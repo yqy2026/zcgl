@@ -51,20 +51,14 @@ except Exception:  # nosec - B110: Intentional graceful degradation
 
 ErrorRecoveryEngine: type[Any]
 try:
-    from .core.error_recovery_service import (
+    from .error_recovery_service import (
         ErrorRecoveryEngine as _ImportedErrorRecoveryEngine,
     )
 except Exception:  # nosec - B110: Intentional graceful degradation
-    _log_import_error("core.error_recovery_service.ErrorRecoveryEngine")
-
-    class _FallbackErrorRecoveryEngine:
-        def __init__(self, *args: object, **kwargs: object) -> None:
-            pass
-
-    ErrorRecoveryEngine = _FallbackErrorRecoveryEngine
+    _log_import_error("error_recovery_service.ErrorRecoveryEngine")
 else:
     ErrorRecoveryEngine = _ImportedErrorRecoveryEngine
-__all__.append("ErrorRecoveryEngine")
+    __all__.append("ErrorRecoveryEngine")
 
 # Asset services
 try:

@@ -33,7 +33,3 @@ class QwenAdapter(BaseVisionAdapter):
     @property
     def api_key_env_name(self) -> str:
         return "DASHSCOPE_API_KEY"
-
-
-# Alias for backward compatibility with tests
-QwenVisionAdapter = QwenAdapter

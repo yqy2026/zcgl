@@ -7,7 +7,7 @@ from typing import Any
 from sqlalchemy import delete, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..models.asset import AssetHistory
+from ..models.asset_history import AssetHistory
 
 
 class HistoryCRUD:

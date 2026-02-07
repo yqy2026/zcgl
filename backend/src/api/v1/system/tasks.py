@@ -11,7 +11,6 @@ from ....core.exception_handler import (
     not_found,
 )
 from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
-from ....crud.task import excel_task_config_crud, task_crud
 from ....database import get_async_db
 from ....enums.task import TaskStatus
 from ....middleware.auth import (
@@ -36,6 +35,91 @@ from ....services.task.access import ensure_task_access, resolve_task_user_filte
 
 class BusinessLogicError(Exception):
     pass
+
+
+class _TaskCrudAdapter:
+    """Compatibility adapter for API tests; delegates to TaskService."""
+
+    async def get_multi_async(self, **kwargs: Any) -> list[Any]:
+        db = kwargs["db"]
+        tasks, _ = await task_service.get_tasks(
+            db=db,
+            skip=kwargs.get("skip", 0),
+            limit=kwargs.get("limit", 100),
+            task_type=kwargs.get("task_type"),
+            status=kwargs.get("status"),
+            user_id=kwargs.get("user_id"),
+            created_after=kwargs.get("created_after"),
+            created_before=kwargs.get("created_before"),
+            order_by=kwargs.get("order_by", "created_at"),
+            order_dir=kwargs.get("order_dir", "desc"),
+        )
+        return tasks
+
+    async def count_async(self, **kwargs: Any) -> int:
+        db = kwargs["db"]
+        _, total = await task_service.get_tasks(
+            db=db,
+            skip=0,
+            limit=1,
+            task_type=kwargs.get("task_type"),
+            status=kwargs.get("status"),
+            user_id=kwargs.get("user_id"),
+            created_after=kwargs.get("created_after"),
+            created_before=kwargs.get("created_before"),
+            order_by="created_at",
+            order_dir="desc",
+        )
+        return total
+
+    async def get(self, **kwargs: Any) -> Any:
+        return await task_service.get_task(
+            db=kwargs["db"],
+            task_id=kwargs["id"],
+        )
+
+    async def get_history_async(self, **kwargs: Any) -> list[Any]:
+        return await task_service.get_task_history(
+            db=kwargs["db"],
+            task_id=kwargs["task_id"],
+        )
+
+
+class _ExcelTaskConfigCrudAdapter:
+    """Compatibility adapter for API tests; delegates to TaskService."""
+
+    async def get_multi_async(self, **kwargs: Any) -> list[Any]:
+        return await task_service.get_excel_configs(
+            db=kwargs["db"],
+            config_type=kwargs.get("config_type"),
+            task_type=kwargs.get("task_type"),
+            limit=kwargs.get("limit", 50),
+        )
+
+    async def get_default_async(self, **kwargs: Any) -> Any:
+        return await task_service.get_default_excel_config(
+            db=kwargs["db"],
+            config_type=kwargs["config_type"],
+            task_type=kwargs["task_type"],
+        )
+
+    async def get(self, **kwargs: Any) -> Any:
+        return await task_service.get_excel_config(
+            db=kwargs["db"],
+            config_id=kwargs["id"],
+        )
+
+    async def update(self, **kwargs: Any) -> Any:
+        db_obj = kwargs["db_obj"]
+        return await task_service.update_excel_config(
+            db=kwargs["db"],
+            config_id=str(getattr(db_obj, "id")),
+            config_data=kwargs["obj_in"],
+        )
+
+
+task_crud = _TaskCrudAdapter()
+excel_task_config_crud = _ExcelTaskConfigCrudAdapter()
 
 
 router = APIRouter(prefix="/tasks", tags=["任务管理"])
@@ -111,7 +195,6 @@ async def get_tasks(
             order_by=order_by,
             order_dir=order_dir,
         )
-
         total = await task_crud.count_async(
             db=db,
             task_type=task_type,
@@ -436,13 +519,13 @@ async def update_excel_config(
     更新Excel任务配置
     """
 
-    config = await excel_task_config_crud.get(db=db, id=config_id)
-    if not config:
-        raise not_found(
-            "配置不存在", resource_type="excel_config", resource_id=config_id
-        )
-
     try:
+        config = await excel_task_config_crud.get(db=db, id=config_id)
+        if not config:
+            raise not_found(
+                "配置不存在", resource_type="excel_config", resource_id=config_id
+            )
+
         updated_config = await excel_task_config_crud.update(
             db=db, db_obj=config, obj_in=config_in
         )
@@ -450,6 +533,8 @@ async def update_excel_config(
             updated_config
         )
         return result
+    except BaseBusinessError:
+        raise
     except Exception as e:
         raise internal_error(f"更新Excel配置失败: {str(e)}")
 
@@ -475,6 +560,8 @@ async def delete_excel_config(
             db=db, db_obj=config, obj_in={"is_active": False}
         )
         return {"message": "Excel配置删除成功"}
+    except BaseBusinessError:
+        raise
     except Exception as e:
         raise internal_error(f"删除Excel配置失败: {str(e)}")
 

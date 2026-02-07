@@ -256,22 +256,26 @@ class PropertyCertificateService:
                 "remarks": extracted_data.get("remarks"),
             }
 
-            owner_ids: list[str] = []
+            owner_create_data_list: list[PropertyOwnerCreate] = []
             for owner_data in owners_data:
-                owner_create_data = PropertyOwnerCreate(
-                    owner_type=owner_data.get("owner_type", "个人"),
-                    name=owner_data.get("name"),
-                    id_type=owner_data.get("id_type"),
-                    id_number=owner_data.get("id_number"),
-                    phone=owner_data.get("phone"),
-                    address=owner_data.get("address"),
-                    organization_id=owner_data.get("organization_id"),
+                owner_create_data_list.append(
+                    PropertyOwnerCreate(
+                        owner_type=owner_data.get("owner_type", "个人"),
+                        name=owner_data.get("name"),
+                        id_type=owner_data.get("id_type"),
+                        id_number=owner_data.get("id_number"),
+                        phone=owner_data.get("phone"),
+                        address=owner_data.get("address"),
+                        organization_id=owner_data.get("organization_id"),
+                    )
                 )
 
-                owner = await property_owner_crud.create_async(
-                    self.db, obj_in=owner_create_data
+            owner_ids: list[str] = []
+            if owner_create_data_list:
+                owners = await property_owner_crud.create_multi_async(
+                    self.db, objects_in=owner_create_data_list, commit=False
                 )
-                owner_ids.append(owner.id)
+                owner_ids = [owner.id for owner in owners if owner.id is not None]
 
             certificate_create = PropertyCertificateCreate(**certificate_create_data)
             certificate = await property_certificate_crud.create_with_owners_async(

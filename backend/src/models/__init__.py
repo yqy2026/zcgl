@@ -2,14 +2,10 @@
 数据库模型模块
 """
 
-from .asset import (  # noqa: F401
-    Asset,
-    AssetDocument,
-    AssetHistory,
-    Project,
-    ProjectOwnershipRelation,
-)
+from .asset import Asset  # noqa: F401
+from .asset_history import AssetDocument, AssetHistory  # noqa: F401
 from .asset_search_index import AssetSearchIndex  # noqa: F401
+from .associations import property_cert_assets, rent_contract_assets  # noqa: F401
 from .auth import AuditLog, User, UserSession  # noqa: F401
 from .collection import (  # noqa: F401
     CollectionMethod,
@@ -17,15 +13,6 @@ from .collection import (  # noqa: F401
     CollectionStatus,
 )
 from .contact import Contact, ContactType  # noqa: F401
-from .dynamic_permission import (  # noqa: F401
-    ConditionalPermission,
-    DynamicPermission,
-    DynamicPermissionAudit,
-    PermissionDelegation,
-    PermissionRequest,
-    PermissionTemplate,
-    TemporaryPermission,
-)
 from .enum_field import (  # noqa: F401
     EnumFieldHistory,
     EnumFieldType,
@@ -37,13 +24,15 @@ from .notification import (  # noqa: F401
     NotificationPriority,
     NotificationType,
 )
-from .ownership import Ownership  # noqa: F401
 from .organization import (  # noqa: F401
     Employee,
     Organization,
     OrganizationHistory,
     Position,
 )
+from .ownership import Ownership  # noqa: F401
+from .project import Project  # noqa: F401
+from .project_relations import ProjectOwnershipRelation  # noqa: F401
 from .property_certificate import (  # noqa: F401
     CertificateType,
     OwnerType,
@@ -53,6 +42,7 @@ from .property_certificate import (  # noqa: F401
 from .rbac import (  # noqa: F401
     Permission,
     PermissionAuditLog,
+    PermissionGrant,
     ResourcePermission,
     Role,
     UserRoleAssignment,
@@ -68,13 +58,13 @@ from .rent_contract import (  # noqa: F401
     RentLedger,
     RentTerm,
     ServiceFeeLedger,
-    rent_contract_assets,
 )
 from .security_event import (  # noqa: F401
     SecurityEvent,
     SecurityEventType,
     SecuritySeverity,
 )
+from .system_dictionary import AssetCustomField, SystemDictionary  # noqa: F401
 from .task import AsyncTask, ExcelTaskConfig, TaskHistory  # noqa: F401
 
 __all__ = [
@@ -84,6 +74,8 @@ __all__ = [
     "Ownership",
     "Project",
     "ProjectOwnershipRelation",
+    "SystemDictionary",
+    "AssetCustomField",
     "AssetSearchIndex",
     "Organization",
     "OrganizationHistory",
@@ -96,6 +88,7 @@ __all__ = [
     "Permission",
     "UserRoleAssignment",
     "ResourcePermission",
+    "PermissionGrant",
     "PermissionAuditLog",
     "EnumFieldType",
     "EnumFieldValue",
@@ -112,13 +105,7 @@ __all__ = [
     "DepositTransactionType",
     "PaymentCycle",
     "rent_contract_assets",
-    "DynamicPermission",
-    "TemporaryPermission",
-    "ConditionalPermission",
-    "PermissionTemplate",
-    "DynamicPermissionAudit",
-    "PermissionRequest",
-    "PermissionDelegation",
+    "property_cert_assets",
     # Contact models
     "Contact",
     "ContactType",

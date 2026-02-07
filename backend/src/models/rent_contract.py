@@ -15,14 +15,12 @@ if TYPE_CHECKING:
 from sqlalchemy import (
     DECIMAL,
     JSON,
-    Column,
     Date,
     DateTime,
     Enum,
     ForeignKey,
     Integer,
     String,
-    Table,
     Text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -30,6 +28,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from ..constants.rent_contract_constants import PaymentStatus, SettlementStatus
 from ..core.enums import ContractStatus
 from ..database import Base
+from .associations import rent_contract_assets
 
 
 # ===================== Enums =====================
@@ -58,22 +57,6 @@ class PaymentCycle(str, enum.Enum):
     QUARTERLY = "quarterly"  # 季付
     SEMI_ANNUAL = "semi_annual"  # 半年付
     ANNUAL = "annual"  # 年付
-
-
-# ===================== Association Tables =====================
-# 合同-资产 多对多关联表
-rent_contract_assets = Table(
-    "rent_contract_assets",
-    Base.metadata,
-    Column("contract_id", String, ForeignKey("rent_contracts.id"), primary_key=True),
-    Column("asset_id", String, ForeignKey("assets.id"), primary_key=True),
-    Column(
-        "created_at",
-        DateTime,
-        default=lambda: datetime.utcnow(),
-        comment="关联创建时间",
-    ),
-)
 
 
 class RentContract(Base):

@@ -24,7 +24,7 @@ from src.core.exception_handler import (
     OperationNotAllowedError,
     ResourceNotFoundError,
 )
-from src.models.asset import Project
+from src.models.project import Project
 from src.schemas.project import ProjectCreate, ProjectUpdate
 from src.services.project.service import ProjectService
 
@@ -67,7 +67,7 @@ def sample_project():
 class TestCreateProject:
     """Tests for project creation"""
 
-    def test_create_project_success(self, project_service, mock_db):
+    async def test_create_project_success(self, project_service, mock_db):
         """Test successful project creation"""
         project_data = ProjectCreate(
             name="New Project",
@@ -88,10 +88,10 @@ class TestCreateProject:
                 "src.crud.project.project_crud.create",
                 return_value=created_project,
             ):
-                result = project_service.create_project(mock_db, obj_in=project_data)
+                result = await project_service.create_project(mock_db, obj_in=project_data)
                 assert result is created_project
 
-    def test_create_project_validates_dates(self, project_service, mock_db):
+    async def test_create_project_validates_dates(self, project_service, mock_db):
         """Test that project dates are accepted"""
         project_data = ProjectCreate(
             name="Date Project",
@@ -108,10 +108,10 @@ class TestCreateProject:
                 "src.crud.project.project_crud.create",
                 return_value=created_project,
             ):
-                result = project_service.create_project(mock_db, obj_in=project_data)
+                result = await project_service.create_project(mock_db, obj_in=project_data)
                 assert result is created_project
 
-    def test_create_project_validates_budget(self, project_service, mock_db):
+    async def test_create_project_validates_budget(self, project_service, mock_db):
         """Test that project budget is accepted"""
         project_data = ProjectCreate(
             name="Budget Project",
@@ -128,10 +128,10 @@ class TestCreateProject:
                 "src.crud.project.project_crud.create",
                 return_value=created_project,
             ):
-                result = project_service.create_project(mock_db, obj_in=project_data)
+                result = await project_service.create_project(mock_db, obj_in=project_data)
                 assert result is created_project
 
-    def test_create_project_sets_default_status(self, project_service, mock_db):
+    async def test_create_project_sets_default_status(self, project_service, mock_db):
         """Test that new projects get default status"""
         project_data = ProjectCreate(
             name="Default Status Project",
@@ -149,10 +149,10 @@ class TestCreateProject:
                 "src.crud.project.project_crud.create",
                 return_value=created_project,
             ):
-                result = project_service.create_project(mock_db, obj_in=project_data)
+                result = await project_service.create_project(mock_db, obj_in=project_data)
                 assert result.project_status == "规划中"
 
-    def test_create_project_duplicate_code(self, project_service, mock_db):
+    async def test_create_project_duplicate_code(self, project_service, mock_db):
         """Test that duplicate project codes are rejected"""
         project_data = ProjectCreate(
             name="Duplicate Code Project",
@@ -166,7 +166,7 @@ class TestCreateProject:
             "src.crud.project.project_crud.get_by_code", return_value=MagicMock()
         ):
             with pytest.raises(DuplicateResourceError, match="项目.*已存在"):
-                project_service.create_project(mock_db, obj_in=project_data)
+                await project_service.create_project(mock_db, obj_in=project_data)
 
 
 # ============================================================================
@@ -177,7 +177,7 @@ class TestCreateProject:
 class TestUpdateProject:
     """Tests for project updates"""
 
-    def test_update_project_name(self, project_service, mock_db, sample_project):
+    async def test_update_project_name(self, project_service, mock_db, sample_project):
         """Test updating project name"""
         update_data = ProjectUpdate(
             name="Updated Project Name",
@@ -187,12 +187,12 @@ class TestUpdateProject:
             with patch(
                 "src.crud.project.project_crud.update", return_value=sample_project
             ):
-                result = project_service.update_project(
+                result = await project_service.update_project(
                     mock_db, project_id="project-123", obj_in=update_data
                 )
                 assert result is sample_project
 
-    def test_update_project_status_workflow(
+    async def test_update_project_status_workflow(
         self, project_service, mock_db, sample_project
     ):
         """Test status workflow transitions"""
@@ -205,12 +205,12 @@ class TestUpdateProject:
             with patch(
                 "src.crud.project.project_crud.update", return_value=sample_project
             ):
-                result = project_service.update_project(
+                result = await project_service.update_project(
                     mock_db, project_id="project-123", obj_in=update_data
                 )
                 assert result is sample_project
 
-    def test_update_project_invalid_status_transition(
+    async def test_update_project_invalid_status_transition(
         self, project_service, mock_db, sample_project
     ):
         """Test that invalid status transitions are rejected"""
@@ -224,12 +224,12 @@ class TestUpdateProject:
             with patch(
                 "src.crud.project.project_crud.update", return_value=sample_project
             ):
-                result = project_service.update_project(
+                result = await project_service.update_project(
                     mock_db, project_id="project-123", obj_in=update_data
                 )
                 assert result is sample_project
 
-    def test_update_project_dates(self, project_service, mock_db, sample_project):
+    async def test_update_project_dates(self, project_service, mock_db, sample_project):
         """Test updating project dates"""
         update_data = ProjectUpdate(
             start_date="2024-02-01",
@@ -240,12 +240,12 @@ class TestUpdateProject:
             with patch(
                 "src.crud.project.project_crud.update", return_value=sample_project
             ):
-                result = project_service.update_project(
+                result = await project_service.update_project(
                     mock_db, project_id="project-123", obj_in=update_data
                 )
                 assert result is sample_project
 
-    def test_update_project_budget(self, project_service, mock_db, sample_project):
+    async def test_update_project_budget(self, project_service, mock_db, sample_project):
         """Test updating project budget"""
         update_data = ProjectUpdate(
             project_budget=1500000.0,
@@ -255,12 +255,12 @@ class TestUpdateProject:
             with patch(
                 "src.crud.project.project_crud.update", return_value=sample_project
             ):
-                result = project_service.update_project(
+                result = await project_service.update_project(
                     mock_db, project_id="project-123", obj_in=update_data
                 )
                 assert result is sample_project
 
-    def test_update_nonexistent_project(self, project_service, mock_db):
+    async def test_update_nonexistent_project(self, project_service, mock_db):
         """Test updating non-existent project"""
         update_data = ProjectUpdate(
             name="Updated Name",
@@ -268,7 +268,7 @@ class TestUpdateProject:
         )
         with patch("src.crud.project.project_crud.get", return_value=None):
             with pytest.raises(ResourceNotFoundError, match="项目.*不存在"):
-                project_service.update_project(
+                await project_service.update_project(
                     mock_db, project_id="nonexistent", obj_in=update_data
                 )
 
@@ -281,31 +281,32 @@ class TestUpdateProject:
 class TestDeleteProject:
     """Tests for project deletion"""
 
-    def test_delete_project_success(self, project_service, mock_db, sample_project):
+    async def test_delete_project_success(self, project_service, mock_db, sample_project):
         """Test successful project deletion"""
         with patch("src.crud.project.project_crud.get_asset_count", return_value=0):
             with patch(
                 "src.crud.project.project_crud.get", return_value=sample_project
             ):
-                result = project_service.delete_project(
-                    db=mock_db, project_id="project-123"
-                )
-                assert result is None
+                with patch("src.crud.project.project_crud.remove", return_value=sample_project):
+                    result = await project_service.delete_project(
+                        db=mock_db, project_id="project-123"
+                    )
+                    assert result is None
 
-    def test_delete_nonexistent_project(self, project_service, mock_db):
+    async def test_delete_nonexistent_project(self, project_service, mock_db):
         """Test deleting non-existent project"""
         with patch("src.crud.project.project_crud.get_asset_count", return_value=0):
             with patch("src.crud.project.project_crud.get", return_value=None):
-                result = project_service.delete_project(
+                result = await project_service.delete_project(
                     db=mock_db, project_id="nonexistent"
                 )
                 assert result is None
 
-    def test_delete_project_with_assets(self, project_service, mock_db, sample_project):
+    async def test_delete_project_with_assets(self, project_service, mock_db, sample_project):
         """Test deleting project that has associated assets"""
         with patch("src.crud.project.project_crud.get_asset_count", return_value=3):
             with pytest.raises(OperationNotAllowedError, match="项目包含.*资产"):
-                project_service.delete_project(db=mock_db, project_id="project-123")
+                await project_service.delete_project(db=mock_db, project_id="project-123")
 
 
 # ============================================================================
@@ -449,23 +450,24 @@ class TestProjectSchedule:
 class TestProjectErrorHandling:
     """Tests for error handling scenarios"""
 
-    def test_handle_database_error_on_create(self, project_service, mock_db):
+    async def test_handle_database_error_on_create(self, project_service, mock_db):
         """Test handling database error during creation"""
-        with patch(
-            "src.crud.project.project_crud.create",
-            side_effect=Exception("Database connection failed"),
-        ):
-            with pytest.raises(InternalServerError, match="创建项目失败"):
-                project_data = ProjectCreate(
-                    name="Test Project",
-                    code="PJ2501001",
-                    start_date="2024-01-01",
-                    end_date="2024-12-31",
-                    project_budget=100000.0,
-                )
-                project_service.create_project(db=mock_db, obj_in=project_data)
+        with patch("src.crud.project.project_crud.get_by_code", return_value=None):
+            with patch(
+                "src.crud.project.project_crud.create",
+                side_effect=Exception("Database connection failed"),
+            ):
+                with pytest.raises(InternalServerError, match="创建项目失败"):
+                    project_data = ProjectCreate(
+                        name="Test Project",
+                        code="PJ2501001",
+                        start_date="2024-01-01",
+                        end_date="2024-12-31",
+                        project_budget=100000.0,
+                    )
+                    await project_service.create_project(db=mock_db, obj_in=project_data)
 
-    def test_handle_database_error_on_update(
+    async def test_handle_database_error_on_update(
         self, project_service, mock_db, sample_project
     ):
         """Test handling database error during update"""
@@ -476,7 +478,7 @@ class TestProjectErrorHandling:
                 side_effect=Exception("Database connection failed"),
             ):
                 with pytest.raises(Exception, match="Database connection failed"):
-                    project_service.update_project(
+                    await project_service.update_project(
                         db=mock_db, project_id="project-123", obj_in=update_data
                     )
 
@@ -489,7 +491,7 @@ class TestProjectErrorHandling:
 class TestProjectEdgeCases:
     """Tests for edge cases and corner scenarios"""
 
-    def test_update_project_with_no_changes(
+    async def test_update_project_with_no_changes(
         self, project_service, mock_db, sample_project
     ):
         """Test updating project with no actual changes"""
@@ -498,7 +500,7 @@ class TestProjectEdgeCases:
             with patch(
                 "src.crud.project.project_crud.update", return_value=sample_project
             ):
-                result = project_service.update_project(
+                result = await project_service.update_project(
                     db=mock_db, project_id="project-123", obj_in=update_data
                 )
                 assert result is sample_project

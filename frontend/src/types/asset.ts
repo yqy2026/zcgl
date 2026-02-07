@@ -285,6 +285,13 @@ export type AssetCreateRequest = Omit<
   | 'occupancy_rate'
   | 'net_income'
   | 'ownership_entity'
+  | 'tenant_name'
+  | 'lease_contract_number'
+  | 'contract_start_date'
+  | 'contract_end_date'
+  | 'monthly_rent'
+  | 'deposit'
+  | 'contract_status'
 >;
 
 // 更新资产请求

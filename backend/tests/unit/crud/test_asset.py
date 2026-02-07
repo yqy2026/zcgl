@@ -1,241 +1,268 @@
 """
-资产 CRUD 单元测试
-
-测试 CRUDAsset 的所有主要方法
+资产 CRUD 单元测试（异步接口）
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from src.crud.asset import AssetCRUD
 from src.models.asset import Asset
+from src.models.asset_search_index import AssetSearchIndex
+
+pytestmark = pytest.mark.asyncio
+
+
+@pytest.fixture
+def crud() -> AssetCRUD:
+    return AssetCRUD()
+
+
+@pytest.fixture
+def mock_db() -> MagicMock:
+    db = MagicMock()
+    db.execute = AsyncMock()
+    db.commit = AsyncMock()
+    db.flush = AsyncMock()
+    db.refresh = AsyncMock()
+    db.get = AsyncMock()
+    db.delete = AsyncMock()
+    db.add = MagicMock()
+    return db
 
 
 class TestCRUDAssetGet:
-    """测试 get 方法"""
-
-    @pytest.fixture
-    def crud(self):
-        return AssetCRUD()
-
-    @pytest.fixture
-    def mock_db(self):
-        return MagicMock()
-
-    def test_get_existing_asset(self, crud, mock_db):
-        """测试获取存在的资产"""
+    async def test_get_existing_asset(self, crud: AssetCRUD, mock_db: MagicMock) -> None:
         mock_asset = MagicMock(spec=Asset)
         mock_asset.id = "1"
         mock_asset.property_name = "测试物业"
 
-        with patch.object(crud, "get", return_value=mock_asset):
-            result = crud.get(mock_db, id="1")
+        with patch.object(crud, "get", new_callable=AsyncMock, return_value=mock_asset):
+            result = await crud.get(mock_db, id="1")
 
         assert result is not None
 
-    def test_get_nonexistent_asset(self, crud, mock_db):
-        """测试获取不存在的资产"""
-        with patch.object(crud, "get", return_value=None):
-            result = crud.get(mock_db, id="999")
+    async def test_get_nonexistent_asset(self, crud: AssetCRUD, mock_db: MagicMock) -> None:
+        with patch.object(crud, "get", new_callable=AsyncMock, return_value=None):
+            result = await crud.get(mock_db, id="999")
 
         assert result is None
 
 
 class TestCRUDAssetGetByName:
-    """测试 get_by_name 方法"""
-
-    @pytest.fixture
-    def crud(self):
-        return AssetCRUD()
-
-    @pytest.fixture
-    def mock_db(self):
-        return MagicMock()
-
-    def test_get_by_name_exists(self, crud, mock_db):
-        """测试通过物业名称获取存在的资产"""
+    async def test_get_by_name_exists(self, crud: AssetCRUD, mock_db: MagicMock) -> None:
         mock_asset = MagicMock(spec=Asset)
         mock_asset.property_name = "测试物业A"
 
-        mock_db.query.return_value.filter.return_value.first.return_value = mock_asset
-
-        result = crud.get_by_name(mock_db, property_name="测试物业A")
+        with patch.object(
+            crud,
+            "get_by_name_async",
+            new_callable=AsyncMock,
+            return_value=mock_asset,
+        ):
+            result = await crud.get_by_name_async(mock_db, property_name="测试物业A")
 
         assert result is not None
         assert result.property_name == "测试物业A"
 
-    def test_get_by_name_not_exists(self, crud, mock_db):
-        """测试通过物业名称获取不存在的资产"""
-        mock_db.query.return_value.filter.return_value.first.return_value = None
-
-        result = crud.get_by_name(mock_db, property_name="不存在的物业")
+    async def test_get_by_name_not_exists(self, crud: AssetCRUD, mock_db: MagicMock) -> None:
+        with patch.object(
+            crud,
+            "get_by_name_async",
+            new_callable=AsyncMock,
+            return_value=None,
+        ):
+            result = await crud.get_by_name_async(mock_db, property_name="不存在的物业")
 
         assert result is None
 
-    def test_get_by_property_name_exists(self, crud, mock_db):
-        """测试 get_by_property_name 别名方法"""
-        mock_asset = MagicMock(spec=Asset)
-        mock_asset.property_name = "测试物业B"
-
-        mock_db.query.return_value.filter.return_value.first.return_value = mock_asset
-
-        result = crud.get_by_property_name(mock_db, property_name="测试物业B")
-
-        assert result is not None
-        assert result.property_name == "测试物业B"
-
 
 class TestCRUDAssetGetMulti:
-    """测试 get_multi 方法"""
-
-    @pytest.fixture
-    def crud(self):
-        return AssetCRUD()
-
-    @pytest.fixture
-    def mock_db(self):
-        db = MagicMock()
-        mock_query = MagicMock()
+    async def test_get_multi_default_params(self, crud: AssetCRUD, mock_db: MagicMock) -> None:
         mock_assets = [MagicMock(spec=Asset), MagicMock(spec=Asset)]
-        mock_query.offset.return_value.limit.return_value.all.return_value = mock_assets
-        db.query.return_value = mock_query
-        return db
+        with patch.object(
+            crud,
+            "get_multi_with_search_async",
+            new_callable=AsyncMock,
+            return_value=(mock_assets, 2),
+        ):
+            result = await crud.get_multi_with_search_async(mock_db)
 
-    def test_get_multi_default_params(self, crud, mock_db):
-        """测试默认参数获取多个资产"""
-        # Mock parent class's get_multi to return a list
-        with patch.object(crud.__class__.__bases__[0], "get_multi", return_value=[]):
-            result = crud.get_multi(mock_db)
+        assert isinstance(result, tuple)
+        assert len(result[0]) == 2
+        assert result[1] == 2
 
-        assert isinstance(result, list)
-
-    def test_get_multi_with_pagination(self, crud, mock_db):
-        """测试分页参数"""
+    async def test_get_multi_with_pagination(self, crud: AssetCRUD, mock_db: MagicMock) -> None:
         mock_assets = [MagicMock(spec=Asset)]
         with patch.object(
-            crud.__class__.__bases__[0], "get_multi", return_value=mock_assets
+            crud,
+            "get_multi_with_search_async",
+            new_callable=AsyncMock,
+            return_value=(mock_assets, 1),
         ) as mock_get_multi:
-            crud.get_multi(mock_db, skip=10, limit=20)
+            await crud.get_multi_with_search_async(mock_db, skip=10, limit=20)
 
-        # Verify parent get_multi was called with correct params
-        mock_get_multi.assert_called_once_with(
-            db=mock_db, skip=10, limit=20, use_cache=False
-        )
+        mock_get_multi.assert_awaited_once_with(mock_db, skip=10, limit=20)
+
+    async def test_get_multi_by_ids_decrypts_assets(
+        self, crud: AssetCRUD, mock_db: MagicMock
+    ) -> None:
+        mock_assets = [MagicMock(spec=Asset), MagicMock(spec=Asset)]
+        with (
+            patch.object(
+                crud,
+                "get_with_filters",
+                new_callable=AsyncMock,
+                return_value=mock_assets,
+            ) as mock_get_with_filters,
+            patch.object(crud, "_decrypt_asset_object") as mock_decrypt,
+        ):
+            result = await crud.get_multi_by_ids_async(
+                mock_db, ids=["asset-1", "asset-2"]
+            )
+
+        assert result == mock_assets
+        mock_get_with_filters.assert_awaited_once()
+        assert mock_decrypt.call_count == 2
+        mock_decrypt.assert_any_call(mock_assets[0])
+        mock_decrypt.assert_any_call(mock_assets[1])
 
 
 class TestCRUDAssetCreate:
-    """测试 create 方法"""
+    async def test_create_asset(self, crud: AssetCRUD, mock_db: MagicMock) -> None:
+        create_data = {"property_name": "新物业", "address": "测试地址123号"}
+        mock_asset = MagicMock(spec=Asset)
+        mock_asset.id = "new-id"
 
-    @pytest.fixture
-    def crud(self):
-        return AssetCRUD()
-
-    @pytest.fixture
-    def mock_db(self):
-        db = MagicMock()
-        db.add = MagicMock()
-        db.commit = MagicMock()
-        db.refresh = MagicMock()
-        return db
-
-    def test_create_asset(self, crud, mock_db):
-        """测试创建资产"""
-        create_data = MagicMock()
-        create_data.model_dump.return_value = {
-            "property_name": "新物业",
-            "address": "测试地址123号",
-        }
-
-        with patch.object(crud, "create") as mock_create:
-            mock_asset = MagicMock()
-            mock_asset.id = "new-id"
-            mock_create.return_value = mock_asset
-
-            result = crud.create(mock_db, obj_in=create_data)
+        with patch.object(
+            crud,
+            "create_async",
+            new_callable=AsyncMock,
+            return_value=mock_asset,
+        ):
+            result = await crud.create_async(mock_db, obj_in=create_data)
 
         assert result is not None
 
 
 class TestCRUDAssetUpdate:
-    """测试 update 方法"""
-
-    @pytest.fixture
-    def crud(self):
-        return AssetCRUD()
-
-    @pytest.fixture
-    def mock_db(self):
-        return MagicMock()
-
-    def test_update_asset(self, crud, mock_db):
-        """测试更新资产"""
+    async def test_update_asset(self, crud: AssetCRUD, mock_db: MagicMock) -> None:
         mock_asset = MagicMock(spec=Asset)
         mock_asset.id = "1"
-
         update_data = {"property_name": "更新后的物业名称"}
 
-        with patch.object(crud, "update") as mock_update:
-            mock_update.return_value = mock_asset
-            result = crud.update(mock_db, db_obj=mock_asset, obj_in=update_data)
+        with patch.object(
+            crud,
+            "update_async",
+            new_callable=AsyncMock,
+            return_value=mock_asset,
+        ):
+            result = await crud.update_async(mock_db, db_obj=mock_asset, obj_in=update_data)
 
         assert result is not None
 
 
 class TestCRUDAssetDelete:
-    """测试 remove 方法"""
-
-    @pytest.fixture
-    def crud(self):
-        return AssetCRUD()
-
-    @pytest.fixture
-    def mock_db(self):
-        db = MagicMock()
-        db.delete = MagicMock()
-        db.commit = MagicMock()
-        return db
-
-    def test_delete_asset(self, crud, mock_db):
-        """测试删除资产"""
+    async def test_delete_asset(self, crud: AssetCRUD, mock_db: MagicMock) -> None:
         mock_asset = MagicMock(spec=Asset)
         mock_asset.id = "1"
 
-        with patch.object(crud, "remove") as mock_remove:
-            mock_remove.return_value = mock_asset
-            result = crud.remove(mock_db, id="1")
+        with patch.object(
+            crud,
+            "remove_async",
+            new_callable=AsyncMock,
+            return_value=mock_asset,
+        ):
+            result = await crud.remove_async(mock_db, id="1")
 
         assert result is not None
 
 
 class TestCRUDAssetSearch:
-    """测试 search 相关方法"""
-
-    @pytest.fixture
-    def crud(self):
-        return AssetCRUD()
-
-    @pytest.fixture
-    def mock_db(self):
-        db = MagicMock()
-        mock_result = MagicMock()
-        mock_result.scalars.return_value.all.return_value = []
-        db.execute.return_value = mock_result
-        db.scalar.return_value = 0
-        return db
-
-    def test_search_with_filters(self, crud, mock_db):
-        """测试带筛选条件的搜索"""
+    async def test_search_with_filters(self, crud: AssetCRUD, mock_db: MagicMock) -> None:
         mock_assets = [MagicMock(spec=Asset)]
         with patch.object(
-            crud.__class__.__bases__[0], "get_multi", return_value=mock_assets
+            crud,
+            "get_multi_with_search_async",
+            new_callable=AsyncMock,
+            return_value=(mock_assets, 1),
         ) as mock_get_multi:
-            # 模拟搜索
             filters = {"ownership_id": "ownership-1"}
-            crud.get_multi(mock_db, filters=filters)
+            await crud.get_multi_with_search_async(mock_db, filters=filters)
 
-        # Verify parent get_multi was called with filters
-        mock_get_multi.assert_called_once()
+        mock_get_multi.assert_awaited_once()
         call_kwargs = mock_get_multi.call_args.kwargs
-        assert "filters" in call_kwargs
         assert call_kwargs["filters"] == {"ownership_id": "ownership-1"}
+
+
+class TestAssetSearchIndexRefresh:
+    async def test_refresh_batches_delete_and_insert(
+        self, crud: AssetCRUD, mock_db: MagicMock
+    ) -> None:
+        data = {"address": "测试地址", "manager_name": "张三"}
+
+        def _build_entries(
+            *,
+            asset_id: str,
+            field_name: str,
+            value: str,
+            key_manager: object,
+        ) -> list[AssetSearchIndex]:
+            del value, key_manager
+            return [
+                AssetSearchIndex(
+                    asset_id=asset_id,
+                    field_name=field_name,
+                    token_hash=f"{field_name}-token",
+                    key_version=1,
+                )
+            ]
+
+        with (
+            patch("src.crud.asset.SEARCH_INDEX_FIELDS", {"address", "manager_name"}),
+            patch("src.crud.asset.build_search_index_entries", side_effect=_build_entries),
+        ):
+            await crud._refresh_search_index_entries(
+                mock_db, asset_id="asset-1", data=data
+            )
+
+        assert mock_db.execute.await_count == 2
+        delete_stmt = mock_db.execute.await_args_list[0].args[0]
+        insert_stmt = mock_db.execute.await_args_list[1].args[0]
+        insert_values = mock_db.execute.await_args_list[1].args[1]
+
+        assert delete_stmt.__visit_name__ == "delete"
+        assert insert_stmt.__visit_name__ == "insert"
+        assert " IN " in str(delete_stmt)
+        assert len(insert_values) == 2
+        assert {item["field_name"] for item in insert_values} == {
+            "address",
+            "manager_name",
+        }
+
+    async def test_refresh_skips_when_no_indexed_fields(
+        self, crud: AssetCRUD, mock_db: MagicMock
+    ) -> None:
+        with patch("src.crud.asset.SEARCH_INDEX_FIELDS", {"address"}):
+            await crud._refresh_search_index_entries(
+                mock_db,
+                asset_id="asset-1",
+                data={"property_name": "测试物业"},
+            )
+
+        mock_db.execute.assert_not_awaited()
+
+    async def test_refresh_only_deletes_when_no_entries(
+        self, crud: AssetCRUD, mock_db: MagicMock
+    ) -> None:
+        with (
+            patch("src.crud.asset.SEARCH_INDEX_FIELDS", {"address"}),
+            patch("src.crud.asset.build_search_index_entries", return_value=[]),
+        ):
+            await crud._refresh_search_index_entries(
+                mock_db, asset_id="asset-1", data={"address": "测试地址"}
+            )
+
+        assert mock_db.execute.await_count == 1
+        delete_stmt = mock_db.execute.await_args_list[0].args[0]
+        assert delete_stmt.__visit_name__ == "delete"

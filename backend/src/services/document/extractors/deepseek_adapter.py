@@ -33,7 +33,3 @@ class DeepSeekAdapter(BaseVisionAdapter):
     @property
     def api_key_env_name(self) -> str:
         return "DEEPSEEK_API_KEY"
-
-
-# Alias for backward compatibility with tests
-DeepSeekVisionAdapter = DeepSeekAdapter

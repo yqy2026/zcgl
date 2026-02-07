@@ -29,12 +29,20 @@ pytestmark = pytest.mark.asyncio
 def mock_db():
     """Mock AsyncSession for async AssetService tests."""
     db = MagicMock()
+    ownership = MagicMock()
+    ownership.id = "ownership-id"
+    ownership.name = "权属方A"
+    execute_result = MagicMock()
+    execute_scalars = MagicMock()
+    execute_scalars.first.return_value = ownership
+    execute_result.scalars.return_value = execute_scalars
+
     db.in_transaction.return_value = True
     db.commit = AsyncMock()
     db.rollback = AsyncMock()
     db.flush = AsyncMock()
     db.refresh = AsyncMock()
-    db.execute = AsyncMock()
+    db.execute = AsyncMock(return_value=execute_result)
     db.add = MagicMock()
     db.delete = AsyncMock()
     return db
@@ -772,13 +780,7 @@ class TestEdgeCases:
             "include_in_occupancy_rate": True,
             "certificated_usage": "商业",
             "actual_usage": "零售",
-            "tenant_name": "租户A",
             "tenant_type": "企业",
-            "lease_contract_number": "CONTRACT001",
-            "contract_start_date": "2024-01-01",
-            "contract_end_date": "2025-12-31",
-            "monthly_rent": 10000.0,
-            "deposit": 20000.0,
             "is_sublease": False,
             "manager_name": "管理员A",
             "business_model": "自营",

@@ -138,7 +138,7 @@ export class AssetFieldService {
   async getAssetCustomFieldValues(assetId: string): Promise<CustomFieldValue[]> {
     try {
       const result = await apiClient.get<{ values: CustomFieldValue[] }>(
-        `/assets/${assetId}/custom-field-values`,
+        `/asset-custom-fields/assets/${assetId}/values`,
         {
           cache: true,
           retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
@@ -166,7 +166,7 @@ export class AssetFieldService {
   ): Promise<CustomFieldValue[]> {
     try {
       const result = await apiClient.put<{ values: CustomFieldValue[] }>(
-        `/assets/${assetId}/custom-field-values`,
+        `/asset-custom-fields/assets/${assetId}/values`,
         { values },
         {
           retry: false,
@@ -192,9 +192,14 @@ export class AssetFieldService {
     updates: Array<{ assetId: string; values: CustomFieldValue[] }>
   ): Promise<void> {
     try {
+      const payload = updates.map(update => ({
+        asset_id: update.assetId,
+        values: update.values,
+      }));
+
       const result = await apiClient.post<void>(
-        '/assets/batch-custom-field-values',
-        { updates },
+        '/asset-custom-fields/assets/batch-values',
+        payload,
         {
           retry: false,
           smartExtract: true,
@@ -215,10 +220,16 @@ export class AssetFieldService {
    */
   async validateCustomFieldValue(fieldId: string, value: unknown): Promise<FieldValidationResult> {
     try {
+      const valueParam =
+        typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
+          ? String(value)
+          : JSON.stringify(value);
+
       const result = await apiClient.post<{ valid: boolean; error?: string }>(
-        `/asset-custom-fields/${fieldId}/validate`,
-        { value },
+        '/asset-custom-fields/validate',
+        {},
         {
+          params: { field_id: fieldId, value: valueParam },
           retry: false,
           smartExtract: true,
         }
@@ -246,18 +257,28 @@ export class AssetFieldService {
    */
   async getFieldOptions(fieldType: string, category?: string): Promise<FieldOption[]> {
     try {
-      const result = await apiClient.get<FieldOption[]>('/field-options', {
-        params: { field_type: fieldType, category },
-        cache: true,
-        retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
-        smartExtract: true,
-      });
+      const result = await apiClient.get<{ field_types: FieldOption[] }>(
+        '/asset-custom-fields/types/list',
+        {
+          params:
+            category != null && category.trim() !== ''
+              ? { field_type: fieldType, category }
+              : { field_type: fieldType },
+          cache: true,
+          retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+          smartExtract: true,
+        }
+      );
 
       if (!result.success) {
         throw new Error(`获取字段选项失败: ${result.error}`);
       }
 
-      return result.data || [];
+      const options = result.data?.field_types ?? [];
+      if (fieldType.trim() !== '') {
+        return options.filter(option => String(option.value) === fieldType);
+      }
+      return options;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);

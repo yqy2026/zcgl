@@ -4,11 +4,12 @@ PostgreSQL并发访问集成测试
 测试数据库在高并发场景下的行为
 """
 
-import os
 import asyncio
+import os
+import uuid
 
 import pytest
-from sqlalchemy import text, select
+from sqlalchemy import text
 
 from src.database import get_database_manager
 
@@ -60,46 +61,51 @@ class TestPostgreSQLConcurrency:
     async def test_concurrent_transaction_isolation(self):
         """测试并发事务隔离"""
         from src.crud.asset import asset_crud
-        from src.models.asset import Asset
+        from src.models.ownership import Ownership
 
         mgr = get_database_manager()
 
         # 创建初始资产
         async with mgr.get_session() as session:
+            suffix = uuid.uuid4().hex[:8]
+            ownership = Ownership(name="并发测试权属方", code="OWN-CONCURRENCY")
+            session.add(ownership)
+            await session.flush()
+
             asset_data = {
-                "property_name": "隔离测试资产",
+                "property_name": f"隔离测试资产-{suffix}",
+                "ownership_id": ownership.id,
+                "address": "隔离测试地址",
                 "ownership_status": "已确权",
                 "property_nature": "商业",
                 "usage_status": "在用",
-                "monthly_rent": 10000.0,
+                "notes": "initial",
             }
             asset = await asset_crud.create_async(db=session, obj_in=asset_data)
             asset_id = asset.id
 
         results = []
 
-        async def update_rent(new_rent: float):
+        async def update_notes(new_notes: str):
             try:
                 async with mgr.get_session() as session:
-                    asset_from_db = await asset_crud.get_async(
-                        db=session, id=asset_id
-                    )
+                    asset_from_db = await asset_crud.get_async(db=session, id=asset_id)
 
                     if asset_from_db:
-                        asset_from_db.monthly_rent = new_rent
+                        asset_from_db.notes = new_notes
                         await session.commit()
-                        results.append(new_rent)
+                        results.append(new_notes)
             except Exception as e:
                 results.append(e)
 
         # 并发更新
         await asyncio.gather(
-            update_rent(15000.0),
-            update_rent(20000.0),
-            update_rent(25000.0),
+            update_notes("notes-A"),
+            update_notes("notes-B"),
+            update_notes("notes-C"),
         )
 
         # 验证：最终状态应该是其中一个值（无数据损坏）
         async with mgr.get_session() as session:
             final_asset = await asset_crud.get_async(db=session, id=asset_id)
-            assert final_asset.monthly_rent in [15000.0, 20000.0, 25000.0]
+            assert final_asset.notes in ["notes-A", "notes-B", "notes-C"]

@@ -11,6 +11,16 @@ from src.schemas.asset import AssetCreate, AssetResponse, AssetUpdate
 
 
 class TestAssetSchemaAttachments:
+    def test_asset_create_schema_excludes_legacy_fields(self) -> None:
+        properties = AssetCreate.model_json_schema().get("properties", {})
+        assert "wuyang_project_name" not in properties
+        assert "description" not in properties
+
+    def test_asset_response_schema_excludes_legacy_fields(self) -> None:
+        properties = AssetResponse.model_json_schema().get("properties", {})
+        assert "wuyang_project_name" not in properties
+        assert "description" not in properties
+
     def test_asset_create_includes_attachments_fields(self) -> None:
         asset = AssetCreate(
             ownership_id="owner-001",
@@ -41,6 +51,12 @@ class TestAssetSchemaAttachments:
 
         assert payload["operation_agreement_attachments"] == "receive-3.pdf"
         assert payload["terminal_contract_files"] == "terminal-2.pdf,terminal-3.pdf"
+
+    def test_asset_update_includes_management_entity_field(self) -> None:
+        asset = AssetUpdate(management_entity="运营管理单位A")
+        payload = asset.model_dump(exclude_unset=True)
+
+        assert payload["management_entity"] == "运营管理单位A"
 
     def test_asset_response_includes_attachments_fields(self) -> None:
         now = datetime.utcnow()

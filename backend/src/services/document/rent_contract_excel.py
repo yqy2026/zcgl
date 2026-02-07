@@ -261,6 +261,31 @@ class RentContractExcelService:
             except Exception:
                 warnings.append("未找到租金条款表，已按基础月租金生成默认条款。")
 
+        contract_numbers_to_check = {
+            str(value).strip()
+            for value in contracts_df.get("contract_number", pd.Series())
+            if value is not None and str(value).strip() != ""
+        }
+        existing_by_contract_number: dict[str, RentContract] = {}
+        if contract_numbers_to_check:
+            existing_contracts = list(
+                (
+                    await db.execute(
+                        select(RentContract).where(
+                            RentContract.contract_number.in_(
+                                list(contract_numbers_to_check)
+                            )
+                        )
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            existing_by_contract_number = {
+                str(contract.contract_number): contract
+                for contract in existing_contracts
+            }
+
         for index, row in contracts_df.iterrows():
             row_data = {k: row[k] for k in contracts_df.columns}
             contract_number_raw = row_data.get("contract_number")
@@ -457,12 +482,7 @@ class RentContractExcelService:
                     rent_terms=terms,
                 )
 
-                existing_result = await db.execute(
-                    select(RentContract).where(
-                        RentContract.contract_number == contract_number
-                    )
-                )
-                existing = existing_result.scalars().first()
+                existing = existing_by_contract_number.get(contract_number)
                 if existing:
                     if not overwrite_existing:
                         errors.append(f"合同编号已存在: {contract_number}")
@@ -473,13 +493,15 @@ class RentContractExcelService:
                     update_data.rent_terms = [
                         RentTermUpdate(**term.model_dump()) for term in terms
                     ]
-                    await rent_contract_service.update_contract_async(
+                    updated_contract = await rent_contract_service.update_contract_async(
                         db=db, db_obj=existing, obj_in=update_data
                     )
+                    existing_by_contract_number[contract_number] = updated_contract
                 else:
-                    await rent_contract_service.create_contract_async(
+                    created_contract = await rent_contract_service.create_contract_async(
                         db=db, obj_in=contract_data
                     )
+                    existing_by_contract_number[contract_number] = created_contract
 
                 imported_contracts += 1
                 imported_terms += len(terms)

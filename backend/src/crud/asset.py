@@ -7,21 +7,24 @@ from typing import Any
 资产计算逻辑（AssetCalculator）应在 API 或 Service 层调用。
 """
 
-from sqlalchemy import Select, delete, select
+from sqlalchemy import Select, delete, insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 
 from ..constants.business_constants import DateTimeFields
 from ..core.encryption import EncryptionKeyManager, FieldEncryptor
+from ..core.exception_handler import ResourceNotFoundError
 from ..core.search_index import (
     SEARCH_INDEX_FIELDS,
     build_asset_id_subquery,
     build_search_index_entries,
 )
-from ..core.exception_handler import ResourceNotFoundError
-from ..models.asset import Asset, AssetHistory, Project, ProjectOwnershipRelation
-from ..models.ownership import Ownership
+from ..models.asset import Asset
+from ..models.asset_history import AssetHistory
 from ..models.asset_search_index import AssetSearchIndex
+from ..models.ownership import Ownership
+from ..models.project import Project
+from ..models.project_relations import ProjectOwnershipRelation
 from ..schemas.asset import AssetCreate, AssetUpdate
 from .base import CRUDBase
 
@@ -189,7 +192,6 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         self.sensitive_data_handler = SensitiveDataHandler(
             # 可搜索字段（需要精确匹配查询）
             searchable_fields={
-                "tenant_name",  # 租户名称
                 "address",  # 地址
             },
             # 不可搜索字段（只需要保护）
@@ -199,44 +201,49 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             },
         )
 
-    async def _replace_search_index_for_field(
-        self,
-        db: AsyncSession,
-        *,
-        asset_id: str,
-        field_name: str,
-        raw_value: Any,
+    async def _refresh_search_index_entries(
+        self, db: AsyncSession, *, asset_id: str, data: dict[str, Any]
     ) -> None:
-        if field_name not in SEARCH_INDEX_FIELDS:
+        fields_to_refresh = [
+            field_name for field_name in SEARCH_INDEX_FIELDS if field_name in data
+        ]
+        if not fields_to_refresh:
             return
 
         await db.execute(
             delete(AssetSearchIndex).where(
                 AssetSearchIndex.asset_id == asset_id,
-                AssetSearchIndex.field_name == field_name,
+                AssetSearchIndex.field_name.in_(fields_to_refresh),
             )
         )
 
-        entries = build_search_index_entries(
-            asset_id=asset_id,
-            field_name=field_name,
-            value=raw_value,
-            key_manager=self.sensitive_data_handler.encryptor.key_manager,
-        )
-        if entries:
-            db.add_all(entries)
-
-    async def _refresh_search_index_entries(
-        self, db: AsyncSession, *, asset_id: str, data: dict[str, Any]
-    ) -> None:
-        for field_name in SEARCH_INDEX_FIELDS:
-            if field_name in data:
-                await self._replace_search_index_for_field(
-                    db,
+        key_manager = self.sensitive_data_handler.encryptor.key_manager
+        entries = []
+        for field_name in fields_to_refresh:
+            entries.extend(
+                build_search_index_entries(
                     asset_id=asset_id,
                     field_name=field_name,
-                    raw_value=data.get(field_name),
+                    value=data.get(field_name),
+                    key_manager=key_manager,
                 )
+            )
+
+        if not entries:
+            return
+
+        await db.execute(
+            insert(AssetSearchIndex),
+            [
+                {
+                    "asset_id": entry.asset_id,
+                    "field_name": entry.field_name,
+                    "token_hash": entry.token_hash,
+                    "key_version": entry.key_version,
+                }
+                for entry in entries
+            ],
+        )
 
     def _asset_base_query_with_relations(self) -> Select[Any]:
         """
@@ -249,6 +256,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             .selectinload(Project.ownership_relations)
             .joinedload(ProjectOwnershipRelation.ownership),
             joinedload(Asset.ownership),
+            selectinload(Asset.rent_contracts),
         )
 
     async def create_async(
@@ -269,6 +277,14 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         obj_in_data.pop("occupancy_rate", None)
         obj_in_data.pop("version", None)
         obj_in_data.pop("ownership_entity", None)
+        obj_in_data.pop("tenant_name", None)
+        obj_in_data.pop("lease_contract_number", None)
+        obj_in_data.pop("contract_start_date", None)
+        obj_in_data.pop("contract_end_date", None)
+        obj_in_data.pop("monthly_rent", None)
+        obj_in_data.pop("deposit", None)
+        obj_in_data.pop("wuyang_project_name", None)
+        obj_in_data.pop("description", None)
 
         encrypted_data = self.sensitive_data_handler.encrypt_data(obj_in_data.copy())
         db_obj = Asset(**encrypted_data)
@@ -291,7 +307,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
     ) -> Asset | None:
         result = await db.execute(
             select(Asset)
-            .options(joinedload(Asset.ownership))
+            .options(joinedload(Asset.ownership), selectinload(Asset.rent_contracts))
             .filter(getattr(self.model, "id") == id)
         )
         asset = result.scalars().first()
@@ -340,7 +356,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
     ) -> Asset | None:
         result = await db.execute(
             select(Asset)
-            .options(joinedload(Asset.ownership))
+            .options(joinedload(Asset.ownership), selectinload(Asset.rent_contracts))
             .filter(
                 Asset.property_name == property_name,
                 Asset.data_status != "已删除",
@@ -418,7 +434,10 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         base_query = (
             self._asset_base_query_with_relations()
             if include_relations
-            else select(Asset)
+            else select(Asset).options(
+                joinedload(Asset.ownership),
+                selectinload(Asset.rent_contracts),
+            )
         )
         if search_conditions:
             base_query = base_query.join(
@@ -436,9 +455,17 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         result = await db.execute(query)
         assets = list(result.scalars().all())
 
+        count_base_query: Select[Any] = select(Asset.id)
+        if search_conditions:
+            count_base_query = count_base_query.join(
+                Ownership, Asset.ownership_id == Ownership.id, isouter=True
+            )
+
         cnt_query = self.query_builder.build_count_query(
             filters=qb_filters,
             search_conditions=search_conditions,
+            base_query=count_base_query,
+            distinct_column=Asset.id,
         )
         total_result = await db.execute(cnt_query)
         total = total_result.scalar() or 0
@@ -462,6 +489,14 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         obj_in_data.pop("unrented_area", None)
         obj_in_data.pop("occupancy_rate", None)
         obj_in_data.pop("version", None)
+        obj_in_data.pop("tenant_name", None)
+        obj_in_data.pop("lease_contract_number", None)
+        obj_in_data.pop("contract_start_date", None)
+        obj_in_data.pop("contract_end_date", None)
+        obj_in_data.pop("monthly_rent", None)
+        obj_in_data.pop("deposit", None)
+        obj_in_data.pop("wuyang_project_name", None)
+        obj_in_data.pop("description", None)
         encrypted_data = self.sensitive_data_handler.encrypt_data(obj_in_data.copy())
 
         db_obj = Asset(**encrypted_data)
@@ -506,6 +541,14 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         update_data.pop("occupancy_rate", None)
         update_data.pop("version", None)
         update_data.pop("ownership_entity", None)
+        update_data.pop("tenant_name", None)
+        update_data.pop("lease_contract_number", None)
+        update_data.pop("contract_start_date", None)
+        update_data.pop("contract_end_date", None)
+        update_data.pop("monthly_rent", None)
+        update_data.pop("deposit", None)
+        update_data.pop("wuyang_project_name", None)
+        update_data.pop("description", None)
 
         encrypted_data = self._encrypt_update_data(update_data)
         result: Asset = await super().update(
@@ -536,6 +579,14 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
     ) -> Asset:
         update_data = obj_in.model_dump(exclude_unset=True)
         update_data.pop("version", None)
+        update_data.pop("tenant_name", None)
+        update_data.pop("lease_contract_number", None)
+        update_data.pop("contract_start_date", None)
+        update_data.pop("contract_end_date", None)
+        update_data.pop("monthly_rent", None)
+        update_data.pop("deposit", None)
+        update_data.pop("wuyang_project_name", None)
+        update_data.pop("description", None)
 
         for field, new_value in update_data.items():
             if hasattr(db_obj, field):
@@ -597,14 +648,20 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         base_query = (
             self._asset_base_query_with_relations()
             if include_relations
-            else select(Asset)
+            else select(Asset).options(
+                joinedload(Asset.ownership),
+                selectinload(Asset.rent_contracts),
+            )
         )
-        return await self.get_with_filters(
+        assets = await self.get_with_filters(
             db,
             filters={"id__in": ids},
             limit=len(ids) if ids else 100,
             base_query=base_query,
         )
+        for asset in assets:
+            self._decrypt_asset_object(asset)
+        return assets
 
     # remove is inherited
     # create is inherited (check notes about calculation)

@@ -946,121 +946,6 @@ class TestAssignPermissionsToRole:
 
 
 # ============================================================================
-# _get_user_resource_permissions 测试
-# ============================================================================
-
-
-class TestGetUserResourcePermissions:
-    """测试获取用户资源权限"""
-
-    async def test_get_resource_permissions_found(self, rbac_service, mock_db):
-        """测试找到资源权限"""
-        mock_permission = Mock()
-        mock_permission.permission_level = "write"
-        mock_permission.conditions = None
-        result_row = Mock()
-        result_row.scalars.return_value.first.return_value = mock_permission
-        mock_db.execute = AsyncMock(return_value=result_row)
-
-        request = PermissionCheckRequest(
-            resource="asset", action="read", resource_id="asset-1", context=None
-        )
-
-        result = await rbac_service._get_user_resource_permissions("user-1", request)
-
-        assert result is not None
-        assert result["permission_level"] == "write"
-
-    async def test_get_resource_permissions_not_found(self, rbac_service, mock_db):
-        """测试未找到资源权限"""
-        result_row = Mock()
-        result_row.scalars.return_value.first.return_value = None
-        mock_db.execute = AsyncMock(return_value=result_row)
-
-        request = PermissionCheckRequest(
-            resource="asset", action="read", resource_id=None, context=None
-        )
-
-        result = await rbac_service._get_user_resource_permissions("user-1", request)
-
-        assert result is None
-
-    async def test_get_resource_permissions_insufficient_level(self, rbac_service, mock_db):
-        """测试权限级别不足"""
-        mock_permission = Mock()
-        mock_permission.permission_level = "read"
-        mock_permission.conditions = None
-        result_row = Mock()
-        result_row.scalars.return_value.first.return_value = mock_permission
-        mock_db.execute = AsyncMock(return_value=result_row)
-
-        request = PermissionCheckRequest(
-            resource="asset", action="delete", resource_id=None, context=None
-        )
-
-        result = await rbac_service._get_user_resource_permissions("user-1", request)
-
-        # read权限不能执行delete操作
-        assert result is None
-
-
-# ============================================================================
-# _check_permission_level 测试
-# ============================================================================
-
-
-class TestCheckPermissionLevel:
-    """测试权限级别检查"""
-
-    async def test_read_level_can_read(self, rbac_service):
-        """测试读权限级别可以读"""
-        result = rbac_service._check_permission_level("read", "read")
-        assert result is True
-
-    async def test_read_level_cannot_write(self, rbac_service):
-        """测试读权限级别不能写"""
-        result = rbac_service._check_permission_level("read", "write")
-        assert result is False
-
-    async def test_write_level_can_read(self, rbac_service):
-        """测试写权限级别可以读"""
-        result = rbac_service._check_permission_level("write", "read")
-        assert result is True
-
-    async def test_write_level_can_write(self, rbac_service):
-        """测试写权限级别可以写"""
-        result = rbac_service._check_permission_level("write", "write")
-        assert result is True
-
-    async def test_delete_level_can_read(self, rbac_service):
-        """测试删除权限级别可以读"""
-        result = rbac_service._check_permission_level("delete", "read")
-        assert result is True
-
-    async def test_delete_level_can_delete(self, rbac_service):
-        """测试删除权限级别可以删除"""
-        result = rbac_service._check_permission_level("delete", "delete")
-        assert result is True
-
-    async def test_admin_level_can_do_anything(self, rbac_service):
-        """测试管理员权限级别可以做任何操作"""
-        assert rbac_service._check_permission_level("admin", "read") is True
-        assert rbac_service._check_permission_level("admin", "write") is True
-        assert rbac_service._check_permission_level("admin", "delete") is True
-        assert rbac_service._check_permission_level("admin", "admin") is True
-
-    async def test_invalid_permission_level(self, rbac_service):
-        """测试无效的权限级别"""
-        result = rbac_service._check_permission_level("invalid", "read")
-        assert result is False
-
-    async def test_invalid_action(self, rbac_service):
-        """测试无效的操作"""
-        result = rbac_service._check_permission_level("read", "invalid_action")
-        assert result is False
-
-
-# ============================================================================
 # _can_manage_role 测试
 # ============================================================================
 
@@ -1130,7 +1015,7 @@ class TestRoleHasPermission:
 
 
 # ============================================================================
-# _is_admin_role 测试
+# _role_has_admin_permission 测试
 # ============================================================================
 
 
@@ -1147,15 +1032,15 @@ class TestIsAdminRole:
         admin_permission.action = "admin"
         role.permissions = [admin_permission]
 
-        assert rbac_service._is_admin_role(role) is True
+        assert rbac_service._role_has_admin_permission(role) is True
 
-    async def test_detect_admin_by_legacy_role_name(self, rbac_service):
-        """兼容历史角色命名（admin/super_admin）"""
+    async def test_legacy_role_name_without_permission_is_not_admin(self, rbac_service):
+        """仅角色名为 admin/super_admin 不再视为管理员"""
         role = Mock(spec=Role)
         role.name = "admin"
         role.permissions = []
 
-        assert rbac_service._is_admin_role(role) is True
+        assert rbac_service._role_has_admin_permission(role) is False
 
     async def test_non_admin_role(self, rbac_service):
         """非管理员角色且无 system:admin 权限时返回 False"""
@@ -1167,7 +1052,7 @@ class TestIsAdminRole:
         permission.action = "view"
         role.permissions = [permission]
 
-        assert rbac_service._is_admin_role(role) is False
+        assert rbac_service._role_has_admin_permission(role) is False
 
 
 # ============================================================================

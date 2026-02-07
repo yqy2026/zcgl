@@ -22,11 +22,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from ..database import Base
 
 if TYPE_CHECKING:
-    from .dynamic_permission import (
-        ConditionalPermission,
-        DynamicPermission,
-        TemporaryPermission,
-    )
     from .organization import Organization
     from .user import User
 
@@ -171,14 +166,8 @@ class Permission(Base):
     roles: Mapped[list["Role"]] = relationship(
         "Role", secondary=role_permissions, back_populates="permissions"
     )
-    dynamic_permissions: Mapped[list["DynamicPermission"]] = relationship(
-        "DynamicPermission", back_populates="permission"
-    )
-    temporary_permissions: Mapped[list["TemporaryPermission"]] = relationship(
-        "TemporaryPermission", back_populates="permission"
-    )
-    conditional_permissions: Mapped[list["ConditionalPermission"]] = relationship(
-        "ConditionalPermission", back_populates="permission"
+    permission_grants: Mapped[list["PermissionGrant"]] = relationship(
+        "PermissionGrant", back_populates="permission"
     )
 
     @property
@@ -313,6 +302,89 @@ class ResourcePermission(Base):
 
     def __repr__(self) -> str:
         return f"<ResourcePermission(resource={self.resource_type}:{self.resource_id}, level={self.permission_level})>"  # pragma: no cover
+
+
+class PermissionGrant(Base):
+    """统一权限授权记录（动态/临时/资源级权限统一落地）"""
+
+    __tablename__ = "permission_grants"
+
+    id: Mapped[str] = mapped_column(
+        String, primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+
+    user_id: Mapped[str] = mapped_column(
+        String, ForeignKey("users.id"), nullable=False, index=True, comment="用户ID"
+    )
+    permission_id: Mapped[str] = mapped_column(
+        String,
+        ForeignKey("permissions.id"),
+        nullable=False,
+        index=True,
+        comment="权限ID",
+    )
+
+    grant_type: Mapped[str] = mapped_column(
+        String(50), nullable=False, default="direct", index=True, comment="授权类型"
+    )
+    effect: Mapped[str] = mapped_column(
+        String(10), nullable=False, default="allow", index=True, comment="效果 allow/deny"
+    )
+
+    scope: Mapped[str] = mapped_column(
+        String(50), nullable=False, default="global", index=True, comment="作用域类型"
+    )
+    scope_id: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
+    conditions: Mapped[dict[str, Any] | None] = mapped_column(
+        JSON, nullable=True, comment="条件表达式(JSON)"
+    )
+
+    starts_at: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True, index=True, comment="生效时间"
+    )
+    expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True, index=True, comment="过期时间"
+    )
+    priority: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=100, comment="优先级(越大越高)"
+    )
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, index=True, comment="是否激活"
+    )
+
+    source_type: Mapped[str | None] = mapped_column(
+        String(50), nullable=True, index=True, comment="来源类型"
+    )
+    source_id: Mapped[str | None] = mapped_column(
+        String, nullable=True, index=True, comment="来源记录ID"
+    )
+    granted_by: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.now, comment="创建时间"
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=datetime.now,
+        onupdate=datetime.now,
+        comment="更新时间",
+    )
+    revoked_at: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True, comment="撤销时间"
+    )
+    revoked_by: Mapped[str | None] = mapped_column(
+        String(100), nullable=True, comment="撤销人"
+    )
+
+    user: Mapped["User"] = relationship("User")
+    permission: Mapped["Permission"] = relationship(
+        "Permission", back_populates="permission_grants"
+    )
+
+    def __repr__(self) -> str:
+        return f"<PermissionGrant(user_id={self.user_id}, permission_id={self.permission_id}, effect={self.effect})>"  # pragma: no cover
 
 
 class PermissionAuditLog(Base):

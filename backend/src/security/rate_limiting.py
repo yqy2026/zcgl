@@ -43,8 +43,6 @@ class RateLimiter:
     def __init__(self, config: dict[str, Any] | None = None) -> None:
         self.config = config or RateLimitConfig.DEFAULT_LIMITS
         self.request_times: dict[str, deque[float]] = defaultdict(deque)
-        # Alias for backward compatibility in tests and older code.
-        self.requests = self.request_times
         self.blocked_ips: dict[str, float] = {}
         self.lock = Lock()
 

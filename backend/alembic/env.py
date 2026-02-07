@@ -25,7 +25,6 @@ try:
         auth,
         collection,
         contact,
-        dynamic_permission,
         enum_field,
         notification,
         operation_log,

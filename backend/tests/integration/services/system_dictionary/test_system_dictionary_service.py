@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.exception_handler import DuplicateResourceError, ResourceNotFoundError
-from src.models.asset import SystemDictionary
+from src.models.system_dictionary import SystemDictionary
 from src.schemas.asset import SystemDictionaryCreate, SystemDictionaryUpdate
 from src.services.system_dictionary.service import system_dictionary_service
 

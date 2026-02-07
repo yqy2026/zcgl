@@ -391,7 +391,9 @@ async def test_security_alert(
     print("DEBUG: [test_security_alert] Handler entered")
     # Verify admin access
     rbac_service = RBACService(db)
-    if not await rbac_service.is_admin(current_user.id):
+    if not await rbac_service.check_user_permission(
+        current_user.id, "system", "admin"
+    ):
         raise HTTPException(status_code=403, detail="需要管理员权限")
 
     from ....security.audit_logger import SecurityEventLogger
@@ -430,7 +432,9 @@ async def get_security_events(
     """
 
     rbac_service = RBACService(db)
-    if not await rbac_service.is_admin(current_user.id):
+    if not await rbac_service.check_user_permission(
+        current_user.id, "system", "admin"
+    ):
         raise HTTPException(status_code=403, detail="需要管理员权限")
 
     events, total = await security_event_crud.get_multi_with_count_async(

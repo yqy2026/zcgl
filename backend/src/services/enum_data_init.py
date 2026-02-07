@@ -137,18 +137,66 @@ async def init_enum_data(
         "errors": [],
     }
 
-    for enum_code, enum_config in STANDARD_ENUMS.items():
+    enum_codes = list(STANDARD_ENUMS.keys())
+    try:
+        existing_types = list(
+            (
+                await db.execute(select(EnumFieldType).where(EnumFieldType.code.in_(enum_codes)))
+            )
+            .scalars()
+            .all()
+        )
+    except Exception as e:
+        for enum_code in STANDARD_ENUMS:
+            error_msg = f"处理枚举类型 {enum_code} 失败: {e}"
+            logger.error(error_msg)
+            stats["errors"].append(error_msg)
+        await db.commit()
+        logger.info(f"枚举数据初始化完成: {stats}")
+        return stats
+
+    existing_types_by_code = {
+        str(enum_type.code): enum_type
+        for enum_type in existing_types
+        if getattr(enum_type, "code", None) is not None
+    }
+    existing_values_by_type_and_value: dict[tuple[str, str], EnumFieldValue] = {}
+
+    existing_type_ids = [
+        str(enum_type.id)
+        for enum_type in existing_types
+        if getattr(enum_type, "id", None) is not None
+    ]
+    if existing_type_ids:
         try:
-            # 查找或创建枚举类型
-            enum_type = (
+            existing_values = list(
                 (
                     await db.execute(
-                        select(EnumFieldType).where(EnumFieldType.code == enum_code)
+                        select(EnumFieldValue).where(
+                            EnumFieldValue.enum_type_id.in_(existing_type_ids)
+                        )
                     )
                 )
                 .scalars()
-                .first()
+                .all()
             )
+            existing_values_by_type_and_value = {
+                (str(value.enum_type_id), str(value.value)): value
+                for value in existing_values
+                if value.enum_type_id is not None and value.value is not None
+            }
+        except Exception as e:
+            for enum_code in STANDARD_ENUMS:
+                error_msg = f"处理枚举类型 {enum_code} 失败: {e}"
+                logger.error(error_msg)
+                stats["errors"].append(error_msg)
+            await db.commit()
+            logger.info(f"枚举数据初始化完成: {stats}")
+            return stats
+
+    for enum_code, enum_config in STANDARD_ENUMS.items():
+        try:
+            enum_type = existing_types_by_code.get(enum_code)
 
             if not enum_type:
                 # 创建新枚举类型
@@ -166,6 +214,7 @@ async def init_enum_data(
                 _set_attr(enum_type, "created_by", created_by)
                 db.add(enum_type)
                 await db.flush()  # 获取ID
+                existing_types_by_code[enum_code] = enum_type
                 stats["types_created"] += 1
                 logger.info(f"创建枚举类型: {enum_code}")
             else:
@@ -189,24 +238,20 @@ async def init_enum_data(
                 logger.info(f"更新枚举类型: {enum_code}")
 
             # 处理枚举值
+            enum_type_id = getattr(enum_type, "id", None)
+            if enum_type_id is None:
+                raise ValueError(f"枚举类型 {enum_code} 缺少 id")
+            enum_type_id_str = str(enum_type_id)
+
             for value_config in enum_config["values"]:
                 value_dict: EnumValueConfig = value_config
-                existing_value = (
-                    (
-                        await db.execute(
-                            select(EnumFieldValue).where(
-                                EnumFieldValue.enum_type_id == enum_type.id,
-                                EnumFieldValue.value == value_dict["value"],
-                            )
-                        )
-                    )
-                    .scalars()
-                    .first()
+                existing_value = existing_values_by_type_and_value.get(
+                    (enum_type_id_str, value_dict["value"])
                 )
 
                 if not existing_value:
                     new_value = EnumFieldValue()
-                    _set_attr(new_value, "enum_type_id", enum_type.id)
+                    _set_attr(new_value, "enum_type_id", enum_type_id_str)
                     _set_attr(new_value, "value", value_dict["value"])
                     _set_attr(new_value, "label", value_dict["label"])
                     _set_attr(new_value, "sort_order", value_dict.get("sort_order", 0))
@@ -214,6 +259,9 @@ async def init_enum_data(
                     _set_attr(new_value, "is_deleted", False)
                     _set_attr(new_value, "created_by", created_by)
                     db.add(new_value)
+                    existing_values_by_type_and_value[
+                        (enum_type_id_str, value_dict["value"])
+                    ] = new_value
                     stats["values_created"] += 1
                 else:
                     # 更新现有枚举值
@@ -235,82 +283,4 @@ async def init_enum_data(
 
     await db.commit()
     logger.info(f"枚举数据初始化完成: {stats}")
-    return stats
-
-
-async def add_legacy_enum_values(
-    db: AsyncSession, created_by: str = "system"
-) -> dict[str, Any]:
-    """
-    添加遗留数据中存在但标准定义中没有的枚举值
-
-    这些值可能来自旧系统导入的数据，需要添加到枚举管理中以避免验证错误
-    """
-    # 遗留值映射：旧值 -> 添加到哪个枚举类型
-    legacy_values: dict[str, list[EnumValueConfig]] = {
-        "ownership_status": [
-            {"value": "正常", "label": "正常 (遗留)", "sort_order": 99},
-        ],
-        "usage_status": [
-            {"value": "已出租", "label": "已出租 (遗留)", "sort_order": 99},
-        ],
-        "business_model": [
-            {"value": "整体出租", "label": "整体出租 (遗留)", "sort_order": 99},
-        ],
-        "operation_status": [
-            {"value": "正常", "label": "正常 (遗留)", "sort_order": 99},
-        ],
-    }
-
-    stats: dict[str, Any] = {"values_added": 0, "errors": []}
-
-    for enum_code, values in legacy_values.items():
-        try:
-            enum_type = (
-                (
-                    await db.execute(
-                        select(EnumFieldType).where(EnumFieldType.code == enum_code)
-                    )
-                )
-                .scalars()
-                .first()
-            )
-
-            if not enum_type:
-                stats["errors"].append(f"枚举类型 {enum_code} 不存在")
-                continue
-
-            for value_config in values:
-                value_dict: EnumValueConfig = value_config
-                existing = (
-                    (
-                        await db.execute(
-                            select(EnumFieldValue).where(
-                                EnumFieldValue.enum_type_id == enum_type.id,
-                                EnumFieldValue.value == value_dict["value"],
-                            )
-                        )
-                    )
-                    .scalars()
-                    .first()
-                )
-
-                if not existing:
-                    new_value = EnumFieldValue()
-                    _set_attr(new_value, "enum_type_id", enum_type.id)
-                    _set_attr(new_value, "value", value_dict["value"])
-                    _set_attr(new_value, "label", value_dict["label"])
-                    _set_attr(new_value, "sort_order", value_dict.get("sort_order", 99))
-                    _set_attr(new_value, "is_active", True)
-                    _set_attr(new_value, "is_deleted", False)
-                    _set_attr(new_value, "created_by", created_by)
-                    db.add(new_value)
-                    stats["values_added"] += 1
-                    logger.info(f"添加遗留枚举值: {enum_code}.{value_dict['value']}")
-
-        except Exception as e:
-            stats["errors"].append(f"处理遗留值 {enum_code} 失败: {e}")
-
-    await db.commit()
-    logger.info(f"遗留枚举值添加完成: {stats}")
     return stats

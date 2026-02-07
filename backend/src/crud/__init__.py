@@ -2,24 +2,25 @@
 CRUD操作模块
 """
 
-from ..models.asset import Asset, AssetCustomField, Project, SystemDictionary
-from ..models.ownership import Ownership
+from ..models.asset import Asset
 from ..models.collection import CollectionRecord
-from ..models.dynamic_permission import DynamicPermission
 from ..models.llm_prompt import PromptTemplate
 from ..models.organization import Organization
+from ..models.ownership import Ownership
+from ..models.project import Project
 from ..models.property_certificate import PropertyCertificate, PropertyOwner
 from ..models.rbac import (
     Permission,
     PermissionAuditLog,
+    PermissionGrant,
     ResourcePermission,
     UserRoleAssignment,
 )
 from ..models.rent_contract import RentContract, RentLedger, RentTerm
+from ..models.system_dictionary import AssetCustomField, SystemDictionary
 from ..models.task import AsyncTask, ExcelTaskConfig
 from .asset import asset_crud
 from .collection import collection_crud
-from .dynamic_permission import dynamic_permission_crud
 
 # Security: Register field whitelists for models
 from .field_whitelist import (
@@ -27,11 +28,11 @@ from .field_whitelist import (
     AssetWhitelist,
     AsyncTaskWhitelist,
     CollectionRecordWhitelist,
-    DynamicPermissionWhitelist,
     ExcelTaskConfigWhitelist,
     OrganizationWhitelist,
     OwnershipWhitelist,
     PermissionAuditLogWhitelist,
+    PermissionGrantWhitelist,
     PermissionWhitelist,
     ProjectWhitelist,
     PromptTemplateWhitelist,
@@ -47,6 +48,7 @@ from .field_whitelist import (
 )
 from .llm_prompt import prompt_template_crud
 from .project import project_crud
+from .rbac import permission_grant_crud
 from .rent_contract import rent_contract, rent_ledger, rent_term
 
 # Register whitelists for each model to prevent unauthorized field access
@@ -57,7 +59,6 @@ register_whitelist(SystemDictionary, SystemDictionaryWhitelist())
 register_whitelist(AssetCustomField, AssetCustomFieldWhitelist())
 register_whitelist(Permission, PermissionWhitelist())
 register_whitelist(CollectionRecord, CollectionRecordWhitelist())
-register_whitelist(DynamicPermission, DynamicPermissionWhitelist())
 register_whitelist(PromptTemplate, PromptTemplateWhitelist())
 register_whitelist(Project, ProjectWhitelist())
 register_whitelist(Organization, OrganizationWhitelist())
@@ -67,6 +68,7 @@ register_whitelist(RentTerm, RentTermWhitelist())
 register_whitelist(RentLedger, RentLedgerWhitelist())
 register_whitelist(UserRoleAssignment, UserRoleAssignmentWhitelist())
 register_whitelist(ResourcePermission, ResourcePermissionWhitelist())
+register_whitelist(PermissionGrant, PermissionGrantWhitelist())
 register_whitelist(PermissionAuditLog, PermissionAuditLogWhitelist())
 register_whitelist(AsyncTask, AsyncTaskWhitelist())
 register_whitelist(ExcelTaskConfig, ExcelTaskConfigWhitelist())
@@ -81,8 +83,8 @@ register_whitelist(ExcelTaskConfig, ExcelTaskConfigWhitelist())
 __all__ = [
     "asset_crud",
     "collection_crud",
-    "dynamic_permission_crud",
     "project_crud",
+    "permission_grant_crud",
     "prompt_template_crud",
     "rent_contract",
     "rent_ledger",

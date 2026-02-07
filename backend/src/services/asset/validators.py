@@ -33,16 +33,11 @@ class AssetBatchValidator:
         "actual_property_area",
         "rentable_area",
         "rented_area",
-        "annual_income",
-        "annual_expense",
-        "monthly_rent",
-        "deposit",
+        "non_commercial_area",
     ]
 
     # 日期字段定义
     DATE_FIELDS = [
-        "contract_start_date",
-        "contract_end_date",
         "operation_agreement_start_date",
         "operation_agreement_end_date",
     ]
@@ -50,9 +45,8 @@ class AssetBatchValidator:
     # 建议字段定义
     SUGGESTION_FIELDS = [
         ("land_area", "建议填写土地面积"),
-        ("annual_income", "建议填写年收入"),
-        ("annual_expense", "建议填写年支出"),
-        ("tenant_name", "建议填写租户信息（如果是已出租资产）"),
+        ("rentable_area", "建议填写可出租面积"),
+        ("rented_area", "建议填写已出租面积"),
     ]
 
     @staticmethod
@@ -141,7 +135,7 @@ class AssetBatchValidator:
         rentable_area = data.get("rentable_area")
         rented_area = data.get("rented_area")
 
-        if rentable_area and rented_area:
+        if rentable_area is not None and rented_area is not None:
             try:
                 if float(rented_area) > float(rentable_area):
                     errors.append(

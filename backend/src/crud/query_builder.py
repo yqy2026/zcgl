@@ -42,13 +42,15 @@ class QueryBuilder[ModelType]:
         search_query: str | None = None,
         search_fields: list[str] | None = None,
         search_conditions: list[Any] | None = None,
+        base_query: Select[Any] | None = None,
+        distinct_column: Any | None = None,
     ) -> Select[Any]:
         """
         Builds a query to count records matching criteria.
         """
         from sqlalchemy import func
 
-        query = select(func.count()).select_from(self.model)
+        query = base_query if base_query is not None else select(self.model)
 
         if self._should_apply_soft_delete_filter(filters):
             query = self._apply_soft_delete_filter(query)
@@ -61,7 +63,15 @@ class QueryBuilder[ModelType]:
         elif search_query and search_fields:
             query = self._apply_search(query, search_query, search_fields)
 
-        return query
+        query = query.order_by(None)
+
+        if distinct_column is not None:
+            distinct_subquery = (
+                query.with_only_columns(distinct_column).distinct().subquery()
+            )
+            return select(func.count()).select_from(distinct_subquery)
+
+        return select(func.count()).select_from(query.subquery())
 
     def build_query(
         self,
@@ -183,9 +193,7 @@ class QueryBuilder[ModelType]:
                 return True
         return False
 
-    def _should_apply_soft_delete_filter(
-        self, filters: dict[str, Any] | None
-    ) -> bool:
+    def _should_apply_soft_delete_filter(self, filters: dict[str, Any] | None) -> bool:
         """
         Apply soft delete filter unless caller explicitly filters by data_status.
         """

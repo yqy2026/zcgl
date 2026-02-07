@@ -2,7 +2,7 @@
 Focused async unit tests for CustomFieldService.
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -11,7 +11,7 @@ from src.core.exception_handler import (
     DuplicateResourceError,
     ResourceNotFoundError,
 )
-from src.models.asset import AssetCustomField
+from src.models.system_dictionary import AssetCustomField
 from src.schemas.asset import (
     AssetCustomFieldCreate,
     AssetCustomFieldUpdate,
@@ -162,27 +162,54 @@ class TestAssetFieldValues:
         values = [CustomFieldValueItem(field_name="test_field", value="foo")]
 
         with patch(
-            "src.services.custom_field.service.custom_field_crud.get_by_field_name_async",
-            new=AsyncMock(return_value=sample_field),
-        ):
-            result = await service.update_asset_field_values_async(
-                mock_db, asset_id=TEST_ASSET_ID, values=values
-            )
+            "src.services.custom_field.service.custom_field_crud.get_multi_by_field_names_async",
+            new=AsyncMock(return_value=[sample_field]),
+        ) as mock_get_by_names:
+            with patch(
+                "src.services.custom_field.service.custom_field_crud.get_multi_by_ids_async",
+                new=AsyncMock(return_value=[]),
+            ):
+                result = await service.update_asset_field_values_async(
+                    mock_db, asset_id=TEST_ASSET_ID, values=values
+                )
 
-            assert result[0]["field_name"] == "test_field"
+                assert result[0]["field_name"] == "test_field"
+                mock_get_by_names.assert_awaited_once()
+
+    async def test_update_asset_field_values_by_id_success(
+        self, service, mock_db, sample_field
+    ):
+        values = [{"field_id": TEST_FIELD_ID, "value": "foo"}]
+        with patch(
+            "src.services.custom_field.service.custom_field_crud.get_multi_by_ids_async",
+            new=AsyncMock(return_value=[sample_field]),
+        ):
+            with patch(
+                "src.services.custom_field.service.custom_field_crud.get_multi_by_field_names_async",
+                new=AsyncMock(return_value=[]),
+            ):
+                result = await service.update_asset_field_values_async(
+                    mock_db, asset_id=TEST_ASSET_ID, values=values
+                )
+
+                assert result[0]["field_id"] == TEST_FIELD_ID
 
     async def test_update_asset_field_values_validation_error(self, service, mock_db, sample_field):
         sample_field.field_type = "number"
         values = [CustomFieldValueItem(field_name="test_field", value="bad")]
 
         with patch(
-            "src.services.custom_field.service.custom_field_crud.get_by_field_name_async",
-            new=AsyncMock(return_value=sample_field),
+            "src.services.custom_field.service.custom_field_crud.get_multi_by_field_names_async",
+            new=AsyncMock(return_value=[sample_field]),
         ):
-            with pytest.raises(BusinessValidationError):
-                await service.update_asset_field_values_async(
-                    mock_db, asset_id=TEST_ASSET_ID, values=values
-                )
+            with patch(
+                "src.services.custom_field.service.custom_field_crud.get_multi_by_ids_async",
+                new=AsyncMock(return_value=[]),
+            ):
+                with pytest.raises(BusinessValidationError):
+                    await service.update_asset_field_values_async(
+                        mock_db, asset_id=TEST_ASSET_ID, values=values
+                    )
 
     async def test_get_asset_field_values_async(self, service, mock_db):
         expected = [{"field_id": TEST_FIELD_ID, "value": "foo"}]
@@ -214,12 +241,11 @@ class TestToggleAndSort:
 
     async def test_update_sort_orders_async(self, service, mock_db, sample_field):
         mock_db.commit = AsyncMock()
-        mock_db.refresh = AsyncMock()
 
         sort_data = [{"id": TEST_FIELD_ID, "sort_order": 5}]
         with patch(
-            "src.services.custom_field.service.custom_field_crud.get",
-            new=AsyncMock(return_value=sample_field),
+            "src.services.custom_field.service.custom_field_crud.get_multi_by_ids_async",
+            new=AsyncMock(return_value=[sample_field]),
         ):
             result = await service.update_sort_orders_async(
                 mock_db, sort_data=sort_data

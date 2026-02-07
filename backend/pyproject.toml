@@ -152,7 +152,6 @@ check_untyped_defs = true
 [[tool.mypy.overrides]]
 module = [
     "src.models.auth",
-    "src.models.dynamic_permission",
     "src.core.security_event_logger",
 ]
 

@@ -2,6 +2,7 @@
 API路由模块
 """
 
+import importlib
 from typing import Any
 
 # Lazy import to avoid circular dependencies
@@ -16,4 +17,6 @@ def __getattr__(name: str) -> Any:
         from .v1 import api_router
 
         return api_router
+    if name == "v1":
+        return importlib.import_module(".v1", __name__)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

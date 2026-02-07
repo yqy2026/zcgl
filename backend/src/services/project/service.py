@@ -189,7 +189,7 @@ class ProjectService:
         self, db: AsyncSession, is_active: bool | None = True
     ) -> list[dict[str, Any]]:
         """获取项目下拉选项列表"""
-        from ...models.asset import Project as AssetProject
+        from ...models.project import Project as AssetProject
 
         stmt = select(AssetProject)
         if is_active is not None:

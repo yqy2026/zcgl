@@ -39,13 +39,9 @@ const AssetDetailedSection: React.FC = () => {
     setShowAdvanced,
     terminalContractFileList,
     setTerminalContractFileList,
-    rentContracts,
-    loadingContracts,
-    handleContractChange,
   } = useAssetFormContext();
 
   // 为字段生成可访问性 ID
-  const selectedContractIds = generateFormFieldIds('selected-contract');
   const tenantNameIds = generateFormFieldIds('tenant-name');
   const tenantContactIds = generateFormFieldIds('tenant-contact');
   const tenantTypeIds = generateFormFieldIds('tenant-type');
@@ -104,37 +100,6 @@ const AssetDetailedSection: React.FC = () => {
               <InfoCircleOutlined style={{ marginLeft: 8, color: COLORS.textSecondary }} />
             </Tooltip>
           </Title>
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item
-                label="选择租赁合同"
-                name="selected_contract_id"
-                htmlFor={selectedContractIds.inputId}
-              >
-                <Select
-                  id={selectedContractIds.inputId}
-                  placeholder="请选择租赁合同"
-                  allowClear
-                  loading={loadingContracts}
-                  onChange={handleContractChange}
-                  optionFilterProp="children"
-                  showSearch
-                  aria-label={selectedContractIds.labelId}
-                  filterOption={(input, option) =>
-                    String(option?.children ?? '')
-                      .toLowerCase()
-                      .includes(input.toLowerCase())
-                  }
-                >
-                  {rentContracts.map(contract => (
-                    <Option key={contract.id} value={contract.id}>
-                      {contract.contract_number} - {contract.tenant_name}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
 
           <Row gutter={16}>
             <Col span={8}>

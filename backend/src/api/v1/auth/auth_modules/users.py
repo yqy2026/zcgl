@@ -142,7 +142,9 @@ async def get_user(
     user_crud = UserCRUD()
 
     rbac_service = RBACService(db)
-    if not await rbac_service.is_admin(current_user.id) and (
+    if not await rbac_service.check_user_permission(
+        current_user.id, "system", "admin"
+    ) and (
         current_user.id != user_id
     ):
         raise forbidden("无权访问该用户信息")
@@ -172,7 +174,9 @@ async def update_user(
     user_crud = UserCRUD()
 
     rbac_service = RBACService(db)
-    if not await rbac_service.is_admin(current_user.id) and (
+    if not await rbac_service.check_user_permission(
+        current_user.id, "system", "admin"
+    ) and (
         current_user.id != user_id
     ):
         raise forbidden("无权修改该用户信息")
@@ -211,7 +215,9 @@ async def change_password(
     user_crud = UserCRUD()
 
     rbac_service = RBACService(db)
-    if not await rbac_service.is_admin(current_user.id) and (
+    if not await rbac_service.check_user_permission(
+        current_user.id, "system", "admin"
+    ) and (
         current_user.id != user_id
     ):
         raise forbidden("无权修改该用户密码")

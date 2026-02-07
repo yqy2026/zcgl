@@ -3,7 +3,7 @@ from typing import Any
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..models.asset import SystemDictionary
+from ..models.system_dictionary import SystemDictionary
 from ..schemas.asset import SystemDictionaryCreate, SystemDictionaryUpdate
 from .base import CRUDBase
 
@@ -73,6 +73,16 @@ class CRUDSystemDictionary(
             sort_desc=False,
         )
         return list((await db.execute(query)).scalars().all())
+
+    async def get_multi_by_ids_and_type_async(
+        self, db: AsyncSession, *, ids: list[str], dict_type: str
+    ) -> list[SystemDictionary]:
+        if not ids:
+            return []
+        stmt = select(SystemDictionary).where(
+            and_(SystemDictionary.id.in_(ids), SystemDictionary.dict_type == dict_type)
+        )
+        return list((await db.execute(stmt)).scalars().all())
 
     async def get_types_async(self, db: AsyncSession) -> list[str]:
         try:

@@ -20,6 +20,7 @@ from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..database import Base
+from .associations import property_cert_assets
 
 if TYPE_CHECKING:
     from .asset import Asset
@@ -42,23 +43,6 @@ property_certificate_owners = Table(
     ),
     comment="产权证权利人关联表",
 )
-
-# Certificate ↔ Assets association table
-property_cert_assets = Table(
-    "property_cert_assets",
-    Base.metadata,
-    Column(
-        "certificate_id",
-        String,
-        ForeignKey("property_certificates.id"),
-        primary_key=True,
-    ),
-    Column("asset_id", String, ForeignKey("assets.id"), primary_key=True),
-    Column("link_type", String(50), comment="关联类型（primary/secondary/partial）"),
-    Column("notes", String(500), comment="关联备注"),
-    comment="产权证资产关联表",
-)
-
 
 class CertificateType(str, Enum):
     """产权证类型"""
@@ -213,6 +197,6 @@ class PropertyCertificate(Base):
     )
     assets: Mapped[list["Asset"]] = relationship(
         "Asset",
-        secondary="property_cert_assets",
+        secondary=property_cert_assets,
         back_populates="certificates",
     )

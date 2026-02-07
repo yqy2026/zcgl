@@ -8,12 +8,15 @@ from ..crud.base import CRUDBase
 from ..models.rbac import (
     Permission,
     PermissionAuditLog,
+    PermissionGrant,
     ResourcePermission,
     Role,
     UserRoleAssignment,
 )
 from ..schemas.rbac import (
     PermissionCreate,
+    PermissionGrantCreate,
+    PermissionGrantUpdate,
     PermissionUpdate,
     ResourcePermissionCreate,
     ResourcePermissionUpdate,
@@ -244,8 +247,15 @@ class CRUDPermissionAuditLog(
     pass
 
 
+class CRUDPermissionGrant(
+    CRUDBase[PermissionGrant, PermissionGrantCreate, PermissionGrantUpdate]
+):
+    """统一权限授权CRUD"""
+
+
 role_crud = CRUDRole(Role)
 permission_crud = CRUDPermission(Permission)
 user_role_assignment_crud = CRUDUserRoleAssignment(UserRoleAssignment)
 resource_permission_crud = CRUDResourcePermission(ResourcePermission)
 permission_audit_log_crud = CRUDPermissionAuditLog(PermissionAuditLog)
+permission_grant_crud = CRUDPermissionGrant(PermissionGrant)

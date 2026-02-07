@@ -1,8 +1,146 @@
 # 变更日志 (Changelog)
 
-## [Unreleased] - 2026-02-06
+## [Unreleased] - 2026-02-07
 
 ### 🛠️ 本次修复 (Current Fixes)
+
+- 资产批量更新去循环查库：`backend/src/services/asset/batch_service.py` 将 `batch_update` 中按资产逐条校验 `ownership_id` 与逐条 `get_by_name_async` 查重改为批次前置查询（权属一次校验 + 物业名一次查重 + 内存占位冲突判断），消除批量更新路径 N+1 往返
+- Excel 导入结果提取兼容性修复：`backend/src/services/excel/excel_import_service.py` 新增 `_scalars_all`，统一兼容真实 `AsyncSession` 与测试 `AsyncMock` 的 `scalars().all()` 调用链，修复预加载优化后的异步测试回归
+- 联系人批量创建事务批处理：`backend/src/crud/contact.py` 新增 `create_many_async`（批量加密 + 单事务提交 + primary 联系人一致性处理），`backend/src/api/v1/system/contact.py` 的批量接口改为一次调用批创建
+- 产权证导入 owner 批量化：`backend/src/crud/property_certificate.py` 新增 `PropertyOwner` 的 `create_multi_async`，`backend/src/services/property_certificate/service.py` 的 `confirm_import` 改为批量创建 owner 后统一提交
+- 新增/修复回归测试：新增 `backend/tests/unit/api/v1/test_contact_batch_api_async.py` 覆盖联系人批量接口批处理路径；更新 `backend/tests/unit/services/property_certificate/test_service.py` 对齐 `create_multi_async`；`backend/tests/unit/services/excel/test_excel_import_service.py` 与 `backend/tests/unit/services/asset/test_batch_service.py` 回归通过
+
+- API 分层收口（最佳实践）：`backend/src/api/v1/system/tasks.py`、`backend/src/api/v1/auth/organization.py`、`backend/src/api/v1/auth/roles.py`、`backend/src/api/v1/assets/ownership.py` 去除对真实 CRUD 的直接依赖，统一改为经由 Service 层
+- Task 服务能力补齐：`backend/src/services/task/service.py` 新增任务列表/详情/历史/运行中/最近任务与 Excel 配置查询/更新/删除服务方法，供 API 统一复用
+- 任务访问控制优化：`backend/src/services/task/access.py` 增加“任务归属快速判定”短路，仅在跨用户访问时触发 RBAC 检查，减少不必要数据库访问
+- 组织/权属/RBAC 服务补齐：`backend/src/services/organization/service.py`、`backend/src/services/ownership/service.py`、`backend/src/services/permission/rbac_service.py` 新增路由所需读取/统计能力，强化 Service 作为业务入口
+- 回归测试同步：`backend/tests/unit/api/v1/test_tasks.py` 对齐删除 Excel 配置的正确语义（不存在返回 404）并补齐异步 mock 断言
+- Ownership 单测异步化修复：`backend/tests/unit/services/ownership/test_ownership_service_impl.py` 全量从旧同步 `db.query` 断言迁移到 async/await + `AsyncMock`，对齐当前 `OwnershipService` 的 `db.execute` 与 CRUD 异步接口
+- Ownership API 单测修复：`backend/tests/unit/api/v1/test_ownership_api.py` 移除失效的直连 CRUD patch，统一改为打桩 `ownership_service` 异步方法并显式 `await` 路由函数，修复 `coroutine was never awaited`/类型断言失败
+
+- 自定义字段排序批量更新去 N+1：`backend/src/services/custom_field/service.py` 将 `update_sort_orders_async` 从循环内逐条 `custom_field_crud.get` 改为单次 `id IN (...)` 批量查询 + 内存映射更新，提交后移除逐条 `refresh`
+- 自定义字段值校验链路查询收敛：`backend/src/services/custom_field/service.py` 将 `update_asset_field_values_async` 从逐值 `get/get_by_field_name` 改为按 `field_id/field_name` 双批量预取后内存匹配，避免批量字段更新时线性数据库往返
+- 自定义字段 CRUD 批量能力补齐：`backend/src/crud/custom_field.py` 新增 `get_multi_by_ids_async` 与 `get_multi_by_field_names_async`，为服务层批处理提供单次取数入口
+- 枚举值批量创建根因修复：`backend/src/crud/enum_field.py` 将 `batch_create_async` 从“循环调用 `create_async`（每条 commit）”重构为“父级一次预取 + 单事务批量创建 + 批量历史写入”
+- 字典快速创建批量化：`backend/src/services/common_dictionary_service.py` 的 `quick_create_enum_dictionary_async` 改为调用 `enum_value_crud.batch_create_async`，移除逐选项 `create_async` 往返
+- API 同类问题修复：`backend/src/api/v1/assets/asset_batch.py` 的 `/batch-custom-fields` 资产存在性校验改为一次批量查询；`backend/src/api/v1/rent_contract/contracts.py` 的创建合同资产校验改为一次 `get_multi_by_ids_async` 批量校验
+- 单测回归补齐：更新 `backend/tests/unit/services/custom_field/test_custom_field_service.py`、`backend/tests/unit/services/test_common_dictionary_service.py`、`backend/tests/unit/crud/test_enum_field.py`、`backend/tests/unit/api/v1/test_rent_contract_api.py` 对齐批量路径并新增事务级断言
+
+- 资产批量服务去兼容回退：`backend/src/services/asset/batch_service.py` 删除 `_load_assets_map` 的逐条 `asset_crud.get_async` fallback 与 mock 特判逻辑，统一走单次 `SELECT ... WHERE id IN (...)` 预取路径
+- 批量删除链路一致化：`batch_service.py` 的关联检查保持纯批量查询结果处理，不再依赖测试环境对象类型分支；同时删除 `to_dict` 的“向后兼容”语义描述
+- 资产时间戳弃用告警修复：`backend/src/models/asset.py`、`backend/src/services/asset/asset_service.py`、`backend/src/services/asset/batch_service.py` 新增 `_utcnow_naive()`，替换关键写路径中的 `datetime.utcnow()`，避免 Python 3.12 弃用警告
+- 批量服务测试重构：`backend/tests/unit/services/asset/test_batch_service.py` 全量改为 mock `db.execute -> _FakeResult(...)` 驱动，验证“批量预取 + 批量关联检查”最终实现，不再依赖旧的逐条 `get_async` 兼容行为
+- 回归验证补齐：针对资产链路执行了模型/CRUD/Service/API 与 project/system_dictionary 相关 unit+integration 目标测试（未跑全量），确认重构后核心路径通过
+
+- 资产批量服务测试根因修复：`backend/tests/unit/services/asset/test_batch_service.py` 统一将 `history_crud.create_async` 与 `enum_validation_service.validate_value` 改为 `AsyncMock`，消除对异步接口的同步 mock 导致的 `object _SafeMagicMock can't be used in 'await' expression`
+- 资产批量校验测试对齐：`test_batch_service.py` 日期字段断言由已删除的 `contract_start_date` 更新为当前模型字段 `operation_agreement_start_date`
+- 权属财务统计测试异步化：`backend/tests/unit/services/asset/test_ownership_financial_service.py` 从旧 `db.query().scalar()` 测试桩改为 `AsyncSession.execute().scalar()` 路径，并对 `get_financial_summary` 全量使用 `await`
+- 资产删除集成测试前置修复：`backend/tests/integration/services/asset/test_asset_service.py` 在 `TestAssetDeletion` 中补齐默认权属方初始化，修复创建资产时 `ownership_id` 外键校验失败
+- 资产测试收集冲突根因修复：新增 `backend/tests/__init__.py`、`backend/tests/unit/**/__init__.py` 与 `backend/tests/integration/services/**/__init__.py`，解决 unit/integration 同名 `test_asset_service.py` 同批执行时的 `import file mismatch`
+- 项目集成测试异步化修复：`backend/tests/integration/services/project/test_project_service.py` 全量改为 `AsyncSession + await` 调用 `ProjectService`/`project_crud`，移除对异步服务的同步调用假设
+- 项目测试夹具根因修复：`backend/tests/integration/services/project/conftest.py` 从同步 `Session` 切换为异步 `AsyncSession` 事务夹具，彻底消除 `ChunkedIteratorResult can't be used in 'await' expression` 失败
+- 资产按ID批量查询解密修复：`backend/src/crud/asset.py` 的 `get_multi_by_ids_async` 改为先取列表后逐条调用 `_decrypt_asset_object`，修复 `/assets/by-ids` 场景可能返回密文字段的问题
+- 资产更新 Schema 字段回补：`backend/src/schemas/asset.py` 在 `AssetUpdate` 补回 `management_entity`，避免更新接口无法修改经营管理单位的回归
+- 批量校验边界修复：`backend/src/services/asset/validators.py` 将面积一致性判断从 truthy 判定改为显式 `is not None`，修复 `rentable_area=0` 时未正确拦截 `rented_area>0` 的漏洞
+- 新增回归测试：`backend/tests/unit/crud/test_asset.py` 增加 `get_multi_by_ids_async` 解密断言；`backend/tests/unit/services/asset/test_validators.py` 增加零值面积边界用例；`backend/tests/unit/schemas/test_asset_schema_attachments.py` 增加 `AssetUpdate.management_entity` 字段覆盖
+- 资产关系懒加载稳定性修复：`backend/src/models/asset.py` 的 `ownership_entity` 改为通过 `inspect(...).attrs.ownership.loaded_value` 判定，避免未预加载关系时触发隐式懒加载导致 `MissingGreenlet`
+- 资产列表查询预加载补齐：`backend/src/crud/asset.py` 在 `get_multi_with_search_async` 与 `get_multi_by_ids_async` 的 `include_relations=False` 路径补充 `joinedload(Asset.ownership)`，确保轻量列表序列化时 `ownership_entity` 可稳定输出
+- 新增集成回归：`backend/tests/integration/services/asset/test_asset_service.py` 增加 `test_get_assets_without_relations_serializes_ownership_entity`，覆盖“非关联查询 + 序列化 ownership_entity”场景
+
+- 资产搜索索引刷新性能根因修复：`backend/src/crud/asset.py` 将逐字段循环 `DELETE/INSERT` 重构为集合化批量刷新（一次 `DELETE ... field_name IN (...)` + 一次批量 `INSERT`），消除字段数增长导致的线性数据库往返放大
+- 新增回归单测：`backend/tests/unit/crud/test_asset.py` 增加 `_refresh_search_index_entries` 批量删插、无索引字段跳过、空索引结果仅删除三类断言，防止回退到逐字段 DML
+- 权属方下拉统计性能修复：`backend/src/services/ownership/service.py` 将 `get_ownership_dropdown_options` 的逐权属方计数查询（`2N+1`）重构为两条聚合查询（资产/项目各一次 `GROUP BY`），避免列表规模增长时数据库往返线性放大
+- 新增回归单测：`backend/tests/unit/services/ownership/test_ownership_dropdown_options.py` 覆盖批量计数映射与空列表提前返回，确保不回退为逐条计数查询
+- 组织统计查询性能修复：`backend/src/services/organization/service.py` 将层级统计从“先查层级再按层级逐条 count”重构为单次 `GROUP BY level` 聚合，消除层级数增长时的额外往返
+- 任务统计查询性能修复：`backend/src/crud/task.py` 将按 `TaskStatus/TaskType` 逐项计数改为两条聚合查询（`GROUP BY status`、`GROUP BY task_type`），避免枚举扩展导致统计查询线性增长
+- 单测同步更新：`backend/tests/unit/services/organization/test_organization_service_impl.py` 与 `backend/tests/unit/crud/test_task.py` 调整为聚合查询结果断言，覆盖新统计路径
+- 枚举初始化查询性能修复：`backend/src/services/enum_data_init.py` 将“按枚举类型/枚举值逐条查询存在性”改为“预取类型 + 预取值后内存匹配”，显著减少初始化阶段数据库往返
+- 枚举初始化单测更新：`backend/tests/unit/services/test_enum_data_init.py` 同步对齐批量预取路径，并补强 `flush` 回填 `id` 的测试桩行为
+- 通知调度判重查询性能修复：`backend/src/services/notification/scheduler.py` 将 `check_contract_expiry/check_payment_overdue/check_payment_due_soon` 中循环内的“活跃用户查询 + 单条判重查询”改为“单次活跃用户查询 + 批量判重后内存去重”，显著降低用户数与合同/台账数增长时的数据库往返
+- 通知服务批量判重能力新增：`backend/src/services/notification/notification_service.py` 新增 `find_existing_notification_pairs_async`，一次查询返回 `(recipient_id, related_entity_id)` 集合，供调度任务复用
+- 合同月台账生成 N+1 修复：`backend/src/services/rent_contract/ledger_service.py` 将按月份逐条 `get_by_contract_and_month_async` 查重改为一次批量查询已存在月份并在内存过滤；同时移除逐条 `refresh`，避免提交后额外 N 次查询
+- 租金台账 CRUD 批量查询补充：`backend/src/crud/rent_contract.py` 新增 `get_existing_year_months_async`，用于按合同 + 月份集合批量取重
+- 新增/更新回归单测：`backend/tests/unit/services/notification/test_scheduler.py` 对齐批量判重接口；新增 `backend/tests/unit/services/rent_contract/test_ledger_service.py` 覆盖“批量月份查重生效、逐月查重不再调用、无逐条 refresh”场景
+- 资产导入权属校验查询优化：`backend/src/api/v1/assets/asset_import.py` 对导入批次中的 `ownership_id/ownership_entity` 先做批量预取，再按行复用映射判定；仅在映射缺失时回退单次查询并写回缓存，避免每行重复查权属方
+- Excel 资产导入查询优化：`backend/src/services/excel/excel_import_service.py` 新增批量预取权属映射（ID/名称）并复用到逐行导入流程；对映射缺口使用惰性回填缓存，降低大批量导入时的重复查询
+- 合同 Excel 导入查重优化：`backend/src/services/document/rent_contract_excel.py` 将“按行查询合同号是否存在”改为“导入前一次性批量查询 + 内存映射复用”，并在创建/更新后实时更新映射，避免循环内重复 `SELECT`
+- Excel 导入单测异步化与接口对齐：`backend/tests/unit/services/excel/test_excel_import_service.py` 批量替换为 `AsyncMock` 并对齐 `asset_crud.*_async`，补齐权属预取查询测试桩与字段映射数量断言（22），确保优化路径可回归
+- 系统字典排序批量更新去 N+1：`backend/src/services/system_dictionary/service.py` 将 `update_sort_orders_async` 从逐条 `system_dictionary_crud.get` 改为一次 `id IN (...) + dict_type` 批量查询并内存映射更新，提交后不再逐条 `refresh`
+- 系统字典 CRUD 批量查询能力新增：`backend/src/crud/system_dictionary.py` 新增 `get_multi_by_ids_and_type_async`，为批量排序等场景提供单次取数入口
+- 枚举类型列表值加载去 N+1：`backend/src/crud/enum_field.py` 为 `EnumFieldTypeCRUD.get_multi_async` 增加批量值加载路径（单次查询所有类型的枚举值），替代原“按类型逐条查值”
+- 枚举树构建查询收敛：`backend/src/crud/enum_field.py` 将 `EnumFieldValueCRUD.get_tree_async` 从递归按父节点多次查询改为“单次取全量 + 内存组树”，消除层级增长导致的查询放大
+- 资产批量操作查询收敛：`backend/src/services/asset/batch_service.py` 新增资产批量预取与关联批量检查（合同/产权证/台账），`batch_update`/`batch_delete` 不再按资产逐条 `get` 与逐条关联探测
+- 新增回归单测：`backend/tests/unit/crud/test_enum_field.py` 增加“批量加载枚举值仅两次查询”与“枚举树单次查询”断言；`backend/tests/unit/services/asset/test_batch_service.py` 增加“批量预取资产”与“批量关联检查”断言；系统字典服务测试改为对齐批量查询接口
+
+- 资产历史 CRUD 根因修复：`backend/src/crud/history.py` 移除同步兼容接口 `get/get_by_asset_id/get_multi/create/remove`，仅保留异步接口，统一历史访问路径
+- 资产历史字段收敛：删除 `operator_id -> operator` 兼容桥接，历史创建仅接受标准字段 `operator`
+- 历史单测异步化：`backend/tests/unit/crud/test_history.py` 全量改为 `get_async/get_by_asset_id_async/get_multi_with_count_async/create_async/remove_async/remove_by_asset_id_async`，并新增“拒绝 legacy operator_id”断言
+
+- 资产批量删除前后端契约修复：前端 `ASSET_API.BATCH_DELETE` 从错误的 `/assets/batch` 修正为 `/assets/batch-delete`
+- 资产批量删除请求体修复：`AssetCoreService.deleteAssets` 改为发送 `{ asset_ids }`，与后端 `POST /api/v1/assets/batch-delete` 入参一致
+- 资产 API 路径常量收敛：`backend/src/constants/api_paths.py` 移除过时 `AssetPaths.BATCH`，改为 `BATCH_UPDATE/BATCH_DELETE/BATCH_CUSTOM_FIELDS`
+- 前端单测对齐：`assetService.test.ts` 同步更新批量删除断言并补充 `invalidateCacheByPrefix` mock，覆盖正确端点与请求体
+- 资产自定义字段契约修复：`assetFieldService` 路径与载荷统一对齐后端真实接口（`/asset-custom-fields/assets/{asset_id}/values`、`/asset-custom-fields/assets/batch-values`、`/asset-custom-fields/validate`、`/asset-custom-fields/types/list`）
+- 新增前端单测：`frontend/src/services/__tests__/assetFieldService.test.ts` 覆盖自定义字段值查询/更新、批量设置、校验与字段类型选项映射
+- Project 服务测试根因修复：`backend/tests/unit/services/project/test_project_service_complete.py` 与 `backend/tests/unit/services/test_project.py` 全量改为 async/await 调用，去除对异步服务的同步调用假设
+- 自定义字段 API 测试根因修复：`backend/tests/unit/api/v1/test_custom_fields.py` 重写为异步路由测试，全面对齐 `*_async` CRUD/Service 方法与布尔筛选参数
+- 安全中间件导入链路复核：确认 `security_middleware` 使用 `src.core.ip_whitelist` 真实实现，`import src.api.v1` 恢复可用
+- 清理临时测试桩：移除 `test_custom_fields.py` 中对 `src.core.ip_whitelist` 的自动 monkeypatch，避免掩盖真实依赖问题
+
+- RBAC 最终态重构：`RBACService.check_permission` 统一为“静态角色权限 + 统一授权记录（PermissionGrant）”判定链路，并加入 `DENY > ALLOW` 决策规则
+- 新增统一授权模型：`backend/src/models/rbac.py` 添加 `PermissionGrant`，并同步补齐 schema、CRUD、白名单注册
+- 新增迁移：`backend/alembic/versions/20260207_unify_permission_grants.py` 创建 `permission_grants` 表，并回填 legacy `resource/dynamic/temporary/conditional/delegation` 授权数据
+- 权限检查入口收敛：业务代码移除直接 `rbac_service.is_admin(...)` 旁路，统一改为 `check_user_permission(user_id, "system", "admin")`
+- 管理员判定去角色名兜底：管理员仅由 `system:admin` 权限决定，移除 `admin/super_admin` 名称自动提权，不再保留旧别名判定入口
+- 初始化脚本对齐：`backend/scripts/setup/init_rbac_data.py` 改为生成 `PermissionGrant` 示例授权，不再写入旧动态/临时权限模型
+- 新增测试：`backend/tests/unit/services/permission/test_rbac_service_grants.py` 覆盖统一授权 allow/deny/scope+condition 场景，`test_rbac_service.py` 同步调整管理员策略断言
+- RBAC 管理接口补齐：`backend/src/api/v1/auth/roles.py` 新增统一权限检查、统一授权记录（`/permission-grants`）增删改查、用户角色分配与用户权限汇总端点
+- RBACService 管理能力补齐：新增统一授权记录查询/更新方法，并在创建/撤销授权时增加输入校验与权限审计日志
+- 新增路由测试：`backend/tests/unit/api/v1/test_roles_permission_grants.py` 覆盖统一授权 API 核心路径
+- RBAC 旧轨删除：移除 `models/crud/schemas` 中 `dynamic_permission*` 旧模型与导出，删除 `RBACService` 中兼容别名方法，仅保留统一授权主链路
+- 迁移加载对齐：`backend/alembic/env.py` 移除对已删除 `dynamic_permission` 模块的导入，修复测试/迁移初始化失败
+- 新增迁移：`backend/alembic/versions/20260207_drop_legacy_dynamic_permission_tables.py`，升级时删除 `dynamic/temporary/conditional/request/delegation/template/audit` 旧权限表
+- 非 RBAC 兼容层清理：移除 `main.py` 中 V1 兼容中间件导入与启动链路；`core/environment.py` 删除 `middleware.v1_compatibility` 可选依赖登记
+- PDF 路由统一收口：`api/v1/__init__.py` 删除旧路径 `/api/v1/documents/pdf-import/*`，仅保留 `/api/v1/pdf-import/*`
+- PDF V1 兼容端点删除：`pdf_upload.py` 删除 `POST /upload-and-extract` 与 `_validate_extracted_fields_v1`；`pdf_import.py` 删除可选 `pdf_v1_compatibility` 模块挂载
+- Schema/测试同步收敛：`schemas/pdf_import.py` 删除 V1 `ExtractionRequest/ExtractionResponse`；`test_pdf_upload.py` 删除 V1 相关测试并保留 `/upload` 主链路测试，`test_pdf_import_routes.py` 全部路径断言对齐新入口
+- 配置包去兼容化：`backend/src/config/__init__.py` 移除 `src.config -> src.core.config` 兼容 shim，仅保留配置子模块包说明
+- 权限模块尾巴清理：`security_middleware` 的白名单依赖统一改为 `src.core.ip_whitelist`，删除 `src.security.ip_whitelist` 后不再保留旧导入路径
+- API 包懒加载修复：`backend/src/api/__init__.py` 新增 `v1` 属性的显式懒加载（`importlib.import_module`），确保 `patch("src.api.v1...")` 在单测中可稳定解析
+- 兼容别名彻底删除：移除 `enum_data_init.add_legacy_enum_values`、`message_constants.get_error_id`、`RateLimiter.requests` 与 `GLMVisionAdapter/QwenVisionAdapter/DeepSeekVisionAdapter` 旧别名
+- 服务导出统一：`backend/src/services/__init__.py` 与 `backend/src/services/core/__init__.py` 删除 fallback/stub 链路，仅保留最终模块导出
+- 单测同步收敛：`tests/unit/core/test_rate_limiter.py` 改为断言 `request_times`，与 `RateLimiter` 去兼容后的最终实现一致
+- 校验脚本对齐：`scripts/verify_fixes.py` 改为验证 `SecurityService` 已删除，并移除 Windows 控制台 emoji 编码风险、硬编码路径依赖与无效 `DATA_ENCRYPTION_KEY` 注入
+- 前端权限旧类型清理：删除未被引用的 `frontend/src/types/permission.ts`（动态/临时/申请/委托等旧轨类型）
+- 类型检查配置收敛：`backend/pyproject.toml` 移除已删除模块 `src.models.dynamic_permission` 的 mypy override
+- RBAC 初始化脚本收敛：`backend/scripts/setup/init_rbac_data.py` 将 `dynamic_permission:*` 基础权限资源统一替换为 `permission_grant:*`
+- 数据库设计文档收敛：`docs/database-design.md` 移除动态/临时/条件/申请/委托旧权限分表说明，统一为 `permission_grants` 单表模型
+- 集成文档路径收敛：`docs/integrations/siliconflow-paddleocr-integration.md` 将 PDF 导入示例接口更新为 `/api/v1/pdf-import/*`
+- 迁移脚本清理：删除 `backend/scripts/maintenance/backfill_asset_ownership_entity.py`（历史 `ownership_entity -> ownership_id` 回填工具）
+- PRD 收敛：`docs/features/prd-asset-management.md` 删除“历史数据迁移策略”章节，保持新项目最终态描述
+- 变更日志收敛：移除 `CHANGELOG.md` 中已与最终态冲突的中间兼容条目（如 PDF 旧兼容路由、`dynamic_permission_crud`、历史回填脚本记录）
+
+- Asset 搜索总数修复：`QueryBuilder.build_count_query` 支持 `base_query + distinct_column`，`AssetCRUD` 计数查询显式复用 `Ownership` 关联，消除搜索场景下笛卡尔积导致的 `total` 放大
+- 合同状态投影修复：`Asset.active_contract` 纳入 `EXPIRING/即将到期` 状态，确保 `tenant_name`、`monthly_rent`、`deposit` 等计算属性在即将到期合同下可正常回显
+- 资产表单合同展示修复：移除 `selected_contract_id` 的误导性“可选合同”交互与相关加载逻辑，改为只读展示后端投影合同信息，避免“可选但不持久化”的伪交互
+- 并发集成测试稳定性修复：`test_concurrent_transaction_isolation` 改为动态唯一资产名并使用现有资产字段（`notes`）验证并发更新，支持重复执行
+- 资产加密集成测试重构：`tests/integration/crud/test_asset_encryption.py` 全量迁移为异步 CRUD 调用，断言字段对齐当前模型（`address`、`manager_name`），修复旧同步调用导致的协程未等待失败
+- Makefile 跨平台 Python 解释器选择修复：Windows 优先使用 `backend/.venv/Scripts/python.exe`（Linux/macOS 继续使用 `backend/.venv/bin/python`），避免 `make dev` 回退到系统 Python 导致缺少 `pydantic_settings` 启动失败
+- Asset God Class 拆分：`backend/src/models/asset.py` 仅保留 `Asset`，新增 `asset_history.py`、`project.py`、`project_relations.py`、`system_dictionary.py` 拆分历史/项目/字典模型职责
+- 模型依赖彻底去耦：移除 `asset.py` 对 `Project/SystemDictionary/AssetCustomField/AssetHistory` 的兼容回导与扩展 `__all__`，强制按新模块路径导入
+- 测试导入路径统一：更新 unit/integration 中残留的 `from src.models.asset import Project/SystemDictionary/AssetCustomField/AssetHistory` 到对应新模型模块，消除对 God Class 兼容层依赖
+- 关联表解耦：新增 `backend/src/models/associations.py` 统一维护 `rent_contract_assets` 与 `property_cert_assets`，并更新相关模型/CRUD/服务引用
+- 资产自定义字段筛选修复：`/api/v1/assets/custom-fields` 中 `is_required/is_active` 过滤改为布尔值传递，修复字符串比较导致的筛选失效
+- 资产自定义字段类型接口修复：路由从错误的 `"/types/list[Any]"` 更正为 `"/types/list"`，恢复前后端契约一致性
+- 资产合同快照去冗余：移除 `Asset` 中 `tenant_name/lease_contract_number/contract_start_date/contract_end_date/monthly_rent/deposit` 持久化字段，改为基于 `active_contract` 的只读计算属性
+- 资产入参与校验收敛：`Asset` schema、批量校验器、字段白名单同步移除上述冗余字段输入与排序能力；`RentContract` 排序字段改为 `monthly_rent_base/total_deposit`
+- 新增迁移：`backend/alembic/versions/20260207_remove_asset_contract_snapshot_fields.py`（rev: `4f9b3b2d6e91`）删除 `assets` 表合同快照列
+- 迁移兼容加固：`20260204_add_unique_asset_property_name` 迁移新增 `alembic_version.version_num` 容量检查与扩容（32→64），避免长 revision id 在升级链上触发截断错误
+- 迁移幂等加固：`20260206_add_asset_search_index` 在表/索引已存在时跳过创建，避免重复执行迁移时触发 `DuplicateTable`/`DuplicateIndex`
+- 前端表单对齐：`AssetForm`、`assetFormSchema`、`useFormFieldVisibility`、`AssetCreateRequest` 移除冗余合同快照字段提交流程与可见性规则
+- 单测对齐：更新 `tests/unit/models/test_asset.py`、`tests/unit/crud/test_field_whitelist.py`、`tests/unit/services/asset/test_validators.py` 适配新模型与校验规则
+- 异步测试对齐：重写 `tests/unit/crud/test_asset.py`、`tests/unit/crud/test_project.py`、`tests/unit/services/project/test_project_service.py` 为 async/await，移除旧同步 mock 触发的 `coroutine was never awaited`
+- 资产服务收敛：`AssetService` 删除历史字段剔除兼容逻辑，创建/更新直接走标准 schema 结果，不再在服务层接收旧字段
 
 - 资产字段统一替换：后端 `AssetCreate/AssetUpdate` 移除历史字段别名兼容，并在请求中显式拒绝 `wuyang_project_name`/`description`（统一使用 `project_name`/`notes`）
 - 资产前端字段对齐：`AssetSearchResult` 仅使用 `project_name/notes`，移除旧字段回退逻辑
@@ -28,7 +166,9 @@
 - 分析服务响应兼容清理：`analyticsService` 移除 `apiData.data?.*` 多形态回退，仅保留当前响应结构与字段适配
 - 导出任务字段统一：前端导出任务类型改为 snake_case（`download_url / created_at / completed_at / error_message`），移除 camelCase 兼容路径
 - 资产历史字段兼容清理：后端 `history_crud.create_async` 移除 `operator_id -> operator` 桥接，仅接受标准字段 `operator`
-- 资产 schema 进一步收敛：删除 `AssetBase` 中的 `wuyang_project_name` 历史字段定义，仅保留“显式拒绝旧字段并提示替换”的校验逻辑
+- 资产 schema 进一步收敛：删除 `AssetCreate/AssetUpdate/AssetResponse` 中的 `wuyang_project_name` 与 `description` 历史字段定义，仅保留“显式拒绝旧字段并提示替换”的校验逻辑
+- 资产创建链路防回归：`asset_crud.create_async/create_with_history_async/update_async/update_with_history_async` 增加旧字段兜底剔除，避免绕过 schema 时触发 `Asset(**kwargs)` 的无效参数异常
+- OpenAPI 对齐：`AssetCreate`/`AssetResponse` 文档不再暴露历史字段，修复“文档允许但运行时拒绝”的契约不一致
 - 产权证导入确认字段统一：后端 `PropertyCertificateService.confirm_import` 改为仅处理 `extracted_data / asset_ids / should_create_new_asset`，并将资产关联透传到 CRUD 创建流程
 
 ### 🔐 安全 (Security)
@@ -384,8 +524,6 @@
 - **资产批量与历史接口异步化** (Asset Batch & History Async Migration)
   - 资产批量更新/验证/删除/列表与历史接口移除 run_sync，统一使用 AsyncSession 调用
   - 批量更新与删除补齐异步 CRUD 与历史记录写入
-- **PDF 路由兼容性** (PDF Route Compatibility)
-  - 增加 `/documents/pdf-import/*` 兼容路由，保持历史路径与测试用例可用
 - **分析缓存容错** (Analytics Cache Guard)
   - 分析缓存读写失败时降级执行计算，避免测试/运行期 Redis 异常导致 500
 - **分析与面积服务单测异步适配** (Analytics/Area Test Async Alignment)
@@ -397,9 +535,6 @@
   - 出租率计算、通知任务、租金合同导出改用 session_factory，移除 get_db 生成器调用
 - **代码格式统一** (Code Formatting Alignment)
   - 执行 Ruff 格式化以统一最新异步迁移后的代码风格
-- **PDF V1上传内存风险** (PDF V1 Upload Memory Risk)
-  - V1 兼容上传改为流式写入并严格限制大小，避免一次性读入内存
-  - 上传临时文件处理完成后自动清理
 - **PDF 导入临时文件清理** (PDF Import Temp File Cleanup)
 - **催缴服务异步收敛** (Collection Service Async Convergence)
   - CollectionService 移除同步方法与 Session 依赖，统一 AsyncSession
@@ -599,12 +734,10 @@
 
 #### Added / 新增
 
-- **资产权属回填脚本** (Asset Ownership Backfill Script)
-  - 新增脚本用于按 ownership_id 回填 ownership_entity（安全策略 A）
 - **缺失的 CRUD 类补齐** (Missing CRUD Classes Added)
-  - 新增 `collection_crud`、`dynamic_permission_crud`、`prompt_template_crud`
+  - 新增 `collection_crud`、`prompt_template_crud`
 - **白名单补齐** (Field Whitelist Coverage)
-  - 为 `CollectionRecord`、`DynamicPermission`、`PromptTemplate` 增加字段白名单
+  - 为 `CollectionRecord`、`PromptTemplate` 增加字段白名单
   - 为 `Project`、`Organization`、`PropertyCertificate`、`PropertyOwner`、`RentTerm`、`RentLedger`、`UserRoleAssignment`、`ResourcePermission`、`PermissionAuditLog` 增加字段白名单
   - 为 `AsyncTask`、`ExcelTaskConfig` 增加字段白名单
 

@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any, cast
 
 from sqlalchemy import select
@@ -14,17 +14,23 @@ from ...core.exception_handler import (
     validation_error,
 )
 from ...crud.history import history_crud
-from ...models.asset import Asset, AssetHistory
-from ...models.ownership import Ownership
+from ...models.asset import Asset
+from ...models.asset_history import AssetHistory
+from ...models.associations import property_cert_assets, rent_contract_assets
 from ...models.auth import User
-from ...models.property_certificate import property_cert_assets
-from ...models.rent_contract import RentLedger, rent_contract_assets
+from ...models.ownership import Ownership
+from ...models.rent_contract import RentLedger
 from ...schemas.asset import AssetCreate, AssetUpdate
 from ...services.asset.asset_calculator import AssetCalculator
 from ...services.enum_validation_service import get_enum_validation_service_async
 
 _DEFAULT_ASSET_CRUD: object = object()
 asset_crud: Any = _DEFAULT_ASSET_CRUD
+
+
+def _utcnow_naive() -> datetime:
+    """Return UTC now as naive datetime to match current DB column types."""
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _get_asset_crud() -> Any:
@@ -219,8 +225,9 @@ class AssetService:
             asset_crud = _get_asset_crud()
             # 1. 枚举值验证
             validation_service = get_enum_validation_service_async(self.db)
+            incoming_payload = asset_in.model_dump()
             is_valid, errors = await validation_service.validate_asset_data(
-                asset_in.model_dump()
+                incoming_payload
             )
             if not is_valid:
                 raise validation_error(
@@ -401,7 +408,7 @@ class AssetService:
                 self.db.add(history)
                 asset.data_status = "已删除"
                 asset.updated_by = str(operator) if operator is not None else None
-                asset.updated_at = datetime.utcnow()
+                asset.updated_at = _utcnow_naive()
                 self.db.add(asset)
                 await self.db.flush()
         except StaleDataError as exc:
@@ -440,7 +447,7 @@ class AssetService:
                 self.db.add(history)
                 asset.data_status = "正常"
                 asset.updated_by = str(operator) if operator is not None else None
-                asset.updated_at = datetime.utcnow()
+                asset.updated_at = _utcnow_naive()
                 self.db.add(asset)
                 await self.db.flush()
                 return asset

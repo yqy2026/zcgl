@@ -108,14 +108,6 @@ class User(Base):
         foreign_keys="[Notification.recipient_id]",
     )
 
-    # 动态权限关系 - 暂时注释掉有问题的关系
-    # dynamic_permissions = relationship("DynamicPermission", foreign_keys="DynamicPermission.user_id", back_populates="user")
-    # temporary_permissions = relationship("TemporaryPermission", foreign_keys="TemporaryPermission.user_id", back_populates="user")
-    # conditional_permissions = relationship("ConditionalPermission", foreign_keys="ConditionalPermission.user_id", back_populates="user")
-    # permission_requests = relationship("PermissionRequest", back_populates="user")
-    # delegated_permissions = relationship("PermissionDelegation", foreign_keys="PermissionDelegation.delegatee_id", back_populates="delegatee")
-    # delegated_permissions_to_others = relationship("PermissionDelegation", foreign_keys="PermissionDelegation.delegator_id", back_populates="delegator")
-
     def __repr__(self) -> str:
         return f"<User(id={self.id}, username={self.username})>"
 

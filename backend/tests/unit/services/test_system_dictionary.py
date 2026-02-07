@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from src.core.exception_handler import DuplicateResourceError
-from src.models.asset import SystemDictionary
+from src.models.system_dictionary import SystemDictionary
 from src.schemas.asset import SystemDictionaryCreate
 from src.services.system_dictionary.service import SystemDictionaryService
 
@@ -77,9 +77,9 @@ class TestSystemDictionaryService:
         mock_db.refresh = AsyncMock()
 
         with patch(
-            "src.crud.system_dictionary.system_dictionary_crud.get",
+            "src.crud.system_dictionary.system_dictionary_crud.get_multi_by_ids_and_type_async",
             new_callable=AsyncMock,
-            return_value=dict_item,
+            return_value=[dict_item],
         ):
             sort_data = [{"id": TEST_DICT_ID, "sort_order": 5}]
             result = await service.update_sort_orders_async(

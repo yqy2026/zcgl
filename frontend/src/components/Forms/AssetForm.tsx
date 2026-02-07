@@ -128,7 +128,6 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
     setFileList,
     terminalContractFileList,
     setTerminalContractFileList,
-    loadRentContracts,
   } = useAssetFormContext();
 
   // Load dictionaries
@@ -198,14 +197,6 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
       }
     }
   }, [initialData, form, setFileList, setTerminalContractFileList]);
-
-  // Load rent contracts when asset ID changes
-  useEffect(() => {
-    const assetId = String(initialData?.id ?? form.getFieldValue('id'));
-    if (assetId !== undefined && assetId !== null && assetId !== 'undefined') {
-      loadRentContracts(assetId);
-    }
-  }, [initialData?.id, form, loadRentContracts]);
 
   // Handle form values change for completion rate calculation
   const valuesChangeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -295,13 +286,11 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
         include_in_occupancy_rate: toBoolean(values.include_in_occupancy_rate),
         is_sublease: toBoolean(values.is_sublease),
         is_litigated: toBoolean(values.is_litigated),
-        contract_start_date: formatDate(values.contract_start_date),
-        contract_end_date: formatDate(values.contract_end_date),
         operation_agreement_start_date: formatDate(values.operation_agreement_start_date),
         operation_agreement_end_date: formatDate(values.operation_agreement_end_date),
         operation_agreement_attachments: fileList.map(file => file.name).join(','),
         terminal_contract_files: terminalContractFileList.map(file => file.name).join(','),
-      };
+      } as Record<string, unknown>;
 
       if (onSubmit !== undefined && onSubmit !== null) {
         if (isAssetCreateRequest(submitData)) {

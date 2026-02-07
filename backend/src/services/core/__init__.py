@@ -36,26 +36,9 @@ except Exception:  # nosec - B110: Intentional graceful degradation
     _log_import_error("core.audit_service.AuditService")
 
 try:
-    from .error_recovery_service import ErrorRecoveryEngine as _ErrorRecoveryEngine
+    from ..error_recovery_service import ErrorRecoveryEngine as _ErrorRecoveryEngine
 
     ErrorRecoveryEngine = _ErrorRecoveryEngine
-
     __all__.append("ErrorRecoveryEngine")
 except Exception:  # nosec - B110: Intentional graceful degradation
-    # Fallback to legacy shim
-    try:
-        from ..error_recovery_service import (
-            ErrorRecoveryEngine as _LegacyErrorRecoveryEngine,
-        )
-
-        ErrorRecoveryEngine = _LegacyErrorRecoveryEngine
-        __all__.append("ErrorRecoveryEngine")
-    except Exception:  # nosec - B110: Intentional graceful degradation
-        # Provide a minimal stub to ensure import success
-        class _ErrorRecoveryEngineStub:
-            def __init__(self, *args: object, **kwargs: object) -> None:
-                pass
-
-        ErrorRecoveryEngine = _ErrorRecoveryEngineStub
-        __all__.append("ErrorRecoveryEngine")
-        _log_import_error("core.error_recovery_service.ErrorRecoveryEngine (stubbed)")
+    _log_import_error("error_recovery_service.ErrorRecoveryEngine")

@@ -441,17 +441,17 @@ async def extract_with_fallback(document_type):
 **API测试**:
 ```bash
 # 单文件测试
-POST /api/v1/documents/pdf-import/upload
+POST /api/v1/pdf-import/upload
 {
     "extractor": "siliconflow",
     "document_type": "property_certificate"
 }
 
-# 批量测试
-POST /api/v1/documents/pdf-import/batch/upload
+# 系统信息
+GET /api/v1/pdf-import/info
 {
-    "extractor": "siliconflow",
-    "max_concurrent": 10
+    "service": "pdf_import",
+    "status": "healthy"
 }
 ```
 

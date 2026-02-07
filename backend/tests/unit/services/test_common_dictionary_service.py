@@ -78,7 +78,9 @@ class TestCommonDictionaryService:
         mock_enum_type_crud.create_async = AsyncMock(return_value=mock_created_type)
 
         mock_created_value = MagicMock()
-        mock_enum_value_crud.create_async = AsyncMock(return_value=mock_created_value)
+        mock_enum_value_crud.batch_create_async = AsyncMock(
+            return_value=[mock_created_value]
+        )
 
         # Input data
         data = SimpleDictionaryCreate(
@@ -95,7 +97,7 @@ class TestCommonDictionaryService:
         assert result["type_id"] == "1"
         assert result["values_count"] == 1
         mock_enum_type_crud.create_async.assert_called_once()
-        mock_enum_value_crud.create_async.assert_called_once()
+        mock_enum_value_crud.batch_create_async.assert_called_once()
 
     async def test_quick_create_conflict(self, mock_db, mock_enum_type_crud):
         """Test creation when dictionary already exists"""

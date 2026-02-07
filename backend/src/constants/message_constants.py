@@ -242,35 +242,6 @@ TOKEN_EXPIRED = ErrorMessages.TOKEN_EXPIRED
 RATE_LIMIT_EXCEEDED = ErrorMessages.RATE_LIMIT_EXCEEDED
 EMPTY = EMPTY_STRING
 
-_LEGACY_ERROR_IDS = {
-    "DB_CONNECTION_FAILED": ErrorIDs.Database.CONNECTION_FAILED,
-    "AUDIT_LOG_FAILED": ErrorIDs.AuditLog.CREATION_FAILED,
-    "DB_HEALTH_CHECK_FAILED": ErrorIDs.Database.HEALTH_CHECK_FAILED,
-    "DB_HEALTH_CHECK_UNKNOWN_ERROR": ErrorIDs.Database.HEALTH_CHECK_UNKNOWN_ERROR,
-    "MISSING_DATABASE_URL": ErrorIDs.Database.MISSING_DATABASE_URL,
-}
-
-
-def get_error_id(legacy_id: str) -> str:
-    """
-    Get error ID from legacy error ID string.
-
-    This function provides backward compatibility with old error ID strings.
-    New code should use ErrorIDs class directly.
-
-    Args:
-        legacy_id: Legacy error ID string
-
-    Returns:
-        New error ID string
-
-    Example:
-        >>> get_error_id("DB_CONNECTION_FAILED")
-        "DB_CONNECTION_FAILED"
-    """
-    return _LEGACY_ERROR_IDS.get(legacy_id, legacy_id)
-
-
 __all__ = [
     "ErrorIDs",
     "ErrorMessages",

@@ -51,13 +51,13 @@ class RentContractLedgerService(RentContractHelperMixin):
             end_year_month = request.end_year_month
 
         months = self._generate_month_range(start_year_month, end_year_month)
+        existing_months = await rent_ledger.get_existing_year_months_async(
+            db, contract_id=request.contract_id, year_months=months
+        )
 
         created_ledgers: list[RentLedger] = []
         for year_month in months:
-            existing = await rent_ledger.get_by_contract_and_month_async(
-                db, contract_id=request.contract_id, year_month=year_month
-            )
-            if existing:
+            if year_month in existing_months:
                 continue
 
             month_date = datetime.strptime(year_month + "-01", "%Y-%m-%d").date()
@@ -81,8 +81,6 @@ class RentContractLedgerService(RentContractHelperMixin):
                 created_ledgers.append(db_ledger)
 
         await db.commit()
-        for ledger in created_ledgers:
-            await db.refresh(ledger)
         return created_ledgers
 
     async def batch_update_payment_async(

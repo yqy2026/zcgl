@@ -39,8 +39,6 @@ class AuthFields:
     IS_ACTIVE: Final[str] = "is_active"
     IS_VERIFIED: Final[str] = "is_verified"
     IS_AUTHENTICATED: Final[str] = "is_authenticated"
-    IS_STAFF: Final[str] = "is_staff"
-    IS_SUPERUSER: Final[str] = "is_superuser"
     LAST_LOGIN: Final[str] = "last_login"
     LAST_LOGIN_AT: Final[str] = "last_login_at"
     LOGIN_COUNT: Final[str] = "login_count"
@@ -75,7 +73,7 @@ class AuthFields:
         Returns:
             List of status-related field names.
         """
-        return [cls.IS_ACTIVE, cls.IS_VERIFIED, cls.IS_AUTHENTICATED, cls.IS_STAFF]
+        return [cls.IS_ACTIVE, cls.IS_VERIFIED, cls.IS_AUTHENTICATED]
 
 
 class FieldLengthLimits:

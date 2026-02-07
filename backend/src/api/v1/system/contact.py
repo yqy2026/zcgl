@@ -196,18 +196,17 @@ async def create_contacts_batch(
     - 自动设置创建人信息
     """
 
-    created_contacts: list[ContactResponse] = []
+    contacts_data = []
     for contact_in in contacts_in:
         contact_data = contact_in.model_dump()
         contact_data["entity_type"] = entity_type
         contact_data["entity_id"] = entity_id
         contact_data["created_by"] = current_user.username
         contact_data["updated_by"] = current_user.username
+        contacts_data.append(contact_data)
 
-        try:
-            contact = await contact_crud.create_async(db=db, obj_in=contact_data)
-            created_contacts.append(ContactResponse.model_validate(contact))
-        except Exception as e:
-            raise internal_error(f"批量创建失败: {str(e)}")
-
-    return created_contacts
+    try:
+        contacts = await contact_crud.create_many_async(db=db, objects_in=contacts_data)
+        return [ContactResponse.model_validate(contact) for contact in contacts]
+    except Exception as e:
+        raise internal_error(f"批量创建失败: {str(e)}")

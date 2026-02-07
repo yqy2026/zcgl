@@ -63,9 +63,6 @@ class AssetBase(BaseModel):
         max_length=FieldLengthLimits.SHORT_TEXT_MAX,
         description="项目名称",
     )
-    wuyang_project_name: str | None = Field(
-        None, max_length=FieldLengthLimits.SHORT_TEXT_MAX, description="五羊项目名称"
-    )
     property_name: str = Field(
         ...,
         min_length=1,
@@ -87,7 +84,6 @@ class AssetBase(BaseModel):
     business_category: str | None = Field(None, max_length=100, description="业态类别")
     is_litigated: bool = Field(False, description="是否涉诉")
     notes: str | None = Field(None, description="备注")
-    description: str | None = Field(None, description="描述")
 
     # 面积相关字段
     land_area: Decimal | None = Field(None, ge=0, description="土地面积（平方米）")
@@ -111,19 +107,7 @@ class AssetBase(BaseModel):
     actual_usage: str | None = Field(None, max_length=100, description="实际用途")
 
     # 租户相关字段
-    tenant_name: str | None = Field(
-        None, max_length=FieldLengthLimits.SHORT_TEXT_MAX, description="租户名称"
-    )
     tenant_type: str | None = Field(None, description="租户类型")
-
-    # 合同相关字段
-    lease_contract_number: str | None = Field(
-        None, max_length=FieldLengthLimits.MEDIUM_TEXT_MAX, description="租赁合同编号"
-    )
-    contract_start_date: date | None = Field(None, description="合同开始日期")
-    contract_end_date: date | None = Field(None, description="合同结束日期")
-    monthly_rent: Decimal | None = Field(None, ge=0, description="月租金（元）")
-    deposit: Decimal | None = Field(None, ge=0, description="押金（元）")
     is_sublease: bool = Field(False, description="是否分租/转租")
     sublease_notes: str | None = Field(None, description="分租/转租备注")
 
@@ -173,8 +157,6 @@ class AssetBase(BaseModel):
         "rentable_area",
         "rented_area",
         "non_commercial_area",
-        "monthly_rent",
-        "deposit",
     )
     @classmethod
     def validate_area(cls, v: Decimal | None) -> Decimal | None:
@@ -192,21 +174,6 @@ class AssetBase(BaseModel):
         if v is not None and not isinstance(v, bool):  # pragma: no cover
             raise PydanticCustomError(  # pragma: no cover
                 "invalid_boolean", "是否涉诉必须是布尔值", {}
-            )  # pragma: no cover
-        return v  # pragma: no cover
-
-    @field_validator("contract_end_date")
-    @classmethod
-    def validate_contract_dates(
-        cls, v: date | None, info: ValidationInfo
-    ) -> date | None:
-        if (
-            v  # pragma: no cover
-            and info.data.get("contract_start_date")  # pragma: no cover
-            and v < info.data["contract_start_date"]  # pragma: no cover
-        ):
-            raise PydanticCustomError(  # pragma: no cover
-                "invalid_date_range", "合同结束日期不能早于开始日期", {}
             )  # pragma: no cover
         return v  # pragma: no cover
 
@@ -251,9 +218,6 @@ class AssetUpdate(BaseModel):
         max_length=200,
         description="项目名称",
     )
-    wuyang_project_name: str | None = Field(
-        None, max_length=FieldLengthLimits.SHORT_TEXT_MAX, description="五羊项目名称"
-    )
     property_name: str | None = Field(
         None, min_length=1, max_length=200, description="物业名称"
     )
@@ -263,10 +227,12 @@ class AssetUpdate(BaseModel):
     ownership_status: str | None = Field(None, description="确权状态")
     property_nature: str | None = Field(None, description="物业性质")
     usage_status: str | None = Field(None, description="使用状态")
+    management_entity: str | None = Field(
+        None, max_length=200, description="经营管理单位"
+    )
     business_category: str | None = Field(None, max_length=100, description="业态类别")
     is_litigated: bool | None = Field(None, description="是否涉诉")
     notes: str | None = Field(None, description="备注")
-    description: str | None = Field(None, description="描述")
 
     # 面积相关字段
     land_area: Decimal | None = Field(None, ge=0, description="土地面积（平方米）")
@@ -292,19 +258,7 @@ class AssetUpdate(BaseModel):
     actual_usage: str | None = Field(None, max_length=100, description="实际用途")
 
     # 租户相关字段
-    tenant_name: str | None = Field(
-        None, max_length=FieldLengthLimits.SHORT_TEXT_MAX, description="租户名称"
-    )
     tenant_type: str | None = Field(None, description="租户类型")
-
-    # 合同相关字段
-    lease_contract_number: str | None = Field(
-        None, max_length=FieldLengthLimits.MEDIUM_TEXT_MAX, description="租赁合同编号"
-    )
-    contract_start_date: date | None = Field(None, description="合同开始日期")
-    contract_end_date: date | None = Field(None, description="合同结束日期")
-    monthly_rent: Decimal | None = Field(None, ge=0, description="月租金（元）")
-    deposit: Decimal | None = Field(None, ge=0, description="押金（元）")
     is_sublease: bool | None = Field(None, description="是否分租/转租")
     sublease_notes: str | None = Field(None, description="分租/转租备注")
 
@@ -353,8 +307,6 @@ class AssetUpdate(BaseModel):
         "rentable_area",
         "rented_area",
         "non_commercial_area",
-        "monthly_rent",
-        "deposit",
     )
     @classmethod
     def validate_area(cls, v: Decimal | None) -> Decimal | None:
@@ -390,7 +342,6 @@ class AssetResponseBase(BaseModel):
     )
     ownership_category: str | None = Field(None, description="权属类别")
     project_name: str | None = Field(None, description="项目名称")
-    wuyang_project_name: str | None = Field(None, description="五羊项目名称")
     property_name: str = Field(..., description="物业名称")
     address: str = Field(..., description="物业地址")
 
@@ -405,7 +356,6 @@ class AssetResponseBase(BaseModel):
     business_category: str | None = Field(None, description="业态类别")
     is_litigated: bool = Field(False, description="是否涉诉")
     notes: str | None = Field(None, description="备注")
-    description: str | None = Field(None, description="描述")
 
     # 面积相关字段
     land_area: Decimal | None = Field(None, description="土地面积（平方米）")

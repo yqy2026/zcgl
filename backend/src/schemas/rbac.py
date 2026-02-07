@@ -160,6 +160,59 @@ class ResourcePermissionResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class PermissionGrantCreate(BaseModel):
+    user_id: str = Field(..., description="用户ID")
+    permission_id: str = Field(..., description="权限ID")
+    grant_type: str = Field("direct", description="授权类型")
+    effect: str = Field("allow", description="效果 allow/deny")
+    scope: str = Field("global", description="作用域类型")
+    scope_id: str | None = Field(None, description="作用域ID")
+    conditions: dict[str, Any] | None = Field(None, description="授权条件")
+    starts_at: datetime | None = Field(None, description="生效时间")
+    expires_at: datetime | None = Field(None, description="过期时间")
+    priority: int = Field(100, description="优先级")
+    source_type: str | None = Field(None, description="来源类型")
+    source_id: str | None = Field(None, description="来源ID")
+    reason: str | None = Field(None, description="授权原因")
+
+
+class PermissionGrantUpdate(BaseModel):
+    effect: str | None = Field(None, description="效果 allow/deny")
+    scope: str | None = Field(None, description="作用域类型")
+    scope_id: str | None = Field(None, description="作用域ID")
+    conditions: dict[str, Any] | None = Field(None, description="授权条件")
+    starts_at: datetime | None = Field(None, description="生效时间")
+    expires_at: datetime | None = Field(None, description="过期时间")
+    priority: int | None = Field(None, description="优先级")
+    is_active: bool | None = Field(None, description="是否激活")
+    reason: str | None = Field(None, description="授权原因")
+
+
+class PermissionGrantResponse(BaseModel):
+    id: str
+    user_id: str
+    permission_id: str
+    grant_type: str
+    effect: str
+    scope: str
+    scope_id: str | None
+    conditions: dict[str, Any] | None
+    starts_at: datetime | None
+    expires_at: datetime | None
+    priority: int
+    is_active: bool
+    source_type: str | None
+    source_id: str | None
+    granted_by: str | None
+    reason: str | None
+    created_at: datetime
+    updated_at: datetime
+    revoked_at: datetime | None
+    revoked_by: str | None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 # 权限检查相关模式
 class PermissionCheckRequest(BaseModel):
     resource: str = Field(..., description="资源类型")

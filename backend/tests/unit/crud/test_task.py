@@ -15,7 +15,7 @@ from src.crud.task import (
     excel_task_config_crud,
     task_crud,
 )
-from src.enums.task import TaskStatus, TaskType
+from src.enums.task import TaskStatus
 from src.models.task import AsyncTask, ExcelTaskConfig, TaskHistory
 
 pytestmark = pytest.mark.asyncio
@@ -118,11 +118,13 @@ class TestTaskCRUDGetStatistics:
     @pytest.fixture
     def mock_db(self):
         mock_db = AsyncMock()
-        count_results = [_result_with_scalar(0)] * (
-            4 + len(TaskType) + len(TaskStatus)
-        )
         mock_db.execute = AsyncMock(
-            side_effect=[*count_results, _result_with_all([])]
+            side_effect=[
+                _result_with_scalar(0),
+                _result_with_all([]),
+                _result_with_all([]),
+                _result_with_all([]),
+            ]
         )
         return mock_db
 
@@ -145,11 +147,19 @@ class TestTaskCRUDGetStatistics:
         now = datetime.now()
         rows = [(now - timedelta(seconds=100), now), (now - timedelta(seconds=200), now)]
         mock_db = AsyncMock()
-        count_results = [_result_with_scalar(2)] * (
-            4 + len(TaskType) + len(TaskStatus)
-        )
         mock_db.execute = AsyncMock(
-            side_effect=[*count_results, _result_with_all(rows)]
+            side_effect=[
+                _result_with_scalar(2),
+                _result_with_all(
+                    [
+                        (TaskStatus.RUNNING.value, 0),
+                        (TaskStatus.COMPLETED.value, 2),
+                        (TaskStatus.FAILED.value, 0),
+                    ]
+                ),
+                _result_with_all([]),
+                _result_with_all(rows),
+            ]
         )
 
         result = await crud.get_statistics_async(mock_db)

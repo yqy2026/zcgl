@@ -64,9 +64,8 @@ export const ASSET_API = {
   HARD_DELETE: (id: string) => `/assets/${id}/hard-delete`,
 
   // 批量操作
-  BATCH_CREATE: '/assets/batch',
-  BATCH_UPDATE: '/assets/batch',
-  BATCH_DELETE: '/assets/batch',
+  BATCH_UPDATE: '/assets/batch-update',
+  BATCH_DELETE: '/assets/batch-delete',
 
   // 搜索和过滤
   SEARCH: '/assets/search',

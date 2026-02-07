@@ -42,9 +42,9 @@ class TestZhipuVisionFailureModes:
     @pytest.mark.asyncio
     async def test_timeout_handling(self):
         """测试超时处理"""
-        from src.services.document.extractors.glm_adapter import GLMVisionAdapter
+        from src.services.document.extractors.glm_adapter import GLMAdapter
 
-        adapter = GLMVisionAdapter()
+        adapter = GLMAdapter()
 
         # Mock pdf_to_images to return fake images
         with patch(
@@ -72,9 +72,9 @@ class TestZhipuVisionFailureModes:
     @pytest.mark.asyncio
     async def test_malformed_json_response(self):
         """测试格式错误的 JSON 响应"""
-        from src.services.document.extractors.glm_adapter import GLMVisionAdapter
+        from src.services.document.extractors.glm_adapter import GLMAdapter
 
-        adapter = GLMVisionAdapter()
+        adapter = GLMAdapter()
 
         # Mock pdf_to_images to return fake images
         with patch(
@@ -108,9 +108,9 @@ class TestZhipuVisionFailureModes:
     @pytest.mark.asyncio
     async def test_partial_batch_failure(self):
         """测试部分批次失败（有些页面成功，有些失败）"""
-        from src.services.document.extractors.glm_adapter import GLMVisionAdapter
+        from src.services.document.extractors.glm_adapter import GLMAdapter
 
-        adapter = GLMVisionAdapter()
+        adapter = GLMAdapter()
 
         call_count = 0
 
@@ -147,9 +147,9 @@ class TestZhipuVisionFailureModes:
     @pytest.mark.asyncio
     async def test_http_429_rate_limit(self):
         """测试 HTTP 429 速率限制错误"""
-        from src.services.document.extractors.glm_adapter import GLMVisionAdapter
+        from src.services.document.extractors.glm_adapter import GLMAdapter
 
-        adapter = GLMVisionAdapter()
+        adapter = GLMAdapter()
 
         # Mock HTTP 429 error
         request = Request("POST", "https://api.example.com/v1/chat/completions")
@@ -183,9 +183,9 @@ class TestZhipuVisionFailureModes:
     @pytest.mark.asyncio
     async def test_http_401_auth_failure(self):
         """测试 HTTP 401 认证失败错误"""
-        from src.services.document.extractors.glm_adapter import GLMVisionAdapter
+        from src.services.document.extractors.glm_adapter import GLMAdapter
 
-        adapter = GLMVisionAdapter()
+        adapter = GLMAdapter()
 
         # Mock HTTP 401 error
         request = Request("POST", "https://api.example.com/v1/chat/completions")
@@ -219,9 +219,9 @@ class TestZhipuVisionFailureModes:
     @pytest.mark.asyncio
     async def test_http_500_server_error(self):
         """测试 HTTP 500 服务器错误"""
-        from src.services.document.extractors.glm_adapter import GLMVisionAdapter
+        from src.services.document.extractors.glm_adapter import GLMAdapter
 
-        adapter = GLMVisionAdapter()
+        adapter = GLMAdapter()
 
         # Mock HTTP 500 error
         request = Request("POST", "https://api.example.com/v1/chat/completions")
@@ -255,9 +255,9 @@ class TestZhipuVisionFailureModes:
     @pytest.mark.asyncio
     async def test_empty_response(self):
         """测试空响应"""
-        from src.services.document.extractors.glm_adapter import GLMVisionAdapter
+        from src.services.document.extractors.glm_adapter import GLMAdapter
 
-        adapter = GLMVisionAdapter()
+        adapter = GLMAdapter()
 
         # Mock pdf_to_images to return fake images
         with patch(
@@ -286,9 +286,9 @@ class TestZhipuVisionFailureModes:
     @pytest.mark.asyncio
     async def test_confidence_threshold_filtering(self):
         """测试低置信度结果被拒绝"""
-        from src.services.document.extractors.glm_adapter import GLMVisionAdapter
+        from src.services.document.extractors.glm_adapter import GLMAdapter
 
-        adapter = GLMVisionAdapter()
+        adapter = GLMAdapter()
 
         low_confidence_result = json.dumps(
             {
@@ -332,9 +332,9 @@ class TestQwenVisionFailureModes:
     @pytest.mark.asyncio
     async def test_timeout_handling(self):
         """测试超时处理"""
-        from src.services.document.extractors.qwen_adapter import QwenVisionAdapter
+        from src.services.document.extractors.qwen_adapter import QwenAdapter
 
-        adapter = QwenVisionAdapter()
+        adapter = QwenAdapter()
 
         # Mock pdf_to_images to return fake images
         with patch(
@@ -360,9 +360,9 @@ class TestQwenVisionFailureModes:
     @pytest.mark.asyncio
     async def test_malformed_json_response(self):
         """测试格式错误的 JSON 响应"""
-        from src.services.document.extractors.qwen_adapter import QwenVisionAdapter
+        from src.services.document.extractors.qwen_adapter import QwenAdapter
 
-        adapter = QwenVisionAdapter()
+        adapter = QwenAdapter()
 
         # 带有 markdown 代码块的响应
         markdown_response = """
@@ -412,11 +412,9 @@ class TestDeepSeekVisionFailureModes:
     @pytest.mark.asyncio
     async def test_timeout_handling(self):
         """测试超时处理"""
-        from src.services.document.extractors.deepseek_adapter import (
-            DeepSeekVisionAdapter,
-        )
+        from src.services.document.extractors.deepseek_adapter import DeepSeekAdapter
 
-        adapter = DeepSeekVisionAdapter()
+        adapter = DeepSeekAdapter()
 
         # Mock pdf_to_images to return fake images
         with patch(

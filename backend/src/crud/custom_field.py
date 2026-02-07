@@ -3,7 +3,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..models.asset import AssetCustomField
+from ..models.system_dictionary import AssetCustomField
 from ..schemas.asset import AssetCustomFieldCreate, AssetCustomFieldUpdate
 from .base import CRUDBase
 
@@ -20,6 +20,26 @@ class CRUDCustomField(
             select(AssetCustomField).filter(AssetCustomField.field_name == field_name)
         )
         return result.scalars().first()
+
+    async def get_multi_by_ids_async(
+        self, db: AsyncSession, ids: list[str]
+    ) -> list[AssetCustomField]:
+        if len(ids) == 0:
+            return []
+        result = await db.execute(
+            select(AssetCustomField).where(AssetCustomField.id.in_(ids))
+        )
+        return list(result.scalars().all())
+
+    async def get_multi_by_field_names_async(
+        self, db: AsyncSession, field_names: list[str]
+    ) -> list[AssetCustomField]:
+        if len(field_names) == 0:
+            return []
+        result = await db.execute(
+            select(AssetCustomField).where(AssetCustomField.field_name.in_(field_names))
+        )
+        return list(result.scalars().all())
 
     async def get_multi_with_filters_async(
         self,

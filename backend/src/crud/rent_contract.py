@@ -7,12 +7,12 @@ from sqlalchemy.orm import selectinload
 
 from ..crud.asset import SensitiveDataHandler
 from ..crud.base import CRUDBase
+from ..models.associations import rent_contract_assets
 from ..models.ownership import Ownership
 from ..models.rent_contract import (
     RentContract,
     RentLedger,
     RentTerm,
-    rent_contract_assets,
 )
 from ..schemas.rent_contract import (
     RentContractCreate,
@@ -351,6 +351,19 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
             )
         )
         return (await db.execute(stmt)).scalars().first()
+
+    async def get_existing_year_months_async(
+        self, db: AsyncSession, *, contract_id: str, year_months: list[str]
+    ) -> set[str]:
+        if len(year_months) == 0:
+            return set()
+
+        stmt = select(RentLedger.year_month).where(
+            RentLedger.contract_id == contract_id,
+            RentLedger.year_month.in_(year_months),
+        )
+        rows = (await db.execute(stmt)).scalars().all()
+        return {str(year_month) for year_month in rows if year_month is not None}
 
 
 # 实例化CRUD对象

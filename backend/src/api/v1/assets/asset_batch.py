@@ -179,35 +179,28 @@ async def batch_update_custom_fields(
         failed_count = 0
         errors: list[BatchProcessingError] = []
 
+        existing_assets = await asset_crud.get_multi_by_ids_async(
+            db=db,
+            ids=request.asset_ids,
+            include_relations=False,
+        )
+        existing_ids = {str(asset.id) for asset in existing_assets if asset.id is not None}
+
         for asset_id in request.asset_ids:
-            try:
-                asset = await asset_crud.get_async(db=db, id=asset_id)
-                if not asset:
-                    errors.append(
-                        BatchProcessingError(
-                            id=asset_id,
-                            row_index=None,
-                            field=None,
-                            message="资产不存在",
-                            code="NOT_FOUND",
-                        )
-                    )
-                    failed_count += 1
-                    continue
-
+            normalized_id = str(asset_id)
+            if normalized_id in existing_ids:
                 success_count += 1
-
-            except Exception as e:
-                errors.append(
-                    BatchProcessingError(
-                        id=asset_id,
-                        row_index=None,
-                        field=None,
-                        message=str(e),
-                        code=type(e).__name__,
-                    )
+                continue
+            errors.append(
+                BatchProcessingError(
+                    id=normalized_id,
+                    row_index=None,
+                    field=None,
+                    message="资产不存在",
+                    code="NOT_FOUND",
                 )
-                failed_count += 1
+            )
+            failed_count += 1
 
         return BatchCustomFieldUpdateResponse(
             success_count=success_count,

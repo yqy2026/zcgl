@@ -55,9 +55,9 @@ async def get_custom_fields(
         if field_type:
             filters["field_type"] = field_type
         if is_required is not None:
-            filters["is_required"] = str(is_required)
+            filters["is_required"] = is_required
         if is_active is not None:
-            filters["is_active"] = str(is_active)
+            filters["is_active"] = is_active
 
         fields = await custom_field_crud.get_multi_with_filters_async(
             db=db, filters=filters
@@ -83,7 +83,7 @@ async def get_custom_field(
     """
 
     try:
-        from ....models.asset import AssetCustomField
+        from ....models.system_dictionary import AssetCustomField
 
         field: AssetCustomField | None = await custom_field_crud.get(db=db, id=field_id)
         if not field:
@@ -214,7 +214,7 @@ async def validate_custom_field_value(
         raise internal_error(f"验证字段值失败: {str(e)}")
 
 
-@router.get("/types/list[Any]", summary="获取字段类型列表")
+@router.get("/types/list", summary="获取字段类型列表")
 def get_field_types(
     current_user: User = Depends(get_current_active_user),
 ) -> dict[str, Any]:

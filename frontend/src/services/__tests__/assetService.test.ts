@@ -14,6 +14,7 @@ vi.mock('@/api/client', () => ({
     post: vi.fn(),
     put: vi.fn(),
     delete: vi.fn(),
+    invalidateCacheByPrefix: vi.fn(),
   },
 }));
 
@@ -275,8 +276,8 @@ describe('AssetCoreService', () => {
 
       await expect(service.deleteAssets(['1', '2', '3'])).resolves.toBeUndefined();
       expect(apiClient.post).toHaveBeenCalledWith(
-        expect.any(String),
-        { ids: ['1', '2', '3'] },
+        expect.stringContaining('/batch-delete'),
+        { asset_ids: ['1', '2', '3'] },
         expect.any(Object)
       );
     });

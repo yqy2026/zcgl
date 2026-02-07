@@ -7,6 +7,7 @@ Excel导入服务
 import logging
 import os
 from datetime import datetime
+from inspect import isawaitable
 from typing import Any
 
 import pandas as pd
@@ -16,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ...config.excel_config import STANDARD_SHEET_NAME
 from ...core.exception_handler import BusinessValidationError
 from ...crud.asset import asset_crud
+from ...models.asset import Asset
 from ...models.ownership import Ownership
 from ...schemas.asset import AssetCreate
 from ..asset.validators import AssetBatchValidator
@@ -66,6 +68,18 @@ class ExcelImportService:
         """
         self.db = db
         self.validator = AssetBatchValidator()
+
+    async def _scalars_all(self, result: Any) -> list[Any]:
+        """兼容真实 AsyncSession 结果与测试 AsyncMock 结果。"""
+        scalars_result = result.scalars()
+        if isawaitable(scalars_result):
+            scalars_result = await scalars_result
+
+        all_result = scalars_result.all()
+        if isawaitable(all_result):
+            all_result = await all_result
+
+        return list(all_result)
 
     async def import_assets_from_excel(
         self,
@@ -129,6 +143,68 @@ class ExcelImportService:
 
             # 批次计数器
             current_batch_count = 0
+            ownership_by_id: dict[str, Ownership] = {}
+            ownership_by_name: dict[str, Ownership] = {}
+            existing_assets_by_name: dict[str, Any] = {}
+            if should_create_assets and self.db:
+                ownership_ids_to_load: set[str] = set()
+                ownership_names_to_load: set[str] = set()
+                property_names_to_load: set[str] = set()
+                for _, row in df.iterrows():
+                    ownership_id_raw = row.get("权属方ID", row.get("ownership_id"))
+                    ownership_name_raw = row.get("权属方", row.get("ownership_entity"))
+                    property_name_raw = row.get("物业名称", row.get("property_name"))
+                    if ownership_id_raw is not None and pd.notna(ownership_id_raw):
+                        ownership_id_value = str(ownership_id_raw).strip()
+                        if ownership_id_value != "":
+                            ownership_ids_to_load.add(ownership_id_value)
+                    if ownership_name_raw is not None and pd.notna(ownership_name_raw):
+                        ownership_name_value = str(ownership_name_raw).strip()
+                        if ownership_name_value != "":
+                            ownership_names_to_load.add(ownership_name_value)
+                    if property_name_raw is not None and pd.notna(property_name_raw):
+                        property_name_value = str(property_name_raw).strip()
+                        if property_name_value != "":
+                            property_names_to_load.add(property_name_value)
+
+                if ownership_ids_to_load:
+                    ownership_rows = await self._scalars_all(
+                        await self.db.execute(
+                            select(Ownership).where(
+                                Ownership.id.in_(list(ownership_ids_to_load))
+                            )
+                        )
+                    )
+                    ownership_by_id = {
+                        str(ownership.id): ownership for ownership in ownership_rows
+                    }
+
+                if ownership_names_to_load:
+                    ownership_rows = await self._scalars_all(
+                        await self.db.execute(
+                            select(Ownership).where(
+                                Ownership.name.in_(list(ownership_names_to_load))
+                            )
+                        )
+                    )
+                    ownership_by_name = {
+                        str(ownership.name): ownership for ownership in ownership_rows
+                    }
+
+                if property_names_to_load:
+                    asset_rows = await self._scalars_all(
+                        await self.db.execute(
+                            select(Asset).where(
+                                Asset.property_name.in_(list(property_names_to_load)),
+                                Asset.data_status != "已删除",
+                            )
+                        )
+                    )
+                    existing_assets_by_name = {
+                        str(asset.property_name): asset
+                        for asset in asset_rows
+                        if getattr(asset, "property_name", None) is not None
+                    }
 
             # 处理每一行数据
             for idx, row in df.iterrows():
@@ -179,18 +255,26 @@ class ExcelImportService:
 
                     # 创建资产
                     if should_create_assets and self.db:
-                        existing_asset = await self._find_existing_asset(asset_data)
+                        existing_asset = await self._find_existing_asset(
+                            asset_data,
+                            existing_assets_by_name=existing_assets_by_name,
+                        )
 
-                        ownership_id = asset_data.get("ownership_id")
-                        ownership_entity = asset_data.get("ownership_entity")
+                        ownership_id_raw = asset_data.get("ownership_id")
+                        ownership_id = (
+                            str(ownership_id_raw).strip()
+                            if ownership_id_raw is not None
+                            else ""
+                        )
+                        ownership_entity_raw = asset_data.get("ownership_entity")
+                        ownership_entity = (
+                            str(ownership_entity_raw).strip()
+                            if ownership_entity_raw is not None
+                            else ""
+                        )
 
-                        if ownership_entity and not ownership_id:
-                            ownership_result = await self.db.execute(
-                                select(Ownership).where(
-                                    Ownership.name == ownership_entity
-                                )
-                            )
-                            ownership = ownership_result.scalars().first()
+                        if ownership_entity != "" and ownership_id == "":
+                            ownership = ownership_by_name.get(ownership_entity)
                             if not ownership:
                                 results["errors"].append(
                                     {
@@ -205,13 +289,11 @@ class ExcelImportService:
                                         f"第{idx + 2}行权属方不存在"
                                     )
                                 continue
-                            ownership_id = ownership.id
+                            ownership_id = str(ownership.id)
+                            ownership_by_id[ownership_id] = ownership
 
-                        if ownership_id:
-                            ownership_result = await self.db.execute(
-                                select(Ownership).where(Ownership.id == ownership_id)
-                            )
-                            ownership = ownership_result.scalars().first()
+                        if ownership_id != "":
+                            ownership = ownership_by_id.get(ownership_id)
                             if not ownership:
                                 results["errors"].append(
                                     {
@@ -228,8 +310,8 @@ class ExcelImportService:
                                 continue
 
                             if (
-                                ownership_entity is not None
-                                and ownership_entity != ownership.name
+                                ownership_entity != ""
+                                and ownership_entity != str(ownership.name)
                             ):
                                 results["errors"].append(
                                     {
@@ -245,14 +327,15 @@ class ExcelImportService:
                                     )
                                 continue
 
-                            asset_data["ownership_id"] = ownership.id
+                            asset_data["ownership_id"] = str(ownership.id)
 
                         asset_data.pop("ownership_entity", None)
 
                         property_name = asset_data.get("property_name")
                         if property_name:
-                            existing_by_name = await asset_crud.get_by_name_async(
-                                db=self.db, property_name=property_name
+                            property_name_key = str(property_name).strip()
+                            existing_by_name = existing_assets_by_name.get(
+                                property_name_key
                             )
                             if existing_by_name and (
                                 not existing_asset
@@ -281,12 +364,19 @@ class ExcelImportService:
                                 db_obj=existing_asset,
                                 obj_in=update_schema,
                             )
+                            existing_assets_by_name[
+                                str(existing_asset.property_name)
+                            ] = existing_asset
                             results["updated_assets"] += 1
                         elif not existing_asset:
                             create_schema = AssetCreate(**asset_data)
-                            await asset_crud.create_async(
+                            created_asset = await asset_crud.create_async(
                                 db=self.db, obj_in=create_schema
                             )
+                            if getattr(created_asset, "property_name", None) is not None:
+                                existing_assets_by_name[
+                                    str(created_asset.property_name)
+                                ] = created_asset
                             results["created_assets"] += 1
                         else:
                             results["warnings"].append(
@@ -408,7 +498,12 @@ class ExcelImportService:
 
         return asset_data, parse_warnings
 
-    async def _find_existing_asset(self, asset_data: dict[str, Any]) -> Any | None:
+    async def _find_existing_asset(
+        self,
+        asset_data: dict[str, Any],
+        *,
+        existing_assets_by_name: dict[str, Any] | None = None,
+    ) -> Any | None:
         """
         根据物业名称和地址查找已存在的资产
 
@@ -422,6 +517,17 @@ class ExcelImportService:
             return None
 
         try:
+            property_name_raw = asset_data.get("property_name")
+            property_name = (
+                str(property_name_raw).strip()
+                if property_name_raw is not None
+                else ""
+            )
+            if existing_assets_by_name is not None:
+                if property_name == "":
+                    return None
+                return existing_assets_by_name.get(property_name)
+
             # 使用物业名称和地址作为唯一标识
             filters = {
                 "property_name": asset_data.get("property_name"),

@@ -103,18 +103,12 @@ class TestAssetWhitelist:
         # Time-based sorting
         assert whitelist.can_sort("created_at")
         assert whitelist.can_sort("updated_at")
-        assert whitelist.can_sort("contract_start_date")
-        assert whitelist.can_sort("contract_end_date")
 
         # Numeric sorting
         assert whitelist.can_sort("land_area")
         assert whitelist.can_sort("actual_property_area")
         assert whitelist.can_sort("rentable_area")
         assert whitelist.can_sort("rented_area")
-
-        # SPECIAL: Financial fields allowed for SORTING (not filtering)
-        assert whitelist.can_sort("monthly_rent")
-        assert whitelist.can_sort("deposit")
 
         # Alphabetic sorting
         assert whitelist.can_sort("property_name")
@@ -170,8 +164,8 @@ class TestRentContractWhitelist:
         whitelist = RentContractWhitelist()
 
         # Sorting allowed for display
-        assert whitelist.can_sort("monthly_rent")
-        assert whitelist.can_sort("deposit")
+        assert whitelist.can_sort("monthly_rent_base")
+        assert whitelist.can_sort("total_deposit")
 
 
 class TestOwnershipWhitelist:
@@ -340,9 +334,9 @@ class TestSecurityScenarios:
         assert not whitelist.can_filter("monthly_rent")
         assert not whitelist.can_filter("deposit")
 
-        # But allowed for sorting (for display purposes)
-        assert whitelist.can_sort("monthly_rent")
-        assert whitelist.can_sort("deposit")
+        # Also blocked for sorting (financial data now sourced from active contract)
+        assert not whitelist.can_sort("monthly_rent")
+        assert not whitelist.can_sort("deposit")
 
     def test_cannot_audit_user_activity(self):
         """Should not be able to filter by audit trail fields."""

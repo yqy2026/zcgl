@@ -32,7 +32,3 @@ class GLMAdapter(BaseVisionAdapter):
     @property
     def api_key_env_name(self) -> str:
         return "ZHIPU_API_KEY"
-
-
-# Alias for backward compatibility with tests
-GLMVisionAdapter = GLMAdapter

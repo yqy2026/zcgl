@@ -10,7 +10,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ....core.exception_handler import BaseBusinessError, bad_request, not_found
 from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
-from ....crud.organization import organization as organization_crud
 from ....database import get_async_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
@@ -46,8 +45,10 @@ async def get_organizations(
 ) -> JSONResponse:
     """获取组织列表"""
     skip = (page - 1) * page_size
-    organizations, total = await organization_crud.get_multi_with_count_async(
-        db, skip=skip, limit=page_size
+    organizations, total = await organization_service.get_organizations(
+        db,
+        skip=skip,
+        limit=page_size,
     )
     items = [OrganizationResponse.model_validate(org) for org in organizations]
     return ResponseHandler.paginated(
@@ -68,7 +69,10 @@ async def get_organization_tree(
     """获取组织层级结构"""
 
     async def build_tree(pid: str | None = None) -> list[OrganizationTree]:
-        organizations = await organization_crud.get_tree_async(db, parent_id=pid)
+        organizations = await organization_service.get_organization_tree(
+            db,
+            parent_id=pid,
+        )
         tree: list[OrganizationTree] = []
         for org in organizations:
             org_id = getattr(org, "id", "")
@@ -100,8 +104,11 @@ async def search_organizations(
 ) -> JSONResponse:
     """搜索组织"""
     skip = (page - 1) * page_size
-    organizations, total = await organization_crud.get_multi_with_count_async(
-        db, keyword=keyword, skip=skip, limit=page_size
+    organizations, total = await organization_service.search_organizations(
+        db,
+        keyword=keyword,
+        skip=skip,
+        limit=page_size,
     )
     items = [OrganizationResponse.model_validate(org) for org in organizations]
 
@@ -131,7 +138,7 @@ async def get_organization(
     current_user: User = Depends(get_current_active_user),
 ) -> OrganizationResponse:
     """根据ID获取组织详情"""
-    organization = await organization_crud.get_async(db, id=org_id)
+    organization = await organization_service.get_organization(db, org_id=org_id)
     if not organization:
         raise not_found("组织不存在", resource_type="organization", resource_id=org_id)
     return OrganizationResponse.model_validate(organization)
@@ -145,11 +152,13 @@ async def get_organization_children(
     current_user: User = Depends(get_current_active_user),
 ) -> list[OrganizationResponse]:
     """获取组织下的子级组织"""
-    parent = await organization_crud.get_async(db, id=org_id)
+    parent = await organization_service.get_organization(db, org_id=org_id)
     if not parent:
         raise not_found("组织不存在", resource_type="organization", resource_id=org_id)
-    children = await organization_crud.get_children_async(
-        db, parent_id=org_id, recursive=is_recursive
+    children = await organization_service.get_organization_children(
+        db,
+        org_id=org_id,
+        recursive=is_recursive,
     )
     return [OrganizationResponse.model_validate(org) for org in children]
 
@@ -161,10 +170,10 @@ async def get_organization_path(
     current_user: User = Depends(get_current_active_user),
 ) -> list[OrganizationResponse]:
     """获取组织到根的路径"""
-    organization = await organization_crud.get_async(db, id=org_id)
+    organization = await organization_service.get_organization(db, org_id=org_id)
     if not organization:
         raise not_found("组织不存在", resource_type="organization", resource_id=org_id)
-    path = await organization_crud.get_path_to_root_async(db, org_id=org_id)
+    path = await organization_service.get_organization_path(db, org_id=org_id)
     return [OrganizationResponse.model_validate(org) for org in path]
 
 
@@ -181,7 +190,7 @@ async def get_organization_history(
 ) -> JSONResponse:
     """获取组织变更历史"""
     skip = (page - 1) * page_size
-    organization = await organization_crud.get_async(db, id=org_id)
+    organization = await organization_service.get_organization(db, org_id=org_id)
     if not organization:
         raise not_found("组织不存在", resource_type="organization", resource_id=org_id)
     history, total = await organization_service.get_history_with_count(
@@ -331,17 +340,12 @@ async def advanced_search_organizations(
     current_user: User = Depends(get_current_active_user),
 ) -> JSONResponse:
     """高级搜索组织"""
-    if search_request.keyword:
-        organizations = await organization_crud.search_async(
-            db,
-            keyword=search_request.keyword,
-            skip=search_request.skip,
-            limit=search_request.page_size,
-        )
-    else:
-        organizations = await organization_crud.get_multi_with_filters_async(
-            db, skip=search_request.skip, limit=search_request.page_size
-        )
+    organizations = await organization_service.advanced_search_organizations(
+        db,
+        keyword=search_request.keyword,
+        skip=search_request.skip,
+        limit=search_request.page_size,
+    )
 
     if search_request.level:
         organizations = [

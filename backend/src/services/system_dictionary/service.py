@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.exception_handler import DuplicateResourceError, ResourceNotFoundError
 from ...crud.system_dictionary import system_dictionary_crud
-from ...models.asset import SystemDictionary
+from ...models.system_dictionary import SystemDictionary
 from ...schemas.asset import SystemDictionaryCreate, SystemDictionaryUpdate
 
 
@@ -68,24 +68,41 @@ class SystemDictionaryService:
     async def update_sort_orders_async(
         self, db: AsyncSession, *, dict_type: str, sort_data: list[dict[str, Any]]
     ) -> list[SystemDictionary]:
-        updated_items: list[SystemDictionary] = []
-
+        updates_by_id: dict[str, Any] = {}
+        ordered_ids: list[str] = []
         for item in sort_data:
             dictionary_id = item.get("id")
             sort_order = item.get("sort_order")
-
             if dictionary_id and sort_order is not None:
-                dictionary_obj: SystemDictionary | None = (
-                    await system_dictionary_crud.get(db, dictionary_id)
-                )
-                if dictionary_obj and dictionary_obj.dict_type == dict_type:
-                    dictionary_obj.sort_order = sort_order
-                    db.add(dictionary_obj)
-                    updated_items.append(dictionary_obj)
+                dictionary_id_str = str(dictionary_id)
+                updates_by_id[dictionary_id_str] = sort_order
+                ordered_ids.append(dictionary_id_str)
+
+        if not updates_by_id:
+            await db.commit()
+            return []
+
+        dictionaries = await system_dictionary_crud.get_multi_by_ids_and_type_async(
+            db, ids=list(updates_by_id.keys()), dict_type=dict_type
+        )
+        dictionary_by_id: dict[str, SystemDictionary] = {
+            str(item.id): item for item in dictionaries
+        }
+
+        updated_items: list[SystemDictionary] = []
+        seen: set[str] = set()
+        for dictionary_id in ordered_ids:
+            if dictionary_id in seen:
+                continue
+            dictionary_obj = dictionary_by_id.get(dictionary_id)
+            if dictionary_obj is None:
+                continue
+            dictionary_obj.sort_order = updates_by_id[dictionary_id]
+            db.add(dictionary_obj)
+            updated_items.append(dictionary_obj)
+            seen.add(dictionary_id)
 
         await db.commit()
-        for updated_item in updated_items:
-            await db.refresh(updated_item)
 
         return updated_items
 

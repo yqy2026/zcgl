@@ -6,29 +6,7 @@ PDF导入相关的Pydantic模型
 
 from typing import Any
 
-from pydantic import BaseModel, Field
-
-
-# === V1兼容性数据传输对象 ===
-class ExtractionRequest(BaseModel):
-    """PDF信息提取请求模型 (V1兼容)"""
-
-    text: str
-    should_include_raw_text: bool = Field(default=False, description="是否包含原始文本")
-    should_validate_fields: bool = Field(default=True, description="是否验证字段有效性")
-
-
-class ExtractionResponse(BaseModel):
-    """PDF信息提取响应模型 (V1兼容)"""
-
-    success: bool
-    extractor_used: str = "rental_contract_extractor"
-    confidence: float = 0.0
-    extracted_fields: dict[str, Any] = {}
-    validation_results: dict[str, Any] = {}
-    error: str | None = None
-    processing_time_ms: float = 0.0
-    real_data_verified: bool = False
+from pydantic import BaseModel
 
 
 # === 数据传输对象 (DTOs) ===

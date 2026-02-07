@@ -253,7 +253,7 @@ export class AssetCoreService {
     try {
       const result = await apiClient.post<void>(
         ASSET_API.BATCH_DELETE,
-        { ids },
+        { asset_ids: ids },
         {
           retry: false,
           smartExtract: true,

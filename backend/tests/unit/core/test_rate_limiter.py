@@ -199,7 +199,7 @@ class TestRateLimiterMemoryManagement:
 
         # 应该不会崩溃，所有IP都有独立的请求队列
         # 验证内部状态
-        assert len(limiter.requests) == 150
+        assert len(limiter.request_times) == 150
 
 
 class TestRateLimiterErrorHandling:

@@ -1319,6 +1319,7 @@ class TestDeleteExcelConfig:
 
         mock_config = create_mock_excel_config()
         mock_excel_crud.get = AsyncMock(return_value=mock_config)
+        mock_excel_crud.update = AsyncMock(return_value=mock_config)
 
         result = run(delete_excel_config(config_id="config-123", db=mock_db))
 
@@ -1335,10 +1336,8 @@ class TestDeleteExcelConfig:
         with pytest.raises(BaseBusinessError) as exc_info:
             run(delete_excel_config(config_id="nonexistent", db=mock_db))
 
-        # 404 is raised inside try block but caught by outer except
-        # The implementation has a bug where HTTPException is caught and converted to 500
-        assert exc_info.value.status_code == 500
-        assert "删除Excel配置失败" in exc_info.value.message
+        assert exc_info.value.status_code == 404
+        assert "不存在" in exc_info.value.message
 
     @patch("src.api.v1.system.tasks.excel_task_config_crud")
     def test_delete_excel_config_exception(self, mock_excel_crud, mock_db):

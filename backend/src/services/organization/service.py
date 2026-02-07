@@ -14,6 +14,85 @@ from ...schemas.organization import OrganizationCreate, OrganizationUpdate
 class OrganizationService:
     """组织架构服务层"""
 
+    async def get_organizations(
+        self, db: AsyncSession, *, skip: int = 0, limit: int = 100
+    ) -> tuple[list[Organization], int]:
+        return await organization_crud.get_multi_with_count_async(
+            db,
+            skip=skip,
+            limit=limit,
+        )
+
+    async def search_organizations(
+        self,
+        db: AsyncSession,
+        *,
+        keyword: str,
+        skip: int = 0,
+        limit: int = 100,
+    ) -> tuple[list[Organization], int]:
+        return await organization_crud.get_multi_with_count_async(
+            db,
+            keyword=keyword,
+            skip=skip,
+            limit=limit,
+        )
+
+    async def get_organization(
+        self, db: AsyncSession, *, org_id: str
+    ) -> Organization | None:
+        return await organization_crud.get_async(db, id=org_id)
+
+    async def get_organization_tree(
+        self, db: AsyncSession, *, parent_id: str | None = None
+    ) -> list[Organization]:
+        return await organization_crud.get_tree_async(db, parent_id=parent_id)
+
+    async def get_organization_children(
+        self,
+        db: AsyncSession,
+        *,
+        org_id: str,
+        recursive: bool = False,
+    ) -> list[Organization]:
+        return await organization_crud.get_children_async(
+            db,
+            parent_id=org_id,
+            recursive=recursive,
+        )
+
+    async def get_organization_path(
+        self,
+        db: AsyncSession,
+        *,
+        org_id: str,
+    ) -> list[Organization]:
+        return await organization_crud.get_path_to_root_async(db, org_id=org_id)
+
+    async def advanced_search_organizations(
+        self,
+        db: AsyncSession,
+        *,
+        keyword: str | None = None,
+        skip: int = 0,
+        limit: int = 100,
+    ) -> list[Organization]:
+        if keyword:
+            normalized = keyword.strip()
+            if normalized:
+                return await organization_crud.search_async(
+                    db,
+                    keyword=normalized,
+                    skip=skip,
+                    limit=limit,
+                )
+
+        return await organization_crud.get_multi_with_filters_async(
+            db,
+            skip=skip,
+            limit=limit,
+        )
+
     async def create_organization(
         self, db: AsyncSession, *, obj_in: OrganizationCreate
     ) -> Organization:
@@ -143,26 +222,21 @@ class OrganizationService:
         return True
 
     async def get_statistics(self, db: AsyncSession) -> dict[str, Any]:
-        total_stmt = select(func.count(Organization.id)).where(
-            Organization.is_deleted.is_(False)
-        )
-        total = int((await db.execute(total_stmt)).scalar() or 0)
+        level_rows = (
+            await db.execute(
+                select(Organization.level, func.count(Organization.id))
+                .where(Organization.is_deleted.is_(False))
+                .group_by(Organization.level)
+            )
+        ).all()
+        level_stats = {
+            f"level_{int(level)}": int(count or 0)
+            for level, count in level_rows
+            if level is not None
+        }
+        total = sum(int(count or 0) for _, count in level_rows)
         active = total
         inactive = 0
-
-        levels_stmt = (
-            select(Organization.level)
-            .where(Organization.is_deleted.is_(False))
-            .distinct()
-        )
-        levels = list((await db.execute(levels_stmt)).scalars().all())
-        level_stats = {}
-        for level in levels:
-            count_stmt = select(func.count(Organization.id)).where(
-                and_(Organization.is_deleted.is_(False), Organization.level == level)
-            )
-            count = int((await db.execute(count_stmt)).scalar() or 0)
-            level_stats[f"level_{level}"] = count
 
         return {
             "total": total,

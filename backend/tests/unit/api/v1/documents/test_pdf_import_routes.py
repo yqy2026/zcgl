@@ -151,7 +151,7 @@ class TestPDFImportSessions:
         测试获取包含数据的 PDF 导入会话列表
 
         Given: 用户有导入会话
-        When: 调用 GET /api/v1/documents/pdf-import/sessions
+        When: 调用 GET /api/v1/pdf-import/sessions
         Then: 返回会话列表
         """
         # Arrange
@@ -192,7 +192,7 @@ class TestPDFUpload:
         测试上传 PDF 进行智能导入
 
         Given: 用户上传 PDF 文件
-        When: 调用 POST /api/v1/documents/pdf-import/upload
+        When: 调用 POST /api/v1/pdf-import/upload
         Then: 返回任务 ID
         """
         # Arrange
@@ -221,11 +221,11 @@ class TestPDFUpload:
         测试没有文件的上传请求
 
         Given: 用户没有上传文件
-        When: 调用 POST /api/v1/documents/pdf-import/upload
+        When: 调用 POST /api/v1/pdf-import/upload
         Then: 返回 400 错误
         """
         # Act
-        response = client.post("/api/v1/documents/pdf-import/upload")
+        response = client.post("/api/v1/pdf-import/upload")
 
         # Assert
         # FastAPI 会自动验证文件参数
@@ -318,7 +318,7 @@ class TestErrorHandling:
             mock_size.side_effect = Exception("Configuration error")
 
             # Act
-            response = client.get("/api/v1/documents/pdf-import/info")
+            response = client.get("/api/v1/pdf-import/info")
 
             # Assert
             # 应该返回 200，因为这是简单的配置读取
@@ -346,7 +346,7 @@ class TestIntegration:
         Then: 所有步骤都成功
         """
         # Step 1: 获取系统信息
-        info_response = client.get("/api/v1/documents/pdf-import/info")
+        info_response = client.get("/api/v1/pdf-import/info")
         assert info_response.status_code == 200
 
         # Step 2: 上传 PDF
@@ -358,5 +358,5 @@ class TestIntegration:
         assert upload_response.status_code == 200
 
         # Step 3: 查询会话列表
-        sessions_response = client.get("/api/v1/documents/pdf-import/sessions")
+        sessions_response = client.get("/api/v1/pdf-import/sessions")
         assert sessions_response.status_code == 200

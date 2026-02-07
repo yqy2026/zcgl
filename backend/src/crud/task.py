@@ -139,38 +139,44 @@ class TaskCRUD(CRUDBase[AsyncTask, TaskCreate, TaskUpdate]):
         total_stmt = select(func.count(AsyncTask.id)).where(*conditions)
         total_tasks = int((await db.execute(total_stmt)).scalar() or 0)
 
-        running_stmt = select(func.count(AsyncTask.id)).where(
-            *conditions, AsyncTask.status == TaskStatus.RUNNING.value
-        )
-        running_tasks = int((await db.execute(running_stmt)).scalar() or 0)
-
-        completed_stmt = select(func.count(AsyncTask.id)).where(
-            *conditions, AsyncTask.status == TaskStatus.COMPLETED.value
-        )
-        completed_tasks = int((await db.execute(completed_stmt)).scalar() or 0)
-
-        failed_stmt = select(func.count(AsyncTask.id)).where(
-            *conditions, AsyncTask.status == TaskStatus.FAILED.value
-        )
-        failed_tasks = int((await db.execute(failed_stmt)).scalar() or 0)
-
-        by_type: dict[str, int] = {}
-        for task_type in TaskType:
-            type_stmt = select(func.count(AsyncTask.id)).where(
-                *conditions, AsyncTask.task_type == task_type.value
+        status_rows = (
+            await db.execute(
+                select(AsyncTask.status, func.count(AsyncTask.id))
+                .where(*conditions)
+                .group_by(AsyncTask.status)
             )
-            count = int((await db.execute(type_stmt)).scalar() or 0)
-            if count > 0:
-                by_type[task_type.value] = count
-
-        by_status: dict[str, int] = {}
-        for status in TaskStatus:
-            status_stmt = select(func.count(AsyncTask.id)).where(
-                *conditions, AsyncTask.status == status.value
+        ).all()
+        allowed_statuses = {status.value for status in TaskStatus}
+        by_status = {
+            str(status): int(count or 0)
+            for status, count in status_rows
+            if (
+                status is not None
+                and str(status) in allowed_statuses
+                and int(count or 0) > 0
             )
-            count = int((await db.execute(status_stmt)).scalar() or 0)
-            if count > 0:
-                by_status[status.value] = count
+        }
+        running_tasks = by_status.get(TaskStatus.RUNNING.value, 0)
+        completed_tasks = by_status.get(TaskStatus.COMPLETED.value, 0)
+        failed_tasks = by_status.get(TaskStatus.FAILED.value, 0)
+
+        type_rows = (
+            await db.execute(
+                select(AsyncTask.task_type, func.count(AsyncTask.id))
+                .where(*conditions)
+                .group_by(AsyncTask.task_type)
+            )
+        ).all()
+        allowed_types = {task_type.value for task_type in TaskType}
+        by_type = {
+            str(task_type): int(count or 0)
+            for task_type, count in type_rows
+            if (
+                task_type is not None
+                and str(task_type) in allowed_types
+                and int(count or 0) > 0
+            )
+        }
 
         completed_rows_stmt = select(
             AsyncTask.started_at, AsyncTask.completed_at

@@ -4,7 +4,7 @@
 测试 OwnershipFinancialService 的所有主要方法
 """
 
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -17,6 +17,16 @@ from src.services.asset.ownership_financial_service import (
 
 TEST_OWNERSHIP_ID = "ownership_123"
 TEST_OWNERSHIP_NAME = "测试权属方"
+
+
+def _mock_scalar_result(value):
+    result = MagicMock()
+    result.scalar.return_value = value
+    return result
+
+
+def _set_execute_side_effect(mock_db, values):
+    mock_db.execute = AsyncMock(side_effect=[_mock_scalar_result(v) for v in values])
 
 
 @pytest.fixture
@@ -112,24 +122,11 @@ class TestDataClasses:
 class TestGetFinancialSummary:
     """测试获取财务汇总"""
 
-    def test_get_financial_summary_success(self, service, mock_db):
+    async def test_get_financial_summary_success(self, service, mock_db):
         """测试成功获取财务汇总"""
-        # Mock 查询结果
-        mock_query = MagicMock()
-        mock_db.query.return_value = mock_query
-        mock_query.filter.return_value = mock_query
-        mock_query.scalar_subquery.return_value = "subquery"
+        _set_execute_side_effect(mock_db, [10000.0, 8000.0, 2000.0, 10, 8])
 
-        # 设置各查询的返回值
-        mock_query.scalar.side_effect = [
-            10000.0,  # due_amount
-            8000.0,  # paid_amount
-            2000.0,  # arrears_amount
-            10,  # total_contracts
-            8,  # active_contracts
-        ]
-
-        result = service.get_financial_summary(
+        result = await service.get_financial_summary(
             mock_db,
             TEST_OWNERSHIP_ID,
             TEST_OWNERSHIP_NAME,
@@ -144,23 +141,11 @@ class TestGetFinancialSummary:
         assert result.contract_summary.total_contracts == 10
         assert result.contract_summary.active_contracts == 8
 
-    def test_get_financial_summary_empty_data(self, service, mock_db):
+    async def test_get_financial_summary_empty_data(self, service, mock_db):
         """测试空数据情况"""
-        mock_query = MagicMock()
-        mock_db.query.return_value = mock_query
-        mock_query.filter.return_value = mock_query
-        mock_query.scalar_subquery.return_value = "subquery"
+        _set_execute_side_effect(mock_db, [None, None, None, 0, 0])
 
-        # 所有查询返回 None 或 0
-        mock_query.scalar.side_effect = [
-            None,  # due_amount
-            None,  # paid_amount
-            None,  # arrears_amount
-            0,  # total_contracts
-            0,  # active_contracts
-        ]
-
-        result = service.get_financial_summary(
+        result = await service.get_financial_summary(
             mock_db,
             TEST_OWNERSHIP_ID,
             TEST_OWNERSHIP_NAME,
@@ -173,22 +158,11 @@ class TestGetFinancialSummary:
         assert result.contract_summary.total_contracts == 0
         assert result.contract_summary.active_contracts == 0
 
-    def test_get_financial_summary_zero_due_amount(self, service, mock_db):
+    async def test_get_financial_summary_zero_due_amount(self, service, mock_db):
         """测试应收为零时收款率计算"""
-        mock_query = MagicMock()
-        mock_db.query.return_value = mock_query
-        mock_query.filter.return_value = mock_query
-        mock_query.scalar_subquery.return_value = "subquery"
+        _set_execute_side_effect(mock_db, [0, 0, 0, 5, 3])
 
-        mock_query.scalar.side_effect = [
-            0,  # due_amount = 0
-            0,  # paid_amount
-            0,  # arrears_amount
-            5,  # total_contracts
-            3,  # active_contracts
-        ]
-
-        result = service.get_financial_summary(
+        result = await service.get_financial_summary(
             mock_db,
             TEST_OWNERSHIP_ID,
             TEST_OWNERSHIP_NAME,
@@ -197,22 +171,11 @@ class TestGetFinancialSummary:
         # 应收为零时，收款率应为 0
         assert result.financial_summary.payment_rate == 0.0
 
-    def test_get_financial_summary_full_payment(self, service, mock_db):
+    async def test_get_financial_summary_full_payment(self, service, mock_db):
         """测试全额付款情况"""
-        mock_query = MagicMock()
-        mock_db.query.return_value = mock_query
-        mock_query.filter.return_value = mock_query
-        mock_query.scalar_subquery.return_value = "subquery"
+        _set_execute_side_effect(mock_db, [10000.0, 10000.0, 0.0, 5, 5])
 
-        mock_query.scalar.side_effect = [
-            10000.0,  # due_amount
-            10000.0,  # paid_amount (全额付款)
-            0.0,  # arrears_amount
-            5,  # total_contracts
-            5,  # active_contracts
-        ]
-
-        result = service.get_financial_summary(
+        result = await service.get_financial_summary(
             mock_db,
             TEST_OWNERSHIP_ID,
             TEST_OWNERSHIP_NAME,
@@ -221,22 +184,11 @@ class TestGetFinancialSummary:
         assert result.financial_summary.payment_rate == 100.0
         assert result.financial_summary.total_arrears_amount == 0.0
 
-    def test_get_financial_summary_partial_payment(self, service, mock_db):
+    async def test_get_financial_summary_partial_payment(self, service, mock_db):
         """测试部分付款情况"""
-        mock_query = MagicMock()
-        mock_db.query.return_value = mock_query
-        mock_query.filter.return_value = mock_query
-        mock_query.scalar_subquery.return_value = "subquery"
+        _set_execute_side_effect(mock_db, [20000.0, 15000.0, 5000.0, 3, 2])
 
-        mock_query.scalar.side_effect = [
-            20000.0,  # due_amount
-            15000.0,  # paid_amount
-            5000.0,  # arrears_amount
-            3,  # total_contracts
-            2,  # active_contracts
-        ]
-
-        result = service.get_financial_summary(
+        result = await service.get_financial_summary(
             mock_db,
             TEST_OWNERSHIP_ID,
             TEST_OWNERSHIP_NAME,
@@ -245,22 +197,11 @@ class TestGetFinancialSummary:
         # 15000 / 20000 * 100 = 75%
         assert result.financial_summary.payment_rate == 75.0
 
-    def test_get_financial_summary_no_active_contracts(self, service, mock_db):
+    async def test_get_financial_summary_no_active_contracts(self, service, mock_db):
         """测试无活跃合同情况"""
-        mock_query = MagicMock()
-        mock_db.query.return_value = mock_query
-        mock_query.filter.return_value = mock_query
-        mock_query.scalar_subquery.return_value = "subquery"
+        _set_execute_side_effect(mock_db, [5000.0, 5000.0, 0.0, 10, 0])
 
-        mock_query.scalar.side_effect = [
-            5000.0,  # due_amount
-            5000.0,  # paid_amount
-            0.0,  # arrears_amount
-            10,  # total_contracts
-            0,  # active_contracts (无活跃)
-        ]
-
-        result = service.get_financial_summary(
+        result = await service.get_financial_summary(
             mock_db,
             TEST_OWNERSHIP_ID,
             TEST_OWNERSHIP_NAME,
@@ -269,25 +210,16 @@ class TestGetFinancialSummary:
         assert result.contract_summary.total_contracts == 10
         assert result.contract_summary.active_contracts == 0
 
-    def test_get_financial_summary_large_amounts(self, service, mock_db):
+    async def test_get_financial_summary_large_amounts(self, service, mock_db):
         """测试大金额情况"""
-        mock_query = MagicMock()
-        mock_db.query.return_value = mock_query
-        mock_query.filter.return_value = mock_query
-        mock_query.scalar_subquery.return_value = "subquery"
-
         large_due = 999999999.99
         large_paid = 888888888.88
 
-        mock_query.scalar.side_effect = [
-            large_due,
-            large_paid,
-            large_due - large_paid,
-            100,
-            95,
-        ]
+        _set_execute_side_effect(
+            mock_db, [large_due, large_paid, large_due - large_paid, 100, 95]
+        )
 
-        result = service.get_financial_summary(
+        result = await service.get_financial_summary(
             mock_db,
             TEST_OWNERSHIP_ID,
             TEST_OWNERSHIP_NAME,
@@ -327,15 +259,11 @@ class TestEdgeCases:
         assert result_dict["financial_summary"]["total_due_amount"] == 12345.67
         assert result_dict["financial_summary"]["payment_rate"] == 80.0123
 
-    def test_empty_ownership_name(self, service, mock_db):
+    async def test_empty_ownership_name(self, service, mock_db):
         """测试空权属方名称"""
-        mock_query = MagicMock()
-        mock_db.query.return_value = mock_query
-        mock_query.filter.return_value = mock_query
-        mock_query.scalar_subquery.return_value = "subquery"
-        mock_query.scalar.side_effect = [0, 0, 0, 0, 0]
+        _set_execute_side_effect(mock_db, [0, 0, 0, 0, 0])
 
-        result = service.get_financial_summary(
+        result = await service.get_financial_summary(
             mock_db,
             TEST_OWNERSHIP_ID,
             "",  # 空名称
@@ -343,16 +271,12 @@ class TestEdgeCases:
 
         assert result.ownership_name == ""
 
-    def test_special_characters_in_ownership_name(self, service, mock_db):
+    async def test_special_characters_in_ownership_name(self, service, mock_db):
         """测试权属方名称包含特殊字符"""
-        mock_query = MagicMock()
-        mock_db.query.return_value = mock_query
-        mock_query.filter.return_value = mock_query
-        mock_query.scalar_subquery.return_value = "subquery"
-        mock_query.scalar.side_effect = [0, 0, 0, 0, 0]
+        _set_execute_side_effect(mock_db, [0, 0, 0, 0, 0])
 
         special_name = "测试公司（中国）有限公司 & Partners"
-        result = service.get_financial_summary(
+        result = await service.get_financial_summary(
             mock_db,
             TEST_OWNERSHIP_ID,
             special_name,

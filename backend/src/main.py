@@ -119,17 +119,6 @@ RequestLoggingMiddleware = safe_import_from(
     fallback=None,
 )
 
-# V1 兼容中间件（可选，迁移完成后可移除）
-V1CompatibilityMiddleware = safe_import(
-    "src.middleware.v1_compatibility:V1CompatibilityMiddleware",
-    fallback=None,
-)
-add_v1_compatibility = safe_import_from(
-    "src.middleware.v1_compatibility",
-    "add_v1_compatibility",
-    fallback=lambda app, preserve_endpoints=None: None,
-)
-
 logger.info("依赖导入完成")
 
 
@@ -216,7 +205,7 @@ async def lifespan(app: FastAPI) -> Any:
     if not is_testing():
         try:
             from .database import async_session_scope
-            from .services.enum_data_init import add_legacy_enum_values, init_enum_data
+            from .services.enum_data_init import init_enum_data
 
             try:
                 logger.info("开始初始化枚举字段数据...")
@@ -229,11 +218,6 @@ async def lifespan(app: FastAPI) -> Any:
                         f"枚举值初始化: 创建 {init_result['values_created']}, 更新 {init_result['values_updated']}"
                     )
 
-                    # 添加遗留枚举值支持
-                    legacy_result = await add_legacy_enum_values(
-                        db, created_by="system"
-                    )
-                    logger.info(f"遗留枚举值添加: {legacy_result['values_added']}")
             except Exception as e:
                 logger.warning(f"枚举数据初始化失败: {e}")
         except ImportError as e:

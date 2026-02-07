@@ -5,7 +5,7 @@ Focus on async-only APIs after migration.
 
 from __future__ import annotations
 
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -29,11 +29,9 @@ from src.models.enum_field import (
 )
 from src.schemas.enum_field import (
     EnumFieldTypeCreate,
-    EnumFieldTypeUpdate,
     EnumFieldUsageCreate,
     EnumFieldUsageUpdate,
     EnumFieldValueCreate,
-    EnumFieldValueUpdate,
 )
 
 pytestmark = pytest.mark.asyncio
@@ -182,6 +180,62 @@ class TestEnumFieldTypeCRUD:
         assert len(result) == 1
         assert result[0].code == "asset_type"
 
+    async def test_get_multi_async_bulk_loads_values(self, mock_db):
+        type_a = EnumFieldType(
+            id="enum_type_a",
+            name="Type A",
+            code="type_a",
+            category="asset",
+            status="active",
+            is_deleted=False,
+        )
+        type_a.enum_values = []
+        type_b = EnumFieldType(
+            id="enum_type_b",
+            name="Type B",
+            code="type_b",
+            category="asset",
+            status="active",
+            is_deleted=False,
+        )
+        type_b.enum_values = []
+
+        value_a = EnumFieldValue(
+            id="value_a",
+            enum_type_id="enum_type_a",
+            label="A1",
+            value="a1",
+            code="A1",
+            sort_order=1,
+            is_active=True,
+            is_deleted=False,
+        )
+        value_b = EnumFieldValue(
+            id="value_b",
+            enum_type_id="enum_type_b",
+            label="B1",
+            value="b1",
+            code="B1",
+            sort_order=1,
+            is_active=True,
+            is_deleted=False,
+        )
+
+        mock_db.execute = AsyncMock(
+            side_effect=[
+                _result_with_scalars([type_a, type_b]),
+                _result_with_scalars([value_a, value_b]),
+            ]
+        )
+
+        crud = EnumFieldTypeCRUD()
+        result = await crud.get_multi_async(mock_db, skip=0, limit=10)
+
+        assert len(result) == 2
+        assert result[0].enum_values == [value_a]
+        assert result[1].enum_values == [value_b]
+        assert mock_db.execute.await_count == 2
+
     async def test_create_async_records_history(self, mock_db, sample_type_create):
         mock_db.add = MagicMock()
         mock_db.commit = AsyncMock()
@@ -239,12 +293,12 @@ class TestEnumFieldValueCRUD:
 
     async def test_get_tree_async(self, mock_db, sample_enum_value):
         crud = EnumFieldValueCRUD()
-        crud.get_by_type_async = AsyncMock(side_effect=[[sample_enum_value], []])
-
+        mock_db.execute = AsyncMock(return_value=_result_with_scalars([sample_enum_value]))
         tree = await crud.get_tree_async(mock_db, "enum_type_123")
 
         assert tree
         assert tree[0].children == []
+        assert mock_db.execute.await_count == 1
 
     async def test_create_async_sets_level_and_path(self, mock_db, sample_value_create):
         parent = EnumFieldValue(
@@ -296,6 +350,60 @@ class TestEnumFieldValueCRUD:
         crud = EnumFieldValueCRUD()
         with pytest.raises(OperationNotAllowedError):
             await crud.delete_async(mock_db, "enum_value_123")
+
+    async def test_batch_create_async_uses_single_transaction(self, mock_db):
+        parent = EnumFieldValue(
+            id="parent",
+            enum_type_id="enum_type_123",
+            label="Parent",
+            value="parent",
+            code="PARENT",
+            level=1,
+            path="root",
+            sort_order=1,
+            is_active=True,
+            is_deleted=False,
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+        )
+        mock_db.execute = AsyncMock(return_value=_result_with_scalars([parent]))
+        mock_db.add = MagicMock()
+        mock_db.flush = AsyncMock()
+        mock_db.commit = AsyncMock()
+
+        crud = EnumFieldValueCRUD()
+        created = await crud.batch_create_async(
+            mock_db,
+            enum_type_id="enum_type_123",
+            values_data=[
+                {
+                    "label": "Child A",
+                    "value": "child_a",
+                    "code": "CHILD_A",
+                    "sort_order": 1,
+                    "is_active": True,
+                    "parent_id": "parent",
+                },
+                {
+                    "label": "Root B",
+                    "value": "root_b",
+                    "code": "ROOT_B",
+                    "sort_order": 2,
+                    "is_active": True,
+                    "parent_id": None,
+                },
+            ],
+            created_by="admin",
+        )
+
+        assert len(created) == 2
+        assert created[0].level == 2
+        assert created[0].path == "root/parent"
+        assert created[1].level == 1
+        assert created[1].path == ""
+        mock_db.execute.assert_awaited_once()
+        mock_db.flush.assert_awaited_once()
+        mock_db.commit.assert_awaited_once()
 
 
 class TestEnumFieldUsageCRUD:

@@ -231,7 +231,9 @@ class TestCheckContractExpiry:
             "src.services.notification.scheduler.notification_service"
         ) as mock_service:
             mock_service.list_active_users_async = AsyncMock(return_value=[])
-            mock_service.find_existing_notification_async = AsyncMock(return_value=None)
+            mock_service.find_existing_notification_pairs_async = AsyncMock(
+                return_value=set()
+            )
             with patch.object(
                 scheduler_service, "_create_and_send_notification", new_callable=AsyncMock
             ) as mock_create:
@@ -252,8 +254,8 @@ class TestCheckContractExpiry:
             "src.services.notification.scheduler.notification_service"
         ) as mock_service:
             mock_service.list_active_users_async = AsyncMock(return_value=[user])
-            mock_service.find_existing_notification_async = AsyncMock(
-                return_value=MagicMock()
+            mock_service.find_existing_notification_pairs_async = AsyncMock(
+                return_value={(str(user.id), str(mock_contract.id))}
             )
 
             with patch.object(
@@ -286,7 +288,9 @@ class TestCheckPaymentOverdue:
             "src.services.notification.scheduler.notification_service"
         ) as mock_service:
             mock_service.list_active_users_async = AsyncMock(return_value=[])
-            mock_service.find_existing_notification_async = AsyncMock(return_value=None)
+            mock_service.find_existing_notification_pairs_async = AsyncMock(
+                return_value=set()
+            )
             with patch.object(
                 scheduler_service, "_create_and_send_notification", new_callable=AsyncMock
             ):
@@ -306,8 +310,8 @@ class TestCheckPaymentOverdue:
             "src.services.notification.scheduler.notification_service"
         ) as mock_service:
             mock_service.list_active_users_async = AsyncMock(return_value=[user])
-            mock_service.find_existing_notification_async = AsyncMock(
-                return_value=MagicMock()
+            mock_service.find_existing_notification_pairs_async = AsyncMock(
+                return_value={(str(user.id), str(mock_ledger.id))}
             )
 
             with patch.object(
@@ -339,7 +343,9 @@ class TestCheckPaymentDueSoon:
             "src.services.notification.scheduler.notification_service"
         ) as mock_service:
             mock_service.list_active_users_async = AsyncMock(return_value=[])
-            mock_service.find_existing_notification_async = AsyncMock(return_value=None)
+            mock_service.find_existing_notification_pairs_async = AsyncMock(
+                return_value=set()
+            )
             with patch.object(
                 scheduler_service, "_create_and_send_notification", new_callable=AsyncMock
             ):
@@ -425,7 +431,9 @@ class TestSchedulerEdgeCases:
             "src.services.notification.scheduler.notification_service"
         ) as mock_service:
             mock_service.list_active_users_async = AsyncMock(return_value=[])
-            mock_service.find_existing_notification_async = AsyncMock(return_value=None)
+            mock_service.find_existing_notification_pairs_async = AsyncMock(
+                return_value=set()
+            )
             with patch.object(
                 scheduler_service, "_create_and_send_notification", new_callable=AsyncMock
             ):
@@ -453,7 +461,9 @@ class TestSchedulerEdgeCases:
             "src.services.notification.scheduler.notification_service"
         ) as mock_service:
             mock_service.list_active_users_async = AsyncMock(return_value=[])
-            mock_service.find_existing_notification_async = AsyncMock(return_value=None)
+            mock_service.find_existing_notification_pairs_async = AsyncMock(
+                return_value=set()
+            )
             with patch.object(
                 scheduler_service, "_create_and_send_notification", new_callable=AsyncMock
             ):

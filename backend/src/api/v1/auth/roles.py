@@ -14,19 +14,27 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ....core.exception_handler import (
     BaseBusinessError,
     bad_request,
+    forbidden,
     internal_error,
     not_found,
 )
 from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
-from ....crud.rbac import permission_crud, role_crud
 from ....database import get_async_db
 from ....middleware.auth import get_current_active_user, require_admin
 from ....models.auth import User
 from ....schemas.rbac import (
+    PermissionCheckRequest,
+    PermissionCheckResponse,
+    PermissionGrantCreate,
+    PermissionGrantResponse,
+    PermissionGrantUpdate,
     PermissionResponse,
     RoleCreate,
     RoleResponse,
     RoleUpdate,
+    UserPermissionSummary,
+    UserRoleAssignmentCreate,
+    UserRoleAssignmentResponse,
 )
 from ....services import RBACService
 
@@ -81,6 +89,16 @@ class RoleUserListResponse(BaseModel):
     total: int
 
 
+class UserPermissionCheckRequest(BaseModel):
+    """用户权限检查请求"""
+
+    user_id: str = Field(..., description="用户ID")
+    resource: str = Field(..., description="资源类型")
+    action: str = Field(..., description="操作类型")
+    resource_id: str | None = Field(None, description="资源ID")
+    context: dict[str, Any] | None = Field(None, description="上下文")
+
+
 # ==================== 角色CRUD端点 ====================
 
 
@@ -110,9 +128,8 @@ async def get_roles(
 
     try:
         skip = (page - 1) * page_size
-
-        roles, total = await role_crud.get_multi_with_filters(
-            db=db,
+        rbac_service = RBACService(db)
+        roles, total = await rbac_service.get_roles(
             skip=skip,
             limit=page_size,
             search=search,
@@ -166,6 +183,304 @@ async def create_role(
         raise bad_request(str(e))
 
 
+@router.post(
+    "/permission-check",
+    response_model=PermissionCheckResponse,
+    summary="统一权限检查",
+)
+async def check_user_permission(
+    check_data: UserPermissionCheckRequest,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(require_admin),
+) -> PermissionCheckResponse:
+    """统一权限检查入口（管理员调试与审计使用）"""
+    try:
+        rbac_service = RBACService(db)
+        request = PermissionCheckRequest(
+            resource=check_data.resource,
+            action=check_data.action,
+            resource_id=check_data.resource_id,
+            context=check_data.context,
+        )
+        return await rbac_service.check_permission(check_data.user_id, request)
+    except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
+        raise bad_request(str(e))
+
+
+@router.post(
+    "/assignments",
+    response_model=UserRoleAssignmentResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="为用户分配角色",
+)
+async def assign_role_to_user(
+    assignment_data: UserRoleAssignmentCreate,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(require_admin),
+) -> UserRoleAssignmentResponse:
+    """创建用户-角色分配记录"""
+    try:
+        rbac_service = RBACService(db)
+        assignment = await rbac_service.assign_role_to_user(
+            assignment_data=assignment_data,
+            assigned_by=str(current_user.id),
+        )
+        return UserRoleAssignmentResponse.model_validate(assignment)
+    except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
+        raise bad_request(str(e))
+
+
+@router.get(
+    "/users/{user_id}/roles",
+    response_model=list[RoleResponse],
+    summary="获取用户角色列表",
+)
+async def get_user_roles(
+    user_id: str,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+) -> list[RoleResponse]:
+    """获取指定用户的角色列表（本人或管理员）"""
+    try:
+        rbac_service = RBACService(db)
+        if current_user.id != user_id and not await rbac_service.check_user_permission(
+            current_user.id, "system", "admin"
+        ):
+            raise forbidden("无权查看该用户角色")
+
+        roles = await rbac_service.get_user_roles(user_id)
+        return [RoleResponse.model_validate(role) for role in roles]
+    except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
+        raise bad_request(str(e))
+
+
+@router.delete(
+    "/users/{user_id}/roles/{role_id}",
+    response_model=dict[str, Any],
+    summary="撤销用户角色",
+)
+async def revoke_user_role(
+    user_id: str,
+    role_id: str,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(require_admin),
+) -> dict[str, Any]:
+    """撤销用户角色分配"""
+    try:
+        rbac_service = RBACService(db)
+        success = await rbac_service.revoke_role_from_user(
+            user_id=user_id,
+            role_id=role_id,
+            revoked_by=str(current_user.id),
+        )
+        if not success:
+            raise not_found(
+                "用户角色分配不存在",
+                resource_type="user_role_assignment",
+                resource_id=f"{user_id}:{role_id}",
+            )
+        return {"success": True, "message": "角色撤销成功"}
+    except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
+        raise bad_request(str(e))
+
+
+@router.get(
+    "/users/{user_id}/permissions/summary",
+    response_model=UserPermissionSummary,
+    summary="获取用户权限汇总",
+)
+async def get_user_permissions_summary(
+    user_id: str,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+) -> UserPermissionSummary:
+    """获取用户权限汇总（本人或管理员）"""
+    try:
+        rbac_service = RBACService(db)
+        if current_user.id != user_id and not await rbac_service.check_user_permission(
+            current_user.id, "system", "admin"
+        ):
+            raise forbidden("无权查看该用户权限汇总")
+        return await rbac_service.get_user_permissions_summary(user_id)
+    except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
+        raise bad_request(str(e))
+
+
+@router.post(
+    "/permission-grants",
+    response_model=PermissionGrantResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="创建统一授权记录",
+)
+async def create_permission_grant(
+    grant_data: PermissionGrantCreate,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(require_admin),
+) -> PermissionGrantResponse:
+    """创建统一授权记录（静态RBAC之外的动态/临时授权都落在此表）"""
+    try:
+        rbac_service = RBACService(db)
+        grant = await rbac_service.grant_permission_to_user(
+            user_id=grant_data.user_id,
+            permission_id=grant_data.permission_id,
+            grant_type=grant_data.grant_type,
+            granted_by=str(current_user.id),
+            effect=grant_data.effect,
+            scope=grant_data.scope,
+            scope_id=grant_data.scope_id,
+            conditions=grant_data.conditions,
+            starts_at=grant_data.starts_at,
+            expires_at=grant_data.expires_at,
+            priority=grant_data.priority,
+            source_type=grant_data.source_type,
+            source_id=grant_data.source_id,
+            reason=grant_data.reason,
+        )
+        return PermissionGrantResponse.model_validate(grant)
+    except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
+        raise bad_request(str(e))
+
+
+@router.get(
+    "/permission-grants",
+    response_model=APIResponse[PaginatedData[PermissionGrantResponse]],
+    summary="分页获取统一授权记录",
+)
+async def get_permission_grants(
+    page: int = Query(1, ge=1, description="页码"),
+    page_size: int = Query(20, ge=1, le=100, description="每页数量"),
+    user_id: str | None = Query(None, description="用户ID"),
+    permission_id: str | None = Query(None, description="权限ID"),
+    grant_type: str | None = Query(None, description="授权类型"),
+    effect: str | None = Query(None, description="allow/deny"),
+    scope: str | None = Query(None, description="作用域"),
+    is_active: bool | None = Query(None, description="是否激活"),
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(require_admin),
+) -> JSONResponse:
+    """分页查询统一授权记录"""
+    try:
+        rbac_service = RBACService(db)
+        skip = (page - 1) * page_size
+        grants, total = await rbac_service.list_permission_grants(
+            skip=skip,
+            limit=page_size,
+            user_id=user_id,
+            permission_id=permission_id,
+            grant_type=grant_type,
+            effect=effect,
+            scope=scope,
+            is_active=is_active,
+        )
+
+        return ResponseHandler.paginated(
+            data=[PermissionGrantResponse.model_validate(grant) for grant in grants],
+            page=page,
+            page_size=page_size,
+            total=total,
+            message="获取统一授权列表成功",
+        )
+    except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
+        raise internal_error(str(e))
+
+
+@router.get(
+    "/permission-grants/{grant_id}",
+    response_model=PermissionGrantResponse,
+    summary="获取统一授权记录详情",
+)
+async def get_permission_grant(
+    grant_id: str,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(require_admin),
+) -> PermissionGrantResponse:
+    """获取指定统一授权记录详情"""
+    try:
+        rbac_service = RBACService(db)
+        grant = await rbac_service.get_permission_grant(grant_id)
+        if not grant:
+            raise not_found(
+                "统一授权记录不存在",
+                resource_type="permission_grant",
+                resource_id=grant_id,
+            )
+        return PermissionGrantResponse.model_validate(grant)
+    except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
+        raise internal_error(str(e))
+
+
+@router.patch(
+    "/permission-grants/{grant_id}",
+    response_model=PermissionGrantResponse,
+    summary="更新统一授权记录",
+)
+async def update_permission_grant(
+    grant_id: str,
+    grant_data: PermissionGrantUpdate,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(require_admin),
+) -> PermissionGrantResponse:
+    """更新统一授权记录"""
+    try:
+        rbac_service = RBACService(db)
+        grant = await rbac_service.update_permission_grant(
+            grant_id=grant_id,
+            grant_data=grant_data,
+            updated_by=str(current_user.id),
+        )
+        return PermissionGrantResponse.model_validate(grant)
+    except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
+        raise bad_request(str(e))
+
+
+@router.delete(
+    "/permission-grants/{grant_id}",
+    response_model=dict[str, Any],
+    summary="撤销统一授权记录",
+)
+async def revoke_permission_grant(
+    grant_id: str,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(require_admin),
+) -> dict[str, Any]:
+    """撤销统一授权记录"""
+    try:
+        rbac_service = RBACService(db)
+        success = await rbac_service.revoke_permission_grant(
+            grant_id=grant_id,
+            revoked_by=str(current_user.id),
+        )
+        if not success:
+            raise not_found(
+                "统一授权记录不存在",
+                resource_type="permission_grant",
+                resource_id=grant_id,
+            )
+        return {"success": True, "message": "统一授权已撤销", "grant_id": grant_id}
+    except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
+        raise bad_request(str(e))
+
+
 @router.get("/{role_id}", response_model=RoleDetailResponse, summary="获取角色详情")
 async def get_role(
     role_id: str,
@@ -174,7 +489,8 @@ async def get_role(
 ) -> RoleDetailResponse:
     """获取角色详情及其关联的权限和用户"""
     try:
-        role = await role_crud.get(db, id=role_id)
+        rbac_service = RBACService(db)
+        role = await rbac_service.get_role(role_id)
 
         if not role:
             raise not_found("角色不存在", resource_type="role", resource_id=role_id)
@@ -253,21 +569,22 @@ async def get_all_permissions(
 ) -> dict[str, Any]:
     """获取系统中所有可用权限，按资源分组"""
     try:
-        permissions: list[Any] = await permission_crud.get_multi(
-            db, skip=0, limit=10000
+        rbac_service = RBACService(db)
+        grouped_permissions, total = await rbac_service.get_all_permissions_grouped(
+            limit=10000
         )
-
-        grouped: dict[str, list[PermissionResponse]] = {}
-        for perm in permissions:
-            resource = perm.resource
-            if resource not in grouped:
-                grouped[resource] = []
-            grouped[resource].append(PermissionResponse.model_validate(perm))
+        grouped = {
+            resource: [
+                PermissionResponse.model_validate(permission)
+                for permission in permissions
+            ]
+            for resource, permissions in grouped_permissions.items()
+        }
 
         return {
             "success": True,
             "data": grouped,
-            "total": len(permissions),
+            "total": total,
         }
     except Exception as e:
         raise internal_error(str(e))
@@ -296,7 +613,7 @@ async def set_role_permissions(
             updated_by=str(current_user.id),
         )
 
-        role = await role_crud.get(db, id=role_id)
+        role = await rbac_service.get_role(role_id)
 
         return {
             "success": True,
@@ -328,16 +645,13 @@ async def get_role_users(
 ) -> JSONResponse:
     """获取拥有某个角色的所有用户"""
     try:
-        role = await role_crud.get(db, id=role_id)
-
-        if not role:
-            raise not_found("角色不存在", resource_type="role", resource_id=role_id)
-
-        from ....crud.auth import UserCRUD
-
-        user_crud = UserCRUD()
+        rbac_service = RBACService(db)
         skip = (page - 1) * page_size
-        users, total = await user_crud.get_users_by_role(db, role_id, skip, page_size)
+        users, total = await rbac_service.get_role_users(
+            role_id,
+            skip=skip,
+            limit=page_size,
+        )
 
         return ResponseHandler.paginated(
             data=[
@@ -366,18 +680,12 @@ async def get_role_statistics(
 ) -> dict[str, Any]:
     """获取角色相关的统计数据"""
     try:
-        by_category = await role_crud.count_by_category(db)
-        counts = await role_crud.count_by_flags(db)
+        rbac_service = RBACService(db)
+        stats = await rbac_service.get_role_statistics()
 
         return {
             "success": True,
-            "data": {
-                "total_roles": counts["total"],
-                "active_roles": counts["active"],
-                "system_roles": counts["system"],
-                "custom_roles": counts["custom"],
-                "by_category": by_category,
-            },
+            "data": stats,
         }
     except Exception as e:
         raise internal_error(str(e))

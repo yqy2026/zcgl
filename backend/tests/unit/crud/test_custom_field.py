@@ -11,7 +11,7 @@ import pytest
 pytestmark = pytest.mark.asyncio
 
 from src.crud.custom_field import CRUDCustomField, custom_field_crud
-from src.models.asset import AssetCustomField
+from src.models.system_dictionary import AssetCustomField
 
 
 class TestCRUDCustomFieldGetByFieldName:

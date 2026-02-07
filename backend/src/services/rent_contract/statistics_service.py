@@ -8,12 +8,12 @@ from sqlalchemy.orm import selectinload
 
 from ...core.enums import ContractStatus
 from ...models.asset import Asset
+from ...models.associations import rent_contract_assets
 from ...models.ownership import Ownership
 from ...models.rent_contract import (
     ContractType,
     RentContract,
     RentLedger,
-    rent_contract_assets,
 )
 from ...schemas.rent_contract import RentStatisticsQuery
 from .helpers import RentContractHelperMixin

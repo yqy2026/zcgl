@@ -5,7 +5,8 @@
 """
 
 import logging
-from datetime import datetime
+from collections.abc import Sequence
+from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import BaseModel, Field, model_validator
@@ -16,13 +17,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ...crud.asset import asset_crud
 from ...crud.history import history_crud
 from ...models.asset import Asset
+from ...models.associations import property_cert_assets, rent_contract_assets
 from ...models.ownership import Ownership
-from ...models.property_certificate import property_cert_assets
-from ...models.rent_contract import RentLedger, rent_contract_assets
+from ...models.rent_contract import RentLedger
 from ...schemas.asset import AssetUpdate
 from .validators import AssetBatchValidator
 
 logger = logging.getLogger(__name__)
+
+
+def _utcnow_naive() -> datetime:
+    """Return UTC now as naive datetime to match current DB column types."""
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class BatchOperationResult(BaseModel):
@@ -56,7 +62,7 @@ class BatchOperationResult(BaseModel):
         return self
 
     def to_dict(self) -> dict[str, Any]:
-        """转换为字典（保持向后兼容）"""
+        """转换为字典"""
         return {
             "success_count": self.success_count,
             "failed_count": self.failed_count,
@@ -70,6 +76,55 @@ class AsyncAssetBatchService:
     def __init__(self, db: AsyncSession):
         self.db = db
         self.validator = AssetBatchValidator()
+
+    @staticmethod
+    def _to_list_safely(value: Any) -> list[Any]:
+        if isinstance(value, list):
+            return value
+        if isinstance(value, tuple):
+            return list(value)
+        if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+            return list(value)
+        return []
+
+    async def _load_assets_map(self, asset_ids: list[str]) -> dict[str, Asset]:
+        if not asset_ids:
+            return {}
+        result = await self.db.execute(select(Asset).where(Asset.id.in_(asset_ids)))
+        rows = self._to_list_safely(result.scalars().all())
+        return {str(asset.id): asset for asset in rows if getattr(asset, "id", None)}
+
+    async def _find_linked_asset_errors(self, asset_ids: list[str]) -> dict[str, str]:
+        if not asset_ids:
+            return {}
+        try:
+            contract_result = await self.db.execute(
+                select(rent_contract_assets.c.asset_id).where(
+                    rent_contract_assets.c.asset_id.in_(asset_ids)
+                )
+            )
+            certificate_result = await self.db.execute(
+                select(property_cert_assets.c.asset_id).where(
+                    property_cert_assets.c.asset_id.in_(asset_ids)
+                )
+            )
+            ledger_result = await self.db.execute(
+                select(RentLedger.asset_id).where(RentLedger.asset_id.in_(asset_ids))
+            )
+            contract_rows = contract_result.scalars().all()
+            certificate_rows = certificate_result.scalars().all()
+            ledger_rows = ledger_result.scalars().all()
+        except Exception:
+            return {}
+
+        linked_errors: dict[str, str] = {}
+        for asset_id in self._to_list_safely(contract_rows):
+            linked_errors[str(asset_id)] = "资产已关联合同，禁止删除"
+        for asset_id in self._to_list_safely(certificate_rows):
+            linked_errors.setdefault(str(asset_id), "资产已关联产权证，禁止删除")
+        for asset_id in self._to_list_safely(ledger_rows):
+            linked_errors.setdefault(str(asset_id), "资产已有租金台账记录，禁止删除")
+        return linked_errors
 
     async def _ensure_asset_not_linked(self, asset_id: str) -> None:
         has_contract = (
@@ -110,26 +165,26 @@ class AsyncAssetBatchService:
         if has_ledger:
             raise ValueError("资产已有租金台账记录，禁止删除")
 
-    async def _resolve_ownership(
-        self, asset: Asset, updates: dict[str, Any]
-    ) -> dict[str, Any]:
+    async def _resolve_batch_ownership_id(
+        self, updates: dict[str, Any]
+    ) -> tuple[bool, str | None]:
+        """批量更新前置解析 ownership_id，避免循环内重复查库。"""
         if "ownership_id" not in updates:
-            return updates
+            return False, None
 
-        ownership_id = updates.get("ownership_id") or getattr(
-            asset, "ownership_id", None
+        ownership_id_raw = updates.get("ownership_id")
+        ownership_id = (
+            str(ownership_id_raw).strip() if ownership_id_raw is not None else ""
         )
+        if ownership_id == "":
+            return True, None
 
-        if ownership_id:
-            result = await self.db.execute(
-                select(Ownership).where(Ownership.id == ownership_id)
-            )
-            ownership = result.scalars().first()
-            if not ownership:
-                raise ValueError("权属方不存在")
+        result = await self.db.execute(select(Ownership).where(Ownership.id == ownership_id))
+        ownership = result.scalars().first()
+        if not ownership:
+            raise ValueError("权属方不存在")
 
-        updates["ownership_id"] = ownership_id
-        return updates
+        return True, ownership_id
 
     async def batch_update(
         self,
@@ -148,11 +203,29 @@ class AsyncAssetBatchService:
             return BatchOperationResult(total_count=0)
 
         result = BatchOperationResult(total_count=len(asset_ids))
+        assets_by_id = await self._load_assets_map(asset_ids)
+        base_updates: dict[str, Any] = updates.copy() if updates else {}
+        has_ownership_update, batch_ownership_id = await self._resolve_batch_ownership_id(
+            base_updates
+        )
+
+        property_name_owner_id: str | None = None
+        property_name_raw = base_updates.get("property_name")
+        property_name = (
+            str(property_name_raw).strip() if property_name_raw is not None else ""
+        )
+        if property_name != "":
+            base_updates["property_name"] = property_name
+            existing_asset = await asset_crud.get_by_name_async(
+                db=self.db, property_name=property_name
+            )
+            if existing_asset and getattr(existing_asset, "id", None):
+                property_name_owner_id = str(existing_asset.id)
 
         for asset_id in asset_ids:
             savepoint = await self.db.begin_nested()
             try:
-                asset = await asset_crud.get_async(db=self.db, id=asset_id)
+                asset = assets_by_id.get(asset_id)
                 if not asset:
                     await savepoint.rollback()
                     result.errors.append(
@@ -165,20 +238,23 @@ class AsyncAssetBatchService:
                     result.failed_count += 1
                     continue
 
-                if updates is None:
-                    updates = {}
-                update_payload = updates.copy()
-                update_payload = await self._resolve_ownership(
-                    asset, update_payload
-                )
+                update_payload = base_updates.copy()
+                if has_ownership_update:
+                    if batch_ownership_id:
+                        update_payload["ownership_id"] = batch_ownership_id
+                    else:
+                        update_payload["ownership_id"] = getattr(
+                            asset, "ownership_id", None
+                        )
 
                 new_name = update_payload.get("property_name")
                 if new_name and new_name != asset.property_name:
-                    existing_asset = await asset_crud.get_by_name_async(
-                        db=self.db, property_name=new_name
-                    )
-                    if existing_asset and existing_asset.id != asset_id:
+                    if (
+                        property_name_owner_id is not None
+                        and property_name_owner_id != str(asset_id)
+                    ):
                         raise ValueError("物业名称已存在")
+                    property_name_owner_id = str(asset_id)
 
                 update_schema = AssetUpdate(**update_payload)
                 await asset_crud.update_async(
@@ -275,11 +351,13 @@ class AsyncAssetBatchService:
             return BatchOperationResult(total_count=0)
 
         result = BatchOperationResult(total_count=len(asset_ids))
+        assets_by_id = await self._load_assets_map(asset_ids)
+        linked_errors_by_asset_id = await self._find_linked_asset_errors(asset_ids)
 
         try:
             for asset_id in asset_ids:
                 async with self.db.begin_nested():
-                    asset = await asset_crud.get_async(db=self.db, id=asset_id)
+                    asset = assets_by_id.get(asset_id)
                     if not asset:
                         result.errors.append(
                             {"asset_id": asset_id, "error": "资产不存在"}
@@ -287,10 +365,9 @@ class AsyncAssetBatchService:
                         result.failed_count += 1
                         continue
 
-                    try:
-                        await self._ensure_asset_not_linked(asset_id)
-                    except ValueError as exc:
-                        result.errors.append({"asset_id": asset_id, "error": str(exc)})
+                    linked_error = linked_errors_by_asset_id.get(asset_id)
+                    if linked_error:
+                        result.errors.append({"asset_id": asset_id, "error": linked_error})
                         result.failed_count += 1
                         continue
 
@@ -304,7 +381,7 @@ class AsyncAssetBatchService:
                     )
                     asset.data_status = "已删除"
                     asset.updated_by = operator
-                    asset.updated_at = datetime.utcnow()
+                    asset.updated_at = _utcnow_naive()
                     self.db.add(asset)
                     await self.db.flush()
                     result.success_count += 1

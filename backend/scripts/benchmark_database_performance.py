@@ -83,11 +83,11 @@ class DatabaseBenchmark:
         """测试3: 财务汇总查询"""
         query = """
         SELECT
-            COUNT(*) as asset_count,
-            SUM(CAST(monthly_rent AS FLOAT)) as total_rent,
-            SUM(CAST(deposit AS FLOAT)) as total_deposit
-        FROM assets
-        WHERE data_status = 'active'
+            COUNT(*) as contract_count,
+            SUM(CAST(monthly_rent_base AS FLOAT)) as total_rent,
+            SUM(CAST(total_deposit AS FLOAT)) as total_deposit
+        FROM rent_contracts
+        WHERE contract_status = 'ACTIVE'
         """
 
         times = []

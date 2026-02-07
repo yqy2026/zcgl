@@ -46,14 +46,24 @@ async def create_contract(
     try:
 
         if contract_in.asset_ids:
-            for asset_id in contract_in.asset_ids:
-                asset = await asset_crud.get_async(db, id=asset_id)
-                if not asset:
-                    raise not_found(
-                        f"关联的资产不存在: {asset_id}",
-                        resource_type="asset",
-                        resource_id=asset_id,
-                    )
+            assets = await asset_crud.get_multi_by_ids_async(
+                db=db,
+                ids=contract_in.asset_ids,
+                include_relations=False,
+            )
+            existing_asset_ids = {
+                str(asset.id) for asset in assets if getattr(asset, "id", None) is not None
+            }
+            missing_asset_id = next(
+                (asset_id for asset_id in contract_in.asset_ids if asset_id not in existing_asset_ids),
+                None,
+            )
+            if missing_asset_id is not None:
+                raise not_found(
+                    f"关联的资产不存在: {missing_asset_id}",
+                    resource_type="asset",
+                    resource_id=missing_asset_id,
+                )
 
         ownership_obj = await ownership.get(db, id=contract_in.ownership_id)
         if not ownership_obj:
@@ -193,7 +203,9 @@ async def delete_contract(
     权限要求: 仅管理员可以删除合同
     """
     rbac_service = RBACService(db)
-    if not await rbac_service.is_admin(current_user.id):
+    if not await rbac_service.check_user_permission(
+        current_user.id, "system", "admin"
+    ):
         raise forbidden("权限不足: 只有管理员可以删除合同")
 
     contract = await rent_contract.get_with_details_async(db, id=contract_id)

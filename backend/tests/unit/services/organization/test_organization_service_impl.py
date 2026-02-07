@@ -359,31 +359,15 @@ class TestGetStatistics:
 
     async def test_get_statistics_basic(self, org_service, mock_db):
         """测试基本统计"""
-        class _ScalarsResult:
-            def __init__(self, values):
-                self._values = values
+        class _ExecuteResult:
+            def __init__(self, rows=None):
+                self._rows = rows or []
 
             def all(self):
-                return self._values
-
-        class _ExecuteResult:
-            def __init__(self, scalar_value=None, scalars_values=None):
-                self._scalar_value = scalar_value
-                self._scalars_values = scalars_values
-
-            def scalar(self):
-                return self._scalar_value
-
-            def scalars(self):
-                return _ScalarsResult(self._scalars_values or [])
+                return self._rows
 
         mock_db.execute = AsyncMock(
-            side_effect=[
-                _ExecuteResult(scalar_value=10),
-                _ExecuteResult(scalars_values=[1, 2]),
-                _ExecuteResult(scalar_value=6),
-                _ExecuteResult(scalar_value=4),
-            ]
+            return_value=_ExecuteResult(rows=[(1, 6), (2, 4)])
         )
 
         result = await org_service.get_statistics(mock_db)
@@ -396,30 +380,14 @@ class TestGetStatistics:
 
     async def test_get_statistics_empty(self, org_service, mock_db):
         """测试空统计"""
-        class _ScalarsResult:
-            def __init__(self, values):
-                self._values = values
+        class _ExecuteResult:
+            def __init__(self, rows=None):
+                self._rows = rows or []
 
             def all(self):
-                return self._values
+                return self._rows
 
-        class _ExecuteResult:
-            def __init__(self, scalar_value=None, scalars_values=None):
-                self._scalar_value = scalar_value
-                self._scalars_values = scalars_values
-
-            def scalar(self):
-                return self._scalar_value
-
-            def scalars(self):
-                return _ScalarsResult(self._scalars_values or [])
-
-        mock_db.execute = AsyncMock(
-            side_effect=[
-                _ExecuteResult(scalar_value=0),
-                _ExecuteResult(scalars_values=[]),
-            ]
-        )
+        mock_db.execute = AsyncMock(return_value=_ExecuteResult(rows=[]))
 
         result = await org_service.get_statistics(mock_db)
 

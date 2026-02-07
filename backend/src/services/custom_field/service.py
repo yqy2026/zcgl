@@ -14,7 +14,7 @@ from ...core.exception_handler import (
     ResourceNotFoundError,
 )
 from ...crud.custom_field import custom_field_crud
-from ...models.asset import AssetCustomField
+from ...models.system_dictionary import AssetCustomField
 from ...schemas.asset import (
     AssetCustomFieldCreate,
     AssetCustomFieldUpdate,
@@ -24,6 +24,20 @@ from ...schemas.asset import (
 
 class CustomFieldService:
     """自定义字段服务层"""
+
+    @staticmethod
+    def _ordered_unique(values: Sequence[str | None]) -> list[str]:
+        ordered: list[str] = []
+        seen: set[str] = set()
+        for raw in values:
+            if raw is None:
+                continue
+            value = str(raw).strip()
+            if value == "" or value in seen:
+                continue
+            seen.add(value)
+            ordered.append(value)
+        return ordered
 
     async def create_custom_field_async(
         self, db: AsyncSession, *, obj_in: AssetCustomFieldCreate
@@ -273,28 +287,74 @@ class CustomFieldService:
         asset_id: str,
         values: Sequence[CustomFieldValueItem | dict[str, Any]],
     ) -> list[dict[str, Any]]:
+        _ = asset_id
         updated_values: list[dict[str, Any]] = []
 
+        normalized_values: list[dict[str, Any]] = []
         for value_data in values:
-            field_id: str | None = None
-            field_name: str | None = None
-            field_value: Any = None
-
             if isinstance(value_data, CustomFieldValueItem):
-                field_name = value_data.field_name
-                field_value = value_data.value
+                normalized_values.append(
+                    {
+                        "field_id": None,
+                        "field_name": value_data.field_name,
+                        "value": value_data.value,
+                    }
+                )
             else:
-                field_id = value_data.get("field_id")
-                field_name = value_data.get("field_name")
-                field_value = value_data.get("value")
+                normalized_values.append(
+                    {
+                        "field_id": value_data.get("field_id"),
+                        "field_name": value_data.get("field_name"),
+                        "value": value_data.get("value"),
+                    }
+                )
+
+        field_ids = self._ordered_unique(
+            [
+                item.get("field_id")
+                for item in normalized_values
+                if item.get("field_id") is not None
+            ]
+        )
+        field_names = self._ordered_unique(
+            [
+                item.get("field_name")
+                for item in normalized_values
+                if item.get("field_id") is None and item.get("field_name") is not None
+            ]
+        )
+
+        fields_by_id: dict[str, AssetCustomField] = {}
+        if field_ids:
+            fields = await custom_field_crud.get_multi_by_ids_async(db, field_ids)
+            fields_by_id = {str(field.id): field for field in fields if field.id is not None}
+
+        fields_by_name: dict[str, AssetCustomField] = {}
+        if field_names:
+            fields = await custom_field_crud.get_multi_by_field_names_async(
+                db, field_names
+            )
+            fields_by_name = {
+                str(field.field_name): field
+                for field in fields
+                if field.field_name is not None
+            }
+
+        for value_data in normalized_values:
+            field_id_raw = value_data.get("field_id")
+            field_name_raw = value_data.get("field_name")
+            field_value: Any = value_data.get("value")
 
             field = None
+            field_id = str(field_id_raw).strip() if field_id_raw is not None else None
+            field_name = (
+                str(field_name_raw).strip() if field_name_raw is not None else None
+            )
+
             if field_id:
-                field = await custom_field_crud.get(db, field_id)
+                field = fields_by_id.get(field_id)
             elif field_name:
-                field = await custom_field_crud.get_by_field_name_async(
-                    db, field_name=field_name
-                )
+                field = fields_by_name.get(field_name)
                 if field:
                     field_id = field.id
 
@@ -344,23 +404,36 @@ class CustomFieldService:
     async def update_sort_orders_async(
         self, db: AsyncSession, *, sort_data: list[dict[str, Any]]
     ) -> list[AssetCustomField]:
-        updated_fields: list[AssetCustomField] = []
-
+        updates_by_id: dict[str, int] = {}
+        ordered_ids: list[str] = []
         for item in sort_data:
             field_id = item.get("id")
             sort_order = item.get("sort_order")
+            if field_id is None or sort_order is None:
+                continue
+            normalized_id = str(field_id).strip()
+            if normalized_id == "":
+                continue
+            if normalized_id not in updates_by_id:
+                ordered_ids.append(normalized_id)
+            updates_by_id[normalized_id] = sort_order
 
-            if field_id and sort_order is not None:
-                field = await custom_field_crud.get(db, field_id)
-                if field:
-                    field.sort_order = sort_order
-                    db.add(field)
-                    updated_fields.append(field)
+        if len(ordered_ids) == 0:
+            return []
+
+        fields = await custom_field_crud.get_multi_by_ids_async(db, ordered_ids)
+        fields_by_id = {str(field.id): field for field in fields if field.id is not None}
+
+        updated_fields: list[AssetCustomField] = []
+        for field_id in ordered_ids:
+            field = fields_by_id.get(field_id)
+            if not field:
+                continue
+            field.sort_order = updates_by_id[field_id]
+            db.add(field)
+            updated_fields.append(field)
 
         await db.commit()
-        for field in updated_fields:
-            await db.refresh(field)
-
         return updated_fields
 
 custom_field_service = CustomFieldService()

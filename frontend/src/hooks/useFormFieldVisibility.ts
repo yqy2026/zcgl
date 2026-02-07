@@ -50,28 +50,6 @@ const assetFieldVisibilityRules: FieldVisibilityRule<AssetFormData>[] = [
     dependsOn: ['property_nature'],
   },
 
-  // 出租状态才显示租户和合同信息
-  {
-    field: 'tenant_name',
-    condition: values => values.usage_status === '出租',
-    dependsOn: ['usage_status'],
-  },
-  {
-    field: 'lease_contract_number',
-    condition: values => values.usage_status === '出租',
-    dependsOn: ['usage_status'],
-  },
-  {
-    field: 'contract_start_date',
-    condition: values => values.usage_status === '出租',
-    dependsOn: ['usage_status'],
-  },
-  {
-    field: 'contract_end_date',
-    condition: values => values.usage_status === '出租',
-    dependsOn: ['usage_status'],
-  },
-
   // 非经营类物业显示非经营面积
   {
     field: 'non_commercial_area',

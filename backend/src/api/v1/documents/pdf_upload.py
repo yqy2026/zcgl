@@ -11,7 +11,6 @@ PDF文件上传API路由模块
 
 端点：
 - POST /upload: 上传PDF并开始处理
-- POST /upload_and_extract: V1兼容的上传和提取
 
 Best practice (breaking change):
 - 仅保留 /upload 作为上传入口，不再提供 /process 等别名。
@@ -19,11 +18,10 @@ Best practice (breaking change):
 
 import logging
 import uuid
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Form, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ....constants.file_size_constants import DEFAULT_MAX_FILE_SIZE
@@ -31,7 +29,7 @@ from ....core.exception_handler import BaseBusinessError, bad_request, internal_
 from ....database import get_async_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
-from ....schemas.pdf_import import ExtractionResponse, FileUploadResponse
+from ....schemas.pdf_import import FileUploadResponse
 from ....security.file_validation import validate_upload_file
 from ....services.document.pdf_import_service import PDFImportService
 from ....utils.file_security import generate_safe_filename
@@ -156,136 +154,3 @@ async def upload_pdf_file(
         session_id=resolved_session_id,
         estimated_time="30-60秒",
     )
-
-
-@router.post("/upload-and-extract", response_model=ExtractionResponse)
-async def upload_and_extract_pdf_v1_compatible(
-    file: UploadFile = File(...),
-    should_include_raw_text: bool = Form(default=False),
-    should_validate_fields: bool = Form(default=True),
-    background_tasks: BackgroundTasks = BackgroundTasks(),
-    optional: Any = Depends(get_optional_services),
-    current_user: User = Depends(get_current_active_user),
-) -> ExtractionResponse:
-    """上传PDF文件并提取信息（V1兼容端点；如不需要可后续移除）"""
-
-    start_time = datetime.now()
-    pdf_processing_service = optional.pdf_processing_service
-
-    if file.content_type != "application/pdf":
-        raise bad_request("只支持PDF文件上传")
-
-    if pdf_processing_service is None:
-        return ExtractionResponse(
-            success=False,
-            error="PDF处理服务不可用",
-            processing_time_ms=(datetime.now() - start_time).total_seconds() * 1000,
-            real_data_verified=False,
-        )
-
-    max_size = DEFAULT_MAX_FILE_SIZE
-    temp_dir = Path("temp_uploads")
-    temp_dir.mkdir(exist_ok=True)
-    file_id = str(uuid.uuid4())
-    safe_filename = generate_safe_filename(
-        file.filename or "uploaded_file.pdf", prefix=file_id
-    )
-    temp_file_path = temp_dir / safe_filename
-
-    total_size = 0
-    chunk_size = 64 * 1024
-
-    try:
-        with open(temp_file_path, "wb") as temp_file:
-            while chunk := await file.read(chunk_size):
-                total_size += len(chunk)
-                if total_size > max_size:
-                    temp_file_path.unlink(missing_ok=True)
-                    raise bad_request(
-                        f"文件大小超过限制({max_size // (1024 * 1024)}MB)"
-                    )
-                temp_file.write(chunk)
-
-        text_result = await pdf_processing_service.extract_text_from_pdf(
-            str(temp_file_path)
-        )
-
-        if not text_result.get("success"):
-            return ExtractionResponse(
-                success=False,
-                error="PDF文本提取失败",
-                processing_time_ms=(datetime.now() - start_time).total_seconds() * 1000,
-                real_data_verified=False,
-            )
-
-        # Best practice: import from backend service module, not "src.*"
-        from ....services.document.contract_extractor import ContractExtractor
-
-        extraction_result = ContractExtractor().extract_contract_info(
-            text_result.get("text", "")
-        )
-
-        processing_time = (datetime.now() - start_time).total_seconds() * 1000
-
-        if extraction_result.get("success"):
-            validation_results = {}
-            if should_validate_fields:
-                validation_results = _validate_extracted_fields_v1(
-                    extraction_result.get("extracted_fields", {})
-                )
-
-            response = ExtractionResponse(
-                success=True,
-                confidence=extraction_result.get("overall_confidence", 0.0),
-                extracted_fields=extraction_result.get("extracted_fields", {}),
-                validation_results=validation_results,
-                processing_time_ms=processing_time,
-                real_data_verified=extraction_result.get("validation_passed", False),
-            )
-
-            if should_include_raw_text:
-                response.extracted_fields["_raw_text"] = text_result.get("text", "")
-
-            return response
-
-        return ExtractionResponse(
-            success=False,
-            error=extraction_result.get("error", "PDF内容提取失败"),
-            processing_time_ms=processing_time,
-            real_data_verified=False,
-        )
-
-    except BaseBusinessError:
-        raise
-    except Exception as e:
-        logger.error("V1兼容模式PDF处理异常: %s", e)
-        return ExtractionResponse(
-            success=False,
-            error=f"PDF处理异常: {str(e)}",
-            processing_time_ms=(datetime.now() - start_time).total_seconds() * 1000,
-            real_data_verified=False,
-        )
-    finally:
-        temp_file_path.unlink(missing_ok=True)
-
-
-def _validate_extracted_fields_v1(extracted_fields: dict[str, Any]) -> dict[str, Any]:
-    """V1兼容的字段验证函数"""
-
-    validation_results: dict[str, Any] = {}
-
-    for field_name, field_value in extracted_fields.items():
-        if field_value and str(field_value).strip():
-            validation_results[field_name] = {
-                "is_valid": True,
-                "validation_errors": [],
-                "confidence": 0.8,
-            }
-        else:
-            validation_results[field_name] = {
-                "is_valid": False,
-                "validation_errors": ["字段值为空"],
-                "confidence": 0.0,
-            }
-
-    return validation_results

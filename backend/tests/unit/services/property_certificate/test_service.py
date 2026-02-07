@@ -102,8 +102,8 @@ class TestPropertyCertificateConfirmImport:
             new=AsyncMock(return_value=None),
         ):
             with patch(
-                "src.services.property_certificate.service.property_owner_crud.create_async",
-                new=AsyncMock(return_value=owner),
+                "src.services.property_certificate.service.property_owner_crud.create_multi_async",
+                new=AsyncMock(return_value=[owner]),
             ):
                 with patch(
                     "src.services.property_certificate.service.property_certificate_crud.create_with_owners_async",

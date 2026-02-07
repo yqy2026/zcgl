@@ -40,8 +40,8 @@ class DatabaseIndexOptimizer:
             "CREATE INDEX IF NOT EXISTS idx_occupancy_calculation ON assets(rentable_area, rented_area, data_status)",
         ),
         (
-            "idx_asset_monthly_rent",
-            "CREATE INDEX IF NOT EXISTS idx_asset_monthly_rent ON assets(monthly_rent, data_status)",
+            "idx_rent_contract_monthly_rent_active",
+            "CREATE INDEX IF NOT EXISTS idx_rent_contract_monthly_rent_active ON rent_contracts(monthly_rent_base, contract_status)",
         ),
     ]
 

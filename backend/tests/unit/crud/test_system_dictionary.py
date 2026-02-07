@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from src.crud.system_dictionary import CRUDSystemDictionary, system_dictionary_crud
-from src.models.asset import SystemDictionary
+from src.models.system_dictionary import SystemDictionary
 
 pytestmark = pytest.mark.asyncio
 

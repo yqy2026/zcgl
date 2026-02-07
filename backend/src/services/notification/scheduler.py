@@ -140,6 +140,11 @@ class NotificationSchedulerService:
         )
         expiring_contracts = list((await self.db.execute(stmt)).scalars().all())
 
+        active_users = await notification_service.list_active_users_async(self.db)
+        active_user_ids = [str(user.id) for user in active_users]
+        contract_alerts: list[dict[str, str]] = []
+        contract_ids_by_type: dict[str, list[str]] = {}
+
         for contract in expiring_contracts:
             # 计算剩余天数
             # end_date is Mapped[datetime] but stored as Date, convert to date for subtraction
@@ -172,34 +177,50 @@ class NotificationSchedulerService:
                 title = f"合同即将到期（{days_remaining}天）"
                 content = f"合同 {contract.contract_number}（{contract.tenant_name}）将在{days_remaining}天后到期"
 
-            # 查找所有活跃用户
-            active_users = await notification_service.list_active_users_async(self.db)
+            contract_id = str(contract.id)
+            contract_alerts.append(
+                {
+                    "contract_id": contract_id,
+                    "notification_type": notification_type,
+                    "priority": priority,
+                    "title": title,
+                    "content": content,
+                }
+            )
+            contract_ids_by_type.setdefault(notification_type, []).append(contract_id)
 
-            # 为每个用户创建通知
-            for user in active_users:
-                # 检查是否已存在相同的通知
-                existing_notification = (
-                    await notification_service.find_existing_notification_async(
+        existing_pairs_by_type: dict[str, set[tuple[str, str]]] = {}
+        for notification_type, contract_ids in contract_ids_by_type.items():
+            existing_pairs_by_type[notification_type] = (
+                await notification_service.find_existing_notification_pairs_async(
                     self.db,
-                    recipient_id=str(user.id),
+                    recipient_ids=active_user_ids,
                     related_entity_type="contract",
-                    related_entity_id=str(contract.id),
+                    related_entity_ids=contract_ids,
                     notification_type=notification_type,
                     require_unread=True,
-                    )
                 )
+            )
 
-                if not existing_notification:
+        # 为每个用户创建通知
+        for contract_alert in contract_alerts:
+            notification_type = contract_alert["notification_type"]
+            contract_id = contract_alert["contract_id"]
+            existing_pairs = existing_pairs_by_type.get(notification_type, set())
+            for user in active_users:
+                user_id = str(user.id)
+                if (user_id, contract_id) not in existing_pairs:
                     # 使用统一方法创建通知并推送企业微信
                     await self._create_and_send_notification(
-                        recipient_id=user.id,
+                        recipient_id=user_id,
                         notification_type=notification_type,
-                        priority=priority,
-                        title=title,
-                        content=content,
+                        priority=contract_alert["priority"],
+                        title=contract_alert["title"],
+                        content=contract_alert["content"],
                         related_entity_type="contract",
-                        related_entity_id=contract.id,
+                        related_entity_id=contract_id,
                     )
+                    existing_pairs.add((user_id, contract_id))
 
         await self.db.commit()
         return len(expiring_contracts)
@@ -232,6 +253,9 @@ class NotificationSchedulerService:
         overdue_ledgers = list((await self.db.execute(stmt)).scalars().all())
 
         notifications_created = 0
+        active_users = await notification_service.list_active_users_async(self.db)
+        active_user_ids = [str(user.id) for user in active_users]
+        ledger_alerts: list[dict[str, str]] = []
 
         for ledger in overdue_ledgers:
             # 计算逾期天数
@@ -261,32 +285,41 @@ class NotificationSchedulerService:
                 f"应收{ledger.due_amount}元，逾期{days_overdue}天未支付"
             )
 
-            # 为所有活跃用户创建通知
-            active_users = await notification_service.list_active_users_async(self.db)
+            ledger_alerts.append(
+                {
+                    "ledger_id": str(ledger.id),
+                    "priority": priority,
+                    "title": title,
+                    "content": content,
+                }
+            )
 
+        existing_pairs = await notification_service.find_existing_notification_pairs_async(
+            self.db,
+            recipient_ids=active_user_ids,
+            related_entity_type="rent_ledger",
+            related_entity_ids=[alert["ledger_id"] for alert in ledger_alerts],
+            notification_type=NotificationType.PAYMENT_OVERDUE,
+            created_since=today,
+        )
+
+        for ledger_alert in ledger_alerts:
+            ledger_id = ledger_alert["ledger_id"]
             for user in active_users:
-                # 检查是否已存在相同的通知
-                existing = await notification_service.find_existing_notification_async(
-                    self.db,
-                    recipient_id=str(user.id),
-                    related_entity_type="rent_ledger",
-                    related_entity_id=str(ledger.id),
-                    notification_type=NotificationType.PAYMENT_OVERDUE,
-                    created_since=today,
-                )
-
-                if not existing:
+                user_id = str(user.id)
+                if (user_id, ledger_id) not in existing_pairs:
                     # 使用统一方法创建通知并推送企业微信
                     await self._create_and_send_notification(
-                        recipient_id=user.id,
+                        recipient_id=user_id,
                         notification_type=NotificationType.PAYMENT_OVERDUE,
-                        priority=priority,
-                        title=title,
-                        content=content,
+                        priority=ledger_alert["priority"],
+                        title=ledger_alert["title"],
+                        content=ledger_alert["content"],
                         related_entity_type="rent_ledger",
-                        related_entity_id=ledger.id,
+                        related_entity_id=ledger_id,
                     )
                     notifications_created += 1
+                    existing_pairs.add((user_id, ledger_id))
 
         await self.db.commit()
         return notifications_created
@@ -320,6 +353,9 @@ class NotificationSchedulerService:
         due_soon_ledgers = list((await self.db.execute(stmt)).scalars().all())
 
         notifications_created = 0
+        active_users = await notification_service.list_active_users_async(self.db)
+        active_user_ids = [str(user.id) for user in active_users]
+        ledger_alerts: list[dict[str, str]] = []
 
         for ledger in due_soon_ledgers:
             # 计算剩余天数
@@ -349,32 +385,41 @@ class NotificationSchedulerService:
                 f"应收{ledger.due_amount}元，将于{days_remaining}天后到期"
             )
 
-            # 为所有活跃用户创建通知
-            active_users = await notification_service.list_active_users_async(self.db)
+            ledger_alerts.append(
+                {
+                    "ledger_id": str(ledger.id),
+                    "priority": priority,
+                    "title": title,
+                    "content": content,
+                }
+            )
 
+        existing_pairs = await notification_service.find_existing_notification_pairs_async(
+            self.db,
+            recipient_ids=active_user_ids,
+            related_entity_type="rent_ledger",
+            related_entity_ids=[alert["ledger_id"] for alert in ledger_alerts],
+            notification_type=NotificationType.PAYMENT_DUE,
+            created_since=today,
+        )
+
+        for ledger_alert in ledger_alerts:
+            ledger_id = ledger_alert["ledger_id"]
             for user in active_users:
-                # 检查是否已存在相同的通知
-                existing = await notification_service.find_existing_notification_async(
-                    self.db,
-                    recipient_id=str(user.id),
-                    related_entity_type="rent_ledger",
-                    related_entity_id=str(ledger.id),
-                    notification_type=NotificationType.PAYMENT_DUE,
-                    created_since=today,
-                )
-
-                if not existing:
+                user_id = str(user.id)
+                if (user_id, ledger_id) not in existing_pairs:
                     # 使用统一方法创建通知并推送企业微信
                     await self._create_and_send_notification(
-                        recipient_id=user.id,
+                        recipient_id=user_id,
                         notification_type=NotificationType.PAYMENT_DUE,
-                        priority=priority,
-                        title=title,
-                        content=content,
+                        priority=ledger_alert["priority"],
+                        title=ledger_alert["title"],
+                        content=ledger_alert["content"],
                         related_entity_type="rent_ledger",
-                        related_entity_id=ledger.id,
+                        related_entity_id=ledger_id,
                     )
                     notifications_created += 1
+                    existing_pairs.add((user_id, ledger_id))
 
         await self.db.commit()
         return notifications_created

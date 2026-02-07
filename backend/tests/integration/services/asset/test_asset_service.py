@@ -10,16 +10,16 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
 
+from src import database as database
 from src.core.exception_handler import (
     DuplicateResourceError,
     ResourceNotFoundError,
 )
-from src.models.asset import Asset, AssetHistory
+from src.models.asset import Asset
+from src.models.asset_history import AssetHistory
 from src.models.ownership import Ownership
-from src.schemas.asset import AssetCreate, AssetUpdate
+from src.schemas.asset import AssetCreate, AssetListItemResponse, AssetUpdate
 from src.services.asset.asset_service import AssetService
-
-from src import database as database
 
 pytestmark = pytest.mark.asyncio
 
@@ -248,6 +248,16 @@ class TestAssetQuery:
             # 字段白名单限制是预期的安全特性
             pass
 
+    async def test_get_assets_without_relations_serializes_ownership_entity(self):
+        """测试非关联查询结果可安全序列化 ownership_entity（避免懒加载异常）"""
+        assets, _ = await self.service.get_assets(
+            skip=0, limit=100, include_relations=False
+        )
+        serialized = [AssetListItemResponse.model_validate(asset) for asset in assets]
+        ownership_entities = {item.ownership_entity for item in serialized}
+        assert "公司A" in ownership_entities
+        assert "公司B" in ownership_entities
+
     async def test_get_asset_by_id_success(self):
         """测试根据ID获取资产"""
         asset = await self.service.get_asset(self.asset1.id)
@@ -349,6 +359,14 @@ class TestAssetDeletion:
         self.db = db_session
         self.service = asset_service
         self.factory = AssetTestDataFactory()
+        ownership = Ownership(
+            id="ownership-default",
+            name="测试公司",
+            code="OWN-DEFAULT",
+        )
+        self.db.add(ownership)
+        await self.db.flush()
+        self.default_ownership = ownership
 
     async def test_delete_asset_success(self):
         """测试成功删除资产"""

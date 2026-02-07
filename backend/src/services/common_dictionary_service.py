@@ -10,8 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.exception_handler import conflict, not_found
 from ..crud.enum_field import get_enum_field_type_crud, get_enum_field_value_crud
-from ..models.asset import SystemDictionary
 from ..models.enum_field import EnumFieldHistory, EnumFieldValue
+from ..models.system_dictionary import SystemDictionary
 from ..schemas.dictionary import (
     DictionaryOptionResponse,
     DictionaryValueCreate,
@@ -99,26 +99,29 @@ class CommonDictionaryService:
         enum_type = await enum_type_crud.create_async(db, enum_type_create)
 
         enum_value_crud = get_enum_field_value_crud(db)
-        created_values = []
         enum_type_id_str = str(enum_type.id)
-
+        values_data: list[dict[str, Any]] = []
         for i, option in enumerate(data.options):
-            enum_value_create = EnumFieldValueCreate(
-                enum_type_id=enum_type_id_str,
-                label=option.label,
-                value=option.value,
-                code=option.code,
-                description=option.description,
-                sort_order=option.sort_order if option.sort_order > 0 else i + 1,
-                color=option.color,
-                icon=option.icon,
-                is_active=option.is_active,
-                created_by=operator,
-                parent_id=None,
-                extra_properties=None,
+            values_data.append(
+                {
+                    "label": option.label,
+                    "value": option.value,
+                    "code": option.code,
+                    "description": option.description,
+                    "sort_order": option.sort_order if option.sort_order > 0 else i + 1,
+                    "color": option.color,
+                    "icon": option.icon,
+                    "is_active": option.is_active,
+                    "parent_id": None,
+                    "extra_properties": None,
+                }
             )
-            created_value = await enum_value_crud.create_async(db, enum_value_create)
-            created_values.append(created_value)
+        created_values = await enum_value_crud.batch_create_async(
+            db,
+            enum_type_id=enum_type_id_str,
+            values_data=values_data,
+            created_by=operator,
+        )
 
         return {
             "message": f"字典 {dict_type} 创建成功",

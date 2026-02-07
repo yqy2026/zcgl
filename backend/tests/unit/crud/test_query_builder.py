@@ -1,5 +1,8 @@
+from sqlalchemy import select
+
 from src.crud.query_builder import QueryBuilder
 from src.models.asset import Asset  # Using Asset as a test model
+from src.models.ownership import Ownership
 
 
 class TestQueryBuilder:
@@ -50,3 +53,18 @@ class TestQueryBuilder:
 
         assert "count" in compiled.lower()
         assert "assets.property_name = 'Test'" in compiled
+
+    def test_build_count_query_with_base_query_and_distinct(self):
+        qb = QueryBuilder(Asset)
+        base_query = select(Asset.id).join(
+            Ownership, Asset.ownership_id == Ownership.id, isouter=True
+        )
+        query = qb.build_count_query(
+            search_conditions=[Ownership.name.ilike("%test%")],
+            base_query=base_query,
+            distinct_column=Asset.id,
+        )
+        compiled = str(query.compile(compile_kwargs={"literal_binds": True}))
+
+        assert "distinct" in compiled.lower()
+        assert "ownerships" in compiled.lower()

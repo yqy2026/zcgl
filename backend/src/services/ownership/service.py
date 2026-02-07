@@ -11,13 +11,20 @@ from ...core.exception_handler import (
     ResourceNotFoundError,
 )
 from ...crud.ownership import ownership as ownership_crud
-from ...models.asset import Asset, Project, ProjectOwnershipRelation
+from ...models.asset import Asset
 from ...models.ownership import Ownership
+from ...models.project import Project
+from ...models.project_relations import ProjectOwnershipRelation
 from ...schemas.ownership import OwnershipCreate, OwnershipUpdate
 
 
 class OwnershipService:
     """权属方服务层"""
+
+    async def get_ownership(
+        self, db: AsyncSession, *, ownership_id: str
+    ) -> Ownership | None:
+        return await ownership_crud.get(db, id=ownership_id)
 
     async def generate_ownership_code(self, db: AsyncSession) -> str:
         """生成权属方编码
@@ -113,6 +120,19 @@ class OwnershipService:
         update_data["updated_at"] = datetime.utcnow()
 
         return await ownership_crud.update(db, db_obj=db_obj, obj_in=update_data)
+
+    async def update_ownership_by_id(
+        self, db: AsyncSession, *, ownership_id: str, obj_in: OwnershipUpdate
+    ) -> Ownership:
+        db_obj = await self.get_ownership(db, ownership_id=ownership_id)
+        if not db_obj:
+            raise ResourceNotFoundError("权属方", ownership_id)
+        return await self.update_ownership(db, db_obj=db_obj, obj_in=obj_in)
+
+    async def search_ownerships(
+        self, db: AsyncSession, *, search_params: Any
+    ) -> dict[str, Any]:
+        return await ownership_crud.search(db, search_params)
 
     async def get_statistics(self, db: AsyncSession) -> dict[str, Any]:
         """获取权属方统计信息"""
@@ -250,14 +270,44 @@ class OwnershipService:
             .scalars()
             .all()
         )
+        if not ownerships:
+            return []
 
-        # 为下拉选项添加关联计数
+        ownership_ids = [item.id for item in ownerships if item.id is not None]
+        if not ownership_ids:
+            return []
+
+        asset_counts_stmt = (
+            select(Asset.ownership_id, func.count(Asset.id))
+            .where(Asset.ownership_id.in_(ownership_ids))
+            .group_by(Asset.ownership_id)
+        )
+        asset_counts = {
+            str(ownership_id): int(count or 0)
+            for ownership_id, count in (await db.execute(asset_counts_stmt)).all()
+            if ownership_id is not None
+        }
+
+        project_counts_stmt = (
+            select(
+                ProjectOwnershipRelation.ownership_id,
+                func.count(ProjectOwnershipRelation.id),
+            )
+            .where(
+                ProjectOwnershipRelation.ownership_id.in_(ownership_ids),
+                ProjectOwnershipRelation.is_active.is_(True),
+            )
+            .group_by(ProjectOwnershipRelation.ownership_id)
+        )
+        project_counts = {
+            str(ownership_id): int(count or 0)
+            for ownership_id, count in (await db.execute(project_counts_stmt)).all()
+            if ownership_id is not None
+        }
+
         responses = []
         for item in ownerships:
-            # 获取关联资产数量
-            asset_count = await self.get_asset_count(db, item.id)
-            # 获取关联项目数量
-            project_count = await self.get_project_count(db, item.id)
+            item_id = str(item.id)
             responses.append(
                 {
                     "id": item.id,
@@ -268,8 +318,8 @@ class OwnershipService:
                     "data_status": item.data_status,
                     "created_at": item.created_at,
                     "updated_at": item.updated_at,
-                    "asset_count": asset_count,
-                    "project_count": project_count,
+                    "asset_count": asset_counts.get(item_id, 0),
+                    "project_count": project_counts.get(item_id, 0),
                 }
             )
         return responses

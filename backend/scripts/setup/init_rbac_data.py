@@ -4,9 +4,9 @@ RBAC系统初始化脚本
 创建基础角色、权限和测试数据
 """
 
+import asyncio
 import os
 import sys
-import asyncio
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -17,7 +17,7 @@ from sqlalchemy import select, text
 
 from src.database import async_session_scope
 from src.models.auth import User
-from src.models.rbac import Permission, Role, UserRoleAssignment
+from src.models.rbac import Permission, PermissionGrant, Role, UserRoleAssignment
 
 
 async def create_basic_permissions(db):
@@ -74,11 +74,11 @@ async def create_basic_permissions(db):
         ("organization", "create", "创建组织", "创建新组织"),
         ("organization", "update", "更新组织", "更新组织信息"),
         ("organization", "delete", "删除组织", "删除组织"),
-        # 动态权限管理
-        ("dynamic_permission", "read", "查看动态权限", "查看动态权限"),
-        ("dynamic_permission", "assign", "分配动态权限", "分配动态权限"),
-        ("dynamic_permission", "revoke", "撤销动态权限", "撤销动态权限"),
-        ("dynamic_permission", "check", "检查权限", "检查用户权限"),
+        # 统一授权管理
+        ("permission_grant", "read", "查看统一授权", "查看统一授权记录"),
+        ("permission_grant", "assign", "分配统一授权", "分配统一授权记录"),
+        ("permission_grant", "revoke", "撤销统一授权", "撤销统一授权记录"),
+        ("permission_grant", "check", "检查权限", "检查用户权限"),
         # 审计权限
         ("audit", "read", "查看审计", "查看审计日志"),
         ("audit", "export", "导出审计", "导出审计数据"),
@@ -376,10 +376,8 @@ async def assign_roles_to_users(db, roles, users):
     print("[OK] 为测试用户分配了角色")
 
 
-async def create_dynamic_permission_samples(db) -> bool:
-    """创建动态权限示例"""
-    from src.models.dynamic_permission import DynamicPermission, TemporaryPermission
-    from src.models.rbac import Permission
+async def create_permission_grant_samples(db) -> bool:
+    """创建统一权限授权示例"""
 
     # 获取测试用户和权限
     test_user_result = await db.execute(
@@ -387,7 +385,7 @@ async def create_dynamic_permission_samples(db) -> bool:
     )
     test_user = test_user_result.scalars().first()
     if not test_user:
-        print("[WARN] 测试用户不存在，跳过动态权限创建")
+        print("[WARN] 测试用户不存在，跳过统一授权创建")
         return False
 
     assigned_by_result = await db.execute(
@@ -409,23 +407,29 @@ async def create_dynamic_permission_samples(db) -> bool:
 
         existing_temp = (
             await db.execute(
-                select(TemporaryPermission).where(
-                    TemporaryPermission.user_id == test_user.id,
-                    TemporaryPermission.permission_id == asset_create_perm.id,
-                    TemporaryPermission.is_active.is_(True),
+                select(PermissionGrant).where(
+                    PermissionGrant.user_id == test_user.id,
+                    PermissionGrant.permission_id == asset_create_perm.id,
+                    PermissionGrant.grant_type == "temporary",
+                    PermissionGrant.is_active.is_(True),
                 )
             )
         ).scalars().first()
         if not existing_temp:
-            # 创建一个临时权限（有效期为7天）
-            temp_permission = TemporaryPermission(
+            # 创建一个临时授权（有效期7天）
+            temp_permission = PermissionGrant(
                 id=str(uuid.uuid4()),
                 user_id=test_user.id,
                 permission_id=asset_create_perm.id,
+                grant_type="temporary",
+                effect="allow",
                 scope="global",
+                starts_at=datetime.utcnow(),
                 expires_at=datetime.utcnow() + timedelta(days=7),
-                assigned_by=assigned_by,
-                assigned_at=datetime.utcnow(),
+                priority=110,
+                source_type="init_seed",
+                source_id="sample_temporary_asset_create",
+                granted_by=assigned_by,
                 is_active=True,
             )
             db.add(temp_permission)
@@ -433,37 +437,42 @@ async def create_dynamic_permission_samples(db) -> bool:
 
         existing_dynamic = (
             await db.execute(
-                select(DynamicPermission).where(
-                    DynamicPermission.user_id == test_user.id,
-                    DynamicPermission.permission_id == asset_create_perm.id,
-                    DynamicPermission.is_active.is_(True),
+                select(PermissionGrant).where(
+                    PermissionGrant.user_id == test_user.id,
+                    PermissionGrant.permission_id == asset_create_perm.id,
+                    PermissionGrant.grant_type == "dynamic",
+                    PermissionGrant.is_active.is_(True),
                 )
             )
         ).scalars().first()
         if not existing_dynamic:
-            # 创建一个动态权限
-            dynamic_permission = DynamicPermission(
+            # 创建一个动态授权
+            permission_grant_sample = PermissionGrant(
                 id=str(uuid.uuid4()),
                 user_id=test_user.id,
                 permission_id=asset_create_perm.id,
-                permission_type="user_specific",
+                grant_type="dynamic",
+                effect="allow",
                 scope="organization",
                 scope_id=None,  # 可以设置为具体的组织ID
                 conditions={"max_daily_operations": 10},  # 每天最多10次操作
+                starts_at=datetime.utcnow(),
                 expires_at=datetime.utcnow() + timedelta(days=30),
-                assigned_by=assigned_by,
-                assigned_at=datetime.utcnow(),
+                priority=100,
+                source_type="init_seed",
+                source_id="sample_dynamic_asset_create",
+                granted_by=assigned_by,
                 is_active=True,
             )
-            db.add(dynamic_permission)
+            db.add(permission_grant_sample)
             created_any = True
 
         if created_any:
             await db.commit()
-            print("[OK] 创建了动态权限示例")
+            print("[OK] 创建了统一授权示例")
             return True
 
-        print("[WARN] 动态权限示例已存在，跳过创建")
+        print("[WARN] 统一授权示例已存在，跳过创建")
         return False
 
     return False
@@ -496,8 +505,8 @@ async def main():
             else:
                 print("[WARN] 未创建测试用户，跳过角色分配")
 
-            # 7. 创建动态权限示例
-            dynamic_permissions_created = await create_dynamic_permission_samples(db)
+            # 7. 创建统一授权示例
+            permission_grants_created = await create_permission_grant_samples(db)
 
         print("\nRBAC系统初始化完成！")
         print("创建内容:")
@@ -508,9 +517,9 @@ async def main():
             f"   - 测试用户新增: {test_users_created} (已存在: {test_users_existing})"
         )
         print(
-            "   - 动态权限示例: 已创建"
-            if dynamic_permissions_created
-            else "   - 动态权限示例: 跳过"
+            "   - 统一授权示例: 已创建"
+            if permission_grants_created
+            else "   - 统一授权示例: 跳过"
         )
 
         print("\n默认登录信息:")

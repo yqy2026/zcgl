@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from src.core.exception_handler import DuplicateResourceError, ResourceNotFoundError
-from src.models.asset import SystemDictionary
+from src.models.system_dictionary import SystemDictionary
 from src.schemas.asset import SystemDictionaryCreate, SystemDictionaryUpdate
 from src.services.system_dictionary.service import SystemDictionaryService
 
@@ -250,9 +250,9 @@ class TestUpdateSortOrders:
         mock_db.refresh = AsyncMock()
 
         with patch(
-            "src.crud.system_dictionary.system_dictionary_crud.get",
+            "src.crud.system_dictionary.system_dictionary_crud.get_multi_by_ids_and_type_async",
             new_callable=AsyncMock,
-            return_value=mock_dictionary,
+            return_value=[mock_dictionary],
         ):
             result = await dictionary_service.update_sort_orders_async(
                 mock_db, dict_type="contract_type", sort_data=sort_data
@@ -276,22 +276,13 @@ class TestUpdateSortOrders:
             {"id": "dict_456", "sort_order": 2},
         ]
 
-        call_count = [0]
-
-        async def get_side_effect(db, id):
-            call_count[0] += 1
-            if call_count[0] == 1:
-                return mock_dict1
-            else:
-                return mock_dict2
-
         mock_db.commit = AsyncMock()
         mock_db.refresh = AsyncMock()
 
         with patch(
-            "src.crud.system_dictionary.system_dictionary_crud.get",
+            "src.crud.system_dictionary.system_dictionary_crud.get_multi_by_ids_and_type_async",
             new_callable=AsyncMock,
-            side_effect=get_side_effect,
+            return_value=[mock_dict1, mock_dict2],
         ):
             result = await dictionary_service.update_sort_orders_async(
                 mock_db, dict_type="contract_type", sort_data=sort_data
@@ -311,9 +302,9 @@ class TestUpdateSortOrders:
         sort_data = [{"id": "dict_123", "sort_order": 5}]
 
         with patch(
-            "src.crud.system_dictionary.system_dictionary_crud.get",
+            "src.crud.system_dictionary.system_dictionary_crud.get_multi_by_ids_and_type_async",
             new_callable=AsyncMock,
-            return_value=mock_dictionary,
+            return_value=[],
         ):
             result = await dictionary_service.update_sort_orders_async(
                 mock_db, dict_type="contract_type", sort_data=sort_data
@@ -353,9 +344,9 @@ class TestUpdateSortOrders:
         mock_db.refresh = AsyncMock()
 
         with patch(
-            "src.crud.system_dictionary.system_dictionary_crud.get",
+            "src.crud.system_dictionary.system_dictionary_crud.get_multi_by_ids_and_type_async",
             new_callable=AsyncMock,
-            return_value=mock_dictionary,
+            return_value=[mock_dictionary],
         ):
             result = await dictionary_service.update_sort_orders_async(
                 mock_db, dict_type="contract_type", sort_data=sort_data
@@ -373,9 +364,9 @@ class TestUpdateSortOrders:
         mock_db.refresh = AsyncMock()
 
         with patch(
-            "src.crud.system_dictionary.system_dictionary_crud.get",
+            "src.crud.system_dictionary.system_dictionary_crud.get_multi_by_ids_and_type_async",
             new_callable=AsyncMock,
-            return_value=None,
+            return_value=[],
         ):
             result = await dictionary_service.update_sort_orders_async(
                 mock_db, dict_type="contract_type", sort_data=sort_data

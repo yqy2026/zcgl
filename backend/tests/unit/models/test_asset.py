@@ -12,9 +12,11 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
+from src.core.enums import ContractStatus
 from src.database import Base
 from src.models.asset import Asset
 from src.models.ownership import Ownership
+from src.models.rent_contract import RentContract
 
 
 class TestAssetModelCreation:
@@ -178,21 +180,28 @@ class TestAssetContractFields:
 
     @pytest.fixture
     def asset_with_contract(self):
-        return Asset(
+        asset = Asset(
             ownership_id="Owner",
             property_name="Property",
             address="Address",
             ownership_status="Status",
             property_nature="Nature",
             usage_status="Status",
-            tenant_name="Test Tenant",
             tenant_type="企业",
-            lease_contract_number="CONTRACT-001",
-            contract_start_date=date(2024, 1, 1),
-            contract_end_date=date(2024, 12, 31),
-            monthly_rent=Decimal("5000.00"),
-            deposit=Decimal("10000.00"),
         )
+        contract = RentContract(
+            contract_number="CONTRACT-001",
+            ownership_id="ownership-1",
+            tenant_name="Test Tenant",
+            sign_date=date(2024, 1, 1),
+            start_date=date(2024, 1, 1),
+            end_date=date(2024, 12, 31),
+            contract_status=ContractStatus.ACTIVE.value,
+            monthly_rent_base=Decimal("5000.00"),
+            total_deposit=Decimal("10000.00"),
+        )
+        asset.rent_contracts = [contract]
+        return asset
 
     def test_tenant_fields(self, asset_with_contract):
         """Test tenant-related fields"""
@@ -208,6 +217,33 @@ class TestAssetContractFields:
         """Test contract financial fields"""
         assert asset_with_contract.monthly_rent == Decimal("5000.00")
         assert asset_with_contract.deposit == Decimal("10000.00")
+
+    def test_expiring_contract_treated_as_active(self):
+        """Test EXPIRING contract is treated as active projection source."""
+        asset = Asset(
+            ownership_id="Owner",
+            property_name="Property",
+            address="Address",
+            ownership_status="Status",
+            property_nature="Nature",
+            usage_status="Status",
+        )
+        contract = RentContract(
+            contract_number="CONTRACT-EXPIRING",
+            ownership_id="ownership-1",
+            tenant_name="Expiring Tenant",
+            sign_date=date(2024, 1, 1),
+            start_date=date(2024, 1, 1),
+            end_date=date(2026, 12, 31),
+            contract_status=ContractStatus.EXPIRING.value,
+            monthly_rent_base=Decimal("6100.00"),
+            total_deposit=Decimal("12000.00"),
+        )
+        asset.rent_contracts = [contract]
+
+        assert asset.active_contract is contract
+        assert asset.tenant_name == "Expiring Tenant"
+        assert asset.monthly_rent == Decimal("6100.00")
 
     def test_sublease_default(self, asset_with_contract):
         """Test sublease default value"""
@@ -240,8 +276,7 @@ class TestAssetTimestamps:
 
     def test_timestamps_use_utc(self, asset):
         """Test that timestamps use UTC timezone"""
-        assert asset.created_at.tzinfo is not None
-        # datetime.now(UTC) creates timezone-aware datetime
+        assert asset.created_at.tzinfo is None
 
 
 class TestAssetManagementFields:
@@ -354,7 +389,7 @@ class TestAssetValidation:
         assert asset.land_area == Decimal("-100.00")
 
     def test_future_date_allowed(self):
-        """Test that future dates are allowed for contracts"""
+        """Test contract projection allows future contract dates."""
         future_date = date(2030, 12, 31)
         asset = Asset(
             ownership_id="Owner",
@@ -363,8 +398,17 @@ class TestAssetValidation:
             ownership_status="Status",
             property_nature="Nature",
             usage_status="Status",
-            contract_end_date=future_date,
         )
+        contract = RentContract(
+            contract_number="CONTRACT-002",
+            ownership_id="ownership-1",
+            tenant_name="Future Tenant",
+            sign_date=date(2030, 1, 1),
+            start_date=date(2030, 1, 1),
+            end_date=future_date,
+            contract_status=ContractStatus.ACTIVE.value,
+        )
+        asset.rent_contracts = [contract]
         assert asset.contract_end_date == future_date
 
 

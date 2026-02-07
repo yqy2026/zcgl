@@ -500,121 +500,42 @@
 
 ---
 
-### 3.8 动态权限表 (dynamic_permissions)
+### 3.8 统一授权表 (permission_grants)
+
+> 说明：项目已统一为 `permission_grants` 单表授权模型；`dynamic_permissions`、`temporary_permissions`、`conditional_permissions`、`permission_requests`、`permission_delegations` 等旧表已移除。
 
 | 字段名 | 类型 | 约束 | 说明 |
 |--------|------|------|------|
-| `id` | String | PK, INDEX | 动态权限ID |
+| `id` | String | PK, INDEX | 授权记录ID |
 | `user_id` | String | FK → users.id, NOT NULL, INDEX | 用户ID |
 | `permission_id` | String | FK → permissions.id, NOT NULL, INDEX | 权限ID |
-| `permission_type` | String | NOT NULL, INDEX | 权限类型 |
-| `scope` | String | NOT NULL, INDEX | 权限范围 |
-| `scope_id` | String | INDEX | 范围ID |
-| `conditions` | JSON | | 权限条件 |
+| `grant_type` | String(50) | NOT NULL, DEFAULT 'direct', INDEX | 授权类型 |
+| `effect` | String(10) | NOT NULL, DEFAULT 'allow', INDEX | 授权效果 |
+| `scope` | String(50) | NOT NULL, DEFAULT 'global', INDEX | 作用域 |
+| `scope_id` | String | INDEX | 作用域ID |
+| `conditions` | JSON | | 条件表达式 |
+| `starts_at` | DateTime | INDEX | 生效时间 |
 | `expires_at` | DateTime | INDEX | 过期时间 |
-| `assigned_by` | String | FK → users.id, NOT NULL | 分配人 |
-| `assigned_at` | DateTime | NOT NULL | 分配时间 |
-| `revoked_by` | String | FK → users.id | 撤销人 |
-| `revoked_at` | DateTime | | 撤销时间 |
+| `priority` | Integer | NOT NULL, DEFAULT 100 | 优先级（越大越高） |
 | `is_active` | Boolean | NOT NULL, DEFAULT TRUE, INDEX | 是否激活 |
-
-**权限类型**: `role_based` / `user_specific` / `temporary` / `conditional` / `template_based`
-
-**权限范围**: `global` / `organization` / `project` / `asset` / `custom`
-
----
-
-### 3.9 临时权限表 (temporary_permissions)
-
-| 字段名 | 类型 | 约束 | 说明 |
-|--------|------|------|------|
-| `id` | String | PK, INDEX | 临时权限ID |
-| `user_id` | String | FK → users.id, NOT NULL, INDEX | 用户ID |
-| `permission_id` | String | FK → permissions.id, NOT NULL, INDEX | 权限ID |
-| `scope` | String | NOT NULL, INDEX | 权限范围 |
-| `scope_id` | String | INDEX | 范围ID |
-| `expires_at` | DateTime | NOT NULL, INDEX | 过期时间 |
-| `assigned_by` | String | FK → users.id, NOT NULL | 分配人 |
-| `assigned_at` | DateTime | NOT NULL | 分配时间 |
-| `is_active` | Boolean | NOT NULL, DEFAULT TRUE, INDEX | 是否激活 |
-
----
-
-### 3.10 条件权限表 (conditional_permissions)
-
-| 字段名 | 类型 | 约束 | 说明 |
-|--------|------|------|------|
-| `id` | String | PK, INDEX | 条件权限ID |
-| `user_id` | String | FK → users.id, NOT NULL, INDEX | 用户ID |
-| `permission_id` | String | FK → permissions.id, NOT NULL, INDEX | 权限ID |
-| `scope` | String | NOT NULL, INDEX | 权限范围 |
-| `scope_id` | String | INDEX | 范围ID |
-| `conditions` | JSON | NOT NULL | 权限条件 |
-| `assigned_by` | String | FK → users.id, NOT NULL | 分配人 |
-| `assigned_at` | DateTime | NOT NULL | 分配时间 |
-| `is_active` | Boolean | NOT NULL, DEFAULT TRUE, INDEX | 是否激活 |
-
----
-
-### 3.11 权限模板表 (permission_templates)
-
-| 字段名 | 类型 | 约束 | 说明 |
-|--------|------|------|------|
-| `id` | String | PK, INDEX | 模板ID |
-| `name` | String | NOT NULL, INDEX | 模板名称 |
-| `description` | Text | | 描述 |
-| `permission_ids` | JSON | NOT NULL | 权限ID列表 |
-| `scope` | String | NOT NULL, INDEX | 默认权限范围 |
-| `conditions` | JSON | | 默认权限条件 |
-| `created_by` | String | FK → users.id, NOT NULL | 创建人 |
+| `source_type` | String(50) | INDEX | 来源类型 |
+| `source_id` | String | INDEX | 来源记录ID |
+| `granted_by` | String(100) | | 授权人 |
+| `reason` | Text | | 授权原因 |
 | `created_at` | DateTime | NOT NULL | 创建时间 |
-| `is_active` | Boolean | NOT NULL, DEFAULT TRUE, INDEX | 是否激活 |
-
----
-
-### 3.12 权限申请表 (permission_requests)
-
-| 字段名 | 类型 | 约束 | 说明 |
-|--------|------|------|------|
-| `id` | String | PK, INDEX | 申请ID |
-| `user_id` | String | FK → users.id, NOT NULL, INDEX | 用户ID |
-| `permission_ids` | JSON | NOT NULL | 申请的权限ID列表 |
-| `scope` | String | NOT NULL, INDEX | 申请范围 |
-| `scope_id` | String | INDEX | 范围ID |
-| `reason` | Text | NOT NULL | 申请理由 |
-| `requested_duration_hours` | String | | 申请期限（小时）|
-| `requested_conditions` | JSON | | 申请条件 |
-| `status` | String | NOT NULL, DEFAULT 'pending', INDEX | 审批状态 |
-| `approved_by` | String | FK → users.id, INDEX | 审批人 |
-| `approved_at` | DateTime | | 审批时间 |
-| `approval_comment` | Text | | 审批意见 |
-| `created_at` | DateTime | NOT NULL, INDEX | 创建时间 |
 | `updated_at` | DateTime | NOT NULL | 更新时间 |
+| `revoked_at` | DateTime | | 撤销时间 |
+| `revoked_by` | String(100) | | 撤销人 |
 
-**审批状态**: `pending` / `approved` / `rejected`
+**授权类型**: `direct` / `dynamic` / `temporary` / `conditional` / `resource` / `delegation` / `request_approved` / `template_based`
 
----
+**授权效果**: `allow` / `deny`
 
-### 3.13 权限委托表 (permission_delegations)
-
-| 字段名 | 类型 | 约束 | 说明 |
-|--------|------|------|------|
-| `id` | String | PK, INDEX | 委托ID |
-| `delegator_id` | String | FK → users.id, NOT NULL, INDEX | 委托人 |
-| `delegatee_id` | String | FK → users.id, NOT NULL, INDEX | 被委托人 |
-| `permission_ids` | JSON | NOT NULL | 委托的权限ID列表 |
-| `scope` | String | NOT NULL, INDEX | 委托范围 |
-| `scope_id` | String | INDEX | 范围ID |
-| `starts_at` | DateTime | NOT NULL | 开始时间 |
-| `ends_at` | DateTime | NOT NULL, INDEX | 结束时间 |
-| `conditions` | JSON | | 委托条件 |
-| `reason` | Text | | 委托原因 |
-| `is_active` | Boolean | NOT NULL, DEFAULT TRUE, INDEX | 是否激活 |
-| `created_at` | DateTime | NOT NULL, INDEX | 创建时间 |
+**作用域**: `global` / `organization` / `project` / `asset` / `custom`
 
 ---
 
-### 3.14 权限审计日志表 (permission_audit_logs)
+### 3.9 权限审计日志表 (permission_audit_logs)
 
 | 字段名 | 类型 | 约束 | 说明 |
 |--------|------|------|------|
@@ -1448,14 +1369,8 @@
 | | role_permissions | 角色权限关联表 |
 | | user_role_assignments | 用户角色分配表 |
 | | resource_permissions | 资源权限表 |
-| | dynamic_permissions | 动态权限表 |
-| | temporary_permissions | 临时权限表 |
-| | conditional_permissions | 条件权限表 |
-| | permission_templates | 权限模板表 |
-| | permission_requests | 权限申请表 |
-| | permission_delegations | 权限委托表 |
+| | permission_grants | 统一授权表 |
 | | permission_audit_logs | 权限审计日志表 |
-| | dynamic_permission_audit | 动态权限审计表 |
 | **合同财务** | rent_contracts | 租金合同表 |
 | | rent_terms | 租金条款表 |
 | | rent_ledger | 租金台账表 |

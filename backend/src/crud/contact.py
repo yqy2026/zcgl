@@ -112,6 +112,68 @@ class ContactCRUD:
         self.sensitive_data_handler.decrypt_data(db_obj.__dict__)
         return db_obj
 
+    async def create_many_async(
+        self, db: AsyncSession, objects_in: list[dict[str, Any]]
+    ) -> list[Contact]:
+        if len(objects_in) == 0:
+            return []
+
+        encrypted_batch: list[dict[str, Any]] = [
+            self.sensitive_data_handler.encrypt_data(obj.copy()) for obj in objects_in
+        ]
+
+        last_primary_index_by_entity: dict[tuple[str, str], int] = {}
+        for index, encrypted_data in enumerate(encrypted_batch):
+            if encrypted_data.get("is_primary", False):
+                entity_key = (
+                    str(encrypted_data.get("entity_type") or ""),
+                    str(encrypted_data.get("entity_id") or ""),
+                )
+                last_primary_index_by_entity[entity_key] = index
+
+        for entity_type, entity_id in last_primary_index_by_entity:
+            if entity_type == "" or entity_id == "":
+                continue
+            await db.execute(
+                select(Contact)
+                .where(
+                    and_(
+                        Contact.entity_type == entity_type,
+                        Contact.entity_id == entity_id,
+                        Contact.is_primary.is_(True),
+                    )
+                )
+                .with_for_update()
+            )
+            await db.execute(
+                Contact.__table__.update()
+                .where(
+                    and_(
+                        Contact.entity_type == entity_type,
+                        Contact.entity_id == entity_id,
+                        Contact.is_primary.is_(True),
+                    )
+                )
+                .values(is_primary=False)
+            )
+
+        for index, encrypted_data in enumerate(encrypted_batch):
+            if not encrypted_data.get("is_primary", False):
+                continue
+            entity_key = (
+                str(encrypted_data.get("entity_type") or ""),
+                str(encrypted_data.get("entity_id") or ""),
+            )
+            if last_primary_index_by_entity.get(entity_key) != index:
+                encrypted_data["is_primary"] = False
+
+        db_objects = [Contact(**encrypted_data) for encrypted_data in encrypted_batch]
+        db.add_all(db_objects)
+        await db.commit()
+        for obj in db_objects:
+            self.sensitive_data_handler.decrypt_data(obj.__dict__)
+        return db_objects
+
     async def update_async(
         self, db: AsyncSession, db_obj: Contact, obj_in: dict[str, Any]
     ) -> Contact:

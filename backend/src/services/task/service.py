@@ -265,6 +265,81 @@ class TaskService:
     ) -> dict[str, Any]:
         return await task_crud.get_statistics_async(db, user_id=user_id)
 
+    async def get_tasks(
+        self,
+        db: AsyncSession,
+        *,
+        skip: int = 0,
+        limit: int = 100,
+        task_type: str | None = None,
+        status: str | None = None,
+        user_id: str | None = None,
+        created_after: datetime | None = None,
+        created_before: datetime | None = None,
+        order_by: str = "created_at",
+        order_dir: str = "desc",
+    ) -> tuple[list[AsyncTask], int]:
+        tasks = await task_crud.get_multi_async(
+            db=db,
+            skip=skip,
+            limit=limit,
+            task_type=task_type,
+            status=status,
+            user_id=user_id,
+            created_after=created_after,
+            created_before=created_before,
+            order_by=order_by,
+            order_dir=order_dir,
+        )
+        total = await task_crud.count_async(
+            db=db,
+            task_type=task_type,
+            status=status,
+            user_id=user_id,
+            created_after=created_after,
+            created_before=created_before,
+        )
+        return tasks, total
+
+    async def get_task(self, db: AsyncSession, *, task_id: str) -> AsyncTask | None:
+        return await task_crud.get(db=db, id=task_id)
+
+    async def get_task_history(
+        self, db: AsyncSession, *, task_id: str
+    ) -> list[TaskHistory]:
+        return await task_crud.get_history_async(db=db, task_id=task_id)
+
+    async def get_running_tasks(
+        self,
+        db: AsyncSession,
+        *,
+        user_id: str | None = None,
+        limit: int = 100,
+    ) -> list[AsyncTask]:
+        return await task_crud.get_multi_async(
+            db=db,
+            limit=limit,
+            status=TaskStatus.RUNNING.value,
+            user_id=user_id,
+            order_by="started_at",
+            order_dir="asc",
+        )
+
+    async def get_recent_tasks(
+        self,
+        db: AsyncSession,
+        *,
+        user_id: str | None = None,
+        limit: int = 10,
+    ) -> list[AsyncTask]:
+        return await task_crud.get_multi_async(
+            db=db,
+            limit=limit,
+            user_id=user_id,
+            order_by="created_at",
+            order_dir="desc",
+        )
+
     async def cleanup_old_tasks(
         self, db: AsyncSession, *, days: int, dry_run: bool
     ) -> dict[str, Any]:
@@ -335,6 +410,85 @@ class TaskService:
             db, obj_in=obj_in, user_id=user_id
         )
         return config
+
+    async def get_excel_configs(
+        self,
+        db: AsyncSession,
+        *,
+        config_type: str | None = None,
+        task_type: str | None = None,
+        limit: int = 50,
+    ) -> list[ExcelTaskConfig]:
+        return await excel_task_config_crud.get_multi_async(
+            db=db,
+            limit=limit,
+            config_type=config_type,
+            task_type=task_type,
+        )
+
+    async def get_default_excel_config(
+        self,
+        db: AsyncSession,
+        *,
+        config_type: str,
+        task_type: str,
+    ) -> ExcelTaskConfig | None:
+        return await excel_task_config_crud.get_default_async(
+            db=db,
+            config_type=config_type,
+            task_type=task_type,
+        )
+
+    async def get_excel_config(
+        self, db: AsyncSession, *, config_id: str
+    ) -> ExcelTaskConfig | None:
+        return await excel_task_config_crud.get(db=db, id=config_id)
+
+    async def update_excel_config(
+        self,
+        db: AsyncSession,
+        *,
+        config_id: str,
+        config_data: dict[str, Any],
+    ) -> ExcelTaskConfig:
+        config = await self.get_excel_config(db, config_id=config_id)
+        if not config:
+            raise ResourceNotFoundError("Excel配置", config_id)
+
+        if config_data.get("is_default") is True:
+            stmt = (
+                update(ExcelTaskConfig)
+                .where(
+                    and_(
+                        ExcelTaskConfig.config_type == config.config_type,
+                        ExcelTaskConfig.task_type == config.task_type,
+                        ExcelTaskConfig.is_default.is_(True),
+                        ExcelTaskConfig.id != config_id,
+                    )
+                )
+                .values(is_default=False)
+            )
+            await db.execute(stmt)
+
+        return await excel_task_config_crud.update(
+            db=db,
+            db_obj=config,
+            obj_in=config_data,
+        )
+
+    async def delete_excel_config(
+        self, db: AsyncSession, *, config_id: str
+    ) -> bool:
+        config = await self.get_excel_config(db, config_id=config_id)
+        if not config:
+            return False
+
+        await excel_task_config_crud.update(
+            db=db,
+            db_obj=config,
+            obj_in={"is_active": False},
+        )
+        return True
 
 
 task_service = TaskService()

@@ -13,11 +13,10 @@ from ....core.exception_handler import (
     not_found,
 )
 from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
-from ....crud.ownership import ownership
 from ....database import get_async_db
 from ....middleware.auth import get_current_active_user
-from ....models.ownership import Ownership
 from ....models.auth import User
+from ....models.ownership import Ownership
 from ....schemas.ownership import (
     OwnershipCreate,
     OwnershipDeleteResponse,
@@ -92,15 +91,11 @@ async def update_ownership(
     current_user: Annotated[User, Depends(get_current_active_user)],
 ) -> OwnershipResponse:
     """更新权属方信息"""
-    db_ownership = await ownership.get(db, id=ownership_id)
-    if not db_ownership:
-        raise not_found(
-            "权属方不存在", resource_type="ownership", resource_id=ownership_id
-        )
-
     try:
-        updated_ownership = await ownership_service.update_ownership(
-            db, db_obj=db_ownership, obj_in=ownership_in
+        updated_ownership = await ownership_service.update_ownership_by_id(
+            db,
+            ownership_id=ownership_id,
+            obj_in=ownership_in,
         )
         return OwnershipResponse.model_validate(updated_ownership)
     except Exception as e:
@@ -118,7 +113,7 @@ async def update_ownership_projects(
     current_user: Annotated[User, Depends(get_current_active_user)],
 ) -> OwnershipResponse:
     """更新权属方的关联项目"""
-    db_ownership = await ownership.get(db, id=ownership_id)
+    db_ownership = await ownership_service.get_ownership(db, ownership_id=ownership_id)
     if not db_ownership:
         raise not_found(
             "权属方不存在", resource_type="ownership", resource_id=ownership_id
@@ -131,7 +126,9 @@ async def update_ownership_projects(
         )
 
         # 返回更新后的权属方信息
-        updated_ownership = await ownership.get(db, id=ownership_id)
+        updated_ownership = await ownership_service.get_ownership(
+            db, ownership_id=ownership_id
+        )
         response = OwnershipResponse.model_validate(updated_ownership)
 
         # 获取实际的项目计数
@@ -197,7 +194,7 @@ async def get_ownerships(
         page=page, page_size=page_size, keyword=keyword, is_active=is_active
     )
 
-    result = await ownership.search(db, search_params)
+    result = await ownership_service.search_ownerships(db, search_params=search_params)
 
     # 转换为响应格式，并添加关联计数
     items: list[OwnershipResponse] = []
@@ -230,7 +227,7 @@ async def search_ownerships(
     current_user: Annotated[User, Depends(get_current_active_user)],
 ) -> Any:
     """搜索权属方"""
-    result = await ownership.search(db, search_params)
+    result = await ownership_service.search_ownerships(db, search_params=search_params)
 
     # 转换为响应格式，并添加关联计数
     items: list[OwnershipResponse] = []
@@ -321,7 +318,7 @@ async def get_ownership_financial_summary(
     )
 
     # 验证权属方是否存在
-    ownership_obj = await ownership.get(db, id=ownership_id)
+    ownership_obj = await ownership_service.get_ownership(db, ownership_id=ownership_id)
     if not ownership_obj:
         raise not_found(
             "权属方不存在", resource_type="ownership", resource_id=ownership_id

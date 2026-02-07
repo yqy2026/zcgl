@@ -53,6 +53,34 @@ class CRUDPropertyOwner(
             db=db, obj_in=encrypted_data, commit=commit, **kwargs
         )
 
+    async def create_multi_async(
+        self,
+        db: AsyncSession,
+        *,
+        objects_in: list[PropertyOwnerCreate | dict[str, Any]],
+        commit: bool = True,
+    ) -> list[PropertyOwner]:
+        if len(objects_in) == 0:
+            return []
+
+        encrypted_rows: list[dict[str, Any]] = []
+        for obj_in in objects_in:
+            if isinstance(obj_in, dict):
+                obj_data = obj_in
+            else:
+                obj_data = obj_in.model_dump()
+            encrypted_rows.append(self.sensitive_data_handler.encrypt_data(obj_data))
+
+        owners = [PropertyOwner(**row) for row in encrypted_rows]
+        db.add_all(owners)
+        if commit:
+            await db.commit()
+        else:
+            await db.flush()
+        for owner in owners:
+            self.sensitive_data_handler.decrypt_data(owner.__dict__)
+        return owners
+
     async def get_async(
         self, db: AsyncSession, id: Any, use_cache: bool = True
     ) -> PropertyOwner | None:

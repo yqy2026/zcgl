@@ -169,7 +169,8 @@ class TestCreateContract:
         )
 
         mock_asset = MagicMock()
-        mock_asset_crud.get_async = AsyncMock(return_value=mock_asset)
+        mock_asset.id = "asset-123"
+        mock_asset_crud.get_multi_by_ids_async = AsyncMock(return_value=[mock_asset])
         mock_ownership_obj = MagicMock()
         mock_ownership.get = AsyncMock(return_value=mock_ownership_obj)
         mock_service.create_contract_async = AsyncMock(return_value=mock_contract)
@@ -207,7 +208,7 @@ class TestCreateContract:
             rent_terms=[rent_term],
         )
 
-        mock_asset_crud.get_async = AsyncMock(return_value=None)
+        mock_asset_crud.get_multi_by_ids_async = AsyncMock(return_value=[])
 
         with pytest.raises(ResourceNotFoundError) as exc_info:
             await create_contract(
@@ -244,7 +245,9 @@ class TestCreateContract:
             rent_terms=[rent_term],
         )
 
-        mock_asset_crud.get_async = AsyncMock(return_value=MagicMock())
+        mock_asset = MagicMock()
+        mock_asset.id = "asset-123"
+        mock_asset_crud.get_multi_by_ids_async = AsyncMock(return_value=[mock_asset])
         mock_ownership.get = AsyncMock(return_value=None)
 
         with pytest.raises(ResourceNotFoundError) as exc_info:

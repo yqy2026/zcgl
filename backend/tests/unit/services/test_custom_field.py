@@ -5,7 +5,7 @@ import pytest
 pytestmark = pytest.mark.asyncio
 
 from src.core.exception_handler import DuplicateResourceError
-from src.models.asset import AssetCustomField
+from src.models.system_dictionary import AssetCustomField
 from src.schemas.asset import AssetCustomFieldCreate
 from src.services.custom_field.service import CustomFieldService
 

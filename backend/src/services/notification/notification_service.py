@@ -75,6 +75,41 @@ class NotificationService:
         result = await db.execute(stmt)
         return result.scalars().first()
 
+    async def find_existing_notification_pairs_async(
+        self,
+        db: AsyncSession,
+        *,
+        recipient_ids: list[str],
+        related_entity_type: str,
+        related_entity_ids: list[str],
+        notification_type: str,
+        require_unread: bool = False,
+        created_since: date | datetime | None = None,
+    ) -> set[tuple[str, str]]:
+        if len(recipient_ids) == 0 or len(related_entity_ids) == 0:
+            return set()
+
+        stmt = select(Notification.recipient_id, Notification.related_entity_id).where(
+            Notification.recipient_id.in_(recipient_ids),
+            Notification.related_entity_type == related_entity_type,
+            Notification.related_entity_id.in_(related_entity_ids),
+            Notification.type == notification_type,
+        )
+
+        if require_unread:
+            stmt = stmt.where(Notification.is_read.is_(False))
+
+        if created_since is not None:
+            stmt = stmt.where(Notification.created_at >= created_since)
+
+        result = await db.execute(stmt)
+        rows = result.all()
+        return {
+            (str(recipient_id), str(related_entity_id))
+            for recipient_id, related_entity_id in rows
+            if related_entity_id is not None
+        }
+
     async def get_unread_count_async(self, db: AsyncSession, *, user_id: str) -> int:
         return await notification_crud.count_unread_async(db, recipient_id=user_id)
 

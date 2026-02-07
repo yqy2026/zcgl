@@ -54,11 +54,6 @@
 - 暂无状态驱动必填规则（如“已出租必须填写租户/合同”）
 - 暂不需要审批流/审核状态（当前仅有 `audit_notes`）
 
-## 历史数据迁移策略（ownership_entity → ownership_id）
-- 对历史资产仅存 `ownership_entity` 的记录，按权属方名称匹配 `ownerships.name` 回填 `ownership_id`
-- 回填完成后不再保留 `ownership_entity` 存储字段（统一改为动态读取）
-- 若名称无法匹配或 `ownership_id` 指向不存在记录，记录异常并跳过
-
 ## 验收标准
 - 资产 CRUD 可用且符合唯一性约束
 - 关键筛选、导入/导出与批量操作可用

@@ -12,7 +12,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from ..database import Base
 
 if TYPE_CHECKING:
-    from .asset import Asset, ProjectOwnershipRelation
+    from .asset import Asset
+    from .project_relations import ProjectOwnershipRelation
     from .rent_contract import RentContract
 
 

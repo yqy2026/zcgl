@@ -15,8 +15,8 @@ from ....crud.asset import asset_crud
 from ....database import get_async_db
 from ....middleware.auth import require_permission
 from ....models.asset import Asset
-from ....models.ownership import Ownership
 from ....models.auth import User
+from ....models.ownership import Ownership
 from ....schemas.asset import (
     AssetCreate,
     AssetImportRequest,
@@ -63,6 +63,76 @@ async def import_assets(
         operator_value = str(operator) if operator is not None else None
         service = AsyncAssetBatchService(db)
         enum_service = get_enum_validation_service_async(db)
+        ownership_ids_to_load = {
+            str(item.get("ownership_id")).strip()
+            for item in request.data
+            if item.get("ownership_id") is not None
+            and str(item.get("ownership_id")).strip() != ""
+        }
+        ownership_names_to_load = {
+            str(item.get("ownership_entity")).strip()
+            for item in request.data
+            if item.get("ownership_entity") is not None
+            and str(item.get("ownership_entity")).strip() != ""
+        }
+        property_names_to_load = {
+            str(item.get("property_name")).strip()
+            for item in request.data
+            if item.get("property_name") is not None
+            and str(item.get("property_name")).strip() != ""
+        }
+
+        ownership_by_id: dict[str, Ownership] = {}
+        if ownership_ids_to_load:
+            ownership_rows = list(
+                (
+                    await db.execute(
+                        select(Ownership).where(
+                            Ownership.id.in_(list(ownership_ids_to_load))
+                        )
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            ownership_by_id = {str(ownership.id): ownership for ownership in ownership_rows}
+
+        ownership_by_name: dict[str, Ownership] = {}
+        if ownership_names_to_load:
+            ownership_rows = list(
+                (
+                    await db.execute(
+                        select(Ownership).where(
+                            Ownership.name.in_(list(ownership_names_to_load))
+                        )
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            ownership_by_name = {
+                str(ownership.name): ownership for ownership in ownership_rows
+            }
+
+        existing_assets_by_name: dict[str, Asset] = {}
+        if property_names_to_load:
+            existing_asset_rows = list(
+                (
+                    await db.execute(
+                        select(Asset).where(
+                            Asset.property_name.in_(list(property_names_to_load)),
+                            Asset.data_status != "已删除",
+                        )
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            existing_assets_by_name = {
+                str(asset.property_name): asset
+                for asset in existing_asset_rows
+                if getattr(asset, "property_name", None) is not None
+            }
 
         for index, asset_data in enumerate(request.data):
             try:
@@ -110,24 +180,30 @@ async def import_assets(
                     continue
 
                 existing_asset = None
+                property_name = (
+                    str(asset_data.get("property_name")).strip()
+                    if asset_data.get("property_name") is not None
+                    else ""
+                )
                 if request.import_mode in ["merge", "update"]:
-                    if "property_name" in asset_data and "address" in asset_data:
-                        assets, _ = await asset_crud.get_multi_with_search_async(
-                            db=db,
-                            search=f"{asset_data.get('property_name', '')} {asset_data.get('address', '')}",
-                            limit=1,
-                        )
-                        if assets:
-                            existing_asset = assets[0]
+                    if property_name != "":
+                        existing_asset = existing_assets_by_name.get(property_name)
 
-                ownership_id = asset_data.get("ownership_id")
-                ownership_entity = asset_data.get("ownership_entity")
+                ownership_id_raw = asset_data.get("ownership_id")
+                ownership_id = (
+                    str(ownership_id_raw).strip()
+                    if ownership_id_raw is not None
+                    else ""
+                )
+                ownership_entity_raw = asset_data.get("ownership_entity")
+                ownership_entity = (
+                    str(ownership_entity_raw).strip()
+                    if ownership_entity_raw is not None
+                    else ""
+                )
 
-                if ownership_entity and not ownership_id:
-                    ownership_result = await db.execute(
-                        select(Ownership).where(Ownership.name == ownership_entity)
-                    )
-                    ownership = ownership_result.scalars().first()
+                if ownership_entity != "" and ownership_id == "":
+                    ownership = ownership_by_name.get(ownership_entity)
                     if not ownership:
                         errors.append(
                             BatchProcessingError(
@@ -140,13 +216,11 @@ async def import_assets(
                         )
                         failed_count += 1
                         continue
-                    ownership_id = ownership.id
+                    ownership_id = str(ownership.id)
+                    ownership_by_id[ownership_id] = ownership
 
-                if ownership_id:
-                    ownership_result = await db.execute(
-                        select(Ownership).where(Ownership.id == ownership_id)
-                    )
-                    ownership = ownership_result.scalars().first()
+                if ownership_id != "":
+                    ownership = ownership_by_id.get(ownership_id)
                     if not ownership:
                         errors.append(
                             BatchProcessingError(
@@ -160,7 +234,10 @@ async def import_assets(
                         failed_count += 1
                         continue
 
-                    if ownership_entity is not None and ownership_entity != ownership.name:
+                    if (
+                        ownership_entity != ""
+                        and ownership_entity != str(ownership.name)
+                    ):
                         errors.append(
                             BatchProcessingError(
                                 id=None,
@@ -173,15 +250,12 @@ async def import_assets(
                         failed_count += 1
                         continue
 
-                    asset_data["ownership_id"] = ownership.id
+                    asset_data["ownership_id"] = str(ownership.id)
 
                 asset_data.pop("ownership_entity", None)
 
-                property_name = asset_data.get("property_name")
                 if property_name:
-                    existing_by_name = await asset_crud.get_by_name_async(
-                        db=db, property_name=property_name
-                    )
+                    existing_by_name = existing_assets_by_name.get(property_name)
                     if existing_by_name and (
                         not existing_asset
                         or str(existing_by_name.id) != str(existing_asset.id)
@@ -209,6 +283,8 @@ async def import_assets(
                         db=db, obj_in=asset_create, operator=operator_value
                     )
                     assert new_asset is not None
+                    if getattr(new_asset, "property_name", None) is not None:
+                        existing_assets_by_name[str(new_asset.property_name)] = new_asset
                     imported_assets.append(new_asset.id)
                     success_count += 1
 
@@ -226,6 +302,10 @@ async def import_assets(
                         obj_in=asset_update,
                         operator=operator_value,
                     )
+                    if getattr(updated_asset, "property_name", None) is not None:
+                        existing_assets_by_name[str(updated_asset.property_name)] = (
+                            updated_asset
+                        )
                     imported_assets.append(str(updated_asset.id))
                     success_count += 1
 
@@ -237,6 +317,10 @@ async def import_assets(
                         obj_in=asset_update,
                         operator=operator_value,
                     )
+                    if getattr(updated_asset, "property_name", None) is not None:
+                        existing_assets_by_name[str(updated_asset.property_name)] = (
+                            updated_asset
+                        )
                     imported_assets.append(str(updated_asset.id))
                     success_count += 1
 
@@ -246,6 +330,8 @@ async def import_assets(
                         db=db, obj_in=asset_create, operator=operator_value
                     )
                     assert new_asset is not None
+                    if getattr(new_asset, "property_name", None) is not None:
+                        existing_assets_by_name[str(new_asset.property_name)] = new_asset
                     imported_assets.append(new_asset.id)
                     success_count += 1
 

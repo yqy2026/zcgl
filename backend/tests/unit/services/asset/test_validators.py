@@ -79,7 +79,7 @@ class TestValidateRequiredFields:
             "ownership_status": "已确权",
             "property_nature": "商业",
             "usage_status": "在用",
-            "monthly_rent": 0,  # 0 是有效值
+            "rentable_area": 0,  # 0 是有效值
         }
         errors = AssetBatchValidator.validate_required_fields(data)
         assert len(errors) == 0
@@ -98,17 +98,14 @@ class TestValidateNumericFields:
             "actual_property_area": 200.0,
             "rentable_area": 150.0,
             "rented_area": 100.0,
-            "annual_income": 50000.0,
-            "annual_expense": 10000.0,
-            "monthly_rent": 5000.0,
-            "deposit": 15000.0,
+            "non_commercial_area": 20.0,
         }
         errors = AssetBatchValidator.validate_numeric_fields(data)
         assert len(errors) == 0
 
     def test_numeric_fields_as_strings(self):
         """测试数值字段以字符串形式提供"""
-        data = {"land_area": "100.5", "monthly_rent": "5000"}
+        data = {"land_area": "100.5", "rentable_area": "5000"}
         errors = AssetBatchValidator.validate_numeric_fields(data)
         assert len(errors) == 0
 
@@ -122,7 +119,7 @@ class TestValidateNumericFields:
 
     def test_none_numeric_field_skipped(self):
         """测试 None 数值字段被跳过"""
-        data = {"land_area": None, "monthly_rent": None}
+        data = {"land_area": None, "rentable_area": None}
         errors = AssetBatchValidator.validate_numeric_fields(data)
         assert len(errors) == 0
 
@@ -134,13 +131,13 @@ class TestValidateNumericFields:
 
     def test_negative_numbers_accepted(self):
         """测试负数被接受"""
-        data = {"annual_income": -5000.0}
+        data = {"non_commercial_area": -5000.0}
         errors = AssetBatchValidator.validate_numeric_fields(data)
-        assert len(errors) == 0  # 业务逻辑上允许负数（亏损）
+        assert len(errors) == 0  # 当前校验规则允许负数
 
     def test_zero_accepted(self):
         """测试 0 被接受"""
-        data = {"monthly_rent": 0}
+        data = {"rentable_area": 0}
         errors = AssetBatchValidator.validate_numeric_fields(data)
         assert len(errors) == 0
 
@@ -160,8 +157,6 @@ class TestValidateDateFields:
     def test_all_date_fields_valid(self):
         """测试所有日期字段都有效"""
         data = {
-            "contract_start_date": "2024-01-01",
-            "contract_end_date": "2024-12-31",
             "operation_agreement_start_date": "2024-01-01",
             "operation_agreement_end_date": "2024-12-31",
         }
@@ -170,15 +165,15 @@ class TestValidateDateFields:
 
     def test_invalid_date_format(self):
         """测试无效的日期格式"""
-        data = {"contract_start_date": "2024/01/01"}  # 错误格式
+        data = {"operation_agreement_start_date": "2024/01/01"}  # 错误格式
         errors = AssetBatchValidator.validate_date_fields(data)
         assert len(errors) == 1
-        assert errors[0]["field"] == "contract_start_date"
+        assert errors[0]["field"] == "operation_agreement_start_date"
         assert "YYYY-MM-DD" in errors[0]["error"]
 
     def test_none_date_skipped(self):
         """测试 None 日期被跳过"""
-        data = {"contract_start_date": None}
+        data = {"operation_agreement_start_date": None}
         errors = AssetBatchValidator.validate_date_fields(data)
         assert len(errors) == 0
 
@@ -190,19 +185,19 @@ class TestValidateDateFields:
 
     def test_empty_string_fails_validation(self):
         """测试空字符串验证失败"""
-        data = {"contract_start_date": ""}
+        data = {"operation_agreement_start_date": ""}
         errors = AssetBatchValidator.validate_date_fields(data)
         assert len(errors) == 1
 
     def test_partial_date_format(self):
         """测试不完整的日期格式"""
-        data = {"contract_start_date": "2024-01"}  # 只有年月
+        data = {"operation_agreement_start_date": "2024-01"}  # 只有年月
         errors = AssetBatchValidator.validate_date_fields(data)
         assert len(errors) == 1
 
     def test_non_string_type_skipped(self):
         """测试非字符串类型被跳过"""
-        data = {"contract_start_date": 20240101}  # 整数
+        data = {"operation_agreement_start_date": 20240101}  # 整数
         errors = AssetBatchValidator.validate_date_fields(data)
         assert len(errors) == 0
 
@@ -263,6 +258,20 @@ class TestValidateAreaConsistency:
         errors = AssetBatchValidator.validate_area_consistency(data)
         assert len(errors) == 0  # 类型转换失败，跳过验证
 
+    def test_zero_rentable_area_with_positive_rented_fails(self):
+        """测试可出租面积为0时，已出租面积大于0应报错"""
+        data = {"rentable_area": 0, "rented_area": 1}
+        errors = AssetBatchValidator.validate_area_consistency(data)
+        assert len(errors) == 1
+        assert errors[0]["field"] == "rented_area"
+
+    def test_zero_rentable_area_as_string_with_positive_rented_fails(self):
+        """测试可出租面积字符串0时，已出租面积大于0应报错"""
+        data = {"rentable_area": "0", "rented_area": "1"}
+        errors = AssetBatchValidator.validate_area_consistency(data)
+        assert len(errors) == 1
+        assert errors[0]["field"] == "rented_area"
+
 
 # ============================================================================
 # get_suggestion_warnings 测试
@@ -274,9 +283,8 @@ class TestGetSuggestionWarnings:
         """测试完整数据无建议"""
         data = {
             "land_area": 100.0,
-            "annual_income": 50000.0,
-            "annual_expense": 10000.0,
-            "tenant_name": "张三公司",
+            "rentable_area": 80.0,
+            "rented_area": 60.0,
         }
         warnings = AssetBatchValidator.get_suggestion_warnings(data)
         assert len(warnings) == 0
@@ -289,37 +297,35 @@ class TestGetSuggestionWarnings:
         assert len(land_warnings) == 1
         assert "土地面积" in land_warnings[0]["message"]
 
-    def test_suggestion_for_missing_annual_income(self):
-        """测试缺少年收入时的建议"""
+    def test_suggestion_for_missing_rentable_area(self):
+        """测试缺少可出租面积时的建议"""
         data = {}
         warnings = AssetBatchValidator.get_suggestion_warnings(data)
-        income_warnings = [w for w in warnings if w["field"] == "annual_income"]
-        assert len(income_warnings) == 1
-        assert "年收入" in income_warnings[0]["message"]
+        rentable_warnings = [w for w in warnings if w["field"] == "rentable_area"]
+        assert len(rentable_warnings) == 1
+        assert "可出租面积" in rentable_warnings[0]["message"]
 
-    def test_suggestion_for_missing_tenant_name(self):
-        """测试缺少租户信息时的建议"""
+    def test_suggestion_for_missing_rented_area(self):
+        """测试缺少已出租面积时的建议"""
         data = {}
         warnings = AssetBatchValidator.get_suggestion_warnings(data)
-        tenant_warnings = [w for w in warnings if w["field"] == "tenant_name"]
-        assert len(tenant_warnings) == 1
-        assert "租户信息" in tenant_warnings[0]["message"]
+        rented_warnings = [w for w in warnings if w["field"] == "rented_area"]
+        assert len(rented_warnings) == 1
+        assert "已出租面积" in rented_warnings[0]["message"]
 
     def test_none_values_trigger_suggestions(self):
         """测试 None 值触发建议"""
         data = {"land_area": None}
         warnings = AssetBatchValidator.get_suggestion_warnings(data)
-        # land_area is None but is in data, so it triggers a warning
-        # Plus the other 3 fields that are missing
-        assert len(warnings) == 4
+        # land_area 为 None 触发建议，另外两个建议字段缺失
+        assert len(warnings) == 3
 
     def test_zero_values_do_not_trigger_suggestions(self):
         """测试 0 值不触发建议（0 是有效值）"""
         data = {
             "land_area": 0,
-            "annual_income": 0,
-            "annual_expense": 0,
-            "tenant_name": "张三",
+            "rentable_area": 0,
+            "rented_area": 0,
         }
         warnings = AssetBatchValidator.get_suggestion_warnings(data)
         # All suggestion fields are present (even if 0), so no warnings
@@ -342,9 +348,8 @@ class TestValidateAll:
             "usage_status": "在用",
             "land_area": 100.0,
             # Add all suggestion fields to avoid warnings
-            "annual_income": 0,
-            "annual_expense": 0,
-            "tenant_name": "测试租户",
+            "rentable_area": 100.0,
+            "rented_area": 80.0,
         }
         is_valid, errors, warnings, validated_fields = AssetBatchValidator.validate_all(
             data
@@ -353,8 +358,7 @@ class TestValidateAll:
         assert is_valid is True
         assert len(errors) == 0
         assert len(warnings) == 0  # All suggestion fields present
-        # validated_fields includes 5 required fields + 3 numeric fields (land_area, annual_income, annual_expense)
-        # tenant_name is not tracked in validated_fields
+        # validated_fields includes 5 required fields + 3 numeric fields
         assert len(validated_fields) == 8
 
     def test_missing_required_field_returns_invalid(self):
@@ -416,7 +420,7 @@ class TestValidateAll:
             "property_nature": "商业",
             "usage_status": "在用",
             "land_area": 100.0,
-            "contract_start_date": "2024-01-01",
+            "operation_agreement_start_date": "2024-01-01",
             "rentable_area": 100.0,
             "rented_area": 50.0,
         }
@@ -428,7 +432,7 @@ class TestValidateAll:
         assert "property_name" in validated_fields
         assert "address" in validated_fields
         assert "land_area" in validated_fields
-        assert "contract_start_date" in validated_fields
+        assert "operation_agreement_start_date" in validated_fields
         assert "rentable_area" in validated_fields
         assert "rented_area" in validated_fields
 
@@ -444,4 +448,4 @@ class TestValidateAll:
         assert len(errors) == 5  # All 5 required fields missing
         assert len(validated_fields) == 0
         # 建议性警告仍然存在
-        assert len(warnings) == 4
+        assert len(warnings) == 3

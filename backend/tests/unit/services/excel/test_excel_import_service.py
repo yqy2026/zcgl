@@ -3,13 +3,21 @@
 """
 
 from datetime import datetime
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pandas as pd
 import pytest
 
 from src.core.exception_handler import BusinessValidationError
 from src.services.excel.excel_import_service import FIELD_MAPPING, ExcelImportService
+
+
+def _result_with_scalars_all(values):
+    result = MagicMock()
+    scalars = MagicMock()
+    scalars.all.return_value = values
+    result.scalars.return_value = scalars
+    return result
 
 
 @pytest.fixture
@@ -133,16 +141,18 @@ class TestExcelImportServiceErrorHandling:
             )
 
             # Mock 找到已存在的资产
-            excel_service._find_existing_asset = MagicMock(
+            excel_service._find_existing_asset = AsyncMock(
                 return_value=MagicMock(id="existing_id")
             )
+            with patch("src.services.excel.excel_import_service.asset_crud") as mock_crud:
+                mock_crud.get_by_name_async = AsyncMock(return_value=None)
 
-            result = await excel_service.import_assets_from_excel(
-                file_path="test.xlsx",
-                should_validate_data=True,
-                should_create_assets=True,
-                should_update_existing=False,
-            )
+                result = await excel_service.import_assets_from_excel(
+                    file_path="test.xlsx",
+                    should_validate_data=True,
+                    should_create_assets=True,
+                    should_update_existing=False,
+                )
 
             assert result["success"] == 1
             assert result["created_assets"] == 0
@@ -158,6 +168,7 @@ class TestExcelImportServiceErrorHandling:
                 {
                     "物业名称": [f"资产{i}" for i in range(150)],
                     "物业地址": [f"地址{i}" for i in range(150)],
+                    "权属方": ["测试单位" for _ in range(150)],
                 }
             )
 
@@ -183,12 +194,17 @@ class TestExcelImportServiceErrorHandling:
                 side_effect=make_asset_data
             )
 
-            excel_service._find_existing_asset = MagicMock(return_value=None)
+            excel_service._find_existing_asset = AsyncMock(return_value=None)
+            ownership = MagicMock()
+            ownership.id = "ownership_123"
+            ownership.name = "测试单位"
+            mock_db.execute = AsyncMock(return_value=_result_with_scalars_all([ownership]))
 
             with patch(
                 "src.services.excel.excel_import_service.asset_crud"
             ) as mock_crud:
-                mock_crud.create.return_value = MagicMock(id="new_id")
+                mock_crud.create_async = AsyncMock(return_value=MagicMock(id="new_id"))
+                mock_crud.get_by_name_async = AsyncMock(return_value=None)
 
                 result = await excel_service.import_assets_from_excel(
                     file_path="test.xlsx",
@@ -212,6 +228,7 @@ class TestExcelImportServiceErrorHandling:
                 {
                     "物业名称": ["资产1", "资产2"],
                     "物业地址": ["地址1", "地址2"],
+                    "权属方": ["测试单位", "测试单位"],
                 }
             )
 
@@ -249,16 +266,23 @@ class TestExcelImportServiceErrorHandling:
                 side_effect=complete_assets
             )
 
-            excel_service._find_existing_asset = MagicMock(return_value=None)
+            excel_service._find_existing_asset = AsyncMock(return_value=None)
+            ownership = MagicMock()
+            ownership.id = "ownership_123"
+            ownership.name = "测试单位"
+            mock_db.execute = AsyncMock(return_value=_result_with_scalars_all([ownership]))
 
             with patch(
                 "src.services.excel.excel_import_service.asset_crud"
             ) as mock_crud:
                 # 第一个成功，第二个失败
-                mock_crud.create.side_effect = [
+                mock_crud.create_async = AsyncMock(
+                    side_effect=[
                     MagicMock(id="id1"),
                     Exception("创建失败"),
-                ]
+                    ]
+                )
+                mock_crud.get_by_name_async = AsyncMock(return_value=None)
 
                 with pytest.raises(Exception) as excinfo:
                     await excel_service.import_assets_from_excel(
@@ -521,13 +545,15 @@ class TestFindExistingAsset:
 
         with patch("src.services.excel.excel_import_service.asset_crud") as mock_crud:
             mock_asset = MagicMock(id="existing_123")
-            mock_crud.get_multi_with_search.return_value = ([mock_asset], 1)
+            mock_crud.get_multi_with_search_async = AsyncMock(
+                return_value=([mock_asset], 1)
+            )
 
-            result = excel_service._find_existing_asset(asset_data)
+            result = await excel_service._find_existing_asset(asset_data)
 
             assert result is not None
             assert result.id == "existing_123"
-            mock_crud.get_multi_with_search.assert_called_once()
+            mock_crud.get_multi_with_search_async.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_find_existing_asset_not_found(self, excel_service, mock_db):
@@ -535,9 +561,9 @@ class TestFindExistingAsset:
         asset_data = {"property_name": "新物业", "address": "新地址"}
 
         with patch("src.services.excel.excel_import_service.asset_crud") as mock_crud:
-            mock_crud.get_multi_with_search.return_value = ([], 0)
+            mock_crud.get_multi_with_search_async = AsyncMock(return_value=([], 0))
 
-            result = excel_service._find_existing_asset(asset_data)
+            result = await excel_service._find_existing_asset(asset_data)
 
             assert result is None
 
@@ -547,7 +573,7 @@ class TestFindExistingAsset:
         excel_service.db = None
         asset_data = {"property_name": "测试", "address": "地址"}
 
-        result = excel_service._find_existing_asset(asset_data)
+        result = await excel_service._find_existing_asset(asset_data)
 
         assert result is None
 
@@ -557,9 +583,11 @@ class TestFindExistingAsset:
         asset_data = {"property_name": "测试", "address": "地址"}
 
         with patch("src.services.excel.excel_import_service.asset_crud") as mock_crud:
-            mock_crud.get_multi_with_search.side_effect = Exception("DB error")
+            mock_crud.get_multi_with_search_async = AsyncMock(
+                side_effect=Exception("DB error")
+            )
 
-            result = excel_service._find_existing_asset(asset_data)
+            result = await excel_service._find_existing_asset(asset_data)
 
             assert result is None
 
@@ -598,11 +626,17 @@ class TestUpdateExistingAssets:
             )
 
             existing_asset = MagicMock(id="existing_id")
-            excel_service._find_existing_asset = MagicMock(return_value=existing_asset)
+            excel_service._find_existing_asset = AsyncMock(return_value=existing_asset)
+            ownership = MagicMock()
+            ownership.id = "ownership_123"
+            ownership.name = "新权属方"
+            mock_db.execute = AsyncMock(return_value=_result_with_scalars_all([ownership]))
 
             with patch(
                 "src.services.excel.excel_import_service.asset_crud"
             ) as mock_crud:
+                mock_crud.get_by_name_async = AsyncMock(return_value=None)
+                mock_crud.update_async = AsyncMock(return_value=existing_asset)
                 result = await excel_service.import_assets_from_excel(
                     file_path="test.xlsx",
                     should_validate_data=True,
@@ -612,7 +646,7 @@ class TestUpdateExistingAssets:
 
                 assert result["updated_assets"] == 1
                 assert result["created_assets"] == 0
-                mock_crud.update.assert_called_once()
+                mock_crud.update_async.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_skip_existing_asset_without_update(self, excel_service, mock_db):
@@ -637,11 +671,12 @@ class TestUpdateExistingAssets:
             )
 
             existing_asset = MagicMock(id="existing_id")
-            excel_service._find_existing_asset = MagicMock(return_value=existing_asset)
+            excel_service._find_existing_asset = AsyncMock(return_value=existing_asset)
 
             with patch(
                 "src.services.excel.excel_import_service.asset_crud"
             ) as mock_crud:
+                mock_crud.get_by_name_async = AsyncMock(return_value=None)
                 result = await excel_service.import_assets_from_excel(
                     file_path="test.xlsx",
                     should_validate_data=True,
@@ -653,7 +688,7 @@ class TestUpdateExistingAssets:
                 assert result["created_assets"] == 0
                 assert len(result["warnings"]) == 1
                 assert "已存在" in result["warnings"][0]["warning"]
-                mock_crud.update.assert_not_called()
+                mock_crud.update_async.assert_not_called()
 
 
 # ============================================================================
@@ -860,4 +895,4 @@ class TestFieldMappingConstant:
 
     def test_field_mapping_count(self):
         """测试字段映射数量"""
-        assert len(FIELD_MAPPING) == 21
+        assert len(FIELD_MAPPING) == 22

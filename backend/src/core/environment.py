@@ -122,7 +122,6 @@ CRITICAL_DEPENDENCIES = [
 
 # 可选依赖列表
 OPTIONAL_DEPENDENCIES = [
-    "middleware.v1_compatibility",
     "middleware.request_logging",
     "middleware.error_recovery_middleware",
 ]

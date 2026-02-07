@@ -130,10 +130,6 @@ api_router.include_router(monitoring_router, prefix="/monitoring", tags=["系统
 api_router.include_router(system_router, tags=["系统管理"])
 api_router.include_router(backup_router, prefix="/system/backup", tags=["数据备份"])
 api_router.include_router(pdf_import_router, prefix="/pdf-import", tags=["PDF智能导入"])
-# Backward-compatible PDF import route (legacy /documents prefix)
-api_router.include_router(
-    pdf_import_router, prefix="/documents/pdf-import", tags=["PDF智能导入"]
-)
 if pdf_batch_router is not None:
     api_router.include_router(pdf_batch_router, tags=["PDF批量导入"])
 api_router.include_router(

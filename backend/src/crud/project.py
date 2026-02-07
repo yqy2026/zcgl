@@ -3,7 +3,8 @@ from typing import Any
 from sqlalchemy import Select, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..models.asset import Asset, Project
+from ..models.asset import Asset
+from ..models.project import Project
 from ..schemas.project import ProjectCreate, ProjectSearchRequest, ProjectUpdate
 from .base import CRUDBase
 

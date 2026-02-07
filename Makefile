@@ -6,7 +6,7 @@
 
 ROOT_DIR := $(CURDIR)
 BACKEND_VENV ?= $(ROOT_DIR)/backend/.venv
-PYTHON ?= $(shell if [ -x "$(BACKEND_VENV)/bin/python" ]; then echo "$(BACKEND_VENV)/bin/python"; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi)
+PYTHON ?= $(shell if [ -x "$(BACKEND_VENV)/Scripts/python.exe" ]; then echo "$(BACKEND_VENV)/Scripts/python.exe"; elif [ -x "$(BACKEND_VENV)/bin/python" ]; then echo "$(BACKEND_VENV)/bin/python"; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi)
 
 help:
 	@echo "Targets:"

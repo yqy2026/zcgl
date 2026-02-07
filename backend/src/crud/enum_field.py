@@ -52,10 +52,46 @@ class EnumFieldTypeCRUD:
     async def _load_enum_values_async(
         self, db: AsyncSession, enum_type: EnumFieldType
     ) -> None:
-        stmt = self._value_query_async(enum_type_id=str(enum_type.id), is_active=True)
-        result = await db.execute(stmt.order_by(EnumFieldValue.sort_order.asc()))
-        enum_values = list(result.scalars().all())
-        set_committed_value(enum_type, "enum_values", enum_values)
+        await self._load_enum_values_for_types_async(db, [enum_type], is_active=True)
+
+    async def _load_enum_values_for_types_async(
+        self,
+        db: AsyncSession,
+        enum_types: list[EnumFieldType],
+        *,
+        is_active: bool | None = None,
+    ) -> None:
+        if not enum_types:
+            return
+
+        enum_type_ids = [str(enum_type.id) for enum_type in enum_types if enum_type.id]
+        if not enum_type_ids:
+            for enum_type in enum_types:
+                set_committed_value(enum_type, "enum_values", [])
+            return
+
+        stmt = select(EnumFieldValue).where(
+            and_(
+                EnumFieldValue.enum_type_id.in_(enum_type_ids),
+                EnumFieldValue.is_deleted.is_(False),
+            )
+        )
+        if is_active is not None:
+            stmt = stmt.where(EnumFieldValue.is_active.is_(is_active))
+        stmt = stmt.order_by(EnumFieldValue.enum_type_id, EnumFieldValue.sort_order.asc())
+
+        rows = list((await db.execute(stmt)).scalars().all())
+        values_by_type: dict[str, list[EnumFieldValue]] = {enum_id: [] for enum_id in enum_type_ids}
+        for value in rows:
+            type_id = str(value.enum_type_id)
+            values_by_type.setdefault(type_id, []).append(value)
+
+        for enum_type in enum_types:
+            set_committed_value(
+                enum_type,
+                "enum_values",
+                values_by_type.get(str(enum_type.id), []),
+            )
 
     async def get_async(
         self, db: AsyncSession, enum_type_id: str
@@ -108,8 +144,7 @@ class EnumFieldTypeCRUD:
         )
         enum_types = list(result.scalars().all())
 
-        for enum_type in enum_types:
-            await self._load_enum_values_async(db, enum_type)
+        await self._load_enum_values_for_types_async(db, enum_types, is_active=True)
 
         return enum_types
 
@@ -325,15 +360,30 @@ class EnumFieldValueCRUD:
         return list(result.scalars().all())
 
     async def get_tree_async(self, db: AsyncSession, enum_type_id: str) -> list[Any]:
-        async def build_tree(parent_id: str | None = None) -> list[EnumFieldValue]:
-            values = await self.get_by_type_async(
-                db, enum_type_id, parent_id=parent_id, is_active=True
+        stmt = self._value_query_async().where(
+            EnumFieldValue.enum_type_id == enum_type_id,
+            EnumFieldValue.is_active.is_(True),
+        )
+        rows = list(
+            (
+                await db.execute(
+                    stmt.order_by(EnumFieldValue.sort_order, EnumFieldValue.created_at)
+                )
             )
-            for value in values:
-                value.children = await build_tree(parent_id=str(value.id))
-            return values
+            .scalars()
+            .all()
+        )
 
-        return await build_tree()
+        children_by_parent_id: dict[str | None, list[EnumFieldValue]] = {}
+        for value in rows:
+            parent_key = str(value.parent_id) if value.parent_id is not None else None
+            children_by_parent_id.setdefault(parent_key, []).append(value)
+
+        for value in rows:
+            value_key = str(value.id)
+            value.children = children_by_parent_id.get(value_key, [])
+
+        return children_by_parent_id.get(None, [])
 
     async def create_async(
         self, db: AsyncSession, obj_in: EnumFieldValueCreate
@@ -457,15 +507,60 @@ class EnumFieldValueCRUD:
         values_data: list[dict[str, Any]],
         created_by: str | None = None,
     ) -> list[EnumFieldValue]:
-        created_values = []
+        if len(values_data) == 0:
+            return []
 
-        for value_data in values_data:
+        parent_ids = [
+            str(parent_id)
+            for parent_id in (item.get("parent_id") for item in values_data)
+            if parent_id
+        ]
+        parents_by_id: dict[str, EnumFieldValue] = {}
+        if parent_ids:
+            parent_stmt = self._value_query_async().where(
+                EnumFieldValue.id.in_(list(set(parent_ids)))
+            )
+            parent_rows = list((await db.execute(parent_stmt)).scalars().all())
+            parents_by_id = {
+                str(parent.id): parent for parent in parent_rows if parent.id is not None
+            }
+
+        created_values: list[EnumFieldValue] = []
+        for raw in values_data:
+            value_data = dict(raw)
             value_data["enum_type_id"] = enum_type_id
             value_data["created_by"] = created_by
             obj_in = EnumFieldValueCreate(**value_data)
-            db_obj = await self.create_async(db, obj_in)
+
+            level = 1
+            path = ""
+            if obj_in.parent_id:
+                parent = parents_by_id.get(str(obj_in.parent_id))
+                if parent:
+                    parent_level = parent.level if parent.level is not None else 0
+                    level = int(parent_level) + 1
+                    parent_path = str(parent.path) if parent.path else ""
+                    parent_id = str(parent.id) if parent.id else ""
+                    path = f"{parent_path}/{parent_id}" if parent_path else parent_id
+
+            db_obj = EnumFieldValue(**obj_in.model_dump())
+            _set_attr(db_obj, "level", level)
+            _set_attr(db_obj, "path", path)
+            db.add(db_obj)
             created_values.append(db_obj)
 
+        await db.flush()
+        for db_obj in created_values:
+            await self._create_history_async(
+                db,
+                enum_type_id=str(db_obj.enum_type_id),
+                enum_value_id=str(db_obj.id),
+                action="create",
+                target_type="value",
+                new_value=f"创建枚举值: {db_obj.label}",
+                created_by=created_by,
+            )
+        await db.commit()
         return created_values
 
     async def _create_history_async(
