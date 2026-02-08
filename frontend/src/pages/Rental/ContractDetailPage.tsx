@@ -6,17 +6,16 @@
  */
 
 import React, { useState } from 'react';
-import { Typography, Button, Space, Row, Col, Spin, Alert } from 'antd';
-import { EditOutlined, ArrowLeftOutlined, StopOutlined, SyncOutlined } from '@ant-design/icons';
+import { Button, Space, Alert } from 'antd';
+import { EditOutlined, StopOutlined, SyncOutlined } from '@ant-design/icons';
 import { useParams, useNavigate } from 'react-router-dom';
+import { PageContainer } from '@/components/Common';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { rentContractService } from '@/services/rentContractService';
 import { RENTAL_QUERY_KEYS } from '@/constants/queryKeys';
 import ContractDetailInfo from '@/components/Rental/ContractDetailInfo';
 import ContractTerminateModal from '@/components/Rental/ContractTerminateModal';
 import { ContractStatus } from '@/types/rentContract';
-
-const { Title } = Typography;
 
 /**
  * ContractDetailPage - 租赁合同详情页面组件
@@ -58,117 +57,99 @@ const ContractDetailPage: React.FC = () => {
     enabled: id !== null && id !== undefined && id !== '',
   });
 
-  // 加载状态
-  if (isLoading) {
-    return (
-      <div style={{ padding: '24px', textAlign: 'center' }}>
-        <Spin size="large" />
-        <div style={{ marginTop: '16px' }}>加载合同详情中...</div>
-      </div>
-    );
-  }
+  // 获取合同标题
+  const getContractTitle = () => {
+    if (contract?.contract_number) {
+      return `${contract.contract_number} - ${contract.tenant_name}`;
+    }
+    return contract?.tenant_name ?? '合同详情';
+  };
 
   // 错误状态
   if (error) {
     return (
-      <div style={{ padding: '24px' }}>
+      <PageContainer title="合同详情" onBack={() => navigate('/rental/contracts')}>
         <Alert
           title="数据加载失败"
           description={`错误详情: ${error instanceof Error ? error.message : '未知错误'}`}
           type="error"
           showIcon
         />
-      </div>
+      </PageContainer>
     );
   }
 
   // 数据不存在状态
-  if (!contract) {
+  if (!isLoading && !contract) {
     return (
-      <div style={{ padding: '24px' }}>
+      <PageContainer title="合同详情" onBack={() => navigate('/rental/contracts')}>
         <Alert title="合同不存在" description="未找到指定的合同信息" type="warning" showIcon />
-      </div>
+      </PageContainer>
     );
   }
 
-  // 获取合同标题
-  const getContractTitle = () => {
-    if (contract.contract_number) {
-      return `${contract.contract_number} - ${contract.tenant_name}`;
-    }
-    return contract.tenant_name;
-  };
-
   return (
-    <div style={{ padding: '24px' }}>
-      {/* 页面头部：标题和操作按钮 */}
-      <div style={{ marginBottom: '24px' }}>
-        <Row justify="space-between" align="middle">
-          <Col>
-            <Space>
-              <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/rental/contracts')}>
-                返回列表
+    <PageContainer
+      title={getContractTitle()}
+      loading={isLoading}
+      onBack={() => navigate('/rental/contracts')}
+      extra={
+        <Space>
+          {/* 只有合同状态为"有效"时才显示续签和终止按钮 */}
+          {contract?.contract_status === ContractStatus.ACTIVE && (
+            <>
+              <Button
+                type="default"
+                icon={<SyncOutlined />}
+                onClick={() => navigate(`/rental/contracts/${id}/renew`)}
+              >
+                续签合同
               </Button>
-              <Title level={2} style={{ margin: 0 }}>
-                {getContractTitle()}
-              </Title>
-            </Space>
-          </Col>
-          <Col>
-            <Space>
-              {/* 只有合同状态为"有效"时才显示续签和终止按钮 */}
-              {contract.contract_status === ContractStatus.ACTIVE && (
-                <>
-                  <Button
-                    type="default"
-                    icon={<SyncOutlined />}
-                    onClick={() => navigate(`/rental/contracts/${id}/renew`)}
-                  >
-                    续签合同
-                  </Button>
-                  <Button
-                    type="primary"
-                    danger
-                    icon={<StopOutlined />}
-                    onClick={() => setTerminateModalVisible(true)}
-                  >
-                    终止合同
-                  </Button>
-                </>
-              )}
               <Button
                 type="primary"
-                icon={<EditOutlined />}
-                onClick={() => navigate(`/rental/contracts/${id}/edit`)}
+                danger
+                icon={<StopOutlined />}
+                onClick={() => setTerminateModalVisible(true)}
               >
-                编辑合同
+                终止合同
               </Button>
-            </Space>
-          </Col>
-        </Row>
-      </div>
-
+            </>
+          )}
+          <Button
+            type="primary"
+            icon={<EditOutlined />}
+            onClick={() => navigate(`/rental/contracts/${id}/edit`)}
+          >
+            编辑合同
+          </Button>
+        </Space>
+      }
+    >
       {/* 合同详细信息 */}
-      <ContractDetailInfo
-        contract={contract}
-        depositLedgers={depositLedgers}
-        depositLoading={depositLoading}
-        serviceFeeLedgers={serviceFeeLedgers}
-        serviceFeeLoading={serviceFeeLoading}
-      />
+      {contract && (
+        <ContractDetailInfo
+          contract={contract}
+          depositLedgers={depositLedgers}
+          depositLoading={depositLoading}
+          serviceFeeLedgers={serviceFeeLedgers}
+          serviceFeeLoading={serviceFeeLoading}
+        />
+      )}
 
       {/* 终止合同模态框 */}
-      <ContractTerminateModal
-        visible={terminateModalVisible}
-        contract={contract}
-        onCancel={() => setTerminateModalVisible(false)}
-        onSuccess={() => {
-          setTerminateModalVisible(false);
-          // 刷新合同详情数据
-          queryClient.invalidateQueries({ queryKey: RENTAL_QUERY_KEYS.contract(id) });
-        }}
-      />
-    </div>
+      {contract && (
+        <ContractTerminateModal
+          visible={terminateModalVisible}
+          contract={contract}
+          onCancel={() => setTerminateModalVisible(false)}
+          onSuccess={() => {
+            setTerminateModalVisible(false);
+            // 刷新合同详情数据
+            queryClient.invalidateQueries({ queryKey: RENTAL_QUERY_KEYS.contract(id) });
+          }}
+        />
+      )}
+    </PageContainer>
   );
 };
 

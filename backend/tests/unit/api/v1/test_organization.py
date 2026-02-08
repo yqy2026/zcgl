@@ -64,13 +64,10 @@ def sample_organization():
         "name": "Test Organization",
         "code": "TEST001",
         "type": "企业",
-        "leader_name": "John Doe",
-        "leader_phone": "13800138000",
-        "address": "123 Business St",
-        "registration_date": "2020-01-01",
-        "registration_number": "REG123456",
-        "tax_id": "TAX789",
-        "is_active": True,
+        "status": "active",
+        "level": 1,
+        "sort_order": 0,
+        "description": "Test description",
     }
 
 
@@ -252,9 +249,8 @@ class TestCreateOrganization:
             "name": "New Organization",
             "code": "NEW001",
             "type": "企业",
-            "leader_name": "Jane Smith",
-            "leader_phone": "13900139000",
-            "address": "456 New Ave",
+            "status": "active",
+            "sort_order": 0,
         }
 
         result = mock_organization_service.create_organization(
@@ -470,20 +466,20 @@ class TestOrganizationAPIEdgeCases:
         assert result is not None
 
     @pytest.mark.asyncio
-    async def test_organization_phone_validation(self, mock_organization_service):
-        """Test phone number validation"""
+    async def test_organization_status_validation(self, mock_organization_service):
+        """Test organization status validation"""
         mock_organization_service.create_organization.side_effect = ValueError(
-            "Invalid phone number format"
+            "Invalid organization status"
         )
 
         with pytest.raises(ValueError) as exc_info:
             mock_organization_service.create_organization(
                 db=MagicMock(),
-                org_data={"name": "Test", "code": "TEST", "leader_phone": "invalid"},
+                org_data={"name": "Test", "code": "TEST", "status": "invalid"},
                 user=MagicMock(),
             )
 
-        assert "Invalid phone number" in str(exc_info.value)
+        assert "Invalid organization status" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_organization_code_format(self, mock_organization_service):

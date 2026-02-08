@@ -221,13 +221,8 @@ class TestUserOrganization:
             email="org@example.com",
             full_name="Org User",
             password_hash="hash",
-            employee_id="emp123",
             default_organization_id="org456",
         )
-
-    def test_employee_id(self, user_with_org):
-        """Test employee_id field"""
-        assert user_with_org.employee_id == "emp123"
 
     def test_default_organization_id(self, user_with_org):
         """Test default_organization_id field"""
@@ -241,7 +236,6 @@ class TestUserOrganization:
             full_name="No Org User",
             password_hash="hash",
         )
-        assert user.employee_id is None
         assert user.default_organization_id is None
 
 

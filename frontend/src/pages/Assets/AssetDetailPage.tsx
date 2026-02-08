@@ -1,12 +1,11 @@
 import React from 'react';
-import { Typography, Button, Space, Row, Col, Spin, Alert } from 'antd';
-import { EditOutlined, ArrowLeftOutlined } from '@ant-design/icons';
+import { Button, Alert } from 'antd';
+import { EditOutlined } from '@ant-design/icons';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { assetService } from '@/services/assetService';
 import AssetDetailInfo from '@/components/Asset/AssetDetailInfo';
-
-const { Title } = Typography;
+import { PageContainer } from '@/components/Common';
 
 const AssetDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -22,64 +21,45 @@ const AssetDetailPage: React.FC = () => {
     enabled: id !== null && id !== undefined && id !== '',
   });
 
-  if (isLoading) {
-    return (
-      <div style={{ padding: '24px', textAlign: 'center' }}>
-        <Spin size="large" />
-        <div style={{ marginTop: '16' }}>加载资产详情中...</div>
-      </div>
-    );
-  }
-
   if (error) {
     return (
-      <div style={{ padding: '24px' }}>
+      <PageContainer title="资产详情" onBack={() => navigate('/assets')}>
         <Alert
           title="数据加载失败"
           description={`错误详情: ${error instanceof Error ? error.message : '未知错误'}`}
           type="error"
           showIcon
         />
-      </div>
+      </PageContainer>
     );
   }
 
-  if (!asset) {
+  if (!isLoading && !asset) {
     return (
-      <div style={{ padding: '24px' }}>
+      <PageContainer title="资产详情" onBack={() => navigate('/assets')}>
         <Alert title="资产不存在" description="未找到指定的资产信息" type="warning" showIcon />
-      </div>
+      </PageContainer>
     );
   }
 
   return (
-    <div style={{ padding: '24px' }}>
-      <div style={{ marginBottom: '24px' }}>
-        <Row justify="space-between" align="middle">
-          <Col>
-            <Space>
-              <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/assets')}>
-                返回列表
-              </Button>
-              <Title level={2} style={{ margin: 0 }}>
-                {asset.property_name ?? '资产详情'}
-              </Title>
-            </Space>
-          </Col>
-          <Col>
-            <Button
-              type="primary"
-              icon={<EditOutlined />}
-              onClick={() => navigate(`/assets/${id}/edit`)}
-            >
-              编辑资产
-            </Button>
-          </Col>
-        </Row>
-      </div>
-
-      <AssetDetailInfo asset={asset} />
-    </div>
+    <PageContainer
+      title={asset?.property_name ?? '资产详情'}
+      loading={isLoading}
+      onBack={() => navigate('/assets')}
+      extra={
+        <Button
+          type="primary"
+          icon={<EditOutlined />}
+          onClick={() => navigate(`/assets/${id}/edit`)}
+          disabled={isLoading}
+        >
+          编辑资产
+        </Button>
+      }
+    >
+      {asset && <AssetDetailInfo asset={asset} />}
+    </PageContainer>
   );
 };
 

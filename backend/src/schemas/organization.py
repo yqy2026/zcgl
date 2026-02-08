@@ -27,19 +27,8 @@ class OrganizationBase(BaseModel):
     type: str = Field(..., description="组织类型")
     status: str = Field(..., description="状态")
 
-    # 联系信息
-    phone: str | None = Field(None, max_length=20, description="联系电话")
-    email: str | None = Field(None, max_length=100, description="邮箱")
-    address: str | None = Field(None, max_length=200, description="地址")
-
-    # 负责人信息
-    leader_name: str | None = Field(None, max_length=50, description="负责人姓名")
-    leader_phone: str | None = Field(None, max_length=20, description="负责人电话")
-    leader_email: str | None = Field(None, max_length=100, description="负责人邮箱")
-
     # 其他信息
     description: str | None = Field(None, max_length=1000, description="组织描述")
-    functions: str | None = Field(None, max_length=1000, description="主要职能")
 
 
 class OrganizationCreate(OrganizationBase):
@@ -61,19 +50,8 @@ class OrganizationUpdate(BaseModel):
     type: str | None = Field(None, description="组织类型")
     status: str | None = Field(None, description="状态")
 
-    # 联系信息
-    phone: str | None = Field(None, max_length=20, description="联系电话")
-    email: str | None = Field(None, max_length=100, description="邮箱")
-    address: str | None = Field(None, max_length=200, description="地址")
-
-    # 负责人信息
-    leader_name: str | None = Field(None, max_length=50, description="负责人姓名")
-    leader_phone: str | None = Field(None, max_length=20, description="负责人电话")
-    leader_email: str | None = Field(None, max_length=100, description="负责人邮箱")
-
     # 其他信息
     description: str | None = Field(None, max_length=1000, description="组织描述")
-    functions: str | None = Field(None, max_length=1000, description="主要职能")
 
     updated_by: str | None = Field(None, max_length=100, description="更新人")
 
@@ -122,9 +100,12 @@ class OrganizationTree(BaseModel):
 
     id: str
     name: str
+    code: str
     level: int
     sort_order: int
-    children: list["OrganizationTree"] = []
+    type: str
+    status: str
+    children: list["OrganizationTree"] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
 

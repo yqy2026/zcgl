@@ -9,10 +9,8 @@ import React, { useEffect, useMemo } from 'react';
 import {
   Typography,
   Button,
-  Space,
   Row,
   Col,
-  Spin,
   Alert,
   Card,
   Descriptions,
@@ -23,7 +21,6 @@ import {
 } from 'antd';
 import {
   EditOutlined,
-  ArrowLeftOutlined,
   HomeOutlined,
   DollarOutlined,
   FileTextOutlined,
@@ -40,8 +37,9 @@ import type { RentContract } from '@/types/rentContract';
 import { COLORS } from '@/styles/colorMap';
 import { useArrayListData } from '@/hooks/useArrayListData';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
+import { PageContainer } from '@/components/Common';
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 /**
  * OwnershipDetailPage - 权属方详情页面组件
@@ -247,36 +245,26 @@ const OwnershipDetailPage: React.FC = () => {
     void loadContractList({ page: 1 });
   }, [contracts, loadContractList]);
 
-  // 加载状态
-  if (ownershipLoading) {
-    return (
-      <div style={{ padding: '24px', textAlign: 'center' }}>
-        <Spin size="large" />
-        <div style={{ marginTop: '16px' }}>加载权属方详情中...</div>
-      </div>
-    );
-  }
-
   // 错误状态
   if (ownershipError) {
     return (
-      <div style={{ padding: '24px' }}>
+      <PageContainer title="权属方详情" onBack={() => navigate('/ownership')}>
         <Alert
           title="数据加载失败"
           description={`错误详情: ${ownershipError instanceof Error ? ownershipError.message : '未知错误'}`}
           type="error"
           showIcon
         />
-      </div>
+      </PageContainer>
     );
   }
 
   // 数据不存在
-  if (!ownership) {
+  if (!ownershipLoading && !ownership) {
     return (
-      <div style={{ padding: '24px' }}>
+      <PageContainer title="权属方详情" onBack={() => navigate('/ownership')}>
         <Alert title="权属方不存在" description="未找到指定的权属方信息" type="warning" showIcon />
-      </div>
+      </PageContainer>
     );
   }
 
@@ -331,42 +319,37 @@ const OwnershipDetailPage: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: '24px' }}>
-      {/* 页面头部 */}
-      <div style={{ marginBottom: '24px' }}>
-        <Row justify="space-between" align="middle">
-          <Col>
-            <Space>
-              <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/ownership')}>
-                返回列表
-              </Button>
-              <Title level={2} style={{ margin: 0 }}>
-                {ownership.name}
-              </Title>
-              {ownership.short_name !== null &&
-                ownership.short_name !== undefined &&
-                ownership.short_name.length > 0 && (
-                  <Text type="secondary">({ownership.short_name})</Text>
-                )}
-              <Badge
-                status={ownership.is_active ? 'success' : 'error'}
-                text={ownership.is_active ? '启用' : '禁用'}
-              />
-            </Space>
-          </Col>
-          <Col>
-            <Button
-              type="primary"
-              icon={<EditOutlined />}
-              onClick={() => navigate(`/ownership/${id}/edit`)}
-            >
-              编辑
-            </Button>
-          </Col>
-        </Row>
-      </div>
-
-      {/* 财务统计卡片 */}
+    <PageContainer
+      title={
+        <>
+          {ownership?.name}
+          {ownership?.short_name != null &&
+            ownership.short_name.length > 0 && (
+              <Text type="secondary" style={{ marginLeft: 8, fontSize: '0.7em' }}>
+                ({ownership.short_name})
+              </Text>
+            )}
+          {ownership && (
+            <Badge
+              status={ownership.is_active ? 'success' : 'error'}
+              text={ownership.is_active ? '启用' : '禁用'}
+              style={{ marginLeft: 12 }}
+            />
+          )}
+        </>
+      }
+      loading={ownershipLoading}
+      onBack={() => navigate('/ownership')}
+      extra={
+        <Button
+          type="primary"
+          icon={<EditOutlined />}
+          onClick={() => navigate(`/ownership/${id}/edit`)}
+        >
+          编辑
+        </Button>
+      }
+    >
       <Row gutter={16} style={{ marginBottom: '24px' }}>
         <Col span={6}>
           <Card>
@@ -425,33 +408,37 @@ const OwnershipDetailPage: React.FC = () => {
       </Row>
 
       {/* 基本信息 */}
-      <Card title="基本信息" style={{ marginBottom: '24px' }}>
-        <Descriptions column={2}>
-          <Descriptions.Item label="权属方全称">{ownership.name}</Descriptions.Item>
-          <Descriptions.Item label="权属方简称">{ownership.short_name ?? '-'}</Descriptions.Item>
-          <Descriptions.Item label="状态">
-            <Badge
-              status={ownership.is_active ? 'success' : 'error'}
-              text={ownership.is_active ? '启用' : '禁用'}
-            />
-          </Descriptions.Item>
-          <Descriptions.Item label="关联合同数量">
-            <Tag color="blue">{contracts.length} 个</Tag>
-          </Descriptions.Item>
-          <Descriptions.Item label="创建时间">
-            {ownership.created_at ? new Date(ownership.created_at).toLocaleString('zh-CN') : '-'}
-          </Descriptions.Item>
-          <Descriptions.Item label="更新时间">
-            {ownership.updated_at ? new Date(ownership.updated_at).toLocaleString('zh-CN') : '-'}
-          </Descriptions.Item>
-        </Descriptions>
-      </Card>
+      {ownership && (
+        <>
+          <Card title="基本信息" style={{ marginBottom: '24px' }}>
+            <Descriptions column={2}>
+              <Descriptions.Item label="权属方全称">{ownership.name}</Descriptions.Item>
+              <Descriptions.Item label="权属方简称">{ownership.short_name ?? '-'}</Descriptions.Item>
+              <Descriptions.Item label="状态">
+                <Badge
+                  status={ownership.is_active ? 'success' : 'error'}
+                  text={ownership.is_active ? '启用' : '禁用'}
+                />
+              </Descriptions.Item>
+              <Descriptions.Item label="关联合同数量">
+                <Tag color="blue">{contracts.length} 个</Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="创建时间">
+                {ownership.created_at ? new Date(ownership.created_at).toLocaleString('zh-CN') : '-'}
+              </Descriptions.Item>
+              <Descriptions.Item label="更新时间">
+                {ownership.updated_at ? new Date(ownership.updated_at).toLocaleString('zh-CN') : '-'}
+              </Descriptions.Item>
+            </Descriptions>
+          </Card>
 
-      {/* 资产和合同列表 */}
-      <Card>
-        <Tabs items={tabItems} />
-      </Card>
-    </div>
+          {/* 资产和合同列表 */}
+          <Card>
+            <Tabs items={tabItems} />
+          </Card>
+        </>
+      )}
+    </PageContainer>
   );
 };
 

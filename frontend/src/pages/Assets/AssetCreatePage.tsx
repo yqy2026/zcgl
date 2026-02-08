@@ -1,8 +1,8 @@
 import React from 'react';
-import { Typography, Button, Space, Spin, Form } from 'antd';
+import { Form } from 'antd';
 import { MessageManager } from '@/utils/messageManager';
-import { ArrowLeftOutlined } from '@ant-design/icons';
 import { useParams, useNavigate } from 'react-router-dom';
+import { PageContainer } from '@/components/Common';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { assetService } from '@/services/assetService';
 import { AssetForm } from '@/components/Forms';
@@ -18,8 +18,6 @@ interface ApiError {
   };
   message?: string;
 }
-
-const { Title } = Typography;
 
 // AssetFormData interface removed, using AssetCreateRequest from types/asset
 
@@ -81,31 +79,12 @@ const AssetCreatePage: React.FC = () => {
     navigate(isEdit ? `/assets/${id}` : '/assets');
   };
 
-  if (isEdit && isLoading) {
-    return (
-      <div style={{ padding: '24px', textAlign: 'center' }}>
-        <Spin size="large" />
-        <div style={{ marginTop: '16px' }}>加载资产信息中...</div>
-      </div>
-    );
-  }
-
   return (
-    <div style={{ padding: '24px' }}>
-      <div style={{ marginBottom: '24px' }}>
-        <Space>
-          <Button
-            icon={<ArrowLeftOutlined />}
-            onClick={() => navigate(isEdit ? `/assets/${id}` : '/assets')}
-          >
-            返回
-          </Button>
-          <Title level={2} style={{ margin: 0 }}>
-            {isEdit ? '编辑资产' : '新增资产'}
-          </Title>
-        </Space>
-      </div>
-
+    <PageContainer
+      title={isEdit ? '编辑资产' : '新增资产'}
+      loading={isEdit && isLoading}
+      onBack={() => navigate(isEdit ? `/assets/${id}` : '/assets')}
+    >
       <AssetForm
         initialData={asset}
         onSubmit={handleSubmit}
@@ -113,7 +92,7 @@ const AssetCreatePage: React.FC = () => {
         isLoading={createMutation.isPending || updateMutation.isPending}
         mode={isEdit ? 'edit' : 'create'}
       />
-    </div>
+    </PageContainer>
   );
 };
 

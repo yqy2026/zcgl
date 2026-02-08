@@ -454,9 +454,11 @@ class OrganizationPermissionChecker:
         if user.default_organization_id == self.organization_id:
             return True
 
-        # 用户可以访问自己所属员工对应的组织
-        # 这里需要查询Employee表，暂时简化处理
-        return bool(user.employee_id)
+        # 当未指定目标组织时，默认组织视为其组织访问范围
+        if self.organization_id is None:
+            return user.default_organization_id is not None
+
+        return False
 
 
 def require_organization_access(

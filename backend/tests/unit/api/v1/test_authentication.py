@@ -92,6 +92,7 @@ def mock_admin_user():
         id="admin-id",
         username="admin",
         email="admin@example.com",
+        phone="13800000001",
         full_name="Admin User",
         role_id="role-admin-id",
         role_name="admin",
@@ -100,7 +101,6 @@ def mock_admin_user():
         is_admin=True,
         is_active=True,
         is_locked=False,
-        employee_id=None,
         default_organization_id=None,
         last_login_at=None,
         created_at=datetime.now(UTC),
@@ -117,6 +117,7 @@ def mock_regular_user():
         id="user-id",
         username="testuser",
         email="test@example.com",
+        phone="13800000002",
         full_name="Test User",
         role_id="role-user-id",
         role_name="asset_viewer",
@@ -125,7 +126,6 @@ def mock_regular_user():
         is_admin=False,
         is_active=True,
         is_locked=False,
-        employee_id=None,
         default_organization_id=None,
         last_login_at=None,
         created_at=datetime.now(UTC),
@@ -867,8 +867,8 @@ class TestRefreshToken:
             )
         )
 
-        assert result["auth_mode"] == "cookie"
-        assert result["message"] == "令牌刷新成功"
+        assert result.auth_mode == "cookie"
+        assert result.message == "令牌刷新成功"
         mock_auth_service.validate_refresh_token.assert_called_once()
 
     @patch("src.api.v1.auth.auth_modules.authentication.AuditLogCRUD")
@@ -1035,7 +1035,7 @@ class TestRefreshToken:
             )
         )
 
-        assert result["auth_mode"] == "cookie"
+        assert result.auth_mode == "cookie"
 
     @patch("src.api.v1.auth.auth_modules.authentication.AuditLogCRUD")
     @patch("src.api.v1.auth.auth_modules.authentication.AsyncAuthenticationService")
@@ -1077,7 +1077,7 @@ class TestRefreshToken:
             )
         )
 
-        assert result["auth_mode"] == "cookie"
+        assert result.auth_mode == "cookie"
 
 
 # ============================================================================
@@ -1166,10 +1166,10 @@ class TestDebugAuth:
     @patch("src.api.v1.debug.auth_debug.PasswordService")
     def test_debug_auth_success(
         self,
-        mock_rbac_class,
         mock_password_service_class,
         mock_user_service_class,
         mock_auth_service_class,
+        mock_rbac_class,
         mock_db,
     ):
         """Test debug authentication endpoint"""
@@ -1181,6 +1181,7 @@ class TestDebugAuth:
         from src.api.v1.debug.auth_debug import debug_auth
 
         mock_admin_user = MagicMock()
+        mock_admin_user.id = "admin-id"
         mock_admin_user.username = "admin"
         mock_admin_user.password_hash = "hashed_password"
 
@@ -1222,10 +1223,10 @@ class TestDebugAuth:
     @patch("src.api.v1.debug.auth_debug.PasswordService")
     def test_debug_auth_admin_not_found(
         self,
-        mock_rbac_class,
         mock_password_service_class,
         mock_user_service_class,
         mock_auth_service_class,
+        mock_rbac_class,
         mock_db,
     ):
         """Test debug auth when admin user not found"""
@@ -1250,10 +1251,10 @@ class TestDebugAuth:
     @patch("src.api.v1.debug.auth_debug.PasswordService")
     def test_debug_auth_authenticate_exception(
         self,
-        mock_rbac_class,
         mock_password_service_class,
         mock_user_service_class,
         mock_auth_service_class,
+        mock_rbac_class,
         mock_db,
     ):
         """Test debug auth when authenticate raises exception"""
@@ -1265,6 +1266,7 @@ class TestDebugAuth:
         from src.api.v1.debug.auth_debug import debug_auth
 
         mock_admin_user = MagicMock()
+        mock_admin_user.id = "admin-id"
         mock_admin_user.username = "admin"
         mock_admin_user.password_hash = "hashed_password"
 
@@ -1297,10 +1299,10 @@ class TestDebugAuth:
     @patch("src.api.v1.debug.auth_debug.PasswordService")
     def test_debug_auth_token_exception(
         self,
-        mock_rbac_class,
         mock_password_service_class,
         mock_user_service_class,
         mock_auth_service_class,
+        mock_rbac_class,
         mock_db,
     ):
         """Test debug auth when token creation raises exception"""
@@ -1312,6 +1314,7 @@ class TestDebugAuth:
         from src.api.v1.debug.auth_debug import debug_auth
 
         mock_admin_user = MagicMock()
+        mock_admin_user.id = "admin-id"
         mock_admin_user.username = "admin"
         mock_admin_user.password_hash = "hashed_password"
 
@@ -1350,10 +1353,10 @@ class TestDebugAuth:
     @patch("src.api.v1.debug.auth_debug.PasswordService")
     def test_debug_auth_general_exception(
         self,
-        mock_rbac_class,
         mock_password_service_class,
         mock_user_service_class,
         mock_auth_service_class,
+        mock_rbac_class,
         mock_db,
     ):
         """Test debug auth with general exception"""

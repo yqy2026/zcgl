@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import false
 
 from ..models.auth import User
-from ..models.organization import Employee, Organization
+from ..models.organization import Organization
 from ..models.rbac import ResourcePermission, Role, UserRoleAssignment
 from ..schemas.rbac import PermissionCheckRequest
 from .permission.rbac_service import RBACService
@@ -98,19 +98,6 @@ class OrganizationPermissionService:
 
         if user.default_organization_id:
             org_ids.add(str(user.default_organization_id))
-
-        if user.employee_id:
-            employee = (
-                (
-                    await self.db.execute(
-                        select(Employee).where(Employee.id == user.employee_id)
-                    )
-                )
-                .scalars()
-                .first()
-            )
-            if employee and employee.organization_id:
-                org_ids.add(str(employee.organization_id))
 
         roles = await self._get_user_roles(user_id)
         for role in roles:
@@ -199,17 +186,6 @@ class OrganizationPermissionService:
             return "admin"
 
         target_org = user.default_organization_id
-        if user.employee_id and not target_org:
-            employee = (
-                (
-                    await self.db.execute(
-                        select(Employee).where(Employee.id == user.employee_id)
-                    )
-                )
-                .scalars()
-                .first()
-            )
-            target_org = employee.organization_id if employee else None
 
         roles = await self._get_user_roles(user_id)
         if target_org:

@@ -73,9 +73,9 @@ class AsyncUserManagementService:
         db_user = User()
         db_user.username = user_data.username
         db_user.email = user_data.email
+        db_user.phone = user_data.phone
         db_user.full_name = user_data.full_name
         db_user.password_hash = hashed_password
-        db_user.employee_id = user_data.employee_id
         db_user.default_organization_id = user_data.default_organization_id
 
         self.password_service.add_password_to_history(db_user, hashed_password)

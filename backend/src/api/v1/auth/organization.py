@@ -81,8 +81,11 @@ async def get_organization_tree(
                 OrganizationTree(
                     id=str(getattr(org, "id", "")),
                     name=str(getattr(org, "name", "")),
+                    code=str(getattr(org, "code", "")),
                     level=int(getattr(org, "level", 0)),
                     sort_order=int(getattr(org, "sort_order", 0)),
+                    type=str(getattr(org, "type", "")),
+                    status=str(getattr(org, "status", "")),
                     children=children,
                 )
             )
@@ -208,6 +211,7 @@ async def get_organization_history(
     )
 
 
+@router.post("", response_model=OrganizationResponse)
 @router.post("/", response_model=OrganizationResponse)
 async def create_organization(
     organization: OrganizationCreate,

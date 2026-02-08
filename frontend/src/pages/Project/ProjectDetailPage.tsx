@@ -12,7 +12,6 @@ import {
   Space,
   Row,
   Col,
-  Spin,
   Alert,
   Card,
   Descriptions,
@@ -22,7 +21,6 @@ import {
 } from 'antd';
 import {
   EditOutlined,
-  ArrowLeftOutlined,
   HomeOutlined,
   AreaChartOutlined,
   TeamOutlined,
@@ -36,8 +34,9 @@ import type { Asset } from '@/types/asset';
 import { COLORS } from '@/styles/colorMap';
 import { useArrayListData } from '@/hooks/useArrayListData';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
+import { PageContainer } from '@/components/Common';
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 /**
  * ProjectDetailPage - 项目详情页面组件
@@ -147,71 +146,55 @@ const ProjectDetailPage: React.FC = () => {
     void loadAssetList({ page: 1 });
   }, [assets, loadAssetList]);
 
-  // 加载状态
-  if (projectLoading) {
-    return (
-      <div style={{ padding: '24px', textAlign: 'center' }}>
-        <Spin size="large" />
-        <div style={{ marginTop: '16px' }}>加载项目详情中...</div>
-      </div>
-    );
-  }
-
   // 错误状态
   if (projectError) {
     return (
-      <div style={{ padding: '24px' }}>
+      <PageContainer title="项目详情" onBack={() => navigate('/project')}>
         <Alert
           title="数据加载失败"
           description={`错误详情: ${projectError instanceof Error ? projectError.message : '未知错误'}`}
           type="error"
           showIcon
         />
-      </div>
+      </PageContainer>
     );
   }
 
   // 数据不存在状态
-  if (!project) {
+  if (!projectLoading && !project) {
     return (
-      <div style={{ padding: '24px' }}>
+      <PageContainer title="项目详情" onBack={() => navigate('/project')}>
         <Alert title="项目不存在" description="未找到指定的项目信息" type="warning" showIcon />
-      </div>
+      </PageContainer>
     );
   }
 
   return (
-    <div style={{ padding: '24px' }}>
-      {/* 页面头部 */}
-      <div style={{ marginBottom: '24px' }}>
-        <Row justify="space-between" align="middle">
-          <Col>
-            <Space>
-              <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/project')}>
-                返回列表
-              </Button>
-              <Title level={2} style={{ margin: 0 }}>
-                {project.name}
-              </Title>
-              <Badge
-                status={project.is_active ? 'success' : 'error'}
-                text={project.is_active ? '启用' : '禁用'}
-              />
-            </Space>
-          </Col>
-          <Col>
-            <Button
-              type="primary"
-              icon={<EditOutlined />}
-              onClick={() => navigate(`/project/${id}/edit`)}
-            >
-              编辑项目
-            </Button>
-          </Col>
-        </Row>
-      </div>
-
-      {/* 统计卡片 */}
+    <PageContainer
+      title={
+        <>
+          {project?.name}
+          {project && (
+            <Badge
+              status={project.is_active ? 'success' : 'error'}
+              text={project.is_active ? '启用' : '禁用'}
+              style={{ marginLeft: 12 }}
+            />
+          )}
+        </>
+      }
+      loading={projectLoading}
+      onBack={() => navigate('/project')}
+      extra={
+        <Button
+          type="primary"
+          icon={<EditOutlined />}
+          onClick={() => navigate(`/project/${id}/edit`)}
+        >
+          编辑项目
+        </Button>
+      }
+    >
       <Row gutter={16} style={{ marginBottom: '24px' }}>
         <Col span={6}>
           <Card>
@@ -263,52 +246,56 @@ const ProjectDetailPage: React.FC = () => {
       </Row>
 
       {/* 项目基本信息 */}
-      <Card title="项目信息" style={{ marginBottom: '24px' }}>
-        <Descriptions column={2}>
-          <Descriptions.Item label="项目编码">
-            <Text code>{project.code}</Text>
-          </Descriptions.Item>
-          <Descriptions.Item label="项目状态">
-            <Tag color={project.data_status === '正常' ? 'green' : 'default'}>
-              {project.data_status}
-            </Tag>
-          </Descriptions.Item>
-          <Descriptions.Item label="项目描述" span={2}>
-            {project.description ?? '-'}
-          </Descriptions.Item>
-          <Descriptions.Item label="创建时间">
-            {project.created_at ? new Date(project.created_at).toLocaleString('zh-CN') : '-'}
-          </Descriptions.Item>
-          <Descriptions.Item label="更新时间">
-            {project.updated_at ? new Date(project.updated_at).toLocaleString('zh-CN') : '-'}
-          </Descriptions.Item>
-        </Descriptions>
-      </Card>
+      {project && (
+        <>
+          <Card title="项目信息" style={{ marginBottom: '24px' }}>
+            <Descriptions column={2}>
+              <Descriptions.Item label="项目编码">
+                <Text code>{project.code}</Text>
+              </Descriptions.Item>
+              <Descriptions.Item label="项目状态">
+                <Tag color={project.data_status === '正常' ? 'green' : 'default'}>
+                  {project.data_status}
+                </Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="项目描述" span={2}>
+                {project.description ?? '-'}
+              </Descriptions.Item>
+              <Descriptions.Item label="创建时间">
+                {project.created_at ? new Date(project.created_at).toLocaleString('zh-CN') : '-'}
+              </Descriptions.Item>
+              <Descriptions.Item label="更新时间">
+                {project.updated_at ? new Date(project.updated_at).toLocaleString('zh-CN') : '-'}
+              </Descriptions.Item>
+            </Descriptions>
+          </Card>
 
-      {/* 关联资产列表 */}
-      <Card
-        title={
-          <Space>
-            <span>关联资产</span>
-            <Badge count={totalAssets} style={{ backgroundColor: COLORS.primary }} />
-          </Space>
-        }
-      >
-        <TableWithPagination
-          columns={assetColumns}
-          dataSource={assetRows}
-          rowKey="id"
-          loading={assetsLoading || assetTableLoading}
-          paginationState={assetPagination}
-          onPageChange={updateAssetPagination}
-          paginationProps={{
-            showSizeChanger: true,
-            showTotal: (total: number) => `共 ${total} 条`,
-          }}
-          locale={{ emptyText: '暂无关联资产' }}
-        />
-      </Card>
-    </div>
+          {/* 关联资产列表 */}
+          <Card
+            title={
+              <Space>
+                <span>关联资产</span>
+                <Badge count={totalAssets} style={{ backgroundColor: COLORS.primary }} />
+              </Space>
+            }
+          >
+            <TableWithPagination
+              columns={assetColumns}
+              dataSource={assetRows}
+              rowKey="id"
+              loading={assetsLoading || assetTableLoading}
+              paginationState={assetPagination}
+              onPageChange={updateAssetPagination}
+              paginationProps={{
+                showSizeChanger: true,
+                showTotal: (total: number) => `共 ${total} 条`,
+              }}
+              locale={{ emptyText: '暂无关联资产' }}
+            />
+          </Card>
+        </>
+      )}
+    </PageContainer>
   );
 };
 

@@ -5,3 +5,4 @@ export { default as GroupedSelect } from './GroupedSelect';
 export { ListToolbar } from './ListToolbar';
 export * from './StateContainer';
 export * from './TableWithPagination';
+export { default as PageContainer } from './PageContainer';

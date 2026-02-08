@@ -14,15 +14,8 @@ class CRUDOrganization(CRUDBase[Organization, OrganizationCreate, OrganizationUp
 
     def __init__(self, model: type[Organization]) -> None:
         super().__init__(model)
-        # Organization 模型的敏感字段（全部需要可搜索）
-        self.sensitive_data_handler = SensitiveDataHandler(
-            searchable_fields={
-                "id_card",  # 身份证号 - 高度敏感，需要搜索
-                "phone",  # 联系电话 - 敏感，需要搜索
-                "leader_phone",  # 负责人电话 - 敏感，需要搜索
-                "emergency_phone",  # 紧急联系电话 - 敏感，需要搜索
-            }
-        )
+        # 组织模块已移除联系人/负责人字段，当前无PII字段需要加密
+        self.sensitive_data_handler = SensitiveDataHandler(searchable_fields=set())
 
     async def create_async(
         self,

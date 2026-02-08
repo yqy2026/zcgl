@@ -181,6 +181,54 @@ export const DICTIONARY_CONFIGS: Record<string, DictionaryConfig> = {
       { label: '待招租', value: 'vacant_for_rent', code: 'vacant_for_rent', sort_order: 4 },
     ],
   },
+
+  organization_type: {
+    code: 'organization_type',
+    name: '组织类型',
+    category: '系统管理',
+    description: '组织架构类型分类',
+    apiEndpoint: '/system/dictionaries/organization_type/options',
+    fallbackOptions: [
+      { label: '公司', value: 'company', code: 'company', sort_order: 1 },
+      { label: '集团', value: 'group', code: 'group', sort_order: 2 },
+      { label: '事业部', value: 'division', code: 'division', sort_order: 3 },
+      { label: '部门', value: 'department', code: 'department', sort_order: 4 },
+      { label: '团队', value: 'team', code: 'team', sort_order: 5 },
+      { label: '分公司', value: 'branch', code: 'branch', sort_order: 6 },
+      { label: '办事处', value: 'office', code: 'office', sort_order: 7 },
+    ],
+  },
+
+  organization_status: {
+    code: 'organization_status',
+    name: '组织状态',
+    category: '系统管理',
+    description: '组织架构状态分类',
+    apiEndpoint: '/system/dictionaries/organization_status/options',
+    fallbackOptions: [
+      {
+        label: '活跃',
+        value: 'active',
+        code: 'active',
+        sort_order: 1,
+        color: 'green',
+      },
+      {
+        label: '停用',
+        value: 'inactive',
+        code: 'inactive',
+        sort_order: 2,
+        color: 'red',
+      },
+      {
+        label: '暂停',
+        value: 'suspended',
+        code: 'suspended',
+        sort_order: 3,
+        color: 'orange',
+      },
+    ],
+  },
 };
 
 /**

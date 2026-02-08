@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Typography, Button, Space, Alert } from 'antd';
+import { Button, Space, Alert } from 'antd';
 import { PlusOutlined, ExportOutlined, ImportOutlined } from '@ant-design/icons';
 import { MessageManager } from '@/utils/messageManager';
 import { useQuery } from '@tanstack/react-query';
@@ -17,15 +17,10 @@ import AssetSearch from '@/components/Asset/AssetSearch';
 import AssetAreaSummary from '@/components/Asset/AssetAreaSummary';
 import type { Asset, AssetSearchParams } from '@/types/asset';
 import { createLogger } from '@/utils/logger';
-import {
-  PageContainer,
-  ContentSection,
-  LoadingContainer,
-} from '@/components/Common/StateContainer';
+import { PageContainer } from '@/components/Common';
+import { LoadingContainer } from '@/components/Common/StateContainer';
 
 const pageLogger = createLogger('AssetList');
-
-const { Title } = Typography;
 
 type AssetListFilters = Omit<AssetSearchParams, 'page' | 'page_size'>;
 
@@ -289,7 +284,7 @@ const AssetListPage: React.FC = () => {
 
   if (error) {
     return (
-      <PageContainer>
+      <PageContainer title="资产列表">
         <Alert
           title="数据加载失败"
           description={
@@ -310,39 +305,27 @@ const AssetListPage: React.FC = () => {
   }
 
   return (
-    <PageContainer>
-      <ContentSection spacing="lg">
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 16,
-            flexWrap: 'wrap',
-          }}
-        >
-          <Title level={2} style={{ margin: 0 }}>
-            资产列表
-          </Title>
-          <Space>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/assets/new')}>
-              新增资产
+    <PageContainer
+      title="资产列表"
+      extra={
+        <Space>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/assets/new')}>
+            新增资产
+          </Button>
+          <Button icon={<ImportOutlined />} onClick={() => navigate('/assets/import')}>
+            导入资产
+          </Button>
+          <Button icon={<ExportOutlined />} onClick={handleExportAll}>
+            导出全部
+          </Button>
+          {selectedRowKeys.length > 0 && (
+            <Button type="dashed" icon={<ExportOutlined />} onClick={handleExportSelected}>
+              导出选中 ({selectedRowKeys.length})
             </Button>
-            <Button icon={<ImportOutlined />} onClick={() => navigate('/assets/import')}>
-              导入资产
-            </Button>
-            <Button icon={<ExportOutlined />} onClick={handleExportAll}>
-              导出全部
-            </Button>
-            {selectedRowKeys.length > 0 && (
-              <Button type="dashed" icon={<ExportOutlined />} onClick={handleExportSelected}>
-                导出选中 ({selectedRowKeys.length})
-              </Button>
-            )}
-          </Space>
-        </div>
-      </ContentSection>
-
+          )}
+        </Space>
+      }
+    >
       {/* 搜索组件 */}
       <AssetSearch
         onSearch={handleSearch}

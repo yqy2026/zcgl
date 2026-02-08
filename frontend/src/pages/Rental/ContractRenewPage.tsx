@@ -6,11 +6,9 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { Card, Button, Space, Breadcrumb, Typography, Row, Col, Spin } from 'antd';
+import { Card, Typography, Row, Col } from 'antd';
 import {
-  HomeOutlined,
   FileTextOutlined,
-  ArrowLeftOutlined,
   CheckCircleOutlined,
 } from '@ant-design/icons';
 import { MessageManager } from '@/utils/messageManager';
@@ -25,6 +23,7 @@ import { RENTAL_QUERY_KEYS } from '@/constants/queryKeys';
 import RenewalSummarySection from '@/components/Forms/RentContract/RenewalSummarySection';
 import { createLogger } from '@/utils/logger';
 import { COLORS } from '@/styles/colorMap';
+import { PageContainer } from '@/components/Common';
 
 const pageLogger = createLogger('ContractRenewPage');
 
@@ -156,80 +155,39 @@ const ContractRenewPage: React.FC = () => {
     navigate(`/rental/contracts/${id}`);
   };
 
-  // 加载状态
-  if (isLoadingContract) {
-    return (
-      <div style={{ padding: '24px', textAlign: 'center' }}>
-        <Spin size="large" />
-        <div style={{ marginTop: '16px' }}>加载原合同数据中...</div>
-      </div>
-    );
-  }
-
   // 数据不存在状态
-  if (!originalContract) {
+  if (!isLoadingContract && !originalContract) {
     return (
-      <div style={{ padding: '24px' }}>
+      <PageContainer title="合同续签" onBack={handleCancel}>
         <Card>
           <Text type="warning">原合同不存在，无法续签</Text>
         </Card>
-      </div>
+      </PageContainer>
     );
   }
 
   return (
-    <div style={{ padding: '24px', background: COLORS.bgTertiary, minHeight: '100vh' }}>
-      {/* 页面头部 */}
-      <Card style={{ marginBottom: '16px' }}>
-        <Row align="middle" justify="space-between">
-          <Col>
-            <Breadcrumb
-              items={[
-                {
-                  href: '/',
-                  title: <HomeOutlined />,
-                },
-                {
-                  href: '/rental/contracts',
-                  title: (
-                    <span>
-                      <FileTextOutlined />
-                      <span style={{ marginLeft: '4px' }}>合同管理</span>
-                    </span>
-                  ),
-                },
-                {
-                  href: `/rental/contracts/${id}`,
-                  title: '原合同',
-                },
-                {
-                  title: '续签合同',
-                },
-              ]}
-            />
-            <div style={{ marginTop: '16px' }}>
-              <Title level={3} style={{ margin: 0 }}>
-                <span style={{ marginRight: '8px', color: COLORS.success }}>
-                  <CheckCircleOutlined />
-                </span>
-                合同续签
-              </Title>
-              <Text type="secondary" style={{ marginTop: '8px', display: 'block' }}>
-                基于原合同 {originalContract.contract_number}{' '}
-                创建新合同，自动继承承租方、资产、租金条款等信息
-              </Text>
-            </div>
-          </Col>
-          <Col>
-            <Space>
-              <Button icon={<ArrowLeftOutlined />} onClick={handleCancel}>
-                返回原合同
-              </Button>
-            </Space>
-          </Col>
-        </Row>
-      </Card>
-
+    <PageContainer
+      title={
+        <>
+          <span style={{ marginRight: '8px', color: COLORS.success }}>
+            <CheckCircleOutlined />
+          </span>
+          合同续签
+        </>
+      }
+      subTitle={
+        originalContract ? (
+          <>
+            基于原合同 {originalContract.contract_number}{' '}
+            创建新合同，自动继承承租方、资产、租金条款等信息
+          </>
+        ) : undefined
+      }
+      onBack={handleCancel}
+      loading={isLoadingContract}
+      contentStyle={{ background: COLORS.bgTertiary }}
+    >
       {/* 创建/更新成功提示 */}
       {contractCreated && (
         <Card
@@ -320,7 +278,7 @@ const ContractRenewPage: React.FC = () => {
       )}
 
       {/* 原合同摘要 */}
-      <RenewalSummarySection contract={originalContract} />
+      {originalContract && <RenewalSummarySection contract={originalContract} />}
 
       {/* 续签表单 */}
       <Card title="新合同信息" loading={isSubmitting}>
@@ -332,7 +290,7 @@ const ContractRenewPage: React.FC = () => {
           isLoading={isSubmitting}
         />
       </Card>
-    </div>
+    </PageContainer>
   );
 };
 

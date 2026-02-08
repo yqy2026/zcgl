@@ -3,7 +3,6 @@ import { Layout, Typography } from 'antd';
 
 import AppHeader from './AppHeader';
 import AppSidebar from './AppSidebar';
-import AppBreadcrumb from './AppBreadcrumb';
 import styles from './Layout.module.css';
 
 const { Content, Footer } = Layout;
@@ -27,11 +26,6 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       <Layout style={{ background: 'transparent' }}>
         {/* 头部 */}
         <AppHeader collapsed={collapsed} onToggleCollapsed={toggleCollapsed} />
-
-        {/* 面包屑导航 */}
-        <div className={styles.breadcrumb}>
-          <AppBreadcrumb />
-        </div>
 
         {/* 主内容区 */}
         <Content className={styles.content}>{children}</Content>

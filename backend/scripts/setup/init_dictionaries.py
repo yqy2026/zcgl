@@ -126,6 +126,26 @@ async def init_asset_dictionaries():
                 {"label": "其他", "value": "other", "code": "other"},
             ],
         },
+        "organization_type": {
+            "description": "组织架构类型分类",
+            "options": [
+                {"label": "公司", "value": "company", "code": "company"},
+                {"label": "集团", "value": "group", "code": "group"},
+                {"label": "事业部", "value": "division", "code": "division"},
+                {"label": "部门", "value": "department", "code": "department"},
+                {"label": "团队", "value": "team", "code": "team"},
+                {"label": "分公司", "value": "branch", "code": "branch"},
+                {"label": "办事处", "value": "office", "code": "office"},
+            ],
+        },
+        "organization_status": {
+            "description": "组织架构状态分类",
+            "options": [
+                {"label": "活跃", "value": "active", "code": "active"},
+                {"label": "停用", "value": "inactive", "code": "inactive"},
+                {"label": "暂停", "value": "suspended", "code": "suspended"},
+            ],
+        },
     }
 
     created_count = 0

@@ -83,14 +83,6 @@ export const ErrorStateContainer: React.FC<ErrorStateContainerProps> = ({
   );
 };
 
-interface PageContainerProps {
-  children: React.ReactNode;
-  className?: string;
-}
-
-export const PageContainer: React.FC<PageContainerProps> = ({ children, className }) => {
-  return <div className={`pageContainer ${className ?? ''}`}>{children}</div>;
-};
 
 interface ContentSectionProps {
   children: React.ReactNode;

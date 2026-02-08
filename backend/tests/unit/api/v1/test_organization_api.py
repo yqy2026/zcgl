@@ -72,14 +72,7 @@ def mock_organization():
     org.parent_id = None
     org.type = "department"
     org.status = "active"
-    org.phone = "1234567890"
-    org.email = "test@example.com"
-    org.address = "Test Address"
-    org.leader_name = "Test Leader"
-    org.leader_phone = "0987654321"
-    org.leader_email = "leader@example.com"
     org.description = "Test Description"
-    org.functions = "Test Functions"
     org.path = "/test-org-id"
     org.is_deleted = False
     org.created_at = datetime.now(UTC)
@@ -115,14 +108,7 @@ class TestGetOrganizations:
             org.parent_id = None
             org.type = "department"
             org.status = "active"
-            org.phone = None
-            org.email = None
-            org.address = None
-            org.leader_name = None
-            org.leader_phone = None
-            org.leader_email = None
             org.description = None
-            org.functions = None
 
         mock_org_crud.get_multi_with_filters.return_value = mock_orgs
 

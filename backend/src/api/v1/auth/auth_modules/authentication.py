@@ -154,6 +154,7 @@ async def login(
                 "id": user.id,
                 "username": user.username,
                 "email": user.email,
+                "phone": getattr(user, "phone", "") or "",
                 "full_name": user.full_name,
                 "role_id": role_summary["primary_role_id"],
                 "role_name": role_summary["primary_role_name"],
@@ -167,7 +168,6 @@ async def login(
                 if hasattr(getattr(user, "is_locked", False), "__int__")
                 else getattr(user, "is_locked", False),
                 "last_login_at": getattr(user, "last_login_at", None),
-                "employee_id": getattr(user, "employee_id", None),
                 "default_organization_id": getattr(
                     user, "default_organization_id", None
                 ),
@@ -370,6 +370,7 @@ async def get_current_user_info(
     return {
         "username": current_user.username,
         "email": current_user.email,
+        "phone": getattr(current_user, "phone", "") or "",
         "full_name": current_user.full_name,
         "id": current_user.id,
         "is_active": current_user.is_active,

@@ -54,16 +54,6 @@ export const MENU_ITEMS: MenuProps['items'] = [
         label: '资产列表',
       },
       {
-        key: '/assets/new',
-        icon: <PlusOutlined />,
-        label: '新增资产',
-      },
-      {
-        key: '/assets/import',
-        icon: <UploadOutlined />,
-        label: '数据导入',
-      },
-      {
         key: '/assets/analytics',
         icon: <BarChartOutlined />,
         label: '数据分析',
@@ -94,11 +84,6 @@ export const MENU_ITEMS: MenuProps['items'] = [
         key: '/rental/contracts',
         icon: <UnorderedListOutlined />,
         label: '合同列表',
-      },
-      {
-        key: '/rental/contracts/new',
-        icon: <PlusOutlined />,
-        label: '新建合同',
       },
       {
         key: '/rental/contracts/pdf-import',

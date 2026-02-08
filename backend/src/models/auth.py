@@ -30,8 +30,11 @@ class User(Base):
     username: Mapped[str] = mapped_column(
         String(50), unique=True, nullable=False, index=True, comment="用户名"
     )
-    email: Mapped[str] = mapped_column(
-        String(100), unique=True, nullable=False, index=True, comment="邮箱"
+    email: Mapped[str | None] = mapped_column(
+        String(100), unique=True, nullable=True, index=True, comment="邮箱"
+    )
+    phone: Mapped[str] = mapped_column(
+        String(20), unique=True, nullable=False, index=True, comment="手机号码"
     )
     full_name: Mapped[str] = mapped_column(String(100), nullable=False, comment="全名")
 
@@ -66,9 +69,6 @@ class User(Base):
     )
 
     # 组织关联
-    employee_id: Mapped[str | None] = mapped_column(
-        String, ForeignKey("employees.id"), comment="关联员工ID"
-    )
     default_organization_id: Mapped[str | None] = mapped_column(
         String, ForeignKey("organizations.id"), comment="默认组织ID"
     )
@@ -88,8 +88,6 @@ class User(Base):
     updated_by: Mapped[str | None] = mapped_column(String(100), comment="更新人")
 
     # 关系
-    # 暂时移除双向关系以避免循环依赖问题
-    # employee = relationship("Employee", back_populates="user", foreign_keys=[employee_id])
     default_organization: Mapped["Organization | None"] = relationship("Organization")
     user_sessions: Mapped[list["UserSession"]] = relationship(
         "UserSession", back_populates="user", cascade="all, delete-orphan"

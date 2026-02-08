@@ -26,7 +26,41 @@ def mock_db():
     return db
 
 
+@pytest.fixture(autouse=True)
+def mock_enum_validation_service():
+    validation_service = MagicMock()
+    validation_service.validate_value = AsyncMock(return_value=(True, None))
+    with patch(
+        "src.services.organization.service.get_enum_validation_service_async",
+        return_value=validation_service,
+    ):
+        yield validation_service
+
+
 class TestOrganizationService:
+    @pytest.mark.asyncio
+    async def test_get_statistics_group_by_enum_fields(self, service, mock_db):
+        status_result = MagicMock()
+        status_result.all.return_value = [("active", 3), ("inactive", 2), ("suspended", 1)]
+
+        type_result = MagicMock()
+        type_result.all.return_value = [("company", 2), ("department", 4)]
+
+        level_result = MagicMock()
+        level_result.all.return_value = [(1, 2), (2, 4)]
+
+        mock_db.execute = AsyncMock(
+            side_effect=[status_result, type_result, level_result]
+        )
+
+        stats = await service.get_statistics(mock_db)
+
+        assert stats["total"] == 6
+        assert stats["active"] == 3
+        assert stats["inactive"] == 3
+        assert stats["by_type"] == {"company": 2, "department": 4}
+        assert stats["by_level"] == {"level_1": 2, "level_2": 4}
+
     @pytest.mark.asyncio
     async def test_create_organization_root(self, service, mock_db):
         obj_in = OrganizationCreate(

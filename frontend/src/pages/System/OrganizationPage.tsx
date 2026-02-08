@@ -11,13 +11,11 @@ import {
   InputNumber,
   Popconfirm,
   Tag,
-  Tooltip,
   Row,
   Col,
   Statistic,
   Tree,
   Tabs,
-  Divider,
   Badge,
 } from 'antd';
 import { COLORS } from '@/styles/colorMap';
@@ -46,14 +44,15 @@ import { organizationService } from '@/services/organizationService';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
 import { useQuery } from '@tanstack/react-query';
 import { useArrayListData } from '@/hooks/useArrayListData';
+import { useDictionary } from '@/hooks/useDictionary';
 // 组织表单数据类型
 interface OrganizationFormData {
   name: string;
   code: string;
-  type: 'company' | 'department' | 'group' | 'division' | 'team' | 'branch' | 'office';
+  type: string;
   parent_id?: string;
   description?: string;
-  status: 'active' | 'inactive' | 'suspended';
+  status: string;
   sort_order?: number;
 }
 
@@ -86,23 +85,61 @@ const OrganizationPage: React.FC = () => {
 
   const [form] = Form.useForm();
 
-  // 组织类型选项
-  const organizationTypes = [
-    { value: 'company', label: '公司', icon: <BankOutlined /> },
-    { value: 'department', label: '部门', icon: <TeamOutlined /> },
-    { value: 'group', label: '集团', icon: <ApartmentOutlined /> },
-    { value: 'division', label: '事业部', icon: <PartitionOutlined /> },
-    { value: 'team', label: '团队', icon: <TeamOutlined /> },
-    { value: 'branch', label: '分公司', icon: <BankOutlined /> },
-    { value: 'office', label: '办事处', icon: <SettingOutlined /> },
-  ];
+  const { options: organizationTypeOptions, isLoading: isTypeOptionsLoading } =
+    useDictionary('organization_type');
+  const { options: organizationStatusOptions, isLoading: isStatusOptionsLoading } =
+    useDictionary('organization_status');
 
-  // 状态选项
-  const statusOptions = [
-    { value: 'active', label: '活跃', color: 'green' },
-    { value: 'inactive', label: '停用', color: 'red' },
-    { value: 'suspended', label: '暂停', color: 'orange' },
-  ];
+  const typeIconMap = useMemo(
+    () => ({
+      company: <BankOutlined />,
+      department: <TeamOutlined />,
+      group: <ApartmentOutlined />,
+      division: <PartitionOutlined />,
+      team: <TeamOutlined />,
+      branch: <BankOutlined />,
+      office: <SettingOutlined />,
+    }),
+    []
+  );
+
+  const typeLabelMap = useMemo(() => {
+    const map = new Map<string, string>();
+    organizationTypeOptions.forEach(option => {
+      map.set(option.value, option.label);
+    });
+    return map;
+  }, [organizationTypeOptions]);
+
+  const statusLabelMap = useMemo(() => {
+    const map = new Map<string, string>();
+    organizationStatusOptions.forEach(option => {
+      map.set(option.value, option.label);
+    });
+    return map;
+  }, [organizationStatusOptions]);
+
+  const statusColorMap = useMemo(() => {
+    const map = new Map<string, string>();
+    organizationStatusOptions.forEach(option => {
+      const rawColor = option.color;
+      if (typeof rawColor === 'string' && rawColor.trim() !== '') {
+        map.set(option.value, rawColor);
+      }
+    });
+
+    if (!map.has('active')) {
+      map.set('active', 'green');
+    }
+    if (!map.has('inactive')) {
+      map.set('inactive', 'red');
+    }
+    if (!map.has('suspended')) {
+      map.set('suspended', 'orange');
+    }
+
+    return map;
+  }, [organizationStatusOptions]);
 
   const convertTreeToDataNodes = (treeNodes: OrganizationTree[]): DataNode[] => {
     return treeNodes.map(node => ({
@@ -123,18 +160,19 @@ const OrganizationPage: React.FC = () => {
   };
 
   const getTypeIcon = (type: string) => {
-    const typeConfig = organizationTypes.find(t => t.value === type);
-    return typeConfig?.icon || <TeamOutlined />;
+    return typeIconMap[type as keyof typeof typeIconMap] ?? <TeamOutlined />;
+  };
+
+  const getTypeLabel = (type: string) => {
+    return typeLabelMap.get(type) ?? type;
   };
 
   const getStatusColor = (status: string) => {
-    const statusConfig = statusOptions.find(s => s.value === status);
-    return statusConfig?.color ?? 'default';
+    return statusColorMap.get(status) ?? 'default';
   };
 
   const getStatusLabel = (status: string) => {
-    const statusConfig = statusOptions.find(s => s.value === status);
-    return statusConfig?.label ?? status;
+    return statusLabelMap.get(status) ?? status;
   };
 
   const fetchOrganizationList = useCallback(async (): Promise<OrganizationListQueryResult> => {
@@ -324,31 +362,13 @@ const OrganizationPage: React.FC = () => {
       title: '类型',
       dataIndex: 'type',
       key: 'type',
-      render: type => {
-        const typeConfig = organizationTypes.find(t => t.value === type);
-        return typeConfig?.label ?? type;
-      },
+      render: type => getTypeLabel(type),
     },
     {
       title: '层级',
       dataIndex: 'level',
       key: 'level',
       render: level => <Badge count={level} color="blue" />,
-    },
-    {
-      title: '负责人',
-      dataIndex: 'leader_name',
-      key: 'leader_name',
-      render: (name, record) =>
-        name != null ? (
-          <Tooltip
-            title={`电话: ${record.leader_phone ?? '未设置'} | 邮箱: ${record.leader_email ?? '未设置'}`}
-          >
-            <span>{name}</span>
-          </Tooltip>
-        ) : (
-          '-'
-        ),
     },
     {
       title: '状态',
@@ -591,10 +611,13 @@ const OrganizationPage: React.FC = () => {
                 label="组织类型"
                 rules={[{ required: true, message: '请选择组织类型' }]}
               >
-                <Select placeholder="请选择组织类型">
-                  {organizationTypes.map(type => (
+                <Select
+                  placeholder="请选择组织类型"
+                  loading={isTypeOptionsLoading === true}
+                >
+                  {organizationTypeOptions.map(type => (
                     <Option key={type.value} value={type.value}>
-                      {type.icon} {type.label}
+                      {getTypeIcon(type.value)} {type.label}
                     </Option>
                   ))}
                 </Select>
@@ -606,10 +629,13 @@ const OrganizationPage: React.FC = () => {
                 label="状态"
                 rules={[{ required: true, message: '请选择状态' }]}
               >
-                <Select placeholder="请选择状态">
-                  {statusOptions.map(status => (
+                <Select
+                  placeholder="请选择状态"
+                  loading={isStatusOptionsLoading === true}
+                >
+                  {organizationStatusOptions.map(status => (
                     <Option key={status.value} value={status.value}>
-                      <Tag color={status.color}>{status.label}</Tag>
+                      <Tag color={getStatusColor(status.value)}>{status.label}</Tag>
                     </Option>
                   ))}
                 </Select>
@@ -631,61 +657,31 @@ const OrganizationPage: React.FC = () => {
             />
           </Form.Item>
 
-          <Divider titlePlacement="start">负责人信息</Divider>
-
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item name="leader_name" label="负责人姓名">
-                <Input placeholder="请输入负责人姓名" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="leader_phone" label="负责人电话">
-                <Input placeholder="请输入负责人电话" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item
-                name="leader_email"
-                label="负责人邮箱"
-                rules={[{ type: 'email', message: '请输入正确的邮箱格式' }]}
-              >
-                <Input placeholder="请输入负责人邮箱" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Divider titlePlacement="start">联系信息</Divider>
-
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item name="phone" label="组织电话">
-                <Input placeholder="请输入组织电话" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item
-                name="email"
-                label="组织邮箱"
-                rules={[{ type: 'email', message: '请输入正确的邮箱格式' }]}
-              >
-                <Input placeholder="请输入组织邮箱" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="address" label="组织地址">
-                <Input placeholder="请输入组织地址" />
-              </Form.Item>
-            </Col>
-          </Row>
-
           <Form.Item name="description" label="组织描述">
             <Input.TextArea rows={3} placeholder="请输入组织描述" />
           </Form.Item>
 
-          <Form.Item name="functions" label="主要职能">
-            <Input.TextArea rows={3} placeholder="请输入主要职能" />
-          </Form.Item>
+          {editingOrganization != null && (
+            <Card size="small" title="系统字段" style={{ marginBottom: 16 }}>
+              <Row gutter={16}>
+                <Col span={24}>
+                  <Form.Item label="组织路径" style={{ marginBottom: 12 }}>
+                    <Input value={editingOrganization.path ?? '-'} disabled />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item label="创建人" style={{ marginBottom: 0 }}>
+                    <Input value={editingOrganization.created_by ?? '-'} disabled />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item label="更新人" style={{ marginBottom: 0 }}>
+                    <Input value={editingOrganization.updated_by ?? '-'} disabled />
+                  </Form.Item>
+                </Col>
+              </Row>
+            </Card>
+          )}
 
           <Form.Item style={{ textAlign: 'right', marginBottom: 0 }}>
             <Space>

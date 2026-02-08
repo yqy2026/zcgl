@@ -209,7 +209,6 @@ def get_encryption_status(
         encryption_enabled = key_manager.is_available()
 
         protected_fields = {
-            "Organization": ["id_card", "phone", "leader_phone", "emergency_phone"],
             "RentContract": ["owner_phone", "tenant_phone"],
             "Contact": ["phone", "office_phone"],
             "Asset": ["project_phone"],

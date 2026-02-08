@@ -88,12 +88,12 @@ def sample_user():
         id="user_123",
         username="testuser",
         email="test@example.com",
+        phone="13800001000",
         full_name="Test User",
         password_hash="hashed_password",
         is_active=True,
         is_locked=False,
         failed_login_attempts=0,
-        employee_id="emp_123",
         default_organization_id="org_123",
     )
 
@@ -103,10 +103,10 @@ def sample_user_create():
     return UserCreate(
         username="newuser",
         email="newuser@example.com",
+        phone="13800001001",
         full_name="New User",
         password="SecurePass123!",
         role_id="role-user-id",
-        employee_id="emp_456",
         default_organization_id="org_456",
     )
 
@@ -244,6 +244,7 @@ class TestUserCreation:
         weak_password_data = UserCreate(
             username="weakuser",
             email="weak@example.com",
+            phone="13800001002",
             full_name="Weak User",
             password="WeakPass123!",
         )
@@ -270,8 +271,8 @@ class TestUserCreation:
         added_user = mock_db.add.call_args[0][0]
         assert added_user.username == sample_user_create.username
         assert added_user.email == sample_user_create.email
+        assert added_user.phone == sample_user_create.phone
         assert added_user.full_name == sample_user_create.full_name
-        assert added_user.employee_id == sample_user_create.employee_id
         assert (
             added_user.default_organization_id
             == sample_user_create.default_organization_id
@@ -283,6 +284,7 @@ class TestUserCreation:
         user_data = UserCreate(
             username="basicuser",
             email="basic@example.com",
+            phone="13800001003",
             full_name="Basic User",
             password="SecurePass123!",
         )
@@ -292,7 +294,7 @@ class TestUserCreation:
 
         mock_db.add.assert_called_once()
         added_user = mock_db.add.call_args[0][0]
-        assert added_user.employee_id is None
+        assert added_user.phone == user_data.phone
         assert added_user.default_organization_id is None
 
 
@@ -636,6 +638,7 @@ class TestEdgeCases:
         user_data = UserCreate(
             username="admin",
             email="admin@example.com",
+            phone="13800001004",
             full_name="Admin User",
             password="AdminPass123!",
             role_id="role-admin-id",

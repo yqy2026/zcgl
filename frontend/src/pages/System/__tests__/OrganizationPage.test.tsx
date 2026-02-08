@@ -1,8 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { renderWithProviders, screen, waitFor } from '@/test/utils/test-helpers';
+import {
+  renderWithProviders,
+  screen,
+  waitFor,
+  userEvent,
+  fireEvent,
+} from '@/test/utils/test-helpers';
 import OrganizationPage from '../OrganizationPage';
 import { organizationService } from '@/services/organizationService';
+import { useDictionary } from '@/hooks/useDictionary';
 
 vi.mock('@/services/organizationService', () => ({
   organizationService: {
@@ -32,6 +39,10 @@ vi.mock('@/utils/messageManager', () => ({
   },
 }));
 
+vi.mock('@/hooks/useDictionary', () => ({
+  useDictionary: vi.fn(),
+}));
+
 describe('OrganizationPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -43,8 +54,53 @@ describe('OrganizationPage', () => {
       active: 0,
       inactive: 0,
       by_type: {},
+      by_level: {},
+    });
+    vi.mocked(organizationService.createOrganization).mockResolvedValue({
+      id: 'org-created',
+      name: '事业部A',
+      code: 'DIV001',
+      level: 1,
+      sort_order: 0,
+      type: 'division',
+      status: 'active',
+      is_deleted: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     });
     vi.mocked(organizationService.getOrganizationHistory).mockResolvedValue([]);
+    vi.mocked(useDictionary).mockImplementation((dictType: string) => {
+      if (dictType === 'organization_type') {
+        return {
+          options: [
+            { label: '事业部', value: 'division' },
+            { label: '部门', value: 'department' },
+          ],
+          isLoading: false,
+          error: null,
+          refresh: vi.fn(),
+        };
+      }
+
+      if (dictType === 'organization_status') {
+        return {
+          options: [
+            { label: '启用(自定义)', value: 'active', color: 'green' },
+            { label: '停用(自定义)', value: 'inactive', color: 'red' },
+          ],
+          isLoading: false,
+          error: null,
+          refresh: vi.fn(),
+        };
+      }
+
+      return {
+        options: [],
+        isLoading: false,
+        error: null,
+        refresh: vi.fn(),
+      };
+    });
   });
 
   it('renders tabs without TabPane deprecation warning', async () => {
@@ -68,5 +124,51 @@ describe('OrganizationPage', () => {
 
     warnSpy.mockRestore();
     errorSpy.mockRestore();
+  });
+
+  it('loads enum options from dictionaries and submits enum values', async () => {
+    const user = userEvent.setup();
+
+    renderWithProviders(<OrganizationPage />);
+
+    await waitFor(() => {
+      expect(organizationService.getOrganizations).toHaveBeenCalled();
+      expect(useDictionary).toHaveBeenCalledWith('organization_type');
+      expect(useDictionary).toHaveBeenCalledWith('organization_status');
+    });
+
+    await user.click(screen.getByRole('button', { name: /新建组织/ }));
+
+    await user.type(screen.getByPlaceholderText('请输入组织名称'), '事业部A');
+    await user.type(screen.getByPlaceholderText('请输入组织编码'), 'DIV001');
+
+    const typeLabel = screen
+      .getAllByText('组织类型')
+      .find(element => element.tagName.toLowerCase() === 'label');
+    const typeSelect = typeLabel?.closest('.ant-form-item')?.querySelector('.ant-select');
+    expect(typeSelect).toBeTruthy();
+    fireEvent.mouseDown(typeSelect!);
+    await user.click(screen.getByText('事业部'));
+
+    const statusLabel = screen
+      .getAllByText('状态')
+      .find(element => element.tagName.toLowerCase() === 'label');
+    const statusSelect = statusLabel?.closest('.ant-form-item')?.querySelector('.ant-select');
+    expect(statusSelect).toBeTruthy();
+    fireEvent.mouseDown(statusSelect!);
+    await user.click(screen.getByText('启用(自定义)'));
+
+    await user.click(screen.getByRole('button', { name: /创\s*建/ }));
+
+    await waitFor(() => {
+      expect(organizationService.createOrganization).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: '事业部A',
+          code: 'DIV001',
+          type: 'division',
+          status: 'active',
+        })
+      );
+    });
   });
 });

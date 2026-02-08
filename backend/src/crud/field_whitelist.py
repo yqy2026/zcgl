@@ -586,7 +586,6 @@ class OrganizationWhitelist(ModelFieldWhitelist):
         "name",
         "code",
         "description",
-        "functions",
         "path",
     }
 
@@ -599,14 +598,7 @@ class OrganizationWhitelist(ModelFieldWhitelist):
         DateTimeFields.UPDATED_AT,
     }
 
-    blocked_fields: ClassVar[set[str]] = {
-        "phone",
-        "email",
-        "address",
-        "leader_name",
-        "leader_phone",
-        "leader_email",
-    }
+    blocked_fields: ClassVar[set[str]] = set()
 
 
 # ============================================================================

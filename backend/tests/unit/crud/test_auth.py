@@ -78,10 +78,10 @@ def sample_user():
         id="user_123",
         username="testuser",
         email="test@example.com",
+        phone="13800002000",
         full_name="Test User",
         password_hash="hashed_password_here",
         is_active=True,
-        employee_id=None,
         default_organization_id=None,
     )
 
@@ -119,10 +119,10 @@ def user_create_data():
     return UserCreate(
         username="newuser",
         email="newuser@example.com",
+        phone="13800002001",
         full_name="New User",
         password="SecurePass123!",
         role_id="role-user-id",
-        employee_id=None,
         default_organization_id=None,
     )
 
@@ -616,18 +616,17 @@ class TestAuthCRUDEdgeCases:
         user_data = UserCreate(
             username="completeuser",
             email="complete@example.com",
+            phone="13800002002",
             full_name="Complete User",
             password="SecurePass123!",
             role_id="role-admin-id",
-            employee_id="emp_123",
             default_organization_id="org_123",
         )
 
         result = await user_crud.create_async(mock_db, user_data)
 
-        assert result.employee_id == "emp_123"
         assert result.default_organization_id == "org_123"
-        assert result.employee_id == "emp_123"
+        assert result.phone == "13800002002"
 
     async def test_user_update_no_changes(self, user_crud, mock_db, sample_user):
         empty_update = UserUpdate()

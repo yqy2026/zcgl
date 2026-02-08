@@ -3,7 +3,6 @@ import { Layout, Typography, Space, Avatar, Button } from 'antd';
 import { UserOutlined, BellOutlined } from '@ant-design/icons';
 
 import MobileMenu from './MobileMenu';
-import AppBreadcrumb from './AppBreadcrumb';
 
 const { Header, Content, Footer } = Layout;
 const { Text } = Typography;
@@ -73,27 +72,13 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
         </Space>
       </Header>
 
-      {/* 面包屑导航 */}
-      <div
-        style={{
-          padding: '8px 16px',
-          background: '#fff',
-          borderBottom: '1px solid #f0f0f0',
-          marginTop: 56, // 头部高度
-          position: 'sticky',
-          top: 56,
-          zIndex: 999,
-        }}
-      >
-        <AppBreadcrumb />
-      </div>
-
       {/* 主内容区 */}
       <Content
         style={{
+          marginTop: 56, // 头部高度
           padding: 0,
           background: '#f5f5f5',
-          minHeight: 'calc(100vh - 112px)', // 减去头部和面包屑的高度
+          minHeight: 'calc(100vh - 56px)', // 减去头部的高度
           overflow: 'auto',
         }}
       >

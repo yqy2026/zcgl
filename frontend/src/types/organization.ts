@@ -12,22 +12,11 @@ export interface Organization {
   path?: string;
 
   // 组织基本信息
-  type: 'company' | 'department' | 'group' | 'division' | 'team' | 'branch' | 'office';
-  status: 'active' | 'inactive' | 'suspended';
-
-  // 联系信息
-  phone?: string;
-  email?: string;
-  address?: string;
-
-  // 负责人信息
-  leader_name?: string;
-  leader_phone?: string;
-  leader_email?: string;
+  type: string;
+  status: string;
 
   // 其他信息
   description?: string;
-  functions?: string;
 
   // 系统字段
   is_deleted: boolean;
@@ -45,22 +34,11 @@ export interface OrganizationCreate {
   level?: number;
   sort_order?: number;
   parent_id?: string;
-  type: 'company' | 'department' | 'group' | 'division' | 'team' | 'branch' | 'office';
-  status: 'active' | 'inactive' | 'suspended';
-
-  // 联系信息
-  phone?: string;
-  email?: string;
-  address?: string;
-
-  // 负责人信息
-  leader_name?: string;
-  leader_phone?: string;
-  leader_email?: string;
+  type: string;
+  status: string;
 
   // 其他信息
   description?: string;
-  functions?: string;
 
   created_by?: string;
 }
@@ -71,22 +49,11 @@ export interface OrganizationUpdate {
   level?: number;
   sort_order?: number;
   parent_id?: string;
-  type?: 'company' | 'department' | 'group' | 'division' | 'team' | 'branch' | 'office';
-  status?: 'active' | 'inactive' | 'suspended';
-
-  // 联系信息
-  phone?: string;
-  email?: string;
-  address?: string;
-
-  // 负责人信息
-  leader_name?: string;
-  leader_phone?: string;
-  leader_email?: string;
+  type?: string;
+  status?: string;
 
   // 其他信息
   description?: string;
-  functions?: string;
 
   updated_by?: string;
 }
@@ -97,8 +64,8 @@ export interface OrganizationTree {
   code: string;
   level: number;
   sort_order: number;
-  type: 'company' | 'department' | 'group' | 'division' | 'team' | 'branch' | 'office';
-  status: 'active' | 'inactive' | 'suspended';
+  type: string;
+  status: string;
   children: OrganizationTree[];
 }
 

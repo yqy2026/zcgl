@@ -132,9 +132,9 @@ class UserCRUD:
         db_user = User()
         db_user.username = obj_in.username
         db_user.email = obj_in.email
+        db_user.phone = obj_in.phone
         db_user.full_name = obj_in.full_name
         db_user.password_hash = hashed_password
-        db_user.employee_id = obj_in.employee_id
         db_user.default_organization_id = obj_in.default_organization_id
 
         db.add(db_user)

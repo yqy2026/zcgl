@@ -25,10 +25,8 @@ from .notification import (  # noqa: F401
     NotificationType,
 )
 from .organization import (  # noqa: F401
-    Employee,
     Organization,
     OrganizationHistory,
-    Position,
 )
 from .ownership import Ownership  # noqa: F401
 from .project import Project  # noqa: F401
@@ -79,8 +77,6 @@ __all__ = [
     "AssetSearchIndex",
     "Organization",
     "OrganizationHistory",
-    "Position",
-    "Employee",
     "User",
     "UserSession",
     "AuditLog",

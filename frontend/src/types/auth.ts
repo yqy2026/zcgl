@@ -14,6 +14,7 @@ export interface User {
   username: string;
   email?: string;
   full_name: string;
+  phone: string;
   role_id?: string;
   role_name?: string;
   roles?: string[];
@@ -23,13 +24,11 @@ export interface User {
   created_at: string;
   updated_at: string;
   // 个人资料相关字段
-  phone?: string;
   last_login_at?: string;
   password_last_changed?: string;
   failed_login_attempts?: number;
   is_locked?: boolean;
   locked_until?: string;
-  employee_id?: string;
   default_organization_id?: string;
   // 关联数据
   organization?: Organization;

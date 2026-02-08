@@ -20,7 +20,8 @@ class UserBase(BaseModel):
     """用户基础模型"""
 
     username: str = Field(..., min_length=3, max_length=50, description="用户名")
-    email: EmailStr = Field(..., description="邮箱地址")
+    email: EmailStr | None = Field(None, description="邮箱地址")
+    phone: str = Field(..., max_length=20, description="手机号码")
     full_name: str = Field(..., min_length=2, max_length=100, description="全名")
 
     @field_validator("username")
@@ -31,6 +32,18 @@ class UserBase(BaseModel):
             raise PydanticCustomError(
                 "invalid_username",
                 "用户名只能包含字母、数字、下划线和连字符",
+                {},
+            )
+        return v
+
+    @field_validator("phone")
+    @classmethod
+    def validate_phone(cls, v: str) -> str:
+        """验证手机号格式"""
+        if not re.match(r"^1[3-9]\d{9}$", v):
+            raise PydanticCustomError(
+                "invalid_phone",
+                "手机号格式不正确，请输入11位中国大陆手机号",
                 {},
             )
         return v
@@ -49,7 +62,6 @@ class UserCreate(UserBase):
 
     password: str = Field(..., min_length=8, max_length=128, description="密码")
     role_id: str | None = Field(None, description="主角色ID")
-    employee_id: str | None = Field(None, description="关联员工ID")
     default_organization_id: str | None = Field(
         None,
         description="默认组织ID",
@@ -88,16 +100,28 @@ class UserUpdate(BaseModel):
     """用户更新模型"""
 
     email: EmailStr | None = Field(None, description="邮箱地址")
+    phone: str | None = Field(None, max_length=20, description="手机号码")
     full_name: str | None = Field(
         None, min_length=2, max_length=100, description="全名"
     )
     role_id: str | None = Field(None, description="主角色ID")
     is_active: bool | None = Field(None, description="是否激活")
-    employee_id: str | None = Field(None, description="关联员工ID")
     default_organization_id: str | None = Field(
         None,
         description="默认组织ID",
     )
+
+    @field_validator("phone")
+    @classmethod
+    def validate_phone(cls, v: str | None) -> str | None:
+        """验证手机号格式"""
+        if v is not None and not re.match(r"^1[3-9]\d{9}$", v):
+            raise PydanticCustomError(
+                "invalid_phone",
+                "手机号格式不正确，请输入11位中国大陆手机号",
+                {},
+            )
+        return v
 
     @field_validator("full_name")
     @classmethod
@@ -107,10 +131,14 @@ class UserUpdate(BaseModel):
         return v
 
 
-class UserResponse(UserBase):
+class UserResponse(BaseModel):
     """用户响应模型"""
 
     id: str
+    username: str
+    email: EmailStr | None = None
+    phone: str
+    full_name: str
     role_id: str | None = Field(None, description="主角色ID")
     role_name: str | None = Field(None, description="主角色名称")
     roles: list[str] = Field(default_factory=list, description="角色编码列表")
@@ -119,7 +147,6 @@ class UserResponse(UserBase):
     is_active: bool
     is_locked: bool
     last_login_at: datetime | str | None
-    employee_id: str | None
     default_organization_id: str | None
     created_at: datetime | str
     updated_at: datetime | str

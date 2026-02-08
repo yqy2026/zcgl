@@ -9,10 +9,14 @@ from ...crud.organization import organization as organization_crud
 from ...crud.organization_history import OrganizationHistoryCRUD
 from ...models.organization import Organization, OrganizationHistory
 from ...schemas.organization import OrganizationCreate, OrganizationUpdate
+from ..enum_validation_service import get_enum_validation_service_async
 
 
 class OrganizationService:
     """组织架构服务层"""
+
+    ORGANIZATION_TYPE_ENUM = "organization_type"
+    ORGANIZATION_STATUS_ENUM = "organization_status"
 
     async def get_organizations(
         self, db: AsyncSession, *, skip: int = 0, limit: int = 100
@@ -96,6 +100,12 @@ class OrganizationService:
     async def create_organization(
         self, db: AsyncSession, *, obj_in: OrganizationCreate
     ) -> Organization:
+        await self._validate_enum_fields(
+            db,
+            type_value=obj_in.type,
+            status_value=obj_in.status,
+        )
+
         level = 1
         parent = None
 
@@ -141,6 +151,17 @@ class OrganizationService:
 
         old_values = {}
         update_data = obj_in.model_dump(exclude_unset=True)
+
+        if "type" in update_data and update_data["type"] is None:
+            raise ValueError("组织类型不能为空")
+        if "status" in update_data and update_data["status"] is None:
+            raise ValueError("组织状态不能为空")
+
+        await self._validate_enum_fields(
+            db,
+            type_value=update_data.get("type"),
+            status_value=update_data.get("status"),
+        )
 
         for field, new_value in update_data.items():
             if field == "updated_by":
@@ -222,27 +243,55 @@ class OrganizationService:
         return True
 
     async def get_statistics(self, db: AsyncSession) -> dict[str, Any]:
+        base_condition = Organization.is_deleted.is_(False)
+
+        status_rows = (
+            await db.execute(
+                select(Organization.status, func.count(Organization.id))
+                .where(base_condition)
+                .group_by(Organization.status)
+            )
+        ).all()
+        type_rows = (
+            await db.execute(
+                select(Organization.type, func.count(Organization.id))
+                .where(base_condition)
+                .group_by(Organization.type)
+            )
+        ).all()
         level_rows = (
             await db.execute(
                 select(Organization.level, func.count(Organization.id))
-                .where(Organization.is_deleted.is_(False))
+                .where(base_condition)
                 .group_by(Organization.level)
             )
         ).all()
+
+        total = sum(int(count or 0) for _, count in status_rows)
+        if total == 0:
+            total = sum(int(count or 0) for _, count in level_rows)
+
+        active = sum(
+            int(count or 0) for status, count in status_rows if str(status) == "active"
+        )
+        inactive = max(total - active, 0)
+
+        type_stats = {
+            str(org_type): int(count or 0)
+            for org_type, count in type_rows
+            if org_type is not None
+        }
         level_stats = {
             f"level_{int(level)}": int(count or 0)
             for level, count in level_rows
             if level is not None
         }
-        total = sum(int(count or 0) for _, count in level_rows)
-        active = total
-        inactive = 0
 
         return {
             "total": total,
             "active": active,
             "inactive": inactive,
-            "by_type": {},
+            "by_type": type_stats,
             "by_level": level_stats,
         }
 
@@ -351,6 +400,35 @@ class OrganizationService:
         )
         db.add(history)
         await db.commit()
+
+    async def _validate_enum_fields(
+        self,
+        db: AsyncSession,
+        *,
+        type_value: str | None,
+        status_value: str | None,
+    ) -> None:
+        enum_validation_service = get_enum_validation_service_async(db)
+
+        if type_value is not None:
+            is_valid, error = await enum_validation_service.validate_value(
+                self.ORGANIZATION_TYPE_ENUM,
+                type_value,
+                allow_empty=False,
+                context={"module": "organization", "field": "type"},
+            )
+            if not is_valid:
+                raise ValueError(f"组织类型无效: {error}")
+
+        if status_value is not None:
+            is_valid, error = await enum_validation_service.validate_value(
+                self.ORGANIZATION_STATUS_ENUM,
+                status_value,
+                allow_empty=False,
+                context={"module": "organization", "field": "status"},
+            )
+            if not is_valid:
+                raise ValueError(f"组织状态无效: {error}")
 
 
 organization_service = OrganizationService()

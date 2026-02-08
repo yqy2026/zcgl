@@ -46,12 +46,12 @@ export interface RoleOption {
 
 export interface CreateUserData {
   username: string;
-  email: string;
+  email?: string;
   full_name: string;
-  phone?: string;
+  phone: string;
   password: string;
-  status: 'active' | 'inactive';
-  role_id: string;
+  status?: 'active' | 'inactive';
+  role_id?: string;
   default_organization_id: string;
 }
 

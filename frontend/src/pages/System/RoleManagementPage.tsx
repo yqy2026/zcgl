@@ -22,7 +22,6 @@ import {
 } from 'antd';
 import { MessageManager } from '@/utils/messageManager';
 import { roleService, type Role } from '@/services/systemService';
-import SystemBreadcrumb from '@/components/System/SystemBreadcrumb';
 import { useQuery } from '@tanstack/react-query';
 import {
   PlusOutlined,
@@ -41,8 +40,7 @@ import type { TransferItem } from 'antd/es/transfer';
 import type { DataNode } from 'antd/es/tree';
 import dayjs from 'dayjs';
 import { COLORS } from '@/styles/colorMap';
-import { TableWithPagination } from '@/components/Common/TableWithPagination';
-import { ListToolbar } from '@/components/Common/ListToolbar';
+import { TableWithPagination, ListToolbar, PageContainer } from '@/components/Common';
 
 const { Option } = Select;
 const { Search } = Input;
@@ -598,10 +596,8 @@ const RoleManagementPage: React.FC = () => {
   }));
 
   return (
-    <>
-      <SystemBreadcrumb />
-      <div style={{ padding: '24px' }}>
-        {statistics && (
+    <PageContainer title="角色管理" subTitle="管理系统角色和权限配置">
+        {statistics != null && (
           <Row gutter={16} style={{ marginBottom: 24 }}>
             <Col span={6}>
               <Card>
@@ -833,8 +829,7 @@ const RoleManagementPage: React.FC = () => {
             </div>
           </div>
         </Modal>
-      </div>
-    </>
+    </PageContainer>
   );
 };
 

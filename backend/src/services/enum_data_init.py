@@ -113,6 +113,30 @@ STANDARD_ENUMS: dict[str, EnumTypeConfig] = {
             {"value": "已归档", "label": "已归档", "sort_order": 3},
         ],
     },
+    "organization_type": {
+        "name": "组织类型",
+        "category": "系统管理",
+        "description": "组织架构类型分类",
+        "values": [
+            {"value": "company", "label": "公司", "sort_order": 1},
+            {"value": "group", "label": "集团", "sort_order": 2},
+            {"value": "division", "label": "事业部", "sort_order": 3},
+            {"value": "department", "label": "部门", "sort_order": 4},
+            {"value": "team", "label": "团队", "sort_order": 5},
+            {"value": "branch", "label": "分公司", "sort_order": 6},
+            {"value": "office", "label": "办事处", "sort_order": 7},
+        ],
+    },
+    "organization_status": {
+        "name": "组织状态",
+        "category": "系统管理",
+        "description": "组织架构状态分类",
+        "values": [
+            {"value": "active", "label": "活跃", "sort_order": 1},
+            {"value": "inactive", "label": "停用", "sort_order": 2},
+            {"value": "suspended", "label": "暂停", "sort_order": 3},
+        ],
+    },
 }
 
 

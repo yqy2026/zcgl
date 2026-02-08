@@ -8,10 +8,8 @@ import {
   Descriptions,
   Tag,
   Table,
-  Typography,
   Row,
   Col,
-  Spin,
   Alert,
   Form,
   Input,
@@ -22,7 +20,6 @@ import {
   Select,
 } from 'antd';
 import {
-  ArrowLeftOutlined,
   FileTextOutlined,
   HomeOutlined,
   CheckCircleOutlined,
@@ -36,8 +33,7 @@ import { PROPERTY_CERTIFICATE_ROUTES } from '@/constants/routes';
 import type { ColumnsType } from 'antd/es/table';
 import { assetService } from '@/services/assetService';
 import type { Asset } from '@/types/asset';
-
-const { Title } = Typography;
+import { PageContainer } from '@/components/Common';
 
 const typeLabelMap: Record<CertificateType, string> = {
   real_estate: '不动产权证',
@@ -80,32 +76,24 @@ const PropertyCertificateDetailPage: React.FC = () => {
     queryFn: () => assetService.getAssets({ page: 1, page_size: 200 }),
   });
 
-  if (isLoading) {
-    return (
-      <div style={{ padding: 24 }}>
-        <Spin />
-      </div>
-    );
-  }
-
   if (error) {
     return (
-      <div style={{ padding: 24 }}>
+      <PageContainer title="产权证详情" onBack={() => navigate(PROPERTY_CERTIFICATE_ROUTES.LIST)}>
         <Alert type="error" title="加载失败" />
-      </div>
+      </PageContainer>
     );
   }
 
-  if (!certificate) {
+  if (!isLoading && !certificate) {
     return (
-      <div style={{ padding: 24 }}>
+      <PageContainer title="产权证详情" onBack={() => navigate(PROPERTY_CERTIFICATE_ROUTES.LIST)}>
         <Alert type="warning" title="未找到产权证信息" />
-      </div>
+      </PageContainer>
     );
   }
 
   const handleToggleVerified = async () => {
-    if (!id) return;
+    if (!id || !certificate) return;
     setSubmitting(true);
     try {
       await propertyCertificateService.updateCertificate(id, {
@@ -121,6 +109,7 @@ const PropertyCertificateDetailPage: React.FC = () => {
   };
 
   const openEdit = () => {
+    if (!certificate) return;
     form.setFieldsValue({
       certificate_number: certificate.certificate_number,
       property_address: certificate.property_address,
@@ -192,6 +181,7 @@ const PropertyCertificateDetailPage: React.FC = () => {
   };
 
   const openAssetModal = () => {
+    if (!certificate) return;
     assetForm.setFieldsValue({
       asset_ids: certificate.asset_ids ?? [],
     });
@@ -216,7 +206,7 @@ const PropertyCertificateDetailPage: React.FC = () => {
     }
   };
 
-  const previewUrl = normalizePreviewUrl(certificate.extraction_source);
+  const previewUrl = normalizePreviewUrl(certificate?.extraction_source);
 
   const ownerColumns: ColumnsType<PropertyOwner> = [
     { title: '姓名/名称', dataIndex: 'name', key: 'name' },
@@ -240,73 +230,80 @@ const PropertyCertificateDetailPage: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: 24 }}>
-      <Space orientation="vertical" size="large" style={{ width: '100%' }}>
+    <PageContainer
+      title={
         <Space>
-          <Button
-            icon={<ArrowLeftOutlined />}
-            onClick={() => navigate(PROPERTY_CERTIFICATE_ROUTES.LIST)}
-          >
-            返回列表
-          </Button>
-          <Title level={4} style={{ margin: 0 }}>
-            产权证详情
-          </Title>
-          <Tag icon={<FileTextOutlined />}>{certificate.certificate_number}</Tag>
-          <Tag color="blue">{typeLabelMap[certificate.certificate_type]}</Tag>
-          <Tag
-            color={certificate.is_verified ? 'green' : 'default'}
-            icon={<CheckCircleOutlined />}
-          >
-            {certificate.is_verified ? '已审核' : '待审核'}
-          </Tag>
-          {certificate.extraction_confidence != null && (
-            <Tag
-              color={
-                certificate.extraction_confidence > 0.8
-                  ? 'green'
-                  : certificate.extraction_confidence > 0.5
-                    ? 'gold'
-                    : 'default'
-              }
-            >
-              置信度 {(certificate.extraction_confidence * 100).toFixed(0)}%
-            </Tag>
+          <span>产权证详情</span>
+          {certificate && (
+            <>
+              <Tag icon={<FileTextOutlined />}>{certificate.certificate_number}</Tag>
+              <Tag color="blue">{typeLabelMap[certificate.certificate_type]}</Tag>
+              <Tag
+                color={certificate.is_verified ? 'green' : 'default'}
+                icon={<CheckCircleOutlined />}
+              >
+                {certificate.is_verified ? '已审核' : '待审核'}
+              </Tag>
+              {certificate.extraction_confidence != null && (
+                <Tag
+                  color={
+                    certificate.extraction_confidence > 0.8
+                      ? 'green'
+                      : certificate.extraction_confidence > 0.5
+                        ? 'gold'
+                        : 'default'
+                  }
+                >
+                  置信度 {(certificate.extraction_confidence * 100).toFixed(0)}%
+                </Tag>
+              )}
+            </>
           )}
-          {previewUrl != null && (
-            <Button
-              icon={<EyeOutlined />}
-              onClick={() => window.open(previewUrl, '_blank', 'noopener,noreferrer')}
-            >
-              查看扫描件
-            </Button>
-          )}
-          <Button onClick={openAssetModal}>关联资产</Button>
-          <Button icon={<EditOutlined />} onClick={openEdit}>
-            编辑
-          </Button>
-          <Button
-            type={certificate.is_verified ? 'default' : 'primary'}
-            loading={submitting}
-            onClick={handleToggleVerified}
-          >
-            {certificate.is_verified ? '取消审核' : '标记已审核'}
-          </Button>
-          <Popconfirm
-            title="确认删除该产权证？"
-            description="删除后不可恢复，请确认已备份相关信息。"
-            okText="删除"
-            cancelText="取消"
-            okButtonProps={{ danger: true }}
-            onConfirm={handleDelete}
-          >
-            <Button danger loading={submitting}>
-              删除
-            </Button>
-          </Popconfirm>
         </Space>
-
-        <Row gutter={[24, 24]}>
+      }
+      loading={isLoading}
+      onBack={() => navigate(PROPERTY_CERTIFICATE_ROUTES.LIST)}
+      extra={
+        certificate && (
+          <Space>
+            {previewUrl != null && (
+              <Button
+                icon={<EyeOutlined />}
+                onClick={() => window.open(previewUrl, '_blank', 'noopener,noreferrer')}
+              >
+                查看扫描件
+              </Button>
+            )}
+            <Button onClick={openAssetModal}>关联资产</Button>
+            <Button icon={<EditOutlined />} onClick={openEdit}>
+              编辑
+            </Button>
+            <Button
+              type={certificate.is_verified ? 'default' : 'primary'}
+              loading={submitting}
+              onClick={handleToggleVerified}
+            >
+              {certificate.is_verified ? '取消审核' : '标记已审核'}
+            </Button>
+            <Popconfirm
+              title="确认删除该产权证？"
+              description="删除后不可恢复，请确认已备份相关信息。"
+              okText="删除"
+              cancelText="取消"
+              okButtonProps={{ danger: true }}
+              onConfirm={handleDelete}
+            >
+              <Button danger loading={submitting}>
+                删除
+              </Button>
+            </Popconfirm>
+          </Space>
+        )
+      }
+    >
+      {certificate && (
+        <Space direction="vertical" size="large" style={{ width: '100%' }}>
+          <Row gutter={[24, 24]}>
           <Col span={24}>
             <Card title="基础信息">
               <Descriptions column={3} bordered>
@@ -392,8 +389,9 @@ const PropertyCertificateDetailPage: React.FC = () => {
               )}
             </Card>
           </Col>
-        </Row>
-      </Space>
+          </Row>
+        </Space>
+      )}
 
       <Modal
         title="编辑产权证信息"
@@ -473,7 +471,7 @@ const PropertyCertificateDetailPage: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
-    </div>
+    </PageContainer>
   );
 };
 

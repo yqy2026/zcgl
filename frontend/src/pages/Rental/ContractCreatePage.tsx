@@ -6,15 +6,12 @@
  */
 
 import React, { useState } from 'react';
-import { Card, Button, Space, Breadcrumb, Typography, Row, Col, Statistic, Spin } from 'antd';
+import { Card, Button, Space, Typography, Row, Col, Statistic, Spin } from 'antd';
 import { MessageManager } from '@/utils/messageManager';
 import {
-  HomeOutlined,
   FileTextOutlined,
   SaveOutlined,
   ArrowLeftOutlined,
-  PlusOutlined,
-  EditOutlined,
   InfoCircleOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -27,6 +24,7 @@ import { RENTAL_QUERY_KEYS } from '@/constants/queryKeys';
 import { useFormat } from '@/utils/format';
 import { createLogger } from '@/utils/logger';
 import { COLORS } from '@/styles/colorMap';
+import { PageContainer } from '@/components/Common';
 
 const pageLogger = createLogger('ContractCreateEdit');
 
@@ -121,23 +119,11 @@ const ContractCreatePage: React.FC = () => {
     }
   };
 
-  // 加载状态（编辑模式下正在获取数据）
-  if (isEdit && isLoadingContract) {
-    return (
-      <div style={{ padding: '24px', textAlign: 'center' }}>
-        <Spin size="large" />
-        <div style={{ marginTop: '16px' }}>加载合同数据中...</div>
-      </div>
-    );
-  }
-
   // 页面标题和描述
   const pageTitle = isEdit ? '编辑租赁合同' : '新建租赁合同';
   const pageDescription = isEdit
     ? '修改现有租赁合同信息和租金条款'
     : '创建新的租赁合同，填写完整的合同信息和租金条款';
-  const pageIcon = isEdit ? <EditOutlined /> : <PlusOutlined />;
-  const breadcrumbTitle = isEdit ? '编辑合同' : '新建合同';
   const successTitle = isEdit ? '合同更新成功！' : '合同创建成功！';
   const successMessage = isEdit
     ? '合同已成功更新，即将跳转到合同详情页面...'
@@ -146,51 +132,13 @@ const ContractCreatePage: React.FC = () => {
   const cancelButtonText = isEdit ? '取消编辑' : '取消创建';
 
   return (
-    <div style={{ padding: '24px', background: COLORS.bgTertiary, minHeight: '100vh' }}>
-      {/* 页面头部 */}
-      <Card style={{ marginBottom: '16px' }}>
-        <Row align="middle" justify="space-between">
-          <Col>
-            <Breadcrumb
-              items={[
-                {
-                  href: '/',
-                  title: <HomeOutlined />,
-                },
-                {
-                  href: '/rental/contracts',
-                  title: (
-                    <span>
-                      <FileTextOutlined />
-                      <span style={{ marginLeft: '4px' }}>合同管理</span>
-                    </span>
-                  ),
-                },
-                {
-                  title: breadcrumbTitle,
-                },
-              ]}
-            />
-            <div style={{ marginTop: '16px' }}>
-              <Title level={3} style={{ margin: 0 }}>
-                <span style={{ marginRight: '8px', color: COLORS.primary }}>{pageIcon}</span>
-                {pageTitle}
-              </Title>
-              <Text type="secondary" style={{ marginTop: '8px', display: 'block' }}>
-                {pageDescription}
-              </Text>
-            </div>
-          </Col>
-          <Col>
-            <Space>
-              <Button icon={<ArrowLeftOutlined />} onClick={handleCancel}>
-                返回列表
-              </Button>
-            </Space>
-          </Col>
-        </Row>
-      </Card>
-
+    <PageContainer
+      title={pageTitle}
+      subTitle={pageDescription}
+      onBack={handleCancel}
+      loading={isEdit && isLoadingContract}
+      contentStyle={{ background: COLORS.bgTertiary }}
+    >
       {/* 创建/更新成功提示 */}
       {contractCreated && (
         <Card
@@ -307,7 +255,7 @@ const ContractCreatePage: React.FC = () => {
           </Space>
         </Card>
       )}
-    </div>
+    </PageContainer>
   );
 };
 

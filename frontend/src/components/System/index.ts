@@ -2,4 +2,3 @@
 
 export { default as PermissionGuard } from './PermissionGuard';
 export { default as PromptEditor } from './PromptEditor';
-export { default as SystemBreadcrumb } from './SystemBreadcrumb';
