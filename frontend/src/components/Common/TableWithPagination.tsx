@@ -36,11 +36,21 @@ export interface TableWithPaginationProps<T> extends Omit<
   /**
    * Fields to display in card view
    */
-  cardFields?: Array<Extract<keyof T, string> | { key: string; label: string; render?: (value: any, record: T) => React.ReactNode }>;
+  cardFields?: Array<Extract<keyof T, string> | { key: string; label: string; render?: (value: unknown, record: T) => React.ReactNode }>;
 }
 
 export const TableWithPagination = <T extends object>(props: TableWithPaginationProps<T>) => {
-  const { paginationState, onPageChange, paginationProps, onChange, ...rest } = props;
+  const {
+    paginationState,
+    onPageChange,
+    paginationProps,
+    onChange,
+    responsive = true,
+    cardTitle,
+    renderCard,
+    cardFields,
+    ...rest
+  } = props;
 
   const handleChange: TableProps<T>['onChange'] = (pagination, filters, sorter, extra) => {
     onPageChange({ current: pagination.current, pageSize: pagination.pageSize });
