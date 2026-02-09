@@ -49,6 +49,41 @@ class TestCRUDAssetGet:
         assert result is None
 
 
+class TestCRUDAssetSoftDeleteGuard:
+    async def test_get_async_excludes_deleted_by_default(
+        self, crud: AssetCRUD, mock_db: MagicMock
+    ) -> None:
+        execute_result = MagicMock()
+        execute_result.scalars.return_value.first.return_value = None
+        mock_db.execute.return_value = execute_result
+
+        await crud.get_async(mock_db, id="asset-1")
+
+        stmt = mock_db.execute.await_args.args[0]
+        compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+        assert "assets.id = 'asset-1'" in compiled
+        assert "assets.data_status IS NULL" in compiled
+        assert (
+            "assets.data_status != '已删除'" in compiled
+            or "assets.data_status <> '已删除'" in compiled
+        )
+
+    async def test_get_async_can_include_deleted(
+        self, crud: AssetCRUD, mock_db: MagicMock
+    ) -> None:
+        execute_result = MagicMock()
+        execute_result.scalars.return_value.first.return_value = None
+        mock_db.execute.return_value = execute_result
+
+        await crud.get_async(mock_db, id="asset-1", include_deleted=True)
+
+        stmt = mock_db.execute.await_args.args[0]
+        compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+        assert "assets.id = 'asset-1'" in compiled
+        assert "assets.data_status IS NULL" not in compiled
+        assert "已删除" not in compiled
+
+
 class TestCRUDAssetGetByName:
     async def test_get_by_name_exists(self, crud: AssetCRUD, mock_db: MagicMock) -> None:
         mock_asset = MagicMock(spec=Asset)
@@ -108,21 +143,17 @@ class TestCRUDAssetGetMulti:
         self, crud: AssetCRUD, mock_db: MagicMock
     ) -> None:
         mock_assets = [MagicMock(spec=Asset), MagicMock(spec=Asset)]
-        with (
-            patch.object(
-                crud,
-                "get_with_filters",
-                new_callable=AsyncMock,
-                return_value=mock_assets,
-            ) as mock_get_with_filters,
-            patch.object(crud, "_decrypt_asset_object") as mock_decrypt,
-        ):
+        execute_result = MagicMock()
+        execute_result.scalars.return_value.all.return_value = mock_assets
+        mock_db.execute.return_value = execute_result
+
+        with patch.object(crud, "_decrypt_asset_object") as mock_decrypt:
             result = await crud.get_multi_by_ids_async(
                 mock_db, ids=["asset-1", "asset-2"]
             )
 
         assert result == mock_assets
-        mock_get_with_filters.assert_awaited_once()
+        mock_db.execute.assert_awaited_once()
         assert mock_decrypt.call_count == 2
         mock_decrypt.assert_any_call(mock_assets[0])
         mock_decrypt.assert_any_call(mock_assets[1])

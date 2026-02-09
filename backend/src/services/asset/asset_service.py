@@ -490,7 +490,11 @@ class AssetService:
                 asset_crud = _get_asset_crud()
                 asset = cast(
                     Asset | None,
-                    await asset_crud.get_async(db=self.db, id=asset_id),
+                    await asset_crud.get_async(
+                        db=self.db,
+                        id=asset_id,
+                        include_deleted=True,
+                    ),
                 )
                 if not asset:
                     raise ResourceNotFoundError("Asset", asset_id)
@@ -530,7 +534,11 @@ class AssetService:
                 asset_crud = _get_asset_crud()
                 asset = cast(
                     Asset | None,
-                    await asset_crud.get_async(db=self.db, id=asset_id),
+                    await asset_crud.get_async(
+                        db=self.db,
+                        id=asset_id,
+                        include_deleted=True,
+                    ),
                 )
                 if not asset:
                     raise ResourceNotFoundError("Asset", asset_id)

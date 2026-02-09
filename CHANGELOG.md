@@ -4,6 +4,13 @@
 
 ### 🛠️ 本次修复 (Current Fixes)
 
+- 资产软删除过滤收口（2026-02-09）：`backend/src/crud/query_builder.py` 的默认软删除条件由单一 `data_status != "已删除"` 升级为 `data_status IS NULL OR data_status != "已删除"`；`backend/src/crud/asset.py` 为 `get_async`、`get_by_name_async`、`get_multi_by_ids_async` 增加 `include_deleted` 显式开关（默认 `False`），并在 `backend/src/services/asset/asset_service.py` 的恢复/彻底删除路径显式使用 `include_deleted=True`，避免业务恢复链路被默认过滤误伤
+- 资产合同投影查询优化（2026-02-09）：`backend/src/crud/asset.py` 的 `rent_contracts` 预加载改为最小字段集 `load_only(...)`，并通过 `with_loader_criteria` 过滤合同软删除记录，降低资产列表派生字段（`tenant_name` / `contract_*` / `monthly_rent` / `deposit`）计算时的关系加载开销
+- 资产高频筛选索引补齐（2026-02-09）：新增迁移 `backend/alembic/versions/20260209_add_asset_management_manager_indexes.py`，为 `assets.management_entity` 与 `assets.manager_name` 增加索引；模型 `backend/src/models/asset.py` 对应字段同步标记 `index=True`
+- `property_name` 唯一约束风险处理策略（2026-02-09）：本轮保持 `backend/src/models/asset.py` 的 `unique=True` 不变以避免破坏性迁移，已记录为二期评估项（候选方案：按区域/项目维度改复合唯一约束）
+- 生产环境 Redis 密码策略强化（2026-02-09）：`backend/src/core/config_database.py` 调整为 `ENVIRONMENT=production` 且 `REDIS_ENABLED=true` 时，未配置 `REDIS_PASSWORD` 将直接配置校验失败；开发环境仍保留告警降级
+- 启动期异常分级可观测性增强（2026-02-09）：`backend/src/main.py` 将缓存初始化阶段的异常拆分为模块导入失败、运行时失败与未知异常三类，补充结构化日志字段并明确内存缓存降级路径，降低“泛化异常”带来的排障成本
+- 回归测试补齐（2026-02-09）：新增/更新 `backend/tests/unit/crud/test_query_builder.py`、`backend/tests/unit/crud/test_asset.py`、`backend/tests/unit/config/test_settings.py`、`backend/tests/unit/services/asset/test_asset_service.py`，覆盖软删除语义、`include_deleted` 调用约束与 Redis 生产配置校验
 - 时间写法文档对齐：更新 `docs/guides/database.md`、`docs/guides/backend.md` 与 `backend/docs/code_quality_extended_guide.md` 的示例代码与说明，将 `datetime.utcnow()` 示例统一为 `datetime.now(UTC).replace(tzinfo=None)`，保持与当前代码实践一致
 - 支撑文件与迁移脚本 `utcnow` 收口（TDD）：新增静态红测 `backend/tests/unit/test_datetime_utcnow_support_files.py`，覆盖 `backend/conftest.py`、`backend/tests/fixtures/auth.py`、`backend/scripts/documentation/*.py`、`backend/scripts/setup/init_rbac_data.py` 与三份 Alembic 迁移；上述文件统一移除 `datetime.utcnow()`，改为 `datetime.now(UTC).replace(tzinfo=None)` 并补齐 `UTC` 导入；同步清理测试中真实调用（`test_asset_schema_attachments.py`、`test_response_safety.py`、`test_auto_optimizer.py`、`test_contact_batch_api_async.py`、`test_assets_projection_guard.py`）
 - Models/CRUD `utcnow` 收口（TDD）：新增批量静态红测 `backend/tests/unit/test_datetime_utcnow_usage.py`（覆盖 `src/models/*` 与 `src/crud/notification.py` 的剩余热点）；将 `backend/src/models/{asset,asset_history,associations,auth,collection,contact,enum_field,llm_prompt,notification,ownership,project,project_relations,property_certificate,rent_contract,security_event,system_dictionary,task}.py` 以及 `backend/src/crud/notification.py` 的 `datetime.utcnow()` 统一替换为 `datetime.now(UTC).replace(tzinfo=None)` 并补齐 `UTC` 导入

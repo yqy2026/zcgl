@@ -7,9 +7,9 @@ from typing import Any
 资产计算逻辑（AssetCalculator）应在 API 或 Service 层调用。
 """
 
-from sqlalchemy import Select, delete, insert, select
+from sqlalchemy import Select, delete, insert, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy.orm import joinedload, load_only, selectinload, with_loader_criteria
 
 from ..constants.business_constants import DateTimeFields
 from ..core.encryption import EncryptionKeyManager, FieldEncryptor
@@ -25,6 +25,7 @@ from ..models.asset_search_index import AssetSearchIndex
 from ..models.ownership import Ownership
 from ..models.project import Project
 from ..models.project_relations import ProjectOwnershipRelation
+from ..models.rent_contract import RentContract
 from ..schemas.asset import AssetCreate, AssetUpdate
 from .base import CRUDBase
 
@@ -196,6 +197,10 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
     }
 
     @staticmethod
+    def _not_deleted_clause(column: Any) -> Any:
+        return or_(column.is_(None), column != "已删除")
+
+    @staticmethod
     def _asset_projection_load_options(
         *,
         include_contract_projection: bool = True,
@@ -203,7 +208,29 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         """资产投影字段所需的关系预加载选项。"""
         options: list[Any] = [joinedload(Asset.ownership)]
         if include_contract_projection:
-            options.append(selectinload(Asset.rent_contracts))
+            options.append(
+                selectinload(Asset.rent_contracts).options(
+                    load_only(
+                        RentContract.id,
+                        RentContract.contract_status,
+                        RentContract.tenant_name,
+                        RentContract.contract_number,
+                        RentContract.start_date,
+                        RentContract.end_date,
+                        RentContract.monthly_rent_base,
+                        RentContract.total_deposit,
+                        RentContract.created_at,
+                        RentContract.data_status,
+                    )
+                )
+            )
+            options.append(
+                with_loader_criteria(
+                    RentContract,
+                    lambda cls: or_(cls.data_status.is_(None), cls.data_status != "已删除"),
+                    include_aliases=True,
+                )
+            )
         return tuple(options)
 
     def __init__(self) -> None:
@@ -355,13 +382,19 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         return db_obj
 
     async def get_async(
-        self, db: AsyncSession, id: Any, use_cache: bool = False
+        self,
+        db: AsyncSession,
+        id: Any,
+        use_cache: bool = False,
+        include_deleted: bool = False,
     ) -> Asset | None:
-        result = await db.execute(
-            select(Asset).options(*self._asset_projection_load_options()).filter(
-                getattr(self.model, "id") == id
-            )
+        stmt = select(Asset).options(*self._asset_projection_load_options()).filter(
+            getattr(self.model, "id") == id
         )
+        if not include_deleted:
+            stmt = stmt.filter(self._not_deleted_clause(Asset.data_status))
+
+        result = await db.execute(stmt)
         asset = result.scalars().first()
         if asset is not None:
             self._decrypt_asset_object(asset)
@@ -404,14 +437,18 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         return encrypted_data
 
     async def get_by_name_async(
-        self, db: AsyncSession, property_name: str
+        self,
+        db: AsyncSession,
+        property_name: str,
+        include_deleted: bool = False,
     ) -> Asset | None:
-        result = await db.execute(
-            select(Asset).options(*self._asset_projection_load_options()).filter(
-                Asset.property_name == property_name,
-                Asset.data_status != "已删除",
-            )
+        stmt = select(Asset).options(*self._asset_projection_load_options()).filter(
+            Asset.property_name == property_name
         )
+        if not include_deleted:
+            stmt = stmt.filter(self._not_deleted_clause(Asset.data_status))
+
+        result = await db.execute(stmt)
         asset = result.scalars().first()
         if asset is not None:
             self._decrypt_asset_object(asset)
@@ -688,19 +725,26 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         return obj
 
     async def get_multi_by_ids_async(
-        self, db: AsyncSession, ids: list[str], include_relations: bool = False
+        self,
+        db: AsyncSession,
+        ids: list[str],
+        include_relations: bool = False,
+        include_deleted: bool = False,
     ) -> list[Asset]:
+        if not ids:
+            return []
+
         base_query = (
             self._asset_base_query_with_relations()
             if include_relations
             else select(Asset).options(*self._asset_projection_load_options())
         )
-        assets = await self.get_with_filters(
-            db,
-            filters={"id__in": ids},
-            limit=len(ids) if ids else 100,
-            base_query=base_query,
-        )
+        query = base_query.where(Asset.id.in_(ids))
+        if not include_deleted:
+            query = query.where(self._not_deleted_clause(Asset.data_status))
+
+        result = await db.execute(query)
+        assets = list(result.scalars().all())
         for asset in assets:
             self._decrypt_asset_object(asset)
         return assets

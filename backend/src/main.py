@@ -161,9 +161,40 @@ async def lifespan(app: FastAPI) -> Any:
 
         async_cache_manager = utils_cache_manager
         if async_cache_manager is not None:
-            await async_cache_manager.initialize()
-    except Exception as e:
-        logger.warning(f"缓存初始化失败，将继续使用内存缓存: {e}")
+            try:
+                await async_cache_manager.initialize()
+            except RuntimeError as e:
+                logger.warning(
+                    "缓存初始化失败，将继续使用内存缓存",
+                    extra={
+                        "bootstrap_component": "cache",
+                        "error_type": type(e).__name__,
+                        "error_message": str(e),
+                        "fallback": "memory_cache",
+                    },
+                )
+                async_cache_manager = None
+            except Exception as e:
+                logger.exception(
+                    "缓存初始化异常，将继续使用内存缓存",
+                    extra={
+                        "bootstrap_component": "cache",
+                        "error_type": type(e).__name__,
+                        "error_message": str(e),
+                        "fallback": "memory_cache",
+                    },
+                )
+                async_cache_manager = None
+    except ImportError as e:
+        logger.warning(
+            "缓存模块加载失败，将继续使用内存缓存",
+            extra={
+                "bootstrap_component": "cache",
+                "error_type": type(e).__name__,
+                "error_message": str(e),
+                "fallback": "memory_cache",
+            },
+        )
 
     # JWT安全专项检查 - 重新启用安全验证
     logger.info("执行JWT安全配置检查...")

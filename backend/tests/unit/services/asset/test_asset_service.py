@@ -763,7 +763,11 @@ class TestRestoreAsset:
     async def test_restore_asset_success(self, service, mock_asset, mock_user):
         """测试成功恢复资产"""
         mock_asset.data_status = "已删除"
-        with patch("src.crud.asset.asset_crud.get_async", new_callable=AsyncMock, return_value=mock_asset):
+        with patch(
+            "src.crud.asset.asset_crud.get_async",
+            new_callable=AsyncMock,
+            return_value=mock_asset,
+        ) as mock_get_async:
             result = await service.restore_asset(TEST_ASSET_ID, current_user=mock_user)
 
             assert result == mock_asset
@@ -772,6 +776,11 @@ class TestRestoreAsset:
             service.db.add.assert_any_call(mock_asset)
             assert service.db.add.call_count == 2
             service.db.flush.assert_awaited_once()
+            mock_get_async.assert_awaited_once_with(
+                db=service.db,
+                id=TEST_ASSET_ID,
+                include_deleted=True,
+            )
 
     async def test_restore_asset_not_deleted(self, service, mock_asset):
         """测试恢复未删除资产"""
@@ -798,7 +807,11 @@ class TestHardDeleteAsset:
     async def test_hard_delete_asset_success(self, service, mock_asset, mock_user):
         """测试成功彻底删除资产"""
         mock_asset.data_status = "已删除"
-        with patch("src.crud.asset.asset_crud.get_async", new_callable=AsyncMock, return_value=mock_asset):
+        with patch(
+            "src.crud.asset.asset_crud.get_async",
+            new_callable=AsyncMock,
+            return_value=mock_asset,
+        ) as mock_get_async:
             with patch(
                 "src.services.asset.asset_service.AssetService._ensure_asset_not_linked",
                 new_callable=AsyncMock,
@@ -814,6 +827,11 @@ class TestHardDeleteAsset:
                         db=service.db,
                         asset_id=mock_asset.id,
                         commit=False,
+                    )
+                    mock_get_async.assert_awaited_once_with(
+                        db=service.db,
+                        id=TEST_ASSET_ID,
+                        include_deleted=True,
                     )
                     service.db.delete.assert_awaited_once_with(mock_asset)
                     service.db.flush.assert_awaited_once()

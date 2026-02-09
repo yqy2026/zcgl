@@ -84,6 +84,27 @@ class TestSettingsEnvironmentVariables:
         settings = build_settings({"DEFAULT_PAGE_SIZE": "50"})
         assert settings.DEFAULT_PAGE_SIZE == 50
 
+    def test_redis_password_required_in_production_when_enabled(self):
+        with pytest.raises(ValidationError):
+            build_settings(
+                {
+                    "ENVIRONMENT": "production",
+                    "REDIS_ENABLED": "true",
+                    "REDIS_HOST": "localhost",
+                }
+            )
+
+    def test_redis_password_optional_in_development_when_enabled(self):
+        settings = build_settings(
+            {
+                "ENVIRONMENT": "development",
+                "REDIS_ENABLED": "true",
+                "REDIS_HOST": "localhost",
+            }
+        )
+        assert settings.REDIS_ENABLED is True
+        assert settings.REDIS_PASSWORD is None
+
 
 class TestSecretKeySecurity:
     """Test SECRET_KEY configuration"""

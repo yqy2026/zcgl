@@ -75,7 +75,7 @@ class Asset(Base):
         String(50), nullable=False, index=True, comment="使用状态"
     )
     management_entity: Mapped[str | None] = mapped_column(
-        String(200), comment="经营管理单位"
+        String(200), index=True, comment="经营管理单位"
     )
     business_category: Mapped[str | None] = mapped_column(
         String(100), comment="业态类别"
@@ -137,7 +137,7 @@ class Asset(Base):
     business_model: Mapped[str | None] = mapped_column(String(50), comment="接收模式")
     operation_status: Mapped[str | None] = mapped_column(String(20), comment="经营状态")
     manager_name: Mapped[str | None] = mapped_column(
-        String(100), comment="管理责任人（网格员）"
+        String(100), index=True, comment="管理责任人（网格员）"
     )
 
     # 接收相关字段

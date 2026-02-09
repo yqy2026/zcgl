@@ -176,7 +176,12 @@ class QueryBuilder[ModelType]:
         """
         if hasattr(self.model, "data_status"):
             data_status_column = getattr(self.model, "data_status")
-            query = query.where(data_status_column != "已删除")
+            query = query.where(
+                or_(
+                    data_status_column.is_(None),
+                    data_status_column != "已删除",
+                )
+            )
         return query
 
     @staticmethod

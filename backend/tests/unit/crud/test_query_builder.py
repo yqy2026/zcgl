@@ -68,3 +68,22 @@ class TestQueryBuilder:
 
         assert "distinct" in compiled.lower()
         assert "ownerships" in compiled.lower()
+
+    def test_soft_delete_filter_allows_null_data_status(self):
+        qb = QueryBuilder(Asset)
+        query = qb.build_query()
+        compiled = str(query.compile(compile_kwargs={"literal_binds": True}))
+
+        assert "assets.data_status IS NULL" in compiled
+        assert (
+            "assets.data_status != '已删除'" in compiled
+            or "assets.data_status <> '已删除'" in compiled
+        )
+
+    def test_soft_delete_filter_skipped_when_data_status_explicit(self):
+        qb = QueryBuilder(Asset)
+        query = qb.build_query(filters={"data_status": "已删除"})
+        compiled = str(query.compile(compile_kwargs={"literal_binds": True}))
+
+        assert "assets.data_status = '已删除'" in compiled
+        assert "assets.data_status IS NULL" not in compiled
