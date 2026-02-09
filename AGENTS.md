@@ -3,7 +3,7 @@
 本文件为 AI Coding Agents 提供项目上下文与执行约束，确保修改一致、可验证。
 每次修改后请更新CHANGELOG.md
 
-**Last Updated**: 2026-02-07
+**Last Updated**: 2026-02-09
 
 ---
 
@@ -448,25 +448,39 @@ release/* (发布准备)
 ### Git 冲突处理经验（2026-02 复盘）
 
 #### 必须遵守
-- 不要直接使用“一键偏向”策略（如 `rebase -X theirs/ours`）后立即推送；先人工复核冲突文件
+- 本地存在大量未提交改动时，**先做双重备份**再同步远端：`备份分支 + WIP 提交 + patch 导出`
+- 不要直接使用“一键偏向”策略（如 `rebase -X theirs/ours`）后立即推送；必须人工复核冲突文件
 - `modify/delete` 冲突必须单独审查：先查 `git log -- <file>` 和最近删除提交，再决定保留删除还是恢复文件
 - 涉及模型聚合文件（如 `models/__init__.py`、`models/asset.py`）时，优先防止重复定义/重复建表
+- 不在主工作分支直接硬解冲突：优先在临时备份分支完成 rebase 与验证，再回灌目标分支
 
 #### 推荐流程（标准化）
-1. 先 `git fetch`，再 `git rebase origin/<branch>`（或 cherry-pick 到临时分支复盘冲突）
-2. 冲突分类处理：
+1. 记录现场并建备份：
+   - `git status -sb`、`git rev-parse --short HEAD`
+   - `git switch -c backup/pre-sync-<timestamp>`
+   - `git add -A && git commit -m "chore(wip): backup before remote sync"`
+   - `git format-patch -1 HEAD --stdout > ../pre-sync-wip-<timestamp>.patch`
+2. 先 `git fetch`，确认分叉，再在备份分支执行 `git rebase origin/<branch>`
+3. 冲突分类处理：
    - `content (UU)`：逐块合并，保留双方有效改动
    - `modify/delete (DU)`：先确认“删除是否为架构收口”，避免误恢复历史文件
-3. 合并完成后执行最小验证：
+4. 针对测试冲突增加语义校验：
+   - 若远端引入新 schema/响应约束（如 `UserResponse.phone` 必填），优先对齐远端测试基线，再补本地语义
+   - 避免“仅能过冲突但语义过时”的测试文件被保留
+5. 合并完成后执行最小验证：
    - `rg -n "^(<<<<<<<|=======|>>>>>>>)"` 确认无冲突标记
    - 关键模块导入烟测（特别是 `backend/src/models`、`backend/src/crud`）
-   - `ruff check` + 受影响测试最小集
-4. 推送前输出“冲突清单 + 处理决策 + 风险点”，必要时先请求人工核准
+   - `ruff check` + 受影响测试最小集（可先单用例）
+6. 验证通过后再回灌主分支：
+   - `git switch <target-branch>`
+   - `git merge --ff-only backup/pre-sync-<timestamp>`
+7. 推送前输出“冲突清单 + 处理决策 + 风险点 + 验证结果”；推送成功后再清理临时分支与 patch
 
 #### 本次事故教训
 - 自动偏向策略会掩盖结构性冲突：可能导致误恢复已删除文件、跨模块导入漂移、模型重复定义
 - “能提交”不等于“语义正确”：必须加导入烟测和关键路径回归测试
-- 先复盘再推送可显著降低二次修复成本
+- 测试冲突不应机械“保留本地”：需先判断是否已被远端模型/接口演进淘汰
+- “备份分支先解冲突 + 主分支快进回灌”可显著降低二次修复与回滚成本
 
 ---
 
