@@ -4,7 +4,7 @@
 
 ### 🛠️ 本次修复 (Current Fixes)
 
-- 远端同步冲突处置（2026-02-09）：将本地分支 `backup/pre-sync-20260209-081218` 基于 `origin/develop` 进行 rebase，处理冲突文件 `CHANGELOG.md`、`backend/tests/unit/api/v1/test_users.py`、`backend/tests/unit/crud/test_organization.py`；测试文件保留本地版本并完成冲突标记清理，保证本地改动不丢失且可继续验证
+- 远端同步冲突处置（2026-02-09）：将本地分支 `backup/pre-sync-20260209-081218` 基于 `origin/develop` 进行 rebase，处理冲突文件 `CHANGELOG.md`、`backend/tests/unit/api/v1/test_users.py`、`backend/tests/unit/crud/test_organization.py`；`CHANGELOG.md` 做手工合并，`test_users.py/test_organization.py` 最终采用远端版本以对齐组织与用户字段重构（含 `phone` 必填约束），并完成冲突标记清理
 - 资产模型合同投影性能优化：`backend/src/models/asset.py` 为 `active_contract` 增加实例级缓存（按 `rent_contracts` 集合标识与长度失效）并将“筛选后排序”改为单次线性选择，减少资产列表序列化时 `tenant_name/contract_*` 等派生字段的重复计算开销；新增 `backend/tests/unit/models/test_asset.py` 用例覆盖“跨投影字段复用缓存”和“替换合同集合后缓存失效”行为
 - 分析服务轻量查询优化：`backend/src/crud/asset.py` 的 `get_multi_with_search_async` 新增 `include_contract_projection` 可选参数（默认 `True` 保持兼容），并在 `backend/src/services/analytics/*.py` 全面改为 `False`，避免统计/分布/财务等不依赖合同投影的路径预加载 `rent_contracts`；同步更新 `backend/tests/unit/services/analytics/test_analytics.py` 与 `backend/tests/unit/services/analytics/test_financial_service.py` 断言
 - 资产导入分层收口：`backend/src/api/v1/assets/asset_import.py` 移除路由层导入编排与冲突处理逻辑，新增 `backend/src/services/asset/import_service.py` 的 `AsyncAssetImportService` 承接“校验/权属映射/重名冲突/导入模式(create|merge|update)”全流程；补充 `backend/tests/unit/api/v1/test_asset_import_layering.py` 固化“路由不直连 CRUD、必须委托服务层”约束
