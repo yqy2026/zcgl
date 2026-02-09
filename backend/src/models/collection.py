@@ -4,7 +4,7 @@
 
 import enum
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
@@ -105,11 +105,11 @@ class CollectionRecord(Base):
     operator_id = Column(String(50), comment="操作人ID")
 
     # 时间戳
-    created_at = Column(DateTime, default=lambda: datetime.utcnow(), comment="创建时间")
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None), comment="创建时间")
     updated_at = Column(
         DateTime,
-        default=lambda: datetime.utcnow(),
-        onupdate=lambda: datetime.utcnow(),
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        onupdate=lambda: datetime.now(UTC).replace(tzinfo=None),
         comment="更新时间",
     )
 

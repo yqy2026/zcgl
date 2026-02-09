@@ -1,6 +1,6 @@
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import jwt
 from sqlalchemy import select, update
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 def _naive_utc_now() -> datetime:
     """Return a naive UTC datetime for storage in TIMESTAMP WITHOUT TIME ZONE."""
-    return datetime.utcnow()
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class AsyncSessionService:

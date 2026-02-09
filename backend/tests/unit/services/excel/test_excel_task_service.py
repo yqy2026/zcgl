@@ -1,11 +1,20 @@
 """ExcelTaskService 单元测试。"""
 
+import inspect
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from src.enums.task import TaskStatus
 from src.services.excel.excel_task_service import ExcelTaskService
+
+
+def test_excel_task_service_module_should_not_use_datetime_utcnow() -> None:
+    """服务模块不应直接调用 datetime.utcnow。"""
+    from src.services.excel import excel_task_service as service_module
+
+    module_source = inspect.getsource(service_module)
+    assert "datetime.utcnow(" not in module_source
 
 
 @pytest.mark.asyncio

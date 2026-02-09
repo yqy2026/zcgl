@@ -4,6 +4,7 @@ Audit Service 单元测试
 测试 AuditService 的审计日志创建功能
 """
 
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
@@ -11,7 +12,16 @@ import pytest
 pytestmark = pytest.mark.asyncio
 
 from src.models.auth import AuditLog, User
+from src.services.core import audit_service as audit_service_module
 from src.services.core.audit_service import AuditService
+
+
+def test_audit_service_module_avoids_datetime_utcnow() -> None:
+    """服务模块不应直接调用 datetime.utcnow."""
+    module_path = Path(audit_service_module.__file__)
+    content = module_path.read_text(encoding="utf-8")
+
+    assert "datetime.utcnow(" not in content
 
 # ============================================================================
 # Fixtures

@@ -4,7 +4,7 @@ Prompt管理服务
 """
 
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
@@ -20,6 +20,11 @@ from ...models.llm_prompt import PromptStatus, PromptTemplate, PromptVersion
 from ...schemas.llm_prompt import PromptTemplateCreate, PromptTemplateUpdate
 
 logger = logging.getLogger(__name__)
+
+
+def _utcnow_naive() -> datetime:
+    """返回 naive UTC 时间。"""
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class PromptManager:
@@ -128,7 +133,7 @@ class PromptManager:
         template.few_shot_examples = new_examples
         template.version = new_version
         template.current_version_id = version_record.id
-        template.updated_at = datetime.utcnow()
+        template.updated_at = _utcnow_naive()
 
         if data.tags is not None:
             template.tags = data.tags
@@ -154,10 +159,12 @@ class PromptManager:
             PromptTemplate.status == PromptStatus.ACTIVE,
             PromptTemplate.id != template_id,
         )
-        await db.execute(stmt.values(status=PromptStatus.ARCHIVED, updated_at=datetime.utcnow()))
+        await db.execute(
+            stmt.values(status=PromptStatus.ARCHIVED, updated_at=_utcnow_naive())
+        )
 
         template.status = PromptStatus.ACTIVE
-        template.updated_at = datetime.utcnow()
+        template.updated_at = _utcnow_naive()
         await db.commit()
         await db.refresh(template)
 
@@ -203,7 +210,7 @@ class PromptManager:
         template.few_shot_examples = target_version.few_shot_examples
         template.version = new_version
         template.current_version_id = version_record.id
-        template.updated_at = datetime.utcnow()
+        template.updated_at = _utcnow_naive()
 
         db.add(version_record)
         await db.commit()

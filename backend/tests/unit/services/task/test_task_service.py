@@ -2,6 +2,7 @@
 测试任务服务（异步）
 """
 
+import inspect
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -14,6 +15,14 @@ from src.schemas.task import ExcelTaskConfigCreate, TaskCreate, TaskUpdate
 from src.services.task.service import TaskService
 
 pytestmark = pytest.mark.asyncio
+
+
+def test_task_service_module_should_not_use_datetime_utcnow() -> None:
+    """任务服务模块不应直接调用 datetime.utcnow。"""
+    from src.services.task import service as task_service_module
+
+    module_source = inspect.getsource(task_service_module)
+    assert "datetime.utcnow(" not in module_source
 
 
 def _result_with_scalars(values: list[object] | None = None) -> MagicMock:

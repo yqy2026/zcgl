@@ -6,14 +6,24 @@ Excel导出服务单元测试
 
 import io
 from datetime import UTC, datetime
+from pathlib import Path
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
+from src.services.excel import excel_export_service as excel_export_service_module
 from src.services.excel.excel_export_service import (
     EXPORT_FIELD_MAPPING,
     ExcelExportService,
 )
+
+
+def test_excel_export_service_module_avoids_datetime_utcnow() -> None:
+    """服务模块不应直接调用 datetime.utcnow."""
+    module_path = Path(excel_export_service_module.__file__)
+    content = module_path.read_text(encoding="utf-8")
+
+    assert "datetime.utcnow(" not in content
 
 # ============================================================================
 # Fixtures

@@ -4,6 +4,7 @@ PromptManager async unit tests
 
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -11,9 +12,18 @@ import pytest
 from src.core.exception_handler import DuplicateResourceError, ResourceNotFoundError
 from src.models.llm_prompt import PromptStatus, PromptTemplate
 from src.schemas.llm_prompt import PromptTemplateCreate, PromptTemplateUpdate
+from src.services.llm_prompt import prompt_manager as prompt_manager_module
 from src.services.llm_prompt.prompt_manager import PromptManager
 
 pytestmark = pytest.mark.asyncio
+
+
+def test_prompt_manager_module_avoids_datetime_utcnow() -> None:
+    """服务模块不应直接调用 datetime.utcnow."""
+    module_path = Path(prompt_manager_module.__file__)
+    content = module_path.read_text(encoding="utf-8")
+
+    assert "datetime.utcnow(" not in content
 
 
 def _result_with_first(value):

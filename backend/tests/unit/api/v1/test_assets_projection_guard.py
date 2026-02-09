@@ -1,5 +1,5 @@
 import json
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from unittest.mock import MagicMock
 
@@ -89,8 +89,8 @@ async def test_get_assets_with_relations_projects_active_contract(monkeypatch):
         name="测试权属方",
         code="OWN-001",
         is_active=True,
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow(),
+        created_at=datetime.now(UTC).replace(tzinfo=None),
+        updated_at=datetime.now(UTC).replace(tzinfo=None),
     )
     asset.rent_contracts = [
         RentContract(

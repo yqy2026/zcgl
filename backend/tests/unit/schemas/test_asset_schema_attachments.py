@@ -2,7 +2,7 @@
 Unit tests for Asset schema attachment fields.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 import pytest
 from pydantic import ValidationError
@@ -59,7 +59,7 @@ class TestAssetSchemaAttachments:
         assert payload["management_entity"] == "运营管理单位A"
 
     def test_asset_response_includes_attachments_fields(self) -> None:
-        now = datetime.utcnow()
+        now = datetime.now(UTC).replace(tzinfo=None)
         asset = AssetResponse(
             id="asset-001",
             property_name="测试物业",

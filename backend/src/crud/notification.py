@@ -2,7 +2,7 @@
 通知 CRUD 操作
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import func, select, update
@@ -103,7 +103,7 @@ class NotificationCRUD:
                 Notification.recipient_id == recipient_id,
                 Notification.is_read.is_(False),
             )
-            .values(is_read=True, read_at=datetime.utcnow())
+            .values(is_read=True, read_at=datetime.now(UTC).replace(tzinfo=None))
         )
         result = await db.execute(stmt)
         await db.commit()

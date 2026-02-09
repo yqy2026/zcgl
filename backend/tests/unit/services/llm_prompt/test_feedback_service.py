@@ -4,14 +4,24 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from src.core.exception_handler import ResourceNotFoundError
+from src.services.llm_prompt import feedback_service as feedback_service_module
 from src.services.llm_prompt.feedback_service import FeedbackService
 
 pytestmark = pytest.mark.asyncio
+
+
+def test_feedback_service_module_avoids_datetime_utcnow() -> None:
+    """服务模块不应直接调用 datetime.utcnow."""
+    module_path = Path(feedback_service_module.__file__)
+    content = module_path.read_text(encoding="utf-8")
+
+    assert "datetime.utcnow(" not in content
 
 
 class TestFeedbackServiceInit:

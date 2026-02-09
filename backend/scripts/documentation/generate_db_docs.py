@@ -6,7 +6,7 @@
 
 import json
 import sys
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -16,11 +16,10 @@ from sqlalchemy import MetaData, inspect
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root / "src"))
 
-from models.project import Project
-
 from database import get_database_engine
 from models.asset import Asset
 from models.ownership import Ownership
+from models.project import Project
 from models.task import AsyncTask, ExcelTaskConfig, TaskHistory
 
 
@@ -237,7 +236,7 @@ class DatabaseDocumentationGenerator:
 
         markdown = [
             "# Database Documentation\n",
-            f"Generated on: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}\n",
+            f"Generated on: {datetime.now(UTC).replace(tzinfo=None).strftime('%Y-%m-%d %H:%M:%S UTC')}\n",
             "## Overview\n",
             f"- **Database Type**: {overview['database_type']}\n",
             f"- **Total Tables**: {overview['total_tables']}\n",

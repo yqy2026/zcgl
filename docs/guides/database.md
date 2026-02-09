@@ -129,7 +129,7 @@ DATABASE_POOL_PRE_PING=true
 
 ### 时间戳与时区约定
 - 数据库字段多为 `TIMESTAMP WITHOUT TIME ZONE`
-- 写库统一使用 naive UTC（`datetime.utcnow()`）
+- 写库统一使用 naive UTC（`datetime.now(UTC).replace(tzinfo=None)`）
 - 如果已有带时区时间，写库前先转换为 naive UTC：
   - `aware_dt.astimezone(timezone.utc).replace(tzinfo=None)`
 
@@ -528,7 +528,7 @@ psql -d zcgl_db -c "ALTER DATABASE zcgl_db SET lock_timeout = '5s';"
 from datetime import datetime, timezone
 
 # 写库字段使用 naive UTC
-naive_utc = datetime.utcnow()
+naive_utc = datetime.now(UTC).replace(tzinfo=None)
 
 # 如果已有带时区时间
 naive_utc = aware_dt.astimezone(timezone.utc).replace(tzinfo=None)

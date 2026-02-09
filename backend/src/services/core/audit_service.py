@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import func, select
@@ -6,6 +6,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...models.auth import AuditLog, User
 from ...models.rbac import Role, UserRoleAssignment
+
+
+def _utcnow_naive() -> datetime:
+    """返回 naive UTC 时间。"""
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class AuditService:
@@ -47,7 +52,7 @@ class AuditService:
                 UserRoleAssignment.user_id == user_id,
                 UserRoleAssignment.is_active.is_(True),
                 UserRoleAssignment.expires_at.is_(None)
-                | (UserRoleAssignment.expires_at > datetime.utcnow()),
+                | (UserRoleAssignment.expires_at > _utcnow_naive()),
             )
             .order_by(Role.level.asc())
             .limit(1)

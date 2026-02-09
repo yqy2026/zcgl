@@ -171,12 +171,12 @@ class Asset(Base):
 
     # 时间戳
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.utcnow(), comment="创建时间"
+        DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None), comment="创建时间"
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=lambda: datetime.utcnow(),
-        onupdate=lambda: datetime.utcnow(),
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        onupdate=lambda: datetime.now(UTC).replace(tzinfo=None),
         comment="更新时间",
     )
 

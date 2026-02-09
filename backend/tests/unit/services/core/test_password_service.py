@@ -6,8 +6,18 @@
 
 import json
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
+from src.services.core import password_service as password_service_module
 from src.services.core.password_service import PasswordService
+
+
+def test_password_service_module_avoids_datetime_utcnow() -> None:
+    """服务模块不应直接调用 datetime.utcnow."""
+    module_path = Path(password_service_module.__file__)
+    content = module_path.read_text(encoding="utf-8")
+
+    assert "datetime.utcnow(" not in content
 
 
 # ============================================================================

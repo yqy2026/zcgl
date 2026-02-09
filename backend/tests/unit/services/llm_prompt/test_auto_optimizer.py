@@ -4,7 +4,8 @@ AutoOptimizer async unit tests
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
@@ -12,9 +13,18 @@ import pytest
 
 from src.core.exception_handler import ResourceNotFoundError
 from src.models.llm_prompt import ExtractionFeedback, PromptTemplate
+from src.services.llm_prompt import auto_optimizer as auto_optimizer_module
 from src.services.llm_prompt.auto_optimizer import AutoOptimizer
 
 pytestmark = pytest.mark.asyncio
+
+
+def test_auto_optimizer_module_avoids_datetime_utcnow() -> None:
+    """服务模块不应直接调用 datetime.utcnow."""
+    module_path = Path(auto_optimizer_module.__file__)
+    content = module_path.read_text(encoding="utf-8")
+
+    assert "datetime.utcnow(" not in content
 
 
 def _result_with_scalar(value):
@@ -103,7 +113,7 @@ class TestAutoOptimizerAsync:
         optimizer = AutoOptimizer(min_feedback_count=1, accuracy_threshold=0.5)
         feedback = MagicMock(spec=ExtractionFeedback)
         feedback.template_id = 'prompt-1'
-        feedback.created_at = datetime.utcnow() - timedelta(days=1)
+        feedback.created_at = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=1)
 
         mock_db.execute.return_value = _result_with_all([feedback])
         mock_db.get.return_value = None

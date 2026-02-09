@@ -8,7 +8,7 @@ Create Date: 2026-02-06 00:00:00.000000
 
 import uuid
 from collections.abc import Sequence
-from datetime import datetime
+from datetime import UTC, datetime
 
 import sqlalchemy as sa
 
@@ -48,7 +48,7 @@ def upgrade() -> None:
         perm_id = perm_row[0]
     else:
         perm_id = str(uuid.uuid4())
-        now = datetime.utcnow()
+        now = datetime.now(UTC).replace(tzinfo=None)
         conn.execute(
             sa.text(
                 """
@@ -110,7 +110,7 @@ def upgrade() -> None:
     ).fetchall()
 
     if roles:
-        now = datetime.utcnow()
+        now = datetime.now(UTC).replace(tzinfo=None)
         for role_id, _role_name in roles:
             exists = conn.execute(
                 sa.text(

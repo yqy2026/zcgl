@@ -1,7 +1,7 @@
 """资产历史与文档模型。"""
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
@@ -32,7 +32,7 @@ class AssetHistory(Base):
     new_value: Mapped[str | None] = mapped_column(Text, comment="新值")
     operator: Mapped[str | None] = mapped_column(String(100), comment="操作人")
     operation_time: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.utcnow(), comment="操作时间"
+        DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None), comment="操作时间"
     )
     description: Mapped[str | None] = mapped_column(Text, comment="操作描述")
 
@@ -68,7 +68,7 @@ class AssetDocument(Base):
     file_size: Mapped[int | None] = mapped_column(Integer, comment="文件大小(字节)")
     mime_type: Mapped[str | None] = mapped_column(String(100), comment="文件MIME类型")
     upload_time: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.utcnow(), comment="上传时间"
+        DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None), comment="上传时间"
     )
     uploader: Mapped[str | None] = mapped_column(String(100), comment="上传人")
     description: Mapped[str | None] = mapped_column(Text, comment="文档描述")

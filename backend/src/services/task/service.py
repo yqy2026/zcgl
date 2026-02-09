@@ -1,5 +1,5 @@
 import tempfile
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -16,6 +16,10 @@ from ...utils.file_security import validate_file_path
 
 class TaskService:
     """任务服务层"""
+
+    @staticmethod
+    def _utcnow_naive() -> datetime:
+        return datetime.now(UTC).replace(tzinfo=None)
 
     def _cleanup_task_file(self, task: AsyncTask) -> bool:
         result_data = task.result_data
@@ -88,10 +92,10 @@ class TaskService:
         update_data: dict[str, Any] = {"status": status}
 
         if old_status == TaskStatus.PENDING and status == TaskStatus.RUNNING:
-            update_data["started_at"] = datetime.utcnow()
+            update_data["started_at"] = self._utcnow_naive()
 
         if status in [TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED]:
-            update_data["completed_at"] = datetime.utcnow()
+            update_data["completed_at"] = self._utcnow_naive()
             if status == TaskStatus.COMPLETED:
                 update_data["progress"] = 100
 
@@ -154,14 +158,14 @@ class TaskService:
             old_status = task.status
 
             if old_status == TaskStatus.PENDING and new_status == TaskStatus.RUNNING:
-                update_data["started_at"] = datetime.utcnow()
+                update_data["started_at"] = self._utcnow_naive()
 
             if new_status in [
                 TaskStatus.COMPLETED,
                 TaskStatus.FAILED,
                 TaskStatus.CANCELLED,
             ]:
-                update_data["completed_at"] = datetime.utcnow()
+                update_data["completed_at"] = self._utcnow_naive()
                 if new_status == TaskStatus.COMPLETED:
                     update_data["progress"] = 100
 
@@ -344,9 +348,7 @@ class TaskService:
         self, db: AsyncSession, *, days: int, dry_run: bool
     ) -> dict[str, Any]:
         """清理过期任务"""
-        from datetime import timedelta
-
-        cutoff_date = datetime.utcnow() - timedelta(days=days)
+        cutoff_date = self._utcnow_naive() - timedelta(days=days)
 
         stmt = select(AsyncTask).filter(
             and_(

@@ -540,9 +540,9 @@ class AuthService:
         """创建访问令牌"""
         to_encode = data.copy()
         if expires_delta:
-            expire = datetime.utcnow() + expires_delta
+            expire = datetime.now(UTC).replace(tzinfo=None) + expires_delta
         else:
-            expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+            expire = datetime.now(UTC).replace(tzinfo=None) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
 
         to_encode.update({"exp": expire, "sub": "access"})
         encoded_jwt = jwt.encode(to_encode, self.secret_key, algorithm=self.algorithm)
@@ -551,7 +551,7 @@ class AuthService:
     def create_refresh_token(self, data: Dict) -> str:
         """创建刷新令牌"""
         to_encode = data.copy()
-        expire = datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+        expire = datetime.now(UTC).replace(tzinfo=None) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
         to_encode.update({"exp": expire, "sub": "refresh"})
         encoded_jwt = jwt.encode(to_encode, self.secret_key, algorithm=self.algorithm)
         return encoded_jwt
@@ -1031,7 +1031,7 @@ pip install -e .
 from datetime import datetime, timezone
 
 # 写库字段使用 naive UTC
-naive_utc = datetime.utcnow()
+naive_utc = datetime.now(UTC).replace(tzinfo=None)
 
 # 如果已有带时区时间
 naive_utc = aware_dt.astimezone(timezone.utc).replace(tzinfo=None)

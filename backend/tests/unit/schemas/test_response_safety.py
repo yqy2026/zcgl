@@ -2,7 +2,7 @@
 Unit tests for response schemas that should not trigger lazy-loads.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -18,7 +18,7 @@ class DummyProject:
         self.name = "测试项目"
         self.is_active = True
         self.data_status = "正常"
-        now = datetime.utcnow()
+        now = datetime.now(UTC).replace(tzinfo=None)
         self.created_at = now
         self.updated_at = now
 
@@ -36,7 +36,7 @@ class DummyOrganization:
         self.sort_order = 0
         self.type = "company"
         self.status = "active"
-        now = datetime.utcnow()
+        now = datetime.now(UTC).replace(tzinfo=None)
         self.created_at = now
         self.updated_at = now
 

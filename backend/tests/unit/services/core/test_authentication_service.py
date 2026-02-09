@@ -7,6 +7,7 @@ password expiration, device fingerprinting, and session management.
 
 import asyncio
 from datetime import datetime, timedelta
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import jwt
@@ -16,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.config import settings
 from src.exceptions import BusinessLogicError
 from src.models.auth import User, UserSession
+from src.services.core import authentication_service as authentication_service_module
 from src.services.core.authentication_service import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
     ALGORITHM,
@@ -28,6 +30,14 @@ from src.services.core.authentication_service import (
 # ============================================================================
 # Fixtures
 # ============================================================================
+
+
+def test_authentication_service_module_avoids_datetime_utcnow() -> None:
+    """服务模块不应直接调用 datetime.utcnow."""
+    module_path = Path(authentication_service_module.__file__)
+    content = module_path.read_text(encoding="utf-8")
+
+    assert "datetime.utcnow(" not in content
 
 
 @pytest.fixture

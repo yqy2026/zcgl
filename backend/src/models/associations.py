@@ -1,6 +1,6 @@
 """跨聚合多对多关联表定义。"""
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import Column, DateTime, ForeignKey, String, Table
 
@@ -14,7 +14,7 @@ rent_contract_assets = Table(
     Column(
         "created_at",
         DateTime,
-        default=lambda: datetime.utcnow(),
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
         comment="关联创建时间",
     ),
 )

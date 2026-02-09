@@ -380,13 +380,13 @@ def test_admin(test_db):
 @pytest.fixture
 def auth_headers(test_user):
     """生成认证头"""
-    from datetime import datetime, timedelta
+    from datetime import UTC, datetime, timedelta
 
     import jwt
 
     from src.core.config import settings
 
-    now = datetime.utcnow()
+    now = datetime.now(UTC).replace(tzinfo=None)
     token_data = {
         "sub": str(test_user.id),  # sub should be user_id
         "user_id": str(test_user.id),  # legacy field

@@ -5,7 +5,7 @@
 """
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 
 from sqlalchemy import Boolean, Column, DateTime, String, Text
@@ -80,11 +80,11 @@ class Contact(Base):
     is_active = Column(Boolean, default=True, nullable=False, comment="是否启用")
 
     # 时间戳
-    created_at = Column(DateTime, default=lambda: datetime.utcnow(), comment="创建时间")
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None), comment="创建时间")
     updated_at = Column(
         DateTime,
-        default=lambda: datetime.utcnow(),
-        onupdate=lambda: datetime.utcnow(),
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        onupdate=lambda: datetime.now(UTC).replace(tzinfo=None),
         comment="更新时间",
     )
     created_by = Column(String(100), comment="创建人")

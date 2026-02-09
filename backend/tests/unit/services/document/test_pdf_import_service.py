@@ -4,6 +4,7 @@
 
 import asyncio
 from datetime import date
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -14,7 +15,16 @@ from src.models.pdf_import_session import (
     SessionStatus,
 )
 from src.models.rent_contract import ContractType, PaymentCycle
+from src.services.document import pdf_import_service as pdf_import_service_module
 from src.services.document.pdf_import_service import PDFImportService
+
+
+def test_pdf_import_service_module_avoids_datetime_utcnow() -> None:
+    """服务模块不应直接调用 datetime.utcnow."""
+    module_path = Path(pdf_import_service_module.__file__)
+    content = module_path.read_text(encoding="utf-8")
+
+    assert "datetime.utcnow(" not in content
 
 # ============================================================================
 # Fixtures

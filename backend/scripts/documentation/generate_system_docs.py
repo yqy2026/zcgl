@@ -9,7 +9,7 @@ import os
 import platform
 import subprocess
 import sys
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -372,7 +372,7 @@ class SystemDocumentationGenerator:
 
         markdown = [
             "# System Documentation\n",
-            f"Generated on: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}\n",
+            f"Generated on: {datetime.now(UTC).replace(tzinfo=None).strftime('%Y-%m-%d %H:%M:%S UTC')}\n",
             "## System Information\n",
             f"- **Platform**: {system_info['platform']}\n",
             f"- **Python Version**: {system_info['python_version']}\n",

@@ -7,7 +7,7 @@ Create Date: 2026-02-08 18:40:00.000000
 
 import uuid
 from collections.abc import Sequence
-from datetime import datetime
+from datetime import UTC, datetime
 
 import sqlalchemy as sa
 
@@ -86,7 +86,7 @@ def _upsert_enum_type(
     category: str,
     description: str,
 ) -> str:
-    now = datetime.utcnow()
+    now = datetime.now(UTC).replace(tzinfo=None)
     existing = conn.execute(
         sa.text("SELECT id FROM enum_field_types WHERE code = :code"),
         {"code": code},
@@ -175,7 +175,7 @@ def _upsert_enum_value(
     label: str,
     sort_order: int,
 ) -> None:
-    now = datetime.utcnow()
+    now = datetime.now(UTC).replace(tzinfo=None)
     existing = conn.execute(
         sa.text(
             """

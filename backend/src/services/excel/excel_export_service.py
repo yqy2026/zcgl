@@ -10,7 +10,7 @@ import io
 import json
 import logging
 import os
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import pandas as pd
@@ -20,6 +20,11 @@ from ...config.excel_config import STANDARD_SHEET_NAME
 from ...crud.asset import asset_crud
 
 logger = logging.getLogger(__name__)
+
+
+def _utcnow_naive() -> datetime:
+    """返回 naive UTC 时间。"""
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 # 反向字段映射：数据库字段名 -> Excel中文列名
@@ -227,7 +232,7 @@ class ExcelExportService:
                 "file_path": file_path,
                 "file_name": os.path.basename(file_path),
                 "file_size": file_size,
-                "export_time": datetime.utcnow().isoformat(),
+                "export_time": _utcnow_naive().isoformat(),
             }
         except Exception as e:
             logger.error(f"导出到文件失败: {str(e)}")
@@ -264,7 +269,7 @@ class ExcelExportService:
                 "file_path": file_path,
                 "file_name": os.path.basename(file_path),
                 "file_size": file_size,
-                "export_time": datetime.utcnow().isoformat(),
+                "export_time": _utcnow_naive().isoformat(),
             }
         except Exception as e:
             logger.error(f"导出到文件失败: {str(e)}")

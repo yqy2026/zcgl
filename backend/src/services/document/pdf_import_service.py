@@ -11,7 +11,7 @@ import tempfile
 import time
 import traceback
 import uuid
-from datetime import date
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any, cast
 
@@ -38,6 +38,11 @@ logger = logging.getLogger(__name__)
 
 # 从环境变量读取并发限制
 MAX_CONCURRENT_PDF_TASKS = int(os.getenv("PDF_MAX_CONCURRENT", "3"))
+
+
+def _utcnow_naive() -> datetime:
+    """返回 naive UTC 时间。"""
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class PDFImportService:
@@ -141,8 +146,6 @@ class PDFImportService:
 
         if isinstance(date_str, date):
             return date_str
-
-        from datetime import datetime
 
         # 尝试常见日期格式
         formats = ["%Y-%m-%d", "%Y/%m/%d", "%d/%m/%Y", "%Y年%m月%d日"]
@@ -468,9 +471,7 @@ class PDFImportService:
 
                     session.current_step = ProcessingStep.FINAL_REVIEW
 
-                    from datetime import datetime
-
-                    session.completed_at = datetime.utcnow()
+                    session.completed_at = _utcnow_naive()
 
                     await db.commit()
                     logger.info(f"Persisted processing result for session {session_id}")
@@ -517,9 +518,7 @@ class PDFImportService:
                     session.status = SessionStatus.FAILED
                     session.progress_percentage = 0.0
 
-                    from datetime import datetime
-
-                    session.completed_at = datetime.utcnow()
+                    session.completed_at = _utcnow_naive()
 
                     await db.commit()
                     logger.info(f"Persisted processing error for session {session_id}")

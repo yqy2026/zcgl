@@ -5,7 +5,7 @@ Provides organization access checks and helper filters for organization-scoped d
 """
 
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import and_, or_, select
@@ -19,6 +19,11 @@ from ..schemas.rbac import PermissionCheckRequest
 from .permission.rbac_service import RBACService
 
 logger = logging.getLogger(__name__)
+
+
+def _utcnow_naive() -> datetime:
+    """返回 naive UTC 时间。"""
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class OrganizationPermissionService:
@@ -237,7 +242,7 @@ class OrganizationPermissionService:
                 UserRoleAssignment.is_active,
                 or_(
                     UserRoleAssignment.expires_at.is_(None),
-                    UserRoleAssignment.expires_at > datetime.utcnow(),
+                    UserRoleAssignment.expires_at > _utcnow_naive(),
                 ),
             )
         )
@@ -257,7 +262,7 @@ class OrganizationPermissionService:
         conditions.append(
             or_(
                 ResourcePermission.expires_at.is_(None),
-                ResourcePermission.expires_at > datetime.utcnow(),
+                ResourcePermission.expires_at > _utcnow_naive(),
             )
         )
 

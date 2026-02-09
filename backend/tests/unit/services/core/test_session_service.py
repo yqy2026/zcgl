@@ -3,6 +3,7 @@
 """
 
 import asyncio
+import inspect
 import json
 from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -12,6 +13,15 @@ import pytest
 from src.core.config import settings
 from src.models.auth import UserSession
 from src.services.core.session_service import AsyncSessionService
+
+
+def test_session_service_module_should_not_use_datetime_utcnow() -> None:
+    """会话服务模块不应直接调用 datetime.utcnow。"""
+    from src.services.core import session_service as session_service_module
+
+    module_source = inspect.getsource(session_service_module)
+    assert "datetime.utcnow(" not in module_source
+
 
 # ============================================================================
 # Fixtures

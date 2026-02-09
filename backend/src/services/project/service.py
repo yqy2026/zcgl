@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import select
@@ -26,6 +26,10 @@ from ...schemas.project import ProjectCreate, ProjectSearchRequest, ProjectUpdat
 
 class ProjectService:
     """项目服务层"""
+
+    @staticmethod
+    def _utcnow_naive() -> datetime:
+        return datetime.now(UTC).replace(tzinfo=None)
 
     async def create_project(
         self,
@@ -90,7 +94,7 @@ class ProjectService:
             project.project_status = "进行中"
 
         project.updated_by = updated_by
-        project.updated_at = datetime.utcnow()
+        project.updated_at = self._utcnow_naive()
         db.add(project)
         await db.commit()
         await db.refresh(project)

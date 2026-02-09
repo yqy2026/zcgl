@@ -154,14 +154,14 @@ def transfer_ownership(
 
             # 更新所有权
             asset.owner_id = to_owner_id
-            asset.updated_at = datetime.utcnow()
+            asset.updated_at = datetime.now(UTC).replace(tzinfo=None)
 
             # 记录变更历史
             history = OwnershipHistory(
                 asset_id=asset_id,
                 from_owner_id=from_owner_id,
                 to_owner_id=to_owner_id,
-                transferred_at=datetime.utcnow()
+                transferred_at=datetime.now(UTC).replace(tzinfo=None)
             )
             session.add(history)
 
@@ -205,7 +205,7 @@ def slow_query_handler(conn, cursor, statement, parameters, context, executemany
             sql=statement,
             parameters=str(parameters),
             execution_time=execution_time,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now(UTC).replace(tzinfo=None)
         )
         session.add(slow_query)
         session.commit()
@@ -225,7 +225,7 @@ def collect_database_metrics():
 
     # 收集关键指标
     performance_data = {
-        "timestamp": datetime.utcnow(),
+        "timestamp": datetime.now(UTC).replace(tzinfo=None),
         "total_queries": metrics.total_queries,
         "slow_queries": metrics.slow_queries,
         "avg_response_time": metrics.avg_response_time,
@@ -274,7 +274,7 @@ def schedule_database_maintenance():
 
 def cleanup_old_logs():
     """清理旧日志"""
-    cutoff_date = datetime.utcnow() - timedelta(days=30)
+    cutoff_date = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=30)
     session.query(LogEntry).filter(
         LogEntry.created_at < cutoff_date
     ).delete()
@@ -351,7 +351,7 @@ class TestAssetService:
             "name": "测试资产",
             "area": 100.0,
             "status": "active",
-            "created_at": datetime.utcnow()
+            "created_at": datetime.now(UTC).replace(tzinfo=None)
         }
 
     def test_create_asset_success(self, asset_service, mock_repository, sample_asset):

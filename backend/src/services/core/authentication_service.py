@@ -33,6 +33,11 @@ JWT_AUDIENCE = settings.JWT_AUDIENCE
 JWT_ISSUER = settings.JWT_ISSUER
 
 
+def _utcnow_naive() -> datetime:
+    """返回 naive UTC 时间。"""
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
 @dataclass(frozen=True)
 class TokenPair:
     """Internal token container (not a public API schema)."""
@@ -254,7 +259,7 @@ class AsyncAuthenticationService:
                 await self.db.commit()
                 return None
 
-        session.last_accessed_at = datetime.utcnow()
+        session.last_accessed_at = _utcnow_naive()
         if client_ip:
             setattr(session, "ip_address", client_ip)
         if user_agent:

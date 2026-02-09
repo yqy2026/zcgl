@@ -4,7 +4,7 @@ LLM Prompt管理相关数据模型
 """
 
 import uuid
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from enum import Enum
 from typing import Any
 
@@ -103,12 +103,12 @@ class PromptTemplate(Base):
 
     # 审计字段
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.utcnow(), comment="创建时间"
+        DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None), comment="创建时间"
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=lambda: datetime.utcnow(),
-        onupdate=lambda: datetime.utcnow(),
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        onupdate=lambda: datetime.now(UTC).replace(tzinfo=None),
         comment="更新时间",
     )
     created_by: Mapped[str | None] = mapped_column(String(100), comment="创建人ID")
@@ -175,7 +175,7 @@ class PromptVersion(Base):
 
     # 审计字段
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.utcnow(), comment="创建时间"
+        DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None), comment="创建时间"
     )
     created_by: Mapped[str | None] = mapped_column(String(100), comment="创建人ID")
 
@@ -231,7 +231,7 @@ class ExtractionFeedback(Base):
 
     # 审计字段
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.utcnow(), comment="创建时间"
+        DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None), comment="创建时间"
     )
 
     # 关系
@@ -285,7 +285,7 @@ class PromptMetrics(Base):
 
     # 审计字段
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.utcnow(), comment="创建时间"
+        DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None), comment="创建时间"
     )
 
     # 关系

@@ -1,7 +1,7 @@
 """系统字典与资产自定义字段模型。"""
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import Boolean, DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
@@ -36,13 +36,13 @@ class SystemDictionary(Base):
         Boolean, nullable=False, default=True, comment="是否启用"
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=lambda: datetime.utcnow(), comment="创建时间"
+        DateTime, nullable=False, default=lambda: datetime.now(UTC).replace(tzinfo=None), comment="创建时间"
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        default=lambda: datetime.utcnow(),
-        onupdate=lambda: datetime.utcnow(),
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        onupdate=lambda: datetime.now(UTC).replace(tzinfo=None),
         comment="更新时间",
     )
 
@@ -82,13 +82,13 @@ class AssetCustomField(Base):
     help_text: Mapped[str | None] = mapped_column(Text, comment="帮助文本")
     description: Mapped[str | None] = mapped_column(Text, comment="描述")
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=lambda: datetime.utcnow(), comment="创建时间"
+        DateTime, nullable=False, default=lambda: datetime.now(UTC).replace(tzinfo=None), comment="创建时间"
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        default=lambda: datetime.utcnow(),
-        onupdate=lambda: datetime.utcnow(),
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        onupdate=lambda: datetime.now(UTC).replace(tzinfo=None),
         comment="更新时间",
     )
 

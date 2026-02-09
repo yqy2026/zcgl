@@ -32,5 +32,6 @@
       "mcp__web-reader__webReader",
       "mcp__plugin_serena_serena__create_text_file"
     ]
-  }
+  },
+  "outputStyle": "Explanatory"
 }

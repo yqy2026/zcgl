@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
@@ -32,7 +32,7 @@ class TestContactBatchApi:
             ),
         ]
 
-        now = datetime.utcnow()
+        now = datetime.now(UTC).replace(tzinfo=None)
         created_contacts = [
             Contact(
                 id="contact-a",

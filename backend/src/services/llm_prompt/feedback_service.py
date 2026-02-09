@@ -5,7 +5,7 @@
 """
 
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from sqlalchemy import select
@@ -17,6 +17,11 @@ from ...schemas.llm_prompt import ExtractionFeedbackCreate, ExtractionFeedbackRe
 from .prompt_manager import PromptManager
 
 logger = logging.getLogger(__name__)
+
+
+def _utcnow_naive() -> datetime:
+    """返回 naive UTC 时间。"""
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class FeedbackService:
@@ -59,7 +64,7 @@ class FeedbackService:
         feedback.user_action = feedback_in.user_action
         feedback.user_id = user_id
         if getattr(feedback, "created_at", None) is None:
-            feedback.created_at = datetime.utcnow()
+            feedback.created_at = _utcnow_naive()
 
         db.add(feedback)
         await db.commit()

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import case, delete, desc, func, select
@@ -20,6 +20,10 @@ from ...schemas.ownership import OwnershipCreate, OwnershipUpdate
 
 class OwnershipService:
     """权属方服务层"""
+
+    @staticmethod
+    def _utcnow_naive() -> datetime:
+        return datetime.now(UTC).replace(tzinfo=None)
 
     async def get_ownership(
         self, db: AsyncSession, *, ownership_id: str
@@ -117,7 +121,7 @@ class OwnershipService:
                 raise DuplicateResourceError("权属方", "name", obj_in.name)
 
         update_data = obj_in.model_dump(exclude_unset=True)
-        update_data["updated_at"] = datetime.utcnow()
+        update_data["updated_at"] = self._utcnow_naive()
 
         return await ownership_crud.update(db, db_obj=db_obj, obj_in=update_data)
 

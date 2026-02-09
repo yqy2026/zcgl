@@ -7,7 +7,7 @@ API文档自动生成脚本
 import inspect
 import json
 import sys
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -45,7 +45,7 @@ class APIDocumentationGenerator:
 
             # 添加自定义信息
             openapi_schema["info"]["x-generator"] = "Land Property Management System"
-            openapi_schema["info"]["x-generated-at"] = datetime.utcnow().isoformat()
+            openapi_schema["info"]["x-generated-at"] = datetime.now(UTC).replace(tzinfo=None).isoformat()
 
             # 添加安全方案
             openapi_schema["components"]["securitySchemes"] = {
@@ -154,10 +154,9 @@ class APIDocumentationGenerator:
 
         # 扫描schemas模块获取类型定义
         try:
-            from models.project import Project
-
             from models.asset import Asset
             from models.ownership import Ownership
+            from models.project import Project
             from models.task import AsyncTask
 
             # 模型类型
@@ -219,7 +218,7 @@ class APIDocumentationGenerator:
 
         markdown = [
             "# API Documentation\n",
-            f"Generated on: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}\n",
+            f"Generated on: {datetime.now(UTC).replace(tzinfo=None).strftime('%Y-%m-%d %H:%M:%S UTC')}\n",
             "## Overview\n",
             f"- **Title**: {app.title}\n",
             f"- **Version**: {app.version}\n",

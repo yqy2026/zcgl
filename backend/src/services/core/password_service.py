@@ -1,7 +1,7 @@
 import base64
 import binascii  # pylint: disable=unused-import
 import json
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any, cast
 
 import bcrypt
@@ -13,6 +13,11 @@ from ...models.auth import User
 MIN_PASSWORD_LENGTH = settings.MIN_PASSWORD_LENGTH
 # 密码过期策略（天数）
 PASSWORD_EXPIRE_DAYS = int(getattr(settings, "PASSWORD_EXPIRE_DAYS", 90))
+
+
+def _utcnow_naive() -> datetime:
+    """返回 naive UTC 时间。"""
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class PasswordService:
@@ -122,7 +127,7 @@ class PasswordService:
 
         # 更新用户记录 (password_history expects dict[str, Any] | None)
         user.password_history = {"passwords": password_history}
-        user.password_last_changed = datetime.utcnow()
+        user.password_last_changed = _utcnow_naive()
 
     def is_password_expired(self, user: User) -> bool:
         """检查密码是否过期"""
@@ -142,4 +147,4 @@ class PasswordService:
             ).replace(tzinfo=None)
 
         expire_time = password_last_changed_value + timedelta(days=PASSWORD_EXPIRE_DAYS)
-        return bool(datetime.utcnow() > expire_time)
+        return bool(_utcnow_naive() > expire_time)

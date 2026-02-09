@@ -11,7 +11,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import uuid
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select, text
 
@@ -174,8 +174,8 @@ async def create_admin_user(db):
             full_name="系统管理员",
             is_active=True,
             password_hash="$2b$12$dummy_hash_for_admin",  # 实际使用中应该设置真实的密码哈希
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_at=datetime.now(UTC).replace(tzinfo=None),
+            updated_at=datetime.now(UTC).replace(tzinfo=None),
         )
         db.add(admin_user)
         await db.commit()
@@ -190,7 +190,7 @@ async def create_admin_user(db):
                 user_id=admin_user.id,
                 role_id=role.id,
                 assigned_by="system",
-                assigned_at=datetime.utcnow(),
+                assigned_at=datetime.now(UTC).replace(tzinfo=None),
                 is_active=True,
             )
             db.add(assignment)
@@ -218,7 +218,7 @@ async def create_admin_user(db):
                         user_id=existing_admin.id,
                         role_id=role.id,
                         assigned_by="system",
-                        assigned_at=datetime.utcnow(),
+                        assigned_at=datetime.now(UTC).replace(tzinfo=None),
                         is_active=True,
                     )
                 )
@@ -272,7 +272,7 @@ async def assign_permissions_to_roles(db, roles, permissions):
                         role_permissions.insert().values(
                             role_id=role.id,
                             permission_id=permission.id,
-                            created_at=datetime.utcnow(),
+                            created_at=datetime.now(UTC).replace(tzinfo=None),
                             created_by="system",
                         )
                     )
@@ -316,8 +316,8 @@ async def create_test_users(db) -> tuple[int, int]:
                 full_name=full_name,
                 is_active=True,
                 password_hash="$2b$12$dummy_hash_for_user",  # 实际使用中应该设置真实的密码哈希
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow(),
+                created_at=datetime.now(UTC).replace(tzinfo=None),
+                updated_at=datetime.now(UTC).replace(tzinfo=None),
             )
             db.add(user)
             created_count += 1
@@ -365,7 +365,7 @@ async def assign_roles_to_users(db, roles, users):
                     user_id=user.id,
                     role_id=role.id,
                     assigned_by="system",
-                    assigned_at=datetime.utcnow(),
+                    assigned_at=datetime.now(UTC).replace(tzinfo=None),
                     expires_at=None,  # 永久分配
                     is_active=True,
                     reason="系统初始化分配",
@@ -424,8 +424,8 @@ async def create_permission_grant_samples(db) -> bool:
                 grant_type="temporary",
                 effect="allow",
                 scope="global",
-                starts_at=datetime.utcnow(),
-                expires_at=datetime.utcnow() + timedelta(days=7),
+                starts_at=datetime.now(UTC).replace(tzinfo=None),
+                expires_at=datetime.now(UTC).replace(tzinfo=None) + timedelta(days=7),
                 priority=110,
                 source_type="init_seed",
                 source_id="sample_temporary_asset_create",
@@ -456,8 +456,8 @@ async def create_permission_grant_samples(db) -> bool:
                 scope="organization",
                 scope_id=None,  # 可以设置为具体的组织ID
                 conditions={"max_daily_operations": 10},  # 每天最多10次操作
-                starts_at=datetime.utcnow(),
-                expires_at=datetime.utcnow() + timedelta(days=30),
+                starts_at=datetime.now(UTC).replace(tzinfo=None),
+                expires_at=datetime.now(UTC).replace(tzinfo=None) + timedelta(days=30),
                 priority=100,
                 source_type="init_seed",
                 source_id="sample_dynamic_asset_create",

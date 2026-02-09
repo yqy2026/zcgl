@@ -2,6 +2,7 @@
 权属方服务单元测试（异步）
 """
 
+import inspect
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -18,6 +19,14 @@ from src.schemas.ownership import OwnershipCreate, OwnershipUpdate
 from src.services.ownership.service import OwnershipService
 
 pytestmark = pytest.mark.asyncio
+
+
+def test_ownership_service_module_should_not_use_datetime_utcnow() -> None:
+    """权属方服务模块不应直接调用 datetime.utcnow。"""
+    from src.services.ownership import service as ownership_service_module
+
+    module_source = inspect.getsource(ownership_service_module)
+    assert "datetime.utcnow(" not in module_source
 
 
 def _result_with_scalars(values: list[object]) -> MagicMock:

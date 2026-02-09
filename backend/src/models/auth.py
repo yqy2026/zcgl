@@ -65,7 +65,7 @@ class User(Base):
         DateTime, comment="锁定到期时间"
     )
     password_last_changed: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.utcnow(), comment="密码最后修改时间"
+        DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None), comment="密码最后修改时间"
     )
 
     # 组织关联
@@ -75,13 +75,13 @@ class User(Base):
 
     # 审计信息
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=lambda: datetime.utcnow(), comment="创建时间"
+        DateTime, nullable=False, default=lambda: datetime.now(UTC).replace(tzinfo=None), comment="创建时间"
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        default=lambda: datetime.utcnow(),
-        onupdate=lambda: datetime.utcnow(),
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        onupdate=lambda: datetime.now(UTC).replace(tzinfo=None),
         comment="更新时间",
     )
     created_by: Mapped[str | None] = mapped_column(String(100), comment="创建人")
@@ -138,7 +138,7 @@ class User(Base):
                     locked_until_value = locked_until_value.replace(tzinfo=UTC)
                 else:
                     locked_until_value = locked_until_value.astimezone(UTC)
-                if locked_until_value > datetime.utcnow():
+                if locked_until_value > datetime.now(UTC).replace(tzinfo=None):
                     return True
 
             # 如果锁定时间已过，自动解锁（安全地设置字段）
@@ -188,12 +188,12 @@ class UserSession(Base):
 
     # 时间信息
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=lambda: datetime.utcnow(), comment="创建时间"
+        DateTime, nullable=False, default=lambda: datetime.now(UTC).replace(tzinfo=None), comment="创建时间"
     )
     last_accessed_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        default=lambda: datetime.utcnow(),
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
         comment="最后访问时间",
     )
 
@@ -218,7 +218,7 @@ class UserSession(Base):
                 )  # pragma: no cover
             else:  # pragma: no cover
                 expires_at_value = expires_at_value.astimezone(UTC)  # pragma: no cover
-            return datetime.utcnow() > expires_at_value  # pragma: no cover
+            return datetime.now(UTC).replace(tzinfo=None) > expires_at_value  # pragma: no cover
 
 
 class AuditLog(Base):
@@ -263,7 +263,7 @@ class AuditLog(Base):
 
     # 时间信息
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=lambda: datetime.utcnow(), comment="创建时间"
+        DateTime, nullable=False, default=lambda: datetime.now(UTC).replace(tzinfo=None), comment="创建时间"
     )
 
     # 关系

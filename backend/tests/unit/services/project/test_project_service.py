@@ -2,6 +2,7 @@
 测试项目服务（异步）
 """
 
+import inspect
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -17,6 +18,14 @@ from src.schemas.project import ProjectCreate, ProjectSearchRequest, ProjectUpda
 from src.services.project.service import ProjectService
 
 pytestmark = pytest.mark.asyncio
+
+
+def test_project_service_module_should_not_use_datetime_utcnow() -> None:
+    """项目服务模块不应直接调用 datetime.utcnow。"""
+    from src.services.project import service as project_service_module
+
+    module_source = inspect.getsource(project_service_module)
+    assert "datetime.utcnow(" not in module_source
 
 
 @pytest.fixture
