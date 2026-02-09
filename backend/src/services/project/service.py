@@ -209,5 +209,15 @@ class ProjectService:
             for p in projects
         ]
 
+    async def get_project_statistics(self, db: AsyncSession) -> dict[str, Any]:
+        """获取项目统计信息。"""
+        return await project_crud.get_statistics(db=db)
+
+    async def get_project_by_id(
+        self, db: AsyncSession, project_id: str
+    ) -> Project | None:
+        """根据 ID 获取项目。"""
+        return await project_crud.get(db=db, id=project_id)
+
 
 project_service = ProjectService()

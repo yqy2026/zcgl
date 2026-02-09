@@ -24,7 +24,6 @@ from ....core.exception_handler import (
     service_unavailable,
 )
 from ....core.response_handler import success_response
-from ....crud.pdf_import_session import PDFImportSessionCRUD
 from ....database import get_async_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
@@ -57,7 +56,11 @@ def _get_batch_tracker() -> BatchStatusTracker:
     return _batch_tracker
 
 
-router = APIRouter(prefix="/pdf-import/batch", tags=["PDF批量导入"])
+router = APIRouter(
+    prefix="/pdf-import/batch",
+    tags=["PDF批量导入"],
+    dependencies=[Depends(get_current_active_user)],
+)
 
 
 # ============================================================================
@@ -377,10 +380,10 @@ async def get_batch_status(
     if not batch:
         raise not_found("批处理任务不存在", resource_id=batch_id)
 
-    session_crud = PDFImportSessionCRUD()
+    service = PDFImportService()
     session_statuses: list[dict[str, Any]] = []
     session_ids = [str(session_id) for session_id in batch.get("session_ids", [])]
-    session_map = await session_crud.get_session_map_async(db, session_ids)
+    session_map = await service.get_session_map_async(db=db, session_ids=session_ids)
     for session_id in session_ids:
         session = session_map.get(session_id)
         if session:
@@ -502,11 +505,10 @@ async def cancel_batch(
         raise bad_request("批处理任务已完成或已取消，无法取消")
 
     service = PDFImportService()
-    session_crud = PDFImportSessionCRUD()
     cancelled_count = 0
 
     session_ids = [str(session_id) for session_id in batch.get("session_ids", [])]
-    session_map = await session_crud.get_session_map_async(db, session_ids)
+    session_map = await service.get_session_map_async(db=db, session_ids=session_ids)
     for session_id in session_ids:
         session = session_map.get(session_id)
         if session and session.is_processing:

@@ -12,7 +12,6 @@ from ....core.exception_handler import (
     internal_error,
     not_found,
 )
-from ....crud.custom_field import custom_field_crud
 from ....database import get_async_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
@@ -59,9 +58,7 @@ async def get_custom_fields(
         if is_active is not None:
             filters["is_active"] = is_active
 
-        fields = await custom_field_crud.get_multi_with_filters_async(
-            db=db, filters=filters
-        )
+        fields = await custom_field_service.get_custom_fields_async(db=db, filters=filters)
         return [AssetCustomFieldResponse.model_validate(f) for f in fields]
 
     except Exception as e:
@@ -83,9 +80,10 @@ async def get_custom_field(
     """
 
     try:
-        from ....models.system_dictionary import AssetCustomField
-
-        field: AssetCustomField | None = await custom_field_crud.get(db=db, id=field_id)
+        field = await custom_field_service.get_custom_field_async(
+            db=db,
+            field_id=field_id,
+        )
         if not field:
             raise not_found(
                 f"字段 {field_id} 不存在",
@@ -191,16 +189,10 @@ async def validate_custom_field_value(
     """
 
     try:
-        field = await custom_field_crud.get(db=db, id=field_id)
-        if not field:
-            raise not_found(
-                f"字段 {field_id} 不存在",
-                resource_type="custom_field",
-                resource_id=field_id,
-            )
-
-        is_valid, error_message = custom_field_service.validate_field_value(
-            field, value
+        is_valid, error_message = await custom_field_service.validate_custom_field_value_async(
+            db=db,
+            field_id=field_id,
+            value=value,
         )
 
         if is_valid:
@@ -257,8 +249,9 @@ async def get_asset_custom_field_values(
     """
 
     try:
-        values = await custom_field_crud.get_asset_field_values_async(
-            db=db, asset_id=asset_id
+        values = await custom_field_service.get_asset_field_values_async(
+            db=db,
+            asset_id=asset_id,
         )
         return {"asset_id": asset_id, "values": values}
 

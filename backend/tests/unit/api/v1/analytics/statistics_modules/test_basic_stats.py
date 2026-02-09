@@ -88,7 +88,7 @@ class TestGetBasicStatistics:
         Then: 返回正确的基础统计数据
         """
         # Arrange
-        with patch("src.crud.asset.asset_crud.get_multi_with_search") as mock_get:
+        with patch("src.crud.asset.asset_crud.get_multi_with_search_async") as mock_get:
             mock_get.return_value = (mock_assets, 100)
 
             # Act
@@ -118,7 +118,7 @@ class TestGetBasicStatistics:
         # Arrange
         confirmed_assets = [a for a in mock_assets if a.ownership_status == "已确权"]
 
-        with patch("src.crud.asset.asset_crud.get_multi_with_search") as mock_get:
+        with patch("src.crud.asset.asset_crud.get_multi_with_search_async") as mock_get:
             mock_get.return_value = (confirmed_assets, 70)
 
             # Act - 使用中文值
@@ -139,7 +139,7 @@ class TestGetBasicStatistics:
         Then: 返回零值统计数据
         """
         # Arrange
-        with patch("src.crud.asset.asset_crud.get_multi_with_search") as mock_get:
+        with patch("src.crud.asset.asset_crud.get_multi_with_search_async") as mock_get:
             mock_get.return_value = ([], 0)
 
             # Act
@@ -167,7 +167,7 @@ class TestGetBasicStatistics:
             if a.ownership_status == "confirmed" and a.usage_status == "rented"
         ]
 
-        with patch("src.crud.asset.asset_crud.get_multi_with_search") as mock_get:
+        with patch("src.crud.asset.asset_crud.get_multi_with_search_async") as mock_get:
             mock_get.return_value = (filtered_assets, len(filtered_assets))
 
             # Act
@@ -191,7 +191,7 @@ class TestGetSummaryStatistics:
         Then: 返回统计摘要数据
         """
         # Arrange
-        with patch("src.crud.asset.asset_crud.get_multi_with_search") as mock_get:
+        with patch("src.crud.asset.asset_crud.get_multi_with_search_async") as mock_get:
             mock_get.return_value = ([Mock()] * 100, 100)
 
             # Act
@@ -216,7 +216,7 @@ class TestGetDashboardData:
         Then: 返回仪表板数据或 404（端点可能未完全实现）
         """
         # Arrange - Dashboard 需要多个服务的 Mock，这里只做基本测试
-        with patch("src.crud.asset.asset_crud.get_multi_with_search") as mock_get:
+        with patch("src.crud.asset.asset_crud.get_multi_with_search_async") as mock_get:
             mock_get.return_value = ([Mock()] * 100, 100)
 
             # Act
@@ -239,7 +239,7 @@ class TestGetComprehensiveStatistics:
         Then: 返回综合统计数据
         """
         # Arrange
-        with patch("src.crud.asset.asset_crud.get_multi_with_search") as mock_get:
+        with patch("src.crud.asset.asset_crud.get_multi_with_search_async") as mock_get:
             mock_get.return_value = ([Mock()] * 100, 100)
 
             # Act
@@ -303,7 +303,7 @@ class TestErrorHandling:
         Then: 返回 500 或 503 错误
         """
         # Arrange
-        with patch("src.crud.asset.asset_crud.get_multi_with_search") as mock_get:
+        with patch("src.crud.asset.asset_crud.get_multi_with_search_async") as mock_get:
             mock_get.side_effect = Exception("Database connection failed")
 
             # Act
@@ -347,7 +347,7 @@ class TestDataValidation:
         Then: 返回包含生成时间戳
         """
         # Arrange
-        with patch("src.crud.asset.asset_crud.get_multi_with_search") as mock_get:
+        with patch("src.crud.asset.asset_crud.get_multi_with_search_async") as mock_get:
             mock_get.return_value = (mock_assets, 100)
 
             # Act
@@ -369,7 +369,7 @@ class TestDataValidation:
         Then: 返回包含应用的筛选条件
         """
         # Arrange
-        with patch("src.crud.asset.asset_crud.get_multi_with_search") as mock_get:
+        with patch("src.crud.asset.asset_crud.get_multi_with_search_async") as mock_get:
             mock_get.return_value = (mock_assets, 100)
 
             # Act

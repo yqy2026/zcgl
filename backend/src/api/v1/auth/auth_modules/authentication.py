@@ -22,7 +22,6 @@ from .....core.exception_handler import (
 
 logger = logging.getLogger(__name__)
 
-from .....crud.auth import AuditLogCRUD, UserCRUD
 from .....database import get_async_db
 from .....exceptions import BusinessLogicError
 from .....middleware.auth import get_current_active_user
@@ -33,15 +32,39 @@ from .....schemas.auth import (
     CookieRefreshResponse,
     LoginRequest,
     PermissionSchema,
-    RefreshTokenRequest,
     UserResponse,
 )
 from .....security.cookie_manager import cookie_manager
+from .....services.core.audit_service import AuditService
 from .....services.core.authentication_service import AsyncAuthenticationService
 from .....services.core.session_service import AsyncSessionService
+from .....services.core.user_management_service import AsyncUserManagementService
 from .....services.permission.rbac_service import RBACService
 
 router = APIRouter(tags=["认证管理"])
+
+
+class UserCRUD:
+    """兼容适配：将历史 UserCRUD 调用委托至用户服务层。"""
+
+    async def get_by_username_async(self, db: AsyncSession, username: str) -> User | None:
+        user_service = AsyncUserManagementService(db)
+        return await user_service.get_user_by_username(username)
+
+
+class AuditLogCRUD:
+    """兼容适配：将历史 AuditLogCRUD 调用委托至审计服务层。"""
+
+    async def create_async(self, db: AsyncSession, **kwargs: Any) -> Any:
+        audit_service = AuditService(db)
+        payload = dict(kwargs)
+        user_id = str(payload.pop("user_id", "unknown"))
+        action = str(payload.pop("action", "unknown_action"))
+        return await audit_service.create_audit_log(
+            user_id=user_id,
+            action=action,
+            **payload,
+        )
 
 
 @router.post("/login", response_model=CookieAuthResponse, summary="用户登录")
@@ -61,8 +84,8 @@ async def login(
 
     auth_service = AsyncAuthenticationService(db)
     session_service = AsyncSessionService(db)
-    audit_crud = AuditLogCRUD()
-    user_crud = UserCRUD()
+    audit_logger = AuditLogCRUD()
+    user_repository = UserCRUD()
 
     client_ip = get_client_ip(request)
     user_agent = request.headers.get("user-agent", "unknown")
@@ -72,11 +95,11 @@ async def login(
             credentials.username, credentials.password
         )
         if not user:
-            existing_user = await user_crud.get_by_username_async(
+            existing_user = await user_repository.get_by_username_async(
                 db, credentials.username
             )
             if existing_user:
-                await audit_crud.create_async(
+                await audit_logger.create_async(
                     db=db,
                     user_id=str(existing_user.id) if existing_user else "unknown",
                     action="user_login_failed",
@@ -90,6 +113,7 @@ async def login(
         device_info: dict[str, str] = {
             "user_agent": user_agent,
             "ip_address": client_ip,
+            "device_id": str(user.id),
         }
         tokens = auth_service.create_tokens(user, device_info)
 
@@ -100,12 +124,13 @@ async def login(
         await session_service.create_user_session(
             user_id=str(user.id),
             refresh_token=tokens.refresh_token,
+            device_info=device_info,
             ip_address=client_ip,
             user_agent=user_agent,
             session_id=getattr(tokens, "session_id", None),
         )
 
-        await audit_crud.create_async(
+        await audit_logger.create_async(
             db=db,
             user_id=str(user.id),
             action="user_login",
@@ -213,7 +238,7 @@ async def logout(
     """
 
     session_service = AsyncSessionService(db)
-    audit_crud = AuditLogCRUD()
+    audit_logger = AuditLogCRUD()
 
     client_ip = get_client_ip(request)
     user_agent = request.headers.get("user-agent", "unknown")
@@ -249,7 +274,7 @@ async def logout(
 
     revoked_count = await session_service.revoke_all_user_sessions(current_user.id)
 
-    await audit_crud.create_async(
+    await audit_logger.create_async(
         db=db,
         user_id=current_user.id,
         action="user_logout",
@@ -269,7 +294,6 @@ async def logout(
 async def refresh_token(
     request: Request,
     response: Response,
-    refresh_data: RefreshTokenRequest | None = None,
     db: AsyncSession = Depends(get_async_db),
 ) -> CookieRefreshResponse:
     """
@@ -294,8 +318,6 @@ async def refresh_token(
     refresh_token = cookie_manager.get_token_from_cookie(
         cookie_header, cookie_name=cookie_manager.refresh_cookie_name
     )
-    if not refresh_token and refresh_data:
-        refresh_token = refresh_data.refresh_token
     if not refresh_token:
         raise bad_request("刷新令牌缺失")
 
@@ -303,8 +325,8 @@ async def refresh_token(
         refresh_token, client_ip=client_ip, user_agent=user_agent
     )
     if not session:
-        audit_crud = AuditLogCRUD()
-        await audit_crud.create_async(
+        audit_logger = AuditLogCRUD()
+        await audit_logger.create_async(
             db=db,
             user_id="unknown",
             action="token_refresh_failed",
@@ -335,10 +357,8 @@ async def refresh_token(
     cookie_manager.set_refresh_cookie(response, tokens.refresh_token)
     cookie_manager.set_csrf_cookie(response, cookie_manager.create_csrf_token())
 
-    await db.commit()
-
-    audit_crud = AuditLogCRUD()
-    await audit_crud.create_async(
+    audit_logger = AuditLogCRUD()
+    await audit_logger.create_async(
         db=db,
         user_id=str(getattr(user, "id", "unknown")),
         action="token_refresh_success",

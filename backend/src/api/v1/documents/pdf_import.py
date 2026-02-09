@@ -11,6 +11,7 @@ PDF导入API - 主路由
 
 import importlib
 import logging
+from importlib.util import find_spec
 from types import ModuleType
 
 from fastapi import APIRouter
@@ -20,11 +21,19 @@ from . import pdf_system, pdf_upload
 logger = logging.getLogger(__name__)
 
 try:
-    pdf_sessions_module: ModuleType | None = importlib.import_module(
-        ".pdf_sessions", package=__package__
+    pdf_sessions_module: ModuleType | None
+    pdf_sessions_spec = (
+        find_spec(f"{__package__}.pdf_sessions") if __package__ is not None else None
     )
-except ModuleNotFoundError as exc:
-    logger.warning("PDF会话模块不可用: %s", exc)
+    if pdf_sessions_spec is not None:
+        pdf_sessions_module = importlib.import_module(
+            ".pdf_sessions", package=__package__
+        )
+    else:
+        logger.debug("PDF会话模块未启用: %s.pdf_sessions", __package__)
+        pdf_sessions_module = None
+except Exception as exc:
+    logger.warning("PDF会话模块加载失败: %s", exc)
     pdf_sessions_module = None
 
 # 创建主路由器
@@ -36,4 +45,5 @@ if pdf_sessions_module is not None:
     router.include_router(pdf_sessions_module.router, tags=["PDF会话管理"])
 router.include_router(pdf_system.router, tags=["PDF系统信息"])
 
-logger.info("PDF导入API主路由初始化完成，包含3个子模块")
+module_count = 2 + (1 if pdf_sessions_module is not None else 0)
+logger.info("PDF导入API主路由初始化完成，包含%s个子模块", module_count)

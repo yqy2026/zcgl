@@ -42,3 +42,24 @@ try:
     __all__.append("ExcelPreviewService")
 except Exception:  # nosec - B110: Intentional graceful degradation
     _log_import_error("excel.excel_preview_service.ExcelPreviewService")
+
+try:
+    from .excel_config_service import ExcelConfigService as ExcelConfigService
+
+    __all__.append("ExcelConfigService")
+except Exception:  # nosec - B110: Intentional graceful degradation
+    _log_import_error("excel.excel_config_service.ExcelConfigService")
+
+try:
+    from .excel_status_service import ExcelStatusService as ExcelStatusService
+
+    __all__.append("ExcelStatusService")
+except Exception:  # nosec - B110: Intentional graceful degradation
+    _log_import_error("excel.excel_status_service.ExcelStatusService")
+
+try:
+    from .excel_task_service import ExcelTaskService as ExcelTaskService
+
+    __all__.append("ExcelTaskService")
+except Exception:  # nosec - B110: Intentional graceful degradation
+    _log_import_error("excel.excel_task_service.ExcelTaskService")

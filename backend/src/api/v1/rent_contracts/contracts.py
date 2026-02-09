@@ -16,9 +16,6 @@ from ....core.exception_handler import (
     not_found,
 )
 from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
-from ....crud.asset import asset_crud
-from ....crud.ownership import ownership
-from ....crud.rent_contract import rent_contract
 from ....database import get_async_db
 from ....middleware.auth import can_edit_contract, get_current_active_user
 from ....models.auth import User
@@ -46,10 +43,9 @@ async def create_contract(
     try:
 
         if contract_in.asset_ids:
-            assets = await asset_crud.get_multi_by_ids_async(
+            assets = await rent_contract_service.get_assets_by_ids_async(
                 db=db,
-                ids=contract_in.asset_ids,
-                include_relations=False,
+                asset_ids=contract_in.asset_ids,
             )
             existing_asset_ids = {
                 str(asset.id) for asset in assets if getattr(asset, "id", None) is not None
@@ -65,7 +61,10 @@ async def create_contract(
                     resource_id=missing_asset_id,
                 )
 
-        ownership_obj = await ownership.get(db, id=contract_in.ownership_id)
+        ownership_obj = await rent_contract_service.get_ownership_by_id_async(
+            db=db,
+            ownership_id=contract_in.ownership_id,
+        )
         if not ownership_obj:
             raise not_found(
                 "关联的权属方不存在",
@@ -96,7 +95,10 @@ async def get_contract(
     """
     获取租金合同详情，包含租金条款信息
     """
-    contract = await rent_contract.get_with_details_async(db, id=contract_id)
+    contract = await rent_contract_service.get_contract_with_details_async(
+        db=db,
+        contract_id=contract_id,
+    )
     if not contract:
         raise not_found("合同不存在", resource_type="contract", resource_id=contract_id)
     return contract
@@ -124,7 +126,7 @@ async def get_contracts(
     获取租金合同列表，支持分页和筛选
     """
     skip = (page - 1) * page_size
-    contracts, total = await rent_contract.get_multi_with_filters_async(
+    contracts, total = await rent_contract_service.get_contract_page_async(
         db=db,
         skip=skip,
         limit=page_size,
@@ -172,7 +174,10 @@ async def update_contract(
 
     try:
 
-        contract = await rent_contract.get_with_details_async(db, id=contract_id)
+        contract = await rent_contract_service.get_contract_with_details_async(
+            db=db,
+            contract_id=contract_id,
+        )
         if not contract:
             raise not_found(
                 "合同不存在", resource_type="contract", resource_id=contract_id
@@ -203,15 +208,19 @@ async def delete_contract(
     权限要求: 仅管理员可以删除合同
     """
     rbac_service = RBACService(db)
-    if not await rbac_service.check_user_permission(
-        current_user.id, "system", "admin"
-    ):
+    if not await rbac_service.is_admin(current_user.id):
         raise forbidden("权限不足: 只有管理员可以删除合同")
 
-    contract = await rent_contract.get_with_details_async(db, id=contract_id)
+    contract = await rent_contract_service.get_contract_with_details_async(
+        db=db,
+        contract_id=contract_id,
+    )
     if not contract:
         raise not_found("合同不存在", resource_type="contract", resource_id=contract_id)
-    await rent_contract.remove(db, id=contract_id)
+    await rent_contract_service.delete_contract_by_id_async(
+        db=db,
+        contract_id=contract_id,
+    )
     return {"message": "合同删除成功"}
 
 
@@ -228,7 +237,7 @@ async def get_asset_contracts(
     """
     获取指定资产的所有合同
     """
-    contracts, _ = await rent_contract.get_multi_with_filters_async(
+    contracts = await rent_contract_service.get_asset_contracts_async(
         db=db,
         asset_id=asset_id,
         limit=1000,

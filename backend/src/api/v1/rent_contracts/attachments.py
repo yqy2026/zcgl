@@ -12,8 +12,6 @@ from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ....core.exception_handler import BaseBusinessError, internal_error, not_found
-from ....crud.rent_contract import rent_contract
-from ....crud.rent_contract_attachment import rent_contract_attachment_crud
 from ....database import get_async_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
@@ -76,26 +74,35 @@ async def get_contract_attachments(
     获取指定合同的所有附件
     """
 
-    contract = await rent_contract.get_async(db, id=contract_id)
-    if not contract:
-        raise not_found("合同不存在", resource_type="contract", resource_id=contract_id)
-    attachments = await rent_contract_attachment_crud.get_by_contract_async(
-        db, contract_id=contract_id
-    )
+    try:
+        contract = await rent_contract_service.get_contract_by_id_async(
+            db=db,
+            contract_id=contract_id,
+        )
+        if not contract:
+            raise not_found("合同不存在", resource_type="contract", resource_id=contract_id)
+        attachments = await rent_contract_service.get_contract_attachments_async(
+            db=db,
+            contract_id=contract_id,
+        )
 
-    return [
-        {
-            "id": a.id,
-            "file_name": a.file_name,
-            "file_size": a.file_size,
-            "file_type": a.file_type,
-            "mime_type": a.mime_type,
-            "description": a.description,
-            "uploader": a.uploader,
-            "uploaded_at": a.created_at.isoformat(),
-        }
-        for a in attachments
-    ]
+        return [
+            {
+                "id": a.id,
+                "file_name": a.file_name,
+                "file_size": a.file_size,
+                "file_type": a.file_type,
+                "mime_type": a.mime_type,
+                "description": a.description,
+                "uploader": a.uploader,
+                "uploaded_at": a.created_at.isoformat(),
+            }
+            for a in attachments
+        ]
+    except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
+        raise internal_error(f"获取合同附件列表失败: {str(e)}")
 
 
 @router.get(
@@ -111,24 +118,30 @@ async def download_contract_attachment(
     """
     下载指定的合同附件
     """
-
-    attachment = await rent_contract_attachment_crud.get_async(
-        db, attachment_id=attachment_id, contract_id=contract_id
-    )
-    if not attachment:
-        raise not_found(
-            "附件不存在", resource_type="attachment", resource_id=attachment_id
+    try:
+        attachment = await rent_contract_service.get_contract_attachment_async(
+            db=db,
+            attachment_id=attachment_id,
+            contract_id=contract_id,
         )
+        if not attachment:
+            raise not_found(
+                "附件不存在", resource_type="attachment", resource_id=attachment_id
+            )
 
-    file_path = Path(attachment.file_path)
-    if not file_path.exists():
-        raise not_found("文件不存在", resource_type="file", resource_id=str(file_path))
+        file_path = Path(attachment.file_path)
+        if not file_path.exists():
+            raise not_found("文件不存在", resource_type="file", resource_id=str(file_path))
 
-    return FileResponse(
-        path=str(file_path),
-        filename=attachment.file_name,
-        media_type=attachment.mime_type or "application/octet-stream",
-    )
+        return FileResponse(
+            path=str(file_path),
+            filename=attachment.file_name,
+            media_type=attachment.mime_type or "application/octet-stream",
+        )
+    except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
+        raise internal_error(f"下载合同附件失败: {str(e)}")
 
 
 @router.delete(
@@ -145,23 +158,30 @@ async def delete_contract_attachment(
     """
     删除指定的合同附件
     """
-
-    attachment = await rent_contract_attachment_crud.get_async(
-        db, attachment_id=attachment_id, contract_id=contract_id
-    )
-    if not attachment:
-        raise not_found(
-            "附件不存在", resource_type="attachment", resource_id=attachment_id
+    try:
+        attachment = await rent_contract_service.get_contract_attachment_async(
+            db=db,
+            attachment_id=attachment_id,
+            contract_id=contract_id,
         )
+        if not attachment:
+            raise not_found(
+                "附件不存在", resource_type="attachment", resource_id=attachment_id
+            )
 
-    file_path = Path(attachment.file_path)
-    if file_path.exists():
-        try:
-            file_path.unlink()
-        except Exception as e:
-            logger.warning(f"Failed to delete file {file_path}: {e}")
+        file_path = Path(attachment.file_path)
+        if file_path.exists():
+            try:
+                file_path.unlink()
+            except Exception as e:
+                logger.warning(f"Failed to delete file {file_path}: {e}")
 
-    await db.delete(attachment)
-    await db.commit()
-
-    return {"message": "附件已删除"}
+        await rent_contract_service.delete_contract_attachment_async(
+            db=db,
+            attachment=attachment,
+        )
+        return {"message": "附件已删除"}
+    except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
+        raise internal_error(f"删除合同附件失败: {str(e)}")

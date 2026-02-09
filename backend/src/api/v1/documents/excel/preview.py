@@ -33,6 +33,7 @@ async def preview_excel_advanced(
     file: UploadFile = File(...),
     request: ExcelPreviewRequest = Body(...),
     db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
 ) -> ExcelPreviewResponse:
     """
     高级Excel文件预览，支持字段映射检测

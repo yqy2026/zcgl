@@ -23,13 +23,17 @@ from fastapi import APIRouter, Depends
 
 from ....core.exception_handler import internal_error
 from ....core.performance import PerformanceMonitor
+from ....middleware.auth import get_current_active_user
 from ....schemas.pdf_import import SystemCapabilities, SystemInfoResponse
 from ....security.route_guards import debug_only, require_localhost
 from ..dependencies import get_performance_monitor
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["PDF系统信息"])
+router = APIRouter(
+    tags=["PDF系统信息"],
+    dependencies=[Depends(get_current_active_user)],
+)
 
 
 @router.get("/info", response_model=SystemInfoResponse)
@@ -64,11 +68,8 @@ def get_system_info() -> SystemInfoResponse:
             },
         )
     except Exception as e:
-        logger.error(f"获取系统信息失败: {str(e)}")
-        import traceback
-
-        traceback.print_exc()
-        raise internal_error(f"获取系统信息失败: {str(e)}")
+        logger.exception("获取系统信息失败: %s", str(e))
+        raise internal_error("获取系统信息失败")
 
 
 @router.get("/test-system", dependencies=[Depends(require_localhost)])
@@ -99,10 +100,10 @@ async def test_system_detailed() -> dict[str, Any]:
         }
 
     except Exception as e:
-        logger.error(f"系统测试失败: {str(e)}")
+        logger.exception("系统测试失败: %s", str(e))
         return {
             "success": False,
-            "message": f"系统测试失败: {str(e)}",
+            "message": "系统测试失败",
             "system_ready": False,
         }
 
@@ -134,10 +135,11 @@ async def health_check(
             "timestamp": datetime.now().isoformat(),
         }
     except Exception as e:
+        logger.exception("PDF系统健康检查失败: %s", str(e))
         return {
             "status": "degraded",
             "components": {},
-            "error": str(e),
+            "error": "系统健康检查失败",
             "timestamp": datetime.now().isoformat(),
         }
 

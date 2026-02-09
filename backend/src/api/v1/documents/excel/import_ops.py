@@ -5,17 +5,17 @@ Excel导入操作模块 - 同步与异步导入
 import logging
 import os
 import tempfile
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, File, Query, UploadFile
+from fastapi.params import Depends as DependsParam
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config.excel_config import STANDARD_SHEET_NAME
 from src.constants.file_size_constants import DEFAULT_MAX_EXCEL_FILE_SIZE
 from src.constants.message_constants import ErrorIDs
 from src.core.exception_handler import BusinessValidationError
-from src.crud.task import task_crud
 from src.database import async_session_scope, get_async_db
 from src.enums.task import TaskStatus, TaskType
 from src.middleware.auth import get_current_active_user
@@ -25,10 +25,26 @@ from src.schemas.task import TaskCreate
 from src.security.logging_security import security_auditor
 from src.security.security import security_middleware
 from src.services.excel import ExcelImportService
+from src.services.excel.excel_task_service import (
+    ExcelTaskService,
+    get_excel_task_service,
+)
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def _utcnow_naive() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
+def _resolve_task_service(
+    task_service: ExcelTaskService | Any,
+) -> ExcelTaskService | Any:
+    if isinstance(task_service, DependsParam):
+        return get_excel_task_service()
+    return task_service
 
 
 @router.post("/import", summary="导入Excel数据（同步）")
@@ -100,6 +116,7 @@ async def import_excel_async(
     request: ExcelImportRequest = Body(...),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    task_service: ExcelTaskService = Depends(get_excel_task_service),
 ) -> dict[str, Any]:
     """
     异步导入Excel文件，返回任务ID用于跟踪进度
@@ -143,7 +160,12 @@ async def import_excel_async(
         config={"config_id": request.config_id} if request.config_id else {},
     )
 
-    task = await task_crud.create_async(db=db, obj_in=task_in, user_id=current_user.id)
+    resolved_task_service = _resolve_task_service(task_service)
+    task = await resolved_task_service.create_task(
+        db=db,
+        task_in=task_in,
+        user_id=current_user.id,
+    )
 
     with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp_file:
         content = await file.read()
@@ -155,6 +177,7 @@ async def import_excel_async(
         task_id=str(task.id),
         file_path=tmp_file_path,
         request=request,
+        task_service=resolved_task_service,
     )
 
     return {
@@ -170,6 +193,7 @@ async def _process_excel_import_async(
     file_path: str,
     request: ExcelImportRequest,
     db_session: AsyncSession | None = None,
+    task_service: ExcelTaskService | None = None,
 ) -> None:
     """
     后台处理Excel导入任务
@@ -181,17 +205,19 @@ async def _process_excel_import_async(
                 file_path=file_path,
                 request=request,
                 db_session=session,
+                task_service=task_service,
             )
         return
+    resolved_task_service = task_service or get_excel_task_service()
     try:
-        task = await task_crud.get(db=db_session, id=task_id)
+        task = await resolved_task_service.get_task(db=db_session, task_id=task_id)
         if not task:
             return
-        started_at = datetime.utcnow()
-        await task_crud.update(
+        started_at = _utcnow_naive()
+        await resolved_task_service.update_task(
             db=db_session,
-            db_obj=task,
-            obj_in={
+            task=task,
+            task_data={
                 "status": TaskStatus.RUNNING,
                 "progress": 0,
                 "processed_items": 0,
@@ -213,11 +239,11 @@ async def _process_excel_import_async(
             batch_size=request.batch_size,
         )
 
-        completed_at = datetime.utcnow()
-        await task_crud.update(
+        completed_at = _utcnow_naive()
+        await resolved_task_service.update_task(
             db=db_session,
-            db_obj=task,
-            obj_in={
+            task=task,
+            task_data={
                 "status": TaskStatus.COMPLETED,
                 "progress": 100,
                 "processed_items": 0,
@@ -249,25 +275,12 @@ async def _process_excel_import_async(
 
         try:
             if db_session is not None:
-                if hasattr(db_session, "rollback"):
-                    await db_session.rollback()
-                failed_at = datetime.utcnow()
-                task = await task_crud.get(db=db_session, id=task_id)
-                if task:
-                    await task_crud.update(
-                        db=db_session,
-                        db_obj=task,
-                        obj_in={
-                            "status": TaskStatus.FAILED,
-                            "error_message": str(e),
-                            "progress": 0,
-                            "processed_items": 0,
-                            "failed_items": 0,
-                            "completed_at": failed_at,
-                            "result_data": None,
-                        },
-                    )
-        except Exception as commit_error:
+                await resolved_task_service.mark_task_failed(
+                    db=db_session,
+                    task_id=task_id,
+                    error_message=str(e),
+                )
+        except Exception as mark_failed_error:
             logger.error(
                 f"无法更新任务失败状态: task_id={task_id}",
                 exc_info=True,
@@ -275,7 +288,7 @@ async def _process_excel_import_async(
                     "error_id": ErrorIDs.Task.STATUS_UPDATE_FAILED,
                     "task_id": task_id,
                     "original_error": str(e),
-                    "commit_error": str(commit_error),
+                    "commit_error": str(mark_failed_error),
                 },
             )
     finally:

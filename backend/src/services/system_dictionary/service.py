@@ -11,6 +11,31 @@ from ...schemas.asset import SystemDictionaryCreate, SystemDictionaryUpdate
 class SystemDictionaryService:
     """系统字典服务层"""
 
+    async def get_dictionaries_async(
+        self,
+        db: AsyncSession,
+        *,
+        dict_type: str | None = None,
+        is_active: bool | None = None,
+    ) -> list[SystemDictionary]:
+        filters: dict[str, Any] = {}
+        if dict_type is not None:
+            filters["dict_type"] = dict_type
+        if is_active is not None:
+            filters["is_active"] = is_active
+
+        return await system_dictionary_crud.get_multi_with_filters_async(
+            db=db, filters=filters
+        )
+
+    async def get_dictionary_async(
+        self, db: AsyncSession, *, id: str
+    ) -> SystemDictionary | None:
+        return await system_dictionary_crud.get(db=db, id=id)
+
+    async def get_types_async(self, db: AsyncSession) -> list[str]:
+        return await system_dictionary_crud.get_types_async(db=db)
+
     async def create_dictionary_async(
         self, db: AsyncSession, *, obj_in: SystemDictionaryCreate
     ) -> SystemDictionary:
@@ -108,3 +133,7 @@ class SystemDictionaryService:
 
 
 system_dictionary_service = SystemDictionaryService()
+
+
+def get_system_dictionary_service() -> SystemDictionaryService:
+    return system_dictionary_service

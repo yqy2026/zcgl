@@ -17,7 +17,6 @@ from ....core.exception_handler import (
     validation_error,
 )
 from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
-from ....crud.rent_contract import rent_ledger
 from ....database import get_async_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
@@ -135,7 +134,7 @@ async def get_rent_ledger(
     获取租金台账列表，支持分页和筛选
     """
     skip = (page - 1) * page_size
-    ledgers, total = await rent_ledger.get_multi_with_filters_async(
+    ledgers, total = await rent_contract_service.get_rent_ledger_page_async(
         db=db,
         skip=skip,
         limit=page_size,
@@ -170,7 +169,10 @@ async def get_rent_ledger_detail(
     """
     获取租金台账详情
     """
-    ledger = await rent_ledger.get(db, id=ledger_id)
+    ledger = await rent_contract_service.get_rent_ledger_by_id_async(
+        db=db,
+        ledger_id=ledger_id,
+    )
     if not ledger:
         raise not_found("台账记录不存在", resource_type="ledger", resource_id=ledger_id)
     return ledger
@@ -243,7 +245,7 @@ async def get_contract_ledger(
     """
     获取指定合同的所有台账记录
     """
-    ledgers, _ = await rent_ledger.get_multi_with_filters_async(
+    ledgers = await rent_contract_service.get_contract_ledger_async(
         db=db,
         contract_id=contract_id,
         limit=1000,

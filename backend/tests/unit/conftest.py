@@ -9,6 +9,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
 
 TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
@@ -64,7 +65,26 @@ def engine(test_database_url):
             allow_module_level=True,
         )
 
-    engine = create_engine(test_database_url, pool_pre_ping=True)
+    connect_args: dict[str, int] = {}
+    if test_database_url.startswith("postgresql"):
+        connect_args["connect_timeout"] = 3
+
+    engine = create_engine(
+        test_database_url,
+        pool_pre_ping=True,
+        connect_args=connect_args,
+    )
+
+    try:
+        with engine.connect():
+            pass
+    except OperationalError as exc:
+        engine.dispose()
+        pytest.skip(
+            f"TEST_DATABASE_URL unreachable for unit db fixtures: {exc}",
+            allow_module_level=True,
+        )
+
     yield engine
     engine.dispose()
 
@@ -86,10 +106,22 @@ def db_tables(engine):
 
         alembic_cfg = Config("alembic.ini")
         alembic_cfg.set_main_option("sqlalchemy.url", TEST_DATABASE_URL)
-        command.upgrade(alembic_cfg, "head")
+        try:
+            command.upgrade(alembic_cfg, "head")
+        except OperationalError as exc:
+            pytest.skip(
+                f"TEST_DATABASE_URL unreachable during Alembic upgrade: {exc}",
+                allow_module_level=True,
+            )
 
     importlib.import_module("src.models")
-    Base.metadata.create_all(bind=engine)
+    try:
+        Base.metadata.create_all(bind=engine)
+    except OperationalError as exc:
+        pytest.skip(
+            f"TEST_DATABASE_URL unreachable during table setup: {exc}",
+            allow_module_level=True,
+        )
 
     yield
 

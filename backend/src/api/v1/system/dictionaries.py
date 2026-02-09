@@ -30,7 +30,11 @@ from ..utils import handle_api_errors
 # 创建logger
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/system/dictionaries", tags=["统一字典管理"])
+router = APIRouter(
+    prefix="/system/dictionaries",
+    tags=["统一字典管理"],
+    dependencies=[Depends(get_current_active_user)],
+)
 
 
 @router.get("/{dict_type}/options", response_model=list[DictionaryOptionResponse])

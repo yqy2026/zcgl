@@ -1,8 +1,8 @@
 """
-RBAC CRUD 操作单元测试
+RBAC CRUD 操作单元测试（异步接口）。
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -16,21 +16,35 @@ from src.crud.rbac import (
 )
 from src.models.rbac import Permission, Role, UserRoleAssignment
 
+pytestmark = pytest.mark.asyncio
 
-# ============================================================================
-# CRUDRole 测试
-# ============================================================================
+
+def _mock_execute_result(
+    *,
+    first_value: object | None = None,
+    all_values: list[object] | None = None,
+    scalar_value: object | None = None,
+    one_value: object | None = None,
+) -> MagicMock:
+    result = MagicMock()
+    scalars_result = MagicMock()
+    scalars_result.first.return_value = first_value
+    scalars_result.all.return_value = [] if all_values is None else all_values
+    result.scalars.return_value = scalars_result
+    result.scalar.return_value = scalar_value
+    result.all.return_value = [] if all_values is None else all_values
+    if one_value is not None:
+        result.one.return_value = one_value
+    return result
+
+
 class TestCRUDRole:
-    """测试角色 CRUD"""
-
     @pytest.fixture
-    def crud(self):
-        """创建角色 CRUD 实例"""
+    def crud(self) -> CRUDRole:
         return CRUDRole(Role)
 
     @pytest.fixture
     def mock_role(self):
-        """模拟角色对象"""
         role = MagicMock(spec=Role)
         role.id = "role_123"
         role.name = "admin"
@@ -38,97 +52,97 @@ class TestCRUDRole:
         role.category = "system"
         role.is_active = True
         role.level = 1
+        role.is_system_role = True
         return role
 
-    def test_create_filters_permission_ids(self, crud, mock_db):
-        """测试创建时过滤 permission_ids 字段"""
+    async def test_create_filters_permission_ids(self, crud: CRUDRole, mock_db: MagicMock):
         role_data = {
             "name": "test_role",
             "display_name": "测试角色",
-            "permission_ids": ["perm_1", "perm_2"],  # 应该被过滤
+            "permission_ids": ["perm_1", "perm_2"],
         }
 
-        with patch.object(crud, "query_builder"):
-            with patch("src.crud.base.CRUDBase.create") as mock_create:
-                mock_create.return_value = MagicMock(spec=Role)
-                crud.create(mock_db, obj_in=role_data)
+        with patch("src.crud.base.CRUDBase.create", new=AsyncMock()) as mock_create:
+            mock_create.return_value = MagicMock(spec=Role)
+            await crud.create(mock_db, obj_in=role_data)
 
-                # 验证 permission_ids 被移除
-                call_args = mock_create.call_args
-                assert "permission_ids" not in call_args.kwargs.get("obj_in", {})
+        mock_create.assert_awaited_once()
+        assert "permission_ids" not in mock_create.call_args.kwargs["obj_in"]
 
-    def test_get_by_name_success(self, crud, mock_db, mock_role):
-        """测试根据名称获取角色"""
-        mock_db.query.return_value.filter.return_value.first.return_value = mock_role
+    async def test_get_by_name_success(
+        self, crud: CRUDRole, mock_db: MagicMock, mock_role
+    ):
+        mock_db.execute = AsyncMock(
+            return_value=_mock_execute_result(first_value=mock_role)
+        )
 
-        result = crud.get_by_name(mock_db, "admin")
+        result = await crud.get_by_name(mock_db, "admin")
 
         assert result == mock_role
-        mock_db.query.assert_called_once_with(Role)
+        mock_db.execute.assert_awaited_once()
 
-    def test_get_by_name_not_found(self, crud, mock_db):
-        """测试角色名称不存在"""
-        mock_db.query.return_value.filter.return_value.first.return_value = None
+    async def test_get_by_name_not_found(self, crud: CRUDRole, mock_db: MagicMock):
+        mock_db.execute = AsyncMock(return_value=_mock_execute_result(first_value=None))
 
-        result = crud.get_by_name(mock_db, "nonexistent")
+        result = await crud.get_by_name(mock_db, "missing")
 
         assert result is None
 
-    def test_get_multi_with_filters(self, crud, mock_db, mock_role):
-        """测试带筛选条件的角色列表"""
-        mock_execute = MagicMock()
-        mock_execute.scalars.return_value.all.return_value = [mock_role]
-        mock_db.execute.return_value = mock_execute
+    async def test_get_multi_with_filters(
+        self, crud: CRUDRole, mock_db: MagicMock, mock_role
+    ):
+        mock_roles_result = _mock_execute_result(all_values=[mock_role])
+        mock_count_result = _mock_execute_result(scalar_value=1)
+        mock_db.execute = AsyncMock(side_effect=[mock_roles_result, mock_count_result])
 
-        # Mock count query
-        mock_count = MagicMock()
-        mock_count.scalar.return_value = 1
-        mock_db.execute.side_effect = [mock_execute, mock_count]
-
-        with patch.object(crud.query_builder, "build_query") as mock_build:
-            with patch.object(
-                crud.query_builder, "build_count_query"
-            ) as mock_count_build:
-                mock_build.return_value = MagicMock()
-                mock_count_build.return_value = MagicMock()
-
-                roles, total = crud.get_multi_with_filters(
-                    mock_db,
-                    category="system",
-                    is_active=True,
-                    search="admin",
-                )
+        with (
+            patch.object(crud.query_builder, "build_query", return_value=MagicMock()),
+            patch.object(
+                crud.query_builder,
+                "build_count_query",
+                return_value=MagicMock(),
+            ),
+        ):
+            roles, total = await crud.get_multi_with_filters(
+                mock_db,
+                category="system",
+                is_active=True,
+                search="admin",
+            )
 
         assert len(roles) == 1
         assert total == 1
+        assert mock_db.execute.await_count == 2
 
-    def test_count_by_category(self, crud, mock_db):
-        """测试按类别统计角色数"""
-        mock_db.query.return_value.group_by.return_value.all.return_value = [
-            ("system", 5),
-            ("custom", 10),
-        ]
+    async def test_count_by_category(self, crud: CRUDRole, mock_db: MagicMock):
+        mock_db.execute = AsyncMock(
+            return_value=_mock_execute_result(
+                all_values=[("system", 5), ("custom", 10), (None, 2)]
+            )
+        )
 
-        result = crud.count_by_category(mock_db)
+        result = await crud.count_by_category(mock_db)
 
         assert result["system"] == 5
         assert result["custom"] == 10
+        assert None not in result
+
+    async def test_count_by_flags(self, crud: CRUDRole, mock_db: MagicMock):
+        mock_row = MagicMock(total=20, active=16, system=5, custom=15)
+        mock_db.execute = AsyncMock(return_value=_mock_execute_result(one_value=mock_row))
+
+        result = await crud.count_by_flags(mock_db)
+
+        assert result == {"total": 20, "active": 16, "system": 5, "custom": 15}
 
 
-# ============================================================================
-# CRUDPermission 测试
-# ============================================================================
 class TestCRUDPermission:
-    """测试权限 CRUD"""
-
     @pytest.fixture
-    def crud(self):
-        """创建权限 CRUD 实例"""
+    def crud(self) -> CRUDPermission:
         return CRUDPermission(Permission)
 
     @pytest.fixture
     def mock_permission(self):
-        """模拟权限对象"""
         perm = MagicMock(spec=Permission)
         perm.id = "perm_123"
         perm.name = "asset:read"
@@ -138,16 +152,26 @@ class TestCRUDPermission:
         perm.is_system_permission = True
         return perm
 
-    def test_get_multi_with_filters(self, crud, mock_db, mock_permission):
-        """测试带筛选条件的权限列表"""
-        mock_execute = MagicMock()
-        mock_execute.scalars.return_value.all.return_value = [mock_permission]
-        mock_db.execute.return_value = mock_execute
+    async def test_get_by_name_success(
+        self, crud: CRUDPermission, mock_db: MagicMock, mock_permission
+    ):
+        mock_db.execute = AsyncMock(
+            return_value=_mock_execute_result(first_value=mock_permission)
+        )
 
-        with patch.object(crud.query_builder, "build_query") as mock_build:
-            mock_build.return_value = MagicMock()
+        result = await crud.get_by_name(mock_db, "asset:read")
 
-            permissions = crud.get_multi_with_filters(
+        assert result == mock_permission
+
+    async def test_get_multi_with_filters(
+        self, crud: CRUDPermission, mock_db: MagicMock, mock_permission
+    ):
+        mock_db.execute = AsyncMock(
+            return_value=_mock_execute_result(all_values=[mock_permission])
+        )
+
+        with patch.object(crud.query_builder, "build_query", return_value=MagicMock()):
+            permissions = await crud.get_multi_with_filters(
                 mock_db,
                 resource="asset",
                 action="read",
@@ -155,36 +179,30 @@ class TestCRUDPermission:
             )
 
         assert len(permissions) == 1
+        assert permissions[0] == mock_permission
 
-    def test_count_by_resource(self, crud, mock_db):
-        """测试按资源统计权限数"""
-        mock_db.query.return_value.group_by.return_value.all.return_value = [
-            ("asset", 10),
-            ("user", 5),
-            ("role", 3),
-        ]
+    async def test_count_by_resource(self, crud: CRUDPermission, mock_db: MagicMock):
+        mock_db.execute = AsyncMock(
+            return_value=_mock_execute_result(
+                all_values=[("asset", 10), ("user", 5), ("role", 3), (None, 2)]
+            )
+        )
 
-        result = crud.count_by_resource(mock_db)
+        result = await crud.count_by_resource(mock_db)
 
         assert result["asset"] == 10
         assert result["user"] == 5
         assert result["role"] == 3
+        assert None not in result
 
 
-# ============================================================================
-# CRUDUserRoleAssignment 测试
-# ============================================================================
 class TestCRUDUserRoleAssignment:
-    """测试用户角色分配 CRUD"""
-
     @pytest.fixture
-    def crud(self):
-        """创建用户角色分配 CRUD 实例"""
+    def crud(self) -> CRUDUserRoleAssignment:
         return CRUDUserRoleAssignment(UserRoleAssignment)
 
     @pytest.fixture
     def mock_assignment(self):
-        """模拟用户角色分配对象"""
         assignment = MagicMock(spec=UserRoleAssignment)
         assignment.id = "assignment_123"
         assignment.user_id = "user_123"
@@ -193,69 +211,70 @@ class TestCRUDUserRoleAssignment:
         assignment.expires_at = None
         return assignment
 
-    def test_get_by_user_and_role_success(self, crud, mock_db, mock_assignment):
-        """测试根据用户和角色获取分配"""
-        mock_db.query.return_value.filter.return_value.first.return_value = (
-            mock_assignment
+    async def test_get_by_user_and_role_success(
+        self,
+        crud: CRUDUserRoleAssignment,
+        mock_db: MagicMock,
+        mock_assignment,
+    ):
+        mock_db.execute = AsyncMock(
+            return_value=_mock_execute_result(first_value=mock_assignment)
         )
 
-        result = crud.get_by_user_and_role(mock_db, "user_123", "role_123")
+        result = await crud.get_by_user_and_role(mock_db, "user_123", "role_123")
 
         assert result == mock_assignment
 
-    def test_get_by_user_and_role_not_found(self, crud, mock_db):
-        """测试分配不存在"""
-        mock_db.query.return_value.filter.return_value.first.return_value = None
+    async def test_get_by_user_and_role_not_found(
+        self, crud: CRUDUserRoleAssignment, mock_db: MagicMock
+    ):
+        mock_db.execute = AsyncMock(return_value=_mock_execute_result(first_value=None))
 
-        result = crud.get_by_user_and_role(mock_db, "user_123", "role_456")
+        result = await crud.get_by_user_and_role(mock_db, "user_123", "role_456")
 
         assert result is None
 
-    def test_get_user_active_assignments(self, crud, mock_db, mock_assignment):
-        """测试获取用户活跃角色"""
-        mock_db.query.return_value.filter.return_value.all.return_value = [
-            mock_assignment
-        ]
+    async def test_get_user_active_assignments(
+        self,
+        crud: CRUDUserRoleAssignment,
+        mock_db: MagicMock,
+        mock_assignment,
+    ):
+        mock_db.execute = AsyncMock(
+            return_value=_mock_execute_result(all_values=[mock_assignment])
+        )
 
-        result = crud.get_user_active_assignments(mock_db, "user_123")
+        result = await crud.get_user_active_assignments(mock_db, "user_123")
 
         assert len(result) == 1
         assert result[0] == mock_assignment
 
-    def test_get_user_active_assignments_empty(self, crud, mock_db):
-        """测试用户没有活跃角色"""
-        mock_db.query.return_value.filter.return_value.all.return_value = []
+    async def test_get_user_active_assignments_empty(
+        self, crud: CRUDUserRoleAssignment, mock_db: MagicMock
+    ):
+        mock_db.execute = AsyncMock(return_value=_mock_execute_result(all_values=[]))
 
-        result = crud.get_user_active_assignments(mock_db, "user_without_roles")
+        result = await crud.get_user_active_assignments(mock_db, "user_without_roles")
 
         assert result == []
 
-    def test_count_by_role(self, crud, mock_db):
-        """测试统计角色的用户数"""
-        mock_db.query.return_value.filter.return_value.count.return_value = 10
+    async def test_count_by_role(self, crud: CRUDUserRoleAssignment, mock_db: MagicMock):
+        mock_db.execute = AsyncMock(return_value=_mock_execute_result(scalar_value=10))
 
-        result = crud.count_by_role(mock_db, "role_123")
+        result = await crud.count_by_role(mock_db, "role_123")
 
         assert result == 10
 
 
-# ============================================================================
-# 全局实例测试
-# ============================================================================
 class TestGlobalInstances:
-    """测试全局实例"""
-
     def test_role_crud_instance_exists(self):
-        """测试角色 CRUD 全局实例存在"""
         assert role_crud is not None
         assert isinstance(role_crud, CRUDRole)
 
     def test_permission_crud_instance_exists(self):
-        """测试权限 CRUD 全局实例存在"""
         assert permission_crud is not None
         assert isinstance(permission_crud, CRUDPermission)
 
     def test_user_role_assignment_crud_instance_exists(self):
-        """测试用户角色分配 CRUD 全局实例存在"""
         assert user_role_assignment_crud is not None
         assert isinstance(user_role_assignment_crud, CRUDUserRoleAssignment)

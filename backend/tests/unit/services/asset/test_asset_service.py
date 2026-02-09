@@ -284,6 +284,49 @@ class TestGetAsset:
                 await service.get_asset(TEST_ASSET_ID)
 
 
+class TestGetAssetHistoryRecords:
+    async def test_get_asset_history_records_success(self, service) -> None:
+        history_records = [MagicMock(id="history-1")]
+
+        with patch.object(service, "get_asset", new_callable=AsyncMock) as mock_get_asset:
+            with patch(
+                "src.services.asset.asset_service.history_crud.get_by_asset_id_async",
+                new_callable=AsyncMock,
+                return_value=history_records,
+            ) as mock_get_history:
+                result = await service.get_asset_history_records(TEST_ASSET_ID)
+
+        assert result == history_records
+        mock_get_asset.assert_awaited_once_with(TEST_ASSET_ID)
+        mock_get_history.assert_awaited_once_with(service.db, asset_id=TEST_ASSET_ID)
+
+
+class TestGetOwnershipEntityNames:
+    async def test_get_ownership_entity_names_success(self, service, mock_db) -> None:
+        execute_result = MagicMock()
+        scalars = MagicMock()
+        scalars.all.return_value = ["权属方A", "权属方B", None]
+        execute_result.scalars.return_value = scalars
+        mock_db.execute = AsyncMock(return_value=execute_result)
+
+        result = await service.get_ownership_entity_names()
+
+        assert result == ["权属方A", "权属方B"]
+        mock_db.execute.assert_awaited_once()
+
+    async def test_get_ownership_entity_names_empty(self, service, mock_db) -> None:
+        execute_result = MagicMock()
+        scalars = MagicMock()
+        scalars.all.return_value = []
+        execute_result.scalars.return_value = scalars
+        mock_db.execute = AsyncMock(return_value=execute_result)
+
+        result = await service.get_ownership_entity_names()
+
+        assert result == []
+        mock_db.execute.assert_awaited_once()
+
+
 # ============================================================================
 # AssetService.create_asset 测试
 # ============================================================================

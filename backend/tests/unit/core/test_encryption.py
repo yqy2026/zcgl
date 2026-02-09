@@ -128,6 +128,9 @@ class TestEncryptionKeyManager:
         monkeypatch.setattr(
             config.settings, "DATA_ENCRYPTION_KEY", "not-valid-base64:1"
         )
+        monkeypatch.setattr(
+            encryption_module.settings, "DATA_ENCRYPTION_KEY", "not-valid-base64:1"
+        )
 
         manager = EncryptionKeyManager()
 

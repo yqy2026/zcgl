@@ -2,6 +2,7 @@
 资产相关数据库模型
 """
 
+import logging
 import uuid
 from datetime import UTC, date, datetime
 from decimal import Decimal
@@ -36,6 +37,9 @@ if TYPE_CHECKING:
 def _utcnow_naive() -> datetime:
     """Return UTC now as naive datetime to match current DB column types."""
     return datetime.now(UTC).replace(tzinfo=None)
+
+
+logger = logging.getLogger(__name__)
 
 
 class Asset(Base):
@@ -205,20 +209,108 @@ class Asset(Base):
     project: Mapped["Project"] = relationship("Project", back_populates="assets")
     ownership: Mapped["Ownership"] = relationship("Ownership", back_populates="assets")
 
+    def _get_loaded_relationship_value(
+        self, relationship_name: str, *, projection_field: str
+    ) -> Any:
+        state = inspect(self)
+        relationship_value = state.attrs[relationship_name].loaded_value
+        if relationship_value is NO_VALUE:
+            if state.transient or state.pending:
+                return None
+
+            warning_flag = f"_warned_unloaded_relationship_{relationship_name}"
+            if not self.__dict__.get(warning_flag):
+                logger.warning(
+                    "Asset.%s accessed with unloaded relationship '%s' (asset_id=%s); "
+                    "returning None. Ensure query uses selectinload(Asset.%s).",
+                    projection_field,
+                    relationship_name,
+                    self.id,
+                    relationship_name,
+                )
+                self.__dict__[warning_flag] = True
+            return None
+
+        return relationship_value
+
     @property
     def ownership_entity(self) -> str | None:
-        ownership_value = inspect(self).attrs.ownership.loaded_value
-        if ownership_value is NO_VALUE:
+        ownership_value = self._get_loaded_relationship_value(
+            "ownership",
+            projection_field="ownership_entity",
+        )
+        if ownership_value is None:
             return None
         return getattr(ownership_value, "name", None)
+
+    def _pick_preferred_contract(
+        self,
+        contracts_value: list["RentContract"],
+        active_statuses: set[str],
+        *,
+        today: date,
+    ) -> "RentContract | None":
+        latest_active: RentContract | None = None
+        latest_active_rank: tuple[date, datetime] | None = None
+        latest_effective: RentContract | None = None
+        latest_effective_rank: tuple[date, datetime] | None = None
+
+        for contract in contracts_value:
+            if getattr(contract, "contract_status", None) not in active_statuses:
+                continue
+
+            rank = (
+                contract.start_date or date.min,
+                contract.created_at or datetime.min,
+            )
+
+            if latest_active_rank is None or rank > latest_active_rank:
+                latest_active = contract
+                latest_active_rank = rank
+
+            if (contract.start_date is None or contract.start_date <= today) and (
+                contract.end_date is None or contract.end_date >= today
+            ):
+                if latest_effective_rank is None or rank > latest_effective_rank:
+                    latest_effective = contract
+                    latest_effective_rank = rank
+
+        return latest_effective or latest_active
+
+    def _get_cached_active_contract(
+        self,
+        contracts_value: list["RentContract"],
+        active_statuses: set[str],
+        *,
+        today: date,
+    ) -> "RentContract | None":
+        cache_token = (id(contracts_value), len(contracts_value))
+        cached_token = self.__dict__.get("_active_contract_cache_token")
+        if (
+            cached_token == cache_token
+            and "_active_contract_cache_value" in self.__dict__
+        ):
+            return self.__dict__["_active_contract_cache_value"]
+
+        selected_contract = self._pick_preferred_contract(
+            contracts_value,
+            active_statuses,
+            today=today,
+        )
+        self.__dict__["_active_contract_cache_token"] = cache_token
+        self.__dict__["_active_contract_cache_value"] = selected_contract
+        return selected_contract
 
     @property
     def active_contract(self) -> "RentContract | None":
         """获取当前有效合同。"""
         from ..core.enums import ContractStatus
 
-        contracts_value = inspect(self).attrs.rent_contracts.loaded_value
-        if contracts_value is NO_VALUE:
+        contracts_value = self._get_loaded_relationship_value(
+            "rent_contracts",
+            projection_field="active_contract",
+        )
+        if contracts_value is None:
             return None
 
         today = date.today()
@@ -229,31 +321,11 @@ class Asset(Base):
             "执行中",
             "即将到期",
         }
-
-        active_contracts = [
-            contract
-            for contract in contracts_value
-            if getattr(contract, "contract_status", None) in active_statuses
-        ]
-        if not active_contracts:
-            return None
-
-        effective_contracts = [
-            contract
-            for contract in active_contracts
-            if (contract.start_date is None or contract.start_date <= today)
-            and (contract.end_date is None or contract.end_date >= today)
-        ]
-
-        candidates = effective_contracts if effective_contracts else active_contracts
-        return sorted(
-            candidates,
-            key=lambda contract: (
-                contract.start_date or date.min,
-                contract.created_at or datetime.min,
-            ),
-            reverse=True,
-        )[0]
+        return self._get_cached_active_contract(
+            contracts_value,
+            active_statuses,
+            today=today,
+        )
 
     @property
     def tenant_name(self) -> str | None:

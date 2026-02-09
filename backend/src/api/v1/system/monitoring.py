@@ -16,13 +16,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ....core.exception_handler import internal_error
 from ....database import get_async_db
-from ....middleware.auth import get_current_user
+from ....middleware.auth import get_current_active_user
 from ....models.auth import User
 from ....security.permissions import permission_required
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/monitoring", tags=["系统监控"])
+router = APIRouter(
+    prefix="/monitoring",
+    tags=["系统监控"],
+    dependencies=[Depends(get_current_active_user)],
+)
 
 
 # 路由性能指标模式
@@ -123,7 +127,10 @@ def get_system_health() -> HealthCheck:
 
 @router.get("/performance/dashboard", summary="获取性能监控仪表板数据")
 @permission_required("system", "monitoring")
-async def get_performance_dashboard() -> dict[str, Any]:
+async def get_performance_dashboard(
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_async_db),
+) -> dict[str, Any]:
     """
     获取性能监控仪表板数据
     """
@@ -312,7 +319,8 @@ def collect_application_metrics() -> ApplicationMetrics:
 @router.get("/system-metrics", response_model=SystemMetrics, summary="获取系统性能指标")
 @permission_required("system_monitoring", "read")
 async def get_system_metrics(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_async_db),
 ) -> SystemMetrics:
     """获取当前系统性能指标"""
     return collect_system_metrics()
@@ -325,7 +333,8 @@ async def get_system_metrics(
 )
 @permission_required("system_monitoring", "read")
 async def get_application_metrics(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_async_db),
 ) -> ApplicationMetrics:
     """获取应用性能指标"""
     return collect_application_metrics()
@@ -334,7 +343,8 @@ async def get_application_metrics(
 @router.get("/dashboard", summary="获取系统监控仪表板")
 @permission_required("system_monitoring", "read")
 async def get_system_monitoring_dashboard(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_async_db),
 ) -> dict[str, Any]:
     """获取系统监控仪表板综合数据"""
     try:
@@ -447,7 +457,8 @@ async def get_system_monitoring_dashboard(
 @router.post("/metrics/collect", summary="手动触发指标收集")
 @permission_required("system_monitoring", "write")
 async def trigger_metrics_collection(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_async_db),
 ) -> dict[str, Any]:
     """手动触发一次指标收集"""
     try:

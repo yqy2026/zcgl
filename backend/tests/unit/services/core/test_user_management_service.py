@@ -518,6 +518,67 @@ class TestUserUnlock:
         assert sample_user.is_locked is False
 
 
+class TestUserLock:
+    async def test_lock_user_success(self, user_management_service, mock_db, sample_user):
+        sample_user.is_locked = False
+        mock_db.execute = AsyncMock(return_value=_mock_execute_first(sample_user))
+
+        result = await user_management_service.lock_user("user_123")
+
+        assert result == sample_user
+        assert sample_user.is_locked is True
+        assert sample_user.updated_at is not None
+        mock_db.commit.assert_awaited_once()
+        mock_db.refresh.assert_awaited_once_with(sample_user)
+
+    async def test_lock_user_not_found(self, user_management_service, mock_db):
+        mock_db.execute = AsyncMock(return_value=_mock_execute_first(None))
+
+        result = await user_management_service.lock_user("nonexistent")
+
+        assert result is None
+        mock_db.commit.assert_not_awaited()
+        mock_db.refresh.assert_not_awaited()
+
+
+class TestAdminResetPassword:
+    async def test_admin_reset_password_success(
+        self,
+        user_management_service,
+        mock_db,
+        sample_user,
+        mock_password_service,
+    ):
+        mock_password_service.get_password_hash.return_value = "admin_reset_hash"
+        mock_db.execute = AsyncMock(return_value=_mock_execute_first(sample_user))
+
+        result = await user_management_service.admin_reset_password(
+            user_id="user_123",
+            new_password="NewSecurePass123!",
+        )
+
+        assert result == sample_user
+        assert sample_user.password_hash == "admin_reset_hash"
+        assert sample_user.updated_at is not None
+        mock_password_service.get_password_hash.assert_called_once_with(
+            "NewSecurePass123!"
+        )
+        mock_db.commit.assert_awaited_once()
+        mock_db.refresh.assert_awaited_once_with(sample_user)
+
+    async def test_admin_reset_password_not_found(self, user_management_service, mock_db):
+        mock_db.execute = AsyncMock(return_value=_mock_execute_first(None))
+
+        result = await user_management_service.admin_reset_password(
+            user_id="nonexistent",
+            new_password="NewSecurePass123!",
+        )
+
+        assert result is None
+        mock_db.commit.assert_not_awaited()
+        mock_db.refresh.assert_not_awaited()
+
+
 # ===================== Password Change Tests =====================
 
 

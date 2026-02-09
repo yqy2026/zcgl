@@ -2,8 +2,9 @@
 Unit tests for organization permission middleware.
 """
 
+import asyncio
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -31,15 +32,20 @@ def test_require_organization_access_denies_without_permission():
             "src.middleware.organization_permission.SecurityEventLogger"
         ) as mock_logger,
     ):
-        mock_service.return_value.check_organization_access.return_value = False
-        mock_logger.return_value.should_alert.return_value = False
+        mock_service.return_value.check_organization_access = AsyncMock(
+            return_value=False
+        )
+        mock_logger.return_value.log_permission_denied = AsyncMock()
+        mock_logger.return_value.should_alert = AsyncMock(return_value=False)
 
         with pytest.raises(PermissionDeniedError) as exc_info:
-            dependency(
-                organization_id="org-2",
-                current_user=current_user,
-                db=db,
-                request=request,
+            asyncio.run(
+                dependency(
+                    organization_id="org-2",
+                    current_user=current_user,
+                    db=db,
+                    request=request,
+                )
             )
 
     assert exc_info.value.status_code == 403
@@ -65,13 +71,17 @@ def test_require_organization_access_allows_with_permission():
             "src.middleware.organization_permission.SecurityEventLogger"
         ) as mock_logger,
     ):
-        mock_service.return_value.check_organization_access.return_value = True
+        mock_service.return_value.check_organization_access = AsyncMock(
+            return_value=True
+        )
 
-        result = dependency(
-            organization_id="org-1",
-            current_user=current_user,
-            db=db,
-            request=request,
+        result = asyncio.run(
+            dependency(
+                organization_id="org-1",
+                current_user=current_user,
+                db=db,
+                request=request,
+            )
         )
 
     assert result == "org-1"

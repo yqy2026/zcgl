@@ -37,7 +37,17 @@ import pytest
 
 from src.core.exception_handler import InvalidRequestError
 
-pytestmark = pytest.mark.api
+pytestmark = [
+    pytest.mark.api,
+    pytest.mark.skip(
+        reason=(
+            "Legacy monolithic statistics API tests; "
+            "active coverage is maintained in "
+            "tests/unit/api/v1/analytics/statistics_modules and "
+            "tests/unit/api/v1/analytics/test_statistics.py"
+        )
+    ),
+]
 
 
 # ============================================================================
@@ -82,7 +92,7 @@ class TestGetBasicStatistics:
         )
 
         # Mock empty results
-        mock_asset_crud.get_multi_with_search_async.return_value = ([], 0)
+        mock_asset_crud.get_multi_with_search_async = AsyncMock(return_value=([], 0))
 
         result = await get_basic_statistics(
             ownership_status=None,
@@ -129,7 +139,9 @@ class TestGetBasicStatistics:
             mock_assets.append(a)
 
         # Total 10 assets
-        mock_asset_crud.get_multi_with_search_async.return_value = (mock_assets, 10)
+        mock_asset_crud.get_multi_with_search_async = AsyncMock(
+            return_value=(mock_assets, 10)
+        )
 
         result = await get_basic_statistics(
             ownership_status="已确权",
@@ -155,7 +167,7 @@ class TestGetBasicStatistics:
             get_basic_statistics,
         )
 
-        mock_asset_crud.get_multi_with_search_async.return_value = ([], 0)
+        mock_asset_crud.get_multi_with_search_async = AsyncMock(return_value=([], 0))
 
         result = await get_basic_statistics(
             ownership_status="已确权",
@@ -193,7 +205,7 @@ class TestGetStatisticsSummary:
         )
 
         mock_asset_crud.get_multi.return_value = []
-        mock_asset_crud.get_multi_with_search_async.return_value = ([], 0)
+        mock_asset_crud.get_multi_with_search_async = AsyncMock(return_value=([], 0))
 
         result = await get_statistics_summary(
             db=mock_db, current_user=mock_current_user
@@ -238,7 +250,9 @@ class TestGetStatisticsSummary:
             a.usage_status = "自用"
             mock_assets.append(a)
 
-        mock_asset_crud.get_multi_with_search_async.return_value = (mock_assets, 20)
+        mock_asset_crud.get_multi_with_search_async = AsyncMock(
+            return_value=(mock_assets, 20)
+        )
 
         result = await get_statistics_summary(
             db=mock_db, current_user=mock_current_user

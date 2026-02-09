@@ -23,7 +23,11 @@ from src.schemas.rbac import (
     RoleUpdate,
     UserRoleAssignmentCreate,
 )
-from src.services.permission.rbac_service import RBACService
+from src.services.permission.rbac_service import (
+    ADMIN_PERMISSION_ACTION,
+    ADMIN_PERMISSION_RESOURCE,
+    RBACService,
+)
 
 pytestmark = pytest.mark.asyncio
 
@@ -1220,6 +1224,27 @@ class TestAsyncAdapterMethods:
                     "user-1", "asset", "view"
                 )
                 assert result is False
+
+    @pytest.mark.asyncio
+    async def test_check_user_permission_admin_uses_is_admin(self, rbac_service):
+        """测试管理员权限检查统一委托到 is_admin 入口"""
+        with (
+            patch.object(
+                rbac_service, "is_admin", new=AsyncMock(return_value=True)
+            ) as mock_is_admin,
+            patch.object(
+                rbac_service, "check_permission", new=AsyncMock()
+            ) as mock_check_permission,
+        ):
+            result = await rbac_service.check_user_permission(
+                "user-1",
+                ADMIN_PERMISSION_RESOURCE,
+                ADMIN_PERMISSION_ACTION,
+            )
+
+        assert result is True
+        mock_is_admin.assert_awaited_once_with("user-1")
+        mock_check_permission.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_check_resource_access(self, rbac_service, mock_db, sample_user):

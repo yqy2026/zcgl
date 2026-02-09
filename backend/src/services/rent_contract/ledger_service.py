@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import desc, select
@@ -144,6 +144,49 @@ class RentContractLedgerService(RentContractHelperMixin):
         await db.commit()
         await db.refresh(ledger)
         return ledger
+
+    async def get_rent_ledger_page_async(
+        self,
+        db: AsyncSession,
+        *,
+        skip: int = 0,
+        limit: int = 10,
+        contract_id: str | None = None,
+        asset_id: str | None = None,
+        ownership_id: str | None = None,
+        year_month: str | None = None,
+        payment_status: str | None = None,
+        start_date: date | None = None,
+        end_date: date | None = None,
+    ) -> tuple[list[RentLedger], int]:
+        return await rent_ledger.get_multi_with_filters_async(
+            db=db,
+            skip=skip,
+            limit=limit,
+            contract_id=contract_id,
+            asset_id=asset_id,
+            ownership_id=ownership_id,
+            year_month=year_month,
+            payment_status=payment_status,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    async def get_rent_ledger_by_id_async(
+        self, db: AsyncSession, *, ledger_id: str
+    ) -> RentLedger | None:
+        return await rent_ledger.get(db, id=ledger_id)
+
+    async def get_contract_ledger_async(
+        self, db: AsyncSession, *, contract_id: str, limit: int = 1000
+    ) -> list[RentLedger]:
+        ledgers, _ = await self.get_rent_ledger_page_async(
+            db,
+            skip=0,
+            limit=limit,
+            contract_id=contract_id,
+        )
+        return ledgers
 
     async def get_contract_by_id_async(
         self, db: AsyncSession, *, contract_id: str

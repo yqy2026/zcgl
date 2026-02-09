@@ -6,13 +6,14 @@ import logging
 from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 
 from ....core.exception_handler import bad_request, internal_error
+from ....middleware.auth import get_current_active_user
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(get_current_active_user)])
 
 
 def _build_occupancy_snapshot(filters: dict[str, Any]) -> dict[str, Any]:

@@ -902,7 +902,11 @@ class TestAreaServiceMemoryCalculation:
         result = await area_service._calculate_summary_in_memory(filters=filters)
 
         mock_crud.get_multi_with_search_async.assert_awaited_with(
-            db=area_service.db, skip=0, limit=1000, filters=filters
+            db=area_service.db,
+            skip=0,
+            limit=1000,
+            filters=filters,
+            include_contract_projection=False,
         )
         assert result["total_assets"] == 1
 

@@ -44,6 +44,23 @@ class AppSettings(BaseModel):
         json_schema_extra={"env": "CORS_ORIGINS"},
     )
 
+    @field_validator("CORS_ORIGINS")
+    @classmethod
+    def validate_cors_origins(cls, v: list[str]) -> list[str]:
+        """验证 CORS 域名配置，禁止使用通配符。"""
+        normalized_origins = [
+            origin.strip()
+            for origin in v
+            if isinstance(origin, str) and origin.strip() != ""
+        ]
+        if any(origin == "*" for origin in normalized_origins):
+            raise PydanticCustomError(
+                "invalid_cors_origins",
+                "CORS_ORIGINS 禁止使用 '*'，请配置明确域名列表",
+                {},
+            )
+        return normalized_origins
+
     @field_validator("PORT")
     @classmethod
     def validate_port_range(cls, v: int) -> int:

@@ -34,7 +34,16 @@ import pytest
 
 from src.core.exception_handler import BaseBusinessError
 
-pytestmark = pytest.mark.api
+pytestmark = [
+    pytest.mark.api,
+    pytest.mark.skip(
+        reason=(
+            "Legacy CRUD-coupled enum_field API tests; "
+            "service-layer route coverage is maintained in "
+            "test_enum_field_layering.py"
+        )
+    ),
+]
 
 
 # ============================================================================

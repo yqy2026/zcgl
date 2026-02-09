@@ -12,22 +12,30 @@ import logging
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query
+from fastapi.params import Depends as DependsParam
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.constants.cache_constants import CACHE_TTL_SHORT_SECONDS
-from src.crud.asset import asset_crud
 from src.database import get_async_db
 from src.middleware.auth import get_current_active_user
 from src.models.auth import User
 from src.schemas.statistics import AreaSummaryResponse
-from src.services.analytics import AreaService
+from src.services.analytics.area_stats_service import (
+    AreaStatsService,
+    get_area_stats_service,
+)
 from src.utils.cache_manager import cache_statistics
-from src.utils.numeric import to_float
 
 logger = logging.getLogger(__name__)
 
 # 创建面积统计路由器
 router = APIRouter()
+
+
+def _resolve_service(service: AreaStatsService | Any) -> AreaStatsService | Any:
+    if isinstance(service, DependsParam):
+        return get_area_stats_service()
+    return service
 
 
 @cache_statistics(expire=CACHE_TTL_SHORT_SECONDS)  # 10分钟缓存
@@ -37,6 +45,7 @@ async def get_area_summary(
     should_use_aggregation: bool = True,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    service: AreaStatsService = Depends(get_area_stats_service),
 ) -> AreaSummaryResponse:
     """
     获取面积汇总统计
@@ -51,25 +60,15 @@ async def get_area_summary(
 
     logger.info(f"开始计算面积汇总，聚合模式: {should_use_aggregation}")
 
-    filters: dict[str, Any] = {}
-    if not should_include_deleted:
-        filters["data_status"] = "正常"
-
-    service = AreaService(db)
-    if should_use_aggregation:
-        summary = await service.calculate_summary_with_aggregation(filters)
-    else:
-        summary = await service._calculate_summary_in_memory(filters)
-
-    logger.info(f"面积汇总计算完成: {summary}")
-
-    return AreaSummaryResponse(
-        total_area=summary["total_land_area"],
-        rentable_area=summary["total_rentable_area"],
-        rented_area=summary["total_rented_area"],
-        unrented_area=summary["total_unrented_area"],
-        occupancy_rate=summary["overall_occupancy_rate"],
+    _ = current_user
+    resolved_service = _resolve_service(service)
+    result = await resolved_service.calculate_area_summary(
+        db=db,
+        should_include_deleted=should_include_deleted,
+        should_use_aggregation=should_use_aggregation,
     )
+    logger.info("面积汇总计算完成")
+    return result
 
 
 @router.get("/area-statistics", summary="获取面积统计")
@@ -80,6 +79,7 @@ async def get_area_statistics(
     should_include_deleted: bool = Query(False, description="是否包含已删除资产"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    service: AreaStatsService = Depends(get_area_stats_service),
 ) -> dict[str, Any]:
     """
     获取面积统计数据（支持多维度筛选）
@@ -98,49 +98,12 @@ async def get_area_statistics(
     Returns:
         面积统计数据
     """
-
-    filters: dict[str, Any] = {}
-    if ownership_status:
-        filters["ownership_status"] = ownership_status
-    if property_nature:
-        filters["property_nature"] = property_nature
-    if usage_status:
-        filters["usage_status"] = usage_status
-    if not should_include_deleted:
-        filters["data_status"] = "正常"
-
-    assets, _ = await asset_crud.get_multi_with_search_async(
-        db=db, skip=0, limit=10000, filters=filters
+    _ = current_user
+    resolved_service = _resolve_service(service)
+    return await resolved_service.calculate_area_statistics(
+        db=db,
+        ownership_status=ownership_status,
+        property_nature=property_nature,
+        usage_status=usage_status,
+        should_include_deleted=should_include_deleted,
     )
-
-    total_land_area = 0.0
-    total_rentable_area = 0.0
-    total_rented_area = 0.0
-
-    for asset in assets:
-        if getattr(asset, "land_area", None):
-            total_land_area += to_float(getattr(asset, "land_area"))
-        if getattr(asset, "rentable_area", None):
-            total_rentable_area += to_float(getattr(asset, "rentable_area"))
-        if getattr(asset, "rented_area", None):
-            total_rented_area += to_float(getattr(asset, "rented_area"))
-
-    occupancy_rate = (
-        (total_rented_area / total_rentable_area * 100)
-        if total_rentable_area > 0
-        else 0.0
-    )
-
-    return {
-        "success": True,
-        "data": {
-            "total_land_area": round(total_land_area, 2),
-            "total_rentable_area": round(total_rentable_area, 2),
-            "total_rented_area": round(total_rented_area, 2),
-            "total_unrented_area": round(total_rentable_area - total_rented_area, 2),
-            "occupancy_rate": round(occupancy_rate, 2),
-            "total_assets": len(assets),
-            "filters_applied": filters,
-        },
-        "message": "面积统计数据获取成功",
-    }

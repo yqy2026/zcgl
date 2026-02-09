@@ -8,12 +8,36 @@ Test coverage for Admin API endpoints:
 - Error handling
 """
 
+from unittest.mock import AsyncMock, Mock
+
 import pytest
 from fastapi import status
+from fastapi.testclient import TestClient
+
+from src.main import app
+from src.middleware.auth import get_current_active_user, require_admin
 
 # ============================================================================
 # Fixtures
 # ============================================================================
+
+
+@pytest.fixture
+def client():
+    """轻量级测试客户端（避免依赖真实数据库连接）。"""
+    mock_user = Mock()
+    mock_user.id = "admin_001"
+    mock_user.username = "admin"
+    mock_user.is_admin = True
+    mock_user.is_active = True
+
+    app.dependency_overrides[get_current_active_user] = lambda: mock_user
+    app.dependency_overrides[require_admin] = lambda: mock_user
+
+    with TestClient(app) as test_client:
+        yield test_client
+
+    app.dependency_overrides.clear()
 
 
 @pytest.fixture
@@ -42,8 +66,8 @@ def mock_db_reset(monkeypatch):
     """Avoid touching real tables during reset tests."""
     from src.api.v1.auth import admin as admin_module
 
-    monkeypatch.setattr(admin_module, "drop_tables", lambda: None)
-    monkeypatch.setattr(admin_module, "create_tables", lambda: None)
+    monkeypatch.setattr(admin_module, "drop_tables", AsyncMock(return_value=None))
+    monkeypatch.setattr(admin_module, "create_tables", AsyncMock(return_value=None))
     return None
 
 

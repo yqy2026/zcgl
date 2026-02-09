@@ -40,6 +40,7 @@ class FinancialService:
             skip=0,
             limit=10000,
             filters=filters,
+            include_contract_projection=False,
         )
 
         total_assets = len(assets)

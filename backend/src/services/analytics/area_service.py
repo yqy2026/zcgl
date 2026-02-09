@@ -167,7 +167,11 @@ class AreaService:
 
             while True:
                 assets_batch, _ = await asset_crud.get_multi_with_search_async(
-                    db=self.db, skip=offset, limit=batch_size, filters=filters
+                    db=self.db,
+                    skip=offset,
+                    limit=batch_size,
+                    filters=filters,
+                    include_contract_projection=False,
                 )
 
                 if not assets_batch:

@@ -32,14 +32,12 @@ from fastapi import (
     Response,
 )
 from pydantic import TypeAdapter
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.status import HTTP_204_NO_CONTENT
 
 from ....constants.api_constants import PaginationLimits
 from ....constants.business_constants import DateTimeFields
 from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
-from ....crud.history import history_crud
 from ....database import get_async_db
 from ....middleware.auth import (
     audit_action,
@@ -49,7 +47,6 @@ from ....middleware.auth import (
 )
 from ....middleware.security_middleware import get_client_ip
 from ....models.auth import User
-from ....models.ownership import Ownership
 from ....schemas.asset import (
     AssetCreate,
     AssetListItemResponse,
@@ -192,9 +189,7 @@ async def get_ownership_entities(
     current_user: User = Depends(get_current_active_user),
 ) -> list[str]:
     """获取所有权属方列表，用于搜索筛选"""
-    stmt = select(Ownership.name).where(Ownership.data_status == "正常")
-    result = await db.execute(stmt)
-    return [str(name) for name in result.scalars().all()]
+    return await AsyncAssetService(db).get_ownership_entity_names()
 
 
 @router.get(
@@ -378,6 +373,5 @@ async def get_asset_history(
     - **asset_id**: 资产ID
     """
     asset_service = AsyncAssetService(db)
-    await asset_service.get_asset(asset_id)
-    history_records = await history_crud.get_by_asset_id_async(db, asset_id=asset_id)
+    history_records = await asset_service.get_asset_history_records(asset_id)
     return {"asset_id": asset_id, "history": history_records}

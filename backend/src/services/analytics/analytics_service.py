@@ -129,7 +129,11 @@ class AnalyticsService:
             query_filters["data_status"] = DataStatusValues.ASSET_NORMAL
 
         assets, _ = await asset_crud.get_multi_with_search_async(
-            db=self.db, skip=0, limit=10000, filters=query_filters
+            db=self.db,
+            skip=0,
+            limit=10000,
+            filters=query_filters,
+            include_contract_projection=False,
         )
 
         # 计算各项统计
@@ -221,7 +225,11 @@ class AnalyticsService:
             query_filters["data_status"] = DataStatusValues.ASSET_NORMAL
 
         assets, _ = await asset_crud.get_multi_with_search_async(
-            db=self.db, skip=0, limit=10000, filters=query_filters
+            db=self.db,
+            skip=0,
+            limit=10000,
+            filters=query_filters,
+            include_contract_projection=False,
         )
 
         # 根据趋势类型和维度生成数据
@@ -313,7 +321,11 @@ class AnalyticsService:
             query_filters["data_status"] = DataStatusValues.ASSET_NORMAL
 
         assets, _ = await asset_crud.get_multi_with_search_async(
-            db=self.db, skip=0, limit=10000, filters=query_filters
+            db=self.db,
+            skip=0,
+            limit=10000,
+            filters=query_filters,
+            include_contract_projection=False,
         )
 
         # 统计分布

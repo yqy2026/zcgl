@@ -425,13 +425,23 @@ class TestErrorHandling:
 
         Given: 用户提供无效的日期格式
         When: 调用分析 API
-        Then: 返回 500 错误（服务层不验证日期格式）
+        Then: 服务层接收原始日期字符串并返回成功响应
         """
-        # Act
-        response = client.get("/api/v1/analytics/comprehensive?date_from=invalid-date")
+        with patch(
+            "src.services.analytics.analytics_service.AnalyticsService.get_comprehensive_analytics",
+            new_callable=AsyncMock,
+        ) as mock_get:
+            mock_get.return_value = {"total_assets": 1}
 
-        # Assert - 服务层不验证日期格式时应正常返回
-        assert response.status_code == 200
+            # Act
+            response = client.get(
+                "/api/v1/analytics/comprehensive?date_from=invalid-date"
+            )
+
+            # Assert
+            assert response.status_code == 200
+            mock_get.assert_called_once()
+            assert mock_get.call_args.kwargs["filters"]["date_from"] == "invalid-date"
 
 
 # =============================================================================

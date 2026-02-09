@@ -7,11 +7,15 @@ Tests for the Asset model - core business entity for property/asset management.
 import os
 from datetime import date, datetime
 from decimal import Decimal
+from types import SimpleNamespace
 
 import pytest
 from sqlalchemy import create_engine
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.attributes import NO_VALUE
 
+import src.models.asset as asset_model_module
 from src.core.enums import ContractStatus
 from src.database import Base
 from src.models.asset import Asset
@@ -32,9 +36,27 @@ class TestAssetModelCreation:
             )
         if not database_url.startswith("postgresql"):
             raise RuntimeError("测试必须使用 PostgreSQL")
-        engine = create_engine(database_url, pool_pre_ping=True)
-        Base.metadata.create_all(engine)
-        return engine
+        connect_args: dict[str, int] = {}
+        if database_url.startswith("postgresql"):
+            connect_args["connect_timeout"] = 3
+        engine = create_engine(
+            database_url,
+            pool_pre_ping=True,
+            connect_args=connect_args,
+        )
+        try:
+            with engine.connect():
+                pass
+            Base.metadata.create_all(engine)
+        except OperationalError as exc:
+            engine.dispose()
+            pytest.skip(
+                f"TEST_DATABASE_URL unreachable for model db tests: {exc}",
+                allow_module_level=True,
+            )
+
+        yield engine
+        engine.dispose()
 
     @pytest.fixture
     def session(self, engine):
@@ -128,6 +150,75 @@ class TestAssetBasicFields:
     def test_data_status_default(self, asset):
         """Test data_status field default"""
         assert asset.data_status == "正常"
+
+
+class TestAssetRelationshipProjectionSafety:
+    """Test relationship projection safety for computed properties."""
+
+    def _build_asset(self) -> Asset:
+        return Asset(
+            ownership_id="Owner",
+            property_name="Property",
+            address="Address",
+            ownership_status="Status",
+            property_nature="Nature",
+            usage_status="Status",
+        )
+
+    def test_active_contract_transient_asset_no_warning(self, caplog):
+        """Transient objects should not warn when relationship is not loaded."""
+        asset = self._build_asset()
+
+        with caplog.at_level("WARNING"):
+            assert asset.active_contract is None
+
+        assert not any(
+            "selectinload(Asset.rent_contracts)" in record.message
+            for record in caplog.records
+        )
+
+    def test_active_contract_unloaded_relationship_warns_once(
+        self, monkeypatch, caplog
+    ):
+        """Persistent-like unloaded relation should emit one warning."""
+        asset = self._build_asset()
+        fake_state = SimpleNamespace(
+            transient=False,
+            pending=False,
+            attrs={"rent_contracts": SimpleNamespace(loaded_value=NO_VALUE)},
+        )
+        monkeypatch.setattr(asset_model_module, "inspect", lambda _: fake_state)
+
+        with caplog.at_level("WARNING"):
+            assert asset.active_contract is None
+            assert asset.tenant_name is None
+
+        warnings = [
+            record
+            for record in caplog.records
+            if "selectinload(Asset.rent_contracts)" in record.message
+        ]
+        assert len(warnings) == 1
+
+    def test_ownership_entity_unloaded_relationship_warns(
+        self, monkeypatch, caplog
+    ):
+        """Unloaded ownership relation should emit actionable warning."""
+        asset = self._build_asset()
+        fake_state = SimpleNamespace(
+            transient=False,
+            pending=False,
+            attrs={"ownership": SimpleNamespace(loaded_value=NO_VALUE)},
+        )
+        monkeypatch.setattr(asset_model_module, "inspect", lambda _: fake_state)
+
+        with caplog.at_level("WARNING"):
+            assert asset.ownership_entity is None
+
+        assert any(
+            "selectinload(Asset.ownership)" in record.message
+            for record in caplog.records
+        )
 
 
 class TestAssetAreaFields:
@@ -244,6 +335,84 @@ class TestAssetContractFields:
         assert asset.active_contract is contract
         assert asset.tenant_name == "Expiring Tenant"
         assert asset.monthly_rent == Decimal("6100.00")
+
+    def test_active_contract_cached_across_projection_fields(self, monkeypatch):
+        """Repeated projection field access should reuse active contract selection."""
+        asset = Asset(
+            ownership_id="Owner",
+            property_name="Property",
+            address="Address",
+            ownership_status="Status",
+            property_nature="Nature",
+            usage_status="Status",
+        )
+        contract = RentContract(
+            contract_number="CONTRACT-CACHED",
+            ownership_id="ownership-1",
+            tenant_name="Cached Tenant",
+            sign_date=date(2024, 1, 1),
+            start_date=date(2024, 1, 1),
+            end_date=date(2026, 12, 31),
+            contract_status=ContractStatus.ACTIVE.value,
+            monthly_rent_base=Decimal("3200.00"),
+            total_deposit=Decimal("6400.00"),
+        )
+        asset.rent_contracts = [contract]
+
+        call_counter = {"count": 0}
+        original_picker = Asset._pick_preferred_contract
+
+        def _counting_picker(self, contracts_value, active_statuses, *, today):
+            call_counter["count"] += 1
+            return original_picker(
+                self,
+                contracts_value,
+                active_statuses,
+                today=today,
+            )
+
+        monkeypatch.setattr(Asset, "_pick_preferred_contract", _counting_picker)
+
+        assert asset.tenant_name == "Cached Tenant"
+        assert asset.contract_end_date == date(2026, 12, 31)
+        assert asset.monthly_rent == Decimal("3200.00")
+        assert call_counter["count"] == 1
+
+    def test_active_contract_cache_invalidate_when_contract_list_replaced(self):
+        """Replacing rent contract collection should invalidate active contract cache."""
+        asset = Asset(
+            ownership_id="Owner",
+            property_name="Property",
+            address="Address",
+            ownership_status="Status",
+            property_nature="Nature",
+            usage_status="Status",
+        )
+        first_contract = RentContract(
+            contract_number="CONTRACT-FIRST",
+            ownership_id="ownership-1",
+            tenant_name="First Tenant",
+            sign_date=date(2024, 1, 1),
+            start_date=date(2024, 1, 1),
+            end_date=date(2025, 12, 31),
+            contract_status=ContractStatus.ACTIVE.value,
+        )
+        second_contract = RentContract(
+            contract_number="CONTRACT-SECOND",
+            ownership_id="ownership-1",
+            tenant_name="Second Tenant",
+            sign_date=date(2024, 1, 1),
+            start_date=date(2025, 1, 1),
+            end_date=date(2026, 12, 31),
+            contract_status=ContractStatus.ACTIVE.value,
+        )
+
+        asset.rent_contracts = [first_contract]
+        assert asset.tenant_name == "First Tenant"
+
+        asset.rent_contracts = [second_contract]
+        assert asset.tenant_name == "Second Tenant"
+        assert asset.lease_contract_number == "CONTRACT-SECOND"
 
     def test_sublease_default(self, asset_with_contract):
         """Test sublease default value"""

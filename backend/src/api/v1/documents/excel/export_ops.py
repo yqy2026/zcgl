@@ -5,7 +5,7 @@ Excel导出操作模块 - 同步与异步导出
 import logging
 import os
 from collections.abc import Generator
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -16,13 +16,13 @@ from fastapi import (
     Depends,
     Query,
 )
+from fastapi.params import Depends as DependsParam
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config.excel_config import STANDARD_SHEET_NAME
 from src.constants.message_constants import ErrorIDs
 from src.core.exception_handler import bad_request, not_found
-from src.crud.task import task_crud
 from src.database import async_session_scope, get_async_db
 from src.enums.task import TaskStatus, TaskType
 from src.middleware.auth import get_current_active_user
@@ -30,11 +30,27 @@ from src.models.auth import User
 from src.schemas.excel_advanced import ExcelExportRequest
 from src.schemas.task import TaskCreate
 from src.services.excel import ExcelExportService
+from src.services.excel.excel_task_service import (
+    ExcelTaskService,
+    get_excel_task_service,
+)
 from src.services.task.access import ensure_task_access
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def _utcnow_naive() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
+
+
+def _resolve_task_service(
+    task_service: ExcelTaskService | Any,
+) -> ExcelTaskService | Any:
+    if isinstance(task_service, DependsParam):
+        return get_excel_task_service()
+    return task_service
 
 
 @router.get("/export", summary="导出Excel文件")
@@ -139,6 +155,7 @@ async def export_excel_async(
     request: ExcelExportRequest = Body(...),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    task_service: ExcelTaskService = Depends(get_excel_task_service),
 ) -> dict[str, Any]:
     """
     异步导出Excel文件，返回任务ID用于跟踪进度
@@ -161,13 +178,19 @@ async def export_excel_async(
         config={"config_id": request.config_id} if request.config_id else {},
     )
 
-    task = await task_crud.create_async(db=db, obj_in=task_in, user_id=current_user.id)
+    resolved_task_service = _resolve_task_service(task_service)
+    task = await resolved_task_service.create_task(
+        db=db,
+        task_in=task_in,
+        user_id=current_user.id,
+    )
 
     # 添加后台任务
     background_tasks.add_task(
         _process_excel_export_async,
         task_id=str(task.id),
         request=request,
+        task_service=resolved_task_service,
     )
 
     return {
@@ -179,21 +202,26 @@ async def export_excel_async(
 
 
 async def _process_excel_export_async(
-    task_id: str, request: ExcelExportRequest, db_session: AsyncSession | None = None
+    task_id: str,
+    request: ExcelExportRequest,
+    db_session: AsyncSession | None = None,
+    task_service: ExcelTaskService | None = None,
 ) -> None:
     """
     后台处理Excel导出任务
     """
+    resolved_task_service = task_service or get_excel_task_service()
+
     async def _run_export(session: AsyncSession) -> None:
         try:
-            task = await task_crud.get(db=session, id=task_id)
+            task = await resolved_task_service.get_task(db=session, task_id=task_id)
             if not task:
                 return
-            started_at = datetime.utcnow()
-            await task_crud.update(
+            started_at = _utcnow_naive()
+            await resolved_task_service.update_task(
                 db=session,
-                db_obj=task,
-                obj_in={
+                task=task,
+                task_data={
                     "status": TaskStatus.RUNNING,
                     "progress": 0,
                     "processed_items": 0,
@@ -222,11 +250,11 @@ async def _process_excel_export_async(
                 limit=5000,
             )
 
-            completed_at = datetime.utcnow()
-            await task_crud.update(
+            completed_at = _utcnow_naive()
+            await resolved_task_service.update_task(
                 db=session,
-                db_obj=task,
-                obj_in={
+                task=task,
+                task_data={
                     "status": TaskStatus.COMPLETED,
                     "progress": 100,
                     "processed_items": 0,
@@ -252,24 +280,12 @@ async def _process_excel_export_async(
             )
 
             try:
-                await session.rollback()
-                failed_at = datetime.utcnow()
-                task = await task_crud.get(db=session, id=task_id)
-                if task:
-                    await task_crud.update(
-                        db=session,
-                        db_obj=task,
-                        obj_in={
-                            "status": TaskStatus.FAILED,
-                            "error_message": str(e),
-                            "progress": 0,
-                            "processed_items": 0,
-                            "failed_items": 0,
-                            "completed_at": failed_at,
-                            "result_data": None,
-                        },
-                    )
-            except Exception as commit_error:
+                await resolved_task_service.mark_task_failed(
+                    db=session,
+                    task_id=task_id,
+                    error_message=str(e),
+                )
+            except Exception as mark_failed_error:
                 logger.error(
                     f"无法更新任务失败状态: task_id={task_id}",
                     exc_info=True,
@@ -277,7 +293,7 @@ async def _process_excel_export_async(
                         "error_id": ErrorIDs.Task.STATUS_UPDATE_FAILED,
                         "task_id": task_id,
                         "original_error": str(e),
-                        "commit_error": str(commit_error),
+                        "commit_error": str(mark_failed_error),
                     },
                 )
 
@@ -293,12 +309,14 @@ async def download_export_file(
     task_id: str,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    task_service: ExcelTaskService = Depends(get_excel_task_service),
 ) -> StreamingResponse:
     """
     下载异步导出的文件
     """
     # 获取任务信息
-    task = await task_crud.get(db=db, id=task_id)
+    resolved_task_service = _resolve_task_service(task_service)
+    task = await resolved_task_service.get_task(db=db, task_id=task_id)
     if not task:
         raise not_found("任务不存在", resource_type="task", resource_id=task_id)
     await ensure_task_access(task, current_user, db)

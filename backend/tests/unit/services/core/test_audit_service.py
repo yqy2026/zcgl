@@ -32,6 +32,19 @@ def _mock_execute_scalar(value):
     return result
 
 
+def _mock_execute_user_role(user, role_name="管理员"):
+    call_counter = {"count": 0}
+
+    def _side_effect(*_args, **_kwargs):
+        current = call_counter["count"]
+        call_counter["count"] += 1
+        if current % 2 == 0:
+            return _mock_execute_first(user)
+        return _mock_execute_scalar(role_name)
+
+    return AsyncMock(side_effect=_side_effect)
+
+
 @pytest.fixture
 def mock_db():
     db = MagicMock()
@@ -80,7 +93,7 @@ class TestCreateAuditLogSuccess:
         result = await audit_service.create_audit_log(user_id=mock_user.id, action="login")
 
         assert result is not None
-        mock_db.execute.assert_awaited_once()
+        assert mock_db.execute.await_count == 2
         mock_db.add.assert_called_once()
         mock_db.commit.assert_awaited_once()
         mock_db.refresh.assert_awaited_once()
@@ -231,7 +244,7 @@ class TestCreateAuditLogActionTypes:
     )
     async def test_various_actions(self, audit_service, mock_db, mock_user, action):
         """测试各种操作类型"""
-        mock_db.execute = AsyncMock(return_value=_mock_execute_first(mock_user))
+        mock_db.execute = _mock_execute_user_role(mock_user)
 
         result = await audit_service.create_audit_log(user_id=mock_user.id, action=action)
 
@@ -239,7 +252,7 @@ class TestCreateAuditLogActionTypes:
 
     async def test_login_action_with_details(self, audit_service, mock_db, mock_user):
         """测试登录操作（包含详细信息）"""
-        mock_db.execute = AsyncMock(return_value=_mock_execute_first(mock_user))
+        mock_db.execute = _mock_execute_user_role(mock_user)
 
         result = await audit_service.create_audit_log(
             user_id=mock_user.id,
@@ -252,7 +265,7 @@ class TestCreateAuditLogActionTypes:
 
     async def test_data_access_action(self, audit_service, mock_db, mock_user):
         """测试数据访问操作"""
-        mock_db.execute = AsyncMock(return_value=_mock_execute_first(mock_user))
+        mock_db.execute = _mock_execute_user_role(mock_user)
 
         result = await audit_service.create_audit_log(
             user_id=mock_user.id,
@@ -273,7 +286,7 @@ class TestCreateAuditLogEdgeCases:
 
     async def test_with_none_optional_fields(self, audit_service, mock_db, mock_user):
         """测试所有可选字段为None"""
-        mock_db.execute = AsyncMock(return_value=_mock_execute_first(mock_user))
+        mock_db.execute = _mock_execute_user_role(mock_user)
 
         result = await audit_service.create_audit_log(
             user_id=mock_user.id,
@@ -296,7 +309,7 @@ class TestCreateAuditLogEdgeCases:
 
     async def test_with_empty_strings(self, audit_service, mock_db, mock_user):
         """测试空字符串值"""
-        mock_db.execute = AsyncMock(return_value=_mock_execute_first(mock_user))
+        mock_db.execute = _mock_execute_user_role(mock_user)
 
         result = await audit_service.create_audit_log(
             user_id=mock_user.id, action="", resource_type="", resource_id=""
@@ -308,7 +321,7 @@ class TestCreateAuditLogEdgeCases:
         """测试特殊字符"""
         special_chars = "测试\n\t\r\\\"'<>{}[]"
 
-        mock_db.execute = AsyncMock(return_value=_mock_execute_first(mock_user))
+        mock_db.execute = _mock_execute_user_role(mock_user)
 
         result = await audit_service.create_audit_log(
             user_id=mock_user.id,
@@ -323,7 +336,7 @@ class TestCreateAuditLogEdgeCases:
         """测试Unicode字符"""
         unicode_text = "🎉 测试 Тест"
 
-        mock_db.execute = AsyncMock(return_value=_mock_execute_first(mock_user))
+        mock_db.execute = _mock_execute_user_role(mock_user)
 
         result = await audit_service.create_audit_log(
             user_id=mock_user.id, action="test_action", resource_name=unicode_text
@@ -335,7 +348,7 @@ class TestCreateAuditLogEdgeCases:
         """测试JSON数据"""
         json_data = '{"key": "value", "nested": {"data": "测试"}}'
 
-        mock_db.execute = AsyncMock(return_value=_mock_execute_first(mock_user))
+        mock_db.execute = _mock_execute_user_role(mock_user)
 
         result = await audit_service.create_audit_log(
             user_id=mock_user.id,
@@ -350,7 +363,7 @@ class TestCreateAuditLogEdgeCases:
         """测试不同的响应状态码"""
         status_codes = [200, 201, 204, 400, 401, 403, 404, 500, 503]
 
-        mock_db.execute = AsyncMock(return_value=_mock_execute_first(mock_user))
+        mock_db.execute = _mock_execute_user_role(mock_user)
 
         for status_code in status_codes:
             result = await audit_service.create_audit_log(
@@ -363,7 +376,7 @@ class TestCreateAuditLogEdgeCases:
         """测试不同的HTTP方法"""
         http_methods = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
 
-        mock_db.execute = AsyncMock(return_value=_mock_execute_first(mock_user))
+        mock_db.execute = _mock_execute_user_role(mock_user)
 
         for method in http_methods:
             result = await audit_service.create_audit_log(
@@ -381,7 +394,16 @@ class TestAuditServiceIntegration:
 
     async def test_complete_user_lifecycle(self, audit_service, mock_db, mock_user):
         """测试完整的用户生命周期审计"""
-        mock_db.execute = AsyncMock(return_value=_mock_execute_first(mock_user))
+        mock_db.execute = AsyncMock(
+            side_effect=[
+                _mock_execute_first(mock_user),
+                _mock_execute_scalar("管理员"),
+                _mock_execute_first(mock_user),
+                _mock_execute_scalar("管理员"),
+                _mock_execute_first(mock_user),
+                _mock_execute_scalar("管理员"),
+            ]
+        )
 
         # 用户登录
         await audit_service.create_audit_log(
@@ -403,7 +425,7 @@ class TestAuditServiceIntegration:
 
     async def test_failed_operation_audit(self, audit_service, mock_db, mock_user):
         """测试失败操作的审计"""
-        mock_db.execute = AsyncMock(return_value=_mock_execute_first(mock_user))
+        mock_db.execute = _mock_execute_user_role(mock_user)
 
         await audit_service.create_audit_log(
             user_id=mock_user.id,
@@ -415,12 +437,16 @@ class TestAuditServiceIntegration:
 
         mock_db.add.assert_called_once()
 
-    async def test_admin_privileged_operation(self, audit_service, mock_db, mock_admin_user):
+    async def test_admin_privileged_operation(self, audit_service, mock_db):
         """测试管理员特权操作"""
-        mock_db.execute = AsyncMock(return_value=_mock_execute_first(mock_admin_user))
+        admin_user = Mock(spec=User)
+        admin_user.id = "admin-user-id"
+        admin_user.username = "admin"
+        admin_user.default_organization_id = "org-admin"
+        mock_db.execute = _mock_execute_user_role(admin_user)
 
         await audit_service.create_audit_log(
-            user_id=mock_admin_user.id,
+            user_id=admin_user.id,
             action="delete_user",
             resource_type="user",
             resource_id="user-to-delete",
@@ -439,15 +465,17 @@ class TestDatabaseOperations:
 
     async def test_query_called_with_correct_filter(self, audit_service, mock_db, mock_user):
         """测试使用正确的筛选条件查询"""
-        mock_db.execute = AsyncMock(return_value=_mock_execute_first(mock_user))
+        mock_db.execute = _mock_execute_user_role(mock_user)
 
         await audit_service.create_audit_log(user_id="specific-user-id", action="test_action")
 
-        mock_db.execute.assert_awaited_once()
+        assert mock_db.execute.await_count == 2
+        query_stmt = mock_db.execute.await_args_list[0].args[0]
+        assert query_stmt.compile().params["id_1"] == "specific-user-id"
 
     async def test_database_operations_call_order(self, audit_service, mock_db, mock_user):
         """测试数据库操作调用顺序"""
-        mock_db.execute = AsyncMock(return_value=_mock_execute_first(mock_user))
+        mock_db.execute = _mock_execute_user_role(mock_user)
 
         await audit_service.create_audit_log(user_id=mock_user.id, action="test_action")
 

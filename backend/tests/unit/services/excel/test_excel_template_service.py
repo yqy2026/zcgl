@@ -5,12 +5,10 @@ Excel Template Service 单元测试
 """
 
 import io
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pandas as pd
 import pytest
-from sqlalchemy.orm import Session
-
 from src.services.excel.excel_template_service import ExcelTemplateService
 
 # ============================================================================
@@ -22,7 +20,7 @@ from src.services.excel.excel_template_service import ExcelTemplateService
 def excel_service():
     """Excel模板服务实例"""
 
-    return ExcelTemplateService(Mock(spec=Session))
+    return ExcelTemplateService()
 
 
 # ============================================================================
@@ -421,13 +419,10 @@ class TestEdgeCases:
 class TestExcelTemplateServiceInitialization:
     """测试ExcelTemplateService初始化"""
 
-    def test_initialization_with_db(self):
-        """测试使用db初始化"""
-
-        mock_db = Mock(spec=Session)
-        service = ExcelTemplateService(mock_db)
-
-        assert service.db == mock_db
+    def test_initialization(self):
+        """测试默认初始化"""
+        service = ExcelTemplateService()
+        assert isinstance(service, ExcelTemplateService)
 
 
 # ============================================================================

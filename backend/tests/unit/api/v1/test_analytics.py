@@ -9,8 +9,15 @@ Test coverage for Analytics API endpoints:
 - Error handling
 """
 
+from unittest.mock import AsyncMock, Mock
+
 import pytest
 from fastapi import status
+from fastapi.testclient import TestClient
+
+from src.database import get_async_db
+from src.main import app
+from src.middleware.auth import get_current_active_user
 
 # ============================================================================
 # Fixtures
@@ -27,6 +34,60 @@ def admin_user_headers():
     """管理员用户认证头"""
     # Since client fixture mocks authentication, we don't need real token
     return {}
+
+
+@pytest.fixture
+def client(monkeypatch):
+    """轻量客户端：绕过真实数据库连接，仅测试路由行为。"""
+    mock_user = Mock()
+    mock_user.id = "admin_001"
+    mock_user.username = "admin"
+    mock_user.is_active = True
+
+    async def override_get_db():
+        yield AsyncMock()
+
+    async def mock_get_comprehensive_analytics(
+        _self,
+        *,
+        filters=None,
+        should_use_cache=True,
+        current_user=None,
+    ):
+        return {
+            "total_assets": 1,
+            "filters_applied": filters or {},
+            "should_use_cache": should_use_cache,
+            "requested_by": getattr(current_user, "username", None),
+        }
+
+    monkeypatch.setattr(
+        "src.services.analytics.analytics_service.AnalyticsService.get_comprehensive_analytics",
+        mock_get_comprehensive_analytics,
+    )
+
+    app.dependency_overrides[get_async_db] = override_get_db
+    app.dependency_overrides[get_current_active_user] = lambda: mock_user
+
+    with TestClient(app) as test_client:
+        yield test_client
+
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def unauthenticated_client():
+    """未认证客户端：同样避免触发真实数据库连接。"""
+
+    async def override_get_db():
+        yield AsyncMock()
+
+    app.dependency_overrides[get_async_db] = override_get_db
+
+    with TestClient(app) as test_client:
+        yield test_client
+
+    app.dependency_overrides.clear()
 
 
 # ============================================================================

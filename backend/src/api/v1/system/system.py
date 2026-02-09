@@ -5,13 +5,17 @@
 
 from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
 from ....core.response_handler import success_response
 from ....database import get_database_status
+from ....middleware.auth import get_current_active_user
 
-router = APIRouter(tags=["系统管理"])
+router = APIRouter(
+    tags=["系统管理"],
+    dependencies=[Depends(get_current_active_user)],
+)
 
 
 @router.get("/monitoring/health")

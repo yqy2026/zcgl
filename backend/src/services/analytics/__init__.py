@@ -44,6 +44,13 @@ try:
 except Exception:  # nosec - B110: Intentional graceful degradation
     _log_import_error("analytics.financial_service.FinancialService")
 
+try:
+    from .basic_stats_service import BasicStatsService as BasicStatsService
+
+    __all__.append("BasicStatsService")
+except Exception:  # nosec - B110: Intentional graceful degradation
+    _log_import_error("analytics.basic_stats_service.BasicStatsService")
+
 # 保留对旧服务的导入尝试（如果存在的话）
 
 # 类型检查导入

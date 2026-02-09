@@ -10,23 +10,33 @@ Created: 2026-01-17 (Phase 2 - Large File Splitting)
 """
 
 import logging
-from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query
+from fastapi.params import Depends as DependsParam
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.crud.asset import asset_crud
 from src.database import get_async_db
 from src.middleware.auth import get_current_active_user
 from src.models.auth import User
-from src.schemas.statistics import ChartDataItem, DistributionResponse
-from src.security.security import FieldValidator
+from src.schemas.statistics import DistributionResponse
+from src.services.analytics.distribution_service import (
+    DistributionService,
+    get_distribution_service,
+)
 
 logger = logging.getLogger(__name__)
 
 # 创建分布统计路由器
 router = APIRouter()
+
+
+def _resolve_service(
+    service: DistributionService | Any,
+) -> DistributionService | Any:
+    if isinstance(service, DependsParam):
+        return get_distribution_service()
+    return service
 
 
 @router.get(
@@ -37,55 +47,16 @@ router = APIRouter()
 async def get_ownership_distribution(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    service: DistributionService = Depends(get_distribution_service),
 ) -> DistributionResponse:
     """
     获取按权属状态的资产分布统计
 
     返回资产在不同权属状态（已确权、未确权、部分确权）下的分布情况
     """
-
-    assets, _ = await asset_crud.get_multi_with_search_async(
-        db=db, skip=0, limit=10000
-    )
-    total_assets = len(assets)
-
-    confirmed_assets, _ = await asset_crud.get_multi_with_search_async(
-        db=db, skip=0, limit=10000, filters={"ownership_status": "已确权"}
-    )
-    confirmed_count = len(confirmed_assets)
-
-    unconfirmed_assets, _ = await asset_crud.get_multi_with_search_async(
-        db=db, skip=0, limit=10000, filters={"ownership_status": "未确权"}
-    )
-    unconfirmed_count = len(unconfirmed_assets)
-
-    partial_assets, _ = await asset_crud.get_multi_with_search_async(
-        db=db, skip=0, limit=10000, filters={"ownership_status": "部分确权"}
-    )
-    partial_count = len(partial_assets)
-
-    distribution = [
-        ChartDataItem(
-            name="已确权",
-            value=confirmed_count,
-            percentage=(confirmed_count / total_assets * 100) if total_assets > 0 else 0,
-        ),
-        ChartDataItem(
-            name="未确权",
-            value=unconfirmed_count,
-            percentage=(unconfirmed_count / total_assets * 100) if total_assets > 0 else 0,
-        ),
-        ChartDataItem(
-            name="部分确权",
-            value=partial_count,
-            percentage=(partial_count / total_assets * 100) if total_assets > 0 else 0,
-        ),
-    ]
-
-    return DistributionResponse(
-        categories=distribution,
-        total=total_assets,
-    )
+    _ = current_user
+    resolved_service = _resolve_service(service)
+    return await resolved_service.get_ownership_distribution(db=db)
 
 
 @router.get(
@@ -96,44 +67,15 @@ async def get_ownership_distribution(
 async def get_property_nature_distribution(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    service: DistributionService = Depends(get_distribution_service),
 ) -> DistributionResponse:
     """
     获取按物业性质的资产分布统计
     返回资产在不同物业性质（经营性、非经营性）下的分布情况
     """
-
-    assets, _ = await asset_crud.get_multi_with_search_async(
-        db=db, skip=0, limit=10000
-    )
-    total_assets = len(assets)
-
-    commercial_assets, _ = await asset_crud.get_multi_with_search_async(
-        db=db, skip=0, limit=10000, filters={"property_nature": "经营性"}
-    )
-    commercial_count = len(commercial_assets)
-
-    non_commercial_assets, _ = await asset_crud.get_multi_with_search_async(
-        db=db, skip=0, limit=10000, filters={"property_nature": "非经营性"}
-    )
-    non_commercial_count = len(non_commercial_assets)
-
-    distribution = [
-        ChartDataItem(
-            name="经营性",
-            value=commercial_count,
-            percentage=(commercial_count / total_assets * 100) if total_assets > 0 else 0,
-        ),
-        ChartDataItem(
-            name="非经营性",
-            value=non_commercial_count,
-            percentage=(non_commercial_count / total_assets * 100) if total_assets > 0 else 0,
-        ),
-    ]
-
-    return DistributionResponse(
-        categories=distribution,
-        total=total_assets,
-    )
+    _ = current_user
+    resolved_service = _resolve_service(service)
+    return await resolved_service.get_property_nature_distribution(db=db)
 
 
 @router.get(
@@ -144,55 +86,16 @@ async def get_property_nature_distribution(
 async def get_usage_status_distribution(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    service: DistributionService = Depends(get_distribution_service),
 ) -> DistributionResponse:
     """
     获取按使用状态的资产分布统计
 
     返回资产在不同使用状态（出租、空置、自用）下的分布情况
     """
-
-    assets, _ = await asset_crud.get_multi_with_search_async(
-        db=db, skip=0, limit=10000
-    )
-    total_assets = len(assets)
-
-    rented_assets, _ = await asset_crud.get_multi_with_search_async(
-        db=db, skip=0, limit=10000, filters={"usage_status": "出租"}
-    )
-    rented_count = len(rented_assets)
-
-    vacant_assets, _ = await asset_crud.get_multi_with_search_async(
-        db=db, skip=0, limit=10000, filters={"usage_status": "空置"}
-    )
-    vacant_count = len(vacant_assets)
-
-    self_used_assets, _ = await asset_crud.get_multi_with_search_async(
-        db=db, skip=0, limit=10000, filters={"usage_status": "自用"}
-    )
-    self_used_count = len(self_used_assets)
-
-    distribution = [
-        ChartDataItem(
-            name="出租",
-            value=rented_count,
-            percentage=(rented_count / total_assets * 100) if total_assets > 0 else 0,
-        ),
-        ChartDataItem(
-            name="空置",
-            value=vacant_count,
-            percentage=(vacant_count / total_assets * 100) if total_assets > 0 else 0,
-        ),
-        ChartDataItem(
-            name="自用",
-            value=self_used_count,
-            percentage=(self_used_count / total_assets * 100) if total_assets > 0 else 0,
-        ),
-    ]
-
-    return DistributionResponse(
-        categories=distribution,
-        total=total_assets,
-    )
+    _ = current_user
+    resolved_service = _resolve_service(service)
+    return await resolved_service.get_usage_status_distribution(db=db)
 
 
 @router.get("/asset-distribution", summary="获取资产分布统计")
@@ -201,6 +104,7 @@ async def get_asset_distribution(
     should_include_deleted: bool = Query(False, description="是否包含已删除资产"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    service: DistributionService = Depends(get_distribution_service),
 ) -> dict[str, Any]:
     """
     获取资产分布统计数据（支持自定义分组字段）
@@ -216,45 +120,10 @@ async def get_asset_distribution(
         - 阻止 PII 字段（manager_name, tenant_name 等）的分析
         - 记录所有被阻止的访问尝试
     """
-
-    FieldValidator.validate_group_by_field("Asset", group_by, raise_on_invalid=True)
-
-    filters: dict[str, Any] = {}
-    if not should_include_deleted:
-        filters["data_status"] = "正常"
-
-    assets, _ = await asset_crud.get_multi_with_search_async(
-        db=db, skip=0, limit=10000, filters=filters
+    _ = current_user
+    resolved_service = _resolve_service(service)
+    return await resolved_service.get_asset_distribution(
+        db=db,
+        group_by=group_by,
+        should_include_deleted=should_include_deleted,
     )
-
-    distribution: dict[str, Any] = {}
-    total_assets = len(assets)
-
-    for asset in assets:
-        group_value = getattr(asset, group_by, None) or "未知"
-        if group_value not in distribution:
-            distribution[group_value] = 0
-        distribution[group_value] += 1
-
-    distribution_data = [
-        {
-            "name": key,
-            "value": count,
-            "percentage": round((count / total_assets * 100), 2)
-            if total_assets > 0
-            else 0,
-        }
-        for key, count in distribution.items()
-    ]
-
-    return {
-        "success": True,
-        "data": {
-            "group_by": group_by,
-            "distribution": distribution_data,
-            "total_assets": total_assets,
-            "generated_at": datetime.now().isoformat(),
-            "filters_applied": filters,
-        },
-        "message": "资产分布统计数据获取成功",
-    }

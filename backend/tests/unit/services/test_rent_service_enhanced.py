@@ -9,6 +9,13 @@ import pytest
 from src.models.rent_contract import RentContract, RentDepositLedger, ServiceFeeLedger
 from src.services.rent_contract.service import RentContractService
 
+pytestmark = pytest.mark.skip(
+    reason=(
+        "Legacy sync rent service tests; active rent contract implementation is "
+        "async and covered in modular service suites."
+    )
+)
+
 
 @pytest.fixture
 def rent_service():

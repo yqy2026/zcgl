@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ...crud.rbac import role_crud
 from ...exceptions import BusinessLogicError
 from ...models.auth import User
+from ...models.rbac import UserRoleAssignment
 from ...schemas.auth import UserCreate, UserUpdate
 from ...schemas.rbac import UserRoleAssignmentCreate
 from ..permission.rbac_service import RBACService
@@ -22,6 +23,44 @@ class AsyncUserManagementService:
         self.password_service = PasswordService()
         self.session_service = AsyncSessionService(db)
         self.rbac_service = RBACService(db)
+
+    @staticmethod
+    def _apply_user_filters_stmt(
+        stmt: Any,
+        *,
+        search: str | None = None,
+        role_id: str | None = None,
+        is_active: bool | None = None,
+        organization_id: str | None = None,
+    ) -> Any:
+        if search:
+            search_filter = or_(
+                User.username.ilike(f"%{search}%"),
+                User.email.ilike(f"%{search}%"),
+                User.full_name.ilike(f"%{search}%"),
+            )
+            stmt = stmt.where(search_filter)
+
+        if role_id is not None:
+            stmt = stmt.join(
+                UserRoleAssignment,
+                UserRoleAssignment.user_id == User.id,
+            ).where(
+                UserRoleAssignment.role_id == role_id,
+                UserRoleAssignment.is_active,
+                or_(
+                    UserRoleAssignment.expires_at.is_(None),
+                    UserRoleAssignment.expires_at > func.now(),
+                ),
+            )
+
+        if is_active is not None:
+            stmt = stmt.where(User.is_active == is_active)
+
+        if organization_id is not None:
+            stmt = stmt.where(User.default_organization_id == organization_id)
+
+        return stmt
 
     async def _assign_primary_role(
         self,
@@ -53,6 +92,44 @@ class AsyncUserManagementService:
     async def get_user_by_email(self, email: str) -> User | None:
         stmt = select(User).where(User.email == email)
         return (await self.db.execute(stmt)).scalars().first()
+
+    async def get_users_with_filters(
+        self,
+        *,
+        skip: int = 0,
+        limit: int = 100,
+        search: str | None = None,
+        role_id: str | None = None,
+        is_active: bool | None = None,
+        organization_id: str | None = None,
+    ) -> tuple[list[User], int]:
+        stmt = select(User)
+        stmt = self._apply_user_filters_stmt(
+            stmt,
+            search=search,
+            role_id=role_id,
+            is_active=is_active,
+            organization_id=organization_id,
+        )
+
+        count_stmt = select(func.count(func.distinct(User.id))).select_from(User)
+        count_stmt = self._apply_user_filters_stmt(
+            count_stmt,
+            search=search,
+            role_id=role_id,
+            is_active=is_active,
+            organization_id=organization_id,
+        )
+
+        total = int((await self.db.execute(count_stmt)).scalar() or 0)
+        users = list(
+            (
+                await self.db.execute(stmt.distinct(User.id).offset(skip).limit(limit))
+            )
+            .scalars()
+            .all()
+        )
+        return users, total
 
     async def create_user(
         self, user_data: UserCreate, assigned_by: str | None = None
@@ -160,9 +237,25 @@ class AsyncUserManagementService:
         return True
 
     async def unlock_user(self, user_id: str) -> bool:
+        user = await self.unlock_user_with_result(user_id)
+        return user is not None
+
+    async def lock_user(self, user_id: str) -> User | None:
         user = await self.get_user_by_id(user_id)
         if not user:
-            return False
+            return None
+
+        user.is_locked = True
+        user.updated_at = datetime.now()
+
+        await self.db.commit()
+        await self.db.refresh(user)
+        return user
+
+    async def unlock_user_with_result(self, user_id: str) -> User | None:
+        user = await self.get_user_by_id(user_id)
+        if not user:
+            return None
 
         user.is_locked = False
         user.locked_until = None
@@ -170,7 +263,22 @@ class AsyncUserManagementService:
         user.updated_at = datetime.now()
 
         await self.db.commit()
-        return True
+        await self.db.refresh(user)
+        return user
+
+    async def admin_reset_password(
+        self, *, user_id: str, new_password: str
+    ) -> User | None:
+        user = await self.get_user_by_id(user_id)
+        if not user:
+            return None
+
+        user.password_hash = self.password_service.get_password_hash(new_password)
+        user.updated_at = datetime.now()
+
+        await self.db.commit()
+        await self.db.refresh(user)
+        return user
 
     async def get_statistics(self) -> dict[str, Any]:
         total_users = int(

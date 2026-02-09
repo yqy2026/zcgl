@@ -173,7 +173,7 @@ def test_get_user_permissions_summary_forbidden_for_other_user(
 
     normal_user = SimpleNamespace(id="user-self")
     mock_service = MagicMock()
-    mock_service.check_user_permission = AsyncMock(return_value=False)
+    mock_service.is_admin = AsyncMock(return_value=False)
     mock_service_cls.return_value = mock_service
 
     with pytest.raises(PermissionDeniedError):

@@ -7,12 +7,12 @@ from typing import Any
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ....core.exception_handler import not_found
-from ....crud.rent_contract import rent_contract, rent_term
+from ....core.exception_handler import BaseBusinessError, internal_error
 from ....database import get_async_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
 from ....schemas.rent_contract import RentTermCreate, RentTermResponse
+from ....services.rent_contract import rent_contract_service
 
 router = APIRouter()
 
@@ -30,8 +30,15 @@ async def get_contract_terms(
     """
     获取指定合同的所有租金条款
     """
-    terms = await rent_term.get_by_contract_async(db, contract_id=contract_id)
-    return terms
+    try:
+        return await rent_contract_service.get_contract_terms_async(
+            db=db,
+            contract_id=contract_id,
+        )
+    except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
+        raise internal_error(f"获取合同租金条款失败: {str(e)}")
 
 
 @router.post(
@@ -49,13 +56,13 @@ async def add_rent_term(
     """
     为合同添加新的租金条款
     """
-
-    contract = await rent_contract.get_with_details_async(db, id=contract_id)
-    if not contract:
-        raise not_found("合同不存在", resource_type="contract", resource_id=contract_id)
-    term_data = term_in.model_dump()
-    term_data["contract_id"] = contract_id
-    term = await rent_term.create(db=db, obj_in=term_data)
-    if not term:
-        raise not_found("合同不存在", resource_type="contract", resource_id=contract_id)
-    return term
+    try:
+        return await rent_contract_service.add_contract_term_async(
+            db=db,
+            contract_id=contract_id,
+            term_in=term_in,
+        )
+    except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
+        raise internal_error(f"添加租金条款失败: {str(e)}")

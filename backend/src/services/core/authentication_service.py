@@ -1,3 +1,4 @@
+import hashlib
 import logging
 import secrets
 from dataclasses import dataclass
@@ -56,6 +57,24 @@ class AsyncAuthenticationService:
     def _generate_jti(self) -> JtiType:
         return secrets.token_urlsafe(32)
 
+    def _build_device_fingerprint(
+        self,
+        user_agent: str | None = None,
+        ip_address: str | None = None,
+        device_id: str | None = None,
+        platform: str | None = None,
+    ) -> str | None:
+        fingerprint_data: list[str] = [
+            user_agent or "",
+            ip_address or "",
+            device_id or "",
+            platform or "",
+        ]
+        fingerprint_string = "|".join(part for part in fingerprint_data if part != "")
+        if fingerprint_string == "":
+            return None
+        return hashlib.sha256(fingerprint_string.encode()).hexdigest()[:16]
+
     def _is_token_revoked(
         self, jti: JtiType | None, user_id: str | None = None
     ) -> bool:
@@ -113,18 +132,12 @@ class AsyncAuthenticationService:
 
         device_fingerprint: str | None = None
         if device_info:
-            import hashlib
-
-            fingerprint_data: list[str] = [
-                device_info.get("user_agent", ""),
-                device_info.get("ip_address", ""),
-                device_info.get("device_id", ""),
-                device_info.get("platform", ""),
-            ]
-            fingerprint_string: str = "|".join(filter(None, fingerprint_data))
-            device_fingerprint = hashlib.sha256(
-                fingerprint_string.encode()
-            ).hexdigest()[:16]
+            device_fingerprint = self._build_device_fingerprint(
+                user_agent=device_info.get("user_agent"),
+                ip_address=device_info.get("ip_address"),
+                device_id=device_info.get("device_id"),
+                platform=device_info.get("platform"),
+            )
 
         access_token_data: dict[str, Any] = {
             "sub": user.id,
@@ -186,6 +199,7 @@ class AsyncAuthenticationService:
             token_type: Any = payload.get("type")
             jti: Any = payload.get("jti")
             session_id: Any = payload.get("session_id")
+            token_device_fingerprint: Any = payload.get("device_fingerprint")
 
             if user_id is None or token_type != "refresh":
                 return None
@@ -217,6 +231,29 @@ class AsyncAuthenticationService:
             await self.db.commit()
             return None
 
+        if token_device_fingerprint:
+            user_id_str = str(user_id)
+            expected_fingerprints = {
+                self._build_device_fingerprint(
+                    user_agent=user_agent,
+                    ip_address=client_ip,
+                    device_id=user_id_str,
+                    platform=None,
+                ),
+                # 兼容旧令牌（未纳入 user_id 参与指纹计算）
+                self._build_device_fingerprint(
+                    user_agent=user_agent,
+                    ip_address=client_ip,
+                    device_id=None,
+                    platform=None,
+                ),
+            }
+            expected_fingerprints.discard(None)
+            if token_device_fingerprint not in expected_fingerprints:
+                session.is_active = False
+                await self.db.commit()
+                return None
+
         session.last_accessed_at = datetime.utcnow()
         if client_ip:
             setattr(session, "ip_address", client_ip)
@@ -225,3 +262,13 @@ class AsyncAuthenticationService:
         await self.db.commit()
 
         return session
+
+
+class UserLookupServiceAdapter:
+    """兼容旧调用方式的用户查询适配器（服务层）。"""
+
+    async def get_by_username_async(
+        self, db: AsyncSession, username: str
+    ) -> User | None:
+        user_service = AsyncUserManagementService(db)
+        return await user_service.get_user_by_username(username)

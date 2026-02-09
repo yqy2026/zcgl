@@ -196,9 +196,7 @@ async def run_notification_tasks_endpoint(
     """
     # 检查用户权限（只有管理员可以手动触发）
     rbac_service = RBACService(db)
-    if not await rbac_service.check_user_permission(
-        current_user.id, "system", "admin"
-    ):
+    if not await rbac_service.is_admin(current_user.id):
         raise forbidden("只有管理员可以手动触发通知任务")
 
     # 在后台运行任务

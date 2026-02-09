@@ -1,6 +1,7 @@
-from datetime import datetime
+from datetime import datetime, timedelta
+from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...models.auth import AuditLog, User
@@ -72,3 +73,77 @@ class AuditService:
         await self.db.refresh(audit_log)
 
         return audit_log
+
+    async def get_login_statistics(self, days: int = 7) -> dict[str, Any]:
+        """获取登录统计信息。"""
+        start_date = datetime.now() - timedelta(days=days)
+        total_stmt = (
+            select(func.count(AuditLog.id))
+            .where(
+                AuditLog.action == "user_login",
+                AuditLog.created_at >= start_date,
+            )
+            .select_from(AuditLog)
+        )
+        success_stmt = (
+            select(func.count(AuditLog.id))
+            .where(
+                AuditLog.action == "user_login",
+                AuditLog.created_at >= start_date,
+                AuditLog.response_status == 200,
+            )
+            .select_from(AuditLog)
+        )
+
+        total_logins = int((await self.db.execute(total_stmt)).scalar() or 0)
+        successful_logins = int((await self.db.execute(success_stmt)).scalar() or 0)
+        failed_logins = max(total_logins - successful_logins, 0)
+
+        return {
+            "total_logins": total_logins,
+            "successful_logins": successful_logins,
+            "failed_logins": failed_logins,
+            "success_rate": round(successful_logins / total_logins * 100, 2)
+            if total_logins > 0
+            else 0,
+        }
+
+
+class AuditLogServiceAdapter:
+    """兼容旧调用方式的审计记录适配器（服务层）。"""
+
+    async def create_async(
+        self,
+        db: AsyncSession,
+        user_id: str,
+        action: str,
+        resource_type: str | None = None,
+        resource_id: str | None = None,
+        resource_name: str | None = None,
+        api_endpoint: str | None = None,
+        http_method: str | None = None,
+        request_params: str | None = None,
+        request_body: str | None = None,
+        response_status: int | None = None,
+        response_message: str | None = None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+        session_id: str | None = None,
+    ) -> AuditLog | None:
+        audit_service = AuditService(db)
+        return await audit_service.create_audit_log(
+            user_id=user_id,
+            action=action,
+            resource_type=resource_type,
+            resource_id=resource_id,
+            resource_name=resource_name,
+            api_endpoint=api_endpoint,
+            http_method=http_method,
+            request_params=request_params,
+            request_body=request_body,
+            response_status=response_status,
+            response_message=response_message,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            session_id=session_id,
+        )

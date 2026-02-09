@@ -220,6 +220,7 @@ class TestAnalyzePDF:
 class TestIsScannedPDF:
     """Tests for is_scanned_pdf convenience function"""
 
+    @pytest.mark.skipif(not PYMUPDF_AVAILABLE, reason="PyMuPDF not installed")
     def test_is_scanned_pdf_returns_true_for_scanned(
         self, sample_pdf_path, mock_pdf_doc, mock_scanned_page
     ):
@@ -234,6 +235,7 @@ class TestIsScannedPDF:
 
             assert result is True
 
+    @pytest.mark.skipif(not PYMUPDF_AVAILABLE, reason="PyMuPDF not installed")
     def test_is_scanned_pdf_returns_false_for_digital(
         self, sample_pdf_path, mock_pdf_doc, mock_digital_page
     ):
@@ -267,6 +269,7 @@ class TestIsScannedPDF:
 class TestGetExtractionRecommendation:
     """Tests for get_extraction_recommendation convenience function"""
 
+    @pytest.mark.skipif(not PYMUPDF_AVAILABLE, reason="PyMuPDF not installed")
     def test_recommends_vision_for_scanned_pdf(
         self, sample_pdf_path, mock_pdf_doc, mock_scanned_page
     ):
@@ -280,6 +283,7 @@ class TestGetExtractionRecommendation:
 
             assert result == "vision"
 
+    @pytest.mark.skipif(not PYMUPDF_AVAILABLE, reason="PyMuPDF not installed")
     def test_recommends_text_for_digital_pdf(
         self, sample_pdf_path, mock_pdf_doc, mock_digital_page
     ):
@@ -293,6 +297,7 @@ class TestGetExtractionRecommendation:
 
             assert result == "text"
 
+    @pytest.mark.skipif(not PYMUPDF_AVAILABLE, reason="PyMuPDF not installed")
     def test_recommends_vision_as_default(
         self, sample_pdf_path, mock_pdf_doc, mock_scanned_page
     ):

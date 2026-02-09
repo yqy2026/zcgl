@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, Body, Depends, Path, Query
+from fastapi.params import Depends as DependsParam
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,7 +13,6 @@ from ....core.exception_handler import (
 )
 from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
 from ....database import get_async_db
-from ....enums.task import TaskStatus
 from ....middleware.auth import (
     get_current_active_user,
     require_admin,
@@ -31,95 +31,17 @@ from ....schemas.task import (
 )
 from ....services.task import task_service
 from ....services.task.access import ensure_task_access, resolve_task_user_filter
+from ....services.task.service import TaskService
 
 
-class BusinessLogicError(Exception):
-    pass
+def get_task_service() -> TaskService:
+    return task_service
 
 
-class _TaskCrudAdapter:
-    """Compatibility adapter for API tests; delegates to TaskService."""
-
-    async def get_multi_async(self, **kwargs: Any) -> list[Any]:
-        db = kwargs["db"]
-        tasks, _ = await task_service.get_tasks(
-            db=db,
-            skip=kwargs.get("skip", 0),
-            limit=kwargs.get("limit", 100),
-            task_type=kwargs.get("task_type"),
-            status=kwargs.get("status"),
-            user_id=kwargs.get("user_id"),
-            created_after=kwargs.get("created_after"),
-            created_before=kwargs.get("created_before"),
-            order_by=kwargs.get("order_by", "created_at"),
-            order_dir=kwargs.get("order_dir", "desc"),
-        )
-        return tasks
-
-    async def count_async(self, **kwargs: Any) -> int:
-        db = kwargs["db"]
-        _, total = await task_service.get_tasks(
-            db=db,
-            skip=0,
-            limit=1,
-            task_type=kwargs.get("task_type"),
-            status=kwargs.get("status"),
-            user_id=kwargs.get("user_id"),
-            created_after=kwargs.get("created_after"),
-            created_before=kwargs.get("created_before"),
-            order_by="created_at",
-            order_dir="desc",
-        )
-        return total
-
-    async def get(self, **kwargs: Any) -> Any:
-        return await task_service.get_task(
-            db=kwargs["db"],
-            task_id=kwargs["id"],
-        )
-
-    async def get_history_async(self, **kwargs: Any) -> list[Any]:
-        return await task_service.get_task_history(
-            db=kwargs["db"],
-            task_id=kwargs["task_id"],
-        )
-
-
-class _ExcelTaskConfigCrudAdapter:
-    """Compatibility adapter for API tests; delegates to TaskService."""
-
-    async def get_multi_async(self, **kwargs: Any) -> list[Any]:
-        return await task_service.get_excel_configs(
-            db=kwargs["db"],
-            config_type=kwargs.get("config_type"),
-            task_type=kwargs.get("task_type"),
-            limit=kwargs.get("limit", 50),
-        )
-
-    async def get_default_async(self, **kwargs: Any) -> Any:
-        return await task_service.get_default_excel_config(
-            db=kwargs["db"],
-            config_type=kwargs["config_type"],
-            task_type=kwargs["task_type"],
-        )
-
-    async def get(self, **kwargs: Any) -> Any:
-        return await task_service.get_excel_config(
-            db=kwargs["db"],
-            config_id=kwargs["id"],
-        )
-
-    async def update(self, **kwargs: Any) -> Any:
-        db_obj = kwargs["db_obj"]
-        return await task_service.update_excel_config(
-            db=kwargs["db"],
-            config_id=str(getattr(db_obj, "id")),
-            config_data=kwargs["obj_in"],
-        )
-
-
-task_crud = _TaskCrudAdapter()
-excel_task_config_crud = _ExcelTaskConfigCrudAdapter()
+def _resolve_service(service: TaskService | Any) -> TaskService | Any:
+    if isinstance(service, DependsParam):
+        return get_task_service()
+    return service
 
 
 router = APIRouter(prefix="/tasks", tags=["任务管理"])
@@ -130,13 +52,15 @@ async def create_task(
     task_in: TaskCreate,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    service: TaskService = Depends(get_task_service),
 ) -> TaskResponse:
     """
     创建新的异步任务
     """
 
     try:
-        task = await task_service.create_task(
+        resolved_service = _resolve_service(service)
+        task = await resolved_service.create_task(
             db=db, obj_in=task_in, user_id=current_user.id
         )
         return TaskResponse.model_validate(task)
@@ -168,6 +92,7 @@ async def get_tasks(
     order_dir: str = Query("desc", regex="^(asc|desc)$", description="排序方向"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    service: TaskService = Depends(get_task_service),
 ) -> JSONResponse:
     """
     获取任务列表，支持分页和筛选
@@ -183,7 +108,8 @@ async def get_tasks(
 
         skip = (page - 1) * page_size
         effective_user_id = await resolve_task_user_filter(user_id, current_user, db)
-        tasks = await task_crud.get_multi_async(
+        resolved_service = _resolve_service(service)
+        tasks, total = await resolved_service.get_tasks(
             db=db,
             skip=skip,
             limit=page_size,
@@ -194,14 +120,6 @@ async def get_tasks(
             created_before=created_before_dt,
             order_by=order_by,
             order_dir=order_dir,
-        )
-        total = await task_crud.count_async(
-            db=db,
-            task_type=task_type,
-            status=status,
-            user_id=effective_user_id,
-            created_after=created_after_dt,
-            created_before=created_before_dt,
         )
 
         task_responses = [TaskResponse.model_validate(task) for task in tasks]
@@ -222,12 +140,14 @@ async def get_task(
     task_id: str = Path(..., description="任务ID"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    service: TaskService = Depends(get_task_service),
 ) -> TaskResponse:
     """
     获取单个任务的详细信息
     """
 
-    task = await task_crud.get(db=db, id=task_id)
+    resolved_service = _resolve_service(service)
+    task = await resolved_service.get_task(db=db, task_id=task_id)
     if not task:
         raise not_found("任务不存在", resource_type="task", resource_id=task_id)
     await ensure_task_access(task, current_user, db)
@@ -241,17 +161,18 @@ async def update_task(
     task_in: TaskUpdate = Body(...),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    service: TaskService = Depends(get_task_service),
 ) -> TaskResponse:
     """
     更新任务信息
     """
-
-    task = await task_crud.get(db=db, id=task_id)
+    resolved_service = _resolve_service(service)
+    task = await resolved_service.get_task(db=db, task_id=task_id)
     if not task:
         raise not_found("任务不存在", resource_type="task", resource_id=task_id)
     await ensure_task_access(task, current_user, db)
     try:
-        updated_task = await task_service.update_task(
+        updated_task = await resolved_service.update_task(
             db=db, task_id=task_id, obj_in=task_in
         )
         return TaskResponse.model_validate(updated_task)
@@ -267,17 +188,18 @@ async def cancel_task(
     cancel_request: TaskCancelRequest | None = Body(None),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    service: TaskService = Depends(get_task_service),
 ) -> TaskResponse:
     """
     取消正在运行的任务
     """
-
-    task = await task_crud.get(db=db, id=task_id)
+    resolved_service = _resolve_service(service)
+    task = await resolved_service.get_task(db=db, task_id=task_id)
     if not task:
         raise not_found("任务不存在", resource_type="task", resource_id=task_id)
     await ensure_task_access(task, current_user, db)
     try:
-        updated_task = await task_service.cancel_task(
+        updated_task = await resolved_service.cancel_task(
             db=db,
             task_id=task_id,
             reason=cancel_request.reason if cancel_request else None,
@@ -294,17 +216,18 @@ async def delete_task(
     task_id: str = Path(..., description="任务ID"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    service: TaskService = Depends(get_task_service),
 ) -> dict[str, str]:
     """
     删除任务（软删除）
     """
-
-    task = await task_crud.get(db=db, id=task_id)
+    resolved_service = _resolve_service(service)
+    task = await resolved_service.get_task(db=db, task_id=task_id)
     if not task:
         raise not_found("任务不存在", resource_type="task", resource_id=task_id)
     await ensure_task_access(task, current_user, db)
     try:
-        await task_service.delete_task(db=db, task_id=task_id)
+        await resolved_service.delete_task(db=db, task_id=task_id)
         return {"message": "任务删除成功"}
     except Exception as e:
         if isinstance(e, BaseBusinessError):
@@ -321,18 +244,19 @@ async def get_task_history(
     task_id: str = Path(..., description="任务ID"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    service: TaskService = Depends(get_task_service),
 ) -> list[TaskHistoryResponse]:
     """
     获取任务的历史记录
     """
-
-    task = await task_crud.get(db=db, id=task_id)
+    resolved_service = _resolve_service(service)
+    task = await resolved_service.get_task(db=db, task_id=task_id)
     if not task:
         raise not_found("任务不存在", resource_type="task", resource_id=task_id)
     await ensure_task_access(task, current_user, db)
 
     try:
-        history = await task_crud.get_history_async(db=db, task_id=task_id)
+        history = await resolved_service.get_task_history(db=db, task_id=task_id)
         result: list[TaskHistoryResponse] = [
             TaskHistoryResponse.model_validate(h) for h in history
         ]
@@ -346,6 +270,7 @@ async def get_task_statistics(
     user_id: str | None = Query(None, description="用户ID筛选"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    service: TaskService = Depends(get_task_service),
 ) -> TaskStatistics:
     """
     获取任务统计信息
@@ -353,7 +278,8 @@ async def get_task_statistics(
 
     try:
         effective_user_id = await resolve_task_user_filter(user_id, current_user, db)
-        stats = await task_service.get_statistics(db=db, user_id=effective_user_id)
+        resolved_service = _resolve_service(service)
+        stats = await resolved_service.get_statistics(db=db, user_id=effective_user_id)
         return TaskStatistics.model_validate(stats)
     except Exception as e:
         raise internal_error(f"获取任务统计失败: {str(e)}")
@@ -363,6 +289,7 @@ async def get_task_statistics(
 async def get_running_tasks(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    service: TaskService = Depends(get_task_service),
 ) -> list[TaskResponse]:
     """
     获取当前正在运行的所有任务
@@ -370,13 +297,11 @@ async def get_running_tasks(
 
     try:
         effective_user_id = await resolve_task_user_filter(None, current_user, db)
-        tasks = await task_crud.get_multi_async(
+        resolved_service = _resolve_service(service)
+        tasks = await resolved_service.get_running_tasks(
             db=db,
             limit=100,
-            status=TaskStatus.RUNNING.value,
             user_id=effective_user_id,
-            order_by="started_at",
-            order_dir="asc",
         )
         return [TaskResponse.model_validate(task) for task in tasks]
     except Exception as e:
@@ -388,18 +313,18 @@ async def get_recent_tasks(
     page_size: int = Query(10, ge=1, le=50, description="返回数量"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    service: TaskService = Depends(get_task_service),
 ) -> list[TaskResponse]:
     """
     获取最近的任务
     """
 
     try:
-        tasks = await task_crud.get_multi_async(
+        resolved_service = _resolve_service(service)
+        tasks = await resolved_service.get_recent_tasks(
             db=db,
             limit=page_size,
             user_id=await resolve_task_user_filter(None, current_user, db),
-            order_by="created_at",
-            order_dir="desc",
         )
         return [TaskResponse.model_validate(task) for task in tasks]
     except Exception as e:
@@ -415,13 +340,15 @@ async def create_excel_config(
     config_in: ExcelTaskConfigCreate,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_permission("excel_config", "write")),
+    service: TaskService = Depends(get_task_service),
 ) -> ExcelTaskConfigResponse:
     """
     创建Excel任务配置
     """
 
     try:
-        config = await task_service.create_excel_config(
+        resolved_service = _resolve_service(service)
+        config = await resolved_service.create_excel_config(
             db=db, obj_in=config_in, user_id=current_user.id
         )
         return ExcelTaskConfigResponse.model_validate(config)
@@ -439,13 +366,16 @@ async def get_excel_configs(
     task_type: str | None = Query(None, description="任务类型"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_permission("excel_config", "read")),
+    service: TaskService = Depends(get_task_service),
 ) -> list[ExcelTaskConfigResponse]:
     """
     获取Excel任务配置列表
     """
 
     try:
-        configs = await excel_task_config_crud.get_multi_async(
+        _ = current_user
+        resolved_service = _resolve_service(service)
+        configs = await resolved_service.get_excel_configs(
             db=db, limit=50, config_type=config_type, task_type=task_type
         )
         return [ExcelTaskConfigResponse.model_validate(cfg) for cfg in configs]
@@ -463,13 +393,16 @@ async def get_default_excel_config(
     task_type: str = Query(..., description="任务类型"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_permission("excel_config", "read")),
+    service: TaskService = Depends(get_task_service),
 ) -> ExcelTaskConfigResponse:
     """
     获取默认的Excel任务配置
     """
 
     try:
-        config = await excel_task_config_crud.get_default_async(
+        _ = current_user
+        resolved_service = _resolve_service(service)
+        config = await resolved_service.get_default_excel_config(
             db=db, config_type=config_type, task_type=task_type
         )
         if not config:
@@ -490,12 +423,15 @@ async def get_excel_config(
     config_id: str = Path(..., description="配置ID"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_permission("excel_config", "read")),
+    service: TaskService = Depends(get_task_service),
 ) -> ExcelTaskConfigResponse:
     """
     获取单个Excel配置的详细信息
     """
 
-    config = await excel_task_config_crud.get(db=db, id=config_id)
+    _ = current_user
+    resolved_service = _resolve_service(service)
+    config = await resolved_service.get_excel_config(db=db, config_id=config_id)
     if not config:
         raise not_found(
             "配置不存在", resource_type="excel_config", resource_id=config_id
@@ -514,20 +450,19 @@ async def update_excel_config(
     config_in: dict[str, Any] = Body(...),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_permission("excel_config", "write")),
+    service: TaskService = Depends(get_task_service),
 ) -> ExcelTaskConfigResponse:
     """
     更新Excel任务配置
     """
 
     try:
-        config = await excel_task_config_crud.get(db=db, id=config_id)
-        if not config:
-            raise not_found(
-                "配置不存在", resource_type="excel_config", resource_id=config_id
-            )
-
-        updated_config = await excel_task_config_crud.update(
-            db=db, db_obj=config, obj_in=config_in
+        _ = current_user
+        resolved_service = _resolve_service(service)
+        updated_config = await resolved_service.update_excel_config(
+            db=db,
+            config_id=config_id,
+            config_data=config_in,
         )
         result: ExcelTaskConfigResponse = ExcelTaskConfigResponse.model_validate(
             updated_config
@@ -544,21 +479,23 @@ async def delete_excel_config(
     config_id: str = Path(..., description="配置ID"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_permission("excel_config", "write")),
+    service: TaskService = Depends(get_task_service),
 ) -> dict[str, str]:
     """
     删除Excel配置（软删除）
     """
 
     try:
-        config = await excel_task_config_crud.get(db=db, id=config_id)
-        if not config:
+        _ = current_user
+        resolved_service = _resolve_service(service)
+        deleted = await resolved_service.delete_excel_config(
+            db=db,
+            config_id=config_id,
+        )
+        if deleted is not True:
             raise not_found(
                 "配置不存在", resource_type="excel_config", resource_id=config_id
             )
-
-        await excel_task_config_crud.update(
-            db=db, db_obj=config, obj_in={"is_active": False}
-        )
         return {"message": "Excel配置删除成功"}
     except BaseBusinessError:
         raise
@@ -572,13 +509,16 @@ async def cleanup_old_tasks(
     is_dry_run: bool = Query(False, description="是否为试运行"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_admin),
+    service: TaskService = Depends(get_task_service),
 ) -> dict[str, Any]:
     """
     清理过期的任务记录
     """
 
     try:
-        return await task_service.cleanup_old_tasks(
+        _ = current_user
+        resolved_service = _resolve_service(service)
+        return await resolved_service.cleanup_old_tasks(
             db=db, days=days, dry_run=is_dry_run
         )
     except Exception as e:

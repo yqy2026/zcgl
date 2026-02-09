@@ -32,6 +32,10 @@ from ..schemas.rbac import PermissionCheckRequest
 from ..security.cookie_manager import cookie_manager
 from ..security.logging_security import security_monitor
 from ..services import RBACService
+from ..services.permission.rbac_service import (
+    ADMIN_PERMISSION_ACTION,
+    ADMIN_PERMISSION_RESOURCE,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -362,9 +366,7 @@ async def require_admin(
 ) -> User:
     """要求管理员权限"""
     rbac_service = RBACService(db)
-    if not await rbac_service.check_user_permission(
-        current_user.id, "system", "admin"
-    ):
+    if not await rbac_service.is_admin(current_user.id):
         raise forbidden("需要管理员权限")
     return current_user
 
@@ -416,6 +418,13 @@ class PermissionChecker:
                 resource, action = permission_code.split(":", 1)
             else:
                 resource, action = "system", permission_code
+            if (
+                resource == ADMIN_PERMISSION_RESOURCE
+                and action == ADMIN_PERMISSION_ACTION
+            ):
+                if await rbac_service.is_admin(user.id):
+                    return True
+                continue
             if await rbac_service.check_user_permission(user.id, resource, action):
                 return True
         return False
@@ -447,7 +456,7 @@ class OrganizationPermissionChecker:
     ) -> bool:
         """检查用户是否可以访问组织"""
         rbac_service = RBACService(db)
-        if await rbac_service.check_user_permission(user.id, "system", "admin"):
+        if await rbac_service.is_admin(user.id):
             return True
 
         # 用户可以访问自己的默认组织
@@ -614,9 +623,7 @@ class RBACPermissionChecker:
             raise unauthorized("需要认证")
 
         rbac_service = RBACService(db)
-        if await rbac_service.check_user_permission(
-            current_user.id, "system", "admin"
-        ):
+        if await rbac_service.is_admin(current_user.id):
             return current_user
 
         # 使用RBAC服务检查权限
@@ -659,9 +666,7 @@ class ResourcePermissionChecker:
     ) -> User:
         """检查用户资源权限"""
         rbac_service = RBACService(db)
-        if await rbac_service.check_user_permission(
-            current_user.id, "system", "admin"
-        ):
+        if await rbac_service.is_admin(current_user.id):
             return current_user
 
         # 检查是否有对应的资源权限
@@ -715,9 +720,7 @@ class RoleBasedAccessChecker:
     ) -> User:
         """检查用户角色"""
         rbac_service = RBACService(db)
-        if await rbac_service.check_user_permission(
-            current_user.id, "system", "admin"
-        ):
+        if await rbac_service.is_admin(current_user.id):
             return current_user
 
         # 获取用户角色
@@ -746,7 +749,7 @@ async def can_edit_contract(user: User, db: AsyncSession, contract_id: str) -> b
     - 其他角色需要通过RBAC服务检查特定权限
     """
     rbac_service = RBACService(db)
-    if await rbac_service.check_user_permission(user.id, "system", "admin"):
+    if await rbac_service.is_admin(user.id):
         return True
 
     # 使用RBAC服务进行细粒度权限检查
@@ -774,9 +777,7 @@ async def get_user_rbac_permissions(
     permissions_summary = await rbac_service.get_user_permissions_summary(
         current_user.id
     )
-    is_admin = await rbac_service.check_user_permission(
-        current_user.id, "system", "admin"
-    )
+    is_admin = await rbac_service.is_admin(current_user.id)
 
     return {
         "is_admin": is_admin,

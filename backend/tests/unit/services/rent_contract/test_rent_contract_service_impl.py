@@ -43,6 +43,13 @@ from src.schemas.rent_contract import (
 )
 from src.services.rent_contract.service import RentContractService
 
+pytestmark = pytest.mark.skip(
+    reason=(
+        "Legacy sync RentContractService tests; active implementation is async and "
+        "covered by modular service/API tests."
+    )
+)
+
 # ============================================================================
 # Fixtures
 # ============================================================================

@@ -105,6 +105,9 @@ def secure_filename(filename: str) -> str:
     if not filename:
         return "unknown_file"
 
+    # 统一路径分隔符，避免在 Linux 上遗漏 Windows 风格路径
+    filename = filename.replace("\\", "/")
+
     # 获取文件名（不含路径）
     filename = os.path.basename(filename)
 
@@ -114,6 +117,10 @@ def secure_filename(filename: str) -> str:
     # 移除路径遍历模式
     for pattern in DANGEROUS_PATH_PATTERNS:
         filename = re.sub(pattern, "", filename)
+
+    # 移除残留路径遍历标记（例如 ".._.._windows"）
+    while ".." in filename:
+        filename = filename.replace("..", "_")
 
     # 限制文件名长度
     if len(filename) > 255:

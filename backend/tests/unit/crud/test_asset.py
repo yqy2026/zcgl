@@ -237,6 +237,7 @@ class TestAssetSearchIndexRefresh:
         self, crud: AssetCRUD, mock_db: MagicMock
     ) -> None:
         data = {"address": "测试地址", "manager_name": "张三"}
+        method_globals = crud._refresh_search_index_entries.__globals__
 
         def _build_entries(
             *,
@@ -255,9 +256,12 @@ class TestAssetSearchIndexRefresh:
                 )
             ]
 
-        with (
-            patch("src.crud.asset.SEARCH_INDEX_FIELDS", {"address", "manager_name"}),
-            patch("src.crud.asset.build_search_index_entries", side_effect=_build_entries),
+        with patch.dict(
+            method_globals,
+            {
+                "SEARCH_INDEX_FIELDS": {"address", "manager_name"},
+                "build_search_index_entries": MagicMock(side_effect=_build_entries),
+            },
         ):
             await crud._refresh_search_index_entries(
                 mock_db, asset_id="asset-1", data=data
@@ -280,7 +284,10 @@ class TestAssetSearchIndexRefresh:
     async def test_refresh_skips_when_no_indexed_fields(
         self, crud: AssetCRUD, mock_db: MagicMock
     ) -> None:
-        with patch("src.crud.asset.SEARCH_INDEX_FIELDS", {"address"}):
+        with patch.dict(
+            crud._refresh_search_index_entries.__globals__,
+            {"SEARCH_INDEX_FIELDS": {"address"}},
+        ):
             await crud._refresh_search_index_entries(
                 mock_db,
                 asset_id="asset-1",
@@ -292,9 +299,12 @@ class TestAssetSearchIndexRefresh:
     async def test_refresh_only_deletes_when_no_entries(
         self, crud: AssetCRUD, mock_db: MagicMock
     ) -> None:
-        with (
-            patch("src.crud.asset.SEARCH_INDEX_FIELDS", {"address"}),
-            patch("src.crud.asset.build_search_index_entries", return_value=[]),
+        with patch.dict(
+            crud._refresh_search_index_entries.__globals__,
+            {
+                "SEARCH_INDEX_FIELDS": {"address"},
+                "build_search_index_entries": MagicMock(return_value=[]),
+            },
         ):
             await crud._refresh_search_index_entries(
                 mock_db, asset_id="asset-1", data={"address": "测试地址"}

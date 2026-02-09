@@ -1,6 +1,6 @@
-"""Tests for CRUDBase.get_distinct_field_values() method"""
+"""Tests for CRUDBase.get_distinct_field_values()."""
 
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -8,33 +8,37 @@ from src.core.exception_handler import InvalidRequestError
 from src.crud.asset import asset_crud
 
 
+@pytest.fixture(autouse=True)
+def clear_asset_crud_cache():
+    asset_crud.clear_cache()
+    yield
+    asset_crud.clear_cache()
+
+
 class TestGetDistinctFieldValues:
-    """Test suite for CRUDBase.get_distinct_field_values()"""
+    """Test suite for CRUDBase.get_distinct_field_values()."""
 
-    def test_invalid_field_name(self, mock_db: MagicMock):
-        """Test error handling for invalid field"""
+    @pytest.mark.asyncio
+    async def test_invalid_field_name(self, mock_db: MagicMock):
         with pytest.raises(AttributeError, match="does not exist on model"):
-            asset_crud.get_distinct_field_values(mock_db, "nonexistent_field")
+            await asset_crud.get_distinct_field_values(mock_db, "nonexistent_field")
 
-    def test_invalid_sort_order(self, mock_db: MagicMock):
-        """Test error handling for invalid sort order"""
+    @pytest.mark.asyncio
+    async def test_invalid_sort_order(self, mock_db: MagicMock):
         with pytest.raises(InvalidRequestError, match="sort_order must be"):
-            asset_crud.get_distinct_field_values(
-                mock_db, "ownership_id", sort_order="invalid"
+            await asset_crud.get_distinct_field_values(
+                mock_db,
+                "ownership_id",
+                sort_order="invalid",
             )
 
-    def test_query_construction(self, mock_db: MagicMock):
-        """Test that query is constructed correctly with all options"""
-        # Mock the query chain
-        mock_query = MagicMock()
-        mock_db.query.return_value = mock_query
-        mock_query.filter.return_value = mock_query
-        mock_query.distinct.return_value = mock_query
-        mock_query.order_by.return_value = mock_query
-        mock_query.all.return_value = [("value1",), ("value2",)]
+    @pytest.mark.asyncio
+    async def test_query_execution_and_result_mapping(self, mock_db: MagicMock):
+        mock_result = MagicMock()
+        mock_result.all.return_value = [("value1",), ("value2",)]
+        mock_db.execute = AsyncMock(return_value=mock_result)
 
-        # Call the method
-        result = asset_crud.get_distinct_field_values(
+        result = await asset_crud.get_distinct_field_values(
             mock_db,
             "ownership_id",
             sort_order="asc",
@@ -42,118 +46,91 @@ class TestGetDistinctFieldValues:
             exclude_empty=True,
         )
 
-        # Verify query was called correctly
-        mock_db.query.assert_called_once()
         assert result == ["value1", "value2"]
+        mock_db.execute.assert_awaited_once()
 
-    def test_query_with_filters(self, mock_db: MagicMock):
-        """Test query construction with additional filters"""
-        # Mock the query chain
-        mock_query = MagicMock()
-        mock_db.query.return_value = mock_query
-        mock_query.filter.return_value = mock_query
-        mock_query.distinct.return_value = mock_query
-        mock_query.order_by.return_value = mock_query
-        mock_query.all.return_value = []
+    @pytest.mark.asyncio
+    async def test_query_with_filters(self, mock_db: MagicMock):
+        mock_result = MagicMock()
+        mock_result.all.return_value = []
+        mock_db.execute = AsyncMock(return_value=mock_result)
 
-        # Call the method with filters
-        asset_crud.get_distinct_field_values(
+        await asset_crud.get_distinct_field_values(
             mock_db,
             "ownership_id",
             filters={"is_active": True},
             use_cache=False,
         )
 
-        # Verify filter was called at least once for exclude_empty + once for additional filter
-        # The implementation chains filters, so we expect at least 2 calls
-        # (one for None/empty check, one or more for additional filters)
-        assert mock_query.filter.call_count >= 1
+        mock_db.execute.assert_awaited_once()
 
-    def test_descending_sort(self, mock_db: MagicMock):
-        """Test descending sort order is applied"""
-        # Mock the query chain
-        mock_query = MagicMock()
-        mock_db.query.return_value = mock_query
-        mock_query.filter.return_value = mock_query
-        mock_query.distinct.return_value = mock_query
-        mock_query.order_by.return_value = mock_query
-        mock_query.all.return_value = []
+    @pytest.mark.asyncio
+    async def test_descending_sort_generates_desc_statement(self, mock_db: MagicMock):
+        mock_result = MagicMock()
+        mock_result.all.return_value = []
+        mock_db.execute = AsyncMock(return_value=mock_result)
 
-        # Call with descending sort
-        asset_crud.get_distinct_field_values(
-            mock_db, "ownership_id", sort_order="desc", use_cache=False
+        await asset_crud.get_distinct_field_values(
+            mock_db,
+            "ownership_id",
+            sort_order="desc",
+            use_cache=False,
         )
 
-        # Verify order_by was called
-        mock_query.order_by.assert_called_once()
+        stmt = mock_db.execute.await_args.args[0]
+        assert "DESC" in str(stmt)
 
-    def test_exclude_empty_false(self, mock_db: MagicMock):
-        """Test with exclude_empty=False"""
-        # Mock the query chain
-        mock_query = MagicMock()
-        mock_db.query.return_value = mock_query
-        mock_query.filter.return_value = mock_query
-        mock_query.distinct.return_value = mock_query
-        mock_query.order_by.return_value = mock_query
-        mock_query.all.return_value = []
+    @pytest.mark.asyncio
+    async def test_exclude_empty_false_still_executes(self, mock_db: MagicMock):
+        mock_result = MagicMock()
+        mock_result.all.return_value = []
+        mock_db.execute = AsyncMock(return_value=mock_result)
 
-        # Call with exclude_empty=False
-        asset_crud.get_distinct_field_values(
-            mock_db, "ownership_id", exclude_empty=True, use_cache=False
+        await asset_crud.get_distinct_field_values(
+            mock_db,
+            "ownership_id",
+            exclude_empty=False,
+            use_cache=False,
         )
 
-        # Verify query was constructed
-        mock_db.query.assert_called_once()
+        mock_db.execute.assert_awaited_once()
 
-    def test_caching_mechanism(self, mock_db: MagicMock):
-        """Test that caching is properly used"""
-        # Mock the query chain
-        mock_query = MagicMock()
-        mock_db.query.return_value = mock_query
-        mock_query.filter.return_value = mock_query
-        mock_query.distinct.return_value = mock_query
-        mock_query.order_by.return_value = mock_query
-        mock_query.all.return_value = [("value1",)]
+    @pytest.mark.asyncio
+    async def test_caching_mechanism(self, mock_db: MagicMock):
+        mock_result = MagicMock()
+        mock_result.all.return_value = [("value1",)]
+        mock_db.execute = AsyncMock(return_value=mock_result)
 
-        # First call with cache enabled
-        result1 = asset_crud.get_distinct_field_values(
-            mock_db, "ownership_id", use_cache=True
+        result1 = await asset_crud.get_distinct_field_values(
+            mock_db,
+            "ownership_id",
+            use_cache=True,
+        )
+        result2 = await asset_crud.get_distinct_field_values(
+            mock_db,
+            "ownership_id",
+            use_cache=True,
         )
 
-        # Second call should use cache (query should not be called again)
-        result2 = asset_crud.get_distinct_field_values(
-            mock_db, "ownership_id", use_cache=True
-        )
-
-        # Results should be the same
         assert result1 == result2 == ["value1"]
+        mock_db.execute.assert_awaited_once()
 
-        # Query should only be called once (first call hits DB, second call uses cache)
-        # Note: This depends on cache_key generation being consistent
-
-    def test_empty_values_filtered(self, mock_db: MagicMock):
-        """Test that empty values are filtered from results"""
-        # Mock the query chain
-        mock_query = MagicMock()
-        mock_db.query.return_value = mock_query
-        mock_query.filter.return_value = mock_query
-        mock_query.distinct.return_value = mock_query
-        mock_query.order_by.return_value = mock_query
-        # Return mix of valid and empty values
-        mock_query.all.return_value = [
+    @pytest.mark.asyncio
+    async def test_empty_values_filtered(self, mock_db: MagicMock):
+        mock_result = MagicMock()
+        mock_result.all.return_value = [
             ("value1",),
             ("value2",),
             (None,),
             ("",),
             ("value3",),
         ]
+        mock_db.execute = AsyncMock(return_value=mock_result)
 
-        # Call the method
-        result = asset_crud.get_distinct_field_values(
-            mock_db, "ownership_id", use_cache=False
+        result = await asset_crud.get_distinct_field_values(
+            mock_db,
+            "ownership_id",
+            use_cache=False,
         )
 
-        # Verify empty values were filtered out
         assert result == ["value1", "value2", "value3"]
-        assert None not in result
-        assert "" not in result

@@ -23,3 +23,10 @@ try:
     __all__ += ["AssetCalculator", "OccupancyRateCalculator"]  # pragma: no cover
 except Exception:  # nosec - B110: Intentional graceful degradation  # pragma: no cover
     _log_import_error("asset.asset_calculator.AssetCalculator")
+
+try:
+    from .import_service import AsyncAssetImportService  # noqa: F401
+
+    __all__.append("AsyncAssetImportService")  # pragma: no cover
+except Exception:  # nosec - B110: Intentional graceful degradation  # pragma: no cover
+    _log_import_error("asset.import_service.AsyncAssetImportService")

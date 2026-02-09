@@ -625,6 +625,71 @@ class TestValidateRefreshToken:
             assert result is None
             assert mock_session.is_active is False
 
+    def test_validate_refresh_token_fingerprint_mismatch(
+        self, auth_service, mock_user, db_session
+    ):
+        """Test validation fails when request fingerprint mismatches token fingerprint."""
+        tokens = auth_service.create_tokens(
+            mock_user,
+            {
+                "user_agent": "Mozilla/5.0",
+                "ip_address": "192.168.1.10",
+                "device_id": str(mock_user.id),
+            },
+        )
+        mock_session = MagicMock(spec=UserSession)
+        mock_session.is_expired = Mock(return_value=False)
+        mock_session.is_active = True
+        mock_session.session_id = tokens.session_id
+
+        db_session.execute = AsyncMock(return_value=_mock_execute_first(mock_session))
+        with patch.object(
+            auth_service.user_service,
+            "get_user_by_id",
+            new=AsyncMock(return_value=mock_user),
+        ):
+            result = asyncio.run(
+                auth_service.validate_refresh_token(
+                    tokens.refresh_token,
+                    client_ip="10.0.0.2",
+                    user_agent="Mozilla/5.0",
+                )
+            )
+            assert result is None
+            assert mock_session.is_active is False
+            db_session.commit.assert_called()
+
+    def test_validate_refresh_token_legacy_fingerprint_compatibility(
+        self, auth_service, mock_user, db_session
+    ):
+        """Test validation accepts legacy fingerprint format without device_id."""
+        tokens = auth_service.create_tokens(
+            mock_user,
+            {
+                "user_agent": "Mozilla/5.0",
+                "ip_address": "192.168.1.10",
+            },
+        )
+        mock_session = MagicMock(spec=UserSession)
+        mock_session.is_expired = Mock(return_value=False)
+        mock_session.is_active = True
+        mock_session.session_id = tokens.session_id
+
+        db_session.execute = AsyncMock(return_value=_mock_execute_first(mock_session))
+        with patch.object(
+            auth_service.user_service,
+            "get_user_by_id",
+            new=AsyncMock(return_value=mock_user),
+        ):
+            result = asyncio.run(
+                auth_service.validate_refresh_token(
+                    tokens.refresh_token,
+                    client_ip="192.168.1.10",
+                    user_agent="Mozilla/5.0",
+                )
+            )
+            assert result == mock_session
+
     def test_validate_updates_session_metadata(
         self, auth_service, mock_user, db_session
     ):

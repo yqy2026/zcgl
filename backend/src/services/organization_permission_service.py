@@ -37,7 +37,7 @@ class OrganizationPermissionService:
         user = await self._get_user(user_id)
         if not user:
             return False
-        if await self.rbac_service.check_user_permission(user_id, "system", "admin"):
+        if await self.rbac_service.is_admin(user_id):
             return True
 
         if await self._has_global_permission(user_id, "read"):
@@ -56,7 +56,7 @@ class OrganizationPermissionService:
         user = await self._get_user(user_id)
         if not user:
             return False
-        if await self.rbac_service.check_user_permission(user_id, "system", "admin"):
+        if await self.rbac_service.is_admin(user_id):
             return True
 
         if await self._has_global_permission(
@@ -89,9 +89,9 @@ class OrganizationPermissionService:
         if not user:
             return []
 
-        if await self.rbac_service.check_user_permission(user_id, "system", "admin") or await self._has_global_permission(
-            user_id, "read"
-        ):
+        if await self.rbac_service.is_admin(
+            user_id
+        ) or await self._has_global_permission(user_id, "read"):
             return await self._get_all_organization_ids()
 
         org_ids: set[str] = set()
@@ -182,7 +182,7 @@ class OrganizationPermissionService:
         user = await self._get_user(user_id)
         if not user:
             return None
-        if await self.rbac_service.check_user_permission(user_id, "system", "admin"):
+        if await self.rbac_service.is_admin(user_id):
             return "admin"
 
         target_org = user.default_organization_id

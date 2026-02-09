@@ -4,14 +4,18 @@ from fastapi import APIRouter, Depends
 
 from ....core.exception_handler import internal_error
 from ....database import create_tables, drop_tables
-from ....middleware.auth import require_admin
+from ....middleware.auth import get_current_active_user, require_admin
 
 """
 管理员API路由
 """
 
 # 创建管理员路由器
-router = APIRouter(prefix="/admin", tags=["系统管理"])
+router = APIRouter(
+    prefix="/admin",
+    tags=["系统管理"],
+    dependencies=[Depends(get_current_active_user)],
+)
 
 
 @router.get("/health")

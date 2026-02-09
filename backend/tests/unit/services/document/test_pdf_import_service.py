@@ -4,7 +4,7 @@
 
 import asyncio
 from datetime import date
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -42,6 +42,14 @@ def mock_session():
     session.error_message = ""
     session.completed_at = None
     return session
+
+
+def _mock_execute_scalars_first(item):
+    result = MagicMock()
+    scalars = MagicMock()
+    scalars.first.return_value = item
+    result.scalars.return_value = scalars
+    return result
 
 
 # ============================================================================
@@ -145,9 +153,9 @@ class TestGetSessionStatus:
     @pytest.mark.asyncio
     async def test_get_session_status_found(self, pdf_service, mock_db, mock_session):
         """测试找到会话"""
-        mock_query = MagicMock()
-        mock_query.filter.return_value.first.return_value = mock_session
-        mock_db.query.return_value = mock_query
+        mock_db.execute = AsyncMock(
+            return_value=_mock_execute_scalars_first(mock_session)
+        )
 
         result = await pdf_service.get_session_status(mock_db, "test_session_123")
 
@@ -158,9 +166,7 @@ class TestGetSessionStatus:
     @pytest.mark.asyncio
     async def test_get_session_status_not_found(self, pdf_service, mock_db):
         """测试会话未找到"""
-        mock_query = MagicMock()
-        mock_query.filter.return_value.first.return_value = None
-        mock_db.query.return_value = mock_query
+        mock_db.execute = AsyncMock(return_value=_mock_execute_scalars_first(None))
 
         result = await pdf_service.get_session_status(mock_db, "nonexistent")
 
@@ -177,9 +183,9 @@ class TestGetSessionStatus:
         mock_session.error_message = ""
         mock_session.processing_result = {}
 
-        mock_query = MagicMock()
-        mock_query.filter.return_value.first.return_value = mock_session
-        mock_db.query.return_value = mock_query
+        mock_db.execute = AsyncMock(
+            return_value=_mock_execute_scalars_first(mock_session)
+        )
 
         result = await pdf_service.get_session_status(mock_db, "session_123")
 
@@ -198,9 +204,9 @@ class TestProcessPdfFile:
         self, pdf_service, mock_db, mock_session
     ):
         """测试启动处理任务"""
-        mock_query = MagicMock()
-        mock_query.filter.return_value.first.return_value = mock_session
-        mock_db.query.return_value = mock_query
+        mock_db.execute = AsyncMock(
+            return_value=_mock_execute_scalars_first(mock_session)
+        )
 
         with patch.object(asyncio, "create_task") as mock_create_task:
             mock_task = MagicMock()
@@ -227,9 +233,9 @@ class TestProcessPdfFile:
         self, pdf_service, mock_db, mock_session
     ):
         """测试带处理选项"""
-        mock_query = MagicMock()
-        mock_query.filter.return_value.first.return_value = mock_session
-        mock_db.query.return_value = mock_query
+        mock_db.execute = AsyncMock(
+            return_value=_mock_execute_scalars_first(mock_session)
+        )
 
         with patch.object(asyncio, "create_task") as mock_create_task:
             mock_task = MagicMock()
@@ -455,7 +461,7 @@ class TestResultCalculation:
             },
         }
 
-        result, count = pdf_service._fill_missing_fields_with_regex(
+        result, count, filled_keys = pdf_service._fill_missing_fields_with_regex(
             extracted, regex_result
         )
 
@@ -463,6 +469,7 @@ class TestResultCalculation:
         assert "field2" in result
         assert "field3" in result
         assert count == 3
+        assert set(filled_keys) == {"field2", "field3"}
 
     def test_fill_missing_fields_does_not_override(self, pdf_service):
         """测试不覆盖已有字段"""
@@ -472,12 +479,13 @@ class TestResultCalculation:
             "extracted_fields": {"field1": {"value": "new_value"}},
         }
 
-        result, count = pdf_service._fill_missing_fields_with_regex(
+        result, count, filled_keys = pdf_service._fill_missing_fields_with_regex(
             extracted, regex_result
         )
 
         assert result["field1"] == "original_value"
         assert count == 1
+        assert filled_keys == []
 
     def test_calculate_extraction_rate(self, pdf_service):
         """测试提取率计算"""
@@ -583,9 +591,9 @@ class TestConfirmImport:
         mock_import_session = MagicMock(spec=PDFImportSession)
         mock_import_session.status = SessionStatus.READY_FOR_REVIEW
 
-        mock_query = MagicMock()
-        mock_query.filter.return_value.first.return_value = mock_import_session
-        mock_db.query.return_value = mock_query
+        mock_db.execute = AsyncMock(
+            return_value=_mock_execute_scalars_first(mock_import_session)
+        )
 
         confirmed_data = {
             "contract_data": {
@@ -611,9 +619,9 @@ class TestConfirmImport:
     async def test_confirm_import_missing_fields(self, pdf_service, mock_db):
         """测试缺失必填字段"""
         mock_import_session = MagicMock(spec=PDFImportSession)
-        mock_query = MagicMock()
-        mock_query.filter.return_value.first.return_value = mock_import_session
-        mock_db.query.return_value = mock_query
+        mock_db.execute = AsyncMock(
+            return_value=_mock_execute_scalars_first(mock_import_session)
+        )
 
         confirmed_data = {
             "contract_data": {
@@ -632,9 +640,7 @@ class TestConfirmImport:
     @pytest.mark.asyncio
     async def test_confirm_import_session_not_found(self, pdf_service, mock_db):
         """测试会话未找到"""
-        mock_query = MagicMock()
-        mock_query.filter.return_value.first.return_value = None
-        mock_db.query.return_value = mock_query
+        mock_db.execute = AsyncMock(return_value=_mock_execute_scalars_first(None))
 
         confirmed_data = {"contract_data": {}}
 
@@ -649,9 +655,9 @@ class TestConfirmImport:
     async def test_confirm_import_contract_type_mapping(self, pdf_service, mock_db):
         """测试合同类型映射"""
         mock_import_session = MagicMock(spec=PDFImportSession)
-        mock_query = MagicMock()
-        mock_query.filter.return_value.first.return_value = mock_import_session
-        mock_db.query.return_value = mock_query
+        mock_db.execute = AsyncMock(
+            return_value=_mock_execute_scalars_first(mock_import_session)
+        )
 
         contract_types = [
             ("lease_upstream", ContractType.LEASE_UPSTREAM),
@@ -681,9 +687,9 @@ class TestConfirmImport:
     async def test_confirm_import_payment_cycle_mapping(self, pdf_service, mock_db):
         """测试付款周期映射"""
         mock_import_session = MagicMock(spec=PDFImportSession)
-        mock_query = MagicMock()
-        mock_query.filter.return_value.first.return_value = mock_import_session
-        mock_db.query.return_value = mock_query
+        mock_db.execute = AsyncMock(
+            return_value=_mock_execute_scalars_first(mock_import_session)
+        )
 
         payment_cycles = [
             ("monthly", PaymentCycle.MONTHLY),
@@ -723,9 +729,9 @@ class TestCancelProcessing:
         mock_session = MagicMock(spec=PDFImportSession)
         mock_session.is_processing = True
 
-        mock_query = MagicMock()
-        mock_query.filter.return_value.first.return_value = mock_session
-        mock_db.query.return_value = mock_query
+        mock_db.execute = AsyncMock(
+            return_value=_mock_execute_scalars_first(mock_session)
+        )
 
         result = await pdf_service.cancel_processing(
             mock_db, "session_123", reason="User cancelled"
@@ -741,9 +747,9 @@ class TestCancelProcessing:
         mock_session = MagicMock(spec=PDFImportSession)
         mock_session.is_processing = False
 
-        mock_query = MagicMock()
-        mock_query.filter.return_value.first.return_value = mock_session
-        mock_db.query.return_value = mock_query
+        mock_db.execute = AsyncMock(
+            return_value=_mock_execute_scalars_first(mock_session)
+        )
 
         result = await pdf_service.cancel_processing(
             mock_db, "session_123", reason="Test"

@@ -58,9 +58,10 @@ def mock_pdf_files():
         file.content_type = "application/pdf"
         # Use minimal content to avoid polluting CI output
         content = io.BytesIO(b"%PDF-1.4\n%Test PDF content\n")
-        file.read = AsyncMock(return_value=content.getvalue())
+        file.read = AsyncMock(side_effect=[content.getvalue(), b""])
         # seek needs to be async for FastAPI UploadFile
         file.seek = AsyncMock(return_value=None)
+        file.close = AsyncMock(return_value=None)
         file.file = MagicMock()
         file.file.seek = MagicMock(return_value=None)
         files.append(file)
@@ -75,8 +76,9 @@ def mock_large_pdf_file():
     file.content_type = "application/pdf"
     # Create content larger than 50MB
     large_content = b"x" * (51 * 1024 * 1024)
-    file.read = AsyncMock(return_value=large_content)
-    file.seek = MagicMock()
+    file.read = AsyncMock(side_effect=[large_content, b""])
+    file.seek = AsyncMock(return_value=None)
+    file.close = AsyncMock(return_value=None)
     return file
 
 
@@ -86,9 +88,18 @@ def create_mock_invalid_file():
     file.filename = "test.txt"
     file.content_type = "text/plain"
     content = io.BytesIO(b"not a pdf")
-    file.read = AsyncMock(return_value=content.getvalue())
-    file.seek = MagicMock()
+    file.read = AsyncMock(side_effect=[content.getvalue(), b""])
+    file.seek = AsyncMock(return_value=None)
+    file.close = AsyncMock(return_value=None)
     return file
+
+
+def _create_mock_asyncio_task(coro):
+    """Create a mock task and close input coroutine to avoid warnings."""
+    coro.close()
+    task = MagicMock()
+    task.add_done_callback = MagicMock()
+    return task
 
 
 @pytest.fixture
@@ -148,50 +159,20 @@ class TestBatchUploadPdfs:
 
         mock_tracker = MagicMock()
         mock_tracker.get_stats.return_value = {"active_batches": 0, "total_batches": 0}
-        mock_get_tracker.return_value = mock_tracker
-
-        mock_service = MagicMock()
-        # Mock create_import_session
-        mock_service.create_import_session = MagicMock()
-        mock_service_class.return_value = mock_service
-
-        # Patch asyncio.create_task to avoid running background tasks
-        with patch("src.api.v1.documents.pdf_batch_routes.asyncio.create_task"):
-            await batch_upload_pdfs(
-                db=mock_db,
-                files=mock_pdf_files,
-                organization_id=1,
-                force_method=None,
-                prefer_vision=False,
-                auto_confirm=False,
-                current_user=mock_current_user,
-            )
-
-        # Verify create_import_session is called for each file
-        # Note: We provided 3 mock files
-        assert mock_service.create_import_session.call_count == 3
-
-        # Verify the arguments of the first call
-        args, kwargs = mock_service.create_import_session.call_args_list[0]
-        assert kwargs["original_filename"] == "test_0.pdf"
-        assert kwargs["organization_id"] == 1
         mock_tracker.create_batch = MagicMock()
         mock_tracker.set_status = MagicMock()
         mock_get_tracker.return_value = mock_tracker
 
-        # Setup service mock
         mock_service = MagicMock()
+        mock_service.create_import_session = AsyncMock(return_value=None)
         mock_service.process_pdf_file = AsyncMock(return_value=None)
         mock_service_class.return_value = mock_service
 
-        # Patch asyncio.create_task to avoid real task creation
+        # Patch asyncio.create_task to avoid running background tasks
         with patch(
             "src.api.v1.documents.pdf_batch_routes.asyncio.create_task"
         ) as mock_create_task:
-            # Make create_task return a mock task
-            mock_task = MagicMock()
-            mock_task.add_done_callback = MagicMock()
-            mock_create_task.return_value = mock_task
+            mock_create_task.side_effect = _create_mock_asyncio_task
 
             result = await batch_upload_pdfs(
                 db=mock_db,
@@ -202,6 +183,14 @@ class TestBatchUploadPdfs:
                 auto_confirm=False,
                 current_user=mock_current_user,
             )
+
+        # Verify create_import_session is called for each file (3 files)
+        assert mock_service.create_import_session.call_count == 3
+
+        # Verify the arguments of the first call
+        _, kwargs = mock_service.create_import_session.call_args_list[0]
+        assert kwargs["original_filename"] == "test_0.pdf"
+        assert kwargs["organization_id"] == 1
 
         # Parse JSONResponse
         body = json.loads(result.body.decode())
@@ -332,6 +321,7 @@ class TestBatchUploadPdfs:
         mock_get_tracker.return_value = mock_tracker
 
         mock_service = MagicMock()
+        mock_service.create_import_session = AsyncMock(return_value=None)
         mock_service.process_pdf_file = AsyncMock(return_value=None)
         mock_service_class.return_value = mock_service
 
@@ -339,9 +329,7 @@ class TestBatchUploadPdfs:
         with patch(
             "src.api.v1.documents.pdf_batch_routes.asyncio.create_task"
         ) as mock_create_task:
-            mock_task = MagicMock()
-            mock_task.add_done_callback = MagicMock()
-            mock_create_task.return_value = mock_task
+            mock_create_task.side_effect = _create_mock_asyncio_task
 
             result = await batch_upload_pdfs(
                 db=mock_db,
@@ -385,6 +373,7 @@ class TestBatchUploadPdfs:
         mock_get_tracker.return_value = mock_tracker
 
         mock_service = MagicMock()
+        mock_service.create_import_session = AsyncMock(return_value=None)
         mock_service.process_pdf_file = AsyncMock(return_value=None)
         mock_service_class.return_value = mock_service
 
@@ -396,9 +385,7 @@ class TestBatchUploadPdfs:
         with patch(
             "src.api.v1.documents.pdf_batch_routes.asyncio.create_task"
         ) as mock_create_task:
-            mock_task = MagicMock()
-            mock_task.add_done_callback = MagicMock()
-            mock_create_task.return_value = mock_task
+            mock_create_task.side_effect = _create_mock_asyncio_task
 
             result = await batch_upload_pdfs(
                 db=mock_db,
@@ -436,6 +423,7 @@ class TestBatchUploadPdfs:
         mock_get_tracker.return_value = mock_tracker
 
         mock_service = MagicMock()
+        mock_service.create_import_session = AsyncMock(return_value=None)
         # First file succeeds, second fails, third succeeds
         mock_service.process_pdf_file = AsyncMock(
             side_effect=[None, Exception("Processing failed"), None]
@@ -446,9 +434,7 @@ class TestBatchUploadPdfs:
         with patch(
             "src.api.v1.documents.pdf_batch_routes.asyncio.create_task"
         ) as mock_create_task:
-            mock_task = MagicMock()
-            mock_task.add_done_callback = MagicMock()
-            mock_create_task.return_value = mock_task
+            mock_create_task.side_effect = _create_mock_asyncio_task
 
             result = await batch_upload_pdfs(
                 db=mock_db,
@@ -476,10 +462,10 @@ class TestGetBatchStatus:
     """Tests for GET /pdf-import/batch/status/{batch_id} endpoint"""
 
     @patch("src.api.v1.documents.pdf_batch_routes._get_batch_tracker")
-    @patch("src.api.v1.documents.pdf_batch_routes.PDFImportSessionCRUD")
+    @patch("src.api.v1.documents.pdf_batch_routes.PDFImportService")
     @pytest.mark.asyncio
     async def test_get_batch_status_success(
-        self, mock_crud_class, mock_get_tracker, mock_db
+        self, mock_service_class, mock_get_tracker, mock_db
     ):
         """Test successful batch status retrieval"""
         from src.api.v1.documents.pdf_batch_routes import get_batch_status
@@ -501,9 +487,9 @@ class TestGetBatchStatus:
         }
         mock_get_tracker.return_value = mock_tracker
 
-        # Mock CRUD
-        mock_crud = MagicMock()
-        mock_crud_class.return_value = mock_crud
+        # Mock service
+        mock_service = MagicMock()
+        mock_service_class.return_value = mock_service
 
         # Mock sessions
         mock_sessions = {}
@@ -517,9 +503,9 @@ class TestGetBatchStatus:
             session.error_message = None
             mock_sessions[session_id] = session
 
-        mock_crud.get_session_map.return_value = mock_sessions
+        mock_service.get_session_map_async = AsyncMock(return_value=mock_sessions)
 
-        result = get_batch_status(batch_id=batch_id, db=mock_db)
+        result = await get_batch_status(batch_id=batch_id, db=mock_db)
 
         # Parse JSONResponse
         assert isinstance(result, JSONResponse)
@@ -540,15 +526,16 @@ class TestGetBatchStatus:
         mock_get_tracker.return_value = mock_tracker
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            get_batch_status(batch_id="nonexistent", db=mock_db)
+            await get_batch_status(batch_id="nonexistent", db=mock_db)
 
         assert exc_info.value.status_code == 404
         assert "批处理任务不存在" in exc_info.value.message
 
     @patch("src.api.v1.documents.pdf_batch_routes._get_batch_tracker")
+    @patch("src.api.v1.documents.pdf_batch_routes.PDFImportService")
     @pytest.mark.asyncio
     async def test_get_batch_status_with_completed_sessions(
-        self, mock_get_tracker, mock_db
+        self, mock_service_class, mock_get_tracker, mock_db
     ):
         """Test batch status with completed sessions"""
         from src.api.v1.documents.pdf_batch_routes import get_batch_status
@@ -577,9 +564,13 @@ class TestGetBatchStatus:
         mock_session.progress_percentage = 100.0
         mock_session.error_message = None
 
-        mock_db.query.return_value.filter.return_value.first.return_value = mock_session
+        mock_service = MagicMock()
+        mock_service.get_session_map_async = AsyncMock(
+            return_value={"session-1": mock_session}
+        )
+        mock_service_class.return_value = mock_service
 
-        result = get_batch_status(batch_id=batch_id, db=mock_db)
+        result = await get_batch_status(batch_id=batch_id, db=mock_db)
 
         # Parse JSONResponse
         body = json.loads(result.body.decode())
@@ -696,11 +687,9 @@ class TestCancelBatch:
     @patch("src.api.v1.documents.pdf_batch_routes._get_batch_tracker")
     @patch("src.api.v1.documents.pdf_batch_routes._update_batch_status")
     @patch("src.api.v1.documents.pdf_batch_routes.PDFImportService")
-    @patch("src.api.v1.documents.pdf_batch_routes.PDFImportSessionCRUD")
     @pytest.mark.asyncio
     async def test_cancel_batch_success(
         self,
-        mock_crud_class,
         mock_service_class,
         mock_update_status,
         mock_get_tracker,
@@ -720,10 +709,6 @@ class TestCancelBatch:
         }
         mock_get_tracker.return_value = mock_tracker
 
-        # Mock CRUD and sessions
-        mock_crud = MagicMock()
-        mock_crud_class.return_value = mock_crud
-
         mock_sessions = {}
         for i in range(2):
             session_id = f"session-{i + 1}"
@@ -732,10 +717,9 @@ class TestCancelBatch:
             session.is_processing = True
             mock_sessions[session_id] = session
 
-        mock_crud.get_session_map.return_value = mock_sessions
-
         # Mock service
         mock_service = MagicMock()
+        mock_service.get_session_map_async = AsyncMock(return_value=mock_sessions)
         mock_service.cancel_processing = AsyncMock(return_value=None)
         mock_service_class.return_value = mock_service
 
@@ -787,11 +771,9 @@ class TestCancelBatch:
     @patch("src.api.v1.documents.pdf_batch_routes._get_batch_tracker")
     @patch("src.api.v1.documents.pdf_batch_routes._update_batch_status")
     @patch("src.api.v1.documents.pdf_batch_routes.PDFImportService")
-    @patch("src.api.v1.documents.pdf_batch_routes.PDFImportSessionCRUD")
     @pytest.mark.asyncio
     async def test_cancel_batch_no_processing_sessions(
         self,
-        mock_crud_class,
         mock_service_class,
         mock_update_status,
         mock_get_tracker,
@@ -810,12 +792,8 @@ class TestCancelBatch:
         }
         mock_get_tracker.return_value = mock_tracker
 
-        # Mock CRUD - return empty map or map with non-processing session
-        mock_crud = MagicMock()
-        mock_crud_class.return_value = mock_crud
-        mock_crud.get_session_map.return_value = {}
-
         mock_service = MagicMock()
+        mock_service.get_session_map_async = AsyncMock(return_value={})
         mock_service.cancel_processing = AsyncMock(return_value=None)
         mock_service_class.return_value = mock_service
 
@@ -1171,8 +1149,9 @@ class TestEdgeCases:
             file.filename = None
             file.content_type = "application/pdf"
             content = io.BytesIO(b"pdf content")
-            file.read = AsyncMock(return_value=content.getvalue())
-            file.seek = MagicMock()
+            file.read = AsyncMock(side_effect=[content.getvalue(), b""])
+            file.seek = AsyncMock(return_value=None)
+            file.close = AsyncMock(return_value=None)
             files.append(file)
 
         with pytest.raises(BaseBusinessError) as exc_info:

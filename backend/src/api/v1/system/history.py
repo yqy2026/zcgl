@@ -5,6 +5,7 @@
 from typing import Any
 
 from fastapi import APIRouter, Depends, Path, Query
+from fastapi.params import Depends as DependsParam
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,16 +13,22 @@ from ....core.exception_handler import (
     BaseBusinessError,
     ResourceNotFoundError,
     internal_error,
-    not_found,
 )
 from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
-from ....crud.asset import asset_crud
-from ....crud.history import history_crud
 from ....database import get_async_db
+from ....middleware.auth import get_current_active_user, require_admin
+from ....models.auth import User
 from ....schemas.asset import AssetHistoryResponse
+from ....services.history.history_service import HistoryService, get_history_service
 
 # 创建历史路由器
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(get_current_active_user)])
+
+
+def _resolve_service(service: HistoryService | Any) -> HistoryService | Any:
+    if isinstance(service, DependsParam):
+        return get_history_service()
+    return service
 
 
 @router.get(
@@ -34,6 +41,7 @@ async def get_history_list(
     page_size: int = Query(20, ge=1, le=100, description="每页记录数"),
     asset_id: str | None = Query(None, description="资产ID筛选"),
     db: AsyncSession = Depends(get_async_db),
+    service: HistoryService = Depends(get_history_service),
 ) -> JSONResponse:
     """
     获取资产历史记录列表
@@ -44,14 +52,13 @@ async def get_history_list(
     """
 
     try:
-        if asset_id:
-            asset = await asset_crud.get_async(db=db, id=asset_id)
-            if not asset:
-                raise ResourceNotFoundError("Asset", asset_id)
-
         skip = (page - 1) * page_size
-        history_records, total = await history_crud.get_multi_with_count_async(
-            db, skip=skip, limit=page_size, asset_id=asset_id
+        resolved_service = _resolve_service(service)
+        history_records, total = await resolved_service.get_history_list(
+            db=db,
+            skip=skip,
+            limit=page_size,
+            asset_id=asset_id,
         )
 
         items = [
@@ -77,6 +84,7 @@ async def get_history_list(
 async def get_history_detail(
     history_id: str = Path(..., description="历史记录ID"),
     db: AsyncSession = Depends(get_async_db),
+    service: HistoryService = Depends(get_history_service),
 ) -> AssetHistoryResponse:
     """
     根据ID获取历史记录详情
@@ -85,13 +93,11 @@ async def get_history_detail(
     """
 
     try:
-        history_record = await history_crud.get_async(db=db, id=history_id)
-        if not history_record:
-            raise not_found(
-                f"历史记录 {history_id} 不存在",
-                resource_type="history",
-                resource_id=history_id,
-            )
+        resolved_service = _resolve_service(service)
+        history_record = await resolved_service.get_history_detail(
+            db=db,
+            history_id=history_id,
+        )
 
         return AssetHistoryResponse.model_validate(history_record)
 
@@ -105,6 +111,8 @@ async def get_history_detail(
 async def delete_history(
     history_id: str = Path(..., description="历史记录ID"),
     db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(require_admin),
+    service: HistoryService = Depends(get_history_service),
 ) -> dict[str, Any]:
     """
     删除历史记录
@@ -113,15 +121,11 @@ async def delete_history(
     """
 
     try:
-        history_record = await history_crud.get_async(db=db, id=history_id)
-        if not history_record:
-            raise not_found(
-                f"历史记录 {history_id} 不存在",
-                resource_type="history",
-                resource_id=history_id,
-            )
-
-        await history_crud.remove_async(db=db, id=history_id)
+        resolved_service = _resolve_service(service)
+        await resolved_service.delete_history(
+            db=db,
+            history_id=history_id,
+        )
         return {"message": f"历史记录 {history_id} 已成功删除"}
 
     except Exception as e:

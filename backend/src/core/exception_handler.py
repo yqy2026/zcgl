@@ -358,6 +358,11 @@ class ExceptionHandler:
     ) -> JSONResponse:
         """处理业务异常"""
         safe_details = self._sanitize_exception_details(exc.details)
+        response_message = exc.message
+        response_details = safe_details
+        if exc.status_code >= status.HTTP_500_INTERNAL_SERVER_ERROR:
+            response_message = "内部服务器错误"
+            response_details = {}
 
         self.logger.warning(
             f"Business exception: {exc.code} - {exc.message}",
@@ -371,11 +376,11 @@ class ExceptionHandler:
 
         response_data = {
             "success": False,
-            "message": exc.message,
+            "message": response_message,
             "error": {
                 "code": exc.code,
-                "message": exc.message,
-                "details": safe_details,
+                "message": response_message,
+                "details": response_details,
             },
             "timestamp": exc.timestamp.isoformat(),
             "request_id": self._get_request_id(request),

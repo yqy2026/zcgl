@@ -3,21 +3,23 @@
 支持日志查询、统计、导出等功能
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query
+from fastapi.params import Depends as DependsParam
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ....core.exception_handler import bad_request, not_found
 from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
-from ....crud.auth import UserCRUD
-from ....crud.operation_log import OperationLogCRUD
 from ....database import get_async_db
 from ....middleware.auth import get_current_active_user, require_admin
 from ....models.auth import User
+from ....services.operation_log.service import (
+    OperationLogService,
+    get_operation_log_service,
+)
 from ..utils import handle_api_errors
 
 router = APIRouter(tags=["操作日志"])
@@ -71,6 +73,12 @@ class OperationLogStatisticsResponse(BaseModel):
     message: str = "统计成功"
 
 
+def _resolve_service(service: OperationLogService | Any) -> OperationLogService | Any:
+    if isinstance(service, DependsParam):
+        return get_operation_log_service()
+    return service
+
+
 # ==================== 日志查询端点 ====================
 
 
@@ -93,6 +101,7 @@ async def get_operation_logs(
     end_date: str | None = Query(None, description="结束日期(YYYY-MM-DD)"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    service: OperationLogService = Depends(get_operation_log_service),
 ) -> JSONResponse:
     """
     获取操作日志列表，支持多条件筛选
@@ -108,46 +117,21 @@ async def get_operation_logs(
     - **end_date**: 结束日期
     """
 
-    log_crud = OperationLogCRUD()
-    user_crud = UserCRUD()
-    skip = (page - 1) * page_size
-
-    start_dt = None
-    end_dt = None
-    if start_date:
-        try:
-            start_dt = datetime.strptime(start_date, "%Y-%m-%d")
-        except ValueError:
-            raise bad_request("开始日期格式错误，应为YYYY-MM-DD")
-
-    if end_date:
-        try:
-            end_dt = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)
-        except ValueError:
-            raise bad_request("结束日期格式错误，应为YYYY-MM-DD")
-
-    logs, total = await log_crud.get_multi_with_count_async(
+    _ = current_user
+    resolved_service = _resolve_service(service)
+    logs, total = await resolved_service.get_operation_logs(
         db=db,
-        skip=skip,
-        limit=page_size,
+        page=page,
+        page_size=page_size,
         user_id=user_id,
         action=action,
         module=module,
         resource_type=resource_type,
         response_status=response_status,
-        start_date=start_dt,
-        end_date=end_dt,
         search=search,
+        start_date=start_date,
+        end_date=end_date,
     )
-
-    missing_user_ids = {log.user_id for log in logs if log.user_id and not log.username}
-    if missing_user_ids:
-        username_map = await user_crud.get_username_map_async(db, missing_user_ids)
-        for log in logs:
-            if log.user_id and not log.username:
-                resolved_username = username_map.get(str(log.user_id))
-                if resolved_username:
-                    log.username = resolved_username
 
     return ResponseHandler.paginated(
         data=[OperationLogResponse.model_validate(log) for log in logs],
@@ -164,20 +148,12 @@ async def get_operation_log(
     log_id: str,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    service: OperationLogService = Depends(get_operation_log_service),
 ) -> OperationLogResponse:
     """获取单条操作日志详情"""
-    log_crud = OperationLogCRUD()
-    log = await log_crud.get_async(db, log_id)
-
-    if not log:
-        raise not_found("日志不存在", resource_type="operation_log", resource_id=log_id)
-
-    if log.user_id and not log.username:
-        user_crud = UserCRUD()
-        user = await user_crud.get_async(db, log.user_id)
-        if user:
-            log.username = user.username
-
+    _ = current_user
+    resolved_service = _resolve_service(service)
+    log = await resolved_service.get_operation_log(db, log_id=log_id)
     return OperationLogResponse.model_validate(log)
 
 
@@ -195,10 +171,16 @@ async def get_user_operation_statistics(
     days: int = Query(30, ge=1, le=365, description="统计天数"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    service: OperationLogService = Depends(get_operation_log_service),
 ) -> OperationLogStatisticsResponse:
     """获取指定用户的操作统计"""
-    log_crud = OperationLogCRUD()
-    stats = await log_crud.get_user_statistics_async(db, user_id, days)
+    _ = current_user
+    resolved_service = _resolve_service(service)
+    stats = await resolved_service.get_user_operation_statistics(
+        db,
+        user_id=user_id,
+        days=days,
+    )
 
     return OperationLogStatisticsResponse(
         success=True,
@@ -217,10 +199,16 @@ async def get_module_operation_statistics(
     days: int = Query(30, ge=1, le=365, description="统计天数"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    service: OperationLogService = Depends(get_operation_log_service),
 ) -> OperationLogStatisticsResponse:
     """获取指定模块的操作统计"""
-    log_crud = OperationLogCRUD()
-    stats = await log_crud.get_module_statistics_async(db, module, days)
+    _ = current_user
+    resolved_service = _resolve_service(service)
+    stats = await resolved_service.get_module_operation_statistics(
+        db,
+        module=module,
+        days=days,
+    )
 
     return OperationLogStatisticsResponse(
         success=True,
@@ -238,10 +226,12 @@ async def get_daily_operation_statistics(
     days: int = Query(30, ge=1, le=365, description="统计天数"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    service: OperationLogService = Depends(get_operation_log_service),
 ) -> OperationLogStatisticsResponse:
     """获取每日操作统计"""
-    log_crud = OperationLogCRUD()
-    stats = await log_crud.get_daily_statistics_async(db, days)
+    _ = current_user
+    resolved_service = _resolve_service(service)
+    stats = await resolved_service.get_daily_operation_statistics(db, days=days)
 
     return OperationLogStatisticsResponse(
         success=True,
@@ -259,10 +249,12 @@ async def get_error_operation_statistics(
     days: int = Query(30, ge=1, le=365, description="统计天数"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_admin),
+    service: OperationLogService = Depends(get_operation_log_service),
 ) -> OperationLogStatisticsResponse:
     """获取错误操作统计（仅管理员）"""
-    log_crud = OperationLogCRUD()
-    stats = await log_crud.get_error_statistics_async(db, days)
+    _ = current_user
+    resolved_service = _resolve_service(service)
+    stats = await resolved_service.get_error_operation_statistics(db, days=days)
 
     return OperationLogStatisticsResponse(
         success=True,
@@ -278,22 +270,16 @@ async def get_operation_log_summary(
     days: int = Query(30, ge=1, le=365, description="统计天数"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    service: OperationLogService = Depends(get_operation_log_service),
 ) -> dict[str, Any]:
     """获取操作日志汇总统计"""
-    log_crud = OperationLogCRUD()
-
-    daily_stats = await log_crud.get_daily_statistics_async(db, days)
-    error_stats = await log_crud.get_error_statistics_async(db, days)
-    total_count = await log_crud.count_async(db)
+    _ = current_user
+    resolved_service = _resolve_service(service)
+    summary = await resolved_service.get_operation_log_summary(db, days=days)
 
     return {
         "success": True,
-        "data": {
-            "total_logs": total_count,
-            "days": days,
-            "daily_statistics": daily_stats.get("daily_breakdown", {}),
-            "error_statistics": error_stats,
-        },
+        "data": summary,
     }
 
 
@@ -307,6 +293,7 @@ async def export_operation_logs(
     format: str = Query("excel", description="导出格式: excel 或 csv"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_admin),
+    service: OperationLogService = Depends(get_operation_log_service),
 ) -> dict[str, Any]:
     """
     导出操作日志为Excel或CSV格式
@@ -314,12 +301,10 @@ async def export_operation_logs(
     - **format**: excel 或 csv
     """
 
+    _ = current_user
     resolved_filters = filters or {}
-    log_crud = OperationLogCRUD()
-
-    logs, _ = await log_crud.get_multi_with_count_async(
-        db=db, skip=0, limit=10000, **resolved_filters
-    )
+    resolved_service = _resolve_service(service)
+    logs = await resolved_service.export_operation_logs(db=db, filters=resolved_filters)
 
     if format.lower() == "csv":
         return {
@@ -342,6 +327,7 @@ async def cleanup_old_logs(
     days: int = Query(90, ge=1, le=365, description="保留天数"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_admin),
+    service: OperationLogService = Depends(get_operation_log_service),
 ) -> dict[str, Any]:
     """
     删除指定天数前的日志（仅管理员）
@@ -349,8 +335,9 @@ async def cleanup_old_logs(
     - **days**: 保留最近N天的日志，更早的日志将被删除
     """
 
-    log_crud = OperationLogCRUD()
-    deleted_count = await log_crud.delete_old_logs_async(db, days)
+    _ = current_user
+    resolved_service = _resolve_service(service)
+    deleted_count = await resolved_service.cleanup_old_logs(db=db, days=days)
 
     return {
         "success": True,

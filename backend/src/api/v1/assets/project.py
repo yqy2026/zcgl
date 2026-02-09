@@ -14,7 +14,6 @@ from ....core.exception_handler import (
     not_found,
 )
 from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
-from ....crud.project import project_crud
 from ....database import get_async_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
@@ -158,7 +157,7 @@ async def get_project_statistics(
     """
     获取项目统计概览
     """
-    return await project_crud.get_statistics(db=db)
+    return await project_service.get_project_statistics(db=db)
 
 
 @router.get("/{project_id}", response_model=ProjectResponse, summary="获取项目详情")
@@ -170,7 +169,7 @@ async def get_project(
     """
     获取项目详情
     """
-    project = await project_crud.get(db=db, id=project_id)
+    project = await project_service.get_project_by_id(db=db, project_id=project_id)
     if not project:
         raise not_found("项目不存在", resource_type="project", resource_id=project_id)
     return _project_to_response(project)

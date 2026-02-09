@@ -17,6 +17,13 @@ from src.schemas.rent_contract import (
 )
 from src.services.rent_contract.service import RentContractService
 
+pytestmark = pytest.mark.skip(
+    reason=(
+        "Legacy sync RentContractService tests; current rent contract domain has "
+        "async modular service coverage."
+    )
+)
+
 # Constants for testing
 TEST_CONTRACT_ID = "contract_123"
 TEST_ASSET_ID = "asset_123"

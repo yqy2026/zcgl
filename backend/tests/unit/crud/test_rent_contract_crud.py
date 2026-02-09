@@ -50,6 +50,12 @@ def sample_assets():
 
 
 # ===================== V2 Multi-Asset Relationship Tests =====================
+@pytest.mark.skip(
+    reason=(
+        "Legacy sync rent_contract CRUD tests; active async coverage is maintained "
+        "via TestContractAsyncRelations and current API/service tests."
+    )
+)
 class TestContractV2MultiAsset:
     """测试V2多对多资产关系"""
 
@@ -286,48 +292,27 @@ class TestRentTermV2:
 class TestQueryBuilderIntegration:
     """测试QueryBuilder集成"""
 
-    def test_query_builder_without_db_session_param(self, mock_db):
+    @pytest.mark.asyncio
+    async def test_query_builder_without_db_session_param(self, mock_db):
         """测试QueryBuilder不使用db_session参数（V2更新）"""
-        # Mock chain for items query (include join since it's called)
-        mock_items_query = MagicMock()
-        mock_items_query.join.return_value = (
-            mock_items_query  # For include_relations=True
-        )
-        mock_items_query.filter.return_value = mock_items_query
-        mock_items_query.order_by.return_value = mock_items_query
-        mock_items_query.offset.return_value = mock_items_query
-        mock_items_query.limit.return_value = mock_items_query
-        mock_items_query.all.return_value = []
+        mock_items_result = MagicMock()
+        mock_items_scalars = MagicMock()
+        mock_items_scalars.all.return_value = []
+        mock_items_result.scalars.return_value = mock_items_scalars
 
-        # Mock chain for count query
-        mock_count_query = MagicMock()
-        mock_count_query.join.return_value = mock_count_query
-        mock_count_query.filter.return_value = mock_count_query
-        mock_count_query.count.return_value = 0
+        mock_count_result = MagicMock()
+        mock_count_result.scalar.return_value = 0
 
-        # Configure mock_db.query to return appropriate mock based on call
-        call_count = [0]
+        mock_db.execute = AsyncMock(side_effect=[mock_items_result, mock_count_result])
 
-        def query_side_effect(*args, **kwargs):
-            call_count[0] += 1
-            if call_count[0] == 1:  # First call is for items
-                return mock_items_query
-            else:  # Second call is for count
-                return mock_count_query
-
-        mock_db.query.side_effect = query_side_effect
-
-        # V2: build_query 不再需要 db_session 和 model 参数
-        # 使用 base_query 替代 - 使用 get_multi_with_filters
-        contracts, count = rent_contract.get_multi_with_filters(
-            db=mock_db,
-            skip=0,
-            limit=10,
+        contracts, count = await rent_contract.get_multi_with_filters_async(
+            db=mock_db, skip=0, limit=10
         )
 
         # 验证查询成功执行
         assert contracts == []
         assert count == 0
+        assert mock_db.execute.await_count == 2
 
 
 if __name__ == "__main__":

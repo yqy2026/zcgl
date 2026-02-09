@@ -247,8 +247,8 @@ async def get_user_roles(
     """获取指定用户的角色列表（本人或管理员）"""
     try:
         rbac_service = RBACService(db)
-        if current_user.id != user_id and not await rbac_service.check_user_permission(
-            current_user.id, "system", "admin"
+        if current_user.id != user_id and not await rbac_service.is_admin(
+            current_user.id
         ):
             raise forbidden("无权查看该用户角色")
 
@@ -305,8 +305,8 @@ async def get_user_permissions_summary(
     """获取用户权限汇总（本人或管理员）"""
     try:
         rbac_service = RBACService(db)
-        if current_user.id != user_id and not await rbac_service.check_user_permission(
-            current_user.id, "system", "admin"
+        if current_user.id != user_id and not await rbac_service.is_admin(
+            current_user.id
         ):
             raise forbidden("无权查看该用户权限汇总")
         return await rbac_service.get_user_permissions_summary(user_id)

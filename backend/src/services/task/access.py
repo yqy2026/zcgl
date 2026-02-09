@@ -16,7 +16,7 @@ async def ensure_task_access(
         return
 
     rbac_service = RBACService(db)
-    if await rbac_service.check_user_permission(current_user.id, "system", "admin"):
+    if await rbac_service.is_admin(current_user.id):
         return
 
     if not task_user_id:
@@ -32,6 +32,6 @@ async def resolve_task_user_filter(
         return current_user.id
 
     rbac_service = RBACService(db)
-    if await rbac_service.check_user_permission(current_user.id, "system", "admin"):
+    if await rbac_service.is_admin(current_user.id):
         return requested_user_id
     raise forbidden("无权访问其他用户任务")

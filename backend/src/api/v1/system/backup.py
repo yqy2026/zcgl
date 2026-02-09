@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ....core.config import settings
 from ....core.exception_handler import bad_request, not_found
 from ....database import get_async_db
+from ....middleware.auth import require_admin
 from ....services.backup import BackupService
 from ..utils import handle_api_errors
 
@@ -20,7 +21,7 @@ from ..utils import handle_api_errors
 logger = logging.getLogger(__name__)
 
 # 创建备份路由器
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_admin)])
 
 # 备份目录
 BACKUP_DIR = "backups"

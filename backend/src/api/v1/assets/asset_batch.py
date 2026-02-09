@@ -10,7 +10,6 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ....core.exception_handler import bad_request, internal_error
-from ....crud.asset import asset_crud
 from ....database import get_async_db
 from ....middleware.auth import get_current_active_user, require_permission
 from ....models.auth import User
@@ -112,7 +111,12 @@ async def validate_asset_data(
         service = AsyncAssetBatchService(db)
         enum_service = get_enum_validation_service_async(db)
 
-        is_valid, errors, warnings, validated_fields = await service.validate_asset_data(
+        (
+            is_valid,
+            errors,
+            warnings,
+            validated_fields,
+        ) = await service.validate_asset_data(
             data=request.data,
             validate_rules=request.validate_rules,
             enum_validation_service=enum_service,
@@ -178,13 +182,15 @@ async def batch_update_custom_fields(
         success_count = 0
         failed_count = 0
         errors: list[BatchProcessingError] = []
+        asset_service = AsyncAssetService(db)
 
-        existing_assets = await asset_crud.get_multi_by_ids_async(
-            db=db,
+        existing_assets = await asset_service.get_assets_by_ids(
             ids=request.asset_ids,
             include_relations=False,
         )
-        existing_ids = {str(asset.id) for asset in existing_assets if asset.id is not None}
+        existing_ids = {
+            str(asset.id) for asset in existing_assets if asset.id is not None
+        }
 
         for asset_id in request.asset_ids:
             normalized_id = str(asset_id)
@@ -262,9 +268,7 @@ async def get_all_assets(
 
         asset_responses: list[AssetResponse | AssetListItemResponse]
         if include_relations:
-            asset_responses = [
-                AssetResponse.model_validate(asset) for asset in assets
-            ]
+            asset_responses = [AssetResponse.model_validate(asset) for asset in assets]
         else:
             asset_responses = [
                 AssetListItemResponse.model_validate(asset) for asset in assets
@@ -298,15 +302,15 @@ async def get_assets_by_ids(
         if not asset_ids:
             return {"success": True, "data": [], "message": "未提供资产ID列表"}
 
-        assets = await asset_crud.get_multi_by_ids_async(
-            db=db, ids=asset_ids, include_relations=include_relations
+        asset_service = AsyncAssetService(db)
+        assets = await asset_service.get_assets_by_ids(
+            ids=asset_ids,
+            include_relations=include_relations,
         )
 
         asset_responses: list[AssetResponse | AssetListItemResponse]
         if include_relations:
-            asset_responses = [
-                AssetResponse.model_validate(asset) for asset in assets
-            ]
+            asset_responses = [AssetResponse.model_validate(asset) for asset in assets]
         else:
             asset_responses = [
                 AssetListItemResponse.model_validate(asset) for asset in assets

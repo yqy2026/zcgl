@@ -253,9 +253,7 @@ class OrganizationPermissionChecker:
         Check user permissions with case-insensitive role comparison
         """
         rbac_service = RBACService(db)
-        if await rbac_service.check_user_permission(
-            current_user.id, "system", "admin"
-        ):
+        if await rbac_service.is_admin(current_user.id):
             return current_user
 
         # If there's an organization ID parameter, check organization permission

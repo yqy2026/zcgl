@@ -2,9 +2,10 @@
 测试 ProcessingTracker (PDF 处理追踪器)
 """
 
+import asyncio
 import time
 from datetime import datetime, timedelta
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -27,6 +28,48 @@ from src.services.document.processing_tracker import (
 # ============================================================================
 
 
+def _mock_execute_scalars_first(item):
+    result = MagicMock()
+    scalars = MagicMock()
+    scalars.first.return_value = item
+    result.scalars.return_value = scalars
+    return result
+
+
+class SyncTrackerAdapter:
+    def __init__(self, tracker: ProcessingTracker):
+        object.__setattr__(self, "_tracker", tracker)
+
+    def __getattr__(self, name: str):
+        attr = getattr(self._tracker, name)
+        tracker_attr = getattr(type(self._tracker), name, None)
+        if callable(attr) and callable(tracker_attr):
+
+            def wrapped(*args, **kwargs):
+                result = attr(*args, **kwargs)
+                if asyncio.iscoroutine(result):
+                    try:
+                        asyncio.get_running_loop()
+                    except RuntimeError:
+                        return asyncio.run(result)
+                return result
+
+            return wrapped
+        return attr
+
+    def __setattr__(self, name: str, value):
+        if name == "_tracker":
+            object.__setattr__(self, name, value)
+            return
+        setattr(self._tracker, name, value)
+
+    def __delattr__(self, name: str):
+        if name == "_tracker":
+            object.__delattr__(self, name)
+            return
+        delattr(self._tracker, name)
+
+
 @pytest.fixture
 def mock_session():
     """创建模拟 PDFImportSession"""
@@ -46,8 +89,8 @@ def mock_session():
 @pytest.fixture
 def tracker(mock_db, mock_session):
     """创建 ProcessingTracker 实例"""
-    mock_db.query.return_value.filter.return_value.first.return_value = mock_session
-    return ProcessingTracker(mock_db, "test_session_123")
+    mock_db.execute = AsyncMock(return_value=_mock_execute_scalars_first(mock_session))
+    return SyncTrackerAdapter(ProcessingTracker(mock_db, "test_session_123"))
 
 
 # ============================================================================
@@ -58,7 +101,7 @@ class TestProcessingTrackerInit:
 
     def test_initialization(self, mock_db):
         """测试初始化"""
-        tracker = ProcessingTracker(mock_db, "session_123")
+        tracker = SyncTrackerAdapter(ProcessingTracker(mock_db, "session_123"))
 
         assert tracker.db == mock_db
         assert tracker.session_id == "session_123"
@@ -81,8 +124,8 @@ class TestGetSession:
 
     def test_get_session_not_found(self, mock_db):
         """测试会话未找到"""
-        mock_db.query.return_value.filter.return_value.first.return_value = None
-        tracker = ProcessingTracker(mock_db, "nonexistent_session")
+        mock_db.execute = AsyncMock(return_value=_mock_execute_scalars_first(None))
+        tracker = SyncTrackerAdapter(ProcessingTracker(mock_db, "nonexistent_session"))
 
         session = tracker.get_session()
 
@@ -128,8 +171,8 @@ class TestUpdateProgress:
 
     def test_update_progress_session_not_found(self, mock_db):
         """测试会话不存在"""
-        mock_db.query.return_value.filter.return_value.first.return_value = None
-        tracker = ProcessingTracker(mock_db, "nonexistent_session")
+        mock_db.execute = AsyncMock(return_value=_mock_execute_scalars_first(None))
+        tracker = SyncTrackerAdapter(ProcessingTracker(mock_db, "nonexistent_session"))
 
         result = tracker.update_progress(progress=50)
 
@@ -299,8 +342,8 @@ class TestHandleFailure:
 
     def test_handle_failure_without_session(self, mock_db):
         """测试没有会话的错误处理"""
-        mock_db.query.return_value.filter.return_value.first.return_value = None
-        tracker = ProcessingTracker(mock_db, "nonexistent_session")
+        mock_db.execute = AsyncMock(return_value=_mock_execute_scalars_first(None))
+        tracker = SyncTrackerAdapter(ProcessingTracker(mock_db, "nonexistent_session"))
 
         # Should not raise exception
         tracker.handle_failure(
@@ -325,7 +368,11 @@ class TestSaveResult:
         )
 
         # Mock complete_step since it calls _create_log which has side effects
-        with patch.object(tracker, "complete_step", return_value=True):
+        with patch.object(
+            tracker,
+            "complete_step",
+            new=AsyncMock(return_value=True),
+        ):
             saved = tracker.save_result(result)
 
         assert saved is True
@@ -346,7 +393,11 @@ class TestSaveResult:
         )
 
         # Mock fail_step since it calls _create_log which has side effects
-        with patch.object(tracker, "fail_step", return_value=True):
+        with patch.object(
+            tracker,
+            "fail_step",
+            new=AsyncMock(return_value=True),
+        ):
             saved = tracker.save_result(result)
 
         assert saved is True
@@ -354,8 +405,8 @@ class TestSaveResult:
 
     def test_save_result_session_not_found(self, mock_db):
         """测试会话不存在"""
-        mock_db.query.return_value.filter.return_value.first.return_value = None
-        tracker = ProcessingTracker(mock_db, "nonexistent_session")
+        mock_db.execute = AsyncMock(return_value=_mock_execute_scalars_first(None))
+        tracker = SyncTrackerAdapter(ProcessingTracker(mock_db, "nonexistent_session"))
 
         result = ExtractionResult(
             success=True,
@@ -1160,7 +1211,7 @@ class TestTrackerProgressCallback:
         """测试回调调用"""
         callback = TrackerProgressCallback(tracker)
 
-        callback(progress=50, message="Processing page 5")
+        asyncio.run(callback(progress=50, message="Processing page 5"))
 
         assert callback._current_progress == 50
         tracker.db.commit.assert_called()
@@ -1169,7 +1220,7 @@ class TestTrackerProgressCallback:
         """测试带阶段回调"""
         callback = TrackerProgressCallback(tracker)
 
-        callback(progress=100, message="Complete", stage="complete")
+        asyncio.run(callback(progress=100, message="Complete", stage="complete"))
 
         assert callback._current_progress == 100
 
@@ -1177,7 +1228,7 @@ class TestTrackerProgressCallback:
         """测试开始阶段回调"""
         callback = TrackerProgressCallback(tracker)
 
-        callback(progress=0, message="Starting", stage="start")
+        asyncio.run(callback(progress=0, message="Starting", stage="start"))
 
         assert callback._current_progress == 0
 

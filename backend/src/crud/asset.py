@@ -195,6 +195,17 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         "occupancy_rate": "cached_occupancy_rate",
     }
 
+    @staticmethod
+    def _asset_projection_load_options(
+        *,
+        include_contract_projection: bool = True,
+    ) -> tuple[Any, ...]:
+        """资产投影字段所需的关系预加载选项。"""
+        options: list[Any] = [joinedload(Asset.ownership)]
+        if include_contract_projection:
+            options.append(selectinload(Asset.rent_contracts))
+        return tuple(options)
+
     def __init__(self) -> None:
         super().__init__(Asset)
         # Asset 模型的敏感字段（需要加密的PII字段）
@@ -254,7 +265,11 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             ],
         )
 
-    def _asset_base_query_with_relations(self) -> Select[Any]:
+    def _asset_base_query_with_relations(
+        self,
+        *,
+        include_contract_projection: bool = True,
+    ) -> Select[Any]:
         """
         资产列表/批量查询的基础查询（预加载高频关系，避免 N+1）
 
@@ -264,8 +279,9 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             joinedload(Asset.project)
             .selectinload(Project.ownership_relations)
             .joinedload(ProjectOwnershipRelation.ownership),
-            joinedload(Asset.ownership),
-            selectinload(Asset.rent_contracts),
+            *self._asset_projection_load_options(
+                include_contract_projection=include_contract_projection
+            ),
         )
 
     def _normalize_sort_field(self, sort_field: str) -> str:
@@ -342,9 +358,9 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         self, db: AsyncSession, id: Any, use_cache: bool = False
     ) -> Asset | None:
         result = await db.execute(
-            select(Asset)
-            .options(joinedload(Asset.ownership), selectinload(Asset.rent_contracts))
-            .filter(getattr(self.model, "id") == id)
+            select(Asset).options(*self._asset_projection_load_options()).filter(
+                getattr(self.model, "id") == id
+            )
         )
         asset = result.scalars().first()
         if asset is not None:
@@ -391,9 +407,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         self, db: AsyncSession, property_name: str
     ) -> Asset | None:
         result = await db.execute(
-            select(Asset)
-            .options(joinedload(Asset.ownership), selectinload(Asset.rent_contracts))
-            .filter(
+            select(Asset).options(*self._asset_projection_load_options()).filter(
                 Asset.property_name == property_name,
                 Asset.data_status != "已删除",
             )
@@ -413,6 +427,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         sort_field: str = DateTimeFields.CREATED_AT,
         sort_order: str = "desc",
         include_relations: bool = True,
+        include_contract_projection: bool = True,
     ) -> tuple[list[Asset], int]:
         qb_filters = self._normalize_filters(filters)
         normalized_sort_field = self._normalize_sort_field(sort_field)
@@ -459,11 +474,14 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
                 search_conditions = None
 
         base_query = (
-            self._asset_base_query_with_relations()
+            self._asset_base_query_with_relations(
+                include_contract_projection=include_contract_projection
+            )
             if include_relations
             else select(Asset).options(
-                joinedload(Asset.ownership),
-                selectinload(Asset.rent_contracts),
+                *self._asset_projection_load_options(
+                    include_contract_projection=include_contract_projection
+                )
             )
         )
         if search_conditions:
@@ -675,10 +693,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         base_query = (
             self._asset_base_query_with_relations()
             if include_relations
-            else select(Asset).options(
-                joinedload(Asset.ownership),
-                selectinload(Asset.rent_contracts),
-            )
+            else select(Asset).options(*self._asset_projection_load_options())
         )
         assets = await self.get_with_filters(
             db,

@@ -20,8 +20,8 @@ from fastapi import (
     Request,
     UploadFile,
 )
+from fastapi.params import Depends as DependsParam
 from pydantic import BaseModel
-from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -30,18 +30,28 @@ from src.constants.message_constants import ErrorIDs
 from ....core.config import settings
 from ....core.exception_handler import BaseBusinessError, InternalServerError
 from ....core.observability import send_security_alert
-from ....crud.auth import AuditLogCRUD
-from ....crud.security_event import security_event_crud
 from ....database import get_async_db
 from ....middleware.auth import get_current_active_user
 from ....middleware.security_middleware import get_client_ip
 from ....schemas.auth import UserResponse
 from ....security.route_guards import debug_only, require_localhost
 from ....services.permission.rbac_service import RBACService
+from ....services.system_settings import (
+    SystemSettingsService,
+    get_system_settings_service,
+)
 
 # 创建系统设置路由器
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+
+def _resolve_system_settings_service(
+    service: SystemSettingsService | Any,
+) -> SystemSettingsService | Any:
+    if isinstance(service, DependsParam):
+        return get_system_settings_service()
+    return service
 
 
 def handle_audit_log_failure(
@@ -259,6 +269,7 @@ def create_audit_log_with_fallback(
     action: str,
     resource_type: str,
     request: Request,
+    service: SystemSettingsService | None = None,
     **kwargs: Any,
 ) -> None:
     """
@@ -274,10 +285,13 @@ def create_audit_log_with_fallback(
     try:
         ip_address = get_client_ip(request)
         user_agent = str(request.headers.get("user-agent", ""))
-
-        audit_crud = AuditLogCRUD()
-        audit_crud.create(
-            db,
+        resolved_service = (
+            get_system_settings_service()
+            if service is None
+            else _resolve_system_settings_service(service)
+        )
+        resolved_service.create_audit_log(
+            db=db,
             user_id=current_user.id,
             action=action,
             resource_type=resource_type,
@@ -314,6 +328,7 @@ async def create_audit_log_with_fallback_async(
     action: str,
     resource_type: str,
     request: Request,
+    service: SystemSettingsService | None = None,
     **kwargs: Any,
 ) -> None:
     from fastapi import HTTPException
@@ -321,9 +336,12 @@ async def create_audit_log_with_fallback_async(
     try:
         ip_address = get_client_ip(request)
         user_agent = str(request.headers.get("user-agent", ""))
-
-        audit_crud = AuditLogCRUD()
-        await audit_crud.create_async(
+        resolved_service = (
+            get_system_settings_service()
+            if service is None
+            else _resolve_system_settings_service(service)
+        )
+        await resolved_service.create_audit_log_async(
             db=db,
             user_id=current_user.id,
             action=action,
@@ -391,9 +409,7 @@ async def test_security_alert(
     print("DEBUG: [test_security_alert] Handler entered")
     # Verify admin access
     rbac_service = RBACService(db)
-    if not await rbac_service.check_user_permission(
-        current_user.id, "system", "admin"
-    ):
+    if not await rbac_service.is_admin(current_user.id):
         raise HTTPException(status_code=403, detail="需要管理员权限")
 
     from ....security.audit_logger import SecurityEventLogger
@@ -420,6 +436,7 @@ async def get_security_events(
     current_user: Annotated[UserResponse, Depends(get_current_active_user)],
     skip: int = 0,
     page_size: int = 100,
+    service: SystemSettingsService = Depends(get_system_settings_service),
 ) -> dict[str, Any]:
     """
     获取安全事件日志
@@ -432,13 +449,14 @@ async def get_security_events(
     """
 
     rbac_service = RBACService(db)
-    if not await rbac_service.check_user_permission(
-        current_user.id, "system", "admin"
-    ):
+    if not await rbac_service.is_admin(current_user.id):
         raise HTTPException(status_code=403, detail="需要管理员权限")
 
-    events, total = await security_event_crud.get_multi_with_count_async(
-        db, skip=skip, limit=page_size
+    resolved_service = _resolve_system_settings_service(service)
+    events, total = await resolved_service.get_security_events(
+        db=db,
+        skip=skip,
+        limit=page_size,
     )
 
     return {
@@ -598,6 +616,7 @@ async def update_system_settings(
 async def get_system_info(
     db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[UserResponse, Depends(get_current_active_user)],
+    service: SystemSettingsService = Depends(get_system_settings_service),
 ) -> SystemInfoResponse:
     """
     获取系统信息
@@ -606,19 +625,9 @@ async def get_system_info(
     """
 
     try:
-        try:
-            await db.execute(text("SELECT 1"))
-            database_status: str = "connected"
-        except SQLAlchemyError as db_error:
-            database_status = "disconnected"
-            logger.error(
-                "数据库连接检查失败",
-                exc_info=True,
-                extra={
-                    "error_type": type(db_error).__name__,
-                    "database_status": "disconnected",
-                },
-            )
+        resolved_service = _resolve_system_settings_service(service)
+        database_connected = await resolved_service.check_database_connection(db=db)
+        database_status = "connected" if database_connected else "disconnected"
 
         environment = os.getenv("ENVIRONMENT", "development")
         build_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")

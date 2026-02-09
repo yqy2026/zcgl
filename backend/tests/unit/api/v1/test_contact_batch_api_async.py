@@ -1,6 +1,6 @@
 from datetime import datetime
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -64,44 +64,43 @@ class TestContactBatchApi:
             ),
         ]
 
-        with patch(
-            "src.api.v1.system.contact.contact_crud.create_many_async",
-            new=AsyncMock(return_value=created_contacts),
-        ) as mock_create_many:
-            result = await create_contacts_batch(
-                entity_type="ownership",
-                entity_id="org-1",
-                db=db,
-                contacts_in=contacts_in,
-                current_user=user,
-            )
+        mock_service = MagicMock()
+        mock_service.create_contacts_batch = AsyncMock(return_value=created_contacts)
+
+        result = await create_contacts_batch(
+            entity_type="ownership",
+            entity_id="org-1",
+            db=db,
+            contacts_in=contacts_in,
+            current_user=user,
+            service=mock_service,
+        )
 
         assert len(result) == 2
-        mock_create_many.assert_awaited_once()
-        kwargs = mock_create_many.call_args.kwargs
-        assert kwargs["db"] == db
-        assert len(kwargs["objects_in"]) == 2
-        assert kwargs["objects_in"][0]["entity_type"] == "ownership"
-        assert kwargs["objects_in"][0]["entity_id"] == "org-1"
-        assert kwargs["objects_in"][1]["is_primary"] is True
+        mock_service.create_contacts_batch.assert_awaited_once()
+        kwargs = mock_service.create_contacts_batch.await_args.kwargs
+        assert kwargs["db"] is db
+        assert len(kwargs["contacts_data"]) == 2
+        assert kwargs["contacts_data"][0]["entity_type"] == "ownership"
+        assert kwargs["contacts_data"][0]["entity_id"] == "org-1"
+        assert kwargs["contacts_data"][1]["is_primary"] is True
 
     async def test_create_contacts_batch_empty(self):
         from src.api.v1.system.contact import create_contacts_batch
 
         db = AsyncMock()
         user = SimpleNamespace(username="tester")
+        mock_service = MagicMock()
+        mock_service.create_contacts_batch = AsyncMock(return_value=[])
 
-        with patch(
-            "src.api.v1.system.contact.contact_crud.create_many_async",
-            new=AsyncMock(return_value=[]),
-        ) as mock_create_many:
-            result = await create_contacts_batch(
-                entity_type="ownership",
-                entity_id="org-1",
-                db=db,
-                contacts_in=[],
-                current_user=user,
-            )
+        result = await create_contacts_batch(
+            entity_type="ownership",
+            entity_id="org-1",
+            db=db,
+            contacts_in=[],
+            current_user=user,
+            service=mock_service,
+        )
 
         assert result == []
-        mock_create_many.assert_awaited_once()
+        mock_service.create_contacts_batch.assert_awaited_once()

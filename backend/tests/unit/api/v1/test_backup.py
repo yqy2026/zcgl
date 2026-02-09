@@ -22,6 +22,7 @@ Testing Approach:
 - Test file system operations
 """
 
+import asyncio
 import os
 import tempfile
 from datetime import UTC, datetime
@@ -45,6 +46,7 @@ def mock_db_without_bind():
     """Create mock database session without bind"""
     db = MagicMock()
     db.bind = None
+    db.get_bind.return_value = None
     return db
 
 
@@ -54,6 +56,7 @@ def mock_db():
     db = MagicMock()
     db.bind = MagicMock()
     db.bind.url = "postgresql+psycopg://user:pass@localhost/test_database"
+    db.get_bind.return_value = db.bind
     return db
 
 
@@ -63,6 +66,7 @@ def mock_db_with_non_postgres():
     db = MagicMock()
     db.bind = MagicMock()
     db.bind.url = "postgresql+psycopg://user:pass@localhost/db"
+    db.get_bind.return_value = db.bind
     return db
 
 
@@ -108,7 +112,7 @@ class TestCreateBackup:
         }
         mock_service_class.return_value = mock_service
 
-        result = create_backup(backup_name="test_backup", db=mock_db)
+        result = asyncio.run(create_backup(backup_name="test_backup", db=mock_db))
 
         assert result["success"] is True
         assert result["message"] == "数据备份创建成功"
@@ -131,7 +135,7 @@ class TestCreateBackup:
         }
         mock_service_class.return_value = mock_service
 
-        result = create_backup(backup_name=None, db=mock_db)
+        result = asyncio.run(create_backup(backup_name=None, db=mock_db))
 
         assert result["success"] is True
         mock_service.create_backup.assert_called_once_with(
@@ -154,7 +158,7 @@ class TestCreateBackup:
         }
         mock_service_class.return_value = mock_service
 
-        result = create_backup(backup_name="db_backup", db=mock_db)
+        result = asyncio.run(create_backup(backup_name="db_backup", db=mock_db))
 
         mock_service.create_backup.assert_called_once_with(
             backup_name="db_backup",
@@ -181,8 +185,10 @@ class TestCreateBackup:
 
         fallback_url = "postgresql+psycopg://user:pass@localhost/fallback_db"
         monkeypatch.setattr(backup_module.settings, "DATABASE_URL", fallback_url)
-        result = backup_module.create_backup(
-            backup_name="backup_no_bind", db=mock_db_without_bind
+        result = asyncio.run(
+            backup_module.create_backup(
+                backup_name="backup_no_bind", db=mock_db_without_bind
+            )
         )
 
         mock_service.create_backup.assert_called_once_with(
@@ -208,7 +214,9 @@ class TestCreateBackup:
         }
         mock_service_class.return_value = mock_service
 
-        result = create_backup(backup_name="pg_backup", db=mock_db_with_non_postgres)
+        result = asyncio.run(
+            create_backup(backup_name="pg_backup", db=mock_db_with_non_postgres)
+        )
 
         mock_service.create_backup.assert_called_once_with(
             backup_name="pg_backup",
@@ -226,7 +234,7 @@ class TestCreateBackup:
         mock_service_class.return_value = mock_service
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            create_backup(backup_name="error_backup", db=mock_db)
+            asyncio.run(create_backup(backup_name="error_backup", db=mock_db))
 
         assert exc_info.value.status_code == 500
         assert "Disk full" in exc_info.value.message
@@ -389,7 +397,9 @@ class TestRestoreBackup:
         }
         mock_service_class.return_value = mock_service
 
-        result = restore_backup(backup_name="test_backup", confirm=True, db=mock_db)
+        result = asyncio.run(
+            restore_backup(backup_name="test_backup", confirm=True, db=mock_db)
+        )
 
         assert result["success"] is True
         assert result["message"] == "数据恢复成功"
@@ -406,7 +416,9 @@ class TestRestoreBackup:
         from src.api.v1.system.backup import restore_backup
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            restore_backup(backup_name="test_backup", confirm=False, db=mock_db)
+            asyncio.run(
+                restore_backup(backup_name="test_backup", confirm=False, db=mock_db)
+            )
 
         assert exc_info.value.status_code == 400
 
@@ -422,7 +434,9 @@ class TestRestoreBackup:
         mock_service_class.return_value = mock_service
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            restore_backup(backup_name="missing_backup", confirm=True, db=mock_db)
+            asyncio.run(
+                restore_backup(backup_name="missing_backup", confirm=True, db=mock_db)
+            )
 
         assert exc_info.value.status_code == 404
         assert "backup" in exc_info.value.message
@@ -439,7 +453,9 @@ class TestRestoreBackup:
         mock_service_class.return_value = mock_service
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            restore_backup(backup_name="error_backup", confirm=True, db=mock_db)
+            asyncio.run(
+                restore_backup(backup_name="error_backup", confirm=True, db=mock_db)
+            )
 
         assert exc_info.value.status_code == 500
 
@@ -459,8 +475,10 @@ class TestRestoreBackup:
 
         fallback_url = "postgresql+psycopg://user:pass@localhost/fallback_db"
         monkeypatch.setattr(backup_module.settings, "DATABASE_URL", fallback_url)
-        result = backup_module.restore_backup(
-            backup_name="backup_no_bind", confirm=True, db=mock_db_without_bind
+        result = asyncio.run(
+            backup_module.restore_backup(
+                backup_name="backup_no_bind", confirm=True, db=mock_db_without_bind
+            )
         )
 
         mock_service.restore_backup.assert_called_once_with(
@@ -763,7 +781,7 @@ class TestBackupEdgeCases:
         }
         mock_service_class.return_value = mock_service
 
-        result = create_backup(backup_name="备份_测试", db=mock_db)
+        result = asyncio.run(create_backup(backup_name="备份_测试", db=mock_db))
 
         assert result["success"] is True
         assert result["data"]["backup_name"] == "备份_测试"
@@ -780,7 +798,9 @@ class TestBackupEdgeCases:
         }
         mock_service_class.return_value = mock_service
 
-        result = restore_backup(backup_name="test_backup", confirm=True, db=mock_db)
+        result = asyncio.run(
+            restore_backup(backup_name="test_backup", confirm=True, db=mock_db)
+        )
 
         # Verify create_current_backup defaults to True
         call_args = mock_service.restore_backup.call_args
@@ -833,7 +853,9 @@ class TestBackupEdgeCases:
         mock_service_class.return_value = mock_service
 
         # Execute operations
-        create_result = create_backup(backup_name="consistency_test", db=mock_db)
+        create_result = asyncio.run(
+            create_backup(backup_name="consistency_test", db=mock_db)
+        )
         list_result = list_backups()
         stats_result = get_backup_stats()
         validate_result = validate_backup(backup_name="consistency_test")

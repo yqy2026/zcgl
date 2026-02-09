@@ -12,13 +12,29 @@ from ....core.exception_handler import (
     ResourceNotFoundError,
     internal_error,
 )
-from ....crud.asset import asset_crud
 from ....database import get_async_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
+from ....services.asset.asset_service import AsyncAssetService
 from ....utils import file_security
 
 router = APIRouter()
+
+
+class AssetCRUD:
+    """资产查询兼容适配器（内部委托服务层）。"""
+
+    async def get_async(self, *, db: AsyncSession, id: str) -> Any:
+        asset_service = AsyncAssetService(db)
+        return await asset_service.get_asset(id)
+
+
+# 兼容旧单测 patch 点；实现已不直连 CRUD。
+asset_crud: Any = AssetCRUD()
+
+
+def _get_asset_lookup() -> Any:
+    return asset_crud
 
 
 def _resolve_attachment_path(asset_id: str, filename: str) -> Path:
@@ -46,7 +62,8 @@ async def upload_asset_attachments(
     current_user: User = Depends(get_current_active_user),
 ) -> dict[str, Any]:
     try:
-        asset = await asset_crud.get_async(db=db, id=asset_id)
+        asset_lookup = _get_asset_lookup()
+        asset = await asset_lookup.get_async(db=db, id=asset_id)
         if not asset:
             raise ResourceNotFoundError("asset", asset_id)
 
@@ -117,7 +134,8 @@ async def get_asset_attachments(
     current_user: User = Depends(get_current_active_user),
 ) -> list[dict[str, Any]]:
     try:
-        asset = await asset_crud.get_async(db=db, id=asset_id)
+        asset_lookup = _get_asset_lookup()
+        asset = await asset_lookup.get_async(db=db, id=asset_id)
         if not asset:
             raise ResourceNotFoundError("asset", asset_id)
 
@@ -158,7 +176,8 @@ async def download_asset_attachment(
     current_user: User = Depends(get_current_active_user),
 ) -> FileResponse:
     try:
-        asset = await asset_crud.get_async(db=db, id=asset_id)
+        asset_lookup = _get_asset_lookup()
+        asset = await asset_lookup.get_async(db=db, id=asset_id)
         if not asset:
             raise ResourceNotFoundError("asset", asset_id)
 
@@ -190,7 +209,8 @@ async def delete_asset_attachment(
     current_user: User = Depends(get_current_active_user),
 ) -> dict[str, str]:
     try:
-        asset = await asset_crud.get_async(db=db, id=asset_id)
+        asset_lookup = _get_asset_lookup()
+        asset = await asset_lookup.get_async(db=db, id=asset_id)
         if not asset:
             raise ResourceNotFoundError("asset", asset_id)
 

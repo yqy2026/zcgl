@@ -41,6 +41,10 @@ def analyze_pdf(pdf_path: str | Path) -> dict[str, Any]:
         - has_images: Whether PDF contains images
         - recommendation: "vision" or "text" extraction method
     """
+    pdf_path_obj: Path = Path(pdf_path)
+    if not pdf_path_obj.exists():
+        raise FileNotFoundError(f"PDF not found: {pdf_path_obj}")
+
     if not PYMUPDF_AVAILABLE:
         logger.warning("PyMuPDF not available, defaulting to vision extraction")
         return {
@@ -50,10 +54,6 @@ def analyze_pdf(pdf_path: str | Path) -> dict[str, Any]:
             "has_images": True,
             "recommendation": "vision",
         }
-
-    pdf_path_obj: Path = Path(pdf_path)
-    if not pdf_path_obj.exists():
-        raise FileNotFoundError(f"PDF not found: {pdf_path_obj}")
 
     try:
         with fitz.open(str(pdf_path_obj)) as doc:

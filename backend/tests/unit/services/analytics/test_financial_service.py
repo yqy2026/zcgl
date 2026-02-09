@@ -29,6 +29,13 @@ async def test_calculate_summary_empty(mock_to_float, mock_asset_crud, service):
     assert summary["net_annual_income"] == 0.0
     assert summary["income_per_sqm"] == 0.0
     assert summary["expense_per_sqm"] == 0.0
+    mock_asset_crud.get_multi_with_search_async.assert_awaited_once_with(
+        db=service.db,
+        skip=0,
+        limit=10000,
+        filters=None,
+        include_contract_projection=False,
+    )
 
 
 @patch("src.services.analytics.financial_service.asset_crud")

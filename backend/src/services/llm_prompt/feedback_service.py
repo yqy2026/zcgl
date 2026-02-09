@@ -5,6 +5,7 @@
 """
 
 import logging
+from datetime import datetime
 from uuid import uuid4
 
 from sqlalchemy import select
@@ -57,6 +58,8 @@ class FeedbackService:
         feedback.confidence_before = feedback_in.confidence_before
         feedback.user_action = feedback_in.user_action
         feedback.user_id = user_id
+        if getattr(feedback, "created_at", None) is None:
+            feedback.created_at = datetime.utcnow()
 
         db.add(feedback)
         await db.commit()

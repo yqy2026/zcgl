@@ -1207,6 +1207,12 @@ class RBACService:
         Returns:
             bool: 是否有权限
         """
+        if (
+            resource == ADMIN_PERMISSION_RESOURCE
+            and action == ADMIN_PERMISSION_ACTION
+        ):
+            return await self.is_admin(user_id)
+
         from ...schemas.rbac import PermissionCheckRequest
 
         permission_request = PermissionCheckRequest(

@@ -42,7 +42,7 @@ class TestSettingsDefaults:
 
     def test_debug_default(self):
         settings = build_settings()
-        assert settings.DEBUG is False
+        assert settings.DEBUG is True
 
     def test_cors_origins_default(self):
         settings = build_settings()

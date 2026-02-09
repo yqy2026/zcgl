@@ -126,12 +126,12 @@ class PDFImportService:
         await db.refresh(session)
         return session
 
-    def _parse_date(self, date_str: str | None) -> date | None:
+    def _parse_date(self, date_str: date | str | None) -> date | None:
         """
         解析日期字符串
 
         Args:
-            date_str: 日期字符串 (格式: YYYY-MM-DD 或 YYYY/MM/DD)
+            date_str: 日期字符串或日期对象
 
         Returns:
             date | None: 解析后的日期对象
@@ -139,10 +139,13 @@ class PDFImportService:
         if not date_str:
             return None
 
+        if isinstance(date_str, date):
+            return date_str
+
         from datetime import datetime
 
         # 尝试常见日期格式
-        formats = ["%Y-%m-%d", "%Y/%m/%d", "%Y年%m月%d日"]
+        formats = ["%Y-%m-%d", "%Y/%m/%d", "%d/%m/%Y", "%Y年%m月%d日"]
         for fmt in formats:
             try:
                 return datetime.strptime(date_str, fmt).date()
@@ -162,6 +165,20 @@ class PDFImportService:
     def get_current_concurrent_count(cls) -> int:
         """获取当前正在处理的任务数"""
         return cls._active_tasks
+
+    async def get_session_map_async(
+        self, db: AsyncSession, session_ids: list[str]
+    ) -> dict[str, PDFImportSession]:
+        """批量获取会话ID到会话对象映射。"""
+        session_id_list = [session_id for session_id in session_ids if session_id]
+        if not session_id_list:
+            return {}
+
+        stmt = select(PDFImportSession).where(
+            PDFImportSession.session_id.in_(session_id_list)
+        )
+        sessions = list((await db.execute(stmt)).scalars().all())
+        return {session.session_id: session for session in sessions}
 
     async def get_session_status(
         self, db: AsyncSession, session_id: str

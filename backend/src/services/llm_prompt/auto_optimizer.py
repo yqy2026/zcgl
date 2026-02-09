@@ -47,7 +47,9 @@ class AutoOptimizer:
             db: 数据库会话
         """
         # 获取所有活跃的Prompt
-        stmt = select(PromptTemplate).where(PromptTemplate.status == PromptStatus.ACTIVE)
+        stmt = select(PromptTemplate).where(
+            PromptTemplate.status == PromptStatus.ACTIVE
+        )
         active_prompts = list((await db.execute(stmt)).scalars().all())
 
         logger.info(f"🔍 检查{len(active_prompts)}个活跃Prompt...")
@@ -109,7 +111,9 @@ class AutoOptimizer:
 
         return False, "反馈数量和准确率均正常"
 
-    async def optimize_prompt(self, db: AsyncSession, template_id: str) -> dict[str, Any]:
+    async def optimize_prompt(
+        self, db: AsyncSession, template_id: str
+    ) -> dict[str, Any]:
         """
         优化指定Prompt
 
@@ -135,6 +139,10 @@ class AutoOptimizer:
 
         logger.info(f"📊 收集到{len(feedbacks)}条反馈数据")
 
+        template = await db.get(PromptTemplate, template_id)
+        if not template:
+            raise ResourceNotFoundError("Prompt", template_id)
+
         # 2. 分析错误模式
         error_patterns = self._analyze_error_patterns(feedbacks)
 
@@ -146,9 +154,7 @@ class AutoOptimizer:
             return {"success": False, "reason": "无明显错误模式"}
 
         # 4. 应用优化
-        template = await db.get(PromptTemplate, template_id)
-        if not template:
-            raise ResourceNotFoundError("Prompt", template_id)
+        old_version = template.version
 
         # 在"重要"部分后追加新规则
         updated_system_prompt = template.system_prompt
@@ -190,7 +196,7 @@ class AutoOptimizer:
             "success": True,
             "template_id": template_id,
             "template_name": template.name,
-            "old_version": template.version,
+            "old_version": old_version,
             "new_version": new_version,
             "rules_added": len(new_rules),
             "feedback_count": len(feedbacks),

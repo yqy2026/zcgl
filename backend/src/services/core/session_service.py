@@ -31,7 +31,7 @@ class AsyncSessionService:
         self,
         user_id: str,
         refresh_token: str,
-        device_info: str | None = None,
+        device_info: str | dict[str, str] | None = None,
         ip_address: str | None = None,
         user_agent: str | None = None,
         session_id: str | None = None,
@@ -76,6 +76,7 @@ class AsyncSessionService:
         user_session.platform = platform
         user_session.ip_address = ip_address
         user_session.user_agent = user_agent
+        user_session.is_active = True
         now = _naive_utc_now()
         user_session.created_at = now
         user_session.last_accessed_at = now
@@ -86,14 +87,20 @@ class AsyncSessionService:
         await self.db.refresh(user_session)
         return user_session
 
-    async def get_user_sessions(self, user_id: str) -> list[UserSession]:
-        stmt = (
-            select(UserSession)
-            .where(UserSession.user_id == user_id)
-            .order_by(UserSession.created_at.desc())
-        )
+    async def get_user_sessions(
+        self, user_id: str, active_only: bool = True
+    ) -> list[UserSession]:
+        stmt = select(UserSession).where(UserSession.user_id == user_id)
+        if active_only:
+            stmt = stmt.where(UserSession.is_active.is_(True))
+        stmt = stmt.order_by(UserSession.created_at.desc())
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
+
+    async def get_session_by_id(self, session_id: str) -> UserSession | None:
+        """根据会话 ID 获取会话。"""
+        stmt = select(UserSession).where(UserSession.id == session_id)
+        return (await self.db.execute(stmt)).scalars().first()
 
     async def revoke_session(self, refresh_token: str) -> bool:
         stmt = select(UserSession).where(UserSession.refresh_token == refresh_token)

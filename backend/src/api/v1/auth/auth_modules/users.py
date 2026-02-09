@@ -5,7 +5,6 @@
 """
 
 import logging
-from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, Request
@@ -23,11 +22,11 @@ from .....core.response_handler import APIResponse, PaginatedData, ResponseHandl
 
 logger = logging.getLogger(__name__)
 
-from .....crud.auth import AuditLogCRUD, UserCRUD
 from .....database import get_async_db
 from .....exceptions import BusinessLogicError
 from .....middleware.auth import get_current_active_user, require_admin
 from .....middleware.security_middleware import get_client_ip
+from .....models.auth import User
 from .....schemas.auth import (
     AdminPasswordResetRequest,
     PasswordChangeRequest,
@@ -38,11 +37,59 @@ from .....schemas.auth import (
 from .....schemas.auth import (
     UserQueryParams as UserQueryParamsSchema,
 )
-from .....services.core.password_service import PasswordService
+from .....services.core.audit_service import AuditService
 from .....services.core.user_management_service import AsyncUserManagementService
 from .....services.permission.rbac_service import RBACService
 
 router = APIRouter(prefix="/users", tags=["用户管理"])
+
+
+class UserCRUD:
+    """兼容适配：将历史 UserCRUD 接口委托至用户服务层。"""
+
+    async def get_multi_with_filters_async(
+        self,
+        db: AsyncSession,
+        *,
+        skip: int = 0,
+        limit: int = 100,
+        search: str | None = None,
+        role_id: str | None = None,
+        is_active: bool | None = None,
+        organization_id: str | None = None,
+    ) -> tuple[list[User], int]:
+        user_service = AsyncUserManagementService(db)
+        return await user_service.get_users_with_filters(
+            skip=skip,
+            limit=limit,
+            search=search,
+            role_id=role_id,
+            is_active=is_active,
+            organization_id=organization_id,
+        )
+
+    async def get_async(self, db: AsyncSession, user_id: str) -> User | None:
+        user_service = AsyncUserManagementService(db)
+        return await user_service.get_user_by_id(user_id)
+
+    async def delete_async(self, db: AsyncSession, user_id: str) -> bool:
+        user_service = AsyncUserManagementService(db)
+        return await user_service.deactivate_user(user_id)
+
+
+class AuditLogCRUD:
+    """兼容适配：将历史 AuditLogCRUD 接口委托至审计服务层。"""
+
+    async def create_async(self, db: AsyncSession, **kwargs: Any) -> Any:
+        audit_service = AuditService(db)
+        payload = dict(kwargs)
+        user_id = str(payload.pop("user_id", "unknown"))
+        action = str(payload.pop("action", "unknown_action"))
+        return await audit_service.create_audit_log(
+            user_id=user_id,
+            action=action,
+            **payload,
+        )
 
 
 async def _build_user_response(user: Any, db: AsyncSession) -> UserResponse:
@@ -84,9 +131,9 @@ async def get_users(
     - 支持关键词搜索
     """
 
-    user_crud = UserCRUD()
+    user_repository = UserCRUD()
 
-    users, total = await user_crud.get_multi_with_filters_async(
+    users, total = await user_repository.get_multi_with_filters_async(
         db=db,
         skip=(params.page - 1) * params.page_size,
         limit=params.page_size,
@@ -139,17 +186,13 @@ async def get_user(
     - 普通用户只能查看自己的信息
     """
 
-    user_crud = UserCRUD()
+    user_repository = UserCRUD()
 
     rbac_service = RBACService(db)
-    if not await rbac_service.check_user_permission(
-        current_user.id, "system", "admin"
-    ) and (
-        current_user.id != user_id
-    ):
+    if not await rbac_service.is_admin(current_user.id) and current_user.id != user_id:
         raise forbidden("无权访问该用户信息")
 
-    user = await user_crud.get_async(db, user_id)
+    user = await user_repository.get_async(db, user_id)
     if not user:
         raise not_found("用户不存在", resource_type="user", resource_id=user_id)
 
@@ -171,18 +214,14 @@ async def update_user(
     - 密码更新需要当前密码验证
     """
 
-    user_crud = UserCRUD()
+    user_repository = UserCRUD()
 
     rbac_service = RBACService(db)
-    if not await rbac_service.check_user_permission(
-        current_user.id, "system", "admin"
-    ) and (
-        current_user.id != user_id
-    ):
+    if not await rbac_service.is_admin(current_user.id) and current_user.id != user_id:
         raise forbidden("无权修改该用户信息")
 
     try:
-        existing_user = await user_crud.get_async(db, str(user_id))
+        existing_user = await user_repository.get_async(db, str(user_id))
         if not existing_user:
             raise not_found("用户不存在", resource_type="user", resource_id=user_id)
         user_service = AsyncUserManagementService(db)
@@ -212,17 +251,13 @@ async def change_password(
     """
 
     user_service = AsyncUserManagementService(db)
-    user_crud = UserCRUD()
+    user_repository = UserCRUD()
 
     rbac_service = RBACService(db)
-    if not await rbac_service.check_user_permission(
-        current_user.id, "system", "admin"
-    ) and (
-        current_user.id != user_id
-    ):
+    if not await rbac_service.is_admin(current_user.id) and current_user.id != user_id:
         raise forbidden("无权修改该用户密码")
 
-    user = await user_crud.get_async(db, user_id)
+    user = await user_repository.get_async(db, user_id)
     if not user:
         raise not_found("用户不存在", resource_type="user", resource_id=user_id)
 
@@ -240,11 +275,11 @@ async def change_password(
 
 
 async def _deactivate_user(user_id: str, db: AsyncSession) -> dict[str, str]:
-    user_crud = UserCRUD()
+    user_repository = UserCRUD()
 
-    user = await user_crud.get_async(db, str(user_id))
+    user = await user_repository.get_async(db, str(user_id))
     if user:
-        success = await user_crud.delete_async(db, str(user_id))
+        success = await user_repository.delete_async(db, str(user_id))
     else:
         success = False
     if not success:
@@ -321,19 +356,14 @@ async def lock_user(
     """
 
     try:
-        user_crud = UserCRUD()
-        user = await user_crud.get_async(db, user_id)
+        user_service = AsyncUserManagementService(db)
+        user = await user_service.lock_user(user_id)
 
         if not user:
             raise not_found("用户不存在", resource_type="user", resource_id=user_id)
 
-        setattr(user, "is_locked", True)
-        setattr(user, "updated_at", datetime.utcnow())
-        await db.commit()
-        await db.refresh(user)
-
-        audit_crud = AuditLogCRUD()
-        await audit_crud.create_async(
+        audit_logger = AuditLogCRUD()
+        await audit_logger.create_async(
             db=db,
             user_id=current_user.id,
             action="user_locked",
@@ -347,7 +377,6 @@ async def lock_user(
     except Exception as e:
         if isinstance(e, BaseBusinessError):
             raise
-        await db.rollback()
         raise bad_request(str(e))
 
 
@@ -368,19 +397,14 @@ async def unlock_user_account(
     """
 
     try:
-        user_crud = UserCRUD()
-        user = await user_crud.get_async(db, user_id)
+        user_service = AsyncUserManagementService(db)
+        user = await user_service.unlock_user_with_result(user_id)
 
         if not user:
             raise not_found("用户不存在", resource_type="user", resource_id=user_id)
 
-        setattr(user, "is_locked", False)
-        setattr(user, "updated_at", datetime.utcnow())
-        await db.commit()
-        await db.refresh(user)
-
-        audit_crud = AuditLogCRUD()
-        await audit_crud.create_async(
+        audit_logger = AuditLogCRUD()
+        await audit_logger.create_async(
             db=db,
             user_id=current_user.id,
             action="user_unlocked",
@@ -394,7 +418,6 @@ async def unlock_user_account(
     except Exception as e:
         if isinstance(e, BaseBusinessError):
             raise
-        await db.rollback()
         raise bad_request(str(e))
 
 
@@ -416,24 +439,16 @@ async def reset_user_password(
     try:
         reset_request = password_data
 
-        user_crud = UserCRUD()
-        password_service = PasswordService()
-
-        user = await user_crud.get_async(db, user_id)
+        user_service = AsyncUserManagementService(db)
+        user = await user_service.admin_reset_password(
+            user_id=user_id,
+            new_password=reset_request.new_password,
+        )
         if not user:
             raise not_found("用户不存在", resource_type="user", resource_id=user_id)
 
-        setattr(
-            user,
-            "password_hash",
-            password_service.get_password_hash(reset_request.new_password),
-        )
-        setattr(user, "updated_at", datetime.utcnow())
-        await db.commit()
-        await db.refresh(user)
-
-        audit_crud = AuditLogCRUD()
-        await audit_crud.create_async(
+        audit_logger = AuditLogCRUD()
+        await audit_logger.create_async(
             db=db,
             user_id=current_user.id,
             action="password_reset",
@@ -451,7 +466,6 @@ async def reset_user_password(
     except Exception as e:
         if isinstance(e, BaseBusinessError):
             raise
-        await db.rollback()
         raise bad_request(str(e))
 
 

@@ -8,7 +8,6 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .....core.exception_handler import internal_error, not_found
-from .....crud.auth import UserSessionCRUD
 from .....database import get_async_db
 from .....middleware.auth import get_current_active_user
 from .....schemas.auth import UserResponse, UserSessionResponse
@@ -17,14 +16,21 @@ from .....services.core.session_service import AsyncSessionService
 router = APIRouter(prefix="/sessions", tags=["会话管理"])
 
 
+def get_session_service(
+    db: AsyncSession = Depends(get_async_db),
+) -> AsyncSessionService:
+    """创建会话服务依赖。"""
+    return AsyncSessionService(db)
+
+
 @router.get("", response_model=list[UserSessionResponse], summary="获取用户会话列表")
 async def get_user_sessions(
     db: AsyncSession = Depends(get_async_db),
     current_user: UserResponse = Depends(get_current_active_user),
+    session_service: AsyncSessionService = Depends(get_session_service),
 ) -> list[UserSessionResponse]:
     """获取当前用户的所有会话"""
-    session_crud = UserSessionCRUD()
-    sessions = await session_crud.get_user_sessions_async(db, current_user.id)
+    sessions = await session_service.get_user_sessions(current_user.id, active_only=True)
     return [UserSessionResponse.model_validate(session) for session in sessions]
 
 
@@ -33,12 +39,10 @@ async def revoke_session(
     session_id: str,
     db: AsyncSession = Depends(get_async_db),
     current_user: UserResponse = Depends(get_current_active_user),
+    session_service: AsyncSessionService = Depends(get_session_service),
 ) -> dict[str, str]:
     """撤销指定会话"""
-    session_service = AsyncSessionService(db)
-    session_crud = UserSessionCRUD()
-
-    session = await session_crud.get_async(db, session_id)
+    session = await session_service.get_session_by_id(session_id)
     if not session or str(session.user_id) != str(current_user.id):
         raise not_found("会话不存在", resource_type="session", resource_id=session_id)
 

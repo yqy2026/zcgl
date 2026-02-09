@@ -2,7 +2,9 @@
 Root conftest.py - runs before any test collection
 """
 
+import base64
 import os
+import sys
 import unittest.mock as _mock
 
 # Work around Python's MagicMock(spec=..., __dict__=...) init bug in tests.
@@ -45,10 +47,41 @@ if not test_secret_key or any(
     # 使用固定的测试密钥（确保无弱模式）
     # 53字符字符串，包含大写、小写、数字和特殊字符，满足Task 7验证器要求
     os.environ["SECRET_KEY"] = "aB3xK7mN9pQ2rS5tU8vW1xY4zZ6bC8dE0fG2hI4jK6!@#$%^&*"
-    # 设置测试数据加密密钥 (43字节 + 版本后缀，满足32字节最小要求)
+
+
+def _is_valid_encryption_key(raw_key: str | None) -> bool:
+    """Validate DATA_ENCRYPTION_KEY format: base64_key:version (supports multi-key)."""
+    if not raw_key:
+        return False
+
+    key_parts = [part.strip() for part in raw_key.split(",") if part.strip()]
+    if not key_parts:
+        return False
+
+    for part in key_parts:
+        key_b64 = part
+        if ":" in part:
+            key_b64, version_str = part.rsplit(":", 1)
+            try:
+                int(version_str)
+            except ValueError:
+                return False
+        try:
+            key_bytes = base64.b64decode(key_b64)
+        except Exception:
+            return False
+        if len(key_bytes) < 32:
+            return False
+    return True
+
+
+if not _is_valid_encryption_key(os.getenv("DATA_ENCRYPTION_KEY")):
+    # 设置测试数据加密密钥（base64 的 32-byte key + 版本号）
     os.environ["DATA_ENCRYPTION_KEY"] = (
-        "TestEncryptionKeyWithSpecialChars123!@#XyZ456:1"
+        "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=:1"
     )
+
+DEFAULT_TEST_DATA_ENCRYPTION_KEY = "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=:1"
 
 os.environ["DEBUG"] = "False"
 os.environ["ENVIRONMENT"] = "testing"
@@ -93,6 +126,11 @@ def hide_env_file():
     env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env")
     backup_path = env_path + ".backup"
 
+    # Self-heal previous interrupted test runs that left only .env.backup
+    if not os.path.exists(env_path) and os.path.exists(backup_path):
+        shutil.move(backup_path, env_path)
+        print("[*] Recovered orphaned .env from .env.backup before tests")
+
     # Check if .env file exists
     if os.path.exists(env_path):
         # Rename .env to .env.backup
@@ -116,26 +154,30 @@ def setup_test_database():
     Runs once per test session for performance.
     """
     import subprocess
-    import sys
 
     database_url = os.environ.get("TEST_DATABASE_URL")
     if not database_url:
         yield
         return
 
-    # Only run migrations for integration tests
-    run_migrations = False
-    try:
-        import argparse
+    cli_args = sys.argv[1:]
+    marker_expr = ""
+    if "-m" in cli_args:
+        marker_index = cli_args.index("-m")
+        if marker_index + 1 < len(cli_args):
+            marker_expr = cli_args[marker_index + 1]
 
-        parser = argparse.ArgumentParser()
-        parser.add_argument("tests", nargs="*", default=[])
-        args, _ = parser.parse_known_args()
+    is_unit_marker_run = "unit" in marker_expr
+    is_unit_path_run = any(
+        "/tests/unit/" in arg
+        or "\\tests\\unit\\" in arg
+        or arg.endswith("/tests/unit")
+        or arg.endswith("\\tests\\unit")
+        for arg in cli_args
+    )
 
-        if "-m" not in sys.argv and "unit" not in sys.argv:
-            run_migrations = True
-    except Exception:
-        run_migrations = True
+    # 仅在非 unit 调用时执行迁移预热，避免 unit 选择性运行时产生长时间 DB 连接等待
+    run_migrations = not (is_unit_marker_run or is_unit_path_run)
 
     if run_migrations and "postgresql" in database_url:
         try:
@@ -209,14 +251,19 @@ def reset_settings_secret_key():
 @pytest.fixture(autouse=True)
 def reset_encryption_key(monkeypatch):
     """
-    Auto-used fixture to reset DATA_ENCRYPTION_KEY before each test.
-    This prevents test isolation issues for encryption tests.
+    Auto-used fixture to normalize DATA_ENCRYPTION_KEY before each test.
+    Tests can still override or clear it explicitly when needed.
     """
-    # Remove DATA_ENCRYPTION_KEY from environment before each test
-    monkeypatch.delenv("DATA_ENCRYPTION_KEY", raising=False)
+    from src.core import config
+    from src.core import encryption as encryption_module
+
+    monkeypatch.setenv("DATA_ENCRYPTION_KEY", DEFAULT_TEST_DATA_ENCRYPTION_KEY)
+    config.settings.DATA_ENCRYPTION_KEY = DEFAULT_TEST_DATA_ENCRYPTION_KEY
+    encryption_module.settings.DATA_ENCRYPTION_KEY = DEFAULT_TEST_DATA_ENCRYPTION_KEY
     yield
-    # Clean up after test
-    monkeypatch.delenv("DATA_ENCRYPTION_KEY", raising=False)
+    monkeypatch.setenv("DATA_ENCRYPTION_KEY", DEFAULT_TEST_DATA_ENCRYPTION_KEY)
+    config.settings.DATA_ENCRYPTION_KEY = DEFAULT_TEST_DATA_ENCRYPTION_KEY
+    encryption_module.settings.DATA_ENCRYPTION_KEY = DEFAULT_TEST_DATA_ENCRYPTION_KEY
 
 
 # =============================================================================

@@ -14,10 +14,10 @@ from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query
+from fastapi.params import Depends as DependsParam
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.constants.cache_constants import CACHE_TTL_SHORT_SECONDS
-from src.crud.asset import asset_crud
 from src.database import get_async_db
 from src.middleware.auth import get_current_active_user
 from src.models.auth import User
@@ -30,95 +30,23 @@ from src.schemas.statistics import (
     OccupancyRateStatsResponse,
 )
 from src.services.analytics import AreaService, FinancialService, OccupancyService
+from src.services.analytics.basic_stats_service import (
+    BasicStatsService,
+    get_basic_stats_service,
+)
 from src.utils.cache_manager import cache_statistics, get_cache_manager
-from src.utils.numeric import to_float
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
 
-def _build_basic_filters(
-    ownership_status: str | None,
-    property_nature: str | None,
-    usage_status: str | None,
-    ownership_id: str | None,
-) -> dict[str, Any]:
-    filters: dict[str, Any] = {}
-    if ownership_status is not None:
-        filters["ownership_status"] = ownership_status
-    if property_nature is not None:
-        filters["property_nature"] = property_nature
-    if usage_status is not None:
-        filters["usage_status"] = usage_status
-    if ownership_id is not None:
-        filters["ownership_id"] = ownership_id
-    return filters
-
-
-async def _calculate_basic_statistics(
-    db: AsyncSession,
-    ownership_status: str | None,
-    property_nature: str | None,
-    usage_status: str | None,
-    ownership_id: str | None,
-) -> BasicStatisticsResponse:
-    filters = _build_basic_filters(
-        ownership_status,
-        property_nature,
-        usage_status,
-        ownership_id,
-    )
-
-    logger.info("开始获取基础统计数据，筛选条件: %s", filters)
-
-    assets, _ = await asset_crud.get_multi_with_search_async(
-        db=db, skip=0, limit=10000, filters=filters
-    )
-    total_assets = len(assets)
-
-    if total_assets == 0:
-        return BasicStatisticsResponse(
-            total_assets=0,
-            ownership_status={"confirmed": 0, "unconfirmed": 0, "partial": 0},
-            property_nature={"commercial": 0, "non_commercial": 0},
-            usage_status={"rented": 0, "self_used": 0, "vacant": 0},
-            generated_at=datetime.now(),
-            filters_applied=filters,
-        )
-
-    ownership_stats = {"confirmed": 0, "unconfirmed": 0, "partial": 0}
-    property_stats = {"commercial": 0, "non_commercial": 0}
-    usage_stats = {"rented": 0, "self_used": 0, "vacant": 0}
-
-    for asset in assets:
-        if getattr(asset, "ownership_status", None) == "已确权":
-            ownership_stats["confirmed"] += 1
-        elif getattr(asset, "ownership_status", None) == "未确权":
-            ownership_stats["unconfirmed"] += 1
-        elif getattr(asset, "ownership_status", None) == "部分确权":
-            ownership_stats["partial"] += 1
-
-        if getattr(asset, "property_nature", None) == "经营性":
-            property_stats["commercial"] += 1
-        elif getattr(asset, "property_nature", None) == "非经营性":
-            property_stats["non_commercial"] += 1
-
-        if getattr(asset, "usage_status", None) == "出租":
-            usage_stats["rented"] += 1
-        elif getattr(asset, "usage_status", None) == "自用":
-            usage_stats["self_used"] += 1
-        elif getattr(asset, "usage_status", None) == "空置":
-            usage_stats["vacant"] += 1
-
-    return BasicStatisticsResponse(
-        total_assets=total_assets,
-        ownership_status=ownership_stats,
-        property_nature=property_stats,
-        usage_status=usage_stats,
-        generated_at=datetime.now(),
-        filters_applied=filters,
-    )
+def _resolve_basic_stats_service(
+    service: BasicStatsService | Any,
+) -> BasicStatsService | Any:
+    if isinstance(service, DependsParam):
+        return get_basic_stats_service()
+    return service
 
 
 @router.get(
@@ -131,9 +59,16 @@ async def get_basic_statistics(
     ownership_id: str | None = Query(None, description="权属方ID筛选"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    service: BasicStatsService = Depends(get_basic_stats_service),
 ) -> BasicStatisticsResponse:
-    return await _calculate_basic_statistics(
-        db, ownership_status, property_nature, usage_status, ownership_id
+    _ = current_user
+    resolved_service = _resolve_basic_stats_service(service)
+    return await resolved_service.calculate_basic_statistics(
+        db=db,
+        ownership_status=ownership_status,
+        property_nature=property_nature,
+        usage_status=usage_status,
+        ownership_id=ownership_id,
     )
 
 
@@ -141,8 +76,17 @@ async def get_basic_statistics(
 async def get_statistics_summary(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    service: BasicStatsService = Depends(get_basic_stats_service),
 ) -> BasicStatisticsResponse:
-    return await _calculate_basic_statistics(db, None, None, None, None)
+    _ = current_user
+    resolved_service = _resolve_basic_stats_service(service)
+    return await resolved_service.calculate_basic_statistics(
+        db=db,
+        ownership_status=None,
+        property_nature=None,
+        usage_status=None,
+        ownership_id=None,
+    )
 
 
 @cache_statistics(expire=CACHE_TTL_SHORT_SECONDS)
@@ -150,8 +94,17 @@ async def get_statistics_summary(
 async def get_dashboard_data(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    service: BasicStatsService = Depends(get_basic_stats_service),
 ) -> DashboardDataResponse:
-    basic_stats = await _calculate_basic_statistics(db, None, None, None, None)
+    _ = current_user
+    resolved_service = _resolve_basic_stats_service(service)
+    basic_stats = await resolved_service.calculate_basic_statistics(
+        db=db,
+        ownership_status=None,
+        property_nature=None,
+        usage_status=None,
+        ownership_id=None,
+    )
     filters = basic_stats.filters_applied or {}
 
     area_service = AreaService(db)
@@ -217,57 +170,20 @@ async def get_comprehensive_statistics(
     should_include_deleted: bool = Query(False, description="是否包含已删除资产"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    service: BasicStatsService = Depends(get_basic_stats_service),
 ) -> dict[str, Any]:
-    filters: dict[str, Any] = {}
-    if not should_include_deleted:
-        filters["data_status"] = "正常"
-
-    assets, _ = await asset_crud.get_multi_with_search_async(
-        db=db, skip=0, limit=10000, filters=filters
+    _ = current_user
+    resolved_service = _resolve_basic_stats_service(service)
+    return await resolved_service.calculate_comprehensive_statistics(
+        db=db,
+        should_include_deleted=should_include_deleted,
     )
-
-    total_assets = len(assets)
-    total_land_area = sum(
-        to_float(getattr(a, "land_area"))
-        for a in assets
-        if getattr(a, "land_area", None)
-    )
-    total_rentable_area = sum(
-        to_float(getattr(a, "rentable_area"))
-        for a in assets
-        if getattr(a, "rentable_area", None)
-    )
-    total_rented_area = sum(
-        to_float(getattr(a, "rented_area"))
-        for a in assets
-        if getattr(a, "rented_area", None)
-    )
-
-    occupancy_rate = (
-        (total_rented_area / total_rentable_area * 100)
-        if total_rentable_area > 0
-        else 0.0
-    )
-
-    comprehensive_data = {
-        "total_assets": total_assets,
-        "total_land_area": round(total_land_area, 2),
-        "total_rentable_area": round(total_rentable_area, 2),
-        "total_rented_area": round(total_rented_area, 2),
-        "occupancy_rate": round(occupancy_rate, 2),
-        "generated_at": datetime.now().isoformat(),
-        "filters_applied": filters,
-    }
-
-    return {
-        "success": True,
-        "data": comprehensive_data,
-        "message": "综合统计数据获取成功",
-    }
 
 
 @router.post("/cache/clear", summary="清除统计数据缓存")
-async def clear_statistics_cache() -> dict[str, Any]:
+async def clear_statistics_cache(
+    current_user: User = Depends(get_current_active_user),
+) -> dict[str, Any]:
     cache_mgr = await get_cache_manager()
     cleared_count = await cache_mgr.clear_pattern("statistics:*")
 
@@ -281,7 +197,9 @@ async def clear_statistics_cache() -> dict[str, Any]:
 
 
 @router.get("/cache/info", summary="获取缓存信息")
-async def get_cache_info() -> dict[str, Any]:
+async def get_cache_info(
+    current_user: User = Depends(get_current_active_user),
+) -> dict[str, Any]:
     cache_mgr = await get_cache_manager()
     backend_type = (
         cache_mgr.backend.__class__.__name__

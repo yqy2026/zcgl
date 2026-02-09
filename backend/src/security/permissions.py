@@ -16,6 +16,10 @@ from ..database import get_async_db
 from ..middleware.auth import get_current_user
 from ..models.auth import User
 from ..services import RBACService
+from ..services.permission.rbac_service import (
+    ADMIN_PERMISSION_ACTION,
+    ADMIN_PERMISSION_RESOURCE,
+)
 
 
 class AssetNotFoundError(Exception):
@@ -36,6 +40,13 @@ class DuplicateAssetError(Exception):
 """
 
 logger = logging.getLogger(__name__)
+
+
+def _is_admin_permission(resource: str, action: str) -> bool:
+    return (
+        resource == ADMIN_PERMISSION_RESOURCE
+        and action == ADMIN_PERMISSION_ACTION
+    )
 
 
 def permission_required[**P, R](
@@ -71,9 +82,12 @@ def permission_required[**P, R](
 
                 # 检查基础权限
                 user_id_value: str = str(getattr(current_user, "id", ""))
-                has_permission = await rbac_service.check_user_permission(
-                    user_id=user_id_value, resource=resource, action=action
-                )
+                if _is_admin_permission(resource, action):
+                    has_permission = await rbac_service.is_admin(user_id=user_id_value)
+                else:
+                    has_permission = await rbac_service.check_user_permission(
+                        user_id=user_id_value, resource=resource, action=action
+                    )
 
                 # 如果有资源ID参数，检查特定资源权限
                 if resource_id_param and has_permission:
@@ -121,7 +135,7 @@ def admin_required[**P, R](
     """
     管理员权限装饰器
     """
-    return permission_required("system", "admin")(func)
+    return permission_required(ADMIN_PERMISSION_RESOURCE, ADMIN_PERMISSION_ACTION)(func)
 
 
 def role_required[**P, R](
@@ -224,9 +238,12 @@ def get_current_user_with_permissions(
 
         rbac_service = RBACService(db)
         user_id_value: str = str(getattr(current_user, "id", ""))
-        has_permission = await rbac_service.check_user_permission(
-            user_id=user_id_value, resource=resource, action=action
-        )
+        if _is_admin_permission(resource, action):
+            has_permission = await rbac_service.is_admin(user_id=user_id_value)
+        else:
+            has_permission = await rbac_service.check_user_permission(
+                user_id=user_id_value, resource=resource, action=action
+            )
 
         if not has_permission:
             raise forbidden(f"权限不足，需要 {resource}:{action} 权限")
@@ -281,6 +298,8 @@ class PermissionChecker:
     async def has_permission(self, resource: str, action: str) -> bool:
         """检查用户是否具有指定权限"""
         user_id_value: str = getattr(self.user, "id", "")
+        if _is_admin_permission(resource, action):
+            return bool(await self.rbac_service.is_admin(user_id=user_id_value))
         return bool(
             await self.rbac_service.check_user_permission(
                 user_id=user_id_value, resource=resource, action=action
@@ -320,9 +339,7 @@ class PermissionChecker:
     async def is_admin(self) -> bool:
         """检查用户是否是管理员"""
         user_id_value: str = getattr(self.user, "id", "")
-        return await self.rbac_service.check_user_permission(
-            user_id_value, "system", "admin"
-        )
+        return await self.rbac_service.is_admin(user_id_value)
 
 
 # 便捷权限检查装饰器

@@ -303,11 +303,9 @@ class LLMServiceFactory:
             "LLM_API_KEY", ""
         )
         base_url = (
-            _env_or_setting("ZHIPU_BASE_URL", "ZHIPU_BASE_URL")
-            or _env_first(
-                ["ZHIPU_BASE_URL", "ZHIPU_API_BASE"],
-                "https://open.bigmodel.cn/api/paas/v4",
-            )
+            _env_first(["ZHIPU_BASE_URL", "ZHIPU_API_BASE"], "")
+            or _env_or_setting("ZHIPU_BASE_URL", "ZHIPU_BASE_URL")
+            or "https://open.bigmodel.cn/api/paas/v4"
         )
         model = os.getenv("ZHIPU_MODEL")
         if not model:
@@ -332,11 +330,9 @@ class LLMServiceFactory:
             "LLM_API_KEY", ""
         )
         base_url = (
-            _env_or_setting("DASHSCOPE_BASE_URL", "DASHSCOPE_BASE_URL")
-            or _env_first(
-                ["DASHSCOPE_BASE_URL", "DASHSCOPE_API_BASE"],
-                "https://dashscope.aliyuncs.com/compatible-mode/v1",
-            )
+            _env_first(["DASHSCOPE_BASE_URL", "DASHSCOPE_API_BASE"], "")
+            or _env_or_setting("DASHSCOPE_BASE_URL", "DASHSCOPE_BASE_URL")
+            or "https://dashscope.aliyuncs.com/compatible-mode/v1"
         )
         model = os.getenv("DASHSCOPE_MODEL")
         if not model:
@@ -361,11 +357,9 @@ class LLMServiceFactory:
             "LLM_API_KEY", ""
         )
         base_url = (
-            _env_or_setting("DEEPSEEK_BASE_URL", "DEEPSEEK_BASE_URL")
-            or _env_first(
-                ["DEEPSEEK_BASE_URL", "DEEPSEEK_API_BASE"],
-                "https://api.deepseek.com",
-            )
+            _env_first(["DEEPSEEK_BASE_URL", "DEEPSEEK_API_BASE"], "")
+            or _env_or_setting("DEEPSEEK_BASE_URL", "DEEPSEEK_BASE_URL")
+            or "https://api.deepseek.com"
         )
         model = os.getenv("DEEPSEEK_MODEL")
         if not model:
@@ -390,11 +384,9 @@ class LLMServiceFactory:
             "LLM_API_KEY", ""
         )
         base_url = (
-            _env_or_setting("HUNYUAN_BASE_URL", "HUNYUAN_BASE_URL")
-            or _env_first(
-                ["HUNYUAN_BASE_URL", "HUNYUAN_API_BASE"],
-                "https://api.hunyuan.cloud.tencent.com/v1",
-            )
+            _env_first(["HUNYUAN_BASE_URL", "HUNYUAN_API_BASE"], "")
+            or _env_or_setting("HUNYUAN_BASE_URL", "HUNYUAN_BASE_URL")
+            or "https://api.hunyuan.cloud.tencent.com/v1"
         )
         model = os.getenv("HUNYUAN_MODEL")
         if not model:

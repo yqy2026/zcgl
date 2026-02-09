@@ -103,7 +103,7 @@ class PropertyCertificateValidator:
         if isinstance(issue_date, datetime):
             if issue_date.tzinfo is None:
                 issue_date = issue_date.replace(tzinfo=UTC)
-            if issue_date > datetime.utcnow():
+            if issue_date > datetime.now(UTC):
                 self._raise_validation_error(
                     "发证日期不能晚于当前日期", field="issue_date"
                 )

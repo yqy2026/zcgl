@@ -1,3 +1,11 @@
-from .service import system_dictionary_service
+from .service import (
+    SystemDictionaryService,
+    get_system_dictionary_service,
+    system_dictionary_service,
+)
 
-__all__ = ["system_dictionary_service"]
+__all__ = [
+    "SystemDictionaryService",
+    "get_system_dictionary_service",
+    "system_dictionary_service",
+]

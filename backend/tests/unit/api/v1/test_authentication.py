@@ -845,9 +845,10 @@ class TestRefreshToken:
     ):
         """Test successful token refresh"""
         from src.api.v1.auth.auth_modules.authentication import refresh_token
-        from src.schemas.auth import RefreshTokenRequest
-
-        refresh_data = RefreshTokenRequest(refresh_token="valid_refresh_token")
+        mock_request.headers = {
+            "user-agent": "test-agent",
+            "cookie": "refresh_token=valid_refresh_token",
+        }
 
         mock_auth_service = MagicMock()
         mock_auth_service.validate_refresh_token = AsyncMock(return_value=mock_session)
@@ -862,7 +863,6 @@ class TestRefreshToken:
             refresh_token(
                 request=mock_request,
                 response=Response(),
-                refresh_data=refresh_data,
                 db=mock_db,
             )
         )
@@ -870,6 +870,35 @@ class TestRefreshToken:
         assert result.auth_mode == "cookie"
         assert result.message == "令牌刷新成功"
         mock_auth_service.validate_refresh_token.assert_called_once()
+
+    @patch("src.api.v1.auth.auth_modules.authentication.AsyncAuthenticationService")
+    @patch("src.api.v1.auth.auth_modules.authentication.AsyncSessionService")
+    def test_refresh_token_missing_cookie(
+        self,
+        mock_session_service_class,
+        mock_auth_service_class,
+        mock_request,
+        mock_db,
+    ):
+        """Test refresh fails when refresh cookie is missing"""
+        from src.api.v1.auth.auth_modules.authentication import refresh_token
+        from src.core.exception_handler import InvalidRequestError
+
+        mock_request.headers = {"user-agent": "test-agent"}
+        mock_auth_service = MagicMock()
+        mock_auth_service_class.return_value = mock_auth_service
+
+        with pytest.raises(InvalidRequestError) as exc_info:
+            asyncio.run(
+                refresh_token(
+                    request=mock_request,
+                    response=Response(),
+                    db=mock_db,
+                )
+            )
+
+        assert exc_info.value.status_code == status.HTTP_400_BAD_REQUEST
+        assert "刷新令牌缺失" in exc_info.value.message
 
     @patch("src.api.v1.auth.auth_modules.authentication.AuditLogCRUD")
     @patch("src.api.v1.auth.auth_modules.authentication.AsyncAuthenticationService")
@@ -885,9 +914,10 @@ class TestRefreshToken:
         """Test refresh with invalid token"""
         from src.api.v1.auth.auth_modules.authentication import refresh_token
         from src.core.exception_handler import AuthenticationError
-        from src.schemas.auth import RefreshTokenRequest
-
-        refresh_data = RefreshTokenRequest(refresh_token="invalid_refresh_token")
+        mock_request.headers = {
+            "user-agent": "test-agent",
+            "cookie": "refresh_token=invalid_refresh_token",
+        }
 
         mock_auth_service = MagicMock()
         mock_auth_service.validate_refresh_token = AsyncMock(return_value=None)
@@ -904,7 +934,6 @@ class TestRefreshToken:
                     refresh_token(
                         request=mock_request,
                         response=Response(),
-                        refresh_data=refresh_data,
                         db=mock_db,
                     )
                 )
@@ -927,9 +956,10 @@ class TestRefreshToken:
         """Test refresh when user not found"""
         from src.api.v1.auth.auth_modules.authentication import refresh_token
         from src.core.exception_handler import AuthenticationError
-        from src.schemas.auth import RefreshTokenRequest
-
-        refresh_data = RefreshTokenRequest(refresh_token="valid_refresh_token")
+        mock_request.headers = {
+            "user-agent": "test-agent",
+            "cookie": "refresh_token=valid_refresh_token",
+        }
 
         mock_auth_service = MagicMock()
         # validate_refresh_token returns a UserSession (or None)
@@ -945,7 +975,6 @@ class TestRefreshToken:
                 refresh_token(
                     request=mock_request,
                     response=Response(),
-                    refresh_data=refresh_data,
                     db=mock_db,
                 )
             )
@@ -969,9 +998,10 @@ class TestRefreshToken:
         """Test refresh when user is inactive"""
         from src.api.v1.auth.auth_modules.authentication import refresh_token
         from src.core.exception_handler import AuthenticationError
-        from src.schemas.auth import RefreshTokenRequest
-
-        refresh_data = RefreshTokenRequest(refresh_token="valid_refresh_token")
+        mock_request.headers = {
+            "user-agent": "test-agent",
+            "cookie": "refresh_token=valid_refresh_token",
+        }
 
         mock_session.user.is_active = False
 
@@ -987,7 +1017,6 @@ class TestRefreshToken:
                 refresh_token(
                     request=mock_request,
                     response=Response(),
-                    refresh_data=refresh_data,
                     db=mock_db,
                 )
             )
@@ -1009,11 +1038,12 @@ class TestRefreshToken:
         mock_session,
         mock_tokens,
     ):
-        """Test refresh with IP change (should succeed with warning)"""
+        """Test refresh with IP change still calls service and succeeds when service accepts"""
         from src.api.v1.auth.auth_modules.authentication import refresh_token
-        from src.schemas.auth import RefreshTokenRequest
-
-        refresh_data = RefreshTokenRequest(refresh_token="valid_refresh_token")
+        mock_request.headers = {
+            "user-agent": "test-agent",
+            "cookie": "refresh_token=valid_refresh_token",
+        }
 
         mock_session.ip_address = "192.168.1.1"  # Different from request.client.host
 
@@ -1030,7 +1060,6 @@ class TestRefreshToken:
             refresh_token(
                 request=mock_request,
                 response=Response(),
-                refresh_data=refresh_data,
                 db=mock_db,
             )
         )
@@ -1053,9 +1082,10 @@ class TestRefreshToken:
     ):
         """Test refresh when request.client is None"""
         from src.api.v1.auth.auth_modules.authentication import refresh_token
-        from src.schemas.auth import RefreshTokenRequest
-
-        refresh_data = RefreshTokenRequest(refresh_token="valid_refresh_token")
+        mock_request.headers = {
+            "user-agent": "test-agent",
+            "cookie": "refresh_token=valid_refresh_token",
+        }
 
         mock_request.client = None
 
@@ -1072,7 +1102,6 @@ class TestRefreshToken:
             refresh_token(
                 request=mock_request,
                 response=Response(),
-                refresh_data=refresh_data,
                 db=mock_db,
             )
         )

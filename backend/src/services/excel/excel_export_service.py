@@ -4,6 +4,8 @@ Excel导出服务
 提供将资产数据导出为Excel文件的功能
 """
 
+import asyncio
+import inspect
 import io
 import json
 import logging
@@ -59,6 +61,37 @@ class ExcelExportService:
         """
         self.db = db
 
+    async def _fetch_assets_with_search(
+        self,
+        search: str | None,
+        filters: dict[str, Any],
+        limit: int,
+    ) -> tuple[list[Any], int]:
+        sync_search = getattr(asset_crud, "get_multi_with_search", None)
+        if callable(sync_search):
+            return sync_search(
+                db=self.db,
+                search=search,
+                filters=filters,
+                limit=limit,
+            )
+
+        async_search = getattr(asset_crud, "get_multi_with_search_async", None)
+        if callable(async_search):
+            result = async_search(
+                db=self.db,
+                search=search,
+                filters=filters,
+                limit=limit,
+            )
+            if inspect.isawaitable(result):
+                return await result
+            return result
+
+        raise AttributeError(
+            "asset_crud missing get_multi_with_search/get_multi_with_search_async"
+        )
+
     async def export_assets_to_excel_async(
         self,
         filters: dict[str, Any] | None = None,
@@ -75,8 +108,7 @@ class ExcelExportService:
             if asset_ids:
                 export_filters["ids"] = asset_ids
 
-            assets, total = await asset_crud.get_multi_with_search_async(
-                db=self.db,
+            assets, total = await self._fetch_assets_with_search(
                 search=search,
                 filters=export_filters,
                 limit=limit,
@@ -105,6 +137,28 @@ class ExcelExportService:
         except Exception as e:
             logger.error(f"导出Excel文件失败: {str(e)}")
             raise
+
+    def export_assets_to_excel(
+        self,
+        filters: dict[str, Any] | None = None,
+        search: str | None = None,
+        asset_ids: list[str] | None = None,
+        fields: list[str] | None = None,
+        sheet_name: str = STANDARD_SHEET_NAME,
+        date_format: str = "%Y-%m-%d %H:%M:%S",
+        limit: int = 5000,
+    ) -> io.BytesIO:
+        return asyncio.run(
+            self.export_assets_to_excel_async(
+                filters=filters,
+                search=search,
+                asset_ids=asset_ids,
+                fields=fields,
+                sheet_name=sheet_name,
+                date_format=date_format,
+                limit=limit,
+            )
+        )
 
     def export_analytics_to_excel(self, analytics_data: dict[str, Any]) -> io.BytesIO:
         try:
@@ -168,6 +222,43 @@ class ExcelExportService:
             file_size = os.path.getsize(file_path)
 
             logger.info(f"成功导出到文件: {file_path} (大小: {file_size} 字节)")
+
+            return {
+                "file_path": file_path,
+                "file_name": os.path.basename(file_path),
+                "file_size": file_size,
+                "export_time": datetime.utcnow().isoformat(),
+            }
+        except Exception as e:
+            logger.error(f"导出到文件失败: {str(e)}")
+            raise
+
+    def export_assets_to_file(
+        self,
+        file_path: str,
+        filters: dict[str, Any] | None = None,
+        search: str | None = None,
+        asset_ids: list[str] | None = None,
+        fields: list[str] | None = None,
+        sheet_name: str = STANDARD_SHEET_NAME,
+        date_format: str = "%Y-%m-%d %H:%M:%S",
+        limit: int = 5000,
+    ) -> dict[str, Any]:
+        try:
+            buffer = self.export_assets_to_excel(
+                filters=filters,
+                search=search,
+                asset_ids=asset_ids,
+                fields=fields,
+                sheet_name=sheet_name,
+                date_format=date_format,
+                limit=limit,
+            )
+
+            with open(file_path, "wb") as file_obj:
+                file_obj.write(buffer.read())
+
+            file_size = os.path.getsize(file_path)
 
             return {
                 "file_path": file_path,
@@ -310,8 +401,7 @@ class ExcelExportService:
             if asset_ids:
                 export_filters["ids"] = asset_ids
 
-            assets, total = await asset_crud.get_multi_with_search_async(
-                db=self.db,
+            assets, total = await self._fetch_assets_with_search(
                 search=search,
                 filters=export_filters,
                 limit=1,
@@ -335,3 +425,17 @@ class ExcelExportService:
         except Exception as e:
             logger.error(f"获取导出预览失败: {str(e)}")
             raise
+
+    def get_export_preview(
+        self,
+        filters: dict[str, Any] | None = None,
+        search: str | None = None,
+        asset_ids: list[str] | None = None,
+    ) -> dict[str, Any]:
+        return asyncio.run(
+            self.get_export_preview_async(
+                filters=filters,
+                search=search,
+                asset_ids=asset_ids,
+            )
+        )

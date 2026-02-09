@@ -222,6 +222,24 @@ class AssetService:
         )
         return result
 
+    async def get_assets_by_ids(
+        self,
+        ids: list[str],
+        *,
+        include_relations: bool = False,
+    ) -> list[Asset]:
+        """根据 ID 列表批量获取资产。"""
+        asset_crud = _get_asset_crud()
+        assets = cast(
+            list[Asset],
+            await asset_crud.get_multi_by_ids_async(
+                db=self.db,
+                ids=ids,
+                include_relations=include_relations,
+            ),
+        )
+        return assets
+
     async def get_asset(self, asset_id: str, *, use_cache: bool = True) -> Asset:
         asset_crud = _get_asset_crud()
         asset = cast(
@@ -232,10 +250,23 @@ class AssetService:
             raise ResourceNotFoundError("Asset", asset_id)
         return asset
 
+    async def get_asset_history_records(self, asset_id: str) -> list[AssetHistory]:
+        await self.get_asset(asset_id)
+        history_records = await history_crud.get_by_asset_id_async(
+            self.db,
+            asset_id=asset_id,
+        )
+        return history_records
+
     async def get_distinct_field_values(self, field_name: str) -> list[str]:
         asset_crud = _get_asset_crud()
         values = await asset_crud.get_distinct_field_values(self.db, field_name)
         return [str(value) for value in values]
+
+    async def get_ownership_entity_names(self) -> list[str]:
+        stmt = select(Ownership.name).where(Ownership.data_status == "正常")
+        names = (await self.db.execute(stmt)).scalars().all()
+        return [str(name) for name in names if name]
 
     async def create_asset(
         self,

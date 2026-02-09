@@ -51,6 +51,18 @@ class CustomFieldService:
         result: AssetCustomField = await custom_field_crud.create(db, obj_in=obj_in)
         return result
 
+    async def get_custom_fields_async(
+        self, db: AsyncSession, *, filters: dict[str, Any] | None = None
+    ) -> list[AssetCustomField]:
+        return await custom_field_crud.get_multi_with_filters_async(
+            db=db, filters=filters or {}
+        )
+
+    async def get_custom_field_async(
+        self, db: AsyncSession, *, field_id: str
+    ) -> AssetCustomField | None:
+        return await custom_field_crud.get(db=db, id=field_id)
+
     async def update_custom_field_async(
         self, db: AsyncSession, *, id: str, obj_in: AssetCustomFieldUpdate
     ) -> AssetCustomField:
@@ -386,6 +398,18 @@ class CustomFieldService:
         return await custom_field_crud.get_asset_field_values_async(
             db, asset_id=asset_id
         )
+
+    async def validate_custom_field_value_async(
+        self,
+        db: AsyncSession,
+        *,
+        field_id: str,
+        value: Any,
+    ) -> tuple[bool, str | None]:
+        field = await self.get_custom_field_async(db, field_id=field_id)
+        if not field:
+            raise ResourceNotFoundError("字段", field_id)
+        return self.validate_field_value(field, value)
 
 
     async def toggle_active_status_async(
