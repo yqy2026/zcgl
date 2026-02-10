@@ -17,8 +17,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ...config.excel_config import STANDARD_SHEET_NAME
 from ...core.exception_handler import BusinessValidationError
 from ...crud.asset import asset_crud
+from ...crud.ownership import ownership
 from ...models.asset import Asset
-from ...models.ownership import Ownership
 from ...schemas.asset import AssetCreate
 from ..asset.validators import AssetBatchValidator
 
@@ -168,37 +168,20 @@ class ExcelImportService:
                             property_names_to_load.add(property_name_value)
 
                 if ownership_ids_to_load:
-                    ownership_rows = await self._scalars_all(
-                        await self.db.execute(
-                            select(Ownership).where(
-                                Ownership.id.in_(list(ownership_ids_to_load))
-                            )
-                        )
+                    ownership_rows = await ownership.get_by_ids_async(
+                        self.db, list(ownership_ids_to_load)
                     )
-                    ownership_by_id = {
-                        str(ownership.id): ownership for ownership in ownership_rows
-                    }
+                    ownership_by_id = {str(o.id): o for o in ownership_rows}
 
                 if ownership_names_to_load:
-                    ownership_rows = await self._scalars_all(
-                        await self.db.execute(
-                            select(Ownership).where(
-                                Ownership.name.in_(list(ownership_names_to_load))
-                            )
-                        )
+                    ownership_rows = await ownership.get_by_names_async(
+                        self.db, list(ownership_names_to_load)
                     )
-                    ownership_by_name = {
-                        str(ownership.name): ownership for ownership in ownership_rows
-                    }
+                    ownership_by_name = {str(o.name): o for o in ownership_rows}
 
                 if property_names_to_load:
-                    asset_rows = await self._scalars_all(
-                        await self.db.execute(
-                            select(Asset).where(
-                                Asset.property_name.in_(list(property_names_to_load)),
-                                Asset.data_status != "已删除",
-                            )
-                        )
+                    asset_rows = await asset_crud.get_by_property_names_async(
+                        self.db, list(property_names_to_load), exclude_deleted=True
                     )
                     existing_assets_by_name = {
                         str(asset.property_name): asset

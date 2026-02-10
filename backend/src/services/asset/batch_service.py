@@ -16,10 +16,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...crud.asset import asset_crud
 from ...crud.history import history_crud
+from ...crud.ownership import ownership
 from ...models.asset import Asset
-from ...models.associations import property_cert_assets, rent_contract_assets
-from ...models.ownership import Ownership
-from ...models.rent_contract import RentLedger
 from ...schemas.asset import AssetUpdate
 from .validators import AssetBatchValidator
 
@@ -90,78 +88,46 @@ class AsyncAssetBatchService:
     async def _load_assets_map(self, asset_ids: list[str]) -> dict[str, Asset]:
         if not asset_ids:
             return {}
-        result = await self.db.execute(select(Asset).where(Asset.id.in_(asset_ids)))
-        rows = self._to_list_safely(result.scalars().all())
-        return {str(asset.id): asset for asset in rows if getattr(asset, "id", None)}
+        assets = await asset_crud.get_multi_by_ids_async(
+            self.db, ids=asset_ids, include_relations=False, include_deleted=False
+        )
+        return {str(asset.id): asset for asset in assets if getattr(asset, "id", None)}
 
     async def _find_linked_asset_errors(self, asset_ids: list[str]) -> dict[str, str]:
         if not asset_ids:
             return {}
         try:
-            contract_result = await self.db.execute(
-                select(rent_contract_assets.c.asset_id).where(
-                    rent_contract_assets.c.asset_id.in_(asset_ids)
-                )
+            contract_asset_ids = await asset_crud.get_assets_with_rent_contracts_async(
+                self.db, asset_ids
             )
-            certificate_result = await self.db.execute(
-                select(property_cert_assets.c.asset_id).where(
-                    property_cert_assets.c.asset_id.in_(asset_ids)
-                )
+            certificate_asset_ids = await asset_crud.get_assets_with_property_certs_async(
+                self.db, asset_ids
             )
-            ledger_result = await self.db.execute(
-                select(RentLedger.asset_id).where(RentLedger.asset_id.in_(asset_ids))
+            ledger_asset_ids = await asset_crud.get_assets_with_rent_ledger_async(
+                self.db, asset_ids
             )
-            contract_rows = contract_result.scalars().all()
-            certificate_rows = certificate_result.scalars().all()
-            ledger_rows = ledger_result.scalars().all()
         except Exception:
             return {}
 
         linked_errors: dict[str, str] = {}
-        for asset_id in self._to_list_safely(contract_rows):
+        for asset_id in self._to_list_safely(contract_asset_ids):
             linked_errors[str(asset_id)] = "资产已关联合同，禁止删除"
-        for asset_id in self._to_list_safely(certificate_rows):
+        for asset_id in self._to_list_safely(certificate_asset_ids):
             linked_errors.setdefault(str(asset_id), "资产已关联产权证，禁止删除")
-        for asset_id in self._to_list_safely(ledger_rows):
+        for asset_id in self._to_list_safely(ledger_asset_ids):
             linked_errors.setdefault(str(asset_id), "资产已有租金台账记录，禁止删除")
         return linked_errors
 
     async def _ensure_asset_not_linked(self, asset_id: str) -> None:
-        has_contract = (
-            (
-                await self.db.execute(
-                    select(rent_contract_assets.c.asset_id)
-                    .where(rent_contract_assets.c.asset_id == asset_id)
-                    .limit(1)
-                )
-            ).first()
-            is not None
-        )
+        has_contract = await asset_crud.has_rent_contracts_async(self.db, asset_id)
         if has_contract:
             raise ValueError("资产已关联合同，禁止删除")
 
-        has_certificate = (
-            (
-                await self.db.execute(
-                    select(property_cert_assets.c.asset_id)
-                    .where(property_cert_assets.c.asset_id == asset_id)
-                    .limit(1)
-                )
-            ).first()
-            is not None
-        )
+        has_certificate = await asset_crud.has_property_certs_async(self.db, asset_id)
         if has_certificate:
             raise ValueError("资产已关联产权证，禁止删除")
-        has_ledger = (
-            (
-                await self.db.execute(
-                    select(RentLedger.id)
-                    .where(RentLedger.asset_id == asset_id)
-                    .limit(1)
-                )
-            ).first()
-            is not None
-        )
+
+        has_ledger = await asset_crud.has_rent_ledger_async(self.db, asset_id)
         if has_ledger:
             raise ValueError("资产已有租金台账记录，禁止删除")
 
@@ -179,9 +145,8 @@ class AsyncAssetBatchService:
         if ownership_id == "":
             return True, None
 
-        result = await self.db.execute(select(Ownership).where(Ownership.id == ownership_id))
-        ownership = result.scalars().first()
-        if not ownership:
+        ownership_obj = await ownership.get_async(self.db, ownership_id)
+        if not ownership_obj:
             raise ValueError("权属方不存在")
 
         return True, ownership_id

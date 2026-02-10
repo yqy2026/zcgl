@@ -14,12 +14,10 @@ from ...core.exception_handler import (
     validation_error,
 )
 from ...crud.history import history_crud
+from ...crud.ownership import ownership
 from ...models.asset import Asset
 from ...models.asset_history import AssetHistory
-from ...models.associations import property_cert_assets, rent_contract_assets
 from ...models.auth import User
-from ...models.ownership import Ownership
-from ...models.rent_contract import RentLedger
 from ...schemas.asset import AssetCreate, AssetUpdate
 from ...services.asset.asset_calculator import AssetCalculator
 from ...services.enum_validation_service import get_enum_validation_service_async
@@ -146,11 +144,8 @@ class AssetService:
             )
 
         if ownership_id:
-            result = await self.db.execute(
-                select(Ownership).where(Ownership.id == ownership_id)
-            )
-            ownership = result.scalars().first()
-            if not ownership:
+            ownership_obj = await ownership.get_async(self.db, ownership_id)
+            if not ownership_obj:
                 raise validation_error(
                     "权属方不存在", field_errors={"ownership_id": "权属方不存在"}
                 )
@@ -159,37 +154,23 @@ class AssetService:
         return data
 
     async def _ensure_asset_not_linked(self, asset_id: str) -> None:
-        has_contract = (
-            await self.db.execute(
-                select(rent_contract_assets.c.asset_id)
-                .where(rent_contract_assets.c.asset_id == asset_id)
-                .limit(1)
-            )
-        ).first() is not None
+        asset_crud = _get_asset_crud()
+
+        has_contract = await asset_crud.has_rent_contracts_async(self.db, asset_id)
         if has_contract:
             raise operation_not_allowed(
                 "资产已关联合同，禁止删除",
                 reason="asset_has_contracts",
             )
 
-        has_certificate = (
-            await self.db.execute(
-                select(property_cert_assets.c.asset_id)
-                .where(property_cert_assets.c.asset_id == asset_id)
-                .limit(1)
-            )
-        ).first() is not None
+        has_certificate = await asset_crud.has_property_certs_async(self.db, asset_id)
         if has_certificate:
             raise operation_not_allowed(
                 "资产已关联产权证，禁止删除",
                 reason="asset_has_certificates",
             )
 
-        has_ledger = (
-            await self.db.execute(
-                select(RentLedger.id).where(RentLedger.asset_id == asset_id).limit(1)
-            )
-        ).first() is not None
+        has_ledger = await asset_crud.has_rent_ledger_async(self.db, asset_id)
         if has_ledger:
             raise operation_not_allowed(
                 "资产已有租金台账记录，禁止删除",
@@ -264,9 +245,8 @@ class AssetService:
         return [str(value) for value in values]
 
     async def get_ownership_entity_names(self) -> list[str]:
-        stmt = select(Ownership.name).where(Ownership.data_status == "正常")
-        names = (await self.db.execute(stmt)).scalars().all()
-        return [str(name) for name in names if name]
+        """获取所有正常状态的权属方名称列表"""
+        return await ownership.get_names_by_status_async(self.db, data_status="正常")
 
     async def create_asset(
         self,

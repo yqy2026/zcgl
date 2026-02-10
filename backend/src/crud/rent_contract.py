@@ -242,6 +242,31 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
 
         return stmt
 
+    async def count_by_ownership_async(
+        self, db: AsyncSession, ownership_id: str
+    ) -> int:
+        """统计权属方的合同总数"""
+        stmt = select(func.count(RentContract.id)).where(
+            RentContract.ownership_id == ownership_id
+        )
+        result = await db.execute(stmt)
+        return int(result.scalar() or 0)
+
+    async def count_active_by_ownership_async(
+        self, db: AsyncSession, ownership_id: str
+    ) -> int:
+        """统计权属方的活跃合同数（状态为'有效'）"""
+        from sqlalchemy import and_
+
+        stmt = select(func.count(RentContract.id)).where(
+            and_(
+                RentContract.ownership_id == ownership_id,
+                RentContract.contract_status == "有效",
+            )
+        )
+        result = await db.execute(stmt)
+        return int(result.scalar() or 0)
+
 
 class CRUDRentTerm(CRUDBase[RentTerm, RentTermCreate, RentTermUpdate]):
     """租金条款CRUD操作"""
@@ -364,6 +389,47 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
         )
         rows = (await db.execute(stmt)).scalars().all()
         return {str(year_month) for year_month in rows if year_month is not None}
+
+    async def sum_due_amount_by_ownership_async(
+        self, db: AsyncSession, ownership_id: str
+    ) -> float:
+        """统计权属方的应收总额（通过合同ID关联）"""
+        # 子查询：获取该权属方下所有合同ID
+        contract_ids = select(RentContract.id).where(
+            RentContract.ownership_id == ownership_id
+        )
+        # 聚合查询：统计应收总额
+        stmt = select(func.coalesce(func.sum(RentLedger.due_amount), 0)).where(
+            RentLedger.contract_id.in_(contract_ids)
+        )
+        result = await db.execute(stmt)
+        return float(result.scalar() or 0)
+
+    async def sum_paid_amount_by_ownership_async(
+        self, db: AsyncSession, ownership_id: str
+    ) -> float:
+        """统计权属方的实收总额（通过合同ID关联）"""
+        contract_ids = select(RentContract.id).where(
+            RentContract.ownership_id == ownership_id
+        )
+        stmt = select(func.coalesce(func.sum(RentLedger.paid_amount), 0)).where(
+            RentLedger.contract_id.in_(contract_ids)
+        )
+        result = await db.execute(stmt)
+        return float(result.scalar() or 0)
+
+    async def sum_overdue_amount_by_ownership_async(
+        self, db: AsyncSession, ownership_id: str
+    ) -> float:
+        """统计权属方的欠款总额（通过合同ID关联）"""
+        contract_ids = select(RentContract.id).where(
+            RentContract.ownership_id == ownership_id
+        )
+        stmt = select(func.coalesce(func.sum(RentLedger.overdue_amount), 0)).where(
+            RentLedger.contract_id.in_(contract_ids)
+        )
+        result = await db.execute(stmt)
+        return float(result.scalar() or 0)
 
 
 # 实例化CRUD对象

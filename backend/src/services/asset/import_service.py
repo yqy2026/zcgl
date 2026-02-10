@@ -7,9 +7,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...crud.asset import asset_crud
+from ...crud.ownership import ownership
 from ...models.asset import Asset
 from ...models.auth import User
-from ...models.ownership import Ownership
 from ...schemas.asset import (
     AssetCreate,
     AssetImportRequest,
@@ -266,35 +266,17 @@ class AsyncAssetImportService:
 
         ownership_by_id: dict[str, Ownership] = {}
         if ownership_ids_to_load:
-            ownership_rows = list(
-                (
-                    await self.db.execute(
-                        select(Ownership).where(
-                            Ownership.id.in_(list(ownership_ids_to_load))
-                        )
-                    )
-                )
-                .scalars()
-                .all()
+            ownership_rows = await ownership.get_by_ids_async(
+                self.db, list(ownership_ids_to_load)
             )
-            ownership_by_id = {str(ownership.id): ownership for ownership in ownership_rows}
+            ownership_by_id = {str(o.id): o for o in ownership_rows}
 
         ownership_by_name: dict[str, Ownership] = {}
         if ownership_names_to_load:
-            ownership_rows = list(
-                (
-                    await self.db.execute(
-                        select(Ownership).where(
-                            Ownership.name.in_(list(ownership_names_to_load))
-                        )
-                    )
-                )
-                .scalars()
-                .all()
+            ownership_rows = await ownership.get_by_names_async(
+                self.db, list(ownership_names_to_load)
             )
-            ownership_by_name = {
-                str(ownership.name): ownership for ownership in ownership_rows
-            }
+            ownership_by_name = {str(o.name): o for o in ownership_rows}
 
         return ownership_by_id, ownership_by_name
 
@@ -311,17 +293,8 @@ class AsyncAssetImportService:
         if not property_names_to_load:
             return {}
 
-        existing_asset_rows = list(
-            (
-                await self.db.execute(
-                    select(Asset).where(
-                        Asset.property_name.in_(list(property_names_to_load)),
-                        Asset.data_status != "已删除",
-                    )
-                )
-            )
-            .scalars()
-            .all()
+        existing_asset_rows = await asset_crud.get_by_property_names_async(
+            self.db, list(property_names_to_load), exclude_deleted=True
         )
         return {
             str(asset.property_name): asset

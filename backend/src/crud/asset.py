@@ -749,6 +749,97 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             self._decrypt_asset_object(asset)
         return assets
 
+    async def has_rent_contracts_async(
+        self, db: AsyncSession, asset_id: str
+    ) -> bool:
+        """检查资产是否关联租赁合同（通过关联表）"""
+        from ..models.associations import rent_contract_assets
+
+        stmt = (
+            select(rent_contract_assets.c.asset_id)
+            .where(rent_contract_assets.c.asset_id == asset_id)
+            .limit(1)
+        )
+        result = await db.execute(stmt)
+        return result.first() is not None
+
+    async def has_property_certs_async(
+        self, db: AsyncSession, asset_id: str
+    ) -> bool:
+        """检查资产是否关联产权证（通过关联表）"""
+        from ..models.associations import property_cert_assets
+
+        stmt = (
+            select(property_cert_assets.c.asset_id)
+            .where(property_cert_assets.c.asset_id == asset_id)
+            .limit(1)
+        )
+        result = await db.execute(stmt)
+        return result.first() is not None
+
+    async def has_rent_ledger_async(self, db: AsyncSession, asset_id: str) -> bool:
+        """检查资产是否有租金台账记录"""
+        from ..models.rent_contract import RentLedger
+
+        stmt = select(RentLedger.id).where(RentLedger.asset_id == asset_id).limit(1)
+        result = await db.execute(stmt)
+        return result.first() is not None
+
+    async def get_assets_with_rent_contracts_async(
+        self, db: AsyncSession, asset_ids: list[str]
+    ) -> list[str]:
+        """批量获取有租赁合同关联的资产ID列表"""
+        if not asset_ids:
+            return []
+        from ..models.associations import rent_contract_assets
+
+        stmt = select(rent_contract_assets.c.asset_id).where(
+            rent_contract_assets.c.asset_id.in_(asset_ids)
+        )
+        result = await db.execute(stmt)
+        return [str(asset_id) for asset_id in result.scalars().all()]
+
+    async def get_assets_with_property_certs_async(
+        self, db: AsyncSession, asset_ids: list[str]
+    ) -> list[str]:
+        """批量获取有产权证关联的资产ID列表"""
+        if not asset_ids:
+            return []
+        from ..models.associations import property_cert_assets
+
+        stmt = select(property_cert_assets.c.asset_id).where(
+            property_cert_assets.c.asset_id.in_(asset_ids)
+        )
+        result = await db.execute(stmt)
+        return [str(asset_id) for asset_id in result.scalars().all()]
+
+    async def get_assets_with_rent_ledger_async(
+        self, db: AsyncSession, asset_ids: list[str]
+    ) -> list[str]:
+        """批量获取有租金台账记录的资产ID列表"""
+        if not asset_ids:
+            return []
+        from ..models.rent_contract import RentLedger
+
+        stmt = select(RentLedger.asset_id).where(RentLedger.asset_id.in_(asset_ids))
+        result = await db.execute(stmt)
+        return [str(asset_id) for asset_id in result.scalars().all()]
+
+    async def get_by_property_names_async(
+        self, db: AsyncSession, property_names: list[str], exclude_deleted: bool = True
+    ) -> list[Asset]:
+        """批量获取资产（按属性名列表），用于导入去重检查"""
+        if not property_names:
+            return []
+        stmt = select(Asset).where(Asset.property_name.in_(property_names))
+        if exclude_deleted:
+            stmt = stmt.where(Asset.data_status != "已删除")
+        result = await db.execute(stmt)
+        assets = list(result.scalars().all())
+        for asset in assets:
+            self._decrypt_asset_object(asset)
+        return assets
+
     # remove is inherited
     # create is inherited (check notes about calculation)
 

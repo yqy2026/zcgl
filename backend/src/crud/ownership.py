@@ -103,6 +103,35 @@ class CRUDOwnership(CRUDBase[Ownership, OwnershipCreate, OwnershipUpdate]):
             "pages": pages,
         }
 
+    async def get_names_by_status_async(
+        self, db: AsyncSession, data_status: str = "正常"
+    ) -> list[str]:
+        """获取指定状态的权属方名称列表（用于下拉选择）"""
+        stmt = select(Ownership.name).where(Ownership.data_status == data_status)
+        result = await db.execute(stmt)
+        names = result.scalars().all()
+        return [str(name) for name in names if name]
+
+    async def get_by_ids_async(
+        self, db: AsyncSession, ids: list[str]
+    ) -> list[Ownership]:
+        """批量获取权属方（按ID列表）"""
+        if not ids:
+            return []
+        stmt = select(Ownership).where(Ownership.id.in_(ids))
+        result = await db.execute(stmt)
+        return list(result.scalars().all())
+
+    async def get_by_names_async(
+        self, db: AsyncSession, names: list[str]
+    ) -> list[Ownership]:
+        """批量获取权属方（按名称列表）"""
+        if not names:
+            return []
+        stmt = select(Ownership).where(Ownership.name.in_(names))
+        result = await db.execute(stmt)
+        return list(result.scalars().all())
+
 
 # 创建CRUD实例
 ownership = CRUDOwnership(Ownership)

@@ -7,10 +7,9 @@
 import logging
 from dataclasses import dataclass
 
-from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...models.rent_contract import RentContract, RentLedger
+from ...crud.rent_contract import rent_contract, rent_ledger
 
 logger = logging.getLogger(__name__)
 
@@ -80,43 +79,30 @@ class OwnershipFinancialService:
         Returns:
             OwnershipFinancialResult
         """
-        # 获取该权属方下所有合同的子查询
-        contract_ids = select(RentContract.id).where(
-            RentContract.ownership_id == ownership_id
-        )
-
         # 统计应收总额
-        due_stmt = select(func.coalesce(func.sum(RentLedger.due_amount), 0)).where(
-            RentLedger.contract_id.in_(contract_ids)
+        due_amount = await rent_ledger.sum_due_amount_by_ownership_async(
+            db, ownership_id
         )
-        due_amount = (await db.execute(due_stmt)).scalar() or 0
 
         # 统计实收总额
-        paid_stmt = select(func.coalesce(func.sum(RentLedger.paid_amount), 0)).where(
-            RentLedger.contract_id.in_(contract_ids)
+        paid_amount = await rent_ledger.sum_paid_amount_by_ownership_async(
+            db, ownership_id
         )
-        paid_amount = (await db.execute(paid_stmt)).scalar() or 0
 
         # 统计欠款总额
-        arrears_stmt = select(
-            func.coalesce(func.sum(RentLedger.overdue_amount), 0)
-        ).where(RentLedger.contract_id.in_(contract_ids))
-        arrears_amount = (await db.execute(arrears_stmt)).scalar() or 0
+        arrears_amount = await rent_ledger.sum_overdue_amount_by_ownership_async(
+            db, ownership_id
+        )
 
         # 统计合同数量
-        total_stmt = select(func.count(RentContract.id)).where(
-            RentContract.ownership_id == ownership_id
+        total_contracts = await rent_contract.count_by_ownership_async(
+            db, ownership_id
         )
-        total_contracts = (await db.execute(total_stmt)).scalar() or 0
 
         # 统计活跃合同数
-        active_stmt = select(func.count(RentContract.id)).where(
-            and_(
-                RentContract.ownership_id == ownership_id,
-                RentContract.contract_status == "有效",
-            )
+        active_contracts = await rent_contract.count_active_by_ownership_async(
+            db, ownership_id
         )
-        active_contracts = (await db.execute(active_stmt)).scalar() or 0
 
         # 计算收款率
         payment_rate = float(paid_amount / due_amount * 100) if due_amount > 0 else 0.0
