@@ -36,35 +36,24 @@ from .....schemas.auth import (
 )
 from .....security.cookie_manager import cookie_manager
 from .....services.core.audit_service import AuditService
-from .....services.core.authentication_service import AsyncAuthenticationService
-from .....services.core.session_service import AsyncSessionService
-from .....services.core.user_management_service import AsyncUserManagementService
-from .....services.permission.rbac_service import RBACService
+from .....services.factory import ServiceFactory, get_service_factory
 
 router = APIRouter(tags=["认证管理"])
 
-
-class UserCRUD:
-    """兼容适配：将历史 UserCRUD 调用委托至用户服务层。"""
-
-    async def get_by_username_async(self, db: AsyncSession, username: str) -> User | None:
-        user_service = AsyncUserManagementService(db)
-        return await user_service.get_user_by_username(username)
+_get_factory = get_service_factory()
 
 
-class AuditLogCRUD:
-    """兼容适配：将历史 AuditLogCRUD 调用委托至审计服务层。"""
-
-    async def create_async(self, db: AsyncSession, **kwargs: Any) -> Any:
-        audit_service = AuditService(db)
-        payload = dict(kwargs)
-        user_id = str(payload.pop("user_id", "unknown"))
-        action = str(payload.pop("action", "unknown_action"))
-        return await audit_service.create_audit_log(
-            user_id=user_id,
-            action=action,
-            **payload,
-        )
+async def _create_audit_log(db: AsyncSession, **kwargs: Any) -> Any:
+    """审计日志创建辅助函数。"""
+    audit_service = AuditService(db)
+    payload = dict(kwargs)
+    user_id = str(payload.pop("user_id", "unknown"))
+    action = str(payload.pop("action", "unknown_action"))
+    return await audit_service.create_audit_log(
+        user_id=user_id,
+        action=action,
+        **payload,
+    )
 
 
 @router.post("/login", response_model=CookieAuthResponse, summary="用户登录")
@@ -72,7 +61,7 @@ async def login(
     request: Request,
     credentials: LoginRequest,
     response: Response,
-    db: AsyncSession = Depends(get_async_db),
+    factory: ServiceFactory = Depends(_get_factory),
 ) -> dict[str, Any]:
     """
     用户登录接口
@@ -82,10 +71,10 @@ async def login(
     - 记录登录审计日志
     """
 
-    auth_service = AsyncAuthenticationService(db)
-    session_service = AsyncSessionService(db)
-    audit_logger = AuditLogCRUD()
-    user_repository = UserCRUD()
+    auth_service = factory.authentication
+    session_service = factory.session
+    user_service = factory.user_management
+    rbac_service = factory.rbac
 
     client_ip = get_client_ip(request)
     user_agent = request.headers.get("user-agent", "unknown")
@@ -95,12 +84,10 @@ async def login(
             credentials.username, credentials.password
         )
         if not user:
-            existing_user = await user_repository.get_by_username_async(
-                db, credentials.username
-            )
+            existing_user = await user_service.get_user_by_username(credentials.username)
             if existing_user:
-                await audit_logger.create_async(
-                    db=db,
+                await _create_audit_log(
+                    factory.db,
                     user_id=str(existing_user.id) if existing_user else "unknown",
                     action="user_login_failed",
                     resource_type="authentication",
@@ -130,8 +117,8 @@ async def login(
             session_id=getattr(tokens, "session_id", None),
         )
 
-        await audit_logger.create_async(
-            db=db,
+        await _create_audit_log(
+            factory.db,
             user_id=str(user.id),
             action="user_login",
             resource_type="authentication",
@@ -142,8 +129,7 @@ async def login(
             user_agent=user_agent,
         )
 
-        rbac_service = RBACService(db)
-        role_summary = {
+        role_summary: dict[str, Any] = {
             "roles": [],
             "role_ids": [],
             "primary_role_id": None,
@@ -159,17 +145,31 @@ async def login(
             permission_summary = await rbac_service.get_user_permissions_summary(
                 str(user.id)
             )
-            permissions_set = set()
+            permission_map: dict[tuple[str, str], PermissionSchema] = {}
             for perm in permission_summary.permissions:
-                permissions_set.add(
-                    PermissionSchema(
-                        resource=perm.resource,
-                        action=perm.action,
-                        description=perm.description,
-                    )
-                )
+                resource = str(perm.resource)
+                action = str(perm.action)
+                key = (resource, action)
+                description = getattr(perm, "description", None)
 
-            permissions_list = list(permissions_set)
+                existing = permission_map.get(key)
+                if existing is None:
+                    permission_map[key] = PermissionSchema(
+                        resource=resource,
+                        action=action,
+                        description=description,
+                    )
+                    continue
+
+                # 若已存在记录缺少描述，而当前记录存在描述，则补齐描述
+                if existing.description in (None, "") and description not in (None, ""):
+                    permission_map[key] = PermissionSchema(
+                        resource=resource,
+                        action=action,
+                        description=description,
+                    )
+
+            permissions_list = list(permission_map.values())
         except Exception as e:
             logger.warning(f"Failed to fetch permissions for user {user.id}: {e}")
             permissions_list = []
@@ -226,7 +226,7 @@ async def logout(
     request: Request,
     response: Response,
     current_user: UserResponse = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_async_db),
+    factory: ServiceFactory = Depends(_get_factory),
 ) -> dict[str, Any]:
     """
     用户登出接口
@@ -237,8 +237,7 @@ async def logout(
     - 记录登出审计日志
     """
 
-    session_service = AsyncSessionService(db)
-    audit_logger = AuditLogCRUD()
+    session_service = factory.session
 
     client_ip = get_client_ip(request)
     user_agent = request.headers.get("user-agent", "unknown")
@@ -274,8 +273,8 @@ async def logout(
 
     revoked_count = await session_service.revoke_all_user_sessions(current_user.id)
 
-    await audit_logger.create_async(
-        db=db,
+    await _create_audit_log(
+        factory.db,
         user_id=current_user.id,
         action="user_logout",
         resource_type="authentication",
@@ -294,7 +293,7 @@ async def logout(
 async def refresh_token(
     request: Request,
     response: Response,
-    db: AsyncSession = Depends(get_async_db),
+    factory: ServiceFactory = Depends(_get_factory),
 ) -> CookieRefreshResponse:
     """
     刷新访问令牌接口
@@ -308,8 +307,8 @@ async def refresh_token(
         extract the User from the session relationship.
     """
 
-    auth_service = AsyncAuthenticationService(db)
-    session_service = AsyncSessionService(db)
+    auth_service = factory.authentication
+    session_service = factory.session
 
     client_ip = request.client.host if request.client else "unknown"
     user_agent = request.headers.get("user-agent", "unknown")
@@ -325,9 +324,8 @@ async def refresh_token(
         refresh_token, client_ip=client_ip, user_agent=user_agent
     )
     if not session:
-        audit_logger = AuditLogCRUD()
-        await audit_logger.create_async(
-            db=db,
+        await _create_audit_log(
+            factory.db,
             user_id="unknown",
             action="token_refresh_failed",
             resource_type="authentication",
@@ -357,9 +355,8 @@ async def refresh_token(
     cookie_manager.set_refresh_cookie(response, tokens.refresh_token)
     cookie_manager.set_csrf_cookie(response, cookie_manager.create_csrf_token())
 
-    audit_logger = AuditLogCRUD()
-    await audit_logger.create_async(
-        db=db,
+    await _create_audit_log(
+        factory.db,
         user_id=str(getattr(user, "id", "unknown")),
         action="token_refresh_success",
         resource_type="authentication",
@@ -377,14 +374,14 @@ async def refresh_token(
 @router.get("/me", response_model=dict[str, Any], summary="获取当前用户信息")
 async def get_current_user_info(
     current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_async_db),
+    factory: ServiceFactory = Depends(_get_factory),
 ) -> dict[str, Any]:
     """
     获取当前登录用户的信息
 
     企业级实现，包含完整的用户信息、权限状态、会话信息和时间戳
     """
-    rbac_service = RBACService(db)
+    rbac_service = factory.rbac
     role_summary = await rbac_service.get_user_role_summary(str(current_user.id))
 
     return {

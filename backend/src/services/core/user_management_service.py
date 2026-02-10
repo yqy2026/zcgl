@@ -1,66 +1,36 @@
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ...crud.auth import UserCRUD
 from ...crud.rbac import role_crud
 from ...exceptions import BusinessLogicError
 from ...models.auth import User
-from ...models.rbac import UserRoleAssignment
 from ...schemas.auth import UserCreate, UserUpdate
 from ...schemas.rbac import UserRoleAssignmentCreate
 from ..permission.rbac_service import RBACService
 from .password_service import PasswordService
 from .session_service import AsyncSessionService
 
+_user_crud = UserCRUD()
+
 
 class AsyncUserManagementService:
     """用户管理服务"""
 
-    def __init__(self, db: AsyncSession):
-        self.db = db
-        self.password_service = PasswordService()
-        self.session_service = AsyncSessionService(db)
-        self.rbac_service = RBACService(db)
-
-    @staticmethod
-    def _apply_user_filters_stmt(
-        stmt: Any,
+    def __init__(
+        self,
+        db: AsyncSession,
         *,
-        search: str | None = None,
-        role_id: str | None = None,
-        is_active: bool | None = None,
-        organization_id: str | None = None,
-    ) -> Any:
-        if search:
-            search_filter = or_(
-                User.username.ilike(f"%{search}%"),
-                User.email.ilike(f"%{search}%"),
-                User.full_name.ilike(f"%{search}%"),
-            )
-            stmt = stmt.where(search_filter)
-
-        if role_id is not None:
-            stmt = stmt.join(
-                UserRoleAssignment,
-                UserRoleAssignment.user_id == User.id,
-            ).where(
-                UserRoleAssignment.role_id == role_id,
-                UserRoleAssignment.is_active,
-                or_(
-                    UserRoleAssignment.expires_at.is_(None),
-                    UserRoleAssignment.expires_at > func.now(),
-                ),
-            )
-
-        if is_active is not None:
-            stmt = stmt.where(User.is_active == is_active)
-
-        if organization_id is not None:
-            stmt = stmt.where(User.default_organization_id == organization_id)
-
-        return stmt
+        password_service: PasswordService,
+        session_service: AsyncSessionService,
+        rbac_service: RBACService,
+    ):
+        self.db = db
+        self.password_service = password_service
+        self.session_service = session_service
+        self.rbac_service = rbac_service
 
     async def _assign_primary_role(
         self,
@@ -76,22 +46,26 @@ class AsyncUserManagementService:
         if not role_id:
             return
 
-        assignment = UserRoleAssignmentCreate(user_id=user_id, role_id=role_id)
+        assignment = UserRoleAssignmentCreate(
+            user_id=user_id,
+            role_id=role_id,
+            expires_at=None,
+            reason=None,
+            notes=None,
+            context=None,
+        )
         await self.rbac_service.assign_role_to_user(
             assignment_data=assignment, assigned_by=assigned_by or "system"
         )
 
     async def get_user_by_id(self, user_id: str) -> User | None:
-        stmt = select(User).where(User.id == user_id)
-        return (await self.db.execute(stmt)).scalars().first()
+        return await _user_crud.get_async(self.db, user_id)
 
     async def get_user_by_username(self, username: str) -> User | None:
-        stmt = select(User).where(User.username == username)
-        return (await self.db.execute(stmt)).scalars().first()
+        return await _user_crud.get_by_username_async(self.db, username)
 
     async def get_user_by_email(self, email: str) -> User | None:
-        stmt = select(User).where(User.email == email)
-        return (await self.db.execute(stmt)).scalars().first()
+        return await _user_crud.get_by_email_async(self.db, email)
 
     async def get_users_with_filters(
         self,
@@ -103,41 +77,22 @@ class AsyncUserManagementService:
         is_active: bool | None = None,
         organization_id: str | None = None,
     ) -> tuple[list[User], int]:
-        stmt = select(User)
-        stmt = self._apply_user_filters_stmt(
-            stmt,
+        return await _user_crud.get_multi_with_filters_async(
+            self.db,
+            skip=skip,
+            limit=limit,
             search=search,
             role_id=role_id,
             is_active=is_active,
             organization_id=organization_id,
         )
-
-        count_stmt = select(func.count(func.distinct(User.id))).select_from(User)
-        count_stmt = self._apply_user_filters_stmt(
-            count_stmt,
-            search=search,
-            role_id=role_id,
-            is_active=is_active,
-            organization_id=organization_id,
-        )
-
-        total = int((await self.db.execute(count_stmt)).scalar() or 0)
-        users = list(
-            (
-                await self.db.execute(stmt.distinct(User.id).offset(skip).limit(limit))
-            )
-            .scalars()
-            .all()
-        )
-        return users, total
 
     async def create_user(
         self, user_data: UserCreate, assigned_by: str | None = None
     ) -> User:
-        stmt = select(User).where(
-            or_(User.username == user_data.username, User.email == user_data.email)
+        existing_user = await _user_crud.find_by_username_or_email_async(
+            self.db, user_data.username, user_data.email
         )
-        existing_user = (await self.db.execute(stmt)).scalars().first()
         if existing_user:
             if existing_user.username == user_data.username:
                 raise BusinessLogicError("用户名已存在")
@@ -281,41 +236,9 @@ class AsyncUserManagementService:
         return user
 
     async def get_statistics(self) -> dict[str, Any]:
-        total_users = int(
-            (await self.db.execute(select(func.count(User.id)))).scalar() or 0
-        )
-        active_users = int(
-            (
-                await self.db.execute(
-                    select(func.count(User.id)).where(User.is_active.is_(True))
-                )
-            ).scalar()
-            or 0
-        )
-        locked_users = int(
-            (
-                await self.db.execute(
-                    select(func.count(User.id)).where(User.is_locked.is_(True))
-                )
-            ).scalar()
-            or 0
-        )
-        inactive_users = int(
-            (
-                await self.db.execute(
-                    select(func.count(User.id)).where(User.is_active.is_(False))
-                )
-            ).scalar()
-            or 0
-        )
-
-        return {
-            "total_users": total_users,
-            "active_users": active_users,
-            "locked_users": locked_users,
-            "inactive_users": inactive_users,
-            "online_users": 0,
-        }
+        stats = await _user_crud.get_user_statistics_async(self.db)
+        stats["online_users"] = 0
+        return stats
 
     async def change_password(
         self, user: User, current_password: str, new_password: str

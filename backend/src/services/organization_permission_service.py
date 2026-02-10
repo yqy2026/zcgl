@@ -8,17 +8,19 @@ import logging
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import false
 
-from ..models.auth import User
+from ..crud.auth import UserCRUD
+from ..crud.organization import organization as organization_crud
+from ..crud.rbac import resource_permission_crud, role_crud
 from ..models.organization import Organization
-from ..models.rbac import ResourcePermission, Role, UserRoleAssignment
 from ..schemas.rbac import PermissionCheckRequest
 from .permission.rbac_service import RBACService
 
 logger = logging.getLogger(__name__)
+
+_user_crud = UserCRUD()
 
 
 def _utcnow_naive() -> datetime:
@@ -127,10 +129,7 @@ class OrganizationPermissionService:
         if not org_ids:
             return []
 
-        stmt = select(Organization).where(
-            Organization.id.in_(org_ids), Organization.is_deleted.is_(False)
-        )
-        organizations = (await self.db.execute(stmt)).scalars().all()
+        organizations = await organization_crud.get_by_ids_async(self.db, org_ids)
 
         return [
             {
@@ -152,10 +151,7 @@ class OrganizationPermissionService:
         if not org_ids:
             return []
 
-        stmt = select(Organization).where(
-            Organization.id.in_(org_ids), Organization.is_deleted.is_(False)
-        )
-        organizations = (await self.db.execute(stmt)).scalars().all()
+        organizations = await organization_crud.get_by_ids_async(self.db, org_ids)
 
         nodes: dict[str, dict[str, Any]] = {}
         for org in organizations:
@@ -226,56 +222,29 @@ class OrganizationPermissionService:
         )
         return query
 
-    async def _get_user(self, user_id: str) -> User | None:
-        return (
-            (await self.db.execute(select(User).where(User.id == user_id)))
-            .scalars()
-            .first()
-        )
+    async def _get_user(self, user_id: str) -> Any:
+        return await _user_crud.get_async(self.db, user_id)
 
-    async def _get_user_roles(self, user_id: str) -> list[Role]:
-        stmt = (
-            select(Role)
-            .join(UserRoleAssignment, Role.id == UserRoleAssignment.role_id)
-            .where(
-                UserRoleAssignment.user_id == user_id,
-                UserRoleAssignment.is_active,
-                or_(
-                    UserRoleAssignment.expires_at.is_(None),
-                    UserRoleAssignment.expires_at > _utcnow_naive(),
-                ),
-            )
+    async def _get_user_roles(self, user_id: str) -> list[Any]:
+        return await role_crud.get_roles_by_user_async(
+            self.db, user_id, now=_utcnow_naive()
         )
-        result = await self.db.execute(stmt)
-        return list(result.scalars().all())
 
     async def _get_all_organization_ids(self) -> list[str]:
-        stmt = select(Organization.id).where(Organization.is_deleted.is_(False))
-        result = await self.db.execute(stmt)
-        return [str(org_id) for org_id in result.scalars().all()]
+        return await organization_crud.get_ids_by_condition_async(
+            self.db, is_deleted=False
+        )
 
     async def _get_resource_permissions(
         self, user_id: str | None = None, role_ids: list[str] | None = None
     ) -> list[str]:
-        conditions = [ResourcePermission.resource_type == "organization"]
-        conditions.append(ResourcePermission.is_active.is_(True))
-        conditions.append(
-            or_(
-                ResourcePermission.expires_at.is_(None),
-                ResourcePermission.expires_at > _utcnow_naive(),
-            )
+        return await resource_permission_crud.get_resource_ids_by_conditions_async(
+            self.db,
+            resource_type="organization",
+            user_id=user_id,
+            role_ids=role_ids,
+            now=_utcnow_naive(),
         )
-
-        if user_id:
-            conditions.append(ResourcePermission.user_id == user_id)
-        elif role_ids:
-            conditions.append(ResourcePermission.role_id.in_(role_ids))
-        else:
-            return []
-
-        stmt = select(ResourcePermission.resource_id).where(and_(*conditions))
-        result = await self.db.execute(stmt)
-        return [str(resource_id) for resource_id in result.scalars().all()]
 
     async def _has_global_permission(self, user_id: str, action: str) -> bool:
         try:

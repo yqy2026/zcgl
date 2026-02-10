@@ -1,28 +1,10 @@
-import inspect
-from typing import Any
-
-
-class AssetNotFoundError(Exception):
-    """Asset not found error"""
-
-    pass
-
-
-class DuplicateAssetError(Exception):
-    """Duplicate asset error"""
-
-    pass
-
-
 """
 RBAC服务层
 """
 
 from datetime import UTC, datetime
 
-from sqlalchemy import and_, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from ...core.exception_handler import (
     DuplicateResourceError,
@@ -37,17 +19,11 @@ from ...crud.rbac import (
     permission_audit_log_crud,
     permission_crud,
     permission_grant_crud,
+    resource_permission_crud,
     role_crud,
     user_role_assignment_crud,
 )
-from ...models.rbac import (
-    Permission,
-    PermissionGrant,
-    ResourcePermission,
-    Role,
-    UserRoleAssignment,
-    role_permissions,
-)
+from ...models.rbac import Permission, PermissionGrant, Role, UserRoleAssignment
 from ...schemas.rbac import (
     PermissionCheckRequest,
     PermissionCheckResponse,
@@ -65,7 +41,10 @@ from ...schemas.rbac import (
 # Global admin permission used for full access
 ADMIN_PERMISSION_RESOURCE = "system"
 ADMIN_PERMISSION_ACTION = "admin"
+LEGACY_ADMIN_PERMISSION_ACTION = "manage"
 VALID_GRANT_EFFECTS = {"allow", "deny"}
+
+_user_crud = UserCRUD()
 
 
 class RBACService:
@@ -110,21 +89,9 @@ class RBACService:
 
         # 检查名称唯一性
         if role_data.display_name and role_data.display_name != role.display_name:
-            existing_role = (
-                (
-                    await self.db.execute(
-                        select(Role).where(
-                            and_(
-                                Role.display_name == role_data.display_name,
-                                Role.id != role_id,
-                            )
-                        )
-                    )
-                )
-                .scalars()
-                .first()
-            )
-            if existing_role:
+            if await role_crud.check_display_name_exists_async(
+                self.db, role_data.display_name, exclude_role_id=role_id
+            ):
                 raise DuplicateResourceError("角色", "display_name", role_data.display_name)
 
         # 更新字段
@@ -292,33 +259,15 @@ class RBACService:
         is_system_permission: bool | None = None,
     ) -> tuple[list[Permission], int]:
         """获取权限列表"""
-        filters: dict[str, Any] = {}
-        if resource:
-            filters["resource"] = resource
-        if action:
-            filters["action"] = action
-        if is_system_permission is not None:
-            filters["is_system_permission"] = is_system_permission
-
-        stmt = permission_crud.query_builder.build_query(
-            filters=filters,
-            search_query=search,
-            search_fields=["name", "display_name", "description"],
-            sort_by="resource",
-            sort_desc=False,
+        return await permission_crud.get_multi_with_count_async(
+            self.db,
             skip=skip,
             limit=limit,
+            search=search,
+            resource=resource,
+            action=action,
+            is_system_permission=is_system_permission,
         )
-        permissions = list((await self.db.execute(stmt)).scalars().all())
-
-        count_stmt = permission_crud.query_builder.build_count_query(
-            filters=filters,
-            search_query=search,
-            search_fields=["name", "display_name", "description"],
-        )
-        total = int((await self.db.execute(count_stmt)).scalar() or 0)
-
-        return permissions, total
 
     # ==================== 用户角色分配 ====================
 
@@ -412,25 +361,9 @@ class RBACService:
         self, user_id: str, active_only: bool = True
     ) -> list[Role]:
         """获取用户角色"""
-        stmt = (
-            select(Role)
-            .join(UserRoleAssignment)
-            .where(UserRoleAssignment.user_id == user_id)
-            .options(selectinload(Role.permissions))
+        return await role_crud.get_roles_by_user_async(
+            self.db, user_id, active_only=active_only, include_permissions=True
         )
-
-        if active_only:
-            now_naive = datetime.now(UTC).replace(tzinfo=None)
-            stmt = stmt.where(UserRoleAssignment.is_active)
-            stmt = stmt.where(
-                or_(
-                    UserRoleAssignment.expires_at.is_(None),
-                    UserRoleAssignment.expires_at > now_naive,
-                )
-            )
-
-        result = await self.db.execute(stmt)
-        return list(result.scalars().all())
 
     # ==================== 权限检查 ====================
 
@@ -464,7 +397,7 @@ class RBACService:
         )
 
     async def is_admin(self, user_id: str) -> bool:
-        """判断用户是否为管理员（基于RBAC权限）"""
+        """判断用户是否为管理员（兼容 system:admin / system:manage）"""
         admin_request = PermissionCheckRequest(
             resource=ADMIN_PERMISSION_RESOURCE,
             action=ADMIN_PERMISSION_ACTION,
@@ -506,37 +439,21 @@ class RBACService:
                 role_permissions.add(permission)
 
         # 获取统一授权权限（动态/临时/资源级授权合并）
-        now = datetime.now()
-        grant_stmt = (
-            select(Permission)
-            .join(PermissionGrant, PermissionGrant.permission_id == Permission.id)
-            .where(
-                and_(
-                    PermissionGrant.user_id == user_id,
-                    PermissionGrant.is_active,
-                    PermissionGrant.effect == "allow",
-                    or_(PermissionGrant.starts_at.is_(None), PermissionGrant.starts_at <= now),
-                    or_(PermissionGrant.expires_at.is_(None), PermissionGrant.expires_at > now),
-                )
-            )
+        granted_permissions = await permission_grant_crud.get_granted_permissions_async(
+            self.db, user_id, now=datetime.now()
         )
-        granted_permissions = list((await self.db.execute(grant_stmt)).scalars().all())
         for permission in granted_permissions:
             role_permissions.add(permission)
 
         # 获取资源权限
-        resource_permissions_stmt = select(ResourcePermission).where(
-            and_(
-                ResourcePermission.user_id == user_id,
-                ResourcePermission.is_active,
-                or_(
-                    ResourcePermission.expires_at.is_(None),
-                    ResourcePermission.expires_at > datetime.now(),
-                ),
-            )
-        )
-        resource_permissions = list(
-            (await self.db.execute(resource_permissions_stmt)).scalars().all()
+        resource_permissions = await resource_permission_crud.get_multi(
+            self.db,
+            filters={
+                "user_id": user_id,
+                "is_active": True,
+            },
+            skip=0,
+            limit=10000,
         )
 
         # 计算有效权限
@@ -569,12 +486,7 @@ class RBACService:
         self, role_id: str, permission_ids: list[str], operator_id: str
     ) -> None:
         """为角色分配权限"""
-        stmt = (
-            select(Role)
-            .options(selectinload(Role.permissions))
-            .where(Role.id == role_id)
-        )
-        role = (await self.db.execute(stmt)).scalars().first()
+        role = await role_crud.get(self.db, id=role_id)
         if not role:
             raise ResourceNotFoundError("角色", role_id)
         if role.is_system_role:
@@ -584,8 +496,7 @@ class RBACService:
 
         permissions: list[Permission] = []
         if permission_ids:
-            stmt = select(Permission).where(Permission.id.in_(permission_ids))
-            permissions = list((await self.db.execute(stmt)).scalars().all())
+            permissions = await permission_crud.get_by_ids_async(self.db, permission_ids)
             found_ids = {str(permission.id) for permission in permissions}
             missing_ids = sorted(set(permission_ids) - found_ids)
             if missing_ids:
@@ -602,11 +513,7 @@ class RBACService:
         role.updated_by = operator_id
 
         await self.db.flush()
-        await self.db.execute(
-            role_permissions.update()
-            .where(role_permissions.c.role_id == role_id)
-            .values(created_by=operator_id)
-        )
+        await role_crud.update_permissions_created_by_async(self.db, role_id, operator_id)
 
     async def _check_static_permission(
         self, user_id: str, permission_request: PermissionCheckRequest
@@ -731,41 +638,13 @@ class RBACService:
     async def _get_matching_permission_grants(
         self, user_id: str, permission_request: PermissionCheckRequest
     ) -> list[PermissionGrant]:
-        now = datetime.now()
-        stmt = (
-            select(PermissionGrant)
-            .join(Permission, Permission.id == PermissionGrant.permission_id)
-            .where(
-                and_(
-                    PermissionGrant.user_id == user_id,
-                    PermissionGrant.is_active,
-                    Permission.resource == permission_request.resource,
-                    Permission.action == permission_request.action,
-                    or_(PermissionGrant.starts_at.is_(None), PermissionGrant.starts_at <= now),
-                    or_(PermissionGrant.expires_at.is_(None), PermissionGrant.expires_at > now),
-                )
-            )
+        return await permission_grant_crud.get_matching_grants_async(
+            self.db,
+            user_id=user_id,
+            resource=permission_request.resource,
+            action=permission_request.action,
+            now=datetime.now(),
         )
-        result = await self.db.execute(stmt)
-        scalars_result = result.scalars()
-        if inspect.isawaitable(scalars_result):
-            scalars_result = await scalars_result
-
-        all_method = getattr(scalars_result, "all", None)
-        if all_method is None:
-            return []
-
-        all_result = all_method()
-        if inspect.isawaitable(all_result):
-            all_result = await all_result
-        if all_result is None:
-            return []
-        if isinstance(all_result, list):
-            return all_result
-        try:
-            return list(all_result)
-        except TypeError:
-            return []
 
     def _scope_matches(
         self, grant: PermissionGrant, permission_request: PermissionCheckRequest
@@ -912,32 +791,17 @@ class RBACService:
         is_active: bool | None = None,
     ) -> tuple[list[PermissionGrant], int]:
         """分页查询统一授权记录"""
-        filters = []
-
-        if user_id:
-            filters.append(PermissionGrant.user_id == user_id)
-        if permission_id:
-            filters.append(PermissionGrant.permission_id == permission_id)
-        if grant_type:
-            filters.append(PermissionGrant.grant_type == grant_type.strip().lower())
-        if effect:
-            filters.append(PermissionGrant.effect == effect.strip().lower())
-        if scope:
-            filters.append(PermissionGrant.scope == scope.strip().lower())
-        if is_active is not None:
-            filters.append(PermissionGrant.is_active == is_active)
-
-        stmt = select(PermissionGrant).order_by(desc(PermissionGrant.created_at))
-        count_stmt = select(func.count(PermissionGrant.id))
-
-        if filters:
-            stmt = stmt.where(and_(*filters))
-            count_stmt = count_stmt.where(and_(*filters))
-
-        stmt = stmt.offset(skip).limit(limit)
-        grants = list((await self.db.execute(stmt)).scalars().all())
-        total = int((await self.db.execute(count_stmt)).scalar() or 0)
-        return grants, total
+        return await permission_grant_crud.list_with_filters_async(
+            self.db,
+            skip=skip,
+            limit=limit,
+            user_id=user_id,
+            permission_id=permission_id,
+            grant_type=grant_type,
+            effect=effect,
+            scope=scope,
+            is_active=is_active,
+        )
 
     async def update_permission_grant(
         self, grant_id: str, grant_data: PermissionGrantUpdate, updated_by: str
@@ -1057,11 +921,12 @@ class RBACService:
         return True
 
     def _role_has_admin_permission(self, role: Role) -> bool:
-        """检查角色是否具有系统管理员权限"""
+        """检查角色是否具有系统管理员权限（兼容 legacy manage）"""
         for permission in role.permissions:
             if (
                 permission.resource == ADMIN_PERMISSION_RESOURCE
-                and permission.action == ADMIN_PERMISSION_ACTION
+                and permission.action
+                in {ADMIN_PERMISSION_ACTION, LEGACY_ADMIN_PERMISSION_ACTION}
             ):
                 return True
 
@@ -1074,14 +939,17 @@ class RBACService:
         if any(self._role_has_admin_permission(role) for role in roles):
             return True
 
-        admin_request = PermissionCheckRequest(
-            resource=ADMIN_PERMISSION_RESOURCE,
-            action=ADMIN_PERMISSION_ACTION,
-            resource_id=None,
-            context=None,
-        )
-        grant_result = await self._check_grant_permission(user_id, admin_request)
-        return grant_result.has_permission
+        for action in {ADMIN_PERMISSION_ACTION, LEGACY_ADMIN_PERMISSION_ACTION}:
+            admin_request = PermissionCheckRequest(
+                resource=ADMIN_PERMISSION_RESOURCE,
+                action=action,
+                resource_id=None,
+                context=None,
+            )
+            grant_result = await self._check_grant_permission(user_id, admin_request)
+            if grant_result.has_permission:
+                return True
+        return False
 
     def _role_has_permission(
         self, role: Role, permission_request: PermissionCheckRequest
@@ -1209,7 +1077,7 @@ class RBACService:
         """
         if (
             resource == ADMIN_PERMISSION_RESOURCE
-            and action == ADMIN_PERMISSION_ACTION
+            and action in {ADMIN_PERMISSION_ACTION, LEGACY_ADMIN_PERMISSION_ACTION}
         ):
             return await self.is_admin(user_id)
 

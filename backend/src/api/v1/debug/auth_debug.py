@@ -17,13 +17,12 @@ from ....database import get_async_db
 from ....middleware.auth import get_current_active_user
 from ....models.auth import User
 from ....security.route_guards import debug_only, require_localhost
-from ....services.core.authentication_service import AsyncAuthenticationService
-from ....services.core.password_service import PasswordService
-from ....services.core.user_management_service import AsyncUserManagementService
-from ....services.permission.rbac_service import RBACService
+from ....services.factory import ServiceFactory, get_service_factory
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Auth Debug"], dependencies=[Depends(require_localhost)])
+
+_get_factory = get_service_factory()
 
 
 @router.get("/test-features", summary="测试功能端点")
@@ -39,7 +38,7 @@ async def test_features() -> dict[str, Any]:
 
 @router.get("/auth", summary="调试认证流程")
 @debug_only
-async def debug_auth(db: AsyncSession = Depends(get_async_db)) -> dict[str, Any]:
+async def debug_auth(factory: ServiceFactory = Depends(_get_factory)) -> dict[str, Any]:
     """调试认证流程，测试各个步骤"""
     try:
         test_username = os.getenv("DEBUG_AUTH_USERNAME", "admin")
@@ -51,9 +50,9 @@ async def debug_auth(db: AsyncSession = Depends(get_async_db)) -> dict[str, Any]
                 "hint": "Set DEBUG_AUTH_PASSWORD environment variable for debug endpoint",
             }
 
-        auth_service = AsyncAuthenticationService(db)
-        user_service = AsyncUserManagementService(db)
-        password_service = PasswordService()
+        auth_service = factory.authentication
+        user_service = factory.user_management
+        password_service = factory.password
 
         admin_user = await user_service.get_user_by_username(test_username)
         if not admin_user:
@@ -90,7 +89,7 @@ async def debug_auth(db: AsyncSession = Depends(get_async_db)) -> dict[str, Any]
             access_token_length = 0
             token_error = str(e)
 
-        rbac_service = RBACService(db)
+        rbac_service = factory.rbac
         role_summary = await rbac_service.get_user_role_summary(str(admin_user.id))
 
         return {
@@ -113,14 +112,18 @@ async def debug_auth(db: AsyncSession = Depends(get_async_db)) -> dict[str, Any]
 @debug_only
 async def test_me_debug(
     current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_async_db),
+    factory: ServiceFactory = Depends(_get_factory),
 ) -> dict[str, Any]:
     """调试ME端点，检查UserResponse内容"""
     # 检查 UserResponse 的所有字段
-    user_dict = current_user.model_dump()
+    user_dict = {
+        key: value
+        for key, value in vars(current_user).items()
+        if not key.startswith("_")
+    }
     logger.debug(f"UserResponse fields: {len(user_dict.keys())} fields")
 
-    rbac_service = RBACService(db)
+    rbac_service = factory.rbac
     role_summary = await rbac_service.get_user_role_summary(str(current_user.id))
 
     return {

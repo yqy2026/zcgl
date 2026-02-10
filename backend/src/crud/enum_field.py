@@ -359,6 +359,23 @@ class EnumFieldValueCRUD:
         )
         return list(result.scalars().all())
 
+    async def get_all_by_type_async(
+        self,
+        db: AsyncSession,
+        enum_type_id: str,
+        is_active: bool | None = None,
+    ) -> list[EnumFieldValue]:
+        """获取某枚举类型的所有值（不区分层级）。"""
+        stmt = self._value_query_async().where(
+            EnumFieldValue.enum_type_id == enum_type_id
+        )
+        if is_active is not None:
+            stmt = stmt.where(EnumFieldValue.is_active.is_(is_active))
+        result = await db.execute(
+            stmt.order_by(EnumFieldValue.sort_order, EnumFieldValue.created_at)
+        )
+        return list(result.scalars().all())
+
     async def get_tree_async(self, db: AsyncSession, enum_type_id: str) -> list[Any]:
         stmt = self._value_query_async().where(
             EnumFieldValue.enum_type_id == enum_type_id,

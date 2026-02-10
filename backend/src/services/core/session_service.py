@@ -3,17 +3,17 @@ import logging
 from datetime import UTC, datetime, timedelta
 
 import jwt
-from sqlalchemy import select, update
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.config import settings
+from ...crud.auth import UserSessionCRUD
 from ...models.auth import UserSession
 from ...security.token_blacklist import blacklist_manager
 
-SECRET_KEY = settings.SECRET_KEY
-ALGORITHM = getattr(settings, "ALGORITHM", "HS256")
-
 logger = logging.getLogger(__name__)
+
+_session_crud = UserSessionCRUD()
 
 
 def _naive_utc_now() -> datetime:
@@ -36,10 +36,9 @@ class AsyncSessionService:
         user_agent: str | None = None,
         session_id: str | None = None,
     ) -> UserSession:
-        existing_stmt = select(UserSession).where(
-            UserSession.user_id == user_id, UserSession.is_active.is_(True)
+        existing_sessions = await _session_crud.get_active_sessions_by_user_async(
+            self.db, user_id
         )
-        existing_sessions = list((await self.db.execute(existing_stmt)).scalars().all())
 
         if (
             len(existing_sessions) >= settings.MAX_CONCURRENT_SESSIONS
@@ -90,27 +89,28 @@ class AsyncSessionService:
     async def get_user_sessions(
         self, user_id: str, active_only: bool = True
     ) -> list[UserSession]:
-        stmt = select(UserSession).where(UserSession.user_id == user_id)
-        if active_only:
-            stmt = stmt.where(UserSession.is_active.is_(True))
-        stmt = stmt.order_by(UserSession.created_at.desc())
-        result = await self.db.execute(stmt)
-        return list(result.scalars().all())
+        return await _session_crud.get_user_sessions_async(
+            self.db, user_id, active_only=active_only
+        )
 
     async def get_session_by_id(self, session_id: str) -> UserSession | None:
         """根据会话 ID 获取会话。"""
-        stmt = select(UserSession).where(UserSession.id == session_id)
-        return (await self.db.execute(stmt)).scalars().first()
+        return await _session_crud.get_async(self.db, session_id)
 
     async def revoke_session(self, refresh_token: str) -> bool:
-        stmt = select(UserSession).where(UserSession.refresh_token == refresh_token)
-        session = (await self.db.execute(stmt)).scalars().first()
+        session = await _session_crud.get_by_refresh_token_async(
+            self.db, refresh_token
+        )
 
         if session:
             session.is_active = False
 
             try:
-                payload = jwt.decode(refresh_token, SECRET_KEY, algorithms=[ALGORITHM])
+                payload = jwt.decode(
+                    refresh_token,
+                    settings.SECRET_KEY,
+                    algorithms=[getattr(settings, "ALGORITHM", "HS256")],
+                )
                 jti = payload.get("jti")  # pragma: no cover
                 exp = payload.get("exp")  # pragma: no cover
 
@@ -126,6 +126,8 @@ class AsyncSessionService:
         return False
 
     async def revoke_all_user_sessions(self, user_id: str) -> int:
+        # 注意：此处保留直接 update() 因为需要与黑名单操作在同一事务中
+        # CRUD 的 deactivate_by_user_async 自带 commit，不适合此场景
         result = await self.db.execute(
             update(UserSession)
             .where(UserSession.user_id == user_id, UserSession.is_active.is_(True))
@@ -138,4 +140,4 @@ class AsyncSessionService:
             logger.warning(f"Failed to revoke user tokens for {user_id}: {e}")
 
         await self.db.commit()
-        return int(result.rowcount or 0)
+        return int(getattr(result, "rowcount", 0) or 0)

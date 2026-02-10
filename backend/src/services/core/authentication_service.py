@@ -7,10 +7,10 @@ from typing import Any
 
 import jwt
 from jwt import PyJWTError as JWTError
-from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.config import settings
+from ...crud.auth import UserCRUD, UserSessionCRUD
 from ...exceptions import BusinessLogicError
 from ...models.auth import User, UserSession
 from ...security.token_blacklist import blacklist_manager
@@ -18,13 +18,17 @@ from .password_service import PasswordService
 from .session_service import AsyncSessionService
 from .user_management_service import AsyncUserManagementService
 
+_user_crud = UserCRUD()
+_session_crud = UserSessionCRUD()
+
 logger = logging.getLogger(__name__)
 
 # Type aliases for better readability
 TokenType = str
 JtiType = str
 
-# JWT配置
+# Legacy exported constants (kept for backward compatibility in tests/importers).
+# Runtime token operations below read from `settings` dynamically.
 SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = getattr(settings, "ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
@@ -52,11 +56,18 @@ class TokenPair:
 class AsyncAuthenticationService:
     """认证服务 - 协调者"""
 
-    def __init__(self, db: AsyncSession):
+    def __init__(
+        self,
+        db: AsyncSession,
+        *,
+        password_service: PasswordService,
+        user_service: AsyncUserManagementService,
+        session_service: AsyncSessionService,
+    ):
         self.db = db
-        self.password_service = PasswordService()
-        self.user_service = AsyncUserManagementService(db)
-        self.session_service = AsyncSessionService(db)
+        self.password_service = password_service
+        self.user_service = user_service
+        self.session_service = session_service
         self.token_blacklist = blacklist_manager
 
     def _generate_jti(self) -> JtiType:
@@ -90,11 +101,7 @@ class AsyncAuthenticationService:
         return self.token_blacklist.is_blacklisted(jti=jti, user_id=user_id)
 
     async def authenticate_user(self, username: str, password: str) -> User | None:
-        stmt = select(User).where(
-            or_(User.username == username, User.email == username),
-            User.is_active.is_(True),
-        )
-        user = (await self.db.execute(stmt)).scalars().first()
+        user = await _user_crud.find_active_by_login_async(self.db, username)
 
         if not user:
             return None
@@ -153,13 +160,17 @@ class AsyncAuthenticationService:
             "device_fingerprint": device_fingerprint,
             "iat": int(now.timestamp()),
             "exp": int(
-                (now + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)).timestamp()
+                (
+                    now + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+                ).timestamp()
             ),
-            "aud": JWT_AUDIENCE,
-            "iss": JWT_ISSUER,
+            "aud": settings.JWT_AUDIENCE,
+            "iss": settings.JWT_ISSUER,
         }
         access_token: TokenType = jwt.encode(
-            access_token_data, SECRET_KEY, algorithm=ALGORITHM
+            access_token_data,
+            settings.SECRET_KEY,
+            algorithm=getattr(settings, "ALGORITHM", "HS256"),
         )
 
         refresh_token_data: dict[str, Any] = {
@@ -169,20 +180,24 @@ class AsyncAuthenticationService:
             "session_id": session_id,
             "device_fingerprint": device_fingerprint,
             "iat": int(now.timestamp()),
-            "exp": int((now + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)).timestamp()),
+            "exp": int(
+                (now + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)).timestamp()
+            ),
             "nbf": int(now.timestamp()),
-            "aud": JWT_AUDIENCE,
-            "iss": JWT_ISSUER,
+            "aud": settings.JWT_AUDIENCE,
+            "iss": settings.JWT_ISSUER,
         }
         refresh_token: TokenType = jwt.encode(
-            refresh_token_data, SECRET_KEY, algorithm=ALGORITHM
+            refresh_token_data,
+            settings.SECRET_KEY,
+            algorithm=getattr(settings, "ALGORITHM", "HS256"),
         )
 
         return TokenPair(
             access_token=access_token,
             refresh_token=refresh_token,
             token_type="bearer",
-            expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
             session_id=session_id,
         )
 
@@ -195,10 +210,10 @@ class AsyncAuthenticationService:
         try:
             payload: dict[str, Any] = jwt.decode(
                 refresh_token,
-                SECRET_KEY,
-                algorithms=[ALGORITHM],
-                audience=JWT_AUDIENCE,
-                issuer=JWT_ISSUER,
+                settings.SECRET_KEY,
+                algorithms=[getattr(settings, "ALGORITHM", "HS256")],
+                audience=settings.JWT_AUDIENCE,
+                issuer=settings.JWT_ISSUER,
             )
             user_id: Any = payload.get("sub")
             token_type: Any = payload.get("type")
@@ -216,11 +231,9 @@ class AsyncAuthenticationService:
             logger.error(f"JWT validation failed: {str(e)}")
             return None
 
-        stmt = select(UserSession).where(
-            UserSession.refresh_token == refresh_token,
-            UserSession.is_active,
+        session: UserSession | None = await _session_crud.get_active_by_refresh_token_async(
+            self.db, refresh_token
         )
-        session: UserSession | None = (await self.db.execute(stmt)).scalars().first()
 
         if not session or session.is_expired():
             return None
@@ -269,11 +282,3 @@ class AsyncAuthenticationService:
         return session
 
 
-class UserLookupServiceAdapter:
-    """兼容旧调用方式的用户查询适配器（服务层）。"""
-
-    async def get_by_username_async(
-        self, db: AsyncSession, username: str
-    ) -> User | None:
-        user_service = AsyncUserManagementService(db)
-        return await user_service.get_user_by_username(username)

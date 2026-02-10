@@ -174,6 +174,46 @@ class UserCRUD:
         result = await db.execute(stmt)
         return int(result.scalar() or 0)
 
+    async def count_locked_async(self, db: AsyncSession) -> int:
+        stmt = select(func.count(User.id)).where(User.is_locked.is_(True))
+        result = await db.execute(stmt)
+        return int(result.scalar() or 0)
+
+    async def count_inactive_async(self, db: AsyncSession) -> int:
+        stmt = select(func.count(User.id)).where(User.is_active.is_(False))
+        result = await db.execute(stmt)
+        return int(result.scalar() or 0)
+
+    async def get_user_statistics_async(self, db: AsyncSession) -> dict[str, int]:
+        """获取用户统计数据（total/active/locked/inactive）"""
+        total = await self.count_async(db)
+        active = await self.count_active_async(db)
+        locked = await self.count_locked_async(db)
+        inactive = await self.count_inactive_async(db)
+        return {
+            "total_users": total,
+            "active_users": active,
+            "locked_users": locked,
+            "inactive_users": inactive,
+        }
+
+    async def find_by_username_or_email_async(
+        self, db: AsyncSession, username: str, email: str
+    ) -> User | None:
+        """查找用户名或邮箱匹配的用户（用于唯一性校验）"""
+        stmt = select(User).where(or_(User.username == username, User.email == email))
+        return (await db.execute(stmt)).scalars().first()
+
+    async def find_active_by_login_async(
+        self, db: AsyncSession, login: str
+    ) -> User | None:
+        """通过用户名或邮箱查找活跃用户（用于登录认证）"""
+        stmt = select(User).where(
+            or_(User.username == login, User.email == login),
+            User.is_active.is_(True),
+        )
+        return (await db.execute(stmt)).scalars().first()
+
     async def get_recent_logins_async(
         self, db: AsyncSession, limit: int = 10
     ) -> list[User]:
@@ -237,6 +277,26 @@ class UserSessionCRUD:
         stmt = select(UserSession).where(UserSession.refresh_token == refresh_token)
         return (await db.execute(stmt)).scalars().first()
 
+    async def get_active_by_refresh_token_async(
+        self, db: AsyncSession, refresh_token: str
+    ) -> UserSession | None:
+        """按 refresh_token 查找活跃会话（用于令牌刷新验证）"""
+        stmt = select(UserSession).where(
+            UserSession.refresh_token == refresh_token,
+            UserSession.is_active.is_(True),
+        )
+        return (await db.execute(stmt)).scalars().first()
+
+    async def get_active_sessions_by_user_async(
+        self, db: AsyncSession, user_id: str
+    ) -> list[UserSession]:
+        """获取用户所有活跃会话（用于并发会话控制）"""
+        stmt = select(UserSession).where(
+            UserSession.user_id == user_id,
+            UserSession.is_active.is_(True),
+        )
+        return list((await db.execute(stmt)).scalars().all())
+
     async def get_user_sessions_async(
         self, db: AsyncSession, user_id: str, active_only: bool = True
     ) -> list[UserSession]:
@@ -283,7 +343,7 @@ class UserSessionCRUD:
             .values({AuthFields.IS_ACTIVE: False})
         )
         await db.commit()
-        return int(result.rowcount or 0)
+        return int(getattr(result, "rowcount", 0) or 0)
 
     async def cleanup_expired_sessions_async(self, db: AsyncSession) -> int:
         result = await db.execute(
@@ -295,7 +355,7 @@ class UserSessionCRUD:
             .values({AuthFields.IS_ACTIVE: False})
         )
         await db.commit()
-        return int(result.rowcount or 0)
+        return int(getattr(result, "rowcount", 0) or 0)
 
     async def count_active_sessions_async(self, db: AsyncSession) -> int:
         stmt = select(func.count(UserSession.id)).where(UserSession.is_active.is_(True))

@@ -1,6 +1,7 @@
+from datetime import datetime
 from typing import Any
 
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, func, literal, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..crud.asset import SensitiveDataHandler
@@ -234,6 +235,155 @@ class CRUDOrganization(CRUDBase[Organization, OrganizationCreate, OrganizationUp
         return await self.get_multi_with_filters_async(
             db, skip=skip, limit=limit, keyword=keyword
         )
+
+
+    async def get_statistics_async(self, db: AsyncSession) -> dict[str, Any]:
+        """获取组织统计数据（按状态/类型/层级分组）"""
+        base_condition = Organization.is_deleted.is_(False)
+
+        status_rows = (
+            await db.execute(
+                select(Organization.status, func.count(Organization.id))
+                .where(base_condition)
+                .group_by(Organization.status)
+            )
+        ).all()
+        type_rows = (
+            await db.execute(
+                select(Organization.type, func.count(Organization.id))
+                .where(base_condition)
+                .group_by(Organization.type)
+            )
+        ).all()
+        level_rows = (
+            await db.execute(
+                select(Organization.level, func.count(Organization.id))
+                .where(base_condition)
+                .group_by(Organization.level)
+            )
+        ).all()
+
+        total = sum(int(count or 0) for _, count in status_rows)
+        if total == 0:
+            total = sum(int(count or 0) for _, count in level_rows)
+
+        active = sum(
+            int(count or 0) for status, count in status_rows if str(status) == "active"
+        )
+        inactive = max(total - active, 0)
+
+        type_stats = {
+            str(org_type): int(count or 0)
+            for org_type, count in type_rows
+            if org_type is not None
+        }
+        level_stats = {
+            f"level_{int(level)}": int(count or 0)
+            for level, count in level_rows
+            if level is not None
+        }
+
+        return {
+            "total": total,
+            "active": active,
+            "inactive": inactive,
+            "by_type": type_stats,
+            "by_level": level_stats,
+        }
+
+    async def would_create_cycle_async(
+        self, db: AsyncSession, org_id: str, new_parent_id: str
+    ) -> bool:
+        """检查移动组织是否会创建循环引用"""
+        if not new_parent_id:
+            return False
+
+        base = (
+            select(Organization.id, Organization.parent_id)
+            .where(Organization.id == new_parent_id)
+            .cte(name="org_ancestors", recursive=True)
+        )
+        recursive = select(Organization.id, Organization.parent_id).where(
+            Organization.id == base.c.parent_id
+        )
+        ancestors = base.union(recursive)
+
+        stmt = select(ancestors.c.id).where(ancestors.c.id == org_id).limit(1)
+        result = await db.execute(stmt)
+        return result.scalar_one_or_none() is not None
+
+    async def update_children_path_async(
+        self, db: AsyncSession, parent_org: Organization
+    ) -> None:
+        """递归更新子组织的路径和层级"""
+        parent_org_id: str | None = getattr(parent_org, "id", None)
+        if not parent_org_id:
+            return
+
+        parent_level: int = getattr(parent_org, "level") or 1
+        parent_path: str | None = getattr(parent_org, "path")
+        base_path = parent_path if parent_path else f"/{parent_org_id}"
+        parent_parent_id: str | None = getattr(parent_org, "parent_id", None)
+
+        base = (
+            select(
+                literal(parent_org_id, type_=Organization.id.type).label("id"),
+                literal(
+                    parent_parent_id, type_=Organization.parent_id.type
+                ).label("parent_id"),
+                literal(base_path, type_=Organization.path.type).label("path"),
+                literal(parent_level, type_=Organization.level.type).label("level"),
+            )
+            .cte(name="org_tree", recursive=True)
+        )
+        recursive = select(
+            Organization.id,
+            Organization.parent_id,
+            func.concat(base.c.path, "/", Organization.id).label("path"),
+            (base.c.level + 1).label("level"),
+        ).where(
+            and_(
+                Organization.parent_id == base.c.id,
+                Organization.is_deleted.is_(False),
+            )
+        )
+        org_tree = base.union_all(recursive)
+
+        stmt = (
+            update(Organization)
+            .where(Organization.id == org_tree.c.id)
+            .values(
+                path=org_tree.c.path,
+                level=org_tree.c.level,
+                updated_at=datetime.now(),
+            )
+            .execution_options(synchronize_session=False)
+        )
+        await db.execute(stmt)
+
+    async def get_ids_by_condition_async(
+        self, db: AsyncSession, *, is_deleted: bool = False
+    ) -> list[str]:
+        """获取满足条件的所有组织ID"""
+        stmt = select(Organization.id).where(
+            Organization.is_deleted.is_(is_deleted)
+        )
+        result = await db.execute(stmt)
+        return [str(org_id) for org_id in result.scalars().all()]
+
+    async def get_by_ids_async(
+        self, db: AsyncSession, ids: list[str]
+    ) -> list[Organization]:
+        """根据ID列表批量获取组织"""
+        if not ids:
+            return []
+        stmt = select(Organization).where(
+            Organization.id.in_(ids), Organization.is_deleted.is_(False)
+        )
+        result = list((await db.execute(stmt)).scalars().all())
+        for item in result:
+            self.sensitive_data_handler.decrypt_data(item.__dict__)
+        return result
 
 
 # 创建CRUD实例

@@ -12,13 +12,15 @@ from datetime import datetime
 from typing import Any
 from weakref import WeakKeyDictionary
 
-from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..constants.message_constants import EMPTY_STRING
-from ..models.enum_field import EnumFieldType, EnumFieldValue
+from ..crud.enum_field import EnumFieldTypeCRUD, EnumFieldValueCRUD
 
 logger = logging.getLogger(__name__)
+
+_type_crud = EnumFieldTypeCRUD()
+_value_crud = EnumFieldValueCRUD()
 
 
 class AsyncEnumValidationService:
@@ -54,33 +56,21 @@ class AsyncEnumValidationService:
             return self._cache[enum_type_code]
 
         try:
-            enum_type_result = await self.db.execute(
-                select(EnumFieldType).filter(
-                    and_(
-                        EnumFieldType.code == enum_type_code,
-                        EnumFieldType.is_deleted.is_(False),
-                        EnumFieldType.status == "active",
-                    )
-                )
-            )
-            enum_type = enum_type_result.scalars().first()
+            enum_type = await _type_crud.get_by_code_async(self.db, enum_type_code)
 
             if not enum_type:
                 logger.warning(f"枚举类型 '{enum_type_code}' 未找到或未激活")
                 return []
 
-            values_result = await self.db.execute(
-                select(EnumFieldValue.value)
-                .filter(
-                    and_(
-                        EnumFieldValue.enum_type_id == enum_type.id,
-                        EnumFieldValue.is_deleted.is_(False),
-                        EnumFieldValue.is_active.is_(True),
-                    )
-                )
-                .order_by(EnumFieldValue.sort_order)
+            # get_by_code_async 已过滤 is_deleted，但需额外检查 status
+            if getattr(enum_type, "status", None) != "active":
+                logger.warning(f"枚举类型 '{enum_type_code}' 未激活")
+                return []
+
+            values = await _value_crud.get_all_by_type_async(
+                self.db, str(enum_type.id), is_active=True
             )
-            result = list(values_result.scalars().all())
+            result = [str(v.value) for v in values]
 
             self._update_cache(enum_type_code, result)
 
@@ -178,6 +168,19 @@ class AsyncEnumValidationService:
 
         return len(errors) == 0, errors
 
+    def get_validation_stats(
+        self, enum_type_code: str | None = None
+    ) -> dict[str, dict[str, Any]]:
+        """获取枚举验证统计信息。"""
+        if enum_type_code:
+            if enum_type_code not in self._validation_stats:
+                return {}
+            return {enum_type_code: dict(self._validation_stats[enum_type_code])}
+        return {
+            enum_code: dict(stat)
+            for enum_code, stat in self._validation_stats.items()
+        }
+
 
 _ASYNC_SERVICE_CACHE: WeakKeyDictionary[AsyncSession, AsyncEnumValidationService] = (
     WeakKeyDictionary()
@@ -193,4 +196,3 @@ def get_enum_validation_service_async(
     service = AsyncEnumValidationService(db)
     _ASYNC_SERVICE_CACHE[db] = service
     return service
-

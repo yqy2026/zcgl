@@ -12,6 +12,7 @@ from ..models.rbac import (
     ResourcePermission,
     Role,
     UserRoleAssignment,
+    role_permissions,
 )
 from ..schemas.rbac import (
     PermissionCreate,
@@ -112,9 +113,55 @@ class CRUDRole(CRUDBase[Role, RoleCreate, RoleUpdate]):
         total = int((await db.execute(count_stmt)).scalar() or 0)
         return list(result), total
 
-    # Override count to use QueryBuilder implicitly or keep custom if complex logic needed
-    # But for standard counts, CRUDBase.count works if filters aligned.
-    # Here we keep custom count_by_category logic.
+    async def get_roles_by_user_async(
+        self,
+        db: AsyncSession,
+        user_id: str,
+        *,
+        active_only: bool = True,
+        include_permissions: bool = False,
+        now: Any = None,
+    ) -> list[Role]:
+        """获取用户的角色列表"""
+        stmt = (
+            select(Role)
+            .join(UserRoleAssignment, Role.id == UserRoleAssignment.role_id)
+            .where(UserRoleAssignment.user_id == user_id)
+        )
+        if include_permissions:
+            stmt = stmt.options(selectinload(Role.permissions))
+        if active_only:
+            _now = now or func.now()
+            stmt = stmt.where(
+                UserRoleAssignment.is_active,
+                or_(
+                    UserRoleAssignment.expires_at.is_(None),
+                    UserRoleAssignment.expires_at > _now,
+                ),
+            )
+        return list((await db.execute(stmt)).scalars().all())
+
+    async def check_display_name_exists_async(
+        self, db: AsyncSession, display_name: str, exclude_role_id: str | None = None
+    ) -> bool:
+        """检查 display_name 是否已存在（排除指定角色）"""
+        stmt = select(Role).where(Role.display_name == display_name)
+        if exclude_role_id:
+            stmt = stmt.where(Role.id != exclude_role_id)
+        result = await db.execute(stmt)
+        return result.scalars().first() is not None
+
+    async def update_permissions_created_by_async(
+        self, db: AsyncSession, role_id: str, created_by: str
+    ) -> None:
+        """更新角色权限关联表的 created_by 字段"""
+        from sqlalchemy import update
+        stmt = (
+            update(role_permissions)
+            .where(role_permissions.c.role_id == role_id)
+            .values(created_by=created_by)
+        )
+        await db.execute(stmt)
 
     async def count_by_category(self, db: AsyncSession) -> dict[str, Any]:
         """按类别统计角色数"""
@@ -183,6 +230,54 @@ class CRUDPermission(CRUDBase[Permission, PermissionCreate, PermissionUpdate]):
         result = (await db.execute(stmt)).scalars().all()
         return list(result)
 
+    async def get_by_ids_async(
+        self, db: AsyncSession, permission_ids: list[str]
+    ) -> list[Permission]:
+        """批量获取权限"""
+        if not permission_ids:
+            return []
+        stmt = select(Permission).where(Permission.id.in_(permission_ids))
+        return list((await db.execute(stmt)).scalars().all())
+
+    async def get_multi_with_count_async(
+        self,
+        db: AsyncSession,
+        *,
+        skip: int = 0,
+        limit: int = 100,
+        search: str | None = None,
+        resource: str | None = None,
+        action: str | None = None,
+        is_system_permission: bool | None = None,
+    ) -> tuple[list[Permission], int]:
+        """获取权限列表（含总数）"""
+        filters: dict[str, Any] = {}
+        if resource:
+            filters["resource"] = resource
+        if action:
+            filters["action"] = action
+        if is_system_permission is not None:
+            filters["is_system_permission"] = is_system_permission
+
+        stmt = self.query_builder.build_query(
+            filters=filters,
+            search_query=search,
+            search_fields=["name", "display_name", "description"],
+            sort_by="resource",
+            sort_desc=False,
+            skip=skip,
+            limit=limit,
+        )
+        count_stmt = self.query_builder.build_count_query(
+            filters=filters,
+            search_query=search,
+            search_fields=["name", "display_name", "description"],
+        )
+
+        permissions = list((await db.execute(stmt)).scalars().all())
+        total = int((await db.execute(count_stmt)).scalar() or 0)
+        return permissions, total
+
     async def count_by_resource(self, db: AsyncSession) -> dict[str, Any]:
         """按资源统计权限数"""
         stmt = select(Permission.resource, func.count(Permission.id)).group_by(
@@ -236,7 +331,35 @@ class CRUDResourcePermission(
 ):
     """资源权限CRUD"""
 
-    pass
+    async def get_resource_ids_by_conditions_async(
+        self,
+        db: AsyncSession,
+        *,
+        resource_type: str,
+        user_id: str | None = None,
+        role_ids: list[str] | None = None,
+        now: Any = None,
+    ) -> list[str]:
+        """获取满足条件的资源ID列表（用于组织权限过滤）"""
+        conditions = [
+            ResourcePermission.resource_type == resource_type,
+            ResourcePermission.is_active.is_(True),
+            or_(
+                ResourcePermission.expires_at.is_(None),
+                ResourcePermission.expires_at > (now or func.now()),
+            ),
+        ]
+
+        if user_id:
+            conditions.append(ResourcePermission.user_id == user_id)
+        elif role_ids:
+            conditions.append(ResourcePermission.role_id.in_(role_ids))
+        else:
+            return []
+
+        stmt = select(ResourcePermission.resource_id).where(and_(*conditions))
+        result = await db.execute(stmt)
+        return [str(resource_id) for resource_id in result.scalars().all()]
 
 
 class CRUDPermissionAuditLog(
@@ -251,6 +374,95 @@ class CRUDPermissionGrant(
     CRUDBase[PermissionGrant, PermissionGrantCreate, PermissionGrantUpdate]
 ):
     """统一权限授权CRUD"""
+
+    async def get_matching_grants_async(
+        self,
+        db: AsyncSession,
+        *,
+        user_id: str,
+        resource: str,
+        action: str,
+        now: Any = None,
+    ) -> list[PermissionGrant]:
+        """获取匹配的权限授权记录（用于权限检查）"""
+        _now = now or func.now()
+        stmt = (
+            select(PermissionGrant)
+            .join(Permission, Permission.id == PermissionGrant.permission_id)
+            .where(
+                and_(
+                    PermissionGrant.user_id == user_id,
+                    PermissionGrant.is_active,
+                    Permission.resource == resource,
+                    Permission.action == action,
+                    or_(PermissionGrant.starts_at.is_(None), PermissionGrant.starts_at <= _now),
+                    or_(PermissionGrant.expires_at.is_(None), PermissionGrant.expires_at > _now),
+                )
+            )
+        )
+        return list((await db.execute(stmt)).scalars().all())
+
+    async def list_with_filters_async(
+        self,
+        db: AsyncSession,
+        *,
+        skip: int = 0,
+        limit: int = 20,
+        user_id: str | None = None,
+        permission_id: str | None = None,
+        grant_type: str | None = None,
+        effect: str | None = None,
+        scope: str | None = None,
+        is_active: bool | None = None,
+    ) -> tuple[list[PermissionGrant], int]:
+        """分页查询统一授权记录（含总数）"""
+        from sqlalchemy import desc
+
+        filters = []
+        if user_id:
+            filters.append(PermissionGrant.user_id == user_id)
+        if permission_id:
+            filters.append(PermissionGrant.permission_id == permission_id)
+        if grant_type:
+            filters.append(PermissionGrant.grant_type == grant_type.strip().lower())
+        if effect:
+            filters.append(PermissionGrant.effect == effect.strip().lower())
+        if scope:
+            filters.append(PermissionGrant.scope == scope.strip().lower())
+        if is_active is not None:
+            filters.append(PermissionGrant.is_active == is_active)
+
+        stmt = select(PermissionGrant).order_by(desc(PermissionGrant.created_at))
+        count_stmt = select(func.count(PermissionGrant.id))
+
+        if filters:
+            stmt = stmt.where(and_(*filters))
+            count_stmt = count_stmt.where(and_(*filters))
+
+        stmt = stmt.offset(skip).limit(limit)
+        grants = list((await db.execute(stmt)).scalars().all())
+        total = int((await db.execute(count_stmt)).scalar() or 0)
+        return grants, total
+
+    async def get_granted_permissions_async(
+        self, db: AsyncSession, user_id: str, now: Any = None
+    ) -> list[Permission]:
+        """获取用户的授权权限列表（用于权限汇总）"""
+        _now = now or func.now()
+        stmt = (
+            select(Permission)
+            .join(PermissionGrant, PermissionGrant.permission_id == Permission.id)
+            .where(
+                and_(
+                    PermissionGrant.user_id == user_id,
+                    PermissionGrant.is_active,
+                    PermissionGrant.effect == "allow",
+                    or_(PermissionGrant.starts_at.is_(None), PermissionGrant.starts_at <= _now),
+                    or_(PermissionGrant.expires_at.is_(None), PermissionGrant.expires_at > _now),
+                )
+            )
+        )
+        return list((await db.execute(stmt)).scalars().all())
 
 
 role_crud = CRUDRole(Role)

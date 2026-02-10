@@ -1,7 +1,6 @@
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import and_, func, literal, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.exception_handler import OperationNotAllowedError, ResourceNotFoundError
@@ -243,57 +242,7 @@ class OrganizationService:
         return True
 
     async def get_statistics(self, db: AsyncSession) -> dict[str, Any]:
-        base_condition = Organization.is_deleted.is_(False)
-
-        status_rows = (
-            await db.execute(
-                select(Organization.status, func.count(Organization.id))
-                .where(base_condition)
-                .group_by(Organization.status)
-            )
-        ).all()
-        type_rows = (
-            await db.execute(
-                select(Organization.type, func.count(Organization.id))
-                .where(base_condition)
-                .group_by(Organization.type)
-            )
-        ).all()
-        level_rows = (
-            await db.execute(
-                select(Organization.level, func.count(Organization.id))
-                .where(base_condition)
-                .group_by(Organization.level)
-            )
-        ).all()
-
-        total = sum(int(count or 0) for _, count in status_rows)
-        if total == 0:
-            total = sum(int(count or 0) for _, count in level_rows)
-
-        active = sum(
-            int(count or 0) for status, count in status_rows if str(status) == "active"
-        )
-        inactive = max(total - active, 0)
-
-        type_stats = {
-            str(org_type): int(count or 0)
-            for org_type, count in type_rows
-            if org_type is not None
-        }
-        level_stats = {
-            f"level_{int(level)}": int(count or 0)
-            for level, count in level_rows
-            if level is not None
-        }
-
-        return {
-            "total": total,
-            "active": active,
-            "inactive": inactive,
-            "by_type": type_stats,
-            "by_level": level_stats,
-        }
+        return await organization_crud.get_statistics_async(db)
 
     async def get_history(
         self, db: AsyncSession, org_id: str, skip: int = 0, limit: int = 100
@@ -315,70 +264,12 @@ class OrganizationService:
     async def _would_create_cycle(
         self, db: AsyncSession, org_id: str, new_parent_id: str
     ) -> bool:
-        if not new_parent_id:
-            return False
-
-        base = (
-            select(Organization.id, Organization.parent_id)
-            .where(Organization.id == new_parent_id)
-            .cte(name="org_ancestors", recursive=True)
-        )
-        recursive = select(Organization.id, Organization.parent_id).where(
-            Organization.id == base.c.parent_id
-        )
-        ancestors = base.union(recursive)
-
-        stmt = select(ancestors.c.id).where(ancestors.c.id == org_id).limit(1)
-        result = await db.execute(stmt)
-        return result.scalar_one_or_none() is not None
+        return await organization_crud.would_create_cycle_async(db, org_id, new_parent_id)
 
     async def _update_children_path(
         self, db: AsyncSession, parent_org: Organization
     ) -> None:
-        parent_org_id: str | None = getattr(parent_org, "id", None)
-        if not parent_org_id:
-            return
-
-        parent_level: int = getattr(parent_org, "level") or 1
-        parent_path: str | None = getattr(parent_org, "path")
-        base_path = parent_path if parent_path else f"/{parent_org_id}"
-        parent_parent_id: str | None = getattr(parent_org, "parent_id", None)
-
-        base = (
-            select(
-                literal(parent_org_id, type_=Organization.id.type).label("id"),
-                literal(
-                    parent_parent_id, type_=Organization.parent_id.type
-                ).label("parent_id"),
-                literal(base_path, type_=Organization.path.type).label("path"),
-                literal(parent_level, type_=Organization.level.type).label("level"),
-            )
-            .cte(name="org_tree", recursive=True)
-        )
-        recursive = select(
-            Organization.id,
-            Organization.parent_id,
-            func.concat(base.c.path, "/", Organization.id).label("path"),
-            (base.c.level + 1).label("level"),
-        ).where(
-            and_(
-                Organization.parent_id == base.c.id,
-                Organization.is_deleted.is_(False),
-            )
-        )
-        org_tree = base.union_all(recursive)
-
-        stmt = (
-            update(Organization)
-            .where(Organization.id == org_tree.c.id)
-            .values(
-                path=org_tree.c.path,
-                level=org_tree.c.level,
-                updated_at=datetime.now(),
-            )
-            .execution_options(synchronize_session=False)
-        )
-        await db.execute(stmt)
+        await organization_crud.update_children_path_async(db, parent_org)
 
     async def _create_history(
         self,
