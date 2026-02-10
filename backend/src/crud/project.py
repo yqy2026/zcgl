@@ -169,6 +169,16 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
         # Keeping minimal here.
         return {"total_projects": total, "active_projects": active or 0}
 
+    async def get_ids_by_filter_async(
+        self, db: AsyncSession, ids: list[str]
+    ) -> list[str]:
+        """验证项目ID是否存在，返回有效的ID列表"""
+        if not ids:
+            return []
+        stmt = select(Project.id).where(Project.id.in_(ids))
+        result = await db.execute(stmt)
+        return [str(project_id) for project_id in result.scalars().all()]
+
     # Removed: generate_project_code, _generate_name_code, _calculate_checksum -> Moved to Service
     # Removed: create (standard) -> Service calls base create
     # Removed: toggle_status -> Service logic

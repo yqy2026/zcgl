@@ -10,11 +10,12 @@ from ...core.exception_handler import (
     OperationNotAllowedError,
     ResourceNotFoundError,
 )
+from ...crud.asset import asset_crud
 from ...crud.ownership import ownership as ownership_crud
+from ...crud.project import project_crud
 from ...models.asset import Asset
 from ...models.ownership import Ownership
 from ...models.project import Project
-from ...models.project_relations import ProjectOwnershipRelation
 from ...schemas.ownership import OwnershipCreate, OwnershipUpdate
 
 
@@ -47,12 +48,8 @@ class OwnershipService:
         base_format = f"{prefix}{year_month}"
 
         # 查询所有已存在的编码（包括新格式和旧格式）
-        stmt = (
-            select(Ownership.code)
-            .where(Ownership.code.like(f"{prefix}%"))
-            .order_by(Ownership.code.desc())
-        )
-        existing_codes = (await db.execute(stmt)).scalars().all()
+        # 查询现有编码
+        existing_codes = await ownership_crud.get_codes_by_prefix_async(db, prefix)
 
         # 找到新格式的最大序列号
         max_sequence = 0
@@ -140,22 +137,11 @@ class OwnershipService:
 
     async def get_statistics(self, db: AsyncSession) -> dict[str, Any]:
         """获取权属方统计信息"""
-        stmt = select(
-            func.count(Ownership.id),
-            func.sum(case((Ownership.is_active.is_(True), 1), else_=0)),
-        )
-        total_count, active_count = (await db.execute(stmt)).one()
-        total_count = int(total_count or 0)
-        active_count = int(active_count or 0)
-        inactive_count = total_count - active_count
-
-        recent_stmt = select(Ownership).order_by(desc(Ownership.created_at)).limit(5)
-        recent_created = (await db.execute(recent_stmt)).scalars().all()
+        stats = await ownership_crud.get_statistics_async(db)
+        recent_created = await ownership_crud.get_recent_created_async(db, limit=5)
 
         return {
-            "total_count": total_count,
-            "active_count": active_count,
-            "inactive_count": inactive_count,
+            **stats,
             "recent_created": recent_created,
         }
 
@@ -171,8 +157,7 @@ class OwnershipService:
         # 验证项目是否存在
         valid_projects: list[str] = []
         if project_ids:
-            project_stmt = select(Project.id).where(Project.id.in_(project_ids))
-            valid_projects = [str(project_id) for project_id in (await db.execute(project_stmt)).scalars().all()]
+            valid_projects = await project_crud.get_ids_by_filter_async(db, project_ids)
         valid_project_ids = [str(p_id) for p_id in valid_projects]
 
         if len(valid_project_ids) != len(project_ids):
@@ -183,11 +168,7 @@ class OwnershipService:
             )
 
         # 删除现有关联
-        await db.execute(
-            delete(ProjectOwnershipRelation).where(
-                ProjectOwnershipRelation.ownership_id == ownership_id
-            )
-        )
+        await ownership_crud.delete_project_relations_async(db, ownership_id)
 
         # 创建新关联
         for project_id in project_ids:
@@ -201,18 +182,11 @@ class OwnershipService:
 
     async def get_project_count(self, db: AsyncSession, ownership_id: str) -> int:
         """获取权属方关联的项目数量"""
-        stmt = select(func.count(ProjectOwnershipRelation.id)).where(
-            ProjectOwnershipRelation.ownership_id == ownership_id,
-            ProjectOwnershipRelation.is_active.is_(True),
-        )
-        result = await db.execute(stmt)
-        return int(result.scalar() or 0)
+        return await ownership_crud.count_projects_async(db, ownership_id)
 
     async def get_asset_count(self, db: AsyncSession, ownership_id: str) -> int:
         """获取权属方关联的资产数量"""
-        stmt = select(func.count(Asset.id)).where(Asset.ownership_id == ownership_id)
-        result = await db.execute(stmt)
-        return int(result.scalar() or 0)
+        return await asset_crud.count_by_ownership_async(db, ownership_id)
 
     async def delete_ownership(self, db: AsyncSession, *, id: str) -> Ownership:
         """删除权属方"""
@@ -221,8 +195,7 @@ class OwnershipService:
             raise ResourceNotFoundError("权属方", id)
 
         # 检查是否有关联的资产
-        asset_stmt = select(func.count(Asset.id)).where(Asset.ownership_id == db_obj.id)
-        asset_count = int((await db.execute(asset_stmt)).scalar() or 0)
+        asset_count = await asset_crud.count_by_ownership_async(db, str(db_obj.id))
 
         if asset_count > 0:
             raise OperationNotAllowedError(
@@ -263,16 +236,9 @@ class OwnershipService:
         self, db: AsyncSession, is_active: bool | None = True
     ) -> list[dict[str, Any]]:
         """获取权属方下拉选项列表"""
-        stmt = select(Ownership).where(Ownership.data_status == "正常")
-        if is_active is not None:
-            # 使用is_active字段过滤（如果存在）或通过data_status推断
-            if hasattr(Ownership, "is_active"):
-                stmt = stmt.where(Ownership.is_active == is_active)
-
-        ownerships = (
-            (await db.execute(stmt.order_by(Ownership.created_at.desc()).limit(1000)))
-            .scalars()
-            .all()
+        # 批量查询权属方
+        ownerships = await ownership_crud.get_multi_for_select_async(
+            db, is_active=is_active, limit=1000
         )
         if not ownerships:
             return []
@@ -281,33 +247,13 @@ class OwnershipService:
         if not ownership_ids:
             return []
 
-        asset_counts_stmt = (
-            select(Asset.ownership_id, func.count(Asset.id))
-            .where(Asset.ownership_id.in_(ownership_ids))
-            .group_by(Asset.ownership_id)
-        )
-        asset_counts = {
-            str(ownership_id): int(count or 0)
-            for ownership_id, count in (await db.execute(asset_counts_stmt)).all()
-            if ownership_id is not None
-        }
+        # 批量获取资产计数（按权属方分组）
+        asset_counts = await asset_crud.get_counts_by_ownerships_async(db, ownership_ids)
 
-        project_counts_stmt = (
-            select(
-                ProjectOwnershipRelation.ownership_id,
-                func.count(ProjectOwnershipRelation.id),
-            )
-            .where(
-                ProjectOwnershipRelation.ownership_id.in_(ownership_ids),
-                ProjectOwnershipRelation.is_active.is_(True),
-            )
-            .group_by(ProjectOwnershipRelation.ownership_id)
+        # 批量获取项目计数（按权属方分组）
+        project_counts = await ownership_crud.get_project_counts_by_ownerships_async(
+            db, ownership_ids
         )
-        project_counts = {
-            str(ownership_id): int(count or 0)
-            for ownership_id, count in (await db.execute(project_counts_stmt)).all()
-            if ownership_id is not None
-        }
 
         responses = []
         for item in ownerships:

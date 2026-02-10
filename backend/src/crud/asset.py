@@ -840,6 +840,30 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             self._decrypt_asset_object(asset)
         return assets
 
+    async def count_by_ownership_async(self, db: AsyncSession, ownership_id: str) -> int:
+        """统计权属方的资产数量"""
+        stmt = select(func.count(Asset.id)).where(Asset.ownership_id == ownership_id)
+        result = await db.execute(stmt)
+        return int(result.scalar() or 0)
+
+    async def get_counts_by_ownerships_async(
+        self, db: AsyncSession, ownership_ids: list[str]
+    ) -> dict[str, int]:
+        """按权属方分组统计资产数量（返回 dict）"""
+        if not ownership_ids:
+            return {}
+        stmt = (
+            select(Asset.ownership_id, func.count(Asset.id))
+            .where(Asset.ownership_id.in_(ownership_ids))
+            .group_by(Asset.ownership_id)
+        )
+        result = await db.execute(stmt)
+        return {
+            str(ownership_id): int(count or 0)
+            for ownership_id, count in result.all()
+            if ownership_id is not None
+        }
+
     # remove is inherited
     # create is inherited (check notes about calculation)
 

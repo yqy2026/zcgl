@@ -132,6 +132,109 @@ class CRUDOwnership(CRUDBase[Ownership, OwnershipCreate, OwnershipUpdate]):
         result = await db.execute(stmt)
         return list(result.scalars().all())
 
+    async def get_codes_by_prefix_async(
+        self, db: AsyncSession, prefix: str
+    ) -> list[str]:
+        """查询指定前缀的所有编码（用于去重检查）"""
+        stmt = (
+            select(Ownership.code)
+            .where(Ownership.code.like(f"{prefix}%"))
+            .order_by(Ownership.code.desc())
+        )
+        result = await db.execute(stmt)
+        codes = result.scalars().all()
+        return [str(code) for code in codes if code]
+
+    async def get_statistics_async(self, db: AsyncSession) -> dict[str, Any]:
+        """获取权属方统计信息（总数/活跃数/不活跃数）"""
+        from sqlalchemy import case, func
+
+        stmt = select(
+            func.count(Ownership.id),
+            func.sum(case((Ownership.is_active.is_(True), 1), else_=0)),
+        )
+        result = await db.execute(stmt)
+        total_count, active_count = result.one()
+        total = int(total_count or 0)
+        active = int(active_count or 0)
+        return {
+            "total_count": total,
+            "active_count": active,
+            "inactive_count": total - active,
+        }
+
+    async def get_recent_created_async(
+        self, db: AsyncSession, limit: int = 5
+    ) -> list[Ownership]:
+        """获取最近创建的权属方列表"""
+        from sqlalchemy import desc
+
+        stmt = select(Ownership).order_by(desc(Ownership.created_at)).limit(limit)
+        result = await db.execute(stmt)
+        return list(result.scalars().all())
+
+    async def count_projects_async(self, db: AsyncSession, ownership_id: str) -> int:
+        """统计权属方关联的项目数量"""
+        from sqlalchemy import func
+        from ..models.project_relations import ProjectOwnershipRelation
+
+        stmt = select(func.count(ProjectOwnershipRelation.id)).where(
+            ProjectOwnershipRelation.ownership_id == ownership_id,
+            ProjectOwnershipRelation.is_active.is_(True),
+        )
+        result = await db.execute(stmt)
+        return int(result.scalar() or 0)
+
+    async def get_multi_for_select_async(
+        self, db: AsyncSession, is_active: bool | None = None, limit: int = 1000
+    ) -> list[Ownership]:
+        """获取权属方下拉选项列表（带 LIMIT）"""
+        stmt = select(Ownership).where(Ownership.data_status == "正常")
+        if is_active is not None and hasattr(Ownership, "is_active"):
+            stmt = stmt.where(Ownership.is_active == is_active)
+        stmt = stmt.order_by(Ownership.created_at.desc()).limit(limit)
+        result = await db.execute(stmt)
+        return list(result.scalars().all())
+
+    async def delete_project_relations_async(
+        self, db: AsyncSession, ownership_id: str
+    ) -> None:
+        """删除权属方的所有项目关联"""
+        from sqlalchemy import delete
+        from ..models.project_relations import ProjectOwnershipRelation
+
+        stmt = delete(ProjectOwnershipRelation).where(
+            ProjectOwnershipRelation.ownership_id == ownership_id
+        )
+        await db.execute(stmt)
+
+    async def get_project_counts_by_ownerships_async(
+        self, db: AsyncSession, ownership_ids: list[str]
+    ) -> dict[str, int]:
+        """按权属方分组统计项目数量（返回 dict）"""
+        if not ownership_ids:
+            return {}
+        from sqlalchemy import func
+        from ..models.project_relations import ProjectOwnershipRelation
+
+        stmt = (
+            select(
+                ProjectOwnershipRelation.ownership_id,
+                func.count(ProjectOwnershipRelation.id),
+            )
+            .where(
+                ProjectOwnershipRelation.ownership_id.in_(ownership_ids),
+                ProjectOwnershipRelation.is_active.is_(True),
+            )
+            .group_by(ProjectOwnershipRelation.ownership_id)
+        )
+        result = await db.execute(stmt)
+        return {
+            str(ownership_id): int(count or 0)
+            for ownership_id, count in result.all()
+            if ownership_id is not None
+        }
+
 
 # 创建CRUD实例
 ownership = CRUDOwnership(Ownership)
