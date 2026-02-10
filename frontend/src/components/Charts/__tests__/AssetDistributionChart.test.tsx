@@ -58,16 +58,18 @@ vi.mock('antd', () => ({
     </div>
   ),
   Alert: ({
+    title,
     message,
     description,
     type,
   }: {
+    title?: React.ReactNode;
     message?: React.ReactNode;
     description?: React.ReactNode;
     type?: string;
   }) => (
     <div data-testid="alert" data-type={type}>
-      <span data-testid="alert-message">{message}</span>
+      <span data-testid="alert-message">{title ?? message}</span>
       <span data-testid="alert-description">{description}</span>
     </div>
   ),

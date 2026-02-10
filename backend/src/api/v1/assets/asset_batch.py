@@ -222,7 +222,7 @@ async def batch_update_custom_fields(
 @router.get("/all", summary="获取所有资产（不分页）")
 async def get_all_assets(
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_permission("asset", "read")),
     search: str | None = Query(None, description="搜索关键字"),
     ownership_status: str | None = Query(None, description="确权状态"),
     usage_status: str | None = Query(None, description="使用状态"),
@@ -288,7 +288,7 @@ async def get_all_assets(
 async def get_assets_by_ids(
     request: dict[str, Any],
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_permission("asset", "read")),
     include_relations: bool = Query(False, description="是否加载关联数据"),
 ) -> dict[str, Any]:
     """
@@ -330,7 +330,7 @@ async def get_assets_by_ids(
 async def batch_delete_assets(
     request: dict[str, Any],
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_permission("asset", "delete")),
 ) -> dict[str, Any]:
     """
     批量删除资产

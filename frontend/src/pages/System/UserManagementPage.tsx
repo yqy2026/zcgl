@@ -48,7 +48,7 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
-import { COLORS } from '@/styles/colorMap';
+import styles from './UserManagementPage.module.css';
 
 const pageLogger = createLogger('UserManagement');
 
@@ -395,11 +395,11 @@ const UserManagementPage: React.FC = () => {
       title: '用户信息',
       key: 'user_info',
       render: (_, record) => (
-        <Space>
+        <Space className={styles.userCell}>
           <Avatar icon={<UserOutlined />} />
-          <div>
-            <div style={{ fontWeight: 500 }}>{record.full_name}</div>
-            <div style={{ fontSize: '12px', color: COLORS.textSecondary }}>@{record.username}</div>
+          <div className={styles.userTextGroup}>
+            <div className={styles.userNameText}>{record.full_name}</div>
+            <div className={styles.secondaryText}>@{record.username}</div>
           </div>
         </Space>
       ),
@@ -408,11 +408,9 @@ const UserManagementPage: React.FC = () => {
       title: '联系方式',
       key: 'contact',
       render: (_, record) => (
-        <div>
+        <div className={styles.contactCell}>
           <div>{record.email}</div>
-          <div style={{ fontSize: '12px', color: COLORS.textSecondary }}>
-            {record.phone || '未设置'}
-          </div>
+          <div className={styles.secondaryText}>{record.phone ?? '未设置'}</div>
         </div>
       ),
     },
@@ -436,7 +434,7 @@ const UserManagementPage: React.FC = () => {
           {getStatusTag(status)}
           {record.is_locked && (
             <Tooltip title="账户已锁定">
-              <LockOutlined style={{ color: COLORS.error }} />
+              <LockOutlined className={styles.lockedIcon} />
             </Tooltip>
           )}
         </Space>
@@ -459,6 +457,7 @@ const UserManagementPage: React.FC = () => {
               type="link"
               size="small"
               icon={<EyeOutlined />}
+              className={styles.tableActionButton}
               onClick={() => handleViewDetail(record)}
             />
           </Tooltip>
@@ -467,6 +466,7 @@ const UserManagementPage: React.FC = () => {
               type="link"
               size="small"
               icon={<EditOutlined />}
+              className={styles.tableActionButton}
               onClick={() => handleEdit(record)}
             />
           </Tooltip>
@@ -476,7 +476,9 @@ const UserManagementPage: React.FC = () => {
               size="small"
               icon={record.is_locked ? <UnlockOutlined /> : <LockOutlined />}
               onClick={() => handleToggleLock(record)}
-              style={{ color: record.is_locked ? COLORS.success : COLORS.error }}
+              className={`${styles.tableActionButton} ${
+                record.is_locked ? styles.unlockActionButton : styles.lockActionButton
+              }`}
             />
           </Tooltip>
           <Tooltip title={record.status === 'active' ? '停用' : '启用'}>
@@ -491,10 +493,16 @@ const UserManagementPage: React.FC = () => {
             onConfirm={() => handleDelete(record.id)}
             okText="确定"
             cancelText="取消"
-            icon={<ExclamationCircleOutlined style={{ color: 'red' }} />}
+            icon={<ExclamationCircleOutlined className={styles.dangerIcon} />}
           >
             <Tooltip title="删除">
-              <Button type="link" size="small" danger icon={<DeleteOutlined />} />
+              <Button
+                type="link"
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+                className={styles.tableActionButton}
+              />
             </Tooltip>
           </Popconfirm>
         </Space>
@@ -504,375 +512,356 @@ const UserManagementPage: React.FC = () => {
 
   return (
     <PageContainer title="用户管理" subTitle="管理系统用户账户和权限">
-        {/* 统计卡片 */}
-        {statistics != null && (
-          <Row gutter={16} style={{ marginBottom: 24 }}>
-            <Col span={6}>
-              <Card>
-                <Statistic title="总用户数" value={statistics.total} prefix={<UserOutlined />} />
-              </Card>
-            </Col>
-            <Col span={6}>
-              <Card>
-                <Statistic
-                  title="活跃用户"
-                  value={statistics.active}
-                  prefix={<TeamOutlined />}
-                  styles={{ content: { color: COLORS.success } }}
-                />
-              </Card>
-            </Col>
-            <Col span={6}>
-              <Card>
-                <Statistic
-                  title="停用用户"
-                  value={statistics.inactive}
-                  prefix={<SettingOutlined />}
-                  styles={{ content: { color: COLORS.error } }}
-                />
-              </Card>
-            </Col>
-            <Col span={6}>
-              <Card>
-                <Statistic
-                  title="锁定用户"
-                  value={statistics.locked}
-                  prefix={<LockOutlined />}
-                  styles={{ content: { color: COLORS.warning } }}
-                />
-              </Card>
-            </Col>
-          </Row>
-        )}
+      {/* 统计卡片 */}
+      {statistics != null && (
+        <Row gutter={[16, 16]} className={styles.statsRow}>
+          <Col xs={24} sm={12} md={6}>
+            <Card className={styles.statsCard}>
+              <Statistic title="总用户数" value={statistics.total} prefix={<UserOutlined />} />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <Card className={`${styles.statsCard} ${styles.activeStatsCard}`}>
+              <Statistic title="活跃用户" value={statistics.active} prefix={<TeamOutlined />} />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <Card className={`${styles.statsCard} ${styles.inactiveStatsCard}`}>
+              <Statistic title="停用用户" value={statistics.inactive} prefix={<SettingOutlined />} />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <Card className={`${styles.statsCard} ${styles.lockedStatsCard}`}>
+              <Statistic title="锁定用户" value={statistics.locked} prefix={<LockOutlined />} />
+            </Card>
+          </Col>
+        </Row>
+      )}
 
-        <Card>
-          <div style={{ marginBottom: 16 }}>
-            <ListToolbar
-              variant="plain"
-              items={[
-                {
-                  key: 'search',
-                  col: { xs: 24, sm: 12, md: 10, lg: 8 },
-                  content: (
-                    <Search
-                      placeholder="搜索用户名、邮箱或姓名"
-                      allowClear
-                      style={{ width: '100%' }}
-                      onSearch={handleSearch}
-                    />
-                  ),
-                },
-                {
-                  key: 'status',
-                  col: { xs: 24, sm: 12, md: 6, lg: 4 },
-                  content: (
-                    <Select
-                      placeholder="状态筛选"
-                      allowClear
-                      style={{ width: '100%' }}
-                      value={filters.status !== '' ? filters.status : undefined}
-                      onChange={handleStatusFilterChange}
-                    >
-                      {statusOptions.map(status => (
-                        <Option key={status.value} value={status.value}>
-                          {status.label}
-                        </Option>
-                      ))}
-                    </Select>
-                  ),
-                },
-                {
-                  key: 'role',
-                  col: { xs: 24, sm: 12, md: 6, lg: 4 },
-                  content: (
-                    <Select
-                      placeholder="角色筛选"
-                      allowClear
-                      style={{ width: '100%' }}
-                      value={filters.roleId !== '' ? filters.roleId : undefined}
-                      onChange={handleRoleFilterChange}
-                    >
-                      {roles.map(role => (
-                        <Option key={role.id} value={role.id}>
-                          {role.name}
-                        </Option>
-                      ))}
-                    </Select>
-                  ),
-                },
-                {
-                  key: 'organization',
-                  col: { xs: 24, sm: 12, md: 6, lg: 4 },
-                  content: (
-                    <Select
-                      placeholder="组织筛选"
-                      allowClear
-                      style={{ width: '100%' }}
-                      value={filters.organizationId !== '' ? filters.organizationId : undefined}
-                      onChange={handleOrganizationFilterChange}
-                    >
-                      {organizations.map(org => (
-                        <Option key={org.id} value={org.id}>
-                          {org.name}
-                        </Option>
-                      ))}
-                    </Select>
-                  ),
-                },
-                {
-                  key: 'refresh',
-                  col: { xs: 24, sm: 12, md: 4, lg: 3 },
-                  content: (
-                    <Button icon={<ReloadOutlined />} onClick={refreshUsersAndStatistics}>
-                      刷新
-                    </Button>
-                  ),
-                },
-                {
-                  key: 'create',
-                  col: { xs: 24, sm: 12, md: 4, lg: 3 },
-                  content: (
-                    <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-                      新建用户
-                    </Button>
-                  ),
-                },
-              ]}
-            />
-          </div>
-
-          <TableWithPagination
-            columns={columns}
-            dataSource={users}
-            rowKey="id"
-            loading={loading}
-            paginationState={pagination}
-            onPageChange={handlePageChange}
-            paginationProps={{
-              showTotal: (total: number) => `共 ${total} 条记录`,
-            }}
-          />
-        </Card>
-
-        {/* 创建/编辑模态框 */}
-        <Modal
-          title={editingUser ? '编辑用户' : '新建用户'}
-          open={modalVisible}
-          onCancel={() => setModalVisible(false)}
-          footer={null}
-          width={600}
-        >
-          <Form form={form} layout="vertical" onFinish={handleSubmit}>
-            {/* 第1行：所属组织（全宽） */}
-            <Row gutter={16}>
-              <Col span={24}>
-                <Form.Item
-                  name="default_organization_id"
-                  label="所属组织"
-                  rules={[{ required: true, message: '请选择所属组织' }]}
-                >
-                  <Select placeholder="请选择所属组织">
-                    {organizations.map(org => (
-                      <Option key={org.id} value={org.id}>
-                        {org.name}
-                      </Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-              </Col>
-            </Row>
-
-            {/* 第2行：姓名 + 手机号 */}
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item
-                  name="full_name"
-                  label="姓名"
-                  rules={[{ required: true, message: '请输入姓名' }]}
-                >
-                  <Input placeholder="请输入姓名" onChange={handleFullNameChange} />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item
-                  name="phone"
-                  label="手机号"
-                  rules={[
-                    { required: true, message: '请输入手机号' },
-                    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号格式' },
-                  ]}
-                >
-                  <Input placeholder="请输入手机号" />
-                </Form.Item>
-              </Col>
-            </Row>
-
-            {/* 第3行：用户名 + 邮箱 */}
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item
-                  name="username"
-                  label="用户名"
-                  rules={[
-                    { required: true, message: '请输入用户名' },
-                    { pattern: /^[a-zA-Z0-9_]+$/, message: '用户名只能包含字母、数字和下划线' },
-                  ]}
-                >
-                  <Input placeholder="请输入用户名（输入姓名后自动生成拼音）" />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item
-                  name="email"
-                  label="邮箱"
-                  rules={[
-                    { type: 'email', message: '请输入正确的邮箱格式' },
-                  ]}
-                >
-                  <Input placeholder="请输入邮箱（选填）" />
-                </Form.Item>
-              </Col>
-            </Row>
-
-            {/* 第4行：密码（仅新建时显示） */}
-            {editingUser == null && (
-              <Row gutter={16}>
-                <Col span={24}>
-                  <Form.Item
-                    name="password"
-                    label="密码"
-                    rules={[
-                      { required: true, message: '请输入密码' },
-                      { min: 8, message: '密码至少8位' },
-                      {
-                        pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/,
-                        message: '密码需包含大小写字母、数字和特殊字符',
-                      },
-                    ]}
+      <Card>
+        <div className={styles.toolbarSection}>
+          <ListToolbar
+            variant="plain"
+            items={[
+              {
+                key: 'search',
+                col: { xs: 24, sm: 12, md: 10, lg: 8 },
+                content: (
+                  <Search
+                    placeholder="搜索用户名、邮箱或姓名"
+                    allowClear
+                    className={styles.fullWidthControl}
+                    onSearch={handleSearch}
+                  />
+                ),
+              },
+              {
+                key: 'status',
+                col: { xs: 24, sm: 12, md: 6, lg: 4 },
+                content: (
+                  <Select
+                    placeholder="状态筛选"
+                    allowClear
+                    className={styles.fullWidthControl}
+                    value={filters.status !== '' ? filters.status : undefined}
+                    onChange={handleStatusFilterChange}
                   >
-                    <Input.Password placeholder="请输入密码（至少8位，需包含大小写字母、数字和特殊字符）" />
-                  </Form.Item>
-                </Col>
-              </Row>
-            )}
-
-            {/* 第5行：状态 + 角色 */}
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item
-                  name="status"
-                  label="状态"
-                >
-                  <Select placeholder="请选择状态（默认活跃）">
                     {statusOptions.map(status => (
                       <Option key={status.value} value={status.value}>
                         {status.label}
                       </Option>
                     ))}
                   </Select>
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item
-                  name="role_id"
-                  label="角色"
-                >
-                  <Select placeholder="请选择角色（选填）">
+                ),
+              },
+              {
+                key: 'role',
+                col: { xs: 24, sm: 12, md: 6, lg: 4 },
+                content: (
+                  <Select
+                    placeholder="角色筛选"
+                    allowClear
+                    className={styles.fullWidthControl}
+                    value={filters.roleId !== '' ? filters.roleId : undefined}
+                    onChange={handleRoleFilterChange}
+                  >
                     {roles.map(role => (
                       <Option key={role.id} value={role.id}>
                         {role.name}
                       </Option>
                     ))}
                   </Select>
+                ),
+              },
+              {
+                key: 'organization',
+                col: { xs: 24, sm: 12, md: 6, lg: 4 },
+                content: (
+                  <Select
+                    placeholder="组织筛选"
+                    allowClear
+                    className={styles.fullWidthControl}
+                    value={filters.organizationId !== '' ? filters.organizationId : undefined}
+                    onChange={handleOrganizationFilterChange}
+                  >
+                    {organizations.map(org => (
+                      <Option key={org.id} value={org.id}>
+                        {org.name}
+                      </Option>
+                    ))}
+                  </Select>
+                ),
+              },
+              {
+                key: 'refresh',
+                col: { xs: 24, sm: 12, md: 4, lg: 3 },
+                content: (
+                  <Button
+                    icon={<ReloadOutlined />}
+                    onClick={refreshUsersAndStatistics}
+                    className={styles.actionButton}
+                  >
+                    刷新
+                  </Button>
+                ),
+              },
+              {
+                key: 'create',
+                col: { xs: 24, sm: 12, md: 4, lg: 3 },
+                content: (
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={handleCreate}
+                    className={styles.actionButton}
+                  >
+                    新建用户
+                  </Button>
+                ),
+              },
+            ]}
+          />
+        </div>
+
+        <TableWithPagination
+          columns={columns}
+          dataSource={users}
+          rowKey="id"
+          loading={loading}
+          paginationState={pagination}
+          onPageChange={handlePageChange}
+          paginationProps={{
+            showTotal: (total: number) => `共 ${total} 条记录`,
+          }}
+        />
+      </Card>
+
+      {/* 创建/编辑模态框 */}
+      <Modal
+        title={editingUser ? '编辑用户' : '新建用户'}
+        open={modalVisible}
+        onCancel={() => setModalVisible(false)}
+        footer={null}
+        width={600}
+      >
+        <Form form={form} layout="vertical" onFinish={handleSubmit}>
+          {/* 第1行：所属组织（全宽） */}
+          <Row gutter={16}>
+            <Col span={24}>
+              <Form.Item
+                name="default_organization_id"
+                label="所属组织"
+                rules={[{ required: true, message: '请选择所属组织' }]}
+              >
+                <Select placeholder="请选择所属组织">
+                  {organizations.map(org => (
+                    <Option key={org.id} value={org.id}>
+                      {org.name}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          {/* 第2行：姓名 + 手机号 */}
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="full_name" label="姓名" rules={[{ required: true, message: '请输入姓名' }]}>
+                <Input placeholder="请输入姓名" onChange={handleFullNameChange} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="phone"
+                label="手机号"
+                rules={[
+                  { required: true, message: '请输入手机号' },
+                  { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号格式' },
+                ]}
+              >
+                <Input placeholder="请输入手机号" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          {/* 第3行：用户名 + 邮箱 */}
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="username"
+                label="用户名"
+                rules={[
+                  { required: true, message: '请输入用户名' },
+                  { pattern: /^[a-zA-Z0-9_]+$/, message: '用户名只能包含字母、数字和下划线' },
+                ]}
+              >
+                <Input placeholder="请输入用户名（输入姓名后自动生成拼音）" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="email"
+                label="邮箱"
+                rules={[{ type: 'email', message: '请输入正确的邮箱格式' }]}
+              >
+                <Input placeholder="请输入邮箱（选填）" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          {/* 第4行：密码（仅新建时显示） */}
+          {editingUser == null && (
+            <Row gutter={16}>
+              <Col span={24}>
+                <Form.Item
+                  name="password"
+                  label="密码"
+                  rules={[
+                    { required: true, message: '请输入密码' },
+                    { min: 8, message: '密码至少8位' },
+                    {
+                      pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/,
+                      message: '密码需包含大小写字母、数字和特殊字符',
+                    },
+                  ]}
+                >
+                  <Input.Password placeholder="请输入密码（至少8位，需包含大小写字母、数字和特殊字符）" />
                 </Form.Item>
               </Col>
             </Row>
+          )}
 
-            <Form.Item style={{ textAlign: 'right', marginBottom: 0 }}>
-              <Space>
-                <Button onClick={() => setModalVisible(false)}>取消</Button>
-                <Button type="primary" htmlType="submit">
-                  {editingUser ? '更新' : '创建'}
+          {/* 第5行：状态 + 角色 */}
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="status" label="状态">
+                <Select placeholder="请选择状态（默认活跃）">
+                  {statusOptions.map(status => (
+                    <Option key={status.value} value={status.value}>
+                      {status.label}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="role_id" label="角色">
+                <Select placeholder="请选择角色（选填）">
+                  {roles.map(role => (
+                    <Option key={role.id} value={role.id}>
+                      {role.name}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item className={styles.formActions}>
+            <Space>
+              <Button onClick={() => setModalVisible(false)} className={styles.actionButton}>
+                取消
+              </Button>
+              <Button type="primary" htmlType="submit" className={styles.actionButton}>
+                {editingUser ? '更新' : '创建'}
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* 用户详情抽屉 */}
+      <Drawer
+        title="用户详情"
+        placement="right"
+        onClose={() => setDetailDrawerVisible(false)}
+        open={detailDrawerVisible}
+        size={600}
+      >
+        {selectedUser != null && (
+          <div>
+            <div className={styles.userProfileHeader}>
+              <Avatar size={80} icon={<UserOutlined />} />
+              <h3 className={styles.userProfileName}>{selectedUser.full_name}</h3>
+              <p className={styles.userProfileAccount}>@{selectedUser.username}</p>
+            </div>
+
+            <Descriptions column={1} bordered>
+              <Descriptions.Item label="用户名">{selectedUser.username}</Descriptions.Item>
+              <Descriptions.Item label="邮箱">{selectedUser.email}</Descriptions.Item>
+              <Descriptions.Item label="手机号">{selectedUser.phone ?? '未设置'}</Descriptions.Item>
+              <Descriptions.Item label="角色">
+                <Tag color="blue">{selectedUser.role_name}</Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="所属组织">{selectedUser.organization_name}</Descriptions.Item>
+              <Descriptions.Item label="状态">
+                <Space>
+                  {getStatusTag(selectedUser.status)}
+                  {selectedUser.is_locked && <Tag color="red">已锁定</Tag>}
+                </Space>
+              </Descriptions.Item>
+              <Descriptions.Item label="最后登录">
+                {(selectedUser.last_login !== null && selectedUser.last_login !== undefined) || false
+                  ? dayjs(selectedUser.last_login).format('YYYY-MM-DD HH:mm:ss')
+                  : '从未登录'}
+              </Descriptions.Item>
+              <Descriptions.Item label="创建时间">
+                {dayjs(selectedUser.created_at).format('YYYY-MM-DD HH:mm:ss')}
+              </Descriptions.Item>
+              <Descriptions.Item label="更新时间">
+                {dayjs(selectedUser.updated_at).format('YYYY-MM-DD HH:mm:ss')}
+              </Descriptions.Item>
+            </Descriptions>
+
+            <div className={styles.drawerActions}>
+              <Space className={styles.drawerActionsGroup} wrap>
+                <Button
+                  type="primary"
+                  icon={<EditOutlined />}
+                  className={styles.actionButton}
+                  onClick={() => {
+                    setDetailDrawerVisible(false);
+                    handleEdit(selectedUser);
+                  }}
+                >
+                  编辑用户
+                </Button>
+                <Button
+                  icon={selectedUser.is_locked ? <UnlockOutlined /> : <LockOutlined />}
+                  className={styles.actionButton}
+                  onClick={() => {
+                    setDetailDrawerVisible(false);
+                    handleToggleLock(selectedUser);
+                  }}
+                >
+                  {selectedUser.is_locked ? '解锁账户' : '锁定账户'}
                 </Button>
               </Space>
-            </Form.Item>
-          </Form>
-        </Modal>
-
-        {/* 用户详情抽屉 */}
-        <Drawer
-          title="用户详情"
-          placement="right"
-          onClose={() => setDetailDrawerVisible(false)}
-          open={detailDrawerVisible}
-          size={600}
-        >
-          {selectedUser && (
-            <div>
-              <div style={{ textAlign: 'center', marginBottom: 24 }}>
-                <Avatar size={80} icon={<UserOutlined />} />
-                <h3 style={{ marginTop: 16, marginBottom: 8 }}>{selectedUser.full_name}</h3>
-                <p style={{ color: COLORS.textSecondary, margin: 0 }}>@{selectedUser.username}</p>
-              </div>
-
-              <Descriptions column={1} bordered>
-                <Descriptions.Item label="用户名">{selectedUser.username}</Descriptions.Item>
-                <Descriptions.Item label="邮箱">{selectedUser.email}</Descriptions.Item>
-                <Descriptions.Item label="手机号">
-                  {selectedUser.phone || '未设置'}
-                </Descriptions.Item>
-                <Descriptions.Item label="角色">
-                  <Tag color="blue">{selectedUser.role_name}</Tag>
-                </Descriptions.Item>
-                <Descriptions.Item label="所属组织">
-                  {selectedUser.organization_name}
-                </Descriptions.Item>
-                <Descriptions.Item label="状态">
-                  <Space>
-                    {getStatusTag(selectedUser.status)}
-                    {selectedUser.is_locked && <Tag color="red">已锁定</Tag>}
-                  </Space>
-                </Descriptions.Item>
-                <Descriptions.Item label="最后登录">
-                  {(selectedUser.last_login !== null && selectedUser.last_login !== undefined) ||
-                  false
-                    ? dayjs(selectedUser.last_login).format('YYYY-MM-DD HH:mm:ss')
-                    : '从未登录'}
-                </Descriptions.Item>
-                <Descriptions.Item label="创建时间">
-                  {dayjs(selectedUser.created_at).format('YYYY-MM-DD HH:mm:ss')}
-                </Descriptions.Item>
-                <Descriptions.Item label="更新时间">
-                  {dayjs(selectedUser.updated_at).format('YYYY-MM-DD HH:mm:ss')}
-                </Descriptions.Item>
-              </Descriptions>
-
-              <div style={{ marginTop: 24, textAlign: 'center' }}>
-                <Space>
-                  <Button
-                    type="primary"
-                    icon={<EditOutlined />}
-                    onClick={() => {
-                      setDetailDrawerVisible(false);
-                      handleEdit(selectedUser);
-                    }}
-                  >
-                    编辑用户
-                  </Button>
-                  <Button
-                    icon={selectedUser.is_locked ? <UnlockOutlined /> : <LockOutlined />}
-                    onClick={() => {
-                      setDetailDrawerVisible(false);
-                      handleToggleLock(selectedUser);
-                    }}
-                  >
-                    {selectedUser.is_locked ? '解锁账户' : '锁定账户'}
-                  </Button>
-                </Space>
-              </div>
             </div>
-          )}
-        </Drawer>
+          </div>
+        )}
+      </Drawer>
     </PageContainer>
   );
 };

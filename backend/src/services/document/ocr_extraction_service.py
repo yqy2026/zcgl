@@ -135,12 +135,14 @@ class OCRExtractionService:
         try:
             from src.core.config import settings
 
-            provider_name = (
+            provider_name: str = (
                 settings.EXTRACTION_LLM_PROVIDER or settings.LLM_PROVIDER or "hunyuan"
             )
         except Exception:
-            provider_name = os.getenv("EXTRACTION_LLM_PROVIDER") or os.getenv(
-                "LLM_PROVIDER", "hunyuan"
+            provider_name = (
+                os.getenv("EXTRACTION_LLM_PROVIDER")
+                or os.getenv("LLM_PROVIDER")
+                or "hunyuan"
             )
         provider = LLMProvider.normalize(provider_name)
         service = create_llm_service(provider)

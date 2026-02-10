@@ -1,0 +1,92 @@
+.enumValuePreview {
+  width: 100%;
+}
+
+.emptyState {
+  color: var(--color-text-tertiary);
+  font-size: 12px;
+}
+
+.valueTag,
+.remainingTag {
+  margin-inline-end: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: default;
+  line-height: 1.2;
+  font-weight: var(--font-weight-medium);
+}
+
+.sizeSmall {
+  font-size: 11px;
+  padding: 1px 4px;
+  margin-bottom: 2px;
+}
+
+.sizeMiddle {
+  font-size: 12px;
+  padding: 2px 6px;
+  margin-bottom: 3px;
+}
+
+.sizeLarge {
+  font-size: 14px;
+  padding: 4px 8px;
+  margin-bottom: 4px;
+}
+
+.defaultMarker {
+  margin-left: 4px;
+  font-weight: var(--font-weight-semibold);
+}
+
+.inactiveCountText {
+  font-size: 11px;
+  color: var(--color-error);
+  margin-top: 2px;
+  line-height: 1.2;
+}
+
+.customColorTag {
+  border: none;
+}
+
+.tonePrimary {
+  color: var(--color-primary);
+}
+
+.toneSuccess {
+  color: var(--color-success);
+}
+
+.toneWarning {
+  color: var(--color-warning);
+}
+
+.toneError {
+  color: var(--color-error);
+}
+
+.valueTag.tonePrimary,
+.remainingTag.tonePrimary {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+}
+
+.valueTag.toneSuccess,
+.remainingTag.toneSuccess {
+  background: var(--color-success-light);
+  border-color: var(--color-success);
+}
+
+.valueTag.toneWarning,
+.remainingTag.toneWarning {
+  background: var(--color-warning-light);
+  border-color: var(--color-warning);
+}
+
+.valueTag.toneError,
+.remainingTag.toneError {
+  background: var(--color-error-light);
+  border-color: var(--color-error);
+}

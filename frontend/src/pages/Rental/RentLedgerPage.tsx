@@ -23,6 +23,7 @@ import {
 import { MessageManager } from '@/utils/messageManager';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
 import { ListToolbar } from '@/components/Common/ListToolbar';
+import PageContainer from '@/components/Common/PageContainer';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   SearchOutlined,
@@ -34,6 +35,7 @@ import {
   FileExcelOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import type { TableRowSelection } from 'antd/es/table/interface';
 import dayjs from 'dayjs';
 
 import {
@@ -51,11 +53,11 @@ import { ownershipService } from '@/services/ownershipService';
 import { RENTAL_QUERY_KEYS } from '@/constants/queryKeys';
 import { useFormat } from '@/utils/format';
 import { createLogger } from '@/utils/logger';
-import { COLORS } from '@/styles/colorMap';
+import styles from './RentLedgerPage.module.css';
 
 const pageLogger = createLogger('RentLedger');
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 const { Search } = Input;
 const { Option } = Select;
 
@@ -67,15 +69,52 @@ interface BatchUpdateValues {
 }
 
 type RentLedgerFilters = Omit<RentLedgerQueryParams, 'page' | 'pageSize' | 'page_size'>;
+type LedgerPaymentStatus = RentLedger['payment_status'];
+type Tone = 'primary' | 'success' | 'warning' | 'error';
+
+const resolveDisplayText = (value: string | null | undefined): string => {
+  if (value == null) {
+    return '未知';
+  }
+  const normalizedValue = value.trim();
+  return normalizedValue !== '' ? normalizedValue : '未知';
+};
+
+const normalizePercentage = (value: number): number => Math.min(100, Math.max(0, value));
+
+const resolvePaymentRateTone = (rate: number): Tone => {
+  if (rate >= 90) {
+    return 'success';
+  }
+  if (rate >= 70) {
+    return 'warning';
+  }
+  return 'error';
+};
+
+const resolvePaymentRateLabel = (rate: number): string => {
+  if (rate >= 90) {
+    return '优';
+  }
+  if (rate >= 70) {
+    return '中';
+  }
+  return '低';
+};
 
 const RentLedgerPage: React.FC = () => {
   const [form] = Form.useForm();
   const queryClient = useQueryClient();
+  const toneClassMap: Record<Tone, string> = {
+    primary: styles.tonePrimary,
+    success: styles.toneSuccess,
+    warning: styles.toneWarning,
+    error: styles.toneError,
+  };
 
   const [uiState, setUiState] = useState({
     selectedLedgers: [] as RentLedger[],
     showBatchModal: false,
-    showGenerateModal: false,
   });
   const [filters, setFilters] = useState<RentLedgerFilters>({});
   const [paginationState, setPaginationState] = useState({
@@ -84,6 +123,35 @@ const RentLedgerPage: React.FC = () => {
   });
 
   const format = useFormat();
+  const paymentStatusConfig: Record<
+    LedgerPaymentStatus,
+    {
+      icon: React.ReactNode;
+      tone: Tone;
+      assistiveText: string;
+    }
+  > = {
+    未支付: {
+      icon: <ClockCircleOutlined />,
+      tone: 'warning',
+      assistiveText: '待处理',
+    },
+    部分支付: {
+      icon: <ExclamationCircleOutlined />,
+      tone: 'warning',
+      assistiveText: '未结清',
+    },
+    已支付: {
+      icon: <CheckOutlined />,
+      tone: 'success',
+      assistiveText: '已结清',
+    },
+    逾期: {
+      icon: <ExclamationCircleOutlined />,
+      tone: 'error',
+      assistiveText: '需催缴',
+    },
+  };
 
   const {
     data: ledgersResponse,
@@ -246,7 +314,7 @@ const RentLedgerPage: React.FC = () => {
   };
 
   // 选择行变化
-  const rowSelection: object = {
+  const rowSelection: TableRowSelection<RentLedger> = {
     selectedRowKeys: uiState.selectedLedgers.map(ledger => ledger.id),
     onChange: (_selectedRowKeys: React.Key[], selectedRows: RentLedger[]) => {
       setUiState(prev => ({ ...prev, selectedLedgers: selectedRows }));
@@ -282,25 +350,25 @@ const RentLedgerPage: React.FC = () => {
       title: '合同编号',
       dataIndex: ['contract', 'contract_number'],
       key: 'contract_number',
-      render: (text: string) => text || '未知',
+      render: (text: string) => resolveDisplayText(text),
     },
     {
       title: '承租方',
       dataIndex: ['contract', 'tenant_name'],
       key: 'tenant_name',
-      render: (text: string) => text || '未知',
+      render: (text: string) => resolveDisplayText(text),
     },
     {
       title: '物业名称',
       dataIndex: ['asset', 'property_name'],
       key: 'property_name',
-      render: (text: string) => text || '未知',
+      render: (text: string) => resolveDisplayText(text),
     },
     {
       title: '权属方',
       dataIndex: ['ownership', 'name'],
       key: 'ownership_name',
-      render: (text: string) => text || '未知',
+      render: (text: string) => resolveDisplayText(text),
     },
     {
       title: '应缴日期',
@@ -320,8 +388,17 @@ const RentLedgerPage: React.FC = () => {
       dataIndex: 'paid_amount',
       key: 'paid_amount',
       render: (amount: number, record: RentLedger) => {
-        const color = amount < record.due_amount ? COLORS.error : COLORS.success;
-        return <Text style={{ color }}>{format.currency(amount)}</Text>;
+        const tone: Tone = amount < record.due_amount ? 'error' : 'success';
+        return (
+          <Space size={6} className={styles.inlineStatus} wrap>
+            <Text className={[styles.valueText, toneClassMap[tone]].join(' ')}>
+              {format.currency(amount)}
+            </Text>
+            <Tag className={[styles.statusTag, toneClassMap[tone]].join(' ')}>
+              {tone === 'error' ? '不足额' : '足额'}
+            </Tag>
+          </Space>
+        );
       },
       align: 'right' as const,
     },
@@ -331,9 +408,16 @@ const RentLedgerPage: React.FC = () => {
       key: 'overdue_amount',
       render: (amount: number) => {
         if (amount > 0) {
-          return <Text type="danger">{format.currency(amount)}</Text>;
+          return (
+            <Space size={6} className={styles.inlineStatus} wrap>
+              <Text className={[styles.valueText, styles.toneError].join(' ')}>
+                {format.currency(amount)}
+              </Text>
+              <Tag className={[styles.statusTag, styles.toneError].join(' ')}>欠款</Tag>
+            </Space>
+          );
         }
-        return '-';
+        return <Tag className={[styles.statusTag, styles.toneSuccess].join(' ')}>无欠款</Tag>;
       },
       align: 'right' as const,
     },
@@ -342,17 +426,20 @@ const RentLedgerPage: React.FC = () => {
       dataIndex: 'payment_status',
       key: 'payment_status',
       render: (status: string) => {
-        const statusConfig = {
-          未支付: { color: 'default', icon: <ClockCircleOutlined /> },
-          部分支付: { color: 'warning', icon: <ExclamationCircleOutlined /> },
-          已支付: { color: 'success', icon: <CheckOutlined /> },
-          逾期: { color: 'error', icon: <ExclamationCircleOutlined /> },
-        };
-        const config = statusConfig[status as keyof typeof statusConfig] ?? statusConfig['未支付'];
+        const config =
+          paymentStatusConfig[status as LedgerPaymentStatus] ?? paymentStatusConfig['未支付'];
         return (
-          <Tag color={config.color} icon={config.icon}>
-            {status}
-          </Tag>
+          <Space size={6} className={styles.inlineStatus} wrap>
+            <Tag
+              icon={config.icon}
+              className={[styles.statusTag, toneClassMap[config.tone]].join(' ')}
+            >
+              {status}
+            </Tag>
+            <Text type="secondary" className={styles.statusAssistText}>
+              {config.assistiveText}
+            </Text>
+          </Space>
         );
       },
     },
@@ -367,7 +454,7 @@ const RentLedgerPage: React.FC = () => {
       key: 'actions',
       width: 150,
       render: (_, record: RentLedger) => (
-        <Space size="small">
+        <Space size="small" className={styles.tableActionGroup}>
           {record.payment_status !== '已支付' && (
             <Tooltip title="快速支付">
               <Button
@@ -375,6 +462,8 @@ const RentLedgerPage: React.FC = () => {
                 size="small"
                 icon={<CheckOutlined />}
                 onClick={() => handleQuickPayment(record)}
+                aria-label={`快速支付 ${record.year_month}`}
+                className={styles.tableActionButton}
               />
             </Tooltip>
           )}
@@ -382,6 +471,8 @@ const RentLedgerPage: React.FC = () => {
             <Button
               type="text"
               icon={<EditOutlined />}
+              aria-label={`编辑 ${record.year_month}`}
+              className={styles.tableActionButton}
               onClick={() => {
                 form.setFieldsValue({
                   payment_status: record.payment_status,
@@ -399,19 +490,21 @@ const RentLedgerPage: React.FC = () => {
     },
   ];
 
-  return (
-    <div style={{ padding: '24px' }}>
-      {/* 页面标题 */}
-      <div style={{ marginBottom: '24px' }}>
-        <Title level={2}>租金台账管理</Title>
-        <p style={{ color: COLORS.textSecondary }}>管理物业租金台账，支持支付状态更新和统计分析</p>
-      </div>
+  const paymentRateTone = resolvePaymentRateTone(Number(statisticsData?.payment_rate ?? 0));
+  const paymentRateLabel = resolvePaymentRateLabel(Number(statisticsData?.payment_rate ?? 0));
+  const overdueTone: Tone = Number(statisticsData?.total_overdue ?? 0) > 0 ? 'error' : 'success';
 
+  return (
+    <PageContainer
+      title="租金台账管理"
+      subTitle="管理物业租金台账，支持支付状态更新和统计分析"
+      className={styles.ledgerPage}
+    >
       {/* 统计卡片 */}
       {statisticsData != null && (
-        <Row gutter={16} style={{ marginBottom: '24px' }}>
-          <Col span={6}>
-            <Card>
+        <Row gutter={[16, 16]} className={styles.overviewRow}>
+          <Col xs={24} sm={12} lg={6}>
+            <Card className={[styles.metricCard, styles.tonePrimary].join(' ')}>
               <Statistic
                 title="应收总额"
                 value={statisticsData.total_due}
@@ -421,8 +514,8 @@ const RentLedgerPage: React.FC = () => {
               />
             </Card>
           </Col>
-          <Col span={6}>
-            <Card>
+          <Col xs={24} sm={12} lg={6}>
+            <Card className={[styles.metricCard, styles.toneSuccess].join(' ')}>
               <Statistic
                 title="已收总额"
                 value={statisticsData.total_paid}
@@ -432,62 +525,63 @@ const RentLedgerPage: React.FC = () => {
               />
             </Card>
           </Col>
-          <Col span={6}>
-            <Card>
+          <Col xs={24} sm={12} lg={6}>
+            <Card className={[styles.metricCard, toneClassMap[overdueTone]].join(' ')}>
               <Statistic
                 title="欠款总额"
                 value={statisticsData.total_overdue}
                 precision={2}
                 prefix={<DollarOutlined />}
                 suffix="元"
-                styles={{ content: { color: COLORS.error } }}
               />
+              <Tag className={[styles.statusTag, toneClassMap[overdueTone], styles.metricTag].join(' ')}>
+                {overdueTone === 'error' ? '需催缴' : '正常'}
+              </Tag>
             </Card>
           </Col>
-          <Col span={6}>
-            <Card>
+          <Col xs={24} sm={12} lg={6}>
+            <Card className={[styles.metricCard, toneClassMap[paymentRateTone]].join(' ')}>
               <Statistic
                 title="收缴率"
-                value={statisticsData.payment_rate}
+                value={normalizePercentage(Number(statisticsData.payment_rate))}
                 precision={2}
                 suffix="%"
-                styles={{
-                  content: {
-                    color: statisticsData.payment_rate > 80 ? COLORS.success : COLORS.error,
-                  },
-                }}
               />
+              <Tag className={[styles.statusTag, toneClassMap[paymentRateTone], styles.metricTag].join(' ')}>
+                {paymentRateLabel}
+              </Tag>
             </Card>
           </Col>
         </Row>
       )}
 
       {/* 搜索区域 */}
-      <Card style={{ marginBottom: '24px' }}>
+      <Card className={styles.filterCard}>
         <ListToolbar
           variant="plain"
           gutter={[16, 16]}
           items={[
             {
               key: 'search',
-              col: { span: 4 },
+              col: { xs: 24, sm: 12, lg: 4 },
               content: (
                 <Search
                   placeholder="搜索合同或承租方"
                   onSearch={value => handleSearch({ keyword: value })}
                   enterButton={<SearchOutlined />}
+                  className={styles.filterControl}
                 />
               ),
             },
             {
               key: 'asset',
-              col: { span: 4 },
+              col: { xs: 24, sm: 12, lg: 4 },
               content: (
                 <Select
                   placeholder="选择物业"
-                  style={{ width: '100%' }}
                   allowClear
                   onChange={value => handleSearch({ asset_id: value })}
+                  className={styles.filterControl}
                 >
                   {assets.map(asset => (
                     <Option key={asset.id} value={asset.id}>
@@ -499,13 +593,13 @@ const RentLedgerPage: React.FC = () => {
             },
             {
               key: 'ownership',
-              col: { span: 4 },
+              col: { xs: 24, sm: 12, lg: 4 },
               content: (
                 <Select
                   placeholder="选择权属方"
-                  style={{ width: '100%' }}
                   allowClear
                   onChange={value => handleSearch({ ownership_id: value })}
+                  className={styles.filterControl}
                 >
                   {ownerships.map(ownership => (
                     <Option key={ownership.id} value={ownership.id}>
@@ -517,13 +611,13 @@ const RentLedgerPage: React.FC = () => {
             },
             {
               key: 'status',
-              col: { span: 4 },
+              col: { xs: 24, sm: 12, lg: 4 },
               content: (
                 <Select
                   placeholder="支付状态"
-                  style={{ width: '100%' }}
                   allowClear
                   onChange={value => handleSearch({ payment_status: value })}
+                  className={styles.filterControl}
                 >
                   <Option value="未支付">未支付</Option>
                   <Option value="部分支付">部分支付</Option>
@@ -534,20 +628,25 @@ const RentLedgerPage: React.FC = () => {
             },
             {
               key: 'month',
-              col: { span: 4 },
+              col: { xs: 24, sm: 12, lg: 4 },
               content: (
-                <DatePicker.MonthPicker
+                <DatePicker
+                  picker="month"
                   placeholder="选择月份"
-                  style={{ width: '100%' }}
-                  onChange={(_date, dateString) => handleSearch({ year_month: dateString })}
+                  className={styles.filterControl}
+                  onChange={(_date, dateString) => {
+                    if (typeof dateString === 'string') {
+                      handleSearch({ year_month: dateString });
+                    }
+                  }}
                 />
               ),
             },
             {
               key: 'actions',
-              col: { span: 4 },
+              col: { xs: 24, sm: 12, lg: 4 },
               content: (
-                <Space>
+                <Space className={styles.toolbarActions} size={8} wrap>
                   <Button onClick={handleReset}>重置</Button>
                   <Button type="primary" icon={<FileExcelOutlined />} onClick={handleExport}>
                     导出
@@ -565,9 +664,9 @@ const RentLedgerPage: React.FC = () => {
           title={`已选择 ${uiState.selectedLedgers.length} 条记录`}
           type="info"
           showIcon
-          style={{ marginBottom: 16 }}
+          className={styles.selectionAlert}
           action={
-            <Space>
+            <Space size={8} wrap>
               <Button
                 type="primary"
                 size="small"
@@ -587,7 +686,7 @@ const RentLedgerPage: React.FC = () => {
       )}
 
       {/* 台账列表 */}
-      <Card>
+      <Card className={styles.tableCard}>
         <TableWithPagination
           columns={columns}
           dataSource={ledgers}
@@ -623,7 +722,7 @@ const RentLedgerPage: React.FC = () => {
           </Form.Item>
 
           <Form.Item name="payment_date" label="支付日期">
-            <DatePicker style={{ width: '100%' }} />
+            <DatePicker className={styles.fullWidthInput} />
           </Form.Item>
 
           <Form.Item name="payment_method" label="支付方式">
@@ -640,7 +739,7 @@ const RentLedgerPage: React.FC = () => {
           </Form.Item>
 
           <Form.Item>
-            <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
+            <Space className={styles.modalFooterActions}>
               <Button onClick={() => setUiState(prev => ({ ...prev, showBatchModal: false }))}>
                 取消
               </Button>
@@ -651,7 +750,7 @@ const RentLedgerPage: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
-    </div>
+    </PageContainer>
   );
 };
 

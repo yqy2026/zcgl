@@ -183,7 +183,7 @@ class CacheDecorator:
             )
             return result
 
-        return cast(Callable[P, Any], sync_wrapper)
+        return sync_wrapper
 
 
 # 常用缓存装饰器

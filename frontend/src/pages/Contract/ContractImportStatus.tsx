@@ -40,9 +40,11 @@ import {
   type CompleteResult,
   type FileInfo,
 } from '@/services/pdfImportService';
-import { COLORS } from '@/styles/colorMap';
+import styles from './ContractImportStatus.module.css';
 
 const { Title, Text } = Typography;
+
+type StatusTone = 'success' | 'warning' | 'error' | 'primary';
 
 interface ContractImportStatusProps {
   sessionId: string;
@@ -59,6 +61,34 @@ interface ProcessingStep {
   status: 'wait' | 'process' | 'finish' | 'error';
   details?: string;
 }
+
+const getStatusTone = (status: string): StatusTone => {
+  switch (status) {
+    case 'ready_for_review':
+      return 'success';
+    case 'failed':
+    case 'cancelled':
+      return 'error';
+    case 'completed':
+      return 'primary';
+    default:
+      return 'warning';
+  }
+};
+
+const getStatusToneClassName = (status: string): string => {
+  const tone = getStatusTone(status);
+  if (tone === 'success') {
+    return styles.toneSuccess;
+  }
+  if (tone === 'error') {
+    return styles.toneError;
+  }
+  if (tone === 'primary') {
+    return styles.tonePrimary;
+  }
+  return styles.toneWarning;
+};
 
 const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
   sessionId,
@@ -214,21 +244,6 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
     MessageManager.info('下载功能待实现');
   };
 
-  // 获取状态颜色
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'ready_for_review':
-        return COLORS.success;
-      case 'failed':
-      case 'cancelled':
-        return COLORS.error;
-      case 'completed':
-        return COLORS.primary;
-      default:
-        return COLORS.warning;
-    }
-  };
-
   // 获取状态文本
   const getStatusText = (status: string) => {
     switch (status) {
@@ -271,14 +286,14 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
   };
 
   return (
-    <div className="contract-import-status">
+    <div className={styles.statusPage}>
       {/* 头部信息 */}
-      <Card style={{ marginBottom: 16 }}>
-        <Row justify="space-between" align="middle">
+      <Card className={styles.sectionCard}>
+        <Row justify="space-between" align="middle" gutter={[16, 16]}>
           <Col>
-            <Space size="large">
+            <Space size="large" className={styles.headerMeta}>
               <div>
-                <Title level={4} style={{ margin: 0 }}>
+                <Title level={4} className={styles.headerTitle}>
                   PDF合同处理状态
                 </Title>
                 <Text type="secondary">会话ID: {sessionId}</Text>
@@ -286,7 +301,7 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
             </Space>
           </Col>
           <Col>
-            <Space>
+            <Space className={styles.headerActions} wrap>
               <Button icon={<ReloadOutlined />} onClick={handleRefresh} loading={!currentProgress}>
                 刷新
               </Button>
@@ -305,28 +320,19 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
 
       {/* 当前状态 */}
       {currentProgress && (
-        <Card style={{ marginBottom: 16 }}>
+        <Card className={styles.sectionCard}>
           <Row gutter={16} align="middle">
             <Col flex="auto">
               <Space>
                 <div
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: '50%',
-                    backgroundColor: getStatusColor(currentProgress.status),
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'white',
-                  }}
+                  className={`${styles.statusIconBadge} ${getStatusToneClassName(currentProgress.status)}`}
                 >
                   {getStatusIcon(currentProgress.status)}
                 </div>
                 <div>
                   <Title
                     level={5}
-                    style={{ margin: 0, color: getStatusColor(currentProgress.status) }}
+                    className={`${styles.statusTitle} ${getStatusToneClassName(currentProgress.status)}`}
                   >
                     {getStatusText(currentProgress.status)}
                   </Title>
@@ -340,11 +346,7 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
                 value={currentProgress.progress}
                 precision={0}
                 suffix="%"
-                styles={{
-                  content: {
-                    color: getStatusColor(currentProgress.status),
-                  },
-                }}
+                className={`${styles.statusStatistic} ${getStatusToneClassName(currentProgress.status)}`}
               />
             </Col>
           </Row>
@@ -355,14 +357,14 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
               description={currentProgress.error_message}
               type="error"
               showIcon
-              style={{ marginTop: 16 }}
+              className={styles.inlineErrorAlert}
             />
           )}
         </Card>
       )}
 
       {/* 处理步骤 */}
-      <Card title="处理步骤" style={{ marginBottom: 16 }}>
+      <Card title="处理步骤" className={styles.sectionCard}>
         <Steps
           current={steps.findIndex(step => step.status === 'process')}
           status={steps.some(step => step.status === 'error') ? 'error' : 'process'}
@@ -373,7 +375,7 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
               <div>
                 <div>{step.description}</div>
                 {step.details != null && (
-                  <Text type="secondary" style={{ fontSize: 12 }}>
+                  <Text type="secondary" className={styles.stepDetailText}>
                     {step.details}
                   </Text>
                 )}
@@ -387,9 +389,11 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
 
       {/* 详细信息 */}
       <Card>
-        <Row justify="space-between" align="middle" style={{ marginBottom: 16 }}>
+        <Row justify="space-between" align="middle" className={styles.detailsHeaderRow}>
           <Col>
-            <Title level={5}>处理详情</Title>
+            <Title level={5} className={styles.detailsTitle}>
+              处理详情
+            </Title>
           </Col>
           <Col>
             <Button type="text" onClick={() => setShowDetailsModal(true)}>
@@ -448,41 +452,41 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
 
       {/* 结果统计 */}
       {result && (
-        <Card title="处理结果统计" style={{ marginTop: 16 }}>
-          <Row gutter={16}>
-            <Col span={6}>
+        <Card title="处理结果统计" className={styles.resultCard}>
+          <Row gutter={[16, 16]}>
+            <Col xs={24} sm={12} xl={6}>
               <Statistic
                 title="提取字段数"
                 value={result.extraction_result.processed_fields}
                 suffix={`/ ${result.extraction_result.total_fields}`}
-                styles={{ content: { color: COLORS.success } }}
+                className={`${styles.resultStatistic} ${styles.toneSuccess}`}
               />
             </Col>
-            <Col span={6}>
+            <Col xs={24} sm={12} xl={6}>
               <Statistic
                 title="验证评分"
                 value={result.validation_result.validation_score}
                 precision={2}
                 suffix="%"
-                styles={{ content: { color: COLORS.success } }}
+                className={`${styles.resultStatistic} ${styles.toneSuccess}`}
               />
             </Col>
-            <Col span={6}>
+            <Col xs={24} sm={12} xl={6}>
               <Statistic
                 title="匹配置信度"
                 value={result.matching_result.match_confidence}
                 precision={2}
                 suffix="%"
-                styles={{ content: { color: COLORS.success } }}
+                className={`${styles.resultStatistic} ${styles.toneSuccess}`}
               />
             </Col>
-            <Col span={6}>
+            <Col xs={24} sm={12} xl={6}>
               <Statistic
                 title="总体评分"
                 value={result.summary.total_confidence}
                 precision={2}
                 suffix="%"
-                styles={{ content: { color: COLORS.success } }}
+                className={`${styles.resultStatistic} ${styles.toneSuccess}`}
               />
             </Col>
           </Row>
@@ -544,7 +548,7 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
               <Text code>{sessionId}</Text>
             </Descriptions.Item>
             <Descriptions.Item label="当前状态">
-              <Tag color={getStatusColor(currentProgress.status)}>
+              <Tag className={`${styles.statusTag} ${getStatusToneClassName(currentProgress.status)}`}>
                 {getStatusText(currentProgress.status)}
               </Tag>
             </Descriptions.Item>

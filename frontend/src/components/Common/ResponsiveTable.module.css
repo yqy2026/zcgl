@@ -1,0 +1,40 @@
+.cardList {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.cardListItem {
+  width: 100%;
+}
+
+.mobileCard {
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+}
+
+.mobileCard :global(.ant-card-body) {
+  padding: var(--spacing-md);
+}
+
+.cardFieldRow {
+  margin-bottom: var(--spacing-sm);
+}
+
+.cardFieldRow:last-child {
+  margin-bottom: 0;
+}
+
+.cardFieldLabel {
+  margin-bottom: 4px;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.cardFieldValue {
+  color: var(--color-text-primary);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  word-break: break-word;
+}

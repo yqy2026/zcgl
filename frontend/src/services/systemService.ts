@@ -73,6 +73,7 @@ export const userService = {
     status?: string;
     role_id?: string;
     organization_id?: string;
+    default_organization_id?: string;
   }): Promise<UserListResponse> {
     const { default_organization_id, ...rest } = params ?? {};
     const requestParams =

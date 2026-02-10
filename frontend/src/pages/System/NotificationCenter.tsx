@@ -11,7 +11,6 @@ import {
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/zh-cn';
-import { COLORS } from '@/styles/colorMap';
 
 dayjs.extend(relativeTime);
 dayjs.locale('zh-cn');
@@ -19,6 +18,8 @@ dayjs.locale('zh-cn');
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { notificationService } from '@/services/notificationService';
+import PageContainer from '@/components/Common/PageContainer';
+import styles from './NotificationCenter.module.css';
 import {
   Notification,
   NotificationType,
@@ -31,6 +32,36 @@ const { Text, Paragraph } = Typography;
 interface NotificationFilters {
   type: string;
 }
+
+type Tone = 'primary' | 'success' | 'warning' | 'error';
+
+const PRIORITY_META_MAP: Record<
+  NotificationPriority,
+  {
+    label: string;
+    tone: Tone;
+  }
+> = {
+  [NotificationPriority.URGENT]: { label: '紧急', tone: 'error' },
+  [NotificationPriority.HIGH]: { label: '重要', tone: 'warning' },
+  [NotificationPriority.NORMAL]: { label: '普通', tone: 'primary' },
+  [NotificationPriority.LOW]: { label: '一般', tone: 'success' },
+};
+
+const TYPE_META_MAP: Record<
+  NotificationType,
+  {
+    label: string;
+    tone: Tone;
+  }
+> = {
+  [NotificationType.CONTRACT_EXPIRING]: { label: '合同提醒', tone: 'warning' },
+  [NotificationType.CONTRACT_EXPIRED]: { label: '合同到期', tone: 'error' },
+  [NotificationType.PAYMENT_OVERDUE]: { label: '逾期提醒', tone: 'error' },
+  [NotificationType.PAYMENT_DUE]: { label: '支付提醒', tone: 'primary' },
+  [NotificationType.APPROVAL_PENDING]: { label: '待办审批', tone: 'warning' },
+  [NotificationType.SYSTEM_NOTICE]: { label: '系统通知', tone: 'success' },
+};
 
 const NotificationCenter: React.FC = () => {
   const navigate = useNavigate();
@@ -69,6 +100,7 @@ const NotificationCenter: React.FC = () => {
   }, [notificationsError]);
 
   const notifications = notificationsResponse?.items ?? [];
+  const unreadCount = notificationsResponse?.unread_count ?? 0;
   const loading = isNotificationsLoading || isNotificationsFetching;
   const pagination = useMemo(
     () => ({
@@ -82,6 +114,12 @@ const NotificationCenter: React.FC = () => {
   const refreshNotifications = useCallback(() => {
     void refetchNotifications();
   }, [refetchNotifications]);
+  const toneClassMap: Record<Tone, string> = {
+    primary: styles.tonePrimary,
+    success: styles.toneSuccess,
+    warning: styles.toneWarning,
+    error: styles.toneError,
+  };
 
   // 处理Tab切换
   const handleTabChange = useCallback(
@@ -171,43 +209,53 @@ const NotificationCenter: React.FC = () => {
     switch (type) {
       case NotificationType.CONTRACT_EXPIRING:
       case NotificationType.CONTRACT_EXPIRED:
-        return <ClockCircleOutlined style={{ color: COLORS.warning }} />;
+        return <ClockCircleOutlined className={`${styles.notificationTypeIcon} ${styles.warningIcon}`} />;
       case NotificationType.PAYMENT_OVERDUE:
-        return <ExclamationCircleOutlined style={{ color: COLORS.error }} />;
+        return <ExclamationCircleOutlined className={`${styles.notificationTypeIcon} ${styles.errorIcon}`} />;
       case NotificationType.PAYMENT_DUE:
-        return <InfoCircleOutlined style={{ color: COLORS.primary }} />;
+        return <InfoCircleOutlined className={`${styles.notificationTypeIcon} ${styles.infoIcon}`} />;
       case NotificationType.APPROVAL_PENDING:
-        return <CheckOutlined style={{ color: COLORS.success }} />;
+        return <CheckOutlined className={`${styles.notificationTypeIcon} ${styles.successIcon}`} />;
       default:
-        return <BellOutlined style={{ color: COLORS.primary }} />;
+        return <BellOutlined className={`${styles.notificationTypeIcon} ${styles.infoIcon}`} />;
     }
   };
 
   // 获取优先级标签
   const getPriorityTag = (priority: NotificationPriority) => {
-    switch (priority) {
-      case NotificationPriority.URGENT:
-        return <Tag color="red">紧急</Tag>;
-      case NotificationPriority.HIGH:
-        return <Tag color="orange">重要</Tag>;
-      case NotificationPriority.LOW:
-        return <Tag color="blue">一般</Tag>;
-      default:
-        return null;
-    }
+    const meta = PRIORITY_META_MAP[priority] ?? PRIORITY_META_MAP[NotificationPriority.NORMAL];
+    return (
+      <Tag className={[styles.priorityTag, toneClassMap[meta.tone]].join(' ')}>{meta.label}</Tag>
+    );
+  };
+
+  const getTypeTag = (type: NotificationType) => {
+    const meta = TYPE_META_MAP[type] ?? TYPE_META_MAP[NotificationType.SYSTEM_NOTICE];
+    return <Tag className={[styles.typeTag, toneClassMap[meta.tone]].join(' ')}>{meta.label}</Tag>;
   };
 
   return (
-    <div style={{ padding: '24px' }}>
+    <PageContainer title="通知中心" subTitle="集中查看业务提醒、系统通知与待办消息">
       <Card
+        className={styles.notificationCard}
         title={
-          <Space>
-            <BellOutlined />
+          <Space size={8} className={styles.headerTitle}>
+            <Badge count={unreadCount} size="small">
+              <BellOutlined className={styles.headerIcon} />
+            </Badge>
             <span>通知中心</span>
+            <Text type="secondary" className={styles.headerMeta}>
+              共 {pagination.total} 条
+            </Text>
           </Space>
         }
         extra={
-          <Button icon={<CheckOutlined />} onClick={handleMarkAllAsRead}>
+          <Button
+            icon={<CheckOutlined />}
+            onClick={handleMarkAllAsRead}
+            className={styles.headerActionButton}
+            disabled={unreadCount === 0}
+          >
             全部已读
           </Button>
         }
@@ -215,6 +263,7 @@ const NotificationCenter: React.FC = () => {
         <Tabs
           activeKey={filters.type}
           onChange={handleTabChange}
+          className={styles.tabs}
           items={[
             { label: '全部消息', key: 'all' },
             { label: '合同提醒', key: NotificationType.CONTRACT_EXPIRING },
@@ -225,20 +274,21 @@ const NotificationCenter: React.FC = () => {
         />
 
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '40px' }}>
+          <div className={styles.loadingContainer}>
             <Spin size="large" />
           </div>
         ) : (
           <List
+            className={styles.notificationList}
             dataSource={notifications}
             pagination={{
-                current: pagination.current,
-                pageSize: pagination.pageSize,
-                total: pagination.total,
-                onChange: (page, pageSize) => {
-                  handlePageChange(page, pageSize);
-                },
-              }}
+              current: pagination.current,
+              pageSize: pagination.pageSize,
+              total: pagination.total,
+              onChange: (page, pageSize) => {
+                handlePageChange(page, pageSize);
+              },
+            }}
             locale={{ emptyText: <Empty description="暂无通知" /> }}
             renderItem={item => (
               <List.Item
@@ -246,12 +296,13 @@ const NotificationCenter: React.FC = () => {
                   <Button
                     key="read"
                     type="text"
-                    size="small"
+                    className={styles.listActionButton}
                     disabled={item.is_read}
                     onClick={e => {
                       e.stopPropagation();
                       handleMarkAsRead(item.id);
                     }}
+                    aria-label={`标记通知 ${item.title} 为已读`}
                   >
                     {item.is_read ? '已读' : '标为已读'}
                   </Button>,
@@ -259,48 +310,47 @@ const NotificationCenter: React.FC = () => {
                     key="delete"
                     type="text"
                     danger
-                    size="small"
+                    className={styles.listActionButton}
                     onClick={e => {
                       e.stopPropagation();
                       handleDelete(item.id);
                     }}
+                    aria-label={`删除通知 ${item.title}`}
                   >
                     删除
                   </Button>,
                 ]}
-                style={{
-                  cursor: 'pointer',
-                  backgroundColor: item.is_read ? 'transparent' : COLORS.infoLight,
-                  padding: '12px 24px',
-                  borderRadius: '4px',
-                  marginBottom: '8px',
-                  transition: 'all 0.3s',
-                }}
+                className={[
+                  styles.notificationItem,
+                  item.is_read ? '' : styles.notificationItemUnread,
+                ].join(' ')}
+                role="button"
+                tabIndex={0}
                 onClick={() => handleItemClick(item)}
+                onKeyDown={event => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    handleItemClick(item);
+                  }
+                }}
               >
                 <List.Item.Meta
                   avatar={
-                    <div
-                      style={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: '50%',
-                        backgroundColor: COLORS.bgPrimary,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        border: '1px solid ' + COLORS.borderLight,
-                      }}
-                    >
+                    <div className={styles.notificationAvatar}>
                       {getIcon(item.type)}
                     </div>
                   }
                   title={
-                    <Space>
-                      {!item.is_read && <Badge status="processing" />}
-                      <Text strong={!item.is_read}>{item.title}</Text>
+                    <Space size={8} className={styles.notificationTitle}>
+                      {item.is_read === false && (
+                        <Tag className={[styles.statusTag, styles.tonePrimary].join(' ')}>未读</Tag>
+                      )}
+                      <Text strong={!item.is_read} className={styles.notificationTitleText}>
+                        {item.title}
+                      </Text>
+                      {getTypeTag(item.type)}
                       {getPriorityTag(item.priority)}
-                      <Text type="secondary" style={{ fontSize: '12px' }}>
+                      <Text type="secondary" className={styles.notificationTime}>
                         {dayjs(item.created_at).fromNow()}
                       </Text>
                     </Space>
@@ -308,10 +358,10 @@ const NotificationCenter: React.FC = () => {
                   description={
                     <Paragraph
                       ellipsis={{ rows: 2 }}
-                      style={{
-                        margin: 0,
-                        color: item.is_read ? COLORS.textTertiary : COLORS.textPrimary,
-                      }}
+                      className={[
+                        styles.notificationDescription,
+                        item.is_read ? styles.notificationDescriptionRead : styles.notificationDescriptionUnread,
+                      ].join(' ')}
                     >
                       {item.content}
                     </Paragraph>
@@ -322,7 +372,7 @@ const NotificationCenter: React.FC = () => {
           />
         )}
       </Card>
-    </div>
+    </PageContainer>
   );
 };
 

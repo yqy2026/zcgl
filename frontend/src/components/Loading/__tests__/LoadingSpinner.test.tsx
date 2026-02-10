@@ -34,7 +34,7 @@ describe('LoadingSpinner', () => {
     // antd 的 Spin 组件会根据 size 添加不同的类
     const sizeClass = size === 'small' ? 'ant-spin-sm' : 'ant-spin-lg';
     if (size !== 'default') {
-      expect(spinner?.querySelector(`.${sizeClass}`)).toBeInTheDocument();
+      expect(container.querySelector(`.${sizeClass}`)).toBeInTheDocument();
     }
   });
 

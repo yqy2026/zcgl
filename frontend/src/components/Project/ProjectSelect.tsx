@@ -183,6 +183,7 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
             onClick={openSelectModal}
             disabled={disabled}
             size={size}
+            aria-label="从列表中选择"
           />
         </Tooltip>
 
@@ -193,6 +194,7 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
               onClick={handleCreateProject}
               disabled={disabled}
               size={size}
+              aria-label="创建新项目"
             />
           </Tooltip>
         )}
@@ -204,6 +206,7 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
             disabled={disabled}
             loading={loading}
             size={size}
+            aria-label="刷新"
           />
         </Tooltip>
       </Space.Compact>

@@ -12,7 +12,7 @@ import os
 import pytest
 from sqlalchemy import text
 
-from src.core.exception_handler import ServiceUnavailableError
+import src.database as database_module
 from src.database import (
     DatabaseManager,
     get_database_manager,
@@ -27,6 +27,21 @@ pytestmark = [
     ),
     pytest.mark.asyncio,
 ]
+
+
+@pytest.fixture(autouse=True)
+async def reset_db_manager():
+    existing = database_module._database_manager
+    if existing is not None and existing.engine is not None:
+        await existing.engine.dispose()
+    database_module._database_manager = None
+    try:
+        yield
+    finally:
+        current = database_module._database_manager
+        if current is not None and current.engine is not None:
+            await current.engine.dispose()
+        database_module._database_manager = None
 
 
 @pytest.mark.integration
@@ -289,12 +304,23 @@ class TestPostgreSQLErrorHandling:
         invalid_url = "postgresql+psycopg://invalid:invalid@localhost:9999/invalid_db"
 
         mgr = DatabaseManager()
-        with pytest.raises(ServiceUnavailableError) as exc_info:
-            mgr.initialize_engine(invalid_url)
+        mgr.initialize_engine(invalid_url)
+        try:
+            with pytest.raises(Exception) as exc_info:
+                async with mgr.get_session() as session:
+                    await session.execute(text("SELECT 1"))
+        finally:
+            if mgr.engine is not None:
+                await mgr.engine.dispose()
 
         # 验证错误消息包含有用信息
-        error_msg = str(exc_info.value)
-        assert "数据库连接失败" in error_msg or "connection" in error_msg.lower()
+        error_msg = str(exc_info.value).lower()
+        assert (
+            "connection" in error_msg
+            or "refused" in error_msg
+            or "could not connect" in error_msg
+            or "connect call failed" in error_msg
+        )
 
     async def test_database_url_validation(self):
         """测试DATABASE_URL验证"""

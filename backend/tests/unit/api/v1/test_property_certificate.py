@@ -65,7 +65,13 @@ class TestUploadCertificate:
         monkeypatch.setattr(
             PropertyCertificateService, "extract_from_file", fake_extract
         )
-        monkeypatch.setattr(PropertyCertificateService, "match_assets", lambda *_: [])
+
+        async def fake_match_assets(*_args, **_kwargs):
+            return []
+
+        monkeypatch.setattr(
+            PropertyCertificateService, "match_assets", fake_match_assets
+        )
 
         response = client.post(
             "/api/v1/property-certificates/upload",

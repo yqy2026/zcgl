@@ -1,0 +1,103 @@
+.inlineLinkButton {
+  padding: 0 !important;
+  height: auto;
+  font-weight: var(--font-weight-medium);
+}
+
+.shortNameText {
+  margin-left: 8px;
+  font-size: 12px;
+}
+
+.statusBadge {
+  margin-left: 12px;
+}
+
+.statsRow {
+  margin-bottom: 24px;
+}
+
+.statsCard {
+  height: 100%;
+}
+
+.tonePrimary {
+  color: var(--color-primary);
+}
+
+.toneSuccess {
+  color: var(--color-success);
+}
+
+.toneWarning {
+  color: var(--color-warning);
+}
+
+.toneError {
+  color: var(--color-error);
+}
+
+.toneNeutral {
+  color: var(--color-text-secondary);
+}
+
+.tonePrimary :global(.ant-statistic-content),
+.toneSuccess :global(.ant-statistic-content),
+.toneWarning :global(.ant-statistic-content),
+.toneError :global(.ant-statistic-content),
+.toneNeutral :global(.ant-statistic-content) {
+  color: inherit;
+}
+
+.detailsCard {
+  margin-bottom: 24px;
+}
+
+.countTag {
+  margin-inline-end: 0;
+  border-radius: 999px;
+  padding-inline: 8px;
+  font-weight: var(--font-weight-medium);
+  border: 1px solid transparent;
+}
+
+.countTag.tonePrimary {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+}
+
+.countTag.toneSuccess {
+  background: var(--color-success-light);
+  border-color: var(--color-success);
+}
+
+.countTag.toneWarning {
+  background: var(--color-warning-light);
+  border-color: var(--color-warning);
+}
+
+.countTag.toneError {
+  background: var(--color-error-light);
+  border-color: var(--color-error);
+}
+
+.countTag.toneNeutral {
+  background: var(--color-bg-secondary);
+  border-color: var(--color-border-light);
+}
+
+.tabLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tabCard :global(.ant-card-body) {
+  padding-top: 16px;
+}
+
+@media (max-width: 768px) {
+  .statusBadge {
+    margin-left: 8px;
+  }
+}

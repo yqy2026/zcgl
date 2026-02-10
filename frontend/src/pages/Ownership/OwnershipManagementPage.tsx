@@ -3,26 +3,15 @@
  */
 
 import React, { Suspense } from 'react';
-import { Spin, Row, Col, Typography } from 'antd';
-import { COLORS } from '@/styles/colorMap';
+import { Spin } from 'antd';
+import PageContainer from '@/components/Common/PageContainer';
 
 // 动态导入权属方列表组件
 const OwnershipList = React.lazy(() => import('@/components/Ownership/OwnershipList'));
-const { Title } = Typography;
 
 const OwnershipManagementPage: React.FC = () => {
   return (
-    <div className="ownership-management-page" style={{ padding: '24px' }}>
-      <div style={{ marginBottom: '24px' }}>
-        <Row justify="space-between" align="middle">
-          <Col>
-            <Title level={2} style={{ margin: 0 }}>
-              权属方管理
-            </Title>
-          </Col>
-        </Row>
-      </div>
-
+    <PageContainer title="权属方管理" subTitle="维护权属主体信息及关联资产关系">
       {/* 权属方列表 */}
       <Suspense
         fallback={
@@ -30,17 +19,16 @@ const OwnershipManagementPage: React.FC = () => {
             style={{
               padding: '60px',
               textAlign: 'center',
-              backgroundColor: COLORS.bgSecondary,
             }}
           >
             <Spin size="large" />
-            <div style={{ marginTop: '16' }}>正在加载权属方管理功能...</div>
+            <div style={{ marginTop: 16 }}>正在加载权属方管理功能...</div>
           </div>
         }
       >
         <OwnershipList />
       </Suspense>
-    </div>
+    </PageContainer>
   );
 };
 

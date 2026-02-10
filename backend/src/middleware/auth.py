@@ -140,10 +140,10 @@ def _is_token_blacklisted(
 
     if not _token_blacklist_circuit.allow_request():
         logger.error(
-            "Token blacklist check degraded. Enforcing fail-closed in production."
+            "Token blacklist check degraded. Enforcing fail-closed in all environments."
         )
         _record_token_blacklist_degraded("circuit_open", jti, user_id)
-        return is_production()
+        return True
 
     try:
         from ..security.token_blacklist import blacklist_manager
@@ -160,7 +160,7 @@ def _is_token_blacklisted(
         _token_blacklist_circuit.record_failure()
         logger.warning(f"Error checking token blacklist: {e}")
         _record_token_blacklist_error(e, jti, user_id)
-        return is_production()
+        return True
 
 
 _token_blacklist_circuit = CircuitBreaker(max_failures=5, cooldown=60)
@@ -251,9 +251,7 @@ def _validate_jwt_token(token: str) -> TokenData:
     return token_data
 
 
-
 async def get_current_user(
-    request: Request,
     auth_token: str | None = Cookie(None, alias=cookie_manager.cookie_name),
     db: AsyncSession = Depends(get_async_db),
 ) -> User:
@@ -261,7 +259,6 @@ async def get_current_user(
     Get current authenticated user from JWT token.
 
     Cookie-only authentication. Tokens are read from httpOnly cookies.
-    Also supports Authorization header for API access/testing.
     """
     credentials_exception = unauthorized("无效的认证凭据")
 
@@ -269,14 +266,7 @@ async def get_current_user(
     if token:
         logger.debug("Authenticating using httpOnly cookie")
 
-    # No token found in cookie, try header
-    if not token:
-        auth_header = request.headers.get("Authorization")
-        if auth_header and auth_header.startswith("Bearer "):
-            token = auth_header.split(" ")[1]
-            logger.debug("Authenticating using Authorization header")
-
-    # No token found in either cookie or header
+    # No token found in cookie
     if not token:
         raise credentials_exception
 
@@ -451,9 +441,7 @@ class OrganizationPermissionChecker:
             raise forbidden("无权访问该组织的数据")
         return current_user
 
-    async def _can_access_organization(
-        self, user: User, db: AsyncSession
-    ) -> bool:
+    async def _can_access_organization(self, user: User, db: AsyncSession) -> bool:
         """检查用户是否可以访问组织"""
         rbac_service = RBACService(db)
         if await rbac_service.is_admin(user.id):

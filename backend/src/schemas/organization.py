@@ -11,7 +11,7 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from pydantic_core import PydanticCustomError
 from sqlalchemy import inspect as sa_inspect
-from sqlalchemy.orm.attributes import NO_VALUE
+from sqlalchemy.orm import attributes as orm_attributes
 
 
 class OrganizationBase(BaseModel):
@@ -86,7 +86,8 @@ class OrganizationResponse(OrganizationBase):
         try:
             children_state = state.attrs.children
             children_value = children_state.loaded_value
-            data["children"] = [] if children_value is NO_VALUE else children_value
+            no_value = getattr(orm_attributes, "NO_VALUE", None)
+            data["children"] = [] if children_value is no_value else children_value
         except Exception:
             data["children"] = []
 

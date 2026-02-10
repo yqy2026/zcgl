@@ -30,7 +30,7 @@ import {
   EyeOutlined,
   SettingOutlined,
 } from '@ant-design/icons';
-import { COLORS } from '@/styles/colorMap';
+import styles from './PDFImportHelp.module.css';
 
 const { Title, Text } = Typography;
 const { Panel } = Collapse;
@@ -196,49 +196,53 @@ const PDFImportHelp: React.FC<PDFImportHelpProps> = ({ visible, onClose }) => {
         </Button>,
       ]}
       width={1000}
-      style={{ top: 20 }}
+      wrapClassName={styles.helpModal}
     >
-      <div style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+      <div className={styles.modalBody}>
         {/* 快速导航 */}
-        <Card style={{ marginBottom: 16 }}>
+        <Card className={styles.sectionCard}>
           <Title level={4}>快速导航</Title>
-          <Row gutter={16}>
-            <Col span={6}>
+          <Row gutter={[12, 12]}>
+            <Col xs={12} lg={6}>
               <Button
                 type={activeTab === 'guide' ? 'primary' : 'default'}
                 block
                 icon={<BookOutlined />}
                 onClick={() => setActiveTab('guide')}
+                className={styles.navButton}
               >
                 使用指南
               </Button>
             </Col>
-            <Col span={6}>
+            <Col xs={12} lg={6}>
               <Button
                 type={activeTab === 'faq' ? 'primary' : 'default'}
                 block
                 icon={<QuestionCircleOutlined />}
                 onClick={() => setActiveTab('faq')}
+                className={styles.navButton}
               >
                 常见问题
               </Button>
             </Col>
-            <Col span={6}>
+            <Col xs={12} lg={6}>
               <Button
                 type={activeTab === 'best' ? 'primary' : 'default'}
                 block
                 icon={<CheckCircleOutlined />}
                 onClick={() => setActiveTab('best')}
+                className={styles.navButton}
               >
                 最佳实践
               </Button>
             </Col>
-            <Col span={6}>
+            <Col xs={12} lg={6}>
               <Button
                 type={activeTab === 'fields' ? 'primary' : 'default'}
                 block
                 icon={<DatabaseOutlined />}
                 onClick={() => setActiveTab('fields')}
+                className={styles.navButton}
               >
                 字段说明
               </Button>
@@ -254,10 +258,10 @@ const PDFImportHelp: React.FC<PDFImportHelpProps> = ({ visible, onClose }) => {
               description="PDF合同智能导入功能可以自动识别和提取合同中的关键信息，大幅提高数据录入效率。"
               type="info"
               showIcon
-              style={{ marginBottom: 16 }}
+              className={styles.sectionAlert}
             />
 
-            <Card title="使用流程" style={{ marginBottom: 16 }}>
+            <Card title="使用流程" className={styles.sectionCard}>
               <Steps
                 direction="vertical"
                 current={0}
@@ -274,7 +278,7 @@ const PDFImportHelp: React.FC<PDFImportHelpProps> = ({ visible, onClose }) => {
             <Card title="详细步骤说明">
               <Collapse>
                 <Panel header="步骤1: 准备文件" key="1">
-                  <Space orientation="vertical" size="middle" style={{ width: '100%' }}>
+                  <Space orientation="vertical" size="middle" className={styles.fullWidthSpace}>
                     <Text>
                       <strong>文件要求：</strong>
                     </Text>
@@ -295,7 +299,7 @@ const PDFImportHelp: React.FC<PDFImportHelpProps> = ({ visible, onClose }) => {
                   </Space>
                 </Panel>
                 <Panel header="步骤2: 上传文件" key="2">
-                  <Space orientation="vertical" size="middle" style={{ width: '100%' }}>
+                  <Space orientation="vertical" size="middle" className={styles.fullWidthSpace}>
                     <Text>
                       <strong>上传方式：</strong>
                     </Text>
@@ -314,7 +318,7 @@ const PDFImportHelp: React.FC<PDFImportHelpProps> = ({ visible, onClose }) => {
                   </Space>
                 </Panel>
                 <Panel header="步骤3: 等待处理" key="3">
-                  <Space orientation="vertical" size="middle" style={{ width: '100%' }}>
+                  <Space orientation="vertical" size="middle" className={styles.fullWidthSpace}>
                     <Text>
                       <strong>处理过程：</strong>
                     </Text>
@@ -335,7 +339,7 @@ const PDFImportHelp: React.FC<PDFImportHelpProps> = ({ visible, onClose }) => {
                   </Space>
                 </Panel>
                 <Panel header="步骤4: 确认信息" key="4">
-                  <Space orientation="vertical" size="middle" style={{ width: '100%' }}>
+                  <Space orientation="vertical" size="middle" className={styles.fullWidthSpace}>
                     <Text>
                       <strong>确认内容：</strong>
                     </Text>
@@ -356,7 +360,7 @@ const PDFImportHelp: React.FC<PDFImportHelpProps> = ({ visible, onClose }) => {
                   </Space>
                 </Panel>
                 <Panel header="步骤5: 完成导入" key="5">
-                  <Space orientation="vertical" size="middle" style={{ width: '100%' }}>
+                  <Space orientation="vertical" size="middle" className={styles.fullWidthSpace}>
                     <Text>
                       <strong>导入确认：</strong>
                     </Text>
@@ -402,27 +406,27 @@ const PDFImportHelp: React.FC<PDFImportHelpProps> = ({ visible, onClose }) => {
               description="遵循以下建议可以获得更好的处理效果和用户体验。"
               type="info"
               showIcon
-              style={{ marginBottom: 16 }}
+              className={styles.sectionAlert}
             />
 
-            <Row gutter={16}>
+            <Row gutter={[16, 16]}>
               {bestPractices.map(practice => (
-                <Col span={12} key={practice.title}>
-                  <Card style={{ height: '100%', marginBottom: 16 }}>
-                    <Space orientation="vertical" size="middle" style={{ width: '100%' }}>
-                      <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: 32, color: COLORS.primary }}>{practice.icon}</div>
-                        <Title level={4} style={{ margin: 0 }}>
+                <Col xs={24} xl={12} key={practice.title}>
+                  <Card className={styles.practiceCard}>
+                    <Space orientation="vertical" size="middle" className={styles.fullWidthSpace}>
+                      <div className={styles.practiceHeader}>
+                        <div className={styles.practiceIcon}>{practice.icon}</div>
+                        <Title level={4} className={styles.practiceTitle}>
                           {practice.title}
                         </Title>
                         <Text type="secondary">{practice.description}</Text>
                       </div>
                       <div>
                         <Text strong>建议要点：</Text>
-                        <ul style={{ marginTop: 8, paddingLeft: 20 }}>
+                        <ul className={styles.tipsList}>
                           {practice.tips.map(tip => (
-                            <li key={tip} style={{ marginBottom: 4 }}>
-                              <Text style={{ fontSize: 14 }}>{tip}</Text>
+                            <li key={tip} className={styles.tipsListItem}>
+                              <Text className={styles.tipText}>{tip}</Text>
                             </li>
                           ))}
                         </ul>
@@ -443,19 +447,19 @@ const PDFImportHelp: React.FC<PDFImportHelpProps> = ({ visible, onClose }) => {
               description="系统会自动提取以下58个关键字段，覆盖合同的完整信息。"
               type="info"
               showIcon
-              style={{ marginBottom: 16 }}
+              className={styles.sectionAlert}
             />
 
-            <Row gutter={16}>
-              <Col span={12}>
-                <Card title="字段分类统计" style={{ marginBottom: 16 }}>
-                  <Space orientation="vertical" size="middle" style={{ width: '100%' }}>
+            <Row gutter={[16, 16]}>
+              <Col xs={24} xl={12}>
+                <Card title="字段分类统计" className={styles.sectionCard}>
+                  <Space orientation="vertical" size="middle" className={styles.fullWidthSpace}>
                     {keyFields.map(category => (
                       <div key={category.category}>
                         <Text strong>{category.category}：</Text>
-                        <div style={{ marginTop: 4 }}>
+                        <div className={styles.tagGroup}>
                           {category.fields.map(field => (
-                            <Tag key={field} color="blue" style={{ marginBottom: 4 }}>
+                            <Tag key={field} color="blue" className={styles.fieldTag}>
                               {field}
                             </Tag>
                           ))}
@@ -465,12 +469,12 @@ const PDFImportHelp: React.FC<PDFImportHelpProps> = ({ visible, onClose }) => {
                   </Space>
                 </Card>
               </Col>
-              <Col span={12}>
-                <Card title="提取准确率说明" style={{ marginBottom: 16 }}>
-                  <Space orientation="vertical" size="middle" style={{ width: '100%' }}>
+              <Col xs={24} xl={12}>
+                <Card title="提取准确率说明" className={styles.sectionCard}>
+                  <Space orientation="vertical" size="middle" className={styles.fullWidthSpace}>
                     <div>
                       <Text strong>高准确率字段 (&gt;90%)：</Text>
-                      <div style={{ marginTop: 4 }}>
+                      <div className={styles.tagGroup}>
                         <Tag color="green">合同编号</Tag>
                         <Tag color="green">物业名称</Tag>
                         <Tag color="green">物业地址</Tag>
@@ -480,7 +484,7 @@ const PDFImportHelp: React.FC<PDFImportHelpProps> = ({ visible, onClose }) => {
                     </div>
                     <div>
                       <Text strong>中等准确率字段 (70-90%)：</Text>
-                      <div style={{ marginTop: 4 }}>
+                      <div className={styles.tagGroup}>
                         <Tag color="orange">面积信息</Tag>
                         <Tag color="orange">租期日期</Tag>
                         <Tag color="orange">押金</Tag>
@@ -489,7 +493,7 @@ const PDFImportHelp: React.FC<PDFImportHelpProps> = ({ visible, onClose }) => {
                     </div>
                     <div>
                       <Text strong>需要人工确认字段：</Text>
-                      <div style={{ marginTop: 4 }}>
+                      <div className={styles.tagGroup}>
                         <Tag color="red">权属状态</Tag>
                         <Tag color="red">物业性质</Tag>
                         <Tag color="red">商业模式</Tag>

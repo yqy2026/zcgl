@@ -8,7 +8,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from pydantic_core import PydanticCustomError
 from sqlalchemy import inspect as sa_inspect
-from sqlalchemy.orm.attributes import NO_VALUE
+from sqlalchemy.orm import attributes as orm_attributes
 
 
 class ProjectBase(BaseModel):
@@ -157,7 +157,8 @@ class ProjectResponse(ProjectBase):
         try:
             rel_state = state.attrs.ownership_relations
             rel_value = rel_state.loaded_value
-            data["ownership_relations"] = [] if rel_value is NO_VALUE else rel_value
+            no_value = getattr(orm_attributes, "NO_VALUE", None)
+            data["ownership_relations"] = [] if rel_value is no_value else rel_value
         except Exception:
             data["ownership_relations"] = []
 

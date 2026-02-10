@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 import tempfile
 import uuid
+from functools import partial
 from pathlib import Path
 
 import anyio
@@ -91,12 +92,13 @@ async def pdf_to_images_async(
     max_pages: int = 10,
 ) -> list[str]:
     """Async wrapper to avoid blocking the event loop."""
-    return await anyio.to_thread.run_sync(
+    runner = partial(
         pdf_to_images,
         pdf_path,
         dpi=dpi,
         max_pages=max_pages,
     )
+    return await anyio.to_thread.run_sync(runner)
 
 
 def cleanup_temp_images(image_paths: list[str]) -> None:

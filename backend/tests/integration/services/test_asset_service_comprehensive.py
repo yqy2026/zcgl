@@ -7,10 +7,11 @@ Comprehensive tests for Asset Service to maximize coverage
 from decimal import Decimal
 
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.pool import NullPool
 
+from src import database as database
 from src.core.exception_handler import ResourceNotFoundError
-from src.database import get_database_engine
 from src.models.ownership import Ownership
 from src.schemas.asset import AssetCreate, AssetUpdate
 from src.services.asset.asset_service import AssetService
@@ -24,8 +25,8 @@ def _build_asset_data(**overrides):
         "property_name": "测试物业A",
         "address": "北京市朝阳区测试路123号",
         "ownership_status": "已确权",
-        "property_nature": "商业",
-        "usage_status": "出租中",
+        "property_nature": "经营类",
+        "usage_status": "出租",
         "rentable_area": Decimal("1000.00"),
         "rented_area": Decimal("600.00"),
     }
@@ -35,7 +36,11 @@ def _build_asset_data(**overrides):
 
 @pytest.fixture
 async def db_session():
-    async_engine = get_database_engine()
+    async_engine = create_async_engine(
+        database.get_async_database_url(),
+        echo=False,
+        poolclass=NullPool,
+    )
 
     async with async_engine.connect() as connection:
         transaction = await connection.begin()
@@ -49,6 +54,7 @@ async def db_session():
         finally:
             await session.close()
             await transaction.rollback()
+            await async_engine.dispose()
 
 
 @pytest.fixture
@@ -99,28 +105,25 @@ class TestAssetServiceBusinessLogic:
         result, count = await asset_service.get_assets(filters=filters)
         assert count >= 1
 
-    async def test_create_asset_logic(self, asset_service, admin_user):
+    async def test_create_asset_logic(self, asset_service, ownership_record):
         """测试创建资产业务逻辑"""
+        _ = ownership_record
         asset_in = _build_asset_data(property_name="新测试资产")
 
-        asset = await asset_service.create_asset(asset_in, current_user=admin_user)
+        asset = await asset_service.create_asset(asset_in)
 
         assert asset.id is not None
         assert asset.property_name == "新测试资产"
         assert asset.data_status == "正常"
 
-    async def test_update_asset_logic(
-        self, asset_service, sample_asset, admin_user
-    ):
+    async def test_update_asset_logic(self, asset_service, sample_asset):
         """测试更新资产逻辑"""
-        update_data = AssetUpdate(property_name="更新后的资产", usage_status="空置")
+        update_data = AssetUpdate(property_name="更新后的资产", usage_status="闲置")
 
-        updated = await asset_service.update_asset(
-            sample_asset.id, update_data, current_user=admin_user
-        )
+        updated = await asset_service.update_asset(sample_asset.id, update_data)
 
         assert updated.property_name == "更新后的资产"
-        assert updated.usage_status == "空置"
+        assert updated.usage_status == "闲置"
 
     async def test_delete_asset_logic(self, asset_service, sample_asset):
         """测试删除资产逻辑"""

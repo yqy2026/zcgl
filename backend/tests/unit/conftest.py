@@ -38,10 +38,13 @@ class AsyncSessionAdapter:
     async def rollback(self):  # noqa: D401 - test helper
         return self._session.rollback()
 
+    async def get(self, *args, **kwargs):  # noqa: ANN001
+        return self._session.get(*args, **kwargs)
+
     def add(self, *args, **kwargs):  # noqa: ANN001
         return self._session.add(*args, **kwargs)
 
-    def delete(self, *args, **kwargs):  # noqa: ANN001
+    async def delete(self, *args, **kwargs):  # noqa: ANN001
         return self._session.delete(*args, **kwargs)
 
     def __getattr__(self, name: str):  # noqa: D401 - test helper

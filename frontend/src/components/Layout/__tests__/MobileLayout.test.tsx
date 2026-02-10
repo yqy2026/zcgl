@@ -105,10 +105,6 @@ vi.mock('../MobileMenu', () => ({
   default: () => <div data-testid="mobile-menu">MobileMenu</div>,
 }));
 
-vi.mock('../AppBreadcrumb', () => ({
-  default: () => <div data-testid="app-breadcrumb">AppBreadcrumb</div>,
-}));
-
 describe('MobileLayout', () => {
   it('renders header, content, footer, and children', () => {
     renderWithProviders(
@@ -136,14 +132,15 @@ describe('MobileLayout', () => {
     expect(screen.getByTestId('icon-user')).toBeInTheDocument();
   });
 
-  it('renders breadcrumb section', () => {
+  it('renders content area container', () => {
     renderWithProviders(
       <MobileLayout>
-        <div>Content</div>
+        <div data-testid="mobile-content">Content</div>
       </MobileLayout>
     );
 
-    expect(screen.getByTestId('app-breadcrumb')).toBeInTheDocument();
+    expect(screen.getByTestId('content')).toBeInTheDocument();
+    expect(screen.getByTestId('mobile-content')).toBeInTheDocument();
   });
 
   it('renders footer text', () => {

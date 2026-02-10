@@ -1,0 +1,48 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.tableRoot :global(.ant-table-container) {
+  border: 1px solid var(--table-border-color);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.tableRoot :global(.ant-table-thead > tr > th) {
+  padding-top: var(--table-cell-padding-sm);
+  padding-bottom: var(--table-cell-padding-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  background: var(--table-header-bg);
+}
+
+.tableRoot :global(.ant-table-tbody > tr > td) {
+  padding-top: var(--table-cell-padding-sm);
+  padding-bottom: var(--table-cell-padding-sm);
+}
+
+.tableRoot :global(.ant-table-tbody > tr:hover > td) {
+  background: var(--table-row-hover-bg);
+}
+
+.paginationContainer {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--spacing-sm) 0 0;
+  border-top: 1px solid var(--table-border-color);
+}
+
+@media (max-width: 767px) {
+  .tableRoot :global(.ant-table-thead > tr > th),
+  .tableRoot :global(.ant-table-tbody > tr > td) {
+    padding-top: var(--spacing-sm);
+    padding-bottom: var(--spacing-sm);
+  }
+
+  .paginationContainer {
+    justify-content: center;
+    padding-top: var(--spacing-md);
+  }
+}

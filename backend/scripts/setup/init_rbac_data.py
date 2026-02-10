@@ -55,6 +55,7 @@ async def create_basic_permissions(db):
         ("excel_config", "read", "查看Excel配置", "查看Excel导入导出配置"),
         ("excel_config", "write", "管理Excel配置", "创建/更新/删除Excel配置"),
         # 系统管理权限
+        ("system", "admin", "系统管理员", "全局管理员权限"),
         ("system", "manage", "系统管理", "系统管理权限"),
         ("system", "audit", "审计查看", "查看审计日志"),
         ("system", "backup", "数据备份", "数据备份权限"),
@@ -171,11 +172,14 @@ async def create_admin_user(db):
             id=str(uuid.uuid4()),
             username="admin",
             email="admin@example.com",
+            phone="13800000000",
             full_name="系统管理员",
             is_active=True,
             password_hash="$2b$12$dummy_hash_for_admin",  # 实际使用中应该设置真实的密码哈希
             created_at=datetime.now(UTC).replace(tzinfo=None),
             updated_at=datetime.now(UTC).replace(tzinfo=None),
+            created_by="system",
+            updated_by="system",
         )
         db.add(admin_user)
         await db.commit()
@@ -295,15 +299,15 @@ async def create_test_users(db) -> tuple[int, int]:
         return 0, 0
 
     test_users = [
-        ("manager1", "manager1@example.com", "测试管理员", "USER"),
-        ("user1", "user1@example.com", "测试用户1", "USER"),
-        ("user2", "user2@example.com", "测试用户2", "USER"),
-        ("viewer1", "viewer1@example.com", "测试查看者", "USER"),
+        ("manager1", "manager1@example.com", "13800000001", "测试管理员", "USER"),
+        ("user1", "user1@example.com", "13800000002", "测试用户1", "USER"),
+        ("user2", "user2@example.com", "13800000003", "测试用户2", "USER"),
+        ("viewer1", "viewer1@example.com", "13800000004", "测试查看者", "USER"),
     ]
 
     created_count = 0
     existing_count = 0
-    for username, email, full_name, _role in test_users:
+    for username, email, phone, full_name, _role in test_users:
         existing_result = await db.execute(
             select(User).where(User.username == username)
         )
@@ -313,11 +317,14 @@ async def create_test_users(db) -> tuple[int, int]:
                 id=str(uuid.uuid4()),
                 username=username,
                 email=email,
+                phone=phone,
                 full_name=full_name,
                 is_active=True,
                 password_hash="$2b$12$dummy_hash_for_user",  # 实际使用中应该设置真实的密码哈希
                 created_at=datetime.now(UTC).replace(tzinfo=None),
                 updated_at=datetime.now(UTC).replace(tzinfo=None),
+                created_by="system",
+                updated_by="system",
             )
             db.add(user)
             created_count += 1

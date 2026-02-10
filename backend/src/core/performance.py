@@ -267,7 +267,7 @@ class QueryOptimizer:
                 .values(cast(dict[Any, Any], update_data))
             )
             result = await self.db.execute(stmt)
-            return int(result.rowcount or 0)
+            return int(getattr(result, "rowcount", 0) or 0)
 
     async def optimize_statistics_query(self) -> Any:
         """优化统计查询"""

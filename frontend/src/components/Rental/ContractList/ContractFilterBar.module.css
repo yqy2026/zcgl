@@ -1,0 +1,28 @@
+.filterCard {
+  margin-bottom: 24px;
+}
+
+.filterControl {
+  width: 100%;
+}
+
+.toolbarActions {
+  width: 100%;
+  justify-content: flex-end;
+}
+
+.actionButton {
+  min-width: 96px;
+}
+
+@media (max-width: 992px) {
+  .toolbarActions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 768px) {
+  .actionButton {
+    min-height: 44px;
+  }
+}

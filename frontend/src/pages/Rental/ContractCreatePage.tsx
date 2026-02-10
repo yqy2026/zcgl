@@ -6,7 +6,7 @@
  */
 
 import React, { useState } from 'react';
-import { Card, Button, Space, Typography, Row, Col, Statistic, Spin } from 'antd';
+import { Card, Button, Space, Typography, Row, Col, Statistic } from 'antd';
 import { MessageManager } from '@/utils/messageManager';
 import {
   FileTextOutlined,
@@ -21,19 +21,55 @@ import { RentContractForm } from '@/components/Forms';
 import { RentContractCreate, RentContractUpdate } from '@/types/rentContract';
 import { rentContractService } from '@/services/rentContractService';
 import { RENTAL_QUERY_KEYS } from '@/constants/queryKeys';
-import { useFormat } from '@/utils/format';
 import { createLogger } from '@/utils/logger';
-import { COLORS } from '@/styles/colorMap';
 import { PageContainer } from '@/components/Common';
+import styles from './ContractCreatePage.module.css';
 
 const pageLogger = createLogger('ContractCreateEdit');
 
 const { Title, Text } = Typography;
 
+const GUIDE_STEPS: Array<{
+  key: string;
+  title: string;
+  value: string;
+  icon: React.ReactNode;
+}> = [
+  {
+    key: 'basic',
+    title: '步骤 1',
+    value: '基本信息',
+    icon: <FileTextOutlined />,
+  },
+  {
+    key: 'asset',
+    title: '步骤 2',
+    value: '关联资产',
+    icon: <InfoCircleOutlined />,
+  },
+  {
+    key: 'tenant',
+    title: '步骤 3',
+    value: '承租信息',
+    icon: <InfoCircleOutlined />,
+  },
+  {
+    key: 'terms',
+    title: '步骤 4',
+    value: '租金条款',
+    icon: <InfoCircleOutlined />,
+  },
+];
+
+const GUIDE_HINTS = [
+  '请确保所有必填字段都已填写完整',
+  '租金条款可以设置多个时间段的租金',
+  '合同创建后将自动生成租金台账',
+];
+
 const ContractCreatePage: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const _format = useFormat();
   const queryClient = useQueryClient();
 
   // 判断当前模式：有id则为编辑模式
@@ -137,28 +173,23 @@ const ContractCreatePage: React.FC = () => {
       subTitle={pageDescription}
       onBack={handleCancel}
       loading={isEdit && isLoadingContract}
-      contentStyle={{ background: COLORS.bgTertiary }}
+      className={styles.contractCreatePage}
+      contentStyle={{ background: 'var(--color-bg-tertiary)' }}
     >
       {/* 创建/更新成功提示 */}
       {contractCreated && (
-        <Card
-          style={{
-            marginBottom: '16px',
-            borderColor: COLORS.success,
-            backgroundColor: 'var(--color-primary-light)',
-          }}
-        >
-          <Row align="middle">
+        <Card className={styles.successCard}>
+          <Row align="middle" gutter={[12, 12]} wrap={false}>
             <Col>
-              <InfoCircleOutlined
-                style={{ fontSize: '24px', color: COLORS.success, marginRight: '12px' }}
-              />
+              <InfoCircleOutlined className={[styles.noticeIcon, styles.toneSuccess].join(' ')} />
             </Col>
             <Col flex="1">
-              <Title level={4} style={{ color: COLORS.success, margin: 0 }}>
+              <Title level={4} className={[styles.noticeTitle, styles.toneSuccess].join(' ')}>
                 {successTitle}
               </Title>
-              <Text type="secondary">{successMessage}</Text>
+              <Text type="secondary" className={styles.noticeMessage}>
+                {successMessage}
+              </Text>
             </Col>
           </Row>
         </Card>
@@ -166,58 +197,32 @@ const ContractCreatePage: React.FC = () => {
 
       {/* 创建指南 */}
       {!contractCreated && (
-        <Card style={{ marginBottom: '16px', backgroundColor: 'var(--color-primary-light)' }}>
-          <Title level={5} style={{ color: COLORS.primary, marginBottom: '12px' }}>
-            <InfoCircleOutlined style={{ marginRight: '6px' }} />
+        <Card className={styles.guideCard}>
+          <Title level={5} className={[styles.guideTitle, styles.tonePrimary].join(' ')}>
+            <InfoCircleOutlined className={styles.guideTitleIcon} />
             创建指南
           </Title>
-          <Row gutter={16}>
-            <Col span={6}>
-              <Statistic
-                title="步骤 1"
-                value="基本信息"
-                prefix={<FileTextOutlined />}
-                styles={{ content: { fontSize: '16px', color: COLORS.primary } }}
-              />
-            </Col>
-            <Col span={6}>
-              <Statistic
-                title="步骤 2"
-                value="关联资产"
-                prefix={<InfoCircleOutlined />}
-                styles={{ content: { fontSize: '16px', color: COLORS.primary } }}
-              />
-            </Col>
-            <Col span={6}>
-              <Statistic
-                title="步骤 3"
-                value="承租信息"
-                prefix={<InfoCircleOutlined />}
-                styles={{ content: { fontSize: '16px', color: COLORS.primary } }}
-              />
-            </Col>
-            <Col span={6}>
-              <Statistic
-                title="步骤 4"
-                value="租金条款"
-                prefix={<InfoCircleOutlined />}
-                styles={{ content: { fontSize: '16px', color: COLORS.primary } }}
-              />
-            </Col>
+          <Row gutter={[16, 16]}>
+            {GUIDE_STEPS.map(step => (
+              <Col key={step.key} xs={24} sm={12} lg={6}>
+                <div className={styles.guideStep}>
+                  <Statistic title={step.title} value={step.value} prefix={step.icon} />
+                </div>
+              </Col>
+            ))}
           </Row>
-          <div style={{ marginTop: '12px' }}>
-            <Text type="secondary">
-              • 请确保所有必填字段都已填写完整
-              <br />
-              • 租金条款可以设置多个时间段的租金
-              <br />• 合同创建后将自动生成租金台账
-            </Text>
-          </div>
+          <ul className={styles.guideHintList}>
+            {GUIDE_HINTS.map(hint => (
+              <li key={hint}>
+                <Text type="secondary">{hint}</Text>
+              </li>
+            ))}
+          </ul>
         </Card>
       )}
 
       {/* 合同表单 */}
-      <Card title="合同信息" loading={isSubmitting}>
+      <Card title="合同信息" loading={isSubmitting} className={styles.formCard}>
         <RentContractForm
           mode={isEdit ? 'edit' : 'create'}
           initialData={contract ?? undefined}
@@ -229,9 +234,14 @@ const ContractCreatePage: React.FC = () => {
 
       {/* 底部操作栏 */}
       {!contractCreated && (
-        <Card style={{ marginTop: '16px', textAlign: 'center' }}>
-          <Space size="large">
-            <Button size="large" icon={<ArrowLeftOutlined />} onClick={handleCancel}>
+        <Card className={styles.footerCard}>
+          <Space size={12} className={styles.footerActions} wrap>
+            <Button
+              size="large"
+              icon={<ArrowLeftOutlined />}
+              onClick={handleCancel}
+              className={styles.footerActionButton}
+            >
               {cancelButtonText}
             </Button>
             <Button
@@ -239,12 +249,13 @@ const ContractCreatePage: React.FC = () => {
               size="large"
               icon={<SaveOutlined />}
               loading={isSubmitting}
+              className={styles.footerActionButton}
               onClick={() => {
                 // 触发表单提交
                 const form = document.querySelector('form');
-                if (form) {
+                if (form != null) {
                   const submitButton = form.querySelector('button[type="submit"]');
-                  if (submitButton) {
+                  if (submitButton != null) {
                     (submitButton as HTMLButtonElement).click();
                   }
                 }

@@ -34,11 +34,12 @@ import {
   type OwnershipMatch,
 } from '@/services/pdfImportService';
 import { ContractStatus, ContractStatusLabels } from '@/types/rentContract';
-import { COLORS } from '@/styles/colorMap';
+import styles from './ContractImportReview.module.css';
 
 const { Title, Text } = Typography;
-const { TabPane } = Tabs;
 const { TextArea } = Input;
+
+type ConfidenceTone = 'success' | 'warning' | 'error';
 
 interface ContractImportReviewProps {
   sessionId: string;
@@ -154,22 +155,22 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
     }
 
     const content = (
-      <div style={{ maxWidth: 420 }}>
-        <Text type="secondary" style={{ display: 'block', marginBottom: 4 }}>
+      <div className={styles.evidencePopover}>
+        <Text type="secondary" className={styles.evidenceMetaText}>
           来源: {resolveSourceLabel(sourceKey)}
         </Text>
         {hasSnippet ? (
-          <Text style={{ whiteSpace: 'pre-wrap' }}>{snippet}</Text>
+          <Text className={styles.evidenceSnippetText}>{snippet}</Text>
         ) : (
           <Text type="secondary">未提供原文片段</Text>
         )}
         {hasMatch && (
-          <Text type="secondary" style={{ display: 'block', marginTop: 8 }}>
+          <Text type="secondary" className={styles.evidenceMetaWithGap}>
             匹配: {String(matchValue)}
           </Text>
         )}
         {evidence?.match_type != null && String(evidence.match_type).trim() !== '' && (
-          <Text type="secondary" style={{ display: 'block' }}>
+          <Text type="secondary" className={styles.evidenceMetaText}>
             匹配类型: {String(evidence.match_type)}
           </Text>
         )}
@@ -283,11 +284,26 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
     }
   };
 
-  // 获取置信度颜色
-  const getConfidenceColor = (score: number): string => {
-    if (score >= 0.9) return COLORS.success;
-    if (score >= 0.7) return COLORS.warning;
-    return COLORS.error;
+  // 获取置信度色阶
+  const getConfidenceTone = (score: number): ConfidenceTone => {
+    if (score >= 90) {
+      return 'success';
+    }
+    if (score >= 70) {
+      return 'warning';
+    }
+    return 'error';
+  };
+
+  const getConfidenceToneClassName = (score: number): string => {
+    const tone = getConfidenceTone(score);
+    if (tone === 'success') {
+      return styles.toneSuccess;
+    }
+    if (tone === 'warning') {
+      return styles.toneWarning;
+    }
+    return styles.toneError;
   };
 
   // 基本信息表单
@@ -344,7 +360,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
       <Row gutter={16}>
         <Col span={8}>
           <Form.Item label={renderFieldLabel('签订日期', 'sign_date')} name="sign_date">
-            <DatePicker style={{ width: '100%' }} placeholder="请选择签订日期" />
+            <DatePicker className={styles.fullWidthControl} placeholder="请选择签订日期" />
           </Form.Item>
         </Col>
         <Col span={8}>
@@ -353,7 +369,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
             name="start_date"
             rules={[{ required: true, message: '请选择开始日期' }]}
           >
-            <DatePicker style={{ width: '100%' }} placeholder="请选择开始日期" />
+            <DatePicker className={styles.fullWidthControl} placeholder="请选择开始日期" />
           </Form.Item>
         </Col>
         <Col span={8}>
@@ -362,7 +378,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
             name="end_date"
             rules={[{ required: true, message: '请选择结束日期' }]}
           >
-            <DatePicker style={{ width: '100%' }} placeholder="请选择结束日期" />
+            <DatePicker className={styles.fullWidthControl} placeholder="请选择结束日期" />
           </Form.Item>
         </Col>
       </Row>
@@ -371,7 +387,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
         <Col span={8}>
           <Form.Item label={renderFieldLabel('租赁面积(㎡)', 'rentable_area')} name="rentable_area">
             <InputNumber
-              style={{ width: '100%' }}
+              className={styles.fullWidthControl}
               placeholder="请输入租赁面积"
               min={0}
               precision={2}
@@ -386,7 +402,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
             rules={[{ required: true, message: '请输入月租金' }]}
           >
             <InputNumber
-              style={{ width: '100%' }}
+              className={styles.fullWidthControl}
               placeholder="请输入月租金"
               min={0}
               precision={2}
@@ -397,7 +413,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
         <Col span={8}>
           <Form.Item label={renderFieldLabel('押金(元)', 'total_deposit')} name="total_deposit">
             <InputNumber
-              style={{ width: '100%' }}
+              className={styles.fullWidthControl}
               placeholder="请输入押金金额"
               min={0}
               precision={2}
@@ -414,11 +430,11 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
   const MatchingForm = () => (
     <div>
       {/* 资产匹配 */}
-      <div style={{ marginBottom: 16 }}>
+      <div className={styles.matchingSection}>
         <Title level={5}>
           资产匹配
           {result.matching_result.matched_assets.length > 0 && (
-            <Tag color="green" style={{ marginLeft: 8 }}>
+            <Tag color="green" className={styles.matchCountTag}>
               找到 {result.matching_result.matched_assets.length} 个匹配项
             </Tag>
           )}
@@ -456,7 +472,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
                         相似度: {asset.similarity}%
                       </Tag>
                     </Space>
-                    <div style={{ fontSize: 12, color: COLORS.textSecondary, marginTop: 4 }}>
+                    <div className={styles.matchAddressText}>
                       {asset.address}
                     </div>
                   </div>
@@ -479,7 +495,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
         <Title level={5}>
           权属方匹配
           {result.matching_result.matched_ownerships.length > 0 && (
-            <Tag color="green" style={{ marginLeft: 8 }}>
+            <Tag color="green" className={styles.matchCountTag}>
               找到 {result.matching_result.matched_ownerships.length} 个匹配项
             </Tag>
           )}
@@ -545,48 +561,85 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
     </Form>
   );
 
+  const tabItems = [
+    {
+      key: 'basic',
+      label: '基本信息',
+      children: <BasicInfoForm />,
+    },
+    {
+      key: 'dates',
+      label: '日期和金额',
+      children: <DateAmountForm />,
+    },
+    {
+      key: 'matching',
+      label: '数据匹配',
+      children: <MatchingForm />,
+    },
+    {
+      key: 'advanced',
+      label: `高级字段${showAdvancedFields ? '' : ' (展开)'}`,
+      children: (
+        <>
+          <div className={styles.advancedSwitchRow}>
+            <Switch
+              checked={showAdvancedFields}
+              onChange={setShowAdvancedFields}
+              checkedChildren="显示高级字段"
+              unCheckedChildren="隐藏高级字段"
+            />
+          </div>
+          {showAdvancedFields && <AdvancedForm />}
+        </>
+      ),
+    },
+  ];
+
   return (
-    <div className="contract-import-review">
+    <div className={styles.reviewContainer}>
       {/* 头部统计 */}
-      <Card style={{ marginBottom: 16 }}>
-        <Row gutter={16}>
-          <Col span={6}>
+      <Card className={styles.sectionCard}>
+        <Row gutter={[16, 16]} className={styles.statsRow}>
+          <Col xs={24} sm={12} xl={6}>
+            <Card className={`${styles.statsCard} ${getConfidenceToneClassName(result.summary.extraction_confidence)}`}>
             <Statistic
               title="提取可信度"
               value={result.summary.extraction_confidence}
               precision={2}
               suffix="%"
-              styles={{
-                content: { color: getConfidenceColor(result.summary.extraction_confidence) },
-              }}
             />
+            </Card>
           </Col>
-          <Col span={6}>
+          <Col xs={24} sm={12} xl={6}>
+            <Card className={`${styles.statsCard} ${getConfidenceToneClassName(result.summary.validation_score)}`}>
             <Statistic
               title="验证评分"
               value={result.summary.validation_score}
               precision={2}
               suffix="%"
-              styles={{ content: { color: getConfidenceColor(result.summary.validation_score) } }}
             />
+            </Card>
           </Col>
-          <Col span={6}>
+          <Col xs={24} sm={12} xl={6}>
+            <Card className={`${styles.statsCard} ${getConfidenceToneClassName(result.summary.match_confidence)}`}>
             <Statistic
               title="匹配置信度"
               value={result.summary.match_confidence}
               precision={2}
               suffix="%"
-              styles={{ content: { color: getConfidenceColor(result.summary.match_confidence) } }}
             />
+            </Card>
           </Col>
-          <Col span={6}>
+          <Col xs={24} sm={12} xl={6}>
+            <Card className={`${styles.statsCard} ${getConfidenceToneClassName(result.summary.total_confidence)}`}>
             <Statistic
               title="总体评分"
               value={result.summary.total_confidence}
               precision={2}
               suffix="%"
-              styles={{ content: { color: getConfidenceColor(result.summary.total_confidence) } }}
             />
+            </Card>
           </Col>
         </Row>
       </Card>
@@ -604,7 +657,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
           }
           type="info"
           showIcon
-          style={{ marginBottom: 16 }}
+          className={styles.messageAlert}
         />
       )}
 
@@ -621,7 +674,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
             }
             type="warning"
             showIcon
-            style={{ marginBottom: 16 }}
+            className={styles.messageAlert}
           />
         )}
 
@@ -638,7 +691,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
           }
           type="error"
           showIcon
-          style={{ marginBottom: 16 }}
+          className={styles.messageAlert}
         />
       )}
 
@@ -654,39 +707,18 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
           }
           type="warning"
           showIcon
-          style={{ marginBottom: 16 }}
+          className={styles.messageAlert}
         />
       )}
 
       {/* 主表单 */}
       <Card title="合同信息确认">
-        <Tabs activeKey={activeTab} onChange={setActiveTab}>
-          <TabPane tab="基本信息" key="basic">
-            <BasicInfoForm />
-          </TabPane>
-          <TabPane tab="日期和金额" key="dates">
-            <DateAmountForm />
-          </TabPane>
-          <TabPane tab="数据匹配" key="matching">
-            <MatchingForm />
-          </TabPane>
-          <TabPane tab={`高级字段${showAdvancedFields ? '' : ' (展开)'}`} key="advanced">
-            <div style={{ marginBottom: 16 }}>
-              <Switch
-                checked={showAdvancedFields}
-                onChange={setShowAdvancedFields}
-                checkedChildren="显示高级字段"
-                unCheckedChildren="隐藏高级字段"
-              />
-            </div>
-            {showAdvancedFields && <AdvancedForm />}
-          </TabPane>
-        </Tabs>
+        <Tabs activeKey={activeTab} onChange={setActiveTab} items={tabItems} />
       </Card>
 
       {/* 操作按钮 */}
-      <div style={{ textAlign: 'center', marginTop: 24 }}>
-        <Space size="large">
+      <div className={styles.actionFooter}>
+        <Space size="large" className={styles.actionSpace}>
           <Button size="large" onClick={onBack}>
             返回
           </Button>

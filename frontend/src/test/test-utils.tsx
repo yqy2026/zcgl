@@ -84,7 +84,12 @@ const AllInOneProvider = ({ children, queryClient, theme = 'light' }: ProvidersP
 
   return (
     <QueryClientProvider client={testQueryClient}>
-      <BrowserRouter>
+      <BrowserRouter
+        future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true,
+        }}
+      >
         <ConfigProvider
           locale={zhCN}
           theme={{

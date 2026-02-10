@@ -44,7 +44,6 @@ const AssetDetailedSection: React.FC = () => {
   // 为字段生成可访问性 ID
   const tenantNameIds = generateFormFieldIds('tenant-name');
   const tenantContactIds = generateFormFieldIds('tenant-contact');
-  const tenantTypeIds = generateFormFieldIds('tenant-type');
   const contractNumberIds = generateFormFieldIds('contract-number');
   const contractStartDateIds = generateFormFieldIds('contract-start-date');
   const contractEndDateIds = generateFormFieldIds('contract-end-date');

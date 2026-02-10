@@ -299,8 +299,10 @@ class LLMServiceFactory:
     @classmethod
     def _create_glm_service(cls) -> LLMServiceInterface:
         """创建智谱 GLM 服务"""
-        api_key = _env_or_setting("ZHIPU_API_KEY", "ZHIPU_API_KEY") or os.getenv(
-            "LLM_API_KEY", ""
+        api_key: str = (
+            _env_or_setting("ZHIPU_API_KEY", "ZHIPU_API_KEY")
+            or os.getenv("LLM_API_KEY")
+            or ""
         )
         base_url = (
             _env_first(["ZHIPU_BASE_URL", "ZHIPU_API_BASE"], "")
@@ -326,8 +328,10 @@ class LLMServiceFactory:
     @classmethod
     def _create_qwen_service(cls) -> LLMServiceInterface:
         """创建通义千问服务"""
-        api_key = _env_or_setting("DASHSCOPE_API_KEY", "DASHSCOPE_API_KEY") or os.getenv(
-            "LLM_API_KEY", ""
+        api_key: str = (
+            _env_or_setting("DASHSCOPE_API_KEY", "DASHSCOPE_API_KEY")
+            or os.getenv("LLM_API_KEY")
+            or ""
         )
         base_url = (
             _env_first(["DASHSCOPE_BASE_URL", "DASHSCOPE_API_BASE"], "")
@@ -353,8 +357,10 @@ class LLMServiceFactory:
     @classmethod
     def _create_deepseek_service(cls) -> LLMServiceInterface:
         """创建 DeepSeek 服务"""
-        api_key = _env_or_setting("DEEPSEEK_API_KEY", "DEEPSEEK_API_KEY") or os.getenv(
-            "LLM_API_KEY", ""
+        api_key: str = (
+            _env_or_setting("DEEPSEEK_API_KEY", "DEEPSEEK_API_KEY")
+            or os.getenv("LLM_API_KEY")
+            or ""
         )
         base_url = (
             _env_first(["DEEPSEEK_BASE_URL", "DEEPSEEK_API_BASE"], "")
@@ -380,8 +386,10 @@ class LLMServiceFactory:
     @classmethod
     def _create_hunyuan_service(cls) -> LLMServiceInterface:
         """创建腾讯混元服务"""
-        api_key = _env_or_setting("HUNYUAN_API_KEY", "HUNYUAN_API_KEY") or os.getenv(
-            "LLM_API_KEY", ""
+        api_key: str = (
+            _env_or_setting("HUNYUAN_API_KEY", "HUNYUAN_API_KEY")
+            or os.getenv("LLM_API_KEY")
+            or ""
         )
         base_url = (
             _env_first(["HUNYUAN_BASE_URL", "HUNYUAN_API_BASE"], "")

@@ -1,7 +1,10 @@
 # API 总览
 
 ## ✅ Status
-**当前状态**: Draft (2026-02-03)
+**当前状态**: Active Baseline (2026-02-09)
+
+> 说明：本页提供 API 导航与约束摘要。  
+> 需求语义与验收口径以 `docs/requirements-specification.md` 为准。
 
 ## 基础信息
 - **Base URL**: `/api/v1`

@@ -151,10 +151,10 @@ class TaskService:
             )
 
         update_data: dict[str, Any] = obj_in.model_dump(exclude_unset=True)
-        old_status: TaskStatus | None = None
-        new_status: TaskStatus | None = None
+        old_status: str | None = None
+        new_status: str | None = None
         if "status" in update_data:
-            new_status = update_data["status"]
+            new_status = str(update_data["status"])
             old_status = task.status
 
             if old_status == TaskStatus.PENDING and new_status == TaskStatus.RUNNING:
@@ -408,8 +408,12 @@ class TaskService:
             )
             await db.execute(stmt)
 
+        payload = obj_in.model_dump()
+        if user_id is not None and user_id.strip() != "":
+            payload["created_by"] = user_id
+
         config: ExcelTaskConfig = await excel_task_config_crud.create(
-            db, obj_in=obj_in, user_id=user_id
+            db, obj_in=payload
         )
         return config
 

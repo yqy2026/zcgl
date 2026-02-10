@@ -1,0 +1,142 @@
+.statusPage {
+  width: 100%;
+}
+
+.sectionCard {
+  margin-bottom: 16px;
+}
+
+.headerMeta {
+  width: 100%;
+}
+
+.headerTitle {
+  margin: 0 !important;
+}
+
+.headerActions {
+  justify-content: flex-end;
+}
+
+.statusIconBadge {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.statusTitle {
+  margin: 0 !important;
+}
+
+.statusStatistic {
+  min-width: 120px;
+}
+
+.resultStatistic {
+  min-width: 120px;
+}
+
+.toneSuccess {
+  color: var(--color-success);
+}
+
+.toneWarning {
+  color: var(--color-warning);
+}
+
+.toneError {
+  color: var(--color-error);
+}
+
+.tonePrimary {
+  color: var(--color-primary);
+}
+
+.statusIconBadge.toneSuccess {
+  background: var(--color-success);
+  color: #fff;
+}
+
+.statusIconBadge.toneWarning {
+  background: var(--color-warning);
+  color: #fff;
+}
+
+.statusIconBadge.toneError {
+  background: var(--color-error);
+  color: #fff;
+}
+
+.statusIconBadge.tonePrimary {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.toneSuccess :global(.ant-statistic-content),
+.toneWarning :global(.ant-statistic-content),
+.toneError :global(.ant-statistic-content),
+.tonePrimary :global(.ant-statistic-content) {
+  color: inherit;
+}
+
+.inlineErrorAlert {
+  margin-top: 16px;
+}
+
+.stepDetailText {
+  font-size: 12px;
+}
+
+.detailsHeaderRow {
+  margin-bottom: 16px;
+}
+
+.detailsTitle {
+  margin: 0 !important;
+}
+
+.resultCard {
+  margin-top: 16px;
+}
+
+.statusTag {
+  margin-inline-end: 0;
+  border-radius: 999px;
+  padding-inline: 8px;
+  border: 1px solid transparent;
+  font-weight: var(--font-weight-medium);
+}
+
+.statusTag.toneSuccess {
+  background: var(--color-success-light);
+  border-color: var(--color-success);
+}
+
+.statusTag.toneWarning {
+  background: var(--color-warning-light);
+  border-color: var(--color-warning);
+}
+
+.statusTag.toneError {
+  background: var(--color-error-light);
+  border-color: var(--color-error);
+}
+
+.statusTag.tonePrimary {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+}
+
+@media (max-width: 768px) {
+  .headerActions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .headerActions :global(.ant-btn) {
+    min-height: 40px;
+  }
+}

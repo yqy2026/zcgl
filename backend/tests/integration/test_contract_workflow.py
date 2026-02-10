@@ -11,14 +11,17 @@ from fastapi import status
 
 
 @pytest.fixture
-def admin_user_headers(client, admin_user):
+def admin_user_headers(client, test_data):
     """管理员认证头"""
+    admin_user = test_data["admin"]
     response = client.post(
         "/api/v1/auth/login",
-        json={"username": admin_user.username, "password": "admin123"},
+        json={"username": admin_user.username, "password": "Admin123!@#"},
     )
     assert response.status_code == status.HTTP_200_OK
-    return {}
+    csrf_token = response.cookies.get("csrf_token")
+    assert csrf_token is not None
+    return {"X-CSRF-Token": csrf_token}
 
 
 class TestContractWorkflow:

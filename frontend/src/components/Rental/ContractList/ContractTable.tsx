@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Space, Tag, Tooltip, Card } from 'antd';
+import { Button, Space, Tag, Tooltip, Card, Typography } from 'antd';
 import {
   EyeOutlined,
   EditOutlined,
@@ -15,9 +15,9 @@ import {
   RentContract,
   ContractStatus,
   ContractStatusLabels,
-  ContractStatusColors,
 } from '@/types/rentContract';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
+import styles from './ContractTable.module.css';
 
 interface ContractTableProps {
   loading: boolean;
@@ -36,6 +36,28 @@ interface ContractTableProps {
   onDelete: (id: string) => void;
 }
 
+type Tone = 'primary' | 'success' | 'warning' | 'error';
+
+const STATUS_TONE_MAP: Record<ContractStatus, Tone> = {
+  [ContractStatus.DRAFT]: 'primary',
+  [ContractStatus.PENDING]: 'warning',
+  [ContractStatus.ACTIVE]: 'success',
+  [ContractStatus.EXPIRING]: 'warning',
+  [ContractStatus.EXPIRED]: 'error',
+  [ContractStatus.TERMINATED]: 'error',
+  [ContractStatus.RENEWED]: 'primary',
+};
+
+const STATUS_ASSIST_TEXT_MAP: Record<ContractStatus, string> = {
+  [ContractStatus.DRAFT]: '待完善',
+  [ContractStatus.PENDING]: '待审核',
+  [ContractStatus.ACTIVE]: '履约中',
+  [ContractStatus.EXPIRING]: '需续签',
+  [ContractStatus.EXPIRED]: '已结束',
+  [ContractStatus.TERMINATED]: '已结束',
+  [ContractStatus.RENEWED]: '已续约',
+};
+
 const ContractTable: React.FC<ContractTableProps> = ({
   loading,
   contracts,
@@ -49,15 +71,27 @@ const ContractTable: React.FC<ContractTableProps> = ({
   onDelete,
 }) => {
   const format = useFormat();
+  const { Text } = Typography;
+  const toneClassMap: Record<Tone, string> = {
+    primary: styles.tonePrimary,
+    success: styles.toneSuccess,
+    warning: styles.toneWarning,
+    error: styles.toneError,
+  };
 
   const columns: ColumnsType<RentContract> = [
     {
       title: '合同编号',
       dataIndex: 'contract_number',
       key: 'contract_number',
-      render: (text: string) => (
+      render: (text: string, record: RentContract) => (
         <Tooltip title={text}>
-          <Button type="link" size="small">
+          <Button
+            type="link"
+            size="small"
+            onClick={() => onView(record)}
+            className={styles.contractNumberButton}
+          >
             {text}
           </Button>
         </Tooltip>
@@ -67,11 +101,7 @@ const ContractTable: React.FC<ContractTableProps> = ({
       title: '承租方',
       dataIndex: 'tenant_name',
       key: 'tenant_name',
-      render: (text: string) => (
-        <Space>
-          <span>{text}</span>
-        </Space>
-      ),
+      render: (text: string) => <span>{text}</span>,
     },
     {
       title: '物业名称',
@@ -84,7 +114,7 @@ const ContractTable: React.FC<ContractTableProps> = ({
         }
         return (
           <Tooltip title={assetList.map(a => a.property_name).join(', ')}>
-            <Tag>{assetList.length}个资产</Tag>
+            <Tag className={styles.assetCountTag}>{assetList.length}个资产</Tag>
           </Tooltip>
         );
       },
@@ -98,11 +128,11 @@ const ContractTable: React.FC<ContractTableProps> = ({
     {
       title: '租期',
       key: 'lease_period',
-      render: (record: RentContract) => (
-        <Space orientation="vertical" size="small">
-          <div>{dayjs(record.start_date).format('YYYY-MM-DD')}</div>
-          <div>至</div>
-          <div>{dayjs(record.end_date).format('YYYY-MM-DD')}</div>
+      render: (_: unknown, record: RentContract) => (
+        <Space orientation="vertical" size={2} className={styles.leasePeriod}>
+          <span>{dayjs(record.start_date).format('YYYY-MM-DD')}</span>
+          <span className={styles.leaseSeparator}>至</span>
+          <span>{dayjs(record.end_date).format('YYYY-MM-DD')}</span>
         </Space>
       ),
     },
@@ -118,10 +148,16 @@ const ContractTable: React.FC<ContractTableProps> = ({
       dataIndex: 'contract_status',
       key: 'contract_status',
       render: (status: ContractStatus) => {
+        const tone = STATUS_TONE_MAP[status] ?? 'primary';
         return (
-          <Tag color={ContractStatusColors[status] || 'default'}>
-            {ContractStatusLabels[status] || status}
-          </Tag>
+          <Space size={6} className={styles.inlineStatus} wrap>
+            <Tag className={[styles.statusTag, toneClassMap[tone]].join(' ')}>
+              {ContractStatusLabels[status] ?? status}
+            </Tag>
+            <Text type="secondary" className={styles.statusAssistText}>
+              {STATUS_ASSIST_TEXT_MAP[status] ?? '状态跟进'}
+            </Text>
+          </Space>
         );
       },
     },
@@ -136,24 +172,44 @@ const ContractTable: React.FC<ContractTableProps> = ({
       key: 'actions',
       width: 260,
       render: (_: unknown, record: RentContract) => (
-        <Space size="small">
+        <Space size={6} className={styles.actionGroup} wrap>
           <Tooltip title="查看详情">
-            <Button type="text" icon={<EyeOutlined />} onClick={() => onView(record)} />
+            <Button
+              type="text"
+              icon={<EyeOutlined />}
+              onClick={() => onView(record)}
+              className={styles.actionButton}
+              aria-label={`查看合同 ${record.contract_number}`}
+            />
           </Tooltip>
           <Tooltip title="编辑">
-            <Button type="text" icon={<EditOutlined />} onClick={() => onEdit(record)} />
+            <Button
+              type="text"
+              icon={<EditOutlined />}
+              onClick={() => onEdit(record)}
+              className={styles.actionButton}
+              aria-label={`编辑合同 ${record.contract_number}`}
+            />
           </Tooltip>
           <Tooltip title="生成台账">
             <Button
               type="text"
               icon={<FileTextOutlined />}
               onClick={() => onGenerateLedger(record.id)}
+              className={styles.actionButton}
+              aria-label={`生成台账 ${record.contract_number}`}
             />
           </Tooltip>
           {record.contract_status === ContractStatus.ACTIVE && (
             <>
               <Tooltip title="续签">
-                <Button type="text" icon={<SyncOutlined />} onClick={() => onRenew(record)} />
+                <Button
+                  type="text"
+                  icon={<SyncOutlined />}
+                  onClick={() => onRenew(record)}
+                  className={styles.actionButton}
+                  aria-label={`续签合同 ${record.contract_number}`}
+                />
               </Tooltip>
               <Tooltip title="终止">
                 <Button
@@ -161,6 +217,8 @@ const ContractTable: React.FC<ContractTableProps> = ({
                   danger
                   icon={<StopOutlined />}
                   onClick={() => onTerminate(record)}
+                  className={styles.actionButton}
+                  aria-label={`终止合同 ${record.contract_number}`}
                 />
               </Tooltip>
             </>
@@ -171,6 +229,8 @@ const ContractTable: React.FC<ContractTableProps> = ({
               danger
               icon={<DeleteOutlined />}
               onClick={() => onDelete(record.id)}
+              className={styles.actionButton}
+              aria-label={`删除合同 ${record.contract_number}`}
             />
           </Tooltip>
         </Space>
@@ -179,7 +239,7 @@ const ContractTable: React.FC<ContractTableProps> = ({
   ];
 
   return (
-    <Card>
+    <Card className={styles.tableCard}>
       <TableWithPagination
         columns={columns}
         dataSource={contracts}

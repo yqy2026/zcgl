@@ -38,10 +38,18 @@ interface OwnershipSelectProps {
   onlyActive?: boolean;
   /** 是否显示高级选择按钮 */
   showAdvancedSelect?: boolean;
+  /** 是否显示弹窗选择按钮 */
+  showPickerButton?: boolean;
+  /** 是否显示刷新按钮 */
+  showRefreshButton?: boolean;
   /** 是否显示搜索框 */
   showSearch?: boolean;
+  /** 组件变体 */
+  variant?: 'full' | 'compact' | 'selectionOnly';
   /** 最大选择数量（多选模式） */
   maxCount?: number;
+  /** 可访问性标签 */
+  ariaLabel?: string;
 }
 
 type OwnershipSelectValue = string | string[];
@@ -50,23 +58,58 @@ interface OwnershipSelectOption extends DefaultOptionType {
   label: React.ReactNode;
 }
 
+const OWNERSHIP_SELECT_VARIANTS = {
+  full: {
+    showCreateButton: true,
+    showAdvancedSelect: true,
+    showPickerButton: true,
+    showRefreshButton: true,
+    showSearch: true,
+  },
+  compact: {
+    showCreateButton: false,
+    showAdvancedSelect: false,
+    showPickerButton: true,
+    showRefreshButton: true,
+    showSearch: true,
+  },
+  selectionOnly: {
+    showCreateButton: false,
+    showAdvancedSelect: false,
+    showPickerButton: false,
+    showRefreshButton: false,
+    showSearch: false,
+  },
+} as const;
+
 const OwnershipSelect: React.FC<OwnershipSelectProps> = ({
   value,
   onChange,
   placeholder = '请选择权属方',
   disabled = false,
   allowClear = true,
-  style = {},
+  style,
   size = 'middle',
   mode = 'single',
-  showCreateButton = true,
+  showCreateButton,
   onlyActive = true,
-  showAdvancedSelect = true,
-  showSearch = true,
+  showAdvancedSelect,
+  showPickerButton,
+  showRefreshButton,
+  showSearch,
+  variant = 'full',
   maxCount,
+  ariaLabel,
 }) => {
   const [searchText, setSearchText] = useState('');
   const [selectModalVisible, setSelectModalVisible] = useState(false);
+
+  const variantConfig = OWNERSHIP_SELECT_VARIANTS[variant];
+  const resolvedShowCreateButton = showCreateButton ?? variantConfig.showCreateButton;
+  const resolvedShowAdvancedSelect = showAdvancedSelect ?? variantConfig.showAdvancedSelect;
+  const resolvedShowPickerButton = showPickerButton ?? variantConfig.showPickerButton;
+  const resolvedShowRefreshButton = showRefreshButton ?? variantConfig.showRefreshButton;
+  const resolvedShowSearch = showSearch ?? variantConfig.showSearch;
 
   // 使用React Query获取权属方数据
   const { ownerships: allOwnerships, loading, refresh } = useOwnershipOptions(onlyActive);
@@ -224,14 +267,15 @@ const OwnershipSelect: React.FC<OwnershipSelectProps> = ({
           size={size}
           style={{ flex: 1 }}
           loading={loading}
-          showSearch={showSearch}
+          showSearch={resolvedShowSearch}
           filterOption={false}
-          onSearch={showSearch ? handleSearch : undefined}
+          onSearch={resolvedShowSearch ? handleSearch : undefined}
           notFoundContent={loading ? '加载中...' : '暂无数据'}
           optionLabelProp="children"
           mode={mode === 'multiple' ? 'multiple' : undefined}
           maxCount={maxCount}
           tagRender={mode === 'multiple' ? tagRender : undefined}
+          aria-label={ariaLabel}
         >
           {filteredOwnerships.map(ownership => (
             <Option key={ownership.id} value={ownership.id}>
@@ -240,16 +284,18 @@ const OwnershipSelect: React.FC<OwnershipSelectProps> = ({
           ))}
         </Select>
 
-        <Tooltip title="从列表中选择">
-          <Button
-            icon={<SearchOutlined />}
-            onClick={openSelectModal}
-            disabled={disabled}
-            size={size}
-          />
-        </Tooltip>
+        {resolvedShowPickerButton && (
+          <Tooltip title="从列表中选择">
+            <Button
+              icon={<SearchOutlined />}
+              onClick={openSelectModal}
+              disabled={disabled}
+              size={size}
+            />
+          </Tooltip>
+        )}
 
-        {showAdvancedSelect && (
+        {resolvedShowAdvancedSelect && (
           <Tooltip title="从列表中选择">
             <Button
               icon={<UnorderedListOutlined />}
@@ -260,7 +306,7 @@ const OwnershipSelect: React.FC<OwnershipSelectProps> = ({
           </Tooltip>
         )}
 
-        {showCreateButton && (
+        {resolvedShowCreateButton && (
           <Tooltip title="创建新权属方">
             <Button
               icon={<PlusOutlined />}
@@ -271,15 +317,17 @@ const OwnershipSelect: React.FC<OwnershipSelectProps> = ({
           </Tooltip>
         )}
 
-        <Tooltip title="刷新">
-          <Button
-            icon={<ReloadOutlined />}
-            onClick={handleRefresh}
-            disabled={disabled}
-            loading={loading}
-            size={size}
-          />
-        </Tooltip>
+        {resolvedShowRefreshButton && (
+          <Tooltip title="刷新">
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={handleRefresh}
+              disabled={disabled}
+              loading={loading}
+              size={size}
+            />
+          </Tooltip>
+        )}
       </Space.Compact>
 
       {/* 选择弹窗 */}

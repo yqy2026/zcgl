@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Layout, Typography } from 'antd';
 
 import AppHeader from './AppHeader';
@@ -6,6 +6,7 @@ import AppSidebar from './AppSidebar';
 import styles from './Layout.module.css';
 
 const { Content, Footer } = Layout;
+const TRANSPARENT_LAYOUT_STYLE = { background: 'transparent' };
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -14,16 +15,16 @@ interface AppLayoutProps {
 const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const [collapsed, setCollapsed] = useState(false);
 
-  const toggleCollapsed = () => {
-    setCollapsed(!collapsed);
-  };
+  const toggleCollapsed = useCallback(() => {
+    setCollapsed(prev => !prev);
+  }, []);
 
   return (
     <Layout className={styles.appLayout}>
       {/* 侧边栏 */}
       <AppSidebar collapsed={collapsed} />
 
-      <Layout style={{ background: 'transparent' }}>
+      <Layout style={TRANSPARENT_LAYOUT_STYLE}>
         {/* 头部 */}
         <AppHeader collapsed={collapsed} onToggleCollapsed={toggleCollapsed} />
 

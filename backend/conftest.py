@@ -266,6 +266,7 @@ def test_user(test_db):
     user = User(
         username="testuser",
         email="test@example.com",
+        phone="13800000001",
         full_name="Test User",
         password_hash=password_hash,
         is_active=True,
@@ -365,6 +366,7 @@ def test_admin(test_db):
     admin = User(
         username="admin",
         email="admin@example.com",
+        phone="13800000000",
         full_name="Admin User",
         password_hash=password_hash,
         is_active=True,

@@ -22,28 +22,26 @@ from sqlalchemy.orm import Session
 @pytest.fixture
 def project_data(db_session: Session):
     """创建测试项目数据"""
-    from src.crud.project import project_crud
-    from src.schemas.project import ProjectCreate
+    from src.models.project import Project
 
-    project = project_crud.create(
-        db_session,
-        obj_in=ProjectCreate(
-            name="Test Project",
-            code="PJ2509001",
-            city="Beijing",
-            district="Chaoyang",
-            address="Test Address 123",
-            total_area=10000.0,
-            build_area=8000.0,
-            project_type="commercial",
-            project_status="planning",
-            ownership_id="owner-001",
-        ),
+    project = Project(
+        name="Test Project",
+        code="PJ2509001",
+        city="Beijing",
+        district="Chaoyang",
+        address="Test Address 123",
+        project_type="commercial",
+        project_status="planning",
+        ownership_entity="owner-001",
     )
+    db_session.add(project)
+    db_session.flush()
+    db_session.refresh(project)
     yield project
     # Cleanup
     try:
-        project_crud.remove(db_session, id=project.id)
+        db_session.query(Project).filter(Project.id == project.id).delete()
+        db_session.flush()
     except Exception:
         pass
 
@@ -416,16 +414,17 @@ class TestSearchProjects:
         self, client, admin_user_headers, db_session: Session
     ):
         """测试成功删除项目"""
-        from src.crud.project import project_crud
-        from src.schemas.project import ProjectCreate
+        from src.models.project import Project
 
         # 创建一个待删除的项目
-        project = project_crud.create(
-            db_session,
-            obj_in=ProjectCreate(
-                name="To Be Deleted", code="PJ2509007", city="Test City"
-            ),
+        project = Project(
+            name="To Be Deleted",
+            code="PJ2509007",
+            city="Test City",
         )
+        db_session.add(project)
+        db_session.flush()
+        db_session.refresh(project)
 
         response = client.delete(
             f"/api/v1/projects/{project.id}", headers=admin_user_headers

@@ -31,7 +31,9 @@
       "mcp__acp__Bash",
       "mcp__web-reader__webReader",
       "mcp__plugin_serena_serena__create_text_file",
-      "Bash(make dev)"
+      "Bash(make dev)",
+      "mcp__acp__Write",
+      "mcp__acp__Edit"
     ]
   },
   "outputStyle": "Explanatory"

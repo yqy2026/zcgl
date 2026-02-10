@@ -3,7 +3,11 @@
  */
 
 import React from 'react';
-import { screen, fireEvent } from '@/test/utils/test-helpers';
+import {
+  screen,
+  fireEvent,
+  renderWithProviders as renderWithAppProviders,
+} from '@/test/utils/test-helpers';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import DashboardPage from '../DashboardPage';
@@ -80,10 +84,10 @@ const createTestQueryClient = () =>
   });
 
 // 渲染辅助函数
-const renderWithProviders = () => {
+const renderDashboardPage = () => {
   const queryClient = createTestQueryClient();
 
-  return renderWithProviders(
+  return renderWithAppProviders(
     <QueryClientProvider client={queryClient}>
       <DashboardPage />
     </QueryClientProvider>
@@ -120,14 +124,14 @@ describe('DashboardPage', () => {
 
   describe('渲染', () => {
     it('渲染页面标题', () => {
-      renderWithProviders();
+      renderDashboardPage();
 
       expect(screen.getByText('资产管理看板')).toBeInTheDocument();
       expect(screen.getByText('实时监控资产运营状况，提供数据驱动的决策支持')).toBeInTheDocument();
     });
 
     it('渲染操作按钮', () => {
-      renderWithProviders();
+      renderDashboardPage();
 
       expect(screen.getByText('刷新')).toBeInTheDocument();
       expect(screen.getByText('导出')).toBeInTheDocument();
@@ -135,7 +139,7 @@ describe('DashboardPage', () => {
     });
 
     it('渲染关键指标卡片', () => {
-      renderWithProviders();
+      renderDashboardPage();
 
       expect(screen.getByTestId('trend-card-资产总数')).toBeInTheDocument();
       expect(screen.getByTestId('trend-card-管理总面积')).toBeInTheDocument();
@@ -144,13 +148,13 @@ describe('DashboardPage', () => {
     });
 
     it('渲染智能洞察区域', () => {
-      renderWithProviders();
+      renderDashboardPage();
 
       expect(screen.getByTestId('quick-insights')).toBeInTheDocument();
     });
 
     it('渲染详细统计区域', () => {
-      renderWithProviders();
+      renderDashboardPage();
 
       expect(screen.getByText('面积分布统计')).toBeInTheDocument();
       expect(screen.getByText('运营状况概览')).toBeInTheDocument();
@@ -166,7 +170,7 @@ describe('DashboardPage', () => {
         refetch: vi.fn(),
       } as unknown as ReturnType<typeof useAnalytics>);
 
-      renderWithProviders();
+      renderDashboardPage();
 
       expect(screen.getByTestId('quick-insights')).toHaveTextContent('Loading insights...');
     });
@@ -181,7 +185,7 @@ describe('DashboardPage', () => {
         refetch: vi.fn(),
       } as unknown as ReturnType<typeof useAnalytics>);
 
-      renderWithProviders();
+      renderDashboardPage();
 
       expect(screen.getByText('数据加载失败')).toBeInTheDocument();
       expect(screen.getByText('网络错误')).toBeInTheDocument();
@@ -197,7 +201,7 @@ describe('DashboardPage', () => {
         refetch,
       } as unknown as ReturnType<typeof useAnalytics>);
 
-      renderWithProviders();
+      renderDashboardPage();
 
       fireEvent.click(screen.getByRole('button', { name: /重\s*试/ }));
 
@@ -224,7 +228,7 @@ describe('DashboardPage', () => {
         refetch,
       } as unknown as ReturnType<typeof useAnalytics>);
 
-      renderWithProviders();
+      renderDashboardPage();
 
       fireEvent.click(screen.getByText('刷新'));
 
@@ -235,7 +239,7 @@ describe('DashboardPage', () => {
       // Mock requestFullscreen
       document.documentElement.requestFullscreen = vi.fn().mockResolvedValue(undefined);
 
-      renderWithProviders();
+      renderDashboardPage();
 
       const fullscreenButton = screen.getByText('全屏');
       fireEvent.click(fullscreenButton);
@@ -246,7 +250,7 @@ describe('DashboardPage', () => {
 
   describe('数据显示', () => {
     it('正确显示资产统计数据', () => {
-      renderWithProviders();
+      renderDashboardPage();
 
       expect(screen.getByText('资产总数: 100个')).toBeInTheDocument();
       expect(screen.getByText('管理总面积: 50000㎡')).toBeInTheDocument();
@@ -255,7 +259,7 @@ describe('DashboardPage', () => {
     });
 
     it('正确显示面积分布数据', () => {
-      renderWithProviders();
+      renderDashboardPage();
 
       expect(screen.getByText('已租面积 (㎡)')).toBeInTheDocument();
       expect(screen.getByText('空置面积 (㎡)')).toBeInTheDocument();
@@ -277,7 +281,7 @@ describe('DashboardPage', () => {
         refetch: vi.fn(),
       } as unknown as ReturnType<typeof useAnalytics>);
 
-      renderWithProviders();
+      renderDashboardPage();
 
       expect(screen.getByText('资产总数: 0个')).toBeInTheDocument();
       expect(screen.getByText('管理总面积: 0㎡')).toBeInTheDocument();

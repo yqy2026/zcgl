@@ -81,27 +81,27 @@ export function getLightThemeCSSVariables(): Record<string, string> {
 
   // Color variables
   Object.entries(lightTheme.colors).forEach(([key, value]) => {
-    variables[`--${key}`] = value as string;
+    variables[`--${key}`] = value;
   });
 
   // Spacing variables
   Object.entries(lightTheme.spacing).forEach(([key, value]) => {
-    variables[`--spacing-${key}`] = value as string;
+    variables[`--spacing-${key}`] = value;
   });
 
   // Font size variables
   Object.entries(lightTheme.fontSize).forEach(([key, value]) => {
-    variables[`--font-size-${key}`] = value as string;
+    variables[`--font-size-${key}`] = value;
   });
 
   // Border radius variables
   Object.entries(lightTheme.borderRadius).forEach(([key, value]) => {
-    variables[`--radius-${key}`] = value as string;
+    variables[`--radius-${key}`] = value;
   });
 
   // Box shadow variables
   Object.entries(lightTheme.boxShadow).forEach(([key, value]) => {
-    variables[`--shadow-${key}`] = value as string;
+    variables[`--shadow-${key}`] = value;
   });
 
   return variables;

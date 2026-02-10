@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   Card,
   Button,
@@ -15,8 +15,6 @@ import {
   Drawer,
   Typography,
 } from 'antd';
-
-const { Text } = Typography;
 import { MessageManager } from '@/utils/messageManager';
 import {
   ReloadOutlined,
@@ -35,15 +33,138 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
-import { COLORS } from '@/styles/colorMap';
+import { TableWithPagination } from '@/components/Common/TableWithPagination';
+import { ListToolbar } from '@/components/Common/ListToolbar';
+import PageContainer from '@/components/Common/PageContainer';
+import { useQuery } from '@tanstack/react-query';
+import { logService, type OperationLog, type LogStatistics } from '@/services/systemService';
+import styles from './OperationLogPage.module.css';
 
+const { Text } = Typography;
 const { RangePicker } = DatePicker;
 const { Search } = Input;
 const { Option } = Select;
-import { TableWithPagination } from '@/components/Common/TableWithPagination';
-import { ListToolbar } from '@/components/Common/ListToolbar';
-import { useQuery } from '@tanstack/react-query';
-import { logService, type OperationLog, type LogStatistics } from '@/services/systemService';
+
+type Tone = 'primary' | 'success' | 'warning' | 'error' | 'neutral';
+type ResponseTimeTone = 'neutral' | 'success' | 'warning' | 'error';
+
+interface ActionMeta {
+  value: string;
+  label: string;
+  tone: Tone;
+  icon: ReactNode;
+}
+
+interface ModuleMeta {
+  value: string;
+  label: string;
+  tone: Tone;
+}
+
+interface StatusFilterOption {
+  value: string;
+  label: string;
+}
+
+const ACTION_OPTIONS: ActionMeta[] = [
+  { value: 'create', label: '创建', tone: 'success', icon: <PlusOutlined /> },
+  { value: 'update', label: '更新', tone: 'primary', icon: <EditOutlined /> },
+  { value: 'delete', label: '删除', tone: 'error', icon: <DeleteOutlined /> },
+  { value: 'view', label: '查看', tone: 'primary', icon: <EyeOutlined /> },
+  { value: 'login', label: '登录', tone: 'success', icon: <LoginOutlined /> },
+  { value: 'logout', label: '登出', tone: 'warning', icon: <LogoutOutlined /> },
+  { value: 'export', label: '导出', tone: 'warning', icon: <FileTextOutlined /> },
+  { value: 'import', label: '导入', tone: 'primary', icon: <FileTextOutlined /> },
+  { value: 'security', label: '安全操作', tone: 'error', icon: <SecurityScanOutlined /> },
+];
+
+const ACTION_META_MAP = ACTION_OPTIONS.reduce<Record<string, ActionMeta>>((accumulator, option) => {
+  accumulator[option.value] = option;
+  return accumulator;
+}, {});
+
+const MODULE_OPTIONS: ModuleMeta[] = [
+  { value: 'dashboard', label: '数据看板', tone: 'primary' },
+  { value: 'assets', label: '资产管理', tone: 'success' },
+  { value: 'rental', label: '租赁管理', tone: 'warning' },
+  { value: 'ownership', label: '权属方管理', tone: 'primary' },
+  { value: 'project', label: '项目管理', tone: 'success' },
+  { value: 'system', label: '系统管理', tone: 'error' },
+  { value: 'auth', label: '认证授权', tone: 'warning' },
+];
+
+const MODULE_META_MAP = MODULE_OPTIONS.reduce<Record<string, ModuleMeta>>((accumulator, option) => {
+  accumulator[option.value] = option;
+  return accumulator;
+}, {});
+
+const STATUS_OPTIONS: StatusFilterOption[] = [
+  { value: 'success', label: '成功' },
+  { value: 'error', label: '失败' },
+  { value: 'warning', label: '警告' },
+];
+
+const REQUEST_METHOD_TONE_MAP: Record<string, Tone> = {
+  GET: 'success',
+  POST: 'primary',
+  PUT: 'warning',
+  PATCH: 'warning',
+  DELETE: 'error',
+};
+
+const TONE_CLASS_MAP: Record<Tone, string> = {
+  primary: styles.tonePrimary,
+  success: styles.toneSuccess,
+  warning: styles.toneWarning,
+  error: styles.toneError,
+  neutral: styles.toneNeutral,
+};
+
+const getToneClassName = (tone: Tone): string => {
+  return TONE_CLASS_MAP[tone];
+};
+
+const getResponseTimeTone = (time?: number | null): ResponseTimeTone => {
+  if (typeof time !== 'number') {
+    return 'neutral';
+  }
+  if (time > 1000) {
+    return 'error';
+  }
+  if (time > 500) {
+    return 'warning';
+  }
+  return 'success';
+};
+
+const getResponseTimeLabel = (time?: number | null): string => {
+  if (typeof time !== 'number') {
+    return '';
+  }
+  if (time > 1000) {
+    return '慢';
+  }
+  if (time > 500) {
+    return '中';
+  }
+  return '快';
+};
+
+const getStatusMeta = (status?: number | null): { label: string; tone: Tone } => {
+  if (status == null) {
+    return { label: '未知', tone: 'neutral' };
+  }
+  if (status >= 200 && status < 300) {
+    return { label: '成功', tone: 'success' };
+  }
+  if (status >= 400 && status < 500) {
+    return { label: '客户端错误', tone: 'warning' };
+  }
+  if (status >= 500) {
+    return { label: '服务器错误', tone: 'error' };
+  }
+  return { label: '未知', tone: 'neutral' };
+};
 
 const OperationLogPage: React.FC = () => {
   interface LogFilters {
@@ -73,37 +194,6 @@ const OperationLogPage: React.FC = () => {
   });
   const [detailDrawerVisible, setDetailDrawerVisible] = useState(false);
   const [selectedLog, setSelectedLog] = useState<OperationLog | null>(null);
-
-  // 操作类型选项
-  const actionOptions = [
-    { value: 'create', label: '创建', color: 'green', icon: <PlusOutlined /> },
-    { value: 'update', label: '更新', color: 'blue', icon: <EditOutlined /> },
-    { value: 'delete', label: '删除', color: 'red', icon: <DeleteOutlined /> },
-    { value: 'view', label: '查看', color: 'default', icon: <EyeOutlined /> },
-    { value: 'login', label: '登录', color: 'green', icon: <LoginOutlined /> },
-    { value: 'logout', label: '登出', color: 'orange', icon: <LogoutOutlined /> },
-    { value: 'export', label: '导出', color: 'purple', icon: <FileTextOutlined /> },
-    { value: 'import', label: '导入', color: 'purple', icon: <FileTextOutlined /> },
-    { value: 'security', label: '安全操作', color: 'red', icon: <SecurityScanOutlined /> },
-  ];
-
-  // 模块选项
-  const moduleOptions = [
-    { value: 'dashboard', label: '数据看板' },
-    { value: 'assets', label: '资产管理' },
-    { value: 'rental', label: '租赁管理' },
-    { value: 'ownership', label: '权属方管理' },
-    { value: 'project', label: '项目管理' },
-    { value: 'system', label: '系统管理' },
-    { value: 'auth', label: '认证授权' },
-  ];
-
-  // 状态选项
-  const statusOptions = [
-    { value: 'success', label: '成功', color: 'green' },
-    { value: 'error', label: '失败', color: 'red' },
-    { value: 'warning', label: '警告', color: 'orange' },
-  ];
 
   type LogJsonValue = string | Record<string, unknown> | unknown[] | null | undefined;
 
@@ -148,21 +238,7 @@ const OperationLogPage: React.FC = () => {
     if (formatted === '-') {
       return '-';
     }
-    return (
-      <pre
-        style={{
-          background: COLORS.bgTertiary,
-          padding: '8px',
-          borderRadius: '4px',
-          fontSize: '12px',
-          margin: 0,
-          whiteSpace: 'pre-wrap',
-          wordBreak: 'break-word',
-        }}
-      >
-        {formatted}
-      </pre>
-    );
+    return <pre className={styles.jsonBlock}>{formatted}</pre>;
   };
 
   const fetchLogs = useCallback(async (): Promise<LogListQueryResult> => {
@@ -239,6 +315,25 @@ const OperationLogPage: React.FC = () => {
     }),
     [logsResponse?.total, paginationState.current, paginationState.pageSize]
   );
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filters.module !== '') {
+      count += 1;
+    }
+    if (filters.action !== '') {
+      count += 1;
+    }
+    if (filters.status !== '') {
+      count += 1;
+    }
+    if (filters.dateRange != null) {
+      count += 1;
+    }
+    if (filters.searchText.trim() !== '') {
+      count += 1;
+    }
+    return count;
+  }, [filters.action, filters.dateRange, filters.module, filters.searchText, filters.status]);
 
   const refreshLogs = useCallback(() => {
     void refetchLogs();
@@ -318,26 +413,64 @@ const OperationLogPage: React.FC = () => {
   };
 
   const getActionTag = (action: string) => {
-    const actionConfig = actionOptions.find(a => a.value === action);
+    const actionConfig = ACTION_META_MAP[action];
+    const label = actionConfig?.label ?? (action.trim() === '' ? '未知操作' : action);
+    const toneClassName = getToneClassName(actionConfig?.tone ?? 'neutral');
+    const icon = actionConfig?.icon ?? <SettingOutlined />;
     return (
-      <Tag color={actionConfig?.color ?? 'default'} icon={actionConfig?.icon}>
-        {actionConfig?.label ?? action}
+      <Tag className={`${styles.statusTag} ${styles.actionTag} ${toneClassName}`} icon={icon}>
+        {label}
+      </Tag>
+    );
+  };
+
+  const getModuleTag = (module?: string | null, moduleName?: string | null) => {
+    const moduleKey = module == null ? '' : module;
+    const moduleMeta = MODULE_META_MAP[moduleKey];
+    const derivedLabel = (() => {
+      if (moduleName != null && moduleName.trim() !== '') {
+        return moduleName;
+      }
+      if (moduleMeta != null) {
+        return moduleMeta.label;
+      }
+      if (moduleKey !== '') {
+        return moduleKey;
+      }
+      return '-';
+    })();
+
+    return (
+      <Tag
+        className={`${styles.statusTag} ${styles.moduleTag} ${getToneClassName(moduleMeta?.tone ?? 'neutral')}`}
+      >
+        {derivedLabel}
       </Tag>
     );
   };
 
   const getStatusTag = (status?: number | null) => {
-    if (status == null) {
-      return <Tag>未知</Tag>;
+    const meta = getStatusMeta(status);
+    const statusCodeText = typeof status === 'number' ? ` ${status}` : '';
+    return (
+      <Tag className={`${styles.statusTag} ${getToneClassName(meta.tone)}`}>
+        {meta.label}
+        {statusCodeText}
+      </Tag>
+    );
+  };
+
+  const getRequestMethodTag = (requestMethod?: string | null) => {
+    if (requestMethod == null || requestMethod.trim() === '') {
+      return <Text type="secondary">-</Text>;
     }
-    if (status >= 200 && status < 300) {
-      return <Tag color="green">成功</Tag>;
-    } else if (status >= 400 && status < 500) {
-      return <Tag color="orange">客户端错误</Tag>;
-    } else if (status >= 500) {
-      return <Tag color="red">服务器错误</Tag>;
-    }
-    return <Tag>未知</Tag>;
+    const normalizedMethod = requestMethod.toUpperCase();
+    const methodTone = REQUEST_METHOD_TONE_MAP[normalizedMethod] ?? 'neutral';
+    return (
+      <Tag className={`${styles.statusTag} ${styles.methodTag} ${getToneClassName(methodTone)}`}>
+        {normalizedMethod}
+      </Tag>
+    );
   };
 
   const columns: ColumnsType<OperationLog> = [
@@ -352,38 +485,45 @@ const OperationLogPage: React.FC = () => {
       title: '用户信息',
       key: 'user_info',
       width: 150,
-      render: (_, record) => (
-        <Space orientation="vertical" size="small">
-          <div style={{ fontWeight: 500 }}>{record.username ?? '-'}</div>
-          <div style={{ fontSize: '12px', color: COLORS.textSecondary }}>
-            @{record.username ?? '-'}
-          </div>
-        </Space>
-      ),
+      render: (_, record) => {
+        const accountName =
+          record.username != null && record.username.trim() !== '' ? record.username : '-';
+        const displayName =
+          record.user_name != null && record.user_name.trim() !== '' ? record.user_name : accountName;
+        return (
+          <Space direction="vertical" size={2} className={styles.userCell}>
+            <div className={styles.primaryText}>{displayName}</div>
+            <div className={styles.secondaryText}>
+              {accountName === '-' ? '-' : `账号 @${accountName}`}
+            </div>
+          </Space>
+        );
+      },
     },
     {
       title: '操作',
       dataIndex: 'action',
       key: 'action',
       width: 100,
-      render: action => getActionTag(action),
+      render: action => getActionTag(typeof action === 'string' ? action : ''),
     },
     {
       title: '模块',
-      dataIndex: 'module',
       key: 'module',
       width: 120,
-      render: module => <Tag color="blue">{module ?? '-'}</Tag>,
+      render: (_, record) => getModuleTag(record.module, record.module_name),
     },
     {
       title: '资源',
       key: 'resource',
       width: 150,
       render: (_, record) => (
-        <div>
-          <div style={{ fontWeight: 500 }}>{record.resource_name ?? '-'}</div>
-          <div style={{ fontSize: '12px', color: COLORS.textSecondary }}>
-            {record.resource_type || '-'}
+        <div className={styles.resourceCell}>
+          <div className={styles.primaryText}>{record.resource_name ?? '-'}</div>
+          <div className={styles.secondaryText}>
+            {record.resource_type != null && record.resource_type.trim() !== ''
+              ? record.resource_type
+              : '-'}
           </div>
         </div>
       ),
@@ -393,49 +533,54 @@ const OperationLogPage: React.FC = () => {
       dataIndex: 'ip_address',
       key: 'ip_address',
       width: 120,
-      render: ip => (
-        <Tooltip title={ip ?? ''}>
-          <span>{ip ?? ''}</span>
-        </Tooltip>
-      ),
+      render: ip => {
+        const ipAddress = typeof ip === 'string' && ip.trim() !== '' ? ip : '-';
+        return (
+          <Tooltip title={ipAddress}>
+            <span className={styles.ipValue}>{ipAddress}</span>
+          </Tooltip>
+        );
+      },
     },
     {
       title: '响应状态',
       dataIndex: 'response_status',
       key: 'response_status',
-      width: 100,
+      width: 132,
       render: status => getStatusTag(status),
     },
     {
       title: '响应时间',
       dataIndex: 'response_time',
       key: 'response_time',
-      width: 100,
-      render: time =>
-        typeof time === 'number' ? (
-          <span
-            style={{
-              color: time > 1000 ? COLORS.error : time > 500 ? COLORS.warning : COLORS.success,
-            }}
-          >
-            {time}ms
+      width: 112,
+      render: time => {
+        if (typeof time !== 'number') {
+          return '-';
+        }
+        const tone = getResponseTimeTone(time);
+        const label = getResponseTimeLabel(time);
+        return (
+          <span className={`${styles.responseTime} ${getToneClassName(tone)}`}>
+            <span className={styles.responseTimeValue}>{time}ms</span>
+            <span className={styles.responseTimeLabel}>{label}</span>
           </span>
-        ) : (
-          '-'
-        ),
+        );
+      },
     },
     {
       title: '操作',
-      key: 'action',
+      key: 'actions',
       fixed: 'right',
-      width: 80,
+      width: 88,
       render: (_, record) => (
         <Tooltip title="查看详情">
           <Button
-            type="link"
-            size="small"
+            type="text"
+            className={styles.rowActionButton}
             icon={<EyeOutlined />}
             onClick={() => handleViewDetail(record)}
+            aria-label={`查看操作日志 ${record.id} 详情`}
           />
         </Tooltip>
       ),
@@ -443,65 +588,62 @@ const OperationLogPage: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: '24px' }}>
+    <PageContainer title="操作日志" subTitle="查看系统操作轨迹与安全审计记录">
       {/* 统计卡片 */}
       {statistics && (
-        <Row gutter={16} style={{ marginBottom: 24 }}>
-          <Col span={6}>
-            <Card>
+        <Row gutter={[16, 16]} className={styles.statsRow}>
+          <Col xs={24} sm={12} xl={6}>
+            <Card className={`${styles.statsCard} ${styles.toneSuccess}`}>
               <Statistic
                 title="今日操作"
                 value={statistics.today}
                 prefix={<FileTextOutlined />}
-                styles={{ content: { color: COLORS.success } }}
               />
             </Card>
           </Col>
-          <Col span={6}>
-            <Card>
+          <Col xs={24} sm={12} xl={6}>
+            <Card className={`${styles.statsCard} ${styles.tonePrimary}`}>
               <Statistic
                 title="本周操作"
                 value={statistics.this_week}
                 prefix={<SettingOutlined />}
-                styles={{ content: { color: COLORS.primary } }}
               />
             </Card>
           </Col>
-          <Col span={6}>
-            <Card>
+          <Col xs={24} sm={12} xl={6}>
+            <Card className={`${styles.statsCard} ${styles.toneError}`}>
               <Statistic
                 title="错误数量"
                 value={statistics.error_count}
                 prefix={<ExclamationCircleOutlined />}
-                styles={{ content: { color: COLORS.error } }}
               />
             </Card>
           </Col>
-          <Col span={6}>
-            <Card>
+          <Col xs={24} sm={12} xl={6}>
+            <Card
+              className={`${styles.statsCard} ${getToneClassName(
+                getResponseTimeTone(statistics.avg_response_time)
+              )}`}
+            >
               <Statistic
                 title="平均响应时间"
                 value={statistics.avg_response_time}
                 suffix="ms"
                 prefix={<SettingOutlined />}
-                styles={{
-                  content: {
-                    color:
-                      statistics.avg_response_time > 1000
-                        ? COLORS.error
-                        : statistics.avg_response_time > 500
-                          ? COLORS.warning
-                          : COLORS.success,
-                  },
-                }}
               />
             </Card>
           </Col>
         </Row>
       )}
 
-      <Card>
-        <div style={{ marginBottom: 16 }}>
+      <Card className={styles.auditCard}>
+        <div className={styles.filtersSection}>
+          <div className={styles.filterSummary} aria-live="polite">
+            <Text type="secondary">共 {pagination.total} 条记录</Text>
+            <Text type="secondary">
+              {activeFilterCount > 0 ? `已启用 ${activeFilterCount} 项筛选` : '未启用筛选条件'}
+            </Text>
+          </div>
           <ListToolbar
             variant="plain"
             gutter={[16, 16]}
@@ -513,6 +655,7 @@ const OperationLogPage: React.FC = () => {
                   <Search
                     placeholder="搜索用户名、资源或操作"
                     allowClear
+                    className={styles.fullWidthControl}
                     onSearch={handleSearch}
                     value={filters.searchText}
                     onChange={event => handleSearch(event.target.value)}
@@ -527,11 +670,11 @@ const OperationLogPage: React.FC = () => {
                   <Select
                     placeholder="模块筛选"
                     allowClear
-                    style={{ width: '100%' }}
+                    className={styles.fullWidthControl}
                     value={filters.module === '' ? undefined : filters.module}
                     onChange={handleModuleChange}
                   >
-                    {moduleOptions.map(module => (
+                    {MODULE_OPTIONS.map(module => (
                       <Option key={module.value} value={module.value}>
                         {module.label}
                       </Option>
@@ -546,11 +689,11 @@ const OperationLogPage: React.FC = () => {
                   <Select
                     placeholder="操作筛选"
                     allowClear
-                    style={{ width: '100%' }}
+                    className={styles.fullWidthControl}
                     value={filters.action === '' ? undefined : filters.action}
                     onChange={handleActionChange}
                   >
-                    {actionOptions.map(action => (
+                    {ACTION_OPTIONS.map(action => (
                       <Option key={action.value} value={action.value}>
                         {action.label}
                       </Option>
@@ -565,11 +708,11 @@ const OperationLogPage: React.FC = () => {
                   <Select
                     placeholder="状态筛选"
                     allowClear
-                    style={{ width: '100%' }}
+                    className={styles.fullWidthControl}
                     value={filters.status === '' ? undefined : filters.status}
                     onChange={handleStatusChange}
                   >
-                    {statusOptions.map(status => (
+                    {STATUS_OPTIONS.map(status => (
                       <Option key={status.value} value={status.value}>
                         {status.label}
                       </Option>
@@ -582,7 +725,7 @@ const OperationLogPage: React.FC = () => {
                 col: { xs: 24, sm: 12, md: 6 },
                 content: (
                   <RangePicker
-                    style={{ width: '100%' }}
+                    className={styles.fullWidthControl}
                     value={filters.dateRange}
                     onChange={dates => {
                       if (dates != null && dates[0] != null && dates[1] != null) {
@@ -603,6 +746,9 @@ const OperationLogPage: React.FC = () => {
                     icon={<ReloadOutlined />}
                     onClick={refreshLogs}
                     loading={loading}
+                    disabled={loading}
+                    className={styles.toolbarButton}
+                    aria-label="刷新操作日志列表"
                   >
                     刷新
                   </Button>
@@ -634,9 +780,10 @@ const OperationLogPage: React.FC = () => {
         onClose={() => setDetailDrawerVisible(false)}
         open={detailDrawerVisible}
         size={800}
+        className={styles.detailDrawer}
       >
         {selectedLog && (
-          <div>
+          <div className={styles.detailContent}>
             <Descriptions column={1} bordered>
               <Descriptions.Item label="操作时间">
                 {dayjs(selectedLog.created_at).format('YYYY-MM-DD HH:mm:ss')}
@@ -644,22 +791,29 @@ const OperationLogPage: React.FC = () => {
               <Descriptions.Item label="用户信息">
                 <Space>
                   <UserOutlined />
-                  <span>
-                    {selectedLog.username ?? '-'} (@{selectedLog.username ?? '-'})
-                  </span>
+                  <Space direction="vertical" size={0} className={styles.userCell}>
+                    <span className={styles.primaryText}>
+                      {selectedLog.user_name ?? selectedLog.username ?? '-'}
+                    </span>
+                    <span className={styles.secondaryText}>
+                      {selectedLog.username != null && selectedLog.username.trim() !== ''
+                        ? `账号 @${selectedLog.username}`
+                        : '-'}
+                    </span>
+                  </Space>
                 </Space>
               </Descriptions.Item>
               <Descriptions.Item label="操作类型">
                 {getActionTag(selectedLog.action)}
               </Descriptions.Item>
               <Descriptions.Item label="所属模块">
-                <Tag color="blue">{selectedLog.module ?? '-'}</Tag>
+                {getModuleTag(selectedLog.module, selectedLog.module_name)}
               </Descriptions.Item>
               <Descriptions.Item label="资源信息">
-                {selectedLog.resource_name != null ? (
+                {selectedLog.resource_name != null && selectedLog.resource_name.trim() !== '' ? (
                   <div>
                     <div>{selectedLog.resource_name}</div>
-                    <div style={{ fontSize: '12px', color: COLORS.textSecondary }}>
+                    <div className={styles.secondaryText}>
                       {selectedLog.resource_type} (ID: {selectedLog.resource_id})
                     </div>
                   </div>
@@ -669,22 +823,21 @@ const OperationLogPage: React.FC = () => {
               </Descriptions.Item>
               <Descriptions.Item label="请求信息">
                 <div>
-                  <div>
-                    {selectedLog.request_method != null ? (
-                      <Tag color="purple">{selectedLog.request_method}</Tag>
-                    ) : (
-                      '-'
-                    )}
-                    {selectedLog.request_url != null ? (
-                      <code style={{ background: COLORS.bgTertiary, padding: '2px 4px' }}>
+                  <div className={styles.requestMetaRow}>
+                    {getRequestMethodTag(selectedLog.request_method)}
+                    {selectedLog.request_url != null && selectedLog.request_url.trim() !== '' ? (
+                      <code className={styles.requestUrl}>
                         {selectedLog.request_url}
                       </code>
                     ) : (
-                      '-'
+                      <Text type="secondary">-</Text>
                     )}
                   </div>
-                  <div style={{ marginTop: 8, fontSize: '12px', color: COLORS.textSecondary }}>
-                    IP: {selectedLog.ip_address ?? '-'}
+                  <div className={styles.ipText}>
+                    IP:{' '}
+                    {selectedLog.ip_address != null && selectedLog.ip_address.trim() !== ''
+                      ? selectedLog.ip_address
+                      : '-'}
                   </div>
                 </div>
               </Descriptions.Item>
@@ -695,22 +848,23 @@ const OperationLogPage: React.FC = () => {
                 {renderJsonBlock(selectedLog.request_body)}
               </Descriptions.Item>
               <Descriptions.Item label="响应信息">
-                <div>
-                  <div>状态: {getStatusTag(selectedLog.response_status)}</div>
-                  <div>
-                    耗时:{' '}
+                <div className={styles.responseMeta}>
+                  <div className={styles.responseMetaRow}>
+                    <Text strong>状态：</Text>
+                    {getStatusTag(selectedLog.response_status)}
+                  </div>
+                  <div className={styles.responseMetaRow}>
+                    <Text strong>耗时：</Text>
                     {typeof selectedLog.response_time === 'number' ? (
                       <span
-                        style={{
-                          color:
-                            selectedLog.response_time > 1000
-                              ? COLORS.error
-                              : selectedLog.response_time > 500
-                                ? COLORS.warning
-                                : COLORS.success,
-                        }}
+                        className={`${styles.responseTime} ${getToneClassName(
+                          getResponseTimeTone(selectedLog.response_time)
+                        )}`}
                       >
-                        {selectedLog.response_time}ms
+                        <span className={styles.responseTimeValue}>{selectedLog.response_time}ms</span>
+                        <span className={styles.responseTimeLabel}>
+                          {getResponseTimeLabel(selectedLog.response_time)}
+                        </span>
                       </span>
                     ) : (
                       '-'
@@ -720,23 +874,16 @@ const OperationLogPage: React.FC = () => {
               </Descriptions.Item>
               {selectedLog.error_message != null && (
                 <Descriptions.Item label="错误信息">
-                  <div
-                    style={{
-                      color: COLORS.error,
-                      background: 'var(--color-error-light)',
-                      padding: '8px',
-                      borderRadius: '4px',
-                    }}
-                  >
+                  <div className={styles.errorMessage}>
                     {selectedLog.error_message}
                   </div>
                 </Descriptions.Item>
               )}
               <Descriptions.Item label="用户代理">
-                <div
-                  style={{ fontSize: '12px', color: COLORS.textSecondary, wordBreak: 'break-all' }}
-                >
-                  {selectedLog.user_agent ?? '-'}
+                <div className={styles.userAgent}>
+                  {selectedLog.user_agent != null && selectedLog.user_agent.trim() !== ''
+                    ? selectedLog.user_agent
+                    : '-'}
                 </div>
               </Descriptions.Item>
               <Descriptions.Item label="详细信息">
@@ -747,19 +894,10 @@ const OperationLogPage: React.FC = () => {
                 ) : Array.isArray(selectedLog.details) ? (
                   renderJsonBlock(selectedLog.details)
                 ) : (
-                  <div
-                    style={{
-                      background: COLORS.bgTertiary,
-                      padding: '12px',
-                      borderRadius: '4px',
-                      fontSize: '12px',
-                      overflow: 'auto',
-                      maxHeight: '300px',
-                    }}
-                  >
+                  <div className={styles.detailsObject}>
                     {Object.entries(selectedLog.details).map(([key, value]) => (
-                      <div key={key} style={{ marginBottom: 4 }}>
-                        <Text strong style={{ marginRight: 8 }}>
+                      <div key={key} className={styles.detailsRow}>
+                        <Text strong className={styles.detailKey}>
                           {key}:
                         </Text>
                         <Text type="secondary">
@@ -774,7 +912,7 @@ const OperationLogPage: React.FC = () => {
           </div>
         )}
       </Drawer>
-    </div>
+    </PageContainer>
   );
 };
 

@@ -1,0 +1,163 @@
+.container {
+  width: 100%;
+}
+
+.uploadIcon {
+  font-size: 48px;
+  color: var(--color-primary);
+}
+
+.uploadText {
+  font-size: 16px !important;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.uploadHint {
+  color: var(--color-text-secondary) !important;
+}
+
+.uploadHintSecondary {
+  color: var(--color-text-tertiary) !important;
+  font-size: 12px !important;
+}
+
+.statusPanel {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.progressBar {
+  margin-bottom: 16px;
+}
+
+.processingHint {
+  margin-top: 8px;
+}
+
+.processingHintText {
+  font-size: 12px;
+  color: var(--color-text-secondary) !important;
+}
+
+.cancelRow {
+  margin-top: 16px;
+}
+
+.statusCircle {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.successCircle {
+  background: var(--color-primary-light);
+}
+
+.errorCircle {
+  background: var(--color-error-light);
+}
+
+.successIcon {
+  font-size: 32px;
+  color: var(--color-success);
+}
+
+.errorIcon {
+  font-size: 32px;
+  color: var(--color-error);
+}
+
+.successTitle {
+  color: var(--color-success) !important;
+  margin: 16px 0 8px !important;
+}
+
+.errorTitle {
+  color: var(--color-error) !important;
+  margin: 16px 0 8px !important;
+}
+
+.fileMetaCard {
+  background: var(--color-bg-tertiary);
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.fullWidthSpace {
+  width: 100%;
+}
+
+.sessionCode {
+  font-size: 12px;
+}
+
+.processingAlert {
+  margin-bottom: 16px;
+}
+
+.errorDescription {
+  color: var(--color-text-secondary) !important;
+  margin-bottom: 16px !important;
+}
+
+.actionSpace :global(.ant-btn) {
+  min-height: 36px;
+}
+
+.usageSection {
+  margin-top: 24px;
+  padding: 16px;
+  background: var(--color-primary-light);
+  border-radius: 6px;
+  border: 1px solid var(--color-border-light);
+}
+
+.usageTitle {
+  color: var(--color-primary) !important;
+  margin-bottom: 12px !important;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.usageTitleIcon {
+  color: var(--color-primary);
+}
+
+.usageList {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--color-text-primary);
+  display: grid;
+  gap: 6px;
+}
+
+.usageList li {
+  line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+  .statusPanel {
+    padding: 16px 0;
+  }
+
+  .fileMetaCard {
+    padding: 12px;
+  }
+
+  .actionSpace {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .actionSpace :global(.ant-btn) {
+    flex: 1;
+  }
+}

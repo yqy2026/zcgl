@@ -10,7 +10,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { screen, fireEvent } from '@/test/utils/test-helpers';
+import { screen, fireEvent, waitFor } from '@/test/utils/test-helpers';
 
 describe('LoadingProvider - 组件导入测试', () => {
   it('应该能够导出LoadingProvider', async () => {
@@ -90,14 +90,18 @@ describe('LoadingProvider - 基础功能测试', () => {
       </LoadingProvider>
     );
 
-    // 初始状态下不应该显示加载中
-    expect(screen.queryByText('Test Tip')).not.toBeInTheDocument();
+    // 初始状态下不应该显示加载遮罩
+    expect(document.querySelector('.ant-spin-spinning')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByText('Show'));
-    expect(screen.getByText('Test Tip')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(document.querySelector('.ant-spin-spinning')).toBeInTheDocument();
+    });
 
     fireEvent.click(screen.getByText('Hide'));
-    expect(screen.queryByText('Test Tip')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(document.querySelector('.ant-spin-spinning')).not.toBeInTheDocument();
+    });
   });
 
   it('useLocalLoading应该可以切换局部Loading状态', async () => {
@@ -151,9 +155,8 @@ describe('LoadingProvider - 基础功能测试', () => {
       </LocalLoading>
     );
 
-    // 验证 Spin 组件被渲染（通过 ant-spin 类）
-    expect(container.querySelector('.ant-spin')).toBeInTheDocument();
-    expect(screen.getByText('Loading...')).toBeInTheDocument();
+    // 验证 Spin 容器被渲染（嵌套模式）
+    expect(container.querySelector('.ant-spin-nested-loading')).toBeInTheDocument();
     expect(screen.getByText('Content')).toBeInTheDocument();
   });
 

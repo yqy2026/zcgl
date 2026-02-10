@@ -13,13 +13,13 @@ interface MobileLayoutProps {
 
 const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
   return (
-    <Layout style={{ minHeight: '100vh' }}>
+    <Layout style={{ minHeight: '100%' }}>
       {/* 移动端头部 */}
       <Header
         style={{
           padding: '0 16px',
-          background: '#fff',
-          borderBottom: '1px solid #f0f0f0',
+          background: 'var(--color-bg-primary)',
+          borderBottom: '1px solid var(--color-border-light)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -35,7 +35,7 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
         <div style={{ display: 'flex', alignItems: 'center' }}>
           <MobileMenu />
           <div style={{ marginLeft: 12 }}>
-            <Text strong style={{ fontSize: '16px', color: '#1890ff' }}>
+            <Text strong style={{ fontSize: '16px', color: 'var(--color-primary)' }}>
               资产管理
             </Text>
           </div>
@@ -60,7 +60,7 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
             size="small"
             icon={<UserOutlined />}
             style={{
-              backgroundColor: '#1890ff',
+              backgroundColor: 'var(--color-primary)',
               width: 36,
               height: 36,
               minWidth: 36,
@@ -77,8 +77,8 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
         style={{
           marginTop: 56, // 头部高度
           padding: 0,
-          background: '#f5f5f5',
-          minHeight: 'calc(100vh - 56px)', // 减去头部的高度
+          background: 'var(--color-bg-tertiary)',
+          minHeight: 'calc(100% - 56px)', // 减去头部的高度
           overflow: 'auto',
         }}
       >
@@ -89,8 +89,8 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
       <Footer
         style={{
           textAlign: 'center',
-          background: '#fff',
-          borderTop: '1px solid #f0f0f0',
+          background: 'var(--color-bg-primary)',
+          borderTop: '1px solid var(--color-border-light)',
           padding: '8px 16px',
           fontSize: '12px',
         }}

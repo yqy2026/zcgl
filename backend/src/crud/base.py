@@ -132,10 +132,11 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
         try:
             stmt = select(self.model).offset(skip).limit(limit)
             result = (await db.execute(stmt)).scalars().all()
+            records = list(result)
 
             if use_cache and limit <= 50:
-                self._set_cache(cache_key, result)  # pragma: no cover
-            return result
+                self._set_cache(cache_key, records)  # pragma: no cover
+            return records
         except Exception as e:  # pragma: no cover
             raise self._handle_database_error(e, "获取记录列表")  # pragma: no cover
 
@@ -249,7 +250,7 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
             logger.info(
                 f"Successfully deleted {getattr(self.model, '__tablename__', 'unknown')} record with id: {id}"
             )
-            return cast(ModelType, obj)
+            return obj
         except BaseBusinessError:
             raise
         except Exception as e:  # pragma: no cover

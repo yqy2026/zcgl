@@ -13,6 +13,7 @@ import {
   Space,
   Typography,
   Table,
+  Tooltip,
 } from 'antd';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { MessageManager } from '@/utils/messageManager';
@@ -32,6 +33,7 @@ import { rentContractService } from '@/services/rentContractService';
 import { RENTAL_QUERY_KEYS } from '@/constants/queryKeys';
 import { useArrayListData } from '@/hooks/useArrayListData';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
+import PageContainer from '@/components/Common/PageContainer';
 import { ChartErrorBoundary } from '@/components/Analytics';
 
 import {
@@ -42,7 +44,8 @@ import {
 } from '@/types/rentContract';
 import { formatCurrency } from '@/utils/format';
 import { createLogger } from '@/utils/logger';
-import { COLORS, CHART_COLORS } from '@/styles/colorMap';
+import { CHART_COLORS } from '@/styles/colorMap';
+import styles from './RentStatisticsPage.module.css';
 
 const pageLogger = createLogger('RentStatistics');
 
@@ -83,7 +86,78 @@ interface RentStatisticsData {
   monthlyData: MonthlyRentStatistics[];
 }
 
+type Tone = 'primary' | 'success' | 'warning' | 'error';
+
+const TONE_COLOR_MAP: Record<Tone, string> = {
+  primary: 'var(--color-primary)',
+  success: 'var(--color-success)',
+  warning: 'var(--color-warning)',
+  error: 'var(--color-error)',
+};
+
+const BAR_SERIES_COLOR_MAP: Record<string, string> = {
+  应收金额: TONE_COLOR_MAP.primary,
+  已收金额: TONE_COLOR_MAP.success,
+  欠款金额: TONE_COLOR_MAP.error,
+};
+
+const normalizePercentage = (value: number | string): number => {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) {
+    return 0;
+  }
+  return Math.min(100, Math.max(0, numericValue));
+};
+
+const resolvePaymentTone = (rate: number): Tone => {
+  if (rate >= 90) {
+    return 'success';
+  }
+  if (rate >= 70) {
+    return 'warning';
+  }
+  return 'error';
+};
+
+const resolvePaymentLabel = (rate: number): string => {
+  if (rate >= 90) {
+    return '优';
+  }
+  if (rate >= 70) {
+    return '中';
+  }
+  return '低';
+};
+
+const resolveOverdueTone = (amount: number): Tone => {
+  if (amount > 0) {
+    return 'error';
+  }
+  return 'success';
+};
+
+const truncateText = (value: string | null | undefined, maxLength: number): string => {
+  if (value == null) {
+    return '—';
+  }
+  const normalizedValue = value.trim();
+  if (normalizedValue === '') {
+    return '—';
+  }
+  if (normalizedValue.length <= maxLength) {
+    return normalizedValue;
+  }
+  return `${normalizedValue.slice(0, maxLength)}...`;
+};
+
 const RentStatisticsPage: React.FC = () => {
+  const toneClassMap: Record<Tone, string> = {
+    primary: styles.tonePrimary,
+    success: styles.toneSuccess,
+    warning: styles.toneWarning,
+    error: styles.toneError,
+  };
+
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs]>([
     dayjs().startOf('year'),
     dayjs().endOf('year'),
@@ -196,10 +270,10 @@ const RentStatisticsPage: React.FC = () => {
       dataIndex: 'ownership_name',
       key: 'ownership_name',
       render: (text: string, record) => (
-        <div>
-          <div style={{ fontWeight: 'bold' }}>{text}</div>
-          <div style={{ fontSize: '12px', color: COLORS.textSecondary }}>
-            {record.ownership_short_name}
+        <div className={styles.nameCell}>
+          <div className={styles.primaryText}>{text}</div>
+          <div className={styles.secondaryText}>
+            {truncateText(record.ownership_short_name, 24)}
           </div>
         </div>
       ),
@@ -209,7 +283,7 @@ const RentStatisticsPage: React.FC = () => {
       dataIndex: 'contract_count',
       key: 'contract_count',
       align: 'center',
-      render: (count: number) => <Tag color="blue">{count} 个</Tag>,
+      render: (count: number) => <Tag className={styles.countTag}>{count} 个</Tag>,
     },
     {
       title: '应收总额',
@@ -223,20 +297,26 @@ const RentStatisticsPage: React.FC = () => {
       dataIndex: 'total_paid_amount',
       key: 'total_paid_amount',
       align: 'right',
-      render: (amount: number) => (
-        <span style={{ color: COLORS.success }}>{formatCurrency(amount)}</span>
-      ),
+      render: (amount: number) => <span className={styles.positiveValue}>{formatCurrency(amount)}</span>,
     },
     {
       title: '欠款总额',
       dataIndex: 'total_overdue_amount',
       key: 'total_overdue_amount',
       align: 'right',
-      render: (amount: number) => (
-        <span style={{ color: amount > 0 ? COLORS.error : COLORS.success }}>
-          {formatCurrency(amount)}
-        </span>
-      ),
+      render: (amount: number) => {
+        const tone = resolveOverdueTone(amount);
+        return (
+          <Space size={6} className={styles.inlineStatus} wrap>
+            <span className={[styles.valueText, toneClassMap[tone]].join(' ')}>
+              {formatCurrency(amount)}
+            </span>
+            <Tag className={[styles.statusTag, toneClassMap[tone]].join(' ')}>
+              {tone === 'error' ? '有欠款' : '正常'}
+            </Tag>
+          </Space>
+        );
+      },
     },
     {
       title: '收缴率',
@@ -244,19 +324,22 @@ const RentStatisticsPage: React.FC = () => {
       key: 'payment_rate',
       align: 'center',
       render: (rate: number | string) => {
-        const percentage = Number(rate);
-        let color: string = COLORS.error;
-        if (percentage >= 90) color = COLORS.success;
-        else if (percentage >= 70) color = COLORS.warning;
+        const percentage = normalizePercentage(rate);
+        const tone = resolvePaymentTone(percentage);
 
         return (
-          <Progress
-            type="circle"
-            percent={percentage}
-            size={50}
-            strokeColor={color}
-            format={() => `${percentage.toFixed(1)}%`}
-          />
+          <div className={styles.paymentRateCell}>
+            <Progress
+              type="circle"
+              percent={percentage}
+              size={50}
+              strokeColor={TONE_COLOR_MAP[tone]}
+              format={() => `${percentage.toFixed(1)}%`}
+            />
+            <Tag className={[styles.statusTag, toneClassMap[tone]].join(' ')}>
+              {resolvePaymentLabel(percentage)}
+            </Tag>
+          </div>
         );
       },
     },
@@ -269,10 +352,12 @@ const RentStatisticsPage: React.FC = () => {
       dataIndex: 'asset_name',
       key: 'asset_name',
       render: (text: string, record) => (
-        <div>
-          <div style={{ fontWeight: 'bold' }}>{text}</div>
-          <div style={{ fontSize: '12px', color: COLORS.textSecondary }}>
-            {record.asset_address?.substring(0, 30)}...
+        <div className={styles.nameCell}>
+          <div className={styles.primaryText}>{text}</div>
+          <div className={styles.secondaryText}>
+            <Tooltip title={record.asset_address ?? '暂无地址'}>
+              <span>{truncateText(record.asset_address, 30)}</span>
+            </Tooltip>
           </div>
         </div>
       ),
@@ -282,7 +367,7 @@ const RentStatisticsPage: React.FC = () => {
       dataIndex: 'contract_count',
       key: 'contract_count',
       align: 'center',
-      render: (count: number) => <Tag color="blue">{count} 个</Tag>,
+      render: (count: number) => <Tag className={styles.countTag}>{count} 个</Tag>,
     },
     {
       title: '应收总额',
@@ -296,20 +381,26 @@ const RentStatisticsPage: React.FC = () => {
       dataIndex: 'total_paid_amount',
       key: 'total_paid_amount',
       align: 'right',
-      render: (amount: number) => (
-        <span style={{ color: COLORS.success }}>{formatCurrency(amount)}</span>
-      ),
+      render: (amount: number) => <span className={styles.positiveValue}>{formatCurrency(amount)}</span>,
     },
     {
       title: '欠款总额',
       dataIndex: 'total_overdue_amount',
       key: 'total_overdue_amount',
       align: 'right',
-      render: (amount: number) => (
-        <span style={{ color: amount > 0 ? COLORS.error : COLORS.success }}>
-          {formatCurrency(amount)}
-        </span>
-      ),
+      render: (amount: number) => {
+        const tone = resolveOverdueTone(amount);
+        return (
+          <Space size={6} className={styles.inlineStatus} wrap>
+            <span className={[styles.valueText, toneClassMap[tone]].join(' ')}>
+              {formatCurrency(amount)}
+            </span>
+            <Tag className={[styles.statusTag, toneClassMap[tone]].join(' ')}>
+              {tone === 'error' ? '有欠款' : '正常'}
+            </Tag>
+          </Space>
+        );
+      },
     },
     {
       title: '收缴率',
@@ -317,19 +408,22 @@ const RentStatisticsPage: React.FC = () => {
       key: 'payment_rate',
       align: 'center',
       render: (rate: number | string) => {
-        const percentage = Number(rate);
-        let color: string = COLORS.error;
-        if (percentage >= 90) color = COLORS.success;
-        else if (percentage >= 70) color = COLORS.warning;
+        const percentage = normalizePercentage(rate);
+        const tone = resolvePaymentTone(percentage);
 
         return (
-          <Progress
-            type="circle"
-            percent={percentage}
-            size={50}
-            strokeColor={color}
-            format={() => `${percentage.toFixed(1)}%`}
-          />
+          <div className={styles.paymentRateCell}>
+            <Progress
+              type="circle"
+              percent={percentage}
+              size={50}
+              strokeColor={TONE_COLOR_MAP[tone]}
+              format={() => `${percentage.toFixed(1)}%`}
+            />
+            <Tag className={[styles.statusTag, toneClassMap[tone]].join(' ')}>
+              {resolvePaymentLabel(percentage)}
+            </Tag>
+          </div>
         );
       },
     },
@@ -391,12 +485,7 @@ const RentStatisticsPage: React.FC = () => {
     xField: 'month',
     yField: 'value',
     seriesField: 'type',
-    color: ({ type }: { type: string }) => {
-      if (type === '应收金额') return COLORS.primary;
-      if (type === '已收金额') return COLORS.success;
-      if (type === '欠款金额') return COLORS.error;
-      return COLORS.primary;
-    },
+    color: ({ type }: { type: string }) => BAR_SERIES_COLOR_MAP[type] ?? TONE_COLOR_MAP.primary,
     isGroup: true,
     columnStyle: {
       fillOpacity: 0.8,
@@ -422,7 +511,7 @@ const RentStatisticsPage: React.FC = () => {
     xField: 'month',
     yField: 'rate',
     smooth: true,
-    color: COLORS.success,
+    color: TONE_COLOR_MAP.success,
     lineStyle: {
       lineWidth: 2,
     },
@@ -523,18 +612,25 @@ const RentStatisticsPage: React.FC = () => {
     },
   ];
 
+  const overdueTone: Tone =
+    Number(overviewData?.total_overdue ?? 0) > 0 ? 'error' : 'success';
+  const paymentRateTone: Tone = resolvePaymentTone(Number(overviewData?.payment_rate ?? 0));
+
   return (
-    <div style={{ padding: '24px', background: COLORS.bgQuaternary, minHeight: '100vh' }}>
-      <Card>
-        <div style={{ marginBottom: '24px' }}>
+    <PageContainer
+      className={styles.statisticsPage}
+      contentStyle={{ background: 'var(--color-bg-quaternary)' }}
+    >
+      <Card className={styles.mainCard}>
+        <div className={styles.headerSection}>
           <Row justify="space-between" align="middle">
             <Col>
-              <Title level={3} style={{ margin: 0 }}>
+              <Title level={3} className={styles.pageTitle}>
                 <AccountBookOutlined /> 租金统计报表
               </Title>
             </Col>
-            <Col>
-              <Space>
+            <Col className={styles.headerActions}>
+              <Space size={12} wrap className={styles.headerActionGroup}>
                 <RangePicker
                   value={dateRange}
                   onChange={dates => {
@@ -542,9 +638,13 @@ const RentStatisticsPage: React.FC = () => {
                       setDateRange(dates as [dayjs.Dayjs, dayjs.Dayjs]);
                     }
                   }}
-                  style={{ width: 300 }}
+                  className={styles.dateRangePicker}
                 />
-                <Select value={selectedYear} onChange={setSelectedYear} style={{ width: 120 }}>
+                <Select
+                  value={selectedYear}
+                  onChange={setSelectedYear}
+                  className={styles.yearSelect}
+                >
                   {Array.from({ length: 5 }, (_, i) => dayjs().year() - i).map(year => (
                     <Option key={year} value={year}>
                       {year}年
@@ -556,6 +656,7 @@ const RentStatisticsPage: React.FC = () => {
                   icon={<ReloadOutlined />}
                   onClick={() => void statisticsQuery.refetch()}
                   loading={statisticsQuery.isFetching}
+                  className={styles.actionButton}
                 >
                   刷新
                 </Button>
@@ -563,6 +664,7 @@ const RentStatisticsPage: React.FC = () => {
                   icon={<DownloadOutlined />}
                   onClick={() => exportStatisticsMutation.mutate()}
                   loading={exportStatisticsMutation.isPending}
+                  className={styles.actionButton}
                 >
                   导出
                 </Button>
@@ -572,65 +674,49 @@ const RentStatisticsPage: React.FC = () => {
         </div>
 
         {/* 概览统计卡片 */}
-        {overviewData && (
-          <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
+        {overviewData != null && (
+          <Row gutter={[16, 16]} className={styles.overviewRow}>
             <Col xs={24} sm={12} md={6}>
-              <Card>
+              <Card className={[styles.metricCard, toneClassMap.primary].join(' ')}>
                 <Statistic
                   title="应收总额"
-                  value={Number(overviewData.total_due || 0)}
+                  value={Number(overviewData.total_due ?? 0)}
                   precision={2}
                   prefix={<DollarOutlined />}
                   suffix="元"
-                  styles={{ content: { color: COLORS.primary } }}
                 />
               </Card>
             </Col>
             <Col xs={24} sm={12} md={6}>
-              <Card>
+              <Card className={[styles.metricCard, toneClassMap.success].join(' ')}>
                 <Statistic
                   title="已收总额"
-                  value={Number(overviewData.total_paid || 0)}
+                  value={Number(overviewData.total_paid ?? 0)}
                   precision={2}
                   prefix={<DollarOutlined />}
                   suffix="元"
-                  styles={{ content: { color: COLORS.success } }}
                 />
               </Card>
             </Col>
             <Col xs={24} sm={12} md={6}>
-              <Card>
+              <Card className={[styles.metricCard, toneClassMap[overdueTone]].join(' ')}>
                 <Statistic
                   title="欠款总额"
-                  value={Number(overviewData.total_overdue || 0)}
+                  value={Number(overviewData.total_overdue ?? 0)}
                   precision={2}
                   prefix={<DollarOutlined />}
                   suffix="元"
-                  styles={{
-                    content: {
-                      color:
-                        Number(overviewData.total_overdue || 0) > 0 ? COLORS.error : COLORS.success,
-                    },
-                  }}
                 />
               </Card>
             </Col>
             <Col xs={24} sm={12} md={6}>
-              <Card>
+              <Card className={[styles.metricCard, toneClassMap[paymentRateTone]].join(' ')}>
                 <Statistic
                   title="收缴率"
-                  value={Number(overviewData.payment_rate || 0)}
+                  value={normalizePercentage(Number(overviewData.payment_rate ?? 0))}
                   precision={1}
                   prefix={<RiseOutlined />}
                   suffix="%"
-                  styles={{
-                    content: {
-                      color:
-                        Number(overviewData.payment_rate || 0) >= 90
-                          ? COLORS.success
-                          : COLORS.warning,
-                    },
-                  }}
                 />
               </Card>
             </Col>
@@ -638,33 +724,31 @@ const RentStatisticsPage: React.FC = () => {
         )}
 
         {/* V2: Operational Indicators */}
-        {overviewData && (
+        {overviewData != null && (
           <>
-            <Title level={4} style={{ marginBottom: '16px' }}>
+            <Title level={4} className={styles.sectionTitle}>
               运营指标
             </Title>
-            <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
+            <Row gutter={[16, 16]} className={styles.operationRow}>
               <Col xs={24} sm={12} md={6}>
-                <Card>
+                <Card className={[styles.metricCard, toneClassMap.primary].join(' ')}>
                   <Statistic
                     title="平均租金单价"
                     value={Number(overviewData.average_unit_price ?? 0)}
                     precision={2}
                     prefix={<DollarOutlined />}
                     suffix="元/㎡/月"
-                    styles={{ content: { color: COLORS.primary } }}
                   />
                 </Card>
               </Col>
               <Col xs={24} sm={12} md={6}>
-                <Card>
+                <Card className={[styles.metricCard, toneClassMap.success].join(' ')}>
                   <Statistic
                     title="合同续签率"
                     value={Number(overviewData.renewal_rate ?? 0)}
                     precision={1}
                     prefix={<ReloadOutlined />}
                     suffix="%"
-                    styles={{ content: { color: COLORS.success } }}
                   />
                 </Card>
               </Col>
@@ -674,7 +758,7 @@ const RentStatisticsPage: React.FC = () => {
 
         <Tabs defaultActiveKey="ownership" type="card" items={tabItems} />
       </Card>
-    </div>
+    </PageContainer>
   );
 };
 

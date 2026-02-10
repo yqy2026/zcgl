@@ -4,16 +4,13 @@
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Typography } from 'antd';
-import { COLORS } from '@/styles/colorMap';
+import { PageContainer } from '@/components/Common';
 import RentContractExcelImport from '@/components/Rental/RentContractExcelImport';
 import { useContractList } from '@/hooks/useContractList';
 import ContractStatsCards from '@/components/Rental/ContractList/ContractStatsCards';
 import ContractFilterBar from '@/components/Rental/ContractList/ContractFilterBar';
 import ContractTable from '@/components/Rental/ContractList/ContractTable';
 import { RentContract } from '@/types/rentContract';
-
-const { Title } = Typography;
 
 const ContractListPage: React.FC = () => {
   const navigate = useNavigate();
@@ -49,12 +46,7 @@ const ContractListPage: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: '24px' }}>
-      {/* 页面标题 */}
-      <div style={{ marginBottom: '24px' }}>
-        <Title level={2}>租金合同管理</Title>
-        <p style={{ color: COLORS.textSecondary }}>管理物业租赁合同，支持租金条款设置和台账生成</p>
-      </div>
+    <PageContainer title="租金合同管理" subTitle="管理物业租赁合同，支持租金条款设置和台账生成">
 
       {/* 统计卡片 */}
       <ContractStatsCards statistics={statistics ?? null} />
@@ -84,7 +76,7 @@ const ContractListPage: React.FC = () => {
         onTerminate={handleTerminate}
         onDelete={handleDelete}
       />
-    </div>
+    </PageContainer>
   );
 };
 

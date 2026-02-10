@@ -21,6 +21,33 @@ from src.models.security_event import SecurityEvent
 from src.security.audit_logger import SecurityEventLogger, SecurityEventType
 
 
+class AsyncSessionAdapter:
+    """Async-compatible adapter for sync SQLAlchemy Session in tests."""
+
+    def __init__(self, session: Session):
+        self._session = session
+
+    async def execute(self, *args, **kwargs):  # noqa: ANN001
+        return self._session.execute(*args, **kwargs)
+
+    async def commit(self):
+        return self._session.commit()
+
+    async def refresh(self, *args, **kwargs):  # noqa: ANN001
+        return self._session.refresh(*args, **kwargs)
+
+    async def rollback(self):
+        return self._session.rollback()
+
+    def add(self, *args, **kwargs):  # noqa: ANN001
+        return self._session.add(*args, **kwargs)
+
+
+@pytest.fixture
+def async_test_db(test_db: Session) -> AsyncSessionAdapter:
+    return AsyncSessionAdapter(test_db)
+
+
 @pytest.fixture(autouse=True)
 def cleanup_security_events(test_db: Session):
     """Clean up security events before and after each test"""
@@ -34,11 +61,13 @@ def cleanup_security_events(test_db: Session):
 class TestPermissionDeniedLogging:
     """Test permission denied event logging in middleware"""
 
-    def test_log_permission_denied_creates_security_event(self, test_db: Session):
+    async def test_log_permission_denied_creates_security_event(
+        self, async_test_db: AsyncSessionAdapter
+    ):
         """Test that permission denied events are logged to database"""
-        logger = SecurityEventLogger(test_db)
+        logger = SecurityEventLogger(async_test_db)
 
-        event = logger.log_permission_denied(
+        event = await logger.log_permission_denied(
             user_id="test_user_123",
             resource="organizations",
             action="access",
@@ -53,13 +82,15 @@ class TestPermissionDeniedLogging:
         assert event.event_metadata["resource"] == "organizations"
         assert event.event_metadata["action"] == "access"
 
-    def test_log_permission_denied_increments_counter(self, test_db: Session):
+    async def test_log_permission_denied_increments_counter(
+        self, async_test_db: AsyncSessionAdapter
+    ):
         """Test that permission denied events increment Redis counter"""
-        logger = SecurityEventLogger(test_db)
+        logger = SecurityEventLogger(async_test_db)
 
         # Log 3 permission denied events from same IP
         for i in range(3):
-            logger.log_permission_denied(
+            await logger.log_permission_denied(
                 user_id=f"user_{i}",
                 resource="organizations",
                 action="access",
@@ -67,20 +98,22 @@ class TestPermissionDeniedLogging:
             )
 
         # Check event count
-        count = logger.get_event_count(
+        count = await logger.get_event_count(
             ip="192.168.1.101", event_type=SecurityEventType.PERMISSION_DENIED
         )
 
         assert count == 3
 
-    def test_should_alert_when_threshold_exceeded(self, test_db: Session):
+    async def test_should_alert_when_threshold_exceeded(
+        self, test_db: Session, async_test_db: AsyncSessionAdapter
+    ):
         """Test that should_alert returns True when threshold is exceeded"""
         from datetime import datetime, timedelta
 
         from src.models.security_event import SecurityEvent
         from src.security.audit_logger import SecurityEventType
 
-        logger = SecurityEventLogger(test_db, alert_threshold=5)
+        logger = SecurityEventLogger(async_test_db, alert_threshold=5)
 
         # Manually create 6 events in the database (simulating past events)
         window_start = datetime.now() - timedelta(minutes=5)
@@ -98,20 +131,22 @@ class TestPermissionDeniedLogging:
 
         # Should alert with 6 events (exceeds threshold of 5)
         assert (
-            logger.should_alert(
+            await logger.should_alert(
                 ip="192.168.1.102", event_type=SecurityEventType.PERMISSION_DENIED
             )
             is True
         )
 
-    def test_should_not_alert_when_threshold_not_exceeded(self, test_db: Session):
+    async def test_should_not_alert_when_threshold_not_exceeded(
+        self, test_db: Session, async_test_db: AsyncSessionAdapter
+    ):
         """Test that should_alert returns False when threshold is not exceeded"""
         from datetime import datetime, timedelta
 
         from src.models.security_event import SecurityEvent
         from src.security.audit_logger import SecurityEventType
 
-        logger = SecurityEventLogger(test_db, alert_threshold=10)
+        logger = SecurityEventLogger(async_test_db, alert_threshold=10)
 
         # Manually create 5 events in the database
         window_start = datetime.now() - timedelta(minutes=5)
@@ -129,20 +164,22 @@ class TestPermissionDeniedLogging:
 
         # Should not alert with only 5 events (below threshold of 10)
         assert (
-            logger.should_alert(
+            await logger.should_alert(
                 ip="192.168.1.103", event_type=SecurityEventType.PERMISSION_DENIED
             )
             is False
         )
 
-    def test_should_alert_with_custom_threshold(self, test_db: Session):
+    async def test_should_alert_with_custom_threshold(
+        self, test_db: Session, async_test_db: AsyncSessionAdapter
+    ):
         """Test that should_alert respects custom threshold"""
         from datetime import datetime, timedelta
 
         from src.models.security_event import SecurityEvent
         from src.security.audit_logger import SecurityEventType
 
-        logger = SecurityEventLogger(test_db, alert_threshold=5)
+        logger = SecurityEventLogger(async_test_db, alert_threshold=5)
 
         # Manually create 3 events in the database
         window_start = datetime.now() - timedelta(minutes=5)
@@ -160,7 +197,7 @@ class TestPermissionDeniedLogging:
 
         # Should not alert with default threshold (5)
         assert (
-            logger.should_alert(
+            await logger.should_alert(
                 ip="192.168.1.104", event_type=SecurityEventType.PERMISSION_DENIED
             )
             is False
@@ -168,7 +205,7 @@ class TestPermissionDeniedLogging:
 
         # Should alert with custom threshold (2)
         assert (
-            logger.should_alert(
+            await logger.should_alert(
                 ip="192.168.1.104",
                 event_type=SecurityEventType.PERMISSION_DENIED,
                 threshold=2,

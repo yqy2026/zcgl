@@ -138,7 +138,9 @@ class TestBatchUploadEndpoint:
         )
 
         assert response.status_code == 503
-        assert "系统繁忙" in response.json()["error"]["message"]
+        data = response.json()
+        assert data["error"]["code"] == "SERVICE_UNAVAILABLE"
+        assert data["error"]["message"] == "内部服务器错误"
 
 
 # ============================================================================

@@ -3,15 +3,17 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Form, Input, Button, Space, Card, Select, Tag } from 'antd';
+import { Form, Input, Button, Space, Card, Tag } from 'antd';
 import type { RuleObject } from 'antd/es/form';
 import { MessageManager } from '@/utils/messageManager';
+import OwnershipSelect from '@/components/Ownership/OwnershipSelect';
 
 import { ownershipService } from '@/services/ownershipService';
 import { projectService } from '@/services/projectService';
 import type { Project, ProjectCreate, ProjectUpdate } from '@/types/project';
 import type { Ownership } from '@/types/ownership';
 import { createLogger } from '@/utils/logger';
+import styles from './ProjectForm.module.css';
 
 const componentLogger = createLogger('ProjectForm');
 const { TextArea } = Input;
@@ -136,47 +138,34 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSuccess, onCancel 
         </Form.Item>
       </Card>
 
-      <Card title="权属方关联" size="small" style={{ marginTop: 16 }}>
+      <Card title="权属方关联" size="small" className={styles.ownershipCard}>
         <Form.Item label="选择权属方">
-          <Select
-            placeholder="选择要关联的权属方"
-            style={{ width: '100%' }}
-            loading={!ownerships.length}
-            optionFilterProp="children"
-            filterOption={(input, option) =>
-              String(option?.label ?? option?.value ?? '')
-                .toLowerCase()
-                .includes(input.toLowerCase())
-            }
-            onSelect={value => {
-              const ownership = ownerships.find(o => o.id === value);
-              if (ownership !== undefined && ownership !== null) {
-                addOwnership(ownership);
-              }
-            }}
-            value={undefined}
-          >
-            {ownerships
-              .filter(ownership => !selectedOwnerships.find(o => o.id === ownership.id))
-              .map(ownership => (
-                <Select.Option key={ownership.id} value={ownership.id}>
-                  {ownership.name}
-                </Select.Option>
-              ))}
-          </Select>
+          <div className={styles.ownershipSelectWrapper}>
+            <OwnershipSelect
+              placeholder="选择要关联的权属方"
+              variant="selectionOnly"
+              showSearch={true}
+              ariaLabel="项目关联权属方选择"
+              onChange={(_value, ownership) => {
+                if (ownership !== undefined && ownership !== null && !Array.isArray(ownership)) {
+                  addOwnership(ownership);
+                }
+              }}
+            />
+          </div>
         </Form.Item>
 
         {selectedOwnerships.length > 0 && (
-          <div style={{ marginTop: 16 }}>
-            <div style={{ marginBottom: 8, fontWeight: 'bold' }}>已选择的权属方：</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          <div className={styles.selectedOwnershipsSection}>
+            <div className={styles.selectedOwnershipsTitle}>已选择的权属方：</div>
+            <div className={styles.selectedOwnershipsList}>
               {selectedOwnerships.map(ownership => (
                 <Tag
                   key={ownership.id}
                   color="blue"
                   closable
                   onClose={() => removeOwnership(ownership.id)}
-                  style={{ padding: '4px 8px', fontSize: '14px' }}
+                  className={styles.selectedOwnershipTag}
                 >
                   {ownership.name}
                 </Tag>
@@ -186,8 +175,8 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSuccess, onCancel 
         )}
       </Card>
 
-      <div style={{ marginTop: 16 }}>
-        <Space style={{ float: 'right' }}>
+      <div className={styles.formActions}>
+        <Space>
           <Button onClick={onCancel}>取消</Button>
           <Button type="primary" htmlType="submit" loading={loading}>
             {project ? '更新' : '创建'}

@@ -244,7 +244,7 @@ class TestGetUser:
         from src.api.v1.auth.auth_modules.users import get_user
 
         mock_rbac = MagicMock()
-        mock_rbac.check_user_permission = AsyncMock(return_value=False)
+        mock_rbac.is_admin = AsyncMock(return_value=False)
         mock_rbac_class.return_value = mock_rbac
 
         with pytest.raises(PermissionDeniedError):
@@ -261,7 +261,7 @@ class TestGetUser:
         mock_user_crud_class.return_value = mock_user_crud
 
         mock_rbac = MagicMock()
-        mock_rbac.check_user_permission = AsyncMock(return_value=True)
+        mock_rbac.is_admin = AsyncMock(return_value=True)
         mock_rbac.get_user_role_summary = AsyncMock(return_value=USER_ROLE_SUMMARY)
         mock_rbac_class.return_value = mock_rbac
 
@@ -282,7 +282,7 @@ class TestUpdateUser:
         mock_user_crud_class.return_value = mock_user_crud
 
         mock_rbac = MagicMock()
-        mock_rbac.check_user_permission = AsyncMock(return_value=True)
+        mock_rbac.is_admin = AsyncMock(return_value=True)
         mock_rbac_class.return_value = mock_rbac
 
         with pytest.raises(ResourceNotFoundError):
@@ -321,7 +321,7 @@ class TestUpdateUser:
         mock_service_class.return_value = mock_service
 
         mock_rbac = MagicMock()
-        mock_rbac.check_user_permission = AsyncMock(return_value=True)
+        mock_rbac.is_admin = AsyncMock(return_value=True)
         mock_rbac.get_user_role_summary = AsyncMock(return_value=USER_ROLE_SUMMARY)
         mock_rbac_class.return_value = mock_rbac
 
@@ -343,7 +343,7 @@ class TestChangePassword:
         from src.api.v1.auth.auth_modules.users import change_password
 
         mock_rbac = MagicMock()
-        mock_rbac.check_user_permission = AsyncMock(return_value=False)
+        mock_rbac.is_admin = AsyncMock(return_value=False)
         mock_rbac_class.return_value = mock_rbac
 
         with pytest.raises(PermissionDeniedError):
@@ -382,7 +382,7 @@ class TestChangePassword:
         mock_service_class.return_value = mock_service
 
         mock_rbac = MagicMock()
-        mock_rbac.check_user_permission = AsyncMock(return_value=True)
+        mock_rbac.is_admin = AsyncMock(return_value=True)
         mock_rbac_class.return_value = mock_rbac
 
         result = asyncio.run(
@@ -449,16 +449,18 @@ class TestUserStateTransitions:
 
 class TestUserSecurityActions:
     @patch("src.api.v1.auth.auth_modules.users.AuditLogCRUD")
-    @patch("src.api.v1.auth.auth_modules.users.UserCRUD")
+    @patch("src.api.v1.auth.auth_modules.users.AsyncUserManagementService")
     def test_lock_user_success(
-        self, mock_user_crud_class, mock_audit_crud_class, mock_db, admin_user, mock_request
+        self, mock_service_class, mock_audit_crud_class, mock_db, admin_user, mock_request
     ):
         from src.api.v1.auth.auth_modules.users import lock_user
 
         target_user = _build_fake_user("target-id", "target")
-        mock_user_crud = MagicMock()
-        mock_user_crud.get_async = AsyncMock(return_value=target_user)
-        mock_user_crud_class.return_value = mock_user_crud
+        target_user.is_locked = True
+
+        mock_service = MagicMock()
+        mock_service.lock_user = AsyncMock(return_value=target_user)
+        mock_service_class.return_value = mock_service
 
         mock_audit_crud = MagicMock()
         mock_audit_crud.create_async = AsyncMock()
@@ -474,21 +476,22 @@ class TestUserSecurityActions:
         )
 
         assert result["success"] is True
-        assert target_user.is_locked is True
+        assert "已锁定" in result["message"]
+        mock_service.lock_user.assert_awaited_once_with("target-id")
 
     @patch("src.api.v1.auth.auth_modules.users.AuditLogCRUD")
-    @patch("src.api.v1.auth.auth_modules.users.UserCRUD")
+    @patch("src.api.v1.auth.auth_modules.users.AsyncUserManagementService")
     def test_unlock_user_success(
-        self, mock_user_crud_class, mock_audit_crud_class, mock_db, admin_user, mock_request
+        self, mock_service_class, mock_audit_crud_class, mock_db, admin_user, mock_request
     ):
         from src.api.v1.auth.auth_modules.users import unlock_user_account
 
         target_user = _build_fake_user("target-id", "target")
-        target_user.is_locked = True
+        target_user.is_locked = False
 
-        mock_user_crud = MagicMock()
-        mock_user_crud.get_async = AsyncMock(return_value=target_user)
-        mock_user_crud_class.return_value = mock_user_crud
+        mock_service = MagicMock()
+        mock_service.unlock_user_with_result = AsyncMock(return_value=target_user)
+        mock_service_class.return_value = mock_service
 
         mock_audit_crud = MagicMock()
         mock_audit_crud.create_async = AsyncMock()
@@ -504,15 +507,14 @@ class TestUserSecurityActions:
         )
 
         assert result["success"] is True
-        assert target_user.is_locked is False
+        assert "已解锁" in result["message"]
+        mock_service.unlock_user_with_result.assert_awaited_once_with("target-id")
 
     @patch("src.api.v1.auth.auth_modules.users.AuditLogCRUD")
-    @patch("src.api.v1.auth.auth_modules.users.PasswordService")
-    @patch("src.api.v1.auth.auth_modules.users.UserCRUD")
+    @patch("src.api.v1.auth.auth_modules.users.AsyncUserManagementService")
     def test_reset_password_success(
         self,
-        mock_user_crud_class,
-        mock_password_service_class,
+        mock_service_class,
         mock_audit_crud_class,
         mock_db,
         admin_user,
@@ -521,13 +523,9 @@ class TestUserSecurityActions:
         from src.api.v1.auth.auth_modules.users import reset_user_password
 
         target_user = _build_fake_user("target-id", "target")
-        mock_user_crud = MagicMock()
-        mock_user_crud.get_async = AsyncMock(return_value=target_user)
-        mock_user_crud_class.return_value = mock_user_crud
-
-        mock_password_service = MagicMock()
-        mock_password_service.get_password_hash.return_value = "hashed-password"
-        mock_password_service_class.return_value = mock_password_service
+        mock_service = MagicMock()
+        mock_service.admin_reset_password = AsyncMock(return_value=target_user)
+        mock_service_class.return_value = mock_service
 
         mock_audit_crud = MagicMock()
         mock_audit_crud.create_async = AsyncMock()
@@ -545,6 +543,10 @@ class TestUserSecurityActions:
 
         assert result["success"] is True
         assert result["user_id"] == "target-id"
+        mock_service.admin_reset_password.assert_awaited_once_with(
+            user_id="target-id",
+            new_password="StrongPass123!",
+        )
 
 
 class TestUserStatistics:

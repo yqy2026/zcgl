@@ -20,9 +20,7 @@ from src.models.auth import User, UserSession
 from src.services.core import authentication_service as authentication_service_module
 from src.services.core.authentication_service import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
-    ALGORITHM,
     REFRESH_TOKEN_EXPIRE_DAYS,
-    SECRET_KEY,
     AsyncAuthenticationService,
     TokenPair,
 )
@@ -319,8 +317,8 @@ class TestCreateTokens:
         tokens = auth_service.create_tokens(mock_user)
         payload = jwt.decode(
             tokens.access_token,
-            SECRET_KEY,
-            algorithms=[ALGORITHM],
+            settings.SECRET_KEY,
+            algorithms=[settings.ALGORITHM],
             options={"verify_aud": False, "verify_iss": False},
         )
         assert payload["sub"] == mock_user.id
@@ -338,8 +336,8 @@ class TestCreateTokens:
         tokens = auth_service.create_tokens(mock_user)
         payload = jwt.decode(
             tokens.refresh_token,
-            SECRET_KEY,
-            algorithms=[ALGORITHM],
+            settings.SECRET_KEY,
+            algorithms=[settings.ALGORITHM],
             options={"verify_aud": False, "verify_iss": False},
         )
         assert payload["sub"] == mock_user.id
@@ -357,14 +355,14 @@ class TestCreateTokens:
 
         payload1_access = jwt.decode(
             tokens1.access_token,
-            SECRET_KEY,
-            algorithms=[ALGORITHM],
+            settings.SECRET_KEY,
+            algorithms=[settings.ALGORITHM],
             options={"verify_aud": False, "verify_iss": False},
         )
         payload2_access = jwt.decode(
             tokens2.access_token,
-            SECRET_KEY,
-            algorithms=[ALGORITHM],
+            settings.SECRET_KEY,
+            algorithms=[settings.ALGORITHM],
             options={"verify_aud": False, "verify_iss": False},
         )
 
@@ -375,14 +373,14 @@ class TestCreateTokens:
         tokens = auth_service.create_tokens(mock_user)
         access_payload = jwt.decode(
             tokens.access_token,
-            SECRET_KEY,
-            algorithms=[ALGORITHM],
+            settings.SECRET_KEY,
+            algorithms=[settings.ALGORITHM],
             options={"verify_aud": False, "verify_iss": False},
         )
         refresh_payload = jwt.decode(
             tokens.refresh_token,
-            SECRET_KEY,
-            algorithms=[ALGORITHM],
+            settings.SECRET_KEY,
+            algorithms=[settings.ALGORITHM],
             options={"verify_aud": False, "verify_iss": False},
         )
         assert access_payload["session_id"] == refresh_payload["session_id"]
@@ -395,8 +393,8 @@ class TestCreateTokens:
 
         payload = jwt.decode(
             tokens.access_token,
-            SECRET_KEY,
-            algorithms=[ALGORITHM],
+            settings.SECRET_KEY,
+            algorithms=[settings.ALGORITHM],
             options={"verify_aud": False, "verify_iss": False},
         )
         exp = datetime.fromtimestamp(payload["exp"])
@@ -411,8 +409,8 @@ class TestCreateTokens:
         tokens = auth_service.create_tokens(mock_user)
         payload = jwt.decode(
             tokens.refresh_token,
-            SECRET_KEY,
-            algorithms=[ALGORITHM],
+            settings.SECRET_KEY,
+            algorithms=[settings.ALGORITHM],
             options={"verify_aud": False, "verify_iss": False},
         )
         exp = datetime.fromtimestamp(payload["exp"])
@@ -441,8 +439,8 @@ class TestCreateTokensDeviceFingerprinting:
         tokens = auth_service.create_tokens(mock_user, device_info)
         access_payload = jwt.decode(
             tokens.access_token,
-            SECRET_KEY,
-            algorithms=[ALGORITHM],
+            settings.SECRET_KEY,
+            algorithms=[settings.ALGORITHM],
             options={"verify_aud": False, "verify_iss": False},
         )
         assert "device_fingerprint" in access_payload
@@ -455,8 +453,8 @@ class TestCreateTokensDeviceFingerprinting:
         tokens = auth_service.create_tokens(mock_user, device_info)
         access_payload = jwt.decode(
             tokens.access_token,
-            SECRET_KEY,
-            algorithms=[ALGORITHM],
+            settings.SECRET_KEY,
+            algorithms=[settings.ALGORITHM],
             options={"verify_aud": False, "verify_iss": False},
         )
         assert access_payload["device_fingerprint"] is not None
@@ -466,8 +464,8 @@ class TestCreateTokensDeviceFingerprinting:
         tokens = auth_service.create_tokens(mock_user, None)
         access_payload = jwt.decode(
             tokens.access_token,
-            SECRET_KEY,
-            algorithms=[ALGORITHM],
+            settings.SECRET_KEY,
+            algorithms=[settings.ALGORITHM],
             options={"verify_aud": False, "verify_iss": False},
         )
         assert access_payload.get("device_fingerprint") is None
@@ -485,14 +483,14 @@ class TestCreateTokensDeviceFingerprinting:
 
         payload1 = jwt.decode(
             tokens1.access_token,
-            SECRET_KEY,
-            algorithms=[ALGORITHM],
+            settings.SECRET_KEY,
+            algorithms=[settings.ALGORITHM],
             options={"verify_aud": False, "verify_iss": False},
         )
         payload2 = jwt.decode(
             tokens2.access_token,
-            SECRET_KEY,
-            algorithms=[ALGORITHM],
+            settings.SECRET_KEY,
+            algorithms=[settings.ALGORITHM],
             options={"verify_aud": False, "verify_iss": False},
         )
         assert payload1["device_fingerprint"] == payload2["device_fingerprint"]
@@ -509,14 +507,14 @@ class TestCreateTokensDeviceFingerprinting:
 
         payload1 = jwt.decode(
             tokens1.access_token,
-            SECRET_KEY,
-            algorithms=[ALGORITHM],
+            settings.SECRET_KEY,
+            algorithms=[settings.ALGORITHM],
             options={"verify_aud": False, "verify_iss": False},
         )
         payload2 = jwt.decode(
             tokens2.access_token,
-            SECRET_KEY,
-            algorithms=[ALGORITHM],
+            settings.SECRET_KEY,
+            algorithms=[settings.ALGORITHM],
             options={"verify_aud": False, "verify_iss": False},
         )
         assert payload1["device_fingerprint"] != payload2["device_fingerprint"]
@@ -560,8 +558,8 @@ class TestValidateRefreshToken:
         tokens = auth_service.create_tokens(mock_user)
         payload = jwt.decode(
             tokens.refresh_token,
-            SECRET_KEY,
-            algorithms=[ALGORITHM],
+            settings.SECRET_KEY,
+            algorithms=[settings.ALGORITHM],
             options={"verify_aud": False, "verify_iss": False},
         )
         payload["jti"]
@@ -836,7 +834,11 @@ class TestEdgeCases:
             "aud": settings.JWT_AUDIENCE,
             "iss": settings.JWT_ISSUER,
         }
-        token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+        token = jwt.encode(
+            payload,
+            settings.SECRET_KEY,
+            algorithm=settings.ALGORITHM,
+        )
         db_session.execute = AsyncMock(return_value=_mock_execute_first(None))
         result = asyncio.run(auth_service.validate_refresh_token(token))
         # Should return None as it won't find a matching session

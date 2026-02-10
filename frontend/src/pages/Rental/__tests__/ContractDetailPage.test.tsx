@@ -3,9 +3,14 @@
  */
 
 import React from 'react';
-import { screen, waitFor, fireEvent } from '@/test/utils/test-helpers';
+import {
+  screen,
+  waitFor,
+  fireEvent,
+  renderWithProviders as renderWithAppProviders,
+} from '@/test/utils/test-helpers';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ContractDetailPage from '../ContractDetailPage';
 import { ContractStatus } from '@/types/rentContract';
@@ -46,20 +51,19 @@ const createTestQueryClient = () =>
   });
 
 // 渲染辅助函数
-const renderWithProviders = (contractId: string) => {
+const renderContractDetailPage = (contractId: string) => {
   const queryClient = createTestQueryClient();
 
-  return renderWithProviders(
+  return renderWithAppProviders(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={[`/rental/contracts/${contractId}`]}>
-        <Routes>
-          <Route path="/rental/contracts/:id" element={<ContractDetailPage />} />
-          <Route path="/rental/contracts" element={<div>Contract List</div>} />
-          <Route path="/rental/contracts/:id/edit" element={<div>Edit Contract</div>} />
-          <Route path="/rental/contracts/:id/renew" element={<div>Renew Contract</div>} />
-        </Routes>
-      </MemoryRouter>
-    </QueryClientProvider>
+      <Routes>
+        <Route path="/rental/contracts/:id" element={<ContractDetailPage />} />
+        <Route path="/rental/contracts" element={<div>Contract List</div>} />
+        <Route path="/rental/contracts/:id/edit" element={<div>Edit Contract</div>} />
+        <Route path="/rental/contracts/:id/renew" element={<div>Renew Contract</div>} />
+      </Routes>
+    </QueryClientProvider>,
+    { route: `/rental/contracts/${contractId}` }
   );
 };
 
@@ -74,9 +78,9 @@ describe('ContractDetailPage', () => {
     it('显示加载中状态', async () => {
       vi.mocked(rentContractService.getContract).mockImplementation(() => new Promise(() => {}));
 
-      renderWithProviders('contract_123');
+      renderContractDetailPage('contract_123');
 
-      expect(screen.getByText('加载合同详情中...')).toBeInTheDocument();
+      expect(document.querySelector('.ant-spin-spinning')).toBeInTheDocument();
     });
   });
 
@@ -91,14 +95,14 @@ describe('ContractDetailPage', () => {
 
       vi.mocked(rentContractService.getContract).mockResolvedValue(mockContract);
 
-      renderWithProviders('contract_123');
+      renderContractDetailPage('contract_123');
 
       await waitFor(() => {
         expect(screen.getByText('HT-2026-001 - 测试租户公司')).toBeInTheDocument();
       });
 
       expect(screen.getByTestId('contract-detail-info')).toBeInTheDocument();
-      expect(screen.getByText('返回列表')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '返回' })).toBeInTheDocument();
       expect(screen.getByText('编辑合同')).toBeInTheDocument();
     });
 
@@ -112,7 +116,7 @@ describe('ContractDetailPage', () => {
 
       vi.mocked(rentContractService.getContract).mockResolvedValue(mockContract);
 
-      renderWithProviders('contract_active');
+      renderContractDetailPage('contract_active');
 
       await waitFor(() => {
         expect(screen.getByText('续签合同')).toBeInTheDocument();
@@ -130,7 +134,7 @@ describe('ContractDetailPage', () => {
 
       vi.mocked(rentContractService.getContract).mockResolvedValue(mockContract);
 
-      renderWithProviders('contract_expired');
+      renderContractDetailPage('contract_expired');
 
       await waitFor(() => {
         expect(screen.getByText('HT-2025-001 - 过期租户')).toBeInTheDocument();
@@ -145,7 +149,7 @@ describe('ContractDetailPage', () => {
     it('显示错误信息', async () => {
       vi.mocked(rentContractService.getContract).mockRejectedValue(new Error('网络错误'));
 
-      renderWithProviders('contract_error');
+      renderContractDetailPage('contract_error');
 
       await waitFor(() => {
         expect(screen.getByText('数据加载失败')).toBeInTheDocument();
@@ -156,7 +160,7 @@ describe('ContractDetailPage', () => {
     it('合同不存在时显示警告', async () => {
       vi.mocked(rentContractService.getContract).mockResolvedValue(null);
 
-      renderWithProviders('contract_not_found');
+      renderContractDetailPage('contract_not_found');
 
       await waitFor(() => {
         expect(screen.getByText('合同不存在')).toBeInTheDocument();
@@ -176,13 +180,13 @@ describe('ContractDetailPage', () => {
 
       vi.mocked(rentContractService.getContract).mockResolvedValue(mockContract);
 
-      renderWithProviders('contract_nav');
+      renderContractDetailPage('contract_nav');
 
       await waitFor(() => {
         expect(screen.getByText('HT-NAV - 导航测试')).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByText('返回列表'));
+      fireEvent.click(screen.getByRole('button', { name: '返回' }));
 
       await waitFor(() => {
         expect(screen.getByText('Contract List')).toBeInTheDocument();
@@ -199,7 +203,7 @@ describe('ContractDetailPage', () => {
 
       vi.mocked(rentContractService.getContract).mockResolvedValue(mockContract);
 
-      renderWithProviders('contract_edit');
+      renderContractDetailPage('contract_edit');
 
       await waitFor(() => {
         expect(screen.getByText('HT-EDIT - 编辑测试')).toBeInTheDocument();
@@ -222,7 +226,7 @@ describe('ContractDetailPage', () => {
 
       vi.mocked(rentContractService.getContract).mockResolvedValue(mockContract);
 
-      renderWithProviders('contract_renew');
+      renderContractDetailPage('contract_renew');
 
       await waitFor(() => {
         expect(screen.getByText('续签合同')).toBeInTheDocument();
@@ -247,7 +251,7 @@ describe('ContractDetailPage', () => {
 
       vi.mocked(rentContractService.getContract).mockResolvedValue(mockContract);
 
-      renderWithProviders('contract_terminate');
+      renderContractDetailPage('contract_terminate');
 
       await waitFor(() => {
         expect(screen.getByText('终止合同')).toBeInTheDocument();

@@ -12,11 +12,15 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 import pytest
-from sqlalchemy import delete, select
+from sqlalchemy import select, update
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.pool import NullPool
 
-from src.database import async_session_scope
+from src import database as database
+from src.core.enums import ContractStatus
 from src.models.auth import User
 from src.models.notification import Notification, NotificationPriority, NotificationType
+from src.models.ownership import Ownership
 from src.models.rent_contract import ContractType, PaymentCycle, RentContract
 from src.services.notification.scheduler import NotificationSchedulerService
 
@@ -28,23 +32,39 @@ pytestmark = pytest.mark.asyncio
 
 @pytest.fixture
 async def async_db():
-    async with async_session_scope() as session:
-        yield session
+    async_engine = create_async_engine(
+        database.get_async_database_url(),
+        echo=False,
+        poolclass=NullPool,
+    )
+    async with async_engine.connect() as connection:
+        transaction = await connection.begin()
+        session = AsyncSession(
+            bind=connection,
+            expire_on_commit=False,
+            join_transaction_mode="create_savepoint",
+        )
+        try:
+            yield session
+        finally:
+            await session.close()
+            await transaction.rollback()
+            await async_engine.dispose()
 
 
 @pytest.fixture(autouse=True)
-async def clean_database():
-    async with async_session_scope() as session:
-        await session.execute(delete(Notification))
-        await session.execute(delete(RentContract))
-        await session.execute(delete(User))
-        await session.commit()
+async def ensure_ownership(async_db):
+    ownership = await async_db.get(Ownership, "ownership_001")
+    if ownership is None:
+        async_db.add(
+            Ownership(
+                id="ownership_001",
+                name="通知测试权属方",
+                code="OWN-NOTIFY-001",
+            )
+        )
+        await async_db.flush()
     yield
-    async with async_session_scope() as session:
-        await session.execute(delete(Notification))
-        await session.execute(delete(RentContract))
-        await session.execute(delete(User))
-        await session.commit()
 
 
 @pytest.fixture
@@ -58,6 +78,7 @@ async def active_user(async_db):
         id=f"user_{unique_id}",
         username=f"testuser_{unique_id}",
         email=f"test_{unique_id}@example.com",
+        phone=f"138{unique_id[:8]}",
         full_name="测试用户",
         password_hash=pwd_service.get_password_hash("testpass123"),
         is_active=True,
@@ -80,7 +101,7 @@ async def expiring_contract_today(async_db):
         sign_date=date.today() - timedelta(days=365),
         start_date=date.today() - timedelta(days=365),
         end_date=date.today(),
-        contract_status="有效",
+        contract_status=ContractStatus.ACTIVE.value,
         payment_cycle=PaymentCycle.MONTHLY,
         total_deposit=Decimal("10000"),
     )
@@ -102,7 +123,7 @@ async def expiring_contract_7days(async_db):
         sign_date=date.today() - timedelta(days=358),
         start_date=date.today() - timedelta(days=358),
         end_date=date.today() + timedelta(days=7),
-        contract_status="有效",
+        contract_status=ContractStatus.ACTIVE.value,
         payment_cycle=PaymentCycle.MONTHLY,
         total_deposit=Decimal("15000"),
     )
@@ -124,7 +145,7 @@ async def expiring_contract_30days(async_db):
         sign_date=date.today() - timedelta(days=335),
         start_date=date.today() - timedelta(days=335),
         end_date=date.today() + timedelta(days=30),
-        contract_status="有效",
+        contract_status=ContractStatus.ACTIVE.value,
         payment_cycle=PaymentCycle.QUARTERLY,
         total_deposit=Decimal("20000"),
     )
@@ -209,7 +230,7 @@ class TestContractExpiryNotifications:
             sign_date=date.today() - timedelta(days=400),
             start_date=date.today() - timedelta(days=400),
             end_date=date.today() - timedelta(days=10),
-            contract_status="有效",
+            contract_status=ContractStatus.ACTIVE.value,
             payment_cycle=PaymentCycle.MONTHLY,
         )
         async_db.add(expired_contract)
@@ -239,7 +260,7 @@ class TestContractExpiryNotifications:
             sign_date=date.today(),
             start_date=date.today(),
             end_date=date.today() + timedelta(days=60),
-            contract_status="有效",
+            contract_status=ContractStatus.ACTIVE.value,
             payment_cycle=PaymentCycle.MONTHLY,
         )
         async_db.add(future_contract)
@@ -290,6 +311,7 @@ class TestDuplicatePrevention:
             id="user_1",
             username="user1",
             email="user1@example.com",
+            phone=f"user1_{uuid.uuid4().hex[:8]}",
             full_name="User One",
             password_hash=pwd_service.get_password_hash("pass123"),
             is_active=True,
@@ -298,6 +320,7 @@ class TestDuplicatePrevention:
             id="user_2",
             username="user2",
             email="user2@example.com",
+            phone=f"user2_{uuid.uuid4().hex[:8]}",
             full_name="User Two",
             password_hash=pwd_service.get_password_hash("pass123"),
             is_active=True,
@@ -336,6 +359,7 @@ class TestInactiveUserFiltering:
             id="inactive_user",
             username="inactive",
             email="inactive@example.com",
+            phone=f"inactive_{uuid.uuid4().hex[:8]}",
             full_name="Inactive User",
             password_hash=pwd_service.get_password_hash("pass123"),
             is_active=False,
@@ -368,7 +392,7 @@ class TestEdgeCases:
             sign_date=date.today() - timedelta(days=100),
             start_date=date.today() - timedelta(days=100),
             end_date=date.today() + timedelta(days=7),
-            contract_status="已终止",
+            contract_status=ContractStatus.TERMINATED.value,
             payment_cycle=PaymentCycle.MONTHLY,
         )
         async_db.add(contract)
@@ -387,7 +411,7 @@ class TestEdgeCases:
     async def test_no_active_users_no_notifications_created(
         self, async_db, expiring_contract_7days
     ):
-        await async_db.execute(delete(User))
+        await async_db.execute(update(User).values(is_active=False))
         await async_db.commit()
 
         scheduler = NotificationSchedulerService(async_db)

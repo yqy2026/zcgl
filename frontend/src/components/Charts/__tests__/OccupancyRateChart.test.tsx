@@ -72,6 +72,6 @@ describe('OccupancyRateChart', () => {
   it('should display title', async () => {
     const OccupancyRateChart = (await import('../OccupancyRateChart')).default;
     render(<OccupancyRateChart />);
-    expect(screen.getByText('出租率统计')).toBeInTheDocument();
+    expect(screen.getByText('出租率趋势分析')).toBeInTheDocument();
   });
 });

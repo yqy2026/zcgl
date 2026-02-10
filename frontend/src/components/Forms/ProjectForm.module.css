@@ -1,0 +1,34 @@
+.ownershipCard {
+  margin-top: 16px;
+}
+
+.ownershipSelectWrapper {
+  width: 100%;
+}
+
+.selectedOwnershipsSection {
+  margin-top: 16px;
+}
+
+.selectedOwnershipsTitle {
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.selectedOwnershipsList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.selectedOwnershipTag {
+  padding: 4px 8px;
+  font-size: 14px;
+}
+
+.formActions {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+}

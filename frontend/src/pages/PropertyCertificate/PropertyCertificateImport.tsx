@@ -5,15 +5,19 @@
 
 import { useState } from 'react';
 import { Row, Col, Steps, message, Card } from 'antd';
+import { useNavigate } from 'react-router-dom';
 import { PropertyCertificateUpload } from '@/components/PropertyCertificate/PropertyCertificateUpload';
 import { PropertyCertificateReview } from '@/components/PropertyCertificate/PropertyCertificateReview';
 import { propertyCertificateService } from '@/services/propertyCertificateService';
+import PageContainer from '@/components/Common/PageContainer';
 import type {
   CertificateExtractionResult,
   CertificateImportConfirm,
 } from '@/types/propertyCertificate';
+import styles from './PropertyCertificateImport.module.css';
 
 export const PropertyCertificateImport: React.FC = () => {
+  const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0);
   const [extractionResult, setExtractionResult] = useState<CertificateExtractionResult | null>(
     null
@@ -30,8 +34,10 @@ export const PropertyCertificateImport: React.FC = () => {
     try {
       const response = await propertyCertificateService.confirmImport(data);
       message.success(`产权证创建成功！ID: ${response.certificate_id}`);
-      // Navigate to list page
-      window.location.href = '/property-certificates';
+      setCurrentStep(2);
+      window.setTimeout(() => {
+        navigate('/property-certificates');
+      }, 800);
     } catch {
       message.error('创建失败，请重试');
     } finally {
@@ -40,16 +46,21 @@ export const PropertyCertificateImport: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: '24px' }}>
+    <PageContainer
+      title="产权证导入"
+      subTitle="上传扫描件并审核抽取结果后创建产权证"
+      className={styles.importPage}
+    >
       <Row gutter={[24, 24]}>
         <Col span={24}>
-          <Card>
+          <Card className={styles.stepsCard}>
             <Steps
               current={currentStep}
+              className={styles.importSteps}
               items={[
-                { title: '上传文件', content: '上传产权证扫描件' },
-                { title: '审核确认', content: '确认提取的信息' },
-                { title: '完成', content: '产权证已创建' },
+                { title: '上传文件', description: '上传产权证扫描件' },
+                { title: '审核确认', description: '确认提取的信息' },
+                { title: '完成', description: '产权证已创建' },
               ]}
             />
           </Card>
@@ -69,7 +80,7 @@ export const PropertyCertificateImport: React.FC = () => {
           )}
         </Col>
       </Row>
-    </div>
+    </PageContainer>
   );
 };
 

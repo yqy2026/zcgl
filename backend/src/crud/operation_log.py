@@ -180,7 +180,7 @@ class OperationLogCRUD:
             delete(OperationLog).where(OperationLog.created_at < cutoff_date)
         )
         await db.commit()
-        return int(result.rowcount or 0)
+        return int(getattr(result, "rowcount", 0) or 0)
 
     async def get_user_statistics_async(
         self, db: AsyncSession, user_id: str, days: int = 30

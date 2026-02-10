@@ -4,7 +4,8 @@
 测试 CRUDOwnership 的所有主要方法
 """
 
-from unittest.mock import MagicMock, patch
+import asyncio
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -37,7 +38,7 @@ class TestCRUDOwnershipGet:
         )
 
         with patch.object(crud, "get", return_value=mock_ownership):
-            result = crud.get(mock_db, id="1")
+            result = asyncio.run(crud.get(mock_db, id="1"))
 
         assert result is not None
 
@@ -46,7 +47,7 @@ class TestCRUDOwnershipGet:
         mock_db.query.return_value.filter.return_value.first.return_value = None
 
         with patch.object(crud, "get", return_value=None):
-            result = crud.get(mock_db, id="999")
+            result = asyncio.run(crud.get(mock_db, id="999"))
 
         assert result is None
 
@@ -60,7 +61,9 @@ class TestCRUDOwnershipGetByName:
 
     @pytest.fixture
     def mock_db(self, db_session):
-        db_session.query = MagicMock()
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.first.return_value = None
+        db_session.execute = AsyncMock(return_value=mock_result)
         return db_session
 
     def test_get_by_name_exists(self, crud, mock_db):
@@ -68,20 +71,21 @@ class TestCRUDOwnershipGetByName:
         mock_ownership = MagicMock(spec=Ownership)
         mock_ownership.name = "测试权属方"
 
-        mock_db.query.return_value.filter.return_value.first.return_value = (
-            mock_ownership
-        )
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.first.return_value = mock_ownership
+        mock_db.execute = AsyncMock(return_value=mock_result)
 
-        result = crud.get_by_name(mock_db, name="测试权属方")
+        result = asyncio.run(crud.get_by_name(mock_db, name="测试权属方"))
 
         assert result is not None
         assert result.name == "测试权属方"
 
     def test_get_by_name_not_exists(self, crud, mock_db):
         """测试通过名称获取不存在的权属方"""
-        mock_db.query.return_value.filter.return_value.first.return_value = None
-
-        result = crud.get_by_name(mock_db, name="不存在")
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.first.return_value = None
+        mock_db.execute = AsyncMock(return_value=mock_result)
+        result = asyncio.run(crud.get_by_name(mock_db, name="不存在"))
 
         assert result is None
 
@@ -95,7 +99,9 @@ class TestCRUDOwnershipGetByCode:
 
     @pytest.fixture
     def mock_db(self, db_session):
-        db_session.query = MagicMock()
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.first.return_value = None
+        db_session.execute = AsyncMock(return_value=mock_result)
         return db_session
 
     def test_get_by_code_exists(self, crud, mock_db):
@@ -103,20 +109,21 @@ class TestCRUDOwnershipGetByCode:
         mock_ownership = MagicMock(spec=Ownership)
         mock_ownership.code = "OWN-001"
 
-        mock_db.query.return_value.filter.return_value.first.return_value = (
-            mock_ownership
-        )
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.first.return_value = mock_ownership
+        mock_db.execute = AsyncMock(return_value=mock_result)
 
-        result = crud.get_by_code(mock_db, code="OWN-001")
+        result = asyncio.run(crud.get_by_code(mock_db, code="OWN-001"))
 
         assert result is not None
         assert result.code == "OWN-001"
 
     def test_get_by_code_not_exists(self, crud, mock_db):
         """测试通过编码获取不存在的权属方"""
-        mock_db.query.return_value.filter.return_value.first.return_value = None
-
-        result = crud.get_by_code(mock_db, code="NOT-EXIST")
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.first.return_value = None
+        mock_db.execute = AsyncMock(return_value=mock_result)
+        result = asyncio.run(crud.get_by_code(mock_db, code="NOT-EXIST"))
 
         assert result is None
 
@@ -132,14 +139,14 @@ class TestCRUDOwnershipGetMultiWithFilters:
     def mock_db(self, db_session):
         mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = []
-        db_session.execute = MagicMock(return_value=mock_result)
+        db_session.execute = AsyncMock(return_value=mock_result)
         return db_session
 
     def test_get_multi_default_params(self, crud, mock_db):
         """测试默认参数获取多个权属方"""
         with patch.object(crud.query_builder, "build_query") as mock_build:
             mock_build.return_value = MagicMock()
-            result = crud.get_multi_with_filters(mock_db)
+            result = asyncio.run(crud.get_multi_with_filters(mock_db))
 
         assert isinstance(result, list)
 
@@ -147,7 +154,7 @@ class TestCRUDOwnershipGetMultiWithFilters:
         """测试带活跃状态筛选"""
         with patch.object(crud.query_builder, "build_query") as mock_build:
             mock_build.return_value = MagicMock()
-            crud.get_multi_with_filters(mock_db, is_active=True)
+            asyncio.run(crud.get_multi_with_filters(mock_db, is_active=True))
 
         mock_build.assert_called_once()
 
@@ -155,7 +162,7 @@ class TestCRUDOwnershipGetMultiWithFilters:
         """测试带关键词搜索"""
         with patch.object(crud.query_builder, "build_query") as mock_build:
             mock_build.return_value = MagicMock()
-            crud.get_multi_with_filters(mock_db, keyword="测试")
+            asyncio.run(crud.get_multi_with_filters(mock_db, keyword="测试"))
 
         mock_build.assert_called_once()
 
@@ -163,7 +170,7 @@ class TestCRUDOwnershipGetMultiWithFilters:
         """测试分页参数"""
         with patch.object(crud.query_builder, "build_query") as mock_build:
             mock_build.return_value = MagicMock()
-            crud.get_multi_with_filters(mock_db, skip=10, limit=20)
+            asyncio.run(crud.get_multi_with_filters(mock_db, skip=10, limit=20))
 
         mock_build.assert_called_with(
             filters={},
@@ -185,10 +192,8 @@ class TestCRUDOwnershipSearch:
 
     @pytest.fixture
     def mock_db(self, db_session):
-        mock_result = MagicMock()
-        mock_result.scalars.return_value.all.return_value = []
-        db_session.execute = MagicMock(return_value=mock_result)
-        db_session.scalar = MagicMock(return_value=0)
+        db_session.execute = AsyncMock()
+        db_session.scalar = AsyncMock(return_value=0)
         return db_session
 
     def test_search_returns_dict(self, crud, mock_db):
@@ -199,11 +204,12 @@ class TestCRUDOwnershipSearch:
         search_params.keyword = None
         search_params.is_active = None
 
-        with patch.object(crud.query_builder, "build_query") as mock_build:
-            with patch.object(crud.query_builder, "build_count_query") as mock_count:
-                mock_build.return_value = MagicMock()
-                mock_count.return_value = MagicMock()
-                result = crud.search(mock_db, search_params)
+        with patch.object(
+            crud,
+            "get_multi_with_count",
+            new=AsyncMock(return_value=([], 0)),
+        ):
+            result = asyncio.run(crud.search(mock_db, search_params))
 
         assert isinstance(result, dict)
         assert "items" in result

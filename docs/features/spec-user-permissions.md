@@ -1,7 +1,12 @@
 # 用户权限规格
 
+> ⚠️ **状态变更（2026-02-09）**  
+> 本文档已降级为历史草稿，不再作为需求权威来源。  
+> 当前权威规格请使用：`docs/requirements-specification.md`  
+> 模块证据附录请使用：`docs/features/requirements-appendix-modules.md`
+
 ## ✅ Status
-**当前状态**: Draft (2026-02-03)
+**当前状态**: Historical Draft (2026-02-09)
 
 ## 角色模型
 - 基础角色: `admin`, `user`

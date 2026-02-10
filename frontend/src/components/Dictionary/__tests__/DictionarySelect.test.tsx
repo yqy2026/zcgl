@@ -9,16 +9,16 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen } from '@/test/utils/test-helpers';
+import { screen, fireEvent } from '@/test/utils/test-helpers';
 import DictionarySelect from '../DictionarySelect';
-import { useDictionary } from '../../hooks/useDictionary';
-import { dictionaryService } from '../../services/dictionary';
+import { useDictionary } from '@/hooks/useDictionary';
+import { dictionaryService } from '@/services/dictionary';
 
-vi.mock('../../hooks/useDictionary', () => ({
+vi.mock('@/hooks/useDictionary', () => ({
   useDictionary: vi.fn(),
 }));
 
-vi.mock('../../services/dictionary', () => ({
+vi.mock('@/services/dictionary', () => ({
   dictionaryService: {
     isTypeAvailable: vi.fn(() => true),
   },
@@ -39,8 +39,9 @@ describe('DictionarySelect', () => {
 
   it('renders options from useDictionary', () => {
     renderWithProviders(<DictionarySelect dictType="test_type" />);
+    const combobox = screen.getByRole('combobox');
+    fireEvent.mouseDown(combobox);
 
-    // antd Select 会渲染选项
     expect(screen.getByText('选项1')).toBeInTheDocument();
     expect(screen.getByText('选项2')).toBeInTheDocument();
   });
@@ -69,9 +70,9 @@ describe('DictionarySelect', () => {
 
     renderWithProviders(<DictionarySelect dictType="test_type" />);
 
-    // loading 时应该显示 Spin
-    const spin = document.querySelector('.ant-spin');
-    expect(spin).toBeInTheDocument();
+    // loading 时 Select 容器应带有 loading 状态
+    const select = document.querySelector('.ant-select-loading');
+    expect(select).toBeInTheDocument();
   });
 
   it('uses notFoundContent when not loading', () => {
@@ -82,6 +83,8 @@ describe('DictionarySelect', () => {
     });
 
     renderWithProviders(<DictionarySelect dictType="test_type" />);
+    const combobox = screen.getByRole('combobox');
+    fireEvent.mouseDown(combobox);
 
     expect(screen.getByText('暂无数据')).toBeInTheDocument();
   });

@@ -26,6 +26,7 @@ from src.schemas.rbac import (
 from src.services.permission.rbac_service import (
     ADMIN_PERMISSION_ACTION,
     ADMIN_PERMISSION_RESOURCE,
+    LEGACY_ADMIN_PERMISSION_ACTION,
     RBACService,
 )
 
@@ -1034,6 +1035,20 @@ class TestIsAdminRole:
         admin_permission = Mock(spec=Permission)
         admin_permission.resource = "system"
         admin_permission.action = "admin"
+        role.permissions = [admin_permission]
+
+        assert rbac_service._role_has_admin_permission(role) is True
+
+    async def test_detect_admin_by_legacy_system_manage_permission(
+        self, rbac_service
+    ):
+        """兼容 legacy system:manage 权限"""
+        role = Mock(spec=Role)
+        role.name = "legacy_ops_role"
+
+        admin_permission = Mock(spec=Permission)
+        admin_permission.resource = ADMIN_PERMISSION_RESOURCE
+        admin_permission.action = LEGACY_ADMIN_PERMISSION_ACTION
         role.permissions = [admin_permission]
 
         assert rbac_service._role_has_admin_permission(role) is True

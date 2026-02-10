@@ -3,6 +3,7 @@ from typing import Any
 
 from sqlalchemy import and_, asc, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql.elements import ColumnElement
 
 from ..enums.task import TaskStatus, TaskType
 from ..models.task import AsyncTask, ExcelTaskConfig, TaskHistory
@@ -132,7 +133,7 @@ class TaskCRUD(CRUDBase[AsyncTask, TaskCreate, TaskUpdate]):
     async def get_statistics_async(
         self, db: AsyncSession, user_id: str | None = None
     ) -> dict[str, Any]:
-        conditions = [AsyncTask.is_active.is_(True)]
+        conditions: list[ColumnElement[bool]] = [AsyncTask.is_active.is_(True)]
         if user_id:
             conditions.append(AsyncTask.user_id == user_id)
 

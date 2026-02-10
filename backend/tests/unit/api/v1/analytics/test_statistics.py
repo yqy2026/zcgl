@@ -38,6 +38,7 @@ def mock_user():
 @pytest.fixture
 def client(mock_db, mock_user):
     """测试客户端"""
+    app.dependency_overrides.clear()
 
     async def override_get_db():
         yield mock_db
@@ -71,7 +72,10 @@ class TestBasicStatistics:
         Then: 返回基础统计数据
         """
         # Arrange
-        with patch("src.crud.asset.asset_crud.get_multi_with_search_async") as mock_get:
+        with patch(
+            "src.services.analytics.basic_stats_service.asset_crud.get_multi_with_search_async",
+            new_callable=AsyncMock,
+        ) as mock_get:
             mock_get.return_value = ([Mock()] * 100, 100)
 
             # Act
@@ -89,7 +93,10 @@ class TestBasicStatistics:
         Then: 返回仪表板数据或 400/404
         """
         # Arrange
-        with patch("src.crud.asset.asset_crud.get_multi_with_search_async") as mock_get:
+        with patch(
+            "src.services.analytics.basic_stats_service.asset_crud.get_multi_with_search_async",
+            new_callable=AsyncMock,
+        ) as mock_get:
             mock_get.return_value = ([Mock()] * 100, 100)
 
             # Act
@@ -116,7 +123,10 @@ class TestAreaStatistics:
         Then: 返回面积统计数据
         """
         # Arrange
-        with patch("src.crud.asset.asset_crud.get_multi_with_search_async") as mock_get:
+        with patch(
+            "src.services.analytics.area_stats_service.asset_crud.get_multi_with_search_async",
+            new_callable=AsyncMock,
+        ) as mock_get:
             mock_assets = []
             for i in range(10):
                 asset = Mock()
@@ -302,7 +312,10 @@ class TestErrorHandling:
         Then: 返回 503 或 500 错误
         """
         # Arrange
-        with patch("src.crud.asset.asset_crud.get_multi_with_search_async") as mock_get:
+        with patch(
+            "src.services.analytics.basic_stats_service.asset_crud.get_multi_with_search_async",
+            new_callable=AsyncMock,
+        ) as mock_get:
             mock_get.side_effect = Exception("Database error")
 
             # Act
@@ -330,7 +343,10 @@ class TestPerformance:
         Then: 应该返回成功
         """
         # Arrange
-        with patch("src.crud.asset.asset_crud.get_multi_with_search_async") as mock_get:
+        with patch(
+            "src.services.analytics.basic_stats_service.asset_crud.get_multi_with_search_async",
+            new_callable=AsyncMock,
+        ) as mock_get:
             # Mock 大数据集
             mock_get.return_value = ([Mock()] * 10000, 10000)
 

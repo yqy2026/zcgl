@@ -1,296 +1,128 @@
 /**
  * ProjectSelect 组件测试
- * 测试项目选择器
+ * 对齐当前 Select + Modal 交互实现
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { screen, fireEvent } from '@/test/utils/test-helpers';
-import { useQuery } from '@tanstack/react-query';
+import { screen, fireEvent, waitFor } from '@/test/utils/test-helpers';
+import { useProjectOptions } from '@/hooks/useProject';
+import { MessageManager } from '@/utils/messageManager';
+import ProjectSelect from '../ProjectSelect';
 
-// Mock @tanstack/react-query
-vi.mock('@tanstack/react-query', () => ({
-  useQuery: vi.fn(() => ({
-    data: [
-      {
-        id: '1',
-        name: '项目1',
-        code: 'PROJ-001',
-        children: [{ id: '1-1', name: '子项目1', code: 'PROJ-001-1', children: [] }],
-      },
-      { id: '2', name: '项目2', code: 'PROJ-002', children: [] },
-    ],
-    isLoading: false,
-    isError: false,
-    refetch: vi.fn(),
-  })),
+vi.mock('@/hooks/useProject', () => ({
+  useProjectOptions: vi.fn(),
 }));
 
-// Mock services
-vi.mock('@/services/projectService', () => ({
-  projectService: {
-    getProjectTree: vi.fn(() => Promise.resolve([])),
+vi.mock('@/utils/messageManager', () => ({
+  MessageManager: {
+    info: vi.fn(),
+    success: vi.fn(),
+    error: vi.fn(),
+    warning: vi.fn(),
   },
 }));
 
-// Mock Ant Design
-vi.mock('antd', () => {
-  const TreeSelect = ({
-    value,
-    onChange,
-    placeholder,
-    treeData,
-    multiple,
-    allowClear,
-    loading,
-    disabled,
-    showSearch,
-  }: {
-    value?: string | string[];
-    onChange?: (value: string | string[]) => void;
-    placeholder?: string;
-    treeData?: Array<{ id: string; name: string }>;
-    multiple?: boolean;
-    allowClear?: boolean;
-    loading?: boolean;
-    disabled?: boolean;
-    showSearch?: boolean;
-  }) => (
-    <div
-      data-testid="tree-select"
-      data-value={Array.isArray(value) ? value.join(',') : value}
-      data-placeholder={placeholder}
-      data-multiple={multiple}
-      data-allow-clear={allowClear}
-      data-loading={loading}
-      data-disabled={disabled}
-      data-show-search={showSearch}
-      data-has-data={!!treeData?.length}
+vi.mock('@/components/Project/ProjectList', () => ({
+  default: ({ onSelectProject }: { onSelectProject: (project: Record<string, unknown>) => void }) => (
+    <button
+      data-testid="pick-modal-project"
+      onClick={() =>
+        onSelectProject({
+          id: 'project-002',
+          name: '项目二',
+          code: 'PROJ-002',
+          short_name: '二期',
+          is_active: true,
+        })
+      }
     >
-      <select
-        data-testid="select-input"
-        value={Array.isArray(value) ? value[0] : value}
-        onChange={e => {
-          if (multiple) {
-            onChange?.([e.target.value]);
-          } else {
-            onChange?.(e.target.value);
-          }
-        }}
-        disabled={disabled}
-      >
-        <option value="">{placeholder}</option>
-        {treeData?.map(item => (
-          <option key={item.id} value={item.id}>
-            {item.name}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
-  TreeSelect.displayName = 'MockTreeSelect';
-
-  const Spin = ({ spinning }: { spinning?: boolean }) => (
-    <div data-testid="spin" data-spinning={spinning}>
-      {spinning ? '加载中...' : null}
-    </div>
-  );
-  Spin.displayName = 'MockSpin';
-
-  const Empty = ({ description }: { description?: string }) => (
-    <div data-testid="empty">{description || '暂无数据'}</div>
-  );
-  Empty.displayName = 'MockEmpty';
-
-  const Tag = ({
-    children,
-    closable,
-    onClose,
-  }: {
-    children: React.ReactNode;
-    closable?: boolean;
-    onClose?: () => void;
-  }) => (
-    <span data-testid="tag" data-closable={closable} onClick={onClose}>
-      {children}
-    </span>
-  );
-  Tag.displayName = 'MockTag';
-
-  return {
-    TreeSelect,
-    Spin,
-    Empty,
-    Tag,
-  };
-});
-
-// Mock icons
-vi.mock('@ant-design/icons', () => {
-  const SearchOutlined = () => <span data-testid="icon-search">SearchIcon</span>;
-  const FolderOutlined = () => <span data-testid="icon-folder">FolderIcon</span>;
-  const CloseOutlined = () => <span data-testid="icon-close">CloseIcon</span>;
-  const LoadingOutlined = () => <span data-testid="icon-loading">LoadingIcon</span>;
-
-  SearchOutlined.displayName = 'SearchOutlined';
-  FolderOutlined.displayName = 'FolderOutlined';
-  CloseOutlined.displayName = 'CloseOutlined';
-  LoadingOutlined.displayName = 'LoadingOutlined';
-
-  return {
-    SearchOutlined,
-    FolderOutlined,
-    CloseOutlined,
-    LoadingOutlined,
-  };
-});
-
-import ProjectSelect from '../ProjectSelect';
+      pick
+    </button>
+  ),
+}));
 
 describe('ProjectSelect', () => {
+  const refreshMock = vi.fn();
+
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  describe('基本渲染', () => {
-    it('应该正确渲染TreeSelect组件', () => {
-      renderWithProviders(<ProjectSelect />);
-
-      expect(screen.getByTestId('tree-select')).toBeInTheDocument();
-    });
-
-    it('应该显示占位符', () => {
-      renderWithProviders(<ProjectSelect placeholder="请选择项目" />);
-
-      const treeSelect = screen.getByTestId('tree-select');
-      expect(treeSelect).toHaveAttribute('data-placeholder', '请选择项目');
-    });
-
-    it('应该加载项目数据', () => {
-      renderWithProviders(<ProjectSelect />);
-
-      const treeSelect = screen.getByTestId('tree-select');
-      expect(treeSelect).toHaveAttribute('data-has-data', 'true');
-    });
-  });
-
-  describe('value属性', () => {
-    it('应该接受value属性', () => {
-      renderWithProviders(<ProjectSelect value="1" />);
-
-      const treeSelect = screen.getByTestId('tree-select');
-      expect(treeSelect).toHaveAttribute('data-value', '1');
-    });
-
-    it('多选模式应该接受数组value', () => {
-      renderWithProviders(<ProjectSelect value={['1', '2']} multiple={true} />);
-
-      const treeSelect = screen.getByTestId('tree-select');
-      expect(treeSelect).toHaveAttribute('data-value', '1,2');
+    vi.mocked(useProjectOptions).mockReturnValue({
+      projects: [
+        {
+          id: 'project-001',
+          name: '项目一',
+          code: 'PROJ-001',
+          short_name: '一期',
+          is_active: true,
+        },
+        {
+          id: 'project-002',
+          name: '项目二',
+          code: 'PROJ-002',
+          short_name: '二期',
+          is_active: true,
+        },
+      ],
+      loading: false,
+      error: null,
+      refresh: refreshMock,
     });
   });
 
-  describe('onChange回调', () => {
-    it('选择项目应该触发onChange', () => {
-      const handleChange = vi.fn();
-      renderWithProviders(<ProjectSelect onChange={handleChange} />);
+  it('应该渲染占位符', () => {
+    renderWithProviders(<ProjectSelect placeholder="请选择项目" />);
+    expect(screen.getByText('请选择项目')).toBeInTheDocument();
+  });
 
-      const selectInput = screen.getByTestId('select-input');
-      fireEvent.change(selectInput, { target: { value: '1' } });
+  it('选择项目后应触发 onChange 并返回项目信息', async () => {
+    const handleChange = vi.fn();
+    renderWithProviders(<ProjectSelect onChange={handleChange} />);
 
-      expect(handleChange).toHaveBeenCalledWith('1');
-    });
+    const combobox = screen.getByRole('combobox');
+    fireEvent.mouseDown(combobox);
+    fireEvent.click(await screen.findByText('项目一'));
 
-    it('多选模式onChange应该返回数组', () => {
-      const handleChange = vi.fn();
-      renderWithProviders(<ProjectSelect onChange={handleChange} multiple={true} />);
-
-      const selectInput = screen.getByTestId('select-input');
-      fireEvent.change(selectInput, { target: { value: '1' } });
-
-      expect(handleChange).toHaveBeenCalledWith(['1']);
+    await waitFor(() => {
+      expect(handleChange).toHaveBeenCalledWith(
+        'project-001',
+        expect.objectContaining({
+          id: 'project-001',
+          code: 'PROJ-001',
+        })
+      );
     });
   });
 
-  describe('disabled状态', () => {
-    it('disabled时应该不可交互', () => {
-      renderWithProviders(<ProjectSelect disabled={true} />);
+  it('点击创建按钮应提示开发中', () => {
+    renderWithProviders(<ProjectSelect />);
 
-      const treeSelect = screen.getByTestId('tree-select');
-      expect(treeSelect).toHaveAttribute('data-disabled', 'true');
-    });
-
-    it('disabled时select应该被禁用', () => {
-      renderWithProviders(<ProjectSelect disabled={true} />);
-
-      const selectInput = screen.getByTestId('select-input');
-      expect(selectInput).toBeDisabled();
-    });
+    fireEvent.click(screen.getByRole('button', { name: '创建新项目' }));
+    expect(MessageManager.info).toHaveBeenCalledWith('创建新项目功能开发中');
   });
 
-  describe('allowClear属性', () => {
-    it('allowClear为true时应该显示清除功能', () => {
-      renderWithProviders(<ProjectSelect allowClear={true} value="1" />);
+  it('点击刷新按钮应调用 refresh', () => {
+    renderWithProviders(<ProjectSelect />);
 
-      const treeSelect = screen.getByTestId('tree-select');
-      expect(treeSelect).toHaveAttribute('data-allow-clear', 'true');
-    });
+    fireEvent.click(screen.getByRole('button', { name: '刷新' }));
+    expect(refreshMock).toHaveBeenCalled();
   });
 
-  describe('多选模式', () => {
-    it('multiple为true时应该支持多选', () => {
-      renderWithProviders(<ProjectSelect multiple={true} />);
+  it('从弹窗选择项目应回传选中项目', async () => {
+    const handleChange = vi.fn();
+    renderWithProviders(<ProjectSelect onChange={handleChange} />);
 
-      const treeSelect = screen.getByTestId('tree-select');
-      expect(treeSelect).toHaveAttribute('data-multiple', 'true');
-    });
-  });
+    fireEvent.click(screen.getByRole('button', { name: '从列表中选择' }));
+    fireEvent.click(await screen.findByTestId('pick-modal-project'));
 
-  describe('搜索功能', () => {
-    it('showSearch为true时应该支持搜索', () => {
-      renderWithProviders(<ProjectSelect showSearch={true} />);
-
-      const treeSelect = screen.getByTestId('tree-select');
-      expect(treeSelect).toHaveAttribute('data-show-search', 'true');
-    });
-  });
-
-  describe('加载状态', () => {
-    it('加载时应该显示loading', () => {
-      vi.mocked(useQuery).mockReturnValueOnce({
-        data: undefined,
-        isLoading: true,
-        isError: false,
-        refetch: vi.fn(),
-      });
-
-      renderWithProviders(<ProjectSelect />);
-
-      const treeSelect = screen.getByTestId('tree-select');
-      expect(treeSelect).toHaveAttribute('data-loading', 'true');
-    });
-  });
-
-  describe('空状态', () => {
-    it('没有数据时应该显示空状态', () => {
-      vi.mocked(useQuery).mockReturnValueOnce({
-        data: [],
-        isLoading: false,
-        isError: false,
-        refetch: vi.fn(),
-      });
-
-      renderWithProviders(<ProjectSelect />);
-
-      expect(screen.getByTestId('empty')).toBeInTheDocument();
-    });
-  });
-
-  describe('默认值', () => {
-    it('应该支持defaultValue', () => {
-      renderWithProviders(<ProjectSelect defaultValue="1" />);
-
-      expect(screen.getByTestId('tree-select')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(handleChange).toHaveBeenCalledWith(
+        'project-002',
+        expect.objectContaining({
+          id: 'project-002',
+          code: 'PROJ-002',
+        })
+      );
     });
   });
 });

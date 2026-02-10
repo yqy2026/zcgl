@@ -30,8 +30,8 @@ class OrganizationTestDataFactory:
         default_data = {
             "name": "测试组织",
             "code": "TEST001",
-            "type": "企业",
-            "status": "启用",
+            "type": "company",
+            "status": "active",
             "parent_id": None,
         }
         default_data.update(kwargs)
@@ -182,7 +182,7 @@ class TestOrganizationUpdate:
         """测试更新组织基本信息"""
         update_data = OrganizationUpdate(
             name="更新后的组织",
-            status="停用",
+            status="inactive",
         )
 
         updated = await self.service.update_organization(
@@ -190,7 +190,7 @@ class TestOrganizationUpdate:
         )
 
         assert updated.name == "更新后的组织"
-        assert updated.status == "停用"
+        assert updated.status == "inactive"
 
     async def test_update_organization_with_parent_change(self):
         """测试更改组织的父组织"""

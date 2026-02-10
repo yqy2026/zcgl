@@ -67,7 +67,7 @@ export const LazyImage: React.FC<LazyImageProps> = ({
 }) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isInView, setIsInView] = useState(false);
-  const imgRef = useRef<HTMLImageElement>(null);
+  const imgRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Check if IntersectionObserver is available
@@ -109,6 +109,13 @@ export const LazyImage: React.FC<LazyImageProps> = ({
     setIsLoaded(true);
   };
 
+  const handleImageClick: React.MouseEventHandler<HTMLElement> | undefined =
+    onClick == null
+      ? undefined
+      : event => {
+          onClick(event as unknown as React.MouseEvent<HTMLImageElement>);
+        };
+
   return (
     <div
       ref={imgRef}
@@ -138,7 +145,7 @@ export const LazyImage: React.FC<LazyImageProps> = ({
         preview={preview}
         onLoad={handleLoad}
         onError={handleError}
-        onClick={onClick as any} // Type cast to fix signature mismatch
+        onClick={handleImageClick}
         style={{
           display: isLoaded ? 'block' : 'none',
           width: '100%',

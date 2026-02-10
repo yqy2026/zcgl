@@ -2,7 +2,10 @@
 
 **发布日期**: 2026-01-08
 **版本**: 2.0.0
-**状态**: ✅ 核心功能已完成
+**状态**: Historical Release Notes（2026-02-09）
+
+> 说明：本文档用于记录 v2 版本历史发布信息。  
+> 当前研发与验收基线请参考：`docs/requirements-specification.md`（相对路径：`../../requirements-specification.md`）。
 
 ---
 
@@ -292,8 +295,8 @@ npm run dev
 
 如有问题，请查阅：
 - [API 文档](http://localhost:8002/docs)
-- [V2.0 升级计划](./v2_upgrade_plan.md)
-- [测试用例文档](./testing/v2-test-cases.md)
+- [V2.0 升级计划（归档）](../plans/v2-upgrade-plan-2026-02.md)
+- [测试用例文档（归档）](../testing/v2-test-cases-2026-02.md)
 
 ---
 

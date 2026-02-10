@@ -11,8 +11,8 @@ import os
 from pathlib import Path
 
 import pytest
-from sqlalchemy import create_engine, inspect
-from sqlalchemy.exc import ProgrammingError
+from sqlalchemy import create_engine, inspect, text
+from sqlalchemy.exc import ProgrammingError, SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
 
 # Lazy imports - only import when fixtures are actually used
@@ -59,14 +59,37 @@ class AsyncSessionAdapter:
     async def rollback(self):  # noqa: D401 - test helper
         return self._session.rollback()
 
+    async def get(self, *args, **kwargs):  # noqa: ANN001
+        return self._session.get(*args, **kwargs)
+
     def add(self, *args, **kwargs):  # noqa: ANN001
         return self._session.add(*args, **kwargs)
 
-    def delete(self, *args, **kwargs):  # noqa: ANN001
+    async def delete(self, *args, **kwargs):  # noqa: ANN001
         return self._session.delete(*args, **kwargs)
 
     def __getattr__(self, name: str):  # noqa: D401 - test helper
         return getattr(self._session, name)
+
+
+def _ensure_alembic_version_capacity(engine) -> None:  # noqa: ANN001
+    """Ensure alembic_version.version_num can store long revision ids."""
+    with engine.begin() as conn:
+        conn.execute(
+            text(
+                """
+                CREATE TABLE IF NOT EXISTS alembic_version (
+                    version_num VARCHAR(128) NOT NULL PRIMARY KEY
+                )
+                """
+            )
+        )
+        conn.execute(
+            text(
+                "ALTER TABLE alembic_version "
+                "ALTER COLUMN version_num TYPE VARCHAR(128)"
+            )
+        )
 
 
 @pytest.fixture(scope="session")
@@ -103,6 +126,16 @@ def engine(test_database_url):
         )
 
     engine = create_engine(test_database_url, pool_pre_ping=True)
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+    except SQLAlchemyError as exc:
+        engine.dispose()
+        pytest.skip(
+            f"Integration database is unavailable ({exc.__class__.__name__})",
+            allow_module_level=True,
+        )
+
     yield engine
     engine.dispose()
 
@@ -136,13 +169,19 @@ def db_tables(engine):
         try:
             command.upgrade(alembic_cfg, "head")
         except ProgrammingError as exc:
-            # If tables already exist without a matching Alembic version, stamp head.
-            if "DuplicateTable" in str(exc) or "already exists" in str(exc):
+            # If schema objects already exist without a matching Alembic version, stamp head.
+            error_text = str(exc)
+            schema_already_exists = (
+                "DuplicateTable" in error_text
+                or "DuplicateColumn" in error_text
+                or "already exists" in error_text
+            )
+            if schema_already_exists:
                 inspector = inspect(engine)
-                if inspector.get_table_names():
-                    command.stamp(alembic_cfg, "head")
-                else:
-                    raise
+                if not inspector.get_table_names():
+                    Base.metadata.create_all(bind=engine)
+                _ensure_alembic_version_capacity(engine)
+                command.stamp(alembic_cfg, "head")
             else:
                 raise
 
@@ -211,25 +250,43 @@ def test_data(db_session):
 
     init_enum_data(db_session, created_by="integration_test")
 
-    # Create test organization
-    test_org = Organization(
-        name="Test Organization", code="TEST_ORG", type="department"
-    )
-    db_session.add(test_org)
-    db_session.commit()
+    # Create or reuse test organization
+    test_org = db_session.query(Organization).filter(Organization.code == "TEST_ORG").first()
+    if test_org is None:
+        test_org = Organization(
+            name="Test Organization", code="TEST_ORG", type="department"
+        )
+        db_session.add(test_org)
+        db_session.commit()
+        db_session.refresh(test_org)
 
-    # Create test admin user
-    test_admin = User(
-        username="admin",
-        email="admin@test.com",
-        full_name="Test Admin",
-        password_hash=password_service.get_password_hash("Admin123!@#"),
-        is_active=True,
-        default_organization_id=test_org.id,
-    )
-    db_session.add(test_admin)
-    db_session.commit()
-    db_session.refresh(test_admin)
+    # Create or reuse test admin user
+    test_admin = db_session.query(User).filter(User.username == "admin").first()
+    if test_admin is None:
+        test_admin = User(
+            username="admin",
+            email="admin@test.com",
+            phone="13800009999",
+            full_name="Test Admin",
+            password_hash=password_service.get_password_hash("Admin123!@#"),
+            is_active=True,
+            default_organization_id=test_org.id,
+            created_by="integration_test",
+            updated_by="integration_test",
+        )
+        db_session.add(test_admin)
+        db_session.commit()
+        db_session.refresh(test_admin)
+    else:
+        test_admin.email = "admin@test.com"
+        test_admin.phone = "13800009999"
+        test_admin.full_name = "Test Admin"
+        test_admin.password_hash = password_service.get_password_hash("Admin123!@#")
+        test_admin.is_active = True
+        test_admin.default_organization_id = test_org.id
+        test_admin.updated_by = "integration_test"
+        db_session.commit()
+        db_session.refresh(test_admin)
 
     admin_role = db_session.query(Role).filter(Role.name == "admin").first()
     if admin_role is None:

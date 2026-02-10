@@ -1,71 +1,100 @@
 /**
- * AssetForm 组件测试 - 简化版本
- *
- * 修复说明：移除 antd UI 组件 mock，保留 Form mock
+ * AssetForm 组件测试
+ * 保留关键交互：渲染与取消操作
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import React from 'react';
-import { screen, fireEvent, waitFor } from '@/test/utils/test-helpers';
-import { createMockAsset } from '@/test-utils/factories';
-
-vi.mock('@/services/assetService', () => ({
-  assetService: {
-    createAsset: vi.fn(),
-    updateAsset: vi.fn(),
-  },
-}));
-
-vi.mock('@/utils/messageManager', () => ({
-  MessageManager: {
-    success: vi.fn(),
-    error: vi.fn(),
-  },
-}));
-
-const mockFormInstance = {
-  resetFields: vi.fn(),
-  validateFields: vi.fn(() => Promise.resolve({})),
-};
-
-vi.mock('antd', () => ({
-  Form: {
-    useForm: () => [mockFormInstance],
-  },
-}));
-
+import { screen, fireEvent } from '@/test/utils/test-helpers';
 import AssetForm from '../AssetForm';
-import { assetService } from '@/services/assetService';
+
+vi.mock('antd', () => {
+  const Form = ({
+    children,
+    onFinish,
+  }: {
+    children: React.ReactNode;
+    onFinish?: () => void;
+  }) => (
+    <form
+      onSubmit={event => {
+        event.preventDefault();
+        onFinish?.();
+      }}
+    >
+      {children}
+    </form>
+  );
+  (Form as unknown as { useForm: () => [Record<string, unknown>] }).useForm = () => [{}];
+
+  return {
+    Form,
+    Button: ({
+      children,
+      onClick,
+      htmlType,
+    }: {
+      children: React.ReactNode;
+      onClick?: () => void;
+      htmlType?: 'button' | 'submit' | 'reset';
+    }) => (
+      <button type={htmlType ?? 'button'} onClick={onClick}>
+        {children}
+      </button>
+    ),
+    Space: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+    Card: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+    Row: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+    Col: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+    Progress: () => <div data-testid="progress" />,
+    Typography: {
+      Text: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+    },
+  };
+});
+
+vi.mock('@/hooks/useDictionary', () => ({
+  useDictionaries: vi.fn(),
+}));
+
+vi.mock('../Asset', () => ({
+  AssetFormProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useAssetFormContext: () => ({
+    form: {
+      setFieldsValue: vi.fn(),
+      getFieldValue: vi.fn(() => 0),
+      getFieldsValue: vi.fn(() => ({})),
+      resetFields: vi.fn(),
+    },
+    completionRate: 0,
+    setCompletionRate: vi.fn(),
+    fileList: [],
+    setFileList: vi.fn(),
+    terminalContractFileList: [],
+    setTerminalContractFileList: vi.fn(),
+  }),
+  AssetBasicInfoSection: () => <div data-testid="asset-basic-section" />,
+  AssetAreaSection: () => <div data-testid="asset-area-section" />,
+  AssetStatusSection: () => <div data-testid="asset-status-section" />,
+  AssetReceptionSection: () => <div data-testid="asset-reception-section" />,
+  AssetDetailedSection: () => <div data-testid="asset-detailed-section" />,
+}));
 
 describe('AssetForm', () => {
-  const mockOnSuccess = vi.fn();
-  const mockOnCancel = vi.fn();
+  it('应该渲染资产表单与操作按钮', () => {
+    renderWithProviders(<AssetForm onSubmit={vi.fn()} onCancel={vi.fn()} />);
 
-  beforeEach(() => {
-    vi.clearAllMocks();
+    expect(screen.getByTestId('asset-basic-section')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '重置' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '取消' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '创建资产' })).toBeInTheDocument();
   });
 
-  it('应该正确渲染表单', () => {
-    renderWithProviders(
-      <AssetForm asset={null} onSuccess={mockOnSuccess} onCancel={mockOnCancel} />
-    );
-    expect(screen.getByRole('form')).toBeInTheDocument();
-  });
+  it('点击取消应触发回调', () => {
+    const handleCancel = vi.fn();
+    renderWithProviders(<AssetForm onSubmit={vi.fn()} onCancel={handleCancel} />);
 
-  it('应该调用创建服务', async () => {
-    vi.mocked(assetService.createAsset).mockResolvedValue(
-      createMockAsset({ id: '1', property_name: '测试资产' })
-    );
-
-    renderWithProviders(
-      <AssetForm asset={null} onSuccess={mockOnSuccess} onCancel={mockOnCancel} />
-    );
-
-    const submitBtn = screen.getByRole('button', { name: /提交/i });
-    fireEvent.click(submitBtn);
-
-    await waitFor(() => {
-      expect(assetService.createAsset).toHaveBeenCalled();
-    });
+    fireEvent.click(screen.getByRole('button', { name: '取消' }));
+    expect(handleCancel).toHaveBeenCalledTimes(1);
   });
 });

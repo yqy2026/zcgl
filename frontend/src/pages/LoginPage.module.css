@@ -107,7 +107,9 @@
   border-radius: 8px !important;
   border: 1px solid #cbd5e1 !important;
   /* Slate 300 */
-  transition: all 0.2s ease !important;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease !important;
   font-size: 15px !important;
   padding: 10px 16px !important;
   background-color: #ffffff !important;
@@ -130,7 +132,9 @@
   height: 44px !important;
   border-radius: 8px !important;
   border: 1px solid #cbd5e1 !important;
-  transition: all 0.2s ease !important;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease !important;
   padding: 4px 11px !important;
   background-color: #ffffff !important;
 }
@@ -174,7 +178,10 @@
   font-size: 15px !important;
   font-weight: 600 !important;
   margin-top: 8px !important;
-  transition: all 0.2s ease !important;
+  transition:
+    background-color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease !important;
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
 }
 

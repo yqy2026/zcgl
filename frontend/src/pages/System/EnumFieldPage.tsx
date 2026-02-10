@@ -19,7 +19,13 @@ import {
 } from 'antd';
 import { MessageManager } from '@/utils/messageManager';
 import type { ColumnsType } from 'antd/es/table';
-import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  EyeOutlined,
+  SearchOutlined,
+} from '@ant-design/icons';
 import { dictionaryService } from '@/services/dictionary';
 import type {
   EnumFieldType,
@@ -30,13 +36,14 @@ import type {
   UpdateEnumFieldValueRequest,
 } from '@/services/dictionary';
 import EnumValuePreview from '@/components/Dictionary/EnumValuePreview';
-import { COLORS } from '@/styles/colorMap';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
 import { useArrayListData } from '@/hooks/useArrayListData';
+import PageContainer from '@/components/Common/PageContainer';
+import styles from './EnumFieldPage.module.css';
 
-const { TabPane } = Tabs;
 const { TextArea } = Input;
 const { Option } = Select;
+const { Search } = Input;
 
 // 错误类型定义
 interface ApiError {
@@ -62,6 +69,19 @@ interface EnumFieldStatistics {
 interface EnumTypeFilters {
   keyword: string;
 }
+
+type Tone = 'primary' | 'success' | 'warning' | 'error';
+
+const resolveText = (value: string | null | undefined, fallback: string): string => {
+  if (value == null) {
+    return fallback;
+  }
+  const normalizedValue = value.trim();
+  return normalizedValue !== '' ? normalizedValue : fallback;
+};
+
+const getTypeStatusTone = (status: EnumFieldType['status']): Tone =>
+  status === 'active' ? 'success' : 'warning';
 
 // Local interfaces removed, using types from services/dictionary
 
@@ -113,7 +133,9 @@ const EnumFieldPage: React.FC = () => {
     data: enumTypes,
     loading: typesTableLoading,
     pagination: typePagination,
+    filters: typeFilters,
     loadList: loadEnumTypes,
+    applyFilters: applyTypeFilters,
     updatePagination: updateTypePagination,
   } = useArrayListData<EnumFieldType, EnumTypeFilters>({
     items: enumTypeSource,
@@ -141,12 +163,19 @@ const EnumFieldPage: React.FC = () => {
 
   const loadStatistics = async () => {
     try {
-      const stats = await dictionaryService.getDictionaryStats();
+      const [stats, enumData] = await Promise.all([
+        dictionaryService.getDictionaryStats(),
+        dictionaryService.getEnumFieldData(),
+      ]);
+      const activeValues = enumData.reduce((totalCount, item) => {
+        const activeCount = item.values.filter(value => value.is_active === true).length;
+        return totalCount + activeCount;
+      }, 0);
       setStatistics({
         total_types: stats.totalTypes,
         active_types: stats.activeTypes,
         total_values: stats.totalValues,
-        active_values: stats.activeTypes,
+        active_values: activeValues,
         usage_count: 0,
         categories: [],
       });
@@ -214,6 +243,12 @@ const EnumFieldPage: React.FC = () => {
     () => isValuesLoading || valuesTableLoading,
     [isValuesLoading, valuesTableLoading]
   );
+  const toneClassMap: Record<Tone, string> = {
+    primary: styles.tonePrimary,
+    success: styles.toneSuccess,
+    warning: styles.toneWarning,
+    error: styles.toneError,
+  };
 
   // 监听模态框打开和编辑值的变化
   useEffect(() => {
@@ -267,9 +302,11 @@ const EnumFieldPage: React.FC = () => {
       dataIndex: 'name',
       key: 'name',
       render: (text, record) => (
-        <Space>
-          <span>{text}</span>
-          {record.is_system && <Tag color="blue">系统</Tag>}
+        <Space className={styles.typeNameCell}>
+          <span className={styles.typeNameText}>{text}</span>
+          {record.is_system && (
+            <Tag className={[styles.statusTag, styles.tonePrimary].join(' ')}>系统</Tag>
+          )}
         </Space>
       ),
     },
@@ -277,21 +314,25 @@ const EnumFieldPage: React.FC = () => {
       title: '编码',
       dataIndex: 'code',
       key: 'code',
-      render: text => <code>{text}</code>,
+      render: text => <code className={styles.codeValue}>{text}</code>,
     },
     {
       title: '类别',
       dataIndex: 'category',
       key: 'category',
-      render: text => text ?? '-',
+      render: text => resolveText(text, '-'),
     },
     {
       title: '配置',
       key: 'config',
       render: (_, record) => (
-        <Space>
-          {record.is_multiple && <Tag color="green">多选</Tag>}
-          {record.is_hierarchical && <Tag color="orange">层级</Tag>}
+        <Space className={styles.configTagGroup}>
+          {record.is_multiple && (
+            <Tag className={[styles.statusTag, styles.toneSuccess].join(' ')}>多选</Tag>
+          )}
+          {record.is_hierarchical && (
+            <Tag className={[styles.statusTag, styles.toneWarning].join(' ')}>层级</Tag>
+          )}
         </Space>
       ),
     },
@@ -299,19 +340,24 @@ const EnumFieldPage: React.FC = () => {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
-      render: status => (
-        <Badge
-          status={status === 'active' ? 'success' : 'default'}
-          text={status === 'active' ? '启用' : '禁用'}
-        />
-      ),
+      render: status => {
+        const tone = getTypeStatusTone(status);
+        return (
+          <Space size={6} className={styles.statusGroup}>
+            <Badge status={status === 'active' ? 'success' : 'default'} />
+            <span className={[styles.statusText, toneClassMap[tone]].join(' ')}>
+              {status === 'active' ? '启用' : '禁用'}
+            </span>
+          </Space>
+        );
+      },
     },
     {
       title: '枚举值预览',
       key: 'enum_values_preview',
       render: (_, record) => (
         <EnumValuePreview
-          values={record.enum_values || []}
+          values={record.enum_values ?? []}
           maxDisplay={5}
           size="small"
           showInactiveCount={false}
@@ -322,26 +368,40 @@ const EnumFieldPage: React.FC = () => {
       title: '操作',
       key: 'action',
       render: (_, record) => (
-        <Space>
+        <Space className={styles.actionGroup}>
           <Tooltip title="查看枚举值">
             <Button
-              type="link"
+              type="text"
               icon={<EyeOutlined />}
+              className={styles.tableActionButton}
               onClick={() => {
                 setSelectedTypeId(record.id);
                 setActiveTab('values');
               }}
+              aria-label={`查看类型 ${record.name} 的枚举值`}
             />
           </Tooltip>
           <Tooltip title="编辑">
-            <Button type="link" icon={<EditOutlined />} onClick={() => handleEditType(record)} />
+            <Button
+              type="text"
+              icon={<EditOutlined />}
+              className={styles.tableActionButton}
+              onClick={() => handleEditType(record)}
+              aria-label={`编辑类型 ${record.name}`}
+            />
           </Tooltip>
           {!record.is_system && (
             <Popconfirm
               title="确定删除此枚举类型吗？"
               onConfirm={() => handleDeleteType(record.id)}
             >
-              <Button type="link" danger icon={<DeleteOutlined />} />
+              <Button
+                type="text"
+                danger
+                icon={<DeleteOutlined />}
+                className={styles.tableActionButton}
+                aria-label={`删除类型 ${record.name}`}
+              />
             </Popconfirm>
           )}
         </Space>
@@ -360,13 +420,13 @@ const EnumFieldPage: React.FC = () => {
       title: '值',
       dataIndex: 'value',
       key: 'value',
-      render: text => <code>{text}</code>,
+      render: text => <code className={styles.codeValue}>{text}</code>,
     },
     {
       title: '编码',
       dataIndex: 'code',
       key: 'code',
-      render: text => (text != null ? <code>{text}</code> : '-'),
+      render: text => (text != null ? <code className={styles.codeValue}>{text}</code> : '-'),
     },
     {
       title: '颜色',
@@ -374,17 +434,12 @@ const EnumFieldPage: React.FC = () => {
       key: 'color',
       render: color =>
         color != null ? (
-          <Space>
-            <div
-              style={{
-                width: 16,
-                height: 16,
-                backgroundColor: color,
-                border: `1px solid ${COLORS.border}`,
-                borderRadius: 2,
-              }}
+          <Space className={styles.colorCell}>
+            <span
+              className={styles.colorPreview}
+              style={{ ['--preview-color' as string]: color } as React.CSSProperties}
             />
-            <span>{color}</span>
+            <span className={styles.colorValue}>{color}</span>
           </Space>
         ) : (
           '-'
@@ -399,12 +454,21 @@ const EnumFieldPage: React.FC = () => {
       title: '状态',
       key: 'status',
       render: (_, record) => (
-        <Space>
-          <Badge
-            status={record.is_active ? 'success' : 'default'}
-            text={record.is_active ? '启用' : '禁用'}
-          />
-          {record.is_default && <Tag color="gold">默认</Tag>}
+        <Space className={styles.configTagGroup}>
+          <Space size={6} className={styles.statusGroup}>
+            <Badge status={record.is_active ? 'success' : 'default'} />
+            <span
+              className={[
+                styles.statusText,
+                record.is_active ? styles.toneSuccess : styles.toneWarning,
+              ].join(' ')}
+            >
+              {record.is_active ? '启用' : '禁用'}
+            </span>
+          </Space>
+          {record.is_default === true && (
+            <Tag className={[styles.statusTag, styles.toneWarning].join(' ')}>默认</Tag>
+          )}
         </Space>
       ),
     },
@@ -412,10 +476,22 @@ const EnumFieldPage: React.FC = () => {
       title: '操作',
       key: 'action',
       render: (_, record) => (
-        <Space>
-          <Button type="link" icon={<EditOutlined />} onClick={() => handleEditValue(record)} />
+        <Space className={styles.actionGroup}>
+          <Button
+            type="text"
+            icon={<EditOutlined />}
+            className={styles.tableActionButton}
+            onClick={() => handleEditValue(record)}
+            aria-label={`编辑枚举值 ${record.label}`}
+          />
           <Popconfirm title="确定删除此枚举值吗？" onConfirm={() => handleDeleteValue(record.id)}>
-            <Button type="link" danger icon={<DeleteOutlined />} />
+            <Button
+              type="text"
+              danger
+              icon={<DeleteOutlined />}
+              className={styles.tableActionButton}
+              aria-label={`删除枚举值 ${record.label}`}
+            />
           </Popconfirm>
         </Space>
       ),
@@ -562,107 +638,123 @@ const EnumFieldPage: React.FC = () => {
     }
   };
 
+  const tabItems = [
+    {
+      key: 'types',
+      label: '枚举类型',
+      children: (
+        <>
+          <div className={styles.toolbarSection}>
+            <Space className={styles.typeToolbar} size={12} wrap>
+              <Search
+                placeholder="搜索类型名称、编码或类别"
+                prefix={<SearchOutlined />}
+                value={typeFilters.keyword}
+                onChange={event => applyTypeFilters({ keyword: event.target.value })}
+                allowClear
+                className={styles.typeSearch}
+              />
+              <div className={styles.typeSummaryText}>共 {typePagination.total} 个类型</div>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                className={styles.actionButton}
+                onClick={handleCreateType}
+              >
+                新建枚举类型
+              </Button>
+            </Space>
+          </div>
+          <TableWithPagination
+            columns={typeColumns}
+            dataSource={enumTypes}
+            rowKey="id"
+            loading={typesLoading}
+            paginationState={typePagination}
+            onPageChange={updateTypePagination}
+            paginationProps={{
+              showTotal: (total: number) => `共 ${total} 条记录`,
+            }}
+          />
+        </>
+      ),
+    },
+    {
+      key: 'values',
+      label: '枚举值管理',
+      children: (
+        <>
+          <div className={styles.toolbarSection}>
+            <Space className={styles.valueToolbar} wrap>
+              <Select
+                placeholder="选择枚举类型"
+                className={styles.typeSelect}
+                value={selectedTypeId ?? undefined}
+                onChange={(value?: string) => {
+                  setSelectedTypeId(value ?? null);
+                }}
+                allowClear
+              >
+                {enumTypeOptions.map(type => (
+                  <Option key={type.id} value={type.id}>
+                    {type.name}
+                  </Option>
+                ))}
+              </Select>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                className={styles.actionButton}
+                onClick={handleCreateValue}
+                disabled={selectedTypeId == null}
+              >
+                新建枚举值
+              </Button>
+            </Space>
+          </div>
+          <TableWithPagination
+            columns={valueColumns}
+            dataSource={enumValues}
+            rowKey="id"
+            loading={valuesLoading}
+            paginationState={valuePagination}
+            onPageChange={updateValuePagination}
+            paginationProps={{
+              showTotal: (total: number) => `共 ${total} 条记录`,
+            }}
+          />
+        </>
+      ),
+    },
+  ];
+
   return (
-    <div style={{ padding: 24 }}>
-      <Row gutter={16} style={{ marginBottom: 24 }}>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="枚举类型总数"
-              value={statistics?.total_types ?? 0}
-              styles={{ content: { color: COLORS.primary } }}
-            />
+    <PageContainer title="枚举字段管理" subTitle="维护枚举类型配置、枚举值及字典可用状态">
+      <Row gutter={[16, 16]} className={styles.statsRow}>
+        <Col xs={24} sm={12} md={6}>
+          <Card className={`${styles.statsCard} ${styles.primaryStatsCard}`}>
+            <Statistic title="枚举类型总数" value={statistics?.total_types ?? 0} />
           </Card>
         </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="启用类型"
-              value={statistics?.active_types ?? 0}
-              styles={{ content: { color: COLORS.success } }}
-            />
+        <Col xs={24} sm={12} md={6}>
+          <Card className={`${styles.statsCard} ${styles.activeStatsCard}`}>
+            <Statistic title="启用类型" value={statistics?.active_types ?? 0} />
           </Card>
         </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="枚举值总数"
-              value={statistics?.total_values ?? 0}
-              styles={{ content: { color: COLORS.primary } }}
-            />
+        <Col xs={24} sm={12} md={6}>
+          <Card className={`${styles.statsCard} ${styles.primaryStatsCard}`}>
+            <Statistic title="枚举值总数" value={statistics?.total_values ?? 0} />
           </Card>
         </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="使用次数"
-              value={statistics?.usage_count ?? 0}
-              styles={{ content: { color: COLORS.warning } }}
-            />
+        <Col xs={24} sm={12} md={6}>
+          <Card className={`${styles.statsCard} ${styles.warningStatsCard}`}>
+            <Statistic title="启用值数量" value={statistics?.active_values ?? 0} />
           </Card>
         </Col>
       </Row>
 
       <Card>
-        <Tabs activeKey={activeTab} onChange={setActiveTab}>
-          <TabPane tab="枚举类型" key="types">
-            <div style={{ marginBottom: 16 }}>
-              <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateType}>
-                新建枚举类型
-              </Button>
-            </div>
-            <TableWithPagination
-              columns={typeColumns}
-              dataSource={enumTypes}
-              rowKey="id"
-              loading={typesLoading}
-              paginationState={typePagination}
-              onPageChange={updateTypePagination}
-              paginationProps={{
-                showTotal: (total: number) => `共 ${total} 条记录`,
-              }}
-            />
-          </TabPane>
-
-          <TabPane tab="枚举值管理" key="values">
-            <div style={{ marginBottom: 16 }}>
-              <Space>
-                <Select
-                  placeholder="选择枚举类型"
-                  style={{ width: 200 }}
-                  value={selectedTypeId}
-                  onChange={setSelectedTypeId}
-                  allowClear
-                >
-                  {enumTypeOptions.map(type => (
-                    <Option key={type.id} value={type.id}>
-                      {type.name}
-                    </Option>
-                  ))}
-                </Select>
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={handleCreateValue}
-                  disabled={selectedTypeId == null}
-                >
-                  新建枚举值
-                </Button>
-              </Space>
-            </div>
-            <TableWithPagination
-              columns={valueColumns}
-              dataSource={enumValues}
-              rowKey="id"
-              loading={valuesLoading}
-              paginationState={valuePagination}
-              onPageChange={updateValuePagination}
-              paginationProps={{
-                showTotal: (total: number) => `共 ${total} 条记录`,
-              }}
-            />
-          </TabPane>
-        </Tabs>
+        <Tabs activeKey={activeTab} onChange={setActiveTab} items={tabItems} className={styles.tabs} />
       </Card>
 
       {/* 枚举类型编辑模态框 */}
@@ -671,6 +763,8 @@ const EnumFieldPage: React.FC = () => {
         open={typeModalVisible}
         onCancel={() => setTypeModalVisible(false)}
         onOk={() => typeForm.submit()}
+        okButtonProps={{ className: styles.modalActionButton }}
+        cancelButtonProps={{ className: styles.modalActionButton }}
         width={600}
       >
         <Form form={typeForm} layout="vertical" onFinish={handleTypeSubmit}>
@@ -750,6 +844,8 @@ const EnumFieldPage: React.FC = () => {
         onOk={() => {
           valueForm.submit();
         }}
+        okButtonProps={{ className: styles.modalActionButton }}
+        cancelButtonProps={{ className: styles.modalActionButton }}
         width={600}
       >
         <Form form={valueForm} layout="vertical" onFinish={handleValueSubmit}>
@@ -821,7 +917,7 @@ const EnumFieldPage: React.FC = () => {
           </Row>
         </Form>
       </Modal>
-    </div>
+    </PageContainer>
   );
 };
 

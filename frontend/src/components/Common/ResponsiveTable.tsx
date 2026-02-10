@@ -9,6 +9,7 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Card, Empty } from 'antd';
 import type { TableProps } from 'antd/es/table';
+import styles from './ResponsiveTable.module.css';
 
 /**
  * Responsive Table Props
@@ -31,7 +32,10 @@ export interface ResponsiveTableProps<T> extends Omit<TableProps<T>, 'pagination
    * Fields to display in card view
    * Can be string (field key) or object with label and custom render
    */
-  cardFields?: Array<Extract<keyof T, string> | { key: string; label: string; render?: (value: any, record: T) => React.ReactNode }>;
+  cardFields?: Array<
+    | Extract<keyof T, string>
+    | { key: string; label: string; render?: (value: unknown, record: T) => React.ReactNode }
+  >;
 }
 
 /**
@@ -40,7 +44,29 @@ export interface ResponsiveTableProps<T> extends Omit<TableProps<T>, 'pagination
  * On desktop: shows standard table
  * On mobile: shows card-based layout for better readability
  */
-export function ResponsiveTable<T extends Record<string, any>>({
+const getRecordValue = <T extends object>(record: T, key: string): unknown => {
+  const recordMap = record as Record<string, unknown>;
+  return recordMap[key];
+};
+
+const getDisplayValue = (value: unknown): React.ReactNode => {
+  if (value == null) {
+    return '-';
+  }
+  if (React.isValidElement(value)) {
+    return value;
+  }
+  if (
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
+  ) {
+    return String(value);
+  }
+  return '-';
+};
+
+export function ResponsiveTable<T extends object>({
   cardTitle: _cardTitle,
   mobileBreakpoint = 768,
   renderCard,
@@ -66,11 +92,21 @@ export function ResponsiveTable<T extends Record<string, any>>({
   // If mobile and custom card render is provided
   if (isMobile && renderCard) {
     return (
-      <div style={{ width: '100%' }}>
+      <div className={styles.cardList}>
         {dataSource && dataSource.length > 0 ? (
           dataSource.map((record, index) => {
-            const key = typeof rowKey === 'function' ? rowKey(record, index) : (record[rowKey as string] as string) ?? index;
-            return <div key={key}>{renderCard(record, index)}</div>;
+            const key =
+              typeof rowKey === 'function'
+                ? rowKey(record, index)
+                : rowKey == null
+                  ? index
+                  : (getRecordValue(record, String(rowKey)) as React.Key | undefined) ??
+                    index;
+            return (
+              <div key={key} className={styles.cardListItem}>
+                {renderCard(record, index)}
+              </div>
+            );
           })
         ) : (
           <Empty description="暂无数据" />
@@ -82,17 +118,19 @@ export function ResponsiveTable<T extends Record<string, any>>({
   // If mobile and card fields are provided, auto-generate cards
   if (isMobile && cardFields && columns) {
     return (
-      <div style={{ width: '100%' }}>
+      <div className={styles.cardList}>
         {dataSource && dataSource.length > 0 ? (
           dataSource.map((record, index) => {
-            const key = typeof rowKey === 'function' ? rowKey(record, index) : (record[rowKey as string] as string) ?? index;
+            const key =
+              typeof rowKey === 'function'
+                ? rowKey(record, index)
+                : rowKey == null
+                  ? index
+                  : (getRecordValue(record, String(rowKey)) as React.Key | undefined) ??
+                    index;
 
             return (
-              <Card
-                key={key}
-                style={{ marginBottom: 'var(--spacing-md)' }}
-                bodyStyle={{ padding: 'var(--spacing-md)' }}
-              >
+              <Card key={key} className={styles.mobileCard}>
                 {cardFields.map((fieldConfig) => {
                   const fieldKey = typeof fieldConfig === 'string' ? fieldConfig : fieldConfig.key;
                   const label = typeof fieldConfig === 'string' ? fieldKey : fieldConfig.label;
@@ -110,15 +148,15 @@ export function ResponsiveTable<T extends Record<string, any>>({
                     return false;
                   });
 
-                  const value = record[fieldKey];
+                  const value = getRecordValue(record, fieldKey);
 
                   return (
-                    <div key={fieldKey} style={{ marginBottom: 'var(--spacing-sm)' }}>
-                      <div style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-sm)', marginBottom: '4px' }}>
+                    <div key={fieldKey} className={styles.cardFieldRow}>
+                      <div className={styles.cardFieldLabel}>
                         {typeof column?.title === 'string' ? column.title : label}
                       </div>
-                      <div style={{ color: 'var(--color-text-primary)', fontSize: 'var(--font-size-base)' }}>
-                        {render ? render(value, record) : value ?? '-'}
+                      <div className={styles.cardFieldValue}>
+                        {render ? render(value, record) : getDisplayValue(value)}
                       </div>
                     </div>
                   );

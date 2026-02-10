@@ -25,7 +25,7 @@ from ....core.exception_handler import (
 )
 from ....core.response_handler import success_response
 from ....database import get_async_db
-from ....middleware.auth import get_current_active_user
+from ....middleware.auth import get_current_active_user, require_admin
 from ....models.auth import User
 from ....services.document.pdf_import_service import PDFImportService
 from ....services.document.processing_tracker import BatchStatusTracker
@@ -535,6 +535,7 @@ async def cancel_batch(
 @router.delete("/cleanup")
 def cleanup_completed_batches(
     older_than_hours: int = 24,
+    current_user: User = Depends(require_admin),
 ) -> JSONResponse:
     """
     清理已完成的批处理记录

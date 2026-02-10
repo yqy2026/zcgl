@@ -169,10 +169,10 @@ class OwnershipService:
             raise ResourceNotFoundError("权属方", ownership_id)
 
         # 验证项目是否存在
-        valid_projects = []
+        valid_projects: list[str] = []
         if project_ids:
             project_stmt = select(Project.id).where(Project.id.in_(project_ids))
-            valid_projects = (await db.execute(project_stmt)).scalars().all()
+            valid_projects = [str(project_id) for project_id in (await db.execute(project_stmt)).scalars().all()]
         valid_project_ids = [str(p_id) for p_id in valid_projects]
 
         if len(valid_project_ids) != len(project_ids):

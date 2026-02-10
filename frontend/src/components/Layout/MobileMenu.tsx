@@ -48,7 +48,7 @@ const MobileMenu: React.FC = () => {
       <Drawer
         title={
           <Space>
-            <HomeOutlined style={{ color: '#1890ff' }} aria-label="首页" />
+            <HomeOutlined style={{ color: 'var(--color-primary)' }} aria-label="首页" />
             <Text strong>资产管理系统</Text>
           </Space>
         }
@@ -84,6 +84,7 @@ const MobileMenu: React.FC = () => {
           style={{
             borderRight: 0,
             height: '100%',
+            background: 'var(--color-bg-primary)',
           }}
         />
       </Drawer>

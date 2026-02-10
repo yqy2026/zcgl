@@ -9,6 +9,7 @@ import { InboxOutlined } from '@ant-design/icons';
 import type { UploadProps } from 'antd';
 import { propertyCertificateService } from '@/services/propertyCertificateService';
 import type { CertificateExtractionResult } from '@/types/propertyCertificate';
+import styles from './PropertyCertificateUpload.module.css';
 
 interface PropertyCertificateUploadProps {
   onSuccess: (result: CertificateExtractionResult) => void;
@@ -59,21 +60,22 @@ export const PropertyCertificateUpload: React.FC<PropertyCertificateUploadProps>
   };
 
   return (
-    <Card>
-      <Space orientation="vertical" size="large" style={{ width: '100%' }}>
+    <Card className={styles.uploadCard}>
+      <Space orientation="vertical" size="large" className={styles.uploadStack}>
         <Alert
           title="上传产权证扫描件"
           description="支持 PDF、JPG、PNG 格式，最大 10MB。系统将自动提取产权证信息。"
           type="info"
           showIcon
+          className={styles.infoAlert}
         />
 
-        <Upload.Dragger {...uploadProps} disabled={uploading || loading}>
+        <Upload.Dragger {...uploadProps} disabled={uploading || loading} className={styles.dragger}>
           <p className="ant-upload-drag-icon">
-            <InboxOutlined />
+            <InboxOutlined className={styles.draggerIcon} />
           </p>
           <p className="ant-upload-text">点击或拖拽文件到此区域上传</p>
-          <p className="ant-upload-hint">支持单个文件上传。系统将使用 AI 自动识别产权证信息。</p>
+          <p className={styles.draggerHint}>支持单个文件上传。系统将使用 AI 自动识别产权证信息。</p>
         </Upload.Dragger>
 
         {(uploading || loading) && (
@@ -82,6 +84,7 @@ export const PropertyCertificateUpload: React.FC<PropertyCertificateUploadProps>
             description="AI 正在分析文件并提取信息，请稍候..."
             type="info"
             showIcon
+            className={styles.processingAlert}
           />
         )}
       </Space>

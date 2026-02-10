@@ -2,10 +2,9 @@
  * 简化版的资产分析页面 - 用于调试
  */
 import React from 'react';
-import { Card, Empty, Typography } from 'antd';
+import { Card, Empty } from 'antd';
 import { AnalyticsStatsGrid } from '@/components/Analytics/AnalyticsStatsCard';
-
-const { Title } = Typography;
+import PageContainer from '@/components/Common/PageContainer';
 
 const SimpleAnalyticsPage: React.FC = () => {
   // 使用模拟数据进行测试
@@ -20,8 +19,7 @@ const SimpleAnalyticsPage: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: '24px' }}>
-      <Title level={2}>资产分析（简化版）</Title>
+    <PageContainer title="资产分析（简化版）" subTitle="用于调试资产分析模块的基础展示">
 
       <Card title="概览统计" style={{ marginBottom: '24px' }}>
         <AnalyticsStatsGrid data={mockData} loading={false} />
@@ -30,7 +28,7 @@ const SimpleAnalyticsPage: React.FC = () => {
       <Card>
         <Empty description="这是简化版页面，仅用于测试" />
       </Card>
-    </div>
+    </PageContainer>
   );
 };
 

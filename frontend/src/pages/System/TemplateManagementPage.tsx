@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Card, Button, Tag, Space, Typography, Row, Col, Modal, Tooltip } from 'antd';
+import React, { useEffect, useState, type ReactNode } from 'react';
+import { Button, Card, Col, Modal, Row, Space, Statistic, Tag, Tooltip, Typography } from 'antd';
 import {
   DownloadOutlined,
   EyeOutlined,
@@ -7,19 +7,21 @@ import {
   InfoCircleOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
+  CloseCircleOutlined,
 } from '@ant-design/icons';
 import { MessageManager } from '@/utils/messageManager';
 import { assetService } from '@/services/assetService';
 import { rentContractExcelService } from '@/services/rentContractExcelService';
 import type { ColumnsType } from 'antd/es/table';
 import { createLogger } from '@/utils/logger';
-import { COLORS } from '@/styles/colorMap';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
 import { useArrayListData } from '@/hooks/useArrayListData';
+import PageContainer from '@/components/Common/PageContainer';
+import styles from './TemplateManagementPage.module.css';
 
 const _pageLogger = createLogger('TemplateManagement');
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 interface TemplateInfo {
   key: string;
@@ -36,6 +38,8 @@ interface TemplateInfo {
 interface TemplateFilters {
   placeholder: string;
 }
+
+type Tone = 'primary' | 'success' | 'warning' | 'error' | 'neutral';
 
 // 模板数据
 const templates: TemplateInfo[] = [
@@ -95,10 +99,42 @@ const templates: TemplateInfo[] = [
   },
 ];
 
+const TYPE_META_MAP: Record<
+  TemplateInfo['type'],
+  {
+    label: string;
+    tone: Tone;
+  }
+> = {
+  asset: { label: '资产导入', tone: 'primary' },
+  'rent-contract': { label: '租赁合同', tone: 'warning' },
+};
+
+const STATUS_META_MAP: Record<
+  TemplateInfo['status'],
+  {
+    label: string;
+    hint: string;
+    tone: Tone;
+    icon: ReactNode;
+  }
+> = {
+  active: { label: '使用中', hint: '已发布', tone: 'success', icon: <CheckCircleOutlined /> },
+  draft: { label: '草稿', hint: '待发布', tone: 'warning', icon: <ClockCircleOutlined /> },
+  deprecated: { label: '已废弃', hint: '停止维护', tone: 'error', icon: <CloseCircleOutlined /> },
+};
+
 const TemplateManagementPage: React.FC = () => {
-  const [downloadLoading, setDownloadLoading] = useState(false);
+  const [downloadingTemplateKey, setDownloadingTemplateKey] = useState<string | null>(null);
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<TemplateInfo | null>(null);
+  const toneClassMap: Record<Tone, string> = {
+    primary: styles.tonePrimary,
+    success: styles.toneSuccess,
+    warning: styles.toneWarning,
+    error: styles.toneError,
+    neutral: styles.toneNeutral,
+  };
 
   const {
     data: templateRows,
@@ -117,10 +153,22 @@ const TemplateManagementPage: React.FC = () => {
   useEffect(() => {
     void loadList({ page: 1 });
   }, [loadList]);
+  const activeTemplateCount = templates.filter(template => template.status === 'active').length;
+
+  const getToneClassName = (tone: Tone): string => {
+    return toneClassMap[tone];
+  };
+
+  const normalizeVersion = (version: string): string => {
+    if (version.startsWith('v')) {
+      return version;
+    }
+    return `v${version}`;
+  };
 
   // 下载模板
   const handleDownloadTemplate = async (template: TemplateInfo) => {
-    setDownloadLoading(true);
+    setDownloadingTemplateKey(template.key);
     try {
       if (template.type === 'asset') {
         await assetService.downloadImportTemplate();
@@ -133,7 +181,7 @@ const TemplateManagementPage: React.FC = () => {
       _pageLogger.error('下载模板失败:', error as Error);
       MessageManager.error(`下载模板失败: ${(error as Error).message || '网络错误'}`);
     } finally {
-      setDownloadLoading(false);
+      setDownloadingTemplateKey(null);
     }
   };
 
@@ -143,26 +191,27 @@ const TemplateManagementPage: React.FC = () => {
     setPreviewVisible(true);
   };
 
+  const getTypeTag = (type: TemplateInfo['type']) => {
+    const meta = TYPE_META_MAP[type];
+    return (
+      <Tag className={`${styles.statusTag} ${styles.typeTag} ${getToneClassName(meta.tone)}`}>
+        {meta.label}
+      </Tag>
+    );
+  };
+
   // 获取状态标签
-  const getStatusTag = (status: string) => {
-    switch (status) {
-      case 'active':
-        return (
-          <Tag icon={<CheckCircleOutlined />} color="success">
-            使用中
-          </Tag>
-        );
-      case 'draft':
-        return (
-          <Tag icon={<ClockCircleOutlined />} color="warning">
-            草稿
-          </Tag>
-        );
-      case 'deprecated':
-        return <Tag color="error">已废弃</Tag>;
-      default:
-        return <Tag>未知</Tag>;
+  const getStatusTag = (status: TemplateInfo['status'] | string) => {
+    const statusMeta = STATUS_META_MAP[status as TemplateInfo['status']];
+    if (statusMeta == null) {
+      return <Tag className={`${styles.statusTag} ${styles.toneNeutral}`}>未知</Tag>;
     }
+    return (
+      <Tag className={`${styles.statusTag} ${getToneClassName(statusMeta.tone)}`} icon={statusMeta.icon}>
+        {statusMeta.label}
+        <span className={styles.statusHint}>· {statusMeta.hint}</span>
+      </Tag>
+    );
   };
 
   // 表格列定义
@@ -172,15 +221,15 @@ const TemplateManagementPage: React.FC = () => {
       dataIndex: 'name',
       key: 'name',
       render: (text: string, record: TemplateInfo) => (
-        <Space>
-          <FileExcelOutlined style={{ color: COLORS.success }} />
+        <div className={styles.templateNameCell}>
+          <FileExcelOutlined className={styles.templateIcon} />
           <span>
-            {text}
-            <Text type="secondary" style={{ marginLeft: 8, fontSize: '12px' }}>
-              v{record.version}
+            <span className={styles.templateNameText}>{text}</span>
+            <Text type="secondary" className={styles.templateVersion}>
+              {normalizeVersion(record.version)}
             </Text>
           </span>
-        </Space>
+        </div>
       ),
     },
     {
@@ -193,11 +242,7 @@ const TemplateManagementPage: React.FC = () => {
       title: '类型',
       dataIndex: 'type',
       key: 'type',
-      render: (type: string) => (
-        <Tag color={type === 'asset' ? 'blue' : 'purple'}>
-          {type === 'asset' ? '资产导入' : '租赁合同'}
-        </Tag>
-      ),
+      render: (type: TemplateInfo['type']) => getTypeTag(type),
     },
     {
       title: '状态',
@@ -219,23 +264,27 @@ const TemplateManagementPage: React.FC = () => {
       title: '操作',
       key: 'action',
       render: (_, record: TemplateInfo) => (
-        <Space>
+        <Space className={styles.actionGroup}>
           <Tooltip title="下载模板">
             <Button
-              type="primary"
-              size="small"
+              type="text"
               icon={<DownloadOutlined />}
+              className={`${styles.actionButton} ${styles.tableActionButton}`}
               onClick={() => handleDownloadTemplate(record)}
-              loading={downloadLoading}
+              loading={downloadingTemplateKey === record.key}
+              disabled={downloadingTemplateKey != null && downloadingTemplateKey !== record.key}
+              aria-label={`下载模板 ${record.name}`}
             >
               下载
             </Button>
           </Tooltip>
           <Tooltip title="查看详情">
             <Button
-              size="small"
+              type="text"
               icon={<EyeOutlined />}
+              className={`${styles.actionButton} ${styles.tableActionButton}`}
               onClick={() => handlePreviewTemplate(record)}
+              aria-label={`预览模板 ${record.name}`}
             >
               预览
             </Button>
@@ -246,38 +295,24 @@ const TemplateManagementPage: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: '24px' }}>
-      {/* 页面标题 */}
-      <div style={{ marginBottom: '24px' }}>
-        <Title level={2} style={{ margin: 0 }}>
-          数据模板管理
-        </Title>
-        <Text type="secondary">管理和下载各种数据导入模板，确保数据导入的准确性和一致性</Text>
-      </div>
-
+    <PageContainer
+      title="数据模板管理"
+      subTitle="管理和下载各种数据导入模板，确保数据导入的准确性和一致性"
+    >
       {/* 统计信息 */}
-      <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
+      <Row gutter={[16, 16]} className={styles.statsRow}>
         <Col xs={24} sm={12} md={6}>
-          <Card>
-            <Statistic
-              title="可用模板"
-              value={templates.filter(t => t.status === 'active').length}
-              suffix="个"
-              styles={{ content: { color: COLORS.success } }}
-            />
+          <Card className={`${styles.statsCard} ${styles.toneSuccess}`}>
+            <Statistic title="可用模板" value={activeTemplateCount} suffix="个" />
           </Card>
         </Col>
         <Col xs={24} sm={12} md={6}>
-          <Card>
-            <Statistic
-              title="资产模板"
-              value={templates.filter(t => t.type === 'asset').length}
-              suffix="个"
-            />
+          <Card className={`${styles.statsCard} ${styles.tonePrimary}`}>
+            <Statistic title="资产模板" value={templates.filter(t => t.type === 'asset').length} suffix="个" />
           </Card>
         </Col>
         <Col xs={24} sm={12} md={6}>
-          <Card>
+          <Card className={`${styles.statsCard} ${styles.toneWarning}`}>
             <Statistic
               title="合同模板"
               value={templates.filter(t => t.type === 'rent-contract').length}
@@ -286,7 +321,7 @@ const TemplateManagementPage: React.FC = () => {
           </Card>
         </Col>
         <Col xs={24} sm={12} md={6}>
-          <Card>
+          <Card className={`${styles.statsCard} ${styles.toneNeutral}`}>
             <Statistic title="总下载量" value={0} suffix="次" />
           </Card>
         </Col>
@@ -296,26 +331,30 @@ const TemplateManagementPage: React.FC = () => {
       <Card
         title={
           <Space>
-            <InfoCircleOutlined />
+            <InfoCircleOutlined className={styles.sectionIcon} />
             使用说明
           </Space>
         }
-        style={{ marginBottom: '24px' }}
+        className={styles.instructionsCard}
       >
         <Row gutter={[16, 16]}>
           <Col xs={24} md={8}>
-            <Card size="small" title="1. 下载模板">
-              <Text>点击&quot;下载&quot;按钮获取对应的数据导入模板文件</Text>
+            <Card size="small" title="1. 下载模板" className={styles.instructionStepCard}>
+              <Text className={styles.instructionText}>
+                点击&quot;下载&quot;按钮获取对应的数据导入模板文件
+              </Text>
             </Card>
           </Col>
           <Col xs={24} md={8}>
-            <Card size="small" title="2. 填写数据">
-              <Text>按照模板格式和字段要求填写您的数据</Text>
+            <Card size="small" title="2. 填写数据" className={styles.instructionStepCard}>
+              <Text className={styles.instructionText}>按照模板格式和字段要求填写您的数据</Text>
             </Card>
           </Col>
           <Col xs={24} md={8}>
-            <Card size="small" title="3. 导入数据">
-              <Text>在对应的导入页面上传填写完成的Excel文件</Text>
+            <Card size="small" title="3. 导入数据" className={styles.instructionStepCard}>
+              <Text className={styles.instructionText}>
+                在对应的导入页面上传填写完成的 Excel 文件
+              </Text>
             </Card>
           </Col>
         </Row>
@@ -323,6 +362,10 @@ const TemplateManagementPage: React.FC = () => {
 
       {/* 模板列表 */}
       <Card>
+        <div className={styles.tableSummary} aria-live="polite">
+          <Text type="secondary">共 {pagination.total} 个模板</Text>
+          <Text type="secondary">可用模板 {activeTemplateCount} 个</Text>
+        </div>
         <TableWithPagination
           columns={columns}
           dataSource={templateRows}
@@ -345,91 +388,87 @@ const TemplateManagementPage: React.FC = () => {
         footer={null}
         width={800}
       >
-        {previewTemplate && (
-          <div>
+        {previewTemplate != null && (
+          <div className={styles.previewContent}>
             <Row gutter={[16, 16]}>
               <Col span={12}>
-                <Text strong>模板名称：</Text>
-                <Text style={{ marginLeft: 8 }}>{previewTemplate.name}</Text>
+                <div className={styles.detailItem}>
+                  <Text strong className={styles.detailLabel}>
+                    模板名称：
+                  </Text>
+                  <Text>{previewTemplate.name}</Text>
+                </div>
               </Col>
               <Col span={12}>
-                <Text strong>版本：</Text>
-                <Text style={{ marginLeft: 8 }}>{previewTemplate.version}</Text>
+                <div className={styles.detailItem}>
+                  <Text strong className={styles.detailLabel}>
+                    版本：
+                  </Text>
+                  <Text>{previewTemplate.version}</Text>
+                </div>
               </Col>
               <Col span={12}>
-                <Text strong>类型：</Text>
-                <Tag color={previewTemplate.type === 'asset' ? 'blue' : 'purple'}>
-                  {previewTemplate.type === 'asset' ? '资产导入' : '租赁合同'}
-                </Tag>
+                <div className={styles.detailItem}>
+                  <Text strong className={styles.detailLabel}>
+                    类型：
+                  </Text>
+                  {getTypeTag(previewTemplate.type)}
+                </div>
               </Col>
               <Col span={12}>
-                <Text strong>状态：</Text>
-                {getStatusTag(previewTemplate.status)}
+                <div className={styles.detailItem}>
+                  <Text strong className={styles.detailLabel}>
+                    状态：
+                  </Text>
+                  {getStatusTag(previewTemplate.status)}
+                </div>
               </Col>
               <Col span={24}>
-                <Text strong>描述：</Text>
-                <Text style={{ marginLeft: 8 }}>{previewTemplate.description}</Text>
+                <div className={styles.detailItem}>
+                  <Text strong className={styles.detailLabel}>
+                    描述：
+                  </Text>
+                  <Text className={styles.descriptionText}>{previewTemplate.description}</Text>
+                </div>
               </Col>
               <Col span={24}>
                 <Text strong>包含字段：</Text>
-                <div style={{ marginTop: 8, maxHeight: '200px', overflowY: 'auto' }}>
+                <div className={styles.fieldsContainer}>
                   {previewTemplate.fields.map(field => (
-                    <Tag key={field} style={{ marginBottom: 4 }}>
+                    <Tag key={field} className={styles.fieldTag}>
                       {field}
                     </Tag>
                   ))}
                 </div>
               </Col>
             </Row>
-            <div style={{ marginTop: '16px', textAlign: 'center' }}>
-              <Space>
+            <div className={styles.previewFooter}>
+              <Space className={styles.previewFooterActions} wrap>
                 <Button
-                  type="primary"
+                  type="text"
                   icon={<DownloadOutlined />}
+                  className={`${styles.actionButton} ${styles.modalActionButton}`}
                   onClick={() => {
                     handleDownloadTemplate(previewTemplate);
                     setPreviewVisible(false);
                   }}
+                  loading={downloadingTemplateKey === previewTemplate.key}
+                  aria-label={`下载模板 ${previewTemplate.name}`}
                 >
                   下载模板
                 </Button>
-                <Button onClick={() => setPreviewVisible(false)}>关闭</Button>
+                <Button
+                  className={`${styles.actionButton} ${styles.modalActionButton}`}
+                  onClick={() => setPreviewVisible(false)}
+                >
+                  关闭
+                </Button>
               </Space>
             </div>
           </div>
         )}
       </Modal>
-    </div>
-  );
-};
-
-// 导入Statistic组件
-const Statistic: React.FC<{
-  title: string;
-  value: number;
-  suffix?: string;
-  valueStyle?: React.CSSProperties;
-  styles?: { content?: React.CSSProperties };
-}> = ({ title, value, suffix, valueStyle, styles }) => {
-  const contentStyle = styles?.content ?? valueStyle;
-
-  return (
-    <div>
-      <div style={{ color: COLORS.textSecondary, fontSize: '14px', marginBottom: '4px' }}>
-        {title}
-      </div>
-      <div
-        style={{
-          fontSize: '24px',
-          fontWeight: 'bold',
-          color: COLORS.textPrimary,
-          ...(contentStyle ?? {}),
-        }}
-      >
-        {value}
-        {suffix != null && <span style={{ fontSize: '14px', marginLeft: '4px' }}>{suffix}</span>}
-      </div>
-    </div>
+    </PageContainer>
   );
 };
 

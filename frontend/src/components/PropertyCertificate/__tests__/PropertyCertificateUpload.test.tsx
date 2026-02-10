@@ -38,9 +38,9 @@ vi.mock('antd', () => {
   return {
     Upload,
     Card: vi.fn(({ children }) => <div data-testid="card">{children}</div>),
-    Alert: vi.fn(({ message, description, type }) => (
+    Alert: vi.fn(({ title, message, description, type }) => (
       <div data-testid="alert" data-type={type}>
-        <span>{message}</span>
+        <span>{title ?? message}</span>
         <span>{description}</span>
       </div>
     )),

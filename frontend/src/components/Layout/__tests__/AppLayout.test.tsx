@@ -41,10 +41,6 @@ vi.mock('../AppHeader', () => ({
   ),
 }));
 
-vi.mock('../AppBreadcrumb', () => ({
-  default: () => <div data-testid="app-breadcrumb">Breadcrumb</div>,
-}));
-
 // =============================================================================
 // 测试内容组件
 // =============================================================================
@@ -69,7 +65,6 @@ describe('AppLayout - 基础功能', () => {
 
     expect(screen.getByTestId('app-sidebar')).toBeInTheDocument();
     expect(screen.getByTestId('app-header')).toBeInTheDocument();
-    expect(screen.getByTestId('app-breadcrumb')).toBeInTheDocument();
     expect(screen.getByTestId('test-content')).toBeInTheDocument();
   });
 
@@ -146,7 +141,6 @@ describe('AppLayout - 布局结构', () => {
     // 验证主要区域存在
     expect(screen.getByTestId('app-sidebar')).toBeInTheDocument();
     expect(screen.getByTestId('app-header')).toBeInTheDocument();
-    expect(screen.getByTestId('app-breadcrumb')).toBeInTheDocument();
     expect(screen.getByTestId('test-content')).toBeInTheDocument();
     expect(screen.getByText(/土地房产资产管理系统/)).toBeInTheDocument();
   });

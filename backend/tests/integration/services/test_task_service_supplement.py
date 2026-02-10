@@ -4,11 +4,13 @@ Supplemental Task Service Integration Tests (Async)
 
 
 import pytest
-from sqlalchemy import delete, select
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.pool import NullPool
 
-from src.database import async_session_scope
+from src import database as database
 from src.enums.task import TaskStatus, TaskType
-from src.models.task import AsyncTask, ExcelTaskConfig, TaskHistory
+from src.models.task import AsyncTask, ExcelTaskConfig
 from src.schemas.task import ExcelTaskConfigCreate, TaskCreate
 from src.services.task.service import TaskService
 
@@ -17,23 +19,24 @@ pytestmark = pytest.mark.asyncio
 
 @pytest.fixture
 async def async_db():
-    async with async_session_scope() as session:
-        yield session
-
-
-@pytest.fixture(autouse=True)
-async def clean_tasks():
-    async with async_session_scope() as session:
-        await session.execute(delete(TaskHistory))
-        await session.execute(delete(ExcelTaskConfig))
-        await session.execute(delete(AsyncTask))
-        await session.commit()
-    yield
-    async with async_session_scope() as session:
-        await session.execute(delete(TaskHistory))
-        await session.execute(delete(ExcelTaskConfig))
-        await session.execute(delete(AsyncTask))
-        await session.commit()
+    async_engine = create_async_engine(
+        database.get_async_database_url(),
+        echo=False,
+        poolclass=NullPool,
+    )
+    async with async_engine.connect() as connection:
+        transaction = await connection.begin()
+        session = AsyncSession(
+            bind=connection,
+            expire_on_commit=False,
+            join_transaction_mode="create_savepoint",
+        )
+        try:
+            yield session
+        finally:
+            await session.close()
+            await transaction.rollback()
+            await async_engine.dispose()
 
 
 @pytest.fixture
@@ -78,9 +81,7 @@ class TestTaskServiceSupplement:
                 config_type="import",
                 task_type="excel_import",
                 is_default=True,
-                created_by="tester",
             ),
-            user_id="tester",
         )
         assert config.config_name == "默认配置"
 

@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, Col, Row } from 'antd';
 import type { CardProps } from 'antd';
 import type { ColProps } from 'antd/es/col';
+import styles from './ListToolbar.module.css';
 
 export interface ListToolbarItem {
   key: string;
@@ -24,11 +25,15 @@ export const ListToolbar: React.FC<ListToolbarProps> = ({
   cardProps,
   variant = 'card',
 }) => {
+  const toolbarCardClassName = [styles.toolbarCard, cardProps?.className]
+    .filter((className): className is string => className != null && className !== '')
+    .join(' ');
+
   const content = (
-    <Row gutter={gutter} align={align}>
+    <Row gutter={gutter} align={align} className={styles.toolbarRow}>
       {items.map(item => (
         <Col key={item.key} {...item.col}>
-          {item.content}
+          <div className={styles.toolbarItem}>{item.content}</div>
         </Col>
       ))}
     </Row>
@@ -39,7 +44,11 @@ export const ListToolbar: React.FC<ListToolbarProps> = ({
   }
 
   return (
-    <Card style={{ marginBottom: 16, ...(cardProps?.style ?? {}) }} {...cardProps}>
+    <Card
+      {...cardProps}
+      className={toolbarCardClassName}
+      style={{ ...(cardProps?.style ?? {}) }}
+    >
       {content}
     </Card>
   );

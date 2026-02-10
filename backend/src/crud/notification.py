@@ -107,7 +107,7 @@ class NotificationCRUD:
         )
         result = await db.execute(stmt)
         await db.commit()
-        return int(result.rowcount or 0)
+        return int(getattr(result, "rowcount", 0) or 0)
 
     async def delete_async(
         self, db: AsyncSession, *, notification_id: str, recipient_id: str

@@ -5,9 +5,11 @@ Task Service Integration Tests (Async)
 from datetime import UTC, datetime, timedelta
 
 import pytest
-from sqlalchemy import delete, select, update
+from sqlalchemy import select, update
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.pool import NullPool
 
-from src.database import async_session_scope
+from src import database as database
 from src.enums.task import TaskStatus, TaskType
 from src.models.task import AsyncTask, TaskHistory
 from src.schemas.task import TaskCreate
@@ -18,21 +20,24 @@ pytestmark = pytest.mark.asyncio
 
 @pytest.fixture
 async def async_db():
-    async with async_session_scope() as session:
-        yield session
-
-
-@pytest.fixture(autouse=True)
-async def clean_tasks():
-    async with async_session_scope() as session:
-        await session.execute(delete(TaskHistory))
-        await session.execute(delete(AsyncTask))
-        await session.commit()
-    yield
-    async with async_session_scope() as session:
-        await session.execute(delete(TaskHistory))
-        await session.execute(delete(AsyncTask))
-        await session.commit()
+    async_engine = create_async_engine(
+        database.get_async_database_url(),
+        echo=False,
+        poolclass=NullPool,
+    )
+    async with async_engine.connect() as connection:
+        transaction = await connection.begin()
+        session = AsyncSession(
+            bind=connection,
+            expire_on_commit=False,
+            join_transaction_mode="create_savepoint",
+        )
+        try:
+            yield session
+        finally:
+            await session.close()
+            await transaction.rollback()
+            await async_engine.dispose()
 
 
 @pytest.fixture
@@ -82,7 +87,7 @@ class TestTaskServiceIntegration:
             ),
             user_id="cleanup-user",
         )
-        old_date = datetime.now(UTC) - timedelta(days=60)
+        old_date = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=60)
         await async_db.execute(
             update(AsyncTask)
             .where(AsyncTask.id == str(task.id))

@@ -44,9 +44,12 @@ class GLMOCRService:
             self.model = settings.GLM_OCR_MODEL or os.getenv(
                 "GLM_OCR_MODEL", self.DEFAULT_MODEL
             )
-            self.timeout = int(
-                settings.GLM_OCR_TIMEOUT
-                or os.getenv("GLM_OCR_TIMEOUT", "120")
+            timeout_from_env = os.getenv("GLM_OCR_TIMEOUT")
+            timeout_from_settings = settings.GLM_OCR_TIMEOUT
+            self.timeout = (
+                int(timeout_from_env)
+                if timeout_from_env is not None
+                else int(timeout_from_settings or 120)
             )
             self.enabled = bool(settings.GLM_OCR_ENABLE)
         except Exception:

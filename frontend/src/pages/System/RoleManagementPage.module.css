@@ -1,0 +1,258 @@
+.statsRow {
+  margin-bottom: 24px;
+}
+
+.statsCard {
+  height: 100%;
+}
+
+.rolesCard {
+  margin-bottom: 0;
+}
+
+.tonePrimary {
+  color: var(--color-primary);
+}
+
+.toneSuccess {
+  color: var(--color-success);
+}
+
+.toneWarning {
+  color: var(--color-warning);
+}
+
+.toneError {
+  color: var(--color-error);
+}
+
+.toneNeutral {
+  color: var(--color-text-secondary);
+}
+
+.tonePrimary :global(.ant-statistic-content),
+.toneSuccess :global(.ant-statistic-content),
+.toneWarning :global(.ant-statistic-content),
+.toneError :global(.ant-statistic-content),
+.toneNeutral :global(.ant-statistic-content) {
+  color: inherit;
+}
+
+.countPill,
+.permissionTypeTag,
+.statusTag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+}
+
+.countPill {
+  min-width: 44px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.35;
+}
+
+.permissionTypeTag,
+.statusTag {
+  margin-inline-end: 0;
+  font-size: 12px;
+  font-weight: var(--font-weight-medium);
+  line-height: 1.35;
+}
+
+.permissionTypeTag {
+  border-radius: 999px;
+  padding-inline: 8px;
+}
+
+.statusTag {
+  border-radius: 999px;
+  padding-inline: 8px;
+}
+
+.countPill.tonePrimary,
+.permissionTypeTag.tonePrimary,
+.statusTag.tonePrimary {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+}
+
+.countPill.toneSuccess,
+.permissionTypeTag.toneSuccess,
+.statusTag.toneSuccess {
+  background: var(--color-success-light);
+  border-color: var(--color-success);
+}
+
+.countPill.toneWarning,
+.permissionTypeTag.toneWarning,
+.statusTag.toneWarning {
+  background: var(--color-warning-light);
+  border-color: var(--color-warning);
+}
+
+.countPill.toneError,
+.permissionTypeTag.toneError,
+.statusTag.toneError {
+  background: var(--color-error-light);
+  border-color: var(--color-error);
+}
+
+.countPill.toneNeutral,
+.permissionTypeTag.toneNeutral,
+.statusTag.toneNeutral {
+  background: var(--color-bg-secondary);
+  border-color: var(--color-border-light);
+}
+
+.filtersSection {
+  margin-bottom: 16px;
+}
+
+.filterSummary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.fullWidthControl {
+  width: 100%;
+}
+
+.toolbarButton {
+  min-height: 40px;
+}
+
+.roleInfoCell {
+  align-items: flex-start;
+}
+
+.roleInfoIcon {
+  color: var(--color-primary);
+  margin-top: 2px;
+}
+
+.roleMeta {
+  line-height: 1.35;
+}
+
+.roleName {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.roleCodeRow {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.systemTag {
+  margin-left: 8px;
+}
+
+.modalFooter {
+  text-align: right;
+  margin-bottom: 0;
+}
+
+.modalFooterActions {
+  width: 100%;
+  justify-content: flex-end;
+}
+
+.modalActionButton,
+.permissionModalActionButton {
+  min-height: 40px;
+}
+
+.permissionDesc {
+  margin-bottom: 16px;
+}
+
+.transferTitle {
+  font-weight: var(--font-weight-semibold);
+}
+
+.transferDesc {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.treePreview {
+  margin-top: 8px;
+  max-height: 220px;
+  overflow: auto;
+}
+
+.permissionTree {
+  background: var(--color-bg-secondary);
+  padding: 16px;
+  border-radius: var(--card-radius);
+}
+
+.permissionTransfer :global(.ant-transfer-list) {
+  width: min(100%, 360px);
+  height: 400px;
+}
+
+.tableActionGroup {
+  gap: 4px;
+}
+
+.tableActionButton {
+  min-width: 40px;
+  min-height: 40px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+  transition: color var(--transition-base), background-color var(--transition-base);
+}
+
+.tableActionButton:hover {
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.tableActionButton:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.statusSwitch {
+  min-height: 28px;
+}
+
+@media (max-width: 768px) {
+  .filterSummary {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .toolbarButton {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .tableActionButton {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .modalActionButton,
+  .permissionModalActionButton {
+    min-height: 44px;
+  }
+
+  .permissionTransfer :global(.ant-transfer-list) {
+    width: min(100%, 280px);
+  }
+}

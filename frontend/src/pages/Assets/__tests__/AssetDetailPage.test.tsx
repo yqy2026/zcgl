@@ -3,9 +3,14 @@
  */
 
 import React from 'react';
-import { screen, waitFor, fireEvent } from '@/test/utils/test-helpers';
+import {
+  screen,
+  waitFor,
+  fireEvent,
+  renderWithProviders as renderWithAppProviders,
+} from '@/test/utils/test-helpers';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AssetDetailPage from '../AssetDetailPage';
 
@@ -37,19 +42,18 @@ const createTestQueryClient = () =>
   });
 
 // 渲染辅助函数
-const renderWithProviders = (assetId: string) => {
+const renderAssetDetailPage = (assetId: string) => {
   const queryClient = createTestQueryClient();
 
-  return renderWithProviders(
+  return renderWithAppProviders(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={[`/assets/${assetId}`]}>
-        <Routes>
-          <Route path="/assets/:id" element={<AssetDetailPage />} />
-          <Route path="/assets" element={<div>Asset List</div>} />
-          <Route path="/assets/:id/edit" element={<div>Edit Asset</div>} />
-        </Routes>
-      </MemoryRouter>
-    </QueryClientProvider>
+      <Routes>
+        <Route path="/assets/:id" element={<AssetDetailPage />} />
+        <Route path="/assets" element={<div>Asset List</div>} />
+        <Route path="/assets/:id/edit" element={<div>Edit Asset</div>} />
+      </Routes>
+    </QueryClientProvider>,
+    { route: `/assets/${assetId}` }
   );
 };
 
@@ -64,9 +68,9 @@ describe('AssetDetailPage', () => {
         () => new Promise(() => {}) // 永不resolve，模拟加载中
       );
 
-      renderWithProviders('asset_123');
+      renderAssetDetailPage('asset_123');
 
-      expect(screen.getByText('加载资产详情中...')).toBeInTheDocument();
+      expect(document.querySelector('.ant-spin-spinning')).toBeInTheDocument();
     });
   });
 
@@ -83,14 +87,14 @@ describe('AssetDetailPage', () => {
 
       vi.mocked(assetService.getAsset).mockResolvedValue(mockAsset);
 
-      renderWithProviders('asset_123');
+      renderAssetDetailPage('asset_123');
 
       await waitFor(() => {
         expect(screen.getByText('测试资产A栋')).toBeInTheDocument();
       });
 
       expect(screen.getByTestId('asset-detail-info')).toBeInTheDocument();
-      expect(screen.getByText('返回列表')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '返回' })).toBeInTheDocument();
       expect(screen.getByText('编辑资产')).toBeInTheDocument();
     });
 
@@ -102,7 +106,7 @@ describe('AssetDetailPage', () => {
 
       vi.mocked(assetService.getAsset).mockResolvedValue(mockAsset);
 
-      renderWithProviders('asset_456');
+      renderAssetDetailPage('asset_456');
 
       await waitFor(() => {
         expect(screen.getByText('商业中心B座')).toBeInTheDocument();
@@ -117,10 +121,10 @@ describe('AssetDetailPage', () => {
 
       vi.mocked(assetService.getAsset).mockResolvedValue(mockAsset);
 
-      renderWithProviders('asset_789');
+      renderAssetDetailPage('asset_789');
 
       await waitFor(() => {
-        expect(screen.getByText('资产详情')).toBeInTheDocument();
+        expect(screen.getAllByText('资产详情').length).toBeGreaterThan(0);
       });
     });
   });
@@ -129,7 +133,7 @@ describe('AssetDetailPage', () => {
     it('显示错误信息', async () => {
       vi.mocked(assetService.getAsset).mockRejectedValue(new Error('网络错误：无法连接到服务器'));
 
-      renderWithProviders('asset_error');
+      renderAssetDetailPage('asset_error');
 
       await waitFor(() => {
         expect(screen.getByText('数据加载失败')).toBeInTheDocument();
@@ -140,7 +144,7 @@ describe('AssetDetailPage', () => {
     it('资产不存在时显示警告', async () => {
       vi.mocked(assetService.getAsset).mockResolvedValue(null);
 
-      renderWithProviders('asset_not_found');
+      renderAssetDetailPage('asset_not_found');
 
       await waitFor(() => {
         expect(screen.getByText('资产不存在')).toBeInTheDocument();
@@ -158,13 +162,13 @@ describe('AssetDetailPage', () => {
 
       vi.mocked(assetService.getAsset).mockResolvedValue(mockAsset);
 
-      renderWithProviders('asset_nav');
+      renderAssetDetailPage('asset_nav');
 
       await waitFor(() => {
         expect(screen.getByText('导航测试资产')).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByText('返回列表'));
+      fireEvent.click(screen.getByRole('button', { name: '返回' }));
 
       await waitFor(() => {
         expect(screen.getByText('Asset List')).toBeInTheDocument();
@@ -179,7 +183,7 @@ describe('AssetDetailPage', () => {
 
       vi.mocked(assetService.getAsset).mockResolvedValue(mockAsset);
 
-      renderWithProviders('asset_edit');
+      renderAssetDetailPage('asset_edit');
 
       await waitFor(() => {
         expect(screen.getByText('编辑测试资产')).toBeInTheDocument();
@@ -202,7 +206,7 @@ describe('AssetDetailPage', () => {
 
       vi.mocked(assetService.getAsset).mockResolvedValue(mockAsset);
 
-      renderWithProviders('specific_asset_id');
+      renderAssetDetailPage('specific_asset_id');
 
       await waitFor(() => {
         expect(assetService.getAsset).toHaveBeenCalledWith('specific_asset_id');

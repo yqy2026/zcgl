@@ -1,0 +1,17 @@
+.importPage {
+  width: 100%;
+}
+
+.stepsCard {
+  margin-bottom: 0;
+}
+
+.importSteps {
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .stepsCard :global(.ant-card-body) {
+    padding: 16px 12px;
+  }
+}

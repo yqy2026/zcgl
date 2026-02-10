@@ -3,7 +3,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pandas as pd
 import pytest
 
-from src.services.document.rent_contract_excel import CONTRACT_COLUMNS, RentContractExcelService
+from src.services.document.rent_contract_excel import (
+    CONTRACT_COLUMNS,
+    RentContractExcelService,
+)
 
 pytestmark = pytest.mark.asyncio
 

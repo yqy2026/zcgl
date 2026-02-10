@@ -2,6 +2,8 @@
 History 服务层
 """
 
+from typing import Any
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.exception_handler import ResourceNotFoundError, not_found
@@ -17,7 +19,7 @@ class HistoryService:
         skip: int,
         limit: int,
         asset_id: str | None,
-    ) -> tuple[list, int]:
+    ) -> tuple[list[Any], int]:
         if asset_id:
             asset = await asset_crud.get_async(db=db, id=asset_id)
             if not asset:
@@ -35,7 +37,7 @@ class HistoryService:
         db: AsyncSession,
         *,
         history_id: str,
-    ):
+    ) -> Any:
         history_record = await history_crud.get_async(db=db, id=history_id)
         if not history_record:
             raise not_found(

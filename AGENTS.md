@@ -564,8 +564,8 @@ docker-compose up -d
 - [前端开发指南](docs/guides/frontend.md)
 - [后端开发指南](docs/guides/backend.md)
 - [API 总览](docs/integrations/api-overview.md)
-- [测试标准](docs/TESTING_STANDARDS.md)
-- [命名规范](docs/guides/NAMING_CONVENTIONS.md)
+- [测试标准](docs/guides/testing-standards.md)
+- [命名规范](docs/guides/naming-conventions.md)
 
 ---
 

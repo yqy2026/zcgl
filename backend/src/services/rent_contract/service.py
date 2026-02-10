@@ -1,8 +1,12 @@
 from datetime import date
+from pathlib import Path
 from typing import Any, cast
+from uuid import uuid4
 
+from fastapi import UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.enums import ContractStatus
 from src.core.exception_handler import ResourceNotFoundError
 from src.crud.asset import asset_crud
 from src.crud.ownership import ownership as ownership_crud
@@ -21,7 +25,7 @@ from src.models.rent_contract import (
     RentLedger,
     RentTerm,
 )
-from src.schemas.rent_contract import RentTermCreate
+from src.schemas.rent_contract import RentContractCreate, RentTermCreate
 
 from .ledger_service import RentContractLedgerService
 from .lifecycle_service import RentContractLifecycleService
@@ -42,11 +46,9 @@ def model_to_dict(model: Any, exclude: set[str] | None = None) -> dict[str, Any]
     if model is None:
         return {}
 
-    # Pydantic v2 模型
     if hasattr(model, "model_dump"):
         return cast(dict[str, Any], model.model_dump(exclude=exclude))
 
-    # SQLAlchemy 模型
     if hasattr(model, "__table__"):
         columns = model.__table__.columns.keys()
         return {
@@ -55,7 +57,6 @@ def model_to_dict(model: Any, exclude: set[str] | None = None) -> dict[str, Any]
             if exclude is None or col not in exclude
         }
 
-    # 其他对象，尝试转换为 dict
     return cast(dict[str, Any], dict(model))
 
 
@@ -69,10 +70,7 @@ class RentContractService(
     async def get_contract_terms_async(
         self, db: AsyncSession, *, contract_id: str
     ) -> list[RentTerm]:
-        return cast(
-            list[RentTerm],
-            await rent_term_crud.get_by_contract_async(db, contract_id=contract_id),
-        )
+        return await rent_term_crud.get_by_contract_async(db, contract_id=contract_id)
 
     async def add_contract_term_async(
         self,
@@ -90,23 +88,17 @@ class RentContractService(
         term = await rent_term_crud.create(db=db, obj_in=term_data)
         if not term:
             raise ResourceNotFoundError("合同", contract_id)
-        return cast(RentTerm, term)
+        return term
 
     async def get_contract_by_id_async(
         self, db: AsyncSession, *, contract_id: str
     ) -> RentContract | None:
-        return cast(
-            RentContract | None,
-            await rent_contract_crud.get_async(db, id=contract_id),
-        )
+        return await rent_contract_crud.get_async(db, id=contract_id)
 
     async def get_contract_with_details_async(
         self, db: AsyncSession, *, contract_id: str
     ) -> RentContract | None:
-        return cast(
-            RentContract | None,
-            await rent_contract_crud.get_with_details_async(db, id=contract_id),
-        )
+        return await rent_contract_crud.get_with_details_async(db, id=contract_id)
 
     async def get_contract_page_async(
         self,
@@ -122,20 +114,17 @@ class RentContractService(
         start_date: date | None = None,
         end_date: date | None = None,
     ) -> tuple[list[RentContract], int]:
-        return cast(
-            tuple[list[RentContract], int],
-            await rent_contract_crud.get_multi_with_filters_async(
-                db=db,
-                skip=skip,
-                limit=limit,
-                contract_number=contract_number,
-                tenant_name=tenant_name,
-                asset_id=asset_id,
-                ownership_id=ownership_id,
-                contract_status=contract_status,
-                start_date=start_date,
-                end_date=end_date,
-            ),
+        return await rent_contract_crud.get_multi_with_filters_async(
+            db=db,
+            skip=skip,
+            limit=limit,
+            contract_number=contract_number,
+            tenant_name=tenant_name,
+            asset_id=asset_id,
+            ownership_id=ownership_id,
+            contract_status=contract_status,
+            start_date=start_date,
+            end_date=end_date,
         )
 
     async def delete_contract_by_id_async(
@@ -146,13 +135,10 @@ class RentContractService(
     async def get_assets_by_ids_async(
         self, db: AsyncSession, *, asset_ids: list[str]
     ) -> list[Any]:
-        return cast(
-            list[Any],
-            await asset_crud.get_multi_by_ids_async(
-                db=db,
-                ids=asset_ids,
-                include_relations=False,
-            ),
+        return await asset_crud.get_multi_by_ids_async(
+            db=db,
+            ids=asset_ids,
+            include_relations=False,
         )
 
     async def get_ownership_by_id_async(
@@ -174,11 +160,8 @@ class RentContractService(
     async def get_contract_attachments_async(
         self, db: AsyncSession, *, contract_id: str
     ) -> list[RentContractAttachment]:
-        return cast(
-            list[RentContractAttachment],
-            await rent_contract_attachment_crud.get_by_contract_async(
-                db, contract_id=contract_id
-            ),
+        return await rent_contract_attachment_crud.get_by_contract_async(
+            db, contract_id=contract_id
         )
 
     async def get_contract_attachment_async(
@@ -188,13 +171,10 @@ class RentContractService(
         attachment_id: str,
         contract_id: str | None = None,
     ) -> RentContractAttachment | None:
-        return cast(
-            RentContractAttachment | None,
-            await rent_contract_attachment_crud.get_async(
-                db,
-                attachment_id=attachment_id,
-                contract_id=contract_id,
-            ),
+        return await rent_contract_attachment_crud.get_async(
+            db,
+            attachment_id=attachment_id,
+            contract_id=contract_id,
         )
 
     async def delete_contract_attachment_async(
@@ -206,10 +186,160 @@ class RentContractService(
         await db.delete(attachment)
         await db.commit()
 
+    async def renew_contract_async(
+        self,
+        db: AsyncSession,
+        *,
+        original_contract_id: str,
+        new_contract_data: RentContractCreate,
+        should_transfer_deposit: bool = True,
+        operator: str | None = None,
+        operator_id: str | None = None,
+    ) -> RentContract:
+        original_contract = await self.get_contract_with_details_async(
+            db, contract_id=original_contract_id
+        )
+        if original_contract is None:
+            raise ResourceNotFoundError("合同", original_contract_id)
+
+        create_data = new_contract_data.model_copy(deep=True)
+        if should_transfer_deposit and create_data.total_deposit is None:
+            create_data.total_deposit = original_contract.total_deposit
+
+        new_contract = await self.create_contract_async(db, obj_in=create_data)
+
+        original_contract.contract_status = ContractStatus.TERMINATED.value
+        if (
+            original_contract.end_date is None
+            or original_contract.end_date > new_contract.start_date
+        ):
+            original_contract.end_date = new_contract.start_date
+
+        db.add(original_contract)
+        await db.commit()
+
+        await self._create_history_async(
+            db,
+            contract_id=original_contract.id,
+            change_type="续签",
+            change_description=f"合同续签为新合同 {new_contract.id}",
+            old_data={"contract_status": ContractStatus.ACTIVE.value},
+            new_data={"contract_status": ContractStatus.TERMINATED.value},
+            operator=operator,
+            operator_id=operator_id,
+        )
+        return new_contract
+
+    async def terminate_contract_async(
+        self,
+        db: AsyncSession,
+        *,
+        contract_id: str,
+        termination_date: date,
+        should_refund_deposit: bool = True,
+        deduction_amount: Any = None,
+        termination_reason: str | None = None,
+        operator: str | None = None,
+        operator_id: str | None = None,
+    ) -> RentContract:
+        contract = await self.get_contract_by_id_async(db, contract_id=contract_id)
+        if contract is None:
+            raise ResourceNotFoundError("合同", contract_id)
+
+        old_status = contract.contract_status
+        contract.contract_status = ContractStatus.TERMINATED.value
+        contract.end_date = termination_date
+
+        notes: list[str] = []
+        if termination_reason:
+            notes.append(f"终止原因: {termination_reason}")
+        notes.append(f"退押金: {'是' if should_refund_deposit else '否'}")
+        if deduction_amount is not None:
+            notes.append(f"扣减金额: {deduction_amount}")
+        termination_note = "；".join(notes)
+        if termination_note:
+            existing_notes = contract.contract_notes or ""
+            contract.contract_notes = (
+                f"{existing_notes}\n{termination_note}".strip()
+                if existing_notes
+                else termination_note
+            )
+
+        db.add(contract)
+        await db.commit()
+        await db.refresh(contract)
+
+        await self._create_history_async(
+            db,
+            contract_id=contract.id,
+            change_type="终止",
+            change_description=termination_note or "合同终止",
+            old_data={"contract_status": old_status},
+            new_data={"contract_status": ContractStatus.TERMINATED.value},
+            operator=operator,
+            operator_id=operator_id,
+        )
+        return contract
+
+    async def upload_contract_attachment_async(
+        self,
+        db: AsyncSession,
+        *,
+        contract_id: str,
+        file: UploadFile,
+        file_type: str,
+        description: str | None = None,
+        uploader_id: str | None = None,
+        uploader_name: str | None = None,
+    ) -> dict[str, Any]:
+        contract = await self.get_contract_by_id_async(db, contract_id=contract_id)
+        if contract is None:
+            raise ResourceNotFoundError("合同", contract_id)
+
+        original_name = (file.filename or "attachment").strip() or "attachment"
+        safe_name = Path(original_name).name
+
+        storage_dir = Path("temp_uploads") / "rent_contract_attachments" / contract_id
+        storage_dir.mkdir(parents=True, exist_ok=True)
+        stored_name = f"{uuid4().hex}_{safe_name}"
+        storage_path = storage_dir / stored_name
+
+        content = await file.read()
+        storage_path.write_bytes(content)
+
+        attachment = RentContractAttachment()
+        attachment.contract_id = contract_id
+        attachment.file_name = safe_name
+        attachment.file_path = str(storage_path)
+        attachment.file_size = len(content)
+        attachment.mime_type = file.content_type
+        attachment.file_type = file_type
+        attachment.description = description
+        attachment.uploader = uploader_name
+        attachment.uploader_id = uploader_id
+        db.add(attachment)
+        await db.commit()
+        await db.refresh(attachment)
+
+        return {
+            "id": attachment.id,
+            "contract_id": attachment.contract_id,
+            "file_name": attachment.file_name,
+            "file_path": attachment.file_path,
+            "file_size": attachment.file_size,
+            "mime_type": attachment.mime_type,
+            "file_type": attachment.file_type,
+            "description": attachment.description,
+            "uploader": attachment.uploader,
+            "uploader_id": attachment.uploader_id,
+            "created_at": attachment.created_at.isoformat()
+            if attachment.created_at is not None
+            else None,
+        }
+
 
 rent_contract_service = RentContractService()
 
-# 别名，用于测试兼容性
 rent_contract = RentContract
 rent_ledger = RentLedger
 rent_term = RentTerm

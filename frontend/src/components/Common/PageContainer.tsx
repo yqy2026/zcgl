@@ -67,6 +67,7 @@ const PageContainer: React.FC<PageContainerProps> = ({
                     type="text"
                     icon={<ArrowLeftOutlined />}
                     onClick={handleBack}
+                    aria-label="返回"
                     style={{ fontSize: '16px', width: 32, height: 32, padding: 0 }}
                   />
                 )}

@@ -24,6 +24,7 @@ import type {
   AssetMatch,
   CertificateImportConfirm,
 } from '@/types/propertyCertificate';
+import styles from './PropertyCertificateReview.module.css';
 
 const { Text } = Typography;
 
@@ -32,6 +33,25 @@ interface PropertyCertificateReviewProps {
   onConfirm: (data: CertificateImportConfirm) => void;
   loading?: boolean;
 }
+
+type Tone = 'primary' | 'success' | 'warning' | 'error';
+
+const ANT_TAG_COLOR_MAP: Record<Tone, string> = {
+  primary: 'blue',
+  success: 'success',
+  warning: 'warning',
+  error: 'error',
+};
+
+const getConfidenceMeta = (confidence: number): { tone: Tone; label: string } => {
+  if (confidence > 0.8) {
+    return { tone: 'success', label: '高' };
+  }
+  if (confidence > 0.5) {
+    return { tone: 'warning', label: '中' };
+  }
+  return { tone: 'error', label: '低' };
+};
 
 export const PropertyCertificateReview: React.FC<PropertyCertificateReviewProps> = ({
   extractionResult,
@@ -43,9 +63,13 @@ export const PropertyCertificateReview: React.FC<PropertyCertificateReviewProps>
 
   const { extracted_data, confidence_score, asset_matches, validation_errors, warnings } =
     extractionResult;
-
-  const confidenceLevel =
-    confidence_score > 0.8 ? 'success' : confidence_score > 0.5 ? 'warning' : 'error';
+  const confidenceMeta = getConfidenceMeta(confidence_score);
+  const toneClassMap: Record<Tone, string> = {
+    primary: styles.tonePrimary,
+    success: styles.toneSuccess,
+    warning: styles.toneWarning,
+    error: styles.toneError,
+  };
 
   const handleConfirm = async () => {
     try {
@@ -63,12 +87,28 @@ export const PropertyCertificateReview: React.FC<PropertyCertificateReviewProps>
     }
   };
 
+  const handleAssetSelect = (assetId: string) => {
+    setSelectedAssetId(assetId);
+  };
+
   return (
-    <Space orientation="vertical" size="large" style={{ width: '100%' }}>
+    <Space orientation="vertical" size="large" className={styles.reviewStack}>
       {/* Confidence Score */}
       <Card
         title="提取结果"
-        extra={<Tag color={confidenceLevel}>置信度: {(confidence_score * 100).toFixed(1)}%</Tag>}
+        extra={
+          <Space size={6} className={styles.inlineStatus} wrap>
+            <Tag
+              color={ANT_TAG_COLOR_MAP[confidenceMeta.tone]}
+              className={[styles.statusTag, toneClassMap[confidenceMeta.tone]].join(' ')}
+            >
+              置信度: {(confidence_score * 100).toFixed(1)}%
+            </Tag>
+            <Text type="secondary" className={styles.statusAssistText}>
+              {confidenceMeta.label}
+            </Text>
+          </Space>
+        }
       >
         <Collapse
           items={[
@@ -80,7 +120,7 @@ export const PropertyCertificateReview: React.FC<PropertyCertificateReviewProps>
                   <List
                     dataSource={validation_errors}
                     renderItem={error => (
-                      <List.Item>
+                      <List.Item className={styles.listItem}>
                         <Text type="danger">{error}</Text>
                       </List.Item>
                     )}
@@ -102,7 +142,7 @@ export const PropertyCertificateReview: React.FC<PropertyCertificateReviewProps>
                   <List
                     dataSource={warnings}
                     renderItem={warning => (
-                      <List.Item>
+                      <List.Item className={styles.listItem}>
                         <Text type="warning">{warning}</Text>
                       </List.Item>
                     )}
@@ -110,7 +150,7 @@ export const PropertyCertificateReview: React.FC<PropertyCertificateReviewProps>
                 ),
               },
             ]}
-            style={{ marginTop: '16px' }}
+            className={styles.warningCollapse}
           />
         )}
       </Card>
@@ -123,11 +163,19 @@ export const PropertyCertificateReview: React.FC<PropertyCertificateReviewProps>
             renderItem={(asset: AssetMatch) => (
               <List.Item
                 key={asset.asset_id}
-                onClick={() => setSelectedAssetId(asset.asset_id)}
-                style={{
-                  cursor: 'pointer',
-                  background: selectedAssetId === asset.asset_id ? '#e6f7ff' : 'transparent',
+                onClick={() => handleAssetSelect(asset.asset_id)}
+                onKeyDown={event => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    handleAssetSelect(asset.asset_id);
+                  }
                 }}
+                role="button"
+                tabIndex={0}
+                className={[
+                  styles.assetListItem,
+                  selectedAssetId === asset.asset_id ? styles.assetListItemActive : '',
+                ].join(' ')}
               >
                 <List.Item.Meta
                   title={asset.name}
@@ -188,11 +236,17 @@ export const PropertyCertificateReview: React.FC<PropertyCertificateReviewProps>
           </Form.Item>
 
           <Form.Item label="登记日期" name="registration_date">
-            <DatePicker style={{ width: '100%' }} />
+            <DatePicker className={styles.fullWidthInput} />
           </Form.Item>
 
           <Form.Item>
-            <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={loading}>
+            <Button
+              type="primary"
+              htmlType="submit"
+              icon={<SaveOutlined />}
+              loading={loading}
+              className={styles.submitButton}
+            >
               确认并创建产权证
             </Button>
           </Form.Item>

@@ -1,0 +1,104 @@
+.pageContent {
+  width: 100%;
+}
+
+.filterCard {
+  margin-bottom: 24px;
+}
+
+.filterActions {
+  width: 100%;
+  justify-content: space-between;
+}
+
+.searchInput {
+  width: 300px;
+}
+
+.createButton {
+  min-width: 120px;
+}
+
+.inlineStatus {
+  align-items: center;
+}
+
+.statusAssistText {
+  font-size: 12px;
+}
+
+.statusTag {
+  margin-inline-end: 0;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  padding-inline: 8px;
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: var(--font-weight-medium);
+}
+
+.tonePrimary {
+  color: var(--color-primary);
+}
+
+.toneSuccess {
+  color: var(--color-success);
+}
+
+.toneWarning {
+  color: var(--color-warning);
+}
+
+.toneError {
+  color: var(--color-error);
+}
+
+.statusTag.tonePrimary {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+}
+
+.statusTag.toneSuccess {
+  background: var(--color-success-light);
+  border-color: var(--color-success);
+}
+
+.statusTag.toneWarning {
+  background: var(--color-warning-light);
+  border-color: var(--color-warning);
+}
+
+.statusTag.toneError {
+  background: var(--color-error-light);
+  border-color: var(--color-error);
+}
+
+.actionGroup {
+  gap: 8px;
+}
+
+.actionButton {
+  min-height: 32px;
+}
+
+@media (max-width: 768px) {
+  .filterCard {
+    margin-bottom: 16px;
+  }
+
+  .filterActions {
+    justify-content: flex-start;
+  }
+
+  .searchInput {
+    width: 100%;
+  }
+
+  .createButton {
+    min-height: 44px;
+  }
+
+  .actionButton {
+    min-height: 40px;
+  }
+}

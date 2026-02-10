@@ -3,14 +3,13 @@
  * 展示 Prompt 的性能趋势、准确率变化、错误分析等
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   Card,
   Row,
   Col,
   Statistic,
-  Typography,
   Spin,
   Alert,
   Tag,
@@ -21,17 +20,28 @@ import {
   Space,
   Button,
 } from 'antd';
-import { RiseOutlined, FallOutlined, CheckCircleOutlined, ReloadOutlined } from '@ant-design/icons';
+import {
+  RiseOutlined,
+  FallOutlined,
+  CheckCircleOutlined,
+  ReloadOutlined,
+  ClockCircleOutlined,
+  StopOutlined,
+  FireOutlined,
+  ExclamationCircleOutlined,
+  InfoCircleOutlined,
+} from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 
-import type { PromptTemplate, PromptStatistics } from '@/types/llmPrompt';
+import { PromptStatus, type PromptTemplate, type PromptStatistics } from '@/types/llmPrompt';
 import { llmPromptService } from '@/services/llmPromptService';
 import { createLogger } from '@/utils/logger';
-import { COLORS } from '@/styles/colorMap';
+import PageContainer from '@/components/Common/PageContainer';
+import { ListToolbar } from '@/components/Common/ListToolbar';
+import styles from './PromptDashboard.module.css';
 
 const logger = createLogger('PromptDashboard');
-const { Title } = Typography;
 const { RangePicker } = DatePicker;
 
 interface PerformanceMetrics {
@@ -56,12 +66,143 @@ interface OptimizationSuggestion {
   suggestion: string;
 }
 
+type Tone = 'primary' | 'success' | 'warning' | 'error' | 'neutral';
+type MetricTone = Extract<Tone, 'success' | 'warning' | 'error'>;
+
+interface PromptStatusMeta {
+  label: string;
+  hint: string;
+  tone: Tone;
+  icon: ReactNode;
+}
+
+interface SuggestionPriorityMeta {
+  label: string;
+  hint: string;
+  tone: Tone;
+  icon: ReactNode;
+  alertType: 'error' | 'warning' | 'info';
+}
+
+const PROMPT_STATUS_META_MAP: Record<PromptStatus, PromptStatusMeta> = {
+  [PromptStatus.ACTIVE]: {
+    label: '使用中',
+    hint: '在线生效',
+    tone: 'success',
+    icon: <CheckCircleOutlined />,
+  },
+  [PromptStatus.DRAFT]: {
+    label: '草稿',
+    hint: '待发布',
+    tone: 'warning',
+    icon: <ClockCircleOutlined />,
+  },
+  [PromptStatus.ARCHIVED]: {
+    label: '已归档',
+    hint: '仅历史',
+    tone: 'neutral',
+    icon: <StopOutlined />,
+  },
+};
+
+const PRIORITY_META_MAP: Record<OptimizationSuggestion['priority'], SuggestionPriorityMeta> = {
+  high: {
+    label: '高优先级',
+    hint: '建议尽快处理',
+    tone: 'error',
+    icon: <FireOutlined />,
+    alertType: 'error',
+  },
+  medium: {
+    label: '中优先级',
+    hint: '建议本周处理',
+    tone: 'warning',
+    icon: <ExclamationCircleOutlined />,
+    alertType: 'warning',
+  },
+  low: {
+    label: '低优先级',
+    hint: '可排期处理',
+    tone: 'success',
+    icon: <InfoCircleOutlined />,
+    alertType: 'info',
+  },
+};
+
+const getAccuracyTone = (value: number): MetricTone => {
+  if (value >= 0.85) {
+    return 'success';
+  }
+  if (value >= 0.75) {
+    return 'warning';
+  }
+  return 'error';
+};
+
+const getConfidenceTone = (value: number): MetricTone => {
+  if (value >= 0.8) {
+    return 'success';
+  }
+  if (value >= 0.7) {
+    return 'warning';
+  }
+  return 'error';
+};
+
+const getErrorRateTone = (value: number): MetricTone => {
+  if (value > 0.08) {
+    return 'error';
+  }
+  if (value > 0.05) {
+    return 'warning';
+  }
+  return 'success';
+};
+
+const getToneClassName = (tone: Tone): string => {
+  if (tone === 'primary') {
+    return styles.tonePrimary;
+  }
+  if (tone === 'success') {
+    return styles.toneSuccess;
+  }
+  if (tone === 'warning') {
+    return styles.toneWarning;
+  }
+  if (tone === 'neutral') {
+    return styles.toneNeutral;
+  }
+  return styles.toneError;
+};
+
+const getToneColor = (tone: MetricTone): string => {
+  if (tone === 'success') {
+    return 'var(--color-success)';
+  }
+  if (tone === 'warning') {
+    return 'var(--color-warning)';
+  }
+  return 'var(--color-error)';
+};
+
+const getPriorityConfig = (priority: OptimizationSuggestion['priority']): SuggestionPriorityMeta =>
+  PRIORITY_META_MAP[priority];
+
+const getPromptStatusMeta = (status: PromptStatus): PromptStatusMeta => PROMPT_STATUS_META_MAP[status];
+
+const normalizeVersion = (version: string): string => {
+  if (version.toLowerCase().startsWith('v')) {
+    return version;
+  }
+  return `v${version}`;
+};
+
 const PromptDashboard: React.FC = () => {
   const [selectedPromptId, setSelectedPromptId] = useState<string | null>(null);
   const [performanceData, setPerformanceData] = useState<PerformanceMetrics[]>([]);
   const [fieldErrorRates, setFieldErrorRates] = useState<FieldErrorRate[]>([]);
   const [suggestions, setSuggestions] = useState<OptimizationSuggestion[]>([]);
-  const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs]>([
+  const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>([
     dayjs().subtract(30, 'days'),
     dayjs(),
   ]);
@@ -101,6 +242,18 @@ const PromptDashboard: React.FC = () => {
 
   const handleRefresh = () => {
     void Promise.all([promptsQuery.refetch(), statisticsQuery.refetch()]);
+  };
+
+  const handleDateRangeChange = (value: [dayjs.Dayjs | null, dayjs.Dayjs | null] | null) => {
+    if (value != null && value[0] != null && value[1] != null) {
+      setDateRange([value[0], value[1]]);
+      return;
+    }
+    setDateRange(null);
+  };
+
+  const handlePromptChange = (value: string) => {
+    setSelectedPromptId(value);
   };
 
   // 加载选中 Prompt 的详细数据
@@ -212,7 +365,7 @@ const PromptDashboard: React.FC = () => {
 
   useEffect(() => {
     if (selectedPromptId == null && prompts.length > 0) {
-      const activePrompt = prompts.find(p => p.status === 'ACTIVE');
+      const activePrompt = prompts.find(p => p.status === PromptStatus.ACTIVE);
       const nextPromptId = activePrompt?.id ?? prompts[0]?.id ?? null;
       if (nextPromptId != null) {
         setSelectedPromptId(nextPromptId);
@@ -246,7 +399,11 @@ const PromptDashboard: React.FC = () => {
       title: '字段名称',
       dataIndex: 'field_name',
       key: 'field_name',
-      render: (name: string) => <Tag color="blue">{name}</Tag>,
+      render: (name: string) => (
+        <Tag className={`${styles.semanticTag} ${styles.fieldNameTag} ${styles.tonePrimary}`}>
+          {name}
+        </Tag>
+      ),
     },
     {
       title: '错误次数',
@@ -265,16 +422,14 @@ const PromptDashboard: React.FC = () => {
       dataIndex: 'error_rate',
       key: 'error_rate',
       align: 'right',
-      render: (rate: number) => (
-        <span
-          style={{
-            color: rate > 0.08 ? COLORS.error : rate > 0.05 ? COLORS.warning : COLORS.success,
-            fontWeight: 'bold',
-          }}
-        >
-          {(rate * 100).toFixed(1)}%
-        </span>
-      ),
+      render: (rate: number) => {
+        const tone = getErrorRateTone(rate);
+        return (
+          <span className={`${styles.metricValue} ${getToneClassName(tone)}`}>
+            {(rate * 100).toFixed(1)}%
+          </span>
+        );
+      },
     },
     {
       title: '错误率分布',
@@ -283,13 +438,7 @@ const PromptDashboard: React.FC = () => {
         <Progress
           percent={record.error_rate * 100}
           size="small"
-          strokeColor={
-            record.error_rate > 0.08
-              ? COLORS.error
-              : record.error_rate > 0.05
-                ? COLORS.warning
-                : COLORS.success
-          }
+          strokeColor={getToneColor(getErrorRateTone(record.error_rate))}
         />
       ),
     },
@@ -309,44 +458,43 @@ const PromptDashboard: React.FC = () => {
     }
 
     return (
-      <Space orientation="vertical" style={{ width: '100%' }}>
-        {suggestions.map(s => (
-          <Alert
-            key={`${s.field_name}-${s.priority}`}
-            title={
-              <Space>
-                <span>
+      <Space direction="vertical" size={12} className={styles.suggestionsList}>
+        {suggestions.map(suggestion => {
+          const priorityConfig = getPriorityConfig(suggestion.priority);
+          return (
+            <Alert
+              key={`${suggestion.field_name}-${suggestion.priority}`}
+              title={
+                <Space size={[8, 6]} wrap>
                   <Tag
-                    color={
-                      s.priority === 'high' ? 'red' : s.priority === 'medium' ? 'orange' : 'green'
-                    }
+                    icon={priorityConfig.icon}
+                    className={`${styles.semanticTag} ${styles.priorityTag} ${getToneClassName(
+                      priorityConfig.tone
+                    )}`}
                   >
-                    {s.priority === 'high'
-                      ? '高优先级'
-                      : s.priority === 'medium'
-                        ? '中优先级'
-                        : '低优先级'}
+                    {priorityConfig.label}
                   </Tag>
-                  <strong>{s.field_name}</strong>
-                </span>
-              </Space>
-            }
-            description={
-              <div>
-                <p style={{ margin: '8px 0' }}>
-                  <strong>问题：</strong>
-                  {s.issue}
-                </p>
-                <p style={{ margin: '8px 0' }}>
-                  <strong>建议：</strong>
-                  {s.suggestion}
-                </p>
-              </div>
-            }
-            type={s.priority === 'high' ? 'error' : s.priority === 'medium' ? 'warning' : 'info'}
-            showIcon
-          />
-        ))}
+                  <strong className={styles.suggestionFieldName}>{suggestion.field_name}</strong>
+                  <span className={styles.suggestionHint}>{priorityConfig.hint}</span>
+                </Space>
+              }
+              description={
+                <div>
+                  <p className={styles.suggestionParagraph}>
+                    <strong className={styles.suggestionLabel}>问题：</strong>
+                    {suggestion.issue}
+                  </p>
+                  <p className={styles.suggestionParagraph}>
+                    <strong className={styles.suggestionLabel}>建议：</strong>
+                    {suggestion.suggestion}
+                  </p>
+                </div>
+              }
+              type={priorityConfig.alertType}
+              showIcon
+            />
+          );
+        })}
       </Space>
     );
   };
@@ -354,120 +502,149 @@ const PromptDashboard: React.FC = () => {
   // 渲染性能趋势图（简化版，实际可使用ECharts或Recharts）
   const renderPerformanceChart = () => {
     if (performanceData.length === 0) {
-      return <div style={{ textAlign: 'center', padding: 40 }}>暂无数据</div>;
+      return <div className={styles.chartEmpty}>暂无数据</div>;
     }
 
     return (
-      <div style={{ padding: 20 }}>
-        <Row gutter={16}>
+      <div className={styles.chartContainer}>
+        <div className={styles.trendGrid}>
           {performanceData.map(day => (
-            <Col span={3} key={day.date}>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 12, color: '#999', marginBottom: 8 }}>
-                  {dayjs(day.date).format('MM-DD')}
-                </div>
-                <div style={{ marginBottom: 4 }}>
-                  <div style={{ fontSize: 10, color: '#999' }}>准确率</div>
-                  <div
-                    style={{
-                      fontSize: 16,
-                      fontWeight: 'bold',
-                      color:
-                        day.accuracy >= 0.85
-                          ? COLORS.success
-                          : day.accuracy >= 0.75
-                            ? COLORS.warning
-                            : COLORS.error,
-                    }}
-                  >
-                    {(day.accuracy * 100).toFixed(0)}%
-                  </div>
-                </div>
-                <div>
-                  <div style={{ fontSize: 10, color: '#999' }}>置信度</div>
-                  <div
-                    style={{
-                      fontSize: 14,
-                      color:
-                        day.confidence >= 0.8
-                          ? COLORS.success
-                          : day.confidence >= 0.7
-                            ? COLORS.warning
-                            : COLORS.error,
-                    }}
-                  >
-                    {(day.confidence * 100).toFixed(0)}%
-                  </div>
-                </div>
+            <div className={styles.trendItem} key={day.date}>
+              <div className={styles.trendDate}>{dayjs(day.date).format('MM-DD')}</div>
+              <div className={styles.trendMetricBlock}>
+                <span className={styles.trendMetricLabel}>准确率</span>
+                <span
+                  className={`${styles.metricValue} ${getToneClassName(getAccuracyTone(day.accuracy))}`}
+                >
+                  {(day.accuracy * 100).toFixed(0)}%
+                </span>
               </div>
-            </Col>
+              <div className={styles.trendMetricBlock}>
+                <span className={styles.trendMetricLabel}>置信度</span>
+                <span
+                  className={`${styles.trendConfidence} ${getToneClassName(
+                    getConfidenceTone(day.confidence)
+                  )}`}
+                >
+                  {(day.confidence * 100).toFixed(0)}%
+                </span>
+              </div>
+            </div>
           ))}
-        </Row>
+        </div>
       </div>
     );
   };
 
   if (isInitialLoading === true) {
     return (
-      <div style={{ padding: 50, textAlign: 'center' }}>
-        <Spin size="large" />
-      </div>
+      <PageContainer title="LLM Prompt 性能监控" subTitle="跟踪模板表现并识别优化机会">
+        <div className={styles.loadingContainer}>
+          <Spin size="large" />
+        </div>
+      </PageContainer>
     );
   }
 
   const selectedPrompt = prompts.find(p => p.id === selectedPromptId);
+  const selectedStatusMeta =
+    selectedPrompt != null ? getPromptStatusMeta(selectedPrompt.status) : null;
+  const activePromptCount =
+    statistics?.status_distribution.find(item => item.status === PromptStatus.ACTIVE)?.count ?? 0;
+  const monitoredFieldCount = fieldErrorRates.length;
+  const highRiskFieldCount = fieldErrorRates.filter(
+    item => getErrorRateTone(item.error_rate) === 'error'
+  ).length;
+  const dateRangeLabel =
+    dateRange != null
+      ? `${dateRange[0].format('YYYY-MM-DD')} ~ ${dateRange[1].format('YYYY-MM-DD')}`
+      : '全部时间';
 
   return (
-    <div style={{ padding: 24, background: '#f0f2f5', minHeight: '100vh' }}>
-      {/* 头部 */}
-      <Card style={{ marginBottom: 24 }}>
-        <Row justify="space-between" align="middle">
-          <Col>
-            <Space>
-              <Title level={3} style={{ margin: 0 }}>
-                LLM Prompt 性能监控
-              </Title>
-            </Space>
-          </Col>
-          <Col>
-            <Space>
-              <RangePicker
-                value={dateRange}
-                onChange={dates => setDateRange(dates as [dayjs.Dayjs, dayjs.Dayjs])}
-              />
-              <Select
-                style={{ width: 300 }}
-                placeholder="选择 Prompt"
-                value={selectedPromptId}
-                onChange={setSelectedPromptId}
-                options={prompts.map(p => ({
-                  label: `${p.name} (${p.version})`,
-                  value: p.id,
-                }))}
-              />
-              <Button icon={<ReloadOutlined />} onClick={handleRefresh} loading={isRefreshing}>
-                刷新
-              </Button>
-            </Space>
-          </Col>
-        </Row>
+    <PageContainer
+      title="LLM Prompt 性能监控"
+      subTitle="跟踪模板表现并识别优化机会"
+      extra={
+        <Button
+          icon={<ReloadOutlined />}
+          onClick={handleRefresh}
+          loading={isRefreshing}
+          aria-label="刷新监控数据"
+          className={styles.actionButton}
+        >
+          刷新
+        </Button>
+      }
+    >
+      <Card className={styles.sectionSpacing}>
+        <ListToolbar
+          variant="plain"
+          items={[
+            {
+              key: 'date-range',
+              col: { xs: 24, md: 10 },
+              content: (
+                <RangePicker
+                  value={dateRange}
+                  onChange={handleDateRangeChange}
+                  className={styles.rangePicker}
+                  allowClear
+                  aria-label="监控时间范围"
+                />
+              ),
+            },
+            {
+              key: 'prompt',
+              col: { xs: 24, md: 14 },
+              content: (
+                <Select
+                  className={styles.promptSelect}
+                  placeholder="选择 Prompt"
+                  value={selectedPromptId ?? undefined}
+                  onChange={handlePromptChange}
+                  options={prompts.map(prompt => ({
+                    label: `${prompt.name} (${normalizeVersion(prompt.version)})`,
+                    value: prompt.id,
+                  }))}
+                  aria-label="选择 Prompt 模板"
+                />
+              ),
+            },
+          ]}
+        />
       </Card>
 
+      <div className={`${styles.sectionSpacing} ${styles.filterSummary}`}>
+        <Space size={[8, 8]} wrap>
+          <Tag className={`${styles.semanticTag} ${styles.toneNeutral}`}>
+            监控区间：{dateRangeLabel}
+          </Tag>
+          <Tag
+            className={`${styles.semanticTag} ${
+              selectedPrompt != null ? styles.tonePrimary : styles.toneNeutral
+            }`}
+          >
+            当前模板：{selectedPrompt?.name ?? '未选择'}
+          </Tag>
+        </Space>
+      </div>
+
       {hasError === true && (
-        <Alert
-          style={{ marginBottom: 24 }}
-          type="error"
-          title="数据加载失败"
-          description={errorMessage ?? '请稍后重试'}
-          showIcon
-        />
+        <div role="alert" className={styles.sectionSpacing}>
+          <Alert
+            type="error"
+            title="数据加载失败"
+            description={errorMessage ?? '请稍后重试'}
+            showIcon
+          />
+        </div>
       )}
 
       {/* 统计概览 */}
       {statistics != null && (
-        <Row gutter={16} style={{ marginBottom: 24 }}>
-          <Col span={6}>
-            <Card>
+        <Row gutter={[16, 16]} className={styles.sectionSpacing}>
+          <Col xs={24} sm={12} xl={6}>
+            <Card className={`${styles.summaryCard} ${styles.statsCard}`}>
               <Statistic
                 title="总 Prompt 数"
                 value={statistics.total_prompts}
@@ -475,28 +652,27 @@ const PromptDashboard: React.FC = () => {
               />
             </Card>
           </Col>
-          <Col span={6}>
-            <Card>
+          <Col xs={24} sm={12} xl={6}>
+            <Card className={`${styles.summaryCard} ${styles.statsCard} ${styles.toneSuccess}`}>
               <Statistic
                 title="活跃 Prompt"
-                value={statistics.status_distribution.find(s => s.status === 'ACTIVE')?.count ?? 0}
-                styles={{ content: { color: COLORS.success } }}
-                suffix={<span style={{ fontSize: 14 }}>/ {statistics.total_prompts}</span>}
+                value={activePromptCount}
+                suffix={
+                  <span className={styles.totalSuffix}>/ {statistics.total_prompts}</span>
+                }
               />
             </Card>
           </Col>
-          <Col span={6}>
-            <Card>
+          <Col xs={24} sm={12} xl={6}>
+            <Card
+              className={`${styles.summaryCard} ${styles.statsCard} ${getToneClassName(
+                getAccuracyTone(statistics.overall_avg_accuracy)
+              )}`}
+            >
               <Statistic
                 title="平均准确率"
                 value={(statistics.overall_avg_accuracy * 100).toFixed(1)}
                 suffix="%"
-                styles={{
-                  content: {
-                    color:
-                      statistics.overall_avg_accuracy >= 0.85 ? COLORS.success : COLORS.warning,
-                  },
-                }}
                 prefix={
                   accuracyTrend === 'up' ? (
                     <RiseOutlined />
@@ -507,18 +683,16 @@ const PromptDashboard: React.FC = () => {
               />
             </Card>
           </Col>
-          <Col span={6}>
-            <Card>
+          <Col xs={24} sm={12} xl={6}>
+            <Card
+              className={`${styles.summaryCard} ${styles.statsCard} ${getToneClassName(
+                getConfidenceTone(statistics.overall_avg_confidence)
+              )}`}
+            >
               <Statistic
                 title="平均置信度"
                 value={(statistics.overall_avg_confidence * 100).toFixed(1)}
                 suffix="%"
-                styles={{
-                  content: {
-                    color:
-                      statistics.overall_avg_confidence >= 0.8 ? COLORS.success : COLORS.warning,
-                  },
-                }}
                 prefix={
                   confidenceTrend === 'up' ? (
                     <RiseOutlined />
@@ -534,58 +708,58 @@ const PromptDashboard: React.FC = () => {
 
       {/* 选中的 Prompt 详情 */}
       {selectedPrompt != null && (
-        <Row gutter={16} style={{ marginBottom: 24 }}>
+        <Row gutter={[16, 16]} className={styles.sectionSpacing}>
           <Col span={24}>
             <Card
               title={
-                <Space>
-                  <span>{selectedPrompt.name}</span>
-                  <Tag color="blue">v{selectedPrompt.version}</Tag>
-                  <Tag color={selectedPrompt.status === 'ACTIVE' ? 'green' : 'default'}>
-                    {selectedPrompt.status}
+                <Space size={[8, 8]} wrap>
+                  <span className={styles.promptName}>{selectedPrompt.name}</span>
+                  <Tag className={`${styles.semanticTag} ${styles.versionTag} ${styles.tonePrimary}`}>
+                    {normalizeVersion(selectedPrompt.version)}
                   </Tag>
+                  {selectedStatusMeta != null && (
+                    <Tag
+                      icon={selectedStatusMeta.icon}
+                      className={`${styles.semanticTag} ${styles.statusTag} ${getToneClassName(
+                        selectedStatusMeta.tone
+                      )}`}
+                    >
+                      {selectedStatusMeta.label}
+                      <span className={styles.statusHint}>{selectedStatusMeta.hint}</span>
+                    </Tag>
+                  )}
                 </Space>
               }
             >
-              <Row gutter={16}>
-                <Col span={6}>
+              <Row gutter={[16, 16]}>
+                <Col xs={24} sm={12} xl={6}>
                   <Statistic title="使用次数" value={selectedPrompt.total_usage} />
                 </Col>
-                <Col span={6}>
+                <Col
+                  xs={24}
+                  sm={12}
+                  xl={6}
+                  className={getToneClassName(getAccuracyTone(selectedPrompt.avg_accuracy))}
+                >
                   <Statistic
                     title="平均准确率"
                     value={(selectedPrompt.avg_accuracy * 100).toFixed(1)}
                     suffix="%"
-                    styles={{
-                      content: {
-                        color:
-                          selectedPrompt.avg_accuracy >= 0.85
-                            ? COLORS.success
-                            : selectedPrompt.avg_accuracy >= 0.75
-                              ? COLORS.warning
-                              : COLORS.error,
-                      },
-                    }}
                   />
                 </Col>
-                <Col span={6}>
+                <Col
+                  xs={24}
+                  sm={12}
+                  xl={6}
+                  className={getToneClassName(getConfidenceTone(selectedPrompt.avg_confidence))}
+                >
                   <Statistic
                     title="平均置信度"
                     value={(selectedPrompt.avg_confidence * 100).toFixed(1)}
                     suffix="%"
-                    styles={{
-                      content: {
-                        color:
-                          selectedPrompt.avg_confidence >= 0.8
-                            ? COLORS.success
-                            : selectedPrompt.avg_confidence >= 0.7
-                              ? COLORS.warning
-                              : COLORS.error,
-                      },
-                    }}
                   />
                 </Col>
-                <Col span={6}>
+                <Col xs={24} sm={12} xl={6}>
                   <Statistic title="提供商" value={selectedPrompt.provider.toUpperCase()} />
                 </Col>
               </Row>
@@ -595,34 +769,45 @@ const PromptDashboard: React.FC = () => {
       )}
 
       {/* 性能趋势图 */}
-      <Row gutter={16} style={{ marginBottom: 24 }}>
+      <Row gutter={[16, 16]} className={styles.sectionSpacing}>
         <Col span={24}>
           <Card title="近7天性能趋势">{renderPerformanceChart()}</Card>
         </Col>
       </Row>
 
       {/* 字段错误率 */}
-      <Row gutter={16} style={{ marginBottom: 24 }}>
+      <Row gutter={[16, 16]} className={styles.sectionSpacing}>
         <Col span={24}>
           <Card title="字段错误率分析">
-            <Table
+            <div className={styles.tableSummary}>
+              <span className={styles.summaryText}>监控字段：{monitoredFieldCount} 个</span>
+              <span
+                className={`${styles.summaryText} ${
+                  highRiskFieldCount > 0 ? styles.toneError : styles.toneSuccess
+                }`}
+              >
+                高风险字段：{highRiskFieldCount} 个
+              </span>
+            </div>
+            <Table<FieldErrorRate>
               columns={fieldErrorColumns}
               dataSource={fieldErrorRates}
               rowKey="field_name"
               pagination={false}
               size="small"
+              scroll={{ x: 720 }}
             />
           </Card>
         </Col>
       </Row>
 
       {/* 优化建议 */}
-      <Row gutter={16}>
+      <Row gutter={[16, 16]}>
         <Col span={24}>
           <Card title="优化建议">{renderSuggestions()}</Card>
         </Col>
       </Row>
-    </div>
+    </PageContainer>
   );
 };
 

@@ -34,12 +34,29 @@ import { rentContractService } from '@/services/rentContractService';
 import type { ColumnsType } from 'antd/es/table';
 import type { Asset } from '@/types/asset';
 import type { RentContract } from '@/types/rentContract';
-import { COLORS } from '@/styles/colorMap';
 import { useArrayListData } from '@/hooks/useArrayListData';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
 import { PageContainer } from '@/components/Common';
+import styles from './OwnershipDetailPage.module.css';
 
 const { Text } = Typography;
+
+type Tone = 'primary' | 'success' | 'warning' | 'error' | 'neutral';
+
+const getToneClassName = (tone: Tone): string => {
+  switch (tone) {
+    case 'success':
+      return styles.toneSuccess;
+    case 'warning':
+      return styles.toneWarning;
+    case 'error':
+      return styles.toneError;
+    case 'neutral':
+      return styles.toneNeutral;
+    default:
+      return styles.tonePrimary;
+  }
+};
 
 /**
  * OwnershipDetailPage - 权属方详情页面组件
@@ -106,7 +123,11 @@ const OwnershipDetailPage: React.FC = () => {
       dataIndex: 'property_name',
       key: 'property_name',
       render: (text: string, record: Asset) => (
-        <Button type="link" onClick={() => navigate(`/assets/${record.id}`)} style={{ padding: 0 }}>
+        <Button
+          type="link"
+          onClick={() => navigate(`/assets/${record.id}`)}
+          className={styles.inlineLinkButton}
+        >
           {text}
         </Button>
       ),
@@ -129,7 +150,7 @@ const OwnershipDetailPage: React.FC = () => {
       dataIndex: 'rentable_area',
       key: 'rentable_area',
       align: 'right',
-      render: (val: number) => val?.toLocaleString() || '-',
+      render: (val?: number) => (val != null ? val.toLocaleString() : '-'),
     },
     {
       title: '所属项目',
@@ -149,7 +170,7 @@ const OwnershipDetailPage: React.FC = () => {
         <Button
           type="link"
           onClick={() => navigate(`/rental/contracts/${record.id}`)}
-          style={{ padding: 0 }}
+          className={styles.inlineLinkButton}
         >
           {text}
         </Button>
@@ -212,6 +233,9 @@ const OwnershipDetailPage: React.FC = () => {
     stats.total_due_amount > 0
       ? ((stats.total_paid_amount / stats.total_due_amount) * 100).toFixed(1)
       : '0';
+  const collectionRateValue = Number(collectionRate);
+  const collectionRateTone: Tone =
+    collectionRateValue >= 90 ? 'success' : collectionRateValue >= 70 ? 'warning' : 'error';
 
   const {
     data: assetRows,
@@ -273,7 +297,7 @@ const OwnershipDetailPage: React.FC = () => {
     {
       key: 'assets',
       label: (
-        <span>
+        <span className={styles.tabLabel}>
           <HomeOutlined />
           关联资产 ({assets.length})
         </span>
@@ -290,13 +314,14 @@ const OwnershipDetailPage: React.FC = () => {
             showTotal: (total: number) => `共 ${total} 条`,
           }}
           locale={{ emptyText: '暂无关联资产' }}
+          scroll={{ x: 860 }}
         />
       ),
     },
     {
       key: 'contracts',
       label: (
-        <span>
+        <span className={styles.tabLabel}>
           <FileTextOutlined />
           关联合同 ({contracts.length})
         </span>
@@ -313,6 +338,7 @@ const OwnershipDetailPage: React.FC = () => {
             showTotal: (total: number) => `共 ${total} 条`,
           }}
           locale={{ emptyText: '暂无关联合同' }}
+          scroll={{ x: 960 }}
         />
       ),
     },
@@ -325,7 +351,7 @@ const OwnershipDetailPage: React.FC = () => {
           {ownership?.name}
           {ownership?.short_name != null &&
             ownership.short_name.length > 0 && (
-              <Text type="secondary" style={{ marginLeft: 8, fontSize: '0.7em' }}>
+              <Text type="secondary" className={styles.shortNameText}>
                 ({ownership.short_name})
               </Text>
             )}
@@ -333,7 +359,7 @@ const OwnershipDetailPage: React.FC = () => {
             <Badge
               status={ownership.is_active ? 'success' : 'error'}
               text={ownership.is_active ? '启用' : '禁用'}
-              style={{ marginLeft: 12 }}
+              className={styles.statusBadge}
             />
           )}
         </>
@@ -350,9 +376,9 @@ const OwnershipDetailPage: React.FC = () => {
         </Button>
       }
     >
-      <Row gutter={16} style={{ marginBottom: '24px' }}>
-        <Col span={6}>
-          <Card>
+      <Row gutter={[16, 16]} className={styles.statsRow}>
+        <Col xs={24} sm={12} xl={6}>
+          <Card className={styles.statsCard}>
             <Statistic
               title="关联资产"
               value={assets.length}
@@ -361,8 +387,8 @@ const OwnershipDetailPage: React.FC = () => {
             />
           </Card>
         </Col>
-        <Col span={6}>
-          <Card>
+        <Col xs={24} sm={12} xl={6}>
+          <Card className={styles.statsCard}>
             <Statistic
               title="应收总额"
               value={stats.total_due_amount || 0}
@@ -372,36 +398,25 @@ const OwnershipDetailPage: React.FC = () => {
             />
           </Card>
         </Col>
-        <Col span={6}>
-          <Card>
+        <Col xs={24} sm={12} xl={6}>
+          <Card className={`${styles.statsCard} ${styles.toneSuccess}`}>
             <Statistic
               title="实收总额"
               value={stats.total_paid_amount || 0}
               precision={2}
               prefix={<DollarOutlined />}
               suffix="元"
-              styles={{ content: { color: COLORS.success } }}
             />
           </Card>
         </Col>
-        <Col span={6}>
-          <Card>
+        <Col xs={24} sm={12} xl={6}>
+          <Card className={`${styles.statsCard} ${getToneClassName(collectionRateTone)}`}>
             <Statistic
               title="收缴率"
               value={collectionRate}
               precision={1}
               prefix={<PercentageOutlined />}
               suffix="%"
-              styles={{
-                content: {
-                  color:
-                    parseFloat(collectionRate) >= 90
-                      ? COLORS.success
-                      : parseFloat(collectionRate) >= 70
-                        ? COLORS.warning
-                        : COLORS.error,
-                },
-              }}
             />
           </Card>
         </Col>
@@ -410,7 +425,7 @@ const OwnershipDetailPage: React.FC = () => {
       {/* 基本信息 */}
       {ownership && (
         <>
-          <Card title="基本信息" style={{ marginBottom: '24px' }}>
+          <Card title="基本信息" className={styles.detailsCard}>
             <Descriptions column={2}>
               <Descriptions.Item label="权属方全称">{ownership.name}</Descriptions.Item>
               <Descriptions.Item label="权属方简称">{ownership.short_name ?? '-'}</Descriptions.Item>
@@ -421,7 +436,7 @@ const OwnershipDetailPage: React.FC = () => {
                 />
               </Descriptions.Item>
               <Descriptions.Item label="关联合同数量">
-                <Tag color="blue">{contracts.length} 个</Tag>
+                <Tag className={`${styles.countTag} ${styles.tonePrimary}`}>{contracts.length} 个</Tag>
               </Descriptions.Item>
               <Descriptions.Item label="创建时间">
                 {ownership.created_at ? new Date(ownership.created_at).toLocaleString('zh-CN') : '-'}
@@ -433,7 +448,7 @@ const OwnershipDetailPage: React.FC = () => {
           </Card>
 
           {/* 资产和合同列表 */}
-          <Card>
+          <Card className={styles.tabCard}>
             <Tabs items={tabItems} />
           </Card>
         </>

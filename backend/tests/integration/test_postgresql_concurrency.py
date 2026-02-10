@@ -11,7 +11,7 @@ import uuid
 import pytest
 from sqlalchemy import text
 
-from src.database import get_database_manager
+from src.database import DatabaseManager, get_database_url
 
 pytestmark = [
     pytest.mark.skipif(
@@ -28,9 +28,19 @@ pytestmark = [
 class TestPostgreSQLConcurrency:
     """PostgreSQL并发访问测试"""
 
-    async def test_concurrent_reads(self):
+    @pytest.fixture
+    async def isolated_db_manager(self):
+        mgr = DatabaseManager()
+        mgr.initialize_engine(get_database_url())
+        try:
+            yield mgr
+        finally:
+            if mgr.engine is not None:
+                await mgr.engine.dispose()
+
+    async def test_concurrent_reads(self, isolated_db_manager):
         """测试并发读取操作"""
-        mgr = get_database_manager()
+        mgr = isolated_db_manager
 
         async def read_query():
             async with mgr.get_session() as session:
@@ -39,9 +49,9 @@ class TestPostgreSQLConcurrency:
         # 并发执行50个读取操作
         await asyncio.gather(*(read_query() for _ in range(50)))
 
-    async def test_connection_pool_under_load(self):
+    async def test_connection_pool_under_load(self, isolated_db_manager):
         """测试连接池在负载下的行为"""
-        mgr = get_database_manager()
+        mgr = isolated_db_manager
 
         mgr.get_metrics()
 
@@ -58,12 +68,12 @@ class TestPostgreSQLConcurrency:
         # 连接应该被释放回池
         assert final_metrics.active_connections >= 0
 
-    async def test_concurrent_transaction_isolation(self):
+    async def test_concurrent_transaction_isolation(self, isolated_db_manager):
         """测试并发事务隔离"""
         from src.crud.asset import asset_crud
         from src.models.ownership import Ownership
 
-        mgr = get_database_manager()
+        mgr = isolated_db_manager
 
         # 创建初始资产
         async with mgr.get_session() as session:

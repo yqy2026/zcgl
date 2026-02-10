@@ -1,7 +1,11 @@
 # 资产管理 API
 
 ## ✅ Status
-**当前状态**: Draft (2026-02-04)
+**当前状态**: Supplemental (2026-02-09)
+
+> 说明：本页为资产 API 的补充说明，不作为需求权威基线。  
+> 权威规格请参考：`docs/requirements-specification.md`  
+> 模块证据请参考：`docs/features/requirements-appendix-modules.md`
 
 ## 核心资源
 | 资源 | 路径前缀 | 说明 |

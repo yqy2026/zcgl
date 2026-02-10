@@ -70,6 +70,8 @@ describe('GroupedSelect - 渲染测试', () => {
 
   it('应该渲染分组标签与选项', () => {
     const { container } = renderWithProviders(<GroupedSelect groups={groups} />);
+    const combobox = screen.getByRole('combobox');
+    fireEvent.mouseDown(combobox);
 
     expect(screen.getByText('分组1')).toBeInTheDocument();
     expect(screen.getByText('(2)')).toBeInTheDocument();
@@ -81,6 +83,8 @@ describe('GroupedSelect - 渲染测试', () => {
 
   it('showGroupLabel为false时不渲染分组标签', () => {
     renderWithProviders(<GroupedSelect groups={groups} showGroupLabel={false} />);
+    const combobox = screen.getByRole('combobox');
+    fireEvent.mouseDown(combobox);
 
     // 不应该显示分组标签
     expect(screen.queryByText('分组1')).not.toBeInTheDocument();
@@ -97,6 +101,8 @@ describe('GroupedSelect - 搜索测试', () => {
 
   it('搜索关键字应过滤选项', () => {
     renderWithProviders(<GroupedSelect groups={groups} />);
+    const combobox = screen.getByRole('combobox');
+    fireEvent.mouseDown(combobox);
 
     // 验证所有选项初始显示
     expect(screen.getByText('选项1')).toBeInTheDocument();
@@ -104,7 +110,7 @@ describe('GroupedSelect - 搜索测试', () => {
     expect(screen.getByText('选项3')).toBeInTheDocument();
 
     // 模拟搜索输入
-    const searchInput = screen.getByRole('textbox');
+    const searchInput = screen.getByLabelText('搜索选项');
     fireEvent.change(searchInput, { target: { value: '选项2' } });
 
     // 验证过滤后的结果
@@ -113,8 +119,10 @@ describe('GroupedSelect - 搜索测试', () => {
 
   it('搜索无结果时显示提示', async () => {
     renderWithProviders(<GroupedSelect groups={groups} />);
+    const combobox = screen.getByRole('combobox');
+    fireEvent.mouseDown(combobox);
 
-    const searchInput = screen.getByRole('textbox');
+    const searchInput = screen.getByLabelText('搜索选项');
     fireEvent.change(searchInput, { target: { value: '不存在' } });
 
     expect(await screen.findByText('未找到匹配的选项')).toBeInTheDocument();

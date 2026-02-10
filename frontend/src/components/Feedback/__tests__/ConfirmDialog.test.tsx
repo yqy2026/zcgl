@@ -83,8 +83,9 @@ describe('ConfirmDialog - 预设类型测试', () => {
     const ConfirmDialog = (await import('../ConfirmDialog')).default;
     renderWithProviders(<ConfirmDialog type={type as any} visible={true} />);
 
-    expect(screen.getByText(String(title))).toBeInTheDocument();
-    expect(screen.getByText(okText)).toBeInTheDocument();
+    const okPattern = new RegExp(String(okText).split('').join('\\s*'));
+    expect(screen.getAllByText(String(title)).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: okPattern }).length).toBeGreaterThan(0);
   });
 });
 
@@ -98,7 +99,7 @@ describe('ConfirmDialog - 回调与配置测试', () => {
     const handleConfirm = vi.fn();
     renderWithProviders(<ConfirmDialog type="delete" visible={true} onConfirm={handleConfirm} />);
 
-    fireEvent.click(screen.getByText('删除'));
+    fireEvent.click(screen.getByRole('button', { name: /删\s*除/ }));
     expect(handleConfirm).toHaveBeenCalledTimes(1);
   });
 
@@ -107,11 +108,8 @@ describe('ConfirmDialog - 回调与配置测试', () => {
     const handleCancel = vi.fn();
     renderWithProviders(<ConfirmDialog type="warning" visible={true} onCancel={handleCancel} />);
 
-    const cancelButtons = screen.getAllByText('取消');
-    if (cancelButtons.length > 0) {
-      fireEvent.click(cancelButtons[0]);
-      expect(handleCancel).toHaveBeenCalledTimes(1);
-    }
+    fireEvent.click(screen.getByRole('button', { name: /取\s*消/ }));
+    expect(handleCancel).toHaveBeenCalledTimes(1);
   });
 });
 

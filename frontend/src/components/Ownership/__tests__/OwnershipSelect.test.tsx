@@ -146,8 +146,8 @@ vi.mock('antd', () => {
       )}
     </div>
   );
-  const Option = ({ children, value }: { children?: React.ReactNode; value?: string }) => (
-    <option value={value}>{children}</option>
+  const Option = ({ value }: { children?: React.ReactNode; value?: string }) => (
+    <option value={value}>{value ?? ''}</option>
   );
   Option.displayName = 'MockSelectOption';
 
@@ -468,6 +468,15 @@ describe('OwnershipSelect 组件测试', () => {
       }
 
       expect(mockRefresh).toHaveBeenCalled();
+    });
+
+    it('selectionOnly 变体应隐藏操作按钮', () => {
+      renderWithProviders(<OwnershipSelect variant="selectionOnly" />);
+
+      expect(screen.queryByTestId('icon-search')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('icon-list')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('icon-plus')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('icon-reload')).not.toBeInTheDocument();
     });
   });
 

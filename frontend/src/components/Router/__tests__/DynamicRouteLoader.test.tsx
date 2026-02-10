@@ -6,7 +6,6 @@
 import { describe, it, expect } from 'vitest';
 import React from 'react';
 import { screen } from '@/test/utils/test-helpers';
-import { BrowserRouter } from 'react-router-dom';
 import {
   DynamicRouteProvider,
   DynamicRouteRenderer,
@@ -39,11 +38,9 @@ describe('DynamicRouteLoader - 基础功能测试', () => {
 describe('DynamicRouteRenderer - 路由渲染测试', () => {
   it('应该在Router和Provider内正确渲染', async () => {
     renderWithProviders(
-      <BrowserRouter>
-        <DynamicRouteProvider>
-          <DynamicRouteRenderer />
-        </DynamicRouteProvider>
-      </BrowserRouter>
+      <DynamicRouteProvider>
+        <DynamicRouteRenderer />
+      </DynamicRouteProvider>
     );
 
     const dashboard = await screen.findByText('Dashboard Page');

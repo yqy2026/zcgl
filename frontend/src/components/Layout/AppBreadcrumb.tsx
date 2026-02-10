@@ -32,7 +32,7 @@ const AppBreadcrumb: React.FC<AppBreadcrumbProps> = ({ customItems }) => {
 
   const breadcrumbItems = useMemo(() => {
     // Always include Home as the first item
-    const items = [
+    const items: Array<{ title: React.ReactNode }> = [
       {
         title: (
           <Link to="/">

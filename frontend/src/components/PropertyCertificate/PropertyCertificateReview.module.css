@@ -1,0 +1,94 @@
+.reviewStack {
+  width: 100%;
+}
+
+.inlineStatus {
+  align-items: center;
+}
+
+.statusAssistText {
+  font-size: 12px;
+}
+
+.statusTag {
+  margin-inline-end: 0;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  padding-inline: 8px;
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: var(--font-weight-medium);
+}
+
+.tonePrimary {
+  color: var(--color-primary);
+}
+
+.toneSuccess {
+  color: var(--color-success);
+}
+
+.toneWarning {
+  color: var(--color-warning);
+}
+
+.toneError {
+  color: var(--color-error);
+}
+
+.statusTag.tonePrimary {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+}
+
+.statusTag.toneSuccess {
+  background: var(--color-success-light);
+  border-color: var(--color-success);
+}
+
+.statusTag.toneWarning {
+  background: var(--color-warning-light);
+  border-color: var(--color-warning);
+}
+
+.statusTag.toneError {
+  background: var(--color-error-light);
+  border-color: var(--color-error);
+}
+
+.listItem {
+  padding-block: 8px;
+}
+
+.warningCollapse {
+  margin-top: 16px;
+}
+
+.assetListItem {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.assetListItem:hover {
+  background: var(--color-primary-light);
+}
+
+.assetListItemActive {
+  background: var(--color-primary-light);
+  border-radius: 8px;
+}
+
+.fullWidthInput {
+  width: 100%;
+}
+
+.submitButton {
+  min-width: 168px;
+}
+
+@media (max-width: 768px) {
+  .submitButton {
+    min-height: 44px;
+    width: 100%;
+  }
+}

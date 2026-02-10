@@ -15,9 +15,14 @@ import {
 import type { UploadFile, UploadProps, RcFile } from 'antd/es/upload/interface';
 
 import { pdfImportService, type FileUploadResponse } from '@/services/pdfImportService';
-import { COLORS } from '@/styles/colorMap';
+import styles from './ContractImportUpload.module.css';
 
 const { Title, Text, Paragraph } = Typography;
+
+const UPLOAD_PROGRESS_STROKE_COLOR: Record<string, string> = {
+  '0%': 'var(--color-primary)',
+  '100%': 'var(--color-success)',
+};
 
 interface ContractImportUploadProps {
   onUploadSuccess: (sessionId: string, fileInfo: UploadFile) => void;
@@ -188,7 +193,7 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
   /* Removed getSystemStatusTags function */
 
   return (
-    <div className="contract-import-upload">
+    <div className={styles.container}>
       <Card
         title={
           <Space>
@@ -196,58 +201,66 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
             <span>PDF合同文件上传</span>
           </Space>
         }
-        /* Removed extra actions for Advanced Options */
       >
-        {/* Removed System Status section */}
-
         <Divider />
 
-        {/* 上传区域 */}
         {uploadStatus === 'idle' && (
-          <Upload.Dragger {...uploadProps}>
-            <p className="ant-upload-drag-icon">
-              <InboxOutlined style={{ fontSize: 48, color: COLORS.primary }} />
-            </p>
-            <p className="ant-upload-text" style={{ fontSize: 16, fontWeight: 500 }}>
-              点击或拖拽PDF合同文件到此区域上传
-            </p>
-            <p className="ant-upload-hint" style={{ color: COLORS.textSecondary }}>
-              支持单个PDF文件上传，文件大小不超过 {maxFileSize}MB
-            </p>
-            <p className="ant-upload-hint" style={{ color: COLORS.textTertiary, fontSize: 12 }}>
-              系统将自动提取合同信息，包括合同编号、承租方、地址、租金等关键字段
-            </p>
-          </Upload.Dragger>
+          <>
+            <Upload.Dragger {...uploadProps}>
+              <p className="ant-upload-drag-icon">
+                <InboxOutlined className={styles.uploadIcon} />
+              </p>
+              <p className={`ant-upload-text ${styles.uploadText}`}>
+                点击或拖拽PDF合同文件到此区域上传
+              </p>
+              <p className={`ant-upload-hint ${styles.uploadHint}`}>
+                支持单个PDF文件上传，文件大小不超过 {maxFileSize}MB
+              </p>
+              <p className={`ant-upload-hint ${styles.uploadHintSecondary}`}>
+                系统将自动提取合同信息，包括合同编号、承租方、地址、租金等关键字段
+              </p>
+            </Upload.Dragger>
+
+            <div className={styles.usageSection}>
+              <Title level={5} className={styles.usageTitle}>
+                <EyeOutlined className={styles.usageTitleIcon} />
+                <span>使用说明</span>
+              </Title>
+              <ul className={styles.usageList}>
+                <li>支持标准PDF格式的合同文件</li>
+                <li>系统将自动提取58个关键字段，包括合同编号、承租方、地址、租金等</li>
+                <li>提取完成后可以进行人工确认和修改</li>
+                <li>支持与现有资产和权属方数据进行智能匹配</li>
+                <li>处理时间通常为30-60秒，取决于文件大小和复杂度</li>
+              </ul>
+            </div>
+          </>
         )}
 
-        {/* 上传进度 */}
         {uploadStatus === 'uploading' && (
-          <div style={{ textAlign: 'center', padding: '20px 0' }}>
+          <div className={styles.statusPanel}>
             <Title level={4}>
               {uploadProgress < 100 ? '正在上传文件...' : '文件上传成功，正在处理中...'}
             </Title>
             <Progress
               percent={uploadProgress}
               status={uploadProgress < 100 ? 'active' : 'success'}
-              strokeColor={{
-                '0%': COLORS.primary,
-                '100%': COLORS.success,
-              }}
-              style={{ marginBottom: 16 }}
+              strokeColor={UPLOAD_PROGRESS_STROKE_COLOR}
+              className={styles.progressBar}
             />
             <Text type="secondary">
               {uploadProgress < 100
                 ? '正在上传文件到服务器，请稍候...'
                 : '文件已上传，系统正在进行PDF转换和信息提取，请耐心等待...'}
             </Text>
-            <div style={{ marginTop: 8 }}>
-              <Text type="secondary" style={{ fontSize: 12 }}>
+            <div className={styles.processingHint}>
+              <Text type="secondary" className={styles.processingHintText}>
                 提示：处理时间通常为30-60秒，复杂文件可能需要更长时间
               </Text>
             </div>
 
             {uploadProgress < 100 && (
-              <div style={{ marginTop: 16 }}>
+              <div className={styles.cancelRow}>
                 <Button danger icon={<CloseOutlined />} onClick={handleCancelUpload}>
                   取消上传
                 </Button>
@@ -256,37 +269,18 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
           </div>
         )}
 
-        {/* 上传成功 */}
-        {uploadStatus === 'success' && uploadedFile && (
-          <div style={{ textAlign: 'center', padding: '20px 0' }}>
-            <div
-              style={{
-                width: 80,
-                height: 80,
-                margin: '0 auto 16px',
-                borderRadius: '50%',
-                backgroundColor: 'var(--color-primary-light)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <EyeOutlined style={{ fontSize: 32, color: COLORS.success }} />
+        {uploadStatus === 'success' && uploadedFile !== null && (
+          <div className={styles.statusPanel}>
+            <div className={`${styles.statusCircle} ${styles.successCircle}`}>
+              <EyeOutlined className={styles.successIcon} />
             </div>
 
-            <Title level={4} style={{ color: COLORS.success, margin: '16px 0 8px' }}>
+            <Title level={4} className={styles.successTitle}>
               文件上传成功！
             </Title>
 
-            <div
-              style={{
-                backgroundColor: COLORS.bgTertiary,
-                padding: '12px 16px',
-                borderRadius: '6px',
-                marginBottom: 16,
-              }}
-            >
-              <Space orientation="vertical" size="small" style={{ width: '100%' }}>
+            <div className={styles.fileMetaCard}>
+              <Space orientation="vertical" size="small" className={styles.fullWidthSpace}>
                 <Row justify="space-between">
                   <Col>
                     <Text type="secondary">文件名：</Text>
@@ -308,7 +302,7 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
                     <Text type="secondary">会话ID：</Text>
                   </Col>
                   <Col>
-                    <Text code style={{ fontSize: 12 }}>
+                    <Text code className={styles.sessionCode}>
                       {sessionId}
                     </Text>
                   </Col>
@@ -321,15 +315,14 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
               description="系统正在自动提取PDF中的合同信息，请稍候..."
               type="info"
               showIcon
-              style={{ marginBottom: 16 }}
+              className={styles.processingAlert}
             />
 
-            <Space>
+            <Space className={styles.actionSpace}>
               <Button
                 type="primary"
                 icon={<EyeOutlined />}
                 onClick={() => {
-                  // 这里可以跳转到进度查看页面
                   MessageManager.info('请等待处理完成后查看结果');
                 }}
               >
@@ -342,62 +335,24 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
           </div>
         )}
 
-        {/* 上传失败 */}
         {uploadStatus === 'error' && (
-          <div style={{ textAlign: 'center', padding: '20px 0' }}>
-            <div
-              style={{
-                width: 80,
-                height: 80,
-                margin: '0 auto 16px',
-                borderRadius: '50%',
-                backgroundColor: 'var(--color-error-light)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <DeleteOutlined style={{ fontSize: 32, color: COLORS.error }} />
+          <div className={styles.statusPanel}>
+            <div className={`${styles.statusCircle} ${styles.errorCircle}`}>
+              <DeleteOutlined className={styles.errorIcon} />
             </div>
 
-            <Title level={4} style={{ color: COLORS.error, margin: '16px 0 8px' }}>
+            <Title level={4} className={styles.errorTitle}>
               文件上传失败
             </Title>
 
-            <Paragraph style={{ color: COLORS.textSecondary, marginBottom: 16 }}>
+            <Paragraph className={styles.errorDescription}>
               上传过程中发生错误，请检查文件格式和大小后重试。
             </Paragraph>
 
-            <Space>
+            <Space className={styles.actionSpace}>
               <Button type="primary" icon={<UploadOutlined />} onClick={handleReupload}>
                 重新上传
               </Button>
-              {/* Removed View System Status button */}
-            </Space>
-          </div>
-        )}
-
-        {/* Removed Advanced Options panel */}
-
-        {/* 使用说明 */}
-        {uploadStatus === 'idle' && (
-          <div
-            style={{
-              marginTop: 24,
-              padding: 16,
-              backgroundColor: 'var(--color-primary-light)',
-              borderRadius: 6,
-            }}
-          >
-            <Title level={5} style={{ color: COLORS.primaryActive, marginBottom: 12 }}>
-              <EyeOutlined /> 使用说明
-            </Title>
-            <Space orientation="vertical" size="small">
-              <Text>• 支持标准PDF格式的合同文件</Text>
-              <Text>• 系统将自动提取58个关键字段，包括合同编号、承租方、地址、租金等</Text>
-              <Text>• 提取完成后可以进行人工确认和修改</Text>
-              <Text>• 支持与现有资产和权属方数据进行智能匹配</Text>
-              <Text>• 处理时间通常为30-60秒，取决于文件大小和复杂度</Text>
             </Space>
           </div>
         )}

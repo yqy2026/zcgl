@@ -222,7 +222,11 @@ describe('AppHeader - 渲染与交互测试', () => {
     );
 
     expect(screen.getByTestId('icon-menu-fold')).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId('button'));
+    const collapseButton = screen.getByTestId('icon-menu-fold').closest('button');
+    expect(collapseButton).not.toBeNull();
+    if (collapseButton != null) {
+      fireEvent.click(collapseButton);
+    }
     expect(handleToggle).toHaveBeenCalledTimes(1);
 
     rerender(<AppHeader collapsed={true} onToggleCollapsed={handleToggle} />);

@@ -1,0 +1,183 @@
+.statisticsPage {
+  width: 100%;
+}
+
+.mainCard {
+  width: 100%;
+}
+
+.headerSection {
+  margin-bottom: 24px;
+}
+
+.pageTitle {
+  margin: 0 !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.headerActions {
+  width: 100%;
+}
+
+.headerActionGroup {
+  width: 100%;
+  justify-content: flex-end;
+}
+
+.dateRangePicker {
+  width: 300px;
+}
+
+.yearSelect {
+  width: 120px;
+}
+
+.actionButton {
+  min-width: 88px;
+}
+
+.overviewRow {
+  margin-bottom: 24px;
+}
+
+.operationRow {
+  margin-bottom: 24px;
+}
+
+.sectionTitle {
+  margin-bottom: 16px !important;
+}
+
+.metricCard {
+  height: 100%;
+}
+
+.metricCard :global(.ant-card-body) {
+  padding: 20px;
+}
+
+.tonePrimary {
+  color: var(--color-primary);
+}
+
+.toneSuccess {
+  color: var(--color-success);
+}
+
+.toneWarning {
+  color: var(--color-warning);
+}
+
+.toneError {
+  color: var(--color-error);
+}
+
+.tonePrimary :global(.ant-statistic-content),
+.toneSuccess :global(.ant-statistic-content),
+.toneWarning :global(.ant-statistic-content),
+.toneError :global(.ant-statistic-content) {
+  color: inherit;
+}
+
+.nameCell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.primaryText {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.secondaryText {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+.countTag {
+  margin-inline-end: 0;
+  border-radius: 999px;
+  border: 1px solid var(--color-primary);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+.positiveValue {
+  color: var(--color-success);
+  font-weight: var(--font-weight-medium);
+}
+
+.inlineStatus {
+  align-items: center;
+}
+
+.valueText {
+  font-weight: var(--font-weight-medium);
+}
+
+.statusTag {
+  margin-inline-end: 0;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  padding-inline: 8px;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.statusTag.toneSuccess {
+  background: var(--color-success-light);
+  border-color: var(--color-success);
+}
+
+.statusTag.toneWarning {
+  background: var(--color-warning-light);
+  border-color: var(--color-warning);
+}
+
+.statusTag.toneError {
+  background: var(--color-error-light);
+  border-color: var(--color-error);
+}
+
+.statusTag.tonePrimary {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+}
+
+.paymentRateCell {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+@media (max-width: 992px) {
+  .headerActionGroup {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 768px) {
+  .headerActions {
+    margin-top: 12px;
+  }
+
+  .headerActionGroup {
+    gap: 8px;
+  }
+
+  .dateRangePicker,
+  .yearSelect {
+    width: 100%;
+  }
+
+  .actionButton {
+    min-height: 40px;
+  }
+}

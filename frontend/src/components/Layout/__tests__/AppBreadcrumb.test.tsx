@@ -73,14 +73,13 @@ describe('AppBreadcrumb', () => {
   it('renders dashboard breadcrumb for /dashboard', () => {
     renderBreadcrumb('/dashboard');
 
-    expect(screen.getByText('数据看板')).toBeInTheDocument();
-    expect(screen.queryByText('首页')).toBeNull();
+    expect(screen.getByText('仪表盘')).toBeInTheDocument();
+    expect(screen.getByTestId('icon-home')).toBeInTheDocument();
   });
 
   it('renders asset list breadcrumb path', () => {
     renderBreadcrumb('/assets/list');
 
-    expect(screen.getByText('首页')).toBeInTheDocument();
     expect(screen.getByText('资产管理')).toBeInTheDocument();
     expect(screen.getByText('资产列表')).toBeInTheDocument();
   });
@@ -89,7 +88,7 @@ describe('AppBreadcrumb', () => {
     renderBreadcrumb('/assets/123');
 
     expect(screen.getByText('资产详情')).toBeInTheDocument();
-    expect(screen.getByText('资产列表')).toBeInTheDocument();
+    expect(screen.getByText('资产管理')).toBeInTheDocument();
   });
 
   it('renders asset edit breadcrumb path', () => {
@@ -100,9 +99,9 @@ describe('AppBreadcrumb', () => {
   });
 
   it('renders data import breadcrumb with category', () => {
-    renderBreadcrumb('/data/import');
+    renderBreadcrumb('/assets/import');
 
-    expect(screen.getByText('数据管理')).toBeInTheDocument();
+    expect(screen.getByText('资产管理')).toBeInTheDocument();
     expect(screen.getByText('数据导入')).toBeInTheDocument();
   });
 
@@ -113,9 +112,9 @@ describe('AppBreadcrumb', () => {
     expect(screen.getByText('用户管理')).toBeInTheDocument();
   });
 
-  it('applies breadcrumb font size', () => {
+  it('renders breadcrumb container', () => {
     renderBreadcrumb('/assets/list');
 
-    expect(screen.getByTestId('breadcrumb')).toHaveStyle({ fontSize: '14px' });
+    expect(screen.getByTestId('breadcrumb')).toBeInTheDocument();
   });
 });

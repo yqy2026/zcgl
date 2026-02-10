@@ -1,0 +1,113 @@
+.statsRow {
+  margin-bottom: 24px;
+}
+
+.statsCard {
+  height: 100%;
+}
+
+.activeStatsCard :global(.ant-statistic-content) {
+  color: var(--color-success);
+}
+
+.inactiveStatsCard :global(.ant-statistic-content) {
+  color: var(--color-error);
+}
+
+.lockedStatsCard :global(.ant-statistic-content) {
+  color: var(--color-warning);
+}
+
+.toolbarSection {
+  margin-bottom: 16px;
+}
+
+.fullWidthControl {
+  width: 100%;
+}
+
+.actionButton {
+  min-height: 36px;
+}
+
+.userCell {
+  align-items: flex-start;
+  line-height: 1.35;
+}
+
+.userTextGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.userNameText {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.contactCell {
+  line-height: 1.35;
+}
+
+.secondaryText {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.lockedIcon {
+  color: var(--color-error);
+}
+
+.tableActionButton {
+  min-width: 32px;
+}
+
+.unlockActionButton {
+  color: var(--color-success) !important;
+}
+
+.lockActionButton {
+  color: var(--color-error) !important;
+}
+
+.dangerIcon {
+  color: var(--color-error);
+}
+
+.formActions {
+  text-align: right;
+  margin-bottom: 0;
+}
+
+.userProfileHeader {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.userProfileName {
+  margin-top: 16px;
+  margin-bottom: 8px;
+  color: var(--color-text-primary);
+}
+
+.userProfileAccount {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.drawerActions {
+  margin-top: 24px;
+  text-align: center;
+}
+
+.drawerActionsGroup {
+  width: 100%;
+  justify-content: center;
+}
+
+@media (max-width: 768px) {
+  .actionButton {
+    min-height: 40px;
+  }
+}

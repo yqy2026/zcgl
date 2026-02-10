@@ -1,7 +1,12 @@
 # 租赁管理 PRD
 
+> ⚠️ **状态变更（2026-02-09）**  
+> 本文档已降级为历史草稿，不再作为需求权威来源。  
+> 当前权威规格请使用：`docs/requirements-specification.md`  
+> 模块证据附录请使用：`docs/features/requirements-appendix-modules.md`
+
 ## ✅ Status
-**当前状态**: Draft (2026-02-03)
+**当前状态**: Historical Draft (2026-02-09)
 
 ## 背景与目标
 覆盖租赁合同的全流程管理，提升合同录入、变更与统计效率。

@@ -7,7 +7,7 @@ import uuid
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from functools import cached_property
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from sqlalchemy import (
     DECIMAL,
@@ -22,7 +22,7 @@ from sqlalchemy import (
     inspect,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.orm.attributes import NO_VALUE
+from sqlalchemy.orm import attributes as orm_attributes
 
 from ..database import Base
 
@@ -213,8 +213,11 @@ class Asset(Base):
         self, relationship_name: str, *, projection_field: str
     ) -> Any:
         state = inspect(self)
+        if state is None:
+            return None
         relationship_value = state.attrs[relationship_name].loaded_value
-        if relationship_value is NO_VALUE:
+        no_value = getattr(orm_attributes, "NO_VALUE", None)
+        if relationship_value is no_value:
             if state.transient or state.pending:
                 return None
 
@@ -290,7 +293,7 @@ class Asset(Base):
             cached_token == cache_token
             and "_active_contract_cache_value" in self.__dict__
         ):
-            return self.__dict__["_active_contract_cache_value"]
+            return cast("RentContract | None", self.__dict__["_active_contract_cache_value"])
 
         selected_contract = self._pick_preferred_contract(
             contracts_value,

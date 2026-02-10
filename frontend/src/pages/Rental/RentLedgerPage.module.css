@@ -1,0 +1,140 @@
+.ledgerPage {
+  width: 100%;
+}
+
+.overviewRow {
+  margin-bottom: 24px;
+}
+
+.metricCard {
+  height: 100%;
+}
+
+.metricCard :global(.ant-card-body) {
+  padding: 20px;
+}
+
+.metricTag {
+  margin-top: 12px;
+}
+
+.filterCard {
+  margin-bottom: 24px;
+}
+
+.filterControl {
+  width: 100%;
+}
+
+.toolbarActions {
+  width: 100%;
+  justify-content: flex-end;
+}
+
+.selectionAlert {
+  margin-bottom: 16px;
+}
+
+.tableCard {
+  margin-bottom: 0;
+}
+
+.inlineStatus {
+  align-items: center;
+}
+
+.valueText {
+  font-weight: var(--font-weight-medium);
+}
+
+.statusAssistText {
+  font-size: 12px;
+}
+
+.statusTag {
+  margin-inline-end: 0;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  padding-inline: 8px;
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: var(--font-weight-medium);
+}
+
+.tonePrimary {
+  color: var(--color-primary);
+}
+
+.toneSuccess {
+  color: var(--color-success);
+}
+
+.toneWarning {
+  color: var(--color-warning);
+}
+
+.toneError {
+  color: var(--color-error);
+}
+
+.statusTag.tonePrimary {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+}
+
+.statusTag.toneSuccess {
+  background: var(--color-success-light);
+  border-color: var(--color-success);
+}
+
+.statusTag.toneWarning {
+  background: var(--color-warning-light);
+  border-color: var(--color-warning);
+}
+
+.statusTag.toneError {
+  background: var(--color-error-light);
+  border-color: var(--color-error);
+}
+
+.metricCard :global(.ant-statistic-content),
+.tonePrimary :global(.ant-statistic-content),
+.toneSuccess :global(.ant-statistic-content),
+.toneWarning :global(.ant-statistic-content),
+.toneError :global(.ant-statistic-content) {
+  color: inherit;
+}
+
+.tableActionGroup {
+  gap: 4px;
+}
+
+.tableActionButton {
+  min-width: 32px;
+  min-height: 32px;
+}
+
+.fullWidthInput {
+  width: 100%;
+}
+
+.modalFooterActions {
+  width: 100%;
+  justify-content: flex-end;
+}
+
+@media (max-width: 992px) {
+  .toolbarActions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 768px) {
+  .filterCard {
+    margin-bottom: 16px;
+  }
+
+  .toolbarActions :global(.ant-btn) {
+    min-height: 40px;
+  }
+}

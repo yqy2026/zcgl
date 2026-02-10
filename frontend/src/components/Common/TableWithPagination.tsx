@@ -2,6 +2,7 @@ import React from 'react';
 import { Table, Pagination } from 'antd';
 import type { TableProps } from 'antd/es/table';
 import { ResponsiveTable } from '@/components/Common/ResponsiveTable';
+import styles from './TableWithPagination.module.css';
 
 export interface PaginationState {
   current: number;
@@ -49,6 +50,7 @@ export const TableWithPagination = <T extends object>(props: TableWithPagination
     cardTitle,
     renderCard,
     cardFields,
+    className,
     ...rest
   } = props;
 
@@ -63,18 +65,18 @@ export const TableWithPagination = <T extends object>(props: TableWithPagination
     onPageChange({ current: page, pageSize });
   };
   const tableScroll = rest.scroll ?? { x: 'max-content' };
+  const mergedTableClassName = [styles.tableRoot, className]
+    .filter((tableClassName): tableClassName is string => {
+      return tableClassName != null && tableClassName !== '';
+    })
+    .join(' ');
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 'var(--spacing-md)',
-      }}
-    >
+    <div className={styles.wrapper}>
       {responsive ? (
         <ResponsiveTable
           {...rest}
+          className={mergedTableClassName}
           cardTitle={cardTitle}
           renderCard={renderCard}
           cardFields={cardFields}
@@ -87,6 +89,7 @@ export const TableWithPagination = <T extends object>(props: TableWithPagination
       ) : (
         <Table
           {...rest}
+          className={mergedTableClassName}
           dataSource={rest.dataSource}
           columns={rest.columns}
           rowKey={rest.rowKey}
@@ -96,13 +99,7 @@ export const TableWithPagination = <T extends object>(props: TableWithPagination
       )}
 
       {/* Pagination */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'flex-end',
-          padding: 'var(--spacing-sm) 0',
-        }}
-      >
+      <div className={styles.paginationContainer}>
         <Pagination
           current={paginationState.current}
           pageSize={paginationState.pageSize}

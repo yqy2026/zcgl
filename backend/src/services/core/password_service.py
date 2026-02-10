@@ -143,7 +143,7 @@ class PasswordService:
         # 统一比较为 naive UTC，避免 aware/naive 混用
         if password_last_changed_value.tzinfo is not None:
             password_last_changed_value = password_last_changed_value.astimezone(
-                datetime.UTC
+                UTC
             ).replace(tzinfo=None)
 
         expire_time = password_last_changed_value + timedelta(days=PASSWORD_EXPIRE_DAYS)

@@ -1,0 +1,237 @@
+.statsRow {
+  margin-bottom: 24px;
+}
+
+.statsCard {
+  height: 100%;
+}
+
+.tonePrimary {
+  color: var(--color-primary);
+}
+
+.toneSuccess {
+  color: var(--color-success);
+}
+
+.toneWarning {
+  color: var(--color-warning);
+}
+
+.toneError {
+  color: var(--color-error);
+}
+
+.toneNeutral {
+  color: var(--color-text-secondary);
+}
+
+.statsCard :global(.ant-statistic-title) {
+  color: var(--color-text-secondary);
+}
+
+.statsCard :global(.ant-statistic-content) {
+  color: inherit;
+  font-weight: var(--font-weight-semibold);
+}
+
+.instructionsCard {
+  margin-bottom: 24px;
+}
+
+.sectionIcon {
+  color: var(--color-info);
+}
+
+.instructionStepCard {
+  height: 100%;
+}
+
+.instructionText {
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
+.templateNameCell {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  line-height: 1.35;
+}
+
+.templateIcon {
+  color: var(--color-success);
+  margin-top: 3px;
+}
+
+.templateNameText {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.templateVersion {
+  margin-left: 8px;
+  font-size: 12px;
+}
+
+.statusTag,
+.typeTag {
+  margin-inline-end: 0;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 12px;
+  font-weight: var(--font-weight-medium);
+  line-height: 1.35;
+}
+
+.statusTag {
+  padding-inline: 8px;
+}
+
+.typeTag {
+  padding-inline: 8px;
+}
+
+.statusHint {
+  margin-left: 4px;
+  font-size: 11px;
+  opacity: 0.88;
+}
+
+.statusTag.tonePrimary,
+.typeTag.tonePrimary {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+}
+
+.statusTag.toneSuccess,
+.typeTag.toneSuccess {
+  background: var(--color-success-light);
+  border-color: var(--color-success);
+}
+
+.statusTag.toneWarning,
+.typeTag.toneWarning {
+  background: var(--color-warning-light);
+  border-color: var(--color-warning);
+}
+
+.statusTag.toneError,
+.typeTag.toneError {
+  background: var(--color-error-light);
+  border-color: var(--color-error);
+}
+
+.statusTag.toneNeutral,
+.typeTag.toneNeutral {
+  background: var(--color-bg-secondary);
+  border-color: var(--color-border-light);
+}
+
+.actionGroup {
+  gap: 4px;
+}
+
+.tableActionButton {
+  min-width: 40px;
+  min-height: 40px;
+  border-radius: 8px;
+  color: var(--color-text-secondary);
+  transition: color var(--transition-base), background-color var(--transition-base);
+}
+
+.tableActionButton:hover {
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.tableActionButton:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.actionButton {
+  min-height: 40px;
+}
+
+.tableSummary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.previewContent {
+  padding-bottom: 12px;
+}
+
+.detailItem {
+  display: inline-flex;
+  align-items: center;
+  column-gap: 8px;
+  max-width: 100%;
+}
+
+.detailLabel {
+  color: var(--color-text-secondary);
+}
+
+.descriptionText {
+  color: var(--color-text-primary);
+}
+
+.fieldsContainer {
+  margin-top: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 8px;
+  border-radius: var(--card-radius);
+  border: 1px solid var(--color-border-light);
+  background: var(--color-bg-secondary);
+}
+
+.fieldTag {
+  margin-bottom: 6px;
+}
+
+.previewFooter {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.previewFooterActions {
+  justify-content: center;
+  width: 100%;
+}
+
+.modalActionButton {
+  min-height: 40px;
+}
+
+@media (max-width: 768px) {
+  .tableSummary {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .actionButton {
+    min-height: 44px;
+  }
+
+  .tableActionButton,
+  .modalActionButton {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .detailItem {
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+
+  .fieldsContainer {
+    max-height: 180px;
+  }
+}

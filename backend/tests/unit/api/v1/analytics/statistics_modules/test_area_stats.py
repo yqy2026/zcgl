@@ -33,6 +33,7 @@ def mock_user():
 @pytest.fixture
 def client(mock_db, mock_user):
     """测试客户端"""
+    app.dependency_overrides.clear()
 
     async def override_get_db():
         yield mock_db
@@ -87,7 +88,10 @@ class TestAreaStatistics:
         Then: 返回面积统计数据
         """
         # Arrange - Mock asset_crud.get_multi_with_search
-        with patch("src.crud.asset.asset_crud.get_multi_with_search_async") as mock_get:
+        with patch(
+            "src.services.analytics.area_stats_service.asset_crud.get_multi_with_search_async",
+            new_callable=AsyncMock,
+        ) as mock_get:
             # 创建模拟资产
             mock_assets = []
             for i in range(10):
@@ -117,7 +121,10 @@ class TestAreaStatistics:
         Then: 返回筛选后的面积统计
         """
         # Arrange
-        with patch("src.crud.asset.asset_crud.get_multi_with_search_async") as mock_get:
+        with patch(
+            "src.services.analytics.area_stats_service.asset_crud.get_multi_with_search_async",
+            new_callable=AsyncMock,
+        ) as mock_get:
             mock_get.return_value = ([Mock()] * 5, 5)
 
             # Act

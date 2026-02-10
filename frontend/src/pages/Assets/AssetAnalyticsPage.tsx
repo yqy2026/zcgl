@@ -11,13 +11,13 @@ import { AnalyticsStatsGrid, FinancialStatsGrid } from '@/components/Analytics/A
 import { AnalyticsLineChart, chartDataUtils } from '@/components/Analytics/AnalyticsChart';
 import AnalyticsFilters from '@/components/Analytics/AnalyticsFilters';
 import { createLogger } from '@/utils/logger';
-import { COLORS } from '@/styles/colorMap';
 import { useAssetAnalytics, AnalysisDimension } from '@/hooks/useAssetAnalytics';
 import { useFullscreen } from '@/hooks/useFullscreen';
 import AssetDistributionGrid from '@/components/Analytics/AssetDistributionGrid';
 import AssetDistributionDetails from '@/components/Analytics/AssetDistributionDetails';
 
 const pageLogger = createLogger('AssetAnalytics');
+const CHART_PRIMARY_COLOR = 'var(--color-primary)';
 
 const { Text } = Typography;
 
@@ -40,9 +40,9 @@ const AssetAnalyticsPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div style={{ padding: '24px', textAlign: 'center' }}>
+      <div className={styles.loadingContainer}>
         <Spin size="large" />
-        <div style={{ marginTop: '16px' }}>加载分析数据中...</div>
+        <div className={styles.loadingText}>加载分析数据中...</div>
       </div>
     );
   }
@@ -50,12 +50,13 @@ const AssetAnalyticsPage: React.FC = () => {
   if (error) {
     pageLogger.error('Analytics Error:', error);
     return (
-      <div style={{ padding: '24px' }}>
+      <div className={styles.errorContainer}>
         <Alert
           title="数据加载失败"
           description={`错误详情: ${error instanceof Error ? error.message : '未知错误'}`}
           type="error"
           showIcon
+          className={styles.errorAlert}
         />
       </div>
     );
@@ -64,10 +65,10 @@ const AssetAnalyticsPage: React.FC = () => {
   return (
     <div className={styles.analyticsContainer}>
       {/* 页面标题和操作栏 */}
-      <Card style={{ marginBottom: '24px' }}>
+      <Card className={styles.sectionCard}>
         <Row justify="space-between" align="middle" gutter={[16, 16]}>
           <Col xs={24} sm={12}>
-            <Typography.Title level={3} style={{ margin: 0 }}>
+            <Typography.Title level={3} className={styles.pageTitle}>
               资产分析
             </Typography.Title>
           </Col>
@@ -113,8 +114,8 @@ const AssetAnalyticsPage: React.FC = () => {
       />
 
       {/* 维度切换 */}
-      <Card style={{ marginBottom: '24px' }}>
-        <Space align="center">
+      <Card className={styles.sectionCard}>
+        <Space align="center" wrap>
           <Text strong>分析维度：</Text>
           <Radio.Group
             value={dimension}
@@ -131,15 +132,15 @@ const AssetAnalyticsPage: React.FC = () => {
       </Card>
 
       {hasData === false || analyticsData == null ? (
-        <Card>
-          <Empty description="暂无数据" style={{ padding: '60px 0' }}>
-            <p>数据库中还没有资产数据，请先录入资产信息</p>
+        <Card className={styles.emptyCard}>
+          <Empty description="暂无数据" className={styles.emptyState}>
+            <p className={styles.emptyHintText}>数据库中还没有资产数据，请先录入资产信息</p>
           </Empty>
         </Card>
       ) : (
         <>
           {/* 概览统计卡片 */}
-          <Card title="概览统计" style={{ marginBottom: '24px' }}>
+          <Card title="概览统计" className={styles.sectionCard}>
             <AnalyticsStatsGrid
               data={{
                 total_assets: analyticsData.area_summary.total_assets,
@@ -162,13 +163,13 @@ const AssetAnalyticsPage: React.FC = () => {
           />
 
           {/* 财务指标 */}
-          <Card title="财务指标" style={{ marginBottom: '24px' }}>
+          <Card title="财务指标" className={styles.sectionCard}>
             <FinancialStatsGrid data={analyticsData.financial_summary} loading={loading} />
           </Card>
 
           {/* 出租率趋势 */}
           {analyticsData.occupancy_trend != null && analyticsData.occupancy_trend.length > 0 && (
-            <Card title="出租率趋势" style={{ marginBottom: '24px' }}>
+            <Card title="出租率趋势" className={styles.sectionCard}>
               <AnalyticsLineChart
                 title="出租率趋势"
                 data={chartDataUtils.toTrendData(analyticsData.occupancy_trend)}
@@ -176,7 +177,7 @@ const AssetAnalyticsPage: React.FC = () => {
                   {
                     key: 'occupancy_rate',
                     name: '出租率 (%)',
-                    color: COLORS.primary,
+                    color: CHART_PRIMARY_COLOR,
                   },
                 ]}
                 xAxisKey="date"

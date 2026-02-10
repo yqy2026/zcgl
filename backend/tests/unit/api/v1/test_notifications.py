@@ -48,9 +48,12 @@ def admin_user_in_db(db_session: Session, admin_user):
         id=admin_user.id,
         username=admin_user.username,
         email=admin_user.email,
+        phone="13800009999",
         full_name="Admin User",
         password_hash="test-hash",
         is_active=True,
+        created_by="test-fixture",
+        updated_by="test-fixture",
     )
     db_session.add(user)
     db_session.flush()
@@ -195,8 +198,8 @@ class TestGetNotifications:
         assert "data" in data
         assert "items" in data["data"]
         assert "unread_count" in data["data"]
-        assert "count" in data["data"]
         assert "pagination" in data["data"]
+        assert "total" in data["data"]["pagination"]
 
     def test_get_notifications_with_pagination(
         self, client, admin_user_headers, multiple_notifications
@@ -296,9 +299,7 @@ class TestGetUnreadCount:
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert "unread_count" in data
-        assert "count" in data
         assert data["unread_count"] >= 0
-        assert data["count"] == data["unread_count"]
 
     def test_get_unread_count_zero(
         self, client, admin_user_headers, db_session: Session, admin_user
@@ -515,7 +516,7 @@ class TestNotificationsEdgeCases:
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert len(data["data"]["items"]) == 0
-        assert data["data"]["count"] == 0
+        assert data["data"]["pagination"]["total"] == 0
         assert data["data"]["unread_count"] == 0
 
     def test_large_page_size(self, client, admin_user_headers):

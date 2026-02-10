@@ -19,8 +19,9 @@ import { UserOutlined, EditOutlined, LockOutlined, HistoryOutlined } from '@ant-
 import { COLORS } from '@/styles/colorMap';
 import { useAuth } from '@/hooks/useAuth';
 import { AuthService } from '@/services/authService';
+import PageContainer from '@/components/Common/PageContainer';
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 interface ProfileFormData {
   full_name: string;
@@ -117,23 +118,18 @@ const ProfilePage: React.FC = () => {
 
   if (user == null) {
     return (
-      <div style={{ padding: '24px' }}>
+      <PageContainer title="个人资料">
         <Skeleton loading={true} avatar active>
           <Card>
             <Skeleton paragraph={{ rows: 4 }} />
           </Card>
         </Skeleton>
-      </div>
+      </PageContainer>
     );
   }
 
   return (
-    <div style={{ padding: '24px', background: COLORS.bgTertiary, minHeight: '100vh' }}>
-      {/* 页面标题 */}
-      <Title level={2} style={{ marginBottom: '24px', color: COLORS.primary }}>
-        个人资料
-      </Title>
-
+    <PageContainer title="个人资料" subTitle="查看并维护当前账号信息与安全设置">
       <Row gutter={[24, 24]}>
         {/* 基本信息 */}
         <Col span={24}>
@@ -423,7 +419,7 @@ const ProfilePage: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
-    </div>
+    </PageContainer>
   );
 };
 

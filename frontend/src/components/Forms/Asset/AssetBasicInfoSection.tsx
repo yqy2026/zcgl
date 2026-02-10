@@ -29,8 +29,8 @@ const AssetBasicInfoSection: React.FC = () => {
             <OwnershipSelect
               placeholder="请选择权属方"
               allowClear={false}
-              showCreateButton={true}
-              aria-label="请选择权属方"
+              variant="full"
+              ariaLabel="请选择权属方"
               onChange={(_value, _ownership) => {
                 // When ownership is selected, can auto-fill related info
               }}

@@ -504,7 +504,7 @@ def build_field_evidence(
             for item in value:
                 if not isinstance(item, dict):
                     continue
-                item_evidence = {}
+                item_evidence: dict[str, Any] = {}
                 for item_key, item_value in item.items():
                     snippet = find_evidence_snippet(text, item_value)
                     if snippet is None:

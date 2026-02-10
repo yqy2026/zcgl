@@ -10,8 +10,9 @@ import io
 import json
 import logging
 import os
+from collections.abc import Awaitable
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 import pandas as pd
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -74,12 +75,13 @@ class ExcelExportService:
     ) -> tuple[list[Any], int]:
         sync_search = getattr(asset_crud, "get_multi_with_search", None)
         if callable(sync_search):
-            return sync_search(
+            sync_result = sync_search(
                 db=self.db,
                 search=search,
                 filters=filters,
                 limit=limit,
             )
+            return cast(tuple[list[Any], int], sync_result)
 
         async_search = getattr(asset_crud, "get_multi_with_search_async", None)
         if callable(async_search):
@@ -90,8 +92,9 @@ class ExcelExportService:
                 limit=limit,
             )
             if inspect.isawaitable(result):
-                return await result
-            return result
+                awaited_result = await cast(Awaitable[tuple[list[Any], int]], result)
+                return awaited_result
+            return cast(tuple[list[Any], int], result)
 
         raise AttributeError(
             "asset_crud missing get_multi_with_search/get_multi_with_search_async"

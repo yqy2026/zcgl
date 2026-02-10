@@ -1,0 +1,235 @@
+.nameCell {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.primaryText {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.secondaryText {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.codeTag,
+.statusTag {
+  margin-inline-end: 0;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 12px;
+  font-weight: var(--font-weight-medium);
+  line-height: 1.35;
+}
+
+.codeTag {
+  padding-inline: 8px;
+}
+
+.statusTag {
+  padding-inline: 8px;
+}
+
+.treeStatusTag {
+  margin-left: 8px;
+}
+
+.treeNodeLabel {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.treeNodeTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.statsRow {
+  margin-bottom: 24px;
+}
+
+.statsCard {
+  height: 100%;
+}
+
+.tonePrimary {
+  color: var(--color-primary);
+}
+
+.toneSuccess {
+  color: var(--color-success);
+}
+
+.toneWarning {
+  color: var(--color-warning);
+}
+
+.toneError {
+  color: var(--color-error);
+}
+
+.toneNeutral {
+  color: var(--color-text-secondary);
+}
+
+.tonePrimary :global(.ant-statistic-content),
+.toneSuccess :global(.ant-statistic-content),
+.toneWarning :global(.ant-statistic-content),
+.toneError :global(.ant-statistic-content),
+.toneNeutral :global(.ant-statistic-content) {
+  color: inherit;
+}
+
+.codeTag.tonePrimary,
+.statusTag.tonePrimary {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+}
+
+.codeTag.toneSuccess,
+.statusTag.toneSuccess {
+  background: var(--color-success-light);
+  border-color: var(--color-success);
+}
+
+.statusTag.toneWarning {
+  background: var(--color-warning-light);
+  border-color: var(--color-warning);
+}
+
+.statusTag.toneError {
+  background: var(--color-error-light);
+  border-color: var(--color-error);
+}
+
+.statusTag.toneNeutral {
+  background: var(--color-bg-secondary);
+  border-color: var(--color-border-light);
+}
+
+.historyActionTag {
+  min-width: 52px;
+}
+
+.tabs :global(.ant-tabs-nav) {
+  margin-bottom: 16px;
+}
+
+.toolbarSection {
+  margin-bottom: 16px;
+}
+
+.filterSummary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.toolbarActions {
+  row-gap: 8px;
+}
+
+.searchInput {
+  width: 300px;
+}
+
+.actionButton {
+  min-height: 40px;
+}
+
+.treePanel {
+  background: var(--color-bg-secondary);
+  padding: 16px;
+  border-radius: var(--card-radius);
+}
+
+.fullWidthControl {
+  width: 100%;
+}
+
+.systemFieldsCard {
+  margin-bottom: 16px;
+}
+
+.compactFieldItem {
+  margin-bottom: 12px;
+}
+
+.compactFieldLastItem {
+  margin-bottom: 0;
+}
+
+.formActions {
+  text-align: right;
+  margin-bottom: 0;
+}
+
+.formActionGroup {
+  width: 100%;
+  justify-content: flex-end;
+}
+
+.modalActionButton {
+  min-height: 40px;
+}
+
+.tableActionGroup {
+  gap: 4px;
+}
+
+.tableActionButton {
+  min-width: 40px;
+  min-height: 40px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+  transition: color var(--transition-base), background-color var(--transition-base);
+}
+
+.tableActionButton:hover {
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.tableActionButton:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+@media (max-width: 768px) {
+  .filterSummary {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .searchInput {
+    width: 100%;
+  }
+
+  .actionButton {
+    min-height: 44px;
+  }
+
+  .treePanel {
+    padding: 12px;
+  }
+
+  .tableActionButton {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .modalActionButton {
+    min-height: 44px;
+  }
+}

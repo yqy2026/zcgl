@@ -61,7 +61,18 @@ build-frontend:
 	cd frontend && pnpm build
 
 backend-import:
-	cd backend && $(PYTHON) -c "from src.main import app; print('import ok')"
+	@cd backend && \
+		RESOLVED_DATABASE_URL="$${DATABASE_URL:-$${TEST_DATABASE_URL:-$${INTEGRATION_TEST_DATABASE_URL:-}}}"; \
+		if [ -z "$$RESOLVED_DATABASE_URL" ] && [ -f .env ]; then \
+			RESOLVED_DATABASE_URL="$$(awk -F= '/^DATABASE_URL=/{print substr($$0, index($$0, "=") + 1)}' .env | tail -n 1)"; \
+		fi; \
+		if [ -z "$$RESOLVED_DATABASE_URL" ]; then \
+			echo "[ERROR] backend-import requires DATABASE_URL."; \
+			echo "Set one of: DATABASE_URL / TEST_DATABASE_URL / INTEGRATION_TEST_DATABASE_URL."; \
+			echo "Example: DATABASE_URL=postgresql+psycopg://user:pass@localhost:5432/zcgl make backend-import"; \
+			exit 2; \
+		fi; \
+		DATABASE_URL="$$RESOLVED_DATABASE_URL" $(PYTHON) -c "from src.main import app; print('import ok')"
 
 check: lint-backend lint-frontend type-check test-backend test-frontend build-frontend backend-import
 

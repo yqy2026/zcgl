@@ -199,10 +199,7 @@ class PropertyCertificateService:
         asset_link_id = data.get("asset_link_id")
         if not should_create_new_asset and asset_link_id is not None:
             normalized_asset_link_id = str(asset_link_id).strip()
-            if (
-                normalized_asset_link_id
-                and normalized_asset_link_id not in asset_ids
-            ):
+            if normalized_asset_link_id and normalized_asset_link_id not in asset_ids:
                 asset_ids.append(normalized_asset_link_id)
         if should_create_new_asset:
             asset_ids = []
@@ -232,7 +229,9 @@ class PropertyCertificateService:
 
             certificate_create_data = {
                 "certificate_number": certificate_number,
-                "certificate_type": str(extracted_data.get("certificate_type") or "other"),
+                "certificate_type": str(
+                    extracted_data.get("certificate_type") or "other"
+                ),
                 "extraction_confidence": extraction_confidence,
                 "extraction_source": "llm",
                 "is_verified": False,
@@ -272,12 +271,17 @@ class PropertyCertificateService:
 
             owner_ids: list[str] = []
             if owner_create_data_list:
+                owner_create_objects: list[PropertyOwnerCreate | dict[str, Any]] = list(
+                    owner_create_data_list
+                )
                 owners = await property_owner_crud.create_multi_async(
-                    self.db, objects_in=owner_create_data_list, commit=False
+                    self.db, objects_in=owner_create_objects, commit=False
                 )
                 owner_ids = [owner.id for owner in owners if owner.id is not None]
 
-            certificate_create = PropertyCertificateCreate(**certificate_create_data)
+            certificate_create = PropertyCertificateCreate.model_validate(
+                certificate_create_data
+            )
             certificate = await property_certificate_crud.create_with_owners_async(
                 self.db,
                 obj_in=certificate_create,
@@ -352,14 +356,18 @@ class PropertyCertificateService:
             for asset in await self._fetch_assets_by_field(
                 "address", address_raw, limit=candidate_limit
             ):
-                entry = candidates.setdefault(asset.id, {"asset": asset, "fields": set()})
+                entry = candidates.setdefault(
+                    asset.id, {"asset": asset, "fields": set()}
+                )
                 entry["fields"].add("address")
 
         if owner_name:
             for asset in await self._fetch_assets_by_field(
                 "ownership_entity", owner_raw, limit=candidate_limit
             ):
-                entry = candidates.setdefault(asset.id, {"asset": asset, "fields": set()})
+                entry = candidates.setdefault(
+                    asset.id, {"asset": asset, "fields": set()}
+                )
                 entry["fields"].add("ownership_entity")
 
         matches: list[dict[str, Any]] = []
@@ -411,10 +419,14 @@ class PropertyCertificateService:
     ) -> list[Asset]:
         """
         根据字段值获取资产列表（处理加密字段）
+
+        安全说明：自动过滤已删除资产，避免泄露已删除数据
         """
         candidates = self._build_value_candidates(raw_value)
         if not candidates:
             return []
+
+        not_deleted = or_(Asset.data_status.is_(None), Asset.data_status != "已删除")
 
         if field_name == "ownership_entity":
             query_value = candidates[0]
@@ -422,6 +434,7 @@ class PropertyCertificateService:
                 select(Asset)
                 .join(Ownership, Asset.ownership_id == Ownership.id, isouter=True)
                 .where(Ownership.name.ilike(f"%{query_value}%"))
+                .where(not_deleted)
             )
             result = await self.db.execute(stmt.limit(limit))
             assets = list(result.scalars().all())
@@ -450,11 +463,15 @@ class PropertyCertificateService:
                         conditions.append(model_field == encrypted)
             if not conditions:
                 return []
-            stmt = select(Asset).where(or_(*conditions))
+            stmt = select(Asset).where(or_(*conditions)).where(not_deleted)
         else:
             used_blind_index = False
             query_value = candidates[0]
-            stmt = select(Asset).where(model_field.ilike(f"%{query_value}%"))
+            stmt = (
+                select(Asset)
+                .where(model_field.ilike(f"%{query_value}%"))
+                .where(not_deleted)
+            )
 
         result = await self.db.execute(stmt.limit(limit))
         assets = list(result.scalars().all())

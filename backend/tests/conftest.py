@@ -94,21 +94,34 @@ def pytest_collection_modifyitems(items, config):
 
     这个钩子在测试收集完成后、测试执行前被调用
     """
+    has_integration_db_url = bool(
+        os.getenv("INTEGRATION_TEST_DATABASE_URL")
+        or os.getenv("TEST_DATABASE_URL")
+        or os.getenv("TEST_USE_POSTGRES") == "true"
+    )
+
     for item in items:
         # 获取测试文件的路径
         test_path = str(item.fspath)
+        existing_marks = [mark.name for mark in item.iter_markers()]
 
         # 根据目录自动添加标记
         if "/tests/unit/" in test_path or "\\tests\\unit\\" in test_path:
-            if "unit" not in [mark.name for mark in item.iter_markers()]:
+            if "unit" not in existing_marks:
                 item.add_marker(pytest.mark.unit)
         elif (
             "/tests/integration/" in test_path or "\\tests\\integration\\" in test_path
         ):
-            if "integration" not in [mark.name for mark in item.iter_markers()]:
+            if "integration" not in existing_marks:
                 item.add_marker(pytest.mark.integration)
+            if not has_integration_db_url:
+                item.add_marker(
+                    pytest.mark.skip(
+                        reason="INTEGRATION_TEST_DATABASE_URL or TEST_DATABASE_URL is required"
+                    )
+                )
         elif "/tests/api/" in test_path or "\\tests\\api\\" in test_path:
-            if "api" not in [mark.name for mark in item.iter_markers()]:
+            if "api" not in existing_marks:
                 item.add_marker(pytest.mark.api)
 
 
@@ -264,6 +277,16 @@ def reset_encryption_key(monkeypatch):
     monkeypatch.setenv("DATA_ENCRYPTION_KEY", DEFAULT_TEST_DATA_ENCRYPTION_KEY)
     config.settings.DATA_ENCRYPTION_KEY = DEFAULT_TEST_DATA_ENCRYPTION_KEY
     encryption_module.settings.DATA_ENCRYPTION_KEY = DEFAULT_TEST_DATA_ENCRYPTION_KEY
+
+
+@pytest.fixture(autouse=True)
+def reset_token_blacklist_state():
+    """Reset in-memory token blacklist between tests to avoid cross-test pollution."""
+    from src.security.token_blacklist import blacklist_manager
+
+    blacklist_manager.clear_blacklist()
+    yield
+    blacklist_manager.clear_blacklist()
 
 
 # =============================================================================

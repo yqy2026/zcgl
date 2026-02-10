@@ -44,8 +44,8 @@ class TestQueryBuilderSecurityIntegration:
 
         # Area fields are allowed for filtering
         filters = {
-            "min_actual_property_area": "100",
-            "max_actual_property_area": "500",
+            "min_actual_property_area": 100,
+            "max_actual_property_area": 500,
         }
 
         query = qb.build_query(filters=filters)
@@ -158,18 +158,17 @@ class TestQueryBuilderSecurityIntegration:
             result = db_session.execute(query).scalars().all()
             assert isinstance(result, list)
 
-    def test_financial_sort_allowed(self, db_session):
-        """Sorting by financial fields should be allowed (for display)."""
+    def test_financial_sort_blocked(self, db_session):
+        """Sorting by敏感财务字段应被阻止。"""
         qb = QueryBuilder(Asset)
 
-        # Can sort by rent amounts
-        query = qb.build_query(sort_by="monthly_rent", sort_desc=True)
-        result = db_session.execute(query).scalars().all()
-        assert isinstance(result, list)
+        with pytest.raises(InvalidRequestError) as exc_info:
+            qb.build_query(sort_by="monthly_rent", sort_desc=True)
+        assert "monthly_rent" in str(exc_info.value)
 
-        query = qb.build_query(sort_by="deposit", sort_desc=True)
-        result = db_session.execute(query).scalars().all()
-        assert isinstance(result, list)
+        with pytest.raises(InvalidRequestError) as exc_info:
+            qb.build_query(sort_by="deposit", sort_desc=True)
+        assert "deposit" in str(exc_info.value)
 
     def test_blocked_sort_field_raises_error(self, db_session):
         """Blocked sort fields should raise InvalidRequestError."""
@@ -206,17 +205,16 @@ class TestQueryBuilderSecurityIntegration:
         assert isinstance(result, list)
 
     def test_blocked_sort_in_combined_query(self, db_session):
-        """Blocked sort should raise error even with safe filters."""
+        """即使搭配安全筛选，受限排序字段也必须报错。"""
         qb = QueryBuilder(Asset)
 
-        # Safe filter + safe sort (monthly_rent is allowed for sorting, just not filtering)
-        query = qb.build_query(
-            filters={"ownership_status": "已确权"},
-            sort_by="monthly_rent",  # Allowed for sorting (display), blocked for filtering (discovery)
-            sort_desc=True,
-        )
-        result = db_session.execute(query).scalars().all()
-        assert isinstance(result, list)
+        with pytest.raises(InvalidRequestError) as exc_info:
+            qb.build_query(
+                filters={"ownership_status": "已确权"},
+                sort_by="monthly_rent",
+                sort_desc=True,
+            )
+        assert "monthly_rent" in str(exc_info.value)
 
         # Now test with a truly blocked field (manager_name)
         with pytest.raises(InvalidRequestError) as exc_info:

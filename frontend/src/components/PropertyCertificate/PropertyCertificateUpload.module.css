@@ -1,0 +1,27 @@
+.uploadCard {
+  margin-bottom: 0;
+}
+
+.uploadStack {
+  width: 100%;
+}
+
+.infoAlert {
+  margin-bottom: 0;
+}
+
+.dragger :global(.ant-upload-drag-icon) {
+  margin-bottom: 8px;
+}
+
+.draggerIcon {
+  color: var(--color-primary);
+}
+
+.draggerHint {
+  color: var(--color-text-secondary);
+}
+
+.processingAlert {
+  margin-top: 0;
+}

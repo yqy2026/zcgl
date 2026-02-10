@@ -23,6 +23,7 @@ Testing Approach:
 
 import asyncio
 from datetime import UTC, datetime
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import jwt
@@ -327,6 +328,113 @@ class TestLogin:
             "testuser", "password123"
         )
         mock_auth_service.create_tokens.assert_called_once()
+
+    @patch("src.api.v1.auth.auth_modules.authentication.AuditLogCRUD")
+    @patch("src.api.v1.auth.auth_modules.authentication.UserCRUD")
+    @patch("src.api.v1.auth.auth_modules.authentication.AsyncAuthenticationService")
+    @patch("src.api.v1.auth.auth_modules.authentication.AsyncSessionService")
+    def test_login_deduplicates_permissions_without_hash_error(
+        self,
+        mock_session_service_class,
+        mock_auth_service_class,
+        mock_user_crud_class,
+        mock_audit_crud_class,
+        mock_request,
+        mock_db,
+    ):
+        """Test login permission dedupe works without hashing Pydantic models."""
+        from src.api.v1.auth.auth_modules.authentication import login
+        from src.schemas.auth import LoginRequest
+
+        credentials = LoginRequest(username="testuser", password="password123")
+
+        mock_user = MagicMock()
+        mock_user.id = "user-id"
+        mock_user.username = "testuser"
+        mock_user.email = "test@example.com"
+        mock_user.phone = "13800009999"
+        mock_user.full_name = "Test User"
+        mock_user.is_active = True
+        mock_user.is_locked = False
+        mock_user.last_login_at = None
+        mock_user.default_organization_id = None
+        now = datetime.now(UTC)
+        mock_user.created_at = now
+        mock_user.updated_at = now
+
+        mock_tokens = MagicMock()
+        mock_tokens.access_token = "access_token"
+        mock_tokens.refresh_token = "refresh_token"
+        mock_tokens.token_type = "bearer"
+        mock_tokens.expires_in = 3600
+        mock_tokens.session_id = "session-id"
+
+        mock_auth_service = MagicMock()
+        mock_auth_service.authenticate_user = AsyncMock(return_value=mock_user)
+        mock_auth_service.create_tokens.return_value = mock_tokens
+        mock_auth_service_class.return_value = mock_auth_service
+
+        mock_session_service = MagicMock()
+        mock_session_service.create_user_session = AsyncMock(return_value=None)
+        mock_session_service_class.return_value = mock_session_service
+
+        mock_audit_crud = MagicMock()
+        mock_audit_crud.create_async = AsyncMock()
+        mock_audit_crud_class.return_value = mock_audit_crud
+
+        permissions_summary = SimpleNamespace(
+            permissions=[
+                SimpleNamespace(
+                    resource="asset",
+                    action="read",
+                    description="查看资产",
+                ),
+                SimpleNamespace(
+                    resource="asset",
+                    action="read",
+                    description="查看资产",
+                ),
+                SimpleNamespace(
+                    resource="asset",
+                    action="create",
+                    description="创建资产",
+                ),
+            ]
+        )
+
+        with patch(
+            "src.api.v1.auth.auth_modules.authentication.RBACService"
+        ) as mock_rbac_class:
+            mock_rbac_service = MagicMock()
+            mock_rbac_service.get_user_role_summary = AsyncMock(
+                return_value=USER_ROLE_SUMMARY
+            )
+            mock_rbac_service.get_user_permissions_summary = AsyncMock(
+                return_value=permissions_summary
+            )
+            mock_rbac_class.return_value = mock_rbac_service
+
+            result = asyncio.run(
+                login(
+                    request=mock_request,
+                    credentials=credentials,
+                    response=Response(),
+                    db=mock_db,
+                )
+            )
+
+        permissions = result["permissions"]
+        assert len(permissions) == 2
+        permission_pairs = {
+            (perm["resource"], perm["action"])
+            if isinstance(perm, dict)
+            else (perm.resource, perm.action)
+            for perm in permissions
+        }
+        assert permission_pairs == {
+            ("asset", "read"),
+            ("asset", "create"),
+        }
 
     @patch("src.api.v1.auth.auth_modules.authentication.AuditLogCRUD")
     @patch("src.api.v1.auth.auth_modules.authentication.UserCRUD")

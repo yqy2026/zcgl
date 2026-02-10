@@ -117,7 +117,7 @@ const PDFImportPage: React.FC = () => {
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          height: '100vh',
+          height: '100%',
           flexDirection: 'column',
           gap: 16,
         }}
@@ -133,7 +133,7 @@ const PDFImportPage: React.FC = () => {
       className={styles['pdf-import-page']}
       style={{
         animation: 'fadeIn 0.3s ease-in-out',
-        minHeight: '100vh',
+        minHeight: '100%',
       }}
     >
       {/* 页面头部 */}

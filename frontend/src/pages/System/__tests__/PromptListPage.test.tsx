@@ -99,6 +99,15 @@ const renderPromptListPage = async () => {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.spyOn(Modal, 'info').mockImplementation(
+    () =>
+      ({
+        destroy: vi.fn(),
+        update: vi.fn(),
+      }) as never
+  );
+  vi.spyOn(message, 'success').mockImplementation(vi.fn());
+  vi.spyOn(message, 'error').mockImplementation(vi.fn());
   vi.mocked(llmPromptService.getPrompts).mockResolvedValue({ items: [], total: 0 });
   vi.mocked(llmPromptService.getStatistics).mockResolvedValue(createMockStatistics());
 });
@@ -112,9 +121,9 @@ describe('PromptListPage - 基础渲染', () => {
 
   it('应该渲染筛选器', async () => {
     await renderPromptListPage();
-    expect(screen.getByText('文档类型')).toBeInTheDocument();
-    expect(screen.getByText('提供商')).toBeInTheDocument();
-    expect(screen.getByText('状态')).toBeInTheDocument();
+    expect(screen.getAllByText('文档类型').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('提供商').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('状态').length).toBeGreaterThan(0);
   });
 });
 
@@ -149,8 +158,7 @@ describe('PromptListPage - Prompt操作', () => {
       expect(llmPromptService.getPrompts).toHaveBeenCalled();
     });
 
-    const activateButtons = screen.getAllByText('激活');
-    fireEvent.click(activateButtons[0]);
+    fireEvent.click(screen.getByRole('button', { name: '激活' }));
 
     await waitFor(() => {
       expect(llmPromptService.activatePrompt).toHaveBeenCalledWith('prompt-001');
@@ -179,8 +187,7 @@ describe('PromptListPage - Prompt操作', () => {
       expect(llmPromptService.getPrompts).toHaveBeenCalled();
     });
 
-    const historyButtons = screen.getAllByText('版本历史');
-    fireEvent.click(historyButtons[0]);
+    fireEvent.click(screen.getByRole('button', { name: '版本历史' }));
 
     await waitFor(() => {
       expect(Modal.info).toHaveBeenCalled();

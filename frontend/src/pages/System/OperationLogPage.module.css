@@ -1,0 +1,266 @@
+.statsRow {
+  margin-bottom: 24px;
+}
+
+.statsCard {
+  height: 100%;
+}
+
+.auditCard {
+  margin-bottom: 0;
+}
+
+.tonePrimary {
+  color: var(--color-primary);
+}
+
+.toneSuccess {
+  color: var(--color-success);
+}
+
+.toneWarning {
+  color: var(--color-warning);
+}
+
+.toneError {
+  color: var(--color-error);
+}
+
+.toneNeutral {
+  color: var(--color-text-secondary);
+}
+
+.tonePrimary :global(.ant-statistic-content),
+.toneSuccess :global(.ant-statistic-content),
+.toneWarning :global(.ant-statistic-content),
+.toneError :global(.ant-statistic-content),
+.toneNeutral :global(.ant-statistic-content) {
+  color: inherit;
+}
+
+.filtersSection {
+  margin-bottom: 16px;
+}
+
+.filterSummary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.fullWidthControl {
+  width: 100%;
+}
+
+.toolbarButton {
+  min-height: 40px;
+}
+
+.statusTag {
+  margin-inline-end: 0;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  padding-inline: 8px;
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: var(--font-weight-medium);
+}
+
+.actionTag,
+.moduleTag,
+.methodTag {
+  max-width: 100%;
+}
+
+.statusTag.tonePrimary {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+}
+
+.statusTag.toneSuccess {
+  background: var(--color-success-light);
+  border-color: var(--color-success);
+}
+
+.statusTag.toneWarning {
+  background: var(--color-warning-light);
+  border-color: var(--color-warning);
+}
+
+.statusTag.toneError {
+  background: var(--color-error-light);
+  border-color: var(--color-error);
+}
+
+.statusTag.toneNeutral {
+  background: var(--color-bg-tertiary);
+  border-color: var(--color-border);
+}
+
+.methodTag {
+  text-transform: uppercase;
+}
+
+.userCell,
+.resourceCell {
+  line-height: 1.35;
+}
+
+.primaryText {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.secondaryText {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.responseTime {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: var(--font-weight-medium);
+}
+
+.responseTimeValue {
+  font-weight: var(--font-weight-semibold);
+}
+
+.responseTimeLabel {
+  font-size: 12px;
+  line-height: 1;
+}
+
+.jsonBlock {
+  background: var(--color-bg-tertiary);
+  padding: 8px;
+  border-radius: var(--card-radius);
+  font-size: 12px;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.detailDrawer :global(.ant-drawer-body) {
+  padding-top: 8px;
+}
+
+.detailContent {
+  padding-bottom: 12px;
+}
+
+.requestUrl {
+  display: inline-block;
+  background: var(--color-bg-tertiary);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.requestMetaRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ipText {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.ipValue {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.responseMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.responseMetaRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.errorMessage {
+  color: var(--color-error);
+  background: var(--color-error-light);
+  padding: 8px;
+  border-radius: 4px;
+}
+
+.userAgent {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  word-break: break-all;
+}
+
+.detailsObject {
+  background: var(--color-bg-tertiary);
+  padding: 12px;
+  border-radius: var(--card-radius);
+  font-size: 12px;
+  overflow: auto;
+  max-height: 300px;
+}
+
+.detailsRow {
+  margin-bottom: 4px;
+}
+
+.detailsRow:last-child {
+  margin-bottom: 0;
+}
+
+.detailKey {
+  margin-right: 8px;
+}
+
+.rowActionButton {
+  min-width: 40px;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: var(--color-text-secondary);
+  transition: background-color var(--transition-base), color var(--transition-base);
+}
+
+.rowActionButton:hover {
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.rowActionButton:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+@media (max-width: 768px) {
+  .filterSummary {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .toolbarButton {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .rowActionButton {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}

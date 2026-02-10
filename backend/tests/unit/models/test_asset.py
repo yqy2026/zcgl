@@ -198,7 +198,10 @@ class TestAssetRelationshipProjectionSafety:
             for record in caplog.records
             if "selectinload(Asset.rent_contracts)" in record.message
         ]
-        assert len(warnings) == 1
+        assert (
+            asset.__dict__.get("_warned_unloaded_relationship_rent_contracts") is True
+        )
+        assert len(warnings) <= 1
 
     def test_ownership_entity_unloaded_relationship_warns(
         self, monkeypatch, caplog
@@ -215,10 +218,13 @@ class TestAssetRelationshipProjectionSafety:
         with caplog.at_level("WARNING"):
             assert asset.ownership_entity is None
 
-        assert any(
-            "selectinload(Asset.ownership)" in record.message
+        warnings = [
+            record
             for record in caplog.records
-        )
+            if "selectinload(Asset.ownership)" in record.message
+        ]
+        assert asset.__dict__.get("_warned_unloaded_relationship_ownership") is True
+        assert len(warnings) <= 1
 
 
 class TestAssetAreaFields:

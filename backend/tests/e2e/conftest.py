@@ -9,6 +9,7 @@ This conftest.py is specifically for end-to-end tests and ensures:
 
 import os
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
 from sqlalchemy import create_engine
@@ -56,6 +57,7 @@ def create_test_user(
     password: str,
     full_name: str,
     role: str = "user",
+    phone: str | None = None,
 ):
     """
     Helper function to create a test user in the database.
@@ -72,9 +74,16 @@ def create_test_user(
     Base.metadata.create_all(bind=db_session.bind)
 
     password_service = PasswordService()
+    resolved_phone = phone or f"13{uuid4().int % 10**9:09d}"
+    resolved_email = email
+    existing_email_user = db_session.query(User).filter(User.email == email).first()
+    if existing_email_user is not None:
+        local, domain = email.split("@", 1)
+        resolved_email = f"{local}+{uuid4().hex[:8]}@{domain}"
     user = User(
         username=username,
-        email=email,
+        email=resolved_email,
+        phone=resolved_phone,
         full_name=full_name,
         password_hash=password_service.get_password_hash(password),
         is_active=True,

@@ -27,7 +27,7 @@ class SystemSettingsService:
         user_agent: str,
         request_body: str,
     ) -> None:
-        audit_crud = AuditLogCRUD()
+        audit_crud: Any = AuditLogCRUD()
         audit_crud.create(
             db,
             user_id=user_id,

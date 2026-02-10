@@ -145,7 +145,7 @@
 - ✅ [API总览](docs/integrations/api-overview.md) - API架构和认证规范
 - ✅ [认证API](docs/integrations/auth-api.md) - 登录、注册、权限管理
 - ✅ [文档中心](README.md) - 文档导航和快速定位
-- ✅ [V2发布说明](docs/v2-release-notes.md) - 合同v2功能更新说明
+- ✅ [V2发布说明（归档）](docs/archive/releases/v2-release-notes-2026-01.md) - 合同v2功能更新说明
 
 ### 计划中文档 (10+个)
 - 📝 快速开始指南
@@ -208,7 +208,7 @@
 - 📊 更新：后端服务子目录从 7 更新到 19
 - 📊 更新：前端组件数量统计 (114+ TSX 文件)
 - 📝 更新：文档统计从 8 增加到 9 个文档
-- ✨ 新增：[V2发布说明](docs/v2-release-notes.md)
+- ✨ 新增：[V2发布说明](docs/archive/releases/v2-release-notes-2026-01.md)
 
 ### 2025-12-23 v1.2.0 - 立即行动项完成
 - ✨ 新增：[前端开发指南](docs/guides/frontend.md) - React 开发完整教程

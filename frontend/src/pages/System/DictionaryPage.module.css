@@ -1,0 +1,151 @@
+.typeNameCell {
+  line-height: 1.35;
+}
+
+.typeName {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.typeCode {
+  margin-top: 2px;
+  font-size: 12px;
+}
+
+.codeTag {
+  margin-inline-end: 0;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  padding-inline: 8px;
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: var(--font-weight-medium);
+}
+
+.typeCell {
+  line-height: 1.35;
+}
+
+.typeHint {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.refreshButton {
+  min-height: 36px;
+}
+
+.filtersRow {
+  margin-bottom: 24px;
+}
+
+.fullWidthControl {
+  width: 100%;
+}
+
+.viewDetailButton {
+  padding-inline: 6px;
+  min-height: 32px;
+}
+
+.typeTotal {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  text-align: right;
+}
+
+.typeTotalText {
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+
+.typeInfoBlock {
+  padding: 12px;
+  background: var(--color-bg-tertiary);
+  border-radius: var(--card-radius);
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  line-height: 1.55;
+}
+
+.statusToggle {
+  align-items: center;
+}
+
+.statusText {
+  font-size: 12px;
+  font-weight: var(--font-weight-medium);
+}
+
+.rowActions {
+  gap: 6px;
+}
+
+.rowActionButton {
+  min-height: 32px;
+  padding-inline: 8px;
+}
+
+.dangerActionButton {
+  color: var(--color-error) !important;
+}
+
+.modalActionButton {
+  min-height: 36px;
+}
+
+.tonePrimary {
+  color: var(--color-primary);
+}
+
+.toneSuccess {
+  color: var(--color-success);
+}
+
+.toneWarning {
+  color: var(--color-warning);
+}
+
+.toneError {
+  color: var(--color-error);
+}
+
+.codeTag.tonePrimary {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+}
+
+.codeTag.toneSuccess {
+  background: var(--color-success-light);
+  border-color: var(--color-success);
+}
+
+.codeTag.toneWarning {
+  background: var(--color-warning-light);
+  border-color: var(--color-warning);
+}
+
+.codeTag.toneError {
+  background: var(--color-error-light);
+  border-color: var(--color-error);
+}
+
+@media (max-width: 768px) {
+  .refreshButton {
+    min-height: 40px;
+  }
+
+  .viewDetailButton,
+  .rowActionButton,
+  .modalActionButton {
+    min-height: 40px;
+  }
+
+  .typeTotal {
+    justify-content: flex-start;
+    text-align: left;
+  }
+}

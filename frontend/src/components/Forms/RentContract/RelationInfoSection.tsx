@@ -1,6 +1,8 @@
 import React from 'react';
 import { Form, Select, Row, Col, Card } from 'antd';
+import OwnershipSelect from '@/components/Ownership/OwnershipSelect';
 import { useRentContractFormContext } from './RentContractFormContext';
+import styles from './RelationInfoSection.module.css';
 
 const { Option } = Select;
 
@@ -9,10 +11,10 @@ const { Option } = Select;
  * Fields: asset, ownership
  */
 const RelationInfoSection: React.FC = () => {
-  const { assets, ownerships, loadingAssets, loadingOwnerships } = useRentContractFormContext();
+  const { assets, loadingAssets } = useRentContractFormContext();
 
   return (
-    <Card title="关联信息" size="small" style={{ marginBottom: 16 }}>
+    <Card title="关联信息" size="small" className={styles.relationCard}>
       <Row gutter={16}>
         <Col span={12}>
           <Form.Item
@@ -46,23 +48,11 @@ const RelationInfoSection: React.FC = () => {
             name="ownership_id"
             rules={[{ required: true, message: '请选择权属方' }]}
           >
-            <Select
-              showSearch
+            <OwnershipSelect
               placeholder="选择权属方"
-              loading={loadingOwnerships}
-              optionFilterProp="children"
-              filterOption={(input, option) =>
-                String(option?.children || '')
-                  .toLowerCase()
-                  .includes(input.toLowerCase())
-              }
-            >
-              {(ownerships.length > 0 ? ownerships : []).map(ownership => (
-                <Option key={ownership.id} value={ownership.id}>
-                  {ownership.name}
-                </Option>
-              ))}
-            </Select>
+              variant="compact"
+              ariaLabel="租赁合同权属方选择"
+            />
           </Form.Item>
         </Col>
       </Row>

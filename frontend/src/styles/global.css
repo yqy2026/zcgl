@@ -106,6 +106,68 @@ select:focus-visible {
   background-color: var(--color-primary-light) !important;
 }
 
+/* Unified card rhythm */
+.ant-card:not(.ant-card-small) {
+  border-radius: var(--card-radius);
+}
+
+.ant-card:not(.ant-card-small) .ant-card-head {
+  min-height: 52px;
+  padding: 0 var(--card-padding-md);
+}
+
+.ant-card:not(.ant-card-small) .ant-card-head-title {
+  padding: var(--spacing-md) 0;
+  font-weight: var(--font-weight-semibold);
+}
+
+.ant-card:not(.ant-card-small) .ant-card-extra {
+  padding: var(--spacing-sm) 0;
+}
+
+.ant-card:not(.ant-card-small) .ant-card-body {
+  padding: var(--card-padding-md);
+}
+
+/* Unified control density */
+.ant-btn {
+  min-height: var(--button-height-md);
+  border-radius: var(--button-radius);
+  font-weight: var(--font-weight-medium);
+}
+
+.ant-btn.ant-btn-sm {
+  min-height: var(--button-height-sm);
+}
+
+.ant-btn.ant-btn-lg {
+  min-height: var(--button-height-lg);
+}
+
+.ant-btn.ant-btn-icon-only {
+  width: var(--button-height-md);
+  min-width: var(--button-height-md);
+}
+
+.ant-input,
+.ant-input-affix-wrapper,
+.ant-picker,
+.ant-select-selector,
+.ant-input-number {
+  border-radius: var(--form-input-radius);
+}
+
+/* Unified table rhythm */
+.ant-table-thead > tr > th {
+  padding-top: var(--table-cell-padding-sm);
+  padding-bottom: var(--table-cell-padding-sm);
+}
+
+.ant-table-tbody > tr > td {
+  padding-top: var(--table-cell-padding-sm);
+  padding-bottom: var(--table-cell-padding-sm);
+}
+
 /* Skip to main content link (for keyboard users) */
 .skip-to-content {
   position: absolute;

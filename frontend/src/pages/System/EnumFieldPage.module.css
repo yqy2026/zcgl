@@ -1,0 +1,183 @@
+.statsRow {
+  margin-bottom: 24px;
+}
+
+.statsCard {
+  height: 100%;
+}
+
+.statusTag {
+  margin-inline-end: 0;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  padding-inline: 8px;
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: var(--font-weight-medium);
+}
+
+.primaryStatsCard :global(.ant-statistic-content) {
+  color: var(--color-primary);
+}
+
+.activeStatsCard :global(.ant-statistic-content) {
+  color: var(--color-success);
+}
+
+.warningStatsCard :global(.ant-statistic-content) {
+  color: var(--color-warning);
+}
+
+.tabs :global(.ant-tabs-nav) {
+  margin-bottom: 16px;
+}
+
+.toolbarSection {
+  margin-bottom: 16px;
+}
+
+.typeToolbar {
+  width: 100%;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.typeSearch {
+  width: 320px;
+}
+
+.typeSummaryText {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.valueToolbar {
+  row-gap: 8px;
+}
+
+.typeSelect {
+  width: 220px;
+}
+
+.actionButton {
+  min-height: 36px;
+}
+
+.typeNameCell {
+  align-items: center;
+  gap: 8px;
+}
+
+.typeNameText {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.codeValue {
+  font-size: 12px;
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.configTagGroup {
+  row-gap: 6px;
+}
+
+.actionGroup {
+  row-gap: 6px;
+}
+
+.tableActionButton {
+  min-width: 32px;
+  min-height: 32px;
+}
+
+.statusGroup {
+  align-items: center;
+}
+
+.statusText {
+  font-size: 12px;
+  font-weight: var(--font-weight-medium);
+}
+
+.colorCell {
+  align-items: center;
+  gap: 8px;
+}
+
+.colorPreview {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border-radius: 2px;
+  border: 1px solid var(--color-border);
+  background: var(--preview-color);
+}
+
+.colorValue {
+  color: var(--color-text-secondary);
+}
+
+.modalActionButton {
+  min-height: 36px;
+}
+
+.tonePrimary {
+  color: var(--color-primary);
+}
+
+.toneSuccess {
+  color: var(--color-success);
+}
+
+.toneWarning {
+  color: var(--color-warning);
+}
+
+.toneError {
+  color: var(--color-error);
+}
+
+.statusTag.tonePrimary {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+}
+
+.statusTag.toneSuccess {
+  background: var(--color-success-light);
+  border-color: var(--color-success);
+}
+
+.statusTag.toneWarning {
+  background: var(--color-warning-light);
+  border-color: var(--color-warning);
+}
+
+.statusTag.toneError {
+  background: var(--color-error-light);
+  border-color: var(--color-error);
+}
+
+@media (max-width: 768px) {
+  .typeToolbar {
+    align-items: stretch;
+    justify-content: flex-start;
+  }
+
+  .typeSearch {
+    width: 100%;
+  }
+
+  .typeSelect {
+    width: 100%;
+  }
+
+  .actionButton,
+  .tableActionButton,
+  .modalActionButton {
+    min-height: 40px;
+  }
+}

@@ -28,6 +28,7 @@ def reset_encryption_modules(monkeypatch):
     """
     # Remove DATA_ENCRYPTION_KEY from environment
     monkeypatch.delenv("DATA_ENCRYPTION_KEY", raising=False)
+    monkeypatch.delenv("REQUIRE_ENCRYPTION", raising=False)
 
     # Clear cached modules to force reload
     import sys
@@ -182,6 +183,8 @@ class TestEncryptionKeyManager:
         # Use monkeypatch to persist the empty value for the entire test
         monkeypatch.setattr(config.settings, "DATA_ENCRYPTION_KEY", "")
         monkeypatch.setattr(encryption_module.settings, "DATA_ENCRYPTION_KEY", "")
+        monkeypatch.setattr(config.settings, "REQUIRE_ENCRYPTION", False)
+        monkeypatch.setattr(encryption_module.settings, "REQUIRE_ENCRYPTION", False)
 
         manager = EncryptionKeyManager()
 
@@ -229,6 +232,7 @@ def reset_encryption_modules_for_field(monkeypatch):
     """
     # Remove DATA_ENCRYPTION_KEY from environment
     monkeypatch.delenv("DATA_ENCRYPTION_KEY", raising=False)
+    monkeypatch.delenv("REQUIRE_ENCRYPTION", raising=False)
 
     # Clear cached modules to force reload
     import sys
@@ -302,6 +306,8 @@ class TestFieldEncryptor:
         # Use monkeypatch to persist the empty value for the entire test
         monkeypatch.setattr(config.settings, "DATA_ENCRYPTION_KEY", "")
         monkeypatch.setattr(encryption_module.settings, "DATA_ENCRYPTION_KEY", "")
+        monkeypatch.setattr(config.settings, "REQUIRE_ENCRYPTION", False)
+        monkeypatch.setattr(encryption_module.settings, "REQUIRE_ENCRYPTION", False)
 
         manager = EncryptionKeyManager()
         return manager

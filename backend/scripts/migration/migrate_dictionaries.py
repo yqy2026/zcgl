@@ -14,8 +14,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from sqlalchemy import select
 
 from src.database import async_session_scope, create_tables
-from src.models.system_dictionary import SystemDictionary
 from src.models.enum_field import EnumFieldType, EnumFieldValue
+from src.models.system_dictionary import SystemDictionary
 
 
 async def migrate_system_dictionaries():

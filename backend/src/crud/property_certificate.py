@@ -168,16 +168,16 @@ class CRUDPropertyCertificate(
         await db.flush()
 
         if owner_ids:
-            result = await db.execute(
+            owner_result = await db.execute(
                 select(PropertyOwner).where(PropertyOwner.id.in_(owner_ids))
             )
-            owners = list(result.scalars().all())
+            owners: list[PropertyOwner] = list(owner_result.scalars().all())
             if owners:
                 db_obj.owners.extend(owners)
 
         if asset_ids:
-            result = await db.execute(select(Asset).where(Asset.id.in_(asset_ids)))
-            assets = list(result.scalars().all())
+            asset_result = await db.execute(select(Asset).where(Asset.id.in_(asset_ids)))
+            assets: list[Asset] = list(asset_result.scalars().all())
             if assets:
                 db_obj.assets.extend(assets)
 

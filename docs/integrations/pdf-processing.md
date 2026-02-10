@@ -1,7 +1,11 @@
 # PDF 处理服务
 
 ## ✅ Status
-**当前状态**: Draft (2026-02-03)
+**当前状态**: Supplemental (2026-02-09)
+
+> 说明：本页为 PDF 流程补充说明，不作为需求权威基线。  
+> 权威规格请参考：`docs/requirements-specification.md`  
+> 模块证据请参考：`docs/features/requirements-appendix-modules.md`
 
 ## 接口入口
 - Base: `/api/v1/pdf-import`

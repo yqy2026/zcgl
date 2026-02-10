@@ -5,13 +5,14 @@ Observability helpers (APM / error tracking).
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, Literal, cast
 
 from .config import settings
 
 logger = logging.getLogger(__name__)
 
 _sentry_initialized = False
+_SENTRY_LEVELS = {"fatal", "critical", "error", "warning", "info", "debug"}
 
 
 def init_sentry() -> bool:
@@ -66,9 +67,16 @@ def send_security_alert(alert_type: str, severity: str, **context: Any) -> bool:
     try:
         import sentry_sdk
 
+        normalized_level = severity.strip().lower()
+        if normalized_level not in _SENTRY_LEVELS:
+            normalized_level = "warning"
+
         sentry_sdk.capture_message(
             f"Security Alert: {alert_type}",
-            level=severity.lower(),
+            level=cast(
+                Literal["fatal", "critical", "error", "warning", "info", "debug"],
+                normalized_level,
+            ),
             extra=context,
         )
         return True

@@ -12,8 +12,9 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React from 'react';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import { message } from 'antd';
+import { renderWithProviders } from '@/test/utils/test-helpers';
 
 import { PropertyCertificateImport } from '../PropertyCertificateImport';
 import { PropertyCertificateUpload } from '@/components/PropertyCertificate/PropertyCertificateUpload';
@@ -63,7 +64,7 @@ const createMockConfirmData = (): CertificateImportConfirm => ({
   owners: [],
 });
 
-const renderPage = () => render(<PropertyCertificateImport />);
+const renderPage = () => renderWithProviders(<PropertyCertificateImport />);
 
 const getUploadProps = () =>
   vi.mocked(PropertyCertificateUpload).mock.calls[0]?.[0] as {

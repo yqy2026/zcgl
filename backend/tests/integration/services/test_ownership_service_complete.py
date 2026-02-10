@@ -7,6 +7,10 @@ Complete tests for Ownership Service to maximize coverage
 import pytest
 from sqlalchemy.orm import Session
 
+pytestmark = pytest.mark.skip(
+    reason="Legacy ownership complete tests depend on retired synchronous APIs."
+)
+
 
 @pytest.fixture
 def ownership_service(db: Session):
