@@ -1,6 +1,7 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
 import { Alert, Button } from 'antd';
 import { createLogger } from '@/utils/logger';
+import styles from './ChartErrorBoundary.module.css';
 
 const componentLogger = createLogger('ChartErrorBoundary');
 
@@ -34,7 +35,7 @@ export class ChartErrorBoundary extends Component<Props, State> {
       errorInfo,
     });
 
-    if (this.props.onError) {
+    if (this.props.onError !== undefined && this.props.onError !== null) {
       this.props.onError(error, errorInfo);
     }
   }
@@ -54,14 +55,14 @@ export class ChartErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div style={{ padding: '20px', textAlign: 'center' }}>
+        <div className={styles.errorContainer} role="alert" aria-live="polite">
           <Alert
             title="图表加载失败"
             description={
-              <div>
-                <p>无法渲染图表，可能是数据格式有问题。</p>
+              <div className={styles.errorDescription}>
+                <p className={styles.errorMessage}>无法渲染图表，可能是数据格式有问题。</p>
                 {this.state.error && (
-                  <p style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
+                  <p className={styles.errorDetail}>
                     错误详情: {this.state.error.message}
                   </p>
                 )}
@@ -69,9 +70,9 @@ export class ChartErrorBoundary extends Component<Props, State> {
             }
             type="error"
             showIcon
-            style={{ marginBottom: '12px' }}
+            className={styles.errorAlert}
           />
-          <Button size="small" onClick={this.handleRetry}>
+          <Button size="small" className={styles.retryButton} onClick={this.handleRetry}>
             重试
           </Button>
         </div>

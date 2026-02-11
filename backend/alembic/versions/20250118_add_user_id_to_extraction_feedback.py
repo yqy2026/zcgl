@@ -1,6 +1,6 @@
 """add user_id to extraction_feedback
 
-Revision ID: 20250118_add_user_id_feedback
+Revision ID: 20250118_add_uid_feedback
 Revises: 20250118_add_property_cert_tables
 Create Date: 2025-01-18 15:00:00.000000
 
@@ -15,7 +15,7 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "20250118_add_user_id_to_extraction_feedback"
+revision: str = "20250118_add_uid_feedback"
 down_revision: str | None = "e4c9e4968dd7"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
@@ -31,24 +31,31 @@ def upgrade() -> None:
     tables = inspector.get_table_names()
 
     if "extraction_feedback" in tables:
-        # Add user_id column to extraction_feedback table
-        op.add_column(
-            "extraction_feedback",
-            sa.Column(
-                "user_id",
-                sa.String,
-                sa.ForeignKey("users.id"),
-                nullable=True,
-                comment="提交反馈的用户ID",
-            ),
-        )
+        columns = {column["name"] for column in inspector.get_columns("extraction_feedback")}
+        indexes = {
+            index["name"] for index in inspector.get_indexes("extraction_feedback")
+        }
 
-        # Create index on user_id for performance
-        op.create_index(
-            "ix_extraction_feedback_user_id",
-            "extraction_feedback",
-            ["user_id"],
-        )
+        # Add user_id column to extraction_feedback table when missing
+        if "user_id" not in columns:
+            op.add_column(
+                "extraction_feedback",
+                sa.Column(
+                    "user_id",
+                    sa.String,
+                    sa.ForeignKey("users.id"),
+                    nullable=True,
+                    comment="提交反馈的用户ID",
+                ),
+            )
+
+        # Create index on user_id for performance when missing
+        if "ix_extraction_feedback_user_id" not in indexes:
+            op.create_index(
+                "ix_extraction_feedback_user_id",
+                "extraction_feedback",
+                ["user_id"],
+            )
 
 
 def downgrade() -> None:
@@ -60,13 +67,14 @@ def downgrade() -> None:
     tables = inspector.get_table_names()
 
     if "extraction_feedback" in tables:
-        # Check if column exists
-        columns = [c["name"] for c in inspector.get_columns("extraction_feedback")]
-        if "user_id" in columns:
-            # Drop index first
+        columns = {column["name"] for column in inspector.get_columns("extraction_feedback")}
+        indexes = {
+            index["name"] for index in inspector.get_indexes("extraction_feedback")
+        }
+        if "ix_extraction_feedback_user_id" in indexes:
             op.drop_index(
                 "ix_extraction_feedback_user_id", table_name="extraction_feedback"
             )
 
-            # Drop column
+        if "user_id" in columns:
             op.drop_column("extraction_feedback", "user_id")

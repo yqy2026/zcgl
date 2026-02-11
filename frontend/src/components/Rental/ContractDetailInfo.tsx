@@ -21,6 +21,7 @@ import { ContractStatusColors, ContractStatusLabels } from '@/types/rentContract
 import type { ColumnsType } from 'antd/es/table';
 import DepositLedgerHistory from './DepositLedgerHistory';
 import ServiceFeeLedgerTable from './ServiceFeeLedgerTable';
+import styles from './ContractDetailInfo.module.css';
 
 interface ContractDetailInfoProps {
   contract: RentContract;
@@ -105,7 +106,7 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
       dataIndex: 'total_monthly_amount',
       key: 'total_monthly_amount',
       render: (amount: number) => (
-        <span style={{ color: '#1890ff', fontWeight: 'bold' }}>¥{amount.toLocaleString()}</span>
+        <span className={styles.totalMonthlyAmount}>¥{amount.toLocaleString()}</span>
       ),
       align: 'right' as const,
     },
@@ -141,44 +142,36 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
   };
 
   const stats = calculateStats();
+  const isDataStatusNormal = contract.data_status === '正常';
 
   return (
-    <div>
+    <div className={styles.contractDetailInfo}>
       {/* 基本信息卡片 */}
       <Card
         title={
-          <span>
-            <InfoCircleOutlined style={{ marginRight: 8 }} />
+          <span className={styles.cardTitle}>
+            <InfoCircleOutlined className={styles.cardTitleIcon} aria-hidden />
             基本信息
           </span>
         }
-        style={{ marginBottom: 16 }}
+        className={styles.sectionCard}
       >
-        <Descriptions
-          bordered
-          column={{ xs: 1, sm: 2, md: 3 }}
-          styles={{
-            label: { width: '130px', fontWeight: 'bold' },
-            content: { minWidth: '180px' },
-          }}
-        >
+        <Descriptions bordered column={{ xs: 1, sm: 2, md: 3 }} className={styles.basicDescriptions}>
           <Descriptions.Item
             label={
-              <span>
-                <FileTextOutlined style={{ marginRight: 4 }} />
+              <span className={styles.labelWithIcon}>
+                <FileTextOutlined className={styles.labelIcon} aria-hidden />
                 合同编号
               </span>
             }
           >
-            <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#1890ff' }}>
-              {contract.contract_number ?? '-'}
-            </span>
+            <span className={styles.contractNumber}>{contract.contract_number ?? '-'}</span>
           </Descriptions.Item>
 
           <Descriptions.Item
             label={
-              <span>
-                <BankOutlined style={{ marginRight: 4 }} />
+              <span className={styles.labelWithIcon}>
+                <BankOutlined className={styles.labelIcon} aria-hidden />
                 合同类型
               </span>
             }
@@ -190,8 +183,8 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
 
           <Descriptions.Item
             label={
-              <span>
-                <BankOutlined style={{ marginRight: 4 }} />
+              <span className={styles.labelWithIcon}>
+                <BankOutlined className={styles.labelIcon} aria-hidden />
                 合同状态
               </span>
             }
@@ -203,13 +196,13 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
 
           <Descriptions.Item
             label={
-              <span>
-                <UserOutlined style={{ marginRight: 4 }} />
+              <span className={styles.labelWithIcon}>
+                <UserOutlined className={styles.labelIcon} aria-hidden />
                 承租方名称
               </span>
             }
           >
-            <span style={{ fontSize: '16px', fontWeight: 'bold' }}>{contract.tenant_name}</span>
+            <span className={styles.tenantName}>{contract.tenant_name}</span>
           </Descriptions.Item>
 
           <Descriptions.Item label="联系人">{contract.tenant_contact ?? '-'}</Descriptions.Item>
@@ -229,19 +222,19 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
       {/* 租期和金额统计卡片 */}
       <Card
         title={
-          <span>
-            <CalendarOutlined style={{ marginRight: 8 }} />
+          <span className={styles.cardTitle}>
+            <CalendarOutlined className={styles.cardTitleIcon} aria-hidden />
             租期与金额
           </span>
         }
-        style={{ marginBottom: 16 }}
+        className={styles.sectionCard}
       >
-        <Row gutter={16}>
+        <Row gutter={16} className={styles.statsRow}>
           <Col xs={24} sm={12} md={8} lg={6}>
             <Statistic
               title="签订日期"
               value={new Date(contract.sign_date).toLocaleDateString('zh-CN')}
-              styles={{ content: { color: '#1890ff' } }}
+              className={styles.statisticPrimary}
             />
           </Col>
 
@@ -249,7 +242,7 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
             <Statistic
               title="租期开始"
               value={new Date(contract.start_date).toLocaleDateString('zh-CN')}
-              styles={{ content: { color: '#52c41a' } }}
+              className={styles.statisticSuccess}
             />
           </Col>
 
@@ -257,7 +250,7 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
             <Statistic
               title="租期结束"
               value={new Date(contract.end_date).toLocaleDateString('zh-CN')}
-              styles={{ content: { color: '#ff4d4f' } }}
+              className={styles.statisticError}
             />
           </Col>
 
@@ -266,7 +259,7 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
               title="总押金"
               value={contract.total_deposit}
               prefix="¥"
-              styles={{ content: { color: '#faad14' } }}
+              className={styles.statisticWarning}
             />
           </Col>
 
@@ -276,7 +269,7 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
               value={stats.avgMonthlyRent}
               prefix="¥"
               precision={2}
-              styles={{ content: { color: '#722ed1' } }}
+              className={styles.statisticAccent}
             />
           </Col>
 
@@ -288,7 +281,7 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
                 contract.payment_cycle ||
                 '按月'
               }
-              styles={{ content: { color: '#13c2c2' } }}
+              className={styles.statisticInfo}
             />
           </Col>
         </Row>
@@ -296,8 +289,8 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
 
       {/* V2字段：上游合同和服务费率 */}
       {(contract.upstream_contract_id != null || contract.service_fee_rate != null) && (
-        <Card title="V2 委托运营信息" style={{ marginBottom: 16 }}>
-          <Descriptions bordered column={{ xs: 1, sm: 2 }} style={{ marginBottom: 16 }}>
+        <Card title="V2 委托运营信息" className={styles.sectionCard}>
+          <Descriptions bordered column={{ xs: 1, sm: 2 }} className={styles.v2Descriptions}>
             <Descriptions.Item label="上游合同ID">
               {contract.upstream_contract_id ?? '-'}
             </Descriptions.Item>
@@ -312,7 +305,7 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
           {(serviceFeeLoading != null && serviceFeeLoading) ||
           (serviceFeeLedgers ?? []).length > 0 ? (
             <>
-              <Divider titlePlacement="start" style={{ margin: '12px 0' }}>
+              <Divider titlePlacement="start" className={styles.serviceFeeDivider}>
                 服务费台账
               </Divider>
               <ServiceFeeLedgerTable
@@ -327,12 +320,12 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
       {/* 关联资产卡片 */}
       <Card
         title={
-          <span>
-            <HomeOutlined style={{ marginRight: 8 }} />
+          <span className={styles.cardTitle}>
+            <HomeOutlined className={styles.cardTitleIcon} aria-hidden />
             关联资产 ({stats.assetCount})
           </span>
         }
-        style={{ marginBottom: 16 }}
+        className={styles.sectionCard}
       >
         {contract.assets && contract.assets.length > 0 ? (
           <Table
@@ -360,19 +353,19 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
             ]}
           />
         ) : (
-          <div style={{ textAlign: 'center', padding: '20px', color: '#999' }}>暂无关联资产</div>
+          <div className={styles.emptyState}>暂无关联资产</div>
         )}
       </Card>
 
       {/* 租金条款表格 */}
       <Card
         title={
-          <span>
-            <DollarOutlined style={{ marginRight: 8 }} />
+          <span className={styles.cardTitle}>
+            <DollarOutlined className={styles.cardTitleIcon} aria-hidden />
             租金条款 ({stats.termCount})
           </span>
         }
-        style={{ marginBottom: 16 }}
+        className={styles.sectionCard}
       >
         <Table
           dataSource={contract.rent_terms ?? []}
@@ -391,8 +384,8 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
       {(contract.payment_terms != null || contract.contract_notes != null) && (
         <Card
           title={
-            <span>
-              <InfoCircleOutlined style={{ marginRight: 8 }} />
+            <span className={styles.cardTitle}>
+              <InfoCircleOutlined className={styles.cardTitleIcon} aria-hidden />
               其他信息
             </span>
           }
@@ -400,12 +393,12 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
           <Descriptions bordered column={1}>
             {contract.payment_terms != null && (
               <Descriptions.Item label="支付条款">
-                <div style={{ whiteSpace: 'pre-wrap' }}>{contract.payment_terms}</div>
+                <div className={styles.preWrapText}>{contract.payment_terms}</div>
               </Descriptions.Item>
             )}
             {contract.contract_notes != null && (
               <Descriptions.Item label="合同备注">
-                <div style={{ whiteSpace: 'pre-wrap' }}>{contract.contract_notes}</div>
+                <div className={styles.preWrapText}>{contract.contract_notes}</div>
               </Descriptions.Item>
             )}
           </Descriptions>
@@ -413,12 +406,15 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
       )}
 
       {/* 元数据信息 */}
-      <Card title="元数据" style={{ marginTop: 16 }}>
+      <Card title="元数据" className={styles.metadataCard}>
         <Descriptions bordered column={{ xs: 1, sm: 2 }}>
           <Descriptions.Item label="数据状态">
-            <Tag color={contract.data_status === '正常' ? 'green' : 'red'}>
-              {contract.data_status}
-            </Tag>
+            <div className={styles.dataStatus}>
+              <Tag color={isDataStatusNormal ? 'green' : 'red'}>{contract.data_status}</Tag>
+              <span className={styles.dataStatusHint}>
+                {isDataStatusNormal ? '状态正常' : '需要关注'}
+              </span>
+            </div>
           </Descriptions.Item>
           <Descriptions.Item label="版本号">v{contract.version}</Descriptions.Item>
           <Descriptions.Item label="创建时间">

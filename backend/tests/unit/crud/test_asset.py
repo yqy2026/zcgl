@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from src.crud.asset import AssetCRUD
+from src.crud.query_builder import TenantFilter
 from src.models.asset import Asset
 from src.models.asset_search_index import AssetSearchIndex
 
@@ -83,6 +84,23 @@ class TestCRUDAssetSoftDeleteGuard:
         assert "assets.data_status IS NULL" not in compiled
         assert "已删除" not in compiled
 
+    async def test_get_async_with_tenant_filter_applies_tenant_filter(
+        self, crud: AssetCRUD, mock_db: MagicMock
+    ) -> None:
+        execute_result = MagicMock()
+        execute_result.scalars.return_value.first.return_value = None
+        mock_db.execute.return_value = execute_result
+        tenant_filter = TenantFilter(organization_ids=["org-1"])
+
+        with patch.object(
+            crud.query_builder,
+            "apply_tenant_filter",
+            side_effect=lambda stmt, _tf: stmt,
+        ) as mock_apply_tenant_filter:
+            await crud.get_async(mock_db, id="asset-1", tenant_filter=tenant_filter)
+
+        assert mock_apply_tenant_filter.call_args.args[1] == tenant_filter
+
 
 class TestCRUDAssetGetByName:
     async def test_get_by_name_exists(self, crud: AssetCRUD, mock_db: MagicMock) -> None:
@@ -139,6 +157,34 @@ class TestCRUDAssetGetMulti:
 
         mock_get_multi.assert_awaited_once_with(mock_db, skip=10, limit=20)
 
+    async def test_get_multi_with_search_passes_tenant_filter(
+        self, crud: AssetCRUD, mock_db: MagicMock
+    ) -> None:
+        tenant_filter = TenantFilter(organization_ids=["org-1"])
+        execute_result_assets = MagicMock()
+        execute_result_assets.scalars.return_value.all.return_value = []
+        execute_result_count = MagicMock()
+        execute_result_count.scalar.return_value = 0
+        mock_db.execute = AsyncMock(
+            side_effect=[execute_result_assets, execute_result_count]
+        )
+
+        with (
+            patch.object(
+                crud.query_builder, "build_query", return_value=MagicMock()
+            ) as mock_build_query,
+            patch.object(
+                crud.query_builder, "build_count_query", return_value=MagicMock()
+            ) as mock_build_count_query,
+        ):
+            await crud.get_multi_with_search_async(
+                mock_db,
+                tenant_filter=tenant_filter,
+            )
+
+        assert mock_build_query.call_args.kwargs.get("tenant_filter") == tenant_filter
+        assert mock_build_count_query.call_args.kwargs.get("tenant_filter") == tenant_filter
+
     async def test_get_multi_by_ids_decrypts_assets(
         self, crud: AssetCRUD, mock_db: MagicMock
     ) -> None:
@@ -150,6 +196,66 @@ class TestCRUDAssetGetMulti:
         with patch.object(crud, "_decrypt_asset_object") as mock_decrypt:
             result = await crud.get_multi_by_ids_async(
                 mock_db, ids=["asset-1", "asset-2"]
+            )
+
+        assert result == mock_assets
+        mock_db.execute.assert_awaited_once()
+        assert mock_decrypt.call_count == 2
+        mock_decrypt.assert_any_call(mock_assets[0])
+        mock_decrypt.assert_any_call(mock_assets[1])
+
+    async def test_get_multi_by_ids_skips_decrypt_when_disabled(
+        self, crud: AssetCRUD, mock_db: MagicMock
+    ) -> None:
+        mock_assets = [MagicMock(spec=Asset), MagicMock(spec=Asset)]
+        execute_result = MagicMock()
+        execute_result.scalars.return_value.all.return_value = mock_assets
+        mock_db.execute.return_value = execute_result
+
+        with patch.object(crud, "_decrypt_asset_object") as mock_decrypt:
+            result = await crud.get_multi_by_ids_async(
+                mock_db,
+                ids=["asset-1", "asset-2"],
+                decrypt=False,
+            )
+
+        assert result == mock_assets
+        mock_db.execute.assert_awaited_once()
+        mock_decrypt.assert_not_called()
+
+
+class TestCRUDAssetGetByPropertyNames:
+    async def test_get_by_property_names_defaults_to_encrypted_rows(
+        self, crud: AssetCRUD, mock_db: MagicMock
+    ) -> None:
+        mock_assets = [MagicMock(spec=Asset)]
+        execute_result = MagicMock()
+        execute_result.scalars.return_value.all.return_value = mock_assets
+        mock_db.execute.return_value = execute_result
+
+        with patch.object(crud, "_decrypt_asset_object") as mock_decrypt:
+            result = await crud.get_by_property_names_async(
+                mock_db,
+                property_names=["物业A"],
+            )
+
+        assert result == mock_assets
+        mock_db.execute.assert_awaited_once()
+        mock_decrypt.assert_not_called()
+
+    async def test_get_by_property_names_can_decrypt_on_demand(
+        self, crud: AssetCRUD, mock_db: MagicMock
+    ) -> None:
+        mock_assets = [MagicMock(spec=Asset), MagicMock(spec=Asset)]
+        execute_result = MagicMock()
+        execute_result.scalars.return_value.all.return_value = mock_assets
+        mock_db.execute.return_value = execute_result
+
+        with patch.object(crud, "_decrypt_asset_object") as mock_decrypt:
+            result = await crud.get_by_property_names_async(
+                mock_db,
+                property_names=["物业A", "物业B"],
+                decrypt=True,
             )
 
         assert result == mock_assets

@@ -3,6 +3,7 @@ import { Breadcrumb } from 'antd';
 import { HomeOutlined } from '@ant-design/icons';
 import { useLocation, Link } from 'react-router-dom';
 import { staticBreadcrumbMap, dynamicBreadcrumbMap } from '@/config/breadcrumb';
+import styles from './AppBreadcrumb.module.css';
 
 interface AppBreadcrumbProps {
   customItems?: { title: string; link?: string }[];
@@ -26,6 +27,14 @@ const getBreadcrumbName = (path: string): string | null => {
   return null;
 };
 
+const renderCrumbLink = (to: string, label: React.ReactNode) => (
+  <Link to={to} className={styles.breadcrumbLink}>
+    {label}
+  </Link>
+);
+
+const renderCrumbLabel = (label: React.ReactNode) => <span className={styles.currentLabel}>{label}</span>;
+
 const AppBreadcrumb: React.FC<AppBreadcrumbProps> = ({ customItems }) => {
   const location = useLocation();
   const pathname = location.pathname;
@@ -35,8 +44,9 @@ const AppBreadcrumb: React.FC<AppBreadcrumbProps> = ({ customItems }) => {
     const items: Array<{ title: React.ReactNode }> = [
       {
         title: (
-          <Link to="/">
+          <Link to="/" aria-label="返回首页" className={styles.homeLink}>
             <HomeOutlined />
+            <span className={styles.homeText}>首页</span>
           </Link>
         ),
       },
@@ -46,7 +56,7 @@ const AppBreadcrumb: React.FC<AppBreadcrumbProps> = ({ customItems }) => {
     if (customItems && customItems.length > 0) {
       customItems.forEach((item) => {
         items.push({
-          title: item.link ? <Link to={item.link}>{item.title}</Link> : item.title,
+          title: item.link ? renderCrumbLink(item.link, item.title) : renderCrumbLabel(item.title),
         });
       });
       return items;
@@ -62,11 +72,7 @@ const AppBreadcrumb: React.FC<AppBreadcrumbProps> = ({ customItems }) => {
       if (name) {
         const isLast = index === pathSnippets.length - 1;
         items.push({
-          title: isLast ? (
-            <span>{name}</span>
-          ) : (
-            <Link to={url}>{name}</Link>
-          ),
+          title: isLast ? renderCrumbLabel(name) : renderCrumbLink(url, name),
         });
       }
     });
@@ -74,7 +80,11 @@ const AppBreadcrumb: React.FC<AppBreadcrumbProps> = ({ customItems }) => {
     return items;
   }, [pathname, customItems]);
 
-  return <Breadcrumb items={breadcrumbItems} />;
+  return (
+    <nav aria-label="页面路径" className={styles.breadcrumbWrapper}>
+      <Breadcrumb className={styles.breadcrumb} items={breadcrumbItems} />
+    </nav>
+  );
 };
 
 export default AppBreadcrumb;

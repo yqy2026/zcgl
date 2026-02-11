@@ -16,6 +16,7 @@ import {
 import { MessageManager } from '@/utils/messageManager';
 import { InfoCircleOutlined, ReloadOutlined, CopyOutlined } from '@ant-design/icons';
 import { createLogger } from '@/utils/logger';
+import styles from './FilenameFixDialog.module.css';
 
 const componentLogger = createLogger('FilenameFixDialog');
 const { Title, Text, Paragraph } = Typography;
@@ -214,15 +215,7 @@ export const FilenameFixDialog: React.FC<FilenameFixDialogProps> = ({
           content: (
             <div>
               <Text strong>原始文件名:</Text>
-              <div
-                style={{
-                  padding: '8px 12px',
-                  backgroundColor: '#fff1f0',
-                  borderRadius: '6px',
-                  marginTop: '8px',
-                  wordBreak: 'break-all',
-                }}
-              >
+              <div className={styles.analysisOriginalFilenameBox}>
                 <Text code>{originalFilename}</Text>
               </div>
             </div>
@@ -274,16 +267,8 @@ export const FilenameFixDialog: React.FC<FilenameFixDialogProps> = ({
             <Space orientation="vertical">
               <div>
                 <Text strong>建议文件名:</Text>
-                <div
-                  style={{
-                    padding: '8px 12px',
-                    backgroundColor: '#f6ffed',
-                    borderRadius: '6px',
-                    marginTop: '8px',
-                    wordBreak: 'break-all',
-                  }}
-                >
-                  <Text code style={{ color: '#389e0d' }}>
+                <div className={styles.stepSuggestedFilenameBox}>
+                  <Text code className={styles.stepSuggestedFilenameText}>
                     {fixed}
                   </Text>
                 </div>
@@ -341,7 +326,7 @@ export const FilenameFixDialog: React.FC<FilenameFixDialogProps> = ({
     const currentStepData = steps[currentStep];
     if (currentStepData == null) return null;
 
-    return <div style={{ padding: '20px 0' }}>{currentStepData.content}</div>;
+    return <div className={styles.stepContentWrapper}>{currentStepData.content}</div>;
   };
 
   return (
@@ -374,7 +359,7 @@ export const FilenameFixDialog: React.FC<FilenameFixDialogProps> = ({
       destroyOnHidden
     >
       <Spin spinning={loading}>
-        <Space orientation="vertical" size="large" style={{ width: '100%' }}>
+        <Space orientation="vertical" size="large" className={styles.fullWidthSpace}>
           <div>
             <Title level={4}>文件名智能修复</Title>
             <Paragraph type="secondary">
@@ -389,21 +374,16 @@ export const FilenameFixDialog: React.FC<FilenameFixDialogProps> = ({
 
           {/* 手动编辑选项 */}
           <Card title="手动调整（可选）" size="small">
-            <Space orientation="vertical" style={{ width: '100%' }}>
+            <Space orientation="vertical" className={styles.fullWidthSpace}>
               <div>
                 <Text strong>自定义文件名:</Text>
-                <div style={{ marginTop: 8 }}>
+                <div className={styles.manualInputWrapper}>
                   <input
                     type="text"
                     value={customFilename}
                     onChange={e => handleCustomFilenameChange(e.target.value)}
                     placeholder="输入自定义文件名"
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      border: '1px solid #d9d9d9',
-                      borderRadius: '6px',
-                    }}
+                    className={styles.manualFilenameInput}
                   />
                 </div>
               </div>
@@ -412,7 +392,7 @@ export const FilenameFixDialog: React.FC<FilenameFixDialogProps> = ({
                 description="您可以直接编辑文件名，系统会实时验证并提供修复建议。"
                 type="info"
                 showIcon
-                style={{ fontSize: '12px' }}
+                className={styles.manualEditInfoAlert}
               />
             </Space>
           </Card>
@@ -420,13 +400,13 @@ export const FilenameFixDialog: React.FC<FilenameFixDialogProps> = ({
           {/* 预览结果 */}
           {suggestedFilename && (
             <Card title="修复结果预览" size="small">
-              <Space orientation="vertical" style={{ width: '100%' }}>
+              <Space orientation="vertical" className={styles.fullWidthSpace}>
                 <Row gutter={16}>
                   <Col span={4}>
                     <Text strong>修复前:</Text>
                   </Col>
                   <Col span={20}>
-                    <Text code style={{ wordBreak: 'break-all', fontSize: '12px' }}>
+                    <Text code className={styles.previewOriginalFilenameText}>
                       {originalFilename}
                     </Text>
                   </Col>
@@ -436,10 +416,7 @@ export const FilenameFixDialog: React.FC<FilenameFixDialogProps> = ({
                     <Text strong>修复后:</Text>
                   </Col>
                   <Col span={20}>
-                    <Text
-                      code
-                      style={{ wordBreak: 'break-all', fontSize: '12px', color: '#389e0d' }}
-                    >
+                    <Text code className={styles.previewFixedFilenameText}>
                       {suggestedFilename}
                     </Text>
                   </Col>
@@ -452,7 +429,7 @@ export const FilenameFixDialog: React.FC<FilenameFixDialogProps> = ({
           <Alert
             title="关于文件名修复"
             description={
-              <div style={{ fontSize: '12px' }}>
+              <div className={styles.fixDescription}>
                 <p>
                   • <strong>中文特殊字符</strong>：【】（）等会被替换为标准字符 []()
                 </p>

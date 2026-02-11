@@ -1,0 +1,121 @@
+.occupancyRateChart {
+  width: 100%;
+}
+
+.summaryRow {
+  margin-bottom: 16px;
+}
+
+.summaryCard {
+  height: 100%;
+}
+
+.chartCard {
+  margin-bottom: 16px;
+}
+
+.statisticPrimary :global(.ant-statistic-content) {
+  color: var(--color-primary);
+}
+
+.statisticSuccess :global(.ant-statistic-content) {
+  color: var(--color-success);
+}
+
+.statisticWarning :global(.ant-statistic-content) {
+  color: var(--color-warning);
+}
+
+.statisticError :global(.ant-statistic-content) {
+  color: var(--color-error);
+}
+
+.statisticAccent :global(.ant-statistic-content) {
+  color: #722ed1;
+}
+
+.statisticMuted :global(.ant-statistic-content) {
+  color: var(--color-text-secondary);
+}
+
+.trendIcon {
+  font-size: 16px;
+}
+
+.trendIconUp {
+  color: var(--color-success);
+}
+
+.trendIconDown {
+  color: var(--color-error);
+}
+
+.trendIconStable {
+  color: var(--color-text-secondary);
+}
+
+.rankingRow {
+  margin-top: 16px;
+}
+
+.rankingList {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.rankingItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.rankingItemLast {
+  border-bottom: 0;
+}
+
+.rankingInfo {
+  min-width: 0;
+}
+
+.rankingMeta {
+  font-size: 12px;
+}
+
+.rankingValue {
+  text-align: right;
+}
+
+.rankingRateHigh {
+  color: var(--color-success);
+  font-weight: var(--font-weight-semibold);
+}
+
+.rankingRateLow {
+  color: var(--color-error);
+  font-weight: var(--font-weight-semibold);
+}
+
+.rankingLabel {
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.chartTooltip {
+  padding: 8px;
+  line-height: 1.5;
+}
+
+.tooltipTitle {
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: 4px;
+}
+
+@media (max-width: 768px) {
+  .rankingItem {
+    align-items: flex-start;
+  }
+}

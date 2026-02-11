@@ -18,14 +18,14 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from ...core.enums import ContractStatus
 from ...core.exception_handler import BusinessValidationError
 from ...crud.rent_contract import rent_contract as rent_contract_crud
-from ...models.rent_contract import RentContract, RentLedger, RentTerm
+from ...crud.rent_contract import rent_ledger as rent_ledger_crud
+from ...crud.rent_contract import rent_term as rent_term_crud
+from ...models.rent_contract import RentContract
 from ...schemas.rent_contract import (
     ContractType,
     PaymentCycle,
@@ -268,18 +268,9 @@ class RentContractExcelService:
         }
         existing_by_contract_number: dict[str, RentContract] = {}
         if contract_numbers_to_check:
-            existing_contracts = list(
-                (
-                    await db.execute(
-                        select(RentContract).where(
-                            RentContract.contract_number.in_(
-                                list(contract_numbers_to_check)
-                            )
-                        )
-                    )
-                )
-                .scalars()
-                .all()
+            existing_contracts = await rent_contract_crud.get_by_contract_numbers_async(
+                db,
+                contract_numbers=list(contract_numbers_to_check),
             )
             existing_by_contract_number = {
                 str(contract.contract_number): contract
@@ -538,18 +529,12 @@ class RentContractExcelService:
         file_name = f"rent_contract_export_{uuid.uuid4().hex[:8]}.xlsx"
         file_path = export_dir / file_name
 
-        stmt = select(RentContract).options(selectinload(RentContract.assets))
-        if contract_ids:
-            stmt = stmt.where(RentContract.id.in_(contract_ids))
-        if start_date:
-            stmt = stmt.where(RentContract.start_date >= start_date)
-        if end_date:
-            stmt = stmt.where(RentContract.end_date <= end_date)
-
-        stmt = stmt.order_by(RentContract.created_at.desc())
-        contracts = list((await db.execute(stmt)).scalars().all())
-        for contract in contracts:
-            rent_contract_crud.sensitive_data_handler.decrypt_data(contract.__dict__)
+        contracts = await rent_contract_crud.get_export_contracts_async(
+            db,
+            contract_ids=contract_ids,
+            start_date=start_date,
+            end_date=end_date,
+        )
 
         contract_rows: list[dict[str, Any]] = []
         for contract in contracts:
@@ -588,12 +573,10 @@ class RentContractExcelService:
         if include_terms and contracts:
             term_rows: list[dict[str, Any]] = []
             contract_ids_lookup = [contract.id for contract in contracts]
-            terms_stmt = (
-                select(RentTerm)
-                .where(RentTerm.contract_id.in_(contract_ids_lookup))
-                .order_by(RentTerm.contract_id, RentTerm.start_date)
+            terms = await rent_term_crud.get_by_contract_ids_async(
+                db,
+                contract_ids=contract_ids_lookup,
             )
-            terms = list((await db.execute(terms_stmt)).scalars().all())
             contract_number_map = {
                 contract.id: contract.contract_number for contract in contracts
             }
@@ -618,12 +601,10 @@ class RentContractExcelService:
         if include_ledger and contracts:
             ledger_rows: list[dict[str, Any]] = []
             contract_ids_lookup = [contract.id for contract in contracts]
-            ledger_stmt = (
-                select(RentLedger)
-                .where(RentLedger.contract_id.in_(contract_ids_lookup))
-                .order_by(RentLedger.contract_id, RentLedger.year_month)
+            ledgers = await rent_ledger_crud.get_by_contract_ids_async(
+                db,
+                contract_ids=contract_ids_lookup,
             )
-            ledgers = list((await db.execute(ledger_stmt)).scalars().all())
             contract_number_map = {
                 contract.id: contract.contract_number for contract in contracts
             }

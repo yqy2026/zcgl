@@ -1,6 +1,7 @@
 import React from 'react';
 import { Row, Col, Typography, Select, DatePicker } from 'antd';
 import { useAnalyticsFiltersContext } from './FiltersContext';
+import styles from './Filters.module.css';
 
 const { Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -14,11 +15,13 @@ const BasicFiltersSection: React.FC = () => {
     useAnalyticsFiltersContext();
 
   return (
-    <Row gutter={[16, 16]} align="middle">
+    <Row gutter={[16, 16]} align="middle" className={styles.basicFiltersRow}>
       <Col xs={24} md={6}>
-        <Text strong>权属状态:</Text>
+        <Text strong className={styles.fieldLabel}>
+          权属状态:
+        </Text>
         <Select
-          style={{ width: '100%', marginTop: '8px' }}
+          className={styles.fieldControl}
           placeholder="请选择权属状态"
           allowClear
           value={localFilters.ownership_status}
@@ -33,9 +36,11 @@ const BasicFiltersSection: React.FC = () => {
       </Col>
 
       <Col xs={24} md={6}>
-        <Text strong>使用状态:</Text>
+        <Text strong className={styles.fieldLabel}>
+          使用状态:
+        </Text>
         <Select
-          style={{ width: '100%', marginTop: '8px' }}
+          className={styles.fieldControl}
           placeholder="请选择使用状态"
           allowClear
           value={localFilters.usage_status}
@@ -60,9 +65,11 @@ const BasicFiltersSection: React.FC = () => {
       </Col>
 
       <Col xs={24} md={6}>
-        <Text strong>物业性质:</Text>
+        <Text strong className={styles.fieldLabel}>
+          物业性质:
+        </Text>
         <Select
-          style={{ width: '100%', marginTop: '8px' }}
+          className={styles.fieldControl}
           placeholder="请选择物业性质"
           allowClear
           value={localFilters.property_nature}
@@ -88,9 +95,11 @@ const BasicFiltersSection: React.FC = () => {
       </Col>
 
       <Col xs={24} md={6}>
-        <Text strong>时间范围:</Text>
+        <Text strong className={styles.fieldLabel}>
+          时间范围:
+        </Text>
         <RangePicker
-          style={{ width: '100%', marginTop: '8px' }}
+          className={styles.fieldControl}
           onChange={handleDateRangeChange}
           placeholder={['开始日期', '结束日期']}
           disabled={loading}

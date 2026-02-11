@@ -1,0 +1,81 @@
+.assetDistributionChart {
+  width: 100%;
+}
+
+.summaryRow {
+  margin-bottom: 16px;
+}
+
+.summaryCard {
+  height: 100%;
+}
+
+.statisticPrimary :global(.ant-statistic-content) {
+  color: var(--color-primary);
+}
+
+.statisticSuccess :global(.ant-statistic-content) {
+  color: var(--color-success);
+}
+
+.statisticAccent :global(.ant-statistic-content) {
+  color: #722ed1;
+}
+
+.statisticWarning :global(.ant-statistic-content) {
+  color: var(--color-warning);
+}
+
+.chartCard {
+  margin-bottom: 16px;
+}
+
+.detailsRow {
+  margin-top: 16px;
+}
+
+.detailList {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.detailItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.detailItemLast {
+  border-bottom: none;
+}
+
+.detailMeta {
+  font-size: 12px;
+}
+
+.detailValue {
+  text-align: right;
+}
+
+.detailPercentage {
+  font-weight: var(--font-weight-semibold);
+}
+
+.detailLabel {
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.chartTooltip {
+  padding: 8px;
+  line-height: 1.5;
+}
+
+.tooltipTitle {
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: 4px;
+}

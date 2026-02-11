@@ -58,7 +58,11 @@ async def get_custom_fields(
         if is_active is not None:
             filters["is_active"] = is_active
 
-        fields = await custom_field_service.get_custom_fields_async(db=db, filters=filters)
+        fields = await custom_field_service.get_custom_fields_async(
+            db=db,
+            filters=filters,
+            current_user_id=str(current_user.id),
+        )
         return [AssetCustomFieldResponse.model_validate(f) for f in fields]
 
     except Exception as e:
@@ -83,6 +87,7 @@ async def get_custom_field(
         field = await custom_field_service.get_custom_field_async(
             db=db,
             field_id=field_id,
+            current_user_id=str(current_user.id),
         )
         if not field:
             raise not_found(

@@ -6,6 +6,7 @@ import React from 'react';
 import { Alert, Space, Tag } from 'antd';
 import { RocketOutlined } from '@ant-design/icons';
 import { usePDFImportContext } from './PDFImportContext';
+import styles from './SystemInfoDisplay.module.css';
 
 const SystemInfoDisplay: React.FC = () => {
   const { systemInfo } = usePDFImportContext();
@@ -32,7 +33,7 @@ const SystemInfoDisplay: React.FC = () => {
       }
       type="success"
       showIcon
-      style={{ marginTop: 16 }}
+      className={styles.systemInfoAlert}
     />
   );
 };

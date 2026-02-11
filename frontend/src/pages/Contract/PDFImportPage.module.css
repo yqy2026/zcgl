@@ -1,5 +1,3 @@
-/* PDF导入页面动画样式 */
-
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -57,99 +55,142 @@
   }
 }
 
-/* 页面主容器 */
-.pdf-import-page {
+.pdfImportPage {
   animation: fadeIn 0.5s ease-in-out;
+  min-height: 100%;
 }
 
-/* 统计卡片动画 */
-.pdf-import-page .ant-statistic {
-  transition: all 0.3s ease;
+.initialLoading {
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
 }
 
-.pdf-import-page .ant-statistic:hover {
+.loadingHint {
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.contentLoading {
+  width: 100%;
+}
+
+.mainTabs {
+  width: 100%;
+}
+
+.tabContent {
+  min-height: 200px;
+}
+
+.pdfImportPage :global(.ant-statistic) {
+  transition:
+    transform 0.3s ease,
+    color 0.3s ease;
+}
+
+.pdfImportPage :global(.ant-card) {
+  animation: slideInLeft 0.4s ease-in-out;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+.pdfImportPage :global(.ant-card:hover) {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 10%);
 }
 
-/* 按钮悬停效果 */
-.pdf-import-page .ant-btn {
-  transition: all 0.2s ease;
+.pdfImportPage :global(.ant-btn) {
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    color 0.2s ease;
 }
 
-.pdf-import-page .ant-btn:hover {
+.pdfImportPage :global(.ant-btn:hover) {
   transform: translateY(-1px);
 }
 
-/* 标签页切换动画 */
-.pdf-import-page .ant-tabs-tabpane {
+.pdfImportPage :global(.ant-btn:focus-visible) {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.pdfImportPage :global(.ant-tabs-tabpane) {
   animation: fadeIn 0.3s ease-in-out;
 }
 
-/* 状态标签动画 */
-.pdf-import-page .ant-tag {
-  transition: all 0.2s ease;
+.pdfImportPage :global(.ant-tag) {
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    color 0.2s ease;
 }
 
-.pdf-import-page .ant-tag:hover {
+.pdfImportPage :global(.ant-tag:hover) {
   transform: scale(1.05);
 }
 
-/* 卡片进入动画 */
-.pdf-import-page .ant-card {
-  animation: slideInLeft 0.4s ease-in-out;
+.pdfImportPage :global(.ant-upload-drag) {
+  transition:
+    border-color 0.3s ease,
+    background-color 0.3s ease;
 }
 
-/* 上传区域悬停效果 */
-.pdf-import-page .ant-upload-drag {
-  transition: all 0.3s ease;
-}
-
-.pdf-import-page .ant-upload-drag:hover {
+.pdfImportPage :global(.ant-upload-drag:hover) {
   border-color: var(--color-primary);
   background-color: var(--color-primary-light);
 }
 
-/* 进度条动画增强 */
-.pdf-import-page .ant-progress-bg {
+.pdfImportPage :global(.ant-progress-bg) {
   animation: progressPulse 2s ease-in-out infinite;
 }
 
-/* 状态图标动画 */
-.pdf-import-page .status-icon {
+.pdfImportPage :global(.status-icon) {
   animation: pulse 2s ease-in-out infinite;
 }
 
-/* 加载状态优化 */
-.pdf-import-page .ant-spin-text {
+.pdfImportPage :global(.ant-spin-text) {
   animation: fadeIn 0.3s ease-in-out;
 }
 
-/* 响应式调整 */
 @media (max-width: 768px) {
-  .pdf-import-page {
+  .pdfImportPage {
     animation: fadeIn 0.3s ease-in-out;
   }
 
-  .pdf-import-page .ant-card {
+  .pdfImportPage :global(.ant-card) {
     animation: slideInLeft 0.3s ease-in-out;
+  }
+
+  .initialLoading {
+    min-height: 260px;
   }
 }
 
-/* 深色模式适配 */
 @media (prefers-color-scheme: dark) {
-  .pdf-import-page .ant-upload-drag:hover {
+  .pdfImportPage :global(.ant-upload-drag:hover) {
     background-color: var(--color-bg-tertiary);
   }
 }
 
-/* 无障碍优化 */
 @media (prefers-reduced-motion: reduce) {
-  .pdf-import-page,
-  .pdf-import-page .ant-card,
-  .pdf-import-page .ant-statistic,
-  .pdf-import-page .ant-btn,
-  .pdf-import-page .ant-tabs-tabpane {
+  .pdfImportPage,
+  .pdfImportPage :global(.ant-card),
+  .pdfImportPage :global(.ant-statistic),
+  .pdfImportPage :global(.ant-btn),
+  .pdfImportPage :global(.ant-tabs-tabpane),
+  .pdfImportPage :global(.ant-tag),
+  .pdfImportPage :global(.ant-upload-drag),
+  .pdfImportPage :global(.ant-progress-bg),
+  .pdfImportPage :global(.status-icon) {
     animation: none;
     transition: none;
   }

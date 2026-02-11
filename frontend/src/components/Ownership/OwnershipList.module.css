@@ -1,0 +1,119 @@
+.ownershipList {
+  width: 100%;
+}
+
+.statsRow {
+  margin-bottom: 24px;
+}
+
+.statsCard {
+  height: 100%;
+  border-radius: 12px;
+}
+
+.statsCard :global(.ant-statistic-title) {
+  color: var(--color-text-secondary);
+}
+
+.statsCard :global(.ant-statistic-content) {
+  font-weight: var(--font-weight-semibold);
+}
+
+.statsTotal :global(.ant-statistic-content) {
+  color: var(--color-primary);
+}
+
+.statsActive :global(.ant-statistic-content) {
+  color: var(--color-success);
+}
+
+.statsInactive :global(.ant-statistic-content) {
+  color: var(--color-error);
+}
+
+.statsAssets :global(.ant-statistic-content) {
+  color: var(--color-info);
+}
+
+.fullWidthControl {
+  width: 100%;
+}
+
+.toolbarActionGroup {
+  gap: 8px;
+}
+
+.toolbarButton {
+  min-height: 40px;
+  border-radius: 8px;
+}
+
+.toolbarButton:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.linkButton {
+  padding: 0 !important;
+  min-height: 40px;
+  border-radius: 6px;
+  font-weight: var(--font-weight-medium);
+}
+
+.linkButton:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.actionGroup {
+  gap: 4px;
+}
+
+.selectActionButton {
+  min-height: 32px;
+}
+
+.iconActionButton {
+  min-width: 40px;
+  min-height: 40px;
+  border-radius: 8px;
+  color: var(--color-text-secondary);
+  transition:
+    color var(--transition-base),
+    background-color var(--transition-base);
+}
+
+.iconActionButton:hover {
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.iconActionButton:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.deleteActionButton:hover {
+  color: var(--color-error);
+  background: var(--color-error-light);
+}
+
+.statusSwitch {
+  min-width: 48px;
+}
+
+.tableCard {
+  border-radius: 12px;
+}
+
+@media (max-width: 768px) {
+  .statsRow {
+    margin-bottom: 16px;
+  }
+
+  .toolbarButton,
+  .linkButton,
+  .iconActionButton {
+    min-height: 44px;
+  }
+}

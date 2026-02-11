@@ -72,9 +72,9 @@ STANDARD_ENUMS: dict[str, EnumTypeConfig] = {
         ],
     },
     "tenant_type": {
-        "name": "租户类型",
+        "name": "承租方类型",
         "category": "合同管理",
-        "description": "租户的类型分类",
+        "description": "承租方的类型分类",
         "values": [
             {"value": "企业", "label": "企业", "sort_order": 1},
             {"value": "个人", "label": "个人", "sort_order": 2},

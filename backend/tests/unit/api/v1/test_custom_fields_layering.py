@@ -25,6 +25,8 @@ async def test_get_custom_fields_should_delegate_custom_field_service() -> None:
 
     mock_service = MagicMock()
     mock_service.get_custom_fields_async = AsyncMock(return_value=[MagicMock()])
+    mock_user = MagicMock()
+    mock_user.id = "user-1"
 
     with pytest.MonkeyPatch.context() as monkeypatch:
         monkeypatch.setattr(module, "custom_field_service", mock_service)
@@ -39,7 +41,7 @@ async def test_get_custom_fields_should_delegate_custom_field_service() -> None:
             is_required=True,
             is_active=True,
             db=MagicMock(),
-            current_user=MagicMock(),
+            current_user=mock_user,
         )
 
     assert len(result) == 1
@@ -51,6 +53,7 @@ async def test_get_custom_fields_should_delegate_custom_field_service() -> None:
             "is_required": True,
             "is_active": True,
         },
+        current_user_id="user-1",
     )
 
 
@@ -62,6 +65,8 @@ async def test_get_custom_field_should_delegate_custom_field_service() -> None:
 
     mock_service = MagicMock()
     mock_service.get_custom_field_async = AsyncMock(return_value=MagicMock())
+    mock_user = MagicMock()
+    mock_user.id = "user-1"
 
     with pytest.MonkeyPatch.context() as monkeypatch:
         monkeypatch.setattr(module, "custom_field_service", mock_service)
@@ -73,13 +78,14 @@ async def test_get_custom_field_should_delegate_custom_field_service() -> None:
         result = await get_custom_field(
             field_id="field-1",
             db=MagicMock(),
-            current_user=MagicMock(),
+            current_user=mock_user,
         )
 
     assert result["id"] == "field-1"
     mock_service.get_custom_field_async.assert_awaited_once_with(
         db=ANY,
         field_id="field-1",
+        current_user_id="user-1",
     )
 
 

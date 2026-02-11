@@ -170,7 +170,17 @@ async def confirm_import(
     """
     try:
         service = PropertyCertificateService(db)
-        certificate = await service.confirm_import(data.model_dump())
+        default_org_id = getattr(current_user, "default_organization_id", None)
+        organization_id = (
+            str(default_org_id)
+            if default_org_id is not None and str(default_org_id).strip() != ""
+            else None
+        )
+        certificate = await service.confirm_import(
+            data.model_dump(),
+            created_by=str(current_user.id),
+            organization_id=organization_id,
+        )
 
         logger.info(
             f"Created certificate {certificate.id} from upload session {data.session_id}"
@@ -207,7 +217,11 @@ async def list_certificates(
     """
     try:
         service = PropertyCertificateService(db)
-        certificates = await service.list_certificates(skip=skip, limit=limit)
+        certificates = await service.list_certificates(
+            skip=skip,
+            limit=limit,
+            current_user_id=str(current_user.id),
+        )
         logger.debug(
             "Retrieved %d certificates (skip=%d, limit=%d)",
             len(certificates),
@@ -247,7 +261,10 @@ async def get_certificate(
     """
     try:
         service = PropertyCertificateService(db)
-        cert = await service.get_certificate(certificate_id)
+        cert = await service.get_certificate(
+            certificate_id,
+            current_user_id=str(current_user.id),
+        )
         if not cert:
             logger.warning(f"Certificate not found: {certificate_id}")
             raise HTTPException(
@@ -307,7 +324,17 @@ async def create_certificate(
             )
 
         service = PropertyCertificateService(db)
-        result = await service.create_certificate(certificate)
+        default_org_id = getattr(current_user, "default_organization_id", None)
+        organization_id = (
+            str(default_org_id)
+            if default_org_id is not None and str(default_org_id).strip() != ""
+            else None
+        )
+        result = await service.create_certificate(
+            certificate,
+            created_by=str(current_user.id),
+            organization_id=organization_id,
+        )
         logger.info(
             "Created certificate %s (number: %r)",
             result.id,
@@ -347,7 +374,10 @@ async def update_certificate(
     """
     try:
         service = PropertyCertificateService(db)
-        cert = await service.get_certificate(certificate_id)
+        cert = await service.get_certificate(
+            certificate_id,
+            current_user_id=str(current_user.id),
+        )
         if not cert:
             logger.warning(f"Certificate not found: {certificate_id}")
             raise HTTPException(
@@ -389,7 +419,10 @@ async def delete_certificate(
     """
     try:
         service = PropertyCertificateService(db)
-        cert = await service.get_certificate(certificate_id)
+        cert = await service.get_certificate(
+            certificate_id,
+            current_user_id=str(current_user.id),
+        )
         if not cert:
             logger.warning(f"Certificate not found: {certificate_id}")
             raise HTTPException(

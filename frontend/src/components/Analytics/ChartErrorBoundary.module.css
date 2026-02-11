@@ -1,0 +1,37 @@
+.errorContainer {
+  padding: 20px;
+  text-align: center;
+}
+
+.errorAlert {
+  margin-bottom: 12px;
+}
+
+.errorDescription {
+  text-align: left;
+}
+
+.errorMessage {
+  margin: 0;
+}
+
+.errorDetail {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.retryButton {
+  min-height: 36px;
+}
+
+.retryButton:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+@media (max-width: 768px) {
+  .retryButton {
+    min-height: 44px;
+  }
+}

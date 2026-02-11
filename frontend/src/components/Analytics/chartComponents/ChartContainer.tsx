@@ -1,5 +1,6 @@
 import React from 'react';
 import { Empty, Spin } from 'antd';
+import styles from './ChartContainer.module.css';
 
 interface ChartContainerProps {
   loading?: boolean;
@@ -14,16 +15,13 @@ const ChartContainer: React.FC<ChartContainerProps> = ({
   hasData,
   children,
 }) => {
+  const containerStyle = {
+    ['--chart-height' as string]: `${height}px`,
+  } as React.CSSProperties;
+
   if (loading === true) {
     return (
-      <div
-        style={{
-          height: `${height}px`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
+      <div className={styles.stateContainer} style={containerStyle} role="status" aria-live="polite">
         <Spin size="large" />
       </div>
     );
@@ -31,14 +29,7 @@ const ChartContainer: React.FC<ChartContainerProps> = ({
 
   if (hasData === false) {
     return (
-      <div
-        style={{
-          height: `${height}px`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
+      <div className={styles.stateContainer} style={containerStyle}>
         <Empty description="暂无数据" />
       </div>
     );

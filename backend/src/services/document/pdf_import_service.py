@@ -15,7 +15,6 @@ from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any, cast
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.exception_handler import (
@@ -25,6 +24,8 @@ from ...core.exception_handler import (
     InternalServerError,
 )
 from ...core.task_queue import get_task_queue  # 现有任务队列系统
+from ...crud.pdf_import_session import pdf_import_session_crud
+from ...crud.query_builder import TenantFilter
 from ...models.pdf_import_session import PDFImportSession, ProcessingStep, SessionStatus
 from ...models.rent_contract import (
     ContractType,
@@ -66,6 +67,47 @@ class PDFImportService:
         self.regex_extractor = ContractExtractor()
         self.llm_extractor = get_llm_contract_extractor()
         self.task_queue = get_task_queue()
+
+    async def _resolve_tenant_filter(
+        self,
+        db: AsyncSession,
+        *,
+        current_user_id: str | None = None,
+        tenant_filter: TenantFilter | None = None,
+    ) -> TenantFilter | None:
+        if tenant_filter is not None:
+            return tenant_filter
+        if current_user_id is None or current_user_id.strip() == "":
+            return None
+
+        try:
+            from ...services.organization_permission_service import (
+                OrganizationPermissionService,
+            )
+
+            org_service = OrganizationPermissionService(db)
+            org_ids = await org_service.get_user_accessible_organizations(
+                current_user_id
+            )
+            normalized_org_ids: list[int] = []
+            for org_id in org_ids:
+                org_id_text = str(org_id).strip()
+                if org_id_text == "":
+                    continue
+                try:
+                    normalized_org_ids.append(int(org_id_text))
+                except ValueError:
+                    logger.debug(
+                        "Skipping non-numeric organization id %r for PDF sessions",
+                        org_id,
+                    )
+            return TenantFilter(organization_ids=normalized_org_ids)
+        except Exception:
+            logger.exception(
+                "Failed to resolve tenant filter for user %s, fallback to fail-closed",
+                current_user_id,
+            )
+            return TenantFilter(organization_ids=[])
 
     async def upload_file(self, file_content: bytes, filename: str) -> dict[str, Any]:
         """
@@ -170,21 +212,30 @@ class PDFImportService:
         return cls._active_tasks
 
     async def get_session_map_async(
-        self, db: AsyncSession, session_ids: list[str]
+        self,
+        db: AsyncSession,
+        session_ids: list[str],
+        tenant_filter: TenantFilter | None = None,
+        current_user_id: str | None = None,
     ) -> dict[str, PDFImportSession]:
         """批量获取会话ID到会话对象映射。"""
-        session_id_list = [session_id for session_id in session_ids if session_id]
-        if not session_id_list:
-            return {}
-
-        stmt = select(PDFImportSession).where(
-            PDFImportSession.session_id.in_(session_id_list)
+        resolved_tenant_filter = await self._resolve_tenant_filter(
+            db,
+            current_user_id=current_user_id,
+            tenant_filter=tenant_filter,
         )
-        sessions = list((await db.execute(stmt)).scalars().all())
-        return {session.session_id: session for session in sessions}
+        return await pdf_import_session_crud.get_session_map_async(
+            db,
+            session_ids,
+            tenant_filter=resolved_tenant_filter,
+        )
 
     async def get_session_status(
-        self, db: AsyncSession, session_id: str
+        self,
+        db: AsyncSession,
+        session_id: str,
+        tenant_filter: TenantFilter | None = None,
+        current_user_id: str | None = None,
     ) -> dict[str, Any]:
         """
         获取会话状态
@@ -197,10 +248,16 @@ class PDFImportService:
             会话状态信息
         """
 
-        session_stmt = select(PDFImportSession).where(
-            PDFImportSession.session_id == session_id
+        resolved_tenant_filter = await self._resolve_tenant_filter(
+            db,
+            current_user_id=current_user_id,
+            tenant_filter=tenant_filter,
         )
-        session = (await db.execute(session_stmt)).scalars().first()
+        session = await pdf_import_session_crud.get_by_session_id_async(
+            db,
+            session_id,
+            tenant_filter=resolved_tenant_filter,
+        )
         if not session:
             return {"success": False, "error": "Session not found"}
 
@@ -244,10 +301,7 @@ class PDFImportService:
         Returns:
             处理启动结果
         """
-        session_stmt = select(PDFImportSession).where(
-            PDFImportSession.session_id == session_id
-        )
-        session = (await db.execute(session_stmt)).scalars().first()
+        session = await pdf_import_session_crud.get_by_session_id_async(db, session_id)
         if session:
             session.status = SessionStatus.PROCESSING
             session.current_step = ProcessingStep.FILE_UPLOAD
@@ -439,10 +493,10 @@ class PDFImportService:
 
         async with async_session_scope() as db:
             try:
-                session_stmt = select(PDFImportSession).where(
-                    PDFImportSession.session_id == session_id
+                session = await pdf_import_session_crud.get_by_session_id_async(
+                    db,
+                    session_id,
                 )
-                session = (await db.execute(session_stmt)).scalars().first()
 
                 if session:
                     result_with_metrics = {
@@ -507,10 +561,10 @@ class PDFImportService:
 
         async with async_session_scope() as db:
             try:
-                session_stmt = select(PDFImportSession).where(
-                    PDFImportSession.session_id == session_id
+                session = await pdf_import_session_crud.get_by_session_id_async(
+                    db,
+                    session_id,
                 )
-                session = (await db.execute(session_stmt)).scalars().first()
 
                 if session:
                     session.error_message = error_result.get("error", "Unknown error")
@@ -790,10 +844,10 @@ class PDFImportService:
             创建结果
         """
         try:
-            import_session_stmt = select(PDFImportSession).where(
-                PDFImportSession.session_id == session_id
+            import_session = await pdf_import_session_crud.get_by_session_id_async(
+                db,
+                session_id,
             )
-            import_session = (await db.execute(import_session_stmt)).scalars().first()
 
             if not import_session:
                 return {"success": False, "error": "Import session not found"}
@@ -958,7 +1012,12 @@ class PDFImportService:
             ) from e
 
     async def cancel_processing(
-        self, db: AsyncSession, session_id: str, reason: str
+        self,
+        db: AsyncSession,
+        session_id: str,
+        reason: str,
+        tenant_filter: TenantFilter | None = None,
+        current_user_id: str | None = None,
     ) -> dict[str, Any]:
         """
         取消处理
@@ -971,10 +1030,16 @@ class PDFImportService:
         Returns:
             取消结果
         """
-        session_stmt = select(PDFImportSession).where(
-            PDFImportSession.session_id == session_id
+        resolved_tenant_filter = await self._resolve_tenant_filter(
+            db,
+            current_user_id=current_user_id,
+            tenant_filter=tenant_filter,
         )
-        session = (await db.execute(session_stmt)).scalars().first()
+        session = await pdf_import_session_crud.get_by_session_id_async(
+            db,
+            session_id,
+            tenant_filter=resolved_tenant_filter,
+        )
 
         if session and session.is_processing:
             session.status = SessionStatus.CANCELLED

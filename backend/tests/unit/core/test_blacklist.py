@@ -194,8 +194,8 @@ class TestMiddlewareIntegration:
 
         assert auth._is_token_blacklisted("fail-closed-token") is True
 
-    def test_blacklist_fail_open_when_circuit_open_in_non_production(self, monkeypatch):
-        """非生产环境下黑名单熔断应 fail-open"""
+    def test_blacklist_fail_closed_when_circuit_open_in_non_production(self, monkeypatch):
+        """非生产环境下黑名单熔断也应 fail-closed"""
         import src.middleware.auth as auth
 
         monkeypatch.setattr(auth, "is_production", lambda: False)
@@ -203,7 +203,7 @@ class TestMiddlewareIntegration:
             auth._token_blacklist_circuit, "allow_request", lambda: False
         )
 
-        assert auth._is_token_blacklisted("fail-open-token") is False
+        assert auth._is_token_blacklisted("fail-open-token") is True
 
     def test_blacklist_exception_fail_closed_in_production(self, monkeypatch):
         """生产环境下黑名单异常应 fail-closed"""

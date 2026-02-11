@@ -1,0 +1,11 @@
+.stepFinishIcon {
+  color: #52c41a;
+}
+
+.stepProcessIcon {
+  color: #1890ff;
+}
+
+.stepErrorIcon {
+  color: #ff4d4f;
+}

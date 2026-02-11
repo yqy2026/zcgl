@@ -1,0 +1,234 @@
+.triggerButton {
+  width: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  transition:
+    color var(--transition-fast),
+    background-color var(--transition-fast);
+}
+
+.triggerButton:hover {
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.triggerButton:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.bellIcon {
+  font-size: 18px;
+}
+
+.panel {
+  width: min(400px, calc(100vw - 24px));
+  max-height: min(500px, calc(100vh - 100px));
+  overflow: auto;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+}
+
+.panelHeader {
+  padding: 12px;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.panelHeaderRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.markAllButton {
+  min-height: 32px;
+  border-radius: 8px;
+}
+
+.loadingState,
+.emptyState {
+  padding: 40px 16px;
+  text-align: center;
+}
+
+.notificationList {
+  background: transparent;
+}
+
+.notificationList :global(.ant-list-items) {
+  margin: 0;
+  padding: 0;
+}
+
+.notificationItem {
+  padding: 12px;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.notificationRead {
+  background: transparent;
+}
+
+.notificationUnread {
+  background: var(--color-success-light);
+}
+
+.notificationItem:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
+.notificationItem:hover {
+  background: var(--color-bg-secondary);
+}
+
+.notificationContent {
+  width: 100%;
+}
+
+.notificationHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.notificationMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.unreadDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-success);
+  flex-shrink: 0;
+}
+
+.typeTag {
+  margin-inline-end: 0;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 12px;
+  font-weight: var(--font-weight-medium);
+  line-height: 1.35;
+  padding-inline: 8px;
+}
+
+.tonePrimary {
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+}
+
+.toneSuccess {
+  color: var(--color-success);
+  background: var(--color-success-light);
+  border-color: var(--color-success);
+}
+
+.toneWarning {
+  color: var(--color-warning);
+  background: var(--color-warning-light);
+  border-color: var(--color-warning);
+}
+
+.toneError {
+  color: var(--color-error);
+  background: var(--color-error-light);
+  border-color: var(--color-error);
+}
+
+.toneNeutral {
+  color: var(--color-text-secondary);
+  background: var(--color-bg-secondary);
+  border-color: var(--color-border-light);
+}
+
+.itemActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.itemActionButton {
+  min-width: 32px;
+  min-height: 32px;
+  border-radius: 8px;
+  color: var(--color-text-secondary);
+}
+
+.itemActionButton:hover {
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.itemActionButton:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.itemActionDanger {
+  color: var(--color-error);
+}
+
+.notificationTitle {
+  margin-bottom: 4px;
+}
+
+.notificationBody {
+  margin-bottom: 4px;
+}
+
+.notificationBodyText {
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.notificationFooter {
+  display: flex;
+  align-items: center;
+}
+
+.notificationTime {
+  font-size: 11px;
+}
+
+.panelFooter {
+  padding: 8px 12px;
+  border-top: 1px solid var(--color-border-light);
+  text-align: center;
+}
+
+.viewAllButton {
+  min-height: 32px;
+  border-radius: 8px;
+}
+
+@media (max-width: 768px) {
+  .triggerButton {
+    width: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .itemActionButton,
+  .markAllButton,
+  .viewAllButton {
+    min-height: 44px;
+  }
+
+  .itemActionButton {
+    min-width: 44px;
+  }
+}

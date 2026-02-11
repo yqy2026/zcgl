@@ -5,13 +5,11 @@
 
 from typing import Any
 
-from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.exception_handler import conflict, not_found
 from ..crud.enum_field import get_enum_field_type_crud, get_enum_field_value_crud
-from ..models.enum_field import EnumFieldHistory, EnumFieldValue
-from ..models.system_dictionary import SystemDictionary
+from ..crud.system_dictionary import system_dictionary_crud
 from ..schemas.dictionary import (
     DictionaryOptionResponse,
     DictionaryValueCreate,
@@ -50,14 +48,11 @@ class CommonDictionaryService:
                 for value in enum_values
             ]
 
-        stmt = select(SystemDictionary).where(SystemDictionary.dict_type == dict_type)
-        if is_active is not None:
-            stmt = stmt.where(SystemDictionary.is_active == is_active)
-
-        result = await db.execute(
-            stmt.order_by(SystemDictionary.sort_order, SystemDictionary.created_at)
+        system_dicts = await system_dictionary_crud.get_by_type_with_active_filter_async(
+            db,
+            dict_type=dict_type,
+            is_active=is_active,
         )
-        system_dicts = list(result.scalars().all())
 
         return [
             DictionaryOptionResponse(
@@ -180,45 +175,26 @@ class CommonDictionaryService:
         if not enum_type:
             raise not_found(f"字典类型 {dict_type} 不存在", resource_type="dictionary")
 
+        enum_value_crud = get_enum_field_value_crud(db)
         enum_type_id_str = str(enum_type.id)
-        values_stmt = (
-            select(EnumFieldValue.id)
-            .where(
-                EnumFieldValue.enum_type_id == enum_type_id_str,
-                EnumFieldValue.is_deleted.is_(False),
-            )
-            .order_by(EnumFieldValue.level.desc())
+        enum_values = await enum_value_crud.get_all_by_type_async(
+            db,
+            enum_type_id=enum_type_id_str,
+            is_active=None,
         )
-        value_ids = list((await db.execute(values_stmt)).scalars().all())
-
-        if value_ids:
-            await db.execute(
-                delete(EnumFieldHistory).where(
-                    EnumFieldHistory.enum_value_id.in_(value_ids)
-                )
+        for enum_value in enum_values:
+            await enum_value_crud.delete_async(
+                db,
+                enum_value_id=str(enum_value.id),
+                deleted_by=operator,
             )
-            await db.execute(
-                update(EnumFieldValue)
-                .where(EnumFieldValue.id.in_(value_ids))
-                .values(
-                    {
-                        EnumFieldValue.is_deleted: True,
-                        EnumFieldValue.updated_by: operator,
-                    }
-                )
-            )
-            await db.flush()
 
         await enum_type_crud.delete_async(db, enum_type_id_str, deleted_by=operator)
 
         return {"message": f"字典类型 {dict_type} 删除成功"}
 
     async def get_all_dictionary_types_async(self, db: AsyncSession) -> list[str]:
-        from ..models.enum_field import EnumFieldType
-
-        stmt = select(EnumFieldType.code).where(EnumFieldType.is_deleted.is_(False))
-        enum_types = list((await db.execute(stmt)).scalars().all())
-        return sorted([code for code in enum_types if code])
+        return await system_dictionary_crud.get_types_async(db)
 
 
 # 单例服务实例

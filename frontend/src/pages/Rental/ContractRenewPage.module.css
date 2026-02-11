@@ -1,0 +1,57 @@
+.pageContainer {
+  background: var(--color-bg-tertiary);
+}
+
+.titleIcon {
+  margin-right: 8px;
+  color: var(--color-success);
+}
+
+.successCard {
+  margin-bottom: 16px;
+  border-color: var(--color-success);
+  background: var(--color-success-light, #f6ffed);
+}
+
+.successIcon {
+  margin-right: 12px;
+  color: var(--color-success);
+  font-size: 24px;
+}
+
+.successTitle {
+  margin: 0 !important;
+  color: var(--color-success) !important;
+}
+
+.guideCard {
+  margin-bottom: 16px;
+  background: var(--color-primary-light, #e6f7ff);
+}
+
+.guideTitle {
+  margin-bottom: 12px !important;
+  color: var(--color-primary) !important;
+}
+
+.guideTitleIcon {
+  margin-right: 6px;
+}
+
+.guideStep {
+  padding: 8px;
+  text-align: center;
+}
+
+.guideStepIcon {
+  color: var(--color-primary);
+  font-size: 24px;
+}
+
+.guideStepText {
+  margin-top: 8px;
+}
+
+.guideNotes {
+  margin-top: 12px;
+}

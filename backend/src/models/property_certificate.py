@@ -176,6 +176,12 @@ class PropertyCertificate(Base):
     co_ownership: Mapped[str | None] = mapped_column(String(200), comment="共有情况")
     restrictions: Mapped[str | None] = mapped_column(Text, comment="权利限制情况")
     remarks: Mapped[str | None] = mapped_column(Text, comment="备注")
+    organization_id: Mapped[str | None] = mapped_column(
+        String,
+        ForeignKey("organizations.id"),
+        index=True,
+        comment="所属组织ID",
+    )
 
     # Audit fields
     created_at: Mapped[datetime] = mapped_column(
@@ -190,6 +196,7 @@ class PropertyCertificate(Base):
     created_by: Mapped[str | None] = mapped_column(String(100), comment="创建人ID")
 
     # Relationships (many-to-many)
+    organization: Mapped["Organization | None"] = relationship("Organization")
     owners: Mapped[list["PropertyOwner"]] = relationship(
         "PropertyOwner",
         secondary="property_certificate_owners",

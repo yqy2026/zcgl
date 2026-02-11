@@ -65,5 +65,7 @@ async def test_get_project_should_delegate_project_service_lookup() -> None:
 
     assert result.id == "project-1"
     mock_service.get_project_by_id.assert_awaited_once_with(
-        db=ANY, project_id="project-1"
+        db=ANY,
+        project_id="project-1",
+        current_user_id=ANY,
     )

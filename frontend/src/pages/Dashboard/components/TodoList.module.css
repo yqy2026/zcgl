@@ -1,0 +1,83 @@
+.todoList {
+  width: 100%;
+}
+
+.todoItem {
+  padding-block: 12px;
+}
+
+.todoItem :global(.ant-list-item-action) {
+  margin-inline-start: 12px;
+}
+
+.completeButton {
+  min-height: 40px;
+  border-radius: 8px;
+}
+
+.completeButton:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.priorityIcon {
+  font-size: 16px;
+}
+
+.priorityHigh {
+  color: var(--color-error);
+}
+
+.priorityMedium {
+  color: var(--color-warning);
+}
+
+.priorityLow {
+  color: var(--color-text-tertiary);
+}
+
+.titleRow {
+  gap: 8px;
+}
+
+.titleText {
+  color: var(--color-text-primary);
+  line-height: 1.4;
+}
+
+.completedTitle {
+  color: var(--color-text-secondary);
+  text-decoration: line-through;
+}
+
+.priorityTag {
+  border-radius: 999px;
+  padding-inline: 8px;
+}
+
+.descriptionBlock {
+  line-height: 1.4;
+}
+
+.descriptionText {
+  font-size: 12px;
+}
+
+.dueRow {
+  margin-top: 4px;
+  gap: 6px;
+}
+
+.dueIcon {
+  color: var(--color-text-tertiary);
+}
+
+.dueText {
+  font-size: 12px;
+}
+
+@media (max-width: 768px) {
+  .completeButton {
+    min-height: 44px;
+  }
+}

@@ -34,6 +34,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { assetService } from '@/services/assetService';
 import type { Asset } from '@/types/asset';
 import { PageContainer } from '@/components/Common';
+import styles from './PropertyCertificateDetailPage.module.css';
 
 const typeLabelMap: Record<CertificateType, string> = {
   real_estate: '不动产权证',
@@ -302,7 +303,7 @@ const PropertyCertificateDetailPage: React.FC = () => {
       }
     >
       {certificate && (
-        <Space direction="vertical" size="large" style={{ width: '100%' }}>
+        <Space direction="vertical" size="large" className={styles.fullWidthStack}>
           <Row gutter={[24, 24]}>
           <Col span={24}>
             <Card title="基础信息">
@@ -409,7 +410,7 @@ const PropertyCertificateDetailPage: React.FC = () => {
             <Input />
           </Form.Item>
           <Form.Item label="登记日期" name="registration_date">
-            <DatePicker style={{ width: '100%' }} />
+            <DatePicker className={styles.fullWidthDatePicker} />
           </Form.Item>
           <Form.Item label="坐落地址" name="property_address">
             <Input />
@@ -427,7 +428,7 @@ const PropertyCertificateDetailPage: React.FC = () => {
             <Input />
           </Form.Item>
           <Form.Item label="土地使用期限" name="land_use_term">
-            <DatePicker.RangePicker style={{ width: '100%' }} />
+            <DatePicker.RangePicker className={styles.fullWidthRangePicker} />
           </Form.Item>
           <Form.Item label="共有情况" name="co_ownership">
             <Input />

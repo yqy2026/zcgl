@@ -17,6 +17,7 @@ import type { SessionProgress, SystemInfoResponse } from '@/services/pdfImportSe
 import { createLogger } from '@/utils/logger';
 import type { PDFImportContextType, ProcessingStep, ProcessingOptions, UploadStats } from './types';
 import { DEFAULT_PROCESSING_OPTIONS } from './types';
+import styles from './PDFImportContext.module.css';
 
 const logger = createLogger('PDFImportContext');
 
@@ -329,11 +330,11 @@ export const PDFImportProvider: React.FC<PDFImportProviderProps> = ({
   const getStepIcon = useCallback((step: ProcessingStep): React.ReactNode => {
     switch (step.status) {
       case 'finish':
-        return <CheckCircleOutlined style={{ color: '#52c41a' }} />;
+        return <CheckCircleOutlined className={styles.stepFinishIcon} />;
       case 'process':
-        return <LoadingOutlined style={{ color: '#1890ff' }} />;
+        return <LoadingOutlined className={styles.stepProcessIcon} />;
       case 'error':
-        return <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />;
+        return <ExclamationCircleOutlined className={styles.stepErrorIcon} />;
       default:
         return <FileTextOutlined />;
     }

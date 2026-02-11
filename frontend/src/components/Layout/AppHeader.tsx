@@ -19,15 +19,6 @@ import { NotificationCenter } from '@/components/Notification';
 import styles from './Layout.module.css';
 
 const { Header } = Layout;
-const HEADER_TOGGLE_BUTTON_STYLE = {
-  fontSize: '16px',
-  width: 40,
-  height: 40,
-} as const;
-const HEADER_TITLE_WRAPPER_STYLE = { marginLeft: 16 } as const;
-const HEADER_ICON_STYLE = { fontSize: '16px' } as const;
-const USER_AVATAR_STYLE = { backgroundColor: '#1677ff' } as const;
-const USER_TEXT_STYLE = { color: '#1e293b' } as const;
 
 interface AppHeaderProps {
   collapsed: boolean;
@@ -127,11 +118,11 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) =
           type="text"
           icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
           onClick={onToggleCollapsed}
-          style={HEADER_TOGGLE_BUTTON_STYLE}
+          className={styles.headerToggleButton}
           aria-label={collapsed ? '展开侧边栏' : '折叠侧边栏'}
         />
 
-        <div style={HEADER_TITLE_WRAPPER_STYLE}>
+        <div className={styles.headerTitleWrapper}>
           <Typography.Text strong className={styles.headerTitle}>
             土地房产资产管理系统
           </Typography.Text>
@@ -139,13 +130,13 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) =
       </div>
 
       {/* 右侧 */}
-      <Space size="middle" className={styles.headerRight}>
+      <Space size={8} className={styles.headerRight} wrap>
         {/* 语言切换 */}
         <Tooltip title="语言切换">
           <Button
             type="text"
             className={styles.headerIconButton}
-            icon={<GlobalOutlined style={HEADER_ICON_STYLE} />}
+            icon={<GlobalOutlined className={styles.headerActionIcon} />}
             onClick={handleLanguageSwitch}
             aria-label="语言切换"
           />
@@ -156,14 +147,16 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) =
           <Button
             type="text"
             className={styles.headerIconButton}
-            icon={<QuestionCircleOutlined style={HEADER_ICON_STYLE} />}
+            icon={<QuestionCircleOutlined className={styles.headerActionIcon} />}
             onClick={handleOpenHelpDocs}
             aria-label="帮助文档"
           />
         </Tooltip>
 
         {/* 通知 */}
-        <NotificationCenter />
+        <div className={styles.notificationSlot}>
+          <NotificationCenter />
+        </div>
 
         {/* 用户信息 */}
         <Dropdown
@@ -178,9 +171,10 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) =
             type="text"
             className={styles.userInfoButton}
             aria-label="用户菜单"
+            aria-haspopup="menu"
           >
-            <Avatar size="small" icon={<UserOutlined />} style={USER_AVATAR_STYLE} />
-            <Typography.Text strong style={USER_TEXT_STYLE}>
+            <Avatar size="small" icon={<UserOutlined />} className={styles.userAvatar} />
+            <Typography.Text strong className={styles.userText}>
               {user?.full_name ?? user?.username ?? '用户'}
             </Typography.Text>
           </Button>

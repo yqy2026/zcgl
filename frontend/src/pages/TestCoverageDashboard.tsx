@@ -33,6 +33,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { useArrayListData } from '@/hooks/useArrayListData';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
 import { testCoverageService } from '@/services/testCoverageService';
+import styles from './TestCoverageDashboard.module.css';
 
 // 类型定义
 interface CoverageMetrics {
@@ -256,7 +257,7 @@ const TestCoverageDashboard: React.FC = () => {
       render: (_, record) => (
         <span>
           {record.lines_covered}/{record.lines_total}
-          <span style={{ marginLeft: 4, color: COLORS.textSecondary }}>
+          <span className={styles.inlineSecondaryText}>
             ({((record.lines_covered / record.lines_total) * 100).toFixed(1)}%)
           </span>
         </span>
@@ -269,7 +270,7 @@ const TestCoverageDashboard: React.FC = () => {
       render: (_, record) => (
         <span>
           {record.branches_covered}/{record.branches_total}
-          <span style={{ marginLeft: 4, color: COLORS.textSecondary }}>
+          <span className={styles.inlineSecondaryText}>
             ({((record.branches_covered / record.branches_total) * 100).toFixed(1)}%)
           </span>
         </span>
@@ -282,7 +283,7 @@ const TestCoverageDashboard: React.FC = () => {
       render: (_, record) => (
         <span>
           {record.functions_covered}/{record.functions_total}
-          <span style={{ marginLeft: 4, color: COLORS.textSecondary }}>
+          <span className={styles.inlineSecondaryText}>
             ({((record.functions_covered / record.functions_total) * 100).toFixed(1)}%)
           </span>
         </span>
@@ -373,18 +374,26 @@ const TestCoverageDashboard: React.FC = () => {
     },
   };
 
+  const totalCoverageValue = coverageReport?.total_coverage ?? 0;
+  const backendCoverageValue = coverageReport?.backend_coverage ?? 0;
+  const frontendCoverageValue = coverageReport?.frontend_coverage ?? 0;
+  const totalThresholdValue = thresholds?.total_threshold ?? 75;
+  const backendThresholdValue = thresholds?.backend_threshold ?? 80;
+  const frontendThresholdValue = thresholds?.frontend_threshold ?? 70;
+
+  const getCoverageToneClassName = (currentValue: number, thresholdValue: number): string => {
+    return currentValue >= thresholdValue ? styles.metricToneSuccess : styles.metricToneError;
+  };
+
+  const buildMetricClassName = (currentValue: number, thresholdValue: number): string => {
+    return [styles.metricStatistic, getCoverageToneClassName(currentValue, thresholdValue)].join(' ');
+  };
+
   return (
-    <div style={{ padding: '24px' }}>
+    <div className={styles.pageContainer}>
       {/* 页面标题和操作按钮 */}
-      <div
-        style={{
-          marginBottom: 24,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}
-      >
-        <h1>测试覆盖率监控</h1>
+      <div className={styles.headerBar}>
+        <h1 className={styles.pageTitle}>测试覆盖率监控</h1>
         <Space>
           <Button
             type="default"
@@ -408,7 +417,7 @@ const TestCoverageDashboard: React.FC = () => {
       {/* 质量门禁状态 */}
       {!qualityGateLoading && qualityGate && (
         <Alert
-          style={{ marginBottom: 24 }}
+          className={styles.qualityGateAlert}
           type={qualityGate.passed ? 'success' : 'error'}
           title={
             qualityGate.passed
@@ -418,7 +427,7 @@ const TestCoverageDashboard: React.FC = () => {
           description={
             !qualityGate.passed &&
             qualityGate.failed_checks.length > 0 && (
-              <ul style={{ margin: '8px 0 0 0', paddingLeft: 20 }}>
+              <ul className={styles.failedChecksList}>
                 {qualityGate.failed_checks.map(check => (
                   <li key={check}>{check}</li>
                 ))}
@@ -430,24 +439,17 @@ const TestCoverageDashboard: React.FC = () => {
       )}
 
       {/* 总体覆盖率统计卡片 */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+      <Row gutter={[16, 16]} className={styles.metricsRow}>
         <Col span={6}>
           <Card>
             <Statistic
               title="总体覆盖率"
-              value={coverageReport?.total_coverage ?? 0}
+              value={totalCoverageValue}
               precision={1}
               suffix="%"
-              styles={{
-                content: {
-                  color:
-                    (coverageReport?.total_coverage ?? 0) >= (thresholds?.total_threshold ?? 75)
-                      ? COLORS.success
-                      : COLORS.error,
-                },
-              }}
+              className={buildMetricClassName(totalCoverageValue, totalThresholdValue)}
               prefix={
-                (coverageReport?.total_coverage ?? 0) >= (thresholds?.total_threshold ?? 75) ? (
+                totalCoverageValue >= totalThresholdValue ? (
                   <RiseOutlined />
                 ) : (
                   <FallOutlined />
@@ -455,7 +457,7 @@ const TestCoverageDashboard: React.FC = () => {
               }
             />
             {thresholds != null && (
-              <div style={{ fontSize: 12, color: COLORS.textSecondary, marginTop: 8 }}>
+              <div className={styles.metricTargetText}>
                 目标: {thresholds.total_threshold}%
               </div>
             )}
@@ -465,19 +467,12 @@ const TestCoverageDashboard: React.FC = () => {
           <Card>
             <Statistic
               title="后端覆盖率"
-              value={coverageReport?.backend_coverage ?? 0}
+              value={backendCoverageValue}
               precision={1}
               suffix="%"
-              styles={{
-                content: {
-                  color:
-                    (coverageReport?.backend_coverage ?? 0) >= (thresholds?.backend_threshold ?? 80)
-                      ? COLORS.success
-                      : COLORS.error,
-                },
-              }}
+              className={buildMetricClassName(backendCoverageValue, backendThresholdValue)}
               prefix={
-                (coverageReport?.backend_coverage ?? 0) >= (thresholds?.backend_threshold ?? 80) ? (
+                backendCoverageValue >= backendThresholdValue ? (
                   <CheckCircleOutlined />
                 ) : (
                   <CloseCircleOutlined />
@@ -485,7 +480,7 @@ const TestCoverageDashboard: React.FC = () => {
               }
             />
             {thresholds != null && (
-              <div style={{ fontSize: 12, color: COLORS.textSecondary, marginTop: 8 }}>
+              <div className={styles.metricTargetText}>
                 目标: {thresholds.backend_threshold}%
               </div>
             )}
@@ -495,21 +490,12 @@ const TestCoverageDashboard: React.FC = () => {
           <Card>
             <Statistic
               title="前端覆盖率"
-              value={coverageReport?.frontend_coverage ?? 0}
+              value={frontendCoverageValue}
               precision={1}
               suffix="%"
-              styles={{
-                content: {
-                  color:
-                    (coverageReport?.frontend_coverage ?? 0) >=
-                    (thresholds?.frontend_threshold ?? 70)
-                      ? COLORS.success
-                      : COLORS.error,
-                },
-              }}
+              className={buildMetricClassName(frontendCoverageValue, frontendThresholdValue)}
               prefix={
-                (coverageReport?.frontend_coverage ?? 0) >=
-                (thresholds?.frontend_threshold ?? 70) ? (
+                frontendCoverageValue >= frontendThresholdValue ? (
                   <CheckCircleOutlined />
                 ) : (
                   <CloseCircleOutlined />
@@ -517,7 +503,7 @@ const TestCoverageDashboard: React.FC = () => {
               }
             />
             {thresholds != null && (
-              <div style={{ fontSize: 12, color: COLORS.textSecondary, marginTop: 8 }}>
+              <div className={styles.metricTargetText}>
                 目标: {thresholds.frontend_threshold}%
               </div>
             )}
@@ -531,8 +517,9 @@ const TestCoverageDashboard: React.FC = () => {
               precision={1}
               suffix="秒"
               prefix={<InfoCircleOutlined />}
+              className={styles.metricStatistic}
             />
-            <div style={{ fontSize: 12, color: COLORS.textSecondary, marginTop: 8 }}>
+            <div className={styles.metricTargetText}>
               总测试数: {coverageReport?.total_tests ?? 0}
             </div>
           </Card>
@@ -548,7 +535,7 @@ const TestCoverageDashboard: React.FC = () => {
             label: '覆盖率趋势',
             children: (
               <Card>
-                <div style={{ marginBottom: 16 }}>
+                <div className={styles.trendToolbar}>
                   <Space>
                     <span>时间范围:</span>
                     <DatePicker.RangePicker
@@ -620,7 +607,13 @@ const TestCoverageDashboard: React.FC = () => {
               { type: 'number', min: 0, max: 100, message: '阈值范围为 0-100' },
             ]}
           >
-            <InputNumber min={0} max={100} precision={1} style={{ width: '100%' }} addonAfter="%" />
+            <InputNumber
+              min={0}
+              max={100}
+              precision={1}
+              className={styles.fullWidthInput}
+              addonAfter="%"
+            />
           </Form.Item>
           <Form.Item
             label="前端覆盖率阈值 (%)"
@@ -630,7 +623,13 @@ const TestCoverageDashboard: React.FC = () => {
               { type: 'number', min: 0, max: 100, message: '阈值范围为 0-100' },
             ]}
           >
-            <InputNumber min={0} max={100} precision={1} style={{ width: '100%' }} addonAfter="%" />
+            <InputNumber
+              min={0}
+              max={100}
+              precision={1}
+              className={styles.fullWidthInput}
+              addonAfter="%"
+            />
           </Form.Item>
           <Form.Item
             label="总体覆盖率阈值 (%)"
@@ -640,7 +639,13 @@ const TestCoverageDashboard: React.FC = () => {
               { type: 'number', min: 0, max: 100, message: '阈值范围为 0-100' },
             ]}
           >
-            <InputNumber min={0} max={100} precision={1} style={{ width: '100%' }} addonAfter="%" />
+            <InputNumber
+              min={0}
+              max={100}
+              precision={1}
+              className={styles.fullWidthInput}
+              addonAfter="%"
+            />
           </Form.Item>
         </Form>
       </Modal>

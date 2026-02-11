@@ -1,0 +1,174 @@
+.searchPresetsRow {
+  margin-bottom: 16px;
+}
+
+.basicFiltersRow {
+  margin-bottom: 0;
+}
+
+.advancedFiltersRow,
+.actionsRow {
+  margin-top: 16px;
+}
+
+.fieldLabel {
+  display: inline-block;
+  margin-bottom: 8px;
+  color: var(--color-text-primary);
+}
+
+.fieldControl {
+  width: 100%;
+}
+
+.rangeGroup {
+  margin-top: 0;
+}
+
+.halfWidthInput {
+  width: 50%;
+}
+
+.tagGroupContainer {
+  margin-top: 8px;
+}
+
+.tagSpace {
+  width: 100%;
+}
+
+.presetTag {
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+  user-select: none;
+}
+
+.presetTag:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.sectionPanel {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border-light);
+  border-radius: 8px;
+}
+
+.sectionTitleText {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.historySaveRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.historyInput {
+  flex: 1;
+  min-width: 0;
+  min-height: 36px;
+  padding: 4px 11px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg-primary);
+}
+
+.historyInput:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.historyList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.historyItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border-light);
+  border-radius: 6px;
+  background: var(--color-bg-primary);
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.historyItem:hover {
+  background: var(--color-bg-secondary);
+  border-color: var(--color-border);
+}
+
+.historyItem:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.historyMeta {
+  min-width: 0;
+}
+
+.historyName {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  line-height: 1.4;
+}
+
+.historyDate {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+.historyDeleteButton {
+  min-height: 32px;
+}
+
+.historyEmpty :global(.ant-empty-image) {
+  height: 60px;
+}
+
+.sectionButton {
+  min-height: 36px;
+  border-radius: 8px;
+}
+
+.actionsSummaryCol {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.actionsSummaryText {
+  line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+  .historySaveRow {
+    flex-wrap: wrap;
+  }
+
+  .historyInput {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .sectionButton,
+  .historyDeleteButton {
+    min-height: 44px;
+  }
+
+  .actionsSummaryCol {
+    justify-content: flex-start;
+  }
+}

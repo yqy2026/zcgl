@@ -3,6 +3,7 @@ import { Row, Col, Typography, Select, Input } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import { ownershipService } from '@/services/ownershipService';
 import { useAnalyticsFiltersContext } from './FiltersContext';
+import styles from './Filters.module.css';
 
 const { Text } = Typography;
 const { Option } = Select;
@@ -23,12 +24,14 @@ const FiltersSection: React.FC = () => {
   }
 
   return (
-    <Row gutter={[16, 16]} style={{ marginTop: '16px' }}>
+    <Row gutter={[16, 16]} className={styles.advancedFiltersRow}>
       <Col xs={24} md={8}>
-        <Text strong>面积范围 (㎡):</Text>
-        <Input.Group compact style={{ marginTop: '8px' }}>
+        <Text strong className={styles.fieldLabel}>
+          面积范围 (㎡):
+        </Text>
+        <Input.Group compact className={styles.rangeGroup}>
           <Input
-            style={{ width: '50%' }}
+            className={styles.halfWidthInput}
             placeholder="最小面积"
             type="number"
             value={localFilters.min_area}
@@ -37,7 +40,7 @@ const FiltersSection: React.FC = () => {
             }
           />
           <Input
-            style={{ width: '50%' }}
+            className={styles.halfWidthInput}
             placeholder="最大面积"
             type="number"
             value={localFilters.max_area}
@@ -49,10 +52,12 @@ const FiltersSection: React.FC = () => {
       </Col>
 
       <Col xs={24} md={8}>
-        <Text strong>租金范围 (元):</Text>
-        <Input.Group compact style={{ marginTop: '8px' }}>
+        <Text strong className={styles.fieldLabel}>
+          租金范围 (元):
+        </Text>
+        <Input.Group compact className={styles.rangeGroup}>
           <Input
-            style={{ width: '50%' }}
+            className={styles.halfWidthInput}
             placeholder="最小租金"
             type="number"
             value={localFilters.min_rent}
@@ -61,7 +66,7 @@ const FiltersSection: React.FC = () => {
             }
           />
           <Input
-            style={{ width: '50%' }}
+            className={styles.halfWidthInput}
             placeholder="最大租金"
             type="number"
             value={localFilters.max_rent}
@@ -73,9 +78,11 @@ const FiltersSection: React.FC = () => {
       </Col>
 
       <Col xs={24} md={8}>
-        <Text strong>管理状态:</Text>
+        <Text strong className={styles.fieldLabel}>
+          管理状态:
+        </Text>
         <Select
-          style={{ width: '100%', marginTop: '8px' }}
+          className={styles.fieldControl}
           placeholder="请选择管理状态"
           allowClear
           value={localFilters.operation_status}
@@ -90,9 +97,11 @@ const FiltersSection: React.FC = () => {
       </Col>
 
       <Col xs={24} md={8}>
-        <Text strong>业态类别:</Text>
+        <Text strong className={styles.fieldLabel}>
+          业态类别:
+        </Text>
         <Select
-          style={{ width: '100%', marginTop: '8px' }}
+          className={styles.fieldControl}
           placeholder="请选择业态类别"
           allowClear
           value={localFilters.business_category}
@@ -109,10 +118,12 @@ const FiltersSection: React.FC = () => {
       </Col>
 
       <Col xs={24} md={8}>
-        <Text strong>租户类型:</Text>
+        <Text strong className={styles.fieldLabel}>
+          承租方类型:
+        </Text>
         <Select
-          style={{ width: '100%', marginTop: '8px' }}
-          placeholder="请选择租户类型"
+          className={styles.fieldControl}
+          placeholder="请选择承租方类型"
           allowClear
           value={localFilters.tenant_type}
           onChange={value => handleFilterChange('tenant_type', value)}
@@ -127,9 +138,11 @@ const FiltersSection: React.FC = () => {
       </Col>
 
       <Col xs={24} md={8}>
-        <Text strong>权属主体:</Text>
+        <Text strong className={styles.fieldLabel}>
+          权属主体:
+        </Text>
         <Select
-          style={{ width: '100%', marginTop: '8px' }}
+          className={styles.fieldControl}
           placeholder="请选择权属主体"
           allowClear
           value={localFilters.ownership_id}

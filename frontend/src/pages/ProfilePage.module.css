@@ -1,0 +1,104 @@
+.sectionCard {
+  border-radius: 12px;
+}
+
+.sectionTitle {
+  align-items: center;
+  gap: 8px;
+  font-weight: var(--font-weight-semibold);
+}
+
+.primaryActionButton {
+  min-height: 44px;
+  border-radius: 8px;
+}
+
+.primaryActionButton:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.profileSummary {
+  text-align: center;
+}
+
+.avatarContainer {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  background: var(--color-bg-quaternary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatarIcon {
+  font-size: 32px;
+  color: var(--color-primary);
+}
+
+.profileDescriptions :global(.ant-descriptions-item-content) {
+  line-height: 1.45;
+}
+
+.securityActions {
+  width: 100%;
+}
+
+.securityActionCard {
+  padding: 16px;
+  background: var(--color-bg-secondary);
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.securityActionMeta {
+  min-width: 0;
+}
+
+.securityActionTitle {
+  color: var(--color-text-primary);
+}
+
+.securityActionHint {
+  font-size: 13px;
+}
+
+.securityActionButton {
+  min-height: 44px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.securityActionButton:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.modalForm {
+  margin-top: 16px;
+}
+
+.formActions {
+  margin-bottom: 0;
+  text-align: right;
+}
+
+.formActionButtons {
+  gap: 8px;
+}
+
+@media (max-width: 768px) {
+  .securityActionCard {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .securityActionButton {
+    min-width: 100%;
+  }
+}

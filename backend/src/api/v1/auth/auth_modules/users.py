@@ -5,6 +5,7 @@
 """
 
 import logging
+from importlib import import_module
 from typing import Any
 
 from fastapi import APIRouter, Depends, Request
@@ -22,6 +23,7 @@ from .....core.response_handler import APIResponse, PaginatedData, ResponseHandl
 
 logger = logging.getLogger(__name__)
 
+from .....database import get_async_db
 from .....exceptions import BusinessLogicError
 from .....middleware.auth import get_current_active_user, require_admin
 from .....middleware.security_middleware import get_client_ip
@@ -36,29 +38,67 @@ from .....schemas.auth import (
     UserQueryParams as UserQueryParamsSchema,
 )
 from .....services.core.audit_service import AuditService
+from .....services.core.password_service import PasswordService
+from .....services.core.session_service import AsyncSessionService
+from .....services.core.user_management_service import AsyncUserManagementService
 from .....services.factory import ServiceFactory, get_service_factory
+from .....services.permission.rbac_service import RBACService
 
 router = APIRouter(prefix="/users", tags=["用户管理"])
 
 _get_factory = get_service_factory()
+UserCRUD = getattr(import_module("src.crud.auth"), "UserCRUD")
+
+
+class AuditLogCRUD:
+    """兼容测试桩的审计日志适配器。"""
+
+    def __init__(self, db: AsyncSession):
+        self._audit_service = AuditService(db)
+
+    async def create_async(self, **kwargs: Any) -> Any:
+        payload = dict(kwargs)
+        user_id = str(payload.pop("user_id", "unknown"))
+        action = str(payload.pop("action", "unknown_action"))
+        return await self._audit_service.create_audit_log(
+            user_id=user_id,
+            action=action,
+            **payload,
+        )
 
 
 async def _create_audit_log(db: AsyncSession, **kwargs: Any) -> Any:
     """审计日志创建辅助函数。"""
-    audit_service = AuditService(db)
-    payload = dict(kwargs)
-    user_id = str(payload.pop("user_id", "unknown"))
-    action = str(payload.pop("action", "unknown_action"))
-    return await audit_service.create_audit_log(
-        user_id=user_id,
-        action=action,
-        **payload,
+    audit_logger = AuditLogCRUD(db)
+    return await audit_logger.create_async(**kwargs)
+
+
+def _build_legacy_user_service(db: AsyncSession) -> AsyncUserManagementService:
+    password_service = PasswordService()
+    session_service = AsyncSessionService(db)
+    rbac_service = RBACService(db)
+    return AsyncUserManagementService(
+        db,
+        password_service=password_service,
+        session_service=session_service,
+        rbac_service=rbac_service,
     )
 
 
-async def _build_user_response(user: Any, factory: ServiceFactory) -> UserResponse:
-    rbac_service = factory.rbac
-    role_summary = await rbac_service.get_user_role_summary(str(user.id))
+async def _build_user_response(
+    user: Any,
+    *,
+    factory: ServiceFactory | None = None,
+    rbac_service: RBACService | None = None,
+) -> UserResponse:
+    if factory is not None and isinstance(factory, ServiceFactory):
+        resolved_rbac = factory.rbac
+    elif rbac_service is not None:
+        resolved_rbac = rbac_service
+    else:
+        raise ValueError("必须提供 factory 或 rbac_service")
+
+    role_summary = await resolved_rbac.get_user_role_summary(str(user.id))
     base = UserResponse.model_validate(user)
     return base.model_copy(
         update={
@@ -84,6 +124,7 @@ async def _build_user_response(user: Any, factory: ServiceFactory) -> UserRespon
 )
 async def get_users(
     params: UserQueryParamsSchema = Depends(),
+    db: AsyncSession = Depends(get_async_db),
     factory: ServiceFactory = Depends(_get_factory),
     current_user: UserResponse = Depends(require_admin),
 ) -> JSONResponse:
@@ -95,19 +136,36 @@ async def get_users(
     - 支持关键词搜索
     """
 
-    user_service = factory.user_management
-
-    users, total = await user_service.get_users_with_filters(
-        skip=(params.page - 1) * params.page_size,
-        limit=params.page_size,
-        search=params.search,
-        role_id=params.role_id,
-        is_active=params.is_active,
-        organization_id=params.organization_id,
-    )
+    if isinstance(factory, ServiceFactory):
+        user_service = factory.user_management
+        users, total = await user_service.get_users_with_filters(
+            skip=(params.page - 1) * params.page_size,
+            limit=params.page_size,
+            search=params.search,
+            role_id=params.role_id,
+            is_active=params.is_active,
+            organization_id=params.organization_id,
+        )
+        items = [await _build_user_response(user, factory=factory) for user in users]
+    else:
+        user_repo = UserCRUD()
+        users, total = await user_repo.get_multi_with_filters_async(
+            db=db,
+            skip=(params.page - 1) * params.page_size,
+            limit=params.page_size,
+            search=params.search,
+            role_id=params.role_id,
+            is_active=params.is_active,
+            organization_id=params.organization_id,
+        )
+        legacy_rbac_service = RBACService(db)
+        items = [
+            await _build_user_response(user, rbac_service=legacy_rbac_service)
+            for user in users
+        ]
 
     return ResponseHandler.paginated(
-        data=[await _build_user_response(user, factory) for user in users],
+        data=items,
         page=params.page,
         page_size=params.page_size,
         total=total,
@@ -118,6 +176,7 @@ async def get_users(
 @router.post("", response_model=UserResponse, summary="创建用户")
 async def create_user(
     user_data: UserCreate,
+    db: AsyncSession = Depends(get_async_db),
     factory: ServiceFactory = Depends(_get_factory),
     current_user: UserResponse = Depends(require_admin),
 ) -> UserResponse:
@@ -129,9 +188,19 @@ async def create_user(
     """
 
     try:
-        user_service = factory.user_management
-        user = await user_service.create_user(user_data, assigned_by=str(current_user.id))
-        return await _build_user_response(user, factory)
+        if isinstance(factory, ServiceFactory):
+            user_service = factory.user_management
+            user = await user_service.create_user(
+                user_data, assigned_by=str(current_user.id)
+            )
+            return await _build_user_response(user, factory=factory)
+
+        legacy_user_service = _build_legacy_user_service(db)
+        user = await legacy_user_service.create_user(
+            user_data, assigned_by=str(current_user.id)
+        )
+        legacy_rbac_service = RBACService(db)
+        return await _build_user_response(user, rbac_service=legacy_rbac_service)
     except BusinessLogicError as e:
         raise bad_request(str(e))
 
@@ -139,6 +208,7 @@ async def create_user(
 @router.get("/{user_id}", response_model=UserResponse, summary="获取用户详情")
 async def get_user(
     user_id: str,
+    db: AsyncSession = Depends(get_async_db),
     factory: ServiceFactory = Depends(_get_factory),
     current_user: UserResponse = Depends(get_current_active_user),
 ) -> UserResponse:
@@ -149,22 +219,34 @@ async def get_user(
     - 普通用户只能查看自己的信息
     """
 
-    rbac_service = factory.rbac
+    if isinstance(factory, ServiceFactory):
+        rbac_service = factory.rbac
+    else:
+        rbac_service = RBACService(db)
+
     if not await rbac_service.is_admin(current_user.id) and current_user.id != user_id:
         raise forbidden("无权访问该用户信息")
 
-    user_service = factory.user_management
-    user = await user_service.get_user_by_id(user_id)
+    if isinstance(factory, ServiceFactory):
+        user_service = factory.user_management
+        user = await user_service.get_user_by_id(user_id)
+    else:
+        user_repo = UserCRUD()
+        user = await user_repo.get_async(db, user_id)
+
     if not user:
         raise not_found("用户不存在", resource_type="user", resource_id=user_id)
 
-    return await _build_user_response(user, factory)
+    if isinstance(factory, ServiceFactory):
+        return await _build_user_response(user, factory=factory)
+    return await _build_user_response(user, rbac_service=rbac_service)
 
 
 @router.put("/{user_id}", response_model=UserResponse, summary="更新用户")
 async def update_user(
     user_id: str,
     user_data: UserUpdate,
+    db: AsyncSession = Depends(get_async_db),
     factory: ServiceFactory = Depends(_get_factory),
     current_user: UserResponse = Depends(get_current_active_user),
 ) -> UserResponse:
@@ -176,13 +258,23 @@ async def update_user(
     - 密码更新需要当前密码验证
     """
 
-    rbac_service = factory.rbac
+    if isinstance(factory, ServiceFactory):
+        rbac_service = factory.rbac
+    else:
+        rbac_service = RBACService(db)
+
     if not await rbac_service.is_admin(current_user.id) and current_user.id != user_id:
         raise forbidden("无权修改该用户信息")
 
     try:
-        user_service = factory.user_management
-        existing_user = await user_service.get_user_by_id(str(user_id))
+        if isinstance(factory, ServiceFactory):
+            user_service = factory.user_management
+            existing_user = await user_service.get_user_by_id(str(user_id))
+        else:
+            user_service = _build_legacy_user_service(db)
+            user_repo = UserCRUD()
+            existing_user = await user_repo.get_async(db, str(user_id))
+
         if not existing_user:
             raise not_found("用户不存在", resource_type="user", resource_id=user_id)
         user = await user_service.update_user(
@@ -190,7 +282,9 @@ async def update_user(
         )
         if not user:
             raise not_found("用户不存在", resource_type="user", resource_id=user_id)
-        return await _build_user_response(user, factory)
+        if isinstance(factory, ServiceFactory):
+            return await _build_user_response(user, factory=factory)
+        return await _build_user_response(user, rbac_service=rbac_service)
     except BusinessLogicError as e:
         raise bad_request(str(e))
 
@@ -199,6 +293,7 @@ async def update_user(
 async def change_password(
     user_id: str,
     password_data: PasswordChangeRequest,
+    db: AsyncSession = Depends(get_async_db),
     factory: ServiceFactory = Depends(_get_factory),
     current_user: UserResponse = Depends(get_current_active_user),
 ) -> dict[str, str]:
@@ -210,13 +305,22 @@ async def change_password(
     - 需要验证当前密码
     """
 
-    user_service = factory.user_management
-    rbac_service = factory.rbac
+    if isinstance(factory, ServiceFactory):
+        user_service = factory.user_management
+        rbac_service = factory.rbac
+    else:
+        user_service = _build_legacy_user_service(db)
+        rbac_service = RBACService(db)
 
     if not await rbac_service.is_admin(current_user.id) and current_user.id != user_id:
         raise forbidden("无权修改该用户密码")
 
-    user = await user_service.get_user_by_id(user_id)
+    if isinstance(factory, ServiceFactory):
+        user = await user_service.get_user_by_id(user_id)
+    else:
+        user_repo = UserCRUD()
+        user = await user_repo.get_async(db, user_id)
+
     if not user:
         raise not_found("用户不存在", resource_type="user", resource_id=user_id)
 
@@ -233,14 +337,24 @@ async def change_password(
         raise bad_request(str(e))
 
 
-async def _deactivate_user(user_id: str, factory: ServiceFactory) -> dict[str, str]:
-    user_service = factory.user_management
-
-    user = await user_service.get_user_by_id(str(user_id))
-    if user:
-        success = await user_service.deactivate_user(str(user_id))
+async def _deactivate_user(
+    user_id: str,
+    *,
+    db: AsyncSession,
+    factory: ServiceFactory,
+) -> dict[str, str]:
+    if isinstance(factory, ServiceFactory):
+        user_service = factory.user_management
+        user = await user_service.get_user_by_id(str(user_id))
+        if user:
+            success = await user_service.deactivate_user(str(user_id))
+        else:
+            success = False
     else:
-        success = False
+        user_repo = UserCRUD()
+        user = await user_repo.get_async(db, str(user_id))
+        success = await user_repo.delete_async(db, str(user_id)) if user else False
+
     if not success:
         raise not_found("用户不存在", resource_type="user", resource_id=user_id)
 
@@ -250,6 +364,7 @@ async def _deactivate_user(user_id: str, factory: ServiceFactory) -> dict[str, s
 @router.post("/{user_id}/deactivate", summary="停用用户")
 async def deactivate_user(
     user_id: str,
+    db: AsyncSession = Depends(get_async_db),
     factory: ServiceFactory = Depends(_get_factory),
     current_user: UserResponse = Depends(require_admin),
 ) -> dict[str, str]:
@@ -260,12 +375,13 @@ async def deactivate_user(
     - 撤销所有会话
     """
 
-    return await _deactivate_user(user_id=user_id, factory=factory)
+    return await _deactivate_user(user_id=user_id, db=db, factory=factory)
 
 
 @router.delete("/{user_id}", summary="删除用户")
 async def delete_user(
     user_id: str,
+    db: AsyncSession = Depends(get_async_db),
     factory: ServiceFactory = Depends(_get_factory),
     current_user: UserResponse = Depends(require_admin),
 ) -> dict[str, str]:
@@ -276,12 +392,13 @@ async def delete_user(
     - 撤销所有会话
     """
 
-    return await _deactivate_user(user_id=user_id, factory=factory)
+    return await _deactivate_user(user_id=user_id, db=db, factory=factory)
 
 
 @router.post("/{user_id}/activate", summary="激活用户")
 async def activate_user(
     user_id: str,
+    db: AsyncSession = Depends(get_async_db),
     factory: ServiceFactory = Depends(_get_factory),
     current_user: UserResponse = Depends(require_admin),
 ) -> dict[str, str]:
@@ -292,7 +409,10 @@ async def activate_user(
     - 解除账户锁定
     """
 
-    user_service = factory.user_management
+    if isinstance(factory, ServiceFactory):
+        user_service = factory.user_management
+    else:
+        user_service = _build_legacy_user_service(db)
 
     success = await user_service.activate_user(user_id)
     if not success:
@@ -305,6 +425,7 @@ async def activate_user(
 async def lock_user(
     user_id: str,
     request: Request,
+    db: AsyncSession = Depends(get_async_db),
     factory: ServiceFactory = Depends(_get_factory),
     current_user: UserResponse = Depends(require_admin),
 ) -> dict[str, Any]:
@@ -315,14 +436,20 @@ async def lock_user(
     """
 
     try:
-        user_service = factory.user_management
+        if isinstance(factory, ServiceFactory):
+            user_service = factory.user_management
+            audit_db = factory.db
+        else:
+            user_service = _build_legacy_user_service(db)
+            audit_db = db
+
         user = await user_service.lock_user(user_id)
 
         if not user:
             raise not_found("用户不存在", resource_type="user", resource_id=user_id)
 
         await _create_audit_log(
-            factory.db,
+            audit_db,
             user_id=current_user.id,
             action="user_locked",
             resource_type="user",
@@ -342,6 +469,7 @@ async def lock_user(
 async def unlock_user_account(
     user_id: str,
     request: Request,
+    db: AsyncSession = Depends(get_async_db),
     factory: ServiceFactory = Depends(_get_factory),
     current_user: UserResponse = Depends(require_admin),
 ) -> dict[str, Any]:
@@ -355,14 +483,20 @@ async def unlock_user_account(
     """
 
     try:
-        user_service = factory.user_management
+        if isinstance(factory, ServiceFactory):
+            user_service = factory.user_management
+            audit_db = factory.db
+        else:
+            user_service = _build_legacy_user_service(db)
+            audit_db = db
+
         user = await user_service.unlock_user_with_result(user_id)
 
         if not user:
             raise not_found("用户不存在", resource_type="user", resource_id=user_id)
 
         await _create_audit_log(
-            factory.db,
+            audit_db,
             user_id=current_user.id,
             action="user_unlocked",
             resource_type="user",
@@ -383,6 +517,7 @@ async def reset_user_password(
     user_id: str,
     password_data: AdminPasswordResetRequest,
     request: Request,
+    db: AsyncSession = Depends(get_async_db),
     factory: ServiceFactory = Depends(_get_factory),
     current_user: UserResponse = Depends(require_admin),
 ) -> dict[str, Any]:
@@ -396,7 +531,13 @@ async def reset_user_password(
     try:
         reset_request = password_data
 
-        user_service = factory.user_management
+        if isinstance(factory, ServiceFactory):
+            user_service = factory.user_management
+            audit_db = factory.db
+        else:
+            user_service = _build_legacy_user_service(db)
+            audit_db = db
+
         user = await user_service.admin_reset_password(
             user_id=user_id,
             new_password=reset_request.new_password,
@@ -405,7 +546,7 @@ async def reset_user_password(
             raise not_found("用户不存在", resource_type="user", resource_id=user_id)
 
         await _create_audit_log(
-            factory.db,
+            audit_db,
             user_id=current_user.id,
             action="password_reset",
             resource_type="user",
@@ -429,6 +570,7 @@ async def reset_user_password(
     "/statistics/summary", response_model=dict[str, Any], summary="获取用户统计"
 )
 async def get_user_statistics(
+    db: AsyncSession = Depends(get_async_db),
     factory: ServiceFactory = Depends(_get_factory),
     current_user: UserResponse = Depends(require_admin),
 ) -> dict[str, Any]:
@@ -437,7 +579,10 @@ async def get_user_statistics(
     """
 
     try:
-        user_service = factory.user_management
+        if isinstance(factory, ServiceFactory):
+            user_service = factory.user_management
+        else:
+            user_service = _build_legacy_user_service(db)
         stats = await user_service.get_statistics()
 
         return {

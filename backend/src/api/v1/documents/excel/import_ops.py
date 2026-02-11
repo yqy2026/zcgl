@@ -87,6 +87,12 @@ async def import_excel(
         tmp_file_path = tmp_file.name
 
     try:
+        default_org_id = getattr(current_user, "default_organization_id", None)
+        organization_id = (
+            str(default_org_id)
+            if default_org_id is not None and str(default_org_id).strip() != ""
+            else None
+        )
         import_service = ExcelImportService(db)
         result = await import_service.import_assets_from_excel(
             file_path=tmp_file_path,
@@ -95,6 +101,7 @@ async def import_excel(
             should_create_assets=True,
             should_update_existing=False,
             should_skip_errors=should_skip_errors,
+            organization_id=organization_id,
         )
 
         return {
@@ -172,12 +179,20 @@ async def import_excel_async(
         tmp_file.write(content)
         tmp_file_path = tmp_file.name
 
+    default_org_id = getattr(current_user, "default_organization_id", None)
+    organization_id = (
+        str(default_org_id)
+        if default_org_id is not None and str(default_org_id).strip() != ""
+        else None
+    )
+
     background_tasks.add_task(
         _process_excel_import_async,
         task_id=str(task.id),
         file_path=tmp_file_path,
         request=request,
         task_service=resolved_task_service,
+        organization_id=organization_id,
     )
 
     return {
@@ -194,6 +209,7 @@ async def _process_excel_import_async(
     request: ExcelImportRequest,
     db_session: AsyncSession | None = None,
     task_service: ExcelTaskService | None = None,
+    organization_id: str | None = None,
 ) -> None:
     """
     后台处理Excel导入任务
@@ -206,6 +222,7 @@ async def _process_excel_import_async(
                 request=request,
                 db_session=session,
                 task_service=task_service,
+                organization_id=organization_id,
             )
         return
     resolved_task_service = task_service or get_excel_task_service()
@@ -237,6 +254,7 @@ async def _process_excel_import_async(
             should_update_existing=request.should_update_existing,
             should_skip_errors=request.should_skip_errors,
             batch_size=request.batch_size,
+            organization_id=organization_id,
         )
 
         completed_at = _utcnow_naive()

@@ -67,8 +67,8 @@ class TestQueryBuilderSecurityIntegration:
         assert "not allowed" in str(exc_info.value).lower()
         assert "manager_name" in str(exc_info.value)
 
-    def test_blocked_tenant_filter_raises_error(self, db_session):
-        """Filtering by tenant name should be blocked."""
+    def test_blocked_tenant_name_field_filter_raises_error(self, db_session):
+        """Filtering by tenant_name (lessee field) should be blocked."""
         qb = QueryBuilder(Asset)
 
         filters = {"tenant_name": "Test Tenant"}

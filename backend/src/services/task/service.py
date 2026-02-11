@@ -3,7 +3,6 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import and_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.exception_handler import OperationNotAllowedError, ResourceNotFoundError
@@ -349,17 +348,10 @@ class TaskService:
     ) -> dict[str, Any]:
         """清理过期任务"""
         cutoff_date = self._utcnow_naive() - timedelta(days=days)
-
-        stmt = select(AsyncTask).filter(
-            and_(
-                AsyncTask.created_at < cutoff_date,
-                AsyncTask.status.in_(
-                    [TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED]
-                ),
-                AsyncTask.is_active.is_(True),
-            )
+        old_tasks = await task_crud.get_cleanup_candidates_async(
+            db,
+            cutoff_date=cutoff_date,
         )
-        old_tasks = list((await db.execute(stmt)).scalars().all())
 
         if dry_run:
             dry_run_result: dict[str, Any] = {
@@ -395,18 +387,11 @@ class TaskService:
         user_id: str | None = None,
     ) -> ExcelTaskConfig:
         if obj_in.is_default:
-            stmt = (
-                update(ExcelTaskConfig)
-                .where(
-                    and_(
-                        ExcelTaskConfig.config_type == obj_in.config_type,
-                        ExcelTaskConfig.task_type == obj_in.task_type,
-                        ExcelTaskConfig.is_default.is_(True),
-                    )
-                )
-                .values(is_default=False)
+            await excel_task_config_crud.unset_default_configs_async(
+                db,
+                config_type=obj_in.config_type,
+                task_type=obj_in.task_type,
             )
-            await db.execute(stmt)
 
         payload = obj_in.model_dump()
         if user_id is not None and user_id.strip() != "":
@@ -462,19 +447,17 @@ class TaskService:
             raise ResourceNotFoundError("Excel配置", config_id)
 
         if config_data.get("is_default") is True:
-            stmt = (
-                update(ExcelTaskConfig)
-                .where(
-                    and_(
-                        ExcelTaskConfig.config_type == config.config_type,
-                        ExcelTaskConfig.task_type == config.task_type,
-                        ExcelTaskConfig.is_default.is_(True),
-                        ExcelTaskConfig.id != config_id,
-                    )
+            if config.config_type is None or config.task_type is None:
+                raise OperationNotAllowedError(
+                    "Excel配置缺少类型信息",
+                    reason="excel_config_missing_type",
                 )
-                .values(is_default=False)
+            await excel_task_config_crud.unset_default_configs_async(
+                db,
+                config_type=config.config_type,
+                task_type=config.task_type,
+                exclude_config_id=config_id,
             )
-            await db.execute(stmt)
 
         return await excel_task_config_crud.update(
             db=db,

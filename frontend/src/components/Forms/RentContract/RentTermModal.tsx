@@ -1,6 +1,7 @@
 import React from 'react';
 import { Modal, Form, DatePicker, InputNumber, Input, Row, Col } from 'antd';
 import { useRentContractFormContext } from './RentContractFormContext';
+import styles from './RentTermModal.module.css';
 
 const { TextArea } = Input;
 
@@ -34,7 +35,7 @@ const RentTermModal: React.FC = () => {
               name="start_date"
               rules={[{ required: true, message: '请选择开始日期' }]}
             >
-              <DatePicker style={{ width: '100%' }} />
+              <DatePicker className={styles.fullWidthControl} />
             </Form.Item>
           </Col>
           <Col span={12}>
@@ -43,7 +44,7 @@ const RentTermModal: React.FC = () => {
               name="end_date"
               rules={[{ required: true, message: '请选择结束日期' }]}
             >
-              <DatePicker style={{ width: '100%' }} />
+              <DatePicker className={styles.fullWidthControl} />
             </Form.Item>
           </Col>
         </Row>
@@ -55,7 +56,7 @@ const RentTermModal: React.FC = () => {
               rules={[{ required: true, message: '请输入月租金' }]}
             >
               <InputNumber
-                style={{ width: '100%' }}
+                className={styles.fullWidthControl}
                 placeholder="请输入月租金"
                 min={0}
                 precision={2}
@@ -67,7 +68,7 @@ const RentTermModal: React.FC = () => {
           <Col span={8}>
             <Form.Item label="管理费" name="management_fee">
               <InputNumber
-                style={{ width: '100%' }}
+                className={styles.fullWidthControl}
                 placeholder="请输入管理费"
                 min={0}
                 precision={2}
@@ -79,7 +80,7 @@ const RentTermModal: React.FC = () => {
           <Col span={8}>
             <Form.Item label="其他费用" name="other_fees">
               <InputNumber
-                style={{ width: '100%' }}
+                className={styles.fullWidthControl}
                 placeholder="请输入其他费用"
                 min={0}
                 precision={2}

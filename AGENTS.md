@@ -566,6 +566,8 @@ docker-compose up -d
 - [API 总览](docs/integrations/api-overview.md)
 - [测试标准](docs/guides/testing-standards.md)
 - [命名规范](docs/guides/naming-conventions.md)
+- [Tenant 术语审计](docs/guides/tenant-terminology-audit.md)
+- [tenant 符号白名单](docs/guides/tenant-symbol-whitelist.md)
 
 ---
 

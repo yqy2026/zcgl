@@ -1,0 +1,100 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sectionCard {
+  border-radius: 12px;
+}
+
+.sectionCard :global(.ant-card-head-title) {
+  font-weight: var(--font-weight-semibold);
+}
+
+.headerCard {
+  border: 1px solid var(--color-border-light);
+}
+
+.headerLayout {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.titleBlock {
+  min-width: 0;
+}
+
+.ownershipName {
+  font-size: 20px;
+  line-height: 1.35;
+  color: var(--color-text-primary);
+}
+
+.shortName {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+.headerActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.statusBadge :global(.ant-badge-status-text) {
+  color: var(--color-text-secondary);
+}
+
+.editButton {
+  min-height: 44px;
+  border-radius: 8px;
+}
+
+.editButton:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.detailDescriptions :global(.ant-descriptions-item-content) {
+  line-height: 1.5;
+}
+
+.counterTag {
+  border-radius: 999px;
+  padding-inline: 8px;
+}
+
+.projectNameCell {
+  gap: 6px;
+}
+
+.projectIcon {
+  color: var(--color-primary);
+}
+
+.relationTag {
+  border-radius: 999px;
+  padding-inline: 8px;
+}
+
+.projectTable :global(.ant-table-cell) {
+  vertical-align: middle;
+}
+
+@media (max-width: 768px) {
+  .headerLayout {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .headerActions {
+    width: 100%;
+    justify-content: space-between;
+  }
+}

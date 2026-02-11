@@ -112,30 +112,15 @@ const PDFImportPage: React.FC = () => {
   // 页面加载状态
   if (session.loading && session.currentSession == null) {
     return (
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '100%',
-          flexDirection: 'column',
-          gap: 16,
-        }}
-      >
+      <div className={styles.initialLoading} role="status" aria-live="polite">
         <Spin size="large" />
-        <span style={{ color: '#999' }}>正在初始化PDF导入系统...</span>
+        <span className={styles.loadingHint}>正在初始化PDF导入系统...</span>
       </div>
     );
   }
 
   return (
-    <div
-      className={styles['pdf-import-page']}
-      style={{
-        animation: 'fadeIn 0.3s ease-in-out',
-        minHeight: '100%',
-      }}
-    >
+    <div className={styles.pdfImportPage}>
       {/* 页面头部 */}
       <PDFImportHeader
         onShowHelp={() => setShowHelp(true)}
@@ -144,24 +129,33 @@ const PDFImportPage: React.FC = () => {
       />
 
       {/* 主要内容区域 */}
-      <Spin spinning={session.loading} tip="正在加载数据..." size="large" delay={300}>
+      <Spin
+        spinning={session.loading}
+        tip="正在加载数据..."
+        size="large"
+        delay={300}
+        className={styles.contentLoading}
+      >
         <Tabs
+          className={styles.mainTabs}
           activeKey={activeTab}
           onChange={key => setActiveTab(key as 'upload' | 'history')}
           items={[
             {
               key: 'upload',
               label: 'PDF导入',
-              children: <div>{renderCurrentSession}</div>,
+              children: <div className={styles.tabContent}>{renderCurrentSession}</div>,
             },
             {
               key: 'history',
               label: '处理历史',
               children: (
-                <SessionHistoryTab
-                  sessionHistory={session.sessionHistory}
-                  onSwitchToUpload={() => setActiveTab('upload')}
-                />
+                <div className={styles.tabContent}>
+                  <SessionHistoryTab
+                    sessionHistory={session.sessionHistory}
+                    onSwitchToUpload={() => setActiveTab('upload')}
+                  />
+                </div>
               ),
             },
           ]}

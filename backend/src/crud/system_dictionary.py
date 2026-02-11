@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..models.system_dictionary import SystemDictionary
 from ..schemas.asset import SystemDictionaryCreate, SystemDictionaryUpdate
 from .base import CRUDBase
+from .query_builder import TenantFilter
 
 
 class CRUDSystemDictionary(
@@ -47,6 +48,7 @@ class CRUDSystemDictionary(
         filters: dict[str, Any] | None = None,
         skip: int = 0,
         limit: int = 100,
+        tenant_filter: TenantFilter | None = None,
     ) -> list[SystemDictionary]:
         qb_filters = self._build_filters(
             dict_type=filters.get("dict_type") if filters else None,
@@ -59,11 +61,17 @@ class CRUDSystemDictionary(
             sort_desc=False,
             skip=skip,
             limit=limit,
+            tenant_filter=tenant_filter,
         )
         return list((await db.execute(query)).scalars().all())
 
     async def get_by_type_async(
-        self, db: AsyncSession, *, dict_type: str, is_active: bool = True
+        self,
+        db: AsyncSession,
+        *,
+        dict_type: str,
+        is_active: bool = True,
+        tenant_filter: TenantFilter | None = None,
     ) -> list[SystemDictionary]:
         filters = self._build_filters(dict_type=dict_type, is_active=is_active)
 
@@ -71,6 +79,27 @@ class CRUDSystemDictionary(
             filters=filters,
             sort_by="sort_order",
             sort_desc=False,
+            tenant_filter=tenant_filter,
+        )
+        return list((await db.execute(query)).scalars().all())
+
+    async def get_by_type_with_active_filter_async(
+        self,
+        db: AsyncSession,
+        *,
+        dict_type: str,
+        is_active: bool | None = True,
+        tenant_filter: TenantFilter | None = None,
+    ) -> list[SystemDictionary]:
+        filters = self._build_filters(dict_type=dict_type)
+        if is_active is not None:
+            filters["is_active"] = is_active
+
+        query = self.query_builder.build_query(
+            filters=filters,
+            sort_by="sort_order",
+            sort_desc=False,
+            tenant_filter=tenant_filter,
         )
         return list((await db.execute(query)).scalars().all())
 

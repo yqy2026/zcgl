@@ -1,0 +1,126 @@
+.areaStatisticsChart {
+  width: 100%;
+}
+
+.summaryRow {
+  margin-bottom: 16px;
+}
+
+.summaryCard {
+  height: 100%;
+}
+
+.statisticLand :global(.ant-statistic-content) {
+  color: var(--color-primary);
+}
+
+.statisticProperty :global(.ant-statistic-content) {
+  color: var(--color-success);
+}
+
+.statisticRentable :global(.ant-statistic-content) {
+  color: var(--color-warning);
+}
+
+.statisticRented :global(.ant-statistic-content) {
+  color: #722ed1;
+}
+
+.statisticVacant :global(.ant-statistic-content) {
+  color: var(--color-error);
+}
+
+.statisticNonCommercial :global(.ant-statistic-content) {
+  color: var(--color-text-secondary);
+}
+
+.chartCard {
+  margin-bottom: 16px;
+}
+
+.detailsRow {
+  margin-top: 16px;
+}
+
+.detailList {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.detailItem {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.detailItemLast {
+  border-bottom: none;
+}
+
+.detailItemHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  gap: 12px;
+}
+
+.detailAreaValue {
+  font-weight: var(--font-weight-semibold);
+}
+
+.detailMeta {
+  font-size: 12px;
+}
+
+.topAssetHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.topAssetLeft {
+  flex: 1;
+  min-width: 0;
+}
+
+.topAssetRight {
+  text-align: right;
+}
+
+.topAssetArea {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-primary);
+}
+
+.topAssetOccupancy {
+  font-size: 12px;
+  color: var(--color-success);
+}
+
+.topAssetProgress {
+  margin-top: 6px;
+}
+
+.chartTooltip {
+  padding: 8px;
+  line-height: 1.5;
+}
+
+.tooltipTitle {
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: 4px;
+}
+
+@media (max-width: 768px) {
+  .detailItemHeader,
+  .topAssetHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .topAssetRight {
+    text-align: left;
+  }
+}

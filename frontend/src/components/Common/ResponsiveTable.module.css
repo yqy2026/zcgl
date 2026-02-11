@@ -1,17 +1,50 @@
+.mobileSection {
+  width: 100%;
+}
+
+.mobileHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.mobileTitle {
+  color: var(--color-text-primary);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+}
+
+.mobileMeta {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
 .cardList {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
+  gap: 12px;
 }
 
 .cardListItem {
   width: 100%;
 }
 
+.emptyState {
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-lg) var(--spacing-md);
+  background: var(--color-bg-secondary);
+}
+
 .mobileCard {
   border: 1px solid var(--color-border-light);
   border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
 }
 
 .mobileCard :global(.ant-card-body) {
@@ -20,16 +53,21 @@
 
 .cardFieldRow {
   margin-bottom: var(--spacing-sm);
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 1px solid var(--color-border-light);
 }
 
 .cardFieldRow:last-child {
   margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
 }
 
 .cardFieldLabel {
   margin-bottom: 4px;
   color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
+  line-height: 1.4;
 }
 
 .cardFieldValue {
@@ -37,4 +75,50 @@
   font-size: var(--font-size-base);
   line-height: var(--line-height-base);
   word-break: break-word;
+  min-height: 24px;
+}
+
+.cardFieldValue :global(.ant-tag) {
+  margin-inline-end: 0;
+}
+
+.cardFieldValue :global(.ant-btn),
+.cardFieldValue :global(.ant-input-affix-wrapper),
+.cardFieldValue :global(.ant-picker),
+.cardFieldValue :global(.ant-select-selector) {
+  min-height: 40px;
+  border-radius: 8px;
+}
+
+.cardFieldValue :global(.ant-btn.ant-btn-icon-only) {
+  min-width: 40px;
+}
+
+.cardFieldValue :global(.ant-switch) {
+  min-height: 24px;
+}
+
+.cardFieldValue :global(.ant-btn:focus-visible),
+.cardFieldValue :global(.ant-input-affix-wrapper:focus-within),
+.cardFieldValue :global(.ant-picker:focus-within),
+.cardFieldValue :global(.ant-select-focused .ant-select-selector) {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+@media (max-width: 767px) {
+  .mobileHeader {
+    margin-bottom: 10px;
+  }
+
+  .cardFieldValue :global(.ant-btn),
+  .cardFieldValue :global(.ant-input-affix-wrapper),
+  .cardFieldValue :global(.ant-picker),
+  .cardFieldValue :global(.ant-select-selector) {
+    min-height: 44px;
+  }
+
+  .cardFieldValue :global(.ant-btn.ant-btn-icon-only) {
+    min-width: 44px;
+  }
 }

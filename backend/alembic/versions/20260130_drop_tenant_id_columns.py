@@ -1,3 +1,14 @@
+"""Drop historical SaaS tenant_id columns.
+
+This migration removes legacy `tenant_id` columns from `assets` and
+`rent_contracts`. The project runtime permission model is organization-scoped
+instead of SaaS multi-tenant scoped.
+
+Note:
+- `downgrade()` re-adds the columns only for Alembic rollback compatibility.
+- Runtime code should not depend on these columns.
+"""
+
 import sqlalchemy as sa
 
 from alembic import op

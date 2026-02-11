@@ -11,14 +11,13 @@ from inspect import isawaitable
 from typing import Any
 
 import pandas as pd
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...config.excel_config import STANDARD_SHEET_NAME
 from ...core.exception_handler import BusinessValidationError
 from ...crud.asset import asset_crud
 from ...crud.ownership import ownership
-from ...models.asset import Asset
+from ...models.ownership import Ownership
 from ...schemas.asset import AssetCreate
 from ..asset.validators import AssetBatchValidator
 
@@ -90,6 +89,7 @@ class ExcelImportService:
         should_update_existing: bool = False,
         should_skip_errors: bool = False,
         batch_size: int = 100,
+        organization_id: str | None = None,
     ) -> dict[str, Any]:
         from fastapi.concurrency import run_in_threadpool
 
@@ -103,6 +103,7 @@ class ExcelImportService:
             should_update_existing=should_update_existing,
             should_skip_errors=should_skip_errors,
             batch_size=batch_size,
+            organization_id=organization_id,
         )
 
     async def _import_assets_from_dataframe(
@@ -114,6 +115,7 @@ class ExcelImportService:
         should_update_existing: bool,
         should_skip_errors: bool,
         batch_size: int,
+        organization_id: str | None,
     ) -> dict[str, Any]:
         try:
 
@@ -181,7 +183,10 @@ class ExcelImportService:
 
                 if property_names_to_load:
                     asset_rows = await asset_crud.get_by_property_names_async(
-                        self.db, list(property_names_to_load), exclude_deleted=True
+                        self.db,
+                        list(property_names_to_load),
+                        exclude_deleted=True,
+                        decrypt=False,
                     )
                     existing_assets_by_name = {
                         str(asset.property_name): asset
@@ -257,8 +262,8 @@ class ExcelImportService:
                         )
 
                         if ownership_entity != "" and ownership_id == "":
-                            ownership = ownership_by_name.get(ownership_entity)
-                            if not ownership:
+                            ownership_record = ownership_by_name.get(ownership_entity)
+                            if not ownership_record:
                                 results["errors"].append(
                                     {
                                         "row": idx + 2,
@@ -272,12 +277,12 @@ class ExcelImportService:
                                         f"第{idx + 2}行权属方不存在"
                                     )
                                 continue
-                            ownership_id = str(ownership.id)
-                            ownership_by_id[ownership_id] = ownership
+                            ownership_id = str(ownership_record.id)
+                            ownership_by_id[ownership_id] = ownership_record
 
                         if ownership_id != "":
-                            ownership = ownership_by_id.get(ownership_id)
-                            if not ownership:
+                            ownership_record = ownership_by_id.get(ownership_id)
+                            if not ownership_record:
                                 results["errors"].append(
                                     {
                                         "row": idx + 2,
@@ -294,7 +299,7 @@ class ExcelImportService:
 
                             if (
                                 ownership_entity != ""
-                                and ownership_entity != str(ownership.name)
+                                and ownership_entity != str(ownership_record.name)
                             ):
                                 results["errors"].append(
                                     {
@@ -310,7 +315,7 @@ class ExcelImportService:
                                     )
                                 continue
 
-                            asset_data["ownership_id"] = str(ownership.id)
+                            asset_data["ownership_id"] = str(ownership_record.id)
 
                         asset_data.pop("ownership_entity", None)
 
@@ -354,7 +359,9 @@ class ExcelImportService:
                         elif not existing_asset:
                             create_schema = AssetCreate(**asset_data)
                             created_asset = await asset_crud.create_async(
-                                db=self.db, obj_in=create_schema
+                                db=self.db,
+                                obj_in=create_schema,
+                                organization_id=organization_id,
                             )
                             if getattr(created_asset, "property_name", None) is not None:
                                 existing_assets_by_name[

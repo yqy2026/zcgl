@@ -9,10 +9,27 @@ import { Badge, Dropdown, List, Empty, Spin, Button, Tag, Typography } from 'ant
 import { BellOutlined, CheckOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { notificationService } from '@/services/notificationService';
-import { Notification } from '@/types/notification';
+import { Notification, NotificationType } from '@/types/notification';
 import { useNavigate } from 'react-router-dom';
+import styles from './NotificationCenter.module.css';
 
 const { Text } = Typography;
+
+type Tone = 'primary' | 'success' | 'warning' | 'error' | 'neutral';
+
+interface NotificationTypeMeta {
+  label: string;
+  tone: Tone;
+}
+
+const NOTIFICATION_TYPE_META_MAP: Record<NotificationType, NotificationTypeMeta> = {
+  [NotificationType.CONTRACT_EXPIRING]: { label: '合同即将到期', tone: 'warning' },
+  [NotificationType.CONTRACT_EXPIRED]: { label: '合同已到期', tone: 'error' },
+  [NotificationType.PAYMENT_OVERDUE]: { label: '付款逾期', tone: 'error' },
+  [NotificationType.PAYMENT_DUE]: { label: '付款到期提醒', tone: 'warning' },
+  [NotificationType.APPROVAL_PENDING]: { label: '审批待办', tone: 'primary' },
+  [NotificationType.SYSTEM_NOTICE]: { label: '系统通知', tone: 'neutral' },
+};
 
 interface NotificationCenterProps {
   onClick?: () => void;
@@ -86,40 +103,47 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClick }) => {
     }
   };
 
-  // 获取通知类型标签颜色
-  const getNotificationTypeColor = (type: string) => {
-    const colorMap: Record<string, string> = {
-      contract_expiring: 'orange',
-      contract_expired: 'red',
-      payment_overdue: 'red',
-      payment_due: 'orange',
-      approval_pending: 'blue',
-      system_notice: 'default',
-    };
-    return colorMap[type] || 'default';
+  const getToneClassName = (tone: Tone): string => {
+    if (tone === 'primary') {
+      return styles.tonePrimary;
+    }
+    if (tone === 'success') {
+      return styles.toneSuccess;
+    }
+    if (tone === 'warning') {
+      return styles.toneWarning;
+    }
+    if (tone === 'error') {
+      return styles.toneError;
+    }
+    return styles.toneNeutral;
   };
 
-  // 获取通知类型文本
-  const getNotificationTypeText = (type: string) => {
-    const textMap: Record<string, string> = {
-      contract_expiring: '合同即将到期',
-      contract_expired: '合同已到期',
-      payment_overdue: '付款逾期',
-      payment_due: '付款到期提醒',
-      approval_pending: '审批待办',
-      system_notice: '系统通知',
-    };
-    return textMap[type] || '通知';
+  const getNotificationTypeMeta = (type: string): NotificationTypeMeta => {
+    const typedType = type as NotificationType;
+    return NOTIFICATION_TYPE_META_MAP[typedType] ?? { label: '通知', tone: 'neutral' };
+  };
+
+  const handleNotificationClick = (notification: Notification) => {
+    if (!notification.is_read) {
+      void handleMarkAsRead(notification.id);
+    }
   };
 
   // 下拉菜单内容
   const content = (
-    <div style={{ width: 400, maxHeight: 500, overflow: 'auto' }}>
-      <div style={{ padding: '12px', borderBottom: '1px solid #f0f0f0' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <div className={styles.panel}>
+      <div className={styles.panelHeader}>
+        <div className={styles.panelHeaderRow}>
           <Text strong>消息通知</Text>
           {unreadCount > 0 && (
-            <Button type="link" size="small" onClick={handleMarkAllAsRead} style={{ padding: 0 }}>
+            <Button
+              type="link"
+              size="small"
+              onClick={handleMarkAllAsRead}
+              className={styles.markAllButton}
+              aria-label="将所有通知标记为已读"
+            >
               全部已读
             </Button>
           )}
@@ -127,81 +151,81 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClick }) => {
       </div>
 
       {isLoading ? (
-        <div style={{ padding: '40px', textAlign: 'center' }}>
+        <div className={styles.loadingState}>
           <Spin />
         </div>
       ) : notifications.length === 0 ? (
-        <div style={{ padding: '40px', textAlign: 'center' }}>
+        <div className={styles.emptyState}>
           <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无通知" />
         </div>
       ) : (
         <List
+          className={styles.notificationList}
           dataSource={notifications}
           renderItem={(notification: Notification) => (
             <List.Item
               key={notification.id}
-              style={{
-                padding: '12px',
-                backgroundColor: notification.is_read ? 'transparent' : '#f6ffed',
-                cursor: 'pointer',
-              }}
-              onClick={() => {
-                if (!notification.is_read) {
-                  handleMarkAsRead(notification.id);
+              className={`${styles.notificationItem} ${
+                notification.is_read ? styles.notificationRead : styles.notificationUnread
+              }`}
+              onClick={() => handleNotificationClick(notification)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={event => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  handleNotificationClick(notification);
                 }
               }}
             >
-              <div style={{ width: '100%' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div className={styles.notificationContent}>
+                <div className={styles.notificationHeader}>
+                  <div className={styles.notificationMeta}>
                     {!notification.is_read && (
-                      <div
-                        style={{
-                          width: 6,
-                          height: 6,
-                          borderRadius: '50%',
-                          backgroundColor: '#52c41a',
-                        }}
-                      />
+                      <span className={styles.unreadDot} aria-hidden="true" />
                     )}
-                    <Tag color={getNotificationTypeColor(notification.type)}>
-                      {getNotificationTypeText(notification.type)}
+                    <Tag
+                      className={`${styles.typeTag} ${getToneClassName(
+                        getNotificationTypeMeta(notification.type).tone
+                      )}`}
+                    >
+                      {getNotificationTypeMeta(notification.type).label}
                     </Tag>
                   </div>
-                  <div style={{ display: 'flex', gap: 4 }}>
+                  <div className={styles.itemActions}>
                     {!notification.is_read && (
                       <Button
                         type="text"
-                        size="small"
                         icon={<CheckOutlined />}
                         onClick={e => handleMarkAsRead(notification.id, e)}
-                        style={{ padding: '0 4px' }}
+                        className={styles.itemActionButton}
+                        aria-label="标记为已读"
                       />
                     )}
                     <Button
                       type="text"
-                      size="small"
                       danger
                       icon={<DeleteOutlined />}
                       onClick={e => handleDelete(notification.id, e)}
-                      style={{ padding: '0 4px' }}
+                      className={`${styles.itemActionButton} ${styles.itemActionDanger}`}
+                      aria-label="删除通知"
                     />
                   </div>
                 </div>
-                <div style={{ marginBottom: 4 }}>
+                <div className={styles.notificationTitle}>
                   <Text
                     strong={notification.priority === 'high' || notification.priority === 'urgent'}
                   >
                     {notification.title}
                   </Text>
                 </div>
-                <div style={{ marginBottom: 4 }}>
-                  <Text type="secondary" style={{ fontSize: 12 }}>
+                <div className={styles.notificationBody}>
+                  <Text type="secondary" className={styles.notificationBodyText}>
                     {notification.content}
                   </Text>
                 </div>
-                <div>
-                  <Text type="secondary" style={{ fontSize: 11 }}>
+                <div className={styles.notificationFooter}>
+                  <Text type="secondary" className={styles.notificationTime}>
                     {new Date(notification.created_at).toLocaleString('zh-CN')}
                   </Text>
                 </div>
@@ -210,10 +234,11 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClick }) => {
           )}
         />
       )}
-      <div style={{ padding: '8px 12px', borderTop: '1px solid #f0f0f0', textAlign: 'center' }}>
+      <div className={styles.panelFooter}>
         <Button
           type="link"
           size="small"
+          className={styles.viewAllButton}
           onClick={() => {
             setOpen(false);
             navigate('/system/notifications');
@@ -234,11 +259,13 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClick }) => {
       placement="bottomRight"
     >
       <Badge count={unreadCount} overflowCount={99}>
-        <BellOutlined
-          style={{ fontSize: 18, cursor: 'pointer' }}
-          onClick={e => {
-            e.preventDefault();
-            setOpen(!open);
+        <Button
+          type="text"
+          icon={<BellOutlined className={styles.bellIcon} />}
+          className={styles.triggerButton}
+          aria-label="通知中心"
+          aria-expanded={open}
+          onClick={() => {
             onClick?.();
           }}
         />

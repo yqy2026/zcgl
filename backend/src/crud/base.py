@@ -18,7 +18,7 @@ from ..core.exception_handler import (
     ResourceNotFoundError,
 )
 from ..core.response_handler import ResponseHandler
-from .query_builder import QueryBuilder
+from .query_builder import QueryBuilder, TenantFilter
 
 
 class HasModelDump(Protocol):
@@ -53,6 +53,25 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
         self.query_builder = QueryBuilder(model)
         self._cache: dict[str, tuple[Any, float]] = {}  # 简单内存缓存
         self._cache_timeout = CacheTTL.SHORT_SECONDS  # 5分钟缓存超时
+
+    @staticmethod
+    def _serialize_tenant_filter(tenant_filter: TenantFilter | None) -> str | None:
+        """序列化租户过滤上下文用于缓存隔离。"""
+        if tenant_filter is None:
+            return None
+        normalized_org_ids = sorted(
+            {
+                str(org_id).strip()
+                for org_id in tenant_filter.organization_ids
+                if str(org_id).strip() != ""
+            }
+        )
+        org_ids_key = ",".join(normalized_org_ids)
+        return (
+            f"mode={tenant_filter.mode};"
+            f"allow_null={int(tenant_filter.allow_null)};"
+            f"org_ids={org_ids_key}"
+        )
 
     def _get_cache_key(self, method: str, **kwargs: Any) -> str:
         """生成缓存键"""
@@ -90,10 +109,18 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
         return error
 
     async def get(
-        self, db: AsyncSession, id: Any, use_cache: bool = True
+        self,
+        db: AsyncSession,
+        id: Any,
+        use_cache: bool = True,
+        tenant_filter: TenantFilter | None = None,
     ) -> ModelType | None:
         """根据ID获取单个记录（支持缓存）"""
-        cache_key = self._get_cache_key("get", id=id)
+        cache_key = self._get_cache_key(
+            "get",
+            id=id,
+            tenant_filter=self._serialize_tenant_filter(tenant_filter),
+        )
 
         if use_cache:
             cached_result = self._get_from_cache(cache_key)
@@ -102,6 +129,8 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
 
         try:
             stmt = select(self.model).where(getattr(self.model, "id") == id)
+            if tenant_filter is not None:
+                stmt = self.query_builder.apply_tenant_filter(stmt, tenant_filter)
             result = (await db.execute(stmt)).scalars().first()
             if use_cache and result is not None:  # pragma: no cover
                 self._set_cache(cache_key, result)  # pragma: no cover
@@ -116,6 +145,7 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
         skip: int = 0,
         limit: int = 100,
         use_cache: bool = False,
+        tenant_filter: TenantFilter | None = None,
         **kwargs: Any,  # 允许子类传递额外参数（如 task_type, status 等）
     ) -> list[ModelType]:
         """获取多个记录（支持缓存）
@@ -123,14 +153,22 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
         子类可以通过 **kwargs 传递额外的筛选参数，例如：
             task_crud.get_multi(db, skip=0, limit=10, task_type="import")
         """
-        cache_key = self._get_cache_key("get_multi", skip=skip, limit=limit)
+        cache_key = self._get_cache_key(
+            "get_multi",
+            skip=skip,
+            limit=limit,
+            tenant_filter=self._serialize_tenant_filter(tenant_filter),
+        )
 
         if use_cache and limit <= 50:  # 只对小结果集缓存
             cached_result = self._get_from_cache(cache_key)  # pragma: no cover
             if cached_result is not None:  # pragma: no cover
                 return cast(list[ModelType], cached_result)
         try:
-            stmt = select(self.model).offset(skip).limit(limit)
+            stmt = select(self.model)
+            if tenant_filter is not None:
+                stmt = self.query_builder.apply_tenant_filter(stmt, tenant_filter)
+            stmt = stmt.offset(skip).limit(limit)
             result = (await db.execute(stmt)).scalars().all()
             records = list(result)
 
@@ -259,7 +297,11 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
             raise self._handle_database_error(e, "删除记录")  # pragma: no cover
 
     async def count(
-        self, db: AsyncSession, filters: dict[str, Any] | None = None, **kwargs: Any
+        self,
+        db: AsyncSession,
+        filters: dict[str, Any] | None = None,
+        tenant_filter: TenantFilter | None = None,
+        **kwargs: Any,
     ) -> int:
         """获取记录总数（支持筛选条件）
 
@@ -272,6 +314,8 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
                 for field, value in filters.items():
                     if hasattr(self.model, field) and value is not None:
                         stmt = stmt.where(getattr(self.model, field) == value)
+            if tenant_filter is not None:
+                stmt = self.query_builder.apply_tenant_filter(stmt, tenant_filter)
             result = await db.execute(stmt)
             return int(result.scalar() or 0)
         except Exception as e:  # pragma: no cover
@@ -290,6 +334,7 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
         order_by: str | None = None,
         order_desc: bool = False,
         base_query: Select[Any] | None = None,
+        tenant_filter: TenantFilter | None = None,
     ) -> list[ModelType]:
         """高级查询方法（支持筛选、搜索、排序）"""
         try:
@@ -306,6 +351,7 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
                 skip=skip,
                 limit=limit,
                 base_query=base_query,
+                tenant_filter=tenant_filter,
             )
             result = (await db.execute(query)).scalars().all()
             return list(result)
@@ -324,6 +370,7 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
         limit: int = 100,
         order_by: str | None = None,
         order_desc: bool = True,
+        tenant_filter: TenantFilter | None = None,
     ) -> tuple[list[ModelType], int]:
         """基于 QueryBuilder 获取列表与总数"""
         try:
@@ -336,12 +383,14 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
                 sort_desc=order_desc,
                 skip=skip,
                 limit=limit,
+                tenant_filter=tenant_filter,
             )
             count_stmt = self.query_builder.build_count_query(
                 filters=filters,
                 search_query=search,
                 search_fields=search_fields,
                 search_conditions=search_conditions,
+                tenant_filter=tenant_filter,
             )
 
             result = (await db.execute(stmt)).scalars().all()
@@ -418,6 +467,7 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
         sort_order: Literal["asc", "desc"] = "asc",
         use_cache: bool = True,
         exclude_empty: bool = True,
+        tenant_filter: TenantFilter | None = None,
     ) -> list[Any]:
         """
         获取模型字段的不重复值列表,用于下拉框/筛选器UI组件
@@ -488,6 +538,9 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
             for filter_key, filter_value in filters.items():
                 if hasattr(self.model, filter_key):
                     stmt = stmt.where(getattr(self.model, filter_key) == filter_value)
+
+        if tenant_filter is not None:
+            stmt = self.query_builder.apply_tenant_filter(stmt, tenant_filter)
 
         # 应用去重和排序
         stmt = stmt.distinct()

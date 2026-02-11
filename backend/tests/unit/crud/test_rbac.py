@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from src.crud.query_builder import TenantFilter
 from src.crud.rbac import (
     CRUDPermission,
     CRUDRole,
@@ -114,6 +115,30 @@ class TestCRUDRole:
         assert total == 1
         assert mock_db.execute.await_count == 2
 
+    async def test_get_multi_with_filters_passes_tenant_filter(
+        self, crud: CRUDRole, mock_db: MagicMock
+    ):
+        tenant_filter = TenantFilter(organization_ids=["org-1"])
+        mock_roles_result = _mock_execute_result(all_values=[])
+        mock_count_result = _mock_execute_result(scalar_value=0)
+        mock_db.execute = AsyncMock(side_effect=[mock_roles_result, mock_count_result])
+
+        with (
+            patch.object(crud.query_builder, "build_query", return_value=MagicMock()) as mock_build_query,
+            patch.object(
+                crud.query_builder,
+                "build_count_query",
+                return_value=MagicMock(),
+            ) as mock_build_count_query,
+        ):
+            await crud.get_multi_with_filters(
+                mock_db,
+                tenant_filter=tenant_filter,
+            )
+
+        assert mock_build_query.call_args.kwargs.get("tenant_filter") == tenant_filter
+        assert mock_build_count_query.call_args.kwargs.get("tenant_filter") == tenant_filter
+
     async def test_count_by_category(self, crud: CRUDRole, mock_db: MagicMock):
         mock_db.execute = AsyncMock(
             return_value=_mock_execute_result(
@@ -180,6 +205,20 @@ class TestCRUDPermission:
 
         assert len(permissions) == 1
         assert permissions[0] == mock_permission
+
+    async def test_get_multi_with_filters_passes_tenant_filter(
+        self, crud: CRUDPermission, mock_db: MagicMock
+    ):
+        tenant_filter = TenantFilter(organization_ids=["org-1"])
+        mock_db.execute = AsyncMock(return_value=_mock_execute_result(all_values=[]))
+
+        with patch.object(crud.query_builder, "build_query", return_value=MagicMock()) as mock_build_query:
+            await crud.get_multi_with_filters(
+                mock_db,
+                tenant_filter=tenant_filter,
+            )
+
+        assert mock_build_query.call_args.kwargs.get("tenant_filter") == tenant_filter
 
     async def test_count_by_resource(self, crud: CRUDPermission, mock_db: MagicMock):
         mock_db.execute = AsyncMock(

@@ -14,6 +14,7 @@ from src.core.exception_handler import (
     OperationNotAllowedError,
     ResourceNotFoundError,
 )
+from src.crud.query_builder import TenantFilter
 from src.models.asset import Asset
 from src.models.auth import User
 from src.schemas.asset import AssetCreate, AssetUpdate
@@ -215,6 +216,67 @@ class TestGetAssets:
 
             assert result == ([], 0)
 
+    async def test_get_assets_with_current_user_resolves_tenant_filter(
+        self, service, mock_db
+    ):
+        """测试 get_assets 按当前用户自动解析 tenant_filter 并透传"""
+        mock_assets = [MagicMock(spec=Asset)]
+        tenant_filter = TenantFilter(organization_ids=["org-1", "org-2"])
+
+        with (
+            patch.object(
+                service,
+                "_resolve_tenant_filter",
+                new=AsyncMock(return_value=tenant_filter),
+            ) as mock_resolve,
+            patch(
+                "src.crud.asset.asset_crud.get_multi_with_search_async",
+                new_callable=AsyncMock,
+                return_value=(mock_assets, 2),
+            ) as mock_get,
+        ):
+            result = await service.get_assets(current_user_id="user-1")
+
+        assert result == (mock_assets, 2)
+        mock_resolve.assert_awaited_once_with(
+            current_user_id="user-1",
+            tenant_filter=None,
+        )
+        call_kwargs = mock_get.call_args.kwargs
+        assert call_kwargs["tenant_filter"] == tenant_filter
+
+
+class TestTenantFilterResolution:
+    async def test_resolve_tenant_filter_returns_org_ids(self, service):
+        """测试可访问组织列表会被转换为 TenantFilter"""
+        mock_org_service = MagicMock()
+        mock_org_service.get_user_accessible_organizations = AsyncMock(
+            return_value=["org-1", "org-2"]
+        )
+        with patch(
+            "src.services.organization_permission_service.OrganizationPermissionService",
+            return_value=mock_org_service,
+        ):
+            tenant_filter = await service._resolve_tenant_filter(
+                current_user_id="user-1"
+            )
+
+        assert tenant_filter is not None
+        assert tenant_filter.organization_ids == ["org-1", "org-2"]
+
+    async def test_resolve_tenant_filter_fail_closed_on_exception(self, service):
+        """测试 tenant_filter 解析失败时走失败关闭策略"""
+        with patch(
+            "src.services.organization_permission_service.OrganizationPermissionService",
+            side_effect=RuntimeError("boom"),
+        ):
+            tenant_filter = await service._resolve_tenant_filter(
+                current_user_id="user-1"
+            )
+
+        assert tenant_filter is not None
+        assert tenant_filter.organization_ids == []
+
 
 class TestBuildFilters:
     async def test_build_filters_includes_occupancy_rate_range(self) -> None:
@@ -283,6 +345,58 @@ class TestGetAsset:
             with pytest.raises(ResourceNotFoundError):
                 await service.get_asset(TEST_ASSET_ID)
 
+    async def test_get_asset_with_current_user_resolves_tenant_filter(
+        self, service, mock_asset
+    ) -> None:
+        tenant_filter = TenantFilter(organization_ids=["org-1"])
+
+        with (
+            patch.object(
+                service,
+                "_resolve_tenant_filter",
+                new=AsyncMock(return_value=tenant_filter),
+            ) as mock_resolve,
+            patch(
+                "src.crud.asset.asset_crud.get_async",
+                new_callable=AsyncMock,
+                return_value=mock_asset,
+            ) as mock_get_async,
+        ):
+            result = await service.get_asset(
+                TEST_ASSET_ID,
+                current_user_id="user-1",
+            )
+
+        assert result == mock_asset
+        mock_resolve.assert_awaited_once_with(
+            current_user_id="user-1",
+            tenant_filter=None,
+        )
+        mock_get_async.assert_awaited_once_with(
+            db=service.db,
+            id=TEST_ASSET_ID,
+            use_cache=True,
+            tenant_filter=tenant_filter,
+        )
+
+    async def test_get_asset_fail_closed_when_no_accessible_org(self, service) -> None:
+        with patch.object(
+            service,
+            "_resolve_tenant_filter",
+            new=AsyncMock(return_value=TenantFilter(organization_ids=[])),
+        ):
+            with patch(
+                "src.crud.asset.asset_crud.get_async",
+                new_callable=AsyncMock,
+            ) as mock_get_async:
+                with pytest.raises(ResourceNotFoundError):
+                    await service.get_asset(
+                        TEST_ASSET_ID,
+                        current_user_id="user-1",
+                    )
+
+        mock_get_async.assert_not_awaited()
+
 
 class TestGetAssetHistoryRecords:
     async def test_get_asset_history_records_success(self, service) -> None:
@@ -297,7 +411,11 @@ class TestGetAssetHistoryRecords:
                 result = await service.get_asset_history_records(TEST_ASSET_ID)
 
         assert result == history_records
-        mock_get_asset.assert_awaited_once_with(TEST_ASSET_ID)
+        mock_get_asset.assert_awaited_once_with(
+            TEST_ASSET_ID,
+            tenant_filter=None,
+            current_user_id=None,
+        )
         mock_get_history.assert_awaited_once_with(service.db, asset_id=TEST_ASSET_ID)
 
 
@@ -325,6 +443,19 @@ class TestGetOwnershipEntityNames:
 
         assert result == []
         mock_db.execute.assert_awaited_once()
+
+
+class TestOwnershipResolution:
+    async def test_resolve_ownership_uses_crud_get(self, service):
+        with patch(
+            "src.services.asset.asset_service.ownership.get",
+            new_callable=AsyncMock,
+            return_value=MagicMock(id="ownership-id"),
+        ) as mock_get:
+            result = await service._resolve_ownership({"ownership_id": "ownership-id"})
+
+        assert result["ownership_id"] == "ownership-id"
+        mock_get.assert_awaited_once_with(service.db, id="ownership-id")
 
 
 # ============================================================================

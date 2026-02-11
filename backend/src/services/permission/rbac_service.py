@@ -2,7 +2,9 @@
 RBAC服务层
 """
 
+import logging
 from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,6 +17,7 @@ from ...core.exception_handler import (
     ResourceNotFoundError,
 )
 from ...crud.auth import UserCRUD
+from ...crud.query_builder import TenantFilter
 from ...crud.rbac import (
     permission_audit_log_crud,
     permission_crud,
@@ -43,6 +46,7 @@ ADMIN_PERMISSION_RESOURCE = "system"
 ADMIN_PERMISSION_ACTION = "admin"
 LEGACY_ADMIN_PERMISSION_ACTION = "manage"
 VALID_GRANT_EFFECTS = {"allow", "deny"}
+logger = logging.getLogger(__name__)
 
 _user_crud = UserCRUD()
 
@@ -77,10 +81,23 @@ class RBACService:
         return role
 
     async def update_role(
-        self, role_id: str, role_data: RoleUpdate, updated_by: str
+        self,
+        role_id: str,
+        role_data: RoleUpdate,
+        updated_by: str,
+        tenant_filter: TenantFilter | None = None,
+        current_user_id: str | None = None,
     ) -> Role:
         """更新角色"""
-        role = await role_crud.get(self.db, id=role_id)
+        resolved_tenant_filter = await self._resolve_tenant_filter(
+            current_user_id=current_user_id,
+            tenant_filter=tenant_filter,
+        )
+        role = await role_crud.get(
+            self.db,
+            id=role_id,
+            tenant_filter=resolved_tenant_filter,
+        )
         if not role:
             raise ResourceNotFoundError("角色", role_id)
 
@@ -109,13 +126,29 @@ class RBACService:
                 role_id=str(role.id),
                 permission_ids=role_data.permission_ids,
                 updated_by=updated_by,
+                tenant_filter=resolved_tenant_filter,
+                current_user_id=current_user_id,
             )
 
         return role
 
-    async def delete_role(self, role_id: str, deleted_by: str) -> bool:
+    async def delete_role(
+        self,
+        role_id: str,
+        deleted_by: str,
+        tenant_filter: TenantFilter | None = None,
+        current_user_id: str | None = None,
+    ) -> bool:
         """删除角色"""
-        role = await role_crud.get(self.db, id=role_id)
+        resolved_tenant_filter = await self._resolve_tenant_filter(
+            current_user_id=current_user_id,
+            tenant_filter=tenant_filter,
+        )
+        role = await role_crud.get(
+            self.db,
+            id=role_id,
+            tenant_filter=resolved_tenant_filter,
+        )
         if not role:
             return False
 
@@ -159,9 +192,19 @@ class RBACService:
         role_id: str,
         permission_ids: list[str],
         updated_by: str,
+        tenant_filter: TenantFilter | None = None,
+        current_user_id: str | None = None,
     ) -> None:
         """更新角色权限"""
-        role = await role_crud.get(self.db, id=role_id)
+        resolved_tenant_filter = await self._resolve_tenant_filter(
+            current_user_id=current_user_id,
+            tenant_filter=tenant_filter,
+        )
+        role = await role_crud.get(
+            self.db,
+            id=role_id,
+            tenant_filter=resolved_tenant_filter,
+        )
         if not role:
             raise ResourceNotFoundError("角色", role_id)
         if role.is_system_role:
@@ -170,9 +213,22 @@ class RBACService:
         await self._assign_permissions_to_role(role_id, permission_ids, updated_by)
         await self.db.commit()
 
-    async def get_role(self, role_id: str) -> Role | None:
+    async def get_role(
+        self,
+        role_id: str,
+        tenant_filter: TenantFilter | None = None,
+        current_user_id: str | None = None,
+    ) -> Role | None:
         """获取角色详情"""
-        return await role_crud.get(self.db, id=role_id)
+        resolved_tenant_filter = await self._resolve_tenant_filter(
+            current_user_id=current_user_id,
+            tenant_filter=tenant_filter,
+        )
+        return await role_crud.get(
+            self.db,
+            id=role_id,
+            tenant_filter=resolved_tenant_filter,
+        )
 
     async def get_roles(
         self,
@@ -182,8 +238,14 @@ class RBACService:
         category: str | None = None,
         is_active: bool | None = None,
         organization_id: str | None = None,
+        tenant_filter: TenantFilter | None = None,
+        current_user_id: str | None = None,
     ) -> tuple[list[Role], int]:
         """获取角色列表"""
+        resolved_tenant_filter = await self._resolve_tenant_filter(
+            current_user_id=current_user_id,
+            tenant_filter=tenant_filter,
+        )
         return await role_crud.get_multi_with_filters(
             db=self.db,
             skip=skip,
@@ -192,6 +254,7 @@ class RBACService:
             category=category,
             is_active=is_active,
             organization_id=organization_id,
+            tenant_filter=resolved_tenant_filter,
         )
 
     async def get_role_users(
@@ -200,8 +263,14 @@ class RBACService:
         *,
         skip: int = 0,
         limit: int = 100,
+        tenant_filter: TenantFilter | None = None,
+        current_user_id: str | None = None,
     ) -> tuple[list[Any], int]:
-        role = await self.get_role(role_id)
+        role = await self.get_role(
+            role_id,
+            tenant_filter=tenant_filter,
+            current_user_id=current_user_id,
+        )
         if not role:
             raise ResourceNotFoundError("角色", role_id)
         return await self.user_crud.get_users_by_role(self.db, role_id, skip, limit)
@@ -257,8 +326,14 @@ class RBACService:
         resource: str | None = None,
         action: str | None = None,
         is_system_permission: bool | None = None,
+        tenant_filter: TenantFilter | None = None,
+        current_user_id: str | None = None,
     ) -> tuple[list[Permission], int]:
         """获取权限列表"""
+        resolved_tenant_filter = await self._resolve_tenant_filter(
+            current_user_id=current_user_id,
+            tenant_filter=tenant_filter,
+        )
         return await permission_crud.get_multi_with_count_async(
             self.db,
             skip=skip,
@@ -267,7 +342,34 @@ class RBACService:
             resource=resource,
             action=action,
             is_system_permission=is_system_permission,
+            tenant_filter=resolved_tenant_filter,
         )
+
+    async def _resolve_tenant_filter(
+        self,
+        *,
+        current_user_id: str | None = None,
+        tenant_filter: TenantFilter | None = None,
+    ) -> TenantFilter | None:
+        if tenant_filter is not None:
+            return tenant_filter
+        if current_user_id is None or current_user_id.strip() == "":
+            return None
+
+        try:
+            from ..organization_permission_service import OrganizationPermissionService
+
+            org_service = OrganizationPermissionService(self.db)
+            org_ids = await org_service.get_user_accessible_organizations(
+                current_user_id
+            )
+            return TenantFilter(organization_ids=[str(org_id) for org_id in org_ids])
+        except Exception:
+            logger.exception(
+                "Failed to resolve tenant filter for user %s, fallback to fail-closed",
+                current_user_id,
+            )
+            return TenantFilter(organization_ids=[])
 
     # ==================== 用户角色分配 ====================
 

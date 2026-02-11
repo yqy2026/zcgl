@@ -1,0 +1,66 @@
+.breadcrumbWrapper {
+  width: 100%;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.breadcrumb {
+  min-width: max-content;
+}
+
+.breadcrumb :global(.ant-breadcrumb-link) {
+  display: inline-flex;
+  align-items: center;
+}
+
+.breadcrumb :global(.ant-breadcrumb-separator) {
+  color: var(--color-text-tertiary);
+}
+
+.homeLink,
+.breadcrumbLink,
+.currentLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 8px;
+  border-radius: 8px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.homeLink,
+.breadcrumbLink {
+  color: var(--color-text-secondary);
+  transition: color var(--transition-base), background-color var(--transition-base);
+}
+
+.homeLink:hover,
+.breadcrumbLink:hover {
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.homeLink:focus-visible,
+.breadcrumbLink:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.homeText {
+  font-size: 13px;
+}
+
+.currentLabel {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+@media (max-width: 768px) {
+  .homeLink,
+  .breadcrumbLink,
+  .currentLabel {
+    min-height: 44px;
+  }
+}

@@ -5,7 +5,6 @@
 from datetime import date, datetime
 from typing import Any
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...crud.notification import notification_crud
@@ -17,8 +16,7 @@ class NotificationService:
     """通知服务层"""
 
     async def list_active_users_async(self, db: AsyncSession) -> list[User]:
-        result = await db.execute(select(User).where(User.is_active.is_(True)))
-        return list(result.scalars().all())
+        return await notification_crud.get_active_users_async(db)
 
     async def list_notifications_async(
         self,
@@ -59,21 +57,15 @@ class NotificationService:
         require_unread: bool = False,
         created_since: date | datetime | None = None,
     ) -> Notification | None:
-        stmt = select(Notification).where(
-            Notification.recipient_id == recipient_id,
-            Notification.related_entity_type == related_entity_type,
-            Notification.related_entity_id == related_entity_id,
-            Notification.type == notification_type,
+        return await notification_crud.find_existing_notification_async(
+            db,
+            recipient_id=recipient_id,
+            related_entity_type=related_entity_type,
+            related_entity_id=related_entity_id,
+            notification_type=notification_type,
+            require_unread=require_unread,
+            created_since=created_since,
         )
-
-        if require_unread:
-            stmt = stmt.where(Notification.is_read.is_(False))
-
-        if created_since is not None:
-            stmt = stmt.where(Notification.created_at >= created_since)
-
-        result = await db.execute(stmt)
-        return result.scalars().first()
 
     async def find_existing_notification_pairs_async(
         self,
@@ -86,29 +78,15 @@ class NotificationService:
         require_unread: bool = False,
         created_since: date | datetime | None = None,
     ) -> set[tuple[str, str]]:
-        if len(recipient_ids) == 0 or len(related_entity_ids) == 0:
-            return set()
-
-        stmt = select(Notification.recipient_id, Notification.related_entity_id).where(
-            Notification.recipient_id.in_(recipient_ids),
-            Notification.related_entity_type == related_entity_type,
-            Notification.related_entity_id.in_(related_entity_ids),
-            Notification.type == notification_type,
+        return await notification_crud.find_existing_notification_pairs_async(
+            db,
+            recipient_ids=recipient_ids,
+            related_entity_type=related_entity_type,
+            related_entity_ids=related_entity_ids,
+            notification_type=notification_type,
+            require_unread=require_unread,
+            created_since=created_since,
         )
-
-        if require_unread:
-            stmt = stmt.where(Notification.is_read.is_(False))
-
-        if created_since is not None:
-            stmt = stmt.where(Notification.created_at >= created_since)
-
-        result = await db.execute(stmt)
-        rows = result.all()
-        return {
-            (str(recipient_id), str(related_entity_id))
-            for recipient_id, related_entity_id in rows
-            if related_entity_id is not None
-        }
 
     async def get_unread_count_async(self, db: AsyncSession, *, user_id: str) -> int:
         return await notification_crud.count_unread_async(db, recipient_id=user_id)

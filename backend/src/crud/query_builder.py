@@ -1,15 +1,26 @@
 import logging
-from typing import Any, TypeVar
+from dataclasses import dataclass
+from typing import Any, Literal, TypeVar
 
-from sqlalchemy import Select, and_, or_, select
+from sqlalchemy import Select, and_, false, or_, select
 from sqlalchemy.orm import DeclarativeMeta
 
 from ..core.exception_handler import InvalidRequestError
 from .field_whitelist import EmptyWhitelist, get_whitelist_for_model
 
 ModelType = TypeVar("ModelType", bound=DeclarativeMeta)
+TenantIdentifier = str | int
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class TenantFilter:
+    """租户过滤上下文（organization 维度）"""
+
+    organization_ids: list[TenantIdentifier]
+    mode: Literal["strict"] = "strict"
+    allow_null: bool = False
 
 
 class QueryBuilder[ModelType]:
@@ -44,6 +55,7 @@ class QueryBuilder[ModelType]:
         search_conditions: list[Any] | None = None,
         base_query: Select[Any] | None = None,
         distinct_column: Any | None = None,
+        tenant_filter: TenantFilter | None = None,
     ) -> Select[Any]:
         """
         Builds a query to count records matching criteria.
@@ -54,6 +66,9 @@ class QueryBuilder[ModelType]:
 
         if self._should_apply_soft_delete_filter(filters):
             query = self._apply_soft_delete_filter(query)
+
+        if tenant_filter is not None:
+            query = self._apply_tenant_filter(query, tenant_filter)
 
         if filters:
             query = self._apply_filters(query, filters)
@@ -84,6 +99,7 @@ class QueryBuilder[ModelType]:
         skip: int = 0,
         limit: int = 100,
         base_query: Select[Any] | None = None,
+        tenant_filter: TenantFilter | None = None,
     ) -> Select[Any]:
         """
         Builds a SQLAlchemy query with whitelist validation.
@@ -118,6 +134,10 @@ class QueryBuilder[ModelType]:
         if self._should_apply_soft_delete_filter(filters):
             query = self._apply_soft_delete_filter(query)
 
+        # 0.5 Apply Tenant Filter (可选租户隔离)
+        if tenant_filter is not None:
+            query = self._apply_tenant_filter(query, tenant_filter)
+
         # 1. Apply Filters (with validation)
         if filters:
             query = self._apply_filters(query, filters)
@@ -141,6 +161,56 @@ class QueryBuilder[ModelType]:
         query = query.offset(skip).limit(limit)
 
         return query
+
+    def _apply_tenant_filter(
+        self, query: Select[Any], tenant_filter: TenantFilter
+    ) -> Select[Any]:
+        """
+        Apply tenant isolation filter by organization_id.
+
+        Rules:
+        - If model has no organization_id field, skip filter.
+        - If organization_ids is empty, fail-closed with FALSE condition.
+        - Otherwise apply organization_id IN (...) condition.
+        - allow_null=False by default for strict isolation.
+        """
+        if tenant_filter.mode != "strict":
+            logger.warning(
+                "Unsupported tenant_filter mode '%s' for %s, fallback to strict",
+                tenant_filter.mode,
+                self.model.__name__,
+            )
+
+        if not hasattr(self.model, "organization_id"):
+            logger.debug(
+                "Skipping tenant filter for %s: no organization_id column",
+                self.model.__name__,
+            )
+            return query
+
+        org_ids: list[TenantIdentifier] = [
+            org_id
+            for org_id in tenant_filter.organization_ids
+            if org_id is not None and str(org_id).strip() != ""
+        ]
+        if not org_ids:
+            logger.warning(
+                "Applying fail-closed tenant filter for %s: empty organization_ids",
+                self.model.__name__,
+            )
+            return query.where(false())
+
+        organization_column = getattr(self.model, "organization_id")
+        condition = organization_column.in_(org_ids)
+        if tenant_filter.allow_null:
+            condition = or_(organization_column.is_(None), condition)
+        return query.where(condition)
+
+    def apply_tenant_filter(
+        self, query: Select[Any], tenant_filter: TenantFilter
+    ) -> Select[Any]:
+        """Public wrapper for applying tenant filter on custom queries."""
+        return self._apply_tenant_filter(query, tenant_filter)
 
     def _validate_filter_field(self, field_name: str) -> None:
         """

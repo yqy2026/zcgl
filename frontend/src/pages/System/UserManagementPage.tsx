@@ -57,6 +57,48 @@ const { Search } = Input;
 
 // User类型已从systemService导入
 
+type Tone = 'primary' | 'success' | 'warning' | 'error' | 'neutral';
+type UserStatus = User['status'];
+
+interface StatusMeta {
+  label: string;
+  hint: string;
+  tone: Tone;
+}
+
+const STATUS_META_MAP: Record<UserStatus, StatusMeta> = {
+  active: { label: '活跃', hint: '可登录', tone: 'success' },
+  inactive: { label: '停用', hint: '已禁用', tone: 'error' },
+  locked: { label: '锁定', hint: '异常冻结', tone: 'warning' },
+};
+
+const USER_STATUS_FILTER_OPTIONS: Array<{ value: UserStatus; label: string }> = [
+  { value: 'active', label: STATUS_META_MAP.active.label },
+  { value: 'inactive', label: STATUS_META_MAP.inactive.label },
+  { value: 'locked', label: STATUS_META_MAP.locked.label },
+];
+
+const USER_STATUS_FORM_OPTIONS: Array<{ value: 'active' | 'inactive'; label: string }> = [
+  { value: 'active', label: STATUS_META_MAP.active.label },
+  { value: 'inactive', label: STATUS_META_MAP.inactive.label },
+];
+
+const getToneClassName = (tone: Tone): string => {
+  if (tone === 'primary') {
+    return styles.tonePrimary;
+  }
+  if (tone === 'success') {
+    return styles.toneSuccess;
+  }
+  if (tone === 'warning') {
+    return styles.toneWarning;
+  }
+  if (tone === 'error') {
+    return styles.toneError;
+  }
+  return styles.toneNeutral;
+};
+
 interface UserStatistics {
   total: number;
   active: number;
@@ -95,13 +137,6 @@ const UserManagementPage: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   const [form] = Form.useForm();
-
-  // 状态选项
-  const statusOptions = [
-    { value: 'active', label: '活跃', color: 'green' },
-    { value: 'inactive', label: '停用', color: 'red' },
-    { value: 'locked', label: '锁定', color: 'orange' },
-  ];
 
   const fetchUsers = useCallback(async (): Promise<UsersQueryResult> => {
     const trimmedKeyword = filters.keyword.trim();
@@ -213,6 +248,7 @@ const UserManagementPage: React.FC = () => {
 
   const users = usersResponse?.items ?? [];
   const loading = isUsersLoading || isUsersFetching;
+  const isRefreshing = isUsersFetching === true;
   const pagination = useMemo(
     () => ({
       current: paginationState.current,
@@ -221,6 +257,9 @@ const UserManagementPage: React.FC = () => {
     }),
     [paginationState.current, paginationState.pageSize, usersResponse?.total]
   );
+  const enabledFilterCount = [filters.keyword, filters.status, filters.roleId, filters.organizationId].filter(
+    value => value.trim() !== ''
+  ).length;
 
   const statistics = useMemo<UserStatistics | null>(() => {
     if (statisticsError != null) {
@@ -385,9 +424,14 @@ const UserManagementPage: React.FC = () => {
     }
   };
 
-  const getStatusTag = (status: string) => {
-    const statusConfig = statusOptions.find(s => s.value === status);
-    return <Tag color={statusConfig?.color ?? 'default'}>{statusConfig?.label ?? status}</Tag>;
+  const getStatusTag = (status: UserStatus) => {
+    const statusMeta = STATUS_META_MAP[status];
+    return (
+      <Tag className={`${styles.semanticTag} ${styles.statusTag} ${getToneClassName(statusMeta.tone)}`}>
+        {statusMeta.label}
+        <span className={styles.statusHint}>{statusMeta.hint}</span>
+      </Tag>
+    );
   };
 
   const columns: ColumnsType<User> = [
@@ -418,7 +462,14 @@ const UserManagementPage: React.FC = () => {
       title: '角色',
       dataIndex: 'role_name',
       key: 'role',
-      render: role => <Tag color="blue">{role}</Tag>,
+      render: (role?: string) => {
+        const roleLabel = role ?? '未分配';
+        return (
+          <Tag className={`${styles.semanticTag} ${styles.roleTag} ${styles.tonePrimary}`}>
+            {roleLabel}
+          </Tag>
+        );
+      },
     },
     {
       title: '组织',
@@ -429,13 +480,13 @@ const UserManagementPage: React.FC = () => {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
-      render: (status, record) => (
-        <Space>
+      render: (status: UserStatus, record: User) => (
+        <Space size={[8, 6]} wrap>
           {getStatusTag(status)}
           {record.is_locked && (
-            <Tooltip title="账户已锁定">
-              <LockOutlined className={styles.lockedIcon} />
-            </Tooltip>
+            <Tag className={`${styles.semanticTag} ${styles.lockStateTag} ${styles.toneError}`}>
+              已锁定
+            </Tag>
           )}
         </Space>
       ),
@@ -451,34 +502,34 @@ const UserManagementPage: React.FC = () => {
       title: '操作',
       key: 'action',
       render: (_, record) => (
-        <Space size="middle">
+        <Space size={4} className={styles.actionGroup}>
           <Tooltip title="查看详情">
             <Button
-              type="link"
-              size="small"
+              type="text"
               icon={<EyeOutlined />}
               className={styles.tableActionButton}
               onClick={() => handleViewDetail(record)}
+              aria-label={`查看用户${record.username}详情`}
             />
           </Tooltip>
           <Tooltip title="编辑">
             <Button
-              type="link"
-              size="small"
+              type="text"
               icon={<EditOutlined />}
               className={styles.tableActionButton}
               onClick={() => handleEdit(record)}
+              aria-label={`编辑用户${record.username}`}
             />
           </Tooltip>
           <Tooltip title={record.is_locked ? '解锁' : '锁定'}>
             <Button
-              type="link"
-              size="small"
+              type="text"
               icon={record.is_locked ? <UnlockOutlined /> : <LockOutlined />}
               onClick={() => handleToggleLock(record)}
               className={`${styles.tableActionButton} ${
                 record.is_locked ? styles.unlockActionButton : styles.lockActionButton
               }`}
+              aria-label={record.is_locked ? `解锁用户${record.username}` : `锁定用户${record.username}`}
             />
           </Tooltip>
           <Tooltip title={record.status === 'active' ? '停用' : '启用'}>
@@ -486,6 +537,10 @@ const UserManagementPage: React.FC = () => {
               size="small"
               checked={record.status === 'active'}
               onChange={checked => handleToggleStatus(record, checked ? 'active' : 'inactive')}
+              checkedChildren="启"
+              unCheckedChildren="停"
+              className={styles.statusSwitch}
+              aria-label={record.status === 'active' ? `停用用户${record.username}` : `启用用户${record.username}`}
             />
           </Tooltip>
           <Popconfirm
@@ -497,11 +552,11 @@ const UserManagementPage: React.FC = () => {
           >
             <Tooltip title="删除">
               <Button
-                type="link"
-                size="small"
+                type="text"
                 danger
                 icon={<DeleteOutlined />}
                 className={styles.tableActionButton}
+                aria-label={`删除用户${record.username}`}
               />
             </Tooltip>
           </Popconfirm>
@@ -516,13 +571,18 @@ const UserManagementPage: React.FC = () => {
       {statistics != null && (
         <Row gutter={[16, 16]} className={styles.statsRow}>
           <Col xs={24} sm={12} md={6}>
-            <Card className={styles.statsCard}>
+            <Card className={`${styles.statsCard} ${styles.tonePrimary}`}>
               <Statistic title="总用户数" value={statistics.total} prefix={<UserOutlined />} />
             </Card>
           </Col>
           <Col xs={24} sm={12} md={6}>
             <Card className={`${styles.statsCard} ${styles.activeStatsCard}`}>
-              <Statistic title="活跃用户" value={statistics.active} prefix={<TeamOutlined />} />
+              <Statistic
+                title="活跃用户"
+                value={statistics.active}
+                prefix={<TeamOutlined />}
+                suffix={<span className={styles.totalSuffix}>/ {statistics.total}</span>}
+              />
             </Card>
           </Col>
           <Col xs={24} sm={12} md={6}>
@@ -552,6 +612,7 @@ const UserManagementPage: React.FC = () => {
                     allowClear
                     className={styles.fullWidthControl}
                     onSearch={handleSearch}
+                    aria-label="搜索用户"
                   />
                 ),
               },
@@ -565,8 +626,9 @@ const UserManagementPage: React.FC = () => {
                     className={styles.fullWidthControl}
                     value={filters.status !== '' ? filters.status : undefined}
                     onChange={handleStatusFilterChange}
+                    aria-label="按状态筛选用户"
                   >
-                    {statusOptions.map(status => (
+                    {USER_STATUS_FILTER_OPTIONS.map(status => (
                       <Option key={status.value} value={status.value}>
                         {status.label}
                       </Option>
@@ -584,6 +646,7 @@ const UserManagementPage: React.FC = () => {
                     className={styles.fullWidthControl}
                     value={filters.roleId !== '' ? filters.roleId : undefined}
                     onChange={handleRoleFilterChange}
+                    aria-label="按角色筛选用户"
                   >
                     {roles.map(role => (
                       <Option key={role.id} value={role.id}>
@@ -603,6 +666,7 @@ const UserManagementPage: React.FC = () => {
                     className={styles.fullWidthControl}
                     value={filters.organizationId !== '' ? filters.organizationId : undefined}
                     onChange={handleOrganizationFilterChange}
+                    aria-label="按组织筛选用户"
                   >
                     {organizations.map(org => (
                       <Option key={org.id} value={org.id}>
@@ -620,6 +684,8 @@ const UserManagementPage: React.FC = () => {
                     icon={<ReloadOutlined />}
                     onClick={refreshUsersAndStatistics}
                     className={styles.actionButton}
+                    loading={isRefreshing}
+                    aria-label="刷新用户列表"
                   >
                     刷新
                   </Button>
@@ -634,6 +700,7 @@ const UserManagementPage: React.FC = () => {
                     icon={<PlusOutlined />}
                     onClick={handleCreate}
                     className={styles.actionButton}
+                    aria-label="新建系统用户"
                   >
                     新建用户
                   </Button>
@@ -641,6 +708,10 @@ const UserManagementPage: React.FC = () => {
               },
             ]}
           />
+        </div>
+        <div className={styles.filterSummary}>
+          <span className={styles.summaryText}>总记录：{pagination.total}</span>
+          <span className={styles.summaryText}>启用筛选：{enabledFilterCount}</span>
         </div>
 
         <TableWithPagination
@@ -757,7 +828,7 @@ const UserManagementPage: React.FC = () => {
             <Col span={12}>
               <Form.Item name="status" label="状态">
                 <Select placeholder="请选择状态（默认活跃）">
-                  {statusOptions.map(status => (
+                  {USER_STATUS_FORM_OPTIONS.map(status => (
                     <Option key={status.value} value={status.value}>
                       {status.label}
                     </Option>
@@ -812,13 +883,19 @@ const UserManagementPage: React.FC = () => {
               <Descriptions.Item label="邮箱">{selectedUser.email}</Descriptions.Item>
               <Descriptions.Item label="手机号">{selectedUser.phone ?? '未设置'}</Descriptions.Item>
               <Descriptions.Item label="角色">
-                <Tag color="blue">{selectedUser.role_name}</Tag>
+                <Tag className={`${styles.semanticTag} ${styles.roleTag} ${styles.tonePrimary}`}>
+                  {selectedUser.role_name ?? '未分配'}
+                </Tag>
               </Descriptions.Item>
               <Descriptions.Item label="所属组织">{selectedUser.organization_name}</Descriptions.Item>
               <Descriptions.Item label="状态">
-                <Space>
+                <Space size={[8, 6]} wrap>
                   {getStatusTag(selectedUser.status)}
-                  {selectedUser.is_locked && <Tag color="red">已锁定</Tag>}
+                  {selectedUser.is_locked && (
+                    <Tag className={`${styles.semanticTag} ${styles.lockStateTag} ${styles.toneError}`}>
+                      已锁定
+                    </Tag>
+                  )}
                 </Space>
               </Descriptions.Item>
               <Descriptions.Item label="最后登录">

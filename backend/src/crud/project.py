@@ -1,16 +1,56 @@
 from typing import Any
 
-from sqlalchemy import Select, desc, func, or_, select
+from sqlalchemy import Select, desc, false, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models.asset import Asset
+from ..models.auth import User
 from ..models.project import Project
 from ..schemas.project import ProjectCreate, ProjectSearchRequest, ProjectUpdate
 from .base import CRUDBase
+from .query_builder import TenantFilter
 
 
 class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
     """项目管理CRUD操作类"""
+
+    @staticmethod
+    def _normalized_org_ids(tenant_filter: TenantFilter) -> list[str]:
+        return [
+            str(org_id).strip()
+            for org_id in tenant_filter.organization_ids
+            if str(org_id).strip() != ""
+        ]
+
+    async def _resolve_creator_principals(
+        self,
+        db: AsyncSession,
+        tenant_filter: TenantFilter,
+    ) -> set[str]:
+        org_ids = self._normalized_org_ids(tenant_filter)
+        if not org_ids:
+            return set()
+
+        stmt = select(User.id, User.username).where(
+            User.default_organization_id.in_(org_ids)
+        )
+        rows = (await db.execute(stmt)).all()
+        principals: set[str] = set()
+        for user_id, username in rows:
+            if user_id is not None and str(user_id).strip() != "":
+                principals.add(str(user_id).strip())
+            if username is not None and str(username).strip() != "":
+                principals.add(str(username).strip())
+        return principals
+
+    @staticmethod
+    def _apply_creator_scope(
+        stmt: Select[Any],
+        principals: set[str],
+    ) -> Select[Any]:
+        if not principals:
+            return stmt.where(false())
+        return stmt.where(Project.created_by.in_(principals))
 
     async def create(
         self,
@@ -43,6 +83,17 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
         stmt = select(Project).where(Project.name == name)
         return (await db.execute(stmt)).scalars().first()
 
+    async def get_latest_by_code_prefix(
+        self, db: AsyncSession, *, prefix: str
+    ) -> Project | None:
+        stmt = (
+            select(Project)
+            .where(Project.code.like(f"{prefix}%"))
+            .order_by(Project.code.desc())
+            .limit(1)
+        )
+        return (await db.execute(stmt)).scalars().first()
+
     async def update(
         self,
         db: AsyncSession,
@@ -66,6 +117,31 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
             db, db_obj=db_obj, obj_in=update_data, commit=commit
         )
 
+    async def get(
+        self,
+        db: AsyncSession,
+        id: Any,
+        use_cache: bool = True,
+        tenant_filter: TenantFilter | None = None,
+    ) -> Project | None:
+        """按 ID 获取项目（租户过滤回退到创建人范围）。"""
+        if tenant_filter is None:
+            return await super().get(
+                db,
+                id=id,
+                use_cache=use_cache,
+                tenant_filter=tenant_filter,
+            )
+
+        stmt = select(Project).where(Project.id == id)
+        if hasattr(Project, "organization_id"):
+            stmt = self.query_builder.apply_tenant_filter(stmt, tenant_filter)
+        else:
+            principals = await self._resolve_creator_principals(db, tenant_filter)
+            stmt = self._apply_creator_scope(stmt, principals)
+
+        return (await db.execute(stmt)).scalars().first()
+
     async def get_multi(
         self,
         db: AsyncSession,
@@ -74,10 +150,18 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
         limit: int = 100,
         is_active: bool | None = None,
         keyword: str | None = None,
+        tenant_filter: TenantFilter | None = None,
         **kwargs: Any,  # 扩展参数，与基类兼容
     ) -> list[Project]:
         """获取多个项目"""
         stmt = select(Project)
+
+        if tenant_filter is not None:
+            if hasattr(Project, "organization_id"):
+                stmt = self.query_builder.apply_tenant_filter(stmt, tenant_filter)
+            else:
+                principals = await self._resolve_creator_principals(db, tenant_filter)
+                stmt = self._apply_creator_scope(stmt, principals)
 
         if is_active is not None:
             stmt = stmt.where(Project.is_active == is_active)
@@ -108,7 +192,10 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
         return stmt
 
     async def search(
-        self, db: AsyncSession, search_params: ProjectSearchRequest
+        self,
+        db: AsyncSession,
+        search_params: ProjectSearchRequest,
+        tenant_filter: TenantFilter | None = None,
     ) -> tuple[list[Project], int]:
         """搜索项目"""
         query = self._apply_project_filters(
@@ -116,6 +203,12 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
             keyword=search_params.keyword,
             project_status=search_params.project_status,
         )
+        if tenant_filter is not None:
+            if hasattr(Project, "organization_id"):
+                query = self.query_builder.apply_tenant_filter(query, tenant_filter)
+            else:
+                principals = await self._resolve_creator_principals(db, tenant_filter)
+                query = self._apply_creator_scope(query, principals)
 
         # 负责人筛选
         # Schema ProjectSearchRequest has no project_manager field

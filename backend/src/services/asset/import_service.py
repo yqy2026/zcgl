@@ -3,13 +3,13 @@
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...crud.asset import asset_crud
 from ...crud.ownership import ownership
 from ...models.asset import Asset
 from ...models.auth import User
+from ...models.ownership import Ownership
 from ...schemas.asset import (
     AssetCreate,
     AssetImportRequest,
@@ -49,6 +49,12 @@ class AsyncAssetImportService:
             or "system"
         )
         operator_value = str(operator) if operator is not None else None
+        default_org_id = getattr(current_user, "default_organization_id", None)
+        organization_id = (
+            str(default_org_id)
+            if default_org_id is not None and str(default_org_id).strip() != ""
+            else None
+        )
         enum_service = get_enum_validation_service_async(self.db)
 
         ownership_by_id, ownership_by_name = await self._load_ownership_maps(
@@ -171,6 +177,7 @@ class AsyncAssetImportService:
                         db=self.db,
                         obj_in=asset_create,
                         operator=operator_value,
+                        organization_id=organization_id,
                     )
                     assert new_asset is not None
                     if getattr(new_asset, "property_name", None) is not None:
@@ -222,6 +229,7 @@ class AsyncAssetImportService:
                     db=self.db,
                     obj_in=asset_create,
                     operator=operator_value,
+                    organization_id=organization_id,
                 )
                 assert new_asset is not None
                 if getattr(new_asset, "property_name", None) is not None:
@@ -294,7 +302,10 @@ class AsyncAssetImportService:
             return {}
 
         existing_asset_rows = await asset_crud.get_by_property_names_async(
-            self.db, list(property_names_to_load), exclude_deleted=True
+            self.db,
+            list(property_names_to_load),
+            exclude_deleted=True,
+            decrypt=False,
         )
         return {
             str(asset.property_name): asset

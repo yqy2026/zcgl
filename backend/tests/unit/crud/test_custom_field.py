@@ -11,6 +11,7 @@ import pytest
 pytestmark = pytest.mark.asyncio
 
 from src.crud.custom_field import CRUDCustomField, custom_field_crud
+from src.crud.query_builder import TenantFilter
 from src.models.system_dictionary import AssetCustomField
 
 
@@ -118,6 +119,20 @@ class TestCRUDCustomFieldGetMultiWithFilters:
         assert call_args.kwargs.get("skip") == 10
         assert call_args.kwargs.get("limit") == 20
 
+    async def test_get_multi_with_tenant_filter(self, crud, mock_db):
+        """测试透传 tenant_filter 参数"""
+        tenant_filter = TenantFilter(organization_ids=["org-1"])
+        with patch.object(crud.query_builder, "build_query") as mock_build:
+            mock_build.return_value = MagicMock()
+
+            await crud.get_multi_with_filters_async(
+                mock_db,
+                tenant_filter=tenant_filter,
+            )
+
+        call_args = mock_build.call_args
+        assert call_args.kwargs.get("tenant_filter") == tenant_filter
+
 
 class TestCRUDCustomFieldGetActiveFields:
     """测试 get_active_fields 方法"""
@@ -172,6 +187,20 @@ class TestCRUDCustomFieldGetActiveFields:
         call_args = mock_build.call_args
         assert call_args.kwargs.get("sort_by") == "sort_order"
         assert call_args.kwargs.get("sort_desc") is False
+
+    async def test_get_active_fields_with_tenant_filter(self, crud, mock_db):
+        """测试 get_active_fields 透传 tenant_filter"""
+        tenant_filter = TenantFilter(organization_ids=["org-1"])
+        with patch.object(crud.query_builder, "build_query") as mock_build:
+            mock_build.return_value = MagicMock()
+
+            await crud.get_active_fields_async(
+                mock_db,
+                tenant_filter=tenant_filter,
+            )
+
+        call_args = mock_build.call_args
+        assert call_args.kwargs.get("tenant_filter") == tenant_filter
 
 
 class TestCRUDCustomFieldGetAssetFieldValues:

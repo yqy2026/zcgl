@@ -16,10 +16,10 @@ import {
 } from 'antd';
 import { MessageManager } from '@/utils/messageManager';
 import { UserOutlined, EditOutlined, LockOutlined, HistoryOutlined } from '@ant-design/icons';
-import { COLORS } from '@/styles/colorMap';
 import { useAuth } from '@/hooks/useAuth';
 import { AuthService } from '@/services/authService';
 import PageContainer from '@/components/Common/PageContainer';
+import styles from './ProfilePage.module.css';
 
 const { Text } = Typography;
 
@@ -134,8 +134,9 @@ const ProfilePage: React.FC = () => {
         {/* 基本信息 */}
         <Col span={24}>
           <Card
+            className={styles.sectionCard}
             title={
-              <Space>
+              <Space className={styles.sectionTitle}>
                 <UserOutlined />
                 <span>基本信息</span>
               </Space>
@@ -144,6 +145,7 @@ const ProfilePage: React.FC = () => {
               <Button
                 type="primary"
                 icon={<EditOutlined />}
+                className={styles.primaryActionButton}
                 onClick={() => setEditModalVisible(true)}
               >
                 编辑资料
@@ -152,27 +154,20 @@ const ProfilePage: React.FC = () => {
           >
             <Row gutter={[24, 24]}>
               <Col xs={24} md={8}>
-                <div style={{ textAlign: 'center' }}>
-                  <div
-                    style={{
-                      width: '80px',
-                      height: '80px',
-                      margin: '0 auto 16px',
-                      borderRadius: '50%',
-                      background: COLORS.bgQuaternary,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <UserOutlined style={{ fontSize: '32px', color: COLORS.primary }} />
+                <div className={styles.profileSummary}>
+                  <div className={styles.avatarContainer}>
+                    <UserOutlined className={styles.avatarIcon} />
                   </div>
                   <Text type="secondary">用户头像</Text>
                 </div>
               </Col>
 
               <Col xs={24} md={16}>
-                <Descriptions column={{ xs: 1, sm: 1, md: 2 }} bordered>
+                <Descriptions
+                  column={{ xs: 1, sm: 1, md: 2 }}
+                  bordered
+                  className={styles.profileDescriptions}
+                >
                   <Descriptions.Item label="用户名">
                     <Text strong>{user.username}</Text>
                   </Descriptions.Item>
@@ -224,51 +219,47 @@ const ProfilePage: React.FC = () => {
         {/* 安全设置 */}
         <Col span={24}>
           <Card
+            className={styles.sectionCard}
             title={
-              <Space>
+              <Space className={styles.sectionTitle}>
                 <LockOutlined />
                 <span>安全设置</span>
               </Space>
             }
           >
-            <Space orientation="vertical" size="large" style={{ width: '100%' }}>
-              <div
-                style={{
-                  padding: '16px',
-                  background: COLORS.bgSecondary,
-                  borderRadius: '6px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
-              >
-                <div>
-                  <Text strong>登录密码</Text>
+            <Space orientation="vertical" size="large" className={styles.securityActions}>
+              <div className={styles.securityActionCard}>
+                <div className={styles.securityActionMeta}>
+                  <Text strong className={styles.securityActionTitle}>
+                    登录密码
+                  </Text>
                   <br />
-                  <Text type="secondary">建议定期修改密码，确保账户安全</Text>
+                  <Text type="secondary" className={styles.securityActionHint}>
+                    建议定期修改密码，确保账户安全
+                  </Text>
                 </div>
-                <Button icon={<LockOutlined />} onClick={() => setPasswordModalVisible(true)}>
+                <Button
+                  icon={<LockOutlined />}
+                  className={styles.securityActionButton}
+                  onClick={() => setPasswordModalVisible(true)}
+                >
                   修改密码
                 </Button>
               </div>
 
-              <div
-                style={{
-                  padding: '16px',
-                  background: COLORS.bgSecondary,
-                  borderRadius: '6px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
-              >
-                <div>
-                  <Text strong>登录历史</Text>
+              <div className={styles.securityActionCard}>
+                <div className={styles.securityActionMeta}>
+                  <Text strong className={styles.securityActionTitle}>
+                    登录历史
+                  </Text>
                   <br />
-                  <Text type="secondary">查看最近的登录记录</Text>
+                  <Text type="secondary" className={styles.securityActionHint}>
+                    查看最近的登录记录
+                  </Text>
                 </div>
                 <Button
                   icon={<HistoryOutlined />}
+                  className={styles.securityActionButton}
                   onClick={() => {
                     void MessageManager.info('登录历史功能开发中');
                   }}
@@ -294,7 +285,7 @@ const ProfilePage: React.FC = () => {
           form={form}
           layout="vertical"
           onFinish={values => void handleUpdateProfile(values as ProfileFormData)}
-          style={{ marginTop: '16px' }}
+          className={styles.modalForm}
         >
           <Form.Item
             label="用户名"
@@ -328,8 +319,8 @@ const ProfilePage: React.FC = () => {
             <Input placeholder="请输入手机号" />
           </Form.Item>
 
-          <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
-            <Space>
+          <Form.Item className={styles.formActions}>
+            <Space className={styles.formActionButtons}>
               <Button onClick={() => setEditModalVisible(false)}>取消</Button>
               <Button type="primary" htmlType="submit" loading={updateProfileMutation.isPending}>
                 保存更改
@@ -357,7 +348,7 @@ const ProfilePage: React.FC = () => {
           onFinish={values =>
             void handleChangePassword(values as { oldPassword: string; newPassword: string })
           }
-          style={{ marginTop: '16px' }}
+          className={styles.modalForm}
         >
           <Form.Item
             label="当前密码"
@@ -402,8 +393,8 @@ const ProfilePage: React.FC = () => {
             <Input.Password placeholder="请再次输入新密码" />
           </Form.Item>
 
-          <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
-            <Space>
+          <Form.Item className={styles.formActions}>
+            <Space className={styles.formActionButtons}>
               <Button
                 onClick={() => {
                   setPasswordModalVisible(false);

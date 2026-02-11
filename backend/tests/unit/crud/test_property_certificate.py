@@ -1,6 +1,6 @@
 """Simplified async tests for property certificate CRUD."""
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -10,6 +10,7 @@ from src.crud.property_certificate import (
     property_certificate_crud,
     property_owner_crud,
 )
+from src.crud.query_builder import TenantFilter
 from src.models.property_certificate import PropertyCertificate, PropertyOwner
 from src.schemas.property_certificate import PropertyCertificateCreate
 
@@ -57,6 +58,44 @@ class TestPropertyCertificateCRUD:
 
         assert cert.certificate_number == "PC-002"
         mock_db.add.assert_called_once()
+
+    async def test_get_with_tenant_filter_applies_tenant_filter(self, mock_db):
+        crud = CRUDPropertyCertificate(PropertyCertificate)
+        cert = PropertyCertificate(certificate_number="PC-001", certificate_type="property")
+        execute_result = MagicMock()
+        execute_result.scalars.return_value.first.return_value = cert
+        mock_db.execute = AsyncMock(return_value=execute_result)
+
+        tenant_filter = TenantFilter(organization_ids=["org-1"])
+        with patch.object(
+            crud.query_builder,
+            "apply_tenant_filter",
+            side_effect=lambda stmt, _tf: stmt,
+        ) as mock_apply_tenant_filter:
+            result = await crud.get(
+                mock_db,
+                id="cert-1",
+                tenant_filter=tenant_filter,
+            )
+
+        assert result == cert
+        assert mock_apply_tenant_filter.call_args.args[1] == tenant_filter
+
+    async def test_get_multi_with_empty_tenant_filter_is_fail_closed(self, mock_db):
+        crud = CRUDPropertyCertificate(PropertyCertificate)
+        execute_result = MagicMock()
+        execute_result.scalars.return_value.all.return_value = []
+        mock_db.execute = AsyncMock(return_value=execute_result)
+
+        result = await crud.get_multi(
+            mock_db,
+            tenant_filter=TenantFilter(organization_ids=[]),
+        )
+
+        assert result == []
+        stmt = mock_db.execute.await_args.args[0]
+        compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+        assert "false" in compiled.lower()
 
 
 class TestPropertyOwnerCRUD:

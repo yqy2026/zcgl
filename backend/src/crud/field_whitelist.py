@@ -92,6 +92,7 @@ class AssetWhitelist(ModelFieldWhitelist):
         "is_active",
         # Project/ownership references (IDs only, not names)
         "project_id",
+        "organization_id",
         "ownership_id",
         # Area fields (public metrics)
         "land_area",
@@ -155,7 +156,7 @@ class AssetWhitelist(ModelFieldWhitelist):
     blocked_fields: ClassVar[set[str]] = {
         # PII - Personal identifiable information
         "manager_name",  # PII: Manager name
-        "tenant_name",  # PII: Tenant name
+        "tenant_name",  # PII: Lessee name (contract party field)
         "project_phone",  # PII: Phone number (encrypted)
         # Operational intelligence
         "operation_status",  # Business sensitive
@@ -526,6 +527,7 @@ class ProjectWhitelist(ModelFieldWhitelist):
         "district",
         "province",
         "management_entity",
+        "organization_id",
         "ownership_entity",
         "is_active",
         "data_status",
@@ -617,6 +619,7 @@ class PropertyCertificateWhitelist(ModelFieldWhitelist):
         "is_verified",
         "registration_date",
         "property_type",
+        "organization_id",
         "land_use_type",
         "land_use_term_start",
         "land_use_term_end",

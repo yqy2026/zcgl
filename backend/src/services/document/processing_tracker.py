@@ -643,12 +643,19 @@ class BatchStatusTracker:
             return True
         return False
 
-    def get_status(self, batch_id: str) -> dict[str, Any] | None:
+    def get_status(
+        self,
+        batch_id: str,
+        current_user_id: str | None = None,
+        accessible_organization_ids: list[str] | None = None,
+    ) -> dict[str, Any] | None:
         """
         获取批处理状态
 
         Args:
             batch_id: 批处理 ID
+            current_user_id: 当前用户ID（可选）
+            accessible_organization_ids: 当前用户可访问组织ID列表
 
         Returns:
             批处理状态字典，不存在则返回 None
@@ -668,13 +675,28 @@ class BatchStatusTracker:
                         result[k] = int(v)
                     else:
                         result[k] = v
+                if not self._is_batch_visible(
+                    result,
+                    current_user_id=current_user_id,
+                    accessible_organization_ids=accessible_organization_ids,
+                ):
+                    return None
                 return result
             except Exception as e:
                 logger.error(f"Failed to get batch from Redis: {e}")
                 return None
 
         # 回退到内存存储
-        return self._fallback_store.get(batch_id)
+        batch = self._fallback_store.get(batch_id)
+        if batch is None:
+            return None
+        if not self._is_batch_visible(
+            batch,
+            current_user_id=current_user_id,
+            accessible_organization_ids=accessible_organization_ids,
+        ):
+            return None
+        return batch
 
     def set_status(self, batch_id: str, status: str) -> bool:
         """
@@ -710,8 +732,57 @@ class BatchStatusTracker:
         # 回退到内存存储
         return self._fallback_store.pop(batch_id, None) is not None
 
+    @staticmethod
+    def _normalize_identifier(value: Any) -> str:
+        if value is None:
+            return ""
+        return str(value).strip()
+
+    def _is_batch_visible(
+        self,
+        batch: dict[str, Any],
+        *,
+        current_user_id: str | None = None,
+        accessible_organization_ids: list[str] | None = None,
+    ) -> bool:
+        """
+        判断批处理记录对当前用户是否可见。
+
+        规则：
+        1. 未传 current_user_id 时不过滤（兼容历史调用）
+        2. 创建者匹配（created_by_user_id / user_id）可见
+        3. organization_id 为空视为历史记录，默认可见
+        4. organization_id 存在时必须在可访问组织集合中
+        """
+        normalized_user_id = self._normalize_identifier(current_user_id)
+        if normalized_user_id == "":
+            return True
+
+        created_by_user_id = self._normalize_identifier(batch.get("created_by_user_id"))
+        if created_by_user_id == normalized_user_id:
+            return True
+
+        legacy_user_id = self._normalize_identifier(batch.get("user_id"))
+        if legacy_user_id == normalized_user_id:
+            return True
+
+        organization_id = self._normalize_identifier(batch.get("organization_id"))
+        if organization_id == "":
+            return True
+
+        normalized_org_ids = {
+            self._normalize_identifier(org_id)
+            for org_id in (accessible_organization_ids or [])
+            if self._normalize_identifier(org_id) != ""
+        }
+        return organization_id in normalized_org_ids
+
     def list_batches(
-        self, status_filter: str | None = None, limit: int = 100
+        self,
+        status_filter: str | None = None,
+        limit: int = 100,
+        current_user_id: str | None = None,
+        accessible_organization_ids: list[str] | None = None,
     ) -> list[dict[str, Any]]:
         """
         列出批处理记录
@@ -719,6 +790,8 @@ class BatchStatusTracker:
         Args:
             status_filter: 状态过滤
             limit: 返回数量限制
+            current_user_id: 当前用户ID（可选）
+            accessible_organization_ids: 当前用户可访问组织ID列表
 
         Returns:
             批处理记录列表
@@ -731,7 +804,7 @@ class BatchStatusTracker:
                     keys.append(key)
 
                 batches = []
-                for key in keys[: limit * 2]:  # 多获取一些用于过滤
+                for key in keys:
                     data: dict[str, Any] = cast(
                         dict[str, Any], self._redis_client.hgetall(key)
                     )
@@ -744,8 +817,15 @@ class BatchStatusTracker:
                             batch[k] = int(v)
                         else:
                             batch[k] = v
-                    if status_filter is None or batch.get("status") == status_filter:
-                        batches.append(batch)
+                    if status_filter is not None and batch.get("status") != status_filter:
+                        continue
+                    if not self._is_batch_visible(
+                        batch,
+                        current_user_id=current_user_id,
+                        accessible_organization_ids=accessible_organization_ids,
+                    ):
+                        continue
+                    batches.append(batch)
                     if len(batches) >= limit:
                         break
 
@@ -759,6 +839,15 @@ class BatchStatusTracker:
         batches = list(self._fallback_store.values())
         if status_filter:
             batches = [b for b in batches if b.get("status") == status_filter]
+        batches = [
+            batch
+            for batch in batches
+            if self._is_batch_visible(
+                batch,
+                current_user_id=current_user_id,
+                accessible_organization_ids=accessible_organization_ids,
+            )
+        ]
         batches.sort(key=lambda x: x.get("created_at", ""), reverse=True)
         return batches[:limit]
 

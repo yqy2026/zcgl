@@ -1,13 +1,13 @@
 from decimal import Decimal
 
-from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.exception_handler import (
     BusinessValidationError,
     ResourceConflictError,
 )
-from ...models.asset import Asset
+from ...crud.asset import asset_crud
+from ...crud.rent_contract import rent_term
 from ...models.rent_contract import (
     RentContract,
     RentTerm,
@@ -59,10 +59,12 @@ class RentContractLifecycleService(RentContractHelperMixin):
         db_contract = RentContract(**contract_data)
 
         if asset_ids:
-            assets = list(
-                (await db.execute(select(Asset).where(Asset.id.in_(asset_ids))))
-                .scalars()
-                .all()
+            assets = await asset_crud.get_multi_by_ids_async(
+                db,
+                asset_ids,
+                include_relations=False,
+                include_deleted=False,
+                decrypt=False,
             )
             sa_assets = [
                 asset for asset in assets if hasattr(asset, "_sa_instance_state")
@@ -112,10 +114,12 @@ class RentContractLifecycleService(RentContractHelperMixin):
             setattr(db_obj, field, value)
 
         if obj_in.asset_ids is not None:
-            assets = list(
-                (await db.execute(select(Asset).where(Asset.id.in_(obj_in.asset_ids))))
-                .scalars()
-                .all()
+            assets = await asset_crud.get_multi_by_ids_async(
+                db,
+                obj_in.asset_ids,
+                include_relations=False,
+                include_deleted=False,
+                decrypt=False,
             )
             sa_assets = [
                 asset for asset in assets if hasattr(asset, "_sa_instance_state")
@@ -124,7 +128,7 @@ class RentContractLifecycleService(RentContractHelperMixin):
                 setattr(db_obj, "assets", sa_assets)
 
         if obj_in.rent_terms is not None:
-            await db.execute(delete(RentTerm).where(RentTerm.contract_id == db_obj.id))
+            await rent_term.delete_by_contract_async(db, db_obj.id)
 
             for term_data in obj_in.rent_terms:
                 term_data_dict = term_data.model_dump()
@@ -146,4 +150,3 @@ class RentContractLifecycleService(RentContractHelperMixin):
         )
 
         return db_obj
-

@@ -1,8 +1,8 @@
+import logging
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from typing import Any, cast
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.exc import StaleDataError
 
@@ -15,6 +15,7 @@ from ...core.exception_handler import (
 )
 from ...crud.history import history_crud
 from ...crud.ownership import ownership
+from ...crud.query_builder import TenantFilter
 from ...models.asset import Asset
 from ...models.asset_history import AssetHistory
 from ...models.auth import User
@@ -24,6 +25,7 @@ from ...services.enum_validation_service import get_enum_validation_service_asyn
 
 _DEFAULT_ASSET_CRUD: object = object()
 asset_crud: Any = _DEFAULT_ASSET_CRUD
+logger = logging.getLogger(__name__)
 
 
 def _utcnow_naive() -> datetime:
@@ -67,6 +69,47 @@ def _get_asset_crud() -> Any:
 class AssetService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
+
+    async def _resolve_tenant_filter(
+        self,
+        *,
+        current_user_id: str | None = None,
+        tenant_filter: TenantFilter | None = None,
+    ) -> TenantFilter | None:
+        if tenant_filter is not None:
+            return tenant_filter
+        if current_user_id is None or current_user_id.strip() == "":
+            return None
+
+        try:
+            from ..organization_permission_service import OrganizationPermissionService
+
+            org_service = OrganizationPermissionService(self.db)
+            org_ids = await org_service.get_user_accessible_organizations(
+                current_user_id
+            )
+            return TenantFilter(organization_ids=[str(org_id) for org_id in org_ids])
+        except Exception:
+            logger.exception(
+                "Failed to resolve tenant filter for user %s, fallback to fail-closed",
+                current_user_id,
+            )
+            return TenantFilter(organization_ids=[])
+
+    @staticmethod
+    def _is_fail_closed_tenant_filter(tenant_filter: TenantFilter | None) -> bool:
+        if tenant_filter is None:
+            return False
+        return (
+            len(
+                [
+                    org_id
+                    for org_id in tenant_filter.organization_ids
+                    if str(org_id).strip() != ""
+                ]
+            )
+            == 0
+        )
 
     @staticmethod
     def build_filters(
@@ -144,7 +187,7 @@ class AssetService:
             )
 
         if ownership_id:
-            ownership_obj = await ownership.get_async(self.db, ownership_id)
+            ownership_obj = await ownership.get(self.db, id=ownership_id)
             if not ownership_obj:
                 raise validation_error(
                     "权属方不存在", field_errors={"ownership_id": "权属方不存在"}
@@ -186,19 +229,32 @@ class AssetService:
         sort_field: str = "created_at",
         sort_order: str = "desc",
         include_relations: bool = False,
+        tenant_filter: TenantFilter | None = None,
+        current_user_id: str | None = None,
     ) -> tuple[list[Asset], int]:
         asset_crud = _get_asset_crud()
+        resolved_tenant_filter = await self._resolve_tenant_filter(
+            current_user_id=current_user_id,
+            tenant_filter=tenant_filter,
+        )
+        if self._is_fail_closed_tenant_filter(resolved_tenant_filter):
+            return ([], 0)
+        query_kwargs: dict[str, Any] = {
+            "skip": skip,
+            "limit": limit,
+            "search": search,
+            "filters": filters,
+            "sort_field": sort_field,
+            "sort_order": sort_order,
+            "include_relations": include_relations,
+        }
+        if resolved_tenant_filter is not None:
+            query_kwargs["tenant_filter"] = resolved_tenant_filter
         result = cast(
             tuple[list[Asset], int],
             await asset_crud.get_multi_with_search_async(
                 self.db,
-                skip=skip,
-                limit=limit,
-                search=search,
-                filters=filters,
-                sort_field=sort_field,
-                sort_order=sort_order,
-                include_relations=include_relations,
+                **query_kwargs,
             ),
         )
         return result
@@ -221,27 +277,75 @@ class AssetService:
         )
         return assets
 
-    async def get_asset(self, asset_id: str, *, use_cache: bool = True) -> Asset:
+    async def get_asset(
+        self,
+        asset_id: str,
+        *,
+        use_cache: bool = True,
+        tenant_filter: TenantFilter | None = None,
+        current_user_id: str | None = None,
+    ) -> Asset:
         asset_crud = _get_asset_crud()
+        resolved_tenant_filter = await self._resolve_tenant_filter(
+            current_user_id=current_user_id,
+            tenant_filter=tenant_filter,
+        )
+        if self._is_fail_closed_tenant_filter(resolved_tenant_filter):
+            raise ResourceNotFoundError("Asset", asset_id)
+
+        query_kwargs: dict[str, Any] = {
+            "db": self.db,
+            "id": asset_id,
+            "use_cache": use_cache,
+        }
+        if resolved_tenant_filter is not None:
+            query_kwargs["tenant_filter"] = resolved_tenant_filter
         asset = cast(
             Asset | None,
-            await asset_crud.get_async(db=self.db, id=asset_id),
+            await asset_crud.get_async(**query_kwargs),
         )
         if not asset or asset.data_status == "已删除":
             raise ResourceNotFoundError("Asset", asset_id)
         return asset
 
-    async def get_asset_history_records(self, asset_id: str) -> list[AssetHistory]:
-        await self.get_asset(asset_id)
+    async def get_asset_history_records(
+        self,
+        asset_id: str,
+        *,
+        tenant_filter: TenantFilter | None = None,
+        current_user_id: str | None = None,
+    ) -> list[AssetHistory]:
+        await self.get_asset(
+            asset_id,
+            tenant_filter=tenant_filter,
+            current_user_id=current_user_id,
+        )
         history_records = await history_crud.get_by_asset_id_async(
             self.db,
             asset_id=asset_id,
         )
         return history_records
 
-    async def get_distinct_field_values(self, field_name: str) -> list[str]:
+    async def get_distinct_field_values(
+        self,
+        field_name: str,
+        *,
+        tenant_filter: TenantFilter | None = None,
+        current_user_id: str | None = None,
+    ) -> list[str]:
         asset_crud = _get_asset_crud()
-        values = await asset_crud.get_distinct_field_values(self.db, field_name)
+        resolved_tenant_filter = await self._resolve_tenant_filter(
+            current_user_id=current_user_id,
+            tenant_filter=tenant_filter,
+        )
+        if self._is_fail_closed_tenant_filter(resolved_tenant_filter):
+            return []
+        query_kwargs: dict[str, Any] = {}
+        if resolved_tenant_filter is not None:
+            query_kwargs["tenant_filter"] = resolved_tenant_filter
+        values = await asset_crud.get_distinct_field_values(
+            self.db, field_name, **query_kwargs
+        )
         return [str(value) for value in values]
 
     async def get_ownership_entity_names(self) -> list[str]:
@@ -264,6 +368,12 @@ class AssetService:
             getattr(current_user, "username", None)
             or getattr(current_user, "id", None)
             or "system"
+        )
+        default_org_id = getattr(current_user, "default_organization_id", None)
+        organization_id = (
+            str(default_org_id)
+            if default_org_id is not None and str(default_org_id).strip() != ""
+            else None
         )
 
         async with self._transaction():
@@ -309,6 +419,7 @@ class AssetService:
                     obj_in=calculated_asset_in,
                     commit=False,
                     operator=str(operator) if operator is not None else None,
+                    organization_id=organization_id,
                     ip_address=ip_address,
                     user_agent=user_agent,
                     session_id=session_id,
@@ -339,7 +450,12 @@ class AssetService:
             async with self._transaction():
                 asset_crud = _get_asset_crud()
                 # 1. 存在性检查
-                asset = await self.get_asset(asset_id, use_cache=False)
+                user_id = getattr(current_user, "id", None)
+                asset = await self.get_asset(
+                    asset_id,
+                    use_cache=False,
+                    current_user_id=str(user_id) if user_id is not None else None,
+                )
 
                 # 2. 枚举值验证 (如果提供了更新数据)
                 validation_service = get_enum_validation_service_async(self.db)
@@ -438,7 +554,12 @@ class AssetService:
         # 1. 存在性检查
         try:
             async with self._transaction():
-                asset = await self.get_asset(asset_id, use_cache=False)
+                user_id = getattr(current_user, "id", None)
+                asset = await self.get_asset(
+                    asset_id,
+                    use_cache=False,
+                    current_user_id=str(user_id) if user_id is not None else None,
+                )
                 await self._ensure_asset_not_linked(asset_id)
                 operator = (
                     getattr(current_user, "username", None)

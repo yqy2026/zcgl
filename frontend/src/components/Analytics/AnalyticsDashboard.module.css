@@ -1,0 +1,103 @@
+.dashboardRoot {
+  width: 100%;
+}
+
+.dashboardDefault {
+  padding: 24px;
+  background: transparent;
+}
+
+.dashboardFullscreen {
+  padding: 0;
+  background: var(--color-bg-quaternary);
+}
+
+.headerRow {
+  margin-bottom: 24px;
+}
+
+.titleCol {
+  display: flex;
+  align-items: center;
+}
+
+.pageTitle {
+  margin-bottom: 0 !important;
+}
+
+.actionsCol {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.actionsSpace {
+  justify-content: flex-end;
+}
+
+.actionButton {
+  min-height: 36px;
+  border-radius: 8px;
+}
+
+.actionButton:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.stateCard {
+  border-radius: 12px;
+}
+
+.stateContent {
+  padding: 60px 0;
+  text-align: center;
+}
+
+.stateTitle {
+  margin-bottom: 8px !important;
+}
+
+.stateDescription {
+  margin: 0 0 16px;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.stateActionButton {
+  min-height: 36px;
+}
+
+.metricsRow,
+.financialRow {
+  margin-bottom: 24px;
+}
+
+.chartsRow {
+  margin-bottom: 0;
+}
+
+@media (max-width: 768px) {
+  .dashboardDefault {
+    padding: 16px;
+  }
+
+  .actionsCol {
+    justify-content: flex-start;
+  }
+
+  .actionsSpace {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .actionButton,
+  .stateActionButton {
+    min-height: 44px;
+  }
+
+  .stateContent {
+    padding: 40px 0;
+  }
+}

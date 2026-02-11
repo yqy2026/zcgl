@@ -5,6 +5,7 @@ import {
   AnalyticsBarChart,
   chartDataUtils,
 } from '@/components/Analytics/AnalyticsChart';
+import styles from './AssetDistributionGrid.module.css';
 import type {
   AnalyticsData,
   OwnershipStatusAreaDistribution,
@@ -24,7 +25,7 @@ const AssetDistributionGrid: React.FC<AssetDistributionGridProps> = ({
   loading,
 }) => {
   return (
-    <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
+    <Row gutter={[16, 16]} className={styles.distributionGrid}>
       {/* 物业性质分布饼图 */}
       <Col xs={24} sm={12} xl={6}>
         <AnalyticsPieChart

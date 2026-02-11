@@ -1,0 +1,19 @@
+.summaryCard {
+  margin-bottom: 16px;
+}
+
+.summaryCard :global(.ant-card-head) {
+  border-bottom: 2px solid var(--color-border-light);
+}
+
+.titleIcon {
+  color: var(--color-primary);
+}
+
+.depositValue {
+  color: var(--color-primary) !important;
+}
+
+.contactText {
+  margin-left: 8px;
+}

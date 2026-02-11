@@ -1,0 +1,81 @@
+.assetChart {
+  width: 100%;
+}
+
+.loadingState {
+  min-height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+
+.sectionTitle {
+  margin-bottom: 16px !important;
+}
+
+.sectionBody {
+  margin-bottom: 24px;
+}
+
+.propertyItem {
+  margin-bottom: 12px;
+}
+
+.propertyItem:last-child {
+  margin-bottom: 0;
+}
+
+.propertyHeaderRow {
+  margin-bottom: 4px;
+}
+
+.propertyLabelGroup {
+  gap: 8px;
+}
+
+.propertyColorDot {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  background: var(--legend-color);
+}
+
+.propertyName {
+  color: var(--color-text-primary);
+}
+
+.propertyValue {
+  color: var(--color-text-primary);
+}
+
+.propertyProgress :global(.ant-progress-inner) {
+  border-radius: 999px;
+}
+
+.trendList {
+  width: 100%;
+}
+
+.trendItem {
+  margin-bottom: 8px;
+}
+
+.trendItem:last-child {
+  margin-bottom: 0;
+}
+
+.trendMonth {
+  color: var(--color-text-primary);
+}
+
+.trendValue {
+  color: var(--color-text-primary);
+}
+
+@media (max-width: 768px) {
+  .sectionBody {
+    margin-bottom: 20px;
+  }
+}

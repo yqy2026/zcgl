@@ -1,306 +1,229 @@
-/* AssetImport 组件样式 */
-
-.importCard {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
-}
-
-.importCard .ant-card-head {
-  background: linear-gradient(135deg, #f0f8ff, #e6f7ff);
-  border-bottom: 1px solid #d9d9d9;
-}
-
-.importCard .ant-card-head-title {
-  font-weight: 600;
-  color: #1890ff;
-}
-
-.uploadArea {
-  border: 2px dashed #d9d9d9;
-  border-radius: 8px;
-  background: #fafafa;
-  transition: all 0.3s ease;
-}
-
-.uploadArea:hover {
-  border-color: #1890ff;
-  background: #f0f8ff;
-}
-
-.uploadArea .ant-upload-drag-icon {
-  color: #1890ff;
-}
-
-.uploadArea .ant-upload-text {
-  font-size: 16px;
-  font-weight: 500;
-  color: #262626;
-}
-
-.uploadArea .ant-upload-hint {
-  color: #8c8c8c;
-}
-
-.stepContainer {
+.importPage {
   padding: 24px;
-  background: #ffffff;
-  border-radius: 8px;
-  margin: 16px 0;
 }
 
-.processingContainer {
-  text-align: center;
-  padding: 40px 20px;
-}
-
-.processingContainer .ant-typography-title {
-  color: #1890ff;
-  margin-top: 16px;
-}
-
-.resultContainer {
-  padding: 24px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  border: 1px solid #e9ecef;
-}
-
-.resultStats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
-  margin: 16px 0;
-}
-
-.resultStat {
+.pageHeader {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 12px 16px;
-  background: white;
-  border-radius: 6px;
-  border: 1px solid #f0f0f0;
-}
-
-.historyCard {
-  margin-top: 16px;
-}
-
-.historyCard .ant-card-head {
-  background: #fafafa;
-}
-
-.historyItem {
-  padding: 16px;
-  border-radius: 8px;
-  background: #ffffff;
-  border: 1px solid #f0f0f0;
-  margin-bottom: 8px;
-  transition: all 0.3s ease;
-}
-
-.historyItem:hover {
-  border-color: #1890ff;
-  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.1);
-}
-
-.historyMeta {
-  display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 8px;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
 }
 
-.historyTitle {
-  font-weight: 600;
-  color: #262626;
-}
-
-.historyDescription {
-  color: #8c8c8c;
-  font-size: 12px;
-  line-height: 1.4;
-}
-
-.historyActions {
+.pageTitle {
+  margin: 0 !important;
   display: flex;
+  align-items: center;
   gap: 8px;
 }
 
-.errorModal .ant-table {
-  font-size: 12px;
+.pageTitleIcon {
+  color: var(--color-primary);
 }
 
-.errorModal .ant-table-tbody > tr > td {
-  padding: 8px 12px;
+.pageHeader :global(.ant-btn) {
+  min-height: 40px;
+  border-radius: var(--radius-md);
 }
 
-.previewModal .ant-table {
-  font-size: 12px;
+.configCard {
+  margin-bottom: 24px;
 }
 
-.previewModal .ant-table-thead > tr > th {
-  background: #f8f9fa;
-  font-weight: 600;
+.stepper {
+  margin-bottom: 32px;
 }
 
-/* 状态标签样式 */
-.statusTag {
-  border-radius: 12px;
-  font-size: 11px;
-  padding: 2px 8px;
-  font-weight: 500;
+.instructionsAlert {
+  margin-bottom: 24px;
 }
 
-.statusTag.completed {
-  background: #f6ffed;
-  border-color: #b7eb8f;
-  color: #52c41a;
+.instructionsDescription p {
+  margin: 0 0 8px;
+  line-height: 1.5;
 }
 
-.statusTag.failed {
-  background: #fff2f0;
-  border-color: #ffccc7;
-  color: #ff4d4f;
+.instructionsDescription p:last-child {
+  margin-bottom: 0;
 }
 
-.statusTag.processing {
-  background: #e6f7ff;
-  border-color: #91d5ff;
-  color: #1890ff;
+.fullWidthStack {
+  width: 100%;
 }
 
-/* 进度条样式 */
-.progressContainer {
-  margin: 24px 0;
+.uploadDragger {
+  border-radius: var(--radius-md) !important;
 }
 
-.progressContainer .ant-progress-circle {
-  margin-bottom: 16px;
+.uploadDragger :global(.ant-upload-btn) {
+  padding: 32px 20px;
 }
 
-.progressContainer .ant-progress-text {
-  color: #1890ff !important;
-  font-weight: 600;
+.uploadDragger :global(.ant-upload-drag-icon) {
+  margin-bottom: 16px !important;
 }
 
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .stepContainer {
-    padding: 16px;
-    margin: 12px 0;
-  }
-
-  .processingContainer {
-    padding: 24px 16px;
-  }
-
-  .resultStats {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-
-  .resultStat {
-    padding: 8px 12px;
-  }
-
-  .historyItem {
-    padding: 12px;
-  }
-
-  .historyMeta {
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .historyActions {
-    justify-content: flex-start;
-  }
-}
-
-/* 动画效果 */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.stepContainer {
-  animation: fadeInUp 0.3s ease-out;
-}
-
-.historyItem {
-  animation: fadeInUp 0.3s ease-out;
-}
-
-/* 拖拽上传样式增强 */
-.uploadArea.ant-upload-drag.ant-upload-drag-hover {
-  border-color: #40a9ff;
-  background: #e6f7ff;
-}
-
-.uploadArea .ant-upload-btn {
-  padding: 40px 20px;
-}
-
-/* 成功/失败图标样式 */
-.statusIcon {
+.uploadIcon {
   font-size: 48px;
+  color: var(--color-primary);
+}
+
+.uploadDragger :global(.ant-upload-text) {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+.uploadDragger :global(.ant-upload-hint) {
+  line-height: 1.5;
+}
+
+.importExecution {
+  text-align: center;
+  padding: 8px 0;
+}
+
+.executionIcon {
+  font-size: 64px;
+  color: var(--color-success);
   margin-bottom: 16px;
 }
 
-.statusIcon.success {
-  color: #52c41a;
+.executionFileMeta {
+  display: inline-block;
+  margin-bottom: 4px;
 }
 
-.statusIcon.error {
-  color: #ff4d4f;
-}
-
-.statusIcon.processing {
-  color: #1890ff;
-}
-
-/* 文件信息样式 */
-.fileInfo {
-  background: #f0f8ff;
-  border: 1px solid #d6e4ff;
-  border-radius: 6px;
-  padding: 12px 16px;
-  margin: 16px 0;
-}
-
-.fileInfo .ant-typography {
-  margin: 0;
-}
-
-/* 按钮组样式 */
-.buttonGroup {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
+.progressBlock {
   margin-top: 24px;
 }
 
-.buttonGroup .ant-btn {
-  border-radius: 6px;
-  font-weight: 500;
-  min-width: 100px;
+.resultSummaryCard {
+  margin-bottom: 24px;
+  border-width: 1px !important;
 }
 
-.buttonGroup .ant-btn-primary {
-  background: linear-gradient(135deg, #1890ff, #096dd9);
-  border: none;
-  box-shadow: 0 2px 6px rgba(24, 144, 255, 0.3);
+.resultSummarySuccess {
+  background: var(--color-success-light);
+  border-color: var(--color-success) !important;
 }
 
-.buttonGroup .ant-btn-primary:hover {
-  background: linear-gradient(135deg, #40a9ff, #1890ff);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.4);
+.resultSummaryWarning {
+  background: var(--color-warning-light);
+  border-color: var(--color-warning) !important;
+}
+
+.resultSummaryError {
+  background: var(--color-error-light);
+  border-color: var(--color-error) !important;
+}
+
+.resultSummaryNeutral {
+  background: var(--color-bg-secondary);
+  border-color: var(--color-border) !important;
+}
+
+.resultSummaryBody {
+  text-align: center;
+  padding: 16px;
+}
+
+.resultSummaryIcon {
+  font-size: 64px;
+}
+
+.resultSummaryIconSuccess {
+  color: var(--color-success);
+}
+
+.resultSummaryIconWarning {
+  color: var(--color-warning);
+}
+
+.resultSummaryIconError {
+  color: var(--color-error);
+}
+
+.resultSummaryIconNeutral {
+  color: var(--color-primary);
+}
+
+.resultSummaryTitle {
+  margin-top: 8px !important;
+}
+
+.resultSummaryTitleIconSuccess {
+  color: var(--color-success);
+}
+
+.resultSummaryTitleIconWarning {
+  color: var(--color-warning);
+}
+
+.resultSummaryTitleIconError {
+  color: var(--color-error);
+}
+
+.resultSummaryTitleIconNeutral {
+  color: var(--color-primary);
+}
+
+.resultSummaryText {
+  font-size: 16px;
+}
+
+.resultSummaryMetrics {
+  margin-top: 16px;
+}
+
+.statsRow {
+  margin-bottom: 24px;
+}
+
+.statCard {
+  background: var(--color-bg-primary);
+}
+
+.statisticSuccess :global(.ant-statistic-content) {
+  color: var(--color-success);
+}
+
+.statisticError :global(.ant-statistic-content) {
+  color: var(--color-error);
+}
+
+.statisticMuted :global(.ant-statistic-content) {
+  color: var(--color-border-dark);
+}
+
+.statisticPrimary :global(.ant-statistic-content) {
+  color: var(--color-primary);
+}
+
+.errorCard {
+  margin-bottom: 16px;
+}
+
+.resultActions {
+  margin-top: 24px;
+  text-align: center;
+}
+
+.resultActions :global(.ant-btn) {
+  min-height: 44px;
+  border-radius: var(--radius-md);
+}
+
+@media (max-width: 768px) {
+  .importPage {
+    padding: 16px;
+  }
+
+  .stepper {
+    margin-bottom: 24px;
+  }
+
+  .resultSummaryBody {
+    padding: 12px;
+  }
 }

@@ -1,7 +1,6 @@
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import case, delete, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.exception_handler import (
@@ -13,9 +12,8 @@ from ...core.exception_handler import (
 from ...crud.asset import asset_crud
 from ...crud.ownership import ownership as ownership_crud
 from ...crud.project import project_crud
-from ...models.asset import Asset
 from ...models.ownership import Ownership
-from ...models.project import Project
+from ...models.project_relations import ProjectOwnershipRelation
 from ...schemas.ownership import OwnershipCreate, OwnershipUpdate
 
 

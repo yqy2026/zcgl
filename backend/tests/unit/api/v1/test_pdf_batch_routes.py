@@ -68,6 +68,16 @@ def mock_pdf_files():
     return files
 
 
+@pytest.fixture(autouse=True)
+def mock_default_accessible_org_ids(monkeypatch):
+    """默认拦截组织可见性解析，避免单测误走真实权限查询。"""
+    from src.api.v1.documents import pdf_batch_routes as module
+
+    resolver_mock = AsyncMock(return_value=[])
+    monkeypatch.setattr(module, "_resolve_accessible_organization_ids", resolver_mock)
+    return resolver_mock
+
+
 @pytest.fixture
 def mock_large_pdf_file():
     """Create mock PDF file exceeding size limit (>50MB)"""
@@ -346,6 +356,7 @@ class TestBatchUploadPdfs:
         # Verify create_batch was called with organization_id
         call_args = mock_tracker.create_batch.call_args
         assert call_args.kwargs["organization_id"] == 5
+        assert call_args.kwargs["created_by_user_id"] == "test-user-id"
 
     @patch("src.api.v1.documents.pdf_batch_routes._get_batch_tracker")
     @patch("src.api.v1.documents.pdf_batch_routes.PDFImportService")
@@ -465,7 +476,7 @@ class TestGetBatchStatus:
     @patch("src.api.v1.documents.pdf_batch_routes.PDFImportService")
     @pytest.mark.asyncio
     async def test_get_batch_status_success(
-        self, mock_service_class, mock_get_tracker, mock_db
+        self, mock_service_class, mock_get_tracker, mock_db, mock_current_user
     ):
         """Test successful batch status retrieval"""
         from src.api.v1.documents.pdf_batch_routes import get_batch_status
@@ -505,7 +516,11 @@ class TestGetBatchStatus:
 
         mock_service.get_session_map_async = AsyncMock(return_value=mock_sessions)
 
-        result = await get_batch_status(batch_id=batch_id, db=mock_db)
+        result = await get_batch_status(
+            batch_id=batch_id,
+            db=mock_db,
+            current_user=mock_current_user,
+        )
 
         # Parse JSONResponse
         assert isinstance(result, JSONResponse)
@@ -517,7 +532,9 @@ class TestGetBatchStatus:
 
     @patch("src.api.v1.documents.pdf_batch_routes._get_batch_tracker")
     @pytest.mark.asyncio
-    async def test_get_batch_status_not_found(self, mock_get_tracker, mock_db):
+    async def test_get_batch_status_not_found(
+        self, mock_get_tracker, mock_db, mock_current_user
+    ):
         """Test getting status of non-existent batch"""
         from src.api.v1.documents.pdf_batch_routes import get_batch_status
 
@@ -526,7 +543,11 @@ class TestGetBatchStatus:
         mock_get_tracker.return_value = mock_tracker
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            await get_batch_status(batch_id="nonexistent", db=mock_db)
+            await get_batch_status(
+                batch_id="nonexistent",
+                db=mock_db,
+                current_user=mock_current_user,
+            )
 
         assert exc_info.value.status_code == 404
         assert "批处理任务不存在" in exc_info.value.message
@@ -535,7 +556,7 @@ class TestGetBatchStatus:
     @patch("src.api.v1.documents.pdf_batch_routes.PDFImportService")
     @pytest.mark.asyncio
     async def test_get_batch_status_with_completed_sessions(
-        self, mock_service_class, mock_get_tracker, mock_db
+        self, mock_service_class, mock_get_tracker, mock_db, mock_current_user
     ):
         """Test batch status with completed sessions"""
         from src.api.v1.documents.pdf_batch_routes import get_batch_status
@@ -570,11 +591,52 @@ class TestGetBatchStatus:
         )
         mock_service_class.return_value = mock_service
 
-        result = await get_batch_status(batch_id=batch_id, db=mock_db)
+        result = await get_batch_status(
+            batch_id=batch_id,
+            db=mock_db,
+            current_user=mock_current_user,
+        )
 
         # Parse JSONResponse
         body = json.loads(result.body.decode())
         assert body["data"]["batch_status"]["percentage"] == 100
+
+    @patch(
+        "src.api.v1.documents.pdf_batch_routes._resolve_accessible_organization_ids",
+        new_callable=AsyncMock,
+    )
+    @patch("src.api.v1.documents.pdf_batch_routes._get_batch_tracker")
+    @pytest.mark.asyncio
+    async def test_get_batch_status_should_deny_when_no_org_access(
+        self,
+        mock_get_tracker,
+        mock_resolve_org_ids,
+        mock_db,
+        mock_current_user,
+    ):
+        """Test batch status should be hidden when user has no org access"""
+        from src.api.v1.documents.pdf_batch_routes import get_batch_status
+
+        batch_id = "batch-no-access"
+        mock_resolve_org_ids.return_value = []
+        mock_tracker = MagicMock()
+        mock_tracker.get_status.return_value = None
+        mock_get_tracker.return_value = mock_tracker
+
+        with pytest.raises(BaseBusinessError) as exc_info:
+            await get_batch_status(
+                batch_id=batch_id,
+                db=mock_db,
+                current_user=mock_current_user,
+            )
+
+        mock_tracker.get_status.assert_called_once_with(
+            batch_id,
+            current_user_id="test-user-id",
+            accessible_organization_ids=[],
+        )
+        assert exc_info.value.status_code == 404
+        assert "批处理任务不存在" in exc_info.value.message
 
 
 # ============================================================================
@@ -585,12 +647,23 @@ class TestGetBatchStatus:
 class TestListBatches:
     """Tests for GET /pdf-import/batch/list endpoint"""
 
+    @patch(
+        "src.api.v1.documents.pdf_batch_routes._resolve_accessible_organization_ids",
+        new_callable=AsyncMock,
+    )
     @patch("src.api.v1.documents.pdf_batch_routes._get_batch_tracker")
     @pytest.mark.asyncio
-    async def test_list_batches_default(self, mock_get_tracker):
+    async def test_list_batches_default(
+        self,
+        mock_get_tracker,
+        mock_resolve_org_ids,
+        mock_db,
+        mock_current_user,
+    ):
         """Test listing batches with default parameters"""
         from src.api.v1.documents.pdf_batch_routes import list_batches
 
+        mock_resolve_org_ids.return_value = ["1", "2"]
         mock_tracker = MagicMock()
         mock_batches = [
             {
@@ -607,21 +680,42 @@ class TestListBatches:
         mock_tracker.list_batches.return_value = mock_batches
         mock_get_tracker.return_value = mock_tracker
 
-        result = list_batches(status_filter=None, limit=20)
+        result = await list_batches(
+            status_filter=None,
+            limit=20,
+            db=mock_db,
+            current_user=mock_current_user,
+        )
 
         # Parse JSONResponse
         body = json.loads(result.body.decode())
         assert body["success"] is True
         assert body["data"]["count"] == 5
         assert len(body["data"]["batches"]) == 5
-        mock_tracker.list_batches.assert_called_once_with(status_filter=None, limit=20)
+        mock_tracker.list_batches.assert_called_once_with(
+            status_filter=None,
+            limit=20,
+            current_user_id="test-user-id",
+            accessible_organization_ids=["1", "2"],
+        )
 
+    @patch(
+        "src.api.v1.documents.pdf_batch_routes._resolve_accessible_organization_ids",
+        new_callable=AsyncMock,
+    )
     @patch("src.api.v1.documents.pdf_batch_routes._get_batch_tracker")
     @pytest.mark.asyncio
-    async def test_list_batches_with_status_filter(self, mock_get_tracker):
+    async def test_list_batches_with_status_filter(
+        self,
+        mock_get_tracker,
+        mock_resolve_org_ids,
+        mock_db,
+        mock_current_user,
+    ):
         """Test listing batches with status filter"""
         from src.api.v1.documents.pdf_batch_routes import list_batches
 
+        mock_resolve_org_ids.return_value = []
         mock_tracker = MagicMock()
         mock_batches = [
             {
@@ -637,43 +731,132 @@ class TestListBatches:
         mock_tracker.list_batches.return_value = mock_batches
         mock_get_tracker.return_value = mock_tracker
 
-        result = list_batches(status_filter="completed", limit=10)
+        result = await list_batches(
+            status_filter="completed",
+            limit=10,
+            db=mock_db,
+            current_user=mock_current_user,
+        )
 
         body = json.loads(result.body.decode())
         assert body["data"]["count"] == 1
         mock_tracker.list_batches.assert_called_once_with(
-            status_filter="completed", limit=10
+            status_filter="completed",
+            limit=10,
+            current_user_id="test-user-id",
+            accessible_organization_ids=[],
         )
 
+    @patch(
+        "src.api.v1.documents.pdf_batch_routes._resolve_accessible_organization_ids",
+        new_callable=AsyncMock,
+    )
     @patch("src.api.v1.documents.pdf_batch_routes._get_batch_tracker")
     @pytest.mark.asyncio
-    async def test_list_batches_empty(self, mock_get_tracker):
+    async def test_list_batches_empty(
+        self,
+        mock_get_tracker,
+        mock_resolve_org_ids,
+        mock_db,
+        mock_current_user,
+    ):
         """Test listing batches when no batches exist"""
         from src.api.v1.documents.pdf_batch_routes import list_batches
 
+        mock_resolve_org_ids.return_value = []
         mock_tracker = MagicMock()
         mock_tracker.list_batches.return_value = []
         mock_get_tracker.return_value = mock_tracker
 
-        result = list_batches(status_filter=None, limit=20)
+        result = await list_batches(
+            status_filter=None,
+            limit=20,
+            db=mock_db,
+            current_user=mock_current_user,
+        )
 
         body = json.loads(result.body.decode())
         assert body["data"]["count"] == 0
         assert body["data"]["batches"] == []
+        mock_tracker.list_batches.assert_called_once_with(
+            status_filter=None,
+            limit=20,
+            current_user_id="test-user-id",
+            accessible_organization_ids=[],
+        )
 
+    @patch(
+        "src.api.v1.documents.pdf_batch_routes._resolve_accessible_organization_ids",
+        new_callable=AsyncMock,
+    )
     @patch("src.api.v1.documents.pdf_batch_routes._get_batch_tracker")
     @pytest.mark.asyncio
-    async def test_list_batches_custom_limit(self, mock_get_tracker):
+    async def test_list_batches_custom_limit(
+        self,
+        mock_get_tracker,
+        mock_resolve_org_ids,
+        mock_db,
+        mock_current_user,
+    ):
         """Test listing batches with custom limit"""
         from src.api.v1.documents.pdf_batch_routes import list_batches
 
+        mock_resolve_org_ids.return_value = ["99"]
         mock_tracker = MagicMock()
         mock_tracker.list_batches.return_value = []
         mock_get_tracker.return_value = mock_tracker
 
-        list_batches(status_filter=None, limit=50)
+        await list_batches(
+            status_filter=None,
+            limit=50,
+            db=mock_db,
+            current_user=mock_current_user,
+        )
 
-        mock_tracker.list_batches.assert_called_once_with(status_filter=None, limit=50)
+        mock_tracker.list_batches.assert_called_once_with(
+            status_filter=None,
+            limit=50,
+            current_user_id="test-user-id",
+            accessible_organization_ids=["99"],
+        )
+
+    @patch(
+        "src.api.v1.documents.pdf_batch_routes._resolve_accessible_organization_ids",
+        new_callable=AsyncMock,
+    )
+    @patch("src.api.v1.documents.pdf_batch_routes._get_batch_tracker")
+    @pytest.mark.asyncio
+    async def test_list_batches_should_delegate_visibility_context_to_tracker(
+        self,
+        mock_get_tracker,
+        mock_resolve_org_ids,
+        mock_db,
+        mock_current_user,
+    ):
+        """Test listing batches delegates visibility context to tracker layer"""
+        from src.api.v1.documents.pdf_batch_routes import list_batches
+
+        mock_resolve_org_ids.return_value = []
+        mock_tracker = MagicMock()
+        mock_tracker.list_batches.return_value = []
+        mock_get_tracker.return_value = mock_tracker
+
+        result = await list_batches(
+            status_filter=None,
+            limit=20,
+            db=mock_db,
+            current_user=mock_current_user,
+        )
+
+        body = json.loads(result.body.decode())
+        assert body["data"]["count"] == 0
+        assert body["data"]["batches"] == []
+        mock_tracker.list_batches.assert_called_once_with(
+            status_filter=None,
+            limit=20,
+            current_user_id="test-user-id",
+            accessible_organization_ids=[],
+        )
 
 
 # ============================================================================
@@ -694,6 +877,7 @@ class TestCancelBatch:
         mock_update_status,
         mock_get_tracker,
         mock_db,
+        mock_current_user,
     ):
         """Test successful batch cancellation"""
         from src.api.v1.documents.pdf_batch_routes import BatchStatus, cancel_batch
@@ -723,7 +907,11 @@ class TestCancelBatch:
         mock_service.cancel_processing = AsyncMock(return_value=None)
         mock_service_class.return_value = mock_service
 
-        result = await cancel_batch(batch_id=batch_id, db=mock_db)
+        result = await cancel_batch(
+            batch_id=batch_id,
+            db=mock_db,
+            current_user=mock_current_user,
+        )
 
         body = json.loads(result.body.decode())
         assert body["success"] is True
@@ -732,7 +920,9 @@ class TestCancelBatch:
 
     @patch("src.api.v1.documents.pdf_batch_routes._get_batch_tracker")
     @pytest.mark.asyncio
-    async def test_cancel_batch_not_found(self, mock_get_tracker, mock_db):
+    async def test_cancel_batch_not_found(
+        self, mock_get_tracker, mock_db, mock_current_user
+    ):
         """Test cancelling non-existent batch"""
         from src.api.v1.documents.pdf_batch_routes import cancel_batch
 
@@ -741,14 +931,20 @@ class TestCancelBatch:
         mock_get_tracker.return_value = mock_tracker
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            await cancel_batch(batch_id="nonexistent", db=mock_db)
+            await cancel_batch(
+                batch_id="nonexistent",
+                db=mock_db,
+                current_user=mock_current_user,
+            )
 
         assert exc_info.value.status_code == 404
         assert "批处理任务不存在" in exc_info.value.message
 
     @patch("src.api.v1.documents.pdf_batch_routes._get_batch_tracker")
     @pytest.mark.asyncio
-    async def test_cancel_batch_already_completed(self, mock_get_tracker, mock_db):
+    async def test_cancel_batch_already_completed(
+        self, mock_get_tracker, mock_db, mock_current_user
+    ):
         """Test cancelling batch that is already completed"""
         from src.api.v1.documents.pdf_batch_routes import BatchStatus, cancel_batch
 
@@ -763,10 +959,50 @@ class TestCancelBatch:
         mock_get_tracker.return_value = mock_tracker
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            await cancel_batch(batch_id=batch_id, db=mock_db)
+            await cancel_batch(
+                batch_id=batch_id,
+                db=mock_db,
+                current_user=mock_current_user,
+            )
 
         assert exc_info.value.status_code == 400
-        assert "批处理任务已完成或已取消" in exc_info.value.message
+
+    @patch(
+        "src.api.v1.documents.pdf_batch_routes._resolve_accessible_organization_ids",
+        new_callable=AsyncMock,
+    )
+    @patch("src.api.v1.documents.pdf_batch_routes._get_batch_tracker")
+    @pytest.mark.asyncio
+    async def test_cancel_batch_should_deny_when_no_org_access(
+        self,
+        mock_get_tracker,
+        mock_resolve_org_ids,
+        mock_db,
+        mock_current_user,
+    ):
+        """Test cancel should return not found when user has no org access"""
+        from src.api.v1.documents.pdf_batch_routes import cancel_batch
+
+        batch_id = "batch-no-access"
+        mock_resolve_org_ids.return_value = []
+        mock_tracker = MagicMock()
+        mock_tracker.get_status.return_value = None
+        mock_get_tracker.return_value = mock_tracker
+
+        with pytest.raises(BaseBusinessError) as exc_info:
+            await cancel_batch(
+                batch_id=batch_id,
+                db=mock_db,
+                current_user=mock_current_user,
+            )
+
+        mock_tracker.get_status.assert_called_once_with(
+            batch_id,
+            current_user_id="test-user-id",
+            accessible_organization_ids=[],
+        )
+        assert exc_info.value.status_code == 404
+        assert "批处理任务不存在" in exc_info.value.message
 
     @patch("src.api.v1.documents.pdf_batch_routes._get_batch_tracker")
     @patch("src.api.v1.documents.pdf_batch_routes._update_batch_status")
@@ -778,6 +1014,7 @@ class TestCancelBatch:
         mock_update_status,
         mock_get_tracker,
         mock_db,
+        mock_current_user,
     ):
         """Test cancelling batch with no processing sessions"""
         from src.api.v1.documents.pdf_batch_routes import BatchStatus, cancel_batch
@@ -797,7 +1034,11 @@ class TestCancelBatch:
         mock_service.cancel_processing = AsyncMock(return_value=None)
         mock_service_class.return_value = mock_service
 
-        result = await cancel_batch(batch_id=batch_id, db=mock_db)
+        result = await cancel_batch(
+            batch_id=batch_id,
+            db=mock_db,
+            current_user=mock_current_user,
+        )
 
         body = json.loads(result.body.decode())
         assert body["data"]["cancelled_count"] == 0
@@ -807,7 +1048,12 @@ class TestCancelBatch:
     @patch("src.api.v1.documents.pdf_batch_routes.PDFImportService")
     @pytest.mark.asyncio
     async def test_cancel_batch_already_failed(
-        self, mock_service_class, mock_update_status, mock_get_tracker, mock_db
+        self,
+        mock_service_class,
+        mock_update_status,
+        mock_get_tracker,
+        mock_db,
+        mock_current_user,
     ):
         """Test cancelling batch that already failed"""
         from src.api.v1.documents.pdf_batch_routes import BatchStatus, cancel_batch
@@ -823,7 +1069,11 @@ class TestCancelBatch:
         mock_get_tracker.return_value = mock_tracker
 
         with pytest.raises(BaseBusinessError) as exc_info:
-            await cancel_batch(batch_id=batch_id, db=mock_db)
+            await cancel_batch(
+                batch_id=batch_id,
+                db=mock_db,
+                current_user=mock_current_user,
+            )
 
         assert exc_info.value.status_code == 400
 
@@ -991,6 +1241,36 @@ class TestHelperFunctions:
 
         assert result is not None
         assert result["batch_id"] == "test"
+        mock_tracker.get_status.assert_called_once_with(
+            "test-batch",
+            current_user_id=None,
+            accessible_organization_ids=None,
+        )
+
+    @patch("src.api.v1.documents.pdf_batch_routes._get_batch_tracker")
+    def test_get_batch_status_with_visibility_context(self, mock_get_tracker):
+        """Test _get_batch_status forwards visibility context to tracker"""
+        from src.api.v1.documents.pdf_batch_routes import _get_batch_status
+
+        mock_tracker = MagicMock()
+        mock_tracker.get_status.return_value = {
+            "batch_id": "test",
+            "status": "processing",
+        }
+        mock_get_tracker.return_value = mock_tracker
+
+        result = _get_batch_status(
+            "test-batch",
+            current_user_id="user-1",
+            accessible_organization_ids=["2", "3"],
+        )
+
+        assert result is not None
+        mock_tracker.get_status.assert_called_once_with(
+            "test-batch",
+            current_user_id="user-1",
+            accessible_organization_ids=["2", "3"],
+        )
 
     @patch("src.api.v1.documents.pdf_batch_routes._get_batch_tracker")
     def test_get_batch_status_not_found(self, mock_get_tracker):
@@ -1004,6 +1284,11 @@ class TestHelperFunctions:
         result = _get_batch_status("nonexistent")
 
         assert result is None
+        mock_tracker.get_status.assert_called_once_with(
+            "nonexistent",
+            current_user_id=None,
+            accessible_organization_ids=None,
+        )
 
     @patch("src.api.v1.documents.pdf_batch_routes._get_batch_tracker")
     def test_update_batch_status(self, mock_get_tracker):

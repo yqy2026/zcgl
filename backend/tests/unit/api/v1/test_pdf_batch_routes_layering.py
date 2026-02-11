@@ -2,7 +2,7 @@
 
 import json
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import ANY, AsyncMock, MagicMock
 
 import pytest
 
@@ -36,13 +36,20 @@ async def test_get_batch_status_should_delegate_session_lookup_to_service() -> N
         }
     )
     mock_service_cls = MagicMock(return_value=mock_service)
+    mock_user = MagicMock()
+    mock_user.id = "user-1"
 
     with pytest.MonkeyPatch.context() as monkeypatch:
         monkeypatch.setattr(module, "PDFImportService", mock_service_cls)
         monkeypatch.setattr(
             module,
+            "_resolve_accessible_organization_ids",
+            AsyncMock(return_value=[]),
+        )
+        monkeypatch.setattr(
+            module,
             "_get_batch_status",
-            lambda _batch_id: {
+            lambda _batch_id, **_kwargs: {
                 "batch_id": "batch-1",
                 "status": "processing",
                 "session_ids": ["session-1"],
@@ -56,11 +63,19 @@ async def test_get_batch_status_should_delegate_session_lookup_to_service() -> N
             lambda _batch_id: {"total": 1, "completed": 0, "failed": 0, "processing": 1, "pending": 0},
         )
 
-        result = await get_batch_status(batch_id="batch-1", db=MagicMock())
+        result = await get_batch_status(
+            batch_id="batch-1",
+            db=MagicMock(),
+            current_user=mock_user,
+        )
 
     body = json.loads(result.body.decode())
     assert body["data"]["batch_status"]["batch_id"] == "batch-1"
-    mock_service.get_session_map_async.assert_awaited_once()
+    mock_service.get_session_map_async.assert_awaited_once_with(
+        db=ANY,
+        session_ids=["session-1"],
+        current_user_id="user-1",
+    )
 
 
 @pytest.mark.asyncio
@@ -77,13 +92,20 @@ async def test_cancel_batch_should_delegate_session_lookup_to_service() -> None:
     )
     mock_service.cancel_processing = AsyncMock(return_value=None)
     mock_service_cls = MagicMock(return_value=mock_service)
+    mock_user = MagicMock()
+    mock_user.id = "user-1"
 
     with pytest.MonkeyPatch.context() as monkeypatch:
         monkeypatch.setattr(module, "PDFImportService", mock_service_cls)
         monkeypatch.setattr(
             module,
+            "_resolve_accessible_organization_ids",
+            AsyncMock(return_value=[]),
+        )
+        monkeypatch.setattr(
+            module,
             "_get_batch_status",
-            lambda _batch_id: {
+            lambda _batch_id, **_kwargs: {
                 "batch_id": "batch-1",
                 "status": module.BatchStatus.PROCESSING,
                 "session_ids": ["session-1"],
@@ -91,10 +113,22 @@ async def test_cancel_batch_should_delegate_session_lookup_to_service() -> None:
         )
         monkeypatch.setattr(module, "_update_batch_status", lambda *_args, **_kwargs: None)
 
-        result = await cancel_batch(batch_id="batch-1", db=MagicMock())
+        result = await cancel_batch(
+            batch_id="batch-1",
+            db=MagicMock(),
+            current_user=mock_user,
+        )
 
     body = json.loads(result.body.decode())
     assert body["data"]["cancelled_count"] == 1
-    mock_service.get_session_map_async.assert_awaited_once()
-    mock_service.cancel_processing.assert_awaited_once()
-
+    mock_service.get_session_map_async.assert_awaited_once_with(
+        db=ANY,
+        session_ids=["session-1"],
+        current_user_id="user-1",
+    )
+    mock_service.cancel_processing.assert_awaited_once_with(
+        db=ANY,
+        session_id="session-1",
+        reason="Batch batch-1 cancelled by user",
+        current_user_id="user-1",
+    )

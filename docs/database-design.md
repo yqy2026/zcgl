@@ -64,9 +64,9 @@
 | **用途信息** ||||
 | `certificated_usage` | String(100) | | 证载用途 |
 | `actual_usage` | String(100) | | 实际用途 |
-| **租户信息** ||||
-| `tenant_name` | String(200) | | 租户名称 |
-| `tenant_type` | String(20) | | 租户类型 |
+| **承租方信息** ||||
+| `tenant_name` | String(200) | | 承租方名称 |
+| `tenant_type` | String(20) | | 承租方类型 |
 | **合同信息** ||||
 | `lease_contract_number` | String(100) | | 租赁合同编号 |
 | `contract_start_date` | Date | | 合同开始日期 |
@@ -96,7 +96,6 @@
 | `audit_notes` | Text | | 审核备注 |
 | `created_at` | DateTime | | 创建时间 |
 | `updated_at` | DateTime | | 更新时间 |
-| `tenant_id` | String(50) | | 租户ID（多租户）|
 
 **计算属性**:
 - `unrented_area`: 未出租面积 = 可出租面积 - 已出租面积
@@ -104,6 +103,8 @@
 
 **说明**:
 - `ownership_entity` 不再作为存储字段；权属方名称从 `ownership_id` 关联的 `ownerships.name` 动态获取。
+- `tenant_type` 与 `tenant_name` 属于“承租方（乙方）业务语义”，不是 SaaS 多租户隔离语义。
+- 历史草稿中的 `tenant_id`（SaaS 多租户字段）不属于当前代码基线，资产模型未定义该字段。
 
 ---
 
@@ -595,8 +596,11 @@
 | `version` | Integer | DEFAULT 1 | 版本号 |
 | `created_at` | DateTime | | 创建时间 |
 | `updated_at` | DateTime | | 更新时间 |
-| `tenant_id` | String(50) | | 租户ID（多租户）|
 | `source_session_id` | String(100) | | PDF导入会话ID |
+
+**术语说明**:
+- `tenant_*` 字段用于承租方信息（合同乙方），不是 SaaS 多租户字段。
+- 历史草稿中的 `tenant_id`（多租户）已从当前代码基线移除，`rent_contracts` 模型未定义该字段。
 
 **合同类型枚举 (ContractType)**:
 - `lease_upstream`: 上游租赁合同（运营方承租）

@@ -9,6 +9,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ErrorHandlingProvider } from './contexts/ErrorHandlingContext';
 import { MessageManager } from './utils/messageManager';
 import { ThemeProvider } from './components/Common/ThemeProvider';
+import styles from './App.module.css';
 // App.css removed - classes were unused default React template styles
 
 /**
@@ -49,10 +50,7 @@ const ProtectedRoutes: React.FC = () => {
                 <PageTransition>
                   <Suspense
                     fallback={
-                      <Spin
-                        size="large"
-                        style={{ display: 'flex', justifyContent: 'center', marginTop: '100px' }}
-                      />
+                      <Spin size="large" className={styles.suspenseFallbackSpin} />
                     }
                   >
                     <route.element />

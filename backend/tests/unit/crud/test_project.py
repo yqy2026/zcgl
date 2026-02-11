@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from src.crud.project import CRUDProject
+from src.crud.query_builder import TenantFilter
 from src.models.project import Project
 
 pytestmark = pytest.mark.asyncio
@@ -119,6 +120,23 @@ class TestCRUDProjectGetMulti:
 
         assert isinstance(result, list)
         mock_get_multi.assert_awaited_once_with(mock_db, skip=10, limit=20)
+
+    async def test_get_multi_applies_tenant_filter(
+        self, crud: CRUDProject, mock_db: MagicMock
+    ) -> None:
+        tenant_filter = TenantFilter(organization_ids=["org-1"])
+        execute_result = MagicMock()
+        execute_result.scalars.return_value.all.return_value = []
+        mock_db.execute = AsyncMock(return_value=execute_result)
+
+        with patch.object(
+            crud.query_builder,
+            "apply_tenant_filter",
+            side_effect=lambda stmt, _tf: stmt,
+        ) as mock_apply_tenant_filter:
+            await crud.get_multi(mock_db, tenant_filter=tenant_filter)
+
+        assert mock_apply_tenant_filter.call_args.args[1] == tenant_filter
 
 
 class TestCRUDProjectSearch:

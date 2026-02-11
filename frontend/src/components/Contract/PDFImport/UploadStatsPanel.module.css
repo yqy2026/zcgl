@@ -1,0 +1,7 @@
+.statsRow {
+  margin-top: 16px;
+}
+
+.recommendedMethodStatistic :global(.ant-statistic-content) {
+  font-size: 14px;
+}

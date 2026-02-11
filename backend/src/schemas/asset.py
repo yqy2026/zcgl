@@ -54,6 +54,7 @@ class AssetBase(BaseModel):
     """资产基础模型"""
 
     # 基本信息 - 按照权属方、权属类别、项目名称、物业名称、物业地址顺序
+    organization_id: str | None = Field(None, description="所属组织ID")
     ownership_id: str | None = Field(None, description="权属方ID")
     ownership_category: str | None = Field(
         None, max_length=FieldLengthLimits.CODE_MAX, description="权属类别"
@@ -106,8 +107,8 @@ class AssetBase(BaseModel):
     certificated_usage: str | None = Field(None, max_length=100, description="证载用途")
     actual_usage: str | None = Field(None, max_length=100, description="实际用途")
 
-    # 租户相关字段
-    tenant_type: str | None = Field(None, description="租户类型")
+    # 承租方相关字段
+    tenant_type: str | None = Field(None, description="承租方类型")
     is_sublease: bool = Field(False, description="是否分租/转租")
     sublease_notes: str | None = Field(None, description="分租/转租备注")
 
@@ -211,6 +212,7 @@ class AssetUpdate(BaseModel):
     """更新资产模型"""
 
     # 基本信息 - 按照权属方、权属类别、项目名称、物业名称、物业地址顺序
+    organization_id: str | None = Field(None, description="所属组织ID")
     ownership_id: str | None = Field(None, description="权属方ID")
     ownership_category: str | None = Field(None, max_length=100, description="权属类别")
     project_name: str | None = Field(
@@ -257,8 +259,8 @@ class AssetUpdate(BaseModel):
     certificated_usage: str | None = Field(None, max_length=100, description="证载用途")
     actual_usage: str | None = Field(None, max_length=100, description="实际用途")
 
-    # 租户相关字段
-    tenant_type: str | None = Field(None, description="租户类型")
+    # 承租方相关字段
+    tenant_type: str | None = Field(None, description="承租方类型")
     is_sublease: bool | None = Field(None, description="是否分租/转租")
     sublease_notes: str | None = Field(None, description="分租/转租备注")
 
@@ -376,9 +378,9 @@ class AssetResponseBase(BaseModel):
     certificated_usage: str | None = Field(None, description="证载用途")
     actual_usage: str | None = Field(None, description="实际用途")
 
-    # 租户相关字段
-    tenant_name: str | None = Field(None, description="租户名称")
-    tenant_type: str | None = Field(None, description="租户类型")
+    # 承租方相关字段
+    tenant_name: str | None = Field(None, description="承租方名称")
+    tenant_type: str | None = Field(None, description="承租方类型")
 
     # 合同相关字段
     lease_contract_number: str | None = Field(None, description="租赁合同编号")
@@ -421,6 +423,7 @@ class AssetResponse(AssetResponseBase):
     """资产响应模型"""
 
     id: str = Field(..., description="资产ID")
+    organization_id: str | None = Field(None, description="所属组织ID")
     project_id: str | None = Field(None, description="项目ID")  # 对齐Model
     ownership_id: str | None = Field(None, description="权属ID")  # 对齐Model
     project: ProjectResponse | None = Field(None, description="关联项目")
@@ -435,6 +438,7 @@ class AssetListItemResponse(AssetResponseBase):
     """资产列表响应模型（轻量，无深层关联字段）"""
 
     id: str = Field(..., description="资产ID")
+    organization_id: str | None = Field(None, description="所属组织ID")
     project_id: str | None = Field(None, description="项目ID")
     ownership_id: str | None = Field(None, description="权属ID")
     created_at: datetime = Field(..., description="创建时间")

@@ -154,10 +154,10 @@ const AssetSearchResult: React.FC<AssetSearchResultProps> = ({
                   </div>
                 )}
 
-                {/* 租户信息 */}
+                {/* 承租方信息 */}
                 {asset.tenant_name != null && (
                   <div style={{ marginBottom: 8 }}>
-                    <Text type="secondary">租户: {highlightSearchText(asset.tenant_name)}</Text>
+                    <Text type="secondary">承租方: {highlightSearchText(asset.tenant_name)}</Text>
                   </div>
                 )}
 

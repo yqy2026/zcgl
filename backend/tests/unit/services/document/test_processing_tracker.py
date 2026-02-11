@@ -789,6 +789,34 @@ class TestBatchStatusTrackerRedis:
                 assert status["total"] == 100  # Converted to int
                 assert status["processed"] == 50  # Converted to int
 
+    def test_get_status_from_redis_should_filter_by_visibility(self):
+        """测试 Redis 路径按可见性过滤状态查询"""
+        with patch("src.services.document.processing_tracker.REDIS_AVAILABLE", True):
+            mock_redis = MagicMock()
+            mock_redis.ping.return_value = True
+            mock_redis.hgetall.return_value = {
+                "batch_id": "batch_get_123",
+                "total": "100",
+                "processed": "50",
+                "status": "processing",
+                "organization_id": "99",
+                "created_by_user_id": "another-user",
+            }
+
+            with patch(
+                "src.services.document.processing_tracker.redis.Redis",
+                return_value=mock_redis,
+            ):
+                tracker = BatchStatusTracker(redis_host="localhost")
+
+                status = tracker.get_status(
+                    "batch_get_123",
+                    current_user_id="user-1",
+                    accessible_organization_ids=["2"],
+                )
+
+                assert status is None
+
     def test_get_status_not_found_in_redis(self):
         """测试从 Redis 获取不存在的状态"""
         with patch("src.services.document.processing_tracker.REDIS_AVAILABLE", True):
@@ -922,6 +950,56 @@ class TestBatchStatusTrackerRedis:
                 assert len(batches) == 1
                 assert batches[0]["status"] == "pending"
 
+    def test_list_batches_with_access_filter_from_redis(self):
+        """测试 Redis 路径按用户/组织过滤批处理可见性"""
+        with patch("src.services.document.processing_tracker.REDIS_AVAILABLE", True):
+            mock_redis = MagicMock()
+            mock_redis.ping.return_value = True
+            mock_redis.scan_iter.return_value = [
+                "batch:status:batch-own",
+                "batch:status:batch-org",
+                "batch:status:batch-hidden",
+            ]
+            mock_redis.hgetall.side_effect = [
+                {
+                    "batch_id": "batch-own",
+                    "status": "pending",
+                    "organization_id": "99",
+                    "created_by_user_id": "user-1",
+                    "created_at": "2026-01-16T12:00:00",
+                },
+                {
+                    "batch_id": "batch-org",
+                    "status": "pending",
+                    "organization_id": "2",
+                    "created_by_user_id": "another-user",
+                    "created_at": "2026-01-16T11:00:00",
+                },
+                {
+                    "batch_id": "batch-hidden",
+                    "status": "pending",
+                    "organization_id": "3",
+                    "created_by_user_id": "another-user",
+                    "created_at": "2026-01-16T10:00:00",
+                },
+            ]
+
+            with patch(
+                "src.services.document.processing_tracker.redis.Redis",
+                return_value=mock_redis,
+            ):
+                tracker = BatchStatusTracker(redis_host="localhost")
+                batches = tracker.list_batches(
+                    current_user_id="user-1",
+                    accessible_organization_ids=["2"],
+                )
+
+                assert len(batches) == 2
+                assert {batch["batch_id"] for batch in batches} == {
+                    "batch-own",
+                    "batch-org",
+                }
+
     def test_list_batches_redis_exception(self):
         """测试 Redis 列出异常"""
         with patch("src.services.document.processing_tracker.REDIS_AVAILABLE", True):
@@ -1030,6 +1108,32 @@ class TestBatchStatusTrackerOperations:
             assert status["batch_id"] == "batch_456"
             assert status["total"] == 20
 
+    def test_get_status_from_memory_should_filter_by_visibility(self):
+        """测试内存路径按可见性过滤状态查询"""
+        with patch("src.services.document.processing_tracker.REDIS_AVAILABLE", False):
+            tracker = BatchStatusTracker()
+            tracker.create_batch(
+                batch_id="batch_456",
+                total=20,
+                organization_id=99,
+                created_by_user_id="owner-user",
+            )
+
+            denied_status = tracker.get_status(
+                "batch_456",
+                current_user_id="another-user",
+                accessible_organization_ids=[],
+            )
+            owner_status = tracker.get_status(
+                "batch_456",
+                current_user_id="owner-user",
+                accessible_organization_ids=[],
+            )
+
+            assert denied_status is None
+            assert owner_status is not None
+            assert owner_status["batch_id"] == "batch_456"
+
     def test_get_status_not_found(self):
         """测试获取不存在状态"""
         with patch("src.services.document.processing_tracker.REDIS_AVAILABLE", False):
@@ -1109,6 +1213,40 @@ class TestBatchStatusTrackerOperations:
 
             # Only batch_2 should be pending
             assert len(batches) == 1
+
+    def test_list_batches_with_access_filter(self):
+        """测试内存路径按用户/组织过滤批处理可见性"""
+        with patch("src.services.document.processing_tracker.REDIS_AVAILABLE", False):
+            tracker = BatchStatusTracker()
+            tracker.create_batch(
+                batch_id="batch-own",
+                total=10,
+                organization_id=99,
+                created_by_user_id="user-1",
+            )
+            tracker.create_batch(
+                batch_id="batch-org",
+                total=10,
+                organization_id=2,
+                created_by_user_id="another-user",
+            )
+            tracker.create_batch(
+                batch_id="batch-hidden",
+                total=10,
+                organization_id=3,
+                created_by_user_id="another-user",
+            )
+
+            batches = tracker.list_batches(
+                current_user_id="user-1",
+                accessible_organization_ids=["2"],
+            )
+
+            assert len(batches) == 2
+            assert {batch["batch_id"] for batch in batches} == {
+                "batch-own",
+                "batch-org",
+            }
 
     def test_cleanup_old_batches(self):
         """测试清理旧批处理"""

@@ -11,6 +11,7 @@ import {
   AreaChartOutlined,
 } from '@ant-design/icons';
 import { getTrendColor, getOccupancyRateColor, COLORS } from '@/styles/colorMap';
+import styles from './AnalyticsStatsCard.module.css';
 
 interface StatCardProps {
   title: string;
@@ -53,79 +54,48 @@ const StatCard: React.FC<StatCardProps> = ({
   color = COLORS.primary,
   loading = false,
 }) => {
-  const getTrendIcon = () => {
-    if (trend === null || trend === undefined) {
-      return null;
-    }
-
-    const isPositive = trend > 0;
-    const color = getTrendColor(trend, trendType);
-    const Icon = isPositive ? ArrowUpOutlined : ArrowDownOutlined;
-
-    return (
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '2px',
-          color,
-          fontSize: 12,
-          fontWeight: 500,
-        }}
-      >
-        <Icon />
-        <span>{Math.abs(trend)}%</span>
-      </div>
-    );
-  };
+  const hasTrend = trend !== null && trend !== undefined;
+  const trendIsPositive = hasTrend ? trend > 0 : false;
+  const TrendIcon = trendIsPositive ? ArrowUpOutlined : ArrowDownOutlined;
+  const trendStyle = hasTrend
+    ? ({
+        ['--stats-card-trend-color' as string]: getTrendColor(trend, trendType),
+      } as React.CSSProperties)
+    : undefined;
+  const statisticStyle = valueStyle !== undefined ? { ...valueStyle } : undefined;
+  const cardStyle = {
+    ['--stats-card-icon-bg' as string]: color,
+    ...(valueStyle?.color !== undefined
+      ? { ['--stats-card-value-color' as string]: valueStyle.color }
+      : {}),
+  } as React.CSSProperties;
 
   return (
-    <Card
-      loading={loading}
-      size="small"
-      styles={{
-        body: { padding: '20px 24px' },
-        header: { padding: '12px 24px', borderBottom: '1px solid #f0f0f0' },
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+    <Card loading={loading} size="small" className={styles.statCard} style={cardStyle}>
+      <div className={styles.statHeader}>
         {icon != null && (
-          <div
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 8,
-              background: color,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginRight: 16,
-              color: 'white',
-              fontSize: 18,
-            }}
-          >
+          <div className={styles.iconBadge}>
             {icon}
           </div>
         )}
-        <div style={{ flex: 1 }}>
-          <div style={{ color: COLORS.textTertiary, fontSize: 14, marginBottom: 4 }}>{title}</div>
+        <div className={styles.statMain}>
+          <div className={styles.statTitle}>{title}</div>
           <Statistic
             value={value}
             precision={precision}
             suffix={suffix}
             prefix={prefix}
-            styles={{
-              content: {
-                fontSize: 24,
-                fontWeight: 'bold',
-                margin: 0,
-                ...valueStyle,
-              },
-            }}
+            className={styles.statistic}
+            styles={statisticStyle ? { content: statisticStyle } : undefined}
           />
         </div>
       </div>
-      {getTrendIcon()}
+      {hasTrend && (
+        <div className={styles.trend} style={trendStyle}>
+          <TrendIcon />
+          <span>{Math.abs(trend)}%</span>
+        </div>
+      )}
     </Card>
   );
 };
@@ -136,7 +106,7 @@ export const AnalyticsStatsGrid: React.FC<StatsGridProps> = ({ data, loading = f
   // 所有数据都是当前时间点的真实数据
 
   return (
-    <Row gutter={[16, 16]}>
+    <Row gutter={[16, 16]} className={styles.statsGrid}>
       <Col xs={24} sm={12} lg={6}>
         <StatCard
           title="资产总数"
@@ -251,55 +221,55 @@ export const FinancialStatsGrid: React.FC<FinancialStatsGridProps> = ({
   loading = false,
 }) => {
   return (
-    <Row gutter={[16, 16]}>
+    <Row gutter={[16, 16]} className={styles.financialGrid}>
       <Col xs={24} sm={6}>
-        <Card loading={loading} size="small">
+        <Card loading={loading} size="small" className={styles.financialCard}>
           <Statistic
             title="年收入"
             value={data.total_annual_income}
             precision={2}
             suffix="元"
-            styles={{ content: { color: COLORS.success } }}
+            className={`${styles.financialMetric} ${styles.financialIncome}`}
           />
         </Card>
       </Col>
 
       <Col xs={24} sm={6}>
-        <Card loading={loading} size="small">
+        <Card loading={loading} size="small" className={styles.financialCard}>
           <Statistic
             title="年支出"
             value={data.total_annual_expense}
             precision={2}
             suffix="元"
-            styles={{ content: { color: COLORS.error } }}
+            className={`${styles.financialMetric} ${styles.financialExpense}`}
           />
         </Card>
       </Col>
 
       <Col xs={24} sm={6}>
-        <Card loading={loading} size="small">
+        <Card loading={loading} size="small" className={styles.financialCard}>
           <Statistic
             title="净收益"
             value={data.total_net_income}
             precision={2}
             suffix="元"
-            styles={{
-              content: {
-                color: data.total_net_income >= 0 ? COLORS.success : COLORS.error,
-              },
-            }}
+            className={`${styles.financialMetric} ${
+              data.total_net_income >= 0
+                ? styles.financialNetIncomePositive
+                : styles.financialNetIncomeNegative
+            }`}
           />
         </Card>
       </Col>
 
       <Col xs={24} sm={6}>
-        <Card loading={loading} size="small">
+        <Card loading={loading} size="small" className={styles.financialCard}>
           <Statistic
             title="月租金"
             value={data.total_monthly_rent}
             precision={2}
             suffix="元"
-            styles={{ content: { color: COLORS.primary } }}
+            className={`${styles.financialMetric} ${styles.financialRent}`}
           />
         </Card>
       </Col>

@@ -1,0 +1,74 @@
+.errorPage {
+  padding: 50px 20px;
+  min-height: 60vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.errorCard {
+  max-width: 500px;
+  width: 100%;
+  text-align: center;
+}
+
+.errorIcon {
+  font-size: 56px;
+}
+
+.errorIconWarning {
+  color: var(--color-warning);
+}
+
+.errorIconError {
+  color: var(--color-error);
+}
+
+.errorIconInfo {
+  color: var(--color-primary);
+}
+
+.subTitleBlock {
+  line-height: 1.6;
+}
+
+.suggestions {
+  margin-top: 16px;
+}
+
+.suggestionTitle {
+  margin-bottom: 8px !important;
+}
+
+.suggestionList {
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  text-align: left;
+  line-height: 1.6;
+  margin: 0;
+  padding-left: 20px;
+}
+
+.actionButtons {
+  justify-content: center;
+}
+
+.actionButtons :global(.ant-btn) {
+  min-height: 44px;
+  border-radius: var(--radius-md);
+}
+
+.actionButtons :global(.ant-btn:focus-visible) {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+@media (max-width: 576px) {
+  .errorPage {
+    padding: 32px 16px;
+  }
+
+  .errorIcon {
+    font-size: 48px;
+  }
+}

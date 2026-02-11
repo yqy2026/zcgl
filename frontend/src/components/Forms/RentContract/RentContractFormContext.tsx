@@ -36,7 +36,7 @@ export interface RentContractInitialData {
   contract_type?: string;
   upstream_contract_id?: string;
   service_fee_rate?: number;
-  // Tenant Info
+  // Lessee Info
   tenant_name: string;
   tenant_contact?: string;
   tenant_phone?: string;

@@ -8,6 +8,7 @@ import { CloudUploadOutlined } from '@ant-design/icons';
 import { MessageManager } from '@/utils/messageManager';
 import type { UploadProps } from 'antd';
 import { usePDFImportContext, usePDFImportUpload } from './PDFImportContext';
+import styles from './PDFUploadArea.module.css';
 
 const { Dragger } = Upload;
 
@@ -55,7 +56,7 @@ const PDFUploadArea: React.FC = () => {
   return (
     <Dragger {...uploadProps} disabled={uploading}>
       <p className="ant-upload-drag-icon">
-        <CloudUploadOutlined style={{ fontSize: 48, color: '#1890ff' }} />
+        <CloudUploadOutlined className={styles.uploadIcon} />
       </p>
       <p className="ant-upload-text">点击或拖拽文件到此区域上传</p>
       <p className="ant-upload-hint">支持PDF文件，最大{maxSize}MB</p>

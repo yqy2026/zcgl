@@ -7,6 +7,7 @@ import {
   WifiOutlined,
   LockOutlined,
 } from '@ant-design/icons';
+import styles from './SuccessNotification.module.css';
 
 interface NotificationOptions {
   type: 'success' | 'error' | 'warning' | 'info';
@@ -20,10 +21,10 @@ class SuccessNotification {
     const { type, title, description, duration = 4.5 } = options;
 
     const iconMap = {
-      success: <CheckCircleOutlined style={{ color: '#52c41a' }} />,
-      error: <CloseCircleOutlined style={{ color: '#ff4d4f' }} />,
-      warning: <ExclamationCircleOutlined style={{ color: '#faad14' }} />,
-      info: <InfoCircleOutlined style={{ color: '#1890ff' }} />,
+      success: <CheckCircleOutlined className={styles.successIcon} />,
+      error: <CloseCircleOutlined className={styles.errorIcon} />,
+      warning: <ExclamationCircleOutlined className={styles.warningIcon} />,
+      info: <InfoCircleOutlined className={styles.infoIcon} />,
     };
 
     notification[type]({
@@ -85,7 +86,7 @@ class SuccessNotification {
         message: '网络错误',
         description: '网络连接失败，请检查网络设置后重试',
         duration: 0,
-        icon: <WifiOutlined style={{ color: '#ff4d4f' }} />,
+        icon: <WifiOutlined className={styles.errorIcon} />,
       }),
 
     server: () =>
@@ -107,7 +108,7 @@ class SuccessNotification {
       notification.error({
         message: '权限不足',
         description: '您没有执行此操作的权限，请联系管理员',
-        icon: <LockOutlined style={{ color: '#ff4d4f' }} />,
+        icon: <LockOutlined className={styles.errorIcon} />,
       }),
 
     notFound: () =>
@@ -131,7 +132,7 @@ class SuccessNotification {
       notification.warning({
         message: '权限受限',
         description: '您的权限受限，某些功能可能无法使用',
-        icon: <LockOutlined style={{ color: '#faad14' }} />,
+        icon: <LockOutlined className={styles.warningIcon} />,
       }),
 
     maintenance: () =>

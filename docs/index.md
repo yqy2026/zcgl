@@ -13,6 +13,8 @@
 - [环境配置](guides/environment-setup.md)
 - [部署指南](guides/deployment.md)
 - [组件导航](guides/components.md)
+- [Tenant 术语审计](guides/tenant-terminology-audit.md)
+- [tenant 符号白名单](guides/tenant-symbol-whitelist.md)
 - [API 总览](integrations/api-overview.md)
 - [数据库设计](database-design.md)
 - [测试标准](guides/testing-standards.md)

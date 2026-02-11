@@ -1,0 +1,79 @@
+.sectionGroup {
+  width: 100%;
+}
+
+.sectionCard {
+  margin-bottom: 16px;
+}
+
+.sectionBlockMd {
+  margin-bottom: 16px;
+}
+
+.sectionBlockLg {
+  margin-bottom: 24px;
+}
+
+.formActions {
+  margin-top: 24px;
+}
+
+.formActionSecondary {
+  margin-left: 16px;
+}
+
+.tableHeaderRow {
+  margin-bottom: 16px;
+  padding: 12px 0;
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-md);
+}
+
+.tableDataRow {
+  margin-bottom: 12px;
+  padding: 8px 0;
+}
+
+.tablePagination {
+  margin-top: 24px;
+  text-align: right;
+}
+
+.chartArea {
+  height: 300px;
+  background: var(--color-bg-secondary);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chartNode {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chartCircle {
+  width: 200px;
+  height: 200px;
+  background: var(--color-border-light);
+  border-radius: 50%;
+}
+
+.detailHeader {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.detailHeaderMeta {
+  margin-left: 16px;
+  flex: 1;
+}
+
+.detailHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}

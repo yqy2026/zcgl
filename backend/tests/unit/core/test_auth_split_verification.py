@@ -8,19 +8,10 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.services.core.authentication_service import AsyncAuthenticationService
+from src.services.core.password_service import PasswordService
+from src.services.core.session_service import AsyncSessionService
 from src.services.core.user_management_service import AsyncUserManagementService
-
-
-@pytest.fixture
-def auth_service(mock_db):
-    """创建 AuthenticationService 实例"""
-    return AsyncAuthenticationService(mock_db)
-
-
-@pytest.fixture
-def user_mgmt(mock_db):
-    """创建 UserManagementService 实例"""
-    return AsyncUserManagementService(mock_db)
+from src.services.permission.rbac_service import RBACService
 
 
 @pytest.fixture
@@ -31,6 +22,43 @@ def mock_db():
     db.refresh = AsyncMock()
     db.add = MagicMock()
     return db
+
+
+@pytest.fixture
+def password_service():
+    return PasswordService()
+
+
+@pytest.fixture
+def session_service(mock_db):
+    return AsyncSessionService(mock_db)
+
+
+@pytest.fixture
+def rbac_service(mock_db):
+    return RBACService(mock_db)
+
+
+@pytest.fixture
+def user_mgmt(mock_db, password_service, session_service, rbac_service):
+    """创建 UserManagementService 实例"""
+    return AsyncUserManagementService(
+        mock_db,
+        password_service=password_service,
+        session_service=session_service,
+        rbac_service=rbac_service,
+    )
+
+
+@pytest.fixture
+def auth_service(mock_db, password_service, session_service, user_mgmt):
+    """创建 AuthenticationService 实例"""
+    return AsyncAuthenticationService(
+        mock_db,
+        password_service=password_service,
+        user_service=user_mgmt,
+        session_service=session_service,
+    )
 
 
 def _mock_execute_first(value):

@@ -2,6 +2,7 @@ import React from 'react';
 import { Typography, Button, Empty } from 'antd';
 import { MessageManager } from '@/utils/messageManager';
 import { useAnalyticsFiltersContext } from './FiltersContext';
+import styles from './Filters.module.css';
 
 const { Text } = Typography;
 
@@ -23,11 +24,12 @@ const FilterHistorySection: React.FC = () => {
     <>
       {/* Save filter input */}
       {saveName !== undefined && (
-        <div style={{ marginBottom: 16, padding: '12px', background: '#f5f5f5', borderRadius: 6 }}>
-          <div style={{ display: 'flex', gap: 8 }}>
+        <div className={styles.sectionPanel}>
+          <div className={styles.historySaveRow}>
             <input
               type="text"
               placeholder="输入保存名称"
+              className={styles.historyInput}
               value={saveName}
               onChange={e => setSaveName(e.target.value)}
               onKeyDown={e => {
@@ -35,41 +37,31 @@ const FilterHistorySection: React.FC = () => {
                   handleSaveFilters();
                 }
               }}
-              style={{ flex: 1, padding: '4px 11px', border: '1px solid #d9d9d9', borderRadius: 6 }}
             />
-            <Button type="primary" onClick={handleSaveFilters}>
+            <Button type="primary" onClick={handleSaveFilters} className={styles.sectionButton}>
               保存
             </Button>
-            <Button onClick={() => setSaveName('')}>取消</Button>
+            <Button onClick={() => setSaveName('')} className={styles.sectionButton}>
+              取消
+            </Button>
           </div>
         </div>
       )}
 
       {/* Filter history */}
       {showHistory && (
-        <div style={{ marginBottom: 16, padding: '12px', background: '#f5f5f5', borderRadius: 6 }}>
-          <Text strong style={{ marginBottom: 8, display: 'block' }}>
+        <div className={styles.sectionPanel}>
+          <Text strong className={styles.sectionTitleText}>
             筛选历史
           </Text>
           {searchHistory.length > 0 ? (
-            <div>
+            <div className={styles.historyList}>
               {searchHistory.slice(0, 5).map(history => (
                 <div
                   key={history.id}
                   role="button"
                   tabIndex={0}
-                  style={{
-                    padding: '8px 12px',
-                    background: 'white',
-                    border: '1px solid #e8e8e8',
-                    borderRadius: 4,
-                    marginBottom: 8,
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                  }}
+                  className={styles.historyItem}
                   onClick={() => handleApplyHistory(history.id)}
                   onKeyDown={e => {
                     if (e.key === 'Enter' || e.key === ' ') {
@@ -77,16 +69,10 @@ const FilterHistorySection: React.FC = () => {
                       handleApplyHistory(history.id);
                     }
                   }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.backgroundColor = '#f0f0f0';
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.backgroundColor = 'white';
-                  }}
                 >
-                  <div>
-                    <div style={{ fontWeight: 'bold' }}>{history.name}</div>
-                    <div style={{ fontSize: 12, color: 'var(--color-text-tertiary, #8c8c8c)' }}>
+                  <div className={styles.historyMeta}>
+                    <div className={styles.historyName}>{history.name}</div>
+                    <div className={styles.historyDate}>
                       {new Date(history.createdAt).toLocaleDateString()}
                     </div>
                   </div>
@@ -94,6 +80,7 @@ const FilterHistorySection: React.FC = () => {
                     type="text"
                     size="small"
                     danger
+                    className={styles.historyDeleteButton}
                     onClick={e => {
                       e.stopPropagation();
                       removeSearchHistory(history.id);
@@ -106,7 +93,7 @@ const FilterHistorySection: React.FC = () => {
               ))}
             </div>
           ) : (
-            <Empty description="暂无筛选历史" imageStyle={{ height: 60 }} />
+            <Empty description="暂无筛选历史" className={styles.historyEmpty} />
           )}
         </div>
       )}

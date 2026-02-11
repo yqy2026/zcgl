@@ -1,0 +1,46 @@
+.cardTitle {
+  margin: 0;
+  margin-bottom: 8px;
+}
+
+.cardDescription {
+  margin-top: 12px;
+}
+
+.addressRow {
+  margin-bottom: 8px;
+}
+
+.ownershipRow {
+  margin-bottom: 8px;
+}
+
+.areaRow {
+  margin-bottom: 12px;
+}
+
+.detailIcon {
+  color: #999;
+}
+
+.detailText {
+  font-size: 12px;
+}
+
+.occupancyHeader {
+  margin-bottom: 4px;
+}
+
+.occupancyHeaderRow {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.occupancyLabel {
+  font-size: 12px;
+}
+
+.occupancyValue {
+  font-size: 12px;
+}

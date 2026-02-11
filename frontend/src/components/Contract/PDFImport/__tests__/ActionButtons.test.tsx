@@ -6,6 +6,7 @@ import React from 'react';
 import { renderWithProviders, screen, fireEvent } from '@/test/utils/test-helpers';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ActionButtons from '../ActionButtons';
+import styles from '../ActionButtons.module.css';
 
 // Mock PDFImportContext
 const mockHandleCancel = vi.fn();
@@ -132,7 +133,7 @@ describe('ActionButtons', () => {
 
       const container = screen.getByText('取消处理').closest('.ant-space')?.parentElement;
       expect(container).not.toBeNull();
-      expect(container as HTMLElement).toHaveStyle({ textAlign: 'center' });
+      expect(container).toHaveClass(styles.actionContainer);
     });
   });
 });

@@ -12,6 +12,7 @@ import {
 import { useOwnershipOptions } from '@/hooks/useOwnership';
 import type { Ownership } from '@/types/ownership';
 import OwnershipList from './OwnershipList';
+import styles from './OwnershipSelect.module.css';
 
 const { Option } = Select;
 
@@ -190,9 +191,9 @@ const OwnershipSelect: React.FC<OwnershipSelectProps> = ({
     <Space>
       <span>{ownership.name}</span>
       {ownership.short_name != null && (
-        <span style={{ color: '#999', fontSize: '12px' }}>({ownership.short_name})</span>
+        <span className={styles.shortNameText}>({ownership.short_name})</span>
       )}
-      <span style={{ color: '#666', fontSize: '12px' }}>[{ownership.code}]</span>
+      <span className={styles.codeText}>[{ownership.code}]</span>
       {ownership.is_active === false && <Tag color="red">禁用</Tag>}
     </Space>
   );
@@ -212,7 +213,7 @@ const OwnershipSelect: React.FC<OwnershipSelectProps> = ({
         color={ownership?.is_active === true ? 'blue' : 'red'}
         closable={closable}
         onClose={onClose}
-        style={{ marginRight: 3 }}
+        className={styles.selectedTag}
       >
         {ownership?.name ?? value}
       </Tag>

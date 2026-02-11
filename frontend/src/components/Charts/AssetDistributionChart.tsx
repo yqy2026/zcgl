@@ -13,6 +13,7 @@ import type {
   TooltipFormatterResult,
   TooltipCustomContentProps,
 } from '@/types/charts';
+import styles from './AssetDistributionChart.module.css';
 
 const { Text } = Typography;
 
@@ -100,12 +101,12 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
           name: (datum.type as string) ?? '',
           value: `${datum.value as number} 个`,
         }),
-        customContent: (_title: string, data: TooltipCustomContentProps['data']) => {
-          const datum = data?.[0]?.data as DistributionDataPoint | undefined;
+        customContent: (_title: string, tooltipData: TooltipCustomContentProps['data']) => {
+          const datum = tooltipData?.[0]?.data as DistributionDataPoint | undefined;
           if (datum == null) return null;
           return (
-            <div style={{ padding: '8px' }}>
-              <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{datum.type}</div>
+            <div className={styles.chartTooltip}>
+              <div className={styles.tooltipTitle}>{datum.type}</div>
               <div>数量: {datum.value} 个</div>
               <div>占比: {datum.percentage?.toFixed(1)}%</div>
               <div>总面积: {datum.total_area?.toLocaleString()} ㎡</div>
@@ -229,12 +230,12 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
           name: (datum.full_name as string | undefined) ?? (datum.entity as string) ?? '',
           value: `${datum.count as number} 个`,
         }),
-        customContent: (_title: string, data: TooltipCustomContentProps['data']) => {
-          const datum = data?.[0]?.data as ColumnDataPoint | undefined;
+        customContent: (_title: string, tooltipData: TooltipCustomContentProps['data']) => {
+          const datum = tooltipData?.[0]?.data as ColumnDataPoint | undefined;
           if (datum == null) return null;
           return (
-            <div style={{ padding: '8px' }}>
-              <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
+            <div className={styles.chartTooltip}>
+              <div className={styles.tooltipTitle}>
                 {datum.full_name ?? (datum.entity as string)}
               </div>
               <div>资产数量: {datum.count as number} 个</div>
@@ -265,6 +266,13 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
     [data]
   );
 
+  const getUsageStatusTone = (usageStatus: string): 'green' | 'red' | 'blue' | 'default' => {
+    if (usageStatus === '出租') return 'green';
+    if (usageStatus === '闲置') return 'red';
+    if (usageStatus === '自用') return 'blue';
+    return 'default';
+  };
+
   if (error !== undefined && error !== null) {
     return (
       <Alert
@@ -277,53 +285,53 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
   }
 
   return (
-    <div>
+    <div className={styles.assetDistributionChart}>
       {/* 总体统计 */}
-      <Row gutter={16} style={{ marginBottom: 16 }}>
+      <Row gutter={16} className={styles.summaryRow}>
         <Col xs={12} sm={6}>
-          <Card>
+          <Card className={styles.summaryCard}>
             <Statistic
               title="资产总数"
               value={data?.total_assets ?? 0}
               suffix="个"
               prefix={<HomeOutlined />}
-              styles={{ content: { color: '#1890ff' } }}
+              className={styles.statisticPrimary}
             />
           </Card>
         </Col>
 
         <Col xs={12} sm={6}>
-          <Card>
+          <Card className={styles.summaryCard}>
             <Statistic
               title="总面积"
               value={data?.summary?.total_area ?? 0}
               suffix="㎡"
               formatter={value => `${Number(value).toLocaleString()}`}
-              styles={{ content: { color: '#52c41a' } }}
+              className={styles.statisticSuccess}
             />
           </Card>
         </Col>
 
         <Col xs={12} sm={6}>
-          <Card>
+          <Card className={styles.summaryCard}>
             <Statistic
               title="权属方数量"
               value={data?.by_ownership_entity?.length ?? 0}
               suffix="个"
               prefix={<UserOutlined />}
-              styles={{ content: { color: '#722ed1' } }}
+              className={styles.statisticAccent}
             />
           </Card>
         </Col>
 
         <Col xs={12} sm={6}>
-          <Card>
+          <Card className={styles.summaryCard}>
             <Statistic
               title="经营类面积"
               value={data?.summary?.commercial_area ?? 0}
               suffix="㎡"
               formatter={value => `${Number(value).toLocaleString()}`}
-              styles={{ content: { color: '#faad14' } }}
+              className={styles.statisticWarning}
             />
           </Card>
         </Col>
@@ -333,7 +341,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
       <Row gutter={16}>
         {/* 物业性质分布 */}
         <Col xs={24} md={12} lg={8}>
-          <Card title="物业性质分布" style={{ marginBottom: 16 }}>
+          <Card title="物业性质分布" className={styles.chartCard}>
             <Spin spinning={isLoading}>
               <Pie {...propertyNatureChartConfig} height={height} />
             </Spin>
@@ -342,7 +350,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
 
         {/* 确权状态分布 */}
         <Col xs={24} md={12} lg={8}>
-          <Card title="确权状态分布" style={{ marginBottom: 16 }}>
+          <Card title="确权状态分布" className={styles.chartCard}>
             <Spin spinning={isLoading}>
               <Pie {...ownershipStatusChartConfig} height={height} />
             </Spin>
@@ -351,7 +359,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
 
         {/* 使用状态分布 */}
         <Col xs={24} md={12} lg={8}>
-          <Card title="使用状态分布" style={{ marginBottom: 16 }}>
+          <Card title="使用状态分布" className={styles.chartCard}>
             <Spin spinning={isLoading}>
               <Pie {...usageStatusChartConfig} height={height} />
             </Spin>
@@ -369,23 +377,18 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
       </Row>
 
       {/* 详细统计 */}
-      <Row gutter={16} style={{ marginTop: 16 }}>
+      <Row gutter={16} className={styles.detailsRow}>
         <Col xs={24} md={12}>
           <Card title="物业性质详情" size="small">
-            <div style={{ maxHeight: 300, overflowY: 'auto' }}>
+            <div className={styles.detailList}>
               {data?.by_property_nature?.map((item, index) => (
                 <div
                   key={item.property_nature}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '8px 0',
-                    borderBottom:
-                      index < (data.by_property_nature?.length ?? 0) - 1
-                        ? '1px solid #f0f0f0'
-                        : 'none',
-                  }}
+                  className={
+                    index < (data.by_property_nature?.length ?? 0) - 1
+                      ? styles.detailItem
+                      : `${styles.detailItem} ${styles.detailItemLast}`
+                  }
                 >
                   <div>
                     <Space>
@@ -393,12 +396,13 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
                       <Text>{item.count} 个</Text>
                     </Space>
                     <br />
-                    <Text type="secondary" style={{ fontSize: '12px' }}>
+                    <Text type="secondary" className={styles.detailMeta}>
                       面积: {item.total_area?.toLocaleString()} ㎡
                     </Text>
                   </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <Text style={{ fontWeight: 'bold' }}>{item.percentage?.toFixed(1)}%</Text>
+                  <div className={styles.detailValue}>
+                    <Text className={styles.detailPercentage}>{item.percentage?.toFixed(1)}%</Text>
+                    <div className={styles.detailLabel}>占比</div>
                   </div>
                 </div>
               ))}
@@ -408,41 +412,25 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
 
         <Col xs={24} md={12}>
           <Card title="使用状态详情" size="small">
-            <div style={{ maxHeight: 300, overflowY: 'auto' }}>
+            <div className={styles.detailList}>
               {data?.by_usage_status?.map((item, index) => (
                 <div
                   key={item.usage_status}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '8px 0',
-                    borderBottom:
-                      index < (data.by_usage_status?.length ?? 0) - 1
-                        ? '1px solid #f0f0f0'
-                        : 'none',
-                  }}
+                  className={
+                    index < (data.by_usage_status?.length ?? 0) - 1
+                      ? styles.detailItem
+                      : `${styles.detailItem} ${styles.detailItemLast}`
+                  }
                 >
                   <div>
                     <Space>
-                      <Tag
-                        color={
-                          item.usage_status === '出租'
-                            ? 'green'
-                            : item.usage_status === '闲置'
-                              ? 'red'
-                              : item.usage_status === '自用'
-                                ? 'blue'
-                                : 'default'
-                        }
-                      >
-                        {item.usage_status}
-                      </Tag>
+                      <Tag color={getUsageStatusTone(item.usage_status)}>{item.usage_status}</Tag>
                       <Text>{item.count} 个</Text>
                     </Space>
                   </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <Text style={{ fontWeight: 'bold' }}>{item.percentage?.toFixed(1)}%</Text>
+                  <div className={styles.detailValue}>
+                    <Text className={styles.detailPercentage}>{item.percentage?.toFixed(1)}%</Text>
+                    <div className={styles.detailLabel}>占比</div>
                   </div>
                 </div>
               ))}

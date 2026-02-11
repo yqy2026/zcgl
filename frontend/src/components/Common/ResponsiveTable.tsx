@@ -18,12 +18,22 @@ export interface ResponsiveTableProps<T> extends Omit<TableProps<T>, 'pagination
   /**
    * Title for card view (mobile)
    */
-  cardTitle?: string;
+  cardTitle?: React.ReactNode;
   /**
    * Mobile breakpoint in pixels
    * @default 768
    */
   mobileBreakpoint?: number;
+  /**
+   * Accessible label for mobile card view
+   * @default 移动端卡片列表
+   */
+  mobileListAriaLabel?: string;
+  /**
+   * Empty description for mobile card view
+   * @default 暂无数据
+   */
+  emptyDescription?: React.ReactNode;
   /**
    * Custom render function for card view
    */
@@ -67,18 +77,29 @@ const getDisplayValue = (value: unknown): React.ReactNode => {
 };
 
 export function ResponsiveTable<T extends object>({
-  cardTitle: _cardTitle,
+  cardTitle,
   mobileBreakpoint = 768,
+  mobileListAriaLabel = '移动端卡片列表',
+  emptyDescription = '暂无数据',
   renderCard,
   cardFields,
   dataSource,
   columns,
   rowKey,
+  className,
   ...rest
 }: ResponsiveTableProps<T>) {
   const [isMobile, setIsMobile] = useState(
     typeof window !== 'undefined' ? window.innerWidth < mobileBreakpoint : false
   );
+  const totalCount = dataSource?.length ?? 0;
+  const hasData = Array.isArray(dataSource) && dataSource.length > 0;
+  const mobileSectionClassName = [styles.mobileSection, className]
+    .filter((currentClassName): currentClassName is string => {
+      return currentClassName != null && currentClassName !== '';
+    })
+    .join(' ');
+  const showCardTitle = cardTitle != null;
 
   useEffect(() => {
     const handleResize = () => {
@@ -89,85 +110,107 @@ export function ResponsiveTable<T extends object>({
     return () => window.removeEventListener('resize', handleResize);
   }, [mobileBreakpoint]);
 
-  // If mobile and custom card render is provided
-  if (isMobile && renderCard) {
+  const getRecordKey = (record: T, index: number): React.Key => {
+    if (typeof rowKey === 'function') {
+      return rowKey(record, index);
+    }
+    if (rowKey == null) {
+      return index;
+    }
+    return (getRecordValue(record, String(rowKey)) as React.Key | undefined) ?? index;
+  };
+
+  const renderMobileHeader = () => {
+    if (showCardTitle !== true) {
+      return null;
+    }
     return (
-      <div className={styles.cardList}>
-        {dataSource && dataSource.length > 0 ? (
-          dataSource.map((record, index) => {
-            const key =
-              typeof rowKey === 'function'
-                ? rowKey(record, index)
-                : rowKey == null
-                  ? index
-                  : (getRecordValue(record, String(rowKey)) as React.Key | undefined) ??
-                    index;
-            return (
-              <div key={key} className={styles.cardListItem}>
-                {renderCard(record, index)}
-              </div>
-            );
-          })
-        ) : (
-          <Empty description="暂无数据" />
-        )}
+      <div className={styles.mobileHeader}>
+        <span className={styles.mobileTitle}>{cardTitle}</span>
+        <span className={styles.mobileMeta}>共 {totalCount} 条</span>
       </div>
+    );
+  };
+
+  const renderEmptyState = () => (
+    <div className={styles.emptyState}>
+      <Empty description={emptyDescription} />
+    </div>
+  );
+
+  // If mobile and custom card render is provided
+  if (isMobile === true && renderCard != null) {
+    return (
+      <section className={mobileSectionClassName} aria-label={mobileListAriaLabel}>
+        {renderMobileHeader()}
+        {hasData ? (
+          <div className={styles.cardList} role="list">
+            {dataSource.map((record, index) => {
+              const key = getRecordKey(record, index);
+              return (
+                <div key={key} className={styles.cardListItem} role="listitem">
+                  {renderCard(record, index)}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          renderEmptyState()
+        )}
+      </section>
     );
   }
 
   // If mobile and card fields are provided, auto-generate cards
-  if (isMobile && cardFields && columns) {
+  if (isMobile === true && cardFields != null && columns != null) {
     return (
-      <div className={styles.cardList}>
-        {dataSource && dataSource.length > 0 ? (
-          dataSource.map((record, index) => {
-            const key =
-              typeof rowKey === 'function'
-                ? rowKey(record, index)
-                : rowKey == null
-                  ? index
-                  : (getRecordValue(record, String(rowKey)) as React.Key | undefined) ??
-                    index;
+      <section className={mobileSectionClassName} aria-label={mobileListAriaLabel}>
+        {renderMobileHeader()}
+        {hasData ? (
+          <div className={styles.cardList} role="list">
+            {dataSource.map((record, index) => {
+              const key = getRecordKey(record, index);
 
-            return (
-              <Card key={key} className={styles.mobileCard}>
-                {cardFields.map((fieldConfig) => {
-                  const fieldKey = typeof fieldConfig === 'string' ? fieldConfig : fieldConfig.key;
-                  const label = typeof fieldConfig === 'string' ? fieldKey : fieldConfig.label;
-                  const render = typeof fieldConfig === 'string' ? undefined : fieldConfig.render;
+              return (
+                <Card key={key} className={styles.mobileCard} role="listitem">
+                  {cardFields.map(fieldConfig => {
+                    const fieldKey = typeof fieldConfig === 'string' ? fieldConfig : fieldConfig.key;
+                    const label = typeof fieldConfig === 'string' ? fieldKey : fieldConfig.label;
+                    const render = typeof fieldConfig === 'string' ? undefined : fieldConfig.render;
 
-                  // Find corresponding column for dataIndex
-                  const column = columns.find(col => {
-                    // Skip column groups
-                    if ('children' in col) return false;
-                    if (typeof col.dataIndex === 'string') {
-                      return col.dataIndex === fieldKey;
-                    } else if (Array.isArray(col.dataIndex)) {
-                      return col.dataIndex.join('.') === fieldKey;
-                    }
-                    return false;
-                  });
+                    // Find corresponding column for dataIndex
+                    const column = columns.find(col => {
+                      // Skip column groups
+                      if ('children' in col) return false;
+                      if (typeof col.dataIndex === 'string') {
+                        return col.dataIndex === fieldKey;
+                      } else if (Array.isArray(col.dataIndex)) {
+                        return col.dataIndex.join('.') === fieldKey;
+                      }
+                      return false;
+                    });
 
-                  const value = getRecordValue(record, fieldKey);
+                    const value = getRecordValue(record, fieldKey);
 
-                  return (
-                    <div key={fieldKey} className={styles.cardFieldRow}>
-                      <div className={styles.cardFieldLabel}>
-                        {typeof column?.title === 'string' ? column.title : label}
+                    return (
+                      <div key={fieldKey} className={styles.cardFieldRow}>
+                        <div className={styles.cardFieldLabel}>
+                          {typeof column?.title === 'string' ? column.title : label}
+                        </div>
+                        <div className={styles.cardFieldValue}>
+                          {render != null ? render(value, record) : getDisplayValue(value)}
+                        </div>
                       </div>
-                      <div className={styles.cardFieldValue}>
-                        {render ? render(value, record) : getDisplayValue(value)}
-                      </div>
-                    </div>
-                  );
-                })}
-              </Card>
-            );
-          })
+                    );
+                  })}
+                </Card>
+              );
+            })}
+          </div>
         ) : (
-          <Empty description="暂无数据" />
+          renderEmptyState()
         )}
-      </div>
+      </section>
     );
   }
 
@@ -178,6 +221,7 @@ export function ResponsiveTable<T extends object>({
       columns={columns}
       rowKey={rowKey}
       pagination={false}
+      className={className}
       {...rest}
     />
   );

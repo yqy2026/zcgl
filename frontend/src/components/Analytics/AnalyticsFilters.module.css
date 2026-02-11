@@ -1,0 +1,49 @@
+.filtersCard {
+  margin-bottom: 16px;
+  border-radius: 12px;
+}
+
+.filtersCard :global(.ant-card-head-title) {
+  display: flex;
+  align-items: center;
+}
+
+.headerIcon {
+  color: var(--color-primary);
+}
+
+.filtersCountTag {
+  margin-inline-start: 2px;
+}
+
+.headerActions {
+  align-items: center;
+}
+
+.iconActionButton {
+  min-height: 32px;
+  border-radius: 8px;
+}
+
+.advancedToggleButton {
+  min-height: 32px;
+  border-radius: 8px;
+  padding-inline: 10px;
+}
+
+.iconActionButton:focus-visible,
+.advancedToggleButton:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+@media (max-width: 768px) {
+  .iconActionButton,
+  .advancedToggleButton {
+    min-height: 40px;
+  }
+
+  .advancedToggleButton {
+    padding-inline: 12px;
+  }
+}

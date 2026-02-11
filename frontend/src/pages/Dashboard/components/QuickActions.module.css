@@ -1,0 +1,90 @@
+.actionsGrid {
+  width: 100%;
+}
+
+.actionCard {
+  text-align: center;
+  height: 120px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition:
+    transform var(--transition-base),
+    box-shadow var(--transition-base),
+    border-color var(--transition-base);
+}
+
+.actionCard:hover {
+  transform: translateY(-2px);
+}
+
+.actionCard:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.actionCard :global(.ant-card-body) {
+  height: 100%;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.actionContent {
+  width: 100%;
+  align-items: center;
+}
+
+.actionIcon {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.tonePrimary {
+  color: var(--color-primary);
+}
+
+.toneSuccess {
+  color: var(--color-success);
+}
+
+.toneWarning {
+  color: var(--color-warning);
+}
+
+.toneInfo {
+  color: var(--color-info);
+}
+
+.toneSecondary {
+  color: var(--color-secondary);
+}
+
+.toneNeutral {
+  color: var(--color-text-tertiary);
+}
+
+.actionTextGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.actionTitle {
+  font-size: 14px;
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.4;
+  color: var(--color-text-primary);
+}
+
+.actionDescription {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 768px) {
+  .actionCard {
+    min-height: 132px;
+  }
+}

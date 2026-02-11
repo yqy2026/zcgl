@@ -1,12 +1,10 @@
 from datetime import date
 from typing import Any
 
-from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from ...constants.rent_contract_constants import SettlementStatus
-from ...core.enums import ContractStatus
+from ...crud.rent_contract import rent_contract, rent_ledger
 from ...models.rent_contract import (
     ContractType,
     RentContract,
@@ -31,16 +29,10 @@ class RentContractHelperMixin:
     ) -> list[dict[str, Any]]:
         conflicts = []
 
-        conditions = [RentContract.contract_status == ContractStatus.ACTIVE]
-        if exclude_contract_id:
-            conditions.append(RentContract.id != exclude_contract_id)
-
-        stmt = (
-            select(RentContract)
-            .options(selectinload(RentContract.assets))
-            .where(and_(*conditions))
+        existing_contracts = await rent_contract.get_active_with_assets_async(
+            db,
+            exclude_contract_id=exclude_contract_id,
         )
-        existing_contracts = list((await db.execute(stmt)).scalars().all())
 
         for contract in existing_contracts:
             contract_assets = [a.id for a in contract.assets]
@@ -129,15 +121,7 @@ class RentContractHelperMixin:
     async def _calculate_service_fee_for_ledger_async(
         self, db: AsyncSession, ledger: RentLedger
     ) -> ServiceFeeLedger | None:
-        contract = (
-            (
-                await db.execute(
-                    select(RentContract).where(RentContract.id == ledger.contract_id)
-                )
-            )
-            .scalars()
-            .first()
-        )
+        contract = await rent_contract.get_async(db, id=ledger.contract_id)
         if not contract:
             return None
 
@@ -147,16 +131,9 @@ class RentContractHelperMixin:
         if not contract.service_fee_rate or contract.service_fee_rate <= 0:
             return None
 
-        existing = (
-            (
-                await db.execute(
-                    select(ServiceFeeLedger).where(
-                        ServiceFeeLedger.source_ledger_id == ledger.id
-                    )
-                )
-            )
-            .scalars()
-            .first()
+        existing = await rent_ledger.get_service_fee_by_source_ledger_async(
+            db,
+            source_ledger_id=ledger.id,
         )
         if existing:
             existing.paid_rent_amount = ledger.paid_amount

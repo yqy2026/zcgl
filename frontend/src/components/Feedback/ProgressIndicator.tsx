@@ -6,6 +6,7 @@ import {
   ClockCircleOutlined,
   ExclamationCircleOutlined,
 } from '@ant-design/icons';
+import styles from './ProgressIndicator.module.css';
 
 const { Text, Title } = Typography;
 
@@ -68,13 +69,13 @@ const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
   const getStatusIcon = () => {
     switch (status) {
       case 'success':
-        return <CheckCircleOutlined style={{ color: '#52c41a' }} />;
+        return <CheckCircleOutlined className={styles.successIcon} />;
       case 'exception':
-        return <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />;
+        return <ExclamationCircleOutlined className={styles.exceptionIcon} />;
       case 'active':
-        return <LoadingOutlined style={{ color: '#1890ff' }} />;
+        return <LoadingOutlined className={styles.activeIcon} />;
       default:
-        return <ClockCircleOutlined style={{ color: '#8c8c8c' }} />;
+        return <ClockCircleOutlined className={styles.defaultIcon} />;
     }
   };
 
@@ -165,11 +166,11 @@ const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
   return (
     <div style={style} className={className}>
       {(title != null || description != null) && (
-        <div style={{ marginBottom: 16 }}>
+        <div className={styles.headerSection}>
           {title != null && (
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+            <div className={styles.titleRow}>
               {getStatusIcon()}
-              <Title level={5} style={{ margin: '0 0 0 8px' }}>
+              <Title level={5} className={styles.titleText}>
                 {title}
               </Title>
             </div>
@@ -237,8 +238,8 @@ export const ProgressCard: React.FC<{
     title={
       <Space>
         {status === 'active' && <LoadingOutlined />}
-        {status === 'success' && <CheckCircleOutlined style={{ color: '#52c41a' }} />}
-        {status === 'exception' && <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />}
+        {status === 'success' && <CheckCircleOutlined className={styles.successIcon} />}
+        {status === 'exception' && <ExclamationCircleOutlined className={styles.exceptionIcon} />}
         <span>{title}</span>
       </Space>
     }
@@ -246,7 +247,7 @@ export const ProgressCard: React.FC<{
     actions={actions}
   >
     {description != null && (
-      <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
+      <Text type="secondary" className={styles.cardDescription}>
         {description}
       </Text>
     )}

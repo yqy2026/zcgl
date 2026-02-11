@@ -1,6 +1,7 @@
 import React from 'react';
 import { Row, Col, Typography, Space, Tag, Input, Tooltip } from 'antd';
 import { useAnalyticsFiltersContext, FILTER_PRESETS } from './FiltersContext';
+import styles from './Filters.module.css';
 
 const { Text } = Typography;
 const { Search } = Input;
@@ -13,13 +14,15 @@ const SearchPresetsSection: React.FC = () => {
     useAnalyticsFiltersContext();
 
   return (
-    <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+    <Row gutter={[16, 16]} className={styles.searchPresetsRow}>
       <Col xs={24} md={8}>
-        <Text strong>搜索资产:</Text>
+        <Text strong className={styles.fieldLabel}>
+          搜索资产:
+        </Text>
         <Search
           placeholder="输入资产名称、地址等关键词"
           allowClear
-          style={{ marginTop: 8 }}
+          className={styles.fieldControl}
           value={searchText}
           onChange={e => handleSearch(e.target.value)}
           onSearch={handleSearch}
@@ -27,14 +30,16 @@ const SearchPresetsSection: React.FC = () => {
         />
       </Col>
       <Col xs={24} md={16}>
-        <Text strong>快速筛选:</Text>
-        <div style={{ marginTop: 8 }}>
-          <Space wrap>
+        <Text strong className={styles.fieldLabel}>
+          快速筛选:
+        </Text>
+        <div className={styles.tagGroupContainer}>
+          <Space wrap size={[8, 8]} className={styles.tagSpace}>
             {FILTER_PRESETS.map(preset => (
               <Tooltip key={preset.key} title={preset.description}>
                 <Tag
                   color={selectedPreset === preset.key ? 'blue' : 'default'}
-                  style={{ cursor: 'pointer', padding: '4px 8px' }}
+                  className={styles.presetTag}
                   onClick={() => handlePresetSelect(preset.key)}
                 >
                   {preset.label}

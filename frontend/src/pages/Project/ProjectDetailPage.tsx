@@ -31,10 +31,10 @@ import { projectService } from '@/services/projectService';
 import { assetService } from '@/services/assetService';
 import type { ColumnsType } from 'antd/es/table';
 import type { Asset } from '@/types/asset';
-import { COLORS } from '@/styles/colorMap';
 import { useArrayListData } from '@/hooks/useArrayListData';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
 import { PageContainer } from '@/components/Common';
+import styles from './ProjectDetailPage.module.css';
 
 const { Text } = Typography;
 
@@ -81,7 +81,11 @@ const ProjectDetailPage: React.FC = () => {
       dataIndex: 'property_name',
       key: 'property_name',
       render: (text: string, record: Asset) => (
-        <Button type="link" onClick={() => navigate(`/assets/${record.id}`)} style={{ padding: 0 }}>
+        <Button
+          type="link"
+          className={styles.assetLinkButton}
+          onClick={() => navigate(`/assets/${record.id}`)}
+        >
           {text}
         </Button>
       ),
@@ -105,14 +109,14 @@ const ProjectDetailPage: React.FC = () => {
       dataIndex: 'rentable_area',
       key: 'rentable_area',
       align: 'right',
-      render: (val: number) => val?.toLocaleString() || '-',
+      render: (val?: number | null) => (val != null ? val.toLocaleString() : '-'),
     },
     {
       title: '已出租面积 (㎡)',
       dataIndex: 'rented_area',
       key: 'rented_area',
       align: 'right',
-      render: (val: number) => val?.toLocaleString() || '-',
+      render: (val?: number | null) => (val != null ? val.toLocaleString() : '-'),
     },
     {
       title: '租户',
@@ -127,8 +131,13 @@ const ProjectDetailPage: React.FC = () => {
   const totalAssets = assets.length;
   const totalRentableArea = assets.reduce((sum, a) => sum + (a.rentable_area ?? 0), 0);
   const totalRentedArea = assets.reduce((sum, a) => sum + (a.rented_area ?? 0), 0);
-  const occupancyRate =
-    totalRentableArea > 0 ? ((totalRentedArea / totalRentableArea) * 100).toFixed(1) : '0';
+  const occupancyRate = totalRentableArea > 0 ? (totalRentedArea / totalRentableArea) * 100 : 0;
+  const occupancyToneClass =
+    occupancyRate >= 80
+      ? styles.occupancySuccess
+      : occupancyRate >= 50
+        ? styles.occupancyWarning
+        : styles.occupancyError;
 
   const {
     data: assetRows,
@@ -172,16 +181,16 @@ const ProjectDetailPage: React.FC = () => {
   return (
     <PageContainer
       title={
-        <>
-          {project?.name}
+        <span className={styles.projectTitle}>
+          <span>{project?.name}</span>
           {project && (
             <Badge
               status={project.is_active ? 'success' : 'error'}
               text={project.is_active ? '启用' : '禁用'}
-              style={{ marginLeft: 12 }}
+              className={styles.projectStatus}
             />
           )}
-        </>
+        </span>
       }
       loading={projectLoading}
       onBack={() => navigate('/project')}
@@ -189,57 +198,57 @@ const ProjectDetailPage: React.FC = () => {
         <Button
           type="primary"
           icon={<EditOutlined />}
+          className={styles.editButton}
           onClick={() => navigate(`/project/${id}/edit`)}
         >
           编辑项目
         </Button>
       }
     >
-      <Row gutter={16} style={{ marginBottom: '24px' }}>
-        <Col span={6}>
-          <Card>
-            <Statistic title="关联资产" value={totalAssets} prefix={<HomeOutlined />} suffix="个" />
+      <Row gutter={[16, 16]} className={styles.metricsRow}>
+        <Col xs={24} sm={12} lg={6}>
+          <Card className={styles.metricCard}>
+            <Statistic
+              title="关联资产"
+              value={totalAssets}
+              prefix={<HomeOutlined />}
+              suffix="个"
+              className={styles.metricPrimary}
+            />
           </Card>
         </Col>
-        <Col span={6}>
-          <Card>
+        <Col xs={24} sm={12} lg={6}>
+          <Card className={styles.metricCard}>
             <Statistic
               title="可出租总面积"
               value={totalRentableArea}
               precision={2}
               prefix={<AreaChartOutlined />}
               suffix="㎡"
+              className={styles.metricSuccess}
             />
           </Card>
         </Col>
-        <Col span={6}>
-          <Card>
+        <Col xs={24} sm={12} lg={6}>
+          <Card className={styles.metricCard}>
             <Statistic
               title="已出租面积"
               value={totalRentedArea}
               precision={2}
               prefix={<TeamOutlined />}
               suffix="㎡"
+              className={styles.metricWarning}
             />
           </Card>
         </Col>
-        <Col span={6}>
-          <Card>
+        <Col xs={24} sm={12} lg={6}>
+          <Card className={styles.metricCard}>
             <Statistic
               title="出租率"
               value={occupancyRate}
               precision={1}
               suffix="%"
-              styles={{
-                content: {
-                  color:
-                    parseFloat(occupancyRate) >= 80
-                      ? COLORS.success
-                      : parseFloat(occupancyRate) >= 50
-                        ? COLORS.warning
-                        : COLORS.error,
-                },
-              }}
+              className={occupancyToneClass}
             />
           </Card>
         </Col>
@@ -248,17 +257,20 @@ const ProjectDetailPage: React.FC = () => {
       {/* 项目基本信息 */}
       {project && (
         <>
-          <Card title="项目信息" style={{ marginBottom: '24px' }}>
+          <Card title="项目信息" className={styles.infoCard}>
             <Descriptions column={2}>
               <Descriptions.Item label="项目编码">
                 <Text code>{project.code}</Text>
               </Descriptions.Item>
               <Descriptions.Item label="项目状态">
-                <Tag color={project.data_status === '正常' ? 'green' : 'default'}>
+                <Tag
+                  color={project.data_status === '正常' ? 'green' : 'default'}
+                  className={styles.projectDataStatusTag}
+                >
                   {project.data_status}
                 </Tag>
               </Descriptions.Item>
-              <Descriptions.Item label="项目描述" span={2}>
+              <Descriptions.Item label="项目描述" span={2} className={styles.projectDescription}>
                 {project.description ?? '-'}
               </Descriptions.Item>
               <Descriptions.Item label="创建时间">
@@ -272,10 +284,11 @@ const ProjectDetailPage: React.FC = () => {
 
           {/* 关联资产列表 */}
           <Card
+            className={styles.assetTableCard}
             title={
-              <Space>
+              <Space className={styles.assetTableTitle}>
                 <span>关联资产</span>
-                <Badge count={totalAssets} style={{ backgroundColor: COLORS.primary }} />
+                <Badge count={totalAssets} className={styles.assetCountBadge} />
               </Space>
             }
           >

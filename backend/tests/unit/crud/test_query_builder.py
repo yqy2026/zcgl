@@ -1,8 +1,9 @@
 from sqlalchemy import select
 
-from src.crud.query_builder import QueryBuilder
+from src.crud.query_builder import QueryBuilder, TenantFilter
 from src.models.asset import Asset  # Using Asset as a test model
 from src.models.ownership import Ownership
+from src.models.rbac import Role
 
 
 class TestQueryBuilder:
@@ -87,3 +88,35 @@ class TestQueryBuilder:
 
         assert "assets.data_status = '已删除'" in compiled
         assert "assets.data_status IS NULL" not in compiled
+
+    def test_build_query_applies_tenant_filter_for_organization_id(self):
+        qb = QueryBuilder(Role)
+        query = qb.build_query(
+            tenant_filter=TenantFilter(organization_ids=["org-1", "org-2"])
+        )
+        compiled = str(query.compile(compile_kwargs={"literal_binds": True}))
+
+        assert "roles.organization_id IN ('org-1', 'org-2')" in compiled
+
+    def test_build_count_query_applies_tenant_filter_for_organization_id(self):
+        qb = QueryBuilder(Role)
+        query = qb.build_count_query(
+            tenant_filter=TenantFilter(organization_ids=["org-1"])
+        )
+        compiled = str(query.compile(compile_kwargs={"literal_binds": True}))
+
+        assert "roles.organization_id IN ('org-1')" in compiled
+
+    def test_build_query_fail_closed_when_tenant_filter_has_no_org_ids(self):
+        qb = QueryBuilder(Role)
+        query = qb.build_query(tenant_filter=TenantFilter(organization_ids=[]))
+        compiled = str(query.compile(compile_kwargs={"literal_binds": True}))
+
+        assert "false" in compiled.lower() or "0 = 1" in compiled
+
+    def test_build_query_skips_tenant_filter_when_model_has_no_organization_id(self):
+        qb = QueryBuilder(Ownership)
+        query = qb.build_query(tenant_filter=TenantFilter(organization_ids=["org-1"]))
+        compiled = str(query.compile(compile_kwargs={"literal_binds": True}))
+
+        assert "ownerships.organization_id" not in compiled

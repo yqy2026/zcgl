@@ -5,6 +5,7 @@
 import React from 'react';
 import { Card, Row, Col, Space, Switch, Typography } from 'antd';
 import { usePDFImportContext } from './PDFImportContext';
+import styles from './ImportOptionsPanel.module.css';
 
 const ImportOptionsPanel: React.FC = () => {
   const { showAdvancedOptions, processingOptions, setProcessingOptions } = usePDFImportContext();
@@ -17,7 +18,7 @@ const ImportOptionsPanel: React.FC = () => {
     <Card
       size="small"
       title="处理选项"
-      style={{ marginTop: 16 }}
+      className={styles.optionsPanel}
       extra={
         <Space>
           <Switch
@@ -43,7 +44,7 @@ const ImportOptionsPanel: React.FC = () => {
     >
       <Row gutter={16}>
         <Col span={12}>
-          <Space orientation="vertical" style={{ width: '100%' }}>
+          <Space orientation="vertical" className={styles.fullWidthStack}>
             <div>
               <Typography.Text strong>置信度阈值</Typography.Text>
               <input
@@ -58,7 +59,7 @@ const ImportOptionsPanel: React.FC = () => {
                     confidence_threshold: parseFloat(e.target.value),
                   }))
                 }
-                style={{ width: '100%' }}
+                className={styles.fullWidthRange}
               />
               <Typography.Text type="secondary">
                 {processingOptions.confidence_threshold}
@@ -67,7 +68,7 @@ const ImportOptionsPanel: React.FC = () => {
           </Space>
         </Col>
         <Col span={12}>
-          <Space orientation="vertical" style={{ width: '100%' }}>
+          <Space orientation="vertical" className={styles.fullWidthStack}>
             <Switch
               checked={processingOptions.enable_multi_engine_fusion}
               onChange={checked =>

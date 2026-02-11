@@ -9,11 +9,10 @@ from datetime import date
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...constants.rent_contract_constants import PaymentStatus
 from ...core.exception_handler import ResourceNotFoundError
+from ...crud.collection import collection_crud
 from ...models.collection import CollectionRecord, CollectionStatus
 from ...models.rent_contract import RentLedger
 from ...schemas.collection import (
@@ -30,50 +29,25 @@ class CollectionService:
         today = date.today()
         current_month_start = date(today.year, today.month, 1)
 
-        overdue_stmt = (
-            select(
-                func.count(RentLedger.id).label("total_count"),
-                func.sum(RentLedger.overdue_amount).label("total_amount"),
-            )
-            .where(
-                and_(
-                    RentLedger.payment_status.in_(
-                        [PaymentStatus.UNPAID, PaymentStatus.PARTIAL]
-                    ),
-                    RentLedger.due_date < today,
-                    RentLedger.data_status == "正常",
-                )
-            )
-            .select_from(RentLedger)
-        )
-        overdue_stats = (await db.execute(overdue_stmt)).first()
-
-        total_overdue_count = (
-            int(overdue_stats.total_count) if overdue_stats and overdue_stats.total_count else 0
-        )
-        total_overdue_amount = (
-            overdue_stats.total_amount if overdue_stats and overdue_stats.total_amount else Decimal("0")
+        total_overdue_count, total_overdue_amount = (
+            await collection_crud.get_overdue_ledger_stats_async(db, today=today)
         )
 
-        pending_stmt = select(func.count(CollectionRecord.id)).where(
-            CollectionRecord.collection_status.in_(
-                [CollectionStatus.PENDING, CollectionStatus.IN_PROGRESS]
-            )
+        pending_collection_count = await collection_crud.count_by_statuses_async(
+            db,
+            statuses=[CollectionStatus.PENDING, CollectionStatus.IN_PROGRESS],
         )
-        pending_collection_count = int((await db.execute(pending_stmt)).scalar() or 0)
 
-        this_month_stmt = select(func.count(CollectionRecord.id)).where(
-            CollectionRecord.collection_date >= current_month_start
+        this_month_collection_count = await collection_crud.count_since_date_async(
+            db,
+            collection_date=current_month_start,
         )
-        this_month_collection_count = int((await db.execute(this_month_stmt)).scalar() or 0)
 
-        success_stmt = select(func.count(CollectionRecord.id)).where(
-            CollectionRecord.collection_status == CollectionStatus.SUCCESS
+        success_count = await collection_crud.count_by_statuses_async(
+            db,
+            statuses=[CollectionStatus.SUCCESS],
         )
-        success_count = int((await db.execute(success_stmt)).scalar() or 0)
-
-        total_stmt = select(func.count(CollectionRecord.id))
-        total_collection_count = int((await db.execute(total_stmt)).scalar() or 0)
+        total_collection_count = await collection_crud.count_total_async(db)
 
         collection_success_rate = None
         if total_collection_count > 0:
@@ -99,32 +73,17 @@ class CollectionService:
         page: int = 1,
         page_size: int = 20,
     ) -> dict[str, Any]:
-        conditions = []
-        if ledger_id:
-            conditions.append(CollectionRecord.ledger_id == ledger_id)
-        if contract_id:
-            conditions.append(CollectionRecord.contract_id == contract_id)
-        if collection_status:
-            conditions.append(CollectionRecord.collection_status == collection_status)
-
-        count_stmt = select(func.count(CollectionRecord.id))
-        if conditions:
-            count_stmt = count_stmt.where(and_(*conditions))
-        total = int((await db.execute(count_stmt)).scalar() or 0)
-
-        offset = (page - 1) * page_size
-        stmt = select(CollectionRecord)
-        if conditions:
-            stmt = stmt.where(and_(*conditions))
-        stmt = (
-            stmt.order_by(CollectionRecord.created_at.desc())
-            .offset(offset)
-            .limit(page_size)
+        items, total = await collection_crud.get_multi_with_filters_async(
+            db,
+            ledger_id=ledger_id,
+            contract_id=contract_id,
+            collection_status=collection_status,
+            page=page,
+            page_size=page_size,
         )
-        records = (await db.execute(stmt)).scalars().all()
 
         return {
-            "items": records,
+            "items": items,
             "total": total,
             "page": page,
             "page_size": page_size,
@@ -133,14 +92,12 @@ class CollectionService:
     async def get_by_id_async(
         self, db: AsyncSession, *, record_id: str
     ) -> CollectionRecord | None:
-        stmt = select(CollectionRecord).where(CollectionRecord.id == record_id)
-        return (await db.execute(stmt)).scalars().first()
+        return await collection_crud.get_by_id_async(db, record_id=record_id)
 
     async def get_ledger_by_id_async(
         self, db: AsyncSession, *, ledger_id: str
     ) -> RentLedger | None:
-        stmt = select(RentLedger).where(RentLedger.id == ledger_id)
-        return (await db.execute(stmt)).scalars().first()
+        return await collection_crud.get_ledger_by_id_async(db, ledger_id=ledger_id)
 
     async def create_async(
         self,
@@ -160,12 +117,7 @@ class CollectionService:
         if not record_data.get("operator_id") and operator_id:
             record_data["operator_id"] = operator_id
 
-        record = CollectionRecord(**record_data)
-        db.add(record)
-        await db.commit()
-        await db.refresh(record)
-
-        return record
+        return await collection_crud.create(db, obj_in=record_data)
 
     async def update_async(
         self,
@@ -174,20 +126,12 @@ class CollectionService:
         db_obj: CollectionRecord,
         obj_in: CollectionRecordUpdate,
     ) -> CollectionRecord:
-        update_dict = obj_in.model_dump(exclude_unset=True)
-        for field, value in update_dict.items():
-            setattr(db_obj, field, value)
-
-        await db.commit()
-        await db.refresh(db_obj)
-
-        return db_obj
+        return await collection_crud.update(db, db_obj=db_obj, obj_in=obj_in)
 
     async def delete_async(
         self, db: AsyncSession, *, db_obj: CollectionRecord
     ) -> None:
-        await db.delete(db_obj)
-        await db.commit()
+        await collection_crud.remove(db, id=str(db_obj.id))
 
 
 # 单例实例

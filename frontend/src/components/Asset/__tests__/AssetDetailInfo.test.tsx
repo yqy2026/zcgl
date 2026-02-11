@@ -443,7 +443,7 @@ describe('AssetDetailInfo', () => {
       expect(screen.getByText('合同信息')).toBeInTheDocument();
     });
 
-    it('应该显示租户名称', () => {
+    it('应该显示承租方名称', () => {
       const asset = createMockAsset({
         usage_status: '出租',
         tenant_name: '测试租户公司',

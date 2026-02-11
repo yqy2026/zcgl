@@ -1,0 +1,8 @@
+.loadingFallback {
+  padding: 60px;
+  text-align: center;
+}
+
+.loadingText {
+  margin-top: 16px;
+}

@@ -1,0 +1,34 @@
+.successIcon {
+  color: #52c41a;
+}
+
+.exceptionIcon {
+  color: #ff4d4f;
+}
+
+.activeIcon {
+  color: #1890ff;
+}
+
+.defaultIcon {
+  color: #8c8c8c;
+}
+
+.headerSection {
+  margin-bottom: 16px;
+}
+
+.titleRow {
+  align-items: center;
+  display: flex;
+  margin-bottom: 8px;
+}
+
+.titleText {
+  margin: 0 0 0 8px !important;
+}
+
+.cardDescription {
+  display: block;
+  margin-bottom: 16px;
+}

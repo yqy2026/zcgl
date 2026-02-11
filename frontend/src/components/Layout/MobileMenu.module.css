@@ -1,0 +1,83 @@
+.menuTriggerButton {
+  width: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: var(--radius-md);
+  font-size: 16px;
+  color: var(--color-text-secondary);
+  transition:
+    color var(--transition-fast),
+    background-color var(--transition-fast);
+}
+
+.menuTriggerButton:hover {
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.menuTriggerButton:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.mobileMenuDrawer {
+  --drawer-item-gap: 4px;
+}
+
+.drawerBody {
+  padding: 0 !important;
+}
+
+.drawerTitleGroup {
+  align-items: center;
+  gap: 8px;
+}
+
+.drawerHomeIcon {
+  color: var(--color-primary);
+}
+
+.drawerCloseButton {
+  width: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: var(--radius-md);
+}
+
+.drawerCloseButton:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.menuRoot {
+  border-right: 0 !important;
+  height: 100%;
+  background: var(--color-bg-primary) !important;
+  padding: 8px;
+}
+
+.menuRoot :global(.ant-menu-item),
+.menuRoot :global(.ant-menu-submenu-title) {
+  min-height: 44px;
+  margin: var(--drawer-item-gap) 0;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+}
+
+.menuRoot :global(.ant-menu-item-selected) {
+  background: var(--color-primary-light) !important;
+  color: var(--color-primary) !important;
+  font-weight: var(--font-weight-semibold);
+}
+
+.menuRoot :global(.ant-menu-item:hover),
+.menuRoot :global(.ant-menu-submenu-title:hover) {
+  background: var(--color-bg-secondary) !important;
+}
+
+.menuRoot :global(.ant-menu-item:focus-visible),
+.menuRoot :global(.ant-menu-submenu-title:focus-visible) {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}

@@ -1,7 +1,6 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...constants.rent_contract_constants import PaymentStatus
@@ -86,16 +85,9 @@ class RentContractLedgerService(RentContractHelperMixin):
     async def batch_update_payment_async(
         self, db: AsyncSession, *, request: RentLedgerBatchUpdate
     ) -> list[RentLedger]:
-        ledgers = list(
-            (
-                await db.execute(
-                    select(RentLedger).where(
-                        RentLedger.id.in_(request.ledger_ids)
-                    )
-                )
-            )
-            .scalars()
-            .all()
+        ledgers = await rent_ledger.get_multi_by_ids_async(
+            db,
+            ledger_ids=request.ledger_ids,
         )
 
         for ledger in ledgers:
@@ -191,25 +183,20 @@ class RentContractLedgerService(RentContractHelperMixin):
     async def get_contract_by_id_async(
         self, db: AsyncSession, *, contract_id: str
     ) -> RentContract | None:
-        stmt = select(RentContract).where(RentContract.id == contract_id)
-        return (await db.execute(stmt)).scalars().first()
+        return await rent_contract.get_async(db, id=contract_id)
 
     async def get_deposit_ledger_async(
         self, db: AsyncSession, *, contract_id: str
     ) -> list[RentDepositLedger]:
-        stmt = (
-            select(RentDepositLedger)
-            .where(RentDepositLedger.contract_id == contract_id)
-            .order_by(desc(RentDepositLedger.created_at))
+        return await rent_ledger.get_deposit_ledger_by_contract_async(
+            db,
+            contract_id=contract_id,
         )
-        return list((await db.execute(stmt)).scalars().all())
 
     async def get_service_fee_ledger_async(
         self, db: AsyncSession, *, contract_id: str
     ) -> list[ServiceFeeLedger]:
-        stmt = (
-            select(ServiceFeeLedger)
-            .where(ServiceFeeLedger.contract_id == contract_id)
-            .order_by(desc(ServiceFeeLedger.year_month))
+        return await rent_ledger.get_service_fee_ledger_by_contract_async(
+            db,
+            contract_id=contract_id,
         )
-        return list((await db.execute(stmt)).scalars().all())

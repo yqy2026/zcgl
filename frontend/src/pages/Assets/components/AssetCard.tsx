@@ -11,6 +11,7 @@ import {
 import type { Asset } from '@/types/asset';
 import { PropertyNature } from '@/types/asset';
 import { COLORS } from '@/styles/colorMap';
+import styles from './AssetCard.module.css';
 
 const { Text, Title } = Typography;
 const { Meta } = Card;
@@ -73,7 +74,7 @@ const AssetCard: React.FC<AssetCardProps> = ({ asset, onView, onEdit, onDelete }
       <Meta
         title={
           <div>
-            <Title level={5} style={{ margin: 0, marginBottom: '8px' }}>
+            <Title level={5} className={styles.cardTitle}>
               {asset.property_name}
             </Title>
             <Space wrap>
@@ -86,32 +87,32 @@ const AssetCard: React.FC<AssetCardProps> = ({ asset, onView, onEdit, onDelete }
           </div>
         }
         description={
-          <div style={{ marginTop: '12px' }}>
+          <div className={styles.cardDescription}>
             {/* 地址信息 */}
-            <div style={{ marginBottom: '8px' }}>
+            <div className={styles.addressRow}>
               <Space>
-                <EnvironmentOutlined style={{ color: COLORS.textTertiary }} />
-                <Text type="secondary" style={{ fontSize: '12px' }}>
+                <EnvironmentOutlined className={styles.detailIcon} />
+                <Text type="secondary" className={styles.detailText}>
                   {asset.address}
                 </Text>
               </Space>
             </div>
 
             {/* 权属方 */}
-            <div style={{ marginBottom: '8px' }}>
+            <div className={styles.ownershipRow}>
               <Space>
-                <UserOutlined style={{ color: COLORS.textTertiary }} />
-                <Text type="secondary" style={{ fontSize: '12px' }}>
+                <UserOutlined className={styles.detailIcon} />
+                <Text type="secondary" className={styles.detailText}>
                   {asset.ownership_entity}
                 </Text>
               </Space>
             </div>
 
             {/* 面积信息 */}
-            <div style={{ marginBottom: '12px' }}>
+            <div className={styles.areaRow}>
               <Space>
-                <BuildOutlined style={{ color: COLORS.textTertiary }} />
-                <Text type="secondary" style={{ fontSize: '12px' }}>
+                <BuildOutlined className={styles.detailIcon} />
+                <Text type="secondary" className={styles.detailText}>
                   总面积: {asset.actual_property_area}㎡ | 可租: {asset.rentable_area}㎡ | 已租:{' '}
                   {asset.rented_area}㎡
                 </Text>
@@ -120,13 +121,13 @@ const AssetCard: React.FC<AssetCardProps> = ({ asset, onView, onEdit, onDelete }
 
             {/* 出租率 */}
             <div>
-              <div style={{ marginBottom: '4px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                  <Text style={{ fontSize: '12px' }}>出租率</Text>
+              <div className={styles.occupancyHeader}>
+                <div className={styles.occupancyHeaderRow}>
+                  <Text className={styles.occupancyLabel}>出租率</Text>
                   <Text
                     strong
+                    className={styles.occupancyValue}
                     style={{
-                      fontSize: '12px',
                       color: getOccupancyColor(occupancyRate),
                     }}
                   >

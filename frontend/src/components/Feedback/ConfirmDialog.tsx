@@ -10,6 +10,7 @@ import {
   QuestionCircleOutlined,
   InfoCircleOutlined,
 } from '@ant-design/icons';
+import styles from './ConfirmDialog.module.css';
 
 const { Text, Paragraph } = Typography;
 
@@ -55,7 +56,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   // 预设配置
   const presetConfigs = {
     delete: {
-      icon: <DeleteOutlined style={{ color: '#ff4d4f', fontSize: 24 }} />,
+      icon: <DeleteOutlined className={`${styles.confirmIcon} ${styles.confirmIconDanger}`} />,
       title: '确认删除',
       confirmText: '删除',
       danger: true,
@@ -67,9 +68,9 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
               : `确定要删除${itemName != null ? `"${itemName}"` : '此项目'}吗？`}
           </Paragraph>
           {details != null && details.length > 0 && (
-            <div style={{ marginTop: 16 }}>
+            <div className={styles.confirmDetailsContainer}>
               <Text type="secondary">将要删除的内容：</Text>
-              <ul style={{ marginTop: 8, paddingLeft: 20 }}>
+              <ul className={styles.confirmDetailsList}>
                 {details.map(detail => (
                   <li key={detail}>
                     <Text type="secondary">{detail}</Text>
@@ -78,14 +79,14 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
               </ul>
             </div>
           )}
-          <Paragraph type="danger" style={{ marginTop: 16, marginBottom: 0 }}>
+          <Paragraph type="danger" className={styles.confirmDangerParagraph}>
             <Text strong>此操作不可撤销，请谨慎操作！</Text>
           </Paragraph>
         </div>
       ),
     },
     edit: {
-      icon: <EditOutlined style={{ color: '#1890ff', fontSize: 24 }} />,
+      icon: <EditOutlined className={`${styles.confirmIcon} ${styles.confirmIconInfo}`} />,
       title: '确认编辑',
       confirmText: '继续编辑',
       danger: false,
@@ -99,7 +100,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       ),
     },
     save: {
-      icon: <SaveOutlined style={{ color: '#52c41a', fontSize: 24 }} />,
+      icon: <SaveOutlined className={`${styles.confirmIcon} ${styles.confirmIconSuccess}`} />,
       title: '确认保存',
       confirmText: '保存',
       danger: false,
@@ -107,9 +108,9 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         <div>
           <Paragraph>确定要保存当前的更改吗？</Paragraph>
           {details != null && details.length > 0 && (
-            <div style={{ marginTop: 16 }}>
+            <div className={styles.confirmDetailsContainer}>
               <Text type="secondary">将要保存的更改：</Text>
-              <ul style={{ marginTop: 8, paddingLeft: 20 }}>
+              <ul className={styles.confirmDetailsList}>
                 {details.map(detail => (
                   <li key={detail}>
                     <Text type="secondary">{detail}</Text>
@@ -122,7 +123,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       ),
     },
     logout: {
-      icon: <LogoutOutlined style={{ color: '#faad14', fontSize: 24 }} />,
+      icon: <LogoutOutlined className={`${styles.confirmIcon} ${styles.confirmIconWarning}`} />,
       title: '确认退出',
       confirmText: '退出',
       danger: false,
@@ -134,7 +135,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       ),
     },
     cancel: {
-      icon: <StopOutlined style={{ color: '#faad14', fontSize: 24 }} />,
+      icon: <StopOutlined className={`${styles.confirmIcon} ${styles.confirmIconWarning}`} />,
       title: '确认取消',
       confirmText: '确认取消',
       danger: false,
@@ -146,14 +147,16 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       ),
     },
     warning: {
-      icon: <ExclamationCircleOutlined style={{ color: '#faad14', fontSize: 24 }} />,
+      icon: (
+        <ExclamationCircleOutlined className={`${styles.confirmIcon} ${styles.confirmIconWarning}`} />
+      ),
       title: '警告',
       confirmText: '确定',
       danger: false,
       getContent: () => <Paragraph>请确认您要执行此操作。</Paragraph>,
     },
     info: {
-      icon: <InfoCircleOutlined style={{ color: '#1890ff', fontSize: 24 }} />,
+      icon: <InfoCircleOutlined className={`${styles.confirmIcon} ${styles.confirmIconInfo}`} />,
       title: '提示',
       confirmText: '确定',
       danger: false,
@@ -217,7 +220,7 @@ export const showDeleteConfirm = (options: Omit<ConfirmDialogProps, 'type' | 'vi
     Modal.confirm({
       title: (
         <Space>
-          <DeleteOutlined style={{ color: '#ff4d4f' }} />
+          <DeleteOutlined className={styles.confirmShortcutDeleteIcon} />
           <span>{options.title ?? '确认删除'}</span>
         </Space>
       ),
@@ -257,7 +260,7 @@ export const showSaveConfirm = (options: Omit<ConfirmDialogProps, 'type' | 'visi
     Modal.confirm({
       title: (
         <Space>
-          <QuestionCircleOutlined style={{ color: '#faad14' }} />
+          <QuestionCircleOutlined className={styles.confirmShortcutSaveIcon} />
           <span>{options.title ?? '确认保存'}</span>
         </Space>
       ),

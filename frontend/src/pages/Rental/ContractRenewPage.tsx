@@ -22,8 +22,8 @@ import { rentContractService } from '@/services/rentContractService';
 import { RENTAL_QUERY_KEYS } from '@/constants/queryKeys';
 import RenewalSummarySection from '@/components/Forms/RentContract/RenewalSummarySection';
 import { createLogger } from '@/utils/logger';
-import { COLORS } from '@/styles/colorMap';
 import { PageContainer } from '@/components/Common';
+import styles from './ContractRenewPage.module.css';
 
 const pageLogger = createLogger('ContractRenewPage');
 
@@ -168,9 +168,10 @@ const ContractRenewPage: React.FC = () => {
 
   return (
     <PageContainer
+      className={styles.pageContainer}
       title={
         <>
-          <span style={{ marginRight: '8px', color: COLORS.success }}>
+          <span className={styles.titleIcon}>
             <CheckCircleOutlined />
           </span>
           合同续签
@@ -186,25 +187,16 @@ const ContractRenewPage: React.FC = () => {
       }
       onBack={handleCancel}
       loading={isLoadingContract}
-      contentStyle={{ background: COLORS.bgTertiary }}
     >
       {/* 创建/更新成功提示 */}
       {contractCreated && (
-        <Card
-          style={{
-            marginBottom: '16px',
-            borderColor: COLORS.success,
-            backgroundColor: 'var(--color-success-light, #f6ffed)',
-          }}
-        >
+        <Card className={styles.successCard}>
           <Row align="middle">
             <Col>
-              <CheckCircleOutlined
-                style={{ fontSize: '24px', color: COLORS.success, marginRight: '12px' }}
-              />
+              <CheckCircleOutlined className={styles.successIcon} />
             </Col>
             <Col flex="1">
-              <Title level={4} style={{ color: COLORS.success, margin: 0 }}>
+              <Title level={4} className={styles.successTitle}>
                 合同续签成功！
               </Title>
               <Text type="secondary">
@@ -217,18 +209,16 @@ const ContractRenewPage: React.FC = () => {
 
       {/* 创建指南 */}
       {!contractCreated && (
-        <Card
-          style={{ marginBottom: '16px', backgroundColor: 'var(--color-primary-light, #e6f7ff)' }}
-        >
-          <Title level={5} style={{ color: COLORS.primary, marginBottom: '12px' }}>
-            <CheckCircleOutlined style={{ marginRight: '6px' }} />
+        <Card className={styles.guideCard}>
+          <Title level={5} className={styles.guideTitle}>
+            <CheckCircleOutlined className={styles.guideTitleIcon} />
             续签说明
           </Title>
           <Row gutter={16}>
             <Col span={6}>
-              <div style={{ textAlign: 'center', padding: '8px' }}>
-                <FileTextOutlined style={{ fontSize: '24px', color: COLORS.primary }} />
-                <div style={{ marginTop: '8px' }}>
+              <div className={styles.guideStep}>
+                <FileTextOutlined className={styles.guideStepIcon} />
+                <div className={styles.guideStepText}>
                   <Text strong>自动继承</Text>
                   <br />
                   <Text type="secondary">承租方、资产</Text>
@@ -236,9 +226,9 @@ const ContractRenewPage: React.FC = () => {
               </div>
             </Col>
             <Col span={6}>
-              <div style={{ textAlign: 'center', padding: '8px' }}>
-                <FileTextOutlined style={{ fontSize: '24px', color: COLORS.primary }} />
-                <div style={{ marginTop: '8px' }}>
+              <div className={styles.guideStep}>
+                <FileTextOutlined className={styles.guideStepIcon} />
+                <div className={styles.guideStepText}>
                   <Text strong>日期调整</Text>
                   <br />
                   <Text type="secondary">新开始=原结束+1天</Text>
@@ -246,9 +236,9 @@ const ContractRenewPage: React.FC = () => {
               </div>
             </Col>
             <Col span={6}>
-              <div style={{ textAlign: 'center', padding: '8px' }}>
-                <FileTextOutlined style={{ fontSize: '24px', color: COLORS.primary }} />
-                <div style={{ marginTop: '8px' }}>
+              <div className={styles.guideStep}>
+                <FileTextOutlined className={styles.guideStepIcon} />
+                <div className={styles.guideStepText}>
                   <Text strong>条款继承</Text>
                   <br />
                   <Text type="secondary">租金金额保持不变</Text>
@@ -256,9 +246,9 @@ const ContractRenewPage: React.FC = () => {
               </div>
             </Col>
             <Col span={6}>
-              <div style={{ textAlign: 'center', padding: '8px' }}>
-                <FileTextOutlined style={{ fontSize: '24px', color: COLORS.primary }} />
-                <div style={{ marginTop: '8px' }}>
+              <div className={styles.guideStep}>
+                <FileTextOutlined className={styles.guideStepIcon} />
+                <div className={styles.guideStepText}>
                   <Text strong>押金转移</Text>
                   <br />
                   <Text type="secondary">自动转到新合同</Text>
@@ -266,7 +256,7 @@ const ContractRenewPage: React.FC = () => {
               </div>
             </Col>
           </Row>
-          <div style={{ marginTop: '12px' }}>
+          <div className={styles.guideNotes}>
             <Text type="secondary">
               • 系统已自动预填原合同数据，请根据需要修改
               <br />

@@ -16,6 +16,7 @@ interface ListToolbarProps {
   align?: 'top' | 'middle' | 'bottom';
   cardProps?: Omit<CardProps, 'children'>;
   variant?: 'card' | 'plain';
+  className?: string;
 }
 
 export const ListToolbar: React.FC<ListToolbarProps> = ({
@@ -24,8 +25,9 @@ export const ListToolbar: React.FC<ListToolbarProps> = ({
   align = 'middle',
   cardProps,
   variant = 'card',
+  className,
 }) => {
-  const toolbarCardClassName = [styles.toolbarCard, cardProps?.className]
+  const toolbarCardClassName = [styles.toolbarCard, className, cardProps?.className]
     .filter((className): className is string => className != null && className !== '')
     .join(' ');
 
@@ -40,7 +42,10 @@ export const ListToolbar: React.FC<ListToolbarProps> = ({
   );
 
   if (variant === 'plain') {
-    return content;
+    const toolbarPlainClassName = [styles.toolbarPlain, className]
+      .filter((className): className is string => className != null && className !== '')
+      .join(' ');
+    return <div className={toolbarPlainClassName}>{content}</div>;
   }
 
   return (

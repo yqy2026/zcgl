@@ -38,6 +38,11 @@ export interface TableWithPaginationProps<T> extends Omit<
    * Fields to display in card view
    */
   cardFields?: Array<Extract<keyof T, string> | { key: string; label: string; render?: (value: unknown, record: T) => React.ReactNode }>;
+  /**
+   * Accessible label for pagination navigation
+   * @default 表格分页导航
+   */
+  paginationAriaLabel?: string;
 }
 
 export const TableWithPagination = <T extends object>(props: TableWithPaginationProps<T>) => {
@@ -50,6 +55,7 @@ export const TableWithPagination = <T extends object>(props: TableWithPagination
     cardTitle,
     renderCard,
     cardFields,
+    paginationAriaLabel = '表格分页导航',
     className,
     ...rest
   } = props;
@@ -100,17 +106,19 @@ export const TableWithPagination = <T extends object>(props: TableWithPagination
 
       {/* Pagination */}
       <div className={styles.paginationContainer}>
-        <Pagination
-          current={paginationState.current}
-          pageSize={paginationState.pageSize}
-          total={paginationState.total}
-          showSizeChanger
-          showQuickJumper
-          showTotal={(total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`}
-          onChange={handlePageChange}
-          {...paginationProps}
-          responsive
-        />
+        <nav aria-label={paginationAriaLabel} className={styles.paginationNav}>
+          <Pagination
+            current={paginationState.current}
+            pageSize={paginationState.pageSize}
+            total={paginationState.total}
+            showSizeChanger
+            showQuickJumper
+            showTotal={(total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`}
+            onChange={handlePageChange}
+            {...paginationProps}
+            responsive
+          />
+        </nav>
       </div>
     </div>
   );

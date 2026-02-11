@@ -40,8 +40,8 @@ import {
 } from '@/services/assetImportService';
 import { STANDARD_SHEET_NAME, IMPORT_INSTRUCTIONS } from '@/config/excelConfig';
 import { createLogger } from '@/utils/logger';
-import { COLORS } from '@/styles/colorMap';
 import { useArrayListData } from '@/hooks/useArrayListData';
+import styles from './AssetImport.module.css';
 
 const importLogger = createLogger('AssetImport');
 
@@ -51,6 +51,42 @@ const { Option } = Select;
 type ImportConfig = Pick<AssetImportServiceConfig, 'useOptimized' | 'skipErrors'> & {
   batchSize: number;
   timeout: number;
+};
+
+type ImportResultTone = 'success' | 'warning' | 'error' | 'neutral';
+
+const RESULT_CARD_CLASS_MAP: Record<ImportResultTone, string> = {
+  success: styles.resultSummarySuccess,
+  warning: styles.resultSummaryWarning,
+  error: styles.resultSummaryError,
+  neutral: styles.resultSummaryNeutral,
+};
+
+const RESULT_ICON_CLASS_MAP: Record<ImportResultTone, string> = {
+  success: styles.resultSummaryIconSuccess,
+  warning: styles.resultSummaryIconWarning,
+  error: styles.resultSummaryIconError,
+  neutral: styles.resultSummaryIconNeutral,
+};
+
+const RESULT_TITLE_ICON_CLASS_MAP: Record<ImportResultTone, string> = {
+  success: styles.resultSummaryTitleIconSuccess,
+  warning: styles.resultSummaryTitleIconWarning,
+  error: styles.resultSummaryTitleIconError,
+  neutral: styles.resultSummaryTitleIconNeutral,
+};
+
+const getImportResultTone = (result: AssetImportResult): ImportResultTone => {
+  if (result.success > 0 && result.failed === 0) {
+    return 'success';
+  }
+  if (result.success > 0 && result.failed > 0) {
+    return 'warning';
+  }
+  if (result.failed > 0) {
+    return 'error';
+  }
+  return 'neutral';
 };
 
 const OptimizedAssetImport: React.FC = () => {
@@ -234,18 +270,13 @@ const OptimizedAssetImport: React.FC = () => {
     void loadErrorList({ page: 1 });
   }, [errorData, loadErrorList]);
 
+  const importResultTone = importResult != null ? getImportResultTone(importResult) : 'neutral';
+
   return (
-    <div style={{ padding: '24px' }}>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '24px',
-        }}
-      >
-        <Title level={2}>
-          <FileExcelOutlined /> 数据导入
+    <div className={styles.importPage}>
+      <div className={styles.pageHeader}>
+        <Title level={2} className={styles.pageTitle}>
+          <FileExcelOutlined className={styles.pageTitleIcon} aria-hidden /> 数据导入
         </Title>
         <Button type="dashed" icon={<SettingOutlined />} onClick={() => setShowConfig(!showConfig)}>
           {showConfig ? '隐藏配置' : '显示配置'}
@@ -254,7 +285,7 @@ const OptimizedAssetImport: React.FC = () => {
 
       {/* 配置面板 */}
       {showConfig && (
-        <Card title="导入配置" size="small" style={{ marginBottom: '24px' }}>
+        <Card title="导入配置" size="small" className={styles.configCard}>
           <Row gutter={[16, 16]}>
             <Col xs={24} sm={12} md={6}>
               <Form.Item label="使用优化导入">
@@ -302,7 +333,7 @@ const OptimizedAssetImport: React.FC = () => {
       <Card>
         <Steps
           current={currentStep}
-          style={{ marginBottom: '32px' }}
+          className={styles.stepper}
           items={[
             { title: '选择文件', content: '上传Excel文件' },
             { title: '执行导入', content: '处理数据' },
@@ -316,7 +347,7 @@ const OptimizedAssetImport: React.FC = () => {
             <Alert
               title="导入说明"
               description={
-                <div>
+                <div className={styles.instructionsDescription}>
                   <p>• 支持Excel文件批量导入资产数据</p>
                   <p>• 智能数据验证和错误处理</p>
                   <p>• 实时导入进度反馈</p>
@@ -330,13 +361,13 @@ const OptimizedAssetImport: React.FC = () => {
               }
               type="info"
               showIcon
-              style={{ marginBottom: '24px' }}
+              className={styles.instructionsAlert}
             />
 
             <Row gutter={[16, 16]}>
               <Col xs={24} sm={12}>
                 <Card size="small" title="第一步：下载模板">
-                  <Space orientation="vertical" style={{ width: '100%' }}>
+                  <Space orientation="vertical" className={styles.fullWidthStack}>
                     <Text>下载标准的Excel导入模板</Text>
                     <Button
                       type="primary"
@@ -352,11 +383,11 @@ const OptimizedAssetImport: React.FC = () => {
 
               <Col xs={24} sm={12}>
                 <Card size="small" title="第二步：上传文件">
-                  <Space orientation="vertical" style={{ width: '100%' }}>
+                  <Space orientation="vertical" className={styles.fullWidthStack}>
                     <Text>选择填写好的Excel文件</Text>
-                    <Upload.Dragger {...uploadProps}>
+                    <Upload.Dragger {...uploadProps} className={styles.uploadDragger}>
                       <p className="ant-upload-drag-icon">
-                        <FileExcelOutlined style={{ fontSize: '48px', color: COLORS.primary }} />
+                        <FileExcelOutlined className={styles.uploadIcon} />
                       </p>
                       <p className="ant-upload-text">点击或拖拽文件到此区域上传</p>
                       <p className="ant-upload-hint">
@@ -372,19 +403,17 @@ const OptimizedAssetImport: React.FC = () => {
 
         {/* 步骤1: 执行导入 */}
         {currentStep === 1 && (
-          <div style={{ textAlign: 'center' }}>
-            <FileExcelOutlined
-              style={{ fontSize: '64px', color: COLORS.success, marginBottom: '16px' }}
-            />
+          <div className={styles.importExecution}>
+            <FileExcelOutlined className={styles.executionIcon} />
             <Title level={4}>文件已选择</Title>
-            <Text>文件名：{fileList[0]?.name}</Text>
+            <Text className={styles.executionFileMeta}>文件名：{fileList[0]?.name}</Text>
             <br />
             <Text type="secondary">
               文件大小：{((fileList[0]?.size ?? 0) / 1024 / 1024).toFixed(2)} MB
             </Text>
 
             {uploading && (
-              <div style={{ marginTop: '24px' }}>
+              <div className={styles.progressBlock}>
                 <Progress percent={Math.round(progress)} status="active" />
                 <Text type="secondary">导入中...</Text>
               </div>
@@ -413,56 +442,48 @@ const OptimizedAssetImport: React.FC = () => {
             {/* 导入状态概览 */}
             <Card
               size="small"
-              style={{
-                marginBottom: '24px',
-                backgroundColor:
-                  importResult.success > 0
-                    ? '#f6ffed'
-                    : importResult.failed > 0
-                      ? '#fff2f0'
-                      : '#f0f2f5',
-                border:
-                  importResult.success > 0
-                    ? '1px solid #b7eb8f'
-                    : importResult.failed > 0
-                      ? '1px solid #ffccc7'
-                      : '1px solid #d9d9d9',
-              }}
+              className={`${styles.resultSummaryCard} ${RESULT_CARD_CLASS_MAP[importResultTone]}`}
             >
-              <div style={{ textAlign: 'center', padding: '16px' }}>
+              <div className={styles.resultSummaryBody}>
                 {importResult.success > 0 && importResult.failed === 0 ? (
-                  <CheckCircleOutlined style={{ fontSize: '64px', color: COLORS.success }} />
+                  <CheckCircleOutlined
+                    className={`${styles.resultSummaryIcon} ${RESULT_ICON_CLASS_MAP[importResultTone]}`}
+                  />
                 ) : importResult.success > 0 && importResult.failed > 0 ? (
-                  <ExclamationCircleOutlined style={{ fontSize: '64px', color: COLORS.warning }} />
+                  <ExclamationCircleOutlined
+                    className={`${styles.resultSummaryIcon} ${RESULT_ICON_CLASS_MAP[importResultTone]}`}
+                  />
                 ) : (
-                  <ExclamationCircleOutlined style={{ fontSize: '64px', color: COLORS.error }} />
+                  <ExclamationCircleOutlined
+                    className={`${styles.resultSummaryIcon} ${RESULT_ICON_CLASS_MAP[importResultTone]}`}
+                  />
                 )}
 
-                <Title level={3} style={{ marginTop: '8px' }}>
+                <Title level={3} className={styles.resultSummaryTitle}>
                   {importResult.success > 0 && importResult.failed === 0 ? (
                     <Space>
-                      <CheckCircleFilled style={{ color: COLORS.success }} />
+                      <CheckCircleFilled className={RESULT_TITLE_ICON_CLASS_MAP[importResultTone]} />
                       导入成功！
                     </Space>
                   ) : importResult.success > 0 && importResult.failed > 0 ? (
                     <Space>
-                      <ExclamationCircleFilled style={{ color: COLORS.warning }} />
+                      <ExclamationCircleFilled className={RESULT_TITLE_ICON_CLASS_MAP[importResultTone]} />
                       部分成功
                     </Space>
                   ) : importResult.failed > 0 ? (
                     <Space>
-                      <CloseCircleFilled style={{ color: COLORS.error }} />
+                      <CloseCircleFilled className={RESULT_TITLE_ICON_CLASS_MAP[importResultTone]} />
                       导入失败
                     </Space>
                   ) : (
                     <Space>
-                      <FileTextFilled style={{ color: COLORS.primary }} />
+                      <FileTextFilled className={RESULT_TITLE_ICON_CLASS_MAP[importResultTone]} />
                       导入完成
                     </Space>
                   )}
                 </Title>
 
-                <Text type="secondary" style={{ fontSize: '16px' }}>
+                <Text type="secondary" className={styles.resultSummaryText}>
                   {importResult.processing_time !== undefined &&
                     importResult.processing_time !== null && (
                       <span>处理时间: {importResult.processing_time}秒 | </span>
@@ -478,7 +499,7 @@ const OptimizedAssetImport: React.FC = () => {
 
                 {/* 性能指标 */}
                 {importResult.performance_metrics && (
-                  <div style={{ marginTop: '16px' }}>
+                  <div className={styles.resultSummaryMetrics}>
                     <Text type="secondary">
                       性能指标: {importResult.performance_metrics.records_per_second} 记录/秒
                       {importResult.performance_metrics.estimated_time_for_1000 > 0 && (
@@ -495,32 +516,24 @@ const OptimizedAssetImport: React.FC = () => {
             </Card>
 
             {/* 详细统计 */}
-            <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
+            <Row gutter={[16, 16]} className={styles.statsRow}>
               <Col xs={24} sm={8}>
-                <Card size="small" variant="borderless">
-                  <Statistic
-                    title="成功记录"
-                    value={importResult.success}
-                    styles={{ content: { color: '#3f8600' } }}
-                  />
+                <Card size="small" variant="borderless" className={styles.statCard}>
+                  <Statistic title="成功记录" value={importResult.success} className={styles.statisticSuccess} />
                 </Card>
               </Col>
               <Col xs={24} sm={8}>
-                <Card size="small" variant="borderless">
+                <Card size="small" variant="borderless" className={styles.statCard}>
                   <Statistic
                     title="失败记录"
                     value={importResult.failed}
-                    styles={{ content: { color: importResult.failed > 0 ? '#cf1322' : '#d9d9d9' } }}
+                    className={importResult.failed > 0 ? styles.statisticError : styles.statisticMuted}
                   />
                 </Card>
               </Col>
               <Col xs={24} sm={8}>
-                <Card size="small" variant="borderless">
-                  <Statistic
-                    title="总计"
-                    value={importResult.total}
-                    styles={{ content: { color: COLORS.primary } }}
-                  />
+                <Card size="small" variant="borderless" className={styles.statCard}>
+                  <Statistic title="总计" value={importResult.total} className={styles.statisticPrimary} />
                 </Card>
               </Col>
             </Row>
@@ -530,7 +543,7 @@ const OptimizedAssetImport: React.FC = () => {
               <Card
                 title={`错误详情 (${importResult.errors.length} 条)`}
                 size="small"
-                style={{ marginBottom: '16px' }}
+                className={styles.errorCard}
                 extra={
                   <Button
                     type="link"
@@ -559,7 +572,7 @@ const OptimizedAssetImport: React.FC = () => {
               </Card>
             )}
 
-            <div style={{ textAlign: 'center', marginTop: '24px' }}>
+            <div className={styles.resultActions}>
               <Space size="large">
                 <Button onClick={handleReset}>重新导入</Button>
                 <Button type="primary" onClick={() => (window.location.href = '/assets')}>

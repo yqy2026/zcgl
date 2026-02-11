@@ -128,9 +128,9 @@ export const DICTIONARY_CONFIGS: Record<string, DictionaryConfig> = {
 
   tenant_type: {
     code: 'tenant_type',
-    name: '租户类型',
+    name: '承租方类型',
     category: '租赁信息',
-    description: '租户类型分类',
+    description: '承租方类型分类',
     apiEndpoint: '/system/dictionaries/tenant_type/options',
     fallbackOptions: [
       { label: '个人', value: 'individual', code: 'individual', sort_order: 1 },

@@ -11,7 +11,6 @@ from typing import Any
 
 from pydantic import BaseModel, Field, model_validator
 from pydantic_core import PydanticCustomError
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...crud.asset import asset_crud
@@ -89,7 +88,11 @@ class AsyncAssetBatchService:
         if not asset_ids:
             return {}
         assets = await asset_crud.get_multi_by_ids_async(
-            self.db, ids=asset_ids, include_relations=False, include_deleted=False
+            self.db,
+            ids=asset_ids,
+            include_relations=False,
+            include_deleted=False,
+            decrypt=False,
         )
         return {str(asset.id): asset for asset in assets if getattr(asset, "id", None)}
 
@@ -145,7 +148,7 @@ class AsyncAssetBatchService:
         if ownership_id == "":
             return True, None
 
-        ownership_obj = await ownership.get_async(self.db, ownership_id)
+        ownership_obj = await ownership.get(self.db, id=ownership_id)
         if not ownership_obj:
             raise ValueError("权属方不存在")
 

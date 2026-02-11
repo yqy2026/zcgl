@@ -52,7 +52,7 @@ export const AVAILABLE_EXPORT_FIELDS: ExportFieldOption[] = [
   { key: 'business_category', label: '业态类别' },
   { key: 'business_model', label: '接收模式' },
   { key: 'occupancy_rate', label: '出租率' },
-  { key: 'tenant_name', label: '租户名称' },
+  { key: 'tenant_name', label: '承租方名称' },
   { key: 'lease_contract_number', label: '租赁合同编号' },
   { key: 'contract_start_date', label: '合同开始日期' },
   { key: 'contract_end_date', label: '合同结束日期' },

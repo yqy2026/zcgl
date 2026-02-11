@@ -109,7 +109,9 @@ class TestGetCustomFields:
         assert len(result) == 2
         assert result[0].field_name == "test_field"
         mock_service.get_custom_fields_async.assert_awaited_once_with(
-            db=mock_db, filters={}
+            db=mock_db,
+            filters={},
+            current_user_id="test-user-id",
         )
 
     async def test_get_custom_fields_with_filters(
@@ -175,7 +177,9 @@ class TestGetCustomField:
         assert result.id == "test-field-id"
         assert result.field_name == "test_field"
         mock_service.get_custom_field_async.assert_awaited_once_with(
-            db=mock_db, field_id="test-field-id"
+            db=mock_db,
+            field_id="test-field-id",
+            current_user_id="test-user-id",
         )
 
     async def test_get_custom_field_not_found(self, mock_db, mock_current_user):

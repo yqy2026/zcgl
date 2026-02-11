@@ -3,6 +3,7 @@ import { Drawer, Menu, Button, Space, Typography } from 'antd';
 import { MenuOutlined, CloseOutlined, HomeOutlined } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { MENU_ITEMS, getSelectedKeys, getOpenKeys } from '@/config/menuConfig';
+import styles from './MobileMenu.module.css';
 
 const { Text } = Typography;
 
@@ -35,20 +36,14 @@ const MobileMenu: React.FC = () => {
         icon={<MenuOutlined />}
         onClick={showMenu}
         aria-label="打开菜单"
-        style={{
-          fontSize: '16px',
-          width: 44,
-          height: 44,
-          minWidth: 44,
-          minHeight: 44,
-        }}
+        className={styles.menuTriggerButton}
       />
 
       {/* 抽屉菜单 */}
       <Drawer
         title={
-          <Space>
-            <HomeOutlined style={{ color: 'var(--color-primary)' }} aria-label="首页" />
+          <Space className={styles.drawerTitleGroup}>
+            <HomeOutlined className={styles.drawerHomeIcon} aria-label="首页" />
             <Text strong>资产管理系统</Text>
           </Space>
         }
@@ -56,21 +51,15 @@ const MobileMenu: React.FC = () => {
         onClose={hideMenu}
         open={visible}
         size={280}
-        styles={{
-          body: { padding: 0 },
-        }}
+        className={styles.mobileMenuDrawer}
+        classNames={{ body: styles.drawerBody }}
         extra={
           <Button
             type="text"
             icon={<CloseOutlined />}
             onClick={hideMenu}
             aria-label="关闭菜单"
-            style={{
-              width: 44,
-              height: 44,
-              minWidth: 44,
-              minHeight: 44,
-            }}
+            className={styles.drawerCloseButton}
           />
         }
         aria-label="移动端导航菜单"
@@ -81,11 +70,7 @@ const MobileMenu: React.FC = () => {
           defaultOpenKeys={getOpenKeys(location.pathname)}
           items={MENU_ITEMS}
           onClick={handleMenuClick}
-          style={{
-            borderRight: 0,
-            height: '100%',
-            background: 'var(--color-bg-primary)',
-          }}
+          className={styles.menuRoot}
         />
       </Drawer>
     </>

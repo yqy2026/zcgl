@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from src.crud.query_builder import TenantFilter
 from src.crud.system_dictionary import CRUDSystemDictionary, system_dictionary_crud
 from src.models.system_dictionary import SystemDictionary
 
@@ -128,6 +129,20 @@ class TestCRUDSystemDictionaryGetMultiWithFilters:
         assert call_args.kwargs.get("skip") == 5
         assert call_args.kwargs.get("limit") == 15
 
+    async def test_get_multi_with_tenant_filter(self, crud, mock_db):
+        """测试 get_multi_with_filters 透传 tenant_filter"""
+        tenant_filter = TenantFilter(organization_ids=["org-1"])
+        with patch.object(crud.query_builder, "build_query") as mock_build:
+            mock_build.return_value = MagicMock()
+
+            await crud.get_multi_with_filters_async(
+                mock_db,
+                tenant_filter=tenant_filter,
+            )
+
+        call_args = mock_build.call_args
+        assert call_args.kwargs.get("tenant_filter") == tenant_filter
+
 
 class TestCRUDSystemDictionaryGetByType:
     """测试 get_by_type 方法"""
@@ -194,6 +209,21 @@ class TestCRUDSystemDictionaryGetByType:
             result = await crud.get_by_type_async(mock_db, dict_type="not_exist")
 
         assert result == []
+
+    async def test_get_by_type_with_tenant_filter(self, crud, mock_db):
+        """测试 get_by_type 透传 tenant_filter"""
+        tenant_filter = TenantFilter(organization_ids=["org-1"])
+        with patch.object(crud.query_builder, "build_query") as mock_build:
+            mock_build.return_value = MagicMock()
+
+            await crud.get_by_type_async(
+                mock_db,
+                dict_type="asset_status",
+                tenant_filter=tenant_filter,
+            )
+
+        call_args = mock_build.call_args
+        assert call_args.kwargs.get("tenant_filter") == tenant_filter
 
 
 class TestCRUDSystemDictionaryGetTypes:

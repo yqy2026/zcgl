@@ -351,7 +351,7 @@ const PromptDashboard: React.FC = () => {
           priority: 'low',
           field_name: 'tenant_name',
           issue: '错误率 5.1%',
-          suggestion: '租户名称识别基本良好，可考虑添加更多样例',
+          suggestion: '承租方名称识别基本良好，可考虑添加更多样例',
         },
       ];
 

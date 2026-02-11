@@ -136,6 +136,7 @@ async def get_roles(
             category=category,
             is_active=is_active,
             organization_id=organization_id,
+            current_user_id=str(current_user.id),
         )
 
         return ResponseHandler.paginated(
@@ -490,7 +491,10 @@ async def get_role(
     """获取角色详情及其关联的权限和用户"""
     try:
         rbac_service = RBACService(db)
-        role = await rbac_service.get_role(role_id)
+        role = await rbac_service.get_role(
+            role_id,
+            current_user_id=str(current_user.id),
+        )
 
         if not role:
             raise not_found("角色不存在", resource_type="role", resource_id=role_id)
@@ -522,6 +526,7 @@ async def update_role(
             role_id=role_id,
             role_data=role_data,
             updated_by=str(current_user.id),
+            current_user_id=str(current_user.id),
         )
 
         return RoleDetailResponse.model_validate(updated_role)
@@ -547,7 +552,9 @@ async def delete_role(
     try:
         rbac_service = RBACService(db)
         success = await rbac_service.delete_role(
-            role_id=role_id, deleted_by=str(current_user.id)
+            role_id=role_id,
+            deleted_by=str(current_user.id),
+            current_user_id=str(current_user.id),
         )
 
         if not success:
@@ -611,9 +618,13 @@ async def set_role_permissions(
             role_id=role_id,
             permission_ids=request.permission_ids,
             updated_by=str(current_user.id),
+            current_user_id=str(current_user.id),
         )
 
-        role = await rbac_service.get_role(role_id)
+        role = await rbac_service.get_role(
+            role_id,
+            current_user_id=str(current_user.id),
+        )
 
         return {
             "success": True,
@@ -651,6 +662,7 @@ async def get_role_users(
             role_id,
             skip=skip,
             limit=page_size,
+            current_user_id=str(current_user.id),
         )
 
         return ResponseHandler.paginated(

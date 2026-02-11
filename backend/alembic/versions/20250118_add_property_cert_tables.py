@@ -14,13 +14,21 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "20250118_add_property_cert_tables"
-down_revision: str | None = "20250118_add_user_id_to_extraction_feedback"
+down_revision: str | None = "20250118_add_uid_feedback"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
     """Upgrade schema."""
+    # Ensure Alembic version column can hold long revision IDs.
+    # PostgreSQL default is VARCHAR(32), while this repository contains
+    # revision IDs longer than 32 characters.
+    op.execute(
+        "ALTER TABLE alembic_version "
+        "ALTER COLUMN version_num TYPE VARCHAR(255)"
+    )
+
     # Check if tables already exist (created by initial migration)
     bind = op.get_bind()
     inspector = sa.inspect(bind)

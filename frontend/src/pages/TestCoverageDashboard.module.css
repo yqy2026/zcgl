@@ -1,0 +1,70 @@
+.pageContainer {
+  padding: 24px;
+}
+
+.headerBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.pageTitle {
+  margin: 0;
+}
+
+.qualityGateAlert {
+  margin-bottom: 24px;
+}
+
+.failedChecksList {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
+.metricsRow {
+  margin-bottom: 24px;
+}
+
+.metricStatistic :global(.ant-statistic-content) {
+  font-weight: var(--font-weight-semibold);
+}
+
+.metricToneSuccess :global(.ant-statistic-content) {
+  color: var(--color-success);
+}
+
+.metricToneError :global(.ant-statistic-content) {
+  color: var(--color-error);
+}
+
+.metricTargetText {
+  margin-top: 8px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.inlineSecondaryText {
+  margin-left: 4px;
+  color: var(--color-text-secondary);
+}
+
+.trendToolbar {
+  margin-bottom: 16px;
+}
+
+.fullWidthInput {
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .pageContainer {
+    padding: 16px;
+  }
+
+  .headerBar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+}

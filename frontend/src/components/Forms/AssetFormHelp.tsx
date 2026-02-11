@@ -140,7 +140,7 @@ const AssetFormHelp: React.FC<AssetFormHelpProps> = ({ visible = false, onClose 
           </Paragraph>
           <Paragraph>
             <Text strong>出租状态：</Text>
-            显示租户名称、合同信息、合同日期等字段。
+            显示承租方名称、合同信息、合同日期等字段。
           </Paragraph>
           <Paragraph>
             <Text strong>有业态类别：</Text>

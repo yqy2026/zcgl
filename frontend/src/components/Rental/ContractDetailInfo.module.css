@@ -1,0 +1,123 @@
+.contractDetailInfo {
+  width: 100%;
+}
+
+.sectionCard {
+  margin-bottom: 16px;
+}
+
+.cardTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cardTitleIcon {
+  color: var(--color-primary);
+}
+
+.labelWithIcon {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.labelIcon {
+  color: var(--color-text-secondary);
+}
+
+.basicDescriptions :global(.ant-descriptions-item-label) {
+  width: 130px;
+  font-weight: var(--font-weight-semibold);
+}
+
+.basicDescriptions :global(.ant-descriptions-item-content) {
+  min-width: 180px;
+}
+
+.contractNumber {
+  font-size: 16px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-primary);
+}
+
+.tenantName {
+  font-size: 16px;
+  font-weight: var(--font-weight-semibold);
+}
+
+.totalMonthlyAmount {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.statsRow {
+  row-gap: 12px;
+}
+
+.statisticPrimary :global(.ant-statistic-content) {
+  color: var(--color-primary);
+}
+
+.statisticSuccess :global(.ant-statistic-content) {
+  color: var(--color-success);
+}
+
+.statisticError :global(.ant-statistic-content) {
+  color: var(--color-error);
+}
+
+.statisticWarning :global(.ant-statistic-content) {
+  color: var(--color-warning);
+}
+
+.statisticAccent :global(.ant-statistic-content) {
+  color: #722ed1;
+}
+
+.statisticInfo :global(.ant-statistic-content) {
+  color: #13c2c2;
+}
+
+.v2Descriptions {
+  margin-bottom: 16px;
+}
+
+.serviceFeeDivider {
+  margin: 12px 0 !important;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 20px;
+  color: var(--color-text-secondary);
+}
+
+.preWrapText {
+  white-space: pre-wrap;
+}
+
+.metadataCard {
+  margin-top: 16px;
+}
+
+.dataStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dataStatusHint {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+@media (max-width: 768px) {
+  .basicDescriptions :global(.ant-descriptions-item-label) {
+    width: 110px;
+  }
+
+  .basicDescriptions :global(.ant-descriptions-item-content) {
+    min-width: 140px;
+  }
+}

@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import and_, asc, desc, func, select
+from sqlalchemy import and_, asc, desc, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import ColumnElement
 
@@ -219,6 +219,25 @@ class TaskCRUD(CRUDBase[AsyncTask, TaskCreate, TaskUpdate]):
         result = await db.execute(stmt)
         return list(result.scalars().all())
 
+    async def get_cleanup_candidates_async(
+        self, db: AsyncSession, *, cutoff_date: datetime
+    ) -> list[AsyncTask]:
+        stmt = select(AsyncTask).filter(
+            and_(
+                AsyncTask.created_at < cutoff_date,
+                AsyncTask.status.in_(
+                    [
+                        TaskStatus.COMPLETED.value,
+                        TaskStatus.FAILED.value,
+                        TaskStatus.CANCELLED.value,
+                    ]
+                ),
+                AsyncTask.is_active.is_(True),
+            )
+        )
+        result = await db.execute(stmt)
+        return list(result.scalars().all())
+
     # create_history, update status logic, etc moved to Service.
 
 
@@ -266,6 +285,25 @@ class ExcelTaskConfigCRUD(CRUDBase[ExcelTaskConfig, ExcelTaskConfigCreate, TaskU
         )
         result = await db.execute(stmt)
         return list(result.scalars().all())
+
+    async def unset_default_configs_async(
+        self,
+        db: AsyncSession,
+        *,
+        config_type: str,
+        task_type: str,
+        exclude_config_id: str | None = None,
+    ) -> None:
+        conditions = [
+            ExcelTaskConfig.config_type == config_type,
+            ExcelTaskConfig.task_type == task_type,
+            ExcelTaskConfig.is_default.is_(True),
+        ]
+        if exclude_config_id is not None and exclude_config_id.strip() != "":
+            conditions.append(ExcelTaskConfig.id != exclude_config_id)
+
+        stmt = update(ExcelTaskConfig).where(and_(*conditions)).values(is_default=False)
+        await db.execute(stmt)
 
     # create method in base is fine, extra default toggle logic moved to service
 

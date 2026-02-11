@@ -11,16 +11,14 @@ import logging
 from datetime import date
 from typing import Any
 
-from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.config import settings
 from ...core.exception_handler import BusinessValidationError, ResourceNotFoundError
-from ...core.search_index import build_asset_id_subquery
 from ...crud.asset import asset_crud
 from ...crud.property_certificate import property_certificate_crud, property_owner_crud
+from ...crud.query_builder import TenantFilter
 from ...models.asset import Asset
-from ...models.ownership import Ownership
 from ...models.property_certificate import PropertyCertificate
 from ...schemas.property_certificate import (
     PropertyCertificateCreate,
@@ -52,23 +50,105 @@ class PropertyCertificateService:
         self.extractor = PropertyCertAdapter()
         self.ocr_extractor = OCRExtractionService()
 
-    async def list_certificates(
-        self, *, skip: int = 0, limit: int = 100
-    ) -> list[PropertyCertificate]:
-        """获取产权证列表"""
-        return await property_certificate_crud.get_multi(
-            self.db, skip=skip, limit=limit
+    @staticmethod
+    def _is_fail_closed_tenant_filter(tenant_filter: TenantFilter | None) -> bool:
+        if tenant_filter is None:
+            return False
+        return (
+            len(
+                [
+                    org_id
+                    for org_id in tenant_filter.organization_ids
+                    if str(org_id).strip() != ""
+                ]
+            )
+            == 0
         )
 
-    async def get_certificate(self, certificate_id: str) -> PropertyCertificate | None:
+    async def _resolve_tenant_filter(
+        self,
+        *,
+        current_user_id: str | None = None,
+        tenant_filter: TenantFilter | None = None,
+    ) -> TenantFilter | None:
+        if tenant_filter is not None:
+            return tenant_filter
+        if current_user_id is None or current_user_id.strip() == "":
+            return None
+
+        try:
+            from ..organization_permission_service import OrganizationPermissionService
+
+            org_service = OrganizationPermissionService(self.db)
+            org_ids = await org_service.get_user_accessible_organizations(
+                current_user_id
+            )
+            return TenantFilter(organization_ids=[str(org_id) for org_id in org_ids])
+        except Exception:
+            logger.exception(
+                "Failed to resolve tenant filter for user %s, fallback to fail-closed",
+                current_user_id,
+            )
+            return TenantFilter(organization_ids=[])
+
+    async def list_certificates(
+        self,
+        *,
+        skip: int = 0,
+        limit: int = 100,
+        tenant_filter: TenantFilter | None = None,
+        current_user_id: str | None = None,
+    ) -> list[PropertyCertificate]:
+        """获取产权证列表"""
+        resolved_tenant_filter = await self._resolve_tenant_filter(
+            current_user_id=current_user_id,
+            tenant_filter=tenant_filter,
+        )
+        if self._is_fail_closed_tenant_filter(resolved_tenant_filter):
+            return []
+
+        return await property_certificate_crud.get_multi(
+            self.db,
+            skip=skip,
+            limit=limit,
+            tenant_filter=resolved_tenant_filter,
+        )
+
+    async def get_certificate(
+        self,
+        certificate_id: str,
+        *,
+        tenant_filter: TenantFilter | None = None,
+        current_user_id: str | None = None,
+    ) -> PropertyCertificate | None:
         """获取单个产权证"""
-        return await property_certificate_crud.get(self.db, certificate_id)
+        resolved_tenant_filter = await self._resolve_tenant_filter(
+            current_user_id=current_user_id,
+            tenant_filter=tenant_filter,
+        )
+        if self._is_fail_closed_tenant_filter(resolved_tenant_filter):
+            return None
+
+        return await property_certificate_crud.get(
+            self.db,
+            certificate_id,
+            tenant_filter=resolved_tenant_filter,
+        )
 
     async def create_certificate(
-        self, certificate: PropertyCertificateCreate
+        self,
+        certificate: PropertyCertificateCreate,
+        *,
+        created_by: str | None = None,
+        organization_id: str | None = None,
     ) -> PropertyCertificate:
         """创建产权证"""
-        return await property_certificate_crud.create(self.db, obj_in=certificate)
+        return await property_certificate_crud.create(
+            self.db,
+            obj_in=certificate,
+            created_by=created_by,
+            organization_id=organization_id,
+        )
 
     async def update_certificate(
         self,
@@ -160,7 +240,13 @@ class PropertyCertificateService:
                 "filename": filename,
             }
 
-    async def confirm_import(self, data: dict[str, Any]) -> PropertyCertificate:
+    async def confirm_import(
+        self,
+        data: dict[str, Any],
+        *,
+        created_by: str | None = None,
+        organization_id: str | None = None,
+    ) -> PropertyCertificate:
         """
         确认导入，创建产权证记录
 
@@ -253,6 +339,7 @@ class PropertyCertificateService:
                 "co_ownership": extracted_data.get("co_ownership"),
                 "restrictions": extracted_data.get("restrictions"),
                 "remarks": extracted_data.get("remarks"),
+                "created_by": created_by,
             }
 
             owner_create_data_list: list[PropertyOwnerCreate] = []
@@ -287,6 +374,7 @@ class PropertyCertificateService:
                 obj_in=certificate_create,
                 owner_ids=owner_ids if owner_ids else None,
                 asset_ids=asset_ids if asset_ids else None,
+                organization_id=organization_id,
             )
 
             logger.info(f"产权证创建成功: {certificate.id} - {certificate_number}")
@@ -426,57 +514,23 @@ class PropertyCertificateService:
         if not candidates:
             return []
 
-        not_deleted = or_(Asset.data_status.is_(None), Asset.data_status != "已删除")
-
         if field_name == "ownership_entity":
             query_value = candidates[0]
-            stmt = (
-                select(Asset)
-                .join(Ownership, Asset.ownership_id == Ownership.id, isouter=True)
-                .where(Ownership.name.ilike(f"%{query_value}%"))
-                .where(not_deleted)
+            return await asset_crud.get_by_ownership_name_like_async(
+                self.db,
+                ownership_name=query_value,
+                limit=limit,
+                include_deleted=False,
+                decrypt=True,
             )
-            result = await self.db.execute(stmt.limit(limit))
-            assets = list(result.scalars().all())
-            for asset in assets:
-                asset_crud._decrypt_asset_object(asset)
-            return assets
-
-        handler = asset_crud.sensitive_data_handler
-        model_field = getattr(Asset, field_name)
-
-        if handler.encryption_enabled and field_name in handler.SEARCHABLE_FIELDS:
-            conditions = []
-            used_blind_index = False
-            for candidate in candidates:
-                subquery = build_asset_id_subquery(
-                    field_name=field_name,
-                    search_text=candidate,
-                    key_manager=handler.encryptor.key_manager,
-                )
-                if subquery is not None:
-                    conditions.append(Asset.id.in_(subquery))
-                    used_blind_index = True
-                else:
-                    encrypted = handler.encrypt_field(field_name, candidate)
-                    if encrypted is not None:
-                        conditions.append(model_field == encrypted)
-            if not conditions:
-                return []
-            stmt = select(Asset).where(or_(*conditions)).where(not_deleted)
-        else:
-            used_blind_index = False
-            query_value = candidates[0]
-            stmt = (
-                select(Asset)
-                .where(model_field.ilike(f"%{query_value}%"))
-                .where(not_deleted)
-            )
-
-        result = await self.db.execute(stmt.limit(limit))
-        assets = list(result.scalars().all())
-        for asset in assets:
-            asset_crud._decrypt_asset_object(asset)
+        assets, used_blind_index = await asset_crud.search_by_field_with_candidates_async(
+            self.db,
+            field_name=field_name,
+            candidates=candidates,
+            limit=limit,
+            include_deleted=False,
+            decrypt=True,
+        )
 
         if used_blind_index:
             normalized_candidates = [

@@ -60,14 +60,29 @@ class AsyncAuthenticationService:
         self,
         db: AsyncSession,
         *,
-        password_service: PasswordService,
-        user_service: AsyncUserManagementService,
-        session_service: AsyncSessionService,
+        password_service: PasswordService | None = None,
+        user_service: AsyncUserManagementService | None = None,
+        session_service: AsyncSessionService | None = None,
     ):
         self.db = db
-        self.password_service = password_service
-        self.user_service = user_service
-        self.session_service = session_service
+        resolved_password_service = password_service or PasswordService()
+        resolved_session_service = session_service or AsyncSessionService(db)
+
+        if user_service is not None:
+            resolved_user_service = user_service
+        else:
+            from ..permission.rbac_service import RBACService
+
+            resolved_user_service = AsyncUserManagementService(
+                db,
+                password_service=resolved_password_service,
+                session_service=resolved_session_service,
+                rbac_service=RBACService(db),
+            )
+
+        self.password_service = resolved_password_service
+        self.user_service = resolved_user_service
+        self.session_service = resolved_session_service
         self.token_blacklist = blacklist_manager
 
     def _generate_jti(self) -> JtiType:
@@ -280,5 +295,4 @@ class AsyncAuthenticationService:
         await self.db.commit()
 
         return session
-
 

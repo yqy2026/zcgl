@@ -1,0 +1,36 @@
+.metricsGrid {
+  width: 100%;
+}
+
+.metricCard {
+  height: 100%;
+  border-radius: 12px;
+}
+
+.metricCard :global(.ant-statistic-title) {
+  color: var(--color-text-secondary);
+}
+
+.metricCard :global(.ant-statistic-content) {
+  font-weight: var(--font-weight-semibold);
+}
+
+.metricPrimary :global(.ant-statistic-content) {
+  color: var(--color-primary);
+}
+
+.metricSuccess :global(.ant-statistic-content) {
+  color: var(--color-success);
+}
+
+.metricWarning :global(.ant-statistic-content) {
+  color: var(--color-warning);
+}
+
+.metricInfo :global(.ant-statistic-content) {
+  color: var(--color-info);
+}
+
+.metricError :global(.ant-statistic-content) {
+  color: var(--color-error);
+}

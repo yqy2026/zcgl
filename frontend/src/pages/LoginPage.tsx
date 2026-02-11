@@ -134,7 +134,7 @@ const LoginPage: React.FC = () => {
               />
             )}
 
-            <Form.Item style={{ marginBottom: 0 }}>
+            <Form.Item className={styles['login-submit-item']}>
               <Button
                 type="primary"
                 htmlType="submit"

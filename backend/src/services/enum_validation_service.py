@@ -70,7 +70,12 @@ class AsyncEnumValidationService:
             values = await _value_crud.get_all_by_type_async(
                 self.db, str(enum_type.id), is_active=True
             )
-            result = [str(v.value) for v in values]
+            result: list[str] = []
+            for value_obj in values:
+                raw_value = getattr(value_obj, "value", value_obj)
+                if raw_value is None:
+                    continue
+                result.append(str(raw_value))
 
             self._update_cache(enum_type_code, result)
 

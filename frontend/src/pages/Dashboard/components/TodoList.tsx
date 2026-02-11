@@ -5,7 +5,7 @@ import {
   ExclamationCircleOutlined,
   CheckCircleOutlined,
 } from '@ant-design/icons';
-import { COLORS } from '@/styles/colorMap';
+import styles from './TodoList.module.css';
 
 const { Text } = Typography;
 
@@ -24,6 +24,15 @@ interface TodoListProps {
 }
 
 const TodoList: React.FC<TodoListProps> = ({ items, loading }) => {
+  const getPriorityIconClassName = (priority: TodoItem['priority']) => {
+    const classMap: Record<TodoItem['priority'], string> = {
+      high: styles.priorityHigh,
+      medium: styles.priorityMedium,
+      low: styles.priorityLow,
+    };
+    return `${styles.priorityIcon} ${classMap[priority]}`;
+  };
+
   const getPriorityColor = (priority: string) => {
     const colorMap: Record<string, string> = {
       high: 'error',
@@ -52,16 +61,19 @@ const TodoList: React.FC<TodoListProps> = ({ items, loading }) => {
 
   return (
     <List
+      className={styles.todoList}
       loading={loading}
       dataSource={items}
       renderItem={item => (
         <List.Item
+          className={styles.todoItem}
           actions={[
             <Button
               key="complete"
               type="link"
               size="small"
               icon={<CheckCircleOutlined />}
+              className={styles.completeButton}
               onClick={() => handleComplete(item.id)}
             >
               完成
@@ -70,35 +82,33 @@ const TodoList: React.FC<TodoListProps> = ({ items, loading }) => {
         >
           <List.Item.Meta
             avatar={
-              <ExclamationCircleOutlined
-                style={{
-                  color:
-                    item.priority === 'high'
-                      ? COLORS.error
-                      : item.priority === 'medium'
-                        ? COLORS.warning
-                        : COLORS.textTertiary,
-                  fontSize: '16px',
-                }}
-              />
+              <ExclamationCircleOutlined className={getPriorityIconClassName(item.priority)} />
             }
             title={
-              <Space>
-                <span>{item.title}</span>
-                <Tag color={getPriorityColor(item.priority)}>
+              <Space className={styles.titleRow}>
+                <span
+                  className={
+                    item.status === 'completed'
+                      ? `${styles.titleText} ${styles.completedTitle}`
+                      : styles.titleText
+                  }
+                >
+                  {item.title}
+                </span>
+                <Tag color={getPriorityColor(item.priority)} className={styles.priorityTag}>
                   {getPriorityText(item.priority)}优先级
                 </Tag>
               </Space>
             }
             description={
-              <div>
-                <Text type="secondary" style={{ fontSize: '12px' }}>
+              <div className={styles.descriptionBlock}>
+                <Text type="secondary" className={styles.descriptionText}>
                   {item.description}
                 </Text>
                 <br />
-                <Space style={{ marginTop: '4px' }}>
-                  <ClockCircleOutlined style={{ color: COLORS.textTertiary }} />
-                  <Text type="secondary" style={{ fontSize: '12px' }}>
+                <Space className={styles.dueRow}>
+                  <ClockCircleOutlined className={styles.dueIcon} />
+                  <Text type="secondary" className={styles.dueText}>
                     截止日期: {item.dueDate}
                   </Text>
                 </Space>

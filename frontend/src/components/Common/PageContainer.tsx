@@ -1,11 +1,11 @@
 import React from 'react';
-import { Typography, Button, Space, Row, Col, Spin, theme } from 'antd';
+import { Typography, Button, Space, Row, Col, Spin } from 'antd';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import AppBreadcrumb from '@/components/Layout/AppBreadcrumb';
+import styles from './PageContainer.module.css';
 
 const { Title, Text } = Typography;
-const { useToken } = theme;
 
 export interface PageContainerProps {
   title?: React.ReactNode;
@@ -31,7 +31,13 @@ const PageContainer: React.FC<PageContainerProps> = ({
   contentStyle,
 }) => {
   const navigate = useNavigate();
-  const { token } = useToken();
+  const hasBackAction = onBack === true || typeof onBack === 'function';
+  const hasHeader = title != null || extra != null || hasBackAction;
+  const pageClassName = [styles.pageContainer, className]
+    .filter((currentClassName): currentClassName is string => {
+      return currentClassName != null && currentClassName !== '';
+    })
+    .join(' ');
 
   const handleBack = () => {
     if (typeof onBack === 'function') {
@@ -42,39 +48,31 @@ const PageContainer: React.FC<PageContainerProps> = ({
   };
 
   return (
-    <div
-      className={className}
-      style={{
-        padding: '24px',
-        minHeight: '100%',
-        backgroundColor: token.colorBgLayout,
-        ...contentStyle,
-      }}
-    >
-      <div style={{ marginBottom: '24px' }}>
+    <div className={pageClassName} style={contentStyle}>
+      <div className={styles.headerSection}>
         {/* Breadcrumb */}
-        <div style={{ marginBottom: '16px' }}>
+        <div className={styles.breadcrumbSection}>
           {breadcrumb ?? <AppBreadcrumb />}
         </div>
 
         {/* Header */}
-        {(title != null || extra != null || onBack != null) && (
-          <Row justify="space-between" align="middle" gutter={[16, 16]}>
-            <Col flex="1">
-              <Space align="center" size={16}>
-                {(onBack === true || typeof onBack === 'function') && (
+        {hasHeader && (
+          <Row justify="space-between" align="middle" gutter={[16, 16]} className={styles.headerRow}>
+            <Col flex="auto">
+              <Space align="center" size={16} className={styles.headerTitleGroup}>
+                {hasBackAction && (
                   <Button
                     type="text"
                     icon={<ArrowLeftOutlined />}
                     onClick={handleBack}
                     aria-label="返回"
-                    style={{ fontSize: '16px', width: 32, height: 32, padding: 0 }}
+                    className={styles.backButton}
                   />
                 )}
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div className={styles.titleBlock}>
+                  <div className={styles.titleRow}>
                     {typeof title === 'string' ? (
-                      <Title level={2} style={{ margin: 0 }}>
+                      <Title level={2} className={styles.title}>
                         {title}
                       </Title>
                     ) : (
@@ -82,20 +80,20 @@ const PageContainer: React.FC<PageContainerProps> = ({
                     )}
                   </div>
                   {subTitle != null && (
-                    <Text type="secondary" style={{ marginTop: '4px' }}>
+                    <Text type="secondary" className={styles.subTitle}>
                       {subTitle}
                     </Text>
                   )}
                 </div>
               </Space>
             </Col>
-            {extra != null && <Col>{extra}</Col>}
+            {extra != null && <Col className={styles.extraSection}>{extra}</Col>}
           </Row>
         )}
       </div>
 
       {/* Content */}
-      <Spin spinning={loading} size="large">
+      <Spin spinning={loading} size="large" className={styles.contentSpin}>
         {children}
       </Spin>
     </div>

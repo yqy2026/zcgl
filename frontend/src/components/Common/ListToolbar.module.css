@@ -5,6 +5,10 @@
   box-shadow: var(--shadow-sm);
 }
 
+.toolbarPlain {
+  width: 100%;
+}
+
 .toolbarCard :global(.ant-card-body) {
   padding: var(--spacing-md) var(--spacing-lg);
 }
@@ -16,7 +20,7 @@
 .toolbarItem {
   display: flex;
   align-items: center;
-  min-height: var(--button-height-md);
+  min-height: 40px;
 }
 
 .toolbarItem :global(.ant-input),
@@ -27,6 +31,43 @@
   width: 100%;
 }
 
+.toolbarItem :global(.ant-input-affix-wrapper),
+.toolbarItem :global(.ant-picker),
+.toolbarItem :global(.ant-input-number),
+.toolbarItem :global(.ant-select-selector),
+.toolbarItem :global(.ant-btn) {
+  min-height: 40px;
+  border-radius: 8px;
+}
+
+.toolbarItem :global(.ant-btn) {
+  min-width: 40px;
+}
+
+.toolbarItem :global(.ant-select-selector) {
+  display: flex;
+  align-items: center;
+}
+
+.toolbarItem :global(.ant-select-selection-item),
+.toolbarItem :global(.ant-select-selection-placeholder) {
+  line-height: 38px !important;
+}
+
+.toolbarItem :global(.ant-picker-input > input),
+.toolbarItem :global(.ant-input-number-input) {
+  height: auto;
+}
+
+.toolbarItem :global(.ant-btn:focus-visible),
+.toolbarItem :global(.ant-input-affix-wrapper:focus-within),
+.toolbarItem :global(.ant-picker:focus-within),
+.toolbarItem :global(.ant-input-number:focus-within),
+.toolbarItem :global(.ant-select-focused .ant-select-selector) {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
 @media (max-width: 767px) {
   .toolbarCard {
     margin-bottom: var(--spacing-md);
@@ -34,5 +75,26 @@
 
   .toolbarCard :global(.ant-card-body) {
     padding: var(--spacing-md);
+  }
+
+  .toolbarItem {
+    min-height: 44px;
+  }
+
+  .toolbarItem :global(.ant-input-affix-wrapper),
+  .toolbarItem :global(.ant-picker),
+  .toolbarItem :global(.ant-input-number),
+  .toolbarItem :global(.ant-select-selector),
+  .toolbarItem :global(.ant-btn) {
+    min-height: 44px;
+  }
+
+  .toolbarItem :global(.ant-btn) {
+    min-width: 44px;
+  }
+
+  .toolbarItem :global(.ant-select-selection-item),
+  .toolbarItem :global(.ant-select-selection-placeholder) {
+    line-height: 42px !important;
   }
 }

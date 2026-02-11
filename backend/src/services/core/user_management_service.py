@@ -23,14 +23,14 @@ class AsyncUserManagementService:
         self,
         db: AsyncSession,
         *,
-        password_service: PasswordService,
-        session_service: AsyncSessionService,
-        rbac_service: RBACService,
+        password_service: PasswordService | None = None,
+        session_service: AsyncSessionService | None = None,
+        rbac_service: RBACService | None = None,
     ):
         self.db = db
-        self.password_service = password_service
-        self.session_service = session_service
-        self.rbac_service = rbac_service
+        self.password_service = password_service or PasswordService()
+        self.session_service = session_service or AsyncSessionService(db)
+        self.rbac_service = rbac_service or RBACService(db)
 
     async def _assign_primary_role(
         self,

@@ -60,8 +60,10 @@ class _FakeResult:
         return _FakeScalarRows(self._rows)
 
 
-def _set_asset_query_result(mock_db, assets):
+def _set_asset_query_result(mock_db, assets, *, mock_asset_crud=None):
     mock_db.execute = AsyncMock(return_value=_FakeResult(list(assets)))
+    if mock_asset_crud is not None:
+        mock_asset_crud.get_multi_by_ids_async = AsyncMock(return_value=list(assets))
 
 
 def _set_batch_delete_query_results(
@@ -71,6 +73,7 @@ def _set_batch_delete_query_results(
     contract_links=None,
     certificate_links=None,
     ledger_links=None,
+    mock_asset_crud=None,
 ):
     mock_db.execute = AsyncMock(
         side_effect=[
@@ -80,6 +83,17 @@ def _set_batch_delete_query_results(
             _FakeResult(list(ledger_links or [])),
         ]
     )
+    if mock_asset_crud is not None:
+        mock_asset_crud.get_multi_by_ids_async = AsyncMock(return_value=list(assets))
+        mock_asset_crud.get_assets_with_rent_contracts_async = AsyncMock(
+            return_value=list(contract_links or [])
+        )
+        mock_asset_crud.get_assets_with_property_certs_async = AsyncMock(
+            return_value=list(certificate_links or [])
+        )
+        mock_asset_crud.get_assets_with_rent_ledger_async = AsyncMock(
+            return_value=list(ledger_links or [])
+        )
 
 
 # ============================================================================
@@ -284,7 +298,9 @@ class TestBatchUpdate:
         mock_asset.id = "asset_1"
         mock_asset_crud.get_async = AsyncMock(return_value=mock_asset)
         mock_asset_crud.update_async = AsyncMock(return_value=mock_asset)
-        _set_asset_query_result(mock_db, [mock_asset])
+        _set_asset_query_result(
+            mock_db, [mock_asset], mock_asset_crud=mock_asset_crud
+        )
 
         with patch("src.services.asset.batch_service.history_crud") as mock_history:
 
@@ -314,7 +330,7 @@ class TestBatchUpdate:
         ]
         mock_asset_crud.get_async = AsyncMock(side_effect=mock_assets)
         mock_asset_crud.update_async = AsyncMock(return_value=MagicMock())
-        _set_asset_query_result(mock_db, mock_assets)
+        _set_asset_query_result(mock_db, mock_assets, mock_asset_crud=mock_asset_crud)
 
         with patch("src.services.asset.batch_service.history_crud") as mock_history:
 
@@ -339,7 +355,7 @@ class TestBatchUpdate:
     ):
         """测试资产不存在时的处理"""
         mock_asset_crud.get_async = AsyncMock(return_value=None)
-        _set_asset_query_result(mock_db, [])
+        _set_asset_query_result(mock_db, [], mock_asset_crud=mock_asset_crud)
 
         result = await batch_service.batch_update(
             asset_ids=["nonexistent_asset"],
@@ -363,7 +379,7 @@ class TestBatchUpdate:
 
         mock_asset_crud.get_async = AsyncMock(side_effect=[asset_1, None])
         mock_asset_crud.update_async = AsyncMock(return_value=asset_1)
-        _set_asset_query_result(mock_db, [asset_1])
+        _set_asset_query_result(mock_db, [asset_1], mock_asset_crud=mock_asset_crud)
 
         with patch("src.services.asset.batch_service.history_crud") as mock_history:
 
@@ -389,7 +405,9 @@ class TestBatchUpdate:
         mock_asset = MagicMock(id="asset_1")
         mock_asset_crud.get_async = AsyncMock(return_value=mock_asset)
         mock_asset_crud.update_async = AsyncMock(side_effect=Exception("Database error"))
-        _set_asset_query_result(mock_db, [mock_asset])
+        _set_asset_query_result(
+            mock_db, [mock_asset], mock_asset_crud=mock_asset_crud
+        )
 
         result = await batch_service.batch_update(
             asset_ids=["asset_1"],
@@ -410,7 +428,9 @@ class TestBatchUpdate:
         mock_asset = MagicMock(id="asset_1")
         mock_asset_crud.get_async = AsyncMock(return_value=mock_asset)
         mock_asset_crud.update_async = AsyncMock(side_effect=Exception("Update failed"))
-        _set_asset_query_result(mock_db, [mock_asset])
+        _set_asset_query_result(
+            mock_db, [mock_asset], mock_asset_crud=mock_asset_crud
+        )
 
         # 模拟 begin_nested
         mock_savepoint = _DummyNested()
@@ -434,7 +454,9 @@ class TestBatchUpdate:
         mock_asset = MagicMock(id="asset_1")
         mock_asset_crud.get_async = AsyncMock(return_value=mock_asset)
         mock_asset_crud.update_async = AsyncMock(return_value=mock_asset)
-        _set_asset_query_result(mock_db, [mock_asset])
+        _set_asset_query_result(
+            mock_db, [mock_asset], mock_asset_crud=mock_asset_crud
+        )
 
         with patch("src.services.asset.batch_service.history_crud") as mock_history:
 
@@ -461,7 +483,7 @@ class TestBatchUpdate:
         with patch("src.services.asset.batch_service.asset_crud") as mock_crud:
             mock_crud.get_async = AsyncMock(return_value=mock_asset)
             mock_crud.update_async = AsyncMock(return_value=mock_asset)
-            _set_asset_query_result(mock_db, [mock_asset])
+            _set_asset_query_result(mock_db, [mock_asset], mock_asset_crud=mock_crud)
 
             with patch("src.services.asset.batch_service.history_crud") as mock_history:
                 mock_history.create_async = AsyncMock()
@@ -484,7 +506,9 @@ class TestBatchUpdate:
         mock_asset_crud.update_async = AsyncMock(
             side_effect=ValueError("usage_status\n  Field required")
         )
-        _set_asset_query_result(mock_db, [mock_asset])
+        _set_asset_query_result(
+            mock_db, [mock_asset], mock_asset_crud=mock_asset_crud
+        )
 
         result = await batch_service.batch_update(
             asset_ids=["asset_1"],
@@ -503,7 +527,9 @@ class TestBatchUpdate:
         """测试批量更新优先走一次性资产预取"""
         asset_1 = MagicMock(id="asset_1", property_name="物业1")
         asset_2 = MagicMock(id="asset_2", property_name="物业2")
-        mock_db.execute = AsyncMock(return_value=_FakeResult([asset_1, asset_2]))
+        _set_asset_query_result(
+            mock_db, [asset_1, asset_2], mock_asset_crud=mock_asset_crud
+        )
         mock_asset_crud.get_async = AsyncMock(return_value=None)
         mock_asset_crud.update_async = AsyncMock(return_value=MagicMock())
 
@@ -532,7 +558,7 @@ class TestBatchUpdateAll:
         mock_asset_crud.get_multi_with_search_async = AsyncMock(return_value=(mock_assets, None))
         mock_asset_crud.get_async = AsyncMock(side_effect=mock_assets)
         mock_asset_crud.update_async = AsyncMock(return_value=MagicMock())
-        _set_asset_query_result(mock_db, mock_assets)
+        _set_asset_query_result(mock_db, mock_assets, mock_asset_crud=mock_asset_crud)
 
         with patch("src.services.asset.batch_service.history_crud") as mock_history:
             mock_history.create_async = AsyncMock()
@@ -586,7 +612,9 @@ class TestBatchDelete:
         mock_asset = MagicMock(id="asset_1", property_name="测试物业")
         mock_asset.data_status = "正常"
         mock_asset_crud.get_async = AsyncMock(return_value=mock_asset)
-        _set_batch_delete_query_results(mock_db, [mock_asset])
+        _set_batch_delete_query_results(
+            mock_db, [mock_asset], mock_asset_crud=mock_asset_crud
+        )
         with patch.object(batch_service, "_ensure_asset_not_linked", return_value=None):
             with patch("src.services.asset.batch_service.history_crud") as mock_history:
                 mock_history.create_async = AsyncMock()
@@ -617,7 +645,9 @@ class TestBatchDelete:
         for asset in mock_assets:
             asset.data_status = "正常"
         mock_asset_crud.get_async = AsyncMock(side_effect=mock_assets)
-        _set_batch_delete_query_results(mock_db, mock_assets)
+        _set_batch_delete_query_results(
+            mock_db, mock_assets, mock_asset_crud=mock_asset_crud
+        )
         with patch.object(batch_service, "_ensure_asset_not_linked", return_value=None):
             with patch("src.services.asset.batch_service.history_crud") as mock_history:
                 mock_history.create_async = AsyncMock()
@@ -638,7 +668,7 @@ class TestBatchDelete:
     ):
         """测试删除不存在的资产"""
         mock_asset_crud.get_async = AsyncMock(return_value=None)
-        _set_batch_delete_query_results(mock_db, [])
+        _set_batch_delete_query_results(mock_db, [], mock_asset_crud=mock_asset_crud)
 
         result = await batch_service.batch_delete(asset_ids=["nonexistent_asset"])
 
@@ -656,7 +686,9 @@ class TestBatchDelete:
         mock_asset = MagicMock(id="asset_1")
         mock_asset.data_status = "正常"
         mock_asset_crud.get_async = AsyncMock(return_value=mock_asset)
-        _set_batch_delete_query_results(mock_db, [mock_asset])
+        _set_batch_delete_query_results(
+            mock_db, [mock_asset], mock_asset_crud=mock_asset_crud
+        )
         with patch.object(batch_service, "_ensure_asset_not_linked", return_value=None):
             with patch("src.services.asset.batch_service.history_crud") as mock_history:
                 mock_history.create_async = AsyncMock()
@@ -680,7 +712,9 @@ class TestBatchDelete:
         asset_2.data_status = "正常"
 
         mock_asset_crud.get_async = AsyncMock(side_effect=[asset_1, asset_2])
-        _set_batch_delete_query_results(mock_db, [asset_1, asset_2])
+        _set_batch_delete_query_results(
+            mock_db, [asset_1, asset_2], mock_asset_crud=mock_asset_crud
+        )
         with patch.object(batch_service, "_ensure_asset_not_linked", return_value=None):
             with patch("src.services.asset.batch_service.history_crud") as mock_history:
                 mock_history.create_async = AsyncMock()
@@ -705,13 +739,13 @@ class TestBatchDelete:
         asset_1.data_status = "正常"
         asset_2.data_status = "正常"
 
-        mock_db.execute = AsyncMock(
-            side_effect=[
-                _FakeResult([asset_1, asset_2]),  # _load_assets_map
-                _FakeResult(["asset_2"]),  # rent_contract_assets
-                _FakeResult([]),  # property_cert_assets
-                _FakeResult([]),  # rent_ledger
-            ]
+        _set_batch_delete_query_results(
+            mock_db,
+            [asset_1, asset_2],
+            contract_links=["asset_2"],
+            certificate_links=[],
+            ledger_links=[],
+            mock_asset_crud=mock_asset_crud,
         )
         mock_asset_crud.get_async = AsyncMock(return_value=None)
 
@@ -964,7 +998,7 @@ class TestProgressTracking:
         mock_assets = [MagicMock(id=f"asset_{i}") for i in range(1, 6)]
         mock_asset_crud.get_async = AsyncMock(side_effect=mock_assets)
         mock_asset_crud.update_async = AsyncMock(return_value=MagicMock())
-        _set_asset_query_result(mock_db, mock_assets)
+        _set_asset_query_result(mock_db, mock_assets, mock_asset_crud=mock_asset_crud)
 
         with patch("src.services.asset.batch_service.history_crud") as mock_history:
             mock_history.create_async = AsyncMock()
@@ -999,7 +1033,9 @@ class TestProgressTracking:
             ]
         )
         _set_asset_query_result(
-            mock_db, [MagicMock(id="asset_1"), MagicMock(id="asset_3")]
+            mock_db,
+            [MagicMock(id="asset_1"), MagicMock(id="asset_3")],
+            mock_asset_crud=mock_asset_crud,
         )
 
         with patch("src.services.asset.batch_service.history_crud") as mock_history:
@@ -1034,7 +1070,9 @@ class TestErrorHandling:
         mock_asset_crud.update_async = AsyncMock(
             side_effect=ValueError("Validation error: usage_status")
         )
-        _set_asset_query_result(mock_db, [mock_asset])
+        _set_asset_query_result(
+            mock_db, [mock_asset], mock_asset_crud=mock_asset_crud
+        )
 
         result = await batch_service.batch_update(
             asset_ids=["asset_1"],
@@ -1064,7 +1102,9 @@ class TestErrorHandling:
             ]
         )
         _set_asset_query_result(
-            mock_db, [MagicMock(id="asset_1"), MagicMock(id="asset_3")]
+            mock_db,
+            [MagicMock(id="asset_1"), MagicMock(id="asset_3")],
+            mock_asset_crud=mock_asset_crud,
         )
 
         with patch("src.services.asset.batch_service.history_crud") as mock_history:
@@ -1087,7 +1127,9 @@ class TestErrorHandling:
         mock_asset = MagicMock(id="asset_1")
         mock_asset_crud.get_async = AsyncMock(return_value=mock_asset)
         mock_asset_crud.update_async = AsyncMock(return_value=mock_asset)
-        _set_asset_query_result(mock_db, [mock_asset])
+        _set_asset_query_result(
+            mock_db, [mock_asset], mock_asset_crud=mock_asset_crud
+        )
 
         with patch("src.services.asset.batch_service.history_crud") as mock_history:
             mock_history.create_async = AsyncMock()
@@ -1106,7 +1148,7 @@ class TestErrorHandling:
     ):
         """测试全部失败时回滚事务"""
         mock_asset_crud.get_async = AsyncMock(return_value=None)
-        _set_asset_query_result(mock_db, [])
+        _set_asset_query_result(mock_db, [], mock_asset_crud=mock_asset_crud)
 
         result = await batch_service.batch_update(
             asset_ids=["asset_1", "asset_2"],
@@ -1135,7 +1177,9 @@ class TestStatusReporting:
         mock_asset = MagicMock(id="asset_1")
         mock_asset_crud.get_async = AsyncMock(return_value=mock_asset)
         mock_asset_crud.update_async = AsyncMock(return_value=mock_asset)
-        _set_asset_query_result(mock_db, [mock_asset])
+        _set_asset_query_result(
+            mock_db, [mock_asset], mock_asset_crud=mock_asset_crud
+        )
 
         with patch("src.services.asset.batch_service.history_crud") as mock_history:
             mock_history.create_async = AsyncMock()
@@ -1166,7 +1210,7 @@ class TestStatusReporting:
                 Exception("Error"),
             ]
         )
-        _set_asset_query_result(mock_db, mock_assets)
+        _set_asset_query_result(mock_db, mock_assets, mock_asset_crud=mock_asset_crud)
 
         with patch("src.services.asset.batch_service.history_crud") as mock_history:
             mock_history.create_async = AsyncMock()
@@ -1204,7 +1248,7 @@ class TestIntegrationScenarios:
         mock_asset_crud.update_async = AsyncMock(
             side_effect=[MagicMock()] * 95 + [Exception("Update failed")] * 5
         )
-        _set_asset_query_result(mock_db, mock_assets)
+        _set_asset_query_result(mock_db, mock_assets, mock_asset_crud=mock_asset_crud)
 
         with patch("src.services.asset.batch_service.history_crud") as mock_history:
             mock_history.create_async = AsyncMock()
@@ -1245,7 +1289,9 @@ class TestIntegrationScenarios:
         mock_asset_crud.get_async = AsyncMock(return_value=mock_asset)
         mock_asset_crud.get_by_name_async = AsyncMock(return_value=None)
         mock_asset_crud.update_async = AsyncMock(return_value=mock_asset)
-        _set_asset_query_result(mock_db, [mock_asset])
+        _set_asset_query_result(
+            mock_db, [mock_asset], mock_asset_crud=mock_asset_crud
+        )
 
         with patch("src.services.asset.batch_service.history_crud") as mock_history:
             mock_history.create_async = AsyncMock()
@@ -1255,3 +1301,38 @@ class TestIntegrationScenarios:
             )
 
             assert result.success_count == 1
+
+
+class TestBatchServiceSecurityAndOwnershipLookup:
+    @patch("src.services.asset.batch_service.asset_crud")
+    async def test_load_assets_map_uses_non_decrypt_query(
+        self, mock_asset_crud, batch_service, mock_db
+    ) -> None:
+        mock_asset_crud.get_multi_by_ids_async = AsyncMock(return_value=[])
+
+        result = await batch_service._load_assets_map(["asset_1"])
+
+        assert result == {}
+        mock_asset_crud.get_multi_by_ids_async.assert_awaited_once_with(
+            mock_db,
+            ids=["asset_1"],
+            include_relations=False,
+            include_deleted=False,
+            decrypt=False,
+        )
+
+    @patch("src.services.asset.batch_service.ownership")
+    async def test_resolve_batch_ownership_id_uses_get(
+        self, mock_ownership, batch_service
+    ) -> None:
+        mock_ownership.get = AsyncMock(return_value=MagicMock(id="ownership_1"))
+
+        has_update, ownership_id = await batch_service._resolve_batch_ownership_id(
+            {"ownership_id": "ownership_1"}
+        )
+
+        assert has_update is True
+        assert ownership_id == "ownership_1"
+        mock_ownership.get.assert_awaited_once_with(
+            batch_service.db, id="ownership_1"
+        )

@@ -9,6 +9,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from src.crud.query_builder import TenantFilter
 from src.models.pdf_import_session import (
     PDFImportSession,
     ProcessingStep,
@@ -152,6 +153,74 @@ class TestConcurrencyControl:
 
         # Reset
         PDFImportService._active_tasks = 0
+
+
+# ============================================================================
+# Test Tenant Filter Resolution
+# ============================================================================
+class TestTenantFilterResolution:
+    """测试租户过滤解析"""
+
+    @pytest.mark.asyncio
+    async def test_resolve_tenant_filter_success(self, pdf_service, mock_db):
+        """测试从用户可访问组织解析租户过滤"""
+        mock_org_service = MagicMock()
+        mock_org_service.get_user_accessible_organizations = AsyncMock(
+            return_value=["1", "2"]
+        )
+
+        with patch(
+            "src.services.organization_permission_service.OrganizationPermissionService",
+            return_value=mock_org_service,
+        ):
+            result = await pdf_service._resolve_tenant_filter(
+                mock_db,
+                current_user_id="user-1",
+            )
+
+        assert result == TenantFilter(organization_ids=[1, 2])
+
+    @pytest.mark.asyncio
+    async def test_resolve_tenant_filter_fail_closed(self, pdf_service, mock_db):
+        """测试解析异常时返回 fail-closed 过滤"""
+        with patch(
+            "src.services.organization_permission_service.OrganizationPermissionService",
+            side_effect=RuntimeError("boom"),
+        ):
+            result = await pdf_service._resolve_tenant_filter(
+                mock_db,
+                current_user_id="user-1",
+            )
+
+        assert result == TenantFilter(organization_ids=[])
+
+    @pytest.mark.asyncio
+    async def test_get_session_map_async_passes_resolved_tenant_filter(
+        self, pdf_service, mock_db
+    ):
+        """测试会话映射查询透传解析后的租户过滤"""
+        resolved_filter = TenantFilter(organization_ids=[1])
+
+        with patch.object(
+            pdf_service,
+            "_resolve_tenant_filter",
+            new=AsyncMock(return_value=resolved_filter),
+        ):
+            with patch(
+                "src.services.document.pdf_import_service.pdf_import_session_crud.get_session_map_async",
+                new=AsyncMock(return_value={}),
+            ) as mock_get_map:
+                await pdf_service.get_session_map_async(
+                    mock_db,
+                    ["session-1"],
+                    current_user_id="user-1",
+                )
+
+        mock_get_map.assert_awaited_once_with(
+            mock_db,
+            ["session-1"],
+            tenant_filter=resolved_filter,
+        )
 
 
 # ============================================================================

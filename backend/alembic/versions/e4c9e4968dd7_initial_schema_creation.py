@@ -6,6 +6,12 @@ Create Date: 2026-01-17 11:05:39.118899
 
 This migration creates ALL tables for the ZCGL asset management system.
 Tables are created in dependency order to respect foreign key constraints.
+
+Historical note:
+This initial snapshot included legacy `tenant_id` columns for early
+multi-tenant experiments. These columns were later removed by
+`20260130_drop_tenant_id_columns` and are not part of current runtime
+authorization semantics.
 """
 
 from collections.abc import Sequence

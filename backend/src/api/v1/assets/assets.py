@@ -76,8 +76,12 @@ _asset_list_item_adapter = TypeAdapter(list[AssetListItemResponse])
 async def _get_distinct_values(
     db: AsyncSession,
     field_name: str,
+    current_user_id: str,
 ) -> list[str]:
-    return await AsyncAssetService(db).get_distinct_field_values(field_name)
+    return await AsyncAssetService(db).get_distinct_field_values(
+        field_name,
+        current_user_id=current_user_id,
+    )
 
 
 @router.get(
@@ -162,6 +166,7 @@ async def get_assets(
         sort_field=resolved_sort_field,
         sort_order=sort_order,
         include_relations=include_relations,
+        current_user_id=str(current_user.id),
     )
 
     items: Sequence[AssetResponse | AssetListItemResponse]
@@ -200,7 +205,7 @@ async def get_business_categories(
     current_user: User = Depends(get_current_active_user),
 ) -> list[str]:
     """获取所有业态类别列表，用于搜索筛选"""
-    return await _get_distinct_values(db, "business_category")
+    return await _get_distinct_values(db, "business_category", str(current_user.id))
 
 
 @router.get("/usage-statuses", response_model=list[str], summary="获取使用情况列表")
@@ -209,7 +214,7 @@ async def get_usage_statuses(
     current_user: User = Depends(get_current_active_user),
 ) -> list[str]:
     """获取所有使用情况列表，用于搜索筛选"""
-    return await _get_distinct_values(db, "usage_status")
+    return await _get_distinct_values(db, "usage_status", str(current_user.id))
 
 
 @router.get("/property-natures", response_model=list[str], summary="获取物业性质列表")
@@ -218,7 +223,7 @@ async def get_property_natures(
     current_user: User = Depends(get_current_active_user),
 ) -> list[str]:
     """获取所有物业性质列表，用于搜索筛选"""
-    return await _get_distinct_values(db, "property_nature")
+    return await _get_distinct_values(db, "property_nature", str(current_user.id))
 
 
 @router.get("/ownership-statuses", response_model=list[str], summary="获取确权状态列表")
@@ -227,7 +232,7 @@ async def get_ownership_statuses(
     current_user: User = Depends(get_current_active_user),
 ) -> list[str]:
     """获取所有确权状态列表，用于搜索筛选"""
-    return await _get_distinct_values(db, "ownership_status")
+    return await _get_distinct_values(db, "ownership_status", str(current_user.id))
 
 
 # ===== 单个资产操作接口 =====
@@ -245,7 +250,10 @@ async def get_asset(
     - **asset_id**: 资产ID
     """
     asset_service = AsyncAssetService(db)
-    asset = await asset_service.get_asset(asset_id)
+    asset = await asset_service.get_asset(
+        asset_id,
+        current_user_id=str(current_user.id),
+    )
     return AssetResponse.model_validate(asset)
 
 
@@ -373,5 +381,8 @@ async def get_asset_history(
     - **asset_id**: 资产ID
     """
     asset_service = AsyncAssetService(db)
-    history_records = await asset_service.get_asset_history_records(asset_id)
+    history_records = await asset_service.get_asset_history_records(
+        asset_id,
+        current_user_id=str(current_user.id),
+    )
     return {"asset_id": asset_id, "history": history_records}

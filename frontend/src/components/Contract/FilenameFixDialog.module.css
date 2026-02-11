@@ -1,0 +1,57 @@
+.stepContentWrapper {
+  padding: 20px 0;
+}
+
+.fullWidthSpace {
+  width: 100%;
+}
+
+.manualInputWrapper {
+  margin-top: 8px;
+}
+
+.manualFilenameInput {
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  padding: 8px 12px;
+  width: 100%;
+}
+
+.manualEditInfoAlert {
+  font-size: 12px;
+}
+
+.previewOriginalFilenameText {
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.previewFixedFilenameText {
+  color: #389e0d;
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.fixDescription {
+  font-size: 12px;
+}
+
+.analysisOriginalFilenameBox {
+  background-color: #fff1f0;
+  border-radius: 6px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  word-break: break-all;
+}
+
+.stepSuggestedFilenameBox {
+  background-color: #f6ffed;
+  border-radius: 6px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  word-break: break-all;
+}
+
+.stepSuggestedFilenameText {
+  color: #389e0d;
+}

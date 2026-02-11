@@ -146,6 +146,7 @@ class TestExcelImportServiceErrorHandling:
             )
             with patch("src.services.excel.excel_import_service.asset_crud") as mock_crud:
                 mock_crud.get_by_name_async = AsyncMock(return_value=None)
+                mock_crud.get_by_property_names_async = AsyncMock(return_value=[])
 
                 result = await excel_service.import_assets_from_excel(
                     file_path="test.xlsx",
@@ -205,6 +206,7 @@ class TestExcelImportServiceErrorHandling:
             ) as mock_crud:
                 mock_crud.create_async = AsyncMock(return_value=MagicMock(id="new_id"))
                 mock_crud.get_by_name_async = AsyncMock(return_value=None)
+                mock_crud.get_by_property_names_async = AsyncMock(return_value=[])
 
                 result = await excel_service.import_assets_from_excel(
                     file_path="test.xlsx",
@@ -283,6 +285,7 @@ class TestExcelImportServiceErrorHandling:
                     ]
                 )
                 mock_crud.get_by_name_async = AsyncMock(return_value=None)
+                mock_crud.get_by_property_names_async = AsyncMock(return_value=[])
 
                 with pytest.raises(Exception) as excinfo:
                     await excel_service.import_assets_from_excel(
@@ -637,6 +640,7 @@ class TestUpdateExistingAssets:
             ) as mock_crud:
                 mock_crud.get_by_name_async = AsyncMock(return_value=None)
                 mock_crud.update_async = AsyncMock(return_value=existing_asset)
+                mock_crud.get_by_property_names_async = AsyncMock(return_value=[])
                 result = await excel_service.import_assets_from_excel(
                     file_path="test.xlsx",
                     should_validate_data=True,
@@ -677,6 +681,7 @@ class TestUpdateExistingAssets:
                 "src.services.excel.excel_import_service.asset_crud"
             ) as mock_crud:
                 mock_crud.get_by_name_async = AsyncMock(return_value=None)
+                mock_crud.get_by_property_names_async = AsyncMock(return_value=[])
                 result = await excel_service.import_assets_from_excel(
                     file_path="test.xlsx",
                     should_validate_data=True,

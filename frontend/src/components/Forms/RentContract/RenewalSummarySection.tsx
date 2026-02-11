@@ -19,7 +19,7 @@ import {
   ContractStatusLabels,
   ContractStatusColors,
 } from '@/types/rentContract';
-import { COLORS } from '@/styles/colorMap';
+import styles from './RenewalSummarySection.module.css';
 
 const { Text } = Typography;
 
@@ -65,13 +65,12 @@ const RenewalSummarySection: React.FC<RenewalSummarySectionProps> = ({ contract 
     <Card
       title={
         <Space>
-          <FileTextOutlined style={{ color: COLORS.primary }} />
+          <FileTextOutlined className={styles.titleIcon} />
           原合同信息
         </Space>
       }
       size="small"
-      style={{ marginBottom: 16 }}
-      headStyle={{ borderBottom: '2px solid ' + COLORS.borderLight }}
+      className={styles.summaryCard}
     >
       <Descriptions column={2} size="small" bordered>
         <Descriptions.Item label="合同编号">
@@ -105,7 +104,7 @@ const RenewalSummarySection: React.FC<RenewalSummarySectionProps> = ({ contract 
             </Space>
           }
         >
-          <Text strong style={{ color: COLORS.primary }}>
+          <Text strong className={styles.depositValue}>
             ¥
             {(typeof contract.total_deposit === 'number'
               ? contract.total_deposit
@@ -126,7 +125,7 @@ const RenewalSummarySection: React.FC<RenewalSummarySectionProps> = ({ contract 
         <Descriptions.Item label="承租方/委托方" span={2}>
           <Text strong>{contract.tenant_name}</Text>
           {contract.tenant_contact != null && (
-            <Text type="secondary" style={{ marginLeft: 8 }}>
+            <Text type="secondary" className={styles.contactText}>
               （联系人: {contract.tenant_contact}）
             </Text>
           )}

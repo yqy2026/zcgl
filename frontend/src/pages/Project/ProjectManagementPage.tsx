@@ -5,6 +5,7 @@
 import React, { Suspense } from 'react';
 import { Spin } from 'antd';
 import PageContainer from '@/components/Common/PageContainer';
+import styles from './ProjectManagementPage.module.css';
 
 // 动态导入项目列表组件
 const ProjectList = React.lazy(() => import('@/components/Project/ProjectList'));
@@ -15,14 +16,9 @@ const ProjectManagementPage: React.FC = () => {
       {/* 项目列表 */}
       <Suspense
         fallback={
-          <div
-            style={{
-              padding: '60px',
-              textAlign: 'center',
-            }}
-          >
+          <div className={styles.loadingFallback}>
             <Spin size="large" />
-            <div style={{ marginTop: 16 }}>正在加载项目管理功能...</div>
+            <div className={styles.loadingText}>正在加载项目管理功能...</div>
           </div>
         }
       >

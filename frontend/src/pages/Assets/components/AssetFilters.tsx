@@ -2,6 +2,7 @@ import React from 'react';
 import { Form, Select, DatePicker, Button, Space, Row, Col, Slider } from 'antd';
 import { ReloadOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import styles from './AssetFilters.module.css';
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
@@ -101,11 +102,11 @@ const AssetFilters: React.FC<AssetFiltersProps> = ({ filters, onChange, onReset 
         </Col>
         <Col span={8}>
           <Form.Item label="创建时间" name="dateRange">
-            <RangePicker style={{ width: '100%' }} />
+            <RangePicker className={styles.fullWidthRangePicker} />
           </Form.Item>
         </Col>
         <Col span={8}>
-          <Form.Item label=" " style={{ marginTop: '30px' }}>
+          <Form.Item label=" " className={styles.resetActionItem}>
             <Space>
               <Button icon={<ReloadOutlined />} onClick={handleReset}>
                 重置筛选

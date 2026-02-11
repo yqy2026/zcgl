@@ -7,6 +7,7 @@ import {
   EditOutlined,
 } from '@ant-design/icons';
 import { createLogger } from '@/utils/logger';
+import styles from './FilenameValidator.module.css';
 
 const componentLogger = createLogger('FilenameValidator');
 const { Text } = Typography;
@@ -217,18 +218,18 @@ export const FilenameValidator: React.FC<FilenameValidatorProps> = ({
   };
 
   const getStatusIcon = () => {
-    if (!validationResult) return <InfoCircleOutlined style={{ color: '#1890ff' }} />;
-    if (validationResult.valid) return <CheckCircleOutlined style={{ color: '#52c41a' }} />;
+    if (!validationResult) return <InfoCircleOutlined className={styles.statusInfoIcon} />;
+    if (validationResult.valid) return <CheckCircleOutlined className={styles.statusSuccessIcon} />;
     if (validationResult.severity === 'high')
-      return <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />;
-    return <ExclamationCircleOutlined style={{ color: '#faad14' }} />;
+      return <ExclamationCircleOutlined className={styles.statusErrorIcon} />;
+    return <ExclamationCircleOutlined className={styles.statusWarningIcon} />;
   };
 
-  const getStatusColor = () => {
-    if (!validationResult) return '#1890ff';
-    if (validationResult.valid) return '#52c41a';
-    if (validationResult.severity === 'high') return '#ff4d4f';
-    return '#faad14';
+  const getStatusTextClass = () => {
+    if (!validationResult) return styles.statusInfoText;
+    if (validationResult.valid) return styles.statusSuccessText;
+    if (validationResult.severity === 'high') return styles.statusErrorText;
+    return styles.statusWarningText;
   };
 
   const getStatusText = () => {
@@ -238,13 +239,15 @@ export const FilenameValidator: React.FC<FilenameValidatorProps> = ({
     return '文件名可以优化';
   };
 
+  const isFilenameInvalid = validationResult != null && validationResult.valid === false;
+
   return (
     <div className={`filename-validator ${className}`}>
-      <Space orientation="vertical" size="small" style={{ width: '100%' }}>
+      <Space orientation="vertical" size="small" className={styles.fullWidthStack}>
         {/* 状态显示 */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className={styles.statusRow}>
           {getStatusIcon()}
-          <Text strong style={{ color: getStatusColor() }}>
+          <Text strong className={getStatusTextClass()}>
             {getStatusText()}
           </Text>
           {validationResult && (
@@ -268,7 +271,7 @@ export const FilenameValidator: React.FC<FilenameValidatorProps> = ({
 
         {/* 文件名输入 */}
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+          <div className={styles.sectionHeaderRow}>
             <Text strong>文件名:</Text>
             {!editing && (
               <Button
@@ -291,14 +294,9 @@ export const FilenameValidator: React.FC<FilenameValidatorProps> = ({
             />
           ) : (
             <div
-              style={{
-                padding: '8px 12px',
-                backgroundColor: '#f5f5f5',
-                borderRadius: '6px',
-                border: `1px solid ${validationResult && !validationResult.valid ? '#ff4d4f' : '#d9d9d9'}`,
-              }}
+              className={`${styles.filenamePreviewBox} ${isFilenameInvalid ? styles.filenamePreviewBoxError : ''}`}
             >
-              <Text code style={{ wordBreak: 'break-all' }}>
+              <Text code className={styles.filenamePreviewText}>
                 {customFilename}
               </Text>
             </div>
@@ -314,35 +312,28 @@ export const FilenameValidator: React.FC<FilenameValidatorProps> = ({
                 showIcon
                 title="发现以下问题:"
                 description={
-                  <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px' }}>
+                  <ul className={styles.issueList}>
                     {validationResult.issues.map(issue => (
                       <li key={issue}>{issue}</li>
                     ))}
                   </ul>
                 }
-                style={{ fontSize: '12px' }}
+                className={styles.issuesAlert}
               />
             )}
 
             {/* 建议的文件名 */}
             {showSuggestions && suggestedFilename !== filename && (
               <div>
-                <Divider style={{ margin: '12px 0 8px 0' }} />
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <Divider className={styles.sectionDivider} />
+                <div className={styles.sectionHeaderRow}>
                   <Text strong>建议的文件名:</Text>
                   <Button type="primary" size="small" onClick={acceptSuggestion}>
                     采用建议
                   </Button>
                 </div>
-                <div
-                  style={{
-                    padding: '8px 12px',
-                    backgroundColor: '#f6ffed',
-                    borderRadius: '6px',
-                    border: '1px solid #b7eb8f',
-                  }}
-                >
-                  <Text code style={{ wordBreak: 'break-all', color: '#389e0d' }}>
+                <div className={styles.suggestedFilenameBox}>
+                  <Text code className={styles.suggestedFilenameText}>
                     {suggestedFilename}
                   </Text>
                 </div>
@@ -352,9 +343,9 @@ export const FilenameValidator: React.FC<FilenameValidatorProps> = ({
             {/* 改进建议 */}
             {validationResult.suggestions.length > 0 && (
               <div>
-                <Divider style={{ margin: '12px 0 8px 0' }} />
+                <Divider className={styles.sectionDivider} />
                 <Text strong>改进建议:</Text>
-                <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px', fontSize: '12px' }}>
+                <ul className={styles.suggestionList}>
                   {validationResult.suggestions.map(suggestion => (
                     <li key={suggestion}>{suggestion}</li>
                   ))}
@@ -365,17 +356,9 @@ export const FilenameValidator: React.FC<FilenameValidatorProps> = ({
         )}
 
         {/* 使用提示 */}
-        <div
-          style={{
-            padding: '8px 12px',
-            backgroundColor: '#e6f7ff',
-            borderRadius: '6px',
-            fontSize: '12px',
-            lineHeight: '1.4',
-          }}
-        >
-          <Text style={{ color: '#0050b3' }}>
-            <InfoCircleOutlined style={{ marginRight: 4 }} />
+        <div className={styles.usageTipsBox}>
+          <Text className={styles.usageTipsText}>
+            <InfoCircleOutlined className={styles.usageTipsIcon} />
             <strong>文件名最佳实践:</strong>
             <br />
             • 避免使用中文特殊字符【】（）

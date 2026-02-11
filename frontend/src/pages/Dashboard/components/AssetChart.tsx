@@ -1,5 +1,6 @@
 import React from 'react';
 import { Row, Col, Progress, Typography, Space } from 'antd';
+import styles from './AssetChart.module.css';
 
 const { Text, Title } = Typography;
 
@@ -22,43 +23,48 @@ interface AssetChartProps {
 
 const AssetChart: React.FC<AssetChartProps> = ({ data, loading }) => {
   if (loading === true) {
-    return <div>加载中...</div>;
+    return (
+      <div className={styles.loadingState} role="status" aria-live="polite">
+        加载中...
+      </div>
+    );
   }
 
-  const propertyTypes = data?.propertyTypes || [];
+  const propertyTypes = data?.propertyTypes ?? [];
+  const occupancyTrend = data?.occupancyTrend ?? [];
   const total = propertyTypes.reduce((sum, item) => sum + item.value, 0);
 
   return (
-    <div>
+    <div className={styles.assetChart}>
       {/* 物业类型分布 */}
-      <Title level={5} style={{ marginBottom: '16px' }}>
+      <Title level={5} className={styles.sectionTitle}>
         物业类型分布
       </Title>
 
-      <div style={{ marginBottom: '24px' }}>
+      <div className={styles.sectionBody}>
         {propertyTypes.map(item => {
           const percentage = total > 0 ? (item.value / total) * 100 : 0;
           return (
-            <div key={item.name} style={{ marginBottom: '12px' }}>
-              <Row justify="space-between" align="middle" style={{ marginBottom: '4px' }}>
+            <div key={item.name} className={styles.propertyItem}>
+              <Row justify="space-between" align="middle" className={styles.propertyHeaderRow}>
                 <Col>
-                  <Space>
-                    <div
-                      style={{
-                        width: '12px',
-                        height: '12px',
-                        backgroundColor: item.color,
-                        borderRadius: '2px',
-                      }}
+                  <Space className={styles.propertyLabelGroup}>
+                    <span
+                      className={styles.propertyColorDot}
+                      style={{ ['--legend-color' as string]: item.color } as React.CSSProperties}
+                      aria-hidden
                     />
-                    <Text>{item.name}</Text>
+                    <Text className={styles.propertyName}>{item.name}</Text>
                   </Space>
                 </Col>
                 <Col>
-                  <Text strong>{item.value}个</Text>
+                  <Text strong className={styles.propertyValue}>
+                    {item.value}个
+                  </Text>
                 </Col>
               </Row>
               <Progress
+                className={styles.propertyProgress}
                 percent={percentage}
                 strokeColor={item.color}
                 showInfo={false}
@@ -70,19 +76,21 @@ const AssetChart: React.FC<AssetChartProps> = ({ data, loading }) => {
       </div>
 
       {/* 出租率趋势 */}
-      <Title level={5} style={{ marginBottom: '16px' }}>
+      <Title level={5} className={styles.sectionTitle}>
         出租率趋势
       </Title>
 
-      <div>
-        {data?.occupancyTrend?.map(item => (
-          <div key={item.month} style={{ marginBottom: '8px' }}>
+      <div className={styles.trendList}>
+        {occupancyTrend.map(item => (
+          <div key={item.month} className={styles.trendItem}>
             <Row justify="space-between" align="middle">
               <Col>
-                <Text>{item.month}</Text>
+                <Text className={styles.trendMonth}>{item.month}</Text>
               </Col>
               <Col>
-                <Text strong>{item.rate}%</Text>
+                <Text strong className={styles.trendValue}>
+                  {item.rate}%
+                </Text>
               </Col>
             </Row>
           </div>

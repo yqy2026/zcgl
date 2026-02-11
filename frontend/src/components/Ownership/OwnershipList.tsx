@@ -41,6 +41,7 @@ import type {
 } from '@/types/ownership';
 import { OwnershipForm } from '@/components/Forms';
 import OwnershipDetail from './OwnershipDetail';
+import styles from './OwnershipList.module.css';
 
 const { Search } = Input;
 const { Option } = Select;
@@ -133,6 +134,10 @@ const OwnershipList: React.FC<OwnershipListProps> = ({ onSelectOwnership, mode =
 
   const ownerships = ownershipsResponse?.items ?? [];
   const loading = isOwnershipsLoading || isOwnershipsFetching;
+  const totalLinkedAssets = useMemo(
+    () => ownerships.reduce((sum, ownership) => sum + (ownership.asset_count ?? 0), 0),
+    [ownerships]
+  );
   const pagination = useMemo(
     () => ({
       current: paginationState.current,
@@ -268,7 +273,7 @@ const OwnershipList: React.FC<OwnershipListProps> = ({ onSelectOwnership, mode =
       dataIndex: 'name',
       key: 'name',
       render: (text: string, record: Ownership) => (
-        <Button type="link" onClick={() => handleView(record)} style={{ padding: 0 }}>
+        <Button type="link" className={styles.linkButton} onClick={() => handleView(record)}>
           {text}
         </Button>
       ),
@@ -315,24 +320,40 @@ const OwnershipList: React.FC<OwnershipListProps> = ({ onSelectOwnership, mode =
       key: 'action',
       width: 180,
       render: (_, record: Ownership) => (
-        <Space size="small">
+        <Space size="small" className={styles.actionGroup}>
           {mode === 'select' && (
-            <Button type="primary" size="small" onClick={() => handleSelect(record)}>
+            <Button
+              type="primary"
+              size="small"
+              className={styles.selectActionButton}
+              onClick={() => handleSelect(record)}
+            >
               选择
             </Button>
           )}
           {mode === 'list' && (
             <>
               <Tooltip title="查看详情">
-                <Button type="text" icon={<EyeOutlined />} onClick={() => handleView(record)} />
+                <Button
+                  type="text"
+                  className={styles.iconActionButton}
+                  icon={<EyeOutlined />}
+                  onClick={() => handleView(record)}
+                />
               </Tooltip>
               <Tooltip title="编辑">
-                <Button type="text" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
+                <Button
+                  type="text"
+                  className={styles.iconActionButton}
+                  icon={<EditOutlined />}
+                  onClick={() => handleEdit(record)}
+                />
               </Tooltip>
               <Tooltip title="删除">
                 <Button
                   type="text"
                   danger
+                  className={`${styles.iconActionButton} ${styles.deleteActionButton}`}
                   icon={<DeleteOutlined />}
                   onClick={() => handleDelete(record)}
                 />
@@ -345,6 +366,7 @@ const OwnershipList: React.FC<OwnershipListProps> = ({ onSelectOwnership, mode =
             onChange={() => handleToggleStatus(record)}
             checkedChildren="启用"
             unCheckedChildren="禁用"
+            className={styles.statusSwitch}
           />
         </Space>
       ),
@@ -352,44 +374,40 @@ const OwnershipList: React.FC<OwnershipListProps> = ({ onSelectOwnership, mode =
   ];
 
   return (
-    <div className="ownership-list">
+    <div className={styles.ownershipList}>
       {/* 统计卡片 */}
       {mode === 'list' && (
-        <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+        <Row gutter={[16, 16]} className={styles.statsRow}>
           <Col xs={24} sm={12} md={6}>
-            <Card>
+            <Card className={styles.statsCard}>
               <Statistic
                 title="总数量"
                 value={derivedStatistics.total_count}
-                styles={{ content: { color: '#3f8600' } }}
+                className={styles.statsTotal}
               />
             </Card>
           </Col>
           <Col xs={24} sm={12} md={6}>
-            <Card>
+            <Card className={styles.statsCard}>
               <Statistic
                 title="启用数量"
                 value={derivedStatistics.active_count}
-                styles={{ content: { color: '#1890ff' } }}
+                className={styles.statsActive}
               />
             </Card>
           </Col>
           <Col xs={24} sm={12} md={6}>
-            <Card>
+            <Card className={styles.statsCard}>
               <Statistic
                 title="禁用数量"
                 value={derivedStatistics.inactive_count}
-                styles={{ content: { color: '#cf1322' } }}
+                className={styles.statsInactive}
               />
             </Card>
           </Col>
           <Col xs={24} sm={12} md={6}>
-            <Card>
-              <Statistic
-                title="关联资产"
-                value={ownerships.reduce((sum, ownership) => sum + (ownership.asset_count ?? 0), 0)}
-                styles={{ content: { color: '#722ed1' } }}
-              />
+            <Card className={styles.statsCard}>
+              <Statistic title="关联资产" value={totalLinkedAssets} className={styles.statsAssets} />
             </Card>
           </Col>
         </Row>
@@ -406,7 +424,7 @@ const OwnershipList: React.FC<OwnershipListProps> = ({ onSelectOwnership, mode =
                 placeholder="搜索权属方名称、简称等"
                 allowClear
                 enterButton={<SearchOutlined />}
-                style={{ width: '100%' }}
+                className={styles.fullWidthControl}
                 value={filters.keyword}
                 onChange={e => handleKeywordChange(e.target.value)}
                 onSearch={handleKeywordChange}
@@ -420,7 +438,7 @@ const OwnershipList: React.FC<OwnershipListProps> = ({ onSelectOwnership, mode =
               <Select
                 placeholder="状态"
                 allowClear
-                style={{ width: '100%' }}
+                className={styles.fullWidthControl}
                 value={filters.isActive === null ? undefined : filters.isActive}
                 onChange={handleStatusChange}
               >
@@ -433,8 +451,10 @@ const OwnershipList: React.FC<OwnershipListProps> = ({ onSelectOwnership, mode =
             key: 'reset',
             col: { xs: 24, sm: 12, md: 6, lg: 4 },
             content: (
-              <Space>
-                <Button onClick={handleReset}>重置</Button>
+              <Space className={styles.toolbarActionGroup}>
+                <Button className={styles.toolbarButton} onClick={handleReset}>
+                  重置
+                </Button>
               </Space>
             ),
           },
@@ -442,11 +462,21 @@ const OwnershipList: React.FC<OwnershipListProps> = ({ onSelectOwnership, mode =
             key: 'actions',
             col: { xs: 24, sm: 12, md: 6, lg: 4 },
             content: (
-              <Space>
-                <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+              <Space className={styles.toolbarActionGroup}>
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  className={styles.toolbarButton}
+                  onClick={handleCreate}
+                >
                   新建权属方
                 </Button>
-                <Button icon={<ReloadOutlined />} onClick={handleRefresh} loading={loading}>
+                <Button
+                  icon={<ReloadOutlined />}
+                  className={styles.toolbarButton}
+                  onClick={handleRefresh}
+                  loading={loading}
+                >
                   刷新
                 </Button>
               </Space>
@@ -456,7 +486,7 @@ const OwnershipList: React.FC<OwnershipListProps> = ({ onSelectOwnership, mode =
       />
 
       {/* 权属方表格 */}
-      <Card>
+      <Card className={styles.tableCard}>
         <TableWithPagination
           columns={columns}
           dataSource={ownerships}

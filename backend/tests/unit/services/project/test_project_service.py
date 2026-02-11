@@ -13,6 +13,7 @@ from src.core.exception_handler import (
     OperationNotAllowedError,
     ResourceNotFoundError,
 )
+from src.crud.query_builder import TenantFilter
 from src.models import Project
 from src.schemas.project import ProjectCreate, ProjectSearchRequest, ProjectUpdate
 from src.services.project.service import ProjectService
@@ -321,3 +322,61 @@ class TestSearchProjects:
 
         assert result["total"] == 0
         assert result["items"] == []
+
+
+class TestGetProjectById:
+    async def test_get_project_by_id_resolves_tenant_filter(
+        self, project_service: ProjectService, mock_db: MagicMock, mock_project: MagicMock
+    ) -> None:
+        tenant_filter = TenantFilter(organization_ids=["org-1"])
+
+        with (
+            patch.object(
+                project_service,
+                "_resolve_tenant_filter",
+                new=AsyncMock(return_value=tenant_filter),
+            ) as mock_resolve,
+            patch(
+                "src.crud.project.project_crud.get",
+                new_callable=AsyncMock,
+                return_value=mock_project,
+            ) as mock_get,
+        ):
+            result = await project_service.get_project_by_id(
+                mock_db,
+                project_id="project_123",
+                current_user_id="user_1",
+            )
+
+        assert result == mock_project
+        mock_resolve.assert_awaited_once_with(
+            mock_db,
+            current_user_id="user_1",
+            tenant_filter=None,
+        )
+        mock_get.assert_awaited_once_with(
+            db=mock_db,
+            id="project_123",
+            tenant_filter=tenant_filter,
+        )
+
+    async def test_get_project_by_id_fail_closed_when_no_accessible_org(
+        self, project_service: ProjectService, mock_db: MagicMock
+    ) -> None:
+        with patch.object(
+            project_service,
+            "_resolve_tenant_filter",
+            new=AsyncMock(return_value=TenantFilter(organization_ids=[])),
+        ):
+            with patch(
+                "src.crud.project.project_crud.get",
+                new_callable=AsyncMock,
+            ) as mock_get:
+                result = await project_service.get_project_by_id(
+                    mock_db,
+                    project_id="project_123",
+                    current_user_id="user_1",
+                )
+
+        assert result is None
+        mock_get.assert_not_awaited()

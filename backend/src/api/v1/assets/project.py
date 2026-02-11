@@ -48,8 +48,17 @@ async def create_project(
     创建新项目
     """
     try:
+        default_org_id = getattr(current_user, "default_organization_id", None)
+        organization_id = (
+            str(default_org_id)
+            if default_org_id is not None and str(default_org_id).strip() != ""
+            else None
+        )
         project = await project_service.create_project(
-            db=db, obj_in=project_in, created_by=current_user.id
+            db=db,
+            obj_in=project_in,
+            created_by=current_user.id,
+            organization_id=organization_id,
         )
         return _project_to_response(project)
     except Exception as e:
@@ -96,7 +105,9 @@ async def list_projects(
             ownership_entity=None,
         )
         result = await project_service.search_projects(
-            db=db, search_params=search_params
+            db=db,
+            search_params=search_params,
+            current_user_id=str(current_user.id),
         )
         items = [_project_to_response(item) for item in result.get("items", [])]
         return ResponseHandler.paginated(
@@ -125,7 +136,9 @@ async def search_projects(
     """
     try:
         result = await project_service.search_projects(
-            db=db, search_params=search_params
+            db=db,
+            search_params=search_params,
+            current_user_id=str(current_user.id),
         )
         items = [_project_to_response(item) for item in result.get("items", [])]
         return ResponseHandler.paginated(
@@ -146,7 +159,11 @@ async def get_project_options(
     is_active: bool | None = Query(True, description="是否仅返回启用项目"),
 ) -> list[dict[str, Any]]:
     """获取项目下拉列表选项（标准端点）"""
-    return await project_service.get_project_dropdown_options(db, is_active=is_active)
+    return await project_service.get_project_dropdown_options(
+        db,
+        is_active=is_active,
+        current_user_id=str(current_user.id),
+    )
 
 
 @router.get("/stats/overview", summary="获取项目统计")
@@ -169,7 +186,11 @@ async def get_project(
     """
     获取项目详情
     """
-    project = await project_service.get_project_by_id(db=db, project_id=project_id)
+    project = await project_service.get_project_by_id(
+        db=db,
+        project_id=project_id,
+        current_user_id=str(current_user.id),
+    )
     if not project:
         raise not_found("项目不存在", resource_type="project", resource_id=project_id)
     return _project_to_response(project)
@@ -191,6 +212,7 @@ async def update_project(
             project_id=project_id,
             obj_in=project_in,
             updated_by=current_user.id,
+            current_user_id=str(current_user.id),
         )
         return _project_to_response(project)
     except Exception as e:
@@ -209,7 +231,11 @@ async def delete_project(
     删除项目
     """
     try:
-        await project_service.delete_project(db=db, project_id=project_id)
+        await project_service.delete_project(
+            db=db,
+            project_id=project_id,
+            current_user_id=str(current_user.id),
+        )
         return {"message": "项目删除成功"}
     except Exception as e:
         if isinstance(e, BaseBusinessError):
@@ -228,7 +254,10 @@ async def toggle_project_status(
     """
     try:
         project = await project_service.toggle_status(
-            db=db, project_id=project_id, updated_by=current_user.id
+            db=db,
+            project_id=project_id,
+            updated_by=current_user.id,
+            current_user_id=str(current_user.id),
         )
         return _project_to_response(project)
     except Exception as e:

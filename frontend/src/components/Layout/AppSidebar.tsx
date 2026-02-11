@@ -21,14 +21,21 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed }) => {
   };
 
   return (
-    <Sider trigger={null} collapsible collapsed={collapsed} width={240} className={styles.sidebar}>
+    <Sider
+      trigger={null}
+      collapsible
+      collapsed={collapsed}
+      width={240}
+      className={styles.sidebar}
+      aria-label="主导航侧边栏"
+    >
       {/* Logo区域 */}
       <div
         className={
           collapsed ? `${styles.sidebarLogo} ${styles.sidebarLogoCollapsed}` : styles.sidebarLogo
         }
       >
-        <HomeOutlined className={styles.sidebarLogoIcon} />
+        <HomeOutlined className={styles.sidebarLogoIcon} aria-hidden />
         {!collapsed && <span className={styles.sidebarLogoText}>资产管理</span>}
       </div>
 
@@ -41,6 +48,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed }) => {
         items={MENU_ITEMS}
         onClick={handleMenuClick}
         className={styles.sidebarMenu}
+        aria-label="系统主菜单"
       />
     </Sider>
   );

@@ -5,6 +5,7 @@ import React from 'react';
 import { Card, Empty } from 'antd';
 import { AnalyticsStatsGrid } from '@/components/Analytics/AnalyticsStatsCard';
 import PageContainer from '@/components/Common/PageContainer';
+import styles from './SimpleAnalyticsPage.module.css';
 
 const SimpleAnalyticsPage: React.FC = () => {
   // 使用模拟数据进行测试
@@ -20,8 +21,7 @@ const SimpleAnalyticsPage: React.FC = () => {
 
   return (
     <PageContainer title="资产分析（简化版）" subTitle="用于调试资产分析模块的基础展示">
-
-      <Card title="概览统计" style={{ marginBottom: '24px' }}>
+      <Card title="概览统计" className={styles.overviewCard}>
         <AnalyticsStatsGrid data={mockData} loading={false} />
       </Card>
 

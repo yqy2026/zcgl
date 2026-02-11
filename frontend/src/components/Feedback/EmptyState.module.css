@@ -1,0 +1,34 @@
+.emptyStateWrapper {
+  padding: 50px 20px;
+  text-align: center;
+}
+
+.emptyTitle {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 16px;
+}
+
+.emptyActions {
+  margin-top: 16px;
+}
+
+.emptyIcon {
+  font-size: 64px;
+}
+
+.emptyIconNeutral {
+  color: #d9d9d9;
+}
+
+.emptyIconError {
+  color: #ff4d4f;
+}
+
+.emptyIconWarning {
+  color: #faad14;
+}
+
+.emptyIconInfo {
+  color: #1890ff;
+}

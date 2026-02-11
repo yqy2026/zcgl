@@ -92,10 +92,10 @@ const AssetDetailedSection: React.FC = () => {
     >
       {showAdvanced && (
         <>
-          {/* Tenant Info */}
+          {/* Lessee Info */}
           <Title level={5}>
-            租户信息
-            <Tooltip title="租户信息来自合同管理模块，只能查看不能编辑">
+            承租方信息
+            <Tooltip title="承租方信息来自合同管理模块，只能查看不能编辑">
               <InfoCircleOutlined style={{ marginLeft: 8, color: COLORS.textSecondary }} />
             </Tooltip>
           </Title>
@@ -103,7 +103,7 @@ const AssetDetailedSection: React.FC = () => {
           <Row gutter={16}>
             <Col span={8}>
               <Form.Item
-                label="租户名称"
+                label="承租方名称"
                 name="tenant_name"
                 htmlFor={tenantNameIds.inputId}
               >
@@ -132,7 +132,7 @@ const AssetDetailedSection: React.FC = () => {
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item label="租户类型" name="tenant_type">
+              <Form.Item label="承租方类型" name="tenant_type">
                 <DictionarySelect dictType="tenant_type" placeholder="自动从合同获取" disabled />
               </Form.Item>
             </Col>

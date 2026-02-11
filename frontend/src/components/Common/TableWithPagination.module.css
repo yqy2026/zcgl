@@ -29,9 +29,46 @@
 
 .paginationContainer {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
   padding: var(--spacing-sm) 0 0;
   border-top: 1px solid var(--table-border-color);
+}
+
+.paginationNav {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+}
+
+.paginationContainer :global(.ant-pagination-item),
+.paginationContainer :global(.ant-pagination-prev .ant-pagination-item-link),
+.paginationContainer :global(.ant-pagination-next .ant-pagination-item-link),
+.paginationContainer :global(.ant-pagination-options-size-changer .ant-select-selector),
+.paginationContainer :global(.ant-pagination-options-quick-jumper input) {
+  min-height: 40px;
+  border-radius: 8px;
+}
+
+.paginationContainer :global(.ant-pagination-item),
+.paginationContainer :global(.ant-pagination-prev .ant-pagination-item-link),
+.paginationContainer :global(.ant-pagination-next .ant-pagination-item-link) {
+  min-width: 40px;
+  line-height: 38px;
+}
+
+.paginationContainer :global(.ant-pagination-options-size-changer .ant-select-selector),
+.paginationContainer :global(.ant-pagination-options-quick-jumper input) {
+  min-width: 72px;
+}
+
+.paginationContainer :global(.ant-pagination-item:focus-visible),
+.paginationContainer :global(.ant-pagination-prev .ant-pagination-item-link:focus-visible),
+.paginationContainer :global(.ant-pagination-next .ant-pagination-item-link:focus-visible),
+.paginationContainer :global(.ant-pagination-options-size-changer .ant-select-selector:focus-visible),
+.paginationContainer :global(.ant-pagination-options-quick-jumper input:focus-visible) {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 @media (max-width: 767px) {
@@ -44,5 +81,24 @@
   .paginationContainer {
     justify-content: center;
     padding-top: var(--spacing-md);
+  }
+
+  .paginationNav {
+    justify-content: center;
+  }
+
+  .paginationContainer :global(.ant-pagination-item),
+  .paginationContainer :global(.ant-pagination-prev .ant-pagination-item-link),
+  .paginationContainer :global(.ant-pagination-next .ant-pagination-item-link),
+  .paginationContainer :global(.ant-pagination-options-size-changer .ant-select-selector),
+  .paginationContainer :global(.ant-pagination-options-quick-jumper input) {
+    min-height: 44px;
+  }
+
+  .paginationContainer :global(.ant-pagination-item),
+  .paginationContainer :global(.ant-pagination-prev .ant-pagination-item-link),
+  .paginationContainer :global(.ant-pagination-next .ant-pagination-item-link) {
+    min-width: 44px;
+    line-height: 42px;
   }
 }

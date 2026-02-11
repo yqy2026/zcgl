@@ -14,6 +14,7 @@ import type {
   TooltipCustomContentProps,
   ChartColorFunction,
 } from '@/types/charts';
+import styles from './AreaStatisticsChart.module.css';
 
 const { Text } = Typography;
 
@@ -23,6 +24,12 @@ interface AreaStatisticsChartProps {
 }
 
 const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({ filters, height = 400 }) => {
+  const getOccupancyProgressColor = (occupancyRate: number): string => {
+    if (occupancyRate >= 80) return 'var(--color-success)';
+    if (occupancyRate >= 60) return 'var(--color-warning)';
+    return 'var(--color-error)';
+  };
+
   // 获取面积统计数据
   const { data, isLoading, error } = useQuery<AreaStatistics>({
     queryKey: ['area-statistics', filters],
@@ -154,12 +161,12 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({ filters, heig
             value: `${(datum.occupancy_rate as number | undefined)?.toFixed(2)}%`,
           };
         },
-        customContent: (_title: string, data: TooltipCustomContentProps['data']) => {
-          const datum = data?.[0]?.data as DualAxesDataPoint | undefined;
+        customContent: (_title: string, tooltipData: TooltipCustomContentProps['data']) => {
+          const datum = tooltipData?.[0]?.data as DualAxesDataPoint | undefined;
           if (datum == null) return null;
           return (
-            <div style={{ padding: '8px' }}>
-              <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
+            <div className={styles.chartTooltip}>
+              <div className={styles.tooltipTitle}>
                 {datum.full_name ?? datum.entity}
               </div>
               <div>总面积: {datum.total_area?.toLocaleString()} ㎡</div>
@@ -218,12 +225,12 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({ filters, heig
           name: (datum.range as string) ?? '',
           value: `${datum.count as number} 个`,
         }),
-        customContent: (_title: string, data: TooltipCustomContentProps['data']) => {
-          const datum = data?.[0]?.data as AreaRangeDataPoint | undefined;
+        customContent: (_title: string, tooltipData: TooltipCustomContentProps['data']) => {
+          const datum = tooltipData?.[0]?.data as AreaRangeDataPoint | undefined;
           if (datum == null) return null;
           return (
-            <div style={{ padding: '8px' }}>
-              <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{datum.range}</div>
+            <div className={styles.chartTooltip}>
+              <div className={styles.tooltipTitle}>{datum.range}</div>
               <div>资产数量: {datum.count} 个</div>
               <div>总面积: {datum.total_area?.toLocaleString()} ㎡</div>
               <div>占比: {datum.percentage?.toFixed(1)}%</div>
@@ -264,80 +271,80 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({ filters, heig
   }
 
   return (
-    <div>
+    <div className={styles.areaStatisticsChart}>
       {/* 总体统计 */}
-      <Row gutter={16} style={{ marginBottom: 16 }}>
+      <Row gutter={16} className={styles.summaryRow}>
         <Col xs={12} sm={6} md={4}>
-          <Card>
+          <Card className={styles.summaryCard}>
             <Statistic
               title="总土地面积"
               value={data?.total_statistics?.total_land_area ?? 0}
               suffix="㎡"
               formatter={value => `${Number(value).toLocaleString()}`}
               prefix={<BuildOutlined />}
-              styles={{ content: { color: '#1890ff' } }}
+              className={styles.statisticLand}
             />
           </Card>
         </Col>
 
         <Col xs={12} sm={6} md={4}>
-          <Card>
+          <Card className={styles.summaryCard}>
             <Statistic
               title="总房产面积"
               value={data?.total_statistics?.total_property_area ?? 0}
               suffix="㎡"
               formatter={value => `${Number(value).toLocaleString()}`}
               prefix={<HomeOutlined />}
-              styles={{ content: { color: '#52c41a' } }}
+              className={styles.statisticProperty}
             />
           </Card>
         </Col>
 
         <Col xs={12} sm={6} md={4}>
-          <Card>
+          <Card className={styles.summaryCard}>
             <Statistic
               title="可租面积"
               value={data?.total_statistics?.total_rentable_area ?? 0}
               suffix="㎡"
               formatter={value => `${Number(value).toLocaleString()}`}
               prefix={<ShopOutlined />}
-              styles={{ content: { color: '#faad14' } }}
+              className={styles.statisticRentable}
             />
           </Card>
         </Col>
 
         <Col xs={12} sm={6} md={4}>
-          <Card>
+          <Card className={styles.summaryCard}>
             <Statistic
               title="已租面积"
               value={data?.total_statistics?.total_rented_area ?? 0}
               suffix="㎡"
               formatter={value => `${Number(value).toLocaleString()}`}
-              styles={{ content: { color: '#722ed1' } }}
+              className={styles.statisticRented}
             />
           </Card>
         </Col>
 
         <Col xs={12} sm={6} md={4}>
-          <Card>
+          <Card className={styles.summaryCard}>
             <Statistic
               title="空置面积"
               value={data?.total_statistics?.total_vacant_area ?? 0}
               suffix="㎡"
               formatter={value => `${Number(value).toLocaleString()}`}
-              styles={{ content: { color: '#ff4d4f' } }}
+              className={styles.statisticVacant}
             />
           </Card>
         </Col>
 
         <Col xs={12} sm={6} md={4}>
-          <Card>
+          <Card className={styles.summaryCard}>
             <Statistic
               title="非经营面积"
               value={data?.total_statistics?.total_non_commercial_area ?? 0}
               suffix="㎡"
               formatter={value => `${Number(value).toLocaleString()}`}
-              styles={{ content: { color: '#8c8c8c' } }}
+              className={styles.statisticNonCommercial}
             />
           </Card>
         </Col>
@@ -347,7 +354,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({ filters, heig
       <Row gutter={16}>
         {/* 物业性质面积分布 */}
         <Col xs={24} lg={12}>
-          <Card title="物业性质面积分布" style={{ marginBottom: 16 }}>
+          <Card title="物业性质面积分布" className={styles.chartCard}>
             <Spin spinning={isLoading}>
               <Column {...propertyNatureChartConfig} height={height} />
             </Spin>
@@ -356,7 +363,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({ filters, heig
 
         {/* 面积区间分布 */}
         <Col xs={24} lg={12}>
-          <Card title="面积区间分布" style={{ marginBottom: 16 }}>
+          <Card title="面积区间分布" className={styles.chartCard}>
             <Spin spinning={isLoading}>
               <Column {...areaRangeChartConfig} height={height} />
             </Spin>
@@ -374,29 +381,20 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({ filters, heig
       </Row>
 
       {/* 详细统计 */}
-      <Row gutter={16} style={{ marginTop: 16 }}>
+      <Row gutter={16} className={styles.detailsRow}>
         <Col xs={24} lg={12}>
           <Card title="使用状态面积统计" size="small">
-            <div style={{ maxHeight: 300, overflowY: 'auto' }}>
+            <div className={styles.detailList}>
               {data?.by_usage_status?.map((item, index) => (
                 <div
                   key={item.usage_status}
-                  style={{
-                    padding: '12px 0',
-                    borderBottom:
-                      index < (data.by_usage_status?.length ?? 0) - 1
-                        ? '1px solid #f0f0f0'
-                        : 'none',
-                  }}
+                  className={
+                    index < (data.by_usage_status?.length ?? 0) - 1
+                      ? styles.detailItem
+                      : `${styles.detailItem} ${styles.detailItemLast}`
+                  }
                 >
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      marginBottom: 8,
-                    }}
-                  >
+                  <div className={styles.detailItemHeader}>
                     <Space>
                       <Tag
                         color={
@@ -413,12 +411,12 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({ filters, heig
                       </Tag>
                       <Text strong>{item.asset_count} 个资产</Text>
                     </Space>
-                    <Text style={{ fontWeight: 'bold' }}>
+                    <Text className={styles.detailAreaValue}>
                       {item.total_area?.toLocaleString()} ㎡
                     </Text>
                   </div>
                   <div>
-                    <Text type="secondary" style={{ fontSize: '12px' }}>
+                    <Text type="secondary" className={styles.detailMeta}>
                       平均面积: {item.average_area?.toLocaleString()} ㎡
                     </Text>
                   </div>
@@ -430,56 +428,42 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({ filters, heig
 
         <Col xs={24} lg={12}>
           <Card title="面积最大资产（前10名）" size="small">
-            <div style={{ maxHeight: 300, overflowY: 'auto' }}>
+            <div className={styles.detailList}>
               {data?.top_assets_by_area?.map((asset, index) => (
                 <div
                   key={asset.property_name}
-                  style={{
-                    padding: '12px 0',
-                    borderBottom:
-                      index < (data.top_assets_by_area?.length ?? 0) - 1
-                        ? '1px solid #f0f0f0'
-                        : 'none',
-                  }}
+                  className={
+                    index < (data.top_assets_by_area?.length ?? 0) - 1
+                      ? styles.detailItem
+                      : `${styles.detailItem} ${styles.detailItemLast}`
+                  }
                 >
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'flex-start',
-                      marginBottom: 8,
-                    }}
-                  >
-                    <div style={{ flex: 1 }}>
+                  <div className={styles.topAssetHeader}>
+                    <div className={styles.topAssetLeft}>
                       <Text strong>{asset.property_name}</Text>
                       <br />
-                      <Text type="secondary" style={{ fontSize: '12px' }}>
+                      <Text type="secondary" className={styles.detailMeta}>
                         房产面积: {asset.property_area?.toLocaleString()} ㎡
                       </Text>
                     </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <Text style={{ fontWeight: 'bold', color: '#1890ff' }}>
+                    <div className={styles.topAssetRight}>
+                      <Text className={styles.topAssetArea}>
                         {asset.rentable_area?.toLocaleString()} ㎡
                       </Text>
                       <br />
-                      <Text style={{ fontSize: '12px', color: '#52c41a' }}>
+                      <Text className={styles.topAssetOccupancy}>
                         出租率: {asset.occupancy_rate?.toFixed(1)}%
                       </Text>
                     </div>
                   </div>
 
-                  {asset.rentable_area && asset.rentable_area > 0 && (
+                  {asset.rentable_area != null && asset.rentable_area > 0 && (
                     <Progress
                       percent={asset.occupancy_rate ?? 0}
                       size="small"
-                      strokeColor={
-                        (asset.occupancy_rate ?? 0) >= 80
-                          ? '#52c41a'
-                          : (asset.occupancy_rate ?? 0) >= 60
-                            ? '#faad14'
-                            : '#ff4d4f'
-                      }
+                      strokeColor={getOccupancyProgressColor(asset.occupancy_rate ?? 0)}
                       format={percent => `${percent?.toFixed(1)}%`}
+                      className={styles.topAssetProgress}
                     />
                   )}
                 </div>

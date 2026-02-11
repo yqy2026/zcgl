@@ -337,7 +337,7 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
               label: { width: '150px' },
             }}
           >
-            <Descriptions.Item label="租户名称">{asset.tenant_name ?? '-'}</Descriptions.Item>
+            <Descriptions.Item label="承租方名称">{asset.tenant_name ?? '-'}</Descriptions.Item>
 
             <Descriptions.Item label="租赁合同编号">
               {asset.lease_contract_number ?? '-'}

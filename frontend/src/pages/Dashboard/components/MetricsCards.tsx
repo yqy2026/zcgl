@@ -8,7 +8,7 @@ import {
   HomeOutlined,
   ShopOutlined,
 } from '@ant-design/icons';
-import { COLORS } from '@/styles/colorMap';
+import styles from './MetricsCards.module.css';
 
 interface MetricsCardsProps {
   metrics?: {
@@ -24,70 +24,70 @@ interface MetricsCardsProps {
 
 const MetricsCards: React.FC<MetricsCardsProps> = ({ metrics, loading }) => {
   return (
-    <Row gutter={16}>
+    <Row gutter={[16, 16]} className={styles.metricsGrid}>
       <Col xs={24} sm={12} lg={8} xl={4}>
-        <Card loading={loading}>
+        <Card loading={loading} className={styles.metricCard}>
           <Statistic
             title="资产总数"
             value={metrics?.totalAssets ?? 0}
             suffix="个"
             prefix={<BuildOutlined />}
-            styles={{ content: { color: COLORS.primary } }}
+            className={styles.metricPrimary}
           />
         </Card>
       </Col>
       <Col xs={24} sm={12} lg={8} xl={4}>
-        <Card loading={loading}>
+        <Card loading={loading} className={styles.metricCard}>
           <Statistic
             title="总面积"
             value={metrics?.totalArea ?? 0}
             suffix="㎡"
             prefix={<AreaChartOutlined />}
-            styles={{ content: { color: COLORS.success } }}
+            className={styles.metricSuccess}
           />
         </Card>
       </Col>
       <Col xs={24} sm={12} lg={8} xl={4}>
-        <Card loading={loading}>
+        <Card loading={loading} className={styles.metricCard}>
           <Statistic
             title="平均出租率"
             value={metrics?.occupancyRate ?? 0}
             suffix="%"
             prefix={<PercentageOutlined />}
             precision={1}
-            styles={{ content: { color: COLORS.warning } }}
+            className={styles.metricWarning}
           />
         </Card>
       </Col>
       <Col xs={24} sm={12} lg={8} xl={4}>
-        <Card loading={loading}>
+        <Card loading={loading} className={styles.metricCard}>
           <Statistic
             title="月度收入"
             value={metrics?.monthlyRevenue ?? 0}
             prefix={<DollarOutlined />}
-            styles={{ content: { color: COLORS.info } }}
+            className={styles.metricInfo}
           />
         </Card>
       </Col>
       <Col xs={24} sm={12} lg={8} xl={4}>
-        <Card loading={loading}>
+        <Card loading={loading} className={styles.metricCard}>
           <Statistic
             title="出租中"
             value={metrics?.rentedAssets ?? 0}
             suffix="个"
             prefix={<HomeOutlined />}
-            styles={{ content: { color: COLORS.success } }}
+            className={styles.metricSuccess}
           />
         </Card>
       </Col>
       <Col xs={24} sm={12} lg={8} xl={4}>
-        <Card loading={loading}>
+        <Card loading={loading} className={styles.metricCard}>
           <Statistic
             title="空置"
             value={metrics?.vacantAssets ?? 0}
             suffix="个"
             prefix={<ShopOutlined />}
-            styles={{ content: { color: COLORS.error } }}
+            className={styles.metricError}
           />
         </Card>
       </Col>

@@ -2,6 +2,7 @@ import React from 'react';
 import { Pie, Column, Line } from '@ant-design/plots';
 import { Card, Empty, Spin } from 'antd';
 import { CHART_COLORS, CHART_LABEL_COLORS } from '@/styles/colorMap';
+import styles from './AnalyticsChart.module.css';
 
 // 基础图表组件属性
 interface BaseChartProps {
@@ -95,10 +96,14 @@ export const AnalyticsPieChart: React.FC<PieChartProps> = ({
       : false,
   };
 
+  const stateContainerStyle = {
+    ['--chart-height' as string]: `${height}px`,
+  } as React.CSSProperties;
+
   if (loading === true) {
     return (
       <Card title={title} className={className}>
-        <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className={styles.stateContainer} style={stateContainerStyle}>
           <Spin size="large" />
         </div>
       </Card>
@@ -108,7 +113,7 @@ export const AnalyticsPieChart: React.FC<PieChartProps> = ({
   if (data.length === 0) {
     return (
       <Card title={title} className={className}>
-        <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className={styles.stateContainer} style={stateContainerStyle}>
           <Empty description="暂无数据" />
         </div>
       </Card>
@@ -216,10 +221,14 @@ export const AnalyticsBarChart: React.FC<BarChartProps> = ({
     },
   };
 
+  const stateContainerStyle = {
+    ['--chart-height' as string]: `${height}px`,
+  } as React.CSSProperties;
+
   if (loading === true) {
     return (
       <Card title={title} className={className}>
-        <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className={styles.stateContainer} style={stateContainerStyle}>
           <Spin size="large" />
         </div>
       </Card>
@@ -229,7 +238,7 @@ export const AnalyticsBarChart: React.FC<BarChartProps> = ({
   if (data.length === 0) {
     return (
       <Card title={title} className={className}>
-        <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className={styles.stateContainer} style={stateContainerStyle}>
           <Empty description="暂无数据" />
         </div>
       </Card>
@@ -342,10 +351,14 @@ export const AnalyticsLineChart: React.FC<LineChartProps> = ({
     },
   };
 
+  const stateContainerStyle = {
+    ['--chart-height' as string]: `${height}px`,
+  } as React.CSSProperties;
+
   if (loading === true) {
     return (
       <Card title={title} className={className}>
-        <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className={styles.stateContainer} style={stateContainerStyle}>
           <Spin size="large" />
         </div>
       </Card>
@@ -355,7 +368,7 @@ export const AnalyticsLineChart: React.FC<LineChartProps> = ({
   if (data.length === 0) {
     return (
       <Card title={title} className={className}>
-        <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className={styles.stateContainer} style={stateContainerStyle}>
           <Empty description="暂无数据" />
         </div>
       </Card>

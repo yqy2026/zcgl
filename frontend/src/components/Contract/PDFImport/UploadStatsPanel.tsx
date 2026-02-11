@@ -5,6 +5,7 @@
 import React from 'react';
 import { Row, Col, Statistic } from 'antd';
 import { usePDFImportContext } from './PDFImportContext';
+import styles from './UploadStatsPanel.module.css';
 
 const UploadStatsPanel: React.FC = () => {
   const { uploadStats } = usePDFImportContext();
@@ -14,7 +15,7 @@ const UploadStatsPanel: React.FC = () => {
   }
 
   return (
-    <Row gutter={16} style={{ marginTop: 16 }}>
+    <Row gutter={16} className={styles.statsRow}>
       <Col span={8}>
         <Statistic title="上传速度" value={uploadStats.uploadSpeed} suffix="KB/s" precision={1} />
       </Col>
@@ -25,7 +26,7 @@ const UploadStatsPanel: React.FC = () => {
         <Statistic
           title="推荐方法"
           value={uploadStats.fileAnalysis.recommendedMethod}
-          styles={{ content: { fontSize: 14 } }}
+          className={styles.recommendedMethodStatistic}
         />
       </Col>
     </Row>

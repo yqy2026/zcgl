@@ -5,6 +5,7 @@
 import React from 'react';
 import { Space, Button } from 'antd';
 import { usePDFImportContext } from './PDFImportContext';
+import styles from './ActionButtons.module.css';
 
 const ActionButtons: React.FC = () => {
   const { uploading, currentSession, handleCancel, handleReset } = usePDFImportContext();
@@ -17,8 +18,8 @@ const ActionButtons: React.FC = () => {
   }
 
   return (
-    <div style={{ marginTop: 16, textAlign: 'center' }}>
-      <Space>
+    <div className={styles.actionContainer}>
+      <Space className={styles.actionSpace}>
         <Button onClick={handleCancel} danger>
           取消处理
         </Button>

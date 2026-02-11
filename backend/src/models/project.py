@@ -5,13 +5,14 @@ from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DECIMAL, Boolean, Date, DateTime, String, Text
+from sqlalchemy import DECIMAL, Boolean, Date, DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..database import Base
 
 if TYPE_CHECKING:
     from .asset import Asset
+    from .organization import Organization
     from .project_relations import ProjectOwnershipRelation
 
 
@@ -72,6 +73,12 @@ class Project(Base):
     management_entity: Mapped[str | None] = mapped_column(
         String(200), comment="管理单位"
     )
+    organization_id: Mapped[str | None] = mapped_column(
+        String,
+        ForeignKey("organizations.id"),
+        index=True,
+        comment="所属组织ID",
+    )
     ownership_entity: Mapped[str | None] = mapped_column(
         String(200), comment="权属单位"
     )
@@ -111,6 +118,7 @@ class Project(Base):
         back_populates="project",
         cascade="all, delete-orphan",
     )
+    organization: Mapped["Organization | None"] = relationship("Organization")
 
     def __repr__(self) -> str:
         return f"<Project(id={self.id}, name={self.name}, code={self.code})>"

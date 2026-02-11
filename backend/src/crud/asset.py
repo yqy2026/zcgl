@@ -7,7 +7,7 @@ from typing import Any
 资产计算逻辑（AssetCalculator）应在 API 或 Service 层调用。
 """
 
-from sqlalchemy import Float, Select, case, delete, func, insert, or_, select
+from sqlalchemy import Float, Select, case, delete, false, func, insert, or_, select
 from sqlalchemy import cast as sql_cast
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, load_only, selectinload, with_loader_criteria
@@ -23,12 +23,14 @@ from ..core.search_index import (
 from ..models.asset import Asset
 from ..models.asset_history import AssetHistory
 from ..models.asset_search_index import AssetSearchIndex
+from ..models.auth import User
 from ..models.ownership import Ownership
 from ..models.project import Project
 from ..models.project_relations import ProjectOwnershipRelation
 from ..models.rent_contract import RentContract
 from ..schemas.asset import AssetCreate, AssetUpdate
 from .base import CRUDBase
+from .query_builder import TenantFilter
 
 
 class SensitiveDataHandler:
@@ -339,6 +341,44 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
 
         return qb_filters
 
+    @staticmethod
+    def _normalized_org_ids(tenant_filter: TenantFilter) -> list[str]:
+        return [
+            str(org_id).strip()
+            for org_id in tenant_filter.organization_ids
+            if str(org_id).strip() != ""
+        ]
+
+    async def _resolve_creator_principals(
+        self,
+        db: AsyncSession,
+        tenant_filter: TenantFilter,
+    ) -> set[str]:
+        org_ids = self._normalized_org_ids(tenant_filter)
+        if not org_ids:
+            return set()
+
+        stmt = select(User.id, User.username).where(
+            User.default_organization_id.in_(org_ids)
+        )
+        rows = (await db.execute(stmt)).all()
+        principals: set[str] = set()
+        for user_id, username in rows:
+            if user_id is not None and str(user_id).strip() != "":
+                principals.add(str(user_id).strip())
+            if username is not None and str(username).strip() != "":
+                principals.add(str(username).strip())
+        return principals
+
+    @staticmethod
+    def _apply_creator_scope(
+        stmt: Select[Any],
+        principals: set[str],
+    ) -> Select[Any]:
+        if not principals:
+            return stmt.where(false())
+        return stmt.where(Asset.created_by.in_(principals))
+
     async def create_async(
         self,
         db: AsyncSession,
@@ -388,10 +428,17 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         id: Any,
         use_cache: bool = False,
         include_deleted: bool = False,
+        tenant_filter: TenantFilter | None = None,
     ) -> Asset | None:
         stmt = select(Asset).options(*self._asset_projection_load_options()).filter(
             getattr(self.model, "id") == id
         )
+        if tenant_filter is not None:
+            if hasattr(Asset, "organization_id"):
+                stmt = self.query_builder.apply_tenant_filter(stmt, tenant_filter)
+            else:
+                principals = await self._resolve_creator_principals(db, tenant_filter)
+                stmt = self._apply_creator_scope(stmt, principals)
         if not include_deleted:
             stmt = stmt.filter(self._not_deleted_clause(Asset.data_status))
 
@@ -466,9 +513,15 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         sort_order: str = "desc",
         include_relations: bool = True,
         include_contract_projection: bool = True,
+        tenant_filter: TenantFilter | None = None,
     ) -> tuple[list[Asset], int]:
         qb_filters = self._normalize_filters(filters)
         normalized_sort_field = self._normalize_sort_field(sort_field)
+        effective_tenant_filter = tenant_filter
+        creator_principals: set[str] | None = None
+        if tenant_filter is not None and not hasattr(Asset, "organization_id"):
+            creator_principals = await self._resolve_creator_principals(db, tenant_filter)
+            effective_tenant_filter = None
 
         non_pii_search_fields = ["property_name", "business_category"]
         pii_search_fields = ["address"]
@@ -526,6 +579,8 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             base_query = base_query.join(
                 Ownership, Asset.ownership_id == Ownership.id, isouter=True
             )
+        if creator_principals is not None:
+            base_query = self._apply_creator_scope(base_query, creator_principals)
         query: Select[Any] = self.query_builder.build_query(
             filters=qb_filters,
             search_conditions=search_conditions,
@@ -534,6 +589,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             skip=skip,
             limit=limit,
             base_query=base_query,
+            tenant_filter=effective_tenant_filter,
         )
         result = await db.execute(query)
         assets = list(result.scalars().all())
@@ -543,12 +599,18 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             count_base_query = count_base_query.join(
                 Ownership, Asset.ownership_id == Ownership.id, isouter=True
             )
+        if creator_principals is not None:
+            count_base_query = self._apply_creator_scope(
+                count_base_query,
+                creator_principals,
+            )
 
         cnt_query = self.query_builder.build_count_query(
             filters=qb_filters,
             search_conditions=search_conditions,
             base_query=count_base_query,
             distinct_column=Asset.id,
+            tenant_filter=effective_tenant_filter,
         )
         total_result = await db.execute(cnt_query)
         total = total_result.scalar() or 0
@@ -564,6 +626,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         obj_in: AssetCreate,
         commit: bool = True,
         operator: str | None = None,
+        organization_id: str | None = None,
         ip_address: str | None = None,
         user_agent: str | None = None,
         session_id: str | None = None,
@@ -580,6 +643,8 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         obj_in_data.pop("deposit", None)
         obj_in_data.pop("wuyang_project_name", None)
         obj_in_data.pop("description", None)
+        if organization_id is not None and organization_id.strip() != "":
+            obj_in_data["organization_id"] = organization_id
         encrypted_data = self.sensitive_data_handler.encrypt_data(obj_in_data.copy())
 
         db_obj = Asset(**encrypted_data)

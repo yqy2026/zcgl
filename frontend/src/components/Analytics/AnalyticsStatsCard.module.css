@@ -1,0 +1,135 @@
+.statsGrid {
+  width: 100%;
+}
+
+.statCard {
+  height: 100%;
+  border: 1px solid var(--color-border-light);
+  border-radius: 12px;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.statCard:hover {
+  border-color: var(--color-primary-light);
+}
+
+.statCard :global(.ant-card-body) {
+  padding: 20px 24px;
+}
+
+.statHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 8px;
+}
+
+.iconBadge {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--stats-card-icon-bg, var(--color-primary));
+  color: var(--color-bg-primary);
+  font-size: 18px;
+}
+
+.statMain {
+  flex: 1;
+  min-width: 0;
+}
+
+.statTitle {
+  margin-bottom: 4px;
+  color: var(--color-text-tertiary);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.statistic :global(.ant-statistic-content) {
+  margin: 0;
+  color: var(--stats-card-value-color, var(--color-text-primary));
+  font-size: 24px;
+  font-weight: var(--font-weight-bold);
+  line-height: 1.2;
+}
+
+.trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 24px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--color-bg-secondary);
+  color: var(--stats-card-trend-color, var(--color-text-secondary));
+  font-size: 12px;
+  font-weight: var(--font-weight-medium);
+  line-height: 1.2;
+}
+
+.financialGrid {
+  width: 100%;
+}
+
+.financialCard {
+  height: 100%;
+  border-radius: 12px;
+}
+
+.financialCard :global(.ant-card-body) {
+  padding: 16px 20px;
+}
+
+.financialMetric :global(.ant-statistic-title) {
+  margin-bottom: 6px;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.financialMetric :global(.ant-statistic-content) {
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.3;
+}
+
+.financialIncome :global(.ant-statistic-content) {
+  color: var(--color-success);
+}
+
+.financialExpense :global(.ant-statistic-content) {
+  color: var(--color-error);
+}
+
+.financialNetIncomePositive :global(.ant-statistic-content) {
+  color: var(--color-success);
+}
+
+.financialNetIncomeNegative :global(.ant-statistic-content) {
+  color: var(--color-error);
+}
+
+.financialRent :global(.ant-statistic-content) {
+  color: var(--color-primary);
+}
+
+@media (max-width: 768px) {
+  .statCard :global(.ant-card-body) {
+    padding: 16px;
+  }
+
+  .iconBadge {
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+  }
+
+  .statistic :global(.ant-statistic-content) {
+    font-size: 22px;
+  }
+}

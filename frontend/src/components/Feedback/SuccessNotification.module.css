@@ -1,0 +1,15 @@
+.successIcon {
+  color: #52c41a;
+}
+
+.errorIcon {
+  color: #ff4d4f;
+}
+
+.warningIcon {
+  color: #faad14;
+}
+
+.infoIcon {
+  color: #1890ff;
+}

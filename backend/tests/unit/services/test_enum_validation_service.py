@@ -54,7 +54,7 @@ class TestAsyncEnumValidationService:
         enum_service.db.execute.assert_not_called()
 
     async def test_get_valid_values_from_database(self, mock_db, enum_service):
-        enum_type = SimpleNamespace(id='enum-1')
+        enum_type = SimpleNamespace(id='enum-1', status='active')
         mock_db.execute.side_effect = [
             _result_with_first(enum_type),
             _result_with_all(['value1', 'value2']),

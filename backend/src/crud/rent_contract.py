@@ -1,18 +1,23 @@
 from datetime import date
 from typing import Any
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import delete, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from ..constants.business_constants import DataStatusValues
+from ..constants.rent_contract_constants import PaymentStatus
+from ..core.enums import ContractStatus
 from ..crud.asset import SensitiveDataHandler
 from ..crud.base import CRUDBase
 from ..models.associations import rent_contract_assets
 from ..models.ownership import Ownership
 from ..models.rent_contract import (
     RentContract,
+    RentDepositLedger,
     RentLedger,
     RentTerm,
+    ServiceFeeLedger,
 )
 from ..schemas.rent_contract import (
     RentContractCreate,
@@ -140,6 +145,63 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
         if result is not None:
             self.sensitive_data_handler.decrypt_data(result.__dict__)
         return result
+
+    async def get_by_contract_numbers_async(
+        self, db: AsyncSession, *, contract_numbers: list[str]
+    ) -> list[RentContract]:
+        if not contract_numbers:
+            return []
+        stmt = select(RentContract).where(
+            RentContract.contract_number.in_(contract_numbers)
+        )
+        contracts = list((await db.execute(stmt)).scalars().all())
+        for contract in contracts:
+            self.sensitive_data_handler.decrypt_data(contract.__dict__)
+        return contracts
+
+    async def get_export_contracts_async(
+        self,
+        db: AsyncSession,
+        *,
+        contract_ids: list[str] | None = None,
+        start_date: date | None = None,
+        end_date: date | None = None,
+    ) -> list[RentContract]:
+        stmt = select(RentContract).options(selectinload(RentContract.assets))
+        if contract_ids:
+            stmt = stmt.where(RentContract.id.in_(contract_ids))
+        if start_date:
+            stmt = stmt.where(RentContract.start_date >= start_date)
+        if end_date:
+            stmt = stmt.where(RentContract.end_date <= end_date)
+
+        stmt = stmt.order_by(RentContract.created_at.desc())
+        contracts = list((await db.execute(stmt)).scalars().all())
+        for contract in contracts:
+            self.sensitive_data_handler.decrypt_data(contract.__dict__)
+        return contracts
+
+    async def get_active_with_assets_async(
+        self, db: AsyncSession, *, exclude_contract_id: str | None = None
+    ) -> list[RentContract]:
+        stmt = (
+            select(RentContract)
+            .options(selectinload(RentContract.assets))
+            .where(RentContract.contract_status == ContractStatus.ACTIVE)
+        )
+        if exclude_contract_id:
+            stmt = stmt.where(RentContract.id != exclude_contract_id)
+        return list((await db.execute(stmt)).scalars().all())
+
+    async def get_expiring_contracts_async(
+        self, db: AsyncSession, *, today: date, warning_date: date
+    ) -> list[RentContract]:
+        stmt = select(RentContract).where(
+            RentContract.contract_status == ContractStatus.ACTIVE,
+            RentContract.end_date <= warning_date,
+            RentContract.end_date >= today,
+        )
+        return list((await db.execute(stmt)).scalars().all())
 
     async def get_multi_with_filters_async(
         self,
@@ -336,6 +398,22 @@ class CRUDRentTerm(CRUDBase[RentTerm, RentTermCreate, RentTermUpdate]):
         )
         return list((await db.execute(stmt)).scalars().all())
 
+    async def get_by_contract_ids_async(
+        self, db: AsyncSession, *, contract_ids: list[str]
+    ) -> list[RentTerm]:
+        if not contract_ids:
+            return []
+        stmt = (
+            select(RentTerm)
+            .where(RentTerm.contract_id.in_(contract_ids))
+            .order_by(RentTerm.contract_id, RentTerm.start_date)
+        )
+        return list((await db.execute(stmt)).scalars().all())
+
+    async def delete_by_contract_async(self, db: AsyncSession, contract_id: str) -> None:
+        stmt = delete(RentTerm).where(RentTerm.contract_id == contract_id)
+        await db.execute(stmt)
+
 
 class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
     """租金台账CRUD操作"""
@@ -431,6 +509,85 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
             )
         )
         return (await db.execute(stmt)).scalars().first()
+
+    async def get_multi_by_ids_async(
+        self, db: AsyncSession, *, ledger_ids: list[str]
+    ) -> list[RentLedger]:
+        if not ledger_ids:
+            return []
+        stmt = select(RentLedger).where(RentLedger.id.in_(ledger_ids))
+        return list((await db.execute(stmt)).scalars().all())
+
+    async def get_by_contract_ids_async(
+        self, db: AsyncSession, *, contract_ids: list[str]
+    ) -> list[RentLedger]:
+        if not contract_ids:
+            return []
+        stmt = (
+            select(RentLedger)
+            .where(RentLedger.contract_id.in_(contract_ids))
+            .order_by(RentLedger.contract_id, RentLedger.year_month)
+        )
+        return list((await db.execute(stmt)).scalars().all())
+
+    async def get_deposit_ledger_by_contract_async(
+        self, db: AsyncSession, *, contract_id: str
+    ) -> list[RentDepositLedger]:
+        stmt = (
+            select(RentDepositLedger)
+            .where(RentDepositLedger.contract_id == contract_id)
+            .order_by(desc(RentDepositLedger.created_at))
+        )
+        return list((await db.execute(stmt)).scalars().all())
+
+    async def get_service_fee_ledger_by_contract_async(
+        self, db: AsyncSession, *, contract_id: str
+    ) -> list[ServiceFeeLedger]:
+        stmt = (
+            select(ServiceFeeLedger)
+            .where(ServiceFeeLedger.contract_id == contract_id)
+            .order_by(desc(ServiceFeeLedger.year_month))
+        )
+        return list((await db.execute(stmt)).scalars().all())
+
+    async def get_service_fee_by_source_ledger_async(
+        self, db: AsyncSession, *, source_ledger_id: str
+    ) -> ServiceFeeLedger | None:
+        stmt = select(ServiceFeeLedger).where(
+            ServiceFeeLedger.source_ledger_id == source_ledger_id
+        )
+        return (await db.execute(stmt)).scalars().first()
+
+    async def get_overdue_with_contract_async(
+        self, db: AsyncSession, *, today: date
+    ) -> list[RentLedger]:
+        stmt = (
+            select(RentLedger)
+            .options(selectinload(RentLedger.contract))
+            .where(
+                RentLedger.payment_status.in_(
+                    [PaymentStatus.UNPAID, PaymentStatus.PARTIAL]
+                ),
+                RentLedger.due_date < today,
+                RentLedger.data_status == DataStatusValues.ASSET_NORMAL,
+            )
+        )
+        return list((await db.execute(stmt)).scalars().all())
+
+    async def get_due_soon_with_contract_async(
+        self, db: AsyncSession, *, today: date, warning_date: date
+    ) -> list[RentLedger]:
+        stmt = (
+            select(RentLedger)
+            .options(selectinload(RentLedger.contract))
+            .where(
+                RentLedger.payment_status == PaymentStatus.UNPAID,
+                RentLedger.due_date <= warning_date,
+                RentLedger.due_date >= today,
+                RentLedger.data_status == DataStatusValues.ASSET_NORMAL,
+            )
+        )
+        return list((await db.execute(stmt)).scalars().all())
 
     async def get_existing_year_months_async(
         self, db: AsyncSession, *, contract_id: str, year_months: list[str]

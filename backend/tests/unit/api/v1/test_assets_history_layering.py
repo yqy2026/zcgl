@@ -30,8 +30,11 @@ async def test_get_asset_history_should_delegate_asset_service() -> None:
         result = await get_asset_history(
             asset_id="asset-1",
             db=MagicMock(),
-            current_user=MagicMock(),
+            current_user=MagicMock(id="user-1"),
         )
 
     assert result == {"asset_id": "asset-1", "history": [{"id": "history-1"}]}
-    mock_service.get_asset_history_records.assert_awaited_once_with("asset-1")
+    mock_service.get_asset_history_records.assert_awaited_once_with(
+        "asset-1",
+        current_user_id="user-1",
+    )

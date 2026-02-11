@@ -54,6 +54,7 @@ import { AnalyticsFilters } from './AnalyticsFilters';
 import { StatisticCard, FinancialStatisticCard } from './StatisticCard';
 import { ChartCard } from './AnalyticsCard';
 import { AnalyticsPieChart, AnalyticsBarChart, AnalyticsLineChart } from './Charts';
+import styles from './AnalyticsDashboard.module.css';
 // import AdvancedAnalyticsCard from './AdvancedAnalyticsCard'  // 暂时注释，等待后端API支持
 import PerformanceMonitor from '@/components/PerformanceMonitor';
 
@@ -137,6 +138,18 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
     setShowAdvanced(!showAdvanced);
   };
 
+  const dashboardClassName = [
+    styles.dashboardRoot,
+    fullscreen ? styles.dashboardFullscreen : styles.dashboardDefault,
+    className,
+  ]
+    .filter(item => item.trim() !== '')
+    .join(' ');
+
+  const errorCardClassName = [styles.stateCard, className]
+    .filter(item => item.trim() !== '')
+    .join(' ');
+
   // 关键指标数据
   const keyMetrics = useMemo(() => {
     if (!analytics) return [];
@@ -213,13 +226,13 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
 
   if (error !== undefined && error !== null) {
     return (
-      <Card className={className}>
-        <div style={{ textAlign: 'center', padding: '60px 0' }}>
-          <Title level={4} type="danger">
+      <Card className={errorCardClassName}>
+        <div className={styles.stateContent}>
+          <Title level={4} type="danger" className={styles.stateTitle}>
             数据加载失败
           </Title>
-          <p>请检查网络连接或联系管理员</p>
-          <Button type="primary" onClick={handleRefresh}>
+          <p className={styles.stateDescription}>请检查网络连接或联系管理员</p>
+          <Button type="primary" onClick={handleRefresh} className={styles.stateActionButton}>
             重试
           </Button>
         </div>
@@ -228,24 +241,25 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   }
 
   return (
-    <div
-      className={className}
-      style={{
-        padding: fullscreen ? '0' : '24px',
-        background: fullscreen ? '#f0f2f5' : 'transparent',
-      }}
-    >
+    <div className={dashboardClassName}>
       {/* 性能监控 */}
       {isDevelopmentMode() && <PerformanceMonitor />}
 
       {/* 头部操作栏 */}
-      <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
-        <Col xs={24} md={12}>
-          <Title level={2}>资产分析</Title>
+      <Row gutter={[16, 16]} className={styles.headerRow}>
+        <Col xs={24} md={12} className={styles.titleCol}>
+          <Title level={2} className={styles.pageTitle}>
+            资产分析
+          </Title>
         </Col>
-        <Col xs={24} md={12} style={{ textAlign: 'right' }}>
-          <Space>
-            <Button icon={<ReloadOutlined />} onClick={handleRefresh} loading={isLoading}>
+        <Col xs={24} md={12} className={styles.actionsCol}>
+          <Space size={12} wrap className={styles.actionsSpace}>
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={handleRefresh}
+              loading={isLoading}
+              className={styles.actionButton}
+            >
               刷新
             </Button>
             <Dropdown
@@ -270,11 +284,14 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
               }}
               placement="bottomRight"
             >
-              <Button icon={<DownloadOutlined />}>导出</Button>
+              <Button icon={<DownloadOutlined />} className={styles.actionButton}>
+                导出
+              </Button>
             </Dropdown>
             <Button
               icon={fullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
               onClick={handleFullscreenToggle}
+              className={styles.actionButton}
             >
               {fullscreen ? '退出全屏' : '全屏'}
             </Button>
@@ -282,6 +299,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
               icon={<SettingOutlined />}
               onClick={toggleAutoRefresh}
               type={autoRefresh ? 'primary' : 'default'}
+              className={styles.actionButton}
             >
               自动刷新
             </Button>
@@ -301,16 +319,18 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
       />
 
       {!hasData ? (
-        <Card>
-          <div style={{ textAlign: 'center', padding: '60px 0' }}>
-            <Title level={4}>暂无数据</Title>
-            <p>数据库中还没有资产数据，请先录入资产信息</p>
+        <Card className={styles.stateCard}>
+          <div className={styles.stateContent}>
+            <Title level={4} className={styles.stateTitle}>
+              暂无数据
+            </Title>
+            <p className={styles.stateDescription}>数据库中还没有资产数据，请先录入资产信息</p>
           </div>
         </Card>
       ) : (
         <>
           {/* 关键指标概览 */}
-          <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
+          <Row gutter={[16, 16]} className={styles.metricsRow}>
             {keyMetrics.map(metric => (
               <Col xs={24} sm={6} key={metric.title}>
                 <StatisticCard
@@ -338,7 +358,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
           )} */}
 
           {/* 财务指标 */}
-          <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
+          <Row gutter={[16, 16]} className={styles.financialRow}>
             {financialMetrics.map(metric => (
               <Col xs={24} sm={6} key={metric.title}>
                 <FinancialStatisticCard
@@ -354,7 +374,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
           </Row>
 
           {/* 图表区域 */}
-          <Row gutter={[16, 16]}>
+          <Row gutter={[16, 16]} className={styles.chartsRow}>
             {/* 物业性质分布 */}
             <Col xs={24} lg={12}>
               <ChartCard

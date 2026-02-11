@@ -5,11 +5,15 @@ Property Certificate CRUD Operations
 
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import false, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models.asset import Asset
-from ..models.property_certificate import PropertyCertificate, PropertyOwner
+from ..models.property_certificate import (
+    PropertyCertificate,
+    PropertyOwner,
+    property_certificate_owners,
+)
 from ..schemas.property_certificate import (
     PropertyCertificateCreate,
     PropertyCertificateUpdate,
@@ -18,6 +22,7 @@ from ..schemas.property_certificate import (
 )
 from .asset import SensitiveDataHandler
 from .base import CRUDBase
+from .query_builder import TenantFilter
 
 
 class CRUDPropertyOwner(
@@ -146,6 +151,98 @@ class CRUDPropertyCertificate(
 ):
     """产权证CRUD操作类"""
 
+    async def get(
+        self,
+        db: AsyncSession,
+        id: Any,
+        use_cache: bool = True,
+        tenant_filter: TenantFilter | None = None,
+    ) -> PropertyCertificate | None:
+        if tenant_filter is not None and not hasattr(
+            PropertyCertificate,
+            "organization_id",
+        ):
+            org_ids = [
+                str(org_id).strip()
+                for org_id in tenant_filter.organization_ids
+                if str(org_id).strip() != ""
+            ]
+            stmt = select(PropertyCertificate).where(PropertyCertificate.id == id)
+            if not org_ids:
+                stmt = stmt.where(false())
+                return (await db.execute(stmt)).scalars().first()
+            stmt = (
+                stmt.join(
+                    property_certificate_owners,
+                    property_certificate_owners.c.certificate_id
+                    == PropertyCertificate.id,
+                )
+                .join(
+                    PropertyOwner,
+                    property_certificate_owners.c.owner_id == PropertyOwner.id,
+                )
+                .where(PropertyOwner.organization_id.in_(org_ids))
+                .distinct()
+            )
+            return (await db.execute(stmt)).scalars().first()
+
+        return await super().get(
+            db=db,
+            id=id,
+            use_cache=use_cache,
+            tenant_filter=tenant_filter,
+        )
+
+    async def get_multi(
+        self,
+        db: AsyncSession,
+        *,
+        skip: int = 0,
+        limit: int = 100,
+        use_cache: bool = False,
+        tenant_filter: TenantFilter | None = None,
+        **kwargs: Any,
+    ) -> list[PropertyCertificate]:
+        if tenant_filter is not None and not hasattr(
+            PropertyCertificate,
+            "organization_id",
+        ):
+            org_ids = [
+                str(org_id).strip()
+                for org_id in tenant_filter.organization_ids
+                if str(org_id).strip() != ""
+            ]
+            stmt = select(PropertyCertificate)
+            if not org_ids:
+                stmt = stmt.where(false()).offset(skip).limit(limit)
+                return list((await db.execute(stmt)).scalars().all())
+            stmt = (
+                stmt
+                .join(
+                    property_certificate_owners,
+                    property_certificate_owners.c.certificate_id
+                    == PropertyCertificate.id,
+                )
+                .join(
+                    PropertyOwner,
+                    property_certificate_owners.c.owner_id == PropertyOwner.id,
+                )
+                .where(PropertyOwner.organization_id.in_(org_ids))
+                .distinct()
+                .offset(skip)
+                .limit(limit)
+            )
+            return list((await db.execute(stmt)).scalars().all())
+
+        return await super().get_multi(
+            db=db,
+            skip=skip,
+            limit=limit,
+            use_cache=use_cache,
+            tenant_filter=tenant_filter,
+            **kwargs,
+        )
+
     async def get_by_certificate_number_async(
         self, db: AsyncSession, certificate_number: str
     ) -> PropertyCertificate | None:
@@ -161,9 +258,13 @@ class CRUDPropertyCertificate(
         obj_in: PropertyCertificateCreate,
         owner_ids: list[str] | None = None,
         asset_ids: list[str] | None = None,
+        organization_id: str | None = None,
         commit: bool = True,
     ) -> PropertyCertificate:
-        db_obj = PropertyCertificate(**obj_in.model_dump())
+        payload = obj_in.model_dump()
+        if organization_id is not None and organization_id.strip() != "":
+            payload["organization_id"] = organization_id
+        db_obj = PropertyCertificate(**payload)
         db.add(db_obj)
         await db.flush()
 

@@ -1,0 +1,13 @@
+.stepsContainer {
+  margin-bottom: 24px;
+}
+
+.progressSection {
+  margin-top: 16px;
+}
+
+.progressMetaRow {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+}

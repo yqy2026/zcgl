@@ -1,3 +1,4 @@
+from inspect import isawaitable
 from typing import Any
 
 from sqlalchemy import and_, case, func, or_, select
@@ -26,6 +27,20 @@ from ..schemas.rbac import (
     UserRoleAssignmentCreate,
     UserRoleAssignmentUpdate,
 )
+from .query_builder import TenantFilter
+
+
+async def _scalars_all(result: Any) -> list[Any]:
+    """兼容真实 AsyncSession 与测试 AsyncMock 的 scalars().all() 行为。"""
+    scalars_result = result.scalars()
+    if isawaitable(scalars_result):
+        scalars_result = await scalars_result
+
+    all_result = scalars_result.all()
+    if isawaitable(all_result):
+        all_result = await all_result
+
+    return list(all_result)
 
 
 class CRUDRole(CRUDBase[Role, RoleCreate, RoleUpdate]):
@@ -58,7 +73,11 @@ class CRUDRole(CRUDBase[Role, RoleCreate, RoleUpdate]):
         return (await db.execute(stmt)).scalars().first()
 
     async def get(
-        self, db: AsyncSession, id: Any, use_cache: bool = True
+        self,
+        db: AsyncSession,
+        id: Any,
+        use_cache: bool = True,
+        tenant_filter: TenantFilter | None = None,
     ) -> Role | None:
         """根据ID获取单个记录（预加载权限）"""
         stmt = (
@@ -66,9 +85,15 @@ class CRUDRole(CRUDBase[Role, RoleCreate, RoleUpdate]):
             .where(Role.id == id)
             .options(selectinload(Role.permissions))
         )
+        if tenant_filter is not None:
+            stmt = self.query_builder.apply_tenant_filter(stmt, tenant_filter)
         result = (await db.execute(stmt)).scalars().first()
         if use_cache and result is not None:  # pragma: no cover
-            cache_key = self._get_cache_key("get", id=id)  # pragma: no cover
+            cache_key = self._get_cache_key(
+                "get",
+                id=id,
+                tenant_filter=self._serialize_tenant_filter(tenant_filter),
+            )  # pragma: no cover
             self._set_cache(cache_key, result)  # pragma: no cover
         return result
 
@@ -82,6 +107,7 @@ class CRUDRole(CRUDBase[Role, RoleCreate, RoleUpdate]):
         category: str | None = None,
         is_active: bool | None = None,
         organization_id: str | None = None,
+        tenant_filter: TenantFilter | None = None,
     ) -> tuple[list[Role], int]:
         """获取角色列表"""
         filters: dict[str, Any] = {}
@@ -101,17 +127,19 @@ class CRUDRole(CRUDBase[Role, RoleCreate, RoleUpdate]):
             sort_desc=False,
             skip=skip,
             limit=limit,
+            tenant_filter=tenant_filter,
         ).options(selectinload(Role.permissions))
 
         count_stmt = self.query_builder.build_count_query(
             filters=filters,
             search_query=search,
             search_fields=["name", "display_name", "description"],
+            tenant_filter=tenant_filter,
         )
 
-        result = (await db.execute(stmt)).scalars().all()
+        result = await _scalars_all(await db.execute(stmt))
         total = int((await db.execute(count_stmt)).scalar() or 0)
-        return list(result), total
+        return result, total
 
     async def get_roles_by_user_async(
         self,
@@ -139,7 +167,8 @@ class CRUDRole(CRUDBase[Role, RoleCreate, RoleUpdate]):
                     UserRoleAssignment.expires_at > _now,
                 ),
             )
-        return list((await db.execute(stmt)).scalars().all())
+        result = await db.execute(stmt)
+        return await _scalars_all(result)
 
     async def check_display_name_exists_async(
         self, db: AsyncSession, display_name: str, exclude_role_id: str | None = None
@@ -207,6 +236,7 @@ class CRUDPermission(CRUDBase[Permission, PermissionCreate, PermissionUpdate]):
         resource: str | None = None,
         action: str | None = None,
         is_system_permission: bool | None = None,
+        tenant_filter: TenantFilter | None = None,
     ) -> list[Permission]:
         """获取权限列表"""
         filters: dict[str, Any] = {}
@@ -225,10 +255,11 @@ class CRUDPermission(CRUDBase[Permission, PermissionCreate, PermissionUpdate]):
             sort_by="resource",
             skip=skip,
             limit=limit,
+            tenant_filter=tenant_filter,
         )
 
-        result = (await db.execute(stmt)).scalars().all()
-        return list(result)
+        result = await _scalars_all(await db.execute(stmt))
+        return result
 
     async def get_by_ids_async(
         self, db: AsyncSession, permission_ids: list[str]
@@ -237,7 +268,8 @@ class CRUDPermission(CRUDBase[Permission, PermissionCreate, PermissionUpdate]):
         if not permission_ids:
             return []
         stmt = select(Permission).where(Permission.id.in_(permission_ids))
-        return list((await db.execute(stmt)).scalars().all())
+        result = await db.execute(stmt)
+        return await _scalars_all(result)
 
     async def get_multi_with_count_async(
         self,
@@ -249,6 +281,7 @@ class CRUDPermission(CRUDBase[Permission, PermissionCreate, PermissionUpdate]):
         resource: str | None = None,
         action: str | None = None,
         is_system_permission: bool | None = None,
+        tenant_filter: TenantFilter | None = None,
     ) -> tuple[list[Permission], int]:
         """获取权限列表（含总数）"""
         filters: dict[str, Any] = {}
@@ -267,14 +300,16 @@ class CRUDPermission(CRUDBase[Permission, PermissionCreate, PermissionUpdate]):
             sort_desc=False,
             skip=skip,
             limit=limit,
+            tenant_filter=tenant_filter,
         )
         count_stmt = self.query_builder.build_count_query(
             filters=filters,
             search_query=search,
             search_fields=["name", "display_name", "description"],
+            tenant_filter=tenant_filter,
         )
 
-        permissions = list((await db.execute(stmt)).scalars().all())
+        permissions = await _scalars_all(await db.execute(stmt))
         total = int((await db.execute(count_stmt)).scalar() or 0)
         return permissions, total
 
@@ -315,7 +350,8 @@ class CRUDUserRoleAssignment(
                 ),
             )
         )
-        return list((await db.execute(stmt)).scalars().all())
+        result = await db.execute(stmt)
+        return await _scalars_all(result)
 
     async def count_by_role(self, db: AsyncSession, role_id: str) -> int:
         stmt = select(func.count(UserRoleAssignment.id)).where(
@@ -358,8 +394,8 @@ class CRUDResourcePermission(
             return []
 
         stmt = select(ResourcePermission.resource_id).where(and_(*conditions))
-        result = await db.execute(stmt)
-        return [str(resource_id) for resource_id in result.scalars().all()]
+        resource_ids = await _scalars_all(await db.execute(stmt))
+        return [str(resource_id) for resource_id in resource_ids]
 
 
 class CRUDPermissionAuditLog(
@@ -400,7 +436,8 @@ class CRUDPermissionGrant(
                 )
             )
         )
-        return list((await db.execute(stmt)).scalars().all())
+        result = await db.execute(stmt)
+        return await _scalars_all(result)
 
     async def list_with_filters_async(
         self,
@@ -440,7 +477,7 @@ class CRUDPermissionGrant(
             count_stmt = count_stmt.where(and_(*filters))
 
         stmt = stmt.offset(skip).limit(limit)
-        grants = list((await db.execute(stmt)).scalars().all())
+        grants = await _scalars_all(await db.execute(stmt))
         total = int((await db.execute(count_stmt)).scalar() or 0)
         return grants, total
 
@@ -462,7 +499,8 @@ class CRUDPermissionGrant(
                 )
             )
         )
-        return list((await db.execute(stmt)).scalars().all())
+        result = await db.execute(stmt)
+        return await _scalars_all(result)
 
 
 role_crud = CRUDRole(Role)

@@ -3,6 +3,7 @@ import { Layout, Typography, Space, Avatar, Button } from 'antd';
 import { UserOutlined, BellOutlined } from '@ant-design/icons';
 
 import MobileMenu from './MobileMenu';
+import styles from './MobileLayout.module.css';
 
 const { Header, Content, Footer } = Layout;
 const { Text } = Typography;
@@ -13,88 +14,43 @@ interface MobileLayoutProps {
 
 const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
   return (
-    <Layout style={{ minHeight: '100%' }}>
+    <Layout className={styles.mobileLayout}>
       {/* 移动端头部 */}
-      <Header
-        style={{
-          padding: '0 16px',
-          background: 'var(--color-bg-primary)',
-          borderBottom: '1px solid var(--color-border-light)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          height: 56,
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 1000,
-        }}
-      >
+      <Header className={styles.mobileHeader}>
         {/* 左侧：菜单按钮和标题 */}
-        <div style={{ display: 'flex', alignItems: 'center' }}>
+        <div className={styles.mobileHeaderLeft}>
           <MobileMenu />
-          <div style={{ marginLeft: 12 }}>
-            <Text strong style={{ fontSize: '16px', color: 'var(--color-primary)' }}>
-              资产管理
+          <div className={styles.mobileHeaderTitleWrapper}>
+            <Text strong className={styles.mobileHeaderTitle}>
+              资产管理系统
             </Text>
           </div>
         </div>
 
         {/* 右侧：用户信息 */}
-        <Space size="small">
+        <Space size="small" className={styles.mobileHeaderRight}>
           <Button
             type="text"
             icon={<BellOutlined />}
             size="small"
             aria-label="通知"
-            style={{
-              fontSize: '16px',
-              width: 44,
-              height: 44,
-              minWidth: 44,
-              minHeight: 44,
-            }}
+            className={styles.notificationButton}
           />
           <Avatar
             size="small"
             icon={<UserOutlined />}
-            style={{
-              backgroundColor: 'var(--color-primary)',
-              width: 36,
-              height: 36,
-              minWidth: 36,
-              minHeight: 36,
-              cursor: 'pointer',
-            }}
-            aria-label="用户信息"
+            className={styles.userAvatar}
           />
         </Space>
       </Header>
 
       {/* 主内容区 */}
-      <Content
-        style={{
-          marginTop: 56, // 头部高度
-          padding: 0,
-          background: 'var(--color-bg-tertiary)',
-          minHeight: 'calc(100% - 56px)', // 减去头部的高度
-          overflow: 'auto',
-        }}
-      >
+      <Content className={styles.mobileContent}>
         {children}
       </Content>
 
       {/* 页脚 */}
-      <Footer
-        style={{
-          textAlign: 'center',
-          background: 'var(--color-bg-primary)',
-          borderTop: '1px solid var(--color-border-light)',
-          padding: '8px 16px',
-          fontSize: '12px',
-        }}
-      >
+      <Footer className={styles.mobileFooter}>
         <Text type="secondary">资产管理系统 ©2024</Text>
       </Footer>
     </Layout>

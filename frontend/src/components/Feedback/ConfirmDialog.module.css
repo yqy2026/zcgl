@@ -1,0 +1,41 @@
+.confirmIcon {
+  font-size: 24px;
+}
+
+.confirmIconDanger {
+  color: #ff4d4f;
+}
+
+.confirmIconInfo {
+  color: #1890ff;
+}
+
+.confirmIconSuccess {
+  color: #52c41a;
+}
+
+.confirmIconWarning {
+  color: #faad14;
+}
+
+.confirmDangerParagraph {
+  margin-top: 16px;
+  margin-bottom: 0;
+}
+
+.confirmDetailsContainer {
+  margin-top: 16px;
+}
+
+.confirmDetailsList {
+  margin-top: 8px;
+  padding-left: 20px;
+}
+
+.confirmShortcutDeleteIcon {
+  color: #ff4d4f;
+}
+
+.confirmShortcutSaveIcon {
+  color: #faad14;
+}

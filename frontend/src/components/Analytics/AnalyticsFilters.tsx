@@ -10,6 +10,7 @@ import {
   UpOutlined,
 } from '@ant-design/icons';
 import type { AssetSearchParams } from '@/types/asset';
+import styles from './AnalyticsFilters.module.css';
 
 // Import section components
 import {
@@ -54,15 +55,20 @@ const FiltersCardHeader: React.FC = () => {
   return (
     <Card
       size="small"
+      className={styles.filtersCard}
       title={
-        <Space>
-          <FilterOutlined />
+        <Space size={8}>
+          <FilterOutlined className={styles.headerIcon} />
           <span>数据筛选</span>
-          {activeFiltersCount > 0 && <Tag color="blue">{activeFiltersCount} 个筛选条件</Tag>}
+          {activeFiltersCount > 0 && (
+            <Tag color="blue" className={styles.filtersCountTag}>
+              {activeFiltersCount} 个筛选条件
+            </Tag>
+          )}
         </Space>
       }
       extra={
-        <Space>
+        <Space size={4} className={styles.headerActions}>
           <Tooltip title="保存筛选条件">
             <Button
               type="text"
@@ -70,6 +76,7 @@ const FiltersCardHeader: React.FC = () => {
               onClick={() => setSaveName('')}
               disabled={activeFiltersCount === 0}
               size="small"
+              className={styles.iconActionButton}
             />
           </Tooltip>
 
@@ -79,6 +86,7 @@ const FiltersCardHeader: React.FC = () => {
               icon={<HistoryOutlined />}
               onClick={() => setShowHistory(!showHistory)}
               size="small"
+              className={styles.iconActionButton}
             />
           </Tooltip>
 
@@ -89,6 +97,7 @@ const FiltersCardHeader: React.FC = () => {
               onClick={handleReset}
               disabled={activeFiltersCount === 0}
               size="small"
+              className={styles.iconActionButton}
             />
           </Tooltip>
 
@@ -99,6 +108,7 @@ const FiltersCardHeader: React.FC = () => {
               onClick={handleApply}
               loading={loading}
               size="small"
+              className={styles.iconActionButton}
             />
           </Tooltip>
 
@@ -108,13 +118,13 @@ const FiltersCardHeader: React.FC = () => {
               icon={showAdvanced ? <UpOutlined /> : <DownOutlined />}
               onClick={onToggleAdvanced}
               size="small"
+              className={styles.advancedToggleButton}
             >
               {showAdvanced ? '收起' : '高级'}
             </Button>
           )}
         </Space>
       }
-      style={{ marginBottom: 16 }}
     >
       <FilterHistorySection />
       <SearchPresetsSection />

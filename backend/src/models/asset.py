@@ -28,6 +28,7 @@ from ..database import Base
 
 if TYPE_CHECKING:
     from .asset_history import AssetDocument, AssetHistory
+    from .organization import Organization
     from .ownership import Ownership
     from .project import Project
     from .property_certificate import PropertyCertificate
@@ -125,8 +126,8 @@ class Asset(Base):
     )
     actual_usage: Mapped[str | None] = mapped_column(String(100), comment="实际用途")
 
-    # 租户相关字段
-    tenant_type: Mapped[str | None] = mapped_column(String(20), comment="租户类型")
+    # 承租方相关字段
+    tenant_type: Mapped[str | None] = mapped_column(String(20), comment="承租方类型")
 
     is_sublease: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, comment="是否分租/转租"
@@ -201,12 +202,19 @@ class Asset(Base):
     project_id: Mapped[str | None] = mapped_column(
         String, ForeignKey("projects.id"), index=True, comment="项目ID"
     )
+    organization_id: Mapped[str | None] = mapped_column(
+        String,
+        ForeignKey("organizations.id"),
+        index=True,
+        comment="所属组织ID",
+    )
     ownership_id: Mapped[str | None] = mapped_column(
         String, ForeignKey("ownerships.id"), index=True, comment="权属方ID"
     )
 
     # 关系定义
     project: Mapped["Project"] = relationship("Project", back_populates="assets")
+    organization: Mapped["Organization | None"] = relationship("Organization")
     ownership: Mapped["Ownership"] = relationship("Ownership", back_populates="assets")
 
     def _get_loaded_relationship_value(

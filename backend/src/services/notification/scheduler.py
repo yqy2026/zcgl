@@ -10,18 +10,13 @@ import logging
 from datetime import date, datetime, timedelta
 from typing import Any
 
-from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
-from ...constants.business_constants import DataStatusValues
-from ...constants.rent_contract_constants import PaymentStatus
-from ...core.enums import ContractStatus
+from ...crud.rent_contract import rent_contract, rent_ledger
 from ...database import async_session_scope
 
 logger = logging.getLogger(__name__)
 from ...models.notification import Notification, NotificationPriority, NotificationType
-from ...models.rent_contract import RentContract, RentLedger
 from .notification_service import notification_service
 from .wecom_service import wecom_service
 
@@ -130,15 +125,11 @@ class NotificationSchedulerService:
         today = date.today()
         warning_date = today + timedelta(days=days_ahead)
 
-        # 查找即将到期的有效合同
-        stmt = select(RentContract).where(
-            and_(
-                RentContract.contract_status == ContractStatus.ACTIVE,
-                RentContract.end_date <= warning_date,
-                RentContract.end_date >= today,
-            )
+        expiring_contracts = await rent_contract.get_expiring_contracts_async(
+            self.db,
+            today=today,
+            warning_date=warning_date,
         )
-        expiring_contracts = list((await self.db.execute(stmt)).scalars().all())
 
         active_users = await notification_service.list_active_users_async(self.db)
         active_user_ids = [str(user.id) for user in active_users]
@@ -236,21 +227,10 @@ class NotificationSchedulerService:
         """
         today = date.today()
 
-        # 查找逾期未支付的台账记录
-        stmt = (
-            select(RentLedger)
-            .options(selectinload(RentLedger.contract))
-            .where(
-                and_(
-                    RentLedger.payment_status.in_(
-                        [PaymentStatus.UNPAID, PaymentStatus.PARTIAL]
-                    ),
-                    RentLedger.due_date < today,  # 应缴日期已过
-                    RentLedger.data_status == DataStatusValues.ASSET_NORMAL,
-                )
-            )
+        overdue_ledgers = await rent_ledger.get_overdue_with_contract_async(
+            self.db,
+            today=today,
         )
-        overdue_ledgers = list((await self.db.execute(stmt)).scalars().all())
 
         notifications_created = 0
         active_users = await notification_service.list_active_users_async(self.db)
@@ -337,20 +317,11 @@ class NotificationSchedulerService:
         today = date.today()
         warning_date = today + timedelta(days=days_ahead)
 
-        # 查找即将到期且未支付的台账记录
-        stmt = (
-            select(RentLedger)
-            .options(selectinload(RentLedger.contract))
-            .where(
-                and_(
-                    RentLedger.payment_status == PaymentStatus.UNPAID,
-                    RentLedger.due_date <= warning_date,
-                    RentLedger.due_date >= today,
-                    RentLedger.data_status == DataStatusValues.ASSET_NORMAL,
-                )
-            )
+        due_soon_ledgers = await rent_ledger.get_due_soon_with_contract_async(
+            self.db,
+            today=today,
+            warning_date=warning_date,
         )
-        due_soon_ledgers = list((await self.db.execute(stmt)).scalars().all())
 
         notifications_created = 0
         active_users = await notification_service.list_active_users_async(self.db)

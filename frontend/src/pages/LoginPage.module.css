@@ -94,6 +94,10 @@
   margin-bottom: 24px;
 }
 
+.login-submit-item {
+  margin-bottom: 0 !important;
+}
+
 .login-form .ant-form-item-label > label {
   font-size: 14px;
   font-weight: 500;

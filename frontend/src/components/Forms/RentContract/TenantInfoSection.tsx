@@ -2,7 +2,7 @@ import React from 'react';
 import { Form, Input, Row, Col, Card } from 'antd';
 
 /**
- * RentContractForm - Tenant Info Section
+ * RentContractForm - Lessee Info Section
  * Fields: tenant name, contact, phone, address
  */
 const TenantInfoSection: React.FC = () => {

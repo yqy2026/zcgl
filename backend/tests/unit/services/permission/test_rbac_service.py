@@ -15,6 +15,7 @@ from src.core.exception_handler import (
     ResourceConflictError,
     ResourceNotFoundError,
 )
+from src.crud.query_builder import TenantFilter
 from src.models.rbac import Permission, Role, UserRoleAssignment
 from src.schemas.rbac import (
     PermissionCheckRequest,
@@ -380,6 +381,31 @@ class TestGetRole:
             role = await rbac_service.get_role("nonexistent")
             assert role is None
 
+    async def test_get_role_with_current_user_resolves_tenant_filter(
+        self, rbac_service, sample_role
+    ):
+        """测试 get_role 按 current_user_id 解析并透传 tenant_filter"""
+        tenant_filter = TenantFilter(organization_ids=["org-1"])
+        with (
+            patch.object(
+                rbac_service,
+                "_resolve_tenant_filter",
+                new=AsyncMock(return_value=tenant_filter),
+            ) as mock_resolve,
+            patch(
+                "src.crud.rbac.role_crud.get",
+                new=AsyncMock(return_value=sample_role),
+            ) as mock_get,
+        ):
+            role = await rbac_service.get_role("role-1", current_user_id="user-1")
+
+        assert role is sample_role
+        mock_resolve.assert_awaited_once_with(
+            current_user_id="user-1",
+            tenant_filter=None,
+        )
+        assert mock_get.await_args.kwargs.get("tenant_filter") == tenant_filter
+
 
 # ============================================================================
 # get_roles 测试
@@ -430,6 +456,64 @@ class TestGetRoles:
             roles, total = await rbac_service.get_roles(skip=10, limit=5)
 
             assert total == 10
+
+    async def test_get_roles_with_current_user_resolves_tenant_filter(
+        self, rbac_service, sample_role
+    ):
+        """测试按 current_user_id 自动解析并透传 tenant_filter"""
+        tenant_filter = TenantFilter(organization_ids=["org-1"])
+        with (
+            patch.object(
+                rbac_service,
+                "_resolve_tenant_filter",
+                new=AsyncMock(return_value=tenant_filter),
+            ) as mock_resolve,
+            patch(
+                "src.crud.rbac.role_crud.get_multi_with_filters",
+                new=AsyncMock(return_value=([sample_role], 1)),
+            ) as mock_get_roles,
+        ):
+            roles, total = await rbac_service.get_roles(current_user_id="user-1")
+
+        assert total == 1
+        assert len(roles) == 1
+        mock_resolve.assert_awaited_once_with(
+            current_user_id="user-1",
+            tenant_filter=None,
+        )
+        assert mock_get_roles.await_args.kwargs.get("tenant_filter") == tenant_filter
+
+
+class TestTenantFilterResolution:
+    async def test_resolve_tenant_filter_returns_org_ids(self, rbac_service):
+        """测试组织权限服务返回可访问组织时生成 TenantFilter"""
+        mock_org_service = MagicMock()
+        mock_org_service.get_user_accessible_organizations = AsyncMock(
+            return_value=["org-1", "org-2"]
+        )
+        with patch(
+            "src.services.organization_permission_service.OrganizationPermissionService",
+            return_value=mock_org_service,
+        ):
+            tenant_filter = await rbac_service._resolve_tenant_filter(
+                current_user_id="user-1"
+            )
+
+        assert tenant_filter is not None
+        assert tenant_filter.organization_ids == ["org-1", "org-2"]
+
+    async def test_resolve_tenant_filter_fail_closed_on_exception(self, rbac_service):
+        """测试 tenant_filter 解析异常时返回空组织（失败关闭）"""
+        with patch(
+            "src.services.organization_permission_service.OrganizationPermissionService",
+            side_effect=RuntimeError("boom"),
+        ):
+            tenant_filter = await rbac_service._resolve_tenant_filter(
+                current_user_id="user-1"
+            )
+
+        assert tenant_filter is not None
+        assert tenant_filter.organization_ids == []
 
 
 # ============================================================================

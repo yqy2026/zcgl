@@ -89,10 +89,19 @@ def _generate_batch_id() -> str:
     return f"batch-{uuid.uuid4().hex[:12]}"
 
 
-def _get_batch_status(batch_id: str) -> dict[str, Any] | None:
+def _get_batch_status(
+    batch_id: str,
+    *,
+    current_user_id: str | None = None,
+    accessible_organization_ids: list[str] | None = None,
+) -> dict[str, Any] | None:
     """获取批处理状态"""
     tracker = _get_batch_tracker()
-    result = tracker.get_status(batch_id)
+    result = tracker.get_status(
+        batch_id,
+        current_user_id=current_user_id,
+        accessible_organization_ids=accessible_organization_ids,
+    )
     return result if isinstance(result, dict) else None
 
 
@@ -137,6 +146,56 @@ def _calculate_batch_progress(batch_id: str) -> dict[str, Any]:
         "processing": 0,  # 从数据库查询
         "pending": max(0, total - processed - failed),
     }
+
+
+def _resolve_user_id(current_user: Any) -> str | None:
+    """解析当前用户ID（兼容测试直接调用场景）"""
+    user_id = getattr(current_user, "id", None)
+    if user_id is None:
+        return None
+    user_id_text = str(user_id).strip()
+    if user_id_text == "":
+        return None
+    return user_id_text
+
+
+async def _resolve_accessible_organization_ids(
+    db: AsyncSession, *, current_user_id: str | None
+) -> list[str]:
+    """解析用户可访问组织列表（列表接口复用，异常降级为空列表）。"""
+    if current_user_id is None or current_user_id.strip() == "":
+        return []
+
+    try:
+        from ....services.organization_permission_service import (
+            OrganizationPermissionService,
+        )
+
+        org_service = OrganizationPermissionService(db)
+        org_ids = await org_service.get_user_accessible_organizations(current_user_id)
+        return [
+            org_id_text
+            for org_id in org_ids
+            if (org_id_text := str(org_id).strip()) != ""
+        ]
+    except Exception:
+        logger.exception(
+            "Failed to resolve accessible organizations for user %s",
+            current_user_id,
+        )
+        return []
+
+
+async def _resolve_batch_visibility_context(
+    db: AsyncSession, *, current_user: User
+) -> tuple[str | None, list[str]]:
+    """统一解析批处理可见性上下文（用户ID + 可访问组织列表）。"""
+    current_user_id = _resolve_user_id(current_user)
+    accessible_org_ids = await _resolve_accessible_organization_ids(
+        db,
+        current_user_id=current_user_id,
+    )
+    return current_user_id, accessible_org_ids
 
 
 # ============================================================================
@@ -272,6 +331,7 @@ async def batch_upload_pdfs(
         batch_id=batch_id,
         total=len(valid_files),
         organization_id=organization_id,
+        created_by_user_id=_resolve_user_id(current_user),
         force_method=sanitized_force_method,
         auto_confirm=auto_confirm,
     )
@@ -343,6 +403,7 @@ async def batch_upload_pdfs(
 async def get_batch_status(
     batch_id: str,
     db: Annotated[AsyncSession, Depends(get_async_db)],
+    current_user: User = Depends(get_current_active_user),
 ) -> JSONResponse:
     """
     查询批处理状态
@@ -376,14 +437,26 @@ async def get_batch_status(
         }
         ```
     """
-    batch = _get_batch_status(batch_id)
+    current_user_id, accessible_org_ids = await _resolve_batch_visibility_context(
+        db,
+        current_user=current_user,
+    )
+    batch = _get_batch_status(
+        batch_id,
+        current_user_id=current_user_id,
+        accessible_organization_ids=accessible_org_ids,
+    )
     if not batch:
         raise not_found("批处理任务不存在", resource_id=batch_id)
 
     service = PDFImportService()
     session_statuses: list[dict[str, Any]] = []
     session_ids = [str(session_id) for session_id in batch.get("session_ids", [])]
-    session_map = await service.get_session_map_async(db=db, session_ids=session_ids)
+    session_map = await service.get_session_map_async(
+        db=db,
+        session_ids=session_ids,
+        current_user_id=current_user_id,
+    )
     for session_id in session_ids:
         session = session_map.get(session_id)
         if session:
@@ -420,7 +493,9 @@ async def get_batch_status(
 
 
 @router.get("/list")
-def list_batches(
+async def list_batches(
+    db: Annotated[AsyncSession, Depends(get_async_db)],
+    current_user: User = Depends(get_current_active_user),
     status_filter: str | None = None,
     limit: int = 20,
 ) -> JSONResponse:
@@ -449,7 +524,16 @@ def list_batches(
         ```
     """
     tracker = _get_batch_tracker()
-    batches = tracker.list_batches(status_filter=status_filter, limit=limit)
+    current_user_id, accessible_org_ids = await _resolve_batch_visibility_context(
+        db,
+        current_user=current_user,
+    )
+    batches = tracker.list_batches(
+        status_filter=status_filter,
+        limit=limit,
+        current_user_id=current_user_id,
+        accessible_organization_ids=accessible_org_ids,
+    )
 
     # 简化返回数据
     result_batches: list[dict[str, Any]] = []
@@ -477,6 +561,7 @@ def list_batches(
 async def cancel_batch(
     batch_id: str,
     db: Annotated[AsyncSession, Depends(get_async_db)],
+    current_user: User = Depends(get_current_active_user),
 ) -> JSONResponse:
     """
     取消批处理任务
@@ -493,7 +578,15 @@ async def cancel_batch(
         }
         ```
     """
-    batch = _get_batch_status(batch_id)
+    current_user_id, accessible_org_ids = await _resolve_batch_visibility_context(
+        db,
+        current_user=current_user,
+    )
+    batch = _get_batch_status(
+        batch_id,
+        current_user_id=current_user_id,
+        accessible_organization_ids=accessible_org_ids,
+    )
     if not batch:
         raise not_found("批处理任务不存在", resource_id=batch_id)
 
@@ -508,7 +601,11 @@ async def cancel_batch(
     cancelled_count = 0
 
     session_ids = [str(session_id) for session_id in batch.get("session_ids", [])]
-    session_map = await service.get_session_map_async(db=db, session_ids=session_ids)
+    session_map = await service.get_session_map_async(
+        db=db,
+        session_ids=session_ids,
+        current_user_id=current_user_id,
+    )
     for session_id in session_ids:
         session = session_map.get(session_id)
         if session and session.is_processing:
@@ -516,6 +613,7 @@ async def cancel_batch(
                 db=db,
                 session_id=session_id,
                 reason=f"Batch {batch_id} cancelled by user",
+                current_user_id=current_user_id,
             )
             cancelled_count += 1
 

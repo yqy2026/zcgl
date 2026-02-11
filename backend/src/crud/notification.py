@@ -2,12 +2,13 @@
 通知 CRUD 操作
 """
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..models.auth import User
 from ..models.notification import Notification
 
 
@@ -121,6 +122,70 @@ class NotificationCRUD:
         await db.delete(notification)
         await db.commit()
         return True
+
+    async def get_active_users_async(self, db: AsyncSession) -> list[User]:
+        stmt = select(User).where(User.is_active.is_(True))
+        return list((await db.execute(stmt)).scalars().all())
+
+    async def find_existing_notification_async(
+        self,
+        db: AsyncSession,
+        *,
+        recipient_id: str,
+        related_entity_type: str,
+        related_entity_id: str,
+        notification_type: str,
+        require_unread: bool = False,
+        created_since: date | datetime | None = None,
+    ) -> Notification | None:
+        stmt = select(Notification).where(
+            Notification.recipient_id == recipient_id,
+            Notification.related_entity_type == related_entity_type,
+            Notification.related_entity_id == related_entity_id,
+            Notification.type == notification_type,
+        )
+
+        if require_unread:
+            stmt = stmt.where(Notification.is_read.is_(False))
+
+        if created_since is not None:
+            stmt = stmt.where(Notification.created_at >= created_since)
+
+        return (await db.execute(stmt)).scalars().first()
+
+    async def find_existing_notification_pairs_async(
+        self,
+        db: AsyncSession,
+        *,
+        recipient_ids: list[str],
+        related_entity_type: str,
+        related_entity_ids: list[str],
+        notification_type: str,
+        require_unread: bool = False,
+        created_since: date | datetime | None = None,
+    ) -> set[tuple[str, str]]:
+        if len(recipient_ids) == 0 or len(related_entity_ids) == 0:
+            return set()
+
+        stmt = select(Notification.recipient_id, Notification.related_entity_id).where(
+            Notification.recipient_id.in_(recipient_ids),
+            Notification.related_entity_type == related_entity_type,
+            Notification.related_entity_id.in_(related_entity_ids),
+            Notification.type == notification_type,
+        )
+
+        if require_unread:
+            stmt = stmt.where(Notification.is_read.is_(False))
+
+        if created_since is not None:
+            stmt = stmt.where(Notification.created_at >= created_since)
+
+        rows = (await db.execute(stmt)).all()
+        return {
+            (str(recipient_id), str(related_entity_id))
+            for recipient_id, related_entity_id in rows
+            if related_entity_id is not None
+        }
 
 
 notification_crud = NotificationCRUD()

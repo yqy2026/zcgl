@@ -5,6 +5,7 @@
 import React from 'react';
 import { Steps, Progress, Typography } from 'antd';
 import { usePDFImportContext } from './PDFImportContext';
+import styles from './ProcessingStepsDisplay.module.css';
 
 const ProcessingStepsDisplay: React.FC = () => {
   const { uploading, uploadProgress, processingProgress, processingSteps, getStepIcon } =
@@ -15,7 +16,7 @@ const ProcessingStepsDisplay: React.FC = () => {
   }
 
   return (
-    <div style={{ marginBottom: 24 }}>
+    <div className={styles.stepsContainer}>
       <Steps
         size="small"
         current={processingSteps.findIndex(s => s.status === 'process')}
@@ -44,7 +45,7 @@ const ProcessingStepsDisplay: React.FC = () => {
       />
 
       {(uploading || processingProgress) && (
-        <div style={{ marginTop: 16 }}>
+        <div className={styles.progressSection}>
           <Progress
             percent={uploading ? uploadProgress : (processingProgress?.progress ?? 0)}
             status={processingProgress?.status === 'failed' ? 'exception' : undefined}
@@ -55,7 +56,7 @@ const ProcessingStepsDisplay: React.FC = () => {
           />
 
           {processingProgress && (
-            <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between' }}>
+            <div className={styles.progressMetaRow}>
               <Typography.Text type="secondary">
                 {processingProgress.current_step || '准备中...'}
               </Typography.Text>
