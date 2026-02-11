@@ -8,9 +8,9 @@
 import logging
 from typing import Any, TypedDict
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..crud.enum_field import enum_field_type_crud, enum_field_value_crud
 from ..models.enum_field import EnumFieldType, EnumFieldValue
 
 logger = logging.getLogger(__name__)
@@ -163,12 +163,8 @@ async def init_enum_data(
 
     enum_codes = list(STANDARD_ENUMS.keys())
     try:
-        existing_types = list(
-            (
-                await db.execute(select(EnumFieldType).where(EnumFieldType.code.in_(enum_codes)))
-            )
-            .scalars()
-            .all()
+        existing_types = await enum_field_type_crud.get_by_codes_async(
+            db, codes=enum_codes
         )
     except Exception as e:
         for enum_code in STANDARD_ENUMS:
@@ -193,16 +189,8 @@ async def init_enum_data(
     ]
     if existing_type_ids:
         try:
-            existing_values = list(
-                (
-                    await db.execute(
-                        select(EnumFieldValue).where(
-                            EnumFieldValue.enum_type_id.in_(existing_type_ids)
-                        )
-                    )
-                )
-                .scalars()
-                .all()
+            existing_values = await enum_field_value_crud.get_by_type_ids_async(
+                db, enum_type_ids=existing_type_ids
             )
             existing_values_by_type_and_value = {
                 (str(value.enum_type_id), str(value.value)): value

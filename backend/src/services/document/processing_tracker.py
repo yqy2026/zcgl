@@ -11,7 +11,6 @@ from collections.abc import Callable
 from datetime import datetime, timedelta
 from typing import Any, cast
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 redis: Any | None
@@ -27,6 +26,7 @@ from ...constants.timeout_constants import (
     REDIS_SOCKET_CONNECT_TIMEOUT_SECONDS,
     REDIS_SOCKET_TIMEOUT_SECONDS,
 )
+from ...crud.pdf_import_session import pdf_import_session_crud
 from ...enums.status import TaskExecutionStatus
 from ...models.pdf_import_session import (
     PDFImportSession,
@@ -66,10 +66,9 @@ class ProcessingTracker:
         Returns:
             PDFImportSession 会话对象，如果不存在则返回 None
         """
-        stmt = select(PDFImportSession).where(
-            PDFImportSession.session_id == self.session_id
+        return await pdf_import_session_crud.get_by_session_id_async(
+            self.db, session_id=self.session_id
         )
-        return (await self.db.execute(stmt)).scalars().first()
 
     async def update_progress(
         self,

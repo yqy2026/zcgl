@@ -8,7 +8,6 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
-from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.exception_handler import (
@@ -16,6 +15,7 @@ from ...core.exception_handler import (
     ResourceConflictError,
     ResourceNotFoundError,
 )
+from ...crud.llm_prompt import prompt_template_crud, prompt_version_crud
 from ...models.llm_prompt import PromptStatus, PromptTemplate, PromptVersion
 from ...schemas.llm_prompt import PromptTemplateCreate, PromptTemplateUpdate
 
@@ -33,16 +33,9 @@ class PromptManager:
     async def get_active_prompt_async(
         self, db: AsyncSession, doc_type: str, provider: str | None = None
     ) -> PromptTemplate | None:
-        stmt = select(PromptTemplate).where(
-            PromptTemplate.doc_type == doc_type,
-            PromptTemplate.status == PromptStatus.ACTIVE,
+        prompt = await prompt_template_crud.get_active_prompt_async(
+            db, doc_type=doc_type, provider=provider
         )
-
-        if provider:
-            stmt = stmt.where(PromptTemplate.provider == provider)
-
-        result = await db.execute(stmt.order_by(PromptTemplate.updated_at.desc()))
-        prompt = result.scalars().first()
 
         if prompt:
             logger.info(f"✅ 获取活跃Prompt: {prompt.name} (v{prompt.version})")
@@ -56,8 +49,7 @@ class PromptManager:
     async def create_prompt_async(
         self, db: AsyncSession, data: PromptTemplateCreate, user_id: str | None = None
     ) -> PromptTemplate:
-        existing_stmt = select(PromptTemplate).where(PromptTemplate.name == data.name)
-        existing = (await db.execute(existing_stmt)).scalars().first()
+        existing = await prompt_template_crud.get_by_name_async(db, name=data.name)
         if existing:
             raise DuplicateResourceError("Prompt", "name", data.name)
 
@@ -103,7 +95,7 @@ class PromptManager:
         data: PromptTemplateUpdate,
         user_id: str | None = None,
     ) -> PromptTemplate:
-        template = await db.get(PromptTemplate, template_id)
+        template = await prompt_template_crud.get(db, id=template_id)
         if not template:
             raise ResourceNotFoundError("Prompt", template_id)
 
@@ -150,17 +142,15 @@ class PromptManager:
     async def activate_prompt_async(
         self, db: AsyncSession, template_id: str
     ) -> PromptTemplate:
-        template = await db.get(PromptTemplate, template_id)
+        template = await prompt_template_crud.get(db, id=template_id)
         if not template:
             raise ResourceNotFoundError("Prompt", template_id)
 
-        stmt = update(PromptTemplate).where(
-            PromptTemplate.doc_type == template.doc_type,
-            PromptTemplate.status == PromptStatus.ACTIVE,
-            PromptTemplate.id != template_id,
-        )
-        await db.execute(
-            stmt.values(status=PromptStatus.ARCHIVED, updated_at=_utcnow_naive())
+        await prompt_template_crud.archive_active_by_doc_type_async(
+            db,
+            doc_type=template.doc_type,
+            exclude_template_id=template_id,
+            updated_at=_utcnow_naive(),
         )
 
         template.status = PromptStatus.ACTIVE
@@ -178,7 +168,7 @@ class PromptManager:
         version_id: str,
         user_id: str | None = None,
     ) -> PromptTemplate:
-        target_version = await db.get(PromptVersion, version_id)
+        target_version = await prompt_version_crud.get_async(db, version_id=version_id)
         if not target_version:
             raise ResourceNotFoundError("Prompt版本", version_id)
         if target_version.template_id != template_id:
@@ -188,7 +178,7 @@ class PromptManager:
                 details={"template_id": template_id, "version_id": version_id},
             )
 
-        template = await db.get(PromptTemplate, template_id)
+        template = await prompt_template_crud.get(db, id=template_id)
         if not template:
             raise ResourceNotFoundError("Prompt", template_id)
 
@@ -224,12 +214,9 @@ class PromptManager:
     async def get_prompt_history_async(
         self, db: AsyncSession, template_id: str
     ) -> list[PromptVersion]:
-        stmt = (
-            select(PromptVersion)
-            .where(PromptVersion.template_id == template_id)
-            .order_by(PromptVersion.created_at.desc())
+        versions = await prompt_version_crud.get_by_template_async(
+            db, template_id=template_id
         )
-        versions = list((await db.execute(stmt)).scalars().all())
 
         logger.info(f"📜 Prompt历史: {template_id}, 共{len(versions)}个版本")
         return versions
@@ -244,71 +231,25 @@ class PromptManager:
         page: int = 1,
         page_size: int = 10,
     ) -> dict[str, Any]:
-        clauses: list[Any] = []
-        if doc_type:
-            clauses.append(PromptTemplate.doc_type == doc_type)
-        if status:
-            clauses.append(PromptTemplate.status == status)
-        if provider:
-            clauses.append(PromptTemplate.provider == provider)
-
-        count_stmt = select(func.count()).select_from(PromptTemplate)
-        if clauses:
-            count_stmt = count_stmt.where(*clauses)
-        total = int((await db.execute(count_stmt)).scalar() or 0)
-
-        stmt = select(PromptTemplate)
-        if clauses:
-            stmt = stmt.where(*clauses)
         skip = (page - 1) * page_size
-        result = await db.execute(stmt.offset(skip).limit(page_size))
-        prompts = list(result.scalars().all())
+        prompts, total = await prompt_template_crud.get_list_with_filters_async(
+            db,
+            doc_type=doc_type,
+            status=status,
+            provider=provider,
+            skip=skip,
+            limit=page_size,
+        )
 
         return {"items": prompts, "total": total, "page": page, "page_size": page_size}
 
     async def get_by_id_async(
         self, db: AsyncSession, *, template_id: str
     ) -> PromptTemplate | None:
-        return await db.get(PromptTemplate, template_id)
+        return await prompt_template_crud.get(db, id=template_id)
 
     async def get_statistics_async(self, db: AsyncSession) -> dict[str, Any]:
-        total_stmt = select(func.count()).select_from(PromptTemplate)
-        total_prompts = int((await db.execute(total_stmt)).scalar() or 0)
-
-        status_stmt = select(PromptTemplate.status, func.count(PromptTemplate.id)).group_by(
-            PromptTemplate.status
-        )
-        status_stats = (await db.execute(status_stmt)).all()
-
-        doc_type_stmt = select(PromptTemplate.doc_type, func.count(PromptTemplate.id)).group_by(
-            PromptTemplate.doc_type
-        )
-        doc_type_stats = (await db.execute(doc_type_stmt)).all()
-
-        provider_stmt = select(PromptTemplate.provider, func.count(PromptTemplate.id)).group_by(
-            PromptTemplate.provider
-        )
-        provider_stats = (await db.execute(provider_stmt)).all()
-
-        avg_accuracy_stmt = select(func.avg(PromptTemplate.avg_accuracy))
-        avg_accuracy = (await db.execute(avg_accuracy_stmt)).scalar() or 0.0
-        avg_confidence_stmt = select(func.avg(PromptTemplate.avg_confidence))
-        avg_confidence = (await db.execute(avg_confidence_stmt)).scalar() or 0.0
-
-        return {
-            "total_prompts": total_prompts,
-            "status_distribution": [
-                {"status": s[0], "count": s[1]} for s in status_stats
-            ],
-            "doc_type_distribution": [
-                {"doc_type": dt[0], "count": dt[1]} for dt in doc_type_stats
-            ],
-            "provider_distribution": [
-                {"provider": p[0], "count": p[1]} for p in provider_stats
-            ],
-            "overall_avg_accuracy": float(avg_accuracy),
-            "overall_avg_confidence": float(avg_confidence),
-        }
+        return await prompt_template_crud.get_statistics_async(db)
 
     @staticmethod
     def _increment_version(current_version: str) -> str:

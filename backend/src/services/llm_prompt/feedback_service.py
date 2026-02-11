@@ -8,10 +8,10 @@ import logging
 from datetime import UTC, datetime
 from uuid import uuid4
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.exception_handler import ResourceNotFoundError
+from ...crud.llm_prompt import extraction_feedback_crud
 from ...models.llm_prompt import ExtractionFeedback
 from ...schemas.llm_prompt import ExtractionFeedbackCreate, ExtractionFeedbackResponse
 from .prompt_manager import PromptManager
@@ -80,11 +80,8 @@ class FeedbackService:
     async def get_by_template_async(
         self, db: AsyncSession, template_id: str, limit: int = 100
     ) -> list[ExtractionFeedback]:
-        stmt = (
-            select(ExtractionFeedback)
-            .where(ExtractionFeedback.template_id == template_id)
-            .order_by(ExtractionFeedback.created_at.desc())
-            .limit(limit)
+        return await extraction_feedback_crud.get_by_template_async(
+            db,
+            template_id=template_id,
+            limit=limit,
         )
-        result = await db.execute(stmt)
-        return list(result.scalars().all())

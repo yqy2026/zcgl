@@ -2,7 +2,6 @@
 
 from typing import Any
 
-from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...crud.task import excel_task_config_crud
@@ -19,16 +18,11 @@ class ExcelConfigService:
         config_data: dict[str, Any],
     ) -> ExcelTaskConfig:
         if config_data.get("is_default") is True:
-            stmt = (
-                update(ExcelTaskConfig)
-                .where(
-                    ExcelTaskConfig.config_type == config_data["config_type"],
-                    ExcelTaskConfig.task_type == config_data["task_type"],
-                    ExcelTaskConfig.is_default.is_(True),
-                )
-                .values(is_default=False)
+            await excel_task_config_crud.unset_default_configs_async(
+                db=db,
+                config_type=config_data["config_type"],
+                task_type=config_data["task_type"],
             )
-            await db.execute(stmt)
         return await excel_task_config_crud.create(db=db, obj_in=config_data)
 
     async def get_configs(
@@ -75,19 +69,20 @@ class ExcelConfigService:
         config_data: dict[str, Any],
     ) -> ExcelTaskConfig:
         if config_data.get("is_default") is True:
-            target_config_type = config_data.get("config_type", config.config_type)
-            target_task_type = config_data.get("task_type", config.task_type)
-            stmt = (
-                update(ExcelTaskConfig)
-                .where(
-                    ExcelTaskConfig.config_type == target_config_type,
-                    ExcelTaskConfig.task_type == target_task_type,
-                    ExcelTaskConfig.is_default.is_(True),
-                    ExcelTaskConfig.id != config.id,
-                )
-                .values(is_default=False)
+            target_config_type = config_data.get("config_type")
+            if not isinstance(target_config_type, str):
+                target_config_type = config.config_type or ""
+
+            target_task_type = config_data.get("task_type")
+            if not isinstance(target_task_type, str):
+                target_task_type = config.task_type or ""
+
+            await excel_task_config_crud.unset_default_configs_async(
+                db=db,
+                config_type=target_config_type,
+                task_type=target_task_type,
+                exclude_config_id=config.id,
             )
-            await db.execute(stmt)
         return await excel_task_config_crud.update(
             db=db,
             db_obj=config,

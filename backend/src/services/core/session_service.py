@@ -3,7 +3,6 @@ import logging
 from datetime import UTC, datetime, timedelta
 
 import jwt
-from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.config import settings
@@ -126,12 +125,8 @@ class AsyncSessionService:
         return False
 
     async def revoke_all_user_sessions(self, user_id: str) -> int:
-        # 注意：此处保留直接 update() 因为需要与黑名单操作在同一事务中
-        # CRUD 的 deactivate_by_user_async 自带 commit，不适合此场景
-        result = await self.db.execute(
-            update(UserSession)
-            .where(UserSession.user_id == user_id, UserSession.is_active.is_(True))
-            .values({"is_active": False})
+        deactivated_count = await _session_crud.deactivate_by_user_no_commit_async(
+            self.db, user_id
         )
 
         try:
@@ -140,4 +135,4 @@ class AsyncSessionService:
             logger.warning(f"Failed to revoke user tokens for {user_id}: {e}")
 
         await self.db.commit()
-        return int(getattr(result, "rowcount", 0) or 0)
+        return deactivated_count

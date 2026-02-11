@@ -108,6 +108,14 @@ class EnumFieldTypeCRUD:
         stmt = self._type_query_async().where(EnumFieldType.code == code)
         return (await db.execute(stmt)).scalars().first()
 
+    async def get_by_codes_async(
+        self, db: AsyncSession, *, codes: list[str]
+    ) -> list[EnumFieldType]:
+        if not codes:
+            return []
+        stmt = self._type_query_async().where(EnumFieldType.code.in_(codes))
+        return list((await db.execute(stmt)).scalars().all())
+
     async def get_multi_async(
         self,
         db: AsyncSession,
@@ -317,6 +325,18 @@ class EnumFieldValueCRUD:
             EnumFieldValue.is_active.is_(True),
         )
         return int((await db.execute(stmt)).scalar() or 0)
+
+    async def get_by_type_ids_async(
+        self, db: AsyncSession, *, enum_type_ids: list[str]
+    ) -> list[EnumFieldValue]:
+        if not enum_type_ids:
+            return []
+        stmt = (
+            self._value_query_async()
+            .where(EnumFieldValue.enum_type_id.in_(enum_type_ids))
+            .order_by(EnumFieldValue.enum_type_id, EnumFieldValue.sort_order.asc())
+        )
+        return list((await db.execute(stmt)).scalars().all())
 
     async def get_async(
         self, db: AsyncSession, enum_value_id: str
@@ -699,25 +719,31 @@ class EnumFieldHistoryCRUD:
         return list(result.scalars().all())
 
 
+enum_field_type_crud = EnumFieldTypeCRUD()
+enum_field_value_crud = EnumFieldValueCRUD()
+enum_field_usage_crud = EnumFieldUsageCRUD()
+enum_field_history_crud = EnumFieldHistoryCRUD()
+
+
 def get_enum_field_type_crud(db: AsyncSession) -> EnumFieldTypeCRUD:
     """获取枚举字段类型CRUD实例"""
     _ = db
-    return EnumFieldTypeCRUD()
+    return enum_field_type_crud
 
 
 def get_enum_field_value_crud(db: AsyncSession) -> EnumFieldValueCRUD:
     """获取枚举字段值CRUD实例"""
     _ = db
-    return EnumFieldValueCRUD()
+    return enum_field_value_crud
 
 
 def get_enum_field_usage_crud(db: AsyncSession) -> EnumFieldUsageCRUD:
     """获取枚举字段使用记录CRUD实例"""
     _ = db
-    return EnumFieldUsageCRUD()
+    return enum_field_usage_crud
 
 
 def get_enum_field_history_crud(db: AsyncSession) -> EnumFieldHistoryCRUD:
     """获取枚举字段历史记录CRUD实例"""
     _ = db
-    return EnumFieldHistoryCRUD()
+    return enum_field_history_crud

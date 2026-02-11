@@ -337,12 +337,18 @@ class UserSessionCRUD:
         return True
 
     async def deactivate_by_user_async(self, db: AsyncSession, user_id: str) -> int:
+        count = await self.deactivate_by_user_no_commit_async(db, user_id)
+        await db.commit()
+        return count
+
+    async def deactivate_by_user_no_commit_async(
+        self, db: AsyncSession, user_id: str
+    ) -> int:
         result = await db.execute(
             update(UserSession)
             .where(UserSession.user_id == user_id, UserSession.is_active.is_(True))
             .values({AuthFields.IS_ACTIVE: False})
         )
-        await db.commit()
         return int(getattr(result, "rowcount", 0) or 0)
 
     async def cleanup_expired_sessions_async(self, db: AsyncSession) -> int:

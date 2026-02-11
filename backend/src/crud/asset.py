@@ -7,7 +7,8 @@ from typing import Any
 资产计算逻辑（AssetCalculator）应在 API 或 Service 层调用。
 """
 
-from sqlalchemy import Select, delete, insert, or_, select
+from sqlalchemy import Float, Select, case, delete, func, insert, or_, select
+from sqlalchemy import cast as sql_cast
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, load_only, selectinload, with_loader_criteria
 
@@ -730,6 +731,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         ids: list[str],
         include_relations: bool = False,
         include_deleted: bool = False,
+        decrypt: bool = True,
     ) -> list[Asset]:
         if not ids:
             return []
@@ -745,9 +747,167 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
 
         result = await db.execute(query)
         assets = list(result.scalars().all())
-        for asset in assets:
-            self._decrypt_asset_object(asset)
+        if decrypt:
+            for asset in assets:
+                self._decrypt_asset_object(asset)
         return assets
+
+    async def get_by_ownership_name_like_async(
+        self,
+        db: AsyncSession,
+        *,
+        ownership_name: str,
+        limit: int = 20,
+        include_deleted: bool = False,
+        decrypt: bool = True,
+    ) -> list[Asset]:
+        stmt = (
+            select(Asset)
+            .join(Ownership, Asset.ownership_id == Ownership.id, isouter=True)
+            .where(Ownership.name.ilike(f"%{ownership_name}%"))
+        )
+        if not include_deleted:
+            stmt = stmt.where(self._not_deleted_clause(Asset.data_status))
+
+        result = await db.execute(stmt.limit(limit))
+        assets = list(result.scalars().all())
+        if decrypt:
+            for asset in assets:
+                self._decrypt_asset_object(asset)
+        return assets
+
+    async def search_by_field_with_candidates_async(
+        self,
+        db: AsyncSession,
+        *,
+        field_name: str,
+        candidates: list[str],
+        limit: int = 20,
+        include_deleted: bool = False,
+        decrypt: bool = True,
+    ) -> tuple[list[Asset], bool]:
+        if len(candidates) == 0 or not hasattr(Asset, field_name):
+            return [], False
+
+        handler = self.sensitive_data_handler
+        model_field = getattr(Asset, field_name)
+        used_blind_index = False
+
+        if handler.encryption_enabled and field_name in handler.SEARCHABLE_FIELDS:
+            conditions = []
+            for candidate in candidates:
+                subquery = build_asset_id_subquery(
+                    field_name=field_name,
+                    search_text=candidate,
+                    key_manager=handler.encryptor.key_manager,
+                )
+                if subquery is not None:
+                    conditions.append(Asset.id.in_(subquery))
+                    used_blind_index = True
+                else:
+                    encrypted = handler.encrypt_field(field_name, candidate)
+                    if encrypted is not None:
+                        conditions.append(model_field == encrypted)
+            if not conditions:
+                return [], used_blind_index
+            stmt = select(Asset).where(or_(*conditions))
+        else:
+            query_value = candidates[0]
+            stmt = select(Asset).where(model_field.ilike(f"%{query_value}%"))
+
+        if not include_deleted:
+            stmt = stmt.where(self._not_deleted_clause(Asset.data_status))
+
+        result = await db.execute(stmt.limit(limit))
+        assets = list(result.scalars().all())
+        if decrypt:
+            for asset in assets:
+                self._decrypt_asset_object(asset)
+        return assets, used_blind_index
+
+    def _apply_simple_asset_filters(
+        self, stmt: Select[Any], filters: dict[str, Any] | None
+    ) -> Select[Any]:
+        """应用 analytics 场景下的简单等值过滤。"""
+        if not filters:
+            return stmt
+
+        for key, value in filters.items():
+            if hasattr(Asset, key) and value is not None:
+                stmt = stmt.where(getattr(Asset, key) == value)
+
+        return stmt
+
+    async def get_occupancy_aggregation_async(
+        self, db: AsyncSession, *, filters: dict[str, Any] | None = None
+    ) -> Any | None:
+        stmt = self._apply_simple_asset_filters(select(Asset), filters)
+        agg_stmt = stmt.with_only_columns(
+            func.count(Asset.id).label("total_assets"),
+            sql_cast(func.sum(func.coalesce(Asset.rentable_area, 0)), Float).label(
+                "total_rentable_area"
+            ),
+            sql_cast(func.sum(func.coalesce(Asset.rented_area, 0)), Float).label(
+                "total_rented_area"
+            ),
+            func.count(case((Asset.rentable_area > 0, 1))).label(
+                "rentable_assets_count"
+            ),
+        )
+        return (await db.execute(agg_stmt)).first()
+
+    async def get_occupancy_by_category_aggregation_async(
+        self,
+        db: AsyncSession,
+        *,
+        category_field: str,
+        filters: dict[str, Any] | None = None,
+    ) -> list[Any]:
+        if not hasattr(Asset, category_field):
+            return []
+
+        stmt = self._apply_simple_asset_filters(select(Asset), filters)
+        category_column = getattr(Asset, category_field)
+        agg_stmt = (
+            stmt.with_only_columns(
+                category_column.label("category"),
+                sql_cast(func.sum(func.coalesce(Asset.rentable_area, 0)), Float).label(
+                    "total_rentable_area"
+                ),
+                sql_cast(func.sum(func.coalesce(Asset.rented_area, 0)), Float).label(
+                    "total_rented_area"
+                ),
+                func.count(Asset.id).label("total_assets"),
+                func.count(case((Asset.rentable_area > 0, 1))).label(
+                    "rentable_assets_count"
+                ),
+            ).group_by(category_column)
+        )
+        return list((await db.execute(agg_stmt)).all())
+
+    async def get_area_summary_aggregation_async(
+        self, db: AsyncSession, *, filters: dict[str, Any] | None = None
+    ) -> Any | None:
+        stmt = self._apply_simple_asset_filters(select(Asset), filters)
+        agg_stmt = stmt.with_only_columns(
+            func.count(Asset.id).label("total_assets"),
+            sql_cast(func.sum(func.coalesce(Asset.land_area, 0)), Float).label(
+                "total_land_area"
+            ),
+            sql_cast(func.sum(func.coalesce(Asset.rentable_area, 0)), Float).label(
+                "total_rentable_area"
+            ),
+            sql_cast(func.sum(func.coalesce(Asset.rented_area, 0)), Float).label(
+                "total_rented_area"
+            ),
+            sql_cast(func.sum(func.coalesce(Asset.non_commercial_area, 0)), Float).label(
+                "total_non_commercial_area"
+            ),
+            func.count(case((Asset.land_area.isnot(None), 1))).label(
+                "assets_with_area_data"
+            ),
+        )
+        return (await db.execute(agg_stmt)).first()
 
     async def has_rent_contracts_async(
         self, db: AsyncSession, asset_id: str
@@ -826,7 +986,11 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         return [str(asset_id) for asset_id in result.scalars().all()]
 
     async def get_by_property_names_async(
-        self, db: AsyncSession, property_names: list[str], exclude_deleted: bool = True
+        self,
+        db: AsyncSession,
+        property_names: list[str],
+        exclude_deleted: bool = True,
+        decrypt: bool = False,
     ) -> list[Asset]:
         """批量获取资产（按属性名列表），用于导入去重检查"""
         if not property_names:
@@ -836,8 +1000,9 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             stmt = stmt.where(Asset.data_status != "已删除")
         result = await db.execute(stmt)
         assets = list(result.scalars().all())
-        for asset in assets:
-            self._decrypt_asset_object(asset)
+        if decrypt:
+            for asset in assets:
+                self._decrypt_asset_object(asset)
         return assets
 
     async def count_by_ownership_async(self, db: AsyncSession, ownership_id: str) -> int:

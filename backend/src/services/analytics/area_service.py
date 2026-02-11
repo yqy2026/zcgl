@@ -7,8 +7,6 @@
 import logging
 from typing import Any
 
-from sqlalchemy import Float, case, func, select
-from sqlalchemy import cast as sql_cast
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...crud.asset import asset_crud
@@ -61,37 +59,9 @@ class AreaService:
             - overall_occupancy_rate: 整体出租率
         """
         try:
-            from ...models.asset import Asset
-
-            # 构建基础查询
-            stmt = select(Asset)
-
-            # 应用筛选条件
-            if filters:
-                for key, value in filters.items():
-                    if hasattr(Asset, key) and value is not None:
-                        stmt = stmt.where(getattr(Asset, key) == value)
-
-            # 使用数据库聚合函数计算
-            agg_stmt = stmt.with_only_columns(
-                func.count(Asset.id).label("total_assets"),
-                sql_cast(func.sum(func.coalesce(Asset.land_area, 0)), Float).label(
-                    "total_land_area"
-                ),
-                sql_cast(func.sum(func.coalesce(Asset.rentable_area, 0)), Float).label(
-                    "total_rentable_area"
-                ),
-                sql_cast(func.sum(func.coalesce(Asset.rented_area, 0)), Float).label(
-                    "total_rented_area"
-                ),
-                sql_cast(
-                    func.sum(func.coalesce(Asset.non_commercial_area, 0)), Float
-                ).label("total_non_commercial_area"),
-                func.count(case((Asset.land_area.isnot(None), 1))).label(
-                    "assets_with_area_data"
-                ),
+            result = await asset_crud.get_area_summary_aggregation_async(
+                self.db, filters=filters
             )
-            result = (await self.db.execute(agg_stmt)).first()
 
             # 提取并转换结果
             if result is None:

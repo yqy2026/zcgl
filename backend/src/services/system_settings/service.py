@@ -3,12 +3,12 @@
 import logging
 from typing import Any
 
-from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...crud.auth import AuditLogCRUD
 from ...crud.security_event import security_event_crud
+from ...crud.system_settings import system_settings_crud
 
 logger = logging.getLogger(__name__)
 
@@ -75,8 +75,7 @@ class SystemSettingsService:
 
     async def check_database_connection(self, db: AsyncSession) -> bool:
         try:
-            await db.execute(text("SELECT 1"))
-            return True
+            return await system_settings_crud.check_database_connection_async(db)
         except SQLAlchemyError:
             logger.error("数据库连接检查失败", exc_info=True)
             return False

@@ -5,7 +5,7 @@ PromptManager async unit tests
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -117,12 +117,16 @@ class TestPromptManagerAsync:
 
     async def test_update_prompt_async_not_found(self, mock_db):
         manager = PromptManager()
-        mock_db.get.return_value = None
 
-        with pytest.raises(ResourceNotFoundError):
-            await manager.update_prompt_async(
-                mock_db, 'missing', PromptTemplateUpdate()
-            )
+        with (
+            patch.object(
+                prompt_manager_module.prompt_template_crud,
+                "get",
+                new=AsyncMock(return_value=None),
+            ),
+            pytest.raises(ResourceNotFoundError),
+        ):
+            await manager.update_prompt_async(mock_db, 'missing', PromptTemplateUpdate())
 
     async def test_update_prompt_async_success(self, mock_db):
         manager = PromptManager()
@@ -131,23 +135,32 @@ class TestPromptManagerAsync:
         template.system_prompt = 'sys'
         template.user_prompt_template = 'user'
         template.few_shot_examples = {}
-        mock_db.get.return_value = template
+        with patch.object(
+            prompt_manager_module.prompt_template_crud,
+            "get",
+            new=AsyncMock(return_value=template),
+        ):
+            result = await manager.update_prompt_async(
+                mock_db,
+                'tmpl-1',
+                PromptTemplateUpdate(system_prompt='new'),
+            )
 
-        result = await manager.update_prompt_async(
-            mock_db,
-            'tmpl-1',
-            PromptTemplateUpdate(system_prompt='new'),
-        )
-
-        assert result is template
-        mock_db.commit.assert_awaited_once()
-        mock_db.refresh.assert_awaited_once()
+            assert result is template
+            mock_db.commit.assert_awaited_once()
+            mock_db.refresh.assert_awaited_once()
 
     async def test_activate_prompt_async_not_found(self, mock_db):
         manager = PromptManager()
-        mock_db.get.return_value = None
 
-        with pytest.raises(ResourceNotFoundError):
+        with (
+            patch.object(
+                prompt_manager_module.prompt_template_crud,
+                "get",
+                new=AsyncMock(return_value=None),
+            ),
+            pytest.raises(ResourceNotFoundError),
+        ):
             await manager.activate_prompt_async(mock_db, 'missing')
 
     async def test_list_templates_async(self, mock_db):

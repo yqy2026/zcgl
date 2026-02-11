@@ -9,13 +9,15 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import uuid4
 
-from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.exception_handler import ResourceNotFoundError
+from ...crud.llm_prompt import (
+    extraction_feedback_crud,
+    prompt_template_crud,
+)
 from ...models.llm_prompt import (
     ExtractionFeedback,
-    PromptStatus,
     PromptTemplate,
     PromptVersion,
 )
@@ -52,10 +54,7 @@ class AutoOptimizer:
             db: 数据库会话
         """
         # 获取所有活跃的Prompt
-        stmt = select(PromptTemplate).where(
-            PromptTemplate.status == PromptStatus.ACTIVE
-        )
-        active_prompts = list((await db.execute(stmt)).scalars().all())
+        active_prompts = await prompt_template_crud.get_active_prompts_async(db)
 
         logger.info(f"🔍 检查{len(active_prompts)}个活跃Prompt...")
 
@@ -93,20 +92,19 @@ class AutoOptimizer:
         """
         # 1. 检查最近7天的反馈数量
         week_ago = _utcnow_naive() - timedelta(days=7)
-        feedback_count_stmt = select(func.count(ExtractionFeedback.id)).where(
-            ExtractionFeedback.template_id == prompt.id,
-            ExtractionFeedback.created_at >= week_ago,
+        feedback_count = await extraction_feedback_crud.count_since_async(
+            db,
+            template_id=prompt.id,
+            created_after=week_ago,
         )
-        feedback_count = int((await db.execute(feedback_count_stmt)).scalar() or 0)
 
         if feedback_count >= self.min_feedback_count:
             return True, f"收集到{feedback_count}条反馈(≥{self.min_feedback_count})"
 
         # 2. 检查当前准确率
-        latest_metrics_stmt = select(func.avg(PromptTemplate.avg_accuracy)).where(
-            PromptTemplate.id == prompt.id
+        latest_metrics = await prompt_template_crud.get_average_accuracy_async(
+            db, template_id=prompt.id
         )
-        latest_metrics = (await db.execute(latest_metrics_stmt)).scalar()
 
         if latest_metrics and latest_metrics < self.accuracy_threshold:
             return (
@@ -130,13 +128,11 @@ class AutoOptimizer:
             优化结果字典
         """
         # 1. 收集反馈数据
-        feedbacks_stmt = (
-            select(ExtractionFeedback)
-            .where(ExtractionFeedback.template_id == template_id)
-            .order_by(ExtractionFeedback.created_at.desc())
-            .limit(100)
+        feedbacks = await extraction_feedback_crud.get_by_template_async(
+            db,
+            template_id=template_id,
+            limit=100,
         )
-        feedbacks = list((await db.execute(feedbacks_stmt)).scalars().all())
 
         if not feedbacks:
             logger.warning(f"❌ Prompt {template_id} 没有足够反馈数据,跳过优化")
@@ -144,7 +140,7 @@ class AutoOptimizer:
 
         logger.info(f"📊 收集到{len(feedbacks)}条反馈数据")
 
-        template = await db.get(PromptTemplate, template_id)
+        template = await prompt_template_crud.get(db, id=template_id)
         if not template:
             raise ResourceNotFoundError("Prompt", template_id)
 

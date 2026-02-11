@@ -267,6 +267,61 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
         result = await db.execute(stmt)
         return int(result.scalar() or 0)
 
+    async def get_contracts_for_price_calculation_async(
+        self,
+        db: AsyncSession,
+        *,
+        contract_type: str | None = None,
+        contract_status: str | None = None,
+        start_date: date | None = None,
+        end_date: date | None = None,
+        ownership_ids: list[str] | None = None,
+    ) -> list[RentContract]:
+        """获取用于单价计算的合同（含关联的资产和租金条款）"""
+        stmt = select(RentContract).options(
+            selectinload(RentContract.assets), selectinload(RentContract.rent_terms)
+        )
+
+        if contract_type:
+            stmt = stmt.where(RentContract.contract_type == contract_type)
+        if contract_status:
+            stmt = stmt.where(RentContract.contract_status == contract_status)
+
+        if start_date and end_date:
+            stmt = stmt.where(RentContract.start_date <= end_date)
+        if end_date and start_date:
+            stmt = stmt.where(RentContract.end_date >= start_date)
+
+        if ownership_ids:
+            stmt = stmt.where(RentContract.ownership_id.in_(ownership_ids))
+
+        result = await db.execute(stmt)
+        return list(result.scalars().all())
+
+    async def get_contract_status_counts_async(
+        self,
+        db: AsyncSession,
+        *,
+        ownership_ids: list[str] | None = None,
+        start_date: date | None = None,
+        end_date: date | None = None,
+    ) -> dict[str, int]:
+        """按合同状态分组计数（用于续租率计算）"""
+        stmt = select(
+            RentContract.contract_status, func.count(RentContract.id)
+        ).group_by(RentContract.contract_status)
+
+        if ownership_ids:
+            stmt = stmt.where(RentContract.ownership_id.in_(ownership_ids))
+
+        if start_date and end_date:
+            stmt = stmt.where(
+                RentContract.end_date.between(start_date, end_date)
+            )
+
+        result = await db.execute(stmt)
+        return {str(row[0]): int(row[1]) for row in result.all()}
+
 
 class CRUDRentTerm(CRUDBase[RentTerm, RentTermCreate, RentTermUpdate]):
     """租金条款CRUD操作"""
@@ -430,6 +485,223 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
         )
         result = await db.execute(stmt)
         return float(result.scalar() or 0)
+
+    async def get_ledger_statistics_async(
+        self,
+        db: AsyncSession,
+        *,
+        start_date: date | None = None,
+        end_date: date | None = None,
+        ownership_ids: list[str] | None = None,
+        asset_ids: list[str] | None = None,
+    ) -> tuple[Any, Any, Any, int]:
+        """获取租金台账总体统计（总应收/实收/欠款/记录数）"""
+        stmt = select(
+            func.sum(RentLedger.due_amount).label("total_due"),
+            func.sum(RentLedger.paid_amount).label("total_paid"),
+            func.sum(RentLedger.overdue_amount).label("total_overdue"),
+            func.count(RentLedger.id).label("total_records"),
+        )
+
+        filters = []
+        if start_date:
+            filters.append(RentLedger.due_date >= start_date)
+        if end_date:
+            filters.append(RentLedger.due_date <= end_date)
+        if ownership_ids:
+            filters.append(RentLedger.ownership_id.in_(ownership_ids))
+        if asset_ids:
+            filters.append(RentLedger.asset_id.in_(asset_ids))
+
+        if filters:
+            stmt = stmt.where(*filters)
+
+        result = await db.execute(stmt)
+        stats = result.first()
+
+        if stats is None:
+            return None, None, None, 0
+
+        return (
+            stats.total_due,
+            stats.total_paid,
+            stats.total_overdue,
+            stats.total_records or 0,
+        )
+
+    async def get_ledger_status_breakdown_async(
+        self,
+        db: AsyncSession,
+        *,
+        start_date: date | None = None,
+        end_date: date | None = None,
+        ownership_ids: list[str] | None = None,
+        asset_ids: list[str] | None = None,
+    ) -> list[Any]:
+        """按支付状态分组统计"""
+        stmt = select(
+            RentLedger.payment_status,
+            func.count(RentLedger.id).label("count"),
+            func.sum(RentLedger.due_amount).label("due_amount"),
+            func.sum(RentLedger.paid_amount).label("paid_amount"),
+        ).group_by(RentLedger.payment_status)
+
+        filters = []
+        if start_date:
+            filters.append(RentLedger.due_date >= start_date)
+        if end_date:
+            filters.append(RentLedger.due_date <= end_date)
+        if ownership_ids:
+            filters.append(RentLedger.ownership_id.in_(ownership_ids))
+        if asset_ids:
+            filters.append(RentLedger.asset_id.in_(asset_ids))
+
+        if filters:
+            stmt = stmt.where(*filters)
+
+        result = await db.execute(stmt)
+        return list(result.all())
+
+    async def get_ledger_monthly_breakdown_async(
+        self,
+        db: AsyncSession,
+        *,
+        start_date: date | None = None,
+        end_date: date | None = None,
+        ownership_ids: list[str] | None = None,
+        asset_ids: list[str] | None = None,
+    ) -> list[Any]:
+        """按月份分组统计"""
+        stmt = (
+            select(
+                RentLedger.year_month,
+                func.sum(RentLedger.due_amount).label("due_amount"),
+                func.sum(RentLedger.paid_amount).label("paid_amount"),
+                func.sum(RentLedger.overdue_amount).label("overdue_amount"),
+            )
+            .group_by(RentLedger.year_month)
+            .order_by(RentLedger.year_month)
+        )
+
+        filters = []
+        if start_date:
+            filters.append(RentLedger.due_date >= start_date)
+        if end_date:
+            filters.append(RentLedger.due_date <= end_date)
+        if ownership_ids:
+            filters.append(RentLedger.ownership_id.in_(ownership_ids))
+        if asset_ids:
+            filters.append(RentLedger.asset_id.in_(asset_ids))
+
+        if filters:
+            stmt = stmt.where(*filters)
+
+        result = await db.execute(stmt)
+        return list(result.all())
+
+    async def get_ownership_statistics_async(
+        self,
+        db: AsyncSession,
+        *,
+        start_date: date | None = None,
+        end_date: date | None = None,
+        ownership_ids: list[str] | None = None,
+    ) -> list[Any]:
+        """权属方维度统计（JOIN Ownership + RentContract + RentLedger）"""
+        from ..models.ownership import Ownership
+
+        stmt = (
+            select(
+                Ownership.id,
+                Ownership.name,
+                Ownership.short_name,
+                func.count(RentContract.id).label("contract_count"),
+                func.sum(RentLedger.due_amount).label("total_due_amount"),
+                func.sum(RentLedger.paid_amount).label("total_paid_amount"),
+                func.sum(RentLedger.overdue_amount).label("total_overdue_amount"),
+            )
+            .join(RentContract, RentContract.ownership_id == Ownership.id)
+            .join(RentLedger, RentLedger.contract_id == RentContract.id)
+            .group_by(Ownership.id, Ownership.name, Ownership.short_name)
+        )
+
+        if start_date:
+            stmt = stmt.where(RentLedger.due_date >= start_date)
+        if end_date:
+            stmt = stmt.where(RentLedger.due_date <= end_date)
+        if ownership_ids:
+            stmt = stmt.where(Ownership.id.in_(ownership_ids))
+
+        result = await db.execute(stmt)
+        return list(result.all())
+
+    async def get_asset_statistics_async(
+        self,
+        db: AsyncSession,
+        *,
+        start_date: date | None = None,
+        end_date: date | None = None,
+        asset_ids: list[str] | None = None,
+    ) -> list[Any]:
+        """资产维度统计（JOIN Asset + RentContract + RentLedger）"""
+        from ..models.asset import Asset
+
+        stmt = (
+            select(
+                Asset.id,
+                Asset.property_name,
+                Asset.address,
+                func.count(RentContract.id).label("contract_count"),
+                func.sum(RentLedger.due_amount).label("total_due_amount"),
+                func.sum(RentLedger.paid_amount).label("total_paid_amount"),
+                func.sum(RentLedger.overdue_amount).label("total_overdue_amount"),
+            )
+            .join(rent_contract_assets, rent_contract_assets.c.asset_id == Asset.id)
+            .join(RentContract, RentContract.id == rent_contract_assets.c.contract_id)
+            .join(RentLedger, RentLedger.contract_id == RentContract.id)
+            .group_by(Asset.id, Asset.property_name, Asset.address)
+        )
+
+        if start_date:
+            stmt = stmt.where(RentLedger.due_date >= start_date)
+        if end_date:
+            stmt = stmt.where(RentLedger.due_date <= end_date)
+        if asset_ids:
+            stmt = stmt.where(Asset.id.in_(asset_ids))
+
+        result = await db.execute(stmt)
+        return list(result.all())
+
+    async def get_monthly_statistics_async(
+        self,
+        db: AsyncSession,
+        *,
+        year: int | None = None,
+        start_month: str | None = None,
+        end_month: str | None = None,
+    ) -> list[Any]:
+        """月度统计（年月维度聚合）"""
+        stmt = (
+            select(
+                RentLedger.year_month,
+                func.count(func.distinct(RentLedger.contract_id)).label("total_contracts"),
+                func.sum(RentLedger.due_amount).label("total_due_amount"),
+                func.sum(RentLedger.paid_amount).label("total_paid_amount"),
+                func.sum(RentLedger.overdue_amount).label("total_overdue_amount"),
+            )
+            .group_by(RentLedger.year_month)
+            .order_by(RentLedger.year_month)
+        )
+
+        if year:
+            stmt = stmt.where(RentLedger.year_month.like(f"{year}%"))
+        if start_month:
+            stmt = stmt.where(RentLedger.year_month >= start_month)
+        if end_month:
+            stmt = stmt.where(RentLedger.year_month <= end_month)
+
+        result = await db.execute(stmt)
+        return list(result.all())
 
 
 # 实例化CRUD对象

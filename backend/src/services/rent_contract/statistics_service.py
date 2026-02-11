@@ -2,19 +2,12 @@ from datetime import date
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from ...core.enums import ContractStatus
-from ...models.asset import Asset
-from ...models.associations import rent_contract_assets
-from ...models.ownership import Ownership
-from ...models.rent_contract import (
-    ContractType,
-    RentContract,
-    RentLedger,
-)
+from ...crud.rent_contract import rent_contract as rent_contract_crud
+from ...crud.rent_contract import rent_ledger as rent_ledger_crud
+from ...models.rent_contract import ContractType
 from ...schemas.rent_contract import RentStatisticsQuery
 from .helpers import RentContractHelperMixin
 
@@ -25,56 +18,38 @@ class RentContractStatisticsService(RentContractHelperMixin):
     async def get_statistics_async(
         self, db: AsyncSession, *, query_params: RentStatisticsQuery
     ) -> dict[str, Any]:
-        filters = []
-        if query_params.start_date:
-            filters.append(RentLedger.due_date >= query_params.start_date)
-        if query_params.end_date:
-            filters.append(RentLedger.due_date <= query_params.end_date)
-        if query_params.ownership_ids:
-            filters.append(RentLedger.ownership_id.in_(query_params.ownership_ids))
-        if query_params.asset_ids:
-            filters.append(RentLedger.asset_id.in_(query_params.asset_ids))
-
-        stats_stmt = select(
-            func.sum(RentLedger.due_amount).label("total_due"),
-            func.sum(RentLedger.paid_amount).label("total_paid"),
-            func.sum(RentLedger.overdue_amount).label("total_overdue"),
-            func.count(RentLedger.id).label("total_records"),
+        # 使用 CRUD 方法获取总体统计
+        total_due, total_paid, total_overdue, total_records = (
+            await rent_ledger_crud.get_ledger_statistics_async(
+                db,
+                start_date=query_params.start_date,
+                end_date=query_params.end_date,
+                ownership_ids=query_params.ownership_ids,
+                asset_ids=query_params.asset_ids,
+            )
         )
-        if filters:
-            stats_stmt = stats_stmt.where(*filters)
-        stats = (await db.execute(stats_stmt)).first()
 
-        if stats is None:
-            total_due = Decimal("0")
-            total_paid = Decimal("0")
-            total_overdue = Decimal("0")
-            total_records = 0
-        else:
-            total_due = stats.total_due or Decimal("0")
-            total_paid = stats.total_paid or Decimal("0")
-            total_overdue = stats.total_overdue or Decimal("0")
-            total_records = stats.total_records or 0
+        total_due = total_due or Decimal("0")
+        total_paid = total_paid or Decimal("0")
+        total_overdue = total_overdue or Decimal("0")
 
-        status_stmt = select(
-            RentLedger.payment_status,
-            func.count(RentLedger.id).label("count"),
-            func.sum(RentLedger.due_amount).label("due_amount"),
-            func.sum(RentLedger.paid_amount).label("paid_amount"),
-        ).group_by(RentLedger.payment_status)
-        if filters:
-            status_stmt = status_stmt.where(*filters)
-        status_stats = (await db.execute(status_stmt)).all()
+        # 使用 CRUD 方法获取支付状态分组统计
+        status_stats = await rent_ledger_crud.get_ledger_status_breakdown_async(
+            db,
+            start_date=query_params.start_date,
+            end_date=query_params.end_date,
+            ownership_ids=query_params.ownership_ids,
+            asset_ids=query_params.asset_ids,
+        )
 
-        monthly_stmt = select(
-            RentLedger.year_month,
-            func.sum(RentLedger.due_amount).label("due_amount"),
-            func.sum(RentLedger.paid_amount).label("paid_amount"),
-            func.sum(RentLedger.overdue_amount).label("overdue_amount"),
-        ).group_by(RentLedger.year_month).order_by(RentLedger.year_month)
-        if filters:
-            monthly_stmt = monthly_stmt.where(*filters)
-        monthly_stats = (await db.execute(monthly_stmt)).all()
+        # 使用 CRUD 方法获取月度分组统计
+        monthly_stats = await rent_ledger_crud.get_ledger_monthly_breakdown_async(
+            db,
+            start_date=query_params.start_date,
+            end_date=query_params.end_date,
+            ownership_ids=query_params.ownership_ids,
+            asset_ids=query_params.asset_ids,
+        )
 
         payment_rate = (total_paid / total_due * 100) if total_due else Decimal("0")
 
@@ -116,29 +91,13 @@ class RentContractStatisticsService(RentContractHelperMixin):
         end_date: date | None = None,
         ownership_ids: list[str] | None = None,
     ) -> list[dict[str, Any]]:
-        stmt = (
-            select(
-                Ownership.id,
-                Ownership.name,
-                Ownership.short_name,
-                func.count(RentContract.id).label("contract_count"),
-                func.sum(RentLedger.due_amount).label("total_due_amount"),
-                func.sum(RentLedger.paid_amount).label("total_paid_amount"),
-                func.sum(RentLedger.overdue_amount).label("total_overdue_amount"),
-            )
-            .join(RentContract, RentContract.ownership_id == Ownership.id)
-            .join(RentLedger, RentLedger.contract_id == RentContract.id)
-            .group_by(Ownership.id, Ownership.name, Ownership.short_name)
+        # 使用 CRUD 方法获取权属方统计
+        results = await rent_ledger_crud.get_ownership_statistics_async(
+            db,
+            start_date=start_date,
+            end_date=end_date,
+            ownership_ids=ownership_ids,
         )
-
-        if start_date:
-            stmt = stmt.where(RentLedger.due_date >= start_date)
-        if end_date:
-            stmt = stmt.where(RentLedger.due_date <= end_date)
-        if ownership_ids:
-            stmt = stmt.where(Ownership.id.in_(ownership_ids))
-
-        results = (await db.execute(stmt)).all()
 
         ownership_stats = []
         for result in results:
@@ -172,30 +131,13 @@ class RentContractStatisticsService(RentContractHelperMixin):
         end_date: date | None = None,
         asset_ids: list[str] | None = None,
     ) -> list[dict[str, Any]]:
-        stmt = (
-            select(
-                Asset.id,
-                Asset.property_name,
-                Asset.address,
-                func.count(RentContract.id).label("contract_count"),
-                func.sum(RentLedger.due_amount).label("total_due_amount"),
-                func.sum(RentLedger.paid_amount).label("total_paid_amount"),
-                func.sum(RentLedger.overdue_amount).label("total_overdue_amount"),
-            )
-            .join(rent_contract_assets, rent_contract_assets.c.asset_id == Asset.id)
-            .join(RentContract, RentContract.id == rent_contract_assets.c.contract_id)
-            .join(RentLedger, RentLedger.contract_id == RentContract.id)
-            .group_by(Asset.id, Asset.property_name, Asset.address)
+        # 使用 CRUD 方法获取资产统计
+        results = await rent_ledger_crud.get_asset_statistics_async(
+            db,
+            start_date=start_date,
+            end_date=end_date,
+            asset_ids=asset_ids,
         )
-
-        if start_date:
-            stmt = stmt.where(RentLedger.due_date >= start_date)
-        if end_date:
-            stmt = stmt.where(RentLedger.due_date <= end_date)
-        if asset_ids:
-            stmt = stmt.where(Asset.id.in_(asset_ids))
-
-        results = (await db.execute(stmt)).all()
 
         asset_stats = []
         for result in results:
@@ -228,28 +170,13 @@ class RentContractStatisticsService(RentContractHelperMixin):
         start_month: str | None = None,
         end_month: str | None = None,
     ) -> list[dict[str, Any]]:
-        stmt = (
-            select(
-                RentLedger.year_month,
-                func.count(func.distinct(RentLedger.contract_id)).label(
-                    "total_contracts"
-                ),
-                func.sum(RentLedger.due_amount).label("total_due_amount"),
-                func.sum(RentLedger.paid_amount).label("total_paid_amount"),
-                func.sum(RentLedger.overdue_amount).label("total_overdue_amount"),
-            )
-            .group_by(RentLedger.year_month)
-            .order_by(RentLedger.year_month)
+        # 使用 CRUD 方法获取月度统计
+        results = await rent_ledger_crud.get_monthly_statistics_async(
+            db,
+            year=year,
+            start_month=start_month,
+            end_month=end_month,
         )
-
-        if year:
-            stmt = stmt.where(RentLedger.year_month.like(f"{year}%"))
-        if start_month:
-            stmt = stmt.where(RentLedger.year_month >= start_month)
-        if end_month:
-            stmt = stmt.where(RentLedger.year_month <= end_month)
-
-        results = (await db.execute(stmt)).all()
 
         monthly_stats = []
         for result in results:
@@ -275,23 +202,16 @@ class RentContractStatisticsService(RentContractHelperMixin):
     async def _calculate_average_unit_price_async(
         self, db: AsyncSession, query_params: RentStatisticsQuery
     ) -> Decimal:
-        stmt = select(RentContract).options(
-            selectinload(RentContract.assets), selectinload(RentContract.rent_terms)
+        # 使用 CRUD 方法获取合同列表
+        contracts = await rent_contract_crud.get_contracts_for_price_calculation_async(
+            db,
+            contract_type=ContractType.LEASE_DOWNSTREAM,
+            contract_status=ContractStatus.ACTIVE,
+            start_date=query_params.start_date,
+            end_date=query_params.end_date,
+            ownership_ids=query_params.ownership_ids,
         )
-        stmt = stmt.where(
-            RentContract.contract_type == ContractType.LEASE_DOWNSTREAM,
-            RentContract.contract_status == ContractStatus.ACTIVE,
-        )
 
-        if query_params.start_date and query_params.end_date:
-            stmt = stmt.where(RentContract.start_date <= query_params.end_date)
-        if query_params.end_date and query_params.start_date:
-            stmt = stmt.where(RentContract.end_date >= query_params.start_date)
-
-        if query_params.ownership_ids:
-            stmt = stmt.where(RentContract.ownership_id.in_(query_params.ownership_ids))
-
-        contracts = list((await db.execute(stmt)).scalars().all())
         if not contracts:
             return Decimal("0")
 
@@ -318,22 +238,13 @@ class RentContractStatisticsService(RentContractHelperMixin):
     async def _calculate_renewal_rate_async(
         self, db: AsyncSession, query_params: RentStatisticsQuery
     ) -> Decimal:
-        stmt = (
-            select(RentContract.contract_status, func.count(RentContract.id))
-            .group_by(RentContract.contract_status)
+        # 使用 CRUD 方法获取合同状态统计
+        stats = await rent_contract_crud.get_contract_status_counts_async(
+            db,
+            ownership_ids=query_params.ownership_ids,
+            start_date=query_params.start_date,
+            end_date=query_params.end_date,
         )
-
-        if query_params.ownership_ids:
-            stmt = stmt.where(RentContract.ownership_id.in_(query_params.ownership_ids))
-
-        if query_params.start_date and query_params.end_date:
-            stmt = stmt.where(
-                RentContract.end_date.between(
-                    query_params.start_date, query_params.end_date
-                )
-            )
-
-        stats = {row[0]: row[1] for row in (await db.execute(stmt)).all()}
 
         renewed = stats.get(ContractStatus.RENEWED, 0)
         expired = stats.get(ContractStatus.EXPIRED, 0)

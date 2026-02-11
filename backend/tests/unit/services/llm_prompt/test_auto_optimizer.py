@@ -7,7 +7,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -116,7 +116,13 @@ class TestAutoOptimizerAsync:
         feedback.created_at = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=1)
 
         mock_db.execute.return_value = _result_with_all([feedback])
-        mock_db.get.return_value = None
 
-        with pytest.raises(ResourceNotFoundError):
+        with (
+            patch.object(
+                auto_optimizer_module.prompt_template_crud,
+                "get",
+                new=AsyncMock(return_value=None),
+            ),
+            pytest.raises(ResourceNotFoundError),
+        ):
             await optimizer.optimize_prompt(mock_db, 'prompt-1')

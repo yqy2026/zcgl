@@ -8,9 +8,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ...crud.pdf_import_session import pdf_import_session_crud
 from ...models.pdf_import_session import PDFImportSession, ProcessingStep, SessionStatus
 
 
@@ -21,10 +21,9 @@ class PDFSessionService:
         self.db = db
 
     async def get_session(self, session_id: str) -> PDFImportSession | None:
-        stmt = select(PDFImportSession).where(
-            PDFImportSession.session_id == session_id
+        return await pdf_import_session_crud.get_by_session_id_async(
+            self.db, session_id=session_id
         )
-        return (await self.db.execute(stmt)).scalars().first()
 
     async def create_session(
         self,

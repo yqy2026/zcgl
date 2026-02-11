@@ -7,8 +7,6 @@
 import logging
 from typing import Any
 
-from sqlalchemy import Float, case, func, select
-from sqlalchemy import cast as sql_cast
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...crud.asset import asset_crud
@@ -62,31 +60,9 @@ class OccupancyService:
             - rentable_assets_count: 可出租资产数
         """
         try:
-            from ...models.asset import Asset
-
-            # 构建基础查询
-            stmt = select(Asset)
-
-            # 应用筛选条件
-            if filters:
-                for key, value in filters.items():
-                    if hasattr(Asset, key) and value is not None:
-                        stmt = stmt.where(getattr(Asset, key) == value)
-
-            # 使用数据库聚合函数计算 - 避免加载所有数据到内存
-            agg_stmt = stmt.with_only_columns(
-                func.count(Asset.id).label("total_assets"),
-                sql_cast(func.sum(func.coalesce(Asset.rentable_area, 0)), Float).label(
-                    "total_rentable_area"
-                ),
-                sql_cast(func.sum(func.coalesce(Asset.rented_area, 0)), Float).label(
-                    "total_rented_area"
-                ),
-                func.count(case((Asset.rentable_area > 0, 1))).label(
-                    "rentable_assets_count"
-                ),
+            result = await asset_crud.get_occupancy_aggregation_async(
+                self.db, filters=filters
             )
-            result = (await self.db.execute(agg_stmt)).first()
 
             # 提取结果并转换为float
             if result is None:
@@ -196,34 +172,11 @@ class OccupancyService:
             按分类的出租率统计字典
         """
         try:
-            from ...models.asset import Asset
-
-            stmt = select(Asset)
-
-            # 应用筛选条件
-            if filters:
-                for key, value in filters.items():
-                    if hasattr(Asset, key) and value is not None:
-                        stmt = stmt.where(getattr(Asset, key) == value)
-
-            # 按分类字段聚合查询
-            agg_stmt = (
-                stmt.with_only_columns(
-                    getattr(Asset, category_field).label("category"),
-                    sql_cast(
-                        func.sum(func.coalesce(Asset.rentable_area, 0)), Float
-                    ).label("total_rentable_area"),
-                    sql_cast(
-                        func.sum(func.coalesce(Asset.rented_area, 0)), Float
-                    ).label("total_rented_area"),
-                    func.count(Asset.id).label("total_assets"),
-                    func.count(case((Asset.rentable_area > 0, 1))).label(
-                        "rentable_assets_count"
-                    ),
-                )
-                .group_by(getattr(Asset, category_field))
+            results = await asset_crud.get_occupancy_by_category_aggregation_async(
+                self.db,
+                category_field=category_field,
+                filters=filters,
             )
-            results = (await self.db.execute(agg_stmt)).all()
 
             categories = {}
             for result in results:
