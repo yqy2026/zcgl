@@ -40,12 +40,13 @@ class TestTokenBlacklistApi:
             user_id=str(admin.id),
             username=admin.username,
         )
+        client.cookies.set("auth_token", token)
 
         # Sanity check: token should work before blacklisting
-        ok_response = client.get("/api/v1/auth/me", cookies={"auth_token": token})
+        ok_response = client.get("/api/v1/auth/me")
         assert ok_response.status_code == 200
 
         blacklist_manager.add_token(jti, exp)
 
-        blocked_response = client.get("/api/v1/auth/me", cookies={"auth_token": token})
+        blocked_response = client.get("/api/v1/auth/me")
         assert blocked_response.status_code == 401

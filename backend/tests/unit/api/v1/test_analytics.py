@@ -25,7 +25,7 @@ from src.middleware.auth import get_current_active_user
 
 AUTH_FAILURE_STATUSES = {
     status.HTTP_401_UNAUTHORIZED,
-    status.HTTP_422_UNPROCESSABLE_ENTITY,
+    status.HTTP_422_UNPROCESSABLE_CONTENT,
 }
 
 

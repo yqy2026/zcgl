@@ -41,6 +41,9 @@ class AsyncSessionAdapter:
     async def get(self, *args, **kwargs):  # noqa: ANN001
         return self._session.get(*args, **kwargs)
 
+    async def scalar(self, *args, **kwargs):  # noqa: ANN001
+        return self._session.scalar(*args, **kwargs)
+
     def add(self, *args, **kwargs):  # noqa: ANN001
         return self._session.add(*args, **kwargs)
 
@@ -255,6 +258,7 @@ def client(monkeypatch, db_session):
     mock_user.role_ids = ["role-admin-id"]
     mock_user.is_admin = True
     mock_user.is_active = True
+    mock_user.default_organization_id = None
 
     # Use monkeypatch to replace functions at module level
     def mock_get_current_user():
@@ -321,6 +325,7 @@ def admin_user():
     mock_user.role_ids = ["role-admin-id"]
     mock_user.is_admin = True
     mock_user.is_active = True
+    mock_user.default_organization_id = None
     return mock_user
 
 
@@ -337,6 +342,7 @@ def normal_user():
     mock_user.role_ids = ["role-user-id"]
     mock_user.is_admin = False
     mock_user.is_active = True
+    mock_user.default_organization_id = None
     return mock_user
 
 

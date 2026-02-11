@@ -9,7 +9,7 @@ from collections.abc import Callable
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic_core import PydanticCustomError
 
 
@@ -99,8 +99,7 @@ class ExtractionResult(BaseModel):
     usage: dict[str, Any] | None = None
     warnings: list[str] = Field(default_factory=list)
 
-    class Config:
-        use_enum_values = True
+    model_config = ConfigDict(use_enum_values=True)
 
     @model_validator(mode="after")
     def validate_success_consistency(self) -> "ExtractionResult":
@@ -289,8 +288,7 @@ class ExtractionConfig(BaseModel):
     debug_mode: bool = False
     save_intermediate: bool = False
 
-    class Config:
-        use_enum_values = True
+    model_config = ConfigDict(use_enum_values=True)
 
 
 class ExtractorFactory:

@@ -9,6 +9,7 @@ import {
   ReloadOutlined,
   UndoOutlined,
 } from '@ant-design/icons';
+import styles from './ActionFeedback.module.css';
 
 const { Text, Paragraph } = Typography;
 
@@ -76,35 +77,35 @@ const ActionFeedback: React.FC<ActionFeedbackProps> = ({
       case 'loading':
         return {
           type: 'info' as const,
-          icon: <LoadingOutlined style={{ color: '#1890ff' }} />,
+          icon: <LoadingOutlined className={styles.feedbackIconLoading} />,
           title: '处理中...',
           showActions: false,
         };
       case 'success':
         return {
           type: 'success' as const,
-          icon: <CheckCircleOutlined style={{ color: '#52c41a' }} />,
+          icon: <CheckCircleOutlined className={styles.feedbackIconSuccess} />,
           title: '操作成功',
           showActions: showUndo,
         };
       case 'error':
         return {
           type: 'error' as const,
-          icon: <CloseCircleOutlined style={{ color: '#ff4d4f' }} />,
+          icon: <CloseCircleOutlined className={styles.feedbackIconError} />,
           title: '操作失败',
           showActions: showRetry,
         };
       case 'warning':
         return {
           type: 'warning' as const,
-          icon: <ExclamationCircleOutlined style={{ color: '#faad14' }} />,
+          icon: <ExclamationCircleOutlined className={styles.feedbackIconWarning} />,
           title: '操作警告',
           showActions: showRetry,
         };
       default:
         return {
           type: 'info' as const,
-          icon: <InfoCircleOutlined style={{ color: '#1890ff' }} />,
+          icon: <InfoCircleOutlined className={styles.feedbackIconInfo} />,
           title: '信息',
           showActions: false,
         };
@@ -142,7 +143,7 @@ const ActionFeedback: React.FC<ActionFeedbackProps> = ({
     }
 
     return (
-      <div style={{ marginTop: 12 }}>
+      <div className={styles.actionsContainer}>
         <Space size="small">{actions}</Space>
       </div>
     );
@@ -160,12 +161,12 @@ const ActionFeedback: React.FC<ActionFeedbackProps> = ({
     }
 
     return (
-      <div style={{ marginTop: 12 }}>
-        <Divider style={{ margin: '12px 0' }} />
-        <Text type="secondary" style={{ fontSize: '12px' }}>
+      <div className={styles.detailsContainer}>
+        <Divider className={styles.sectionDivider} />
+        <Text type="secondary" className={styles.sectionLabel}>
           详细信息：
         </Text>
-        <ul style={{ margin: '8px 0 0 0', paddingLeft: 16, fontSize: '12px' }}>
+        <ul className={styles.detailsList}>
           {result.details.map(detail => (
             <li key={detail}>
               <Text type="secondary">{detail}</Text>
@@ -183,24 +184,12 @@ const ActionFeedback: React.FC<ActionFeedbackProps> = ({
     }
 
     return (
-      <div style={{ marginTop: 12 }}>
-        <Divider style={{ margin: '12px 0' }} />
-        <Text type="secondary" style={{ fontSize: '12px' }}>
+      <div className={styles.errorInfoContainer}>
+        <Divider className={styles.sectionDivider} />
+        <Text type="secondary" className={styles.sectionLabel}>
           错误信息：
         </Text>
-        <Paragraph
-          code
-          style={{
-            fontSize: '11px',
-            margin: '8px 0 0 0',
-            padding: '8px',
-            background: '#fff2f0',
-            border: '1px solid #ffccc7',
-            borderRadius: '4px',
-            maxHeight: '100px',
-            overflow: 'auto',
-          }}
-        >
+        <Paragraph code className={styles.errorCodeBlock}>
           {result.error.message}
         </Paragraph>
       </div>
@@ -318,11 +307,11 @@ export const ActionFeedbackCard: React.FC<{
   onUndo?: () => void;
 }> = ({ result, title, extra, onRetry, onUndo }) => {
   const config = {
-    loading: { color: '#1890ff', icon: LoadingOutlined },
-    success: { color: '#52c41a', icon: CheckCircleOutlined },
-    error: { color: '#ff4d4f', icon: CloseCircleOutlined },
-    warning: { color: '#faad14', icon: ExclamationCircleOutlined },
-    idle: { color: '#8c8c8c', icon: InfoCircleOutlined },
+    loading: { icon: LoadingOutlined, iconClassName: styles.feedbackIconLoading },
+    success: { icon: CheckCircleOutlined, iconClassName: styles.feedbackIconSuccess },
+    error: { icon: CloseCircleOutlined, iconClassName: styles.feedbackIconError },
+    warning: { icon: ExclamationCircleOutlined, iconClassName: styles.feedbackIconWarning },
+    idle: { icon: InfoCircleOutlined, iconClassName: styles.feedbackIconIdle },
   };
 
   const statusConfig = config[result.status];
@@ -332,7 +321,7 @@ export const ActionFeedbackCard: React.FC<{
     <Card
       title={
         <Space>
-          <IconComponent style={{ color: statusConfig.color }} />
+          <IconComponent className={statusConfig.iconClassName} />
           <span>{title !== null && title !== undefined && title !== '' ? title : '操作状态'}</span>
         </Space>
       }
@@ -346,7 +335,7 @@ export const ActionFeedbackCard: React.FC<{
       {result.details !== null && result.details !== undefined && result.details.length > 0 && (
         <div>
           <Text type="secondary">详细信息：</Text>
-          <ul style={{ marginTop: 8, paddingLeft: 16 }}>
+          <ul className={styles.cardDetailsList}>
             {result.details.map(detail => (
               <li key={detail}>
                 <Text type="secondary">{detail}</Text>
@@ -357,7 +346,7 @@ export const ActionFeedbackCard: React.FC<{
       )}
 
       {(result.status === 'error' && onRetry) || (result.status === 'success' && onUndo) ? (
-        <div style={{ marginTop: 16 }}>
+        <div className={styles.cardActionsContainer}>
           <Space>
             {result.status === 'error' && onRetry && (
               <Button type="primary" size="small" icon={<ReloadOutlined />} onClick={onRetry}>

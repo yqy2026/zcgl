@@ -10,6 +10,7 @@ import {
   type HealthStatus,
   type PerformanceAlert,
 } from './systemMonitoringTypes';
+import styles from './SystemMonitoringHealthAlerts.module.css';
 
 interface SystemMonitoringHealthAlertsProps {
   healthStatus?: HealthStatus;
@@ -81,12 +82,12 @@ const SystemMonitoringHealthAlerts: React.FC<SystemMonitoringHealthAlertsProps> 
   );
 
   return (
-    <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+    <Row gutter={[16, 16]} className={styles.healthAlertsRow}>
       <Col span={8}>
         <Card title="系统健康状态" size="small">
-          <div style={{ textAlign: 'center', padding: '20px 0' }}>
+          <div className={styles.healthGaugeContainer}>
             <Gauge {...healthGaugeConfig} height={200} />
-            <div style={{ marginTop: 16 }}>
+            <div className={styles.healthStatusTagWrapper}>
               <Tag color={getStatusColor(healthStatus?.status ?? 'unknown')}>
                 {(healthStatus?.status ?? 'unknown').toUpperCase()}
               </Tag>

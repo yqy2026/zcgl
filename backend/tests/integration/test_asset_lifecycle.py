@@ -43,7 +43,7 @@ class TestAssetLifecycle:
             status.HTTP_201_CREATED,
             status.HTTP_401_UNAUTHORIZED,
             status.HTTP_404_NOT_FOUND,
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
         ]
         if create_response.status_code not in [status.HTTP_200_OK, status.HTTP_201_CREATED]:
             return
@@ -59,7 +59,7 @@ class TestAssetLifecycle:
             status.HTTP_200_OK,
             status.HTTP_401_UNAUTHORIZED,
             status.HTTP_404_NOT_FOUND,
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
         ]
 
         # 3. 分配使用权属

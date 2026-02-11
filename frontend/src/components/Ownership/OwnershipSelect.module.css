@@ -11,3 +11,11 @@
 .selectedTag {
   margin-right: 3px;
 }
+
+.compactContainer {
+  width: 100%;
+}
+
+.ownershipSelect {
+  flex: 1;
+}

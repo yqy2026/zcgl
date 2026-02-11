@@ -16,7 +16,7 @@ from src.services.llm_prompt.feedback_service import FeedbackService
 pytestmark = pytest.mark.asyncio
 
 
-def test_feedback_service_module_avoids_datetime_utcnow() -> None:
+async def test_feedback_service_module_avoids_datetime_utcnow() -> None:
     """服务模块不应直接调用 datetime.utcnow."""
     module_path = Path(feedback_service_module.__file__)
     content = module_path.read_text(encoding="utf-8")
@@ -25,7 +25,7 @@ def test_feedback_service_module_avoids_datetime_utcnow() -> None:
 
 
 class TestFeedbackServiceInit:
-    def test_init_with_custom_prompt_manager(self):
+    async def test_init_with_custom_prompt_manager(self):
         mock_pm = MagicMock()
         service = FeedbackService(prompt_manager=mock_pm)
         assert service.prompt_manager is mock_pm

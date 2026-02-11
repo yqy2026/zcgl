@@ -13,7 +13,7 @@ from fastapi import status
 
 AUTH_FAILURE_STATUSES = {
     status.HTTP_401_UNAUTHORIZED,
-    status.HTTP_422_UNPROCESSABLE_ENTITY,
+    status.HTTP_422_UNPROCESSABLE_CONTENT,
 }
 
 LLM_PROMPTS_BASE_PATH = "/api/v1/llm-prompts/llm-prompts"
@@ -196,7 +196,7 @@ class TestLLMPromptsValidation:
         )
         assert response.status_code in [
             status.HTTP_400_BAD_REQUEST,
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
             status.HTTP_200_OK,
             *AUTH_FAILURE_STATUSES,
         ]
@@ -211,5 +211,5 @@ class TestLLMPromptsAuthentication:
         assert response.status_code in {
             status.HTTP_200_OK,
             status.HTTP_401_UNAUTHORIZED,
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
         }

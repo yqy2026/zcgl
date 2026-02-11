@@ -58,6 +58,7 @@ def asset_crud_with_encryption(
 def asset_crud_no_encryption(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.delenv("DATA_ENCRYPTION_KEY", raising=False)
     monkeypatch.setenv("DATA_ENCRYPTION_KEY", "")
+    monkeypatch.setenv("REQUIRE_ENCRYPTION", "false")
 
     import sys
 

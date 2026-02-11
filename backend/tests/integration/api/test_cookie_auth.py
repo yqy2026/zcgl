@@ -8,6 +8,14 @@ from fastapi.testclient import TestClient
 from src.core.environment import is_production
 
 
+def _set_auth_cookies(
+    client: TestClient, *, auth_token: str, csrf_token: str | None = None
+) -> None:
+    client.cookies.set("auth_token", auth_token)
+    if csrf_token is not None:
+        client.cookies.set("csrf_token", csrf_token)
+
+
 def test_login_sets_http_only_cookie(client, test_data):
     """Test that login response sets httpOnly cookie"""
     admin_user = test_data["admin"]
@@ -88,11 +96,11 @@ def test_logout_clears_cookie(client, test_data):
     csrf_cookie = login_response.cookies.get("csrf_token")
     assert auth_cookie is not None
     assert csrf_cookie is not None
+    _set_auth_cookies(client, auth_token=auth_cookie, csrf_token=csrf_cookie)
 
     # Now logout
     logout_response = client.post(
         "/api/v1/auth/logout",
-        cookies={"auth_token": auth_cookie, "csrf_token": csrf_cookie},
         headers={"X-CSRF-Token": csrf_cookie},
     )
 
@@ -174,17 +182,12 @@ def test_protected_endpoint_authenticates_via_cookie(client, test_data):
     )
     assert login_response.status_code == 200
 
-    # Extract cookie value from login response
-    # Note: TestClient doesn't automatically send cookies like browsers do
-    # So we need to manually extract and send the cookie
     auth_cookie = login_response.cookies.get("auth_token")
     assert auth_cookie is not None, "Login should set auth_token cookie"
+    _set_auth_cookies(client, auth_token=auth_cookie)
 
     # Access a protected endpoint WITHOUT Authorization header
-    # Send the cookie explicitly (TestClient limitation)
-    protected_response = client.get(
-        "/api/v1/auth/me", cookies={"auth_token": auth_cookie}
-    )
+    protected_response = client.get("/api/v1/auth/me")
 
     # Should succeed because cookie is being sent
     assert protected_response.status_code == 200
@@ -206,11 +209,9 @@ def test_csrf_blocks_cookie_post_without_header(client, test_data):
     csrf_cookie = login_response.cookies.get("csrf_token")
     assert auth_cookie is not None
     assert csrf_cookie is not None
+    _set_auth_cookies(client, auth_token=auth_cookie, csrf_token=csrf_cookie)
 
-    response = client.post(
-        "/api/v1/auth/logout",
-        cookies={"auth_token": auth_cookie, "csrf_token": csrf_cookie},
-    )
+    response = client.post("/api/v1/auth/logout")
 
     assert response.status_code == 403
 
@@ -229,10 +230,10 @@ def test_csrf_allows_cookie_post_with_header(client, test_data):
     csrf_cookie = login_response.cookies.get("csrf_token")
     assert auth_cookie is not None
     assert csrf_cookie is not None
+    _set_auth_cookies(client, auth_token=auth_cookie, csrf_token=csrf_cookie)
 
     response = client.post(
         "/api/v1/auth/logout",
-        cookies={"auth_token": auth_cookie, "csrf_token": csrf_cookie},
         headers={"X-CSRF-Token": csrf_cookie},
     )
 

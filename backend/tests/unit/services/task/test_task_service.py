@@ -17,7 +17,7 @@ from src.services.task.service import TaskService
 pytestmark = pytest.mark.asyncio
 
 
-def test_task_service_module_should_not_use_datetime_utcnow() -> None:
+async def test_task_service_module_should_not_use_datetime_utcnow() -> None:
     """任务服务模块不应直接调用 datetime.utcnow。"""
     from src.services.task import service as task_service_module
 

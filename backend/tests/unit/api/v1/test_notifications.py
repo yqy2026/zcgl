@@ -19,7 +19,7 @@ from src.models.notification import Notification
 
 AUTH_FAILURE_STATUSES = {
     status.HTTP_401_UNAUTHORIZED,
-    status.HTTP_422_UNPROCESSABLE_ENTITY,
+    status.HTTP_422_UNPROCESSABLE_CONTENT,
 }
 
 # ============================================================================
@@ -539,7 +539,7 @@ class TestNotificationsEdgeCases:
 
         # 应该返回验证错误
         assert response.status_code in [
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
             *AUTH_FAILURE_STATUSES,
         ]
 

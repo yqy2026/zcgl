@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 # Auth failures can occur when JWT validation is active during unit tests.
 AUTH_FAILURE_STATUSES = {
     status.HTTP_401_UNAUTHORIZED,
-    status.HTTP_422_UNPROCESSABLE_ENTITY,
+    status.HTTP_422_UNPROCESSABLE_CONTENT,
 }
 
 # ============================================================================
@@ -167,7 +167,7 @@ class TestCreateContact:
 
         assert response.status_code in [
             status.HTTP_401_UNAUTHORIZED,
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
         ]
 
     def test_create_contact_invalid_phone(
@@ -203,7 +203,7 @@ class TestCreateContact:
         )
 
         assert response.status_code in [
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
             *AUTH_FAILURE_STATUSES,
         ]
 
@@ -266,7 +266,7 @@ class TestGetContact:
         response = unauthenticated_client.get(f"/api/v1/contacts/{contact_data.id}")
         assert response.status_code in [
             status.HTTP_401_UNAUTHORIZED,
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
         ]
 
 
@@ -323,7 +323,7 @@ class TestGetEntityContacts:
         )
         assert response.status_code in [
             status.HTTP_401_UNAUTHORIZED,
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
         ]
 
     def test_get_entity_contacts_invalid_entity_type(self, client, admin_user_headers):
@@ -395,7 +395,7 @@ class TestGetPrimaryContact:
         )
         assert response.status_code in [
             status.HTTP_401_UNAUTHORIZED,
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
         ]
 
 
@@ -510,7 +510,7 @@ class TestDeleteContact:
         response = unauthenticated_client.delete(f"/api/v1/contacts/{contact_data.id}")
         assert response.status_code in [
             status.HTTP_401_UNAUTHORIZED,
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
         ]
 
 
@@ -584,7 +584,7 @@ class TestBatchCreateContacts:
 
         assert response.status_code in [
             status.HTTP_401_UNAUTHORIZED,
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
         ]
 
 

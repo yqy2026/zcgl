@@ -1,3 +1,4 @@
+from inspect import isawaitable
 from typing import Any
 
 """
@@ -31,6 +32,54 @@ from ..models.rent_contract import RentContract
 from ..schemas.asset import AssetCreate, AssetUpdate
 from .base import CRUDBase
 from .query_builder import TenantFilter
+
+
+async def _result_all(result: Any) -> list[Any]:
+    """兼容真实 AsyncSession 与测试 AsyncMock 的 result.all() 行为。"""
+    all_result = result.all()
+    if isawaitable(all_result):
+        all_result = await all_result
+    return list(all_result)
+
+
+async def _scalars_all(result: Any) -> list[Any]:
+    """兼容真实 AsyncSession 与测试 AsyncMock 的 result.scalars().all() 行为。"""
+    scalars_result = result.scalars()
+    if isawaitable(scalars_result):
+        scalars_result = await scalars_result
+
+    all_result = scalars_result.all()
+    if isawaitable(all_result):
+        all_result = await all_result
+    return list(all_result)
+
+
+async def _scalars_first(result: Any) -> Any:
+    """兼容真实 AsyncSession 与测试 AsyncMock 的 result.scalars().first() 行为。"""
+    scalars_result = result.scalars()
+    if isawaitable(scalars_result):
+        scalars_result = await scalars_result
+
+    first_result = scalars_result.first()
+    if isawaitable(first_result):
+        first_result = await first_result
+    return first_result
+
+
+async def _result_first(result: Any) -> Any:
+    """兼容真实 AsyncSession 与测试 AsyncMock 的 result.first() 行为。"""
+    first_result = result.first()
+    if isawaitable(first_result):
+        first_result = await first_result
+    return first_result
+
+
+async def _result_scalar(result: Any) -> Any:
+    """兼容真实 AsyncSession 与测试 AsyncMock 的 result.scalar() 行为。"""
+    scalar_result = result.scalar()
+    if isawaitable(scalar_result):
+        scalar_result = await scalar_result
+    return scalar_result
 
 
 class SensitiveDataHandler:
@@ -361,7 +410,8 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         stmt = select(User.id, User.username).where(
             User.default_organization_id.in_(org_ids)
         )
-        rows = (await db.execute(stmt)).all()
+        result = await db.execute(stmt)
+        rows = await _result_all(result)
         principals: set[str] = set()
         for user_id, username in rows:
             if user_id is not None and str(user_id).strip() != "":
@@ -443,7 +493,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             stmt = stmt.filter(self._not_deleted_clause(Asset.data_status))
 
         result = await db.execute(stmt)
-        asset = result.scalars().first()
+        asset = await _scalars_first(result)
         if asset is not None:
             self._decrypt_asset_object(asset)
         return asset
@@ -497,7 +547,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             stmt = stmt.filter(self._not_deleted_clause(Asset.data_status))
 
         result = await db.execute(stmt)
-        asset = result.scalars().first()
+        asset = await _scalars_first(result)
         if asset is not None:
             self._decrypt_asset_object(asset)
         return asset
@@ -592,7 +642,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             tenant_filter=effective_tenant_filter,
         )
         result = await db.execute(query)
-        assets = list(result.scalars().all())
+        assets = await _scalars_all(result)
 
         count_base_query: Select[Any] = select(Asset.id)
         if search_conditions:
@@ -613,7 +663,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             tenant_filter=effective_tenant_filter,
         )
         total_result = await db.execute(cnt_query)
-        total = total_result.scalar() or 0
+        total = await _result_scalar(total_result) or 0
 
         for asset in assets:
             self._decrypt_asset_object(asset)
@@ -811,7 +861,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             query = query.where(self._not_deleted_clause(Asset.data_status))
 
         result = await db.execute(query)
-        assets = list(result.scalars().all())
+        assets = await _scalars_all(result)
         if decrypt:
             for asset in assets:
                 self._decrypt_asset_object(asset)
@@ -835,7 +885,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             stmt = stmt.where(self._not_deleted_clause(Asset.data_status))
 
         result = await db.execute(stmt.limit(limit))
-        assets = list(result.scalars().all())
+        assets = await _scalars_all(result)
         if decrypt:
             for asset in assets:
                 self._decrypt_asset_object(asset)
@@ -884,7 +934,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             stmt = stmt.where(self._not_deleted_clause(Asset.data_status))
 
         result = await db.execute(stmt.limit(limit))
-        assets = list(result.scalars().all())
+        assets = await _scalars_all(result)
         if decrypt:
             for asset in assets:
                 self._decrypt_asset_object(asset)
@@ -919,7 +969,8 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
                 "rentable_assets_count"
             ),
         )
-        return (await db.execute(agg_stmt)).first()
+        result = await db.execute(agg_stmt)
+        return await _result_first(result)
 
     async def get_occupancy_by_category_aggregation_async(
         self,
@@ -948,7 +999,8 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
                 ),
             ).group_by(category_column)
         )
-        return list((await db.execute(agg_stmt)).all())
+        result = await db.execute(agg_stmt)
+        return await _result_all(result)
 
     async def get_area_summary_aggregation_async(
         self, db: AsyncSession, *, filters: dict[str, Any] | None = None
@@ -972,7 +1024,8 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
                 "assets_with_area_data"
             ),
         )
-        return (await db.execute(agg_stmt)).first()
+        result = await db.execute(agg_stmt)
+        return await _result_first(result)
 
     async def has_rent_contracts_async(
         self, db: AsyncSession, asset_id: str
@@ -986,7 +1039,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             .limit(1)
         )
         result = await db.execute(stmt)
-        return result.first() is not None
+        return (await _result_first(result)) is not None
 
     async def has_property_certs_async(
         self, db: AsyncSession, asset_id: str
@@ -1000,7 +1053,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             .limit(1)
         )
         result = await db.execute(stmt)
-        return result.first() is not None
+        return (await _result_first(result)) is not None
 
     async def has_rent_ledger_async(self, db: AsyncSession, asset_id: str) -> bool:
         """检查资产是否有租金台账记录"""
@@ -1008,7 +1061,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
 
         stmt = select(RentLedger.id).where(RentLedger.asset_id == asset_id).limit(1)
         result = await db.execute(stmt)
-        return result.first() is not None
+        return (await _result_first(result)) is not None
 
     async def get_assets_with_rent_contracts_async(
         self, db: AsyncSession, asset_ids: list[str]
@@ -1022,7 +1075,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             rent_contract_assets.c.asset_id.in_(asset_ids)
         )
         result = await db.execute(stmt)
-        return [str(asset_id) for asset_id in result.scalars().all()]
+        return [str(asset_id) for asset_id in await _scalars_all(result)]
 
     async def get_assets_with_property_certs_async(
         self, db: AsyncSession, asset_ids: list[str]
@@ -1036,7 +1089,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             property_cert_assets.c.asset_id.in_(asset_ids)
         )
         result = await db.execute(stmt)
-        return [str(asset_id) for asset_id in result.scalars().all()]
+        return [str(asset_id) for asset_id in await _scalars_all(result)]
 
     async def get_assets_with_rent_ledger_async(
         self, db: AsyncSession, asset_ids: list[str]
@@ -1048,7 +1101,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
 
         stmt = select(RentLedger.asset_id).where(RentLedger.asset_id.in_(asset_ids))
         result = await db.execute(stmt)
-        return [str(asset_id) for asset_id in result.scalars().all()]
+        return [str(asset_id) for asset_id in await _scalars_all(result)]
 
     async def get_by_property_names_async(
         self,
@@ -1064,7 +1117,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         if exclude_deleted:
             stmt = stmt.where(Asset.data_status != "已删除")
         result = await db.execute(stmt)
-        assets = list(result.scalars().all())
+        assets = await _scalars_all(result)
         if decrypt:
             for asset in assets:
                 self._decrypt_asset_object(asset)
@@ -1074,7 +1127,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         """统计权属方的资产数量"""
         stmt = select(func.count(Asset.id)).where(Asset.ownership_id == ownership_id)
         result = await db.execute(stmt)
-        return int(result.scalar() or 0)
+        return int((await _result_scalar(result)) or 0)
 
     async def get_counts_by_ownerships_async(
         self, db: AsyncSession, ownership_ids: list[str]
@@ -1090,7 +1143,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         result = await db.execute(stmt)
         return {
             str(ownership_id): int(count or 0)
-            for ownership_id, count in result.all()
+            for ownership_id, count in await _result_all(result)
             if ownership_id is not None
         }
 

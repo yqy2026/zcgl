@@ -195,6 +195,7 @@ class TestCRUDOwnershipGetMultiWithFilters:
             sort_desc=True,
             skip=10,
             limit=20,
+            tenant_filter=None,
         )
 
 

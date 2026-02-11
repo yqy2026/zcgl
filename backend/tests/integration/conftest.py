@@ -209,14 +209,14 @@ def db_session(engine, db_tables):
     This ensures test isolation - changes made in one test
     don't affect other tests.
     """
-    test_session_local = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-    session = test_session_local()
-
-    # Begin a transaction for this test
     connection = engine.connect()
     transaction = connection.begin()
-    session.bind = connection
+    test_session_local = sessionmaker(
+        autocommit=False,
+        autoflush=False,
+        bind=connection,
+    )
+    session = test_session_local()
 
     yield session
 
@@ -244,11 +244,8 @@ def test_data(db_session):
     from src.models.organization import Organization
     from src.models.rbac import Permission, Role, UserRoleAssignment
     from src.services.core.password_service import PasswordService
-    from src.services.enum_data_init import init_enum_data
 
     password_service = PasswordService()
-
-    init_enum_data(db_session, created_by="integration_test")
 
     # Create or reuse test organization
     test_org = db_session.query(Organization).filter(Organization.code == "TEST_ORG").first()

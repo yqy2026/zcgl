@@ -1,0 +1,12 @@
+.healthAlertsRow {
+  margin-bottom: 16px;
+}
+
+.healthGaugeContainer {
+  padding: 20px 0;
+  text-align: center;
+}
+
+.healthStatusTagWrapper {
+  margin-top: 16px;
+}

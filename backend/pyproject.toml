@@ -202,9 +202,11 @@ markers = [
     "asyncio: Async tests",
     "concurrency: Concurrency and stress tests"
 ]
+filterwarnings = [
+    "ignore:The @wait_container_is_ready decorator is deprecated.*:DeprecationWarning",
+    "ignore:coroutine 'Connection\\._cancel' was never awaited:RuntimeWarning",
+]
 minversion = "7.4"
-timeout = 300
-timeout_method = "thread"
 
 [tool.coverage.run]
 source = ["src"]

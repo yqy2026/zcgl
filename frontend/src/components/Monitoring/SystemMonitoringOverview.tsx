@@ -6,6 +6,7 @@ import {
   type ApplicationMetrics,
   type SystemMetrics,
 } from './systemMonitoringTypes';
+import styles from './SystemMonitoringOverview.module.css';
 
 interface SystemMonitoringOverviewProps {
   system?: SystemMetrics;
@@ -22,7 +23,7 @@ const SystemMonitoringOverview: React.FC<SystemMonitoringOverviewProps> = ({
   const activeConnections = application?.active_connections ?? 0;
 
   return (
-    <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+    <Row gutter={[16, 16]} className={styles.overviewRow}>
       <Col span={6}>
         <Card size="small">
           <Statistic

@@ -266,11 +266,13 @@ class TestCRUDAssetGetByPropertyNames:
 
 
 class TestCRUDAssetQueryNormalization:
-    def test_normalize_sort_field_maps_occupancy_rate(self, crud: AssetCRUD) -> None:
+    async def test_normalize_sort_field_maps_occupancy_rate(
+        self, crud: AssetCRUD
+    ) -> None:
         assert crud._normalize_sort_field("occupancy_rate") == "cached_occupancy_rate"
         assert crud._normalize_sort_field("created_at") == "created_at"
 
-    def test_normalize_filters_maps_occupancy_and_area_fields(
+    async def test_normalize_filters_maps_occupancy_and_area_fields(
         self, crud: AssetCRUD
     ) -> None:
         normalized = crud._normalize_filters(
@@ -295,7 +297,7 @@ class TestCRUDAssetQueryNormalization:
         assert normalized["management_entity"] == "管理方A"
         assert normalized["is_litigated"] is True
 
-    def test_normalize_filters_maps_is_litigated_chinese_string(
+    async def test_normalize_filters_maps_is_litigated_chinese_string(
         self, crud: AssetCRUD
     ) -> None:
         normalized = crud._normalize_filters({"is_litigated": "否"})

@@ -18,7 +18,7 @@ from src.services.llm_prompt.prompt_manager import PromptManager
 pytestmark = pytest.mark.asyncio
 
 
-def test_prompt_manager_module_avoids_datetime_utcnow() -> None:
+async def test_prompt_manager_module_avoids_datetime_utcnow() -> None:
     """服务模块不应直接调用 datetime.utcnow."""
     module_path = Path(prompt_manager_module.__file__)
     content = module_path.read_text(encoding="utf-8")
@@ -196,7 +196,7 @@ class TestPromptManagerAsync:
 
 
 class TestIncrementVersion:
-    def test_increment_version(self):
+    async def test_increment_version(self):
         assert PromptManager._increment_version('v1.0.0') == 'v1.0.1'
         assert PromptManager._increment_version('v2.5.9') == 'v2.5.10'
         assert PromptManager._increment_version('invalid') == 'invalid.1'

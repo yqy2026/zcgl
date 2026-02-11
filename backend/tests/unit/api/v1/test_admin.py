@@ -120,7 +120,7 @@ class TestDatabaseReset:
             status.HTTP_200_OK,
             status.HTTP_403_FORBIDDEN,
             status.HTTP_401_UNAUTHORIZED,
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
         ]
 
     def test_database_reset_as_normal_user_forbidden(
@@ -135,7 +135,7 @@ class TestDatabaseReset:
         assert response.status_code in [
             status.HTTP_401_UNAUTHORIZED,
             status.HTTP_403_FORBIDDEN,
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
         ]
 
     def test_database_reset_unauthorized(self, unauthenticated_client):
@@ -145,7 +145,7 @@ class TestDatabaseReset:
         # 未认证用户应该被拒绝
         assert response.status_code in [
             status.HTTP_401_UNAUTHORIZED,
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
         ]
 
 
@@ -164,7 +164,7 @@ class TestAdminAccessControl:
 
         assert response.status_code in [
             status.HTTP_401_UNAUTHORIZED,
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
         ]
 
     def test_normal_user_cannot_access_admin_functions(
@@ -178,7 +178,7 @@ class TestAdminAccessControl:
         assert response.status_code in [
             status.HTTP_401_UNAUTHORIZED,
             status.HTTP_403_FORBIDDEN,
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
         ]
 
 

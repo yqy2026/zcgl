@@ -260,6 +260,6 @@ class TestGetMultiByTypeAsync:
 
 
 class TestGlobalInstance:
-    def test_contact_crud_instance_exists(self):
+    async def test_contact_crud_instance_exists(self):
         assert contact_crud is not None
         assert isinstance(contact_crud, ContactCRUD)

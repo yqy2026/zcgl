@@ -1,5 +1,6 @@
 """Tests for CRUDBase.get_distinct_field_values()."""
 
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -13,8 +14,10 @@ from src.crud.rbac import role_crud
 @pytest.fixture(autouse=True)
 def clear_asset_crud_cache():
     asset_crud.clear_cache()
+    role_crud.clear_cache()
     yield
     asset_crud.clear_cache()
+    role_crud.clear_cache()
 
 
 class TestGetDistinctFieldValues:
@@ -248,3 +251,46 @@ class TestGetAndGetMultiWithTenantFilter:
         stmt = mock_db.execute.await_args.args[0]
         compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
         assert "roles.organization_id IN ('org-2')" in compiled
+
+
+class TestCacheInvalidationWithTenantFilter:
+    @pytest.mark.asyncio
+    async def test_remove_clears_tenant_scoped_get_cache(self, mock_db: MagicMock):
+        tenant_filter = TenantFilter(organization_ids=["org-1"])
+        cache_key = role_crud._get_cache_key(
+            "get",
+            id="role-1",
+            tenant_filter=role_crud._serialize_tenant_filter(tenant_filter),
+        )
+        role_crud._set_cache(cache_key, MagicMock())
+
+        mock_db.get = AsyncMock(return_value=SimpleNamespace(id="role-1"))
+        mock_db.delete = AsyncMock()
+        mock_db.commit = AsyncMock()
+
+        await role_crud.remove(mock_db, id="role-1")
+
+        assert cache_key not in role_crud._cache
+
+    @pytest.mark.asyncio
+    async def test_update_clears_tenant_scoped_get_cache(self, mock_db: MagicMock):
+        tenant_filter = TenantFilter(organization_ids=["org-1"])
+        cache_key = role_crud._get_cache_key(
+            "get",
+            id="role-1",
+            tenant_filter=role_crud._serialize_tenant_filter(tenant_filter),
+        )
+        role_crud._set_cache(cache_key, MagicMock())
+
+        role = SimpleNamespace(id="role-1", name="old-role", organization_id="org-1")
+        mock_db.commit = AsyncMock()
+        mock_db.refresh = AsyncMock()
+
+        updated = await role_crud.update(
+            mock_db,
+            db_obj=role,
+            obj_in={"name": "new-role"},
+        )
+
+        assert updated.name == "new-role"
+        assert cache_key not in role_crud._cache

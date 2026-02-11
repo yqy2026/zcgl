@@ -27,7 +27,7 @@ def _mock_execute_result(*, first=None, all_values=None):
 
 
 class TestOccupancyService:
-    def test_init(self, mock_db):
+    async def test_init(self, mock_db):
         service = OccupancyService(mock_db)
         assert service.db == mock_db
 

@@ -7,8 +7,8 @@
 import React from 'react';
 import { Card, Button, Space, Typography, Tag } from 'antd';
 import { HistoryOutlined } from '@ant-design/icons';
-import { COLORS } from '@/styles/colorMap';
 import type { ProcessingSession } from '@/types/pdfImport';
+import styles from './SessionHistoryTab.module.css';
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -24,9 +24,9 @@ export const SessionHistoryTab: React.FC<SessionHistoryTabProps> = ({
   if (sessionHistory.length === 0) {
     return (
       <Card title="导入历史记录">
-        <div style={{ textAlign: 'center', padding: '40px' }}>
-          <HistoryOutlined style={{ fontSize: 48, color: COLORS.textTertiary, marginBottom: 16 }} />
-          <Title level={4} style={{ color: COLORS.textTertiary }}>
+        <div className={styles.emptyStateContainer}>
+          <HistoryOutlined className={styles.emptyStateIcon} />
+          <Title level={4} className={styles.emptyStateTitle}>
             暂无导入记录
           </Title>
           <Paragraph>开始上传PDF文件以创建导入记录。</Paragraph>
@@ -45,7 +45,7 @@ export const SessionHistoryTab: React.FC<SessionHistoryTabProps> = ({
           <Card
             key={session.sessionId}
             size="small"
-            style={{ marginBottom: 8 }}
+            className={styles.historyItemCard}
             title={
               <Space>
                 <Text>{session.fileInfo.name}</Text>

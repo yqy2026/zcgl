@@ -19,7 +19,7 @@ from src.services.llm_prompt.auto_optimizer import AutoOptimizer
 pytestmark = pytest.mark.asyncio
 
 
-def test_auto_optimizer_module_avoids_datetime_utcnow() -> None:
+async def test_auto_optimizer_module_avoids_datetime_utcnow() -> None:
     """服务模块不应直接调用 datetime.utcnow."""
     module_path = Path(auto_optimizer_module.__file__)
     content = module_path.read_text(encoding="utf-8")

@@ -257,7 +257,7 @@ const OwnershipSelect: React.FC<OwnershipSelectProps> = ({
 
   return (
     <div style={style}>
-      <Space.Compact style={{ width: '100%' }}>
+      <Space.Compact className={styles.compactContainer}>
         <Select<OwnershipSelectValue, OwnershipSelectOption>
           value={value ?? (mode === 'multiple' ? [] : undefined)}
           onChange={handleChange}
@@ -266,7 +266,7 @@ const OwnershipSelect: React.FC<OwnershipSelectProps> = ({
           disabled={disabled}
           allowClear={allowClear}
           size={size}
-          style={{ flex: 1 }}
+          className={styles.ownershipSelect}
           loading={loading}
           showSearch={resolvedShowSearch}
           filterOption={false}

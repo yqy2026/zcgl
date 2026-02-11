@@ -89,7 +89,7 @@ async def get_tasks(
     created_after: str | None = Query(None, description="创建时间起始筛选"),
     created_before: str | None = Query(None, description="创建时间结束筛选"),
     order_by: str = Query("created_at", description="排序字段"),
-    order_dir: str = Query("desc", regex="^(asc|desc)$", description="排序方向"),
+    order_dir: str = Query("desc", pattern="^(asc|desc)$", description="排序方向"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     service: TaskService = Depends(get_task_service),

@@ -21,7 +21,7 @@ from src.services.project.service import ProjectService
 pytestmark = pytest.mark.asyncio
 
 
-def test_project_service_module_should_not_use_datetime_utcnow() -> None:
+async def test_project_service_module_should_not_use_datetime_utcnow() -> None:
     """项目服务模块不应直接调用 datetime.utcnow。"""
     from src.services.project import service as project_service_module
 

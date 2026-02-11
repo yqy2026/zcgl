@@ -309,9 +309,13 @@ class PDFImportService:
             await db.commit()
 
         # 创建带异常追踪的后台任务
-        task = asyncio.create_task(
-            self._process_background_safe(session_id, file_path, processing_options)
+        background_coro = self._process_background_safe(
+            session_id, file_path, processing_options
         )
+        task = asyncio.create_task(background_coro)
+        if not isinstance(task, asyncio.Task):
+            # 测试场景中 create_task 可能被同步 mock，主动关闭协程避免未等待告警
+            background_coro.close()
 
         # 添加任务完成回调（用于捕获异常）
         task.add_done_callback(self._handle_task_completion)

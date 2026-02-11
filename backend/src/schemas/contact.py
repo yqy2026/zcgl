@@ -5,7 +5,7 @@
 from datetime import datetime
 from enum import Enum
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class ContactType(str, Enum):
@@ -79,8 +79,7 @@ class ContactResponse(ContactBase):
     created_by: str | None
     updated_by: str | None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ContactListResponse(BaseModel):
@@ -104,5 +103,4 @@ class PrimaryContactResponse(BaseModel):
     wechat: str | None
     preferred_contact_method: str | None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

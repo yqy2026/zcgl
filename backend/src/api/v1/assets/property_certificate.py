@@ -310,7 +310,7 @@ async def create_certificate(
             cert_type = CertificateType(certificate.certificate_type)
         except ValueError as e:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=f"证书类型不正确: {str(e)}",
             )
 
@@ -319,7 +319,7 @@ async def create_certificate(
         )
         if not validation.is_valid():
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail={"errors": validation.errors},
             )
 

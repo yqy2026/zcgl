@@ -115,6 +115,6 @@ class TestPropertyOwnerCRUD:
 
 
 class TestCRUDInstances:
-    def test_instances(self):
+    async def test_instances(self):
         assert property_certificate_crud is not None
         assert property_owner_crud is not None

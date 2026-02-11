@@ -97,7 +97,7 @@ class TestUploadCertificate:
         # 应该返回400或422错误
         assert response.status_code in [
             status.HTTP_400_BAD_REQUEST,
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
         ]
 
 
@@ -186,7 +186,7 @@ class TestPropertyCertificateEdgeCases:
         # 应该返回验证错误
         assert response.status_code in [
             status.HTTP_400_BAD_REQUEST,
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
         ]
 
     def test_certificate_area_validation(self, client, admin_user_headers):
@@ -206,7 +206,7 @@ class TestPropertyCertificateEdgeCases:
         # 应该返回验证错误
         assert response.status_code in [
             status.HTTP_400_BAD_REQUEST,
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
         ]
 
     def test_search_certificates_by_number(self, client, admin_user_headers):
@@ -247,7 +247,7 @@ class TestPropertyCertificateEdgeCases:
         assert response.status_code in [
             status.HTTP_200_OK,
             status.HTTP_404_NOT_FOUND,
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
         ]
 
     def test_certificate_issue_date_validation(self, client, admin_user_headers):
@@ -267,7 +267,7 @@ class TestPropertyCertificateEdgeCases:
         # 应该返回验证错误
         assert response.status_code in [
             status.HTTP_400_BAD_REQUEST,
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
         ]
 
     def test_certificate_expiry_date_after_issue(self, client, admin_user_headers):
@@ -290,7 +290,7 @@ class TestPropertyCertificateEdgeCases:
         # 应该返回验证错误（到期日期不能早于发证日期）
         assert response.status_code in [
             status.HTTP_400_BAD_REQUEST,
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
         ]
 
     def test_certificate_duplicate_number(self, client, admin_user_headers):

@@ -12,7 +12,7 @@ from fastapi import status
 
 AUTH_FAILURE_STATUSES = {
     status.HTTP_401_UNAUTHORIZED,
-    status.HTTP_422_UNPROCESSABLE_ENTITY,
+    status.HTTP_422_UNPROCESSABLE_CONTENT,
 }
 
 

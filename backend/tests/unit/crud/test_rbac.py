@@ -306,14 +306,14 @@ class TestCRUDUserRoleAssignment:
 
 
 class TestGlobalInstances:
-    def test_role_crud_instance_exists(self):
+    async def test_role_crud_instance_exists(self):
         assert role_crud is not None
         assert isinstance(role_crud, CRUDRole)
 
-    def test_permission_crud_instance_exists(self):
+    async def test_permission_crud_instance_exists(self):
         assert permission_crud is not None
         assert isinstance(permission_crud, CRUDPermission)
 
-    def test_user_role_assignment_crud_instance_exists(self):
+    async def test_user_role_assignment_crud_instance_exists(self):
         assert user_role_assignment_crud is not None
         assert isinstance(user_role_assignment_crud, CRUDUserRoleAssignment)

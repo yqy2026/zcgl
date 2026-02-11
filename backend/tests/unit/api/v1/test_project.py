@@ -20,7 +20,26 @@ from sqlalchemy.orm import Session
 
 
 @pytest.fixture
-def project_data(db_session: Session):
+def test_organization(db_session: Session):
+    """创建测试组织数据"""
+    from src.models.organization import Organization
+
+    organization = Organization(
+        id="org-unit-test-001",
+        name="Unit Test Organization",
+        code="ORG-UNIT-TEST-001",
+        level=1,
+        type="company",
+        status="active",
+    )
+    db_session.add(organization)
+    db_session.flush()
+    db_session.refresh(organization)
+    return organization
+
+
+@pytest.fixture
+def project_data(db_session: Session, test_organization):
     """创建测试项目数据"""
     from src.models.project import Project
 
@@ -33,6 +52,7 @@ def project_data(db_session: Session):
         project_type="commercial",
         project_status="planning",
         ownership_entity="owner-001",
+        organization_id=test_organization.id,
     )
     db_session.add(project)
     db_session.flush()
@@ -47,13 +67,26 @@ def project_data(db_session: Session):
 
 
 @pytest.fixture
-def admin_user_headers(client, admin_user):
+def admin_user_headers(client, admin_user, test_organization, monkeypatch):
     """管理员用户认证头"""
     from src.api.v1.assets import project as project_module
     from src.main import app
+    from src.services.organization_permission_service import (
+        OrganizationPermissionService,
+    )
 
     def mock_get_current_user():
         return admin_user
+
+    async def mock_get_user_accessible_organizations(self, user_id: str):
+        return [test_organization.id]
+
+    admin_user.default_organization_id = test_organization.id
+    monkeypatch.setattr(
+        OrganizationPermissionService,
+        "get_user_accessible_organizations",
+        mock_get_user_accessible_organizations,
+    )
 
     app.dependency_overrides[project_module.get_current_active_user] = (
         mock_get_current_user
@@ -131,7 +164,7 @@ class TestCreateProject:
             "/api/v1/projects/", json=invalid_data, headers=admin_user_headers
         )
 
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 # ============================================================================
@@ -344,7 +377,7 @@ class TestSearchProjects:
         # 应该成功或返回422（如果缺少必填字段）
         assert response.status_code in [
             status.HTTP_200_OK,
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
         ]
 
     def test_update_project_partial_fields(
@@ -408,10 +441,10 @@ class TestSearchProjects:
             headers=admin_user_headers,
         )
 
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
     def test_delete_project_success(
-        self, client, admin_user_headers, db_session: Session
+        self, client, admin_user_headers, db_session: Session, test_organization
     ):
         """测试成功删除项目"""
         from src.models.project import Project
@@ -421,6 +454,7 @@ class TestSearchProjects:
             name="To Be Deleted",
             code="PJ2509007",
             city="Test City",
+            organization_id=test_organization.id,
         )
         db_session.add(project)
         db_session.flush()

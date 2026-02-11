@@ -21,7 +21,7 @@ from src.services.ownership.service import OwnershipService
 pytestmark = pytest.mark.asyncio
 
 
-def test_ownership_service_module_should_not_use_datetime_utcnow() -> None:
+async def test_ownership_service_module_should_not_use_datetime_utcnow() -> None:
     """权属方服务模块不应直接调用 datetime.utcnow。"""
     from src.services.ownership import service as ownership_service_module
 

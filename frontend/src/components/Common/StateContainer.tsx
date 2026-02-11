@@ -25,7 +25,7 @@ export const LoadingContainer: React.FC<LoadingContainerProps> = ({
   return (
     <div className="loadingContainer">
       <Spin size="large" />
-      {text && <div style={{ marginTop: '16px' }}>{text}</div>}
+      {text && <div className="marginTopMd">{text}</div>}
     </div>
   );
 };
@@ -42,7 +42,7 @@ export const EmptyStateContainer: React.FC<EmptyStateContainerProps> = ({
   return (
     <div className="emptyState">
       <Empty description={description} />
-      {action && <div style={{ marginTop: '16px' }}>{action}</div>}
+      {action && <div className="marginTopMd">{action}</div>}
     </div>
   );
 };

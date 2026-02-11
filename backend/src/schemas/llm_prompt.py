@@ -6,7 +6,7 @@ LLM Prompt管理的Pydantic Schema
 from datetime import date, datetime
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 # ============================================================================
 # Prompt模板相关Schema
@@ -60,8 +60,7 @@ class PromptTemplateResponse(PromptTemplateBase):
     updated_at: datetime
     created_by: str | None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PromptTemplateListResponse(BaseModel):
@@ -97,8 +96,7 @@ class PromptVersionResponse(BaseModel):
     created_at: datetime
     created_by: str | None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PromptVersionHistory(BaseModel):
@@ -142,8 +140,7 @@ class ExtractionFeedbackResponse(BaseModel):
     user_action: str
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ============================================================================
@@ -164,8 +161,7 @@ class PromptMetricsResponse(BaseModel):
     avg_accuracy: float
     avg_confidence: float
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class MetricsDashboard(BaseModel):

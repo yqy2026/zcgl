@@ -250,9 +250,7 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
                 await db.refresh(db_obj)
 
             # 清除相关缓存
-            cache_key = self._get_cache_key("get", id=getattr(db_obj, "id", None))
-            if cache_key in self._cache:
-                del self._cache[cache_key]
+            self._clear_get_cache_for_id(getattr(db_obj, "id", None))
             self._clear_cache_pattern("get_multi")
 
             logger.info(
@@ -280,9 +278,7 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
                 await db.flush()
 
             # 清除相关缓存
-            cache_key = self._get_cache_key("get", id=id)
-            if cache_key in self._cache:
-                del self._cache[cache_key]
+            self._clear_get_cache_for_id(id)
             self._clear_cache_pattern("get_multi")
 
             logger.info(
@@ -442,6 +438,15 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
 
         for key in keys_to_remove:
             del self._cache[key]
+
+    def _clear_get_cache_for_id(self, id_value: Any) -> None:
+        """清理指定ID相关的 get 缓存（含租户隔离键）。"""
+        if id_value is None:
+            return
+        exact_key = self._get_cache_key("get", id=id_value)
+        if exact_key in self._cache:
+            del self._cache[exact_key]
+        self._clear_cache_pattern(f"get|id:{id_value}")
 
     def clear_cache(self) -> None:
         """清除所有缓存"""

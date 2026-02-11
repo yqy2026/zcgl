@@ -16,7 +16,7 @@ from src.services.core import audit_service as audit_service_module
 from src.services.core.audit_service import AuditService
 
 
-def test_audit_service_module_avoids_datetime_utcnow() -> None:
+async def test_audit_service_module_avoids_datetime_utcnow() -> None:
     """服务模块不应直接调用 datetime.utcnow."""
     module_path = Path(audit_service_module.__file__)
     content = module_path.read_text(encoding="utf-8")

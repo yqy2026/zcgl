@@ -15,6 +15,7 @@ import { createLogger } from '@/utils/logger';
 import { apiHealthCheck } from '@/services/apiHealthCheck';
 import { useArrayListData } from '@/hooks/useArrayListData';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
+import styles from './ApiMonitor.module.css';
 
 const componentLogger = createLogger('ApiMonitor');
 
@@ -103,11 +104,11 @@ const ApiMonitor: React.FC = () => {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'healthy':
-        return <CheckCircleOutlined style={{ color: '#52c41a' }} />;
+        return <CheckCircleOutlined className={styles.statusIconHealthy} />;
       case 'unhealthy':
-        return <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />;
+        return <ExclamationCircleOutlined className={styles.statusIconUnhealthy} />;
       case 'unknown':
-        return <CloudServerOutlined style={{ color: '#fa8c16' }} />;
+        return <CloudServerOutlined className={styles.statusIconUnknown} />;
       default:
         return <CloudServerOutlined />;
     }
@@ -119,13 +120,23 @@ const ApiMonitor: React.FC = () => {
     return `${(time / 1000).toFixed(2)}s`;
   };
 
+  const getResponseTimeClass = (time?: number) => {
+    if ((time ?? 0) > 3000) {
+      return styles.responseTimeSlow;
+    }
+    if ((time ?? 0) > 1000) {
+      return styles.responseTimeMedium;
+    }
+    return styles.responseTimeFast;
+  };
+
   const columns = [
     {
       title: '端点',
       dataIndex: 'endpoint',
       key: 'endpoint',
       width: 200,
-      render: (text: string) => <code style={{ fontSize: '12px' }}>{text}</code>,
+      render: (text: string) => <code className={styles.endpointCode}>{text}</code>,
     },
     {
       title: '状态',
@@ -144,11 +155,7 @@ const ApiMonitor: React.FC = () => {
       key: 'responseTime',
       width: 120,
       render: (time?: number) => (
-        <span
-          style={{
-            color: (time ?? 0) > 3000 ? '#ff4d4f' : (time ?? 0) > 1000 ? '#fa8c16' : '#52c41a',
-          }}
-        >
+        <span className={getResponseTimeClass(time)}>
           {formatResponseTime(time)}
         </span>
       ),
@@ -159,7 +166,7 @@ const ApiMonitor: React.FC = () => {
       key: 'error',
       ellipsis: true,
       render: (error?: string) =>
-        error != null && error !== '' ? <span style={{ color: '#ff4d4f' }}>{error}</span> : '-',
+        error != null && error !== '' ? <span className={styles.errorText}>{error}</span> : '-',
     },
     {
       title: '最后检查',
@@ -179,15 +186,8 @@ const ApiMonitor: React.FC = () => {
   const loading = useMemo(() => isRefreshing || listLoading, [isRefreshing, listLoading]);
 
   return (
-    <div style={{ padding: '24px' }}>
-      <div
-        style={{
-          marginBottom: '24px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}
-      >
+    <div className={styles.monitorContainer}>
+      <div className={styles.monitorHeader}>
         <h2>API健康监控</h2>
         <Button
           type="primary"
@@ -200,7 +200,7 @@ const ApiMonitor: React.FC = () => {
       </div>
 
       {/* 总体状态概览 */}
-      <Row gutter={16} style={{ marginBottom: '24px' }}>
+      <Row gutter={16} className={styles.overviewRow}>
         <Col span={6}>
           <Card>
             <Statistic
@@ -258,7 +258,7 @@ const ApiMonitor: React.FC = () => {
           description={`当前API健康度为${summary.healthPercentage.toFixed(1)}%，低于80%的健康阈值。建议检查异常端点并采取相应措施。`}
           type="warning"
           showIcon
-          style={{ marginBottom: '24px' }}
+          className={styles.alertSpacing}
         />
       )}
 
@@ -268,7 +268,7 @@ const ApiMonitor: React.FC = () => {
           description={`当前API健康度仅为${summary.healthPercentage.toFixed(1)}%，系统可能存在严重问题。建议立即检查所有API端点状态。`}
           type="error"
           showIcon
-          style={{ marginBottom: '24px' }}
+          className={styles.alertSpacing}
         />
       )}
 
@@ -289,8 +289,8 @@ const ApiMonitor: React.FC = () => {
       </Card>
 
       {/* 监控说明 */}
-      <Card title="监控说明" size="small" style={{ marginTop: '24px' }}>
-        <div style={{ fontSize: '14px', color: '#666' }}>
+      <Card title="监控说明" size="small" className={styles.guideCard}>
+        <div className={styles.guideText}>
           <p>
             <strong>监控范围：</strong>系统关键API端点
           </p>
@@ -300,15 +300,15 @@ const ApiMonitor: React.FC = () => {
           <p>
             <strong>健康标准：</strong>
           </p>
-          <ul style={{ marginLeft: '20px', marginTop: '8px' }}>
+          <ul className={styles.guideList}>
             <li>
-              <span style={{ color: '#52c41a' }}>绿色</span>：响应正常（2xx状态码，响应时间&lt;3秒）
+              <span className={styles.statusHealthy}>绿色</span>：响应正常（2xx状态码，响应时间&lt;3秒）
             </li>
             <li>
-              <span style={{ color: '#ff4d4f' }}>红色</span>：端点不可用（404、500等错误）
+              <span className={styles.statusUnhealthy}>红色</span>：端点不可用（404、500等错误）
             </li>
             <li>
-              <span style={{ color: '#fa8c16' }}>橙色</span>：状态未知（检查失败或超时）
+              <span className={styles.statusUnknown}>橙色</span>：状态未知（检查失败或超时）
             </li>
           </ul>
           <p>

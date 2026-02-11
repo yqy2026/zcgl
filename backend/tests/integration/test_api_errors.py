@@ -85,7 +85,7 @@ class TestValidationError:
         error = validation_error("数据验证失败")
 
         assert isinstance(error, BaseBusinessError)
-        assert error.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert error.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
         assert error.code == "VALIDATION_ERROR"
 
     def test_validation_error_with_field_list(self) -> None:

@@ -9,7 +9,7 @@ from src.services.asset.import_service import AsyncAssetImportService
 pytestmark = pytest.mark.asyncio
 
 
-def test_import_service_module_exports_service_class() -> None:
+async def test_import_service_module_exports_service_class() -> None:
     assert AsyncAssetImportService is not None
 
 

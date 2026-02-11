@@ -6,6 +6,7 @@ import {
   type ApplicationMetrics,
   type SystemMetrics,
 } from './systemMonitoringTypes';
+import styles from './SystemMonitoringDetails.module.css';
 
 interface SystemMonitoringDetailsProps {
   system?: SystemMetrics;
@@ -17,7 +18,7 @@ const SystemMonitoringDetails: React.FC<SystemMonitoringDetailsProps> = ({
   application,
 }) => {
   return (
-    <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+    <Row gutter={[16, 16]} className={styles.detailsRow}>
       <Col span={12}>
         <Card title="系统详细信息" size="small">
           <Row gutter={[16, 8]}>

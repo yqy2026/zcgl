@@ -9,7 +9,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class PropertyCertificateFields(BaseModel):
@@ -113,8 +113,7 @@ class PropertyCertificateUploadResponse(BaseModel):
     )
     warnings: list[str] = Field(default_factory=list, description="警告列表")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CertificateImportConfirm(BaseModel):
@@ -127,8 +126,7 @@ class CertificateImportConfirm(BaseModel):
     should_create_new_asset: bool = Field(default=False, description="是否创建新资产")
     owners: list[dict[str, Any]] = Field(default_factory=list, description="权利人列表")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # CRUD Schemas
@@ -206,8 +204,7 @@ class PropertyCertificateResponse(PropertyCertificateBase):
     updated_at: datetime = Field(description="更新时间")
     created_by: str | None = Field(default=None, description="创建人ID")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # PropertyOwner Schemas
@@ -251,5 +248,4 @@ class PropertyOwnerResponse(PropertyOwnerBase):
     created_at: datetime = Field(description="创建时间")
     updated_at: datetime = Field(description="更新时间")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

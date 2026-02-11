@@ -1,0 +1,76 @@
+.monitorContainer {
+  padding: 24px;
+}
+
+.monitorHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.overviewRow {
+  margin-bottom: 24px;
+}
+
+.alertSpacing {
+  margin-bottom: 24px;
+}
+
+.guideCard {
+  margin-top: 24px;
+}
+
+.guideText {
+  font-size: 14px;
+  color: #666;
+}
+
+.guideList {
+  margin-top: 8px;
+  margin-left: 20px;
+}
+
+.statusHealthy {
+  color: #52c41a;
+}
+
+.statusUnhealthy {
+  color: #ff4d4f;
+}
+
+.statusUnknown {
+  color: #fa8c16;
+}
+
+.endpointCode {
+  font-size: 12px;
+}
+
+.errorText {
+  color: #ff4d4f;
+}
+
+.statusIconHealthy {
+  color: #52c41a;
+}
+
+.statusIconUnhealthy {
+  color: #ff4d4f;
+}
+
+.statusIconUnknown {
+  color: #fa8c16;
+}
+
+.responseTimeFast {
+  color: #52c41a;
+}
+
+.responseTimeMedium {
+  color: #fa8c16;
+}
+
+.responseTimeSlow {
+  color: #ff4d4f;
+}

@@ -51,7 +51,7 @@ class TestContractWorkflow:
             status.HTTP_201_CREATED,
             status.HTTP_401_UNAUTHORIZED,
             status.HTTP_404_NOT_FOUND,
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
         ]
 
         if create_response.status_code in [status.HTTP_200_OK, status.HTTP_201_CREATED]:
@@ -66,7 +66,7 @@ class TestContractWorkflow:
                 status.HTTP_200_OK,
                 status.HTTP_401_UNAUTHORIZED,
                 status.HTTP_404_NOT_FOUND,
-                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status.HTTP_422_UNPROCESSABLE_CONTENT,
             ]
 
             # 3. 续期合同
@@ -84,7 +84,7 @@ class TestContractWorkflow:
                 status.HTTP_201_CREATED,
                 status.HTTP_401_UNAUTHORIZED,
                 status.HTTP_404_NOT_FOUND,
-                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status.HTTP_422_UNPROCESSABLE_CONTENT,
             ]
 
             # 4. 终止合同
@@ -102,7 +102,7 @@ class TestContractWorkflow:
                 status.HTTP_201_CREATED,
                 status.HTTP_401_UNAUTHORIZED,
                 status.HTTP_404_NOT_FOUND,
-                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status.HTTP_422_UNPROCESSABLE_CONTENT,
             ]
 
     def test_contract_payment_workflow(self, client, admin_user_headers):
