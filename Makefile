@@ -1,6 +1,7 @@
 .PHONY: help dev dev-backend dev-frontend \
 	lint lint-backend lint-frontend type-check type-check-e2e \
-	test test-backend test-frontend \
+	test test-backend test-frontend test-e2e test-e2e-backend test-e2e-frontend \
+	test-integration test-coverage \
 	build-frontend backend-import check \
 	backend-org-cov secrets migrate
 
@@ -19,6 +20,11 @@ help:
 	@echo "  type-check-e2e    Run frontend E2E TypeScript check"
 	@echo "  test-backend      Run backend unit tests"
 	@echo "  test-frontend     Run frontend tests"
+	@echo "  test-integration  Run backend integration tests with coverage"
+	@echo "  test-coverage     Run all tests with coverage reports"
+	@echo "  test-e2e-backend  Run backend E2E tests"
+	@echo "  test-e2e-frontend Run frontend E2E tests"
+	@echo "  test-e2e          Run backend and frontend E2E tests"
 	@echo "  build-frontend    Build frontend"
 	@echo "  backend-import    Import backend app to validate runtime"
 	@echo "  check             Run lint, tests, build, and import checks"
@@ -57,6 +63,14 @@ test-backend:
 test-frontend:
 	cd frontend && pnpm test
 
+test-e2e: test-e2e-backend test-e2e-frontend
+
+test-e2e-backend:
+	cd backend && E2E_TEST_DATABASE_URL="$${E2E_TEST_DATABASE_URL:-$${TEST_DATABASE_URL:-}}" $(PYTHON) -m pytest tests/e2e -m e2e --no-cov
+
+test-e2e-frontend:
+	cd frontend && pnpm e2e
+
 build-frontend:
 	cd frontend && pnpm build
 
@@ -92,3 +106,17 @@ secrets:
 
 migrate:
 	cd backend && alembic upgrade head
+
+# 运行集成测试
+test-integration:
+	cd backend && $(PYTHON) -m pytest -m integration --cov=src --cov-report=html --cov-report=term-missing
+
+# 生成覆盖率报告
+test-coverage:
+	@echo "=== Backend Coverage ==="
+	cd backend && $(PYTHON) -m pytest --cov=src --cov-report=html --cov-report=term-missing
+	@echo "=== Frontend Coverage ==="
+	cd frontend && pnpm test:coverage
+	@echo "Coverage reports generated at:"
+	@echo "  Backend:  test-results/backend/coverage/html/index.html"
+	@echo "  Frontend: test-results/frontend/coverage/index.html"

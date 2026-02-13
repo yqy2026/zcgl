@@ -5,7 +5,6 @@
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Path, Query
-from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ....core.exception_handler import (
@@ -26,15 +25,6 @@ from ....schemas.project import (
 from ....services.project import project_service
 
 router = APIRouter()
-
-
-def _project_to_response(project: Any) -> ProjectResponse:
-    data = {
-        attr.key: getattr(project, attr.key)
-        for attr in sa_inspect(project).mapper.column_attrs
-    }
-    data["ownership_relations"] = []
-    return ProjectResponse.model_validate(data)
 
 
 @router.post("", response_model=ProjectResponse, summary="创建项目")
@@ -60,7 +50,7 @@ async def create_project(
             created_by=current_user.id,
             organization_id=organization_id,
         )
-        return _project_to_response(project)
+        return project_service.project_to_response(project)
     except Exception as e:
         if isinstance(e, BaseBusinessError):
             raise
@@ -109,7 +99,7 @@ async def list_projects(
             search_params=search_params,
             current_user_id=str(current_user.id),
         )
-        items = [_project_to_response(item) for item in result.get("items", [])]
+        items = [project_service.project_to_response(item) for item in result.get("items", [])]
         return ResponseHandler.paginated(
             data=items,
             page=result.get("page", page),
@@ -140,7 +130,7 @@ async def search_projects(
             search_params=search_params,
             current_user_id=str(current_user.id),
         )
-        items = [_project_to_response(item) for item in result.get("items", [])]
+        items = [project_service.project_to_response(item) for item in result.get("items", [])]
         return ResponseHandler.paginated(
             data=items,
             page=result.get("page", search_params.page),
@@ -193,7 +183,7 @@ async def get_project(
     )
     if not project:
         raise not_found("项目不存在", resource_type="project", resource_id=project_id)
-    return _project_to_response(project)
+    return project_service.project_to_response(project)
 
 
 @router.put("/{project_id}", response_model=ProjectResponse, summary="更新项目")
@@ -214,7 +204,7 @@ async def update_project(
             updated_by=current_user.id,
             current_user_id=str(current_user.id),
         )
-        return _project_to_response(project)
+        return project_service.project_to_response(project)
     except Exception as e:
         if isinstance(e, BaseBusinessError):
             raise
@@ -259,7 +249,7 @@ async def toggle_project_status(
             updated_by=current_user.id,
             current_user_id=str(current_user.id),
         )
-        return _project_to_response(project)
+        return project_service.project_to_response(project)
     except Exception as e:
         if isinstance(e, BaseBusinessError):
             raise

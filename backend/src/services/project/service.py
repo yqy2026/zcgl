@@ -2,6 +2,7 @@ import logging
 from datetime import UTC, datetime
 from typing import Any
 
+from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.ext.asyncio import AsyncSession
 
 try:
@@ -22,13 +23,34 @@ from ...core.exception_handler import (
 from ...crud.project import project_crud
 from ...crud.query_builder import TenantFilter
 from ...models import Project
-from ...schemas.project import ProjectCreate, ProjectSearchRequest, ProjectUpdate
+from ...schemas.project import ProjectCreate, ProjectResponse, ProjectSearchRequest, ProjectUpdate
 
 logger = logging.getLogger(__name__)
 
 
 class ProjectService:
     """项目服务层"""
+
+    @staticmethod
+    def project_to_response(project: Project) -> ProjectResponse:
+        """
+        将 Project 模型转换为 ProjectResponse。
+
+        这个方法封装了模型到响应 Schema 的转换逻辑，
+        确保所有属性都被正确提取和格式化。
+
+        Args:
+            project: Project 模型实例
+
+        Returns:
+            ProjectResponse: 转换后的响应 Schema
+        """
+        data = {
+            attr.key: getattr(project, attr.key)
+            for attr in sa_inspect(project).mapper.column_attrs
+        }
+        data["ownership_relations"] = []
+        return ProjectResponse.model_validate(data)
 
     @staticmethod
     def _utcnow_naive() -> datetime:

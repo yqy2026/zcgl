@@ -15,42 +15,9 @@ from src.models.asset import Asset
 from src.models.ownership import Ownership
 from src.schemas.ownership import OwnershipCreate, OwnershipUpdate
 from src.services.ownership.service import OwnershipService
+from tests.shared.conftest_utils import AsyncSessionAdapter
 
 pytestmark = pytest.mark.asyncio
-
-
-class AsyncSessionAdapter:
-    """为同步 Session 提供异步接口，以兼容服务层。"""
-
-    def __init__(self, session: Session):
-        self._session = session
-
-    async def execute(self, *args, **kwargs):
-        return self._session.execute(*args, **kwargs)
-
-    async def commit(self):
-        return self._session.commit()
-
-    async def refresh(self, *args, **kwargs):
-        return self._session.refresh(*args, **kwargs)
-
-    async def flush(self):
-        return self._session.flush()
-
-    async def rollback(self):
-        return self._session.rollback()
-
-    async def get(self, *args, **kwargs):
-        return self._session.get(*args, **kwargs)
-
-    async def delete(self, *args, **kwargs):
-        return self._session.delete(*args, **kwargs)
-
-    def add(self, *args, **kwargs):
-        return self._session.add(*args, **kwargs)
-
-    def __getattr__(self, name: str):
-        return getattr(self._session, name)
 
 
 class OwnershipTestDataFactory:

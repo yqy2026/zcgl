@@ -15,6 +15,8 @@ from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.exc import ProgrammingError, SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
 
+from tests.shared.conftest_utils import AsyncSessionAdapter
+
 # Lazy imports - only import when fixtures are actually used
 # This avoids ModuleNotFoundError during pytest collection
 
@@ -36,40 +38,6 @@ TEST_DATABASE_URL = os.getenv("INTEGRATION_TEST_DATABASE_URL") or os.getenv(
 
 if TEST_DATABASE_URL:
     os.environ["DATABASE_URL"] = TEST_DATABASE_URL
-
-
-class AsyncSessionAdapter:
-    """Provide async-compatible methods over a sync SQLAlchemy session."""
-
-    def __init__(self, session):  # noqa: ANN001 - test helper
-        self._session = session
-
-    async def execute(self, *args, **kwargs):  # noqa: ANN001
-        return self._session.execute(*args, **kwargs)
-
-    async def commit(self):  # noqa: D401 - test helper
-        return self._session.commit()
-
-    async def refresh(self, *args, **kwargs):  # noqa: ANN001
-        return self._session.refresh(*args, **kwargs)
-
-    async def flush(self):  # noqa: D401 - test helper
-        return self._session.flush()
-
-    async def rollback(self):  # noqa: D401 - test helper
-        return self._session.rollback()
-
-    async def get(self, *args, **kwargs):  # noqa: ANN001
-        return self._session.get(*args, **kwargs)
-
-    def add(self, *args, **kwargs):  # noqa: ANN001
-        return self._session.add(*args, **kwargs)
-
-    async def delete(self, *args, **kwargs):  # noqa: ANN001
-        return self._session.delete(*args, **kwargs)
-
-    def __getattr__(self, name: str):  # noqa: D401 - test helper
-        return getattr(self._session, name)
 
 
 def _ensure_alembic_version_capacity(engine) -> None:  # noqa: ANN001
@@ -138,6 +106,17 @@ def engine(test_database_url):
 
     yield engine
     engine.dispose()
+
+
+@pytest.fixture(scope="session", autouse=True)
+def ensure_integration_engine_ready(engine):
+    """
+    Force all integration tests to initialize `engine` first.
+
+    This guarantees database availability checks run even for tests that
+    don't explicitly depend on `engine`/`db_session` fixtures.
+    """
+    yield
 
 
 @pytest.fixture(scope="session")

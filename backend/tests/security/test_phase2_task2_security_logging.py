@@ -19,28 +19,7 @@ from sqlalchemy.orm import Session
 
 from src.models.security_event import SecurityEvent
 from src.security.audit_logger import SecurityEventLogger, SecurityEventType
-
-
-class AsyncSessionAdapter:
-    """Async-compatible adapter for sync SQLAlchemy Session in tests."""
-
-    def __init__(self, session: Session):
-        self._session = session
-
-    async def execute(self, *args, **kwargs):  # noqa: ANN001
-        return self._session.execute(*args, **kwargs)
-
-    async def commit(self):
-        return self._session.commit()
-
-    async def refresh(self, *args, **kwargs):  # noqa: ANN001
-        return self._session.refresh(*args, **kwargs)
-
-    async def rollback(self):
-        return self._session.rollback()
-
-    def add(self, *args, **kwargs):  # noqa: ANN001
-        return self._session.add(*args, **kwargs)
+from tests.shared.conftest_utils import AsyncSessionAdapter
 
 
 @pytest.fixture

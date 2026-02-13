@@ -406,7 +406,6 @@ async def test_security_alert(
     - 生成12个测试安全事件（超过默认阈值）
     - 返回是否应该触发警报
     """
-    print("DEBUG: [test_security_alert] Handler entered")
     # Verify admin access
     rbac_service = RBACService(db)
     if not await rbac_service.is_admin(current_user.id):

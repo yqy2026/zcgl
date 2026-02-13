@@ -12,46 +12,35 @@ from sqlalchemy import create_engine
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
 
-TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
+from tests.shared.conftest_utils import AsyncSessionAdapter
+
+
+def _resolve_test_database_url() -> str | None:
+    """Resolve TEST_DATABASE_URL from env first, then backend/.env as fallback."""
+    env_value = os.getenv("TEST_DATABASE_URL")
+    if env_value:
+        return env_value
+
+    env_file = Path(__file__).resolve().parents[2] / ".env"
+    if not env_file.exists():
+        return None
+
+    for raw_line in env_file.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if line == "" or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        if key.strip() != "TEST_DATABASE_URL":
+            continue
+        parsed_value = value.strip().strip("\"'")
+        if parsed_value:
+            return parsed_value
+    return None
+
+
+TEST_DATABASE_URL = _resolve_test_database_url()
 if TEST_DATABASE_URL:
     os.environ["DATABASE_URL"] = TEST_DATABASE_URL
-
-
-class AsyncSessionAdapter:
-    """Provide async-compatible methods over a sync SQLAlchemy session."""
-
-    def __init__(self, session):  # noqa: ANN001 - test helper
-        self._session = session
-
-    async def execute(self, *args, **kwargs):  # noqa: ANN001
-        return self._session.execute(*args, **kwargs)
-
-    async def commit(self):  # noqa: D401 - test helper
-        return self._session.commit()
-
-    async def refresh(self, *args, **kwargs):  # noqa: ANN001
-        return self._session.refresh(*args, **kwargs)
-
-    async def flush(self):  # noqa: D401 - test helper
-        return self._session.flush()
-
-    async def rollback(self):  # noqa: D401 - test helper
-        return self._session.rollback()
-
-    async def get(self, *args, **kwargs):  # noqa: ANN001
-        return self._session.get(*args, **kwargs)
-
-    async def scalar(self, *args, **kwargs):  # noqa: ANN001
-        return self._session.scalar(*args, **kwargs)
-
-    def add(self, *args, **kwargs):  # noqa: ANN001
-        return self._session.add(*args, **kwargs)
-
-    async def delete(self, *args, **kwargs):  # noqa: ANN001
-        return self._session.delete(*args, **kwargs)
-
-    def __getattr__(self, name: str):  # noqa: D401 - test helper
-        return getattr(self._session, name)
 
 
 @pytest.fixture(scope="session")

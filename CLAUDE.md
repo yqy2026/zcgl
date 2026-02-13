@@ -2,7 +2,7 @@
 每次回复我都叫我【yellowUp】
 本文件为 Claude Code 提供项目上下文与执行约束。详细文档请参阅 `docs/` 目录。
 
-**最后更新**: 2026-02-07
+**最后更新**: 2026-02-13
 
 ---
 
@@ -12,10 +12,10 @@
 
 | 层 | 技术栈 |
 |---|-------|
-| **前端** | React 19.2 + TypeScript 5.9 + Vite 6 + Ant Design 6 + pnpm |
-| **后端** | FastAPI 0.104+ + Uvicorn 0.38+ + Python 3.12 + SQLAlchemy 2.0 + Pydantic v2 + Alembic |
+| **前端** | React 19.x + TypeScript 5.x + Vite 6.x + Ant Design 6.x + pnpm |
+| **后端** | FastAPI 0.104+ + Uvicorn 0.38+ + Python 3.12+ + SQLAlchemy 2.0+ + Pydantic v2 + Alembic |
 | **数据库** | PostgreSQL 16+（开发/测试/生产统一；SQLite 已移除） |
-| **缓存** | Redis 7 |
+| **缓存** | Redis 7+ |
 | **文档AI** | Qwen-VL / GLM-4V / Hunyuan Vision / DeepSeek-VL |
 
 ---

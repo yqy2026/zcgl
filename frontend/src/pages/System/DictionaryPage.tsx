@@ -25,18 +25,10 @@ import EnumValuePreview from '@/components/Dictionary/EnumValuePreview';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
 import PageContainer from '@/components/Common/PageContainer';
 import { useArrayListData } from '@/hooks/useArrayListData';
-import {
-  handleApiError as _handleError,
-  withErrorHandling as _withErrorHandling_unused,
-  createErrorHandler as _createErrorHandler,
-} from '@/services';
 import { createLogger } from '@/utils/logger';
 import styles from './DictionaryPage.module.css';
 
 const pageLogger = createLogger('DictionaryPage');
-
-// Utility functions
-const setDictTypes = (types: string[]) => types;
 
 const { Option } = Select;
 const { Search } = Input;
@@ -67,7 +59,6 @@ const resolveText = (value: string | null | undefined, fallback: string): string
 
 const DictionaryPage: React.FC = () => {
   const [overviewSourceLoading, setOverviewSourceLoading] = useState(false);
-  const [_dictTypes, _setDictTypes] = useState<string[]>([]);
   const [enumTypes, setEnumTypes] = useState<EnumFieldType[]>([]);
   const [activeType, setActiveType] = useState<string | undefined>(undefined);
   const [edit, setEdit] = useState<EditState>({ visible: false });
@@ -175,10 +166,7 @@ const DictionaryPage: React.FC = () => {
   // 获取字典类型列表
   const fetchTypes = async () => {
     try {
-      const types = await dictionaryService.getTypes();
-      setDictTypes(types ?? []);
-
-      // 同时获取枚举类型详细信息
+      // 获取枚举类型详细信息
       const typesData = await dictionaryService.getEnumFieldTypes();
       setEnumTypes(typesData ?? []);
     } catch (error) {
@@ -226,8 +214,8 @@ const DictionaryPage: React.FC = () => {
     }
 
     // 获取对应的枚举类型
-    const _targetType = enumTypes.find(type => type.code === activeType);
-    if (!_targetType) {
+    const targetType = enumTypes.find(type => type.code === activeType);
+    if (!targetType) {
       MessageManager.error('未找到对应的枚举类型');
       return;
     }
@@ -250,7 +238,6 @@ const DictionaryPage: React.FC = () => {
   };
 
   const handleEdit = (record: SystemDictionary) => {
-    const _targetType = enumTypes.find(type => type.code === record.dict_type);
     setEditingRecord(record);
     setEdit({ visible: true });
 

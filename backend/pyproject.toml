@@ -178,7 +178,7 @@ testpaths = ["tests"]
 python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
-addopts = "-v --strict-markers --tb=short --disable-warnings -ra --import-mode=importlib --cov=src --cov-report=term-missing --cov-report=html:../test-results/backend/coverage/html --cov-report=xml:../test-results/backend/coverage/coverage.xml --cov-report=json:../test-results/backend/coverage/coverage.json --junitxml=../test-results/backend/junit/junit-report.xml --cov-fail-under=20"
+addopts = "-v --strict-markers --tb=short --disable-warnings -ra --import-mode=importlib --cov=src --cov-report=term-missing --cov-report=html:../test-results/backend/coverage/html --cov-report=xml:../test-results/backend/coverage/coverage.xml --cov-report=json:../test-results/backend/coverage/coverage.json --junitxml=../test-results/backend/junit/junit-report.xml --cov-fail-under=70"
 norecursedirs = ["archive", "*.egg-info", ".git", ".tox", "dist", "build", "node_modules", "__pycache__", ".pytest_cache"]
 log_cli = true
 log_cli_level = "INFO"
@@ -222,7 +222,7 @@ omit = [
 ]
 
 [tool.coverage.report]
-fail_under = 20
+fail_under = 70
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",

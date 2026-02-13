@@ -15,39 +15,10 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from tests.shared.conftest_utils import AsyncSessionAdapter
+
 # E2E tests use file database (not memory)
 TEST_DATABASE_URL = os.getenv("E2E_TEST_DATABASE_URL") or os.getenv("TEST_DATABASE_URL")
-
-
-class AsyncSessionAdapter:
-    """Provide async-compatible methods over a sync SQLAlchemy session."""
-
-    def __init__(self, session):  # noqa: ANN001 - test helper
-        self._session = session
-
-    async def execute(self, *args, **kwargs):  # noqa: ANN001
-        return self._session.execute(*args, **kwargs)
-
-    async def commit(self):  # noqa: D401 - test helper
-        return self._session.commit()
-
-    async def refresh(self, *args, **kwargs):  # noqa: ANN001
-        return self._session.refresh(*args, **kwargs)
-
-    async def flush(self):  # noqa: D401 - test helper
-        return self._session.flush()
-
-    async def rollback(self):  # noqa: D401 - test helper
-        return self._session.rollback()
-
-    def add(self, *args, **kwargs):  # noqa: ANN001
-        return self._session.add(*args, **kwargs)
-
-    def delete(self, *args, **kwargs):  # noqa: ANN001
-        return self._session.delete(*args, **kwargs)
-
-    def __getattr__(self, name: str):  # noqa: D401 - test helper
-        return getattr(self._session, name)
 
 
 def create_test_user(
@@ -298,3 +269,71 @@ def create_test_user_factory(db_session, db_tables):
         )
 
     return _create_test_user
+
+
+def ensure_test_organization(db_session):
+    """Ensure at least one active organization exists for tenant-scoped queries."""
+    from src.models.organization import Organization
+
+    organization = (
+        db_session.query(Organization)
+        .filter(Organization.code == "E2E-ORG-ROOT")
+        .first()
+    )
+    if organization is None:
+        organization = Organization(
+            name="E2E Test Organization",
+            code="E2E-ORG-ROOT",
+            level=1,
+            sort_order=0,
+            type="总部",
+            status="active",
+            path="/E2E-ORG-ROOT",
+            is_deleted=False,
+            created_by="e2e-fixture",
+            updated_by="e2e-fixture",
+        )
+        db_session.add(organization)
+        db_session.commit()
+        db_session.refresh(organization)
+    return organization
+
+
+@pytest.fixture
+def authenticated_client(client, create_test_user_factory, db_session):
+    """Create an authenticated admin client using real login flow."""
+    organization = ensure_test_organization(db_session)
+    user = create_test_user_factory(
+        username="e2e_admin",
+        email="e2e_admin@example.com",
+        password="Admin123!@#",
+        full_name="E2E Admin User",
+        role="admin",
+    )
+    user.default_organization_id = organization.id
+    db_session.add(user)
+    db_session.commit()
+
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"username": "e2e_admin", "password": "Admin123!@#"},
+    )
+    assert response.status_code == 200
+
+    auth_token = response.cookies.get("auth_token")
+    csrf_token = response.cookies.get("csrf_token")
+    if auth_token is not None:
+        client.cookies.set("auth_token", auth_token)
+    if csrf_token is not None:
+        client.cookies.set("csrf_token", csrf_token)
+
+    setattr(client, "_csrf_token", csrf_token)
+    return client
+
+
+@pytest.fixture
+def csrf_headers(authenticated_client) -> dict[str, str]:
+    csrf_token = getattr(authenticated_client, "_csrf_token", None)
+    if csrf_token is None:
+        return {}
+    return {"X-CSRF-Token": csrf_token}

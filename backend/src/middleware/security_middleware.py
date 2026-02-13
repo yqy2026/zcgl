@@ -742,10 +742,8 @@ class CORSExtendedMiddleware(BaseHTTPMiddleware):
         allowed_methods: list[str] | None = None,
     ) -> None:
         super().__init__(app)
-        self.allowed_origins = allowed_origins or [
-            "http://localhost:5173",
-            "http://localhost:3000",
-        ]
+        # 使用配置中的 CORS_ORIGINS 作为默认值
+        self.allowed_origins = allowed_origins or settings.CORS_ORIGINS
         self.allowed_methods = allowed_methods or HTTPMethods.get_common_methods() + [
             HTTPMethods.OPTIONS
         ]
@@ -808,7 +806,7 @@ def create_security_middleware(app: Any, config: dict[str, Any] | None = None) -
 def setup_security_middleware(app: Any) -> None:
     """设置安全中间件"""
     config = {
-        "allowed_origins": ["http://localhost:5173", "http://localhost:3000"],
+        "allowed_origins": settings.CORS_ORIGINS,
         "allowed_methods": HTTPMethods.get_common_methods()
         + [HTTPMethods.OPTIONS, HTTPMethods.PATCH],
         "max_file_size": DEFAULT_MAX_EXCEL_FILE_SIZE,
