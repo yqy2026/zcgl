@@ -1,9 +1,18 @@
+.pageShell {
+  --property-certificate-search-width: 300px;
+  --property-certificate-create-min-width: calc(var(--button-height-lg) * 3);
+  --property-certificate-tag-line-height: var(--font-size-xl);
+  --property-certificate-action-height: var(--button-height-sm);
+  --property-certificate-action-height-mobile: var(--button-height-lg);
+  --property-certificate-touch-target-size: calc(var(--button-height-lg) + var(--spacing-xs));
+}
+
 .pageContent {
   width: 100%;
 }
 
 .filterCard {
-  margin-bottom: 24px;
+  margin-bottom: var(--spacing-xl);
 }
 
 .filterActions {
@@ -12,11 +21,11 @@
 }
 
 .searchInput {
-  width: 300px;
+  width: var(--property-certificate-search-width);
 }
 
 .createButton {
-  min-width: 120px;
+  min-width: var(--property-certificate-create-min-width);
 }
 
 .inlineStatus {
@@ -24,16 +33,16 @@
 }
 
 .statusAssistText {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
 }
 
 .statusTag {
   margin-inline-end: 0;
   border-radius: 999px;
   border: 1px solid transparent;
-  padding-inline: 8px;
-  font-size: 12px;
-  line-height: 18px;
+  padding-inline: var(--spacing-sm);
+  font-size: var(--font-size-xs);
+  line-height: var(--property-certificate-tag-line-height);
   font-weight: var(--font-weight-medium);
 }
 
@@ -74,16 +83,16 @@
 }
 
 .actionGroup {
-  gap: 8px;
+  gap: var(--spacing-sm);
 }
 
 .actionButton {
-  min-height: 32px;
+  min-height: var(--property-certificate-action-height);
 }
 
 @media (max-width: 768px) {
   .filterCard {
-    margin-bottom: 16px;
+    margin-bottom: var(--spacing-lg);
   }
 
   .filterActions {
@@ -95,10 +104,10 @@
   }
 
   .createButton {
-    min-height: 44px;
+    min-height: var(--property-certificate-touch-target-size);
   }
 
   .actionButton {
-    min-height: 40px;
+    min-height: var(--property-certificate-action-height-mobile);
   }
 }

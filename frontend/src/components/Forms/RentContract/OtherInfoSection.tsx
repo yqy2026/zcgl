@@ -1,5 +1,6 @@
 import React from 'react';
 import { Form, Input, InputNumber, Row, Col, Card } from 'antd';
+import styles from './OtherInfoSection.module.css';
 
 const { TextArea } = Input;
 
@@ -15,7 +16,7 @@ const parseCurrency = (value: string | undefined) => {
  */
 const OtherInfoSection: React.FC = () => {
   return (
-    <Card title="其他信息" size="small" style={{ marginBottom: 16 }}>
+    <Card title="其他信息" size="small" className={styles.otherInfoCard}>
       <Row gutter={16}>
         <Col span={12}>
           <Form.Item
@@ -24,7 +25,7 @@ const OtherInfoSection: React.FC = () => {
             tooltip="用于快速参考，实际租金以租金条款为准"
           >
             <InputNumber
-              style={{ width: '100%' }}
+              className={styles.fullWidthControl}
               placeholder="请输入基础月租金"
               min={0}
               precision={2}

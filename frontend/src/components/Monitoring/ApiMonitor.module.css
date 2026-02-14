@@ -1,76 +1,76 @@
 .monitorContainer {
-  padding: 24px;
+  padding: var(--spacing-xl);
 }
 
 .monitorHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 24px;
+  margin-bottom: var(--spacing-xl);
 }
 
 .overviewRow {
-  margin-bottom: 24px;
+  margin-bottom: var(--spacing-xl);
 }
 
 .alertSpacing {
-  margin-bottom: 24px;
+  margin-bottom: var(--spacing-xl);
 }
 
 .guideCard {
-  margin-top: 24px;
+  margin-top: var(--spacing-xl);
 }
 
 .guideText {
-  font-size: 14px;
-  color: #666;
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
 }
 
 .guideList {
-  margin-top: 8px;
-  margin-left: 20px;
+  margin-top: var(--spacing-sm);
+  margin-left: calc(var(--spacing-lg) + var(--spacing-xs));
 }
 
 .statusHealthy {
-  color: #52c41a;
+  color: var(--color-success);
 }
 
 .statusUnhealthy {
-  color: #ff4d4f;
+  color: var(--color-error);
 }
 
 .statusUnknown {
-  color: #fa8c16;
+  color: var(--color-warning);
 }
 
 .endpointCode {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
 }
 
 .errorText {
-  color: #ff4d4f;
+  color: var(--color-error);
 }
 
 .statusIconHealthy {
-  color: #52c41a;
+  color: var(--color-success);
 }
 
 .statusIconUnhealthy {
-  color: #ff4d4f;
+  color: var(--color-error);
 }
 
 .statusIconUnknown {
-  color: #fa8c16;
+  color: var(--color-warning);
 }
 
 .responseTimeFast {
-  color: #52c41a;
+  color: var(--color-success);
 }
 
 .responseTimeMedium {
-  color: #fa8c16;
+  color: var(--color-warning);
 }
 
 .responseTimeSlow {
-  color: #ff4d4f;
+  color: var(--color-error);
 }

@@ -33,6 +33,7 @@ import {
 } from '@ant-design/icons';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { rentContractExcelService, ExcelImportResult } from '@/services/rentContractExcelService';
+import styles from './RentContractExcelImport.module.css';
 
 const { Text, Paragraph } = Typography;
 const { RangePicker } = DatePicker;
@@ -162,7 +163,7 @@ const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
         <Col span={12}>
           <Card
             title="导入数据"
-            extra={<FileExcelOutlined style={{ color: '#52c41a' }} />}
+            extra={<FileExcelOutlined className={styles.importIcon} />}
             actions={[
               <Button
                 key="template"
@@ -186,11 +187,11 @@ const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
               从Excel文件批量导入租金合同数据，支持合同信息、租金条款和台账记录的导入。
             </Paragraph>
 
-            <Space orientation="vertical" size="small" style={{ width: '100%' }}>
+            <Space orientation="vertical" size="small" className={styles.fullWidthSpace}>
               <Alert
                 title="导入说明"
                 description={
-                  <ul style={{ margin: 0, paddingLeft: 16 }}>
+                  <ul className={styles.guideList}>
                     <li>请先下载模板，按照模板格式填写数据</li>
                     <li>支持.xlsx和.xls格式，文件大小不超过10MB</li>
                     <li>导入前请确保资产和权属方信息已存在</li>
@@ -206,7 +207,7 @@ const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
         <Col span={12}>
           <Card
             title="导出数据"
-            extra={<ExportOutlined style={{ color: '#1890ff' }} />}
+            extra={<ExportOutlined className={styles.exportIcon} />}
             actions={[
               <Button
                 key="export"
@@ -222,11 +223,11 @@ const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
               将租金合同数据导出为Excel文件，支持按时间范围筛选和选择导出内容。
             </Paragraph>
 
-            <Space orientation="vertical" size="small" style={{ width: '100%' }}>
+            <Space orientation="vertical" size="small" className={styles.fullWidthSpace}>
               <Alert
                 title="导出说明"
                 description={
-                  <ul style={{ margin: 0, paddingLeft: 16 }}>
+                  <ul className={styles.guideList}>
                     <li>可选择导出合同信息、租金条款和台账记录</li>
                     <li>支持按时间范围筛选数据</li>
                     <li>导出的Excel文件包含多个工作表</li>
@@ -252,10 +253,10 @@ const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
         footer={null}
         width={600}
       >
-        <Space orientation="vertical" size="large" style={{ width: '100%' }}>
+        <Space orientation="vertical" size="large" className={styles.fullWidthSpace}>
           {/* 导入选项 */}
           <Card title="导入选项" size="small">
-            <Space orientation="vertical" size="small" style={{ width: '100%' }}>
+            <Space orientation="vertical" size="small" className={styles.fullWidthSpace}>
               <Checkbox
                 checked={importOptions.import_terms}
                 onChange={e =>
@@ -305,16 +306,16 @@ const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
               title={
                 <Space>
                   {importResult.success ? (
-                    <CheckCircleOutlined style={{ color: '#52c41a' }} />
+                    <CheckCircleOutlined className={styles.resultSuccessIcon} />
                   ) : (
-                    <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />
+                    <ExclamationCircleOutlined className={styles.resultErrorIcon} />
                   )}
                   <Text>导入结果</Text>
                 </Space>
               }
               size="small"
             >
-              <Space orientation="vertical" size="small" style={{ width: '100%' }}>
+              <Space orientation="vertical" size="small" className={styles.fullWidthSpace}>
                 <Row gutter={16}>
                   <Col span={8}>
                     <Statistic title="合同" value={importResult.imported_contracts} suffix="个" />
@@ -402,7 +403,7 @@ const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
           </Form.Item>
 
           <Form.Item name="date_range" label="时间范围">
-            <RangePicker style={{ width: '100%' }} />
+            <RangePicker className={styles.fullWidthRangePicker} />
           </Form.Item>
         </Form>
       </Modal>

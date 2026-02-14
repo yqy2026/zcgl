@@ -18,12 +18,12 @@ import {
   Switch,
 } from 'antd';
 import { MessageManager } from '@/utils/messageManager';
-import { COLORS } from '@/styles/colorMap';
 import { UploadOutlined, DeleteOutlined, EyeOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import type { UploadFile, UploadProps } from 'antd/es/upload/interface';
 import { DictionarySelect } from '@/components/Dictionary';
 import { useAssetFormContext } from './AssetFormContext';
 import { generateFormFieldIds } from '@/utils/accessibility';
+import styles from './AssetDetailedSection.module.css';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -88,7 +88,7 @@ const AssetDetailedSection: React.FC = () => {
           />
         </Space>
       }
-      style={{ marginBottom: '16px' }}
+      className={styles.sectionCard}
     >
       {showAdvanced && (
         <>
@@ -96,7 +96,7 @@ const AssetDetailedSection: React.FC = () => {
           <Title level={5}>
             承租方信息
             <Tooltip title="承租方信息来自合同管理模块，只能查看不能编辑">
-              <InfoCircleOutlined style={{ marginLeft: 8, color: COLORS.textSecondary }} />
+              <InfoCircleOutlined className={styles.infoIcon} />
             </Tooltip>
           </Title>
 
@@ -142,7 +142,7 @@ const AssetDetailedSection: React.FC = () => {
           <Title level={5}>
             合同信息
             <Tooltip title="合同信息来自合同管理模块，只能查看不能编辑">
-              <InfoCircleOutlined style={{ marginLeft: 8, color: COLORS.textSecondary }} />
+              <InfoCircleOutlined className={styles.infoIcon} />
             </Tooltip>
           </Title>
           <Row gutter={16}>
@@ -171,7 +171,7 @@ const AssetDetailedSection: React.FC = () => {
                 htmlFor={contractStartDateIds.inputId}
               >
                 <DatePicker
-                  style={{ width: '100%' }}
+                  className={styles.fullWidthControl}
                   disabled
                   id={contractStartDateIds.inputId}
                   aria-label={contractStartDateIds.labelId}
@@ -185,7 +185,7 @@ const AssetDetailedSection: React.FC = () => {
                 htmlFor={contractEndDateIds.inputId}
               >
                 <DatePicker
-                  style={{ width: '100%' }}
+                  className={styles.fullWidthControl}
                   disabled
                   id={contractEndDateIds.inputId}
                   aria-label={contractEndDateIds.labelId}
@@ -204,7 +204,7 @@ const AssetDetailedSection: React.FC = () => {
                 <InputNumber
                   id={monthlyRentIds.inputId}
                   placeholder="自动从合同获取"
-                  style={{ width: '100%' }}
+                  className={styles.fullWidthControl}
                   min={0}
                   precision={2}
                   disabled
@@ -221,7 +221,7 @@ const AssetDetailedSection: React.FC = () => {
                 <InputNumber
                   id={depositIds.inputId}
                   placeholder="自动从合同获取"
-                  style={{ width: '100%' }}
+                  className={styles.fullWidthControl}
                   min={0}
                   precision={2}
                   disabled
@@ -283,7 +283,7 @@ const AssetDetailedSection: React.FC = () => {
                     </Button>
                   </Upload>
                   <div
-                    style={{ marginTop: 8, fontSize: 12, color: COLORS.textSecondary }}
+                    className={styles.uploadHintText}
                     role="note"
                     aria-label="文件上传说明"
                   >
@@ -336,7 +336,7 @@ const AssetDetailedSection: React.FC = () => {
                           />
                         </List.Item>
                       )}
-                      style={{ marginTop: 16 }}
+                      className={styles.terminalContractList}
                     />
                   )}
                 </div>

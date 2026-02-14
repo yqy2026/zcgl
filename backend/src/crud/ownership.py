@@ -120,7 +120,16 @@ class CRUDOwnership(CRUDBase[Ownership, OwnershipCreate, OwnershipUpdate]):
         self, db: AsyncSession, data_status: str = "正常"
     ) -> list[str]:
         """获取指定状态的权属方名称列表（用于下拉选择）"""
-        stmt = select(Ownership.name).where(Ownership.data_status == data_status)
+        stmt = (
+            select(Ownership.name)
+            .where(
+                Ownership.data_status == data_status,
+                Ownership.name.is_not(None),
+                Ownership.name != "",
+            )
+            .distinct()
+            .order_by(Ownership.name.asc())
+        )
         result = await db.execute(stmt)
         names = result.scalars().all()
         return [str(name) for name in names if name]

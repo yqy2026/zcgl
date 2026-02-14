@@ -36,6 +36,16 @@ const AssetCard: React.FC<AssetCardProps> = ({ asset, onView, onEdit, onDelete }
     return COLORS.error;
   };
 
+  const getOccupancyValueClass = (rate: number) => {
+    if (rate > 80) {
+      return styles.occupancyValueHigh;
+    }
+    if (rate > 50) {
+      return styles.occupancyValueMedium;
+    }
+    return styles.occupancyValueLow;
+  };
+
   const getStatusColor = (status: string) => {
     const colorMap: Record<string, string> = {
       出租: 'success',
@@ -124,13 +134,7 @@ const AssetCard: React.FC<AssetCardProps> = ({ asset, onView, onEdit, onDelete }
               <div className={styles.occupancyHeader}>
                 <div className={styles.occupancyHeaderRow}>
                   <Text className={styles.occupancyLabel}>出租率</Text>
-                  <Text
-                    strong
-                    className={styles.occupancyValue}
-                    style={{
-                      color: getOccupancyColor(occupancyRate),
-                    }}
-                  >
+                  <Text strong className={`${styles.occupancyValue} ${getOccupancyValueClass(occupancyRate)}`}>
                     {occupancyRate.toFixed(1)}%
                   </Text>
                 </div>

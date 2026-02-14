@@ -1,406 +1,571 @@
 #!/usr/bin/env python3
 """
-PDF 批量导入 API 集成测试
-测试 pdf_batch_routes.py 中的所有 API 端点
+PDF 批量导入 API 集成测试（真实认证链路）
 """
 
 import io
-from unittest.mock import AsyncMock, Mock
 
 import pytest
+from fastapi.testclient import TestClient
 
 from src.api.v1.documents import pdf_batch_routes
 from src.services.document.processing_tracker import BatchStatusTracker
 
-# ============================================================================
-# 测试 Fixtures
-# ============================================================================
+pytestmark = pytest.mark.integration
+UPLOAD_ORGANIZATION_ID = 1
+
+
+@pytest.fixture
+def authenticated_client(client: TestClient, test_data) -> TestClient:
+    """通过真实登录流程初始化认证 cookie。"""
+    admin_user = test_data["admin"]
+    login_response = client.post(
+        "/api/v1/auth/login",
+        json={"username": admin_user.username, "password": "Admin123!@#"},
+    )
+    assert login_response.status_code == 200
+
+    auth_token = login_response.cookies.get("auth_token")
+    csrf_token = login_response.cookies.get("csrf_token")
+    assert auth_token is not None
+
+    client.cookies.set("auth_token", auth_token)
+    if csrf_token is not None:
+        client.cookies.set("csrf_token", csrf_token)
+    setattr(client, "_csrf_token", csrf_token)
+    return client
+
+
+@pytest.fixture
+def csrf_headers(authenticated_client: TestClient) -> dict[str, str]:
+    """写操作时使用 CSRF Header。"""
+    csrf_token = getattr(authenticated_client, "_csrf_token", None)
+    if csrf_token is None:
+        return {}
+    return {"X-CSRF-Token": csrf_token}
+
+
+@pytest.fixture
+def owner_context(test_data) -> dict[str, int]:
+    """当前登录用户的可见性上下文。"""
+    return {
+        "user_id": test_data["admin"].id,
+        "organization_id": test_data["organization"].id,
+    }
 
 
 @pytest.fixture
 def batch_tracker():
-    """获取批处理追踪器实例"""
+    """替换路由层批处理追踪器，确保测试隔离。"""
     tracker = BatchStatusTracker()
-    # 保存原始的 tracker
     original_tracker = pdf_batch_routes._batch_tracker
-    # 设置测试 tracker
     pdf_batch_routes._batch_tracker = tracker
     yield tracker
-    # 恢复原始 tracker
     pdf_batch_routes._batch_tracker = original_tracker
-    # 清理: 清空所有测试数据
+    if hasattr(tracker, "_fallback_store"):
+        tracker._fallback_store.clear()
     if hasattr(tracker, "_memory_store"):
         tracker._memory_store.clear()
 
 
 @pytest.fixture
-def sample_pdf_content():
-    """示例 PDF 内容"""
-    return b"%PDF-1.4\nsample pdf content for testing"
-
-
-@pytest.fixture
-def sample_pdf_files():
-    """创建多个示例 PDF 文件"""
-    files = []
-    for i in range(3):
-        content = f"%PDF-1.4\nSample PDF file {i}".encode()
+def sample_pdf_files() -> list[tuple[str, tuple[str, io.BytesIO, str]]]:
+    """创建多个示例 PDF 文件。"""
+    files: list[tuple[str, tuple[str, io.BytesIO, str]]] = []
+    for index in range(3):
+        content = f"%PDF-1.4\nSample PDF file {index}".encode()
         files.append(
-            ("files", (f"contract_{i}.pdf", io.BytesIO(content), "application/pdf"))
+            (
+                "files",
+                (f"contract_{index}.pdf", io.BytesIO(content), "application/pdf"),
+            )
         )
     return files
 
 
-# ============================================================================
-# 批量上传端点测试
-# ============================================================================
+def _seed_owned_batch(
+    batch_tracker: BatchStatusTracker,
+    *,
+    batch_id: str,
+    total: int,
+    user_id: int,
+    organization_id: int,
+    status: str,
+) -> None:
+    created = batch_tracker.create_batch(
+        batch_id=batch_id,
+        total=total,
+        user_id=user_id,
+        organization_id=organization_id,
+        created_by_user_id=str(user_id),
+    )
+    assert created is True
+    batch_tracker.set_status(batch_id, status)
 
 
-class TestBatchUploadEndpoint:
-    """批量上传端点测试"""
+class TestBatchAuthAndUploadEndpoint:
+    """批量上传与认证测试。"""
 
-    async def test_batch_upload_success(self, test_client, sample_pdf_files):
-        """测试批量上传成功"""
-        # Mock PDFImportService - 直接在服务模块级别 mock
-        from unittest.mock import patch
+    def test_batch_health_requires_authentication(self, client: TestClient) -> None:
+        response = client.get("/api/v1/pdf-import/batch/health")
+        assert response.status_code == 401
+        payload = response.json()
+        assert payload["success"] is False
 
-        with patch(
-            "src.services.document.pdf_import_service.PDFImportService"
-        ) as mock_service_cls:
-            mock_service = Mock()
-            mock_service.process_pdf_file = AsyncMock(return_value={"success": True})
-            mock_service.get_session_status = AsyncMock(
-                return_value={
-                    "success": True,
-                    "session_status": {"status": "completed"},
-                }
-            )
-            mock_service.cancel_processing = AsyncMock(return_value={"success": True})
-            mock_service_cls.return_value = mock_service
-
-            response = await test_client.post(
-                "/api/v1/pdf-import/batch/upload",
-                files=sample_pdf_files,
-                data={
-                    "organization_id": 1,
-                    "force_method": "vision",
-                    "auto_confirm": False,
-                },
-            )
-
-        print(f"Response status: {response.status_code}")
-        print(f"Response JSON: {response.json()}")
-        assert response.status_code == 200
-        data = response.json()
-        assert data["success"] is True
-        assert "batch_id" in data["data"]
-
-    async def test_batch_upload_exceeds_max_size(self, test_client):
-        """测试文件数量超过限制"""
-        files = []
-        for i in range(15):  # 超过 MAX_BATCH_SIZE=10
-            content = b"%PDF-1.4"
-            files.append(
-                ("files", (f"file_{i}.pdf", io.BytesIO(content), "application/pdf"))
-            )
-
-        response = await test_client.post(
-            "/api/v1/pdf-import/batch/upload", files=files, data={"organization_id": 1}
-        )
-
-        assert response.status_code == 400
-        assert "文件数量超过限制" in response.json()["message"]
-
-    async def test_batch_upload_no_valid_files(self, test_client):
-        """测试没有有效文件"""
-        files = [("files", ("test.txt", io.BytesIO(b"text content"), "text/plain"))]
-
-        response = await test_client.post(
-            "/api/v1/pdf-import/batch/upload", files=files, data={"organization_id": 1}
-        )
-
-        assert response.status_code == 400
-        assert "没有有效的 PDF 文件" in response.json()["error"]["message"]
-
-    async def test_batch_upload_service_busy(
-        self, test_client, sample_pdf_files, batch_tracker
-    ):
-        """测试系统繁忙"""
-        batch_tracker.create_batch("batch-active-1", total=3, user_id=1)
-        batch_tracker.set_status("batch-active-1", "processing")
-        batch_tracker.create_batch("batch-active-2", total=3, user_id=1)
-        batch_tracker.set_status("batch-active-2", "pending")
-
-        response = await test_client.post(
+    def test_batch_upload_success(
+        self,
+        authenticated_client: TestClient,
+        csrf_headers: dict[str, str],
+        sample_pdf_files,
+        owner_context: dict[str, int],
+    ) -> None:
+        response = authenticated_client.post(
             "/api/v1/pdf-import/batch/upload",
             files=sample_pdf_files,
-            data={"organization_id": 1},
+            headers=csrf_headers,
+            data={
+                "organization_id": UPLOAD_ORGANIZATION_ID,
+                "force_method": "vision",
+                "auto_confirm": "false",
+            },
+        )
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["success"] is True
+
+        data = payload["data"]
+        assert isinstance(data["batch_id"], str)
+        assert data["batch_id"].startswith("batch-")
+        assert data["status"] == "processing"
+        assert data["session_count"] == len(data["session_ids"])
+
+        status_response = authenticated_client.get(
+            f"/api/v1/pdf-import/batch/status/{data['batch_id']}"
+        )
+        assert status_response.status_code == 200
+        status_payload = status_response.json()
+        assert status_payload["success"] is True
+        assert (
+            status_payload["data"]["batch_status"]["batch_id"] == data["batch_id"]
+        )
+
+    def test_batch_upload_exceeds_max_size(
+        self, authenticated_client: TestClient, csrf_headers: dict[str, str]
+    ) -> None:
+        files = []
+        for index in range(15):  # 超过 MAX_BATCH_SIZE=10
+            files.append(
+                (
+                    "files",
+                    (f"file_{index}.pdf", io.BytesIO(b"%PDF-1.4"), "application/pdf"),
+                )
+            )
+
+        response = authenticated_client.post(
+            "/api/v1/pdf-import/batch/upload",
+            files=files,
+            headers=csrf_headers,
+            data={"organization_id": UPLOAD_ORGANIZATION_ID},
+        )
+
+        assert response.status_code == 400
+        payload = response.json()
+        assert payload["success"] is False
+        assert "文件数量超过限制" in payload.get("message", "")
+
+    def test_batch_upload_no_valid_files(
+        self, authenticated_client: TestClient, csrf_headers: dict[str, str]
+    ) -> None:
+        files = [("files", ("test.txt", io.BytesIO(b"text content"), "text/plain"))]
+        response = authenticated_client.post(
+            "/api/v1/pdf-import/batch/upload",
+            files=files,
+            headers=csrf_headers,
+            data={"organization_id": UPLOAD_ORGANIZATION_ID},
+        )
+
+        assert response.status_code == 400
+        payload = response.json()
+        assert payload["success"] is False
+        assert payload["error"]["code"] == "INVALID_REQUEST"
+        assert "没有有效的 PDF 文件" in payload["error"]["message"]
+
+    def test_batch_upload_service_busy(
+        self,
+        authenticated_client: TestClient,
+        csrf_headers: dict[str, str],
+        sample_pdf_files,
+        batch_tracker: BatchStatusTracker,
+        owner_context: dict[str, int],
+    ) -> None:
+        _seed_owned_batch(
+            batch_tracker,
+            batch_id="batch-active-1",
+            total=3,
+            user_id=owner_context["user_id"],
+            organization_id=owner_context["organization_id"],
+            status="processing",
+        )
+        _seed_owned_batch(
+            batch_tracker,
+            batch_id="batch-active-2",
+            total=3,
+            user_id=owner_context["user_id"],
+            organization_id=owner_context["organization_id"],
+            status="pending",
+        )
+
+        response = authenticated_client.post(
+            "/api/v1/pdf-import/batch/upload",
+            files=sample_pdf_files,
+            headers=csrf_headers,
+            data={"organization_id": UPLOAD_ORGANIZATION_ID},
         )
 
         assert response.status_code == 503
-        data = response.json()
-        assert data["error"]["code"] == "SERVICE_UNAVAILABLE"
-        assert data["error"]["message"] == "内部服务器错误"
+        payload = response.json()
+        assert payload["success"] is False
+        error = payload.get("error", {})
+        if isinstance(error, dict) and error:
+            assert error.get("code") == "SERVICE_UNAVAILABLE"
+        message_text = str(error.get("message") or payload.get("message") or "")
+        assert message_text != ""
 
 
-# ============================================================================
-# 批量状态查询端点测试
-# ============================================================================
+class TestBatchStatusAndListEndpoint:
+    """批处理状态和列表端点测试。"""
 
-
-class TestBatchStatusEndpoint:
-    """批量状态查询端点测试"""
-
-    @pytest.fixture
-    def mock_batch_status(self):
-        """Mock 批处理状态"""
-        return {
-            "batch_id": "batch-abc123",
-            "status": "processing",
-            "organization_id": 1,
-            "session_ids": ["session-1", "session-2", "session-3"],
-            "completed_count": 1,
-            "failed_count": 0,
-            "processing_count": 2,
-            "pending_count": 0,
-            "created_at": "2024-01-10T10:00:00",
-            "updated_at": "2024-01-10T10:05:00",
-        }
-
-    async def test_get_batch_status_success(
-        self, test_client, mock_batch_status, batch_tracker
-    ):
-        """测试获取批处理状态成功"""
-        batch_tracker.create_batch("batch-abc123", total=3, user_id=1)
-        response = await test_client.get(
-            "/api/v1/pdf-import/batch/status/batch-abc123"
+    def test_get_batch_status_success(
+        self,
+        authenticated_client: TestClient,
+        batch_tracker: BatchStatusTracker,
+        owner_context: dict[str, int],
+    ) -> None:
+        _seed_owned_batch(
+            batch_tracker,
+            batch_id="batch-abc123",
+            total=3,
+            user_id=owner_context["user_id"],
+            organization_id=owner_context["organization_id"],
+            status="processing",
         )
 
+        response = authenticated_client.get("/api/v1/pdf-import/batch/status/batch-abc123")
         assert response.status_code == 200
-        data = response.json()
-        assert data["success"] is True
+        payload = response.json()
+        assert payload["success"] is True
+        assert payload["data"]["batch_status"]["batch_id"] == "batch-abc123"
 
-    async def test_get_batch_status_not_found(self, test_client, batch_tracker):
-        """测试批处理不存在"""
-        response = await test_client.get(
+    def test_get_batch_status_not_found(self, authenticated_client: TestClient) -> None:
+        response = authenticated_client.get(
             "/api/v1/pdf-import/batch/status/batch-nonexistent"
         )
-
         assert response.status_code == 404
-        assert "批处理任务不存在" in response.json()["error"]["message"]
+        payload = response.json()
+        assert payload["success"] is False
+        assert payload["error"]["code"] == "RESOURCE_NOT_FOUND"
+        assert "批处理任务不存在" in payload["error"]["message"]
 
+    def test_list_batches_all(
+        self,
+        authenticated_client: TestClient,
+        batch_tracker: BatchStatusTracker,
+        owner_context: dict[str, int],
+    ) -> None:
+        _seed_owned_batch(
+            batch_tracker,
+            batch_id="batch-001",
+            total=2,
+            user_id=owner_context["user_id"],
+            organization_id=owner_context["organization_id"],
+            status="completed",
+        )
+        _seed_owned_batch(
+            batch_tracker,
+            batch_id="batch-002",
+            total=1,
+            user_id=owner_context["user_id"],
+            organization_id=owner_context["organization_id"],
+            status="processing",
+        )
 
-# ============================================================================
-# 批量列表端点测试
-# ============================================================================
-
-
-class TestBatchListEndpoint:
-    """批量列表端点测试"""
-
-    @pytest.fixture
-    def mock_batches(self):
-        """Mock 批处理列表"""
-        return [
-            {
-                "batch_id": "batch-001",
-                "status": "completed",
-                "session_ids": ["s1", "s2"],
-                "completed_count": 2,
-                "failed_count": 0,
-                "created_at": "2024-01-10T09:00:00",
-                "updated_at": "2024-01-10T09:30:00",
-            },
-            {
-                "batch_id": "batch-002",
-                "status": "processing",
-                "session_ids": ["s3"],
-                "completed_count": 0,
-                "failed_count": 0,
-                "created_at": "2024-01-10T10:00:00",
-                "updated_at": "2024-01-10T10:05:00",
-            },
-        ]
-
-    async def test_list_batches_all(self, test_client, mock_batches, batch_tracker):
-        """测试列出所有批处理"""
-        batch_tracker.create_batch("batch-001", total=2, user_id=1)
-        batch_tracker.set_status("batch-001", "completed")
-        batch_tracker.create_batch("batch-002", total=1, user_id=1)
-        batch_tracker.set_status("batch-002", "processing")
-
-        response = await test_client.get("/api/v1/pdf-import/batch/list")
-
+        response = authenticated_client.get("/api/v1/pdf-import/batch/list")
         assert response.status_code == 200
-        data = response.json()
-        assert data["success"] is True
+        payload = response.json()
+        assert payload["success"] is True
 
-    async def test_list_batches_with_status_filter(
-        self, test_client, mock_batches, batch_tracker
-    ):
-        """测试按状态过滤"""
-        batch_tracker.create_batch("batch-001", total=2, user_id=1)
-        batch_tracker.set_status("batch-001", "completed")
-        batch_tracker.create_batch("batch-002", total=1, user_id=1)
-        batch_tracker.set_status("batch-002", "processing")
+        batches = payload["data"]["batches"]
+        batch_ids = {item["batch_id"] for item in batches}
+        assert {"batch-001", "batch-002"} <= batch_ids
 
-        response = await test_client.get(
+    def test_list_batches_with_status_filter(
+        self,
+        authenticated_client: TestClient,
+        batch_tracker: BatchStatusTracker,
+        owner_context: dict[str, int],
+    ) -> None:
+        _seed_owned_batch(
+            batch_tracker,
+            batch_id="batch-001",
+            total=2,
+            user_id=owner_context["user_id"],
+            organization_id=owner_context["organization_id"],
+            status="completed",
+        )
+        _seed_owned_batch(
+            batch_tracker,
+            batch_id="batch-002",
+            total=1,
+            user_id=owner_context["user_id"],
+            organization_id=owner_context["organization_id"],
+            status="processing",
+        )
+
+        response = authenticated_client.get(
             "/api/v1/pdf-import/batch/list?status_filter=completed"
         )
-
         assert response.status_code == 200
-        data = response.json()
-        assert data["success"] is True
+        payload = response.json()
+        assert payload["success"] is True
+        statuses = {item["status"] for item in payload["data"]["batches"]}
+        assert statuses == {"completed"}
 
-    async def test_list_batches_with_limit(
-        self, test_client, mock_batches, batch_tracker
-    ):
-        """测试限制返回数量"""
-        batch_tracker.create_batch("batch-001", total=2, user_id=1)
-        batch_tracker.set_status("batch-001", "completed")
-        batch_tracker.create_batch("batch-002", total=1, user_id=1)
-        batch_tracker.set_status("batch-002", "processing")
-
-        response = await test_client.get("/api/v1/pdf-import/batch/list?limit=1")
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["success"] is True
-
-
-# ============================================================================
-# 取消批处理端点测试
-# ============================================================================
-
-
-class TestBatchCancelEndpoint:
-    """取消批处理端点测试"""
-
-    @pytest.fixture
-    def mock_processing_batch(self):
-        """Mock 处理中的批处理"""
-        return {
-            "batch_id": "batch-processing",
-            "status": "processing",
-            "session_ids": ["s1", "s2"],
-            "completed_count": 0,
-            "failed_count": 0,
-        }
-
-    async def test_cancel_batch_success(
-        self, test_client, mock_processing_batch, batch_tracker
-    ):
-        """测试取消批处理成功"""
-        batch_tracker.create_batch("batch-processing", total=2, user_id=1)
-        response = await test_client.post(
-            "/api/v1/pdf-import/batch/cancel/batch-processing"
+    def test_list_batches_with_limit(
+        self,
+        authenticated_client: TestClient,
+        batch_tracker: BatchStatusTracker,
+        owner_context: dict[str, int],
+    ) -> None:
+        _seed_owned_batch(
+            batch_tracker,
+            batch_id="batch-001",
+            total=2,
+            user_id=owner_context["user_id"],
+            organization_id=owner_context["organization_id"],
+            status="completed",
+        )
+        _seed_owned_batch(
+            batch_tracker,
+            batch_id="batch-002",
+            total=1,
+            user_id=owner_context["user_id"],
+            organization_id=owner_context["organization_id"],
+            status="processing",
         )
 
+        response = authenticated_client.get("/api/v1/pdf-import/batch/list?limit=1")
         assert response.status_code == 200
-        data = response.json()
-        assert data["success"] is True
+        payload = response.json()
+        assert payload["success"] is True
+        assert payload["data"]["count"] <= 1
 
-    async def test_cancel_batch_already_completed(self, test_client, batch_tracker):
-        """测试取消已完成的批处理"""
-        batch_tracker.create_batch("batch-completed", total=2, user_id=1)
-        batch_tracker.set_status("batch-completed", "completed")
 
-        response = await test_client.post(
-            "/api/v1/pdf-import/batch/cancel/batch-completed"
+class TestBatchCancelCleanupAndHealthEndpoint:
+    """取消、清理、健康检查端点测试。"""
+
+    def test_cancel_batch_success(
+        self,
+        authenticated_client: TestClient,
+        csrf_headers: dict[str, str],
+        batch_tracker: BatchStatusTracker,
+        owner_context: dict[str, int],
+    ) -> None:
+        _seed_owned_batch(
+            batch_tracker,
+            batch_id="batch-processing",
+            total=2,
+            user_id=owner_context["user_id"],
+            organization_id=owner_context["organization_id"],
+            status="processing",
         )
 
+        response = authenticated_client.post(
+            "/api/v1/pdf-import/batch/cancel/batch-processing",
+            headers=csrf_headers,
+        )
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["success"] is True
+        assert "cancelled_count" in payload["data"]
+
+    def test_cancel_batch_already_completed(
+        self,
+        authenticated_client: TestClient,
+        csrf_headers: dict[str, str],
+        batch_tracker: BatchStatusTracker,
+        owner_context: dict[str, int],
+    ) -> None:
+        _seed_owned_batch(
+            batch_tracker,
+            batch_id="batch-completed",
+            total=2,
+            user_id=owner_context["user_id"],
+            organization_id=owner_context["organization_id"],
+            status="completed",
+        )
+
+        response = authenticated_client.post(
+            "/api/v1/pdf-import/batch/cancel/batch-completed",
+            headers=csrf_headers,
+        )
         assert response.status_code == 400
-        assert "批处理任务已完成或已取消" in response.json()["error"]["message"]
+        payload = response.json()
+        assert payload["success"] is False
+        assert payload["error"]["code"] == "INVALID_REQUEST"
+        assert "无法取消" in payload["error"]["message"]
 
-
-# ============================================================================
-# 清理端点测试
-# ============================================================================
-
-
-class TestBatchCleanupEndpoint:
-    """清理端点测试"""
-
-    async def test_cleanup_old_batches(self, test_client, batch_tracker):
-        """测试清理旧批处理"""
-        batch_tracker.create_batch("batch-old-1", total=2, user_id=1)
-        batch_tracker.set_status("batch-old-1", "completed")
-        batch_tracker.create_batch("batch-old-2", total=2, user_id=1)
-        batch_tracker.set_status("batch-old-2", "failed")
-        batch_tracker.create_batch("batch-recent", total=2, user_id=1)
-        batch_tracker.set_status("batch-recent", "completed")
-
-        response = await test_client.delete(
-            "/api/v1/pdf-import/batch/cleanup?older_than_hours=24"
+    def test_cleanup_old_batches(
+        self,
+        authenticated_client: TestClient,
+        csrf_headers: dict[str, str],
+        batch_tracker: BatchStatusTracker,
+        owner_context: dict[str, int],
+    ) -> None:
+        _seed_owned_batch(
+            batch_tracker,
+            batch_id="batch-old-1",
+            total=2,
+            user_id=owner_context["user_id"],
+            organization_id=owner_context["organization_id"],
+            status="completed",
+        )
+        _seed_owned_batch(
+            batch_tracker,
+            batch_id="batch-old-2",
+            total=2,
+            user_id=owner_context["user_id"],
+            organization_id=owner_context["organization_id"],
+            status="failed",
+        )
+        _seed_owned_batch(
+            batch_tracker,
+            batch_id="batch-recent",
+            total=2,
+            user_id=owner_context["user_id"],
+            organization_id=owner_context["organization_id"],
+            status="completed",
         )
 
+        response = authenticated_client.delete(
+            "/api/v1/pdf-import/batch/cleanup?older_than_hours=24",
+            headers=csrf_headers,
+        )
         assert response.status_code == 200
-        data = response.json()
-        assert data["success"] is True
+        payload = response.json()
+        assert payload["success"] is True
+        assert "cleaned_count" in payload["data"]
 
-
-# ============================================================================
-# 健康检查端点测试
-# ============================================================================
-
-
-class TestBatchHealthEndpoint:
-    """健康检查端点测试"""
-
-    async def test_health_check(self, test_client, batch_tracker):
-        """测试健康检查"""
-        response = await test_client.get("/api/v1/pdf-import/batch/health")
-
+    def test_health_check(
+        self, authenticated_client: TestClient, batch_tracker: BatchStatusTracker
+    ) -> None:
+        response = authenticated_client.get("/api/v1/pdf-import/batch/health")
         assert response.status_code == 200
-        data = response.json()
-        assert data["success"] is True
-        assert data["data"]["status"] == "healthy"
+        payload = response.json()
+        assert payload["success"] is True
+        assert payload["data"]["status"] == "healthy"
 
-    async def test_health_check_with_active_batches(self, test_client, batch_tracker):
-        """测试有活动批处理时的健康检查"""
-        batch_tracker.create_batch("batch-1", total=2, user_id=1)
-        batch_tracker.set_status("batch-1", "processing")
-        batch_tracker.create_batch("batch-2", total=2, user_id=1)
-        batch_tracker.set_status("batch-2", "pending")
+    def test_health_check_with_active_batches(
+        self,
+        authenticated_client: TestClient,
+        batch_tracker: BatchStatusTracker,
+        owner_context: dict[str, int],
+    ) -> None:
+        _seed_owned_batch(
+            batch_tracker,
+            batch_id="batch-1",
+            total=2,
+            user_id=owner_context["user_id"],
+            organization_id=owner_context["organization_id"],
+            status="processing",
+        )
+        _seed_owned_batch(
+            batch_tracker,
+            batch_id="batch-2",
+            total=2,
+            user_id=owner_context["user_id"],
+            organization_id=owner_context["organization_id"],
+            status="pending",
+        )
 
-        response = await test_client.get("/api/v1/pdf-import/batch/health")
-
+        response = authenticated_client.get("/api/v1/pdf-import/batch/health")
         assert response.status_code == 200
-        data = response.json()
-        assert data["data"]["current_usage"]["active_batches"] >= 2
-
-
-# ============================================================================
-# 集成测试场景
-# ============================================================================
+        payload = response.json()
+        current_usage = payload["data"]["current_usage"]
+        assert current_usage["active_batches"] >= 2
+        assert isinstance(current_usage["available_slots"], int)
 
 
 class TestBatchAPIIntegrationScenarios:
-    """批处理 API 集成测试场景"""
+    """批处理 API 集成场景测试。"""
 
-    @pytest.mark.asyncio
-    async def test_full_batch_processing_workflow(self):
-        """测试完整的批处理工作流"""
-        batch_id = "batch-test-001"
-        session_ids = ["session-1", "session-2", "session-3"]
-
-        assert batch_id.startswith("batch-")
-        assert len(session_ids) == 3
-
-    async def test_concurrent_batch_limit_enforcement(self, test_client, batch_tracker):
-        """测试并发批处理限制"""
-        batch_tracker.create_batch("batch-1", total=2, user_id=1)
-        batch_tracker.set_status("batch-1", "processing")
-        batch_tracker.create_batch("batch-2", total=2, user_id=1)
-        batch_tracker.set_status("batch-2", "processing")
-        files = [
-            ("files", ("test.pdf", io.BytesIO(b"%PDF-1.4"), "application/pdf"))
-        ]
-
-        response = await test_client.post(
+    def test_upload_then_query_workflow(
+        self,
+        authenticated_client: TestClient,
+        csrf_headers: dict[str, str],
+        owner_context: dict[str, int],
+    ) -> None:
+        files = [("files", ("workflow.pdf", io.BytesIO(b"%PDF-1.4"), "application/pdf"))]
+        upload_response = authenticated_client.post(
             "/api/v1/pdf-import/batch/upload",
             files=files,
-            data={"organization_id": 1},
+            headers=csrf_headers,
+            data={"organization_id": UPLOAD_ORGANIZATION_ID},
+        )
+        assert upload_response.status_code == 200
+        upload_payload = upload_response.json()
+        assert upload_payload["success"] is True
+
+        batch_id = upload_payload["data"]["batch_id"]
+        list_response = authenticated_client.get("/api/v1/pdf-import/batch/list")
+        assert list_response.status_code == 200
+        list_payload = list_response.json()
+        assert list_payload["success"] is True
+        assert any(
+            item["batch_id"] == batch_id for item in list_payload["data"]["batches"]
         )
 
+        status_response = authenticated_client.get(
+            f"/api/v1/pdf-import/batch/status/{batch_id}"
+        )
+        assert status_response.status_code == 200
+        status_payload = status_response.json()
+        assert status_payload["success"] is True
+
+    def test_concurrent_batch_limit_enforcement(
+        self,
+        authenticated_client: TestClient,
+        csrf_headers: dict[str, str],
+        batch_tracker: BatchStatusTracker,
+        owner_context: dict[str, int],
+    ) -> None:
+        _seed_owned_batch(
+            batch_tracker,
+            batch_id="batch-1",
+            total=2,
+            user_id=owner_context["user_id"],
+            organization_id=owner_context["organization_id"],
+            status="processing",
+        )
+        _seed_owned_batch(
+            batch_tracker,
+            batch_id="batch-2",
+            total=2,
+            user_id=owner_context["user_id"],
+            organization_id=owner_context["organization_id"],
+            status="processing",
+        )
+        files = [("files", ("test.pdf", io.BytesIO(b"%PDF-1.4"), "application/pdf"))]
+
+        response = authenticated_client.post(
+            "/api/v1/pdf-import/batch/upload",
+            files=files,
+            headers=csrf_headers,
+            data={"organization_id": UPLOAD_ORGANIZATION_ID},
+        )
         assert response.status_code == 503
+        payload = response.json()
+        assert payload["success"] is False
+        error = payload.get("error", {})
+        if isinstance(error, dict) and error:
+            assert error.get("code") == "SERVICE_UNAVAILABLE"

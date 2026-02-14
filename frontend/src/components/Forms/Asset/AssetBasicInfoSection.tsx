@@ -4,6 +4,7 @@ import { DictionarySelect } from '@/components/Dictionary';
 import OwnershipSelect from '@/components/Ownership/OwnershipSelect';
 import ProjectSelect from '@/components/Project/ProjectSelect';
 import { generateFormFieldIds } from '@/utils/accessibility';
+import styles from './AssetBasicInfoSection.module.css';
 
 /**
  * AssetForm - Basic Info Section
@@ -16,7 +17,7 @@ const AssetBasicInfoSection: React.FC = () => {
   const addressIds = generateFormFieldIds('address');
 
   return (
-    <Card title="基本信息" style={{ marginBottom: '16px' }}>
+    <Card title="基本信息" className={styles.sectionCard}>
       <Row gutter={16}>
         <Col span={12}>
           <Form.Item

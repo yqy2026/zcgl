@@ -633,16 +633,21 @@ pytest --cov=src
 # Run specific test types
 pytest -m unit                    # Fast unit tests only
 pytest -m integration             # Integration tests
+pytest -m e2e                     # End-to-end workflow tests
 pytest -m "not slow"              # Exclude slow tests
 
 # Run specific file
 pytest tests/unit/models/test_asset_model.py
+pytest tests/e2e/test_auth_flow_e2e.py -m e2e
 
 # Run with verbose output
 pytest -v --tb=short
 
 # Run failed tests only
 pytest --lf
+
+# Recommended E2E command (disable coverage gate for workflow tests)
+pytest tests/e2e -m e2e --no-cov
 ```
 
 ### Frontend Test Execution
@@ -651,6 +656,15 @@ pytest --lf
 # Run all tests
 cd frontend
 pnpm test
+
+# Run Playwright E2E tests
+pnpm e2e
+
+# Run E2E in CI mode
+pnpm e2e:ci
+
+# Show Playwright HTML report
+pnpm e2e:report
 
 # Run with coverage
 pnpm test:coverage
@@ -677,7 +691,8 @@ pnpm test -u
 |-----------|--------------|-------|
 | Unit Tests | < 1 minute | Fast, isolated tests |
 | Integration Tests | < 5 minutes | Database/API integration |
-| Full Suite | < 10 minutes | All tests combined |
+| E2E Tests | < 15 minutes | Playwright + backend workflow checks |
+| Full Suite | < 20 minutes | All tests combined |
 
 ---
 
@@ -757,6 +772,26 @@ jobs:
       - name: Lint
         run: cd frontend && pnpm lint
 ```
+
+### E2E CI Pipeline (Blocking)
+
+```yaml
+jobs:
+  backend-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - run: cd backend && pytest tests/e2e -m e2e --no-cov
+
+  frontend-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - run: cd frontend && pnpm e2e:ci
+```
+
+**Notes**
+- E2E jobs are configured as **blocking gates** for pull requests.
+- Frontend E2E uses Playwright `tests/e2e` with role-specific `storageState`.
+- Backend E2E requires PostgreSQL and should run with `E2E_TEST_DATABASE_URL`.
 
 ---
 

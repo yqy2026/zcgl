@@ -1,5 +1,6 @@
 import React from 'react';
 import { Form, DatePicker, InputNumber, Row, Col, Card } from 'antd';
+import styles from './ContractPeriodSection.module.css';
 
 const parseCurrency = (value: string | undefined) => {
   const normalized = value?.replace(/¥\s?|(,*)/g, '') ?? '';
@@ -13,7 +14,7 @@ const parseCurrency = (value: string | undefined) => {
  */
 const ContractPeriodSection: React.FC = () => {
   return (
-    <Card title="合同期限" size="small" style={{ marginBottom: 16 }}>
+    <Card title="合同期限" size="small" className={styles.contractPeriodCard}>
       <Row gutter={16}>
         <Col span={8}>
           <Form.Item
@@ -21,7 +22,7 @@ const ContractPeriodSection: React.FC = () => {
             name="start_date"
             rules={[{ required: true, message: '请选择开始日期' }]}
           >
-            <DatePicker style={{ width: '100%' }} />
+            <DatePicker className={styles.fullWidthControl} />
           </Form.Item>
         </Col>
         <Col span={8}>
@@ -30,13 +31,13 @@ const ContractPeriodSection: React.FC = () => {
             name="end_date"
             rules={[{ required: true, message: '请选择结束日期' }]}
           >
-            <DatePicker style={{ width: '100%' }} />
+            <DatePicker className={styles.fullWidthControl} />
           </Form.Item>
         </Col>
         <Col span={8}>
           <Form.Item label="押金总额" name="total_deposit" tooltip="单位：元">
             <InputNumber
-              style={{ width: '100%' }}
+              className={styles.fullWidthControl}
               placeholder="请输入押金总额"
               min={0}
               precision={2}

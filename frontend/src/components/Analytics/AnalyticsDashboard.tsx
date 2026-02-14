@@ -346,7 +346,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
 
           {/* 高级分析指标 - 暂时隐藏，等待后端API支持 */}
           {/* {analytics?.performance_metrics && (
-            <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
+            <Row gutter={[16, 16]} className={styles.advancedMetricsRow}>
               <Col xs={24}>
                 <AdvancedAnalyticsCard
                   performanceMetrics={analytics.performance_metrics}

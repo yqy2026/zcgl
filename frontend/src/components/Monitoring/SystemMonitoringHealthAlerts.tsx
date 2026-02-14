@@ -2,6 +2,7 @@ import React, { useCallback, useMemo } from 'react';
 import { Card, Row, Col, Tag, List, Badge, Button, Space } from 'antd';
 import { AlertOutlined } from '@ant-design/icons';
 import { Gauge } from '@ant-design/plots';
+import { COLORS } from '@/styles/colorMap';
 
 import {
   getAlertLevelColor,
@@ -32,8 +33,8 @@ const SystemMonitoringHealthAlerts: React.FC<SystemMonitoringHealthAlertsProps> 
       percent: (healthStatus?.overall_score ?? 0) / 100,
       color: getStatusColor(healthStatus?.status ?? 'unknown'),
       indicator: {
-        pointer: { style: { stroke: '#D0D0D0' } },
-        pin: { style: { stroke: '#D0D0D0' } },
+        pointer: { style: { stroke: COLORS.border } },
+        pin: { style: { stroke: COLORS.border } },
       },
       statistic: {
         content: {

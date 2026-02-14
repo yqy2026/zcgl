@@ -992,10 +992,9 @@ class TestCreateExcelConfig:
         response = unauthenticated_client.post(
             "/api/v1/tasks/configs/excel", json=payload
         )
-        assert response.status_code in [
-            status.HTTP_401_UNAUTHORIZED,
-            status.HTTP_403_FORBIDDEN,
-        ]
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        data = response.json()
+        assert data.get("error", {}).get("code") == "AUTHENTICATION_ERROR"
 
     @patch("src.api.v1.system.tasks.task_service")
     def test_create_excel_config_success(
@@ -1068,10 +1067,9 @@ class TestGetExcelConfigs:
     def test_get_excel_configs_unauthorized(self, unauthenticated_client):
         """Test unauthorized access to Excel configs list"""
         response = unauthenticated_client.get("/api/v1/tasks/configs/excel")
-        assert response.status_code in [
-            status.HTTP_401_UNAUTHORIZED,
-            status.HTTP_403_FORBIDDEN,
-        ]
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        data = response.json()
+        assert data.get("error", {}).get("code") == "AUTHENTICATION_ERROR"
 
     @patch("src.api.v1.system.tasks.task_service")
     def test_get_excel_configs_default(self, mock_task_service, mock_db):

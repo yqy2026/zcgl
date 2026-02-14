@@ -1,0 +1,15 @@
+.exportCard {
+  margin-bottom: var(--spacing-lg);
+}
+
+.fullWidthGroup {
+  width: 100%;
+}
+
+.scopeAlert {
+  margin-bottom: var(--spacing-lg);
+}
+
+.searchTagWrapper {
+  margin-top: var(--spacing-sm);
+}

@@ -7,7 +7,7 @@
 import React from 'react';
 import { Card, Button, Space, Row, Col, Typography } from 'antd';
 import { UploadOutlined, QuestionCircleOutlined, ReloadOutlined } from '@ant-design/icons';
-import { COLORS } from '@/styles/colorMap';
+import styles from './PDFImportHeader.module.css';
 
 const { Title, Text } = Typography;
 
@@ -23,25 +23,15 @@ export const PDFImportHeader: React.FC<PDFImportHeaderProps> = ({
   loading,
 }) => {
   return (
-    <Card style={{ marginBottom: 16 }}>
+    <Card className={styles.headerCard}>
       <Row justify="space-between" align="middle">
         <Col>
           <Space size="large">
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 48,
-                height: 48,
-                borderRadius: '50%',
-                backgroundColor: `${COLORS.primary}10`,
-              }}
-            >
-              <UploadOutlined style={{ fontSize: 24, color: COLORS.primary }} />
+            <div className={styles.uploadIconWrapper}>
+              <UploadOutlined className={styles.uploadIcon} />
             </div>
             <div>
-              <Title level={3} style={{ margin: 0 }}>
+              <Title level={3} className={styles.headerTitle}>
                 PDF合同智能导入
               </Title>
               <Text type="secondary">上传PDF文件,自动提取合同信息并导入系统</Text>

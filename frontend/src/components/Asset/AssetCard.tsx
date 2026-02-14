@@ -16,7 +16,8 @@ import {
   getStatusColor,
   calculateOccupancyRate,
 } from '@/utils/format';
-import { getOccupancyRateColor, COLORS } from '@/styles/colorMap';
+import { getOccupancyRateColor } from '@/styles/colorMap';
+import styles from './AssetCard.module.css';
 
 interface AssetCardProps {
   asset: Asset;
@@ -38,16 +39,14 @@ const AssetCard: React.FC<AssetCardProps> = ({
   // 计算出租率
   const occupancyRate =
     asset.occupancy_rate ?? calculateOccupancyRate(asset.rented_area, asset.rentable_area);
+  const occupancyValueStyle: React.CSSProperties = {
+    color: getOccupancyRateColor(occupancyRate),
+  };
 
   return (
     <Card
-      className={`asset-card ${selected ? 'selected' : ''}`}
+      className={`asset-card ${selected ? 'selected' : ''} ${styles.card} ${selected ? styles.cardSelected : styles.cardDefault}`}
       hoverable
-      style={{
-        marginBottom: 16,
-        border: selected ? `2px solid ${COLORS.primary}` : `1px solid ${COLORS.border}`,
-        cursor: 'pointer',
-      }}
       onClick={() => onSelect?.(asset, !selected)}
       actions={[
         <Tooltip title="查看详情" key="view">
@@ -100,8 +99,8 @@ const AssetCard: React.FC<AssetCardProps> = ({
       {/* 卡片头部 */}
       <Card.Meta
         title={
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '16px', fontWeight: 'bold' }}>{asset.property_name}</span>
+          <div className={styles.metaTitle}>
+            <span className={styles.propertyName}>{asset.property_name}</span>
             <Space>
               <Tag color={getStatusColor(asset.ownership_status, 'ownership')}>
                 {asset.ownership_status}
@@ -114,29 +113,28 @@ const AssetCard: React.FC<AssetCardProps> = ({
         }
         description={
           <div>
-            <div style={{ marginBottom: 8 }}>
-              <EnvironmentOutlined style={{ marginRight: 4, color: COLORS.textTertiary }} />
-              <span style={{ color: COLORS.textTertiary }}>{asset.address}</span>
+            <div className={styles.metaRow}>
+              <EnvironmentOutlined className={styles.metaIcon} />
+              <span className={styles.metaText}>{asset.address}</span>
             </div>
-            <div style={{ marginBottom: 8 }}>
-              <UserOutlined style={{ marginRight: 4, color: COLORS.textTertiary }} />
-              <span style={{ color: COLORS.textTertiary }}>权属方：{asset.ownership_entity}</span>
+            <div className={styles.metaRow}>
+              <UserOutlined className={styles.metaIcon} />
+              <span className={styles.metaText}>权属方：{asset.ownership_entity}</span>
             </div>
           </div>
         }
       />
 
       {/* 卡片内容 */}
-      <div style={{ marginTop: 16 }}>
+      <div className={styles.content}>
         {/* 面积信息 */}
-        <Row gutter={16} style={{ marginBottom: 16 }}>
+        <Row gutter={16} className={styles.areaRow}>
           <Col span={6}>
             <Statistic
               title="土地面积"
               value={asset.land_area ?? 0}
               suffix="㎡"
               precision={2}
-              styles={{ content: { fontSize: '14px' } }}
             />
           </Col>
           <Col span={6}>
@@ -145,7 +143,6 @@ const AssetCard: React.FC<AssetCardProps> = ({
               value={asset.actual_property_area ?? 0}
               suffix="㎡"
               precision={2}
-              styles={{ content: { fontSize: '14px' } }}
             />
           </Col>
           <Col span={6}>
@@ -154,7 +151,6 @@ const AssetCard: React.FC<AssetCardProps> = ({
               value={asset.rentable_area ?? 0}
               suffix="㎡"
               precision={2}
-              styles={{ content: { fontSize: '14px' } }}
             />
           </Col>
           <Col span={6}>
@@ -163,22 +159,18 @@ const AssetCard: React.FC<AssetCardProps> = ({
               value={asset.rented_area ?? 0}
               suffix="㎡"
               precision={2}
-              styles={{ content: { fontSize: '14px' } }}
             />
           </Col>
         </Row>
 
         {/* 出租率进度条 */}
         {(asset.rentable_area ?? 0) > 0 && (
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-              <span style={{ fontSize: '12px', color: COLORS.textTertiary }}>出租率</span>
+          <div className={styles.occupancyContainer}>
+            <div className={styles.occupancyHeader}>
+              <span className={styles.occupancyLabel}>出租率</span>
               <span
-                style={{
-                  fontSize: '12px',
-                  fontWeight: 'bold',
-                  color: getOccupancyRateColor(occupancyRate),
-                }}
+                className={styles.occupancyValue}
+                style={occupancyValueStyle}
               >
                 {formatPercentage(occupancyRate)}
               </span>
@@ -193,7 +185,7 @@ const AssetCard: React.FC<AssetCardProps> = ({
         )}
 
         {/* 状态标签 */}
-        <div style={{ marginBottom: 12 }}>
+        <div className={styles.statusSection}>
           <Space wrap>
             <Tag color={getStatusColor(asset.usage_status, 'usage')}>{asset.usage_status}</Tag>
             {asset.is_litigated == true && <Tag color="red">涉诉</Tag>}
@@ -208,7 +200,7 @@ const AssetCard: React.FC<AssetCardProps> = ({
         </div>
 
         {/* 时间信息 */}
-        <div style={{ fontSize: '12px', color: COLORS.textTertiary }}>
+        <div className={styles.timeInfo}>
           <div>创建时间：{formatDate(asset.created_at)}</div>
           <div>更新时间：{formatDate(asset.updated_at)}</div>
         </div>

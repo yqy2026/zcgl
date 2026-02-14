@@ -1,26 +1,29 @@
 .assetChart {
+  --asset-chart-loading-min-height: calc((var(--spacing-xxxl) * 3) + var(--spacing-xl) + var(--spacing-md));
+  --asset-chart-color-dot-size: var(--spacing-md);
+  --asset-chart-color-dot-radius: calc(var(--spacing-xs) / 2);
   width: 100%;
 }
 
 .loadingState {
-  min-height: 180px;
+  min-height: var(--asset-chart-loading-min-height);
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--color-text-secondary);
-  font-size: 14px;
+  font-size: var(--font-size-base);
 }
 
 .sectionTitle {
-  margin-bottom: 16px !important;
+  margin-bottom: var(--spacing-lg) !important;
 }
 
 .sectionBody {
-  margin-bottom: 24px;
+  margin-bottom: var(--spacing-xl);
 }
 
 .propertyItem {
-  margin-bottom: 12px;
+  margin-bottom: var(--spacing-md);
 }
 
 .propertyItem:last-child {
@@ -28,17 +31,17 @@
 }
 
 .propertyHeaderRow {
-  margin-bottom: 4px;
+  margin-bottom: var(--spacing-xs);
 }
 
 .propertyLabelGroup {
-  gap: 8px;
+  gap: var(--spacing-sm);
 }
 
 .propertyColorDot {
-  width: 12px;
-  height: 12px;
-  border-radius: 2px;
+  width: var(--asset-chart-color-dot-size);
+  height: var(--asset-chart-color-dot-size);
+  border-radius: var(--asset-chart-color-dot-radius);
   background: var(--legend-color);
 }
 
@@ -59,7 +62,7 @@
 }
 
 .trendItem {
-  margin-bottom: 8px;
+  margin-bottom: var(--spacing-sm);
 }
 
 .trendItem:last-child {
@@ -76,6 +79,6 @@
 
 @media (max-width: 768px) {
   .sectionBody {
-    margin-bottom: 20px;
+    margin-bottom: calc(var(--spacing-lg) + var(--spacing-xs));
   }
 }

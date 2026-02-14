@@ -89,25 +89,34 @@ class TestPDFImportServiceInit:
 class TestUploadFile:
     """测试文件上传"""
 
-    @pytest.mark.skip(
-        reason="upload_file has relative import that fails in unit test context. Better tested via integration tests."
-    )
     @pytest.mark.asyncio
-    async def test_upload_file_basic(self, pdf_service):
+    async def test_upload_file_basic(self, pdf_service, tmp_path):
         """测试基本文件上传"""
-        # Skipped: relative import 'from ....utils.file_security' fails in unit test
-        # This functionality is better tested through integration tests
-        pass
+        file_content = b"%PDF-1.4\nunit-test-content\n"
+        filename = "contract.pdf"
 
-    @pytest.mark.skip(
-        reason="upload_file has relative import that fails in unit test context. Better tested via integration tests."
-    )
+        with patch("tempfile.gettempdir", return_value=str(tmp_path)):
+            result = await pdf_service.upload_file(file_content, filename)
+
+        saved_path = Path(result["file_path"])
+        assert saved_path.exists()
+        assert saved_path.read_bytes() == file_content
+        assert result["original_filename"] == filename
+        assert result["file_size"] == len(file_content)
+        assert result["filename"] == saved_path.name
+
     @pytest.mark.asyncio
-    async def test_upload_file_generates_unique_id(self, pdf_service):
+    async def test_upload_file_generates_unique_id(self, pdf_service, tmp_path):
         """测试生成唯一文件ID"""
-        # Skipped: relative import 'from ....utils.file_security' fails in unit test
-        # This functionality is better tested through integration tests
-        pass
+        file_content = b"%PDF-1.4\nsame-file-name\n"
+
+        with patch("tempfile.gettempdir", return_value=str(tmp_path)):
+            first = await pdf_service.upload_file(file_content, "duplicate.pdf")
+            second = await pdf_service.upload_file(file_content, "duplicate.pdf")
+
+        assert first["filename"] != second["filename"]
+        assert Path(first["file_path"]).exists()
+        assert Path(second["file_path"]).exists()
 
 
 # ============================================================================

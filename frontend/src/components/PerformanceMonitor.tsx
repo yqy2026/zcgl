@@ -6,6 +6,7 @@ import {
   ClockCircleOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
+import styles from './PerformanceMonitor.module.css';
 
 interface PerformanceMetrics {
   fcp?: number;
@@ -216,7 +217,7 @@ const PerformanceMonitor: React.FC = () => {
         type="primary"
         icon={<ThunderboltOutlined />}
         onClick={() => setIsVisible(true)}
-        style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 1000 }}
+        className={styles.floatingMonitorButton}
       >
         性能监控
       </Button>
@@ -245,7 +246,7 @@ const PerformanceMonitor: React.FC = () => {
           />
         )}
 
-        <div style={{ marginTop: 16 }}>
+        <div className={styles.panelContent}>
           <Card title="Web Vitals" size="small">
             <Row gutter={16}>
               <Col span={6}>
@@ -290,7 +291,7 @@ const PerformanceMonitor: React.FC = () => {
             </Row>
           </Card>
 
-          <Card title="系统资源" size="small" style={{ marginTop: 16 }}>
+          <Card title="系统资源" size="small" className={styles.sectionCard}>
             <Row gutter={16}>
               <Col span={8}>
                 <Statistic title="内存使用率" value={metrics.memoryUsage?.toFixed(1)} suffix="%" />
@@ -307,7 +308,7 @@ const PerformanceMonitor: React.FC = () => {
             </Row>
           </Card>
 
-          <Card title="组件性能" size="small" style={{ marginTop: 16 }}>
+          <Card title="组件性能" size="small" className={styles.sectionCard}>
             <Table
               columns={componentColumns}
               dataSource={componentMetrics}
@@ -316,7 +317,7 @@ const PerformanceMonitor: React.FC = () => {
             />
           </Card>
 
-          <Card title="性能建议" size="small" style={{ marginTop: 16 }}>
+          <Card title="性能建议" size="small" className={styles.sectionCard}>
             {getPerformanceAdvice().length > 0 ? (
               getPerformanceAdvice().map(advice => (
                 <Alert
@@ -325,7 +326,7 @@ const PerformanceMonitor: React.FC = () => {
                   type="warning"
                   showIcon
                   icon={<WarningOutlined />}
-                  style={{ marginBottom: 8 }}
+                  className={styles.adviceAlert}
                 />
               ))
             ) : (
@@ -333,7 +334,7 @@ const PerformanceMonitor: React.FC = () => {
             )}
           </Card>
 
-          <Card title="操作" size="small" style={{ marginTop: 16 }}>
+          <Card title="操作" size="small" className={styles.sectionCard}>
             <Button
               icon={<ClockCircleOutlined />}
               onClick={() => {

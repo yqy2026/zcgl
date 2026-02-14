@@ -1,5 +1,6 @@
 import React from 'react';
 import { Card, Statistic } from 'antd';
+import { COLORS } from '@/styles/colorMap';
 
 interface StatisticCardProps {
   title: string;
@@ -49,7 +50,7 @@ export const FinancialStatisticCard: React.FC<FinancialStatisticCardProps> = ({
   ...props
 }) => {
   const contentStyle = {
-    color: value >= 0 ? (isPositive ? '#3f8600' : '#cf1322') : '#cf1322',
+    color: value >= 0 ? (isPositive ? COLORS.success : COLORS.error) : COLORS.error,
   };
 
   return (

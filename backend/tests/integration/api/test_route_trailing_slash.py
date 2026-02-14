@@ -17,38 +17,28 @@ def client():
     return TestClient(app)
 
 
-@pytest.fixture
-def auth_headers(client: TestClient) -> dict:
-    """获取认证头"""
-    try:
-        response = client.post(
-            "/api/v1/auth/login", json={"username": "admin", "password": "admin"}
-        )
-        if response.status_code == 200:
-            return {}
-    except Exception:
-        pass
-    return {}
-
-
 @pytest.mark.integration
 class TestRouteTrailingSlashFix:
     """验证路由同时支持带/不带斜杠的路径"""
 
     @pytest.mark.parametrize(
-        "route_path",
+        ("route_path", "expected_status"),
         [
-            "/api/v1/notifications",
-            "/api/v1/ownerships",
-            "/api/v1/organizations",
-            "/api/v1/projects",
-            "/api/v1/tasks",
-            "/api/v1/defects",
+            ("/api/v1/notifications", 401),
+            ("/api/v1/ownerships", 401),
+            ("/api/v1/organizations", 401),
+            ("/api/v1/projects", 401),
+            ("/api/v1/tasks", 401),
+            ("/api/v1/defects", 404),
         ],
     )
     @pytest.mark.parametrize("use_slash", [True, False])
     def test_no_redirect_on_different_formats(
-        self, client: TestClient, route_path: str, use_slash: bool
+        self,
+        client: TestClient,
+        route_path: str,
+        expected_status: int,
+        use_slash: bool,
     ):
         """测试不同路径格式都不产生307重定向"""
         # 测试路由
@@ -60,14 +50,7 @@ class TestRouteTrailingSlashFix:
             307,
             308,
         ], f"路由 {test_path} 返回了 {response.status_code} 重定向"
-
-        # 验证响应是预期的状态码
-        assert response.status_code in [
-            200,
-            401,
-            403,
-            404,
-        ], f"路由 {test_path} 返回了意外状态码 {response.status_code}"
+        assert response.status_code == expected_status
 
     def test_notifications_both_formats_consistent(self, client: TestClient):
         """验证通知列表两种格式返回相同状态码"""

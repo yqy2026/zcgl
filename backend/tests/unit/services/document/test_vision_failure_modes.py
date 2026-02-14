@@ -5,7 +5,6 @@ Vision API 失败模式测试
 测试 LLM vision 服务在各种失败场景下的行为
 
 NOTE: These tests are for error scenarios in vision API integration.
-Tests are skipped until vision API integration is fully implemented.
 """
 
 import json
@@ -15,11 +14,6 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from httpx import HTTPStatusError, Request, Response
 from pydantic import BaseModel
-
-# Skip all tests in this module - vision API integration not complete
-pytestmark = pytest.mark.skip(
-    reason="Vision API failure mode tests pending implementation"
-)
 
 
 # Mock VisionResponse class
@@ -499,32 +493,49 @@ class TestNetworkErrorRecovery:
     @pytest.mark.asyncio
     async def test_retry_on_transient_error(self):
         """测试瞬态错误时的重试"""
-        from src.services.document.retry import retry_async_call
+        from src.services.document.extractors.glm_adapter import GLMAdapter
 
-        call_count = 0
+        adapter = GLMAdapter()
+        mock_response = VisionResponse(content='{"success": true}')
 
-        async def flaky_call():
-            nonlocal call_count
-            call_count += 1
-            if call_count < 3:
-                raise ConnectionError("Network blip")
-            return '{"success": true}'
+        with patch.object(
+            adapter.vision_service,
+            "extract_from_images",
+            AsyncMock(
+                side_effect=[
+                    ConnectionError("Network blip"),
+                    ConnectionError("Network blip"),
+                    mock_response,
+                ]
+            ),
+        ) as mock_extract:
+            with patch("asyncio.sleep", new=AsyncMock()) as mock_sleep:
+                result = await adapter._extract_with_retry(
+                    image_paths=["image1.png"], prompt="test"
+                )
 
-        # 重试应该成功
-        await retry_async_call(flaky_call, max_attempts=3)
-        assert call_count == 3
+        assert result is mock_response
+        assert mock_extract.await_count == 3
+        assert mock_sleep.await_count == 2
 
     @pytest.mark.asyncio
     async def test_no_retry_on_permanent_error(self):
         """测试永久错误时不重试"""
-        from src.services.document.retry import retry_async_call
+        from src.services.document.extractors.glm_adapter import GLMAdapter
 
-        async def permanent_error():
-            raise ValueError("Invalid input - retrying won't help")
+        adapter = GLMAdapter()
 
-        # 不应该重试 ValueError
-        with pytest.raises(ValueError):
-            await retry_async_call(permanent_error, max_attempts=3)
+        with patch.object(
+            adapter.vision_service,
+            "extract_from_images",
+            AsyncMock(side_effect=ValueError("Invalid input - retrying won't help")),
+        ) as mock_extract:
+            with pytest.raises(ValueError, match="Invalid input"):
+                await adapter._extract_with_retry(
+                    image_paths=["image1.png"], prompt="test"
+                )
+
+        assert mock_extract.await_count == 1
 
 
 if __name__ == "__main__":

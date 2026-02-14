@@ -1,5 +1,5 @@
 .filterCard {
-  margin-bottom: 24px;
+  margin-bottom: var(--spacing-xl);
 }
 
 .filterControl {

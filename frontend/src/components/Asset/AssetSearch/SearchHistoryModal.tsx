@@ -3,6 +3,7 @@ import { Modal, List, Space, Button, Typography, Popconfirm, Input } from 'antd'
 import dayjs from 'dayjs';
 
 import type { SearchHistoryItem } from '@/hooks/useSearchHistory';
+import styles from './SearchHistoryModal.module.css';
 
 const { Text } = Typography;
 
@@ -84,7 +85,7 @@ export const SearchHistoryModal = React.memo(function SearchHistoryModal({
                     onChange={event => onEditNameChange(event.target.value)}
                     onBlur={onSaveEdit}
                     onPressEnter={onSaveEdit}
-                    style={{ width: 200 }}
+                    className={styles.editNameInput}
                   />
                 ) : (
                   <Text>{item.name}</Text>
@@ -104,7 +105,7 @@ export const SearchHistoryModal = React.memo(function SearchHistoryModal({
       />
 
       {historyItems.length > 0 && (
-        <div style={{ textAlign: 'center', marginTop: 16 }}>
+        <div className={styles.clearHistoryWrapper}>
           <Popconfirm
             title="确定要清空所有搜索历史吗？"
             onConfirm={onClear}

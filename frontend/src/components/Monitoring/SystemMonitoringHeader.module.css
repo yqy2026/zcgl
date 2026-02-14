@@ -1,10 +1,10 @@
 .headerRow {
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-lg);
 }
 
 .monitorIcon {
-  color: #1890ff;
-  font-size: 24px;
+  color: var(--color-primary);
+  font-size: var(--font-size-xxxl);
 }
 
 .headerTitle {

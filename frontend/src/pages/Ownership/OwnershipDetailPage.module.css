@@ -5,16 +5,16 @@
 }
 
 .shortNameText {
-  margin-left: 8px;
-  font-size: 12px;
+  margin-left: var(--spacing-sm);
+  font-size: var(--font-size-xs);
 }
 
 .statusBadge {
-  margin-left: 12px;
+  margin-left: var(--spacing-md);
 }
 
 .statsRow {
-  margin-bottom: 24px;
+  margin-bottom: var(--spacing-xl);
 }
 
 .statsCard {
@@ -50,13 +50,13 @@
 }
 
 .detailsCard {
-  margin-bottom: 24px;
+  margin-bottom: var(--spacing-xl);
 }
 
 .countTag {
   margin-inline-end: 0;
   border-radius: 999px;
-  padding-inline: 8px;
+  padding-inline: var(--spacing-sm);
   font-weight: var(--font-weight-medium);
   border: 1px solid transparent;
 }
@@ -89,15 +89,15 @@
 .tabLabel {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: calc(var(--spacing-sm) - (var(--spacing-xs) / 2));
 }
 
 .tabCard :global(.ant-card-body) {
-  padding-top: 16px;
+  padding-top: var(--spacing-lg);
 }
 
 @media (max-width: 768px) {
   .statusBadge {
-    margin-left: 8px;
+    margin-left: var(--spacing-sm);
   }
 }

@@ -59,11 +59,10 @@ def project_data(db_session: Session, test_organization):
     db_session.refresh(project)
     yield project
     # Cleanup
-    try:
-        db_session.query(Project).filter(Project.id == project.id).delete()
+    existing_project = db_session.query(Project).filter(Project.id == project.id).one_or_none()
+    if existing_project is not None:
+        db_session.delete(existing_project)
         db_session.flush()
-    except Exception:
-        pass
 
 
 @pytest.fixture
@@ -374,11 +373,7 @@ class TestSearchProjects:
             "/api/v1/projects/", json=minimal_data, headers=admin_user_headers
         )
 
-        # 应该成功或返回422（如果缺少必填字段）
-        assert response.status_code in [
-            status.HTTP_200_OK,
-            status.HTTP_422_UNPROCESSABLE_CONTENT,
-        ]
+        assert response.status_code == status.HTTP_200_OK
 
     def test_update_project_partial_fields(
         self, client, admin_user_headers, project_data
@@ -465,7 +460,7 @@ class TestSearchProjects:
         )
 
         # 验证删除成功
-        assert response.status_code in [status.HTTP_200_OK, status.HTTP_204_NO_CONTENT]
+        assert response.status_code == status.HTTP_200_OK
 
         # 验证项目已被删除
         get_response = client.get(

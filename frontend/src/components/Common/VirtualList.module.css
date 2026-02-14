@@ -1,0 +1,27 @@
+.virtualListContainer {
+  position: relative;
+  overflow: auto;
+}
+
+.virtualListItem {
+  position: absolute;
+  left: 0;
+  right: 0;
+}
+
+.virtualListSpacer {
+  position: relative;
+}
+
+.virtualGridContainer {
+  position: relative;
+  overflow: auto;
+}
+
+.virtualGridItem {
+  position: absolute;
+}
+
+.virtualGridSpacer {
+  position: relative;
+}

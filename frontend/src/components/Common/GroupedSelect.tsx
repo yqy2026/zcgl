@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Select, Input, Tag, Space, Typography } from 'antd';
 import type { SelectProps } from 'antd';
 import { EnumGroup, EnumOption, EnumSearchHelper } from '@/utils/enumHelpers';
+import styles from './GroupedSelect.module.css';
 
 const { Option } = Select;
 const { Search } = Input;
@@ -77,7 +78,7 @@ const GroupedSelect: React.FC<GroupedSelectProps> = ({
       filteredGroups.every(group => group.options.length === 0)
     ) {
       return (
-        <div style={{ padding: '8px', textAlign: 'center' }}>
+        <div className={styles.emptyContainer}>
           <Text type="secondary">未找到匹配的选项</Text>
         </div>
       );
@@ -86,12 +87,12 @@ const GroupedSelect: React.FC<GroupedSelectProps> = ({
     return (
       <div>
         {showSearch && (
-          <div style={{ padding: '8px', borderBottom: '1px solid #f0f0f0' }}>
+          <div className={styles.searchHeader}>
             <Search
               placeholder="搜索选项..."
               value={searchKeyword}
               onChange={e => handleSearch(e.target.value)}
-              style={{ width: '100%' }}
+              className={styles.fullWidthSearch}
               allowClear
               aria-label="搜索选项"
             />
@@ -123,20 +124,11 @@ const GroupedSelect: React.FC<GroupedSelectProps> = ({
                 <Option key={option.value} value={option.value}>
                   <Space>
                     {option.color != null && (
-                      <span
-                        style={{
-                          display: 'inline-block',
-                          width: '8px',
-                          height: '8px',
-                          borderRadius: '50%',
-                          backgroundColor: getColorValue(option.color),
-                          marginRight: '4px',
-                        }}
-                      />
+                      <span className={`${styles.colorDot} ${getColorDotClass(option.color)}`} />
                     )}
                     <span>{option.label}</span>
                     {option.description != null && (
-                      <Text type="secondary" style={{ fontSize: '12px' }}>
+                      <Text type="secondary" className={styles.optionDescription}>
                         - {option.description}
                       </Text>
                     )}
@@ -152,20 +144,11 @@ const GroupedSelect: React.FC<GroupedSelectProps> = ({
           <Option key={option.value} value={option.value}>
             <Space>
               {option.color != null && (
-                <span
-                  style={{
-                    display: 'inline-block',
-                    width: '8px',
-                    height: '8px',
-                    borderRadius: '50%',
-                    backgroundColor: getColorValue(option.color),
-                    marginRight: '4px',
-                  }}
-                />
+                <span className={`${styles.colorDot} ${getColorDotClass(option.color)}`} />
               )}
               <span>{option.label}</span>
               {option.description != null && (
-                <Text type="secondary" style={{ fontSize: '12px' }}>
+                <Text type="secondary" className={styles.optionDescription}>
                   - {option.description}
                 </Text>
               )}
@@ -176,18 +159,18 @@ const GroupedSelect: React.FC<GroupedSelectProps> = ({
     });
   };
 
-  // 获取颜色值映射
-  const getColorValue = (color: string): string => {
-    const colorMap: Record<string, string> = {
-      blue: '#1890ff',
-      green: '#52c41a',
-      orange: '#fa8c16',
-      red: '#ff4d4f',
-      purple: '#722ed1',
-      cyan: '#13c2c2',
-      default: '#d9d9d9',
+  // 获取颜色点 class
+  const getColorDotClass = (color: string): string => {
+    const colorClassMap: Record<string, string> = {
+      blue: styles.colorDotBlue,
+      green: styles.colorDotGreen,
+      orange: styles.colorDotOrange,
+      red: styles.colorDotRed,
+      purple: styles.colorDotPurple,
+      cyan: styles.colorDotCyan,
+      default: styles.colorDotDefault,
     };
-    return colorMap[color] || colorMap.default;
+    return colorClassMap[color] ?? colorClassMap.default;
   };
 
   // 自定义标签显示
@@ -205,7 +188,7 @@ const GroupedSelect: React.FC<GroupedSelectProps> = ({
         color={optionInfo !== undefined && optionInfo !== null ? optionInfo.color : undefined}
         closable={closable}
         onClose={onClose}
-        style={{ marginRight: 3 }}
+        className={styles.selectedTag}
       >
         {optionInfo !== undefined && optionInfo !== null ? optionInfo.label : label}
       </Tag>

@@ -14,13 +14,19 @@
 }
 
 .toolbarRow {
+  --list-toolbar-control-size: var(--button-height-lg);
+  --list-toolbar-control-size-mobile: calc(var(--button-height-lg) + var(--spacing-xs));
+  --list-toolbar-select-line-height: calc(var(--button-height-lg) - (var(--spacing-xs) / 2));
+  --list-toolbar-select-line-height-mobile: calc(
+    var(--list-toolbar-control-size-mobile) - (var(--spacing-xs) / 2)
+  );
   width: 100%;
 }
 
 .toolbarItem {
   display: flex;
   align-items: center;
-  min-height: 40px;
+  min-height: var(--list-toolbar-control-size);
 }
 
 .toolbarItem :global(.ant-input),
@@ -36,12 +42,12 @@
 .toolbarItem :global(.ant-input-number),
 .toolbarItem :global(.ant-select-selector),
 .toolbarItem :global(.ant-btn) {
-  min-height: 40px;
-  border-radius: 8px;
+  min-height: var(--list-toolbar-control-size);
+  border-radius: var(--radius-md);
 }
 
 .toolbarItem :global(.ant-btn) {
-  min-width: 40px;
+  min-width: var(--list-toolbar-control-size);
 }
 
 .toolbarItem :global(.ant-select-selector) {
@@ -51,7 +57,7 @@
 
 .toolbarItem :global(.ant-select-selection-item),
 .toolbarItem :global(.ant-select-selection-placeholder) {
-  line-height: 38px !important;
+  line-height: var(--list-toolbar-select-line-height) !important;
 }
 
 .toolbarItem :global(.ant-picker-input > input),
@@ -78,7 +84,7 @@
   }
 
   .toolbarItem {
-    min-height: 44px;
+    min-height: var(--list-toolbar-control-size-mobile);
   }
 
   .toolbarItem :global(.ant-input-affix-wrapper),
@@ -86,15 +92,15 @@
   .toolbarItem :global(.ant-input-number),
   .toolbarItem :global(.ant-select-selector),
   .toolbarItem :global(.ant-btn) {
-    min-height: 44px;
+    min-height: var(--list-toolbar-control-size-mobile);
   }
 
   .toolbarItem :global(.ant-btn) {
-    min-width: 44px;
+    min-width: var(--list-toolbar-control-size-mobile);
   }
 
   .toolbarItem :global(.ant-select-selection-item),
   .toolbarItem :global(.ant-select-selection-placeholder) {
-    line-height: 42px !important;
+    line-height: var(--list-toolbar-select-line-height-mobile) !important;
   }
 }

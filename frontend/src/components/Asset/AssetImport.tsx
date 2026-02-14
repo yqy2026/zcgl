@@ -193,9 +193,9 @@ const OptimizedAssetImport: React.FC = () => {
 
       // 显示性能信息
       if (result.processing_time !== undefined && result.processing_time !== null) {
-        MessageManager.success(`🎉 导入完成！用时 ${result.processing_time} 秒`);
+        MessageManager.success(`导入完成，用时 ${result.processing_time} 秒`);
       } else {
-        MessageManager.success(`🎉 导入完成！成功导入 ${result.success} 条记录`);
+        MessageManager.success(`导入完成，成功导入 ${result.success} 条记录`);
       }
     } catch (err: unknown) {
       clearInterval(progressInterval);
@@ -215,7 +215,7 @@ const OptimizedAssetImport: React.FC = () => {
 
       setImportResult(errorResult);
       setCurrentStep(2);
-      MessageManager.error(`❌ 导入失败: ${errorResult.errors[0] ?? '未知错误'}`);
+      MessageManager.error(`导入失败: ${errorResult.errors[0] ?? '未知错误'}`);
     } finally {
       setUploading(false);
     }

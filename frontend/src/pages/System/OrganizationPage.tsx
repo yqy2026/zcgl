@@ -626,7 +626,7 @@ const OrganizationPage: React.FC = () => {
   ];
 
   return (
-    <PageContainer title="组织管理" subTitle="维护组织结构、层级关系与组织历史记录">
+    <PageContainer className={styles.pageShell} title="组织管理" subTitle="维护组织结构、层级关系与组织历史记录">
       {/* 统计卡片 */}
       {statistics != null && (
         <Row gutter={16} className={styles.statsRow}>

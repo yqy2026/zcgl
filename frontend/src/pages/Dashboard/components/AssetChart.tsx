@@ -21,6 +21,9 @@ interface AssetChartProps {
   loading?: boolean;
 }
 
+const buildLegendStyle = (color: string): React.CSSProperties =>
+  ({ ['--legend-color' as string]: color }) as React.CSSProperties;
+
 const AssetChart: React.FC<AssetChartProps> = ({ data, loading }) => {
   if (loading === true) {
     return (
@@ -51,7 +54,7 @@ const AssetChart: React.FC<AssetChartProps> = ({ data, loading }) => {
                   <Space className={styles.propertyLabelGroup}>
                     <span
                       className={styles.propertyColorDot}
-                      style={{ ['--legend-color' as string]: item.color } as React.CSSProperties}
+                      style={buildLegendStyle(item.color)}
                       aria-hidden
                     />
                     <Text className={styles.propertyName}>{item.name}</Text>

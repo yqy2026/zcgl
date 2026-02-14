@@ -1,23 +1,23 @@
 .projectTitle {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--spacing-md);
   flex-wrap: wrap;
   min-width: 0;
 }
 
 .projectStatus {
-  margin-inline-start: 2px;
+  margin-inline-start: calc(var(--spacing-xs) / 2);
 }
 
 .projectStatus :global(.ant-badge-status-text) {
   color: var(--color-text-secondary);
-  font-size: 13px;
+  font-size: var(--font-size-sm);
 }
 
 .editButton {
-  min-height: 44px;
-  border-radius: 8px;
+  min-height: calc(var(--button-height-lg) + var(--spacing-xs));
+  border-radius: var(--radius-md);
 }
 
 .editButton:focus-visible {
@@ -26,12 +26,12 @@
 }
 
 .metricsRow {
-  margin-bottom: 24px;
+  margin-bottom: var(--spacing-xl);
 }
 
 .metricCard {
   height: 100%;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
 }
 
 .metricCard :global(.ant-statistic-title) {
@@ -68,13 +68,13 @@
 
 .infoCard,
 .assetTableCard {
-  margin-bottom: 24px;
-  border-radius: 12px;
+  margin-bottom: var(--spacing-xl);
+  border-radius: var(--radius-lg);
 }
 
 .projectDataStatusTag {
   border-radius: 999px;
-  padding-inline: 8px;
+  padding-inline: var(--spacing-sm);
 }
 
 .projectDescription {
@@ -83,7 +83,7 @@
 
 .assetTableTitle {
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-sm);
 }
 
 .assetCountBadge :global(.ant-badge-count) {
@@ -93,8 +93,8 @@
 
 .assetLinkButton {
   padding: 0 !important;
-  min-height: 40px;
-  border-radius: 6px;
+  min-height: var(--button-height-lg);
+  border-radius: var(--button-radius);
   font-weight: var(--font-weight-medium);
 }
 
@@ -105,10 +105,10 @@
 
 @media (max-width: 768px) {
   .metricsRow {
-    margin-bottom: 16px;
+    margin-bottom: var(--spacing-lg);
   }
 
   .assetLinkButton {
-    min-height: 44px;
+    min-height: calc(var(--button-height-lg) + var(--spacing-xs));
   }
 }

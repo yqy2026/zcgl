@@ -4,113 +4,115 @@
 Integration tests for complete contract workflow
 """
 
-from datetime import UTC, datetime
-
 import pytest
-from fastapi import status
+from fastapi.testclient import TestClient
+
+pytestmark = pytest.mark.integration
 
 
 @pytest.fixture
-def admin_user_headers(client, test_data):
-    """管理员认证头"""
+def authenticated_client(client: TestClient, test_data) -> TestClient:
+    """通过真实登录流程注入认证 cookie。"""
     admin_user = test_data["admin"]
     response = client.post(
         "/api/v1/auth/login",
         json={"username": admin_user.username, "password": "Admin123!@#"},
     )
-    assert response.status_code == status.HTTP_200_OK
+    assert response.status_code == 200
+
+    auth_token = response.cookies.get("auth_token")
     csrf_token = response.cookies.get("csrf_token")
-    assert csrf_token is not None
+    assert auth_token is not None
+    client.cookies.set("auth_token", auth_token)
+    if csrf_token is not None:
+        client.cookies.set("csrf_token", csrf_token)
+    setattr(client, "_csrf_token", csrf_token)
+    return client
+
+
+@pytest.fixture
+def csrf_headers(authenticated_client: TestClient) -> dict[str, str]:
+    """返回 cookie-only 场景下写操作所需 CSRF 头。"""
+    csrf_token = getattr(authenticated_client, "_csrf_token", None)
+    if csrf_token is None:
+        return {}
     return {"X-CSRF-Token": csrf_token}
 
 
 class TestContractWorkflow:
-    """测试合同工作流"""
+    """租赁合同流程关键路径契约测试。"""
 
-    def test_contract_lifecycle(self, client, admin_user_headers):
-        """测试完整合同生命周期：创建→激活→续期→终止"""
-        # 1. 创建合同
-        contract_data = {
-            "contract_number": "WORKFLOW-001",
-            "tenant_name": "工作流测试租户",
-            "tenant_phone": "13900139000",
-            "property_id": "prop-001",
-            "start_date": datetime.now(UTC).isoformat(),
-            "end_date": datetime.now(UTC).isoformat(),
-            "monthly_rent": 15000.0,
-            "area": 150.0,
-        }
-        create_response = client.post(
-            "/api/v1/rental-contracts/contracts",
-            json=contract_data,
-            headers=admin_user_headers,
+    def test_contract_list_endpoint_contract(
+        self, authenticated_client: TestClient
+    ) -> None:
+        response = authenticated_client.get("/api/v1/rental-contracts/contracts")
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload.get("success") is True
+        data = payload.get("data", {})
+        assert isinstance(data.get("items"), list)
+        assert isinstance(data.get("pagination"), dict)
+
+    def test_contract_detail_not_found_semantics(
+        self, authenticated_client: TestClient
+    ) -> None:
+        response = authenticated_client.get(
+            "/api/v1/rental-contracts/contracts/nonexistent"
         )
-        # 用例兼容不同鉴权/校验状态
-        assert create_response.status_code in [
-            status.HTTP_200_OK,
-            status.HTTP_201_CREATED,
-            status.HTTP_401_UNAUTHORIZED,
-            status.HTTP_404_NOT_FOUND,
-            status.HTTP_422_UNPROCESSABLE_CONTENT,
-        ]
+        assert response.status_code == 404
+        payload = response.json()
+        assert payload.get("success") is False
+        error = payload.get("error", {})
+        assert isinstance(error, dict)
+        assert error.get("code") == "RESOURCE_NOT_FOUND"
 
-        if create_response.status_code in [status.HTTP_200_OK, status.HTTP_201_CREATED]:
-            contract_id = create_response.json()["id"]
+    def test_contract_renew_not_found_semantics(
+        self, authenticated_client: TestClient, csrf_headers: dict[str, str]
+    ) -> None:
+        response = authenticated_client.post(
+            "/api/v1/rental-contracts/contracts/nonexistent/renew",
+            json={
+                "contract_number": "WF-RENEW-001",
+                "contract_type": "lease_downstream",
+                "tenant_name": "工作流续签租户",
+                "ownership_id": "ownership_001",
+                "sign_date": "2027-01-01",
+                "start_date": "2027-01-01",
+                "end_date": "2027-12-31",
+                "rent_terms": [
+                    {
+                        "start_date": "2027-01-01",
+                        "end_date": "2027-12-31",
+                        "monthly_rent": 8500,
+                    }
+                ],
+            },
+            params={"should_transfer_deposit": True},
+            headers=csrf_headers,
+        )
+        assert response.status_code == 404
+        payload = response.json()
+        assert payload.get("success") is False
+        error = payload.get("error", {})
+        assert isinstance(error, dict)
+        assert error.get("code") == "RESOURCE_NOT_FOUND"
 
-            # 2. 激活合同
-            activate_response = client.post(
-                f"/api/v1/rental-contracts/contracts/{contract_id}/activate",
-                headers=admin_user_headers,
-            )
-            assert activate_response.status_code in [
-                status.HTTP_200_OK,
-                status.HTTP_401_UNAUTHORIZED,
-                status.HTTP_404_NOT_FOUND,
-                status.HTTP_422_UNPROCESSABLE_CONTENT,
-            ]
-
-            # 3. 续期合同
-            renewal_data = {
-                "new_end_date": datetime.now(UTC).isoformat(),
-                "rent_adjustment": 5.0,
-            }
-            renewal_response = client.post(
-                f"/api/v1/rental-contracts/contracts/{contract_id}/renew",
-                json=renewal_data,
-                headers=admin_user_headers,
-            )
-            assert renewal_response.status_code in [
-                status.HTTP_200_OK,
-                status.HTTP_201_CREATED,
-                status.HTTP_401_UNAUTHORIZED,
-                status.HTTP_404_NOT_FOUND,
-                status.HTTP_422_UNPROCESSABLE_CONTENT,
-            ]
-
-            # 4. 终止合同
-            terminate_data = {
-                "termination_date": datetime.now(UTC).isoformat(),
-                "termination_reason": "test",
-            }
-            terminate_response = client.post(
-                f"/api/v1/rental-contracts/contracts/{contract_id}/terminate",
-                json=terminate_data,
-                headers=admin_user_headers,
-            )
-            assert terminate_response.status_code in [
-                status.HTTP_200_OK,
-                status.HTTP_201_CREATED,
-                status.HTTP_401_UNAUTHORIZED,
-                status.HTTP_404_NOT_FOUND,
-                status.HTTP_422_UNPROCESSABLE_CONTENT,
-            ]
-
-    def test_contract_payment_workflow(self, client, admin_user_headers):
-        """测试合同付款流程"""
-        # 测试账单创建、支付等流程
-        pass
-
-    def test_contract_document_generation(self, client, admin_user_headers):
-        """测试合同文档生成"""
-        # 测试PDF生成、下载等流程
-        pass
+    def test_contract_terminate_not_found_semantics(
+        self, authenticated_client: TestClient, csrf_headers: dict[str, str]
+    ) -> None:
+        response = authenticated_client.post(
+            "/api/v1/rental-contracts/contracts/nonexistent/terminate",
+            params={
+                "termination_date": "2026-06-30",
+                "should_refund_deposit": True,
+                "deduction_amount": 0,
+                "termination_reason": "workflow test",
+            },
+            headers=csrf_headers,
+        )
+        assert response.status_code == 404
+        payload = response.json()
+        assert payload.get("success") is False
+        error = payload.get("error", {})
+        assert isinstance(error, dict)
+        assert error.get("code") == "RESOURCE_NOT_FOUND"

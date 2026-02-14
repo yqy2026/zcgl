@@ -1,5 +1,11 @@
 .notificationCard {
-  min-height: 420px;
+  --notification-card-min-height: calc(
+    (var(--spacing-xxxl) * 8) + var(--spacing-xl) + var(--spacing-md)
+  );
+  --notification-tag-line-height: calc(
+    var(--font-size-base) + var(--spacing-xs) + (var(--spacing-xs) / 4)
+  );
+  min-height: var(--notification-card-min-height);
 }
 
 .headerTitle {
@@ -8,36 +14,38 @@
 
 .headerIcon {
   color: var(--color-primary);
-  font-size: 18px;
+  font-size: var(--font-size-xl);
 }
 
 .headerMeta {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
 }
 
 .headerActionButton {
-  min-height: 36px;
+  min-height: var(--button-height-md);
 }
 
 .tabs {
-  margin-bottom: 8px;
+  margin-bottom: var(--spacing-sm);
 }
 
 .loadingContainer {
   text-align: center;
-  padding: 48px 0;
+  padding: var(--spacing-xxxl) 0;
 }
 
 .notificationList {
-  margin-top: 4px;
+  margin-top: var(--spacing-xs);
 }
 
 .notificationItem {
   cursor: pointer;
   border-radius: var(--card-radius);
-  margin-bottom: 8px;
-  padding: 12px 20px;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
+  margin-bottom: var(--spacing-sm);
+  padding: var(--spacing-md) calc(var(--spacing-lg) + var(--spacing-xs));
+  transition:
+    background-color var(--transition-base),
+    border-color var(--transition-base);
   border: 1px solid transparent;
 }
 
@@ -57,8 +65,8 @@
 }
 
 .notificationAvatar {
-  width: 40px;
-  height: 40px;
+  width: var(--button-height-lg);
+  height: var(--button-height-lg);
   border-radius: 50%;
   background: var(--color-bg-primary);
   border: 1px solid var(--color-border-light);
@@ -68,7 +76,7 @@
 }
 
 .notificationTypeIcon {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
 }
 
 .infoIcon {
@@ -90,7 +98,7 @@
 .notificationTitle {
   width: 100%;
   flex-wrap: wrap;
-  row-gap: 4px;
+  row-gap: var(--spacing-xs);
   align-items: center;
 }
 
@@ -99,7 +107,7 @@
 }
 
 .notificationTime {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
 }
 
 .notificationDescription {
@@ -115,7 +123,7 @@
 }
 
 .listActionButton {
-  min-height: 36px;
+  min-height: var(--button-height-md);
 }
 
 .priorityTag,
@@ -124,9 +132,9 @@
   margin-inline-end: 0;
   border-radius: 999px;
   border: 1px solid transparent;
-  padding-inline: 8px;
-  font-size: 12px;
-  line-height: 18px;
+  padding-inline: var(--spacing-sm);
+  font-size: var(--font-size-xs);
+  line-height: var(--notification-tag-line-height);
   font-weight: var(--font-weight-medium);
 }
 
@@ -176,17 +184,17 @@
 
 .headerActionButton,
 .listActionButton {
-  min-height: 36px;
+  min-height: var(--button-height-md);
 }
 
 @media (max-width: 768px) {
   .notificationItem {
-    padding: 12px 16px;
+    padding: var(--spacing-md) var(--spacing-lg);
   }
 
   .headerActionButton,
   .listActionButton {
-    min-height: 40px;
-    padding-inline: 10px;
+    min-height: var(--button-height-lg);
+    padding-inline: var(--spacing-md);
   }
 }

@@ -33,7 +33,7 @@ import dayjs, { Dayjs } from 'dayjs';
 import { assetService } from '@/services/assetService';
 import type { AssetHistory } from '@/types/asset';
 import { formatDate } from '@/utils/format';
-import { COLORS } from '@/styles/colorMap';
+import styles from './AssetHistory.module.css';
 
 const { Option } = Select;
 const { RangePicker } = DatePicker;
@@ -197,14 +197,10 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
 
     return changes.map(change => (
       <Descriptions.Item key={change.field} label={change.field} span={3}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ color: COLORS.error, textDecoration: 'line-through' }}>
-            {String(change.oldValue)}
-          </span>
+        <div className={styles.fieldChangeRow}>
+          <span className={styles.fieldOldValue}>{String(change.oldValue)}</span>
           <span>→</span>
-          <span style={{ color: COLORS.success, fontWeight: 'bold' }}>
-            {String(change.newValue)}
-          </span>
+          <span className={styles.fieldNewValue}>{String(change.newValue)}</span>
         </div>
       </Descriptions.Item>
     ));
@@ -223,9 +219,9 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
   }
 
   return (
-    <div>
-      {/* 筛选器 */}
-      <Card size="small" style={{ marginBottom: 16 }}>
+      <div>
+        {/* 筛选器 */}
+      <Card size="small" className={styles.filterCard}>
         <Row gutter={16} align="middle">
           <Col xs={24} sm={8} md={6}>
             <Select
@@ -236,7 +232,7 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
                 setPaginationState(prev => ({ ...prev, current: 1 }));
               }}
               allowClear
-              style={{ width: '100%' }}
+              className={styles.fullWidthControl}
             >
               <Option value="create">创建</Option>
               <Option value="update">更新</Option>
@@ -256,7 +252,7 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
                 setPaginationState(prev => ({ ...prev, current: 1 }));
               }}
               placeholder={['开始日期', '结束日期']}
-              style={{ width: '100%' }}
+              className={styles.fullWidthControl}
             />
           </Col>
 
@@ -271,8 +267,8 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
             </Space>
           </Col>
 
-          <Col xs={24} sm={24} md={6} style={{ textAlign: 'right' }}>
-            <span style={{ color: '#8c8c8c', fontSize: '14px' }}>共 {pagination.total} 条记录</span>
+          <Col xs={24} sm={24} md={6} className={styles.totalCountCol}>
+            <span className={styles.totalCountText}>共 {pagination.total} 条记录</span>
           </Col>
         </Row>
       </Card>
@@ -281,7 +277,7 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
       <Card
         title={
           <span>
-            <HistoryOutlined style={{ marginRight: 8 }} />
+            <HistoryOutlined className={styles.titleIcon} />
             变更历史
           </span>
         }
@@ -295,26 +291,26 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
 
                   return (
                     <Timeline.Item key={history.id} dot={config.icon} color={config.color}>
-                      <div style={{ paddingBottom: 16 }}>
+                      <div className={styles.timelineItem}>
                         {/* 变更标题 */}
-                        <div style={{ marginBottom: 8 }}>
+                        <div className={styles.timelineHeader}>
                           <Space>
                             <Tag color={config.color}>{config.text}</Tag>
-                            <span style={{ fontWeight: 'bold' }}>
+                            <span className={styles.timelineFieldText}>
                               {history.changed_fields?.join(', ') ?? '无字段变更'}
                             </span>
                           </Space>
                         </div>
 
                         {/* 变更信息 */}
-                        <div style={{ marginBottom: 8, color: '#8c8c8c', fontSize: '14px' }}>
+                        <div className={styles.timelineMeta}>
                           <Space split={<span>•</span>}>
                             <span>
-                              <UserOutlined style={{ marginRight: 4 }} />
+                              <UserOutlined className={styles.timelineMetaIcon} />
                               {history.operator ?? '未知用户'}
                             </span>
                             <span>
-                              <CalendarOutlined style={{ marginRight: 4 }} />
+                              <CalendarOutlined className={styles.timelineMetaIcon} />
                               {formatDate(history.operation_time, 'datetime')}
                             </span>
                           </Space>
@@ -322,7 +318,7 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
 
                         {/* 变更原因 */}
                         {history.change_reason != null && (
-                          <div style={{ marginBottom: 8, color: '#595959' }}>
+                          <div className={styles.timelineReason}>
                             原因：{history.change_reason}
                           </div>
                         )}
@@ -334,7 +330,7 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
                             size="small"
                             icon={<EyeOutlined />}
                             onClick={() => handleViewDetail(history)}
-                            style={{ padding: 0 }}
+                            className={styles.detailLinkButton}
                           >
                             查看详情
                           </Button>
@@ -347,7 +343,7 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
 
               {/* 分页 */}
               {pagination.total > pagination.pageSize && (
-                <div style={{ textAlign: 'center', marginTop: 24 }}>
+                <div className={styles.paginationContainer}>
                   <Pagination
                     current={pagination.current}
                     pageSize={pagination.pageSize}
@@ -422,7 +418,7 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
             {selectedHistory.change_type === 'update' &&
               selectedHistory.old_values &&
               selectedHistory.new_values && (
-                <div style={{ marginTop: 24 }}>
+                <div className={styles.detailSection}>
                   <h4>字段变更详情</h4>
                   <Descriptions bordered column={1} labelStyle={{ width: '120px' }}>
                     {renderFieldChanges(selectedHistory.old_values, selectedHistory.new_values)}
@@ -432,7 +428,7 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
 
             {/* 创建时的数据 */}
             {selectedHistory.change_type === 'create' && selectedHistory.new_values && (
-              <div style={{ marginTop: 24 }}>
+              <div className={styles.detailSection}>
                 <h4>创建时的数据</h4>
                 <Descriptions bordered column={2} labelStyle={{ width: '120px' }}>
                   {Object.entries(selectedHistory.new_values).map(([key, value]) => (

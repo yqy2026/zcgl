@@ -1,3 +1,5 @@
+import { COLORS } from '@/styles/colorMap';
+
 export interface SystemMetrics {
   timestamp: string;
   cpu_percent: number;
@@ -63,24 +65,24 @@ export interface DashboardData {
 }
 
 export const STATUS_COLORS = {
-  healthy: '#52c41a',
-  degraded: '#faad14',
-  unhealthy: '#ff4d4f',
-  normal: '#52c41a',
-  warning: '#faad14',
-  critical: '#ff4d4f',
+  healthy: COLORS.success,
+  degraded: COLORS.warning,
+  unhealthy: COLORS.error,
+  normal: COLORS.success,
+  warning: COLORS.warning,
+  critical: COLORS.error,
 } as const;
 
 export const ALERT_LEVEL_COLORS = {
-  info: '#1890ff',
-  warning: '#faad14',
-  critical: '#ff4d4f',
+  info: COLORS.primary,
+  warning: COLORS.warning,
+  critical: COLORS.error,
 } as const;
 
 export const getStatusColor = (status: string): string => {
-  return STATUS_COLORS[status as keyof typeof STATUS_COLORS] ?? '#d9d9d9';
+  return STATUS_COLORS[status as keyof typeof STATUS_COLORS] ?? COLORS.border;
 };
 
 export const getAlertLevelColor = (level: string): string => {
-  return ALERT_LEVEL_COLORS[level as keyof typeof ALERT_LEVEL_COLORS] ?? '#d9d9d9';
+  return ALERT_LEVEL_COLORS[level as keyof typeof ALERT_LEVEL_COLORS] ?? COLORS.border;
 };

@@ -18,6 +18,7 @@ from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ....core.exception_handler import BaseBusinessError
 from ....core.response_handler import ResponseHandler, get_request_id
 from ....database import get_async_db
 from ....middleware.auth import get_current_active_user
@@ -294,6 +295,8 @@ async def get_distribution_data(
         )
         return success_response
 
+    except BaseBusinessError:
+        raise
     except Exception as e:
         logger.error(f"获取分布数据失败: {str(e)}")
         error_response: JSONResponse = ResponseHandler.error(

@@ -1,9 +1,9 @@
 .menuTriggerButton {
-  width: 44px;
-  min-width: 44px;
-  min-height: 44px;
+  width: calc(var(--button-height-lg) + var(--spacing-xs));
+  min-width: calc(var(--button-height-lg) + var(--spacing-xs));
+  min-height: calc(var(--button-height-lg) + var(--spacing-xs));
   border-radius: var(--radius-md);
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   color: var(--color-text-secondary);
   transition:
     color var(--transition-fast),
@@ -21,7 +21,7 @@
 }
 
 .mobileMenuDrawer {
-  --drawer-item-gap: 4px;
+  --drawer-item-gap: var(--spacing-xs);
 }
 
 .drawerBody {
@@ -30,7 +30,7 @@
 
 .drawerTitleGroup {
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-sm);
 }
 
 .drawerHomeIcon {
@@ -38,9 +38,9 @@
 }
 
 .drawerCloseButton {
-  width: 44px;
-  min-width: 44px;
-  min-height: 44px;
+  width: calc(var(--button-height-lg) + var(--spacing-xs));
+  min-width: calc(var(--button-height-lg) + var(--spacing-xs));
+  min-height: calc(var(--button-height-lg) + var(--spacing-xs));
   border-radius: var(--radius-md);
 }
 
@@ -53,14 +53,14 @@
   border-right: 0 !important;
   height: 100%;
   background: var(--color-bg-primary) !important;
-  padding: 8px;
+  padding: var(--spacing-sm);
 }
 
 .menuRoot :global(.ant-menu-item),
 .menuRoot :global(.ant-menu-submenu-title) {
-  min-height: 44px;
+  min-height: calc(var(--button-height-lg) + var(--spacing-xs));
   margin: var(--drawer-item-gap) 0;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
 }

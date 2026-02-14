@@ -3,6 +3,7 @@ import { Card, Row, Col, Statistic } from 'antd';
 import type { AnalyticsData } from '@/services/analyticsService';
 import { formatArea, formatPercentage } from '@/utils/format';
 import { getOccupancyRateColor, COLORS } from '@/styles/colorMap';
+import styles from './AssetAreaSummary.module.css';
 
 interface AssetAreaSummaryProps {
   analyticsData?: AnalyticsData;
@@ -87,7 +88,7 @@ const AssetAreaSummary: React.FC<AssetAreaSummaryProps> = ({ analyticsData, load
           </Col>
         </Row>
       ) : (
-        <div style={{ textAlign: 'center', padding: '20px', color: COLORS.textTertiary }}>
+        <div className={styles.emptyState}>
           {loading ? '正在加载统计数据...' : '暂无统计数据'}
         </div>
       )}

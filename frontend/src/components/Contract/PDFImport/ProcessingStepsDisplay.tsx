@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { Steps, Progress, Typography } from 'antd';
+import { COLORS } from '@/styles/colorMap';
 import { usePDFImportContext } from './PDFImportContext';
 import styles from './ProcessingStepsDisplay.module.css';
 
@@ -50,8 +51,8 @@ const ProcessingStepsDisplay: React.FC = () => {
             percent={uploading ? uploadProgress : (processingProgress?.progress ?? 0)}
             status={processingProgress?.status === 'failed' ? 'exception' : undefined}
             strokeColor={{
-              '0%': '#108ee9',
-              '100%': '#87d068',
+              '0%': COLORS.primary,
+              '100%': COLORS.success,
             }}
           />
 

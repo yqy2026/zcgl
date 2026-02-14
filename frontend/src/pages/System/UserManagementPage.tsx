@@ -72,6 +72,19 @@ const STATUS_META_MAP: Record<UserStatus, StatusMeta> = {
   locked: { label: '锁定', hint: '异常冻结', tone: 'warning' },
 };
 
+const FALLBACK_STATUS_META: StatusMeta = {
+  label: '未知',
+  hint: '状态缺失',
+  tone: 'neutral',
+};
+
+const resolveStatusMeta = (status: UserStatus | string | null | undefined): StatusMeta => {
+  if (status === 'active' || status === 'inactive' || status === 'locked') {
+    return STATUS_META_MAP[status];
+  }
+  return FALLBACK_STATUS_META;
+};
+
 const USER_STATUS_FILTER_OPTIONS: Array<{ value: UserStatus; label: string }> = [
   { value: 'active', label: STATUS_META_MAP.active.label },
   { value: 'inactive', label: STATUS_META_MAP.inactive.label },
@@ -424,8 +437,8 @@ const UserManagementPage: React.FC = () => {
     }
   };
 
-  const getStatusTag = (status: UserStatus) => {
-    const statusMeta = STATUS_META_MAP[status];
+  const getStatusTag = (status: UserStatus | string | null | undefined) => {
+    const statusMeta = resolveStatusMeta(status);
     return (
       <Tag className={`${styles.semanticTag} ${styles.statusTag} ${getToneClassName(statusMeta.tone)}`}>
         {statusMeta.label}
@@ -566,7 +579,7 @@ const UserManagementPage: React.FC = () => {
   ];
 
   return (
-    <PageContainer title="用户管理" subTitle="管理系统用户账户和权限">
+    <PageContainer className={styles.pageShell} title="用户管理" subTitle="管理系统用户账户和权限">
       {/* 统计卡片 */}
       {statistics != null && (
         <Row gutter={[16, 16]} className={styles.statsRow}>

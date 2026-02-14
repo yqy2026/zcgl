@@ -15,12 +15,6 @@ import pytest
 from fastapi import status
 from sqlalchemy.orm import Session
 
-# Auth failures can occur when JWT validation is active during unit tests.
-AUTH_FAILURE_STATUSES = {
-    status.HTTP_401_UNAUTHORIZED,
-    status.HTTP_422_UNPROCESSABLE_CONTENT,
-}
-
 # ============================================================================
 # Fixtures
 # ============================================================================
@@ -54,11 +48,14 @@ def sample_ownership(db_session: Session):
     db_session.refresh(ownership_record)
 
     yield ownership_record
-    try:
-        db_session.delete(ownership_record)
+    existing_ownership = (
+        db_session.query(Ownership)
+        .filter(Ownership.id == ownership_record.id)
+        .one_or_none()
+    )
+    if existing_ownership is not None:
+        db_session.delete(existing_ownership)
         db_session.commit()
-    except Exception:
-        pass
 
 
 @pytest.fixture
@@ -82,11 +79,12 @@ def contact_data(db_session: Session, sample_ownership):
     db_session.refresh(contact)
 
     yield contact
-    try:
-        db_session.delete(contact)
+    existing_contact = (
+        db_session.query(Contact).filter(Contact.id == contact.id).one_or_none()
+    )
+    if existing_contact is not None:
+        db_session.delete(existing_contact)
         db_session.commit()
-    except Exception:
-        pass
 
 
 @pytest.fixture
@@ -120,9 +118,7 @@ class TestCreateContact:
             "/api/v1/contacts/", json=contact_data, headers=admin_user_headers
         )
 
-        assert response.status_code in [status.HTTP_200_OK, *AUTH_FAILURE_STATUSES]
-        if response.status_code != status.HTTP_200_OK:
-            return
+        assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["name"] == "李四"
         assert data["phone"] == "13900139000"
@@ -146,9 +142,7 @@ class TestCreateContact:
             "/api/v1/contacts/", json=contact_data, headers=admin_user_headers
         )
 
-        assert response.status_code in [status.HTTP_200_OK, *AUTH_FAILURE_STATUSES]
-        if response.status_code != status.HTTP_200_OK:
-            return
+        assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["is_primary"] is True
 
@@ -165,10 +159,7 @@ class TestCreateContact:
 
         response = unauthenticated_client.post("/api/v1/contacts/", json=contact_data)
 
-        assert response.status_code in [
-            status.HTTP_401_UNAUTHORIZED,
-            status.HTTP_422_UNPROCESSABLE_CONTENT,
-        ]
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_create_contact_invalid_phone(
         self, client, admin_user_headers, sample_ownership
@@ -185,11 +176,7 @@ class TestCreateContact:
             "/api/v1/contacts/", json=contact_data, headers=admin_user_headers
         )
 
-        # 可能通过验证或返回验证错误
-        assert response.status_code in [
-            status.HTTP_200_OK,
-            *AUTH_FAILURE_STATUSES,
-        ]
+        assert response.status_code == status.HTTP_200_OK
 
     def test_create_contact_missing_required_fields(self, client, admin_user_headers):
         """测试缺少必填字段"""
@@ -202,10 +189,7 @@ class TestCreateContact:
             "/api/v1/contacts/", json=contact_data, headers=admin_user_headers
         )
 
-        assert response.status_code in [
-            status.HTTP_422_UNPROCESSABLE_CONTENT,
-            *AUTH_FAILURE_STATUSES,
-        ]
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
     def test_create_contact_invalid_email(
         self, client, admin_user_headers, sample_ownership
@@ -223,11 +207,7 @@ class TestCreateContact:
             "/api/v1/contacts/", json=contact_data, headers=admin_user_headers
         )
 
-        # Pydantic应该验证邮箱格式
-        assert response.status_code in [
-            status.HTTP_200_OK,
-            *AUTH_FAILURE_STATUSES,
-        ]
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 # ============================================================================
@@ -244,9 +224,7 @@ class TestGetContact:
             f"/api/v1/contacts/{contact_data.id}", headers=admin_user_headers
         )
 
-        assert response.status_code in [status.HTTP_200_OK, *AUTH_FAILURE_STATUSES]
-        if response.status_code != status.HTTP_200_OK:
-            return
+        assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["id"] == contact_data.id
         assert data["name"] == contact_data.name
@@ -257,17 +235,12 @@ class TestGetContact:
             "/api/v1/contacts/non-existent-id", headers=admin_user_headers
         )
 
-        if response.status_code in AUTH_FAILURE_STATUSES:
-            return
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_get_contact_unauthorized(self, unauthenticated_client, contact_data):
         """测试未授权获取联系人"""
         response = unauthenticated_client.get(f"/api/v1/contacts/{contact_data.id}")
-        assert response.status_code in [
-            status.HTTP_401_UNAUTHORIZED,
-            status.HTTP_422_UNPROCESSABLE_CONTENT,
-        ]
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 # ============================================================================
@@ -287,9 +260,7 @@ class TestGetEntityContacts:
             headers=admin_user_headers,
         )
 
-        assert response.status_code in [status.HTTP_200_OK, *AUTH_FAILURE_STATUSES]
-        if response.status_code != status.HTTP_200_OK:
-            return
+        assert response.status_code == status.HTTP_200_OK
         data = response.json()
         payload = data["data"]
         assert "items" in payload
@@ -306,9 +277,7 @@ class TestGetEntityContacts:
             headers=admin_user_headers,
         )
 
-        assert response.status_code in [status.HTTP_200_OK, *AUTH_FAILURE_STATUSES]
-        if response.status_code != status.HTTP_200_OK:
-            return
+        assert response.status_code == status.HTTP_200_OK
         data = response.json()
         pagination = data["data"]["pagination"]
         assert pagination["page"] == 1
@@ -321,10 +290,7 @@ class TestGetEntityContacts:
         response = unauthenticated_client.get(
             f"/api/v1/contacts/entity/ownership/{contact_data.entity_id}"
         )
-        assert response.status_code in [
-            status.HTTP_401_UNAUTHORIZED,
-            status.HTTP_422_UNPROCESSABLE_CONTENT,
-        ]
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_get_entity_contacts_invalid_entity_type(self, client, admin_user_headers):
         """测试无效的实体类型"""
@@ -333,18 +299,10 @@ class TestGetEntityContacts:
             headers=admin_user_headers,
         )
 
-        if response.status_code in AUTH_FAILURE_STATUSES:
-            return
-        if response.status_code == status.HTTP_200_OK:
-            payload = response.json()["data"]
-            assert payload["items"] == []
-            assert payload["pagination"]["total"] == 0
-        else:
-            # 应该返回404或错误
-            assert response.status_code in [
-                status.HTTP_404_NOT_FOUND,
-                status.HTTP_400_BAD_REQUEST,
-            ]
+        assert response.status_code == status.HTTP_200_OK
+        payload = response.json()["data"]
+        assert payload["items"] == []
+        assert payload["pagination"]["total"] == 0
 
 
 # ============================================================================
@@ -364,9 +322,7 @@ class TestGetPrimaryContact:
             headers=admin_user_headers,
         )
 
-        assert response.status_code in [status.HTTP_200_OK, *AUTH_FAILURE_STATUSES]
-        if response.status_code != status.HTTP_200_OK:
-            return
+        assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["id"] == contact_data.id
         assert data["name"] == contact_data.name
@@ -381,8 +337,6 @@ class TestGetPrimaryContact:
             headers=admin_user_headers,
         )
 
-        if response.status_code in AUTH_FAILURE_STATUSES:
-            return
         # 应该返回404
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
@@ -393,10 +347,7 @@ class TestGetPrimaryContact:
         response = unauthenticated_client.get(
             f"/api/v1/contacts/entity/ownership/{contact_data.entity_id}/primary"
         )
-        assert response.status_code in [
-            status.HTTP_401_UNAUTHORIZED,
-            status.HTTP_422_UNPROCESSABLE_CONTENT,
-        ]
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 # ============================================================================
@@ -417,9 +368,7 @@ class TestUpdateContact:
             headers=admin_user_headers,
         )
 
-        assert response.status_code in [status.HTTP_200_OK, *AUTH_FAILURE_STATUSES]
-        if response.status_code != status.HTTP_200_OK:
-            return
+        assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["name"] == "更新后的姓名"
         assert data["title"] == "高级经理"
@@ -434,8 +383,6 @@ class TestUpdateContact:
             headers=admin_user_headers,
         )
 
-        if response.status_code in AUTH_FAILURE_STATUSES:
-            return
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_update_contact_promote_to_primary(
@@ -450,9 +397,7 @@ class TestUpdateContact:
             headers=admin_user_headers,
         )
 
-        assert response.status_code in [status.HTTP_200_OK, *AUTH_FAILURE_STATUSES]
-        if response.status_code != status.HTTP_200_OK:
-            return
+        assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["is_primary"] is True
 
@@ -488,9 +433,7 @@ class TestDeleteContact:
             f"/api/v1/contacts/{temp_contact.id}", headers=admin_user_headers
         )
 
-        assert response.status_code in [status.HTTP_200_OK, *AUTH_FAILURE_STATUSES]
-        if response.status_code != status.HTTP_200_OK:
-            return
+        assert response.status_code == status.HTTP_200_OK
         data = response.json()
         # 软删除 - 联系人仍存在但is_active=False
         assert data["id"] == temp_contact.id
@@ -501,17 +444,12 @@ class TestDeleteContact:
             "/api/v1/contacts/non-existent-id", headers=admin_user_headers
         )
 
-        if response.status_code in AUTH_FAILURE_STATUSES:
-            return
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_delete_contact_unauthorized(self, unauthenticated_client, contact_data):
         """测试未授权删除联系人"""
         response = unauthenticated_client.delete(f"/api/v1/contacts/{contact_data.id}")
-        assert response.status_code in [
-            status.HTTP_401_UNAUTHORIZED,
-            status.HTTP_422_UNPROCESSABLE_CONTENT,
-        ]
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 # ============================================================================
@@ -547,9 +485,7 @@ class TestBatchCreateContacts:
             headers=admin_user_headers,
         )
 
-        assert response.status_code in [status.HTTP_200_OK, *AUTH_FAILURE_STATUSES]
-        if response.status_code != status.HTTP_200_OK:
-            return
+        assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert isinstance(data, list)
         assert len(data) == 2
@@ -564,9 +500,7 @@ class TestBatchCreateContacts:
             headers=admin_user_headers,
         )
 
-        assert response.status_code in [status.HTTP_200_OK, *AUTH_FAILURE_STATUSES]
-        if response.status_code != status.HTTP_200_OK:
-            return
+        assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert isinstance(data, list)
         assert len(data) == 0
@@ -582,10 +516,7 @@ class TestBatchCreateContacts:
             json=contacts_data,
         )
 
-        assert response.status_code in [
-            status.HTTP_401_UNAUTHORIZED,
-            status.HTTP_422_UNPROCESSABLE_CONTENT,
-        ]
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 # ============================================================================
@@ -611,9 +542,7 @@ class TestContactAPIEdgeCases:
             "/api/v1/contacts/", json=contact_data, headers=admin_user_headers
         )
 
-        assert response.status_code in [status.HTTP_200_OK, *AUTH_FAILURE_STATUSES]
-        if response.status_code != status.HTTP_200_OK:
-            return
+        assert response.status_code == status.HTTP_200_OK
 
     def test_contact_with_unicode(self, client, admin_user_headers, sample_ownership):
         """测试Unicode支持"""
@@ -630,9 +559,7 @@ class TestContactAPIEdgeCases:
             "/api/v1/contacts/", json=contact_data, headers=admin_user_headers
         )
 
-        assert response.status_code in [status.HTTP_200_OK, *AUTH_FAILURE_STATUSES]
-        if response.status_code != status.HTTP_200_OK:
-            return
+        assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["name"] == "测试联系人姓名"
 
@@ -651,8 +578,4 @@ class TestContactAPIEdgeCases:
             "/api/v1/contacts/", json=contact_data, headers=admin_user_headers
         )
 
-        # 应该成功或有合理的长度限制
-        assert response.status_code in [
-            status.HTTP_200_OK,
-            *AUTH_FAILURE_STATUSES,
-        ]
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT

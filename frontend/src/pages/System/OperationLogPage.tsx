@@ -588,7 +588,7 @@ const OperationLogPage: React.FC = () => {
   ];
 
   return (
-    <PageContainer title="操作日志" subTitle="查看系统操作轨迹与安全审计记录">
+    <PageContainer className={styles.pageShell} title="操作日志" subTitle="查看系统操作轨迹与安全审计记录">
       {/* 统计卡片 */}
       {statistics && (
         <Row gutter={[16, 16]} className={styles.statsRow}>

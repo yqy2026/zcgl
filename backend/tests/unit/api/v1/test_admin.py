@@ -107,21 +107,12 @@ class TestDatabaseReset:
         self, client, admin_user_headers, mock_db_reset
     ):
         """测试管理员成功重置数据库"""
-        # 注意：这个测试会真正重置数据库，可能会影响其他测试
-        # 在实际测试环境中，你可能需要mock这个操作或使用测试数据库
-
         response = client.post(
             "/api/v1/admin/database/reset", headers=admin_user_headers
         )
-
-        # 由于测试环境限制，可能返回403或其他错误
-        # 我们主要验证API端点存在且需要管理员权限
-        assert response.status_code in [
-            status.HTTP_200_OK,
-            status.HTTP_403_FORBIDDEN,
-            status.HTTP_401_UNAUTHORIZED,
-            status.HTTP_422_UNPROCESSABLE_CONTENT,
-        ]
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data.get("message") == "数据库重置成功"
 
     def test_database_reset_as_normal_user_forbidden(
         self, client, normal_user_headers, mock_db_reset
@@ -130,23 +121,14 @@ class TestDatabaseReset:
         response = client.post(
             "/api/v1/admin/database/reset", headers=normal_user_headers
         )
-
-        # 普通用户应该被拒绝
-        assert response.status_code in [
-            status.HTTP_401_UNAUTHORIZED,
-            status.HTTP_403_FORBIDDEN,
-            status.HTTP_422_UNPROCESSABLE_CONTENT,
-        ]
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        data = response.json()
+        assert data.get("error", {}).get("code") == "PERMISSION_DENIED"
 
     def test_database_reset_unauthorized(self, unauthenticated_client):
         """测试未授权重置数据库"""
         response = unauthenticated_client.post("/api/v1/admin/database/reset")
-
-        # 未认证用户应该被拒绝
-        assert response.status_code in [
-            status.HTTP_401_UNAUTHORIZED,
-            status.HTTP_422_UNPROCESSABLE_CONTENT,
-        ]
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 # ============================================================================
@@ -161,11 +143,7 @@ class TestAdminAccessControl:
         """测试管理员端点受保护"""
         # 测试需要管理员权限的端点
         response = unauthenticated_client.post("/api/v1/admin/database/reset")
-
-        assert response.status_code in [
-            status.HTTP_401_UNAUTHORIZED,
-            status.HTTP_422_UNPROCESSABLE_CONTENT,
-        ]
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_normal_user_cannot_access_admin_functions(
         self, client, normal_user_headers, mock_db_reset
@@ -174,12 +152,9 @@ class TestAdminAccessControl:
         response = client.post(
             "/api/v1/admin/database/reset", headers=normal_user_headers
         )
-
-        assert response.status_code in [
-            status.HTTP_401_UNAUTHORIZED,
-            status.HTTP_403_FORBIDDEN,
-            status.HTTP_422_UNPROCESSABLE_CONTENT,
-        ]
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        data = response.json()
+        assert data.get("error", {}).get("code") == "PERMISSION_DENIED"
 
 
 # ============================================================================

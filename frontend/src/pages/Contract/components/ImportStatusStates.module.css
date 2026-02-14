@@ -1,0 +1,27 @@
+.statusContainer {
+  --import-status-container-padding: calc(var(--spacing-xxl) + var(--spacing-sm));
+  --import-status-icon-size: calc(var(--spacing-xxxl) + var(--spacing-lg));
+  --import-status-icon-spacing: var(--spacing-lg);
+  padding: var(--import-status-container-padding);
+  text-align: center;
+}
+
+.successIcon {
+  margin-bottom: var(--import-status-icon-spacing);
+  color: var(--color-success);
+  font-size: var(--import-status-icon-size);
+}
+
+.errorIcon {
+  margin-bottom: var(--import-status-icon-spacing);
+  color: var(--color-error);
+  font-size: var(--import-status-icon-size);
+}
+
+.successTitle {
+  color: var(--color-success);
+}
+
+.errorTitle {
+  color: var(--color-error);
+}

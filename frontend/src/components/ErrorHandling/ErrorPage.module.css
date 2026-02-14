@@ -1,5 +1,14 @@
 .errorPage {
-  padding: 50px 20px;
+  --error-page-padding-y: calc(var(--spacing-xxxl) + (var(--spacing-xs) / 2));
+  --error-page-padding-x: calc(var(--spacing-lg) + var(--spacing-xs));
+  --error-page-card-max-width: calc((var(--spacing-xxl) * 15) + var(--spacing-lg) + var(--spacing-xs));
+  --error-page-icon-size: calc(var(--spacing-xxxl) + var(--spacing-sm));
+  --error-page-suggestions-gap: var(--spacing-lg);
+  --error-page-suggestion-title-gap: var(--spacing-sm);
+  --error-page-list-font-size: var(--font-size-base);
+  --error-page-list-padding-left: calc(var(--spacing-lg) + var(--spacing-xs));
+  --error-page-action-min-height: calc(var(--button-height-lg) + var(--spacing-xs));
+  padding: var(--error-page-padding-y) var(--error-page-padding-x);
   min-height: 60vh;
   display: flex;
   align-items: center;
@@ -7,13 +16,13 @@
 }
 
 .errorCard {
-  max-width: 500px;
+  max-width: var(--error-page-card-max-width);
   width: 100%;
   text-align: center;
 }
 
 .errorIcon {
-  font-size: 56px;
+  font-size: var(--error-page-icon-size);
 }
 
 .errorIconWarning {
@@ -33,20 +42,20 @@
 }
 
 .suggestions {
-  margin-top: 16px;
+  margin-top: var(--error-page-suggestions-gap);
 }
 
 .suggestionTitle {
-  margin-bottom: 8px !important;
+  margin-bottom: var(--error-page-suggestion-title-gap) !important;
 }
 
 .suggestionList {
   color: var(--color-text-secondary);
-  font-size: 14px;
+  font-size: var(--error-page-list-font-size);
   text-align: left;
   line-height: 1.6;
   margin: 0;
-  padding-left: 20px;
+  padding-left: var(--error-page-list-padding-left);
 }
 
 .actionButtons {
@@ -54,7 +63,7 @@
 }
 
 .actionButtons :global(.ant-btn) {
-  min-height: 44px;
+  min-height: var(--error-page-action-min-height);
   border-radius: var(--radius-md);
 }
 
@@ -65,10 +74,10 @@
 
 @media (max-width: 576px) {
   .errorPage {
-    padding: 32px 16px;
+    padding: var(--spacing-xxl) var(--spacing-lg);
   }
 
   .errorIcon {
-    font-size: 48px;
+    font-size: var(--spacing-xxxl);
   }
 }

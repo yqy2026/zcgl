@@ -1,5 +1,5 @@
 .statsRow {
-  margin-bottom: 24px;
+  margin-bottom: var(--spacing-xl);
 }
 
 .metricCard {
@@ -7,15 +7,15 @@
 }
 
 .metricCard :global(.ant-card-body) {
-  padding: 20px;
+  padding: calc(var(--spacing-lg) + var(--spacing-xs));
 }
 
 .statusTag {
-  margin-top: 12px;
+  margin-top: var(--spacing-md);
   margin-inline-end: 0;
   border-radius: 999px;
   border: 1px solid transparent;
-  padding-inline: 8px;
+  padding-inline: var(--spacing-sm);
   font-weight: var(--font-weight-medium);
 }
 

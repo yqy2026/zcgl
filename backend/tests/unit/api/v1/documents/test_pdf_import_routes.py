@@ -3,11 +3,12 @@ PDF Import Routes 测试
 测试 PDF 导入路由的端点
 """
 
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, Mock, mock_open, patch
 
 import pytest
 from fastapi.testclient import TestClient
 
+from src.api.v1.dependencies import get_pdf_import_service
 from src.database import get_async_db
 from src.main import app
 from src.middleware.auth import get_current_active_user
@@ -35,7 +36,19 @@ def mock_user():
 
 
 @pytest.fixture
-def client(mock_db, mock_user):
+def mock_pdf_service():
+    """Mock PDF 导入服务"""
+    mock_service = Mock()
+    mock_session = Mock()
+    mock_session.session_id = "session_contract_001"
+    mock_session.processing_options = {"prefer_markitdown": True}
+    mock_service.create_import_session = AsyncMock(return_value=mock_session)
+    mock_service.process_pdf_file = AsyncMock(return_value={"success": True})
+    return mock_service
+
+
+@pytest.fixture
+def client(mock_db, mock_user, mock_pdf_service):
     """测试客户端"""
 
     async def override_get_db():
@@ -44,8 +57,12 @@ def client(mock_db, mock_user):
     def override_get_user():
         return mock_user
 
+    def override_get_pdf_service():
+        return mock_pdf_service
+
     app.dependency_overrides[get_async_db] = override_get_db
     app.dependency_overrides[get_current_active_user] = override_get_user
+    app.dependency_overrides[get_pdf_import_service] = override_get_pdf_service
 
     with TestClient(app) as test_client:
         yield test_client
@@ -143,37 +160,29 @@ class TestPDFImportSessions:
         assert data["data"]["items"] == []
         assert "获取成功" in data["message"]
 
-    @pytest.mark.skip(
-        reason="pdf_session_service module not implemented - requires integration test"
-    )
     def test_get_pdf_import_sessions_with_data(self, client):
         """
-        测试获取包含数据的 PDF 导入会话列表
+        测试获取会话接口的分页结构
 
-        Given: 用户有导入会话
+        Given: 用户请求会话列表
         When: 调用 GET /api/v1/pdf-import/sessions
-        Then: 返回会话列表
+        Then: 返回稳定分页结构（当前为占位空列表）
         """
-        # Arrange
-        with patch(
-            "src.services.document.pdf_session_service.get_sessions"
-        ) as mock_get:
-            mock_get.return_value = [
-                {
-                    "session_id": "session_001",
-                    "filename": "contract.pdf",
-                    "status": "processing",
-                    "created_at": "2024-01-01T00:00:00",
-                }
-            ]
+        # Act
+        response = client.get("/api/v1/pdf-import/sessions")
 
-            # Act
-            response = client.get("/api/v1/pdf-import/sessions")
-
-            # Assert
-            assert response.status_code == 200
-            data = response.json()
-            assert len(data["data"]) >= 0
+        # Assert
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["data"]["items"] == []
+        assert data["data"]["count"] == 0
+        assert data["data"]["unread_count"] == 0
+        pagination = data["data"]["pagination"]
+        assert pagination["page"] == 1
+        assert pagination["page_size"] == 10
+        assert pagination["total"] == 0
+        assert isinstance(data["timestamp"], str)
 
 
 # =============================================================================
@@ -184,38 +193,51 @@ class TestPDFImportSessions:
 class TestPDFUpload:
     """PDF 上传 API 测试"""
 
-    @pytest.mark.skip(
-        reason="PDF upload requires file handling and PDF processing service - integration test"
-    )
-    def test_upload_pdf_for_import(self, client):
+    def test_upload_pdf_for_import(self, client, mock_pdf_service):
         """
         测试上传 PDF 进行智能导入
 
         Given: 用户上传 PDF 文件
         When: 调用 POST /api/v1/pdf-import/upload
-        Then: 返回任务 ID
+        Then: 返回会话 ID 并触发处理
         """
         # Arrange
-        files = {"file": ("contract.pdf", b"fake pdf content", "application/pdf")}
+        files = {
+            "file": (
+                "contract.pdf",
+                b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF",
+                "application/pdf",
+            )
+        }
         data = {
-            "document_type": "rent_contract",
-            "provider": "glm",
+            "prefer_markitdown": "true",
+            "force_method": "vision",
         }
 
-        # Act
-        response = client.post(
-            "/api/v1/pdf-import/upload",
-            files=files,
-            data=data,
-        )
+        with patch(
+            "src.api.v1.documents.pdf_upload.validate_upload_file",
+            new=AsyncMock(return_value={"valid": True}),
+        ):
+            with patch(
+                "src.api.v1.documents.pdf_upload.open",
+                mock_open(),
+                create=True,
+            ):
+                # Act
+                response = client.post(
+                    "/api/v1/pdf-import/upload",
+                    files=files,
+                    data=data,
+                )
 
         # Assert
         assert response.status_code == 200
         response_data = response.json()
         assert response_data["success"] is True
-        assert "data" in response_data
+        assert response_data["session_id"] == "session_contract_001"
+        mock_pdf_service.create_import_session.assert_awaited_once()
+        mock_pdf_service.process_pdf_file.assert_awaited_once()
 
-    @pytest.mark.skip(reason="PDF upload requires file handling - integration test")
     def test_upload_pdf_without_file(self, client):
         """
         测试没有文件的上传请求
@@ -228,10 +250,8 @@ class TestPDFUpload:
         response = client.post("/api/v1/pdf-import/upload")
 
         # Assert
-        # FastAPI 会自动验证文件参数
-        assert response.status_code in [400, 422]
+        assert response.status_code == 422
 
-    @pytest.mark.skip(reason="PDF upload requires file handling - integration test")
     def test_upload_pdf_invalid_format(self, client):
         """
         测试上传非 PDF 文件
@@ -250,10 +270,9 @@ class TestPDFUpload:
         )
 
         # Assert
-        assert response.status_code in [400, 422]
+        assert response.status_code == 422
 
-    @pytest.mark.skip(reason="PDF upload requires file handling - integration test")
-    def test_upload_pdf_exceeds_size_limit(self, client):
+    def test_upload_pdf_exceeds_size_limit(self, client, monkeypatch):
         """
         测试上传超大 PDF 文件
 
@@ -262,7 +281,10 @@ class TestPDFUpload:
         Then: 返回 400 错误
         """
         # Arrange
-        large_content = b"x" * (11 * 1024 * 1024)  # 11MB
+        from src.api.v1.documents import pdf_upload
+
+        monkeypatch.setattr(pdf_upload, "DEFAULT_MAX_FILE_SIZE", 1024)
+        large_content = b"%PDF-1.4\n" + b"x" * 2048
         files = {"file": ("large.pdf", large_content, "application/pdf")}
 
         # Act
@@ -272,7 +294,7 @@ class TestPDFUpload:
         )
 
         # Assert
-        assert response.status_code in [400, 413, 422]
+        assert response.status_code == 400
 
 
 # =============================================================================
@@ -283,10 +305,7 @@ class TestPDFUpload:
 class TestErrorHandling:
     """错误处理测试"""
 
-    @pytest.mark.skip(
-        reason="Test client fixture bypasses auth - requires proper auth test setup"
-    )
-    def test_unauthorized_access(self, client):
+    def test_unauthorized_access(self, mock_db):
         """
         测试未授权访问
 
@@ -294,14 +313,23 @@ class TestErrorHandling:
         When: 调用 PDF 导入 API
         Then: 返回 401 错误
         """
-        # Arrange - 移除授权 override
-        app.dependency_overrides.clear()
+        async def override_get_db():
+            yield mock_db
 
-        # Act
-        response = client.get("/api/v1/pdf-import/info")
+        app.dependency_overrides.clear()
+        app.dependency_overrides[get_async_db] = override_get_db
+
+        try:
+            with TestClient(app) as unauthorized_client:
+                # Act
+                response = unauthorized_client.get("/api/v1/pdf-import/info")
+        finally:
+            app.dependency_overrides.clear()
 
         # Assert
         assert response.status_code == 401
+        data = response.json()
+        assert data.get("error", {}).get("code") == "AUTHENTICATION_ERROR"
 
     def test_internal_server_error(self, client):
         """
@@ -334,8 +362,7 @@ class TestErrorHandling:
 class TestIntegration:
     """集成测试"""
 
-    @pytest.mark.skip(reason="Integration test requiring full PDF processing pipeline")
-    def test_pdf_import_workflow(self, client):
+    def test_pdf_import_workflow(self, client, mock_pdf_service):
         """
         测试完整的 PDF 导入工作流
 
@@ -350,13 +377,36 @@ class TestIntegration:
         assert info_response.status_code == 200
 
         # Step 2: 上传 PDF
-        files = {"file": ("contract.pdf", b"fake pdf content", "application/pdf")}
-        upload_response = client.post(
-            "/api/v1/pdf-import/upload",
-            files=files,
-        )
+        files = {
+            "file": (
+                "contract.pdf",
+                b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF",
+                "application/pdf",
+            )
+        }
+        with patch(
+            "src.api.v1.documents.pdf_upload.validate_upload_file",
+            new=AsyncMock(return_value={"valid": True}),
+        ):
+            with patch(
+                "src.api.v1.documents.pdf_upload.open",
+                mock_open(),
+                create=True,
+            ):
+                upload_response = client.post(
+                    "/api/v1/pdf-import/upload",
+                    files=files,
+                )
         assert upload_response.status_code == 200
+        upload_data = upload_response.json()
+        assert upload_data["success"] is True
+        assert upload_data["session_id"] == "session_contract_001"
+        mock_pdf_service.create_import_session.assert_awaited_once()
+        mock_pdf_service.process_pdf_file.assert_awaited_once()
 
         # Step 3: 查询会话列表
         sessions_response = client.get("/api/v1/pdf-import/sessions")
         assert sessions_response.status_code == 200
+        sessions_data = sessions_response.json()
+        assert sessions_data["success"] is True
+        assert sessions_data["data"]["items"] == []

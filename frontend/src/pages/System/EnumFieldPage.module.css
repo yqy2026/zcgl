@@ -1,5 +1,18 @@
+.pageShell {
+  --enum-control-height: var(--button-height-md);
+  --enum-control-height-mobile: var(--button-height-lg);
+  --enum-table-action-size: var(--button-height-sm);
+  --enum-status-line-height: var(--font-size-xl);
+  --enum-type-search-width: 320px;
+  --enum-type-select-width: 220px;
+  --enum-row-gap: calc(var(--spacing-sm) - (var(--spacing-xs) / 2));
+  --enum-code-padding-x: calc(var(--spacing-sm) - (var(--spacing-xs) / 2));
+  --enum-color-preview-size: var(--spacing-lg);
+  --enum-color-preview-radius: calc(var(--spacing-xs) / 2);
+}
+
 .statsRow {
-  margin-bottom: 24px;
+  margin-bottom: var(--spacing-xl);
 }
 
 .statsCard {
@@ -10,9 +23,9 @@
   margin-inline-end: 0;
   border-radius: 999px;
   border: 1px solid transparent;
-  padding-inline: 8px;
-  font-size: 12px;
-  line-height: 18px;
+  padding-inline: var(--spacing-sm);
+  font-size: var(--font-size-xs);
+  line-height: var(--enum-status-line-height);
   font-weight: var(--font-weight-medium);
 }
 
@@ -29,11 +42,11 @@
 }
 
 .tabs :global(.ant-tabs-nav) {
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-lg);
 }
 
 .toolbarSection {
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-lg);
 }
 
 .typeToolbar {
@@ -43,29 +56,29 @@
 }
 
 .typeSearch {
-  width: 320px;
+  width: var(--enum-type-search-width);
 }
 
 .typeSummaryText {
   color: var(--color-text-secondary);
-  font-size: 13px;
+  font-size: var(--font-size-sm);
 }
 
 .valueToolbar {
-  row-gap: 8px;
+  row-gap: var(--spacing-sm);
 }
 
 .typeSelect {
-  width: 220px;
+  width: var(--enum-type-select-width);
 }
 
 .actionButton {
-  min-height: 36px;
+  min-height: var(--enum-control-height);
 }
 
 .typeNameCell {
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-sm);
 }
 
 .typeNameText {
@@ -74,24 +87,24 @@
 }
 
 .codeValue {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--color-primary);
   background: var(--color-primary-light);
-  padding: 2px 6px;
-  border-radius: 4px;
+  padding: calc(var(--spacing-xs) / 2) var(--enum-code-padding-x);
+  border-radius: var(--radius-sm);
 }
 
 .configTagGroup {
-  row-gap: 6px;
+  row-gap: var(--enum-row-gap);
 }
 
 .actionGroup {
-  row-gap: 6px;
+  row-gap: var(--enum-row-gap);
 }
 
 .tableActionButton {
-  min-width: 32px;
-  min-height: 32px;
+  min-width: var(--enum-table-action-size);
+  min-height: var(--enum-table-action-size);
 }
 
 .statusGroup {
@@ -99,20 +112,20 @@
 }
 
 .statusText {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
 }
 
 .colorCell {
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-sm);
 }
 
 .colorPreview {
   display: inline-block;
-  width: 16px;
-  height: 16px;
-  border-radius: 2px;
+  width: var(--enum-color-preview-size);
+  height: var(--enum-color-preview-size);
+  border-radius: var(--enum-color-preview-radius);
   border: 1px solid var(--color-border);
   background: var(--preview-color);
 }
@@ -122,7 +135,7 @@
 }
 
 .modalActionButton {
-  min-height: 36px;
+  min-height: var(--enum-control-height);
 }
 
 .tonePrimary {
@@ -178,6 +191,10 @@
   .actionButton,
   .tableActionButton,
   .modalActionButton {
-    min-height: 40px;
+    min-height: var(--enum-control-height-mobile);
+  }
+
+  .tableActionButton {
+    min-width: var(--enum-control-height-mobile);
   }
 }

@@ -6,6 +6,7 @@ import { Line, Column, Pie } from '@ant-design/plots';
 
 import { assetService } from '@/services/assetService';
 import type { AssetSearchParams } from '@/types/asset';
+import { CHART_COLORS, CHART_LABEL_COLORS } from '@/styles/colorMap';
 import type {
   ChartDataPoint,
   TrendDataPoint,
@@ -81,7 +82,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({ filters, height
       xField: 'month' as const,
       yField: 'rate' as const,
       smooth: true,
-      color: '#1890ff',
+      color: CHART_COLORS[0],
       areaStyle: {
         fillOpacity: 0.1,
       },
@@ -138,7 +139,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({ filters, height
         ) ?? [],
       angleField: 'value' as const,
       colorField: 'type' as const,
-      color: ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#fa8c16'],
+      color: CHART_COLORS,
       radius: 0.8,
       innerRadius: 0.6,
       label: {
@@ -148,7 +149,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({ filters, height
         style: {
           textAlign: 'center' as const,
           fontSize: 14,
-          fill: '#fff',
+          fill: CHART_LABEL_COLORS.light,
         },
       },
       legend: {
@@ -212,17 +213,17 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({ filters, height
         ) ?? [],
       xField: 'ownership' as const,
       yField: 'rate' as const,
-      color: '#1890ff',
+      color: CHART_COLORS[0],
       columnStyle: {
         fillOpacity: 0.6,
-        stroke: '#1890ff',
+        stroke: CHART_COLORS[0],
         lineWidth: 1,
       },
       label: {
         position: 'top' as const,
         formatter: (datum: ChartDataPoint): string => `${(datum.rate as number).toFixed(1)}%`,
         style: {
-          fill: '#333',
+          fill: CHART_LABEL_COLORS.dark,
           fontSize: 12,
         },
       },

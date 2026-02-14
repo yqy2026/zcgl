@@ -658,7 +658,7 @@ const RoleManagementPage: React.FC = () => {
   }));
 
   return (
-    <PageContainer title="角色管理" subTitle="管理系统角色和权限配置">
+    <PageContainer className={styles.pageShell} title="角色管理" subTitle="管理系统角色和权限配置">
       {statistics != null && (
         <Row gutter={[16, 16]} className={styles.statsRow}>
           <Col xs={24} sm={12} xl={6}>

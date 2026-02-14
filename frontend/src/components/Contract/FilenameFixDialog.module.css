@@ -1,5 +1,5 @@
 .stepContentWrapper {
-  padding: 20px 0;
+  padding: calc(var(--spacing-lg) + var(--spacing-xs)) 0;
 }
 
 .fullWidthSpace {
@@ -7,51 +7,51 @@
 }
 
 .manualInputWrapper {
-  margin-top: 8px;
+  margin-top: var(--spacing-sm);
 }
 
 .manualFilenameInput {
-  border: 1px solid #d9d9d9;
-  border-radius: 6px;
-  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--form-input-radius);
+  padding: var(--spacing-sm) var(--spacing-md);
   width: 100%;
 }
 
 .manualEditInfoAlert {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
 }
 
 .previewOriginalFilenameText {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   word-break: break-all;
 }
 
 .previewFixedFilenameText {
-  color: #389e0d;
-  font-size: 12px;
+  color: var(--color-success);
+  font-size: var(--font-size-xs);
   word-break: break-all;
 }
 
 .fixDescription {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
 }
 
 .analysisOriginalFilenameBox {
-  background-color: #fff1f0;
-  border-radius: 6px;
-  margin-top: 8px;
-  padding: 8px 12px;
+  background-color: var(--color-error-light);
+  border-radius: var(--form-input-radius);
+  margin-top: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
   word-break: break-all;
 }
 
 .stepSuggestedFilenameBox {
-  background-color: #f6ffed;
-  border-radius: 6px;
-  margin-top: 8px;
-  padding: 8px 12px;
+  background-color: var(--color-success-light);
+  border-radius: var(--form-input-radius);
+  margin-top: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
   word-break: break-all;
 }
 
 .stepSuggestedFilenameText {
-  color: #389e0d;
+  color: var(--color-success);
 }

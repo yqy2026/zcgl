@@ -7,13 +7,10 @@ Test coverage for Dictionaries API endpoints:
 - Validation
 """
 
+from uuid import uuid4
+
 import pytest
 from fastapi import status
-
-AUTH_FAILURE_STATUSES = {
-    status.HTTP_401_UNAUTHORIZED,
-    status.HTTP_422_UNPROCESSABLE_CONTENT,
-}
 
 
 @pytest.fixture
@@ -26,23 +23,21 @@ class TestDictionariesAPI:
     """测试字典API"""
 
     def test_debug_routes(self, client):
-        """Debug: Print all registered routes"""
+        """验证字典路由已注册。"""
         from src.main import app
 
-        print("\n=== Registered Routes ===")
-        for route in app.routes:
-            if hasattr(route, "path"):
-                print(f"{route.methods} {route.path}")
-        print("=========================\n")
+        registered_paths = {
+            route.path for route in app.routes if hasattr(route, "path")
+        }
+        assert "/api/v1/system/dictionaries/types" in registered_paths
+        assert "/api/v1/system/dictionaries/{dict_type}/options" in registered_paths
 
     def test_get_dictionary_types_success(self, client, admin_user_headers):
         """测试获取所有字典类型"""
         response = client.get(
             "/api/v1/system/dictionaries/types", headers=admin_user_headers
         )
-        assert response.status_code in [status.HTTP_200_OK, *AUTH_FAILURE_STATUSES]
-        if response.status_code != status.HTTP_200_OK:
-            return
+        assert response.status_code == status.HTTP_200_OK
         assert isinstance(response.json(), list)
 
     def test_get_dictionary_options_success(self, client, admin_user_headers):
@@ -50,10 +45,8 @@ class TestDictionariesAPI:
         response = client.get(
             "/api/v1/system/dictionaries/asset_type/options", headers=admin_user_headers
         )
-        # 可能是空列表（如果未初始化）或列表
-        assert response.status_code in [status.HTTP_200_OK, *AUTH_FAILURE_STATUSES]
-        if response.status_code != status.HTTP_200_OK:
-            return
+        # 可能是空列表（如果未初始化）或有值列表
+        assert response.status_code == status.HTTP_200_OK
         assert isinstance(response.json(), list)
 
     def test_get_dictionary_options_with_filter(self, client, admin_user_headers):
@@ -62,26 +55,21 @@ class TestDictionariesAPI:
             "/api/v1/system/dictionaries/asset_type/options?is_active=true",
             headers=admin_user_headers,
         )
-        assert response.status_code in [status.HTTP_200_OK, *AUTH_FAILURE_STATUSES]
+        assert response.status_code == status.HTTP_200_OK
+        assert isinstance(response.json(), list)
 
     def test_get_validation_stats(self, client, admin_user_headers):
         """测试获取验证统计"""
         response = client.get(
             "/api/v1/system/dictionaries/validation/stats", headers=admin_user_headers
         )
-        assert response.status_code in [status.HTTP_200_OK, *AUTH_FAILURE_STATUSES]
-        if response.status_code != status.HTTP_200_OK:
-            return
+        assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["success"] is True
 
     def test_quick_create_dictionary(self, client, admin_user_headers):
         """测试快速创建字典"""
-        # 使用随机后缀避免冲突
-        import random
-
-        suffix = random.randint(1000, 9999)
-        dict_type = f"test_dict_{suffix}"
+        dict_type = f"test_dict_{uuid4().hex}"
 
         payload = {
             "options": [
@@ -97,24 +85,13 @@ class TestDictionariesAPI:
             headers=admin_user_headers,
         )
 
-        if response.status_code in AUTH_FAILURE_STATUSES:
-            return
-        if response.status_code == status.HTTP_200_OK:
-            data = response.json()
-            assert data["values_count"] == 2
-        elif response.status_code == status.HTTP_409_CONFLICT:
-            # 允许冲突（如果已存在）
-            pass
-        else:
-            pytest.fail(f"Unexpected status code: {response.status_code}")
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["values_count"] == 2
 
     def test_add_dictionary_value(self, client, admin_user_headers):
         """测试添加字典值"""
-        # 先确保有一个字典存在
-        import random
-
-        suffix = random.randint(1000, 9999)
-        dict_type = f"test_dict_val_{suffix}"
+        dict_type = f"test_dict_val_{uuid4().hex}"
 
         # 创建字典
         client.post(
@@ -137,14 +114,14 @@ class TestDictionariesAPI:
             headers=admin_user_headers,
         )
 
-        assert response.status_code in [status.HTTP_200_OK, *AUTH_FAILURE_STATUSES]
+        assert response.status_code == status.HTTP_200_OK
+        response_data = response.json()
+        assert response_data.get("message") == "字典值添加成功"
+        assert response_data.get("value_id")
 
     def test_delete_dictionary(self, client, admin_user_headers):
         """测试删除字典"""
-        import random
-
-        suffix = random.randint(1000, 9999)
-        dict_type = f"test_dict_del_{suffix}"
+        dict_type = f"test_dict_del_{uuid4().hex}"
 
         # 创建
         client.post(
@@ -158,4 +135,4 @@ class TestDictionariesAPI:
             f"/api/v1/system/dictionaries/{dict_type}", headers=admin_user_headers
         )
 
-        assert response.status_code in [status.HTTP_200_OK, *AUTH_FAILURE_STATUSES]
+        assert response.status_code == status.HTTP_200_OK

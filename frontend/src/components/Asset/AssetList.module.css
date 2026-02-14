@@ -1,0 +1,25 @@
+.propertyNameButton {
+  padding: 0;
+  height: auto;
+  text-align: left;
+}
+
+.hardDeleteSpace {
+  width: 100%;
+}
+
+.hardDeleteHelp {
+  color: var(--color-error);
+}
+
+.occupancyRateSuccess {
+  color: var(--color-success);
+}
+
+.occupancyRateWarning {
+  color: var(--color-warning);
+}
+
+.occupancyRateError {
+  color: var(--color-error);
+}

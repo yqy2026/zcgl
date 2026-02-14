@@ -201,7 +201,11 @@ export const PropertyCertificateList: React.FC = () => {
   ];
 
   return (
-    <PageContainer title="产权证管理" subTitle="管理产权证列表、审核状态与资产关联">
+    <PageContainer
+      className={styles.pageShell}
+      title="产权证管理"
+      subTitle="管理产权证列表、审核状态与资产关联"
+    >
       <div className={styles.pageContent}>
         <Card className={styles.filterCard}>
           <Space size={12} wrap className={styles.filterActions}>

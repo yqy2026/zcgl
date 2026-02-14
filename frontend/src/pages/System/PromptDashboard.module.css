@@ -1,12 +1,23 @@
+.pageShell {
+  --prompt-dashboard-control-height: var(--button-height-lg);
+  --prompt-dashboard-touch-target-size: calc(var(--button-height-lg) + var(--spacing-xs));
+  --prompt-dashboard-loading-min-height: calc((var(--spacing-xxxl) * 7) + var(--spacing-lg));
+  --prompt-dashboard-trend-card-min-width: calc((var(--spacing-xxxl) * 2) + var(--spacing-xs));
+  --prompt-dashboard-trend-card-min-width-mobile: calc(
+    (var(--spacing-xxxl) * 2) + var(--spacing-lg) - var(--spacing-xs)
+  );
+  --prompt-dashboard-trend-date-spacing: calc(var(--spacing-sm) - (var(--spacing-xs) / 2));
+}
+
 .loadingContainer {
-  min-height: 360px;
+  min-height: var(--prompt-dashboard-loading-min-height);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .sectionSpacing {
-  margin-bottom: 24px;
+  margin-bottom: var(--spacing-xl);
 }
 
 .summaryCard {
@@ -33,7 +44,7 @@
 }
 
 .totalSuffix {
-  font-size: 14px;
+  font-size: var(--font-size-base);
   color: var(--color-text-secondary);
 }
 
@@ -42,8 +53,8 @@
 }
 
 .actionButton {
-  min-height: 40px;
-  border-radius: 8px;
+  min-height: var(--prompt-dashboard-control-height);
+  border-radius: var(--radius-md);
 }
 
 .actionButton:focus-visible {
@@ -52,58 +63,58 @@
 }
 
 .chartContainer {
-  padding: 12px 4px;
+  padding: var(--spacing-md) var(--spacing-xs);
 }
 
 .chartEmpty {
   text-align: center;
-  padding: 48px 0;
+  padding: var(--spacing-xxxl) 0;
   color: var(--color-text-tertiary);
 }
 
 .trendGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(108px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(var(--prompt-dashboard-trend-card-min-width), 1fr));
+  gap: var(--spacing-md);
 }
 
 .trendItem {
   background: var(--color-bg-secondary);
   border: 1px solid var(--color-border-light);
   border-radius: var(--card-radius);
-  padding: 12px 10px;
+  padding: var(--spacing-md) var(--spacing-md);
   text-align: center;
 }
 
 .trendDate {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
-  margin-bottom: 6px;
+  margin-bottom: var(--prompt-dashboard-trend-date-spacing);
 }
 
 .trendMetricBlock {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: calc(var(--spacing-xs) / 2);
 }
 
 .trendMetricBlock + .trendMetricBlock {
-  margin-top: 6px;
+  margin-top: var(--prompt-dashboard-trend-date-spacing);
 }
 
 .trendMetricLabel {
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
 }
 
 .metricValue {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   line-height: 1.25;
   font-weight: var(--font-weight-semibold);
 }
 
 .trendConfidence {
-  font-size: 14px;
+  font-size: var(--font-size-base);
   line-height: 1.25;
   font-weight: var(--font-weight-medium);
 }
@@ -132,7 +143,7 @@
   margin-inline-end: 0;
   border-radius: 999px;
   border: 1px solid transparent;
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
   line-height: 1.35;
   display: inline-flex;
@@ -143,12 +154,12 @@
 .versionTag,
 .priorityTag,
 .statusTag {
-  padding-inline: 8px;
+  padding-inline: var(--spacing-sm);
 }
 
 .statusHint {
-  margin-left: 4px;
-  font-size: 11px;
+  margin-left: var(--spacing-xs);
+  font-size: var(--font-size-xs);
   opacity: 0.88;
 }
 
@@ -184,16 +195,16 @@
 }
 
 .tableSummary {
-  margin-bottom: 12px;
+  margin-bottom: var(--spacing-md);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--spacing-sm);
   flex-wrap: wrap;
 }
 
 .summaryText {
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
 }
 
@@ -210,20 +221,23 @@
 }
 
 .suggestionParagraph {
-  margin: 8px 0;
+  margin: var(--spacing-sm) 0;
 }
 
 .suggestionLabel {
-  margin-right: 4px;
+  margin-right: var(--spacing-xs);
 }
 
 @media (max-width: 768px) {
   .actionButton {
-    min-height: 44px;
+    min-height: var(--prompt-dashboard-touch-target-size);
   }
 
   .trendGrid {
-    grid-template-columns: repeat(auto-fit, minmax(124px, 1fr));
+    grid-template-columns: repeat(
+      auto-fit,
+      minmax(var(--prompt-dashboard-trend-card-min-width-mobile), 1fr)
+    );
   }
 
   .tableSummary {

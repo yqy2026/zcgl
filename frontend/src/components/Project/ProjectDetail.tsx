@@ -7,6 +7,7 @@ import { Descriptions, Card, Tag, Space, Button, Badge, Typography } from 'antd'
 import { EditOutlined } from '@ant-design/icons';
 
 import type { Project } from '@/types/project';
+import styles from './ProjectDetail.module.css';
 
 const { Text } = Typography;
 
@@ -37,13 +38,13 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onEdit }) => {
   };
 
   return (
-    <div className="project-detail">
+    <div className={styles.projectDetail}>
       {/* 项目基本信息 */}
       <Card>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className={styles.headerRow}>
           <div>
             <Space>
-              <h2 style={{ margin: 0 }}>{project.name}</h2>
+              <h2 className={styles.projectTitle}>{project.name}</h2>
               <Badge
                 status={project.is_active ? 'success' : 'error'}
                 text={project.is_active ? '启用' : '禁用'}
@@ -59,7 +60,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onEdit }) => {
       </Card>
 
       {/* 项目详细信息 */}
-      <Card title="项目信息" size="small" style={{ marginTop: 16 }}>
+      <Card title="项目信息" size="small" className={styles.sectionCard}>
         <Descriptions column={2} size="small">
           <Descriptions.Item label="项目编码">
             <Text code>{project.code}</Text>
@@ -83,7 +84,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onEdit }) => {
       </Card>
 
       {/* 系统信息 */}
-      <Card title="系统信息" size="small" style={{ marginTop: 16 }}>
+      <Card title="系统信息" size="small" className={styles.sectionCard}>
         <Descriptions column={2} size="small">
           <Descriptions.Item label="创建时间">{formatDate(project.created_at)}</Descriptions.Item>
           <Descriptions.Item label="更新时间">{formatDate(project.updated_at)}</Descriptions.Item>

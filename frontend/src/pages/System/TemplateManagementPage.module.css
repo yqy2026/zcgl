@@ -1,5 +1,14 @@
+.pageShell {
+  --template-control-height: var(--button-height-lg);
+  --template-touch-target-size: calc(var(--button-height-lg) + var(--spacing-xs));
+  --template-icon-offset-y: calc(var(--spacing-xs) - 1px);
+  --template-fields-max-height: 220px;
+  --template-fields-max-height-mobile: 180px;
+  --template-detail-row-gap-mobile: var(--spacing-xs);
+}
+
 .statsRow {
-  margin-bottom: 24px;
+  margin-bottom: var(--spacing-xl);
 }
 
 .statsCard {
@@ -36,7 +45,7 @@
 }
 
 .instructionsCard {
-  margin-bottom: 24px;
+  margin-bottom: var(--spacing-xl);
 }
 
 .sectionIcon {
@@ -55,13 +64,13 @@
 .templateNameCell {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: var(--spacing-sm);
   line-height: 1.35;
 }
 
 .templateIcon {
   color: var(--color-success);
-  margin-top: 3px;
+  margin-top: var(--template-icon-offset-y);
 }
 
 .templateNameText {
@@ -70,8 +79,8 @@
 }
 
 .templateVersion {
-  margin-left: 8px;
-  font-size: 12px;
+  margin-left: var(--spacing-sm);
+  font-size: var(--font-size-xs);
 }
 
 .statusTag,
@@ -79,22 +88,22 @@
   margin-inline-end: 0;
   border-radius: 999px;
   border: 1px solid transparent;
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
   line-height: 1.35;
 }
 
 .statusTag {
-  padding-inline: 8px;
+  padding-inline: var(--spacing-sm);
 }
 
 .typeTag {
-  padding-inline: 8px;
+  padding-inline: var(--spacing-sm);
 }
 
 .statusHint {
-  margin-left: 4px;
-  font-size: 11px;
+  margin-left: var(--spacing-xs);
+  font-size: var(--font-size-xs);
   opacity: 0.88;
 }
 
@@ -129,13 +138,13 @@
 }
 
 .actionGroup {
-  gap: 4px;
+  gap: var(--spacing-xs);
 }
 
 .tableActionButton {
-  min-width: 40px;
-  min-height: 40px;
-  border-radius: 8px;
+  min-width: var(--template-control-height);
+  min-height: var(--template-control-height);
+  border-radius: var(--radius-md);
   color: var(--color-text-secondary);
   transition: color var(--transition-base), background-color var(--transition-base);
 }
@@ -151,7 +160,7 @@
 }
 
 .actionButton {
-  min-height: 40px;
+  min-height: var(--template-control-height);
 }
 
 .tableSummary {
@@ -159,18 +168,18 @@
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
 }
 
 .previewContent {
-  padding-bottom: 12px;
+  padding-bottom: var(--spacing-md);
 }
 
 .detailItem {
   display: inline-flex;
   align-items: center;
-  column-gap: 8px;
+  column-gap: var(--spacing-sm);
   max-width: 100%;
 }
 
@@ -183,21 +192,21 @@
 }
 
 .fieldsContainer {
-  margin-top: 8px;
-  max-height: 220px;
+  margin-top: var(--spacing-sm);
+  max-height: var(--template-fields-max-height);
   overflow-y: auto;
-  padding: 8px;
+  padding: var(--spacing-sm);
   border-radius: var(--card-radius);
   border: 1px solid var(--color-border-light);
   background: var(--color-bg-secondary);
 }
 
 .fieldTag {
-  margin-bottom: 6px;
+  margin-bottom: var(--spacing-sm);
 }
 
 .previewFooter {
-  margin-top: 20px;
+  margin-top: calc(var(--spacing-lg) + var(--spacing-xs));
   text-align: center;
 }
 
@@ -207,7 +216,7 @@
 }
 
 .modalActionButton {
-  min-height: 40px;
+  min-height: var(--template-control-height);
 }
 
 @media (max-width: 768px) {
@@ -217,21 +226,21 @@
   }
 
   .actionButton {
-    min-height: 44px;
+    min-height: var(--template-touch-target-size);
   }
 
   .tableActionButton,
   .modalActionButton {
-    min-width: 44px;
-    min-height: 44px;
+    min-width: var(--template-touch-target-size);
+    min-height: var(--template-touch-target-size);
   }
 
   .detailItem {
     flex-wrap: wrap;
-    row-gap: 4px;
+    row-gap: var(--template-detail-row-gap-mobile);
   }
 
   .fieldsContainer {
-    max-height: 180px;
+    max-height: var(--template-fields-max-height-mobile);
   }
 }

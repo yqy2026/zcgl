@@ -1,9 +1,12 @@
 .statusPage {
+  --contract-status-stat-min-width: calc(var(--button-height-lg) * 3);
+  --contract-status-action-min-height: var(--button-height-lg);
+  --contract-status-action-min-height-mobile: calc(var(--button-height-lg) + var(--spacing-xs));
   width: 100%;
 }
 
 .sectionCard {
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-lg);
 }
 
 .headerMeta {
@@ -18,9 +21,13 @@
   justify-content: flex-end;
 }
 
+.headerActions :global(.ant-btn) {
+  min-height: var(--contract-status-action-min-height);
+}
+
 .statusIconBadge {
-  width: 40px;
-  height: 40px;
+  width: var(--button-height-lg);
+  height: var(--button-height-lg);
   border-radius: 50%;
   display: inline-flex;
   align-items: center;
@@ -32,11 +39,11 @@
 }
 
 .statusStatistic {
-  min-width: 120px;
+  min-width: var(--contract-status-stat-min-width);
 }
 
 .resultStatistic {
-  min-width: 120px;
+  min-width: var(--contract-status-stat-min-width);
 }
 
 .toneSuccess {
@@ -57,22 +64,22 @@
 
 .statusIconBadge.toneSuccess {
   background: var(--color-success);
-  color: #fff;
+  color: var(--color-text-inverse);
 }
 
 .statusIconBadge.toneWarning {
   background: var(--color-warning);
-  color: #fff;
+  color: var(--color-text-inverse);
 }
 
 .statusIconBadge.toneError {
   background: var(--color-error);
-  color: #fff;
+  color: var(--color-text-inverse);
 }
 
 .statusIconBadge.tonePrimary {
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-text-inverse);
 }
 
 .toneSuccess :global(.ant-statistic-content),
@@ -83,15 +90,15 @@
 }
 
 .inlineErrorAlert {
-  margin-top: 16px;
+  margin-top: var(--spacing-lg);
 }
 
 .stepDetailText {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
 }
 
 .detailsHeaderRow {
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-lg);
 }
 
 .detailsTitle {
@@ -99,13 +106,13 @@
 }
 
 .resultCard {
-  margin-top: 16px;
+  margin-top: var(--spacing-lg);
 }
 
 .statusTag {
   margin-inline-end: 0;
   border-radius: 999px;
-  padding-inline: 8px;
+  padding-inline: var(--spacing-sm);
   border: 1px solid transparent;
   font-weight: var(--font-weight-medium);
 }
@@ -137,6 +144,6 @@
   }
 
   .headerActions :global(.ant-btn) {
-    min-height: 40px;
+    min-height: var(--contract-status-action-min-height-mobile);
   }
 }

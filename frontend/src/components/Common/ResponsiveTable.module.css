@@ -1,4 +1,7 @@
 .mobileSection {
+  --responsive-table-field-min-height: var(--spacing-xl);
+  --responsive-table-control-size: var(--button-height-lg);
+  --responsive-table-control-size-mobile: calc(var(--button-height-lg) + var(--spacing-xs));
   width: 100%;
 }
 
@@ -7,8 +10,8 @@
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
 }
 
 .mobileTitle {
@@ -26,7 +29,7 @@
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--spacing-md);
 }
 
 .cardListItem {
@@ -64,7 +67,7 @@
 }
 
 .cardFieldLabel {
-  margin-bottom: 4px;
+  margin-bottom: var(--spacing-xs);
   color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
   line-height: 1.4;
@@ -75,7 +78,7 @@
   font-size: var(--font-size-base);
   line-height: var(--line-height-base);
   word-break: break-word;
-  min-height: 24px;
+  min-height: var(--responsive-table-field-min-height);
 }
 
 .cardFieldValue :global(.ant-tag) {
@@ -86,16 +89,16 @@
 .cardFieldValue :global(.ant-input-affix-wrapper),
 .cardFieldValue :global(.ant-picker),
 .cardFieldValue :global(.ant-select-selector) {
-  min-height: 40px;
-  border-radius: 8px;
+  min-height: var(--responsive-table-control-size);
+  border-radius: var(--radius-md);
 }
 
 .cardFieldValue :global(.ant-btn.ant-btn-icon-only) {
-  min-width: 40px;
+  min-width: var(--responsive-table-control-size);
 }
 
 .cardFieldValue :global(.ant-switch) {
-  min-height: 24px;
+  min-height: var(--responsive-table-field-min-height);
 }
 
 .cardFieldValue :global(.ant-btn:focus-visible),
@@ -108,17 +111,17 @@
 
 @media (max-width: 767px) {
   .mobileHeader {
-    margin-bottom: 10px;
+    margin-bottom: calc(var(--spacing-md) - 2px);
   }
 
   .cardFieldValue :global(.ant-btn),
   .cardFieldValue :global(.ant-input-affix-wrapper),
   .cardFieldValue :global(.ant-picker),
   .cardFieldValue :global(.ant-select-selector) {
-    min-height: 44px;
+    min-height: var(--responsive-table-control-size-mobile);
   }
 
   .cardFieldValue :global(.ant-btn.ant-btn-icon-only) {
-    min-width: 44px;
+    min-width: var(--responsive-table-control-size-mobile);
   }
 }

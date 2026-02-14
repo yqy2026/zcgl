@@ -7,6 +7,7 @@
  */
 
 import React, { useState, useRef, useCallback, useMemo } from 'react';
+import styles from './VirtualList.module.css';
 
 /**
  * Virtual list props
@@ -65,6 +66,10 @@ export function VirtualList<T>({
 }: VirtualListProps<T>) {
   const [scrollTop, setScrollTop] = useState(0);
   const scrollElementRef = useRef<HTMLDivElement>(null);
+  const containerClassName =
+    className != null && className !== ''
+      ? `${styles.virtualListContainer} ${className}`
+      : styles.virtualListContainer;
 
   // Calculate visible range
   const { startIndex, endIndex, totalHeight } = useMemo(() => {
@@ -90,17 +95,16 @@ export function VirtualList<T>({
     return items.slice(startIndex, endIndex).map((item, index) => {
       const actualIndex = startIndex + index;
       const key = getKey ? getKey(item, actualIndex) : String(actualIndex);
+      const itemStyle: React.CSSProperties = {
+        top: `${actualIndex * itemHeight}px`,
+        height: `${itemHeight}px`,
+      };
 
       return (
         <div
           key={key}
-          style={{
-            position: 'absolute',
-            top: `${actualIndex * itemHeight}px`,
-            left: 0,
-            right: 0,
-            height: `${itemHeight}px`,
-          }}
+          className={styles.virtualListItem}
+          style={itemStyle}
           role="listitem"
           aria-setsize={items.length}
           aria-posinset={actualIndex + 1}
@@ -111,27 +115,23 @@ export function VirtualList<T>({
     });
   }, [items, startIndex, endIndex, itemHeight, renderItem, getKey]);
 
+  const containerStyle: React.CSSProperties = {
+    height: `${containerHeight}px`,
+    ...style,
+  };
+  const spacerStyle: React.CSSProperties = { height: `${totalHeight}px` };
+
   return (
     <div
-      className={className}
-      style={{
-        position: 'relative',
-        height: `${containerHeight}px`,
-        overflow: 'auto',
-        ...style,
-      }}
+      className={containerClassName}
+      style={containerStyle}
       ref={scrollElementRef}
       onScroll={handleScroll}
       role="list"
       aria-label="虚拟列表"
     >
       {/* Spacer for total height */}
-      <div
-        style={{
-          height: `${totalHeight}px`,
-          position: 'relative',
-        }}
-      >
+      <div className={styles.virtualListSpacer} style={spacerStyle}>
         {visibleItems}
       </div>
     </div>
@@ -207,6 +207,10 @@ export function VirtualGrid<T>({
   const [scrollTop, setScrollTop] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
   const scrollElementRef = useRef<HTMLDivElement>(null);
+  const containerClassName =
+    className != null && className !== ''
+      ? `${styles.virtualGridContainer} ${className}`
+      : styles.virtualGridContainer;
 
   // Calculate total dimensions
   const { rowCount, totalWidth, totalHeight } = useMemo(() => {
@@ -261,17 +265,18 @@ export function VirtualGrid<T>({
 
         const item = items[index];
         const key = getKey ? getKey(item, row, col) : `${row}-${col}`;
+        const gridItemStyle: React.CSSProperties = {
+          top: `${row * rowHeight}px`,
+          left: `${col * columnWidth}px`,
+          width: `${columnWidth}px`,
+          height: `${rowHeight}px`,
+        };
 
         elements.push(
           <div
             key={key}
-            style={{
-              position: 'absolute',
-              top: `${row * rowHeight}px`,
-              left: `${col * columnWidth}px`,
-              width: `${columnWidth}px`,
-              height: `${rowHeight}px`,
-            }}
+            className={styles.virtualGridItem}
+            style={gridItemStyle}
             role="gridcell"
             aria-rowindex={row + 1}
             aria-colindex={col + 1}
@@ -296,16 +301,20 @@ export function VirtualGrid<T>({
     getKey,
   ]);
 
+  const gridContainerStyle: React.CSSProperties = {
+    height: `${containerHeight}px`,
+    width: `${containerWidth}px`,
+    ...style,
+  };
+  const gridSpacerStyle: React.CSSProperties = {
+    height: `${totalHeight}px`,
+    width: `${totalWidth}px`,
+  };
+
   return (
     <div
-      className={className}
-      style={{
-        position: 'relative',
-        height: `${containerHeight}px`,
-        width: `${containerWidth}px`,
-        overflow: 'auto',
-        ...style,
-      }}
+      className={containerClassName}
+      style={gridContainerStyle}
       ref={scrollElementRef}
       onScroll={handleScroll}
       role="grid"
@@ -314,13 +323,7 @@ export function VirtualGrid<T>({
       aria-colcount={columnCount}
     >
       {/* Spacer for total dimensions */}
-      <div
-        style={{
-          height: `${totalHeight}px`,
-          width: `${totalWidth}px`,
-          position: 'relative',
-        }}
-      >
+      <div className={styles.virtualGridSpacer} style={gridSpacerStyle}>
         {visibleItems}
       </div>
     </div>

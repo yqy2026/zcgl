@@ -3,5 +3,5 @@
 }
 
 .resetActionItem {
-  margin-top: 30px;
+  margin-top: calc(var(--spacing-xl) + var(--spacing-sm) - (var(--spacing-xs) / 2));
 }

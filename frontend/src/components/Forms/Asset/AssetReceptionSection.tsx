@@ -6,8 +6,8 @@ import type { UploadFile, UploadProps } from 'antd/es/upload/interface';
 import GroupedSelectSingle from '@/components/Common/GroupedSelect';
 import { BusinessModelOptions } from '@/utils/enumHelpers';
 import { useAssetFormContext } from './AssetFormContext';
-import { COLORS } from '@/styles/colorMap';
 import { generateFormFieldIds } from '@/utils/accessibility';
+import styles from './AssetReceptionSection.module.css';
 
 const { Title } = Typography;
 
@@ -47,7 +47,7 @@ const AssetReceptionSection: React.FC = () => {
   };
 
   return (
-    <Card style={{ marginBottom: '16px' }}>
+    <Card className={styles.sectionCard}>
       <Title level={5}>接收信息</Title>
       <Row gutter={16}>
         <Col span={8}>
@@ -72,7 +72,7 @@ const AssetReceptionSection: React.FC = () => {
             htmlFor={agreementStartDateIds.inputId}
           >
             <DatePicker
-              style={{ width: '100%' }}
+              className={styles.datePickerFullWidth}
               id={agreementStartDateIds.inputId}
               aria-label={agreementStartDateIds.labelId}
             />
@@ -85,7 +85,7 @@ const AssetReceptionSection: React.FC = () => {
             htmlFor={agreementEndDateIds.inputId}
           >
             <DatePicker
-              style={{ width: '100%' }}
+              className={styles.datePickerFullWidth}
               id={agreementEndDateIds.inputId}
               aria-label={agreementEndDateIds.labelId}
             />
@@ -110,7 +110,7 @@ const AssetReceptionSection: React.FC = () => {
                 </Button>
               </Upload>
               <div
-                style={{ marginTop: 8, fontSize: 12, color: COLORS.textSecondary }}
+                className={styles.uploadHintText}
                 role="note"
                 aria-label="文件上传说明"
               >
@@ -161,7 +161,7 @@ const AssetReceptionSection: React.FC = () => {
                       />
                     </List.Item>
                   )}
-                  style={{ marginTop: 16 }}
+                  className={styles.attachmentList}
                 />
               )}
             </div>

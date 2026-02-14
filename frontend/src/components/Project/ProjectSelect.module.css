@@ -1,0 +1,17 @@
+.fullWidthCompact {
+  width: 100%;
+}
+
+.flexSelect {
+  flex: 1;
+}
+
+.shortNameText {
+  color: var(--color-text-quaternary);
+  font-size: var(--font-size-xs);
+}
+
+.codeText {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+}

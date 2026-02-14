@@ -1,15 +1,21 @@
 .contractCreatePage {
+  --contract-create-action-min-width: calc(
+    (var(--spacing-xxxl) * 2) + var(--spacing-lg) + var(--spacing-sm) + var(--spacing-md)
+  );
+  --contract-create-icon-size: calc(var(--spacing-lg) + var(--spacing-sm));
+  --contract-create-title-icon-gap: calc(var(--spacing-sm) - (var(--spacing-xs) / 2));
+  --contract-create-hint-indent: calc(var(--spacing-lg) + var(--spacing-xs));
   width: 100%;
 }
 
 .successCard {
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-lg);
   border-color: var(--color-success);
   background: var(--color-success-light);
 }
 
 .noticeIcon {
-  font-size: 24px;
+  font-size: var(--contract-create-icon-size);
 }
 
 .noticeTitle {
@@ -18,38 +24,38 @@
 
 .noticeMessage {
   display: inline-block;
-  margin-top: 4px;
+  margin-top: var(--spacing-xs);
 }
 
 .guideCard {
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-lg);
   background: var(--color-primary-light);
 }
 
 .guideTitle {
-  margin-bottom: 12px !important;
+  margin-bottom: var(--spacing-md) !important;
   display: inline-flex;
   align-items: center;
 }
 
 .guideTitleIcon {
-  margin-right: 6px;
+  margin-right: var(--contract-create-title-icon-gap);
 }
 
 .guideStep {
-  padding: 8px 0;
+  padding: var(--spacing-sm) 0;
 }
 
 .guideStep :global(.ant-statistic-content) {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   color: var(--color-primary);
 }
 
 .guideHintList {
-  margin: 12px 0 0;
-  padding-left: 20px;
+  margin: var(--spacing-md) 0 0;
+  padding-left: var(--contract-create-hint-indent);
   display: grid;
-  gap: 4px;
+  gap: var(--spacing-xs);
 }
 
 .formCard {
@@ -57,11 +63,11 @@
 }
 
 .footerCard {
-  margin-top: 16px;
+  margin-top: var(--spacing-lg);
 }
 
 .footerCard :global(.ant-card-body) {
-  padding: 16px;
+  padding: var(--spacing-lg);
 }
 
 .footerActions {
@@ -70,7 +76,7 @@
 }
 
 .footerActionButton {
-  min-width: 132px;
+  min-width: var(--contract-create-action-min-width);
 }
 
 .tonePrimary {
@@ -89,6 +95,6 @@
   .footerActionButton {
     flex: 1;
     min-width: 0;
-    min-height: 44px;
+    min-height: calc(var(--button-height-lg) + var(--spacing-xs));
   }
 }

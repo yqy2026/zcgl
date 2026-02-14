@@ -6,7 +6,7 @@ import {
   BulbOutlined,
   CheckCircleOutlined,
 } from '@ant-design/icons';
-import { COLORS } from '@/styles/colorMap';
+import styles from './AssetFormHelp.module.css';
 
 const { Panel } = Collapse;
 const { Text, Paragraph } = Typography;
@@ -225,7 +225,7 @@ const AssetFormHelp: React.FC<AssetFormHelpProps> = ({ visible = false, onClose 
         </Button>,
       ]}
       width={800}
-      style={{ top: 20 }}
+      rootClassName={styles.helpModal}
     >
       <Collapse defaultActiveKey={['basic']} ghost expandIconPosition="start">
         {helpSections.map(section => (
@@ -256,7 +256,7 @@ export const AssetFormHelpButton: React.FC = () => {
         type="text"
         icon={<QuestionCircleOutlined />}
         onClick={() => setHelpVisible(true)}
-        style={{ color: COLORS.primary }}
+        className={styles.helpButton}
       >
         填写帮助
       </Button>

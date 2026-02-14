@@ -1,12 +1,15 @@
-/* 布局组件样式 */
-
-/* 主布局样式 */
 .appLayout {
+  --layout-header-height: calc(var(--spacing-xxxl) + var(--spacing-lg));
+  --layout-header-height-mobile: calc(var(--spacing-xxxl) + var(--spacing-sm));
+  --layout-control-size: var(--button-height-lg);
+  --layout-control-size-mobile: calc(var(--button-height-lg) + var(--spacing-xs));
+  --layout-title-letter-spacing: calc((var(--spacing-xs) / 8) * -1);
+  --layout-user-text-max-width: calc((var(--spacing-xxxl) * 2) + var(--spacing-xl));
+  --layout-content-min-height-offset: calc((var(--spacing-xxxl) * 2) + var(--spacing-lg));
   min-height: 100vh;
-  background: var(--color-bg-secondary);
+  background: var(--color-bg-layout);
 }
 
-/* 头部样式 */
 .header {
   padding: 0 var(--spacing-xl);
   background: var(--color-bg-primary);
@@ -14,7 +17,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 64px;
+  min-height: var(--layout-header-height);
   position: sticky;
   top: 0;
   z-index: var(--z-index-sticky);
@@ -31,9 +34,9 @@
 }
 
 .headerToggleButton {
-  width: 40px;
-  min-width: 40px;
-  min-height: 40px;
+  width: var(--layout-control-size);
+  min-width: var(--layout-control-size);
+  min-height: var(--layout-control-size);
   border-radius: var(--radius-md);
   color: var(--color-text-secondary);
 }
@@ -49,37 +52,38 @@
 }
 
 .headerTitleWrapper {
-  margin-left: 16px;
+  margin-left: var(--spacing-lg);
 }
 
 .headerTitle {
   font-size: var(--font-size-xl);
   font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
   color: var(--color-text-primary);
-  letter-spacing: -0.5px;
+  letter-spacing: var(--layout-title-letter-spacing);
 }
 
 .headerRight {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-sm);
 }
 
 .headerIconButton {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  min-width: 40px;
-  min-height: 40px;
+  width: var(--layout-control-size);
+  min-width: var(--layout-control-size);
+  min-height: var(--layout-control-size);
   padding: 0;
   border-radius: var(--radius-md);
   border: none;
   background: transparent;
+  color: var(--color-text-secondary);
   transition:
     color var(--transition-fast),
     background-color var(--transition-fast);
-  color: var(--color-text-secondary);
 }
 
 .headerIconButton:hover {
@@ -93,12 +97,12 @@
 }
 
 .headerActionIcon {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
 }
 
 .notificationSlot {
-  min-width: 40px;
-  min-height: 40px;
+  min-width: var(--layout-control-size);
+  min-height: var(--layout-control-size);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -109,20 +113,21 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 40px;
-  min-height: 40px;
+  min-width: var(--layout-control-size);
+  min-height: var(--layout-control-size);
 }
 
 .userInfoButton {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 4px 12px 4px 4px;
-  border-radius: 20px;
-  min-height: 40px;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-xs) var(--spacing-md) var(--spacing-xs) var(--spacing-xs);
+  border-radius: 999px;
+  min-height: var(--layout-control-size);
   border: 1px solid transparent;
   background: transparent;
   box-shadow: none;
+  color: var(--color-text-primary);
   transition:
     border-color var(--transition-fast),
     background-color var(--transition-fast),
@@ -130,9 +135,9 @@
 }
 
 .userInfoButton:hover {
-  background: #fff;
-  border-color: rgba(0, 0, 0, 0.06);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+  background: var(--color-bg-secondary);
+  border-color: var(--color-border-light);
+  box-shadow: var(--shadow-sm);
 }
 
 .userInfoButton:focus-visible {
@@ -141,30 +146,29 @@
 }
 
 .userAvatar {
-  background-color: var(--color-primary);
+  background-color: var(--color-primary) !important;
 }
 
 .userText {
   color: var(--color-text-primary);
-  max-width: 120px;
+  max-width: var(--layout-user-text-max-width);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* 侧边栏样式 */
 .sidebar {
   background: var(--color-bg-primary) !important;
   border-right: 1px solid var(--color-border-light) !important;
-  z-index: 1001;
+  z-index: var(--z-index-fixed);
   box-shadow: none !important;
 }
 
 .sidebarLogo {
-  height: 64px;
+  min-height: var(--layout-header-height);
   display: flex;
   align-items: center;
-  padding: 0 24px;
+  padding: 0 var(--spacing-xl);
   background: transparent;
   border-bottom: 1px solid var(--color-border-light);
 }
@@ -175,31 +179,31 @@
 }
 
 .sidebarLogoIcon {
-  font-size: 24px;
+  font-size: var(--font-size-xxxl);
   color: var(--color-primary);
 }
 
 .sidebarLogoText {
-  margin-left: 12px;
+  margin-left: var(--spacing-md);
   color: var(--color-text-primary);
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
-  letter-spacing: -0.5px;
+  letter-spacing: var(--layout-title-letter-spacing);
 }
 
 .sidebarMenu {
   border-right: 0 !important;
   background: transparent !important;
-  padding: 8px;
+  padding: var(--spacing-sm);
 }
 
 .sidebarMenu :global(.ant-menu-item),
 .sidebarMenu :global(.ant-menu-submenu-title) {
-  min-height: 44px;
-  margin: 4px 0;
-  border-radius: 8px;
+  min-height: var(--layout-control-size-mobile);
+  margin: var(--spacing-xs) 0;
+  border-radius: var(--radius-md);
   color: var(--color-text-secondary);
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
   display: flex;
   align-items: center;
   transition:
@@ -208,7 +212,7 @@
 }
 
 .sidebarMenu :global(.ant-menu-submenu) {
-  margin: 4px 0;
+  margin: var(--spacing-xs) 0;
   color: var(--color-text-secondary);
 }
 
@@ -234,246 +238,47 @@
   outline-offset: 2px;
 }
 
-/* 面包屑样式 */
-.breadcrumb {
-  padding: 12px 24px;
-  background: #fff;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.breadcrumb .ant-breadcrumb {
-  font-size: 14px;
-}
-
-.breadcrumb .ant-breadcrumb a {
-  color: #1890ff;
-  text-decoration: none;
-  transition: color var(--transition-fast);
-}
-
-.breadcrumb .ant-breadcrumb a:hover {
-  color: #40a9ff;
-}
-
-/* 内容区域样式 */
 .content {
   margin: 0;
   padding: 0;
-  background: var(--color-bg-tertiary);
-  min-height: calc(100vh - 112px);
+  background: var(--color-bg-layout);
+  min-height: calc(100vh - var(--layout-content-min-height-offset));
   overflow: auto;
 }
 
-/* 页脚样式 */
 .footer {
   text-align: center;
-  background: #fff;
-  border-top: 1px solid #f0f0f0;
-  padding: 12px 24px;
+  background: var(--color-bg-primary);
+  border-top: 1px solid var(--color-border-light);
+  padding: var(--spacing-md) var(--spacing-xl);
 }
 
-/* 移动端布局样式 */
-.mobileLayout {
-  min-height: 100vh;
-}
-
-.mobileHeader {
-  padding: 0 16px;
-  background: #fff;
-  border-bottom: 1px solid #f0f0f0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 56px;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 1000;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-}
-
-.mobileHeaderLeft {
-  display: flex;
-  align-items: center;
-}
-
-.mobileHeaderTitle {
-  margin-left: 12px;
-  font-size: 16px;
-  font-weight: 600;
-  color: #1890ff;
-}
-
-.mobileHeaderRight {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.mobileBreadcrumb {
-  padding: 8px 16px;
-  background: #fff;
-  border-bottom: 1px solid #f0f0f0;
-  margin-top: 56px;
-  position: sticky;
-  top: 56px;
-  z-index: 999;
-}
-
-.mobileContent {
-  padding: 0;
-  background: #f5f5f5;
-  min-height: calc(100vh - 112px);
-  overflow: auto;
-}
-
-.mobileFooter {
-  text-align: center;
-  background: #fff;
-  border-top: 1px solid #f0f0f0;
-  padding: 8px 16px;
-  font-size: 12px;
-}
-
-/* 移动端菜单样式 */
-.mobileMenuDrawer .ant-drawer-header {
-  padding: 16px 24px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.mobileMenuDrawer .ant-drawer-body {
-  padding: 0;
-}
-
-.mobileMenuDrawer .ant-menu {
-  border-right: 0;
-  height: 100%;
-}
-
-.mobileMenuDrawer .ant-menu-item {
-  margin: 4px 8px;
-  border-radius: 6px;
-}
-
-.mobileMenuDrawer .ant-menu-submenu {
-  margin: 4px 8px;
-}
-
-.mobileMenuDrawer .ant-menu-submenu > .ant-menu-submenu-title {
-  border-radius: 6px;
-}
-
-.mobileMenuDrawer .ant-menu-item-selected {
-  background: #e6f7ff !important;
-  color: #1890ff !important;
-}
-
-.mobileMenuDrawer .ant-menu-item:hover {
-  background: #f5f5f5 !important;
-}
-
-/* 通知下拉菜单样式 */
-.notificationDropdown {
-  width: 320px;
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-.notificationItem {
-  padding: 12px 16px;
-  border-bottom: 1px solid #f0f0f0;
-  cursor: pointer;
-  transition: background var(--transition-fast);
-}
-
-.notificationItem:hover {
-  background: #f5f5f5;
-}
-
-.notificationItem:last-child {
-  border-bottom: none;
-}
-
-.notificationTitle {
-  font-weight: 600;
-  margin-bottom: 4px;
-  color: #262626;
-}
-
-.notificationContent {
-  font-size: 12px;
-  color: #8c8c8c;
-  line-height: 1.4;
-}
-
-.notificationTime {
-  font-size: 11px;
-  color: #bfbfbf;
-  margin-top: 4px;
-}
-
-.notificationViewAll {
-  text-align: center;
-  padding: 12px;
-  color: #1890ff;
-  cursor: pointer;
-  border-top: 1px solid #f0f0f0;
-  transition: background var(--transition-fast);
-}
-
-.notificationViewAll:hover {
-  background: #f5f5f5;
-}
-
-/* 响应式设计 */
 @media (max-width: 768px) {
   .header {
-    padding: 0 16px;
-    height: 56px;
+    padding: 0 var(--spacing-lg);
+    min-height: var(--layout-header-height-mobile);
   }
 
-  .headerToggleButton {
-    width: 44px;
-    min-width: 44px;
-    min-height: 44px;
+  .headerToggleButton,
+  .headerIconButton,
+  .notificationSlot,
+  .notificationSlot :global(.ant-badge),
+  .userInfoButton {
+    min-width: var(--layout-control-size-mobile);
+    min-height: var(--layout-control-size-mobile);
   }
 
   .headerTitleWrapper {
-    margin-left: 12px;
+    margin-left: var(--spacing-md);
   }
 
   .headerTitle {
-    font-size: 16px;
-  }
-
-  .headerRight {
-    gap: 8px;
-  }
-
-  .headerIconButton {
-    width: 44px;
-    min-width: 44px;
-    min-height: 44px;
-  }
-
-  .notificationSlot,
-  .notificationSlot :global(.ant-badge) {
-    min-width: 44px;
-    min-height: 44px;
-  }
-
-  .userInfoButton {
-    min-height: 44px;
-  }
-
-  .breadcrumb {
-    padding: 8px 16px;
+    font-size: var(--font-size-lg);
   }
 
   .footer {
-    padding: 8px 16px;
-    font-size: 12px;
+    padding: var(--spacing-sm) var(--spacing-lg);
+    font-size: var(--font-size-xs);
   }
 }
 
@@ -485,74 +290,4 @@
   .userText {
     display: none;
   }
-
-  .notificationDropdown {
-    width: 280px;
-  }
-}
-
-/* 动画效果 */
-@keyframes slideInRight {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-@keyframes slideInLeft {
-  from {
-    transform: translateX(-100%);
-    opacity: 0;
-  }
-
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-.sidebar {
-  animation: slideInLeft 0.3s ease-out;
-}
-
-.mobileMenuDrawer .ant-drawer-content {
-  animation: slideInLeft 0.3s ease-out;
-}
-
-/* 加载状态样式 */
-.loadingContainer {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  background: #f5f5f5;
-}
-
-.loadingContainer .ant-spin {
-  font-size: 24px;
-}
-
-.loadingText {
-  margin-top: 16px;
-  color: #8c8c8c;
-  font-size: 14px;
-}
-
-/* 主题色彩变量 */
-:root {
-  --primary-color: #1890ff;
-  --primary-hover: #40a9ff;
-  --primary-active: #096dd9;
-  --success-color: #52c41a;
-  --warning-color: #faad14;
-  --error-color: #ff4d4f;
-  --text-color: #262626;
-  --text-secondary: #8c8c8c;
-  --border-color: #f0f0f0;
-  --background-color: #f5f5f5;
 }

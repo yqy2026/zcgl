@@ -4,6 +4,7 @@ import { PermissionGuard } from '@/components/System/PermissionGuard';
 import { componentLogger } from './DynamicRouteLoaderCore';
 import { useDynamicRoute } from './DynamicRouteContext';
 import type { DynamicRoute } from './dynamicRouteTypes';
+import styles from './DynamicRouteRenderer.module.css';
 
 export const DynamicRouteRenderer: React.FC = () => {
   const { routes } = useDynamicRoute();
@@ -52,13 +53,7 @@ export const DynamicRouteRenderer: React.FC = () => {
 
   if (error != null) {
     return (
-      <div
-        style={{
-          padding: '50px',
-          textAlign: 'center',
-          color: '#ff4d4f',
-        }}
-      >
+      <div className={styles.routeErrorContainer}>
         <h2>路由加载错误</h2>
         <p>{error}</p>
         <button onClick={() => setError(null)}>重试</button>
@@ -110,16 +105,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
     if (this.state.hasError) {
       return (
         this.props.fallback ?? (
-          <div
-            style={{
-              padding: '20px',
-              textAlign: 'center',
-              color: '#ff4d4f',
-              border: '1px solid #ff4d4f',
-              borderRadius: '6px',
-              margin: '20px',
-            }}
-          >
+          <div className={styles.boundaryErrorContainer}>
             <h3>路由加载失败</h3>
             <p>{this.state.error?.message}</p>
             <button onClick={() => this.setState({ hasError: false, error: null })}>重试</button>

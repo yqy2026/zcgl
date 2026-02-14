@@ -25,6 +25,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Asset, AssetUpdateRequest } from '@/types/asset';
 import { assetService } from '@/services/assetService';
 import { excelService } from '@/services/excelService';
+import styles from './AssetBatchActions.module.css';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -163,15 +164,15 @@ const AssetBatchActions: React.FC<AssetBatchActionsProps> = ({
 
   return (
     <>
-      <Card size="small" style={{ marginBottom: 16 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Card size="small" className={styles.batchActionCard}>
+        <div className={styles.batchActionHeader}>
           <div>
             <Text strong>已选择 {selectedRowKeys.length} 个资产</Text>
             <Button
               type="link"
               size="small"
               onClick={onClearSelection}
-              style={{ padding: '0 8px' }}
+              className={styles.clearSelectionButton}
             >
               清空选择
             </Button>
@@ -237,7 +238,7 @@ const AssetBatchActions: React.FC<AssetBatchActionsProps> = ({
           description="只有填写的字段会被更新，空字段将保持原值不变"
           type="info"
           showIcon
-          style={{ marginBottom: 16 }}
+          className={styles.batchEditAlert}
         />
 
         <Form form={form} layout="vertical">

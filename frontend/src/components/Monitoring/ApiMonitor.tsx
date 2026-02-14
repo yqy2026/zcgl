@@ -15,6 +15,7 @@ import { createLogger } from '@/utils/logger';
 import { apiHealthCheck } from '@/services/apiHealthCheck';
 import { useArrayListData } from '@/hooks/useArrayListData';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
+import { COLORS } from '@/styles/colorMap';
 import styles from './ApiMonitor.module.css';
 
 const componentLogger = createLogger('ApiMonitor');
@@ -26,6 +27,18 @@ interface ApiStatus {
   error?: string;
   lastChecked: Date;
 }
+
+const HEALTHY_STATISTIC_STYLE = {
+  content: { color: COLORS.success },
+};
+
+const UNHEALTHY_STATISTIC_STYLE = {
+  content: { color: COLORS.error },
+};
+
+const UNKNOWN_STATISTIC_STYLE = {
+  content: { color: COLORS.warning },
+};
 
 const ApiMonitor: React.FC = () => {
   const [summary, setSummary] = useState({
@@ -178,9 +191,9 @@ const ApiMonitor: React.FC = () => {
   ];
 
   const getHealthStatusColor = (percentage: number) => {
-    if (percentage >= 80) return '#52c41a';
-    if (percentage >= 60) return '#fa8c16';
-    return '#ff4d4f';
+    if (percentage >= 80) return COLORS.success;
+    if (percentage >= 60) return COLORS.warning;
+    return COLORS.error;
   };
 
   const loading = useMemo(() => isRefreshing || listLoading, [isRefreshing, listLoading]);
@@ -224,7 +237,7 @@ const ApiMonitor: React.FC = () => {
             <Statistic
               title="健康端点"
               value={summary.healthy}
-              styles={{ content: { color: '#52c41a' } }}
+              styles={HEALTHY_STATISTIC_STYLE}
               prefix={<CheckCircleOutlined />}
             />
           </Card>
@@ -234,7 +247,7 @@ const ApiMonitor: React.FC = () => {
             <Statistic
               title="异常端点"
               value={summary.unhealthy}
-              styles={{ content: { color: '#ff4d4f' } }}
+              styles={UNHEALTHY_STATISTIC_STYLE}
               prefix={<ExclamationCircleOutlined />}
             />
           </Card>
@@ -244,7 +257,7 @@ const ApiMonitor: React.FC = () => {
             <Statistic
               title="未知状态"
               value={summary.unknown}
-              styles={{ content: { color: '#fa8c16' } }}
+              styles={UNKNOWN_STATISTIC_STYLE}
               prefix={<CloudServerOutlined />}
             />
           </Card>

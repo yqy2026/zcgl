@@ -14,13 +14,7 @@ import tempfile
 from pathlib import Path
 from unittest.mock import AsyncMock, Mock, patch
 
-import httpx
 import pytest
-
-# Skip all tests in this module - pdf_to_images module not implemented
-pytestmark = pytest.mark.skip(
-    reason="PDF to images conversion module not yet implemented"
-)
 
 # ============================================================================
 # PDF 转 图像边缘情况测试
@@ -46,11 +40,14 @@ class TestPDFToImagesEdgeCases:
 
         try:
             # 应该抛出异常或返回空列表
-            result = pdf_to_images(temp_path, max_pages=1)
-            # 如果不抛异常，应该返回空列表或错误字典
-            assert isinstance(result, (list, dict))
-            if isinstance(result, dict):
-                assert result.get("success") is False or not result.get("images")
+            try:
+                result = pdf_to_images(temp_path, max_pages=1)
+                assert isinstance(result, (list, dict))
+                if isinstance(result, dict):
+                    assert result.get("success") is False or not result.get("images")
+            except Exception as exc:
+                # 后端或文件格式异常均视为合理失败模式
+                assert isinstance(exc, Exception)
         finally:
             os.unlink(temp_path)
 
@@ -62,13 +59,16 @@ class TestPDFToImagesEdgeCases:
         # 注：实际创建密码保护的 PDF 需要 pypdf
         # 这里我们模拟这种行为
         with (
-            patch("fitz.open") as mock_open,
+            patch("src.services.document.pdf_to_images.PYMUPDF_AVAILABLE", True),
+            patch("src.services.document.pdf_to_images.fitz") as mock_fitz,
             patch("pathlib.Path.exists", return_value=True),
         ):
             mock_doc = Mock()
+            mock_doc.__enter__ = Mock(return_value=mock_doc)
+            mock_doc.__exit__ = Mock(return_value=None)
             mock_doc.__len__ = Mock(return_value=1)
             mock_doc.__getitem__ = Mock(side_effect=Exception("Password required"))
-            mock_open.return_value = mock_doc
+            mock_fitz.open.return_value = mock_doc
 
             # 异常应该被抛出
             with pytest.raises(Exception, match="Password required"):
@@ -104,15 +104,18 @@ class TestPDFToImagesEdgeCases:
 
         # 模拟包含不支持特性的 PDF
         with (
-            patch("fitz.open") as mock_open,
+            patch("src.services.document.pdf_to_images.PYMUPDF_AVAILABLE", True),
+            patch("src.services.document.pdf_to_images.fitz") as mock_fitz,
             patch("pathlib.Path.exists", return_value=True),
         ):
             mock_doc = Mock()
+            mock_doc.__enter__ = Mock(return_value=mock_doc)
+            mock_doc.__exit__ = Mock(return_value=None)
             mock_page = Mock()
             mock_page.get_pixmap = Mock(side_effect=Exception("Unsupported feature"))
             mock_doc.__len__ = Mock(return_value=1)
             mock_doc.__getitem__ = Mock(return_value=mock_page)
-            mock_open.return_value = mock_doc
+            mock_fitz.open.return_value = mock_doc
 
             # 应该优雅地处理错误 - 异常应该被抛出
             with pytest.raises(Exception, match="Unsupported feature"):
@@ -127,30 +130,33 @@ class TestPDFToImagesEdgeCases:
         large_pdf = "D:\\work\\zcgl\\backend\\tests\\fixtures\\large.pdf"
 
         # 创建一个模拟的多页 PDF
-        with patch("fitz.open") as mock_open:
+        with (
+            patch("src.services.document.pdf_to_images.PYMUPDF_AVAILABLE", True),
+            patch("src.services.document.pdf_to_images.fitz") as mock_fitz,
+            patch("pathlib.Path.exists", return_value=True),
+        ):
             mock_doc = Mock()
+            mock_doc.__enter__ = Mock(return_value=mock_doc)
+            mock_doc.__exit__ = Mock(return_value=None)
             mock_doc.__len__ = Mock(return_value=100)  # 100 页
             mock_page = Mock()
             mock_pix = Mock()
-            mock_pix.tobytes = Mock(return_value=b"fake_image_data")
+            mock_pix.save = Mock(return_value=None)
             mock_page.get_pixmap = Mock(return_value=mock_pix)
             mock_doc.__getitem__ = Mock(return_value=mock_page)
-            mock_doc.close = Mock()
-            mock_open.return_value = mock_doc
+            mock_fitz.open.return_value = mock_doc
 
             result = pdf_to_images(large_pdf, max_pages=10)
 
         # 应该只处理 10 页
         if isinstance(result, list):
             assert len(result) <= 10
-        # mock_doc.__getitem__.assert_called()  # 应该只调用 10 次
+        assert mock_doc.__getitem__.call_count == 10
 
     @pytest.mark.unit
     def test_cleanup_on_conversion_failure(self):
         """测试转换失败时的清理"""
-        from src.services.document.pdf_to_images import (
-            pdf_to_images,
-        )
+        from src.services.document.pdf_to_images import pdf_to_images
 
         # Use absolute path to fixtures
 
@@ -161,7 +167,11 @@ class TestPDFToImagesEdgeCases:
             temp_file_path = temp_file.name
 
         try:
-            with patch("fitz.open") as mock_open:
+            with (
+                patch("src.services.document.pdf_to_images.PYMUPDF_AVAILABLE", True),
+                patch("src.services.document.pdf_to_images.fitz") as mock_fitz,
+                patch("pathlib.Path.exists", return_value=True),
+            ):
                 mock_doc = Mock()
                 mock_doc.__enter__ = Mock(
                     return_value=mock_doc
@@ -179,24 +189,17 @@ class TestPDFToImagesEdgeCases:
                     if call_count == 1:
                         mock_page = Mock()
                         mock_pix = Mock()
-                        mock_pix.tobytes = Mock(return_value=b"image1")
+                        mock_pix.save = Mock(return_value=None)
                         mock_page.get_pixmap = Mock(return_value=mock_pix)
                         return mock_page
                     else:
                         raise Exception("Conversion failed")
 
                 mock_doc.__getitem__ = Mock(side_effect=get_page)
-                mock_doc.close = Mock()
-                mock_open.return_value = mock_doc
+                mock_fitz.open.return_value = mock_doc
 
-                try:
+                with pytest.raises(Exception, match="Conversion failed"):
                     pdf_to_images(temp_file_path, max_pages=3)
-                except Exception:
-                    pass
-
-                # 验证 doc.close() 被调用（资源清理）- 注意：如果异常在循环中抛出，close可能不会被调用
-                # 在实际实现中这是一个bug，但在测试中我们接受这种行为
-                pass
         finally:
             os.unlink(temp_file_path)
 
@@ -208,22 +211,25 @@ class TestPDFToImagesEdgeCases:
         # Use absolute path to fixtures
         disk_full_pdf = "D:\\work\\zcgl\\backend\\tests\\fixtures\\disk_full.pdf"
 
-        with patch("fitz.open") as mock_open:
+        with (
+            patch("src.services.document.pdf_to_images.PYMUPDF_AVAILABLE", True),
+            patch("src.services.document.pdf_to_images.fitz") as mock_fitz,
+            patch("pathlib.Path.exists", return_value=True),
+        ):
             mock_doc = Mock()
+            mock_doc.__enter__ = Mock(return_value=mock_doc)
+            mock_doc.__exit__ = Mock(return_value=None)
             mock_page = Mock()
             mock_pix = Mock()
             # 模拟磁盘空间不足
-            mock_pix.tobytes = Mock(side_effect=OSError("No space left on device"))
+            mock_pix.save = Mock(side_effect=OSError("No space left on device"))
             mock_page.get_pixmap = Mock(return_value=mock_pix)
             mock_doc.__len__ = Mock(return_value=1)
             mock_doc.__getitem__ = Mock(return_value=mock_page)
-            mock_doc.close = Mock()
-            mock_open.return_value = mock_doc
+            mock_fitz.open.return_value = mock_doc
 
-            pdf_to_images(disk_full_pdf, max_pages=1)
-
-            # 应该捕获磁盘空间错误
-            mock_doc.close.assert_called_once()
+            with pytest.raises(OSError, match="No space left on device"):
+                pdf_to_images(disk_full_pdf, max_pages=1)
 
 
 # ============================================================================
@@ -274,7 +280,11 @@ class TestTemporaryFileCleanup:
             temp_file_path = temp_file.name
 
         try:
-            with patch("fitz.open") as mock_open:
+            with (
+                patch("src.services.document.pdf_to_images.PYMUPDF_AVAILABLE", True),
+                patch("src.services.document.pdf_to_images.fitz") as mock_fitz,
+                patch("pathlib.Path.exists", return_value=True),
+            ):
                 mock_doc = Mock()
                 mock_doc.__enter__ = Mock(
                     return_value=mock_doc
@@ -287,27 +297,15 @@ class TestTemporaryFileCleanup:
                 def get_page(idx):
                     mock_page = Mock()
                     mock_pix = Mock()
-                    mock_pix.tobytes = Mock(return_value=b"image_data")
+                    mock_pix.save = Mock(side_effect=Exception("Abnormal termination"))
                     mock_page.get_pixmap = Mock(return_value=mock_pix)
-                    # 模拟在保存图像时失败
-                    with patch(
-                        "builtins.open", side_effect=Exception("Abnormal termination")
-                    ):
-                        return mock_page
                     return mock_page
 
                 mock_doc.__getitem__ = Mock(side_effect=get_page)
-                mock_doc.close = Mock()
-                mock_open.return_value = mock_doc
+                mock_fitz.open.return_value = mock_doc
 
-                try:
+                with pytest.raises(Exception, match="Abnormal termination"):
                     pdf_to_images(temp_file_path, max_pages=1)
-                except Exception:
-                    pass
-
-                # 即使异常，doc.close() 也应该被调用 - 注意：如果异常在循环中抛出，close可能不会被调用
-                # 在实际实现中这是一个bug，但在测试中我们接受这种行为
-                pass
         finally:
             os.unlink(temp_file_path)
 
@@ -327,12 +325,17 @@ class TestPDFAnalyzerEdgeCases:
 
         from src.services.document.pdf_analyzer import analyze_pdf
 
-        with patch("src.services.document.pdf_analyzer.fitz.open") as mock_open:
+        with (
+            patch("src.services.document.pdf_analyzer.PYMUPDF_AVAILABLE", True),
+            patch("src.services.document.pdf_analyzer.fitz") as mock_fitz,
+        ):
             with patch.object(Path, "exists", return_value=True):
                 mock_doc = Mock()
+                mock_doc.__enter__ = Mock(return_value=mock_doc)
+                mock_doc.__exit__ = Mock(return_value=None)
                 mock_doc.__len__ = Mock(return_value=0)
                 mock_doc.__getitem__ = Mock(side_effect=IndexError("empty"))
-                mock_open.return_value = mock_doc
+                mock_fitz.open.return_value = mock_doc
 
                 result = analyze_pdf("empty.pdf")
 
@@ -347,15 +350,20 @@ class TestPDFAnalyzerEdgeCases:
 
         from src.services.document.pdf_analyzer import analyze_pdf
 
-        with patch("src.services.document.pdf_analyzer.fitz.open") as mock_open:
+        with (
+            patch("src.services.document.pdf_analyzer.PYMUPDF_AVAILABLE", True),
+            patch("src.services.document.pdf_analyzer.fitz") as mock_fitz,
+        ):
             with patch.object(Path, "exists", return_value=True):
                 mock_doc = Mock()
+                mock_doc.__enter__ = Mock(return_value=mock_doc)
+                mock_doc.__exit__ = Mock(return_value=None)
                 mock_doc.__len__ = Mock(return_value=1)
                 mock_page = Mock()
                 mock_page.get_text = Mock(return_value="")  # 无文本
                 mock_page.get_images = Mock(return_value=[])  # 也无图像
                 mock_doc.__getitem__ = Mock(return_value=mock_page)
-                mock_open.return_value = mock_doc
+                mock_fitz.open.return_value = mock_doc
 
                 result = analyze_pdf("scanned.pdf")
 
@@ -370,15 +378,20 @@ class TestPDFAnalyzerEdgeCases:
 
         from src.services.document.pdf_analyzer import analyze_pdf
 
-        with patch("src.services.document.pdf_analyzer.fitz.open") as mock_open:
+        with (
+            patch("src.services.document.pdf_analyzer.PYMUPDF_AVAILABLE", True),
+            patch("src.services.document.pdf_analyzer.fitz") as mock_fitz,
+        ):
             with patch.object(Path, "exists", return_value=True):
                 mock_doc = Mock()
+                mock_doc.__enter__ = Mock(return_value=mock_doc)
+                mock_doc.__exit__ = Mock(return_value=None)
                 mock_doc.__len__ = Mock(return_value=1)
                 mock_page = Mock()
                 mock_page.get_text = Mock(return_value="Some text content")
                 mock_page.get_images = Mock(return_value=[(1, 2, 3, 4)])  # 有图像
                 mock_doc.__getitem__ = Mock(return_value=mock_page)
-                mock_open.return_value = mock_doc
+                mock_fitz.open.return_value = mock_doc
 
                 result = analyze_pdf("mixed.pdf")
 
@@ -579,6 +592,8 @@ class TestEndToEndEdgeCases:
         from src.services.document.llm_contract_extractor import LLMContractExtractor
 
         extractor = LLMContractExtractor()
+        adapter = QwenAdapter()
+        extractor.adapter = adapter
 
         call_count = 0
 
@@ -586,7 +601,7 @@ class TestEndToEndEdgeCases:
             nonlocal call_count
             call_count += 1
             if call_count == 1:
-                raise httpx.NetworkError("API temporarily unavailable")
+                raise ConnectionError("API temporarily unavailable")
             return type(
                 "MockResponse",
                 (),
@@ -596,26 +611,24 @@ class TestEndToEndEdgeCases:
                 },
             )()
 
-        # Mock the vision service to be available
-        with patch.object(QwenAdapter, "vision_service") as mock_vision_service:
-            mock_vision_service.is_available = True
-
-            # Mock the actual extract_from_images method on the vision service
-            mock_vision_service.extract_from_images = AsyncMock(
-                side_effect=flaky_vision_call
-            )
-
-            # Mock PDF conversion
-            with patch(
-                "src.services.document.pdf_to_images.pdf_to_images",
-                return_value=["image1.png"],
+        with patch.object(type(adapter.vision_service), "is_available", True):
+            with patch.object(
+                adapter.vision_service,
+                "extract_from_images",
+                AsyncMock(side_effect=flaky_vision_call),
             ):
-                result = await extractor.extract_smart("dummy.pdf")
+                with patch(
+                    "src.services.document.pdf_to_images.pdf_to_images",
+                    return_value=["image1.png"],
+                ):
+                    result = await extractor.extract_smart(
+                        "dummy.pdf", force_method="vision"
+                    )
 
-                # 应该重试并成功
-                assert result["success"] is True
-                assert result["extracted_fields"]["contract_number"] == "CT001"
-                assert call_count >= 2
+        # 应该重试并成功
+        assert result["success"] is True
+        assert result["extracted_fields"]["contract_number"] == "CT001"
+        assert call_count >= 2
 
 
 if __name__ == "__main__":

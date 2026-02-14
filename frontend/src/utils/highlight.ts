@@ -1,5 +1,12 @@
 import React from 'react';
 
+const HIGHLIGHT_MARK_STYLE: React.CSSProperties = {
+  backgroundColor: 'var(--color-warning-light)',
+  padding: '0 var(--spacing-xs)',
+  borderRadius: 'var(--radius-sm)',
+  fontWeight: 'bold',
+};
+
 /**
  * 高亮搜索关键词
  */
@@ -16,24 +23,20 @@ export const highlightText = (
   const escapedSearchTerm = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
   // 创建正则表达式，忽略大小写
-  const regex = new RegExp(`(${escapedSearchTerm})`, 'gi');
+  const splitRegex = new RegExp(`(${escapedSearchTerm})`, 'gi');
+  const exactMatchRegex = new RegExp(`^${escapedSearchTerm}$`, 'i');
 
   // 分割文本
-  const parts = text.split(regex);
+  const parts = text.split(splitRegex);
 
   return parts.map((part, index) => {
-    if (regex.test(part)) {
+    if (exactMatchRegex.test(part)) {
       return React.createElement(
         'mark',
         {
           key: index,
           className,
-          style: {
-            backgroundColor: '#fff2b8',
-            padding: '0 2px',
-            borderRadius: '2px',
-            fontWeight: 'bold',
-          },
+          style: HIGHLIGHT_MARK_STYLE,
         },
         part
       );
@@ -64,24 +67,20 @@ export const highlightMultipleTerms = (
   const escapedTerms = validTerms.map(term => term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
 
   // 创建正则表达式
-  const regex = new RegExp(`(${escapedTerms.join('|')})`, 'gi');
+  const splitRegex = new RegExp(`(${escapedTerms.join('|')})`, 'gi');
+  const exactMatchRegex = new RegExp(`^(${escapedTerms.join('|')})$`, 'i');
 
   // 分割文本
-  const parts = text.split(regex);
+  const parts = text.split(splitRegex);
 
   return parts.map((part, index) => {
-    if (regex.test(part)) {
+    if (exactMatchRegex.test(part)) {
       return React.createElement(
         'mark',
         {
           key: index,
           className,
-          style: {
-            backgroundColor: '#fff2b8',
-            padding: '0 2px',
-            borderRadius: '2px',
-            fontWeight: 'bold',
-          },
+          style: HIGHLIGHT_MARK_STYLE,
         },
         part
       );

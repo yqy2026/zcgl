@@ -1,0 +1,56 @@
+.cardSpacing {
+  margin-bottom: var(--spacing-lg);
+}
+
+.titleIcon {
+  margin-right: var(--spacing-sm);
+}
+
+.labelIcon {
+  margin-right: var(--spacing-xs);
+}
+
+.propertyName {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+}
+
+.occupancyRateExtra {
+  color: var(--ant-color-primary);
+}
+
+.occupancySection {
+  margin-top: var(--spacing-xl);
+}
+
+.occupancyAnalysisRow {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-lg);
+}
+
+.occupancyProgressWrapper {
+  flex: 1;
+}
+
+.occupancySummary {
+  min-width: calc(var(--spacing-xxl) * 3 + var(--spacing-xl));
+  text-align: right;
+}
+
+.occupancySummaryText {
+  font-size: var(--font-size-xs);
+  color: var(--ant-color-text-tertiary);
+}
+
+.attachmentItem {
+  margin-bottom: var(--spacing-xs);
+}
+
+.attachmentName {
+  margin-left: var(--spacing-sm);
+}
+
+.notesText {
+  white-space: pre-wrap;
+}

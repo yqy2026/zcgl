@@ -3,7 +3,7 @@
 }
 
 .summaryRow {
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-lg);
 }
 
 .summaryCard {
@@ -11,7 +11,7 @@
 }
 
 .chartCard {
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-lg);
 }
 
 .statisticPrimary :global(.ant-statistic-content) {
@@ -31,7 +31,7 @@
 }
 
 .statisticAccent :global(.ant-statistic-content) {
-  color: #722ed1;
+  color: var(--color-primary);
 }
 
 .statisticMuted :global(.ant-statistic-content) {
@@ -39,7 +39,7 @@
 }
 
 .trendIcon {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
 }
 
 .trendIconUp {
@@ -55,7 +55,7 @@
 }
 
 .rankingRow {
-  margin-top: 16px;
+  margin-top: var(--spacing-lg);
 }
 
 .rankingList {
@@ -67,8 +67,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
-  padding: 8px 0;
+  gap: var(--spacing-md);
+  padding: var(--spacing-sm) 0;
   border-bottom: 1px solid var(--color-border-light);
 }
 
@@ -81,7 +81,7 @@
 }
 
 .rankingMeta {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
 }
 
 .rankingValue {
@@ -100,18 +100,18 @@
 
 .rankingLabel {
   color: var(--color-text-secondary);
-  font-size: 11px;
-  margin-top: 2px;
+  font-size: var(--font-size-xs);
+  margin-top: calc(var(--spacing-xs) / 2);
 }
 
 .chartTooltip {
-  padding: 8px;
+  padding: var(--spacing-sm);
   line-height: 1.5;
 }
 
 .tooltipTitle {
   font-weight: var(--font-weight-semibold);
-  margin-bottom: 4px;
+  margin-bottom: var(--spacing-xs);
 }
 
 @media (max-width: 768px) {

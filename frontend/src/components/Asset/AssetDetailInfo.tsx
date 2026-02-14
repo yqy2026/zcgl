@@ -12,6 +12,7 @@ import {
 import type { Asset } from '@/types/asset';
 import { formatDate, getStatusColor, calculateOccupancyRate } from '@/utils/format';
 import { getOccupancyRateColor, COLORS } from '@/styles/colorMap';
+import styles from './AssetDetailInfo.module.css';
 
 interface AssetDetailInfoProps {
   asset: Asset;
@@ -30,11 +31,11 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
       <Card
         title={
           <span>
-            <InfoCircleOutlined style={{ marginRight: 8 }} />
+            <InfoCircleOutlined className={styles.titleIcon} />
             基本信息
           </span>
         }
-        style={{ marginBottom: 16 }}
+        className={styles.cardSpacing}
       >
         <Descriptions
           bordered
@@ -47,7 +48,7 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
           <Descriptions.Item
             label={
               <span>
-                <HomeOutlined style={{ marginRight: 4 }} />
+                <HomeOutlined className={styles.labelIcon} />
                 项目名称
               </span>
             }
@@ -58,20 +59,18 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
           <Descriptions.Item
             label={
               <span>
-                <HomeOutlined style={{ marginRight: 4 }} />
+                <HomeOutlined className={styles.labelIcon} />
                 物业名称
               </span>
             }
           >
-            <span style={{ fontSize: '16px', fontWeight: 'bold' }}>
-              {asset.property_name ?? '-'}
-            </span>
+            <span className={styles.propertyName}>{asset.property_name ?? '-'}</span>
           </Descriptions.Item>
 
           <Descriptions.Item
             label={
               <span>
-                <UserOutlined style={{ marginRight: 4 }} />
+                <UserOutlined className={styles.labelIcon} />
                 权属方
               </span>
             }
@@ -82,7 +81,7 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
           <Descriptions.Item
             label={
               <span>
-                <EnvironmentOutlined style={{ marginRight: 4 }} />
+                <EnvironmentOutlined className={styles.labelIcon} />
                 所在地址
               </span>
             }
@@ -122,7 +121,7 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
           <Descriptions.Item
             label={
               <span>
-                <CalendarOutlined style={{ marginRight: 4 }} />
+                <CalendarOutlined className={styles.labelIcon} />
                 创建时间
               </span>
             }
@@ -133,7 +132,7 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
           <Descriptions.Item
             label={
               <span>
-                <CalendarOutlined style={{ marginRight: 4 }} />
+                <CalendarOutlined className={styles.labelIcon} />
                 更新时间
               </span>
             }
@@ -146,11 +145,11 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
       {/* 面积信息卡片 */}
       <Card
         title="面积信息"
-        style={{ marginBottom: 16 }}
+        className={styles.cardSpacing}
         extra={
           asset.property_nature === '经营性' && (
-            <span style={{ color: COLORS.primary }}>
-              <PercentageOutlined style={{ marginRight: 4 }} />
+            <span className={styles.occupancyRateExtra}>
+              <PercentageOutlined className={styles.labelIcon} />
               出租率: {occupancyRate.toFixed(2)}%
             </span>
           )
@@ -231,18 +230,18 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
           asset.rentable_area !== undefined &&
           asset.rentable_area !== null &&
           asset.rentable_area > 0 && (
-            <div style={{ marginTop: 24 }}>
+            <div className={styles.occupancySection}>
               <Divider titlePlacement="start">出租率分析</Divider>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                <div style={{ flex: 1 }}>
+              <div className={styles.occupancyAnalysisRow}>
+                <div className={styles.occupancyProgressWrapper}>
                   <Progress
                     percent={occupancyRate}
                     strokeColor={getOccupancyRateColor(occupancyRate)}
                     format={percent => `${percent?.toFixed(2)}%`}
                   />
                 </div>
-                <div style={{ minWidth: 120, textAlign: 'right' }}>
-                  <div style={{ fontSize: '12px', color: COLORS.textTertiary }}>
+                <div className={styles.occupancySummary}>
+                  <div className={styles.occupancySummaryText}>
                     {asset.rented_area?.toLocaleString() ?? 0} /{' '}
                     {asset.rentable_area?.toLocaleString() ?? 0} ㎡
                   </div>
@@ -253,7 +252,7 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
       </Card>
 
       {/* 接收信息 */}
-      <Card title="接收信息" style={{ marginBottom: 16 }}>
+      <Card title="接收信息" className={styles.cardSpacing}>
         <Descriptions
           bordered
           column={{ xs: 1, sm: 2 }}
@@ -283,7 +282,7 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
         (asset.operation_agreement_attachments !== undefined &&
           asset.operation_agreement_attachments !== '' &&
           asset.operation_agreement_attachments !== null)) && (
-        <Card title="接收协议详情" style={{ marginBottom: 16 }}>
+        <Card title="接收协议详情" className={styles.cardSpacing}>
           <Descriptions
             bordered
             column={{ xs: 1, sm: 2 }}
@@ -313,9 +312,9 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
               asset.operation_agreement_attachments !== null ? (
                 <div>
                   {asset.operation_agreement_attachments.split(',').map(fileName => (
-                    <div key={fileName} style={{ marginBottom: 4 }}>
+                    <div key={fileName} className={styles.attachmentItem}>
                       <Tag color="blue">PDF</Tag>
-                      <span style={{ marginLeft: 8 }}>{fileName.trim()}</span>
+                      <span className={styles.attachmentName}>{fileName.trim()}</span>
                     </div>
                   ))}
                 </div>
@@ -329,7 +328,7 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
 
       {/* 合同信息 */}
       {asset.usage_status === '出租' && (
-        <Card title="合同信息" style={{ marginBottom: 16 }}>
+        <Card title="合同信息" className={styles.cardSpacing}>
           <Descriptions
             bordered
             column={{ xs: 1, sm: 2 }}
@@ -371,7 +370,7 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
         <Card title="备注信息">
           <Descriptions bordered column={1}>
             <Descriptions.Item label="备注">
-              <div style={{ whiteSpace: 'pre-wrap' }}>{asset.notes}</div>
+              <div className={styles.notesText}>{asset.notes}</div>
             </Descriptions.Item>
           </Descriptions>
         </Card>

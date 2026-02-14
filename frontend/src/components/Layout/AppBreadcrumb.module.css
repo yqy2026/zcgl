@@ -1,7 +1,7 @@
 .breadcrumbWrapper {
   width: 100%;
   overflow-x: auto;
-  padding-bottom: 2px;
+  padding-bottom: calc(var(--spacing-xs) / 2);
 }
 
 .breadcrumb {
@@ -22,10 +22,10 @@
 .currentLabel {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  min-height: 40px;
-  padding: 0 8px;
-  border-radius: 8px;
+  gap: calc(var(--spacing-sm) - (var(--spacing-xs) / 2));
+  min-height: var(--button-height-lg);
+  padding: 0 var(--spacing-sm);
+  border-radius: var(--radius-md);
   line-height: 1.4;
   white-space: nowrap;
 }
@@ -49,7 +49,7 @@
 }
 
 .homeText {
-  font-size: 13px;
+  font-size: var(--font-size-sm);
 }
 
 .currentLabel {
@@ -61,6 +61,6 @@
   .homeLink,
   .breadcrumbLink,
   .currentLabel {
-    min-height: 44px;
+    min-height: calc(var(--button-height-lg) + var(--spacing-xs));
   }
 }

@@ -18,6 +18,7 @@ import type { FormInstance } from 'antd/es/form';
 
 import type { AssetSearchParams } from '@/types/asset';
 import type { ExportFieldOption } from './assetExportConfig';
+import styles from './AssetExportForm.module.css';
 
 const { Option } = Select;
 const { Text } = Typography;
@@ -66,7 +67,7 @@ const AssetExportForm: React.FC<AssetExportFormProps> = ({
           导出历史
         </Button>
       }
-      style={{ marginBottom: 16 }}
+      className={styles.exportCard}
     >
       <Form
         form={form}
@@ -95,7 +96,7 @@ const AssetExportForm: React.FC<AssetExportFormProps> = ({
         </Row>
 
         <Form.Item name="selectedFields" label="选择导出字段">
-          <Checkbox.Group style={{ width: '100%' }}>
+          <Checkbox.Group className={styles.fullWidthGroup}>
             <Row gutter={[16, 8]}>
               {availableFields.map(field => (
                 <Col xs={24} sm={12} md={8} lg={6} key={field.key}>
@@ -124,14 +125,14 @@ const AssetExportForm: React.FC<AssetExportFormProps> = ({
                 title={`将导出已选择的 ${selectedAssetIds.length} 条资产记录`}
                 type="info"
                 showIcon
-                style={{ marginBottom: 16 }}
+                className={styles.scopeAlert}
               />
             ) : (
               searchParams && (
                 <Alert
                   title="将根据当前搜索条件导出匹配的资产记录"
                   description={
-                    <div style={{ marginTop: 8 }}>
+                    <div className={styles.searchTagWrapper}>
                       <Space wrap>
                         {Object.entries(searchParams).map(([key, value]) => {
                           if (value === undefined || value === null || value === '') {
@@ -163,7 +164,7 @@ const AssetExportForm: React.FC<AssetExportFormProps> = ({
                   }
                   type="info"
                   showIcon
-                  style={{ marginBottom: 16 }}
+                  className={styles.scopeAlert}
                 />
               )
             )}

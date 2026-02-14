@@ -12,17 +12,37 @@ Auth API 集成测试 - 测试重构后的认证模块
 import pytest
 from fastapi.testclient import TestClient
 
-pytestmark = pytest.mark.skip(
-    reason="Integration API tests require real JWT authentication setup"
-)
+pytestmark = pytest.mark.integration
 
 
 @pytest.fixture
-def client():
-    """创建测试客户端"""
-    from src.main import app
+def authenticated_client(client: TestClient, test_data) -> TestClient:
+    """使用真实登录 cookie 认证测试客户端。"""
+    admin_user = test_data["admin"]
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"username": admin_user.username, "password": "Admin123!@#"},
+    )
+    assert response.status_code == 200
+    auth_token = response.cookies.get("auth_token")
+    csrf_token = response.cookies.get("csrf_token")
+    refresh_token = response.cookies.get("refresh_token")
+    assert auth_token is not None
+    assert csrf_token is not None
+    assert refresh_token is not None
+    client.cookies.set("auth_token", auth_token)
+    client.cookies.set("csrf_token", csrf_token)
+    client.cookies.set("refresh_token", refresh_token)
+    setattr(client, "_csrf_token", csrf_token)
+    return client
 
-    return TestClient(app)
+
+@pytest.fixture
+def csrf_headers(authenticated_client: TestClient) -> dict[str, str]:
+    csrf_token = getattr(authenticated_client, "_csrf_token", None)
+    if csrf_token is None:
+        return {}
+    return {"X-CSRF-Token": csrf_token}
 
 
 class TestAuthenticationEndpoints:
@@ -34,19 +54,34 @@ class TestAuthenticationEndpoints:
             "/api/v1/auth/login",
             json={"username": "admin", "password": "wrong_password"},
         )
-        # 应该返回 401 (密码错误) 或 422 (验证错误)，但不应该是 404
-        assert response.status_code != 404
-        assert response.status_code in [401, 422]
+        # 无效凭证应返回统一认证错误
+        assert response.status_code == 401
+        payload = response.json()
+        assert payload.get("success") is False
+        error = payload.get("error", {})
+        assert isinstance(error, dict)
+        assert error.get("code") == "AUTHENTICATION_ERROR"
 
-    def test_login_with_valid_credentials(self, client):
+    def test_login_with_valid_credentials(self, client, test_data):
         """测试使用有效凭证登录"""
-        # 注意：这需要数据库中有admin用户
-        # 如果测试环境没有admin用户，这个测试会失败
+        admin_user = test_data["admin"]
         response = client.post(
-            "/api/v1/auth/login", json={"username": "admin", "password": "Admin123!@#"}
+            "/api/v1/auth/login",
+            json={"username": admin_user.username, "password": "Admin123!@#"},
         )
-        # 可能的响应: 200 (成功), 401 (密码错误), 404 (用户不存在)
-        assert response.status_code in [200, 401, 404]
+        assert response.status_code == 200
+
+        payload = response.json()
+        assert payload.get("auth_mode") == "cookie"
+        assert payload.get("message") == "登录成功"
+        user_info = payload.get("user", {})
+        assert user_info.get("username") == admin_user.username
+        assert user_info.get("id") is not None
+        assert isinstance(payload.get("permissions"), list)
+
+        assert response.cookies.get("auth_token") is not None
+        assert response.cookies.get("csrf_token") is not None
+        assert response.cookies.get("refresh_token") is not None
 
     def test_logout_endpoint_exists(self, client):
         """测试登出端点是否存在"""
@@ -59,14 +94,52 @@ class TestAuthenticationEndpoints:
         response = client.post(
             "/api/v1/auth/refresh", json={"refresh_token": "invalid_token"}
         )
-        # 应该返回 401 (无效令牌) 或 422 (验证错误)
-        assert response.status_code in [401, 422]
+        # 无 cookie 场景返回 400（刷新令牌缺失）
+        assert response.status_code == 400
+        payload = response.json()
+        assert payload.get("success") is False
+        error = payload.get("error", {})
+        assert isinstance(error, dict)
+        assert error.get("code") == "INVALID_REQUEST"
 
     def test_me_endpoint_exists(self, client):
         """测试获取当前用户信息端点是否存在"""
         response = client.get("/api/v1/auth/me")
         # 需要认证，所以预期返回 401
         assert response.status_code == 401
+
+    def test_me_endpoint_with_authenticated_cookie(self, authenticated_client, test_data):
+        """测试登录后 /me 返回当前用户信息。"""
+        response = authenticated_client.get("/api/v1/auth/me")
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload.get("username") == test_data["admin"].username
+        assert payload.get("session_status") == "active"
+        assert isinstance(payload.get("roles"), list)
+
+    def test_refresh_token_with_cookie(self, authenticated_client, csrf_headers):
+        """测试带 cookie 的刷新令牌链路。"""
+        response = authenticated_client.post(
+            "/api/v1/auth/refresh",
+            headers=csrf_headers,
+        )
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload.get("message") == "令牌刷新成功"
+        assert payload.get("auth_mode") == "cookie"
+
+    def test_logout_with_csrf_revokes_session(self, authenticated_client, csrf_headers):
+        """测试登出后当前会话被撤销。"""
+        response = authenticated_client.post(
+            "/api/v1/auth/logout",
+            headers=csrf_headers,
+        )
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload.get("message") == "登出成功"
+
+        me_response = authenticated_client.get("/api/v1/auth/me")
+        assert me_response.status_code == 401
 
 
 class TestUserManagementEndpoints:
@@ -161,6 +234,28 @@ class TestUserManagementEndpoints:
         # 需要管理员权限
         assert response.status_code == 401
 
+    def test_get_users_list_with_admin(self, authenticated_client, test_data):
+        """测试管理员可获取用户列表，且包含当前管理员。"""
+        response = authenticated_client.get("/api/v1/auth/users?page=1&page_size=20")
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload.get("success") is True
+        items = payload.get("data", {}).get("items", [])
+        assert isinstance(items, list)
+        assert any(
+            item.get("username") == test_data["admin"].username
+            for item in items
+            if isinstance(item, dict)
+        )
+
+    def test_get_user_statistics_with_admin(self, authenticated_client):
+        """测试管理员可获取用户统计。"""
+        response = authenticated_client.get("/api/v1/auth/users/statistics/summary")
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload.get("success") is True
+        assert isinstance(payload.get("data"), dict)
+
 
 class TestSessionManagementEndpoints:
     """测试会话管理端点 (sessions.py)"""
@@ -177,6 +272,18 @@ class TestSessionManagementEndpoints:
         # 需要认证
         assert response.status_code == 401
 
+    def test_get_sessions_with_authenticated_user(self, authenticated_client):
+        """测试登录后可获取当前用户会话列表。"""
+        response = authenticated_client.get("/api/v1/auth/sessions")
+        assert response.status_code == 200
+        payload = response.json()
+        assert isinstance(payload, list)
+        if payload:
+            first = payload[0]
+            assert first.get("id") is not None
+            assert first.get("user_id") is not None
+            assert isinstance(first.get("is_active"), bool)
+
 
 class TestAuditEndpoints:
     """测试审计日志端点 (audit.py)"""
@@ -186,6 +293,13 @@ class TestAuditEndpoints:
         response = client.get("/api/v1/auth/audit/logs?days=30")
         # 需要管理员权限
         assert response.status_code == 401
+
+    def test_get_audit_logs_with_admin(self, authenticated_client):
+        """测试管理员可访问审计统计。"""
+        response = authenticated_client.get("/api/v1/auth/audit/logs?days=30")
+        assert response.status_code == 200
+        payload = response.json()
+        assert isinstance(payload, dict)
 
 
 class TestSecurityEndpoints:
@@ -197,53 +311,62 @@ class TestSecurityEndpoints:
         # 需要管理员权限
         assert response.status_code == 401
 
+    def test_get_security_config_with_admin(self, authenticated_client):
+        """测试管理员可访问安全配置。"""
+        response = authenticated_client.get("/api/v1/auth/security/config")
+        assert response.status_code == 200
+        payload = response.json()
+        assert isinstance(payload.get("password_policy"), dict)
+        assert isinstance(payload.get("token_config"), dict)
+        assert isinstance(payload.get("session_config"), dict)
+
 
 class TestRouterStructure:
     """测试路由结构是否正确"""
 
     def test_all_routes_accessible(self, client):
-        """测试所有路由都可以访问（不会返回404）"""
+        """测试所有路由返回与未认证场景一致的明确状态码。"""
         routes_to_test = [
             # Authentication routes
-            ("POST", "/api/v1/auth/login"),
-            ("POST", "/api/v1/auth/logout"),
-            ("POST", "/api/v1/auth/refresh"),
-            ("GET", "/api/v1/auth/me"),
+            ("POST", "/api/v1/auth/login", 422),
+            ("POST", "/api/v1/auth/logout", 401),
+            ("POST", "/api/v1/auth/refresh", 400),
+            ("GET", "/api/v1/auth/me", 401),
             # User management routes
-            ("GET", "/api/v1/auth/users"),
-            ("GET", "/api/v1/auth/users/search"),
-            ("POST", "/api/v1/auth/users"),
-            ("GET", "/api/v1/auth/users/123"),
-            ("PUT", "/api/v1/auth/users/123"),
-            ("POST", "/api/v1/auth/users/123/change-password"),
-            ("POST", "/api/v1/auth/users/123/deactivate"),
-            ("POST", "/api/v1/auth/users/123/activate"),
-            ("POST", "/api/v1/auth/users/123/lock"),
-            ("POST", "/api/v1/auth/users/123/unlock"),
-            ("POST", "/api/v1/auth/users/123/reset-password"),
-            ("GET", "/api/v1/auth/users/statistics/summary"),
+            ("GET", "/api/v1/auth/users", 401),
+            ("GET", "/api/v1/auth/users/search", 401),
+            ("POST", "/api/v1/auth/users", 401),
+            ("GET", "/api/v1/auth/users/123", 401),
+            ("PUT", "/api/v1/auth/users/123", 401),
+            ("POST", "/api/v1/auth/users/123/change-password", 401),
+            ("POST", "/api/v1/auth/users/123/deactivate", 401),
+            ("POST", "/api/v1/auth/users/123/activate", 401),
+            ("POST", "/api/v1/auth/users/123/lock", 401),
+            ("POST", "/api/v1/auth/users/123/unlock", 401),
+            ("POST", "/api/v1/auth/users/123/reset-password", 401),
+            ("GET", "/api/v1/auth/users/statistics/summary", 401),
             # Session management routes
-            ("GET", "/api/v1/auth/sessions"),
-            ("DELETE", "/api/v1/auth/sessions/123"),
+            ("GET", "/api/v1/auth/sessions", 401),
+            ("DELETE", "/api/v1/auth/sessions/123", 401),
             # Audit routes
-            ("GET", "/api/v1/auth/audit/logs"),
+            ("GET", "/api/v1/auth/audit/logs", 401),
             # Security routes
-            ("GET", "/api/v1/auth/security/config"),
+            ("GET", "/api/v1/auth/security/config", 401),
         ]
 
-        for method, route in routes_to_test:
+        for method, route, expected_status in routes_to_test:
             if method == "GET":
                 response = client.get(route)
             elif method == "POST":
-                response = client.post(route)
+                response = client.post(route, json={} if route == "/api/v1/auth/login" else None)
             elif method == "PUT":
                 response = client.put(route)
             elif method == "DELETE":
                 response = client.delete(route)
 
-            # 所有路由都应该存在（不返回404）
-            # 可能返回 401 (需要认证), 422 (验证错误), 但不应该是 404
-            assert response.status_code != 404, f"Route {method} {route} returned 404"
+            assert response.status_code == expected_status, (
+                f"Route {method} {route} expected {expected_status}, got {response.status_code}"
+            )
 
     def test_no_duplicate_routes(self):
         """测试没有真正重复的路由（不同方法的路由可以有相同路径）"""
@@ -281,21 +404,21 @@ class TestBackwardCompatibility:
 
     def test_old_urls_still_work(self, client):
         """测试旧的API URL仍然工作"""
-        # 这些URL在重构前就存在，重构后应该仍然可以访问
         old_urls = [
-            "/api/v1/auth/login",  # 旧的登录URL
-            "/api/v1/auth/users",  # 旧的用户列表URL
-            "/api/v1/auth/sessions",  # 旧的会话URL
+            ("POST", "/api/v1/auth/login", 422),
+            ("POST", "/api/v1/auth/users", 401),
+            ("GET", "/api/v1/auth/sessions", 401),
         ]
 
-        for url in old_urls:
-            response = (
-                client.get(url)
-                if url.startswith("/api/v1/auth/sessions")
-                else client.post(url, json={})
+        for method, url, expected_status in old_urls:
+            if method == "GET":
+                response = client.get(url)
+            else:
+                response = client.post(url, json={})
+
+            assert response.status_code == expected_status, (
+                f"Old URL {method} {url} expected {expected_status}, got {response.status_code}"
             )
-            # 不应该返回404
-            assert response.status_code != 404, f"Old URL {url} is broken"
 
 
 class TestModuleImports:

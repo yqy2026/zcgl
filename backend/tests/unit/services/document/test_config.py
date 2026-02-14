@@ -8,14 +8,9 @@ import os
 from unittest.mock import patch
 
 import pytest
-
-# Skip all tests in this module - API mismatches with implementation
-pytestmark = pytest.mark.skip(
-    reason="Config/extractor tests have API mismatches with implementation"
-)
-
 from pydantic import ValidationError
 
+from src.core.exception_handler import ConfigurationError
 from src.services.document.config import (
     ExtractionConfig,
     LLMProvider,
@@ -58,10 +53,10 @@ class TestLLMProvider:
 
     def test_normalize_invalid_provider(self):
         """测试无效提供商抛出异常"""
-        with pytest.raises(ValueError, match="Unsupported LLM provider"):
+        with pytest.raises(ConfigurationError, match="Unsupported LLM provider"):
             LLMProvider.normalize("invalid-provider")
 
-        with pytest.raises(ValueError, match="Unsupported LLM provider"):
+        with pytest.raises(ConfigurationError, match="Unsupported LLM provider"):
             LLMProvider.normalize("gpt-4")
 
     def test_normalize_case_insensitive(self):

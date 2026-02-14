@@ -4,6 +4,7 @@ import { DeleteOutlined, DownloadOutlined } from '@ant-design/icons';
 
 import type { ExportTaskWithApiFields } from './assetExportConfig';
 import { formatFileSize, getStatusColor, getStatusText } from './assetExportUtils';
+import styles from './AssetExportHistoryModal.module.css';
 
 const { Text } = Typography;
 
@@ -79,7 +80,7 @@ const AssetExportHistoryModal: React.FC<AssetExportHistoryModalProps> = ({
                     记录数: {item.total_records ?? 0} | 文件大小: {formatFileSize(item.file_size)}
                   </div>
                   {(item.status === 'running' || item.status === 'processing') && (
-                    <Progress percent={item.progress} size="small" style={{ marginTop: 4 }} />
+                    <Progress percent={item.progress} size="small" className={styles.progressBar} />
                   )}
                 </div>
               }

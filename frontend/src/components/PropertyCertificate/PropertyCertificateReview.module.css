@@ -7,16 +7,16 @@
 }
 
 .statusAssistText {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
 }
 
 .statusTag {
   margin-inline-end: 0;
   border-radius: 999px;
   border: 1px solid transparent;
-  padding-inline: 8px;
-  font-size: 12px;
-  line-height: 18px;
+  padding-inline: var(--spacing-sm);
+  font-size: var(--font-size-xs);
+  line-height: calc(var(--font-size-base) + var(--spacing-xs));
   font-weight: var(--font-weight-medium);
 }
 
@@ -57,16 +57,16 @@
 }
 
 .listItem {
-  padding-block: 8px;
+  padding-block: var(--spacing-sm);
 }
 
 .warningCollapse {
-  margin-top: 16px;
+  margin-top: var(--spacing-lg);
 }
 
 .assetListItem {
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: background-color var(--transition-base);
 }
 
 .assetListItem:hover {
@@ -75,7 +75,7 @@
 
 .assetListItemActive {
   background: var(--color-primary-light);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
 }
 
 .fullWidthInput {
@@ -83,12 +83,12 @@
 }
 
 .submitButton {
-  min-width: 168px;
+  min-width: calc(var(--spacing-xxl) * 5 + var(--spacing-sm));
 }
 
 @media (max-width: 768px) {
   .submitButton {
-    min-height: 44px;
+    min-height: calc(var(--button-height-lg) + var(--spacing-xs));
     width: 100%;
   }
 }

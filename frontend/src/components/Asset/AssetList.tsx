@@ -12,11 +12,11 @@ import type {
 import type { Asset, AssetListResponse } from '@/types/asset';
 import { DataStatus } from '@/types/asset';
 import { formatArea, formatPercentage, formatDate, getStatusColor } from '@/utils/format';
-import { getOccupancyRateColor } from '@/styles/colorMap';
 import { useSystemDictionary } from '@/hooks/useSystemDictionary';
 import usePermission from '@/hooks/usePermission';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
 import { announceToScreenReader } from '@/utils/accessibility';
+import styles from './AssetList.module.css';
 
 // Constants
 const UUID_LENGTH = 36;
@@ -54,6 +54,16 @@ function getDataStatusColor(status?: string): string {
     default:
       return 'default';
   }
+}
+
+function getOccupancyRateClassName(rate: number): string {
+  if (rate >= 80) {
+    return styles.occupancyRateSuccess;
+  }
+  if (rate >= 60) {
+    return styles.occupancyRateWarning;
+  }
+  return styles.occupancyRateError;
 }
 
 interface AssetListProps {
@@ -174,7 +184,7 @@ const AssetList: React.FC<AssetListProps> = ({
           <Button
             type="link"
             onClick={() => onView(record)}
-            style={{ padding: 0, height: 'auto', textAlign: 'left' }}
+            className={styles.propertyNameButton}
           >
             <Tooltip title="点击查看详情">{text}</Tooltip>
           </Button>
@@ -323,11 +333,7 @@ const AssetList: React.FC<AssetListProps> = ({
           ) {
             const calculatedRate = (record.rented_area / record.rentable_area) * 100;
             return (
-              <span
-                style={{
-                  color: getOccupancyRateColor(calculatedRate),
-                }}
-              >
+              <span className={getOccupancyRateClassName(calculatedRate)}>
                 {formatPercentage(calculatedRate)}
               </span>
             );
@@ -555,11 +561,7 @@ const AssetList: React.FC<AssetListProps> = ({
             </Table.Summary.Cell>
             <Table.Summary.Cell index={rentedIndex + 1} colSpan={statusSpan} />
             <Table.Summary.Cell index={occupancyIndex} align="right">
-              <strong
-                style={{
-                  color: getOccupancyRateColor(summary.occupancyRate),
-                }}
-              >
+              <strong className={getOccupancyRateClassName(summary.occupancyRate)}>
                 {formatPercentage(summary.occupancyRate)}
               </strong>
             </Table.Summary.Cell>
@@ -644,7 +646,7 @@ const AssetList: React.FC<AssetListProps> = ({
         okButtonProps={{ disabled: !hardDeleteMatch }}
         aria-labelledby="hard-delete-title"
       >
-        <Space direction="vertical" style={{ width: '100%' }}>
+        <Space direction="vertical" className={styles.hardDeleteSpace}>
           <div id="hard-delete-title">
             此操作不可恢复。请输入物业名称或资产 ID 以确认删除：
             <strong>
@@ -662,7 +664,7 @@ const AssetList: React.FC<AssetListProps> = ({
             aria-describedby="hard-delete-help"
           />
           {!hardDeleteMatch && hardDeleteInput && (
-            <div id="hard-delete-help" role="alert" style={{ color: '#ff4d4f' }}>
+            <div id="hard-delete-help" role="alert" className={styles.hardDeleteHelp}>
               输入与物业名称或资产ID不匹配
             </div>
           )}

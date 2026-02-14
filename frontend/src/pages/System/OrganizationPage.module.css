@@ -1,7 +1,15 @@
+.pageShell {
+  --organization-control-height: var(--button-height-lg);
+  --organization-touch-target-size: calc(var(--button-height-lg) + var(--spacing-xs));
+  --organization-search-width: 300px;
+  --organization-history-action-min-width: calc(var(--button-height-lg) + var(--spacing-md));
+  --organization-tree-title-gap: calc(var(--spacing-sm) - (var(--spacing-xs) / 2));
+}
+
 .nameCell {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-sm);
 }
 
 .primaryText {
@@ -10,7 +18,7 @@
 }
 
 .secondaryText {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
 }
 
@@ -19,38 +27,38 @@
   margin-inline-end: 0;
   border-radius: 999px;
   border: 1px solid transparent;
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
   line-height: 1.35;
 }
 
 .codeTag {
-  padding-inline: 8px;
+  padding-inline: var(--spacing-sm);
 }
 
 .statusTag {
-  padding-inline: 8px;
+  padding-inline: var(--spacing-sm);
 }
 
 .treeStatusTag {
-  margin-left: 8px;
+  margin-left: var(--spacing-sm);
 }
 
 .treeNodeLabel {
   display: inline-flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--spacing-sm);
 }
 
 .treeNodeTitle {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--organization-tree-title-gap);
 }
 
 .statsRow {
-  margin-bottom: 24px;
+  margin-bottom: var(--spacing-xl);
 }
 
 .statsCard {
@@ -113,15 +121,15 @@
 }
 
 .historyActionTag {
-  min-width: 52px;
+  min-width: var(--organization-history-action-min-width);
 }
 
 .tabs :global(.ant-tabs-nav) {
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-lg);
 }
 
 .toolbarSection {
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-lg);
 }
 
 .filterSummary {
@@ -129,25 +137,25 @@
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
 }
 
 .toolbarActions {
-  row-gap: 8px;
+  row-gap: var(--spacing-sm);
 }
 
 .searchInput {
-  width: 300px;
+  width: var(--organization-search-width);
 }
 
 .actionButton {
-  min-height: 40px;
+  min-height: var(--organization-control-height);
 }
 
 .treePanel {
   background: var(--color-bg-secondary);
-  padding: 16px;
+  padding: var(--spacing-lg);
   border-radius: var(--card-radius);
 }
 
@@ -156,11 +164,11 @@
 }
 
 .systemFieldsCard {
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-lg);
 }
 
 .compactFieldItem {
-  margin-bottom: 12px;
+  margin-bottom: var(--spacing-md);
 }
 
 .compactFieldLastItem {
@@ -178,17 +186,17 @@
 }
 
 .modalActionButton {
-  min-height: 40px;
+  min-height: var(--organization-control-height);
 }
 
 .tableActionGroup {
-  gap: 4px;
+  gap: var(--spacing-xs);
 }
 
 .tableActionButton {
-  min-width: 40px;
-  min-height: 40px;
-  border-radius: 8px;
+  min-width: var(--organization-control-height);
+  min-height: var(--organization-control-height);
+  border-radius: var(--radius-md);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -217,19 +225,19 @@
   }
 
   .actionButton {
-    min-height: 44px;
+    min-height: var(--organization-touch-target-size);
   }
 
   .treePanel {
-    padding: 12px;
+    padding: var(--spacing-md);
   }
 
   .tableActionButton {
-    min-width: 44px;
-    min-height: 44px;
+    min-width: var(--organization-touch-target-size);
+    min-height: var(--organization-touch-target-size);
   }
 
   .modalActionButton {
-    min-height: 44px;
+    min-height: var(--organization-touch-target-size);
   }
 }

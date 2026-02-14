@@ -1,0 +1,32 @@
+.progressContainer {
+  margin-top: var(--spacing-xl);
+  padding: var(--spacing-lg);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-md);
+}
+
+.headerBlock {
+  margin-bottom: var(--spacing-lg);
+}
+
+.title {
+  margin: 0 !important;
+}
+
+.successIcon {
+  color: var(--color-success);
+}
+
+.contentBlock {
+  margin-bottom: var(--spacing-lg);
+}
+
+.infoRow {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-sm);
+}
+
+.fileSizeBlock {
+  margin-bottom: var(--spacing-sm);
+}

@@ -5,10 +5,10 @@
 .statCard {
   height: 100%;
   border: 1px solid var(--color-border-light);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
+    border-color var(--transition-base),
+    box-shadow var(--transition-base);
 }
 
 .statCard:hover {
@@ -16,14 +16,14 @@
 }
 
 .statCard :global(.ant-card-body) {
-  padding: 20px 24px;
+  padding: calc(var(--spacing-lg) + var(--spacing-xs)) var(--spacing-xl);
 }
 
 .statHeader {
   display: flex;
   align-items: flex-start;
-  gap: 14px;
-  margin-bottom: 8px;
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-sm);
 }
 
 .iconBadge {
@@ -31,12 +31,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
+  width: var(--button-height-lg);
+  height: var(--button-height-lg);
+  border-radius: var(--radius-md);
   background: var(--stats-card-icon-bg, var(--color-primary));
   color: var(--color-bg-primary);
-  font-size: 18px;
+  font-size: var(--font-size-xl);
 }
 
 .statMain {
@@ -45,16 +45,16 @@
 }
 
 .statTitle {
-  margin-bottom: 4px;
+  margin-bottom: var(--spacing-xs);
   color: var(--color-text-tertiary);
-  font-size: 14px;
+  font-size: var(--font-size-base);
   line-height: 1.4;
 }
 
 .statistic :global(.ant-statistic-content) {
   margin: 0;
   color: var(--stats-card-value-color, var(--color-text-primary));
-  font-size: 24px;
+  font-size: var(--font-size-xxxl);
   font-weight: var(--font-weight-bold);
   line-height: 1.2;
 }
@@ -62,13 +62,13 @@
 .trend {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--spacing-xs);
   min-height: 24px;
-  padding: 2px 8px;
+  padding: calc(var(--spacing-xs) / 2) var(--spacing-sm);
   border-radius: 999px;
   background: var(--color-bg-secondary);
   color: var(--stats-card-trend-color, var(--color-text-secondary));
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
   line-height: 1.2;
 }
@@ -79,17 +79,17 @@
 
 .financialCard {
   height: 100%;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
 }
 
 .financialCard :global(.ant-card-body) {
-  padding: 16px 20px;
+  padding: var(--spacing-lg) calc(var(--spacing-lg) + var(--spacing-xs));
 }
 
 .financialMetric :global(.ant-statistic-title) {
-  margin-bottom: 6px;
+  margin-bottom: calc(var(--spacing-sm) - 2px);
   color: var(--color-text-secondary);
-  font-size: 14px;
+  font-size: var(--font-size-base);
   line-height: 1.4;
 }
 
@@ -120,16 +120,16 @@
 
 @media (max-width: 768px) {
   .statCard :global(.ant-card-body) {
-    padding: 16px;
+    padding: var(--spacing-lg);
   }
 
   .iconBadge {
-    width: 36px;
-    height: 36px;
-    font-size: 16px;
+    width: var(--button-height-md);
+    height: var(--button-height-md);
+    font-size: var(--font-size-lg);
   }
 
   .statistic :global(.ant-statistic-content) {
-    font-size: 22px;
+    font-size: calc(var(--font-size-xxl) + (var(--spacing-xs) / 2));
   }
 }

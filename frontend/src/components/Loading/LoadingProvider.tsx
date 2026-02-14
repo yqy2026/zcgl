@@ -5,6 +5,7 @@
 
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { Spin } from 'antd';
+import styles from './LoadingProvider.module.css';
 
 // Loading状态接口
 interface LoadingState {
@@ -159,20 +160,7 @@ export const GlobalLoadingOverlay: React.FC = () => {
   }
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.45)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 9999,
-      }}
-    >
+    <div className={styles.globalLoadingOverlay}>
       <Spin
         size="large"
         tip={
@@ -244,6 +232,16 @@ export const LoadingButton: React.FC<LoadingButtonProps> = ({
   className,
   style,
 }) => {
+  const disabledState = (disabled ?? false) || loading;
+  const buttonClassName = [
+    styles.loadingButton,
+    loading ? styles.loadingButtonLoading : '',
+    disabledState ? styles.loadingButtonDisabled : '',
+    className ?? '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   const handleClick = useCallback(async () => {
     if (
       onClick !== undefined &&
@@ -262,17 +260,13 @@ export const LoadingButton: React.FC<LoadingButtonProps> = ({
 
   return (
     <button
-      className={className}
-      style={{
-        ...style,
-        opacity: loading ? 0.6 : 1,
-        cursor: loading ? 'not-allowed' : (disabled ?? false) ? 'not-allowed' : 'pointer',
-      }}
-      disabled={(disabled ?? false) || loading}
+      className={buttonClassName}
+      style={style}
+      disabled={disabledState}
       onClick={handleClick}
     >
       {loading && (
-        <span style={{ marginRight: '8px' }}>
+        <span className={styles.loadingIndicator}>
           <Spin size="small" />
         </span>
       )}

@@ -99,6 +99,27 @@ class AnalyticsService:
 
         return validated
 
+    @staticmethod
+    def _build_asset_status_filters(include_deleted: bool) -> dict[str, Any]:
+        """
+        构建资产状态筛选条件。
+
+        说明：
+        QueryBuilder 会在未显式传入 data_status 过滤时自动追加
+        `data_status != "已删除"` 软删条件。为确保 include_deleted=true 生效，
+        这里显式传入 data_status 相关过滤，避免被默认软删规则覆盖。
+        """
+        if include_deleted:
+            return {
+                "data_status__in": [
+                    DataStatusValues.ASSET_NORMAL,
+                    DataStatusValues.ASSET_ABNORMAL,
+                    DataStatusValues.ASSET_DELETED,
+                    DataStatusValues.ASSET_ARCHIVED,
+                ]
+            }
+        return {"data_status": DataStatusValues.ASSET_NORMAL}
+
     def _generate_cache_key(self, filters: dict[str, Any]) -> str:
         """生成缓存键"""
         # 简化版本：基于筛选条件生成键
@@ -121,12 +142,9 @@ class AnalyticsService:
         """
         # 获取基础数据
         from ...crud.asset import asset_crud
-        query_filters: dict[str, Any] = {}
-
-        # 应用筛选条件 - 使用 data_status 而不是 is_deleted
-        if not filters.get("include_deleted", False):
-            # 只获取状态为"正常"的资产
-            query_filters["data_status"] = DataStatusValues.ASSET_NORMAL
+        query_filters = self._build_asset_status_filters(
+            include_deleted=filters.get("include_deleted", False)
+        )
 
         assets, _ = await asset_crud.get_multi_with_search_async(
             db=self.db,
@@ -220,9 +238,10 @@ class AnalyticsService:
         # 获取资产数据
         from ...crud.asset import asset_crud
 
-        query_filters: dict[str, Any] = {}
-        if filters is not None and not filters.get("include_deleted", False):
-            query_filters["data_status"] = DataStatusValues.ASSET_NORMAL
+        include_deleted = bool(filters.get("include_deleted", False)) if filters else False
+        query_filters = self._build_asset_status_filters(
+            include_deleted=include_deleted
+        )
 
         assets, _ = await asset_crud.get_multi_with_search_async(
             db=self.db,
@@ -316,9 +335,10 @@ class AnalyticsService:
 
         from ...crud.asset import asset_crud
 
-        query_filters: dict[str, Any] = {}
-        if filters is not None and not filters.get("include_deleted", False):
-            query_filters["data_status"] = DataStatusValues.ASSET_NORMAL
+        include_deleted = bool(filters.get("include_deleted", False)) if filters else False
+        query_filters = self._build_asset_status_filters(
+            include_deleted=include_deleted
+        )
 
         assets, _ = await asset_crud.get_multi_with_search_async(
             db=self.db,

@@ -10,6 +10,7 @@ import React from 'react';
 import { Switch, Tooltip, Space, Typography } from 'antd';
 import { SunOutlined, MoonOutlined, BgColorsOutlined } from '@ant-design/icons';
 import { useAppStore } from '@/store/useAppStore';
+import styles from './ThemeToggle.module.css';
 
 const { Text } = Typography;
 
@@ -56,6 +57,8 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
     toggleTheme();
   };
 
+  const modeIconSizeClass = size === 'small' ? styles.modeIconSmall : styles.modeIconDefault;
+
   const switchElement = (
     <Switch
       checked={isDark}
@@ -71,20 +74,14 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
 
   if (showLabel) {
     return (
-      <Space size="small" style={{ gap: 'var(--spacing-sm)' }}>
+      <Space size="small" className={styles.toggleLabelSpace}>
         <SunOutlined
-          style={{
-            fontSize: size === 'small' ? '14px' : '16px',
-            color: isDark ? 'var(--color-text-tertiary)' : 'var(--color-warning)',
-          }}
+          className={`${modeIconSizeClass} ${isDark ? styles.lightIconInactive : styles.lightIconActive}`}
           aria-label="浅色模式图标"
         />
         {switchElement}
         <MoonOutlined
-          style={{
-            fontSize: size === 'small' ? '14px' : '16px',
-            color: isDark ? 'var(--color-primary)' : 'var(--color-text-tertiary)',
-          }}
+          className={`${modeIconSizeClass} ${isDark ? styles.darkIconActive : styles.darkIconInactive}`}
           aria-label="深色模式图标"
         />
       </Space>
@@ -127,44 +124,35 @@ export const ThemeToggleButton: React.FC<ThemeToggleButtonProps> = ({
   const { theme, toggleTheme } = useAppStore();
 
   const isDark = theme === 'dark';
+  const buttonSizeClass =
+    size === 'large'
+      ? styles.themeToggleButtonLarge
+      : size === 'middle'
+        ? styles.themeToggleButtonMiddle
+        : styles.themeToggleButtonSmall;
+  const iconSizeClass =
+    size === 'large'
+      ? styles.toggleButtonIconLarge
+      : size === 'middle'
+        ? styles.toggleButtonIconMiddle
+        : styles.toggleButtonIconSmall;
 
   return (
     <Tooltip title={isDark ? '切换到浅色模式' : '切换到深色模式'}>
       <button
         onClick={toggleTheme}
         aria-label={isDark ? '切换到浅色模式' : '切换到深色模式'}
-        className={`theme-toggle-button ${className ?? ''}`}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: size === 'large' ? '44px' : size === 'middle' ? '40px' : '36px',
-          height: size === 'large' ? '44px' : size === 'middle' ? '40px' : '36px',
-          minWidth: size === 'large' ? '44px' : size === 'middle' ? '40px' : '36px',
-          minHeight: size === 'large' ? '44px' : size === 'middle' ? '40px' : '36px',
-          padding: 'var(--spacing-sm)',
-          background: 'transparent',
-          border: '1px solid var(--color-border)',
-          borderRadius: 'var(--radius-md)',
-          cursor: 'pointer',
-          transition: 'all var(--transition-fast)',
-          ...style,
-        }}
+        className={`theme-toggle-button ${styles.themeToggleButtonBase} ${buttonSizeClass} ${className ?? ''}`}
+        style={style}
       >
         {isDark ? (
           <SunOutlined
-            style={{
-              fontSize: size === 'large' ? '18px' : size === 'middle' ? '16px' : '14px',
-              color: 'var(--color-warning)',
-            }}
+            className={`${iconSizeClass} ${styles.toggleButtonSunIcon}`}
             aria-label="浅色模式"
           />
         ) : (
           <MoonOutlined
-            style={{
-              fontSize: size === 'large' ? '18px' : size === 'middle' ? '16px' : '14px',
-              color: 'var(--color-primary)',
-            }}
+            className={`${iconSizeClass} ${styles.toggleButtonMoonIcon}`}
             aria-label="深色模式"
           />
         )}
@@ -183,17 +171,18 @@ export const ThemeSelector: React.FC<{
   style?: React.CSSProperties;
 }> = ({ className, style }) => {
   const { theme, setTheme } = useAppStore();
+  const lightButtonStateClass =
+    theme === 'light' ? styles.selectorButtonActive : styles.selectorButtonInactive;
+  const darkButtonStateClass =
+    theme === 'dark' ? styles.selectorButtonActive : styles.selectorButtonInactive;
 
   return (
-    <Space size="small" style={{ gap: 'var(--spacing-sm)', ...style }} className={className}>
+    <Space size="small" style={style} className={`${styles.selectorSpace} ${className ?? ''}`}>
       <BgColorsOutlined
-        style={{
-          fontSize: '16px',
-          color: 'var(--color-text-secondary)',
-        }}
+        className={styles.selectorIcon}
         aria-label="主题选择"
       />
-      <Text type="secondary" style={{ fontSize: 'var(--font-size-sm)' }}>
+      <Text type="secondary" className={styles.selectorLabel}>
         主题:
       </Text>
       <Space.Compact>
@@ -201,15 +190,7 @@ export const ThemeSelector: React.FC<{
           onClick={() => setTheme('light')}
           aria-label="浅色模式"
           aria-pressed={theme === 'light'}
-          style={{
-            padding: 'var(--spacing-xs) var(--spacing-md)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-sm) 0 0 var(--radius-sm)',
-            background: theme === 'light' ? 'var(--color-primary-light)' : 'transparent',
-            color: theme === 'light' ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-            cursor: 'pointer',
-            fontSize: 'var(--font-size-sm)',
-          }}
+          className={`${styles.selectorButtonBase} ${styles.selectorButtonLeft} ${lightButtonStateClass}`}
         >
           浅色
         </button>
@@ -217,16 +198,7 @@ export const ThemeSelector: React.FC<{
           onClick={() => setTheme('dark')}
           aria-label="深色模式"
           aria-pressed={theme === 'dark'}
-          style={{
-            padding: 'var(--spacing-xs) var(--spacing-md)',
-            border: '1px solid var(--color-border)',
-            borderLeft: 'none',
-            borderRadius: '0 var(--radius-sm) var(--radius-sm) 0',
-            background: theme === 'dark' ? 'var(--color-primary-light)' : 'transparent',
-            color: theme === 'dark' ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-            cursor: 'pointer',
-            fontSize: 'var(--font-size-sm)',
-          }}
+          className={`${styles.selectorButtonBase} ${styles.selectorButtonRight} ${darkButtonStateClass}`}
         >
           深色
         </button>

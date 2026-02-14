@@ -8,6 +8,7 @@ import type { UploadFile } from 'antd/es/upload/interface';
 import { useDictionaries } from '@/hooks/useDictionary';
 import { COLORS } from '@/styles/colorMap';
 import { announceToScreenReader } from '@/utils/accessibility';
+import styles from './AssetForm.module.css';
 
 // Section components
 import {
@@ -37,12 +38,12 @@ const FormCompletionProgress: React.FC = () => {
   const { completionRate } = useAssetFormContext();
 
   return (
-    <Card style={{ marginBottom: '16px' }}>
+    <Card className={styles.completionCard}>
       <Row justify="space-between" align="middle">
         <Col>
           <Text>表单完成度</Text>
         </Col>
-        <Col flex="auto" style={{ marginLeft: '16px' }}>
+        <Col flex="auto" className={styles.progressColumn}>
           <Progress
             percent={completionRate}
             size="small"

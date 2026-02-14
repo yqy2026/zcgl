@@ -1,11 +1,13 @@
 .container {
+  --ownership-detail-action-height: calc(var(--button-height-lg) + var(--spacing-xs));
+  --ownership-detail-project-gap: calc(var(--spacing-sm) - (var(--spacing-xs) / 2));
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--spacing-lg);
 }
 
 .sectionCard {
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
 }
 
 .sectionCard :global(.ant-card-head-title) {
@@ -20,7 +22,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
+  gap: var(--spacing-lg);
 }
 
 .titleBlock {
@@ -28,14 +30,14 @@
 }
 
 .ownershipName {
-  font-size: 20px;
+  font-size: var(--font-size-xxl);
   line-height: 1.35;
   color: var(--color-text-primary);
 }
 
 .shortName {
-  margin-top: 8px;
-  font-size: 13px;
+  margin-top: var(--spacing-sm);
+  font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
   line-height: 1.4;
 }
@@ -43,7 +45,7 @@
 .headerActions {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--spacing-md);
   flex-wrap: wrap;
 }
 
@@ -52,8 +54,8 @@
 }
 
 .editButton {
-  min-height: 44px;
-  border-radius: 8px;
+  min-height: var(--ownership-detail-action-height);
+  border-radius: var(--radius-md);
 }
 
 .editButton:focus-visible {
@@ -67,11 +69,11 @@
 
 .counterTag {
   border-radius: 999px;
-  padding-inline: 8px;
+  padding-inline: var(--spacing-sm);
 }
 
 .projectNameCell {
-  gap: 6px;
+  gap: var(--ownership-detail-project-gap);
 }
 
 .projectIcon {
@@ -80,7 +82,7 @@
 
 .relationTag {
   border-radius: 999px;
-  padding-inline: 8px;
+  padding-inline: var(--spacing-sm);
 }
 
 .projectTable :global(.ant-table-cell) {

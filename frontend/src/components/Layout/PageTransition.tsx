@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import styles from './PageTransition.module.css';
 
 interface PageTransitionProps {
   children: React.ReactNode;
@@ -34,7 +35,7 @@ const PageTransition: React.FC<PageTransitionProps> = ({ children }) => {
       exit="out"
       variants={pageVariants}
       transition={pageTransition}
-      style={{ height: '100%', width: '100%' }}
+      className={styles.pageTransition}
     >
       {children}
     </motion.div>

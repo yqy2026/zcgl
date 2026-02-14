@@ -9,10 +9,6 @@ interface SkeletonLoaderProps {
   children?: React.ReactNode;
 }
 
-const INPUT_ROW_STYLE = { width: '100%', height: 32 } as const;
-const CARD_SPACING_STYLE = { width: 200, height: 24 } as const;
-const TABLE_HEADER_INPUT_STYLE = { width: '80%', height: 20 } as const;
-
 const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
   type = 'list',
   rows = 3,
@@ -53,27 +49,30 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
         return (
           <Card>
             <div className={styles.sectionBlockLg}>
-              <Skeleton.Input style={{ width: 200, height: 32 }} active />
+              <Skeleton.Input className={styles.formTitleInput} active />
             </div>
             {Array.from({ length: rows }).map((_, index) => (
               <Row key={`skeleton-form-${index}`} gutter={16} className={styles.sectionBlockLg}>
                 <Col span={6}>
-                  <Skeleton.Input style={INPUT_ROW_STYLE} active />
+                  <Skeleton.Input className={styles.rowInput} active />
                 </Col>
                 <Col span={6}>
-                  <Skeleton.Input style={INPUT_ROW_STYLE} active />
+                  <Skeleton.Input className={styles.rowInput} active />
                 </Col>
                 <Col span={6}>
-                  <Skeleton.Input style={INPUT_ROW_STYLE} active />
+                  <Skeleton.Input className={styles.rowInput} active />
                 </Col>
                 <Col span={6}>
-                  <Skeleton.Input style={INPUT_ROW_STYLE} active />
+                  <Skeleton.Input className={styles.rowInput} active />
                 </Col>
               </Row>
             ))}
             <div className={styles.formActions}>
-              <Skeleton.Button style={{ width: 100, height: 32 }} active />
-              <Skeleton.Button style={{ width: 80, height: 32 }} className={styles.formActionSecondary} active />
+              <Skeleton.Button className={styles.formActionPrimary} active />
+              <Skeleton.Button
+                className={`${styles.formActionButton} ${styles.formActionSecondary}`}
+                active
+              />
             </div>
           </Card>
         );
@@ -84,16 +83,16 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
             <div className={styles.sectionBlockMd}>
               <Row gutter={16}>
                 <Col span={6}>
-                  <Skeleton.Input style={INPUT_ROW_STYLE} active />
+                  <Skeleton.Input className={styles.rowInput} active />
                 </Col>
                 <Col span={6}>
-                  <Skeleton.Input style={INPUT_ROW_STYLE} active />
+                  <Skeleton.Input className={styles.rowInput} active />
                 </Col>
                 <Col span={6}>
-                  <Skeleton.Input style={INPUT_ROW_STYLE} active />
+                  <Skeleton.Input className={styles.rowInput} active />
                 </Col>
                 <Col span={6}>
-                  <Skeleton.Button style={{ width: 80, height: 32 }} active />
+                  <Skeleton.Button className={styles.formActionButton} active />
                 </Col>
               </Row>
             </div>
@@ -102,7 +101,7 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
             <Row gutter={16} className={styles.tableHeaderRow}>
               {Array.from({ length: 6 }).map((_, index) => (
                 <Col span={4} key={`skeleton-header-${index}`}>
-                  <Skeleton.Input style={TABLE_HEADER_INPUT_STYLE} active />
+                  <Skeleton.Input className={styles.tableHeaderInput} active />
                 </Col>
               ))}
             </Row>
@@ -113,10 +112,9 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
                 {Array.from({ length: 6 }).map((_, colIndex) => (
                   <Col span={4} key={`skeleton-cell-${rowIndex}-${colIndex}`}>
                     <Skeleton.Input
-                      style={{
-                        width: colIndex === 0 ? '60%' : '80%',
-                        height: 16,
-                      }}
+                      className={
+                        colIndex === 0 ? styles.tableCellInputNarrow : styles.tableCellInputRegular
+                      }
                       active
                     />
                   </Col>
@@ -126,7 +124,7 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
 
             {/* 分页 */}
             <div className={styles.tablePagination}>
-              <Skeleton.Button style={{ width: 200, height: 32 }} active />
+              <Skeleton.Button className={styles.tablePaginationButton} active />
             </div>
           </Card>
         );
@@ -135,7 +133,7 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
         return (
           <Card>
             <div className={styles.sectionBlockMd}>
-              <Skeleton.Input style={CARD_SPACING_STYLE} active />
+              <Skeleton.Input className={styles.chartSectionTitle} active />
             </div>
 
             {/* 统计卡片 */}
@@ -151,7 +149,7 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
 
             {/* 图表区域 */}
             <div className={styles.chartArea}>
-              <Skeleton.Node style={{ width: 200, height: 200 }} className={styles.chartNode} active>
+              <Skeleton.Node className={`${styles.chartNode} ${styles.chartNodeSize}`} active>
                 <div className={styles.chartCircle} />
               </Skeleton.Node>
             </div>
@@ -166,12 +164,12 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
               <div className={styles.detailHeader}>
                 <Skeleton.Avatar size={64} active />
                 <div className={styles.detailHeaderMeta}>
-                  <Skeleton.Input style={{ width: 300, height: 24, marginBottom: 8 }} active />
-                  <Skeleton.Input style={{ width: 200, height: 16 }} active />
+                  <Skeleton.Input className={styles.detailHeaderTitle} active />
+                  <Skeleton.Input className={styles.detailHeaderSubTitle} active />
                 </div>
                 <div className={styles.detailHeaderActions}>
-                  <Skeleton.Button style={{ width: 80, height: 32 }} active />
-                  <Skeleton.Button style={{ width: 80, height: 32 }} active />
+                  <Skeleton.Button className={styles.detailActionButton} active />
+                  <Skeleton.Button className={styles.detailActionButton} active />
                 </div>
               </div>
             </Card>
@@ -179,14 +177,14 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
             {/* 详细信息 */}
             <Row gutter={16}>
               <Col span={16}>
-                <Card title={<Skeleton.Input style={{ width: 120, height: 20 }} active />}>
+                <Card title={<Skeleton.Input className={styles.detailMainTitle} active />}>
                   {Array.from({ length: rows }).map((_, index) => (
                     <Row key={`skeleton-detail-${index}`} gutter={16} className={styles.sectionBlockMd}>
                       <Col span={8}>
-                        <Skeleton.Input style={{ width: '100%', height: 16 }} active />
+                        <Skeleton.Input className={styles.detailFieldFull} active />
                       </Col>
                       <Col span={16}>
-                        <Skeleton.Input style={{ width: '80%', height: 16 }} active />
+                        <Skeleton.Input className={styles.detailFieldRegular} active />
                       </Col>
                     </Row>
                   ))}
@@ -194,7 +192,7 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
               </Col>
 
               <Col span={8}>
-                <Card title={<Skeleton.Input style={{ width: 100, height: 20 }} active />}>
+                <Card title={<Skeleton.Input className={styles.detailSideTitle} active />}>
                   {Array.from({ length: 3 }).map((_, index) => (
                     <div key={`skeleton-side-${index}`} className={styles.sectionBlockMd}>
                       <Skeleton paragraph={{ rows: 1 }} title={{ width: '70%' }} active />

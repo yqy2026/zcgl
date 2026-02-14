@@ -1,0 +1,41 @@
+.spinnerIcon {
+  color: inherit;
+}
+
+.iconLarge {
+  font-size: var(--font-size-xxxl);
+}
+
+.iconDefault {
+  font-size: var(--font-size-xl);
+}
+
+.iconSmall {
+  font-size: var(--font-size-base);
+}
+
+.spinnerContainer {
+  --loading-spinner-padding-y: calc(var(--spacing-xxxl) + (var(--spacing-xs) / 2));
+  --loading-spinner-padding-x: calc(var(--spacing-lg) + var(--spacing-xs));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--loading-spinner-padding-y) var(--loading-spinner-padding-x);
+}
+
+.tipText {
+  margin-top: var(--spacing-lg);
+}
+
+.tipLarge {
+  font-size: var(--font-size-lg);
+}
+
+.tipDefault {
+  font-size: var(--font-size-base);
+}
+
+.tipSmall {
+  font-size: var(--font-size-xs);
+}

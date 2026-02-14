@@ -3,16 +3,12 @@ Unit Tests for Contract Extractor Adapters
 合同提取适配器单元测试
 """
 
-import pytest
-
-# Skip all tests in this module - API mismatches with implementation
-pytestmark = pytest.mark.skip(
-    reason="Config/extractor tests have API mismatches with implementation"
-)
-
 from unittest.mock import MagicMock
 
+import pytest
+
 # Test imports
+from src.core.exception_handler import ConfigurationError
 from src.services.document.extractors.base import ContractExtractorInterface
 from src.services.document.extractors.deepseek_adapter import DeepSeekAdapter
 from src.services.document.extractors.factory import (
@@ -62,8 +58,8 @@ class TestExtractorFactory:
         assert isinstance(adapter, DeepSeekAdapter)
 
     def test_default_fallback_is_glm(self):
-        """Unknown provider should raise ValueError (no implicit fallback)"""
-        with pytest.raises(ValueError, match="Unsupported LLM provider"):
+        """未知 provider 应抛出配置错误（不做隐式回退）"""
+        with pytest.raises(ConfigurationError, match="Unsupported LLM provider"):
             ExtractorFactory.get_extractor("unknown-model")
 
     def test_case_insensitive(self):

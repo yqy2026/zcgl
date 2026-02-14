@@ -296,6 +296,7 @@ const TemplateManagementPage: React.FC = () => {
 
   return (
     <PageContainer
+      className={styles.pageShell}
       title="数据模板管理"
       subTitle="管理和下载各种数据导入模板，确保数据导入的准确性和一致性"
     >

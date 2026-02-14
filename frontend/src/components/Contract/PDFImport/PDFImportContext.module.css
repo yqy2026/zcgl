@@ -1,11 +1,11 @@
 .stepFinishIcon {
-  color: #52c41a;
+  color: var(--color-success);
 }
 
 .stepProcessIcon {
-  color: #1890ff;
+  color: var(--color-primary);
 }
 
 .stepErrorIcon {
-  color: #ff4d4f;
+  color: var(--color-error);
 }

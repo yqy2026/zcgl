@@ -1,10 +1,10 @@
 .errorContainer {
-  padding: 20px;
+  padding: calc(var(--spacing-lg) + var(--spacing-xs));
   text-align: center;
 }
 
 .errorAlert {
-  margin-bottom: 12px;
+  margin-bottom: var(--spacing-md);
 }
 
 .errorDescription {
@@ -16,13 +16,13 @@
 }
 
 .errorDetail {
-  margin: 8px 0 0;
-  font-size: 12px;
+  margin: var(--spacing-sm) 0 0;
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
 }
 
 .retryButton {
-  min-height: 36px;
+  min-height: var(--button-height-md);
 }
 
 .retryButton:focus-visible {
@@ -32,6 +32,6 @@
 
 @media (max-width: 768px) {
   .retryButton {
-    min-height: 44px;
+    min-height: calc(var(--button-height-lg) + var(--spacing-xs));
   }
 }

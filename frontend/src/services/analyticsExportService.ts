@@ -276,18 +276,25 @@ class AnalyticsExportService {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>资产分析报告</title>
     <style>
+        :root {
+            --report-color-primary: #1677ff;
+            --report-color-text-primary: #262626;
+            --report-color-text-secondary: #595959;
+            --report-color-border: #d9d9d9;
+            --report-color-bg-secondary: #fafafa;
+        }
         body { font-family: Arial, sans-serif; margin: 20px; }
         .header { text-align: center; margin-bottom: 30px; }
         .section { margin-bottom: 30px; }
-        .section h2 { color: #333; border-bottom: 2px solid #1890ff; padding-bottom: 10px; }
+        .section h2 { color: var(--report-color-text-primary); border-bottom: 2px solid var(--report-color-primary); padding-bottom: 10px; }
         table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f5f5f5; }
+        th, td { border: 1px solid var(--report-color-border); padding: 8px; text-align: left; }
+        th { background-color: var(--report-color-bg-secondary); }
         .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
-        .summary-card { border: 1px solid #ddd; padding: 15px; border-radius: 5px; }
-        .summary-card h3 { margin: 0 0 10px 0; color: #1890ff; }
-        .summary-card .value { font-size: 24px; font-weight: bold; color: #333; }
-        .summary-card .unit { font-size: 14px; color: #666; }
+        .summary-card { border: 1px solid var(--report-color-border); padding: 15px; border-radius: 5px; }
+        .summary-card h3 { margin: 0 0 10px 0; color: var(--report-color-primary); }
+        .summary-card .value { font-size: 24px; font-weight: bold; color: var(--report-color-text-primary); }
+        .summary-card .unit { font-size: 14px; color: var(--report-color-text-secondary); }
     </style>
 </head>
 <body>

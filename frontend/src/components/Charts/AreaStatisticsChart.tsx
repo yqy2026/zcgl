@@ -6,6 +6,7 @@ import { Column, DualAxes } from '@ant-design/plots';
 
 import { assetService } from '@/services/assetService';
 import type { AssetSearchParams, AreaStatistics } from '@/types/asset';
+import { CHART_COLORS, CHART_LABEL_COLORS, COLORS } from '@/styles/colorMap';
 import type {
   ChartDataPoint,
   DualAxesDataPoint,
@@ -25,9 +26,9 @@ interface AreaStatisticsChartProps {
 
 const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({ filters, height = 400 }) => {
   const getOccupancyProgressColor = (occupancyRate: number): string => {
-    if (occupancyRate >= 80) return 'var(--color-success)';
-    if (occupancyRate >= 60) return 'var(--color-warning)';
-    return 'var(--color-error)';
+    if (occupancyRate >= 80) return COLORS.success;
+    if (occupancyRate >= 60) return COLORS.warning;
+    return COLORS.error;
   };
 
   // 获取面积统计数据
@@ -57,11 +58,11 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({ filters, heig
       seriesField: 'type' as const,
       color: (({ type }: ChartDataPoint): string => {
         const typeStr = type as string;
-        if (typeStr === '土地面积') return '#1890ff';
-        if (typeStr === '房产面积') return '#52c41a';
-        if (typeStr === '可租面积') return '#faad14';
-        if (typeStr === '已租面积') return '#722ed1';
-        return '#1890ff';
+        if (typeStr === '土地面积') return CHART_COLORS[0];
+        if (typeStr === '房产面积') return CHART_COLORS[1];
+        if (typeStr === '可租面积') return CHART_COLORS[2];
+        if (typeStr === '已租面积') return CHART_COLORS[4];
+        return CHART_COLORS[0];
       }) as ChartColorFunction,
       columnStyle: {
         fillOpacity: 0.6,
@@ -117,14 +118,14 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({ filters, heig
       geometryOptions: [
         {
           geometry: 'column' as const,
-          color: '#1890ff',
+          color: CHART_COLORS[0],
           columnStyle: {
             fillOpacity: 0.6,
           },
         },
         {
           geometry: 'line' as const,
-          color: '#f5222d',
+          color: CHART_COLORS[3],
           lineStyle: {
             lineWidth: 2,
           },
@@ -206,17 +207,17 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({ filters, heig
       data: areaRangeChartData,
       xField: 'range' as const,
       yField: 'count' as const,
-      color: '#52c41a',
+      color: CHART_COLORS[1],
       columnStyle: {
         fillOpacity: 0.6,
-        stroke: '#52c41a',
+        stroke: CHART_COLORS[1],
         lineWidth: 1,
       },
       label: {
         position: 'top' as const,
         formatter: (datum: ChartDataPoint): string => `${datum.count as number} 个`,
         style: {
-          fill: '#333',
+          fill: CHART_LABEL_COLORS.dark,
           fontSize: 12,
         },
       },

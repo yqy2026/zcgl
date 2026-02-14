@@ -32,6 +32,7 @@ from src.models.collection import CollectionStatus
 from src.schemas.collection import (
     CollectionRecordCreate,
     CollectionRecordUpdate,
+    CollectionTaskSummary,
 )
 
 pytestmark = [pytest.mark.api, pytest.mark.asyncio]
@@ -127,28 +128,63 @@ def assert_paginated_payload(payload, *, total, page, page_size, items_len):
 class TestGetCollectionSummary:
     """Tests for GET /api/v1/collection/summary endpoint"""
 
-    @pytest.mark.skip("Complex database query mocking - tested in integration tests")
-    async def test_get_collection_summary_success(self, mock_db, mock_current_user):
+    async def test_get_collection_summary_success(
+        self, mock_db, mock_current_user, mock_collection_service
+    ):
         """Test getting collection summary successfully"""
-        # Skipped due to complex SQLAlchemy query mocking
-        # This endpoint is tested in integration tests
-        pass
+        from src.api.v1.system.collection import get_collection_summary
 
-    @pytest.mark.skip("Complex database query mocking - tested in integration tests")
-    async def test_get_collection_summary_no_overdue(self, mock_db, mock_current_user):
+        mock_collection_service.get_summary_async.return_value = CollectionTaskSummary(
+            total_overdue_count=5,
+            total_overdue_amount=Decimal("12000.00"),
+            pending_collection_count=3,
+            this_month_collection_count=8,
+            collection_success_rate=Decimal("62.50"),
+        )
+
+        result = await get_collection_summary(db=mock_db, current_user=mock_current_user)
+
+        assert result.total_overdue_count == 5
+        assert result.pending_collection_count == 3
+        assert result.collection_success_rate == Decimal("62.50")
+
+    async def test_get_collection_summary_no_overdue(
+        self, mock_db, mock_current_user, mock_collection_service
+    ):
         """Test getting collection summary with no overdue records"""
-        # Skipped due to complex SQLAlchemy query mocking
-        # This endpoint is tested in integration tests
-        pass
+        from src.api.v1.system.collection import get_collection_summary
 
-    @pytest.mark.skip("Complex database query mocking - tested in integration tests")
+        mock_collection_service.get_summary_async.return_value = CollectionTaskSummary(
+            total_overdue_count=0,
+            total_overdue_amount=Decimal("0.00"),
+            pending_collection_count=0,
+            this_month_collection_count=0,
+            collection_success_rate=Decimal("0"),
+        )
+
+        result = await get_collection_summary(db=mock_db, current_user=mock_current_user)
+
+        assert result.total_overdue_count == 0
+        assert result.total_overdue_amount == Decimal("0.00")
+        assert result.collection_success_rate == Decimal("0")
+
     async def test_get_collection_summary_zero_total_records(
-        self, mock_db, mock_current_user
+        self, mock_db, mock_current_user, mock_collection_service
     ):
         """Test getting collection summary with zero total collection records"""
-        # Skipped due to complex SQLAlchemy query mocking
-        # This endpoint is tested in integration tests
-        pass
+        from src.api.v1.system.collection import get_collection_summary
+
+        mock_collection_service.get_summary_async.return_value = CollectionTaskSummary(
+            total_overdue_count=0,
+            total_overdue_amount=Decimal("0"),
+            pending_collection_count=0,
+            this_month_collection_count=0,
+            collection_success_rate=None,
+        )
+
+        result = await get_collection_summary(db=mock_db, current_user=mock_current_user)
+        assert result.total_overdue_count == 0
+        assert result.collection_success_rate is None
 
 
 # ============================================================================
@@ -866,12 +902,23 @@ class TestCollectionEdgeCases:
             payload, total=200, page=1, page_size=100, items_len=100
         )
 
-    @pytest.mark.skip("Complex database query mocking - tested in integration tests")
-    async def test_get_summary_with_null_success_count(self, mock_db, mock_current_user):
-        """Test collection summary when success count query returns None"""
-        # Skipped due to complex SQLAlchemy query mocking
-        # This endpoint is tested in integration tests
-        pass
+    async def test_get_summary_with_null_success_count(
+        self, mock_db, mock_current_user, mock_collection_service
+    ):
+        """Test collection summary when success rate is unavailable."""
+        from src.api.v1.system.collection import get_collection_summary
+
+        mock_collection_service.get_summary_async.return_value = CollectionTaskSummary(
+            total_overdue_count=2,
+            total_overdue_amount=Decimal("3000.00"),
+            pending_collection_count=2,
+            this_month_collection_count=2,
+            collection_success_rate=None,
+        )
+
+        result = await get_collection_summary(db=mock_db, current_user=mock_current_user)
+        assert result.total_overdue_count == 2
+        assert result.collection_success_rate is None
 
     async def test_create_record_without_username(
         self,

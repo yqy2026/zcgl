@@ -83,6 +83,9 @@ const resolveText = (value: string | null | undefined, fallback: string): string
 const getTypeStatusTone = (status: EnumFieldType['status']): Tone =>
   status === 'active' ? 'success' : 'warning';
 
+const buildColorPreviewStyle = (color: string): React.CSSProperties =>
+  ({ ['--preview-color' as string]: color }) as React.CSSProperties;
+
 // Local interfaces removed, using types from services/dictionary
 
 const EnumFieldPage: React.FC = () => {
@@ -437,7 +440,7 @@ const EnumFieldPage: React.FC = () => {
           <Space className={styles.colorCell}>
             <span
               className={styles.colorPreview}
-              style={{ ['--preview-color' as string]: color } as React.CSSProperties}
+              style={buildColorPreviewStyle(color)}
             />
             <span className={styles.colorValue}>{color}</span>
           </Space>
@@ -729,7 +732,7 @@ const EnumFieldPage: React.FC = () => {
   ];
 
   return (
-    <PageContainer title="枚举字段管理" subTitle="维护枚举类型配置、枚举值及字典可用状态">
+    <PageContainer className={styles.pageShell} title="枚举字段管理" subTitle="维护枚举类型配置、枚举值及字典可用状态">
       <Row gutter={[16, 16]} className={styles.statsRow}>
         <Col xs={24} sm={12} md={6}>
           <Card className={`${styles.statsCard} ${styles.primaryStatsCard}`}>

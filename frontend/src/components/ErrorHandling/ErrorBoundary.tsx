@@ -9,6 +9,7 @@ import { Result, Button, Typography, Alert, Space } from 'antd';
 import { captureException } from '@/utils/errorMonitoring';
 import { errorReportService, type FrontendErrorReportPayload } from '@/services/errorReportService';
 import { isDevelopmentMode, isProductionMode } from '@/utils/runtimeEnv';
+import styles from './ErrorBoundary.module.css';
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -233,17 +234,7 @@ const ErrorHandler: React.FC<RouterErrorHandlerProps> = ({
   };
 
   return (
-    <div
-      style={{
-        padding: '50px',
-        maxWidth: '800px',
-        margin: '0 auto',
-        minHeight: '60vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
+    <div className={styles.errorPageContainer}>
       <Result
         status="error"
         title={getErrorTitle()}
@@ -276,16 +267,7 @@ const ErrorHandler: React.FC<RouterErrorHandlerProps> = ({
       />
 
       {showErrorDetails && error && (
-        <div
-          style={{
-            marginTop: '30px',
-            padding: '20px',
-            background: '#f5f5f5',
-            borderRadius: '6px',
-            fontSize: '12px',
-            fontFamily: 'monospace',
-          }}
-        >
+        <div className={styles.errorDetailsPanel}>
           <Title level={5}>错误详情 (开发模式)</Title>
           <Paragraph>
             <Text strong>错误类型:</Text> {errorType}
@@ -296,16 +278,9 @@ const ErrorHandler: React.FC<RouterErrorHandlerProps> = ({
           </Paragraph>
 
           {error.stack !== undefined && error.stack !== null && error.stack !== '' && (
-            <details style={{ marginTop: '10px' }}>
+            <details className={styles.detailsBlock}>
               <summary>错误堆栈</summary>
-              <pre
-                style={{
-                  marginTop: '10px',
-                  fontSize: '11px',
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word',
-                }}
-              >
+              <pre className={styles.stackTrace}>
                 {error.stack}
               </pre>
             </details>
@@ -315,16 +290,9 @@ const ErrorHandler: React.FC<RouterErrorHandlerProps> = ({
             errorInfo.componentStack !== undefined &&
             errorInfo.componentStack !== null &&
             errorInfo.componentStack !== '' && (
-              <details style={{ marginTop: '10px' }}>
+              <details className={styles.detailsBlock}>
                 <summary>组件堆栈</summary>
-                <pre
-                  style={{
-                    marginTop: '10px',
-                    fontSize: '11px',
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word',
-                  }}
-                >
+                <pre className={styles.stackTrace}>
                   {errorInfo.componentStack}
                 </pre>
               </details>

@@ -4,6 +4,7 @@ import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { Dayjs } from 'dayjs';
 import { useRentContractFormContext, RentTermFormData } from './RentContractFormContext';
+import styles from './RentTermsSection.module.css';
 
 /**
  * RentContractForm - Rent Terms Section
@@ -93,7 +94,7 @@ const RentTermsSection: React.FC = () => {
     <Card
       title="租金条款"
       size="small"
-      style={{ marginBottom: 16 }}
+      className={styles.rentTermsCard}
       extra={
         <Button type="primary" size="small" icon={<PlusOutlined />} onClick={handleAddRentTerm}>
           添加条款

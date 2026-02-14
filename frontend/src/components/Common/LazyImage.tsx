@@ -8,6 +8,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Image, Skeleton } from 'antd';
+import styles from './LazyImage.module.css';
 
 /**
  * Lazy image props
@@ -68,6 +69,18 @@ export const LazyImage: React.FC<LazyImageProps> = ({
   const [isLoaded, setIsLoaded] = useState(false);
   const [isInView, setIsInView] = useState(false);
   const imgRef = useRef<HTMLDivElement>(null);
+  const containerClassName =
+    className != null && className !== ''
+      ? `${styles.lazyImageContainer} ${className}`
+      : styles.lazyImageContainer;
+  const imageClassName = isLoaded
+    ? `${styles.lazyImageContent} ${styles.lazyImageVisible}`
+    : `${styles.lazyImageContent} ${styles.lazyImageHidden}`;
+  const containerStyle: React.CSSProperties = {
+    width,
+    height,
+    ...style,
+  };
 
   useEffect(() => {
     // Check if IntersectionObserver is available
@@ -119,23 +132,10 @@ export const LazyImage: React.FC<LazyImageProps> = ({
   return (
     <div
       ref={imgRef}
-      className={className}
-      style={{
-        display: 'inline-block',
-        width,
-        height,
-        ...style,
-      }}
+      className={containerClassName}
+      style={containerStyle}
     >
-      {!isLoaded && (
-        <Skeleton.Image
-          active
-          style={{
-            width: '100%',
-            height: '100%',
-          }}
-        />
-      )}
+      {!isLoaded && <Skeleton.Image active className={styles.lazyImageSkeleton} />}
       <Image
         src={isInView ? src : undefined}
         fallback={fallback}
@@ -146,12 +146,7 @@ export const LazyImage: React.FC<LazyImageProps> = ({
         onLoad={handleLoad}
         onError={handleError}
         onClick={handleImageClick}
-        style={{
-          display: isLoaded ? 'block' : 'none',
-          width: '100%',
-          height: '100%',
-          objectFit: 'cover',
-        }}
+        className={imageClassName}
         {...rest}
       />
     </div>
@@ -198,7 +193,7 @@ export interface LazyBackgroundImageProps {
 
 export const LazyBackgroundImage: React.FC<LazyBackgroundImageProps> = ({
   src,
-  fallback = '#f5f5f5',
+  fallback = 'var(--color-bg-tertiary)',
   backgroundSize = 'cover',
   backgroundPosition = 'center',
   children,
@@ -208,6 +203,14 @@ export const LazyBackgroundImage: React.FC<LazyBackgroundImageProps> = ({
   const [isLoaded, setIsLoaded] = useState(false);
   const [isInView, setIsInView] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const backgroundClassName =
+    className != null && className !== ''
+      ? `${styles.lazyBackgroundContainer} ${className}`
+      : styles.lazyBackgroundContainer;
+  const backgroundStyle: React.CSSProperties = {
+    background: isLoaded ? `url(${src}) ${backgroundPosition} / ${backgroundSize} no-repeat` : fallback,
+    ...style,
+  };
 
   useEffect(() => {
     if (!window.IntersectionObserver) {
@@ -252,15 +255,8 @@ export const LazyBackgroundImage: React.FC<LazyBackgroundImageProps> = ({
   return (
     <div
       ref={containerRef}
-      className={className}
-      style={{
-        position: 'relative',
-        overflow: 'hidden',
-        background: isLoaded
-          ? `url(${src}) ${backgroundPosition} / ${backgroundSize} no-repeat`
-          : fallback,
-        ...style,
-      }}
+      className={backgroundClassName}
+      style={backgroundStyle}
     >
       {children}
     </div>

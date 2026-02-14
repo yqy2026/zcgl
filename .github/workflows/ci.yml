@@ -208,6 +208,85 @@ jobs:
         fail_ci_if_error: false  # Don't let Codecov failures block us
 
   # ===========================
+  # Backend E2E Tests (BLOCKING)
+  # ===========================
+  backend-e2e:
+    name: Backend E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: backend-test
+    env:
+      ENVIRONMENT: testing
+      TESTING_MODE: "true"
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_e2e
+      TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_e2e
+      E2E_TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_e2e
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: zcgl_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d zcgl_e2e"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Cache uv dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/uv
+          ~/.local/share/uv
+        key: ${{ runner.os }}-uv-${{ hashFiles('backend/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-uv-
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libmagic1 postgresql-client
+
+    - name: Install Python dependencies
+      run: |
+        cd backend
+        pip install uv --upgrade
+        uv sync --all-extras
+
+    - name: Initialize test database
+      run: |
+        cd backend
+        uv run alembic upgrade head
+
+    - name: Run backend E2E tests
+      run: |
+        cd backend
+        mkdir -p ../test-results/backend/junit
+        uv run pytest tests/e2e/ -m e2e --no-cov -v --junitxml=../test-results/backend/junit/junit-e2e.xml
+
+    - name: Upload backend E2E reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: backend-e2e-reports
+        path: |
+          test-results/backend/junit/junit-e2e.xml
+        retention-days: 30
+
+  # ===========================
   # Frontend Lint & Type Check
   # ===========================
   frontend-lint:
@@ -264,6 +343,11 @@ jobs:
       run: |
         cd frontend
         pnpm type-check
+
+    - name: Run E2E TypeScript check
+      run: |
+        cd frontend
+        pnpm type-check:e2e
 
     - name: Run type coverage check
       run: |
@@ -365,12 +449,358 @@ jobs:
         retention-days: 7
 
   # ===========================
+  # Frontend E2E Tests (BLOCKING)
+  # ===========================
+  frontend-e2e:
+    name: Frontend E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: [backend-test, frontend-test]
+    env:
+      ENVIRONMENT: testing
+      TESTING_MODE: "true"
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_e2e
+      TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_e2e
+      E2E_ADMIN_USERNAME: admin
+      E2E_ADMIN_PASSWORD: Admin123!@#
+      E2E_LOGOUT_USERNAME: e2e_logout_admin
+      E2E_LOGOUT_PASSWORD: Logout123!@#
+      E2E_REQUIRE_AUTH_STATE: "true"
+      BASE_URL: http://127.0.0.1:5173
+      VITE_API_BASE_URL: http://127.0.0.1:8002/api/v1
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: zcgl_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d zcgl_e2e"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 10
+
+    - name: Cache uv dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/uv
+          ~/.local/share/uv
+        key: ${{ runner.os }}-uv-${{ hashFiles('backend/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-uv-
+
+    - name: Get pnpm store directory
+      id: pnpm-cache-e2e
+      shell: bash
+      run: |
+        echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+    - name: Setup pnpm cache
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.pnpm-cache-e2e.outputs.STORE_PATH }}
+        key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-pnpm-store-
+
+    - name: Install backend dependencies
+      run: |
+        cd backend
+        pip install uv --upgrade
+        uv sync --all-extras
+
+    - name: Install frontend dependencies
+      run: |
+        cd frontend
+        pnpm install --frozen-lockfile
+
+    - name: Install Playwright browser
+      run: |
+        cd frontend
+        pnpm exec playwright install --with-deps chromium
+
+    - name: Initialize database schema
+      run: |
+        cd backend
+        uv run alembic upgrade head
+
+    - name: Seed admin user for E2E
+      run: |
+        cd backend
+        uv run python - <<'PY'
+        import asyncio
+        import os
+        from sqlalchemy import select
+        from src.database import async_session_scope
+        from src.models.auth import User
+        from src.models.organization import Organization
+        from src.models.rbac import Permission, Role, UserRoleAssignment, role_permissions
+        from src.services.core.password_service import PasswordService
+
+        ADMIN_USERNAME = os.getenv("E2E_ADMIN_USERNAME", "admin")
+        ADMIN_PASSWORD = os.getenv("E2E_ADMIN_PASSWORD", "Admin123!@#")
+        LOGOUT_USERNAME = os.getenv("E2E_LOGOUT_USERNAME", "e2e_logout_admin")
+        LOGOUT_PASSWORD = os.getenv("E2E_LOGOUT_PASSWORD", "Logout123!@#")
+        ORG_CODE = "E2E-ORG-ROOT"
+
+        async def ensure_organization(db):
+            result = await db.execute(
+                select(Organization).where(Organization.code == ORG_CODE)
+            )
+            organization = result.scalars().first()
+            if organization is None:
+                organization = Organization(
+                    name="E2E Test Organization",
+                    code=ORG_CODE,
+                    level=1,
+                    sort_order=0,
+                    type="总部",
+                    status="active",
+                    path=f"/{ORG_CODE}",
+                    is_deleted=False,
+                    created_by="ci-e2e",
+                    updated_by="ci-e2e",
+                )
+                db.add(organization)
+                await db.commit()
+                await db.refresh(organization)
+            return organization
+
+        async def ensure_admin_role(db):
+            role_result = await db.execute(select(Role).where(Role.name == "admin"))
+            role = role_result.scalars().first()
+            if role is None:
+                role = Role(
+                    name="admin",
+                    display_name="管理员",
+                    is_system_role=True,
+                    is_active=True,
+                    created_by="ci-e2e",
+                    updated_by="ci-e2e",
+                )
+                db.add(role)
+                await db.commit()
+                await db.refresh(role)
+            return role
+
+        async def ensure_admin_permission(db):
+            permission_result = await db.execute(
+                select(Permission).where(
+                    Permission.resource == "system",
+                    Permission.action == "admin",
+                )
+            )
+            permission = permission_result.scalars().first()
+            if permission is None:
+                permission = Permission(
+                    name="system:admin",
+                    display_name="系统管理员",
+                    description="系统管理员权限",
+                    resource="system",
+                    action="admin",
+                    is_system_permission=True,
+                    requires_approval=False,
+                    created_by="ci-e2e",
+                    updated_by="ci-e2e",
+                )
+                db.add(permission)
+                await db.commit()
+                await db.refresh(permission)
+            return permission
+
+        async def ensure_role_permission(db, role_id, permission_id):
+            mapping_result = await db.execute(
+                select(role_permissions).where(
+                    role_permissions.c.role_id == role_id,
+                    role_permissions.c.permission_id == permission_id,
+                )
+            )
+            mapping = mapping_result.first()
+            if mapping is None:
+                await db.execute(
+                    role_permissions.insert().values(
+                        role_id=role_id,
+                        permission_id=permission_id,
+                        created_by="ci-e2e",
+                    )
+                )
+                await db.commit()
+
+        async def upsert_admin_user(db, *, username, password, full_name, email, phone, organization_id):
+            user_result = await db.execute(select(User).where(User.username == username))
+            user = user_result.scalars().first()
+            password_service = PasswordService()
+            password_hash = password_service.get_password_hash(password)
+
+            if user is None:
+                user = User(
+                    username=username,
+                    email=email,
+                    phone=phone,
+                    full_name=full_name,
+                    password_hash=password_hash,
+                    is_active=True,
+                    is_locked=False,
+                    failed_login_attempts=0,
+                    default_organization_id=organization_id,
+                    created_by="ci-e2e",
+                    updated_by="ci-e2e",
+                )
+                db.add(user)
+                await db.commit()
+                await db.refresh(user)
+            else:
+                user.email = email
+                user.phone = phone
+                user.full_name = full_name
+                user.password_hash = password_hash
+                user.is_active = True
+                user.is_locked = False
+                user.failed_login_attempts = 0
+                user.locked_until = None
+                user.default_organization_id = organization_id
+                user.updated_by = "ci-e2e"
+                await db.commit()
+                await db.refresh(user)
+            return user
+
+        async def ensure_user_role_assignment(db, user_id, role_id):
+            assignment_result = await db.execute(
+                select(UserRoleAssignment).where(
+                    UserRoleAssignment.user_id == user_id,
+                    UserRoleAssignment.role_id == role_id,
+                )
+            )
+            assignment = assignment_result.scalars().first()
+            if assignment is None:
+                assignment = UserRoleAssignment(
+                    user_id=user_id,
+                    role_id=role_id,
+                    assigned_by="ci-e2e",
+                    is_active=True,
+                )
+                db.add(assignment)
+            else:
+                assignment.is_active = True
+                assignment.assigned_by = "ci-e2e"
+            await db.commit()
+
+        async def main():
+            async with async_session_scope() as db:
+                organization = await ensure_organization(db)
+                admin_role = await ensure_admin_role(db)
+                admin_permission = await ensure_admin_permission(db)
+                await ensure_role_permission(db, admin_role.id, admin_permission.id)
+
+                admin_user = await upsert_admin_user(
+                    db,
+                    username=ADMIN_USERNAME,
+                    password=ADMIN_PASSWORD,
+                    full_name="E2E Admin User",
+                    email=f"{ADMIN_USERNAME}@example.com",
+                    phone="13800000000",
+                    organization_id=organization.id,
+                )
+                logout_user = await upsert_admin_user(
+                    db,
+                    username=LOGOUT_USERNAME,
+                    password=LOGOUT_PASSWORD,
+                    full_name="E2E Logout Admin",
+                    email=f"{LOGOUT_USERNAME}@example.com",
+                    phone="13800000009",
+                    organization_id=organization.id,
+                )
+
+                await ensure_user_role_assignment(db, admin_user.id, admin_role.id)
+                await ensure_user_role_assignment(db, logout_user.id, admin_role.id)
+
+        asyncio.run(main())
+        PY
+
+    - name: Start backend server
+      run: |
+        cd backend
+        mkdir -p ../test-results/backend
+        nohup uv run uvicorn src.main:app --host 127.0.0.1 --port 8002 > ../test-results/backend/e2e-backend.log 2>&1 &
+        echo $! > ../test-results/backend/e2e-backend.pid
+
+    - name: Wait for backend readiness
+      run: |
+        python - <<'PY'
+        import time
+        import urllib.error
+        import urllib.request
+        url = "http://127.0.0.1:8002/docs"
+        for _ in range(60):
+            try:
+                request = urllib.request.Request(url, method="GET")
+                with urllib.request.urlopen(request, timeout=2) as response:
+                    if response.status in (200, 301, 302):
+                        print("Backend is ready.")
+                        break
+            except urllib.error.HTTPError as error:
+                if error.code in (401, 403, 404, 405):
+                    print("Backend is ready.")
+                    break
+            except Exception:
+                pass
+            time.sleep(2)
+        else:
+            raise SystemExit("Backend did not become ready in time.")
+        PY
+
+    - name: Run frontend E2E tests
+      run: |
+        cd frontend
+        pnpm e2e:ci
+
+    - name: Upload frontend E2E reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: frontend-e2e-reports
+        path: |
+          test-results/frontend/playwright/
+          test-results/backend/e2e-backend.log
+        retention-days: 30
+
+    - name: Stop backend server
+      if: always()
+      run: |
+        if [ -f test-results/backend/e2e-backend.pid ]; then
+          kill "$(cat test-results/backend/e2e-backend.pid)" || true
+        fi
+
+  # ===========================
   # API Consistency Check (BLOCKING)
   # ===========================
   api-consistency:
     name: API Consistency
     runs-on: ubuntu-latest
-    needs: [backend-test, frontend-test]
+    needs: [backend-test, frontend-test, backend-e2e, frontend-e2e]
 
     steps:
     - name: Checkout code
@@ -452,7 +882,7 @@ jobs:
   integration:
     name: Integration Tests
     runs-on: ubuntu-latest
-    needs: [backend-test, frontend-test]
+    needs: [backend-test, frontend-test, backend-e2e, frontend-e2e]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     services:
@@ -533,7 +963,7 @@ jobs:
   summary:
     name: CI Summary
     runs-on: ubuntu-latest
-    needs: [backend-test, frontend-test, api-consistency]
+    needs: [backend-test, backend-e2e, frontend-test, frontend-e2e, api-consistency]
     if: always()
 
     steps:
@@ -554,7 +984,9 @@ jobs:
         echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
         echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
         echo "| Backend Tests | ${{ needs.backend-test.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Backend E2E Tests | ${{ needs.backend-e2e.result }} |" >> $GITHUB_STEP_SUMMARY
         echo "| Frontend Tests | ${{ needs.frontend-test.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Frontend E2E Tests | ${{ needs.frontend-e2e.result }} |" >> $GITHUB_STEP_SUMMARY
         echo "| API Consistency | ${{ needs.api-consistency.result }} |" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "## 📊 Coverage Targets" >> $GITHUB_STEP_SUMMARY

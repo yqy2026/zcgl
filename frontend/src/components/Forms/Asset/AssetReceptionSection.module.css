@@ -1,0 +1,17 @@
+.sectionCard {
+  margin-bottom: var(--spacing-lg);
+}
+
+.datePickerFullWidth {
+  width: 100%;
+}
+
+.uploadHintText {
+  margin-top: var(--spacing-sm);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+}
+
+.attachmentList {
+  margin-top: var(--spacing-lg);
+}

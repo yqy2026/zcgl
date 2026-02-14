@@ -1,3 +1,12 @@
+.pageShell {
+  --dictionary-control-height: var(--button-height-md);
+  --dictionary-control-height-mobile: var(--button-height-lg);
+  --dictionary-inline-action-height: var(--button-height-sm);
+  --dictionary-inline-action-padding-x: calc(var(--spacing-sm) - (var(--spacing-xs) / 2));
+  --dictionary-meta-offset-y: calc(var(--spacing-xs) / 2);
+  --dictionary-tag-line-height: var(--font-size-xl);
+}
+
 .typeNameCell {
   line-height: 1.35;
 }
@@ -8,17 +17,17 @@
 }
 
 .typeCode {
-  margin-top: 2px;
-  font-size: 12px;
+  margin-top: var(--dictionary-meta-offset-y);
+  font-size: var(--font-size-xs);
 }
 
 .codeTag {
   margin-inline-end: 0;
   border-radius: 999px;
   border: 1px solid transparent;
-  padding-inline: 8px;
-  font-size: 12px;
-  line-height: 18px;
+  padding-inline: var(--spacing-sm);
+  font-size: var(--font-size-xs);
+  line-height: var(--dictionary-tag-line-height);
   font-weight: var(--font-weight-medium);
 }
 
@@ -27,17 +36,17 @@
 }
 
 .typeHint {
-  margin-top: 2px;
-  font-size: 12px;
+  margin-top: var(--dictionary-meta-offset-y);
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
 }
 
 .refreshButton {
-  min-height: 36px;
+  min-height: var(--dictionary-control-height);
 }
 
 .filtersRow {
-  margin-bottom: 24px;
+  margin-bottom: var(--spacing-xl);
 }
 
 .fullWidthControl {
@@ -45,8 +54,8 @@
 }
 
 .viewDetailButton {
-  padding-inline: 6px;
-  min-height: 32px;
+  padding-inline: var(--dictionary-inline-action-padding-x);
+  min-height: var(--dictionary-inline-action-height);
 }
 
 .typeTotal {
@@ -59,14 +68,14 @@
 
 .typeTotalText {
   color: var(--color-text-secondary);
-  font-size: 14px;
+  font-size: var(--font-size-base);
 }
 
 .typeInfoBlock {
-  padding: 12px;
+  padding: var(--spacing-md);
   background: var(--color-bg-tertiary);
   border-radius: var(--card-radius);
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
   line-height: 1.55;
 }
@@ -76,17 +85,17 @@
 }
 
 .statusText {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
 }
 
 .rowActions {
-  gap: 6px;
+  gap: var(--spacing-sm);
 }
 
 .rowActionButton {
-  min-height: 32px;
-  padding-inline: 8px;
+  min-height: var(--dictionary-inline-action-height);
+  padding-inline: var(--spacing-sm);
 }
 
 .dangerActionButton {
@@ -94,7 +103,7 @@
 }
 
 .modalActionButton {
-  min-height: 36px;
+  min-height: var(--dictionary-control-height);
 }
 
 .tonePrimary {
@@ -135,13 +144,13 @@
 
 @media (max-width: 768px) {
   .refreshButton {
-    min-height: 40px;
+    min-height: var(--dictionary-control-height-mobile);
   }
 
   .viewDetailButton,
   .rowActionButton,
   .modalActionButton {
-    min-height: 40px;
+    min-height: var(--dictionary-control-height-mobile);
   }
 
   .typeTotal {

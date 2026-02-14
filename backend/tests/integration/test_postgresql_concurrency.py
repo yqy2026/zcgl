@@ -11,15 +11,25 @@ import uuid
 import pytest
 from sqlalchemy import text
 
-from src.database import DatabaseManager, get_database_url
+from src.database import DatabaseManager, get_database_manager, get_database_url
 
-pytestmark = [
-    pytest.mark.skipif(
-        not os.getenv("DATABASE_URL", "").startswith("postgresql+psycopg://"),
-        reason="PostgreSQL tests required",
-    ),
-    pytest.mark.asyncio,
-]
+pytestmark = pytest.mark.asyncio
+
+
+@pytest.fixture(autouse=True)
+async def ensure_postgresql_available():
+    database_url = os.getenv("DATABASE_URL", "")
+    if not database_url.startswith("postgresql+psycopg://"):
+        pytest.skip("PostgreSQL tests require DATABASE_URL to use postgresql+psycopg://")
+
+    try:
+        mgr = get_database_manager()
+        async with mgr.get_session() as session:
+            await session.execute(text("SELECT 1"))
+    except Exception as exc:  # pragma: no cover - environment dependent
+        pytest.skip(
+            f"PostgreSQL is unavailable for integration tests: {exc.__class__.__name__}"
+        )
 
 
 @pytest.mark.integration

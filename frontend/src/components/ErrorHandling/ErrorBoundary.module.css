@@ -1,0 +1,30 @@
+.errorPageContainer {
+  --error-boundary-max-width: calc((var(--spacing-xxxl) * 16) + var(--spacing-xxl));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  max-width: var(--error-boundary-max-width);
+  margin: 0 auto;
+  padding: calc(var(--spacing-xxxl) + var(--spacing-xs));
+}
+
+.errorDetailsPanel {
+  margin-top: calc(var(--spacing-xl) + var(--spacing-sm));
+  padding: calc(var(--spacing-lg) + var(--spacing-xs));
+  background: var(--color-bg-tertiary);
+  border-radius: var(--form-input-radius);
+  font-size: var(--font-size-xs);
+  font-family: monospace;
+}
+
+.detailsBlock {
+  margin-top: var(--spacing-sm);
+}
+
+.stackTrace {
+  margin-top: var(--spacing-sm);
+  font-size: var(--font-size-xs);
+  white-space: pre-wrap;
+  word-break: break-word;
+}

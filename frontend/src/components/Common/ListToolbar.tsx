@@ -49,11 +49,7 @@ export const ListToolbar: React.FC<ListToolbarProps> = ({
   }
 
   return (
-    <Card
-      {...cardProps}
-      className={toolbarCardClassName}
-      style={{ ...(cardProps?.style ?? {}) }}
-    >
+    <Card {...cardProps} className={toolbarCardClassName} style={cardProps?.style}>
       {content}
     </Card>
   );

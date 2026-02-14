@@ -1,0 +1,30 @@
+.globalLoadingOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.loadingButton {
+  opacity: 1;
+  cursor: pointer;
+}
+
+.loadingButtonLoading {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.loadingButtonDisabled {
+  cursor: not-allowed;
+}
+
+.loadingIndicator {
+  margin-right: var(--spacing-sm);
+}

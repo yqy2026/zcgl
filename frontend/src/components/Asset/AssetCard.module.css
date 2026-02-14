@@ -1,0 +1,89 @@
+.card {
+  margin-bottom: var(--spacing-lg);
+  cursor: pointer;
+}
+
+.cardDefault {
+  border: 1px solid var(--ant-color-border);
+}
+
+.cardSelected {
+  border: 2px solid var(--ant-color-primary);
+}
+
+.metaTitle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.propertyName {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+}
+
+.metaRow {
+  margin-bottom: var(--spacing-sm);
+}
+
+.metaIcon {
+  margin-right: var(--spacing-xs);
+  color: var(--ant-color-text-tertiary);
+}
+
+.metaText {
+  color: var(--ant-color-text-tertiary);
+}
+
+.content {
+  margin-top: var(--spacing-lg);
+}
+
+.areaRow {
+  margin-bottom: var(--spacing-lg);
+}
+
+.areaRow :global(.ant-statistic-content) {
+  font-size: var(--font-size-base);
+}
+
+.occupancyContainer {
+  margin-bottom: var(--spacing-lg);
+}
+
+.occupancyHeader {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-xs);
+}
+
+.occupancyLabel {
+  font-size: var(--font-size-xs);
+  color: var(--ant-color-text-tertiary);
+}
+
+.occupancyValue {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+}
+
+.occupancyValueSuccess {
+  color: var(--color-success);
+}
+
+.occupancyValueWarning {
+  color: var(--color-warning);
+}
+
+.occupancyValueError {
+  color: var(--color-error);
+}
+
+.statusSection {
+  margin-bottom: var(--spacing-md);
+}
+
+.timeInfo {
+  font-size: var(--font-size-xs);
+  color: var(--ant-color-text-tertiary);
+}

@@ -1,69 +1,70 @@
 .actionsContainer {
-  margin-top: 12px;
+  margin-top: var(--spacing-md);
 }
 
 .detailsContainer {
-  margin-top: 12px;
+  margin-top: var(--spacing-md);
 }
 
 .sectionDivider {
-  margin: 12px 0;
+  margin: var(--spacing-md) 0;
 }
 
 .sectionLabel {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
 }
 
 .detailsList {
-  margin: 8px 0 0;
-  padding-left: 16px;
-  font-size: 12px;
+  margin: var(--spacing-sm) 0 0;
+  padding-left: var(--spacing-lg);
+  font-size: var(--font-size-xs);
 }
 
 .errorInfoContainer {
-  margin-top: 12px;
+  margin-top: var(--spacing-md);
 }
 
 .errorCodeBlock {
-  margin: 8px 0 0;
-  padding: 8px;
-  font-size: 11px;
+  --action-feedback-error-max-height: calc(var(--spacing-xxxl) + var(--spacing-xxxl) + var(--spacing-xs));
+  margin: var(--spacing-sm) 0 0;
+  padding: var(--spacing-sm);
+  font-size: var(--font-size-xs);
   overflow: auto;
-  max-height: 100px;
-  background: #fff2f0;
-  border: 1px solid #ffccc7;
-  border-radius: 4px;
+  max-height: var(--action-feedback-error-max-height);
+  background: var(--color-error-light);
+  border: 1px solid var(--color-error);
+  border-radius: var(--radius-sm);
 }
 
 .cardDetailsList {
-  margin-top: 8px;
-  padding-left: 16px;
+  margin-top: var(--spacing-sm);
+  padding-left: var(--spacing-lg);
 }
 
 .cardActionsContainer {
-  margin-top: 16px;
+  margin-top: var(--spacing-lg);
 }
 
 .feedbackIconLoading {
-  color: #1890ff;
+  color: var(--color-primary);
 }
 
 .feedbackIconSuccess {
-  color: #52c41a;
+  color: var(--color-success);
 }
 
 .feedbackIconError {
-  color: #ff4d4f;
+  color: var(--color-error);
 }
 
 .feedbackIconWarning {
-  color: #faad14;
+  color: var(--color-warning);
 }
 
 .feedbackIconInfo {
-  color: #1890ff;
+  color: var(--color-primary);
 }
 
 .feedbackIconIdle {
-  color: #8c8c8c;
+  color: var(--color-text-tertiary);
 }

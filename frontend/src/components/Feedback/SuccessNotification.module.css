@@ -1,15 +1,15 @@
 .successIcon {
-  color: #52c41a;
+  color: var(--color-success);
 }
 
 .errorIcon {
-  color: #ff4d4f;
+  color: var(--color-error);
 }
 
 .warningIcon {
-  color: #faad14;
+  color: var(--color-warning);
 }
 
 .infoIcon {
-  color: #1890ff;
+  color: var(--color-primary);
 }

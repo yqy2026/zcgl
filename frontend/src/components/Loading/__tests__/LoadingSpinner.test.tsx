@@ -69,8 +69,9 @@ describe('LoadingSpinner', () => {
   });
 
   it('applies wrapper className and style when no children', () => {
+    const wrapperStyle = { margin: '20px' };
     const { container } = renderWithProviders(
-      <LoadingSpinner className="custom-spinner" style={{ margin: '20px' }} />
+      <LoadingSpinner className="custom-spinner" style={wrapperStyle} />
     );
 
     const wrapper = container.firstChild as HTMLElement;

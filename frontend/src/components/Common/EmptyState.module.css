@@ -1,0 +1,73 @@
+.emptyState {
+  --empty-state-min-height: calc((var(--spacing-xxxl) * 6) + var(--spacing-md));
+  --empty-state-icon-size: calc(var(--spacing-xxxl) + var(--spacing-lg));
+  --empty-state-image-max-width: calc((var(--spacing-xxxl) * 4) + var(--spacing-md) - var(--spacing-xs));
+  --empty-state-image-max-height: calc((var(--spacing-xxxl) * 3) + var(--spacing-sm) - 2px);
+  --empty-state-content-max-width: calc(var(--spacing-xxxl) * 10);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--empty-state-min-height);
+  padding: var(--spacing-xl);
+}
+
+.emptyIconGlyph {
+  font-size: var(--empty-state-icon-size);
+  color: var(--color-text-quaternary);
+}
+
+.emptyImage {
+  max-width: var(--empty-state-image-max-width);
+  max-height: var(--empty-state-image-max-height);
+  margin-bottom: var(--spacing-lg);
+}
+
+.emptyIconContainer {
+  margin-bottom: var(--spacing-lg);
+  color: var(--color-text-quaternary);
+}
+
+.emptyContent {
+  text-align: center;
+  max-width: var(--empty-state-content-max-width);
+}
+
+.emptyTitle {
+  margin-bottom: var(--spacing-sm) !important;
+}
+
+.emptyDescription {
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-md);
+}
+
+.actionsSpace {
+  gap: var(--spacing-md);
+}
+
+.componentEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xxl);
+  text-align: center;
+}
+
+.componentIconContainer {
+  color: var(--color-text-quaternary);
+  margin-bottom: var(--spacing-lg);
+}
+
+.componentMessageContainer {
+  margin-top: var(--spacing-lg);
+}
+
+.componentMessageText {
+  font-size: var(--font-size-base);
+}
+
+.componentActionContainer {
+  margin-top: var(--spacing-lg);
+}

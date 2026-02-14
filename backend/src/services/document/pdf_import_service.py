@@ -122,7 +122,7 @@ class PDFImportService:
         """
         import tempfile
 
-        from ....utils.file_security import generate_safe_filename
+        from ...utils.file_security import generate_safe_filename
 
         temp_dir = Path(tempfile.gettempdir())
         file_id = str(uuid.uuid4())

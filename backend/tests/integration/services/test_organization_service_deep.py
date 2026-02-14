@@ -1,12 +1,147 @@
 """
-组织服务深度测试（已停用）
-
-原测试覆盖大量不存在的组织服务接口，已与当前异步实现不匹配。
+Organization service deep smoke tests (async-era aligned).
 """
 
-import pytest
+from uuid import uuid4
 
-pytest.skip(
-    "Legacy OrganizationService deep tests pending async API alignment.",
-    allow_module_level=True,
-)
+import pytest
+from fastapi.testclient import TestClient
+
+pytestmark = pytest.mark.integration
+
+
+@pytest.fixture
+def authenticated_client(client: TestClient, test_data) -> TestClient:
+    admin_user = test_data["admin"]
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"username": admin_user.username, "password": "Admin123!@#"},
+    )
+    assert response.status_code == 200
+    auth_token = response.cookies.get("auth_token")
+    csrf_token = response.cookies.get("csrf_token")
+    assert auth_token is not None
+    client.cookies.set("auth_token", auth_token)
+    if csrf_token is not None:
+        client.cookies.set("csrf_token", csrf_token)
+    setattr(client, "_csrf_token", csrf_token)
+    return client
+
+
+@pytest.fixture
+def csrf_headers(authenticated_client: TestClient) -> dict[str, str]:
+    csrf_token = getattr(authenticated_client, "_csrf_token", None)
+    if csrf_token is None:
+        return {}
+    return {"X-CSRF-Token": csrf_token}
+
+
+def _resolve_org_type_and_status(authenticated_client: TestClient) -> tuple[str, str]:
+    response = authenticated_client.get("/api/v1/organizations?page=1&page_size=1")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload.get("success") is True
+    items = payload.get("data", {}).get("items", [])
+    if items:
+        item = items[0]
+        return (
+            str(item.get("type") or "department"),
+            str(item.get("status") or "active"),
+        )
+    return ("department", "active")
+
+
+def test_organization_tree_endpoint_structure(authenticated_client: TestClient) -> None:
+    response = authenticated_client.get("/api/v1/organizations/tree")
+    assert response.status_code == 200
+    payload = response.json()
+    assert isinstance(payload, list)
+    if payload:
+        first = payload[0]
+        assert isinstance(first, dict)
+        assert "id" in first
+        assert "name" in first
+
+
+def test_organization_create_path_search_delete_roundtrip(
+    authenticated_client: TestClient,
+    csrf_headers: dict[str, str],
+) -> None:
+    org_type, org_status = _resolve_org_type_and_status(authenticated_client)
+    unique_suffix = uuid4().hex[:8]
+    create_payload = {
+        "name": f"集成组织-{unique_suffix}",
+        "code": f"INT-ORG-{unique_suffix}",
+        "type": org_type,
+        "status": org_status,
+        "description": "integration roundtrip",
+        "created_by": "integration_test",
+    }
+
+    create_response = authenticated_client.post(
+        "/api/v1/organizations",
+        json=create_payload,
+        headers=csrf_headers,
+    )
+    assert create_response.status_code == 200
+    created = create_response.json()
+    organization_id = created.get("id")
+    assert organization_id is not None
+    assert created.get("name") == create_payload["name"]
+    assert created.get("code") == create_payload["code"]
+
+    detail_response = authenticated_client.get(
+        f"/api/v1/organizations/{organization_id}",
+    )
+    assert detail_response.status_code == 200
+    detail = detail_response.json()
+    assert detail.get("id") == organization_id
+    assert detail.get("path") is not None
+
+    path_response = authenticated_client.get(
+        f"/api/v1/organizations/{organization_id}/path",
+    )
+    assert path_response.status_code == 200
+    path_nodes = path_response.json()
+    assert isinstance(path_nodes, list)
+    assert any(
+        item.get("id") == organization_id
+        for item in path_nodes
+        if isinstance(item, dict)
+    )
+
+    search_response = authenticated_client.get(
+        f"/api/v1/organizations/search?keyword={unique_suffix}",
+    )
+    assert search_response.status_code == 200
+    search_payload = search_response.json()
+    assert search_payload.get("success") is True
+    search_items = search_payload.get("data", {}).get("items", [])
+    assert any(
+        item.get("id") == organization_id
+        for item in search_items
+        if isinstance(item, dict)
+    )
+
+    delete_response = authenticated_client.delete(
+        f"/api/v1/organizations/{organization_id}",
+        headers=csrf_headers,
+    )
+    assert delete_response.status_code == 200
+    delete_payload = delete_response.json()
+    assert delete_payload.get("message") == "组织删除成功"
+
+    deleted_detail_response = authenticated_client.get(
+        f"/api/v1/organizations/{organization_id}",
+    )
+    assert deleted_detail_response.status_code == 200
+    deleted_detail = deleted_detail_response.json()
+    assert deleted_detail.get("id") == organization_id
+    assert deleted_detail.get("is_deleted") is True
+
+
+def test_organization_path_nonexistent_returns_not_found(
+    authenticated_client: TestClient,
+) -> None:
+    response = authenticated_client.get("/api/v1/organizations/nonexistent/path")
+    assert response.status_code == 404

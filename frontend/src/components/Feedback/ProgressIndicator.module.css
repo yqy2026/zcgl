@@ -1,34 +1,34 @@
 .successIcon {
-  color: #52c41a;
+  color: var(--color-success);
 }
 
 .exceptionIcon {
-  color: #ff4d4f;
+  color: var(--color-error);
 }
 
 .activeIcon {
-  color: #1890ff;
+  color: var(--color-primary);
 }
 
 .defaultIcon {
-  color: #8c8c8c;
+  color: var(--color-text-tertiary);
 }
 
 .headerSection {
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-lg);
 }
 
 .titleRow {
   align-items: center;
   display: flex;
-  margin-bottom: 8px;
+  margin-bottom: var(--spacing-sm);
 }
 
 .titleText {
-  margin: 0 0 0 8px !important;
+  margin: 0 0 0 var(--spacing-sm) !important;
 }
 
 .cardDescription {
   display: block;
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-lg);
 }

@@ -1,0 +1,19 @@
+.floatingMonitorButton {
+  --performance-monitor-floating-offset: calc(var(--spacing-lg) + var(--spacing-xs));
+  position: fixed;
+  right: var(--performance-monitor-floating-offset);
+  bottom: var(--performance-monitor-floating-offset);
+  z-index: var(--z-index-dropdown);
+}
+
+.panelContent {
+  margin-top: var(--spacing-lg);
+}
+
+.sectionCard {
+  margin-top: var(--spacing-lg);
+}
+
+.adviceAlert {
+  margin-bottom: var(--spacing-sm);
+}

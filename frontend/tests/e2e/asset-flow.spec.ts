@@ -1,67 +1,41 @@
-import { test, expect } from '@playwright/test';
-import { LoginPage } from './pages/LoginPage';
-import { AssetListPage } from './pages/AssetListPage';
-import { AssetDetailPage } from './pages/AssetDetailPage';
-
-const readTestCredential = (
-  name: 'E2E_USERNAME' | 'E2E_PASSWORD',
-  fallbackValue: string
-): string => {
-  const rawValue = process.env[name];
-  return typeof rawValue === 'string' && rawValue !== '' ? rawValue : fallbackValue;
-};
+import { expect, test } from '@playwright/test';
+import { ensureAuthenticated } from './helpers/auth';
 
 test.describe('Asset Management Flow', () => {
-  let loginPage: LoginPage;
-  let assetListPage: AssetListPage;
-  let assetDetailPage: AssetDetailPage;
-
   test.beforeEach(async ({ page }) => {
-    loginPage = new LoginPage(page);
-    assetListPage = new AssetListPage(page);
-    assetDetailPage = new AssetDetailPage(page);
-
-    // Initial Login - skipping if state is already saved (handled by global setup in config usually, but here explicit for safety)
-    // For this test run, we assume we might need to login.
-    // However, playwright.config.ts uses storageState.
-    // If we run this and storageState is invalid/missing, we should login.
-
-    await loginPage.goto();
-    // Check if redirected to login or already logged in
-    if (await page.url().includes('/login')) {
-      // Use env vars or default dev creds
-      await loginPage.login(
-        readTestCredential('E2E_USERNAME', 'admin'),
-        readTestCredential('E2E_PASSWORD', 'password123')
-      );
-    }
+    await ensureAuthenticated(page);
   });
 
-  test('should search for an asset and view details', async ({ page }) => {
-    // 1. Navigate to Asset List
-    await assetListPage.goto();
+  test('should load list and support keyword search', async ({ page }) => {
+    await page.goto('/assets/list');
+    await expect(page).toHaveURL(/\/assets\/list/);
 
-    // 2. Perform Search
-    // We'll search for something generic or "Test"
-    const searchKeyword = 'Test';
-    await assetListPage.search(searchKeyword);
+    const searchInput = page
+      .locator('input[id="search"], input[placeholder*="搜索"], input[placeholder*="关键字"]')
+      .first();
+    await expect(searchInput).toBeVisible();
+    await searchInput.fill('测试');
 
-    // 3. Verify results exist (mocking response might be needed if backend is empty/down)
-    // For a real E2E, we assume data exists.
-    // If no data, we might need to handle that.
-    const count = await assetListPage.getAssetCount();
-
-    if (count > 0) {
-        console.log(`Found ${count} assets matching "${searchKeyword}"`);
-
-        // 4. Click first asset
-        await assetListPage.clickFirstAsset();
-
-        // 5. Verify Detail Page
-        await assetDetailPage.verifyLoaded();
+    const searchButton = page.getByRole('button', { name: /搜索|查询/ }).first();
+    const hasSearchButton = await searchButton.isVisible().catch(() => false);
+    if (hasSearchButton) {
+      await searchButton.click();
     } else {
-        console.warn('No assets found. Skipping detail view check.');
-        // Still pass the test but warn
+      await searchInput.press('Enter');
     }
+    await page.waitForLoadState('networkidle');
+
+    const hasTable = await page
+      .locator('.ant-table')
+      .first()
+      .isVisible()
+      .catch(() => false);
+    const hasEmpty = await page
+      .locator('.ant-empty')
+      .first()
+      .isVisible()
+      .catch(() => false);
+
+    expect(hasTable || hasEmpty).toBe(true);
   });
 });

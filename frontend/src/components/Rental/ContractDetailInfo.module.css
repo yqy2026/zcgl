@@ -1,15 +1,19 @@
 .contractDetailInfo {
+  --contract-detail-label-width: calc((var(--spacing-xxxl) * 2) + var(--spacing-xl) + var(--spacing-sm));
+  --contract-detail-content-min-width: calc((var(--spacing-xxxl) * 3) + var(--spacing-xxl));
+  --contract-detail-label-width-mobile: calc((var(--spacing-xxxl) * 2) + var(--spacing-sm) + var(--spacing-xs));
+  --contract-detail-content-min-width-mobile: calc((var(--spacing-xxxl) * 2) + var(--spacing-xxl));
   width: 100%;
 }
 
 .sectionCard {
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-lg);
 }
 
 .cardTitle {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-sm);
 }
 
 .cardTitleIcon {
@@ -19,7 +23,7 @@
 .labelWithIcon {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--spacing-xs);
 }
 
 .labelIcon {
@@ -27,22 +31,22 @@
 }
 
 .basicDescriptions :global(.ant-descriptions-item-label) {
-  width: 130px;
+  width: var(--contract-detail-label-width);
   font-weight: var(--font-weight-semibold);
 }
 
 .basicDescriptions :global(.ant-descriptions-item-content) {
-  min-width: 180px;
+  min-width: var(--contract-detail-content-min-width);
 }
 
 .contractNumber {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
   color: var(--color-primary);
 }
 
 .tenantName {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
 }
 
@@ -52,7 +56,7 @@
 }
 
 .statsRow {
-  row-gap: 12px;
+  row-gap: var(--spacing-md);
 }
 
 .statisticPrimary :global(.ant-statistic-content) {
@@ -72,24 +76,24 @@
 }
 
 .statisticAccent :global(.ant-statistic-content) {
-  color: #722ed1;
+  color: var(--color-secondary);
 }
 
 .statisticInfo :global(.ant-statistic-content) {
-  color: #13c2c2;
+  color: var(--color-info);
 }
 
 .v2Descriptions {
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-lg);
 }
 
 .serviceFeeDivider {
-  margin: 12px 0 !important;
+  margin: var(--spacing-md) 0 !important;
 }
 
 .emptyState {
   text-align: center;
-  padding: 20px;
+  padding: calc(var(--spacing-lg) + var(--spacing-xs));
   color: var(--color-text-secondary);
 }
 
@@ -98,26 +102,26 @@
 }
 
 .metadataCard {
-  margin-top: 16px;
+  margin-top: var(--spacing-lg);
 }
 
 .dataStatus {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-sm);
 }
 
 .dataStatusHint {
   color: var(--color-text-secondary);
-  font-size: 12px;
+  font-size: var(--font-size-xs);
 }
 
 @media (max-width: 768px) {
   .basicDescriptions :global(.ant-descriptions-item-label) {
-    width: 110px;
+    width: var(--contract-detail-label-width-mobile);
   }
 
   .basicDescriptions :global(.ant-descriptions-item-content) {
-    min-width: 140px;
+    min-width: var(--contract-detail-content-min-width-mobile);
   }
 }

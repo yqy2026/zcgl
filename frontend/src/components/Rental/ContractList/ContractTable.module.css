@@ -20,7 +20,7 @@
 
 .leaseSeparator {
   color: var(--color-text-secondary);
-  font-size: 12px;
+  font-size: var(--font-size-xs);
 }
 
 .inlineStatus {
@@ -28,16 +28,16 @@
 }
 
 .statusAssistText {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
 }
 
 .statusTag {
   margin-inline-end: 0;
   border-radius: 999px;
   border: 1px solid transparent;
-  padding-inline: 8px;
-  font-size: 12px;
-  line-height: 18px;
+  padding-inline: var(--spacing-sm);
+  font-size: var(--font-size-xs);
+  line-height: calc(var(--font-size-base) + var(--spacing-xs));
   font-weight: var(--font-weight-medium);
 }
 
@@ -78,17 +78,17 @@
 }
 
 .actionGroup {
-  gap: 6px;
+  gap: calc(var(--spacing-sm) - (var(--spacing-xs) / 2));
 }
 
 .actionButton {
-  min-width: 32px;
-  min-height: 32px;
+  min-width: var(--button-height-sm);
+  min-height: var(--button-height-sm);
 }
 
 @media (max-width: 768px) {
   .actionButton {
-    min-width: 40px;
-    min-height: 40px;
+    min-width: var(--button-height-lg);
+    min-height: var(--button-height-lg);
   }
 }

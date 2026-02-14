@@ -1,0 +1,7 @@
+.helpModal :global(.ant-modal) {
+  top: calc(var(--spacing-xl) - var(--spacing-xs));
+}
+
+.helpButton {
+  color: var(--color-primary);
+}

@@ -1,13 +1,13 @@
 /* 快速洞察组件样式 */
 
 .insightsContainer {
-  margin-bottom: 24px;
+  margin-bottom: var(--spacing-xl);
 }
 
 .titleContainer {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--spacing-xs);
 }
 
 .title {
@@ -16,13 +16,12 @@
 }
 
 .insightCard {
-  border-radius: 12px;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
-  /* Subtle shadow */
+  border-radius: var(--radius-lg);
+  box-shadow: var(--card-shadow);
   transition:
-    transform 0.3s ease,
-    box-shadow 0.3s ease,
-    border-color 0.3s ease;
+    transform var(--transition-slow),
+    box-shadow var(--transition-slow),
+    border-color var(--transition-slow);
   overflow: hidden;
   height: 100%;
   border: 1px solid var(--color-border-light);
@@ -30,28 +29,28 @@
 }
 
 .insightCard:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  border-color: rgba(22, 119, 255, 0.2);
+  transform: translateY(calc(var(--spacing-xs) / -2));
+  box-shadow: var(--card-shadow-hover);
+  border-color: var(--color-primary-light);
 }
 
 .insightHeader {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
 }
 
 .insightIcon {
-  font-size: 18px;
-  padding: 8px;
-  border-radius: 10px;
+  font-size: var(--font-size-xl);
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
   transition:
-    background-color 0.3s ease,
-    color 0.3s ease;
+    background-color var(--transition-slow),
+    color var(--transition-slow);
 }
 
 .insightCard.info .insightIcon {
@@ -60,26 +59,23 @@
 }
 
 .insightCard.success .insightIcon {
-  background: #f0fdf4;
-  /* Green 50 */
+  background: var(--color-success-light);
   color: var(--color-success);
 }
 
 .insightCard.warning .insightIcon {
-  background: #fffbeb;
-  /* Amber 50 */
+  background: var(--color-warning-light);
   color: var(--color-warning);
 }
 
 .insightCard.error .insightIcon {
-  background: #fef2f2;
-  /* Red 50 */
+  background: var(--color-error-light);
   color: var(--color-error);
 }
 
 .insightTitle {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
   margin: 0;
 }
@@ -87,23 +83,23 @@
 .insightContent {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--spacing-sm);
 }
 
 .insightDescription {
   margin: 0;
   color: var(--color-text-secondary);
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   line-height: 1.5;
 }
 
 .insightHighlight {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
   background: var(--color-bg-secondary);
-  padding: 4px 10px;
-  border-radius: 6px;
+  padding: var(--spacing-xs) var(--spacing-md);
+  border-radius: var(--button-radius);
   display: inline-block;
   width: fit-content;
   border: 1px solid var(--color-border);
@@ -112,15 +108,15 @@
 /* 响应式设计 */
 @media (max-width: 768px) {
   .insightIcon {
-    font-size: 16px;
-    padding: 6px;
+    font-size: var(--font-size-lg);
+    padding: calc(var(--spacing-sm) - (var(--spacing-xs) / 2));
   }
 
   .insightTitle {
-    font-size: 13px;
+    font-size: var(--font-size-sm);
   }
 
   .insightDescription {
-    font-size: 12px;
+    font-size: var(--font-size-xs);
   }
 }

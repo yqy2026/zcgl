@@ -55,13 +55,13 @@ const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
   const getStatusColor = () => {
     switch (status) {
       case 'success':
-        return '#52c41a';
+        return 'var(--color-success)';
       case 'exception':
-        return '#ff4d4f';
+        return 'var(--color-error)';
       case 'active':
-        return '#1890ff';
+        return 'var(--color-primary)';
       default:
-        return '#1890ff';
+        return 'var(--color-primary)';
     }
   };
 
@@ -255,7 +255,11 @@ export const ProgressCard: React.FC<{
       percent={percent}
       status={status}
       strokeColor={
-        status === 'success' ? '#52c41a' : status === 'exception' ? '#ff4d4f' : '#1890ff'
+        status === 'success'
+          ? 'var(--color-success)'
+          : status === 'exception'
+            ? 'var(--color-error)'
+            : 'var(--color-primary)'
       }
     />
   </Card>

@@ -1,0 +1,25 @@
+.titleIcon {
+  color: var(--color-primary);
+}
+
+.propertyTitle {
+  font-size: var(--font-size-lg);
+}
+
+.infoBlock {
+  margin-bottom: var(--spacing-sm);
+}
+
+.mutedIcon {
+  color: var(--color-text-tertiary);
+}
+
+.notesBlock {
+  margin-top: var(--spacing-sm);
+}
+
+.notesParagraph {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}

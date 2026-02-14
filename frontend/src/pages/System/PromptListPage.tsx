@@ -540,7 +540,7 @@ const PromptListPage: React.FC = () => {
   );
 
   return (
-    <PageContainer title="LLM Prompt 管理" subTitle="统一管理模板版本、状态与性能指标">
+    <PageContainer className={styles.pageShell} title="LLM Prompt 管理" subTitle="统一管理模板版本、状态与性能指标">
       {/* 统计卡片 */}
       {statistics != null && (
         <Row gutter={[16, 16]} className={styles.summaryRow}>

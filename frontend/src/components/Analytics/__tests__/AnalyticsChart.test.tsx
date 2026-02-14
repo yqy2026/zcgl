@@ -21,6 +21,9 @@ vi.mock('@/styles/colorMap', () => ({
     light: '#fff',
     medium: '#666',
   },
+  COLORS: {
+    border: '#d9d9d9',
+  },
 }));
 
 // Mock @ant-design/plots（这个 mock 是必要的，因为图表库依赖复杂）

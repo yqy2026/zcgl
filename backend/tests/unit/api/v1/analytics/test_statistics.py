@@ -102,8 +102,7 @@ class TestBasicStatistics:
             # Act
             response = client.get("/api/v1/statistics/dashboard")
 
-            # Assert - Dashboard 可能返回 200、400（数据验证失败）或 404
-            assert response.status_code in [200, 400, 404]
+            assert response.status_code == 200
 
 
 # =============================================================================
@@ -295,13 +294,12 @@ class TestErrorHandling:
 
         Given: 用户提供无效的筛选参数
         When: 调用统计 API
-        Then: 返回 200、400、500 或 404
+        Then: 返回 200
         """
         # Act
         response = client.get("/api/v1/statistics/basic?invalid_param=value")
 
-        # Assert - 未知参数可能导致不同的响应
-        assert response.status_code in [200, 400, 404, 500]
+        assert response.status_code == 200
 
     def test_service_layer_exception(self, client):
         """
@@ -321,9 +319,7 @@ class TestErrorHandling:
             # Act
             response = client.get("/api/v1/statistics/basic")
 
-            # Assert
-            # 可能返回 500 或 503（服务不可用）
-            assert response.status_code in [500, 503]
+            assert response.status_code == 503
 
 
 # =============================================================================

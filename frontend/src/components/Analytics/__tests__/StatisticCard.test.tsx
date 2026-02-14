@@ -129,7 +129,7 @@ describe('FinancialStatisticCard - 渲染测试', () => {
     );
 
     const value = container.querySelector('.ant-statistic-content');
-    expect(value?.getAttribute('style')).toContain('rgb(63, 134, 0)');
+    expect(value?.getAttribute('style')).toContain('var(--color-success)');
   });
 
   it('负值时应该使用红色', async () => {
@@ -139,7 +139,7 @@ describe('FinancialStatisticCard - 渲染测试', () => {
     );
 
     const value = container.querySelector('.ant-statistic-content');
-    expect(value?.getAttribute('style')).toContain('rgb(207, 19, 34)');
+    expect(value?.getAttribute('style')).toContain('var(--color-error)');
   });
 
   it('默认isPositive应该是true', async () => {
@@ -147,7 +147,7 @@ describe('FinancialStatisticCard - 渲染测试', () => {
     const { container } = renderWithProviders(<FinancialStatisticCard title="测试" value={100} />);
 
     const value = container.querySelector('.ant-statistic-content');
-    expect(value?.getAttribute('style')).toContain('rgb(63, 134, 0)');
+    expect(value?.getAttribute('style')).toContain('var(--color-success)');
   });
 });
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Spin, Typography } from 'antd';
 import { LoadingOutlined } from '@ant-design/icons';
+import styles from './LoadingSpinner.module.css';
 
 const { Text } = Typography;
 
@@ -23,11 +24,22 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   className,
   delay = 0,
 }) => {
+  const iconSizeClass =
+    size === 'large'
+      ? styles.iconLarge
+      : size === 'small'
+        ? styles.iconSmall
+        : styles.iconDefault;
+
+  const tipSizeClass =
+    size === 'large'
+      ? styles.tipLarge
+      : size === 'small'
+        ? styles.tipSmall
+        : styles.tipDefault;
+
   const antIcon = (
-    <LoadingOutlined
-      style={{ fontSize: size === 'large' ? 24 : size === 'small' ? 14 : 18 }}
-      spin
-    />
+    <LoadingOutlined className={`${styles.spinnerIcon} ${iconSizeClass}`} spin />
   );
 
   if (children !== null && children !== undefined) {
@@ -48,25 +60,16 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
 
   return (
     <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '50px 20px',
-        ...style,
-      }}
-      className={className}
+      style={style}
+      className={
+        className != null && className !== ''
+          ? `${styles.spinnerContainer} ${className}`
+          : styles.spinnerContainer
+      }
     >
       <Spin spinning={spinning} size={size} indicator={antIcon} delay={delay} />
       {tip !== null && tip !== undefined && (
-        <Text
-          type="secondary"
-          style={{
-            marginTop: 16,
-            fontSize: size === 'large' ? 16 : size === 'small' ? 12 : 14,
-          }}
-        >
+        <Text type="secondary" className={`${styles.tipText} ${tipSizeClass}`}>
           {tip}
         </Text>
       )}

@@ -1,15 +1,12 @@
 /* 数据趋势卡片样式 */
 
 .trendCard {
-  border-radius: 12px;
-  box-shadow:
-    0 1px 2px 0 rgba(0, 0, 0, 0.03),
-    0 1px 6px -1px rgba(0, 0, 0, 0.02),
-    0 2px 4px 0 rgba(0, 0, 0, 0.02);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--card-shadow);
   transition:
-    transform 0.3s ease,
-    box-shadow 0.3s ease,
-    border-color 0.3s ease;
+    transform var(--transition-slow),
+    box-shadow var(--transition-slow),
+    border-color var(--transition-slow);
   overflow: hidden;
   border: 1px solid var(--color-border-light);
   background: var(--color-bg-primary);
@@ -17,11 +14,9 @@
 }
 
 .trendCard:hover {
-  transform: translateY(-2px);
-  box-shadow:
-    0 10px 15px -3px rgba(0, 0, 0, 0.1),
-    0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  border-color: rgba(22, 119, 255, 0.2);
+  transform: translateY(calc(var(--spacing-xs) / -2));
+  box-shadow: var(--card-shadow-hover);
+  border-color: var(--color-primary-light);
 }
 
 /* Color Variants determining Icon Bubble colors */
@@ -31,20 +26,17 @@
 }
 
 .trendCard.success .cardIcon {
-  background: #f0fdf4;
-  /* Green 50 - keeping custom green for success variant */
+  background: var(--color-success-light);
   color: var(--color-success);
 }
 
 .trendCard.warning .cardIcon {
-  background: #fffbeb;
-  /* Amber 50 - keeping custom amber for warning variant */
+  background: var(--color-warning-light);
   color: var(--color-warning);
 }
 
 .trendCard.error .cardIcon {
-  background: #fef2f2;
-  /* Red 50 - keeping custom red for error variant */
+  background: var(--color-error-light);
   color: var(--color-error);
 }
 
@@ -70,40 +62,40 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-lg);
 }
 
 .cardTitle {
-  font-size: 14px;
-  font-weight: 500;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
   color: var(--color-text-secondary);
   margin: 0;
   line-height: 1.4;
-  margin-top: 4px;
+  margin-top: var(--spacing-xs);
 }
 
 .cardIcon {
-  font-size: 20px;
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
+  font-size: var(--font-size-xxl);
+  width: var(--button-height-lg);
+  height: var(--button-height-lg);
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
   transition:
-    background-color 0.3s ease,
-    color 0.3s ease;
+    background-color var(--transition-slow),
+    color var(--transition-slow);
 }
 
 .cardContent {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--spacing-sm);
 }
 
 /* Statistic Value Override */
 .trendCard :global(.ant-statistic-content-value) {
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   color: var(--color-text-primary);
 }
 
@@ -111,39 +103,39 @@
 .trendUp {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--spacing-xs);
   color: var(--color-success);
-  background: #f0fdf4;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 600;
+  background: var(--color-success-light);
+  padding: calc(var(--spacing-xs) / 2) var(--spacing-sm);
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
   width: fit-content;
 }
 
 .trendDown {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--spacing-xs);
   color: var(--color-error);
-  background: #fef2f2;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 600;
+  background: var(--color-error-light);
+  padding: calc(var(--spacing-xs) / 2) var(--spacing-sm);
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
   width: fit-content;
 }
 
 .trendNeutral {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--spacing-xs);
   color: var(--color-text-secondary);
   background: var(--color-bg-tertiary);
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 600;
+  padding: calc(var(--spacing-xs) / 2) var(--spacing-sm);
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
   width: fit-content;
 }
 
@@ -153,13 +145,13 @@
 }
 
 .trendText {
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
 }
 
 .trendPeriod {
   opacity: 0.8;
-  font-size: 11px;
-  margin-left: 4px;
+  font-size: var(--font-size-xs);
+  margin-left: var(--spacing-xs);
   color: var(--color-text-secondary);
 }
 
@@ -172,8 +164,8 @@
   }
 
   .cardIcon {
-    width: 32px;
-    height: 32px;
-    font-size: 16px;
+    width: var(--button-height-sm);
+    height: var(--button-height-sm);
+    font-size: var(--font-size-lg);
   }
 }

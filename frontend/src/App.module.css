@@ -1,5 +1,5 @@
 .suspenseFallbackSpin {
   display: flex;
   justify-content: center;
-  margin-top: 100px;
+  margin-top: calc(var(--spacing-xxxl) + var(--spacing-xxxl) + var(--spacing-xs));
 }

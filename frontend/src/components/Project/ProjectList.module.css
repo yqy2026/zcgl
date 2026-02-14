@@ -1,0 +1,61 @@
+.projectNameButton {
+  padding: 0;
+  text-align: left;
+}
+
+.ownershipTag {
+  margin-right: var(--spacing-xs);
+}
+
+.statisticsRow {
+  margin-bottom: var(--spacing-xl);
+}
+
+.statPrefixPrimary {
+  color: var(--color-primary);
+}
+
+.statPrefixSuccess {
+  color: var(--color-success);
+}
+
+.statPrefixError {
+  color: var(--color-error);
+}
+
+.statPrefixInfo {
+  color: var(--color-info);
+}
+
+.fullWidthSelect {
+  width: 100%;
+}
+
+.statsCard {
+  height: 100%;
+  border-radius: var(--radius-lg);
+}
+
+.statsCard :global(.ant-statistic-title) {
+  color: var(--color-text-secondary);
+}
+
+.statsCard :global(.ant-statistic-content) {
+  font-weight: var(--font-weight-semibold);
+}
+
+.statsTotal :global(.ant-statistic-content) {
+  color: var(--color-primary);
+}
+
+.statsActive :global(.ant-statistic-content) {
+  color: var(--color-success);
+}
+
+.statsInactive :global(.ant-statistic-content) {
+  color: var(--color-error);
+}
+
+.statsAssets :global(.ant-statistic-content) {
+  color: var(--color-info);
+}

@@ -11,11 +11,6 @@ Test coverage for LLM Prompts API endpoints:
 import pytest
 from fastapi import status
 
-AUTH_FAILURE_STATUSES = {
-    status.HTTP_401_UNAUTHORIZED,
-    status.HTTP_422_UNPROCESSABLE_CONTENT,
-}
-
 LLM_PROMPTS_BASE_PATH = "/api/v1/llm-prompts/llm-prompts"
 
 
@@ -57,16 +52,12 @@ class TestLLMPromptsCRUD:
         response = client.post(
             f"{LLM_PROMPTS_BASE_PATH}/", json=prompt_data, headers=admin_user_headers
         )
-        assert response.status_code in [
-            status.HTTP_200_OK,
-            status.HTTP_201_CREATED,
-            *AUTH_FAILURE_STATUSES,
-        ]
+        assert response.status_code == status.HTTP_200_OK
 
     def test_get_prompts_list(self, client, admin_user_headers):
         """测试获取Prompt列表"""
         response = client.get(f"{LLM_PROMPTS_BASE_PATH}/", headers=admin_user_headers)
-        assert response.status_code in [status.HTTP_200_OK, *AUTH_FAILURE_STATUSES]
+        assert response.status_code == status.HTTP_200_OK
 
     def test_get_prompts_with_pagination(self, client, admin_user_headers):
         """测试分页功能"""
@@ -74,19 +65,14 @@ class TestLLMPromptsCRUD:
             f"{LLM_PROMPTS_BASE_PATH}/?page=1&page_size=10",
             headers=admin_user_headers,
         )
-        assert response.status_code in [status.HTTP_200_OK, *AUTH_FAILURE_STATUSES]
+        assert response.status_code == status.HTTP_200_OK
 
     def test_get_prompt_by_id(self, client, admin_user_headers):
         """测试获取单个Prompt"""
         response = client.get(
             f"{LLM_PROMPTS_BASE_PATH}/test-id", headers=admin_user_headers
         )
-        # 可能返回200或404
-        assert response.status_code in [
-            status.HTTP_200_OK,
-            status.HTTP_404_NOT_FOUND,
-            *AUTH_FAILURE_STATUSES,
-        ]
+        assert response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_update_prompt(self, client, admin_user_headers):
         """测试更新Prompt"""
@@ -96,23 +82,14 @@ class TestLLMPromptsCRUD:
             json=update_data,
             headers=admin_user_headers,
         )
-        assert response.status_code in [
-            status.HTTP_200_OK,
-            status.HTTP_404_NOT_FOUND,
-            *AUTH_FAILURE_STATUSES,
-        ]
+        assert response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_delete_prompt(self, client, admin_user_headers):
         """测试删除Prompt"""
         response = client.delete(
             f"{LLM_PROMPTS_BASE_PATH}/test-id", headers=admin_user_headers
         )
-        assert response.status_code in [
-            status.HTTP_200_OK,
-            status.HTTP_404_NOT_FOUND,
-            status.HTTP_405_METHOD_NOT_ALLOWED,
-            *AUTH_FAILURE_STATUSES,
-        ]
+        assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
 
 
 class TestLLMPromptsVersionManagement:
@@ -123,11 +100,7 @@ class TestLLMPromptsVersionManagement:
         response = client.get(
             f"{LLM_PROMPTS_BASE_PATH}/test-id/versions", headers=admin_user_headers
         )
-        assert response.status_code in [
-            status.HTTP_200_OK,
-            status.HTTP_404_NOT_FOUND,
-            *AUTH_FAILURE_STATUSES,
-        ]
+        assert response.status_code == status.HTTP_200_OK
 
     def test_rollback_prompt_version(self, client, admin_user_headers):
         """测试回滚到指定版本"""
@@ -137,11 +110,7 @@ class TestLLMPromptsVersionManagement:
             json=rollback_data,
             headers=admin_user_headers,
         )
-        assert response.status_code in [
-            status.HTTP_200_OK,
-            status.HTTP_404_NOT_FOUND,
-            *AUTH_FAILURE_STATUSES,
-        ]
+        assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 class TestLLMPromptsActivation:
@@ -152,11 +121,7 @@ class TestLLMPromptsActivation:
         response = client.post(
             f"{LLM_PROMPTS_BASE_PATH}/test-id/activate", headers=admin_user_headers
         )
-        assert response.status_code in [
-            status.HTTP_200_OK,
-            status.HTTP_404_NOT_FOUND,
-            *AUTH_FAILURE_STATUSES,
-        ]
+        assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 class TestLLMPromptsValidation:
@@ -177,11 +142,7 @@ class TestLLMPromptsValidation:
         response = client.post(
             f"{LLM_PROMPTS_BASE_PATH}/", json=prompt_data, headers=admin_user_headers
         )
-        assert response.status_code in [
-            status.HTTP_400_BAD_REQUEST,
-            status.HTTP_200_OK,
-            *AUTH_FAILURE_STATUSES,
-        ]
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
     def test_create_invalid_provider(self, client, admin_user_headers):
         """测试使用无效的provider"""
@@ -194,12 +155,7 @@ class TestLLMPromptsValidation:
         response = client.post(
             f"{LLM_PROMPTS_BASE_PATH}/", json=prompt_data, headers=admin_user_headers
         )
-        assert response.status_code in [
-            status.HTTP_400_BAD_REQUEST,
-            status.HTTP_422_UNPROCESSABLE_CONTENT,
-            status.HTTP_200_OK,
-            *AUTH_FAILURE_STATUSES,
-        ]
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 class TestLLMPromptsAuthentication:
@@ -208,8 +164,6 @@ class TestLLMPromptsAuthentication:
     def test_unauthorized_access(self, unauthenticated_client):
         """测试未授权访问"""
         response = unauthenticated_client.get(f"{LLM_PROMPTS_BASE_PATH}/")
-        assert response.status_code in {
-            status.HTTP_200_OK,
-            status.HTTP_401_UNAUTHORIZED,
-            status.HTTP_422_UNPROCESSABLE_CONTENT,
-        }
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        data = response.json()
+        assert data.get("error", {}).get("code") == "AUTHENTICATION_ERROR"

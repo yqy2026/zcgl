@@ -1,5 +1,10 @@
+.pageShell {
+  --prompt-list-control-height: var(--button-height-lg);
+  --prompt-list-touch-target-size: calc(var(--button-height-lg) + var(--spacing-xs));
+}
+
 .summaryRow {
-  margin-bottom: 24px;
+  margin-bottom: var(--spacing-xl);
 }
 
 .summaryCard {
@@ -16,7 +21,7 @@
 }
 
 .totalSuffix {
-  font-size: 14px;
+  font-size: var(--font-size-base);
   color: var(--color-text-secondary);
 }
 
@@ -25,8 +30,8 @@
 }
 
 .actionButton {
-  min-height: 40px;
-  border-radius: 8px;
+  min-height: var(--prompt-list-control-height);
+  border-radius: var(--radius-md);
 }
 
 .actionButton:focus-visible {
@@ -35,7 +40,7 @@
 }
 
 .filtersSection {
-  margin-bottom: 12px;
+  margin-bottom: var(--spacing-md);
 }
 
 .fullWidthControl {
@@ -43,23 +48,23 @@
 }
 
 .filterSummary {
-  margin-bottom: 12px;
+  margin-bottom: var(--spacing-md);
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--spacing-sm);
 }
 
 .summaryText {
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
 }
 
 .nameCell {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: calc(var(--spacing-xs) / 2);
   line-height: 1.4;
 }
 
@@ -69,7 +74,7 @@
 }
 
 .versionText {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
 }
 
@@ -101,7 +106,7 @@
   margin-inline-end: 0;
   border-radius: 999px;
   border: 1px solid transparent;
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
   line-height: 1.35;
   display: inline-flex;
@@ -113,12 +118,12 @@
 .statusTag,
 .versionTag,
 .sourceTag {
-  padding-inline: 8px;
+  padding-inline: var(--spacing-sm);
 }
 
 .statusHint {
-  margin-left: 4px;
-  font-size: 11px;
+  margin-left: var(--spacing-xs);
+  font-size: var(--font-size-xs);
   opacity: 0.88;
 }
 
@@ -154,13 +159,13 @@
 }
 
 .actionGroup {
-  gap: 4px;
+  gap: var(--spacing-xs);
 }
 
 .tableActionButton {
-  min-width: 40px;
-  min-height: 40px;
-  border-radius: 8px;
+  min-width: var(--prompt-list-control-height);
+  min-height: var(--prompt-list-control-height);
+  border-radius: var(--radius-md);
   color: var(--color-text-secondary);
   transition: color var(--transition-base), background-color var(--transition-base);
 }
@@ -176,11 +181,11 @@
 }
 
 .versionModalContent {
-  margin-top: 16px;
+  margin-top: var(--spacing-lg);
 }
 
 .versionEmpty {
-  margin: 12px 0 4px;
+  margin: var(--spacing-md) 0 var(--spacing-xs);
 }
 
 .versionTable :global(.ant-table-container) {
@@ -194,12 +199,12 @@
 
 @media (max-width: 768px) {
   .actionButton {
-    min-height: 44px;
+    min-height: var(--prompt-list-touch-target-size);
   }
 
   .tableActionButton {
-    min-width: 44px;
-    min-height: 44px;
+    min-width: var(--prompt-list-touch-target-size);
+    min-height: var(--prompt-list-touch-target-size);
   }
 
   .filterSummary {

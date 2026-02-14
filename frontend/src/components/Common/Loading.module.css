@@ -1,0 +1,61 @@
+.pageLoading {
+  --common-loading-page-min-height: calc((var(--spacing-xxxl) * 8) + var(--spacing-md) + var(--spacing-xs));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--common-loading-page-min-height);
+}
+
+.pageMessage {
+  margin-top: var(--spacing-md);
+  color: var(--color-text-secondary);
+}
+
+.inlineLoading {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.inlineMessage {
+  color: var(--color-text-secondary);
+}
+
+.listSkeletonSpace {
+  width: 100%;
+  gap: var(--spacing-md);
+}
+
+.fullWidthInput {
+  width: 100%;
+}
+
+.tableSkeletonContainer {
+  width: 100%;
+}
+
+.tableSkeletonItem {
+  margin-bottom: var(--spacing-md);
+}
+
+.cardSkeletonSpace {
+  width: 100%;
+  gap: var(--spacing-lg);
+}
+
+.cardSkeletonTitle {
+  width: 40%;
+}
+
+.cardSkeletonLine {
+  width: 100%;
+}
+
+.cardSkeletonButton {
+  width: 30%;
+}
+
+.loadingButtonSpace {
+  gap: var(--spacing-sm);
+}

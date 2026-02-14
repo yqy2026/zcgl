@@ -2,6 +2,7 @@ import React from 'react';
 import { Form, Input, Select, Row, Col, Card } from 'antd';
 import { DictionarySelect } from '@/components/Dictionary';
 import { generateFormFieldIds } from '@/utils/accessibility';
+import styles from './AssetStatusSection.module.css';
 
 const { Option } = Select;
 
@@ -24,7 +25,7 @@ const AssetStatusSection: React.FC = () => {
   const occupancyRateIds = generateFormFieldIds('occupancy-rate');
 
   return (
-    <Card title="状态信息" style={{ marginBottom: '16px' }}>
+    <Card title="状态信息" className={styles.sectionCard}>
       <Row gutter={16}>
         <Col span={8}>
           <Form.Item

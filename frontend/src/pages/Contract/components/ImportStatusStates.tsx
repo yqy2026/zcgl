@@ -7,7 +7,7 @@
 import React from 'react';
 import { Button, Space, Typography } from 'antd';
 import { CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
-import { COLORS } from '@/styles/colorMap';
+import styles from './ImportStatusStates.module.css';
 
 const { Title, Paragraph } = Typography;
 
@@ -28,9 +28,9 @@ export const ImportStatusStates: React.FC<ImportStatusStatesProps> = ({
 }) => {
   if (status === 'completed') {
     return (
-      <div style={{ textAlign: 'center', padding: '40px' }}>
-        <CheckCircleOutlined style={{ fontSize: 64, color: COLORS.success, marginBottom: 16 }} />
-        <Title level={4} style={{ color: COLORS.success }}>
+      <div className={styles.statusContainer}>
+        <CheckCircleOutlined className={styles.successIcon} />
+        <Title level={4} className={styles.successTitle}>
           导入成功！
         </Title>
         <Paragraph>合同已成功导入到系统中。</Paragraph>
@@ -46,9 +46,9 @@ export const ImportStatusStates: React.FC<ImportStatusStatesProps> = ({
 
   // status === 'failed'
   return (
-    <div style={{ textAlign: 'center', padding: '40px' }}>
-      <CloseCircleOutlined style={{ fontSize: 64, color: COLORS.error, marginBottom: 16 }} />
-      <Title level={4} style={{ color: COLORS.error }}>
+    <div className={styles.statusContainer}>
+      <CloseCircleOutlined className={styles.errorIcon} />
+      <Title level={4} className={styles.errorTitle}>
         处理失败
       </Title>
       <Paragraph>{error ?? '处理过程中发生错误'}</Paragraph>

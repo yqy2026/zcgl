@@ -6,6 +6,7 @@ import React, { useState, useEffect } from 'react';
 import { Form, Input, Button, Space, Card, Row, Col, Divider, Switch, Select } from 'antd';
 import type { RuleObject } from 'antd/es/form';
 import { MessageManager } from '@/utils/messageManager';
+import styles from './OwnershipForm.module.css';
 
 const { Option } = Select;
 
@@ -160,7 +161,7 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({ initialValues, onSuccess,
               <Select
                 mode="multiple"
                 placeholder="请选择关联项目"
-                style={{ width: '100%' }}
+                className={styles.projectSelect}
                 showSearch
                 filterOption={(input, option) => {
                   if (option?.children == null) return false;
@@ -188,7 +189,7 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({ initialValues, onSuccess,
       <Divider />
 
       <Row>
-        <Col span={24} style={{ textAlign: 'right' }}>
+        <Col span={24} className={styles.actionsColumn}>
           <Space>
             <Button onClick={onCancel}>取消</Button>
             <Button type="primary" htmlType="submit" loading={loading}>

@@ -1,18 +1,27 @@
 .todoList {
+  --todo-control-height: var(--button-height-lg);
+  --todo-touch-target-size: calc(var(--button-height-lg) + var(--spacing-xs));
+  --todo-item-padding-y: var(--spacing-md);
+  --todo-action-offset-x: var(--spacing-md);
+  --todo-priority-icon-size: var(--font-size-lg);
+  --todo-title-gap: var(--spacing-sm);
+  --todo-tag-padding-x: var(--spacing-sm);
+  --todo-due-gap: calc(var(--spacing-sm) - (var(--spacing-xs) / 2));
+  --todo-due-offset-y: var(--spacing-xs);
   width: 100%;
 }
 
 .todoItem {
-  padding-block: 12px;
+  padding-block: var(--todo-item-padding-y);
 }
 
 .todoItem :global(.ant-list-item-action) {
-  margin-inline-start: 12px;
+  margin-inline-start: var(--todo-action-offset-x);
 }
 
 .completeButton {
-  min-height: 40px;
-  border-radius: 8px;
+  min-height: var(--todo-control-height);
+  border-radius: var(--radius-md);
 }
 
 .completeButton:focus-visible {
@@ -21,7 +30,7 @@
 }
 
 .priorityIcon {
-  font-size: 16px;
+  font-size: var(--todo-priority-icon-size);
 }
 
 .priorityHigh {
@@ -37,7 +46,7 @@
 }
 
 .titleRow {
-  gap: 8px;
+  gap: var(--todo-title-gap);
 }
 
 .titleText {
@@ -52,7 +61,7 @@
 
 .priorityTag {
   border-radius: 999px;
-  padding-inline: 8px;
+  padding-inline: var(--todo-tag-padding-x);
 }
 
 .descriptionBlock {
@@ -60,12 +69,12 @@
 }
 
 .descriptionText {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
 }
 
 .dueRow {
-  margin-top: 4px;
-  gap: 6px;
+  margin-top: var(--todo-due-offset-y);
+  gap: var(--todo-due-gap);
 }
 
 .dueIcon {
@@ -73,11 +82,11 @@
 }
 
 .dueText {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
 }
 
 @media (max-width: 768px) {
   .completeButton {
-    min-height: 44px;
+    min-height: var(--todo-touch-target-size);
   }
 }

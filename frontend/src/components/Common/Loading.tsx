@@ -13,6 +13,7 @@
 import React from 'react';
 import { Spin, Skeleton, Button as AntButton, Space, Typography } from 'antd';
 import type { ButtonProps } from 'antd/es/button';
+import styles from './Loading.module.css';
 
 const { Text } = Typography;
 
@@ -47,17 +48,15 @@ export const PageLoading: React.FC<PageLoadingProps> = ({
   className,
   style,
 }) => {
+  const containerClassName =
+    className !== undefined && className !== ''
+      ? `${styles.pageLoading} ${className}`
+      : styles.pageLoading;
+
   return (
     <div
-      className={className}
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '400px',
-        ...style,
-      }}
+      className={containerClassName}
+      style={style}
       role="status"
       aria-live="polite"
       aria-busy="true"
@@ -65,12 +64,7 @@ export const PageLoading: React.FC<PageLoadingProps> = ({
     >
       <Spin size={size} />
       {message && (
-        <Text
-          style={{
-            marginTop: 'var(--spacing-md)',
-            color: 'var(--color-text-secondary)',
-          }}
-        >
+        <Text className={styles.pageMessage}>
           {message}
         </Text>
       )}
@@ -108,15 +102,15 @@ export const InlineLoading: React.FC<InlineLoadingProps> = ({
   className,
   style,
 }) => {
+  const containerClassName =
+    className !== undefined && className !== ''
+      ? `${styles.inlineLoading} ${className}`
+      : styles.inlineLoading;
+
   return (
     <div
-      className={className}
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 'var(--spacing-sm)',
-        ...style,
-      }}
+      className={containerClassName}
+      style={style}
       role="status"
       aria-live="polite"
       aria-busy="true"
@@ -124,12 +118,7 @@ export const InlineLoading: React.FC<InlineLoadingProps> = ({
     >
       <Spin size={size} />
       {message && (
-        <Text
-          type="secondary"
-          style={{
-            color: 'var(--color-text-secondary)',
-          }}
-        >
+        <Text type="secondary" className={styles.inlineMessage}>
           {message}
         </Text>
       )}
@@ -171,37 +160,37 @@ export const SkeletonLoading: React.FC<SkeletonLoadingProps> = ({
   style,
 }) => {
   const renderListSkeleton = () => (
-    <Space direction="vertical" style={{ width: '100%', gap: 'var(--spacing-md)' }} size="small">
+    <Space direction="vertical" className={styles.listSkeletonSpace} size="small">
       {Array.from({ length: count }).map((_, index) => (
         <Skeleton.Input
           key={index}
           active
           size="large"
-          style={{ width: '100%' }}
+          className={styles.fullWidthInput}
         />
       ))}
     </Space>
   );
 
   const renderTableSkeleton = () => (
-    <div style={{ width: '100%' }}>
+    <div className={styles.tableSkeletonContainer}>
       {Array.from({ length: count }).map((_, index) => (
         <Skeleton
           key={index}
           active
           paragraph={{ rows: 1 }}
-          style={{ marginBottom: 'var(--spacing-md)' }}
+          className={styles.tableSkeletonItem}
         />
       ))}
     </div>
   );
 
   const renderCardSkeleton = () => (
-    <Space direction="vertical" style={{ width: '100%', gap: 'var(--spacing-lg)' }} size="small">
-      <Skeleton.Input active size="large" style={{ width: '40%' }} />
-      <Skeleton.Input active size="small" style={{ width: '100%' }} />
-      <Skeleton.Input active size="small" style={{ width: '100%' }} />
-      <Skeleton.Button active size="large" style={{ width: '30%' }} />
+    <Space direction="vertical" className={styles.cardSkeletonSpace} size="small">
+      <Skeleton.Input active size="large" className={styles.cardSkeletonTitle} />
+      <Skeleton.Input active size="small" className={styles.cardSkeletonLine} />
+      <Skeleton.Input active size="small" className={styles.cardSkeletonLine} />
+      <Skeleton.Button active size="large" className={styles.cardSkeletonButton} />
     </Space>
   );
 
@@ -274,7 +263,7 @@ export const LoadingButton: React.FC<LoadingButtonProps> = ({
       aria-busy={loading}
     >
       {loading ? (
-        <Space size="small" style={{ gap: 'var(--spacing-sm)' }}>
+        <Space size="small" className={styles.loadingButtonSpace}>
           {loadingIcon || <Spin size="small" />}
           <span>{loadingText}</span>
         </Space>

@@ -138,7 +138,7 @@ class User(Base):
                     locked_until_value = locked_until_value.replace(tzinfo=UTC)
                 else:
                     locked_until_value = locked_until_value.astimezone(UTC)
-                if locked_until_value > datetime.now(UTC).replace(tzinfo=None):
+                if locked_until_value > datetime.now(UTC):
                     return True
 
             # 如果锁定时间已过，自动解锁（安全地设置字段）
@@ -218,7 +218,7 @@ class UserSession(Base):
                 )  # pragma: no cover
             else:  # pragma: no cover
                 expires_at_value = expires_at_value.astimezone(UTC)  # pragma: no cover
-            return datetime.now(UTC).replace(tzinfo=None) > expires_at_value  # pragma: no cover
+            return datetime.now(UTC) > expires_at_value  # pragma: no cover
 
 
 class AuditLog(Base):

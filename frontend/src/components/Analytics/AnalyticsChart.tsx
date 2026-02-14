@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pie, Column, Line } from '@ant-design/plots';
 import { Card, Empty, Spin } from 'antd';
-import { CHART_COLORS, CHART_LABEL_COLORS } from '@/styles/colorMap';
+import { CHART_COLORS, CHART_LABEL_COLORS, COLORS } from '@/styles/colorMap';
 import styles from './AnalyticsChart.module.css';
 
 // 基础图表组件属性
@@ -194,7 +194,7 @@ export const AnalyticsBarChart: React.FC<BarChartProps> = ({
       grid: {
         line: {
           style: {
-            stroke: showGrid ? '#d9d9d9' : 'transparent',
+            stroke: showGrid ? COLORS.border : 'transparent',
             lineWidth: 1,
           },
         },
@@ -213,7 +213,7 @@ export const AnalyticsBarChart: React.FC<BarChartProps> = ({
       grid: {
         line: {
           style: {
-            stroke: showGrid ? '#d9d9d9' : 'transparent',
+            stroke: showGrid ? COLORS.border : 'transparent',
             lineWidth: 1,
           },
         },
@@ -333,7 +333,7 @@ export const AnalyticsLineChart: React.FC<LineChartProps> = ({
       grid: {
         line: {
           style: {
-            stroke: showGrid ? '#d9d9d9' : 'transparent',
+            stroke: showGrid ? COLORS.border : 'transparent',
             lineWidth: 1,
           },
         },
@@ -343,7 +343,7 @@ export const AnalyticsLineChart: React.FC<LineChartProps> = ({
       grid: {
         line: {
           style: {
-            stroke: showGrid ? '#d9d9d9' : 'transparent',
+            stroke: showGrid ? COLORS.border : 'transparent',
             lineWidth: 1,
           },
         },

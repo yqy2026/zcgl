@@ -3,6 +3,8 @@ import { Card, Row, Col } from 'antd';
 import { Line } from '@ant-design/plots';
 
 import {
+  ALERT_LEVEL_COLORS,
+  STATUS_COLORS,
   type ApplicationMetrics,
   type ChartDataPoint,
   type SystemMetrics,
@@ -32,13 +34,13 @@ const SystemMonitoringTrendCharts: React.FC<SystemMonitoringTrendChartsProps> = 
       xField: 'time',
       yField: 'value',
       smooth: true,
-      color: '#1890ff',
+      color: ALERT_LEVEL_COLORS.info,
       annotations: [
         {
           type: 'line',
           start: ['min', 80],
           end: ['max', 80],
-          style: { stroke: '#ff4d4f', lineDash: [2, 2] },
+          style: { stroke: STATUS_COLORS.critical, lineDash: [2, 2] },
         },
       ],
       tooltip: {
@@ -66,13 +68,13 @@ const SystemMonitoringTrendCharts: React.FC<SystemMonitoringTrendChartsProps> = 
       xField: 'time',
       yField: 'value',
       smooth: true,
-      color: '#52c41a',
+      color: STATUS_COLORS.normal,
       annotations: [
         {
           type: 'line',
           start: ['min', 85],
           end: ['max', 85],
-          style: { stroke: '#ff4d4f', lineDash: [2, 2] },
+          style: { stroke: STATUS_COLORS.critical, lineDash: [2, 2] },
         },
       ],
       tooltip: {
@@ -100,13 +102,13 @@ const SystemMonitoringTrendCharts: React.FC<SystemMonitoringTrendChartsProps> = 
       xField: 'time',
       yField: 'value',
       smooth: true,
-      color: '#faad14',
+      color: ALERT_LEVEL_COLORS.warning,
       annotations: [
         {
           type: 'line',
           start: ['min', 1000],
           end: ['max', 1000],
-          style: { stroke: '#ff4d4f', lineDash: [2, 2] },
+          style: { stroke: STATUS_COLORS.critical, lineDash: [2, 2] },
         },
       ],
       tooltip: {

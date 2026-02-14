@@ -1,14 +1,18 @@
 .ownershipList {
+  --ownership-control-height: var(--button-height-lg);
+  --ownership-touch-target-size: calc(var(--button-height-lg) + var(--spacing-xs));
+  --ownership-compact-control-height: var(--button-height-sm);
+  --ownership-status-switch-width: calc(var(--button-height-lg) + var(--spacing-sm));
   width: 100%;
 }
 
 .statsRow {
-  margin-bottom: 24px;
+  margin-bottom: var(--spacing-xl);
 }
 
 .statsCard {
   height: 100%;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
 }
 
 .statsCard :global(.ant-statistic-title) {
@@ -40,12 +44,12 @@
 }
 
 .toolbarActionGroup {
-  gap: 8px;
+  gap: var(--spacing-sm);
 }
 
 .toolbarButton {
-  min-height: 40px;
-  border-radius: 8px;
+  min-height: var(--ownership-control-height);
+  border-radius: var(--radius-md);
 }
 
 .toolbarButton:focus-visible {
@@ -55,8 +59,8 @@
 
 .linkButton {
   padding: 0 !important;
-  min-height: 40px;
-  border-radius: 6px;
+  min-height: var(--ownership-control-height);
+  border-radius: var(--button-radius);
   font-weight: var(--font-weight-medium);
 }
 
@@ -66,17 +70,17 @@
 }
 
 .actionGroup {
-  gap: 4px;
+  gap: var(--spacing-xs);
 }
 
 .selectActionButton {
-  min-height: 32px;
+  min-height: var(--ownership-compact-control-height);
 }
 
 .iconActionButton {
-  min-width: 40px;
-  min-height: 40px;
-  border-radius: 8px;
+  min-width: var(--ownership-control-height);
+  min-height: var(--ownership-control-height);
+  border-radius: var(--radius-md);
   color: var(--color-text-secondary);
   transition:
     color var(--transition-base),
@@ -99,21 +103,25 @@
 }
 
 .statusSwitch {
-  min-width: 48px;
+  min-width: var(--ownership-status-switch-width);
 }
 
 .tableCard {
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
 }
 
 @media (max-width: 768px) {
   .statsRow {
-    margin-bottom: 16px;
+    margin-bottom: var(--spacing-lg);
   }
 
   .toolbarButton,
   .linkButton,
   .iconActionButton {
-    min-height: 44px;
+    min-height: var(--ownership-touch-target-size);
+  }
+
+  .iconActionButton {
+    min-width: var(--ownership-touch-target-size);
   }
 }

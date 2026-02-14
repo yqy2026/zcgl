@@ -26,6 +26,7 @@ import type { PromptTemplate, PromptTemplateCreate, PromptTemplateUpdate } from 
 import { DocType, LLMProvider } from '@/types/llmPrompt';
 import { llmPromptService } from '@/services/llmPromptService';
 import { createLogger } from '@/utils/logger';
+import styles from './PromptEditor.module.css';
 
 const logger = createLogger('PromptEditor');
 const { TextArea } = Input;
@@ -269,7 +270,7 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
             <TextArea
               rows={6}
               placeholder='{"example1": {"input": "...", "output": "..."}}'
-              style={{ fontFamily: 'monospace' }}
+              className={styles.monospaceTextarea}
             />
           </Form.Item>
 
@@ -290,30 +291,14 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
       label: '预览',
       children: (
         <div>
-          <Card title="系统 Prompt" size="small" style={{ marginBottom: 16 }}>
-            <Paragraph
-              style={{
-                background: '#f5f5f5',
-                padding: 12,
-                borderRadius: 4,
-                whiteSpace: 'pre-wrap',
-                fontFamily: 'monospace',
-              }}
-            >
+          <Card title="系统 Prompt" size="small" className={styles.cardSpacing}>
+            <Paragraph className={styles.promptPreview}>
               {previewData.system_prompt || '暂无内容'}
             </Paragraph>
           </Card>
 
           <Card title="用户 Prompt 模板" size="small">
-            <Paragraph
-              style={{
-                background: '#f5f5f5',
-                padding: 12,
-                borderRadius: 4,
-                whiteSpace: 'pre-wrap',
-                fontFamily: 'monospace',
-              }}
-            >
+            <Paragraph className={styles.promptPreview}>
               {renderPreview(previewData.user_prompt_template) || '暂无内容'}
             </Paragraph>
           </Card>
@@ -323,7 +308,7 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
             description="预览中的 {pages_hint} 等变量将在实际使用时被替换为具体内容"
             type="info"
             showIcon
-            style={{ marginTop: 16 }}
+            className={styles.previewTip}
           />
         </div>
       ),
@@ -333,7 +318,7 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
       label: '帮助',
       children: (
         <div>
-          <Card title="什么是 System Prompt?" size="small" style={{ marginBottom: 16 }}>
+          <Card title="什么是 System Prompt?" size="small" className={styles.cardSpacing}>
             <Paragraph>
               System Prompt 定义了 AI 助手的<strong>角色</strong>和<strong>基本行为规则</strong>。
               它会应用到所有对话中，设定 AI 的&quot;人格&quot;和&quot;工作方式&quot;。
@@ -347,7 +332,7 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
             </Paragraph>
           </Card>
 
-          <Card title="什么是 User Prompt Template?" size="small" style={{ marginBottom: 16 }}>
+          <Card title="什么是 User Prompt Template?" size="small" className={styles.cardSpacing}>
             <Paragraph>
               User Prompt Template 是<strong>具体的任务指令</strong>，描述了需要完成的具体工作。
               可以使用变量模板，如 <Text code>&#123;pages_hint&#125;</Text> 会在运行时被替换。
@@ -359,7 +344,7 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
             </Paragraph>
           </Card>
 
-          <Card title="什么是 Few-shot 示例?" size="small" style={{ marginBottom: 16 }}>
+          <Card title="什么是 Few-shot 示例?" size="small" className={styles.cardSpacing}>
             <Paragraph>
               Few-shot 示例通过提供<strong>输入-输出示例</strong>，帮助 AI
               理解期望的格式和质量标准。 这对于复杂的提取任务特别有效。

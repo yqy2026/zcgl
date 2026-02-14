@@ -1,5 +1,5 @@
 .ownershipCard {
-  margin-top: 16px;
+  margin-top: var(--spacing-lg);
 }
 
 .ownershipSelectWrapper {
@@ -7,28 +7,28 @@
 }
 
 .selectedOwnershipsSection {
-  margin-top: 16px;
+  margin-top: var(--spacing-lg);
 }
 
 .selectedOwnershipsTitle {
-  margin-bottom: 8px;
-  font-weight: 600;
+  margin-bottom: var(--spacing-sm);
+  font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
 }
 
 .selectedOwnershipsList {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--spacing-sm);
 }
 
 .selectedOwnershipTag {
-  padding: 4px 8px;
-  font-size: 14px;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: var(--font-size-base);
 }
 
 .formActions {
-  margin-top: 16px;
+  margin-top: var(--spacing-lg);
   display: flex;
   justify-content: flex-end;
 }

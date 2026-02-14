@@ -1,5 +1,12 @@
+.pageShell {
+  --operation-log-control-height: var(--button-height-lg);
+  --operation-log-touch-target-size: calc(var(--button-height-lg) + var(--spacing-xs));
+  --operation-log-request-url-padding-x: calc(var(--spacing-sm) - (var(--spacing-xs) / 2));
+  --operation-log-details-max-height: 300px;
+}
+
 .statsRow {
-  margin-bottom: 24px;
+  margin-bottom: var(--spacing-xl);
 }
 
 .statsCard {
@@ -39,7 +46,7 @@
 }
 
 .filtersSection {
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-lg);
 }
 
 .filterSummary {
@@ -47,8 +54,8 @@
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
 }
 
 .fullWidthControl {
@@ -56,16 +63,16 @@
 }
 
 .toolbarButton {
-  min-height: 40px;
+  min-height: var(--operation-log-control-height);
 }
 
 .statusTag {
   margin-inline-end: 0;
   border-radius: 999px;
   border: 1px solid transparent;
-  padding-inline: 8px;
-  font-size: 12px;
-  line-height: 18px;
+  padding-inline: var(--spacing-sm);
+  font-size: var(--font-size-xs);
+  line-height: var(--font-size-xl);
   font-weight: var(--font-weight-medium);
 }
 
@@ -115,14 +122,14 @@
 }
 
 .secondaryText {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
 }
 
 .responseTime {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--spacing-xs);
   font-weight: var(--font-weight-medium);
 }
 
@@ -131,34 +138,34 @@
 }
 
 .responseTimeLabel {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   line-height: 1;
 }
 
 .jsonBlock {
   background: var(--color-bg-tertiary);
-  padding: 8px;
+  padding: var(--spacing-sm);
   border-radius: var(--card-radius);
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   margin: 0;
   white-space: pre-wrap;
   word-break: break-word;
 }
 
 .detailDrawer :global(.ant-drawer-body) {
-  padding-top: 8px;
+  padding-top: var(--spacing-sm);
 }
 
 .detailContent {
-  padding-bottom: 12px;
+  padding-bottom: var(--spacing-md);
 }
 
 .requestUrl {
   display: inline-block;
   background: var(--color-bg-tertiary);
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 12px;
+  padding: calc(var(--spacing-xs) / 2) var(--operation-log-request-url-padding-x);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
   word-break: break-all;
 }
 
@@ -166,57 +173,57 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--spacing-sm);
 }
 
 .ipText {
-  margin-top: 8px;
-  font-size: 12px;
+  margin-top: var(--spacing-sm);
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
 }
 
 .ipValue {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
 }
 
 .responseMeta {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--spacing-sm);
 }
 
 .responseMetaRow {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-sm);
   flex-wrap: wrap;
 }
 
 .errorMessage {
   color: var(--color-error);
   background: var(--color-error-light);
-  padding: 8px;
-  border-radius: 4px;
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-sm);
 }
 
 .userAgent {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
   word-break: break-all;
 }
 
 .detailsObject {
   background: var(--color-bg-tertiary);
-  padding: 12px;
+  padding: var(--spacing-md);
   border-radius: var(--card-radius);
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   overflow: auto;
-  max-height: 300px;
+  max-height: var(--operation-log-details-max-height);
 }
 
 .detailsRow {
-  margin-bottom: 4px;
+  margin-bottom: var(--spacing-xs);
 }
 
 .detailsRow:last-child {
@@ -224,16 +231,16 @@
 }
 
 .detailKey {
-  margin-right: 8px;
+  margin-right: var(--spacing-sm);
 }
 
 .rowActionButton {
-  min-width: 40px;
-  min-height: 40px;
+  min-width: var(--operation-log-control-height);
+  min-height: var(--operation-log-control-height);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   color: var(--color-text-secondary);
   transition: background-color var(--transition-base), color var(--transition-base);
 }
@@ -256,11 +263,11 @@
 
   .toolbarButton {
     width: 100%;
-    min-height: 44px;
+    min-height: var(--operation-log-touch-target-size);
   }
 
   .rowActionButton {
-    min-width: 44px;
-    min-height: 44px;
+    min-width: var(--operation-log-touch-target-size);
+    min-height: var(--operation-log-touch-target-size);
   }
 }

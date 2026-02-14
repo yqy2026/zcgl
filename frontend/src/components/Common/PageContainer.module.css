@@ -1,15 +1,15 @@
 .pageContainer {
-  padding: 24px;
+  padding: var(--spacing-xl);
   min-height: 100%;
   background: var(--color-bg-layout);
 }
 
 .headerSection {
-  margin-bottom: 24px;
+  margin-bottom: var(--spacing-xl);
 }
 
 .breadcrumbSection {
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-lg);
 }
 
 .headerRow {
@@ -22,11 +22,11 @@
 }
 
 .backButton {
-  width: 40px;
-  min-width: 40px;
-  min-height: 40px;
-  border-radius: 8px;
-  font-size: 16px;
+  width: var(--button-height-lg);
+  min-width: var(--button-height-lg);
+  min-height: var(--button-height-lg);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-lg);
   color: var(--color-text-secondary);
 }
 
@@ -49,7 +49,7 @@
 .titleRow {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-sm);
   min-width: 0;
 }
 
@@ -59,7 +59,7 @@
 }
 
 .subTitle {
-  margin-top: 4px;
+  margin-top: var(--spacing-xs);
   line-height: 1.5;
 }
 
@@ -68,7 +68,7 @@
 }
 
 .extraSection :global(.ant-btn) {
-  min-height: 40px;
+  min-height: var(--button-height-lg);
 }
 
 .contentSpin {
@@ -77,26 +77,26 @@
 
 @media (max-width: 768px) {
   .pageContainer {
-    padding: 16px;
+    padding: var(--spacing-lg);
   }
 
   .headerSection {
-    margin-bottom: 16px;
+    margin-bottom: var(--spacing-lg);
   }
 
   .breadcrumbSection {
-    margin-bottom: 12px;
+    margin-bottom: var(--spacing-md);
   }
 
   .headerTitleGroup {
     width: 100%;
-    gap: 10px;
+    gap: var(--spacing-sm);
   }
 
   .backButton {
-    width: 44px;
-    min-width: 44px;
-    min-height: 44px;
+    width: calc(var(--button-height-lg) + var(--spacing-xs));
+    min-width: calc(var(--button-height-lg) + var(--spacing-xs));
+    min-height: calc(var(--button-height-lg) + var(--spacing-xs));
   }
 
   .extraSection {
@@ -108,10 +108,10 @@
     width: 100%;
     justify-content: flex-start;
     flex-wrap: wrap;
-    gap: 8px !important;
+    gap: var(--spacing-sm) !important;
   }
 
   .extraSection :global(.ant-btn) {
-    min-height: 44px;
+    min-height: calc(var(--button-height-lg) + var(--spacing-xs));
   }
 }

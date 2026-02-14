@@ -6,6 +6,7 @@ import { Pie, Column } from '@ant-design/plots';
 
 import { assetService } from '@/services/assetService';
 import type { AssetSearchParams } from '@/types/asset';
+import { CHART_COLORS, CHART_LABEL_COLORS } from '@/styles/colorMap';
 import type {
   ChartDataPoint,
   DistributionDataPoint,
@@ -85,7 +86,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
         ) ?? [],
       angleField: 'value' as const,
       colorField: 'type' as const,
-      color: ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#fa8c16'],
+      color: CHART_COLORS,
       radius: 0.8,
       innerRadius: 0.4,
       label: {
@@ -131,7 +132,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
         ) ?? [],
       angleField: 'value' as const,
       colorField: 'type' as const,
-      color: ['#52c41a', '#ff4d4f', '#faad14', '#1890ff'],
+      color: [CHART_COLORS[1], CHART_COLORS[3], CHART_COLORS[2], CHART_COLORS[0]],
       radius: 0.8,
       innerRadius: 0.6,
       label: {
@@ -141,7 +142,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
         style: {
           textAlign: 'center' as const,
           fontSize: 14,
-          fill: '#fff',
+          fill: CHART_LABEL_COLORS.light,
         },
       },
       legend: {
@@ -171,7 +172,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
         ) ?? [],
       angleField: 'value' as const,
       colorField: 'type' as const,
-      color: ['#52c41a', '#ff4d4f', '#1890ff', '#722ed1', '#faad14'],
+      color: [CHART_COLORS[1], CHART_COLORS[3], CHART_COLORS[0], CHART_COLORS[4], CHART_COLORS[2]],
       radius: 0.8,
       innerRadius: 0.4,
       label: {
@@ -211,17 +212,17 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
         ) ?? [],
       xField: 'entity' as const,
       yField: 'count' as const,
-      color: '#1890ff',
+      color: CHART_COLORS[0],
       columnStyle: {
         fillOpacity: 0.6,
-        stroke: '#1890ff',
+        stroke: CHART_COLORS[0],
         lineWidth: 1,
       },
       label: {
         position: 'top' as const,
         formatter: (datum: ChartDataPoint): string => `${datum.count as number} 个`,
         style: {
-          fill: '#333',
+          fill: CHART_LABEL_COLORS.dark,
           fontSize: 12,
         },
       },

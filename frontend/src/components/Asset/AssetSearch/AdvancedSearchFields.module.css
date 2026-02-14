@@ -1,0 +1,22 @@
+.areaInput {
+  width: 45%;
+}
+
+.areaRangeSeparator {
+  width: 10%;
+  border-left: 0;
+  border-right: 0;
+  pointer-events: none;
+}
+
+.fullWidthControl {
+  width: 100%;
+}
+
+.sortFieldSelect {
+  width: 60%;
+}
+
+.sortOrderSelect {
+  width: 40%;
+}

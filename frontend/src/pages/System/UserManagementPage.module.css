@@ -1,5 +1,11 @@
+.pageShell {
+  --user-management-control-height: var(--button-height-lg);
+  --user-management-touch-target-size: calc(var(--button-height-lg) + var(--spacing-xs));
+  --user-management-switch-min-width: calc(var(--button-height-lg) + var(--spacing-sm));
+}
+
 .statsRow {
-  margin-bottom: 24px;
+  margin-bottom: var(--spacing-xl);
 }
 
 .statsCard {
@@ -47,25 +53,25 @@
 }
 
 .totalSuffix {
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
 }
 
 .toolbarSection {
-  margin-bottom: 12px;
+  margin-bottom: var(--spacing-md);
 }
 
 .filterSummary {
-  margin-bottom: 12px;
+  margin-bottom: var(--spacing-md);
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--spacing-sm);
 }
 
 .summaryText {
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
 }
 
@@ -74,7 +80,7 @@
 }
 
 .actionButton {
-  min-height: 40px;
+  min-height: var(--user-management-control-height);
 }
 
 .actionButton:focus-visible {
@@ -90,7 +96,7 @@
 .userTextGroup {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: calc(var(--spacing-xs) / 2);
 }
 
 .userNameText {
@@ -103,7 +109,7 @@
 }
 
 .secondaryText {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
 }
 
@@ -111,23 +117,23 @@
   margin-inline-end: 0;
   border-radius: 999px;
   border: 1px solid transparent;
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
   line-height: 1.35;
   display: inline-flex;
   align-items: center;
-  padding-inline: 8px;
+  padding-inline: var(--spacing-sm);
 }
 
 .statusTag,
 .roleTag,
 .lockStateTag {
-  padding-inline: 8px;
+  padding-inline: var(--spacing-sm);
 }
 
 .statusHint {
-  margin-left: 4px;
-  font-size: 11px;
+  margin-left: var(--spacing-xs);
+  font-size: var(--font-size-xs);
   opacity: 0.88;
 }
 
@@ -157,13 +163,13 @@
 }
 
 .actionGroup {
-  gap: 4px;
+  gap: var(--spacing-xs);
 }
 
 .tableActionButton {
-  min-width: 40px;
-  min-height: 40px;
-  border-radius: 8px;
+  min-width: var(--user-management-control-height);
+  min-height: var(--user-management-control-height);
+  border-radius: var(--radius-md);
   color: var(--color-text-secondary);
   transition: color var(--transition-base), background-color var(--transition-base);
 }
@@ -187,7 +193,7 @@
 }
 
 .statusSwitch {
-  min-width: 48px;
+  min-width: var(--user-management-switch-min-width);
 }
 
 .dangerIcon {
@@ -201,12 +207,12 @@
 
 .userProfileHeader {
   text-align: center;
-  margin-bottom: 24px;
+  margin-bottom: var(--spacing-xl);
 }
 
 .userProfileName {
-  margin-top: 16px;
-  margin-bottom: 8px;
+  margin-top: var(--spacing-lg);
+  margin-bottom: var(--spacing-sm);
   color: var(--color-text-primary);
 }
 
@@ -216,7 +222,7 @@
 }
 
 .drawerActions {
-  margin-top: 24px;
+  margin-top: var(--spacing-xl);
   text-align: center;
 }
 
@@ -227,12 +233,12 @@
 
 @media (max-width: 768px) {
   .actionButton {
-    min-height: 44px;
+    min-height: var(--user-management-touch-target-size);
   }
 
   .tableActionButton {
-    min-width: 44px;
-    min-height: 44px;
+    min-width: var(--user-management-touch-target-size);
+    min-height: var(--user-management-touch-target-size);
   }
 
   .filterSummary {

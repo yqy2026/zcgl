@@ -27,6 +27,10 @@ import {
   SearchOutlined,
   ReloadOutlined,
   ExclamationCircleOutlined,
+  BarChartOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  BankOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 
@@ -39,6 +43,7 @@ import type { Project, ProjectListResponse, ProjectStatisticsResponse } from '@/
 import type { Ownership } from '@/types/ownership';
 import { ProjectForm } from '@/components/Forms';
 import ProjectDetail from './ProjectDetail';
+import styles from './ProjectList.module.css';
 // import OwnershipSelect from '@/components/Ownership/OwnershipSelect';
 
 // 项目查询参数接口
@@ -265,7 +270,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
         <Button
           type="link"
           onClick={() => handleView(record)}
-          style={{ padding: 0, textAlign: 'left' }}
+          className={styles.projectNameButton}
         >
           {text}
         </Button>
@@ -292,15 +297,15 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
         if (record.ownership_relations != null && record.ownership_relations.length > 0) {
           const activeRelations = record.ownership_relations.filter(rel => rel.is_active === true);
           if (activeRelations.length > 0) {
-            return (
-              <div>
-                {activeRelations.slice(0, 2).map((rel, _index) => (
-                  <Tag key={rel.id} color="blue" style={{ marginRight: 4 }}>
-                    {rel.ownership_name ?? '权属方已关联'}
-                  </Tag>
-                ))}
-                {activeRelations.length > 2 && (
-                  <Tag color="gray">+{activeRelations.length - 2}</Tag>
+              return (
+                <div>
+                  {activeRelations.slice(0, 2).map((rel, _index) => (
+                    <Tag key={rel.id} color="blue" className={styles.ownershipTag}>
+                      {rel.ownership_name ?? '权属方已关联'}
+                    </Tag>
+                  ))}
+                  {activeRelations.length > 2 && (
+                    <Tag color="gray">+{activeRelations.length - 2}</Tag>
                 )}
               </div>
             );
@@ -419,42 +424,56 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
   return (
     <div className="project-list">
       {/* 统计卡片 */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+      <Row gutter={[16, 16]} className={styles.statisticsRow}>
         <Col xs={24} sm={12} md={6}>
-          <Card>
+          <Card className={`${styles.statsCard} ${styles.statsTotal}`}>
             <Statistic
               title="总项目数"
               value={statistics?.total_count ?? 0}
-              prefix={<span style={{ color: '#1890ff' }}>📊</span>}
+              prefix={
+                <span className={styles.statPrefixPrimary} aria-hidden>
+                  <BarChartOutlined />
+                </span>
+              }
             />
           </Card>
         </Col>
         <Col xs={24} sm={12} md={6}>
-          <Card>
+          <Card className={`${styles.statsCard} ${styles.statsActive}`}>
             <Statistic
               title="启用项目"
               value={statistics?.active_count ?? 0}
-              styles={{ content: { color: '#3f8600' } }}
-              prefix={<span style={{ color: '#52c41a' }}>✅</span>}
+              prefix={
+                <span className={styles.statPrefixSuccess} aria-hidden>
+                  <CheckCircleOutlined />
+                </span>
+              }
             />
           </Card>
         </Col>
         <Col xs={24} sm={12} md={6}>
-          <Card>
+          <Card className={`${styles.statsCard} ${styles.statsInactive}`}>
             <Statistic
               title="禁用项目"
               value={statistics?.inactive_count ?? 0}
-              styles={{ content: { color: '#cf1322' } }}
-              prefix={<span style={{ color: '#ff4d4f' }}>❌</span>}
+              prefix={
+                <span className={styles.statPrefixError} aria-hidden>
+                  <CloseCircleOutlined />
+                </span>
+              }
             />
           </Card>
         </Col>
         <Col xs={24} sm={12} md={6}>
-          <Card>
+          <Card className={`${styles.statsCard} ${styles.statsAssets}`}>
             <Statistic
               title="总关联资产"
               value={projects.reduce((sum, project) => sum + (project.asset_count ?? 0), 0)}
-              prefix={<span style={{ color: '#722ed1' }}>🏢</span>}
+              prefix={
+                <span className={styles.statPrefixInfo} aria-hidden>
+                  <BankOutlined />
+                </span>
+              }
             />
           </Card>
         </Col>
@@ -484,7 +503,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
               <Select
                 placeholder="状态"
                 allowClear
-                style={{ width: '100%' }}
+                className={styles.fullWidthSelect}
                 value={filters.isActive === null ? undefined : filters.isActive}
                 onChange={handleStatusChange}
               >
@@ -500,7 +519,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
               <Select
                 placeholder="权属方"
                 allowClear
-                style={{ width: '100%' }}
+                className={styles.fullWidthSelect}
                 value={filters.ownershipId === '' ? undefined : filters.ownershipId}
                 onChange={handleOwnershipChange}
                 loading={ownershipsLoading}

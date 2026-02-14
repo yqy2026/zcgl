@@ -1,9 +1,12 @@
 .dashboardRoot {
+  --analytics-dashboard-action-height: var(--button-height-md);
+  --analytics-dashboard-state-padding-y: calc(var(--spacing-xxxl) + var(--spacing-md));
+  --analytics-dashboard-state-padding-y-mobile: calc(var(--spacing-xxl) + var(--spacing-sm));
   width: 100%;
 }
 
 .dashboardDefault {
-  padding: 24px;
+  padding: var(--spacing-xl);
   background: transparent;
 }
 
@@ -13,7 +16,7 @@
 }
 
 .headerRow {
-  margin-bottom: 24px;
+  margin-bottom: var(--spacing-xl);
 }
 
 .titleCol {
@@ -36,8 +39,8 @@
 }
 
 .actionButton {
-  min-height: 36px;
-  border-radius: 8px;
+  min-height: var(--analytics-dashboard-action-height);
+  border-radius: var(--button-radius);
 }
 
 .actionButton:focus-visible {
@@ -46,32 +49,36 @@
 }
 
 .stateCard {
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
 }
 
 .stateContent {
-  padding: 60px 0;
+  padding: var(--analytics-dashboard-state-padding-y) 0;
   text-align: center;
 }
 
 .stateTitle {
-  margin-bottom: 8px !important;
+  margin-bottom: var(--spacing-sm) !important;
 }
 
 .stateDescription {
-  margin: 0 0 16px;
+  margin: 0 0 var(--spacing-lg);
   color: var(--color-text-secondary);
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
 }
 
 .stateActionButton {
-  min-height: 36px;
+  min-height: var(--analytics-dashboard-action-height);
 }
 
 .metricsRow,
 .financialRow {
-  margin-bottom: 24px;
+  margin-bottom: var(--spacing-xl);
+}
+
+.advancedMetricsRow {
+  margin-bottom: var(--spacing-xl);
 }
 
 .chartsRow {
@@ -80,7 +87,7 @@
 
 @media (max-width: 768px) {
   .dashboardDefault {
-    padding: 16px;
+    padding: var(--spacing-lg);
   }
 
   .actionsCol {
@@ -98,6 +105,6 @@
   }
 
   .stateContent {
-    padding: 40px 0;
+    padding: var(--analytics-dashboard-state-padding-y-mobile) 0;
   }
 }

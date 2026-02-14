@@ -50,124 +50,96 @@ def sample_assets():
 
 
 # ===================== V2 Multi-Asset Relationship Tests =====================
-@pytest.mark.skip(
-    reason=(
-        "Legacy sync rent_contract CRUD tests; active async coverage is maintained "
-        "via TestContractAsyncRelations and current API/service tests."
-    )
-)
+@pytest.mark.asyncio
 class TestContractV2MultiAsset:
     """测试V2多对多资产关系"""
 
-    def test_get_contracts_by_asset_id(self, mock_db, sample_contract):
+    async def test_get_contracts_by_asset_id(self, mock_db, sample_contract):
         """测试通过资产ID筛选合同"""
-        # 模拟查询链
-        mock_query = MagicMock()
-        mock_db.query.return_value = mock_query
+        mock_items_result = MagicMock()
+        mock_items_scalars = MagicMock()
+        mock_items_scalars.all.return_value = [sample_contract]
+        mock_items_result.scalars.return_value = mock_items_scalars
 
-        # V2: 模拟多对多关联表join
-        mock_query.join.return_value = mock_query
-        mock_query.filter.return_value = mock_query
-        mock_query.order_by.return_value = mock_query
+        mock_count_result = MagicMock()
+        mock_count_result.scalar.return_value = 1
+        mock_db.execute = AsyncMock(side_effect=[mock_items_result, mock_count_result])
 
-        # 模拟返回结果
-        mock_query.all.return_value = [sample_contract]
-        mock_query.count.return_value = 1
-
-        # 执行查询 - 使用 get_multi_with_filters
-        contracts, count = rent_contract.get_multi_with_filters(
+        contracts, count = await rent_contract.get_multi_with_filters_async(
             db=mock_db,
             asset_id="asset_1",
             skip=0,
             limit=10,
         )
 
-        # 验证join被正确调用（V2使用关联表）
-        assert mock_query.join.called
-        join_calls = mock_query.join.call_args_list
-
-        # 应该join了rent_contract_assets关联表
-        assert any(
-            "rent_contract_assets" in str(call) or hasattr(call[0][0], "__table__")
-            for call in join_calls
-        )
-
-    def test_get_contracts_without_asset_filter(self, mock_db, sample_contract):
-        """测试不带资产筛选的查询"""
-        # Mock chain for items query (include join since it's called)
-        mock_items_query = MagicMock()
-        mock_items_query.join.return_value = (
-            mock_items_query  # For include_relations=True
-        )
-        mock_items_query.filter.return_value = mock_items_query
-        mock_items_query.order_by.return_value = mock_items_query
-        mock_items_query.offset.return_value = mock_items_query
-        mock_items_query.limit.return_value = mock_items_query
-        mock_items_query.all.return_value = [sample_contract]
-
-        # Mock chain for count query
-        mock_count_query = MagicMock()
-        mock_count_query.join.return_value = mock_count_query
-        mock_count_query.filter.return_value = mock_count_query
-        mock_count_query.count.return_value = 1
-
-        # Configure mock_db.query to return appropriate mock based on call
-        call_count = [0]
-
-        def query_side_effect(*args, **kwargs):
-            call_count[0] += 1
-            if call_count[0] == 1:  # First call is for items
-                return mock_items_query
-            else:  # Second call is for count
-                return mock_count_query
-
-        mock_db.query.side_effect = query_side_effect
-
-        # 不带asset_id的查询 - 使用 get_multi_with_filters
-        contracts, count = rent_contract.get_multi_with_filters(
-            db=mock_db,
-            skip=0,
-            limit=10,
-        )
-
-        # 验证基本查询
         assert contracts == [sample_contract]
         assert count == 1
+        assert mock_db.execute.await_count == 2
+        items_stmt = mock_db.execute.await_args_list[0].args[0]
+        count_stmt = mock_db.execute.await_args_list[1].args[0]
+        assert "rent_contract_assets" in str(items_stmt)
+        assert "rent_contract_assets" in str(count_stmt)
 
-    def test_contract_with_ownership_join(self, mock_db):
+    async def test_get_contracts_without_asset_filter(self, mock_db, sample_contract):
+        """测试不带资产筛选的查询"""
+        mock_items_result = MagicMock()
+        mock_items_scalars = MagicMock()
+        mock_items_scalars.all.return_value = [sample_contract]
+        mock_items_result.scalars.return_value = mock_items_scalars
+
+        mock_count_result = MagicMock()
+        mock_count_result.scalar.return_value = 1
+        mock_db.execute = AsyncMock(side_effect=[mock_items_result, mock_count_result])
+
+        contracts, count = await rent_contract.get_multi_with_filters_async(
+            db=mock_db,
+            skip=0,
+            limit=10,
+        )
+
+        assert contracts == [sample_contract]
+        assert count == 1
+        items_stmt = mock_db.execute.await_args_list[0].args[0]
+        count_stmt = mock_db.execute.await_args_list[1].args[0]
+        assert "rent_contract_assets" not in str(items_stmt)
+        assert "rent_contract_assets" not in str(count_stmt)
+
+    async def test_contract_with_ownership_join(self, mock_db):
         """测试合同与权属方的关联查询"""
-        mock_query = MagicMock()
-        mock_db.query.return_value = mock_query
-        mock_query.join.return_value = mock_query
-        mock_query.filter.return_value = mock_query
-        mock_query.first.return_value = None
+        mock_result = MagicMock()
+        mock_scalars = MagicMock()
+        mock_scalars.first.return_value = None
+        mock_result.scalars.return_value = mock_scalars
+        mock_db.execute = AsyncMock(return_value=mock_result)
 
-        # get_with_details 应该join Ownership表
-        rent_contract.get_with_details(mock_db, "contract_123")
+        result = await rent_contract.get_with_details_async(mock_db, "contract_123")
 
-        # 验证join调用
-        assert mock_query.join.called
-        mock_query.filter.assert_called()
-        mock_query.first.assert_called()
+        assert result is None
+        stmt = mock_db.execute.await_args.args[0]
+        assert "ownerships" in str(stmt)
 
-    def test_multi_asset_count_query(self, mock_db):
+    async def test_multi_asset_count_query(self, mock_db):
         """测试带资产筛选的count查询"""
-        mock_query = MagicMock()
-        mock_db.query.return_value = mock_query
-        mock_query.join.return_value = mock_query
-        mock_query.filter.return_value = mock_query
-        mock_query.count.return_value = 5
+        mock_items_result = MagicMock()
+        mock_items_scalars = MagicMock()
+        mock_items_scalars.all.return_value = []
+        mock_items_result.scalars.return_value = mock_items_scalars
 
-        # 查询带asset_id筛选的合同数量 - 使用 get_multi_with_filters
-        contracts, count = rent_contract.get_multi_with_filters(
+        mock_count_result = MagicMock()
+        mock_count_result.scalar.return_value = 5
+        mock_db.execute = AsyncMock(side_effect=[mock_items_result, mock_count_result])
+
+        contracts, count = await rent_contract.get_multi_with_filters_async(
             db=mock_db,
             asset_id="asset_1",
             skip=0,
             limit=10,
         )
 
-        # 验证count查询也包含了join和filter
+        assert contracts == []
         assert count == 5
+        count_stmt = mock_db.execute.await_args_list[1].args[0]
+        assert "rent_contract_assets" in str(count_stmt)
 
 
 class TestContractAsyncRelations:

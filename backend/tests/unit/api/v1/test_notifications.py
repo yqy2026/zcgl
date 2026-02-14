@@ -17,11 +17,6 @@ from sqlalchemy.orm import Session
 
 from src.models.notification import Notification
 
-AUTH_FAILURE_STATUSES = {
-    status.HTTP_401_UNAUTHORIZED,
-    status.HTTP_422_UNPROCESSABLE_CONTENT,
-}
-
 # ============================================================================
 # Fixtures
 # ============================================================================
@@ -190,9 +185,6 @@ class TestGetNotifications:
         """测试获取通知列表（默认参数）"""
         response = client.get("/api/v1/notifications/", headers=admin_user_headers)
 
-        if response.status_code in AUTH_FAILURE_STATUSES:
-            return
-
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert "data" in data
@@ -209,9 +201,6 @@ class TestGetNotifications:
             "/api/v1/notifications/?page=1&page_size=2", headers=admin_user_headers
         )
 
-        if response.status_code in AUTH_FAILURE_STATUSES:
-            return
-
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert len(data["data"]["items"]) <= 2
@@ -223,9 +212,6 @@ class TestGetNotifications:
         response = client.get(
             "/api/v1/notifications/?is_read=false", headers=admin_user_headers
         )
-
-        if response.status_code in AUTH_FAILURE_STATUSES:
-            return
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -241,9 +227,6 @@ class TestGetNotifications:
             "/api/v1/notifications/?is_read=true", headers=admin_user_headers
         )
 
-        if response.status_code in AUTH_FAILURE_STATUSES:
-            return
-
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         # 验证所有结果都是已读的
@@ -258,9 +241,6 @@ class TestGetNotifications:
             "/api/v1/notifications/?type=alert", headers=admin_user_headers
         )
 
-        if response.status_code in AUTH_FAILURE_STATUSES:
-            return
-
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         # 验证所有结果都是alert类型
@@ -270,11 +250,9 @@ class TestGetNotifications:
     def test_get_notifications_unauthorized(self, unauthenticated_client):
         """测试未授权获取通知"""
         response = unauthenticated_client.get("/api/v1/notifications/")
-
-        assert response.status_code in {
-            status.HTTP_200_OK,
-            *AUTH_FAILURE_STATUSES,
-        }
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        data = response.json()
+        assert data.get("error", {}).get("code") == "AUTHENTICATION_ERROR"
 
 
 # ============================================================================
@@ -292,9 +270,6 @@ class TestGetUnreadCount:
         response = client.get(
             "/api/v1/notifications/unread-count", headers=admin_user_headers
         )
-
-        if response.status_code in AUTH_FAILURE_STATUSES:
-            return
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -315,9 +290,6 @@ class TestGetUnreadCount:
             "/api/v1/notifications/unread-count", headers=admin_user_headers
         )
 
-        if response.status_code in AUTH_FAILURE_STATUSES:
-            return
-
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["unread_count"] == 0
@@ -325,11 +297,9 @@ class TestGetUnreadCount:
     def test_get_unread_count_unauthorized(self, unauthenticated_client):
         """测试未授权获取未读数量"""
         response = unauthenticated_client.get("/api/v1/notifications/unread-count")
-
-        assert response.status_code in {
-            status.HTTP_200_OK,
-            *AUTH_FAILURE_STATUSES,
-        }
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        data = response.json()
+        assert data.get("error", {}).get("code") == "AUTHENTICATION_ERROR"
 
 
 # ============================================================================
@@ -349,9 +319,6 @@ class TestMarkAsRead:
             headers=admin_user_headers,
         )
 
-        if response.status_code in AUTH_FAILURE_STATUSES:
-            return
-
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["is_read"] is True
@@ -364,10 +331,7 @@ class TestMarkAsRead:
             "/api/v1/notifications/non-existent-id/read", headers=admin_user_headers
         )
 
-        assert response.status_code in {
-            status.HTTP_404_NOT_FOUND,
-            *AUTH_FAILURE_STATUSES,
-        }
+        assert response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_mark_notification_as_read_unauthorized(
         self, unauthenticated_client, sample_notification
@@ -377,10 +341,9 @@ class TestMarkAsRead:
             f"/api/v1/notifications/{sample_notification.id}/read"
         )
 
-        assert response.status_code in {
-            status.HTTP_200_OK,
-            *AUTH_FAILURE_STATUSES,
-        }
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        data = response.json()
+        assert data.get("error", {}).get("code") == "AUTHENTICATION_ERROR"
 
 
 # ============================================================================
@@ -404,9 +367,6 @@ class TestMarkAllAsRead:
             "/api/v1/notifications/read-all", headers=admin_user_headers
         )
 
-        if response.status_code in AUTH_FAILURE_STATUSES:
-            return
-
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert "message" in data
@@ -425,11 +385,9 @@ class TestMarkAllAsRead:
     def test_mark_all_as_read_unauthorized(self, unauthenticated_client):
         """测试未授权全部标记已读"""
         response = unauthenticated_client.post("/api/v1/notifications/read-all")
-
-        assert response.status_code in {
-            status.HTTP_200_OK,
-            *AUTH_FAILURE_STATUSES,
-        }
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        data = response.json()
+        assert data.get("error", {}).get("code") == "AUTHENTICATION_ERROR"
 
 
 # ============================================================================
@@ -450,9 +408,6 @@ class TestDeleteNotification:
             f"/api/v1/notifications/{notification_id}", headers=admin_user_headers
         )
 
-        if response.status_code in AUTH_FAILURE_STATUSES:
-            return
-
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert "message" in data
@@ -471,10 +426,7 @@ class TestDeleteNotification:
             "/api/v1/notifications/non-existent-id", headers=admin_user_headers
         )
 
-        assert response.status_code in {
-            status.HTTP_404_NOT_FOUND,
-            *AUTH_FAILURE_STATUSES,
-        }
+        assert response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_delete_notification_unauthorized(
         self, unauthenticated_client, sample_notification
@@ -484,10 +436,9 @@ class TestDeleteNotification:
             f"/api/v1/notifications/{sample_notification.id}"
         )
 
-        assert response.status_code in {
-            status.HTTP_200_OK,
-            *AUTH_FAILURE_STATUSES,
-        }
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        data = response.json()
+        assert data.get("error", {}).get("code") == "AUTHENTICATION_ERROR"
 
 
 # ============================================================================
@@ -510,9 +461,6 @@ class TestNotificationsEdgeCases:
 
         response = client.get("/api/v1/notifications/", headers=admin_user_headers)
 
-        if response.status_code in AUTH_FAILURE_STATUSES:
-            return
-
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert len(data["data"]["items"]) == 0
@@ -525,10 +473,7 @@ class TestNotificationsEdgeCases:
             "/api/v1/notifications/?page_size=100", headers=admin_user_headers
         )
 
-        assert response.status_code in [
-            status.HTTP_200_OK,
-            *AUTH_FAILURE_STATUSES,
-        ]
+        assert response.status_code == status.HTTP_200_OK
 
     def test_invalid_page_size(self, client, admin_user_headers):
         """测试无效的分页大小（超过最大值）"""
@@ -537,11 +482,7 @@ class TestNotificationsEdgeCases:
             headers=admin_user_headers,
         )
 
-        # 应该返回验证错误
-        assert response.status_code in [
-            status.HTTP_422_UNPROCESSABLE_CONTENT,
-            *AUTH_FAILURE_STATUSES,
-        ]
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
     def test_mark_already_read_notification(
         self, client, admin_user_headers, sample_notification
@@ -559,19 +500,13 @@ class TestNotificationsEdgeCases:
             headers=admin_user_headers,
         )
 
-        assert response.status_code in [
-            status.HTTP_200_OK,
-            *AUTH_FAILURE_STATUSES,
-        ]
+        assert response.status_code == status.HTTP_200_OK
 
     def test_notifications_ordering(
         self, client, admin_user_headers, multiple_notifications
     ):
         """测试通知排序（按创建时间倒序）"""
         response = client.get("/api/v1/notifications/", headers=admin_user_headers)
-
-        if response.status_code in AUTH_FAILURE_STATUSES:
-            return
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()

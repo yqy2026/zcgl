@@ -1,6 +1,7 @@
 import React from 'react';
 import { Form, InputNumber, Row, Col, Card } from 'antd';
 import { generateFormFieldIds } from '@/utils/accessibility';
+import styles from './AssetAreaSection.module.css';
 
 /**
  * AssetForm - Area Info Section
@@ -16,7 +17,7 @@ const AssetAreaSection: React.FC = () => {
   const unrentedAreaIds = generateFormFieldIds('unrented-area');
 
   return (
-    <Card title="面积信息" style={{ marginBottom: '16px' }}>
+    <Card title="面积信息" className={styles.sectionCard}>
       <Row gutter={16}>
         <Col span={8}>
           <Form.Item
@@ -27,7 +28,7 @@ const AssetAreaSection: React.FC = () => {
             <InputNumber
               id={landAreaIds.inputId}
               placeholder="请输入土地面积"
-              style={{ width: '100%' }}
+              className={styles.fullWidthInput}
               min={0}
               aria-label={landAreaIds.labelId}
             />
@@ -42,7 +43,7 @@ const AssetAreaSection: React.FC = () => {
             <InputNumber
               id={actualPropertyAreaIds.inputId}
               placeholder="请输入实际房产面积"
-              style={{ width: '100%' }}
+              className={styles.fullWidthInput}
               min={0}
               aria-label={actualPropertyAreaIds.labelId}
             />
@@ -57,7 +58,7 @@ const AssetAreaSection: React.FC = () => {
             <InputNumber
               id={nonCommercialAreaIds.inputId}
               placeholder="请输入非经营物业面积"
-              style={{ width: '100%' }}
+              className={styles.fullWidthInput}
               min={0}
               aria-label={nonCommercialAreaIds.labelId}
             />
@@ -75,7 +76,7 @@ const AssetAreaSection: React.FC = () => {
             <InputNumber
               id={rentableAreaIds.inputId}
               placeholder="请输入可出租面积"
-              style={{ width: '100%' }}
+              className={styles.fullWidthInput}
               min={0}
               aria-label={rentableAreaIds.labelId}
             />
@@ -90,7 +91,7 @@ const AssetAreaSection: React.FC = () => {
             <InputNumber
               id={rentedAreaIds.inputId}
               placeholder="请输入已出租面积"
-              style={{ width: '100%' }}
+              className={styles.fullWidthInput}
               min={0}
               aria-label={rentedAreaIds.labelId}
             />
@@ -105,7 +106,7 @@ const AssetAreaSection: React.FC = () => {
             <InputNumber
               id={unrentedAreaIds.inputId}
               placeholder="自动计算"
-              style={{ width: '100%' }}
+              className={styles.fullWidthInput}
               disabled
               aria-label={unrentedAreaIds.labelId}
               aria-readonly="true"

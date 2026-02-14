@@ -23,11 +23,6 @@ from src.middleware.auth import get_current_active_user
 # Fixtures
 # ============================================================================
 
-AUTH_FAILURE_STATUSES = {
-    status.HTTP_401_UNAUTHORIZED,
-    status.HTTP_422_UNPROCESSABLE_CONTENT,
-}
-
 
 @pytest.fixture
 def admin_user_headers():
@@ -104,9 +99,7 @@ class TestComprehensiveAnalytics:
             "/api/v1/analytics/comprehensive", headers=admin_user_headers
         )
 
-        assert response.status_code in [status.HTTP_200_OK, *AUTH_FAILURE_STATUSES]
-        if response.status_code != status.HTTP_200_OK:
-            return
+        assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert "success" in data
         assert data["success"] is True
@@ -121,9 +114,7 @@ class TestComprehensiveAnalytics:
             headers=admin_user_headers,
         )
 
-        assert response.status_code in [status.HTTP_200_OK, *AUTH_FAILURE_STATUSES]
-        if response.status_code != status.HTTP_200_OK:
-            return
+        assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["success"] is True
 
@@ -136,7 +127,7 @@ class TestComprehensiveAnalytics:
             headers=admin_user_headers,
         )
 
-        assert response.status_code in [status.HTTP_200_OK, *AUTH_FAILURE_STATUSES]
+        assert response.status_code == status.HTTP_200_OK
 
     def test_get_comprehensive_analytics_include_deleted(
         self, client, admin_user_headers
@@ -147,13 +138,13 @@ class TestComprehensiveAnalytics:
             headers=admin_user_headers,
         )
 
-        assert response.status_code in [status.HTTP_200_OK, *AUTH_FAILURE_STATUSES]
+        assert response.status_code == status.HTTP_200_OK
 
     def test_get_comprehensive_analytics_unauthorized(self, unauthenticated_client):
         """测试未授权获取分析数据"""
         response = unauthenticated_client.get("/api/v1/analytics/comprehensive")
 
-        assert response.status_code in AUTH_FAILURE_STATUSES
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 # ============================================================================
@@ -170,9 +161,7 @@ class TestCacheStatistics:
             "/api/v1/analytics/cache/stats", headers=admin_user_headers
         )
 
-        assert response.status_code in [status.HTTP_200_OK, *AUTH_FAILURE_STATUSES]
-        if response.status_code != status.HTTP_200_OK:
-            return
+        assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert "success" in data
         assert data["success"] is True
@@ -182,7 +171,7 @@ class TestCacheStatistics:
         """测试未授权获取缓存统计"""
         response = unauthenticated_client.get("/api/v1/analytics/cache/stats")
 
-        assert response.status_code in AUTH_FAILURE_STATUSES
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 # ============================================================================
@@ -199,9 +188,7 @@ class TestCacheManagement:
             "/api/v1/analytics/cache/clear", headers=admin_user_headers
         )
 
-        assert response.status_code in [status.HTTP_200_OK, *AUTH_FAILURE_STATUSES]
-        if response.status_code != status.HTTP_200_OK:
-            return
+        assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert "success" in data
         assert data["success"] is True
@@ -210,7 +197,7 @@ class TestCacheManagement:
         """测试未授权清除缓存"""
         response = unauthenticated_client.post("/api/v1/analytics/cache/clear")
 
-        assert response.status_code in AUTH_FAILURE_STATUSES
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 # ============================================================================
@@ -227,23 +214,13 @@ class TestDebugEndpoints:
             "/api/v1/analytics/debug/cache", headers=admin_user_headers
         )
 
-        # 调试端点可能存在或不存在
-        assert response.status_code in [
-            status.HTTP_200_OK,
-            status.HTTP_404_NOT_FOUND,
-            *AUTH_FAILURE_STATUSES,
-        ]
+        assert response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_debug_cache_status_unauthorized(self, unauthenticated_client):
         """测试未授权访问调试端点"""
         response = unauthenticated_client.get("/api/v1/analytics/debug/cache")
 
-        # 调试端点可能允许未认证访问
-        assert response.status_code in [
-            status.HTTP_200_OK,
-            status.HTTP_404_NOT_FOUND,
-            *AUTH_FAILURE_STATUSES,
-        ]
+        assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 # ============================================================================
@@ -261,12 +238,7 @@ class TestAnalyticsDataValidation:
             headers=admin_user_headers,
         )
 
-        # 可能返回400错误或200成功（取决于验证逻辑）
-        assert response.status_code in [
-            status.HTTP_200_OK,
-            status.HTTP_400_BAD_REQUEST,
-            *AUTH_FAILURE_STATUSES,
-        ]
+        assert response.status_code == status.HTTP_200_OK
 
     def test_date_from_after_date_to(self, client, admin_user_headers):
         """测试日期范围无效（起始日期晚于结束日期）"""
@@ -275,12 +247,7 @@ class TestAnalyticsDataValidation:
             headers=admin_user_headers,
         )
 
-        # 可能返回错误或返回空结果
-        assert response.status_code in [
-            status.HTTP_200_OK,
-            status.HTTP_400_BAD_REQUEST,
-            *AUTH_FAILURE_STATUSES,
-        ]
+        assert response.status_code == status.HTTP_200_OK
 
 
 # ============================================================================
@@ -309,11 +276,7 @@ class TestAnalyticsPerformance:
         for t in threads:
             t.join()
 
-        # 所有请求都应该成功
-        assert all(
-            status_code in [status.HTTP_200_OK, *AUTH_FAILURE_STATUSES]
-            for status_code in results
-        )
+        assert all(status_code == status.HTTP_200_OK for status_code in results)
 
     def test_cache_clear_idempotent(self, client, admin_user_headers):
         """测试缓存清除幂等性"""
@@ -324,9 +287,8 @@ class TestAnalyticsPerformance:
             "/api/v1/analytics/cache/clear", headers=admin_user_headers
         )
 
-        # 两次调用都应该成功
-        assert response1.status_code in [status.HTTP_200_OK, *AUTH_FAILURE_STATUSES]
-        assert response2.status_code in [status.HTTP_200_OK, *AUTH_FAILURE_STATUSES]
+        assert response1.status_code == status.HTTP_200_OK
+        assert response2.status_code == status.HTTP_200_OK
         assert response1.status_code == response2.status_code
 
 
@@ -346,9 +308,7 @@ class TestAnalyticsResponseStructure:
             "/api/v1/analytics/comprehensive", headers=admin_user_headers
         )
 
-        assert response.status_code in [status.HTTP_200_OK, *AUTH_FAILURE_STATUSES]
-        if response.status_code != status.HTTP_200_OK:
-            return
+        assert response.status_code == status.HTTP_200_OK
         data = response.json()
 
         # 验证响应结构
@@ -366,9 +326,7 @@ class TestAnalyticsResponseStructure:
             "/api/v1/analytics/cache/stats", headers=admin_user_headers
         )
 
-        assert response.status_code in [status.HTTP_200_OK, *AUTH_FAILURE_STATUSES]
-        if response.status_code != status.HTTP_200_OK:
-            return
+        assert response.status_code == status.HTTP_200_OK
         data = response.json()
 
         assert "success" in data

@@ -1,0 +1,76 @@
+.filterCard {
+  margin-bottom: var(--spacing-lg);
+}
+
+.fullWidthControl {
+  width: 100%;
+}
+
+.totalCountCol {
+  text-align: right;
+}
+
+.totalCountText {
+  color: var(--ant-color-text-tertiary);
+  font-size: var(--font-size-base);
+}
+
+.titleIcon {
+  margin-right: var(--spacing-sm);
+}
+
+.timelineItem {
+  padding-bottom: var(--spacing-lg);
+}
+
+.timelineHeader {
+  margin-bottom: var(--spacing-sm);
+}
+
+.timelineFieldText {
+  font-weight: var(--font-weight-bold);
+}
+
+.timelineMeta {
+  margin-bottom: var(--spacing-sm);
+  color: var(--ant-color-text-tertiary);
+  font-size: var(--font-size-base);
+}
+
+.timelineMetaIcon {
+  margin-right: var(--spacing-xs);
+}
+
+.timelineReason {
+  margin-bottom: var(--spacing-sm);
+  color: var(--ant-color-text-secondary);
+}
+
+.detailLinkButton {
+  padding: 0;
+}
+
+.paginationContainer {
+  margin-top: var(--spacing-xl);
+  text-align: center;
+}
+
+.detailSection {
+  margin-top: var(--spacing-xl);
+}
+
+.fieldChangeRow {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.fieldOldValue {
+  color: var(--ant-color-error);
+  text-decoration: line-through;
+}
+
+.fieldNewValue {
+  color: var(--ant-color-success);
+  font-weight: var(--font-weight-bold);
+}

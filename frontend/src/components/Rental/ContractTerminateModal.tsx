@@ -27,6 +27,7 @@ import { RentContract } from '@/types/rentContract';
 import { rentContractService } from '@/services/rentContractService';
 import { TERMINATION_REASONS } from '@/constants/reasons';
 import { createLogger } from '@/utils/logger';
+import styles from './ContractTerminateModal.module.css';
 
 const logger = createLogger('ContractTerminateModal');
 
@@ -192,7 +193,7 @@ const ContractTerminateModal: React.FC<ContractTerminateModalProps> = ({
         <Alert
           title="原合同信息"
           description={
-            <Descriptions column={2} size="small" style={{ marginTop: 8 }}>
+            <Descriptions column={2} size="small" className={styles.summaryDescriptions}>
               <Descriptions.Item label="合同编号">{contract.contract_number}</Descriptions.Item>
               <Descriptions.Item label="合同类型">
                 {getContractTypeLabel(contract.contract_type)}
@@ -210,7 +211,7 @@ const ContractTerminateModal: React.FC<ContractTerminateModalProps> = ({
             </Descriptions>
           }
           type="info"
-          style={{ marginBottom: 16 }}
+          className={styles.alertSpacing}
         />
 
         {/* 终止表单 */}
@@ -222,7 +223,7 @@ const ContractTerminateModal: React.FC<ContractTerminateModalProps> = ({
             tooltip="合同将在该日期正式终止"
           >
             <DatePicker
-              style={{ width: '100%' }}
+              className={styles.fullWidthControl}
               placeholder="请选择终止日期"
               disabledDate={current => {
                 // 禁用早于合同开始日期的日期
@@ -254,7 +255,7 @@ const ContractTerminateModal: React.FC<ContractTerminateModalProps> = ({
                   : (parseFloat(contract.total_deposit as string) ?? 0)
               }
               precision={2}
-              style={{ width: '100%' }}
+              className={styles.fullWidthControl}
               placeholder="违约金、欠租等抵扣金额"
               addonAfter="元"
             />
@@ -275,7 +276,7 @@ const ContractTerminateModal: React.FC<ContractTerminateModalProps> = ({
                   - 抵扣¥{deductionAmount.toFixed(2)})
                 </>
               }
-              style={{ marginBottom: 16 }}
+              className={styles.alertSpacing}
             />
           )}
 
@@ -300,7 +301,7 @@ const ContractTerminateModal: React.FC<ContractTerminateModalProps> = ({
       <Modal
         title={
           <Space>
-            <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />
+            <ExclamationCircleOutlined className={styles.dangerIcon} />
             确认终止合同
           </Space>
         }
@@ -315,9 +316,9 @@ const ContractTerminateModal: React.FC<ContractTerminateModalProps> = ({
         <Alert
           title="此操作不可撤销"
           description={
-            <div style={{ marginTop: 8 }}>
+            <div className={styles.confirmDescription}>
               <p>您即将终止以下合同：</p>
-              <Descriptions column={1} size="small" bordered style={{ marginTop: 8 }}>
+              <Descriptions column={1} size="small" bordered className={styles.summaryDescriptions}>
                 <Descriptions.Item label="合同编号">{contract.contract_number}</Descriptions.Item>
                 <Descriptions.Item label="合同类型">
                   {getContractTypeLabel(contract.contract_type)}

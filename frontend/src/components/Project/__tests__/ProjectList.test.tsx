@@ -263,6 +263,13 @@ vi.mock('@ant-design/icons', () => {
   const EyeOutlined = () => <span data-testid="icon-eye">EyeIcon</span>;
   const SearchOutlined = () => <span data-testid="icon-search">SearchIcon</span>;
   const ReloadOutlined = () => <span data-testid="icon-reload">ReloadIcon</span>;
+  const ExclamationCircleOutlined = () => (
+    <span data-testid="icon-exclamation-circle">ExclamationCircleIcon</span>
+  );
+  const BarChartOutlined = () => <span data-testid="icon-bar-chart">BarChartIcon</span>;
+  const CheckCircleOutlined = () => <span data-testid="icon-check-circle">CheckCircleIcon</span>;
+  const CloseCircleOutlined = () => <span data-testid="icon-close-circle">CloseCircleIcon</span>;
+  const BankOutlined = () => <span data-testid="icon-bank">BankIcon</span>;
 
   PlusOutlined.displayName = 'PlusOutlined';
   EditOutlined.displayName = 'EditOutlined';
@@ -270,6 +277,11 @@ vi.mock('@ant-design/icons', () => {
   EyeOutlined.displayName = 'EyeOutlined';
   SearchOutlined.displayName = 'SearchOutlined';
   ReloadOutlined.displayName = 'ReloadOutlined';
+  ExclamationCircleOutlined.displayName = 'ExclamationCircleOutlined';
+  BarChartOutlined.displayName = 'BarChartOutlined';
+  CheckCircleOutlined.displayName = 'CheckCircleOutlined';
+  CloseCircleOutlined.displayName = 'CloseCircleOutlined';
+  BankOutlined.displayName = 'BankOutlined';
 
   return {
     PlusOutlined,
@@ -278,6 +290,11 @@ vi.mock('@ant-design/icons', () => {
     EyeOutlined,
     SearchOutlined,
     ReloadOutlined,
+    ExclamationCircleOutlined,
+    BarChartOutlined,
+    CheckCircleOutlined,
+    CloseCircleOutlined,
+    BankOutlined,
   };
 });
 

@@ -1,33 +1,13 @@
 from datetime import date
 from decimal import Decimal
-from unittest.mock import MagicMock, patch
-from uuid import uuid4
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.constants.rent_contract_constants import PaymentStatus
-from src.models.rent_contract import RentContract, RentLedger, RentTerm
-from src.schemas.rent_contract import (
-    GenerateLedgerRequest,
-    RentContractCreate,
-    RentContractUpdate,
-    RentLedgerBatchUpdate,
-    RentTermCreate,
-    RentTermUpdate,
-)
+from src.core.exception_handler import BusinessValidationError
+from src.models.rent_contract import RentContract
+from src.schemas.rent_contract import RentContractCreate, RentTermCreate
 from src.services.rent_contract.service import RentContractService
-
-pytestmark = pytest.mark.skip(
-    reason=(
-        "Legacy sync RentContractService tests; current rent contract domain has "
-        "async modular service coverage."
-    )
-)
-
-# Constants for testing
-TEST_CONTRACT_ID = "contract_123"
-TEST_ASSET_ID = "asset_123"
-TEST_OWNERSHIP_ID = "ownership_123"
 
 
 @pytest.fixture
@@ -35,166 +15,96 @@ def service():
     return RentContractService()
 
 
+def _build_contract_create(*, contract_number: str | None) -> RentContractCreate:
+    return RentContractCreate(
+        contract_number=contract_number,
+        asset_ids=[],
+        ownership_id="ownership_123",
+        tenant_name="测试承租方",
+        sign_date=date(2024, 1, 1),
+        start_date=date(2024, 1, 1),
+        end_date=date(2024, 12, 31),
+        rent_terms=[
+            RentTermCreate(
+                start_date=date(2024, 1, 1),
+                end_date=date(2024, 12, 31),
+                monthly_rent=Decimal("1000"),
+            )
+        ],
+    )
+
+
 class TestRentContractService:
-    def test_create_contract(
-        self, service, test_db, sample_ownership, sample_asset_with_ownership
+    @pytest.mark.asyncio
+    async def test_get_contract_by_id_async_delegates_to_crud(self, service, mock_db):
+        mock_contract = MagicMock(spec=RentContract)
+        with patch(
+            "src.services.rent_contract.service.rent_contract_crud.get_async",
+            new=AsyncMock(return_value=mock_contract),
+        ) as mock_get:
+            result = await service.get_contract_by_id_async(
+                mock_db, contract_id="contract_123"
+            )
+
+        assert result is mock_contract
+        mock_get.assert_awaited_once_with(mock_db, id="contract_123")
+
+    @pytest.mark.asyncio
+    async def test_get_contract_page_async_delegates_to_crud(self, service, mock_db):
+        mock_contract = MagicMock(spec=RentContract)
+        with patch(
+            "src.services.rent_contract.service.rent_contract_crud.get_multi_with_filters_async",
+            new=AsyncMock(return_value=([mock_contract], 1)),
+        ) as mock_get_page:
+            items, total = await service.get_contract_page_async(
+                mock_db,
+                skip=5,
+                limit=20,
+                contract_number="CT-2026",
+            )
+
+        assert items == [mock_contract]
+        assert total == 1
+        mock_get_page.assert_awaited_once_with(
+            db=mock_db,
+            skip=5,
+            limit=20,
+            contract_number="CT-2026",
+            tenant_name=None,
+            asset_id=None,
+            ownership_id=None,
+            contract_status=None,
+            start_date=None,
+            end_date=None,
+        )
+
+    @pytest.mark.asyncio
+    async def test_get_asset_contracts_async_returns_items(self, service, mock_db):
+        mock_contract = MagicMock(spec=RentContract)
+        with patch.object(
+            service,
+            "get_contract_page_async",
+            new=AsyncMock(return_value=([mock_contract], 9)),
+        ) as mock_get_page:
+            result = await service.get_asset_contracts_async(
+                mock_db,
+                asset_id="asset_001",
+                limit=200,
+            )
+
+        assert result == [mock_contract]
+        mock_get_page.assert_awaited_once_with(
+            db=mock_db,
+            skip=0,
+            limit=200,
+            asset_id="asset_001",
+        )
+
+    @pytest.mark.asyncio
+    async def test_create_contract_async_rejects_empty_contract_number(
+        self, service, mock_db
     ):
-        # Prepare input data
-        term_data = RentTermCreate(
-            start_date=date(2024, 1, 1),
-            end_date=date(2024, 12, 31),
-            monthly_rent=Decimal("1000"),
-            management_fee=Decimal("100"),
-        )
-        contract_number = f"TEST{uuid4().hex[:8]}"
-        contract_in = RentContractCreate(
-            contract_number=contract_number,
-            tenant_name="Test Tenant",
-            asset_ids=[sample_asset_with_ownership.id],  # V2: 多资产
-            ownership_id=sample_ownership.id,
-            sign_date=date(2024, 1, 1),
-            start_date=date(2024, 1, 1),
-            end_date=date(2024, 12, 31),
-            rent_terms=[term_data],
-        )
+        obj_in = _build_contract_create(contract_number=None)
 
-        # Execute
-        result = service.create_contract(test_db, obj_in=contract_in)
-
-        # Verify
-        assert isinstance(result, RentContract)
-        assert result.contract_number == contract_number
-        assert len(result.rent_terms) == 1
-        assert result.rent_terms[0].monthly_rent == Decimal("1000")
-        assert any(
-            asset.id == sample_asset_with_ownership.id for asset in result.assets
-        )
-
-    def test_update_contract(self, service, mock_db):
-        # Prepare
-        db_obj = RentContract(
-            id=TEST_CONTRACT_ID,
-            contract_number="OLD123",
-            tenant_name="Old Name",
-            rent_terms=[],
-        )
-        update_in = RentContractUpdate(
-            tenant_name="New Name",
-            rent_terms=[
-                RentTermUpdate(
-                    start_date=date(2025, 1, 1),
-                    end_date=date(2025, 12, 31),
-                    monthly_rent=Decimal("2000"),
-                )
-            ],
-        )
-
-        service._create_history = MagicMock()
-
-        # Mock query return for deleting terms
-        mock_query = MagicMock()
-        mock_db.query.return_value = mock_query
-        mock_query.filter.return_value = mock_query
-
-        # Execute
-        result = service.update_contract(mock_db, db_obj=db_obj, obj_in=update_in)
-
-        # Verify
-        assert result.tenant_name == "New Name"
-        mock_query.delete.assert_called()  # Terms deleted
-
-        # New term added
-        # mock_db.add called for term and contract update
-        # We expect at least one add for term.
-        # db.add(db_obj) is also called.
-
-        term_added = False
-        for call in mock_db.add.call_args_list:
-            if isinstance(call[0][0], RentTerm):
-                term_added = True
-                assert call[0][0].monthly_rent == Decimal("2000")
-        assert term_added
-
-    @patch("src.services.rent_contract.ledger_service.rent_ledger")
-    @patch("src.services.rent_contract.ledger_service.rent_term")
-    @patch("src.services.rent_contract.ledger_service.rent_contract")
-    def test_generate_monthly_ledger(
-        self, mock_contract_crud, mock_term_crud, mock_ledger_crud, service, mock_db
-    ):
-        # Prepare mocks
-        contract = RentContract(
-            id=TEST_CONTRACT_ID,
-            start_date=date(2024, 1, 1),
-            end_date=date(2024, 3, 31),  # 3 months
-            # V2: asset_id removed from model, use ownership_id only for FK
-            ownership_id=TEST_OWNERSHIP_ID,
-        )
-        mock_contract_crud.get.return_value = contract
-
-        term = RentTerm(
-            contract_id=TEST_CONTRACT_ID,
-            start_date=date(2024, 1, 1),
-            end_date=date(2024, 12, 31),
-            monthly_rent=Decimal("1000"),
-            total_monthly_amount=Decimal("1000"),
-        )
-        mock_term_crud.get_by_contract.return_value = [term]
-
-        # Assume no existing ledgers
-        mock_ledger_crud.get_by_contract_and_month.return_value = None
-
-        request = GenerateLedgerRequest(contract_id=TEST_CONTRACT_ID)
-
-        # Execute
-        result = service.generate_monthly_ledger(mock_db, request=request)
-
-        # Verify
-        assert len(result) == 3  # Jan, Feb, Mar
-        assert result[0].year_month == "2024-01"
-        assert result[0].due_amount == Decimal("1000")
-
-        mock_db.add.call_count == 3
-        mock_db.commit.assert_called()
-
-    def test_batch_update_payment(self, service, mock_db):
-        # Prepare
-        ledger1 = RentLedger(
-            id="1",
-            due_amount=Decimal("1000"),
-            paid_amount=Decimal("0"),
-            payment_status=PaymentStatus.UNPAID,
-        )
-        ledger2 = RentLedger(
-            id="2",
-            due_amount=Decimal("1000"),
-            paid_amount=Decimal("500"),
-            payment_status=PaymentStatus.PARTIAL,
-        )
-
-        mock_query = MagicMock()
-        mock_db.query.return_value = mock_query
-        mock_query.filter.return_value = mock_query
-        mock_query.all.return_value = [ledger1, ledger2]
-
-        request = RentLedgerBatchUpdate(
-            ledger_ids=["1", "2"],
-            payment_status=PaymentStatus.PAID,
-            notes="Batch update",
-        )
-
-        # Execute
-        service.batch_update_payment(mock_db, request=request)
-
-        # Verify
-        assert ledger1.payment_status == PaymentStatus.PAID
-        assert ledger1.notes == "Batch update"
-        # Logic: if "已支付", overdue should be calc.
-        # But paid_amount didn't change in update request?
-        # The service logic checks:
-        # if ledger.paid_amount < ledger.due_amount:
-        #    ledger.overdue_amount = (ledger.due_amount - ledger.paid_amount)
-
-        assert ledger1.overdue_amount == Decimal("1000")  # Because paid is 0
-        assert ledger2.overdue_amount == Decimal("500")  # Because paid is 500
-
-        mock_db.commit.assert_called()
+        with pytest.raises(BusinessValidationError, match="合同编号不能为空"):
+            await service.create_contract_async(mock_db, obj_in=obj_in)

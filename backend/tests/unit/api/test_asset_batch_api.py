@@ -13,10 +13,6 @@ This test module covers batch operations for assets:
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
-pytestmark = pytest.mark.skip(
-    reason="Unit API tests require proper authentication and database mocking setup"
-)
 from fastapi.testclient import TestClient
 
 
@@ -69,6 +65,7 @@ class TestBatchUpdateAssets:
         mock_batch_service.return_value = mock_service_instance
 
         update_request = {
+            "asset_ids": ["id1"],
             "updates": {"status": "active"},
             "should_update_all": True,
         }
@@ -92,7 +89,7 @@ class TestBatchUpdateAssets:
 
         response = client.post("/api/v1/assets/batch-update", json=update_request)
 
-        assert response.status_code in [400, 422, 500]
+        assert response.status_code == 500
 
 
 class TestValidateAssetData:
@@ -112,8 +109,14 @@ class TestValidateAssetData:
             return_value=(
                 True,
                 [],
-                ["Warning: Optional field missing"],
-                {"property_name": "validated"},
+                [
+                    {
+                        "field": "address",
+                        "message": "Warning: Optional field missing",
+                        "code": "OPTIONAL_MISSING",
+                    }
+                ],
+                ["property_name"],
             )
         )
         mock_batch_service.return_value = mock_service_instance
@@ -146,9 +149,20 @@ class TestValidateAssetData:
         mock_service_instance.validate_asset_data = AsyncMock(
             return_value=(
                 False,
-                ["Invalid area value", "Missing required field"],
+                [
+                    {
+                        "field": "area",
+                        "error": "Invalid area value",
+                        "code": "INVALID_VALUE",
+                    },
+                    {
+                        "field": "property_name",
+                        "error": "Missing required field",
+                        "code": "REQUIRED",
+                    },
+                ],
                 [],
-                {},
+                [],
             )
         )
         mock_batch_service.return_value = mock_service_instance
@@ -169,12 +183,14 @@ class TestValidateAssetData:
 class TestBatchCustomFieldUpdate:
     """Tests for POST /batch-custom-fields endpoint"""
 
-    @patch("src.api.v1.assets.asset_batch.asset_crud")
-    def test_batch_custom_field_update_success(self, mock_asset_crud, client):
+    @patch("src.api.v1.assets.asset_batch.AsyncAssetService")
+    def test_batch_custom_field_update_success(self, mock_asset_service, client):
         """Test successful batch custom field update"""
-        mock_asset_crud.get_async = AsyncMock(
-            side_effect=[MagicMock(), MagicMock(), MagicMock()]
+        mock_service_instance = MagicMock()
+        mock_service_instance.get_assets_by_ids = AsyncMock(
+            return_value=[MagicMock(id="id1"), MagicMock(id="id2"), MagicMock(id="id3")]
         )
+        mock_asset_service.return_value = mock_service_instance
 
         update_request = {
             "asset_ids": ["id1", "id2", "id3"],
@@ -190,12 +206,16 @@ class TestBatchCustomFieldUpdate:
         assert data["success_count"] == 3
         assert data["failed_count"] == 0
 
-    @patch("src.api.v1.assets.asset_batch.asset_crud")
+    @patch("src.api.v1.assets.asset_batch.AsyncAssetService")
     def test_batch_custom_field_update_partial_failure(
-        self, mock_asset_crud, client
+        self, mock_asset_service, client
     ):
         """Test batch custom field update with some failures"""
-        mock_asset_crud.get_async = AsyncMock(side_effect=[MagicMock(), None, None])
+        mock_service_instance = MagicMock()
+        mock_service_instance.get_assets_by_ids = AsyncMock(
+            return_value=[MagicMock(id="id1")]
+        )
+        mock_asset_service.return_value = mock_service_instance
 
         update_request = {
             "asset_ids": ["id1", "id2", "id3"],
@@ -215,14 +235,20 @@ class TestBatchCustomFieldUpdate:
 class TestGetAllAssets:
     """Tests for GET /all endpoint"""
 
+    @patch("src.api.v1.assets.asset_batch.AssetListItemResponse.model_validate")
     @patch("src.api.v1.assets.asset_batch.AsyncAssetService")
-    def test_get_all_assets_success(self, mock_asset_service, client):
+    def test_get_all_assets_success(
+        self, mock_asset_service, mock_model_validate, client
+    ):
         """Test successful retrieval of all assets"""
         # Mock assets
         mock_assets = [
             MagicMock(id="id1", property_name="Property 1"),
             MagicMock(id="id2", property_name="Property 2"),
         ]
+        mock_model_validate.side_effect = (
+            lambda asset: {"id": asset.id, "property_name": asset.property_name}
+        )
         mock_service_instance = MagicMock()
         mock_service_instance.get_assets = AsyncMock(return_value=(mock_assets, 2))
         mock_asset_service.return_value = mock_service_instance
@@ -253,16 +279,24 @@ class TestGetAllAssets:
 class TestGetAssetsByIds:
     """Tests for POST /by-ids endpoint"""
 
-    @patch("src.api.v1.assets.asset_batch.asset_crud")
-    def test_get_assets_by_ids_success(self, mock_asset_crud, client):
+    @patch("src.api.v1.assets.asset_batch.AssetListItemResponse.model_validate")
+    @patch("src.api.v1.assets.asset_batch.AsyncAssetService")
+    def test_get_assets_by_ids_success(
+        self, mock_asset_service, mock_model_validate, client
+    ):
         """Test successful retrieval of assets by IDs"""
         mock_assets = [
             MagicMock(id="id1", property_name="Property 1"),
             MagicMock(id="id2", property_name="Property 2"),
             MagicMock(id="id3", property_name="Property 3"),
         ]
+        mock_model_validate.side_effect = (
+            lambda asset: {"id": asset.id, "property_name": asset.property_name}
+        )
 
-        mock_asset_crud.get_multi_by_ids_async = AsyncMock(return_value=mock_assets)
+        mock_service_instance = MagicMock()
+        mock_service_instance.get_assets_by_ids = AsyncMock(return_value=mock_assets)
+        mock_asset_service.return_value = mock_service_instance
 
         request_data = {"ids": ["id1", "id2", "id3"]}
 
@@ -274,14 +308,22 @@ class TestGetAssetsByIds:
         assert "data" in data
         assert isinstance(data["data"], list)
 
-    @patch("src.api.v1.assets.asset_batch.asset_crud")
-    def test_get_assets_by_ids_some_not_found(self, mock_asset_crud, client):
+    @patch("src.api.v1.assets.asset_batch.AssetListItemResponse.model_validate")
+    @patch("src.api.v1.assets.asset_batch.AsyncAssetService")
+    def test_get_assets_by_ids_some_not_found(
+        self, mock_asset_service, mock_model_validate, client
+    ):
         """Test getting assets by IDs when some don't exist"""
         mock_assets = [
             MagicMock(id="id1", property_name="Property 1"),
         ]
+        mock_model_validate.side_effect = (
+            lambda asset: {"id": asset.id, "property_name": asset.property_name}
+        )
 
-        mock_asset_crud.get_multi_by_ids_async = AsyncMock(return_value=mock_assets)
+        mock_service_instance = MagicMock()
+        mock_service_instance.get_assets_by_ids = AsyncMock(return_value=mock_assets)
+        mock_asset_service.return_value = mock_service_instance
 
         request_data = {
             "ids": ["id1", "id2", "id3"]  # id2 and id3 don't exist
@@ -298,8 +340,7 @@ class TestGetAssetsByIds:
 
         response = client.post("/api/v1/assets/by-ids", json=request_data)
 
-        # Should handle empty list
-        assert response.status_code in [200, 400, 422]
+        assert response.status_code == 200
 
 
 class TestBatchDeleteAssets:
@@ -329,8 +370,7 @@ class TestBatchDeleteAssets:
 
         response = client.post("/api/v1/assets/batch-delete", json=delete_request)
 
-        # Should handle empty list appropriately
-        assert response.status_code in [400, 422]
+        assert response.status_code == 500
 
     @patch("src.api.v1.assets.asset_batch.AsyncAssetBatchService")
     def test_batch_delete_exception(self, mock_batch_service, client):
@@ -343,7 +383,7 @@ class TestBatchDeleteAssets:
 
         response = client.post("/api/v1/assets/batch-delete", json=delete_request)
 
-        assert response.status_code in [500, 400]
+        assert response.status_code == 500
 
 
 class TestBatchOperationsUnauthorized:

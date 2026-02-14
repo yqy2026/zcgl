@@ -257,16 +257,32 @@ class TestUpdateOrganization:
                     assert result is not None
                     mock_update_children.assert_awaited()
 
-    @pytest.mark.skip(
-        reason="Mock attribute tracking is complex. History creation is better tested via integration tests."
-    )
     async def test_update_organization_creates_history(
         self, org_service, mock_db, mock_organization
     ):
         """测试更新时记录变更历史"""
-        # Skipped: MagicMock doesn't properly track attribute changes
-        # This functionality is better tested through integration tests
-        pass
+        obj_in = OrganizationUpdate(name="更新后的组织名称", updated_by="user_123")
+
+        with patch(
+            "src.services.organization.service.organization_crud.get_async",
+            new=AsyncMock(return_value=mock_organization),
+        ):
+            with patch.object(
+                org_service, "_create_history", new=AsyncMock(return_value=None)
+            ) as mock_history:
+                await org_service.update_organization(
+                    mock_db, org_id="org_123", obj_in=obj_in
+                )
+
+        mock_history.assert_awaited_once_with(
+            mock_db,
+            "org_123",
+            "update",
+            "name",
+            "测试组织",
+            "更新后的组织名称",
+            created_by="user_123",
+        )
 
 
 # ============================================================================
@@ -451,14 +467,18 @@ class TestWouldCreateCycle:
 
         assert result is True
 
-    @pytest.mark.skip(
-        reason="Complex cycle detection requires proper mock chain setup. Better tested via integration tests."
-    )
     async def test_indirect_cycle(self, org_service, mock_db):
         """测试间接循环引用"""
-        # Skipped: Indirect cycle detection requires complex mock setup
-        # This functionality is better tested through integration tests
-        pass
+        with patch(
+            "src.services.organization.service.organization_crud.would_create_cycle_async",
+            new=AsyncMock(return_value=True),
+        ) as mock_cycle_check:
+            result = await org_service._would_create_cycle(
+                mock_db, "org_123", "parent_456"
+            )
+
+        assert result is True
+        mock_cycle_check.assert_awaited_once_with(mock_db, "org_123", "parent_456")
 
 
 # ============================================================================

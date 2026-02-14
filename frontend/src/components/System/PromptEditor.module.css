@@ -1,0 +1,19 @@
+.monospaceTextarea {
+  font-family: monospace;
+}
+
+.cardSpacing {
+  margin-bottom: var(--spacing-lg);
+}
+
+.promptPreview {
+  background: var(--color-bg-tertiary);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-sm);
+  white-space: pre-wrap;
+  font-family: monospace;
+}
+
+.previewTip {
+  margin-top: var(--spacing-lg);
+}

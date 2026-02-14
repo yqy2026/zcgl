@@ -1,0 +1,25 @@
+.headerCard {
+  --pdf-import-header-spacing-bottom: var(--spacing-lg);
+  --pdf-import-header-icon-size: var(--font-size-xxxl);
+  --pdf-import-header-icon-wrapper-size: calc(var(--button-height-lg) + var(--spacing-sm));
+  margin-bottom: var(--pdf-import-header-spacing-bottom);
+}
+
+.headerTitle {
+  margin: 0;
+}
+
+.uploadIcon {
+  color: var(--color-primary);
+  font-size: var(--pdf-import-header-icon-size);
+}
+
+.uploadIconWrapper {
+  display: flex;
+  width: var(--pdf-import-header-icon-wrapper-size);
+  height: var(--pdf-import-header-icon-wrapper-size);
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background-color: var(--color-primary-light);
+}

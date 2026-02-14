@@ -17,12 +17,6 @@ NOTE: These endpoints are not yet implemented. Tests are skipped until implement
 
 from unittest.mock import MagicMock, patch
 
-import pytest
-from fastapi.testclient import TestClient
-
-# Skip all tests in this module - endpoints not implemented yet
-pytestmark = pytest.mark.skip(reason="Error recovery API endpoints not yet implemented")
-
 
 class TestErrorRecoveryStatistics:
     """Tests for GET /error-recovery/statistics endpoint"""
@@ -142,7 +136,8 @@ class TestUpdateRecoveryStrategy:
         )
 
         assert response.status_code == 400
-        assert "无效的错误类别" in response.json()["detail"]
+        data = response.json()
+        assert "无效的错误类别" in data["error"]["message"]
 
 
 class TestCircuitBreakerStatus:
@@ -201,7 +196,8 @@ class TestResetCircuitBreaker:
         response = client.post("/api/v1/error-recovery/circuit-breakers/invalid/reset")
 
         assert response.status_code == 400
-        assert "无效的错误类别" in response.json()["detail"]
+        data = response.json()
+        assert "无效的错误类别" in data["error"]["message"]
 
 
 class TestRecoveryHistory:
@@ -285,8 +281,8 @@ class TestClearRecoveryHistory:
 class TestGetErrorRecoveryHealth:
     """Tests for GET /error-recovery/health endpoint"""
 
-    @patch("src.api.v1.error_recovery.error_recovery_engine")
-    def test_health_healthy(self, mock_engine):
+    @patch("src.api.v1.system.error_recovery.error_recovery_engine")
+    def test_health_healthy(self, mock_engine, client):
         """Test health status when success rate >= 90%"""
         mock_engine.get_recovery_statistics.return_value = {
             "total_recoveries": 100,
@@ -294,17 +290,14 @@ class TestGetErrorRecoveryHealth:
             "success_rate": 92.0,
         }
 
-        from src.main import app
-
-        client = TestClient(app)
         response = client.get("/api/v1/error-recovery/health")
 
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "healthy"
 
-    @patch("src.api.v1.error_recovery.error_recovery_engine")
-    def test_health_degraded(self, mock_engine):
+    @patch("src.api.v1.system.error_recovery.error_recovery_engine")
+    def test_health_degraded(self, mock_engine, client):
         """Test health status when success rate between 70-90%"""
         mock_engine.get_recovery_statistics.return_value = {
             "total_recoveries": 100,
@@ -312,17 +305,14 @@ class TestGetErrorRecoveryHealth:
             "success_rate": 80.0,
         }
 
-        from src.main import app
-
-        client = TestClient(app)
         response = client.get("/api/v1/error-recovery/health")
 
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "degraded"
 
-    @patch("src.api.v1.error_recovery.error_recovery_engine")
-    def test_health_unhealthy(self, mock_engine):
+    @patch("src.api.v1.system.error_recovery.error_recovery_engine")
+    def test_health_unhealthy(self, mock_engine, client):
         """Test health status when success rate < 70%"""
         mock_engine.get_recovery_statistics.return_value = {
             "total_recoveries": 100,
@@ -330,9 +320,6 @@ class TestGetErrorRecoveryHealth:
             "success_rate": 60.0,
         }
 
-        from src.main import app
-
-        client = TestClient(app)
         response = client.get("/api/v1/error-recovery/health")
 
         assert response.status_code == 503

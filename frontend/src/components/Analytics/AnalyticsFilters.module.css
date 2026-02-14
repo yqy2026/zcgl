@@ -1,6 +1,6 @@
 .filtersCard {
-  margin-bottom: 16px;
-  border-radius: 12px;
+  margin-bottom: var(--spacing-lg);
+  border-radius: var(--radius-lg);
 }
 
 .filtersCard :global(.ant-card-head-title) {
@@ -21,14 +21,14 @@
 }
 
 .iconActionButton {
-  min-height: 32px;
-  border-radius: 8px;
+  min-height: var(--button-height-sm);
+  border-radius: var(--button-radius);
 }
 
 .advancedToggleButton {
-  min-height: 32px;
-  border-radius: 8px;
-  padding-inline: 10px;
+  min-height: var(--button-height-sm);
+  border-radius: var(--button-radius);
+  padding-inline: var(--spacing-md);
 }
 
 .iconActionButton:focus-visible,
@@ -40,10 +40,10 @@
 @media (max-width: 768px) {
   .iconActionButton,
   .advancedToggleButton {
-    min-height: 40px;
+    min-height: var(--button-height-lg);
   }
 
   .advancedToggleButton {
-    padding-inline: 12px;
+    padding-inline: var(--spacing-md);
   }
 }

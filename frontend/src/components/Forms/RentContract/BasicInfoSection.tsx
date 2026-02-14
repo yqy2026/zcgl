@@ -1,6 +1,7 @@
 import React from 'react';
 import { Form, Input, Select, DatePicker, Row, Col, Card, InputNumber } from 'antd';
 import { ContractStatus, ContractStatusLabels } from '@/types/rentContract';
+import styles from './BasicInfoSection.module.css';
 
 const { Option } = Select;
 
@@ -10,7 +11,7 @@ const { Option } = Select;
  */
 const BasicInfoSection: React.FC = () => {
   return (
-    <Card title="基本信息" size="small" style={{ marginBottom: 16 }}>
+    <Card title="基本信息" size="small" className={styles.basicInfoCard}>
       <Row gutter={16}>
         <Col span={8}>
           <Form.Item
@@ -41,7 +42,7 @@ const BasicInfoSection: React.FC = () => {
             name="sign_date"
             rules={[{ required: true, message: '请选择签订日期' }]}
           >
-            <DatePicker style={{ width: '100%' }} />
+            <DatePicker className={styles.fullWidthControl} />
           </Form.Item>
         </Col>
       </Row>
@@ -92,7 +93,7 @@ const BasicInfoSection: React.FC = () => {
                   tooltip="例如：0.05 表示 5%"
                 >
                   <InputNumber
-                    style={{ width: '100%' }}
+                    className={styles.fullWidthControl}
                     min={0}
                     max={1}
                     step={0.01}

@@ -3,7 +3,7 @@
 }
 
 .summaryRow {
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-lg);
 }
 
 .summaryCard {
@@ -19,7 +19,7 @@
 }
 
 .statisticAccent :global(.ant-statistic-content) {
-  color: #722ed1;
+  color: var(--color-primary);
 }
 
 .statisticWarning :global(.ant-statistic-content) {
@@ -27,11 +27,11 @@
 }
 
 .chartCard {
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-lg);
 }
 
 .detailsRow {
-  margin-top: 16px;
+  margin-top: var(--spacing-lg);
 }
 
 .detailList {
@@ -43,7 +43,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
+  gap: var(--spacing-md);
   padding: 8px 0;
   border-bottom: 1px solid var(--color-border-light);
 }
@@ -53,7 +53,7 @@
 }
 
 .detailMeta {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
 }
 
 .detailValue {
@@ -66,16 +66,16 @@
 
 .detailLabel {
   color: var(--color-text-secondary);
-  font-size: 11px;
-  margin-top: 2px;
+  font-size: var(--font-size-xs);
+  margin-top: calc(var(--spacing-xs) / 2);
 }
 
 .chartTooltip {
-  padding: 8px;
+  padding: var(--spacing-sm);
   line-height: 1.5;
 }
 
 .tooltipTitle {
   font-weight: var(--font-weight-semibold);
-  margin-bottom: 4px;
+  margin-bottom: var(--spacing-xs);
 }

@@ -1,34 +1,34 @@
 .cardTitle {
   margin: 0;
-  margin-bottom: 8px;
+  margin-bottom: var(--spacing-sm);
 }
 
 .cardDescription {
-  margin-top: 12px;
+  margin-top: var(--spacing-md);
 }
 
 .addressRow {
-  margin-bottom: 8px;
+  margin-bottom: var(--spacing-sm);
 }
 
 .ownershipRow {
-  margin-bottom: 8px;
+  margin-bottom: var(--spacing-sm);
 }
 
 .areaRow {
-  margin-bottom: 12px;
+  margin-bottom: var(--spacing-md);
 }
 
 .detailIcon {
-  color: #999;
+  color: var(--color-text-tertiary);
 }
 
 .detailText {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
 }
 
 .occupancyHeader {
-  margin-bottom: 4px;
+  margin-bottom: var(--spacing-xs);
 }
 
 .occupancyHeaderRow {
@@ -38,9 +38,21 @@
 }
 
 .occupancyLabel {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
 }
 
 .occupancyValue {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
+}
+
+.occupancyValueHigh {
+  color: var(--color-success);
+}
+
+.occupancyValueMedium {
+  color: var(--color-warning);
+}
+
+.occupancyValueLow {
+  color: var(--color-error);
 }

@@ -86,7 +86,7 @@ const SystemMonitoringOverview: React.FC<SystemMonitoringOverviewProps> = ({
           <Statistic
             title="活跃连接"
             value={activeConnections}
-            styles={{ content: { color: '#1890ff' } }}
+            styles={{ content: { color: 'var(--color-primary)' } }}
           />
         </Card>
       </Col>

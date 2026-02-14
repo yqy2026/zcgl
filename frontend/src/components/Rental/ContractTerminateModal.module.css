@@ -1,0 +1,19 @@
+.summaryDescriptions {
+  margin-top: var(--spacing-sm);
+}
+
+.alertSpacing {
+  margin-bottom: var(--spacing-lg);
+}
+
+.fullWidthControl {
+  width: 100%;
+}
+
+.dangerIcon {
+  color: var(--color-error);
+}
+
+.confirmDescription {
+  margin-top: var(--spacing-sm);
+}

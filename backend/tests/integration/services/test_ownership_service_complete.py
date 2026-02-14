@@ -1,270 +1,221 @@
 """
-权属服务完整测试
-
-Complete tests for Ownership Service to maximize coverage
+Ownership service integration smoke tests (async-era aligned).
 """
 
+from uuid import uuid4
+
 import pytest
-from sqlalchemy.orm import Session
+from fastapi.testclient import TestClient
 
-pytestmark = pytest.mark.skip(
-    reason="Legacy ownership complete tests depend on retired synchronous APIs."
-)
+pytestmark = pytest.mark.integration
 
 
 @pytest.fixture
-def ownership_service(db: Session):
-    """权属服务实例"""
-    from src.services.ownership.service import OwnershipService
-
-    return OwnershipService(db)
-
-
-@pytest.fixture
-def sample_ownership(db: Session, admin_user):
-    """示例权属数据"""
-    from src.crud.ownership import ownership_crud
-    from src.schemas.ownership import OwnershipCreate
-
-    ownership = ownership_crud.create(
-        db,
-        obj_in=OwnershipCreate(
-            owner_name="测试业主",
-            owner_type="individual",
-            id_card="110101199001011234",
-            phone="13800138000",
-            address="北京市朝阳区测试地址",
-            ownership_ratio=100.0,
-            asset_id="asset-001",
-        ),
+def authenticated_client(client: TestClient, test_data) -> TestClient:
+    admin_user = test_data["admin"]
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"username": admin_user.username, "password": "Admin123!@#"},
     )
-    yield ownership
-    try:
-        ownership_crud.remove(db, id=ownership.id)
-    except Exception:
-        pass
+    assert response.status_code == 200
+    auth_token = response.cookies.get("auth_token")
+    csrf_token = response.cookies.get("csrf_token")
+    assert auth_token is not None
+    client.cookies.set("auth_token", auth_token)
+    if csrf_token is not None:
+        client.cookies.set("csrf_token", csrf_token)
+    setattr(client, "_csrf_token", csrf_token)
+    return client
 
 
 @pytest.fixture
-def sample_ownership_with_org(db: Session, admin_user):
-    """组织权属数据"""
-    from src.crud.ownership import ownership_crud
-    from src.schemas.ownership import OwnershipCreate
+def csrf_headers(authenticated_client: TestClient) -> dict[str, str]:
+    csrf_token = getattr(authenticated_client, "_csrf_token", None)
+    if csrf_token is None:
+        return {}
+    return {"X-CSRF-Token": csrf_token}
 
-    ownership = ownership_crud.create(
-        db,
-        obj_in=OwnershipCreate(
-            owner_name="测试公司",
-            owner_type="enterprise",
-            credit_code="91110000123456789X",
-            phone="010-12345678",
-            address="北京市海淀区测试地址",
-            ownership_ratio=50.0,
-            asset_id="asset-002",
-        ),
+
+def _create_ownership(
+    authenticated_client: TestClient,
+    csrf_headers: dict[str, str],
+    unique_suffix: str,
+) -> dict:
+    create_response = authenticated_client.post(
+        "/api/v1/ownerships",
+        json={
+            "name": f"集成权属方-{unique_suffix}",
+            "short_name": f"IT-{unique_suffix[:4]}",
+        },
+        headers=csrf_headers,
     )
-    yield ownership
-    try:
-        ownership_crud.remove(db, id=ownership.id)
-    except Exception:
-        pass
+    assert create_response.status_code == 200
+    created = create_response.json()
+    assert created.get("id") is not None
+    return created
 
 
-class TestOwnershipServiceBusinessLogic:
-    """测试权属服务业务逻辑"""
+def test_ownership_create_search_toggle_and_delete_roundtrip(
+    authenticated_client: TestClient,
+    csrf_headers: dict[str, str],
+) -> None:
+    unique_suffix = uuid4().hex[:8]
+    created = _create_ownership(authenticated_client, csrf_headers, unique_suffix)
+    ownership_id = created["id"]
+    initial_status = bool(created.get("is_active"))
+    assert str(created.get("code", "")).startswith("OW")
 
-    def test_calculate_total_ownership_ratio(self, ownership_service, db: Session):
-        """测试计算总权属比例"""
-        total_ratio = ownership_service.calculate_total_ownership_ratio(
-            db, asset_id="asset-001"
-        )
-        assert total_ratio is not None
-        assert total_ratio >= 0
-        assert total_ratio <= 100
+    list_response = authenticated_client.get(
+        f"/api/v1/ownerships?page=1&page_size=20&keyword={unique_suffix}",
+    )
+    assert list_response.status_code == 200
+    list_payload = list_response.json()
+    assert list_payload.get("success") is True
+    list_items = list_payload.get("data", {}).get("items", [])
+    assert any(
+        item.get("id") == ownership_id for item in list_items if isinstance(item, dict)
+    )
 
-    def test_validate_ownership_ratio_exceeds_100(self, ownership_service, db: Session):
-        """测试验证权属比例超过100%"""
-        with pytest.raises(ValueError):
-            ownership_service.validate_ownership_ratio(
-                db, asset_id="asset-001", new_ratio=150.0
-            )
+    search_response = authenticated_client.post(
+        "/api/v1/ownerships/search",
+        json={"keyword": unique_suffix, "page": 1, "page_size": 20},
+        headers=csrf_headers,
+    )
+    assert search_response.status_code == 200
+    search_payload = search_response.json()
+    assert search_payload.get("success") is True
+    search_items = search_payload.get("data", {}).get("items", [])
+    assert any(
+        item.get("id") == ownership_id
+        for item in search_items
+        if isinstance(item, dict)
+    )
 
-    def test_transfer_ownership_success(
-        self, ownership_service, sample_ownership, db: Session
-    ):
-        """测试成功转移权属"""
-        new_owner_data = {
-            "owner_name": "新业主",
-            "owner_type": "individual",
-            "id_card": "110101199001019999",
-            "phone": "13900139000",
-        }
+    toggle_response = authenticated_client.post(
+        f"/api/v1/ownerships/{ownership_id}/toggle-status",
+        headers=csrf_headers,
+    )
+    assert toggle_response.status_code == 200
+    toggled = toggle_response.json()
+    assert toggled.get("id") == ownership_id
+    assert toggled.get("is_active") is (not initial_status)
 
-        result = ownership_service.transfer_ownership(
-            db, ownership_id=sample_ownership.id, new_owner_data=new_owner_data
-        )
-        assert result is not None
-        assert result.owner_name == "新业主"
+    dropdown_response = authenticated_client.get(
+        f"/api/v1/ownerships/dropdown-options?is_active="
+        f"{str(toggled.get('is_active')).lower()}",
+    )
+    assert dropdown_response.status_code == 200
+    dropdown_items = dropdown_response.json()
+    assert isinstance(dropdown_items, list)
+    assert any(
+        item.get("id") == ownership_id
+        for item in dropdown_items
+        if isinstance(item, dict)
+    )
 
-    def test_split_ownership(self, ownership_service, sample_ownership, db: Session):
-        """测试分割权属"""
-        split_data = [
-            {
-                "owner_name": "共有人1",
-                "owner_type": "individual",
-                "ownership_ratio": 60.0,
-                "id_card": "110101199001011111",
-            },
-            {
-                "owner_name": "共有人2",
-                "owner_type": "individual",
-                "ownership_ratio": 40.0,
-                "id_card": "110101199001012222",
-            },
-        ]
+    delete_response = authenticated_client.delete(
+        f"/api/v1/ownerships/{ownership_id}",
+        headers=csrf_headers,
+    )
+    assert delete_response.status_code == 200
+    delete_payload = delete_response.json()
+    assert delete_payload.get("id") == ownership_id
 
-        result = ownership_service.split_ownership(
-            db, ownership_id=sample_ownership.id, split_data=split_data
-        )
-        assert result is not None
-        assert len(result) == 2
+    search_after_delete = authenticated_client.post(
+        "/api/v1/ownerships/search",
+        json={"keyword": unique_suffix, "page": 1, "page_size": 20},
+        headers=csrf_headers,
+    )
+    assert search_after_delete.status_code == 200
+    after_items = search_after_delete.json().get("data", {}).get("items", [])
+    assert all(
+        item.get("id") != ownership_id for item in after_items if isinstance(item, dict)
+    )
 
-    def test_merge_ownerships(self, ownership_service, db: Session):
-        """测试合并权属"""
-        ownership_ids = ["ownership-1", "ownership-2"]
 
-        result = ownership_service.merge_ownerships(
-            db,
-            ownership_ids=ownership_ids,
-            merged_owner_data={
-                "owner_name": "合并后业主",
-                "owner_type": "individual",
-                "id_card": "110101199001013333",
-            },
-        )
-        assert result is not None
+def test_ownership_statistics_summary_consistency(
+    authenticated_client: TestClient,
+    csrf_headers: dict[str, str],
+) -> None:
+    before_response = authenticated_client.get("/api/v1/ownerships/statistics/summary")
+    assert before_response.status_code == 200
+    before_stats = before_response.json()
+    before_total = int(before_stats.get("total_count", 0))
 
-    def test_get_ownership_history(self, ownership_service, sample_ownership):
-        """测试获取权属历史"""
-        history = ownership_service.get_ownership_history(
-            ownership_id=sample_ownership.id
-        )
-        assert history is not None
+    unique_suffix = uuid4().hex[:8]
+    created = _create_ownership(authenticated_client, csrf_headers, unique_suffix)
+    ownership_id = created["id"]
 
-    def test_verify_ownership_documents(self, ownership_service, sample_ownership):
-        """测试验证权属文档"""
-        documents = ["doc1.pdf", "doc2.pdf"]
+    after_create_response = authenticated_client.get(
+        "/api/v1/ownerships/statistics/summary",
+    )
+    assert after_create_response.status_code == 200
+    after_create_stats = after_create_response.json()
+    assert int(after_create_stats.get("total_count", 0)) == before_total + 1
+    assert (
+        int(after_create_stats.get("total_count", 0))
+        == int(after_create_stats.get("active_count", 0))
+        + int(after_create_stats.get("inactive_count", 0))
+    )
 
-        result = ownership_service.verify_ownership_documents(
-            ownership_id=sample_ownership.id, document_ids=documents
-        )
-        assert result is not None
+    delete_response = authenticated_client.delete(
+        f"/api/v1/ownerships/{ownership_id}",
+        headers=csrf_headers,
+    )
+    assert delete_response.status_code == 200
 
-    def test_get_owners_by_asset(self, ownership_service, db: Session):
-        """测试按资产获取所有业主"""
-        owners = ownership_service.get_owners_by_asset(db, asset_id="asset-001")
-        assert owners is not None
-        assert isinstance(owners, list)
+    after_delete_response = authenticated_client.get(
+        "/api/v1/ownerships/statistics/summary",
+    )
+    assert after_delete_response.status_code == 200
+    after_delete_stats = after_delete_response.json()
+    assert int(after_delete_stats.get("total_count", 0)) == before_total
 
-    def test_get_assets_by_owner(self, ownership_service, db: Session):
-        """测试按业主获取所有资产"""
-        assets = ownership_service.get_assets_by_owner(db, owner_id="owner-001")
-        assert assets is not None
-        assert isinstance(assets, list)
 
-    def test_update_ownership_ratio(
-        self, ownership_service, sample_ownership, db: Session
-    ):
-        """测试更新权属比例"""
-        new_ratio = 75.0
+def test_ownership_financial_summary_nonexistent(
+    authenticated_client: TestClient,
+) -> None:
+    response = authenticated_client.get(
+        "/api/v1/ownerships/nonexistent/financial-summary"
+    )
+    assert response.status_code == 404
 
-        result = ownership_service.update_ownership_ratio(
-            db, ownership_id=sample_ownership.id, new_ratio=new_ratio
-        )
-        assert result is not None
-        assert result.ownership_ratio == new_ratio
 
-    def test_validate_id_card_format(self, ownership_service):
-        """测试验证身份证号格式"""
-        # 有效身份证号
-        assert ownership_service.validate_id_card("110101199001011234") is not None
+def test_delete_nonexistent_ownership(
+    authenticated_client: TestClient,
+    csrf_headers: dict[str, str],
+) -> None:
+    response = authenticated_client.delete(
+        "/api/v1/ownerships/nonexistent",
+        headers=csrf_headers,
+    )
+    assert response.status_code == 404
+    payload = response.json()
+    assert payload.get("success") is False
 
-        # 无效身份证号
-        with pytest.raises(ValueError):
-            ownership_service.validate_id_card("invalid_id")
 
-    def test_validate_credit_code_format(self, ownership_service):
-        """测试验证统一社会信用代码格式"""
-        # 有效信用代码
-        assert ownership_service.validate_credit_code("91110000123456789X") is not None
+def test_toggle_status_nonexistent_ownership(
+    authenticated_client: TestClient,
+    csrf_headers: dict[str, str],
+) -> None:
+    response = authenticated_client.post(
+        "/api/v1/ownerships/nonexistent/toggle-status",
+        headers=csrf_headers,
+    )
+    assert response.status_code == 404
+    payload = response.json()
+    assert payload.get("success") is False
 
-        # 无效信用代码
-        with pytest.raises(ValueError):
-            ownership_service.validate_credit_code("invalid_code")
 
-    def test_get_ownership_statistics(self, ownership_service, db: Session):
-        """测试获取权属统计信息"""
-        stats = ownership_service.get_ownership_statistics(db)
-        assert stats is not None
-        assert "total_ownerships" in stats
-        assert "individual_owners" in stats
-        assert "enterprise_owners" in stats
-
-    def test_search_ownerships_advanced(self, ownership_service, db: Session):
-        """测试高级搜索权属"""
-        result = ownership_service.search_ownerships(
-            db, keyword="测试", owner_type="individual", asset_id="asset-001"
-        )
-        assert result is not None
-
-    def test_calculate_ownership_value(self, ownership_service, sample_ownership):
-        """测试计算权属价值"""
-        asset_value = 1000000.0
-
-        ownership_value = ownership_service.calculate_ownership_value(
-            ownership_id=sample_ownership.id, asset_value=asset_value
-        )
-        assert ownership_value is not None
-        assert ownership_value >= 0
-
-    def test_check_ownership_completeness(self, ownership_service, db: Session):
-        """测试检查权属完整性"""
-        completeness = ownership_service.check_ownership_completeness(
-            db, asset_id="asset-001"
-        )
-        assert completeness is not None
-        assert "is_complete" in completeness
-        assert "total_ratio" in completeness
-
-    def test_get_joint_owners(self, ownership_service, db: Session):
-        """测试获取共有权人"""
-        joint_owners = ownership_service.get_joint_owners(db, asset_id="asset-001")
-        assert joint_owners is not None
-        assert isinstance(joint_owners, list)
-
-    def test_create_ownership_with_encryption(self, ownership_service, db: Session):
-        """测试创建权属时加密敏感信息"""
-        ownership_data = {
-            "owner_name": "加密测试业主",
-            "owner_type": "individual",
-            "id_card": "110101199001014444",
-            "phone": "13800138888",
-            "asset_id": "asset-003",
-            "ownership_ratio": 100.0,
-        }
-
-        result = ownership_service.create_ownership(db, ownership_data)
-        assert result is not None
-        # 验证敏感信息已加密（存储时）
-        # 实际验证需要查询数据库
-
-    def test_update_encrypted_fields(
-        self, ownership_service, sample_ownership, db: Session
-    ):
-        """测试更新加密字段"""
-        update_data = {"phone": "13900139999"}
-
-        result = ownership_service.update_ownership(
-            db, ownership_id=sample_ownership.id, update_data=update_data
-        )
-        assert result is not None
+def test_update_projects_nonexistent_ownership(
+    authenticated_client: TestClient,
+    csrf_headers: dict[str, str],
+) -> None:
+    response = authenticated_client.put(
+        "/api/v1/ownerships/nonexistent/projects",
+        json=[],
+        headers=csrf_headers,
+    )
+    assert response.status_code == 404
+    payload = response.json()
+    assert payload.get("success") is False

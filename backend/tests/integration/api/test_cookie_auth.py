@@ -263,5 +263,10 @@ def test_bearer_rejected_in_cookie_only_mode(client, test_data):
         "/api/v1/auth/me", headers={"Authorization": f"Bearer {access_token}"}
     )
 
-    # Should be rejected in cookie-only mode
-    assert protected_response.status_code in [401, 403]
+    # Cookie-only mode下仅Bearer应被拒绝
+    assert protected_response.status_code == 401
+    payload = protected_response.json()
+    assert payload.get("success") is False
+    error = payload.get("error", {})
+    assert isinstance(error, dict)
+    assert error.get("code") == "AUTHENTICATION_ERROR"

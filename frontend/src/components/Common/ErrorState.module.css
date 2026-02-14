@@ -1,0 +1,63 @@
+.errorState {
+  --error-state-min-height: calc((var(--spacing-xxxl) * 8) + var(--spacing-md) + var(--spacing-xs));
+  --error-state-icon-size: calc(var(--spacing-xxxl) + var(--spacing-xl));
+  --error-state-technical-max-width: calc((var(--spacing-xxxl) * 12) + var(--spacing-xl));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--error-state-min-height);
+  padding: var(--spacing-xl);
+}
+
+.errorIcon {
+  font-size: var(--error-state-icon-size);
+  color: var(--color-error);
+}
+
+.warningIcon {
+  font-size: var(--error-state-icon-size);
+  color: var(--color-warning);
+}
+
+.errorMessageParagraph {
+  margin-bottom: 0 !important;
+}
+
+.errorCodeText {
+  font-size: var(--font-size-sm);
+}
+
+.actionSpace {
+  gap: var(--spacing-md);
+}
+
+.technicalDetailText {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+.technicalAlert {
+  max-width: var(--error-state-technical-max-width);
+}
+
+.componentError {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xxl);
+  text-align: center;
+}
+
+.componentMessageContainer {
+  margin-top: var(--spacing-lg);
+}
+
+.componentMessageText {
+  font-size: var(--font-size-lg);
+}
+
+.componentActionContainer {
+  margin-top: var(--spacing-lg);
+}

@@ -1,4 +1,6 @@
 .importPage {
+  --property-certificate-import-card-padding-y-mobile: var(--spacing-lg);
+  --property-certificate-import-card-padding-x-mobile: var(--spacing-md);
   width: 100%;
 }
 
@@ -12,6 +14,7 @@
 
 @media (max-width: 768px) {
   .stepsCard :global(.ant-card-body) {
-    padding: 16px 12px;
+    padding: var(--property-certificate-import-card-padding-y-mobile)
+      var(--property-certificate-import-card-padding-x-mobile);
   }
 }

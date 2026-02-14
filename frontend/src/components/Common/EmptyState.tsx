@@ -16,6 +16,7 @@ import {
   ArrowLeftOutlined,
   CloudUploadOutlined,
 } from '@ant-design/icons';
+import styles from './EmptyState.module.css';
 
 const { Text, Paragraph, Title } = Typography;
 
@@ -114,12 +115,12 @@ const DEFAULT_EMPTY_STATES: Record<EmptyType, { title: string; description: stri
  * Empty state icons by type
  */
 const EMPTY_ICONS: Record<EmptyType, React.ReactNode> = {
-  'no-data': <InboxOutlined style={{ fontSize: 64, color: 'var(--color-text-quaternary)' }} />,
-  'no-results': <FileSearchOutlined style={{ fontSize: 64, color: 'var(--color-text-quaternary)' }} />,
-  'cleared': <SearchOutlined style={{ fontSize: 64, color: 'var(--color-text-quaternary)' }} />,
-  'not-found': <SearchOutlined style={{ fontSize: 64, color: 'var(--color-text-quaternary)' }} />,
-  'unauthorized': <FileSearchOutlined style={{ fontSize: 64, color: 'var(--color-text-quaternary)' }} />,
-  custom: <InboxOutlined style={{ fontSize: 64, color: 'var(--color-text-quaternary)' }} />,
+  'no-data': <InboxOutlined className={styles.emptyIconGlyph} />,
+  'no-results': <FileSearchOutlined className={styles.emptyIconGlyph} />,
+  'cleared': <SearchOutlined className={styles.emptyIconGlyph} />,
+  'not-found': <SearchOutlined className={styles.emptyIconGlyph} />,
+  'unauthorized': <FileSearchOutlined className={styles.emptyIconGlyph} />,
+  custom: <InboxOutlined className={styles.emptyIconGlyph} />,
 };
 
 /**
@@ -142,19 +143,15 @@ export const EmptyState: React.FC<EmptyStateConfig> = ({
   const emptyTitle = title || defaultEmpty.title;
   const emptyDescription = description || defaultEmpty.description;
   const icon = EMPTY_ICONS[type];
+  const containerClassName =
+    className !== undefined && className !== ''
+      ? `${styles.emptyState} ${className}`
+      : styles.emptyState;
 
   return (
     <div
-      className={className}
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '300px',
-        padding: 'var(--spacing-xl)',
-        ...style,
-      }}
+      className={containerClassName}
+      style={style}
       role="status"
       aria-live="polite"
       aria-atomic="true"
@@ -165,36 +162,25 @@ export const EmptyState: React.FC<EmptyStateConfig> = ({
           src={image}
           alt={imageAlt || emptyTitle}
           preview={false}
-          style={{
-            maxWidth: '200px',
-            maxHeight: '150px',
-            marginBottom: 'var(--spacing-lg)',
-          }}
+          className={styles.emptyImage}
         />
       ) : (
-        <div style={{ marginBottom: 'var(--spacing-lg)', color: 'var(--color-text-quaternary)' }}>
-          {icon}
-        </div>
+        <div className={styles.emptyIconContainer}>{icon}</div>
       )}
 
       {/* Title and Description */}
-      <div style={{ textAlign: 'center', maxWidth: 480 }}>
-        <Title level={4} style={{ marginBottom: 'var(--spacing-sm)' }}>
+      <div className={styles.emptyContent}>
+        <Title level={4} className={styles.emptyTitle}>
           {emptyTitle}
         </Title>
-        <Paragraph
-          style={{
-            color: 'var(--color-text-secondary)',
-            marginBottom: 'var(--spacing-md)',
-          }}
-        >
+        <Paragraph className={styles.emptyDescription}>
           {emptyDescription}
         </Paragraph>
       </div>
 
       {/* Action Buttons */}
       {(primaryAction || secondaryAction) && (
-        <Space size="middle" style={{ gap: 'var(--spacing-md)' }}>
+        <Space size="middle" className={styles.actionsSpace}>
           {/* Primary action */}
           {primaryAction && (
             <Button
@@ -272,32 +258,29 @@ export const ComponentEmpty: React.FC<ComponentEmptyProps> = ({
   className,
   style,
 }) => {
+  const containerClassName =
+    className !== undefined && className !== ''
+      ? `${styles.componentEmpty} ${className}`
+      : styles.componentEmpty;
+
   return (
     <div
-      className={className}
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 'var(--spacing-xxl)',
-        textAlign: 'center',
-        ...style,
-      }}
+      className={containerClassName}
+      style={style}
       role="status"
       aria-live="polite"
       aria-atomic="true"
     >
-      <div style={{ color: 'var(--color-text-quaternary)', marginBottom: 'var(--spacing-lg)' }}>
+      <div className={styles.componentIconContainer}>
         {EMPTY_ICONS[type]}
       </div>
-      <div style={{ marginTop: 'var(--spacing-lg)' }}>
-        <Text type="secondary" style={{ fontSize: 'var(--font-size-base)' }}>
+      <div className={styles.componentMessageContainer}>
+        <Text type="secondary" className={styles.componentMessageText}>
           {message}
         </Text>
       </div>
       {showCreate && onCreate && (
-        <div style={{ marginTop: 'var(--spacing-lg)' }}>
+        <div className={styles.componentActionContainer}>
           <Button
             type="primary"
             icon={<PlusOutlined />}

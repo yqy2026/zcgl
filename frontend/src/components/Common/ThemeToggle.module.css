@@ -1,0 +1,119 @@
+.toggleLabelSpace {
+  gap: var(--spacing-sm);
+}
+
+.modeIconSmall {
+  font-size: var(--font-size-base);
+}
+
+.modeIconDefault {
+  font-size: var(--font-size-lg);
+}
+
+.lightIconActive {
+  color: var(--color-warning);
+}
+
+.lightIconInactive {
+  color: var(--color-text-tertiary);
+}
+
+.darkIconActive {
+  color: var(--color-primary);
+}
+
+.darkIconInactive {
+  color: var(--color-text-tertiary);
+}
+
+.themeToggleButtonBase {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-sm);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.themeToggleButtonLarge {
+  width: calc(var(--button-height-lg) + var(--spacing-xs));
+  height: calc(var(--button-height-lg) + var(--spacing-xs));
+  min-width: calc(var(--button-height-lg) + var(--spacing-xs));
+  min-height: calc(var(--button-height-lg) + var(--spacing-xs));
+}
+
+.themeToggleButtonMiddle {
+  width: var(--button-height-lg);
+  height: var(--button-height-lg);
+  min-width: var(--button-height-lg);
+  min-height: var(--button-height-lg);
+}
+
+.themeToggleButtonSmall {
+  width: var(--button-height-md);
+  height: var(--button-height-md);
+  min-width: var(--button-height-md);
+  min-height: var(--button-height-md);
+}
+
+.toggleButtonIconSmall {
+  font-size: var(--font-size-base);
+}
+
+.toggleButtonIconMiddle {
+  font-size: var(--font-size-lg);
+}
+
+.toggleButtonIconLarge {
+  font-size: var(--font-size-xl);
+}
+
+.toggleButtonSunIcon {
+  color: var(--color-warning);
+}
+
+.toggleButtonMoonIcon {
+  color: var(--color-primary);
+}
+
+.selectorSpace {
+  gap: var(--spacing-sm);
+}
+
+.selectorIcon {
+  font-size: var(--font-size-lg);
+  color: var(--color-text-secondary);
+}
+
+.selectorLabel {
+  font-size: var(--font-size-sm);
+}
+
+.selectorButtonBase {
+  padding: var(--spacing-xs) var(--spacing-md);
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+}
+
+.selectorButtonLeft {
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+}
+
+.selectorButtonRight {
+  border-left: none;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.selectorButtonActive {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.selectorButtonInactive {
+  background: transparent;
+  color: var(--color-text-secondary);
+}

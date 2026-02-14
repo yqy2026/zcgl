@@ -1,9 +1,11 @@
 .ledgerPage {
+  --rent-ledger-status-line-height: calc(var(--font-size-base) + var(--spacing-xs));
+  --rent-ledger-action-size: var(--button-height-sm);
   width: 100%;
 }
 
 .overviewRow {
-  margin-bottom: 24px;
+  margin-bottom: var(--spacing-xl);
 }
 
 .metricCard {
@@ -11,15 +13,15 @@
 }
 
 .metricCard :global(.ant-card-body) {
-  padding: 20px;
+  padding: calc(var(--spacing-lg) + var(--spacing-xs));
 }
 
 .metricTag {
-  margin-top: 12px;
+  margin-top: var(--spacing-md);
 }
 
 .filterCard {
-  margin-bottom: 24px;
+  margin-bottom: var(--spacing-xl);
 }
 
 .filterControl {
@@ -32,7 +34,7 @@
 }
 
 .selectionAlert {
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-lg);
 }
 
 .tableCard {
@@ -48,16 +50,16 @@
 }
 
 .statusAssistText {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
 }
 
 .statusTag {
   margin-inline-end: 0;
   border-radius: 999px;
   border: 1px solid transparent;
-  padding-inline: 8px;
-  font-size: 12px;
-  line-height: 18px;
+  padding-inline: var(--spacing-sm);
+  font-size: var(--font-size-xs);
+  line-height: var(--rent-ledger-status-line-height);
   font-weight: var(--font-weight-medium);
 }
 
@@ -106,12 +108,12 @@
 }
 
 .tableActionGroup {
-  gap: 4px;
+  gap: var(--spacing-xs);
 }
 
 .tableActionButton {
-  min-width: 32px;
-  min-height: 32px;
+  min-width: var(--rent-ledger-action-size);
+  min-height: var(--rent-ledger-action-size);
 }
 
 .fullWidthInput {
@@ -131,10 +133,10 @@
 
 @media (max-width: 768px) {
   .filterCard {
-    margin-bottom: 16px;
+    margin-bottom: var(--spacing-lg);
   }
 
   .toolbarActions :global(.ant-btn) {
-    min-height: 40px;
+    min-height: var(--button-height-lg);
   }
 }

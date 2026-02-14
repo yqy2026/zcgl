@@ -1,0 +1,28 @@
+.importIcon {
+  color: var(--color-success);
+}
+
+.exportIcon {
+  color: var(--color-primary);
+}
+
+.fullWidthSpace {
+  width: 100%;
+}
+
+.guideList {
+  margin: 0;
+  padding-left: var(--spacing-lg);
+}
+
+.resultSuccessIcon {
+  color: var(--color-success);
+}
+
+.resultErrorIcon {
+  color: var(--color-error);
+}
+
+.fullWidthRangePicker {
+  width: 100%;
+}

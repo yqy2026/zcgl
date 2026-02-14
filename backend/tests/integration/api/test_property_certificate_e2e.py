@@ -10,6 +10,7 @@ This module tests the complete workflow:
 
 import tempfile
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
@@ -34,11 +35,31 @@ def get_auth_headers(client: TestClient, admin_user) -> dict:
 
 @pytest.mark.integration
 def test_upload_extract_confirm_flow(
-    db_session: Session, client: TestClient, test_data
+    db_session: Session, client: TestClient, test_data, monkeypatch
 ):
-    """测试完整的上传-提取-确认流程"""
+    """测试完整的上传-提取-确认流程（提取环节使用可控桩，其余链路真实）。"""
     admin_user = test_data["admin"]
     headers = get_auth_headers(client, admin_user)
+    unique_suffix = uuid4().hex[:8]
+    certificate_number = f"E2E-UPLOAD-{unique_suffix}"
+    extracted_address = f"上传测试地址-{unique_suffix}"
+
+    async def fake_extract(self, file_path: str, filename: str):
+        return {
+            "success": True,
+            "data": {
+                "certificate_number": certificate_number,
+                "certificate_type": "other",
+                "property_address": extracted_address,
+                "owner_name": "上传流程权利人",
+            },
+            "confidence": 0.95,
+            "raw_response": {},
+            "extraction_method": "mock",
+            "filename": filename,
+        }
+
+    monkeypatch.setattr(PropertyCertificateService, "extract_from_file", fake_extract)
 
     # 1. Upload file (create a fake PDF)
     with tempfile.NamedTemporaryFile(mode="wb", suffix=".pdf", delete=False) as f:
@@ -53,45 +74,43 @@ def test_upload_extract_confirm_flow(
                 headers=headers,
             )
 
-        # Note: This test documents the expected flow
-        # Actual LLM extraction won't work without real Qwen service
-        # So we test the API structure and response format
+        assert response.status_code == 200
+        result = response.json()
+        assert result.get("session_id")
+        assert result.get("certificate_type") == "property_cert"
+        assert result.get("extracted_data", {}).get("certificate_number") == certificate_number
+        assert result.get("extracted_data", {}).get("property_address") == extracted_address
 
-        # For integration testing with real service, add: @pytest.mark.integration
-        # And ensure Qwen Vision service is available
+        # 2. Confirm import
+        confirm_data = {
+            "session_id": result["session_id"],
+            "extracted_data": result.get("extracted_data", {}),
+            "asset_link_id": None,
+            "asset_ids": [],
+            "should_create_new_asset": False,
+            "owners": [],
+        }
+        confirm_response = client.post(
+            "/api/v1/property-certificates/confirm-import",
+            json=confirm_data,
+            headers=headers,
+        )
+        assert confirm_response.status_code == 200
+        confirm_payload = confirm_response.json()
+        assert confirm_payload.get("status") == "success"
+        certificate_id = confirm_payload.get("certificate_id")
+        assert isinstance(certificate_id, str)
 
-        print(f"Upload response status: {response.status_code}")
-        print(f"Response: {response.json()}")
-
-        # Test will document the expected structure
-        assert response.status_code in [200, 400, 500]  # May fail if LLM not available
-
-        if response.status_code == 200:
-            result = response.json()
-            assert "session_id" in result or "detail" in result
-
-            if "session_id" in result:
-                # Test confirm import
-                confirm_data = {
-                    "session_id": result["session_id"],
-                    "extracted_data": result.get("extracted_data", {}),
-                    "asset_link_id": None,
-                    "asset_ids": [],
-                    "should_create_new_asset": False,
-                    "owners": [],
-                }
-
-                response = client.post(
-                    "/api/v1/property-certificates/confirm-import",
-                    json=confirm_data,
-                    headers=headers,
-                )
-
-                assert response.status_code in [200, 400, 422, 500]
-        else:
-            # Expected to fail without real LLM service
-            # Just verify the endpoint exists and returns proper error
-            assert "detail" in response.json()
+        # 3. Verify created certificate
+        detail_response = client.get(
+            f"/api/v1/property-certificates/{certificate_id}",
+            headers=headers,
+        )
+        assert detail_response.status_code == 200
+        detail = detail_response.json()
+        assert detail.get("id") == certificate_id
+        assert detail.get("certificate_number") == certificate_number
+        assert detail.get("property_address") == extracted_address
 
     finally:
         # Cleanup temp file
@@ -137,6 +156,8 @@ def test_upload_returns_asset_matches(
         return {
             "success": True,
             "data": {
+                "certificate_number": f"MATCH-CERT-{uuid4().hex[:8]}",
+                "certificate_type": "other",
                 "property_address": asset_data["address"],
                 "owner_name": asset_data["ownership_entity"],
             },

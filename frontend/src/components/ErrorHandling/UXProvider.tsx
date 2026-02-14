@@ -62,7 +62,9 @@ const UXProvider: React.FC<UXProviderProps> = ({ children, config = {} }) => {
   // 主题配置
   const themeConfig = {
     token: {
-      colorPrimary: config.theme?.primaryColor ?? '#1890ff',
+      ...(config.theme?.primaryColor != null && config.theme?.primaryColor !== ''
+        ? { colorPrimary: config.theme.primaryColor }
+        : {}),
       borderRadius: config.theme?.borderRadius ?? 6,
       fontSize: config.theme?.fontSize ?? 14,
     },

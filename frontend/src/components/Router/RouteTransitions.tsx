@@ -8,6 +8,7 @@ import { useLocation, useNavigationType } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { TargetAndTransition } from 'framer-motion';
 import { ConfigProvider, theme } from 'antd';
+import styles from './RouteTransitions.module.css';
 
 // 动画类型
 type AnimationType = 'fade' | 'slide' | 'scale' | 'flip' | 'none';
@@ -245,13 +246,7 @@ export const RouteTransition: React.FC<RouteTransitionProps> = ({
         initial={animationConfig.initial}
         animate={animationConfig.enter}
         exit={animationConfig.exit}
-        style={{
-          position: 'absolute',
-          width: '100%',
-          height: '100%',
-          top: 0,
-          left: 0,
-        }}
+        className={styles.routeTransitionMotion}
       >
         {children}
       </motion.div>
@@ -265,17 +260,13 @@ export const PageTransitionContainer: React.FC<{
   className?: string;
   style?: React.CSSProperties;
 }> = ({ children, className, style }) => {
+  const containerClassName =
+    className != null && className !== ''
+      ? `${styles.pageTransitionContainer} ${className}`
+      : styles.pageTransitionContainer;
+
   return (
-    <div
-      className={className}
-      style={{
-        position: 'relative',
-        width: '100%',
-        height: '100%',
-        overflow: 'hidden',
-        ...style,
-      }}
-    >
+    <div className={containerClassName} style={style}>
       {children}
     </div>
   );
@@ -444,9 +435,7 @@ export const OptimizedTransition: React.FC<{
       initial={config.initial}
       animate={config.enter}
       exit={config.exit}
-      style={{
-        willChange: 'opacity, transform', // 提示浏览器优化
-      }}
+      className={styles.optimizedTransition}
     >
       {children}
     </motion.div>

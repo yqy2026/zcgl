@@ -15,6 +15,8 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
+pytestmark = pytest.mark.e2e
+
 
 def test_complete_auth_flow_e2e(
     db_session: Session,
@@ -171,7 +173,12 @@ def test_invalid_credentials_flow(
         json={"username": "credential_test", "password": "WrongPassword123!"},
     )
 
-    assert response.status_code in [401, 400]
+    assert response.status_code == 401
+    payload = response.json()
+    assert payload.get("success") is False
+    error = payload.get("error", {})
+    assert isinstance(error, dict)
+    assert error.get("code") == "AUTHENTICATION_ERROR"
 
 
 def test_token_refresh_flow(
@@ -213,13 +220,12 @@ def test_token_refresh_flow(
     refresh_headers = {"X-CSRF-Token": csrf_token} if csrf_token else {}
     refresh_response = client.post("/api/v1/auth/refresh", headers=refresh_headers)
 
-    # Verify refresh works (if implemented)
-    if refresh_response.status_code == 200:
-        new_tokens = refresh_response.json()
-        assert new_tokens.get("auth_mode") == "cookie"
-        new_me_response = client.get("/api/v1/auth/me")
-        assert new_me_response.status_code == 200
-    # Note: If refresh fails, it may be due to session management not being fully set up in test environment
+    assert refresh_response.status_code == 200
+    new_tokens = refresh_response.json()
+    assert new_tokens.get("auth_mode") == "cookie"
+    assert new_tokens.get("message") == "令牌刷新成功"
+    new_me_response = client.get("/api/v1/auth/me")
+    assert new_me_response.status_code == 200
 
 
 def test_logout_flow(
@@ -254,17 +260,18 @@ def test_logout_flow(
     me_response = client.get("/api/v1/auth/me")
     assert me_response.status_code == 200
 
-    # Logout
-    logout_response = client.post("/api/v1/auth/logout")
+    csrf_token = login_response.cookies.get("csrf_token") or client.cookies.get(
+        "csrf_token"
+    )
+    csrf_headers = {"X-CSRF-Token": csrf_token} if csrf_token else {}
 
-    # Try to use token after logout (should fail if token is invalidated)
-    # Note: If using JWT without token blacklist, token might still be valid
-    # This test checks the expected behavior
-    if logout_response.status_code == 200:
-        # If logout is implemented with token invalidation
-        after_logout_response = client.get("/api/v1/auth/me")
-        # Token should be invalidated
-        assert after_logout_response.status_code in [401, 403]
+    # Logout
+    logout_response = client.post("/api/v1/auth/logout", headers=csrf_headers)
+    assert logout_response.status_code == 200
+
+    # Try to use token after logout (should fail due to session revocation)
+    after_logout_response = client.get("/api/v1/auth/me")
+    assert after_logout_response.status_code == 401
 
 
 def test_permission_enforcement(
@@ -308,26 +315,21 @@ def test_permission_enforcement(
     # Test admin endpoint (e.g., list all users)
     # Admin should be able to access
     admin_list_response = admin_client.get("/api/v1/auth/users")
-    # Note: This might return 200 or pagination structure
-    assert admin_list_response.status_code in [200, 206]
+    assert admin_list_response.status_code == 200
 
     # Login as regular user
     user_client.post(
         "/api/v1/auth/login", json={"username": "perm_user", "password": "UserPerm123!"}
     )
 
-    # Regular user should not be able to list all users (or get filtered results)
+    # Regular user should not be able to list all users
     user_list_response = user_client.get("/api/v1/auth/users")
-    # Should either be forbidden or return only own user
-    assert user_list_response.status_code in [200, 403, 404]
-    if user_list_response.status_code == 200:
-        # If allowed, should only return own user
-        users = user_list_response.json()
-        if isinstance(users, list):
-            assert len(users) <= 1
-        elif isinstance(users, dict) and "items" in users:
-            # Paginated response
-            assert len(users["items"]) <= 1
+    assert user_list_response.status_code == 403
+    payload = user_list_response.json()
+    assert payload.get("success") is False
+    error = payload.get("error", {})
+    assert isinstance(error, dict)
+    assert error.get("code") == "PERMISSION_DENIED"
 
 
 @pytest.mark.parametrize(

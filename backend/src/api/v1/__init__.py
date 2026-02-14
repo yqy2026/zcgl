@@ -38,15 +38,13 @@ from .system.collection import router as collection_router
 from .system.contact import router as contact_router
 from .system.dictionaries import router as dictionaries_router
 from .system.enum_field import router as enum_field_router
+from .system.error_recovery import router as error_recovery_router
 from .system.history import router as history_router
 from .system.monitoring import router as monitoring_router
 from .system.notifications import router as notifications_router
 from .system.operation_logs import router as operation_logs_router
 from .system.system import router as system_router
 from .system.tasks import router as tasks_router
-
-# TEMPORARILY DISABLED: error_recovery has Pydantic model issues
-# from .system.error_recovery import router as error_recovery_router
 
 # 尝试导入 PDF 批量路由，如果失败则跳过
 pdf_batch_router: APIRouter | None = None
@@ -137,10 +135,7 @@ api_router.include_router(
 )
 api_router.include_router(contact_router, prefix="/contacts", tags=["联系人管理"])
 api_router.include_router(collection_router, prefix="/collections", tags=["催缴管理"])
-# TEMPORARILY DISABLED: error_recovery has Pydantic model issues
-# api_router.include_router(
-#     error_recovery_router, prefix="/error-recovery", tags=["错误恢复"]
-# )
+api_router.include_router(error_recovery_router, tags=["错误恢复"])
 api_router.include_router(
     llm_prompts_router, prefix="/llm-prompts", tags=["LLM提示词管理"]
 )

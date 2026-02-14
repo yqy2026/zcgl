@@ -538,7 +538,11 @@ const PromptDashboard: React.FC = () => {
 
   if (isInitialLoading === true) {
     return (
-      <PageContainer title="LLM Prompt 性能监控" subTitle="跟踪模板表现并识别优化机会">
+      <PageContainer
+        className={styles.pageShell}
+        title="LLM Prompt 性能监控"
+        subTitle="跟踪模板表现并识别优化机会"
+      >
         <div className={styles.loadingContainer}>
           <Spin size="large" />
         </div>
@@ -562,6 +566,7 @@ const PromptDashboard: React.FC = () => {
 
   return (
     <PageContainer
+      className={styles.pageShell}
       title="LLM Prompt 性能监控"
       subTitle="跟踪模板表现并识别优化机会"
       extra={

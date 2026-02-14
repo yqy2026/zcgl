@@ -1,5 +1,18 @@
+.pageShell {
+  --role-control-height: var(--button-height-lg);
+  --role-touch-target-size: calc(var(--button-height-lg) + var(--spacing-xs));
+  --role-pill-padding-y: calc(var(--spacing-xs) / 2);
+  --role-pill-padding-x: calc(var(--spacing-md) - (var(--spacing-xs) / 2));
+  --role-icon-offset-y: calc(var(--spacing-xs) / 2);
+  --role-switch-height: calc(var(--button-height-sm) - var(--spacing-xs));
+  --role-tree-preview-max-height: 220px;
+  --role-transfer-list-width: 360px;
+  --role-transfer-list-width-mobile: 280px;
+  --role-transfer-list-height: 400px;
+}
+
 .statsRow {
-  margin-bottom: 24px;
+  margin-bottom: var(--spacing-xl);
 }
 
 .statsCard {
@@ -48,10 +61,10 @@
 }
 
 .countPill {
-  min-width: 44px;
-  padding: 2px 10px;
+  min-width: var(--role-touch-target-size);
+  padding: var(--role-pill-padding-y) var(--role-pill-padding-x);
   border-radius: 999px;
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
   line-height: 1.35;
 }
@@ -59,19 +72,19 @@
 .permissionTypeTag,
 .statusTag {
   margin-inline-end: 0;
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
   line-height: 1.35;
 }
 
 .permissionTypeTag {
   border-radius: 999px;
-  padding-inline: 8px;
+  padding-inline: var(--spacing-sm);
 }
 
 .statusTag {
   border-radius: 999px;
-  padding-inline: 8px;
+  padding-inline: var(--spacing-sm);
 }
 
 .countPill.tonePrimary,
@@ -110,7 +123,7 @@
 }
 
 .filtersSection {
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-lg);
 }
 
 .filterSummary {
@@ -118,8 +131,8 @@
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
 }
 
 .fullWidthControl {
@@ -127,7 +140,7 @@
 }
 
 .toolbarButton {
-  min-height: 40px;
+  min-height: var(--role-control-height);
 }
 
 .roleInfoCell {
@@ -136,7 +149,7 @@
 
 .roleInfoIcon {
   color: var(--color-primary);
-  margin-top: 2px;
+  margin-top: var(--role-icon-offset-y);
 }
 
 .roleMeta {
@@ -149,12 +162,12 @@
 }
 
 .roleCodeRow {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
 }
 
 .systemTag {
-  margin-left: 8px;
+  margin-left: var(--spacing-sm);
 }
 
 .modalFooter {
@@ -169,11 +182,11 @@
 
 .modalActionButton,
 .permissionModalActionButton {
-  min-height: 40px;
+  min-height: var(--role-control-height);
 }
 
 .permissionDesc {
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-lg);
 }
 
 .transferTitle {
@@ -181,35 +194,35 @@
 }
 
 .transferDesc {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
 }
 
 .treePreview {
-  margin-top: 8px;
-  max-height: 220px;
+  margin-top: var(--spacing-sm);
+  max-height: var(--role-tree-preview-max-height);
   overflow: auto;
 }
 
 .permissionTree {
   background: var(--color-bg-secondary);
-  padding: 16px;
+  padding: var(--spacing-lg);
   border-radius: var(--card-radius);
 }
 
 .permissionTransfer :global(.ant-transfer-list) {
-  width: min(100%, 360px);
-  height: 400px;
+  width: min(100%, var(--role-transfer-list-width));
+  height: var(--role-transfer-list-height);
 }
 
 .tableActionGroup {
-  gap: 4px;
+  gap: var(--spacing-xs);
 }
 
 .tableActionButton {
-  min-width: 40px;
-  min-height: 40px;
-  border-radius: 8px;
+  min-width: var(--role-control-height);
+  min-height: var(--role-control-height);
+  border-radius: var(--radius-md);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -228,7 +241,7 @@
 }
 
 .statusSwitch {
-  min-height: 28px;
+  min-height: var(--role-switch-height);
 }
 
 @media (max-width: 768px) {
@@ -239,20 +252,20 @@
 
   .toolbarButton {
     width: 100%;
-    min-height: 44px;
+    min-height: var(--role-touch-target-size);
   }
 
   .tableActionButton {
-    min-width: 44px;
-    min-height: 44px;
+    min-width: var(--role-touch-target-size);
+    min-height: var(--role-touch-target-size);
   }
 
   .modalActionButton,
   .permissionModalActionButton {
-    min-height: 44px;
+    min-height: var(--role-touch-target-size);
   }
 
   .permissionTransfer :global(.ant-transfer-list) {
-    width: min(100%, 280px);
+    width: min(100%, var(--role-transfer-list-width-mobile));
   }
 }

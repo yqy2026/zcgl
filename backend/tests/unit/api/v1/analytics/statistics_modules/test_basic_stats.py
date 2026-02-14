@@ -241,9 +241,7 @@ class TestGetDashboardData:
             # Act
             response = client.get("/api/v1/statistics/dashboard")
 
-            # Assert - Dashboard 可能返回 200、400（数据验证失败）或 404
-            # 由于需要复杂的 Mock 数据结构，400 也是可接受的
-            assert response.status_code in [200, 400, 404]
+            assert response.status_code == 200
 
 
 class TestGetComprehensiveStatistics:
@@ -290,8 +288,7 @@ class TestCacheManagement:
         # Act - Statistics 路由可能没有 cache 端点
         response = client.post("/api/v1/statistics/cache/clear")
 
-        # Assert - 端点可能不存在（404）或返回成功（200）
-        assert response.status_code in [200, 404, 405]
+        assert response.status_code == 200
 
     def test_get_cache_info(self, client):
         """
@@ -304,8 +301,7 @@ class TestCacheManagement:
         # Act - Statistics 路由可能没有 cache 端点
         response = client.get("/api/v1/statistics/cache/info")
 
-        # Assert - 端点可能不存在（404）
-        assert response.status_code in [200, 404]
+        assert response.status_code == 200
 
 
 # =============================================================================
@@ -334,8 +330,7 @@ class TestErrorHandling:
             # Act
             response = client.get("/api/v1/statistics/basic")
 
-            # Assert - 可能返回 500 或 503（服务不可用）
-            assert response.status_code in [500, 503]
+            assert response.status_code == 503
 
     def test_unauthorized_access(self, client):
         """

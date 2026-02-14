@@ -10,6 +10,7 @@ import { Card, Table, Tag, Empty } from 'antd';
 import { WalletOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { DepositLedger, DepositTransactionType } from '@/types/rentContract';
+import styles from './DepositLedgerHistory.module.css';
 
 interface DepositLedgerHistoryProps {
   depositLedgers?: DepositLedger[];
@@ -61,8 +62,9 @@ const DepositLedgerHistory: React.FC<DepositLedgerHistoryProps> = ({
       align: 'right',
       render: (amount: number) => {
         // 后端已使用有符号金额（正=收入，负=支出）
+        const amountClassName = amount >= 0 ? styles.positiveAmount : styles.negativeAmount;
         return (
-          <span style={{ color: amount >= 0 ? '#52c41a' : '#ff4d4f' }}>
+          <span className={amountClassName}>
             {amount >= 0 ? '+' : ''}¥{Math.abs(amount).toLocaleString()}
           </span>
         );
@@ -88,11 +90,11 @@ const DepositLedgerHistory: React.FC<DepositLedgerHistoryProps> = ({
     <Card
       title={
         <span>
-          <WalletOutlined style={{ marginRight: 8 }} />
+          <WalletOutlined className={styles.walletIcon} />
           押金变动记录 ({depositLedgers.length})
         </span>
       }
-      style={{ marginBottom: 16 }}
+      className={styles.depositLedgerCard}
     >
       {depositLedgers.length > 0 ? (
         <Table

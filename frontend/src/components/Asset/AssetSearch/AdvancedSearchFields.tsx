@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { Col, Form, Input, InputNumber, DatePicker, Row, Select, Space } from 'antd';
+import styles from './AdvancedSearchFields.module.css';
 
 const { Option } = Select;
 const { RangePicker } = DatePicker;
@@ -91,7 +92,7 @@ export const AdvancedSearchFields = React.memo(function AdvancedSearchFields({
               <InputNumber
                 id="asset-area-min"
                 name="asset-area-min"
-                style={{ width: '45%' }}
+                className={styles.areaInput}
                 placeholder="最小面积"
                 value={areaRange[0]}
                 onChange={onAreaMinChange}
@@ -99,14 +100,14 @@ export const AdvancedSearchFields = React.memo(function AdvancedSearchFields({
               <Input
                 id="asset-area-range-separator"
                 name="asset-area-range-separator"
-                style={{ width: '10%', borderLeft: 0, borderRight: 0, pointerEvents: 'none' }}
+                className={styles.areaRangeSeparator}
                 placeholder="~"
                 disabled
               />
               <InputNumber
                 id="asset-area-max"
                 name="asset-area-max"
-                style={{ width: '45%' }}
+                className={styles.areaInput}
                 placeholder="最大面积"
                 value={areaRange[1]}
                 onChange={onAreaMaxChange}
@@ -117,7 +118,7 @@ export const AdvancedSearchFields = React.memo(function AdvancedSearchFields({
 
         <Col xs={24} sm={12} md={8}>
           <Form.Item name="dateRange" label="创建日期">
-            <RangePicker style={{ width: '100%' }} format="YYYY-MM-DD" />
+            <RangePicker className={styles.fullWidthControl} format="YYYY-MM-DD" />
           </Form.Item>
         </Col>
 
@@ -125,7 +126,7 @@ export const AdvancedSearchFields = React.memo(function AdvancedSearchFields({
           <Form.Item label="排序方式">
             <Space.Compact>
               <Form.Item name="sort_field" noStyle>
-                <Select style={{ width: '60%' }} defaultValue="created_at">
+                <Select className={styles.sortFieldSelect} defaultValue="created_at">
                   <Option value="created_at">创建时间</Option>
                   <Option value="property_name">物业名称</Option>
                   <Option value="actual_property_area">建筑面积</Option>
@@ -134,7 +135,7 @@ export const AdvancedSearchFields = React.memo(function AdvancedSearchFields({
                 </Select>
               </Form.Item>
               <Form.Item name="sort_order" noStyle>
-                <Select style={{ width: '40%' }} defaultValue="desc">
+                <Select className={styles.sortOrderSelect} defaultValue="desc">
                   <Option value="asc">升序</Option>
                   <Option value="desc">降序</Option>
                 </Select>

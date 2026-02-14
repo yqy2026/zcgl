@@ -1,0 +1,15 @@
+.optionContainer {
+  --dictionary-select-option-gap: var(--spacing-sm);
+  --dictionary-select-swatch-size: var(--spacing-md);
+  --dictionary-select-swatch-radius: calc(var(--spacing-xs) / 2);
+  display: flex;
+  align-items: center;
+  gap: var(--dictionary-select-option-gap);
+}
+
+.colorSwatch {
+  width: var(--dictionary-select-swatch-size);
+  height: var(--dictionary-select-swatch-size);
+  border-radius: var(--dictionary-select-swatch-radius);
+  display: inline-block;
+}

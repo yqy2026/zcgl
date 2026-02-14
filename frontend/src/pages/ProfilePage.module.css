@@ -1,16 +1,19 @@
 .sectionCard {
-  border-radius: 12px;
+  --profile-action-height: calc(var(--button-height-lg) + var(--spacing-xs));
+  --profile-avatar-size: calc((var(--spacing-xxxl) * 2) - var(--spacing-lg));
+  --profile-avatar-icon-size: calc(var(--spacing-xl) + var(--spacing-sm));
+  border-radius: var(--radius-lg);
 }
 
 .sectionTitle {
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-sm);
   font-weight: var(--font-weight-semibold);
 }
 
 .primaryActionButton {
-  min-height: 44px;
-  border-radius: 8px;
+  min-height: var(--profile-action-height);
+  border-radius: var(--radius-md);
 }
 
 .primaryActionButton:focus-visible {
@@ -23,9 +26,9 @@
 }
 
 .avatarContainer {
-  width: 80px;
-  height: 80px;
-  margin: 0 auto 16px;
+  width: var(--profile-avatar-size);
+  height: var(--profile-avatar-size);
+  margin: 0 auto var(--spacing-lg);
   border-radius: 50%;
   background: var(--color-bg-quaternary);
   display: flex;
@@ -34,7 +37,7 @@
 }
 
 .avatarIcon {
-  font-size: 32px;
+  font-size: var(--profile-avatar-icon-size);
   color: var(--color-primary);
 }
 
@@ -47,13 +50,13 @@
 }
 
 .securityActionCard {
-  padding: 16px;
+  padding: var(--spacing-lg);
   background: var(--color-bg-secondary);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 16px;
+  gap: var(--spacing-lg);
 }
 
 .securityActionMeta {
@@ -65,12 +68,12 @@
 }
 
 .securityActionHint {
-  font-size: 13px;
+  font-size: var(--font-size-sm);
 }
 
 .securityActionButton {
-  min-height: 44px;
-  border-radius: 8px;
+  min-height: var(--profile-action-height);
+  border-radius: var(--radius-md);
   flex-shrink: 0;
 }
 
@@ -80,7 +83,7 @@
 }
 
 .modalForm {
-  margin-top: 16px;
+  margin-top: var(--spacing-lg);
 }
 
 .formActions {
@@ -89,7 +92,7 @@
 }
 
 .formActionButtons {
-  gap: 8px;
+  gap: var(--spacing-sm);
 }
 
 @media (max-width: 768px) {

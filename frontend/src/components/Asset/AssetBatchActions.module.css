@@ -1,0 +1,17 @@
+.batchActionCard {
+  margin-bottom: var(--spacing-lg);
+}
+
+.batchActionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.clearSelectionButton {
+  padding: 0 var(--spacing-sm);
+}
+
+.batchEditAlert {
+  margin-bottom: var(--spacing-lg);
+}

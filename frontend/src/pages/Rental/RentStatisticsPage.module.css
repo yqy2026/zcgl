@@ -1,4 +1,9 @@
 .statisticsPage {
+  --rent-stats-range-width: calc((var(--spacing-xxl) * 9) + var(--spacing-md));
+  --rent-stats-year-width: calc(var(--button-height-lg) * 3);
+  --rent-stats-action-min-width: calc((var(--button-height-lg) * 2) + var(--spacing-sm));
+  --rent-stats-tag-line-height: var(--font-size-xl);
+  --rent-stats-action-min-height-mobile: calc(var(--button-height-lg) + var(--spacing-xs));
   width: 100%;
 }
 
@@ -7,14 +12,14 @@
 }
 
 .headerSection {
-  margin-bottom: 24px;
+  margin-bottom: var(--spacing-xl);
 }
 
 .pageTitle {
   margin: 0 !important;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-sm);
 }
 
 .headerActions {
@@ -27,27 +32,27 @@
 }
 
 .dateRangePicker {
-  width: 300px;
+  width: var(--rent-stats-range-width);
 }
 
 .yearSelect {
-  width: 120px;
+  width: var(--rent-stats-year-width);
 }
 
 .actionButton {
-  min-width: 88px;
+  min-width: var(--rent-stats-action-min-width);
 }
 
 .overviewRow {
-  margin-bottom: 24px;
+  margin-bottom: var(--spacing-xl);
 }
 
 .operationRow {
-  margin-bottom: 24px;
+  margin-bottom: var(--spacing-xl);
 }
 
 .sectionTitle {
-  margin-bottom: 16px !important;
+  margin-bottom: var(--spacing-lg) !important;
 }
 
 .metricCard {
@@ -55,7 +60,7 @@
 }
 
 .metricCard :global(.ant-card-body) {
-  padding: 20px;
+  padding: calc(var(--spacing-lg) + var(--spacing-xs));
 }
 
 .tonePrimary {
@@ -84,16 +89,16 @@
 .nameCell {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: calc(var(--spacing-xs) / 2);
 }
 
 .primaryText {
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
 }
 
 .secondaryText {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
   line-height: 1.4;
 }
@@ -124,9 +129,9 @@
   margin-inline-end: 0;
   border-radius: 999px;
   border: 1px solid transparent;
-  padding-inline: 8px;
-  font-size: 12px;
-  line-height: 18px;
+  padding-inline: var(--spacing-sm);
+  font-size: var(--font-size-xs);
+  line-height: var(--rent-stats-tag-line-height);
 }
 
 .statusTag.toneSuccess {
@@ -154,7 +159,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--spacing-sm);
 }
 
 @media (max-width: 992px) {
@@ -165,11 +170,11 @@
 
 @media (max-width: 768px) {
   .headerActions {
-    margin-top: 12px;
+    margin-top: var(--spacing-md);
   }
 
   .headerActionGroup {
-    gap: 8px;
+    gap: var(--spacing-sm);
   }
 
   .dateRangePicker,
@@ -178,6 +183,6 @@
   }
 
   .actionButton {
-    min-height: 40px;
+    min-height: var(--rent-stats-action-min-height-mobile);
   }
 }

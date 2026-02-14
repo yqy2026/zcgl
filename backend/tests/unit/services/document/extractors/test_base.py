@@ -6,9 +6,6 @@ Unit Tests for Base Extractor Classes
 Tests for:
 - ContractExtractorInterface (abstract interface)
 - BaseVisionAdapter (base class with common utilities)
-
-NOTE: Tests for extract() method are skipped because pdf_to_images module
-is not yet implemented (as noted in test_pdf_edge_cases.py).
 """
 
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -122,14 +119,10 @@ class TestBaseVisionAdapterProperties:
 
 
 class TestBaseVisionAdapterExtract:
-    """Tests for BaseVisionAdapter.extract() method
-
-    All tests skipped because pdf_to_images module is not yet implemented.
-    """
+    """Tests for BaseVisionAdapter.extract() method"""
 
     @pytest.mark.unit
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="pdf_to_images module not yet implemented")
     async def test_extract_returns_error_when_service_unavailable(self):
         """Should return error when vision service is not available"""
         adapter = ConcreteAdapter(is_available=False)
@@ -142,13 +135,13 @@ class TestBaseVisionAdapterExtract:
 
     @pytest.mark.unit
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="pdf_to_images module not yet implemented")
     async def test_extract_returns_error_when_no_images_converted(self):
         """Should return error when PDF conversion produces no images"""
         adapter = ConcreteAdapter(is_available=True)
 
         with patch(
-            "src.services.document.extractors.base.pdf_to_images", return_value=[]
+            "src.services.document.pdf_to_images.pdf_to_images_async",
+            new=AsyncMock(return_value=[]),
         ):
             result = await adapter.extract("/fake/path.pdf")
 
@@ -157,7 +150,6 @@ class TestBaseVisionAdapterExtract:
 
     @pytest.mark.unit
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="pdf_to_images module not yet implemented")
     async def test_extract_successful_single_page(self):
         """Should successfully extract from single page"""
         adapter = ConcreteAdapter(is_available=True)
@@ -171,8 +163,8 @@ class TestBaseVisionAdapterExtract:
         adapter.vision_service.extract_from_images.return_value = mock_response
 
         with patch(
-            "src.services.document.extractors.base.pdf_to_images",
-            return_value=image_paths,
+            "src.services.document.pdf_to_images.pdf_to_images_async",
+            new=AsyncMock(return_value=image_paths),
         ):
             result = await adapter.extract("/fake/path.pdf")
 
@@ -184,7 +176,6 @@ class TestBaseVisionAdapterExtract:
 
     @pytest.mark.unit
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="pdf_to_images module not yet implemented")
     async def test_extract_successful_multiple_pages_batching(self):
         """Should successfully extract from multiple pages with batching"""
         adapter = ConcreteAdapter(is_available=True)
@@ -198,8 +189,8 @@ class TestBaseVisionAdapterExtract:
         adapter.vision_service.extract_from_images.return_value = mock_response
 
         with patch(
-            "src.services.document.extractors.base.pdf_to_images",
-            return_value=image_paths,
+            "src.services.document.pdf_to_images.pdf_to_images_async",
+            new=AsyncMock(return_value=image_paths),
         ):
             result = await adapter.extract("/fake/path.pdf", batch_size=2)
 
@@ -209,7 +200,6 @@ class TestBaseVisionAdapterExtract:
 
     @pytest.mark.unit
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="pdf_to_images module not yet implemented")
     async def test_extract_with_custom_parameters(self):
         """Should pass custom parameters correctly"""
         adapter = ConcreteAdapter(is_available=True)
@@ -222,21 +212,22 @@ class TestBaseVisionAdapterExtract:
         adapter.vision_service.extract_from_images.return_value = mock_response
 
         with patch(
-            "src.services.document.extractors.base.pdf_to_images",
-            return_value=image_paths,
+            "src.services.document.pdf_to_images.pdf_to_images_async",
+            new=AsyncMock(return_value=image_paths),
         ) as mock_convert:
             result = await adapter.extract(
                 "/fake/path.pdf", max_pages=5, dpi=300, batch_size=2
             )
 
             # Verify pdf_to_images was called with correct parameters
-            mock_convert.assert_called_once_with("/fake/path.pdf", dpi=300, max_pages=5)
+            mock_convert.assert_awaited_once_with(
+                "/fake/path.pdf", dpi=300, max_pages=5
+            )
 
         assert result["success"] is True
 
     @pytest.mark.unit
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="pdf_to_images module not yet implemented")
     async def test_extract_handles_batch_failure(self):
         """Should handle batch failures gracefully"""
         adapter = ConcreteAdapter(is_available=True)
@@ -250,8 +241,8 @@ class TestBaseVisionAdapterExtract:
         ]
 
         with patch(
-            "src.services.document.extractors.base.pdf_to_images",
-            return_value=image_paths,
+            "src.services.document.pdf_to_images.pdf_to_images_async",
+            new=AsyncMock(return_value=image_paths),
         ):
             result = await adapter.extract("/fake/path.pdf", batch_size=1)
 
@@ -261,7 +252,6 @@ class TestBaseVisionAdapterExtract:
 
     @pytest.mark.unit
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="pdf_to_images module not yet implemented")
     async def test_extract_returns_error_when_all_batches_fail(self):
         """Should return error when all batches fail"""
         adapter = ConcreteAdapter(is_available=True)
@@ -270,8 +260,8 @@ class TestBaseVisionAdapterExtract:
         adapter.vision_service.extract_from_images.side_effect = Exception("API Error")
 
         with patch(
-            "src.services.document.extractors.base.pdf_to_images",
-            return_value=image_paths,
+            "src.services.document.pdf_to_images.pdf_to_images_async",
+            new=AsyncMock(return_value=image_paths),
         ):
             result = await adapter.extract("/fake/path.pdf", batch_size=1)
 
@@ -281,7 +271,6 @@ class TestBaseVisionAdapterExtract:
 
     @pytest.mark.unit
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="pdf_to_images module not yet implemented")
     async def test_extract_cleans_up_temp_images_on_success(self):
         """Should clean up temporary images on success"""
         adapter = ConcreteAdapter(is_available=True)
@@ -294,11 +283,11 @@ class TestBaseVisionAdapterExtract:
         adapter.vision_service.extract_from_images.return_value = mock_response
 
         with patch(
-            "src.services.document.extractors.base.pdf_to_images",
-            return_value=image_paths,
+            "src.services.document.pdf_to_images.pdf_to_images_async",
+            new=AsyncMock(return_value=image_paths),
         ):
             with patch(
-                "src.services.document.extractors.base.cleanup_temp_images"
+                "src.services.document.pdf_to_images.cleanup_temp_images"
             ) as mock_cleanup:
                 result = await adapter.extract("/fake/path.pdf")
 
@@ -308,7 +297,6 @@ class TestBaseVisionAdapterExtract:
 
     @pytest.mark.unit
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="pdf_to_images module not yet implemented")
     async def test_extract_cleans_up_temp_images_on_failure(self):
         """Should clean up temporary images even on failure"""
         adapter = ConcreteAdapter(is_available=True)
@@ -317,11 +305,11 @@ class TestBaseVisionAdapterExtract:
         adapter.vision_service.extract_from_images.side_effect = Exception("API Error")
 
         with patch(
-            "src.services.document.extractors.base.pdf_to_images",
-            return_value=image_paths,
+            "src.services.document.pdf_to_images.pdf_to_images_async",
+            new=AsyncMock(return_value=image_paths),
         ):
             with patch(
-                "src.services.document.extractors.base.cleanup_temp_images"
+                "src.services.document.pdf_to_images.cleanup_temp_images"
             ) as mock_cleanup:
                 result = await adapter.extract("/fake/path.pdf")
 
@@ -331,14 +319,13 @@ class TestBaseVisionAdapterExtract:
 
     @pytest.mark.unit
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="pdf_to_images module not yet implemented")
     async def test_extract_handles_exception_in_conversion(self):
         """Should handle exceptions during PDF conversion"""
         adapter = ConcreteAdapter(is_available=True)
 
         with patch(
-            "src.services.document.extractors.base.pdf_to_images",
-            side_effect=Exception("Conversion failed"),
+            "src.services.document.pdf_to_images.pdf_to_images_async",
+            new=AsyncMock(side_effect=Exception("Conversion failed")),
         ):
             result = await adapter.extract("/fake/path.pdf")
 
@@ -1130,7 +1117,6 @@ class TestBaseVisionAdapterIntegration:
 
     @pytest.mark.unit
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="pdf_to_images module not yet implemented")
     async def test_full_extraction_workflow_success(self):
         """Test complete successful extraction workflow"""
         adapter = ConcreteAdapter(is_available=True)
@@ -1152,8 +1138,8 @@ class TestBaseVisionAdapterIntegration:
         ]
 
         with patch(
-            "src.services.document.extractors.base.pdf_to_images",
-            return_value=image_paths,
+            "src.services.document.pdf_to_images.pdf_to_images_async",
+            new=AsyncMock(return_value=image_paths),
         ):
             result = await adapter.extract("/fake/path.pdf", batch_size=1)
 
@@ -1169,7 +1155,6 @@ class TestBaseVisionAdapterIntegration:
 
     @pytest.mark.unit
     @pytest.mark.asyncio
-    @pytest.mark.skip(reason="pdf_to_images module not yet implemented")
     async def test_full_extraction_workflow_with_retry(self):
         """Test extraction workflow with retry logic"""
         adapter = ConcreteAdapter(is_available=True)
@@ -1187,8 +1172,8 @@ class TestBaseVisionAdapterIntegration:
         ]
 
         with patch(
-            "src.services.document.extractors.base.pdf_to_images",
-            return_value=image_paths,
+            "src.services.document.pdf_to_images.pdf_to_images_async",
+            new=AsyncMock(return_value=image_paths),
         ):
             result = await adapter.extract("/fake/path.pdf")
 

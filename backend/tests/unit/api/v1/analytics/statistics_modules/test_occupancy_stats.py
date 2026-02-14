@@ -122,5 +122,4 @@ class TestOccupancyStatistics:
         # Act
         response = client.get("/api/v1/statistics/occupancy-rate/trend")
 
-        # Assert - 端点可能不存在，返回 404 或 200
-        assert response.status_code in [200, 404]
+        assert response.status_code == 404

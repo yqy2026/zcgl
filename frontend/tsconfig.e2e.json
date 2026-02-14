@@ -6,9 +6,7 @@
   },
   "include": [
     "playwright.config.ts",
-    "src/e2e/**/*.ts",
-    "tests/e2e/**/*.ts",
-    "types/playwright-test.d.ts"
+    "tests/e2e/**/*.ts"
   ],
   "exclude": ["node_modules", "dist"]
 }

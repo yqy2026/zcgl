@@ -94,12 +94,6 @@ def pytest_collection_modifyitems(items, config):
 
     这个钩子在测试收集完成后、测试执行前被调用
     """
-    has_integration_db_url = bool(
-        os.getenv("INTEGRATION_TEST_DATABASE_URL")
-        or os.getenv("TEST_DATABASE_URL")
-        or os.getenv("TEST_USE_POSTGRES") == "true"
-    )
-
     for item in items:
         # 获取测试文件的路径
         test_path = str(item.fspath)
@@ -114,12 +108,6 @@ def pytest_collection_modifyitems(items, config):
         ):
             if "integration" not in existing_marks:
                 item.add_marker(pytest.mark.integration)
-            if not has_integration_db_url:
-                item.add_marker(
-                    pytest.mark.skip(
-                        reason="INTEGRATION_TEST_DATABASE_URL or TEST_DATABASE_URL is required"
-                    )
-                )
         elif "/tests/api/" in test_path or "\\tests\\api\\" in test_path:
             if "api" not in existing_marks:
                 item.add_marker(pytest.mark.api)

@@ -15,6 +15,7 @@ import {
   ReloadOutlined,
   ArrowLeftOutlined,
 } from '@ant-design/icons';
+import styles from './ErrorState.module.css';
 
 const { Text, Paragraph } = Typography;
 
@@ -111,12 +112,12 @@ const DEFAULT_ERRORS: Record<ErrorType, { title: string; message: string }> = {
  * Error icons by type
  */
 const ERROR_ICONS: Record<ErrorType, React.ReactNode> = {
-  '404': <CloseCircleOutlined style={{ fontSize: 72, color: 'var(--color-error)' }} />,
-  '500': <WarningOutlined style={{ fontSize: 72, color: 'var(--color-warning)' }} />,
-  '403': <InfoCircleOutlined style={{ fontSize: 72, color: 'var(--color-warning)' }} />,
-  'network': <WarningOutlined style={{ fontSize: 72, color: 'var(--color-warning)' }} />,
-  permission: <InfoCircleOutlined style={{ fontSize: 72, color: 'var(--color-warning)' }} />,
-  custom: <CloseCircleOutlined style={{ fontSize: 72, color: 'var(--color-error)' }} />,
+  '404': <CloseCircleOutlined className={styles.errorIcon} />,
+  '500': <WarningOutlined className={styles.warningIcon} />,
+  '403': <InfoCircleOutlined className={styles.warningIcon} />,
+  'network': <WarningOutlined className={styles.warningIcon} />,
+  permission: <InfoCircleOutlined className={styles.warningIcon} />,
+  custom: <CloseCircleOutlined className={styles.errorIcon} />,
 };
 
 /**
@@ -140,19 +141,15 @@ export const ErrorState: React.FC<ErrorStateConfig> = ({
   const errorTitle = title || defaultError.title;
   const errorMessage = message || defaultError.message;
   const icon = ERROR_ICONS[type];
+  const containerClassName =
+    className !== undefined && className !== ''
+      ? `${styles.errorState} ${className}`
+      : styles.errorState;
 
   return (
     <div
-      className={className}
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '400px',
-        padding: 'var(--spacing-xl)',
-        ...style,
-      }}
+      className={containerClassName}
+      style={style}
       role="alert"
       aria-live="assertive"
       aria-atomic="true"
@@ -163,18 +160,18 @@ export const ErrorState: React.FC<ErrorStateConfig> = ({
         title={errorTitle}
         subTitle={
           <div>
-            <Paragraph style={{ marginBottom: 0 }}>
+            <Paragraph className={styles.errorMessageParagraph}>
               {errorMessage}
             </Paragraph>
             {errorCode && (
-              <Text type="secondary" style={{ fontSize: 'var(--font-size-sm)' }}>
+              <Text type="secondary" className={styles.errorCodeText}>
                 错误代码: {errorCode}
               </Text>
             )}
           </div>
         }
         extra={
-          <Space direction="vertical" size="small" style={{ gap: 'var(--spacing-md)' }}>
+          <Space direction="vertical" size="small" className={styles.actionSpace}>
             {/* Primary action */}
             {primaryAction && (
               <Button
@@ -205,19 +202,13 @@ export const ErrorState: React.FC<ErrorStateConfig> = ({
               <Alert
                 message="技术详情"
                 description={
-                  <Text
-                    code
-                    style={{
-                      fontSize: 'var(--font-size-xs)',
-                      color: 'var(--color-text-tertiary)',
-                    }}
-                  >
+                  <Text code className={styles.technicalDetailText}>
                     {errorDetails || '暂无详细信息'}
                   </Text>
                 }
                 type="info"
                 showIcon
-                style={{ maxWidth: 600 }}
+                className={styles.technicalAlert}
               />
             )}
           </Space>
@@ -268,30 +259,27 @@ export const ComponentError: React.FC<ComponentErrorProps> = ({
   className,
   style,
 }) => {
+  const containerClassName =
+    className !== undefined && className !== ''
+      ? `${styles.componentError} ${className}`
+      : styles.componentError;
+
   return (
     <div
-      className={className}
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 'var(--spacing-xxl)',
-        textAlign: 'center',
-        ...style,
-      }}
+      className={containerClassName}
+      style={style}
       role="alert"
       aria-live="assertive"
       aria-atomic="true"
     >
       {ERROR_ICONS[type]}
-      <div style={{ marginTop: 'var(--spacing-lg)' }}>
-        <Text type="danger" style={{ fontSize: 'var(--font-size-lg)' }}>
+      <div className={styles.componentMessageContainer}>
+        <Text type="danger" className={styles.componentMessageText}>
           {message}
         </Text>
       </div>
       {showRetry && onRetry && (
-        <div style={{ marginTop: 'var(--spacing-lg)' }}>
+        <div className={styles.componentActionContainer}>
           <Button
             icon={<ReloadOutlined />}
             onClick={onRetry}

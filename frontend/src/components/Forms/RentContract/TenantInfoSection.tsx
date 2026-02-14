@@ -1,5 +1,6 @@
 import React from 'react';
 import { Form, Input, Row, Col, Card } from 'antd';
+import styles from './TenantInfoSection.module.css';
 
 /**
  * RentContractForm - Lessee Info Section
@@ -7,7 +8,7 @@ import { Form, Input, Row, Col, Card } from 'antd';
  */
 const TenantInfoSection: React.FC = () => {
   return (
-    <Card title="承租方信息" size="small" style={{ marginBottom: 16 }}>
+    <Card title="承租方信息" size="small" className={styles.tenantInfoCard}>
       <Row gutter={16}>
         <Col span={12}>
           <Form.Item

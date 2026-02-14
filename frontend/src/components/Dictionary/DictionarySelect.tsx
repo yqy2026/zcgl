@@ -9,6 +9,7 @@ import type { SelectProps } from 'antd';
 import { useDictionary } from '@/hooks/useDictionary';
 import { dictionaryService } from '@/services/dictionary';
 import type { DictionaryOption } from '@/services/dictionary';
+import styles from './DictionarySelect.module.css';
 
 interface DictionarySelectProps extends Omit<
   SelectProps<string, DictionaryOption>,
@@ -25,6 +26,10 @@ interface DictionarySelectProps extends Omit<
   /** 自定义选项渲染 */
   optionRender?: (option: DictionaryOption) => React.ReactNode;
 }
+
+const buildColorSwatchStyle = (color: string): React.CSSProperties => ({
+  backgroundColor: color,
+});
 
 const DictionarySelect: React.FC<DictionarySelectProps> = ({
   dictType,
@@ -53,19 +58,14 @@ const DictionarySelect: React.FC<DictionarySelectProps> = ({
     }
 
     return (
-      <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <span className={styles.optionContainer}>
         {showColor &&
           option.color !== undefined &&
           option.color !== null &&
           option.color !== '' && (
             <span
-              style={{
-                width: '12px',
-                height: '12px',
-                borderRadius: '2px',
-                backgroundColor: option.color,
-                display: 'inline-block',
-              }}
+              className={styles.colorSwatch}
+              style={buildColorSwatchStyle(option.color)}
             />
           )}
         {showIcon && option.icon !== undefined && option.icon !== null && option.icon !== '' && (

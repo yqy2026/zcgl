@@ -1,0 +1,14 @@
+.routeErrorContainer {
+  padding: calc(var(--spacing-xxxl) + (var(--spacing-xs) / 2));
+  text-align: center;
+  color: var(--color-error);
+}
+
+.boundaryErrorContainer {
+  padding: calc(var(--spacing-lg) + var(--spacing-xs));
+  text-align: center;
+  color: var(--color-error);
+  border: 1px solid var(--color-error);
+  border-radius: var(--button-radius);
+  margin: calc(var(--spacing-lg) + var(--spacing-xs));
+}

@@ -1,7 +1,9 @@
 .statsRow {
-  margin-top: 16px;
+  --upload-stats-row-gap: var(--spacing-lg);
+  --upload-stats-font-size: var(--font-size-base);
+  margin-top: var(--upload-stats-row-gap);
 }
 
 .recommendedMethodStatistic :global(.ant-statistic-content) {
-  font-size: 14px;
+  font-size: var(--upload-stats-font-size);
 }

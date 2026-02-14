@@ -1,8 +1,8 @@
 .loadingFallback {
-  padding: 60px;
+  padding: calc(var(--spacing-xxxl) + var(--spacing-md));
   text-align: center;
 }
 
 .loadingText {
-  margin-top: 16px;
+  margin-top: var(--spacing-lg);
 }

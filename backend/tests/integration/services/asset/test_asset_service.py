@@ -4,6 +4,7 @@ AssetService 集成测试
 """
 
 from decimal import Decimal
+from uuid import uuid4
 
 import pytest
 from sqlalchemy import select
@@ -190,80 +191,90 @@ class TestAssetQuery:
         self.db = db_session
         self.service = asset_service
         self.factory = AssetTestDataFactory()
+        self.query_marker = f"asset-query-{uuid4().hex}"
 
-        ownership_a = Ownership(id="ownership-a", name="公司A", code="OWN-A")
-        ownership_b = Ownership(id="ownership-b", name="公司B", code="OWN-B")
+        ownership_a = Ownership(
+            id=f"ownership-a-{uuid4().hex}",
+            name=f"公司A-{self.query_marker}",
+            code=f"OWN-A-{uuid4().hex[:8]}",
+        )
+        ownership_b = Ownership(
+            id=f"ownership-b-{uuid4().hex}",
+            name=f"公司B-{self.query_marker}",
+            code=f"OWN-B-{uuid4().hex[:8]}",
+        )
         self.db.add_all([ownership_a, ownership_b])
         await self.db.flush()
 
         self.ownership_a = ownership_a
         self.ownership_b = ownership_b
+        self.asset_name_a = f"物业A-{self.query_marker}"
+        self.asset_name_b = f"物业B-{self.query_marker}"
 
         # 创建测试数据
         self.asset1 = await self.service.create_asset(
             AssetCreate(
                 **self.factory.create_asset_dict(
-                    property_name="物业A", ownership_id=ownership_a.id
+                    property_name=self.asset_name_a, ownership_id=ownership_a.id
                 )
             )
         )
         self.asset2 = await self.service.create_asset(
             AssetCreate(
                 **self.factory.create_asset_dict(
-                    property_name="物业B", ownership_id=ownership_b.id
+                    property_name=self.asset_name_b, ownership_id=ownership_b.id
                 )
             )
         )
 
     async def test_get_assets_returns_list(self):
         """测试获取资产列表"""
-        # 简化测试，避免字段白名单问题
-        try:
-            assets, total = await self.service.get_assets(skip=0, limit=100)
-            # 只验证不抛异常
-            assert isinstance(assets, list)
-            assert isinstance(total, int)
-        except Exception:
-            # 字段白名单限制是预期的
-            pass
+        assets, total = await self.service.get_assets(
+            skip=0, limit=100, search=self.query_marker
+        )
+
+        assert isinstance(assets, list)
+        assert total == 2
+        asset_names = {asset.property_name for asset in assets}
+        assert asset_names == {self.asset_name_a, self.asset_name_b}
 
     async def test_get_assets_with_pagination(self):
         """测试分页获取资产"""
-        # 简化测试
-        try:
-            assets, total = await self.service.get_assets(skip=0, limit=1)
-            assert isinstance(assets, list)
-        except Exception:
-            pass
+        assets, total = await self.service.get_assets(
+            skip=0, limit=1, search=self.query_marker
+        )
+
+        assert isinstance(assets, list)
+        assert len(assets) == 1
+        assert total == 2
 
     async def test_get_assets_with_search(self):
         """测试搜索资产"""
-        # 由于字段白名单限制，测试基本功能
-        try:
-            assets, total = await self.service.get_assets(search="物业")
-            # 只验证不抛异常
-            assert isinstance(assets, list)
-            assert isinstance(total, int)
-        except Exception:
-            # 字段白名单限制是预期的安全特性
-            pass
+        assets, total = await self.service.get_assets(search=self.asset_name_a)
+
+        assert isinstance(assets, list)
+        assert total == 1
+        assert len(assets) == 1
+        assert assets[0].property_name == self.asset_name_a
 
     async def test_get_assets_without_relations_serializes_ownership_entity(self):
         """测试非关联查询结果可安全序列化 ownership_entity（避免懒加载异常）"""
         assets, _ = await self.service.get_assets(
-            skip=0, limit=100, include_relations=False
+            skip=0,
+            limit=100,
+            include_relations=False,
+            search=self.query_marker,
         )
         serialized = [AssetListItemResponse.model_validate(asset) for asset in assets]
         ownership_entities = {item.ownership_entity for item in serialized}
-        assert "公司A" in ownership_entities
-        assert "公司B" in ownership_entities
+        assert ownership_entities == {self.ownership_a.name, self.ownership_b.name}
 
     async def test_get_asset_by_id_success(self):
         """测试根据ID获取资产"""
         asset = await self.service.get_asset(self.asset1.id)
 
         assert asset.id == self.asset1.id
-        assert asset.property_name == "物业A"
+        assert asset.property_name == self.asset_name_a
 
     async def test_get_asset_by_id_not_found_raises_error(self):
         """测试获取不存在的资产抛出异常"""
@@ -402,18 +413,29 @@ class TestFieldValuesQuery:
         self.db = db_session
         self.service = asset_service
         self.factory = AssetTestDataFactory()
+        self.field_values_marker = f"asset-field-values-{uuid4().hex}"
 
-        ownership_a = Ownership(id="ownership-a", name="公司A", code="OWN-A")
-        ownership_b = Ownership(id="ownership-b", name="公司B", code="OWN-B")
+        ownership_a = Ownership(
+            id=f"ownership-a-{uuid4().hex}",
+            name=f"公司A-{self.field_values_marker}",
+            code=f"OWN-A-{uuid4().hex[:8]}",
+        )
+        ownership_b = Ownership(
+            id=f"ownership-b-{uuid4().hex}",
+            name=f"公司B-{self.field_values_marker}",
+            code=f"OWN-B-{uuid4().hex[:8]}",
+        )
         self.db.add_all([ownership_a, ownership_b])
         await self.db.flush()
+        self.ownership_a = ownership_a
+        self.ownership_b = ownership_b
 
         # 创建测试数据
         await self.service.create_asset(
             AssetCreate(
                 **self.factory.create_asset_dict(
                     ownership_id=ownership_a.id,
-                    property_name="字段值测试物业A",
+                    property_name=f"字段值测试物业A-{self.field_values_marker}",
                 )
             )
         )
@@ -421,7 +443,7 @@ class TestFieldValuesQuery:
             AssetCreate(
                 **self.factory.create_asset_dict(
                     ownership_id=ownership_b.id,
-                    property_name="字段值测试物业B",
+                    property_name=f"字段值测试物业B-{self.field_values_marker}",
                 )
             )
         )
@@ -429,19 +451,16 @@ class TestFieldValuesQuery:
             AssetCreate(
                 **self.factory.create_asset_dict(
                     ownership_id=ownership_a.id,  # 重复
-                    property_name="字段值测试物业C",
+                    property_name=f"字段值测试物业C-{self.field_values_marker}",
                 )
             )
         )
 
     async def test_get_distinct_field_values(self):
         """测试获取字段唯一值"""
-        # 注意: 字段白名单限制，这个测试可能不工作
-        # 我们只验证方法调用不报错
-        try:
-            values = await self.service.get_distinct_field_values("ownership_id")
-            # 如果字段白名单允许，会返回结果
-            assert isinstance(values, list)
-        except Exception:
-            # 字段白名单限制，这是预期的
-            pass
+        values = await self.service.get_distinct_field_values("ownership_id")
+
+        assert isinstance(values, list)
+        assert self.ownership_a.id in values
+        assert self.ownership_b.id in values
+        assert values.count(self.ownership_a.id) == 1

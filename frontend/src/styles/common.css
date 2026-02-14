@@ -5,33 +5,33 @@
 
 /* Page Container */
 .pageContainer {
-  padding: 24px;
+  padding: var(--spacing-xl);
 }
 
 .pageContainerCenter {
-  padding: 24px;
+  padding: var(--spacing-xl);
   text-align: center;
 }
 
 .pageContainerCompact {
-  padding: 16px;
+  padding: var(--spacing-lg);
 }
 
 .pageContainerSpacious {
-  padding: 32px;
+  padding: var(--spacing-xxl);
 }
 
 /* Responsive Page Container - Uses clamp() for fluid spacing */
 .pageContainerResponsive {
-  padding: clamp(12px, 2vw, 24px);
+  padding: clamp(var(--spacing-md), 2vw, var(--spacing-xl));
 }
 
 .pageContainerResponsiveCompact {
-  padding: clamp(8px, 1.5vw, 16px);
+  padding: clamp(var(--spacing-sm), 1.5vw, var(--spacing-lg));
 }
 
 .pageContainerResponsiveSpacious {
-  padding: clamp(16px, 3vw, 32px);
+  padding: clamp(var(--spacing-lg), 3vw, var(--spacing-xxl));
 }
 
 /* Loading and Empty States */
@@ -40,7 +40,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: var(--spacing-xl);
   text-align: center;
   min-height: 200px;
 }
@@ -50,18 +50,13 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 40px 24px;
+  padding: calc(var(--spacing-xxl) + var(--spacing-sm)) var(--spacing-xl);
   text-align: center;
   min-height: 300px;
 }
 
 .errorContainer {
-  padding: 24px;
-}
-
-/* Responsive Page Container */
-.pageContainerResponsive {
-  padding: clamp(12px, 2vw, 24px);
+  padding: var(--spacing-xl);
 }
 
 /* Flex Layout Utilities */
@@ -89,35 +84,35 @@
 
 /* Spacing Utilities */
 .marginBottomSm {
-  margin-bottom: 8px;
+  margin-bottom: var(--spacing-sm);
 }
 
 .marginBottomMd {
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-lg);
 }
 
 .marginBottomLg {
-  margin-bottom: 24px;
+  margin-bottom: var(--spacing-xl);
 }
 
 .marginBottomResponsive {
-  margin-bottom: clamp(8px, 1.5vw, 16px);
+  margin-bottom: clamp(var(--spacing-sm), 1.5vw, var(--spacing-lg));
 }
 
 .marginTopSm {
-  margin-top: 8px;
+  margin-top: var(--spacing-sm);
 }
 
 .marginTopMd {
-  margin-top: 16px;
+  margin-top: var(--spacing-lg);
 }
 
 .marginTopLg {
-  margin-top: 24px;
+  margin-top: var(--spacing-xl);
 }
 
 .marginTopResponsive {
-  margin-top: clamp(8px, 1.5vw, 16px);
+  margin-top: clamp(var(--spacing-sm), 1.5vw, var(--spacing-lg));
 }
 
 /* Responsive padding utilities */

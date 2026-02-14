@@ -7,6 +7,7 @@ import { PlusOutlined, ReloadOutlined, UnorderedListOutlined } from '@ant-design
 import { useProjectOptions } from '@/hooks/useProject';
 import type { Project, ProjectDropdownOption } from '@/types/project';
 import ProjectList from '@/components/Project/ProjectList';
+import styles from './ProjectSelect.module.css';
 
 interface ProjectSelectProps {
   value?: string;
@@ -141,7 +142,7 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
 
   return (
     <div style={style}>
-      <Space.Compact style={{ width: '100%' }}>
+      <Space.Compact className={styles.fullWidthCompact}>
         <Select<string, ProjectOption>
           value={displayValue || undefined}
           onChange={handleChange}
@@ -150,7 +151,7 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
           disabled={disabled}
           allowClear={allowClear}
           size={size}
-          style={{ flex: 1 }}
+          className={styles.flexSelect}
           loading={loading}
           showSearch
           filterOption={filterOption}
@@ -165,9 +166,9 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
                 <Space>
                   <span>{project.name}</span>
                   {project.short_name != null && (
-                    <span style={{ color: '#999', fontSize: '12px' }}>({project.short_name})</span>
+                    <span className={styles.shortNameText}>({project.short_name})</span>
                   )}
-                  <span style={{ color: '#666', fontSize: '12px' }}>[{project.code}]</span>
+                  <span className={styles.codeText}>[{project.code}]</span>
                 </Space>
               ),
               value: nameLabel,
