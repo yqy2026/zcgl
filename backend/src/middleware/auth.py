@@ -3,9 +3,6 @@
 """
 
 import logging
-import sys
-from collections import deque
-from time import time
 from typing import Any
 
 import jwt
@@ -14,13 +11,6 @@ from jwt import PyJWTError as JWTError
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..constants.security_constants import (
-    TOKEN_BLACKLIST_DEGRADE_THRESHOLD,
-    TOKEN_BLACKLIST_DEGRADE_WINDOW_SECONDS,
-    TOKEN_BLACKLIST_ERROR_THRESHOLD,
-    TOKEN_BLACKLIST_ERROR_WINDOW_SECONDS,
-)
-from ..core.circuit_breaker import CircuitBreaker
 from ..core.config import settings
 from ..core.environment import is_production
 from ..core.exception_handler import bad_request, forbidden, unauthorized
@@ -30,140 +20,29 @@ from ..models.auth import User
 from ..schemas.auth import TokenData
 from ..schemas.rbac import PermissionCheckRequest
 from ..security.cookie_manager import cookie_manager
-from ..security.logging_security import security_monitor
 from ..services import RBACService
 from ..services.permission.rbac_service import (
     ADMIN_PERMISSION_ACTION,
     ADMIN_PERMISSION_RESOURCE,
 )
+from .token_blacklist_guard import TokenBlacklistGuard
 
 logger = logging.getLogger(__name__)
 
 
-_token_blacklist_degrade_events: deque[float] = deque(maxlen=100)
-_token_blacklist_error_events: deque[float] = deque(maxlen=100)
-_last_degrade_alert_ts = 0.0
-_last_error_alert_ts = 0.0
-
-
-def _trim_recent_events(events: deque[float], window_seconds: int, now: float) -> int:
-    while events and now - events[0] > window_seconds:
-        events.popleft()
-    return len(events)
-
-
-def _record_token_blacklist_degraded(
-    reason: str, jti: str | None, user_id: str | None
-) -> None:
-    global _last_degrade_alert_ts
-    now = time()
-    _token_blacklist_degrade_events.append(now)
-    recent = _trim_recent_events(
-        _token_blacklist_degrade_events, TOKEN_BLACKLIST_DEGRADE_WINDOW_SECONDS, now
-    )
-
-    security_monitor.record_metric("token_blacklist.degraded", 1)
-    security_monitor.record_event(
-        "token_blacklist_degraded",
-        reason=reason,
-        jti=jti,
-        user_id=user_id,
-        recent_count=recent,
-        window_seconds=TOKEN_BLACKLIST_DEGRADE_WINDOW_SECONDS,
-    )
-    if is_production():
-        security_monitor.record_audit(
-            "token_blacklist_degraded",
-            reason=reason,
-            jti=jti,
-            user_id=user_id,
-        )
-
-    if (
-        recent >= TOKEN_BLACKLIST_DEGRADE_THRESHOLD
-        and now - _last_degrade_alert_ts >= TOKEN_BLACKLIST_DEGRADE_WINDOW_SECONDS
-    ):
-        _last_degrade_alert_ts = now
-        logger.warning("Token blacklist degraded frequently in the last window.")
-        security_monitor.record_event(
-            "token_blacklist_degraded_frequent",
-            count=recent,
-            window_seconds=TOKEN_BLACKLIST_DEGRADE_WINDOW_SECONDS,
-        )
-
-
-def _record_token_blacklist_error(
-    error: Exception, jti: str | None, user_id: str | None
-) -> None:
-    global _last_error_alert_ts
-    now = time()
-    _token_blacklist_error_events.append(now)
-    recent = _trim_recent_events(
-        _token_blacklist_error_events, TOKEN_BLACKLIST_ERROR_WINDOW_SECONDS, now
-    )
-
-    security_monitor.record_metric("token_blacklist.error", 1)
-    security_monitor.record_event(
-        "token_blacklist_error",
-        error=str(error),
-        jti=jti,
-        user_id=user_id,
-        recent_count=recent,
-        window_seconds=TOKEN_BLACKLIST_ERROR_WINDOW_SECONDS,
-    )
-
-    if (
-        recent >= TOKEN_BLACKLIST_ERROR_THRESHOLD
-        and now - _last_error_alert_ts >= TOKEN_BLACKLIST_ERROR_WINDOW_SECONDS
-    ):
-        _last_error_alert_ts = now
-        logger.warning("Token blacklist errors are frequent in the last window.")
-        security_monitor.record_event(
-            "token_blacklist_error_frequent",
-            count=recent,
-            window_seconds=TOKEN_BLACKLIST_ERROR_WINDOW_SECONDS,
-        )
+_token_blacklist_guard = TokenBlacklistGuard(is_production=lambda: is_production())
+_token_blacklist_circuit = _token_blacklist_guard.circuit
 
 
 def _is_token_blacklisted(
     jti: str | None, user_id: str | None = None, session_id: str | None = None
 ) -> bool:
-    """
-    检查token是否在黑名单中
-    未来可以扩展为Redis缓存或数据库表
-    """
-    if not settings.TOKEN_BLACKLIST_ENABLED:
-        return False
-
-    if jti is None and user_id is None and session_id is None:
-        return False
-
-    if not _token_blacklist_circuit.allow_request():
-        logger.error(
-            "Token blacklist check degraded. Enforcing fail-closed in all environments."
-        )
-        _record_token_blacklist_degraded("circuit_open", jti, user_id)
-        return True
-
-    try:
-        from ..security.token_blacklist import blacklist_manager
-
-        result = blacklist_manager.is_blacklisted(jti=jti, user_id=user_id)
-        _token_blacklist_circuit.record_success()
-        return result
-    except ImportError:
-        logger.debug(f"Token blacklist not implemented, allowing token {jti}")
-        _record_token_blacklist_degraded("not_implemented", jti, user_id)
-        _token_blacklist_circuit.record_success()
-        return False
-    except Exception as e:
-        _token_blacklist_circuit.record_failure()
-        logger.warning(f"Error checking token blacklist: {e}")
-        _record_token_blacklist_error(e, jti, user_id)
-        return True
-
-
-_token_blacklist_circuit = CircuitBreaker(max_failures=5, cooldown=60)
+    """检查 token 是否在黑名单中（熔断/异常统一 fail-closed）。"""
+    return _token_blacklist_guard.is_token_blacklisted(
+        jti=jti,
+        user_id=user_id,
+        session_id=session_id,
+    )
 
 
 def _get_jwt_settings() -> tuple[str, str, str, str]:
@@ -241,11 +120,10 @@ def _validate_jwt_token(token: str) -> TokenData:
             raise credentials_exception
 
     except JWTError as e:
-        sys.stderr.write(f"DEBUG: [_validate_jwt_token] JWTError: {e}\n")
         logger.warning(f"JWT decode error: {e}")
         raise credentials_exception
     except Exception as e:
-        sys.stderr.write(f"DEBUG: [_validate_jwt_token] Unexpected error: {e}\n")
+        logger.exception("Unexpected JWT validation error: %s", e)
         raise credentials_exception
 
     return token_data

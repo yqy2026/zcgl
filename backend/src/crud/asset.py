@@ -1,6 +1,3 @@
-from inspect import isawaitable
-from typing import Any
-
 """
 资产CRUD操作 - 优化版本
 
@@ -13,8 +10,7 @@ from sqlalchemy import cast as sql_cast
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, load_only, selectinload, with_loader_criteria
 
-from ..constants.business_constants import DateTimeFields
-from ..core.encryption import EncryptionKeyManager, FieldEncryptor
+from ..constants.business_constants import DataStatusValues, DateTimeFields
 from ..core.exception_handler import ResourceNotFoundError
 from ..core.search_index import (
     SEARCH_INDEX_FIELDS,
@@ -30,210 +26,19 @@ from ..models.project import Project
 from ..models.project_relations import ProjectOwnershipRelation
 from ..models.rent_contract import RentContract
 from ..schemas.asset import AssetCreate, AssetUpdate
+from .asset_support import (
+    AssetFilterData,
+    AssetIdentifier,
+    AssetMutationData,
+    SensitiveDataHandler,
+    _result_all,
+    _result_first,
+    _result_scalar,
+    _scalars_all,
+    _scalars_first,
+)
 from .base import CRUDBase
 from .query_builder import TenantFilter
-
-
-async def _result_all(result: Any) -> list[Any]:
-    """兼容真实 AsyncSession 与测试 AsyncMock 的 result.all() 行为。"""
-    all_result = result.all()
-    if isawaitable(all_result):
-        all_result = await all_result
-    return list(all_result)
-
-
-async def _scalars_all(result: Any) -> list[Any]:
-    """兼容真实 AsyncSession 与测试 AsyncMock 的 result.scalars().all() 行为。"""
-    scalars_result = result.scalars()
-    if isawaitable(scalars_result):
-        scalars_result = await scalars_result
-
-    all_result = scalars_result.all()
-    if isawaitable(all_result):
-        all_result = await all_result
-    return list(all_result)
-
-
-async def _scalars_first(result: Any) -> Any:
-    """兼容真实 AsyncSession 与测试 AsyncMock 的 result.scalars().first() 行为。"""
-    scalars_result = result.scalars()
-    if isawaitable(scalars_result):
-        scalars_result = await scalars_result
-
-    first_result = scalars_result.first()
-    if isawaitable(first_result):
-        first_result = await first_result
-    return first_result
-
-
-async def _result_first(result: Any) -> Any:
-    """兼容真实 AsyncSession 与测试 AsyncMock 的 result.first() 行为。"""
-    first_result = result.first()
-    if isawaitable(first_result):
-        first_result = await first_result
-    return first_result
-
-
-async def _result_scalar(result: Any) -> Any:
-    """兼容真实 AsyncSession 与测试 AsyncMock 的 result.scalar() 行为。"""
-    scalar_result = result.scalar()
-    if isawaitable(scalar_result):
-        scalar_result = await scalar_result
-    return scalar_result
-
-
-class SensitiveDataHandler:
-    """
-    敏感数据处理器 - PII字段加密
-
-    支持两种加密模式：
-    - 确定性加密 (AES-256-CBC with derived IV): 用于可搜索字段（手机号等）
-    - 标准加密 (AES-256-GCM): 用于非搜索字段
-
-    使用方法：
-    # 在子类中定义敏感字段
-    class MySensitiveDataHandler(SensitiveDataHandler):
-        SEARCHABLE_FIELDS = {"phone", "id_card"}
-        NON_SEARCHABLE_FIELDS = {"note"}
-    """
-
-    # 默认无敏感字段（子类应覆盖）
-    SEARCHABLE_FIELDS: set[str] = set()
-    NON_SEARCHABLE_FIELDS: set[str] = set()
-    ALL_PII_FIELDS = SEARCHABLE_FIELDS | NON_SEARCHABLE_FIELDS
-
-    def __init__(
-        self,
-        searchable_fields: set[str] | None = None,
-        non_searchable_fields: set[str] | None = None,
-    ) -> None:
-        """
-        初始化敏感数据处理器
-
-        Args:
-            searchable_fields: 需要加密且可搜索的字段（如手机号）
-            non_searchable_fields: 需要加密但不需要搜索的字段（如备注）
-        """
-        # 如果提供了参数，使用参数；否则使用类属性
-        if searchable_fields is not None:
-            self.SEARCHABLE_FIELDS = searchable_fields
-        if non_searchable_fields is not None:
-            self.NON_SEARCHABLE_FIELDS = non_searchable_fields
-        self.ALL_PII_FIELDS = self.SEARCHABLE_FIELDS | self.NON_SEARCHABLE_FIELDS
-
-        key_manager = EncryptionKeyManager()
-        self.encryptor = FieldEncryptor(key_manager)
-        self.encryption_enabled = key_manager.is_available()
-
-        if not self.encryption_enabled:
-            import logging
-
-            logger = logging.getLogger(__name__)
-            logger.warning(
-                "Encryption disabled: DATA_ENCRYPTION_KEY not set or invalid. "
-                "PII data will be stored in plaintext."
-            )
-
-    def encrypt_field(self, field_name: str, value: Any) -> Any:
-        """
-        加密单个字段
-
-        Args:
-            field_name: 字段名称
-            value: 字段值
-
-        Returns:
-            加密后的值，如果不是PII字段或加密失败则返回原值
-        """
-        if not self.encryption_enabled or value is None:
-            return value
-
-        # 使用确定性加密（可搜索）
-        if field_name in self.SEARCHABLE_FIELDS:
-            encrypted = self.encryptor.encrypt_deterministic(str(value))
-            return value if encrypted is None else encrypted
-
-        # 使用标准加密（不可搜索）
-        if field_name in self.NON_SEARCHABLE_FIELDS:
-            encrypted = self.encryptor.encrypt_standard(str(value))
-            return value if encrypted is None else encrypted
-
-        # 非PII字段，返回原值
-        return value
-
-    def decrypt_field(self, field_name: str, value: Any) -> Any:
-        """
-        解密单个字段
-
-        Args:
-            field_name: 字段名称
-            value: 字段值（可能已加密）
-
-        Returns:
-            解密后的值，如果不是加密格式则返回原值
-            注意：真正的解密错误（如密钥错误）会返回 None
-        """
-        if not self.encryption_enabled or value is None:
-            return value
-
-        # 使用确定性解密
-        if field_name in self.SEARCHABLE_FIELDS:
-            return self.encryptor.decrypt_deterministic(str(value))
-
-        # 使用标准解密
-        if field_name in self.NON_SEARCHABLE_FIELDS:
-            return self.encryptor.decrypt_standard(str(value))
-
-        # 非PII字段，返回原值
-        return value
-
-    def encrypt_data(self, data: dict[str, Any] | list[dict[str, Any]]) -> Any:
-        """
-        批量加密数据中的PII字段
-
-        Args:
-            data: 字典或字典列表
-
-        Returns:
-            加密后的数据（原地修改）
-        """
-        if isinstance(data, dict):
-            for field_name in self.ALL_PII_FIELDS:
-                if field_name in data:
-                    data[field_name] = self.encrypt_field(field_name, data[field_name])
-        elif isinstance(data, list):
-            for item in data:
-                if isinstance(item, dict):
-                    for field_name in self.ALL_PII_FIELDS:
-                        if field_name in item:
-                            item[field_name] = self.encrypt_field(
-                                field_name, item[field_name]
-                            )
-        return data
-
-    def decrypt_data(self, data: dict[str, Any] | list[dict[str, Any]]) -> Any:
-        """
-        批量解密数据中的PII字段
-
-        Args:
-            data: 字典或字典列表
-
-        Returns:
-            解密后的数据（原地修改）
-        """
-        if isinstance(data, dict):
-            for field_name in self.ALL_PII_FIELDS:
-                if field_name in data and data[field_name] is not None:
-                    data[field_name] = self.decrypt_field(field_name, data[field_name])
-        elif isinstance(data, list):
-            for item in data:
-                if isinstance(item, dict):
-                    for field_name in self.ALL_PII_FIELDS:
-                        if field_name in item and item[field_name] is not None:
-                            item[field_name] = self.decrypt_field(
-                                field_name, item[field_name]
-                            )
-        return data
 
 
 class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
@@ -247,18 +52,31 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         "max_occupancy_rate": "max_cached_occupancy_rate",
         "occupancy_rate": "cached_occupancy_rate",
     }
+    IMMUTABLE_MUTATION_FIELDS = (
+        "version",
+        "tenant_name",
+        "lease_contract_number",
+        "contract_start_date",
+        "contract_end_date",
+        "monthly_rent",
+        "deposit",
+        "wuyang_project_name",
+        "description",
+    )
+    COMPUTED_MUTATION_FIELDS = ("unrented_area", "occupancy_rate")
+    RELATION_MUTATION_FIELDS = ("ownership_entity",)
 
     @staticmethod
-    def _not_deleted_clause(column: Any) -> Any:
-        return or_(column.is_(None), column != "已删除")
+    def _not_deleted_clause(column: object) -> object:
+        return or_(column.is_(None), column != DataStatusValues.ASSET_DELETED)
 
     @staticmethod
     def _asset_projection_load_options(
         *,
         include_contract_projection: bool = True,
-    ) -> tuple[Any, ...]:
+    ) -> tuple[object, ...]:
         """资产投影字段所需的关系预加载选项。"""
-        options: list[Any] = [joinedload(Asset.ownership)]
+        options: list[object] = [joinedload(Asset.ownership)]
         if include_contract_projection:
             options.append(
                 selectinload(Asset.rent_contracts).options(
@@ -279,7 +97,10 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             options.append(
                 with_loader_criteria(
                     RentContract,
-                    lambda cls: or_(cls.data_status.is_(None), cls.data_status != "已删除"),
+                    lambda cls: or_(
+                        cls.data_status.is_(None),
+                        cls.data_status != DataStatusValues.ASSET_DELETED,
+                    ),
                     include_aliases=True,
                 )
             )
@@ -300,8 +121,28 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             },
         )
 
+    @classmethod
+    def _clean_asset_data(
+        cls,
+        data: AssetMutationData,
+        *,
+        remove_immutable_fields: bool = True,
+        remove_computed_fields: bool = True,
+        remove_relation_fields: bool = True,
+    ) -> AssetMutationData:
+        if remove_immutable_fields:
+            for field in cls.IMMUTABLE_MUTATION_FIELDS:
+                data.pop(field, None)
+        if remove_computed_fields:
+            for field in cls.COMPUTED_MUTATION_FIELDS:
+                data.pop(field, None)
+        if remove_relation_fields:
+            for field in cls.RELATION_MUTATION_FIELDS:
+                data.pop(field, None)
+        return data
+
     async def _refresh_search_index_entries(
-        self, db: AsyncSession, *, asset_id: str, data: dict[str, Any]
+        self, db: AsyncSession, *, asset_id: str, data: AssetMutationData
     ) -> None:
         fields_to_refresh = [
             field_name for field_name in SEARCH_INDEX_FIELDS if field_name in data
@@ -348,7 +189,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         self,
         *,
         include_contract_projection: bool = True,
-    ) -> Select[Any]:
+    ) -> Select[object]:
         """
         资产列表/批量查询的基础查询（预加载高频关系，避免 N+1）
 
@@ -366,8 +207,8 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
     def _normalize_sort_field(self, sort_field: str) -> str:
         return self.SORT_FIELD_ALIASES.get(sort_field, sort_field)
 
-    def _normalize_filters(self, filters: dict[str, Any] | None) -> dict[str, Any]:
-        qb_filters: dict[str, Any] = {}
+    def _normalize_filters(self, filters: AssetFilterData | None) -> AssetFilterData:
+        qb_filters: AssetFilterData = {}
         if not filters:
             return qb_filters
 
@@ -422,9 +263,9 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
 
     @staticmethod
     def _apply_creator_scope(
-        stmt: Select[Any],
+        stmt: Select[object],
         principals: set[str],
-    ) -> Select[Any]:
+    ) -> Select[object]:
         if not principals:
             return stmt.where(false())
         return stmt.where(Asset.created_by.in_(principals))
@@ -433,9 +274,9 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         self,
         db: AsyncSession,
         *,
-        obj_in: AssetCreate | dict[str, Any],
+        obj_in: AssetCreate | AssetMutationData,
         commit: bool = True,
-        **kwargs: Any,
+        **kwargs: object,
     ) -> Asset:
         if isinstance(obj_in, dict):
             obj_in_data = obj_in
@@ -443,18 +284,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             obj_in_data = obj_in.model_dump()
 
         obj_in_data.update(kwargs)
-        obj_in_data.pop("unrented_area", None)
-        obj_in_data.pop("occupancy_rate", None)
-        obj_in_data.pop("version", None)
-        obj_in_data.pop("ownership_entity", None)
-        obj_in_data.pop("tenant_name", None)
-        obj_in_data.pop("lease_contract_number", None)
-        obj_in_data.pop("contract_start_date", None)
-        obj_in_data.pop("contract_end_date", None)
-        obj_in_data.pop("monthly_rent", None)
-        obj_in_data.pop("deposit", None)
-        obj_in_data.pop("wuyang_project_name", None)
-        obj_in_data.pop("description", None)
+        self._clean_asset_data(obj_in_data)
 
         encrypted_data = self.sensitive_data_handler.encrypt_data(obj_in_data.copy())
         db_obj = Asset(**encrypted_data)
@@ -475,7 +305,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
     async def get_async(
         self,
         db: AsyncSession,
-        id: Any,
+        id: AssetIdentifier,
         use_cache: bool = False,
         include_deleted: bool = False,
         tenant_filter: TenantFilter | None = None,
@@ -493,7 +323,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             stmt = stmt.filter(self._not_deleted_clause(Asset.data_status))
 
         result = await db.execute(stmt)
-        asset = await _scalars_first(result)
+        asset: Asset | None = await _scalars_first(result)
         if asset is not None:
             self._decrypt_asset_object(asset)
         return asset
@@ -514,7 +344,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
                     )
                     setattr(asset, field_name, decrypted_value)
 
-    def _encrypt_update_data(self, update_data: dict[str, Any]) -> dict[str, Any]:
+    def _encrypt_update_data(self, update_data: AssetMutationData) -> AssetMutationData:
         """
         加密更新数据中的PII字段
 
@@ -558,7 +388,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         skip: int = 0,
         limit: int = 100,
         search: str | None = None,
-        filters: dict[str, Any] | None = None,
+        filters: AssetFilterData | None = None,
         sort_field: str = DateTimeFields.CREATED_AT,
         sort_order: str = "desc",
         include_relations: bool = True,
@@ -575,7 +405,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
 
         non_pii_search_fields = ["property_name", "business_category"]
         pii_search_fields = ["address"]
-        search_conditions: list[Any] | None = None
+        search_conditions: list[object] | None = None
         if search:
             search_conditions = []
             for field in non_pii_search_fields:
@@ -631,7 +461,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             )
         if creator_principals is not None:
             base_query = self._apply_creator_scope(base_query, creator_principals)
-        query: Select[Any] = self.query_builder.build_query(
+        query: Select[object] = self.query_builder.build_query(
             filters=qb_filters,
             search_conditions=search_conditions,
             sort_by=normalized_sort_field,
@@ -642,9 +472,9 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             tenant_filter=effective_tenant_filter,
         )
         result = await db.execute(query)
-        assets = await _scalars_all(result)
+        assets: list[Asset] = await _scalars_all(result)
 
-        count_base_query: Select[Any] = select(Asset.id)
+        count_base_query: Select[object] = select(Asset.id)
         if search_conditions:
             count_base_query = count_base_query.join(
                 Ownership, Asset.ownership_id == Ownership.id, isouter=True
@@ -663,7 +493,8 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             tenant_filter=effective_tenant_filter,
         )
         total_result = await db.execute(cnt_query)
-        total = await _result_scalar(total_result) or 0
+        total_raw = await _result_scalar(total_result)
+        total = int(total_raw) if total_raw is not None else 0
 
         for asset in assets:
             self._decrypt_asset_object(asset)
@@ -682,17 +513,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         session_id: str | None = None,
     ) -> Asset:
         obj_in_data = obj_in.model_dump()
-        obj_in_data.pop("unrented_area", None)
-        obj_in_data.pop("occupancy_rate", None)
-        obj_in_data.pop("version", None)
-        obj_in_data.pop("tenant_name", None)
-        obj_in_data.pop("lease_contract_number", None)
-        obj_in_data.pop("contract_start_date", None)
-        obj_in_data.pop("contract_end_date", None)
-        obj_in_data.pop("monthly_rent", None)
-        obj_in_data.pop("deposit", None)
-        obj_in_data.pop("wuyang_project_name", None)
-        obj_in_data.pop("description", None)
+        self._clean_asset_data(obj_in_data, remove_relation_fields=False)
         if organization_id is not None and organization_id.strip() != "":
             obj_in_data["organization_id"] = organization_id
         encrypted_data = self.sensitive_data_handler.encrypt_data(obj_in_data.copy())
@@ -727,7 +548,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         db: AsyncSession,
         *,
         db_obj: Asset,
-        obj_in: AssetUpdate | dict[str, Any],
+        obj_in: AssetUpdate | AssetMutationData,
         commit: bool = True,
     ) -> Asset:
         if isinstance(obj_in, dict):
@@ -735,18 +556,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         else:
             update_data = obj_in.model_dump(exclude_unset=True)
 
-        update_data.pop("unrented_area", None)
-        update_data.pop("occupancy_rate", None)
-        update_data.pop("version", None)
-        update_data.pop("ownership_entity", None)
-        update_data.pop("tenant_name", None)
-        update_data.pop("lease_contract_number", None)
-        update_data.pop("contract_start_date", None)
-        update_data.pop("contract_end_date", None)
-        update_data.pop("monthly_rent", None)
-        update_data.pop("deposit", None)
-        update_data.pop("wuyang_project_name", None)
-        update_data.pop("description", None)
+        self._clean_asset_data(update_data)
 
         encrypted_data = self._encrypt_update_data(update_data)
         result: Asset = await super().update(
@@ -776,15 +586,11 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         session_id: str | None = None,
     ) -> Asset:
         update_data = obj_in.model_dump(exclude_unset=True)
-        update_data.pop("version", None)
-        update_data.pop("tenant_name", None)
-        update_data.pop("lease_contract_number", None)
-        update_data.pop("contract_start_date", None)
-        update_data.pop("contract_end_date", None)
-        update_data.pop("monthly_rent", None)
-        update_data.pop("deposit", None)
-        update_data.pop("wuyang_project_name", None)
-        update_data.pop("description", None)
+        self._clean_asset_data(
+            update_data,
+            remove_computed_fields=False,
+            remove_relation_fields=False,
+        )
 
         for field, new_value in update_data.items():
             if hasattr(db_obj, field):
@@ -809,8 +615,11 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
                     history.session_id = session_id
                     db.add(history)
 
-        update_data.pop("unrented_area", None)
-        update_data.pop("occupancy_rate", None)
+        self._clean_asset_data(
+            update_data,
+            remove_immutable_fields=False,
+            remove_relation_fields=False,
+        )
         encrypted_data = self._encrypt_update_data(update_data)
 
         for field, value in encrypted_data.items():
@@ -828,7 +637,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         return db_obj
 
     async def remove_async(
-        self, db: AsyncSession, *, id: Any, commit: bool = True
+        self, db: AsyncSession, *, id: AssetIdentifier, commit: bool = True
     ) -> Asset:
         obj = await db.get(self.model, id)
         if obj is None:
@@ -861,7 +670,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             query = query.where(self._not_deleted_clause(Asset.data_status))
 
         result = await db.execute(query)
-        assets = await _scalars_all(result)
+        assets: list[Asset] = await _scalars_all(result)
         if decrypt:
             for asset in assets:
                 self._decrypt_asset_object(asset)
@@ -885,7 +694,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             stmt = stmt.where(self._not_deleted_clause(Asset.data_status))
 
         result = await db.execute(stmt.limit(limit))
-        assets = await _scalars_all(result)
+        assets: list[Asset] = await _scalars_all(result)
         if decrypt:
             for asset in assets:
                 self._decrypt_asset_object(asset)
@@ -934,15 +743,15 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             stmt = stmt.where(self._not_deleted_clause(Asset.data_status))
 
         result = await db.execute(stmt.limit(limit))
-        assets = await _scalars_all(result)
+        assets: list[Asset] = await _scalars_all(result)
         if decrypt:
             for asset in assets:
                 self._decrypt_asset_object(asset)
         return assets, used_blind_index
 
     def _apply_simple_asset_filters(
-        self, stmt: Select[Any], filters: dict[str, Any] | None
-    ) -> Select[Any]:
+        self, stmt: Select[object], filters: AssetFilterData | None
+    ) -> Select[object]:
         """应用 analytics 场景下的简单等值过滤。"""
         if not filters:
             return stmt
@@ -954,8 +763,8 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         return stmt
 
     async def get_occupancy_aggregation_async(
-        self, db: AsyncSession, *, filters: dict[str, Any] | None = None
-    ) -> Any | None:
+        self, db: AsyncSession, *, filters: AssetFilterData | None = None
+    ) -> object | None:
         stmt = self._apply_simple_asset_filters(select(Asset), filters)
         agg_stmt = stmt.with_only_columns(
             func.count(Asset.id).label("total_assets"),
@@ -977,8 +786,8 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         db: AsyncSession,
         *,
         category_field: str,
-        filters: dict[str, Any] | None = None,
-    ) -> list[Any]:
+        filters: AssetFilterData | None = None,
+    ) -> list[object]:
         if not hasattr(Asset, category_field):
             return []
 
@@ -1003,8 +812,8 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         return await _result_all(result)
 
     async def get_area_summary_aggregation_async(
-        self, db: AsyncSession, *, filters: dict[str, Any] | None = None
-    ) -> Any | None:
+        self, db: AsyncSession, *, filters: AssetFilterData | None = None
+    ) -> object | None:
         stmt = self._apply_simple_asset_filters(select(Asset), filters)
         agg_stmt = stmt.with_only_columns(
             func.count(Asset.id).label("total_assets"),
@@ -1115,7 +924,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             return []
         stmt = select(Asset).where(Asset.property_name.in_(property_names))
         if exclude_deleted:
-            stmt = stmt.where(Asset.data_status != "已删除")
+            stmt = stmt.where(Asset.data_status != DataStatusValues.ASSET_DELETED)
         result = await db.execute(stmt)
         assets = await _scalars_all(result)
         if decrypt:

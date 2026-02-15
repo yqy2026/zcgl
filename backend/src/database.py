@@ -5,7 +5,6 @@
 
 import importlib
 import logging
-import os
 import threading
 import time
 from collections.abc import AsyncGenerator
@@ -13,7 +12,6 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from datetime import datetime
 from queue import Empty, Queue
-from typing import Any
 
 from sqlalchemy import event, text
 from sqlalchemy.engine.interfaces import DBAPIConnection
@@ -36,6 +34,8 @@ from .core.exception_handler import (
     InternalServerError,
     ServiceUnavailableError,
 )
+from .database_url import get_async_database_url as resolve_async_database_url
+from .database_url import get_database_url as resolve_database_url
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +65,7 @@ class ConnectionPoolConfig:
     pool_recycle: int = DatabasePoolConfig.RECYCLE_SECONDS
     pool_pre_ping: bool = DatabasePoolConfig.PRE_PING_ENABLED
     echo: bool = DatabasePoolConfig.ECHO_ENABLED
-    connect_args: dict[str, Any] = field(default_factory=dict)
+    connect_args: dict[str, object] = field(default_factory=dict)
 
 
 class DatabaseManager:
@@ -76,7 +76,7 @@ class DatabaseManager:
         self.session_factory: async_sessionmaker[AsyncSession] | None = None
         self.config: ConnectionPoolConfig = self._load_config()
         self.metrics: DatabaseMetrics = DatabaseMetrics()
-        self.query_history: Queue[dict[str, Any]] = Queue(
+        self.query_history: Queue[dict[str, object]] = Queue(
             maxsize=DatabasePoolConfig.QUERY_HISTORY_QUEUE_SIZE
         )
         self._metrics_lock = threading.Lock()
@@ -105,7 +105,7 @@ class DatabaseManager:
                 "postgresql+psycopg://", "postgresql+asyncpg://", 1
             )
 
-        engine_kwargs: dict[str, Any] = {
+        engine_kwargs: dict[str, object] = {
             "echo": self.config.echo,
             "future": True,
             "pool_size": self.config.pool_size,
@@ -226,7 +226,7 @@ class DatabaseManager:
 
         @event.listens_for(sync_engine, "connect")
         def on_connect(
-            dbapi_connection: DBAPIConnection, connection_record: Any
+            dbapi_connection: DBAPIConnection, connection_record: object
         ) -> None:
             """连接事件"""
             with self._metrics_lock:
@@ -236,44 +236,52 @@ class DatabaseManager:
         @event.listens_for(sync_engine, "checkout")
         def on_checkout(
             dbapi_connection: DBAPIConnection,
-            connection_record: Any,
-            connection_proxy: Any,
+            connection_record: object,
+            connection_proxy: object,
         ) -> None:
             """检出连接事件"""
             with self._metrics_lock:
-                if connection_record and hasattr(
-                    connection_record, "info"
-                ):  # pragma: no cover
-                    if (
-                        connection_record.info.get("origin", "") == "pool"
-                    ):  # pragma: no cover
+                record_info = getattr(connection_record, "info", None)
+                if isinstance(record_info, dict):  # pragma: no cover
+                    if record_info.get("origin", "") == "pool":  # pragma: no cover
                         self.metrics.pool_hits += 1  # pragma: no cover
                     else:  # pragma: no cover
                         self.metrics.pool_misses += 1  # pragma: no cover
 
         @event.listens_for(sync_engine, "before_execute")
         def on_execute(
-            conn: Any,
-            clauseelement: Any,
-            multiparams: Any,
-            params: Any,
-            execution_options: Any,
+            conn: object,
+            clauseelement: object,
+            multiparams: object,
+            params: object,
+            execution_options: object,
         ) -> None:
             """执行查询事件"""
-            conn.info.setdefault("query_start_time", time.time())
+            conn_info = getattr(conn, "info", None)
+            if isinstance(conn_info, dict):
+                conn_info.setdefault("query_start_time", time.time())
 
         @event.listens_for(sync_engine, "after_execute")
         def after_execute(
-            conn: Any,
-            clauseelement: Any,
-            multiparams: Any,
-            params: Any,
-            execution_options: Any,
-            result: Any,
+            conn: object,
+            clauseelement: object,
+            multiparams: object,
+            params: object,
+            execution_options: object,
+            result: object,
         ) -> None:
             """查询执行后事件"""
             try:
-                start_time = conn.info.pop("query_start_time", time.time())
+                conn_info = getattr(conn, "info", None)
+                if not isinstance(conn_info, dict):
+                    return
+
+                raw_start_time = conn_info.pop("query_start_time", time.time())
+                start_time = (
+                    float(raw_start_time)
+                    if isinstance(raw_start_time, (int, float))
+                    else time.time()
+                )
                 execution_time = (time.time() - start_time) * 1000  # ms
 
                 with self._metrics_lock:
@@ -335,9 +343,9 @@ class DatabaseManager:
         with self._metrics_lock:
             return DatabaseMetrics(**self.metrics.__dict__)
 
-    async def run_health_check(self) -> dict[str, Any]:
+    async def run_health_check(self) -> dict[str, object]:
         """运行数据库健康检查"""
-        health_status: dict[str, Any] = {
+        health_status: dict[str, object] = {
             "healthy": True,
             "checks": {},
             "timestamp": datetime.now().isoformat(),
@@ -401,86 +409,15 @@ class DatabaseManager:
         return health_status
 
 
-# 数据库URL配置 - 动态读取环境变量，支持测试模式
+# 数据库URL配置 - 保持向后兼容的模块级入口
 def get_database_url() -> str:
     """获取数据库URL（支持动态环境变量）"""
-    database_url = os.getenv("DATABASE_URL")
-
-    if not database_url:
-        environment = os.getenv("ENVIRONMENT", "development")
-        logger.critical(
-            f"环境 '{environment}' 未设置DATABASE_URL",
-            extra={"error_id": ErrorIDs.Database.MISSING_DATABASE_URL},
-        )
-        raise ConfigurationError(
-            "必须设置DATABASE_URL环境变量。\n"
-            "请在.env文件中配置:\n"
-            "DATABASE_URL=postgresql+psycopg://user:password@host:port/database\n"
-            "帮助文档: docs/POSTGRESQL_MIGRATION.md",
-            config_key="DATABASE_URL",
-        )
-
-    # 验证PostgreSQL URL格式
-    if database_url.startswith("postgresql+psycopg://"):
-        try:
-            from urllib.parse import urlparse
-
-            parsed = urlparse(database_url)
-
-            # 检查必需组件
-            if not parsed.hostname:
-                raise ConfigurationError(
-                    "缺少主机名 (hostname)", config_key="DATABASE_URL"
-                )
-            if not parsed.username:
-                raise ConfigurationError(
-                    "缺少用户名 (username)", config_key="DATABASE_URL"
-                )
-            if not parsed.password:
-                logger.warning("DATABASE_URL缺少密码 (password)")
-            if not parsed.path or len(parsed.path) <= 1:
-                raise ConfigurationError(
-                    "缺少数据库名称 (database name)",
-                    config_key="DATABASE_URL",
-                )
-            if parsed.port and not (1 <= parsed.port <= 65535):
-                raise ConfigurationError(
-                    f"无效端口号: {parsed.port}",
-                    config_key="DATABASE_URL",
-                )
-
-            # 记录安全信息（不含密码）
-            safe_url = f"{parsed.scheme}://{parsed.username}@{parsed.hostname}:{parsed.port or 5432}{parsed.path}"
-            logger.info(f"PostgreSQL URL验证通过: {safe_url}")
-
-        except (ValueError, ConfigurationError) as e:
-            logger.error(
-                f"DATABASE_URL验证失败: {e}", extra={"error_id": "DATABASE_URL_INVALID"}
-            )
-            raise ConfigurationError(
-                f"DATABASE_URL格式错误: {e}\n"
-                f"正确格式: postgresql+psycopg://user:password@host:port/database\n"
-                f"示例: postgresql+psycopg://postgres:password@localhost:5432/zcgl_db",
-                config_key="DATABASE_URL",
-            ) from e
-
-    else:
-        logger.error(
-            f"不支持的数据库类型: {database_url[:20]}...",
-            extra={"error_id": "UNSUPPORTED_DATABASE_TYPE"},
-        )
-        raise ConfigurationError(
-            "不支持的数据库类型。支持: postgresql+psycopg://\n"
-            f"当前URL: {database_url[:50]}",
-            config_key="DATABASE_URL",
-        )
-
-    return database_url
+    return resolve_database_url()
 
 
 def get_async_database_url() -> str:
-    database_url = get_database_url()
-    return database_url.replace("postgresql+psycopg://", "postgresql+asyncpg://", 1)
+    """获取异步数据库URL"""
+    return resolve_async_database_url()
 
 
 # 向后兼容的模块级变量（现在通过函数获取）
@@ -501,7 +438,7 @@ def _get_database_manager() -> DatabaseManager:
 
 
 # 创建基础模型类
-Base: DeclarativeMeta | Any = declarative_base()
+Base: DeclarativeMeta = declarative_base()
 
 
 def get_database_manager() -> DatabaseManager:
@@ -585,7 +522,7 @@ async def drop_tables() -> None:
         await conn.run_sync(Base.metadata.drop_all)
 
 
-async def get_database_status() -> dict[str, Any]:
+async def get_database_status() -> dict[str, object]:
     """获取数据库状态信息"""
     manager = _get_database_manager()
     status = {

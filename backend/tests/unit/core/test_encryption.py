@@ -525,6 +525,7 @@ class TestSensitiveDataHandler:
     def valid_handler(self, monkeypatch):
         """创建有效的敏感数据处理器fixture - 配置测试字段"""
         # Clear cached modules first
+        import importlib
         import sys
 
         for mod in list(sys.modules.keys()):
@@ -532,6 +533,7 @@ class TestSensitiveDataHandler:
                 "src.core.config" in mod
                 or "src.core.encryption" in mod
                 or "src.crud.asset" in mod
+                or "src.crud.asset_support" in mod
             ):
                 del sys.modules[mod]
 
@@ -542,13 +544,17 @@ class TestSensitiveDataHandler:
         # Set environment variable
         monkeypatch.setenv("DATA_ENCRYPTION_KEY", test_key)
 
-        # Import fresh and patch settings directly
+        # Import fresh and patch settings directly (before importing src.crud.asset)
         from src.core import config
-        from src.crud.asset import SensitiveDataHandler
+        fresh_encryption_module = importlib.import_module("src.core.encryption")
 
         # Use monkeypatch to persist the value for the entire test
         monkeypatch.setattr(config.settings, "DATA_ENCRYPTION_KEY", test_key)
-        monkeypatch.setattr(encryption_module.settings, "DATA_ENCRYPTION_KEY", test_key)
+        monkeypatch.setattr(
+            fresh_encryption_module.settings, "DATA_ENCRYPTION_KEY", test_key
+        )
+
+        from src.crud.asset import SensitiveDataHandler
 
         # 创建配置了测试字段的处理器
         return SensitiveDataHandler(
@@ -559,6 +565,8 @@ class TestSensitiveDataHandler:
     @pytest.fixture
     def missing_key_handler(self, monkeypatch):
         """创建缺失密钥的敏感数据处理器fixture"""
+        import importlib
+
         # Remove environment variable completely
         monkeypatch.delenv("DATA_ENCRYPTION_KEY", raising=False)
 
@@ -569,6 +577,7 @@ class TestSensitiveDataHandler:
             "src.core.config",
             "src.core.encryption",
             "src.crud.asset",
+            "src.crud.asset_support",
         ]
         for mod in modules_to_clear:
             if mod in sys.modules:
@@ -576,11 +585,15 @@ class TestSensitiveDataHandler:
 
         # Import modules fresh - settings will read from environment (which is now deleted)
         from src.core import config
-        from src.crud.asset import SensitiveDataHandler
+        fresh_encryption_module = importlib.import_module("src.core.encryption")
 
         # Use monkeypatch to persist the empty value for the entire test
         monkeypatch.setattr(config.settings, "DATA_ENCRYPTION_KEY", "")
-        monkeypatch.setattr(encryption_module.settings, "DATA_ENCRYPTION_KEY", "")
+        monkeypatch.setattr(
+            fresh_encryption_module.settings, "DATA_ENCRYPTION_KEY", ""
+        )
+
+        from src.crud.asset import SensitiveDataHandler
 
         return SensitiveDataHandler()
 
