@@ -1,88 +1,60 @@
 # 待处理重构任务清单
 
 **创建日期**: 2026-02-13
+**最后校准**: 2026-02-15
 **来源**: 项目基础性问题完整修复清单（部分中高风险任务）
 
 ---
 
 ## 概述
 
-本文档记录了需要更多规划和时间的重构任务。这些任务在 2026-02-13 的修复批次中被识别，但由于风险较高或工作量较大，需要单独规划迭代。
+本文档记录需要独立迭代的重构任务。2026-02-14 已根据当前代码基线完成一次校准，重点修正了已过期描述并重排执行顺序，降低重复施工风险。
+
+### 本次校准结论（摘要）
+
+- `OrganizationPage` 已使用 React Query，不再归类为“纯反模式页面”
+- `backend/src/services/document/pdf_to_images.py` 已实现，PDF 任务从“实现模块”调整为“测试与注释校准”
+- `Decimal/Number` 转换从“低优先级”提升为“中优先级”，先做链路统一入口
 
 ---
 
-## 1. 前端状态管理反模式重构
+## 1. 前端数据获取模式统一（React Query / Mutation）
 
 **优先级**: 高
 **风险**: 中
-**预估工作量**: 3-5 天
+**预估工作量**: 4-6 天
 
 ### 问题描述
 
-以下页面使用 `useState + useEffect` 管理 API 数据，违反 React Query 最佳实践：
+以下页面仍存在 `useState + useEffect + 手动 loading` 的数据流模式，维护成本高，且缓存与失效策略不统一：
 
-| 文件 | 路径 |
-|------|------|
-| DictionaryPage.tsx | `frontend/src/pages/System/DictionaryPage.tsx` |
-| EnumFieldPage.tsx | `frontend/src/pages/System/EnumFieldPage.tsx` |
-| OrganizationPage.tsx | `frontend/src/pages/System/OrganizationPage.tsx` |
-| AssetImport.tsx | `frontend/src/components/Asset/AssetImport.tsx` |
+| 文件 | 路径 | 当前问题 |
+|------|------|----------|
+| DictionaryPage.tsx | `frontend/src/pages/System/DictionaryPage.tsx` | 多处手动 `fetch*` 与 `setLoading` |
+| EnumFieldPage.tsx | `frontend/src/pages/System/EnumFieldPage.tsx` | 列表/统计/值管理并行请求均手动管理 |
+| AssetImport.tsx | `frontend/src/components/Asset/AssetImport.tsx` | 命令式导入流程未统一到 mutation 模式 |
 
-### 重构方案
+说明：`OrganizationPage.tsx` 已在当前基线中使用 React Query，不再列入本任务范围。
 
-#### 示例：DictionaryPage 重构
+### 重构策略
 
-**1. 创建自定义 Hook**
+1. **读操作统一为 `useQuery`**：字典类型、字典值、统计等查询使用稳定 `queryKey`
+2. **写操作统一为 `useMutation`**：增删改与导入操作统一 mutation 生命周期
+3. **失效策略显式化**：mutation 成功后仅失效受影响 key，避免全页手动重刷
+4. **错误处理统一化**：将重复 toast/try-catch 模式收敛到 hook 层
 
-```typescript
-// frontend/src/hooks/useDictionaryTypes.ts
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { dictionaryService } from '@/services';
+### 分批计划
 
-export function useDictionaryTypes() {
-  return useQuery({
-    queryKey: ['dictionary-types'],
-    queryFn: () => dictionaryService.getTypes(),
-    staleTime: 5 * 60 * 1000, // 5 分钟
-  });
-}
-
-export function useCreateDictionaryType() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: dictionaryService.createType,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['dictionary-types'] });
-    },
-  });
-}
-```
-
-**2. 重构组件**
-
-```typescript
-// 修改前:
-const [dictTypes, setDictTypes] = useState<string[]>([]);
-const [loading, setLoading] = useState(false);
-
-useEffect(() => {
-  setLoading(true);
-  dictionaryService.getTypes()
-    .then(setDictTypes)
-    .finally(() => setLoading(false));
-}, []);
-
-// 修改后:
-const { data: dictTypes = [], isLoading } = useDictionaryTypes();
-```
+- 批次 A（2 天）：`DictionaryPage`（已完成，2026-02-14）
+- 批次 B（2 天）：`EnumFieldPage`（已完成，2026-02-14）
+- 批次 C（1-2 天）：`AssetImport` 改造为 `useMutation` 驱动的导入流程（已完成，2026-02-14）
 
 ### 验收标准
 
-- [ ] 所有目标页面使用 React Query
-- [ ] 移除手动的 loading 状态管理
-- [ ] 测试覆盖率保持或提升
-- [ ] 无功能回归
+- [x] `DictionaryPage` 与 `EnumFieldPage` 不再通过 `useEffect` 直接调用 `dictionaryService`
+- [x] `AssetImport` 主导入动作使用 `useMutation`
+- [x] 查询 key 命名统一且可追踪（页面内不再散落手动刷新链）
+- [x] 受影响页面无功能回归（创建、编辑、删除、刷新、导入）
 
 ---
 
@@ -90,176 +62,128 @@ const { data: dictTypes = [], isLoading } = useDictionaryTypes();
 
 **优先级**: 中
 **风险**: 中
-**预估工作量**: 5-7 天
+**预估工作量**: 6-8 天
 
 ### 问题描述
 
-以下组件超过 800 行，需要拆分为更小的子组件：
+以下页面体量过大（当前基线统计），单文件承载过多状态、渲染与事件逻辑：
 
-| 文件 | 行数 | 建议拆分方案 |
-|------|------|-------------|
-| UserManagementPage.tsx | 946 | 用户列表 + 用户表单 + 权限分配 |
-| EnumFieldPage.tsx | 927 | 字段列表 + 字段编辑器 + 值管理 |
+| 文件 | 行数（当前） | 建议拆分方向 |
+|------|-------------|-------------|
+| UserManagementPage.tsx | 959 | 列表 + 表单 + 权限分配 |
+| EnumFieldPage.tsx | 927 | 类型列表 + 值列表 + 编辑弹窗 |
 | RoleManagementPage.tsx | 921 | 角色列表 + 权限矩阵 + 角色表单 |
-| OperationLogPage.tsx | 919 | 日志列表 + 详情抽屉 + 筛选器 |
-| OrganizationPage.tsx | 823 | 组织树 + 成员管理 + 表单 |
+| OperationLogPage.tsx | 919 | 列表 + 筛选器 + 详情抽屉 |
+| OrganizationPage.tsx | 823 | 列表 + 组织树 + 历史记录 |
+| PromptDashboard.tsx | 819 | 统计卡 + 图表 + 任务面板 |
 
 ### 拆分模式
 
-以 `UserManagementPage` 为例：
+以 `UserManagementPage` 为模板：
 
 ```
 frontend/src/pages/System/UserManagement/
-├── index.tsx              # 主页面（容器）
-├── UserList.tsx           # 用户列表表格
-├── UserForm.tsx           # 新增/编辑表单
-├── PermissionAssign.tsx   # 权限分配对话框
+├── index.tsx                # 容器层（路由入口）
+├── UserList.tsx             # 列表展示
+├── UserForm.tsx             # 新增/编辑表单
+├── PermissionAssign.tsx     # 权限分配
 ├── hooks/
-│   ├── useUsers.ts        # 用户数据 Hook
-│   └── useUserMutations.ts # 用户操作 Hook
-├── types.ts               # 类型定义
+│   ├── useUsers.ts          # 查询
+│   └── useUserMutations.ts  # 写操作
+├── types.ts
 └── UserManagement.module.css
 ```
 
-### 主页面重构示例
+### 当前进展（2026-02-14）
 
-```typescript
-// frontend/src/pages/System/UserManagement/index.tsx
-export default function UserManagementPage() {
-  const { data: users, isLoading } = useUsers();
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-
-  return (
-    <PageContainer>
-      <UserList
-        users={users}
-        loading={isLoading}
-        onSelect={setSelectedUser}
-      />
-      <UserForm
-        user={selectedUser}
-        onClose={() => setSelectedUser(null)}
-      />
-    </PageContainer>
-  );
-}
-```
+- [x] `UserManagementPage` 已完成目录化拆分（`index.tsx` + `components/` + `hooks/` + `types.ts`）
+- [x] `RoleManagementPage` 已完成目录化拆分（`index.tsx` + `components/` + `hooks/` + `types.ts`）
+- [x] `OperationLogPage` 已完成目录化拆分（`index.tsx` + `components/` + `hooks/` + `types.ts/constants.tsx/utils.ts`）
+- [x] `OrganizationPage` 已完成目录化拆分（`index.tsx` + `components/` + `hooks/` + `types.ts/constants.tsx/utils.tsx`）
+- [x] `PromptDashboard` 已完成目录化拆分（`index.tsx` + `components/` + `hooks/` + `types.ts/constants.tsx/utils.ts`）
+- [x] 结构验证完成：`madge` 扫描 5 个拆分目录共 99 文件，结果无循环依赖
+- [x] 关键交互回归完成：`OrganizationPage`/`RoleManagementPage`/`UserManagementPage`/`OperationLogPage`/`PromptDashboard` 定向测试共 39 项通过（含筛选、编辑、提交、刷新、详情查看与错误分支）
 
 ### 验收标准
 
-- [ ] 每个子组件不超过 300 行
-- [ ] 保持功能完整性
-- [ ] 提升代码可测试性
-- [ ] 测试通过
+- [x] 容器组件建议控制在 `<= 350` 行，展示子组件建议 `<= 300` 行
+- [x] 展示组件不直接包含服务层调用
+- [x] 拆分后无循环依赖与跨层导入漂移
+- [x] 关键交互回归通过（筛选、分页、编辑、提交、刷新）
 
 ---
 
-## 3. PDF 测试跳过问题
+## 3. Decimal/Number 转换链路统一
 
-**优先级**: 低
-**风险**: 低
-**预估工作量**: 1-2 天（需先确认需求）
+**优先级**: 中
+**风险**: 中
+**预估工作量**: 2-4 天（首批）+ 渐进推广
 
 ### 问题描述
 
-`backend/tests/unit/services/document/extractors/test_base.py` 中有 12 个测试被跳过，原因是 `pdf_to_images module not yet implemented`。
+后端金额/面积大量使用 `Decimal`，前端业务类型以 `number` 为主。虽然 `convertBackendToFrontend` 与 `DecimalUtils` 已存在，但尚未成为服务层统一返回入口，导致不同页面存在重复的手动转换与潜在精度/类型不一致。
 
-### 选项分析
+### 首批改造范围
 
-| 选项 | 描述 | 工作量 |
-|------|------|--------|
-| A: 实现模块 | 创建 `pdf_to_images.py` 使用 PyMuPDF | 1-2 天 |
-| B: 移除测试 | 如果 PDF 处理功能不再计划实现 | 0.5 天 |
-| C: 保持现状 | 添加 TODO 注释，后续规划 | 0 天 |
+- 优先覆盖高频字段：`land_area`、`actual_property_area`、`rentable_area`、`monthly_rent`、`deposit/total_deposit`
+- 在服务层建立统一转换出口（优先“服务方法返回前转换”，暂不做全局拦截器）
+- 清理页面层分散的 `parseFloat`/类型兜底逻辑
 
-### 如果选择选项 A
+### 渐进式方案
 
-```python
-# backend/src/services/document/extractors/pdf_to_images.py
-"""
-PDF 转图像模块
-"""
-from pathlib import Path
-from typing import List
-import fitz  # PyMuPDF
-
-
-def pdf_to_images(pdf_path: Path, dpi: int = 150) -> List[bytes]:
-    """将 PDF 页面转换为图像"""
-    doc = fitz.open(pdf_path)
-    images = []
-
-    for page in doc:
-        pix = page.get_pixmap(dpi=dpi)
-        images.append(pix.tobytes("png"))
-
-    return images
-```
+1. **入口统一**：在核心服务返回数据前调用 `convertBackendToFrontend`
+2. **类型收敛**：前端类型定义与真实返回结构对齐，减少“string | number”扩散
+3. **测试补齐**：为至少 1-2 个关键服务补充转换链路测试
+4. **文档固化**：在 `frontend/CLAUDE.md` 增加“何时转换、在哪里转换”规范
 
 ### 验收标准
 
-- [ ] 确认 PDF 处理功能需求
-- [ ] 根据需求选择合适的选项
-- [ ] 移除或修复所有跳过的测试
+- [x] 首批高频字段在服务层统一转换，不依赖页面层临时 parse
+- [x] 新增/改造服务包含对应单测或契约测试
+- [x] 前端类型定义与转换策略一致
+- [x] 开发指南明确“默认在服务层完成 Decimal->number”
 
 ---
 
-## 4. Decimal/Number 类型转换完善
+## 4. PDF 文档处理测试与注释校准
 
 **优先级**: 低
 **风险**: 低
-**预估工作量**: 渐进式（新功能中应用）
+**预估工作量**: 0.5-1 天
 
 ### 问题描述
 
-后端使用 `Decimal` 类型存储金额和面积，前端使用 `number`。虽然 `DecimalUtils` 工具已存在，但未在所有 API 响应处理中统一应用。
+当前 PDF 转图能力已存在于 `backend/src/services/document/pdf_to_images.py`，但部分测试/注释仍保留“模块未实现”历史描述，容易误导后续开发与排障。
 
-### 现有工具
+### 调整方向
 
-```typescript
-// frontend/src/utils/dataConversion.ts
-export const convertBackendToFrontend = <T = unknown>(data: unknown): T => {
-  // 自动转换 DECIMAL_FIELDS 中的字段
-};
-
-// frontend/src/types/asset.ts
-export const DecimalUtils = {
-  toNumber: (value: unknown): number => { ... },
-  toString: (value: unknown): string => { ... },
-};
-```
-
-### 需要检查的字段
-
-```bash
-cd frontend
-grep -r "\.land_area\|\.actual_property_area\|\.rentable_area\|\.monthly_rent\|\.deposit" src/
-```
-
-### 渐进式改进方案
-
-1. **新功能**: 在新 API 调用中使用 `convertBackendToFrontend`
-2. **类型定义**: 确保 `AssetResponse` 类型已声明为 `number`（已转换）
-3. **文档**: 在 `frontend/CLAUDE.md` 中记录最佳实践
+1. 清理测试文件中的过期注释（如“not yet implemented”）
+2. 核查 `pdf_to_images` 相关测试语义与当前实现是否一致
+3. 明确依赖策略（PyMuPDF 优先，`pdf2image` 作为 fallback）并补充到文档
 
 ### 验收标准
 
-- [ ] 新功能使用 DecimalUtils
-- [ ] 更新前端类型定义
-- [ ] 添加开发指南文档
+- [x] 不再存在“模块未实现”这类与现状冲突的描述
+- [x] PDF 相关单测描述与当前实现一致
+- [x] 文档中明确 PDF 渲染后端依赖与回退策略
+
+### 验证记录（2026-02-15）
+
+- [x] 使用项目虚拟环境执行：`backend/.venv/bin/pytest -o addopts='' tests/unit/services/document/test_pdf_edge_cases.py tests/unit/services/document/extractors/test_base.py -q`，结果 `86 passed`
+- [x] 补齐 `pytest-cov` 后按常规无覆盖率回归命令执行：`backend/.venv/bin/pytest tests/unit/services/document/test_pdf_edge_cases.py tests/unit/services/document/extractors/test_base.py -q --no-cov`，结果 `86 passed`
 
 ---
 
-## 执行顺序建议
+## 执行顺序建议（重排）
 
 ```
-第 1 周: 问题 1 (状态管理) - DictionaryPage, EnumFieldPage
-第 2 周: 问题 1 (状态管理) - OrganizationPage, AssetImport
-第 3 周: 问题 2 (组件拆分) - UserManagementPage
-第 4 周: 问题 2 (组件拆分) - RoleManagementPage
-第 5 周: 问题 2 (组件拆分) - OperationLogPage, OrganizationPage
-持续进行: 问题 4 (Decimal 转换)
-待定: 问题 3 (PDF 测试) - 需先确认需求
+已完成: Backlog 校准（2026-02-14）
+
+第 1 周: 问题 1（DictionaryPage + EnumFieldPage）
+第 2 周: 问题 3（Decimal/Number 首批链路统一，已完成）
+第 3-4 周: 问题 2（User/Role/Operation 拆分，已完成）
+第 5 周: 问题 2（Organization + PromptDashboard，已完成）+ 问题 4（PDF 注释校准，已完成）
+持续进行: 问题 3（新增功能按统一入口接入）
 ```
 
 ---
