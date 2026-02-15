@@ -24,7 +24,11 @@ vi.mock('@/utils/messageManager', () => ({
 }));
 
 vi.mock('@/components/Project/ProjectList', () => ({
-  default: ({ onSelectProject }: { onSelectProject: (project: Record<string, unknown>) => void }) => (
+  default: ({
+    onSelectProject,
+  }: {
+    onSelectProject: (project: Record<string, unknown>) => void;
+  }) => (
     <button
       data-testid="pick-modal-project"
       onClick={() =>

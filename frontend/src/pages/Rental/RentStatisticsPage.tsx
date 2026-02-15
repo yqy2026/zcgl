@@ -70,11 +70,8 @@ interface PieChartDatum {
 
 interface LineChartDatum {
   month: string;
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   due: number;
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   paid: number;
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   overdue: number;
   rate: number;
 }
@@ -297,7 +294,9 @@ const RentStatisticsPage: React.FC = () => {
       dataIndex: 'total_paid_amount',
       key: 'total_paid_amount',
       align: 'right',
-      render: (amount: number) => <span className={styles.positiveValue}>{formatCurrency(amount)}</span>,
+      render: (amount: number) => (
+        <span className={styles.positiveValue}>{formatCurrency(amount)}</span>
+      ),
     },
     {
       title: '欠款总额',
@@ -381,7 +380,9 @@ const RentStatisticsPage: React.FC = () => {
       dataIndex: 'total_paid_amount',
       key: 'total_paid_amount',
       align: 'right',
-      render: (amount: number) => <span className={styles.positiveValue}>{formatCurrency(amount)}</span>,
+      render: (amount: number) => (
+        <span className={styles.positiveValue}>{formatCurrency(amount)}</span>
+      ),
     },
     {
       title: '欠款总额',
@@ -612,8 +613,7 @@ const RentStatisticsPage: React.FC = () => {
     },
   ];
 
-  const overdueTone: Tone =
-    Number(overviewData?.total_overdue ?? 0) > 0 ? 'error' : 'success';
+  const overdueTone: Tone = Number(overviewData?.total_overdue ?? 0) > 0 ? 'error' : 'success';
   const paymentRateTone: Tone = resolvePaymentTone(Number(overviewData?.payment_rate ?? 0));
 
   return (

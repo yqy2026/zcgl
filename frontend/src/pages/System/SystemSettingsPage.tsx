@@ -223,7 +223,7 @@ const SystemSettingsPage: React.FC = () => {
             type="info"
             showIcon
             className={styles.settingsNotice}
-            message="配置提示"
+            title="配置提示"
             description="修改系统参数后将立即生效；建议先确认密码策略与会话超时配置。"
           />
           <Form
@@ -338,7 +338,7 @@ const SystemSettingsPage: React.FC = () => {
       children: (
         <Card title="系统信息" loading={isInfoLoading} className={styles.infoCard}>
           {systemInfo != null ? (
-            <Space direction="vertical" size={12} className={styles.infoList}>
+            <Space orientation="vertical" size={12} className={styles.infoList}>
               <div className={styles.infoItem}>
                 <Text strong className={styles.infoLabel}>
                   版本号：
@@ -398,7 +398,7 @@ const SystemSettingsPage: React.FC = () => {
       ),
       children: (
         <Card title="数据备份与恢复" className={styles.backupCard}>
-          <Space direction="vertical" size={16} className={styles.backupStack}>
+          <Space orientation="vertical" size={16} className={styles.backupStack}>
             <Alert
               title="备份说明"
               description="定期备份数据是保障系统安全的重要措施。建议每周至少备份一次数据。"
@@ -410,7 +410,7 @@ const SystemSettingsPage: React.FC = () => {
               <Title level={4} className={styles.sectionTitle}>
                 <DatabaseOutlined /> 数据备份
               </Title>
-              <Space direction="vertical" size={8} className={styles.actionRow}>
+              <Space orientation="vertical" size={8} className={styles.actionRow}>
                 <Button
                   type="primary"
                   icon={<CloudDownloadOutlined />}
@@ -442,7 +442,7 @@ const SystemSettingsPage: React.FC = () => {
                 ref={restoreFileInputRef}
                 aria-label="选择系统备份文件"
               />
-              <Space direction="vertical" size={8} className={styles.actionRow}>
+              <Space orientation="vertical" size={8} className={styles.actionRow}>
                 <Button
                   danger
                   icon={<CloudUploadOutlined />}
@@ -476,7 +476,12 @@ const SystemSettingsPage: React.FC = () => {
       subTitle="管理基础参数、系统信息与备份恢复流程"
       className={styles.pageContainer}
     >
-      <Tabs activeKey={activeTab} onChange={setActiveTab} items={tabItems} className={styles.tabs} />
+      <Tabs
+        activeKey={activeTab}
+        onChange={setActiveTab}
+        items={tabItems}
+        className={styles.tabs}
+      />
     </PageContainer>
   );
 };

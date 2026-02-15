@@ -1,8 +1,12 @@
 .emptyState {
   --empty-state-min-height: calc((var(--spacing-xxxl) * 6) + var(--spacing-md));
   --empty-state-icon-size: calc(var(--spacing-xxxl) + var(--spacing-lg));
-  --empty-state-image-max-width: calc((var(--spacing-xxxl) * 4) + var(--spacing-md) - var(--spacing-xs));
-  --empty-state-image-max-height: calc((var(--spacing-xxxl) * 3) + var(--spacing-sm) - 2px);
+  --empty-state-image-max-width: calc(
+    (var(--spacing-xxxl) * 4) + var(--spacing-md) - var(--spacing-xs)
+  );
+  --empty-state-image-max-height: calc(
+    (var(--spacing-xxxl) * 3) + var(--spacing-sm) - var(--focus-ring-width)
+  );
   --empty-state-content-max-width: calc(var(--spacing-xxxl) * 10);
   display: flex;
   flex-direction: column;

@@ -9,13 +9,7 @@ import { screen, fireEvent } from '@/test/utils/test-helpers';
 import AssetForm from '../AssetForm';
 
 vi.mock('antd', () => {
-  const Form = ({
-    children,
-    onFinish,
-  }: {
-    children: React.ReactNode;
-    onFinish?: () => void;
-  }) => (
+  const Form = ({ children, onFinish }: { children: React.ReactNode; onFinish?: () => void }) => (
     <form
       onSubmit={event => {
         event.preventDefault();

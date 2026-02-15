@@ -5,10 +5,12 @@
   --role-pill-padding-x: calc(var(--spacing-md) - (var(--spacing-xs) / 2));
   --role-icon-offset-y: calc(var(--spacing-xs) / 2);
   --role-switch-height: calc(var(--button-height-sm) - var(--spacing-xs));
-  --role-tree-preview-max-height: 220px;
-  --role-transfer-list-width: 360px;
-  --role-transfer-list-width-mobile: 280px;
-  --role-transfer-list-height: 400px;
+  --role-tree-preview-max-height: calc(
+    (var(--spacing-xxxl) * 4) + var(--spacing-xl) + var(--spacing-xs)
+  );
+  --role-transfer-list-width: calc(var(--button-height-lg) * 9);
+  --role-transfer-list-width-mobile: calc(var(--button-height-lg) * 7);
+  --role-transfer-list-height: calc(var(--button-height-lg) * 10);
 }
 
 .statsRow {
@@ -57,13 +59,13 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid transparent;
+  border: var(--border-width-thin) solid transparent;
 }
 
 .countPill {
   min-width: var(--role-touch-target-size);
   padding: var(--role-pill-padding-y) var(--role-pill-padding-x);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
   line-height: 1.35;
@@ -78,12 +80,12 @@
 }
 
 .permissionTypeTag {
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding-inline: var(--spacing-sm);
 }
 
 .statusTag {
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding-inline: var(--spacing-sm);
 }
 
@@ -227,7 +229,9 @@
   align-items: center;
   justify-content: center;
   color: var(--color-text-secondary);
-  transition: color var(--transition-base), background-color var(--transition-base);
+  transition:
+    color var(--transition-base),
+    background-color var(--transition-base);
 }
 
 .tableActionButton:hover {
@@ -236,15 +240,15 @@
 }
 
 .tableActionButton:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--color-primary);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .statusSwitch {
   min-height: var(--role-switch-height);
 }
 
-@media (max-width: 768px) {
+@media (max-width: var(--breakpoint-sm)) {
   .filterSummary {
     flex-direction: column;
     align-items: flex-start;

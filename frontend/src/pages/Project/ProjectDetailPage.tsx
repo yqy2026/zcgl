@@ -19,12 +19,7 @@ import {
   Statistic,
   Badge,
 } from 'antd';
-import {
-  EditOutlined,
-  HomeOutlined,
-  AreaChartOutlined,
-  TeamOutlined,
-} from '@ant-design/icons';
+import { EditOutlined, HomeOutlined, AreaChartOutlined, TeamOutlined } from '@ant-design/icons';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { projectService } from '@/services/projectService';

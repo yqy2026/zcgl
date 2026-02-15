@@ -59,11 +59,7 @@ const AssetStatusSection: React.FC = () => {
           </Form.Item>
         </Col>
         <Col span={8}>
-          <Form.Item
-            label="实际用途"
-            name="actual_usage"
-            htmlFor={actualUsageIds.inputId}
-          >
+          <Form.Item label="实际用途" name="actual_usage" htmlFor={actualUsageIds.inputId}>
             <DictionarySelect
               dictType="actual_usage"
               placeholder="请选择实际用途"
@@ -107,11 +103,7 @@ const AssetStatusSection: React.FC = () => {
           </Form.Item>
         </Col>
         <Col span={8}>
-          <Form.Item
-            label="是否涉诉"
-            name="is_litigated"
-            htmlFor={isLitigatedIds.inputId}
-          >
+          <Form.Item label="是否涉诉" name="is_litigated" htmlFor={isLitigatedIds.inputId}>
             <Select
               placeholder="请选择是否涉诉"
               id={isLitigatedIds.inputId}
@@ -159,11 +151,7 @@ const AssetStatusSection: React.FC = () => {
           </Form.Item>
         </Col>
         <Col span={8}>
-          <Form.Item
-            label="出租率"
-            name="occupancy_rate"
-            htmlFor={occupancyRateIds.inputId}
-          >
+          <Form.Item label="出租率" name="occupancy_rate" htmlFor={occupancyRateIds.inputId}>
             <Input
               placeholder="自动计算"
               disabled

@@ -1,5 +1,5 @@
 .editNameInput {
-  width: 200px;
+  width: calc(var(--button-height-lg) * 5);
 }
 
 .clearHistoryWrapper {

@@ -37,7 +37,7 @@
 | **认证** | Python-JOSE | 3.5+ | JWT 认证 |
 | **密码哈希** | Passlib | 1.7+ | 密码加密 |
 | **缓存** | Redis | 7.0+ | 缓存层 |
-| **PDF 处理** | LLM Vision API（Qwen/DeepSeek/GLM）, PyMuPDF（可选） | - , 1.24+ | 文档处理 |
+| **PDF 处理** | LLM Vision API（Qwen/DeepSeek/GLM）, PyMuPDF（优先）, pdf2image（回退） | - , 1.24+ | 文档处理 |
 | **数据处理** | Pandas | 2.0+ | 数据分析 |
 
 **证据来源**: `backend/pyproject.toml`
@@ -128,6 +128,13 @@ python run_dev.py
 ```
 
 > 提示：确保 `python` 来自虚拟环境（如 `.venv` / `venv`），可用 `python -c "import sys; print(sys.executable)"` 检查，避免系统 Python 缺失依赖。
+
+### PDF 渲染后端策略
+
+- `backend/src/services/document/pdf_to_images.py` 采用 **PyMuPDF 优先** 的 PDF 渲染路径。
+- 当 PyMuPDF 不可用时，自动回退到 `pdf2image`。
+- 若两者均不可用，将抛出明确错误：`No PDF rendering backend available. Install pymupdf or pdf2image.`。
+- 建议在测试/生产环境至少安装一种渲染后端，避免文档提取流程在预处理阶段失败。
 
 ### 开发命令
 

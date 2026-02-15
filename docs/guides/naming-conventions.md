@@ -115,18 +115,13 @@ const handleSubmit = () => {};
 // ✅ API 交互时的命名转换见「第 4 节 分页字段统一标准」
 ```
 
-### 3.4 ESLint 配置
-```javascript
-// .eslintrc.js - 允许 snake_case
-rules: {
-  '@typescript-eslint/naming-convention': [
-    'error',
-    {
-      selector: 'variable',
-      format: ['camelCase', 'snake_case', 'UPPER_CASE'],
-    },
-  ],
-}
+### 3.4 Lint 约定
+```text
+前端使用 oxlint 做代码检查。
+命名风格遵循本规范：
+- 业务代码优先 camelCase / PascalCase
+- API 交互字段允许 snake_case
+- 常量允许 UPPER_CASE
 ```
 
 ---

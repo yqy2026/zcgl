@@ -207,7 +207,10 @@ const TemplateManagementPage: React.FC = () => {
       return <Tag className={`${styles.statusTag} ${styles.toneNeutral}`}>未知</Tag>;
     }
     return (
-      <Tag className={`${styles.statusTag} ${getToneClassName(statusMeta.tone)}`} icon={statusMeta.icon}>
+      <Tag
+        className={`${styles.statusTag} ${getToneClassName(statusMeta.tone)}`}
+        icon={statusMeta.icon}
+      >
         {statusMeta.label}
         <span className={styles.statusHint}>· {statusMeta.hint}</span>
       </Tag>
@@ -309,7 +312,11 @@ const TemplateManagementPage: React.FC = () => {
         </Col>
         <Col xs={24} sm={12} md={6}>
           <Card className={`${styles.statsCard} ${styles.tonePrimary}`}>
-            <Statistic title="资产模板" value={templates.filter(t => t.type === 'asset').length} suffix="个" />
+            <Statistic
+              title="资产模板"
+              value={templates.filter(t => t.type === 'asset').length}
+              suffix="个"
+            />
           </Card>
         </Col>
         <Col xs={24} sm={12} md={6}>

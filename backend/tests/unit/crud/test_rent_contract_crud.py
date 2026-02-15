@@ -287,5 +287,31 @@ class TestQueryBuilderIntegration:
         assert mock_db.execute.await_count == 2
 
 
+@pytest.mark.asyncio
+class TestPriceCalculationQuery:
+    """测试统计单价查询构建"""
+
+    async def test_get_contracts_for_price_calculation_with_enum_filters(self, mock_db):
+        """传入枚举时应构建兼容 varchar 的合同类型比较条件"""
+        mock_result = MagicMock()
+        mock_scalars = MagicMock()
+        mock_scalars.all.return_value = []
+        mock_result.scalars.return_value = mock_scalars
+        mock_db.execute = AsyncMock(return_value=mock_result)
+
+        contracts = await rent_contract.get_contracts_for_price_calculation_async(
+            db=mock_db,
+            contract_type=ContractType.LEASE_DOWNSTREAM,
+            contract_status="ACTIVE",
+        )
+
+        assert contracts == []
+        assert mock_db.execute.await_count == 1
+        stmt = mock_db.execute.await_args.args[0]
+        stmt_text = str(stmt)
+        assert "CAST(rent_contracts.contract_type AS VARCHAR)" in stmt_text
+        assert "rent_contracts.contract_status" in stmt_text
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--tb=short"])

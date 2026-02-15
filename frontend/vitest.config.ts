@@ -15,6 +15,39 @@ import path from 'path';
 const artifactsRoot = path.resolve(__dirname, '../test-results/frontend');
 const reportsRoot = path.join(artifactsRoot, 'reports');
 const coverageRoot = path.join(artifactsRoot, 'coverage');
+const isStrictCoverage = process.env.VITEST_COVERAGE_STRICT === 'true';
+
+const coverageThresholds = isStrictCoverage
+  ? {
+      // 阶段2（严格）阈值：向 70% 目标对齐
+      lines: 70,
+      functions: 70,
+      branches: 65,
+      statements: 70,
+      perFile: false,
+    }
+  : {
+      // 阶段1（默认）阈值：从历史 50% 基线平滑上调
+      lines: 55,
+      functions: 55,
+      branches: 50,
+      statements: 55,
+      perFile: false,
+    };
+
+const coverageWatermarks = isStrictCoverage
+  ? {
+      statements: [70, 85],
+      functions: [70, 85],
+      branches: [65, 80],
+      lines: [70, 85],
+    }
+  : {
+      statements: [55, 85],
+      functions: [55, 85],
+      branches: [50, 80],
+      lines: [55, 85],
+    };
 
 export default defineConfig({
   plugins: [react()],
@@ -91,24 +124,13 @@ export default defineConfig({
       include: ['src/**/*.{ts,tsx}'],
 
       // 覆盖率阈值（当前CI基线）
-      thresholds: {
-        lines: 50,
-        functions: 50,
-        branches: 45,
-        statements: 50,
-        perFile: false,
-      },
+      thresholds: coverageThresholds,
 
       // 收集选项
       ignoreEmptyLines: true,
 
       // 水印（绿色=良好，黄色=警告）
-      watermarks: {
-        statements: [50, 85],
-        functions: [50, 85],
-        branches: [45, 80],
-        lines: [50, 85],
-      },
+      watermarks: coverageWatermarks,
     },
   },
 

@@ -78,7 +78,9 @@ const AssetSearchResult: React.FC<AssetSearchResultProps> = ({
                   <Tag color={getStatusColor(asset.property_nature, 'property')}>
                     {asset.property_nature}
                   </Tag>
-                  <Tag color={getStatusColor(asset.usage_status, 'usage')}>{asset.usage_status}</Tag>
+                  <Tag color={getStatusColor(asset.usage_status, 'usage')}>
+                    {asset.usage_status}
+                  </Tag>
                 </Space>
               }
               description={
@@ -165,7 +167,9 @@ const AssetSearchResult: React.FC<AssetSearchResultProps> = ({
                   <div>
                     <Space>
                       {asset.is_litigated != null && <Tag color="red">涉诉</Tag>}
-                      {asset.include_in_occupancy_rate != null && <Tag color="green">计入出租率</Tag>}
+                      {asset.include_in_occupancy_rate != null && (
+                        <Tag color="green">计入出租率</Tag>
+                      )}
                       {hasProjectName && <Tag color="blue">{highlightSearchText(projectName)}</Tag>}
                     </Space>
                   </div>

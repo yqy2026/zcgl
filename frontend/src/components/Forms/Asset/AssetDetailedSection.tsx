@@ -34,12 +34,8 @@ const { Title } = Typography;
  * Fields: tenant info, contract info, terminal contracts
  */
 const AssetDetailedSection: React.FC = () => {
-  const {
-    showAdvanced,
-    setShowAdvanced,
-    terminalContractFileList,
-    setTerminalContractFileList,
-  } = useAssetFormContext();
+  const { showAdvanced, setShowAdvanced, terminalContractFileList, setTerminalContractFileList } =
+    useAssetFormContext();
 
   // 为字段生成可访问性 ID
   const tenantNameIds = generateFormFieldIds('tenant-name');
@@ -102,11 +98,7 @@ const AssetDetailedSection: React.FC = () => {
 
           <Row gutter={16}>
             <Col span={8}>
-              <Form.Item
-                label="承租方名称"
-                name="tenant_name"
-                htmlFor={tenantNameIds.inputId}
-              >
+              <Form.Item label="承租方名称" name="tenant_name" htmlFor={tenantNameIds.inputId}>
                 <Input
                   id={tenantNameIds.inputId}
                   placeholder="自动从合同获取"
@@ -196,11 +188,7 @@ const AssetDetailedSection: React.FC = () => {
 
           <Row gutter={16}>
             <Col span={8}>
-              <Form.Item
-                label="月租金(元)"
-                name="monthly_rent"
-                htmlFor={monthlyRentIds.inputId}
-              >
+              <Form.Item label="月租金(元)" name="monthly_rent" htmlFor={monthlyRentIds.inputId}>
                 <InputNumber
                   id={monthlyRentIds.inputId}
                   placeholder="自动从合同获取"
@@ -213,11 +201,7 @@ const AssetDetailedSection: React.FC = () => {
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item
-                label="押金(元)"
-                name="deposit"
-                htmlFor={depositIds.inputId}
-              >
+              <Form.Item label="押金(元)" name="deposit" htmlFor={depositIds.inputId}>
                 <InputNumber
                   id={depositIds.inputId}
                   placeholder="自动从合同获取"
@@ -230,11 +214,7 @@ const AssetDetailedSection: React.FC = () => {
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item
-                label="是否分租/转租"
-                name="is_sublease"
-                htmlFor={isSubleaseIds.inputId}
-              >
+              <Form.Item label="是否分租/转租" name="is_sublease" htmlFor={isSubleaseIds.inputId}>
                 <Select
                   id={isSubleaseIds.inputId}
                   placeholder="请选择"
@@ -275,18 +255,11 @@ const AssetDetailedSection: React.FC = () => {
               >
                 <div>
                   <Upload {...terminalContractUploadProps}>
-                    <Button
-                      icon={<UploadOutlined />}
-                      aria-label="上传PDF终端合同文件"
-                    >
+                    <Button icon={<UploadOutlined />} aria-label="上传PDF终端合同文件">
                       上传PDF终端合同文件
                     </Button>
                   </Upload>
-                  <div
-                    className={styles.uploadHintText}
-                    role="note"
-                    aria-label="文件上传说明"
-                  >
+                  <div className={styles.uploadHintText} role="note" aria-label="文件上传说明">
                     支持多文件上传，每个文件不超过10MB，仅支持PDF格式
                   </div>
                   {terminalContractFileList.length > 0 && (

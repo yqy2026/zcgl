@@ -121,6 +121,31 @@ class TestGetDistinctFieldValues:
         mock_db.execute.assert_awaited_once()
 
     @pytest.mark.asyncio
+    async def test_caching_is_isolated_by_tenant_filter(self, mock_db: MagicMock):
+        mock_result_org_1 = MagicMock()
+        mock_result_org_1.all.return_value = [("org-1-role",)]
+        mock_result_org_2 = MagicMock()
+        mock_result_org_2.all.return_value = [("org-2-role",)]
+        mock_db.execute = AsyncMock(side_effect=[mock_result_org_1, mock_result_org_2])
+
+        result_org_1 = await role_crud.get_distinct_field_values(
+            mock_db,
+            "name",
+            tenant_filter=TenantFilter(organization_ids=["org-1"]),
+            use_cache=True,
+        )
+        result_org_2 = await role_crud.get_distinct_field_values(
+            mock_db,
+            "name",
+            tenant_filter=TenantFilter(organization_ids=["org-2"]),
+            use_cache=True,
+        )
+
+        assert result_org_1 == ["org-1-role"]
+        assert result_org_2 == ["org-2-role"]
+        assert mock_db.execute.await_count == 2
+
+    @pytest.mark.asyncio
     async def test_empty_values_filtered(self, mock_db: MagicMock):
         mock_result = MagicMock()
         mock_result.all.return_value = [
@@ -294,3 +319,29 @@ class TestCacheInvalidationWithTenantFilter:
 
         assert updated.name == "new-role"
         assert cache_key not in role_crud._cache
+
+
+class TestCacheKeyStability:
+    def test_cache_key_stable_for_nested_filter_order(self):
+        key1 = role_crud._get_cache_key(
+            "distinct_values",
+            filters={
+                "status": "active",
+                "metadata": {"b": 2, "a": 1},
+            },
+        )
+        key2 = role_crud._get_cache_key(
+            "distinct_values",
+            filters={
+                "metadata": {"a": 1, "b": 2},
+                "status": "active",
+            },
+        )
+
+        assert key1 == key2
+
+    def test_cache_key_distinguishes_string_and_numeric_ids(self):
+        numeric_key = role_crud._get_cache_key("get", id=1)
+        string_key = role_crud._get_cache_key("get", id="1")
+
+        assert numeric_key != string_key

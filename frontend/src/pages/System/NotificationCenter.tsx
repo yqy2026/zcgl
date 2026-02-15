@@ -88,7 +88,12 @@ const NotificationCenter: React.FC = () => {
     isFetching: isNotificationsFetching,
     refetch: refetchNotifications,
   } = useQuery<NotificationListResponse>({
-    queryKey: ['notification-list', paginationState.current, paginationState.pageSize, filters.type],
+    queryKey: [
+      'notification-list',
+      paginationState.current,
+      paginationState.pageSize,
+      filters.type,
+    ],
     queryFn: fetchNotifications,
     retry: 1,
   });
@@ -122,13 +127,10 @@ const NotificationCenter: React.FC = () => {
   };
 
   // 处理Tab切换
-  const handleTabChange = useCallback(
-    (key: string) => {
-      setFilters({ type: key });
-      setPaginationState(prev => ({ ...prev, current: 1 }));
-    },
-    []
-  );
+  const handleTabChange = useCallback((key: string) => {
+    setFilters({ type: key });
+    setPaginationState(prev => ({ ...prev, current: 1 }));
+  }, []);
 
   const handlePageChange = useCallback((page: number, pageSize: number) => {
     setPaginationState({
@@ -209,11 +211,19 @@ const NotificationCenter: React.FC = () => {
     switch (type) {
       case NotificationType.CONTRACT_EXPIRING:
       case NotificationType.CONTRACT_EXPIRED:
-        return <ClockCircleOutlined className={`${styles.notificationTypeIcon} ${styles.warningIcon}`} />;
+        return (
+          <ClockCircleOutlined className={`${styles.notificationTypeIcon} ${styles.warningIcon}`} />
+        );
       case NotificationType.PAYMENT_OVERDUE:
-        return <ExclamationCircleOutlined className={`${styles.notificationTypeIcon} ${styles.errorIcon}`} />;
+        return (
+          <ExclamationCircleOutlined
+            className={`${styles.notificationTypeIcon} ${styles.errorIcon}`}
+          />
+        );
       case NotificationType.PAYMENT_DUE:
-        return <InfoCircleOutlined className={`${styles.notificationTypeIcon} ${styles.infoIcon}`} />;
+        return (
+          <InfoCircleOutlined className={`${styles.notificationTypeIcon} ${styles.infoIcon}`} />
+        );
       case NotificationType.APPROVAL_PENDING:
         return <CheckOutlined className={`${styles.notificationTypeIcon} ${styles.successIcon}`} />;
       default:
@@ -335,11 +345,7 @@ const NotificationCenter: React.FC = () => {
                 }}
               >
                 <List.Item.Meta
-                  avatar={
-                    <div className={styles.notificationAvatar}>
-                      {getIcon(item.type)}
-                    </div>
-                  }
+                  avatar={<div className={styles.notificationAvatar}>{getIcon(item.type)}</div>}
                   title={
                     <Space size={8} className={styles.notificationTitle}>
                       {item.is_read === false && (
@@ -360,7 +366,9 @@ const NotificationCenter: React.FC = () => {
                       ellipsis={{ rows: 2 }}
                       className={[
                         styles.notificationDescription,
-                        item.is_read ? styles.notificationDescriptionRead : styles.notificationDescriptionUnread,
+                        item.is_read
+                          ? styles.notificationDescriptionRead
+                          : styles.notificationDescriptionUnread,
                       ].join(' ')}
                     >
                       {item.content}

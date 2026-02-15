@@ -94,7 +94,6 @@ export const LoadingProvider: React.FC<{ children: ReactNode }> = ({ children })
         const result = await asyncFn();
         return result;
       } catch (error) {
-        // eslint-disable-next-line no-console
         console.error(`Error in withLoading (${key}):`, error);
         throw error;
       } finally {
@@ -252,7 +251,6 @@ export const LoadingButton: React.FC<LoadingButtonProps> = ({
       try {
         await onClick();
       } catch (error) {
-        // eslint-disable-next-line no-console
         console.error('LoadingButton onClick error:', error);
       }
     }

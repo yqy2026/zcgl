@@ -185,7 +185,6 @@ export class ResponseExtractor {
 
         if (!validation.valid) {
           // 未知格式，记录警告但继续尝试提取
-          // eslint-disable-next-line no-console
           console.warn('API response format does not match standard:', {
             url: response.config.url,
             method: response.config.method?.toUpperCase(),
@@ -193,7 +192,6 @@ export class ResponseExtractor {
           });
         } else if (validation.result && !validation.result.valid) {
           // 格式可识别但验证失败
-          // eslint-disable-next-line no-console
           console.warn('API response validation failed:', {
             url: response.config.url,
             method: response.config.method?.toUpperCase(),
@@ -407,7 +405,6 @@ export class ResponseExtractor {
       // 尝试构造新实例（适用于简单对象）
       return new expectedType(data);
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.warn(`类型验证失败: ${err instanceof Error ? err.message : '未知错误'}`);
 
       // 返回默认值或原数据
@@ -425,7 +422,6 @@ export class ResponseExtractor {
     const result = this.smartExtract<T>(response);
 
     if (!result.success) {
-      // eslint-disable-next-line no-console
       console.warn(`响应数据提取失败: ${result.error}`);
       return defaultValue as T;
     }

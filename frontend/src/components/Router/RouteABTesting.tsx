@@ -250,7 +250,6 @@ class ABTestManager {
           timestamp: new Date().toISOString(),
         })
         .catch(error => {
-          // eslint-disable-next-line no-console
           console.warn('A/B Test event reporting failed:', error);
         });
     }
@@ -266,7 +265,6 @@ class ABTestManager {
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      // eslint-disable-next-line no-console
       console.warn('A/B Test conversion reporting failed:', error);
     }
   }
@@ -461,13 +459,13 @@ export const DashboardABTest: React.FC<{ children: ReactNode }> = ({ children })
       case 'new_layout':
         return {
           display: 'grid',
-          gridTemplateColumns: '300px 1fr',
-          gap: '20px',
-          padding: '20px',
+          gridTemplateColumns: 'calc(var(--spacing-xl) * 12 + var(--spacing-md)) 1fr',
+          gap: 'calc(var(--spacing-sm) + var(--spacing-md))',
+          padding: 'calc(var(--spacing-sm) + var(--spacing-md))',
         };
       default:
         return {
-          padding: '20px',
+          padding: 'calc(var(--spacing-sm) + var(--spacing-md))',
         };
     }
   };
@@ -484,12 +482,12 @@ export const AssetListABTest: React.FC<{ children: ReactNode }> = ({ children })
     switch (currentVariant.id) {
       case 'compact':
         return {
-          fontSize: '14px',
+          fontSize: 'var(--font-size-base)',
           lineHeight: '1.2',
         };
       case 'detailed':
         return {
-          fontSize: '16px',
+          fontSize: 'var(--font-size-lg)',
           lineHeight: '1.6',
         };
       default:

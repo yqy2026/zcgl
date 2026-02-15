@@ -83,7 +83,6 @@ export const ErrorStateContainer: React.FC<ErrorStateContainerProps> = ({
   );
 };
 
-
 interface ContentSectionProps {
   children: React.ReactNode;
   spacing?: 'sm' | 'md' | 'lg' | 'xl';

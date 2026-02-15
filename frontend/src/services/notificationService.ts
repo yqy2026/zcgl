@@ -55,7 +55,6 @@ class NotificationService {
       return result.data!.unread_count;
     } catch (error) {
       // 这里的错误可以忽略，返回0即可，避免影响主流程
-      // eslint-disable-next-line no-console
       console.warn('获取未读通知数量失败', error);
       return 0;
     }

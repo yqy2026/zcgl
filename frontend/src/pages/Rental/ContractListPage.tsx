@@ -47,7 +47,6 @@ const ContractListPage: React.FC = () => {
 
   return (
     <PageContainer title="租金合同管理" subTitle="管理物业租赁合同，支持租金条款设置和台账生成">
-
       {/* 统计卡片 */}
       <ContractStatsCards statistics={statistics ?? null} />
 

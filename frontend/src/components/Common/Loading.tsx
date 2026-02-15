@@ -63,11 +63,7 @@ export const PageLoading: React.FC<PageLoadingProps> = ({
       aria-label={message}
     >
       <Spin size={size} />
-      {message && (
-        <Text className={styles.pageMessage}>
-          {message}
-        </Text>
-      )}
+      {message && <Text className={styles.pageMessage}>{message}</Text>}
     </div>
   );
 };
@@ -162,12 +158,7 @@ export const SkeletonLoading: React.FC<SkeletonLoadingProps> = ({
   const renderListSkeleton = () => (
     <Space direction="vertical" className={styles.listSkeletonSpace} size="small">
       {Array.from({ length: count }).map((_, index) => (
-        <Skeleton.Input
-          key={index}
-          active
-          size="large"
-          className={styles.fullWidthInput}
-        />
+        <Skeleton.Input key={index} active size="large" className={styles.fullWidthInput} />
       ))}
     </Space>
   );
@@ -175,12 +166,7 @@ export const SkeletonLoading: React.FC<SkeletonLoadingProps> = ({
   const renderTableSkeleton = () => (
     <div className={styles.tableSkeletonContainer}>
       {Array.from({ length: count }).map((_, index) => (
-        <Skeleton
-          key={index}
-          active
-          paragraph={{ rows: 1 }}
-          className={styles.tableSkeletonItem}
-        />
+        <Skeleton key={index} active paragraph={{ rows: 1 }} className={styles.tableSkeletonItem} />
       ))}
     </div>
   );
@@ -257,11 +243,7 @@ export const LoadingButton: React.FC<LoadingButtonProps> = ({
   ...restProps
 }) => {
   return (
-    <AntButton
-      {...restProps}
-      disabled={disabled || loading}
-      aria-busy={loading}
-    >
+    <AntButton {...restProps} disabled={disabled || loading} aria-busy={loading}>
       {loading ? (
         <Space size="small" className={styles.loadingButtonSpace}>
           {loadingIcon || <Spin size="small" />}

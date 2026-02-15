@@ -2,6 +2,7 @@ import { apiClient } from '@/api/client';
 import { STATISTICS_API } from '@/constants/api';
 import type { AssetSearchParams } from '@/types/asset';
 import type { AnalyticsData, AnalyticsResponse } from '@/types/analytics';
+import { convertBackendToFrontend } from '@/utils/dataConversion';
 import { createLogger } from '@/utils/logger';
 
 const serviceLogger = createLogger('analyticsService');
@@ -68,6 +69,19 @@ interface RawBusinessCategoryItem {
   [key: string]: unknown;
 }
 
+const toNumber = (value: unknown): number => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+  return 0;
+};
+
 export class AnalyticsService {
   private api = apiClient;
 
@@ -119,7 +133,7 @@ export class AnalyticsService {
     );
 
     // 从 API 数据中提取 area_summary
-    const rawAreaSummary = apiData.area_summary ?? {};
+    const rawAreaSummary = convertBackendToFrontend<RawAreaSummary>(apiData.area_summary ?? {});
 
     // 适配 area_summary
     const area_summary: AnalyticsData['area_summary'] = {
@@ -134,7 +148,9 @@ export class AnalyticsService {
     };
 
     // 提取或生成 financial_summary（如果后端没有返回，使用空值）
-    const rawFinancialSummary = apiData.financial_summary ?? {};
+    const rawFinancialSummary = convertBackendToFrontend<RawFinancialSummary>(
+      apiData.financial_summary ?? {}
+    );
     const financial_summary: AnalyticsData['financial_summary'] = {
       estimated_annual_income: rawFinancialSummary.estimated_annual_income ?? 0,
       total_annual_income: rawFinancialSummary.total_annual_income ?? 0,
@@ -160,9 +176,9 @@ export class AnalyticsService {
     const business_category_distribution: AnalyticsData['business_category_distribution'] =
       rawBusinessCategories.map((item: RawBusinessCategoryItem) => ({
         category: typeof item.category === 'string' ? item.category : '未分类',
-        count: typeof item.count === 'number' ? item.count : 0,
-        occupancy_rate: typeof item.occupancy_rate === 'number' ? item.occupancy_rate : 0,
-        avg_annual_income: typeof item.avg_annual_income === 'number' ? item.avg_annual_income : 0,
+        count: toNumber(item.count),
+        occupancy_rate: toNumber(item.occupancy_rate),
+        avg_annual_income: toNumber(item.avg_annual_income),
       }));
 
     // 提取趋势数据

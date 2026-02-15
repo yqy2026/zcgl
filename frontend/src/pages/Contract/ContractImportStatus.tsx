@@ -3,7 +3,7 @@
  * 显示实时处理进度、结果和错误信息
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Card,
   Progress,
@@ -22,6 +22,7 @@ import {
   Divider,
 } from 'antd';
 import { MessageManager } from '@/utils/messageManager';
+import { createLogger } from '@/utils/logger';
 import {
   CheckCircleOutlined,
   LoadingOutlined,
@@ -43,6 +44,8 @@ import {
 import styles from './ContractImportStatus.module.css';
 
 const { Title, Text } = Typography;
+const pageLogger = createLogger('ContractImportStatus');
+const MAX_CONSECUTIVE_POLL_FAILURES = 3;
 
 type StatusTone = 'success' | 'warning' | 'error' | 'primary';
 
@@ -102,10 +105,13 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
   const [result, setResult] = useState<CompleteResult | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const pollFailureCountRef = useRef(0);
 
   // 初始化步骤
   useEffect(() => {
     // Component initialized
+    pollFailureCountRef.current = 0;
+    setAutoRefresh(true);
 
     const initialSteps: ProcessingStep[] = [
       {
@@ -153,6 +159,7 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
       const response = await pdfImportService.getProgress(sessionId);
 
       if (response.success && response.session_status) {
+        pollFailureCountRef.current = 0;
         setCurrentProgress(response.session_status);
 
         // 更新步骤状态
@@ -180,10 +187,13 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
         }
       }
     } catch (error: unknown) {
-      // eslint-disable-next-line no-console
-      console.error('获取进度失败:', error);
-      // 不立即调用onError，让轮询继续
-      // 只有在连续多次失败时才停止
+      pollFailureCountRef.current += 1;
+      pageLogger.error('获取导入进度失败:', error);
+
+      if (pollFailureCountRef.current >= MAX_CONSECUTIVE_POLL_FAILURES) {
+        setAutoRefresh(false);
+        onError('连续获取进度失败，已停止自动刷新，请点击刷新重试');
+      }
     }
   }, [sessionId, onComplete, onError]);
 
@@ -368,8 +378,8 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
         <Steps
           current={steps.findIndex(step => step.status === 'process')}
           status={steps.some(step => step.status === 'error') ? 'error' : 'process'}
-          items={steps.map((step, index) => ({
-            key: index,
+          items={steps.map(step => ({
+            key: step.title,
             title: step.title,
             description: (
               <div>
@@ -548,7 +558,9 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
               <Text code>{sessionId}</Text>
             </Descriptions.Item>
             <Descriptions.Item label="当前状态">
-              <Tag className={`${styles.statusTag} ${getStatusToneClassName(currentProgress.status)}`}>
+              <Tag
+                className={`${styles.statusTag} ${getStatusToneClassName(currentProgress.status)}`}
+              >
                 {getStatusText(currentProgress.status)}
               </Tag>
             </Descriptions.Item>

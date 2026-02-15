@@ -88,9 +88,7 @@ const AssetAreaSummary: React.FC<AssetAreaSummaryProps> = ({ analyticsData, load
           </Col>
         </Row>
       ) : (
-        <div className={styles.emptyState}>
-          {loading ? '正在加载统计数据...' : '暂无统计数据'}
-        </div>
+        <div className={styles.emptyState}>{loading ? '正在加载统计数据...' : '暂无统计数据'}</div>
       )}
     </Card>
   );

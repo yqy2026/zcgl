@@ -105,8 +105,8 @@
 
 .countTag {
   margin-inline-end: 0;
-  border-radius: 999px;
-  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-pill);
+  border: var(--border-width-thin) solid var(--color-primary);
   background: var(--color-primary-light);
   color: var(--color-primary);
   font-weight: var(--font-weight-medium);
@@ -127,8 +127,8 @@
 
 .statusTag {
   margin-inline-end: 0;
-  border-radius: 999px;
-  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  border: var(--border-width-thin) solid transparent;
   padding-inline: var(--spacing-sm);
   font-size: var(--font-size-xs);
   line-height: var(--rent-stats-tag-line-height);
@@ -162,13 +162,13 @@
   gap: var(--spacing-sm);
 }
 
-@media (max-width: 992px) {
+@media (max-width: var(--breakpoint-md)) {
   .headerActionGroup {
     justify-content: flex-start;
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: var(--breakpoint-sm)) {
   .headerActions {
     margin-top: var(--spacing-md);
   }

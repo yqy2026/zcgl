@@ -79,6 +79,35 @@ describe('AssetCoreService', () => {
       );
     });
 
+    it('should convert decimal string fields in list items', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        success: true,
+        data: {
+          items: [
+            {
+              id: '1',
+              name: '资产1',
+              land_area: '123.45',
+              monthly_rent: '8888.00',
+            },
+          ],
+          total: 1,
+          page: 1,
+          page_size: 20,
+          pages: 1,
+        },
+      });
+
+      const result = await service.getAssets({ page: 1, page_size: 20 });
+      const firstItem = result.items[0] as unknown as {
+        land_area: number;
+        monthly_rent: number;
+      };
+
+      expect(firstItem.land_area).toBe(123.45);
+      expect(firstItem.monthly_rent).toBe(8888);
+    });
+
     it('should use default pagination when not provided', async () => {
       const mockResponse = {
         success: true,
@@ -141,6 +170,30 @@ describe('AssetCoreService', () => {
 
       expect(result).toEqual(mockAsset);
       expect(result.id).toBe('1');
+    });
+
+    it('should convert decimal string fields in asset detail', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        success: true,
+        data: {
+          id: '1',
+          name: '测试资产',
+          land_area: '1000.50',
+          rentable_area: '800.25',
+          total_deposit: '50000.00',
+        },
+      });
+
+      const result = await service.getAsset('1');
+      const convertedAsset = result as unknown as {
+        land_area: number;
+        rentable_area: number;
+        total_deposit: number;
+      };
+
+      expect(convertedAsset.land_area).toBe(1000.5);
+      expect(convertedAsset.rentable_area).toBe(800.25);
+      expect(convertedAsset.total_deposit).toBe(50000);
     });
 
     it('should throw error when asset not found', async () => {

@@ -36,8 +36,8 @@
 }
 
 .backButton:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--color-primary);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .titleBlock {
@@ -75,7 +75,7 @@
   width: 100%;
 }
 
-@media (max-width: 768px) {
+@media (max-width: var(--breakpoint-sm)) {
   .pageContainer {
     padding: var(--spacing-lg);
   }

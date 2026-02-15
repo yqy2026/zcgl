@@ -14,8 +14,7 @@ interface EnumValuePreviewProps {
 
 type Tone = 'primary' | 'success' | 'warning' | 'error';
 
-const hasText = (value: string | null | undefined): boolean =>
-  value != null && value.trim() !== '';
+const hasText = (value: string | null | undefined): boolean => value != null && value.trim() !== '';
 
 const getToneByValue = (value: EnumFieldValue): Tone => {
   if (value.is_default === true) {
@@ -49,11 +48,7 @@ const EnumValuePreview: React.FC<EnumValuePreviewProps> = ({
   const shouldShowInactiveCount = _showInactiveCount ?? showInactiveCount;
 
   if (!Array.isArray(values) || values.length === 0) {
-    return (
-      <span className={[styles.emptyState, className].join(' ').trim()}>
-        暂无枚举值
-      </span>
-    );
+    return <span className={[styles.emptyState, className].join(' ').trim()}>暂无枚举值</span>;
   }
 
   // 过滤活跃值并按排序排序
@@ -93,10 +88,10 @@ const EnumValuePreview: React.FC<EnumValuePreviewProps> = ({
                   </div>
                 )}
                 {hasText(value.description) && (
-                    <div>
-                      <strong>描述:</strong> {value.description}
-                    </div>
-                  )}
+                  <div>
+                    <strong>描述:</strong> {value.description}
+                  </div>
+                )}
                 <div>
                   <strong>排序:</strong> {value.sort_order}
                 </div>
@@ -113,9 +108,7 @@ const EnumValuePreview: React.FC<EnumValuePreviewProps> = ({
               className={[
                 styles.valueTag,
                 sizeClassName,
-                hasText(value.color)
-                  ? styles.customColorTag
-                  : toneClassMap[getToneByValue(value)],
+                hasText(value.color) ? styles.customColorTag : toneClassMap[getToneByValue(value)],
               ].join(' ')}
             >
               <span>{value.label}</span>
@@ -134,9 +127,7 @@ const EnumValuePreview: React.FC<EnumValuePreviewProps> = ({
 
       {/* 显示非活跃数量 */}
       {shouldShowInactiveCount === true && inactiveCount > 0 && (
-        <div className={styles.inactiveCountText}>
-          {inactiveCount} 个已禁用
-        </div>
+        <div className={styles.inactiveCountText}>{inactiveCount} 个已禁用</div>
       )}
     </div>
   );

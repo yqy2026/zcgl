@@ -7,6 +7,7 @@ import { apiClient } from '@/api/client';
 import { ownershipService } from '@/services/ownershipService';
 import { ApiErrorHandler } from '@/utils/responseExtractor';
 import { ASSET_API } from '@/constants/api';
+import { convertBackendToFrontend } from '@/utils/dataConversion';
 import type {
   Asset,
   AssetSearchParams,
@@ -49,15 +50,14 @@ export class AssetCoreService {
         throw new Error(`获取资产列表失败: ${result.error}`);
       }
 
-      return (
-        result.data ?? {
-          items: [],
-          total: 0,
-          page: 1,
-          page_size: 20,
-          pages: 0,
-        }
-      );
+      const payload = result.data ?? {
+        items: [],
+        total: 0,
+        page: 1,
+        page_size: 20,
+        pages: 0,
+      };
+      return convertBackendToFrontend<AssetListResponse>(payload);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -83,7 +83,7 @@ export class AssetCoreService {
         throw new Error(`获取所有资产失败: ${result.error}`);
       }
 
-      return result.data!;
+      return convertBackendToFrontend<Asset[]>(result.data ?? []);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -110,7 +110,7 @@ export class AssetCoreService {
         throw new Error(`根据ID列表获取资产失败: ${result.error}`);
       }
 
-      return result.data!;
+      return convertBackendToFrontend<Asset[]>(result.data ?? []);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -132,7 +132,10 @@ export class AssetCoreService {
         throw new Error(`获取资产详情失败: ${result.error}`);
       }
 
-      return result.data!;
+      if (result.data == null) {
+        throw new Error('资产详情为空');
+      }
+      return convertBackendToFrontend<Asset>(result.data);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -154,7 +157,10 @@ export class AssetCoreService {
       }
 
       this.invalidateAssetCaches();
-      return result.data!;
+      if (result.data == null) {
+        throw new Error('创建资产返回为空');
+      }
+      return convertBackendToFrontend<Asset>(result.data);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -176,7 +182,10 @@ export class AssetCoreService {
       }
 
       this.invalidateAssetCaches();
-      return result.data!;
+      if (result.data == null) {
+        throw new Error('更新资产返回为空');
+      }
+      return convertBackendToFrontend<Asset>(result.data);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -223,7 +232,10 @@ export class AssetCoreService {
       }
 
       this.invalidateAssetCaches();
-      return result.data!;
+      if (result.data == null) {
+        throw new Error('恢复资产返回为空');
+      }
+      return convertBackendToFrontend<Asset>(result.data);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);

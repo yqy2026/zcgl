@@ -176,7 +176,7 @@ PAGES=/dashboard,/assets/list,/maintenance pnpm diagnose
 
 ```bash
 # 开发前检查
-pnpm audit:ui              # ESLint + TypeScript + Stylelint
+pnpm audit:ui              # Oxlint + Tsgo + Stylelint
 pnpm diagnose              # Puppeteer 运行时检查
 
 # 完整检查

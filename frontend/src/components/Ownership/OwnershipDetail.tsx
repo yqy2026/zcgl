@@ -36,7 +36,9 @@ const OwnershipDetail: React.FC<OwnershipDetailProps> = ({ ownership, onEdit }) 
   }
 
   const hasShortName =
-    ownership.short_name !== null && ownership.short_name !== undefined && ownership.short_name !== '';
+    ownership.short_name !== null &&
+    ownership.short_name !== undefined &&
+    ownership.short_name !== '';
   const hasRelatedProjects = (ownership.related_projects?.length ?? 0) > 0;
 
   // 关联项目表格列定义
@@ -105,7 +107,12 @@ const OwnershipDetail: React.FC<OwnershipDetailProps> = ({ ownership, onEdit }) 
               text={ownership.is_active ? '启用' : '禁用'}
               className={styles.statusBadge}
             />
-            <Button type="primary" icon={<EditOutlined />} className={styles.editButton} onClick={onEdit}>
+            <Button
+              type="primary"
+              icon={<EditOutlined />}
+              className={styles.editButton}
+              onClick={onEdit}
+            >
               编辑
             </Button>
           </div>

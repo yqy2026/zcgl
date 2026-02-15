@@ -1,5 +1,5 @@
 from collections.abc import Awaitable, Callable
-from typing import Any, NoReturn, TypeVar, cast
+from typing import NoReturn, TypeVar, cast
 
 """
 统一异常处理机制
@@ -10,7 +10,7 @@ import logging
 import traceback
 from datetime import UTC, datetime
 
-from fastapi import HTTPException, Request, status
+from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import IntegrityError
@@ -18,6 +18,7 @@ from sqlalchemy.exc import IntegrityError
 from ..constants.message_constants import ErrorMessages
 
 logger = logging.getLogger(__name__)
+ErrorDetails = dict[str, object]
 
 
 class BaseBusinessError(Exception):
@@ -27,7 +28,7 @@ class BaseBusinessError(Exception):
         self,
         message: str,
         code: str = "BUSINESS_ERROR",
-        details: dict[str, Any] | None = None,
+        details: ErrorDetails | None = None,
         status_code: int = status.HTTP_400_BAD_REQUEST,
     ):
         self.message = message
@@ -37,7 +38,7 @@ class BaseBusinessError(Exception):
         self.timestamp = datetime.now(UTC)
         super().__init__(message)
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> ErrorDetails:
         """转换为字典格式"""
         return {
             "success": False,
@@ -57,7 +58,7 @@ class BusinessValidationError(BaseBusinessError):
         self,
         message: str,
         field_errors: dict[str, list[str]] | None = None,
-        details: dict[str, Any] | None = None,
+        details: ErrorDetails | None = None,
     ):
         self.field_errors = field_errors or {}
         super().__init__(
@@ -75,7 +76,7 @@ class ResourceNotFoundError(BaseBusinessError):
         self,
         resource_type: str,
         resource_id: str | None = None,
-        details: dict[str, Any] | None = None,
+        details: ErrorDetails | None = None,
     ):
         message = (
             f"{resource_type}{ErrorMessages.RESOURCE_NOT_FOUND.replace('资源', '')}"
@@ -103,7 +104,7 @@ class DuplicateResourceError(BaseBusinessError):
         resource_type: str,
         field: str,
         value: str,
-        details: dict[str, Any] | None = None,
+        details: ErrorDetails | None = None,
     ):
         message = f"{resource_type}{ErrorMessages.RESOURCE_ALREADY_EXISTS.replace('资源', '')}，{field}: {value}"
 
@@ -127,7 +128,7 @@ class PermissionDeniedError(BaseBusinessError):
         self,
         message: str | None = None,
         required_permission: str | None = None,
-        details: dict[str, Any] | None = None,
+        details: ErrorDetails | None = None,
     ):
         super().__init__(
             message=message or ErrorMessages.PERMISSION_DENIED,
@@ -143,7 +144,7 @@ class AuthenticationError(BaseBusinessError):
     def __init__(
         self,
         message: str | None = None,
-        details: dict[str, Any] | None = None,
+        details: ErrorDetails | None = None,
     ):
         super().__init__(
             message=message or ErrorMessages.AUTHENTICATION_FAILED,
@@ -160,9 +161,9 @@ class InvalidRequestError(BaseBusinessError):
         self,
         message: str,
         field: str | None = None,
-        details: dict[str, Any] | None = None,
+        details: ErrorDetails | None = None,
     ):
-        detail_payload: dict[str, Any] = {}
+        detail_payload: ErrorDetails = {}
         if field:
             detail_payload["field"] = field
         if details:
@@ -182,7 +183,7 @@ class ResourceConflictError(BaseBusinessError):
         self,
         message: str,
         resource_type: str | None = None,
-        details: dict[str, Any] | None = None,
+        details: ErrorDetails | None = None,
     ):
         payload = {"resource_type": resource_type} if resource_type else {}
         if details:
@@ -202,7 +203,7 @@ class ServiceUnavailableError(BaseBusinessError):
         self,
         message: str,
         service_name: str | None = None,
-        details: dict[str, Any] | None = None,
+        details: ErrorDetails | None = None,
     ):
         payload = {"service": service_name} if service_name else {}
         if details:
@@ -222,7 +223,7 @@ class OperationNotAllowedError(BaseBusinessError):
         self,
         message: str,
         reason: str | None = None,
-        details: dict[str, Any] | None = None,
+        details: ErrorDetails | None = None,
     ):
         payload = {"reason": reason} if reason else {}
         if details:
@@ -242,7 +243,7 @@ class InternalServerError(BaseBusinessError):
         self,
         message: str,
         original_error: Exception | None = None,
-        details: dict[str, Any] | None = None,
+        details: ErrorDetails | None = None,
     ):
         payload = {"original_error": str(original_error)} if original_error else {}
         if details:
@@ -263,7 +264,7 @@ class FileProcessingError(BaseBusinessError):
         message: str,
         file_name: str | None = None,
         file_type: str | None = None,
-        details: dict[str, Any] | None = None,
+        details: ErrorDetails | None = None,
     ):
         super().__init__(
             message=message,
@@ -281,7 +282,7 @@ class TaskProcessingError(BaseBusinessError):
         message: str,
         task_id: str | None = None,
         task_type: str | None = None,
-        details: dict[str, Any] | None = None,
+        details: ErrorDetails | None = None,
     ):
         super().__init__(
             message=message,
@@ -298,7 +299,7 @@ class ConfigurationError(BaseBusinessError):
         self,
         message: str,
         config_key: str | None = None,
-        details: dict[str, Any] | None = None,
+        details: ErrorDetails | None = None,
     ):
         super().__init__(
             message=message,
@@ -316,7 +317,7 @@ class ExternalServiceError(BaseBusinessError):
         message: str,
         service_name: str | None = None,
         service_error: str | None = None,
-        details: dict[str, Any] | None = None,
+        details: ErrorDetails | None = None,
     ):
         super().__init__(
             message=message,
@@ -337,7 +338,7 @@ class RateLimitError(BaseBusinessError):
         self,
         message: str = "请求过于频繁，请稍后再试",
         retry_after: int | None = None,
-        details: dict[str, Any] | None = None,
+        details: ErrorDetails | None = None,
     ):
         super().__init__(
             message=message,
@@ -389,8 +390,8 @@ class ExceptionHandler:
         return JSONResponse(status_code=exc.status_code, content=response_data)
 
     def _sanitize_exception_details(
-        self, details: dict[str, Any]
-    ) -> dict[str, Any] | str | None:
+        self, details: ErrorDetails | None
+    ) -> ErrorDetails | str | None:
         """清理异常详情中的不可序列化内容"""
         if details is None:
             return None
@@ -453,7 +454,7 @@ class ExceptionHandler:
 
         return self.handle_business_exception(request, business_exc)
 
-    def _clean_for_serialization(self, obj: Any) -> Any:
+    def _clean_for_serialization(self, obj: object) -> object:
         """递归清理对象以便JSON序列化"""
         from decimal import Decimal
 
@@ -509,7 +510,7 @@ class ExceptionHandler:
         )
 
         message = "内部服务器错误"
-        details: dict[str, Any] = {}
+        details: ErrorDetails = {}
 
         business_exc = BaseBusinessError(
             message=message,
@@ -575,9 +576,9 @@ def bad_request(
     message: str,
     *,
     field: str | None = None,
-    details: str | dict[str, Any] | list[str] | None = None,
+    details: str | ErrorDetails | list[str] | None = None,
 ) -> BaseBusinessError:
-    error_details: dict[str, Any] = {}
+    error_details: ErrorDetails = {}
     if details is not None:
         error_details["details"] = details
 
@@ -660,7 +661,7 @@ def operation_not_allowed(
     )
 
 
-def setup_exception_handlers(app: Any) -> None:
+def setup_exception_handlers(app: FastAPI) -> None:
     """设置应用异常处理器"""
 
     TExc = TypeVar("TExc", bound=BaseException)
@@ -714,28 +715,28 @@ def setup_exception_handlers(app: Any) -> None:
 
 # 便捷异常抛出函数
 def raise_not_found(
-    resource_type: str, resource_id: str | None = None, **kwargs: Any
+    resource_type: str, resource_id: str | None = None, **kwargs: object
 ) -> NoReturn:
     """抛出资源未找到异常"""
     raise ResourceNotFoundError(resource_type, resource_id, kwargs)
 
 
 def raise_duplicate(
-    resource_type: str, field: str, value: str, **kwargs: Any
+    resource_type: str, field: str, value: str, **kwargs: object
 ) -> NoReturn:
     """抛出资源重复异常"""
     raise DuplicateResourceError(resource_type, field, value, kwargs)
 
 
 def raise_permission_denied(
-    message: str | None = None, required_permission: str | None = None, **kwargs: Any
+    message: str | None = None, required_permission: str | None = None, **kwargs: object
 ) -> NoReturn:
     """抛出权限不足异常"""
     raise PermissionDeniedError(message or "权限不足", required_permission, kwargs)
 
 
 def raise_validation_error(
-    message: str, field_errors: dict[str, list[str]] | None = None, **kwargs: Any
+    message: str, field_errors: dict[str, list[str]] | None = None, **kwargs: object
 ) -> NoReturn:
     """抛出验证异常"""
     raise BusinessValidationError(message, field_errors, kwargs)
@@ -745,7 +746,7 @@ def raise_file_error(
     message: str,
     file_name: str | None = None,
     file_type: str | None = None,
-    **kwargs: Any,
+    **kwargs: object,
 ) -> NoReturn:
     """抛出文件处理异常"""
     raise FileProcessingError(message, file_name, file_type, kwargs)
@@ -755,27 +756,27 @@ def raise_task_error(
     message: str,
     task_id: str | None = None,
     task_type: str | None = None,
-    **kwargs: Any,
+    **kwargs: object,
 ) -> NoReturn:
     """抛出任务处理异常"""
     raise TaskProcessingError(message, task_id, task_type, kwargs)
 
 
 def raise_config_error(
-    message: str, config_key: str | None = None, **kwargs: Any
+    message: str, config_key: str | None = None, **kwargs: object
 ) -> NoReturn:
     """抛出配置异常"""
     raise ConfigurationError(message, config_key, kwargs)
 
 
 def raise_external_service_error(
-    message: str, service_name: str | None = None, **kwargs: Any
+    message: str, service_name: str | None = None, **kwargs: object
 ) -> NoReturn:
     """抛出外部服务异常"""
     raise ExternalServiceError(message, service_name, **kwargs)
 
 
-def raise_rate_limit(retry_after: int | None = None, **kwargs: Any) -> NoReturn:
+def raise_rate_limit(retry_after: int | None = None, **kwargs: object) -> NoReturn:
     """抛出频率限制异常"""
     raise RateLimitError(retry_after=retry_after, **kwargs)
 

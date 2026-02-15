@@ -4,11 +4,11 @@
 }
 
 .cardDefault {
-  border: 1px solid var(--ant-color-border);
+  border: var(--border-width-thin) solid var(--ant-color-border);
 }
 
 .cardSelected {
-  border: 2px solid var(--ant-color-primary);
+  border: var(--focus-ring-width) solid var(--ant-color-primary);
 }
 
 .metaTitle {

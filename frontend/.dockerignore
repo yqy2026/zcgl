@@ -1,0 +1,23 @@
+# VCS metadata
+.git
+.gitignore
+
+# Local environment
+.env
+.env.*
+
+# Dependencies and build outputs
+node_modules
+dist
+.vite
+
+# Tests and reports
+tests
+coverage
+playwright-report
+test-results
+
+# Local artifacts
+*.log
+tsc_output.txt
+typecheck.err

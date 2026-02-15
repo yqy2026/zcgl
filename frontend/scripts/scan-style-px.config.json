@@ -1,0 +1,6 @@
+{
+  "tokenSourceFiles": [
+    "styles/variables.css",
+    "theme/sharedTokens.ts"
+  ]
+}

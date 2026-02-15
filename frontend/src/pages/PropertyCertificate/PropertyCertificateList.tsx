@@ -121,7 +121,11 @@ export const PropertyCertificateList: React.FC = () => {
           label: type,
           tone: 'primary' as Tone,
         };
-        return <Tag className={[styles.statusTag, toneClassMap[typeMeta.tone]].join(' ')}>{typeMeta.label}</Tag>;
+        return (
+          <Tag className={[styles.statusTag, toneClassMap[typeMeta.tone]].join(' ')}>
+            {typeMeta.label}
+          </Tag>
+        );
       },
     },
     {

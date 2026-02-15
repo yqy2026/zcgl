@@ -28,8 +28,7 @@
 
 .container {
   text-align: center;
-  padding: calc(var(--spacing-xxl) + var(--spacing-sm))
-    calc(var(--spacing-lg) + var(--spacing-xs));
+  padding: calc(var(--spacing-xxl) + var(--spacing-sm)) calc(var(--spacing-lg) + var(--spacing-xs));
 }
 
 .detailsContainer {

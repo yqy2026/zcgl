@@ -1,5 +1,8 @@
 from typing import Any, Protocol
 
+from ...core.performance import PerformanceMonitor
+from ...services.document.pdf_import_service import PDFImportService
+
 
 class PDFProcessingServiceProtocol(Protocol):
     """Protocol for PDF processing service"""
@@ -24,10 +27,6 @@ class PDFSessionServiceProtocol(Protocol):
         organization_id: int | None,
         processing_options: dict[str, Any] | None = None,
     ) -> object: ...
-
-
-from ...core.performance import PerformanceMonitor
-from ...services.document.pdf_import_service import PDFImportService
 
 # ============================================================================
 # 服务依赖工厂

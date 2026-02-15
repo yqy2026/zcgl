@@ -35,7 +35,7 @@ export const baseThemeConfig: ThemeConfig = {
     },
     Card: {
       boxShadow:
-        '0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px 0 rgba(0, 0, 0, 0.02)',
+        '0 0.0625rem 0.125rem 0 rgba(0, 0, 0, 0.03), 0 0.0625rem 0.375rem -0.0625rem rgba(0, 0, 0, 0.02), 0 0.125rem 0.25rem 0 rgba(0, 0, 0, 0.02)',
       headerFontSize: 16,
     },
     Table: {
@@ -48,7 +48,7 @@ export const baseThemeConfig: ThemeConfig = {
       controlHeight: 36,
       contentFontSize: 14,
       borderRadius: 6,
-      boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+      boxShadow: '0 0.0625rem 0.125rem 0 rgba(0, 0, 0, 0.05)',
     },
     Statistic: {
       titleFontSize: 14,

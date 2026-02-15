@@ -230,7 +230,7 @@ const TableComponent = responsive ? ResponsiveTable : Table;
 
 ---
 
-## 🟢 低优先级修复（类型错误和 ESLint）
+## 🟢 低优先级修复（类型错误和 Oxlint）
 
 ### 问题 7: 修复 AssetSearchResult 组件类型错误
 **文件**: `frontend/src/components/Asset/AssetSearchResult.tsx`
@@ -314,7 +314,7 @@ cardFields?: Array<Extract<keyof T, string> | { key: string; label: string; ... 
 
 ---
 
-## 🔧 ESLint 警告修复
+## 🔧 Oxlint 警告修复
 
 ### 修复内容
 1. ✅ 移除 `AssetList.tsx` 中未使用的 `generateAriaLabel` 导入
@@ -325,7 +325,7 @@ cardFields?: Array<Extract<keyof T, string> | { key: string; label: string; ... 
 6. ✅ 移除 `VirtualList.tsx` 中未使用的 `useEffect` 导入
 
 **修复效果**:
-- ✅ ESLint 检查通过（0 错误，0 警告）
+- ✅ Oxlint 检查通过（0 错误，0 警告）
 - ✅ 代码更清洁
 
 ---
@@ -338,7 +338,7 @@ cd frontend && pnpm type-check
 ```
 **结果**: ✅ 通过（0 错误）
 
-### ESLint 代码检查
+### Oxlint 代码检查
 ```bash
 cd frontend && pnpm lint
 ```
@@ -373,7 +373,7 @@ cd frontend && pnpm lint
 
 ### 代码质量改进
 - ✅ **类型安全**: 所有 TypeScript 类型错误已修复
-- ✅ **代码规范**: ESLint 检查通过，无警告
+- ✅ **代码规范**: Oxlint 检查通过，无警告
 - ✅ **导入路径**: 大小写一致，跨平台兼容
 
 ### 功能保持完整
@@ -422,7 +422,7 @@ CSS 变量系统冲突，`global.css` 中的静态主题变量与 ThemeProvider 
 1. **最小化修改**: 只修改必要的代码，降低风险
 2. **保持功能**: 确保所有现有功能正常工作
 3. **类型安全**: 修复所有类型错误，提高代码质量
-4. **代码规范**: 遵循项目 ESLint 规则
+4. **代码规范**: 遵循项目 Oxlint 规则
 5. **可维护性**: 使用 CSS 类代替内联样式
 
 ---
@@ -443,7 +443,7 @@ CSS 变量系统冲突，`global.css` 中的静态主题变量与 ThemeProvider 
 - [x] 无 TypeScript 类型错误
 - [x] 无 CSS 语法错误
 - [x] 导入路径大小写一致
-- [x] ESLint 检查通过
+- [x] Oxlint 检查通过
 
 ---
 

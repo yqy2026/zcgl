@@ -9,8 +9,8 @@
 ## ✅ 前置条件
 - Python 3.12+
 - Node.js 20+ / pnpm
-- PostgreSQL 16+
-- Redis 7（可选）
+- PostgreSQL 18.2+
+- Redis 8.6（可选）
 - Docker / Docker Compose（可选）
 
 ## 1. 获取代码

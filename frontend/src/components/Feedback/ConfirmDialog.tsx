@@ -148,7 +148,9 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     },
     warning: {
       icon: (
-        <ExclamationCircleOutlined className={`${styles.confirmIcon} ${styles.confirmIconWarning}`} />
+        <ExclamationCircleOutlined
+          className={`${styles.confirmIcon} ${styles.confirmIconWarning}`}
+        />
       ),
       title: '警告',
       confirmText: '确定',

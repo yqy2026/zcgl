@@ -11,6 +11,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import { screen, fireEvent } from '@/test/utils/test-helpers';
+import type { ConfirmType } from '../ConfirmDialog';
 
 describe('ConfirmDialog - 组件导入测试', () => {
   it('应该能够导入ConfirmDialog组件', async () => {
@@ -71,7 +72,7 @@ describe('ConfirmDialog - 预设类型测试', () => {
     vi.clearAllMocks();
   });
 
-  it.each([
+  it.each<[ConfirmType, string, string]>([
     ['delete', '确认删除', '删除'],
     ['edit', '确认编辑', '继续编辑'],
     ['save', '确认保存', '保存'],
@@ -81,7 +82,7 @@ describe('ConfirmDialog - 预设类型测试', () => {
     ['info', '提示', '确定'],
   ])('type=%s 应该显示默认标题与按钮文案', async (type, title, okText) => {
     const ConfirmDialog = (await import('../ConfirmDialog')).default;
-    renderWithProviders(<ConfirmDialog type={type as any} visible={true} />);
+    renderWithProviders(<ConfirmDialog type={type} visible={true} />);
 
     const okPattern = new RegExp(String(okText).split('').join('\\s*'));
     expect(screen.getAllByText(String(title)).length).toBeGreaterThan(0);

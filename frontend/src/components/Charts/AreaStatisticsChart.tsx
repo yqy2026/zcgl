@@ -167,9 +167,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({ filters, heig
           if (datum == null) return null;
           return (
             <div className={styles.chartTooltip}>
-              <div className={styles.tooltipTitle}>
-                {datum.full_name ?? datum.entity}
-              </div>
+              <div className={styles.tooltipTitle}>{datum.full_name ?? datum.entity}</div>
               <div>总面积: {datum.total_area?.toLocaleString()} ㎡</div>
               <div>出租率: {datum.occupancy_rate?.toFixed(2)}%</div>
             </div>

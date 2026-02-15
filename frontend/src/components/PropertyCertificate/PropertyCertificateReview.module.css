@@ -12,8 +12,8 @@
 
 .statusTag {
   margin-inline-end: 0;
-  border-radius: 999px;
-  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  border: var(--border-width-thin) solid transparent;
   padding-inline: var(--spacing-sm);
   font-size: var(--font-size-xs);
   line-height: calc(var(--font-size-base) + var(--spacing-xs));
@@ -86,7 +86,7 @@
   min-width: calc(var(--spacing-xxl) * 5 + var(--spacing-sm));
 }
 
-@media (max-width: 768px) {
+@media (max-width: var(--breakpoint-sm)) {
   .submitButton {
     min-height: calc(var(--button-height-lg) + var(--spacing-xs));
     width: 100%;

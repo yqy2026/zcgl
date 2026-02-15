@@ -407,7 +407,11 @@ const OwnershipList: React.FC<OwnershipListProps> = ({ onSelectOwnership, mode =
           </Col>
           <Col xs={24} sm={12} md={6}>
             <Card className={styles.statsCard}>
-              <Statistic title="关联资产" value={totalLinkedAssets} className={styles.statsAssets} />
+              <Statistic
+                title="关联资产"
+                value={totalLinkedAssets}
+                className={styles.statsAssets}
+              />
             </Card>
           </Col>
         </Row>

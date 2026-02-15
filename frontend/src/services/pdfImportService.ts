@@ -1185,7 +1185,6 @@ export class PDFImportService {
         };
       }
     } catch (error: unknown) {
-      // eslint-disable-next-line no-console
       console.error('获取处理结果失败:', error);
       const errorDetail = isAxiosError(error)
         ? (error.response?.data?.detail ?? error.message)
@@ -1233,7 +1232,6 @@ export class PDFImportService {
       }
       return responseData;
     } catch (error: unknown) {
-      // eslint-disable-next-line no-console
       console.error('测试功能失败:', error);
       const errorMsg = isAxiosError(error)
         ? (error.response?.data?.detail ?? error.message ?? 'Unknown error')
@@ -1272,7 +1270,6 @@ export class PDFImportService {
       }
       return responseData;
     } catch (error: unknown) {
-      // eslint-disable-next-line no-console
       console.error('健康检查失败:', error);
       const errorDetail = isAxiosError(error)
         ? (error.response?.data?.detail ?? error.message)
@@ -1308,7 +1305,6 @@ export class PDFImportService {
       }
       return responseData;
     } catch (error: unknown) {
-      // eslint-disable-next-line no-console
       console.error('获取性能摘要失败:', error);
       const errorMsg = isAxiosError(error)
         ? (error.response?.data?.detail ?? error.message ?? 'Unknown error')
@@ -1366,7 +1362,6 @@ export class PDFImportService {
         message: available ? '功能可用' : '部分功能不可用',
       };
     } catch (error: unknown) {
-      // eslint-disable-next-line no-console
       console.error('检查功能可用性失败:', error);
       return {
         available: false,

@@ -1,9 +1,19 @@
+.skeletonRoot {
+  --skeleton-width-xs: calc(var(--button-height-lg) * 2);
+  --skeleton-width-sm: calc((var(--button-height-lg) * 2) + var(--spacing-md) + var(--spacing-sm));
+  --skeleton-width-md: calc(var(--button-height-lg) * 3);
+  --skeleton-width-lg: calc(var(--button-height-lg) * 5);
+  --skeleton-width-xl: calc((var(--button-height-lg) * 7) + var(--spacing-md) + var(--spacing-sm));
+  --skeleton-height-lg: calc(var(--button-height-lg) * 5);
+  --skeleton-height-xl: calc((var(--button-height-lg) * 7) + var(--spacing-md) + var(--spacing-sm));
+}
+
 .sectionGroup {
   width: 100%;
 }
 
 .formTitleInput {
-  width: 200px;
+  width: var(--skeleton-width-lg);
   height: var(--button-height-sm);
 }
 
@@ -13,17 +23,17 @@
 }
 
 .formActionPrimary {
-  width: 100px;
+  width: var(--skeleton-width-sm);
   height: var(--button-height-sm);
 }
 
 .formActionButton {
-  width: 80px;
+  width: var(--skeleton-width-xs);
   height: var(--button-height-sm);
 }
 
 .chartSectionTitle {
-  width: 200px;
+  width: var(--skeleton-width-lg);
   height: var(--font-size-xxxl);
 }
 
@@ -43,33 +53,33 @@
 }
 
 .tablePaginationButton {
-  width: 200px;
+  width: var(--skeleton-width-lg);
   height: var(--button-height-sm);
 }
 
 .chartNodeSize {
-  width: 200px;
-  height: 200px;
+  width: var(--skeleton-width-lg);
+  height: var(--skeleton-height-lg);
 }
 
 .detailHeaderTitle {
-  width: 300px;
+  width: var(--skeleton-width-xl);
   height: var(--font-size-xxxl);
   margin-bottom: var(--spacing-sm);
 }
 
 .detailHeaderSubTitle {
-  width: 200px;
+  width: var(--skeleton-width-lg);
   height: var(--font-size-lg);
 }
 
 .detailActionButton {
-  width: 80px;
+  width: var(--skeleton-width-xs);
   height: var(--button-height-sm);
 }
 
 .detailMainTitle {
-  width: 120px;
+  width: var(--skeleton-width-md);
   height: var(--font-size-xxl);
 }
 
@@ -84,7 +94,7 @@
 }
 
 .detailSideTitle {
-  width: 100px;
+  width: var(--skeleton-width-sm);
   height: var(--font-size-xxl);
 }
 
@@ -126,7 +136,7 @@
 }
 
 .chartArea {
-  height: 300px;
+  height: var(--skeleton-height-xl);
   background: var(--color-bg-secondary);
   border-radius: var(--radius-md);
   display: flex;
@@ -141,8 +151,8 @@
 }
 
 .chartCircle {
-  width: 200px;
-  height: 200px;
+  width: var(--skeleton-width-lg);
+  height: var(--skeleton-height-lg);
   background: var(--color-border-light);
   border-radius: 50%;
 }

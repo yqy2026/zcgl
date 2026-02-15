@@ -55,10 +55,10 @@
 
 .countTag {
   margin-inline-end: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding-inline: var(--spacing-sm);
   font-weight: var(--font-weight-medium);
-  border: 1px solid transparent;
+  border: var(--border-width-thin) solid transparent;
 }
 
 .countTag.tonePrimary {
@@ -96,7 +96,7 @@
   padding-top: var(--spacing-lg);
 }
 
-@media (max-width: 768px) {
+@media (max-width: var(--breakpoint-sm)) {
   .statusBadge {
     margin-left: var(--spacing-sm);
   }

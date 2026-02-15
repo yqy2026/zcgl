@@ -134,7 +134,10 @@ const AssetCard: React.FC<AssetCardProps> = ({ asset, onView, onEdit, onDelete }
               <div className={styles.occupancyHeader}>
                 <div className={styles.occupancyHeaderRow}>
                   <Text className={styles.occupancyLabel}>出租率</Text>
-                  <Text strong className={`${styles.occupancyValue} ${getOccupancyValueClass(occupancyRate)}`}>
+                  <Text
+                    strong
+                    className={`${styles.occupancyValue} ${getOccupancyValueClass(occupancyRate)}`}
+                  >
                     {occupancyRate.toFixed(1)}%
                   </Text>
                 </div>

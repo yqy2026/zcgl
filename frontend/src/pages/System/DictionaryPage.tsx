@@ -18,17 +18,22 @@ import { MessageManager } from '@/utils/messageManager';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { SearchOutlined } from '@ant-design/icons';
-import { dictionaryService } from '@/services/dictionary';
 import type { EnumFieldType, EnumFieldValue } from '@/services/dictionary';
 import type { SystemDictionary } from '@/types/dictionary';
 import EnumValuePreview from '@/components/Dictionary/EnumValuePreview';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
 import PageContainer from '@/components/Common/PageContainer';
 import { useArrayListData } from '@/hooks/useArrayListData';
-import { createLogger } from '@/utils/logger';
+import {
+  useCreateEnumValueMutation,
+  useDeleteEnumValueMutation,
+  useEnumFieldDataQuery,
+  useEnumFieldTypesQuery,
+  useEnumFieldValuesByTypeCodeQuery,
+  useToggleEnumValueActiveMutation,
+  useUpdateEnumValueMutation,
+} from '@/hooks/useDictionaryManagement';
 import styles from './DictionaryPage.module.css';
-
-const pageLogger = createLogger('DictionaryPage');
 
 const { Option } = Select;
 const { Search } = Input;
@@ -58,18 +63,35 @@ const resolveText = (value: string | null | undefined, fallback: string): string
 };
 
 const DictionaryPage: React.FC = () => {
-  const [overviewSourceLoading, setOverviewSourceLoading] = useState(false);
-  const [enumTypes, setEnumTypes] = useState<EnumFieldType[]>([]);
   const [activeType, setActiveType] = useState<string | undefined>(undefined);
   const [edit, setEdit] = useState<EditState>({ visible: false });
   const [editingRecord, setEditingRecord] = useState<SystemDictionary | null>(null);
   const [form] = Form.useForm<SystemDictionary>();
 
-  // 新增状态
-  const [allEnumData, setAllEnumData] = useState<EnumFieldWithType[]>([]);
   const [detailModalVisible, setDetailModalVisible] = useState<boolean>(false);
-  const [detailSource, setDetailSource] = useState<SystemDictionary[]>([]);
-  const [detailSourceLoading, setDetailSourceLoading] = useState(false);
+
+  const {
+    data: enumTypes = [],
+    error: enumTypesError,
+    isLoading: isEnumTypesLoading,
+    refetch: refetchEnumTypes,
+  } = useEnumFieldTypesQuery();
+  const {
+    data: allEnumData = [],
+    error: enumDataError,
+    isLoading: isEnumDataLoading,
+    refetch: refetchEnumData,
+  } = useEnumFieldDataQuery();
+  const {
+    data: detailSource = [],
+    error: detailSourceError,
+    isLoading: isDetailSourceLoading,
+    refetch: refetchDetailSource,
+  } = useEnumFieldValuesByTypeCodeQuery(activeType);
+  const createEnumValueMutation = useCreateEnumValueMutation();
+  const updateEnumValueMutation = useUpdateEnumValueMutation();
+  const deleteEnumValueMutation = useDeleteEnumValueMutation();
+  const toggleEnumValueActiveMutation = useToggleEnumValueActiveMutation();
 
   const {
     data: overviewData,
@@ -116,12 +138,6 @@ const DictionaryPage: React.FC = () => {
     }, []),
   });
 
-  const handleDetailError = useCallback((error: unknown) => {
-    pageLogger.error('获取枚举值失败:', error as Error);
-    const errorMessage = error instanceof Error ? error.message : '获取枚举值失败';
-    MessageManager.error(errorMessage);
-  }, []);
-
   const {
     data: detailRows,
     loading: detailTableLoading,
@@ -132,68 +148,16 @@ const DictionaryPage: React.FC = () => {
     items: detailSource,
     initialFilters: {},
     initialPageSize: 10,
-    onError: handleDetailError,
   });
 
-  const loadDetailSource = useCallback(
-    async (typeCode?: string) => {
-      if (typeCode == null || typeCode === '') {
-        setDetailSource([]);
-        return;
-      }
-      setDetailSourceLoading(true);
-      try {
-        const list = await dictionaryService.getEnumFieldValuesByTypeCode(typeCode);
-        setDetailSource(list);
-      } catch (error) {
-        handleDetailError(error);
-      } finally {
-        setDetailSourceLoading(false);
-      }
-    },
-    [handleDetailError]
-  );
-
   const overviewLoading = useMemo(
-    () => overviewSourceLoading || overviewTableLoading,
-    [overviewSourceLoading, overviewTableLoading]
+    () => isEnumDataLoading || isEnumTypesLoading || overviewTableLoading,
+    [isEnumDataLoading, isEnumTypesLoading, overviewTableLoading]
   );
   const detailLoading = useMemo(
-    () => detailSourceLoading || detailTableLoading,
-    [detailSourceLoading, detailTableLoading]
+    () => isDetailSourceLoading || detailTableLoading,
+    [isDetailSourceLoading, detailTableLoading]
   );
-
-  // 获取字典类型列表
-  const fetchTypes = async () => {
-    try {
-      // 获取枚举类型详细信息
-      const typesData = await dictionaryService.getEnumFieldTypes();
-      setEnumTypes(typesData ?? []);
-    } catch (error) {
-      pageLogger.error('获取字典类型失败:', error as Error);
-    }
-  };
-
-  // 获取所有枚举数据
-  const fetchAllEnumData = async () => {
-    setOverviewSourceLoading(true);
-    try {
-      const data = await dictionaryService.getEnumFieldData();
-      // Got enum data
-      setAllEnumData(data);
-    } catch (e: unknown) {
-      pageLogger.error('获取枚举数据失败:', e as Error);
-      const errorMessage = e instanceof Error ? e.message : '获取枚举数据失败';
-      MessageManager.error(errorMessage);
-    } finally {
-      setOverviewSourceLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchTypes();
-    fetchAllEnumData();
-  }, []);
 
   useEffect(() => {
     void loadOverviewList({ page: 1 });
@@ -204,8 +168,22 @@ const DictionaryPage: React.FC = () => {
   }, [detailSource, loadDetailList]);
 
   useEffect(() => {
-    void loadDetailSource(activeType);
-  }, [activeType, loadDetailSource]);
+    if (enumTypesError != null) {
+      MessageManager.error('获取字典类型失败');
+    }
+  }, [enumTypesError]);
+
+  useEffect(() => {
+    if (enumDataError != null) {
+      MessageManager.error('获取枚举数据失败');
+    }
+  }, [enumDataError]);
+
+  useEffect(() => {
+    if (detailSourceError != null) {
+      MessageManager.error('获取枚举值失败');
+    }
+  }, [detailSourceError]);
 
   const handleCreate = async () => {
     if (activeType == null) {
@@ -261,13 +239,11 @@ const DictionaryPage: React.FC = () => {
 
   const handleDelete = async (record: SystemDictionary) => {
     try {
-      const result = await dictionaryService.deleteEnumValue(record.id);
+      const result = await deleteEnumValueMutation.mutateAsync(record.id);
       if (result.success === true) {
         MessageManager.success('删除成功');
-        void loadDetailSource(record.dict_type);
-        void fetchAllEnumData();
       } else {
-        MessageManager.error('删除失败');
+        MessageManager.error(result.message ?? '删除失败');
       }
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : '删除失败';
@@ -291,63 +267,64 @@ const DictionaryPage: React.FC = () => {
       }
 
       if (editingRecord) {
-        // 更新现有枚举值
-        const result = await dictionaryService.updateEnumValue(editingRecord.id, {
-          label: values.dict_label,
-          value: values.dict_value,
-          code: values.dict_code,
-          description: values.description,
-          sort_order: values.sort_order,
-          is_active: values.is_active,
+        const result = await updateEnumValueMutation.mutateAsync({
+          valueId: editingRecord.id,
+          data: {
+            label: values.dict_label,
+            value: values.dict_value,
+            code: values.dict_code,
+            description: values.description,
+            sort_order: values.sort_order,
+            is_active: values.is_active,
+          },
         });
 
         if (result.success === true) {
           MessageManager.success('更新成功');
         } else {
-          MessageManager.error('更新失败');
+          MessageManager.error(result.message ?? '更新失败');
           return;
         }
       } else {
-        // 创建新的枚举值
-        const createResult = await dictionaryService.createEnumValue(targetType.id, {
-          label: values.dict_label,
-          value: values.dict_value,
-          code: values.dict_code,
-          description: values.description,
-          sort_order: values.sort_order,
+        const createResult = await createEnumValueMutation.mutateAsync({
+          typeId: targetType.id,
+          data: {
+            label: values.dict_label,
+            value: values.dict_value,
+            code: values.dict_code,
+            description: values.description,
+            sort_order: values.sort_order,
+          },
         });
 
         if (createResult.success === true) {
           MessageManager.success('创建成功');
         } else {
-          MessageManager.error('创建失败');
+          MessageManager.error(createResult.message ?? '创建失败');
           return;
         }
       }
 
       setEdit({ visible: false });
       setEditingRecord(null);
-      void loadDetailSource(activeType);
-      void fetchAllEnumData();
     } catch (e: unknown) {
-      // Handle form validation errors
       if (typeof e === 'object' && e !== null && 'errorFields' in e) return;
 
       const errorMessage = e instanceof Error ? e.message : '保存失败';
-      pageLogger.error('保存字典失败:', e as Error);
       MessageManager.error(errorMessage);
     }
   };
 
   const handleToggleActive = async (record: SystemDictionary, checked: boolean) => {
     try {
-      const result = await dictionaryService.toggleEnumValueActive(record.id, checked);
+      const result = await toggleEnumValueActiveMutation.mutateAsync({
+        valueId: record.id,
+        isActive: checked,
+      });
       if (result.success === true) {
         MessageManager.success('状态已更新');
-        void loadDetailSource(record.dict_type);
-        void fetchAllEnumData();
       } else {
-        MessageManager.error('更新失败');
+        MessageManager.error(result.message ?? '更新失败');
       }
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : '更新失败';
@@ -386,23 +363,14 @@ const DictionaryPage: React.FC = () => {
     };
   };
 
-  const handleActiveTypeChange = useCallback(
-    (value?: string) => {
-      setActiveType(value);
-      void loadDetailSource(value);
-    },
-    [loadDetailSource]
-  );
+  const handleActiveTypeChange = useCallback((value?: string) => {
+    setActiveType(value);
+  }, []);
 
-  // 查看详情处理
-  const handleViewDetail = useCallback(
-    (typeCode: string) => {
-      setActiveType(typeCode);
-      setDetailModalVisible(true);
-      void loadDetailSource(typeCode);
-    },
-    [loadDetailSource]
-  );
+  const handleViewDetail = useCallback((typeCode: string) => {
+    setActiveType(typeCode);
+    setDetailModalVisible(true);
+  }, []);
 
   // 概览视图列定义
   const overviewColumns: ColumnsType<EnumFieldWithType> = useMemo(
@@ -478,11 +446,7 @@ const DictionaryPage: React.FC = () => {
           return (
             <div className={styles.typeCell}>
               <Tag className={[styles.codeTag, styles.tonePrimary].join(' ')}>{t}</Tag>
-              {typeInfo && (
-                <div className={styles.typeHint}>
-                  {typeInfo.name}
-                </div>
-              )}
+              {typeInfo && <div className={styles.typeHint}>{typeInfo.name}</div>}
             </div>
           );
         },
@@ -578,9 +542,11 @@ const DictionaryPage: React.FC = () => {
             <Button
               className={styles.refreshButton}
               onClick={() => {
-                fetchTypes();
-                fetchAllEnumData();
-                void loadDetailSource(activeType);
+                void refetchEnumTypes();
+                void refetchEnumData();
+                if (activeType != null && activeType !== '') {
+                  void refetchDetailSource();
+                }
               }}
             >
               刷新
@@ -630,9 +596,7 @@ const DictionaryPage: React.FC = () => {
           </Col>
           <Col xs={24} xl={4}>
             <div className={styles.typeTotal}>
-              <span className={styles.typeTotalText}>
-                共 {overviewPagination.total} 个类型
-              </span>
+              <span className={styles.typeTotalText}>共 {overviewPagination.total} 个类型</span>
             </div>
           </Col>
         </Row>
@@ -750,7 +714,7 @@ const DictionaryPage: React.FC = () => {
             className={styles.modalActionButton}
             onClick={() => {
               setDetailModalVisible(false);
-              handleCreate();
+              void handleCreate();
             }}
           >
             新增枚举值

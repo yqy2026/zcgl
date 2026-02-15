@@ -14,8 +14,8 @@
 |---|-------|
 | **前端** | React 19.x + TypeScript 5.x + Vite 6.x + Ant Design 6.x + pnpm |
 | **后端** | FastAPI 0.104+ + Uvicorn 0.38+ + Python 3.12+ + SQLAlchemy 2.0+ + Pydantic v2 + Alembic |
-| **数据库** | PostgreSQL 16+（开发/测试/生产统一；SQLite 已移除） |
-| **缓存** | Redis 7+ |
+| **数据库** | PostgreSQL 18.2+（开发/测试/生产统一；SQLite 已移除） |
+| **缓存** | Redis 8.6+ |
 | **文档AI** | Qwen-VL / GLM-4V / Hunyuan Vision / DeepSeek-VL |
 
 ---
@@ -147,7 +147,7 @@ async def process(data):
 
 ## 测试策略
 
-**测试标记**：`unit` / `integration` / `e2e` / `api` / `database` / `security` / `performance` / `slow`
+**测试标记**：`unit` / `integration` / `e2e` / `slow` / `database` / `api` / `vision` / `pdf` / `rbac` / `security` / `performance` / `load` / `stress` / `core` / `asyncio` / `concurrency`
 
 **常用命令**：
 ```bash

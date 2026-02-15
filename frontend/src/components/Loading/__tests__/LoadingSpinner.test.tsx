@@ -69,7 +69,7 @@ describe('LoadingSpinner', () => {
   });
 
   it('applies wrapper className and style when no children', () => {
-    const wrapperStyle = { margin: '20px' };
+    const wrapperStyle = { margin: 'var(--spacing-xl)' };
     const { container } = renderWithProviders(
       <LoadingSpinner className="custom-spinner" style={wrapperStyle} />
     );

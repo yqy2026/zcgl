@@ -25,22 +25,12 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   delay = 0,
 }) => {
   const iconSizeClass =
-    size === 'large'
-      ? styles.iconLarge
-      : size === 'small'
-        ? styles.iconSmall
-        : styles.iconDefault;
+    size === 'large' ? styles.iconLarge : size === 'small' ? styles.iconSmall : styles.iconDefault;
 
   const tipSizeClass =
-    size === 'large'
-      ? styles.tipLarge
-      : size === 'small'
-        ? styles.tipSmall
-        : styles.tipDefault;
+    size === 'large' ? styles.tipLarge : size === 'small' ? styles.tipSmall : styles.tipDefault;
 
-  const antIcon = (
-    <LoadingOutlined className={`${styles.spinnerIcon} ${iconSizeClass}`} spin />
-  );
+  const antIcon = <LoadingOutlined className={`${styles.spinnerIcon} ${iconSizeClass}`} spin />;
 
   if (children !== null && children !== undefined) {
     return (

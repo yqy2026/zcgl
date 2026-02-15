@@ -21,7 +21,12 @@ const ChartContainer: React.FC<ChartContainerProps> = ({
 
   if (loading === true) {
     return (
-      <div className={styles.stateContainer} style={containerStyle} role="status" aria-live="polite">
+      <div
+        className={styles.stateContainer}
+        style={containerStyle}
+        role="status"
+        aria-live="polite"
+      >
         <Spin size="large" />
       </div>
     );

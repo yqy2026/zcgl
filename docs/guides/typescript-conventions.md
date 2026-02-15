@@ -1,6 +1,6 @@
 # TypeScript 严格布尔表达式规范
 
-本文档说明项目中 TypeScript 的严格布尔表达式规则 (`@typescript-eslint/strict-boolean-expressions`)。
+本文档说明项目中 TypeScript 的严格布尔表达式规范。当前通过 `tsgo` + `oxlint` + 代码评审执行，不依赖单一 lint 规则开关。
 
 **最后更新**: 2026-02-10
 
@@ -192,21 +192,17 @@ const initialValues = {
 
 ---
 
-## ESLint 配置
+## 规则执行方式
 
-```json
-{
-  "rules": {
-    "@typescript-eslint/strict-boolean-expressions": ["warn", {
-      "allowString": false,
-      "allowNumber": false,
-      "allowNullableObject": false
-    }]
-  }
-}
+```bash
+# 类型检查（tsgo）
+pnpm type-check
+
+# 代码检查（oxlint）
+pnpm lint
 ```
 
-配置级别: `warn` (允许临时绕过，但需修复)
+说明：严格布尔表达式作为团队编码约定执行；工具链迁移后采用“先可用再收敛”策略，按增量任务持续补齐 lint 等价规则。
 
 ---
 
@@ -214,4 +210,3 @@ const initialValues = {
 
 - [TypeScript 3.7+ 可选链](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-3-7.html#optional-chaining)
 - [空值合并运算符](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-3-7.html#nullish-coalescing)
-- [TypeScript ESLint - strict-boolean-expressions](https://typescript-eslint.io/rules/strict-boolean-expressions/)

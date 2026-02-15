@@ -15,7 +15,7 @@
 }
 
 .headerCard {
-  border: 1px solid var(--color-border-light);
+  border: var(--border-width-thin) solid var(--color-border-light);
 }
 
 .headerLayout {
@@ -59,8 +59,8 @@
 }
 
 .editButton:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--color-primary);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .detailDescriptions :global(.ant-descriptions-item-content) {
@@ -68,7 +68,7 @@
 }
 
 .counterTag {
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding-inline: var(--spacing-sm);
 }
 
@@ -81,7 +81,7 @@
 }
 
 .relationTag {
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding-inline: var(--spacing-sm);
 }
 
@@ -89,7 +89,7 @@
   vertical-align: middle;
 }
 
-@media (max-width: 768px) {
+@media (max-width: var(--breakpoint-sm)) {
   .headerLayout {
     flex-direction: column;
     align-items: flex-start;

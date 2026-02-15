@@ -1,22 +1,11 @@
-# 异常类定义
-class AssetNotFoundError(Exception):
-    pass
-
-
-class DuplicateAssetError(Exception):
-    pass
-
-
-class NotFoundError(Exception):
-    pass
-
-
 """
-资产管理API路由 - 核心CRUD操作
+资产管理API路由聚合入口。
 
-批量操作、导入功能已拆分到独立模块:
+本文件保留资产核心 CRUD 与筛选辅助接口，
+批量、导入、附件能力由子路由模块承载：
 - asset_batch.py: 批量操作端点
 - asset_import.py: 导入功能端点
+- asset_attachments.py: 附件相关端点
 """
 
 import os

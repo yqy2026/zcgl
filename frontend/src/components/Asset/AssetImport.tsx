@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Card,
   Typography,
@@ -41,6 +41,7 @@ import {
 import { STANDARD_SHEET_NAME, IMPORT_INSTRUCTIONS } from '@/config/excelConfig';
 import { createLogger } from '@/utils/logger';
 import { useArrayListData } from '@/hooks/useArrayListData';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import styles from './AssetImport.module.css';
 
 const importLogger = createLogger('AssetImport');
@@ -90,12 +91,13 @@ const getImportResultTone = (result: AssetImportResult): ImportResultTone => {
 };
 
 const OptimizedAssetImport: React.FC = () => {
+  const queryClient = useQueryClient();
   const [currentStep, setCurrentStep] = useState(0);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
-  const [uploading, setUploading] = useState(false);
   const [importResult, setImportResult] = useState<AssetImportResult | null>(null);
   const [progress, setProgress] = useState(0);
   const [showConfig, setShowConfig] = useState(false);
+  const progressIntervalRef = useRef<number | null>(null);
   const [config, setConfig] = useState<ImportConfig>({
     useOptimized: true,
     batchSize: 100,
@@ -144,65 +146,68 @@ const OptimizedAssetImport: React.FC = () => {
     maxCount: 1,
   };
 
+  const clearProgressInterval = useCallback(() => {
+    if (progressIntervalRef.current !== null) {
+      window.clearInterval(progressIntervalRef.current);
+      progressIntervalRef.current = null;
+    }
+  }, []);
+
   // 模拟进度条
-  const simulateProgress = () => {
+  const startProgressSimulation = useCallback(() => {
+    clearProgressInterval();
     setProgress(0);
-    const interval = setInterval(() => {
+    progressIntervalRef.current = window.setInterval(() => {
       setProgress(prev => {
         if (prev >= 95) {
-          clearInterval(interval);
+          clearProgressInterval();
           return 95;
         }
         return prev + Math.random() * 10;
       });
     }, 500);
-    return interval;
-  };
+  }, [clearProgressInterval]);
 
-  // 执行导入
-  const handleImport = async () => {
-    if (fileList.length === 0) {
-      MessageManager.error('请先选择要导入的文件');
-      return;
-    }
+  useEffect(() => {
+    return () => {
+      clearProgressInterval();
+    };
+  }, [clearProgressInterval]);
 
-    setUploading(true);
-    const progressInterval = simulateProgress();
-
-    try {
-      const file = fileList[0]?.originFileObj;
-      if (file == null) {
-        clearInterval(progressInterval);
-        setUploading(false);
-        MessageManager.error('未检测到可导入文件');
-        return;
-      }
-
-      const result = await assetImportService.importAssets(file, {
+  const importMutation = useMutation({
+    mutationFn: async (payload: { file: File; importConfig: ImportConfig }) => {
+      return await assetImportService.importAssets(payload.file, {
         sheetName: STANDARD_SHEET_NAME,
-        skipErrors: config.skipErrors,
-        useOptimized: config.useOptimized,
-        timeoutSeconds: config.timeout,
+        skipErrors: payload.importConfig.skipErrors,
+        useOptimized: payload.importConfig.useOptimized,
+        timeoutSeconds: payload.importConfig.timeout,
       });
-
-      clearInterval(progressInterval);
+    },
+    onMutate: () => {
+      startProgressSimulation();
+    },
+    onSuccess: async result => {
+      clearProgressInterval();
       setProgress(100);
-
       setImportResult(result);
       setCurrentStep(2);
 
-      // 显示性能信息
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['assets'] }),
+        queryClient.invalidateQueries({ queryKey: ['asset-stats'] }),
+      ]);
+
       if (result.processing_time !== undefined && result.processing_time !== null) {
         MessageManager.success(`导入完成，用时 ${result.processing_time} 秒`);
       } else {
         MessageManager.success(`导入完成，成功导入 ${result.success} 条记录`);
       }
-    } catch (err: unknown) {
-      clearInterval(progressInterval);
+    },
+    onError: err => {
+      clearProgressInterval();
       importLogger.error('导入错误', err instanceof Error ? err : new Error(String(err)));
 
       const errorMessage = err instanceof Error ? err.message : '网络错误';
-
       const errorResult: AssetImportResult = {
         success: 0,
         failed: 0,
@@ -216,13 +221,29 @@ const OptimizedAssetImport: React.FC = () => {
       setImportResult(errorResult);
       setCurrentStep(2);
       MessageManager.error(`导入失败: ${errorResult.errors[0] ?? '未知错误'}`);
-    } finally {
-      setUploading(false);
+    },
+  });
+
+  // 执行导入
+  const handleImport = async () => {
+    if (fileList.length === 0) {
+      MessageManager.error('请先选择要导入的文件');
+      return;
     }
+
+    const file = fileList[0]?.originFileObj;
+    if (file == null) {
+      MessageManager.error('未检测到可导入文件');
+      return;
+    }
+
+    importMutation.mutate({ file, importConfig: config });
   };
 
   // 重新开始
   const handleReset = () => {
+    clearProgressInterval();
+    importMutation.reset();
     setCurrentStep(0);
     setFileList([]);
     setImportResult(null);
@@ -412,7 +433,7 @@ const OptimizedAssetImport: React.FC = () => {
               文件大小：{((fileList[0]?.size ?? 0) / 1024 / 1024).toFixed(2)} MB
             </Text>
 
-            {uploading && (
+            {importMutation.isPending && (
               <div className={styles.progressBlock}>
                 <Progress percent={Math.round(progress)} status="active" />
                 <Text type="secondary">导入中...</Text>
@@ -427,10 +448,10 @@ const OptimizedAssetImport: React.FC = () => {
                 type="primary"
                 icon={<UploadOutlined />}
                 onClick={handleImport}
-                loading={uploading}
+                loading={importMutation.isPending}
                 size="large"
               >
-                {uploading ? '导入中…' : '开始导入'}
+                {importMutation.isPending ? '导入中…' : '开始导入'}
               </Button>
             </Space>
           </div>
@@ -462,17 +483,23 @@ const OptimizedAssetImport: React.FC = () => {
                 <Title level={3} className={styles.resultSummaryTitle}>
                   {importResult.success > 0 && importResult.failed === 0 ? (
                     <Space>
-                      <CheckCircleFilled className={RESULT_TITLE_ICON_CLASS_MAP[importResultTone]} />
+                      <CheckCircleFilled
+                        className={RESULT_TITLE_ICON_CLASS_MAP[importResultTone]}
+                      />
                       导入成功！
                     </Space>
                   ) : importResult.success > 0 && importResult.failed > 0 ? (
                     <Space>
-                      <ExclamationCircleFilled className={RESULT_TITLE_ICON_CLASS_MAP[importResultTone]} />
+                      <ExclamationCircleFilled
+                        className={RESULT_TITLE_ICON_CLASS_MAP[importResultTone]}
+                      />
                       部分成功
                     </Space>
                   ) : importResult.failed > 0 ? (
                     <Space>
-                      <CloseCircleFilled className={RESULT_TITLE_ICON_CLASS_MAP[importResultTone]} />
+                      <CloseCircleFilled
+                        className={RESULT_TITLE_ICON_CLASS_MAP[importResultTone]}
+                      />
                       导入失败
                     </Space>
                   ) : (
@@ -519,7 +546,11 @@ const OptimizedAssetImport: React.FC = () => {
             <Row gutter={[16, 16]} className={styles.statsRow}>
               <Col xs={24} sm={8}>
                 <Card size="small" variant="borderless" className={styles.statCard}>
-                  <Statistic title="成功记录" value={importResult.success} className={styles.statisticSuccess} />
+                  <Statistic
+                    title="成功记录"
+                    value={importResult.success}
+                    className={styles.statisticSuccess}
+                  />
                 </Card>
               </Col>
               <Col xs={24} sm={8}>
@@ -527,13 +558,19 @@ const OptimizedAssetImport: React.FC = () => {
                   <Statistic
                     title="失败记录"
                     value={importResult.failed}
-                    className={importResult.failed > 0 ? styles.statisticError : styles.statisticMuted}
+                    className={
+                      importResult.failed > 0 ? styles.statisticError : styles.statisticMuted
+                    }
                   />
                 </Card>
               </Col>
               <Col xs={24} sm={8}>
                 <Card size="small" variant="borderless" className={styles.statCard}>
-                  <Statistic title="总计" value={importResult.total} className={styles.statisticPrimary} />
+                  <Statistic
+                    title="总计"
+                    value={importResult.total}
+                    className={styles.statisticPrimary}
+                  />
                 </Card>
               </Col>
             </Row>

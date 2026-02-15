@@ -51,11 +51,7 @@ const AssetReceptionSection: React.FC = () => {
       <Title level={5}>接收信息</Title>
       <Row gutter={16}>
         <Col span={8}>
-          <Form.Item
-            label="接收模式"
-            name="business_model"
-            htmlFor={businessModelIds.inputId}
-          >
+          <Form.Item label="接收模式" name="business_model" htmlFor={businessModelIds.inputId}>
             <GroupedSelectSingle
               groups={[{ label: '接收模式', options: BusinessModelOptions }]}
               placeholder="请选择接收模式"
@@ -102,18 +98,11 @@ const AssetReceptionSection: React.FC = () => {
           >
             <div>
               <Upload {...uploadProps}>
-                <Button
-                  icon={<UploadOutlined />}
-                  aria-label="上传PDF接收协议文件"
-                >
+                <Button icon={<UploadOutlined />} aria-label="上传PDF接收协议文件">
                   上传PDF接收协议文件
                 </Button>
               </Upload>
-              <div
-                className={styles.uploadHintText}
-                role="note"
-                aria-label="文件上传说明"
-              >
+              <div className={styles.uploadHintText} role="note" aria-label="文件上传说明">
                 支持多文件上传，每个文件不超过10MB，仅支持PDF格式
               </div>
               {fileList.length > 0 && (

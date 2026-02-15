@@ -171,23 +171,36 @@ class QualityScoreCalculator:
         issues = []
         details = {}
 
-        # 读取ESLint报告
-        eslint_report = frontend_reports / "eslint-report.json"
-        if eslint_report.exists():
+        # 读取Lint报告（优先 oxlint，兼容旧 eslint）
+        lint_report_files = (
+            frontend_reports / "oxlint-report.json",
+            frontend_reports / "eslint-report.json",
+        )
+        lint_report = next((p for p in lint_report_files if p.exists()), None)
+        if lint_report is not None:
             try:
-                with open(eslint_report, 'r') as f:
-                    eslint_data = json.load(f)
+                with open(lint_report, 'r') as f:
+                    lint_data = json.load(f)
 
-                    error_count = len(eslint_data)
+                    if isinstance(lint_data, list):
+                        # ESLint JSON format
+                        error_count = len(lint_data)
+                    elif isinstance(lint_data, dict):
+                        # Oxlint JSON format
+                        diagnostics = lint_data.get("diagnostics", [])
+                        error_count = len(diagnostics) if isinstance(diagnostics, list) else 0
+                    else:
+                        error_count = 0
+
                     details['lint_issues'] = error_count
 
-                    # 扣分：ESLint错误-2分/个
+                    # 扣分：Lint错误-2分/个
                     score -= error_count * 2
 
                     if error_count > 0:
-                        issues.append(f"修复{error_count}个ESLint问题")
+                        issues.append(f"修复{error_count}个Lint问题")
             except Exception as e:
-                print(f"Warning: Could not read ESLint report: {e}")
+                print(f"Warning: Could not read lint report: {e}")
 
         # 读取测试覆盖率报告
         coverage_summary = frontend_reports / "coverage" / "coverage-summary.json"

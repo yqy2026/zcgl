@@ -37,12 +37,30 @@ export interface TableWithPaginationProps<T> extends Omit<
   /**
    * Fields to display in card view
    */
-  cardFields?: Array<Extract<keyof T, string> | { key: string; label: string; render?: (value: unknown, record: T) => React.ReactNode }>;
+  cardFields?: Array<
+    | Extract<keyof T, string>
+    | { key: string; label: string; render?: (value: unknown, record: T) => React.ReactNode }
+  >;
   /**
    * Accessible label for pagination navigation
    * @default 表格分页导航
    */
   paginationAriaLabel?: string;
+  /**
+   * Enable table virtualization when data size reaches threshold
+   * @default true
+   */
+  enableVirtual?: boolean;
+  /**
+   * Minimum row count to enable virtualization
+   * @default 100
+   */
+  virtualThreshold?: number;
+  /**
+   * Default virtual scroll viewport height (px)
+   * @default 640
+   */
+  virtualScrollY?: number;
 }
 
 export const TableWithPagination = <T extends object>(props: TableWithPaginationProps<T>) => {
@@ -56,6 +74,9 @@ export const TableWithPagination = <T extends object>(props: TableWithPagination
     renderCard,
     cardFields,
     paginationAriaLabel = '表格分页导航',
+    enableVirtual = true,
+    virtualThreshold = 100,
+    virtualScrollY = 640,
     className,
     ...rest
   } = props;
@@ -70,7 +91,26 @@ export const TableWithPagination = <T extends object>(props: TableWithPagination
   const handlePageChange = (page: number, pageSize: number) => {
     onPageChange({ current: page, pageSize });
   };
-  const tableScroll = rest.scroll ?? { x: 'max-content' };
+  const dataCount = rest.dataSource?.length ?? 0;
+  const shouldEnableVirtual = enableVirtual === true && dataCount >= virtualThreshold;
+
+  const tableScroll = (() => {
+    const baseScroll: NonNullable<TableProps<T>['scroll']> = { x: 'max-content' };
+
+    if (rest.scroll == null) {
+      if (shouldEnableVirtual === true) {
+        return { ...baseScroll, y: virtualScrollY };
+      }
+      return baseScroll;
+    }
+
+    const mergedScroll = { ...baseScroll, ...rest.scroll };
+    if (shouldEnableVirtual === true && mergedScroll.y == null) {
+      return { ...mergedScroll, y: virtualScrollY };
+    }
+    return mergedScroll;
+  })();
+
   const mergedTableClassName = [styles.tableRoot, className]
     .filter((tableClassName): tableClassName is string => {
       return tableClassName != null && tableClassName !== '';
@@ -91,6 +131,7 @@ export const TableWithPagination = <T extends object>(props: TableWithPagination
           rowKey={rest.rowKey}
           onChange={handleChange}
           scroll={tableScroll}
+          virtual={shouldEnableVirtual}
         />
       ) : (
         <Table
@@ -101,6 +142,7 @@ export const TableWithPagination = <T extends object>(props: TableWithPagination
           rowKey={rest.rowKey}
           onChange={handleChange}
           scroll={tableScroll}
+          virtual={shouldEnableVirtual}
         />
       )}
 

@@ -178,7 +178,7 @@ const [visibleColumns, setVisibleColumns] = useState(allColumnKeys);
 
 ```bash
 ✅ TypeScript 类型检查通过
-✅ ESLint 检查通过
+✅ Oxlint 检查通过
 ✅ 表格恢复正常显示
 ```
 
@@ -242,7 +242,7 @@ const [visibleColumns, setVisibleColumns] = useState(allColumnKeys);
 - [x] 移除响应式状态管理
 - [x] 移除列过滤逻辑
 - [x] TypeScript 类型检查通过
-- [x] ESLint 检查通过
+- [x] Oxlint 检查通过
 - [x] 表格布局恢复正常
 - [ ] 在浏览器中实际测试（待用户验证）
 

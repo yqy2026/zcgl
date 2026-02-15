@@ -426,7 +426,6 @@ nlp_models/
 # 13. Docker & Containers
 # ============================================================================
 
-.dockerignore
 docker-compose.override.yml
 .skaffold/
 helm/charts/templates/

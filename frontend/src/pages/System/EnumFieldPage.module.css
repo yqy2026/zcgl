@@ -3,8 +3,8 @@
   --enum-control-height-mobile: var(--button-height-lg);
   --enum-table-action-size: var(--button-height-sm);
   --enum-status-line-height: var(--font-size-xl);
-  --enum-type-search-width: 320px;
-  --enum-type-select-width: 220px;
+  --enum-type-search-width: calc(var(--spacing-xxl) * 10);
+  --enum-type-select-width: calc((var(--spacing-xxl) * 7) - var(--spacing-xs));
   --enum-row-gap: calc(var(--spacing-sm) - (var(--spacing-xs) / 2));
   --enum-code-padding-x: calc(var(--spacing-sm) - (var(--spacing-xs) / 2));
   --enum-color-preview-size: var(--spacing-lg);
@@ -21,8 +21,8 @@
 
 .statusTag {
   margin-inline-end: 0;
-  border-radius: 999px;
-  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  border: var(--border-width-thin) solid transparent;
   padding-inline: var(--spacing-sm);
   font-size: var(--font-size-xs);
   line-height: var(--enum-status-line-height);
@@ -126,7 +126,7 @@
   width: var(--enum-color-preview-size);
   height: var(--enum-color-preview-size);
   border-radius: var(--enum-color-preview-radius);
-  border: 1px solid var(--color-border);
+  border: var(--border-width-thin) solid var(--color-border);
   background: var(--preview-color);
 }
 
@@ -174,7 +174,7 @@
   border-color: var(--color-error);
 }
 
-@media (max-width: 768px) {
+@media (max-width: var(--breakpoint-sm)) {
   .typeToolbar {
     align-items: stretch;
     justify-content: flex-start;

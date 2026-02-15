@@ -6,7 +6,7 @@
 
 ## 为什么使用 Logger？
 
-1. **符合 ESLint 规范** - 绕过 `no-console` 规则
+1. **符合 Oxlint 规范** - 统一处理 `no-console` 风格约束
 2. **环境感知** - 开发环境显示详细日志，生产环境仅显示错误
 3. **统一格式** - 所有日志采用一致的格式输出
 4. **模块化** - 通过前缀区分不同模块的日志
@@ -278,7 +278,7 @@ logger.info('加载成功');
 
 ### 5. 测试代码可以继续使用 console
 
-测试文件（`**/*.test.ts`, `**/*.test.tsx`, `src/test/**`）已在 ESLint 配置中豁免，可以继续使用原生 console。
+测试文件（`**/*.test.ts`, `**/*.test.tsx`, `src/test/**`）可按测试需要使用原生 console。
 
 ## 配置
 
@@ -297,15 +297,15 @@ Logger 会根据环境自动配置：
 3. **保持日志简洁** - 避免打印大对象
 4. **使用合适的级别** - debug 用于调试，warn 用于潜在问题，error 用于错误
 
-## 与 ESLint 集成
+## 与 Oxlint 集成
 
-Logger 内部使用 `// eslint-disable-next-line no-console` 绕过规则检查，外部代码无需添加此注释。
+Logger 通过统一封装避免业务代码直接散落 `console` 调用，外部代码无需添加额外 lint 注释。
 
 ```typescript
 // ✅ 正确 - 无需注释
 logger.debug('message');
 
-// ❌ 错误 - 会被 ESLint 检测
+// ❌ 错误 - 会被 Oxlint 检测
 console.log('message');
 ```
 

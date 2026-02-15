@@ -1,7 +1,7 @@
 from datetime import date
 from typing import Any
 
-from sqlalchemy import delete, desc, func, or_, select
+from sqlalchemy import String, cast, delete, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -13,6 +13,7 @@ from ..crud.base import CRUDBase
 from ..models.associations import rent_contract_assets
 from ..models.ownership import Ownership
 from ..models.rent_contract import (
+    ContractType,
     RentContract,
     RentDepositLedger,
     RentLedger,
@@ -333,8 +334,8 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
         self,
         db: AsyncSession,
         *,
-        contract_type: str | None = None,
-        contract_status: str | None = None,
+        contract_type: ContractType | str | None = None,
+        contract_status: ContractStatus | str | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
         ownership_ids: list[str] | None = None,
@@ -344,10 +345,23 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
             selectinload(RentContract.assets), selectinload(RentContract.rent_terms)
         )
 
-        if contract_type:
-            stmt = stmt.where(RentContract.contract_type == contract_type)
-        if contract_status:
-            stmt = stmt.where(RentContract.contract_status == contract_status)
+        if contract_type is not None:
+            contract_type_value = (
+                contract_type.value
+                if isinstance(contract_type, ContractType)
+                else str(contract_type)
+            )
+            # 兼容数据库中 contract_type 仍为 varchar 的场景，避免 enum 类型比较报错
+            stmt = stmt.where(
+                cast(RentContract.contract_type, String) == contract_type_value
+            )
+        if contract_status is not None:
+            contract_status_value = (
+                contract_status.value
+                if isinstance(contract_status, ContractStatus)
+                else str(contract_status)
+            )
+            stmt = stmt.where(RentContract.contract_status == contract_status_value)
 
         if start_date and end_date:
             stmt = stmt.where(RentContract.start_date <= end_date)

@@ -12,7 +12,7 @@
   width: 100%;
 }
 
-@media (max-width: 768px) {
+@media (max-width: var(--breakpoint-sm)) {
   .stepsCard :global(.ant-card-body) {
     padding: var(--property-certificate-import-card-padding-y-mobile)
       var(--property-certificate-import-card-padding-x-mobile);

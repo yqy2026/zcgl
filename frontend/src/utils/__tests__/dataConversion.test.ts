@@ -64,6 +64,29 @@ describe('convertBackendToFrontend', () => {
       expect(result.occupancy_rate).toBe(85.5);
     });
 
+    it('应该将 overall_occupancy_rate 字符串转换为数字', () => {
+      const data = { overall_occupancy_rate: '83.2' };
+      const result = convertBackendToFrontend<{ overall_occupancy_rate: number }>(data);
+      expect(result.overall_occupancy_rate).toBe(83.2);
+    });
+
+    it('应该将新增金额汇总字段字符串转换为数字', () => {
+      const data = {
+        total_deposit: '120000.50',
+        due_amount: '8000.20',
+        total_due_amount: '25000.10',
+      };
+      const result = convertBackendToFrontend<{
+        total_deposit: number;
+        due_amount: number;
+        total_due_amount: number;
+      }>(data);
+
+      expect(result.total_deposit).toBe(120000.5);
+      expect(result.due_amount).toBe(8000.2);
+      expect(result.total_due_amount).toBe(25000.1);
+    });
+
     it('应该保持非 Decimal 字段不变', () => {
       const data = { name: 'Test Asset', status: 'active' };
       const result = convertBackendToFrontend(data);
@@ -134,6 +157,23 @@ describe('convertFrontendToBackend', () => {
       const data = { monthly_rent: 5000 };
       const result = convertFrontendToBackend<{ monthly_rent: string }>(data);
       expect(result.monthly_rent).toBe('5000');
+    });
+
+    it('应该将新增金额汇总字段数字转换为字符串', () => {
+      const data = {
+        total_deposit: 120000.5,
+        due_amount: 8000.2,
+        total_due_amount: 25000.1,
+      };
+      const result = convertFrontendToBackend<{
+        total_deposit: string;
+        due_amount: string;
+        total_due_amount: string;
+      }>(data);
+
+      expect(result.total_deposit).toBe('120000.5');
+      expect(result.due_amount).toBe('8000.2');
+      expect(result.total_due_amount).toBe('25000.1');
     });
 
     it('应该保持非 Decimal 字段不变', () => {

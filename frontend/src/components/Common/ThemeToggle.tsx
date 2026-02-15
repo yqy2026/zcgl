@@ -88,11 +88,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
     );
   }
 
-  return (
-    <Tooltip title={isDark ? '切换到浅色模式' : '切换到深色模式'}>
-      {switchElement}
-    </Tooltip>
-  );
+  return <Tooltip title={isDark ? '切换到浅色模式' : '切换到深色模式'}>{switchElement}</Tooltip>;
 };
 
 /**
@@ -178,10 +174,7 @@ export const ThemeSelector: React.FC<{
 
   return (
     <Space size="small" style={style} className={`${styles.selectorSpace} ${className ?? ''}`}>
-      <BgColorsOutlined
-        className={styles.selectorIcon}
-        aria-label="主题选择"
-      />
+      <BgColorsOutlined className={styles.selectorIcon} aria-label="主题选择" />
       <Text type="secondary" className={styles.selectorLabel}>
         主题:
       </Text>

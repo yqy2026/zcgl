@@ -491,7 +491,6 @@ class BaseDictionaryService {
             results[dictType] = result;
           } else {
             // 处理Promise拒绝的情况
-            // eslint-disable-next-line no-console
             console.error('批量获取字典数据失败:', promiseResult.reason);
           }
         });

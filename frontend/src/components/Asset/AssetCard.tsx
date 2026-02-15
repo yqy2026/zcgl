@@ -130,12 +130,7 @@ const AssetCard: React.FC<AssetCardProps> = ({
         {/* 面积信息 */}
         <Row gutter={16} className={styles.areaRow}>
           <Col span={6}>
-            <Statistic
-              title="土地面积"
-              value={asset.land_area ?? 0}
-              suffix="㎡"
-              precision={2}
-            />
+            <Statistic title="土地面积" value={asset.land_area ?? 0} suffix="㎡" precision={2} />
           </Col>
           <Col span={6}>
             <Statistic
@@ -168,10 +163,7 @@ const AssetCard: React.FC<AssetCardProps> = ({
           <div className={styles.occupancyContainer}>
             <div className={styles.occupancyHeader}>
               <span className={styles.occupancyLabel}>出租率</span>
-              <span
-                className={styles.occupancyValue}
-                style={occupancyValueStyle}
-              >
+              <span className={styles.occupancyValue} style={occupancyValueStyle}>
                 {formatPercentage(occupancyRate)}
               </span>
             </div>

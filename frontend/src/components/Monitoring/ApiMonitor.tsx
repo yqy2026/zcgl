@@ -168,9 +168,7 @@ const ApiMonitor: React.FC = () => {
       key: 'responseTime',
       width: 120,
       render: (time?: number) => (
-        <span className={getResponseTimeClass(time)}>
-          {formatResponseTime(time)}
-        </span>
+        <span className={getResponseTimeClass(time)}>{formatResponseTime(time)}</span>
       ),
     },
     {
@@ -315,7 +313,8 @@ const ApiMonitor: React.FC = () => {
           </p>
           <ul className={styles.guideList}>
             <li>
-              <span className={styles.statusHealthy}>绿色</span>：响应正常（2xx状态码，响应时间&lt;3秒）
+              <span className={styles.statusHealthy}>绿色</span>
+              ：响应正常（2xx状态码，响应时间&lt;3秒）
             </li>
             <li>
               <span className={styles.statusUnhealthy}>红色</span>：端点不可用（404、500等错误）

@@ -9,7 +9,15 @@ vi.mock('antd', () => ({
       antd-table
     </div>
   ),
-  Pagination: ({ current, pageSize, total }: { current: number; pageSize: number; total: number }) => (
+  Pagination: ({
+    current,
+    pageSize,
+    total,
+  }: {
+    current: number;
+    pageSize: number;
+    total: number;
+  }) => (
     <div
       data-testid="antd-pagination"
       data-current={current}

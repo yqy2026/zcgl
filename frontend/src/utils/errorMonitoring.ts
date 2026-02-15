@@ -42,7 +42,6 @@ export function initErrorMonitoring(): void {
   if (sentryDSN != null && sentryDSN !== '' && isProductionMode()) {
     initSentry();
   } else {
-    // eslint-disable-next-line no-console
     console.info('[ErrorMonitoring] Running in development mode - logging to console');
   }
 
@@ -109,11 +108,9 @@ async function initSentry(): Promise<void> {
     };
 
     Sentry.init(sentryConfig);
-    // eslint-disable-next-line no-console
     console.info('[ErrorMonitoring] Sentry initialized');
   } catch (error) {
     // Sentry not installed or failed to load
-    // eslint-disable-next-line no-console
     console.warn(
       '[ErrorMonitoring] Sentry not available:',
       error instanceof Error ? error.message : String(error)
@@ -127,7 +124,6 @@ async function initSentry(): Promise<void> {
 function setupGlobalErrorHandlers(): void {
   // Catch unhandled promise rejections
   window.addEventListener('unhandledrejection', event => {
-    // eslint-disable-next-line no-console
     console.error('[ErrorMonitoring] Unhandled Promise Rejection:', event.reason);
     captureException(
       event.reason instanceof Error ? event.reason : new Error(String(event.reason)),
@@ -137,7 +133,6 @@ function setupGlobalErrorHandlers(): void {
 
   // Catch uncaught errors
   window.addEventListener('error', event => {
-    // eslint-disable-next-line no-console
     console.error('[ErrorMonitoring] Uncaught Error:', event.error);
     captureException(event.error ?? new Error(event.message), { type: 'uncaughterror' });
   });
@@ -158,7 +153,6 @@ export function captureException(error: Error, context: ErrorContext = {}): void
 
   // Log to console in development
   if (!isProductionMode()) {
-    // eslint-disable-next-line no-console
     console.error('[ErrorMonitoring]', errorReport);
   }
 
@@ -194,7 +188,6 @@ export function captureMessage(
       },
     });
   } else {
-    // eslint-disable-next-line no-console
     console.info(`[ErrorMonitoring] [${level.toUpperCase()}]`, message, context);
   }
 }
@@ -241,10 +234,8 @@ export async function flushErrorQueue(): Promise<void> {
       },
       body: JSON.stringify({ errors: errorsToSend }),
     });
-    // eslint-disable-next-line no-console
     console.info(`[ErrorMonitoring] Sent ${errorsToSend.length} errors to server`);
   } catch (error) {
-    // eslint-disable-next-line no-console
     console.error('[ErrorMonitoring] Failed to send errors:', error);
     // Re-queue for retry
     errorQueue.unshift(...errorsToSend);

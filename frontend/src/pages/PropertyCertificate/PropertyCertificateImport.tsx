@@ -58,9 +58,9 @@ export const PropertyCertificateImport: React.FC = () => {
               current={currentStep}
               className={styles.importSteps}
               items={[
-                { title: '上传文件', description: '上传产权证扫描件' },
-                { title: '审核确认', description: '确认提取的信息' },
-                { title: '完成', description: '产权证已创建' },
+                { title: '上传文件', content: '上传产权证扫描件' },
+                { title: '审核确认', content: '确认提取的信息' },
+                { title: '完成', content: '产权证已创建' },
               ]}
             />
           </Card>

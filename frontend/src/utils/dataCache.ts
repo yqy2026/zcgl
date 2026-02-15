@@ -197,7 +197,6 @@ export class DataPreloader {
         }
       }
     } catch (error) {
-      // eslint-disable-next-line no-console
       console.warn('Data preloading failed:', error);
     } finally {
       this.isPreloading = false;

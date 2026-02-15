@@ -25,8 +25,8 @@
 }
 
 .completeButton:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--color-primary);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .priorityIcon {
@@ -60,7 +60,7 @@
 }
 
 .priorityTag {
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding-inline: var(--todo-tag-padding-x);
 }
 
@@ -85,7 +85,7 @@
   font-size: var(--font-size-xs);
 }
 
-@media (max-width: 768px) {
+@media (max-width: var(--breakpoint-sm)) {
   .completeButton {
     min-height: var(--todo-touch-target-size);
   }

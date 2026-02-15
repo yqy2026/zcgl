@@ -3,24 +3,12 @@
  */
 
 declare module '@sentry/react' {
-  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   interface BrowserTracingOptions {
     // Add options as needed
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   interface ReplayOptions {
     // Add options as needed
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-empty-object-type, @typescript-eslint/no-unsafe-declaration-merging
-  interface BrowserTracing {
-    new (): unknown;
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-empty-object-type, @typescript-eslint/no-unsafe-declaration-merging
-  interface Replay {
-    new (): unknown;
   }
 
   interface SentryInitOptions {
@@ -48,10 +36,13 @@ declare module '@sentry/react' {
     username?: string;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
-  export class BrowserTracing implements BrowserTracingOptions {}
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
-  export class Replay implements ReplayOptions {}
+  export class BrowserTracing {
+    constructor(options?: BrowserTracingOptions);
+  }
+
+  export class Replay {
+    constructor(options?: ReplayOptions);
+  }
 
   export interface SentryType {
     init: (options: SentryInitOptions) => void;

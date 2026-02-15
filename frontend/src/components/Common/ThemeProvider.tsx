@@ -34,9 +34,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
 
       // Get CSS variables based on theme
       const cssVariables =
-        theme === 'dark'
-          ? getDarkThemeCSSVariables()
-          : getLightThemeCSSVariables();
+        theme === 'dark' ? getDarkThemeCSSVariables() : getLightThemeCSSVariables();
 
       // Apply CSS variables to root
       Object.entries(cssVariables).forEach(([key, value]) => {
@@ -44,9 +42,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
       });
 
       // Apply theme class to body for component-specific styling
-      document.body.className = document.body.className
-        .replace(/theme-\w+/g, '')
-        .trim();
+      document.body.className = document.body.className.replace(/theme-\w+/g, '').trim();
       document.body.classList.add(`theme-${theme}`);
     };
 

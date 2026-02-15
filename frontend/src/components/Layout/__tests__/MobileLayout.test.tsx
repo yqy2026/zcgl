@@ -76,7 +76,13 @@ vi.mock('antd', () => {
   return {
     Layout: MockLayout,
     Button: ({ children, icon, type, size, style, className }: ButtonMockProps) => (
-      <button data-testid="button" data-type={type} data-size={size} style={style} className={className}>
+      <button
+        data-testid="button"
+        data-type={type}
+        data-size={size}
+        style={style}
+        className={className}
+      >
         {icon}
         {children}
       </button>
@@ -94,7 +100,13 @@ vi.mock('antd', () => {
     ),
     Typography: {
       Text: ({ children, strong, type, style, className }: TypographyTextMockProps) => (
-        <span data-testid="text" data-strong={strong} data-type={type} style={style} className={className}>
+        <span
+          data-testid="text"
+          data-strong={strong}
+          data-type={type}
+          style={style}
+          className={className}
+        >
           {children}
         </span>
       ),

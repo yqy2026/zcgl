@@ -49,9 +49,7 @@ const ProtectedRoutes: React.FC = () => {
               element={
                 <PageTransition>
                   <Suspense
-                    fallback={
-                      <Spin size="large" className={styles.suspenseFallbackSpin} />
-                    }
+                    fallback={<Spin size="large" className={styles.suspenseFallbackSpin} />}
                   >
                     <route.element />
                   </Suspense>

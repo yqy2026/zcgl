@@ -66,11 +66,7 @@ const getDisplayValue = (value: unknown): React.ReactNode => {
   if (React.isValidElement(value)) {
     return value;
   }
-  if (
-    typeof value === 'string' ||
-    typeof value === 'number' ||
-    typeof value === 'boolean'
-  ) {
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
     return String(value);
   }
   return '-';
@@ -174,7 +170,8 @@ export function ResponsiveTable<T extends object>({
               return (
                 <Card key={key} className={styles.mobileCard} role="listitem">
                   {cardFields.map(fieldConfig => {
-                    const fieldKey = typeof fieldConfig === 'string' ? fieldConfig : fieldConfig.key;
+                    const fieldKey =
+                      typeof fieldConfig === 'string' ? fieldConfig : fieldConfig.key;
                     const label = typeof fieldConfig === 'string' ? fieldKey : fieldConfig.label;
                     const render = typeof fieldConfig === 'string' ? undefined : fieldConfig.render;
 

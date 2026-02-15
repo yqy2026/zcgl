@@ -111,9 +111,9 @@
 
 .statusTag {
   margin-inline-end: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding-inline: var(--spacing-sm);
-  border: 1px solid transparent;
+  border: var(--border-width-thin) solid transparent;
   font-weight: var(--font-weight-medium);
 }
 
@@ -137,7 +137,7 @@
   border-color: var(--color-primary);
 }
 
-@media (max-width: 768px) {
+@media (max-width: var(--breakpoint-sm)) {
   .headerActions {
     width: 100%;
     justify-content: flex-start;

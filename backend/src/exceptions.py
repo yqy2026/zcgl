@@ -2,33 +2,25 @@
 自定义异常类
 """
 
-from fastapi import status
+from .core.exception_handler import (
+    BaseBusinessError,
+    DuplicateResourceError,
+    ResourceNotFoundError,
+)
 
-from .core.exception_handler import BaseBusinessError
 
-
-class AssetNotFoundError(BaseBusinessError):
-    """资产未找到异常"""
+class AssetNotFoundError(ResourceNotFoundError):
+    """资产未找到异常（兼容包装）"""
 
     def __init__(self, asset_id: str):
-        self.asset_id = asset_id
-        super().__init__(
-            message=f"Asset with id {asset_id} not found",
-            code="ASSET_NOT_FOUND",
-            status_code=status.HTTP_404_NOT_FOUND,
-        )
+        super().__init__("Asset", asset_id)
 
 
-class DuplicateAssetError(BaseBusinessError):
-    """重复资产异常"""
+class DuplicateAssetError(DuplicateResourceError):
+    """重复资产异常（兼容包装）"""
 
     def __init__(self, property_name: str):
-        self.property_name = property_name
-        super().__init__(
-            message=f"Asset with name {property_name} already exists",
-            code="DUPLICATE_ASSET",
-            status_code=status.HTTP_409_CONFLICT,
-        )
+        super().__init__("Asset", "property_name", property_name)
 
 
 class BusinessLogicError(BaseBusinessError):
@@ -38,5 +30,5 @@ class BusinessLogicError(BaseBusinessError):
         super().__init__(
             message=message,
             code="BUSINESS_LOGIC_ERROR",
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=400,
         )

@@ -179,7 +179,11 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
               <Col span={16}>
                 <Card title={<Skeleton.Input className={styles.detailMainTitle} active />}>
                   {Array.from({ length: rows }).map((_, index) => (
-                    <Row key={`skeleton-detail-${index}`} gutter={16} className={styles.sectionBlockMd}>
+                    <Row
+                      key={`skeleton-detail-${index}`}
+                      gutter={16}
+                      className={styles.sectionBlockMd}
+                    >
                       <Col span={8}>
                         <Skeleton.Input className={styles.detailFieldFull} active />
                       </Col>
@@ -209,7 +213,7 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
     }
   };
 
-  return <div>{renderSkeleton()}</div>;
+  return <div className={styles.skeletonRoot}>{renderSkeleton()}</div>;
 };
 
 export default SkeletonLoader;

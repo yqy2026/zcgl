@@ -328,7 +328,8 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
         className="sr-only"
         id="asset-form-status"
       >
-        {mode === 'create' ? '创建资产表单' : '编辑资产表单'}，表单完成度 {completionRate.toFixed(0)}%
+        {mode === 'create' ? '创建资产表单' : '编辑资产表单'}，表单完成度{' '}
+        {completionRate.toFixed(0)}%
       </div>
 
       <FormCompletionProgress />

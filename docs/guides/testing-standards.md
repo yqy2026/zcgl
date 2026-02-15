@@ -766,10 +766,10 @@ jobs:
       - name: Run tests
         run: cd frontend && pnpm test:ci
 
-      - name: Type check
+      - name: Type check (tsgo)
         run: cd frontend && pnpm type-check
 
-      - name: Lint
+      - name: Lint (oxlint)
         run: cd frontend && pnpm lint
 ```
 

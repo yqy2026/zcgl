@@ -1,9 +1,13 @@
 .pageShell {
   --template-control-height: var(--button-height-lg);
   --template-touch-target-size: calc(var(--button-height-lg) + var(--spacing-xs));
-  --template-icon-offset-y: calc(var(--spacing-xs) - 1px);
-  --template-fields-max-height: 220px;
-  --template-fields-max-height-mobile: 180px;
+  --template-icon-offset-y: calc(var(--spacing-xs) - var(--border-width-thin));
+  --template-fields-max-height: calc(
+    (var(--spacing-xxxl) * 4) + var(--spacing-xl) + var(--spacing-xs)
+  );
+  --template-fields-max-height-mobile: calc(
+    (var(--spacing-xxxl) * 3) + var(--spacing-xxl) + var(--spacing-xs)
+  );
   --template-detail-row-gap-mobile: var(--spacing-xs);
 }
 
@@ -86,8 +90,8 @@
 .statusTag,
 .typeTag {
   margin-inline-end: 0;
-  border-radius: 999px;
-  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  border: var(--border-width-thin) solid transparent;
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
   line-height: 1.35;
@@ -146,7 +150,9 @@
   min-height: var(--template-control-height);
   border-radius: var(--radius-md);
   color: var(--color-text-secondary);
-  transition: color var(--transition-base), background-color var(--transition-base);
+  transition:
+    color var(--transition-base),
+    background-color var(--transition-base);
 }
 
 .tableActionButton:hover {
@@ -155,8 +161,8 @@
 }
 
 .tableActionButton:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--color-primary);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .actionButton {
@@ -197,7 +203,7 @@
   overflow-y: auto;
   padding: var(--spacing-sm);
   border-radius: var(--card-radius);
-  border: 1px solid var(--color-border-light);
+  border: var(--border-width-thin) solid var(--color-border-light);
   background: var(--color-bg-secondary);
 }
 
@@ -219,7 +225,7 @@
   min-height: var(--template-control-height);
 }
 
-@media (max-width: 768px) {
+@media (max-width: var(--breakpoint-sm)) {
   .tableSummary {
     flex-direction: column;
     align-items: flex-start;

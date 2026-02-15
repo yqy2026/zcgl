@@ -53,8 +53,8 @@
 }
 
 .toolbarButton:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--color-primary);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .linkButton {
@@ -65,8 +65,8 @@
 }
 
 .linkButton:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--color-primary);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .actionGroup {
@@ -93,8 +93,8 @@
 }
 
 .iconActionButton:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--color-primary);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .deleteActionButton:hover {
@@ -110,7 +110,7 @@
   border-radius: var(--radius-lg);
 }
 
-@media (max-width: 768px) {
+@media (max-width: var(--breakpoint-sm)) {
   .statsRow {
     margin-bottom: var(--spacing-lg);
   }

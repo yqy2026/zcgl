@@ -36,18 +36,12 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
             aria-label="通知"
             className={styles.notificationButton}
           />
-          <Avatar
-            size="small"
-            icon={<UserOutlined />}
-            className={styles.userAvatar}
-          />
+          <Avatar size="small" icon={<UserOutlined />} className={styles.userAvatar} />
         </Space>
       </Header>
 
       {/* 主内容区 */}
-      <Content className={styles.mobileContent}>
-        {children}
-      </Content>
+      <Content className={styles.mobileContent}>{children}</Content>
 
       {/* 页脚 */}
       <Footer className={styles.mobileFooter}>

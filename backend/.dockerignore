@@ -1,0 +1,27 @@
+# VCS metadata
+.git
+.gitignore
+
+# Local environment
+.env
+.env.*
+.venv
+venv
+
+# Python caches
+__pycache__
+*.py[cod]
+.pytest_cache
+.mypy_cache
+.ruff_cache
+
+# Test and docs content not needed in runtime image
+tests
+docs
+test-data
+.benchmarks
+
+# Local artifacts
+*.log
+.coverage
+htmlcov

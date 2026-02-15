@@ -4,7 +4,7 @@
  * 用途：
  * 1. 在开发环境启用日志输出
  * 2. 在生产环境禁用日志输出
- * 3. 绕过 ESLint no-console 规则
+ * 3. 满足前端 lint 的 no-console 约束
  * 4. 提供统一的日志格式和级别控制
  *
  * @example
@@ -85,22 +85,18 @@ class Logger {
 
   debug(message: string, meta?: Record<string, unknown>): void {
     if (this.shouldLog('debug')) {
-      // eslint-disable-next-line no-console
       console.log(...this.formatMessage('debug', message, meta));
     }
   }
 
   info(message: string, meta?: Record<string, unknown>): void {
     if (this.shouldLog('info')) {
-      // eslint-disable-next-line no-console
       console.info(...this.formatMessage('info', message, meta));
     }
   }
 
   warn(message: string, meta?: Record<string, unknown>): void {
     if (this.shouldLog('warn')) {
-      // eslint-disable-next-line no-console
-      // eslint-disable-next-line no-console
       console.warn(...this.formatMessage('warn', message, meta));
     }
   }
@@ -114,8 +110,6 @@ class Logger {
             ? { error, ...meta }
             : meta;
 
-      // eslint-disable-next-line no-console
-      // eslint-disable-next-line no-console
       console.error(...this.formatMessage('error', message, errorMeta));
     }
   }

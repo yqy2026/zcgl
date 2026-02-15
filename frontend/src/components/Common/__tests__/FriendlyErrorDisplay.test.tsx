@@ -12,6 +12,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import { screen, fireEvent } from '@/test/utils/test-helpers';
 
+type FriendlyErrorType = 'network' | 'data' | 'server' | 'permission' | 'not-found';
+
 describe('FriendlyErrorDisplay - 组件导入测试', () => {
   it('应该能够导入FriendlyErrorDisplay组件', async () => {
     const module = await import('../FriendlyErrorDisplay');
@@ -49,7 +51,7 @@ describe('FriendlyErrorDisplay - 错误类型测试', () => {
     vi.clearAllMocks();
   });
 
-  it.each([
+  it.each<[FriendlyErrorType, string]>([
     ['network', '网络连接问题'],
     ['data', '数据加载失败'],
     ['server', '服务器错误'],
@@ -57,7 +59,7 @@ describe('FriendlyErrorDisplay - 错误类型测试', () => {
     ['not-found', '未找到数据'],
   ])('type=%s 应该显示对应标题', async (type, title) => {
     const FriendlyErrorDisplay = (await import('../FriendlyErrorDisplay')).default;
-    renderWithProviders(<FriendlyErrorDisplay error={{ message: '测试' }} type={type as any} />);
+    renderWithProviders(<FriendlyErrorDisplay error={{ message: '测试' }} type={type} />);
 
     expect(screen.getByText(title)).toBeInTheDocument();
   });

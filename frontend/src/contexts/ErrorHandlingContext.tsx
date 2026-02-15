@@ -42,13 +42,11 @@ export function ErrorHandlingProvider({ children }: ErrorHandlingProviderProps) 
     async (id: string) => {
       const action = retryActions.get(id);
       if (!action) {
-        // eslint-disable-next-line no-console
         console.warn(`[ErrorHandlingContext] No retry action found for id: ${id}`);
         return;
       }
 
       try {
-        // eslint-disable-next-line no-console
         console.log(`[ErrorHandlingContext] Executing retry for: ${action.description}`);
         await action.fn();
 
@@ -62,10 +60,8 @@ export function ErrorHandlingProvider({ children }: ErrorHandlingProviderProps) 
           return next;
         });
 
-        // eslint-disable-next-line no-console
         console.log(`[ErrorHandlingContext] Retry successful for: ${action.description}`);
       } catch (error) {
-        // eslint-disable-next-line no-console
         console.error(`[ErrorHandlingContext] Retry failed for: ${action.description}`, error);
         throw error; // Re-throw to allow caller to handle
       }

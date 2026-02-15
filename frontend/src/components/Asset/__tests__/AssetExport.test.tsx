@@ -31,6 +31,19 @@ vi.mock('@/services/assetService', () => ({
 
 // Mock @tanstack/react-query
 const mockMutate = vi.fn();
+
+interface MutationSuccessPayload {
+  id: string;
+  status: string;
+  progress: number;
+  download_url: string;
+  created_at: string;
+}
+
+interface MutationOptionsLike {
+  onSuccess?: (payload: MutationSuccessPayload) => void;
+}
+
 vi.mock('@tanstack/react-query', () => ({
   useMutation: vi.fn(() => ({
     mutate: mockMutate,
@@ -474,9 +487,10 @@ describe('AssetExport', () => {
     });
 
     it('导出成功应该显示成功消息', async () => {
-      vi.mocked(useMutation).mockImplementationOnce((options: any) => ({
+      vi.mocked(useMutation).mockImplementationOnce((options: unknown) => ({
         mutate: () => {
-          options?.onSuccess?.({
+          const mutationOptions = options as MutationOptionsLike | undefined;
+          mutationOptions?.onSuccess?.({
             id: 'task-1',
             status: 'completed',
             progress: 100,

@@ -94,11 +94,11 @@ const DEFAULT_ERRORS: Record<ErrorType, { title: string; message: string }> = {
     title: '没有权限',
     message: '抱歉，您没有权限访问此页面。',
   },
-  'network': {
+  network: {
     title: '网络连接失败',
     message: '请检查您的网络连接后重试。',
   },
-  'permission': {
+  permission: {
     title: '权限不足',
     message: '您没有执行此操作的权限，请联系管理员。',
   },
@@ -115,7 +115,7 @@ const ERROR_ICONS: Record<ErrorType, React.ReactNode> = {
   '404': <CloseCircleOutlined className={styles.errorIcon} />,
   '500': <WarningOutlined className={styles.warningIcon} />,
   '403': <InfoCircleOutlined className={styles.warningIcon} />,
-  'network': <WarningOutlined className={styles.warningIcon} />,
+  network: <WarningOutlined className={styles.warningIcon} />,
   permission: <InfoCircleOutlined className={styles.warningIcon} />,
   custom: <CloseCircleOutlined className={styles.errorIcon} />,
 };
@@ -160,9 +160,7 @@ export const ErrorState: React.FC<ErrorStateConfig> = ({
         title={errorTitle}
         subTitle={
           <div>
-            <Paragraph className={styles.errorMessageParagraph}>
-              {errorMessage}
-            </Paragraph>
+            <Paragraph className={styles.errorMessageParagraph}>{errorMessage}</Paragraph>
             {errorCode && (
               <Text type="secondary" className={styles.errorCodeText}>
                 错误代码: {errorCode}
@@ -280,11 +278,7 @@ export const ComponentError: React.FC<ComponentErrorProps> = ({
       </div>
       {showRetry && onRetry && (
         <div className={styles.componentActionContainer}>
-          <Button
-            icon={<ReloadOutlined />}
-            onClick={onRetry}
-            aria-label="重试"
-          >
+          <Button icon={<ReloadOutlined />} onClick={onRetry} aria-label="重试">
             重试
           </Button>
         </div>

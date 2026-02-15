@@ -57,7 +57,7 @@
   width: 100%;
 }
 
-@media (max-width: 768px) {
+@media (max-width: var(--breakpoint-sm)) {
   .pageContainer {
     padding: var(--spacing-lg);
   }

@@ -80,12 +80,7 @@ const ContractStatsCards: React.FC<ContractStatsCardsProps> = ({ statistics }) =
       </Col>
       <Col xs={24} sm={12} lg={6}>
         <Card className={[styles.metricCard, toneClassMap[paymentRateTone]].join(' ')}>
-          <Statistic
-            title="收缴率"
-            value={statistics.payment_rate}
-            precision={2}
-            suffix="%"
-          />
+          <Statistic title="收缴率" value={statistics.payment_rate} precision={2} suffix="%" />
           <Tag className={[styles.statusTag, toneClassMap[paymentRateTone]].join(' ')}>
             {paymentRateLabel}
           </Tag>

@@ -349,12 +349,11 @@ const OwnershipDetailPage: React.FC = () => {
       title={
         <>
           {ownership?.name}
-          {ownership?.short_name != null &&
-            ownership.short_name.length > 0 && (
-              <Text type="secondary" className={styles.shortNameText}>
-                ({ownership.short_name})
-              </Text>
-            )}
+          {ownership?.short_name != null && ownership.short_name.length > 0 && (
+            <Text type="secondary" className={styles.shortNameText}>
+              ({ownership.short_name})
+            </Text>
+          )}
           {ownership && (
             <Badge
               status={ownership.is_active ? 'success' : 'error'}
@@ -428,7 +427,9 @@ const OwnershipDetailPage: React.FC = () => {
           <Card title="基本信息" className={styles.detailsCard}>
             <Descriptions column={2}>
               <Descriptions.Item label="权属方全称">{ownership.name}</Descriptions.Item>
-              <Descriptions.Item label="权属方简称">{ownership.short_name ?? '-'}</Descriptions.Item>
+              <Descriptions.Item label="权属方简称">
+                {ownership.short_name ?? '-'}
+              </Descriptions.Item>
               <Descriptions.Item label="状态">
                 <Badge
                   status={ownership.is_active ? 'success' : 'error'}
@@ -436,13 +437,19 @@ const OwnershipDetailPage: React.FC = () => {
                 />
               </Descriptions.Item>
               <Descriptions.Item label="关联合同数量">
-                <Tag className={`${styles.countTag} ${styles.tonePrimary}`}>{contracts.length} 个</Tag>
+                <Tag className={`${styles.countTag} ${styles.tonePrimary}`}>
+                  {contracts.length} 个
+                </Tag>
               </Descriptions.Item>
               <Descriptions.Item label="创建时间">
-                {ownership.created_at ? new Date(ownership.created_at).toLocaleString('zh-CN') : '-'}
+                {ownership.created_at
+                  ? new Date(ownership.created_at).toLocaleString('zh-CN')
+                  : '-'}
               </Descriptions.Item>
               <Descriptions.Item label="更新时间">
-                {ownership.updated_at ? new Date(ownership.updated_at).toLocaleString('zh-CN') : '-'}
+                {ownership.updated_at
+                  ? new Date(ownership.updated_at).toLocaleString('zh-CN')
+                  : '-'}
               </Descriptions.Item>
             </Descriptions>
           </Card>

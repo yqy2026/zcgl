@@ -11,11 +11,7 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useFormat } from '@/utils/format';
-import {
-  RentContract,
-  ContractStatus,
-  ContractStatusLabels,
-} from '@/types/rentContract';
+import { RentContract, ContractStatus, ContractStatusLabels } from '@/types/rentContract';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
 import styles from './ContractTable.module.css';
 

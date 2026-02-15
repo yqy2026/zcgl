@@ -18,6 +18,20 @@ interface AssetDetailInfoProps {
   asset: Asset;
 }
 
+const DESCRIPTIONS_LABEL_STYLE_BOLD = {
+  width: 'calc(var(--spacing-xl) * 5)',
+  fontWeight: 'bold' as const,
+};
+const DESCRIPTIONS_LABEL_STYLE_DEFAULT = {
+  width: 'calc(var(--spacing-xl) * 5)',
+};
+const DESCRIPTIONS_LABEL_STYLE_WIDE = {
+  width: 'calc(var(--spacing-xl) * 6 + var(--spacing-md) / 2)',
+};
+const DESCRIPTIONS_CONTENT_STYLE = {
+  minWidth: 'calc(var(--spacing-xxxl) * 4 + var(--spacing-sm))',
+};
+
 const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
   // 计算出租率
   const occupancyRate =
@@ -41,8 +55,8 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
           bordered
           column={{ xs: 1, sm: 2, md: 3 }}
           styles={{
-            label: { width: '120px', fontWeight: 'bold' },
-            content: { minWidth: '200px' },
+            label: DESCRIPTIONS_LABEL_STYLE_BOLD,
+            content: DESCRIPTIONS_CONTENT_STYLE,
           }}
         >
           <Descriptions.Item
@@ -257,7 +271,7 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
           bordered
           column={{ xs: 1, sm: 2 }}
           styles={{
-            label: { width: '120px' },
+            label: DESCRIPTIONS_LABEL_STYLE_DEFAULT,
           }}
         >
           <Descriptions.Item label="接收模式">{asset.business_model ?? '-'}</Descriptions.Item>
@@ -287,7 +301,7 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
             bordered
             column={{ xs: 1, sm: 2 }}
             styles={{
-              label: { width: '150px' },
+              label: DESCRIPTIONS_LABEL_STYLE_WIDE,
             }}
           >
             <Descriptions.Item label="(当前)接收协议开始日期">
@@ -333,7 +347,7 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
             bordered
             column={{ xs: 1, sm: 2 }}
             styles={{
-              label: { width: '150px' },
+              label: DESCRIPTIONS_LABEL_STYLE_WIDE,
             }}
           >
             <Descriptions.Item label="承租方名称">{asset.tenant_name ?? '-'}</Descriptions.Item>

@@ -181,7 +181,7 @@ const useAssets = (params: AssetQueryParams) => {
 npx lighthouse http://localhost:5173 --view
 
 # 性能分析
-npm run build -- --profile
+pnpm build -- --profile
 ```
 
 ## 内存优化

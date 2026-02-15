@@ -128,10 +128,8 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
 
   useEffect(() => {
     if (projectsError != null) {
-      // eslint-disable-next-line no-console
       console.error('获取项目列表失败:', projectsError);
       const err = projectsError as Error & { response?: { status?: number; data?: unknown } };
-      // eslint-disable-next-line no-console
       console.error('Error details:', {
         message: err.message,
         status: err.response?.status,
@@ -214,7 +212,6 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
           MessageManager.success('项目删除成功');
           refreshProjects();
         } catch (error) {
-          // eslint-disable-next-line no-console
           console.error('删除项目失败:', error);
           MessageManager.error('删除项目失败');
         }
@@ -229,7 +226,6 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
       MessageManager.success('项目状态切换成功');
       refreshProjects();
     } catch (error) {
-      // eslint-disable-next-line no-console
       console.error('切换项目状态失败:', error);
       MessageManager.error('切换项目状态失败');
     }
@@ -267,11 +263,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
       dataIndex: 'name',
       key: 'name',
       render: (text: string, record: Project) => (
-        <Button
-          type="link"
-          onClick={() => handleView(record)}
-          className={styles.projectNameButton}
-        >
+        <Button type="link" onClick={() => handleView(record)} className={styles.projectNameButton}>
           {text}
         </Button>
       ),
@@ -297,15 +289,15 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
         if (record.ownership_relations != null && record.ownership_relations.length > 0) {
           const activeRelations = record.ownership_relations.filter(rel => rel.is_active === true);
           if (activeRelations.length > 0) {
-              return (
-                <div>
-                  {activeRelations.slice(0, 2).map((rel, _index) => (
-                    <Tag key={rel.id} color="blue" className={styles.ownershipTag}>
-                      {rel.ownership_name ?? '权属方已关联'}
-                    </Tag>
-                  ))}
-                  {activeRelations.length > 2 && (
-                    <Tag color="gray">+{activeRelations.length - 2}</Tag>
+            return (
+              <div>
+                {activeRelations.slice(0, 2).map((rel, _index) => (
+                  <Tag key={rel.id} color="blue" className={styles.ownershipTag}>
+                    {rel.ownership_name ?? '权属方已关联'}
+                  </Tag>
+                ))}
+                {activeRelations.length > 2 && (
+                  <Tag color="gray">+{activeRelations.length - 2}</Tag>
                 )}
               </div>
             );

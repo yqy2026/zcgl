@@ -40,16 +40,15 @@ const AssetExportHistoryModal: React.FC<AssetExportHistoryModalProps> = ({
         renderItem={(item: ExportTaskWithApiFields) => (
           <List.Item
             actions={[
-              item.status === 'completed' &&
-                item.download_url !== undefined && (
-                  <Tooltip key="download" title="下载文件">
-                    <Button
-                      type="text"
-                      icon={<DownloadOutlined />}
-                      onClick={() => onDownload(item)}
-                    />
-                  </Tooltip>
-                ),
+              item.status === 'completed' && item.download_url !== undefined && (
+                <Tooltip key="download" title="下载文件">
+                  <Button
+                    type="text"
+                    icon={<DownloadOutlined />}
+                    onClick={() => onDownload(item)}
+                  />
+                </Tooltip>
+              ),
               <Tooltip key="delete" title="删除记录">
                 <Button
                   type="text"

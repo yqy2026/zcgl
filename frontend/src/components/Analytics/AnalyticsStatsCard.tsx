@@ -73,11 +73,7 @@ const StatCard: React.FC<StatCardProps> = ({
   return (
     <Card loading={loading} size="small" className={styles.statCard} style={cardStyle}>
       <div className={styles.statHeader}>
-        {icon != null && (
-          <div className={styles.iconBadge}>
-            {icon}
-          </div>
-        )}
+        {icon != null && <div className={styles.iconBadge}>{icon}</div>}
         <div className={styles.statMain}>
           <div className={styles.statTitle}>{title}</div>
           <Statistic

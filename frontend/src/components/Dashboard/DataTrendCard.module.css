@@ -1,6 +1,11 @@
 /* 数据趋势卡片样式 */
 
 .trendCard {
+  --trend-card-min-height-sm: calc(var(--button-height-lg) * 3);
+  --trend-card-min-height-md: calc(
+    (var(--button-height-lg) * 3) + var(--spacing-lg) + var(--spacing-xs)
+  );
+  --trend-card-min-height-lg: calc(var(--button-height-lg) * 4);
   border-radius: var(--radius-lg);
   box-shadow: var(--card-shadow);
   transition:
@@ -8,7 +13,7 @@
     box-shadow var(--transition-slow),
     border-color var(--transition-slow);
   overflow: hidden;
-  border: 1px solid var(--color-border-light);
+  border: var(--border-width-thin) solid var(--color-border-light);
   background: var(--color-bg-primary);
   height: 100%;
 }
@@ -47,15 +52,15 @@
 
 /* Size Variants */
 .trendCard.small {
-  min-height: 120px;
+  min-height: var(--trend-card-min-height-sm);
 }
 
 .trendCard.default {
-  min-height: 140px;
+  min-height: var(--trend-card-min-height-md);
 }
 
 .trendCard.large {
-  min-height: 160px;
+  min-height: var(--trend-card-min-height-lg);
 }
 
 .cardHeader {
@@ -156,7 +161,7 @@
 }
 
 /* 响应式设计 */
-@media (max-width: 768px) {
+@media (max-width: var(--breakpoint-sm)) {
   .trendCard.small,
   .trendCard.default,
   .trendCard.large {

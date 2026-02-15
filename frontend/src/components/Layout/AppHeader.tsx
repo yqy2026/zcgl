@@ -35,7 +35,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) =
       await AuthService.logout();
       navigate('/login');
     } catch (error) {
-      // eslint-disable-next-line no-console
       console.error('退出登录失败:', error);
       // 即使API失败，也要跳转到登录页面
       navigate('/login');

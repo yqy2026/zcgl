@@ -5,10 +5,13 @@ Validates SECRET_KEY and DATA_ENCRYPTION_KEY for strength to prevent
 security vulnerabilities from weak or default values.
 """
 
+import logging
 import os
 import re
 
 from src.core.environment import get_environment
+
+logger = logging.getLogger(__name__)
 
 
 class SecretValidationError(Exception):
@@ -88,17 +91,16 @@ class SecretValidator:
         all_valid = True
         for secret_name, secret_value in secrets_to_check.items():
             if not secret_value:
-                print(f"❌ {secret_name} is not set!")
+                logger.error("%s is not set", secret_name)
                 all_valid = False
             else:
                 try:
                     self.validate(secret_value)
-                    print(f"✅ {secret_name} is strong")
-                except SecretValidationError as e:
-                    print(f"❌ {secret_name} validation failed:")
-                    print(f"   {e.message}")
-                    if e.suggestion:
-                        print(f"\n{e.suggestion}")
+                    logger.info("%s is strong", secret_name)
+                except SecretValidationError as error:
+                    logger.error("%s validation failed: %s", secret_name, error.message)
+                    if error.suggestion:
+                        logger.info("Validation suggestion generated for %s", secret_name)
                     all_valid = False
 
         return all_valid

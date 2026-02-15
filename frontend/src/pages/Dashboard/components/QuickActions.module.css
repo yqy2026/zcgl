@@ -1,8 +1,6 @@
 .actionsGrid {
   --quick-actions-card-height: calc((var(--spacing-xxxl) * 2) + var(--spacing-xl));
-  --quick-actions-card-height-mobile: calc(
-    var(--quick-actions-card-height) + var(--spacing-md)
-  );
+  --quick-actions-card-height-mobile: calc(var(--quick-actions-card-height) + var(--spacing-md));
   width: 100%;
 }
 
@@ -18,12 +16,12 @@
 }
 
 .actionCard:hover {
-  transform: translateY(-2px);
+  transform: translateY(calc(var(--spacing-xs) / -2));
 }
 
 .actionCard:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--color-primary);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .actionCard :global(.ant-card-body) {
@@ -87,7 +85,7 @@
   color: var(--color-text-secondary);
 }
 
-@media (max-width: 768px) {
+@media (max-width: var(--breakpoint-sm)) {
   .actionCard {
     min-height: var(--quick-actions-card-height-mobile);
   }

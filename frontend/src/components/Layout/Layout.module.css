@@ -13,7 +13,7 @@
 .header {
   padding: 0 var(--spacing-xl);
   background: var(--color-bg-primary);
-  border-bottom: 1px solid var(--color-border-light);
+  border-bottom: var(--border-width-thin) solid var(--color-border-light);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -47,8 +47,8 @@
 }
 
 .headerToggleButton:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--color-primary);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .headerTitleWrapper {
@@ -92,8 +92,8 @@
 }
 
 .headerIconButton:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--color-primary);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .headerActionIcon {
@@ -122,9 +122,9 @@
   align-items: center;
   gap: var(--spacing-sm);
   padding: var(--spacing-xs) var(--spacing-md) var(--spacing-xs) var(--spacing-xs);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   min-height: var(--layout-control-size);
-  border: 1px solid transparent;
+  border: var(--border-width-thin) solid transparent;
   background: transparent;
   box-shadow: none;
   color: var(--color-text-primary);
@@ -141,8 +141,8 @@
 }
 
 .userInfoButton:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--color-primary);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .userAvatar {
@@ -159,7 +159,7 @@
 
 .sidebar {
   background: var(--color-bg-primary) !important;
-  border-right: 1px solid var(--color-border-light) !important;
+  border-right: var(--border-width-thin) solid var(--color-border-light) !important;
   z-index: var(--z-index-fixed);
   box-shadow: none !important;
 }
@@ -170,7 +170,7 @@
   align-items: center;
   padding: 0 var(--spacing-xl);
   background: transparent;
-  border-bottom: 1px solid var(--color-border-light);
+  border-bottom: var(--border-width-thin) solid var(--color-border-light);
 }
 
 .sidebarLogoCollapsed {
@@ -234,8 +234,8 @@
 
 .sidebarMenu :global(.ant-menu-item:focus-visible),
 .sidebarMenu :global(.ant-menu-submenu-title:focus-visible) {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--color-primary);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .content {
@@ -249,11 +249,11 @@
 .footer {
   text-align: center;
   background: var(--color-bg-primary);
-  border-top: 1px solid var(--color-border-light);
+  border-top: var(--border-width-thin) solid var(--color-border-light);
   padding: var(--spacing-md) var(--spacing-xl);
 }
 
-@media (max-width: 768px) {
+@media (max-width: var(--breakpoint-sm)) {
   .header {
     padding: 0 var(--spacing-lg);
     min-height: var(--layout-header-height-mobile);
@@ -282,7 +282,7 @@
   }
 }
 
-@media (max-width: 576px) {
+@media (max-width: var(--breakpoint-xs)) {
   .headerTitle {
     display: none;
   }

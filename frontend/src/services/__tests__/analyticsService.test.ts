@@ -134,6 +134,47 @@ describe('AnalyticsService', () => {
       expect(result.success).toBe(true);
       expect(result.data?.area_summary.total_assets).toBe(100);
     });
+
+    it('将金额和面积字符串转换为数字', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        success: true,
+        data: {
+          area_summary: {
+            total_assets: 10,
+            total_land_area: '50000.75',
+            total_rentable_area: '42000.50',
+            occupancy_rate: '84.25',
+          },
+          financial_summary: {
+            total_monthly_rent: '75000.30',
+            total_deposit: '150000.40',
+          },
+          business_category_distribution: [
+            {
+              category: '办公',
+              count: '6',
+              occupancy_rate: '80.5',
+              avg_annual_income: '120000.75',
+            },
+          ],
+        },
+      });
+
+      const result = await service.getComprehensiveAnalytics();
+      const analyticsData = result.data;
+
+      expect(analyticsData?.area_summary.total_area).toBe(50000.75);
+      expect(analyticsData?.area_summary.total_rentable_area).toBe(42000.5);
+      expect(analyticsData?.area_summary.occupancy_rate).toBe(84.25);
+      expect(analyticsData?.financial_summary.total_monthly_rent).toBe(75000.3);
+      expect(analyticsData?.financial_summary.total_deposit).toBe(150000.4);
+      expect(analyticsData?.business_category_distribution[0]).toEqual({
+        category: '办公',
+        count: 6,
+        occupancy_rate: 80.5,
+        avg_annual_income: 120000.75,
+      });
+    });
   });
 
   describe('getBasicStatistics', () => {

@@ -102,7 +102,9 @@ const EmptyState: React.FC<EmptyStateProps> = ({
   const config = presetConfigs[type];
 
   const wrapperClassName =
-    className != null && className !== '' ? `${styles.emptyStateWrapper} ${className}` : styles.emptyStateWrapper;
+    className != null && className !== ''
+      ? `${styles.emptyStateWrapper} ${className}`
+      : styles.emptyStateWrapper;
 
   // 生成操作按钮
   const getActionButtons = () => {

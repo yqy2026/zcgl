@@ -13,9 +13,12 @@ from uuid import uuid4
 
 import pytest
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
-from tests.shared.conftest_utils import AsyncSessionAdapter
+from tests.shared.conftest_utils import (
+    AsyncSessionAdapter,
+    cleanup_transactional_session,
+    create_transactional_session,
+)
 
 # E2E tests use file database (not memory)
 TEST_DATABASE_URL = os.getenv("E2E_TEST_DATABASE_URL") or os.getenv("TEST_DATABASE_URL")
@@ -171,24 +174,12 @@ def db_tables(engine):
 @pytest.fixture(scope="function")
 def db_session(engine, db_tables):
     """Create a new database session for each test."""
-    test_session_local = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-    session = test_session_local()
-
-    # Begin a transaction for this test
-    connection = engine.connect()
-    transaction = connection.begin()
-    session.bind = connection
+    session, connection, transaction = create_transactional_session(engine)
 
     yield session
 
     # Roll back the transaction after test
-    try:
-        session.close()
-        transaction.rollback()
-        connection.close()
-    except Exception:
-        pass
+    cleanup_transactional_session(session, connection, transaction)
 
 
 @pytest.fixture(scope="function")

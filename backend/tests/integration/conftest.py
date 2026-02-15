@@ -13,9 +13,12 @@ from pathlib import Path
 import pytest
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.exc import ProgrammingError, SQLAlchemyError
-from sqlalchemy.orm import sessionmaker
 
-from tests.shared.conftest_utils import AsyncSessionAdapter
+from tests.shared.conftest_utils import (
+    AsyncSessionAdapter,
+    cleanup_transactional_session,
+    create_transactional_session,
+)
 
 # Lazy imports - only import when fixtures are actually used
 # This avoids ModuleNotFoundError during pytest collection
@@ -79,7 +82,7 @@ def engine(test_database_url):
     Uses PostgreSQL (either provided URL or testcontainers).
     """
     if os.getenv("TEST_USE_POSTGRES") == "true" and HAS_TESTCONTAINERS:
-        postgres = PostgresContainer("postgres:15")
+        postgres = PostgresContainer("postgres:18.2")
         postgres.start()
         db_url = postgres.get_connection_url()
         engine = create_engine(db_url, pool_pre_ping=True)
@@ -188,25 +191,12 @@ def db_session(engine, db_tables):
     This ensures test isolation - changes made in one test
     don't affect other tests.
     """
-    connection = engine.connect()
-    transaction = connection.begin()
-    test_session_local = sessionmaker(
-        autocommit=False,
-        autoflush=False,
-        bind=connection,
-    )
-    session = test_session_local()
+    session, connection, transaction = create_transactional_session(engine)
 
     yield session
 
     # Roll back the transaction after test
-    try:
-        session.close()
-        transaction.rollback()
-        connection.close()
-    except Exception:
-        # Ignore cleanup errors
-        pass
+    cleanup_transactional_session(session, connection, transaction)
 
 
 @pytest.fixture(scope="function")

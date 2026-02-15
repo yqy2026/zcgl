@@ -13,8 +13,8 @@
 .statusTag {
   margin-top: var(--spacing-md);
   margin-inline-end: 0;
-  border-radius: 999px;
-  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  border: var(--border-width-thin) solid transparent;
   padding-inline: var(--spacing-sm);
   font-weight: var(--font-weight-medium);
 }

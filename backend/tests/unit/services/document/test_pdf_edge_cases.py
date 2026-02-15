@@ -4,8 +4,8 @@ PDF 处理边缘情况测试
 
 测试 PDF 文件在各种边缘情况下的处理行为
 
-NOTE: PDF to images conversion module not yet implemented.
-Tests are skipped until implementation.
+NOTE: `pdf_to_images` 模块已实现（PyMuPDF 优先，pdf2image 作为回退）。
+本文件用于覆盖异常输入与边界行为契约。
 """
 
 import json

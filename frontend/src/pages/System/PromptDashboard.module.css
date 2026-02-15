@@ -58,8 +58,8 @@
 }
 
 .actionButton:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--color-primary);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .chartContainer {
@@ -74,13 +74,16 @@
 
 .trendGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(var(--prompt-dashboard-trend-card-min-width), 1fr));
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(var(--prompt-dashboard-trend-card-min-width), 1fr)
+  );
   gap: var(--spacing-md);
 }
 
 .trendItem {
   background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border-light);
+  border: var(--border-width-thin) solid var(--color-border-light);
   border-radius: var(--card-radius);
   padding: var(--spacing-md) var(--spacing-md);
   text-align: center;
@@ -141,8 +144,8 @@
 
 .semanticTag {
   margin-inline-end: 0;
-  border-radius: 999px;
-  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  border: var(--border-width-thin) solid transparent;
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
   line-height: 1.35;
@@ -228,7 +231,7 @@
   margin-right: var(--spacing-xs);
 }
 
-@media (max-width: 768px) {
+@media (max-width: var(--breakpoint-sm)) {
   .actionButton {
     min-height: var(--prompt-dashboard-touch-target-size);
   }

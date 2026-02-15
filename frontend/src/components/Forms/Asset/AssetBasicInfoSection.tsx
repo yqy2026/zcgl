@@ -71,11 +71,7 @@ const AssetBasicInfoSection: React.FC = () => {
             aria-required="true"
             htmlFor={propertyNameIds.inputId}
           >
-            <Input
-              id={propertyNameIds.inputId}
-              placeholder="请输入物业名称"
-              aria-required="true"
-            />
+            <Input id={propertyNameIds.inputId} placeholder="请输入物业名称" aria-required="true" />
           </Form.Item>
         </Col>
       </Row>
@@ -87,11 +83,7 @@ const AssetBasicInfoSection: React.FC = () => {
         aria-required="true"
         htmlFor={addressIds.inputId}
       >
-        <Input
-          id={addressIds.inputId}
-          placeholder="请输入详细地址"
-          aria-required="true"
-        />
+        <Input id={addressIds.inputId} placeholder="请输入详细地址" aria-required="true" />
       </Form.Item>
     </Card>
   );

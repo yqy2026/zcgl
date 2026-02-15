@@ -1,3 +1,3 @@
 .relationCard {
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-lg);
 }

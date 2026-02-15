@@ -53,6 +53,10 @@ interface AssetHistoryListResult {
   pages?: number;
 }
 
+const HISTORY_DETAIL_LABEL_STYLE = {
+  width: 'calc(var(--spacing-xl) * 5)',
+};
+
 const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
   const [filters, setFilters] = useState<AssetHistoryFilters>({
     changeType: undefined,
@@ -219,8 +223,8 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
   }
 
   return (
-      <div>
-        {/* 筛选器 */}
+    <div>
+      {/* 筛选器 */}
       <Card size="small" className={styles.filterCard}>
         <Row gutter={16} align="middle">
           <Col xs={24} sm={8} md={6}>
@@ -261,7 +265,11 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
               <Button icon={<FilterOutlined />} onClick={handleResetFilter}>
                 重置
               </Button>
-              <Button icon={<ReloadOutlined />} onClick={() => void refetchHistory()} loading={isLoading}>
+              <Button
+                icon={<ReloadOutlined />}
+                onClick={() => void refetchHistory()}
+                loading={isLoading}
+              >
                 刷新
               </Button>
             </Space>
@@ -318,9 +326,7 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
 
                         {/* 变更原因 */}
                         {history.change_reason != null && (
-                          <div className={styles.timelineReason}>
-                            原因：{history.change_reason}
-                          </div>
+                          <div className={styles.timelineReason}>原因：{history.change_reason}</div>
                         )}
 
                         {/* 操作按钮 */}
@@ -388,7 +394,7 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
       >
         {selectedHistory && (
           <Spin spinning={detailLoading}>
-            <Descriptions bordered column={1} labelStyle={{ width: '120px' }}>
+            <Descriptions bordered column={1} labelStyle={HISTORY_DETAIL_LABEL_STYLE}>
               <Descriptions.Item label="变更类型">
                 <Tag color={getChangeTypeConfig(selectedHistory.change_type).color}>
                   {getChangeTypeConfig(selectedHistory.change_type).text}
@@ -420,7 +426,7 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
               selectedHistory.new_values && (
                 <div className={styles.detailSection}>
                   <h4>字段变更详情</h4>
-                  <Descriptions bordered column={1} labelStyle={{ width: '120px' }}>
+                  <Descriptions bordered column={1} labelStyle={HISTORY_DETAIL_LABEL_STYLE}>
                     {renderFieldChanges(selectedHistory.old_values, selectedHistory.new_values)}
                   </Descriptions>
                 </div>
@@ -430,7 +436,7 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
             {selectedHistory.change_type === 'create' && selectedHistory.new_values && (
               <div className={styles.detailSection}>
                 <h4>创建时的数据</h4>
-                <Descriptions bordered column={2} labelStyle={{ width: '120px' }}>
+                <Descriptions bordered column={2} labelStyle={HISTORY_DETAIL_LABEL_STYLE}>
                   {Object.entries(selectedHistory.new_values).map(([key, value]) => (
                     <Descriptions.Item key={key} label={key}>
                       {String(value)}

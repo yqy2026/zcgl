@@ -33,6 +33,7 @@ import { ApiErrorHandler } from '@/utils/responseExtractor';
 import { createLogger } from '@/utils/logger';
 import { API_ENDPOINTS } from '@/constants/api';
 import { ApiClientError, ApiErrorType } from '@/types/apiResponse';
+import { convertBackendToFrontend } from '@/utils/dataConversion';
 
 const logger = createLogger('RentContractService');
 
@@ -85,6 +86,10 @@ const shouldRetryOnServerError = (error: unknown): boolean => {
 class RentContractService {
   private baseUrl = API_ENDPOINTS.RENT_CONTRACT.LIST;
 
+  private toFrontend<T>(payload: T): T {
+    return convertBackendToFrontend<T>(payload);
+  }
+
   // ==================== 租金合同相关API ====================
 
   /**
@@ -104,10 +109,9 @@ class RentContractService {
         throw new Error(`获取租金合同列表失败: ${result.error}`);
       }
 
-      return result.data!;
+      return this.toFrontend(result.data!);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      // eslint-disable-next-line no-console
       console.error('获取租金合同列表失败:', enhancedError.message);
 
       // 返回默认空结果，避免UI崩溃
@@ -136,7 +140,7 @@ class RentContractService {
         throw new Error(`获取合同详情失败: ${result.error}`);
       }
 
-      return result.data!;
+      return this.toFrontend(result.data!);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -162,7 +166,7 @@ class RentContractService {
         throw new Error(`创建租金合同失败: ${result.error}`);
       }
 
-      return result.data!;
+      return this.toFrontend(result.data!);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -187,7 +191,7 @@ class RentContractService {
         throw new Error(`更新租金合同失败: ${result.error}`);
       }
 
-      return result.data!;
+      return this.toFrontend(result.data!);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -232,7 +236,7 @@ class RentContractService {
         throw new Error(`获取租金条款失败: ${result.error}`);
       }
 
-      return result.data!;
+      return this.toFrontend(result.data!);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -257,7 +261,7 @@ class RentContractService {
         throw new Error(`添加租金条款失败: ${result.error}`);
       }
 
-      return result.data!;
+      return this.toFrontend(result.data!);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -286,10 +290,9 @@ class RentContractService {
         throw new Error(`获取租金台账列表失败: ${result.error}`);
       }
 
-      return result.data!;
+      return this.toFrontend(result.data!);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      // eslint-disable-next-line no-console
       console.error('获取租金台账列表失败:', enhancedError.message);
 
       // 返回默认空结果，避免UI崩溃
@@ -321,7 +324,7 @@ class RentContractService {
         throw new Error(`获取租金台账详情失败: ${result.error}`);
       }
 
-      return result.data!;
+      return this.toFrontend(result.data!);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -346,7 +349,7 @@ class RentContractService {
         throw new Error(`更新租金台账失败: ${result.error}`);
       }
 
-      return result.data!;
+      return this.toFrontend(result.data!);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -373,7 +376,7 @@ class RentContractService {
         throw new Error(`批量更新租金台账失败: ${result.error}`);
       }
 
-      return result.data!;
+      return this.toFrontend(result.data!);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -400,7 +403,7 @@ class RentContractService {
         throw new Error(`生成月度台账失败: ${result.error}`);
       }
 
-      return result.data!;
+      return this.toFrontend(result.data!);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -428,7 +431,7 @@ class RentContractService {
         throw new Error(`获取租金统计失败: ${result.error}`);
       }
 
-      return result.data!;
+      return this.toFrontend(result.data!);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -460,7 +463,7 @@ class RentContractService {
         throw new Error(`获取权属方租金统计失�? ${result.error}`);
       }
 
-      return result.data!;
+      return this.toFrontend(result.data!);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -486,7 +489,7 @@ class RentContractService {
         throw new Error(`获取资产租金统计失败: ${result.error}`);
       }
 
-      return result.data!;
+      return this.toFrontend(result.data!);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -516,7 +519,7 @@ class RentContractService {
         throw new Error(`获取月度租金统计失败: ${result.error}`);
       }
 
-      return result.data!;
+      return this.toFrontend(result.data!);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -610,7 +613,7 @@ class RentContractService {
         throw new Error(`获取合同台账失败: ${result.error}`);
       }
 
-      return result.data!;
+      return this.toFrontend(result.data!);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -634,7 +637,7 @@ class RentContractService {
         throw new Error(`获取资产合同失败: ${result.error}`);
       }
 
-      return result.data!;
+      return this.toFrontend(result.data!);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -661,11 +664,10 @@ class RentContractService {
         throw new Error(`获取押金变动记录失败: ${result.error}`);
       }
 
-      return result.data!;
+      return this.toFrontend(result.data!);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       // 返回空数组，避免UI崩溃
-      // eslint-disable-next-line no-console
       console.warn('获取押金变动记录失败:', enhancedError.message);
       return [];
     }
@@ -689,10 +691,9 @@ class RentContractService {
         throw new Error(`获取服务费台账失败: ${result.error}`);
       }
 
-      return result.data!;
+      return this.toFrontend(result.data!);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      // eslint-disable-next-line no-console
       console.warn('获取服务费台账失败:', enhancedError.message);
       return [];
     }
@@ -752,7 +753,7 @@ class RentContractService {
         throw new Error(`合同续签失败: ${result.error}`);
       }
 
-      return result.data!;
+      return this.toFrontend(result.data!);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -793,7 +794,7 @@ class RentContractService {
         throw new Error(`合同终止失败: ${result.error}`);
       }
 
-      return result.data!;
+      return this.toFrontend(result.data!);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);

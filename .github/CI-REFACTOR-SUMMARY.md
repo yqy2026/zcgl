@@ -70,8 +70,8 @@ def check_coverage_incremental(current_pct, baseline_pct):
 **关键改进**:
 1. **移除所有 `|| true`** (关键检查改为阻塞性)
    - Bandit安全检查 → 现在阻塞CI
-   - ESLint → 添加 `--max-warnings=0`
-   - Prettier → 现在阻塞CI
+   - Oxlint → 添加 `--max-warnings=0`
+   - Oxfmt → 现在阻塞CI
    - API一致性 → 严重问题阻塞CI
 
 2. **并行化任务**
@@ -244,8 +244,8 @@ def check_coverage_incremental(current_pct, baseline_pct):
    - 高于85%: 必须维持
 
 2. **质量检查全部阻塞**
-   - ESLint警告 → PR失败
-   - Prettier格式错误 → PR失败
+   - Oxlint警告 → PR失败
+   - Oxfmt格式错误 → PR失败
    - Bandit安全问题 → PR失败
    - API严重不一致 → PR失败
 

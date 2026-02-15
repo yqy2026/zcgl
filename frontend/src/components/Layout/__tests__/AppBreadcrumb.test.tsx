@@ -37,8 +37,8 @@ vi.mock('react-router-dom', () => ({
 vi.mock('antd', () => ({
   Breadcrumb: ({ items, style }: BreadcrumbMockProps) => (
     <div data-testid="breadcrumb" style={style}>
-      {items?.map((item, index) => (
-        <div key={index} data-testid="breadcrumb-item">
+      {items?.map(item => (
+        <div key={String(item.title ?? 'breadcrumb-item')} data-testid="breadcrumb-item">
           {item.title}
         </div>
       ))}

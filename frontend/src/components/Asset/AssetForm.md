@@ -249,19 +249,19 @@ import { ConfigProvider } from 'antd';
 ### 单元测试
 
 ```bash
-npm test -- AssetForm.test.tsx
+pnpm test -- AssetForm.test.tsx
 ```
 
 ### 集成测试
 
 ```bash
-npm run test:integration -- AssetForm
+pnpm test -- AssetForm
 ```
 
 ### E2E 测试
 
 ```bash
-npm run test:e2e -- AssetForm
+pnpm e2e
 ```
 
 ## 故障排除

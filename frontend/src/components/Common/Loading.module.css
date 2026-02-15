@@ -1,5 +1,7 @@
 .pageLoading {
-  --common-loading-page-min-height: calc((var(--spacing-xxxl) * 8) + var(--spacing-md) + var(--spacing-xs));
+  --common-loading-page-min-height: calc(
+    (var(--spacing-xxxl) * 8) + var(--spacing-md) + var(--spacing-xs)
+  );
   display: flex;
   flex-direction: column;
   align-items: center;

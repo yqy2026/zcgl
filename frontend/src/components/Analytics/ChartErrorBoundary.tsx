@@ -62,9 +62,7 @@ export class ChartErrorBoundary extends Component<Props, State> {
               <div className={styles.errorDescription}>
                 <p className={styles.errorMessage}>无法渲染图表，可能是数据格式有问题。</p>
                 {this.state.error && (
-                  <p className={styles.errorDetail}>
-                    错误详情: {this.state.error.message}
-                  </p>
+                  <p className={styles.errorDetail}>错误详情: {this.state.error.message}</p>
                 )}
               </div>
             }

@@ -383,7 +383,7 @@ pnpm type-check src/utils/accessibility.ts
 
 ### 代码质量验证
 
-✅ **ESLint 检查**
+✅ **Oxlint 检查**
 ```bash
 cd frontend
 pnpm lint

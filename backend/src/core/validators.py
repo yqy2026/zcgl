@@ -1,24 +1,3 @@
-from typing import Any
-
-
-class BusinessLogicError(Exception):
-    """Business logic error"""
-
-    pass
-
-
-class AssetNotFoundError(Exception):
-    """Asset not found error"""
-
-    pass
-
-
-class DuplicateAssetError(Exception):
-    """Duplicate asset error"""
-
-    pass
-
-
 """
 统一验证器
 提供通用的数据验证和转换功能
@@ -26,6 +5,7 @@ class DuplicateAssetError(Exception):
 
 import re
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession

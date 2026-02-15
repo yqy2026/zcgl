@@ -4,20 +4,19 @@ const path = require('path');
 console.log('Starting test run...');
 
 const isWin = process.platform === 'win32';
-const npmCmd = isWin ? 'npm.cmd' : 'npm';
 const npxCmd = isWin ? 'npx.cmd' : 'npx';
 
-// Try running tsc first
-console.log('\n--- Running TSC ---');
-const tsc = spawn(npxCmd, ['tsc', '--noEmit'], {
+// Try running tsgo first
+console.log('\n--- Running TSGO ---');
+const tsgo = spawn(npxCmd, ['tsgo', '--noEmit'], {
   cwd: path.resolve('frontend'),
   shell: true
 });
 
-tsc.stdout.on('data', (data) => console.log(`TSC STDOUT: ${data}`));
-tsc.stderr.on('data', (data) => console.log(`TSC STDERR: ${data}`));
-tsc.on('close', (code) => {
-  console.log(`TSC exited with code ${code}`);
+tsgo.stdout.on('data', (data) => console.log(`TSGO STDOUT: ${data}`));
+tsgo.stderr.on('data', (data) => console.log(`TSGO STDERR: ${data}`));
+tsgo.on('close', (code) => {
+  console.log(`TSGO exited with code ${code}`);
 
   // Then run vitest
   console.log('\n--- Running Vitest ---');

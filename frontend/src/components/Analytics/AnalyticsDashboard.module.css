@@ -1,5 +1,6 @@
 .dashboardRoot {
   --analytics-dashboard-action-height: var(--button-height-md);
+  --analytics-dashboard-action-height-mobile: calc(var(--button-height-lg) + var(--spacing-xs));
   --analytics-dashboard-state-padding-y: calc(var(--spacing-xxxl) + var(--spacing-md));
   --analytics-dashboard-state-padding-y-mobile: calc(var(--spacing-xxl) + var(--spacing-sm));
   width: 100%;
@@ -44,8 +45,8 @@
 }
 
 .actionButton:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--color-primary);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .stateCard {
@@ -85,7 +86,7 @@
   margin-bottom: 0;
 }
 
-@media (max-width: 768px) {
+@media (max-width: var(--breakpoint-sm)) {
   .dashboardDefault {
     padding: var(--spacing-lg);
   }
@@ -101,7 +102,7 @@
 
   .actionButton,
   .stateActionButton {
-    min-height: 44px;
+    min-height: var(--analytics-dashboard-action-height-mobile);
   }
 
   .stateContent {

@@ -148,7 +148,8 @@ const AssetList: React.FC<AssetListProps> = ({
   }, [handleCloseHardDelete, hardDeleteTarget, onHardDelete]);
 
   // 表格列定义
-  const columns = useMemo<ColumnsType<Asset>>(() => [
+  const columns = useMemo<ColumnsType<Asset>>(
+    () => [
       {
         title: '所属项目',
         dataIndex: 'project_name',
@@ -181,11 +182,7 @@ const AssetList: React.FC<AssetListProps> = ({
         fixed: 'left',
         sorter: true,
         render: (text, record) => (
-          <Button
-            type="link"
-            onClick={() => onView(record)}
-            className={styles.propertyNameButton}
-          >
+          <Button type="link" onClick={() => onView(record)} className={styles.propertyNameButton}>
             <Tooltip title="点击查看详情">{text}</Tooltip>
           </Button>
         ),

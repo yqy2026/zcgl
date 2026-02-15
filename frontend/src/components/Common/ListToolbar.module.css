@@ -1,6 +1,6 @@
 .toolbarCard {
   margin-bottom: var(--spacing-lg);
-  border: 1px solid var(--color-border-light);
+  border: var(--border-width-thin) solid var(--color-border-light);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
 }
@@ -20,6 +20,7 @@
   --list-toolbar-select-line-height-mobile: calc(
     var(--list-toolbar-control-size-mobile) - (var(--spacing-xs) / 2)
   );
+  --list-toolbar-mobile-breakpoint: calc(var(--breakpoint-sm) - var(--border-width-thin));
   width: 100%;
 }
 
@@ -70,11 +71,11 @@
 .toolbarItem :global(.ant-picker:focus-within),
 .toolbarItem :global(.ant-input-number:focus-within),
 .toolbarItem :global(.ant-select-focused .ant-select-selector) {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--color-primary);
+  outline-offset: var(--focus-ring-offset);
 }
 
-@media (max-width: 767px) {
+@media (max-width: var(--list-toolbar-mobile-breakpoint)) {
   .toolbarCard {
     margin-bottom: var(--spacing-md);
   }

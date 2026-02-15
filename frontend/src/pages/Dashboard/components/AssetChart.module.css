@@ -1,5 +1,7 @@
 .assetChart {
-  --asset-chart-loading-min-height: calc((var(--spacing-xxxl) * 3) + var(--spacing-xl) + var(--spacing-md));
+  --asset-chart-loading-min-height: calc(
+    (var(--spacing-xxxl) * 3) + var(--spacing-xl) + var(--spacing-md)
+  );
   --asset-chart-color-dot-size: var(--spacing-md);
   --asset-chart-color-dot-radius: calc(var(--spacing-xs) / 2);
   width: 100%;
@@ -54,7 +56,7 @@
 }
 
 .propertyProgress :global(.ant-progress-inner) {
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
 }
 
 .trendList {
@@ -77,7 +79,7 @@
   color: var(--color-text-primary);
 }
 
-@media (max-width: 768px) {
+@media (max-width: var(--breakpoint-sm)) {
   .sectionBody {
     margin-bottom: calc(var(--spacing-lg) + var(--spacing-xs));
   }

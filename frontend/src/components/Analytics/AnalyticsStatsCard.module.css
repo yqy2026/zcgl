@@ -1,10 +1,12 @@
 .statsGrid {
+  --analytics-trend-min-height: calc(var(--button-height-sm) - var(--spacing-sm));
+  --analytics-financial-title-margin-bottom: calc(var(--spacing-sm) - var(--focus-ring-width));
   width: 100%;
 }
 
 .statCard {
   height: 100%;
-  border: 1px solid var(--color-border-light);
+  border: var(--border-width-thin) solid var(--color-border-light);
   border-radius: var(--radius-lg);
   transition:
     border-color var(--transition-base),
@@ -63,9 +65,9 @@
   display: inline-flex;
   align-items: center;
   gap: var(--spacing-xs);
-  min-height: 24px;
+  min-height: var(--analytics-trend-min-height);
   padding: calc(var(--spacing-xs) / 2) var(--spacing-sm);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--color-bg-secondary);
   color: var(--stats-card-trend-color, var(--color-text-secondary));
   font-size: var(--font-size-xs);
@@ -87,7 +89,7 @@
 }
 
 .financialMetric :global(.ant-statistic-title) {
-  margin-bottom: calc(var(--spacing-sm) - 2px);
+  margin-bottom: var(--analytics-financial-title-margin-bottom);
   color: var(--color-text-secondary);
   font-size: var(--font-size-base);
   line-height: 1.4;
@@ -118,7 +120,7 @@
   color: var(--color-primary);
 }
 
-@media (max-width: 768px) {
+@media (max-width: var(--breakpoint-sm)) {
   .statCard :global(.ant-card-body) {
     padding: var(--spacing-lg);
   }

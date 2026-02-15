@@ -265,7 +265,8 @@ const RentLedgerPage: React.FC = () => {
       await rentContractService.updateRentLedger(id, data);
       MessageManager.success('更新成功');
       refreshLedgersAndStatistics();
-    } catch {
+    } catch (error: unknown) {
+      pageLogger.error('更新台账支付状态失败:', error);
       MessageManager.error('更新失败');
     }
   };
@@ -288,7 +289,8 @@ const RentLedgerPage: React.FC = () => {
       MessageManager.success('批量更新成功');
       setUiState(prev => ({ ...prev, showBatchModal: false, selectedLedgers: [] }));
       refreshLedgersAndStatistics();
-    } catch {
+    } catch (error: unknown) {
+      pageLogger.error('批量更新台账支付状态失败:', error);
       MessageManager.error('批量更新失败');
     }
   };
@@ -308,7 +310,8 @@ const RentLedgerPage: React.FC = () => {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
       MessageManager.success('导出成功');
-    } catch {
+    } catch (error: unknown) {
+      pageLogger.error('导出台账失败:', error);
       MessageManager.error('导出失败');
     }
   };
@@ -534,7 +537,11 @@ const RentLedgerPage: React.FC = () => {
                 prefix={<DollarOutlined />}
                 suffix="元"
               />
-              <Tag className={[styles.statusTag, toneClassMap[overdueTone], styles.metricTag].join(' ')}>
+              <Tag
+                className={[styles.statusTag, toneClassMap[overdueTone], styles.metricTag].join(
+                  ' '
+                )}
+              >
                 {overdueTone === 'error' ? '需催缴' : '正常'}
               </Tag>
             </Card>
@@ -547,7 +554,11 @@ const RentLedgerPage: React.FC = () => {
                 precision={2}
                 suffix="%"
               />
-              <Tag className={[styles.statusTag, toneClassMap[paymentRateTone], styles.metricTag].join(' ')}>
+              <Tag
+                className={[styles.statusTag, toneClassMap[paymentRateTone], styles.metricTag].join(
+                  ' '
+                )}
+              >
                 {paymentRateLabel}
               </Tag>
             </Card>

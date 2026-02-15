@@ -2,7 +2,7 @@
   --operation-log-control-height: var(--button-height-lg);
   --operation-log-touch-target-size: calc(var(--button-height-lg) + var(--spacing-xs));
   --operation-log-request-url-padding-x: calc(var(--spacing-sm) - (var(--spacing-xs) / 2));
-  --operation-log-details-max-height: 300px;
+  --operation-log-details-max-height: calc((var(--spacing-xxl) * 9) + var(--spacing-md));
 }
 
 .statsRow {
@@ -68,8 +68,8 @@
 
 .statusTag {
   margin-inline-end: 0;
-  border-radius: 999px;
-  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  border: var(--border-width-thin) solid transparent;
   padding-inline: var(--spacing-sm);
   font-size: var(--font-size-xs);
   line-height: var(--font-size-xl);
@@ -242,7 +242,9 @@
   justify-content: center;
   border-radius: var(--radius-md);
   color: var(--color-text-secondary);
-  transition: background-color var(--transition-base), color var(--transition-base);
+  transition:
+    background-color var(--transition-base),
+    color var(--transition-base);
 }
 
 .rowActionButton:hover {
@@ -251,11 +253,11 @@
 }
 
 .rowActionButton:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--color-primary);
+  outline-offset: var(--focus-ring-offset);
 }
 
-@media (max-width: 768px) {
+@media (max-width: var(--breakpoint-sm)) {
   .filterSummary {
     flex-direction: column;
     align-items: flex-start;

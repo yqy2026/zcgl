@@ -15,24 +15,54 @@ interface DataObject {
 const DECIMAL_FIELDS = [
   // 面积字段
   'land_area',
+  'total_land_area',
   'actual_property_area',
   'rentable_area',
+  'total_rentable_area',
   'rented_area',
+  'total_rented_area',
   'unrented_area',
+  'total_unrented_area',
   'non_commercial_area',
+  'total_non_commercial_area',
   'occupancy_rate',
+  'overall_occupancy_rate',
   'area', // 通用面积字段
 
   // 金额字段
   'monthly_rent',
+  'monthly_rent_base',
   'deposit',
+  'total_deposit',
+  'due_amount',
+  'paid_amount',
+  'overdue_amount',
+  'late_fee',
+  'management_fee',
+  'other_fees',
+  'total_monthly_amount',
+  'paid_rent_amount',
+  'fee_rate',
+  'fee_amount',
+  'amount',
+  'deduction_amount',
+  'transfer_deposit',
+  'refund_deposit',
   'annual_income',
+  'total_annual_income',
+  'estimated_annual_income',
   'annual_expense',
+  'total_annual_expense',
   'net_income',
+  'total_net_income',
+  'total_monthly_rent',
 
   // 汇总字段
   'total_area',
   'total_income',
+  'total_due_amount',
+  'total_paid_amount',
+  'total_overdue_amount',
 ] as const;
 
 type DecimalField = (typeof DECIMAL_FIELDS)[number];

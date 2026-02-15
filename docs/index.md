@@ -19,6 +19,10 @@
 - [数据库设计](database-design.md)
 - [测试标准](guides/testing-standards.md)
 
+## 🔍 问题跟踪
+- [代码审查报告 (2026-02-14)](issues/code-review-2026-02-14.md) - 全项目审查发现的问题
+- [问题快速参考](issues/quick-reference.md) - 简洁版问题清单
+
 ## 🗂️ 历史归档
 - [归档目录说明](archive/readme.md)
 - [V2 发布说明（归档）](archive/releases/v2-release-notes-2026-01.md)
@@ -32,6 +36,7 @@
 - `architecture/` 架构设计与概览
 - `security/` 安全与加密
 - `incidents/` 事故复盘与模板
+- `issues/` 代码审查问题跟踪
 - `tooling/` 工具元数据说明
 - `archive/` 历史草稿、旧计划、调研资料归档
 

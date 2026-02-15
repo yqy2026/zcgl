@@ -20,7 +20,7 @@
 
 ## 🎯 修复目标
 
-解决所有 `@typescript-eslint/strict-boolean-expressions` ESLint 警告，该规则要求在条件表达式中使用显式的 `null`/`undefined` 检查，而不是隐式的真值/假值判断。
+解决所有 `@typescript-eslint/strict-boolean-expressions` lint 警告，该规则要求在条件表达式中使用显式的 `null`/`undefined` 检查，而不是隐式的真值/假值判断。
 
 ---
 
@@ -220,17 +220,17 @@ if (config.enabled === true) {
 
 ## ✅ 验证结果
 
-### ESLint 检查
+### Oxlint 检查
 
 ```bash
-$ npx eslint src/ 2>&1 | grep "strict-boolean-expressions" | wc -l
+$ pnpm lint
 0  # ✅ 0 个 strict-boolean-expressions 警告
 ```
 
 ### 类型检查
 
 ```bash
-$ npm run type-check
+$ pnpm type-check
 # 结果: 16 个预先存在的类型错误（非本次修复引入）
 ```
 
@@ -288,7 +288,7 @@ $ npm test
 
 ## 🔗 相关资源
 
-- [ESLint Rule: strict-boolean-expressions](https://github.com/typescript-eslint/typescript-eslint/blob/main/packages/eslint-plugin/docs/rules/strict-boolean-expressions.md)
+- [strict-boolean-expressions 规则参考](https://github.com/typescript-eslint/typescript-eslint/blob/main/packages/eslint-plugin/docs/rules/strict-boolean-expressions.md)
 - [TypeScript 可选链](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-3-7.html#optional-chaining)
 - [空值合并运算符](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-3-7.html#nullish-coalescing)
 - [前端开发指南](../CLAUDE.md)

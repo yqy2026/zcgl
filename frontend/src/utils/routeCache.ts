@@ -92,7 +92,10 @@ class MemoryRouteCache implements RouteCache {
     // 估算内存使用（简单计算）
     let memoryUsage = 0;
     for (const item of this.cache.values()) {
-      memoryUsage += JSON.stringify(item.component).length * 2; // 粗略估算
+      const serializedComponent = JSON.stringify(item.component);
+      memoryUsage +=
+        (serializedComponent != null ? serializedComponent.length : String(item.component).length) *
+        2; // 粗略估算
     }
 
     return {

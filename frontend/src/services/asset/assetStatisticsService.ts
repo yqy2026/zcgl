@@ -5,6 +5,7 @@
 
 import { apiClient } from '@/api/client';
 import { ApiErrorHandler } from '@/utils/responseExtractor';
+import { convertBackendToFrontend } from '@/utils/dataConversion';
 import type {
   AssetSearchParams,
   AssetStats,
@@ -35,7 +36,10 @@ export class AssetStatisticsService {
         throw new Error(`获取资产统计失败: ${result.error}`);
       }
 
-      return result.data!;
+      if (result.data == null) {
+        throw new Error('资产统计返回为空');
+      }
+      return convertBackendToFrontend<AssetStats>(result.data);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -58,7 +62,10 @@ export class AssetStatisticsService {
         throw new Error(`获取出租率统计失败: ${result.error}`);
       }
 
-      return result.data!;
+      if (result.data == null) {
+        throw new Error('出租率统计返回为空');
+      }
+      return convertBackendToFrontend<OccupancyRateStats>(result.data);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -81,7 +88,10 @@ export class AssetStatisticsService {
         throw new Error(`获取资产分布统计失败: ${result.error}`);
       }
 
-      return result.data!;
+      if (result.data == null) {
+        throw new Error('资产分布统计返回为空');
+      }
+      return convertBackendToFrontend<AssetDistributionStats>(result.data);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -104,7 +114,10 @@ export class AssetStatisticsService {
         throw new Error(`获取面积统计失败: ${result.error}`);
       }
 
-      return result.data!;
+      if (result.data == null) {
+        throw new Error('面积统计返回为空');
+      }
+      return convertBackendToFrontend<AreaStatistics>(result.data);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -127,7 +140,10 @@ export class AssetStatisticsService {
         throw new Error(`获取综合统计失败: ${result.error}`);
       }
 
-      return result.data!;
+      if (result.data == null) {
+        throw new Error('综合统计返回为空');
+      }
+      return convertBackendToFrontend<ComprehensiveStats>(result.data);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);

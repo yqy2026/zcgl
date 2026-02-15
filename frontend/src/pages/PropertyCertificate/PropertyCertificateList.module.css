@@ -1,5 +1,7 @@
 .pageShell {
-  --property-certificate-search-width: 300px;
+  --property-certificate-search-width: calc(
+    (var(--button-height-lg) * 7) + var(--spacing-md) + var(--spacing-sm)
+  );
   --property-certificate-create-min-width: calc(var(--button-height-lg) * 3);
   --property-certificate-tag-line-height: var(--font-size-xl);
   --property-certificate-action-height: var(--button-height-sm);
@@ -38,8 +40,8 @@
 
 .statusTag {
   margin-inline-end: 0;
-  border-radius: 999px;
-  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  border: var(--border-width-thin) solid transparent;
   padding-inline: var(--spacing-sm);
   font-size: var(--font-size-xs);
   line-height: var(--property-certificate-tag-line-height);
@@ -90,7 +92,7 @@
   min-height: var(--property-certificate-action-height);
 }
 
-@media (max-width: 768px) {
+@media (max-width: var(--breakpoint-sm)) {
   .filterCard {
     margin-bottom: var(--spacing-lg);
   }

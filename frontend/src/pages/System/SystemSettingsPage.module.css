@@ -5,7 +5,7 @@
   --system-settings-status-line-height: calc(
     var(--font-size-base) + var(--spacing-xs) + (var(--spacing-xs) / 4)
   );
-  max-width: 1200px;
+  max-width: var(--breakpoint-lg);
   margin: 0 auto;
 }
 
@@ -71,8 +71,7 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  column-gap: var(--spacing-sm);
-  row-gap: var(--spacing-xs);
+  gap: var(--spacing-xs) var(--spacing-sm);
   min-height: var(--button-height-sm);
 }
 
@@ -106,8 +105,8 @@
 
 .statusTag {
   margin-inline-end: 0;
-  border-radius: 999px;
-  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  border: var(--border-width-thin) solid transparent;
   padding-inline: var(--spacing-sm);
   font-size: var(--font-size-xs);
   line-height: var(--system-settings-status-line-height);
@@ -155,7 +154,7 @@
 .backupSection {
   width: 100%;
   padding: var(--spacing-md) var(--spacing-lg);
-  border: 1px solid var(--color-border-light);
+  border: var(--border-width-thin) solid var(--color-border-light);
   border-radius: var(--card-radius);
   background: var(--color-bg-secondary);
 }
@@ -185,7 +184,7 @@
   display: none;
 }
 
-@media (max-width: 768px) {
+@media (max-width: var(--breakpoint-sm)) {
   .tabs :global(.ant-tabs-tab) {
     min-height: calc(var(--button-height-lg) + var(--spacing-xs));
   }

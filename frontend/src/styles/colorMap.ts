@@ -59,7 +59,6 @@ export function toCssVar(color: string): string {
 
   // Warn in development if color not found in map
   if (!mappedColor && isDevelopmentMode()) {
-    // eslint-disable-next-line no-console
     console.warn(
       `[ColorMap] Unknown color "${color}" not found in COLOR_MAP. ` +
         `Using original value. Available colors: ${Object.keys(COLOR_MAP).join(', ')}`

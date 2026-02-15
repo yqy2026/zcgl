@@ -26,7 +26,6 @@ import {
   EyeOutlined,
   SearchOutlined,
 } from '@ant-design/icons';
-import { dictionaryService } from '@/services/dictionary';
 import type {
   EnumFieldType,
   EnumFieldValue,
@@ -39,6 +38,17 @@ import EnumValuePreview from '@/components/Dictionary/EnumValuePreview';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
 import { useArrayListData } from '@/hooks/useArrayListData';
 import PageContainer from '@/components/Common/PageContainer';
+import {
+  useCreateEnumFieldTypeMutation,
+  useCreateEnumFieldValueMutation,
+  useDeleteEnumFieldTypeMutation,
+  useDeleteEnumValueMutation,
+  useDictionaryStatisticsQuery,
+  useEnumFieldTypesQuery,
+  useEnumFieldValuesByTypeIdQuery,
+  useUpdateEnumFieldTypeMutation,
+  useUpdateEnumFieldValueMutation,
+} from '@/hooks/useDictionaryManagement';
 import styles from './EnumFieldPage.module.css';
 
 const { TextArea } = Input;
@@ -54,16 +64,6 @@ interface ApiError {
     };
   };
   message?: string;
-}
-
-// 统计信息类型
-interface EnumFieldStatistics {
-  total_types: number;
-  active_types: number;
-  total_values: number;
-  active_values: number;
-  usage_count: number;
-  categories: string[];
 }
 
 interface EnumTypeFilters {
@@ -86,17 +86,9 @@ const getTypeStatusTone = (status: EnumFieldType['status']): Tone =>
 const buildColorPreviewStyle = (color: string): React.CSSProperties =>
   ({ ['--preview-color' as string]: color }) as React.CSSProperties;
 
-// Local interfaces removed, using types from services/dictionary
-
 const EnumFieldPage: React.FC = () => {
-  const [statistics, setStatistics] = useState<EnumFieldStatistics | null>(null);
   const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('types');
-  const [enumTypeOptions, setEnumTypeOptions] = useState<EnumFieldType[]>([]);
-  const [enumTypeSource, setEnumTypeSource] = useState<EnumFieldType[]>([]);
-  const [enumValueSource, setEnumValueSource] = useState<EnumFieldValue[]>([]);
-  const [isTypesLoading, setIsTypesLoading] = useState(false);
-  const [isValuesLoading, setIsValuesLoading] = useState(false);
 
   // 模态框状态
   const [typeModalVisible, setTypeModalVisible] = useState(false);
@@ -107,6 +99,23 @@ const EnumFieldPage: React.FC = () => {
   // 表单实例
   const [typeForm] = Form.useForm();
   const [valueForm] = Form.useForm();
+  const {
+    data: enumTypeSource = [],
+    error: enumTypesError,
+    isLoading: isTypeSourceLoading,
+  } = useEnumFieldTypesQuery();
+  const {
+    data: enumValueSource = [],
+    error: enumValuesError,
+    isLoading: isValueSourceLoading,
+  } = useEnumFieldValuesByTypeIdQuery(selectedTypeId);
+  const { data: statistics = null, error: statisticsError } = useDictionaryStatisticsQuery();
+  const createEnumFieldTypeMutation = useCreateEnumFieldTypeMutation();
+  const updateEnumFieldTypeMutation = useUpdateEnumFieldTypeMutation();
+  const deleteEnumFieldTypeMutation = useDeleteEnumFieldTypeMutation();
+  const createEnumFieldValueMutation = useCreateEnumFieldValueMutation();
+  const updateEnumFieldValueMutation = useUpdateEnumFieldValueMutation();
+  const deleteEnumValueMutation = useDeleteEnumValueMutation();
 
   const handleTypesError = useCallback((error: unknown) => {
     const apiError = error as ApiError;
@@ -164,67 +173,6 @@ const EnumFieldPage: React.FC = () => {
     },
   });
 
-  const loadStatistics = async () => {
-    try {
-      const [stats, enumData] = await Promise.all([
-        dictionaryService.getDictionaryStats(),
-        dictionaryService.getEnumFieldData(),
-      ]);
-      const activeValues = enumData.reduce((totalCount, item) => {
-        const activeCount = item.values.filter(value => value.is_active === true).length;
-        return totalCount + activeCount;
-      }, 0);
-      setStatistics({
-        total_types: stats.totalTypes,
-        active_types: stats.activeTypes,
-        total_values: stats.totalValues,
-        active_values: activeValues,
-        usage_count: 0,
-        categories: [],
-      });
-    } catch (error: unknown) {
-      const apiError = error as ApiError;
-      MessageManager.error(apiError?.message ?? '加载统计信息失败');
-    }
-  };
-
-  const loadEnumTypeSource = useCallback(async () => {
-    setIsTypesLoading(true);
-    try {
-      const data = await dictionaryService.getEnumFieldTypes();
-      setEnumTypeOptions(data);
-      setEnumTypeSource(data);
-    } catch (error) {
-      handleTypesError(error);
-    } finally {
-      setIsTypesLoading(false);
-    }
-  }, [handleTypesError]);
-
-  const loadEnumValueSource = useCallback(
-    async (typeId: string) => {
-      if (typeId === '') {
-        setEnumValueSource([]);
-        return;
-      }
-      setIsValuesLoading(true);
-      try {
-        const data = await dictionaryService.getEnumFieldValues(typeId);
-        setEnumValueSource(data);
-      } catch (error) {
-        handleValuesError(error);
-      } finally {
-        setIsValuesLoading(false);
-      }
-    },
-    [handleValuesError]
-  );
-
-  useEffect(() => {
-    void loadEnumTypeSource();
-    void loadStatistics();
-  }, [loadEnumTypeSource]);
-
   useEffect(() => {
     void loadEnumValues({ page: 1 });
   }, [enumValueSource, loadEnumValues]);
@@ -234,17 +182,30 @@ const EnumFieldPage: React.FC = () => {
   }, [enumTypeSource, loadEnumTypes]);
 
   useEffect(() => {
-    const typeId = selectedTypeId ?? '';
-    void loadEnumValueSource(typeId);
-  }, [selectedTypeId, loadEnumValueSource]);
+    if (enumTypesError != null) {
+      handleTypesError(enumTypesError);
+    }
+  }, [enumTypesError, handleTypesError]);
+
+  useEffect(() => {
+    if (enumValuesError != null) {
+      handleValuesError(enumValuesError);
+    }
+  }, [enumValuesError, handleValuesError]);
+
+  useEffect(() => {
+    if (statisticsError != null) {
+      MessageManager.error('加载统计信息失败');
+    }
+  }, [statisticsError]);
 
   const typesLoading = useMemo(
-    () => isTypesLoading || typesTableLoading,
-    [isTypesLoading, typesTableLoading]
+    () => isTypeSourceLoading || typesTableLoading,
+    [isTypeSourceLoading, typesTableLoading]
   );
   const valuesLoading = useMemo(
-    () => isValuesLoading || valuesTableLoading,
-    [isValuesLoading, valuesTableLoading]
+    () => isValueSourceLoading || valuesTableLoading,
+    [isValueSourceLoading, valuesTableLoading]
   );
   const toneClassMap: Record<Tone, string> = {
     primary: styles.tonePrimary,
@@ -438,10 +399,7 @@ const EnumFieldPage: React.FC = () => {
       render: color =>
         color != null ? (
           <Space className={styles.colorCell}>
-            <span
-              className={styles.colorPreview}
-              style={buildColorPreviewStyle(color)}
-            />
+            <span className={styles.colorPreview} style={buildColorPreviewStyle(color)} />
             <span className={styles.colorValue}>{color}</span>
           </Space>
         ) : (
@@ -516,11 +474,12 @@ const EnumFieldPage: React.FC = () => {
 
   const handleDeleteType = async (id: string) => {
     try {
-      const success = await dictionaryService.deleteEnumFieldType(id);
+      const success = await deleteEnumFieldTypeMutation.mutateAsync(id);
       if (success) {
         MessageManager.success('删除成功');
-        void loadEnumTypes();
-        void loadStatistics();
+        if (selectedTypeId === id) {
+          setSelectedTypeId(null);
+        }
       } else {
         MessageManager.error('删除失败');
       }
@@ -548,14 +507,11 @@ const EnumFieldPage: React.FC = () => {
 
   const handleDeleteValue = async (id: string) => {
     try {
-      const result = await dictionaryService.deleteEnumValue(id);
+      const result = await deleteEnumValueMutation.mutateAsync(id);
       if (result.success) {
         MessageManager.success('删除成功');
-        if (selectedTypeId != null) {
-          void loadEnumValues();
-        }
       } else {
-        MessageManager.error('删除失败');
+        MessageManager.error(result.message ?? '删除失败');
       }
     } catch (error: unknown) {
       const apiError = error as ApiError;
@@ -572,19 +528,17 @@ const EnumFieldPage: React.FC = () => {
       let success = false;
       if (editingType) {
         success =
-          (await dictionaryService.updateEnumFieldType(
-            editingType.id,
-            values as UpdateEnumFieldTypeRequest
-          )) !== null;
+          (await updateEnumFieldTypeMutation.mutateAsync({
+            typeId: editingType.id,
+            data: values as UpdateEnumFieldTypeRequest,
+          })) !== null;
       } else {
-        success = (await dictionaryService.createEnumFieldType(values)) !== null;
+        success = (await createEnumFieldTypeMutation.mutateAsync(values)) !== null;
       }
 
       if (success) {
         MessageManager.success(editingType ? '更新成功' : '创建成功');
         setTypeModalVisible(false);
-        void loadEnumTypes();
-        void loadStatistics();
       } else {
         MessageManager.error('操作失败');
       }
@@ -612,26 +566,23 @@ const EnumFieldPage: React.FC = () => {
           is_default: values.is_default,
         };
         success =
-          (await dictionaryService.updateEnumFieldValue(
-            selectedTypeId,
-            editingValue.id,
-            updateData
-          )) !== null;
+          (await updateEnumFieldValueMutation.mutateAsync({
+            typeId: selectedTypeId,
+            valueId: editingValue.id,
+            data: updateData,
+          })) !== null;
       } else {
         success =
-          (await dictionaryService.addEnumFieldValue(
-            editingValue?.enum_type_id ?? selectedTypeId!,
-            values
-          )) !== null;
+          (await createEnumFieldValueMutation.mutateAsync({
+            typeId: editingValue?.enum_type_id ?? selectedTypeId!,
+            data: values,
+          })) !== null;
       }
 
       if (success) {
         MessageManager.success(editingValue ? '更新成功' : '创建成功');
         setValueModalVisible(false);
         setEditingValue(null);
-        if (selectedTypeId != null) {
-          void loadEnumValues();
-        }
       } else {
         MessageManager.error('操作失败');
       }
@@ -698,7 +649,7 @@ const EnumFieldPage: React.FC = () => {
                 }}
                 allowClear
               >
-                {enumTypeOptions.map(type => (
+                {enumTypeSource.map(type => (
                   <Option key={type.id} value={type.id}>
                     {type.name}
                   </Option>
@@ -732,7 +683,11 @@ const EnumFieldPage: React.FC = () => {
   ];
 
   return (
-    <PageContainer className={styles.pageShell} title="枚举字段管理" subTitle="维护枚举类型配置、枚举值及字典可用状态">
+    <PageContainer
+      className={styles.pageShell}
+      title="枚举字段管理"
+      subTitle="维护枚举类型配置、枚举值及字典可用状态"
+    >
       <Row gutter={[16, 16]} className={styles.statsRow}>
         <Col xs={24} sm={12} md={6}>
           <Card className={`${styles.statsCard} ${styles.primaryStatsCard}`}>
@@ -757,7 +712,12 @@ const EnumFieldPage: React.FC = () => {
       </Row>
 
       <Card>
-        <Tabs activeKey={activeTab} onChange={setActiveTab} items={tabItems} className={styles.tabs} />
+        <Tabs
+          activeKey={activeTab}
+          onChange={setActiveTab}
+          items={tabItems}
+          className={styles.tabs}
+        />
       </Card>
 
       {/* 枚举类型编辑模态框 */}

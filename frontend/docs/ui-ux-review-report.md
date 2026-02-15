@@ -237,7 +237,7 @@ $ cd frontend && pnpm type-check
 
 **说明**: 修改没有引入任何类型错误，现有错误与本次改进无关。
 
-### ESLint 代码检查
+### Oxlint 代码检查
 
 ```bash
 $ cd frontend && pnpm lint
@@ -465,7 +465,7 @@ pnpm add -D @axe-core/react jest-axe
 ### ✅ 验证通过项
 
 - [x] TypeScript 类型检查
-- [x] ESLint 代码检查
+- [x] Oxlint 代码检查
 - [x] CSS 变量引用
 - [x] 响应式逻辑
 - [x] 可访问性属性

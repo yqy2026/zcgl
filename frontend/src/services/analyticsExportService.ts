@@ -148,7 +148,6 @@ class AnalyticsExportService {
       // 导出文件
       XLSX.writeFile(workbook, finalFilename);
     } catch (error) {
-      // eslint-disable-next-line no-console
       console.error('导出Excel失败:', error);
       throw new Error('导出失败，请重试');
     }
@@ -228,7 +227,6 @@ class AnalyticsExportService {
       link.click();
       document.body.removeChild(link);
     } catch (error) {
-      // eslint-disable-next-line no-console
       console.error('导出CSV失败:', error);
       throw new Error('导出失败，请重试');
     }
@@ -258,7 +256,6 @@ class AnalyticsExportService {
       link.click();
       document.body.removeChild(link);
     } catch (error) {
-      // eslint-disable-next-line no-console
       console.error('导出PDF失败:', error);
       throw new Error('导出失败，请重试');
     }
@@ -282,19 +279,30 @@ class AnalyticsExportService {
             --report-color-text-secondary: #595959;
             --report-color-border: #d9d9d9;
             --report-color-bg-secondary: #fafafa;
+            --report-spacing-sm: 0.5rem;
+            --report-spacing-md: 0.625rem;
+            --report-spacing-lg: 0.9375rem;
+            --report-spacing-xl: 1.25rem;
+            --report-spacing-xxl: 1.875rem;
+            --report-border-width-thin: 0.0625rem;
+            --report-border-width-md: 0.125rem;
+            --report-border-radius-md: 0.3125rem;
+            --report-summary-min-width: 12.5rem;
+            --report-font-size-lg: 1.5rem;
+            --report-font-size-base: 0.875rem;
         }
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .header { text-align: center; margin-bottom: 30px; }
-        .section { margin-bottom: 30px; }
-        .section h2 { color: var(--report-color-text-primary); border-bottom: 2px solid var(--report-color-primary); padding-bottom: 10px; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        th, td { border: 1px solid var(--report-color-border); padding: 8px; text-align: left; }
+        body { font-family: Arial, sans-serif; margin: var(--report-spacing-xl); }
+        .header { text-align: center; margin-bottom: var(--report-spacing-xxl); }
+        .section { margin-bottom: var(--report-spacing-xxl); }
+        .section h2 { color: var(--report-color-text-primary); border-bottom: var(--report-border-width-md) solid var(--report-color-primary); padding-bottom: var(--report-spacing-md); }
+        table { width: 100%; border-collapse: collapse; margin-bottom: var(--report-spacing-xl); }
+        th, td { border: var(--report-border-width-thin) solid var(--report-color-border); padding: var(--report-spacing-sm); text-align: left; }
         th { background-color: var(--report-color-bg-secondary); }
-        .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
-        .summary-card { border: 1px solid var(--report-color-border); padding: 15px; border-radius: 5px; }
-        .summary-card h3 { margin: 0 0 10px 0; color: var(--report-color-primary); }
-        .summary-card .value { font-size: 24px; font-weight: bold; color: var(--report-color-text-primary); }
-        .summary-card .unit { font-size: 14px; color: var(--report-color-text-secondary); }
+        .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(var(--report-summary-min-width), 1fr)); gap: var(--report-spacing-xl); }
+        .summary-card { border: var(--report-border-width-thin) solid var(--report-color-border); padding: var(--report-spacing-lg); border-radius: var(--report-border-radius-md); }
+        .summary-card h3 { margin: 0 0 var(--report-spacing-md) 0; color: var(--report-color-primary); }
+        .summary-card .value { font-size: var(--report-font-size-lg); font-weight: bold; color: var(--report-color-text-primary); }
+        .summary-card .unit { font-size: var(--report-font-size-base); color: var(--report-color-text-secondary); }
     </style>
 </head>
 <body>

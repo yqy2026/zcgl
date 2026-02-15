@@ -118,7 +118,8 @@ const buildAssetsQueryResult = () =>
     data: {
       items: mockData,
       total: mockPagination.total,
-      pages: mockPagination.pageSize > 0 ? Math.ceil(mockPagination.total / mockPagination.pageSize) : 0,
+      pages:
+        mockPagination.pageSize > 0 ? Math.ceil(mockPagination.total / mockPagination.pageSize) : 0,
     },
     error: mockError,
     isLoading: mockIsAssetsInitialLoading,

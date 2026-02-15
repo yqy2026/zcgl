@@ -73,7 +73,6 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClick }) => {
       // 刷新通知列表和未读数量
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     } catch (error) {
-      // eslint-disable-next-line no-console
       console.error('标记已读失败:', error);
     }
   };
@@ -85,7 +84,6 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClick }) => {
       // 刷新通知列表和未读数量
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     } catch (error) {
-      // eslint-disable-next-line no-console
       console.error('标记全部已读失败:', error);
     }
   };
@@ -98,7 +96,6 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClick }) => {
       // 刷新通知列表和未读数量
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     } catch (error) {
-      // eslint-disable-next-line no-console
       console.error('删除通知失败:', error);
     }
   };

@@ -307,11 +307,11 @@ class SystemDocumentationGenerator:
                     ],
                 },
                 "frontend": {
-                    "build_command": "npm run build",
+                    "build_command": "pnpm build",
                     "output_dir": "dist",
                     "deployment_steps": [
-                        "Install dependencies: npm ci",
-                        "Build application: npm run build",
+                        "Install dependencies: pnpm install --frozen-lockfile",
+                        "Build application: pnpm build",
                         "Configure web server",
                         "Enable gzip compression",
                         "Set up caching headers",

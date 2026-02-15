@@ -7,10 +7,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Card, Typography, Row, Col } from 'antd';
-import {
-  FileTextOutlined,
-  CheckCircleOutlined,
-} from '@ant-design/icons';
+import { FileTextOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { MessageManager } from '@/utils/messageManager';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -259,8 +256,7 @@ const ContractRenewPage: React.FC = () => {
           <div className={styles.guideNotes}>
             <Text type="secondary">
               • 系统已自动预填原合同数据，请根据需要修改
-              <br />
-              • 新合同开始日期默认为原合同结束日期+1天
+              <br />• 新合同开始日期默认为原合同结束日期+1天
               <br />• 押金将自动从原合同转移到新合同
             </Text>
           </div>

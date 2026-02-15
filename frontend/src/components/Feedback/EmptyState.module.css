@@ -1,6 +1,5 @@
 .emptyStateWrapper {
-  padding: calc(var(--spacing-xxl) + var(--spacing-lg))
-    calc(var(--spacing-lg) + var(--spacing-xs));
+  padding: calc(var(--spacing-xxl) + var(--spacing-lg)) calc(var(--spacing-lg) + var(--spacing-xs));
   text-align: center;
 }
 

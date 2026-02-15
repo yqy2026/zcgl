@@ -1,0 +1,25 @@
+# VCS metadata
+.git
+.gitignore
+
+# Local environments
+**/.env
+**/.env.*
+backend/.venv
+frontend/node_modules
+node_modules
+
+# Build and test artifacts
+dist
+coverage
+test-results
+reports
+playwright-report
+
+# Caches
+**/__pycache__
+**/*.py[cod]
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/.vite

@@ -10,7 +10,7 @@
 .valueTag,
 .remainingTag {
   margin-inline-end: 0;
-  border: 1px solid transparent;
+  border: var(--border-width-thin) solid transparent;
   border-radius: var(--button-radius);
   cursor: default;
   line-height: var(--line-height-tight);

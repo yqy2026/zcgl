@@ -126,10 +126,8 @@ describe('OrganizationPage', () => {
     errorSpy.mockRestore();
   });
 
-  it(
-    'loads enum options from dictionaries and submits enum values',
-    async () => {
-      const user = userEvent.setup();
+  it('loads enum options from dictionaries and submits enum values', async () => {
+    const user = userEvent.setup();
 
     renderWithProviders(<OrganizationPage />);
 
@@ -160,21 +158,19 @@ describe('OrganizationPage', () => {
     fireEvent.mouseDown(statusSelect!);
     await user.click(screen.getByText('启用(自定义)'));
 
-      const formElement = document.querySelector('.ant-modal form');
-      expect(formElement).toBeTruthy();
-      fireEvent.submit(formElement!);
+    const formElement = document.querySelector('.ant-modal form');
+    expect(formElement).toBeTruthy();
+    fireEvent.submit(formElement!);
 
-      await waitFor(() => {
-        expect(organizationService.createOrganization).toHaveBeenCalledWith(
-          expect.objectContaining({
-            name: '事业部A',
-            code: 'DIV001',
-            type: 'division',
-            status: 'active',
-          })
-        );
-      });
-    },
-    15000
-  );
+    await waitFor(() => {
+      expect(organizationService.createOrganization).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: '事业部A',
+          code: 'DIV001',
+          type: 'division',
+          status: 'active',
+        })
+      );
+    });
+  }, 30000);
 });

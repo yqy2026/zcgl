@@ -78,7 +78,6 @@ class OrganizationService {
       return this.extractList<Organization>(result.data);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      // eslint-disable-next-line no-console
       console.error('获取组织列表失败:', enhancedError.message);
       return [];
     }
@@ -196,7 +195,6 @@ class OrganizationService {
       return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      // eslint-disable-next-line no-console
       console.error('获取组织树失�?', enhancedError.message);
       return [];
     }

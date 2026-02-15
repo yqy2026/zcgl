@@ -208,7 +208,13 @@ const ErrorPage: React.FC<ErrorPageProps> = ({
               {getSuggestions()}
             </div>
           }
-          extra={extra ?? <Space wrap className={styles.actionButtons}>{getActionButtons()}</Space>}
+          extra={
+            extra ?? (
+              <Space wrap className={styles.actionButtons}>
+                {getActionButtons()}
+              </Space>
+            )
+          }
         />
       </div>
     </div>

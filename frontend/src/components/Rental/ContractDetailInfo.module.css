@@ -1,7 +1,11 @@
 .contractDetailInfo {
-  --contract-detail-label-width: calc((var(--spacing-xxxl) * 2) + var(--spacing-xl) + var(--spacing-sm));
+  --contract-detail-label-width: calc(
+    (var(--spacing-xxxl) * 2) + var(--spacing-xl) + var(--spacing-sm)
+  );
   --contract-detail-content-min-width: calc((var(--spacing-xxxl) * 3) + var(--spacing-xxl));
-  --contract-detail-label-width-mobile: calc((var(--spacing-xxxl) * 2) + var(--spacing-sm) + var(--spacing-xs));
+  --contract-detail-label-width-mobile: calc(
+    (var(--spacing-xxxl) * 2) + var(--spacing-sm) + var(--spacing-xs)
+  );
   --contract-detail-content-min-width-mobile: calc((var(--spacing-xxxl) * 2) + var(--spacing-xxl));
   width: 100%;
 }
@@ -116,7 +120,7 @@
   font-size: var(--font-size-xs);
 }
 
-@media (max-width: 768px) {
+@media (max-width: var(--breakpoint-sm)) {
   .basicDescriptions :global(.ant-descriptions-item-label) {
     width: var(--contract-detail-label-width-mobile);
   }

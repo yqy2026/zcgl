@@ -13,7 +13,7 @@ make check
 ```
 
 默认包含：
-- 代码质量检查（后端 Ruff、前端 ESLint、TS 类型检查）
+- 代码质量检查（后端 Ruff、前端 Oxlint/Oxfmt、Tsgo 类型检查）
 - 后端单元测试与前端测试
 - 前端构建与后端导入验证
 

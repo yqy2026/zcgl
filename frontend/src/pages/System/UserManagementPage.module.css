@@ -84,8 +84,8 @@
 }
 
 .actionButton:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--color-primary);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .userCell {
@@ -115,8 +115,8 @@
 
 .semanticTag {
   margin-inline-end: 0;
-  border-radius: 999px;
-  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  border: var(--border-width-thin) solid transparent;
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
   line-height: 1.35;
@@ -171,7 +171,9 @@
   min-height: var(--user-management-control-height);
   border-radius: var(--radius-md);
   color: var(--color-text-secondary);
-  transition: color var(--transition-base), background-color var(--transition-base);
+  transition:
+    color var(--transition-base),
+    background-color var(--transition-base);
 }
 
 .tableActionButton:hover {
@@ -180,8 +182,8 @@
 }
 
 .tableActionButton:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--color-primary);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .unlockActionButton {
@@ -231,7 +233,7 @@
   justify-content: center;
 }
 
-@media (max-width: 768px) {
+@media (max-width: var(--breakpoint-sm)) {
   .actionButton {
     min-height: var(--user-management-touch-target-size);
   }

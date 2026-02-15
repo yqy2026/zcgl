@@ -23,8 +23,8 @@
 
 .codeTag {
   margin-inline-end: 0;
-  border-radius: 999px;
-  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  border: var(--border-width-thin) solid transparent;
   padding-inline: var(--spacing-sm);
   font-size: var(--font-size-xs);
   line-height: var(--dictionary-tag-line-height);
@@ -142,7 +142,7 @@
   border-color: var(--color-error);
 }
 
-@media (max-width: 768px) {
+@media (max-width: var(--breakpoint-sm)) {
   .refreshButton {
     min-height: var(--dictionary-control-height-mobile);
   }

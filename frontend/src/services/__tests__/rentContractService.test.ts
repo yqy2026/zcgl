@@ -310,6 +310,25 @@ describe('RentContractService', () => {
       expect(result).toHaveLength(2);
       expect(result[0].monthly_rent).toBe(10000);
     });
+
+    it('should convert decimal string fields in rent terms', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        success: true,
+        data: [
+          {
+            id: '1',
+            monthly_rent: '12000.50',
+            start_date: '2026-01-01',
+            end_date: '2026-06-30',
+          },
+        ],
+      });
+
+      const result = await service.getContractTerms('contract-1');
+      const firstTerm = result[0] as unknown as { monthly_rent: number };
+
+      expect(firstTerm.monthly_rent).toBe(12000.5);
+    });
   });
 
   describe('addRentTerm', () => {
@@ -457,6 +476,62 @@ describe('RentContractService', () => {
       const result = await service.getMonthlyStatistics({ year: 2026 });
 
       expect(result).toHaveLength(2);
+    });
+  });
+
+  describe('export methods', () => {
+    it('should return blob directly for exportStatistics', async () => {
+      const blob = new Blob(['statistics']);
+      vi.mocked(apiClient.get).mockResolvedValue({
+        success: true,
+        data: blob,
+      });
+
+      const result = await service.exportStatistics();
+
+      expect(result).toBe(blob);
+      expect(apiClient.get).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          responseType: 'blob',
+        })
+      );
+    });
+
+    it('should return blob directly for exportContractsToExcel', async () => {
+      const blob = new Blob(['contracts']);
+      vi.mocked(apiClient.get).mockResolvedValue({
+        success: true,
+        data: blob,
+      });
+
+      const result = await service.exportContractsToExcel();
+
+      expect(result).toBe(blob);
+      expect(apiClient.get).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          responseType: 'blob',
+        })
+      );
+    });
+
+    it('should return blob directly for exportLedgersToExcel', async () => {
+      const blob = new Blob(['ledgers']);
+      vi.mocked(apiClient.get).mockResolvedValue({
+        success: true,
+        data: blob,
+      });
+
+      const result = await service.exportLedgersToExcel();
+
+      expect(result).toBe(blob);
+      expect(apiClient.get).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          responseType: 'blob',
+        })
+      );
     });
   });
 

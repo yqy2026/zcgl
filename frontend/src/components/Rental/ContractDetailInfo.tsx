@@ -156,7 +156,11 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
         }
         className={styles.sectionCard}
       >
-        <Descriptions bordered column={{ xs: 1, sm: 2, md: 3 }} className={styles.basicDescriptions}>
+        <Descriptions
+          bordered
+          column={{ xs: 1, sm: 2, md: 3 }}
+          className={styles.basicDescriptions}
+        >
           <Descriptions.Item
             label={
               <span className={styles.labelWithIcon}>

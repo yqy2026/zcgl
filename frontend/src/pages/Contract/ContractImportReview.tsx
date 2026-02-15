@@ -25,6 +25,7 @@ import {
 import { SaveOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { MessageManager } from '@/utils/messageManager';
+import { createLogger } from '@/utils/logger';
 
 import {
   type CompleteResult,
@@ -38,6 +39,7 @@ import styles from './ContractImportReview.module.css';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
+const pageLogger = createLogger('ContractImportReview');
 
 type ConfidenceTone = 'success' | 'warning' | 'error';
 
@@ -275,8 +277,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
         MessageManager.error(response.error ?? '导入失败');
       }
     } catch (error: unknown) {
-      // eslint-disable-next-line no-console
-      console.error('表单验证失败:', error);
+      pageLogger.error('表单验证失败', error);
       const _errorMessage = error instanceof Error ? error.message : '表单验证失败';
       MessageManager.error('请检查表单填写是否正确');
     } finally {
@@ -472,9 +473,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
                         相似度: {asset.similarity}%
                       </Tag>
                     </Space>
-                    <div className={styles.matchAddressText}>
-                      {asset.address}
-                    </div>
+                    <div className={styles.matchAddressText}>{asset.address}</div>
                   </div>
                 </Select.Option>
               ))}
@@ -602,43 +601,51 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
       <Card className={styles.sectionCard}>
         <Row gutter={[16, 16]} className={styles.statsRow}>
           <Col xs={24} sm={12} xl={6}>
-            <Card className={`${styles.statsCard} ${getConfidenceToneClassName(result.summary.extraction_confidence)}`}>
-            <Statistic
-              title="提取可信度"
-              value={result.summary.extraction_confidence}
-              precision={2}
-              suffix="%"
-            />
+            <Card
+              className={`${styles.statsCard} ${getConfidenceToneClassName(result.summary.extraction_confidence)}`}
+            >
+              <Statistic
+                title="提取可信度"
+                value={result.summary.extraction_confidence}
+                precision={2}
+                suffix="%"
+              />
             </Card>
           </Col>
           <Col xs={24} sm={12} xl={6}>
-            <Card className={`${styles.statsCard} ${getConfidenceToneClassName(result.summary.validation_score)}`}>
-            <Statistic
-              title="验证评分"
-              value={result.summary.validation_score}
-              precision={2}
-              suffix="%"
-            />
+            <Card
+              className={`${styles.statsCard} ${getConfidenceToneClassName(result.summary.validation_score)}`}
+            >
+              <Statistic
+                title="验证评分"
+                value={result.summary.validation_score}
+                precision={2}
+                suffix="%"
+              />
             </Card>
           </Col>
           <Col xs={24} sm={12} xl={6}>
-            <Card className={`${styles.statsCard} ${getConfidenceToneClassName(result.summary.match_confidence)}`}>
-            <Statistic
-              title="匹配置信度"
-              value={result.summary.match_confidence}
-              precision={2}
-              suffix="%"
-            />
+            <Card
+              className={`${styles.statsCard} ${getConfidenceToneClassName(result.summary.match_confidence)}`}
+            >
+              <Statistic
+                title="匹配置信度"
+                value={result.summary.match_confidence}
+                precision={2}
+                suffix="%"
+              />
             </Card>
           </Col>
           <Col xs={24} sm={12} xl={6}>
-            <Card className={`${styles.statsCard} ${getConfidenceToneClassName(result.summary.total_confidence)}`}>
-            <Statistic
-              title="总体评分"
-              value={result.summary.total_confidence}
-              precision={2}
-              suffix="%"
-            />
+            <Card
+              className={`${styles.statsCard} ${getConfidenceToneClassName(result.summary.total_confidence)}`}
+            >
+              <Statistic
+                title="总体评分"
+                value={result.summary.total_confidence}
+                precision={2}
+                suffix="%"
+              />
             </Card>
           </Col>
         </Row>

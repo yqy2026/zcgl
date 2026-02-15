@@ -93,7 +93,7 @@ const DEFAULT_EMPTY_STATES: Record<EmptyType, { title: string; description: stri
     title: '未找到相关结果',
     description: '尝试调整搜索条件或关键词，可能会有所发现。',
   },
-  'cleared': {
+  cleared: {
     title: '已清空',
     description: '所有数据已被清空，您可以重新开始。',
   },
@@ -101,7 +101,7 @@ const DEFAULT_EMPTY_STATES: Record<EmptyType, { title: string; description: stri
     title: '未找到',
     description: '没有找到符合条件的数据。',
   },
-  'unauthorized': {
+  unauthorized: {
     title: '无法访问',
     description: '请先登录以查看此内容。',
   },
@@ -117,9 +117,9 @@ const DEFAULT_EMPTY_STATES: Record<EmptyType, { title: string; description: stri
 const EMPTY_ICONS: Record<EmptyType, React.ReactNode> = {
   'no-data': <InboxOutlined className={styles.emptyIconGlyph} />,
   'no-results': <FileSearchOutlined className={styles.emptyIconGlyph} />,
-  'cleared': <SearchOutlined className={styles.emptyIconGlyph} />,
+  cleared: <SearchOutlined className={styles.emptyIconGlyph} />,
   'not-found': <SearchOutlined className={styles.emptyIconGlyph} />,
-  'unauthorized': <FileSearchOutlined className={styles.emptyIconGlyph} />,
+  unauthorized: <FileSearchOutlined className={styles.emptyIconGlyph} />,
   custom: <InboxOutlined className={styles.emptyIconGlyph} />,
 };
 
@@ -173,9 +173,7 @@ export const EmptyState: React.FC<EmptyStateConfig> = ({
         <Title level={4} className={styles.emptyTitle}>
           {emptyTitle}
         </Title>
-        <Paragraph className={styles.emptyDescription}>
-          {emptyDescription}
-        </Paragraph>
+        <Paragraph className={styles.emptyDescription}>{emptyDescription}</Paragraph>
       </div>
 
       {/* Action Buttons */}
@@ -271,9 +269,7 @@ export const ComponentEmpty: React.FC<ComponentEmptyProps> = ({
       aria-live="polite"
       aria-atomic="true"
     >
-      <div className={styles.componentIconContainer}>
-        {EMPTY_ICONS[type]}
-      </div>
+      <div className={styles.componentIconContainer}>{EMPTY_ICONS[type]}</div>
       <div className={styles.componentMessageContainer}>
         <Text type="secondary" className={styles.componentMessageText}>
           {message}
@@ -281,12 +277,7 @@ export const ComponentEmpty: React.FC<ComponentEmptyProps> = ({
       </div>
       {showCreate && onCreate && (
         <div className={styles.componentActionContainer}>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={onCreate}
-            aria-label={createText}
-          >
+          <Button type="primary" icon={<PlusOutlined />} onClick={onCreate} aria-label={createText}>
             {createText}
           </Button>
         </div>

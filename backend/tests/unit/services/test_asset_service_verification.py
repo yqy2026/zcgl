@@ -48,10 +48,11 @@ async def test_asset_service_crud_lifecycle(asset_service, mock_db):
     assert hasattr(asset_service, "get_assets")
 
     # 3. 验证资源不存在的错误处理
-    with patch("src.services.asset.asset_service.asset_crud") as mock_crud:
-        mock_crud.get_async = AsyncMock(return_value=None)
-        with pytest.raises(ResourceNotFoundError):
-            await asset_service.get_asset("nonexistent_id")
+    mock_crud = MagicMock()
+    mock_crud.get_async = AsyncMock(return_value=None)
+    injected_service = AssetService(mock_db, asset_crud_override=mock_crud)
+    with pytest.raises(ResourceNotFoundError):
+        await injected_service.get_asset("nonexistent_id")
 
     # 4. 验证枚举验证服务可以被正确mock
     with patch(

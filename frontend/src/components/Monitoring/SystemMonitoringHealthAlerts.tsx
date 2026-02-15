@@ -38,7 +38,7 @@ const SystemMonitoringHealthAlerts: React.FC<SystemMonitoringHealthAlertsProps> 
       },
       statistic: {
         content: {
-          style: { fontSize: '36px', lineHeight: '36px' },
+          style: { fontSize: 36, lineHeight: 1 },
           formatter: () => `${healthStatus?.overall_score ?? 0}%`,
         },
       },

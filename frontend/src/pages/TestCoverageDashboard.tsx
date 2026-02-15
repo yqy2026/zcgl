@@ -386,7 +386,9 @@ const TestCoverageDashboard: React.FC = () => {
   };
 
   const buildMetricClassName = (currentValue: number, thresholdValue: number): string => {
-    return [styles.metricStatistic, getCoverageToneClassName(currentValue, thresholdValue)].join(' ');
+    return [styles.metricStatistic, getCoverageToneClassName(currentValue, thresholdValue)].join(
+      ' '
+    );
   };
 
   return (
@@ -449,17 +451,11 @@ const TestCoverageDashboard: React.FC = () => {
               suffix="%"
               className={buildMetricClassName(totalCoverageValue, totalThresholdValue)}
               prefix={
-                totalCoverageValue >= totalThresholdValue ? (
-                  <RiseOutlined />
-                ) : (
-                  <FallOutlined />
-                )
+                totalCoverageValue >= totalThresholdValue ? <RiseOutlined /> : <FallOutlined />
               }
             />
             {thresholds != null && (
-              <div className={styles.metricTargetText}>
-                目标: {thresholds.total_threshold}%
-              </div>
+              <div className={styles.metricTargetText}>目标: {thresholds.total_threshold}%</div>
             )}
           </Card>
         </Col>
@@ -480,9 +476,7 @@ const TestCoverageDashboard: React.FC = () => {
               }
             />
             {thresholds != null && (
-              <div className={styles.metricTargetText}>
-                目标: {thresholds.backend_threshold}%
-              </div>
+              <div className={styles.metricTargetText}>目标: {thresholds.backend_threshold}%</div>
             )}
           </Card>
         </Col>
@@ -503,9 +497,7 @@ const TestCoverageDashboard: React.FC = () => {
               }
             />
             {thresholds != null && (
-              <div className={styles.metricTargetText}>
-                目标: {thresholds.frontend_threshold}%
-              </div>
+              <div className={styles.metricTargetText}>目标: {thresholds.frontend_threshold}%</div>
             )}
           </Card>
         </Col>

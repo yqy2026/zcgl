@@ -45,15 +45,15 @@
 }
 
 .presetTag:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--color-primary);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .sectionPanel {
   margin-bottom: var(--spacing-lg);
   padding: var(--spacing-md);
   background: var(--color-bg-tertiary);
-  border: 1px solid var(--color-border-light);
+  border: var(--border-width-thin) solid var(--color-border-light);
   border-radius: var(--radius-md);
 }
 
@@ -73,14 +73,14 @@
   min-width: 0;
   min-height: var(--button-height-md);
   padding: var(--spacing-xs) var(--spacing-md);
-  border: 1px solid var(--color-border);
+  border: var(--border-width-thin) solid var(--color-border);
   border-radius: var(--form-input-radius);
   background: var(--color-bg-primary);
 }
 
 .historyInput:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--color-primary);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .historyList {
@@ -95,7 +95,7 @@
   justify-content: space-between;
   gap: var(--spacing-md);
   padding: var(--spacing-sm) var(--spacing-md);
-  border: 1px solid var(--color-border-light);
+  border: var(--border-width-thin) solid var(--color-border-light);
   border-radius: var(--form-input-radius);
   background: var(--color-bg-primary);
   cursor: pointer;
@@ -110,8 +110,8 @@
 }
 
 .historyItem:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--color-primary);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .historyMeta {
@@ -125,7 +125,7 @@
 }
 
 .historyDate {
-  margin-top: 2px;
+  margin-top: calc(var(--spacing-xs) / 2);
   font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
 }
@@ -153,7 +153,7 @@
   line-height: 1.5;
 }
 
-@media (max-width: 768px) {
+@media (max-width: var(--breakpoint-sm)) {
   .historySaveRow {
     flex-wrap: wrap;
   }

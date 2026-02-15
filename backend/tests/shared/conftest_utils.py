@@ -7,6 +7,10 @@
 
 from __future__ import annotations
 
+from sqlalchemy.engine import Connection, Engine
+from sqlalchemy.engine.base import Transaction
+from sqlalchemy.orm import Session, sessionmaker
+
 
 class AsyncSessionAdapter:
     """
@@ -67,4 +71,38 @@ class AsyncSessionAdapter:
         return getattr(self._session, name)
 
 
-__all__ = ["AsyncSessionAdapter"]
+def create_transactional_session(
+    engine: Engine,
+) -> tuple[Session, Connection, Transaction]:
+    """
+    Create a transactional sync SQLAlchemy session for tests.
+
+    Returns:
+        (session, connection, transaction)
+    """
+    connection = engine.connect()
+    transaction = connection.begin()
+    test_session_local = sessionmaker(autocommit=False, autoflush=False, bind=connection)
+    session = test_session_local()
+    return session, connection, transaction
+
+
+def cleanup_transactional_session(
+    session: Session,
+    connection: Connection,
+    transaction: Transaction,
+) -> None:
+    """Best-effort cleanup for transactional test sessions."""
+    try:
+        session.close()
+        transaction.rollback()
+        connection.close()
+    except Exception:
+        pass
+
+
+__all__ = [
+    "AsyncSessionAdapter",
+    "cleanup_transactional_session",
+    "create_transactional_session",
+]

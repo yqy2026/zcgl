@@ -283,7 +283,6 @@ if (isDevelopmentMode()) {
     try {
       runApiPathTests();
     } catch (error) {
-      // eslint-disable-next-line no-console
       console.error('❌ API Path Tests failed:', error);
     }
   }, 1000);

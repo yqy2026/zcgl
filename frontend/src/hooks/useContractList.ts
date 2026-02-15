@@ -156,7 +156,8 @@ export const useContractList = () => {
           await rentContractService.deleteContract(id);
           MessageManager.success('删除成功');
           refreshListAndStatistics();
-        } catch {
+        } catch (error: unknown) {
+          logger.error('删除合同失败:', error);
           MessageManager.error('删除失败');
         }
       },
@@ -168,7 +169,8 @@ export const useContractList = () => {
     try {
       await rentContractService.generateMonthlyLedger({ contract_id: contractId });
       MessageManager.success('生成台账成功');
-    } catch {
+    } catch (error: unknown) {
+      logger.error('生成台账失败:', error);
       MessageManager.error('生成台账失败');
     }
   };
@@ -189,7 +191,8 @@ export const useContractList = () => {
           );
           MessageManager.success('合同已终止');
           refreshListAndStatistics();
-        } catch {
+        } catch (error: unknown) {
+          logger.error('终止合同失败:', error);
           MessageManager.error('终止合同失败');
         }
       },

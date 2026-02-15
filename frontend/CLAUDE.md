@@ -11,8 +11,8 @@ cd frontend
 pnpm install            # 安装依赖
 pnpm dev                # 启动开发服务器 (port 5173)
 pnpm test               # 运行测试
-pnpm lint               # ESLint 检查
-pnpm type-check         # TypeScript 类型检查
+pnpm lint               # Oxlint 检查
+pnpm type-check         # Tsgo 类型检查
 ```
 
 ---
@@ -54,6 +54,18 @@ const total = response.data?.total || 0;
 ```
 
 **详细规范**: 参见 [`docs/guides/typescript-conventions.md`](../../docs/guides/typescript-conventions.md)
+
+---
+
+## Decimal/Number 转换规范 (重要!)
+
+后端常以 `Decimal` 字符串返回金额/面积字段，前端业务默认使用 `number`。
+
+- **统一入口**：服务层在返回数据前统一调用 `convertBackendToFrontend`（`src/utils/dataConversion.ts`）。
+- **页面约束**：页面/组件层禁止用 `parseFloat` 临时兜底金额或面积字段。
+- **提交约束**：提交到后端时按字段需要使用 `convertFrontendToBackend`。
+- **字段范围**：优先覆盖高频字段（`land_area`、`actual_property_area`、`rentable_area`、`monthly_rent`、`deposit/total_deposit` 等）。
+- **测试要求**：新增或改造服务时，补充对应转换链路测试（至少覆盖一个字符串 Decimal -> number 场景）。
 
 ---
 
@@ -145,7 +157,7 @@ pnpm build --report
 docker build -t zcgl-frontend .
 
 # 类型检查（CI/CD）
-pnpm type-check --noEmit
+pnpm type-check
 ```
 
 **环境变量**:
@@ -206,7 +218,7 @@ pnpm test:ui                # Vitest UI
 | API 请求失败 | 确保后端运行在 8002 端口，检查 `VITE_API_BASE_URL` |
 | TypeScript 错误 | `pnpm type-check` 查看详情 |
 | 构建失败 | 清理缓存: `rm -rf node_modules/.vite` 后重新构建 |
-| ESLint 警告过多 | `pnpm lint --fix` 自动修复部分问题 |
+| Oxlint 问题较多 | `pnpm lint --fix` 自动修复部分问题 |
 
 
 <claude-mem-context>

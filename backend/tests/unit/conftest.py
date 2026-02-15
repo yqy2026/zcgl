@@ -10,9 +10,12 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.exc import OperationalError
-from sqlalchemy.orm import sessionmaker
 
-from tests.shared.conftest_utils import AsyncSessionAdapter
+from tests.shared.conftest_utils import (
+    AsyncSessionAdapter,
+    cleanup_transactional_session,
+    create_transactional_session,
+)
 
 
 def _resolve_test_database_url() -> str | None:
@@ -129,21 +132,11 @@ def db_tables(engine):
 @pytest.fixture(scope="function")
 def db_session(engine, db_tables):
     """Create a new database session for each unit test."""
-    test_session_local = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    session = test_session_local()
-
-    connection = engine.connect()
-    transaction = connection.begin()
-    session.bind = connection
+    session, connection, transaction = create_transactional_session(engine)
 
     yield session
 
-    try:
-        session.close()
-        transaction.rollback()
-        connection.close()
-    except Exception:
-        pass
+    cleanup_transactional_session(session, connection, transaction)
 
 
 @pytest.fixture(scope="function")

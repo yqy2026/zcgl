@@ -11,7 +11,7 @@
 }
 
 .dragger :global(.ant-upload-drag-icon) {
-  margin-bottom: 8px;
+  margin-bottom: var(--spacing-sm);
 }
 
 .draggerIcon {

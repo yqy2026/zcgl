@@ -7,7 +7,7 @@
  * - 事件处理函数
  */
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { pdfImportService } from '@/services/pdfImportService';
 import type {
@@ -39,6 +39,16 @@ export const usePDFImportSession = () => {
   // 使用 ref 避免闭包问题
   const currentSessionRef = useRef(currentSession);
   currentSessionRef.current = currentSession;
+  const rerenderTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (rerenderTimeoutRef.current != null) {
+        clearTimeout(rerenderTimeoutRef.current);
+        rerenderTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   /**
    * 加载会话历史记录
@@ -96,9 +106,14 @@ export const usePDFImportSession = () => {
 
     setCurrentSession(newSession);
 
+    if (rerenderTimeoutRef.current != null) {
+      clearTimeout(rerenderTimeoutRef.current);
+    }
+
     // 强制重新渲染
-    setTimeout(() => {
+    rerenderTimeoutRef.current = setTimeout(() => {
       setCurrentSession(prev => (prev != null ? { ...prev } : null));
+      rerenderTimeoutRef.current = null;
     }, 100);
   }, []);
 

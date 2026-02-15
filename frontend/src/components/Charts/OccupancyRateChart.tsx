@@ -179,13 +179,13 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({ filters, height
           offsetY: -8,
           content: '总体出租率',
           style: {
-            fontSize: '14px',
+            fontSize: 14,
           },
         },
         content: {
           offsetY: 4,
           style: {
-            fontSize: '20px',
+            fontSize: 20,
             fontWeight: 'bold' as const,
           },
           content: `${data?.overall_rate?.toFixed(2) ?? 0}%`,
@@ -290,7 +290,9 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({ filters, height
     } else if (trend === 'down') {
       return <FallOutlined className={`${styles.trendIcon} ${styles.trendIconDown}`} aria-hidden />;
     } else {
-      return <MinusOutlined className={`${styles.trendIcon} ${styles.trendIconStable}`} aria-hidden />;
+      return (
+        <MinusOutlined className={`${styles.trendIcon} ${styles.trendIconStable}`} aria-hidden />
+      );
     }
   };
 
@@ -421,9 +423,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({ filters, height
                     </Text>
                   </div>
                   <div className={styles.rankingValue}>
-                    <Text className={styles.rankingRateHigh}>
-                      {(asset.rate ?? 0).toFixed(2)}%
-                    </Text>
+                    <Text className={styles.rankingRateHigh}>{(asset.rate ?? 0).toFixed(2)}%</Text>
                     <div className={styles.rankingLabel}>高位</div>
                   </div>
                 </div>
@@ -452,9 +452,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({ filters, height
                     </Text>
                   </div>
                   <div className={styles.rankingValue}>
-                    <Text className={styles.rankingRateLow}>
-                      {(asset.rate ?? 0).toFixed(2)}%
-                    </Text>
+                    <Text className={styles.rankingRateLow}>{(asset.rate ?? 0).toFixed(2)}%</Text>
                     <div className={styles.rankingLabel}>低位</div>
                   </div>
                 </div>

@@ -126,7 +126,7 @@ describe('usePermission', () => {
         created_at: '2024-01-01T00:00:00Z',
         updated_at: '2024-01-01T00:00:00Z',
       },
-      permissions: []
+      permissions: [],
     };
 
     AuthStorage.setAuthData(mockAuthData);

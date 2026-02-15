@@ -2,6 +2,7 @@
 增强的基础CRUD操作类 - 支持缓存、性能监控和错误处理
 """
 
+import json
 import logging
 import time
 from typing import Any, Literal, Protocol, TypeVar, cast
@@ -78,8 +79,40 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
         key_parts = [getattr(self.model, "__tablename__", "unknown"), method]
         for k, v in sorted(kwargs.items()):
             if v is not None:
-                key_parts.append(f"{k}:{v}")
+                key_parts.append(f"{k}:{self._serialize_cache_value(v)}")
         return "|".join(key_parts)
+
+    @classmethod
+    def _serialize_cache_value(cls, value: Any) -> str:
+        """将缓存键值稳定序列化，避免复杂对象顺序差异导致的键漂移。"""
+        normalized = cls._normalize_cache_value(value)
+        return json.dumps(
+            normalized,
+            ensure_ascii=True,
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+
+    @classmethod
+    def _normalize_cache_value(cls, value: Any) -> Any:
+        if value is None or isinstance(value, (str, int, float, bool)):
+            return value
+        if isinstance(value, dict):
+            return {
+                str(key): cls._normalize_cache_value(nested_value)
+                for key, nested_value in sorted(
+                    value.items(), key=lambda item: str(item[0])
+                )
+            }
+        if isinstance(value, (list, tuple)):
+            return [cls._normalize_cache_value(item) for item in value]
+        if isinstance(value, set):
+            return sorted(
+                cls._normalize_cache_value(item)
+                for item in value
+            )
+
+        return repr(value)
 
     def _get_from_cache(self, cache_key: str) -> Any:
         """从缓存获取数据"""
@@ -443,10 +476,17 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
         """清理指定ID相关的 get 缓存（含租户隔离键）。"""
         if id_value is None:
             return
-        exact_key = self._get_cache_key("get", id=id_value)
-        if exact_key in self._cache:
-            del self._cache[exact_key]
-        self._clear_cache_pattern(f"get|id:{id_value}")
+        id_token = f"id:{self._serialize_cache_value(id_value)}"
+        keys_to_remove = []
+        for cache_key in self._cache:
+            segments = cache_key.split("|")
+            if len(segments) < 2 or segments[1] != "get":
+                continue
+            if id_token in segments[2:]:
+                keys_to_remove.append(cache_key)
+
+        for cache_key in keys_to_remove:
+            del self._cache[cache_key]
 
     def clear_cache(self) -> None:
         """清除所有缓存"""
@@ -523,8 +563,10 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
             cache_key = self._get_cache_key(
                 "distinct_values",
                 field=field_name,
-                filters=str(sorted(filters.items())) if filters else None,
+                filters=filters,
                 sort=sort_order,
+                exclude_empty=exclude_empty,
+                tenant_filter=self._serialize_tenant_filter(tenant_filter),
             )
             cached_result = self._get_from_cache(cache_key)
             if cached_result is not None:

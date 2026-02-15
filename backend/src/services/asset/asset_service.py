@@ -6,6 +6,7 @@ from typing import Any, cast
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.exc import StaleDataError
 
+from ...constants.business_constants import DataStatusValues
 from ...core.exception_handler import (
     DuplicateResourceError,
     ResourceNotFoundError,
@@ -23,8 +24,6 @@ from ...schemas.asset import AssetCreate, AssetUpdate
 from ...services.asset.asset_calculator import AssetCalculator
 from ...services.enum_validation_service import get_enum_validation_service_async
 
-_DEFAULT_ASSET_CRUD: object = object()
-asset_crud: Any = _DEFAULT_ASSET_CRUD
 logger = logging.getLogger(__name__)
 
 
@@ -57,18 +56,25 @@ def _normalize_bool_filter(
     )
 
 
-def _get_asset_crud() -> Any:
-    if asset_crud is not _DEFAULT_ASSET_CRUD:
-        return asset_crud
-
+def _get_default_asset_crud() -> Any:
     from ...crud import asset as asset_module
 
     return asset_module.asset_crud
 
 
 class AssetService:
-    def __init__(self, db: AsyncSession) -> None:
+    def __init__(
+        self,
+        db: AsyncSession,
+        *,
+        asset_crud_override: Any | None = None,
+    ) -> None:
         self.db = db
+        self.asset_crud = (
+            asset_crud_override
+            if asset_crud_override is not None
+            else _get_default_asset_crud()
+        )
 
     async def _resolve_tenant_filter(
         self,
@@ -197,7 +203,7 @@ class AssetService:
         return data
 
     async def _ensure_asset_not_linked(self, asset_id: str) -> None:
-        asset_crud = _get_asset_crud()
+        asset_crud = self.asset_crud
 
         has_contract = await asset_crud.has_rent_contracts_async(self.db, asset_id)
         if has_contract:
@@ -232,7 +238,7 @@ class AssetService:
         tenant_filter: TenantFilter | None = None,
         current_user_id: str | None = None,
     ) -> tuple[list[Asset], int]:
-        asset_crud = _get_asset_crud()
+        asset_crud = self.asset_crud
         resolved_tenant_filter = await self._resolve_tenant_filter(
             current_user_id=current_user_id,
             tenant_filter=tenant_filter,
@@ -266,7 +272,7 @@ class AssetService:
         include_relations: bool = False,
     ) -> list[Asset]:
         """根据 ID 列表批量获取资产。"""
-        asset_crud = _get_asset_crud()
+        asset_crud = self.asset_crud
         assets = cast(
             list[Asset],
             await asset_crud.get_multi_by_ids_async(
@@ -285,7 +291,7 @@ class AssetService:
         tenant_filter: TenantFilter | None = None,
         current_user_id: str | None = None,
     ) -> Asset:
-        asset_crud = _get_asset_crud()
+        asset_crud = self.asset_crud
         resolved_tenant_filter = await self._resolve_tenant_filter(
             current_user_id=current_user_id,
             tenant_filter=tenant_filter,
@@ -304,7 +310,7 @@ class AssetService:
             Asset | None,
             await asset_crud.get_async(**query_kwargs),
         )
-        if not asset or asset.data_status == "已删除":
+        if not asset or asset.data_status == DataStatusValues.ASSET_DELETED:
             raise ResourceNotFoundError("Asset", asset_id)
         return asset
 
@@ -333,7 +339,7 @@ class AssetService:
         tenant_filter: TenantFilter | None = None,
         current_user_id: str | None = None,
     ) -> list[str]:
-        asset_crud = _get_asset_crud()
+        asset_crud = self.asset_crud
         resolved_tenant_filter = await self._resolve_tenant_filter(
             current_user_id=current_user_id,
             tenant_filter=tenant_filter,
@@ -350,7 +356,9 @@ class AssetService:
 
     async def get_ownership_entity_names(self) -> list[str]:
         """获取所有正常状态的权属方名称列表"""
-        return await ownership.get_names_by_status_async(self.db, data_status="正常")
+        return await ownership.get_names_by_status_async(
+            self.db, data_status=DataStatusValues.ASSET_NORMAL
+        )
 
     async def create_asset(
         self,
@@ -377,7 +385,7 @@ class AssetService:
         )
 
         async with self._transaction():
-            asset_crud = _get_asset_crud()
+            asset_crud = self.asset_crud
             # 1. 枚举值验证
             validation_service = get_enum_validation_service_async(self.db)
             incoming_payload = asset_in.model_dump()
@@ -448,7 +456,7 @@ class AssetService:
 
         try:
             async with self._transaction():
-                asset_crud = _get_asset_crud()
+                asset_crud = self.asset_crud
                 # 1. 存在性检查
                 user_id = getattr(current_user, "id", None)
                 asset = await self.get_asset(
@@ -572,7 +580,7 @@ class AssetService:
                 history.description = f"删除资产: {asset.property_name}"
                 history.operator = str(operator) if operator is not None else None
                 self.db.add(history)
-                asset.data_status = "已删除"
+                asset.data_status = DataStatusValues.ASSET_DELETED
                 asset.updated_by = str(operator) if operator is not None else None
                 asset.updated_at = _utcnow_naive()
                 self.db.add(asset)
@@ -588,7 +596,7 @@ class AssetService:
     ) -> Asset:
         try:
             async with self._transaction():
-                asset_crud = _get_asset_crud()
+                asset_crud = self.asset_crud
                 asset = cast(
                     Asset | None,
                     await asset_crud.get_async(
@@ -599,7 +607,7 @@ class AssetService:
                 )
                 if not asset:
                     raise ResourceNotFoundError("Asset", asset_id)
-                if asset.data_status != "已删除":
+                if asset.data_status != DataStatusValues.ASSET_DELETED:
                     raise operation_not_allowed(
                         "资产未处于已删除状态，无法恢复",
                         reason="asset_not_deleted",
@@ -615,7 +623,7 @@ class AssetService:
                 history.description = f"恢复资产: {asset.property_name}"
                 history.operator = str(operator) if operator is not None else None
                 self.db.add(history)
-                asset.data_status = "正常"
+                asset.data_status = DataStatusValues.ASSET_NORMAL
                 asset.updated_by = str(operator) if operator is not None else None
                 asset.updated_at = _utcnow_naive()
                 self.db.add(asset)
@@ -632,7 +640,7 @@ class AssetService:
     ) -> None:
         try:
             async with self._transaction():
-                asset_crud = _get_asset_crud()
+                asset_crud = self.asset_crud
                 asset = cast(
                     Asset | None,
                     await asset_crud.get_async(
@@ -643,7 +651,7 @@ class AssetService:
                 )
                 if not asset:
                     raise ResourceNotFoundError("Asset", asset_id)
-                if asset.data_status != "已删除":
+                if asset.data_status != DataStatusValues.ASSET_DELETED:
                     raise operation_not_allowed(
                         "资产未处于已删除状态，无法彻底删除",
                         reason="asset_not_deleted",

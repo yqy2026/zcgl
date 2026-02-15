@@ -141,19 +141,16 @@ export const useMemoryLeakDetection = (componentName: string) => {
         // Component unmounted
 
         if (timersRef.current.size > 0) {
-          // eslint-disable-next-line no-console
           console.warn(`Component ${componentName} had ${timersRef.current.size} uncleaned timers`);
         }
 
         if (listenersRef.current.size > 0) {
-          // eslint-disable-next-line no-console
           console.warn(
             `Component ${componentName} had ${listenersRef.current.size} uncleaned listeners`
           );
         }
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const addTimer = useCallback((timer: NodeJS.Timeout) => {
@@ -191,7 +188,6 @@ export const useRenderPerformance = (componentName: string) => {
       const renderTime = now - lastRenderTimeRef.current;
 
       if (isDevelopmentMode() && renderTime > 16) {
-        // eslint-disable-next-line no-console
         console.warn(`Slow render detected in ${componentName}: ${renderTime.toFixed(2)}ms`);
       }
     }
@@ -205,7 +201,6 @@ export const useRenderPerformance = (componentName: string) => {
         // Component rendered
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return renderCountRef.current;
@@ -234,7 +229,6 @@ export const useCache = <T>(key: string, factory: () => T, deps: unknown[] = [])
     }
 
     return value;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, factory, ...deps]);
 };
 

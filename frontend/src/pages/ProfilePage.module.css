@@ -17,8 +17,8 @@
 }
 
 .primaryActionButton:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--color-primary);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .profileSummary {
@@ -78,8 +78,8 @@
 }
 
 .securityActionButton:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--color-primary);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .modalForm {
@@ -95,7 +95,7 @@
   gap: var(--spacing-sm);
 }
 
-@media (max-width: 768px) {
+@media (max-width: var(--breakpoint-sm)) {
   .securityActionCard {
     flex-direction: column;
     align-items: flex-start;

@@ -26,7 +26,7 @@ coverage:
 # 质量门槛阈值（对新问题零容忍）
 quality_gates:
   max_errors: 0  # Maximum errors allowed (允许的最大错误数)
-  max_warnings: 0  # Maximum warnings allowed (ESLint --max-warnings=0)
+  max_warnings: 0  # Maximum warnings allowed (frontend lint gate)
   max_security_issues: 0  # Maximum security issues allowed
   max_complexity_score: 10  # Maximum cyclomatic complexity (圈复杂度上限)
   max_duplication_percentage: 5  # Maximum code duplication (代码重复度上限)

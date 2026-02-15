@@ -63,10 +63,7 @@ const DictionarySelect: React.FC<DictionarySelectProps> = ({
           option.color !== undefined &&
           option.color !== null &&
           option.color !== '' && (
-            <span
-              className={styles.colorSwatch}
-              style={buildColorSwatchStyle(option.color)}
-            />
+            <span className={styles.colorSwatch} style={buildColorSwatchStyle(option.color)} />
           )}
         {showIcon && option.icon !== undefined && option.icon !== null && option.icon !== '' && (
           <span className={option.icon} />

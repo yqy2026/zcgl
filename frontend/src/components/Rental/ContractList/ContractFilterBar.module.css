@@ -1,4 +1,6 @@
 .filterCard {
+  --contract-filter-action-min-width: calc(var(--spacing-xl) * 4);
+  --contract-filter-mobile-action-min-height: calc(var(--button-height-lg) + var(--spacing-xs));
   margin-bottom: var(--spacing-xl);
 }
 
@@ -12,17 +14,17 @@
 }
 
 .actionButton {
-  min-width: 96px;
+  min-width: var(--contract-filter-action-min-width);
 }
 
-@media (max-width: 992px) {
+@media (max-width: var(--breakpoint-md)) {
   .toolbarActions {
     justify-content: flex-start;
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: var(--breakpoint-sm)) {
   .actionButton {
-    min-height: 44px;
+    min-height: var(--contract-filter-mobile-action-min-height);
   }
 }

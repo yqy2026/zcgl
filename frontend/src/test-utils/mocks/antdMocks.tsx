@@ -336,32 +336,54 @@ export const MockTable = <T extends object>({
   dataSource,
   columns,
   loading,
-}: MockTableProps<T>) => (
-  <div data-testid="table" data-loading={loading}>
-    <table>
-      <thead>
-        <tr>
-          {columns?.map(col => (
-            <th key={col.dataIndex}>{col.title}</th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {dataSource?.map((record, index) => (
-          <tr key={index}>
+  rowKey,
+}: MockTableProps<T>) => {
+  const resolveRowKey = (record: T): string => {
+    if (typeof rowKey === 'function') {
+      return rowKey(record);
+    }
+    if (typeof rowKey === 'string') {
+      const value = (record as Record<string, unknown>)[rowKey];
+      if (typeof value === 'string' || typeof value === 'number') {
+        return String(value);
+      }
+    }
+
+    const recordId = (record as Record<string, unknown>).id;
+    if (typeof recordId === 'string' || typeof recordId === 'number') {
+      return String(recordId);
+    }
+
+    return JSON.stringify(record);
+  };
+
+  return (
+    <div data-testid="table" data-loading={loading}>
+      <table>
+        <thead>
+          <tr>
             {columns?.map(col => (
-              <td key={col.dataIndex}>
-                {col.render
-                  ? col.render((record as Record<string, unknown>)[col.dataIndex], record, index)
-                  : String((record as Record<string, unknown>)[col.dataIndex] ?? '')}
-              </td>
+              <th key={col.dataIndex}>{col.title}</th>
             ))}
           </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
-);
+        </thead>
+        <tbody>
+          {dataSource?.map((record, index) => (
+            <tr key={resolveRowKey(record)}>
+              {columns?.map(col => (
+                <td key={col.dataIndex}>
+                  {col.render
+                    ? col.render((record as Record<string, unknown>)[col.dataIndex], record, index)
+                    : String((record as Record<string, unknown>)[col.dataIndex] ?? '')}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
 
 // Message Mock
 export const mockMessage = {

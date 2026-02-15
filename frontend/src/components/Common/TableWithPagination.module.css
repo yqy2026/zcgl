@@ -8,13 +8,14 @@
     var(--table-pagination-control-size-mobile) - (var(--spacing-xs) / 2)
   );
   --table-pagination-input-min-width: calc(var(--spacing-xl) * 3);
+  --table-pagination-mobile-breakpoint: calc(var(--breakpoint-sm) - var(--border-width-thin));
   display: flex;
   flex-direction: column;
   gap: var(--spacing-md);
 }
 
 .tableRoot :global(.ant-table-container) {
-  border: 1px solid var(--table-border-color);
+  border: var(--border-width-thin) solid var(--table-border-color);
   border-radius: var(--radius-md);
   overflow: hidden;
 }
@@ -41,7 +42,7 @@
   align-items: center;
   justify-content: flex-end;
   padding: var(--spacing-sm) 0 0;
-  border-top: 1px solid var(--table-border-color);
+  border-top: var(--border-width-thin) solid var(--table-border-color);
 }
 
 .paginationNav {
@@ -74,13 +75,14 @@
 .paginationContainer :global(.ant-pagination-item:focus-visible),
 .paginationContainer :global(.ant-pagination-prev .ant-pagination-item-link:focus-visible),
 .paginationContainer :global(.ant-pagination-next .ant-pagination-item-link:focus-visible),
-.paginationContainer :global(.ant-pagination-options-size-changer .ant-select-selector:focus-visible),
+.paginationContainer
+  :global(.ant-pagination-options-size-changer .ant-select-selector:focus-visible),
 .paginationContainer :global(.ant-pagination-options-quick-jumper input:focus-visible) {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--color-primary);
+  outline-offset: var(--focus-ring-offset);
 }
 
-@media (max-width: 767px) {
+@media (max-width: var(--table-pagination-mobile-breakpoint)) {
   .tableRoot :global(.ant-table-thead > tr > th),
   .tableRoot :global(.ant-table-tbody > tr > td) {
     padding-top: var(--spacing-sm);

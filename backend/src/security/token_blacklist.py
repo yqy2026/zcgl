@@ -13,6 +13,7 @@ from typing import Any
 
 from ..core.cache_manager import RedisCache, cache_manager
 from ..core.config import settings
+from ..core.exception_handler import ConfigurationError
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,22 @@ class TokenBlacklistManager:
         self._last_cleanup = time.time()
         self._cache_namespace = "token_blacklist"
         self._use_cache = isinstance(cache_manager.backend, RedisCache)
+        self._environment = settings.ENVIRONMENT.lower()
+        self._require_distributed_storage = self._environment == "production"
+
+        if self._require_distributed_storage and not self._use_cache:
+            logger.critical(
+                "Production environment requires Redis-backed token blacklist; "
+                "current backend is in-memory and will be rejected at runtime."
+            )
+
+    def _enforce_storage_requirements(self) -> None:
+        if self._require_distributed_storage and not self._use_cache:
+            raise ConfigurationError(
+                "生产环境必须使用 Redis 持久化 token 黑名单",
+                config_key="REDIS_ENABLED",
+                details={"environment": self._environment},
+            )
 
     def _cache_key_token(self, jti: str) -> str:
         return f"token:{jti}"
@@ -37,6 +54,8 @@ class TokenBlacklistManager:
 
     def add_token(self, jti: str, expires_at: float | datetime) -> None:
         """添加令牌到黑名单"""
+        self._enforce_storage_requirements()
+
         # 统一转换为时间戳
         if isinstance(expires_at, datetime):
             expiry_timestamp = expires_at.timestamp()
@@ -67,6 +86,8 @@ class TokenBlacklistManager:
         self, jti: str | None = None, user_id: str | None = None
     ) -> bool:
         """检查令牌是否在黑名单中"""
+        self._enforce_storage_requirements()
+
         # 定期清理过期令牌
         self._cleanup_expired_tokens()
 
@@ -105,6 +126,7 @@ class TokenBlacklistManager:
 
     def remove_token(self, jti: str) -> None:
         """从黑名单中移除令牌"""
+        self._enforce_storage_requirements()
         self._blacklisted_tokens.discard(jti)
         self._blacklist_expiry.pop(jti, None)
         if self._use_cache:
@@ -121,6 +143,7 @@ class TokenBlacklistManager:
         self, user_id: str, token_patterns: list[str] | None = None
     ) -> None:
         """撤销用户的所有令牌"""
+        self._enforce_storage_requirements()
         current_time = time.time()
         # 设置较长的过期时间确保覆盖所有可能的令牌
         expiry_time = current_time + (settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 3600)

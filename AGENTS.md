@@ -26,8 +26,8 @@
 |------|--------|
 | 前端 | React 19.2 + TypeScript 5.9 + Vite 6 + Ant Design 6 + pnpm |
 | 后端 | FastAPI 0.104+ + Uvicorn 0.38+ + Python 3.12 + SQLAlchemy 2.0 + Pydantic v2 + Alembic |
-| 数据库 | PostgreSQL 16+（开发/测试/生产统一；SQLite已移除）|
-| 缓存 | Redis 7 |
+| 数据库 | PostgreSQL 18.2+（开发/测试/生产统一；SQLite已移除）|
+| 缓存 | Redis 8.6 |
 | 文档AI | Qwen-VL / GLM-4V / Hunyuan Vision / DeepSeek-VL |
 
 ---
@@ -233,7 +233,7 @@ route_registry.register_router(router, prefix="/api/v1", tags=["My Feature"], ve
 ## 前端开发要点
 
 ### 1. 严格布尔表达式（重要！）
-本项目启用 `@typescript-eslint/strict-boolean-expressions` 规则，必须使用显式空值检查：
+本项目将严格布尔表达式作为团队编码规范执行（`tsgo` + `oxlint` 组合与代码评审），必须使用显式空值检查：
 
 | 场景 | ❌ 错误 | ✅ 正确 |
 |------|--------|--------|
@@ -389,8 +389,9 @@ python -c "import secrets; print('SECRET_KEY=\"%s\"' % secrets.token_urlsafe(32)
 - **pytest**: 测试框架
 
 ### 前端
-- **ESLint**: TypeScript/React 代码检查
-- **Prettier**: 代码格式化
+- **Tsgo**: TypeScript 类型检查（native preview）
+- **Oxlint**: TypeScript/React 代码检查
+- **Oxfmt**: 代码格式化
 - **Vitest**: 测试框架
 - **stylelint**: CSS/SCSS 检查
 

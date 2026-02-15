@@ -305,91 +305,91 @@ const PropertyCertificateDetailPage: React.FC = () => {
       {certificate && (
         <Space direction="vertical" size="large" className={styles.fullWidthStack}>
           <Row gutter={[24, 24]}>
-          <Col span={24}>
-            <Card title="基础信息">
-              <Descriptions column={3} bordered>
-                <Descriptions.Item label="登记日期">
-                  {certificate.registration_date
-                    ? dayjs(certificate.registration_date).format('YYYY-MM-DD')
-                    : '-'}
-                </Descriptions.Item>
-                <Descriptions.Item label="坐落地址">
-                  {certificate.property_address ?? '-'}
-                </Descriptions.Item>
-                <Descriptions.Item label="物业类型">
-                  {certificate.property_type ?? '-'}
-                </Descriptions.Item>
-                <Descriptions.Item label="建筑面积">
-                  {certificate.building_area != null ? `${certificate.building_area}㎡` : '-'}
-                </Descriptions.Item>
-                <Descriptions.Item label="土地面积">
-                  {certificate.land_area != null ? `${certificate.land_area}㎡` : '-'}
-                </Descriptions.Item>
-                <Descriptions.Item label="楼层信息">
-                  {certificate.floor_info ?? '-'}
-                </Descriptions.Item>
-                <Descriptions.Item label="土地用途">
-                  {certificate.land_use_type ?? '-'}
-                </Descriptions.Item>
-                <Descriptions.Item label="土地使用期限">
-                  {certificate.land_use_term_start && certificate.land_use_term_end
-                    ? `${certificate.land_use_term_start} ~ ${certificate.land_use_term_end}`
-                    : '-'}
-                </Descriptions.Item>
-                <Descriptions.Item label="共有情况">
-                  {certificate.co_ownership ?? '-'}
-                </Descriptions.Item>
-                <Descriptions.Item label="权利限制">
-                  {certificate.restrictions ?? '-'}
-                </Descriptions.Item>
-                <Descriptions.Item label="备注">{certificate.remarks ?? '-'}</Descriptions.Item>
-                <Descriptions.Item label="来源">
-                  {certificate.extraction_source ?? '-'}
-                </Descriptions.Item>
-                <Descriptions.Item label="创建时间">
-                  {certificate.created_at
-                    ? dayjs(certificate.created_at).format('YYYY-MM-DD')
-                    : '-'}
-                </Descriptions.Item>
-                <Descriptions.Item label="更新时间">
-                  {certificate.updated_at
-                    ? dayjs(certificate.updated_at).format('YYYY-MM-DD')
-                    : '-'}
-                </Descriptions.Item>
-              </Descriptions>
-            </Card>
-          </Col>
+            <Col span={24}>
+              <Card title="基础信息">
+                <Descriptions column={3} bordered>
+                  <Descriptions.Item label="登记日期">
+                    {certificate.registration_date
+                      ? dayjs(certificate.registration_date).format('YYYY-MM-DD')
+                      : '-'}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="坐落地址">
+                    {certificate.property_address ?? '-'}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="物业类型">
+                    {certificate.property_type ?? '-'}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="建筑面积">
+                    {certificate.building_area != null ? `${certificate.building_area}㎡` : '-'}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="土地面积">
+                    {certificate.land_area != null ? `${certificate.land_area}㎡` : '-'}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="楼层信息">
+                    {certificate.floor_info ?? '-'}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="土地用途">
+                    {certificate.land_use_type ?? '-'}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="土地使用期限">
+                    {certificate.land_use_term_start && certificate.land_use_term_end
+                      ? `${certificate.land_use_term_start} ~ ${certificate.land_use_term_end}`
+                      : '-'}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="共有情况">
+                    {certificate.co_ownership ?? '-'}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="权利限制">
+                    {certificate.restrictions ?? '-'}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="备注">{certificate.remarks ?? '-'}</Descriptions.Item>
+                  <Descriptions.Item label="来源">
+                    {certificate.extraction_source ?? '-'}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="创建时间">
+                    {certificate.created_at
+                      ? dayjs(certificate.created_at).format('YYYY-MM-DD')
+                      : '-'}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="更新时间">
+                    {certificate.updated_at
+                      ? dayjs(certificate.updated_at).format('YYYY-MM-DD')
+                      : '-'}
+                  </Descriptions.Item>
+                </Descriptions>
+              </Card>
+            </Col>
 
-          <Col span={24}>
-            <Card title="权利人">
-              <Table<PropertyOwner>
-                columns={ownerColumns}
-                dataSource={certificate.owners ?? []}
-                rowKey="id"
-                pagination={false}
-              />
-            </Card>
-          </Col>
+            <Col span={24}>
+              <Card title="权利人">
+                <Table<PropertyOwner>
+                  columns={ownerColumns}
+                  dataSource={certificate.owners ?? []}
+                  rowKey="id"
+                  pagination={false}
+                />
+              </Card>
+            </Col>
 
-          <Col span={24}>
-            <Card title="关联资产">
-              {certificate.asset_ids && certificate.asset_ids.length > 0 ? (
-                <Space wrap>
-                  {certificate.asset_ids.map(aid => (
-                    <Button
-                      key={aid}
-                      icon={<HomeOutlined />}
-                      onClick={() => navigate(`/assets/${aid}`)}
-                    >
-                      资产 {aid}
-                    </Button>
-                  ))}
-                </Space>
-              ) : (
-                <Alert type="info" title="暂无关联资产" />
-              )}
-            </Card>
-          </Col>
+            <Col span={24}>
+              <Card title="关联资产">
+                {certificate.asset_ids && certificate.asset_ids.length > 0 ? (
+                  <Space wrap>
+                    {certificate.asset_ids.map(aid => (
+                      <Button
+                        key={aid}
+                        icon={<HomeOutlined />}
+                        onClick={() => navigate(`/assets/${aid}`)}
+                      >
+                        资产 {aid}
+                      </Button>
+                    ))}
+                  </Space>
+                ) : (
+                  <Alert type="info" title="暂无关联资产" />
+                )}
+              </Card>
+            </Col>
           </Row>
         </Space>
       )}

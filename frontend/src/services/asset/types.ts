@@ -278,12 +278,7 @@ export interface ExportOptions {
 
 // ==================== 搜索过滤器接口 ====================
 
-import type {
-  OwnershipStatus,
-  UsageStatus,
-  PropertyNature,
-  TenantType,
-} from '@/types/asset';
+import type { OwnershipStatus, UsageStatus, PropertyNature, TenantType } from '@/types/asset';
 
 /** 搜索过滤器接口 */
 export interface AssetSearchFilters {

@@ -10,6 +10,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Image, Skeleton } from 'antd';
 import styles from './LazyImage.module.css';
 
+const LAZY_LOAD_PRELOAD_OFFSET_PX = 50;
+const LAZY_LOAD_ROOT_MARGIN = `${LAZY_LOAD_PRELOAD_OFFSET_PX}px`;
+
 /**
  * Lazy image props
  */
@@ -97,7 +100,7 @@ export const LazyImage: React.FC<LazyImageProps> = ({
         }
       },
       {
-        rootMargin: '50px', // Start loading 50px before element comes into view
+        rootMargin: LAZY_LOAD_ROOT_MARGIN, // Start loading before element comes into view
         threshold: 0.01,
       }
     );
@@ -130,11 +133,7 @@ export const LazyImage: React.FC<LazyImageProps> = ({
         };
 
   return (
-    <div
-      ref={imgRef}
-      className={containerClassName}
-      style={containerStyle}
-    >
+    <div ref={imgRef} className={containerClassName} style={containerStyle}>
       {!isLoaded && <Skeleton.Image active className={styles.lazyImageSkeleton} />}
       <Image
         src={isInView ? src : undefined}
@@ -208,7 +207,9 @@ export const LazyBackgroundImage: React.FC<LazyBackgroundImageProps> = ({
       ? `${styles.lazyBackgroundContainer} ${className}`
       : styles.lazyBackgroundContainer;
   const backgroundStyle: React.CSSProperties = {
-    background: isLoaded ? `url(${src}) ${backgroundPosition} / ${backgroundSize} no-repeat` : fallback,
+    background: isLoaded
+      ? `url(${src}) ${backgroundPosition} / ${backgroundSize} no-repeat`
+      : fallback,
     ...style,
   };
 
@@ -226,7 +227,7 @@ export const LazyBackgroundImage: React.FC<LazyBackgroundImageProps> = ({
         }
       },
       {
-        rootMargin: '50px',
+        rootMargin: LAZY_LOAD_ROOT_MARGIN,
         threshold: 0.01,
       }
     );
@@ -253,11 +254,7 @@ export const LazyBackgroundImage: React.FC<LazyBackgroundImageProps> = ({
   }, [isInView, isLoaded, src]);
 
   return (
-    <div
-      ref={containerRef}
-      className={backgroundClassName}
-      style={backgroundStyle}
-    >
+    <div ref={containerRef} className={backgroundClassName} style={backgroundStyle}>
       {children}
     </div>
   );

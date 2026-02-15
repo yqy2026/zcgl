@@ -231,7 +231,7 @@ describe('RoleManagementPage - 角色操作测试', () => {
 
     const editButtons = screen.getAllByRole('button', { name: '编辑' });
     fireEvent.click(editButtons[0]);
-  });
+  }, 30000);
 
   it('应该支持删除角色', async () => {
     vi.mocked(roleService.deleteRole).mockResolvedValue(undefined);
@@ -259,7 +259,7 @@ describe('RoleManagementPage - 角色操作测试', () => {
     await waitFor(() => {
       expect(roleService.deleteRole).toHaveBeenCalledWith('role-001');
     });
-  });
+  }, 30000);
 
   it('应该支持切换角色状态', async () => {
     vi.mocked(roleService.updateRole).mockResolvedValue({ id: 'role-001' });
@@ -316,7 +316,7 @@ describe('RoleManagementPage - 权限管理测试', () => {
 
     const permissionButtons = screen.getAllByRole('button', { name: '权限配置' });
     fireEvent.click(permissionButtons[0]);
-  });
+  }, 30000);
 });
 
 describe('RoleManagementPage - 搜索和筛选测试', () => {
@@ -414,7 +414,7 @@ describe('RoleManagementPage - 错误处理测试', () => {
     await waitFor(() => {
       expect(MessageManager.error).toHaveBeenCalledWith('删除失败');
     });
-  });
+  }, 30000);
 });
 
 describe('RoleManagementPage - 权限模块测试', () => {

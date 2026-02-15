@@ -7,6 +7,32 @@ const HIGHLIGHT_MARK_STYLE: React.CSSProperties = {
   fontWeight: 'bold',
 };
 
+const toHighlightedParts = (
+  parts: string[],
+  exactMatchRegex: RegExp,
+  className: string
+): React.ReactNode[] => {
+  let offset = 0;
+
+  return parts.map(part => {
+    const partOffset = offset;
+    offset += part.length;
+
+    if (exactMatchRegex.test(part)) {
+      return React.createElement(
+        'mark',
+        {
+          key: `${partOffset}-${part}`,
+          className,
+          style: HIGHLIGHT_MARK_STYLE,
+        },
+        part
+      );
+    }
+    return part;
+  });
+};
+
 /**
  * 高亮搜索关键词
  */
@@ -29,20 +55,7 @@ export const highlightText = (
   // 分割文本
   const parts = text.split(splitRegex);
 
-  return parts.map((part, index) => {
-    if (exactMatchRegex.test(part)) {
-      return React.createElement(
-        'mark',
-        {
-          key: index,
-          className,
-          style: HIGHLIGHT_MARK_STYLE,
-        },
-        part
-      );
-    }
-    return part;
-  });
+  return toHighlightedParts(parts, exactMatchRegex, className);
 };
 
 /**
@@ -73,20 +86,7 @@ export const highlightMultipleTerms = (
   // 分割文本
   const parts = text.split(splitRegex);
 
-  return parts.map((part, index) => {
-    if (exactMatchRegex.test(part)) {
-      return React.createElement(
-        'mark',
-        {
-          key: index,
-          className,
-          style: HIGHLIGHT_MARK_STYLE,
-        },
-        part
-      );
-    }
-    return part;
-  });
+  return toHighlightedParts(parts, exactMatchRegex, className);
 };
 
 /**

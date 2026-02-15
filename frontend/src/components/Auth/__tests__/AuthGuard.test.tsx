@@ -20,10 +20,17 @@ import { fireEvent, render, screen } from '@testing-library/react';
 
 import AuthGuard from '../AuthGuard';
 import { useAuth } from '@/hooks/useAuth';
+import type { AuthContextType } from '@/contexts/AuthContext';
+
+interface NavigateMockProps {
+  to: string;
+  state?: unknown;
+  replace?: boolean;
+}
 
 // Mock react-router-dom
 vi.mock('react-router-dom', () => ({
-  Navigate: ({ to, state, replace }: any) => (
+  Navigate: ({ to, state, replace }: NavigateMockProps) => (
     <div
       data-testid="navigate"
       data-to={to}
@@ -47,16 +54,31 @@ vi.mock('@/hooks/useAuth', () => ({
 
 const mockHistoryBack = vi.fn();
 
-const renderAuthGuard = (props: any = {}, authState: any = {}) => {
-  const defaultAuthState = {
+const renderAuthGuard = (
+  props: Partial<React.ComponentProps<typeof AuthGuard>> = {},
+  authState: Partial<AuthContextType> = {}
+) => {
+  const defaultAuthState: AuthContextType = {
+    user: { id: '1', username: 'test', is_active: true } as AuthContextType['user'],
+    permissions: [],
     isAuthenticated: true,
+    login: vi.fn(async () => {}),
+    logout: vi.fn(async () => {}),
+    refreshUser: vi.fn(async () => {}),
     hasPermission: vi.fn(() => true),
     hasAnyPermission: vi.fn(() => true),
-    user: { id: '1', username: 'test', is_active: true },
+    clearError: vi.fn(),
+    loading: false,
+    error: null,
     ...authState,
   };
   vi.mocked(useAuth).mockReturnValue(defaultAuthState);
-  return render(<AuthGuard {...props} />);
+
+  const resolvedProps: React.ComponentProps<typeof AuthGuard> = {
+    children: null,
+    ...props,
+  };
+  return render(<AuthGuard {...resolvedProps} />);
 };
 
 describe('AuthGuard', () => {

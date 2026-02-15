@@ -51,13 +51,16 @@ const PageContainer: React.FC<PageContainerProps> = ({
     <div className={pageClassName} style={contentStyle}>
       <div className={styles.headerSection}>
         {/* Breadcrumb */}
-        <div className={styles.breadcrumbSection}>
-          {breadcrumb ?? <AppBreadcrumb />}
-        </div>
+        <div className={styles.breadcrumbSection}>{breadcrumb ?? <AppBreadcrumb />}</div>
 
         {/* Header */}
         {hasHeader && (
-          <Row justify="space-between" align="middle" gutter={[16, 16]} className={styles.headerRow}>
+          <Row
+            justify="space-between"
+            align="middle"
+            gutter={[16, 16]}
+            className={styles.headerRow}
+          >
             <Col flex="auto">
               <Space align="center" size={16} className={styles.headerTitleGroup}>
                 {hasBackAction && (

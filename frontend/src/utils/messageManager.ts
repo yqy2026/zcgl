@@ -30,7 +30,6 @@ class MessageManagerClass {
     if (!this.isInitialized || !this.messageInstance) {
       // 在开发环境下记录详细错误
       if (isDevelopmentMode()) {
-        // eslint-disable-next-line no-console
         console.error(
           `[MessageManager] 未初始化 - 调用了 ${methodName}()。` +
             '请在 App 组件中使用 MessageManager.init(App.useApp().message) 初始化。' +

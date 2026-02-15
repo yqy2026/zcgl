@@ -65,7 +65,7 @@
   margin: 0;
 }
 
-@media (max-width: 768px) {
+@media (max-width: var(--breakpoint-sm)) {
   .helpModal :global(.ant-modal) {
     top: var(--spacing-md);
     max-width: calc(100vw - var(--spacing-xl));

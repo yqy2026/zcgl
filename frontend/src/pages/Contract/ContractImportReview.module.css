@@ -1,7 +1,9 @@
 .reviewContainer {
   --import-review-section-gap: var(--spacing-lg);
   --import-review-footer-gap: var(--spacing-xl);
-  --import-review-evidence-max-width: 420px;
+  --import-review-evidence-max-width: calc(
+    (var(--button-height-lg) * 10) + var(--spacing-md) + var(--spacing-sm)
+  );
   --import-review-evidence-row-gap: var(--spacing-xs);
   --import-review-evidence-block-gap: var(--spacing-sm);
   --import-review-match-tag-offset: var(--spacing-sm);
@@ -88,7 +90,7 @@
   margin-top: var(--import-review-footer-gap);
 }
 
-@media (max-width: 576px) {
+@media (max-width: var(--breakpoint-xs)) {
   .actionSpace {
     width: 100%;
     justify-content: center;

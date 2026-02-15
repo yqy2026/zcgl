@@ -1,7 +1,9 @@
 .errorPage {
   --error-page-padding-y: calc(var(--spacing-xxxl) + (var(--spacing-xs) / 2));
   --error-page-padding-x: calc(var(--spacing-lg) + var(--spacing-xs));
-  --error-page-card-max-width: calc((var(--spacing-xxl) * 15) + var(--spacing-lg) + var(--spacing-xs));
+  --error-page-card-max-width: calc(
+    (var(--spacing-xxl) * 15) + var(--spacing-lg) + var(--spacing-xs)
+  );
   --error-page-icon-size: calc(var(--spacing-xxxl) + var(--spacing-sm));
   --error-page-suggestions-gap: var(--spacing-lg);
   --error-page-suggestion-title-gap: var(--spacing-sm);
@@ -68,11 +70,11 @@
 }
 
 .actionButtons :global(.ant-btn:focus-visible) {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--color-primary);
+  outline-offset: var(--focus-ring-offset);
 }
 
-@media (max-width: 576px) {
+@media (max-width: var(--breakpoint-xs)) {
   .errorPage {
     padding: var(--spacing-xxl) var(--spacing-lg);
   }

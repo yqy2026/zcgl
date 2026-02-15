@@ -20,11 +20,7 @@ const AssetAreaSection: React.FC = () => {
     <Card title="面积信息" className={styles.sectionCard}>
       <Row gutter={16}>
         <Col span={8}>
-          <Form.Item
-            label="土地面积(㎡)"
-            name="land_area"
-            htmlFor={landAreaIds.inputId}
-          >
+          <Form.Item label="土地面积(㎡)" name="land_area" htmlFor={landAreaIds.inputId}>
             <InputNumber
               id={landAreaIds.inputId}
               placeholder="请输入土地面积"
@@ -68,11 +64,7 @@ const AssetAreaSection: React.FC = () => {
 
       <Row gutter={16}>
         <Col span={8}>
-          <Form.Item
-            label="可出租面积(㎡)"
-            name="rentable_area"
-            htmlFor={rentableAreaIds.inputId}
-          >
+          <Form.Item label="可出租面积(㎡)" name="rentable_area" htmlFor={rentableAreaIds.inputId}>
             <InputNumber
               id={rentableAreaIds.inputId}
               placeholder="请输入可出租面积"
@@ -83,11 +75,7 @@ const AssetAreaSection: React.FC = () => {
           </Form.Item>
         </Col>
         <Col span={8}>
-          <Form.Item
-            label="已出租面积(㎡)"
-            name="rented_area"
-            htmlFor={rentedAreaIds.inputId}
-          >
+          <Form.Item label="已出租面积(㎡)" name="rented_area" htmlFor={rentedAreaIds.inputId}>
             <InputNumber
               id={rentedAreaIds.inputId}
               placeholder="请输入已出租面积"
@@ -98,11 +86,7 @@ const AssetAreaSection: React.FC = () => {
           </Form.Item>
         </Col>
         <Col span={8}>
-          <Form.Item
-            label="未出租面积(㎡)"
-            name="unrented_area"
-            htmlFor={unrentedAreaIds.inputId}
-          >
+          <Form.Item label="未出租面积(㎡)" name="unrented_area" htmlFor={unrentedAreaIds.inputId}>
             <InputNumber
               id={unrentedAreaIds.inputId}
               placeholder="自动计算"

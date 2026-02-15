@@ -33,7 +33,9 @@ const renderCrumbLink = (to: string, label: React.ReactNode) => (
   </Link>
 );
 
-const renderCrumbLabel = (label: React.ReactNode) => <span className={styles.currentLabel}>{label}</span>;
+const renderCrumbLabel = (label: React.ReactNode) => (
+  <span className={styles.currentLabel}>{label}</span>
+);
 
 const AppBreadcrumb: React.FC<AppBreadcrumbProps> = ({ customItems }) => {
   const location = useLocation();
@@ -54,7 +56,7 @@ const AppBreadcrumb: React.FC<AppBreadcrumbProps> = ({ customItems }) => {
 
     // If custom items are provided, use them
     if (customItems && customItems.length > 0) {
-      customItems.forEach((item) => {
+      customItems.forEach(item => {
         items.push({
           title: item.link ? renderCrumbLink(item.link, item.title) : renderCrumbLabel(item.title),
         });
@@ -63,7 +65,7 @@ const AppBreadcrumb: React.FC<AppBreadcrumbProps> = ({ customItems }) => {
     }
 
     // Otherwise generate from path
-    const pathSnippets = pathname.split('/').filter((i) => i);
+    const pathSnippets = pathname.split('/').filter(i => i);
 
     pathSnippets.forEach((_, index) => {
       const url = `/${pathSnippets.slice(0, index + 1).join('/')}`;
