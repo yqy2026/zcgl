@@ -327,24 +327,29 @@ jobs:
         cd frontend
         pnpm install --frozen-lockfile
 
-    - name: Run ESLint
+    - name: Run Oxlint
       run: |
         cd frontend
-        npm run lint -- --max-warnings=0
-        # REMOVED || true and added --max-warnings=0 for zero tolerance
+        pnpm lint
 
-    - name: Run Prettier check
+    - name: Export frontend lint/guard reports (blocking)
       run: |
         cd frontend
-        npm run format:check
-        # REMOVED || true
+        mkdir -p ../reports/frontend
+        pnpm exec oxlint --config .oxlintrc.json --disable-unicorn-plugin --react-plugin --import-plugin --jsx-a11y-plugin -f json src > ../reports/frontend/oxlint-report.json
+        pnpm guard:ui:ci
 
-    - name: Run TypeScript check
+    - name: Run Oxfmt check
+      run: |
+        cd frontend
+        pnpm format:check
+
+    - name: Run TypeScript check (Tsgo)
       run: |
         cd frontend
         pnpm type-check
 
-    - name: Run E2E TypeScript check
+    - name: Run E2E TypeScript check (Tsgo)
       run: |
         cd frontend
         pnpm type-check:e2e
@@ -352,7 +357,18 @@ jobs:
     - name: Run type coverage check
       run: |
         cd frontend
-        npm run type-coverage:check || true  # Non-blocking for now
+        pnpm type-coverage:check || true  # Non-blocking for now
+
+    - name: Upload frontend lint reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: frontend-lint-reports
+        path: |
+          reports/frontend/oxlint-report.json
+          reports/frontend/style-px-report.json
+          reports/frontend/token-sync-report.json
+        retention-days: 30
 
   # ===========================
   # Frontend Tests
@@ -995,7 +1011,8 @@ jobs:
         echo "- **Incremental mode active** when below thresholds (70% / 50%)" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "## 🔧 Quality Checks" >> $GITHUB_STEP_SUMMARY
-        echo "- ✅ All lint checks **blocking** (Ruff, ESLint, MyPy)" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ All lint checks **blocking** (Ruff, Oxlint, MyPy)" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Frontend UI guards **blocking** (guard:ui = scan:lint-disable + scan:px:all-strict + verify:token-sync)" >> $GITHUB_STEP_SUMMARY
         echo "- ✅ Security checks **blocking** (Bandit)" >> $GITHUB_STEP_SUMMARY
         echo "- ✅ API consistency **blocking** (critical issues)" >> $GITHUB_STEP_SUMMARY
         echo "- ✅ Zero tolerance for new issues" >> $GITHUB_STEP_SUMMARY

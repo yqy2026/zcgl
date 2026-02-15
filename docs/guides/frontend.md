@@ -103,9 +103,11 @@ pnpm dev
 pnpm dev              # 启动开发服务器 (端口 5173)
 
 # 代码质量
-pnpm type-check       # TypeScript 类型检查
-pnpm lint            # ESLint 代码检查
-pnpm lint:fix        # 自动修复 ESLint 问题
+pnpm type-check       # TypeScript 类型检查（tsgo）
+pnpm lint             # Oxlint 代码检查
+pnpm lint:fix         # 自动修复 Oxlint 问题
+pnpm format           # Oxfmt 自动格式化
+pnpm format:check     # Oxfmt 格式检查
 
 # 测试
 pnpm test            # 运行所有测试
@@ -580,14 +582,14 @@ const appTheme = {
 // ComponentName.module.css
 .container {
   display: flex;
-  gap: 16px;
-  padding: 24px;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-xl);
 }
 
 .title {
-  font-size: 20px;
-  font-weight: 600;
-  color: #1890ff;
+  font-size: var(--font-size-xxl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-primary);
 }
 
 // ComponentName.tsx
@@ -601,6 +603,26 @@ export const ComponentName = () => {
   );
 };
 ```
+
+### 样式令牌与门禁约束（2026-02）
+
+- token 源（`frontend/src/styles/variables.css`、`frontend/src/theme/sharedTokens.ts`）统一使用 `rem` 尺寸单位。
+- 非 token 源文件（页面/组件/服务模板等）禁止新增硬编码 `px`。
+- 样式扫描命令：
+  - 基线扫描：`pnpm scan:px`
+  - 严格扫描（模块 + 非 token）：`pnpm scan:px:strict`
+  - 全量严格扫描（含 token 源）：`pnpm scan:px:all-strict`
+- token 一致性校验命令：
+  - `pnpm verify:token-sync`（校验 `variables.css` 与 `theme/sharedTokens.ts` 的 `spacing/fontSize/borderRadius` 对齐）
+- 门禁聚合命令：`pnpm guard:ui`（执行 `scan:lint-disable + scan:px:all-strict + verify:token-sync`）。
+- 质量门禁已接入：`pnpm audit:ui` / `pnpm audit:full` / `pnpm audit:full:coverage` 默认执行 `guard:ui`。
+- 本地常用校验：`pnpm check` 已包含 `lint + guard:ui + type-check + format:check`。
+- 报告导出（可选）：
+  - `pnpm guard:ui:ci`（阻塞校验并同时导出报告，CI 推荐）
+  - `pnpm guard:ui:report`（仅导出报告，不启用严格阻塞参数）
+  - `pnpm scan:px:report`
+  - `pnpm verify:token-sync:report`
+  - `make scan-frontend-report`（在仓库根目录执行严格校验并导出同路径报告）
 
 ---
 
@@ -653,16 +675,16 @@ describe('AssetForm', () => {
 
 ```bash
 # 运行所有测试
-npm test
+pnpm test
 
 # 监听模式
-npm run test:watch
+pnpm test:watch
 
 # 生成覆盖率报告
-npm run test:coverage
+pnpm test:coverage
 
 # 运行特定测试文件
-npm test -- AssetForm.test.tsx
+pnpm test -- AssetForm.test.tsx
 ```
 
 **证据来源**: `frontend/package.json.scripts`
@@ -802,7 +824,7 @@ netstat -ano | findstr :5173  # Windows
 # 检查 tsconfig.json paths 配置
 # 确保路径别名正确
 # 运行类型检查
-npm run type-check
+pnpm type-check
 ```
 
 ### Q3: 代理错误
@@ -821,18 +843,18 @@ server: {
 ```
 
 ### Q4: 构建失败
-**问题**: `npm run build` 失败
+**问题**: `pnpm build` 失败
 **解决**:
 ```bash
 # 清理缓存
 rm -rf node_modules dist
-npm install
+pnpm install
 
 # 检查类型错误
-npm run type-check
+pnpm type-check
 
-# 检查 ESLint
-npm run lint
+# 检查 Oxlint
+pnpm lint
 ```
 
 ---
@@ -841,7 +863,7 @@ npm run lint
 
 ### 开发前
 - [ ] 已拉取最新代码
-- [ ] 已安装依赖 (`npm install`)
+- [ ] 已安装依赖 (`pnpm install`)
 - [ ] 已配置环境变量
 - [ ] 后端服务运行中
 
@@ -853,7 +875,7 @@ npm run lint
 - [ ] 性能考虑（懒加载、缓存）
 
 ### 提交前
-- [ ] 代码通过 ESLint 检查
+- [ ] 代码通过 Oxlint 检查
 - [ ] 类型检查无错误
 - [ ] 添加或更新测试
 - [ ] 更新相关文档

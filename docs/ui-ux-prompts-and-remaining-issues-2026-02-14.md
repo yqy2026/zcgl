@@ -28,50 +28,59 @@ P2: 次级文本和微间距（2/4/6/8px）。
 
 ---
 
-## 2) 当前剩余问题概览（基于代码扫描）
+## 2) 当前剩余问题概览（基于代码扫描，更新于 2026-02-15）
 
-- 扫描范围：`frontend/src/**/*.module.css`
-- 硬编码 `px` 命中总数：`343`
-- 涉及文件数：`76`
+- 扫描范围 A：`frontend/src/**/*.module.css`
+- 硬编码 `px` 命中总数：`0`
+- 涉及文件数：`0`
 
-### 高优先级剩余文件（按命中数）
+- 扫描范围 B：`frontend/src/**`（排除 `*.module.css`）
+- 非 token 源文件中的硬编码 `px` 命中总数：`0`
+- 已知保留 `px` 的文件：`无`
+- token 源文件中的硬编码 `px` 命中总数：`0`
 
-1. `frontend/src/pages/Assets/AssetAnalyticsPage.module.css`（24）
-2. `frontend/src/components/Layout/Layout.module.css`（16）
-3. `frontend/src/components/Loading/SkeletonLoader.module.css`（15）
-4. `frontend/src/components/Notification/NotificationCenter.module.css`（14）
-5. `frontend/src/pages/System/RoleManagementPage.module.css`（11）
-6. `frontend/src/components/Analytics/Filters/Filters.module.css`（11）
-7. `frontend/src/pages/System/TemplateManagementPage.module.css`（9）
-8. `frontend/src/pages/LoginPage.module.css`（9）
-9. `frontend/src/pages/System/PromptListPage.module.css`（8）
-10. `frontend/src/pages/System/UserManagementPage.module.css`（7）
-11. `frontend/src/components/Ownership/OwnershipList.module.css`（7）
-12. `frontend/src/components/Common/ResponsiveTable.module.css`（7）
+### 当前高优先级剩余文件（策略决策项）
+
+1. `frontend/src/styles/variables.css`（已切换 `rem`，需固化令牌单位规范）
+2. `frontend/src/theme/sharedTokens.ts`（已切换 `rem`，需保持与样式 token 同步）
+3. `frontend/scripts/scan-style-px.config.json`（持续维护 token 源白名单）
 
 ---
 
 ## 3) 剩余问题类型（建议优先处理）
 
-- **触控目标不统一**：仍有 `32/36/40/44px` 混用，移动端优先统一到按钮高度令牌。
-- **状态标签与辅助文案不统一**：`12px + 18px` 组合仍在多处重复，需继续令牌化。
-- **微间距硬编码残留**：`2/4/6/8px` 在导航、过滤器、列表项中分散存在。
-- **卡片与布局节奏漂移**：部分页面仍保留固定高度/最小宽度表达，影响跨页面密度一致性。
+- **令牌单位治理需要固化**：当前 token 源已统一 `rem`，下一步需文档化并避免回退。
+- **主题 token 仍有多入口维护成本**：`variables.css` 与 `theme/*` 仍分层存在，需持续校准。
+- **回归重点转为门禁稳定性**：保持扫描与审计链路一致，防止新增硬编码回流。
 
 ---
 
 ## 4) 建议的下一批执行顺序
 
-1. `AssetAnalyticsPage` + `Layout`（全局骨架与分析页）
-2. `SkeletonLoader` + `NotificationCenter`（高可见反馈区）
-3. `RoleManagementPage` + `Filters`（系统页高频交互区）
-4. `PromptListPage` + `UserManagementPage` + `ResponsiveTable`（列表密集区）
+1. 固化 “token 源统一使用 `rem`” 规范并补充到开发文档
+2. 将扫描脚本升级为可选“全量零 `px`”模式，用于阶段性验收
+3. 持续在 `audit:*` 链路保留像素门禁，避免回归
+4. 继续跟踪主题 token 复用，减少跨文件重复定义
+
+补充：扫描规则已配置化，token 源列表由 `frontend/scripts/scan-style-px.config.json` 维护。
 
 ---
 
 ## 5) 当前回归基线（最近一次）
 
-- `pnpm lint`：通过
-- `pnpm type-check`：通过
-- `pnpm vitest`：`1934/1934` 通过（`/tmp/vitest-ui-round581.json`）
-
+- `pnpm lint`：通过（`oxlint` 0 warning / 0 error）
+- `pnpm type-check`：通过（`tsgo --noEmit`）
+- `pnpm vitest`：定向通过（`OccupancyRateChart` + `LoadingSpinner`，`12/12`）
+- `pnpm scan:px:all-strict`：通过（`module-style / non-token-source / token-source px = 0`）
+- `pnpm verify:token-sync`：通过（`variables.css` 与 `theme/sharedTokens.ts` 尺度令牌一致）
+- `pnpm guard:ui`：通过（聚合执行 `scan:lint-disable + scan:px:all-strict + verify:token-sync`）
+- `pnpm guard:ui:report`：通过（仅导出 `style-px-report.json` + `token-sync-report.json`）
+- `pnpm guard:ui:ci`：通过（阻塞校验并导出报告，供 CI 使用）
+- `make scan-frontend-report`：通过（仓库根目录执行严格门禁并导出前端报告）
+- 审计链路已接入：`audit:ui / audit:full / audit:full:coverage` 包含 `guard:ui`
+- CI 链路已接入：`.github/workflows/ci.yml` 的 `frontend-lint` 作业执行 `guard:ui:ci`
+- CI 报告产物：`frontend-lint-reports` 附带 `style-px-report.json` 与 `token-sync-report.json`
+- 本地 `pnpm check` 已接入：默认执行 `guard:ui`
+- `frontend/src/**/*.module.css`：`px` 命中 `0`
+- 非 token 源文件（排除 `variables.css`、`theme/sharedTokens.ts`）：`px` 命中 `0`
+- token 源文件（`variables.css`、`theme/sharedTokens.ts`）：`px` 命中 `0`

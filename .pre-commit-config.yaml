@@ -121,6 +121,15 @@ repos:
         pass_filenames: false
         # Phase 2: 重复度 >5% 时警告，但允许提交
 
+      # 前端 UI 门禁（阻塞模式）
+      - id: frontend-ui-guard
+        name: frontend-ui-guard
+        description: "运行前端样式/令牌门禁 (guard:ui)"
+        entry: bash -lc 'cd frontend && corepack pnpm guard:ui'
+        language: system
+        pass_filenames: false
+        files: ^frontend/(src/|scripts/|package\.json|pnpm-lock\.yaml|src/styles/variables\.css|src/theme/sharedTokens\.ts)
+
 # =============================================================================
 # CI 配置
 # =============================================================================

@@ -111,8 +111,8 @@ frontend/
 
 ### 前置要求
 
-- Node.js >= 18.0.0
-- npm >= 8.0.0
+- Node.js >= 20.0.0
+- pnpm >= 10.0.0
 
 ### 安装依赖
 
@@ -132,7 +132,7 @@ pnpm dev
 ### 构建生产版本
 
 ```bash
-npm run build
+pnpm build
 ```
 
 ### 预览生产版本
@@ -140,6 +140,28 @@ npm run build
 ```bash
 pnpm preview
 ```
+
+## 质量门禁与报告
+
+前端样式/令牌门禁采用聚合命令 `guard:ui`：
+
+```bash
+# 在 frontend 目录执行
+pnpm guard:ui              # 阻塞校验（lint-disable + px + token sync）
+pnpm guard:ui:report       # 导出样式/token JSON 报告（非严格模式）
+pnpm guard:ui:ci           # 阻塞校验并导出 JSON 报告（CI 同款）
+pnpm check                 # 本地常用完整检查（lint + guard + type-check + format）
+pnpm test:style-guards     # 仅运行门禁脚本回归测试
+```
+
+在仓库根目录可执行：
+
+```bash
+make scan-frontend         # 等价于 frontend/pnpm guard:ui
+make scan-frontend-report  # 严格校验并导出 reports/frontend/*.json
+```
+
+`pre-commit` 已配置 `frontend-ui-guard` 本地 hook，在提交前对前端门禁做阻塞校验。
 
 ## 配置说明
 
@@ -286,7 +308,7 @@ server: {
 
 ### 代码规范
 
-- 使用 ESLint 进行代码检查
+- 使用 Oxlint 进行代码检查
 - 使用 TypeScript 严格模式
 - 组件使用函数式组件 + Hooks
 - 遵循 React 最佳实践
@@ -336,7 +358,7 @@ pnpm test
 ### 端到端测试
 
 ```bash
-pnpm test:e2e
+pnpm e2e
 ```
 
 ## 部署
@@ -344,7 +366,7 @@ pnpm test:e2e
 ### 构建生产版本
 
 ```bash
-npm run build
+pnpm build
 ```
 
 ### 部署到静态服务器
@@ -390,7 +412,7 @@ CMD ["nginx", "-g", "daemon off;"]
 - Ant Design 6组件库
 - Vite 6构建工具
 - 遵循组件化开发模式
-- 使用ESLint和Prettier进行代码检查和格式化
+- 使用Oxlint和Oxfmt进行代码检查和格式化
 - 实现单元测试和端到端测试
 
 ## 系统访问
