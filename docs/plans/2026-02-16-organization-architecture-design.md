@@ -114,7 +114,8 @@ CREATE TABLE assets (
     address VARCHAR(500) NOT NULL,
     -- ... 其他现有字段 ...
     
-    -- 保留字段
+    -- 保留字段（用于默认租户隔离）
+    organization_id VARCHAR(36) REFERENCES organizations(id),
     ownership_id VARCHAR(36) REFERENCES ownerships(id),
     
     -- 新增字段
@@ -124,8 +125,7 @@ CREATE TABLE assets (
     management_agreement TEXT,
     
     -- 删除字段
-    -- organization_id (删除)
-    -- management_entity (删除)
+    -- management_entity (删除，改用 manager_id)
     
     -- 系统字段
     data_status VARCHAR(20) DEFAULT '正常',
@@ -138,11 +138,12 @@ CREATE TABLE assets (
 
 | 变更类型 | 字段 | 说明 |
 |---------|------|------|
+| **保留** | `organization_id` | 数据归属组织，用于默认租户隔离 |
+| **保留** | `ownership_id` | 产权方关联 |
 | 新增 | `manager_id` | 经营方 FK，替代字符串字段 |
 | 新增 | `management_start_date` | 经营管理开始日期 |
 | 新增 | `management_end_date` | 经营管理结束日期 |
 | 新增 | `management_agreement` | 经营管理协议文件 |
-| 删除 | `organization_id` | 含义不清晰，移除 |
 | 删除 | `management_entity` | 改用 `manager_id` FK |
 
 ---
@@ -163,12 +164,13 @@ CREATE TABLE assets (
 │  └────────┬─────────┘                    └────────┬─────────┘           │
 │           │                                       │                      │
 │           │ manager_id                            │ ownership_id         │
-│           │                                       │                      │
+│           │ organization_id                       │                      │
 │           ▼                                       ▼                      │
 │  ┌─────────────────────────────────────────────────────────────┐        │
 │  │                          Asset                               │        │
 │  │                        (资产)                                 │        │
 │  │                                                              │        │
+│  │  organization_id ────────▶ 数据归属组织（默认隔离）          │        │
 │  │  ownership_id ──────────▶ 产权方                             │        │
 │  │  manager_id ────────────▶ 经营方                             │        │
 │  │                                                              │        │
@@ -179,8 +181,10 @@ CREATE TABLE assets (
 
 **关联说明**：
 - `Ownership.organization_id` → `Organization.id`（单向）
-- 内部产权方通过此字段关联到组织
-- 查询组织的产权方：`Ownership.query.filter_by(organization_id=org_id, is_internal=True)`
+- `Asset.organization_id` → `Organization.id`（数据归属，用于默认租户隔离）
+- `Asset.manager_id` → `Organization.id`（经营方）
+- `Asset.ownership_id` → `Ownership.id`（产权方）
+- 内部产权方查询：`Ownership.query.filter_by(organization_id=org_id, is_internal=True)`
 ```
 
 ---
@@ -198,32 +202,83 @@ CREATE TABLE assets (
 ### 5.2 数据权限规则
 
 ```
-规则1：集团用户 → 看到所有数据
-IF user.organization.type == '集团'
+规则1：检查跨组织权限（角色权限突破）
+IF user.has_permission("cross_organization_access")
+THEN 返回所有数据（无组织过滤）
+
+规则2：集团用户（默认全可见）
+IF user.organization.type == '集团' AND 无跨组织权限限制
 THEN 可以访问所有资产
 
-规则2：公司用户 → 看到相关数据
+规则3：公司用户（默认组织隔离）
 IF user.organization.type == '公司'
 THEN 可以访问满足以下任一条件的资产：
-     • asset.ownership.organization_id == user.org_id (用户公司是产权方)
+     • asset.organization_id == user.org_id (数据归属组织)
      • asset.manager_id == user.org_id (用户公司是经营方)
+     • asset.ownership.organization_id == user.org_id (用户公司是产权方)
 ```
+
+**权限设计说明**：
+
+| 权限类型 | 说明 | 应用场景 |
+|---------|------|---------|
+| 默认隔离 | 基于 `organization_id` 过滤 | 普通用户，只能看本组织数据 |
+| 经营方关联 | 基于 `manager_id` 扩展 | 用户公司作为经营方时可查看 |
+| 产权方关联 | 基于 `ownership.organization_id` 扩展 | 用户公司作为产权方时可查看 |
+| 跨组织权限 | 角色权限突破，无过滤 | 管理员、审计员等需要全局视角 |
 
 ### 5.3 权限查询示例
 
 ```python
-def get_visible_assets(user):
-    """获取用户可见的资产列表"""
+def get_visible_assets(user, db):
+    """获取用户可见的资产列表（支持跨组织权限）"""
+    
+    # 1. 检查是否有跨组织权限
+    if user.has_permission("cross_organization_access"):
+        return Asset.query.all()  # 无过滤，查看全部
+    
+    # 2. 集团用户默认全可见
     if user.organization.type == "集团":
         return Asset.query.all()
-    else:
-        org_id = user.organization_id
-        return Asset.query.filter(
-            or_(
-                Asset.ownership.has(organization_id=org_id),  # 作为产权方
-                Asset.manager_id == org_id                     # 作为经营方
+    
+    # 3. 公司用户：基于组织过滤（三种路径）
+    org_id = user.organization_id
+    return Asset.query.filter(
+        or_(
+            Asset.organization_id == org_id,           # 数据归属组织
+            Asset.manager_id == org_id,                # 作为经营方
+            Asset.ownership.has(organization_id=org_id) # 作为产权方
+        )
+    ).all()
+```
+
+### 5.4 QueryBuilder 租户过滤适配
+
+修改 `QueryBuilder._apply_tenant_filter()` 支持新的权限模型：
+
+```python
+def _apply_tenant_filter(self, query, tenant_filter, user=None):
+    """增强的租户过滤：支持跨组织权限和多路径过滤"""
+    
+    # 1. 检查跨组织权限
+    if user and user.has_permission("cross_organization_access"):
+        return query  # 无过滤
+    
+    # 2. 保留原有 organization_id 过滤逻辑
+    if hasattr(self.model, "organization_id"):
+        org_ids = tenant_filter.organization_ids
+        condition = self.model.organization_id.in_(org_ids)
+        
+        # 3. 如果有 manager_id，扩展过滤条件
+        if hasattr(self.model, "manager_id"):
+            condition = or_(
+                condition,
+                self.model.manager_id.in_(org_ids)
             )
-        ).all()
+        
+        return query.where(condition)
+    
+    return query
 ```
 
 ---
@@ -280,7 +335,7 @@ VALUES
 |-----|---------|
 | `backend/src/models/organization.py` | 新增 `can_manage_assets` |
 | `backend/src/models/ownership.py` | 新增 `is_internal`, `organization_id` 及外部产权方字段 |
-| `backend/src/models/asset.py` | 新增 `manager_id`，删除 `organization_id`, `management_entity` |
+| `backend/src/models/asset.py` | 新增 `manager_id`，删除 `management_entity`，保留 `organization_id` |
 | `backend/src/models/project.py` | 类似资产表的修改 |
 | `backend/src/schemas/*.py` | 相应 Schema 更新 |
 | `backend/src/crud/*.py` | CRUD 逻辑更新 |
@@ -328,6 +383,7 @@ erDiagram
     Ownership ||--o| Organization : "organization_id (单向)"
     Ownership ||--o{ Asset : "ownership_id"
     Organization ||--o{ Asset : "manager_id"
+    Organization ||--o{ Asset : "organization_id (数据归属)"
     
     Organization {
         string id PK
@@ -357,6 +413,7 @@ erDiagram
         string id PK
         string property_name
         string address
+        string organization_id FK
         string ownership_id FK
         string manager_id FK
         date management_start_date
