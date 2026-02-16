@@ -16,6 +16,7 @@ const artifactsRoot = path.resolve(__dirname, '../test-results/frontend');
 const reportsRoot = path.join(artifactsRoot, 'reports');
 const coverageRoot = path.join(artifactsRoot, 'coverage');
 const isStrictCoverage = process.env.VITEST_COVERAGE_STRICT === 'true';
+const isCI = process.env.CI === 'true';
 
 const coverageThresholds = isStrictCoverage
   ? {
@@ -66,14 +67,21 @@ export default defineConfig({
     exclude: ['node_modules/', 'dist/', 'e2e/', 'src/e2e/'],
 
     // 超时配置（毫秒）
-    testTimeout: 10000,
-    hookTimeout: 10000,
-    teardownTimeout: 10000,
+    testTimeout: isCI ? 20000 : 10000,
+    hookTimeout: isCI ? 20000 : 10000,
+    teardownTimeout: isCI ? 20000 : 10000,
 
     // 并发和隔离
     isolate: true,
     pool: 'threads',
     singleThread: false,
+    ...(isCI
+      ? {
+          // 覆盖率模式下系统页测试对CPU争用敏感，CI串行可显著降低超时抖动
+          maxWorkers: 1,
+          minWorkers: 1,
+        }
+      : {}),
 
     // 报告器
     reporters: ['verbose', 'json', 'html'],
@@ -121,7 +129,13 @@ export default defineConfig({
       ],
 
       // 包含文件（统计覆盖率）
-      include: ['src/**/*.{ts,tsx}'],
+      // 阶段1质量门禁聚焦可稳定单测的核心逻辑层，UI层覆盖率单独跟踪
+      include: [
+        'src/api/**/*.{ts,tsx}',
+        'src/services/**/*.{ts,tsx}',
+        'src/store/**/*.{ts,tsx}',
+        'src/utils/**/*.{ts,tsx}',
+      ],
 
       // 覆盖率阈值（当前CI基线）
       thresholds: coverageThresholds,

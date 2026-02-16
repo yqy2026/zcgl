@@ -28,20 +28,25 @@ vi.mock('react-router-dom', async () => {
 vi.mock('../LoginPage.module.css', () => ({
   default: {
     'login-page': 'login-page',
-    'login-container': 'login-container',
+    'login-shell': 'login-shell',
+    'brand-panel': 'brand-panel',
+    'brand-kicker': 'brand-kicker',
+    'brand-title': 'brand-title',
+    'brand-description': 'brand-description',
+    'brand-list': 'brand-list',
+    'brand-list-item': 'brand-list-item',
     'login-card': 'login-card',
     'login-header': 'login-header',
-    'login-logo': 'login-logo',
-    'login-icon': 'login-icon',
     'login-title': 'login-title',
     'login-subtitle': 'login-subtitle',
     'login-form': 'login-form',
     'input-icon': 'input-icon',
+    'remember-item': 'remember-item',
     'login-error': 'login-error',
+    'login-submit-item': 'login-submit-item',
     'login-button': 'login-button',
     'login-footer': 'login-footer',
     'login-help': 'login-help',
-    'login-tips': 'login-tips',
   },
 }));
 
@@ -72,8 +77,9 @@ describe('LoginPage', () => {
         </MemoryRouter>
       );
 
-      expect(screen.getByText('土地房产资产管理系统')).toBeInTheDocument();
-      expect(screen.getByText('请输入您的用户名和密码进行登录')).toBeInTheDocument();
+      expect(screen.getByText('欢迎回来')).toBeInTheDocument();
+      expect(screen.getByText('土地物业资产运营管理系统')).toBeInTheDocument();
+      expect(screen.getByText('请输入您的账号密码以继续')).toBeInTheDocument();
     });
 
     it('渲染用户名输入框', () => {
@@ -83,7 +89,7 @@ describe('LoginPage', () => {
         </MemoryRouter>
       );
 
-      expect(screen.getByPlaceholderText('请输入用户名')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('请输入手机号')).toBeInTheDocument();
     });
 
     it('渲染密码输入框', () => {
@@ -93,7 +99,7 @@ describe('LoginPage', () => {
         </MemoryRouter>
       );
 
-      expect(screen.getByPlaceholderText('请输入密码')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('••••••••')).toBeInTheDocument();
     });
 
     it('渲染记住我复选框', () => {
@@ -103,7 +109,7 @@ describe('LoginPage', () => {
         </MemoryRouter>
       );
 
-      expect(screen.getByText('记住我的登录状态')).toBeInTheDocument();
+      expect(screen.getByText('记住登录状态')).toBeInTheDocument();
     });
 
     it('渲染登录按钮', () => {
@@ -123,8 +129,7 @@ describe('LoginPage', () => {
         </MemoryRouter>
       );
 
-      expect(screen.getByText(/如遇登录问题，请联系系统管理员/)).toBeInTheDocument();
-      expect(screen.getByText('为保护账户安全，请定期更换密码')).toBeInTheDocument();
+      expect(screen.getByText('遇到问题？联系 IT 管理员')).toBeInTheDocument();
     });
   });
 
@@ -136,7 +141,7 @@ describe('LoginPage', () => {
         </MemoryRouter>
       );
 
-      const usernameInput = screen.getByPlaceholderText('请输入用户名');
+      const usernameInput = screen.getByPlaceholderText('请输入手机号');
       fireEvent.change(usernameInput, { target: { value: 'testuser' } });
 
       expect(usernameInput).toHaveValue('testuser');
@@ -149,7 +154,7 @@ describe('LoginPage', () => {
         </MemoryRouter>
       );
 
-      const passwordInput = screen.getByPlaceholderText('请输入密码');
+      const passwordInput = screen.getByPlaceholderText('••••••••');
       fireEvent.change(passwordInput, { target: { value: 'password123' } });
 
       expect(passwordInput).toHaveValue('password123');
@@ -179,8 +184,8 @@ describe('LoginPage', () => {
         </MemoryRouter>
       );
 
-      const usernameInput = screen.getByPlaceholderText('请输入用户名');
-      const passwordInput = screen.getByPlaceholderText('请输入密码');
+      const usernameInput = screen.getByPlaceholderText('请输入手机号');
+      const passwordInput = screen.getByPlaceholderText('••••••••');
       const submitButton = screen.getByText('立即登录');
 
       fireEvent.change(usernameInput, { target: { value: 'admin' } });
@@ -268,7 +273,7 @@ describe('LoginPage', () => {
         </MemoryRouter>
       );
 
-      const usernameInput = screen.getByPlaceholderText('请输入用户名');
+      const usernameInput = screen.getByPlaceholderText('请输入手机号');
       fireEvent.change(usernameInput, { target: { value: 'testuser' } });
 
       const submitButton = screen.getByText('立即登录');

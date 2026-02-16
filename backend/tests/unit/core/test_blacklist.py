@@ -87,6 +87,26 @@ class TestTokenBlacklistManager:
         """测试移除不存在的令牌不会报错"""
         self.manager.remove_token("nonexistent-token")  # 不应抛出异常
 
+    def test_revoke_all_user_tokens_blocks_only_tokens_issued_before_revoke(self):
+        """测试用户级撤销只拦截撤销前签发的 token。"""
+        user_id = "revoked-user"
+        self.manager.revoke_all_user_tokens(user_id)
+
+        revocation_entry = self.manager._revoked_users.get(user_id)
+        assert isinstance(revocation_entry, dict)
+        revoked_at = float(revocation_entry["revoked_at"])
+
+        # 无 iat 走保守拒绝
+        assert self.manager.is_blacklisted(user_id=user_id) is True
+        # 撤销前签发：应拒绝
+        assert self.manager.is_blacklisted(
+            user_id=user_id, token_iat=revoked_at - 1
+        ) is True
+        # 撤销后签发：应放行
+        assert self.manager.is_blacklisted(
+            user_id=user_id, token_iat=revoked_at + 1
+        ) is False
+
     # ==================== 清理过期令牌测试 ====================
 
     def test_cleanup_expired_tokens(self):
@@ -182,6 +202,24 @@ class TestMiddlewareIntegration:
         result = _is_token_blacklisted("any-token")
         # 应该不会抛出异常，返回 bool 值
         assert isinstance(result, bool)
+
+    def test_is_token_blacklisted_respects_token_iat_for_user_revoke(self):
+        """测试中间件黑名单检查会按 token iat 区分新旧令牌。"""
+        from src.middleware.auth import _is_token_blacklisted
+
+        user_id = "middleware-revoked-user"
+        blacklist_manager.revoke_all_user_tokens(user_id)
+
+        revocation_entry = blacklist_manager._revoked_users.get(user_id)
+        assert isinstance(revocation_entry, dict)
+        revoked_at = float(revocation_entry["revoked_at"])
+
+        assert _is_token_blacklisted(
+            jti=None, user_id=user_id, token_iat=revoked_at - 1
+        ) is True
+        assert _is_token_blacklisted(
+            jti=None, user_id=user_id, token_iat=revoked_at + 1
+        ) is False
 
     def test_blacklist_fail_closed_when_circuit_open_in_production(self, monkeypatch):
         """生产环境下黑名单熔断应 fail-closed"""

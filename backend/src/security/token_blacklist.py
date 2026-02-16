@@ -24,7 +24,9 @@ class TokenBlacklistManager:
     def __init__(self) -> None:
         self._blacklisted_tokens: set[str] = set()
         self._blacklist_expiry: dict[str, float] = {}
-        self._revoked_users: dict[str, float] = {}
+        # user_id -> {"revoked_at": <unix_ts>, "expires_at": <unix_ts>}
+        # 兼容历史数据: user_id -> <expires_at_ts>
+        self._revoked_users: dict[str, dict[str, float] | float] = {}
         self._cleanup_interval = 3600  # 1小时清理一次过期令牌
         self._last_cleanup = time.time()
         self._cache_namespace = "token_blacklist"
@@ -51,6 +53,24 @@ class TokenBlacklistManager:
 
     def _cache_key_user(self, user_id: str) -> str:
         return f"user:{user_id}"
+
+    @staticmethod
+    def _parse_user_revocation_entry(
+        entry: dict[str, float] | float,
+    ) -> tuple[float, float] | None:
+        """解析用户级撤销记录为 (revoked_at, expires_at)。
+
+        兼容历史格式：
+        - 新格式: {"revoked_at": ts, "expires_at": ts}
+        - 旧格式: expires_at(ts)
+        """
+        if isinstance(entry, dict):
+            revoked_at = float(entry.get("revoked_at", 0.0))
+            expires_at = float(entry.get("expires_at", 0.0))
+            return revoked_at, expires_at
+        if isinstance(entry, (int, float)):
+            return 0.0, float(entry)
+        return None
 
     def add_token(self, jti: str, expires_at: float | datetime) -> None:
         """添加令牌到黑名单"""
@@ -83,25 +103,53 @@ class TokenBlacklistManager:
         self._cleanup_expired_tokens()
 
     def is_blacklisted(
-        self, jti: str | None = None, user_id: str | None = None
+        self,
+        jti: str | None = None,
+        user_id: str | None = None,
+        token_iat: int | float | None = None,
     ) -> bool:
         """检查令牌是否在黑名单中"""
         self._enforce_storage_requirements()
 
         # 定期清理过期令牌
         self._cleanup_expired_tokens()
+        now = time.time()
 
-        # 用户级撤销优先
+        # 用户级撤销优先：
+        # 仅阻断撤销时间点之前签发的 token，保证重新登录后的新 token 可用。
         if user_id and user_id in self._revoked_users:
-            if self._revoked_users[user_id] > time.time():
-                return True
-            # 过期则移除
-            self._revoked_users.pop(user_id, None)
+            parsed = self._parse_user_revocation_entry(self._revoked_users[user_id])
+            if parsed is None:
+                self._revoked_users.pop(user_id, None)
+            else:
+                revoked_at, expires_at = parsed
+                if expires_at > now:
+                    if token_iat is None:
+                        # 无 iat 时保守拒绝
+                        return True
+                    if revoked_at <= 0:
+                        # 历史数据无法精确判断，保持阻断
+                        return True
+                    return float(token_iat) <= revoked_at
+                # 过期则移除
+                self._revoked_users.pop(user_id, None)
 
         if self._use_cache and user_id:
-            if cache_manager.exists(
-                self._cache_key_user(user_id), namespace=self._cache_namespace
-            ):
+            cached_revocation = cache_manager.get(
+                self._cache_key_user(user_id),
+                namespace=self._cache_namespace,
+                default=None,
+            )
+            if cached_revocation is not None:
+                # 新格式（推荐）：{"revoked_at": ts}
+                if isinstance(cached_revocation, dict):
+                    revoked_at = float(cached_revocation.get("revoked_at", 0.0))
+                    if token_iat is None:
+                        return True
+                    if revoked_at <= 0:
+                        return True
+                    return float(token_iat) <= revoked_at
+                # 历史格式（True 等）保守阻断
                 return True
 
         if jti is None:
@@ -148,14 +196,17 @@ class TokenBlacklistManager:
         # 设置较长的过期时间确保覆盖所有可能的令牌
         expiry_time = current_time + (settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 3600)
 
-        # 用户级撤销：访问令牌解析后可直接拒绝
-        self._revoked_users[user_id] = expiry_time
+        # 用户级撤销：仅拒绝撤销时间点之前签发的 token
+        self._revoked_users[user_id] = {
+            "revoked_at": current_time,
+            "expires_at": expiry_time,
+        }
         if self._use_cache:
             ttl = max(0, int(expiry_time - current_time))
             if ttl > 0:
                 cache_manager.set(
                     self._cache_key_user(user_id),
-                    True,
+                    {"revoked_at": current_time},
                     ttl=ttl,
                     namespace=self._cache_namespace,
                 )
@@ -186,11 +237,15 @@ class TokenBlacklistManager:
             self._blacklist_expiry.pop(jti, None)
 
         # 清理过期的用户撤销记录
-        expired_users = [
-            user_id
-            for user_id, expiry in self._revoked_users.items()
-            if expiry <= current_time
-        ]
+        expired_users = []
+        for user_id, revocation in self._revoked_users.items():
+            parsed = self._parse_user_revocation_entry(revocation)
+            if parsed is None:
+                expired_users.append(user_id)
+                continue
+            _revoked_at, expires_at = parsed
+            if expires_at <= current_time:
+                expired_users.append(user_id)
         for user_id in expired_users:
             self._revoked_users.pop(user_id, None)
 

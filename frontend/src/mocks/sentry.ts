@@ -30,8 +30,8 @@ const defaultSentry = {
 };
 
 // Mock named exports for integrations
-const BrowserTracing = vi.fn(() => ({}));
-const Replay = vi.fn(() => ({}));
+class BrowserTracing {}
+class Replay {}
 const integrations: unknown[] = [];
 
 // Export default

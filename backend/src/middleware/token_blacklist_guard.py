@@ -110,7 +110,11 @@ class TokenBlacklistGuard:
             )
 
     def is_token_blacklisted(
-        self, jti: str | None, user_id: str | None = None, session_id: str | None = None
+        self,
+        jti: str | None,
+        user_id: str | None = None,
+        session_id: str | None = None,
+        token_iat: int | float | None = None,
     ) -> bool:
         """Check whether token is blacklisted (fail-closed on circuit/error)."""
         if not settings.TOKEN_BLACKLIST_ENABLED:
@@ -129,7 +133,9 @@ class TokenBlacklistGuard:
         try:
             from ..security.token_blacklist import blacklist_manager
 
-            result = blacklist_manager.is_blacklisted(jti=jti, user_id=user_id)
+            result = blacklist_manager.is_blacklisted(
+                jti=jti, user_id=user_id, token_iat=token_iat
+            )
             self.circuit.record_success()
             return result
         except ImportError:

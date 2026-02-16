@@ -55,7 +55,7 @@ const OperationLogDetailDrawer: React.FC<OperationLogDetailDrawerProps> = ({
             <Descriptions.Item label="用户信息">
               <Space>
                 <UserOutlined />
-                <Space direction="vertical" size={0} className={styles.userCell}>
+                <Space orientation="vertical" size={0} className={styles.userCell}>
                   <span className={styles.primaryText}>
                     {selectedLog.user_name ?? selectedLog.username ?? '-'}
                   </span>

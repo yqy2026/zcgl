@@ -35,13 +35,17 @@ _token_blacklist_circuit = _token_blacklist_guard.circuit
 
 
 def _is_token_blacklisted(
-    jti: str | None, user_id: str | None = None, session_id: str | None = None
+    jti: str | None,
+    user_id: str | None = None,
+    session_id: str | None = None,
+    token_iat: int | float | None = None,
 ) -> bool:
     """检查 token 是否在黑名单中（熔断/异常统一 fail-closed）。"""
     return _token_blacklist_guard.is_token_blacklisted(
         jti=jti,
         user_id=user_id,
         session_id=session_id,
+        token_iat=token_iat,
     )
 
 
@@ -103,7 +107,9 @@ def _validate_jwt_token(token: str) -> TokenData:
             raise credentials_exception
 
         # 验证token是否在黑名单中（如果实现了token黑名单）
-        if _is_token_blacklisted(jti=jti, user_id=user_id, session_id=None):
+        if _is_token_blacklisted(
+            jti=jti, user_id=user_id, session_id=None, token_iat=iat
+        ):
             logger.warning(f"JWT token {jti} is blacklisted")
             raise unauthorized("Token已失效")
 

@@ -18,6 +18,7 @@
 - [API 总览](integrations/api-overview.md)
 - [数据库设计](database-design.md)
 - [测试标准](guides/testing-standards.md)
+- [手机号优先登录与用户名保留策略研究（2026-02-15）](plans/2026-02-15-phone-first-login-and-username-retention.md)
 
 ## 🔍 问题跟踪
 - [代码审查报告 (2026-02-14)](issues/code-review-2026-02-14.md) - 全项目审查发现的问题

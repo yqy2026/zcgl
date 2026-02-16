@@ -34,7 +34,9 @@
       "Bash(make dev)",
       "mcp__acp__Write",
       "mcp__acp__Edit",
-      "WebSearch"
+      "WebSearch",
+      "mcp__zread__get_repo_structure",
+      "mcp__zread__read_file"
     ]
   },
   "outputStyle": "Explanatory"

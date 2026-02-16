@@ -87,6 +87,9 @@ vi.stubGlobal('IntersectionObserver', IntersectionObserverMock);
 //=============================================================================
 
 // Mock @sentry/react (optional dependency for error monitoring)
+class SentryBrowserTracingMock {}
+class SentryReplayMock {}
+
 vi.mock('@sentry/react', () => ({
   default: {
     init: vi.fn(),
@@ -99,8 +102,8 @@ vi.mock('@sentry/react', () => ({
     startTransaction: vi.fn(),
     finishTransaction: vi.fn(),
   },
-  BrowserTracing: vi.fn(),
-  Replay: vi.fn(),
+  BrowserTracing: SentryBrowserTracingMock,
+  Replay: SentryReplayMock,
   integrations: [],
 }));
 
