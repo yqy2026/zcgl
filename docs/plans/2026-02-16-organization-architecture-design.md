@@ -53,7 +53,6 @@ CREATE TABLE organizations (
     
     -- 新增字段
     can_manage_assets BOOLEAN DEFAULT TRUE,
-    internal_ownership_id VARCHAR(36) REFERENCES ownerships(id),
     
     -- 系统字段
     is_active BOOLEAN DEFAULT TRUE,
@@ -68,7 +67,6 @@ CREATE TABLE organizations (
 | 字段 | 类型 | 说明 |
 |-----|------|------|
 | `can_manage_assets` | Boolean | 标记该公司是否可以担任资产经营方 |
-| `internal_ownership_id` | FK | 关联到内部产权方记录 |
 
 ### 3.2 Ownership（权属方）
 
@@ -157,13 +155,11 @@ CREATE TABLE assets (
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
 │  ┌──────────────────┐                    ┌──────────────────┐           │
-│  │   Organization   │◀──────────────────▶│    Ownership     │           │
-│  │   (组织架构)      │   双向关联          │    (权属方)       │           │
-│  │                  │                    │                  │           │
-│  │ internal_        │                    │ organization_id  │           │
-│  │ ownership_id ────┼────────────────────┼────────────────▶ │           │
-│  │                  │                    │                  │           │
-│  │ can_manage_assets│                    │ is_internal      │           │
+│  │   Organization   │◀───────────────────│    Ownership     │           │
+│  │   (组织架构)      │   organization_id  │    (权属方)       │           │
+│  │                  │      (单向)        │                  │           │
+│  │                  │                    │ is_internal      │           │
+│  │ can_manage_assets│                    │                  │           │
 │  └────────┬─────────┘                    └────────┬─────────┘           │
 │           │                                       │                      │
 │           │ manager_id                            │ ownership_id         │
@@ -179,6 +175,12 @@ CREATE TABLE assets (
 │  └─────────────────────────────────────────────────────────────┘        │
 │                                                                          │
 └─────────────────────────────────────────────────────────────────────────┘
+```
+
+**关联说明**：
+- `Ownership.organization_id` → `Organization.id`（单向）
+- 内部产权方通过此字段关联到组织
+- 查询组织的产权方：`Ownership.query.filter_by(organization_id=org_id, is_internal=True)`
 ```
 
 ---
@@ -261,15 +263,11 @@ VALUES
     ('org_a', 'XX资产公司', 'COMP_A', '公司', 'org_group', 1, TRUE),
     ('org_b', 'XX运营公司', 'COMP_B', '公司', 'org_group', 1, TRUE);
 
--- 创建对应的 Ownership
+-- 创建对应的 Ownership（单向关联到 Organization）
 INSERT INTO ownerships (id, name, code, is_internal, organization_id)
 VALUES 
     ('own_a', 'XX资产公司', 'COMP_A', TRUE, 'org_a'),
     ('own_b', 'XX运营公司', 'COMP_B', TRUE, 'org_b');
-
--- 建立反向关联
-UPDATE organizations SET internal_ownership_id = 'own_a' WHERE id = 'org_a';
-UPDATE organizations SET internal_ownership_id = 'own_b' WHERE id = 'org_b';
 ```
 
 ---
@@ -280,7 +278,7 @@ UPDATE organizations SET internal_ownership_id = 'own_b' WHERE id = 'org_b';
 
 | 文件 | 修改内容 |
 |-----|---------|
-| `backend/src/models/organization.py` | 新增 `can_manage_assets`, `internal_ownership_id` |
+| `backend/src/models/organization.py` | 新增 `can_manage_assets` |
 | `backend/src/models/ownership.py` | 新增 `is_internal`, `organization_id` 及外部产权方字段 |
 | `backend/src/models/asset.py` | 新增 `manager_id`，删除 `organization_id`, `management_entity` |
 | `backend/src/models/project.py` | 类似资产表的修改 |
@@ -327,8 +325,7 @@ UPDATE organizations SET internal_ownership_id = 'own_b' WHERE id = 'org_b';
 ```mermaid
 erDiagram
     Organization ||--o{ Organization : "parent/children"
-    Organization ||--o| Ownership : "internal_ownership_id"
-    Ownership ||--o| Organization : "organization_id"
+    Ownership ||--o| Organization : "organization_id (单向)"
     Ownership ||--o{ Asset : "ownership_id"
     Organization ||--o{ Asset : "manager_id"
     
@@ -341,7 +338,6 @@ erDiagram
         string path
         int level
         boolean can_manage_assets
-        string internal_ownership_id FK
     }
     
     Ownership {
@@ -370,8 +366,64 @@ erDiagram
 
 ---
 
+---
+
+## 11. 评审意见（结合项目现状）
+
+**评审日期**: 2026-02-16  
+**评审结论**: 设计目标与模型关系合理，与现有代码对照后有以下**必须补齐**与**建议**，供实现前采纳。
+
+### 11.1 与当前实现对照
+
+| 设计项 | 当前项目状态 | 说明 |
+|--------|--------------|------|
+| **Organization** | `backend/src/models/organization.py` 无 `can_manage_assets`、`internal_ownership_id`；使用 `is_deleted` 而非 `is_active` | 需新增字段；若保留软删可继续用 `is_deleted`，与文档中 `is_active` 二选一并统一命名 |
+| **Ownership** | `backend/src/models/ownership.py` 无 `is_internal`、`organization_id`；有 `management_entity` 字符串；无 `contact_person/contact_phone/business_license` | 与设计一致需新增/调整，注意现有权属方无“内部/外部”区分 |
+| **Asset** | 已有 `organization_id`、`ownership_id`、`management_entity`（字符串） | 删除 `organization_id`、`management_entity`，新增 `manager_id` 等后，**权限过滤逻辑必须同步改**（见下） |
+| **Project** | `backend/src/models/project.py` 有 `organization_id`、`ownership_entity`、`management_entity` | 设计仅写“类似资产表”，建议在 7.1 中明确：Project 是否同样删除 `organization_id`、改为 `manager_id` + 权属关联，并统一语义 |
+| **PropertyCertificate** | `backend/src/models/property_certificate.py` 存在 `organization_id` | 7.1 未列，需决定：保留为“所属组织”或纳入本次“组织-权属-经营方”统一模型并补充迁移与影响范围 |
+
+### 11.2 权限过滤逻辑（必须同步修改）
+
+当前 **数据权限** 仅按 `asset.organization_id in (用户可访问组织)` 过滤（`OrganizationPermissionService._apply_organization_filter` 与 asset CRUD 中的 tenant_filter）。  
+设计删除 `asset.organization_id` 后，**必须**改为按文档 5.2 规则实现：
+
+- **集团用户**：可访问所有资产（现有 admin/全局 read 已覆盖，需确认“集团”是否与 admin 或 `organization.type == '集团'` 对齐）。
+- **公司用户**：可见资产 = **产权方** 或 **经营方** 与用户组织相关，即：
+  - `asset.ownership.organization_id in org_ids` **或**
+  - `asset.manager_id in org_ids`
+
+因此需要修改：
+
+- `OrganizationPermissionService._apply_organization_filter`：对 Asset 实体不再用 `entity.organization_id.in_(org_ids)`，改为基于 `ownership` 关联与 `manager_id` 的 OR 条件（或先查 org 可见的 ownership_id 列表 + manager_id 列表再过滤）。
+- 若 Asset 列表查询使用 `selectinload(Asset.ownership)`，需保证过滤条件与 join 一致，避免 N+1 或重复过滤。
+
+建议在实现计划中单独列“权限过滤迁移”任务，并补充单元/集成测试：集团看全部、公司仅看产权方/经营方。
+
+### 11.3 迁移与兼容
+
+- 文档 6.1 采用清空重建，若生产或预发已有真实数据，需单独评估备份与回滚。
+- **API 兼容性**：删除 `organization_id`、`management_entity` 会破坏现有前端与调用方。建议在 7.2/9 中明确：API 版本或响应中是否在一段时间内保留只读的 `organization_id`/`management_entity`（从 ownership/manager 推导）以兼容旧前端，再在前端与文档中标注废弃时间。
+- **前端**：`frontend/src/types/asset.ts`、`AssetExportForm`、`AssetBatchActions`、`assetFormSchema.ts`、`assetExportConfig.ts` 等使用 `management_entity`；需改为 `manager_id`（或展示用 `manager?.name`）并更新表单、导出、筛选与类型定义。
+
+### 11.4 模型与命名一致性
+
+- **Organization**：设计 DDL 用 `is_active`、`status`，现有模型用 `is_deleted`、`status`。若项目统一采用“软删”，建议设计处注明“与现有 is_deleted 对应，不新增 is_active”，或在迁移中统一为其中一种并更新文档。
+- **Ownership**：设计新增 `contact_person`、`contact_phone`、`business_license`。若权属方沿用 PII 加密（如手机号），需在 CRUD 层接入 `SensitiveDataHandler`，与现有 Asset/Contact 等一致。
+
+### 11.5 建议补充到文档的内容
+
+1. **7.1 影响范围**：增加 `backend/src/models/property_certificate.py` 及 PropertyCertificate 相关 schema/crud/api 的决策与修改说明；明确 Project 的字段变更清单（是否删除 `organization_id`/`ownership_entity`/`management_entity`，是否新增 `manager_id` 等）。
+2. **5.2 数据权限**：明确“集团”的判定来源（如 `user.organization.type == '集团'` 或仅 RBAC 管理员），与现有 `OrganizationPermissionService`、RBAC 的集成方式。
+3. **6.2 初始化数据**：内部产权方与组织的双向关联（`internal_ownership_id` ↔ `organization_id`）在创建顺序上存在依赖，建议在实现计划中写清：先创建 Organization 再创建 Ownership 再 UPDATE Organization.internal_ownership_id，或提供可重复执行的初始化脚本。
+
+按上述意见补充与修改后，再编写实现计划与 Alembic 迁移更稳妥。
+
+---
+
 **文档历史**：
 
 | 日期 | 版本 | 变更内容 | 作者 |
 |-----|------|---------|------|
 | 2026-02-16 | 1.0 | 初始版本 | Claude & yellowUp |
+| 2026-02-16 | 1.1 | 增加第 11 节评审意见（结合项目现状） | Claude |
