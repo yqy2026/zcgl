@@ -115,8 +115,8 @@ class AsyncAuthenticationService:
             return False
         return self.token_blacklist.is_blacklisted(jti=jti, user_id=user_id)
 
-    async def authenticate_user(self, username: str, password: str) -> User | None:
-        user = await _user_crud.find_active_by_login_async(self.db, username)
+    async def authenticate_user(self, identifier: str, password: str) -> User | None:
+        user = await _user_crud.find_active_by_identifier_async(self.db, identifier)
 
         if not user:
             return None
@@ -295,4 +295,3 @@ class AsyncAuthenticationService:
         await self.db.commit()
 
         return session
-

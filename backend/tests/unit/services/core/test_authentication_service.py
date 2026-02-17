@@ -81,12 +81,12 @@ def _mock_execute_first(value):
 
 
 # ============================================================================
-# authenticate_user tests - Username/Email Login Paths
+# authenticate_user tests - Username/Phone Login Paths
 # ============================================================================
 
 
-class TestAuthenticateUserUsernameEmail:
-    """Tests for username and email login paths"""
+class TestAuthenticateUserUsernamePhone:
+    """Tests for username and phone login paths"""
 
     def test_authenticate_with_username(self, auth_service, db_session, mock_user):
         """Test authentication with username"""
@@ -104,9 +104,10 @@ class TestAuthenticateUserUsernameEmail:
                 )
                 assert result == mock_user
 
-    def test_authenticate_with_email(self, auth_service, db_session, mock_user):
-        """Test authentication with email"""
-        db_session.execute = AsyncMock(return_value=_mock_execute_first(mock_user))
+    def test_authenticate_with_phone_identifier(self, auth_service, mock_user):
+        """Test authentication with phone identifier"""
+        repo = MagicMock()
+        repo.find_active_by_identifier_async = AsyncMock(return_value=mock_user)
         with patch.object(
             auth_service.password_service, "verify_password", return_value=True
         ):
@@ -115,10 +116,15 @@ class TestAuthenticateUserUsernameEmail:
                 "is_password_expired",
                 return_value=False,
             ):
-                result = asyncio.run(
-                    auth_service.authenticate_user("test@example.com", "password123")
-                )
-                assert result == mock_user
+                with patch.object(authentication_service_module, "_user_crud", repo):
+                    result = asyncio.run(
+                        auth_service.authenticate_user("13800002000", "password123")
+                    )
+                    assert result == mock_user
+
+        repo.find_active_by_identifier_async.assert_awaited_once_with(
+            auth_service.db, "13800002000"
+        )
 
     def test_authenticate_user_not_found(self, auth_service, db_session):
         """Test authentication with non-existent user"""

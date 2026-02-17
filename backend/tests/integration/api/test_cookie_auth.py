@@ -22,7 +22,7 @@ def test_login_sets_http_only_cookie(client, test_data):
 
     response = client.post(
         "/api/v1/auth/login",
-        json={"username": admin_user.username, "password": "Admin123!@#"},
+        json={"identifier": admin_user.username, "password": "Admin123!@#"},
     )
 
     assert response.status_code == 200
@@ -42,7 +42,7 @@ def test_cookie_is_http_only(client, test_data):
 
     response = client.post(
         "/api/v1/auth/login",
-        json={"username": admin_user.username, "password": "Admin123!@#"},
+        json={"identifier": admin_user.username, "password": "Admin123!@#"},
     )
 
     assert response.status_code == 200
@@ -63,12 +63,16 @@ def test_cookie_is_http_only(client, test_data):
 
 
 def test_cookie_has_expiration(client, test_data):
-    """Test that auth cookie has proper expiration"""
+    """Test persistent login sets cookie expiration attributes."""
     admin_user = test_data["admin"]
 
     response = client.post(
         "/api/v1/auth/login",
-        json={"username": admin_user.username, "password": "Admin123!@#"},
+        json={
+            "identifier": admin_user.username,
+            "password": "Admin123!@#",
+            "remember": True,
+        },
     )
 
     assert response.status_code == 200
@@ -81,13 +85,35 @@ def test_cookie_has_expiration(client, test_data):
     )
 
 
+def test_cookie_without_remember_has_session_scope(client, test_data):
+    """Test non-remember login uses session cookies without explicit expiration."""
+    admin_user = test_data["admin"]
+
+    response = client.post(
+        "/api/v1/auth/login",
+        json={
+            "identifier": admin_user.username,
+            "password": "Admin123!@#",
+            "remember": False,
+        },
+    )
+
+    assert response.status_code == 200
+
+    cookie_header = response.headers.get("set-cookie", "")
+    cookie_lower = cookie_header.lower()
+    assert "max-age" not in cookie_lower and "expires" not in cookie_lower, (
+        "Session cookie should not include max-age/expires when remember=false"
+    )
+
+
 def test_logout_clears_cookie(client, test_data):
     """Test that logout clears auth cookie"""
     # First login
     admin_user = test_data["admin"]
     login_response = client.post(
         "/api/v1/auth/login",
-        json={"username": admin_user.username, "password": "Admin123!@#"},
+        json={"identifier": admin_user.username, "password": "Admin123!@#"},
     )
 
     assert login_response.status_code == 200
@@ -122,7 +148,7 @@ def test_login_response_does_not_include_tokens(client, test_data):
 
     response = client.post(
         "/api/v1/auth/login",
-        json={"username": admin_user.username, "password": "Admin123!@#"},
+        json={"identifier": admin_user.username, "password": "Admin123!@#"},
     )
 
     assert response.status_code == 200
@@ -137,7 +163,7 @@ def test_cookie_path_is_root(client, test_data):
 
     response = client.post(
         "/api/v1/auth/login",
-        json={"username": admin_user.username, "password": "Admin123!@#"},
+        json={"identifier": admin_user.username, "password": "Admin123!@#"},
     )
 
     assert response.status_code == 200
@@ -157,7 +183,7 @@ def test_login_response_includes_user_data(client, test_data):
 
     response = client.post(
         "/api/v1/auth/login",
-        json={"username": admin_user.username, "password": "Admin123!@#"},
+        json={"identifier": admin_user.username, "password": "Admin123!@#"},
     )
 
     assert response.status_code == 200
@@ -178,7 +204,7 @@ def test_protected_endpoint_authenticates_via_cookie(client, test_data):
     # Login to set the httpOnly cookie
     login_response = client.post(
         "/api/v1/auth/login",
-        json={"username": admin_user.username, "password": "Admin123!@#"},
+        json={"identifier": admin_user.username, "password": "Admin123!@#"},
     )
     assert login_response.status_code == 200
 
@@ -201,7 +227,7 @@ def test_csrf_blocks_cookie_post_without_header(client, test_data):
 
     login_response = client.post(
         "/api/v1/auth/login",
-        json={"username": admin_user.username, "password": "Admin123!@#"},
+        json={"identifier": admin_user.username, "password": "Admin123!@#"},
     )
     assert login_response.status_code == 200
 
@@ -222,7 +248,7 @@ def test_csrf_allows_cookie_post_with_header(client, test_data):
 
     login_response = client.post(
         "/api/v1/auth/login",
-        json={"username": admin_user.username, "password": "Admin123!@#"},
+        json={"identifier": admin_user.username, "password": "Admin123!@#"},
     )
     assert login_response.status_code == 200
 
@@ -247,7 +273,7 @@ def test_bearer_rejected_in_cookie_only_mode(client, test_data):
     # Login
     login_response = client.post(
         "/api/v1/auth/login",
-        json={"username": admin_user.username, "password": "Admin123!@#"},
+        json={"identifier": admin_user.username, "password": "Admin123!@#"},
     )
     assert login_response.status_code == 200
 

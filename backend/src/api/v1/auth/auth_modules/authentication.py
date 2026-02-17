@@ -7,6 +7,7 @@
 import logging
 from datetime import UTC, datetime
 from importlib import import_module
+from json import JSONDecodeError, loads
 from typing import Any
 
 import jwt
@@ -73,6 +74,51 @@ async def _create_audit_log(db: AsyncSession, **kwargs: Any) -> Any:
     return await audit_logger.create_async(**kwargs)
 
 
+def _resolve_persistent_login(device_info: Any) -> bool:
+    """Resolve remember-login preference from persisted session device_info.
+
+    Backward compatibility:
+    Sessions created before remember-me rollout don't include the `remember` field.
+    Missing/unknown values are treated as legacy persistent sessions.
+    """
+
+    def _to_bool(value: Any) -> bool:
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            if normalized in {"true", "1", "yes", "on"}:
+                return True
+            if normalized in {"false", "0", "no", "off"}:
+                return False
+            return True
+        return True
+
+    # Legacy sessions without structured device_info should keep persistent cookies.
+    if device_info is None:
+        return True
+
+    if isinstance(device_info, dict):
+        if "remember" not in device_info:
+            return True
+        remember_value = device_info.get("remember")
+        return _to_bool(remember_value)
+
+    if isinstance(device_info, str):
+        try:
+            parsed = loads(device_info)
+        except JSONDecodeError:
+            return True
+        if isinstance(parsed, dict):
+            if "remember" not in parsed:
+                return True
+            remember_value = parsed.get("remember")
+            return _to_bool(remember_value)
+        return True
+
+    return True
+
+
 def _build_legacy_services(
     db: AsyncSession,
 ) -> tuple[
@@ -110,7 +156,7 @@ async def login(
     """
     用户登录接口
 
-    - 支持用户名或邮箱登录
+    - 支持用户名或手机号登录
     - 返回JWT访问令牌和刷新令牌
     - 记录登录审计日志
     """
@@ -119,31 +165,30 @@ async def login(
     if using_factory:
         auth_service = factory.authentication
         session_service = factory.session
-        user_service = factory.user_management
         rbac_service = factory.rbac
         audit_db = factory.db
     else:
-        auth_service, session_service, user_service, rbac_service = (
+        auth_service, session_service, _, rbac_service = (
             _build_legacy_services(db)
         )
         audit_db = db
 
     client_ip = get_client_ip(request)
     user_agent = request.headers.get("user-agent", "unknown")
+    persistent_login = credentials.remember is True
 
     try:
         user = await auth_service.authenticate_user(
-            credentials.username, credentials.password
+            credentials.identifier, credentials.password
         )
         if not user:
-            if using_factory:
-                existing_user = await user_service.get_user_by_username(
-                    credentials.username
-                )
-            else:
-                user_repo = UserCRUD()
-                existing_user = await user_repo.get_by_username_async(
-                    db, credentials.username
+            user_repo = UserCRUD()
+            existing_user = await user_repo.find_active_by_identifier_async(
+                db, credentials.identifier
+            )
+            if existing_user is None:
+                existing_user = await user_repo.find_by_identifier_async(
+                    db, credentials.identifier
                 )
             if existing_user:
                 await _create_audit_log(
@@ -155,18 +200,27 @@ async def login(
                     user_agent=user_agent,
                 )
 
-            raise unauthorized("用户名或密码错误")
+            raise unauthorized("账号或密码错误")
 
-        device_info: dict[str, str] = {
+        device_info: dict[str, Any] = {
             "user_agent": user_agent,
             "ip_address": client_ip,
             "device_id": str(user.id),
+            "remember": persistent_login,
         }
         tokens = auth_service.create_tokens(user, device_info)
 
-        cookie_manager.set_auth_cookie(response, tokens.access_token)
-        cookie_manager.set_refresh_cookie(response, tokens.refresh_token)
-        cookie_manager.set_csrf_cookie(response, cookie_manager.create_csrf_token())
+        cookie_manager.set_auth_cookie(
+            response, tokens.access_token, persistent=persistent_login
+        )
+        cookie_manager.set_refresh_cookie(
+            response, tokens.refresh_token, persistent=persistent_login
+        )
+        cookie_manager.set_csrf_cookie(
+            response,
+            cookie_manager.create_csrf_token(),
+            persistent=persistent_login,
+        )
 
         await session_service.create_user_session(
             user_id=str(user.id),
@@ -423,9 +477,18 @@ async def refresh_token(
         "platform": None,
     }
     tokens = auth_service.create_tokens(user, device_info)
-    cookie_manager.set_auth_cookie(response, tokens.access_token)
-    cookie_manager.set_refresh_cookie(response, tokens.refresh_token)
-    cookie_manager.set_csrf_cookie(response, cookie_manager.create_csrf_token())
+    persistent_login = _resolve_persistent_login(getattr(session, "device_info", None))
+    cookie_manager.set_auth_cookie(
+        response, tokens.access_token, persistent=persistent_login
+    )
+    cookie_manager.set_refresh_cookie(
+        response, tokens.refresh_token, persistent=persistent_login
+    )
+    cookie_manager.set_csrf_cookie(
+        response,
+        cookie_manager.create_csrf_token(),
+        persistent=persistent_login,
+    )
 
     await _create_audit_log(
         audit_db,

@@ -89,7 +89,7 @@ describe('LoginPage', () => {
         </MemoryRouter>
       );
 
-      expect(screen.getByPlaceholderText('请输入手机号')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('请输入用户名或手机号')).toBeInTheDocument();
     });
 
     it('渲染密码输入框', () => {
@@ -141,7 +141,7 @@ describe('LoginPage', () => {
         </MemoryRouter>
       );
 
-      const usernameInput = screen.getByPlaceholderText('请输入手机号');
+      const usernameInput = screen.getByPlaceholderText('请输入用户名或手机号');
       fireEvent.change(usernameInput, { target: { value: 'testuser' } });
 
       expect(usernameInput).toHaveValue('testuser');
@@ -184,7 +184,7 @@ describe('LoginPage', () => {
         </MemoryRouter>
       );
 
-      const usernameInput = screen.getByPlaceholderText('请输入手机号');
+      const usernameInput = screen.getByPlaceholderText('请输入用户名或手机号');
       const passwordInput = screen.getByPlaceholderText('••••••••');
       const submitButton = screen.getByText('立即登录');
 
@@ -194,13 +194,42 @@ describe('LoginPage', () => {
 
       await waitFor(() => {
         expect(mockLogin).toHaveBeenCalledWith({
-          username: 'admin',
+          identifier: 'admin',
           password: 'password123',
+          remember: false,
         });
       });
 
       await waitFor(() => {
         expect(mockNavigate).toHaveBeenCalledWith('/dashboard', { replace: true });
+      });
+    });
+
+    it('勾选记住登录状态后提交 remember=true', async () => {
+      mockLogin.mockResolvedValue(undefined);
+
+      render(
+        <MemoryRouter>
+          <LoginPage />
+        </MemoryRouter>
+      );
+
+      const usernameInput = screen.getByPlaceholderText('请输入用户名或手机号');
+      const passwordInput = screen.getByPlaceholderText('••••••••');
+      const rememberCheckbox = screen.getByRole('checkbox');
+      const submitButton = screen.getByText('立即登录');
+
+      fireEvent.change(usernameInput, { target: { value: 'admin' } });
+      fireEvent.change(passwordInput, { target: { value: 'password123' } });
+      fireEvent.click(rememberCheckbox);
+      fireEvent.click(submitButton);
+
+      await waitFor(() => {
+        expect(mockLogin).toHaveBeenCalledWith({
+          identifier: 'admin',
+          password: 'password123',
+          remember: true,
+        });
       });
     });
   });
@@ -262,7 +291,7 @@ describe('LoginPage', () => {
       fireEvent.click(submitButton);
 
       await waitFor(() => {
-        expect(screen.getByText('请输入用户名')).toBeInTheDocument();
+        expect(screen.getByText('请输入用户名或手机号')).toBeInTheDocument();
       });
     });
 
@@ -273,7 +302,7 @@ describe('LoginPage', () => {
         </MemoryRouter>
       );
 
-      const usernameInput = screen.getByPlaceholderText('请输入手机号');
+      const usernameInput = screen.getByPlaceholderText('请输入用户名或手机号');
       fireEvent.change(usernameInput, { target: { value: 'testuser' } });
 
       const submitButton = screen.getByText('立即登录');

@@ -13,7 +13,7 @@ def authenticated_client(client: TestClient, test_data) -> TestClient:
     admin_user = test_data["admin"]
     response = client.post(
         "/api/v1/auth/login",
-        json={"username": admin_user.username, "password": "Admin123!@#"},
+        json={"identifier": admin_user.username, "password": "Admin123!@#"},
     )
     assert response.status_code == 200
     auth_token = response.cookies.get("auth_token")

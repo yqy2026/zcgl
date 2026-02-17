@@ -266,18 +266,18 @@ async def db_session() -> AsyncSession:
 
 @pytest.fixture(scope="function")
 async def authenticated_client(db_session: AsyncSession):
-    """API client with authentication token"""
+    """API client with authentication cookies"""
     from httpx import ASGITransport, AsyncClient
     from src.main import app
 
-    # Create test user and get token
-    token = create_test_user_and_get_token(db_session)
+    # 创建测试用户并通过 /auth/login 获取 cookie
+    auth_cookies = await create_test_user_and_get_auth_cookies(db_session)
 
     transport = ASGITransport(app=app)
     async with AsyncClient(
         transport=transport,
         base_url="http://127.0.0.1",
-        headers={"Authorization": f"Bearer {token}"},
+        cookies=auth_cookies,
     ) as client:
         yield client
 

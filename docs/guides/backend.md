@@ -572,43 +572,34 @@ class AuthService:
             return None
 ```
 
-### 依赖注入认证
+### 依赖注入认证（Cookie 模式）
 
 ```python
 # src/middleware/auth.py
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import Cookie, Depends
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_async_db
-from ..models.user import User
-from ..crud.user import user_crud
-
-security = HTTPBearer()
+from ..core.exception_handler import forbidden, unauthorized
+from ..models.auth import User
+from ..security.cookie_manager import cookie_manager
+from ..services.permission.rbac_service import RBACService
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    auth_token: str | None = Cookie(None, alias=cookie_manager.cookie_name),
     db: AsyncSession = Depends(get_async_db)
 ) -> User:
-    """获取当前认证用户"""
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="无效的认证凭据",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+    """从 HttpOnly Cookie 获取当前认证用户"""
+    if not auth_token:
+        raise unauthorized("无效的认证凭据")
 
-    token = credentials.credentials
-    auth_service = AuthService(db)
-    payload = auth_service.decode_token(token)
+    token_data = _validate_jwt_token(auth_token)
+    user_stmt = select(User).where(User.id == token_data.sub)
+    user = (await db.execute(user_stmt)).scalars().first()
 
-    if payload is None or payload.get("sub") != "access":
-        raise credentials_exception
-
-    user_id: str = payload.get("sub")
-    user = await user_crud.get_async(db, user_id)
-
-    if user is None:
-        raise credentials_exception
+    if user is None or not user.is_active or user.is_locked_now():
+        raise unauthorized("无效的认证凭据")
 
     return user
 
@@ -616,19 +607,16 @@ async def get_current_active_user(
     current_user: User = Depends(get_current_user)
 ) -> User:
     """获取当前活跃用户"""
-    if not current_user.is_active:
-        raise HTTPException(status_code=400, detail="用户未激活")
     return current_user
 
 async def require_admin(
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_async_db)
 ) -> User:
-    """要求管理员权限"""
-    if not current_user.is_admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="需要管理员权限"
-        )
+    """基于 RBAC 校验管理员权限"""
+    rbac_service = RBACService(db)
+    if not await rbac_service.is_admin(current_user.id):
+        raise forbidden("需要管理员权限")
     return current_user
 ```
 
@@ -672,7 +660,7 @@ async def delete_asset(
     pass
 ```
 
-**证据来源**: `backend/src/middleware/auth.py`, `backend/src/services/auth_service.py`
+**证据来源**: `backend/src/middleware/auth.py`, `backend/src/services/core/authentication_service.py`
 
 ---
 

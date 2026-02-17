@@ -55,7 +55,7 @@ def test_login_failed_should_delegate_user_lookup_and_audit_logger(
     """登录失败分支应委托用户查询与审计服务。"""
     from src.api.v1.auth.auth_modules.authentication import login
 
-    credentials = LoginRequest(username="testuser", password="wrong-password")
+    credentials = LoginRequest(identifier="testuser", password="wrong-password")
     response = MagicMock(spec=Response)
 
     with (
@@ -73,7 +73,9 @@ def test_login_failed_should_delegate_user_lookup_and_audit_logger(
         existing_user = MagicMock()
         existing_user.id = "user-1"
         user_repository = mock_user_cls.return_value
-        user_repository.get_by_username_async = AsyncMock(return_value=existing_user)
+        user_repository.find_active_by_identifier_async = AsyncMock(
+            return_value=existing_user
+        )
 
         audit_logger = mock_audit_cls.return_value
         audit_logger.create_async = AsyncMock(return_value=None)
@@ -82,7 +84,7 @@ def test_login_failed_should_delegate_user_lookup_and_audit_logger(
             asyncio.run(login(mock_request, credentials, response, mock_db))
 
         assert exc_info.value.code == "AUTHENTICATION_ERROR"
-        user_repository.get_by_username_async.assert_awaited_once_with(
+        user_repository.find_active_by_identifier_async.assert_awaited_once_with(
             mock_db, "testuser"
         )
         audit_logger.create_async.assert_awaited_once()

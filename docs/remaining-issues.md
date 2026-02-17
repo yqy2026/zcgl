@@ -14,7 +14,7 @@
    - Service 层直连数据库整改完成（见 `CHANGELOG.md` 历史记录）。
 2. **`Asset.active_contract` 基础优化已落地**
    - 已具备关系未加载保护、实例级缓存、单次选择逻辑。
-3. **`crud/asset.py` 已支持按场景控制合同投影加载**
+3. **`backend/src/crud/asset.py` 已支持按场景控制合同投影加载**
    - 具备 `include_contract_projection` 开关，可用于规避不必要关系加载。
 
 ### ⚠️ 已确认仍存在（本清单重点）

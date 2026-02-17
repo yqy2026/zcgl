@@ -12,7 +12,7 @@
 - **版本策略**: 所有 API 路径统一以 `/api/v1/*` 版本化
 
 ## 认证与安全
-- 登录成功后设置 `access_token` 与 `refresh_token` Cookie
+- 登录成功后设置 `auth_token` 与 `refresh_token` Cookie
 - 请求需要携带 Cookie，部分接口要求管理员权限
 - 详细见：[认证 API](auth-api.md)
 

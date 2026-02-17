@@ -1,11 +1,13 @@
 # 认证 API
 
 ## ✅ Status
-**当前状态**: Draft (2026-02-03)
+**当前状态**: Supplemental (2026-02-16)
 
 ## 认证模式
 - 当前以 Cookie 认证为主
 - 登录后由服务端写入 HttpOnly Cookie
+- 登录/刷新会轮转 `auth_token` 与 `refresh_token` Cookie
+- 登录请求字段为 `identifier`（用户名或手机号），响应体不返回 token
 
 ## 核心端点
 | 方法 | 路径 | 说明 |

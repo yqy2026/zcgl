@@ -62,6 +62,7 @@ const renderAuthGuard = (
     user: { id: '1', username: 'test', is_active: true } as AuthContextType['user'],
     permissions: [],
     isAuthenticated: true,
+    initializing: false,
     login: vi.fn(async () => {}),
     logout: vi.fn(async () => {}),
     refreshUser: vi.fn(async () => {}),

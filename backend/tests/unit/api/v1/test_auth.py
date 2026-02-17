@@ -91,12 +91,12 @@ class TestUserLogin:
         mock_auth_service.authenticate.return_value = sample_user
         mock_auth_service.create_tokens.return_value = sample_token_response
 
-        login_data = {"username": "testuser", "password": "correctpassword"}
+        login_data = {"identifier": "testuser", "password": "correctpassword"}
 
         # Simulate login flow
         user = mock_auth_service.authenticate(
             db=MagicMock(),
-            username=login_data["username"],
+            identifier=login_data["identifier"],
             password=login_data["password"],
         )
         tokens = mock_auth_service.create_tokens(user_id=user["id"])
@@ -140,7 +140,7 @@ class TestUserLogin:
     async def test_login_missing_fields(self):
         """Test login with missing required fields"""
         # Should validate at API level
-        login_data = {"username": "testuser"}  # Missing password
+        login_data = {"identifier": "testuser"}  # Missing password
 
         # Would test API validation here
         assert "password" not in login_data

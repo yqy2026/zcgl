@@ -1,5 +1,11 @@
 # 手机号优先登录与用户名保留策略研究（2026-02-15）
 
+> ⚠️ **状态更新（2026-02-16）**  
+> 本文档第 2.2/2.3 的“当时现状”已被后续实现覆盖。当前代码基线为：
+> - 登录请求使用 `identifier`（用户名或手机号）
+> - 后端支持手机号或用户名识别登录
+> - 认证采用 HttpOnly Cookie 模式，不在响应体返回 token
+
 ## 1. 文档目标
 
 本文用于回答两个决策问题：
@@ -24,28 +30,27 @@
 
 说明：当前数据库层并非“无用户名”模型，而是用户名和手机号都处于强约束状态。
 
-### 2.2 登录请求与认证链路
+### 2.2 登录请求与认证链路（2026-02-16 已更新）
 
 - `backend/src/schemas/auth.py` `LoginRequest`
-  - 字段名仍是 `username`，描述为“用户名或邮箱”。
+  - 字段名是 `identifier`，描述为“用户名或手机号”。
 - `backend/src/services/core/authentication_service.py`
-  - `authenticate_user(username, password)`
+  - `authenticate_user(identifier, password)`
 - `backend/src/crud/auth.py`
-  - `find_active_by_login_async(...)` 仅查询 `User.username == login` 或 `User.email == login`
+  - `find_active_by_identifier_async(...)` 支持“手机号优先，其次用户名”。
 
-结论：**后端当前并不支持手机号作为登录标识。**
+结论：**后端已支持手机号或用户名作为登录标识。**
 
-### 2.3 前端登录页现状
+### 2.3 前端登录页现状（2026-02-16 已更新）
 
 - `frontend/src/pages/LoginPage.tsx`
-  - UI 文案是“用户名 / 手机号”，占位符“请输入手机号”。
-  - 但提交参数仍是 `login({ username: formData.username, password })`。
+  - 登录表单字段为 `identifier`，提交参数为 `login({ identifier, password, remember })`。
 - `frontend/src/types/auth.ts`
-  - `LoginCredentials` 仍定义为 `{ username: string; password: string }`。
+  - `LoginCredentials` 定义为 `{ identifier: string; password: string; remember?: boolean }`。
 - `frontend/src/services/authService.ts`
-  - 调用 `/auth/login` 直接透传 `credentials.username`。
+  - 调用 `/auth/login` 透传 `credentials.identifier`。
 
-结论：**前端文案与后端能力存在语义错位**（用户以为是手机号登录，但实际并不支持手机号识别）。
+结论：**前后端登录标识语义已对齐（identifier）。**
 
 ### 2.4 用户名耦合范围
 

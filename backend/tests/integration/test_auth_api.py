@@ -21,7 +21,7 @@ def authenticated_client(client: TestClient, test_data) -> TestClient:
     admin_user = test_data["admin"]
     response = client.post(
         "/api/v1/auth/login",
-        json={"username": admin_user.username, "password": "Admin123!@#"},
+        json={"identifier": admin_user.username, "password": "Admin123!@#"},
     )
     assert response.status_code == 200
     auth_token = response.cookies.get("auth_token")
@@ -52,7 +52,7 @@ class TestAuthenticationEndpoints:
         """测试登录端点是否存在"""
         response = client.post(
             "/api/v1/auth/login",
-            json={"username": "admin", "password": "wrong_password"},
+            json={"identifier": "admin", "password": "wrong_password"},
         )
         # 无效凭证应返回统一认证错误
         assert response.status_code == 401
@@ -67,7 +67,7 @@ class TestAuthenticationEndpoints:
         admin_user = test_data["admin"]
         response = client.post(
             "/api/v1/auth/login",
-            json={"username": admin_user.username, "password": "Admin123!@#"},
+            json={"identifier": admin_user.username, "password": "Admin123!@#"},
         )
         assert response.status_code == 200
 
@@ -82,6 +82,23 @@ class TestAuthenticationEndpoints:
         assert response.cookies.get("auth_token") is not None
         assert response.cookies.get("csrf_token") is not None
         assert response.cookies.get("refresh_token") is not None
+
+    def test_login_with_formatted_phone_identifier(self, client, test_data):
+        """测试使用格式化手机号登录（+86 + 连字符）。"""
+        admin_user = test_data["admin"]
+        phone = admin_user.phone
+        formatted_phone = f"+86 {phone[:3]}-{phone[3:7]}-{phone[7:]}"
+
+        response = client.post(
+            "/api/v1/auth/login",
+            json={"identifier": formatted_phone, "password": "Admin123!@#"},
+        )
+
+        assert response.status_code == 200
+        payload = response.json()
+        user_info = payload.get("user", {})
+        assert user_info.get("username") == admin_user.username
+        assert response.cookies.get("auth_token") is not None
 
     def test_logout_endpoint_exists(self, client):
         """测试登出端点是否存在"""

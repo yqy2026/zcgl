@@ -178,14 +178,14 @@ export const deleteAssetHandler = http.delete(`${API_BASE_URL}/assets/:id`, asyn
 export const loginHandler = http.post(`${API_BASE_URL}/auth/login`, async ({ request }) => {
   await delay(100);
 
-  const body = (await request.json()) as { username: string; password: string };
+  const body = (await request.json()) as { identifier: string; password: string };
 
   // 模拟认证失败
-  if (!body.username || !body.password) {
+  if (!body.identifier || !body.password) {
     return HttpResponse.json(authErrorResponse, { status: 401 });
   }
 
-  if (body.username === 'error') {
+  if (body.identifier === 'error') {
     return HttpResponse.json(serverErrorResponse, { status: 500 });
   }
 

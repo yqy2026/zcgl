@@ -15,6 +15,7 @@ import { apiClient } from '@/api/client';
 describe('AuthService - Login with Permissions', () => {
   beforeEach(() => {
     localStorage.clear();
+    sessionStorage.clear();
     AuthStorage.clearAuthData();
     vi.clearAllMocks();
   });
@@ -43,7 +44,7 @@ describe('AuthService - Login with Permissions', () => {
       data: mockResponse.data,
     });
 
-    const result = await AuthService.login({ username: 'testuser', password: 'password' });
+    const result = await AuthService.login({ identifier: 'testuser', password: 'password' });
 
     expect(result.success).toBe(true);
     expect(result.data?.permissions).toEqual([
@@ -76,7 +77,7 @@ describe('AuthService - Login with Permissions', () => {
       data: mockResponse.data,
     });
 
-    const result = await AuthService.login({ username: 'testuser', password: 'password' });
+    const result = await AuthService.login({ identifier: 'testuser', password: 'password' });
 
     expect(result.success).toBe(true);
     expect(result.data?.permissions).toEqual([]);
@@ -140,8 +141,95 @@ describe('AuthService - Login with Permissions', () => {
       '/auth/me',
       expect.objectContaining({
         cache: false,
+        skipAuthRefresh: false,
+        suppressAuthRedirect: false,
       })
     );
+  });
+
+  it('should bypass auth refresh handling when requested for bootstrap probe', async () => {
+    const mockUser = {
+      id: '1',
+      username: 'testuser',
+      email: 'test@example.com',
+    };
+
+    vi.mocked(apiClient.get).mockResolvedValue({
+      success: true,
+      data: mockUser,
+    });
+
+    const result = await AuthService.getCurrentUser({ skipAuthRefresh: true });
+
+    expect(result).toEqual(mockUser);
+    expect(apiClient.get).toHaveBeenCalledWith(
+      '/auth/me',
+      expect.objectContaining({
+        cache: false,
+        skipAuthRefresh: true,
+        suppressAuthRedirect: false,
+      })
+    );
+  });
+
+  it('should suppress hard redirect during bootstrap auth probe when requested', async () => {
+    const mockUser = {
+      id: '1',
+      username: 'testuser',
+      email: 'test@example.com',
+    };
+
+    vi.mocked(apiClient.get).mockResolvedValue({
+      success: true,
+      data: mockUser,
+    });
+
+    const result = await AuthService.getCurrentUser({ suppressAuthRedirect: true });
+
+    expect(result).toEqual(mockUser);
+    expect(apiClient.get).toHaveBeenCalledWith(
+      '/auth/me',
+      expect.objectContaining({
+        cache: false,
+        skipAuthRefresh: false,
+        suppressAuthRedirect: true,
+      })
+    );
+  });
+
+  it('should get and normalize current user permission summary', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      success: true,
+      data: {
+        permissions: [
+          { resource: 'assets', action: 'read', description: 'Read assets' },
+          { resource: 'users', action: 'write' },
+          { resource: '', action: 'invalid' },
+          { resource: 'reports' },
+        ],
+      },
+    });
+
+    const permissions = await AuthService.getCurrentUserPermissions('user-1');
+
+    expect(permissions).toEqual([
+      { resource: 'assets', action: 'read', description: 'Read assets' },
+      { resource: 'users', action: 'write', description: undefined },
+    ]);
+    expect(apiClient.get).toHaveBeenCalledWith('/roles/users/user-1/permissions/summary', {
+      cache: false,
+      retry: false,
+    });
+  });
+
+  it('should return empty permission summary when response has no permissions', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      success: true,
+      data: {},
+    });
+
+    const permissions = await AuthService.getCurrentUserPermissions('user-1');
+    expect(permissions).toEqual([]);
   });
 
   it('should handle missing permissions field (defaults to empty array)', async () => {
@@ -161,12 +249,68 @@ describe('AuthService - Login with Permissions', () => {
       data: mockResponse.data,
     });
 
-    const result = await AuthService.login({ username: 'testuser', password: 'password' });
+    const result = await AuthService.login({ identifier: 'testuser', password: 'password' });
 
     expect(result.success).toBe(true);
     expect(result.data?.permissions).toEqual([]);
 
     const authData = AuthStorage.getAuthData();
     expect(authData?.permissions).toEqual([]);
+  });
+
+  it('should store auth metadata in sessionStorage when remember is false', async () => {
+    const mockResponse = {
+      data: {
+        user: {
+          id: '1',
+          username: 'testuser',
+          email: 'test@example.com',
+        },
+        permissions: [],
+      },
+    };
+
+    vi.mocked(apiClient.post).mockResolvedValue({
+      success: true,
+      data: mockResponse.data,
+    });
+
+    const result = await AuthService.login({
+      identifier: 'testuser',
+      password: 'password',
+      remember: false,
+    });
+
+    expect(result.success).toBe(true);
+    expect(sessionStorage.getItem('authData')).not.toBeNull();
+    expect(localStorage.getItem('authData')).toBeNull();
+  });
+
+  it('should store auth metadata in localStorage when remember is true', async () => {
+    const mockResponse = {
+      data: {
+        user: {
+          id: '1',
+          username: 'testuser',
+          email: 'test@example.com',
+        },
+        permissions: [],
+      },
+    };
+
+    vi.mocked(apiClient.post).mockResolvedValue({
+      success: true,
+      data: mockResponse.data,
+    });
+
+    const result = await AuthService.login({
+      identifier: 'testuser',
+      password: 'password',
+      remember: true,
+    });
+
+    expect(result.success).toBe(true);
+    expect(localStorage.getItem('authData')).not.toBeNull();
+    expect(sessionStorage.getItem('authData')).toBeNull();
   });
 });

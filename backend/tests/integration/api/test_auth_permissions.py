@@ -9,7 +9,7 @@ def _login_as_admin(client, test_data):
     response = client.post(
         "/api/v1/auth/login",
         json={
-            "username": admin_user.username,
+            "identifier": admin_user.username,
             "password": "Admin123!@#",
         },
     )
@@ -60,7 +60,7 @@ def test_login_with_invalid_password_rejected(client, test_data):
     admin_user = test_data["admin"]
     response = client.post(
         "/api/v1/auth/login",
-        json={"username": admin_user.username, "password": "WrongPass123!"},
+        json={"identifier": admin_user.username, "password": "WrongPass123!"},
     )
     assert response.status_code == 401
     payload = response.json()

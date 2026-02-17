@@ -13,6 +13,7 @@ import {
   GlobalOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import { AuthService } from '@/services/authService';
 import { NotificationCenter } from '@/components/Notification';
 
@@ -27,12 +28,13 @@ interface AppHeaderProps {
 
 const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) => {
   const navigate = useNavigate();
+  const { logout } = useAuth();
   const user = AuthService.getLocalUser();
 
   // 处理退出登录
   const handleLogout = async () => {
     try {
-      await AuthService.logout();
+      await logout();
       navigate('/login');
     } catch (error) {
       console.error('退出登录失败:', error);

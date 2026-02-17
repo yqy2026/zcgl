@@ -3,3 +3,10 @@
   justify-content: center;
   margin-top: calc(var(--spacing-xxxl) + var(--spacing-xxxl) + var(--spacing-xs));
 }
+
+.authBootstrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

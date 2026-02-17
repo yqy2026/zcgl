@@ -40,6 +40,7 @@ class CookieManager:
         response: Response,
         token: str,
         max_age: timedelta | None = None,
+        persistent: bool = True,
     ) -> None:
         """
         Set httpOnly authentication cookie
@@ -48,14 +49,21 @@ class CookieManager:
             response: FastAPI Response object
             token: JWT access token
             max_age: Optional custom expiration time (defaults to 1 hour)
+            persistent: Whether to persist cookie across browser restarts.
         """
         max_age = max_age or self.cookie_max_age
+        cookie_max_age: int | None = (
+            int(max_age.total_seconds()) if persistent else None
+        )
+        cookie_expires: datetime | None = (
+            datetime.now(UTC) + max_age if persistent else None
+        )
 
         response.set_cookie(
             key=self.cookie_name,
             value=token,
-            max_age=int(max_age.total_seconds()),
-            expires=datetime.now(UTC) + max_age,
+            max_age=cookie_max_age,
+            expires=cookie_expires,
             path=self.cookie_path,
             domain=self.cookie_domain,
             secure=self.secure_cookie,
@@ -84,14 +92,21 @@ class CookieManager:
         response: Response,
         token: str,
         max_age: timedelta | None = None,
+        persistent: bool = True,
     ) -> None:
         max_age = max_age or self.refresh_cookie_max_age
+        cookie_max_age: int | None = (
+            int(max_age.total_seconds()) if persistent else None
+        )
+        cookie_expires: datetime | None = (
+            datetime.now(UTC) + max_age if persistent else None
+        )
 
         response.set_cookie(
             key=self.refresh_cookie_name,
             value=token,
-            max_age=int(max_age.total_seconds()),
-            expires=datetime.now(UTC) + max_age,
+            max_age=cookie_max_age,
+            expires=cookie_expires,
             path=self.cookie_path,
             domain=self.cookie_domain,
             secure=self.secure_cookie,
@@ -114,18 +129,28 @@ class CookieManager:
         return secrets.token_urlsafe(32)
 
     def set_csrf_cookie(
-        self, response: Response, token: str, max_age: timedelta | None = None
+        self,
+        response: Response,
+        token: str,
+        max_age: timedelta | None = None,
+        persistent: bool = True,
     ) -> None:
         """Set CSRF token cookie (non-HttpOnly)."""
         if not settings.CSRF_ENABLED:
             return
 
         max_age = max_age or self.cookie_max_age
+        cookie_max_age: int | None = (
+            int(max_age.total_seconds()) if persistent else None
+        )
+        cookie_expires: datetime | None = (
+            datetime.now(UTC) + max_age if persistent else None
+        )
         response.set_cookie(
             key=self.csrf_cookie_name,
             value=token,
-            max_age=int(max_age.total_seconds()),
-            expires=datetime.now(UTC) + max_age,
+            max_age=cookie_max_age,
+            expires=cookie_expires,
             path=self.cookie_path,
             domain=self.cookie_domain,
             secure=self.secure_cookie,

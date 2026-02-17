@@ -74,6 +74,7 @@ interface ModalConfirmMockProps {
 const navigateMock = vi.fn();
 const confirmSpy = vi.fn();
 const messageInfoSpy = vi.fn();
+const authLogoutMock = vi.fn().mockResolvedValue(undefined);
 
 // Mock react-router-dom
 vi.mock('react-router-dom', () => ({
@@ -94,6 +95,12 @@ vi.mock('@/utils/messageManager', () => ({
     warning: vi.fn(),
     loading: vi.fn(),
   },
+}));
+
+vi.mock('@/contexts/AuthContext', () => ({
+  useAuth: () => ({
+    logout: (...args: unknown[]) => authLogoutMock(...args),
+  }),
 }));
 
 // Mock AuthService
@@ -203,6 +210,7 @@ describe('AppHeader - 渲染与交互测试', () => {
     navigateMock.mockClear();
     confirmSpy.mockClear();
     messageInfoSpy.mockClear();
+    authLogoutMock.mockClear();
   });
 
   it('应该显示标题、用户名与通知中心', async () => {
@@ -250,7 +258,6 @@ describe('AppHeader - 渲染与交互测试', () => {
 
   it('退出登录应触发确认并执行登出流程', async () => {
     const AppHeader = (await import('../AppHeader')).default;
-    const { AuthService } = await import('../../../services/authService');
 
     renderWithProviders(<AppHeader collapsed={false} onToggleCollapsed={vi.fn()} />);
     fireEvent.click(screen.getByTestId('menu-item-logout'));
@@ -263,7 +270,7 @@ describe('AppHeader - 渲染与交互测试', () => {
     expect(config.okType).toBe('danger');
 
     await config.onOk?.();
-    expect(AuthService.logout).toHaveBeenCalledTimes(1);
+    expect(authLogoutMock).toHaveBeenCalledTimes(1);
     expect(navigateMock).toHaveBeenCalledWith('/login');
   });
 });

@@ -24,11 +24,12 @@ Testing Approach:
 import asyncio
 from datetime import UTC, datetime
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import ANY, AsyncMock, MagicMock, patch
 
 import jwt
 import pytest
 from fastapi import Response, status
+from pydantic import ValidationError
 
 pytestmark = pytest.mark.api
 
@@ -204,7 +205,9 @@ def test_login_success_security_check(
                 rbac_instance.get_user_permissions_summary.return_value.permissions = []
 
                 # Execute
-                credentials = LoginRequest(username="testuser", password="password")
+                credentials = LoginRequest(
+                    identifier="testuser", password="password", remember=False
+                )
                 mock_response = MagicMock(spec=Response)
 
                 result = asyncio.run(
@@ -222,12 +225,15 @@ def test_login_success_security_check(
 
             # 2. Verify cookies were set
             mock_cookie_manager.set_auth_cookie.assert_called_once_with(
-                mock_response, "access-token-123"
+                mock_response, "access-token-123", persistent=False
             )
             mock_cookie_manager.set_refresh_cookie.assert_called_once_with(
-                mock_response, "refresh-token-123"
+                mock_response, "refresh-token-123", persistent=False
             )
-            mock_cookie_manager.set_csrf_cookie.assert_called_once()
+            csrf_token = mock_cookie_manager.create_csrf_token.return_value
+            mock_cookie_manager.set_csrf_cookie.assert_called_once_with(
+                mock_response, csrf_token, persistent=False
+            )
 
 
 @pytest.fixture
@@ -266,6 +272,13 @@ def mock_session(mock_user_model):
 class TestLogin:
     """Tests for POST /api/v1/auth/login endpoint"""
 
+    def test_login_request_rejects_legacy_username_field(self):
+        """Legacy username payload should fail validation in current API contract."""
+        from src.schemas.auth import LoginRequest
+
+        with pytest.raises(ValidationError):
+            LoginRequest(**{"username": "testuser", "password": "password123"})
+
     @patch("src.api.v1.auth.auth_modules.authentication.AuditLogCRUD")
     @patch("src.api.v1.auth.auth_modules.authentication.UserCRUD")
     @patch("src.api.v1.auth.auth_modules.authentication.AsyncAuthenticationService")
@@ -283,7 +296,7 @@ class TestLogin:
         from src.api.v1.auth.auth_modules.authentication import login
         from src.schemas.auth import LoginRequest
 
-        credentials = LoginRequest(username="testuser", password="password123")
+        credentials = LoginRequest(identifier="testuser", password="password123")
 
         mock_user = MagicMock()
         mock_user.id = "user-id"
@@ -346,7 +359,7 @@ class TestLogin:
         from src.api.v1.auth.auth_modules.authentication import login
         from src.schemas.auth import LoginRequest
 
-        credentials = LoginRequest(username="testuser", password="password123")
+        credentials = LoginRequest(identifier="testuser", password="password123")
 
         mock_user = MagicMock()
         mock_user.id = "user-id"
@@ -440,6 +453,128 @@ class TestLogin:
     @patch("src.api.v1.auth.auth_modules.authentication.UserCRUD")
     @patch("src.api.v1.auth.auth_modules.authentication.AsyncAuthenticationService")
     @patch("src.api.v1.auth.auth_modules.authentication.AsyncSessionService")
+    def test_login_invalid_credentials_audit_prefers_auth_consistent_active_match(
+        self,
+        mock_session_service_class,
+        mock_auth_service_class,
+        mock_user_crud_class,
+        mock_audit_crud_class,
+        mock_request,
+        mock_db,
+    ):
+        """Failed login audit should follow active-identifier resolution before inactive fallback."""
+        from src.api.v1.auth.auth_modules.authentication import login
+        from src.core.exception_handler import AuthenticationError
+        from src.schemas.auth import LoginRequest
+
+        credentials = LoginRequest(identifier="13800002000", password="wrongpass")
+
+        mock_auth_service = MagicMock()
+        mock_auth_service.authenticate_user = AsyncMock(return_value=None)
+        mock_auth_service_class.return_value = mock_auth_service
+
+        active_phone_user = MagicMock()
+        active_phone_user.id = "active-phone-user-id"
+        active_phone_user.is_active = True
+
+        inactive_username_user = MagicMock()
+        inactive_username_user.id = "inactive-username-user-id"
+        inactive_username_user.is_active = False
+
+        mock_user_crud = MagicMock()
+        mock_user_crud.find_active_by_identifier_async = AsyncMock(
+            return_value=active_phone_user
+        )
+        mock_user_crud.find_by_identifier_async = AsyncMock(
+            return_value=inactive_username_user
+        )
+        mock_user_crud_class.return_value = mock_user_crud
+
+        mock_audit_crud = MagicMock()
+        mock_audit_crud.create_async = AsyncMock()
+        mock_audit_crud_class.return_value = mock_audit_crud
+
+        with pytest.raises(AuthenticationError):
+            asyncio.run(
+                login(
+                    request=mock_request,
+                    credentials=credentials,
+                    response=Response(),
+                    db=mock_db,
+                )
+            )
+
+        mock_user_crud.find_active_by_identifier_async.assert_awaited_once_with(
+            mock_db, "13800002000"
+        )
+        mock_user_crud.find_by_identifier_async.assert_not_called()
+        mock_audit_crud.create_async.assert_awaited_once()
+        audit_payload = mock_audit_crud.create_async.await_args.kwargs
+        assert audit_payload["user_id"] == "active-phone-user-id"
+        assert audit_payload["action"] == "user_login_failed"
+
+    @patch("src.api.v1.auth.auth_modules.authentication.AuditLogCRUD")
+    @patch("src.api.v1.auth.auth_modules.authentication.UserCRUD")
+    @patch("src.api.v1.auth.auth_modules.authentication.AsyncAuthenticationService")
+    @patch("src.api.v1.auth.auth_modules.authentication.AsyncSessionService")
+    def test_login_invalid_credentials_logs_disabled_user_audit(
+        self,
+        mock_session_service_class,
+        mock_auth_service_class,
+        mock_user_crud_class,
+        mock_audit_crud_class,
+        mock_request,
+        mock_db,
+    ):
+        """Failed login should still be audited when identifier matches disabled user."""
+        from src.api.v1.auth.auth_modules.authentication import login
+        from src.core.exception_handler import AuthenticationError
+        from src.schemas.auth import LoginRequest
+
+        credentials = LoginRequest(identifier="13800002000", password="wrongpass")
+
+        mock_auth_service = MagicMock()
+        mock_auth_service.authenticate_user = AsyncMock(return_value=None)
+        mock_auth_service_class.return_value = mock_auth_service
+
+        disabled_user = MagicMock()
+        disabled_user.id = "disabled-user-id"
+        disabled_user.is_active = False
+
+        mock_user_crud = MagicMock()
+        mock_user_crud.find_active_by_identifier_async = AsyncMock(return_value=None)
+        mock_user_crud.find_by_identifier_async = AsyncMock(return_value=disabled_user)
+        mock_user_crud_class.return_value = mock_user_crud
+
+        mock_audit_crud = MagicMock()
+        mock_audit_crud.create_async = AsyncMock()
+        mock_audit_crud_class.return_value = mock_audit_crud
+
+        with pytest.raises(AuthenticationError):
+            asyncio.run(
+                login(
+                    request=mock_request,
+                    credentials=credentials,
+                    response=Response(),
+                    db=mock_db,
+                )
+            )
+
+        mock_user_crud.find_active_by_identifier_async.assert_awaited_once_with(
+            mock_db, "13800002000"
+        )
+        mock_user_crud.find_by_identifier_async.assert_awaited_once_with(
+            mock_db, "13800002000"
+        )
+        mock_audit_crud.create_async.assert_awaited_once()
+        audit_payload = mock_audit_crud.create_async.await_args.kwargs
+        assert audit_payload["user_id"] == "disabled-user-id"
+        assert audit_payload["action"] == "user_login_failed"
+
+    @patch("src.api.v1.auth.auth_modules.authentication.AuditLogCRUD")
+    @patch("src.api.v1.auth.auth_modules.authentication.UserCRUD")
+    @patch("src.api.v1.auth.auth_modules.authentication.AsyncAuthenticationService")
+    @patch("src.api.v1.auth.auth_modules.authentication.AsyncSessionService")
     def test_login_invalid_credentials(
         self,
         mock_session_service_class,
@@ -454,7 +589,7 @@ class TestLogin:
         from src.core.exception_handler import AuthenticationError
         from src.schemas.auth import LoginRequest
 
-        credentials = LoginRequest(username="wronguser", password="wrongpass")
+        credentials = LoginRequest(identifier="wronguser", password="wrongpass")
 
         mock_auth_service = MagicMock()
         mock_auth_service.authenticate_user = AsyncMock(return_value=None)
@@ -464,9 +599,10 @@ class TestLogin:
         mock_existing_user.id = "wronguser-id"
 
         mock_user_crud = MagicMock()
-        mock_user_crud.get_by_username_async = AsyncMock(
+        mock_user_crud.find_active_by_identifier_async = AsyncMock(
             return_value=mock_existing_user
         )
+        mock_user_crud.find_by_identifier_async = AsyncMock(return_value=None)
         mock_user_crud_class.return_value = mock_user_crud
 
         mock_audit_crud = MagicMock()
@@ -483,8 +619,12 @@ class TestLogin:
                 )
             )
 
+        mock_user_crud.find_active_by_identifier_async.assert_awaited_once_with(
+            mock_db, "wronguser"
+        )
+        mock_user_crud.find_by_identifier_async.assert_not_called()
         assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
-        assert "用户名或密码错误" in exc_info.value.message
+        assert "账号或密码错误" in exc_info.value.message
 
     @patch("src.api.v1.auth.auth_modules.authentication.AuditLogCRUD")
     @patch("src.api.v1.auth.auth_modules.authentication.UserCRUD")
@@ -504,14 +644,15 @@ class TestLogin:
         from src.core.exception_handler import AuthenticationError
         from src.schemas.auth import LoginRequest
 
-        credentials = LoginRequest(username="nonexistent", password="wrongpass")
+        credentials = LoginRequest(identifier="nonexistent", password="wrongpass")
 
         mock_auth_service = MagicMock()
         mock_auth_service.authenticate_user = AsyncMock(return_value=None)
         mock_auth_service_class.return_value = mock_auth_service
 
         mock_user_crud = MagicMock()
-        mock_user_crud.get_by_username_async = AsyncMock(return_value=None)
+        mock_user_crud.find_active_by_identifier_async = AsyncMock(return_value=None)
+        mock_user_crud.find_by_identifier_async = AsyncMock(return_value=None)
         mock_user_crud_class.return_value = mock_user_crud
 
         mock_audit_crud = MagicMock()
@@ -528,6 +669,12 @@ class TestLogin:
                 )
             )
 
+        mock_user_crud.find_active_by_identifier_async.assert_awaited_once_with(
+            mock_db, "nonexistent"
+        )
+        mock_user_crud.find_by_identifier_async.assert_awaited_once_with(
+            mock_db, "nonexistent"
+        )
         assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
 
     @patch("src.api.v1.auth.auth_modules.authentication.AuditLogCRUD")
@@ -548,7 +695,7 @@ class TestLogin:
         from src.core.exception_handler import InternalServerError
         from src.schemas.auth import LoginRequest
 
-        credentials = LoginRequest(username="testuser", password="password123")
+        credentials = LoginRequest(identifier="testuser", password="password123")
 
         mock_auth_service = MagicMock()
         mock_auth_service.authenticate_user = AsyncMock(
@@ -588,7 +735,7 @@ class TestLogin:
         from src.exceptions import BusinessLogicError
         from src.schemas.auth import LoginRequest
 
-        credentials = LoginRequest(username="lockeduser", password="password123")
+        credentials = LoginRequest(identifier="lockeduser", password="password123")
 
         mock_auth_service = MagicMock()
         mock_auth_service.authenticate_user = AsyncMock(
@@ -626,7 +773,7 @@ class TestLogin:
         from src.api.v1.auth.auth_modules.authentication import login
         from src.schemas.auth import LoginRequest
 
-        credentials = LoginRequest(username="testuser", password="password123")
+        credentials = LoginRequest(identifier="testuser", password="password123")
 
         mock_user = MagicMock()
         mock_user.id = "user-id"
@@ -953,6 +1100,117 @@ class TestRefreshToken:
     ):
         """Test successful token refresh"""
         from src.api.v1.auth.auth_modules.authentication import refresh_token
+
+        mock_request.headers = {
+            "user-agent": "test-agent",
+            "cookie": "refresh_token=valid_refresh_token",
+        }
+        mock_session.device_info = '{"remember": true}'
+
+        mock_auth_service = MagicMock()
+        mock_auth_service.validate_refresh_token = AsyncMock(return_value=mock_session)
+        mock_auth_service.create_tokens.return_value = mock_tokens
+        mock_auth_service_class.return_value = mock_auth_service
+
+        mock_audit_crud = MagicMock()
+        mock_audit_crud.create_async = AsyncMock()
+        mock_audit_crud_class.return_value = mock_audit_crud
+
+        with patch(
+            "src.api.v1.auth.auth_modules.authentication.cookie_manager"
+        ) as mock_cookie_manager:
+            result = asyncio.run(
+                refresh_token(
+                    request=mock_request,
+                    response=Response(),
+                    db=mock_db,
+                )
+            )
+            mock_cookie_manager.set_auth_cookie.assert_called_once_with(
+                ANY, mock_tokens.access_token, persistent=True
+            )
+            mock_cookie_manager.set_refresh_cookie.assert_called_once_with(
+                ANY, mock_tokens.refresh_token, persistent=True
+            )
+            csrf_token = mock_cookie_manager.create_csrf_token.return_value
+            mock_cookie_manager.set_csrf_cookie.assert_called_once_with(
+                ANY, csrf_token, persistent=True
+            )
+
+        assert result.auth_mode == "cookie"
+        assert result.message == "令牌刷新成功"
+        mock_auth_service.validate_refresh_token.assert_called_once()
+
+    @patch("src.api.v1.auth.auth_modules.authentication.AuditLogCRUD")
+    @patch("src.api.v1.auth.auth_modules.authentication.AsyncAuthenticationService")
+    @patch("src.api.v1.auth.auth_modules.authentication.AsyncSessionService")
+    def test_refresh_token_with_remember_false_uses_session_cookie(
+        self,
+        mock_session_service_class,
+        mock_auth_service_class,
+        mock_audit_crud_class,
+        mock_request,
+        mock_db,
+        mock_user_model,
+        mock_session,
+        mock_tokens,
+    ):
+        """remember=false should issue session-scoped cookies."""
+        from src.api.v1.auth.auth_modules.authentication import refresh_token
+
+        mock_request.headers = {
+            "user-agent": "test-agent",
+            "cookie": "refresh_token=valid_refresh_token",
+        }
+        mock_session.device_info = '{"remember": false}'
+
+        mock_auth_service = MagicMock()
+        mock_auth_service.validate_refresh_token = AsyncMock(return_value=mock_session)
+        mock_auth_service.create_tokens.return_value = mock_tokens
+        mock_auth_service_class.return_value = mock_auth_service
+
+        mock_audit_crud = MagicMock()
+        mock_audit_crud.create_async = AsyncMock()
+        mock_audit_crud_class.return_value = mock_audit_crud
+
+        with patch(
+            "src.api.v1.auth.auth_modules.authentication.cookie_manager"
+        ) as mock_cookie_manager:
+            asyncio.run(
+                refresh_token(
+                    request=mock_request,
+                    response=Response(),
+                    db=mock_db,
+                )
+            )
+            mock_cookie_manager.set_auth_cookie.assert_called_once_with(
+                ANY, mock_tokens.access_token, persistent=False
+            )
+            mock_cookie_manager.set_refresh_cookie.assert_called_once_with(
+                ANY, mock_tokens.refresh_token, persistent=False
+            )
+            csrf_token = mock_cookie_manager.create_csrf_token.return_value
+            mock_cookie_manager.set_csrf_cookie.assert_called_once_with(
+                ANY, csrf_token, persistent=False
+            )
+
+    @patch("src.api.v1.auth.auth_modules.authentication.AuditLogCRUD")
+    @patch("src.api.v1.auth.auth_modules.authentication.AsyncAuthenticationService")
+    @patch("src.api.v1.auth.auth_modules.authentication.AsyncSessionService")
+    def test_refresh_token_without_remember_keeps_legacy_persistent_cookie(
+        self,
+        mock_session_service_class,
+        mock_auth_service_class,
+        mock_audit_crud_class,
+        mock_request,
+        mock_db,
+        mock_user_model,
+        mock_session,
+        mock_tokens,
+    ):
+        """Legacy sessions without remember should keep persistent cookies."""
+        from src.api.v1.auth.auth_modules.authentication import refresh_token
+
         mock_request.headers = {
             "user-agent": "test-agent",
             "cookie": "refresh_token=valid_refresh_token",
@@ -967,17 +1225,36 @@ class TestRefreshToken:
         mock_audit_crud.create_async = AsyncMock()
         mock_audit_crud_class.return_value = mock_audit_crud
 
-        result = asyncio.run(
-            refresh_token(
-                request=mock_request,
-                response=Response(),
-                db=mock_db,
-            )
-        )
+        legacy_device_info_cases = [
+            '{"user_agent":"legacy-browser"}',
+            '{"remember":"legacy"}',
+            "Chrome on Windows",
+            None,
+        ]
 
-        assert result.auth_mode == "cookie"
-        assert result.message == "令牌刷新成功"
-        mock_auth_service.validate_refresh_token.assert_called_once()
+        for legacy_device_info in legacy_device_info_cases:
+            mock_session.device_info = legacy_device_info
+
+            with patch(
+                "src.api.v1.auth.auth_modules.authentication.cookie_manager"
+            ) as mock_cookie_manager:
+                asyncio.run(
+                    refresh_token(
+                        request=mock_request,
+                        response=Response(),
+                        db=mock_db,
+                    )
+                )
+                mock_cookie_manager.set_auth_cookie.assert_called_once_with(
+                    ANY, mock_tokens.access_token, persistent=True
+                )
+                mock_cookie_manager.set_refresh_cookie.assert_called_once_with(
+                    ANY, mock_tokens.refresh_token, persistent=True
+                )
+                csrf_token = mock_cookie_manager.create_csrf_token.return_value
+                mock_cookie_manager.set_csrf_cookie.assert_called_once_with(
+                    ANY, csrf_token, persistent=True
+                )
 
     @patch("src.api.v1.auth.auth_modules.authentication.AsyncAuthenticationService")
     @patch("src.api.v1.auth.auth_modules.authentication.AsyncSessionService")

@@ -280,7 +280,7 @@ interface ComponentProps {
 
 ### Zustand 全局状态
 
-**用户状态 Store** (`store/useAppStore.ts`):
+**用户状态 Store** (`frontend/src/store/useAppStore.ts`):
 ```typescript
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
@@ -613,7 +613,7 @@ export const ComponentName = () => {
   - 严格扫描（模块 + 非 token）：`pnpm scan:px:strict`
   - 全量严格扫描（含 token 源）：`pnpm scan:px:all-strict`
 - token 一致性校验命令：
-  - `pnpm verify:token-sync`（校验 `variables.css` 与 `theme/sharedTokens.ts` 的 `spacing/fontSize/borderRadius` 对齐）
+- `pnpm verify:token-sync`（校验 `variables.css` 与 `frontend/src/theme/sharedTokens.ts` 的 `spacing/fontSize/borderRadius` 对齐）
 - 门禁聚合命令：`pnpm guard:ui`（执行 `scan:lint-disable + scan:px:all-strict + verify:token-sync`）。
 - 质量门禁已接入：`pnpm audit:ui` / `pnpm audit:full` / `pnpm audit:full:coverage` 默认执行 `guard:ui`。
 - 本地常用校验：`pnpm check` 已包含 `lint + guard:ui + type-check + format:check`。

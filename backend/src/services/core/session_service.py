@@ -30,7 +30,7 @@ class AsyncSessionService:
         self,
         user_id: str,
         refresh_token: str,
-        device_info: str | dict[str, str] | None = None,
+        device_info: str | dict[str, str | bool] | None = None,
         ip_address: str | None = None,
         user_agent: str | None = None,
         session_id: str | None = None,

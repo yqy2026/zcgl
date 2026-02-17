@@ -4,6 +4,7 @@ import { AuthService } from '@/services/authService';
 import { AuthStorage } from '@/utils/AuthStorage';
 import { createLogger } from '@/utils/logger';
 import { MessageManager } from '@/utils/messageManager';
+import { CSRF_CONFIG } from '@/api/config';
 
 const logger = createLogger('AuthContext');
 
@@ -11,6 +12,7 @@ interface AuthContextType {
   user: User | null;
   permissions: Permission[];
   isAuthenticated: boolean;
+  initializing: boolean;
   login: (credentials: LoginCredentials) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -27,6 +29,28 @@ interface AuthProviderProps {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const hasCookieValue = (cookieName: string): boolean => {
+  if (typeof document === 'undefined') {
+    return false;
+  }
+
+  const cookies = document.cookie.split(';');
+  const encodedCookieName = `${encodeURIComponent(cookieName)}=`;
+
+  for (const cookie of cookies) {
+    const trimmed = cookie.trim();
+    if (trimmed === '') {
+      continue;
+    }
+
+    if (trimmed.startsWith(encodedCookieName)) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
 // Hook for components to use the auth context
 export function useAuth() {
   const context = useContext(AuthContext);
@@ -39,45 +63,139 @@ export function useAuth() {
 const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
+  const [initializing, setInitializing] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // 检查本地存储的认证状态
   useEffect(() => {
     let isMounted = true;
-    const restoreAuth = async () => {
-      // 从 AuthStorage 获取用户数据（统一的存储方式）
-      const authData = AuthStorage.getAuthData();
-      const storedUser = authData?.user;
 
-      if (storedUser != null) {
-        if (isMounted) {
-          setUser(storedUser);
-        }
-        logger.debug('认证状态已从本地存储恢复', { userId: storedUser.id });
-
-        // 清理旧的 localStorage 键
-        localStorage.removeItem('user');
-        localStorage.removeItem('user_info');
+    const resolvePermissionsWithFallback = async (
+      userId: string,
+      fallbackPermissions: Array<{ resource: string; action: string; description?: string }>
+    ) => {
+      try {
+        return await AuthService.getCurrentUserPermissions(userId);
+      } catch (permissionError) {
+        logger.warn('获取权限摘要失败，使用兜底权限', {
+          userId,
+          error:
+            permissionError instanceof Error ? permissionError.message : String(permissionError),
+        });
+        return fallbackPermissions;
       }
+    };
 
-      // 验证登录会话
-      if (storedUser != null) {
-        logger.debug('开始校验登录会话');
-        const verified = await AuthService.verifyAuth();
-        if (!verified) {
-          logger.warn('登录会话校验失败，清理本地认证信息');
+    const persistAuthDataSafely = (
+      nextUser: User,
+      nextPermissions: Array<{ resource: string; action: string; description?: string }>,
+      persistence: 'local' | 'session'
+    ) => {
+      try {
+        AuthStorage.setAuthData(
+          {
+            user: nextUser,
+            permissions: nextPermissions,
+          },
+          { persistence }
+        );
+      } catch (storageError) {
+        logger.warn('写入本地认证元数据失败，不影响当前会话', {
+          userId: nextUser.id,
+          error: storageError instanceof Error ? storageError.message : String(storageError),
+        });
+      }
+    };
+
+    const restoreAuth = async () => {
+      const authData = AuthStorage.getAuthData();
+      const storedUser = authData?.user ?? null;
+      const storedPermissions = authData?.permissions ?? [];
+      const authPersistence = AuthStorage.getAuthPersistence() ?? 'session';
+
+      try {
+        if (storedUser != null) {
+          if (isMounted) {
+            setUser(storedUser);
+            setError(null);
+          }
+          logger.debug('认证状态已从本地存储恢复', { userId: storedUser.id });
+
+          // 清理旧的 localStorage 键
+          localStorage.removeItem('user');
+          localStorage.removeItem('user_info');
+
+          // 以当前Cookie会话为准，避免跨标签账号切换后展示旧用户
+          logger.debug('开始校验并同步当前登录会话');
+          const currentUser = await AuthService.getCurrentUser();
+          const fallbackPermissions =
+            currentUser.id === storedUser.id ? storedPermissions : [];
+          const permissions = await resolvePermissionsWithFallback(
+            currentUser.id,
+            fallbackPermissions
+          );
+          persistAuthDataSafely(currentUser, permissions, authPersistence);
+
+          if (isMounted) {
+            setUser(currentUser);
+            setError(null);
+          }
+
+          if (currentUser.id !== storedUser.id) {
+            logger.info('检测到跨标签账号切换，已同步当前会话用户', {
+              fromUserId: storedUser.id,
+              toUserId: currentUser.id,
+            });
+          }
+          logger.debug('登录会话校验并同步完成', { userId: currentUser.id });
+          return;
+        }
+
+        // 无本地元数据时，只有检测到会话Cookie提示才进行恢复探测。
+        // 这样可避免匿名访客无Cookie时触发不必要的/auth/me与重定向链路。
+        const hasSessionCookieHint = hasCookieValue(CSRF_CONFIG.COOKIE_NAME);
+        if (hasSessionCookieHint !== true) {
+          logger.debug('未发现会话Cookie提示，跳过登录会话恢复探测');
+          if (isMounted) {
+            setUser(null);
+            setError(null);
+          }
+          return;
+        }
+
+        logger.debug('检测到会话Cookie提示，尝试通过Cookie恢复登录会话');
+        const currentUser = await AuthService.getCurrentUser({
+          suppressAuthRedirect: true,
+        });
+        const permissions = await resolvePermissionsWithFallback(currentUser.id, []);
+        persistAuthDataSafely(currentUser, permissions, 'session');
+        if (isMounted) {
+          setUser(currentUser);
+          setError(null);
+        }
+        logger.debug('通过Cookie恢复登录会话成功', { userId: currentUser.id });
+      } catch {
+        if (storedUser != null) {
+          // 本地有认证元数据但Cookie会话已失效
           AuthStorage.clearAuthData();
           if (isMounted) {
             setUser(null);
             setError('登录状态已失效，请重新登录');
           }
         } else {
-          logger.debug('登录会话校验通过');
+          // 无本地元数据时，恢复失败保持未登录且不弹错误
+          if (isMounted) {
+            setUser(null);
+          }
+        }
+      } finally {
+        if (isMounted) {
+          setInitializing(false);
         }
       }
     };
 
-    restoreAuth();
+    void restoreAuth();
 
     return () => {
       isMounted = false;
@@ -86,7 +204,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (credentials: LoginCredentials) => {
     try {
-      logger.debug('开始登录', { username: credentials.username });
+      logger.debug('开始登录', { identifier: credentials.identifier });
       setLoading(true);
       setError(null);
 
@@ -191,7 +309,8 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const value: AuthContextType = {
     user,
     permissions: AuthService.getLocalPermissions() as Permission[],
-    isAuthenticated: !!user,
+    isAuthenticated: user != null,
+    initializing,
     login,
     logout,
     refreshUser,

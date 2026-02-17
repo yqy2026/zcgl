@@ -5,7 +5,7 @@ import type { LoginFormData } from '@/types/auth';
 import styles from './LoginPage.module.css';
 
 type FieldErrors = {
-  username: string | null;
+  identifier: string | null;
   password: string | null;
 };
 
@@ -42,18 +42,16 @@ const MaterialSymbol: React.FC<MaterialSymbolProps> = ({ name, className }) => {
 };
 
 const validateForm = (values: LoginFormData): FieldErrors => {
-  const username = values.username.trim();
+  const identifier = values.identifier.trim();
   const password = values.password;
 
-  let usernameError: string | null = null;
+  let identifierError: string | null = null;
   let passwordError: string | null = null;
 
-  if (username === '') {
-    usernameError = '请输入用户名';
-  } else if (username.length < 2) {
-    usernameError = '用户名至少2个字符';
-  } else if (username.length > 50) {
-    usernameError = '用户名最多50个字符';
+  if (identifier === '') {
+    identifierError = '请输入用户名或手机号';
+  } else if (identifier.length > 50) {
+    identifierError = '用户名或手机号最多50个字符';
   }
 
   if (password.trim() === '') {
@@ -63,7 +61,7 @@ const validateForm = (values: LoginFormData): FieldErrors => {
   }
 
   return {
-    username: usernameError,
+    identifier: identifierError,
     password: passwordError,
   };
 };
@@ -73,14 +71,14 @@ const LoginPage: React.FC = () => {
   const location = useLocation();
   const { login, loading, error } = useAuth();
   const [formData, setFormData] = useState<LoginFormData>({
-    username: '',
+    identifier: '',
     password: '',
     remember: false,
   });
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [isQrMode, setIsQrMode] = useState<boolean>(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({
-    username: null,
+    identifier: null,
     password: null,
   });
 
@@ -89,14 +87,18 @@ const LoginPage: React.FC = () => {
     const nextErrors = validateForm(formData);
     setFieldErrors(nextErrors);
 
-    const hasUsernameError = nextErrors.username != null && nextErrors.username !== '';
+    const hasIdentifierError = nextErrors.identifier != null && nextErrors.identifier !== '';
     const hasPasswordError = nextErrors.password != null && nextErrors.password !== '';
-    if (hasUsernameError || hasPasswordError) {
+    if (hasIdentifierError || hasPasswordError) {
       return;
     }
 
     try {
-      await login({ username: formData.username, password: formData.password });
+      await login({
+        identifier: formData.identifier,
+        password: formData.password,
+        remember: formData.remember,
+      });
 
       // 登录成功，跳转到目标页面或默认工作台
       const state = location.state as { from?: { pathname?: string } } | null;
@@ -107,9 +109,9 @@ const LoginPage: React.FC = () => {
     }
   };
 
-  const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData(prev => ({ ...prev, username: e.target.value }));
-    setFieldErrors(prev => ({ ...prev, username: null }));
+  const handleIdentifierChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData(prev => ({ ...prev, identifier: e.target.value }));
+    setFieldErrors(prev => ({ ...prev, identifier: null }));
   };
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -130,7 +132,7 @@ const LoginPage: React.FC = () => {
   };
 
   const hasError = error != null && error !== '';
-  const hasUsernameFieldError = fieldErrors.username != null && fieldErrors.username !== '';
+  const hasIdentifierFieldError = fieldErrors.identifier != null && fieldErrors.identifier !== '';
   const hasPasswordFieldError = fieldErrors.password != null && fieldErrors.password !== '';
   const currentModeIcon = isQrMode ? 'desktop_windows' : 'qr_code_2';
 
@@ -198,31 +200,31 @@ const LoginPage: React.FC = () => {
                 <form className={styles['login-form']} onSubmit={handleSubmit} noValidate>
                   <div className={styles['field-list']}>
                     <div className={styles['field-group']}>
-                      <label className={styles['field-label']} htmlFor="username">
+                      <label className={styles['field-label']} htmlFor="identifier">
                         用户名 / 手机号
                       </label>
                       <div
                         className={[
                           styles['input-shell'],
-                          hasUsernameFieldError ? styles['input-shell-error'] : '',
+                          hasIdentifierFieldError ? styles['input-shell-error'] : '',
                         ].join(' ')}
                       >
                         <span className={styles['input-icon']}>
                           <MaterialSymbol name="person" />
                         </span>
                         <input
-                          id="username"
-                          name="username"
+                          id="identifier"
+                          name="identifier"
                           type="text"
                           className={styles['input-control']}
-                          placeholder="请输入手机号"
-                          value={formData.username}
-                          onChange={handleUsernameChange}
+                          placeholder="请输入用户名或手机号"
+                          value={formData.identifier}
+                          onChange={handleIdentifierChange}
                           autoComplete="username"
                         />
                       </div>
-                      {hasUsernameFieldError && (
-                        <p className={styles['field-error']}>{fieldErrors.username}</p>
+                      {hasIdentifierFieldError && (
+                        <p className={styles['field-error']}>{fieldErrors.identifier}</p>
                       )}
                     </div>
 

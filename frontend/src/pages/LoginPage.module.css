@@ -359,6 +359,12 @@
   color: #cbd5e1;
 }
 
+/* Avoid double focus ring: keep shell focus style only on login inputs. */
+.input-control:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
 .password-visibility {
   position: absolute;
   right: 0.85rem;

@@ -5,6 +5,7 @@
 如需业务逻辑（如密码验证、用户校验等），请使用Service层。
 """
 
+import re
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -20,6 +21,23 @@ from ..schemas.auth import UserCreate, UserUpdate
 
 class UserCRUD:
     """用户CRUD操作（异步）"""
+
+    @staticmethod
+    def _normalize_phone_identifier(identifier: str) -> str | None:
+        candidate = identifier.strip()
+        if candidate == "":
+            return None
+
+        # Accept common phone formatting used by external systems.
+        digits = re.sub(r"[\s\-\(\)]", "", candidate)
+        if digits.startswith("+"):
+            digits = digits[1:]
+        if digits.startswith("86") and len(digits) == 13:
+            digits = digits[2:]
+
+        if re.fullmatch(r"1[3-9]\d{9}", digits):
+            return digits
+        return None
 
     def _apply_user_filters_stmt(
         self,
@@ -204,15 +222,57 @@ class UserCRUD:
         stmt = select(User).where(or_(User.username == username, User.email == email))
         return (await db.execute(stmt)).scalars().first()
 
+    async def _find_by_identifier_async(
+        self, db: AsyncSession, identifier: str, *, active_only: bool
+    ) -> User | None:
+        normalized_identifier = identifier.strip()
+        if normalized_identifier == "":
+            return None
+
+        username_conditions: list[Any] = [User.username == normalized_identifier]
+        if active_only:
+            username_conditions.append(User.is_active.is_(True))
+
+        # 优先按用户名精确匹配，避免 username 与其他用户手机号重叠时误命中。
+        username_stmt = select(User).where(*username_conditions)
+        user = (await db.execute(username_stmt)).scalars().first()
+        if user is not None:
+            return user
+
+        normalized_phone = self._normalize_phone_identifier(normalized_identifier)
+        if normalized_phone is None:
+            return None
+
+        phone_conditions: list[Any] = [User.phone == normalized_phone]
+        if active_only:
+            phone_conditions.append(User.is_active.is_(True))
+
+        phone_stmt = select(User).where(*phone_conditions)
+        user = (await db.execute(phone_stmt)).scalars().first()
+        if user is not None:
+            return user
+
+        return None
+
+    async def find_by_identifier_async(
+        self, db: AsyncSession, identifier: str
+    ) -> User | None:
+        """通过用户名或手机号查找用户（不区分启用状态，用于审计等场景）。"""
+        return await self._find_by_identifier_async(
+            db, identifier, active_only=False
+        )
+
+    async def find_active_by_identifier_async(
+        self, db: AsyncSession, identifier: str
+    ) -> User | None:
+        """通过用户名或手机号查找活跃用户（用于登录认证）。"""
+        return await self._find_by_identifier_async(db, identifier, active_only=True)
+
     async def find_active_by_login_async(
         self, db: AsyncSession, login: str
     ) -> User | None:
-        """通过用户名或邮箱查找活跃用户（用于登录认证）"""
-        stmt = select(User).where(
-            or_(User.username == login, User.email == login),
-            User.is_active.is_(True),
-        )
-        return (await db.execute(stmt)).scalars().first()
+        """兼容旧接口，等价于 find_active_by_identifier_async。"""
+        return await self.find_active_by_identifier_async(db, login)
 
     async def get_recent_logins_async(
         self, db: AsyncSession, limit: int = 10

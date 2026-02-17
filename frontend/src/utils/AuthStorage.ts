@@ -9,22 +9,37 @@ export interface AuthData {
   }>;
 }
 
+export type AuthDataPersistence = 'local' | 'session';
+
+export interface AuthDataOptions {
+  persistence?: AuthDataPersistence;
+}
+
 export class AuthStorageClass {
   private readonly AUTH_DATA_KEY = 'authData';
+  private readonly AUTH_DATA_UPDATED_AT_KEY = 'authDataUpdatedAt';
   private readonly USER_KEY = 'user';
   private readonly PERMISSIONS_KEY = 'permissions';
   private readonly LEGACY_TOKEN_KEYS = ['token', 'refresh_token', 'auth_token', 'refreshToken'];
 
   /**
-   * Store authentication data in localStorage (no tokens)
+   * Store authentication metadata (tokens remain in httpOnly cookies).
    */
-  setAuthData(data: AuthData): void {
+  setAuthData(data: AuthData, options?: AuthDataOptions): void {
+    const persistence = options?.persistence ?? 'local';
+    const targetStorage = this.getStorageByPersistence(persistence);
+    const secondaryStorage = persistence === 'session' ? localStorage : sessionStorage;
+
     try {
-      localStorage.setItem(this.AUTH_DATA_KEY, JSON.stringify(data));
+      // Keep only one active metadata source to avoid stale cross-storage reads.
+      this.clearAuthDataFromStorage(secondaryStorage);
+      targetStorage.setItem(this.AUTH_DATA_KEY, JSON.stringify(data));
+      targetStorage.setItem(this.AUTH_DATA_UPDATED_AT_KEY, String(Date.now()));
       // Store user and permissions for legacy consumers
-      localStorage.setItem(this.USER_KEY, JSON.stringify(data.user));
-      localStorage.setItem(this.PERMISSIONS_KEY, JSON.stringify(data.permissions));
-      this.clearLegacyTokenKeys();
+      targetStorage.setItem(this.USER_KEY, JSON.stringify(data.user));
+      targetStorage.setItem(this.PERMISSIONS_KEY, JSON.stringify(data.permissions));
+      this.clearLegacyTokenKeys(localStorage);
+      this.clearLegacyTokenKeys(sessionStorage);
     } catch (error) {
       console.error('Failed to store auth data:', error);
       throw error;
@@ -32,11 +47,33 @@ export class AuthStorageClass {
   }
 
   /**
-   * Retrieve authentication data from localStorage
+   * Retrieve authentication metadata, reconciling session/local conflicts by freshness.
    */
   getAuthData(): AuthData | null {
+    const sessionAuthData = this.getAuthDataFromStorage(sessionStorage);
+    const localAuthData = this.getAuthDataFromStorage(localStorage);
+    const preferredPersistence = this.resolvePreferredPersistence(sessionAuthData, localAuthData);
+    if (preferredPersistence === 'session') {
+      return sessionAuthData;
+    }
+    if (preferredPersistence === 'local') {
+      return localAuthData;
+    }
+    return null;
+  }
+
+  /**
+   * Get where current auth metadata is persisted.
+   */
+  getAuthPersistence(): AuthDataPersistence | null {
+    const sessionAuthData = this.getAuthDataFromStorage(sessionStorage);
+    const localAuthData = this.getAuthDataFromStorage(localStorage);
+    return this.resolvePreferredPersistence(sessionAuthData, localAuthData);
+  }
+
+  private getAuthDataFromStorage(storage: Storage): AuthData | null {
     try {
-      const stored = localStorage.getItem(this.AUTH_DATA_KEY);
+      const stored = storage.getItem(this.AUTH_DATA_KEY);
       if (stored == null) {
         return null;
       }
@@ -64,15 +101,14 @@ export class AuthStorageClass {
   }
 
   /**
-   * Clear all authentication data from localStorage
+   * Clear all authentication metadata from session/local storage.
    */
   clearAuthData(): void {
     try {
-      localStorage.removeItem(this.AUTH_DATA_KEY);
-      localStorage.removeItem(this.USER_KEY);
-      localStorage.removeItem(this.PERMISSIONS_KEY);
-      localStorage.removeItem('currentUser');
-      this.clearLegacyTokenKeys();
+      this.clearAuthDataFromStorage(localStorage);
+      this.clearAuthDataFromStorage(sessionStorage);
+      this.clearLegacyTokenKeys(localStorage);
+      this.clearLegacyTokenKeys(sessionStorage);
     } catch (error) {
       console.error('Failed to clear auth data:', error);
     }
@@ -86,9 +122,72 @@ export class AuthStorageClass {
     return user != null;
   }
 
-  private clearLegacyTokenKeys(): void {
+  private getStorageByPersistence(persistence: AuthDataPersistence): Storage {
+    return persistence === 'session' ? sessionStorage : localStorage;
+  }
+
+  private resolvePreferredPersistence(
+    sessionAuthData: AuthData | null,
+    localAuthData: AuthData | null
+  ): AuthDataPersistence | null {
+    if (sessionAuthData != null && localAuthData != null) {
+      const sessionUpdatedAt = this.getAuthDataUpdatedAt(sessionStorage);
+      const localUpdatedAt = this.getAuthDataUpdatedAt(localStorage);
+
+      if (sessionUpdatedAt != null && localUpdatedAt != null) {
+        if (sessionUpdatedAt > localUpdatedAt) {
+          return 'session';
+        }
+        if (localUpdatedAt > sessionUpdatedAt) {
+          return 'local';
+        }
+      } else if (sessionUpdatedAt != null && localUpdatedAt == null) {
+        return 'session';
+      } else if (localUpdatedAt != null && sessionUpdatedAt == null) {
+        return 'local';
+      }
+
+      // When two different users are present without reliable recency metadata,
+      // prefer shared localStorage to follow cross-tab account switches.
+      if (sessionAuthData.user.id !== localAuthData.user.id) {
+        return 'local';
+      }
+
+      return 'session';
+    }
+
+    if (sessionAuthData != null) {
+      return 'session';
+    }
+    if (localAuthData != null) {
+      return 'local';
+    }
+    return null;
+  }
+
+  private getAuthDataUpdatedAt(storage: Storage): number | null {
+    const value = storage.getItem(this.AUTH_DATA_UPDATED_AT_KEY);
+    if (value == null) {
+      return null;
+    }
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) {
+      return null;
+    }
+    return parsed;
+  }
+
+  private clearAuthDataFromStorage(storage: Storage): void {
+    storage.removeItem(this.AUTH_DATA_KEY);
+    storage.removeItem(this.AUTH_DATA_UPDATED_AT_KEY);
+    storage.removeItem(this.USER_KEY);
+    storage.removeItem(this.PERMISSIONS_KEY);
+    storage.removeItem('currentUser');
+  }
+
+  private clearLegacyTokenKeys(storage: Storage): void {
     for (const key of this.LEGACY_TOKEN_KEYS) {
-      localStorage.removeItem(key);
+      storage.removeItem(key);
     }
   }
 }

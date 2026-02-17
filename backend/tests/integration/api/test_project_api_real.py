@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 def _get_auth_headers(client: TestClient, admin_user) -> dict[str, str]:
     response = client.post(
         "/api/v1/auth/login",
-        json={"username": admin_user.username, "password": "Admin123!@#"},
+        json={"identifier": admin_user.username, "password": "Admin123!@#"},
     )
     assert response.status_code == 200
     csrf_token = response.cookies.get("csrf_token")

@@ -15,9 +15,9 @@ const API_BASE_URL = '/api/v1';
 export const authHandlers = [
   // 登录
   http.post(`${API_BASE_URL}/auth/login`, async ({ request }) => {
-    const body = (await request.json()) as { username: string; password: string };
+    const body = (await request.json()) as { identifier: string; password: string };
 
-    if (body.username === 'testuser' && body.password === 'password123') {
+    if (body.identifier === 'testuser' && body.password === 'password123') {
       return HttpResponse.json({
         data: {
           user: {

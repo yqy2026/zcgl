@@ -72,7 +72,7 @@ P2: 次级文本和微间距（2/4/6/8px）。
 - `pnpm type-check`：通过（`tsgo --noEmit`）
 - `pnpm vitest`：定向通过（`OccupancyRateChart` + `LoadingSpinner`，`12/12`）
 - `pnpm scan:px:all-strict`：通过（`module-style / non-token-source / token-source px = 0`）
-- `pnpm verify:token-sync`：通过（`variables.css` 与 `theme/sharedTokens.ts` 尺度令牌一致）
+- `pnpm verify:token-sync`：通过（`variables.css` 与 `frontend/src/theme/sharedTokens.ts` 尺度令牌一致）
 - `pnpm guard:ui`：通过（聚合执行 `scan:lint-disable + scan:px:all-strict + verify:token-sync`）
 - `pnpm guard:ui:report`：通过（仅导出 `style-px-report.json` + `token-sync-report.json`）
 - `pnpm guard:ui:ci`：通过（阻塞校验并导出报告，供 CI 使用）
@@ -82,5 +82,5 @@ P2: 次级文本和微间距（2/4/6/8px）。
 - CI 报告产物：`frontend-lint-reports` 附带 `style-px-report.json` 与 `token-sync-report.json`
 - 本地 `pnpm check` 已接入：默认执行 `guard:ui`
 - `frontend/src/**/*.module.css`：`px` 命中 `0`
-- 非 token 源文件（排除 `variables.css`、`theme/sharedTokens.ts`）：`px` 命中 `0`
-- token 源文件（`variables.css`、`theme/sharedTokens.ts`）：`px` 命中 `0`
+- 非 token 源文件（排除 `variables.css`、`frontend/src/theme/sharedTokens.ts`）：`px` 命中 `0`
+- token 源文件（`variables.css`、`frontend/src/theme/sharedTokens.ts`）：`px` 命中 `0`

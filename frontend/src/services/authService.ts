@@ -11,10 +11,11 @@ const logger = createLogger('AuthService');
 
 // 权限接口
 interface Permission {
-  id: string;
-  name: string;
+  id?: string;
+  name?: string;
   resource: string;
   action: string;
+  description?: string;
   conditions?: Record<string, unknown>;
 }
 
@@ -22,7 +23,7 @@ export class AuthService {
   // 用户登录
   static async login(credentials: LoginCredentials): Promise<StandardApiResponse<AuthResponse>> {
     try {
-      logger.debug('开始登录流程', { username: credentials.username });
+      logger.debug('开始登录流程', { identifier: credentials.identifier });
 
       // 使用API客户端，自动处理响应提取和错误
       const result = await apiClient.post(AUTH_API.LOGIN, credentials, {
@@ -80,8 +81,9 @@ export class AuthService {
           ? responseData.data?.permissions
           : [];
 
-      // Store user/permissions locally (tokens stay in httpOnly cookies)
-      AuthStorage.setAuthData({ user, permissions });
+      // Keep metadata persistence aligned with cookie lifetime.
+      const authPersistence = credentials.remember === true ? 'local' : 'session';
+      AuthStorage.setAuthData({ user, permissions }, { persistence: authPersistence });
 
       return {
         success: true,
@@ -154,10 +156,15 @@ export class AuthService {
   }
 
   // 获取当前用户信息
-  static async getCurrentUser(): Promise<User> {
+  static async getCurrentUser(options?: {
+    skipAuthRefresh?: boolean;
+    suppressAuthRedirect?: boolean;
+  }): Promise<User> {
     try {
       const result = await apiClient.get(AUTH_API.PROFILE, {
         cache: false, // 用户信息不缓存
+        skipAuthRefresh: options?.skipAuthRefresh === true,
+        suppressAuthRedirect: options?.suppressAuthRedirect === true,
         retry: {
           maxAttempts: 2,
           delay: 500,
@@ -171,6 +178,59 @@ export class AuthService {
 
       // me端点直接返回用户数据，不是嵌套在user字段中
       return result.data as User;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
+  // 获取当前用户权限摘要（用于会话恢复）
+  static async getCurrentUserPermissions(
+    userId: string
+  ): Promise<Array<{ resource: string; action: string; description?: string }>> {
+    try {
+      const result = await apiClient.get(`/roles/users/${userId}/permissions/summary`, {
+        cache: false,
+        retry: false,
+      });
+
+      if (!result.success) {
+        throw new Error(`获取用户权限失败: ${result.error}`);
+      }
+
+      const responseData = result.data as
+        | {
+            permissions?: Array<{
+              resource?: string;
+              action?: string;
+              description?: string;
+            }>;
+          }
+        | undefined;
+
+      if (!Array.isArray(responseData?.permissions)) {
+        return [];
+      }
+
+      return responseData.permissions
+        .filter(
+          (
+            permission
+          ): permission is {
+            resource: string;
+            action: string;
+            description?: string;
+          } =>
+            typeof permission.resource === 'string' &&
+            permission.resource.trim() !== '' &&
+            typeof permission.action === 'string' &&
+            permission.action.trim() !== ''
+        )
+        .map(permission => ({
+          resource: permission.resource,
+          action: permission.action,
+          description: permission.description,
+        }));
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -284,9 +344,12 @@ export class AuthService {
       // 更新本地存储的用户信息
       const updatedUser = result.data as User;
       const existing = AuthStorage.getAuthData();
+      const existingPersistence = AuthStorage.getAuthPersistence();
       AuthStorage.setAuthData({
         user: updatedUser,
         permissions: existing?.permissions ?? [],
+      }, {
+        persistence: existingPersistence ?? 'local',
       });
       return updatedUser;
     } catch (error) {

@@ -24,7 +24,7 @@ def _build_project_code() -> str:
 def _login(client: TestClient, username: str, password: str) -> None:
     response = client.post(
         "/api/v1/auth/login",
-        json={"username": username, "password": password},
+        json={"identifier": username, "password": password},
     )
     assert response.status_code == 200
 

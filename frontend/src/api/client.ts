@@ -104,6 +104,8 @@ const validateApiPath = (url: string): void => {
  */
 interface ExtendedAxiosRequestConfig extends InternalAxiosRequestConfig {
   _retry?: boolean;
+  _skipAuthRefresh?: boolean;
+  _suppressAuthRedirect?: boolean;
 }
 
 // ==================== 缓存管理器 ====================
@@ -405,6 +407,7 @@ export class ApiClient {
       async (error: unknown) => {
         const axiosError = error as AxiosError<unknown, ExtendedAxiosRequestConfig>;
         const originalRequest = axiosError.config as ExtendedAxiosRequestConfig | undefined;
+        const suppressAuthRedirect = originalRequest?._suppressAuthRedirect === true;
 
         const requestUrl = originalRequest?.url ?? '';
         const isRefreshRequest =
@@ -412,7 +415,7 @@ export class ApiClient {
 
         // 刷新接口本身返回401时，直接登出，避免递归刷新
         if (axiosError.response?.status === 401 && isRefreshRequest) {
-          if (typeof window !== 'undefined') {
+          if (suppressAuthRedirect !== true && typeof window !== 'undefined') {
             AuthStorage.clearAuthData();
             const currentPath =
               window.location.pathname + window.location.search + window.location.hash;
@@ -426,6 +429,7 @@ export class ApiClient {
           axiosError.response?.status === 401 &&
           originalRequest != null &&
           originalRequest._retry !== true &&
+          originalRequest._skipAuthRefresh !== true &&
           !isRefreshRequest
         ) {
           apiLogger.warn('Token expired, attempting refresh', {
@@ -435,7 +439,11 @@ export class ApiClient {
 
           try {
             // Try to refresh using cookie-based auth
-            await this.instance.post('/auth/refresh');
+            const refreshRequestConfig: AxiosRequestConfig = {};
+            if (suppressAuthRedirect === true) {
+              (refreshRequestConfig as ExtendedAxiosRequestConfig)._suppressAuthRedirect = true;
+            }
+            await this.instance.post('/auth/refresh', undefined, refreshRequestConfig);
 
             apiLogger.info('Token refresh successful, retrying original request', {
               url: originalRequest.url,
@@ -453,6 +461,10 @@ export class ApiClient {
               url: originalRequest.url,
               method: originalRequest.method,
             });
+
+            if (suppressAuthRedirect === true) {
+              return Promise.reject(refreshError);
+            }
 
             // 刷新失败，跳转到登录页
             // Cookie will be cleared by backend logout endpoint
@@ -500,12 +512,16 @@ export class ApiClient {
     config?: AxiosRequestConfig & {
       cache?: boolean;
       retry?: boolean | RetryConfig;
+      skipAuthRefresh?: boolean;
+      suppressAuthRedirect?: boolean;
       smartExtract?: boolean;
     }
   ): Promise<ExtractResult<T>> {
     const {
       cache = this.config.defaultCacheConfig?.enabled,
       retry = this.config.enableAutoRetry,
+      skipAuthRefresh = false,
+      suppressAuthRedirect = false,
       smartExtract = true,
       ...axiosConfig
     } = config || {};
@@ -544,7 +560,18 @@ export class ApiClient {
 
     // 执行请求
     const executeRequest = async (): Promise<AxiosResponse> => {
-      const response = await this.instance.get(url, axiosConfig);
+      const requestConfig: AxiosRequestConfig = {
+        ...axiosConfig,
+      };
+
+      if (skipAuthRefresh === true) {
+        (requestConfig as ExtendedAxiosRequestConfig)._skipAuthRefresh = true;
+      }
+      if (suppressAuthRedirect === true) {
+        (requestConfig as ExtendedAxiosRequestConfig)._suppressAuthRedirect = true;
+      }
+
+      const response = await this.instance.get(url, requestConfig);
 
       // 存储到缓存
       if (cache === true && response.data !== undefined && response.data !== null) {

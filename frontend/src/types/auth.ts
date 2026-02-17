@@ -1,12 +1,13 @@
 export interface LoginFormData {
-  username: string;
+  identifier: string;
   password: string;
   remember: boolean;
 }
 
 export interface LoginCredentials {
-  username: string;
+  identifier: string;
   password: string;
+  remember?: boolean;
 }
 
 export interface User {

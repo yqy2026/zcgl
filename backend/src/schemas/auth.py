@@ -184,8 +184,11 @@ class UserResponse(BaseModel):
 class LoginRequest(BaseModel):
     """登录请求模型"""
 
-    username: str = Field(..., description="用户名或邮箱")
+    identifier: str = Field(..., description="用户名或手机号")
     password: str = Field(..., description="密码")
+    remember: bool = Field(
+        default=False, description="是否记住登录状态（持久化 Cookie）"
+    )
 
 
 class TokenData(BaseModel):

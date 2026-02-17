@@ -11,7 +11,7 @@
 - 安全配置最佳实践
 
 ## ✅ Status
-**当前状态**: Active (2026-02-03 更新)
+**当前状态**: Active (2026-02-16 更新)
 **适用版本**: v1.1.0
 **配置文件位置**:
 - 后端: `backend/.env.example`
@@ -112,10 +112,7 @@ TOKEN_BLACKLIST_ENABLED=true
 DATABASE_URL=postgresql+psycopg://username:password@host:5432/database_name
 TEST_DATABASE_URL=postgresql+psycopg://username:password@host:5432/test_database_name
 
-# 可选：仅测试/CI 允许 SQLite（默认禁用）
-# ENVIRONMENT=testing
-# ALLOW_SQLITE_FOR_TESTS=true
-# DATABASE_URL=sqlite:///./test_database.db
+# SQLite 已移除（开发/测试/生产均不支持）
 
 # 连接池配置 (PostgreSQL)
 # DATABASE_POOL_SIZE=20
@@ -557,7 +554,7 @@ redis-cli ping  # 应返回 PONG
 ## 🔍 Evidence Sources
 - **后端配置**: `backend/src/core/config.py`
 - **后端环境模板**: `backend/.env.example`
-- **前端配置**: `frontend/src/services/config.ts`
+- **前端配置**: `frontend/src/api/config.ts`
 - **前端环境模板**: `frontend/.env.example`
 - **Vite 配置**: `frontend/vite.config.ts`
 - **Docker 环境变量**: `docker-compose.yml`

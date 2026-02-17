@@ -44,7 +44,7 @@ def test_complete_auth_flow_e2e(
     # Step 1: Login with admin user
     login_response = client.post(
         "/api/v1/auth/login",
-        json={"username": "admin_test", "password": "AdminPass123!"},
+        json={"identifier": "admin_test", "password": "AdminPass123!"},
     )
 
     # Debug: print response if not successful
@@ -121,7 +121,7 @@ def test_regular_user_auth_flow_e2e(
     # Step 1: Login with regular user
     login_response = client.post(
         "/api/v1/auth/login",
-        json={"username": "regular_user", "password": "UserPass123!"},
+        json={"identifier": "regular_user", "password": "UserPass123!"},
     )
 
     assert login_response.status_code == 200
@@ -170,7 +170,7 @@ def test_invalid_credentials_flow(
     # Try login with wrong password
     response = client.post(
         "/api/v1/auth/login",
-        json={"username": "credential_test", "password": "WrongPassword123!"},
+        json={"identifier": "credential_test", "password": "WrongPassword123!"},
     )
 
     assert response.status_code == 401
@@ -205,7 +205,7 @@ def test_token_refresh_flow(
     # Login to establish cookie session
     login_response = client.post(
         "/api/v1/auth/login",
-        json={"username": "refresh_test", "password": "RefreshPass123!"},
+        json={"identifier": "refresh_test", "password": "RefreshPass123!"},
     )
 
     assert login_response.status_code == 200
@@ -252,7 +252,7 @@ def test_logout_flow(
     # Login
     login_response = client.post(
         "/api/v1/auth/login",
-        json={"username": "logout_test", "password": "LogoutPass123!"},
+        json={"identifier": "logout_test", "password": "LogoutPass123!"},
     )
 
     assert login_response.status_code == 200
@@ -309,7 +309,7 @@ def test_permission_enforcement(
     # Login as admin and verify admin access
     admin_client.post(
         "/api/v1/auth/login",
-        json={"username": "perm_admin", "password": "AdminPerm123!"},
+        json={"identifier": "perm_admin", "password": "AdminPerm123!"},
     )
 
     # Test admin endpoint (e.g., list all users)
@@ -319,7 +319,7 @@ def test_permission_enforcement(
 
     # Login as regular user
     user_client.post(
-        "/api/v1/auth/login", json={"username": "perm_user", "password": "UserPerm123!"}
+        "/api/v1/auth/login", json={"identifier": "perm_user", "password": "UserPerm123!"}
     )
 
     # Regular user should not be able to list all users
@@ -363,7 +363,7 @@ def test_role_based_permissions(
     # Login
     login_response = client.post(
         "/api/v1/auth/login",
-        json={"username": f"{role}_test", "password": f"{role.capitalize()}Pass123!"},
+        json={"identifier": f"{role}_test", "password": f"{role.capitalize()}Pass123!"},
     )
 
     assert login_response.status_code == 200

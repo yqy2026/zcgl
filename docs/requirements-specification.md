@@ -304,7 +304,7 @@
 | REQ-AST-003 | `DELETE/restore/hard-delete` | `AssetService._ensure_asset_not_linked` | `backend/tests/unit/services/asset/test_asset_service.py` |
 | REQ-RNT-001 | `POST /api/v1/rental-contracts/contracts` | `rent_contract_service` | `backend/src/api/v1/rent_contracts/contracts.py` |
 | REQ-RNT-003 | `/api/v1/rental-contracts/ledger/*` | `RentContractLedgerService` | `backend/src/services/rent_contract/ledger_service.py` |
-| REQ-AUTH-001 | `/api/v1/auth/login/refresh` | `CookieManager` | `backend/tests/unit/middleware/test_optional_auth.py` |
+| REQ-AUTH-001 | `/api/v1/auth/login` + `/api/v1/auth/refresh` | `CookieManager` | `backend/tests/unit/middleware/test_optional_auth.py` |
 | REQ-AUTH-ROLE-001 | `/api/v1/roles/*` | `RBACService` | `backend/tests/unit/api/v1/test_roles_permission_grants.py` |
 | REQ-SYS-001 | `/api/v1/monitoring/health` | `get_database_status` | `backend/src/api/v1/system/system.py` |
 | REQ-DOC-001 | `/api/v1/pdf-import/*` | `pdf_import` 组合路由 | `backend/src/api/v1/documents/pdf_import.py` |

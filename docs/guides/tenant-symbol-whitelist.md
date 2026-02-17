@@ -1,14 +1,14 @@
 # tenant 符号白名单（运行时零歧义清单）
 
 > **状态**: Active  
-> **生成日期**: 2026-02-11  
+> **生成日期**: 2026-02-16  
 > **用途**: 明确哪些 `tenant*` 符号可保留（承租方语义），哪些仅限历史迁移，哪些不得新增。
 
 ---
 
 ## 1. 结论（可直接用于评审）
 
-- 当前运行时代码未发现 SaaS 多租户上下文符号（如 `tenant_scope`、`tenant_filter`、`current_tenant`）。
+- 当前运行时代码存在 `TenantFilter/tenant_filter`，但其语义为**组织范围过滤**，不是 SaaS 多租户上下文。
 - `tenant_*` 在当前系统中主要代表**承租方（合同乙方）业务字段**，属于保留白名单。
 - `tenant_id` 在运行时仅用于**合同抽取中的证件号/统一社会信用代码语义**，不表示 SaaS tenant。
 - SaaS 多租户遗留仅存在于 Alembic 历史迁移链，且已在后续迁移中删除。
@@ -64,11 +64,11 @@
 以下符号在当前架构中应视为**禁止新增**（除非明确引入 SaaS 多租户并完成架构评审）：
 
 - `tenant_scope`
-- `tenant_filter`
 - `current_tenant`
 - `TenantContext`
 - `X-Tenant` / `x-tenant` 请求头语义
 - 任何用于权限隔离的 `tenant_id` 运行时字段
+- 将现有 `TenantFilter/tenant_filter` 扩展为 SaaS tenant 语义
 
 ---
 
@@ -94,4 +94,3 @@ rg -n "tenant_id" backend/src backend/alembic
 预期结果：
 - 第一条命令在运行时目录应无命中。
 - 第二条命令仅命中文档抽取语义与 Alembic 历史迁移。
-

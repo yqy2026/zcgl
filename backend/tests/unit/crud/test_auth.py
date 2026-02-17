@@ -171,6 +171,86 @@ class TestUserCRUD:
         assert result == sample_user
         mock_db.execute.assert_awaited_once()
 
+    async def test_find_by_identifier_returns_inactive_user(
+        self, user_crud, mock_db
+    ):
+        inactive_user = User(
+            id="inactive-user-id",
+            username="13800002000",
+            email="inactive@example.com",
+            phone="13800002000",
+            full_name="Inactive User",
+            password_hash="hashed_password_here",
+            is_active=False,
+            default_organization_id=None,
+        )
+        mock_db.execute = AsyncMock(return_value=_mock_execute_first(inactive_user))
+
+        result = await user_crud.find_by_identifier_async(mock_db, "13800002000")
+
+        assert result == inactive_user
+        assert mock_db.execute.await_count == 1
+
+    async def test_find_active_by_identifier_username_then_phone(
+        self, user_crud, mock_db, sample_user
+    ):
+        mock_db.execute = AsyncMock(
+            side_effect=[
+                _mock_execute_first(None),
+                _mock_execute_first(sample_user),
+            ]
+        )
+
+        result = await user_crud.find_active_by_identifier_async(
+            mock_db, "+86 138-0000-2000"
+        )
+
+        assert result == sample_user
+        assert mock_db.execute.await_count == 2
+
+    async def test_find_active_by_identifier_prefers_username_when_ambiguous(
+        self, user_crud, mock_db, sample_user
+    ):
+        username_user = User(
+            id="user_username_priority",
+            username="13800002000",
+            email="username-priority@example.com",
+            phone="13900009999",
+            full_name="Username Priority",
+            password_hash="hashed_password_here",
+            is_active=True,
+            default_organization_id=None,
+        )
+        phone_user = sample_user
+
+        mock_db.execute = AsyncMock(
+            side_effect=[
+                _mock_execute_first(username_user),
+                _mock_execute_first(phone_user),
+            ]
+        )
+
+        result = await user_crud.find_active_by_identifier_async(mock_db, "13800002000")
+
+        assert result == username_user
+        # 命中用户名后应直接返回，避免落到手机号查询。
+        assert mock_db.execute.await_count == 1
+
+    async def test_find_active_by_identifier_does_not_use_email(
+        self, user_crud, mock_db
+    ):
+        mock_db.execute = AsyncMock(return_value=_mock_execute_first(None))
+
+        result = await user_crud.find_active_by_identifier_async(
+            mock_db, "test@example.com"
+        )
+
+        assert result is None
+        (stmt,) = mock_db.execute.await_args.args
+        compiled = str(stmt)
+        assert "users.username = :username_1" in compiled
+        assert " OR " not in compiled
+
     async def test_get_multi(self, user_crud, mock_db, sample_user):
         mock_db.execute = AsyncMock(return_value=_mock_execute_scalars([sample_user]))
 

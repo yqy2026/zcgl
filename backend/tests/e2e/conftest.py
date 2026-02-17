@@ -307,7 +307,7 @@ def authenticated_client(client, create_test_user_factory, db_session):
 
     response = client.post(
         "/api/v1/auth/login",
-        json={"username": "e2e_admin", "password": "Admin123!@#"},
+        json={"identifier": "e2e_admin", "password": "Admin123!@#"},
     )
     assert response.status_code == 200
 

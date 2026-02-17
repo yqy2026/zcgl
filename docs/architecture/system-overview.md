@@ -10,7 +10,7 @@
 - 配置入口与安全边界
 
 ## ✅ Status
-**当前状态**: Active (2026-01-28 更新)
+**当前状态**: Active (2026-02-16 更新)
 **适用版本**: v2.0.0
 
 ---
@@ -51,7 +51,7 @@
 ### 后端（Backend）
 - Web 框架: FastAPI + Uvicorn
 - ORM: SQLAlchemy 2.0
-- 配置: `src/core/config.py`（Pydantic Settings）
+- 配置: `backend/src/core/config.py`（Pydantic Settings）
 - 认证: JWT
 - 文档处理: LLM Vision API（Qwen/DeepSeek/GLM 等）
 
@@ -87,7 +87,7 @@
 
 - **唯一配置入口**: `backend/src/core/config.py`
 - **密钥来源**: 生产环境必须由外部注入（环境变量或密钥管理服务）
-- **数据库策略**: PostgreSQL 为唯一生产数据库；SQLite 仅用于测试（显式开启）
+- **数据库策略**: PostgreSQL 为开发/测试/生产统一数据库；SQLite 已移除
 
 ---
 

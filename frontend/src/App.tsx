@@ -69,8 +69,16 @@ const ProtectedRoutes: React.FC = () => {
  * 应用路由配置 - 根据认证状态分发路由
  */
 const AppContent: React.FC = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, initializing } = useAuth();
   const location = useLocation();
+
+  if (initializing === true) {
+    return (
+      <div className={styles.authBootstrap}>
+        <Spin size="large" />
+      </div>
+    );
+  }
 
   return (
     <Routes>
