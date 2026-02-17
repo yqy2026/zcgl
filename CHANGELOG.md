@@ -4,6 +4,11 @@
 
 ### 🛠️ 本次修复 (Current Fixes)
 
+- Party-Role 文档评审口径修订（2026-02-17）：更新 `docs/plans/2026-02-16-party-role-architecture-design.md` 到 v3.7。补齐 `condition_expr`（存储）与 `condition`（示例）映射说明；明确 `abac_policy_rules.action` 单值落库与统一动作枚举权威来源；新增 `headquarters` 与 `capabilities` 的“唯一权威章节”声明；补充 `owner`-only 用户写入拒绝验收；明确 `/api/v1/authz/check` 复用鉴权缓存口径；强化“策略变更必须事件驱动失效”约束；新增排斥约束执行计划校验要求；补充人工修复动作审计要求；新增发布前 RACI 责任矩阵。
+- 剩余问题清单归档删除（2026-02-17）：删除 `docs/remaining-issues.md`；Phase 2.1/2.2/2.3 闭环结论与验证证据已保留在本日志记录，避免文档状态与当前实现重复维护。
+- Phase 2.3 缓存闭环落地（2026-02-17）：新增启动预热服务 `backend/src/services/cache_warmup_service.py` 并接入 `backend/src/main.py` 生命周期；补齐关键写路径缓存失效（`system_dictionary`、`organization`、`organization_permission`、`rbac` 含统一授权创建/更新/撤销）；增强 `backend/src/core/cache_manager.py` Redis 分支指标，新增 `redis_keyspace_hits` / `redis_keyspace_misses` / `hit_rate` / `app_hit_rate`，形成“预热 + 写失效 + 命中率观测”代码闭环。新增测试：`backend/tests/unit/services/core/test_cache_warmup_service.py`、`backend/tests/unit/services/permission/test_rbac_service_grants.py`（缓存失效断言）、`backend/tests/unit/utils/test_cache_manager_enhanced.py`（Redis 指标断言）。
+- Phase 2.2 审计用例补盲（2026-02-17）：新增 `backend/tests/integration/api/test_phase2_statement_count.py`，覆盖资产列表/详情/导出/统计四条高频路径的 SQL statement-count 基线；在可用集成库 URL（`TEST_DATABASE_URL=postgresql+psycopg://zcgl_user:postgres@127.0.0.1:5432/zcgl_test`）复跑结果 `4 passed`。
+- 剩余问题文档闭环（2026-02-17）：更新 `docs/remaining-issues.md` 为“闭环记录”，将 Phase 2.1/2.2/2.3 全部标记完成，并补充验证证据：缓存相关回归 `37 passed`、Phase 2.2 集成审计 `4 passed`、Phase 2.1 索引核验 `expected_count=26` 且 `zcgl/zcgl_test missing=0`。文档当前可按团队策略归档或删除。
 - Security 工作流容错增强（2026-02-17）：更新 `.github/workflows/security.yml`，新增 `Code Scanning Availability` 探测 job；当仓库未开启 GitHub Code Scanning 时，自动跳过 `CodeQL Analysis` 与 Trivy SARIF 上传步骤，避免因仓库设置缺失导致工作流硬失败。
 - CI 文档流水线移除（2026-02-17）：删除 `.github/workflows/docs.yml`，移除 `mkdocs` 相关安装、构建与发布步骤，避免因仓库已移除 `mkdocs.yml` 持续触发 `Documentation` 工作流失败。
 - 后端 Ruff 阻塞项修复（2026-02-17）：修复 CI 同步报错的 3 个问题：`backend/src/security/permissions.py` 与 `backend/src/services/project/service.py` 的 import 排序（I001），以及 `backend/src/services/organization_permission_service.py` 未使用导入 `Organization`（F401）。验证通过：`cd backend && ./.venv/bin/python -m ruff check src/security/permissions.py src/services/organization_permission_service.py src/services/project/service.py`、`cd backend && ./.venv/bin/python -m ruff check src`。
