@@ -4,6 +4,7 @@
 
 ### 🛠️ 本次修复 (Current Fixes)
 
+- pre-commit 命令缺失修复（2026-02-17）：按 `uv` 工作流执行 `cd backend && uv add --dev pre-commit`，将 `pre-commit>=4.3.0` 补入 `backend` 的 `dependency-groups.dev` 并更新 `backend/uv.lock`；完成本地 hooks 安装：`uv run --directory backend pre-commit install` 与 `uv run --directory backend pre-commit install --hook-type pre-push`，验证 `uv run --directory backend pre-commit validate-config` 通过。
 - CI 门禁收口（2026-02-17）：新增 `Makefile` 目标 `ci-gate`（串联 `lint-backend` + `type-check` + `test`）；在 `.pre-commit-config.yaml` 新增 `pre-push` 本地钩子 `ci-gate`（执行 `make ci-gate`）；在 `.github/workflows/ci.yml` 新增 `Make CI Gate` job，并将其接入 `frontend-e2e` 依赖与 `CI Summary` 汇总，确保 CI 中显式校验 `make test` 与核心 linters（Ruff/Tsgo）。
 - Party-Role 文档评审口径修订（2026-02-17）：更新 `docs/plans/2026-02-16-party-role-architecture-design.md` 到 v3.7。补齐 `condition_expr`（存储）与 `condition`（示例）映射说明；明确 `abac_policy_rules.action` 单值落库与统一动作枚举权威来源；新增 `headquarters` 与 `capabilities` 的“唯一权威章节”声明；补充 `owner`-only 用户写入拒绝验收；明确 `/api/v1/authz/check` 复用鉴权缓存口径；强化“策略变更必须事件驱动失效”约束；新增排斥约束执行计划校验要求；补充人工修复动作审计要求；新增发布前 RACI 责任矩阵。
 - 剩余问题清单归档删除（2026-02-17）：删除 `docs/remaining-issues.md`；Phase 2.1/2.2/2.3 闭环结论与验证证据已保留在本日志记录，避免文档状态与当前实现重复维护。

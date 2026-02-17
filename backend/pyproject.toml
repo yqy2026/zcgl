@@ -266,4 +266,5 @@ assert_used = false  # Don't treat assert as security issue
 [dependency-groups]
 dev = [
     "faker>=40.1.2",
+    "pre-commit>=4.3.0",
 ]
