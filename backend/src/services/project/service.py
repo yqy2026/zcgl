@@ -23,7 +23,12 @@ from ...core.exception_handler import (
 from ...crud.project import project_crud
 from ...crud.query_builder import TenantFilter
 from ...models import Project
-from ...schemas.project import ProjectCreate, ProjectResponse, ProjectSearchRequest, ProjectUpdate
+from ...schemas.project import (
+    ProjectCreate,
+    ProjectResponse,
+    ProjectSearchRequest,
+    ProjectUpdate,
+)
 
 logger = logging.getLogger(__name__)
 

@@ -14,7 +14,6 @@ from sqlalchemy.sql import false
 from ..crud.auth import UserCRUD
 from ..crud.organization import organization as organization_crud
 from ..crud.rbac import resource_permission_crud, role_crud
-from ..models.organization import Organization
 from ..schemas.rbac import PermissionCheckRequest
 from .permission.rbac_service import RBACService
 

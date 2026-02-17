@@ -21,7 +21,6 @@ from ..services.permission.rbac_service import (
     ADMIN_PERMISSION_RESOURCE,
 )
 
-
 """
 权限验证装饰器
 提供统一的权限验证装饰器，简化API端点的权限控制
