@@ -128,8 +128,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           // 以当前Cookie会话为准，避免跨标签账号切换后展示旧用户
           logger.debug('开始校验并同步当前登录会话');
           const currentUser = await AuthService.getCurrentUser();
-          const fallbackPermissions =
-            currentUser.id === storedUser.id ? storedPermissions : [];
+          const fallbackPermissions = currentUser.id === storedUser.id ? storedPermissions : [];
           const permissions = await resolvePermissionsWithFallback(
             currentUser.id,
             fallbackPermissions

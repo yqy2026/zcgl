@@ -1,4 +1,4 @@
-# 前端视觉一致性执行提示语与剩余问题（2026-02-14）
+# 前端视觉一致性执行提示语与剩余问题（更新于 2026-02-17）
 
 ## 1) 可直接复用的提示语（Prompt）
 
@@ -6,7 +6,7 @@
 ```text
 请使用 ui-ux-pro-max 连续执行前端视觉一致性修复，不要停。
 每轮必须完成：1) 选择1-3个高影响样式文件；2) 将硬编码 px 迁移为设计令牌；
-3) 更新 CHANGELOG.md；4) 运行 pnpm lint、pnpm type-check、pnpm vitest；
+3) 更新 CHANGELOG.md；4) 运行 pnpm lint、pnpm type-check、pnpm vitest、pnpm guard:ui；
 5) 输出“本轮修改文件 + 验证结果 + 下一轮目标”。
 ```
 
@@ -17,6 +17,7 @@ P0: 导航/按钮/表单触控高度与焦点态；
 P1: 卡片与列表间距、状态标签字号/行高；
 P2: 次级文本和微间距（2/4/6/8px）。
 使用 ui-ux-pro-max，每轮修复后必须更新 CHANGELOG.md 并跑前端全量回归。
+回归至少包含：pnpm lint、pnpm type-check、pnpm vitest、pnpm guard:ui（或 pnpm guard:ui:ci）。
 ```
 
 ### Prompt C（验收导向）
@@ -28,11 +29,12 @@ P2: 次级文本和微间距（2/4/6/8px）。
 
 ---
 
-## 2) 当前剩余问题概览（基于代码扫描，更新于 2026-02-15）
+## 2) 当前剩余问题概览（基于代码扫描，更新于 2026-02-17）
 
 - 扫描范围 A：`frontend/src/**/*.module.css`
 - 硬编码 `px` 命中总数：`0`
 - 涉及文件数：`0`
+- 说明：`frontend/src/pages/LoginPage.module.css` 的 `31` 处 `px` 命中已于 2026-02-17 清理完成
 
 - 扫描范围 B：`frontend/src/**`（排除 `*.module.css`）
 - 非 token 源文件中的硬编码 `px` 命中总数：`0`
@@ -58,7 +60,7 @@ P2: 次级文本和微间距（2/4/6/8px）。
 ## 4) 建议的下一批执行顺序
 
 1. 固化 “token 源统一使用 `rem`” 规范并补充到开发文档
-2. 将扫描脚本升级为可选“全量零 `px`”模式，用于阶段性验收
+2. 在 PR 模板与提交流程中固化 `pnpm guard:ui:ci` 执行与报告留痕
 3. 持续在 `audit:*` 链路保留像素门禁，避免回归
 4. 继续跟踪主题 token 复用，减少跨文件重复定义
 
@@ -66,7 +68,7 @@ P2: 次级文本和微间距（2/4/6/8px）。
 
 ---
 
-## 5) 当前回归基线（最近一次）
+## 5) 当前回归基线（最近一次，2026-02-17）
 
 - `pnpm lint`：通过（`oxlint` 0 warning / 0 error）
 - `pnpm type-check`：通过（`tsgo --noEmit`）

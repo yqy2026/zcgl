@@ -22,8 +22,7 @@ describe('highlight utilities', () => {
     const result = highlightText('资产A+项目B', 'A+项目', 'asset-highlight');
     const parts = result as React.ReactNode[];
     const marks = parts.filter(
-      (part): part is React.ReactElement =>
-        React.isValidElement(part) && part.type === 'mark'
+      (part): part is React.ReactElement => React.isValidElement(part) && part.type === 'mark'
     );
 
     expect(marks).toHaveLength(1);
@@ -35,8 +34,7 @@ describe('highlight utilities', () => {
     const result = highlightMultipleTerms('资产A 位于 上海', ['资产A', ' ', '上海'], 'hit');
     const parts = result as React.ReactNode[];
     const marks = parts.filter(
-      (part): part is React.ReactElement =>
-        React.isValidElement(part) && part.type === 'mark'
+      (part): part is React.ReactElement => React.isValidElement(part) && part.type === 'mark'
     );
 
     expect(marks).toHaveLength(2);

@@ -85,7 +85,10 @@ describe('dictionaryManagerService', () => {
     expect(values[0]?.enum_type_id).toBe('type-1');
     expect(values[0]?.is_active).toBe(false);
     expect(values[0]?.is_default).toBe(true);
-    expect(apiClient.get).toHaveBeenLastCalledWith('/enum-fields/types/type-1/values', expect.any(Object));
+    expect(apiClient.get).toHaveBeenLastCalledWith(
+      '/enum-fields/types/type-1/values',
+      expect.any(Object)
+    );
 
     vi.mocked(apiClient.get).mockRejectedValueOnce(new Error('down'));
     const fallback = await dictionaryManagerService.getEnumFieldValues('usage_status');
@@ -111,8 +114,12 @@ describe('dictionaryManagerService', () => {
       ],
     });
 
-    const typesSpy = vi.spyOn(dictionaryManagerService, 'getEnumFieldTypes').mockResolvedValue([type]);
-    const valuesSpy = vi.spyOn(dictionaryManagerService, 'getEnumFieldValues').mockResolvedValue([]);
+    const typesSpy = vi
+      .spyOn(dictionaryManagerService, 'getEnumFieldTypes')
+      .mockResolvedValue([type]);
+    const valuesSpy = vi
+      .spyOn(dictionaryManagerService, 'getEnumFieldValues')
+      .mockResolvedValue([]);
 
     const data = await dictionaryManagerService.getEnumFieldData();
     expect(data[0]?.values[0]?.id).toBe('value-1');
@@ -147,7 +154,9 @@ describe('dictionaryManagerService', () => {
       success: true,
       data: enumType({ name: '已更新' }),
     } as never);
-    const updated = await dictionaryManagerService.updateEnumFieldType('type-1', { name: '已更新' });
+    const updated = await dictionaryManagerService.updateEnumFieldType('type-1', {
+      name: '已更新',
+    });
     expect(updated?.name).toBe('已更新');
 
     vi.mocked(apiClient.delete).mockResolvedValueOnce({
@@ -172,7 +181,10 @@ describe('dictionaryManagerService', () => {
         updated_at: '2026-01-01',
       },
     } as never);
-    const added = await dictionaryManagerService.addEnumFieldValue('type-1', { label: 'L', value: 'V' });
+    const added = await dictionaryManagerService.addEnumFieldValue('type-1', {
+      label: 'L',
+      value: 'V',
+    });
     expect(added?.id).toBe('v1');
 
     vi.mocked(apiClient.put).mockResolvedValueOnce({
@@ -254,7 +266,9 @@ describe('dictionaryManagerService', () => {
       success: false,
       error: 'fail',
     } as never);
-    await expect(dictionaryManagerService.exportEnumFieldData('type-1')).rejects.toThrow('导出失败');
+    await expect(dictionaryManagerService.exportEnumFieldData('type-1')).rejects.toThrow(
+      '导出失败'
+    );
 
     vi.mocked(apiClient.post).mockResolvedValueOnce({
       success: true,
@@ -268,7 +282,9 @@ describe('dictionaryManagerService', () => {
       success: false,
       error: 'import-fail',
     } as never);
-    await expect(dictionaryManagerService.importEnumFieldData('type-1', file)).rejects.toThrow('导入失败');
+    await expect(dictionaryManagerService.importEnumFieldData('type-1', file)).rejects.toThrow(
+      '导入失败'
+    );
   });
 
   it('批量操作方法应统计成功与失败数量', async () => {
@@ -323,7 +339,10 @@ describe('dictionaryManagerService', () => {
       .spyOn(dictionaryManagerService, 'deleteEnumFieldValue')
       .mockResolvedValueOnce(true)
       .mockRejectedValueOnce(new Error('bad'));
-    const deleteResult = await dictionaryManagerService.batchDeleteEnumValues('type-1', ['v1', 'v2']);
+    const deleteResult = await dictionaryManagerService.batchDeleteEnumValues('type-1', [
+      'v1',
+      'v2',
+    ]);
     expect(deleteResult.success).toBe(1);
     expect(deleteResult.failed).toBe(1);
     deleteSpy.mockRestore();
@@ -338,10 +357,12 @@ describe('dictionaryManagerService', () => {
     expect(apiResult.length).toBe(1);
 
     vi.mocked(apiClient.get).mockRejectedValueOnce(new Error('down'));
-    const typesSpy = vi.spyOn(dictionaryManagerService, 'getEnumFieldTypes').mockResolvedValue([
-      enumType({ code: 'usage_status', name: '使用状态', category: '资产状态' }),
-      enumType({ id: 'type-2', code: 'tenant_type', name: '承租方类型', category: '租赁信息' }),
-    ]);
+    const typesSpy = vi
+      .spyOn(dictionaryManagerService, 'getEnumFieldTypes')
+      .mockResolvedValue([
+        enumType({ code: 'usage_status', name: '使用状态', category: '资产状态' }),
+        enumType({ id: 'type-2', code: 'tenant_type', name: '承租方类型', category: '租赁信息' }),
+      ]);
 
     const local = await dictionaryManagerService.searchEnumTypes('状态', {
       category: '资产状态',
@@ -359,44 +380,46 @@ describe('dictionaryManagerService', () => {
       .mockResolvedValueOnce([enumType({ code: 'usage_status' })])
       .mockResolvedValueOnce([]);
 
-    const valuesSpy = vi.spyOn(dictionaryManagerService, 'getEnumFieldValues').mockResolvedValueOnce([
-      {
-        id: 'v1',
-        enum_type_id: 'type-1',
-        label: '重复',
-        value: 'dup',
-        level: 1,
-        sort_order: 0,
-        is_active: true,
-        is_default: true,
-        created_at: '2026-01-01',
-        updated_at: '2026-01-01',
-      },
-      {
-        id: 'v2',
-        enum_type_id: 'type-1',
-        label: '重复',
-        value: 'dup',
-        level: 1,
-        sort_order: 0,
-        is_active: true,
-        is_default: true,
-        created_at: '2026-01-01',
-        updated_at: '2026-01-01',
-      },
-      {
-        id: 'v3',
-        enum_type_id: 'type-1',
-        label: '',
-        value: '',
-        level: 1,
-        sort_order: 0,
-        is_active: true,
-        is_default: false,
-        created_at: '2026-01-01',
-        updated_at: '2026-01-01',
-      },
-    ]);
+    const valuesSpy = vi
+      .spyOn(dictionaryManagerService, 'getEnumFieldValues')
+      .mockResolvedValueOnce([
+        {
+          id: 'v1',
+          enum_type_id: 'type-1',
+          label: '重复',
+          value: 'dup',
+          level: 1,
+          sort_order: 0,
+          is_active: true,
+          is_default: true,
+          created_at: '2026-01-01',
+          updated_at: '2026-01-01',
+        },
+        {
+          id: 'v2',
+          enum_type_id: 'type-1',
+          label: '重复',
+          value: 'dup',
+          level: 1,
+          sort_order: 0,
+          is_active: true,
+          is_default: true,
+          created_at: '2026-01-01',
+          updated_at: '2026-01-01',
+        },
+        {
+          id: 'v3',
+          enum_type_id: 'type-1',
+          label: '',
+          value: '',
+          level: 1,
+          sort_order: 0,
+          is_active: true,
+          is_default: false,
+          created_at: '2026-01-01',
+          updated_at: '2026-01-01',
+        },
+      ]);
 
     const validation = await dictionaryManagerService.validateDictionaryData('usage_status');
     expect(validation.isValid).toBe(false);

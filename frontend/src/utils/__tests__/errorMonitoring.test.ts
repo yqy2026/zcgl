@@ -132,7 +132,9 @@ describe('errorMonitoring', () => {
 
     module.captureMessage('plain-info', 'info', { from: 'test' });
 
-    expect(infoSpy).toHaveBeenCalledWith('[ErrorMonitoring] [INFO]', 'plain-info', { from: 'test' });
+    expect(infoSpy).toHaveBeenCalledWith('[ErrorMonitoring] [INFO]', 'plain-info', {
+      from: 'test',
+    });
   });
 
   it('initializes Sentry in production and applies sanitization hooks', async () => {

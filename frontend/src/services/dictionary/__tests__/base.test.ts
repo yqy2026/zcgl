@@ -93,13 +93,10 @@ describe('baseDictionaryService', () => {
       data: [{ label: '实时项', value: 'fresh' }],
     } as never);
 
-    const result = await baseDictionaryService.getBatchOptions(
-      ['tenant_type', 'contract_status'],
-      {
-        useCache: true,
-        includeMetadata: true,
-      }
-    );
+    const result = await baseDictionaryService.getBatchOptions(['tenant_type', 'contract_status'], {
+      useCache: true,
+      includeMetadata: true,
+    });
 
     expect(result.tenant_type.source).toBe('cache');
     expect(result.contract_status.source).toBe('api');
