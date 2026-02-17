@@ -8,7 +8,7 @@
 
 ## 项目概述
 
-**土地物业资产管理系统**（Land Property Asset Management System）- 一个用于管理土地和物业资产的综合管理平台。
+**土地物业资产管理系统**（Real Estate Asset Management & Operations System）- 一个用于管理土地和物业资产的综合管理平台。
 
 | 层 | 技术栈 |
 |---|-------|

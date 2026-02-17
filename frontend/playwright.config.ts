@@ -170,7 +170,7 @@ const config: PlaywrightTestConfig = defineConfig({
     'Test Environment': testEnvironment,
     'Base URL': baseUrl,
     Browser: 'Playwright',
-    'Test Suite': 'Land Property Asset Management E2E Tests',
+    'Test Suite': 'Real Estate Asset Management & Operations E2E Tests',
   },
 });
 

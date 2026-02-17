@@ -144,7 +144,9 @@ const LoginPage: React.FC = () => {
       <main className={styles['login-main']}>
         <section className={styles['brand-panel']} aria-label="系统介绍">
           <div className={styles['brand-heading']}>
-            <p className={styles['brand-kicker']}>LAND PROPERTY ASSET MANAGEMENT</p>
+            <p className={styles['brand-kicker']}>
+              Real Estate Asset Management & Operations System
+            </p>
             <h1 className={styles['brand-title']}>
               土地物业
               <br />

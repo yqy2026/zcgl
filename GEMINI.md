@@ -8,7 +8,7 @@ This file provides project context for Gemini, following 2026 best practices. Fo
 
 ## Project Overview
 
-**Land Property Asset Management System** - A full-stack asset management platform supporting RBAC permission management, contract lifecycle management, and intelligent document extraction with multi-provider LLM integration.
+**Real Estate Asset Management & Operations System** - A full-stack asset management platform supporting RBAC permission management, contract lifecycle management, and intelligent document extraction with multi-provider LLM integration.
 
 | Layer | Tech Stack |
 |---|-------|

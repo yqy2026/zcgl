@@ -1,7 +1,7 @@
 # 开发环境配置文件
 # 注意: 生产环境应使用环境变量而非此文件
 app:
-  name: "Land Property Asset Management System"
+  name: "Real Estate Asset Management & Operations System"
   version: "2.0.0"
   debug: false # 生产环境必须为false
 
