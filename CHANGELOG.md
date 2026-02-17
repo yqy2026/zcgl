@@ -4,6 +4,7 @@
 
 ### 🛠️ 本次修复 (Current Fixes)
 
+- CI 门禁收口（2026-02-17）：新增 `Makefile` 目标 `ci-gate`（串联 `lint-backend` + `type-check` + `test`）；在 `.pre-commit-config.yaml` 新增 `pre-push` 本地钩子 `ci-gate`（执行 `make ci-gate`）；在 `.github/workflows/ci.yml` 新增 `Make CI Gate` job，并将其接入 `frontend-e2e` 依赖与 `CI Summary` 汇总，确保 CI 中显式校验 `make test` 与核心 linters（Ruff/Tsgo）。
 - Party-Role 文档评审口径修订（2026-02-17）：更新 `docs/plans/2026-02-16-party-role-architecture-design.md` 到 v3.7。补齐 `condition_expr`（存储）与 `condition`（示例）映射说明；明确 `abac_policy_rules.action` 单值落库与统一动作枚举权威来源；新增 `headquarters` 与 `capabilities` 的“唯一权威章节”声明；补充 `owner`-only 用户写入拒绝验收；明确 `/api/v1/authz/check` 复用鉴权缓存口径；强化“策略变更必须事件驱动失效”约束；新增排斥约束执行计划校验要求；补充人工修复动作审计要求；新增发布前 RACI 责任矩阵。
 - 剩余问题清单归档删除（2026-02-17）：删除 `docs/remaining-issues.md`；Phase 2.1/2.2/2.3 闭环结论与验证证据已保留在本日志记录，避免文档状态与当前实现重复维护。
 - Phase 2.3 缓存闭环落地（2026-02-17）：新增启动预热服务 `backend/src/services/cache_warmup_service.py` 并接入 `backend/src/main.py` 生命周期；补齐关键写路径缓存失效（`system_dictionary`、`organization`、`organization_permission`、`rbac` 含统一授权创建/更新/撤销）；增强 `backend/src/core/cache_manager.py` Redis 分支指标，新增 `redis_keyspace_hits` / `redis_keyspace_misses` / `hit_rate` / `app_hit_rate`，形成“预热 + 写失效 + 命中率观测”代码闭环。新增测试：`backend/tests/unit/services/core/test_cache_warmup_service.py`、`backend/tests/unit/services/permission/test_rbac_service_grants.py`（缓存失效断言）、`backend/tests/unit/utils/test_cache_manager_enhanced.py`（Redis 指标断言）。

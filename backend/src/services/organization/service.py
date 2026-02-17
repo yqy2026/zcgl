@@ -3,12 +3,17 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ...constants.performance_constants import CacheTTL
+from ...core.cache_manager import cache_manager
 from ...core.exception_handler import OperationNotAllowedError, ResourceNotFoundError
 from ...crud.organization import organization as organization_crud
 from ...crud.organization_history import OrganizationHistoryCRUD
 from ...models.organization import Organization, OrganizationHistory
 from ...schemas.organization import OrganizationCreate, OrganizationUpdate
 from ..enum_validation_service import get_enum_validation_service_async
+from ..organization_permission_service import (
+    invalidate_user_accessible_organizations_cache,
+)
 
 
 class OrganizationService:
@@ -16,6 +21,13 @@ class OrganizationService:
 
     ORGANIZATION_TYPE_ENUM = "organization_type"
     ORGANIZATION_STATUS_ENUM = "organization_status"
+    CACHE_NAMESPACE = "organization"
+    STATS_CACHE_KEY = "statistics"
+
+    @classmethod
+    def _invalidate_organization_cache(cls) -> None:
+        cache_manager.clear(namespace=cls.CACHE_NAMESPACE)
+        invalidate_user_accessible_organizations_cache()
 
     async def get_organizations(
         self, db: AsyncSession, *, skip: int = 0, limit: int = 100
@@ -138,6 +150,7 @@ class OrganizationService:
 
         org_id_value: str = getattr(db_obj, "id")
         await self._create_history(db, org_id_value, "create", created_by=obj_in.created_by)
+        self._invalidate_organization_cache()
 
         return db_obj
 
@@ -217,6 +230,8 @@ class OrganizationService:
                 created_by=obj_in.updated_by,
             )
 
+        self._invalidate_organization_cache()
+
         return db_obj
 
     async def delete_organization(
@@ -238,11 +253,26 @@ class OrganizationService:
         await db.commit()
 
         await self._create_history(db, org_id, "delete", created_by=deleted_by)
+        self._invalidate_organization_cache()
 
         return True
 
     async def get_statistics(self, db: AsyncSession) -> dict[str, Any]:
-        return await organization_crud.get_statistics_async(db)
+        cached_stats = cache_manager.get(
+            self.STATS_CACHE_KEY,
+            namespace=self.CACHE_NAMESPACE,
+        )
+        if isinstance(cached_stats, dict):
+            return cached_stats
+
+        stats = await organization_crud.get_statistics_async(db)
+        cache_manager.set(
+            self.STATS_CACHE_KEY,
+            stats,
+            ttl=CacheTTL.MEDIUM_SECONDS,
+            namespace=self.CACHE_NAMESPACE,
+        )
+        return stats
 
     async def get_history(
         self, db: AsyncSession, org_id: str, skip: int = 0, limit: int = 100

@@ -157,6 +157,27 @@ class TestCreateOrganization:
             await org_service.create_organization(mock_db, obj_in=obj_in)
             mock_history.assert_awaited_once()
 
+    async def test_create_organization_invalidates_cache(self, org_service, mock_db):
+        """创建组织后应触发组织缓存失效"""
+        obj_in = OrganizationCreate(
+            name="缓存失效组织",
+            code="CACHE001",
+            type="department",
+            status="active",
+            parent_id=None,
+            created_by="user_123",
+        )
+        mock_db.flush.return_value = None
+        mock_db.refresh.return_value = None
+
+        with patch(
+            "src.services.organization.service.cache_manager.clear",
+            return_value=True,
+        ) as mock_cache_clear:
+            await org_service.create_organization(mock_db, obj_in=obj_in)
+
+        mock_cache_clear.assert_called()
+
 
 # ============================================================================
 # Test update_organization
@@ -220,6 +241,25 @@ class TestUpdateOrganization:
                     await org_service.update_organization(
                         mock_db, org_id="org_123", obj_in=obj_in
                     )
+
+    async def test_update_organization_invalidates_cache(
+        self, org_service, mock_db, mock_organization
+    ):
+        """更新组织后应触发组织缓存失效"""
+        obj_in = OrganizationUpdate(
+            name="新名称",
+            updated_by="user_123",
+        )
+        with patch(
+            "src.services.organization.service.organization_crud.get_async",
+            new=AsyncMock(return_value=mock_organization),
+        ), patch(
+            "src.services.organization.service.cache_manager.clear",
+            return_value=True,
+        ) as mock_cache_clear:
+            await org_service.update_organization(mock_db, org_id="org_123", obj_in=obj_in)
+
+        mock_cache_clear.assert_called()
 
     async def test_update_organization_changes_level_and_path(
         self, org_service, mock_db, mock_parent
@@ -366,12 +406,51 @@ class TestDeleteOrganization:
                     )
                     mock_history.assert_awaited_once()
 
+    async def test_delete_organization_invalidates_cache(
+        self, org_service, mock_db, mock_organization
+    ):
+        """删除组织后应触发组织缓存失效"""
+        with patch(
+            "src.services.organization.service.organization_crud.get_async",
+            new=AsyncMock(return_value=mock_organization),
+        ), patch(
+            "src.services.organization.service.organization_crud.get_children_async",
+            new=AsyncMock(return_value=[]),
+        ), patch(
+            "src.services.organization.service.cache_manager.clear",
+            return_value=True,
+        ) as mock_cache_clear:
+            await org_service.delete_organization(mock_db, org_id="org_123")
+
+        mock_cache_clear.assert_called()
+
 
 # ============================================================================
 # Test get_statistics
 # ============================================================================
 class TestGetStatistics:
     """测试获取统计信息"""
+
+    async def test_get_statistics_cache_hit(self, org_service, mock_db):
+        """缓存命中时直接返回缓存值"""
+        cached_stats = {
+            "total": 7,
+            "active": 6,
+            "inactive": 1,
+            "by_level": {"1": 4, "2": 3},
+        }
+
+        with patch(
+            "src.services.organization.service.cache_manager.get",
+            return_value=cached_stats,
+        ), patch(
+            "src.services.organization.service.organization_crud.get_statistics_async",
+            new=AsyncMock(),
+        ) as mock_get_stats:
+            result = await org_service.get_statistics(mock_db)
+
+        assert result == cached_stats
+        mock_get_stats.assert_not_awaited()
 
     async def test_get_statistics_basic(self, org_service, mock_db):
         """测试基本统计"""
@@ -386,7 +465,11 @@ class TestGetStatistics:
             return_value=_ExecuteResult(rows=[(1, 6), (2, 4)])
         )
 
-        result = await org_service.get_statistics(mock_db)
+        with patch(
+            "src.services.organization.service.cache_manager.get",
+            return_value=None,
+        ):
+            result = await org_service.get_statistics(mock_db)
 
         assert "total" in result
         assert "active" in result
@@ -405,10 +488,37 @@ class TestGetStatistics:
 
         mock_db.execute = AsyncMock(return_value=_ExecuteResult(rows=[]))
 
-        result = await org_service.get_statistics(mock_db)
+        with patch(
+            "src.services.organization.service.cache_manager.get",
+            return_value=None,
+        ):
+            result = await org_service.get_statistics(mock_db)
 
         assert result["total"] == 0
         assert result["by_level"] == {}
+
+    async def test_get_statistics_cache_miss_sets_cache(self, org_service, mock_db):
+        """缓存未命中时回源并写入缓存"""
+        db_stats = {
+            "total": 3,
+            "active": 3,
+            "inactive": 0,
+            "by_level": {"1": 2, "2": 1},
+        }
+        with patch(
+            "src.services.organization.service.cache_manager.get",
+            return_value=None,
+        ), patch(
+            "src.services.organization.service.cache_manager.set",
+            return_value=True,
+        ) as mock_cache_set, patch(
+            "src.services.organization.service.organization_crud.get_statistics_async",
+            new=AsyncMock(return_value=db_stats),
+        ):
+            result = await org_service.get_statistics(mock_db)
+
+        assert result == db_stats
+        mock_cache_set.assert_called_once()
 
 
 # ============================================================================

@@ -4,8 +4,10 @@ RBAC服务层
 
 import logging
 from datetime import UTC, datetime
+from inspect import isawaitable
 from typing import Any
 
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.exception_handler import (
@@ -40,6 +42,7 @@ from ...schemas.rbac import (
     UserPermissionSummary,
     UserRoleAssignmentCreate,
 )
+from .permission_cache_service import get_permission_cache_service
 
 # Global admin permission used for full access
 ADMIN_PERMISSION_RESOURCE = "system"
@@ -49,6 +52,17 @@ VALID_GRANT_EFFECTS = {"allow", "deny"}
 logger = logging.getLogger(__name__)
 
 _user_crud = UserCRUD()
+
+
+def invalidate_user_accessible_organizations_cache(user_id: str | None = None) -> None:
+    """
+    失效组织可见范围缓存（延迟导入避免循环依赖）。
+    """
+    from ..organization_permission_service import (
+        invalidate_user_accessible_organizations_cache as _invalidate_cache,
+    )
+
+    _invalidate_cache(user_id)
 
 
 class RBACService:
@@ -174,6 +188,8 @@ class RBACService:
         except Exception as exc:  # pragma: no cover - defensive for DB layer errors
             raise InternalServerError("删除角色失败", original_error=exc) from exc
 
+        await self._invalidate_permission_cache_for_role(role_id)
+
         # 记录审计日志（使用保存的role_name，因为role已被删除）
         await self._create_permission_audit_log(
             action="role_delete",
@@ -212,6 +228,7 @@ class RBACService:
 
         await self._assign_permissions_to_role(role_id, permission_ids, updated_by)
         await self.db.commit()
+        await self._invalidate_permission_cache_for_role(role_id)
 
     async def get_role(
         self,
@@ -416,6 +433,8 @@ class RBACService:
                 assigned_by=assigned_by,
             )
 
+        await self._invalidate_user_permission_cache(str(assignment_data.user_id))
+
         # 记录审计日志
         await self._create_permission_audit_log(
             action="role_assign",
@@ -446,6 +465,7 @@ class RBACService:
         assignment.updated_at = datetime.now(UTC)
 
         await self.db.commit()
+        await self._invalidate_user_permission_cache(user_id)
 
         # 记录审计日志
         await self._create_permission_audit_log(
@@ -531,6 +551,18 @@ class RBACService:
         if not user:
             raise ResourceNotFoundError("用户", user_id)
 
+        cache_service = get_permission_cache_service()
+        cached_summary = await cache_service.get_user_permission_summary(user_id)
+        if isinstance(cached_summary, dict):
+            try:
+                return UserPermissionSummary.model_validate(cached_summary)
+            except Exception:
+                logger.warning(
+                    "Invalid cached permission summary for user %s, fallback to DB",
+                    user_id,
+                    exc_info=True,
+                )
+
         # 获取用户角色
         roles = await self.get_user_roles(user_id)
 
@@ -573,7 +605,7 @@ class RBACService:
             for resource_permission in resource_permissions
         ]
 
-        return UserPermissionSummary(
+        summary = UserPermissionSummary(
             user_id=user_id,
             username=user.username,
             roles=roles_response,
@@ -581,8 +613,67 @@ class RBACService:
             resource_permissions=resource_permissions_response,
             effective_permissions=effective_permissions,
         )
+        await cache_service.set_user_permission_summary(
+            user_id,
+            summary.model_dump(mode="json"),
+        )
+        return summary
 
     # ==================== 私有方法 ====================
+
+    async def _invalidate_user_permission_cache(self, user_id: str) -> None:
+        """失效单用户权限缓存与组织可见范围缓存。"""
+        cache_service = get_permission_cache_service()
+        try:
+            await cache_service.invalidate_user_cache(user_id)
+        except Exception:
+            logger.warning(
+                "Failed to invalidate permission cache for user %s",
+                user_id,
+                exc_info=True,
+            )
+
+        try:
+            invalidate_user_accessible_organizations_cache(user_id)
+        except Exception:
+            logger.warning(
+                "Failed to invalidate organization access cache for user %s",
+                user_id,
+                exc_info=True,
+            )
+
+    async def _get_active_user_ids_by_role(self, role_id: str) -> list[str]:
+        """查询当前角色关联的活跃用户ID列表。"""
+        now = datetime.now(UTC)
+        stmt = select(UserRoleAssignment.user_id).where(
+            UserRoleAssignment.role_id == role_id,
+            UserRoleAssignment.is_active.is_(True),
+            or_(
+                UserRoleAssignment.expires_at.is_(None),
+                UserRoleAssignment.expires_at > now,
+            ),
+        )
+        rows = (await self.db.execute(stmt)).all()
+        if isawaitable(rows):
+            rows = await rows
+        user_ids = [str(row[0]) for row in rows if row and row[0] is not None]
+        return sorted(set(user_ids))
+
+    async def _invalidate_permission_cache_for_role(self, role_id: str) -> None:
+        """角色维度缓存失效（角色缓存 + 受影响用户缓存）。"""
+        cache_service = get_permission_cache_service()
+        try:
+            await cache_service.invalidate_role_cache(role_id)
+        except Exception:
+            logger.warning(
+                "Failed to invalidate role cache for %s",
+                role_id,
+                exc_info=True,
+            )
+
+        user_ids = await self._get_active_user_ids_by_role(role_id)
+        for user_id in user_ids:
+            await self._invalidate_user_permission_cache(user_id)
 
     async def _assign_permissions_to_role(
         self, role_id: str, permission_ids: list[str], operator_id: str
@@ -859,6 +950,8 @@ class RBACService:
             },
         )
 
+        await self._invalidate_user_permission_cache(user_id)
+
         await self._create_permission_audit_log(
             action="permission_grant_create",
             resource_type="permission_grant",
@@ -959,6 +1052,12 @@ class RBACService:
             obj_in=update_data,
         )
 
+        target_user_id = str(
+            getattr(updated_grant, "user_id", getattr(grant, "user_id", ""))
+        ).strip()
+        if target_user_id != "":
+            await self._invalidate_user_permission_cache(target_user_id)
+
         await self._create_permission_audit_log(
             action="permission_grant_update",
             resource_type="permission_grant",
@@ -1000,6 +1099,9 @@ class RBACService:
         grant.updated_at = datetime.now(UTC)
         await self.db.commit()
         await self.db.refresh(grant)
+        target_user_id = str(getattr(grant, "user_id", "")).strip()
+        if target_user_id != "":
+            await self._invalidate_user_permission_cache(target_user_id)
 
         await self._create_permission_audit_log(
             action="permission_grant_revoke",

@@ -186,11 +186,28 @@ class RedisCache(CacheBackend):
         )
         # 验证连接
         self.client.ping()
+        self._hits = 0
+        self._misses = 0
+        self._stats_started_at = datetime.now(UTC)
+
+    @staticmethod
+    def _to_int(value: Any, default: int = 0) -> int:
+        try:
+            if value is None:
+                return default
+            return int(value)
+        except (TypeError, ValueError):
+            return default
 
     def get(self, key: str) -> Any | None:
         """获取缓存值"""
         try:
-            return self.client.get(key)
+            value = self.client.get(key)
+            if value is None:
+                self._misses += 1
+            else:
+                self._hits += 1
+            return value
         except Exception as e:
             logger.error(f"Redis缓存获取失败: {e}")
             return None
@@ -256,6 +273,42 @@ class RedisCache(CacheBackend):
         except Exception as e:
             logger.error(f"Redis缓存TTL获取失败: {e}")
             return None
+
+    def get_runtime_stats(self) -> dict[str, Any]:
+        """获取 Redis 运行时统计（best effort）。"""
+        stats_info: dict[str, Any] = {}
+        memory_info: dict[str, Any] = {}
+        total_items = 0
+
+        try:
+            stats_data = self.client.info("stats")
+            if isinstance(stats_data, dict):
+                stats_info = stats_data
+        except Exception as e:
+            logger.debug("Redis stats info unavailable: %s", e)
+
+        try:
+            memory_data = self.client.info("memory")
+            if isinstance(memory_data, dict):
+                memory_info = memory_data
+        except Exception as e:
+            logger.debug("Redis memory info unavailable: %s", e)
+
+        try:
+            total_items = self._to_int(self.client.dbsize(), default=0)
+        except Exception as e:
+            logger.debug("Redis dbsize unavailable: %s", e)
+
+        keyspace_hits = self._to_int(stats_info.get("keyspace_hits"), default=0)
+        keyspace_misses = self._to_int(stats_info.get("keyspace_misses"), default=0)
+        used_memory = self._to_int(memory_info.get("used_memory"), default=0)
+
+        return {
+            "total_items": total_items,
+            "keyspace_hits": keyspace_hits,
+            "keyspace_misses": keyspace_misses,
+            "used_memory": used_memory,
+        }
 
 
 def _create_default_backend() -> CacheBackend:
@@ -559,6 +612,52 @@ class CacheManager:
                     "cache_misses": self.backend._misses,
                     "hit_rate": hit_rate,
                     "stats_started_at": self.backend._stats_started_at.isoformat(),
+                    "created_at": datetime.now(UTC).isoformat(),
+                }
+            elif isinstance(self.backend, RedisCache):
+                app_hits = int(getattr(self.backend, "_hits", 0))
+                app_misses = int(getattr(self.backend, "_misses", 0))
+                app_total_requests = app_hits + app_misses
+                app_hit_rate = (
+                    round(app_hits / app_total_requests, 4)
+                    if app_total_requests > 0
+                    else None
+                )
+
+                runtime_stats = self.backend.get_runtime_stats()
+                keyspace_hits = int(runtime_stats.get("keyspace_hits", 0))
+                keyspace_misses = int(runtime_stats.get("keyspace_misses", 0))
+                keyspace_total = keyspace_hits + keyspace_misses
+                keyspace_hit_rate = (
+                    round(keyspace_hits / keyspace_total, 4)
+                    if keyspace_total > 0
+                    else None
+                )
+                used_memory_bytes = int(runtime_stats.get("used_memory", 0))
+                stats_started_at = getattr(self.backend, "_stats_started_at", None)
+
+                return {
+                    "backend_type": "RedisCache",
+                    "total_items": int(runtime_stats.get("total_items", 0)),
+                    "valid_items": None,
+                    "expired_items": None,
+                    "max_size": None,
+                    "usage_ratio": None,
+                    "memory_usage_bytes": used_memory_bytes,
+                    "memory_usage_mb": round(used_memory_bytes / (1024 * 1024), 2),
+                    "default_ttl": self.default_ttl,
+                    "key_prefix": self.key_prefix,
+                    "cache_hits": app_hits,
+                    "cache_misses": app_misses,
+                    "app_hit_rate": app_hit_rate,
+                    "redis_keyspace_hits": keyspace_hits,
+                    "redis_keyspace_misses": keyspace_misses,
+                    "hit_rate": keyspace_hit_rate,
+                    "stats_started_at": (
+                        stats_started_at.isoformat()
+                        if isinstance(stats_started_at, datetime)
+                        else None
+                    ),
                     "created_at": datetime.now(UTC).isoformat(),
                 }
             else:  # pragma: no cover

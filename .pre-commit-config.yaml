@@ -130,6 +130,16 @@ repos:
         pass_filenames: false
         files: ^frontend/(src/|scripts/|package\.json|pnpm-lock\.yaml|src/styles/variables\.css|src/theme/sharedTokens\.ts)
 
+      # CI 对齐门禁（pre-push 阶段）
+      - id: ci-gate
+        name: ci-gate
+        description: "预推送执行 CI 门禁 (make ci-gate: ruff + tsgo + test)"
+        entry: bash -lc 'make ci-gate'
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+        always_run: true
+
 # =============================================================================
 # CI 配置
 # =============================================================================

@@ -52,6 +52,7 @@
 - [8. 回滚预案](#8-回滚预案)
 - [9. 实施任务拆解（可直接派工）](#9-实施任务拆解可直接派工)
 - [9.1 审计与合规（推荐增强）](#91-审计与合规推荐增强)
+- [9.2 发布前责任矩阵（RACI，推荐）](#92-发布前责任矩阵raci推荐)
 - [10. 重要假设与默认值](#10-重要假设与默认值)
 - [11. 文档历史](#11-文档历史)
 
@@ -334,7 +335,7 @@
 
 ### `abac_policy_rules`
 - `id`, `policy_id`
-- `resource_type`, `action`
+- `resource_type`, `action`（单值枚举：`create|read|list|update|delete|export`）
 - `condition_expr`（**本期唯一引擎：JSONLogic**）
 - `field_mask`（可选）
 
@@ -342,6 +343,8 @@
 - `abac_policy_subjects` 表结构本期直接删除。  
 - 策略主体来源统一为“用户 -> 角色 -> `abac_role_policies` -> `abac_policies`”链路。
 - 本期禁止引入双表达式栈（JSONLogic + CEL）并行解析；CEL 标记为后续可选能力，不进入本期实现与验收范围。
+- 命名映射约束：数据库持久化字段名为 `condition_expr`；文档/接口示例中的 `condition` 仅为展示别名，与 `condition_expr` 一一对应。
+- 多动作规则落库约束：若业务希望一条策略覆盖多个动作，必须在存储层拆分为多条 `abac_policy_rules` 记录（每条单一 `action`）。
 
 ---
 
@@ -351,10 +354,12 @@
 - Resource: `resource_type`, `resource_id`, `owner_party_id`, `manager_party_id`
 - Action（统一枚举）: `create|read|list|update|delete|export`
 - Environment: 时间/IP/客户端
+- 权威口径：本节为判定上下文与动作枚举的唯一权威定义；`abac_policy_rules.action`、`/api/v1/authz/check` 入参 `action`、`capabilities.actions` 必须与本节一致。
 - 说明：`owner_party_ids / manager_party_ids / headquarters_party_ids` 来源于 `user_party_bindings` 有效记录，在登录与 token refresh 时加载并缓存
 - 说明：`headquarters` 绑定会自动展开 `party_hierarchy` 子树；展开结果仅并入 `manager_party_ids`
 - 说明：`project` 资源仅使用 `manager_party_id` 参与判定，不使用 `owner_party_id`
 - 说明：`headquarters` 不隐式授予 owner 路径；owner 路径需 `owner` 绑定或独立策略命中。
+- 权威口径：`headquarters` 语义仅为“并入 `manager_party_ids`”；本节为唯一权威定义，其它章节如有差异以本节为准。
 
 ---
 
@@ -436,6 +441,7 @@
 - `roles_hash = sha256(','.join(sorted(set(role_ids))))`（UTF-8，小写十六进制）。
 - 对同一 `role_ids` 集合必须稳定一致；不得引入请求顺序、实例本地顺序等非确定性因素。
 - 策略内容变更口径：不把“策略版本”拼入缓存键；统一依赖 `authz.role_policy.updated` 事件驱动失效，避免双轨键策略。
+- 策略更新约束：策略内容变更必须通过事件链路触发失效（至少发布 `authz.policy.updated`，并按影响面补充 `authz.role_policy.updated` / `authz.user_role.updated` / `authz.user_scope.updated`）；禁止直接改表不发事件。
 
 失效事件规范：
 1. 事件类型：`authz.role_policy.updated`、`authz.user_role.updated`、`authz.policy.updated`、`authz.user_scope.updated`  
@@ -459,6 +465,8 @@
 表达式引擎口径：
 - 本节示例与运行时实现均以 JSONLogic 为唯一语义基线。
 - CEL 仅作为后续扩展预留，本期不提供解析器、不纳入测试矩阵与发布门禁。
+- 示例命名说明：示例对象中的 `condition` 等价于落库存储字段 `condition_expr`（见 4.2）。
+- 示例简写说明：若示例中 `action` 展示为数组，仅表示同构规则的阅读简写；实际落库必须拆分为单 `action` 规则记录（见 4.2）。
 
 create 场景执行顺序（统一口径）：
 1. 先按 5.5 将请求体字段注入 `resource.*`。  
@@ -556,6 +564,7 @@ create 场景执行顺序（统一口径）：
   - 内部服务账号（`authz:debug` 范围）：`allow/deny + matched_policy + reason_code`
   - 用户态请求：仅 `allow/deny + reason_code + request_id`（禁止返回策略表达式/策略明细）
 - 安全要求：用户态响应不得泄漏策略结构与资源存在性细节。
+- 缓存口径：`/api/v1/authz/check` 与业务鉴权共用同一判定链路与 L1/L2 缓存，不单独旁路缓存。
 
 7. 新增角色数据策略配置接口（管理面）
 - `GET /api/v1/auth/roles/{role_id}/data-policies`
@@ -654,6 +663,7 @@ create 场景执行顺序（统一口径）：
 2. PostgreSQL 前置能力校验（No-Go）：
 - 安装并校验 `btree_gist` 扩展（排斥约束依赖）。
 - 排斥约束涉及列/操作符在目标库可用，演练环境与生产版本一致。
+- 执行计划校验：对排斥约束相关写入与关键查询执行 `EXPLAIN (ANALYZE, BUFFERS)`；不得出现不可接受的长期全表扫描，若出现退化需按查询模式补充索引或调整 SQL 后再放流。
 3. 生成映射表：
 - `org_to_party_map`
 - `ownership_to_party_map`
@@ -868,6 +878,7 @@ No-Go 规则：
 9. 前端会话未 refresh 前能力清单允许短暂陈旧，但不得绕过后端 ABAC。  
 10. 无权限详情 404 行为一致。
 11. 前端静默 refresh 防风暴策略生效：single-flight、30s cooldown、失败后不重复风暴触发。
+12. `owner`-only 用户对资产/合同写操作（`create|update|delete`）必须被 deny，不得通过策略误配绕过 manager 路径门禁。
 
 ## 7.3 业务回归
 
@@ -913,6 +924,7 @@ No-Go 规则：
 2. 用户主体绑定变更（`user_party_bindings` 新增/修改/删除）必须写入审计日志。  
 3. 审计日志字段完整：`operator_id`、`occurred_at`、`target_type`、`target_id`、`before`、`after`、`reason`、`request_id`、`source_ip`。  
 4. 审计查询可按用户、角色、主体、时间范围检索，并支持导出。  
+5. 人工清单处置与回填冲突人工修复动作必须入审计（建议 `target_type=user_party_binding_manual_fix`），禁止线下补数绕过审计通道。
 
 ---
 
@@ -963,6 +975,17 @@ No-Go 规则：
 2. 审计日志默认保留 >= 180 天。  
 3. 提供按“谁/何时/改了什么”的查询与导出能力（CSV/JSON）。  
 
+## 9.2 发布前责任矩阵（RACI，推荐）
+
+| 工作项 | R（负责执行） | A（最终负责） | C（协作） | I（知会） |
+|---|---|---|---|---|
+| DDL/迁移脚本与回滚脚本 | 数据库组 | 发布负责人 | 迁移组、鉴权组 | 业务负责人 |
+| 数据映射回填与人工清单清零 | 迁移组 | 迁移负责人 | 业务数据 owner、数据库组 | 发布负责人 |
+| ABAC 引擎与缓存失效链路 | 鉴权组 | 鉴权负责人 | 权限管理组、平台运维 | 测试组 |
+| 角色策略包映射与后台配置 | 权限管理组 | 权限负责人 | 鉴权组、业务负责人 | 发布负责人 |
+| 前端能力清单与交互收敛 | 前端组 | 前端负责人 | 鉴权组、业务后端组 | 测试组 |
+| 对账/回归/性能验收与放流决策 | 测试组 | 发布负责人 | 全体实施组 | 业务负责人 |
+
 ---
 
 ## 10. 重要假设与默认值
@@ -974,6 +997,7 @@ No-Go 规则：
 5. 外部产权方可仅作为 Party 存在，不要求必须有系统用户账号。  
 6. 项目创建本期不强制要求已绑定资产（后续可再升级为硬约束）。  
 7. 前端 `capabilities` 为会话级快照；权限实时真值以后端 ABAC 判定为准。  
+   - 权威口径：会话与 `capabilities` 语义以本节为准；其它章节如有表述差异，以本节为准。  
 8. 有效业务用户默认要求具备 `manager/headquarters` 有效绑定；`no_data_access` 角色用户可例外。  
    - `owner`-only 用户允许存在，但仅可授予 owner 路径只读策略，不得授予写策略。  
 9. 以数据正确性为唯一上线门禁优先级。
@@ -1002,3 +1026,4 @@ No-Go 规则：
 | 2026-02-17 | 3.4 | 修复复核遗留：TOC 补齐 7.7 锚点、`party_contacts.is_primary` 部分唯一索引改为强制实现口径、`user_party_bindings` 回填伪代码补充 `default_organization_id` 字段存在性判断，避免照抄导致缺列错误 | Codex |
 | 2026-02-17 | 3.5 | 按复核意见加固高风险口径：ABAC 表达式栈单选（本期 JSONLogic）、补齐 Outbox 事务一致性与事件幂等重放要求、显式化 `headquarters` 双并入口径、补充 `party_role_bindings` 本期定位与读写边界、增加排斥约束 DDL 基线模板、细化 Party 映射/去重规则、收口 `/authz/check` 用户态脱敏返回、新增 `capabilities` 最小 schema+version、补充权限拒绝可观测日志要求 | Codex |
 | 2026-02-17 | 3.6 | 按业务确认收口 `headquarters` 语义：由双并入改为仅并入 `manager_party_ids`，同步修订 3.3/4.3/4.4/4.8/5.4/7.2 的权限口径与验收描述，明确 owner 路径需显式 `owner` 绑定或独立策略命中 | Codex |
+| 2026-02-17 | 3.7 | 按实施评审补齐落地口径：统一 `condition_expr/condition` 命名映射、明确 `action` 单值落库与动作枚举唯一权威、增加 `headquarters` 与 `capabilities` 权威章节声明、补充 `owner`-only 写入拒绝验收、明确 `/authz/check` 复用缓存口径、强化策略变更“必须事件驱动失效”约束、补充排斥约束执行计划校验、新增人工修复审计要求与发布前 RACI 矩阵 | Codex |

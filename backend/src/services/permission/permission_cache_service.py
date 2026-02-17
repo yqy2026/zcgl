@@ -40,6 +40,10 @@ class PermissionCacheService:
         """获取角色权限缓存键"""
         return f"permission:role:{role_id}:permissions"
 
+    def _get_user_summary_key(self, user_id: int | str) -> str:
+        """获取用户权限摘要缓存键"""
+        return f"permission:user:{user_id}:summary"
+
     async def get_user_permissions(self, user_id: int | str) -> list[str] | None:
         """
         获取用户权限列表（从缓存）
@@ -152,6 +156,57 @@ class PermissionCacheService:
             logger.error(f"Error setting user roles cache: {e}")  # pragma: no cover
             return False  # pragma: no cover
 
+    async def get_user_permission_summary(
+        self, user_id: int | str
+    ) -> dict[str, Any] | None:
+        """
+        获取用户权限摘要（从缓存）
+
+        Args:
+            user_id: 用户ID
+
+        Returns:
+            权限摘要字典，缓存未命中返回 None
+        """
+        if not self.enabled or self.redis is None:
+            return None
+
+        try:
+            key = self._get_user_summary_key(user_id)
+            cached = await self.redis.get(key)
+            if not cached:
+                return None
+            return cast(dict[str, Any], json.loads(cached))
+        except Exception as e:
+            logger.error(f"Error getting user summary from cache: {e}")
+            return None
+
+    async def set_user_permission_summary(
+        self, user_id: int | str, summary: dict[str, Any]
+    ) -> bool:
+        """
+        设置用户权限摘要缓存
+
+        Args:
+            user_id: 用户ID
+            summary: 用户权限摘要
+
+        Returns:
+            是否设置成功
+        """
+        if not self.enabled or self.redis is None:
+            return False
+
+        try:
+            key = self._get_user_summary_key(user_id)
+            value = json.dumps(summary)
+            await self.redis.setex(key, self.ttl, value)
+            logger.debug(f"Cached permission summary for user {user_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Error setting user summary cache: {e}")
+            return False
+
     async def invalidate_user_cache(self, user_id: int | str) -> bool:
         """
         清除用户相关缓存
@@ -169,6 +224,7 @@ class PermissionCacheService:
             keys_to_delete = [
                 self._get_user_permissions_key(user_id),
                 self._get_user_roles_key(user_id),
+                self._get_user_summary_key(user_id),
             ]
 
             deleted = await self.redis.delete(*keys_to_delete)
@@ -274,6 +330,7 @@ class PermissionCacheService:
             total_keys = 0
             user_permission_keys = 0
             user_role_keys = 0
+            user_summary_keys = 0
             role_permission_keys = 0
 
             while True:
@@ -291,6 +348,10 @@ class PermissionCacheService:
                             role_permission_keys += 1
                     elif ":roles" in key_str:
                         user_role_keys += 1
+                    elif ":summary" in key_str and key_str.startswith(
+                        "permission:user:"
+                    ):
+                        user_summary_keys += 1
 
                 if cursor == 0:
                     break
@@ -301,6 +362,7 @@ class PermissionCacheService:
                 "total_keys": total_keys,
                 "user_permission_keys": user_permission_keys,
                 "user_role_keys": user_role_keys,
+                "user_summary_keys": user_summary_keys,
                 "role_permission_keys": role_permission_keys,
             }
 

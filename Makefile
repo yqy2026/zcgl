@@ -2,7 +2,7 @@
 	lint lint-backend lint-frontend scan-frontend scan-frontend-report type-check type-check-e2e \
 	test test-backend test-frontend test-e2e test-e2e-backend test-e2e-frontend \
 	test-integration test-coverage \
-	build-frontend backend-import check \
+	build-frontend backend-import check ci-gate \
 	backend-org-cov secrets migrate check-migration-naming
 
 ROOT_DIR := $(CURDIR)
@@ -31,6 +31,7 @@ help:
 	@echo "  build-frontend    Build frontend"
 	@echo "  backend-import    Import backend app to validate runtime"
 	@echo "  check             Run lint, tests, build, and import checks"
+	@echo "  ci-gate           Run CI gate (ruff + tsgo + unit tests)"
 	@echo "  backend-org-cov   Run org CRUD coverage test"
 	@echo "  secrets           Generate SECRET_KEY and DATA_ENCRYPTION_KEY"
 	@echo "  migrate           Run alembic upgrade head"
@@ -102,6 +103,8 @@ backend-import:
 		DATABASE_URL="$$RESOLVED_DATABASE_URL" $(PYTHON) -c "from src.main import app; print('import ok')"
 
 check: lint-backend lint-frontend scan-frontend type-check test-backend test-frontend build-frontend backend-import
+
+ci-gate: lint-backend type-check test
 
 backend-org-cov:
 	cd backend && \
