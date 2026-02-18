@@ -16,6 +16,7 @@ import {
   Collapse,
   List,
   Typography,
+  message,
 } from 'antd';
 import { SaveOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -84,6 +85,7 @@ export const PropertyCertificateReview: React.FC<PropertyCertificateReviewProps>
       });
     } catch {
       console.error('Validation failed');
+      message.error('表单验证失败，请检查输入');
     }
   };
 

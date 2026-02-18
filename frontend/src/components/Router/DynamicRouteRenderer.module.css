@@ -12,3 +12,22 @@
   border-radius: var(--button-radius);
   margin: calc(var(--spacing-lg) + var(--spacing-xs));
 }
+
+.suspenseFallback {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: var(--spacing-sm);
+  min-height: calc(var(--spacing-xxxl) * 4 + var(--spacing-sm));
+  padding: var(--spacing-xl);
+}
+
+.suspenseFallbackText {
+  color: var(--color-text-secondary);
+}
+
+.routeErrorContainer button,
+.boundaryErrorContainer button {
+  cursor: pointer;
+}

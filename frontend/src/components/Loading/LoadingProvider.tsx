@@ -4,7 +4,7 @@
  */
 
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import { Spin } from 'antd';
+import { Spin, message } from 'antd';
 import styles from './LoadingProvider.module.css';
 
 // Loading状态接口
@@ -252,6 +252,7 @@ export const LoadingButton: React.FC<LoadingButtonProps> = ({
         await onClick();
       } catch (error) {
         console.error('LoadingButton onClick error:', error);
+        message.error('操作失败，请重试');
       }
     }
   }, [onClick, loading]);

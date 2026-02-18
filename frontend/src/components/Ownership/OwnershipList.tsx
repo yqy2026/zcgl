@@ -367,6 +367,7 @@ const OwnershipList: React.FC<OwnershipListProps> = ({ onSelectOwnership, mode =
             checkedChildren="启用"
             unCheckedChildren="禁用"
             className={styles.statusSwitch}
+            aria-label={`${record.is_active ? '停用' : '启用'}权属方 ${record.name}`}
           />
         </Space>
       ),

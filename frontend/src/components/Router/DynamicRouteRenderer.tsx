@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState, ReactNode, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { Spin } from 'antd';
 import { PermissionGuard } from '@/components/System/PermissionGuard';
 import { componentLogger } from './DynamicRouteLoaderCore';
 import { useDynamicRoute } from './DynamicRouteContext';
@@ -18,7 +19,16 @@ export const DynamicRouteRenderer: React.FC = () => {
       const fullPath = parentPath + route.path;
 
       const element = (
-        <Suspense fallback={<div>Loading {route.meta?.title ?? route.id}...</div>}>
+        <Suspense
+          fallback={
+            <div className={styles.suspenseFallback}>
+              <Spin size="large" />
+              <span className={styles.suspenseFallbackText}>
+                {`加载 ${route.meta?.title ?? route.id}...`}
+              </span>
+            </div>
+          }
+        >
           <ErrorBoundary
             onError={error => {
               componentLogger.error(`Route ${route.id} error:`, error);

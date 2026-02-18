@@ -11,6 +11,7 @@ import {
 import type { Asset } from '@/types/asset';
 import { PropertyNature } from '@/types/asset';
 import { COLORS } from '@/styles/colorMap';
+import { getIconButtonProps } from '@/utils/accessibility';
 import styles from './AssetCard.module.css';
 
 const { Text, Title } = Typography;
@@ -71,13 +72,29 @@ const AssetCard: React.FC<AssetCardProps> = ({ asset, onView, onEdit, onDelete }
       hoverable
       actions={[
         <Tooltip title="查看详情" key="view">
-          <Button type="text" icon={<EyeOutlined />} onClick={onView} />
+          <Button
+            type="text"
+            icon={<EyeOutlined />}
+            onClick={onView}
+            {...getIconButtonProps('view', '资产')}
+          />
         </Tooltip>,
         <Tooltip title="编辑" key="edit">
-          <Button type="text" icon={<EditOutlined />} onClick={onEdit} />
+          <Button
+            type="text"
+            icon={<EditOutlined />}
+            onClick={onEdit}
+            {...getIconButtonProps('edit', '资产')}
+          />
         </Tooltip>,
         <Tooltip title="删除" key="delete">
-          <Button type="text" danger icon={<DeleteOutlined />} onClick={onDelete} />
+          <Button
+            type="text"
+            danger
+            icon={<DeleteOutlined />}
+            onClick={onDelete}
+            {...getIconButtonProps('delete', '资产')}
+          />
         </Tooltip>,
       ]}
     >

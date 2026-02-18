@@ -473,7 +473,11 @@ const DictionaryPage: React.FC = () => {
           const tone: Tone = v === true ? 'success' : 'warning';
           return (
             <Space size={6} className={styles.statusToggle}>
-              <Switch checked={v} onChange={checked => handleToggleActive(record, checked)} />
+              <Switch
+                checked={v}
+                onChange={checked => handleToggleActive(record, checked)}
+                aria-label={`${v ? '停用' : '启用'}字典项 ${record.dict_label}`}
+              />
               <span className={[styles.statusText, toneClassMap[tone]].join(' ')}>
                 {v === true ? '启用' : '停用'}
               </span>
