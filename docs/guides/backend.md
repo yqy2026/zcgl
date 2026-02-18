@@ -48,11 +48,15 @@
 backend/
 ├── src/
 │   ├── api/                # API 路由
-│   │   └── v1/            # API v1 版本
-│   │       ├── auth.py    # 认证接口
-│   │       ├── assets.py # 资产接口
-│   │       ├── analytics.py # 分析接口
-│   │       └── ...
+│   │   └── v1/            # API v1 版本（按模块子目录划分）
+│   │       ├── analytics/  # 分析报表接口
+│   │       ├── assets/     # 资产管理接口
+│   │       ├── auth/       # 认证授权接口
+│   │       ├── documents/  # 文档/PDF 处理接口
+│   │       ├── rent_contracts/ # 租赁合同接口
+│   │       ├── system/     # 系统管理接口
+│   │       ├── llm_prompts.py # LLM Prompt 管理
+│   │       └── dependencies.py # 共享依赖注入
 │   ├── core/              # 核心功能
 │   │   ├── config.py     # 配置管理
 │   │   ├── security.py   # 安全相关
@@ -64,24 +68,33 @@ backend/
 │   │   ├── asset.py      # 资产 CRUD
 │   │   └── ...
 │   ├── models/            # 数据库模型
-│   │   ├── user.py       # 用户模型
 │   │   ├── asset.py      # 资产模型
-│   │   └── ...
+│   │   ├── auth.py       # 用户/角色模型
+│   │   ├── rbac.py       # RBAC 权限模型
+│   │   ├── rent_contract.py # 租赁合同模型
+│   │   └── ...           # 共 22 个模型文件
 │   ├── schemas/           # Pydantic 模型
 │   │   ├── auth.py       # 认证 Schema
 │   │   ├── asset.py      # 资产 Schema
 │   │   └── ...
-│   ├── services/          # 业务逻辑
-│   │   ├── auth_service.py # 认证服务
-│   │   ├── asset_service.py # 资产服务
+│   ├── services/          # 业务逻辑（按模块子目录划分）
+│   │   ├── asset/         # 资产服务
+│   │   ├── rent_contract/ # 合同服务
 │   │   ├── document/      # PDF 处理
-│   │   └── ...
+│   │   ├── core/          # 核心服务（认证/密码）
+│   │   ├── permission/    # 权限服务（RBAC）
+│   │   ├── analytics/     # 分析报表
+│   │   ├── notification/  # 通知服务
+│   │   └── ...           # 共 23 个服务子目录
+│   ├── security/          # 认证 / 授权 / 加密（JWT/AES）
 │   ├── middleware/        # 中间件
 │   │   ├── auth.py       # 认证中间件
 │   │   ├── cors.py       # CORS 中间件
 │   │   └── ...
-│   ├── utils/             # 工具函数
+│   ├── config/            # 配置管理
 │   ├── constants/         # 常量定义
+│   ├── enums/             # 枚举类型
+│   ├── utils/             # 工具函数
 │   ├── database.py        # 数据库配置
 │   ├── exceptions.py      # 自定义异常
 │   └── main.py           # 应用入口
@@ -763,15 +776,20 @@ async def get_asset_cached(asset_id: str, db: AsyncSession = Depends(get_async_d
 
 ```
 tests/
-├── __init__.py
-├── conftest.py              # pytest 配置
-├── test_api/                # API 测试
-│   ├── test_auth.py
-│   ├── test_assets.py
-│   └── ...
-├── test_services/            # 服务测试
-├── test_crud/                # CRUD 测试
-└── test_utils/               # 工具测试
+├── conftest.py              # pytest 配置和 fixtures
+├── factories/               # 测试数据工厂
+├── fixtures/                # 共享 fixtures
+├── shared/                  # 共享测试工具
+├── unit/                    # 单元测试（快速、隔离）
+│   ├── api/                 # API 端点测试
+│   ├── services/            # 服务层测试
+│   ├── crud/                # CRUD 测试
+│   ├── models/              # 模型测试
+│   └── utils/               # 工具函数测试
+├── integration/             # 集成测试（模块协作）
+├── e2e/                     # 端到端测试（完整工作流）
+├── security/                # 安全测试
+└── load/                    # 负载测试
 ```
 
 ### API 测试示例

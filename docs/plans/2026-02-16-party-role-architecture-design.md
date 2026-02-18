@@ -849,7 +849,7 @@ for user in active_users:
 
 | # | Blocker | 关闭标准 |
 |---|---|---|
-| BG-1 | PartyFilter 替代方案落地并通过回归 | `_apply_party_filter` 覆盖所有 16+ CRUD 模块，无 `organization_id` 遍历引用 |
+| BG-1 | PartyFilter 替代方案落地并通过回归 | `_apply_party_filter` 覆盖所有 16+ 文件（含 CRUD/Service/API 层），无 `organization_id` 遍历引用 |
 | BG-2 | `roles.organization_id` 迁移完成 | FK 替换/删除 + `scope` 值域更新 + 相关 whitelist 同步 |
 | BG-3 | 权限判定路径统一为 ABAC | `PermissionGrant`/`ResourcePermission` 确认无运行时读取 + 标记 deprecated |
 | BG-4 | 台账链路 `ownership_id` 全清 | `RentLedger.ownership_id` 改为 `owner_party_id` + `ledger_service.py` 业务逻辑 + `RentContract.__init__` 验证 |
@@ -1110,3 +1110,4 @@ No-Go 规则：
 | 2026-02-17 | 3.4 | 修复复核遗留：TOC 补齐 7.7 锚点、`party_contacts.is_primary` 部分唯一索引改为强制实现口径、`user_party_bindings` 回填伪代码补充 `default_organization_id` 字段存在性判断，避免照抄导致缺列错误 | Codex |
 | 2026-02-18 | 3.5 | 合并评审补丁：新增 Blocker Gate(C1-C4)、既有权限表处置(C3)、台账/角色/关联表迁移补齐(C2/C4/C5/C6/C7)、PartyFilter 替代(C1)、hierarchy_version 生命周期(R5)、ID 类型冻结(R4)、useCapabilities 规范(S4)、文件冻结清单要求(S1)、management_entity 映射策略(R7)、Excel 导入导出任务(S5) | Antigravity |
 | 2026-02-18 | 3.6 | 重审修订：显式列出 Project.ownership_entity 删除与迁移策略；新增 Asset.project_name 去规范化处置；补齐 tenant_party_id 迁移口径（本期选填不自动映射）；修正 PermissionGrant 方法计数(11→09)；修正 TenantFilter 文件范围描述；修正 §3.1/§4.1 heading 层级 | Antigravity |
+| 2026-02-18 | 3.7 | 语义收窄与实施增强：`headquarters` 展开结果仅并入 `manager_party_ids`（不再并入 `owner_party_ids`）；`parties` 新增 `external_ref` + `code` 治理口径 + 匹配优先级；`party_role_bindings` 本期定位明确为非实时 ABAC；`abac_policy_rules.action` 收为单值枚举 + 多动作拆单落库；`condition_expr` 本期唯一引擎 JSONLogic（CEL 后续预留）；新增 capabilities 最小 Schema 与版本兼容约束；新增 §9.2 RACI 发布责任矩阵；§4.4 可观测性要求；§4.7 策略更新约束；§6.1 Party 去重规则 + EXPLAIN 校验 + 步骤重编号；§7.5 Outbox/幂等验收；§7.7 人工清单审计；§10 capabilities 权威口径 | yellowUp + Antigravity |

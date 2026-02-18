@@ -46,7 +46,7 @@
 ```
 frontend/
 ├── src/
-│   ├── components/          # React 组件 (114+ TSX 文件)
+│   ├── components/          # React 组件
 │   │   ├── Asset/          # 资产管理组件
 │   │   ├── Analytics/      # 分析组件
 │   │   ├── Router/         # 路由管理组件
@@ -55,17 +55,21 @@ frontend/
 │   │   ├── Forms/          # 表单组件
 │   │   ├── ErrorHandling/  # 错误处理
 │   │   └── ...
-│   ├── pages/              # 页面组件 (40个)
-│   ├── routes/             # 路由配置
+│   ├── pages/              # 页面组件
+│   ├── services/           # API 服务封装
+│   ├── hooks/              # 自定义 Hooks
 │   ├── store/              # Zustand 状态管理
-│   ├── services/           # API 服务 (35个)
-│   ├── hooks/              # 自定义 Hooks (13个)
-│   ├── utils/              # 工具函数 (15个)
-│   ├── types/              # TypeScript 类型定义 (15个)
+│   ├── contexts/           # React Context（AuthContext 等）
+│   ├── types/              # TypeScript 类型定义
+│   ├── routes/             # 路由配置
 │   ├── constants/          # 常量配置
-│   ├── contexts/           # React Context
-│   ├── monitoring/         # 性能监控
 │   ├── config/             # 配置文件
+│   ├── styles/             # 全局样式
+│   ├── theme/              # 主题配置 / 样式令牌
+│   ├── utils/              # 工具函数
+│   ├── api/                # API 客户端
+│   ├── mocks/              # MSW Mock 数据
+│   ├── test-utils/         # 测试工具
 │   └── main.tsx            # 应用入口
 ├── public/                 # 静态资源
 ├── package.json            # 依赖和脚本
@@ -74,7 +78,7 @@ frontend/
 └── index.html              # HTML 模板
 ```
 
-**证据来源**: `frontend/CLAUDE.md`, `frontend/src/` 目录结构
+**证据来源**: `frontend/src/` 目录结构
 
 ---
 
