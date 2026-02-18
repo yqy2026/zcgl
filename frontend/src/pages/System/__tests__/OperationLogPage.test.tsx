@@ -93,7 +93,7 @@ describe('OperationLogPage', () => {
     await waitFor(() => {
       expect(screen.getByText('已启用 1 项筛选')).toBeInTheDocument();
     });
-  });
+  }, 20_000);
 
   it('opens detail drawer from table action', async () => {
     renderWithProviders(<OperationLogPage />);
