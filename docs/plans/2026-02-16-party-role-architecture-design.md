@@ -2,7 +2,7 @@
 
 **文档类型**: 技术设计文档  
 **创建日期**: 2026-02-16  
-**最新更新**: 2026-02-17  
+**最新更新**: 2026-02-18  
 **状态**: 待实施（方案冻结）  
 **作者**: Codex
 
@@ -36,6 +36,7 @@
 - [5.3 外部调用方切换要求（破坏性变更治理）](#53-外部调用方切换要求破坏性变更治理)
 - [5.4 登录时权限展开逻辑（后端实现约束）](#54-登录时权限展开逻辑后端实现约束)
 - [5.5 创建接口 ABAC 资源注入规范（强制）](#55-创建接口-abac-资源注入规范强制)
+- [5.6 数据隔离层替代方案（TenantFilter → PartyFilter）](#56-数据隔离层替代方案tenantfilter--partyfilter)
 - [6. 一次切换迁移方案（Runbook）](#6-一次切换迁移方案runbook)
 - [6.1 上线前准备](#61-上线前准备)
 - [6.2 发布窗口执行](#62-发布窗口执行)
@@ -102,13 +103,15 @@
 5. 业务范围：全域替换（资产+合同+项目+产权证+权限）。  
 6. ID 策略：Party 侧全部新 ID，使用映射表回填。  
 7. 本期不保留 `abac_policy_subjects`，直接删除表结构。  
-8. 门禁原则：数据正确性优先，未通过不发布。
+8. 门禁原则：数据正确性优先，未通过不发布。  
+9. ID 类型：统一为 `String`（与现网 22 张表一致，本轮不引入 UUID 类型迁移轴；新表 DDL 中 `UUID PK` 实际实现为 `String + Python uuid4()`）。  
+10. ABAC 条件引擎：JSONLogic（`json-logic-py` 或等价库），需新增依赖。
 
 ---
 
 ## 3. 目标数据模型
 
-## 3.1 Party 主体层
+### 3.1 Party 主体层
 
 ### `parties`
 - `id` UUID PK  
@@ -231,13 +234,15 @@
 - 保留：`management_start_date`, `management_end_date`, `management_agreement`
 
 ### 合同 `rent_contracts`
-- 删除：`ownership_id`
+- 删除：`ownership_id`（现有 FK 指向 `ownerships.id`，迁移时需通过 `ownership_to_party_map` 映射）
 - 新增：`owner_party_id` NOT NULL, `manager_party_id` NOT NULL, `tenant_party_id` NULL
+- `tenant_party_id` 迁移策略：`tenant_name` 为 `String(200)` 自由文本，本期 `tenant_party_id` 仅做选填标注，不从 `tenant_name` 自动迁移（本期不引入自然人 Party，承租方可能含个人）；已知企业承租方可后续人工补绑
 
 ### 项目 `projects`
-- 删除：`organization_id`、旧管理字符串字段
+- 删除：`organization_id`、`management_entity`（String(200) 管理单位）、`ownership_entity`（String(200) 权属单位）
 - 新增：`manager_party_id` NOT NULL
 - 说明：项目仅代表运营管理归集单元，不设置 `owner_party_id`；项目下资产可关联多个不同产权方
+- `ownership_entity` 处置：该字段语义为“权属单位”，迁移时对 `parties.name` 模糊匹配写入 `party_role_bindings`（`role_code=OWNER` + `scope_type=project`），未匹配项进入人工清单
 
 ### 项目-资产关系 `project_assets`
 - `id` UUID PK
@@ -285,15 +290,62 @@
 新增 `asset_management_history`：
 - `asset_id`, `manager_party_id`, `start_date`, `end_date`, `agreement`, `change_reason`, `changed_by`
 
+### 台账 `rent_ledger`
+- 删除：`ownership_id`
+- 新增：`owner_party_id` NOT NULL
+- 说明：`RentDepositLedger` 和 `ServiceFeeLedger` 仅含 `contract_id`，无 `ownership_id`，无需单独处理
+- 代码联动：`RentContract.__init__` 构造函数中硬编码的 `ownership_id` 必填验证需同步改为 `owner_party_id`；`ledger_service.py` 中 `db_ledger.ownership_id = contract.ownership_id` 需改为 `db_ledger.owner_party_id = contract.owner_party_id`
+
+### RBAC `roles` 表字段迁移
+- 删除：`organization_id` FK → `organizations.id`
+- `scope` 值域变更：`global/organization/department` → `global/party/party_subtree`
+- `scope_id` 语义变更：原指向 `organizations.id`，改为指向 `parties.id`（`scope='global'` 时仍为 `NULL`）
+- 说明：§4.1 "复用现有 RBAC 表"口径不变，仅修改上述字段
+
+### `Asset.project_id` 处置
+- 本期删除 `Asset.project_id` 直接 FK（`projects.id`），统一走 `project_assets` M2M 关系表
+- 前端 `Asset` 类型中 `project_id` 同步移除
+- 迁移时先将现有 `Asset.project_id` 回填到 `project_assets`，再删除该列
+
+### `Asset.project_name` 去规范化字段处置
+- `Asset.project_name`（`String(200)`）为去规范化冗余字段，迁移到 `project_assets` M2M 后存在数据不一致风险（一个资产可能关联多个项目）
+- 本期保留该列但标记 **deprecated**：仅供搜索兼容使用，不再由业务逻辑写入
+- `field_whitelist.py` 中 `AssetWhitelist.search_fields` 和 `sort_fields` 均含 `"project_name"`，本期保留搜索能力
+- 后续版本计划：搜索改为 `JOIN project_assets + projects`，届时删除该列
+
+### `RentContract` 冗余 owner 字段处置
+- `owner_name`、`owner_contact`、`owner_phone` 保留为**历史快照**（只读）
+- 迁移后不再从 Party 实时同步更新这些字段
+- 新建合同时不再填写这些字段（由 `owner_party_id` 关联推导显示）
+
+### 旧关联表处置
+- `project_ownership_relations`：数据迁移到 `project_assets`（项目维度）+ `party_role_bindings`（主体维度）后物理删除
+- `property_owners` + `property_certificate_owners`：数据迁移到 `certificate_party_relations` 后物理删除
+
 ---
 
 ## 4. 权限模型（角色入口 + ABAC 执行）
 
-## 4.1 管理面：角色绑定策略（管理员视角）
+### 4.1 管理面：角色绑定策略（管理员视角）
 
 ### 复用现有 RBAC 表
-- `roles`
+- `roles`（字段迁移见 §3.4「RBAC roles 表字段迁移」）
 - `user_role_assignments`
+
+### 既有权限表处置（本期决策）
+
+| 表 | 处置 | 说明 |
+|---|---|---|
+| `permission_grants` | 本期标记 **deprecated**，迁移窗口后物理删除 | 已有 grant 数据不迁入 ABAC；角色策略包为唯一权限判定路径 |
+| `resource_permissions` | 同上 | `resource_type + permission_level` 功能由 `abac_policy_rules` 替代 |
+| `permission_audit_logs` | 保留为历史审计（只读），不再新增写入 | 新审计走 §7.7 规范 |
+
+既有权限服务处置：
+- `OrganizationPermissionService`（282 行）：由 ABAC 引擎 + PartyFilter（§5.6）替代，标记废弃
+- `OrganizationPermissionChecker`（中间件层）：由 `/authz/check` 端点替代，标记废弃
+- `rbac_service.py` 中涉及 `PermissionGrant` 的 9 个方法（`_check_grant_permission` / `_get_matching_permission_grants` / `_scope_matches` / `_conditions_match` / `grant_permission_to_user` / `get_permission_grant` / `list_permission_grants` / `update_permission_grant` / `revoke_permission_grant`）：逐步迁移到 ABAC 策略包路径
+
+判定路径统一原则：**仅 ABAC**。迁移后系统中不得存在 `PermissionGrant` 运行时读取路径，避免双重权限判定。
 
 ### 新增 `abac_role_policies`
 - `id` UUID PK
@@ -430,6 +482,16 @@
 3. 消费要求：所有实例订阅同一广播通道并执行本地 + Redis 双删除。  
 4. 时效目标：从事件提交成功到所有实例缓存失效 `<5s`（最终一致）。  
 
+`hierarchy_version` 生命周期协议（本期必须）：
+
+| 阶段 | 机制 | 说明 |
+|---|---|---|
+| **生成** | `party_hierarchy` 写入触发器执行 `INCR party:hierarchy_version`（Redis） | 每次层级变更递增全局版本号 |
+| **传播** | `authz.user_scope.updated` 事件携带 `new_hierarchy_version` | 所有实例感知版本变更 |
+| **失效** | 缓存键 `party:descendants:{party_id}:{version}` 版本变更后自动 miss | 无需显式删除旧键 |
+| **冷启动** | 无版本时 fallback 到 DB 递归 CTE 查询 + 写入初始版本 | 首次启动或 Redis 丢失时自愈 |
+| **存储** | Redis key `party:hierarchy_version`（全局单键） | TTL = -1（永不过期，仅递增） |
+
 ## 4.8 ABAC 策略规则示例（JSONLogic）
 
 create 场景执行顺序（统一口径）：
@@ -520,19 +582,22 @@ create 场景执行顺序（统一口径）：
 5. `PropertyCertificate*`
 - 统一改为 `party_id` 或证照关系表
 
-6. 新增鉴权接口
+6. `RentLedger*`
+- `ownership_id → owner_party_id`
+
+7. 新增鉴权接口
 - `POST /api/v1/authz/check`（内部服务与调试使用）
 - 入参：`action + resource + context`（默认）
 - `subject` 仅允许内部服务账号透传；用户态请求一律以后端从 token 解析的 subject 为准（忽略/拒绝外部传入 subject）
 - 出参：`allow/deny + matched_policy`
 
-7. 新增角色数据策略配置接口（管理面）
+8. 新增角色数据策略配置接口（管理面）
 - `GET /api/v1/auth/roles/{role_id}/data-policies`
 - `PUT /api/v1/auth/roles/{role_id}/data-policies`
 - `GET /api/v1/auth/data-policies/templates`
 - 说明：管理员按角色挂载策略包，不直接编辑底层表达式
 
-8. 登录态能力清单接口（前端消费）
+9. 登录态能力清单接口（前端消费）
 - `GET /api/v1/auth/me/capabilities`
 - 出参：`resource + action + perspective + data_scope` 能力清单
 - 说明：前端页面显隐和按钮可用性以能力清单为准，不在页面层频繁调用 `/authz/check`
@@ -553,6 +618,11 @@ create 场景执行顺序（统一口径）：
 - 单次失败波次最多触发 `1` 次静默 refresh，仍失败则提示用户手动刷新/重新登录。
 10. 后端建议在权限变化导致的拒绝中返回 `X-Authz-Stale: true` 响应头；前端仅在命中该信号或首次权限拒绝时触发静默 refresh。
 11. 触发与抑制行为需写入前端诊断日志（含 `request_id`、触发原因、是否命中 cooldown），用于排查 refresh 风暴。
+12. `usePermission` Hook 重构为 `useCapabilities`：
+- 废弃 `canAccessOrganization(organizationId)` 对比逻辑
+- 新增 `canPerform(action, resourceType, perspective?)` 基于能力清单判定
+- 新增 `hasPartyAccess(partyId, relationType)` 替代旧组织 ID 比较
+- 接口规范：`capabilities` 清单结构为 `{ resource, action, perspective, data_scope }[]`，与 §5.1 的 `GET /auth/me/capabilities` 出参对齐
 
 ## 5.3 外部调用方切换要求（破坏性变更治理）
 
@@ -593,6 +663,60 @@ create 场景执行顺序（统一口径）：
    - 必填字段：`owner_party_id`、`manager_party_id`（创建资产/合同）与 `manager_party_id`（创建项目）必须 fail-closed。  
    - 选填字段：`tenant_party_id` 允许 `NULL`，但不得在 ABAC 组件中被替换成默认值。  
 5. 禁止各接口自定义注入逻辑；由统一鉴权组件负责映射与校验。  
+
+---
+
+## 5.6 数据隔离层替代方案（TenantFilter → PartyFilter）
+
+> 本节解决核心数据隔离机制的替换问题。现有 `TenantFilter` 硬编码 `organization_ids`，删除 `organization_id` 列后将完全失效。
+
+### 现状
+- `TenantFilter`（`query_builder.py`）：frozen dataclass，`organization_ids: list[TenantIdentifier]`
+- `_apply_tenant_filter`：对 `model.organization_id` 列做 `IN` 过滤
+- 被 **16+ 个文件**（含 CRUD/Service/API 层）使用（CRUD 层：`asset.py`, `project.py`, `property_certificate.py`, `rbac.py`, `base.py` 等 10 个文件；Service/API 层另有 6+ 个文件）
+
+### 替代方案
+
+`PartyFilter`（新 dataclass）：
+```python
+@dataclass(frozen=True)
+class PartyFilter:
+    """主体过滤上下文（Party 维度）"""
+    party_ids: list[str]                       # 来源：user_party_bindings 展开结果
+    filter_mode: Literal["owner", "manager", "any"] = "any"
+    mode: Literal["strict"] = "strict"
+    allow_null: bool = False
+```
+
+`_apply_party_filter`（新方法）：
+```python
+def _apply_party_filter(self, query, model):
+    if self.filter_mode == "owner" and hasattr(model, "owner_party_id"):
+        return query.where(model.owner_party_id.in_(self.party_ids))
+    elif self.filter_mode == "manager" and hasattr(model, "manager_party_id"):
+        return query.where(model.manager_party_id.in_(self.party_ids))
+    else:  # "any"
+        conditions = []
+        if hasattr(model, "owner_party_id"):
+            conditions.append(model.owner_party_id.in_(self.party_ids))
+        if hasattr(model, "manager_party_id"):
+            conditions.append(model.manager_party_id.in_(self.party_ids))
+        return query.where(or_(*conditions)) if conditions else query
+```
+
+### `field_whitelist.py` 批量更新
+
+| 操作 | 详细 |
+|---|---|
+| 字段替换（9 处） | `organization_id → owner_party_id/manager_party_id`（5 处）；`ownership_id → owner_party_id`（3 处）；`ownership_entity → manager_party_id`（1 处） |
+| 类删除（2 个） | `OrganizationWhitelist`、`OwnershipWhitelist` 整个类删除 |
+
+### `management_entity` 自由文本映射策略
+
+`Asset.management_entity` 和 `Project.management_entity` 为 `String(200)` 自由文本，无法直接映射为 `manager_party_id`。迁移策略：
+1. 模糊匹配 `parties.name`：自动映射匹配结果写入 `manager_party_id`
+2. 未匹配项进入人工清单（类似 `project_assets` 处置流程）
+3. 迁移顺序：先回填 `manager_party_id`，再删除 `management_entity` 列
 
 ---
 
@@ -668,6 +792,15 @@ for user in active_users:
 - 明确责任人（迁移组负责人 + 业务数据 owner）
 - 明确时限（窗口内清零，未清零不开放写流量）
 
+### P0 Blocker Gate（全部关闭后方可进入发布窗口）
+
+| # | Blocker | 关闭标准 |
+|---|---|---|
+| BG-1 | PartyFilter 替代方案落地并通过回归 | `_apply_party_filter` 覆盖所有 16+ CRUD 模块，无 `organization_id` 遍历引用 |
+| BG-2 | `roles.organization_id` 迁移完成 | FK 替换/删除 + `scope` 值域更新 + 相关 whitelist 同步 |
+| BG-3 | 权限判定路径统一为 ABAC | `PermissionGrant`/`ResourcePermission` 确认无运行时读取 + 标记 deprecated |
+| BG-4 | 台账链路 `ownership_id` 全清 | `RentLedger.ownership_id` 改为 `owner_party_id` + `ledger_service.py` 业务逻辑 + `RentContract.__init__` 验证 |
+
 ## 6.2 发布窗口执行
 
 窗口时长估算基线（必须在演练中实测修正）：
@@ -704,13 +837,18 @@ No-Go 规则：
 - 写入经营方历史首条记录
 5. 部署新后端（角色入口 + ABAC 判定生效）+ 新前端（新字段），并完成基础冒烟。  
 6. 同一窗口内物理删除旧业务字段（不延后版本删除）：
-- `assets.organization_id / ownership_id / management_entity`
+- `assets.organization_id / ownership_id / management_entity / project_id`
 - `rent_contracts.ownership_id`
+- `rent_ledger.ownership_id`
 - `projects.organization_id` 及旧管理字符串字段
 - `property_certificates.organization_id`
-7. 执行门禁验证（对账 + 权限 + 性能 + 外部调用方冒烟）。  
-8. 仅当门禁全部通过且 `project_assets` 人工清单清零（或签字豁免）后，恢复业务流量。
-9. 任一门禁失败：保持维护窗口并执行双回滚（应用 + DB）。
+- `roles.organization_id`
+7. 同一窗口内物理删除旧关联表：
+- `project_ownership_relations`
+- `property_owners` + `property_certificate_owners`
+8. 执行门禁验证（对账 + 权限 + 性能 + 外部调用方冒烟）。  
+9. 仅当门禁全部通过且 `project_assets` 人工清单清零（或签字豁免）后，恢复业务流量。
+10. 任一门禁失败：保持维护窗口并执行双回滚（应用 + DB）。
 
 ## 6.3 发布后收敛
 
@@ -766,6 +904,8 @@ No-Go 规则：
 9. 前端会话未 refresh 前能力清单允许短暂陈旧，但不得绕过后端 ABAC。  
 10. 无权限详情 404 行为一致。
 11. 前端静默 refresh 防风暴策略生效：single-flight、30s cooldown、失败后不重复风暴触发。
+12. `PartyFilter` 数据隔离全链路回归：各 CRUD 模块租户隔离行为与旧 `TenantFilter` 等价。
+13. `PermissionGrant`/`ResourcePermission` 确认无运行时引用（grep 全库 + 冒烟测试覆盖）。
 
 ## 7.3 业务回归
 
@@ -832,13 +972,17 @@ No-Go 规则：
 ## 9. 实施任务拆解（可直接派工）
 
 1. 数据库组：新表 + 约束 + Alembic + 回滚脚本 + `party_hierarchy` 防环触发器。  
-2. 迁移组：映射、回填、对账工具、`abac_policy_subjects` 删表迁移、`project_assets` 关系回填、`user_party_bindings` 回填、人工清单闭环。  
-3. 鉴权组：ABAC 引擎 + `abac_role_policies` + `/authz/check` + 登录/refresh 上下文展开 + 缓存键标准化 + 精准删除 + 失效事件广播。  
+2. 迁移组：映射、回填、对账工具、`abac_policy_subjects` 删表迁移、`project_assets` 关系回填、`user_party_bindings` 回填、`management_entity` 自由文本映射、人工清单闭环。  
+3. 鉴权组：ABAC 引擎（含 JSONLogic 依赖集成） + `abac_role_policies` + `/authz/check` + 登录/refresh 上下文展开 + 缓存键标准化 + 精准删除 + 失效事件广播 + `OrganizationPermissionService`/`OrganizationPermissionChecker` 废弃与替代。  
 4. 权限管理组：角色数据策略包后台配置、既有角色映射 dry-run、审计日志（角色策略包与 `user_party_bindings` 变更全量留痕）。  
-5. 业务后端组：asset/contract/project/certificate 全域字段替换 + `project_assets` 关系服务 + `certificate_party_relations` 落地。  
-6. 前端组：类型、服务、页面联调、角色策略包配置页、能力清单陈旧态交互提示。  
-7. 测试组：迁移回归、角色到策略链路回归、`headquarters` 展开回归、防环专项、性能基准。  
+5. 业务后端组：asset/contract/project/certificate 全域字段替换 + `project_assets` 关系服务 + `certificate_party_relations` 落地 + `ledger_service.py` 台账链路修改 + `RentContract.__init__` 构造函数修改 + `field_whitelist.py` 批量更新（9 字段 + 2 类） + Excel 导入导出模板适配。  
+6. 前端组：类型、服务、页面联调、角色策略包配置页、能力清单陈旧态交互提示 + `usePermission` → `useCapabilities` 重构 + `ownership_id` 33 文件替换。  
+7. 测试组：迁移回归、角色到策略链路回归、`headquarters` 展开回归、防环专项、性能基准 + `PartyFilter` 数据隔离回归。  
 8. 发布组：窗口执行、外部调用方签收核验、回滚值守。
+
+各组交付物要求（强制）：
+- 每组必须产出**“受影响文件冻结清单”**（模块-文件-责任人-状态），在发布前冲刺阶段冻结
+- 清单估算：后端 ~50+ 文件，前端 ~51+ 文件（基于评审发现的 `organization_id` 50+ 、`ownership_id` 34+ 影响分析）
 
 ## 9.1 审计与合规（推荐增强）
 
@@ -896,3 +1040,5 @@ No-Go 规则：
 | 2026-02-17 | 3.2 | 补齐实施闭环：明确 `user_party_bindings` 回填来源定义与决策树、补充 `headquarters` 展开性能与缓存预热约束、新增迁移窗口时长估算与 No-Go 门禁、完善 `project_assets` 人工清单生命周期、增加前端 capabilities 静默 refresh 防风暴规范、细化“未识别角色”定义与 `category` 推荐映射规则（仍 deny-by-default） | Codex |
 | 2026-02-17 | 3.3 | 补齐审阅遗留细节：显式化 `party_contacts` partial unique、明确 `scope_id` 类型与 `global` 可空约束、补充证照“同一时刻唯一主产权方”语义、增加 `default_organization_id` 缺列兼容、澄清 `roles_hash` 不含策略版本（仅事件失效）、补充 7.5 的 `<5s` 可验证用例，并明确 7.7（强制）与 9.1（推荐）边界 | Codex |
 | 2026-02-17 | 3.4 | 修复复核遗留：TOC 补齐 7.7 锚点、`party_contacts.is_primary` 部分唯一索引改为强制实现口径、`user_party_bindings` 回填伪代码补充 `default_organization_id` 字段存在性判断，避免照抄导致缺列错误 | Codex |
+| 2026-02-18 | 3.5 | 合并评审补丁：新增 Blocker Gate(C1-C4)、既有权限表处置(C3)、台账/角色/关联表迁移补齐(C2/C4/C5/C6/C7)、PartyFilter 替代(C1)、hierarchy_version 生命周期(R5)、ID 类型冻结(R4)、useCapabilities 规范(S4)、文件冻结清单要求(S1)、management_entity 映射策略(R7)、Excel 导入导出任务(S5) | Antigravity |
+| 2026-02-18 | 3.6 | 重审修订：显式列出 Project.ownership_entity 删除与迁移策略；新增 Asset.project_name 去规范化处置；补齐 tenant_party_id 迁移口径（本期选填不自动映射）；修正 PermissionGrant 方法计数(11→09)；修正 TenantFilter 文件范围描述；修正 §3.1/§4.1 heading 层级 | Antigravity |
