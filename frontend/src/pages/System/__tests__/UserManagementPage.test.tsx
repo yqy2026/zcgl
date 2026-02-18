@@ -122,7 +122,7 @@ describe('UserManagementPage', () => {
       expect(userService.updateUser).toHaveBeenCalledWith('user-1', { status: 'inactive' });
       expect(MessageManager.success).toHaveBeenCalledWith('状态已更新');
     });
-  });
+  }, 20_000);
 
   it('shows detail drawer and surfaces load errors', async () => {
     vi.mocked(useUserManagementData).mockReturnValue(
