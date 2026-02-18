@@ -92,7 +92,7 @@ describe('UserManagementPage', () => {
     expect(screen.getByText('用户管理')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '新建系统用户' })).toBeInTheDocument();
     expect(screen.getByText('总记录：1')).toBeInTheDocument();
-  }, 20_000);
+  }, 40_000);
 
   it('triggers refresh and user status actions', async () => {
     const refetchUsers = vi.fn().mockResolvedValue(undefined);

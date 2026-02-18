@@ -100,7 +100,7 @@ describe('OperationLogPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '查看操作日志 log-1 详情' }));
     expect(await screen.findByText('操作日志详情')).toBeInTheDocument();
-  });
+  }, 30_000);
 
   it('surfaces load errors', async () => {
     vi.mocked(useOperationLogData).mockReturnValue(

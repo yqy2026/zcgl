@@ -22,6 +22,7 @@ beforeAll(() => {
 // 在每个测试之后重置handlers，确保测试隔离
 afterEach(() => {
   mswServer.resetHandlers();
+  vi.useRealTimers();
 });
 
 // 在所有测试之后关闭MSW服务器
