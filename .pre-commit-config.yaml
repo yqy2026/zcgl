@@ -45,6 +45,7 @@ repos:
           types-requests,
           types-PyYAML,
           pydantic>=2.0,
+          sqlalchemy>=2.0.44,
         ]
         # Phase 2: 不再使用 pass_filenames (通过 --package 处理)
 
