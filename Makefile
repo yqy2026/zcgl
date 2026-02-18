@@ -1,6 +1,6 @@
 .PHONY: help dev dev-backend dev-frontend \
 	lint lint-backend lint-frontend scan-frontend scan-frontend-report type-check type-check-e2e \
-	test test-backend test-frontend test-e2e test-e2e-backend test-e2e-frontend \
+	test test-backend test-frontend test-frontend-ci test-e2e test-e2e-backend test-e2e-frontend \
 	test-integration test-coverage \
 	build-frontend backend-import check ci-gate \
 	backend-org-cov secrets migrate check-migration-naming
@@ -23,6 +23,7 @@ help:
 	@echo "  type-check-e2e    Run frontend Tsgo E2E check"
 	@echo "  test-backend      Run backend unit tests"
 	@echo "  test-frontend     Run frontend tests"
+	@echo "  test-frontend-ci  Run frontend tests with CI profile"
 	@echo "  test-integration  Run backend integration tests with coverage"
 	@echo "  test-coverage     Run all tests with coverage reports"
 	@echo "  test-e2e-backend  Run backend E2E tests"
@@ -77,6 +78,9 @@ test-backend:
 test-frontend:
 	cd frontend && pnpm test
 
+test-frontend-ci:
+	cd frontend && CI=true pnpm test
+
 test-e2e: test-e2e-backend test-e2e-frontend
 
 test-e2e-backend:
@@ -104,7 +108,7 @@ backend-import:
 
 check: lint-backend lint-frontend scan-frontend type-check test-backend test-frontend build-frontend backend-import
 
-ci-gate: lint-backend type-check test
+ci-gate: lint-backend type-check test-backend test-frontend-ci
 
 backend-org-cov:
 	cd backend && \
