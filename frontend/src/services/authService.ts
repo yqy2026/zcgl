@@ -345,12 +345,15 @@ export class AuthService {
       const updatedUser = result.data as User;
       const existing = AuthStorage.getAuthData();
       const existingPersistence = AuthStorage.getAuthPersistence();
-      AuthStorage.setAuthData({
-        user: updatedUser,
-        permissions: existing?.permissions ?? [],
-      }, {
-        persistence: existingPersistence ?? 'local',
-      });
+      AuthStorage.setAuthData(
+        {
+          user: updatedUser,
+          permissions: existing?.permissions ?? [],
+        },
+        {
+          persistence: existingPersistence ?? 'local',
+        }
+      );
       return updatedUser;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);

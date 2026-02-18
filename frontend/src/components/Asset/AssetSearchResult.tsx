@@ -11,6 +11,7 @@ import {
 import type { Asset, AssetSearchParams } from '@/types/asset';
 import { highlightText, extractSearchTerms } from '@/utils/highlight';
 import { formatArea, getStatusColor } from '@/utils/format';
+import { getIconButtonProps } from '@/utils/accessibility';
 import styles from './AssetSearchResult.module.css';
 
 const { Text, Paragraph } = Typography;
@@ -58,10 +59,20 @@ const AssetSearchResult: React.FC<AssetSearchResultProps> = ({
             key={asset.id}
             actions={[
               <Tooltip key="view" title="查看详情">
-                <Button type="text" icon={<EyeOutlined />} onClick={() => onViewDetail(asset)} />
+                <Button
+                  type="text"
+                  icon={<EyeOutlined />}
+                  onClick={() => onViewDetail(asset)}
+                  {...getIconButtonProps('view', '资产')}
+                />
               </Tooltip>,
               <Tooltip key="edit" title="编辑">
-                <Button type="text" icon={<EditOutlined />} onClick={() => onEdit(asset)} />
+                <Button
+                  type="text"
+                  icon={<EditOutlined />}
+                  onClick={() => onEdit(asset)}
+                  {...getIconButtonProps('edit', '资产')}
+                />
               </Tooltip>,
             ]}
           >

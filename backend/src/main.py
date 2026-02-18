@@ -269,6 +269,24 @@ async def lifespan(app: FastAPI) -> Any:
             logger.info("数据库健康检查通过")
         else:
             logger.info("数据库健康检查未通过或未返回状态")
+
+        # 启动缓存预热（best effort）
+        try:
+            from .database import async_session_scope
+            from .services.cache_warmup_service import cache_warmup_service
+
+            async with async_session_scope() as db:
+                warmup_result = await cache_warmup_service.warmup_low_churn_data(db)
+                logger.info(
+                    "启动缓存预热完成: success=%s failure=%s duration_ms=%s",
+                    warmup_result["success_count"],
+                    warmup_result["failure_count"],
+                    warmup_result["duration_ms"],
+                )
+        except ImportError as e:
+            logger.warning("缓存预热模块导入失败: %s", e)
+        except Exception as e:
+            logger.warning("缓存预热执行失败: %s", e, exc_info=True)
     else:
         logger.info("测试模式：跳过数据库自动初始化，使用测试fixture提供的数据库")
 

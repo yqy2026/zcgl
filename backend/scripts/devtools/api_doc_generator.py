@@ -24,7 +24,7 @@ class APIDocGenerator:
         self.app = app
         self.docs_data: dict[str, Any] = {
             "info": {
-                "title": "Land Property Asset Management API",
+                "title": "Real Estate Asset Management & Operations API",
                 "description": "土地物业管理资产系统 API 文档",
                 "version": "2.0.0",
                 "generated_at": datetime.now().isoformat(),

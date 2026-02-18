@@ -271,7 +271,7 @@ VITE_API_TIMEOUT=30000
 #### 2. 应用配置
 ```bash
 # 应用标题
-VITE_APP_TITLE=Land Property Asset Management
+VITE_APP_TITLE=Real Estate Asset Management & Operations System
 
 # 应用版本
 VITE_APP_VERSION=2.0.0

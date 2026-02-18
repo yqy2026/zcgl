@@ -39,6 +39,7 @@ import { ownershipService } from '@/services/ownershipService';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
 import { ListToolbar } from '@/components/Common/ListToolbar';
 import { useQuery } from '@tanstack/react-query';
+import { getIconButtonProps } from '@/utils/accessibility';
 import type { Project, ProjectListResponse, ProjectStatisticsResponse } from '@/types/project';
 import type { Ownership } from '@/types/ownership';
 import { ProjectForm } from '@/components/Forms';
@@ -365,10 +366,20 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
           {mode === 'list' && (
             <>
               <Tooltip title="查看详情">
-                <Button type="text" icon={<EyeOutlined />} onClick={() => handleView(record)} />
+                <Button
+                  type="text"
+                  icon={<EyeOutlined />}
+                  onClick={() => handleView(record)}
+                  {...getIconButtonProps('view', '项目')}
+                />
               </Tooltip>
               <Tooltip title="编辑">
-                <Button type="text" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
+                <Button
+                  type="text"
+                  icon={<EditOutlined />}
+                  onClick={() => handleEdit(record)}
+                  {...getIconButtonProps('edit', '项目')}
+                />
               </Tooltip>
               <Tooltip title="删除">
                 <Button
@@ -376,6 +387,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
                   danger
                   icon={<DeleteOutlined />}
                   onClick={() => handleDelete(record)}
+                  {...getIconButtonProps('delete', '项目')}
                 />
               </Tooltip>
             </>
@@ -386,6 +398,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
             onChange={() => handleToggleStatus(record)}
             checkedChildren="启用"
             unCheckedChildren="禁用"
+            aria-label={`${record.is_active ? '停用' : '启用'}项目 ${record.name}`}
           />
         </Space>
       ),

@@ -45,6 +45,7 @@ repos:
           types-requests,
           types-PyYAML,
           pydantic>=2.0,
+          sqlalchemy>=2.0.44,
         ]
         # Phase 2: 不再使用 pass_filenames (通过 --package 处理)
 
@@ -107,7 +108,7 @@ repos:
       - id: radon-complexity
         name: radon-complexity
         description: "检查代码复杂度 (警告模式，不阻塞提交)"
-        entry: python -m radon cc backend/src --min C --total-average
+        entry: backend/.venv/bin/python -m radon cc backend/src --min C --total-average
         language: system
         pass_filenames: false
         files: ^backend/.*\.py$
@@ -129,6 +130,16 @@ repos:
         language: system
         pass_filenames: false
         files: ^frontend/(src/|scripts/|package\.json|pnpm-lock\.yaml|src/styles/variables\.css|src/theme/sharedTokens\.ts)
+
+      # CI 对齐门禁（pre-push 阶段）
+      - id: ci-gate
+        name: ci-gate
+        description: "预推送执行 CI 门禁 (make ci-gate: ruff + tsgo + test)"
+        entry: bash -lc 'make ci-gate'
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+        always_run: true
 
 # =============================================================================
 # CI 配置

@@ -9,6 +9,8 @@ Tests secret validation logic including:
 - Environment secret validation
 """
 
+from unittest.mock import ANY, patch
+
 import pytest
 
 from src.security.secret_validator import (
@@ -148,7 +150,7 @@ class TestSecretValidator:
             elif "DATA_ENCRYPTION_KEY" in os.environ:
                 del os.environ["DATA_ENCRYPTION_KEY"]
 
-    def test_validate_env_secrets_with_missing_secret(self, capsys):
+    def test_validate_env_secrets_with_missing_secret(self):
         """validate_env_secrets should fail when SECRET_KEY is missing"""
         import os
 
@@ -156,23 +158,27 @@ class TestSecretValidator:
         original_enc_key = os.environ.get("DATA_ENCRYPTION_KEY")
 
         try:
-            del os.environ["SECRET_KEY"]
+            os.environ.pop("SECRET_KEY", None)
             os.environ["DATA_ENCRYPTION_KEY"] = "Valid!Data#Encryption$Key%2026ABCDEF"
 
             validator = SecretValidator()
-            result = validator.validate_env_secrets()
-
-            captured = capsys.readouterr()
+            with patch("src.security.secret_validator.logger.error") as mock_log_error:
+                result = validator.validate_env_secrets()
             assert result is False
-            assert "SECRET_KEY is not set" in captured.out
+            mock_log_error.assert_any_call("%s is not set", "SECRET_KEY")
 
         finally:
             if original_secret_key:
                 os.environ["SECRET_KEY"] = original_secret_key
+            elif "SECRET_KEY" in os.environ:
+                del os.environ["SECRET_KEY"]
+
             if original_enc_key:
                 os.environ["DATA_ENCRYPTION_KEY"] = original_enc_key
+            elif "DATA_ENCRYPTION_KEY" in os.environ:
+                del os.environ["DATA_ENCRYPTION_KEY"]
 
-    def test_validate_env_secrets_with_weak_secret(self, capsys):
+    def test_validate_env_secrets_with_weak_secret(self):
         """validate_env_secrets should fail with weak secrets"""
         import os
 
@@ -184,17 +190,25 @@ class TestSecretValidator:
             os.environ["DATA_ENCRYPTION_KEY"] = "Valid!Data#Encryption$Key%2026ABCDEF"
 
             validator = SecretValidator()
-            result = validator.validate_env_secrets()
-
-            captured = capsys.readouterr()
+            with patch("src.security.secret_validator.logger.error") as mock_log_error:
+                result = validator.validate_env_secrets()
             assert result is False
-            assert "SECRET_KEY validation failed" in captured.out
+            mock_log_error.assert_any_call(
+                "%s validation failed: %s",
+                "SECRET_KEY",
+                ANY,
+            )
 
         finally:
             if original_secret_key:
                 os.environ["SECRET_KEY"] = original_secret_key
+            elif "SECRET_KEY" in os.environ:
+                del os.environ["SECRET_KEY"]
+
             if original_enc_key:
                 os.environ["DATA_ENCRYPTION_KEY"] = original_enc_key
+            elif "DATA_ENCRYPTION_KEY" in os.environ:
+                del os.environ["DATA_ENCRYPTION_KEY"]
 
     def test_singleton_instance(self):
         """secret_validator should be a singleton instance"""

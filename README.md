@@ -82,7 +82,7 @@
 
 ## 🎯 系统概览
 
-**项目名称**: 土地物业资产管理系统 (Land Property Asset Management System)
+**项目名称**: 土地物业资产管理系统 (Real Estate Asset Management & Operations System)
 
 **技术架构**: React 19 + TypeScript (Frontend) + FastAPI + Python 3.12 (Backend)
 

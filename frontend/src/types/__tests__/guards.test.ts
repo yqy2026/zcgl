@@ -185,7 +185,10 @@ describe('guards', () => {
   it('集合工具函数应正确处理数据', () => {
     expect(filterNullish([1, null, 2, undefined, 3])).toEqual([1, 2, 3]);
     expect(filterDuplicates([1, 1, 2, 3, 3])).toEqual([1, 2, 3]);
-    expect(partition([1, 2, 3, 4], v => v % 2 === 0)).toEqual([[2, 4], [1, 3]]);
+    expect(partition([1, 2, 3, 4], v => v % 2 === 0)).toEqual([
+      [2, 4],
+      [1, 3],
+    ]);
   });
 
   it('TypeGuards 默认导出应包含核心能力', () => {

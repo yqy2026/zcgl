@@ -178,6 +178,38 @@ async def test_grant_permission_to_user_rejects_invalid_effect(
                 )
 
 
+async def test_grant_permission_to_user_invalidates_user_permission_cache(
+    rbac_service, sample_user
+):
+    grant = _make_grant("g-new")
+    grant.grant_type = "direct"
+    grant.scope = "global"
+    grant.scope_id = None
+
+    with patch.object(
+        rbac_service.user_crud, "get_async", new=AsyncMock(return_value=sample_user)
+    ), patch(
+        "src.services.permission.rbac_service.permission_crud.get",
+        new=AsyncMock(return_value=Mock(id="perm-1")),
+    ), patch(
+        "src.services.permission.rbac_service.permission_grant_crud.create",
+        new=AsyncMock(return_value=grant),
+    ), patch.object(
+        rbac_service, "_create_permission_audit_log", new=AsyncMock()
+    ), patch.object(
+        rbac_service, "_invalidate_user_permission_cache", new=AsyncMock()
+    ) as mock_invalidate_cache:
+        await rbac_service.grant_permission_to_user(
+            user_id="user-1",
+            permission_id="perm-1",
+            grant_type="direct",
+            granted_by="admin-1",
+            effect="allow",
+        )
+
+    mock_invalidate_cache.assert_awaited_once_with("user-1")
+
+
 async def test_update_permission_grant_sets_revoke_fields_when_deactivating(
     rbac_service,
 ):
@@ -216,6 +248,66 @@ async def test_update_permission_grant_sets_revoke_fields_when_deactivating(
     assert update_payload["is_active"] is False
     assert update_payload["revoked_by"] == "admin-1"
     assert "revoked_at" in update_payload
+
+
+async def test_update_permission_grant_invalidates_user_permission_cache(rbac_service):
+    existing_grant = _make_grant("g-1")
+    existing_grant.user_id = "user-1"
+    existing_grant.starts_at = None
+    existing_grant.expires_at = None
+    existing_grant.scope = "global"
+    existing_grant.scope_id = None
+    existing_grant.priority = 100
+    existing_grant.is_active = True
+    existing_grant.reason = "old reason"
+
+    updated_grant = _make_grant("g-1")
+    updated_grant.user_id = "user-1"
+    updated_grant.starts_at = None
+    updated_grant.expires_at = None
+    updated_grant.scope = "global"
+    updated_grant.scope_id = None
+    updated_grant.priority = 100
+    updated_grant.is_active = True
+
+    with patch(
+        "src.services.permission.rbac_service.permission_grant_crud.get",
+        new=AsyncMock(return_value=existing_grant),
+    ), patch(
+        "src.services.permission.rbac_service.permission_grant_crud.update",
+        new=AsyncMock(return_value=updated_grant),
+    ), patch.object(
+        rbac_service, "_create_permission_audit_log", new=AsyncMock()
+    ), patch.object(
+        rbac_service, "_invalidate_user_permission_cache", new=AsyncMock()
+    ) as mock_invalidate_cache:
+        await rbac_service.update_permission_grant(
+            grant_id="g-1",
+            grant_data=PermissionGrantUpdate(priority=300),
+            updated_by="admin-1",
+        )
+
+    mock_invalidate_cache.assert_awaited_once_with("user-1")
+
+
+async def test_revoke_permission_grant_invalidates_user_permission_cache(rbac_service):
+    grant = _make_grant("g-1")
+    grant.user_id = "user-1"
+    grant.is_active = True
+    grant.reason = "revoke"
+
+    with patch(
+        "src.services.permission.rbac_service.permission_grant_crud.get",
+        new=AsyncMock(return_value=grant),
+    ), patch.object(
+        rbac_service, "_create_permission_audit_log", new=AsyncMock()
+    ), patch.object(
+        rbac_service, "_invalidate_user_permission_cache", new=AsyncMock()
+    ) as mock_invalidate_cache:
+        result = await rbac_service.revoke_permission_grant("g-1", revoked_by="admin-1")
+
+    assert result is True
+    mock_invalidate_cache.assert_awaited_once_with("user-1")
 
 
 async def test_list_permission_grants_returns_items_and_total(rbac_service):

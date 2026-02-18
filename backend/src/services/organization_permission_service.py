@@ -11,21 +11,39 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import false
 
+from ..constants.performance_constants import CacheTTL
+from ..core.cache_manager import cache_manager
 from ..crud.auth import UserCRUD
 from ..crud.organization import organization as organization_crud
 from ..crud.rbac import resource_permission_crud, role_crud
-from ..models.organization import Organization
 from ..schemas.rbac import PermissionCheckRequest
 from .permission.rbac_service import RBACService
 
 logger = logging.getLogger(__name__)
 
 _user_crud = UserCRUD()
+ORG_ACCESS_CACHE_NAMESPACE = "organization_permission"
+ORG_ACCESS_CACHE_TTL = CacheTTL.MEDIUM_SECONDS
 
 
 def _utcnow_naive() -> datetime:
     """返回 naive UTC 时间。"""
     return datetime.now(UTC).replace(tzinfo=None)
+
+
+def _user_org_cache_key(user_id: str) -> str:
+    return f"user_accessible_orgs:{user_id}"
+
+
+def invalidate_user_accessible_organizations_cache(user_id: str | None = None) -> None:
+    """失效组织可见范围缓存。"""
+    if user_id is None:
+        cache_manager.clear(namespace=ORG_ACCESS_CACHE_NAMESPACE)
+        return
+    cache_manager.delete(
+        _user_org_cache_key(user_id),
+        namespace=ORG_ACCESS_CACHE_NAMESPACE,
+    )
 
 
 class OrganizationPermissionService:
@@ -92,6 +110,19 @@ class OrganizationPermissionService:
 
     async def get_user_accessible_organizations(self, user_id: str) -> list[str]:
         """获取用户可访问组织ID列表"""
+        cached_org_ids = cache_manager.get(
+            _user_org_cache_key(user_id),
+            namespace=ORG_ACCESS_CACHE_NAMESPACE,
+        )
+        if isinstance(cached_org_ids, list):
+            normalized_org_ids = [
+                str(org_id).strip()
+                for org_id in cached_org_ids
+                if str(org_id).strip() != ""
+            ]
+            if len(normalized_org_ids) == len(cached_org_ids):
+                return normalized_org_ids
+
         user = await self._get_user(user_id)
         if not user:
             return []
@@ -99,7 +130,14 @@ class OrganizationPermissionService:
         if await self.rbac_service.is_admin(
             user_id
         ) or await self._has_global_permission(user_id, "read"):
-            return await self._get_all_organization_ids()
+            all_org_ids = await self._get_all_organization_ids()
+            cache_manager.set(
+                _user_org_cache_key(user_id),
+                all_org_ids,
+                ttl=ORG_ACCESS_CACHE_TTL,
+                namespace=ORG_ACCESS_CACHE_NAMESPACE,
+            )
+            return all_org_ids
 
         org_ids: set[str] = set()
 
@@ -119,7 +157,14 @@ class OrganizationPermissionService:
         user_permissions = await self._get_resource_permissions(user_id=user_id)
         org_ids.update(user_permissions)
 
-        return list(org_ids)
+        resolved_org_ids = sorted(org_ids)
+        cache_manager.set(
+            _user_org_cache_key(user_id),
+            resolved_org_ids,
+            ttl=ORG_ACCESS_CACHE_TTL,
+            namespace=ORG_ACCESS_CACHE_NAMESPACE,
+        )
+        return resolved_org_ids
 
     async def get_user_accessible_organizations_with_details(
         self, user_id: str

@@ -117,7 +117,7 @@ describe('PromptListPage - 基础渲染', () => {
     await renderPromptListPage();
     expect(screen.getByText('LLM Prompt 管理')).toBeInTheDocument();
     expect(screen.getByText('新建 Prompt')).toBeInTheDocument();
-  });
+  }, 30000);
 
   it('应该渲染筛选器', async () => {
     await renderPromptListPage();

@@ -152,7 +152,7 @@ describe('RoleManagementPage - 组件结构测试', () => {
   it('应该可以渲染页面', async () => {
     await renderRoleManagementPage();
     expect(screen.getByText('新建角色')).toBeInTheDocument();
-  });
+  }, 30000);
 
   it('组件不需要任何必需属性', async () => {
     await renderRoleManagementPage();

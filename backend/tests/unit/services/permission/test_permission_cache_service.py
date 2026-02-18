@@ -126,6 +126,25 @@ class TestGetRolePermissionsKey:
 
 
 # ============================================================================
+# _get_user_summary_key 测试
+# ============================================================================
+
+
+class TestGetUserSummaryKey:
+    """测试获取用户权限摘要缓存键"""
+
+    def test_with_int_user_id(self, cache_service):
+        """测试整数用户ID"""
+        key = cache_service._get_user_summary_key(123)
+        assert key == "permission:user:123:summary"
+
+    def test_with_str_user_id(self, cache_service):
+        """测试字符串用户ID"""
+        key = cache_service._get_user_summary_key("user-123")
+        assert key == "permission:user:user-123:summary"
+
+
+# ============================================================================
 # get_user_permissions 测试
 # ============================================================================
 
@@ -329,6 +348,69 @@ class TestSetUserRoles:
 
 
 # ============================================================================
+# get_user_permission_summary / set_user_permission_summary 测试
+# ============================================================================
+
+
+class TestUserPermissionSummary:
+    """测试用户权限摘要缓存读写"""
+
+    @pytest.mark.asyncio
+    async def test_get_summary_cache_hit(self, cache_service, mock_redis):
+        """测试摘要缓存命中"""
+        summary = {
+            "user_id": "user-123",
+            "username": "test",
+            "roles": [],
+            "permissions": [],
+            "resource_permissions": [],
+            "effective_permissions": {},
+        }
+        mock_redis.get.return_value = json.dumps(summary)
+
+        result = await cache_service.get_user_permission_summary("user-123")
+
+        assert result == summary
+        mock_redis.get.assert_called_once_with("permission:user:user-123:summary")
+
+    @pytest.mark.asyncio
+    async def test_get_summary_cache_miss(self, cache_service, mock_redis):
+        """测试摘要缓存未命中"""
+        mock_redis.get.return_value = None
+
+        result = await cache_service.get_user_permission_summary("user-123")
+
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_set_summary_success(self, cache_service, mock_redis):
+        """测试设置摘要缓存"""
+        summary = {
+            "user_id": "user-123",
+            "username": "test",
+            "roles": [],
+            "permissions": [],
+            "resource_permissions": [],
+            "effective_permissions": {},
+        }
+        mock_redis.setex.return_value = True
+
+        result = await cache_service.set_user_permission_summary("user-123", summary)
+
+        assert result is True
+        mock_redis.setex.assert_called_once()
+        call_args = mock_redis.setex.call_args
+        assert call_args[0][0] == "permission:user:user-123:summary"
+        assert call_args[0][2] == json.dumps(summary)
+
+    @pytest.mark.asyncio
+    async def test_set_summary_cache_disabled(self, disabled_cache_service):
+        """测试缓存禁用时设置摘要"""
+        result = await disabled_cache_service.set_user_permission_summary("user-123", {})
+        assert result is False
+
+
+# ============================================================================
 # invalidate_user_cache 测试
 # ============================================================================
 
@@ -339,13 +421,15 @@ class TestInvalidateUserCache:
     @pytest.mark.asyncio
     async def test_invalidate_success(self, cache_service, mock_redis):
         """测试成功清除用户缓存"""
-        mock_redis.delete.return_value = 2
+        mock_redis.delete.return_value = 3
 
         result = await cache_service.invalidate_user_cache(123)
 
         assert result is True
         mock_redis.delete.assert_called_once_with(
-            "permission:user:123:permissions", "permission:user:123:roles"
+            "permission:user:123:permissions",
+            "permission:user:123:roles",
+            "permission:user:123:summary",
         )
 
     @pytest.mark.asyncio

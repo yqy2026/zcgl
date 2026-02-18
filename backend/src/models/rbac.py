@@ -328,7 +328,11 @@ class PermissionGrant(Base):
         String(50), nullable=False, default="direct", index=True, comment="授权类型"
     )
     effect: Mapped[str] = mapped_column(
-        String(10), nullable=False, default="allow", index=True, comment="效果 allow/deny"
+        String(10),
+        nullable=False,
+        default="allow",
+        index=True,
+        comment="效果 allow/deny",
     )
 
     scope: Mapped[str] = mapped_column(
@@ -384,7 +388,8 @@ class PermissionGrant(Base):
     )
 
     def __repr__(self) -> str:
-        return f"<PermissionGrant(user_id={self.user_id}, permission_id={self.permission_id}, effect={self.effect})>"  # pragma: no cover
+        effect = self.effect if self.effect is not None else "allow"
+        return f"<PermissionGrant(user_id={self.user_id}, permission_id={self.permission_id}, effect={effect})>"  # pragma: no cover
 
 
 class PermissionAuditLog(Base):

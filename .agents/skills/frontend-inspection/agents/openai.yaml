@@ -1,0 +1,4 @@
+interface:
+  display_name: "Frontend Inspection"
+  short_description: "Browser-based frontend smoke inspection workflows"
+  default_prompt: "Use $frontend-inspection to run a frontend smoke inspection and summarize issues."

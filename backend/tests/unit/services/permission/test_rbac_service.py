@@ -295,6 +295,37 @@ class TestUpdateRole:
 
 
 # ============================================================================
+# update_role_permissions 测试
+# ============================================================================
+
+
+class TestUpdateRolePermissions:
+    """测试角色权限更新"""
+
+    async def test_update_role_permissions_invalidates_related_caches(
+        self, rbac_service, sample_role
+    ):
+        """更新角色权限后应触发角色相关缓存失效"""
+        with patch(
+            "src.crud.rbac.role_crud.get",
+            new=AsyncMock(return_value=sample_role),
+        ), patch.object(
+            rbac_service, "_assign_permissions_to_role", new=AsyncMock()
+        ), patch.object(
+            rbac_service,
+            "_invalidate_permission_cache_for_role",
+            new=AsyncMock(),
+        ) as mock_invalidate_role_cache:
+            await rbac_service.update_role_permissions(
+                role_id="role-1",
+                permission_ids=["perm-1"],
+                updated_by="admin",
+            )
+
+        mock_invalidate_role_cache.assert_awaited_once_with("role-1")
+
+
+# ============================================================================
 # delete_role 测试
 # ============================================================================
 
@@ -803,6 +834,44 @@ class TestAssignRoleToUser:
                             assignment_data, assigned_by="admin"
                         )
 
+    async def test_assign_role_invalidates_user_permission_cache(
+        self, rbac_service, sample_user, sample_role
+    ):
+        """分配角色后应清理用户权限缓存与组织访问缓存"""
+        assignment_data = UserRoleAssignmentCreate(
+            user_id="user-1",
+            role_id="role-1",
+        )
+        assignment = Mock(spec=UserRoleAssignment)
+        assignment.user_id = "user-1"
+        assignment.role_id = "role-1"
+
+        mock_cache_service = Mock()
+        mock_cache_service.invalidate_user_cache = AsyncMock(return_value=True)
+
+        with patch.object(
+            rbac_service.user_crud, "get_async", new=AsyncMock(return_value=sample_user)
+        ), patch(
+            "src.crud.rbac.role_crud.get", new=AsyncMock(return_value=sample_role)
+        ), patch(
+            "src.crud.rbac.user_role_assignment_crud.get_by_user_and_role",
+            new=AsyncMock(return_value=None),
+        ), patch(
+            "src.crud.rbac.user_role_assignment_crud.create",
+            new=AsyncMock(return_value=assignment),
+        ), patch.object(
+            rbac_service, "_create_permission_audit_log", new=AsyncMock()
+        ), patch(
+            "src.services.permission.rbac_service.get_permission_cache_service",
+            return_value=mock_cache_service,
+        ), patch(
+            "src.services.permission.rbac_service.invalidate_user_accessible_organizations_cache"
+        ) as mock_invalidate_org_cache:
+            await rbac_service.assign_role_to_user(assignment_data, assigned_by="admin")
+
+        mock_cache_service.invalidate_user_cache.assert_awaited_once_with("user-1")
+        mock_invalidate_org_cache.assert_called_once_with("user-1")
+
 
 # ============================================================================
 # revoke_role_from_user 测试
@@ -840,6 +909,33 @@ class TestRevokeRoleFromUser:
                 "user-1", "role-1", revoked_by="admin"
             )
             assert result is False
+
+    async def test_revoke_role_invalidates_user_permission_cache(self, rbac_service):
+        """撤销角色后应清理用户权限缓存与组织访问缓存"""
+        assignment = Mock(spec=UserRoleAssignment)
+        assignment.is_active = True
+
+        mock_cache_service = Mock()
+        mock_cache_service.invalidate_user_cache = AsyncMock(return_value=True)
+
+        with patch(
+            "src.crud.rbac.user_role_assignment_crud.get_by_user_and_role",
+            new=AsyncMock(return_value=assignment),
+        ), patch.object(
+            rbac_service, "_create_permission_audit_log", new=AsyncMock()
+        ), patch(
+            "src.services.permission.rbac_service.get_permission_cache_service",
+            return_value=mock_cache_service,
+        ), patch(
+            "src.services.permission.rbac_service.invalidate_user_accessible_organizations_cache"
+        ) as mock_invalidate_org_cache:
+            result = await rbac_service.revoke_role_from_user(
+                "user-1", "role-1", revoked_by="admin"
+            )
+
+        assert result is True
+        mock_cache_service.invalidate_user_cache.assert_awaited_once_with("user-1")
+        mock_invalidate_org_cache.assert_called_once_with("user-1")
 
 
 # ============================================================================
@@ -987,6 +1083,62 @@ class TestGetUserPermissionsSummary:
                 assert summary.user_id == "user-1"
                 assert summary.username == "testuser"
                 assert len(summary.roles) == 1
+
+    async def test_get_summary_uses_cache_when_available(
+        self, rbac_service, sample_user
+    ):
+        """缓存命中时直接返回摘要，避免重复计算"""
+        cached_summary = {
+            "user_id": "user-1",
+            "username": "testuser",
+            "roles": [],
+            "permissions": [],
+            "resource_permissions": [],
+            "effective_permissions": {},
+        }
+        mock_cache_service = Mock()
+        mock_cache_service.get_user_permission_summary = AsyncMock(
+            return_value=cached_summary
+        )
+
+        with patch.object(
+            rbac_service.user_crud, "get_async", new=AsyncMock(return_value=sample_user)
+        ), patch(
+            "src.services.permission.rbac_service.get_permission_cache_service",
+            return_value=mock_cache_service,
+        ), patch.object(
+            rbac_service, "get_user_roles", new=AsyncMock()
+        ) as mock_get_user_roles:
+            summary = await rbac_service.get_user_permissions_summary("user-1")
+
+        assert summary.user_id == "user-1"
+        mock_get_user_roles.assert_not_awaited()
+
+    async def test_get_summary_cache_miss_sets_cache(
+        self, rbac_service, sample_user, sample_role, sample_permission
+    ):
+        """缓存未命中时计算并写入摘要缓存"""
+        sample_role.permissions = [sample_permission]
+        list_result = Mock()
+        list_result.scalars.return_value.all.return_value = []
+        rbac_service.db.execute = AsyncMock(return_value=list_result)
+
+        mock_cache_service = Mock()
+        mock_cache_service.get_user_permission_summary = AsyncMock(return_value=None)
+        mock_cache_service.set_user_permission_summary = AsyncMock(return_value=True)
+
+        with patch.object(
+            rbac_service.user_crud, "get_async", new=AsyncMock(return_value=sample_user)
+        ), patch.object(
+            rbac_service, "get_user_roles", new=AsyncMock(return_value=[sample_role])
+        ), patch(
+            "src.services.permission.rbac_service.get_permission_cache_service",
+            return_value=mock_cache_service,
+        ):
+            summary = await rbac_service.get_user_permissions_summary("user-1")
+
+        assert summary.user_id == "user-1"
+        mock_cache_service.set_user_permission_summary.assert_awaited_once()
 
     async def test_get_summary_user_not_found(self, rbac_service, mock_db):
         """测试用户不存在"""

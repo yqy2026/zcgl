@@ -5,16 +5,17 @@ Enhanced tests for cache manager to improve coverage
 """
 
 import time
+from unittest.mock import MagicMock
 
 import pytest
 
-from src.core.cache_manager import CacheManager
+from src.core.cache_manager import CacheManager, MemoryCache, RedisCache
 
 
 @pytest.fixture
 def cache_manager():
     """缓存管理器实例"""
-    return CacheManager()
+    return CacheManager(backend=MemoryCache())
 
 
 class TestCacheManagerCore:
@@ -103,6 +104,40 @@ class TestCacheManagerStats:
         stats = cache_manager.get_stats()
         assert stats["total_items"] == 1
         assert stats["backend_type"] == "MemoryCache"
+
+    def test_get_stats_with_redis_keyspace_metrics(self):
+        """Redis 后端应暴露 keyspace 命中率统计"""
+        redis_backend = object.__new__(RedisCache)
+        redis_backend.client = MagicMock()
+        redis_backend.client.info.return_value = {
+            "keyspace_hits": 90,
+            "keyspace_misses": 10,
+        }
+        redis_backend.client.dbsize.return_value = 12
+
+        cache_manager = CacheManager(backend=redis_backend)
+        stats = cache_manager.get_stats()
+
+        assert stats["backend_type"] == "RedisCache"
+        assert stats["total_items"] == 12
+        assert stats["redis_keyspace_hits"] == 90
+        assert stats["redis_keyspace_misses"] == 10
+        assert stats["hit_rate"] == 0.9
+
+    def test_get_stats_with_redis_missing_metrics_defaults_to_zero(self):
+        """Redis 未返回 keyspace 字段时应回退为 0"""
+        redis_backend = object.__new__(RedisCache)
+        redis_backend.client = MagicMock()
+        redis_backend.client.info.return_value = {}
+        redis_backend.client.dbsize.return_value = 0
+
+        cache_manager = CacheManager(backend=redis_backend)
+        stats = cache_manager.get_stats()
+
+        assert stats["backend_type"] == "RedisCache"
+        assert stats["redis_keyspace_hits"] == 0
+        assert stats["redis_keyspace_misses"] == 0
+        assert stats["hit_rate"] is None
 
 
 class TestCacheManagerAdvanced:

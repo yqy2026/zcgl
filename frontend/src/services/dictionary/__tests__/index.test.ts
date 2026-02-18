@@ -34,11 +34,9 @@ describe('DictionaryService', () => {
     const types = await service.getTypes();
     expect(types.length).toBeGreaterThan(0);
 
-    const spy = vi
-      .spyOn(baseDictionaryService, 'getAvailableTypes')
-      .mockImplementationOnce(() => {
-        throw new Error('broken');
-      });
+    const spy = vi.spyOn(baseDictionaryService, 'getAvailableTypes').mockImplementationOnce(() => {
+      throw new Error('broken');
+    });
     const fallback = await service.getTypes();
     expect(fallback).toEqual([]);
     spy.mockRestore();
@@ -391,11 +389,9 @@ describe('DictionaryService', () => {
     const degraded = await service.healthCheck();
     expect(degraded.status).toBe('degraded');
 
-    const statsSpy = vi
-      .spyOn(baseDictionaryService, 'getStats')
-      .mockImplementationOnce(() => {
-        throw new Error('down');
-      });
+    const statsSpy = vi.spyOn(baseDictionaryService, 'getStats').mockImplementationOnce(() => {
+      throw new Error('down');
+    });
     const unhealthy = await service.healthCheck();
     expect(unhealthy.status).toBe('unhealthy');
 

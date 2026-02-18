@@ -436,7 +436,7 @@ describe('ApiClient', () => {
       await expect(responseInterceptor(error)).rejects.toBe(refreshError);
 
       expect(postSpy).toHaveBeenCalledTimes(1);
-      expect(postSpy).toHaveBeenCalledWith('/auth/refresh');
+      expect(postSpy.mock.calls[0]?.[0]).toBe('/auth/refresh');
       expect(mockClearAuthData).toHaveBeenCalledTimes(1);
       expect(window.location.href).toBe(`/login?redirect=${encodeURIComponent('/assets')}`);
     });

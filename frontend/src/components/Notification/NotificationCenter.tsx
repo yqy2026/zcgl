@@ -5,7 +5,7 @@
  */
 
 import React, { useState } from 'react';
-import { Badge, Dropdown, List, Empty, Spin, Button, Tag, Typography } from 'antd';
+import { Badge, Dropdown, List, Empty, Spin, Button, Tag, Typography, message } from 'antd';
 import { BellOutlined, CheckOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { notificationService } from '@/services/notificationService';
@@ -74,6 +74,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClick }) => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     } catch (error) {
       console.error('标记已读失败:', error);
+      message.error('标记已读失败，请重试');
     }
   };
 
@@ -85,6 +86,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClick }) => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     } catch (error) {
       console.error('标记全部已读失败:', error);
+      message.error('标记全部已读失败，请重试');
     }
   };
 
@@ -97,6 +99,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClick }) => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     } catch (error) {
       console.error('删除通知失败:', error);
+      message.error('删除通知失败，请重试');
     }
   };
 

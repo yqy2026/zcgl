@@ -79,6 +79,9 @@ describe('LoginPage', () => {
 
       expect(screen.getByText('欢迎回来')).toBeInTheDocument();
       expect(screen.getByText('土地物业资产运营管理系统')).toBeInTheDocument();
+      expect(
+        screen.getByText('Real Estate Asset Management & Operations System')
+      ).toBeInTheDocument();
       expect(screen.getByText('请输入您的账号密码以继续')).toBeInTheDocument();
     });
 

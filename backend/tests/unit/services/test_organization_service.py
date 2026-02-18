@@ -2,6 +2,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from src.core.cache_manager import cache_manager
 from src.core.exception_handler import OperationNotAllowedError
 from src.models.organization import Organization
 from src.schemas.organization import OrganizationCreate, OrganizationUpdate
@@ -37,11 +38,22 @@ def mock_enum_validation_service():
         yield validation_service
 
 
+@pytest.fixture(autouse=True)
+def clear_organization_stats_cache():
+    cache_manager.clear(namespace=OrganizationService.CACHE_NAMESPACE)
+    yield
+    cache_manager.clear(namespace=OrganizationService.CACHE_NAMESPACE)
+
+
 class TestOrganizationService:
     @pytest.mark.asyncio
     async def test_get_statistics_group_by_enum_fields(self, service, mock_db):
         status_result = MagicMock()
-        status_result.all.return_value = [("active", 3), ("inactive", 2), ("suspended", 1)]
+        status_result.all.return_value = [
+            ("active", 3),
+            ("inactive", 2),
+            ("suspended", 1),
+        ]
 
         type_result = MagicMock()
         type_result.all.return_value = [("company", 2), ("department", 4)]

@@ -44,8 +44,12 @@ class APIDocumentationGenerator:
             )
 
             # 添加自定义信息
-            openapi_schema["info"]["x-generator"] = "Land Property Management System"
-            openapi_schema["info"]["x-generated-at"] = datetime.now(UTC).replace(tzinfo=None).isoformat()
+            openapi_schema["info"]["x-generator"] = (
+                "Real Estate Asset Management & Operations System"
+            )
+            openapi_schema["info"]["x-generated-at"] = (
+                datetime.now(UTC).replace(tzinfo=None).isoformat()
+            )
 
             # 添加安全方案
             openapi_schema["components"]["securitySchemes"] = {

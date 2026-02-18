@@ -41,7 +41,10 @@ async def test_wecom():
     # 2. Test Text Message
     logger.info("Sending Test Text Message...")
     success = await wecom_service.send_notification(
-        message="[Test] This is a verification message from Land Property Management System V2."
+        message=(
+            "[Test] This is a verification message from Real Estate Asset "
+            "Management & Operations System V2."
+        )
     )
     if success:
         logger.info("✅ Text Message Sent Successfully")

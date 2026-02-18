@@ -2,6 +2,8 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ...constants.performance_constants import CacheTTL
+from ...core.cache_manager import cache_manager
 from ...core.exception_handler import DuplicateResourceError, ResourceNotFoundError
 from ...crud.system_dictionary import system_dictionary_crud
 from ...models.system_dictionary import SystemDictionary
@@ -10,6 +12,13 @@ from ...schemas.asset import SystemDictionaryCreate, SystemDictionaryUpdate
 
 class SystemDictionaryService:
     """系统字典服务层"""
+
+    CACHE_NAMESPACE = "system_dictionary"
+    TYPES_CACHE_KEY = "types"
+
+    @classmethod
+    def _invalidate_dictionary_cache(cls) -> None:
+        cache_manager.clear(namespace=cls.CACHE_NAMESPACE)
 
     async def get_dictionaries_async(
         self,
@@ -34,7 +43,23 @@ class SystemDictionaryService:
         return await system_dictionary_crud.get(db=db, id=id)
 
     async def get_types_async(self, db: AsyncSession) -> list[str]:
-        return await system_dictionary_crud.get_types_async(db=db)
+        cached_types = cache_manager.get(
+            self.TYPES_CACHE_KEY,
+            namespace=self.CACHE_NAMESPACE,
+        )
+        if isinstance(cached_types, list):
+            normalized_types = [item for item in cached_types if isinstance(item, str)]
+            if len(normalized_types) == len(cached_types):
+                return normalized_types
+
+        types = await system_dictionary_crud.get_types_async(db=db)
+        cache_manager.set(
+            self.TYPES_CACHE_KEY,
+            types,
+            ttl=CacheTTL.LONG_SECONDS,
+            namespace=self.CACHE_NAMESPACE,
+        )
+        return types
 
     async def create_dictionary_async(
         self, db: AsyncSession, *, obj_in: SystemDictionaryCreate
@@ -53,6 +78,7 @@ class SystemDictionaryService:
         result: SystemDictionary = await system_dictionary_crud.create(
             db, obj_in=obj_in
         )
+        self._invalidate_dictionary_cache()
         return result
 
     async def update_dictionary_async(
@@ -65,6 +91,7 @@ class SystemDictionaryService:
         result: SystemDictionary = await system_dictionary_crud.update(
             db, db_obj=db_obj, obj_in=obj_in
         )
+        self._invalidate_dictionary_cache()
         return result
 
     async def delete_dictionary_async(
@@ -75,6 +102,7 @@ class SystemDictionaryService:
             raise ResourceNotFoundError("字典项", id)
 
         result: SystemDictionary = await system_dictionary_crud.remove(db, id=id)
+        self._invalidate_dictionary_cache()
         return result
 
     async def toggle_active_status_async(
@@ -88,6 +116,7 @@ class SystemDictionaryService:
         db.add(dictionary)
         await db.commit()
         await db.refresh(dictionary)
+        self._invalidate_dictionary_cache()
         return dictionary
 
     async def update_sort_orders_async(
@@ -128,6 +157,7 @@ class SystemDictionaryService:
             seen.add(dictionary_id)
 
         await db.commit()
+        self._invalidate_dictionary_cache()
 
         return updated_items
 

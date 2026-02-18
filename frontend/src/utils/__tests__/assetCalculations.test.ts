@@ -160,7 +160,12 @@ describe('assetCalculations', () => {
 
     expect(result.completeness).toBe(64);
     expect(result.missingFields).toEqual(
-      expect.arrayContaining(['rented_area', 'monthly_rent', 'contract_start_date', 'contract_end_date'])
+      expect.arrayContaining([
+        'rented_area',
+        'monthly_rent',
+        'contract_start_date',
+        'contract_end_date',
+      ])
     );
     expect(result.optionalFields).toContain('notes');
   });

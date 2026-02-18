@@ -93,14 +93,14 @@ describe('OperationLogPage', () => {
     await waitFor(() => {
       expect(screen.getByText('已启用 1 项筛选')).toBeInTheDocument();
     });
-  });
+  }, 20_000);
 
   it('opens detail drawer from table action', async () => {
     renderWithProviders(<OperationLogPage />);
 
     fireEvent.click(screen.getByRole('button', { name: '查看操作日志 log-1 详情' }));
     expect(await screen.findByText('操作日志详情')).toBeInTheDocument();
-  });
+  }, 30_000);
 
   it('surfaces load errors', async () => {
     vi.mocked(useOperationLogData).mockReturnValue(

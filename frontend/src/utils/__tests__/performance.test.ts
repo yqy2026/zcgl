@@ -8,10 +8,7 @@ const loadPerformanceModule = async (): Promise<PerformanceModule> => {
   return import('../performance');
 };
 
-const stubPerformanceObserver = (
-  entriesByType: EntryMap = {},
-  throwingTypes: string[] = []
-) => {
+const stubPerformanceObserver = (entriesByType: EntryMap = {}, throwingTypes: string[] = []) => {
   class PerformanceObserverMock {
     private callback: PerformanceObserverCallback;
 
@@ -39,7 +36,10 @@ const stubPerformanceObserver = (
     disconnect = vi.fn();
   }
 
-  vi.stubGlobal('PerformanceObserver', PerformanceObserverMock as unknown as typeof PerformanceObserver);
+  vi.stubGlobal(
+    'PerformanceObserver',
+    PerformanceObserverMock as unknown as typeof PerformanceObserver
+  );
 };
 
 describe('performance utils', () => {
@@ -50,7 +50,8 @@ describe('performance utils', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
-    delete (globalThis as typeof globalThis & { requestIdleCallback?: unknown }).requestIdleCallback;
+    delete (globalThis as typeof globalThis & { requestIdleCallback?: unknown })
+      .requestIdleCallback;
   });
 
   it('preloadManager deduplicates high-priority preload and marks module as preloaded', async () => {
@@ -73,8 +74,9 @@ describe('performance utils', () => {
       callback();
       return 1;
     });
-    (globalThis as typeof globalThis & { requestIdleCallback: typeof idleSpy }).requestIdleCallback =
-      idleSpy;
+    (
+      globalThis as typeof globalThis & { requestIdleCallback: typeof idleSpy }
+    ).requestIdleCallback = idleSpy;
 
     const { preloadManager } = await loadPerformanceModule();
     const importFn = vi
@@ -82,7 +84,9 @@ describe('performance utils', () => {
       .mockRejectedValueOnce(new Error('load failed'))
       .mockResolvedValueOnce('ok');
 
-    await expect(preloadManager.preload(importFn, 'module-b', 'low')).rejects.toThrow('load failed');
+    await expect(preloadManager.preload(importFn, 'module-b', 'low')).rejects.toThrow(
+      'load failed'
+    );
     expect(preloadManager.isPreloaded('module-b')).toBe(false);
 
     await expect(preloadManager.preload(importFn, 'module-b', 'low')).resolves.toBe('ok');
@@ -116,9 +120,12 @@ describe('performance utils', () => {
       };
     });
     const { createLazyComponent } = await import('../performance');
-    const lazyLoader = createLazyComponent(async () => ({
-      default: (() => null) as unknown as import('react').ComponentType<Record<string, unknown>>,
-    }), 'dashboard') as unknown as () => Promise<unknown>;
+    const lazyLoader = createLazyComponent(
+      async () => ({
+        default: (() => null) as unknown as import('react').ComponentType<Record<string, unknown>>,
+      }),
+      'dashboard'
+    ) as unknown as () => Promise<unknown>;
 
     await lazyLoader();
     vi.doUnmock('react');
@@ -350,7 +357,8 @@ describe('performance utils', () => {
   });
 
   it('handles missing observer support and observe failures gracefully', async () => {
-    delete (globalThis as typeof globalThis & { PerformanceObserver?: unknown }).PerformanceObserver;
+    delete (globalThis as typeof globalThis & { PerformanceObserver?: unknown })
+      .PerformanceObserver;
     const withoutObserverModule = await loadPerformanceModule();
     expect(withoutObserverModule.performanceMonitor.getMetrics()).toEqual({});
 
@@ -401,8 +409,9 @@ describe('performance utils', () => {
     const markSpy = vi.spyOn(performance, 'mark').mockImplementation(() => {});
     const measureSpy = vi.spyOn(performance, 'measure').mockImplementation(() => {});
     const navigationEntry = { name: 'navigation' } as PerformanceNavigationTiming;
-    const resources = Array.from({ length: 25 }, (_, i) => ({ name: `res-${i}` })) as unknown as
-      PerformanceResourceTiming[];
+    const resources = Array.from({ length: 25 }, (_, i) => ({
+      name: `res-${i}`,
+    })) as unknown as PerformanceResourceTiming[];
     vi.spyOn(performance, 'getEntriesByType').mockImplementation(type => {
       if (type === 'navigation') return [navigationEntry];
       if (type === 'resource') return resources;
@@ -419,7 +428,8 @@ describe('performance utils', () => {
       },
     });
 
-    const { getPerformanceReport, markPerformance, measurePerformance } = await loadPerformanceModule();
+    const { getPerformanceReport, markPerformance, measurePerformance } =
+      await loadPerformanceModule();
 
     markPerformance('start');
     measurePerformance('metric', 'start', 'end');

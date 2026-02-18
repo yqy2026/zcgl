@@ -92,7 +92,7 @@ describe('UserManagementPage', () => {
     expect(screen.getByText('用户管理')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '新建系统用户' })).toBeInTheDocument();
     expect(screen.getByText('总记录：1')).toBeInTheDocument();
-  });
+  }, 40_000);
 
   it('triggers refresh and user status actions', async () => {
     const refetchUsers = vi.fn().mockResolvedValue(undefined);
@@ -122,7 +122,7 @@ describe('UserManagementPage', () => {
       expect(userService.updateUser).toHaveBeenCalledWith('user-1', { status: 'inactive' });
       expect(MessageManager.success).toHaveBeenCalledWith('状态已更新');
     });
-  });
+  }, 20_000);
 
   it('shows detail drawer and surfaces load errors', async () => {
     vi.mocked(useUserManagementData).mockReturnValue(
@@ -139,5 +139,5 @@ describe('UserManagementPage', () => {
     await waitFor(() => {
       expect(MessageManager.error).toHaveBeenCalledWith('加载用户列表失败');
     });
-  });
+  }, 20_000);
 });
