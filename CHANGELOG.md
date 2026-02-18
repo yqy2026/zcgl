@@ -4,6 +4,7 @@
 
 ### 🛠️ 本次修复 (Current Fixes)
 
+- pre-commit `radon-complexity` 环境兼容修复（2026-02-18）：更新 `.pre-commit-config.yaml`，将 `radon-complexity` 的执行入口从 `python -m radon ...` 调整为 `backend/.venv/bin/python -m radon ...`，对齐项目“后端使用 `backend/.venv`”约束，修复部分环境缺少 `python` 别名导致提交失败（`Executable 'python' not found`）的问题。
 - 系统英文名称统一（2026-02-17）：将系统英文名统一为 `Real Estate Asset Management & Operations System`。同步更新登录页品牌文案与测试断言（`frontend/src/pages/LoginPage.tsx`、`frontend/src/pages/__tests__/LoginPage.test.tsx`）、项目与开发文档（`README.md`、`AGENTS.md`、`CLAUDE.md`、`GEMINI.md`、`docs/guides/testing-standards.md`、`docs/guides/environment-setup.md`）、后端系统配置与文档生成元数据（`backend/config.yaml`、`backend/.env.example`、`backend/scripts/devtools/api_doc_generator.py`、`backend/scripts/documentation/generate_api_docs.py`、`backend/scripts/devtools/experiments/test_wecom.py`）以及 E2E 元信息（`frontend/playwright.config.ts`）。
 - pre-commit 命令缺失修复（2026-02-17）：按 `uv` 工作流执行 `cd backend && uv add --dev pre-commit`，将 `pre-commit>=4.3.0` 补入 `backend` 的 `dependency-groups.dev` 并更新 `backend/uv.lock`；完成本地 hooks 安装：`uv run --directory backend pre-commit install` 与 `uv run --directory backend pre-commit install --hook-type pre-push`，验证 `uv run --directory backend pre-commit validate-config` 通过。
 - CI 门禁收口（2026-02-17）：新增 `Makefile` 目标 `ci-gate`（串联 `lint-backend` + `type-check` + `test`）；在 `.pre-commit-config.yaml` 新增 `pre-push` 本地钩子 `ci-gate`（执行 `make ci-gate`）；在 `.github/workflows/ci.yml` 新增 `Make CI Gate` job，并将其接入 `frontend-e2e` 依赖与 `CI Summary` 汇总，确保 CI 中显式校验 `make test` 与核心 linters（Ruff/Tsgo）。

@@ -107,7 +107,7 @@ repos:
       - id: radon-complexity
         name: radon-complexity
         description: "检查代码复杂度 (警告模式，不阻塞提交)"
-        entry: python -m radon cc backend/src --min C --total-average
+        entry: backend/.venv/bin/python -m radon cc backend/src --min C --total-average
         language: system
         pass_filenames: false
         files: ^backend/.*\.py$
