@@ -9,6 +9,17 @@ from fastapi.testclient import TestClient
 
 pytestmark = pytest.mark.integration
 
+VALID_ORGANIZATION_TYPES = {
+    "company",
+    "group",
+    "division",
+    "department",
+    "team",
+    "branch",
+    "office",
+}
+VALID_ORGANIZATION_STATUSES = {"active", "inactive", "suspended"}
+
 
 @pytest.fixture
 def authenticated_client(client: TestClient, test_data) -> TestClient:
@@ -44,9 +55,11 @@ def _resolve_org_type_and_status(authenticated_client: TestClient) -> tuple[str,
     items = payload.get("data", {}).get("items", [])
     if items:
         item = items[0]
+        org_type = str(item.get("type") or "").strip()
+        org_status = str(item.get("status") or "").strip()
         return (
-            str(item.get("type") or "department"),
-            str(item.get("status") or "active"),
+            org_type if org_type in VALID_ORGANIZATION_TYPES else "department",
+            org_status if org_status in VALID_ORGANIZATION_STATUSES else "active",
         )
     return ("department", "active")
 

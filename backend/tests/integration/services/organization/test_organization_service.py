@@ -4,11 +4,12 @@ OrganizationService 集成测试
 """
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
 
 from src import database as database
+from src.core.cache_manager import cache_manager
 from src.core.exception_handler import OperationNotAllowedError, ResourceNotFoundError
 from src.models.organization import OrganizationHistory
 from src.schemas.organization import OrganizationCreate, OrganizationUpdate
@@ -59,8 +60,17 @@ async def db_session():
             join_transaction_mode="create_savepoint",
         )
         try:
+            # Keep integration tests deterministic even when shared test DB has leftover data.
+            await connection.execute(
+                text(
+                    "TRUNCATE TABLE organization_history, organizations "
+                    "RESTART IDENTITY CASCADE"
+                )
+            )
+            cache_manager.clear(namespace=OrganizationService.CACHE_NAMESPACE)
             yield session
         finally:
+            cache_manager.clear(namespace=OrganizationService.CACHE_NAMESPACE)
             await session.close()
             await transaction.rollback()
             await async_engine.dispose()

@@ -5,6 +5,12 @@ from importlib import import_module
 
 from fastapi import APIRouter
 
+# --- Party-Role Phase 1 新模块加载（触发 route_registry.register_router） ---
+from . import (
+    authz,  # noqa: F401
+    party,  # noqa: F401
+)
+
 # 导入各个模块的路由 - Analytics
 from .analytics.analytics import router as analytics_router
 from .analytics.statistics import router as statistics_router

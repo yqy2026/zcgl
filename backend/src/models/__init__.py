@@ -2,11 +2,22 @@
 数据库模型模块
 """
 
+from .abac import (  # noqa: F401
+    ABACAction,
+    ABACEffect,
+    ABACPolicy,
+    ABACPolicyRule,
+    ABACRolePolicy,
+)
 from .asset import Asset  # noqa: F401
 from .asset_history import AssetDocument, AssetHistory  # noqa: F401
 from .asset_search_index import AssetSearchIndex  # noqa: F401
 from .associations import property_cert_assets, rent_contract_assets  # noqa: F401
 from .auth import AuditLog, User, UserSession  # noqa: F401
+from .certificate_party_relation import (  # noqa: F401
+    CertificatePartyRelation,
+    CertificateRelationRole,
+)
 from .collection import (  # noqa: F401
     CollectionMethod,
     CollectionRecord,
@@ -29,7 +40,10 @@ from .organization import (  # noqa: F401
     OrganizationHistory,
 )
 from .ownership import Ownership  # noqa: F401
+from .party import Party, PartyContact, PartyHierarchy, PartyType  # noqa: F401
+from .party_role import PartyRoleBinding, PartyRoleDef  # noqa: F401
 from .project import Project  # noqa: F401
+from .project_asset import ProjectAsset  # noqa: F401
 from .project_relations import ProjectOwnershipRelation  # noqa: F401
 from .property_certificate import (  # noqa: F401
     CertificateType,
@@ -64,6 +78,7 @@ from .security_event import (  # noqa: F401
 )
 from .system_dictionary import AssetCustomField, SystemDictionary  # noqa: F401
 from .task import AsyncTask, ExcelTaskConfig, TaskHistory  # noqa: F401
+from .user_party_binding import RelationType, UserPartyBinding  # noqa: F401
 
 __all__ = [
     "Asset",
@@ -113,6 +128,22 @@ __all__ = [
     "Notification",
     "NotificationType",
     "NotificationPriority",
+    "PartyType",
+    "Party",
+    "PartyHierarchy",
+    "PartyContact",
+    "PartyRoleDef",
+    "PartyRoleBinding",
+    "RelationType",
+    "UserPartyBinding",
+    "ProjectAsset",
+    "CertificateRelationRole",
+    "CertificatePartyRelation",
+    "ABACEffect",
+    "ABACAction",
+    "ABACPolicy",
+    "ABACPolicyRule",
+    "ABACRolePolicy",
     # Property Certificate models
     "CertificateType",
     "OwnerType",

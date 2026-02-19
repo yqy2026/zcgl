@@ -20,6 +20,7 @@ from ..models.rent_contract import RentContract, RentLedger, RentTerm
 from ..models.system_dictionary import AssetCustomField, SystemDictionary
 from ..models.task import AsyncTask, ExcelTaskConfig
 from .asset import asset_crud
+from .authz import crud_authz
 from .collection import collection_crud
 
 # Security: Register field whitelists for models
@@ -47,7 +48,9 @@ from .field_whitelist import (
     register_whitelist,
 )
 from .llm_prompt import prompt_template_crud
+from .party import party_crud
 from .project import project_crud
+from .project_asset import project_asset_crud
 from .rbac import permission_grant_crud
 from .rent_contract import rent_contract, rent_ledger, rent_term
 
@@ -84,6 +87,9 @@ __all__ = [
     "asset_crud",
     "collection_crud",
     "project_crud",
+    "party_crud",
+    "crud_authz",
+    "project_asset_crud",
     "permission_grant_crud",
     "prompt_template_crud",
     "rent_contract",
