@@ -48,61 +48,57 @@ def engine(test_database_url):
 
 def _init_enum_data(session):
     """初始化测试所需的枚举数据"""
-    # 创建确权状态枚举类型
-    ownership_status_type = EnumFieldType(
-        name="确权状态", code="ownership_status", is_system=True, status="active"
-    )
-    session.add(ownership_status_type)
-    session.flush()
+    def get_or_create_enum_type(type_name: str, type_code: str) -> EnumFieldType:
+        existing = (
+            session.query(EnumFieldType)
+            .filter(EnumFieldType.code == type_code, EnumFieldType.is_deleted.is_(False))
+            .first()
+        )
+        if existing is not None:
+            return existing
 
-    # 添加确权状态值
-    for value in ["已确权", "未确权", "确权中"]:
-        session.add(
-            EnumFieldValue(
-                enum_type_id=ownership_status_type.id, label=value, value=value
+        enum_type = EnumFieldType(
+            name=type_name,
+            code=type_code,
+            is_system=True,
+            status="active",
+        )
+        session.add(enum_type)
+        session.flush()
+        return enum_type
+
+    def ensure_enum_values(enum_type_id: str, values: list[str]) -> None:
+        existing_values = {
+            row[0]
+            for row in session.query(EnumFieldValue.value)
+            .filter(
+                EnumFieldValue.enum_type_id == enum_type_id,
+                EnumFieldValue.is_deleted.is_(False),
             )
-        )
-
-    # 创建使用状态枚举类型
-    usage_status_type = EnumFieldType(
-        name="使用状态", code="usage_status", is_system=True, status="active"
-    )
-    session.add(usage_status_type)
-    session.flush()
-
-    # 添加使用状态值
-    for value in ["在用", "空置", "自用", "出租中"]:
-        session.add(
-            EnumFieldValue(enum_type_id=usage_status_type.id, label=value, value=value)
-        )
-
-    # 创建物业性质枚举类型
-    property_nature_type = EnumFieldType(
-        name="物业性质", code="property_nature", is_system=True, status="active"
-    )
-    session.add(property_nature_type)
-    session.flush()
-
-    # 添加物业性质值
-    for value in ["住宅", "商业", "办公", "工业", "综合"]:
-        session.add(
-            EnumFieldValue(
-                enum_type_id=property_nature_type.id, label=value, value=value
+            .all()
+        }
+        for value in values:
+            if value in existing_values:
+                continue
+            session.add(
+                EnumFieldValue(
+                    enum_type_id=enum_type_id,
+                    label=value,
+                    value=value,
+                )
             )
-        )
 
-    # 创建数据状态枚举类型
-    data_status_type = EnumFieldType(
-        name="数据状态", code="data_status", is_system=True, status="active"
-    )
-    session.add(data_status_type)
-    session.flush()
+    ownership_status_type = get_or_create_enum_type("确权状态", "ownership_status")
+    ensure_enum_values(ownership_status_type.id, ["已确权", "未确权", "确权中"])
 
-    # 添加数据状态值
-    for value in ["正常", "草稿", "已审核", "已发布"]:
-        session.add(
-            EnumFieldValue(enum_type_id=data_status_type.id, label=value, value=value)
-        )
+    usage_status_type = get_or_create_enum_type("使用状态", "usage_status")
+    ensure_enum_values(usage_status_type.id, ["在用", "空置", "自用", "出租中"])
+
+    property_nature_type = get_or_create_enum_type("物业性质", "property_nature")
+    ensure_enum_values(property_nature_type.id, ["住宅", "商业", "办公", "工业", "综合"])
+
+    data_status_type = get_or_create_enum_type("数据状态", "data_status")
+    ensure_enum_values(data_status_type.id, ["正常", "草稿", "已审核", "已发布"])
 
 
 @pytest.fixture(scope="session")

@@ -8,6 +8,9 @@ from fastapi.testclient import TestClient
 from src.crud.asset import asset_crud
 from src.models.asset import Asset
 from src.models.ownership import Ownership
+from src.services.organization_permission_service import (
+    invalidate_user_accessible_organizations_cache,
+)
 
 pytestmark = pytest.mark.integration
 
@@ -16,6 +19,7 @@ pytestmark = pytest.mark.integration
 def authenticated_client(client: TestClient, test_data) -> TestClient:
     """Authenticate client with real login cookie before each test."""
     admin_user = test_data["admin"]
+    invalidate_user_accessible_organizations_cache(str(admin_user.id))
     response = client.post(
         "/api/v1/auth/login",
         json={"identifier": admin_user.username, "password": "Admin123!@#"},

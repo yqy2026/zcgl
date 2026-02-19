@@ -812,6 +812,7 @@ dependencies = [
     { name = "pydantic-settings" },
     { name = "pyjwt" },
     { name = "python-dotenv" },
+    { name = "python-jsonlogic" },
     { name = "python-multipart" },
     { name = "redis" },
     { name = "sentry-sdk", extra = ["fastapi"] },
@@ -835,6 +836,7 @@ dev = [
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "pytest-cov" },
+    { name = "pytest-timeout" },
     { name = "radon" },
     { name = "ruff" },
     { name = "safety" },
@@ -884,7 +886,9 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.4.2" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=1.2.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=7.0.0" },
+    { name = "pytest-timeout", marker = "extra == 'dev'", specifier = ">=2.2.0" },
     { name = "python-dotenv", specifier = ">=1.2.1" },
+    { name = "python-jsonlogic", specifier = ">=0.1.0" },
     { name = "python-magic", marker = "sys_platform != 'linux' and extra == 'pdf-basic'", specifier = ">=0.4.27" },
     { name = "python-magic-bin", marker = "sys_platform != 'linux' and extra == 'pdf-basic'", specifier = ">=0.4.14" },
     { name = "python-multipart", specifier = ">=0.0.6" },
@@ -1697,6 +1701,18 @@ wheels = [
 ]
 
 [[package]]
+name = "pytest-timeout"
+version = "2.4.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pytest" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ac/82/4c9ecabab13363e72d880f2fb504c5f750433b2b6f16e99f4ec21ada284c/pytest_timeout-2.4.0.tar.gz", hash = "sha256:7e68e90b01f9eff71332b25001f85c75495fc4e3a836701876183c4bcfd0540a", size = 17973, upload-time = "2025-05-05T19:44:34.99Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fa/b6/3127540ecdf1464a00e5a01ee60a1b09175f6913f0644ac748494d9c4b21/pytest_timeout-2.4.0-py3-none-any.whl", hash = "sha256:c42667e5cdadb151aeb5b26d114aff6bdf5a907f176a007a30b940d3d865b5c2", size = 14382, upload-time = "2025-05-05T19:44:33.502Z" },
+]
+
+[[package]]
 name = "python-dateutil"
 version = "2.9.0.post0"
 source = { registry = "https://pypi.org/simple" }
@@ -1715,6 +1731,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/f0/26/19cadc79a718c5edbec86fd4919a6b6d3f681039a2f6d66d14be94e75fb9/python_dotenv-1.2.1.tar.gz", hash = "sha256:42667e897e16ab0d66954af0e60a9caa94f0fd4ecf3aaf6d2d260eec1aa36ad6", size = 44221, upload-time = "2025-10-26T15:12:10.434Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/14/1b/a298b06749107c305e1fe0f814c6c74aea7b2f1e10989cb30f544a1b3253/python_dotenv-1.2.1-py3-none-any.whl", hash = "sha256:b81ee9561e9ca4004139c6cbba3a238c32b03e4894671e181b671e8cb8425d61", size = 21230, upload-time = "2025-10-26T15:12:09.109Z" },
+]
+
+[[package]]
+name = "python-jsonlogic"
+version = "0.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/66/aa/02347287af15ef0efb10b1246b75e5da891411cb6778d5cd011531568640/python_jsonlogic-0.1.0.tar.gz", hash = "sha256:581faad0e9adaa3c343bb74c02d73ffe23b10b94a0373e7cb4875a50efa13b9f", size = 23896, upload-time = "2024-06-02T20:26:38.395Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9d/14/c15cb899495cb1e9744b9caad516a0bfca8a8fc15c6665fd7694b2004057/python_jsonlogic-0.1.0-py3-none-any.whl", hash = "sha256:e545062f44613cbc7de623a88e1edaf3b4f0981c1f8615dbd85c80b754dced25", size = 27258, upload-time = "2024-06-02T20:26:36.629Z" },
 ]
 
 [[package]]

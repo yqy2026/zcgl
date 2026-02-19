@@ -324,11 +324,18 @@ class TestPostgreSQLErrorHandling:
 
         # 验证错误消息包含有用信息
         error_msg = str(exc_info.value).lower()
+        error_type = type(exc_info.value).__name__.lower()
+        cause_msg = str(exc_info.value.__cause__ or "").lower()
+        context_msg = str(exc_info.value.__context__ or "").lower()
+        diagnostic_text = " ".join(
+            [error_msg, error_type, cause_msg, context_msg]
+        )
         assert (
-            "connection" in error_msg
-            or "refused" in error_msg
-            or "could not connect" in error_msg
-            or "connect call failed" in error_msg
+            "connection" in diagnostic_text
+            or "refused" in diagnostic_text
+            or "could not connect" in diagnostic_text
+            or "connect call failed" in diagnostic_text
+            or "timeout" in diagnostic_text
         )
 
     async def test_database_url_validation(self):

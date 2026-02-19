@@ -25,6 +25,7 @@ dependencies = [
     "sentry-sdk[fastapi]>=1.45.0",
     "httpx>=0.28.1",
     "cryptography>=42.0.0",
+    "python-jsonlogic>=0.1.0",
     # PDF基础处理（移动到可选依赖）
     "bcrypt>=5.0.0",
 ]
@@ -48,6 +49,7 @@ dev = [
     "pytest>=8.4.2",
     "pytest-asyncio>=1.2.0",
     "pytest-cov>=7.0.0",
+    "pytest-timeout>=2.2.0",
     "mypy>=1.7.0",
     "ruff>=0.1.6",
     "pre-commit>=4.3.0",

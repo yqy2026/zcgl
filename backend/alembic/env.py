@@ -21,18 +21,24 @@ try:
     # Import all models so Alembic can detect them
     # noqa: F401 - Models are imported for side effects (Alembic metadata)
     from src.models import (
+        abac,
         asset,
         auth,
+        certificate_party_relation,
         collection,
         contact,
         enum_field,
         notification,
         operation_log,
         organization,
+        party,
+        party_role,
         pdf_import_session,
+        project_asset,
         rbac,
         rent_contract,
         task,
+        user_party_binding,
     )
 
 except ImportError as e:

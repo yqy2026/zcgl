@@ -2,7 +2,7 @@
 
 **文档类型**: 技术设计文档  
 **创建日期**: 2026-02-16  
-**最新更新**: 2026-02-18  
+**最新更新**: 2026-02-19  
 **状态**: 待实施（方案冻结）  
 **作者**: Codex
 
@@ -106,7 +106,7 @@
 7. 本期不保留 `abac_policy_subjects`，直接删除表结构。  
 8. 门禁原则：数据正确性优先，未通过不发布。  
 9. ID 类型：统一为 `String`（与现网 22 张表一致，本轮不引入 UUID 类型迁移轴；新表 DDL 中 `UUID PK` 实际实现为 `String + Python uuid4()`）。  
-10. ABAC 条件引擎：JSONLogic（`json-logic-py` 或等价库），需新增依赖。
+10. ABAC 条件引擎：JSONLogic（PyPI 包名 `json-logic`，当前 ≥0.6.3；备选 `python-jsonlogic` 或 `jsonlogic-rs`），需新增依赖。
 
 ---
 
@@ -628,7 +628,7 @@ create 场景执行顺序（统一口径）：
 
 9. 登录态能力清单接口（前端消费）
 - `GET /api/v1/auth/me/capabilities`
-- 出参：`resource + action + perspective + data_scope` 能力清单
+- 出参：`resource + actions[] + perspectives[] + data_scope` 能力清单
 - 说明：前端页面显隐和按钮可用性以能力清单为准，不在页面层频繁调用 `/authz/check`
 - 最小 Schema（本期固定）：
 ```json
@@ -670,7 +670,7 @@ create 场景执行顺序（统一口径）：
 - 废弃 `canAccessOrganization(organizationId)` 对比逻辑
 - 新增 `canPerform(action, resourceType, perspective?)` 基于能力清单判定
 - 新增 `hasPartyAccess(partyId, relationType)` 替代旧组织 ID 比较
-- 接口规范：`capabilities` 清单结构为 `{ resource, action, perspective, data_scope }[]`，与 §5.1 的 `GET /auth/me/capabilities` 出参对齐
+- 接口规范：`capabilities` 清单结构为 `{ resource, actions, perspectives, data_scope }[]`，与 §5.1 的 `GET /api/v1/auth/me/capabilities` 出参对齐
 
 ## 5.3 外部调用方切换要求（破坏性变更治理）
 
@@ -1111,3 +1111,5 @@ No-Go 规则：
 | 2026-02-18 | 3.5 | 合并评审补丁：新增 Blocker Gate(C1-C4)、既有权限表处置(C3)、台账/角色/关联表迁移补齐(C2/C4/C5/C6/C7)、PartyFilter 替代(C1)、hierarchy_version 生命周期(R5)、ID 类型冻结(R4)、useCapabilities 规范(S4)、文件冻结清单要求(S1)、management_entity 映射策略(R7)、Excel 导入导出任务(S5) | Antigravity |
 | 2026-02-18 | 3.6 | 重审修订：显式列出 Project.ownership_entity 删除与迁移策略；新增 Asset.project_name 去规范化处置；补齐 tenant_party_id 迁移口径（本期选填不自动映射）；修正 PermissionGrant 方法计数(11→09)；修正 TenantFilter 文件范围描述；修正 §3.1/§4.1 heading 层级 | Antigravity |
 | 2026-02-18 | 3.7 | 语义收窄与实施增强：`headquarters` 展开结果仅并入 `manager_party_ids`（不再并入 `owner_party_ids`）；`parties` 新增 `external_ref` + `code` 治理口径 + 匹配优先级；`party_role_bindings` 本期定位明确为非实时 ABAC；`abac_policy_rules.action` 收为单值枚举 + 多动作拆单落库；`condition_expr` 本期唯一引擎 JSONLogic（CEL 后续预留）；新增 capabilities 最小 Schema 与版本兼容约束；新增 §9.2 RACI 发布责任矩阵；§4.4 可观测性要求；§4.7 策略更新约束；§6.1 Party 去重规则 + EXPLAIN 校验 + 步骤重编号；§7.5 Outbox/幂等验收；§7.7 人工清单审计；§10 capabilities 权威口径 | yellowUp + Antigravity |
+| 2026-02-19 | 3.8 | ABAC 条件引擎依赖名修正为 `json-logic`（PyPI 实测可用，当前 ≥0.6.3），取代此前错误的 `json-logic-py` | Antigravity |
+| 2026-02-19 | 3.9 | capabilities 契约一致性修复：§5.1 L631 出参描述由 singular `action`/`perspective` 统一为 plural `actions[]`/`perspectives[]`（对齐同节 JSON Schema L641-642）；§5.2 L673 `useCapabilities` 接口规范同步修复（字段名 + 补全 `/api/v1` 路径前缀） | Antigravity |

@@ -36,7 +36,9 @@ from .....schemas.auth import (
     PermissionSchema,
     UserResponse,
 )
+from .....schemas.authz import CapabilitiesResponse
 from .....security.cookie_manager import cookie_manager
+from .....services.authz import authz_service
 from .....services.core.audit_service import AuditService
 from .....services.core.authentication_service import AsyncAuthenticationService
 from .....services.core.password_service import PasswordService
@@ -539,3 +541,21 @@ async def get_current_user_info(
         "timestamp": datetime.now(UTC).isoformat(),
         "session_status": "active",
     }
+
+
+@router.get(
+    "/me/capabilities",
+    response_model=CapabilitiesResponse,
+    summary="获取当前用户能力清单",
+)
+async def get_current_user_capabilities(
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_async_db),
+) -> CapabilitiesResponse:
+    """返回当前登录用户的会话级能力清单。"""
+    try:
+        return await authz_service.get_capabilities(db, user_id=str(current_user.id))
+    except BaseBusinessError:
+        raise
+    except Exception as exc:
+        raise internal_error("获取能力清单失败", original_error=exc) from exc
