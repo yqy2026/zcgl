@@ -4,6 +4,7 @@
 
 ### 🛠️ 本次修复 (Current Fixes)
 
+- Phase 1 集成测试筛选接口稳定性修复（2026-02-19）：修复 `backend/tests/integration/api/test_asset_filter_endpoints.py` 在共享测试库场景下偶发读取旧组织可见范围的问题。`authenticated_client` fixture 在登录前新增 `invalidate_user_accessible_organizations_cache(str(admin_user.id))`，确保 `/api/v1/assets/business-categories` 等筛选接口按当前用例组织范围查询，避免跨用例缓存污染导致的误报失败。
 - Phase 1 第 3.4~3.6 节骨架落地（2026-02-19）：新增 `backend/src/schemas/party.py` 与 `backend/src/schemas/authz.py`；新增服务层 `backend/src/services/authz/`（`engine.py`/`context_builder.py`/`service.py`）与 `backend/src/services/party/service.py`；新增 API `backend/src/api/v1/authz.py`（`POST /api/v1/authz/check`）和 `backend/src/api/v1/party.py`（`/api/v1/parties*`、层级与联系人端点）；在 `backend/src/api/v1/auth/auth_modules/authentication.py` 增加 `GET /api/v1/auth/me/capabilities`；在 `backend/src/api/v1/__init__.py` 显式导入 `authz`/`party` 触发 `route_registry.register_router()`；新增单测 `backend/tests/unit/services/test_authz_engine.py` 覆盖 owner/manager 命中、deny-by-default 与 field_mask 回传。
 - Phase 1 第 2 章前置项落地（2026-02-19）：完成依赖与数据库扩展准备。`backend/pyproject.toml` 生产依赖调整为 `python-jsonlogic>=0.1.0`（替换不兼容 Python 3.12 的 `json-logic`）并保留开发依赖 `pytest-timeout>=2.2.0`（测试超时控制）；新增 Alembic 迁移 `backend/alembic/versions/20260219_enable_btree_gist_extension.py`，在升级阶段执行 `CREATE EXTENSION IF NOT EXISTS btree_gist`，为后续排斥约束提供扩展前置保障。
 - Phase 1 实施计划修订至 v1.5（2026-02-19）：在 v1.4 基础上修正上游基线版本至 v3.9（含 capabilities 契约修复）、路由注册参考行号修正为 `collection.py` L164（实际 `register_router()` 调用位置）。
