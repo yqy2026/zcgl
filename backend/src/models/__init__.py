@@ -11,6 +11,7 @@ from .abac import (  # noqa: F401
 )
 from .asset import Asset  # noqa: F401
 from .asset_history import AssetDocument, AssetHistory  # noqa: F401
+from .asset_management_history import AssetManagementHistory  # noqa: F401
 from .asset_search_index import AssetSearchIndex  # noqa: F401
 from .associations import property_cert_assets, rent_contract_assets  # noqa: F401
 from .auth import AuditLog, User, UserSession  # noqa: F401
@@ -29,6 +30,13 @@ from .enum_field import (  # noqa: F401
     EnumFieldType,
     EnumFieldUsage,
     EnumFieldValue,
+)
+from .llm_prompt import (  # noqa: F401
+    ExtractionFeedback,
+    PromptMetrics,
+    PromptStatus,
+    PromptTemplate,
+    PromptVersion,
 )
 from .notification import (  # noqa: F401
     Notification,
@@ -82,6 +90,7 @@ from .user_party_binding import RelationType, UserPartyBinding  # noqa: F401
 
 __all__ = [
     "Asset",
+    "AssetManagementHistory",
     "AssetHistory",
     "AssetDocument",
     "Ownership",
@@ -128,6 +137,12 @@ __all__ = [
     "Notification",
     "NotificationType",
     "NotificationPriority",
+    # LLM Prompt models
+    "PromptTemplate",
+    "PromptVersion",
+    "ExtractionFeedback",
+    "PromptMetrics",
+    "PromptStatus",
     "PartyType",
     "Party",
     "PartyHierarchy",
