@@ -24,7 +24,8 @@ class RentContractStatisticsService(RentContractHelperMixin):
                 db,
                 start_date=query_params.start_date,
                 end_date=query_params.end_date,
-                ownership_ids=query_params.ownership_ids,
+                owner_party_ids=query_params.owner_party_ids,
+                ownership_ids=query_params.ownership_ids,  # DEPRECATED alias
                 asset_ids=query_params.asset_ids,
             )
         )
@@ -38,7 +39,8 @@ class RentContractStatisticsService(RentContractHelperMixin):
             db,
             start_date=query_params.start_date,
             end_date=query_params.end_date,
-            ownership_ids=query_params.ownership_ids,
+            owner_party_ids=query_params.owner_party_ids,
+            ownership_ids=query_params.ownership_ids,  # DEPRECATED alias
             asset_ids=query_params.asset_ids,
         )
 
@@ -47,7 +49,8 @@ class RentContractStatisticsService(RentContractHelperMixin):
             db,
             start_date=query_params.start_date,
             end_date=query_params.end_date,
-            ownership_ids=query_params.ownership_ids,
+            owner_party_ids=query_params.owner_party_ids,
+            ownership_ids=query_params.ownership_ids,  # DEPRECATED alias
             asset_ids=query_params.asset_ids,
         )
 
@@ -89,39 +92,129 @@ class RentContractStatisticsService(RentContractHelperMixin):
         *,
         start_date: date | None = None,
         end_date: date | None = None,
-        ownership_ids: list[str] | None = None,
+        owner_party_ids: list[str] | None = None,
+        ownership_ids: list[str] | None = None,  # DEPRECATED alias
     ) -> list[dict[str, Any]]:
-        # 使用 CRUD 方法获取权属方统计
-        results = await rent_ledger_crud.get_ownership_statistics_async(
-            db,
-            start_date=start_date,
-            end_date=end_date,
-            ownership_ids=ownership_ids,
-        )
+        owner_party_filter_ids = owner_party_ids
+        if owner_party_filter_ids is None and ownership_ids is not None:
+            owner_party_filter_ids = (
+                await rent_contract_crud.get_distinct_owner_party_ids_by_ownership_ids_async(
+                    db,
+                    ownership_ids=ownership_ids,
+                )
+            )
 
-        ownership_stats = []
-        for result in results:
+        owner_party_results = []
+        if not (
+            owner_party_ids is None
+            and ownership_ids is not None
+            and owner_party_filter_ids == []
+        ):
+            owner_party_results = await rent_ledger_crud.get_owner_party_statistics_async(
+                db,
+                start_date=start_date,
+                end_date=end_date,
+                owner_party_ids=owner_party_filter_ids,
+            )
+
+        merged_stats: dict[str, dict[str, Any]] = {}
+        for result in owner_party_results:
             total_due = result.total_due_amount or Decimal("0")
             total_paid = result.total_paid_amount or Decimal("0")
             payment_rate = (
                 (total_paid / total_due * 100) if total_due > 0 else Decimal("0")
             )
 
-            ownership_stats.append(
-                {
-                    "ownership_id": result.id,
-                    "ownership_name": result.name,
+            merged_stats[str(result.id)] = {
+                "owner_party_id": result.id,
+                "owner_party_name": result.name,
+                "ownership_id": None,  # DEPRECATED: 仅在 legacy ownership 维度回填
+                "ownership_name": None,  # DEPRECATED: 仅在 legacy ownership 维度回填
+                "total_contracts": result.contract_count,
+                "active_contracts": result.contract_count,
+                "total_due_amount": total_due,
+                "total_paid_amount": total_paid,
+                "total_overdue_amount": result.total_overdue_amount or Decimal("0"),
+                "occupancy_rate": payment_rate,
+            }
+
+        legacy_ownership_ids = ownership_ids
+        if legacy_ownership_ids is None and owner_party_ids:
+            legacy_ownership_ids = (
+                await rent_contract_crud.get_distinct_ownership_ids_by_owner_party_ids_async(
+                    db,
+                    owner_party_ids=owner_party_ids,
+                )
+            )
+
+        legacy_results = []
+        should_query_legacy = True
+        if ownership_ids == []:
+            should_query_legacy = False
+        elif owner_party_ids and legacy_ownership_ids == []:
+            should_query_legacy = False
+
+        if should_query_legacy:
+            legacy_results = await rent_ledger_crud.get_ownership_statistics_async(
+                db,
+                start_date=start_date,
+                end_date=end_date,
+                ownership_ids=legacy_ownership_ids,  # DEPRECATED alias
+                legacy_only=True,
+            )
+        for result in legacy_results:
+            key = str(result.id)
+            total_due = result.total_due_amount or Decimal("0")
+            total_paid = result.total_paid_amount or Decimal("0")
+            total_overdue = result.total_overdue_amount or Decimal("0")
+            if key not in merged_stats:
+                payment_rate = (
+                    (total_paid / total_due * 100) if total_due > 0 else Decimal("0")
+                )
+                merged_stats[key] = {
+                    "owner_party_id": result.id,
+                    "owner_party_name": result.name,
+                    "ownership_id": result.id,  # DEPRECATED: 兼容旧键
+                    "ownership_name": result.name,  # DEPRECATED: 兼容旧键
                     "total_contracts": result.contract_count,
                     "active_contracts": result.contract_count,
                     "total_due_amount": total_due,
                     "total_paid_amount": total_paid,
-                    "total_overdue_amount": result.total_overdue_amount
-                    or Decimal("0"),
+                    "total_overdue_amount": total_overdue,
                     "occupancy_rate": payment_rate,
                 }
+                continue
+
+            existing = merged_stats[key]
+            existing["total_contracts"] = int(existing["total_contracts"]) + int(
+                result.contract_count
+            )
+            existing["active_contracts"] = int(existing["active_contracts"]) + int(
+                result.contract_count
+            )
+            existing["total_due_amount"] = (
+                existing["total_due_amount"] + total_due
+            )
+            existing["total_paid_amount"] = (
+                existing["total_paid_amount"] + total_paid
+            )
+            existing["total_overdue_amount"] = (
+                existing["total_overdue_amount"] + total_overdue
+            )
+            if not existing.get("ownership_name"):
+                existing["ownership_name"] = result.name
+            if not existing.get("owner_party_name"):
+                existing["owner_party_name"] = result.name
+
+            merged_total_due = existing["total_due_amount"]
+            merged_total_paid = existing["total_paid_amount"]
+            existing["occupancy_rate"] = (
+                (merged_total_paid / merged_total_due * 100)
+                if merged_total_due > 0
+                else Decimal("0")
             )
 
-        return ownership_stats
+        return list(merged_stats.values())
 
     async def get_asset_statistics_async(
         self,
@@ -209,7 +302,8 @@ class RentContractStatisticsService(RentContractHelperMixin):
             contract_status=ContractStatus.ACTIVE,
             start_date=query_params.start_date,
             end_date=query_params.end_date,
-            ownership_ids=query_params.ownership_ids,
+            owner_party_ids=query_params.owner_party_ids,
+            ownership_ids=query_params.ownership_ids,  # DEPRECATED alias
         )
 
         if not contracts:
@@ -241,7 +335,8 @@ class RentContractStatisticsService(RentContractHelperMixin):
         # 使用 CRUD 方法获取合同状态统计
         stats = await rent_contract_crud.get_contract_status_counts_async(
             db,
-            ownership_ids=query_params.ownership_ids,
+            owner_party_ids=query_params.owner_party_ids,
+            ownership_ids=query_params.ownership_ids,  # DEPRECATED alias
             start_date=query_params.start_date,
             end_date=query_params.end_date,
         )
@@ -256,3 +351,4 @@ class RentContractStatisticsService(RentContractHelperMixin):
 
         rate = (Decimal(str(renewed)) / Decimal(str(total_ended))) * 100
         return rate.quantize(Decimal("0.00"))
+

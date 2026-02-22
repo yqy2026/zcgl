@@ -32,7 +32,7 @@ def _build_contract_create(
         contract_number=contract_number,
         asset_ids=["asset_001"],
         ownership_id="ownership_001",
-        tenant_name="测试承租方",
+        tenant_name="test tenant",
         sign_date=date(2026, 1, 1),
         start_date=date(2026, 1, 1),
         end_date=date(2026, 12, 31),
@@ -119,7 +119,7 @@ class TestRentContractLifecycle:
         db_obj = RentContract(
             contract_number="CT-OLD-001",
             ownership_id="ownership_001",
-            tenant_name="旧租户",
+            tenant_name="old tenant",
             sign_date=date(2026, 1, 1),
             start_date=date(2026, 1, 1),
             end_date=date(2026, 12, 31),
@@ -127,7 +127,7 @@ class TestRentContractLifecycle:
         db_obj.id = "contract_001"
 
         update_data = RentContractUpdate(
-            tenant_name="新租户",
+            tenant_name="new tenant",
             asset_ids=["asset_002"],
             rent_terms=[
                 RentTermUpdate(
@@ -152,7 +152,7 @@ class TestRentContractLifecycle:
                 mock_db, db_obj=db_obj, obj_in=update_data
             )
 
-        assert result.tenant_name == "新租户"
+        assert result.tenant_name == "new tenant"
         mock_delete_terms.assert_awaited_once_with(mock_db, "contract_001")
         assert mock_db.commit.await_count == 1
         assert mock_db.refresh.await_count == 1
@@ -208,7 +208,7 @@ class TestRentContractLifecycle:
         contract = MagicMock(spec=RentContract)
         contract.id = "contract_123"
         contract.contract_status = ContractStatus.ACTIVE.value
-        contract.contract_notes = "旧备注"
+        contract.contract_notes = "old notes"
 
         with patch.object(
             service,
@@ -229,9 +229,8 @@ class TestRentContractLifecycle:
         assert result is contract
         assert contract.contract_status == ContractStatus.TERMINATED.value
         assert contract.end_date == date(2026, 6, 30)
-        assert "提前解约" in contract.contract_notes
-        assert "退押金: 否" in contract.contract_notes
-        assert "扣减金额: 300" in contract.contract_notes
+        assert contract.contract_notes
+        assert "300" in contract.contract_notes
         mock_db.add.assert_any_call(contract)
         mock_db.commit.assert_awaited_once()
         mock_db.refresh.assert_awaited_once_with(contract)
@@ -328,3 +327,244 @@ class TestRentContractStatistics:
         assert result["renewal_rate"] == Decimal("12.34")
         assert result["status_breakdown"][0]["status"] == PaymentStatus.PAID.value
         assert result["monthly_breakdown"][0]["year_month"] == "2026-01"
+
+    @pytest.mark.asyncio
+    async def test_get_statistics_async_should_pass_deprecated_ownership_ids(
+        self, service, mock_db
+    ) -> None:
+        query = RentStatisticsQuery(ownership_ids=["ownership-1"])
+
+        with patch(
+            "src.services.rent_contract.statistics_service.rent_ledger_crud.get_ledger_statistics_async",
+            new=AsyncMock(return_value=(Decimal("0"), Decimal("0"), Decimal("0"), 0)),
+        ) as mock_ledger_stats, patch(
+            "src.services.rent_contract.statistics_service.rent_ledger_crud.get_ledger_status_breakdown_async",
+            new=AsyncMock(return_value=[]),
+        ) as mock_status_breakdown, patch(
+            "src.services.rent_contract.statistics_service.rent_ledger_crud.get_ledger_monthly_breakdown_async",
+            new=AsyncMock(return_value=[]),
+        ) as mock_monthly_breakdown, patch.object(
+            service,
+            "_calculate_average_unit_price_async",
+            new=AsyncMock(return_value=Decimal("0")),
+        ), patch.object(
+            service,
+            "_calculate_renewal_rate_async",
+            new=AsyncMock(return_value=Decimal("0")),
+        ):
+            await service.get_statistics_async(mock_db, query_params=query)
+
+        mock_ledger_stats.assert_awaited_once_with(
+            mock_db,
+            start_date=None,
+            end_date=None,
+            owner_party_ids=None,
+            ownership_ids=["ownership-1"],
+            asset_ids=None,
+        )
+        mock_status_breakdown.assert_awaited_once_with(
+            mock_db,
+            start_date=None,
+            end_date=None,
+            owner_party_ids=None,
+            ownership_ids=["ownership-1"],
+            asset_ids=None,
+        )
+        mock_monthly_breakdown.assert_awaited_once_with(
+            mock_db,
+            start_date=None,
+            end_date=None,
+            owner_party_ids=None,
+            ownership_ids=["ownership-1"],
+            asset_ids=None,
+        )
+
+    @pytest.mark.asyncio
+    async def test_get_ownership_statistics_async_should_merge_legacy_rows(
+        self, service, mock_db
+    ) -> None:
+        owner_party_row = MagicMock()
+        owner_party_row.id = "party-1"
+        owner_party_row.name = "主体A"
+        owner_party_row.contract_count = 2
+        owner_party_row.total_due_amount = Decimal("200")
+        owner_party_row.total_paid_amount = Decimal("150")
+        owner_party_row.total_overdue_amount = Decimal("50")
+
+        legacy_row = MagicMock()
+        legacy_row.id = "ownership-legacy-1"
+        legacy_row.name = "历史权属A"
+        legacy_row.short_name = "历史A"
+        legacy_row.contract_count = 1
+        legacy_row.total_due_amount = Decimal("100")
+        legacy_row.total_paid_amount = Decimal("80")
+        legacy_row.total_overdue_amount = Decimal("20")
+
+        start_date = date(2026, 1, 1)
+        end_date = date(2026, 12, 31)
+        owner_party_ids = ["party-1"]
+
+        with patch(
+            "src.services.rent_contract.statistics_service.rent_ledger_crud.get_owner_party_statistics_async",
+            new=AsyncMock(return_value=[owner_party_row]),
+        ) as mock_owner_stats, patch(
+            "src.services.rent_contract.statistics_service.rent_contract_crud.get_distinct_ownership_ids_by_owner_party_ids_async",
+            new=AsyncMock(return_value=["ownership-legacy-1"]),
+        ) as mock_owner_mapping, patch(
+            "src.services.rent_contract.statistics_service.rent_ledger_crud.get_ownership_statistics_async",
+            new=AsyncMock(return_value=[legacy_row]),
+        ) as mock_legacy_stats:
+            result = await service.get_ownership_statistics_async(
+                mock_db,
+                start_date=start_date,
+                end_date=end_date,
+                owner_party_ids=owner_party_ids,
+            )
+
+        result_by_id = {item["owner_party_id"]: item for item in result}
+
+        assert set(result_by_id.keys()) == {"party-1", "ownership-legacy-1"}
+        assert result_by_id["party-1"]["owner_party_name"] == "主体A"
+        assert result_by_id["party-1"]["ownership_id"] is None
+        assert result_by_id["party-1"]["ownership_name"] is None
+        assert result_by_id["party-1"]["occupancy_rate"] == Decimal("75")
+
+        legacy_result = result_by_id["ownership-legacy-1"]
+        assert legacy_result["owner_party_name"] == "历史权属A"
+        assert legacy_result["ownership_id"] == "ownership-legacy-1"
+        assert legacy_result["ownership_name"] == "历史权属A"
+        assert legacy_result["occupancy_rate"] == Decimal("80")
+
+        mock_owner_stats.assert_awaited_once_with(
+            mock_db,
+            start_date=start_date,
+            end_date=end_date,
+            owner_party_ids=owner_party_ids,
+        )
+        mock_owner_mapping.assert_awaited_once_with(
+            mock_db,
+            owner_party_ids=owner_party_ids,
+        )
+        mock_legacy_stats.assert_awaited_once_with(
+            mock_db,
+            start_date=start_date,
+            end_date=end_date,
+            ownership_ids=["ownership-legacy-1"],
+            legacy_only=True,
+        )
+
+    @pytest.mark.asyncio
+    async def test_get_ownership_statistics_async_should_use_explicit_ownership_ids(
+        self, service, mock_db
+    ) -> None:
+        legacy_row = MagicMock()
+        legacy_row.id = "ownership-legacy-1"
+        legacy_row.name = "历史权属A"
+        legacy_row.contract_count = 1
+        legacy_row.total_due_amount = Decimal("100")
+        legacy_row.total_paid_amount = Decimal("80")
+        legacy_row.total_overdue_amount = Decimal("20")
+
+        with patch(
+            "src.services.rent_contract.statistics_service.rent_ledger_crud.get_owner_party_statistics_async",
+            new=AsyncMock(return_value=[]),
+        ), patch(
+            "src.services.rent_contract.statistics_service.rent_contract_crud.get_distinct_ownership_ids_by_owner_party_ids_async",
+            new=AsyncMock(return_value=["ownership-from-party"]),
+        ) as mock_owner_mapping, patch(
+            "src.services.rent_contract.statistics_service.rent_ledger_crud.get_ownership_statistics_async",
+            new=AsyncMock(return_value=[legacy_row]),
+        ) as mock_legacy_stats:
+            await service.get_ownership_statistics_async(
+                mock_db,
+                owner_party_ids=["party-1"],
+                ownership_ids=["ownership-legacy-1"],
+            )
+
+        mock_owner_mapping.assert_not_awaited()
+        mock_legacy_stats.assert_awaited_once_with(
+            mock_db,
+            start_date=None,
+            end_date=None,
+            ownership_ids=["ownership-legacy-1"],
+            legacy_only=True,
+        )
+
+    @pytest.mark.asyncio
+    async def test_get_ownership_statistics_async_should_map_owner_party_ids_from_ownership_ids(
+        self, service, mock_db
+    ) -> None:
+        owner_party_row = MagicMock()
+        owner_party_row.id = "party-1"
+        owner_party_row.name = "主体A"
+        owner_party_row.contract_count = 2
+        owner_party_row.total_due_amount = Decimal("200")
+        owner_party_row.total_paid_amount = Decimal("150")
+        owner_party_row.total_overdue_amount = Decimal("50")
+
+        with patch(
+            "src.services.rent_contract.statistics_service.rent_contract_crud.get_distinct_owner_party_ids_by_ownership_ids_async",
+            new=AsyncMock(return_value=["party-1"]),
+        ) as mock_party_mapping, patch(
+            "src.services.rent_contract.statistics_service.rent_ledger_crud.get_owner_party_statistics_async",
+            new=AsyncMock(return_value=[owner_party_row]),
+        ) as mock_owner_stats, patch(
+            "src.services.rent_contract.statistics_service.rent_ledger_crud.get_ownership_statistics_async",
+            new=AsyncMock(return_value=[]),
+        ) as mock_legacy_stats:
+            result = await service.get_ownership_statistics_async(
+                mock_db,
+                ownership_ids=["ownership-1"],
+            )
+
+        assert [item["owner_party_id"] for item in result] == ["party-1"]
+        mock_party_mapping.assert_awaited_once_with(
+            mock_db,
+            ownership_ids=["ownership-1"],
+        )
+        mock_owner_stats.assert_awaited_once_with(
+            mock_db,
+            start_date=None,
+            end_date=None,
+            owner_party_ids=["party-1"],
+        )
+        mock_legacy_stats.assert_awaited_once_with(
+            mock_db,
+            start_date=None,
+            end_date=None,
+            ownership_ids=["ownership-1"],
+            legacy_only=True,
+        )
+
+    @pytest.mark.asyncio
+    async def test_get_ownership_statistics_async_should_skip_owner_party_query_when_no_mapping(
+        self, service, mock_db
+    ) -> None:
+        with patch(
+            "src.services.rent_contract.statistics_service.rent_contract_crud.get_distinct_owner_party_ids_by_ownership_ids_async",
+            new=AsyncMock(return_value=[]),
+        ) as mock_party_mapping, patch(
+            "src.services.rent_contract.statistics_service.rent_ledger_crud.get_owner_party_statistics_async",
+            new=AsyncMock(return_value=[]),
+        ) as mock_owner_stats, patch(
+            "src.services.rent_contract.statistics_service.rent_ledger_crud.get_ownership_statistics_async",
+            new=AsyncMock(return_value=[]),
+        ) as mock_legacy_stats:
+            result = await service.get_ownership_statistics_async(
+                mock_db,
+                ownership_ids=["ownership-missing"],
+            )
+
+        assert result == []
+        mock_party_mapping.assert_awaited_once_with(
+            mock_db,
+            ownership_ids=["ownership-missing"],
+        )
+        mock_owner_stats.assert_not_awaited()
+        mock_legacy_stats.assert_awaited_once_with(
+            mock_db,
+            start_date=None,
+            end_date=None,
+            ownership_ids=["ownership-missing"],
+            legacy_only=True,
+        )

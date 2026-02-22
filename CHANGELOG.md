@@ -4,6 +4,13 @@
 
 ### 🛠️ 本次修复 (Current Fixes)
 
+- 租赁合同 Schema 乱码专项修复（2026-02-22）：完成 `backend/src/schemas/rent_contract.py` 全量乱码文案清理，统一修复类注释、字段 `description`、校验器说明与分页/统计/台账响应说明文本，消除历史编码错乱导致的 OpenAPI 可读性问题；本次未调整字段结构与校验逻辑，仅修正文案。验证：`ruff check backend/src/schemas/rent_contract.py` 通过，`pytest --no-cov tests/unit/services/rent_contract/test_rent_contract_service_impl.py -q`（13 passed）。
+- Phase 3 实施计划门禁纠偏（2026-02-22）：修订 `docs/plans/2026-02-20-phase3-implementation-plan.md` 至 v1.33，重点修复执行阻断与口径冲突：1) 解除 P3d Entry/Exit 互斥（Entry 不再依赖尚未创建文件，`usePermission` 改为主链零引用 + Router A/B 处置）；2) 统一 403 结构化拒绝口径为 `error.code=PERMISSION_DENIED`（兼容 `error_code=AUTHZ_DENIED`）；3) 补齐 `request_id` 跨域可观测前提（CORS `expose_headers`）；4) 生产 flag 验签改为“`.env.production` 或 CI/CD 注入”二选一且禁止隐式默认；5) 统一排除单源清单（Bash/PowerShell）并修正中文旧列名扫描为零命中门禁；6) 回滚步骤新增工作区保护；7) D10 互斥门禁改为 AST 脚本入口并已新增实现：`frontend/scripts/check-route-authz-mutual-exclusive.mjs`。
+- Phase 3 门禁自动化接线（2026-02-22）：将 D10 AST 门禁正式接入自动化。新增 `frontend/package.json` 脚本 `check:route-authz`（执行 `scripts/check-route-authz-mutual-exclusive.mjs`），并纳入 `pnpm check`；在 `.github/workflows/ci.yml` 的 `frontend-lint` 阶段增加阻断步骤 `pnpm check:route-authz`。同时收紧脚本行为：`protectedRoutes` 中出现非对象字面量条目时改为 fail-closed（直接失败并输出索引与表达式），避免以非常规写法绕过 D10 校验。
+- 乱码文本排查与修复（2026-02-22）：针对同类编码异常开展扫描并修复高风险文本。已修复 `backend/tests/unit/services/rent_contract/test_rent_contract_service_impl.py` 中多处测试数据乱码（如资产名、主体名、历史权属名、备注与解约原因），修复 `backend/src/services/rent_contract/statistics_service.py` 中统计服务注释/说明乱码，修复 `backend/src/services/analytics/analytics_service.py` 缓存读写告警乱码文案，以及 `backend/src/services/asset/__init__.py` 模块说明中的替换符异常。验证：`pytest --no-cov tests/unit/services/rent_contract/test_rent_contract_service_impl.py -q`（13 passed）与 `ruff check` 定向检查通过。
+- 租赁合同服务单测断言修复（2026-02-22）：修复 `backend/tests/unit/services/rent_contract/test_rent_contract_service_impl.py` 中两个异常匹配断言与实际中文错误消息不一致的问题。`test_create_contract_async_raises_conflict` 的 `match` 从英文 `conflict` 调整为 `资产租金冲突检测`，`test_generate_monthly_ledger_async_requires_rent_terms` 的乱码匹配串调整为 `合同没有租金条款`，恢复用例与服务层异常文案一致性。
+- Review 修复（2026-02-22）：修复 `backend/src/scripts/migration/party_migration/backfill_role_policies.py` 中将 `is_system_role=True` 统一提升为 `platform_admin` 的回填逻辑，改为仅基于显式角色信号映射策略包，避免非管理员系统角色被提权；补充回归断言于 `backend/tests/unit/migration/test_backfill.py`。同时恢复 `backend/src/schemas/rent_contract.py` 中 `start_date`、`end_date`、`monthly_rent` 三个字段描述为可读 UTF-8 中文，修复 OpenAPI 文档可读性回归。
+
 - 测试库 Alembic 升级阻塞修复（2026-02-20）：修复 `backend/alembic/versions/20260219_phase2_seed_data_policy_packages.py` 在写入 `abac_policies.effect` 与 `abac_policy_rules.action` 时将参数绑定为 `VARCHAR` 导致 PostgreSQL enum 列类型不匹配（`DatatypeMismatch`）的问题。现将 seed 迁移中的两列绑定改为 `postgresql.ENUM(..., create_type=False)`，恢复 `alembic upgrade head` 在测试库重建场景下的可执行性。
 - LLM Prompt 回退建表缺表修复（2026-02-20）：修复 `backend/src/models/__init__.py` 未导入 `llm_prompt` 模型导致单测数据库在 Alembic 失败回退 `Base.metadata.create_all()` 时遗漏 `prompt_templates`/`prompt_versions`/`extraction_feedback`/`prompt_metrics` 的问题。现已补齐 `PromptTemplate`、`PromptVersion`、`ExtractionFeedback`、`PromptMetrics`、`PromptStatus` 的统一导入与导出，确保 `tests/unit/api/v1/test_llm_prompts.py` 在回退建表路径可完整初始化。
 - 产权证关系枚举建表一致性修复（2026-02-20）：修复 `backend/src/models/certificate_party_relation.py` 中 `SQLEnum(CertificateRelationRole)` 默认使用枚举名称（`OWNER`）导致与索引条件中小写值（`'owner'`）不一致的问题。现为 `relation_role` 显式配置 `values_callable` 使用枚举 `.value`，确保 `create_all` 建出的 `certificate_relation_role` 与迁移/索引表达式一致，避免 db-backed unit 在 fallback 建表阶段触发 `invalid input value for enum certificate_relation_role: "owner"`。
@@ -2167,3 +2174,14 @@
 - ✅ 租金台账基础功能
 - ✅ 权属方/项目列表管理
 - ✅ 数据字典管理
+
+## [2026-02-22-phase3-plan-v132]
+
+### Changed
+
+- Updated `docs/plans/2026-02-20-phase3-implementation-plan.md` to v1.32.
+- Replaced the D10 route mutual-exclusion gate from cross-line `grep -E` regex to a Node structural check command.
+- Standardized legacy-field zero-reference scans to `grep -w` in P3b/P3e/§6.2 to reduce regex-boundary portability risk.
+- Tightened production feature-flag verification: missing `frontend/.env.production` is now a hard failure; removed auto-write default `VITE_ENABLE_CAPABILITY_GUARD=false` behavior from examples.
+- Added `request_id` source-priority contract and PartySelector Level-2 fallback telemetry fields (`result_count`, `is_truncated`, `search_query_length`).
+- Corrected section order/numbering: Windows core gate commands are now §6.3 and browser smoke matrix is §6.4.

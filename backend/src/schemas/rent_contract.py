@@ -5,9 +5,15 @@
 from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
-from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationInfo,
+    field_validator,
+    model_validator,
+)
 from pydantic_core import PydanticCustomError
 
 from ..constants.rent_contract_constants import PaymentStatus, SettlementStatus
@@ -117,10 +123,11 @@ class RentContractBase(BaseModel):
 
     contract_number: str | None = Field(None, description="合同编号")
     # V2: 改为多资产关联
-    asset_ids: list[str] = Field(
-        default_factory=list[Any], description="关联资产ID列表"
-    )
-    ownership_id: str = Field(..., description="权属方ID")
+    asset_ids: list[str] = Field(default_factory=list, description="关联资产ID列表")
+    ownership_id: str | None = Field(None, description="权属方ID（DEPRECATED）")
+    owner_party_id: str | None = Field(None, description="产权方主体ID")
+    manager_party_id: str | None = Field(None, description="经营管理方主体ID")
+    tenant_party_id: str | None = Field(None, description="承租方主体ID")
     # V2: 合同类型
     contract_type: ContractType = Field(
         ContractType.LEASE_DOWNSTREAM, description="合同类型"
@@ -179,12 +186,31 @@ class RentContractBase(BaseModel):
             raise PydanticCustomError("empty_contract_number", "合同编号不能为空", {})
         return normalized
 
+    @model_validator(mode="after")
+    def validate_owner_reference(self) -> "RentContractBase":
+        if not self.owner_party_id and not self.ownership_id:
+            raise PydanticCustomError(
+                "missing_owner_reference",
+                "owner_party_id 或 ownership_id 至少提供一个",
+                {"field": "owner_party_id"},
+            )
+        return self
+
 
 class RentContractCreate(RentContractBase):
     """创建租金合同Schema"""
 
+    ownership_id: str = Field(..., description="权属方ID（DEPRECATED，创建时必填）")
     contract_number: str | None = Field(None, description="合同编号（手工录入）")
     rent_terms: list[RentTermCreate] = Field(..., description="租金条款列表")
+
+    @field_validator("ownership_id")
+    @classmethod
+    def validate_ownership_id(cls, v: str) -> str:
+        normalized = v.strip()
+        if not normalized:
+            raise PydanticCustomError("empty_ownership_id", "ownership_id 不能为空", {})
+        return normalized
 
     @field_validator("rent_terms")
     @classmethod
@@ -236,7 +262,10 @@ class RentContractUpdate(BaseModel):
 
     contract_number: str | None = Field(None, description="合同编号")
     asset_ids: list[str] | None = Field(None, description="关联资产ID列表")
-    ownership_id: str | None = Field(None, description="权属方ID")
+    ownership_id: str | None = Field(None, description="权属方ID（DEPRECATED）")
+    owner_party_id: str | None = Field(None, description="产权方主体ID")
+    manager_party_id: str | None = Field(None, description="经营管理方主体ID")
+    tenant_party_id: str | None = Field(None, description="承租方主体ID")
     contract_type: ContractType | None = Field(None, description="合同类型")
     upstream_contract_id: str | None = Field(None, description="上游合同ID")
     service_fee_rate: Decimal | None = Field(None, ge=0, le=1, description="服务费率")
@@ -269,7 +298,7 @@ class RentContractUpdate(BaseModel):
 
 
 class AssetSimpleResponse(BaseModel):
-    """资产简略响应（用于合同关联）"""
+    """资产简要响应（用于合同关联）"""
 
     id: str
     property_name: str
@@ -301,7 +330,8 @@ class RentLedgerBase(BaseModel):
     asset_id: str | None = Field(
         None, description="关联资产ID"
     )  # 对齐Model: nullable=True
-    ownership_id: str = Field(..., description="权属方ID")
+    ownership_id: str | None = Field(None, description="权属方ID（DEPRECATED）")
+    owner_party_id: str | None = Field(None, description="产权方主体ID")
     year_month: str = Field(..., description="年月，格式：YYYY-MM")
     due_date: date = Field(..., description="应缴日期")
     due_amount: Decimal = Field(..., ge=0, description="应收金额")
@@ -341,6 +371,16 @@ class RentLedgerBase(BaseModel):
                 {},
             )
         return v
+
+    @model_validator(mode="after")
+    def validate_owner_reference(self) -> "RentLedgerBase":
+        if not self.owner_party_id and not self.ownership_id:
+            raise PydanticCustomError(
+                "missing_owner_reference",
+                "owner_party_id 或 ownership_id 至少提供一个",
+                {"field": "owner_party_id"},
+            )
+        return self
 
 
 class RentLedgerCreate(RentLedgerBase):
@@ -389,18 +429,20 @@ class RentLedgerBatchUpdate(BaseModel):
 class RentStatisticsQuery(BaseModel):
     """租金统计查询参数"""
 
+    owner_party_ids: list[str] | None = Field(None, description="产权方主体ID列表")
     start_date: date | None = Field(None, description="开始日期")
     end_date: date | None = Field(None, description="结束日期")
-    ownership_ids: list[str] | None = Field(None, description="权属方ID列表")
+    ownership_ids: list[str] | None = Field(None, description="权属方ID列表（DEPRECATED）")
     asset_ids: list[str] | None = Field(None, description="资产ID列表")
     contract_status: ContractStatus | None = Field(None, description="合同状态")
 
-
 class OwnershipRentStatistics(BaseModel):
-    """权属方租金统计"""
+    """产权主体租金统计"""
 
-    ownership_id: str
-    ownership_name: str
+    owner_party_id: str
+    owner_party_name: str
+    ownership_id: str | None = Field(None, description="权属方ID（DEPRECATED）")
+    ownership_name: str | None = Field(None, description="权属方名称（DEPRECATED）")
     total_contracts: int
     active_contracts: int
     total_due_amount: Decimal
