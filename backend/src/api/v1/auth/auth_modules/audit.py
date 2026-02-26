@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .....database import get_async_db
-from .....middleware.auth import require_admin
+from .....middleware.auth import AuthzContext, require_admin, require_authz
 from .....schemas.auth import UserResponse
 from .....services.core.audit_service import AuditService
 
@@ -30,6 +30,9 @@ async def get_audit_statistics(
     db: AsyncSession = Depends(get_async_db),
     current_user: UserResponse = Depends(require_admin),
     audit_service: AuditService = Depends(get_audit_service),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="read", resource_type="operation_log")
+    ),
 ) -> dict[str, Any]:
     """
     获取审计日志统计（仅管理员）

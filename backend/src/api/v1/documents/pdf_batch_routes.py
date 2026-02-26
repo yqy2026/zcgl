@@ -25,7 +25,12 @@ from ....core.exception_handler import (
 )
 from ....core.response_handler import success_response
 from ....database import get_async_db
-from ....middleware.auth import get_current_active_user, require_admin
+from ....middleware.auth import (
+    AuthzContext,
+    get_current_active_user,
+    require_admin,
+    require_authz,
+)
 from ....models.auth import User
 from ....services.document.pdf_import_service import PDFImportService
 from ....services.document.processing_tracker import BatchStatusTracker
@@ -61,6 +66,24 @@ router = APIRouter(
     tags=["PDF批量导入"],
     dependencies=[Depends(get_current_active_user)],
 )
+_RENT_CONTRACT_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:rent_contract:create"
+_RENT_CONTRACT_CREATE_RESOURCE_CONTEXT: dict[str, str] = {
+    "party_id": _RENT_CONTRACT_CREATE_UNSCOPED_PARTY_ID,
+    "owner_party_id": _RENT_CONTRACT_CREATE_UNSCOPED_PARTY_ID,
+    "manager_party_id": _RENT_CONTRACT_CREATE_UNSCOPED_PARTY_ID,
+}
+_RENT_CONTRACT_UPDATE_UNSCOPED_PARTY_ID = "__unscoped__:rent_contract:update"
+_RENT_CONTRACT_UPDATE_RESOURCE_CONTEXT: dict[str, str] = {
+    "party_id": _RENT_CONTRACT_UPDATE_UNSCOPED_PARTY_ID,
+    "owner_party_id": _RENT_CONTRACT_UPDATE_UNSCOPED_PARTY_ID,
+    "manager_party_id": _RENT_CONTRACT_UPDATE_UNSCOPED_PARTY_ID,
+}
+_RENT_CONTRACT_DELETE_UNSCOPED_PARTY_ID = "__unscoped__:rent_contract:delete"
+_RENT_CONTRACT_DELETE_RESOURCE_CONTEXT: dict[str, str] = {
+    "party_id": _RENT_CONTRACT_DELETE_UNSCOPED_PARTY_ID,
+    "owner_party_id": _RENT_CONTRACT_DELETE_UNSCOPED_PARTY_ID,
+    "manager_party_id": _RENT_CONTRACT_DELETE_UNSCOPED_PARTY_ID,
+}
 
 
 # ============================================================================
@@ -168,10 +191,10 @@ async def _resolve_accessible_organization_ids(
 
     try:
         from ....services.organization_permission_service import (
-            OrganizationPermissionService,
+            OrganizationPermissionService,  # DEPRECATED
         )
 
-        org_service = OrganizationPermissionService(db)
+        org_service = OrganizationPermissionService(db)  # DEPRECATED
         org_ids = await org_service.get_user_accessible_organizations(current_user_id)
         return [
             org_id_text
@@ -212,6 +235,13 @@ async def batch_upload_pdfs(
     prefer_vision: Annotated[bool, Form()] = False,
     auto_confirm: Annotated[bool, Form()] = False,
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="create",
+            resource_type="rent_contract",
+            resource_context=_RENT_CONTRACT_CREATE_RESOURCE_CONTEXT,
+        )
+    ),
 ) -> JSONResponse:
     """
     批量上传 PDF 文件进行智能识别
@@ -404,6 +434,12 @@ async def get_batch_status(
     batch_id: str,
     db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="rent_contract",
+        )
+    ),
 ) -> JSONResponse:
     """
     查询批处理状态
@@ -496,6 +532,12 @@ async def get_batch_status(
 async def list_batches(
     db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="rent_contract",
+        )
+    ),
     status_filter: str | None = None,
     limit: int = 20,
 ) -> JSONResponse:
@@ -562,6 +604,13 @@ async def cancel_batch(
     batch_id: str,
     db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="rent_contract",
+            resource_context=_RENT_CONTRACT_UPDATE_RESOURCE_CONTEXT,
+        )
+    ),
 ) -> JSONResponse:
     """
     取消批处理任务
@@ -634,6 +683,13 @@ async def cancel_batch(
 def cleanup_completed_batches(
     older_than_hours: int = 24,
     current_user: User = Depends(require_admin),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="delete",
+            resource_type="rent_contract",
+            resource_context=_RENT_CONTRACT_DELETE_RESOURCE_CONTEXT,
+        )
+    ),
 ) -> JSONResponse:
     """
     清理已完成的批处理记录
@@ -777,12 +833,20 @@ async def _monitor_batch_progress(batch_id: str) -> None:
 
 
 @router.get("/health")
-def batch_health_check() -> JSONResponse:
+def batch_health_check(
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="rent_contract",
+        )
+    ),
+) -> JSONResponse:
     """
     批处理系统健康检查
 
     返回系统状态和配置信息
     """
+    _ = _authz_ctx
     tracker = _get_batch_tracker()
     stats = tracker.get_stats()
 

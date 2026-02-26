@@ -17,7 +17,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ....database import get_async_db
-from ....middleware.auth import get_current_active_user
+from ....middleware.auth import AuthzContext, get_current_active_user, require_authz
 from ....models.auth import User
 from ....schemas.dictionary import (
     DictionaryOptionResponse,
@@ -43,6 +43,14 @@ async def get_dictionary_options(
     dict_type: str = Path(..., description="字典类型"),
     is_active: bool = Query(True, description="是否只返回启用的选项"),
     db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="dictionary",
+            resource_id="{dict_type}",
+            deny_as_not_found=True,
+        )
+    ),
 ) -> list[DictionaryOptionResponse]:
     """
     获取字典选项（统一接口）
@@ -63,6 +71,13 @@ async def quick_create_dictionary(
     dictionary_data: SimpleDictionaryCreate = Body(...),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="create",
+            resource_type="dictionary",
+            resource_id="{dict_type}",
+        )
+    ),
 ) -> JSONResponse:
     """
     快速创建字典（兼容原系统字典功能）
@@ -85,7 +100,15 @@ async def quick_create_dictionary(
 
 @router.get("/types", response_model=list[str])
 @handle_api_errors
-async def get_dictionary_types(db: AsyncSession = Depends(get_async_db)) -> list[str]:
+async def get_dictionary_types(
+    db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="dictionary",
+        )
+    ),
+) -> list[str]:
     """
     获取所有字典类型列表
 
@@ -100,6 +123,12 @@ async def get_dictionary_types(db: AsyncSession = Depends(get_async_db)) -> list
 async def get_validation_statistics(
     enum_type: str | None = Query(None, description="枚举类型编码（可选）"),
     db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="dictionary",
+        )
+    ),
 ) -> JSONResponse:
     """
     获取枚举验证统计信息
@@ -153,6 +182,13 @@ async def add_dictionary_value(
     value_data: DictionaryValueCreate = Body(...),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="create",
+            resource_type="dictionary",
+            resource_id="{dict_type}",
+        )
+    ),
 ) -> JSONResponse:
     """
     为指定字典类型添加新的选项值
@@ -178,6 +214,13 @@ async def delete_dictionary_type(
     dict_type: str = Path(..., description="字典类型"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="delete",
+            resource_type="dictionary",
+            resource_id="{dict_type}",
+        )
+    ),
 ) -> JSONResponse:
     """
     删除字典类型及其所有值

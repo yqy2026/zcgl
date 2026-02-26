@@ -26,6 +26,7 @@ from .assets.property_certificate import router as property_certificate_router
 # 导入各个模块的路由 - Auth
 from .auth.admin import router as admin_router
 from .auth.auth import router as auth_router
+from .auth.data_policies import router as data_policies_router
 from .auth.organization import router as organization_router
 from .auth.roles import router as roles_router
 
@@ -94,6 +95,7 @@ api_router = APIRouter()
 
 # 包含各个模块的路由（使用版本化前缀，最终路径为 /api/v1/*）
 api_router.include_router(auth_router, prefix="/auth", tags=["用户认证"])
+api_router.include_router(data_policies_router, prefix="/auth", tags=["数据策略包"])
 api_router.include_router(roles_router, prefix="/roles", tags=["角色管理"])
 api_router.include_router(operation_logs_router, prefix="/logs", tags=["操作日志"])
 api_router.include_router(assets_router, prefix="/assets", tags=["资产管理"])

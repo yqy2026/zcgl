@@ -31,7 +31,7 @@ from ....core.config import settings
 from ....core.exception_handler import BaseBusinessError, InternalServerError
 from ....core.observability import send_security_alert
 from ....database import get_async_db
-from ....middleware.auth import get_current_active_user
+from ....middleware.auth import AuthzContext, get_current_active_user, require_authz
 from ....middleware.security_middleware import get_client_ip
 from ....schemas.auth import UserResponse
 from ....security.route_guards import debug_only, require_localhost
@@ -44,6 +44,18 @@ from ....services.system_settings import (
 # 创建系统设置路由器
 router = APIRouter()
 logger = logging.getLogger(__name__)
+_SYSTEM_SETTINGS_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:system_settings:create"
+_SYSTEM_SETTINGS_CREATE_RESOURCE_CONTEXT: dict[str, str] = {
+    "party_id": _SYSTEM_SETTINGS_CREATE_UNSCOPED_PARTY_ID,
+    "owner_party_id": _SYSTEM_SETTINGS_CREATE_UNSCOPED_PARTY_ID,
+    "manager_party_id": _SYSTEM_SETTINGS_CREATE_UNSCOPED_PARTY_ID,
+}
+_SYSTEM_SETTINGS_UPDATE_UNSCOPED_PARTY_ID = "__unscoped__:system_settings:update"
+_SYSTEM_SETTINGS_UPDATE_RESOURCE_CONTEXT: dict[str, str] = {
+    "party_id": _SYSTEM_SETTINGS_UPDATE_UNSCOPED_PARTY_ID,
+    "owner_party_id": _SYSTEM_SETTINGS_UPDATE_UNSCOPED_PARTY_ID,
+    "manager_party_id": _SYSTEM_SETTINGS_UPDATE_UNSCOPED_PARTY_ID,
+}
 
 
 def _resolve_system_settings_service(
@@ -396,6 +408,13 @@ if settings.ENVIRONMENT == "testing":
 async def test_security_alert(
     db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[UserResponse, Depends(get_current_active_user)],
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="system_settings",
+            resource_context=_SYSTEM_SETTINGS_UPDATE_RESOURCE_CONTEXT,
+        )
+    ),
 ) -> dict[str, Any]:
     """
     测试安全警报系统
@@ -436,6 +455,9 @@ async def get_security_events(
     skip: int = 0,
     page_size: int = 100,
     service: SystemSettingsService = Depends(get_system_settings_service),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="read", resource_type="system_settings")
+    ),
 ) -> dict[str, Any]:
     """
     获取安全事件日志
@@ -546,6 +568,9 @@ _system_settings = SystemSettings()
 async def get_system_settings(
     db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[UserResponse, Depends(get_current_active_user)],
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="read", resource_type="system_settings")
+    ),
 ) -> SystemSettingsResponse:
     """
     获取系统设置
@@ -582,6 +607,13 @@ async def update_system_settings(
     db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[UserResponse, Depends(get_current_active_user)],
     request: Request,
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="system_settings",
+            resource_context=_SYSTEM_SETTINGS_UPDATE_RESOURCE_CONTEXT,
+        )
+    ),
 ) -> SystemSettingsResponse:
     """
     更新系统设置
@@ -616,6 +648,9 @@ async def get_system_info(
     db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[UserResponse, Depends(get_current_active_user)],
     service: SystemSettingsService = Depends(get_system_settings_service),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="read", resource_type="system_settings")
+    ),
 ) -> SystemInfoResponse:
     """
     获取系统信息
@@ -652,6 +687,13 @@ async def backup_system(
     db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[UserResponse, Depends(get_current_active_user)],
     request: Request,
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="create",
+            resource_type="system_settings",
+            resource_context=_SYSTEM_SETTINGS_CREATE_RESOURCE_CONTEXT,
+        )
+    ),
 ) -> SystemBackupResponse:
     """
     备份系统数据
@@ -693,6 +735,13 @@ async def restore_system(
     db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[UserResponse, Depends(get_current_active_user)],
     request: Request,
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="system_settings",
+            resource_context=_SYSTEM_SETTINGS_UPDATE_RESOURCE_CONTEXT,
+        )
+    ),
 ) -> SystemRestoreResponse:
     """
     恢复系统数据

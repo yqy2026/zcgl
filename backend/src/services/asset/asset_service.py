@@ -16,13 +16,15 @@ from ...core.exception_handler import (
 )
 from ...crud.history import history_crud
 from ...crud.ownership import ownership
-from ...crud.query_builder import TenantFilter
+from ...crud.party import party_crud
+from ...crud.query_builder import PartyFilter
 from ...models.asset import Asset
 from ...models.asset_history import AssetHistory
 from ...models.auth import User
 from ...schemas.asset import AssetCreate, AssetUpdate
 from ...services.asset.asset_calculator import AssetCalculator
 from ...services.enum_validation_service import get_enum_validation_service_async
+from ...services.party_scope import resolve_user_party_filter
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +32,15 @@ logger = logging.getLogger(__name__)
 def _utcnow_naive() -> datetime:
     """Return UTC now as naive datetime to match current DB column types."""
     return datetime.now(UTC).replace(tzinfo=None)
+
+
+def _normalize_optional_str(value: Any) -> str | None:
+    if value is None:
+        return None
+    normalized = str(value).strip()
+    if normalized == "":
+        return None
+    return normalized
 
 
 def _normalize_bool_filter(
@@ -76,41 +87,28 @@ class AssetService:
             else _get_default_asset_crud()
         )
 
-    async def _resolve_tenant_filter(
+    async def _resolve_party_filter(
         self,
         *,
         current_user_id: str | None = None,
-        tenant_filter: TenantFilter | None = None,
-    ) -> TenantFilter | None:
-        if tenant_filter is not None:
-            return tenant_filter
-        if current_user_id is None or current_user_id.strip() == "":
-            return None
-
-        try:
-            from ..organization_permission_service import OrganizationPermissionService
-
-            org_service = OrganizationPermissionService(self.db)
-            org_ids = await org_service.get_user_accessible_organizations(
-                current_user_id
-            )
-            return TenantFilter(organization_ids=[str(org_id) for org_id in org_ids])
-        except Exception:
-            logger.exception(
-                "Failed to resolve tenant filter for user %s, fallback to fail-closed",
-                current_user_id,
-            )
-            return TenantFilter(organization_ids=[])
+        party_filter: PartyFilter | None = None,
+    ) -> PartyFilter | None:
+        return await resolve_user_party_filter(
+            self.db,
+            current_user_id=current_user_id,
+            party_filter=party_filter,
+            logger=logger,
+        )
 
     @staticmethod
-    def _is_fail_closed_tenant_filter(tenant_filter: TenantFilter | None) -> bool:
-        if tenant_filter is None:
+    def _is_fail_closed_party_filter(party_filter: PartyFilter | None) -> bool:
+        if party_filter is None:
             return False
         return (
             len(
                 [
                     org_id
-                    for org_id in tenant_filter.organization_ids
+                    for org_id in party_filter.party_ids
                     if str(org_id).strip() != ""
                 ]
             )
@@ -235,15 +233,15 @@ class AssetService:
         sort_field: str = "created_at",
         sort_order: str = "desc",
         include_relations: bool = False,
-        tenant_filter: TenantFilter | None = None,
+        party_filter: PartyFilter | None = None,
         current_user_id: str | None = None,
     ) -> tuple[list[Asset], int]:
         asset_crud = self.asset_crud
-        resolved_tenant_filter = await self._resolve_tenant_filter(
+        resolved_party_filter = await self._resolve_party_filter(
             current_user_id=current_user_id,
-            tenant_filter=tenant_filter,
+            party_filter=party_filter,
         )
-        if self._is_fail_closed_tenant_filter(resolved_tenant_filter):
+        if self._is_fail_closed_party_filter(resolved_party_filter):
             return ([], 0)
         query_kwargs: dict[str, Any] = {
             "skip": skip,
@@ -254,8 +252,8 @@ class AssetService:
             "sort_order": sort_order,
             "include_relations": include_relations,
         }
-        if resolved_tenant_filter is not None:
-            query_kwargs["tenant_filter"] = resolved_tenant_filter
+        if resolved_party_filter is not None:
+            query_kwargs["party_filter"] = resolved_party_filter
         result = cast(
             tuple[list[Asset], int],
             await asset_crud.get_multi_with_search_async(
@@ -288,15 +286,15 @@ class AssetService:
         asset_id: str,
         *,
         use_cache: bool = True,
-        tenant_filter: TenantFilter | None = None,
+        party_filter: PartyFilter | None = None,
         current_user_id: str | None = None,
     ) -> Asset:
         asset_crud = self.asset_crud
-        resolved_tenant_filter = await self._resolve_tenant_filter(
+        resolved_party_filter = await self._resolve_party_filter(
             current_user_id=current_user_id,
-            tenant_filter=tenant_filter,
+            party_filter=party_filter,
         )
-        if self._is_fail_closed_tenant_filter(resolved_tenant_filter):
+        if self._is_fail_closed_party_filter(resolved_party_filter):
             raise ResourceNotFoundError("Asset", asset_id)
 
         query_kwargs: dict[str, Any] = {
@@ -304,8 +302,8 @@ class AssetService:
             "id": asset_id,
             "use_cache": use_cache,
         }
-        if resolved_tenant_filter is not None:
-            query_kwargs["tenant_filter"] = resolved_tenant_filter
+        if resolved_party_filter is not None:
+            query_kwargs["party_filter"] = resolved_party_filter
         asset = cast(
             Asset | None,
             await asset_crud.get_async(**query_kwargs),
@@ -318,12 +316,12 @@ class AssetService:
         self,
         asset_id: str,
         *,
-        tenant_filter: TenantFilter | None = None,
+        party_filter: PartyFilter | None = None,
         current_user_id: str | None = None,
     ) -> list[AssetHistory]:
         await self.get_asset(
             asset_id,
-            tenant_filter=tenant_filter,
+            party_filter=party_filter,
             current_user_id=current_user_id,
         )
         history_records = await history_crud.get_by_asset_id_async(
@@ -336,19 +334,19 @@ class AssetService:
         self,
         field_name: str,
         *,
-        tenant_filter: TenantFilter | None = None,
+        party_filter: PartyFilter | None = None,
         current_user_id: str | None = None,
     ) -> list[str]:
         asset_crud = self.asset_crud
-        resolved_tenant_filter = await self._resolve_tenant_filter(
+        resolved_party_filter = await self._resolve_party_filter(
             current_user_id=current_user_id,
-            tenant_filter=tenant_filter,
+            party_filter=party_filter,
         )
-        if self._is_fail_closed_tenant_filter(resolved_tenant_filter):
+        if self._is_fail_closed_party_filter(resolved_party_filter):
             return []
         query_kwargs: dict[str, Any] = {}
-        if resolved_tenant_filter is not None:
-            query_kwargs["tenant_filter"] = resolved_tenant_filter
+        if resolved_party_filter is not None:
+            query_kwargs["party_filter"] = resolved_party_filter
         values = await asset_crud.get_distinct_field_values(
             self.db, field_name, **query_kwargs
         )
@@ -359,6 +357,31 @@ class AssetService:
         return await ownership.get_names_by_status_async(
             self.db, data_status=DataStatusValues.ASSET_NORMAL
         )
+
+    async def resolve_owner_party_scope_by_ownership_id_async(
+        self,
+        *,
+        ownership_id: str,
+    ) -> str | None:
+        normalized_ownership_id = _normalize_optional_str(ownership_id)
+        if normalized_ownership_id is None:
+            return None
+
+        ownership_obj = await ownership.get(self.db, id=normalized_ownership_id)
+        ownership_code = _normalize_optional_str(
+            getattr(ownership_obj, "code", None) if ownership_obj is not None else None
+        )
+        ownership_name = _normalize_optional_str(
+            getattr(ownership_obj, "name", None) if ownership_obj is not None else None
+        )
+
+        resolved_party_id = await party_crud.resolve_legal_entity_party_id(
+            self.db,
+            ownership_id=normalized_ownership_id,
+            ownership_code=ownership_code,
+            ownership_name=ownership_name,
+        )
+        return _normalize_optional_str(resolved_party_id)
 
     async def create_asset(
         self,
@@ -377,8 +400,8 @@ class AssetService:
             or getattr(current_user, "id", None)
             or "system"
         )
-        default_org_id = getattr(current_user, "default_organization_id", None)
-        organization_id = (
+        default_org_id = getattr(current_user, "default_organization_id", None)  # DEPRECATED legacy org scope fallback
+        organization_id = (  # DEPRECATED alias
             str(default_org_id)
             if default_org_id is not None and str(default_org_id).strip() != ""
             else None
@@ -427,7 +450,7 @@ class AssetService:
                     obj_in=calculated_asset_in,
                     commit=False,
                     operator=str(operator) if operator is not None else None,
-                    organization_id=organization_id,
+                    organization_id=organization_id,  # DEPRECATED alias
                     ip_address=ip_address,
                     user_agent=user_agent,
                     session_id=session_id,

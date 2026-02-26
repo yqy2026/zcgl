@@ -19,7 +19,7 @@ from ...core.exception_handler import (
     ResourceNotFoundError,
 )
 from ...crud.auth import UserCRUD
-from ...crud.query_builder import TenantFilter
+from ...crud.query_builder import PartyFilter
 from ...crud.rbac import (
     permission_audit_log_crud,
     permission_crud,
@@ -28,20 +28,26 @@ from ...crud.rbac import (
     role_crud,
     user_role_assignment_crud,
 )
-from ...models.rbac import Permission, PermissionGrant, Role, UserRoleAssignment
+from ...models.rbac import (  # DEPRECATED
+    Permission,
+    PermissionGrant,  # DEPRECATED
+    Role,
+    UserRoleAssignment,
+)
 from ...schemas.rbac import (
     PermissionCheckRequest,
     PermissionCheckResponse,
     PermissionCreate,
-    PermissionGrantUpdate,
+    PermissionGrantUpdate,  # DEPRECATED
     PermissionResponse,
-    ResourcePermissionResponse,
+    ResourcePermissionResponse,  # DEPRECATED
     RoleCreate,
     RoleResponse,
     RoleUpdate,
     UserPermissionSummary,
     UserRoleAssignmentCreate,
 )
+from ...services.party_scope import resolve_user_party_filter
 from .permission_cache_service import get_permission_cache_service
 
 # Global admin permission used for full access
@@ -99,18 +105,18 @@ class RBACService:
         role_id: str,
         role_data: RoleUpdate,
         updated_by: str,
-        tenant_filter: TenantFilter | None = None,
+        party_filter: PartyFilter | None = None,
         current_user_id: str | None = None,
     ) -> Role:
         """更新角色"""
-        resolved_tenant_filter = await self._resolve_tenant_filter(
+        resolved_party_filter = await self._resolve_party_filter(
             current_user_id=current_user_id,
-            tenant_filter=tenant_filter,
+            party_filter=party_filter,
         )
         role = await role_crud.get(
             self.db,
             id=role_id,
-            tenant_filter=resolved_tenant_filter,
+            party_filter=resolved_party_filter,
         )
         if not role:
             raise ResourceNotFoundError("角色", role_id)
@@ -140,7 +146,7 @@ class RBACService:
                 role_id=str(role.id),
                 permission_ids=role_data.permission_ids,
                 updated_by=updated_by,
-                tenant_filter=resolved_tenant_filter,
+                party_filter=resolved_party_filter,
                 current_user_id=current_user_id,
             )
 
@@ -150,18 +156,18 @@ class RBACService:
         self,
         role_id: str,
         deleted_by: str,
-        tenant_filter: TenantFilter | None = None,
+        party_filter: PartyFilter | None = None,
         current_user_id: str | None = None,
     ) -> bool:
         """删除角色"""
-        resolved_tenant_filter = await self._resolve_tenant_filter(
+        resolved_party_filter = await self._resolve_party_filter(
             current_user_id=current_user_id,
-            tenant_filter=tenant_filter,
+            party_filter=party_filter,
         )
         role = await role_crud.get(
             self.db,
             id=role_id,
-            tenant_filter=resolved_tenant_filter,
+            party_filter=resolved_party_filter,
         )
         if not role:
             return False
@@ -208,18 +214,18 @@ class RBACService:
         role_id: str,
         permission_ids: list[str],
         updated_by: str,
-        tenant_filter: TenantFilter | None = None,
+        party_filter: PartyFilter | None = None,
         current_user_id: str | None = None,
     ) -> None:
         """更新角色权限"""
-        resolved_tenant_filter = await self._resolve_tenant_filter(
+        resolved_party_filter = await self._resolve_party_filter(
             current_user_id=current_user_id,
-            tenant_filter=tenant_filter,
+            party_filter=party_filter,
         )
         role = await role_crud.get(
             self.db,
             id=role_id,
-            tenant_filter=resolved_tenant_filter,
+            party_filter=resolved_party_filter,
         )
         if not role:
             raise ResourceNotFoundError("角色", role_id)
@@ -233,18 +239,18 @@ class RBACService:
     async def get_role(
         self,
         role_id: str,
-        tenant_filter: TenantFilter | None = None,
+        party_filter: PartyFilter | None = None,
         current_user_id: str | None = None,
     ) -> Role | None:
         """获取角色详情"""
-        resolved_tenant_filter = await self._resolve_tenant_filter(
+        resolved_party_filter = await self._resolve_party_filter(
             current_user_id=current_user_id,
-            tenant_filter=tenant_filter,
+            party_filter=party_filter,
         )
         return await role_crud.get(
             self.db,
             id=role_id,
-            tenant_filter=resolved_tenant_filter,
+            party_filter=resolved_party_filter,
         )
 
     async def get_roles(
@@ -254,14 +260,15 @@ class RBACService:
         search: str | None = None,
         category: str | None = None,
         is_active: bool | None = None,
-        organization_id: str | None = None,
-        tenant_filter: TenantFilter | None = None,
+        party_id: str | None = None,
+        organization_id: str | None = None,  # DEPRECATED alias
+        party_filter: PartyFilter | None = None,
         current_user_id: str | None = None,
     ) -> tuple[list[Role], int]:
         """获取角色列表"""
-        resolved_tenant_filter = await self._resolve_tenant_filter(
+        resolved_party_filter = await self._resolve_party_filter(
             current_user_id=current_user_id,
-            tenant_filter=tenant_filter,
+            party_filter=party_filter,
         )
         return await role_crud.get_multi_with_filters(
             db=self.db,
@@ -270,8 +277,9 @@ class RBACService:
             search=search,
             category=category,
             is_active=is_active,
-            organization_id=organization_id,
-            tenant_filter=resolved_tenant_filter,
+            party_id=party_id,
+            organization_id=organization_id,  # DEPRECATED alias
+            party_filter=resolved_party_filter,
         )
 
     async def get_role_users(
@@ -280,12 +288,12 @@ class RBACService:
         *,
         skip: int = 0,
         limit: int = 100,
-        tenant_filter: TenantFilter | None = None,
+        party_filter: PartyFilter | None = None,
         current_user_id: str | None = None,
     ) -> tuple[list[Any], int]:
         role = await self.get_role(
             role_id,
-            tenant_filter=tenant_filter,
+            party_filter=party_filter,
             current_user_id=current_user_id,
         )
         if not role:
@@ -343,13 +351,13 @@ class RBACService:
         resource: str | None = None,
         action: str | None = None,
         is_system_permission: bool | None = None,
-        tenant_filter: TenantFilter | None = None,
+        party_filter: PartyFilter | None = None,
         current_user_id: str | None = None,
     ) -> tuple[list[Permission], int]:
         """获取权限列表"""
-        resolved_tenant_filter = await self._resolve_tenant_filter(
+        resolved_party_filter = await self._resolve_party_filter(
             current_user_id=current_user_id,
-            tenant_filter=tenant_filter,
+            party_filter=party_filter,
         )
         return await permission_crud.get_multi_with_count_async(
             self.db,
@@ -359,34 +367,21 @@ class RBACService:
             resource=resource,
             action=action,
             is_system_permission=is_system_permission,
-            tenant_filter=resolved_tenant_filter,
+            party_filter=resolved_party_filter,
         )
 
-    async def _resolve_tenant_filter(
+    async def _resolve_party_filter(
         self,
         *,
         current_user_id: str | None = None,
-        tenant_filter: TenantFilter | None = None,
-    ) -> TenantFilter | None:
-        if tenant_filter is not None:
-            return tenant_filter
-        if current_user_id is None or current_user_id.strip() == "":
-            return None
-
-        try:
-            from ..organization_permission_service import OrganizationPermissionService
-
-            org_service = OrganizationPermissionService(self.db)
-            org_ids = await org_service.get_user_accessible_organizations(
-                current_user_id
-            )
-            return TenantFilter(organization_ids=[str(org_id) for org_id in org_ids])
-        except Exception:
-            logger.exception(
-                "Failed to resolve tenant filter for user %s, fallback to fail-closed",
-                current_user_id,
-            )
-            return TenantFilter(organization_ids=[])
+        party_filter: PartyFilter | None = None,
+    ) -> PartyFilter | None:
+        return await resolve_user_party_filter(
+            self.db,
+            current_user_id=current_user_id,
+            party_filter=party_filter,
+            logger=logger,
+        )
 
     # ==================== 用户角色分配 ====================
 
@@ -601,7 +596,7 @@ class RBACService:
             for permission in role_permissions
         ]
         resource_permissions_response = [
-            ResourcePermissionResponse.model_validate(resource_permission)
+            ResourcePermissionResponse.model_validate(resource_permission)  # DEPRECATED
             for resource_permission in resource_permissions
         ]
 
@@ -638,6 +633,20 @@ class RBACService:
         except Exception:
             logger.warning(
                 "Failed to invalidate organization access cache for user %s",
+                user_id,
+                exc_info=True,
+            )
+
+        try:
+            from ..authz import AUTHZ_USER_ROLE_UPDATED, authz_event_bus
+
+            authz_event_bus.publish_invalidation(
+                event_type=AUTHZ_USER_ROLE_UPDATED,
+                payload={"user_id": user_id},
+            )
+        except Exception:
+            logger.warning(
+                "Failed to publish authz user-role invalidation event for user %s",
                 user_id,
                 exc_info=True,
             )
@@ -782,7 +791,7 @@ class RBACService:
                 reason="统一授权条件不满足",
             )
 
-        def _grant_sort_key(grant: PermissionGrant) -> tuple[int, float]:
+        def _grant_sort_key(grant: PermissionGrant) -> tuple[int, float]:  # DEPRECATED
             created_at = getattr(grant, "created_at", None)
             created_at_ts = (
                 created_at.timestamp()
@@ -830,7 +839,7 @@ class RBACService:
 
     async def _get_matching_permission_grants(
         self, user_id: str, permission_request: PermissionCheckRequest
-    ) -> list[PermissionGrant]:
+    ) -> list[PermissionGrant]:  # DEPRECATED
         return await permission_grant_crud.get_matching_grants_async(
             self.db,
             user_id=user_id,
@@ -840,7 +849,7 @@ class RBACService:
         )
 
     def _scope_matches(
-        self, grant: PermissionGrant, permission_request: PermissionCheckRequest
+        self, grant: PermissionGrant, permission_request: PermissionCheckRequest  # DEPRECATED
     ) -> bool:
         scope = (grant.scope or "global").lower()
         if scope == "global":
@@ -858,7 +867,8 @@ class RBACService:
         context_scope_keys = [
             f"{scope}_id",
             "scope_id",
-            "organization_id",
+            "organization_id",  # DEPRECATED context key
+            "party_id",
             "project_id",
             "asset_id",
         ]
@@ -869,7 +879,7 @@ class RBACService:
         return False
 
     def _conditions_match(
-        self, grant: PermissionGrant, permission_request: PermissionCheckRequest
+        self, grant: PermissionGrant, permission_request: PermissionCheckRequest  # DEPRECATED
     ) -> bool:
         if not grant.conditions:
             return True
@@ -905,7 +915,7 @@ class RBACService:
         source_type: str | None = None,
         source_id: str | None = None,
         reason: str | None = None,
-    ) -> PermissionGrant:
+    ) -> PermissionGrant:  # DEPRECATED
         """创建统一授权记录"""
         user = await self.user_crud.get_async(self.db, user_id)
         if not user:
@@ -969,7 +979,7 @@ class RBACService:
         )
         return grant
 
-    async def get_permission_grant(self, grant_id: str) -> PermissionGrant | None:
+    async def get_permission_grant(self, grant_id: str) -> PermissionGrant | None:  # DEPRECATED
         """获取统一授权记录详情"""
         return await permission_grant_crud.get(self.db, id=grant_id)
 
@@ -984,7 +994,7 @@ class RBACService:
         effect: str | None = None,
         scope: str | None = None,
         is_active: bool | None = None,
-    ) -> tuple[list[PermissionGrant], int]:
+    ) -> tuple[list[PermissionGrant], int]:  # DEPRECATED
         """分页查询统一授权记录"""
         return await permission_grant_crud.list_with_filters_async(
             self.db,
@@ -999,8 +1009,8 @@ class RBACService:
         )
 
     async def update_permission_grant(
-        self, grant_id: str, grant_data: PermissionGrantUpdate, updated_by: str
-    ) -> PermissionGrant:
+        self, grant_id: str, grant_data: PermissionGrantUpdate, updated_by: str  # DEPRECATED
+    ) -> PermissionGrant:  # DEPRECATED
         """更新统一授权记录"""
         grant = await permission_grant_crud.get(self.db, id=grant_id)
         if not grant:
@@ -1324,15 +1334,15 @@ class RBACService:
         response = await self.check_permission(user_id, permission_request)
         return response.has_permission
 
-    async def check_organization_access(
-        self, user_id: str, organization_id: str
+    async def check_organization_access(  # DEPRECATED compatibility API
+        self, user_id: str, organization_id: str  # DEPRECATED alias
     ) -> bool:
         """
         检查组织访问权限 - 适配器方法供装饰器使用
 
         Args:
             user_id: 用户ID
-            organization_id: 组织ID
+            organization_id: 组织ID（DEPRECATED）
 
         Returns:
             bool: 是否有组织访问权限
@@ -1342,7 +1352,7 @@ class RBACService:
         permission_request = PermissionCheckRequest(
             resource="organization",
             action="view",
-            resource_id=organization_id,
+            resource_id=organization_id,  # DEPRECATED alias
             context=None,
         )
 

@@ -9,22 +9,83 @@ import {
   SYSTEM_ROUTES,
   BASE_PATHS,
   PROPERTY_CERTIFICATE_ROUTES,
+  ROUTE_CONFIG,
+  type RouteConfig,
 } from '@/constants/routes';
+
+export interface ProtectedRouteItem {
+  path: string;
+  element: React.ComponentType;
+  permissions?: Array<{ action: string; resource: string }>;
+  permissionMode?: 'any' | 'all';
+  adminOnly?: boolean;
+  capabilityGuardBypass?: boolean;
+  fallback?: React.ReactNode;
+}
+
+type RoutePermission = { action: string; resource: string };
+
+const collectPermissionsByPath = (routes: RouteConfig[]): Map<string, RoutePermission[]> => {
+  const permissionsByPath = new Map<string, RoutePermission[]>();
+
+  const walk = (items: RouteConfig[]): void => {
+    for (const route of items) {
+      if (route.permissions != null && route.permissions.length > 0) {
+        permissionsByPath.set(
+          route.path,
+          route.permissions.map(permission => ({
+            action: permission.action,
+            resource: permission.resource,
+          }))
+        );
+      }
+
+      if (route.children != null && route.children.length > 0) {
+        walk(route.children);
+      }
+    }
+  };
+
+  walk(routes);
+  return permissionsByPath;
+};
+
+const ROUTE_PERMISSIONS_BY_PATH = collectPermissionsByPath(ROUTE_CONFIG);
+
+const withDerivedAuthzMetadata = (routes: ProtectedRouteItem[]): ProtectedRouteItem[] => {
+  return routes.map(route => {
+    if (route.permissions != null || route.adminOnly === true) {
+      return route;
+    }
+
+    const derivedPermissions = ROUTE_PERMISSIONS_BY_PATH.get(route.path);
+    if (derivedPermissions == null || derivedPermissions.length === 0) {
+      return route;
+    }
+
+    return {
+      ...route,
+      permissions: derivedPermissions,
+    };
+  });
+};
 
 /**
  * 受保护的路由配置
  * 这些路由需要用户认证后才能访问,并会被 AppLayout 包装
  * 注意: 登录页面路由不应该在此定义,应该在 App.tsx 中作为公共路由处理
  */
-export const protectedRoutes = [
+const baseProtectedRoutes: ProtectedRouteItem[] = [
   // 仪表板 - 首页
   {
     path: BASE_PATHS.DASHBOARD,
     element: React.lazy(() => import('../pages/Dashboard/DashboardPage')),
+    capabilityGuardBypass: true,
   },
   {
     path: BASE_PATHS.ASSETS,
     element: () => <Navigate to={ASSET_ROUTES.LIST} replace />,
+    capabilityGuardBypass: true,
   },
 
   // 资产管理模块 - 注意路由顺序，更具体的路径要在前面
@@ -136,6 +197,7 @@ export const protectedRoutes = [
   {
     path: PROFILE_ROUTES.PROFILE,
     element: React.lazy(() => import('../pages/ProfilePage')),
+    capabilityGuardBypass: true,
   },
 
   // 系统管理
@@ -168,3 +230,5 @@ export const protectedRoutes = [
     element: React.lazy(() => import('../pages/System/SystemSettingsPage')),
   },
 ];
+
+export const protectedRoutes: ProtectedRouteItem[] = withDerivedAuthzMetadata(baseProtectedRoutes);

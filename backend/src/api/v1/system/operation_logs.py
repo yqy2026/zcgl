@@ -14,7 +14,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
 from ....database import get_async_db
-from ....middleware.auth import get_current_active_user, require_admin
+from ....middleware.auth import (
+    AuthzContext,
+    get_current_active_user,
+    require_admin,
+    require_authz,
+)
 from ....models.auth import User
 from ....services.operation_log.service import (
     OperationLogService,
@@ -23,6 +28,12 @@ from ....services.operation_log.service import (
 from ..utils import handle_api_errors
 
 router = APIRouter(tags=["操作日志"])
+_OPERATION_LOG_DELETE_UNSCOPED_PARTY_ID = "__unscoped__:operation_log:delete"
+_OPERATION_LOG_DELETE_RESOURCE_CONTEXT: dict[str, str] = {
+    "party_id": _OPERATION_LOG_DELETE_UNSCOPED_PARTY_ID,
+    "owner_party_id": _OPERATION_LOG_DELETE_UNSCOPED_PARTY_ID,
+    "manager_party_id": _OPERATION_LOG_DELETE_UNSCOPED_PARTY_ID,
+}
 
 # ==================== Schema定义 ====================
 
@@ -101,6 +112,12 @@ async def get_operation_logs(
     end_date: str | None = Query(None, description="结束日期(YYYY-MM-DD)"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="operation_log",
+        )
+    ),
     service: OperationLogService = Depends(get_operation_log_service),
 ) -> JSONResponse:
     """
@@ -148,6 +165,14 @@ async def get_operation_log(
     log_id: str,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="operation_log",
+            resource_id="{log_id}",
+            deny_as_not_found=True,
+        )
+    ),
     service: OperationLogService = Depends(get_operation_log_service),
 ) -> OperationLogResponse:
     """获取单条操作日志详情"""
@@ -171,6 +196,12 @@ async def get_user_operation_statistics(
     days: int = Query(30, ge=1, le=365, description="统计天数"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="operation_log",
+        )
+    ),
     service: OperationLogService = Depends(get_operation_log_service),
 ) -> OperationLogStatisticsResponse:
     """获取指定用户的操作统计"""
@@ -199,6 +230,12 @@ async def get_module_operation_statistics(
     days: int = Query(30, ge=1, le=365, description="统计天数"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="operation_log",
+        )
+    ),
     service: OperationLogService = Depends(get_operation_log_service),
 ) -> OperationLogStatisticsResponse:
     """获取指定模块的操作统计"""
@@ -226,6 +263,12 @@ async def get_daily_operation_statistics(
     days: int = Query(30, ge=1, le=365, description="统计天数"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="operation_log",
+        )
+    ),
     service: OperationLogService = Depends(get_operation_log_service),
 ) -> OperationLogStatisticsResponse:
     """获取每日操作统计"""
@@ -249,6 +292,12 @@ async def get_error_operation_statistics(
     days: int = Query(30, ge=1, le=365, description="统计天数"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_admin),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="operation_log",
+        )
+    ),
     service: OperationLogService = Depends(get_operation_log_service),
 ) -> OperationLogStatisticsResponse:
     """获取错误操作统计（仅管理员）"""
@@ -270,6 +319,12 @@ async def get_operation_log_summary(
     days: int = Query(30, ge=1, le=365, description="统计天数"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="operation_log",
+        )
+    ),
     service: OperationLogService = Depends(get_operation_log_service),
 ) -> dict[str, Any]:
     """获取操作日志汇总统计"""
@@ -293,6 +348,12 @@ async def export_operation_logs(
     format: str = Query("excel", description="导出格式: excel 或 csv"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_admin),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="operation_log",
+        )
+    ),
     service: OperationLogService = Depends(get_operation_log_service),
 ) -> dict[str, Any]:
     """
@@ -327,6 +388,13 @@ async def cleanup_old_logs(
     days: int = Query(90, ge=1, le=365, description="保留天数"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_admin),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="delete",
+            resource_type="operation_log",
+            resource_context=_OPERATION_LOG_DELETE_RESOURCE_CONTEXT,
+        )
+    ),
     service: OperationLogService = Depends(get_operation_log_service),
 ) -> dict[str, Any]:
     """

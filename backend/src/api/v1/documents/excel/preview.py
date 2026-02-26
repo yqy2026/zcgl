@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.constants.file_size_constants import DEFAULT_MAX_FILE_SIZE
 from src.core.exception_handler import BusinessValidationError
 from src.database import get_async_db
-from src.middleware.auth import get_current_active_user
+from src.middleware.auth import AuthzContext, get_current_active_user, require_authz
 from src.models.auth import User
 from src.schemas.excel_advanced import (
     ExcelFieldMapping,
@@ -24,6 +24,12 @@ from src.security.security import security_middleware
 from src.services.excel import ExcelPreviewService
 
 router = APIRouter()
+_ASSET_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:asset:create"
+_ASSET_CREATE_RESOURCE_CONTEXT: dict[str, str] = {
+    "party_id": _ASSET_CREATE_UNSCOPED_PARTY_ID,
+    "owner_party_id": _ASSET_CREATE_UNSCOPED_PARTY_ID,
+    "manager_party_id": _ASSET_CREATE_UNSCOPED_PARTY_ID,
+}
 
 
 @router.post(
@@ -34,6 +40,13 @@ async def preview_excel_advanced(
     request: ExcelPreviewRequest = Body(...),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="create",
+            resource_type="asset",
+            resource_context=_ASSET_CREATE_RESOURCE_CONTEXT,
+        )
+    ),
 ) -> ExcelPreviewResponse:
     """
     高级Excel文件预览，支持字段映射检测
@@ -90,6 +103,13 @@ async def preview_excel(
     file: UploadFile = File(...),
     max_rows: int = Query(10, ge=1, le=100, description="预览行数"),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="create",
+            resource_type="asset",
+            resource_context=_ASSET_CREATE_RESOURCE_CONTEXT,
+        )
+    ),
 ) -> dict[str, Any]:
     """
     预览Excel文件内容，用于导入前确认

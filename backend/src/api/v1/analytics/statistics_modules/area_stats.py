@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.constants.cache_constants import CACHE_TTL_SHORT_SECONDS
 from src.database import get_async_db
-from src.middleware.auth import get_current_active_user
+from src.middleware.auth import AuthzContext, get_current_active_user, require_authz
 from src.models.auth import User
 from src.schemas.statistics import AreaSummaryResponse
 from src.services.analytics.area_stats_service import (
@@ -46,6 +46,12 @@ async def get_area_summary(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     service: AreaStatsService = Depends(get_area_stats_service),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="analytics",
+        )
+    ),
 ) -> AreaSummaryResponse:
     """
     获取面积汇总统计
@@ -80,6 +86,12 @@ async def get_area_statistics(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     service: AreaStatsService = Depends(get_area_stats_service),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="analytics",
+        )
+    ),
 ) -> dict[str, Any]:
     """
     获取面积统计数据（支持多维度筛选）

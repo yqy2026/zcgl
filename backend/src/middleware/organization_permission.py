@@ -14,7 +14,9 @@ from ..core.exception_handler import bad_request, forbidden
 from ..database import get_async_db
 from ..models.auth import User
 from ..security.audit_logger import SecurityEventLogger
-from ..services.organization_permission_service import OrganizationPermissionService
+from ..services.organization_permission_service import (
+    OrganizationPermissionService,  # DEPRECATED
+)
 from ..services.permission.rbac_service import RBACService
 from .auth import get_current_active_user
 
@@ -41,7 +43,7 @@ def require_organization_access(
         if organization_id is None:
             raise bad_request("组织ID不能为空")
 
-        org_service = OrganizationPermissionService(db)
+        org_service = OrganizationPermissionService(db)  # DEPRECATED
         if not await org_service.check_organization_access(
             current_user.id, organization_id
         ):
@@ -101,7 +103,7 @@ def require_organization_management(
         if organization_id is None:
             raise bad_request("组织ID不能为空")
 
-        org_service = OrganizationPermissionService(db)
+        org_service = OrganizationPermissionService(db)  # DEPRECATED
         if not await org_service.can_manage_organization(
             current_user.id, organization_id
         ):
@@ -148,7 +150,7 @@ class OrganizationDataFilter:
     def __init__(self, db: AsyncSession, user_id: str):
         self.db = db
         self.user_id = user_id
-        self.org_service = OrganizationPermissionService(db)
+        self.org_service = OrganizationPermissionService(db)  # DEPRECATED
 
     async def filter_assets_query(self, query: Any) -> Any:
         """过滤资产查询"""
@@ -206,7 +208,7 @@ async def get_accessible_organizations(
     """
     获取用户可访问的组织列表
     """
-    org_service = OrganizationPermissionService(db)
+    org_service = OrganizationPermissionService(db)  # DEPRECATED
     result = await org_service.get_user_accessible_organizations_with_details(
         current_user.id
     )
@@ -221,7 +223,7 @@ async def get_user_organization_role(
     """
     获取用户在组织中的角色
     """
-    org_service = OrganizationPermissionService(db)
+    org_service = OrganizationPermissionService(db)  # DEPRECATED
     result = await org_service.get_user_organization_role(current_user.id)
     # The result might already be str | None, but we need to ensure it matches the return type
     if result is None or isinstance(result, str):
@@ -232,7 +234,7 @@ async def get_user_organization_role(
 # 导入必要的依赖已在顶部完成
 
 
-class OrganizationPermissionChecker:
+class OrganizationPermissionChecker:  # DEPRECATED
     """
     组织权限检查器
     """
@@ -262,7 +264,7 @@ class OrganizationPermissionChecker:
             if organization_id is None:
                 raise bad_request("组织ID不能为空")
 
-            org_service = OrganizationPermissionService(db)
+            org_service = OrganizationPermissionService(db)  # DEPRECATED
             if not await org_service.check_organization_access(
                 current_user.id, organization_id
             ):
@@ -293,7 +295,7 @@ class OrganizationPermissionChecker:
                 raise forbidden("无权访问该组织的数据")
 
         # Check if user has any organization access permissions
-        org_service = OrganizationPermissionService(db)
+        org_service = OrganizationPermissionService(db)  # DEPRECATED
         accessible_orgs = await org_service.get_user_accessible_organizations(
             current_user.id
         )
@@ -358,11 +360,11 @@ class OrganizationPermissionChecker:
 
 def require_organization_permission(
     required_permission: str, organization_id_param: str | None = None
-) -> OrganizationPermissionChecker:
+) -> OrganizationPermissionChecker:  # DEPRECATED
     """
     组织权限装饰器工厂函数
     """
-    return OrganizationPermissionChecker(required_permission, organization_id_param)
+    return OrganizationPermissionChecker(required_permission, organization_id_param)  # DEPRECATED
 
 
 # 从现有中间件导入需要的函数已在顶部完成

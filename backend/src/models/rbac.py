@@ -23,6 +23,7 @@ from ..database import Base
 
 if TYPE_CHECKING:
     from .organization import Organization
+    from .party import Party
     from .user import User
 
 # 角色权限关联表
@@ -70,15 +71,26 @@ class Role(Base):
     )
 
     # 组织关联
-    organization_id: Mapped[str | None] = mapped_column(
-        String, ForeignKey("organizations.id"), comment="所属组织ID"
+    organization_id: Mapped[str | None] = mapped_column(  # DEPRECATED legacy column
+        String,
+        ForeignKey("organizations.id"),
+        comment="所属组织ID（DEPRECATED）",
+        info={"deprecated": True},
+    )
+    party_id: Mapped[str | None] = mapped_column(
+        String,
+        ForeignKey("parties.id"),
+        index=True,
+        comment="所属主体ID",
     )
 
     # 权限范围
     scope: Mapped[str] = mapped_column(
-        String(50), default="global", comment="权限范围(global/organization/department)"
+        String(50),
+        default="global",
+        comment="权限范围(global/party/party_subtree)",
     )
-    scope_id: Mapped[str | None] = mapped_column(String, comment="范围ID")
+    scope_id: Mapped[str | None] = mapped_column(String, comment="范围ID（parties.id）")
 
     # 审计信息
     created_at: Mapped[datetime] = mapped_column(
@@ -96,6 +108,7 @@ class Role(Base):
 
     # 关系
     organization: Mapped["Organization"] = relationship("Organization")
+    party: Mapped["Party | None"] = relationship("Party")
     permissions: Mapped[list["Permission"]] = relationship(
         "Permission", secondary=role_permissions, back_populates="roles"
     )
@@ -166,8 +179,8 @@ class Permission(Base):
     roles: Mapped[list["Role"]] = relationship(
         "Role", secondary=role_permissions, back_populates="permissions"
     )
-    permission_grants: Mapped[list["PermissionGrant"]] = relationship(
-        "PermissionGrant", back_populates="permission"
+    permission_grants: Mapped[list["PermissionGrant"]] = relationship(  # DEPRECATED
+        "PermissionGrant", back_populates="permission"  # DEPRECATED
     )
 
     @property
@@ -234,8 +247,8 @@ class UserRoleAssignment(Base):
         return f"<UserRoleAssignment(user_id={self.user_id}, role_id={self.role_id}, active={self.is_active})>"  # pragma: no cover
 
 
-class ResourcePermission(Base):
-    """资源权限模型 - 用于资源级别的权限控制"""
+class ResourcePermission(Base):  # DEPRECATED
+    """DEPRECATED: 资源权限模型（兼容保留）"""
 
     __tablename__ = "resource_permissions"
 
@@ -301,11 +314,11 @@ class ResourcePermission(Base):
     permission: Mapped["Permission"] = relationship("Permission")
 
     def __repr__(self) -> str:
-        return f"<ResourcePermission(resource={self.resource_type}:{self.resource_id}, level={self.permission_level})>"  # pragma: no cover
+        return f"<ResourcePermission(resource={self.resource_type}:{self.resource_id}, level={self.permission_level})>"  # pragma: no cover DEPRECATED
 
 
-class PermissionGrant(Base):
-    """统一权限授权记录（动态/临时/资源级权限统一落地）"""
+class PermissionGrant(Base):  # DEPRECATED
+    """DEPRECATED: 统一权限授权记录（兼容保留）"""
 
     __tablename__ = "permission_grants"
 
@@ -389,7 +402,7 @@ class PermissionGrant(Base):
 
     def __repr__(self) -> str:
         effect = self.effect if self.effect is not None else "allow"
-        return f"<PermissionGrant(user_id={self.user_id}, permission_id={self.permission_id}, effect={effect})>"  # pragma: no cover
+        return f"<PermissionGrant(user_id={self.user_id}, permission_id={self.permission_id}, effect={effect})>"  # pragma: no cover DEPRECATED
 
 
 class PermissionAuditLog(Base):

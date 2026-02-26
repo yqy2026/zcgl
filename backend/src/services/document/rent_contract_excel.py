@@ -524,6 +524,10 @@ class RentContractExcelService:
         include_ledger: bool = True,
         start_date: date | None = None,
         end_date: date | None = None,
+        owner_party_id: str | None = None,
+        manager_party_id: str | None = None,
+        owner_party_ids: list[str] | None = None,
+        manager_party_ids: list[str] | None = None,
     ) -> dict[str, Any]:
         export_dir = self._export_dir()
         file_name = f"rent_contract_export_{uuid.uuid4().hex[:8]}.xlsx"
@@ -534,6 +538,10 @@ class RentContractExcelService:
             contract_ids=contract_ids,
             start_date=start_date,
             end_date=end_date,
+            owner_party_id=owner_party_id,
+            manager_party_id=manager_party_id,
+            owner_party_ids=owner_party_ids,
+            manager_party_ids=manager_party_ids,
         )
 
         contract_rows: list[dict[str, Any]] = []

@@ -24,6 +24,11 @@ def _utcnow_naive() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
 
+def _enum_values(enum_cls: type[StrEnum]) -> list[str]:
+    """Persist enum values instead of member names for PostgreSQL enum compatibility."""
+    return [member.value for member in enum_cls]
+
+
 class ABACEffect(StrEnum):
     ALLOW = "allow"
     DENY = "deny"
@@ -48,7 +53,11 @@ class ABACPolicy(Base):
     )
     name: Mapped[str] = mapped_column(String(200), nullable=False, comment="策略名称")
     effect: Mapped[ABACEffect] = mapped_column(
-        SQLEnum(ABACEffect, name="abac_effect"),
+        SQLEnum(
+            ABACEffect,
+            name="abac_effect",
+            values_callable=_enum_values,
+        ),
         nullable=False,
         default=ABACEffect.ALLOW,
         comment="策略效果",
@@ -100,7 +109,11 @@ class ABACPolicyRule(Base):
         String(100), nullable=False, comment="资源类型"
     )
     action: Mapped[ABACAction] = mapped_column(
-        SQLEnum(ABACAction, name="abac_action"),
+        SQLEnum(
+            ABACAction,
+            name="abac_action",
+            values_callable=_enum_values,
+        ),
         nullable=False,
         comment="动作",
     )

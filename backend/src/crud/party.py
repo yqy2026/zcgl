@@ -3,10 +3,10 @@
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import delete, select, text
+from sqlalchemy import delete, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..models.party import Party, PartyContact, PartyHierarchy
+from ..models.party import Party, PartyContact, PartyHierarchy, PartyType
 from ..models.user_party_binding import UserPartyBinding
 
 
@@ -16,6 +16,15 @@ def _utcnow_naive() -> datetime:
 
 class CRUDParty:
     """Party and related hierarchy/contact/user-binding CRUD methods."""
+
+    @staticmethod
+    def _normalize_identifier(value: Any) -> str | None:
+        if value is None:
+            return None
+        normalized = str(value).strip()
+        if normalized == "":
+            return None
+        return normalized
 
     async def create_party(
         self,
@@ -37,6 +46,131 @@ class CRUDParty:
         stmt = select(Party).where(Party.id == party_id)
         return (await db.execute(stmt)).scalars().first()
 
+    async def resolve_organization_party_id(
+        self,
+        db: AsyncSession,
+        *,
+        organization_id: str,
+        organization_code: str | None = None,
+        organization_name: str | None = None,
+    ) -> str | None:
+        normalized_organization_id = self._normalize_identifier(organization_id)
+        if normalized_organization_id is None:
+            return None
+
+        for condition in (
+            Party.id == normalized_organization_id,
+            Party.external_ref == normalized_organization_id,
+        ):
+            stmt = (
+                select(Party.id.label("party_id"))
+                .where(
+                    Party.party_type == PartyType.ORGANIZATION.value,
+                    condition,
+                )
+                .order_by(Party.id)
+                .limit(1)
+            )
+            row = (await db.execute(stmt)).mappings().one_or_none()
+            resolved_party_id = self._normalize_identifier(
+                row.get("party_id") if row is not None else None
+            )
+            if resolved_party_id is not None:
+                return resolved_party_id
+
+        normalized_code = self._normalize_identifier(organization_code)
+        normalized_name = self._normalize_identifier(organization_name)
+        if normalized_code is None or normalized_name is None:
+            from ..models.organization import Organization
+
+            org_stmt = (
+                select(
+                    Organization.code.label("organization_code"),
+                    Organization.name.label("organization_name"),
+                )
+                .where(Organization.id == normalized_organization_id)
+                .limit(1)
+            )
+            org_row = (await db.execute(org_stmt)).mappings().one_or_none()
+            if org_row is not None:
+                if normalized_code is None:
+                    normalized_code = self._normalize_identifier(
+                        org_row.get("organization_code")
+                    )
+                if normalized_name is None:
+                    normalized_name = self._normalize_identifier(
+                        org_row.get("organization_name")
+                    )
+
+        code_or_name_conditions = []
+        if normalized_code is not None:
+            code_or_name_conditions.append(Party.code == normalized_code)
+        if normalized_name is not None:
+            code_or_name_conditions.append(Party.name == normalized_name)
+
+        for condition in code_or_name_conditions:
+            stmt = (
+                select(Party.id.label("party_id"))
+                .where(
+                    Party.party_type == PartyType.ORGANIZATION.value,
+                    condition,
+                )
+                .order_by(Party.id)
+                .limit(1)
+            )
+            row = (await db.execute(stmt)).mappings().one_or_none()
+            resolved_party_id = self._normalize_identifier(
+                row.get("party_id") if row is not None else None
+            )
+            if resolved_party_id is not None:
+                return resolved_party_id
+
+        return None
+
+    async def resolve_legal_entity_party_id(
+        self,
+        db: AsyncSession,
+        *,
+        ownership_id: str,
+        ownership_code: str | None = None,
+        ownership_name: str | None = None,
+    ) -> str | None:
+        normalized_ownership_id = self._normalize_identifier(ownership_id)
+        if normalized_ownership_id is None:
+            return None
+
+        lookup_conditions = [
+            Party.id == normalized_ownership_id,
+            Party.external_ref == normalized_ownership_id,
+        ]
+
+        normalized_code = self._normalize_identifier(ownership_code)
+        if normalized_code is not None:
+            lookup_conditions.append(Party.code == normalized_code)
+
+        normalized_name = self._normalize_identifier(ownership_name)
+        if normalized_name is not None:
+            lookup_conditions.append(Party.name == normalized_name)
+
+        for condition in lookup_conditions:
+            stmt = (
+                select(Party.id.label("party_id"))
+                .where(
+                    Party.party_type == PartyType.LEGAL_ENTITY.value,
+                    condition,
+                )
+                .order_by(Party.id)
+                .limit(1)
+            )
+            row = (await db.execute(stmt)).mappings().one_or_none()
+            resolved_party_id = self._normalize_identifier(
+                row.get("party_id") if row is not None else None
+            )
+            if resolved_party_id is not None:
+                return resolved_party_id
+
+        return None
+
     async def get_parties(
         self,
         db: AsyncSession,
@@ -45,12 +179,21 @@ class CRUDParty:
         limit: int = 100,
         party_type: str | None = None,
         status: str | None = None,
+        search: str | None = None,
     ) -> list[Party]:
         stmt = select(Party)
         if party_type is not None:
             stmt = stmt.where(Party.party_type == party_type)
         if status is not None:
             stmt = stmt.where(Party.status == status)
+        if search is not None and search.strip() != "":
+            keyword = f"%{search.strip()}%"
+            stmt = stmt.where(
+                or_(
+                    Party.name.ilike(keyword),
+                    Party.code.ilike(keyword),
+                )
+            )
         stmt = stmt.offset(skip).limit(limit)
         return list((await db.execute(stmt)).scalars().all())
 

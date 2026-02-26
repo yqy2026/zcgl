@@ -69,7 +69,8 @@ class RentContractLedgerService(RentContractHelperMixin):
                 db_ledger = RentLedger()
                 db_ledger.contract_id = request.contract_id
                 db_ledger.asset_id = None
-                db_ledger.ownership_id = contract.ownership_id
+                db_ledger.owner_party_id = contract.owner_party_id
+                db_ledger.ownership_id = contract.ownership_id  # DEPRECATED legacy column
                 db_ledger.year_month = year_month
                 db_ledger.due_date = due_date
                 db_ledger.due_amount = due_amount
@@ -145,7 +146,11 @@ class RentContractLedgerService(RentContractHelperMixin):
         limit: int = 10,
         contract_id: str | None = None,
         asset_id: str | None = None,
-        ownership_id: str | None = None,
+        owner_party_id: str | None = None,
+        manager_party_id: str | None = None,
+        owner_party_ids: list[str] | None = None,
+        manager_party_ids: list[str] | None = None,
+        ownership_id: str | None = None,  # DEPRECATED alias
         year_month: str | None = None,
         payment_status: str | None = None,
         start_date: date | None = None,
@@ -157,7 +162,11 @@ class RentContractLedgerService(RentContractHelperMixin):
             limit=limit,
             contract_id=contract_id,
             asset_id=asset_id,
-            ownership_id=ownership_id,
+            owner_party_id=owner_party_id,
+            manager_party_id=manager_party_id,
+            owner_party_ids=owner_party_ids,
+            manager_party_ids=manager_party_ids,
+            ownership_id=ownership_id,  # DEPRECATED alias
             year_month=year_month,
             payment_status=payment_status,
             start_date=start_date,

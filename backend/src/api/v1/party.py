@@ -1,12 +1,14 @@
 """Party domain API endpoints."""
 
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.exception_handler import BaseBusinessError, internal_error, not_found
 from ...core.router_registry import route_registry
 from ...database import get_async_db
-from ...middleware.auth import get_current_active_user
+from ...middleware.auth import AuthzContext, get_current_active_user, require_authz
 from ...models.auth import User
 from ...schemas.party import (
     PartyContactCreate,
@@ -20,6 +22,12 @@ from ...schemas.party import (
 from ...services.party import party_service
 
 router = APIRouter(tags=["主体管理"])
+_PARTY_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:party:create"
+_PARTY_CREATE_RESOURCE_CONTEXT: dict[str, str] = {
+    "party_id": _PARTY_CREATE_UNSCOPED_PARTY_ID,
+    "owner_party_id": _PARTY_CREATE_UNSCOPED_PARTY_ID,
+    "manager_party_id": _PARTY_CREATE_UNSCOPED_PARTY_ID,
+}
 
 
 @router.get("/parties", response_model=list[PartyResponse], summary="获取主体列表")
@@ -28,8 +36,18 @@ async def list_parties(
     limit: int = Query(100, ge=1, le=1000, description="返回条数"),
     party_type: str | None = Query(None, description="主体类型过滤"),
     status: str | None = Query(None, description="状态过滤"),
+    search: str | None = Query(None, description="名称/编码模糊搜索"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: Annotated[
+        AuthzContext,
+        Depends(
+            require_authz(
+                action="read",
+                resource_type="party",
+            )
+        ),
+    ] = None,
 ) -> list[PartyResponse]:
     _ = current_user
     parties = await party_service.get_parties(
@@ -38,6 +56,7 @@ async def list_parties(
         limit=limit,
         party_type=party_type,
         status=status,
+        search=search,
     )
     return [PartyResponse.model_validate(party) for party in parties]
 
@@ -47,6 +66,16 @@ async def create_party(
     payload: PartyCreate,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: Annotated[
+        AuthzContext,
+        Depends(
+            require_authz(
+                action="create",
+                resource_type="party",
+                resource_context=_PARTY_CREATE_RESOURCE_CONTEXT,
+            )
+        ),
+    ] = None,
 ) -> PartyResponse:
     _ = current_user
     try:
@@ -63,6 +92,17 @@ async def get_party(
     party_id: str,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: Annotated[
+        AuthzContext,
+        Depends(
+            require_authz(
+                action="read",
+                resource_type="party",
+                resource_id="{party_id}",
+                deny_as_not_found=True,
+            )
+        ),
+    ] = None,
 ) -> PartyResponse:
     _ = current_user
     party = await party_service.get_party(db, party_id=party_id)
@@ -77,6 +117,16 @@ async def update_party(
     payload: PartyUpdate,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: Annotated[
+        AuthzContext,
+        Depends(
+            require_authz(
+                action="update",
+                resource_type="party",
+                resource_id="{party_id}",
+            )
+        ),
+    ] = None,
 ) -> PartyResponse:
     _ = current_user
     try:
@@ -93,6 +143,16 @@ async def delete_party(
     party_id: str,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: Annotated[
+        AuthzContext,
+        Depends(
+            require_authz(
+                action="delete",
+                resource_type="party",
+                resource_id="{party_id}",
+            )
+        ),
+    ] = None,
 ) -> dict[str, str]:
     _ = current_user
     deleted = await party_service.delete_party(db, party_id=party_id)
@@ -111,6 +171,17 @@ async def get_party_hierarchy(
     include_self: bool = Query(False, description="是否包含自身"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: Annotated[
+        AuthzContext,
+        Depends(
+            require_authz(
+                action="read",
+                resource_type="party",
+                resource_id="{party_id}",
+                deny_as_not_found=True,
+            )
+        ),
+    ] = None,
 ) -> list[str]:
     _ = current_user
     party = await party_service.get_party(db, party_id=party_id)
@@ -134,6 +205,16 @@ async def add_party_hierarchy(
     payload: PartyHierarchyCreate,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: Annotated[
+        AuthzContext,
+        Depends(
+            require_authz(
+                action="create",
+                resource_type="party",
+                resource_id="{party_id}",
+            )
+        ),
+    ] = None,
 ) -> PartyHierarchyResponse:
     _ = current_user
     try:
@@ -155,6 +236,16 @@ async def delete_party_hierarchy(
     child_party_id: str = Query(..., description="子主体ID"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: Annotated[
+        AuthzContext,
+        Depends(
+            require_authz(
+                action="delete",
+                resource_type="party",
+                resource_id="{party_id}",
+            )
+        ),
+    ] = None,
 ) -> dict[str, str]:
     _ = current_user
     deleted = await party_service.remove_hierarchy(
@@ -176,6 +267,17 @@ async def get_party_contacts(
     party_id: str,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: Annotated[
+        AuthzContext,
+        Depends(
+            require_authz(
+                action="read",
+                resource_type="party",
+                resource_id="{party_id}",
+                deny_as_not_found=True,
+            )
+        ),
+    ] = None,
 ) -> list[PartyContactResponse]:
     _ = current_user
     party = await party_service.get_party(db, party_id=party_id)
@@ -196,6 +298,16 @@ async def create_party_contact(
     payload: PartyContactCreate,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: Annotated[
+        AuthzContext,
+        Depends(
+            require_authz(
+                action="create",
+                resource_type="party",
+                resource_id="{party_id}",
+            )
+        ),
+    ] = None,
 ) -> PartyContactResponse:
     _ = current_user
     try:

@@ -13,7 +13,7 @@ from ....core.exception_handler import (
     internal_error,
 )
 from ....database import get_async_db
-from ....middleware.auth import get_current_active_user
+from ....middleware.auth import AuthzContext, get_current_active_user, require_authz
 from ....models.auth import User
 from ....services.asset.asset_service import AsyncAssetService
 from ....utils import file_security
@@ -60,6 +60,13 @@ async def upload_asset_attachments(
     files: list[UploadFile] = File(..., description="附件文件列表"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="asset",
+            resource_id="{asset_id}",
+        )
+    ),
 ) -> dict[str, Any]:
     try:
         asset_lookup = _get_asset_lookup()
@@ -132,6 +139,14 @@ async def get_asset_attachments(
     asset_id: str,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="asset",
+            resource_id="{asset_id}",
+            deny_as_not_found=True,
+        )
+    ),
 ) -> list[dict[str, Any]]:
     try:
         asset_lookup = _get_asset_lookup()
@@ -174,6 +189,14 @@ async def download_asset_attachment(
     filename: str,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="asset",
+            resource_id="{asset_id}",
+            deny_as_not_found=True,
+        )
+    ),
 ) -> FileResponse:
     try:
         asset_lookup = _get_asset_lookup()
@@ -207,6 +230,13 @@ async def delete_asset_attachment(
     attachment_id: str,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="delete",
+            resource_type="asset",
+            resource_id="{asset_id}",
+        )
+    ),
 ) -> dict[str, str]:
     try:
         asset_lookup = _get_asset_lookup()

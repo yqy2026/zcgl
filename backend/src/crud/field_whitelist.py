@@ -86,14 +86,14 @@ class AssetWhitelist(ModelFieldWhitelist):
         "property_nature",
         "usage_status",
         "business_category",  # High-level business classification
-        "management_entity",
+        "management_entity",  # DEPRECATED
         "is_litigated",
         "data_status",
         "is_active",
         # Project/ownership references (IDs only, not names)
-        "project_id",
-        "organization_id",
-        "ownership_id",
+        "ownership_id",  # DEPRECATED compatibility field
+        "manager_party_id",
+        "owner_party_id",
         # Area fields (public metrics)
         "land_area",
         "actual_property_area",
@@ -182,7 +182,7 @@ class RentContractWhitelist(ModelFieldWhitelist):
         "contract_number",
         "contract_status",
         # References
-        "ownership_id",
+        "owner_party_id",
         # Date fields
         "start_date",
         "end_date",
@@ -223,51 +223,6 @@ class RentContractWhitelist(ModelFieldWhitelist):
     }
 
 
-# ============================================================================
-# Ownership Whitelist
-# ============================================================================
-
-
-class OwnershipWhitelist(ModelFieldWhitelist):
-    """Whitelist for Ownership model."""
-
-    filter_fields: ClassVar[set[str]] = {
-        # Basic identifiers
-        "id",
-        # Name fields
-        "name",
-        "short_name",
-        "code",
-        # Status
-        "is_active",
-        "data_status",
-        # System
-        "created_at",
-        "updated_at",
-    }
-
-    search_fields: ClassVar[set[str]] = {
-        "name",
-        "short_name",
-        "notes",
-    }
-
-    sort_fields: ClassVar[set[str]] = {
-        "name",
-        "code",
-        "created_at",
-        "updated_at",
-    }
-
-    blocked_fields: ClassVar[set[str]] = {
-        # Contact information
-        "address",
-        # Audit trail
-        "created_by",
-        "updated_by",
-    }
-
-
 class RoleWhitelist(ModelFieldWhitelist):
     filter_fields: ClassVar[set[str]] = {
         "id",
@@ -275,7 +230,7 @@ class RoleWhitelist(ModelFieldWhitelist):
         "display_name",
         "category",
         "is_active",
-        "organization_id",
+        "party_id",
         "is_system_role",
         "scope",
         "scope_id",
@@ -526,9 +481,7 @@ class ProjectWhitelist(ModelFieldWhitelist):
         "city",
         "district",
         "province",
-        "management_entity",
-        "organization_id",
-        "ownership_entity",
+        "manager_party_id",
         "is_active",
         "data_status",
         DateTimeFields.CREATED_AT,
@@ -562,52 +515,43 @@ class ProjectWhitelist(ModelFieldWhitelist):
 
 
 # ============================================================================
-# Organization Whitelist
-# ============================================================================
-
-
-class OrganizationWhitelist(ModelFieldWhitelist):
-    """Whitelist for Organization model."""
+class OwnershipWhitelist(ModelFieldWhitelist):
+    """DEPRECATED: Whitelist for Ownership model."""
 
     filter_fields: ClassVar[set[str]] = {
         "id",
         "name",
+        "short_name",
         "code",
-        "level",
-        "sort_order",
-        "type",
-        "status",
-        "parent_id",
-        "path",
-        "is_deleted",
+        "management_entity",
+        "is_active",
+        "data_status",
         DateTimeFields.CREATED_AT,
         DateTimeFields.UPDATED_AT,
     }
 
     search_fields: ClassVar[set[str]] = {
         "name",
+        "short_name",
         "code",
-        "description",
-        "path",
     }
 
     sort_fields: ClassVar[set[str]] = {
+        "id",
         "name",
+        "short_name",
         "code",
-        "level",
-        "sort_order",
         DateTimeFields.CREATED_AT,
         DateTimeFields.UPDATED_AT,
     }
 
-    blocked_fields: ClassVar[set[str]] = set()
+    blocked_fields: ClassVar[set[str]] = {
+        "created_by",
+        "updated_by",
+    }
 
 
 # ============================================================================
-# PropertyCertificate Whitelist
-# ============================================================================
-
-
 class PropertyCertificateWhitelist(ModelFieldWhitelist):
     """Whitelist for PropertyCertificate model."""
 
@@ -619,7 +563,6 @@ class PropertyCertificateWhitelist(ModelFieldWhitelist):
         "is_verified",
         "registration_date",
         "property_type",
-        "organization_id",
         "land_use_type",
         "land_use_term_start",
         "land_use_term_end",
@@ -650,13 +593,12 @@ class PropertyCertificateWhitelist(ModelFieldWhitelist):
 
 
 class PropertyOwnerWhitelist(ModelFieldWhitelist):
-    """Whitelist for PropertyOwner model."""
+    """DEPRECATED: Whitelist for PropertyOwner model."""
 
     filter_fields: ClassVar[set[str]] = {
         "id",
         "owner_type",
         "name",
-        "organization_id",
         DateTimeFields.CREATED_AT,
         DateTimeFields.UPDATED_AT,
     }
@@ -720,7 +662,7 @@ class RentLedgerWhitelist(ModelFieldWhitelist):
         "id",
         "contract_id",
         "asset_id",
-        "ownership_id",
+        "owner_party_id",
         "year_month",
         "due_date",
         "payment_status",
@@ -783,8 +725,8 @@ class UserRoleAssignmentWhitelist(ModelFieldWhitelist):
     }
 
 
-class ResourcePermissionWhitelist(ModelFieldWhitelist):
-    """Whitelist for ResourcePermission model."""
+class ResourcePermissionWhitelist(ModelFieldWhitelist):  # DEPRECATED
+    """DEPRECATED: Whitelist for ResourcePermission model."""
 
     filter_fields: ClassVar[set[str]] = {
         "id",
@@ -819,8 +761,8 @@ class ResourcePermissionWhitelist(ModelFieldWhitelist):
     }
 
 
-class PermissionGrantWhitelist(ModelFieldWhitelist):
-    """Whitelist for PermissionGrant model."""
+class PermissionGrantWhitelist(ModelFieldWhitelist):  # DEPRECATED
+    """DEPRECATED: Whitelist for PermissionGrant model."""
 
     filter_fields: ClassVar[set[str]] = {
         "id",
@@ -987,15 +929,14 @@ def _ensure_whitelists_registered() -> None:
         from ..models.asset import Asset
         from ..models.collection import CollectionRecord
         from ..models.llm_prompt import PromptTemplate
-        from ..models.organization import Organization
         from ..models.ownership import Ownership
         from ..models.project import Project
         from ..models.property_certificate import PropertyCertificate, PropertyOwner
         from ..models.rbac import (
             Permission,
             PermissionAuditLog,
-            PermissionGrant,
-            ResourcePermission,
+            PermissionGrant,  # DEPRECATED
+            ResourcePermission,  # DEPRECATED
             Role,
             UserRoleAssignment,
         )
@@ -1004,7 +945,6 @@ def _ensure_whitelists_registered() -> None:
         from ..models.task import AsyncTask, ExcelTaskConfig
 
         register_whitelist(Asset, AssetWhitelist())
-        register_whitelist(Ownership, OwnershipWhitelist())
         register_whitelist(RentContract, RentContractWhitelist())
         register_whitelist(Role, RoleWhitelist())
         register_whitelist(SystemDictionary, SystemDictionaryWhitelist())
@@ -1013,14 +953,14 @@ def _ensure_whitelists_registered() -> None:
         register_whitelist(CollectionRecord, CollectionRecordWhitelist())
         register_whitelist(PromptTemplate, PromptTemplateWhitelist())
         register_whitelist(Project, ProjectWhitelist())
-        register_whitelist(Organization, OrganizationWhitelist())
+        register_whitelist(Ownership, OwnershipWhitelist())
         register_whitelist(PropertyCertificate, PropertyCertificateWhitelist())
         register_whitelist(PropertyOwner, PropertyOwnerWhitelist())
         register_whitelist(RentTerm, RentTermWhitelist())
         register_whitelist(RentLedger, RentLedgerWhitelist())
         register_whitelist(UserRoleAssignment, UserRoleAssignmentWhitelist())
-        register_whitelist(ResourcePermission, ResourcePermissionWhitelist())
-        register_whitelist(PermissionGrant, PermissionGrantWhitelist())
+        register_whitelist(ResourcePermission, ResourcePermissionWhitelist())  # DEPRECATED
+        register_whitelist(PermissionGrant, PermissionGrantWhitelist())  # DEPRECATED
         register_whitelist(PermissionAuditLog, PermissionAuditLogWhitelist())
         register_whitelist(AsyncTask, AsyncTaskWhitelist())
         register_whitelist(ExcelTaskConfig, ExcelTaskConfigWhitelist())

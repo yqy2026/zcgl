@@ -12,7 +12,7 @@ from ....core.exception_handler import BaseBusinessError, not_found
 from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
 from ....core.router_registry import route_registry
 from ....database import get_async_db
-from ....middleware.auth import get_current_active_user
+from ....middleware.auth import AuthzContext, get_current_active_user, require_authz
 from ....models.auth import User
 from ....models.collection import CollectionStatus
 from ....schemas.collection import (
@@ -24,6 +24,12 @@ from ....schemas.collection import (
 from ....services.collection import collection_service
 
 router = APIRouter(prefix="/collection", tags=["催缴管理"])
+_COLLECTION_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:collection:create"
+_COLLECTION_CREATE_RESOURCE_CONTEXT: dict[str, str] = {
+    "party_id": _COLLECTION_CREATE_UNSCOPED_PARTY_ID,
+    "owner_party_id": _COLLECTION_CREATE_UNSCOPED_PARTY_ID,
+    "manager_party_id": _COLLECTION_CREATE_UNSCOPED_PARTY_ID,
+}
 
 
 @router.get(
@@ -32,6 +38,12 @@ router = APIRouter(prefix="/collection", tags=["催缴管理"])
 async def get_collection_summary(
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="collection",
+        )
+    ),
 ) -> CollectionTaskSummary:
     return await collection_service.get_summary_async(db)
 
@@ -49,6 +61,12 @@ async def list_collection_records(
     page_size: int = Query(20, ge=1, le=100, description="每页记录数"),
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="collection",
+        )
+    ),
 ) -> JSONResponse:
     result = await collection_service.list_records_async(
         db,
@@ -81,6 +99,14 @@ async def get_collection_record(
     record_id: str,
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="collection",
+            resource_id="{record_id}",
+            deny_as_not_found=True,
+        )
+    ),
 ) -> CollectionRecordResponse:
     record = await collection_service.get_by_id_async(db, record_id=record_id)
     if not record:
@@ -99,6 +125,13 @@ async def create_collection_record(
     record_data: CollectionRecordCreate,
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="create",
+            resource_type="collection",
+            resource_context=_COLLECTION_CREATE_RESOURCE_CONTEXT,
+        )
+    ),
 ) -> CollectionRecordResponse:
     try:
         record = await collection_service.create_async(
@@ -123,6 +156,13 @@ async def update_collection_record(
     update_data: CollectionRecordUpdate,
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="collection",
+            resource_id="{record_id}",
+        )
+    ),
 ) -> CollectionRecordResponse:
     record = await collection_service.get_by_id_async(db, record_id=record_id)
     if not record:
@@ -145,6 +185,13 @@ async def delete_collection_record(
     record_id: str,
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="delete",
+            resource_type="collection",
+            resource_id="{record_id}",
+        )
+    ),
 ) -> dict[str, str]:
     record = await collection_service.get_by_id_async(db, record_id=record_id)
     if not record:

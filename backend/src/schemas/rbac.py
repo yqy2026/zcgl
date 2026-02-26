@@ -59,7 +59,8 @@ class RoleBase(BaseModel):
 
 class RoleCreate(RoleBase):
     is_system_role: bool = Field(False, description="是否系统角色")
-    organization_id: str | None = Field(None, description="所属组织ID")
+    organization_id: str | None = Field(None, description="所属组织ID（DEPRECATED）")
+    party_id: str | None = Field(None, description="所属主体ID")
     permission_ids: list[str] = Field(default_factory=list, description="权限ID列表")
 
 
@@ -70,6 +71,7 @@ class RoleUpdate(BaseModel):
     category: str | None = Field(None, description="角色类别")
     scope: str | None = Field(None, description="权限范围")
     scope_id: str | None = Field(None, description="范围ID")
+    party_id: str | None = Field(None, description="所属主体ID")
     is_active: bool = Field(True, description="是否激活")
     permission_ids: list[str] | None = Field(None, description="权限ID列表")
 
@@ -79,6 +81,7 @@ class RoleResponse(RoleBase):
     is_system_role: bool
     is_active: bool
     organization_id: str | None
+    party_id: str | None
     created_at: datetime
     updated_at: datetime
     created_by: str | None
@@ -246,7 +249,8 @@ class RoleQueryParams(BaseModel):
     search: str | None = Field(None, description="搜索关键词")
     category: str | None = Field(None, description="角色类别")
     is_active: bool | None = Field(None, description="是否激活")
-    organization_id: str | None = Field(None, description="组织ID")
+    organization_id: str | None = Field(None, description="组织ID（DEPRECATED）")
+    party_id: str | None = Field(None, description="主体ID")
     scope: str | None = Field(None, description="权限范围")
 
 

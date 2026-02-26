@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..models.system_dictionary import AssetCustomField
 from ..schemas.asset import AssetCustomFieldCreate, AssetCustomFieldUpdate
 from .base import CRUDBase
-from .query_builder import TenantFilter
+from .query_builder import PartyFilter
 
 
 class CRUDCustomField(
@@ -49,7 +49,7 @@ class CRUDCustomField(
         filters: dict[str, Any] | None = None,
         skip: int = 0,
         limit: int = 100,
-        tenant_filter: TenantFilter | None = None,
+        party_filter: PartyFilter | None = None,
     ) -> list[AssetCustomField]:
         if filters is None:
             filters = {}
@@ -72,13 +72,13 @@ class CRUDCustomField(
             sort_desc=False,
             skip=skip,
             limit=limit,
-            tenant_filter=tenant_filter,
+            party_filter=party_filter,
         )
         result = await db.execute(query)
         return list(result.scalars().all())
 
     async def get_active_fields_async(
-        self, db: AsyncSession, *, tenant_filter: TenantFilter | None = None
+        self, db: AsyncSession, *, party_filter: PartyFilter | None = None
     ) -> list[AssetCustomField]:
         base_query = select(self.model)
 
@@ -87,7 +87,7 @@ class CRUDCustomField(
             base_query=base_query,
             sort_by="sort_order",
             sort_desc=False,
-            tenant_filter=tenant_filter,
+            party_filter=party_filter,
         )
         result = await db.execute(query)
         return list(result.scalars().all())

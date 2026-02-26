@@ -77,6 +77,7 @@ class CertificatePartyRelation(Base):
         SQLEnum(
             CertificateRelationRole,
             name="certificate_relation_role",
+            values_callable=lambda enum_cls: [member.value for member in enum_cls],
         ),
         nullable=False,
         comment="关系角色",

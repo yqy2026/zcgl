@@ -5,14 +5,14 @@ LLM Prompt管理API路由
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.exception_handler import BaseBusinessError
 from ...core.response_handler import APIResponse, PaginatedData, ResponseHandler
 from ...database import get_async_db
-from ...middleware.auth import get_current_active_user
+from ...middleware.auth import AuthzContext, get_current_active_user, require_authz
 from ...models.auth import User
 from ...models.llm_prompt import PromptTemplate
 from ...schemas.llm_prompt import (
@@ -28,6 +28,51 @@ from ...services.llm_prompt.feedback_service import FeedbackService
 from ...services.llm_prompt.prompt_manager import PromptManager
 
 router = APIRouter(prefix="/llm-prompts", tags=["LLM Prompts"])
+_LLM_PROMPT_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:llm_prompt:create"
+
+
+def _normalize_optional_str(value: Any) -> str | None:
+    if value is None:
+        return None
+    normalized = str(value).strip()
+    if normalized == "":
+        return None
+    return normalized
+
+
+def _build_party_scope_context(
+    *,
+    scoped_party_id: str,
+    organization_id: str | None = None,
+) -> dict[str, str]:
+    context: dict[str, str] = {
+        "party_id": scoped_party_id,
+        "owner_party_id": scoped_party_id,
+        "manager_party_id": scoped_party_id,
+    }
+    if organization_id is not None:
+        context["organization_id"] = organization_id
+    return context
+
+
+async def _resolve_llm_prompt_create_resource_context(request: Request) -> dict[str, str]:
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+
+    if not isinstance(payload, dict):
+        payload = {}
+
+    party_id = _normalize_optional_str(payload.get("party_id"))
+    organization_id = _normalize_optional_str(payload.get("organization_id"))
+    scoped_party_id = (
+        party_id or organization_id or _LLM_PROMPT_CREATE_UNSCOPED_PARTY_ID
+    )
+    return _build_party_scope_context(
+        scoped_party_id=scoped_party_id,
+        organization_id=organization_id,
+    )
 
 
 @router.post("/", response_model=PromptTemplateResponse)
@@ -36,6 +81,13 @@ async def create_prompt(
     db: AsyncSession = Depends(get_async_db),
     prompt_in: PromptTemplateCreate,
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="create",
+            resource_type="llm_prompt",
+            resource_context=_resolve_llm_prompt_create_resource_context,
+        )
+    ),
 ) -> PromptTemplate:
     """
     创建新Prompt模板
@@ -62,6 +114,9 @@ async def create_prompt(
 async def get_prompts(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="read", resource_type="llm_prompt")
+    ),
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(10, ge=1, le=100, description="每页记录数"),
     doc_type: str | None = Query(None, description="文档类型筛选"),
@@ -98,6 +153,14 @@ async def get_prompt(
     prompt_id: str,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="llm_prompt",
+            resource_id="{prompt_id}",
+            deny_as_not_found=True,
+        )
+    ),
 ) -> PromptTemplate:
     """获取Prompt模板详情"""
 
@@ -115,6 +178,13 @@ async def update_prompt(
     db: AsyncSession = Depends(get_async_db),
     prompt_in: PromptTemplateUpdate,
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="llm_prompt",
+            resource_id="{prompt_id}",
+        )
+    ),
 ) -> PromptTemplate:
     """
     更新Prompt模板
@@ -146,6 +216,13 @@ async def activate_prompt(
     *,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="llm_prompt",
+            resource_id="{prompt_id}",
+        )
+    ),
 ) -> PromptTemplate:
     """
     激活Prompt模板
@@ -171,6 +248,13 @@ async def rollback_prompt(
     db: AsyncSession = Depends(get_async_db),
     request: PromptRollbackRequest,
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="llm_prompt",
+            resource_id="{prompt_id}",
+        )
+    ),
 ) -> PromptTemplate:
     """
     回滚Prompt到指定版本
@@ -197,6 +281,14 @@ async def get_prompt_versions(
     prompt_id: str,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="llm_prompt",
+            resource_id="{prompt_id}",
+            deny_as_not_found=True,
+        )
+    ),
 ) -> list[PromptVersionResponse]:
     """
     获取Prompt的所有历史版本
@@ -219,6 +311,9 @@ async def get_prompt_versions(
 async def get_statistics(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="read", resource_type="llm_prompt")
+    ),
 ) -> dict[str, Any]:
     """
     获取Prompt统计概览
@@ -245,6 +340,13 @@ async def collect_feedback(
     db: AsyncSession = Depends(get_async_db),
     feedback_in: ExtractionFeedbackCreate,
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="create",
+            resource_type="llm_prompt",
+            resource_context=_resolve_llm_prompt_create_resource_context,
+        )
+    ),
 ) -> ExtractionFeedbackResponse:
     """
     收集用户反馈(修正数据)

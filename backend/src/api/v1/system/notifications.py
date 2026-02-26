@@ -14,13 +14,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ....core.exception_handler import forbidden, not_found
 from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
 from ....database import get_async_db
-from ....middleware.auth import get_current_active_user
+from ....middleware.auth import AuthzContext, get_current_active_user, require_authz
 from ....models.auth import User
 from ....services.notification.notification_service import notification_service
 from ....services.notification.scheduler import run_notification_tasks
 from ....services.permission.rbac_service import RBACService
 
 router = APIRouter(tags=["Notifications"])
+_NOTIFICATION_UPDATE_UNSCOPED_PARTY_ID = "__unscoped__:notification:update"
+_NOTIFICATION_UPDATE_RESOURCE_CONTEXT: dict[str, str] = {
+    "party_id": _NOTIFICATION_UPDATE_UNSCOPED_PARTY_ID,
+    "owner_party_id": _NOTIFICATION_UPDATE_UNSCOPED_PARTY_ID,
+    "manager_party_id": _NOTIFICATION_UPDATE_UNSCOPED_PARTY_ID,
+}
 
 
 # ==================== Pydantic 模型 ====================
@@ -75,6 +81,12 @@ async def get_notifications(
     type: str | None = Query(None, description="通知类型筛选"),
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="notification",
+        )
+    ),
 ) -> JSONResponse:
     """
     获取当前用户的通知列表
@@ -111,6 +123,12 @@ async def get_notifications(
 async def get_unread_count(
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="notification",
+        )
+    ),
 ) -> UnreadCountResponse:
     """
     获取当前用户的未读通知数量
@@ -130,6 +148,13 @@ async def mark_notification_as_read(
     notification_id: str,
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="notification",
+            resource_id="{notification_id}",
+        )
+    ),
 ) -> NotificationResponse:
     """
     标记通知为已读
@@ -151,6 +176,13 @@ async def mark_notification_as_read(
 async def mark_all_as_read(
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="notification",
+            resource_context=_NOTIFICATION_UPDATE_RESOURCE_CONTEXT,
+        )
+    ),
 ) -> dict[str, str]:
     """
     标记所有通知为已读
@@ -166,6 +198,13 @@ async def delete_notification(
     notification_id: str,
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="delete",
+            resource_type="notification",
+            resource_id="{notification_id}",
+        )
+    ),
 ) -> dict[str, str]:
     """
     删除通知
@@ -187,6 +226,13 @@ async def run_notification_tasks_endpoint(
     background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="notification",
+            resource_context=_NOTIFICATION_UPDATE_RESOURCE_CONTEXT,
+        )
+    ),
 ) -> dict[str, str]:
     """
     手动触发通知任务（用于测试和管理）

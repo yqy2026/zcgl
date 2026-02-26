@@ -10,6 +10,7 @@ from src.core.enums import ContractStatus
 from src.core.exception_handler import ResourceNotFoundError
 from src.crud.asset import asset_crud
 from src.crud.ownership import ownership as ownership_crud
+from src.crud.party import party_crud
 from src.crud.rent_contract import (
     rent_contract as rent_contract_crud,
 )
@@ -30,6 +31,15 @@ from src.schemas.rent_contract import RentContractCreate, RentTermCreate
 from .ledger_service import RentContractLedgerService
 from .lifecycle_service import RentContractLifecycleService
 from .statistics_service import RentContractStatisticsService
+
+
+def _normalize_optional_str(value: Any) -> str | None:
+    if value is None:
+        return None
+    normalized = str(value).strip()
+    if normalized == "":
+        return None
+    return normalized
 
 
 def model_to_dict(model: Any, exclude: set[str] | None = None) -> dict[str, Any]:
@@ -109,7 +119,11 @@ class RentContractService(
         contract_number: str | None = None,
         tenant_name: str | None = None,
         asset_id: str | None = None,
-        ownership_id: str | None = None,
+        owner_party_id: str | None = None,
+        manager_party_id: str | None = None,
+        owner_party_ids: list[str] | None = None,
+        manager_party_ids: list[str] | None = None,
+        ownership_id: str | None = None,  # DEPRECATED alias
         contract_status: str | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
@@ -121,7 +135,11 @@ class RentContractService(
             contract_number=contract_number,
             tenant_name=tenant_name,
             asset_id=asset_id,
-            ownership_id=ownership_id,
+            owner_party_id=owner_party_id,
+            manager_party_id=manager_party_id,
+            owner_party_ids=owner_party_ids,
+            manager_party_ids=manager_party_ids,
+            ownership_id=ownership_id,  # DEPRECATED alias
             contract_status=contract_status,
             start_date=start_date,
             end_date=end_date,
@@ -141,19 +159,62 @@ class RentContractService(
             include_relations=False,
         )
 
-    async def get_ownership_by_id_async(
-        self, db: AsyncSession, *, ownership_id: str
+    async def get_owner_party_by_id_async(
+        self, db: AsyncSession, *, owner_party_id: str
     ) -> Any:
-        return await ownership_crud.get(db, id=ownership_id)
+        return await party_crud.get_party(db, owner_party_id)
+
+    async def get_ownership_by_id_async(  # DEPRECATED compatibility path
+        self, db: AsyncSession, *, ownership_id: str  # DEPRECATED alias
+    ) -> Any:
+        return await ownership_crud.get(db, id=ownership_id)  # DEPRECATED alias
+
+    async def resolve_owner_party_scope_by_ownership_id_async(
+        self,
+        db: AsyncSession,
+        *,
+        ownership_id: str,
+    ) -> str | None:
+        normalized_ownership_id = _normalize_optional_str(ownership_id)
+        if normalized_ownership_id is None:
+            return None
+
+        ownership_obj = await ownership_crud.get(db, id=normalized_ownership_id)
+        ownership_code = _normalize_optional_str(
+            getattr(ownership_obj, "code", None) if ownership_obj is not None else None
+        )
+        ownership_name = _normalize_optional_str(
+            getattr(ownership_obj, "name", None) if ownership_obj is not None else None
+        )
+
+        resolved_party_id = await party_crud.resolve_legal_entity_party_id(
+            db,
+            ownership_id=normalized_ownership_id,
+            ownership_code=ownership_code,
+            ownership_name=ownership_name,
+        )
+        return _normalize_optional_str(resolved_party_id)
 
     async def get_asset_contracts_async(
-        self, db: AsyncSession, *, asset_id: str, limit: int = 1000
+        self,
+        db: AsyncSession,
+        *,
+        asset_id: str,
+        owner_party_id: str | None = None,
+        manager_party_id: str | None = None,
+        owner_party_ids: list[str] | None = None,
+        manager_party_ids: list[str] | None = None,
+        limit: int = 1000,
     ) -> list[RentContract]:
         contracts, _ = await self.get_contract_page_async(
             db=db,
             skip=0,
             limit=limit,
             asset_id=asset_id,
+            owner_party_id=owner_party_id,
+            manager_party_id=manager_party_id,
+            owner_party_ids=owner_party_ids,
+            manager_party_ids=manager_party_ids,
         )
         return contracts
 

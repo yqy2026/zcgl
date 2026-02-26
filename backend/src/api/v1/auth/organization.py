@@ -6,12 +6,18 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ....core.exception_handler import BaseBusinessError, bad_request, not_found
+from ....core.exception_handler import (
+    BaseBusinessError,
+    bad_request,
+    forbidden,
+    not_found,
+)
 from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
 from ....database import get_async_db
-from ....middleware.auth import get_current_active_user
+from ....middleware.auth import AuthzContext, get_current_active_user, require_authz
 from ....models.auth import User
 from ....schemas.organization import (
     OrganizationBatchRequest,
@@ -24,9 +30,125 @@ from ....schemas.organization import (
     OrganizationTree,
     OrganizationUpdate,
 )
+from ....services.authz import authz_service
 from ....services.organization import organization_service
 
 router = APIRouter(tags=["组织架构管理"])
+_ORGANIZATION_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:organization:create"
+_ORGANIZATION_BATCH_UPDATE_UNSCOPED_PARTY_ID = "__unscoped__:organization:batch_update"
+_ORGANIZATION_BATCH_UPDATE_RESOURCE_CONTEXT: dict[str, str] = {
+    "party_id": _ORGANIZATION_BATCH_UPDATE_UNSCOPED_PARTY_ID,
+    "owner_party_id": _ORGANIZATION_BATCH_UPDATE_UNSCOPED_PARTY_ID,
+    "manager_party_id": _ORGANIZATION_BATCH_UPDATE_UNSCOPED_PARTY_ID,
+}
+
+
+def _normalize_optional_str(value: Any) -> str | None:
+    if value is None:
+        return None
+    normalized = str(value).strip()
+    if normalized == "":
+        return None
+    return normalized
+
+
+def _resolve_current_user_organization_id(current_user: User) -> str | None:
+    return _normalize_optional_str(getattr(current_user, "default_organization_id", None))
+
+
+async def _resolve_organization_party_id(
+    *,
+    db: AsyncSession,
+    organization_id: str | None,
+) -> str | None:
+    normalized_organization_id = _normalize_optional_str(organization_id)
+    if normalized_organization_id is None:
+        return None
+
+    from ....models.party import Party, PartyType
+
+    stmt = (
+        select(Party.id.label("party_id"))
+        .where(
+            Party.party_type == PartyType.ORGANIZATION.value,
+            or_(
+                Party.id == normalized_organization_id,
+                Party.external_ref == normalized_organization_id,
+            ),
+        )
+        .order_by(Party.id)
+        .limit(1)
+    )
+    row = (await db.execute(stmt)).mappings().one_or_none()
+    return _normalize_optional_str(row.get("party_id") if row is not None else None)
+
+
+def _build_party_scope_context(
+    *,
+    scoped_party_id: str,
+    organization_id: str | None = None,
+) -> dict[str, str]:
+    context: dict[str, str] = {
+        "party_id": scoped_party_id,
+        "owner_party_id": scoped_party_id,
+        "manager_party_id": scoped_party_id,
+    }
+    if organization_id is not None:
+        context["organization_id"] = organization_id
+    return context
+
+
+async def _require_organization_create_authz(
+    organization: OrganizationCreate,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_async_db),
+) -> AuthzContext:
+    # 创建组织时优先沿 parent_id 建立作用域，缺失时回退到当前用户默认组织。
+    scoped_organization_id = _normalize_optional_str(organization.parent_id)
+    if scoped_organization_id is None:
+        scoped_organization_id = _resolve_current_user_organization_id(current_user)
+
+    scoped_party_id: str | None = None
+    if scoped_organization_id is not None:
+        scoped_party_id = await _resolve_organization_party_id(
+            db=db,
+            organization_id=scoped_organization_id,
+        )
+        if scoped_party_id is None:
+            scoped_party_id = scoped_organization_id
+
+    if scoped_party_id is None:
+        scoped_party_id = _ORGANIZATION_CREATE_UNSCOPED_PARTY_ID
+
+    resource_context = _build_party_scope_context(
+        scoped_party_id=scoped_party_id,
+        organization_id=scoped_organization_id,
+    )
+
+    try:
+        decision = await authz_service.check_access(
+            db,
+            user_id=str(current_user.id),
+            resource_type="organization",
+            action="create",
+            resource_id=None,
+            resource=resource_context,
+        )
+    except Exception:
+        raise forbidden("权限校验失败")
+
+    if not decision.allowed:
+        raise forbidden("权限不足")
+
+    return AuthzContext(
+        current_user=current_user,
+        action="create",
+        resource_type="organization",
+        resource_id=None,
+        resource_context=resource_context,
+        allowed=True,
+        reason_code=decision.reason_code,
+    )
 
 
 @router.get(
@@ -42,6 +164,9 @@ async def get_organizations(
     page_size: int = Query(100, ge=1, le=1000, description="每页记录数"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="read", resource_type="organization")
+    ),
 ) -> JSONResponse:
     """获取组织列表"""
     skip = (page - 1) * page_size
@@ -65,6 +190,9 @@ async def get_organization_tree(
     parent_id: str | None = Query(None, description="父组织ID，为空时获取根组织"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="read", resource_type="organization")
+    ),
 ) -> list[OrganizationTree]:
     """获取组织层级结构"""
 
@@ -104,6 +232,9 @@ async def search_organizations(
     page_size: int = Query(100, ge=1, le=1000, description="每页记录数"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="read", resource_type="organization")
+    ),
 ) -> JSONResponse:
     """搜索组织"""
     skip = (page - 1) * page_size
@@ -128,6 +259,9 @@ async def search_organizations(
 async def get_organization_statistics(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="read", resource_type="organization")
+    ),
 ) -> OrganizationStatistics:
     """获取组织统计信息"""
     stats = await organization_service.get_statistics(db)
@@ -139,6 +273,14 @@ async def get_organization(
     org_id: str,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="organization",
+            resource_id="{org_id}",
+            deny_as_not_found=True,
+        )
+    ),
 ) -> OrganizationResponse:
     """根据ID获取组织详情"""
     organization = await organization_service.get_organization(db, org_id=org_id)
@@ -153,6 +295,14 @@ async def get_organization_children(
     is_recursive: bool = Query(False, description="是否递归获取子级组织"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="organization",
+            resource_id="{org_id}",
+            deny_as_not_found=True,
+        )
+    ),
 ) -> list[OrganizationResponse]:
     """获取组织下的子级组织"""
     parent = await organization_service.get_organization(db, org_id=org_id)
@@ -171,6 +321,14 @@ async def get_organization_path(
     org_id: str,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="organization",
+            resource_id="{org_id}",
+            deny_as_not_found=True,
+        )
+    ),
 ) -> list[OrganizationResponse]:
     """获取组织到根的路径"""
     organization = await organization_service.get_organization(db, org_id=org_id)
@@ -190,6 +348,14 @@ async def get_organization_history(
     page_size: int = Query(100, ge=1, le=1000, description="每页记录数"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="organization",
+            resource_id="{org_id}",
+            deny_as_not_found=True,
+        )
+    ),
 ) -> JSONResponse:
     """获取组织变更历史"""
     skip = (page - 1) * page_size
@@ -217,6 +383,7 @@ async def create_organization(
     organization: OrganizationCreate,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(_require_organization_create_authz),
 ) -> OrganizationResponse:
     """创建组织"""
     try:
@@ -236,6 +403,9 @@ async def update_organization(
     organization: OrganizationUpdate,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="update", resource_type="organization", resource_id="{org_id}")
+    ),
 ) -> OrganizationResponse:
     """更新组织"""
     try:
@@ -257,6 +427,9 @@ async def delete_organization(
     deleted_by: str | None = Query(None, description="删除人"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="delete", resource_type="organization", resource_id="{org_id}")
+    ),
 ) -> dict[str, str]:
     """删除组织（软删除）"""
     try:
@@ -280,6 +453,9 @@ async def move_organization(
     move_request: OrganizationMoveRequest,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="update", resource_type="organization", resource_id="{org_id}")
+    ),
 ) -> dict[str, Any]:
     """移动组织到新的父组织下"""
     try:
@@ -306,6 +482,13 @@ async def batch_organization_operation(
     batch_request: OrganizationBatchRequest,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="organization",
+            resource_context=_ORGANIZATION_BATCH_UPDATE_RESOURCE_CONTEXT,
+        )
+    ),
 ) -> dict[str, Any]:
     """批量操作组织"""
     results: list[dict[str, str]] = []
@@ -342,6 +525,9 @@ async def advanced_search_organizations(
     search_request: OrganizationSearchRequest,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="read", resource_type="organization")
+    ),
 ) -> JSONResponse:
     """高级搜索组织"""
     organizations = await organization_service.advanced_search_organizations(

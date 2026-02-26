@@ -127,7 +127,7 @@ export const ROUTE_CONFIG: RouteConfig[] = [
       {
         path: ASSET_ROUTES.LIST,
         title: '资产列表',
-        permissions: [{ resource: 'asset', action: 'view' }],
+        permissions: [{ resource: 'asset', action: 'read' }],
       },
       {
         path: ASSET_ROUTES.NEW,
@@ -137,22 +137,22 @@ export const ROUTE_CONFIG: RouteConfig[] = [
       {
         path: ASSET_ROUTES.IMPORT,
         title: '资产导入',
-        permissions: [{ resource: 'asset', action: 'import' }],
+        permissions: [{ resource: 'asset', action: 'create' }],
       },
       {
         path: ASSET_ROUTES.ANALYTICS,
         title: '资产分析',
-        permissions: [{ resource: 'asset', action: 'view' }],
+        permissions: [{ resource: 'analytics', action: 'read' }],
       },
       {
         path: ASSET_ROUTES.ANALYTICS_SIMPLE,
         title: '简易分析',
-        permissions: [{ resource: 'asset', action: 'view' }],
+        permissions: [{ resource: 'analytics', action: 'read' }],
       },
       {
         path: ASSET_ROUTES.DETAIL_PATH,
         title: '资产详情',
-        permissions: [{ resource: 'asset', action: 'view' }],
+        permissions: [{ resource: 'asset', action: 'read' }],
       },
     ],
   },
@@ -165,47 +165,47 @@ export const ROUTE_CONFIG: RouteConfig[] = [
       {
         path: RENTAL_ROUTES.CONTRACTS.LIST,
         title: '合同列表',
-        permissions: [{ resource: 'rental', action: 'view' }],
+        permissions: [{ resource: 'rent_contract', action: 'read' }],
       },
       {
         path: RENTAL_ROUTES.CONTRACTS.NEW,
         title: '创建合同',
-        permissions: [{ resource: 'rental', action: 'create' }],
+        permissions: [{ resource: 'rent_contract', action: 'create' }],
       },
       {
         path: RENTAL_ROUTES.CONTRACTS.CREATE,
         title: '创建合同',
-        permissions: [{ resource: 'rental', action: 'create' }],
+        permissions: [{ resource: 'rent_contract', action: 'create' }],
       },
       {
         path: RENTAL_ROUTES.CONTRACTS.PDF_IMPORT,
         title: 'PDF导入合同',
-        permissions: [{ resource: 'rental', action: 'create' }],
+        permissions: [{ resource: 'rent_contract', action: 'create' }],
       },
       {
         path: RENTAL_ROUTES.CONTRACTS.RENEW_PATH,
         title: '合同续签',
-        permissions: [{ resource: 'rental', action: 'edit' }],
+        permissions: [{ resource: 'rent_contract', action: 'update' }],
       },
       {
         path: RENTAL_ROUTES.CONTRACTS.DETAIL_PATH,
         title: '合同详情',
-        permissions: [{ resource: 'rental', action: 'view' }],
+        permissions: [{ resource: 'rent_contract', action: 'read' }],
       },
       {
         path: RENTAL_ROUTES.CONTRACTS.EDIT_PATH,
         title: '编辑合同',
-        permissions: [{ resource: 'rental', action: 'edit' }],
+        permissions: [{ resource: 'rent_contract', action: 'update' }],
       },
       {
         path: RENTAL_ROUTES.LEDGER,
         title: '租金台账',
-        permissions: [{ resource: 'rental', action: 'view' }],
+        permissions: [{ resource: 'rent_contract', action: 'read' }],
       },
       {
         path: RENTAL_ROUTES.STATISTICS,
         title: '租赁统计',
-        permissions: [{ resource: 'rental', action: 'view' }],
+        permissions: [{ resource: 'rent_contract', action: 'read' }],
       },
     ],
   },
@@ -218,14 +218,17 @@ export const ROUTE_CONFIG: RouteConfig[] = [
       {
         path: OWNERSHIP_ROUTES.LIST,
         title: '权属方列表',
+        permissions: [{ resource: 'ownership', action: 'read' }],
       },
       {
         path: OWNERSHIP_ROUTES.DETAIL_PATH,
         title: '权属方详情',
+        permissions: [{ resource: 'ownership', action: 'read' }],
       },
       {
         path: OWNERSHIP_ROUTES.EDIT_PATH,
         title: '编辑权属方',
+        permissions: [{ resource: 'ownership', action: 'update' }],
       },
     ],
   },
@@ -238,14 +241,40 @@ export const ROUTE_CONFIG: RouteConfig[] = [
       {
         path: PROJECT_ROUTES.LIST,
         title: '项目列表',
+        permissions: [{ resource: 'project', action: 'read' }],
       },
       {
         path: PROJECT_ROUTES.DETAIL_PATH,
         title: '项目详情',
+        permissions: [{ resource: 'project', action: 'read' }],
       },
       {
         path: PROJECT_ROUTES.EDIT_PATH,
         title: '编辑项目',
+        permissions: [{ resource: 'project', action: 'update' }],
+      },
+    ],
+  },
+  {
+    path: PROPERTY_CERTIFICATE_ROUTES.LIST,
+    title: '产权证管理',
+    icon: 'file-text',
+    breadcrumb: ['产权证管理'],
+    children: [
+      {
+        path: PROPERTY_CERTIFICATE_ROUTES.LIST,
+        title: '产权证列表',
+        permissions: [{ resource: 'property_certificate', action: 'read' }],
+      },
+      {
+        path: PROPERTY_CERTIFICATE_ROUTES.IMPORT,
+        title: '产权证导入',
+        permissions: [{ resource: 'property_certificate', action: 'create' }],
+      },
+      {
+        path: PROPERTY_CERTIFICATE_ROUTES.DETAIL_PATH,
+        title: '产权证详情',
+        permissions: [{ resource: 'property_certificate', action: 'read' }],
       },
     ],
   },
@@ -262,35 +291,40 @@ export const ROUTE_CONFIG: RouteConfig[] = [
       {
         path: SYSTEM_ROUTES.USERS,
         title: '用户管理',
-        permissions: [{ resource: 'user', action: 'view' }],
+        permissions: [{ resource: 'user', action: 'read' }],
       },
       {
         path: SYSTEM_ROUTES.ROLES,
         title: '角色管理',
-        permissions: [{ resource: 'role', action: 'view' }],
+        permissions: [{ resource: 'role', action: 'read' }],
       },
       {
         path: SYSTEM_ROUTES.ORGANIZATIONS,
         title: '组织架构',
-        permissions: [{ resource: 'organization', action: 'view' }],
+        permissions: [{ resource: 'organization', action: 'read' }],
       },
       {
         path: SYSTEM_ROUTES.DICTIONARIES,
         title: '字典管理',
-        permissions: [{ resource: 'system', action: 'dictionary' }],
+        permissions: [{ resource: 'dictionary', action: 'read' }],
       },
       {
         path: SYSTEM_ROUTES.TEMPLATES,
         title: '模板管理',
+        permissions: [{ resource: 'llm_prompt', action: 'read' }],
       },
       {
         path: SYSTEM_ROUTES.LOGS,
         title: '操作日志',
-        permissions: [{ resource: 'system', action: 'logs' }],
+        permissions: [{ resource: 'operation_log', action: 'read' }],
       },
       {
         path: SYSTEM_ROUTES.SETTINGS,
         title: '系统设置',
+        permissions: [
+          { resource: 'system_settings', action: 'read' },
+          { resource: 'system_settings', action: 'update' },
+        ],
       },
     ],
   },

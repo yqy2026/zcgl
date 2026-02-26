@@ -14,9 +14,10 @@ from ....core.exception_handler import (
 from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
 from ....database import get_async_db
 from ....middleware.auth import (
+    AuthzContext,
     get_current_active_user,
     require_admin,
-    require_permission,
+    require_authz,
 )
 from ....models.auth import User
 from ....schemas.task import (
@@ -45,6 +46,24 @@ def _resolve_service(service: TaskService | Any) -> TaskService | Any:
 
 
 router = APIRouter(prefix="/tasks", tags=["任务管理"])
+_TASK_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:task:create"
+_TASK_CREATE_RESOURCE_CONTEXT: dict[str, str] = {
+    "party_id": _TASK_CREATE_UNSCOPED_PARTY_ID,
+    "owner_party_id": _TASK_CREATE_UNSCOPED_PARTY_ID,
+    "manager_party_id": _TASK_CREATE_UNSCOPED_PARTY_ID,
+}
+_TASK_DELETE_UNSCOPED_PARTY_ID = "__unscoped__:task:delete"
+_TASK_DELETE_RESOURCE_CONTEXT: dict[str, str] = {
+    "party_id": _TASK_DELETE_UNSCOPED_PARTY_ID,
+    "owner_party_id": _TASK_DELETE_UNSCOPED_PARTY_ID,
+    "manager_party_id": _TASK_DELETE_UNSCOPED_PARTY_ID,
+}
+_EXCEL_CONFIG_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:excel_config:create"
+_EXCEL_CONFIG_CREATE_RESOURCE_CONTEXT: dict[str, str] = {
+    "party_id": _EXCEL_CONFIG_CREATE_UNSCOPED_PARTY_ID,
+    "owner_party_id": _EXCEL_CONFIG_CREATE_UNSCOPED_PARTY_ID,
+    "manager_party_id": _EXCEL_CONFIG_CREATE_UNSCOPED_PARTY_ID,
+}
 
 
 @router.post("/", response_model=TaskResponse, summary="创建新任务")
@@ -52,6 +71,13 @@ async def create_task(
     task_in: TaskCreate,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="create",
+            resource_type="task",
+            resource_context=_TASK_CREATE_RESOURCE_CONTEXT,
+        )
+    ),
     service: TaskService = Depends(get_task_service),
 ) -> TaskResponse:
     """
@@ -92,6 +118,12 @@ async def get_tasks(
     order_dir: str = Query("desc", pattern="^(asc|desc)$", description="排序方向"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="task",
+        )
+    ),
     service: TaskService = Depends(get_task_service),
 ) -> JSONResponse:
     """
@@ -140,6 +172,13 @@ async def get_task(
     task_id: str = Path(..., description="任务ID"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="task",
+            resource_id="{task_id}",
+        )
+    ),
     service: TaskService = Depends(get_task_service),
 ) -> TaskResponse:
     """
@@ -161,6 +200,13 @@ async def update_task(
     task_in: TaskUpdate = Body(...),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="task",
+            resource_id="{task_id}",
+        )
+    ),
     service: TaskService = Depends(get_task_service),
 ) -> TaskResponse:
     """
@@ -188,6 +234,13 @@ async def cancel_task(
     cancel_request: TaskCancelRequest | None = Body(None),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="task",
+            resource_id="{task_id}",
+        )
+    ),
     service: TaskService = Depends(get_task_service),
 ) -> TaskResponse:
     """
@@ -216,6 +269,13 @@ async def delete_task(
     task_id: str = Path(..., description="任务ID"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="delete",
+            resource_type="task",
+            resource_id="{task_id}",
+        )
+    ),
     service: TaskService = Depends(get_task_service),
 ) -> dict[str, str]:
     """
@@ -244,6 +304,13 @@ async def get_task_history(
     task_id: str = Path(..., description="任务ID"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="task",
+            resource_id="{task_id}",
+        )
+    ),
     service: TaskService = Depends(get_task_service),
 ) -> list[TaskHistoryResponse]:
     """
@@ -270,6 +337,12 @@ async def get_task_statistics(
     user_id: str | None = Query(None, description="用户ID筛选"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="task",
+        )
+    ),
     service: TaskService = Depends(get_task_service),
 ) -> TaskStatistics:
     """
@@ -289,6 +362,12 @@ async def get_task_statistics(
 async def get_running_tasks(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="task",
+        )
+    ),
     service: TaskService = Depends(get_task_service),
 ) -> list[TaskResponse]:
     """
@@ -313,6 +392,12 @@ async def get_recent_tasks(
     page_size: int = Query(10, ge=1, le=50, description="返回数量"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="task",
+        )
+    ),
     service: TaskService = Depends(get_task_service),
 ) -> list[TaskResponse]:
     """
@@ -339,7 +424,14 @@ async def get_recent_tasks(
 async def create_excel_config(
     config_in: ExcelTaskConfigCreate,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_permission("excel_config", "write")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="create",
+            resource_type="excel_config",
+            resource_context=_EXCEL_CONFIG_CREATE_RESOURCE_CONTEXT,
+        )
+    ),
     service: TaskService = Depends(get_task_service),
 ) -> ExcelTaskConfigResponse:
     """
@@ -365,7 +457,13 @@ async def get_excel_configs(
     config_type: str | None = Query(None, description="配置类型"),
     task_type: str | None = Query(None, description="任务类型"),
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_permission("excel_config", "read")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="excel_config",
+        )
+    ),
     service: TaskService = Depends(get_task_service),
 ) -> list[ExcelTaskConfigResponse]:
     """
@@ -392,7 +490,13 @@ async def get_default_excel_config(
     config_type: str = Query(..., description="配置类型"),
     task_type: str = Query(..., description="任务类型"),
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_permission("excel_config", "read")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="excel_config",
+        )
+    ),
     service: TaskService = Depends(get_task_service),
 ) -> ExcelTaskConfigResponse:
     """
@@ -422,7 +526,14 @@ async def get_default_excel_config(
 async def get_excel_config(
     config_id: str = Path(..., description="配置ID"),
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_permission("excel_config", "read")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="excel_config",
+            resource_id="{config_id}",
+        )
+    ),
     service: TaskService = Depends(get_task_service),
 ) -> ExcelTaskConfigResponse:
     """
@@ -449,7 +560,14 @@ async def update_excel_config(
     config_id: str = Path(..., description="配置ID"),
     config_in: dict[str, Any] = Body(...),
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_permission("excel_config", "write")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="excel_config",
+            resource_id="{config_id}",
+        )
+    ),
     service: TaskService = Depends(get_task_service),
 ) -> ExcelTaskConfigResponse:
     """
@@ -478,7 +596,14 @@ async def update_excel_config(
 async def delete_excel_config(
     config_id: str = Path(..., description="配置ID"),
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_permission("excel_config", "write")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="delete",
+            resource_type="excel_config",
+            resource_id="{config_id}",
+        )
+    ),
     service: TaskService = Depends(get_task_service),
 ) -> dict[str, str]:
     """
@@ -509,6 +634,13 @@ async def cleanup_old_tasks(
     is_dry_run: bool = Query(False, description="是否为试运行"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_admin),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="delete",
+            resource_type="task",
+            resource_context=_TASK_DELETE_RESOURCE_CONTEXT,
+        )
+    ),
     service: TaskService = Depends(get_task_service),
 ) -> dict[str, Any]:
     """

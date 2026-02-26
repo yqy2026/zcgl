@@ -11,7 +11,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ....core.exception_handler import bad_request, internal_error
 from ....database import get_async_db
-from ....middleware.auth import get_current_active_user, require_permission
+from ....middleware.auth import (
+    AuthzContext,
+    get_current_active_user,
+    require_authz,
+)
 from ....models.auth import User
 from ....schemas.asset import (
     AssetBatchUpdateRequest,
@@ -31,6 +35,18 @@ from ....services.enum_validation_service import get_enum_validation_service_asy
 
 # 创建批量操作路由器
 router = APIRouter()
+_ASSET_BATCH_UPDATE_UNSCOPED_PARTY_ID = "__unscoped__:asset:batch_update"
+_ASSET_BATCH_UPDATE_RESOURCE_CONTEXT: dict[str, str] = {
+    "party_id": _ASSET_BATCH_UPDATE_UNSCOPED_PARTY_ID,
+    "owner_party_id": _ASSET_BATCH_UPDATE_UNSCOPED_PARTY_ID,
+    "manager_party_id": _ASSET_BATCH_UPDATE_UNSCOPED_PARTY_ID,
+}
+_ASSET_BATCH_DELETE_UNSCOPED_PARTY_ID = "__unscoped__:asset:batch_delete"
+_ASSET_BATCH_DELETE_RESOURCE_CONTEXT: dict[str, str] = {
+    "party_id": _ASSET_BATCH_DELETE_UNSCOPED_PARTY_ID,
+    "owner_party_id": _ASSET_BATCH_DELETE_UNSCOPED_PARTY_ID,
+    "manager_party_id": _ASSET_BATCH_DELETE_UNSCOPED_PARTY_ID,
+}
 
 
 @router.post(
@@ -39,7 +55,14 @@ router = APIRouter()
 async def batch_update_assets(
     request: AssetBatchUpdateRequest,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_permission("asset", "update")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="asset",
+            resource_context=_ASSET_BATCH_UPDATE_RESOURCE_CONTEXT,
+        )
+    ),
 ) -> AssetBatchUpdateResponse:
     """
     批量更新资产信息
@@ -100,6 +123,12 @@ async def validate_asset_data(
     request: AssetValidationRequest,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="asset",
+        )
+    ),
 ) -> AssetValidationResponse:
     """
     验证资产数据的完整性和正确性
@@ -169,7 +198,14 @@ async def validate_asset_data(
 async def batch_update_custom_fields(
     request: BatchCustomFieldUpdateRequest,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_permission("asset", "update")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="asset",
+            resource_context=_ASSET_BATCH_UPDATE_RESOURCE_CONTEXT,
+        )
+    ),
 ) -> BatchCustomFieldUpdateResponse:
     """
     批量更新资产的自定义字段
@@ -222,7 +258,13 @@ async def batch_update_custom_fields(
 @router.get("/all", summary="获取所有资产（不分页）")
 async def get_all_assets(
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_permission("asset", "read")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="asset",
+        )
+    ),
     search: str | None = Query(None, description="搜索关键字"),
     ownership_status: str | None = Query(None, description="确权状态"),
     usage_status: str | None = Query(None, description="使用状态"),
@@ -288,7 +330,13 @@ async def get_all_assets(
 async def get_assets_by_ids(
     request: dict[str, Any],
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_permission("asset", "read")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="asset",
+        )
+    ),
     include_relations: bool = Query(False, description="是否加载关联数据"),
 ) -> dict[str, Any]:
     """
@@ -330,7 +378,14 @@ async def get_assets_by_ids(
 async def batch_delete_assets(
     request: dict[str, Any],
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_permission("asset", "delete")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="delete",
+            resource_type="asset",
+            resource_context=_ASSET_BATCH_DELETE_RESOURCE_CONTEXT,
+        )
+    ),
 ) -> dict[str, Any]:
     """
     批量删除资产

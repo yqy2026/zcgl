@@ -46,7 +46,7 @@ def invalidate_user_accessible_organizations_cache(user_id: str | None = None) -
     )
 
 
-class OrganizationPermissionService:
+class OrganizationPermissionService:  # DEPRECATED
     """组织权限服务"""
 
     def __init__(self, db: AsyncSession):

@@ -8,25 +8,25 @@ from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, Depends, Query
 
-from ....constants.message_constants import ErrorIDs
-from ....core.exception_handler import (
+from .....constants.message_constants import ErrorIDs
+from .....core.exception_handler import (
     BaseBusinessError,
     ConfigurationError,
     internal_error,
     service_unavailable,
 )
-from ....middleware.auth import require_permission
+from .....middleware.auth import AuthzContext, get_current_active_user, require_authz
 from .health import get_database_manager
 from .models import DatabaseHealthMetrics, DatabaseOptimizationReport
 
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from ....models.auth import User
+    from .....models.auth import User
 
 # 关键依赖导入 - 使用快速失败策略
 try:
-    from ....models.auth import User
+    from .....models.auth import User
 except ImportError as e:
     logger.critical(
         "无法导入数据库监控关键依赖",
@@ -45,6 +45,18 @@ except ImportError as e:
 
 
 router = APIRouter()
+_SYSTEM_MONITORING_UPDATE_UNSCOPED_PARTY_ID = "__unscoped__:system_monitoring:update"
+_SYSTEM_MONITORING_UPDATE_RESOURCE_CONTEXT: dict[str, str] = {
+    "party_id": _SYSTEM_MONITORING_UPDATE_UNSCOPED_PARTY_ID,
+    "owner_party_id": _SYSTEM_MONITORING_UPDATE_UNSCOPED_PARTY_ID,
+    "manager_party_id": _SYSTEM_MONITORING_UPDATE_UNSCOPED_PARTY_ID,
+}
+_SYSTEM_MONITORING_DELETE_UNSCOPED_PARTY_ID = "__unscoped__:system_monitoring:delete"
+_SYSTEM_MONITORING_DELETE_RESOURCE_CONTEXT: dict[str, str] = {
+    "party_id": _SYSTEM_MONITORING_DELETE_UNSCOPED_PARTY_ID,
+    "owner_party_id": _SYSTEM_MONITORING_DELETE_UNSCOPED_PARTY_ID,
+    "manager_party_id": _SYSTEM_MONITORING_DELETE_UNSCOPED_PARTY_ID,
+}
 
 
 @router.get(
@@ -53,7 +65,10 @@ router = APIRouter()
     summary="获取数据库健康指标",
 )
 async def get_database_health_metrics(
-    current_user: User = Depends(require_permission("system_monitoring", "read")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="read", resource_type="system_monitoring")
+    ),
 ) -> DatabaseHealthMetrics:
     """获取数据库健康状态和性能指标"""
     try:
@@ -112,7 +127,10 @@ async def get_database_health_metrics(
 @router.get("/database/slow-queries", summary="获取慢查询列表")
 def get_slow_queries(
     page_size: int = Query(default=20, ge=1, le=100, description="返回数量限制"),
-    current_user: User = Depends(require_permission("system_monitoring", "read")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="read", resource_type="system_monitoring")
+    ),
 ) -> dict[str, Any]:
     """获取数据库慢查询列表"""
     try:
@@ -141,7 +159,14 @@ def get_slow_queries(
     summary="执行数据库优化",
 )
 def optimize_database(
-    current_user: User = Depends(require_permission("system_monitoring", "write")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="system_monitoring",
+            resource_context=_SYSTEM_MONITORING_UPDATE_RESOURCE_CONTEXT,
+        )
+    ),
 ) -> DatabaseOptimizationReport:
     """执行数据库优化操作"""
     try:
@@ -197,7 +222,14 @@ def optimize_database(
 @router.post("/database/cleanup", summary="清理数据库过期数据")
 def cleanup_database(
     days: int = Query(default=7, ge=1, le=90, description="清理多少天前的数据"),
-    current_user: User = Depends(require_permission("system_monitoring", "write")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="delete",
+            resource_type="system_monitoring",
+            resource_context=_SYSTEM_MONITORING_DELETE_RESOURCE_CONTEXT,
+        )
+    ),
 ) -> dict[str, Any]:
     """清理数据库过期数据"""
     try:
@@ -222,7 +254,10 @@ def cleanup_database(
 
 @router.get("/database/connection-pool", summary="获取连接池状态")
 def get_connection_pool_status(
-    current_user: User = Depends(require_permission("system_monitoring", "read")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="read", resource_type="system_monitoring")
+    ),
 ) -> dict[str, Any]:
     """获取数据库连接池详细状态"""
     try:

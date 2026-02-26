@@ -2,7 +2,10 @@
 认证中间件
 """
 
+import inspect
 import logging
+from collections.abc import Awaitable, Callable, Mapping
+from dataclasses import dataclass
 from typing import Any
 
 import jwt
@@ -13,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.config import settings
 from ..core.environment import is_production
-from ..core.exception_handler import bad_request, forbidden, unauthorized
+from ..core.exception_handler import bad_request, forbidden, not_found, unauthorized
 from ..crud.auth import AuditLogCRUD
 from ..database import get_async_db
 from ..models.auth import User
@@ -21,6 +24,7 @@ from ..schemas.auth import TokenData
 from ..schemas.rbac import PermissionCheckRequest
 from ..security.cookie_manager import cookie_manager
 from ..services import RBACService
+from ..services.authz import authz_service
 from ..services.permission.rbac_service import (
     ADMIN_PERMISSION_ACTION,
     ADMIN_PERMISSION_RESOURCE,
@@ -309,7 +313,923 @@ def require_permissions(required_permissions: list[str]) -> PermissionChecker:
     return PermissionChecker(required_permissions)
 
 
-class OrganizationPermissionChecker:
+ResourceIdResolver = Callable[[Request], str | None | Awaitable[str | None]]
+ResourceContextResolver = Callable[
+    [Request],
+    Mapping[str, Any] | dict[str, Any] | None | Awaitable[Mapping[str, Any] | dict[str, Any] | None],
+]
+
+
+@dataclass(frozen=True)
+class AuthzContext:
+    """ABAC 鉴权上下文。"""
+
+    current_user: User
+    action: str
+    resource_type: str
+    resource_id: str | None
+    resource_context: dict[str, Any]
+    allowed: bool
+    reason_code: str | None
+
+
+class AuthzPermissionChecker:
+    """统一 ABAC 鉴权依赖。"""
+
+    def __init__(
+        self,
+        *,
+        action: str,
+        resource_type: str,
+        resource_id: str | ResourceIdResolver | None = None,
+        resource_context: Mapping[str, Any] | ResourceContextResolver | None = None,
+        deny_as_not_found: bool = False,
+    ) -> None:
+        self.action = action
+        self.resource_type = resource_type
+        self.resource_id = resource_id
+        self.resource_context = resource_context
+        self.deny_as_not_found = deny_as_not_found
+
+    async def __call__(
+        self,
+        request: Request,
+        current_user: User = Depends(get_current_active_user),
+        db: AsyncSession = Depends(get_async_db),
+    ) -> AuthzContext:
+        resolved_resource_id = await self._resolve_resource_id(request)
+        resolved_resource_context = await self._resolve_resource_context(
+            request=request,
+            db=db,
+            resource_id=resolved_resource_id,
+        )
+        resolved_resource_context = await self._inject_collection_scope_hint_if_needed(
+            db=db,
+            user_id=str(current_user.id),
+            resource_id=resolved_resource_id,
+            resource_context=resolved_resource_context,
+        )
+
+        try:
+            decision = await authz_service.check_access(
+                db,
+                user_id=str(current_user.id),
+                resource_type=self.resource_type,
+                action=self.action,
+                resource_id=resolved_resource_id,
+                resource=resolved_resource_context,
+            )
+        except Exception:
+            logger.exception(
+                "ABAC check failed: user=%s resource=%s action=%s id=%s",
+                getattr(current_user, "id", None),
+                self.resource_type,
+                self.action,
+                resolved_resource_id,
+            )
+            raise forbidden("权限校验失败")
+
+        if not decision.allowed:
+            if self.deny_as_not_found:
+                raise not_found(
+                    resource_type=self.resource_type,
+                    resource_id=resolved_resource_id,
+                )
+            raise forbidden("权限不足")
+
+        return AuthzContext(
+            current_user=current_user,
+            action=self.action,
+            resource_type=self.resource_type,
+            resource_id=resolved_resource_id,
+            resource_context=resolved_resource_context,
+            allowed=True,
+            reason_code=decision.reason_code,
+        )
+
+    async def _resolve_resource_id(self, request: Request) -> str | None:
+        raw_value = await self._resolve_dynamic_value(self.resource_id, request)
+        normalized = self._normalize_optional_str(raw_value)
+        if normalized is None:
+            return None
+        return self._resolve_path_template(normalized, request)
+
+    async def _resolve_resource_context(
+        self,
+        *,
+        request: Request,
+        db: AsyncSession,
+        resource_id: str | None,
+    ) -> dict[str, Any]:
+        raw_context = await self._resolve_dynamic_value(self.resource_context, request)
+        normalized_context = self._normalize_context_mapping(raw_context)
+        request_context = await self._extract_request_context(request)
+        trusted_context = await self._resolve_trusted_resource_context(
+            db=db,
+            resource_id=resource_id,
+        )
+        return {**request_context, **normalized_context, **trusted_context}
+
+    async def _inject_collection_scope_hint_if_needed(
+        self,
+        *,
+        db: AsyncSession,
+        user_id: str,
+        resource_id: str | None,
+        resource_context: dict[str, Any],
+    ) -> dict[str, Any]:
+        if not self._should_infer_collection_scope_hint(
+            resource_id=resource_id,
+            resource_context=resource_context,
+        ):
+            return resource_context
+
+        inferred_scope_hint = await self._build_subject_scope_hint(
+            db=db,
+            user_id=user_id,
+        )
+        if len(inferred_scope_hint) == 0:
+            return resource_context
+
+        merged_context = dict(resource_context)
+        for key, value in inferred_scope_hint.items():
+            merged_context.setdefault(key, value)
+        return merged_context
+
+    def _should_infer_collection_scope_hint(
+        self,
+        *,
+        resource_id: str | None,
+        resource_context: Mapping[str, Any],
+    ) -> bool:
+        if self.action not in {"read", "list"}:
+            return False
+        if self._normalize_optional_str(resource_id) is not None:
+            return False
+
+        has_owner_scope = (
+            self._normalize_optional_str(resource_context.get("owner_party_id"))
+            is not None
+        )
+        has_manager_scope = (
+            self._normalize_optional_str(resource_context.get("manager_party_id"))
+            is not None
+        )
+        has_party_scope = (
+            self._normalize_optional_str(resource_context.get("party_id")) is not None
+        )
+        return not (has_owner_scope and has_manager_scope and has_party_scope)
+
+    async def _build_subject_scope_hint(
+        self,
+        *,
+        db: AsyncSession,
+        user_id: str,
+    ) -> dict[str, Any]:
+        try:
+            subject_context = await authz_service.context_builder.build_subject_context(
+                db,
+                user_id=user_id,
+            )
+        except Exception:
+            logger.exception(
+                "Failed to infer collection scope hint for user %s",
+                user_id,
+            )
+            return {}
+
+        owner_party_ids = self._normalize_identifier_sequence(
+            getattr(subject_context, "owner_party_ids", [])
+        )
+        manager_party_ids = self._normalize_identifier_sequence(
+            getattr(subject_context, "manager_party_ids", [])
+        )
+
+        scope_hint: dict[str, Any] = {}
+        if len(owner_party_ids) > 0:
+            scope_hint["owner_party_ids"] = owner_party_ids
+            scope_hint["owner_party_id"] = owner_party_ids[0]
+        if len(manager_party_ids) > 0:
+            scope_hint["manager_party_ids"] = manager_party_ids
+            scope_hint["manager_party_id"] = manager_party_ids[0]
+
+        party_candidates = [*owner_party_ids, *manager_party_ids]
+        if len(party_candidates) > 0:
+            scope_hint["party_id"] = party_candidates[0]
+        return scope_hint
+
+    async def _resolve_trusted_resource_context(
+        self,
+        *,
+        db: AsyncSession,
+        resource_id: str | None,
+    ) -> dict[str, Any]:
+        normalized_resource_id = self._normalize_optional_str(resource_id)
+        if normalized_resource_id is None:
+            return {}
+        if not self._is_queryable_session(db):
+            return {}
+
+        if self.resource_type == "asset":
+            return await self._load_asset_scope_context(
+                db=db,
+                asset_id=normalized_resource_id,
+            )
+        if self.resource_type == "project":
+            return await self._load_project_scope_context(
+                db=db,
+                project_id=normalized_resource_id,
+            )
+        if self.resource_type == "rent_contract":
+            return await self._load_rent_contract_scope_context(
+                db=db,
+                contract_id=normalized_resource_id,
+            )
+        if self.resource_type == "ownership":
+            return await self._load_ownership_scope_context(
+                db=db,
+                ownership_id=normalized_resource_id,
+            )
+        if self.resource_type == "party":
+            return await self._load_party_scope_context(
+                db=db,
+                party_id=normalized_resource_id,
+            )
+        if self.resource_type == "role":
+            return await self._load_role_scope_context(
+                db=db,
+                role_id=normalized_resource_id,
+            )
+        if self.resource_type == "user":
+            return await self._load_user_scope_context(
+                db=db,
+                user_id=normalized_resource_id,
+            )
+        if self.resource_type == "task":
+            return await self._load_task_scope_context(
+                db=db,
+                task_id=normalized_resource_id,
+            )
+        if self.resource_type == "organization":
+            return await self._load_organization_scope_context(
+                db=db,
+                organization_id=normalized_resource_id,
+            )
+        if self.resource_type == "property_certificate":
+            return await self._load_property_certificate_scope_context(
+                db=db,
+                certificate_id=normalized_resource_id,
+            )
+        return {}
+
+    def _is_queryable_session(self, db: Any) -> bool:
+        if isinstance(db, AsyncSession):
+            return True
+        execute = getattr(db, "execute", None)
+        if execute is None:
+            return False
+        return inspect.iscoroutinefunction(execute)
+
+    async def _load_asset_scope_context(
+        self,
+        *,
+        db: AsyncSession,
+        asset_id: str,
+    ) -> dict[str, Any]:
+        from ..models.asset import Asset
+
+        stmt = select(
+            Asset.id.label("asset_id"),
+            Asset.owner_party_id,
+            Asset.manager_party_id,
+            Asset.organization_id,
+            Asset.ownership_id,
+            Asset.project_id,
+        ).where(Asset.id == asset_id)
+        row = (await db.execute(stmt)).mappings().one_or_none()
+        if row is None:
+            return {}
+
+        normalized_owner_party_id = self._normalize_optional_str(row.get("owner_party_id"))
+        normalized_manager_party_id = self._normalize_optional_str(
+            row.get("manager_party_id")
+        )
+        normalized_organization_id = self._normalize_optional_str(
+            row.get("organization_id")
+        )
+        normalized_ownership_id = self._normalize_optional_str(row.get("ownership_id"))
+        if normalized_owner_party_id is None and normalized_ownership_id is not None:
+            normalized_owner_party_id = await self._resolve_ownership_party_id(
+                db=db,
+                ownership_id=normalized_ownership_id,
+                ownership_code=None,
+                ownership_name=None,
+            )
+            if normalized_owner_party_id is None:
+                normalized_owner_party_id = normalized_ownership_id
+        if (
+            normalized_manager_party_id is None
+            and normalized_organization_id is not None
+        ):
+            normalized_manager_party_id = await self._resolve_organization_party_id(
+                db=db,
+                organization_id=normalized_organization_id,
+                organization_code=None,
+                organization_name=None,
+            )
+            if normalized_manager_party_id is None:
+                normalized_manager_party_id = normalized_organization_id
+        scoped_party_id = normalized_owner_party_id or normalized_manager_party_id
+
+        return self._normalize_scope_context(
+            {
+                "asset_id": row.get("asset_id"),
+                "owner_party_id": normalized_owner_party_id,
+                "manager_party_id": normalized_manager_party_id,
+                "party_id": scoped_party_id,
+                "organization_id": normalized_organization_id,
+                "ownership_id": normalized_ownership_id,
+                "project_id": row.get("project_id"),
+            }
+        )
+
+    async def _load_project_scope_context(
+        self,
+        *,
+        db: AsyncSession,
+        project_id: str,
+    ) -> dict[str, Any]:
+        from ..models.project import Project
+
+        stmt = select(
+            Project.id.label("project_id"),
+            Project.manager_party_id,
+            Project.organization_id,
+        ).where(Project.id == project_id)
+        row = (await db.execute(stmt)).mappings().one_or_none()
+        if row is None:
+            return {}
+
+        normalized_manager_party_id = self._normalize_optional_str(
+            row.get("manager_party_id")
+        )
+        normalized_organization_id = self._normalize_optional_str(
+            row.get("organization_id")
+        )
+        if (
+            normalized_manager_party_id is None
+            and normalized_organization_id is not None
+        ):
+            normalized_manager_party_id = await self._resolve_organization_party_id(
+                db=db,
+                organization_id=normalized_organization_id,
+                organization_code=None,
+                organization_name=None,
+            )
+            if normalized_manager_party_id is None:
+                normalized_manager_party_id = normalized_organization_id
+
+        return self._normalize_scope_context(
+            {
+                "project_id": row.get("project_id"),
+                "manager_party_id": normalized_manager_party_id,
+                "party_id": normalized_manager_party_id,
+                "organization_id": normalized_organization_id,
+            }
+        )
+
+    async def _load_rent_contract_scope_context(
+        self,
+        *,
+        db: AsyncSession,
+        contract_id: str,
+    ) -> dict[str, Any]:
+        from ..models.rent_contract import RentContract
+
+        stmt = select(
+            RentContract.id.label("contract_id"),
+            RentContract.owner_party_id,
+            RentContract.manager_party_id,
+            RentContract.tenant_party_id,
+            RentContract.ownership_id,
+        ).where(RentContract.id == contract_id)
+        row = (await db.execute(stmt)).mappings().one_or_none()
+        if row is None:
+            return {}
+
+        normalized_owner_party_id = self._normalize_optional_str(row.get("owner_party_id"))
+        normalized_manager_party_id = self._normalize_optional_str(
+            row.get("manager_party_id")
+        )
+        normalized_ownership_id = self._normalize_optional_str(row.get("ownership_id"))
+        if normalized_owner_party_id is None and normalized_ownership_id is not None:
+            normalized_owner_party_id = await self._resolve_ownership_party_id(
+                db=db,
+                ownership_id=normalized_ownership_id,
+                ownership_code=None,
+                ownership_name=None,
+            )
+            if normalized_owner_party_id is None:
+                normalized_owner_party_id = normalized_ownership_id
+
+        return self._normalize_scope_context(
+            {
+                "contract_id": row.get("contract_id"),
+                "owner_party_id": normalized_owner_party_id,
+                "manager_party_id": normalized_manager_party_id,
+                "party_id": normalized_owner_party_id or normalized_manager_party_id,
+                "tenant_party_id": row.get("tenant_party_id"),
+                "ownership_id": normalized_ownership_id,
+            }
+        )
+
+    async def _load_ownership_scope_context(
+        self,
+        *,
+        db: AsyncSession,
+        ownership_id: str,
+    ) -> dict[str, Any]:
+        from ..models.ownership import Ownership
+
+        stmt = select(
+            Ownership.id.label("ownership_id"),
+            Ownership.code.label("ownership_code"),
+            Ownership.name.label("ownership_name"),
+        ).where(Ownership.id == ownership_id)
+        row = (await db.execute(stmt)).mappings().one_or_none()
+        if row is None:
+            return {}
+
+        normalized_ownership_id = self._normalize_optional_str(row.get("ownership_id"))
+        if normalized_ownership_id is None:
+            return {}
+
+        scoped_party_id = await self._resolve_ownership_party_id(
+            db=db,
+            ownership_id=normalized_ownership_id,
+            ownership_code=row.get("ownership_code"),
+            ownership_name=row.get("ownership_name"),
+        )
+        if scoped_party_id is None:
+            # Legacy fallback: keep ownership-id based scoping fail-closed.
+            scoped_party_id = normalized_ownership_id
+
+        return self._normalize_scope_context(
+            {
+                "ownership_id": normalized_ownership_id,
+                "party_id": scoped_party_id,
+                "owner_party_id": scoped_party_id,
+                "manager_party_id": scoped_party_id,
+            }
+        )
+
+    async def _load_party_scope_context(
+        self,
+        *,
+        db: AsyncSession,
+        party_id: str,
+    ) -> dict[str, Any]:
+        from ..models.party import Party
+
+        stmt = select(Party.id.label("party_id")).where(Party.id == party_id)
+        row = (await db.execute(stmt)).mappings().one_or_none()
+        if row is None:
+            return {}
+        return self._normalize_scope_context({"party_id": row.get("party_id")})
+
+    async def _load_role_scope_context(
+        self,
+        *,
+        db: AsyncSession,
+        role_id: str,
+    ) -> dict[str, Any]:
+        from ..models.rbac import Role
+
+        stmt = select(
+            Role.id.label("role_id"),
+            Role.party_id,
+            Role.organization_id,
+        ).where(Role.id == role_id)
+        row = (await db.execute(stmt)).mappings().one_or_none()
+        if row is None:
+            return {}
+
+        normalized_role_id = self._normalize_optional_str(row.get("role_id"))
+        if normalized_role_id is None:
+            return {}
+
+        scoped_party_id = self._normalize_optional_str(row.get("party_id"))
+        normalized_organization_id = self._normalize_optional_str(row.get("organization_id"))
+        if scoped_party_id is None and normalized_organization_id is not None:
+            scoped_party_id = await self._resolve_organization_party_id(
+                db=db,
+                organization_id=normalized_organization_id,
+                organization_code=None,
+                organization_name=None,
+            )
+            if scoped_party_id is None:
+                scoped_party_id = normalized_organization_id
+        if scoped_party_id is None:
+            scoped_party_id = self._build_unscoped_party_id(
+                resource_type="role",
+                resource_id=normalized_role_id,
+            )
+
+        return self._normalize_scope_context(
+            {
+                "role_id": normalized_role_id,
+                "organization_id": normalized_organization_id,
+                "party_id": scoped_party_id,
+                "owner_party_id": scoped_party_id,
+                "manager_party_id": scoped_party_id,
+            }
+        )
+
+    async def _load_user_scope_context(
+        self,
+        *,
+        db: AsyncSession,
+        user_id: str,
+    ) -> dict[str, Any]:
+        from ..models.auth import User
+        from ..models.user_party_binding import UserPartyBinding
+
+        user_stmt = select(
+            User.id.label("user_id"),
+            User.default_organization_id,
+        ).where(User.id == user_id)
+        user_row = (await db.execute(user_stmt)).mappings().one_or_none()
+        if user_row is None:
+            return {}
+
+        normalized_user_id = self._normalize_optional_str(user_row.get("user_id"))
+        if normalized_user_id is None:
+            return {}
+
+        binding_stmt = (
+            select(UserPartyBinding.party_id.label("party_id"))
+            .where(UserPartyBinding.user_id == normalized_user_id)
+            .order_by(UserPartyBinding.is_primary.desc(), UserPartyBinding.created_at.asc())
+            .limit(1)
+        )
+        binding_row = (await db.execute(binding_stmt)).mappings().one_or_none()
+
+        scoped_party_id = self._normalize_optional_str(
+            binding_row.get("party_id") if binding_row is not None else None
+        )
+        normalized_organization_id = self._normalize_optional_str(
+            user_row.get("default_organization_id")
+        )
+        if scoped_party_id is None and normalized_organization_id is not None:
+            scoped_party_id = await self._resolve_organization_party_id(
+                db=db,
+                organization_id=normalized_organization_id,
+                organization_code=None,
+                organization_name=None,
+            )
+            if scoped_party_id is None:
+                scoped_party_id = normalized_organization_id
+        if scoped_party_id is None:
+            scoped_party_id = self._build_unscoped_party_id(
+                resource_type="user",
+                resource_id=normalized_user_id,
+            )
+
+        return self._normalize_scope_context(
+            {
+                "user_id": normalized_user_id,
+                "organization_id": normalized_organization_id,
+                "party_id": scoped_party_id,
+                "owner_party_id": scoped_party_id,
+                "manager_party_id": scoped_party_id,
+            }
+        )
+
+    async def _load_task_scope_context(
+        self,
+        *,
+        db: AsyncSession,
+        task_id: str,
+    ) -> dict[str, Any]:
+        from ..models.task import AsyncTask
+
+        task_stmt = select(
+            AsyncTask.id.label("task_id"),
+            AsyncTask.user_id,
+        ).where(AsyncTask.id == task_id)
+        task_row = (await db.execute(task_stmt)).mappings().one_or_none()
+        if task_row is None:
+            return {}
+
+        normalized_task_id = self._normalize_optional_str(task_row.get("task_id"))
+        if normalized_task_id is None:
+            return {}
+
+        normalized_user_id = self._normalize_optional_str(task_row.get("user_id"))
+        user_scope: dict[str, Any] = {}
+        if normalized_user_id is not None:
+            user_scope = await self._load_user_scope_context(
+                db=db,
+                user_id=normalized_user_id,
+            )
+
+        scoped_party_id = self._normalize_optional_str(user_scope.get("party_id"))
+        if scoped_party_id is None:
+            scoped_party_id = self._build_unscoped_party_id(
+                resource_type="task",
+                resource_id=normalized_task_id,
+            )
+
+        owner_party_id = self._normalize_optional_str(user_scope.get("owner_party_id"))
+        manager_party_id = self._normalize_optional_str(
+            user_scope.get("manager_party_id")
+        )
+        organization_id = self._normalize_optional_str(
+            user_scope.get("organization_id")
+        )
+
+        return self._normalize_scope_context(
+            {
+                "task_id": normalized_task_id,
+                "user_id": normalized_user_id,
+                "organization_id": organization_id,
+                "party_id": scoped_party_id,
+                "owner_party_id": owner_party_id or scoped_party_id,
+                "manager_party_id": manager_party_id or scoped_party_id,
+            }
+        )
+
+    @staticmethod
+    def _build_unscoped_party_id(*, resource_type: str, resource_id: str) -> str:
+        return f"__unscoped__:{resource_type}:{resource_id}"
+
+    async def _load_organization_scope_context(
+        self,
+        *,
+        db: AsyncSession,
+        organization_id: str,
+    ) -> dict[str, Any]:
+        from ..models.organization import Organization
+
+        stmt = select(
+            Organization.id.label("organization_id"),
+            Organization.code.label("organization_code"),
+            Organization.name.label("organization_name"),
+        ).where(Organization.id == organization_id)
+        row = (await db.execute(stmt)).mappings().one_or_none()
+        if row is None:
+            return {}
+
+        normalized_org_id = self._normalize_optional_str(row.get("organization_id"))
+        if normalized_org_id is None:
+            return {}
+
+        scoped_party_id = await self._resolve_organization_party_id(
+            db=db,
+            organization_id=normalized_org_id,
+            organization_code=row.get("organization_code"),
+            organization_name=row.get("organization_name"),
+        )
+        if scoped_party_id is None:
+            # Legacy fallback: keep organization-id based scoping fail-closed.
+            scoped_party_id = normalized_org_id
+
+        return self._normalize_scope_context(
+            {
+                "organization_id": normalized_org_id,
+                "party_id": scoped_party_id,
+                "owner_party_id": scoped_party_id,
+                "manager_party_id": scoped_party_id,
+            }
+        )
+
+    async def _resolve_organization_party_id(
+        self,
+        *,
+        db: AsyncSession,
+        organization_id: str,
+        organization_code: Any,
+        organization_name: Any,
+    ) -> str | None:
+        from ..models.party import Party, PartyType
+
+        lookup_conditions = [
+            Party.id == organization_id,
+            Party.external_ref == organization_id,
+        ]
+
+        normalized_code = self._normalize_optional_str(organization_code)
+        if normalized_code is not None:
+            lookup_conditions.append(Party.code == normalized_code)
+
+        normalized_name = self._normalize_optional_str(organization_name)
+        if normalized_name is not None:
+            lookup_conditions.append(Party.name == normalized_name)
+
+        for condition in lookup_conditions:
+            stmt = (
+                select(Party.id.label("party_id"))
+                .where(
+                    Party.party_type == PartyType.ORGANIZATION.value,
+                    condition,
+                )
+                .order_by(Party.id)
+                .limit(1)
+            )
+            row = (await db.execute(stmt)).mappings().one_or_none()
+            party_id = self._normalize_optional_str(
+                row.get("party_id") if row is not None else None
+            )
+            if party_id is not None:
+                return party_id
+        return None
+
+    async def _resolve_ownership_party_id(
+        self,
+        *,
+        db: AsyncSession,
+        ownership_id: str,
+        ownership_code: Any,
+        ownership_name: Any,
+    ) -> str | None:
+        from ..models.party import Party, PartyType
+
+        lookup_conditions = [
+            Party.id == ownership_id,
+            Party.external_ref == ownership_id,
+        ]
+
+        normalized_code = self._normalize_optional_str(ownership_code)
+        if normalized_code is not None:
+            lookup_conditions.append(Party.code == normalized_code)
+
+        normalized_name = self._normalize_optional_str(ownership_name)
+        if normalized_name is not None:
+            lookup_conditions.append(Party.name == normalized_name)
+
+        for condition in lookup_conditions:
+            stmt = (
+                select(Party.id.label("party_id"))
+                .where(
+                    Party.party_type == PartyType.LEGAL_ENTITY.value,
+                    condition,
+                )
+                .order_by(Party.id)
+                .limit(1)
+            )
+            row = (await db.execute(stmt)).mappings().one_or_none()
+            party_id = self._normalize_optional_str(
+                row.get("party_id") if row is not None else None
+            )
+            if party_id is not None:
+                return party_id
+        return None
+
+    async def _load_property_certificate_scope_context(
+        self,
+        *,
+        db: AsyncSession,
+        certificate_id: str,
+    ) -> dict[str, Any]:
+        from ..models.property_certificate import PropertyCertificate
+
+        stmt = select(
+            PropertyCertificate.id.label("certificate_id"),
+            PropertyCertificate.organization_id,
+        ).where(PropertyCertificate.id == certificate_id)
+        row = (await db.execute(stmt)).mappings().one_or_none()
+        if row is None:
+            return {}
+
+        normalized_organization_id = self._normalize_optional_str(row.get("organization_id"))
+        scoped_party_id: str | None = None
+        if normalized_organization_id is not None:
+            scoped_party_id = await self._resolve_organization_party_id(
+                db=db,
+                organization_id=normalized_organization_id,
+                organization_code=None,
+                organization_name=None,
+            )
+            if scoped_party_id is None:
+                scoped_party_id = normalized_organization_id
+
+        return self._normalize_scope_context(
+            {
+                "certificate_id": row.get("certificate_id"),
+                "organization_id": normalized_organization_id,
+                "party_id": scoped_party_id,
+                "owner_party_id": scoped_party_id,
+                "manager_party_id": scoped_party_id,
+            }
+        )
+
+    async def _resolve_dynamic_value(
+        self,
+        source: (
+            str
+            | Mapping[str, Any]
+            | ResourceIdResolver
+            | ResourceContextResolver
+            | None
+        ),
+        request: Request,
+    ) -> Any:
+        if not callable(source):
+            return source
+
+        resolved = source(request)
+        if inspect.isawaitable(resolved):
+            return await resolved
+        return resolved
+
+    @staticmethod
+    def _normalize_optional_str(value: Any) -> str | None:
+        if value is None:
+            return None
+        normalized = str(value).strip()
+        if normalized == "":
+            return None
+        return normalized
+
+    def _resolve_path_template(self, value: str, request: Request) -> str | None:
+        if not (value.startswith("{") and value.endswith("}")):
+            return value
+
+        param_name = value[1:-1].strip()
+        if param_name == "":
+            return None
+        return self._normalize_optional_str(request.path_params.get(param_name))
+
+    @classmethod
+    def _normalize_context_mapping(cls, value: Any) -> dict[str, Any]:
+        if value is None or not isinstance(value, Mapping):
+            return {}
+
+        normalized: dict[str, Any] = {}
+        for key, item in value.items():
+            normalized_key = cls._normalize_optional_str(key)
+            if normalized_key is None:
+                continue
+            normalized[normalized_key] = item
+        return normalized
+
+    @classmethod
+    def _normalize_scope_context(cls, value: Mapping[str, Any]) -> dict[str, Any]:
+        normalized: dict[str, Any] = {}
+        for key, item in value.items():
+            normalized_key = cls._normalize_optional_str(key)
+            if normalized_key is None:
+                continue
+            normalized_value = cls._normalize_optional_str(item)
+            if normalized_value is None:
+                continue
+            normalized[normalized_key] = normalized_value
+        return normalized
+
+    @classmethod
+    def _normalize_identifier_sequence(cls, values: Any) -> list[str]:
+        if not isinstance(values, list):
+            return []
+
+        normalized_values: list[str] = []
+        for value in values:
+            normalized = cls._normalize_optional_str(value)
+            if normalized is None:
+                continue
+            normalized_values.append(normalized)
+        return normalized_values
+
+    async def _extract_request_context(self, request: Request) -> dict[str, Any]:
+        context: dict[str, Any] = {}
+        for key, value in request.path_params.items():
+            if not key.endswith("_id"):
+                continue
+            normalized = self._normalize_optional_str(value)
+            if normalized is None:
+                continue
+            context[key] = normalized
+        return context
+
+
+def require_authz(
+    action: str,
+    resource_type: str,
+    resource_id: str | ResourceIdResolver | None = None,
+    resource_context: Mapping[str, Any] | ResourceContextResolver | None = None,
+    *,
+    deny_as_not_found: bool = False,
+) -> AuthzPermissionChecker:
+    """ABAC 鉴权依赖工厂。"""
+    return AuthzPermissionChecker(
+        action=action,
+        resource_type=resource_type,
+        resource_id=resource_id,
+        resource_context=resource_context,
+        deny_as_not_found=deny_as_not_found,
+    )
+
+
+class OrganizationPermissionChecker:  # DEPRECATED
     """组织权限检查器"""
 
     def __init__(self, organization_id: str | None = None):
@@ -344,9 +1264,9 @@ class OrganizationPermissionChecker:
 
 def require_organization_access(
     organization_id: str | None = None,
-) -> OrganizationPermissionChecker:
+) -> OrganizationPermissionChecker:  # DEPRECATED
     """组织权限装饰器工厂函数"""
-    return OrganizationPermissionChecker(organization_id)
+    return OrganizationPermissionChecker(organization_id)  # DEPRECATED
 
 
 class AuditLogger:
@@ -523,7 +1443,7 @@ def require_permission(
     return RBACPermissionChecker(resource, action, resource_id)
 
 
-class ResourcePermissionChecker:
+class ResourcePermissionChecker:  # DEPRECATED
     """资源权限检查器"""
 
     def __init__(self, resource_type: str, required_level: str = "read"):
@@ -542,14 +1462,14 @@ class ResourcePermissionChecker:
             return current_user
 
         # 检查是否有对应的资源权限
-        from ..models.rbac import ResourcePermission
+        from ..models.rbac import ResourcePermission  # DEPRECATED
 
-        stmt = select(ResourcePermission).where(
+        stmt = select(ResourcePermission).where(  # DEPRECATED
             and_(
-                ResourcePermission.user_id == current_user.id,
-                ResourcePermission.resource_type == self.resource_type,
-                ResourcePermission.resource_id == resource_id,
-                ResourcePermission.is_active,
+                ResourcePermission.user_id == current_user.id,  # DEPRECATED
+                ResourcePermission.resource_type == self.resource_type,  # DEPRECATED
+                ResourcePermission.resource_id == resource_id,  # DEPRECATED
+                ResourcePermission.is_active,  # DEPRECATED
             )
         )
         resource_permission = (await db.execute(stmt)).scalars().first()
@@ -574,9 +1494,9 @@ class ResourcePermissionChecker:
 
 def require_resource_permission(
     resource_type: str, required_level: str = "read"
-) -> ResourcePermissionChecker:
+) -> ResourcePermissionChecker:  # DEPRECATED
     """资源权限装饰器工厂函数"""
-    return ResourcePermissionChecker(resource_type, required_level)
+    return ResourcePermissionChecker(resource_type, required_level)  # DEPRECATED
 
 
 class RoleBasedAccessChecker:

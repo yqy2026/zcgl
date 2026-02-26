@@ -25,7 +25,12 @@ logger = logging.getLogger(__name__)
 
 from .....database import get_async_db
 from .....exceptions import BusinessLogicError
-from .....middleware.auth import get_current_active_user, require_admin
+from .....middleware.auth import (
+    AuthzContext,
+    get_current_active_user,
+    require_admin,
+    require_authz,
+)
 from .....middleware.security_middleware import get_client_ip
 from .....schemas.auth import (
     AdminPasswordResetRequest,
@@ -48,6 +53,52 @@ router = APIRouter(prefix="/users", tags=["用户管理"])
 
 _get_factory = get_service_factory()
 UserCRUD = getattr(import_module("src.crud.auth"), "UserCRUD")
+_USER_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:user:create"
+
+
+def _normalize_optional_str(value: Any) -> str | None:
+    if value is None:
+        return None
+    normalized = str(value).strip()
+    if normalized == "":
+        return None
+    return normalized
+
+
+def _build_party_scope_context(
+    *,
+    scoped_party_id: str,
+    organization_id: str | None = None,
+) -> dict[str, str]:
+    context: dict[str, str] = {
+        "party_id": scoped_party_id,
+        "owner_party_id": scoped_party_id,
+        "manager_party_id": scoped_party_id,
+    }
+    if organization_id is not None:
+        context["organization_id"] = organization_id
+    return context
+
+
+async def _resolve_user_create_resource_context(request: Request) -> dict[str, str]:
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+
+    if not isinstance(payload, dict):
+        payload = {}
+
+    organization_id = _normalize_optional_str(payload.get("default_organization_id"))
+    scoped_party_id = (
+        organization_id
+        if organization_id is not None
+        else _USER_CREATE_UNSCOPED_PARTY_ID
+    )
+    return _build_party_scope_context(
+        scoped_party_id=scoped_party_id,
+        organization_id=organization_id,
+    )
 
 
 class AuditLogCRUD:
@@ -111,6 +162,59 @@ async def _build_user_response(
     )
 
 
+async def _require_user_read_or_self_authz(
+    request: Request,
+    current_user: Any = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_async_db),
+) -> AuthzContext:
+    target_user_id = str(request.path_params.get("user_id") or "").strip()
+    current_user_id = str(getattr(current_user, "id", "")).strip()
+    if target_user_id != "" and target_user_id == current_user_id:
+        return AuthzContext(
+            current_user=current_user,
+            action="read",
+            resource_type="user",
+            resource_id=target_user_id,
+            resource_context={},
+            allowed=True,
+            reason_code="self_access_bypass",
+        )
+
+    checker = require_authz(
+        action="read",
+        resource_type="user",
+        resource_id="{user_id}",
+        deny_as_not_found=True,
+    )
+    return await checker(request=request, current_user=current_user, db=db)
+
+
+async def _require_user_update_or_self_authz(
+    request: Request,
+    current_user: Any = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_async_db),
+) -> AuthzContext:
+    target_user_id = str(request.path_params.get("user_id") or "").strip()
+    current_user_id = str(getattr(current_user, "id", "")).strip()
+    if target_user_id != "" and target_user_id == current_user_id:
+        return AuthzContext(
+            current_user=current_user,
+            action="update",
+            resource_type="user",
+            resource_id=target_user_id,
+            resource_context={},
+            allowed=True,
+            reason_code="self_access_bypass",
+        )
+
+    checker = require_authz(
+        action="update",
+        resource_type="user",
+        resource_id="{user_id}",
+    )
+    return await checker(request=request, current_user=current_user, db=db)
+
+
 # ==================== User CRUD Endpoints ====================
 
 
@@ -127,6 +231,9 @@ async def get_users(
     db: AsyncSession = Depends(get_async_db),
     factory: ServiceFactory = Depends(_get_factory),
     current_user: UserResponse = Depends(require_admin),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="read", resource_type="user")
+    ),
 ) -> JSONResponse:
     """
     获取用户列表（仅管理员）
@@ -179,6 +286,13 @@ async def create_user(
     db: AsyncSession = Depends(get_async_db),
     factory: ServiceFactory = Depends(_get_factory),
     current_user: UserResponse = Depends(require_admin),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="create",
+            resource_type="user",
+            resource_context=_resolve_user_create_resource_context,
+        )
+    ),
 ) -> UserResponse:
     """
     创建新用户（仅管理员）
@@ -211,6 +325,7 @@ async def get_user(
     db: AsyncSession = Depends(get_async_db),
     factory: ServiceFactory = Depends(_get_factory),
     current_user: UserResponse = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(_require_user_read_or_self_authz),
 ) -> UserResponse:
     """
     获取用户详情
@@ -249,6 +364,7 @@ async def update_user(
     db: AsyncSession = Depends(get_async_db),
     factory: ServiceFactory = Depends(_get_factory),
     current_user: UserResponse = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(_require_user_update_or_self_authz),
 ) -> UserResponse:
     """
     更新用户信息
@@ -367,6 +483,9 @@ async def deactivate_user(
     db: AsyncSession = Depends(get_async_db),
     factory: ServiceFactory = Depends(_get_factory),
     current_user: UserResponse = Depends(require_admin),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="update", resource_type="user", resource_id="{user_id}")
+    ),
 ) -> dict[str, str]:
     """
     停用用户（仅管理员）
@@ -384,6 +503,9 @@ async def delete_user(
     db: AsyncSession = Depends(get_async_db),
     factory: ServiceFactory = Depends(_get_factory),
     current_user: UserResponse = Depends(require_admin),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="delete", resource_type="user", resource_id="{user_id}")
+    ),
 ) -> dict[str, str]:
     """
     删除用户（仅管理员）
@@ -401,6 +523,9 @@ async def activate_user(
     db: AsyncSession = Depends(get_async_db),
     factory: ServiceFactory = Depends(_get_factory),
     current_user: UserResponse = Depends(require_admin),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="update", resource_type="user", resource_id="{user_id}")
+    ),
 ) -> dict[str, str]:
     """
     激活用户（仅管理员）
@@ -428,6 +553,9 @@ async def lock_user(
     db: AsyncSession = Depends(get_async_db),
     factory: ServiceFactory = Depends(_get_factory),
     current_user: UserResponse = Depends(require_admin),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="update", resource_type="user", resource_id="{user_id}")
+    ),
 ) -> dict[str, Any]:
     """
     锁定用户账户（仅管理员）
@@ -472,6 +600,9 @@ async def unlock_user_account(
     db: AsyncSession = Depends(get_async_db),
     factory: ServiceFactory = Depends(_get_factory),
     current_user: UserResponse = Depends(require_admin),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="update", resource_type="user", resource_id="{user_id}")
+    ),
 ) -> dict[str, Any]:
     """
     解锁用户账户（仅管理员）
@@ -520,6 +651,9 @@ async def reset_user_password(
     db: AsyncSession = Depends(get_async_db),
     factory: ServiceFactory = Depends(_get_factory),
     current_user: UserResponse = Depends(require_admin),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="update", resource_type="user", resource_id="{user_id}")
+    ),
 ) -> dict[str, Any]:
     """
     重置用户密码（仅管理员）
@@ -573,6 +707,9 @@ async def get_user_statistics(
     db: AsyncSession = Depends(get_async_db),
     factory: ServiceFactory = Depends(_get_factory),
     current_user: UserResponse = Depends(require_admin),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="read", resource_type="user")
+    ),
 ) -> dict[str, Any]:
     """
     获取用户相关统计数据（仅管理员）

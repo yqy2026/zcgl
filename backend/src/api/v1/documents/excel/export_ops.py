@@ -25,7 +25,7 @@ from src.constants.message_constants import ErrorIDs
 from src.core.exception_handler import bad_request, not_found
 from src.database import async_session_scope, get_async_db
 from src.enums.task import TaskStatus, TaskType
-from src.middleware.auth import get_current_active_user
+from src.middleware.auth import AuthzContext, get_current_active_user, require_authz
 from src.models.auth import User
 from src.schemas.excel_advanced import ExcelExportRequest
 from src.schemas.task import TaskCreate
@@ -61,6 +61,12 @@ async def export_excel(
     usage_status: str | None = Query(None, description="使用状态筛选"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="asset",
+        )
+    ),
 ) -> StreamingResponse:
     """
     导出资产数据为Excel文件
@@ -107,6 +113,12 @@ async def export_selected_assets(
     usage_status: str | None = Query(None, description="使用状态筛选"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="asset",
+        )
+    ),
 ) -> StreamingResponse:
     """
     导出选中资产数据为Excel文件
@@ -155,6 +167,12 @@ async def export_excel_async(
     request: ExcelExportRequest = Body(...),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="asset",
+        )
+    ),
     task_service: ExcelTaskService = Depends(get_excel_task_service),
 ) -> dict[str, Any]:
     """
@@ -309,6 +327,13 @@ async def download_export_file(
     task_id: str,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="task",
+            resource_id="{task_id}",
+        )
+    ),
     task_service: ExcelTaskService = Depends(get_excel_task_service),
 ) -> StreamingResponse:
     """

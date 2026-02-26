@@ -18,7 +18,7 @@ from src.constants.message_constants import ErrorIDs
 from src.core.exception_handler import BusinessValidationError
 from src.database import async_session_scope, get_async_db
 from src.enums.task import TaskStatus, TaskType
-from src.middleware.auth import get_current_active_user
+from src.middleware.auth import AuthzContext, get_current_active_user, require_authz
 from src.models.auth import User
 from src.schemas.excel_advanced import ExcelImportRequest
 from src.schemas.task import TaskCreate
@@ -33,6 +33,12 @@ from src.services.excel.excel_task_service import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+_ASSET_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:asset:create"
+_ASSET_CREATE_RESOURCE_CONTEXT: dict[str, str] = {
+    "party_id": _ASSET_CREATE_UNSCOPED_PARTY_ID,
+    "owner_party_id": _ASSET_CREATE_UNSCOPED_PARTY_ID,
+    "manager_party_id": _ASSET_CREATE_UNSCOPED_PARTY_ID,
+}
 
 
 def _utcnow_naive() -> datetime:
@@ -54,6 +60,13 @@ async def import_excel(
     sheet_name: str = Query(STANDARD_SHEET_NAME, description="Excel工作表名称"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="create",
+            resource_type="asset",
+            resource_context=_ASSET_CREATE_RESOURCE_CONTEXT,
+        )
+    ),
 ) -> dict[str, Any]:
     """
     从Excel文件导入资产数据（同步版本）
@@ -123,6 +136,13 @@ async def import_excel_async(
     request: ExcelImportRequest = Body(...),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="create",
+            resource_type="asset",
+            resource_context=_ASSET_CREATE_RESOURCE_CONTEXT,
+        )
+    ),
     task_service: ExcelTaskService = Depends(get_excel_task_service),
 ) -> dict[str, Any]:
     """

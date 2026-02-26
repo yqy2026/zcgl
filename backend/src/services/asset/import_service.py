@@ -49,8 +49,8 @@ class AsyncAssetImportService:
             or "system"
         )
         operator_value = str(operator) if operator is not None else None
-        default_org_id = getattr(current_user, "default_organization_id", None)
-        organization_id = (
+        default_org_id = getattr(current_user, "default_organization_id", None)  # DEPRECATED legacy org scope fallback
+        organization_id = (  # DEPRECATED alias
             str(default_org_id)
             if default_org_id is not None and str(default_org_id).strip() != ""
             else None
@@ -177,7 +177,7 @@ class AsyncAssetImportService:
                         db=self.db,
                         obj_in=asset_create,
                         operator=operator_value,
-                        organization_id=organization_id,
+                        organization_id=organization_id,  # DEPRECATED alias
                     )
                     assert new_asset is not None
                     if getattr(new_asset, "property_name", None) is not None:
@@ -229,7 +229,7 @@ class AsyncAssetImportService:
                     db=self.db,
                     obj_in=asset_create,
                     operator=operator_value,
-                    organization_id=organization_id,
+                    organization_id=organization_id,  # DEPRECATED alias
                 )
                 assert new_asset is not None
                 if getattr(new_asset, "property_name", None) is not None:

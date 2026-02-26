@@ -8,8 +8,9 @@ from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, Depends, Query
 
-from ....constants.message_constants import ErrorIDs
-from ....core.exception_handler import ConfigurationError, internal_error, not_found
+from .....constants.message_constants import ErrorIDs
+from .....core.exception_handler import ConfigurationError, internal_error, not_found
+from .....middleware.auth import AuthzContext, get_current_active_user, require_authz
 from .collectors import (
     check_performance_alerts,
     collect_application_metrics,
@@ -24,12 +25,11 @@ from .models import ApplicationMetrics, HealthStatus, PerformanceAlert, SystemMe
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from ....models.auth import User
+    from .....models.auth import User
 
 # 关键依赖导入 - 使用快速失败策略
 try:
-    from ....middleware.auth import require_permission
-    from ....models.auth import User
+    from .....models.auth import User
 except ImportError as e:
     logger.critical(
         "无法导入系统监控关键依赖",
@@ -48,11 +48,20 @@ except ImportError as e:
 
 
 router = APIRouter()
+_SYSTEM_MONITORING_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:system_monitoring:create"
+_SYSTEM_MONITORING_CREATE_RESOURCE_CONTEXT: dict[str, str] = {
+    "party_id": _SYSTEM_MONITORING_CREATE_UNSCOPED_PARTY_ID,
+    "owner_party_id": _SYSTEM_MONITORING_CREATE_UNSCOPED_PARTY_ID,
+    "manager_party_id": _SYSTEM_MONITORING_CREATE_UNSCOPED_PARTY_ID,
+}
 
 
 @router.get("/system-metrics", response_model=SystemMetrics, summary="获取系统性能指标")
 def get_system_metrics(
-    current_user: User = Depends(require_permission("system_monitoring", "read")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="read", resource_type="system_monitoring")
+    ),
 ) -> SystemMetrics:
     """获取当前系统性能指标"""
     return collect_system_metrics()
@@ -64,7 +73,10 @@ def get_system_metrics(
     summary="获取应用性能指标",
 )
 def get_application_metrics(
-    current_user: User = Depends(require_permission("system_monitoring", "read")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="read", resource_type="system_monitoring")
+    ),
 ) -> ApplicationMetrics:
     """获取应用性能指标"""
     return collect_application_metrics()
@@ -72,7 +84,10 @@ def get_application_metrics(
 
 @router.get("/health", response_model=HealthStatus, summary="获取系统健康状态")
 async def get_health_status(
-    current_user: User = Depends(require_permission("system_monitoring", "read")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="read", resource_type="system_monitoring")
+    ),
 ) -> HealthStatus:
     """获取系统整体健康状态"""
     components = await check_component_health()
@@ -98,7 +113,10 @@ async def get_health_status(
 )
 def get_history(
     hours: int = Query(default=24, ge=1, le=168, description="查询历史时间范围(小时)"),
-    current_user: User = Depends(require_permission("system_monitoring", "read")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="read", resource_type="system_monitoring")
+    ),
 ) -> list[SystemMetrics]:
     """获取系统性能指标历史数据"""
     cutoff_time = datetime.now() - timedelta(hours=hours)
@@ -111,7 +129,10 @@ def get_performance_alerts(
         default=None, regex="^(info|warning|critical)$", description="告警级别过滤"
     ),
     resolved: bool | None = Query(default=None, description="是否已解决过滤"),
-    current_user: User = Depends(require_permission("system_monitoring", "read")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="read", resource_type="system_monitoring")
+    ),
 ) -> list[PerformanceAlert]:
     """获取性能告警列表"""
     alerts = get_active_alerts()
@@ -128,7 +149,14 @@ def get_performance_alerts(
 @router.post("/alerts/{alert_id}/resolve", summary="解决告警")
 def resolve_alert(
     alert_id: str,
-    current_user: User = Depends(require_permission("system_monitoring", "write")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="system_monitoring",
+            resource_id="{alert_id}",
+        )
+    ),
 ) -> dict[str, Any]:
     """标记告警为已解决"""
     for alert in get_active_alerts():
@@ -143,7 +171,10 @@ def resolve_alert(
 
 @router.get("/dashboard", summary="获取监控仪表板数据")
 async def get_monitoring_dashboard(
-    current_user: User = Depends(require_permission("system_monitoring", "read")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="read", resource_type="system_monitoring")
+    ),
 ) -> dict[str, Any]:
     """获取监控仪表板综合数据"""
     system_metrics = collect_system_metrics()
@@ -181,7 +212,14 @@ async def get_monitoring_dashboard(
 
 @router.post("/metrics/collect", summary="手动触发指标收集")
 def trigger_metrics_collection(
-    current_user: User = Depends(require_permission("system_monitoring", "write")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="create",
+            resource_type="system_monitoring",
+            resource_context=_SYSTEM_MONITORING_CREATE_RESOURCE_CONTEXT,
+        )
+    ),
 ) -> dict[str, Any]:
     """手动触发一次指标收集"""
     system_metrics = collect_system_metrics()
@@ -199,11 +237,14 @@ def trigger_metrics_collection(
 
 @router.get("/encryption-status", summary="获取加密状态")
 def get_encryption_status(
-    current_user: User = Depends(require_permission("system_monitoring", "read")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="read", resource_type="system_monitoring")
+    ),
 ) -> dict[str, Any]:
     """获取数据加密系统状态"""
     try:
-        from ....core.encryption import EncryptionKeyManager
+        from .....core.encryption import EncryptionKeyManager
 
         key_manager = EncryptionKeyManager()
         encryption_enabled = key_manager.is_available()

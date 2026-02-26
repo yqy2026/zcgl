@@ -21,7 +21,7 @@ from ...core.exception_handler import (
     ResourceNotFoundError,
 )
 from ...crud.project import project_crud
-from ...crud.query_builder import TenantFilter
+from ...crud.query_builder import PartyFilter
 from ...models import Project
 from ...schemas.project import (
     ProjectCreate,
@@ -29,6 +29,7 @@ from ...schemas.project import (
     ProjectSearchRequest,
     ProjectUpdate,
 )
+from ...services.party_scope import resolve_user_party_filter
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +55,6 @@ class ProjectService:
             attr.key: getattr(project, attr.key)
             for attr in sa_inspect(project).mapper.column_attrs
         }
-        data["ownership_relations"] = []
         return ProjectResponse.model_validate(data)
 
     @staticmethod
@@ -62,48 +62,33 @@ class ProjectService:
         return datetime.now(UTC).replace(tzinfo=None)
 
     @staticmethod
-    def _is_fail_closed_tenant_filter(tenant_filter: TenantFilter | None) -> bool:
-        if tenant_filter is None:
+    def _is_fail_closed_party_filter(party_filter: PartyFilter | None) -> bool:
+        if party_filter is None:
             return False
         return (
             len(
                 [
                     org_id
-                    for org_id in tenant_filter.organization_ids
+                    for org_id in party_filter.party_ids
                     if str(org_id).strip() != ""
                 ]
             )
             == 0
         )
 
-    async def _resolve_tenant_filter(
+    async def _resolve_party_filter(
         self,
         db: AsyncSession,
         *,
         current_user_id: str | None = None,
-        tenant_filter: TenantFilter | None = None,
-    ) -> TenantFilter | None:
-        if tenant_filter is not None:
-            return tenant_filter
-        if current_user_id is None or current_user_id.strip() == "":
-            return None
-
-        try:
-            from ...services.organization_permission_service import (
-                OrganizationPermissionService,
-            )
-
-            org_service = OrganizationPermissionService(db)
-            org_ids = await org_service.get_user_accessible_organizations(
-                current_user_id
-            )
-            return TenantFilter(organization_ids=[str(org_id) for org_id in org_ids])
-        except Exception:
-            logger.exception(
-                "Failed to resolve tenant filter for user %s, fallback to fail-closed",
-                current_user_id,
-            )
-            return TenantFilter(organization_ids=[])
+        party_filter: PartyFilter | None = None,
+    ) -> PartyFilter | None:
+        return await resolve_user_party_filter(
+            db,
+            current_user_id=current_user_id,
+            party_filter=party_filter,
+            logger=logger,
+        )
 
     async def create_project(
         self,
@@ -111,7 +96,7 @@ class ProjectService:
         *,
         obj_in: ProjectCreate,
         created_by: str | None = None,
-        organization_id: str | None = None,
+        organization_id: str | None = None,  # DEPRECATED alias
     ) -> Project:
         """创建项目"""
         try:
@@ -129,7 +114,7 @@ class ProjectService:
                 db,
                 obj_in=obj_in,
                 created_by=created_by,
-                organization_id=organization_id,
+                organization_id=organization_id,  # DEPRECATED alias
             )
             return project
 
@@ -145,22 +130,22 @@ class ProjectService:
         project_id: str,
         obj_in: ProjectUpdate,
         updated_by: str | None = None,
-        tenant_filter: TenantFilter | None = None,
+        party_filter: PartyFilter | None = None,
         current_user_id: str | None = None,
     ) -> Project:
         """更新项目"""
-        resolved_tenant_filter = await self._resolve_tenant_filter(
+        resolved_party_filter = await self._resolve_party_filter(
             db,
             current_user_id=current_user_id,
-            tenant_filter=tenant_filter,
+            party_filter=party_filter,
         )
-        if self._is_fail_closed_tenant_filter(resolved_tenant_filter):
+        if self._is_fail_closed_party_filter(resolved_party_filter):
             raise ResourceNotFoundError("项目", project_id)
 
         project: Project | None = await project_crud.get(
             db,
             id=project_id,
-            tenant_filter=resolved_tenant_filter,
+            party_filter=resolved_party_filter,
         )
         if not project:
             raise ResourceNotFoundError("项目", project_id)
@@ -174,22 +159,22 @@ class ProjectService:
         *,
         project_id: str,
         updated_by: str | None = None,
-        tenant_filter: TenantFilter | None = None,
+        party_filter: PartyFilter | None = None,
         current_user_id: str | None = None,
     ) -> Project:
         """切换项目状态"""
-        resolved_tenant_filter = await self._resolve_tenant_filter(
+        resolved_party_filter = await self._resolve_party_filter(
             db,
             current_user_id=current_user_id,
-            tenant_filter=tenant_filter,
+            party_filter=party_filter,
         )
-        if self._is_fail_closed_tenant_filter(resolved_tenant_filter):
+        if self._is_fail_closed_party_filter(resolved_party_filter):
             raise ResourceNotFoundError("项目", project_id)
 
         project: Project | None = await project_crud.get(
             db,
             id=project_id,
-            tenant_filter=resolved_tenant_filter,
+            party_filter=resolved_party_filter,
         )
         if not project:
             raise ResourceNotFoundError("项目", project_id)
@@ -215,16 +200,16 @@ class ProjectService:
         db: AsyncSession,
         *,
         project_id: str,
-        tenant_filter: TenantFilter | None = None,
+        party_filter: PartyFilter | None = None,
         current_user_id: str | None = None,
     ) -> None:
         """删除项目"""
-        resolved_tenant_filter = await self._resolve_tenant_filter(
+        resolved_party_filter = await self._resolve_party_filter(
             db,
             current_user_id=current_user_id,
-            tenant_filter=tenant_filter,
+            party_filter=party_filter,
         )
-        if self._is_fail_closed_tenant_filter(resolved_tenant_filter):
+        if self._is_fail_closed_party_filter(resolved_party_filter):
             raise ResourceNotFoundError("项目", project_id)
 
         count = await project_crud.get_asset_count(db, project_id)
@@ -238,7 +223,7 @@ class ProjectService:
         project = await project_crud.get(
             db,
             id=project_id,
-            tenant_filter=resolved_tenant_filter,
+            party_filter=resolved_party_filter,
         )
         if project:
             await project_crud.remove(db, id=project_id)
@@ -303,22 +288,22 @@ class ProjectService:
         self,
         db: AsyncSession,
         search_params: ProjectSearchRequest,
-        tenant_filter: TenantFilter | None = None,
+        party_filter: PartyFilter | None = None,
         current_user_id: str | None = None,
     ) -> dict[str, Any]:
-        resolved_tenant_filter = await self._resolve_tenant_filter(
+        resolved_party_filter = await self._resolve_party_filter(
             db,
             current_user_id=current_user_id,
-            tenant_filter=tenant_filter,
+            party_filter=party_filter,
         )
-        if self._is_fail_closed_tenant_filter(resolved_tenant_filter):
+        if self._is_fail_closed_party_filter(resolved_party_filter):
             items: list[Project] = []
             total = 0
         else:
             items, total = await project_crud.search(
                 db,
                 search_params,
-                tenant_filter=resolved_tenant_filter,
+                party_filter=resolved_party_filter,
             )
         return {
             "items": items,
@@ -332,16 +317,16 @@ class ProjectService:
         self,
         db: AsyncSession,
         is_active: bool | None = True,
-        tenant_filter: TenantFilter | None = None,
+        party_filter: PartyFilter | None = None,
         current_user_id: str | None = None,
     ) -> list[dict[str, Any]]:
         """获取项目下拉选项列表"""
-        resolved_tenant_filter = await self._resolve_tenant_filter(
+        resolved_party_filter = await self._resolve_party_filter(
             db,
             current_user_id=current_user_id,
-            tenant_filter=tenant_filter,
+            party_filter=party_filter,
         )
-        if self._is_fail_closed_tenant_filter(resolved_tenant_filter):
+        if self._is_fail_closed_party_filter(resolved_party_filter):
             return []
 
         projects = await project_crud.get_multi(
@@ -349,7 +334,7 @@ class ProjectService:
             skip=0,
             limit=1000,
             is_active=is_active,
-            tenant_filter=resolved_tenant_filter,
+            party_filter=resolved_party_filter,
         )
         projects.sort(key=lambda project: str(project.name or ""))
         return [
@@ -363,30 +348,46 @@ class ProjectService:
             for p in projects
         ]
 
-    async def get_project_statistics(self, db: AsyncSession) -> dict[str, Any]:
+    async def get_project_statistics(
+        self,
+        db: AsyncSession,
+        party_filter: PartyFilter | None = None,
+        current_user_id: str | None = None,
+    ) -> dict[str, Any]:
         """获取项目统计信息。"""
-        return await project_crud.get_statistics(db=db)
+        resolved_party_filter = await self._resolve_party_filter(
+            db,
+            current_user_id=current_user_id,
+            party_filter=party_filter,
+        )
+        if self._is_fail_closed_party_filter(resolved_party_filter):
+            return {"total_projects": 0, "active_projects": 0}
+
+        return await project_crud.get_statistics(
+            db=db,
+            party_filter=resolved_party_filter,
+        )
 
     async def get_project_by_id(
         self,
         db: AsyncSession,
         project_id: str,
-        tenant_filter: TenantFilter | None = None,
+        party_filter: PartyFilter | None = None,
         current_user_id: str | None = None,
     ) -> Project | None:
         """根据 ID 获取项目。"""
-        resolved_tenant_filter = await self._resolve_tenant_filter(
+        resolved_party_filter = await self._resolve_party_filter(
             db,
             current_user_id=current_user_id,
-            tenant_filter=tenant_filter,
+            party_filter=party_filter,
         )
-        if self._is_fail_closed_tenant_filter(resolved_tenant_filter):
+        if self._is_fail_closed_party_filter(resolved_party_filter):
             return None
 
         return await project_crud.get(
             db=db,
             id=project_id,
-            tenant_filter=resolved_tenant_filter,
+            party_filter=resolved_party_filter,
         )
 
 

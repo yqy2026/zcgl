@@ -1,12 +1,13 @@
 import React, { Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Spin, App as AntdApp } from 'antd';
-import { protectedRoutes } from './routes/AppRoutes';
+import { protectedRoutes, type ProtectedRouteItem } from './routes/AppRoutes';
 import AppLayout from './components/Layout/AppLayout';
 import LoginPage from './pages/LoginPage';
 import ErrorBoundary from './components/ErrorHandling/ErrorBoundary';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ErrorHandlingProvider } from './contexts/ErrorHandlingContext';
+import { PermissionGuard } from './components/System/PermissionGuard';
 import { MessageManager } from './utils/messageManager';
 import { ThemeProvider } from './components/Common/ThemeProvider';
 import styles from './App.module.css';
@@ -29,8 +30,47 @@ import { AnimatePresence } from 'framer-motion';
 import PageTransition from './components/Layout/PageTransition';
 
 const ProtectedRoutes: React.FC = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const location = useLocation();
+  const capabilityGuardEnabled = import.meta.env.VITE_ENABLE_CAPABILITY_GUARD === 'true';
+
+  const renderProtectedElement = (route: ProtectedRouteItem): React.ReactNode => {
+    const RouteComponent = route.element;
+    const routeElement = (
+      <PageTransition>
+        <Suspense fallback={<Spin size="large" className={styles.suspenseFallbackSpin} />}>
+          <RouteComponent />
+        </Suspense>
+      </PageTransition>
+    );
+
+    const bypassCapabilityGuard = route.capabilityGuardBypass === true;
+    const hasRoutePermissions = (route.permissions?.length ?? 0) > 0;
+    const shouldEnforceCapabilityGuard = capabilityGuardEnabled && bypassCapabilityGuard === false;
+    const shouldEnforceAdminOnly = shouldEnforceCapabilityGuard && route.adminOnly === true;
+
+    if (shouldEnforceAdminOnly && user?.is_admin !== true) {
+      return route.fallback ?? <Navigate to="/dashboard" replace />;
+    }
+
+    if (shouldEnforceCapabilityGuard && hasRoutePermissions) {
+      return (
+        <PermissionGuard
+          permissions={route.permissions ?? []}
+          mode={route.permissionMode ?? 'any'}
+          fallback={route.fallback}
+        >
+          {routeElement}
+        </PermissionGuard>
+      );
+    }
+
+    if (shouldEnforceCapabilityGuard && route.adminOnly !== true) {
+      return route.fallback ?? <Navigate to="/dashboard" replace />;
+    }
+
+    return routeElement;
+  };
 
   // 未认证用户重定向到登录页面
   if (!isAuthenticated) {
@@ -43,19 +83,7 @@ const ProtectedRoutes: React.FC = () => {
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
           {protectedRoutes.map(route => (
-            <Route
-              key={route.path}
-              path={route.path}
-              element={
-                <PageTransition>
-                  <Suspense
-                    fallback={<Spin size="large" className={styles.suspenseFallbackSpin} />}
-                  >
-                    <route.element />
-                  </Suspense>
-                </PageTransition>
-              }
-            />
+            <Route key={route.path} path={route.path} element={renderProtectedElement(route)} />
           ))}
           {/* 默认路由重定向到仪表板 */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />

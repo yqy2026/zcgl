@@ -17,7 +17,7 @@ from fastapi.params import Depends as DependsParam
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_async_db
-from src.middleware.auth import get_current_active_user
+from src.middleware.auth import AuthzContext, get_current_active_user, require_authz
 from src.models.auth import User
 from src.schemas.statistics import DistributionResponse
 from src.services.analytics.distribution_service import (
@@ -48,6 +48,12 @@ async def get_ownership_distribution(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     service: DistributionService = Depends(get_distribution_service),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="analytics",
+        )
+    ),
 ) -> DistributionResponse:
     """
     获取按权属状态的资产分布统计
@@ -68,6 +74,12 @@ async def get_property_nature_distribution(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     service: DistributionService = Depends(get_distribution_service),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="analytics",
+        )
+    ),
 ) -> DistributionResponse:
     """
     获取按物业性质的资产分布统计
@@ -87,6 +99,12 @@ async def get_usage_status_distribution(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     service: DistributionService = Depends(get_distribution_service),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="analytics",
+        )
+    ),
 ) -> DistributionResponse:
     """
     获取按使用状态的资产分布统计
@@ -105,6 +123,12 @@ async def get_asset_distribution(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     service: DistributionService = Depends(get_distribution_service),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="analytics",
+        )
+    ),
 ) -> dict[str, Any]:
     """
     获取资产分布统计数据（支持自定义分组字段）

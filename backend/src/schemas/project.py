@@ -38,9 +38,14 @@ class ProjectBase(BaseModel):
     project_description: str | None = Field(None, title="项目描述")
     project_objectives: str | None = Field(None, title="项目目标")
     project_scope: str | None = Field(None, title="项目范围")
-    management_entity: str | None = Field(None, title="管理单位", max_length=200)
-    organization_id: str | None = Field(None, title="所属组织ID")
-    ownership_entity: str | None = Field(None, title="权属单位", max_length=200)
+    management_entity: str | None = Field(
+        None, title="管理单位（DEPRECATED）", max_length=200
+    )
+    organization_id: str | None = Field(None, title="所属组织ID（DEPRECATED）")
+    manager_party_id: str | None = Field(None, title="经营管理主体ID")
+    ownership_entity: str | None = Field(
+        None, title="权属单位（DEPRECATED）", max_length=200
+    )
     construction_company: str | None = Field(None, title="施工单位", max_length=200)
     design_company: str | None = Field(None, title="设计单位", max_length=200)
     supervision_company: str | None = Field(None, title="监理单位", max_length=200)
@@ -70,7 +75,7 @@ class ProjectCreate(ProjectBase):
     """创建项目模式"""
 
     ownership_relations: list[dict[str, Any]] | None = Field(None, title="权属方关系")
-    ownership_ids: list[str] | None = Field(None, title="权属方ID列表")
+    ownership_ids: list[str] | None = Field(None, title="权属方ID列表（DEPRECATED）")
 
 
 class ProjectUpdate(BaseModel):
@@ -100,16 +105,21 @@ class ProjectUpdate(BaseModel):
     project_description: str | None = Field(None, title="项目描述")
     project_objectives: str | None = Field(None, title="项目目标")
     project_scope: str | None = Field(None, title="项目范围")
-    management_entity: str | None = Field(None, title="管理单位", max_length=200)
-    organization_id: str | None = Field(None, title="所属组织ID")
-    ownership_entity: str | None = Field(None, title="权属单位", max_length=200)
+    management_entity: str | None = Field(
+        None, title="管理单位（DEPRECATED）", max_length=200
+    )
+    organization_id: str | None = Field(None, title="所属组织ID（DEPRECATED）")
+    manager_party_id: str | None = Field(None, title="经营管理主体ID")
+    ownership_entity: str | None = Field(
+        None, title="权属单位（DEPRECATED）", max_length=200
+    )
     construction_company: str | None = Field(None, title="施工单位", max_length=200)
     design_company: str | None = Field(None, title="设计单位", max_length=200)
     supervision_company: str | None = Field(None, title="监理单位", max_length=200)
     is_active: bool | None = Field(None, title="是否启用")
     data_status: str | None = Field(None, title="数据状态", max_length=20)
     ownership_relations: list[dict[str, Any]] | None = Field(None, title="权属方关系")
-    ownership_ids: list[str] | None = Field(None, title="权属方ID列表")
+    ownership_ids: list[str] | None = Field(None, title="权属方ID列表（DEPRECATED）")
 
     @field_validator("code")
     @classmethod
@@ -160,9 +170,9 @@ class ProjectResponse(ProjectBase):
             rel_state = state.attrs.ownership_relations
             rel_value = rel_state.loaded_value
             no_value = getattr(orm_attributes, "NO_VALUE", None)
-            data["ownership_relations"] = [] if rel_value is no_value else rel_value
+            data["ownership_relations"] = None if rel_value is no_value else rel_value
         except Exception:
-            data["ownership_relations"] = []
+            data["ownership_relations"] = None
 
         if hasattr(v, "asset_count"):
             data["asset_count"] = getattr(v, "asset_count")

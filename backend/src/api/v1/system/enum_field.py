@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import set_committed_value
 
 from ....database import get_async_db
-from ....middleware.auth import get_current_active_user
+from ....middleware.auth import AuthzContext, get_current_active_user, require_authz
 from ....schemas.enum_field import (
     EnumFieldBatchCreate,
     EnumFieldHistoryResponse,
@@ -34,6 +34,18 @@ router = APIRouter(
     tags=["枚举字段管理"],
     dependencies=[Depends(get_current_active_user)],
 )
+_ENUM_FIELD_TYPE_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:enum_field_type:create"
+_ENUM_FIELD_TYPE_CREATE_RESOURCE_CONTEXT: dict[str, str] = {
+    "party_id": _ENUM_FIELD_TYPE_CREATE_UNSCOPED_PARTY_ID,
+    "owner_party_id": _ENUM_FIELD_TYPE_CREATE_UNSCOPED_PARTY_ID,
+    "manager_party_id": _ENUM_FIELD_TYPE_CREATE_UNSCOPED_PARTY_ID,
+}
+_ENUM_FIELD_USAGE_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:enum_field_usage:create"
+_ENUM_FIELD_USAGE_CREATE_RESOURCE_CONTEXT: dict[str, str] = {
+    "party_id": _ENUM_FIELD_USAGE_CREATE_UNSCOPED_PARTY_ID,
+    "owner_party_id": _ENUM_FIELD_USAGE_CREATE_UNSCOPED_PARTY_ID,
+    "manager_party_id": _ENUM_FIELD_USAGE_CREATE_UNSCOPED_PARTY_ID,
+}
 
 
 def _strip_enum_children(enum_values: list[Any] | None) -> None:
@@ -77,6 +89,12 @@ async def get_enum_field_types(
     is_system: bool | None = Query(None, description="是否系统内置"),
     keyword: str | None = Query(None, description="搜索关键词"),
     db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="enum_field",
+        )
+    ),
     service: EnumFieldService = Depends(get_enum_field_service),
 ) -> list[EnumFieldTypeResponse]:
     """获取枚举字段类型列表"""
@@ -95,6 +113,12 @@ async def get_enum_field_types(
 @router.get("/types/statistics", response_model=EnumFieldStatistics)
 async def get_enum_field_statistics(
     db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="enum_field",
+        )
+    ),
     service: EnumFieldService = Depends(get_enum_field_service),
 ) -> EnumFieldStatistics:
     """获取枚举字段统计信息"""
@@ -106,6 +130,14 @@ async def get_enum_field_statistics(
 async def get_enum_field_type(
     type_id: str = Path(..., description="枚举类型ID"),
     db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="enum_field",
+            resource_id="{type_id}",
+            deny_as_not_found=True,
+        )
+    ),
     service: EnumFieldService = Depends(get_enum_field_service),
 ) -> EnumFieldTypeResponse:
     """根据ID获取枚举字段类型详情"""
@@ -117,6 +149,13 @@ async def get_enum_field_type(
 async def create_enum_field_type(
     enum_type: EnumFieldTypeCreate,
     db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="create",
+            resource_type="enum_field",
+            resource_context=_ENUM_FIELD_TYPE_CREATE_RESOURCE_CONTEXT,
+        )
+    ),
     service: EnumFieldService = Depends(get_enum_field_service),
 ) -> EnumFieldTypeResponse:
     """创建枚举字段类型"""
@@ -129,6 +168,13 @@ async def update_enum_field_type(
     type_id: str,
     enum_type: EnumFieldTypeUpdate,
     db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="enum_field",
+            resource_id="{type_id}",
+        )
+    ),
     service: EnumFieldService = Depends(get_enum_field_service),
 ) -> EnumFieldTypeResponse:
     """更新枚举字段类型"""
@@ -145,6 +191,13 @@ async def delete_enum_field_type(
     type_id: str,
     deleted_by: str | None = Query(None, description="删除人"),
     db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="delete",
+            resource_type="enum_field",
+            resource_id="{type_id}",
+        )
+    ),
     service: EnumFieldService = Depends(get_enum_field_service),
 ) -> dict[str, str]:
     """删除枚举字段类型"""
@@ -159,6 +212,12 @@ async def delete_enum_field_type(
 @router.get("/types/categories/list[Any]")
 async def get_enum_field_categories(
     db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="enum_field",
+        )
+    ),
     service: EnumFieldService = Depends(get_enum_field_service),
 ) -> dict[str, list[str]]:
     """获取枚举字段类别列表"""
@@ -172,6 +231,14 @@ async def get_enum_field_values(
     parent_id: str | None = Query(None, description="父级枚举值ID"),
     is_active: bool | None = Query(None, description="是否启用"),
     db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="enum_field",
+            resource_id="{type_id}",
+            deny_as_not_found=True,
+        )
+    ),
     service: EnumFieldService = Depends(get_enum_field_service),
 ) -> list[EnumFieldValueResponse]:
     """获取枚举字段值列表"""
@@ -188,6 +255,14 @@ async def get_enum_field_values(
 async def get_enum_field_values_tree(
     type_id: str,
     db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="enum_field",
+            resource_id="{type_id}",
+            deny_as_not_found=True,
+        )
+    ),
     service: EnumFieldService = Depends(get_enum_field_service),
 ) -> list[EnumFieldTree]:
     """获取枚举字段值树形结构"""
@@ -199,6 +274,14 @@ async def get_enum_field_values_tree(
 async def get_enum_field_value(
     value_id: str = Path(..., description="枚举值ID"),
     db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="enum_field",
+            resource_id="{value_id}",
+            deny_as_not_found=True,
+        )
+    ),
     service: EnumFieldService = Depends(get_enum_field_service),
 ) -> EnumFieldValueResponse:
     """根据ID获取枚举字段值详情"""
@@ -211,6 +294,13 @@ async def create_enum_field_value(
     type_id: str,
     enum_value: EnumFieldValueCreate,
     db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="create",
+            resource_type="enum_field",
+            resource_id="{type_id}",
+        )
+    ),
     service: EnumFieldService = Depends(get_enum_field_service),
 ) -> EnumFieldValueResponse:
     """创建枚举字段值"""
@@ -227,6 +317,13 @@ async def update_enum_field_value(
     value_id: str,
     enum_value: EnumFieldValueUpdate,
     db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="enum_field",
+            resource_id="{value_id}",
+        )
+    ),
     service: EnumFieldService = Depends(get_enum_field_service),
 ) -> EnumFieldValueResponse:
     """更新枚举字段值"""
@@ -243,6 +340,13 @@ async def delete_enum_field_value(
     value_id: str,
     deleted_by: str | None = Query(None, description="删除人"),
     db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="delete",
+            resource_type="enum_field",
+            resource_id="{value_id}",
+        )
+    ),
     service: EnumFieldService = Depends(get_enum_field_service),
 ) -> dict[str, str]:
     """删除枚举字段值"""
@@ -261,6 +365,13 @@ async def batch_create_enum_field_values(
     type_id: str,
     batch_data: EnumFieldBatchCreate,
     db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="create",
+            resource_type="enum_field",
+            resource_id="{type_id}",
+        )
+    ),
     service: EnumFieldService = Depends(get_enum_field_service),
 ) -> list[EnumFieldValueResponse]:
     """批量创建枚举字段值"""
@@ -278,6 +389,12 @@ async def get_enum_field_usage(
     table_name: str | None = Query(None, description="表名"),
     module_name: str | None = Query(None, description="模块名"),
     db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="enum_field",
+        )
+    ),
     service: EnumFieldService = Depends(get_enum_field_service),
 ) -> list[EnumFieldUsageResponse]:
     """获取枚举字段使用记录"""
@@ -294,6 +411,13 @@ async def get_enum_field_usage(
 async def create_enum_field_usage(
     usage: EnumFieldUsageCreate,
     db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="create",
+            resource_type="enum_field",
+            resource_context=_ENUM_FIELD_USAGE_CREATE_RESOURCE_CONTEXT,
+        )
+    ),
     service: EnumFieldService = Depends(get_enum_field_service),
 ) -> EnumFieldUsageResponse:
     """创建枚举字段使用记录"""
@@ -306,6 +430,13 @@ async def update_enum_field_usage(
     usage_id: str,
     usage: EnumFieldUsageUpdate,
     db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="enum_field",
+            resource_id="{usage_id}",
+        )
+    ),
     service: EnumFieldService = Depends(get_enum_field_service),
 ) -> EnumFieldUsageResponse:
     """更新枚举字段使用记录"""
@@ -321,6 +452,13 @@ async def update_enum_field_usage(
 async def delete_enum_field_usage(
     usage_id: str,
     db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="delete",
+            resource_type="enum_field",
+            resource_id="{usage_id}",
+        )
+    ),
     service: EnumFieldService = Depends(get_enum_field_service),
 ) -> dict[str, str]:
     """删除枚举字段使用记录"""
@@ -334,6 +472,14 @@ async def get_enum_field_type_history(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(100, ge=1, le=1000, description="每页记录数"),
     db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="enum_field",
+            resource_id="{type_id}",
+            deny_as_not_found=True,
+        )
+    ),
     service: EnumFieldService = Depends(get_enum_field_service),
 ) -> list[EnumFieldHistoryResponse]:
     """获取枚举字段类型变更历史"""
@@ -352,6 +498,14 @@ async def get_enum_field_value_history(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(100, ge=1, le=1000, description="每页记录数"),
     db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="enum_field",
+            resource_id="{value_id}",
+            deny_as_not_found=True,
+        )
+    ),
     service: EnumFieldService = Depends(get_enum_field_service),
 ) -> list[EnumFieldHistoryResponse]:
     """获取枚举字段值变更历史"""

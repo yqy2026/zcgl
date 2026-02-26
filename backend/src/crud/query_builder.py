@@ -9,16 +9,19 @@ from ..core.exception_handler import InvalidRequestError
 from .field_whitelist import EmptyWhitelist, get_whitelist_for_model
 
 ModelType = TypeVar("ModelType", bound=DeclarativeMeta)
-TenantIdentifier = str | int
+PartyIdentifier = str | int
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
-class TenantFilter:
-    """租户过滤上下文（organization 维度）"""
+class PartyFilter:
+    """主体维度过滤上下文。"""
 
-    organization_ids: list[TenantIdentifier]
+    party_ids: list[PartyIdentifier]
+    filter_mode: Literal["owner", "manager", "any"] = "any"
+    owner_party_ids: list[PartyIdentifier] | None = None
+    manager_party_ids: list[PartyIdentifier] | None = None
     mode: Literal["strict"] = "strict"
     allow_null: bool = False
 
@@ -55,7 +58,7 @@ class QueryBuilder[ModelType]:
         search_conditions: list[Any] | None = None,
         base_query: Select[Any] | None = None,
         distinct_column: Any | None = None,
-        tenant_filter: TenantFilter | None = None,
+        party_filter: PartyFilter | None = None,
     ) -> Select[Any]:
         """
         Builds a query to count records matching criteria.
@@ -67,8 +70,8 @@ class QueryBuilder[ModelType]:
         if self._should_apply_soft_delete_filter(filters):
             query = self._apply_soft_delete_filter(query)
 
-        if tenant_filter is not None:
-            query = self._apply_tenant_filter(query, tenant_filter)
+        if party_filter is not None:
+            query = self._apply_party_filter(query, party_filter)
 
         if filters:
             query = self._apply_filters(query, filters)
@@ -99,7 +102,7 @@ class QueryBuilder[ModelType]:
         skip: int = 0,
         limit: int = 100,
         base_query: Select[Any] | None = None,
-        tenant_filter: TenantFilter | None = None,
+        party_filter: PartyFilter | None = None,
     ) -> Select[Any]:
         """
         Builds a SQLAlchemy query with whitelist validation.
@@ -134,9 +137,9 @@ class QueryBuilder[ModelType]:
         if self._should_apply_soft_delete_filter(filters):
             query = self._apply_soft_delete_filter(query)
 
-        # 0.5 Apply Tenant Filter (可选租户隔离)
-        if tenant_filter is not None:
-            query = self._apply_tenant_filter(query, tenant_filter)
+        # 0.5 Apply Party Filter (可选主体隔离)
+        if party_filter is not None:
+            query = self._apply_party_filter(query, party_filter)
 
         # 1. Apply Filters (with validation)
         if filters:
@@ -162,55 +165,250 @@ class QueryBuilder[ModelType]:
 
         return query
 
-    def _apply_tenant_filter(
-        self, query: Select[Any], tenant_filter: TenantFilter
+    def _apply_party_filter(
+        self, query: Select[Any], party_filter: PartyFilter
     ) -> Select[Any]:
         """
-        Apply tenant isolation filter by organization_id.
+        Apply party isolation filter.
 
         Rules:
-        - If model has no organization_id field, skip filter.
-        - If organization_ids is empty, fail-closed with FALSE condition.
-        - Otherwise apply organization_id IN (...) condition.
-        - allow_null=False by default for strict isolation.
+        - If party_ids is empty, fail-closed with FALSE condition.
+        - filter_mode controls which columns are considered.
+        - If model has no applicable party column, skip filtering.
         """
-        if tenant_filter.mode != "strict":
+        if party_filter.mode != "strict":
             logger.warning(
-                "Unsupported tenant_filter mode '%s' for %s, fallback to strict",
-                tenant_filter.mode,
+                "Unsupported party_filter mode '%s' for %s, fallback to strict",
+                party_filter.mode,
                 self.model.__name__,
             )
 
-        if not hasattr(self.model, "organization_id"):
-            logger.debug(
-                "Skipping tenant filter for %s: no organization_id column",
-                self.model.__name__,
-            )
-            return query
+        owner_column = getattr(self.model, "owner_party_id", None)
+        manager_column = getattr(self.model, "manager_party_id", None)
+        generic_column = getattr(self.model, "party_id", None)
+        legacy_org_column = getattr(self.model, "organization_id", None)
 
-        org_ids: list[TenantIdentifier] = [
-            org_id
-            for org_id in tenant_filter.organization_ids
-            if org_id is not None and str(org_id).strip() != ""
-        ]
-        if not org_ids:
+        relation_aware_filter = (
+            party_filter.owner_party_ids is not None
+            or party_filter.manager_party_ids is not None
+        )
+        if relation_aware_filter:
+            return self._apply_relation_aware_party_filter(
+                query,
+                owner_party_ids=self._normalize_party_ids(
+                    party_filter.owner_party_ids
+                ),
+                manager_party_ids=self._normalize_party_ids(
+                    party_filter.manager_party_ids
+                ),
+                owner_column=owner_column,
+                manager_column=manager_column,
+                generic_column=generic_column,
+                legacy_org_column=legacy_org_column,
+                allow_null=party_filter.allow_null,
+            )
+
+        party_ids = self._normalize_party_ids(party_filter.party_ids)
+        if not party_ids:
             logger.warning(
-                "Applying fail-closed tenant filter for %s: empty organization_ids",
+                "Applying fail-closed party filter for %s: empty party_ids",
                 self.model.__name__,
             )
             return query.where(false())
 
-        organization_column = getattr(self.model, "organization_id")
-        condition = organization_column.in_(org_ids)
-        if tenant_filter.allow_null:
-            condition = or_(organization_column.is_(None), condition)
-        return query.where(condition)
+        columns: list[Any] = []
+        if party_filter.filter_mode == "owner":
+            if owner_column is not None:
+                columns.append(owner_column)
+            elif generic_column is not None:
+                columns.append(generic_column)
+            elif legacy_org_column is not None:
+                columns.append(legacy_org_column)
+        elif party_filter.filter_mode == "manager":
+            if manager_column is not None:
+                columns.append(manager_column)
+            elif generic_column is not None:
+                columns.append(generic_column)
+            elif legacy_org_column is not None:
+                columns.append(legacy_org_column)
+        else:
+            for column in (
+                owner_column,
+                manager_column,
+                generic_column,
+                legacy_org_column,
+            ):
+                if column is None:
+                    continue
+                if any(column is existing for existing in columns):
+                    continue
+                columns.append(column)
 
-    def apply_tenant_filter(
-        self, query: Select[Any], tenant_filter: TenantFilter
+        if not columns:
+            logger.debug(
+                "Skipping party filter for %s: no party-compatible column",
+                self.model.__name__,
+            )
+            return query
+
+        conditions = [column.in_(party_ids) for column in columns]
+        if party_filter.allow_null:
+            conditions = [
+                or_(column.is_(None), condition)
+                for column, condition in zip(columns, conditions, strict=False)
+            ]
+
+        if len(conditions) == 1:
+            return query.where(conditions[0])
+        return query.where(or_(*conditions))
+
+    def _apply_relation_aware_party_filter(
+        self,
+        query: Select[Any],
+        *,
+        owner_party_ids: list[PartyIdentifier],
+        manager_party_ids: list[PartyIdentifier],
+        owner_column: Any,
+        manager_column: Any,
+        generic_column: Any,
+        legacy_org_column: Any,
+        allow_null: bool,
     ) -> Select[Any]:
-        """Public wrapper for applying tenant filter on custom queries."""
-        return self._apply_tenant_filter(query, tenant_filter)
+        available_columns = [
+            column
+            for column in (
+                owner_column,
+                manager_column,
+                generic_column,
+                legacy_org_column,
+            )
+            if column is not None
+        ]
+        if not available_columns:
+            logger.debug(
+                "Skipping relation-aware party filter for %s: no party-compatible column",
+                self.model.__name__,
+            )
+            return query
+
+        if len(owner_party_ids) == 0 and len(manager_party_ids) == 0:
+            logger.warning(
+                "Applying fail-closed relation-aware party filter for %s: empty owner/manager scope",
+                self.model.__name__,
+            )
+            return query.where(false())
+
+        @dataclass
+        class _ScopedRelationCondition:
+            column: Any
+            party_ids: set[PartyIdentifier]
+            fallback_to_legacy_org_when_null: bool = False
+
+        scoped_columns: dict[int, _ScopedRelationCondition] = {}
+
+        def _bind_scope(
+            column: Any | None,
+            party_ids: list[PartyIdentifier],
+            *,
+            fallback_to_legacy_org_when_null: bool = False,
+        ) -> None:
+            if column is None or len(party_ids) == 0:
+                return
+            column_key = id(column)
+            if column_key not in scoped_columns:
+                scoped_columns[column_key] = _ScopedRelationCondition(
+                    column=column,
+                    party_ids=set(),
+                    fallback_to_legacy_org_when_null=fallback_to_legacy_org_when_null,
+                )
+            scoped_scope = scoped_columns[column_key]
+            scoped_scope.party_ids.update(party_ids)
+            if fallback_to_legacy_org_when_null:
+                scoped_scope.fallback_to_legacy_org_when_null = True
+
+        owner_target_column = owner_column or generic_column or legacy_org_column
+        manager_target_column = manager_column or generic_column or legacy_org_column
+        _bind_scope(
+            owner_target_column,
+            owner_party_ids,
+            fallback_to_legacy_org_when_null=(
+                legacy_org_column is not None and owner_target_column is owner_column
+            ),
+        )
+        _bind_scope(
+            manager_target_column,
+            manager_party_ids,
+            fallback_to_legacy_org_when_null=(
+                legacy_org_column is not None
+                and manager_target_column is manager_column
+            ),
+        )
+
+        if len(scoped_columns) == 0:
+            logger.warning(
+                "Applying fail-closed relation-aware party filter for %s: relation scope has no matching columns",
+                self.model.__name__,
+            )
+            return query.where(false())
+
+        conditions: list[Any] = []
+        for scoped_scope in scoped_columns.values():
+            if len(scoped_scope.party_ids) == 0:
+                continue
+            sorted_scoped_ids = sorted(
+                scoped_scope.party_ids, key=lambda value: str(value)
+            )
+            condition = scoped_scope.column.in_(sorted_scoped_ids)
+            if (
+                scoped_scope.fallback_to_legacy_org_when_null
+                and legacy_org_column is not None
+            ):
+                condition = or_(
+                    condition,
+                    and_(
+                        scoped_scope.column.is_(None),
+                        legacy_org_column.in_(sorted_scoped_ids),
+                    ),
+                )
+            if allow_null:
+                condition = or_(scoped_scope.column.is_(None), condition)
+            conditions.append(condition)
+
+        if len(conditions) == 0:
+            logger.warning(
+                "Applying fail-closed relation-aware party filter for %s: empty scoped conditions",
+                self.model.__name__,
+            )
+            return query.where(false())
+
+        if len(conditions) == 1:
+            return query.where(conditions[0])
+        return query.where(or_(*conditions))
+
+    @staticmethod
+    def _normalize_party_ids(
+        party_ids: list[PartyIdentifier] | None,
+    ) -> list[PartyIdentifier]:
+        if party_ids is None:
+            return []
+
+        normalized: list[PartyIdentifier] = []
+        seen: set[str] = set()
+        for party_id in party_ids:
+            if party_id is None:
+                continue
+            identifier = str(party_id).strip()
+            if identifier == "" or identifier in seen:
+                continue
+            seen.add(identifier)
+            normalized.append(party_id)
+        return normalized
+
+    def apply_party_filter(
+        self, query: Select[Any], party_filter: PartyFilter
+    ) -> Select[Any]:
+        """Public wrapper for applying party filter on custom queries."""
+        return self._apply_party_filter(query, party_filter)
 
     def _validate_filter_field(self, field_name: str) -> None:
         """

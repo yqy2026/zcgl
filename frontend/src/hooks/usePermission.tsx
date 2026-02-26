@@ -197,44 +197,46 @@ export default usePermission;
 // 权限常量定义
 export const PERMISSIONS = {
   // 用户管理权限
-  USER_VIEW: { resource: 'user', action: 'view' },
+  USER_VIEW: { resource: 'user', action: 'read' },
   USER_CREATE: { resource: 'user', action: 'create' },
-  USER_EDIT: { resource: 'user', action: 'edit' },
+  USER_EDIT: { resource: 'user', action: 'update' },
   USER_DELETE: { resource: 'user', action: 'delete' },
-  USER_LOCK: { resource: 'user', action: 'lock' },
+  USER_LOCK: { resource: 'user', action: 'update' },
 
   // 角色管理权限
-  ROLE_VIEW: { resource: 'role', action: 'view' },
+  ROLE_VIEW: { resource: 'role', action: 'read' },
   ROLE_CREATE: { resource: 'role', action: 'create' },
-  ROLE_EDIT: { resource: 'role', action: 'edit' },
+  ROLE_EDIT: { resource: 'role', action: 'update' },
   ROLE_DELETE: { resource: 'role', action: 'delete' },
-  ROLE_ASSIGN_PERMISSIONS: { resource: 'role', action: 'assign_permissions' },
+  ROLE_ASSIGN_PERMISSIONS: { resource: 'role', action: 'update' },
 
   // 组织管理权限
-  ORGANIZATION_VIEW: { resource: 'organization', action: 'view' },
+  ORGANIZATION_VIEW: { resource: 'organization', action: 'read' },
   ORGANIZATION_CREATE: { resource: 'organization', action: 'create' },
-  ORGANIZATION_EDIT: { resource: 'organization', action: 'edit' },
+  ORGANIZATION_EDIT: { resource: 'organization', action: 'update' },
   ORGANIZATION_DELETE: { resource: 'organization', action: 'delete' },
 
   // 资产管理权限
-  ASSET_VIEW: { resource: 'asset', action: 'view' },
+  ASSET_VIEW: { resource: 'asset', action: 'read' },
   ASSET_CREATE: { resource: 'asset', action: 'create' },
-  ASSET_EDIT: { resource: 'asset', action: 'edit' },
+  ASSET_EDIT: { resource: 'asset', action: 'update' },
   ASSET_DELETE: { resource: 'asset', action: 'delete' },
-  ASSET_IMPORT: { resource: 'asset', action: 'import' },
+  ASSET_IMPORT: { resource: 'asset', action: 'create' },
   ASSET_EXPORT: { resource: 'asset', action: 'export' },
 
   // 租赁管理权限
-  RENTAL_VIEW: { resource: 'rental', action: 'view' },
-  RENTAL_CREATE: { resource: 'rental', action: 'create' },
-  RENTAL_EDIT: { resource: 'rental', action: 'edit' },
-  RENTAL_DELETE: { resource: 'rental', action: 'delete' },
+  RENTAL_VIEW: { resource: 'rent_contract', action: 'read' },
+  RENTAL_CREATE: { resource: 'rent_contract', action: 'create' },
+  RENTAL_EDIT: { resource: 'rent_contract', action: 'update' },
+  RENTAL_DELETE: { resource: 'rent_contract', action: 'delete' },
 
   // 系统管理权限
-  SYSTEM_SETTINGS: { resource: 'system', action: 'settings' },
-  SYSTEM_LOGS: { resource: 'system', action: 'logs' },
-  SYSTEM_BACKUP: { resource: 'system', action: 'backup' },
-  SYSTEM_DICTIONARY: { resource: 'system', action: 'dictionary' },
+  SYSTEM_SETTINGS: { resource: 'system_settings', action: 'update' },
+  SYSTEM_SETTINGS_READ: { resource: 'system_settings', action: 'read' },
+  SYSTEM_LOGS: { resource: 'operation_log', action: 'read' },
+  SYSTEM_BACKUP: { resource: 'system_settings', action: 'create' },
+  SYSTEM_DICTIONARY: { resource: 'dictionary', action: 'read' },
+  SYSTEM_TEMPLATES: { resource: 'llm_prompt', action: 'read' },
 } as const;
 
 // 页面权限配置
@@ -243,8 +245,9 @@ export const PAGE_PERMISSIONS = {
   '/system/roles': [PERMISSIONS.ROLE_VIEW],
   '/system/organizations': [PERMISSIONS.ORGANIZATION_VIEW],
   '/system/dictionaries': [PERMISSIONS.SYSTEM_DICTIONARY],
+  '/system/templates': [PERMISSIONS.SYSTEM_TEMPLATES],
   '/system/logs': [PERMISSIONS.SYSTEM_LOGS],
-  '/system/settings': [PERMISSIONS.SYSTEM_SETTINGS],
+  '/system/settings': [PERMISSIONS.SYSTEM_SETTINGS_READ, PERMISSIONS.SYSTEM_SETTINGS],
   '/assets/list': [PERMISSIONS.ASSET_VIEW],
   '/assets/new': [PERMISSIONS.ASSET_CREATE],
   '/assets/import': [PERMISSIONS.ASSET_IMPORT],

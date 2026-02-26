@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ....core.exception_handler import BaseBusinessError, internal_error, not_found
 from ....database import get_async_db
-from ....middleware.auth import get_current_active_user
+from ....middleware.auth import AuthzContext, get_current_active_user, require_authz
 from ....models.auth import User
 from ....services.rent_contract import rent_contract_service
 
@@ -32,6 +32,13 @@ async def upload_contract_attachment(
     file_type: str = Form("other", description="文件类型: contract_scan/id_card/other"),
     description: str | None = Form(None, description="附件描述"),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="create",
+            resource_type="rent_contract",
+            resource_id="{contract_id}",
+        )
+    ),
     db: AsyncSession = Depends(get_async_db),
 ) -> dict[str, AnyType]:
     """
@@ -68,6 +75,14 @@ async def upload_contract_attachment(
 async def get_contract_attachments(
     contract_id: str,
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="rent_contract",
+            resource_id="{contract_id}",
+            deny_as_not_found=True,
+        )
+    ),
     db: AsyncSession = Depends(get_async_db),
 ) -> list[dict[str, Any]]:
     """
@@ -113,6 +128,14 @@ async def download_contract_attachment(
     contract_id: str,
     attachment_id: str,
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="rent_contract",
+            resource_id="{contract_id}",
+            deny_as_not_found=True,
+        )
+    ),
     db: AsyncSession = Depends(get_async_db),
 ) -> FileResponse:
     """
@@ -153,6 +176,13 @@ async def delete_contract_attachment(
     contract_id: str,
     attachment_id: str,
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="delete",
+            resource_type="rent_contract",
+            resource_id="{contract_id}",
+        )
+    ),
     db: AsyncSession = Depends(get_async_db),
 ) -> dict[str, str]:
     """

@@ -11,7 +11,7 @@ import psutil
 def get_database_manager() -> Any:
     """获取数据库管理器"""
     try:
-        from ....database import get_database_manager as _get_db_manager
+        from .....database import get_database_manager as _get_db_manager
 
         return _get_db_manager()
     except ImportError:
@@ -116,7 +116,7 @@ async def check_component_health() -> dict[str, dict[str, Any]]:
 
     # 加密服务健康检查
     try:
-        from ....core.encryption import get_encryption_status
+        from .....core.encryption import get_encryption_status
 
         enc_status = get_encryption_status()
         components["encryption"] = {

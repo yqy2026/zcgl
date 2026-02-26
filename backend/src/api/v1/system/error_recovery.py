@@ -7,7 +7,7 @@
 from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, Body, Depends, Query
+from fastapi import APIRouter, Body, Depends, Query, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
@@ -18,7 +18,7 @@ from ....core.exception_handler import (
     internal_error,
     not_found,
 )
-from ....middleware.auth import require_permission
+from ....middleware.auth import AuthzContext, get_current_active_user, require_authz
 from ....middleware.error_recovery_middleware import api_error_recovery
 from ....models.auth import User
 from ....security.route_guards import debug_only, require_localhost
@@ -29,6 +29,30 @@ from ....services.error_recovery_service import (
 )
 
 router = APIRouter(prefix="/error-recovery", tags=["错误恢复"])
+_ERROR_RECOVERY_DELETE_UNSCOPED_PARTY_ID = "__unscoped__:error_recovery:delete"
+_ERROR_RECOVERY_DELETE_RESOURCE_CONTEXT: dict[str, str] = {
+    "party_id": _ERROR_RECOVERY_DELETE_UNSCOPED_PARTY_ID,
+    "owner_party_id": _ERROR_RECOVERY_DELETE_UNSCOPED_PARTY_ID,
+    "manager_party_id": _ERROR_RECOVERY_DELETE_UNSCOPED_PARTY_ID,
+}
+
+
+async def _resolve_test_recovery_category_resource_id(request: Request) -> str | None:
+    """从 /test 请求体中解析 category 作为 resource_id。"""
+    content_type = request.headers.get("content-type", "")
+    if "application/json" not in content_type.lower():
+        return None
+    try:
+        body = await request.json()
+    except Exception:
+        return None
+    if not isinstance(body, dict):
+        return None
+    category = body.get("category")
+    if category is None:
+        return None
+    normalized = str(category).strip()
+    return normalized or None
 
 
 # Pydantic模型
@@ -117,7 +141,10 @@ class RecoveryConfigResponse(BaseModel):
 )
 @api_error_recovery(ErrorCategory.DATABASE)
 async def get_recovery_statistics(
-    current_user: User = Depends(require_permission("system:error_recovery", "view")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="read", resource_type="error_recovery")
+    ),
     category: str | None = Query(None, description="按错误类别筛选"),
     start_time: datetime | None = Query(None, description="开始时间"),
     end_time: datetime | None = Query(None, description="结束时间"),
@@ -148,7 +175,10 @@ async def get_recovery_statistics(
 )
 @api_error_recovery(ErrorCategory.DATABASE)
 async def get_recovery_strategies(
-    current_user: User = Depends(require_permission("system:error_recovery", "view")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="read", resource_type="error_recovery")
+    ),
 ) -> list[RecoveryConfigResponse]:
     """获取错误恢复策略配置"""
 
@@ -186,7 +216,14 @@ async def get_recovery_strategies(
 async def update_recovery_strategy(
     category: str,
     strategy_update: RecoveryStrategyUpdate,
-    current_user: User = Depends(require_permission("system:error_recovery", "edit")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="error_recovery",
+            resource_id="{category}",
+        )
+    ),
 ) -> dict[str, Any]:
     """更新错误恢复策略"""
 
@@ -248,7 +285,10 @@ async def update_recovery_strategy(
 )
 @api_error_recovery(ErrorCategory.DATABASE)
 async def get_circuit_breaker_status(
-    current_user: User = Depends(require_permission("system:error_recovery", "view")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="read", resource_type="error_recovery")
+    ),
 ) -> list[CircuitBreakerStatus]:
     """获取熔断器状态"""
 
@@ -285,7 +325,14 @@ async def get_circuit_breaker_status(
 @api_error_recovery(ErrorCategory.DATABASE)
 async def reset_circuit_breaker(
     category: str,
-    current_user: User = Depends(require_permission("system:error_recovery", "edit")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="error_recovery",
+            resource_id="{category}",
+        )
+    ),
 ) -> dict[str, Any]:
     """重置熔断器"""
 
@@ -325,7 +372,10 @@ async def reset_circuit_breaker(
 )
 @api_error_recovery(ErrorCategory.DATABASE)
 async def get_recovery_history(
-    current_user: User = Depends(require_permission("system:error_recovery", "view")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="read", resource_type="error_recovery")
+    ),
     category: str | None = Query(None, description="按错误类别筛选"),
     success: bool | None = Query(None, description="按是否成功筛选"),
     page: int = Query(1, ge=1, description="页码"),
@@ -371,7 +421,14 @@ async def get_recovery_history(
 async def test_error_recovery(
     category: str = Body(..., description="错误类别"),
     simulate_error: bool = Body(True, description="是否模拟错误"),
-    current_user: User = Depends(require_permission("system:error_recovery", "test")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="error_recovery",
+            resource_id=_resolve_test_recovery_category_resource_id,
+        )
+    ),
 ) -> dict[str, Any]:
     """测试错误恢复"""
 
@@ -434,7 +491,14 @@ async def test_error_recovery(
 )
 @api_error_recovery(ErrorCategory.DATABASE)
 async def clear_recovery_history(
-    current_user: User = Depends(require_permission("system:error_recovery", "edit")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="delete",
+            resource_type="error_recovery",
+            resource_context=_ERROR_RECOVERY_DELETE_RESOURCE_CONTEXT,
+        )
+    ),
     before_time: datetime | None = Query(None, description="清理此时间之前的记录"),
 ) -> dict[str, Any]:
     """清理错误恢复历史"""

@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.constants.cache_constants import CACHE_TTL_SHORT_SECONDS
 from src.core.exception_handler import bad_request
 from src.database import get_async_db
-from src.middleware.auth import get_current_active_user
+from src.middleware.auth import AuthzContext, get_current_active_user, require_authz
 from src.models.auth import User
 from src.schemas.statistics import (
     CategoryOccupancyRateListResponse,
@@ -40,6 +40,12 @@ async def get_overall_occupancy_rate(
     should_use_aggregation: bool = True,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="analytics",
+        )
+    ),
 ) -> OccupancyRateStatsResponse:
     """
     获取整体出租率统计
@@ -90,6 +96,12 @@ async def get_occupancy_rate_by_category(
     should_use_aggregation: bool = True,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="analytics",
+        )
+    ),
 ) -> CategoryOccupancyRateListResponse:
     """
     按类别获取出租率统计
@@ -161,6 +173,12 @@ async def get_occupancy_rate_statistics(
     business_category: str | None = Query(None, description="业务分类筛选"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="analytics",
+        )
+    ),
 ) -> dict[str, Any]:
     """
     获取出租率统计数据（支持多维度筛选）

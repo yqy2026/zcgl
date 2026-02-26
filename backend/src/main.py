@@ -299,6 +299,14 @@ async def lifespan(app: FastAPI) -> Any:
         except Exception as e:
             logger.warning(f"缓存关闭失败: {e}")
 
+    # 关闭鉴权失效事件总线传输层（Redis pub/sub 监听线程）
+    try:
+        from .services.authz import authz_event_bus
+
+        authz_event_bus.close()
+    except Exception as e:
+        logger.warning(f"鉴权事件总线关闭失败: {e}")
+
 
 # 创建FastAPI应用实例
 app = FastAPI(
@@ -356,6 +364,10 @@ app.add_middleware(
         "Origin",
         "Access-Control-Request-Method",
         "Access-Control-Request-Headers",
+    ],
+    expose_headers=[
+        "X-Request-ID",
+        "Request-ID",
     ],
 )
 

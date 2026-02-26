@@ -27,7 +27,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ....constants.file_size_constants import DEFAULT_MAX_FILE_SIZE
 from ....core.exception_handler import BaseBusinessError, bad_request, internal_error
 from ....database import get_async_db
-from ....middleware.auth import get_current_active_user
+from ....middleware.auth import AuthzContext, get_current_active_user, require_authz
 from ....models.auth import User
 from ....schemas.pdf_import import FileUploadResponse
 from ....security.file_validation import validate_upload_file
@@ -38,6 +38,12 @@ from ..dependencies import get_optional_services, get_pdf_import_service
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["PDF上传"])
+_RENT_CONTRACT_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:rent_contract:create"
+_RENT_CONTRACT_CREATE_RESOURCE_CONTEXT: dict[str, str] = {
+    "party_id": _RENT_CONTRACT_CREATE_UNSCOPED_PARTY_ID,
+    "owner_party_id": _RENT_CONTRACT_CREATE_UNSCOPED_PARTY_ID,
+    "manager_party_id": _RENT_CONTRACT_CREATE_UNSCOPED_PARTY_ID,
+}
 
 
 @router.post("/upload", response_model=FileUploadResponse)
@@ -50,6 +56,13 @@ async def upload_pdf_file(
     pdf_service: PDFImportService = Depends(get_pdf_import_service),
     optional: Any = Depends(get_optional_services),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="create",
+            resource_type="rent_contract",
+            resource_context=_RENT_CONTRACT_CREATE_RESOURCE_CONTEXT,
+        )
+    ),
 ) -> FileUploadResponse:
     """上传PDF文件并开始处理"""
 

@@ -9,25 +9,25 @@ from ..crud.base import CRUDBase
 from ..models.rbac import (
     Permission,
     PermissionAuditLog,
-    PermissionGrant,
-    ResourcePermission,
+    PermissionGrant,  # DEPRECATED
+    ResourcePermission,  # DEPRECATED
     Role,
     UserRoleAssignment,
     role_permissions,
 )
 from ..schemas.rbac import (
     PermissionCreate,
-    PermissionGrantCreate,
-    PermissionGrantUpdate,
+    PermissionGrantCreate,  # DEPRECATED
+    PermissionGrantUpdate,  # DEPRECATED
     PermissionUpdate,
-    ResourcePermissionCreate,
-    ResourcePermissionUpdate,
+    ResourcePermissionCreate,  # DEPRECATED
+    ResourcePermissionUpdate,  # DEPRECATED
     RoleCreate,
     RoleUpdate,
     UserRoleAssignmentCreate,
     UserRoleAssignmentUpdate,
 )
-from .query_builder import TenantFilter
+from .query_builder import PartyFilter
 
 
 async def _scalars_all(result: Any) -> list[Any]:
@@ -77,7 +77,7 @@ class CRUDRole(CRUDBase[Role, RoleCreate, RoleUpdate]):
         db: AsyncSession,
         id: Any,
         use_cache: bool = True,
-        tenant_filter: TenantFilter | None = None,
+        party_filter: PartyFilter | None = None,
     ) -> Role | None:
         """根据ID获取单个记录（预加载权限）"""
         stmt = (
@@ -85,14 +85,14 @@ class CRUDRole(CRUDBase[Role, RoleCreate, RoleUpdate]):
             .where(Role.id == id)
             .options(selectinload(Role.permissions))
         )
-        if tenant_filter is not None:
-            stmt = self.query_builder.apply_tenant_filter(stmt, tenant_filter)
+        if party_filter is not None:
+            stmt = self.query_builder.apply_party_filter(stmt, party_filter)
         result = (await db.execute(stmt)).scalars().first()
         if use_cache and result is not None:  # pragma: no cover
             cache_key = self._get_cache_key(
                 "get",
                 id=id,
-                tenant_filter=self._serialize_tenant_filter(tenant_filter),
+                party_filter=self._serialize_party_filter(party_filter),
             )  # pragma: no cover
             self._set_cache(cache_key, result)  # pragma: no cover
         return result
@@ -106,18 +106,33 @@ class CRUDRole(CRUDBase[Role, RoleCreate, RoleUpdate]):
         search: str | None = None,
         category: str | None = None,
         is_active: bool | None = None,
-        organization_id: str | None = None,
-        tenant_filter: TenantFilter | None = None,
+        party_id: str | None = None,
+        organization_id: str | None = None,  # DEPRECATED alias
+        party_filter: PartyFilter | None = None,
     ) -> tuple[list[Role], int]:
         """获取角色列表"""
         filters: dict[str, Any] = {}
+        legacy_org_scope_id: str | None = None
 
         if category:
             filters["category"] = category
         if is_active is not None:
             filters["is_active"] = is_active
-        if organization_id:
-            filters["organization_id"] = organization_id
+        if party_id:
+            filters["party_id"] = party_id
+        elif organization_id:  # DEPRECATED alias
+            # DEPRECATED alias: during migration window match both new `party_id`
+            # and DEPRECATED legacy `organization_id` to preserve existing client behavior.
+            legacy_org_scope_id = organization_id  # DEPRECATED alias fallback
+
+        base_query = select(Role)
+        if legacy_org_scope_id:
+            base_query = base_query.where(
+                or_(
+                    Role.party_id == legacy_org_scope_id,
+                    Role.organization_id == legacy_org_scope_id,  # DEPRECATED legacy column
+                )
+            )
 
         stmt = self.query_builder.build_query(
             filters=filters,
@@ -127,14 +142,16 @@ class CRUDRole(CRUDBase[Role, RoleCreate, RoleUpdate]):
             sort_desc=False,
             skip=skip,
             limit=limit,
-            tenant_filter=tenant_filter,
+            base_query=base_query,
+            party_filter=party_filter,
         ).options(selectinload(Role.permissions))
 
         count_stmt = self.query_builder.build_count_query(
             filters=filters,
             search_query=search,
             search_fields=["name", "display_name", "description"],
-            tenant_filter=tenant_filter,
+            base_query=base_query,
+            party_filter=party_filter,
         )
 
         result = await _scalars_all(await db.execute(stmt))
@@ -236,7 +253,7 @@ class CRUDPermission(CRUDBase[Permission, PermissionCreate, PermissionUpdate]):
         resource: str | None = None,
         action: str | None = None,
         is_system_permission: bool | None = None,
-        tenant_filter: TenantFilter | None = None,
+        party_filter: PartyFilter | None = None,
     ) -> list[Permission]:
         """获取权限列表"""
         filters: dict[str, Any] = {}
@@ -255,7 +272,7 @@ class CRUDPermission(CRUDBase[Permission, PermissionCreate, PermissionUpdate]):
             sort_by="resource",
             skip=skip,
             limit=limit,
-            tenant_filter=tenant_filter,
+            party_filter=party_filter,
         )
 
         result = await _scalars_all(await db.execute(stmt))
@@ -281,7 +298,7 @@ class CRUDPermission(CRUDBase[Permission, PermissionCreate, PermissionUpdate]):
         resource: str | None = None,
         action: str | None = None,
         is_system_permission: bool | None = None,
-        tenant_filter: TenantFilter | None = None,
+        party_filter: PartyFilter | None = None,
     ) -> tuple[list[Permission], int]:
         """获取权限列表（含总数）"""
         filters: dict[str, Any] = {}
@@ -300,13 +317,13 @@ class CRUDPermission(CRUDBase[Permission, PermissionCreate, PermissionUpdate]):
             sort_desc=False,
             skip=skip,
             limit=limit,
-            tenant_filter=tenant_filter,
+            party_filter=party_filter,
         )
         count_stmt = self.query_builder.build_count_query(
             filters=filters,
             search_query=search,
             search_fields=["name", "display_name", "description"],
-            tenant_filter=tenant_filter,
+            party_filter=party_filter,
         )
 
         permissions = await _scalars_all(await db.execute(stmt))
@@ -362,8 +379,8 @@ class CRUDUserRoleAssignment(
         return int(result.scalar() or 0)
 
 
-class CRUDResourcePermission(
-    CRUDBase[ResourcePermission, ResourcePermissionCreate, ResourcePermissionUpdate]
+class CRUDResourcePermission(  # DEPRECATED
+    CRUDBase[ResourcePermission, ResourcePermissionCreate, ResourcePermissionUpdate]  # DEPRECATED
 ):
     """资源权限CRUD"""
 
@@ -378,22 +395,22 @@ class CRUDResourcePermission(
     ) -> list[str]:
         """获取满足条件的资源ID列表（用于组织权限过滤）"""
         conditions = [
-            ResourcePermission.resource_type == resource_type,
-            ResourcePermission.is_active.is_(True),
+            ResourcePermission.resource_type == resource_type,  # DEPRECATED
+            ResourcePermission.is_active.is_(True),  # DEPRECATED
             or_(
-                ResourcePermission.expires_at.is_(None),
-                ResourcePermission.expires_at > (now or func.now()),
+                ResourcePermission.expires_at.is_(None),  # DEPRECATED
+                ResourcePermission.expires_at > (now or func.now()),  # DEPRECATED
             ),
         ]
 
         if user_id:
-            conditions.append(ResourcePermission.user_id == user_id)
+            conditions.append(ResourcePermission.user_id == user_id)  # DEPRECATED
         elif role_ids:
-            conditions.append(ResourcePermission.role_id.in_(role_ids))
+            conditions.append(ResourcePermission.role_id.in_(role_ids))  # DEPRECATED
         else:
             return []
 
-        stmt = select(ResourcePermission.resource_id).where(and_(*conditions))
+        stmt = select(ResourcePermission.resource_id).where(and_(*conditions))  # DEPRECATED
         resource_ids = await _scalars_all(await db.execute(stmt))
         return [str(resource_id) for resource_id in resource_ids]
 
@@ -406,8 +423,8 @@ class CRUDPermissionAuditLog(
     pass
 
 
-class CRUDPermissionGrant(
-    CRUDBase[PermissionGrant, PermissionGrantCreate, PermissionGrantUpdate]
+class CRUDPermissionGrant(  # DEPRECATED
+    CRUDBase[PermissionGrant, PermissionGrantCreate, PermissionGrantUpdate]  # DEPRECATED
 ):
     """统一权限授权CRUD"""
 
@@ -419,20 +436,20 @@ class CRUDPermissionGrant(
         resource: str,
         action: str,
         now: Any = None,
-    ) -> list[PermissionGrant]:
+    ) -> list[PermissionGrant]:  # DEPRECATED
         """获取匹配的权限授权记录（用于权限检查）"""
         _now = now or func.now()
         stmt = (
-            select(PermissionGrant)
-            .join(Permission, Permission.id == PermissionGrant.permission_id)
+            select(PermissionGrant)  # DEPRECATED
+            .join(Permission, Permission.id == PermissionGrant.permission_id)  # DEPRECATED
             .where(
                 and_(
-                    PermissionGrant.user_id == user_id,
-                    PermissionGrant.is_active,
+                    PermissionGrant.user_id == user_id,  # DEPRECATED
+                    PermissionGrant.is_active,  # DEPRECATED
                     Permission.resource == resource,
                     Permission.action == action,
-                    or_(PermissionGrant.starts_at.is_(None), PermissionGrant.starts_at <= _now),
-                    or_(PermissionGrant.expires_at.is_(None), PermissionGrant.expires_at > _now),
+                    or_(PermissionGrant.starts_at.is_(None), PermissionGrant.starts_at <= _now),  # DEPRECATED
+                    or_(PermissionGrant.expires_at.is_(None), PermissionGrant.expires_at > _now),  # DEPRECATED
                 )
             )
         )
@@ -451,26 +468,26 @@ class CRUDPermissionGrant(
         effect: str | None = None,
         scope: str | None = None,
         is_active: bool | None = None,
-    ) -> tuple[list[PermissionGrant], int]:
+    ) -> tuple[list[PermissionGrant], int]:  # DEPRECATED
         """分页查询统一授权记录（含总数）"""
         from sqlalchemy import desc
 
         filters = []
         if user_id:
-            filters.append(PermissionGrant.user_id == user_id)
+            filters.append(PermissionGrant.user_id == user_id)  # DEPRECATED
         if permission_id:
-            filters.append(PermissionGrant.permission_id == permission_id)
+            filters.append(PermissionGrant.permission_id == permission_id)  # DEPRECATED
         if grant_type:
-            filters.append(PermissionGrant.grant_type == grant_type.strip().lower())
+            filters.append(PermissionGrant.grant_type == grant_type.strip().lower())  # DEPRECATED
         if effect:
-            filters.append(PermissionGrant.effect == effect.strip().lower())
+            filters.append(PermissionGrant.effect == effect.strip().lower())  # DEPRECATED
         if scope:
-            filters.append(PermissionGrant.scope == scope.strip().lower())
+            filters.append(PermissionGrant.scope == scope.strip().lower())  # DEPRECATED
         if is_active is not None:
-            filters.append(PermissionGrant.is_active == is_active)
+            filters.append(PermissionGrant.is_active == is_active)  # DEPRECATED
 
-        stmt = select(PermissionGrant).order_by(desc(PermissionGrant.created_at))
-        count_stmt = select(func.count(PermissionGrant.id))
+        stmt = select(PermissionGrant).order_by(desc(PermissionGrant.created_at))  # DEPRECATED
+        count_stmt = select(func.count(PermissionGrant.id))  # DEPRECATED
 
         if filters:
             stmt = stmt.where(and_(*filters))
@@ -488,14 +505,14 @@ class CRUDPermissionGrant(
         _now = now or func.now()
         stmt = (
             select(Permission)
-            .join(PermissionGrant, PermissionGrant.permission_id == Permission.id)
+            .join(PermissionGrant, PermissionGrant.permission_id == Permission.id)  # DEPRECATED
             .where(
                 and_(
-                    PermissionGrant.user_id == user_id,
-                    PermissionGrant.is_active,
-                    PermissionGrant.effect == "allow",
-                    or_(PermissionGrant.starts_at.is_(None), PermissionGrant.starts_at <= _now),
-                    or_(PermissionGrant.expires_at.is_(None), PermissionGrant.expires_at > _now),
+                    PermissionGrant.user_id == user_id,  # DEPRECATED
+                    PermissionGrant.is_active,  # DEPRECATED
+                    PermissionGrant.effect == "allow",  # DEPRECATED
+                    or_(PermissionGrant.starts_at.is_(None), PermissionGrant.starts_at <= _now),  # DEPRECATED
+                    or_(PermissionGrant.expires_at.is_(None), PermissionGrant.expires_at > _now),  # DEPRECATED
                 )
             )
         )
@@ -506,6 +523,6 @@ class CRUDPermissionGrant(
 role_crud = CRUDRole(Role)
 permission_crud = CRUDPermission(Permission)
 user_role_assignment_crud = CRUDUserRoleAssignment(UserRoleAssignment)
-resource_permission_crud = CRUDResourcePermission(ResourcePermission)
+resource_permission_crud = CRUDResourcePermission(ResourcePermission)  # DEPRECATED
 permission_audit_log_crud = CRUDPermissionAuditLog(PermissionAuditLog)
-permission_grant_crud = CRUDPermissionGrant(PermissionGrant)
+permission_grant_crud = CRUDPermissionGrant(PermissionGrant)  # DEPRECATED

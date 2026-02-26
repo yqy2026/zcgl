@@ -14,7 +14,7 @@ from fastapi import APIRouter, Depends, Path, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_async_db
-from src.middleware.auth import get_current_active_user
+from src.middleware.auth import AuthzContext, get_current_active_user, require_authz
 from src.models.auth import User
 from src.schemas.statistics import TimeSeriesDataPoint, TrendDataResponse
 
@@ -32,6 +32,12 @@ async def get_trend_data(
     ),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="analytics",
+        )
+    ),
 ) -> TrendDataResponse:
     """
     获取指标趋势数据

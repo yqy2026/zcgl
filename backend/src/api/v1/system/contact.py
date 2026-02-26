@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ....core.exception_handler import BaseBusinessError, internal_error, not_found
 from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
 from ....database import get_async_db
-from ....middleware.auth import get_current_active_user
+from ....middleware.auth import AuthzContext, get_current_active_user, require_authz
 from ....models.auth import User
 from ....schemas.contact import (
     ContactCreate,
@@ -23,6 +23,12 @@ from ....schemas.contact import (
 from ....services.contact import ContactService, get_contact_service
 
 router = APIRouter()
+_CONTACT_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:contact:create"
+_CONTACT_CREATE_RESOURCE_CONTEXT: dict[str, str] = {
+    "party_id": _CONTACT_CREATE_UNSCOPED_PARTY_ID,
+    "owner_party_id": _CONTACT_CREATE_UNSCOPED_PARTY_ID,
+    "manager_party_id": _CONTACT_CREATE_UNSCOPED_PARTY_ID,
+}
 
 
 def _resolve_service(service: ContactService | Any) -> ContactService | Any:
@@ -37,6 +43,13 @@ async def create_contact(
     db: AsyncSession = Depends(get_async_db),
     contact_in: ContactCreate,
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="create",
+            resource_type="contact",
+            resource_context=_CONTACT_CREATE_RESOURCE_CONTEXT,
+        )
+    ),
     service: ContactService = Depends(get_contact_service),
 ) -> Any:
     """
@@ -66,6 +79,14 @@ async def get_contact(
     contact_id: str,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="contact",
+            resource_id="{contact_id}",
+            deny_as_not_found=True,
+        )
+    ),
     service: ContactService = Depends(get_contact_service),
 ) -> Any:
     """获取联系人详情"""
@@ -89,6 +110,14 @@ async def get_entity_contacts(
     current_user: User = Depends(get_current_active_user),
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(10, ge=1, le=100, description="每页数量"),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="contact",
+            resource_id="{entity_id}",
+            deny_as_not_found=True,
+        )
+    ),
     service: ContactService = Depends(get_contact_service),
 ) -> JSONResponse:
     """
@@ -130,6 +159,14 @@ async def get_primary_contact(
     entity_id: str,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="contact",
+            resource_id="{entity_id}",
+            deny_as_not_found=True,
+        )
+    ),
     service: ContactService = Depends(get_contact_service),
 ) -> Any:
     """
@@ -159,6 +196,13 @@ async def update_contact(
     db: AsyncSession = Depends(get_async_db),
     contact_in: ContactUpdate,
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="contact",
+            resource_id="{contact_id}",
+        )
+    ),
     service: ContactService = Depends(get_contact_service),
 ) -> Any:
     """更新联系人信息"""
@@ -191,6 +235,13 @@ async def delete_contact(
     contact_id: str,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="delete",
+            resource_type="contact",
+            resource_id="{contact_id}",
+        )
+    ),
     service: ContactService = Depends(get_contact_service),
 ) -> Any:
     """
@@ -220,6 +271,13 @@ async def create_contacts_batch(
     db: AsyncSession = Depends(get_async_db),
     contacts_in: list[ContactCreate],
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="create",
+            resource_type="contact",
+            resource_id="{entity_id}",
+        )
+    ),
     service: ContactService = Depends(get_contact_service),
 ) -> Any:
     """

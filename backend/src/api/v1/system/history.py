@@ -16,7 +16,12 @@ from ....core.exception_handler import (
 )
 from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
 from ....database import get_async_db
-from ....middleware.auth import get_current_active_user, require_admin
+from ....middleware.auth import (
+    AuthzContext,
+    get_current_active_user,
+    require_admin,
+    require_authz,
+)
 from ....models.auth import User
 from ....schemas.asset import AssetHistoryResponse
 from ....services.history.history_service import HistoryService, get_history_service
@@ -41,6 +46,12 @@ async def get_history_list(
     page_size: int = Query(20, ge=1, le=100, description="每页记录数"),
     asset_id: str | None = Query(None, description="资产ID筛选"),
     db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="history",
+        )
+    ),
     service: HistoryService = Depends(get_history_service),
 ) -> JSONResponse:
     """
@@ -84,6 +95,13 @@ async def get_history_list(
 async def get_history_detail(
     history_id: str = Path(..., description="历史记录ID"),
     db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="history",
+            resource_id="{history_id}",
+        )
+    ),
     service: HistoryService = Depends(get_history_service),
 ) -> AssetHistoryResponse:
     """
@@ -112,6 +130,13 @@ async def delete_history(
     history_id: str = Path(..., description="历史记录ID"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_admin),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="delete",
+            resource_type="history",
+            resource_id="{history_id}",
+        )
+    ),
     service: HistoryService = Depends(get_history_service),
 ) -> dict[str, Any]:
     """

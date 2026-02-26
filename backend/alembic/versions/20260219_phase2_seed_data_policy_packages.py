@@ -1,13 +1,14 @@
 """phase2_seed_data_policy_packages
 
 Revision ID: 20260219_phase2_seed_data_policy_packages
-Revises: 20260219_phase2_add_party_columns_step1
+Revises: 20260219_create_abac_and_relation_tables
 Create Date: 2026-02-19 21:00:00.000000
 """
 
 from __future__ import annotations
 
 from collections.abc import Sequence
+from copy import deepcopy
 from datetime import UTC, datetime
 
 import sqlalchemy as sa
@@ -17,13 +18,130 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "20260219_phase2_seed_data_policy_packages"
-down_revision: str | None = "20260219_phase2_add_party_columns_step1"
+down_revision: str | None = "20260219_create_abac_and_relation_tables"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
 def _utcnow_naive() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
+
+
+_ALLOW_ALL_CONDITION_EXPR: dict[str, object] = {"==": [1, 1]}
+_DENY_ALL_CONDITION_EXPR: dict[str, object] = {"==": [1, 0]}
+
+_OWNER_SCOPE_CONDITION_EXPR: dict[str, object] = {
+    "if": [
+        {
+            "or": [
+                {"!!": {"var": "resource.owner_party_id"}},
+                {"!!": {"var": "resource.party_id"}},
+            ]
+        },
+        {
+            "or": [
+                {
+                    "in": [
+                        {"var": "resource.owner_party_id"},
+                        {"var": "subject.owner_party_ids"},
+                    ]
+                },
+                {
+                    "in": [
+                        {"var": "resource.party_id"},
+                        {"var": "subject.owner_party_ids"},
+                    ]
+                },
+            ]
+        },
+        _DENY_ALL_CONDITION_EXPR,
+    ]
+}
+
+_MANAGER_SCOPE_CONDITION_EXPR: dict[str, object] = {
+    "if": [
+        {
+            "or": [
+                {"!!": {"var": "resource.manager_party_id"}},
+                {"!!": {"var": "resource.party_id"}},
+            ]
+        },
+        {
+            "or": [
+                {
+                    "in": [
+                        {"var": "resource.manager_party_id"},
+                        {"var": "subject.manager_party_ids"},
+                    ]
+                },
+                {
+                    "in": [
+                        {"var": "resource.party_id"},
+                        {"var": "subject.manager_party_ids"},
+                    ]
+                },
+            ]
+        },
+        _DENY_ALL_CONDITION_EXPR,
+    ]
+}
+
+_DUAL_SCOPE_CONDITION_EXPR: dict[str, object] = {
+    "if": [
+        {
+            "or": [
+                {"!!": {"var": "resource.owner_party_id"}},
+                {"!!": {"var": "resource.manager_party_id"}},
+                {"!!": {"var": "resource.party_id"}},
+            ]
+        },
+        {
+            "or": [
+                {
+                    "in": [
+                        {"var": "resource.owner_party_id"},
+                        {"var": "subject.owner_party_ids"},
+                    ]
+                },
+                {
+                    "in": [
+                        {"var": "resource.manager_party_id"},
+                        {"var": "subject.manager_party_ids"},
+                    ]
+                },
+                {
+                    "in": [
+                        {"var": "resource.party_id"},
+                        {"var": "subject.owner_party_ids"},
+                    ]
+                },
+                {
+                    "in": [
+                        {"var": "resource.party_id"},
+                        {"var": "subject.manager_party_ids"},
+                    ]
+                },
+            ]
+        },
+        _DENY_ALL_CONDITION_EXPR,
+    ]
+}
+
+_POLICY_CONDITION_EXPR_BY_NAME: dict[str, dict[str, object]] = {
+    "platform_admin": _ALLOW_ALL_CONDITION_EXPR,
+    "asset_owner_operator": _OWNER_SCOPE_CONDITION_EXPR,
+    "asset_manager_operator": _MANAGER_SCOPE_CONDITION_EXPR,
+    "dual_party_viewer": _DUAL_SCOPE_CONDITION_EXPR,
+    "project_manager_operator": _MANAGER_SCOPE_CONDITION_EXPR,
+    "audit_viewer": _DUAL_SCOPE_CONDITION_EXPR,
+    "no_data_access": _ALLOW_ALL_CONDITION_EXPR,
+}
+
+
+def _condition_expr_for_policy(policy_name: str) -> dict[str, object]:
+    return deepcopy(
+        _POLICY_CONDITION_EXPR_BY_NAME.get(policy_name, _ALLOW_ALL_CONDITION_EXPR)
+    )
 
 
 POLICY_SEEDS: list[dict[str, object]] = [
@@ -177,7 +295,7 @@ def upgrade() -> None:
                 policy_id=policy_id,
                 resource_type=seed["resource_type"],
                 action=seed["action"],
-                condition_expr={"==": [1, 1]},
+                condition_expr=_condition_expr_for_policy(str(seed["name"])),
                 field_mask=None,
             )
         )

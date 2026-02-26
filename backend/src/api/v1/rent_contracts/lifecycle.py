@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ....core.exception_handler import BaseBusinessError, internal_error
 from ....database import get_async_db
-from ....middleware.auth import get_current_active_user
+from ....middleware.auth import AuthzContext, get_current_active_user, require_authz
 from ....models.auth import User
 from ....schemas.rent_contract import RentContractCreate, RentContractResponse
 from ....services.rent_contract import rent_contract_service
@@ -31,6 +31,13 @@ async def renew_contract(
     new_contract_data: RentContractCreate,
     should_transfer_deposit: bool = True,
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="rent_contract",
+            resource_id="{contract_id}",
+        )
+    ),
 ) -> Any:
     """
     合同续签：创建新合同，结束原合同，转移押金
@@ -66,6 +73,13 @@ async def terminate_contract(
     deduction_amount: float = 0.0,
     termination_reason: str | None = None,
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="rent_contract",
+            resource_id="{contract_id}",
+        )
+    ),
 ) -> Any:
     """
     合同终止：提前结束合同，处理押金退还/抵扣

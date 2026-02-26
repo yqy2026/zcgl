@@ -38,7 +38,7 @@ from .asset_support import (
     _scalars_first,
 )
 from .base import CRUDBase
-from .query_builder import TenantFilter
+from .query_builder import PartyFilter
 
 
 class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
@@ -232,24 +232,24 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         return qb_filters
 
     @staticmethod
-    def _normalized_org_ids(tenant_filter: TenantFilter) -> list[str]:
+    def _normalized_org_ids(party_filter: PartyFilter) -> list[str]:
         return [
             str(org_id).strip()
-            for org_id in tenant_filter.organization_ids
+            for org_id in party_filter.party_ids
             if str(org_id).strip() != ""
         ]
 
     async def _resolve_creator_principals(
         self,
         db: AsyncSession,
-        tenant_filter: TenantFilter,
+        party_filter: PartyFilter,
     ) -> set[str]:
-        org_ids = self._normalized_org_ids(tenant_filter)
+        org_ids = self._normalized_org_ids(party_filter)
         if not org_ids:
             return set()
 
         stmt = select(User.id, User.username).where(
-            User.default_organization_id.in_(org_ids)
+            User.default_organization_id.in_(org_ids)  # DEPRECATED legacy org scope fallback
         )
         result = await db.execute(stmt)
         rows = await _result_all(result)
@@ -308,16 +308,16 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         id: AssetIdentifier,
         use_cache: bool = False,
         include_deleted: bool = False,
-        tenant_filter: TenantFilter | None = None,
+        party_filter: PartyFilter | None = None,
     ) -> Asset | None:
         stmt = select(Asset).options(*self._asset_projection_load_options()).filter(
             getattr(self.model, "id") == id
         )
-        if tenant_filter is not None:
-            if hasattr(Asset, "organization_id"):
-                stmt = self.query_builder.apply_tenant_filter(stmt, tenant_filter)
+        if party_filter is not None:
+            if hasattr(Asset, "organization_id"):  # DEPRECATED legacy column fallback
+                stmt = self.query_builder.apply_party_filter(stmt, party_filter)
             else:
-                principals = await self._resolve_creator_principals(db, tenant_filter)
+                principals = await self._resolve_creator_principals(db, party_filter)
                 stmt = self._apply_creator_scope(stmt, principals)
         if not include_deleted:
             stmt = stmt.filter(self._not_deleted_clause(Asset.data_status))
@@ -393,15 +393,15 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         sort_order: str = "desc",
         include_relations: bool = True,
         include_contract_projection: bool = True,
-        tenant_filter: TenantFilter | None = None,
+        party_filter: PartyFilter | None = None,
     ) -> tuple[list[Asset], int]:
         qb_filters = self._normalize_filters(filters)
         normalized_sort_field = self._normalize_sort_field(sort_field)
-        effective_tenant_filter = tenant_filter
+        effective_party_filter = party_filter
         creator_principals: set[str] | None = None
-        if tenant_filter is not None and not hasattr(Asset, "organization_id"):
-            creator_principals = await self._resolve_creator_principals(db, tenant_filter)
-            effective_tenant_filter = None
+        if party_filter is not None and not hasattr(Asset, "organization_id"):  # DEPRECATED legacy column guard
+            creator_principals = await self._resolve_creator_principals(db, party_filter)
+            effective_party_filter = None
 
         non_pii_search_fields = ["property_name", "business_category"]
         pii_search_fields = ["address"]
@@ -469,7 +469,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             skip=skip,
             limit=limit,
             base_query=base_query,
-            tenant_filter=effective_tenant_filter,
+            party_filter=effective_party_filter,
         )
         result = await db.execute(query)
         assets: list[Asset] = await _scalars_all(result)
@@ -490,7 +490,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             search_conditions=search_conditions,
             base_query=count_base_query,
             distinct_column=Asset.id,
-            tenant_filter=effective_tenant_filter,
+            party_filter=effective_party_filter,
         )
         total_result = await db.execute(cnt_query)
         total_raw = await _result_scalar(total_result)
@@ -507,15 +507,15 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         obj_in: AssetCreate,
         commit: bool = True,
         operator: str | None = None,
-        organization_id: str | None = None,
+        organization_id: str | None = None,  # DEPRECATED alias
         ip_address: str | None = None,
         user_agent: str | None = None,
         session_id: str | None = None,
     ) -> Asset:
         obj_in_data = obj_in.model_dump()
         self._clean_asset_data(obj_in_data, remove_relation_fields=False)
-        if organization_id is not None and organization_id.strip() != "":
-            obj_in_data["organization_id"] = organization_id
+        if organization_id is not None and organization_id.strip() != "":  # DEPRECATED alias
+            obj_in_data["organization_id"] = organization_id  # DEPRECATED legacy column
         encrypted_data = self.sensitive_data_handler.encrypt_data(obj_in_data.copy())
 
         db_obj = Asset(**encrypted_data)

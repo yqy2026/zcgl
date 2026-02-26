@@ -21,7 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ....core.exception_handler import BaseBusinessError
 from ....core.response_handler import ResponseHandler, get_request_id
 from ....database import get_async_db
-from ....middleware.auth import get_current_active_user
+from ....middleware.auth import AuthzContext, get_current_active_user, require_authz
 from ....models.auth import User
 from ....security.route_guards import debug_only, require_localhost
 from ....services.analytics.analytics_service import AnalyticsService
@@ -29,6 +29,12 @@ from ....services.analytics.analytics_service import AnalyticsService
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+_ANALYTICS_UPDATE_UNSCOPED_PARTY_ID = "__unscoped__:analytics:update"
+_ANALYTICS_UPDATE_RESOURCE_CONTEXT: dict[str, str] = {
+    "party_id": _ANALYTICS_UPDATE_UNSCOPED_PARTY_ID,
+    "owner_party_id": _ANALYTICS_UPDATE_UNSCOPED_PARTY_ID,
+    "manager_party_id": _ANALYTICS_UPDATE_UNSCOPED_PARTY_ID,
+}
 
 
 @router.get("/comprehensive", summary="获取综合统计分析数据")
@@ -40,6 +46,12 @@ async def get_comprehensive_analytics(
     should_use_cache: bool = True,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="analytics",
+        )
+    ),
 ) -> JSONResponse:
     """
     获取综合统计分析数据
@@ -109,6 +121,12 @@ async def get_cache_stats(
     request: Request,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="analytics",
+        )
+    ),
 ) -> JSONResponse:
     """
     获取分析缓存的统计信息
@@ -141,6 +159,13 @@ async def clear_cache(
     request: Request,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="analytics",
+            resource_context=_ANALYTICS_UPDATE_RESOURCE_CONTEXT,
+        )
+    ),
 ) -> JSONResponse:
     """
     清除所有分析相关的缓存
@@ -221,6 +246,12 @@ async def get_trend_data(
     should_include_deleted: bool = False,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="analytics",
+        )
+    ),
 ) -> JSONResponse:
     """
     获取指定类型的趋势数据
@@ -270,6 +301,12 @@ async def get_distribution_data(
     should_include_deleted: bool = False,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="analytics",
+        )
+    ),
 ) -> JSONResponse:
     """
     获取指定类型的分布数据
@@ -315,6 +352,12 @@ async def export_analytics(
     date_to: str | None = None,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="analytics",
+        )
+    ),
 ) -> Any:
     """
     导出综合分析数据

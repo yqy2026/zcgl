@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.exception_handler import not_found, validation_error
 from src.database import get_async_db
 from src.enums.task import ExcelConfigType, TaskType
-from src.middleware.auth import require_permission
+from src.middleware.auth import AuthzContext, get_current_active_user, require_authz
 from src.models.auth import User
 from src.schemas.excel_advanced import ExcelConfigCreate
 from src.services.excel.excel_config_service import (
@@ -20,6 +20,12 @@ from src.services.excel.excel_config_service import (
 )
 
 router = APIRouter()
+_EXCEL_CONFIG_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:excel_config:create"
+_EXCEL_CONFIG_CREATE_RESOURCE_CONTEXT: dict[str, str] = {
+    "party_id": _EXCEL_CONFIG_CREATE_UNSCOPED_PARTY_ID,
+    "owner_party_id": _EXCEL_CONFIG_CREATE_UNSCOPED_PARTY_ID,
+    "manager_party_id": _EXCEL_CONFIG_CREATE_UNSCOPED_PARTY_ID,
+}
 
 
 def _resolve_service(service: ExcelConfigService | Any) -> ExcelConfigService | Any:
@@ -56,7 +62,14 @@ def _build_format_config(config_data: dict[str, Any]) -> dict[str, Any] | None:
 async def create_excel_config(
     config_in: ExcelConfigCreate,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_permission("excel_config", "write")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="create",
+            resource_type="excel_config",
+            resource_context=_EXCEL_CONFIG_CREATE_RESOURCE_CONTEXT,
+        )
+    ),
     service: ExcelConfigService = Depends(get_excel_config_service),
 ) -> dict[str, Any]:
     """
@@ -86,7 +99,13 @@ async def get_excel_configs(
     config_type: str | None = Query(None, description="配置类型"),
     task_type: str | None = Query(None, description="任务类型"),
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_permission("excel_config", "read")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="excel_config",
+        )
+    ),
     service: ExcelConfigService = Depends(get_excel_config_service),
 ) -> dict[str, Any]:
     """
@@ -111,7 +130,13 @@ async def get_default_excel_config(
     config_type: str = Query(..., description="配置类型"),
     task_type: str = Query(..., description="任务类型"),
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_permission("excel_config", "read")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="excel_config",
+        )
+    ),
     service: ExcelConfigService = Depends(get_excel_config_service),
 ) -> Any:
     """
@@ -140,7 +165,14 @@ async def get_default_excel_config(
 async def get_excel_config(
     config_id: str,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_permission("excel_config", "read")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="excel_config",
+            resource_id="{config_id}",
+        )
+    ),
     service: ExcelConfigService = Depends(get_excel_config_service),
 ) -> Any:
     """
@@ -163,7 +195,14 @@ async def update_excel_config(
     config_id: str,
     config_in: dict[str, Any],
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_permission("excel_config", "write")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="excel_config",
+            resource_id="{config_id}",
+        )
+    ),
     service: ExcelConfigService = Depends(get_excel_config_service),
 ) -> dict[str, Any]:
     """
@@ -202,7 +241,14 @@ async def update_excel_config(
 async def delete_excel_config(
     config_id: str,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_permission("excel_config", "write")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="delete",
+            resource_type="excel_config",
+            resource_id="{config_id}",
+        )
+    ),
     service: ExcelConfigService = Depends(get_excel_config_service),
 ) -> dict[str, str]:
     """

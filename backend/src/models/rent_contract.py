@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from .asset import Asset
     from .ownership import Ownership
+    from .party import Party
 
 from sqlalchemy import (
     DECIMAL,
@@ -73,8 +74,33 @@ class RentContract(Base):
         String(100), unique=True, nullable=False, comment="合同编号"
     )
     # V2: 移除 asset_id，改用多对多关联
-    ownership_id: Mapped[str] = mapped_column(
-        String, ForeignKey("ownerships.id"), nullable=False, comment="权属方ID"
+    ownership_id: Mapped[str] = mapped_column(  # DEPRECATED legacy column
+        String,
+        ForeignKey("ownerships.id"),
+        nullable=False,
+        comment="权属方ID（DEPRECATED）",
+        info={"deprecated": True},
+    )
+    owner_party_id: Mapped[str | None] = mapped_column(
+        String,
+        ForeignKey("parties.id"),
+        nullable=True,
+        index=True,
+        comment="产权方主体ID",
+    )
+    manager_party_id: Mapped[str | None] = mapped_column(
+        String,
+        ForeignKey("parties.id"),
+        nullable=True,
+        index=True,
+        comment="经营管理方主体ID",
+    )
+    tenant_party_id: Mapped[str | None] = mapped_column(
+        String,
+        ForeignKey("parties.id"),
+        nullable=True,
+        index=True,
+        comment="承租方主体ID",
     )
 
     # V2: 合同类型
@@ -191,6 +217,18 @@ class RentContract(Base):
     ownership: Mapped["Ownership"] = relationship(
         "Ownership", back_populates="owned_rent_contracts"
     )
+    owner_party: Mapped["Party | None"] = relationship(
+        "Party",
+        foreign_keys=[owner_party_id],
+    )
+    manager_party: Mapped["Party | None"] = relationship(
+        "Party",
+        foreign_keys=[manager_party_id],
+    )
+    tenant_party: Mapped["Party | None"] = relationship(
+        "Party",
+        foreign_keys=[tenant_party_id],
+    )
     rent_terms: Mapped[list["RentTerm"]] = relationship(
         "RentTerm", back_populates="contract", cascade="all, delete-orphan"
     )
@@ -229,12 +267,13 @@ class RentContract(Base):
                 kwargs["assets"] = sa_assets
             else:
                 kwargs.pop("assets", None)
-        ownership_id = kwargs.get("ownership_id")
-        if ownership_id in (None, "") and all(
+        owner_party_id = kwargs.get("owner_party_id")
+        ownership_id = kwargs.get("ownership_id")  # DEPRECATED alias
+        if owner_party_id in (None, "") and ownership_id in (None, "") and all(  # DEPRECATED fallback
             field in kwargs
             for field in ("tenant_name", "sign_date", "start_date", "end_date")
         ):
-            raise ValueError("ownership_id is required")
+            raise ValueError("owner_party_id is required")
         if kwargs.get("id") in (None, ""):
             kwargs["id"] = str(uuid.uuid4())
         if kwargs.get("contract_type") is None:
@@ -397,8 +436,19 @@ class RentLedger(Base):
     asset_id: Mapped[str | None] = mapped_column(
         String, ForeignKey("assets.id"), nullable=True, comment="关联资产ID"
     )
-    ownership_id: Mapped[str] = mapped_column(
-        String, ForeignKey("ownerships.id"), nullable=False, comment="权属方ID"
+    ownership_id: Mapped[str] = mapped_column(  # DEPRECATED legacy column
+        String,
+        ForeignKey("ownerships.id"),
+        nullable=False,
+        comment="权属方ID（DEPRECATED）",
+        info={"deprecated": True},
+    )
+    owner_party_id: Mapped[str | None] = mapped_column(
+        String,
+        ForeignKey("parties.id"),
+        nullable=True,
+        index=True,
+        comment="产权方主体ID",
     )
 
     # 时间信息
@@ -462,6 +512,10 @@ class RentLedger(Base):
     )
     asset: Mapped["Asset | None"] = relationship("Asset")
     ownership: Mapped["Ownership"] = relationship("Ownership")
+    owner_party: Mapped["Party | None"] = relationship(
+        "Party",
+        foreign_keys=[owner_party_id],
+    )
 
     def __repr__(self) -> str:
         return f"<RentLedger(contract_id={self.contract_id}, year_month={self.year_month}, payment_status={self.payment_status})>"  # pragma: no cover

@@ -54,8 +54,10 @@ class AssetBase(BaseModel):
     """资产基础模型"""
 
     # 基本信息 - 按照权属方、权属类别、项目名称、物业名称、物业地址顺序
-    organization_id: str | None = Field(None, description="所属组织ID")
-    ownership_id: str | None = Field(None, description="权属方ID")
+    organization_id: str | None = Field(None, description="所属组织ID（DEPRECATED）")
+    ownership_id: str | None = Field(None, description="权属方ID（DEPRECATED）")
+    manager_party_id: str | None = Field(None, description="经营管理方主体ID")
+    owner_party_id: str | None = Field(None, description="产权方主体ID")
     ownership_category: str | None = Field(
         None, max_length=FieldLengthLimits.CODE_MAX, description="权属类别"
     )
@@ -195,9 +197,11 @@ class AssetBase(BaseModel):
 
     @model_validator(mode="after")
     def validate_ownership_required(self) -> "AssetBase":
-        if not self.ownership_id:
+        if not self.owner_party_id and not self.ownership_id:
             raise PydanticCustomError(
-                "missing_ownership", "权属方不能为空", {"field": "ownership_id"}
+                "missing_owner_reference",
+                "owner_party_id 或 ownership_id 至少提供一个",
+                {"field": "owner_party_id"},
             )
         return self
 
@@ -212,8 +216,10 @@ class AssetUpdate(BaseModel):
     """更新资产模型"""
 
     # 基本信息 - 按照权属方、权属类别、项目名称、物业名称、物业地址顺序
-    organization_id: str | None = Field(None, description="所属组织ID")
-    ownership_id: str | None = Field(None, description="权属方ID")
+    organization_id: str | None = Field(None, description="所属组织ID（DEPRECATED）")
+    ownership_id: str | None = Field(None, description="权属方ID（DEPRECATED）")
+    manager_party_id: str | None = Field(None, description="经营管理方主体ID")
+    owner_party_id: str | None = Field(None, description="产权方主体ID")
     ownership_category: str | None = Field(None, max_length=100, description="权属类别")
     project_name: str | None = Field(
         None,
@@ -423,9 +429,11 @@ class AssetResponse(AssetResponseBase):
     """资产响应模型"""
 
     id: str = Field(..., description="资产ID")
-    organization_id: str | None = Field(None, description="所属组织ID")
+    organization_id: str | None = Field(None, description="所属组织ID（DEPRECATED）")
     project_id: str | None = Field(None, description="项目ID")  # 对齐Model
-    ownership_id: str | None = Field(None, description="权属ID")  # 对齐Model
+    ownership_id: str | None = Field(None, description="权属ID（DEPRECATED）")  # 对齐Model
+    manager_party_id: str | None = Field(None, description="经营管理方主体ID")
+    owner_party_id: str | None = Field(None, description="产权方主体ID")
     project: ProjectResponse | None = Field(None, description="关联项目")
     ownership: OwnershipResponse | None = Field(None, description="关联权属方")
     created_at: datetime = Field(..., description="创建时间")
@@ -438,9 +446,11 @@ class AssetListItemResponse(AssetResponseBase):
     """资产列表响应模型（轻量，无深层关联字段）"""
 
     id: str = Field(..., description="资产ID")
-    organization_id: str | None = Field(None, description="所属组织ID")
+    organization_id: str | None = Field(None, description="所属组织ID（DEPRECATED）")
     project_id: str | None = Field(None, description="项目ID")
-    ownership_id: str | None = Field(None, description="权属ID")
+    ownership_id: str | None = Field(None, description="权属ID（DEPRECATED）")
+    manager_party_id: str | None = Field(None, description="经营管理方主体ID")
+    owner_party_id: str | None = Field(None, description="产权方主体ID")
     created_at: datetime = Field(..., description="创建时间")
     updated_at: datetime = Field(..., description="更新时间")
 

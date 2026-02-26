@@ -151,7 +151,9 @@ class PropertyCertificateBase(BaseModel):
     co_ownership: str | None = Field(default=None, description="共有情况")
     restrictions: str | None = Field(default=None, description="权利限制情况")
     remarks: str | None = Field(default=None, description="备注")
-    organization_id: str | None = Field(default=None, description="所属组织ID")
+    organization_id: str | None = Field(
+        default=None, description="所属组织ID（DEPRECATED）"
+    )
 
 
 class PropertyCertificateCreate(PropertyCertificateBase):
@@ -181,7 +183,9 @@ class PropertyCertificateUpdate(BaseModel):
     co_ownership: str | None = Field(default=None, description="共有情况")
     restrictions: str | None = Field(default=None, description="权利限制情况")
     remarks: str | None = Field(default=None, description="备注")
-    organization_id: str | None = Field(default=None, description="所属组织ID")
+    organization_id: str | None = Field(
+        default=None, description="所属组织ID（DEPRECATED）"
+    )
     extraction_confidence: float | None = Field(
         default=None, description="LLM提取置信度"
     )
@@ -217,7 +221,9 @@ class PropertyOwnerBase(BaseModel):
     id_number: str | None = Field(default=None, description="证件号码（加密存储）")
     phone: str | None = Field(default=None, description="联系电话（加密存储）")
     address: str | None = Field(default=None, description="地址")
-    organization_id: str | None = Field(default=None, description="关联单位ID")
+    organization_id: str | None = Field(
+        default=None, description="关联单位ID（DEPRECATED）"
+    )
     asset_ids: list[str] = []
 
 
@@ -236,7 +242,9 @@ class PropertyOwnerUpdate(BaseModel):
     id_number: str | None = Field(default=None, description="证件号码")
     phone: str | None = Field(default=None, description="联系电话")
     address: str | None = Field(default=None, description="地址")
-    organization_id: str | None = Field(default=None, description="关联单位ID")
+    organization_id: str | None = Field(
+        default=None, description="关联单位ID（DEPRECATED）"
+    )
     asset_ids: list[str] = []
 
 

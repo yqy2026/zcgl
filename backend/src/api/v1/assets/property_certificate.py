@@ -9,12 +9,17 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 
-from ....core.exception_handler import BaseBusinessError
+from ....core.exception_handler import BaseBusinessError, forbidden
 from ....database import get_async_db
-from ....middleware.auth import require_permission
+from ....middleware.auth import (
+    AuthzContext,
+    get_current_active_user,
+    require_authz,
+)
 from ....models.auth import User
 from ....schemas.property_certificate import (
     CertificateImportConfirm,
@@ -23,12 +28,118 @@ from ....schemas.property_certificate import (
     PropertyCertificateUpdate,
     PropertyCertificateUploadResponse,
 )
+from ....services.authz import authz_service
 from ....services.property_certificate.service import PropertyCertificateService
 from ....utils.file_security import generate_safe_filename, validate_file_extension
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+_PROPERTY_CERTIFICATE_CREATE_UNSCOPED_PARTY_ID = (
+    "__unscoped__:property_certificate:create"
+)
+
+
+def _normalize_optional_str(value: Any) -> str | None:
+    if value is None:
+        return None
+    normalized = str(value).strip()
+    if normalized == "":
+        return None
+    return normalized
+
+
+def _resolve_current_user_organization_id(current_user: User) -> str | None:
+    return _normalize_optional_str(getattr(current_user, "default_organization_id", None))
+
+
+async def _resolve_organization_party_id(
+    *,
+    db: AsyncSession,
+    organization_id: str | None,
+) -> str | None:
+    normalized_organization_id = _normalize_optional_str(organization_id)
+    if normalized_organization_id is None:
+        return None
+
+    from ....models.party import Party, PartyType
+
+    stmt = (
+        select(Party.id.label("party_id"))
+        .where(
+            Party.party_type == PartyType.ORGANIZATION.value,
+            or_(
+                Party.id == normalized_organization_id,
+                Party.external_ref == normalized_organization_id,
+            ),
+        )
+        .order_by(Party.id)
+        .limit(1)
+    )
+    row = (await db.execute(stmt)).mappings().one_or_none()
+    return _normalize_optional_str(row.get("party_id") if row is not None else None)
+
+
+async def _build_property_certificate_create_resource_context(
+    *,
+    db: AsyncSession,
+    current_user: User,
+) -> dict[str, Any]:
+    organization_id = _resolve_current_user_organization_id(current_user)
+    resource_context: dict[str, Any] = {}
+    if organization_id is None:
+        resource_context["party_id"] = _PROPERTY_CERTIFICATE_CREATE_UNSCOPED_PARTY_ID
+        resource_context["owner_party_id"] = _PROPERTY_CERTIFICATE_CREATE_UNSCOPED_PARTY_ID
+        resource_context["manager_party_id"] = (
+            _PROPERTY_CERTIFICATE_CREATE_UNSCOPED_PARTY_ID
+        )
+        return resource_context
+
+    resource_context["organization_id"] = organization_id
+    scoped_party_id = await _resolve_organization_party_id(
+        db=db,
+        organization_id=organization_id,
+    )
+    resolved_party_id = scoped_party_id if scoped_party_id is not None else organization_id
+    resource_context["party_id"] = resolved_party_id
+    resource_context["owner_party_id"] = resolved_party_id
+    resource_context["manager_party_id"] = resolved_party_id
+    return resource_context
+
+
+async def _require_property_certificate_create_authz(
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_async_db),
+) -> AuthzContext:
+    resource_context = await _build_property_certificate_create_resource_context(
+        db=db,
+        current_user=current_user,
+    )
+
+    try:
+        decision = await authz_service.check_access(
+            db,
+            user_id=str(current_user.id),
+            resource_type="property_certificate",
+            action="create",
+            resource_id=None,
+            resource=resource_context,
+        )
+    except Exception:
+        raise forbidden("权限校验失败")
+
+    if not decision.allowed:
+        raise forbidden("权限不足")
+
+    return AuthzContext(
+        current_user=current_user,
+        action="create",
+        resource_type="property_certificate",
+        resource_id=None,
+        resource_context=resource_context,
+        allowed=True,
+        reason_code=decision.reason_code,
+    )
 
 
 @router.post("/upload", response_model=PropertyCertificateUploadResponse)
@@ -36,7 +147,8 @@ async def upload_certificate(
     request: Request,
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_permission("property_certificate", "create")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(_require_property_certificate_create_authz),
 ) -> PropertyCertificateUploadResponse:
     """
     上传产权证文件并提取信息
@@ -153,7 +265,8 @@ async def upload_certificate(
 async def confirm_import(
     data: CertificateImportConfirm,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_permission("property_certificate", "create")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(_require_property_certificate_create_authz),
 ) -> dict[str, Any]:
     """
     确认导入，创建产权证
@@ -170,12 +283,7 @@ async def confirm_import(
     """
     try:
         service = PropertyCertificateService(db)
-        default_org_id = getattr(current_user, "default_organization_id", None)
-        organization_id = (
-            str(default_org_id)
-            if default_org_id is not None and str(default_org_id).strip() != ""
-            else None
-        )
+        organization_id = _resolve_current_user_organization_id(current_user)
         certificate = await service.confirm_import(
             data.model_dump(),
             created_by=str(current_user.id),
@@ -202,7 +310,13 @@ async def list_certificates(
     skip: int = 0,
     limit: int = 100,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_permission("property_certificate", "read")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="property_certificate",
+        )
+    ),
 ) -> list[PropertyCertificateResponse]:
     """
     获取产权证列表
@@ -244,7 +358,15 @@ async def list_certificates(
 async def get_certificate(
     certificate_id: str,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_permission("property_certificate", "read")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="property_certificate",
+            resource_id="{certificate_id}",
+            deny_as_not_found=True,
+        )
+    ),
 ) -> PropertyCertificateResponse:
     """
     获取产权证详情
@@ -287,7 +409,8 @@ async def get_certificate(
 async def create_certificate(
     certificate: PropertyCertificateCreate,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_permission("property_certificate", "create")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(_require_property_certificate_create_authz),
 ) -> PropertyCertificateResponse:
     """
     手动创建产权证
@@ -324,12 +447,7 @@ async def create_certificate(
             )
 
         service = PropertyCertificateService(db)
-        default_org_id = getattr(current_user, "default_organization_id", None)
-        organization_id = (
-            str(default_org_id)
-            if default_org_id is not None and str(default_org_id).strip() != ""
-            else None
-        )
+        organization_id = _resolve_current_user_organization_id(current_user)
         result = await service.create_certificate(
             certificate,
             created_by=str(current_user.id),
@@ -356,7 +474,14 @@ async def update_certificate(
     certificate_id: str,
     certificate: PropertyCertificateUpdate,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_permission("property_certificate", "update")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="property_certificate",
+            resource_id="{certificate_id}",
+        )
+    ),
 ) -> PropertyCertificateResponse:
     """
     更新产权证
@@ -402,7 +527,14 @@ async def update_certificate(
 async def delete_certificate(
     certificate_id: str,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_permission("property_certificate", "delete")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="delete",
+            resource_type="property_certificate",
+            resource_id="{certificate_id}",
+        )
+    ),
 ) -> dict[str, str]:
     """
     删除产权证

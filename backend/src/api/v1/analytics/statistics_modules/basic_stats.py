@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.constants.cache_constants import CACHE_TTL_SHORT_SECONDS
 from src.database import get_async_db
-from src.middleware.auth import get_current_active_user
+from src.middleware.auth import AuthzContext, get_current_active_user, require_authz
 from src.models.auth import User
 from src.schemas.statistics import (
     AreaSummaryResponse,
@@ -39,6 +39,12 @@ from src.utils.cache_manager import cache_statistics, get_cache_manager
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+_ANALYTICS_UPDATE_UNSCOPED_PARTY_ID = "__unscoped__:analytics:update"
+_ANALYTICS_UPDATE_RESOURCE_CONTEXT: dict[str, str] = {
+    "party_id": _ANALYTICS_UPDATE_UNSCOPED_PARTY_ID,
+    "owner_party_id": _ANALYTICS_UPDATE_UNSCOPED_PARTY_ID,
+    "manager_party_id": _ANALYTICS_UPDATE_UNSCOPED_PARTY_ID,
+}
 
 
 def _resolve_basic_stats_service(
@@ -60,6 +66,12 @@ async def get_basic_statistics(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     service: BasicStatsService = Depends(get_basic_stats_service),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="analytics",
+        )
+    ),
 ) -> BasicStatisticsResponse:
     _ = current_user
     resolved_service = _resolve_basic_stats_service(service)
@@ -77,6 +89,12 @@ async def get_statistics_summary(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     service: BasicStatsService = Depends(get_basic_stats_service),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="analytics",
+        )
+    ),
 ) -> BasicStatisticsResponse:
     _ = current_user
     resolved_service = _resolve_basic_stats_service(service)
@@ -95,6 +113,12 @@ async def get_dashboard_data(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     service: BasicStatsService = Depends(get_basic_stats_service),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="analytics",
+        )
+    ),
 ) -> DashboardDataResponse:
     _ = current_user
     resolved_service = _resolve_basic_stats_service(service)
@@ -171,6 +195,12 @@ async def get_comprehensive_statistics(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     service: BasicStatsService = Depends(get_basic_stats_service),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="analytics",
+        )
+    ),
 ) -> dict[str, Any]:
     _ = current_user
     resolved_service = _resolve_basic_stats_service(service)
@@ -183,6 +213,13 @@ async def get_comprehensive_statistics(
 @router.post("/cache/clear", summary="清除统计数据缓存")
 async def clear_statistics_cache(
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="analytics",
+            resource_context=_ANALYTICS_UPDATE_RESOURCE_CONTEXT,
+        )
+    ),
 ) -> dict[str, Any]:
     cache_mgr = await get_cache_manager()
     cleared_count = await cache_mgr.clear_pattern("statistics:*")
@@ -199,6 +236,12 @@ async def clear_statistics_cache(
 @router.get("/cache/info", summary="获取缓存信息")
 async def get_cache_info(
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="analytics",
+        )
+    ),
 ) -> dict[str, Any]:
     cache_mgr = await get_cache_manager()
     backend_type = (

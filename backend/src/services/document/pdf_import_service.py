@@ -25,13 +25,14 @@ from ...core.exception_handler import (
 )
 from ...core.task_queue import get_task_queue  # 现有任务队列系统
 from ...crud.pdf_import_session import pdf_import_session_crud
-from ...crud.query_builder import TenantFilter
+from ...crud.query_builder import PartyFilter
 from ...models.pdf_import_session import PDFImportSession, ProcessingStep, SessionStatus
 from ...models.rent_contract import (
     ContractType,
     PaymentCycle,
     RentContract,
 )
+from ...services.party_scope import resolve_user_party_filter
 from .contract_extractor import ContractExtractor
 from .llm_contract_extractor import get_llm_contract_extractor
 
@@ -68,46 +69,19 @@ class PDFImportService:
         self.llm_extractor = get_llm_contract_extractor()
         self.task_queue = get_task_queue()
 
-    async def _resolve_tenant_filter(
+    async def _resolve_party_filter(
         self,
         db: AsyncSession,
         *,
         current_user_id: str | None = None,
-        tenant_filter: TenantFilter | None = None,
-    ) -> TenantFilter | None:
-        if tenant_filter is not None:
-            return tenant_filter
-        if current_user_id is None or current_user_id.strip() == "":
-            return None
-
-        try:
-            from ...services.organization_permission_service import (
-                OrganizationPermissionService,
-            )
-
-            org_service = OrganizationPermissionService(db)
-            org_ids = await org_service.get_user_accessible_organizations(
-                current_user_id
-            )
-            normalized_org_ids: list[int] = []
-            for org_id in org_ids:
-                org_id_text = str(org_id).strip()
-                if org_id_text == "":
-                    continue
-                try:
-                    normalized_org_ids.append(int(org_id_text))
-                except ValueError:
-                    logger.debug(
-                        "Skipping non-numeric organization id %r for PDF sessions",
-                        org_id,
-                    )
-            return TenantFilter(organization_ids=normalized_org_ids)
-        except Exception:
-            logger.exception(
-                "Failed to resolve tenant filter for user %s, fallback to fail-closed",
-                current_user_id,
-            )
-            return TenantFilter(organization_ids=[])
+        party_filter: PartyFilter | None = None,
+    ) -> PartyFilter | None:
+        return await resolve_user_party_filter(
+            db,
+            current_user_id=current_user_id,
+            party_filter=party_filter,
+            logger=logger,
+        )
 
     async def upload_file(self, file_content: bytes, filename: str) -> dict[str, Any]:
         """
@@ -215,26 +189,26 @@ class PDFImportService:
         self,
         db: AsyncSession,
         session_ids: list[str],
-        tenant_filter: TenantFilter | None = None,
+        party_filter: PartyFilter | None = None,
         current_user_id: str | None = None,
     ) -> dict[str, PDFImportSession]:
         """批量获取会话ID到会话对象映射。"""
-        resolved_tenant_filter = await self._resolve_tenant_filter(
+        resolved_party_filter = await self._resolve_party_filter(
             db,
             current_user_id=current_user_id,
-            tenant_filter=tenant_filter,
+            party_filter=party_filter,
         )
         return await pdf_import_session_crud.get_session_map_async(
             db,
             session_ids,
-            tenant_filter=resolved_tenant_filter,
+            party_filter=resolved_party_filter,
         )
 
     async def get_session_status(
         self,
         db: AsyncSession,
         session_id: str,
-        tenant_filter: TenantFilter | None = None,
+        party_filter: PartyFilter | None = None,
         current_user_id: str | None = None,
     ) -> dict[str, Any]:
         """
@@ -248,15 +222,15 @@ class PDFImportService:
             会话状态信息
         """
 
-        resolved_tenant_filter = await self._resolve_tenant_filter(
+        resolved_party_filter = await self._resolve_party_filter(
             db,
             current_user_id=current_user_id,
-            tenant_filter=tenant_filter,
+            party_filter=party_filter,
         )
         session = await pdf_import_session_crud.get_by_session_id_async(
             db,
             session_id,
-            tenant_filter=resolved_tenant_filter,
+            party_filter=resolved_party_filter,
         )
         if not session:
             return {"success": False, "error": "Session not found"}
@@ -1020,7 +994,7 @@ class PDFImportService:
         db: AsyncSession,
         session_id: str,
         reason: str,
-        tenant_filter: TenantFilter | None = None,
+        party_filter: PartyFilter | None = None,
         current_user_id: str | None = None,
     ) -> dict[str, Any]:
         """
@@ -1034,15 +1008,15 @@ class PDFImportService:
         Returns:
             取消结果
         """
-        resolved_tenant_filter = await self._resolve_tenant_filter(
+        resolved_party_filter = await self._resolve_party_filter(
             db,
             current_user_id=current_user_id,
-            tenant_filter=tenant_filter,
+            party_filter=party_filter,
         )
         session = await pdf_import_session_crud.get_by_session_id_async(
             db,
             session_id,
-            tenant_filter=resolved_tenant_filter,
+            party_filter=resolved_party_filter,
         )
 
         if session and session.is_processing:

@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ....core.exception_handler import internal_error
 from ....database import get_async_db
-from ....middleware.auth import get_current_active_user
+from ....middleware.auth import AuthzContext, get_current_active_user, require_authz
 from ....models.auth import User
 from ....security.permissions import permission_required
 
@@ -27,6 +27,18 @@ router = APIRouter(
     tags=["系统监控"],
     dependencies=[Depends(get_current_active_user)],
 )
+_SYSTEM_MONITORING_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:system_monitoring:create"
+_SYSTEM_MONITORING_CREATE_RESOURCE_CONTEXT: dict[str, str] = {
+    "party_id": _SYSTEM_MONITORING_CREATE_UNSCOPED_PARTY_ID,
+    "owner_party_id": _SYSTEM_MONITORING_CREATE_UNSCOPED_PARTY_ID,
+    "manager_party_id": _SYSTEM_MONITORING_CREATE_UNSCOPED_PARTY_ID,
+}
+_SYSTEM_MONITORING_UPDATE_UNSCOPED_PARTY_ID = "__unscoped__:system_monitoring:update"
+_SYSTEM_MONITORING_UPDATE_RESOURCE_CONTEXT: dict[str, str] = {
+    "party_id": _SYSTEM_MONITORING_UPDATE_UNSCOPED_PARTY_ID,
+    "owner_party_id": _SYSTEM_MONITORING_UPDATE_UNSCOPED_PARTY_ID,
+    "manager_party_id": _SYSTEM_MONITORING_UPDATE_UNSCOPED_PARTY_ID,
+}
 
 
 # 路由性能指标模式
@@ -67,7 +79,15 @@ class HealthCheck(BaseModel):
 
 @router.post("/route-performance", summary="上报路由性能指标")
 async def report_route_performance(
-    report: PerformanceReport, _: AsyncSession = Depends(get_async_db)
+    report: PerformanceReport,
+    _: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="create",
+            resource_type="system_monitoring",
+            resource_context=_SYSTEM_MONITORING_CREATE_RESOURCE_CONTEXT,
+        )
+    ),
 ) -> dict[str, str]:
     """
     接收前端上报的路由性能指标
@@ -102,7 +122,11 @@ async def report_route_performance(
 
 
 @router.get("/system-health", summary="获取系统健康状态", response_model=HealthCheck)
-def get_system_health() -> HealthCheck:
+def get_system_health(
+    _authz_ctx: AuthzContext = Depends(
+    require_authz(action="read", resource_type="system_monitoring")
+    ),
+) -> HealthCheck:
     """
     获取系统健康状态
     """
@@ -130,6 +154,9 @@ def get_system_health() -> HealthCheck:
 async def get_performance_dashboard(
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+    require_authz(action="read", resource_type="system_monitoring")
+    ),
 ) -> dict[str, Any]:
     """
     获取性能监控仪表板数据
@@ -321,6 +348,9 @@ def collect_application_metrics() -> ApplicationMetrics:
 async def get_system_metrics(
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+    require_authz(action="read", resource_type="system_monitoring")
+    ),
 ) -> SystemMetrics:
     """获取当前系统性能指标"""
     return collect_system_metrics()
@@ -335,6 +365,9 @@ async def get_system_metrics(
 async def get_application_metrics(
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+    require_authz(action="read", resource_type="system_monitoring")
+    ),
 ) -> ApplicationMetrics:
     """获取应用性能指标"""
     return collect_application_metrics()
@@ -345,6 +378,9 @@ async def get_application_metrics(
 async def get_system_monitoring_dashboard(
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+    require_authz(action="read", resource_type="system_monitoring")
+    ),
 ) -> dict[str, Any]:
     """获取系统监控仪表板综合数据"""
     try:
@@ -459,6 +495,13 @@ async def get_system_monitoring_dashboard(
 async def trigger_metrics_collection(
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="system_monitoring",
+            resource_context=_SYSTEM_MONITORING_UPDATE_RESOURCE_CONTEXT,
+        )
+    ),
 ) -> dict[str, Any]:
     """手动触发一次指标收集"""
     try:

@@ -23,7 +23,7 @@ from fastapi import APIRouter, Depends
 
 from ....core.exception_handler import internal_error
 from ....core.performance import PerformanceMonitor
-from ....middleware.auth import get_current_active_user
+from ....middleware.auth import AuthzContext, get_current_active_user, require_authz
 from ....schemas.pdf_import import SystemCapabilities, SystemInfoResponse
 from ....security.route_guards import debug_only, require_localhost
 from ..dependencies import get_performance_monitor
@@ -37,7 +37,14 @@ router = APIRouter(
 
 
 @router.get("/info", response_model=SystemInfoResponse)
-def get_system_info() -> SystemInfoResponse:
+def get_system_info(
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="rent_contract",
+        )
+    ),
+) -> SystemInfoResponse:
     """
     获取系统信息和能力
 
@@ -110,6 +117,12 @@ async def test_system_detailed() -> dict[str, Any]:
 
 @router.get("/health")
 async def health_check(
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="rent_contract",
+        )
+    ),
     perf_monitor: PerformanceMonitor = Depends(get_performance_monitor),
 ) -> dict[str, Any]:
     """
@@ -145,7 +158,14 @@ async def health_check(
 
 
 @router.get("/sessions")
-def get_pdf_import_sessions() -> dict[str, Any]:
+def get_pdf_import_sessions(
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="rent_contract",
+        )
+    ),
+) -> dict[str, Any]:
     """
     获取PDF导入会话列表
 

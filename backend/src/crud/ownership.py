@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..crud.base import CRUDBase
 from ..models.ownership import Ownership
 from ..schemas.ownership import OwnershipCreate, OwnershipUpdate
-from .query_builder import TenantFilter
+from .query_builder import PartyFilter
 
 
 class CRUDOwnership(CRUDBase[Ownership, OwnershipCreate, OwnershipUpdate]):
@@ -17,14 +17,14 @@ class CRUDOwnership(CRUDBase[Ownership, OwnershipCreate, OwnershipUpdate]):
         db: AsyncSession,
         id: Any,
         use_cache: bool = True,
-        tenant_filter: TenantFilter | None = None,
+        party_filter: PartyFilter | None = None,
     ) -> Ownership | None:
         """获取单个权属方"""
         ownership_obj = await super().get(
             db,
             id=id,
             use_cache=use_cache,
-            tenant_filter=tenant_filter,
+            party_filter=party_filter,
         )
         if ownership_obj:
             # 临时禁用项目关联数据查询
@@ -50,7 +50,7 @@ class CRUDOwnership(CRUDBase[Ownership, OwnershipCreate, OwnershipUpdate]):
         limit: int = 100,
         is_active: bool | None = None,
         keyword: str | None = None,
-        tenant_filter: TenantFilter | None = None,
+        party_filter: PartyFilter | None = None,
     ) -> list[Ownership]:
         """获取多个权属方"""
         filters = {}
@@ -68,7 +68,7 @@ class CRUDOwnership(CRUDBase[Ownership, OwnershipCreate, OwnershipUpdate]):
             sort_desc=True,
             skip=skip,
             limit=limit,
-            tenant_filter=tenant_filter,
+            party_filter=party_filter,
         )
 
         # 执行查询
@@ -103,7 +103,7 @@ class CRUDOwnership(CRUDBase[Ownership, OwnershipCreate, OwnershipUpdate]):
             order_desc=True,
             skip=skip,
             limit=limit,
-            tenant_filter=getattr(search_params, "tenant_filter", None),
+            party_filter=getattr(search_params, "party_filter", None),
         )
 
         pages = (total + limit - 1) // limit

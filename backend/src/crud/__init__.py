@@ -5,7 +5,6 @@ CRUD操作模块
 from ..models.asset import Asset
 from ..models.collection import CollectionRecord
 from ..models.llm_prompt import PromptTemplate
-from ..models.organization import Organization
 from ..models.ownership import Ownership
 from ..models.project import Project
 from ..models.property_certificate import PropertyCertificate, PropertyOwner
@@ -30,11 +29,10 @@ from .field_whitelist import (
     AsyncTaskWhitelist,
     CollectionRecordWhitelist,
     ExcelTaskConfigWhitelist,
-    OrganizationWhitelist,
-    OwnershipWhitelist,
     PermissionAuditLogWhitelist,
     PermissionGrantWhitelist,
     PermissionWhitelist,
+    OwnershipWhitelist,
     ProjectWhitelist,
     PromptTemplateWhitelist,
     PropertyCertificateWhitelist,
@@ -57,14 +55,13 @@ from .rent_contract import rent_contract, rent_ledger, rent_term
 # Register whitelists for each model to prevent unauthorized field access
 register_whitelist(Asset, AssetWhitelist())
 register_whitelist(RentContract, RentContractWhitelist())
-register_whitelist(Ownership, OwnershipWhitelist())
 register_whitelist(SystemDictionary, SystemDictionaryWhitelist())
 register_whitelist(AssetCustomField, AssetCustomFieldWhitelist())
 register_whitelist(Permission, PermissionWhitelist())
 register_whitelist(CollectionRecord, CollectionRecordWhitelist())
 register_whitelist(PromptTemplate, PromptTemplateWhitelist())
 register_whitelist(Project, ProjectWhitelist())
-register_whitelist(Organization, OrganizationWhitelist())
+register_whitelist(Ownership, OwnershipWhitelist())
 register_whitelist(PropertyCertificate, PropertyCertificateWhitelist())
 register_whitelist(PropertyOwner, PropertyOwnerWhitelist())
 register_whitelist(RentTerm, RentTermWhitelist())

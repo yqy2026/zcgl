@@ -1,12 +1,17 @@
 """Build authz subject context from user-party bindings."""
 
+import logging
 from dataclasses import dataclass
 from typing import Any
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...crud.party import CRUDParty, party_crud
+from ...models.auth import User
 from ...models.user_party_binding import RelationType, UserPartyBinding
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -73,6 +78,25 @@ class AuthzContextBuilder:
                 )
                 manager_party_ids.update(descendants)
 
+        if (
+            len(owner_party_ids) == 0
+            and len(manager_party_ids) == 0
+            and len(headquarters_party_ids) == 0
+        ):
+            legacy_org_id = await self._resolve_legacy_default_organization_id(
+                db,
+                user_id=user_id,
+            )
+            if legacy_org_id is not None:
+                legacy_party_id = await self._resolve_legacy_default_organization_party_id(
+                    db,
+                    user_id=user_id,
+                    organization_id=legacy_org_id,
+                )
+                if legacy_party_id is not None:
+                    owner_party_ids.add(legacy_party_id)
+                    manager_party_ids.add(legacy_party_id)
+
         return SubjectContext(
             user_id=user_id,
             owner_party_ids=sorted(owner_party_ids),
@@ -87,6 +111,50 @@ class AuthzContextBuilder:
         if isinstance(relation_value, RelationType):
             return relation_value.value
         return str(relation_value)
+
+    async def _resolve_legacy_default_organization_id(
+        self,
+        db: AsyncSession,
+        *,
+        user_id: str,
+    ) -> str | None:
+        try:
+            stmt = select(User.default_organization_id).where(User.id == user_id)
+            default_org_id = (await db.execute(stmt)).scalar_one_or_none()
+        except Exception:
+            logger.exception(
+                "Failed to resolve legacy default_organization_id for user %s",
+                user_id,
+            )
+            return None
+
+        if default_org_id is None:
+            return None
+
+        normalized = str(default_org_id).strip()
+        if normalized == "":
+            return None
+        return normalized
+
+    async def _resolve_legacy_default_organization_party_id(
+        self,
+        db: AsyncSession,
+        *,
+        user_id: str,
+        organization_id: str,
+    ) -> str | None:
+        try:
+            return await self.party_crud.resolve_organization_party_id(
+                db,
+                organization_id=organization_id,
+            )
+        except Exception:
+            logger.exception(
+                "Failed to resolve legacy default organization party mapping for user %s (organization_id=%s)",
+                user_id,
+                organization_id,
+            )
+            return None
 
 
 __all__ = ["AuthzContextBuilder", "SubjectContext"]

@@ -13,7 +13,7 @@ from ....core.exception_handler import (
     not_found,
 )
 from ....database import get_async_db
-from ....middleware.auth import get_current_active_user
+from ....middleware.auth import AuthzContext, get_current_active_user, require_authz
 from ....models.auth import User
 from ....schemas.asset import (
     AssetCustomFieldCreate,
@@ -25,6 +25,20 @@ from ....services.custom_field import custom_field_service
 
 # 创建自定义字段路由器
 router = APIRouter()
+_ASSET_CUSTOM_FIELD_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:asset_custom_field:create"
+_ASSET_CUSTOM_FIELD_CREATE_RESOURCE_CONTEXT: dict[str, str] = {
+    "party_id": _ASSET_CUSTOM_FIELD_CREATE_UNSCOPED_PARTY_ID,
+    "owner_party_id": _ASSET_CUSTOM_FIELD_CREATE_UNSCOPED_PARTY_ID,
+    "manager_party_id": _ASSET_CUSTOM_FIELD_CREATE_UNSCOPED_PARTY_ID,
+}
+_ASSET_CUSTOM_FIELD_BATCH_UPDATE_UNSCOPED_PARTY_ID = (
+    "__unscoped__:asset_custom_field:batch_update_values"
+)
+_ASSET_CUSTOM_FIELD_BATCH_UPDATE_RESOURCE_CONTEXT: dict[str, str] = {
+    "party_id": _ASSET_CUSTOM_FIELD_BATCH_UPDATE_UNSCOPED_PARTY_ID,
+    "owner_party_id": _ASSET_CUSTOM_FIELD_BATCH_UPDATE_UNSCOPED_PARTY_ID,
+    "manager_party_id": _ASSET_CUSTOM_FIELD_BATCH_UPDATE_UNSCOPED_PARTY_ID,
+}
 
 
 @router.get(
@@ -37,6 +51,12 @@ async def get_custom_fields(
     is_active: bool | None = Query(None, description="是否启用筛选"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="custom_field",
+        )
+    ),
 ) -> list[AssetCustomFieldResponse]:
     """
     获取自定义字段配置列表，支持筛选
@@ -76,6 +96,13 @@ async def get_custom_field(
     field_id: str = Path(..., description="字段ID"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="custom_field",
+            resource_id="{field_id}",
+        )
+    ),
 ) -> AssetCustomFieldResponse:
     """
     根据ID获取单个自定义字段的详细信息
@@ -113,6 +140,13 @@ async def create_custom_field(
     field_in: AssetCustomFieldCreate,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="create",
+            resource_type="asset",
+            resource_context=_ASSET_CUSTOM_FIELD_CREATE_RESOURCE_CONTEXT,
+        )
+    ),
 ) -> AssetCustomFieldResponse:
     """
     创建新的自定义字段配置
@@ -139,6 +173,13 @@ async def update_custom_field(
     field_id: str = Path(..., description="字段ID"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="asset",
+            resource_id="{field_id}",
+        )
+    ),
 ) -> AssetCustomFieldResponse:
     """
     更新自定义字段配置
@@ -163,6 +204,13 @@ async def delete_custom_field(
     field_id: str = Path(..., description="字段ID"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="delete",
+            resource_type="asset",
+            resource_id="{field_id}",
+        )
+    ),
 ) -> dict[str, str]:
     """
     删除自定义字段配置
@@ -185,6 +233,12 @@ async def validate_custom_field_value(
     value: Any,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="custom_field",
+        )
+    ),
 ) -> dict[str, Any]:
     """
     验证自定义字段值是否符合配置要求
@@ -215,6 +269,12 @@ async def validate_custom_field_value(
 @router.get("/types/list[Any]", include_in_schema=False)
 def get_field_types(
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="asset",
+        )
+    ),
 ) -> dict[str, Any]:
     """
     获取支持的字段类型列表
@@ -246,6 +306,14 @@ async def get_asset_custom_field_values(
     asset_id: str = Path(..., description="资产ID"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="asset",
+            resource_id="{asset_id}",
+            deny_as_not_found=True,
+        )
+    ),
 ) -> dict[str, Any]:
     """
     获取指定资产的所有自定义字段值
@@ -270,6 +338,13 @@ async def update_asset_custom_field_values(
     asset_id: str = Path(..., description="资产ID"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="asset",
+            resource_id="{asset_id}",
+        )
+    ),
 ) -> dict[str, Any]:
     """
     更新指定资产的自定义字段值
@@ -294,6 +369,13 @@ async def batch_set_custom_field_values(
     updates: list[dict[str, Any]],
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="asset",
+            resource_context=_ASSET_CUSTOM_FIELD_BATCH_UPDATE_RESOURCE_CONTEXT,
+        )
+    ),
 ) -> dict[str, Any]:
     """
     批量设置多个资产的自定义字段值

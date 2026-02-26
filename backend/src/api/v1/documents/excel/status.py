@@ -9,7 +9,7 @@ from fastapi.params import Depends as DependsParam
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_async_db
-from src.middleware.auth import get_current_active_user
+from src.middleware.auth import AuthzContext, get_current_active_user, require_authz
 from src.models.auth import User
 from src.schemas.excel_advanced import ExcelStatusResponse
 from src.services.excel.excel_status_service import (
@@ -33,6 +33,13 @@ async def get_excel_task_status(
     task_id: str,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="task",
+            resource_id="{task_id}",
+        )
+    ),
     service: ExcelStatusService = Depends(get_excel_status_service),
 ) -> ExcelStatusResponse:
     """
@@ -57,6 +64,12 @@ async def get_excel_history(
     page_size: int = Query(20, ge=1, le=100, description="每页记录数"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="asset",
+        )
+    ),
     service: ExcelStatusService = Depends(get_excel_status_service),
 ) -> dict[str, Any]:
     """

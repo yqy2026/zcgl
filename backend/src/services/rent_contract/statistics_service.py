@@ -25,6 +25,7 @@ class RentContractStatisticsService(RentContractHelperMixin):
                 start_date=query_params.start_date,
                 end_date=query_params.end_date,
                 owner_party_ids=query_params.owner_party_ids,
+                manager_party_ids=query_params.manager_party_ids,
                 ownership_ids=query_params.ownership_ids,  # DEPRECATED alias
                 asset_ids=query_params.asset_ids,
             )
@@ -40,6 +41,7 @@ class RentContractStatisticsService(RentContractHelperMixin):
             start_date=query_params.start_date,
             end_date=query_params.end_date,
             owner_party_ids=query_params.owner_party_ids,
+            manager_party_ids=query_params.manager_party_ids,
             ownership_ids=query_params.ownership_ids,  # DEPRECATED alias
             asset_ids=query_params.asset_ids,
         )
@@ -50,6 +52,7 @@ class RentContractStatisticsService(RentContractHelperMixin):
             start_date=query_params.start_date,
             end_date=query_params.end_date,
             owner_party_ids=query_params.owner_party_ids,
+            manager_party_ids=query_params.manager_party_ids,
             ownership_ids=query_params.ownership_ids,  # DEPRECATED alias
             asset_ids=query_params.asset_ids,
         )
@@ -93,21 +96,22 @@ class RentContractStatisticsService(RentContractHelperMixin):
         start_date: date | None = None,
         end_date: date | None = None,
         owner_party_ids: list[str] | None = None,
+        manager_party_ids: list[str] | None = None,
         ownership_ids: list[str] | None = None,  # DEPRECATED alias
     ) -> list[dict[str, Any]]:
         owner_party_filter_ids = owner_party_ids
-        if owner_party_filter_ids is None and ownership_ids is not None:
+        if owner_party_filter_ids is None and ownership_ids is not None:  # DEPRECATED bridge alias
             owner_party_filter_ids = (
-                await rent_contract_crud.get_distinct_owner_party_ids_by_ownership_ids_async(
+                await rent_contract_crud.get_distinct_owner_party_ids_by_ownership_ids_async(  # DEPRECATED bridge lookup
                     db,
-                    ownership_ids=ownership_ids,
+                    ownership_ids=ownership_ids,  # DEPRECATED bridge alias
                 )
             )
 
         owner_party_results = []
         if not (
             owner_party_ids is None
-            and ownership_ids is not None
+            and ownership_ids is not None  # DEPRECATED bridge alias
             and owner_party_filter_ids == []
         ):
             owner_party_results = await rent_ledger_crud.get_owner_party_statistics_async(
@@ -115,6 +119,7 @@ class RentContractStatisticsService(RentContractHelperMixin):
                 start_date=start_date,
                 end_date=end_date,
                 owner_party_ids=owner_party_filter_ids,
+                manager_party_ids=manager_party_ids,
             )
 
         merged_stats: dict[str, dict[str, Any]] = {}
@@ -138,10 +143,10 @@ class RentContractStatisticsService(RentContractHelperMixin):
                 "occupancy_rate": payment_rate,
             }
 
-        legacy_ownership_ids = ownership_ids
-        if legacy_ownership_ids is None and owner_party_ids:
-            legacy_ownership_ids = (
-                await rent_contract_crud.get_distinct_ownership_ids_by_owner_party_ids_async(
+        legacy_ownership_ids = ownership_ids  # DEPRECATED bridge alias
+        if legacy_ownership_ids is None and owner_party_ids:  # DEPRECATED bridge alias
+            legacy_ownership_ids = (  # DEPRECATED bridge alias
+                await rent_contract_crud.get_distinct_ownership_ids_by_owner_party_ids_async(  # DEPRECATED bridge lookup
                     db,
                     owner_party_ids=owner_party_ids,
                 )
@@ -149,9 +154,9 @@ class RentContractStatisticsService(RentContractHelperMixin):
 
         legacy_results = []
         should_query_legacy = True
-        if ownership_ids == []:
+        if ownership_ids == []:  # DEPRECATED bridge alias
             should_query_legacy = False
-        elif owner_party_ids and legacy_ownership_ids == []:
+        elif owner_party_ids and legacy_ownership_ids == []:  # DEPRECATED bridge alias
             should_query_legacy = False
 
         if should_query_legacy:
@@ -159,6 +164,7 @@ class RentContractStatisticsService(RentContractHelperMixin):
                 db,
                 start_date=start_date,
                 end_date=end_date,
+                manager_party_ids=manager_party_ids,
                 ownership_ids=legacy_ownership_ids,  # DEPRECATED alias
                 legacy_only=True,
             )
@@ -222,6 +228,8 @@ class RentContractStatisticsService(RentContractHelperMixin):
         *,
         start_date: date | None = None,
         end_date: date | None = None,
+        owner_party_ids: list[str] | None = None,
+        manager_party_ids: list[str] | None = None,
         asset_ids: list[str] | None = None,
     ) -> list[dict[str, Any]]:
         # 使用 CRUD 方法获取资产统计
@@ -229,6 +237,8 @@ class RentContractStatisticsService(RentContractHelperMixin):
             db,
             start_date=start_date,
             end_date=end_date,
+            owner_party_ids=owner_party_ids,
+            manager_party_ids=manager_party_ids,
             asset_ids=asset_ids,
         )
 
@@ -262,6 +272,8 @@ class RentContractStatisticsService(RentContractHelperMixin):
         year: int | None = None,
         start_month: str | None = None,
         end_month: str | None = None,
+        owner_party_ids: list[str] | None = None,
+        manager_party_ids: list[str] | None = None,
     ) -> list[dict[str, Any]]:
         # 使用 CRUD 方法获取月度统计
         results = await rent_ledger_crud.get_monthly_statistics_async(
@@ -269,6 +281,8 @@ class RentContractStatisticsService(RentContractHelperMixin):
             year=year,
             start_month=start_month,
             end_month=end_month,
+            owner_party_ids=owner_party_ids,
+            manager_party_ids=manager_party_ids,
         )
 
         monthly_stats = []
@@ -303,6 +317,7 @@ class RentContractStatisticsService(RentContractHelperMixin):
             start_date=query_params.start_date,
             end_date=query_params.end_date,
             owner_party_ids=query_params.owner_party_ids,
+            manager_party_ids=query_params.manager_party_ids,
             ownership_ids=query_params.ownership_ids,  # DEPRECATED alias
         )
 
@@ -336,6 +351,7 @@ class RentContractStatisticsService(RentContractHelperMixin):
         stats = await rent_contract_crud.get_contract_status_counts_async(
             db,
             owner_party_ids=query_params.owner_party_ids,
+            manager_party_ids=query_params.manager_party_ids,
             ownership_ids=query_params.ownership_ids,  # DEPRECATED alias
             start_date=query_params.start_date,
             end_date=query_params.end_date,

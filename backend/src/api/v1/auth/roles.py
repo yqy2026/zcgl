@@ -6,7 +6,7 @@
 from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Request, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,14 +20,19 @@ from ....core.exception_handler import (
 )
 from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
 from ....database import get_async_db
-from ....middleware.auth import get_current_active_user, require_admin
+from ....middleware.auth import (
+    AuthzContext,
+    get_current_active_user,
+    require_admin,
+    require_authz,
+)
 from ....models.auth import User
 from ....schemas.rbac import (
     PermissionCheckRequest,
     PermissionCheckResponse,
-    PermissionGrantCreate,
-    PermissionGrantResponse,
-    PermissionGrantUpdate,
+    PermissionGrantCreate,  # DEPRECATED
+    PermissionGrantResponse,  # DEPRECATED
+    PermissionGrantUpdate,  # DEPRECATED
     PermissionResponse,
     RoleCreate,
     RoleResponse,
@@ -39,6 +44,60 @@ from ....schemas.rbac import (
 from ....services import RBACService
 
 router = APIRouter(tags=["角色管理"])
+_ROLE_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:role:create"
+
+
+def _normalize_optional_str(value: Any) -> str | None:
+    if value is None:
+        return None
+    normalized = str(value).strip()
+    if normalized == "":
+        return None
+    return normalized
+
+
+def _build_party_scope_context(
+    *,
+    scoped_party_id: str,
+    organization_id: str | None = None,
+) -> dict[str, str]:
+    context: dict[str, str] = {
+        "party_id": scoped_party_id,
+        "owner_party_id": scoped_party_id,
+        "manager_party_id": scoped_party_id,
+    }
+    if organization_id is not None:
+        context["organization_id"] = organization_id
+    return context
+
+
+async def _resolve_role_create_resource_context(request: Request) -> dict[str, str]:
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+
+    if not isinstance(payload, dict):
+        payload = {}
+
+    party_id = _normalize_optional_str(payload.get("party_id"))
+    organization_id = _normalize_optional_str(payload.get("organization_id"))
+    scoped_party_id = party_id or organization_id or _ROLE_CREATE_UNSCOPED_PARTY_ID
+    return _build_party_scope_context(
+        scoped_party_id=scoped_party_id,
+        organization_id=organization_id,
+    )
+
+
+async def _resolve_user_assignment_resource_id(request: Request) -> str | None:
+    try:
+        payload = await request.json()
+    except Exception:
+        return None
+
+    if not isinstance(payload, dict):
+        return None
+    return _normalize_optional_str(payload.get("user_id"))
 
 # ==================== Schema定义 ====================
 
@@ -64,7 +123,8 @@ class RoleDetailResponse(BaseModel):
     category: str | None = None
     is_system_role: bool
     is_active: bool
-    organization_id: str | None = None
+    party_id: str | None = None
+    organization_id: str | None = None  # DEPRECATED alias
     scope: str
     permissions: list[PermissionResponse] = []
     user_count: int = 0
@@ -99,6 +159,32 @@ class UserPermissionCheckRequest(BaseModel):
     context: dict[str, Any] | None = Field(None, description="上下文")
 
 
+async def _require_user_read_or_self_authz(
+    request: Request,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_async_db),
+) -> AuthzContext:
+    target_user_id = str(request.path_params.get("user_id") or "").strip()
+    current_user_id = str(getattr(current_user, "id", "")).strip()
+    if target_user_id != "" and target_user_id == current_user_id:
+        return AuthzContext(
+            current_user=current_user,
+            action="read",
+            resource_type="user",
+            resource_id=target_user_id,
+            resource_context={},
+            allowed=True,
+            reason_code="self_access_bypass",
+        )
+
+    checker = require_authz(
+        action="read",
+        resource_type="user",
+        resource_id="{user_id}",
+    )
+    return await checker(request=request, current_user=current_user, db=db)
+
+
 # ==================== 角色CRUD端点 ====================
 
 
@@ -111,9 +197,13 @@ async def get_roles(
     search: str | None = Query(None, description="搜索关键词"),
     category: str | None = Query(None, description="角色类别"),
     is_active: bool | None = Query(None, description="是否激活"),
-    organization_id: str | None = Query(None, description="组织ID"),
+    party_id: str | None = Query(None, description="主体ID"),
+    organization_id: str | None = Query(None, description="组织ID（DEPRECATED）"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="read", resource_type="role")
+    ),
 ) -> JSONResponse:
     """
     获取角色列表，支持分页和筛选
@@ -123,7 +213,8 @@ async def get_roles(
     - **search**: 按名称、显示名称或描述搜索
     - **category**: 按角色类别筛选
     - **is_active**: 按激活状态筛选
-    - **organization_id**: 按组织筛选
+    - **party_id**: 按主体筛选
+    - **organization_id**: 按组织筛选（DEPRECATED）
     """
 
     try:
@@ -135,7 +226,8 @@ async def get_roles(
             search=search,
             category=category,
             is_active=is_active,
-            organization_id=organization_id,
+            party_id=party_id,
+            organization_id=organization_id,  # DEPRECATED alias
             current_user_id=str(current_user.id),
         )
 
@@ -160,6 +252,13 @@ async def create_role(
     role_data: RoleCreate,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_admin),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="create",
+            resource_type="role",
+            resource_context=_resolve_role_create_resource_context,
+        )
+    ),
 ) -> RoleDetailResponse:
     """
     创建新角色（仅管理员）
@@ -193,6 +292,9 @@ async def check_user_permission(
     check_data: UserPermissionCheckRequest,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_admin),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="read", resource_type="role")
+    ),
 ) -> PermissionCheckResponse:
     """统一权限检查入口（管理员调试与审计使用）"""
     try:
@@ -220,6 +322,13 @@ async def assign_role_to_user(
     assignment_data: UserRoleAssignmentCreate,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_admin),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="user",
+            resource_id=_resolve_user_assignment_resource_id,
+        )
+    ),
 ) -> UserRoleAssignmentResponse:
     """创建用户-角色分配记录"""
     try:
@@ -244,6 +353,7 @@ async def get_user_roles(
     user_id: str,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(_require_user_read_or_self_authz),
 ) -> list[RoleResponse]:
     """获取指定用户的角色列表（本人或管理员）"""
     try:
@@ -271,6 +381,9 @@ async def revoke_user_role(
     role_id: str,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_admin),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="delete", resource_type="user", resource_id="{user_id}")
+    ),
 ) -> dict[str, Any]:
     """撤销用户角色分配"""
     try:
@@ -302,6 +415,7 @@ async def get_user_permissions_summary(
     user_id: str,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(_require_user_read_or_self_authz),
 ) -> UserPermissionSummary:
     """获取用户权限汇总（本人或管理员）"""
     try:
@@ -319,15 +433,22 @@ async def get_user_permissions_summary(
 
 @router.post(
     "/permission-grants",
-    response_model=PermissionGrantResponse,
+    response_model=PermissionGrantResponse,  # DEPRECATED
     status_code=status.HTTP_201_CREATED,
     summary="创建统一授权记录",
 )
 async def create_permission_grant(
-    grant_data: PermissionGrantCreate,
+    grant_data: PermissionGrantCreate,  # DEPRECATED
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_admin),
-) -> PermissionGrantResponse:
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="create",
+            resource_type="role",
+            resource_context=_resolve_role_create_resource_context,
+        )
+    ),
+) -> PermissionGrantResponse:  # DEPRECATED
     """创建统一授权记录（静态RBAC之外的动态/临时授权都落在此表）"""
     try:
         rbac_service = RBACService(db)
@@ -347,7 +468,7 @@ async def create_permission_grant(
             source_id=grant_data.source_id,
             reason=grant_data.reason,
         )
-        return PermissionGrantResponse.model_validate(grant)
+        return PermissionGrantResponse.model_validate(grant)  # DEPRECATED
     except Exception as e:
         if isinstance(e, BaseBusinessError):
             raise
@@ -356,7 +477,7 @@ async def create_permission_grant(
 
 @router.get(
     "/permission-grants",
-    response_model=APIResponse[PaginatedData[PermissionGrantResponse]],
+    response_model=APIResponse[PaginatedData[PermissionGrantResponse]],  # DEPRECATED
     summary="分页获取统一授权记录",
 )
 async def get_permission_grants(
@@ -370,6 +491,9 @@ async def get_permission_grants(
     is_active: bool | None = Query(None, description="是否激活"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_admin),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="read", resource_type="role")
+    ),
 ) -> JSONResponse:
     """分页查询统一授权记录"""
     try:
@@ -387,7 +511,7 @@ async def get_permission_grants(
         )
 
         return ResponseHandler.paginated(
-            data=[PermissionGrantResponse.model_validate(grant) for grant in grants],
+            data=[PermissionGrantResponse.model_validate(grant) for grant in grants],  # DEPRECATED
             page=page,
             page_size=page_size,
             total=total,
@@ -401,14 +525,22 @@ async def get_permission_grants(
 
 @router.get(
     "/permission-grants/{grant_id}",
-    response_model=PermissionGrantResponse,
+    response_model=PermissionGrantResponse,  # DEPRECATED
     summary="获取统一授权记录详情",
 )
 async def get_permission_grant(
     grant_id: str,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_admin),
-) -> PermissionGrantResponse:
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="role",
+            resource_id="{grant_id}",
+            deny_as_not_found=True,
+        )
+    ),
+) -> PermissionGrantResponse:  # DEPRECATED
     """获取指定统一授权记录详情"""
     try:
         rbac_service = RBACService(db)
@@ -419,7 +551,7 @@ async def get_permission_grant(
                 resource_type="permission_grant",
                 resource_id=grant_id,
             )
-        return PermissionGrantResponse.model_validate(grant)
+        return PermissionGrantResponse.model_validate(grant)  # DEPRECATED
     except Exception as e:
         if isinstance(e, BaseBusinessError):
             raise
@@ -428,15 +560,22 @@ async def get_permission_grant(
 
 @router.patch(
     "/permission-grants/{grant_id}",
-    response_model=PermissionGrantResponse,
+    response_model=PermissionGrantResponse,  # DEPRECATED
     summary="更新统一授权记录",
 )
 async def update_permission_grant(
     grant_id: str,
-    grant_data: PermissionGrantUpdate,
+    grant_data: PermissionGrantUpdate,  # DEPRECATED
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_admin),
-) -> PermissionGrantResponse:
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="role",
+            resource_id="{grant_id}",
+        )
+    ),
+) -> PermissionGrantResponse:  # DEPRECATED
     """更新统一授权记录"""
     try:
         rbac_service = RBACService(db)
@@ -445,7 +584,7 @@ async def update_permission_grant(
             grant_data=grant_data,
             updated_by=str(current_user.id),
         )
-        return PermissionGrantResponse.model_validate(grant)
+        return PermissionGrantResponse.model_validate(grant)  # DEPRECATED
     except Exception as e:
         if isinstance(e, BaseBusinessError):
             raise
@@ -461,6 +600,13 @@ async def revoke_permission_grant(
     grant_id: str,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_admin),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="delete",
+            resource_type="role",
+            resource_id="{grant_id}",
+        )
+    ),
 ) -> dict[str, Any]:
     """撤销统一授权记录"""
     try:
@@ -487,6 +633,14 @@ async def get_role(
     role_id: str,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="role",
+            resource_id="{role_id}",
+            deny_as_not_found=True,
+        )
+    ),
 ) -> RoleDetailResponse:
     """获取角色详情及其关联的权限和用户"""
     try:
@@ -512,6 +666,9 @@ async def update_role(
     role_data: RoleUpdate,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_admin),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="update", resource_type="role", resource_id="{role_id}")
+    ),
 ) -> RoleDetailResponse:
     """
     更新角色信息（仅管理员）
@@ -541,6 +698,9 @@ async def delete_role(
     role_id: str,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_admin),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="delete", resource_type="role", resource_id="{role_id}")
+    ),
 ) -> None:
     """
     删除角色（仅管理员）
@@ -573,6 +733,9 @@ async def delete_role(
 async def get_all_permissions(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="read", resource_type="role")
+    ),
 ) -> dict[str, Any]:
     """获取系统中所有可用权限，按资源分组"""
     try:
@@ -605,6 +768,9 @@ async def set_role_permissions(
     request: RolePermissionUpdateRequest,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_admin),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="update", resource_type="role", resource_id="{role_id}")
+    ),
 ) -> dict[str, Any]:
     """
     为角色分配权限
@@ -653,6 +819,9 @@ async def get_role_users(
     page_size: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="read", resource_type="role", resource_id="{role_id}")
+    ),
 ) -> JSONResponse:
     """获取拥有某个角色的所有用户"""
     try:
@@ -689,6 +858,9 @@ async def get_role_users(
 async def get_role_statistics(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(action="read", resource_type="role")
+    ),
 ) -> dict[str, Any]:
     """获取角色相关的统计数据"""
     try:

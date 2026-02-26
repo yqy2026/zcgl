@@ -22,7 +22,7 @@ from ..schemas.property_certificate import (
 )
 from .asset import SensitiveDataHandler
 from .base import CRUDBase
-from .query_builder import TenantFilter
+from .query_builder import PartyFilter
 
 
 class CRUDPropertyOwner(
@@ -156,15 +156,15 @@ class CRUDPropertyCertificate(
         db: AsyncSession,
         id: Any,
         use_cache: bool = True,
-        tenant_filter: TenantFilter | None = None,
+        party_filter: PartyFilter | None = None,
     ) -> PropertyCertificate | None:
-        if tenant_filter is not None and not hasattr(
+        if party_filter is not None and not hasattr(  # DEPRECATED legacy column guard
             PropertyCertificate,
-            "organization_id",
+            "organization_id",  # DEPRECATED legacy column name
         ):
             org_ids = [
                 str(org_id).strip()
-                for org_id in tenant_filter.organization_ids
+                for org_id in party_filter.party_ids
                 if str(org_id).strip() != ""
             ]
             stmt = select(PropertyCertificate).where(PropertyCertificate.id == id)
@@ -181,7 +181,7 @@ class CRUDPropertyCertificate(
                     PropertyOwner,
                     property_certificate_owners.c.owner_id == PropertyOwner.id,
                 )
-                .where(PropertyOwner.organization_id.in_(org_ids))
+                .where(PropertyOwner.organization_id.in_(org_ids))  # DEPRECATED legacy column
                 .distinct()
             )
             return (await db.execute(stmt)).scalars().first()
@@ -190,7 +190,7 @@ class CRUDPropertyCertificate(
             db=db,
             id=id,
             use_cache=use_cache,
-            tenant_filter=tenant_filter,
+            party_filter=party_filter,
         )
 
     async def get_multi(
@@ -200,16 +200,16 @@ class CRUDPropertyCertificate(
         skip: int = 0,
         limit: int = 100,
         use_cache: bool = False,
-        tenant_filter: TenantFilter | None = None,
+        party_filter: PartyFilter | None = None,
         **kwargs: Any,
     ) -> list[PropertyCertificate]:
-        if tenant_filter is not None and not hasattr(
+        if party_filter is not None and not hasattr(  # DEPRECATED legacy column guard
             PropertyCertificate,
-            "organization_id",
+            "organization_id",  # DEPRECATED legacy column name
         ):
             org_ids = [
                 str(org_id).strip()
-                for org_id in tenant_filter.organization_ids
+                for org_id in party_filter.party_ids
                 if str(org_id).strip() != ""
             ]
             stmt = select(PropertyCertificate)
@@ -227,7 +227,7 @@ class CRUDPropertyCertificate(
                     PropertyOwner,
                     property_certificate_owners.c.owner_id == PropertyOwner.id,
                 )
-                .where(PropertyOwner.organization_id.in_(org_ids))
+                .where(PropertyOwner.organization_id.in_(org_ids))  # DEPRECATED legacy column
                 .distinct()
                 .offset(skip)
                 .limit(limit)
@@ -239,7 +239,7 @@ class CRUDPropertyCertificate(
             skip=skip,
             limit=limit,
             use_cache=use_cache,
-            tenant_filter=tenant_filter,
+            party_filter=party_filter,
             **kwargs,
         )
 
@@ -258,12 +258,12 @@ class CRUDPropertyCertificate(
         obj_in: PropertyCertificateCreate,
         owner_ids: list[str] | None = None,
         asset_ids: list[str] | None = None,
-        organization_id: str | None = None,
+        organization_id: str | None = None,  # DEPRECATED alias
         commit: bool = True,
     ) -> PropertyCertificate:
         payload = obj_in.model_dump()
-        if organization_id is not None and organization_id.strip() != "":
-            payload["organization_id"] = organization_id
+        if organization_id is not None and organization_id.strip() != "":  # DEPRECATED alias
+            payload["organization_id"] = organization_id  # DEPRECATED legacy column
         db_obj = PropertyCertificate(**payload)
         db.add(db_obj)
         await db.flush()

@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from .asset_history import AssetDocument, AssetHistory
     from .organization import Organization
     from .ownership import Ownership
+    from .party import Party
     from .project import Project
     from .property_certificate import PropertyCertificate
     from .rent_contract import RentContract
@@ -58,7 +59,10 @@ class Asset(Base):
         String(100), comment="权属类别"
     )
     project_name: Mapped[str | None] = mapped_column(
-        String(200), index=True, comment="项目名称"
+        String(200),
+        index=True,
+        comment="项目名称（DEPRECATED，仅搜索兼容）",
+        info={"deprecated": True},
     )
     property_name: Mapped[str] = mapped_column(
         String(200), nullable=False, unique=True, comment="物业名称"
@@ -76,7 +80,10 @@ class Asset(Base):
         String(50), nullable=False, index=True, comment="使用状态"
     )
     management_entity: Mapped[str | None] = mapped_column(
-        String(200), index=True, comment="经营管理单位"
+        String(200),
+        index=True,
+        comment="经营管理单位（DEPRECATED）",
+        info={"deprecated": True},
     )
     business_category: Mapped[str | None] = mapped_column(
         String(100), comment="业态类别"
@@ -200,20 +207,49 @@ class Asset(Base):
         back_populates="assets",
     )
     project_id: Mapped[str | None] = mapped_column(
-        String, ForeignKey("projects.id"), index=True, comment="项目ID"
+        String,
+        ForeignKey("projects.id"),
+        index=True,
+        comment="项目ID（DEPRECATED，改由 project_assets 关联）",
+        info={"deprecated": True},
+    )
+    owner_party_id: Mapped[str | None] = mapped_column(
+        String,
+        ForeignKey("parties.id"),
+        index=True,
+        comment="产权方主体ID",
+    )
+    manager_party_id: Mapped[str | None] = mapped_column(
+        String,
+        ForeignKey("parties.id"),
+        index=True,
+        comment="经营管理方主体ID",
     )
     organization_id: Mapped[str | None] = mapped_column(
         String,
         ForeignKey("organizations.id"),
         index=True,
-        comment="所属组织ID",
+        comment="所属组织ID（DEPRECATED）",
+        info={"deprecated": True},
     )
     ownership_id: Mapped[str | None] = mapped_column(
-        String, ForeignKey("ownerships.id"), index=True, comment="权属方ID"
+        String,
+        ForeignKey("ownerships.id"),
+        index=True,
+        comment="权属方ID（DEPRECATED）",
+        info={"deprecated": True},
     )
 
     # 关系定义
     project: Mapped["Project"] = relationship("Project", back_populates="assets")
+    owner_party: Mapped["Party | None"] = relationship(
+        "Party",
+        foreign_keys=[owner_party_id],
+    )
+    manager_party: Mapped["Party | None"] = relationship(
+        "Party",
+        foreign_keys=[manager_party_id],
+    )
     organization: Mapped["Organization | None"] = relationship("Organization")
     ownership: Mapped["Ownership"] = relationship("Ownership", back_populates="assets")
 

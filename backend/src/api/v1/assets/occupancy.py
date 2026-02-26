@@ -9,7 +9,11 @@ from typing import Any
 from fastapi import APIRouter, Depends, Query
 
 from ....core.exception_handler import bad_request, internal_error
-from ....middleware.auth import get_current_active_user
+from ....middleware.auth import (
+    AuthzContext,
+    get_current_active_user,
+    require_authz,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +52,12 @@ def calculate_occupancy_rate(
     property_nature: str | None = Query(None, description="物业性质筛选"),
     ownership_status: str | None = Query(None, description="确权状态筛选"),
     ownership_id: str | None = Query(None, description="权属方ID筛选"),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="occupancy",
+        )
+    ),
 ) -> dict[str, Any]:
     try:
         filters: dict[str, Any] = {}
@@ -75,7 +85,14 @@ def calculate_occupancy_rate(
 
 
 @router.get("/analysis", summary="出租率分析")
-def analyze_occupancy() -> dict[str, Any]:
+def analyze_occupancy(
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="occupancy",
+        )
+    ),
+) -> dict[str, Any]:
     try:
         logger.info("开始进行出租率分析")
 
@@ -151,6 +168,12 @@ def analyze_occupancy() -> dict[str, Any]:
 @router.get("/trends", summary="出租率趋势")
 def get_occupancy_trends(
     months: int = Query(12, ge=1, le=36, description="分析月数"),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="occupancy",
+        )
+    ),
 ) -> dict[str, Any]:
     try:
         logger.info("开始获取 %s 个月的出租率趋势", months)

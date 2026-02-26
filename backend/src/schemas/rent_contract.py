@@ -200,13 +200,13 @@ class RentContractBase(BaseModel):
 class RentContractCreate(RentContractBase):
     """创建租金合同Schema"""
 
-    ownership_id: str = Field(..., description="权属方ID（DEPRECATED，创建时必填）")
+    ownership_id: str = Field(..., description="权属方ID（DEPRECATED）")
     contract_number: str | None = Field(None, description="合同编号（手工录入）")
     rent_terms: list[RentTermCreate] = Field(..., description="租金条款列表")
 
-    @field_validator("ownership_id")
+    @field_validator("ownership_id")  # DEPRECATED alias validation
     @classmethod
-    def validate_ownership_id(cls, v: str) -> str:
+    def validate_ownership_id(cls, v: str) -> str:  # DEPRECATED alias validator
         normalized = v.strip()
         if not normalized:
             raise PydanticCustomError("empty_ownership_id", "ownership_id 不能为空", {})
@@ -430,6 +430,7 @@ class RentStatisticsQuery(BaseModel):
     """租金统计查询参数"""
 
     owner_party_ids: list[str] | None = Field(None, description="产权方主体ID列表")
+    manager_party_ids: list[str] | None = Field(None, description="管理方主体ID列表")
     start_date: date | None = Field(None, description="开始日期")
     end_date: date | None = Field(None, description="结束日期")
     ownership_ids: list[str] | None = Field(None, description="权属方ID列表（DEPRECATED）")

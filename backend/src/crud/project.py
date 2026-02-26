@@ -8,31 +8,31 @@ from ..models.auth import User
 from ..models.project import Project
 from ..schemas.project import ProjectCreate, ProjectSearchRequest, ProjectUpdate
 from .base import CRUDBase
-from .query_builder import TenantFilter
+from .query_builder import PartyFilter
 
 
 class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
     """项目管理CRUD操作类"""
 
     @staticmethod
-    def _normalized_org_ids(tenant_filter: TenantFilter) -> list[str]:
+    def _normalized_org_ids(party_filter: PartyFilter) -> list[str]:
         return [
             str(org_id).strip()
-            for org_id in tenant_filter.organization_ids
+            for org_id in party_filter.party_ids
             if str(org_id).strip() != ""
         ]
 
     async def _resolve_creator_principals(
         self,
         db: AsyncSession,
-        tenant_filter: TenantFilter,
+        party_filter: PartyFilter,
     ) -> set[str]:
-        org_ids = self._normalized_org_ids(tenant_filter)
+        org_ids = self._normalized_org_ids(party_filter)
         if not org_ids:
             return set()
 
         stmt = select(User.id, User.username).where(
-            User.default_organization_id.in_(org_ids)
+            User.default_organization_id.in_(org_ids)  # DEPRECATED legacy org scope fallback
         )
         rows = (await db.execute(stmt)).all()
         principals: set[str] = set()
@@ -122,22 +122,22 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
         db: AsyncSession,
         id: Any,
         use_cache: bool = True,
-        tenant_filter: TenantFilter | None = None,
+        party_filter: PartyFilter | None = None,
     ) -> Project | None:
         """按 ID 获取项目（租户过滤回退到创建人范围）。"""
-        if tenant_filter is None:
+        if party_filter is None:
             return await super().get(
                 db,
                 id=id,
                 use_cache=use_cache,
-                tenant_filter=tenant_filter,
+                party_filter=party_filter,
             )
 
         stmt = select(Project).where(Project.id == id)
-        if hasattr(Project, "organization_id"):
-            stmt = self.query_builder.apply_tenant_filter(stmt, tenant_filter)
+        if hasattr(Project, "organization_id"):  # DEPRECATED legacy column fallback
+            stmt = self.query_builder.apply_party_filter(stmt, party_filter)
         else:
-            principals = await self._resolve_creator_principals(db, tenant_filter)
+            principals = await self._resolve_creator_principals(db, party_filter)
             stmt = self._apply_creator_scope(stmt, principals)
 
         return (await db.execute(stmt)).scalars().first()
@@ -150,17 +150,17 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
         limit: int = 100,
         is_active: bool | None = None,
         keyword: str | None = None,
-        tenant_filter: TenantFilter | None = None,
+        party_filter: PartyFilter | None = None,
         **kwargs: Any,  # 扩展参数，与基类兼容
     ) -> list[Project]:
         """获取多个项目"""
         stmt = select(Project)
 
-        if tenant_filter is not None:
-            if hasattr(Project, "organization_id"):
-                stmt = self.query_builder.apply_tenant_filter(stmt, tenant_filter)
+        if party_filter is not None:
+            if hasattr(Project, "organization_id"):  # DEPRECATED legacy column fallback
+                stmt = self.query_builder.apply_party_filter(stmt, party_filter)
             else:
-                principals = await self._resolve_creator_principals(db, tenant_filter)
+                principals = await self._resolve_creator_principals(db, party_filter)
                 stmt = self._apply_creator_scope(stmt, principals)
 
         if is_active is not None:
@@ -195,7 +195,7 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
         self,
         db: AsyncSession,
         search_params: ProjectSearchRequest,
-        tenant_filter: TenantFilter | None = None,
+        party_filter: PartyFilter | None = None,
     ) -> tuple[list[Project], int]:
         """搜索项目"""
         query = self._apply_project_filters(
@@ -203,11 +203,11 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
             keyword=search_params.keyword,
             project_status=search_params.project_status,
         )
-        if tenant_filter is not None:
-            if hasattr(Project, "organization_id"):
-                query = self.query_builder.apply_tenant_filter(query, tenant_filter)
+        if party_filter is not None:
+            if hasattr(Project, "organization_id"):  # DEPRECATED legacy column fallback
+                query = self.query_builder.apply_party_filter(query, party_filter)
             else:
-                principals = await self._resolve_creator_principals(db, tenant_filter)
+                principals = await self._resolve_creator_principals(db, party_filter)
                 query = self._apply_creator_scope(query, principals)
 
         # 负责人筛选
@@ -250,12 +250,32 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
         projects = (await db.execute(stmt)).all()
         return [{"value": p.id, "label": p.name} for p in projects]
 
-    async def get_statistics(self, db: AsyncSession) -> dict[str, Any]:
+    async def get_statistics(
+        self,
+        db: AsyncSession,
+        party_filter: PartyFilter | None = None,
+    ) -> dict[str, Any]:
         """获取统计信息"""
-        total_stmt = select(func.count(Project.id))
-        active_stmt = select(func.count(Project.id)).where(
-            Project.project_status == "doing"
-        )
+        total_query = select(Project.id)
+        active_query = select(Project.id).where(Project.project_status == "doing")
+
+        if party_filter is not None:
+            if hasattr(Project, "organization_id"):  # DEPRECATED legacy column fallback
+                total_query = self.query_builder.apply_party_filter(
+                    total_query,
+                    party_filter,
+                )
+                active_query = self.query_builder.apply_party_filter(
+                    active_query,
+                    party_filter,
+                )
+            else:
+                principals = await self._resolve_creator_principals(db, party_filter)
+                total_query = self._apply_creator_scope(total_query, principals)
+                active_query = self._apply_creator_scope(active_query, principals)
+
+        total_stmt = select(func.count()).select_from(total_query.subquery())
+        active_stmt = select(func.count()).select_from(active_query.subquery())
         total = int((await db.execute(total_stmt)).scalar() or 0)
         active = int((await db.execute(active_stmt)).scalar() or 0)
         # ... logic reduced for brevity, keeping simpler stats in CRUD is okay or move to service?

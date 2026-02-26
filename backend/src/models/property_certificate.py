@@ -91,7 +91,10 @@ class PropertyOwner(Base):
 
     # Optional organization linkage
     organization_id: Mapped[str | None] = mapped_column(
-        String, ForeignKey("organizations.id"), comment="关联组织ID"
+        String,
+        ForeignKey("organizations.id"),
+        comment="关联组织ID（DEPRECATED）",
+        info={"deprecated": True},
     )
 
     # Audit fields
@@ -180,7 +183,8 @@ class PropertyCertificate(Base):
         String,
         ForeignKey("organizations.id"),
         index=True,
-        comment="所属组织ID",
+        comment="所属组织ID（DEPRECATED）",
+        info={"deprecated": True},
     )
 
     # Audit fields

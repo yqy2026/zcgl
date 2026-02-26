@@ -15,13 +15,14 @@ from ...core.exception_handler import (
     ResourceNotFoundError,
 )
 from ...crud.custom_field import custom_field_crud
-from ...crud.query_builder import TenantFilter
+from ...crud.query_builder import PartyFilter
 from ...models.system_dictionary import AssetCustomField
 from ...schemas.asset import (
     AssetCustomFieldCreate,
     AssetCustomFieldUpdate,
     CustomFieldValueItem,
 )
+from ...services.party_scope import resolve_user_party_filter
 
 logger = logging.getLogger(__name__)
 
@@ -43,34 +44,19 @@ class CustomFieldService:
             ordered.append(value)
         return ordered
 
-    async def _resolve_tenant_filter(
+    async def _resolve_party_filter(
         self,
         db: AsyncSession,
         *,
         current_user_id: str | None = None,
-        tenant_filter: TenantFilter | None = None,
-    ) -> TenantFilter | None:
-        if tenant_filter is not None:
-            return tenant_filter
-        if current_user_id is None or current_user_id.strip() == "":
-            return None
-
-        try:
-            from ...services.organization_permission_service import (
-                OrganizationPermissionService,
-            )
-
-            org_service = OrganizationPermissionService(db)
-            org_ids = await org_service.get_user_accessible_organizations(
-                current_user_id
-            )
-            return TenantFilter(organization_ids=[str(org_id) for org_id in org_ids])
-        except Exception:
-            logger.exception(
-                "Failed to resolve tenant filter for user %s, fallback to fail-closed",
-                current_user_id,
-            )
-            return TenantFilter(organization_ids=[])
+        party_filter: PartyFilter | None = None,
+    ) -> PartyFilter | None:
+        return await resolve_user_party_filter(
+            db,
+            current_user_id=current_user_id,
+            party_filter=party_filter,
+            logger=logger,
+        )
 
     async def create_custom_field_async(
         self, db: AsyncSession, *, obj_in: AssetCustomFieldCreate
@@ -89,18 +75,18 @@ class CustomFieldService:
         db: AsyncSession,
         *,
         filters: dict[str, Any] | None = None,
-        tenant_filter: TenantFilter | None = None,
+        party_filter: PartyFilter | None = None,
         current_user_id: str | None = None,
     ) -> list[AssetCustomField]:
-        resolved_tenant_filter = await self._resolve_tenant_filter(
+        resolved_party_filter = await self._resolve_party_filter(
             db,
             current_user_id=current_user_id,
-            tenant_filter=tenant_filter,
+            party_filter=party_filter,
         )
         return await custom_field_crud.get_multi_with_filters_async(
             db=db,
             filters=filters or {},
-            tenant_filter=resolved_tenant_filter,
+            party_filter=resolved_party_filter,
         )
 
     async def get_custom_field_async(
@@ -108,15 +94,15 @@ class CustomFieldService:
         db: AsyncSession,
         *,
         field_id: str,
-        tenant_filter: TenantFilter | None = None,
+        party_filter: PartyFilter | None = None,
         current_user_id: str | None = None,
     ) -> AssetCustomField | None:
-        resolved_tenant_filter = await self._resolve_tenant_filter(
+        resolved_party_filter = await self._resolve_party_filter(
             db,
             current_user_id=current_user_id,
-            tenant_filter=tenant_filter,
+            party_filter=party_filter,
         )
-        if resolved_tenant_filter is None:
+        if resolved_party_filter is None:
             return await custom_field_crud.get(db=db, id=field_id)
 
         records = await custom_field_crud.get_with_filters(
@@ -124,7 +110,7 @@ class CustomFieldService:
             filters={"id": field_id},
             skip=0,
             limit=1,
-            tenant_filter=resolved_tenant_filter,
+            party_filter=resolved_party_filter,
         )
         return records[0] if records else None
 

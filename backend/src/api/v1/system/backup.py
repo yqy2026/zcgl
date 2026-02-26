@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ....core.config import settings
 from ....core.exception_handler import bad_request, not_found
 from ....database import get_async_db
-from ....middleware.auth import require_admin
+from ....middleware.auth import AuthzContext, require_admin, require_authz
 from ....services.backup import BackupService
 from ..utils import handle_api_errors
 
@@ -22,6 +22,18 @@ logger = logging.getLogger(__name__)
 
 # 创建备份路由器
 router = APIRouter(dependencies=[Depends(require_admin)])
+_BACKUP_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:backup:create"
+_BACKUP_CREATE_RESOURCE_CONTEXT: dict[str, str] = {
+    "party_id": _BACKUP_CREATE_UNSCOPED_PARTY_ID,
+    "owner_party_id": _BACKUP_CREATE_UNSCOPED_PARTY_ID,
+    "manager_party_id": _BACKUP_CREATE_UNSCOPED_PARTY_ID,
+}
+_BACKUP_DELETE_UNSCOPED_PARTY_ID = "__unscoped__:backup:delete"
+_BACKUP_DELETE_RESOURCE_CONTEXT: dict[str, str] = {
+    "party_id": _BACKUP_DELETE_UNSCOPED_PARTY_ID,
+    "owner_party_id": _BACKUP_DELETE_UNSCOPED_PARTY_ID,
+    "manager_party_id": _BACKUP_DELETE_UNSCOPED_PARTY_ID,
+}
 
 # 备份目录
 BACKUP_DIR = "backups"
@@ -34,6 +46,13 @@ if not os.path.exists(BACKUP_DIR):
 async def create_backup(
     backup_name: str | None = Query(None, description="备份名称，默认使用时间戳"),
     db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="create",
+            resource_type="backup",
+            resource_context=_BACKUP_CREATE_RESOURCE_CONTEXT,
+        )
+    ),
 ) -> dict[str, Any]:
     """
     创建数据库备份
@@ -68,7 +87,14 @@ async def create_backup(
 
 @router.get("/list[Any]", summary="获取备份列表")
 @handle_api_errors
-def list_backups() -> dict[str, Any]:
+def list_backups(
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="backup",
+        )
+    ),
+) -> dict[str, Any]:
     """
     获取所有备份文件列表
 
@@ -90,7 +116,17 @@ def list_backups() -> dict[str, Any]:
 
 @router.get("/download/{backup_name}", summary="下载备份文件")
 @handle_api_errors
-def download_backup(backup_name: str) -> FileResponse:
+def download_backup(
+    backup_name: str,
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="backup",
+            resource_id="{backup_name}",
+            deny_as_not_found=True,
+        )
+    ),
+) -> FileResponse:
     """
     下载指定的备份文件
 
@@ -124,6 +160,13 @@ async def restore_backup(
     backup_name: str,
     confirm: bool = Query(False, description="确认恢复操作"),
     db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="backup",
+            resource_id="{backup_name}",
+        )
+    ),
 ) -> dict[str, Any]:
     """
     从备份文件恢复数据
@@ -169,7 +212,16 @@ async def restore_backup(
 
 @router.delete("/delete/{backup_name}", summary="删除备份文件")
 @handle_api_errors
-def delete_backup(backup_name: str) -> dict[str, Any]:
+def delete_backup(
+    backup_name: str,
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="delete",
+            resource_type="backup",
+            resource_id="{backup_name}",
+        )
+    ),
+) -> dict[str, Any]:
     """
     删除指定的备份文件
 
@@ -197,7 +249,14 @@ def delete_backup(backup_name: str) -> dict[str, Any]:
 
 @router.get("/stats", summary="获取备份统计信息")
 @handle_api_errors
-def get_backup_stats() -> dict[str, Any]:
+def get_backup_stats(
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="backup",
+        )
+    ),
+) -> dict[str, Any]:
     """
     获取备份统计信息
 
@@ -215,7 +274,16 @@ def get_backup_stats() -> dict[str, Any]:
 
 @router.post("/validate/{backup_name}", summary="验证备份文件")
 @handle_api_errors
-def validate_backup(backup_name: str) -> dict[str, Any]:
+def validate_backup(
+    backup_name: str,
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="backup",
+            resource_id="{backup_name}",
+        )
+    ),
+) -> dict[str, Any]:
     """
     验证备份文件的完整性
 
@@ -238,6 +306,13 @@ def validate_backup(backup_name: str) -> dict[str, Any]:
 @handle_api_errors
 def cleanup_old_backups(
     keep_count: int = Query(10, ge=1, le=100, description="保留的备份数量"),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="delete",
+            resource_type="backup",
+            resource_context=_BACKUP_DELETE_RESOURCE_CONTEXT,
+        )
+    ),
 ) -> dict[str, Any]:
     """
     清理旧的备份文件，保留最新的 N 个

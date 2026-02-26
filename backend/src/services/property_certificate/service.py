@@ -17,7 +17,7 @@ from ...core.config import settings
 from ...core.exception_handler import BusinessValidationError, ResourceNotFoundError
 from ...crud.asset import asset_crud
 from ...crud.property_certificate import property_certificate_crud, property_owner_crud
-from ...crud.query_builder import TenantFilter
+from ...crud.query_builder import PartyFilter
 from ...models.asset import Asset
 from ...models.property_certificate import PropertyCertificate
 from ...schemas.property_certificate import (
@@ -28,6 +28,7 @@ from ...schemas.property_certificate import (
 from ...services.document.extractors.property_cert_adapter import PropertyCertAdapter
 from ...services.document.ocr_extraction_service import OCRExtractionService
 from ...services.llm_prompt.prompt_manager import PromptManager
+from ...services.party_scope import resolve_user_party_filter
 
 logger = logging.getLogger(__name__)
 
@@ -51,88 +52,75 @@ class PropertyCertificateService:
         self.ocr_extractor = OCRExtractionService()
 
     @staticmethod
-    def _is_fail_closed_tenant_filter(tenant_filter: TenantFilter | None) -> bool:
-        if tenant_filter is None:
+    def _is_fail_closed_party_filter(party_filter: PartyFilter | None) -> bool:
+        if party_filter is None:
             return False
         return (
             len(
                 [
                     org_id
-                    for org_id in tenant_filter.organization_ids
+                    for org_id in party_filter.party_ids
                     if str(org_id).strip() != ""
                 ]
             )
             == 0
         )
 
-    async def _resolve_tenant_filter(
+    async def _resolve_party_filter(
         self,
         *,
         current_user_id: str | None = None,
-        tenant_filter: TenantFilter | None = None,
-    ) -> TenantFilter | None:
-        if tenant_filter is not None:
-            return tenant_filter
-        if current_user_id is None or current_user_id.strip() == "":
-            return None
-
-        try:
-            from ..organization_permission_service import OrganizationPermissionService
-
-            org_service = OrganizationPermissionService(self.db)
-            org_ids = await org_service.get_user_accessible_organizations(
-                current_user_id
-            )
-            return TenantFilter(organization_ids=[str(org_id) for org_id in org_ids])
-        except Exception:
-            logger.exception(
-                "Failed to resolve tenant filter for user %s, fallback to fail-closed",
-                current_user_id,
-            )
-            return TenantFilter(organization_ids=[])
+        party_filter: PartyFilter | None = None,
+    ) -> PartyFilter | None:
+        return await resolve_user_party_filter(
+            self.db,
+            current_user_id=current_user_id,
+            party_filter=party_filter,
+            logger=logger,
+        )
 
     async def list_certificates(
         self,
         *,
         skip: int = 0,
         limit: int = 100,
-        tenant_filter: TenantFilter | None = None,
+        party_filter: PartyFilter | None = None,
         current_user_id: str | None = None,
     ) -> list[PropertyCertificate]:
         """获取产权证列表"""
-        resolved_tenant_filter = await self._resolve_tenant_filter(
+        resolved_party_filter = await self._resolve_party_filter(
             current_user_id=current_user_id,
-            tenant_filter=tenant_filter,
+            party_filter=party_filter,
         )
-        if self._is_fail_closed_tenant_filter(resolved_tenant_filter):
+        if self._is_fail_closed_party_filter(resolved_party_filter):
             return []
 
         return await property_certificate_crud.get_multi(
             self.db,
             skip=skip,
             limit=limit,
-            tenant_filter=resolved_tenant_filter,
+            party_filter=resolved_party_filter,
         )
 
     async def get_certificate(
         self,
         certificate_id: str,
         *,
-        tenant_filter: TenantFilter | None = None,
+        party_filter: PartyFilter | None = None,
         current_user_id: str | None = None,
     ) -> PropertyCertificate | None:
         """获取单个产权证"""
-        resolved_tenant_filter = await self._resolve_tenant_filter(
+        resolved_party_filter = await self._resolve_party_filter(
             current_user_id=current_user_id,
-            tenant_filter=tenant_filter,
+            party_filter=party_filter,
         )
-        if self._is_fail_closed_tenant_filter(resolved_tenant_filter):
+        if self._is_fail_closed_party_filter(resolved_party_filter):
             return None
 
         return await property_certificate_crud.get(
             self.db,
             certificate_id,
-            tenant_filter=resolved_tenant_filter,
+            party_filter=resolved_party_filter,
         )
 
     async def create_certificate(

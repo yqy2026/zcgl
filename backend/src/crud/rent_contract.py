@@ -1,7 +1,7 @@
 from datetime import date
 from typing import Any
 
-from sqlalchemy import String, cast, delete, desc, func, or_, select
+from sqlalchemy import String, and_, cast, delete, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -12,6 +12,7 @@ from ..crud.asset import SensitiveDataHandler
 from ..crud.base import CRUDBase
 from ..models.associations import rent_contract_assets
 from ..models.ownership import Ownership
+from ..models.party import Party
 from ..models.rent_contract import (
     ContractType,
     RentContract,
@@ -133,7 +134,6 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
                 selectinload(RentContract.assets),
                 selectinload(RentContract.rent_terms),
             )
-            .join(Ownership, RentContract.ownership_id == Ownership.id, isouter=True)
             .where(
                 RentContract.id == id,
                 or_(
@@ -167,6 +167,10 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
         contract_ids: list[str] | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
+        owner_party_id: str | None = None,
+        manager_party_id: str | None = None,
+        owner_party_ids: list[str] | None = None,
+        manager_party_ids: list[str] | None = None,
     ) -> list[RentContract]:
         stmt = select(RentContract).options(selectinload(RentContract.assets))
         if contract_ids:
@@ -175,6 +179,35 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
             stmt = stmt.where(RentContract.start_date >= start_date)
         if end_date:
             stmt = stmt.where(RentContract.end_date <= end_date)
+        resolved_owner_party_ids = self._normalize_scope_ids(
+            values=owner_party_ids,
+            value=owner_party_id,
+        )
+        resolved_manager_party_ids = self._normalize_scope_ids(
+            values=manager_party_ids,
+            value=manager_party_id,
+        )
+        scope_filters: list[Any] = []
+        if resolved_owner_party_ids:
+            if len(resolved_owner_party_ids) == 1:
+                scope_filters.append(
+                    RentContract.owner_party_id == resolved_owner_party_ids[0]
+                )
+            else:
+                scope_filters.append(
+                    RentContract.owner_party_id.in_(resolved_owner_party_ids)
+                )
+        if resolved_manager_party_ids:
+            if len(resolved_manager_party_ids) == 1:
+                scope_filters.append(
+                    RentContract.manager_party_id == resolved_manager_party_ids[0]
+                )
+            else:
+                scope_filters.append(
+                    RentContract.manager_party_id.in_(resolved_manager_party_ids)
+                )
+        if scope_filters:
+            stmt = stmt.where(or_(*scope_filters))
 
         stmt = stmt.order_by(RentContract.created_at.desc())
         contracts = list((await db.execute(stmt)).scalars().all())
@@ -213,7 +246,11 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
         contract_number: str | None = None,
         tenant_name: str | None = None,
         asset_id: str | None = None,
-        ownership_id: str | None = None,
+        owner_party_id: str | None = None,
+        manager_party_id: str | None = None,
+        owner_party_ids: list[str] | None = None,
+        manager_party_ids: list[str] | None = None,
+        ownership_id: str | None = None,  # DEPRECATED alias
         contract_status: str | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
@@ -225,16 +262,16 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
                 selectinload(RentContract.assets),
                 selectinload(RentContract.rent_terms),
             )
-        if include_relations:
-            stmt = stmt.join(
-                Ownership, RentContract.ownership_id == Ownership.id, isouter=True
-            )
         stmt = self._apply_contract_filters_async(
             stmt,
             contract_number=contract_number,
             tenant_name=tenant_name,
             asset_id=asset_id,
-            ownership_id=ownership_id,
+            owner_party_id=owner_party_id,
+            manager_party_id=manager_party_id,
+            owner_party_ids=owner_party_ids,
+            manager_party_ids=manager_party_ids,
+            ownership_id=ownership_id,  # DEPRECATED alias
             contract_status=contract_status,
             start_date=start_date,
             end_date=end_date,
@@ -248,16 +285,16 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
             self.sensitive_data_handler.decrypt_data(item.__dict__)
 
         count_stmt = select(func.count(RentContract.id))
-        if include_relations:
-            count_stmt = count_stmt.join(
-                Ownership, RentContract.ownership_id == Ownership.id, isouter=True
-            )
         count_stmt = self._apply_contract_filters_async(
             count_stmt,
             contract_number=contract_number,
             tenant_name=tenant_name,
             asset_id=asset_id,
-            ownership_id=ownership_id,
+            owner_party_id=owner_party_id,
+            manager_party_id=manager_party_id,
+            owner_party_ids=owner_party_ids,
+            manager_party_ids=manager_party_ids,
+            ownership_id=ownership_id,  # DEPRECATED alias
             contract_status=contract_status,
             start_date=start_date,
             end_date=end_date,
@@ -273,7 +310,11 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
         contract_number: str | None,
         tenant_name: str | None,
         asset_id: str | None,
-        ownership_id: str | None,
+        owner_party_id: str | None,
+        manager_party_id: str | None,
+        owner_party_ids: list[str] | None,
+        manager_party_ids: list[str] | None,
+        ownership_id: str | None,  # DEPRECATED alias
         contract_status: str | None,
         start_date: date | None,
         end_date: date | None,
@@ -298,37 +339,166 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
             stmt = stmt.where(RentContract.start_date >= start_date)
         if end_date:
             stmt = stmt.where(RentContract.end_date <= end_date)
-        if ownership_id:
-            stmt = stmt.where(RentContract.ownership_id == ownership_id)
+
+        resolved_owner_party_ids = self._normalize_scope_ids(
+            values=owner_party_ids,
+            value=owner_party_id,
+        )
+        resolved_manager_party_ids = self._normalize_scope_ids(
+            values=manager_party_ids,
+            value=manager_party_id,
+        )
+
+        scope_filters: list[Any] = []
+        if resolved_owner_party_ids:
+            if len(resolved_owner_party_ids) == 1:
+                scope_filters.append(
+                    RentContract.owner_party_id == resolved_owner_party_ids[0]
+                )
+            else:
+                scope_filters.append(
+                    RentContract.owner_party_id.in_(resolved_owner_party_ids)
+                )
+        if resolved_manager_party_ids:
+            if len(resolved_manager_party_ids) == 1:
+                scope_filters.append(
+                    RentContract.manager_party_id == resolved_manager_party_ids[0]
+                )
+            else:
+                scope_filters.append(
+                    RentContract.manager_party_id.in_(resolved_manager_party_ids)
+                )
+        legacy_scope_filter = None
+        if ownership_id:  # DEPRECATED alias
+            legacy_scope_filter = and_(
+                RentContract.ownership_id == ownership_id,  # DEPRECATED
+                or_(
+                    RentContract.owner_party_id.is_(None),
+                    RentContract.owner_party_id == "",
+                ),
+                or_(
+                    RentContract.manager_party_id.is_(None),
+                    RentContract.manager_party_id == "",
+                ),
+            )
+        if scope_filters:
+            if legacy_scope_filter is not None:
+                stmt = stmt.where(or_(or_(*scope_filters), legacy_scope_filter))
+            else:
+                stmt = stmt.where(or_(*scope_filters))
+        elif ownership_id:  # DEPRECATED alias
+            stmt = stmt.where(RentContract.ownership_id == ownership_id)  # DEPRECATED
         if contract_status:
             stmt = stmt.where(RentContract.contract_status == contract_status)
 
         return stmt
 
-    async def count_by_ownership_async(
-        self, db: AsyncSession, ownership_id: str
+    @classmethod
+    def _normalize_scope_ids(
+        cls,
+        *,
+        values: list[str] | None,
+        value: str | None,
+    ) -> list[str]:
+        normalized_values: list[str] = []
+        seen: set[str] = set()
+
+        for item in values or []:
+            normalized = str(item).strip()
+            if normalized == "" or normalized in seen:
+                continue
+            normalized_values.append(normalized)
+            seen.add(normalized)
+
+        normalized_value = str(value).strip() if value is not None else ""
+        if normalized_value != "" and normalized_value not in seen:
+            normalized_values.append(normalized_value)
+
+        return normalized_values
+
+    async def count_by_owner_party_async(
+        self, db: AsyncSession, owner_party_id: str
     ) -> int:
-        """统计权属方的合同总数"""
+        """统计产权主体的合同总数"""
         stmt = select(func.count(RentContract.id)).where(
-            RentContract.ownership_id == ownership_id
+            RentContract.owner_party_id == owner_party_id
         )
         result = await db.execute(stmt)
         return int(result.scalar() or 0)
 
-    async def count_active_by_ownership_async(
-        self, db: AsyncSession, ownership_id: str
+    async def count_active_by_owner_party_async(
+        self, db: AsyncSession, owner_party_id: str
     ) -> int:
-        """统计权属方的活跃合同数（状态为'有效'）"""
+        """统计产权主体的活跃合同数（状态为'有效'）"""
         from sqlalchemy import and_
 
         stmt = select(func.count(RentContract.id)).where(
             and_(
-                RentContract.ownership_id == ownership_id,
+                RentContract.owner_party_id == owner_party_id,
                 RentContract.contract_status == "有效",
             )
         )
         result = await db.execute(stmt)
         return int(result.scalar() or 0)
+
+    async def count_by_ownership_async(  # DEPRECATED compatibility path
+        self, db: AsyncSession, ownership_id: str  # DEPRECATED alias
+    ) -> int:
+        stmt = select(func.count(RentContract.id)).where(
+            RentContract.ownership_id == ownership_id  # DEPRECATED legacy column
+        )
+        result = await db.execute(stmt)
+        return int(result.scalar() or 0)
+
+    async def count_active_by_ownership_async(  # DEPRECATED compatibility path
+        self, db: AsyncSession, ownership_id: str  # DEPRECATED alias
+    ) -> int:
+        from sqlalchemy import and_
+
+        stmt = select(func.count(RentContract.id)).where(
+            and_(
+                RentContract.ownership_id == ownership_id,  # DEPRECATED legacy column
+                RentContract.contract_status == "有效",
+            )
+        )
+        result = await db.execute(stmt)
+        return int(result.scalar() or 0)
+
+    async def get_distinct_ownership_ids_by_owner_party_ids_async(  # DEPRECATED bridge helper
+        self,
+        db: AsyncSession,
+        *,
+        owner_party_ids: list[str],
+    ) -> list[str]:
+        """DEPRECATED: Resolve legacy ownership IDs from owner-party scoped contracts."""
+        if not owner_party_ids:
+            return []
+
+        stmt = select(func.distinct(RentContract.ownership_id)).where(  # DEPRECATED legacy column
+            RentContract.owner_party_id.in_(owner_party_ids),
+            RentContract.ownership_id.is_not(None),  # DEPRECATED legacy column
+            RentContract.ownership_id != "",  # DEPRECATED legacy column
+        )
+        ownership_ids = (await db.execute(stmt)).scalars().all()  # DEPRECATED legacy identifiers
+        return [str(ownership_id) for ownership_id in ownership_ids if ownership_id]  # DEPRECATED legacy identifiers
+
+    async def get_distinct_owner_party_ids_by_ownership_ids_async(  # DEPRECATED bridge helper
+        self,
+        db: AsyncSession,
+        *,
+        ownership_ids: list[str],  # DEPRECATED alias
+    ) -> list[str]:
+        """DEPRECATED: Resolve owner-party IDs from legacy ownership-scoped contracts."""
+        if not ownership_ids:  # DEPRECATED alias
+            return []
+
+        stmt = select(func.distinct(RentContract.owner_party_id)).where(
+            RentContract.ownership_id.in_(ownership_ids),  # DEPRECATED legacy column + alias
+            RentContract.owner_party_id.is_not(None),
+            RentContract.owner_party_id != "",
+        )
+        owner_party_ids = (await db.execute(stmt)).scalars().all()
+        return [str(owner_party_id) for owner_party_id in owner_party_ids if owner_party_id]
 
     async def get_contracts_for_price_calculation_async(
         self,
@@ -338,7 +508,9 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
         contract_status: ContractStatus | str | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
-        ownership_ids: list[str] | None = None,
+        owner_party_ids: list[str] | None = None,
+        manager_party_ids: list[str] | None = None,
+        ownership_ids: list[str] | None = None,  # DEPRECATED alias
     ) -> list[RentContract]:
         """获取用于单价计算的合同（含关联的资产和租金条款）"""
         stmt = select(RentContract).options(
@@ -368,8 +540,15 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
         if end_date and start_date:
             stmt = stmt.where(RentContract.end_date >= start_date)
 
-        if ownership_ids:
-            stmt = stmt.where(RentContract.ownership_id.in_(ownership_ids))
+        scope_filters: list[Any] = []
+        if owner_party_ids:
+            scope_filters.append(RentContract.owner_party_id.in_(owner_party_ids))
+        if manager_party_ids:
+            scope_filters.append(RentContract.manager_party_id.in_(manager_party_ids))
+        if scope_filters:
+            stmt = stmt.where(or_(*scope_filters))
+        elif ownership_ids:  # DEPRECATED alias
+            stmt = stmt.where(RentContract.ownership_id.in_(ownership_ids))  # DEPRECATED
 
         result = await db.execute(stmt)
         return list(result.scalars().all())
@@ -378,7 +557,9 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
         self,
         db: AsyncSession,
         *,
-        ownership_ids: list[str] | None = None,
+        owner_party_ids: list[str] | None = None,
+        manager_party_ids: list[str] | None = None,
+        ownership_ids: list[str] | None = None,  # DEPRECATED alias
         start_date: date | None = None,
         end_date: date | None = None,
     ) -> dict[str, int]:
@@ -387,8 +568,15 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
             RentContract.contract_status, func.count(RentContract.id)
         ).group_by(RentContract.contract_status)
 
-        if ownership_ids:
-            stmt = stmt.where(RentContract.ownership_id.in_(ownership_ids))
+        scope_filters: list[Any] = []
+        if owner_party_ids:
+            scope_filters.append(RentContract.owner_party_id.in_(owner_party_ids))
+        if manager_party_ids:
+            scope_filters.append(RentContract.manager_party_id.in_(manager_party_ids))
+        if scope_filters:
+            stmt = stmt.where(or_(*scope_filters))
+        elif ownership_ids:  # DEPRECATED alias
+            stmt = stmt.where(RentContract.ownership_id.in_(ownership_ids))  # DEPRECATED
 
         if start_date and end_date:
             stmt = stmt.where(
@@ -440,7 +628,11 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
         limit: int = 100,
         contract_id: str | None = None,
         asset_id: str | None = None,
-        ownership_id: str | None = None,
+        owner_party_id: str | None = None,
+        manager_party_id: str | None = None,
+        owner_party_ids: list[str] | None = None,
+        manager_party_ids: list[str] | None = None,
+        ownership_id: str | None = None,  # DEPRECATED alias
         year_month: str | None = None,
         payment_status: str | None = None,
         start_date: date | None = None,
@@ -451,7 +643,11 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
             stmt,
             contract_id=contract_id,
             asset_id=asset_id,
-            ownership_id=ownership_id,
+            owner_party_id=owner_party_id,
+            manager_party_id=manager_party_id,
+            owner_party_ids=owner_party_ids,
+            manager_party_ids=manager_party_ids,
+            ownership_id=ownership_id,  # DEPRECATED alias
             year_month=year_month,
             payment_status=payment_status,
             start_date=start_date,
@@ -472,7 +668,11 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
             count_stmt,
             contract_id=contract_id,
             asset_id=asset_id,
-            ownership_id=ownership_id,
+            owner_party_id=owner_party_id,
+            manager_party_id=manager_party_id,
+            owner_party_ids=owner_party_ids,
+            manager_party_ids=manager_party_ids,
+            ownership_id=ownership_id,  # DEPRECATED alias
             year_month=year_month,
             payment_status=payment_status,
             start_date=start_date,
@@ -488,7 +688,11 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
         *,
         contract_id: str | None,
         asset_id: str | None,
-        ownership_id: str | None,
+        owner_party_id: str | None,
+        manager_party_id: str | None,
+        owner_party_ids: list[str] | None,
+        manager_party_ids: list[str] | None,
+        ownership_id: str | None,  # DEPRECATED alias
         year_month: str | None,
         payment_status: str | None,
         start_date: date | None,
@@ -498,8 +702,38 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
             stmt = stmt.where(RentLedger.contract_id == contract_id)
         if asset_id:
             stmt = stmt.where(RentLedger.asset_id == asset_id)
-        if ownership_id:
-            stmt = stmt.where(RentLedger.ownership_id == ownership_id)
+        resolved_owner_party_ids = CRUDRentContract._normalize_scope_ids(
+            values=owner_party_ids,
+            value=owner_party_id,
+        )
+        resolved_manager_party_ids = CRUDRentContract._normalize_scope_ids(
+            values=manager_party_ids,
+            value=manager_party_id,
+        )
+        scope_filters: list[Any] = []
+        if resolved_owner_party_ids:
+            if len(resolved_owner_party_ids) == 1:
+                scope_filters.append(
+                    RentLedger.owner_party_id == resolved_owner_party_ids[0]
+                )
+            else:
+                scope_filters.append(
+                    RentLedger.owner_party_id.in_(resolved_owner_party_ids)
+                )
+        if resolved_manager_party_ids:
+            stmt = stmt.join(RentContract, RentLedger.contract_id == RentContract.id)
+            if len(resolved_manager_party_ids) == 1:
+                scope_filters.append(
+                    RentContract.manager_party_id == resolved_manager_party_ids[0]
+                )
+            else:
+                scope_filters.append(
+                    RentContract.manager_party_id.in_(resolved_manager_party_ids)
+                )
+        if scope_filters:
+            stmt = stmt.where(or_(*scope_filters))
+        elif ownership_id:  # DEPRECATED alias
+            stmt = stmt.where(RentLedger.ownership_id == ownership_id)  # DEPRECATED
         if year_month:
             stmt = stmt.where(RentLedger.year_month == year_month)
         if payment_status:
@@ -616,13 +850,13 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
         rows = (await db.execute(stmt)).scalars().all()
         return {str(year_month) for year_month in rows if year_month is not None}
 
-    async def sum_due_amount_by_ownership_async(
-        self, db: AsyncSession, ownership_id: str
+    async def sum_due_amount_by_owner_party_async(
+        self, db: AsyncSession, owner_party_id: str
     ) -> float:
-        """统计权属方的应收总额（通过合同ID关联）"""
-        # 子查询：获取该权属方下所有合同ID
+        """统计产权主体的应收总额（通过合同ID关联）"""
+        # 子查询：获取该产权主体下所有合同ID
         contract_ids = select(RentContract.id).where(
-            RentContract.ownership_id == ownership_id
+            RentContract.owner_party_id == owner_party_id
         )
         # 聚合查询：统计应收总额
         stmt = select(func.coalesce(func.sum(RentLedger.due_amount), 0)).where(
@@ -631,12 +865,12 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
         result = await db.execute(stmt)
         return float(result.scalar() or 0)
 
-    async def sum_paid_amount_by_ownership_async(
-        self, db: AsyncSession, ownership_id: str
+    async def sum_paid_amount_by_owner_party_async(
+        self, db: AsyncSession, owner_party_id: str
     ) -> float:
-        """统计权属方的实收总额（通过合同ID关联）"""
+        """统计产权主体的实收总额（通过合同ID关联）"""
         contract_ids = select(RentContract.id).where(
-            RentContract.ownership_id == ownership_id
+            RentContract.owner_party_id == owner_party_id
         )
         stmt = select(func.coalesce(func.sum(RentLedger.paid_amount), 0)).where(
             RentLedger.contract_id.in_(contract_ids)
@@ -644,12 +878,48 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
         result = await db.execute(stmt)
         return float(result.scalar() or 0)
 
-    async def sum_overdue_amount_by_ownership_async(
-        self, db: AsyncSession, ownership_id: str
+    async def sum_overdue_amount_by_owner_party_async(
+        self, db: AsyncSession, owner_party_id: str
     ) -> float:
-        """统计权属方的欠款总额（通过合同ID关联）"""
+        """统计产权主体的欠款总额（通过合同ID关联）"""
         contract_ids = select(RentContract.id).where(
-            RentContract.ownership_id == ownership_id
+            RentContract.owner_party_id == owner_party_id
+        )
+        stmt = select(func.coalesce(func.sum(RentLedger.overdue_amount), 0)).where(
+            RentLedger.contract_id.in_(contract_ids)
+        )
+        result = await db.execute(stmt)
+        return float(result.scalar() or 0)
+
+    async def sum_due_amount_by_ownership_async(  # DEPRECATED compatibility path
+        self, db: AsyncSession, ownership_id: str  # DEPRECATED alias
+    ) -> float:
+        contract_ids = select(RentContract.id).where(
+            RentContract.ownership_id == ownership_id  # DEPRECATED legacy column
+        )
+        stmt = select(func.coalesce(func.sum(RentLedger.due_amount), 0)).where(
+            RentLedger.contract_id.in_(contract_ids)
+        )
+        result = await db.execute(stmt)
+        return float(result.scalar() or 0)
+
+    async def sum_paid_amount_by_ownership_async(  # DEPRECATED compatibility path
+        self, db: AsyncSession, ownership_id: str  # DEPRECATED alias
+    ) -> float:
+        contract_ids = select(RentContract.id).where(
+            RentContract.ownership_id == ownership_id  # DEPRECATED legacy column
+        )
+        stmt = select(func.coalesce(func.sum(RentLedger.paid_amount), 0)).where(
+            RentLedger.contract_id.in_(contract_ids)
+        )
+        result = await db.execute(stmt)
+        return float(result.scalar() or 0)
+
+    async def sum_overdue_amount_by_ownership_async(  # DEPRECATED compatibility path
+        self, db: AsyncSession, ownership_id: str  # DEPRECATED alias
+    ) -> float:
+        contract_ids = select(RentContract.id).where(
+            RentContract.ownership_id == ownership_id  # DEPRECATED legacy column
         )
         stmt = select(func.coalesce(func.sum(RentLedger.overdue_amount), 0)).where(
             RentLedger.contract_id.in_(contract_ids)
@@ -663,7 +933,9 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
         *,
         start_date: date | None = None,
         end_date: date | None = None,
-        ownership_ids: list[str] | None = None,
+        owner_party_ids: list[str] | None = None,
+        manager_party_ids: list[str] | None = None,
+        ownership_ids: list[str] | None = None,  # DEPRECATED alias
         asset_ids: list[str] | None = None,
     ) -> tuple[Any, Any, Any, int]:
         """获取租金台账总体统计（总应收/实收/欠款/记录数）"""
@@ -679,8 +951,16 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
             filters.append(RentLedger.due_date >= start_date)
         if end_date:
             filters.append(RentLedger.due_date <= end_date)
-        if ownership_ids:
-            filters.append(RentLedger.ownership_id.in_(ownership_ids))
+        scope_filters: list[Any] = []
+        if owner_party_ids:
+            scope_filters.append(RentLedger.owner_party_id.in_(owner_party_ids))
+        if manager_party_ids:
+            stmt = stmt.join(RentContract, RentLedger.contract_id == RentContract.id)
+            scope_filters.append(RentContract.manager_party_id.in_(manager_party_ids))
+        if scope_filters:
+            filters.append(or_(*scope_filters))
+        elif ownership_ids:  # DEPRECATED alias
+            filters.append(RentLedger.ownership_id.in_(ownership_ids))  # DEPRECATED
         if asset_ids:
             filters.append(RentLedger.asset_id.in_(asset_ids))
 
@@ -706,7 +986,9 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
         *,
         start_date: date | None = None,
         end_date: date | None = None,
-        ownership_ids: list[str] | None = None,
+        owner_party_ids: list[str] | None = None,
+        manager_party_ids: list[str] | None = None,
+        ownership_ids: list[str] | None = None,  # DEPRECATED alias
         asset_ids: list[str] | None = None,
     ) -> list[Any]:
         """按支付状态分组统计"""
@@ -722,8 +1004,16 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
             filters.append(RentLedger.due_date >= start_date)
         if end_date:
             filters.append(RentLedger.due_date <= end_date)
-        if ownership_ids:
-            filters.append(RentLedger.ownership_id.in_(ownership_ids))
+        scope_filters: list[Any] = []
+        if owner_party_ids:
+            scope_filters.append(RentLedger.owner_party_id.in_(owner_party_ids))
+        if manager_party_ids:
+            stmt = stmt.join(RentContract, RentLedger.contract_id == RentContract.id)
+            scope_filters.append(RentContract.manager_party_id.in_(manager_party_ids))
+        if scope_filters:
+            filters.append(or_(*scope_filters))
+        elif ownership_ids:  # DEPRECATED alias
+            filters.append(RentLedger.ownership_id.in_(ownership_ids))  # DEPRECATED
         if asset_ids:
             filters.append(RentLedger.asset_id.in_(asset_ids))
 
@@ -739,7 +1029,9 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
         *,
         start_date: date | None = None,
         end_date: date | None = None,
-        ownership_ids: list[str] | None = None,
+        owner_party_ids: list[str] | None = None,
+        manager_party_ids: list[str] | None = None,
+        ownership_ids: list[str] | None = None,  # DEPRECATED alias
         asset_ids: list[str] | None = None,
     ) -> list[Any]:
         """按月份分组统计"""
@@ -759,8 +1051,16 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
             filters.append(RentLedger.due_date >= start_date)
         if end_date:
             filters.append(RentLedger.due_date <= end_date)
-        if ownership_ids:
-            filters.append(RentLedger.ownership_id.in_(ownership_ids))
+        scope_filters: list[Any] = []
+        if owner_party_ids:
+            scope_filters.append(RentLedger.owner_party_id.in_(owner_party_ids))
+        if manager_party_ids:
+            stmt = stmt.join(RentContract, RentLedger.contract_id == RentContract.id)
+            scope_filters.append(RentContract.manager_party_id.in_(manager_party_ids))
+        if scope_filters:
+            filters.append(or_(*scope_filters))
+        elif ownership_ids:  # DEPRECATED alias
+            filters.append(RentLedger.ownership_id.in_(ownership_ids))  # DEPRECATED
         if asset_ids:
             filters.append(RentLedger.asset_id.in_(asset_ids))
 
@@ -770,17 +1070,53 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
         result = await db.execute(stmt)
         return list(result.all())
 
-    async def get_ownership_statistics_async(
+    async def get_owner_party_statistics_async(
         self,
         db: AsyncSession,
         *,
         start_date: date | None = None,
         end_date: date | None = None,
-        ownership_ids: list[str] | None = None,
+        owner_party_ids: list[str] | None = None,
+        manager_party_ids: list[str] | None = None,
     ) -> list[Any]:
-        """权属方维度统计（JOIN Ownership + RentContract + RentLedger）"""
-        from ..models.ownership import Ownership
+        """产权主体维度统计（JOIN Party + RentContract + RentLedger）"""
+        stmt = (
+            select(
+                Party.id,
+                Party.name,
+                Party.code,
+                func.count(func.distinct(RentContract.id)).label("contract_count"),
+                func.sum(RentLedger.due_amount).label("total_due_amount"),
+                func.sum(RentLedger.paid_amount).label("total_paid_amount"),
+                func.sum(RentLedger.overdue_amount).label("total_overdue_amount"),
+            )
+            .join(RentContract, RentContract.owner_party_id == Party.id)
+            .join(RentLedger, RentLedger.contract_id == RentContract.id)
+            .group_by(Party.id, Party.name, Party.code)
+        )
 
+        if start_date:
+            stmt = stmt.where(RentLedger.due_date >= start_date)
+        if end_date:
+            stmt = stmt.where(RentLedger.due_date <= end_date)
+        if owner_party_ids:
+            stmt = stmt.where(Party.id.in_(owner_party_ids))
+        if manager_party_ids:
+            stmt = stmt.where(RentContract.manager_party_id.in_(manager_party_ids))
+
+        result = await db.execute(stmt)
+        return list(result.all())
+
+    async def get_ownership_statistics_async(  # DEPRECATED compatibility path
+        self,
+        db: AsyncSession,
+        *,
+        start_date: date | None = None,
+        end_date: date | None = None,
+        manager_party_ids: list[str] | None = None,
+        ownership_ids: list[str] | None = None,  # DEPRECATED alias
+        legacy_only: bool = False,
+    ) -> list[Any]:
         stmt = (
             select(
                 Ownership.id,
@@ -791,7 +1127,7 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
                 func.sum(RentLedger.paid_amount).label("total_paid_amount"),
                 func.sum(RentLedger.overdue_amount).label("total_overdue_amount"),
             )
-            .join(RentContract, RentContract.ownership_id == Ownership.id)
+            .join(RentContract, RentContract.ownership_id == Ownership.id)  # DEPRECATED
             .join(RentLedger, RentLedger.contract_id == RentContract.id)
             .group_by(Ownership.id, Ownership.name, Ownership.short_name)
         )
@@ -800,8 +1136,17 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
             stmt = stmt.where(RentLedger.due_date >= start_date)
         if end_date:
             stmt = stmt.where(RentLedger.due_date <= end_date)
-        if ownership_ids:
-            stmt = stmt.where(Ownership.id.in_(ownership_ids))
+        if manager_party_ids:
+            stmt = stmt.where(RentContract.manager_party_id.in_(manager_party_ids))
+        if ownership_ids:  # DEPRECATED alias
+            stmt = stmt.where(Ownership.id.in_(ownership_ids))  # DEPRECATED
+        if legacy_only:
+            stmt = stmt.where(
+                or_(
+                    RentContract.owner_party_id.is_(None),
+                    RentContract.owner_party_id == "",
+                )
+            )
 
         result = await db.execute(stmt)
         return list(result.all())
@@ -812,6 +1157,8 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
         *,
         start_date: date | None = None,
         end_date: date | None = None,
+        owner_party_ids: list[str] | None = None,
+        manager_party_ids: list[str] | None = None,
         asset_ids: list[str] | None = None,
     ) -> list[Any]:
         """资产维度统计（JOIN Asset + RentContract + RentLedger）"""
@@ -837,6 +1184,13 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
             stmt = stmt.where(RentLedger.due_date >= start_date)
         if end_date:
             stmt = stmt.where(RentLedger.due_date <= end_date)
+        scope_filters: list[Any] = []
+        if owner_party_ids:
+            scope_filters.append(RentContract.owner_party_id.in_(owner_party_ids))
+        if manager_party_ids:
+            scope_filters.append(RentContract.manager_party_id.in_(manager_party_ids))
+        if scope_filters:
+            stmt = stmt.where(or_(*scope_filters))
         if asset_ids:
             stmt = stmt.where(Asset.id.in_(asset_ids))
 
@@ -850,6 +1204,8 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
         year: int | None = None,
         start_month: str | None = None,
         end_month: str | None = None,
+        owner_party_ids: list[str] | None = None,
+        manager_party_ids: list[str] | None = None,
     ) -> list[Any]:
         """月度统计（年月维度聚合）"""
         stmt = (
@@ -870,6 +1226,14 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
             stmt = stmt.where(RentLedger.year_month >= start_month)
         if end_month:
             stmt = stmt.where(RentLedger.year_month <= end_month)
+        scope_filters: list[Any] = []
+        if owner_party_ids:
+            scope_filters.append(RentLedger.owner_party_id.in_(owner_party_ids))
+        if manager_party_ids:
+            stmt = stmt.join(RentContract, RentLedger.contract_id == RentContract.id)
+            scope_filters.append(RentContract.manager_party_id.in_(manager_party_ids))
+        if scope_filters:
+            stmt = stmt.where(or_(*scope_filters))
 
         result = await db.execute(stmt)
         return list(result.all())

@@ -1,5 +1,6 @@
 """Party domain service orchestration."""
 
+import logging
 from typing import Any
 
 from sqlalchemy import select
@@ -15,6 +16,8 @@ from ...schemas.party import (
     PartyUpdate,
     UserPartyBindingCreate,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class PartyService:
@@ -38,6 +41,7 @@ class PartyService:
         limit: int = 100,
         party_type: str | None = None,
         status: str | None = None,
+        search: str | None = None,
     ) -> list[Party]:
         return await self.party_crud.get_parties(
             db,
@@ -45,6 +49,7 @@ class PartyService:
             limit=limit,
             party_type=party_type,
             status=status,
+            search=search,
         )
 
     async def update_party(
@@ -166,7 +171,29 @@ class PartyService:
         obj_in: UserPartyBindingCreate,
     ) -> UserPartyBinding:
         payload = obj_in.model_dump(exclude_none=True)
-        return await self.party_crud.create_user_party_binding(db, obj_in=payload)
+        binding = await self.party_crud.create_user_party_binding(db, obj_in=payload)
+        await self._publish_user_scope_invalidation(str(binding.user_id))
+        return binding
+
+    @staticmethod
+    async def _publish_user_scope_invalidation(user_id: str) -> None:
+        normalized_user_id = str(user_id).strip()
+        if normalized_user_id == "":
+            return
+
+        try:
+            from ..authz import AUTHZ_USER_SCOPE_UPDATED, authz_event_bus
+
+            authz_event_bus.publish_invalidation(
+                event_type=AUTHZ_USER_SCOPE_UPDATED,
+                payload={"user_id": normalized_user_id},
+            )
+        except Exception:
+            logger.warning(
+                "Failed to publish authz user-scope invalidation event for user %s",
+                normalized_user_id,
+                exc_info=True,
+            )
 
     @staticmethod
     def _normalize_party_payload(payload: dict[str, Any]) -> dict[str, Any]:

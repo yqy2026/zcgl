@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 
 from ....core.response_handler import success_response
 from ....database import get_database_status
-from ....middleware.auth import get_current_active_user
+from ....middleware.auth import AuthzContext, get_current_active_user, require_authz
 
 router = APIRouter(
     tags=["系统管理"],
@@ -19,7 +19,14 @@ router = APIRouter(
 
 
 @router.get("/monitoring/health")
-async def health_check() -> JSONResponse:
+async def health_check(
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="system_monitoring",
+        )
+    ),
+) -> JSONResponse:
     """
     健康检查端点 - 包含数据库状态
     迁移自 main.py 的健康检查功能
@@ -92,7 +99,14 @@ async def health_check() -> JSONResponse:
 
 
 @router.get("/system/info")
-def app_info() -> JSONResponse:
+def app_info(
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="system_settings",
+        )
+    ),
+) -> JSONResponse:
     """
     应用信息端点
     迁移自 main.py 的应用信息功能
@@ -116,7 +130,14 @@ def app_info() -> JSONResponse:
 
 
 @router.get("/system/root")
-def api_root() -> JSONResponse:
+def api_root(
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="system_settings",
+        )
+    ),
+) -> JSONResponse:
     """
     API根路径端点
     迁移自 main.py 的API根路径功能

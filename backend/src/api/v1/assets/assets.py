@@ -26,13 +26,15 @@ from starlette.status import HTTP_204_NO_CONTENT
 
 from ....constants.api_constants import PaginationLimits
 from ....constants.business_constants import DateTimeFields
+from ....core.exception_handler import forbidden
 from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
 from ....database import get_async_db
 from ....middleware.auth import (
+    AuthzContext,
     audit_action,
     get_current_active_user,
     require_admin,
-    require_permission,
+    require_authz,
 )
 from ....middleware.security_middleware import get_client_ip
 from ....models.auth import User
@@ -43,6 +45,7 @@ from ....schemas.asset import (
     AssetUpdate,
 )
 from ....services.asset.asset_service import AssetService, AsyncAssetService
+from ....services.authz import authz_service
 
 # 导入子路由模块
 from . import asset_attachments, asset_batch, asset_import
@@ -60,6 +63,191 @@ router.include_router(asset_attachments.router, tags=["资产附件"])
 
 _asset_response_list_adapter = TypeAdapter(list[AssetResponse])
 _asset_list_item_adapter = TypeAdapter(list[AssetListItemResponse])
+_ASSET_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:asset:create"
+
+
+def _normalize_optional_str(value: Any) -> str | None:
+    if value is None:
+        return None
+    normalized = str(value).strip()
+    if normalized == "":
+        return None
+    return normalized
+
+
+def _normalize_identifier_sequence(values: Any) -> list[str]:
+    if not isinstance(values, list):
+        return []
+    normalized_values: list[str] = []
+    for value in values:
+        normalized_value = _normalize_optional_str(value)
+        if normalized_value is None:
+            continue
+        normalized_values.append(normalized_value)
+    return normalized_values
+
+
+async def _resolve_owner_party_scope_by_ownership_id(
+    *,
+    db: AsyncSession,
+    ownership_id: str | None,
+) -> str | None:
+    normalized_ownership_id = _normalize_optional_str(ownership_id)
+    if normalized_ownership_id is None:
+        return None
+    resolved_party_id = await AsyncAssetService(
+        db
+    ).resolve_owner_party_scope_by_ownership_id_async(
+        ownership_id=normalized_ownership_id
+    )
+    return _normalize_optional_str(resolved_party_id)
+
+
+async def _build_subject_scope_hint(
+    *,
+    db: AsyncSession,
+    user_id: str,
+) -> dict[str, str]:
+    try:
+        subject_context = await authz_service.context_builder.build_subject_context(
+            db,
+            user_id=user_id,
+        )
+    except Exception:
+        return {}
+
+    owner_party_ids = _normalize_identifier_sequence(
+        getattr(subject_context, "owner_party_ids", [])
+    )
+    manager_party_ids = _normalize_identifier_sequence(
+        getattr(subject_context, "manager_party_ids", [])
+    )
+    scope_hint: dict[str, str] = {}
+    if len(owner_party_ids) > 0:
+        scope_hint["owner_party_id"] = owner_party_ids[0]
+    if len(manager_party_ids) > 0:
+        scope_hint["manager_party_id"] = manager_party_ids[0]
+
+    party_candidates = [*owner_party_ids, *manager_party_ids]
+    if len(party_candidates) > 0:
+        scope_hint["party_id"] = party_candidates[0]
+    return scope_hint
+
+
+async def _require_asset_collection_read_authz(
+    ownership_id: str | None = Query(None, description="权属方ID筛选"),
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_async_db),
+) -> AuthzContext:
+    normalized_ownership_id = _normalize_optional_str(ownership_id)
+    resource_context: dict[str, Any] = {}
+    if normalized_ownership_id is not None:
+        resource_context["ownership_id"] = normalized_ownership_id
+        resolved_owner_party_id = await _resolve_owner_party_scope_by_ownership_id(
+            db=db,
+            ownership_id=normalized_ownership_id,
+        )
+        if resolved_owner_party_id is not None:
+            resource_context["owner_party_id"] = resolved_owner_party_id
+            resource_context["party_id"] = resolved_owner_party_id
+
+    subject_scope_hint = await _build_subject_scope_hint(
+        db=db,
+        user_id=str(current_user.id),
+    )
+    for key, value in subject_scope_hint.items():
+        resource_context.setdefault(key, value)
+
+    try:
+        decision = await authz_service.check_access(
+            db,
+            user_id=str(current_user.id),
+            resource_type="asset",
+            action="read",
+            resource_id=None,
+            resource=resource_context,
+        )
+    except Exception:
+        raise forbidden("权限校验失败")
+
+    if not decision.allowed:
+        raise forbidden("权限不足")
+
+    return AuthzContext(
+        current_user=current_user,
+        action="read",
+        resource_type="asset",
+        resource_id=None,
+        resource_context=resource_context,
+        allowed=True,
+        reason_code=decision.reason_code,
+    )
+
+
+async def _require_asset_create_authz(
+    asset_in: AssetCreate,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_async_db),
+) -> AuthzContext:
+    owner_party_id = _normalize_optional_str(asset_in.owner_party_id)
+    manager_party_id = _normalize_optional_str(asset_in.manager_party_id)
+    ownership_id = _normalize_optional_str(asset_in.ownership_id)
+    organization_id = _normalize_optional_str(asset_in.organization_id)
+    asset_in.owner_party_id = owner_party_id
+    asset_in.manager_party_id = manager_party_id
+    asset_in.ownership_id = ownership_id
+    asset_in.organization_id = organization_id
+    resource_context: dict[str, Any] = {}
+    if owner_party_id is not None:
+        resource_context["owner_party_id"] = owner_party_id
+    if manager_party_id is not None:
+        resource_context["manager_party_id"] = manager_party_id
+    if ownership_id is not None:
+        resource_context["ownership_id"] = ownership_id
+    resolved_owner_party_id: str | None = None
+    if owner_party_id is None and manager_party_id is None and ownership_id is not None:
+        resolved_owner_party_id = await _resolve_owner_party_scope_by_ownership_id(
+            db=db,
+            ownership_id=ownership_id,
+        )
+        if resolved_owner_party_id is not None:
+            asset_in.owner_party_id = resolved_owner_party_id
+            resource_context["owner_party_id"] = resolved_owner_party_id
+    if organization_id is not None:
+        resource_context["organization_id"] = organization_id
+    resolved_party_id = (
+        owner_party_id
+        or manager_party_id
+        or resolved_owner_party_id
+        or organization_id
+        or _ASSET_CREATE_UNSCOPED_PARTY_ID
+    )
+    resource_context["party_id"] = resolved_party_id
+
+    try:
+        decision = await authz_service.check_access(
+            db,
+            user_id=str(current_user.id),
+            resource_type="asset",
+            action="create",
+            resource_id=None,
+            resource=resource_context,
+        )
+    except Exception:
+        raise forbidden("权限校验失败")
+
+    if not decision.allowed:
+        raise forbidden("权限不足")
+
+    return AuthzContext(
+        current_user=current_user,
+        action="create",
+        resource_type="asset",
+        resource_id=None,
+        resource_context=resource_context,
+        allowed=True,
+        reason_code=decision.reason_code,
+    )
 
 
 async def _get_distinct_values(
@@ -104,6 +292,7 @@ async def get_assets(
     include_relations: bool = Query(False, description="是否加载关联数据"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(_require_asset_collection_read_authz),
     sort_field: str | None = Query(None, description="排序字段"),
     sort_by: str | None = Query(None, description="排序字段（兼容参数）"),
     sort_order: str = Query("desc", pattern="^(asc|desc)$", description="排序方向"),
@@ -181,6 +370,7 @@ async def get_assets(
 async def get_ownership_entities(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(_require_asset_collection_read_authz),
 ) -> list[str]:
     """获取所有权属方列表，用于搜索筛选"""
     return await AsyncAssetService(db).get_ownership_entity_names()
@@ -192,6 +382,7 @@ async def get_ownership_entities(
 async def get_business_categories(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(_require_asset_collection_read_authz),
 ) -> list[str]:
     """获取所有业态类别列表，用于搜索筛选"""
     return await _get_distinct_values(db, "business_category", str(current_user.id))
@@ -201,6 +392,7 @@ async def get_business_categories(
 async def get_usage_statuses(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(_require_asset_collection_read_authz),
 ) -> list[str]:
     """获取所有使用情况列表，用于搜索筛选"""
     return await _get_distinct_values(db, "usage_status", str(current_user.id))
@@ -210,6 +402,7 @@ async def get_usage_statuses(
 async def get_property_natures(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(_require_asset_collection_read_authz),
 ) -> list[str]:
     """获取所有物业性质列表，用于搜索筛选"""
     return await _get_distinct_values(db, "property_nature", str(current_user.id))
@@ -219,6 +412,7 @@ async def get_property_natures(
 async def get_ownership_statuses(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(_require_asset_collection_read_authz),
 ) -> list[str]:
     """获取所有确权状态列表，用于搜索筛选"""
     return await _get_distinct_values(db, "ownership_status", str(current_user.id))
@@ -232,6 +426,14 @@ async def get_asset(
     asset_id: str = Path(..., description="资产ID"),
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="asset",
+            resource_id="{asset_id}",
+            deny_as_not_found=True,
+        )
+    ),
 ) -> AssetResponse:
     """
     根据ID获取单个资产的详细信息
@@ -251,7 +453,8 @@ async def create_asset(
     asset_in: AssetCreate,
     request: Request,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_permission("asset", "create")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(_require_asset_create_authz),
     audit_logger: Any = Depends(audit_action("asset_create", "asset")),
 ) -> AssetResponse:
     """
@@ -260,6 +463,15 @@ async def create_asset(
     - **asset_in**: 资产创建数据
     """
     asset_service = AsyncAssetService(db)
+    if isinstance(_authz_ctx, AuthzContext):
+        resolved_owner_party_id = _normalize_optional_str(
+            _authz_ctx.resource_context.get("owner_party_id")
+        )
+        if (
+            _normalize_optional_str(asset_in.owner_party_id) is None
+            and resolved_owner_party_id is not None
+        ):
+            asset_in.owner_party_id = resolved_owner_party_id
     ip_address = get_client_ip(request)
     user_agent = request.headers.get("user-agent", "")
     session_id = request.headers.get("X-Session-ID") or request.headers.get(
@@ -281,7 +493,14 @@ async def update_asset(
     asset_in: AssetUpdate,
     request: Request,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_permission("asset", "update")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="asset",
+            resource_id="{asset_id}",
+        )
+    ),
     audit_logger: Any = Depends(audit_action("asset_update", "asset")),
 ) -> AssetResponse:
     """
@@ -311,7 +530,14 @@ async def update_asset(
 async def delete_asset(
     asset_id: str = Path(..., description="资产ID"),
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_permission("asset", "delete")),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="delete",
+            resource_type="asset",
+            resource_id="{asset_id}",
+        )
+    ),
     audit_logger: Any = Depends(audit_action("asset_delete", "asset")),
 ) -> Response:
     """
@@ -329,6 +555,13 @@ async def restore_asset(
     asset_id: str = Path(..., description="资产ID"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_admin),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="asset",
+            resource_id="{asset_id}",
+        )
+    ),
     audit_logger: Any = Depends(audit_action("asset_restore", "asset")),
 ) -> AssetResponse:
     """
@@ -346,6 +579,13 @@ async def hard_delete_asset(
     asset_id: str = Path(..., description="资产ID"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_admin),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="delete",
+            resource_type="asset",
+            resource_id="{asset_id}",
+        )
+    ),
     audit_logger: Any = Depends(audit_action("asset_hard_delete", "asset")),
 ) -> Response:
     """
@@ -363,6 +603,14 @@ async def get_asset_history(
     asset_id: str = Path(..., description="资产ID"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="asset",
+            resource_id="{asset_id}",
+            deny_as_not_found=True,
+        )
+    ),
 ) -> dict[str, Any]:
     """
     获取资产的变更历史记录
