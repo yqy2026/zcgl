@@ -10,7 +10,7 @@ from src.crud.property_certificate import (
     property_certificate_crud,
     property_owner_crud,
 )
-from src.crud.query_builder import TenantFilter
+from src.crud.query_builder import PartyFilter
 from src.models.property_certificate import PropertyCertificate, PropertyOwner
 from src.schemas.property_certificate import PropertyCertificateCreate
 
@@ -66,20 +66,20 @@ class TestPropertyCertificateCRUD:
         execute_result.scalars.return_value.first.return_value = cert
         mock_db.execute = AsyncMock(return_value=execute_result)
 
-        tenant_filter = TenantFilter(organization_ids=["org-1"])
+        party_filter = PartyFilter(party_ids=["org-1"])
         with patch.object(
             crud.query_builder,
-            "apply_tenant_filter",
+            "apply_party_filter",
             side_effect=lambda stmt, _tf: stmt,
-        ) as mock_apply_tenant_filter:
+        ) as mock_apply_party_filter:
             result = await crud.get(
                 mock_db,
                 id="cert-1",
-                tenant_filter=tenant_filter,
+                party_filter=party_filter,
             )
 
         assert result == cert
-        assert mock_apply_tenant_filter.call_args.args[1] == tenant_filter
+        assert mock_apply_party_filter.call_args.args[1] == party_filter
 
     async def test_get_multi_with_empty_tenant_filter_is_fail_closed(self, mock_db):
         crud = CRUDPropertyCertificate(PropertyCertificate)
@@ -89,7 +89,7 @@ class TestPropertyCertificateCRUD:
 
         result = await crud.get_multi(
             mock_db,
-            tenant_filter=TenantFilter(organization_ids=[]),
+            party_filter=PartyFilter(party_ids=[]),
         )
 
         assert result == []

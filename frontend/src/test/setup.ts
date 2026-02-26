@@ -5,15 +5,23 @@
 
 import '@testing-library/jest-dom';
 import { vi } from 'vitest';
-import { mswServer } from '@/mocks/server';
-import { renderWithProviders } from '@/test/utils/test-helpers';
+
+type MswServer = {
+  listen: (options?: { onUnhandledRequest?: 'warn' | 'error' | 'bypass' }) => void;
+  resetHandlers: () => void;
+  close: () => void;
+};
+
+let mswServer: MswServer | null = null;
 
 // =============================================================================
 // MSW 服务器设置
 // =============================================================================
 
 // 在所有测试之前启动MSW服务器
-beforeAll(() => {
+beforeAll(async () => {
+  const { mswServer: resolvedServer } = await import('@/mocks/server');
+  mswServer = resolvedServer;
   mswServer.listen({
     onUnhandledRequest: 'warn', // 对未处理的请求警告（不阻止测试）
   });
@@ -21,13 +29,13 @@ beforeAll(() => {
 
 // 在每个测试之后重置handlers，确保测试隔离
 afterEach(() => {
-  mswServer.resetHandlers();
+  mswServer?.resetHandlers();
   vi.useRealTimers();
 });
 
 // 在所有测试之后关闭MSW服务器
 afterAll(() => {
-  mswServer.close();
+  mswServer?.close();
 });
 
 // =============================================================================
@@ -41,10 +49,6 @@ vi.stubGlobal('import.meta', {
     NODE_ENV: 'test',
   },
 });
-
-(
-  globalThis as typeof globalThis & { renderWithProviders: typeof renderWithProviders }
-).renderWithProviders = renderWithProviders;
 
 // =============================================================================
 // 浏览器API Mock

@@ -1,8 +1,9 @@
 """分层约束测试：excel import_ops 路由应委托服务层。"""
 
-import inspect
 import os
+import re
 import tempfile
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -12,14 +13,41 @@ from src.schemas.excel_advanced import ExcelImportRequest
 pytestmark = pytest.mark.api
 
 
-def test_excel_import_ops_module_should_not_use_crud_adapter_calls():
-    """路由模块不应直接调用 task_crud。"""
+def _read_module_source() -> str:
     from src.api.v1.documents.excel import import_ops
 
-    module_source = inspect.getsource(import_ops)
+    return Path(import_ops.__file__).read_text(encoding="utf-8")
+
+
+def test_excel_import_ops_module_should_not_use_crud_adapter_calls():
+    """路由模块不应直接调用 task_crud。"""
+    module_source = _read_module_source()
     assert "task_crud." not in module_source
     assert "rollback(" not in module_source
     assert "datetime.utcnow(" not in module_source
+
+
+def test_excel_import_ops_key_endpoints_should_use_require_authz():
+    """excel 导入关键端点应接入统一 ABAC 依赖。"""
+    module_source = _read_module_source()
+    expected_patterns = [
+        r"async def import_excel[\s\S]*?require_authz\([\s\S]*?action=\"create\"[\s\S]*?resource_type=\"asset\"[\s\S]*?resource_context=_ASSET_CREATE_RESOURCE_CONTEXT",
+        r"async def import_excel_async[\s\S]*?require_authz\([\s\S]*?action=\"create\"[\s\S]*?resource_type=\"asset\"[\s\S]*?resource_context=_ASSET_CREATE_RESOURCE_CONTEXT",
+    ]
+    for pattern in expected_patterns:
+        assert re.search(pattern, module_source), pattern
+
+
+def test_excel_import_ops_unscoped_create_context_should_be_defined() -> None:
+    from src.api.v1.documents.excel import import_ops as module
+
+    expected_sentinel = "__unscoped__:asset:create"
+    assert module._ASSET_CREATE_UNSCOPED_PARTY_ID == expected_sentinel
+    assert module._ASSET_CREATE_RESOURCE_CONTEXT == {
+        "party_id": expected_sentinel,
+        "owner_party_id": expected_sentinel,
+        "manager_party_id": expected_sentinel,
+    }
 
 
 @pytest.mark.asyncio

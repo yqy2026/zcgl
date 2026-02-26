@@ -9,9 +9,11 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
+from src.models.abac import ABACPolicy, ABACPolicyRule, ABACRolePolicy
 from src.models.auth import User
 from src.models.organization import Organization
 from src.models.project import Project
+from src.models.rbac import Role, UserRoleAssignment
 from src.services.core.password_service import PasswordService
 
 
@@ -27,6 +29,52 @@ def _login(client: TestClient, username: str, password: str) -> None:
         json={"identifier": username, "password": password},
     )
     assert response.status_code == 200
+
+
+def _bind_project_read_policy(
+    db_session: Session,
+    *,
+    suffix: str,
+    user_ids: list[str],
+) -> None:
+    """Seed a non-admin role with project read ABAC policy for target users."""
+    role = Role(
+        name=f"vis_project_reader_{suffix}",
+        display_name=f"VisReader{suffix[:6]}",
+        is_system_role=False,
+        is_active=True,
+        created_by="integration_test",
+        updated_by="integration_test",
+    )
+
+    policy = ABACPolicy(
+        name=f"vis_project_read_policy_{suffix}",
+        effect="allow",
+        priority=100,
+        enabled=True,
+    )
+    policy.rules.append(
+        ABACPolicyRule(
+            resource_type="project",
+            action="read",
+            condition_expr={"==": [1, 1]},
+            field_mask=None,
+        )
+    )
+
+    db_session.add_all([role, policy])
+    db_session.flush()
+
+    db_session.add(ABACRolePolicy(role_id=role.id, policy_id=policy.id, enabled=True))
+    for user_id in user_ids:
+        db_session.add(
+            UserRoleAssignment(
+                user_id=user_id,
+                role_id=role.id,
+                assigned_by="integration_test",
+                is_active=True,
+            )
+        )
 
 
 @pytest.mark.integration
@@ -93,6 +141,11 @@ def test_non_admin_project_visibility_isolation(client: TestClient, db_session: 
         created_by=user_b.id,
     )
     db_session.add_all([project_a, project_b])
+    _bind_project_read_policy(
+        db_session,
+        suffix=suffix,
+        user_ids=[user_a.id, user_b.id],
+    )
     db_session.commit()
 
     _login(client, user_a.username, password)

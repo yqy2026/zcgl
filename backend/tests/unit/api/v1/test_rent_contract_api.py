@@ -7,6 +7,7 @@ This test module covers all endpoints in the rent_contract router to achieve 70%
 import json
 from datetime import date, datetime
 from decimal import Decimal
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -16,7 +17,6 @@ pytestmark = pytest.mark.api
 from src.constants.rent_contract_constants import PaymentStatus
 from src.core.exception_handler import (
     BusinessValidationError,
-    PermissionDeniedError,
     ResourceNotFoundError,
 )
 
@@ -80,6 +80,9 @@ def mock_contract():
     contract.id = "contract-123"
     contract.contract_number = "CT-2024-001"
     contract.tenant_name = "Test Tenant"
+    contract.owner_party_id = None
+    contract.manager_party_id = None
+    contract.tenant_party_id = None
     contract.ownership_id = "ownership-123"
     contract.asset_ids = ["asset-123"]
     contract.contract_type = "lease_downstream"
@@ -116,6 +119,9 @@ def mock_ledger():
     ledger.id = "ledger-123"
     ledger.contract_id = "contract-123"
     ledger.asset_id = "asset-123"
+    ledger.owner_party_id = None
+    ledger.manager_party_id = None
+    ledger.tenant_party_id = None
     ledger.ownership_id = "ownership-123"
     ledger.year_month = "2024-01"
     ledger.payment_status = PaymentStatus.UNPAID
@@ -321,6 +327,9 @@ class TestGetContracts:
             contract = MagicMock()
             contract.id = f"contract-{i}"
             contract.contract_number = f"CT-2024-00{i}"
+            contract.owner_party_id = None
+            contract.manager_party_id = None
+            contract.tenant_party_id = None
             contract.ownership_id = f"ownership-{i}"
             contract.tenant_name = f"Tenant {i}"
             contract.contract_type = "lease_downstream"
@@ -362,6 +371,7 @@ class TestGetContracts:
             contract_number=None,
             tenant_name=None,
             asset_id=None,
+            owner_party_id=None,
             ownership_id=None,
             contract_status=None,
             start_date=None,
@@ -388,6 +398,9 @@ class TestGetContracts:
             contract = MagicMock()
             contract.id = f"contract-{i}"
             contract.contract_number = f"CT-2024-{i:03d}"
+            contract.owner_party_id = None
+            contract.manager_party_id = None
+            contract.tenant_party_id = None
             contract.ownership_id = f"ownership-{i}"
             contract.tenant_name = f"Tenant {i}"
             contract.contract_type = "lease_downstream"
@@ -428,6 +441,7 @@ class TestGetContracts:
             contract_number=None,
             tenant_name=None,
             asset_id=None,
+            owner_party_id=None,
             ownership_id=None,
             contract_status=None,
             start_date=None,
@@ -450,13 +464,11 @@ class TestGetContracts:
 class TestUpdateContract:
     """Tests for PUT /contracts/{contract_id} endpoint"""
 
-    @patch("src.api.v1.rent_contracts.contracts.can_edit_contract")
     @patch("src.api.v1.rent_contracts.contracts.rent_contract_service")
     @pytest.mark.asyncio
     async def test_update_contract_success(
         self,
         mock_service,
-        mock_can_edit,
         mock_db,
         mock_current_user,
     ):
@@ -466,7 +478,6 @@ class TestUpdateContract:
 
         contract_in = RentContractUpdate(tenant_name="Updated Tenant")
 
-        mock_can_edit.return_value = True
         mock_service.get_contract_with_details_async = AsyncMock(return_value=mock_contract)
         mock_service.update_contract_async = AsyncMock(return_value=mock_contract)
 
@@ -480,29 +491,12 @@ class TestUpdateContract:
         assert result is not None
         mock_service.update_contract_async.assert_called_once()
 
-    @patch("src.api.v1.rent_contracts.contracts.can_edit_contract")
-    @pytest.mark.asyncio
-    async def test_update_contract_permission_denied(
-        self, mock_can_edit, mock_db, mock_current_user
-    ):
-        """Test contract update without permission"""
-        from src.api.v1.rent_contracts.contracts import update_contract
-        from src.schemas.rent_contract import RentContractUpdate
+    def test_update_contract_should_not_use_legacy_can_edit_guard(self):
+        """更新合同不应再使用 can_edit_contract 旧权限链路。"""
+        from src.api.v1.rent_contracts import contracts as module
 
-        contract_in = RentContractUpdate(tenant_name="Updated Tenant")
-
-        mock_can_edit.return_value = False
-
-        with pytest.raises(PermissionDeniedError) as exc_info:
-            await update_contract(
-                contract_id="contract-123",
-                db=mock_db,
-                contract_in=contract_in,
-                current_user=mock_current_user,
-            )
-
-        assert exc_info.value.status_code == 403
-        assert "权限不足" in exc_info.value.message
+        module_source = Path(module.__file__).read_text(encoding="utf-8")
+        assert "can_edit_contract(" not in module_source
 
 
 # ============================================================================
@@ -513,20 +507,16 @@ class TestUpdateContract:
 class TestDeleteContract:
     """Tests for DELETE /contracts/{contract_id} endpoint"""
 
-    @patch("src.api.v1.rent_contracts.contracts.RBACService")
     @patch("src.api.v1.rent_contracts.contracts.rent_contract_service")
     @pytest.mark.asyncio
     async def test_delete_contract_success_admin(
-        self, mock_service, mock_rbac_service_class, mock_db, mock_current_user_admin
+        self, mock_service, mock_db, mock_current_user_admin
     ):
         """Test successful contract deletion by admin"""
         from src.api.v1.rent_contracts.contracts import delete_contract
 
         mock_service.get_contract_with_details_async = AsyncMock(return_value=mock_contract)
         mock_service.delete_contract_by_id_async = AsyncMock(return_value=None)
-        mock_rbac_service = MagicMock()
-        mock_rbac_service.is_admin = AsyncMock(return_value=True)
-        mock_rbac_service_class.return_value = mock_rbac_service
 
         result = await delete_contract(
             contract_id="contract-123", db=mock_db, current_user=mock_current_user_admin
@@ -534,26 +524,12 @@ class TestDeleteContract:
 
         assert result["message"] == "合同删除成功"
 
-    @patch("src.api.v1.rent_contracts.contracts.RBACService")
-    @pytest.mark.asyncio
-    async def test_delete_contract_permission_denied(
-        self, mock_rbac_service_class, mock_db, mock_current_user_regular
-    ):
-        """Test contract deletion by non-admin user"""
-        from src.api.v1.rent_contracts.contracts import delete_contract
+    def test_delete_contract_should_not_use_legacy_admin_guard(self):
+        """删除合同不应再使用 RBACService.is_admin 旧权限链路。"""
+        from src.api.v1.rent_contracts import contracts as module
 
-        mock_rbac_service = MagicMock()
-        mock_rbac_service.is_admin = AsyncMock(return_value=False)
-        mock_rbac_service_class.return_value = mock_rbac_service
-
-        with pytest.raises(PermissionDeniedError) as exc_info:
-            await delete_contract(
-                contract_id="contract-123",
-                db=mock_db,
-                current_user=mock_current_user_regular,
-            )
-
-        assert exc_info.value.status_code == 403
+        module_source = Path(module.__file__).read_text(encoding="utf-8")
+        assert "RBACService(" not in module_source
 
 
 # ============================================================================
@@ -646,6 +622,9 @@ class TestGetRentLedger:
             ledger.id = f"ledger-{i}"
             ledger.contract_id = f"contract-{i}"
             ledger.asset_id = f"asset-{i}"
+            ledger.owner_party_id = None
+            ledger.manager_party_id = None
+            ledger.tenant_party_id = None
             ledger.ownership_id = f"ownership-{i}"
             ledger.year_month = "2024-01"
             ledger.due_date = date(2024, 1, 1)
@@ -674,6 +653,7 @@ class TestGetRentLedger:
             page_size=10,
             contract_id=None,
             asset_id=None,
+            owner_party_id=None,
             ownership_id=None,
             year_month=None,
             payment_status=None,
@@ -844,6 +824,7 @@ class TestStatisticsEndpoints:
             current_user=mock_current_user,
             start_date=date(2024, 1, 1),
             end_date=date(2024, 12, 31),
+            owner_party_ids=None,
             ownership_ids=None,
             asset_ids=None,
             contract_status=None,
@@ -868,9 +849,19 @@ class TestStatisticsEndpoints:
             current_user=mock_current_user,
             start_date=date(2024, 1, 1),
             end_date=date(2024, 12, 31),
+            owner_party_ids=None,
+            ownership_ids=None,
         )
 
         assert len(result) == 1
+        mock_service.get_ownership_statistics_async.assert_awaited_once_with(
+            db=mock_db,
+            start_date=date(2024, 1, 1),
+            end_date=date(2024, 12, 31),
+            owner_party_ids=None,
+            manager_party_ids=None,
+            ownership_ids=None,
+        )
 
     @patch("src.api.v1.rent_contracts.statistics.rent_contract_service")
     @pytest.mark.asyncio
@@ -889,9 +880,18 @@ class TestStatisticsEndpoints:
             current_user=mock_current_user,
             start_date=date(2024, 1, 1),
             end_date=date(2024, 12, 31),
+            asset_ids=None,
         )
 
         assert len(result) == 1
+        mock_service.get_asset_statistics_async.assert_awaited_once_with(
+            db=mock_db,
+            start_date=date(2024, 1, 1),
+            end_date=date(2024, 12, 31),
+            owner_party_ids=None,
+            manager_party_ids=None,
+            asset_ids=None,
+        )
 
     @patch("src.api.v1.rent_contracts.statistics.rent_contract_service")
     @pytest.mark.asyncio
@@ -909,9 +909,19 @@ class TestStatisticsEndpoints:
             db=mock_db,
             current_user=mock_current_user,
             year=2024,
+            start_month=None,
+            end_month=None,
         )
 
         assert len(result) == 1
+        mock_service.get_monthly_statistics_async.assert_awaited_once_with(
+            db=mock_db,
+            year=2024,
+            start_month=None,
+            end_month=None,
+            owner_party_ids=None,
+            manager_party_ids=None,
+        )
 
 # ============================================================================
 # Test: GET /contracts/{contract_id}/ledger - Get Contract Ledger
@@ -956,15 +966,38 @@ class TestGetAssetContracts:
     ):
         """Test successful asset contracts retrieval"""
         from src.api.v1.rent_contracts.contracts import get_asset_contracts
+        from src.middleware.auth import AuthzContext
 
         mock_contracts = [mock_contract for _ in range(3)]
         mock_service.get_asset_contracts_async = AsyncMock(return_value=mock_contracts)
 
+        authz_ctx = AuthzContext(
+            current_user=mock_current_user,
+            action="read",
+            resource_type="rent_contract",
+            resource_id=None,
+            resource_context={},
+            allowed=True,
+            reason_code="allow",
+        )
+
         result = await get_asset_contracts(
-            asset_id="asset-123", db=mock_db, current_user=mock_current_user
+            asset_id="asset-123",
+            db=mock_db,
+            current_user=mock_current_user,
+            authz_ctx=authz_ctx,
         )
 
         assert len(result) == 3
+        mock_service.get_asset_contracts_async.assert_awaited_once_with(
+            db=mock_db,
+            asset_id="asset-123",
+            owner_party_id=None,
+            manager_party_id=None,
+            owner_party_ids=None,
+            manager_party_ids=None,
+            limit=1000,
+        )
 
 
 # ============================================================================
@@ -1025,6 +1058,11 @@ class TestExcelOperations:
 
         assert isinstance(result, FileResponse)
         mock_excel_service.export_contracts_to_excel.assert_awaited_once()
+        export_call_kwargs = mock_excel_service.export_contracts_to_excel.await_args.kwargs
+        assert export_call_kwargs["owner_party_id"] is None
+        assert export_call_kwargs["manager_party_id"] is None
+        assert export_call_kwargs["owner_party_ids"] is None
+        assert export_call_kwargs["manager_party_ids"] is None
 
 
 # ============================================================================
@@ -1138,11 +1176,10 @@ class TestAttachmentManagement:
 class TestAdditionalErrorCases:
     """Additional tests for error handling and edge cases"""
 
-    @patch("src.api.v1.rent_contracts.contracts.can_edit_contract")
     @patch("src.api.v1.rent_contracts.contracts.rent_contract_service")
     @pytest.mark.asyncio
     async def test_update_contract_not_found(
-        self, mock_service, mock_can_edit, mock_db, mock_current_user
+        self, mock_service, mock_db, mock_current_user
     ):
         """Test updating non-existent contract"""
         from src.api.v1.rent_contracts.contracts import update_contract
@@ -1150,7 +1187,6 @@ class TestAdditionalErrorCases:
 
         contract_in = RentContractUpdate(tenant_name="Updated Tenant")
 
-        mock_can_edit.return_value = True
         mock_service.get_contract_with_details_async = AsyncMock(return_value=None)
 
         with pytest.raises(ResourceNotFoundError) as exc_info:
@@ -1163,13 +1199,11 @@ class TestAdditionalErrorCases:
 
         assert exc_info.value.status_code == 404
 
-    @patch("src.api.v1.rent_contracts.contracts.RBACService")
     @patch("src.api.v1.rent_contracts.contracts.rent_contract_service")
     @pytest.mark.asyncio
     async def test_delete_contract_not_found(
         self,
         mock_service,
-        mock_rbac_service_class,
         mock_db,
         mock_current_user_admin,
     ):
@@ -1177,9 +1211,6 @@ class TestAdditionalErrorCases:
         from src.api.v1.rent_contracts.contracts import delete_contract
 
         mock_service.get_contract_with_details_async = AsyncMock(return_value=None)
-        mock_rbac_service = MagicMock()
-        mock_rbac_service.is_admin = AsyncMock(return_value=True)
-        mock_rbac_service_class.return_value = mock_rbac_service
 
         with pytest.raises(ResourceNotFoundError) as exc_info:
             await delete_contract(

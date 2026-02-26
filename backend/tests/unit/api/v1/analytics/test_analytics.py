@@ -3,6 +3,7 @@ Analytics API 测试
 测试综合分析 API 端点
 """
 
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -47,9 +48,12 @@ def client(mock_db, mock_user):
 
     app.dependency_overrides[get_async_db] = override_get_db
     app.dependency_overrides[get_current_active_user] = override_get_user
-
-    with TestClient(app) as test_client:
-        yield test_client
+    with patch(
+        "src.middleware.auth.authz_service.check_access",
+        AsyncMock(return_value=SimpleNamespace(allowed=True, reason_code="ALLOW")),
+    ):
+        with TestClient(app) as test_client:
+            yield test_client
 
     app.dependency_overrides.clear()
 

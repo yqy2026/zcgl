@@ -1,6 +1,8 @@
 """分层约束测试：area_stats 路由应委托 AreaStatsService。"""
 
 import inspect
+import re
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -16,6 +18,28 @@ def test_area_stats_api_module_should_not_use_crud_adapter_calls():
 
     module_source = inspect.getsource(area_stats)
     assert "asset_crud." not in module_source
+
+
+def test_area_stats_module_should_import_authz_dependency() -> None:
+    """area_stats 路由应引入统一 ABAC 依赖。"""
+    from src.api.v1.analytics.statistics_modules import area_stats as module
+
+    module_source = Path(module.__file__).read_text(encoding="utf-8")
+    assert "AuthzContext" in module_source
+    assert "require_authz" in module_source
+
+
+def test_area_stats_endpoints_should_use_require_authz() -> None:
+    """area_stats 关键端点应接入 require_authz。"""
+    from src.api.v1.analytics.statistics_modules import area_stats as module
+
+    module_source = Path(module.__file__).read_text(encoding="utf-8")
+    expected_patterns = [
+        r"async def get_area_summary[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"analytics\"",
+        r"async def get_area_statistics[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"analytics\"",
+    ]
+    for pattern in expected_patterns:
+        assert re.search(pattern, module_source), pattern
 
 
 @pytest.mark.asyncio

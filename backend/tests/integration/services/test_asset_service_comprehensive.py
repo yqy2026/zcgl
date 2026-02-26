@@ -25,8 +25,8 @@ def _build_asset_data(**overrides):
         "property_name": "测试物业A",
         "address": "北京市朝阳区测试路123号",
         "ownership_status": "已确权",
-        "property_nature": "经营类",
-        "usage_status": "出租",
+        "property_nature": "商业",
+        "usage_status": "出租中",
         "rentable_area": Decimal("1000.00"),
         "rented_area": Decimal("600.00"),
     }
@@ -118,12 +118,12 @@ class TestAssetServiceBusinessLogic:
 
     async def test_update_asset_logic(self, asset_service, sample_asset):
         """测试更新资产逻辑"""
-        update_data = AssetUpdate(property_name="更新后的资产", usage_status="闲置")
+        update_data = AssetUpdate(property_name="更新后的资产", usage_status="空置")
 
         updated = await asset_service.update_asset(sample_asset.id, update_data)
 
         assert updated.property_name == "更新后的资产"
-        assert updated.usage_status == "闲置"
+        assert updated.usage_status == "空置"
 
     async def test_delete_asset_logic(self, asset_service, sample_asset):
         """测试删除资产逻辑"""

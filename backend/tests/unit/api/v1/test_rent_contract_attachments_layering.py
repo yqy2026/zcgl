@@ -1,5 +1,6 @@
 """分层约束测试：rent_contract attachments 路由应委托服务层。"""
 
+import re
 from datetime import datetime
 from pathlib import Path
 from unittest.mock import ANY, AsyncMock, MagicMock
@@ -9,11 +10,15 @@ import pytest
 pytestmark = pytest.mark.api
 
 
-def test_attachments_module_should_not_import_crud_directly() -> None:
-    """attachments 路由模块不应直接导入 rent_contract CRUD。"""
+def _read_module_source() -> str:
     from src.api.v1.rent_contracts import attachments as module
 
-    module_source = Path(module.__file__).read_text(encoding="utf-8")
+    return Path(module.__file__).read_text(encoding="utf-8")
+
+
+def test_attachments_module_should_not_import_crud_directly() -> None:
+    """attachments 路由模块不应直接导入 rent_contract CRUD。"""
+    module_source = _read_module_source()
     assert "from ....crud.rent_contract import rent_contract" not in module_source
     assert (
         "from ....crud.rent_contract_attachment import rent_contract_attachment_crud"
@@ -21,6 +26,26 @@ def test_attachments_module_should_not_import_crud_directly() -> None:
     )
     assert "rent_contract_attachment_crud." not in module_source
     assert "rent_contract.get_async(" not in module_source
+
+
+def test_attachments_module_should_import_authz_dependency() -> None:
+    """attachments 路由应引入统一 ABAC 依赖。"""
+    module_source = _read_module_source()
+    assert "AuthzContext" in module_source
+    assert "require_authz" in module_source
+
+
+def test_attachments_endpoints_should_use_require_authz() -> None:
+    """关键附件端点应接入 require_authz。"""
+    module_source = _read_module_source()
+    expected_patterns = [
+        r"async def upload_contract_attachment[\s\S]*?require_authz\([\s\S]*?action=\"create\"[\s\S]*?resource_type=\"rent_contract\"[\s\S]*?resource_id=\"\{contract_id\}\"",
+        r"async def get_contract_attachments[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"rent_contract\"[\s\S]*?resource_id=\"\{contract_id\}\"[\s\S]*?deny_as_not_found=True",
+        r"async def download_contract_attachment[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"rent_contract\"[\s\S]*?resource_id=\"\{contract_id\}\"[\s\S]*?deny_as_not_found=True",
+        r"async def delete_contract_attachment[\s\S]*?require_authz\([\s\S]*?action=\"delete\"[\s\S]*?resource_type=\"rent_contract\"[\s\S]*?resource_id=\"\{contract_id\}\"",
+    ]
+    for pattern in expected_patterns:
+        assert re.search(pattern, module_source), pattern
 
 
 @pytest.mark.asyncio

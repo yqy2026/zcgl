@@ -10,6 +10,8 @@ Test coverage for Project API endpoints:
 - Authentication and authorization
 """
 
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
 from fastapi import status
 from sqlalchemy.orm import Session
@@ -73,6 +75,7 @@ def admin_user_headers(client, admin_user, test_organization, monkeypatch):
     from src.services.organization_permission_service import (
         OrganizationPermissionService,
     )
+    from src.services.project.service import ProjectService
 
     def mock_get_current_user():
         return admin_user
@@ -80,11 +83,35 @@ def admin_user_headers(client, admin_user, test_organization, monkeypatch):
     async def mock_get_user_accessible_organizations(self, user_id: str):
         return [test_organization.id]
 
+    async def mock_resolve_party_filter(
+        self,
+        db,
+        *,
+        current_user_id=None,
+        party_filter=None,
+    ):
+        return None
+
     admin_user.default_organization_id = test_organization.id
     monkeypatch.setattr(
         OrganizationPermissionService,
         "get_user_accessible_organizations",
         mock_get_user_accessible_organizations,
+    )
+    monkeypatch.setattr(
+        ProjectService,
+        "_resolve_party_filter",
+        mock_resolve_party_filter,
+    )
+    monkeypatch.setattr(
+        project_module.authz_service,
+        "check_access",
+        AsyncMock(
+            return_value=MagicMock(
+                allowed=True,
+                reason_code="allow",
+            )
+        ),
     )
 
     app.dependency_overrides[project_module.get_current_active_user] = (

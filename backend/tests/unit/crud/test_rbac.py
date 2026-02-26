@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.crud.query_builder import TenantFilter
+from src.crud.query_builder import PartyFilter
 from src.crud.rbac import (
     CRUDPermission,
     CRUDRole,
@@ -118,7 +118,7 @@ class TestCRUDRole:
     async def test_get_multi_with_filters_passes_tenant_filter(
         self, crud: CRUDRole, mock_db: MagicMock
     ):
-        tenant_filter = TenantFilter(organization_ids=["org-1"])
+        party_filter = PartyFilter(party_ids=["org-1"])
         mock_roles_result = _mock_execute_result(all_values=[])
         mock_count_result = _mock_execute_result(scalar_value=0)
         mock_db.execute = AsyncMock(side_effect=[mock_roles_result, mock_count_result])
@@ -133,11 +133,38 @@ class TestCRUDRole:
         ):
             await crud.get_multi_with_filters(
                 mock_db,
-                tenant_filter=tenant_filter,
+                party_filter=party_filter,
             )
 
-        assert mock_build_query.call_args.kwargs.get("tenant_filter") == tenant_filter
-        assert mock_build_count_query.call_args.kwargs.get("tenant_filter") == tenant_filter
+        assert mock_build_query.call_args.kwargs.get("party_filter") == party_filter
+        assert mock_build_count_query.call_args.kwargs.get("party_filter") == party_filter
+
+    async def test_get_multi_with_filters_maps_deprecated_organization_id_alias(
+        self, crud: CRUDRole, mock_db: MagicMock
+    ):
+        mock_roles_result = _mock_execute_result(all_values=[])
+        mock_count_result = _mock_execute_result(scalar_value=0)
+        mock_db.execute = AsyncMock(side_effect=[mock_roles_result, mock_count_result])
+
+        await crud.get_multi_with_filters(
+            mock_db,
+            organization_id="org-legacy-1",
+        )
+
+        query_stmt = mock_db.execute.await_args_list[0].args[0]
+        count_stmt = mock_db.execute.await_args_list[1].args[0]
+        query_sql = str(query_stmt)
+        count_sql = str(count_stmt)
+        count_froms = count_stmt.get_final_froms()
+
+        assert "roles.party_id" in query_sql
+        assert "roles.organization_id" in query_sql
+        assert " OR " in query_sql
+        assert "roles.party_id" in count_sql
+        assert "roles.organization_id" in count_sql
+        assert " OR " in count_sql
+        assert len(count_froms) == 1
+        assert "anon_1, roles" not in count_sql
 
     async def test_count_by_category(self, crud: CRUDRole, mock_db: MagicMock):
         mock_db.execute = AsyncMock(
@@ -209,16 +236,16 @@ class TestCRUDPermission:
     async def test_get_multi_with_filters_passes_tenant_filter(
         self, crud: CRUDPermission, mock_db: MagicMock
     ):
-        tenant_filter = TenantFilter(organization_ids=["org-1"])
+        party_filter = PartyFilter(party_ids=["org-1"])
         mock_db.execute = AsyncMock(return_value=_mock_execute_result(all_values=[]))
 
         with patch.object(crud.query_builder, "build_query", return_value=MagicMock()) as mock_build_query:
             await crud.get_multi_with_filters(
                 mock_db,
-                tenant_filter=tenant_filter,
+                party_filter=party_filter,
             )
 
-        assert mock_build_query.call_args.kwargs.get("tenant_filter") == tenant_filter
+        assert mock_build_query.call_args.kwargs.get("party_filter") == party_filter
 
     async def test_count_by_resource(self, crud: CRUDPermission, mock_db: MagicMock):
         mock_db.execute = AsyncMock(

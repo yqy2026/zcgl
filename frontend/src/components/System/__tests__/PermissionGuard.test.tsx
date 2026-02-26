@@ -49,13 +49,13 @@ vi.mock('../../hooks/usePermission', () => ({
     refreshPermissions: vi.fn(),
   })),
   PERMISSIONS: {
-    USER_VIEW: { resource: 'users', action: 'view' },
-    ROLE_VIEW: { resource: 'roles', action: 'view' },
-    ORGANIZATION_VIEW: { resource: 'organizations', action: 'view' },
-    SYSTEM_LOGS: { resource: 'system', action: 'logs' },
-    ASSET_VIEW: { resource: 'assets', action: 'view' },
-    ASSET_CREATE: { resource: 'assets', action: 'create' },
-    RENTAL_VIEW: { resource: 'rental', action: 'view' },
+    USER_VIEW: { resource: 'user', action: 'read' },
+    ROLE_VIEW: { resource: 'role', action: 'read' },
+    ORGANIZATION_VIEW: { resource: 'organization', action: 'read' },
+    SYSTEM_LOGS: { resource: 'operation_log', action: 'read' },
+    ASSET_VIEW: { resource: 'asset', action: 'read' },
+    ASSET_CREATE: { resource: 'asset', action: 'create' },
+    RENTAL_VIEW: { resource: 'rent_contract', action: 'read' },
   },
 }));
 
@@ -102,7 +102,7 @@ describe('PermissionGuard - 基础渲染', () => {
 
   it('应该正常渲染组件结构', () => {
     const { container } = render(
-      <PermissionGuard permissions={[{ resource: 'assets', action: 'view' }]}>
+      <PermissionGuard permissions={[{ resource: 'asset', action: 'read' }]}>
         <TestComponent />
       </PermissionGuard>
     );
@@ -113,7 +113,7 @@ describe('PermissionGuard - 基础渲染', () => {
 
   it('应该处理null children', () => {
     const { container } = render(
-      <PermissionGuard permissions={[{ resource: 'assets', action: 'view' }]}>
+      <PermissionGuard permissions={[{ resource: 'asset', action: 'read' }]}>
         {null}
       </PermissionGuard>
     );
@@ -124,13 +124,13 @@ describe('PermissionGuard - 基础渲染', () => {
 
   it('应该支持mode属性', () => {
     const { container: containerAny } = render(
-      <PermissionGuard mode="any" permissions={[{ resource: 'assets', action: 'view' }]}>
+      <PermissionGuard mode="any" permissions={[{ resource: 'asset', action: 'read' }]}>
         <TestComponent />
       </PermissionGuard>
     );
 
     const { container: containerAll } = render(
-      <PermissionGuard mode="all" permissions={[{ resource: 'assets', action: 'view' }]}>
+      <PermissionGuard mode="all" permissions={[{ resource: 'asset', action: 'read' }]}>
         <TestComponent />
       </PermissionGuard>
     );
@@ -146,7 +146,7 @@ describe('PermissionGuard - 基础渲染', () => {
 
     const { container } = render(
       <PermissionGuard
-        permissions={[{ resource: 'assets', action: 'view' }]}
+        permissions={[{ resource: 'asset', action: 'read' }]}
         fallback={customFallback}
       >
         <TestComponent />

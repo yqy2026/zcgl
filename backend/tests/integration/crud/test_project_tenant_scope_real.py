@@ -8,7 +8,7 @@ import pytest
 from sqlalchemy.orm import Session
 
 from src.crud.project import project_crud
-from src.crud.query_builder import TenantFilter
+from src.crud.query_builder import PartyFilter
 from src.models.organization import Organization
 from src.models.project import Project
 from tests.integration.conftest import AsyncSessionAdapter
@@ -21,7 +21,7 @@ def _build_code(prefix: str) -> str:
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_project_get_multi_respects_tenant_filter(db_session: Session):
-    """真实数据验证 tenant_filter 只返回目标组织项目。"""
+    """真实数据验证 party_filter 只返回目标组织项目。"""
     project_crud.clear_cache()
     async_db = AsyncSessionAdapter(db_session)
 
@@ -61,7 +61,7 @@ async def test_project_get_multi_respects_tenant_filter(db_session: Session):
         async_db,
         skip=0,
         limit=50,
-        tenant_filter=TenantFilter(organization_ids=[org_a.id]),
+        party_filter=PartyFilter(party_ids=[org_a.id]),
     )
     org_a_ids = {project.id for project in org_a_projects}
     assert project_a.id in org_a_ids
@@ -71,7 +71,7 @@ async def test_project_get_multi_respects_tenant_filter(db_session: Session):
         async_db,
         skip=0,
         limit=50,
-        tenant_filter=TenantFilter(organization_ids=[org_b.id]),
+        party_filter=PartyFilter(party_ids=[org_b.id]),
     )
     org_b_ids = {project.id for project in org_b_projects}
     assert project_b.id in org_b_ids
@@ -91,6 +91,6 @@ async def test_project_get_multi_fail_closed_when_tenant_filter_empty(
         async_db,
         skip=0,
         limit=20,
-        tenant_filter=TenantFilter(organization_ids=[]),
+        party_filter=PartyFilter(party_ids=[]),
     )
     assert projects == []

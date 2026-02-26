@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from src.crud.ownership import CRUDOwnership
-from src.crud.query_builder import TenantFilter
+from src.crud.query_builder import PartyFilter
 from src.models.ownership import Ownership
 
 
@@ -168,18 +168,18 @@ class TestCRUDOwnershipGetMultiWithFilters:
         mock_build.assert_called_once()
 
     def test_get_multi_with_tenant_filter(self, crud, mock_db):
-        """测试透传 tenant_filter 参数"""
-        tenant_filter = TenantFilter(organization_ids=["org-1"])
+        """测试透传 party_filter 参数"""
+        party_filter = PartyFilter(party_ids=["org-1"])
         with patch.object(crud.query_builder, "build_query") as mock_build:
             mock_build.return_value = MagicMock()
             asyncio.run(
                 crud.get_multi_with_filters(
                     mock_db,
-                    tenant_filter=tenant_filter,
+                    party_filter=party_filter,
                 )
             )
 
-        assert mock_build.call_args.kwargs.get("tenant_filter") == tenant_filter
+        assert mock_build.call_args.kwargs.get("party_filter") == party_filter
 
     def test_get_multi_with_pagination(self, crud, mock_db):
         """测试分页参数"""
@@ -195,7 +195,7 @@ class TestCRUDOwnershipGetMultiWithFilters:
             sort_desc=True,
             skip=10,
             limit=20,
-            tenant_filter=None,
+            party_filter=None,
         )
 
 

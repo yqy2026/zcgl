@@ -2,6 +2,7 @@
 
 import inspect
 import json
+import re
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -16,6 +17,23 @@ def test_history_api_module_should_not_use_crud_adapter_calls():
     module_source = inspect.getsource(history)
     assert "asset_crud." not in module_source
     assert "history_crud." not in module_source
+
+
+def test_history_endpoints_should_use_require_authz() -> None:
+    """history 关键端点应接入 require_authz。"""
+    from src.api.v1.system import history
+
+    module_source = inspect.getsource(history)
+    assert "AuthzContext" in module_source
+    assert "require_authz" in module_source
+
+    patterns = [
+        r"async def get_history_list[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"history\"",
+        r"async def get_history_detail[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"history\"[\s\S]*?resource_id=\"\{history_id\}\"",
+        r"async def delete_history[\s\S]*?require_authz\([\s\S]*?action=\"delete\"[\s\S]*?resource_type=\"history\"[\s\S]*?resource_id=\"\{history_id\}\"",
+    ]
+    for pattern in patterns:
+        assert re.search(pattern, module_source), pattern
 
 
 @pytest.mark.asyncio

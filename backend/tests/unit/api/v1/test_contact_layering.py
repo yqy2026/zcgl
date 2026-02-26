@@ -2,6 +2,7 @@
 
 import inspect
 import json
+import re
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -17,6 +18,39 @@ def test_contact_api_module_should_not_use_crud_adapter_calls():
 
     module_source = inspect.getsource(contact)
     assert "contact_crud." not in module_source
+
+
+def test_contact_endpoints_should_use_require_authz() -> None:
+    """contact 关键端点应接入 require_authz。"""
+    from src.api.v1.system import contact
+
+    module_source = inspect.getsource(contact)
+    assert "AuthzContext" in module_source
+    assert "require_authz" in module_source
+
+    patterns = [
+        r"async def create_contact[\s\S]*?require_authz\([\s\S]*?action=\"create\"[\s\S]*?resource_type=\"contact\"[\s\S]*?resource_context=_CONTACT_CREATE_RESOURCE_CONTEXT",
+        r"async def get_contact[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"contact\"[\s\S]*?resource_id=\"\{contact_id\}\"[\s\S]*?deny_as_not_found=True",
+        r"async def get_entity_contacts[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"contact\"[\s\S]*?resource_id=\"\{entity_id\}\"[\s\S]*?deny_as_not_found=True",
+        r"async def get_primary_contact[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"contact\"[\s\S]*?resource_id=\"\{entity_id\}\"[\s\S]*?deny_as_not_found=True",
+        r"async def update_contact[\s\S]*?require_authz\([\s\S]*?action=\"update\"[\s\S]*?resource_type=\"contact\"[\s\S]*?resource_id=\"\{contact_id\}\"",
+        r"async def delete_contact[\s\S]*?require_authz\([\s\S]*?action=\"delete\"[\s\S]*?resource_type=\"contact\"[\s\S]*?resource_id=\"\{contact_id\}\"",
+        r"async def create_contacts_batch[\s\S]*?require_authz\([\s\S]*?action=\"create\"[\s\S]*?resource_type=\"contact\"[\s\S]*?resource_id=\"\{entity_id\}\"",
+    ]
+    for pattern in patterns:
+        assert re.search(pattern, module_source), pattern
+
+
+def test_contact_create_unscoped_context_should_be_defined() -> None:
+    from src.api.v1.system import contact as module
+
+    expected = "__unscoped__:contact:create"
+    assert module._CONTACT_CREATE_UNSCOPED_PARTY_ID == expected
+    assert module._CONTACT_CREATE_RESOURCE_CONTEXT == {
+        "party_id": expected,
+        "owner_party_id": expected,
+        "manager_party_id": expected,
+    }
 
 
 @pytest.mark.asyncio

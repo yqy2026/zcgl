@@ -15,7 +15,7 @@ from src.core.exception_handler import (
     ResourceConflictError,
     ResourceNotFoundError,
 )
-from src.crud.query_builder import TenantFilter
+from src.crud.query_builder import PartyFilter
 from src.models.rbac import Permission, Role, UserRoleAssignment
 from src.schemas.rbac import (
     PermissionCheckRequest,
@@ -69,8 +69,9 @@ def sample_role():
     role.category = "business"
     role.is_system_role = False
     role.organization_id = "org-1"
-    role.scope = "organization"
-    role.scope_id = "org-1"
+    role.party_id = "party-1"
+    role.scope = "party"
+    role.scope_id = "party-1"
     role.is_active = True
     role.created_at = datetime.now(UTC)
     role.created_by = "admin"
@@ -415,13 +416,13 @@ class TestGetRole:
     async def test_get_role_with_current_user_resolves_tenant_filter(
         self, rbac_service, sample_role
     ):
-        """测试 get_role 按 current_user_id 解析并透传 tenant_filter"""
-        tenant_filter = TenantFilter(organization_ids=["org-1"])
+        """测试 get_role 按 current_user_id 解析并透传 party_filter"""
+        party_filter = PartyFilter(party_ids=["org-1"])
         with (
             patch.object(
                 rbac_service,
-                "_resolve_tenant_filter",
-                new=AsyncMock(return_value=tenant_filter),
+                "_resolve_party_filter",
+                new=AsyncMock(return_value=party_filter),
             ) as mock_resolve,
             patch(
                 "src.crud.rbac.role_crud.get",
@@ -433,9 +434,9 @@ class TestGetRole:
         assert role is sample_role
         mock_resolve.assert_awaited_once_with(
             current_user_id="user-1",
-            tenant_filter=None,
+            party_filter=None,
         )
-        assert mock_get.await_args.kwargs.get("tenant_filter") == tenant_filter
+        assert mock_get.await_args.kwargs.get("party_filter") == party_filter
 
 
 # ============================================================================
@@ -491,13 +492,13 @@ class TestGetRoles:
     async def test_get_roles_with_current_user_resolves_tenant_filter(
         self, rbac_service, sample_role
     ):
-        """测试按 current_user_id 自动解析并透传 tenant_filter"""
-        tenant_filter = TenantFilter(organization_ids=["org-1"])
+        """测试按 current_user_id 自动解析并透传 party_filter"""
+        party_filter = PartyFilter(party_ids=["org-1"])
         with (
             patch.object(
                 rbac_service,
-                "_resolve_tenant_filter",
-                new=AsyncMock(return_value=tenant_filter),
+                "_resolve_party_filter",
+                new=AsyncMock(return_value=party_filter),
             ) as mock_resolve,
             patch(
                 "src.crud.rbac.role_crud.get_multi_with_filters",
@@ -510,41 +511,42 @@ class TestGetRoles:
         assert len(roles) == 1
         mock_resolve.assert_awaited_once_with(
             current_user_id="user-1",
-            tenant_filter=None,
+            party_filter=None,
         )
-        assert mock_get_roles.await_args.kwargs.get("tenant_filter") == tenant_filter
+        assert mock_get_roles.await_args.kwargs.get("party_filter") == party_filter
 
 
 class TestTenantFilterResolution:
-    async def test_resolve_tenant_filter_returns_org_ids(self, rbac_service):
-        """测试组织权限服务返回可访问组织时生成 TenantFilter"""
-        mock_org_service = MagicMock()
-        mock_org_service.get_user_accessible_organizations = AsyncMock(
-            return_value=["org-1", "org-2"]
-        )
+    async def test_resolve_party_filter_returns_party_binding_ids(self, rbac_service):
+        """测试 user_party_bindings 返回的 party_id 会生成 PartyFilter。"""
+        binding_1 = MagicMock()
+        binding_1.party_id = "party-1"
+        binding_2 = MagicMock()
+        binding_2.party_id = "party-2"
+
         with patch(
-            "src.services.organization_permission_service.OrganizationPermissionService",
-            return_value=mock_org_service,
+            "src.services.party_scope.party_crud.get_user_bindings",
+            new=AsyncMock(return_value=[binding_1, binding_2]),
         ):
-            tenant_filter = await rbac_service._resolve_tenant_filter(
+            party_filter = await rbac_service._resolve_party_filter(
                 current_user_id="user-1"
             )
 
-        assert tenant_filter is not None
-        assert tenant_filter.organization_ids == ["org-1", "org-2"]
+        assert party_filter is not None
+        assert party_filter.party_ids == ["party-1", "party-2"]
 
-    async def test_resolve_tenant_filter_fail_closed_on_exception(self, rbac_service):
-        """测试 tenant_filter 解析异常时返回空组织（失败关闭）"""
+    async def test_resolve_party_filter_fail_closed_on_exception(self, rbac_service):
+        """测试 party_filter 解析异常时返回空组织（失败关闭）"""
         with patch(
-            "src.services.organization_permission_service.OrganizationPermissionService",
-            side_effect=RuntimeError("boom"),
+            "src.services.party_scope.party_crud.get_user_bindings",
+            new=AsyncMock(side_effect=RuntimeError("boom")),
         ):
-            tenant_filter = await rbac_service._resolve_tenant_filter(
+            party_filter = await rbac_service._resolve_party_filter(
                 current_user_id="user-1"
             )
 
-        assert tenant_filter is not None
-        assert tenant_filter.organization_ids == []
+        assert party_filter is not None
+        assert party_filter.party_ids == []
 
 
 # ============================================================================

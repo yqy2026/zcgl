@@ -359,6 +359,7 @@ class TestRentContractStatistics:
             start_date=None,
             end_date=None,
             owner_party_ids=None,
+            manager_party_ids=None,
             ownership_ids=["ownership-1"],
             asset_ids=None,
         )
@@ -367,6 +368,7 @@ class TestRentContractStatistics:
             start_date=None,
             end_date=None,
             owner_party_ids=None,
+            manager_party_ids=None,
             ownership_ids=["ownership-1"],
             asset_ids=None,
         )
@@ -375,6 +377,7 @@ class TestRentContractStatistics:
             start_date=None,
             end_date=None,
             owner_party_ids=None,
+            manager_party_ids=None,
             ownership_ids=["ownership-1"],
             asset_ids=None,
         )
@@ -440,6 +443,7 @@ class TestRentContractStatistics:
             start_date=start_date,
             end_date=end_date,
             owner_party_ids=owner_party_ids,
+            manager_party_ids=None,
         )
         mock_owner_mapping.assert_awaited_once_with(
             mock_db,
@@ -449,6 +453,7 @@ class TestRentContractStatistics:
             mock_db,
             start_date=start_date,
             end_date=end_date,
+            manager_party_ids=None,
             ownership_ids=["ownership-legacy-1"],
             legacy_only=True,
         )
@@ -486,6 +491,7 @@ class TestRentContractStatistics:
             mock_db,
             start_date=None,
             end_date=None,
+            manager_party_ids=None,
             ownership_ids=["ownership-legacy-1"],
             legacy_only=True,
         )
@@ -527,11 +533,13 @@ class TestRentContractStatistics:
             start_date=None,
             end_date=None,
             owner_party_ids=["party-1"],
+            manager_party_ids=None,
         )
         mock_legacy_stats.assert_awaited_once_with(
             mock_db,
             start_date=None,
             end_date=None,
+            manager_party_ids=None,
             ownership_ids=["ownership-1"],
             legacy_only=True,
         )
@@ -565,6 +573,7 @@ class TestRentContractStatistics:
             mock_db,
             start_date=None,
             end_date=None,
+            manager_party_ids=None,
             ownership_ids=["ownership-missing"],
             legacy_only=True,
         )

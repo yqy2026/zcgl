@@ -357,8 +357,9 @@ class TestSecurityAlertsEndpoint:
 
         assert response.status_code == 403
         data = response.json()
-        # Exception handler puts the detail message in "message" field
-        assert "需要管理员权限" in data.get("message", "")
+        # ABAC 接入后统一返回“权限不足”，保留历史文案兼容断言。
+        message = data.get("message", "")
+        assert "权限不足" in message or "需要管理员权限" in message
 
     async def test_security_alerts_test_without_auth(self, test_client_no_auth):
         """Test that unauthenticated users cannot access /security/alerts/test"""

@@ -1,6 +1,7 @@
 """分层约束测试：auth sessions 路由应委托服务层。"""
 
 import inspect
+import re
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
@@ -15,6 +16,41 @@ def test_auth_sessions_module_should_not_use_crud_adapter_calls() -> None:
 
     module_source = inspect.getsource(sessions)
     assert "session_crud." not in module_source
+
+
+def test_auth_sessions_module_should_not_import_route_authz_dependency() -> None:
+    """自助会话管理路由不应引入与资产等无关的 ABAC 依赖。"""
+    from src.api.v1.auth.auth_modules import sessions
+
+    module_source = inspect.getsource(sessions)
+    assert "AuthzContext" not in module_source
+    assert "require_authz" not in module_source
+
+
+def test_get_user_sessions_should_not_require_asset_authz() -> None:
+    """获取当前用户会话不应依赖 asset:read 权限。"""
+    from src.api.v1.auth.auth_modules import sessions
+
+    module_source = inspect.getsource(sessions)
+    match = re.search(
+        r"async def get_user_sessions[\s\S]*?@router.delete",
+        module_source,
+    )
+    assert match is not None
+    assert "require_authz(" not in match.group(0)
+
+
+def test_revoke_session_should_not_require_asset_authz() -> None:
+    """自助撤销会话不应依赖资产 ABAC 权限。"""
+    from src.api.v1.auth.auth_modules import sessions
+
+    module_source = inspect.getsource(sessions)
+    match = re.search(
+        r"async def revoke_session[\s\S]*",
+        module_source,
+    )
+    assert match is not None
+    assert "require_authz(" not in match.group(0)
 
 
 @pytest.mark.asyncio

@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.crud.rent_contract import rent_contract
+from src.crud.rent_contract import rent_contract, rent_ledger
 from src.models.rent_contract import (
     ContractType,
     PaymentCycle,
@@ -104,8 +104,138 @@ class TestContractV2MultiAsset:
         assert "rent_contract_assets" not in str(items_stmt)
         assert "rent_contract_assets" not in str(count_stmt)
 
-    async def test_contract_with_ownership_join(self, mock_db):
-        """测试合同与权属方的关联查询"""
+    async def test_get_contracts_by_manager_party_id(self, mock_db, sample_contract):
+        """测试通过 manager_party_id 筛选合同。"""
+        mock_items_result = MagicMock()
+        mock_items_scalars = MagicMock()
+        mock_items_scalars.all.return_value = [sample_contract]
+        mock_items_result.scalars.return_value = mock_items_scalars
+
+        mock_count_result = MagicMock()
+        mock_count_result.scalar.return_value = 1
+        mock_db.execute = AsyncMock(side_effect=[mock_items_result, mock_count_result])
+
+        contracts, count = await rent_contract.get_multi_with_filters_async(
+            db=mock_db,
+            manager_party_id="manager_1",
+            skip=0,
+            limit=10,
+        )
+
+        assert contracts == [sample_contract]
+        assert count == 1
+        items_stmt = mock_db.execute.await_args_list[0].args[0]
+        count_stmt = mock_db.execute.await_args_list[1].args[0]
+        assert "manager_party_id" in str(items_stmt)
+        assert "manager_party_id" in str(count_stmt)
+
+    async def test_get_contracts_should_keep_legacy_ownership_fallback_with_scope_filters(
+        self, mock_db, sample_contract
+    ):
+        """存在 owner/manager scope 时应保留 ownership legacy 回退条件。"""
+        mock_items_result = MagicMock()
+        mock_items_scalars = MagicMock()
+        mock_items_scalars.all.return_value = [sample_contract]
+        mock_items_result.scalars.return_value = mock_items_scalars
+
+        mock_count_result = MagicMock()
+        mock_count_result.scalar.return_value = 1
+        mock_db.execute = AsyncMock(side_effect=[mock_items_result, mock_count_result])
+
+        contracts, count = await rent_contract.get_multi_with_filters_async(
+            db=mock_db,
+            owner_party_id="owner_1",
+            ownership_id="ownership_legacy",
+            skip=0,
+            limit=10,
+        )
+
+        assert contracts == [sample_contract]
+        assert count == 1
+        items_stmt = mock_db.execute.await_args_list[0].args[0]
+        count_stmt = mock_db.execute.await_args_list[1].args[0]
+        assert "owner_party_id" in str(items_stmt)
+        assert "ownership_id" in str(items_stmt)
+        assert "owner_party_id IS NULL" in str(items_stmt)
+        assert "manager_party_id IS NULL" in str(items_stmt)
+        assert "ownership_id" in str(count_stmt)
+
+    async def test_get_contracts_should_support_owner_manager_scope_collections(
+        self, mock_db, sample_contract
+    ):
+        """支持 owner/manager 多主体并集过滤。"""
+        mock_items_result = MagicMock()
+        mock_items_scalars = MagicMock()
+        mock_items_scalars.all.return_value = [sample_contract]
+        mock_items_result.scalars.return_value = mock_items_scalars
+
+        mock_count_result = MagicMock()
+        mock_count_result.scalar.return_value = 1
+        mock_db.execute = AsyncMock(side_effect=[mock_items_result, mock_count_result])
+
+        contracts, count = await rent_contract.get_multi_with_filters_async(
+            db=mock_db,
+            owner_party_ids=["owner_1", "owner_2"],
+            manager_party_ids=["manager_1", "manager_2"],
+            skip=0,
+            limit=10,
+        )
+
+        assert contracts == [sample_contract]
+        assert count == 1
+        items_stmt = mock_db.execute.await_args_list[0].args[0]
+        count_stmt = mock_db.execute.await_args_list[1].args[0]
+        assert "owner_party_id IN" in str(items_stmt)
+        assert "manager_party_id IN" in str(items_stmt)
+        assert "owner_party_id IN" in str(count_stmt)
+        assert "manager_party_id IN" in str(count_stmt)
+
+    async def test_get_export_contracts_should_apply_owner_manager_scope(
+        self, mock_db, sample_contract
+    ):
+        """测试导出查询应收敛 owner/manager 作用域。"""
+        mock_items_result = MagicMock()
+        mock_items_scalars = MagicMock()
+        mock_items_scalars.all.return_value = [sample_contract]
+        mock_items_result.scalars.return_value = mock_items_scalars
+        mock_db.execute = AsyncMock(return_value=mock_items_result)
+
+        contracts = await rent_contract.get_export_contracts_async(
+            db=mock_db,
+            owner_party_id="owner_1",
+            manager_party_id="manager_1",
+        )
+
+        assert contracts == [sample_contract]
+        stmt = mock_db.execute.await_args.args[0]
+        assert "owner_party_id" in str(stmt)
+        assert "manager_party_id" in str(stmt)
+
+    async def test_get_export_contracts_should_support_owner_manager_scope_collections(
+        self, mock_db, sample_contract
+    ):
+        """导出查询应支持 owner/manager 多主体并集过滤。"""
+        mock_items_result = MagicMock()
+        mock_items_scalars = MagicMock()
+        mock_items_scalars.all.return_value = [sample_contract]
+        mock_items_result.scalars.return_value = mock_items_scalars
+        mock_db.execute = AsyncMock(return_value=mock_items_result)
+
+        contracts = await rent_contract.get_export_contracts_async(
+            db=mock_db,
+            owner_party_id="owner_1",
+            manager_party_id="manager_1",
+            owner_party_ids=["owner_1", "owner_2"],
+            manager_party_ids=["manager_1", "manager_2"],
+        )
+
+        assert contracts == [sample_contract]
+        stmt = mock_db.execute.await_args.args[0]
+        assert "owner_party_id IN" in str(stmt)
+        assert "manager_party_id IN" in str(stmt)
+
+    async def test_contract_with_details_without_ownership_join(self, mock_db):
+        """测试合同详情查询不再依赖 ownerships 关联表"""
         mock_result = MagicMock()
         mock_scalars = MagicMock()
         mock_scalars.first.return_value = None
@@ -116,7 +246,7 @@ class TestContractV2MultiAsset:
 
         assert result is None
         stmt = mock_db.execute.await_args.args[0]
-        assert "ownerships" in str(stmt)
+        assert "ownerships" not in str(stmt)
 
     async def test_multi_asset_count_query(self, mock_db):
         """测试带资产筛选的count查询"""
@@ -140,6 +270,40 @@ class TestContractV2MultiAsset:
         assert count == 5
         count_stmt = mock_db.execute.await_args_list[1].args[0]
         assert "rent_contract_assets" in str(count_stmt)
+
+
+@pytest.mark.asyncio
+class TestRentLedgerScopeFilters:
+    """测试台账查询作用域过滤。"""
+
+    async def test_get_rent_ledger_should_support_owner_manager_scope_collections(
+        self, mock_db
+    ):
+        mock_items_result = MagicMock()
+        mock_items_scalars = MagicMock()
+        mock_items_scalars.all.return_value = []
+        mock_items_result.scalars.return_value = mock_items_scalars
+
+        mock_count_result = MagicMock()
+        mock_count_result.scalar.return_value = 0
+        mock_db.execute = AsyncMock(side_effect=[mock_items_result, mock_count_result])
+
+        items, count = await rent_ledger.get_multi_with_filters_async(
+            db=mock_db,
+            owner_party_ids=["owner_1", "owner_2"],
+            manager_party_ids=["manager_1", "manager_2"],
+            skip=0,
+            limit=10,
+        )
+
+        assert items == []
+        assert count == 0
+        items_stmt = mock_db.execute.await_args_list[0].args[0]
+        count_stmt = mock_db.execute.await_args_list[1].args[0]
+        assert "owner_party_id IN" in str(items_stmt)
+        assert "manager_party_id IN" in str(items_stmt)
+        assert "owner_party_id IN" in str(count_stmt)
+        assert "manager_party_id IN" in str(count_stmt)
 
 
 class TestContractAsyncRelations:

@@ -95,6 +95,18 @@ class TestAssetSchemaAttachments:
         assert "wuyang_project_name->project_name" in message
         assert "description->notes" in message
 
+    def test_asset_create_allows_owner_party_id_without_ownership_id(self) -> None:
+        model = AssetCreate(
+            owner_party_id="party-001",
+            property_name="测试物业",
+            address="测试地址",
+            ownership_status="已确权",
+            property_nature="经营类",
+            usage_status="出租",
+        )
+
+        assert model.owner_party_id == "party-001"
+
     def test_asset_update_rejects_legacy_fields(self) -> None:
         with pytest.raises(ValidationError) as error:
             AssetUpdate(

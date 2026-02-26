@@ -2,6 +2,7 @@
 
 import ast
 import inspect
+import re
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
@@ -36,6 +37,41 @@ def test_operation_logs_api_module_should_not_import_crud():
     crud_imports = _get_crud_imports(module_source)
 
     assert crud_imports == []
+
+
+def test_operation_logs_endpoints_should_use_require_authz() -> None:
+    """operation_logs 关键端点应接入 require_authz。"""
+    from src.api.v1.system import operation_logs
+
+    module_source = inspect.getsource(operation_logs)
+    assert "AuthzContext" in module_source
+    assert "require_authz" in module_source
+
+    patterns = [
+        r"async def get_operation_logs[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"operation_log\"",
+        r"async def get_operation_log[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"operation_log\"[\s\S]*?resource_id=\"\{log_id\}\"[\s\S]*?deny_as_not_found=True",
+        r"async def get_user_operation_statistics[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"operation_log\"",
+        r"async def get_module_operation_statistics[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"operation_log\"",
+        r"async def get_daily_operation_statistics[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"operation_log\"",
+        r"async def get_error_operation_statistics[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"operation_log\"",
+        r"async def get_operation_log_summary[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"operation_log\"",
+        r"async def export_operation_logs[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"operation_log\"",
+        r"async def cleanup_old_logs[\s\S]*?require_authz\([\s\S]*?action=\"delete\"[\s\S]*?resource_type=\"operation_log\"[\s\S]*?resource_context=_OPERATION_LOG_DELETE_RESOURCE_CONTEXT",
+    ]
+    for pattern in patterns:
+        assert re.search(pattern, module_source), pattern
+
+
+def test_operation_logs_unscoped_delete_context_should_be_defined() -> None:
+    from src.api.v1.system import operation_logs as module
+
+    expected_sentinel = "__unscoped__:operation_log:delete"
+    assert module._OPERATION_LOG_DELETE_UNSCOPED_PARTY_ID == expected_sentinel
+    assert module._OPERATION_LOG_DELETE_RESOURCE_CONTEXT == {
+        "party_id": expected_sentinel,
+        "owner_party_id": expected_sentinel,
+        "manager_party_id": expected_sentinel,
+    }
 
 
 def _build_mock_log() -> MagicMock:
@@ -121,4 +157,3 @@ async def test_cleanup_old_logs_should_delegate_to_service(mock_db):
 
     assert result["deleted_count"] == 5
     mock_service.cleanup_old_logs.assert_awaited_once_with(db=mock_db, days=90)
-

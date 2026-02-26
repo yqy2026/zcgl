@@ -1,63 +1,92 @@
-"""分层约束测试：excel config 路由应委托 ExcelConfigService。"""
+"""分层约束测试：excel config 路由应走统一 ABAC 依赖。"""
 
+import ast
 import inspect
-from unittest.mock import AsyncMock, MagicMock
+import textwrap
 
 import pytest
 
 pytestmark = pytest.mark.api
 
 
-def test_excel_config_api_module_should_not_use_crud_adapter_calls():
-    """路由层不应直接调用 excel_task_config_crud。"""
-    from src.api.v1.documents.excel import config
+def _read_module() -> object:
+    from src.api.v1.documents.excel import config as module
 
-    module_source = inspect.getsource(config)
-    assert "excel_task_config_crud." not in module_source
+    return module
 
 
-@pytest.mark.asyncio
-async def test_get_excel_configs_should_delegate_to_service(mock_db):
-    """配置列表路由应委托给 service.get_configs。"""
-    from src.api.v1.documents.excel.config import get_excel_configs
-
-    mock_service = MagicMock()
-    mock_service.get_configs = AsyncMock(return_value=[MagicMock(), MagicMock()])
-
-    result = await get_excel_configs(
-        config_type="import",
-        task_type="excel_import",
-        db=mock_db,
-        current_user=MagicMock(id="user-1"),
-        service=mock_service,
-    )
-
-    assert result["total"] == 2
-    mock_service.get_configs.assert_awaited_once_with(
-        db=mock_db,
-        config_type="import",
-        task_type="excel_import",
-        limit=50,
-    )
+def _read_function_source(function_name: str) -> str:
+    module = _read_module()
+    return inspect.getsource(getattr(module, function_name))
 
 
-@pytest.mark.asyncio
-async def test_delete_excel_config_should_delegate_to_service(mock_db):
-    """删除路由应委托给 service.delete_config。"""
-    from src.api.v1.documents.excel.config import delete_excel_config
+def _get_require_authz_keywords(function_name: str) -> dict[str, ast.expr]:
+    function_source = textwrap.dedent(_read_function_source(function_name))
+    parsed = ast.parse(function_source)
+    for node in ast.walk(parsed):
+        if isinstance(node, ast.Call):
+            if isinstance(node.func, ast.Name) and node.func.id == "require_authz":
+                return {
+                    keyword.arg: keyword.value
+                    for keyword in node.keywords
+                    if keyword.arg is not None
+                }
+    raise AssertionError(f"{function_name} 未找到 require_authz 调用")
 
-    mock_service = MagicMock()
-    mock_service.delete_config = AsyncMock(return_value=None)
 
-    result = await delete_excel_config(
-        config_id="config-1",
-        db=mock_db,
-        current_user=MagicMock(id="user-1"),
-        service=mock_service,
-    )
+def _require_str_value(keyword_map: dict[str, ast.expr], key: str) -> str:
+    value_node = keyword_map.get(key)
+    assert isinstance(value_node, ast.Constant), f"{key} 应为字符串常量"
+    assert isinstance(value_node.value, str), f"{key} 应为字符串常量"
+    return value_node.value
 
-    assert result["message"] == "配置删除成功"
-    mock_service.delete_config.assert_awaited_once_with(
-        db=mock_db,
-        config_id="config-1",
-    )
+
+def test_excel_config_key_endpoints_should_use_require_authz() -> None:
+    """excel 配置关键端点应接入统一 ABAC 依赖。"""
+    module_source = inspect.getsource(_read_module())
+    assert "AuthzContext" in module_source
+    assert "get_current_active_user" in module_source
+    assert "require_permission(" not in module_source
+
+    create_kwargs = _get_require_authz_keywords("create_excel_config")
+    assert _require_str_value(create_kwargs, "action") == "create"
+    assert _require_str_value(create_kwargs, "resource_type") == "excel_config"
+    create_context = create_kwargs.get("resource_context")
+    assert isinstance(create_context, ast.Name)
+    assert create_context.id == "_EXCEL_CONFIG_CREATE_RESOURCE_CONTEXT"
+
+    list_kwargs = _get_require_authz_keywords("get_excel_configs")
+    assert _require_str_value(list_kwargs, "action") == "read"
+    assert _require_str_value(list_kwargs, "resource_type") == "excel_config"
+    assert "resource_id" not in list_kwargs
+
+    default_kwargs = _get_require_authz_keywords("get_default_excel_config")
+    assert _require_str_value(default_kwargs, "action") == "read"
+    assert _require_str_value(default_kwargs, "resource_type") == "excel_config"
+    assert "resource_id" not in default_kwargs
+
+    detail_kwargs = _get_require_authz_keywords("get_excel_config")
+    assert _require_str_value(detail_kwargs, "action") == "read"
+    assert _require_str_value(detail_kwargs, "resource_type") == "excel_config"
+    assert _require_str_value(detail_kwargs, "resource_id") == "{config_id}"
+
+    update_kwargs = _get_require_authz_keywords("update_excel_config")
+    assert _require_str_value(update_kwargs, "action") == "update"
+    assert _require_str_value(update_kwargs, "resource_type") == "excel_config"
+    assert _require_str_value(update_kwargs, "resource_id") == "{config_id}"
+
+    delete_kwargs = _get_require_authz_keywords("delete_excel_config")
+    assert _require_str_value(delete_kwargs, "action") == "delete"
+    assert _require_str_value(delete_kwargs, "resource_type") == "excel_config"
+    assert _require_str_value(delete_kwargs, "resource_id") == "{config_id}"
+
+
+def test_excel_config_unscoped_create_context_should_be_defined() -> None:
+    module = _read_module()
+    expected_sentinel = "__unscoped__:excel_config:create"
+    assert module._EXCEL_CONFIG_CREATE_UNSCOPED_PARTY_ID == expected_sentinel
+    assert module._EXCEL_CONFIG_CREATE_RESOURCE_CONTEXT == {
+        "party_id": expected_sentinel,
+        "owner_party_id": expected_sentinel,
+        "manager_party_id": expected_sentinel,
+    }

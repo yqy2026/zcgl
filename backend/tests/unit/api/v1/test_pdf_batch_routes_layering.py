@@ -1,6 +1,7 @@
 """分层约束测试：pdf_batch_routes 路由应委托服务层。"""
 
 import json
+import re
 from pathlib import Path
 from unittest.mock import ANY, AsyncMock, MagicMock
 
@@ -9,13 +10,60 @@ import pytest
 pytestmark = pytest.mark.api
 
 
-def test_pdf_batch_routes_module_should_not_import_session_crud_directly() -> None:
-    """pdf_batch_routes 路由模块不应直接导入 PDFImportSessionCRUD。"""
+def _read_module_source() -> str:
     from src.api.v1.documents import pdf_batch_routes as module
 
-    module_source = Path(module.__file__).read_text(encoding="utf-8")
+    return Path(module.__file__).read_text(encoding="utf-8")
+
+
+def test_pdf_batch_routes_module_should_not_import_session_crud_directly() -> None:
+    """pdf_batch_routes 路由模块不应直接导入 PDFImportSessionCRUD。"""
+    module_source = _read_module_source()
     assert "from ....crud.pdf_import_session import PDFImportSessionCRUD" not in module_source
     assert "PDFImportSessionCRUD(" not in module_source
+
+
+def test_pdf_batch_routes_key_endpoints_should_use_require_authz() -> None:
+    """pdf 批处理关键端点应接入统一 ABAC 依赖。"""
+    module_source = _read_module_source()
+    expected_patterns = [
+        r"async def batch_upload_pdfs[\s\S]*?require_authz\([\s\S]*?action=\"create\"[\s\S]*?resource_type=\"rent_contract\"[\s\S]*?resource_context=_RENT_CONTRACT_CREATE_RESOURCE_CONTEXT",
+        r"async def get_batch_status[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"rent_contract\"",
+        r"async def list_batches[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"rent_contract\"",
+        r"async def cancel_batch[\s\S]*?require_authz\([\s\S]*?action=\"update\"[\s\S]*?resource_type=\"rent_contract\"[\s\S]*?resource_context=_RENT_CONTRACT_UPDATE_RESOURCE_CONTEXT",
+        r"def cleanup_completed_batches[\s\S]*?require_authz\([\s\S]*?action=\"delete\"[\s\S]*?resource_type=\"rent_contract\"[\s\S]*?resource_context=_RENT_CONTRACT_DELETE_RESOURCE_CONTEXT",
+        r"def batch_health_check[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"rent_contract\"",
+    ]
+    for pattern in expected_patterns:
+        assert re.search(pattern, module_source), pattern
+
+
+def test_pdf_batch_routes_unscoped_write_context_should_be_defined() -> None:
+    from src.api.v1.documents import pdf_batch_routes as module
+
+    expected_create = "__unscoped__:rent_contract:create"
+    assert module._RENT_CONTRACT_CREATE_UNSCOPED_PARTY_ID == expected_create
+    assert module._RENT_CONTRACT_CREATE_RESOURCE_CONTEXT == {
+        "party_id": expected_create,
+        "owner_party_id": expected_create,
+        "manager_party_id": expected_create,
+    }
+
+    expected_update = "__unscoped__:rent_contract:update"
+    assert module._RENT_CONTRACT_UPDATE_UNSCOPED_PARTY_ID == expected_update
+    assert module._RENT_CONTRACT_UPDATE_RESOURCE_CONTEXT == {
+        "party_id": expected_update,
+        "owner_party_id": expected_update,
+        "manager_party_id": expected_update,
+    }
+
+    expected_delete = "__unscoped__:rent_contract:delete"
+    assert module._RENT_CONTRACT_DELETE_UNSCOPED_PARTY_ID == expected_delete
+    assert module._RENT_CONTRACT_DELETE_RESOURCE_CONTEXT == {
+        "party_id": expected_delete,
+        "owner_party_id": expected_delete,
+        "manager_party_id": expected_delete,
+    }
 
 
 @pytest.mark.asyncio

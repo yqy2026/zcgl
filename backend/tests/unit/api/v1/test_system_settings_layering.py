@@ -1,6 +1,7 @@
 """分层约束测试：system_settings 路由应委托 SystemSettingsService。"""
 
 import inspect
+import re
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -16,6 +17,59 @@ def test_system_settings_api_module_should_not_use_crud_adapter_calls():
     module_source = inspect.getsource(system_settings)
     assert "AuditLogCRUD" not in module_source
     assert "security_event_crud." not in module_source
+
+
+def test_system_settings_module_should_import_authz_dependency():
+    """system_settings 路由应引入统一 ABAC 依赖。"""
+    from src.api.v1.system import system_settings
+
+    module_source = inspect.getsource(system_settings)
+    assert "AuthzContext" in module_source
+    assert "require_authz" in module_source
+
+
+def test_system_settings_endpoints_should_use_require_authz():
+    """system_settings 关键端点应接入 require_authz。"""
+    from src.api.v1.system import system_settings
+
+    module_source = inspect.getsource(system_settings)
+    expected_patterns = [
+        r"async def test_security_alert[\s\S]*?require_authz\([\s\S]*?action=\"update\"[\s\S]*?resource_type=\"system_settings\"[\s\S]*?resource_context=_SYSTEM_SETTINGS_UPDATE_RESOURCE_CONTEXT",
+        r"async def get_security_events[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"system_settings\"",
+        r"async def get_system_settings[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"system_settings\"",
+        r"async def update_system_settings[\s\S]*?require_authz\([\s\S]*?action=\"update\"[\s\S]*?resource_type=\"system_settings\"[\s\S]*?resource_context=_SYSTEM_SETTINGS_UPDATE_RESOURCE_CONTEXT",
+        r"async def get_system_info[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"system_settings\"",
+        r"async def backup_system[\s\S]*?require_authz\([\s\S]*?action=\"create\"[\s\S]*?resource_type=\"system_settings\"[\s\S]*?resource_context=_SYSTEM_SETTINGS_CREATE_RESOURCE_CONTEXT",
+        r"async def restore_system[\s\S]*?require_authz\([\s\S]*?action=\"update\"[\s\S]*?resource_type=\"system_settings\"[\s\S]*?resource_context=_SYSTEM_SETTINGS_UPDATE_RESOURCE_CONTEXT",
+    ]
+    for pattern in expected_patterns:
+        assert re.search(pattern, module_source), pattern
+
+
+def test_system_settings_backup_create_authz_context_should_use_unscoped_sentinel() -> None:
+    from src.api.v1.system import system_settings
+
+    expected_create_sentinel = "__unscoped__:system_settings:create"
+    assert (
+        system_settings._SYSTEM_SETTINGS_CREATE_UNSCOPED_PARTY_ID
+        == expected_create_sentinel
+    )
+    assert system_settings._SYSTEM_SETTINGS_CREATE_RESOURCE_CONTEXT == {
+        "party_id": expected_create_sentinel,
+        "owner_party_id": expected_create_sentinel,
+        "manager_party_id": expected_create_sentinel,
+    }
+
+    expected_update_sentinel = "__unscoped__:system_settings:update"
+    assert (
+        system_settings._SYSTEM_SETTINGS_UPDATE_UNSCOPED_PARTY_ID
+        == expected_update_sentinel
+    )
+    assert system_settings._SYSTEM_SETTINGS_UPDATE_RESOURCE_CONTEXT == {
+        "party_id": expected_update_sentinel,
+        "owner_party_id": expected_update_sentinel,
+        "manager_party_id": expected_update_sentinel,
+    }
 
 
 def test_system_settings_api_module_should_not_execute_db_query_directly():

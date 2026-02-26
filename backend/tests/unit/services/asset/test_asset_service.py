@@ -14,7 +14,7 @@ from src.core.exception_handler import (
     OperationNotAllowedError,
     ResourceNotFoundError,
 )
-from src.crud.query_builder import TenantFilter
+from src.crud.query_builder import PartyFilter
 from src.models.asset import Asset
 from src.models.auth import User
 from src.schemas.asset import AssetCreate, AssetUpdate
@@ -219,15 +219,15 @@ class TestGetAssets:
     async def test_get_assets_with_current_user_resolves_tenant_filter(
         self, service, mock_db
     ):
-        """测试 get_assets 按当前用户自动解析 tenant_filter 并透传"""
+        """测试 get_assets 按当前用户自动解析 party_filter 并透传"""
         mock_assets = [MagicMock(spec=Asset)]
-        tenant_filter = TenantFilter(organization_ids=["org-1", "org-2"])
+        party_filter = PartyFilter(party_ids=["org-1", "org-2"])
 
         with (
             patch.object(
                 service,
-                "_resolve_tenant_filter",
-                new=AsyncMock(return_value=tenant_filter),
+                "_resolve_party_filter",
+                new=AsyncMock(return_value=party_filter),
             ) as mock_resolve,
             patch(
                 "src.crud.asset.asset_crud.get_multi_with_search_async",
@@ -240,45 +240,84 @@ class TestGetAssets:
         assert result == (mock_assets, 2)
         mock_resolve.assert_awaited_once_with(
             current_user_id="user-1",
-            tenant_filter=None,
+            party_filter=None,
         )
         call_kwargs = mock_get.call_args.kwargs
-        assert call_kwargs["tenant_filter"] == tenant_filter
+        assert call_kwargs["party_filter"] == party_filter
 
 
 class TestTenantFilterResolution:
-    async def test_resolve_tenant_filter_returns_org_ids(self, service):
-        """测试可访问组织列表会被转换为 TenantFilter"""
-        mock_org_service = MagicMock()
-        mock_org_service.get_user_accessible_organizations = AsyncMock(
-            return_value=["org-1", "org-2"]
-        )
+    async def test_resolve_party_filter_returns_party_binding_ids(self, service):
+        """测试 user_party_bindings 会被转换为 PartyFilter。"""
+        binding_1 = MagicMock()
+        binding_1.party_id = "party-1"
+        binding_2 = MagicMock()
+        binding_2.party_id = "party-2"
         with patch(
-            "src.services.organization_permission_service.OrganizationPermissionService",
-            return_value=mock_org_service,
+            "src.services.party_scope.party_crud.get_user_bindings",
+            new=AsyncMock(return_value=[binding_1, binding_2]),
         ):
-            tenant_filter = await service._resolve_tenant_filter(
+            party_filter = await service._resolve_party_filter(
                 current_user_id="user-1"
             )
 
-        assert tenant_filter is not None
-        assert tenant_filter.organization_ids == ["org-1", "org-2"]
+        assert party_filter is not None
+        assert party_filter.party_ids == ["party-1", "party-2"]
 
-    async def test_resolve_tenant_filter_fail_closed_on_exception(self, service):
-        """测试 tenant_filter 解析失败时走失败关闭策略"""
+    async def test_resolve_party_filter_uses_user_party_bindings(self, service):
+        """应使用 user_party_bindings 解析过滤范围。"""
+        binding = MagicMock()
+        binding.party_id = "party-1"
+
         with patch(
-            "src.services.organization_permission_service.OrganizationPermissionService",
-            side_effect=RuntimeError("boom"),
+            "src.services.party_scope.party_crud.get_user_bindings",
+            new=AsyncMock(return_value=[binding]),
         ):
-            tenant_filter = await service._resolve_tenant_filter(
+            party_filter = await service._resolve_party_filter(
                 current_user_id="user-1"
             )
 
-        assert tenant_filter is not None
-        assert tenant_filter.organization_ids == []
+        assert party_filter is not None
+        assert party_filter.party_ids == ["party-1"]
+
+    async def test_resolve_party_filter_keeps_bindings_when_org_lookup_fails(
+        self, service
+    ):
+        """party binding 解析成功时应返回绑定范围。"""
+        binding = MagicMock()
+        binding.party_id = "party-1"
+
+        with patch(
+            "src.services.party_scope.party_crud.get_user_bindings",
+            new=AsyncMock(return_value=[binding]),
+        ):
+            party_filter = await service._resolve_party_filter(
+                current_user_id="user-1"
+            )
+
+        assert party_filter is not None
+        assert party_filter.party_ids == ["party-1"]
+
+    async def test_resolve_party_filter_fail_closed_on_exception(self, service):
+        """测试 party_filter 解析失败时走失败关闭策略"""
+        with patch(
+            "src.services.party_scope.party_crud.get_user_bindings",
+            new=AsyncMock(side_effect=RuntimeError("boom")),
+        ):
+            party_filter = await service._resolve_party_filter(
+                current_user_id="user-1"
+            )
+
+        assert party_filter is not None
+        assert party_filter.party_ids == []
 
 
 class TestBuildFilters:
+    async def test_build_filters_includes_ownership_id(self) -> None:
+        filters = AssetService.build_filters(ownership_id="ownership-1")
+        assert filters is not None
+        assert filters["ownership_id"] == "ownership-1"
+
     async def test_build_filters_includes_occupancy_rate_range(self) -> None:
         filters = AssetService.build_filters(
             min_occupancy_rate=25.5,
@@ -348,13 +387,13 @@ class TestGetAsset:
     async def test_get_asset_with_current_user_resolves_tenant_filter(
         self, service, mock_asset
     ) -> None:
-        tenant_filter = TenantFilter(organization_ids=["org-1"])
+        party_filter = PartyFilter(party_ids=["org-1"])
 
         with (
             patch.object(
                 service,
-                "_resolve_tenant_filter",
-                new=AsyncMock(return_value=tenant_filter),
+                "_resolve_party_filter",
+                new=AsyncMock(return_value=party_filter),
             ) as mock_resolve,
             patch(
                 "src.crud.asset.asset_crud.get_async",
@@ -370,20 +409,20 @@ class TestGetAsset:
         assert result == mock_asset
         mock_resolve.assert_awaited_once_with(
             current_user_id="user-1",
-            tenant_filter=None,
+            party_filter=None,
         )
         mock_get_async.assert_awaited_once_with(
             db=service.db,
             id=TEST_ASSET_ID,
             use_cache=True,
-            tenant_filter=tenant_filter,
+            party_filter=party_filter,
         )
 
     async def test_get_asset_fail_closed_when_no_accessible_org(self, service) -> None:
         with patch.object(
             service,
-            "_resolve_tenant_filter",
-            new=AsyncMock(return_value=TenantFilter(organization_ids=[])),
+            "_resolve_party_filter",
+            new=AsyncMock(return_value=PartyFilter(party_ids=[])),
         ):
             with patch(
                 "src.crud.asset.asset_crud.get_async",
@@ -413,7 +452,7 @@ class TestGetAssetHistoryRecords:
         assert result == history_records
         mock_get_asset.assert_awaited_once_with(
             TEST_ASSET_ID,
-            tenant_filter=None,
+            party_filter=None,
             current_user_id=None,
         )
         mock_get_history.assert_awaited_once_with(service.db, asset_id=TEST_ASSET_ID)
@@ -741,6 +780,7 @@ class TestUpdateAsset:
                     result = await service.update_asset(TEST_ASSET_ID, asset_in)
 
                     assert result == mock_asset
+
 
     async def test_update_asset_area_validation_fails(self, service, mock_asset):
         """测试更新时面积一致性验证失败"""
@@ -1116,3 +1156,64 @@ class TestEdgeCases:
                     result = await service.update_asset(TEST_ASSET_ID, asset_in)
 
                     assert result == mock_asset
+
+
+class TestOwnershipPartyScopeResolution:
+    async def test_resolve_owner_party_scope_should_return_none_for_blank_ownership_id(
+        self, service
+    ):
+        """空 ownership_id 应直接返回 None。"""
+        resolved = await service.resolve_owner_party_scope_by_ownership_id_async(
+            ownership_id="  ",
+        )
+        assert resolved is None
+
+    async def test_resolve_owner_party_scope_should_forward_ownership_metadata(
+        self, service
+    ):
+        """应将 ownership_id/code/name 透传到 party 解析层。"""
+        ownership_obj = MagicMock()
+        ownership_obj.code = "OWN-CODE"
+        ownership_obj.name = "OWN-NAME"
+        with (
+            patch(
+                "src.services.asset.asset_service.ownership.get",
+                new=AsyncMock(return_value=ownership_obj),
+            ) as mock_get_ownership,
+            patch(
+                "src.services.asset.asset_service.party_crud.resolve_legal_entity_party_id",
+                new=AsyncMock(return_value="party-1"),
+            ) as mock_resolve_party,
+        ):
+            resolved = await service.resolve_owner_party_scope_by_ownership_id_async(
+                ownership_id="ownership-1",
+            )
+
+        assert resolved == "party-1"
+        mock_get_ownership.assert_awaited_once_with(service.db, id="ownership-1")
+        mock_resolve_party.assert_awaited_once_with(
+            service.db,
+            ownership_id="ownership-1",
+            ownership_code="OWN-CODE",
+            ownership_name="OWN-NAME",
+        )
+
+    async def test_resolve_owner_party_scope_should_return_none_when_party_unresolved(
+        self, service
+    ):
+        """party 未解析成功时应返回 None。"""
+        with (
+            patch(
+                "src.services.asset.asset_service.ownership.get",
+                new=AsyncMock(return_value=None),
+            ),
+            patch(
+                "src.services.asset.asset_service.party_crud.resolve_legal_entity_party_id",
+                new=AsyncMock(return_value="   "),
+            ),
+        ):
+            resolved = await service.resolve_owner_party_scope_by_ownership_id_async(
+                ownership_id="ownership-1",
+            )
+
+        assert resolved is None

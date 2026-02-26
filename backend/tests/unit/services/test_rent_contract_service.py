@@ -1,5 +1,6 @@
 from datetime import date
 from decimal import Decimal
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -72,6 +73,10 @@ class TestRentContractService:
             contract_number="CT-2026",
             tenant_name=None,
             asset_id=None,
+            owner_party_id=None,
+            manager_party_id=None,
+            owner_party_ids=None,
+            manager_party_ids=None,
             ownership_id=None,
             contract_status=None,
             start_date=None,
@@ -98,6 +103,10 @@ class TestRentContractService:
             skip=0,
             limit=200,
             asset_id="asset_001",
+            owner_party_id=None,
+            manager_party_id=None,
+            owner_party_ids=None,
+            manager_party_ids=None,
         )
 
     @pytest.mark.asyncio
@@ -108,3 +117,67 @@ class TestRentContractService:
 
         with pytest.raises(BusinessValidationError, match="合同编号不能为空"):
             await service.create_contract_async(mock_db, obj_in=obj_in)
+
+    @pytest.mark.asyncio
+    async def test_resolve_owner_party_scope_should_return_none_for_blank_ownership_id(
+        self, service, mock_db
+    ):
+        with patch(
+            "src.services.rent_contract.service.ownership_crud.get",
+            new=AsyncMock(),
+        ) as mock_get_ownership, patch(
+            "src.services.rent_contract.service.party_crud.resolve_legal_entity_party_id",
+            new=AsyncMock(),
+        ) as mock_resolve_party:
+            resolved = await service.resolve_owner_party_scope_by_ownership_id_async(
+                mock_db,
+                ownership_id="  ",
+            )
+
+        assert resolved is None
+        mock_get_ownership.assert_not_awaited()
+        mock_resolve_party.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_resolve_owner_party_scope_should_forward_ownership_metadata(
+        self, service, mock_db
+    ):
+        mock_ownership = SimpleNamespace(code="OW-001", name="权属方一")
+        with patch(
+            "src.services.rent_contract.service.ownership_crud.get",
+            new=AsyncMock(return_value=mock_ownership),
+        ) as mock_get_ownership, patch(
+            "src.services.rent_contract.service.party_crud.resolve_legal_entity_party_id",
+            new=AsyncMock(return_value="party-1"),
+        ) as mock_resolve_party:
+            resolved = await service.resolve_owner_party_scope_by_ownership_id_async(
+                mock_db,
+                ownership_id="ownership-1",
+            )
+
+        assert resolved == "party-1"
+        mock_get_ownership.assert_awaited_once_with(mock_db, id="ownership-1")
+        mock_resolve_party.assert_awaited_once_with(
+            mock_db,
+            ownership_id="ownership-1",
+            ownership_code="OW-001",
+            ownership_name="权属方一",
+        )
+
+    @pytest.mark.asyncio
+    async def test_resolve_owner_party_scope_should_return_none_when_party_unresolved(
+        self, service, mock_db
+    ):
+        with patch(
+            "src.services.rent_contract.service.ownership_crud.get",
+            new=AsyncMock(return_value=MagicMock(code="OW-001", name="权属方一")),
+        ), patch(
+            "src.services.rent_contract.service.party_crud.resolve_legal_entity_party_id",
+            new=AsyncMock(return_value=None),
+        ):
+            resolved = await service.resolve_owner_party_scope_by_ownership_id_async(
+                mock_db,
+                ownership_id="ownership-1",
+            )
+
+        assert resolved is None

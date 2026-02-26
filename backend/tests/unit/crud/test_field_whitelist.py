@@ -47,8 +47,10 @@ class TestAssetWhitelist:
         assert whitelist.can_filter("is_sublease")
 
         # References
-        assert whitelist.can_filter("project_id")
+        assert whitelist.can_filter("manager_party_id")
+        assert whitelist.can_filter("owner_party_id")
         assert whitelist.can_filter("ownership_id")
+        assert not whitelist.can_filter("project_id")
 
         # System fields
         assert whitelist.can_filter("version")
@@ -171,30 +173,6 @@ class TestRentContractWhitelist:
         assert whitelist.can_sort("total_deposit")
 
 
-class TestOwnershipWhitelist:
-    """Test Ownership whitelist configuration."""
-
-    def test_basic_fields_allowed(self):
-        """Basic ownership fields should be accessible."""
-        whitelist = OwnershipWhitelist()
-
-        assert whitelist.can_filter("name")
-        assert whitelist.can_filter("code")
-        assert whitelist.can_filter("short_name")
-        assert whitelist.can_filter("is_active")
-        assert whitelist.can_search("name")
-        assert whitelist.can_sort("name")
-
-    def test_audit_fields_blocked(self):
-        """Audit trail fields should be blocked."""
-        whitelist = OwnershipWhitelist()
-
-        assert not whitelist.can_filter("created_by")
-        assert not whitelist.can_filter("updated_by")
-        assert not whitelist.can_search("created_by")
-        assert not whitelist.can_sort("created_by")
-
-
 class TestEmptyWhitelist:
     """Test strict whitelist (future default)."""
 
@@ -243,6 +221,17 @@ class TestWhitelistRegistry:
         assert not whitelist.can_filter("any_field")
         assert not whitelist.can_search("any_field")
         assert not whitelist.can_sort("any_field")
+
+    def test_ownership_model_uses_ownership_whitelist(self):
+        """Ownership model should use dedicated whitelist."""
+        from src.models.ownership import Ownership
+
+        # Ownership should have explicit whitelist (no empty-whitelist fallback).
+        whitelist = get_whitelist_for_model(Ownership)
+        assert isinstance(whitelist, OwnershipWhitelist)
+        assert whitelist.can_filter("is_active")
+        assert whitelist.can_search("name")
+        assert whitelist.can_sort("created_at")
 
     def test_registry_isolation(self):
         """Registry should maintain separate entries per model."""

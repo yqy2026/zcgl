@@ -68,7 +68,7 @@ def test_project_response_skips_unloaded_ownership_relations() -> None:
     ):
         result = ProjectResponse.model_validate(dummy)
 
-    assert result.ownership_relations == []
+    assert result.ownership_relations is None
 
 
 def test_organization_response_skips_unloaded_children() -> None:

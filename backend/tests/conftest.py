@@ -6,6 +6,7 @@ import base64
 import os
 import sys
 import unittest.mock as _mock
+from pathlib import Path
 
 # Work around Python's MagicMock(spec=..., __dict__=...) init bug in tests.
 _OriginalMagicMock = _mock.MagicMock
@@ -23,12 +24,37 @@ _mock.MagicMock = _SafeMagicMock
 
 import pytest
 
+
+def _resolve_test_database_url() -> str | None:
+    """Resolve TEST_DATABASE_URL from env first, then backend/.env as fallback."""
+    env_value = os.getenv("TEST_DATABASE_URL")
+    if env_value:
+        return env_value
+
+    env_file = Path(__file__).resolve().parents[1] / ".env"
+    if not env_file.exists():
+        return None
+
+    for raw_line in env_file.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if line == "" or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        if key.strip() != "TEST_DATABASE_URL":
+            continue
+        parsed_value = value.strip().strip("\"'")
+        if parsed_value:
+            return parsed_value
+    return None
+
+
 # Set environment variables at the earliest possible moment
 # Use TEST_DATABASE_URL for database-backed tests
 # Integration/E2E tests should set their own *_TEST_DATABASE_URL
 # Performance improvement: 37min → <5min (estimated)
-TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
+TEST_DATABASE_URL = _resolve_test_database_url()
 if TEST_DATABASE_URL:
+    os.environ["TEST_DATABASE_URL"] = TEST_DATABASE_URL
     os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 elif "DATABASE_URL" not in os.environ:
     # Fallback placeholder to satisfy settings import in non-DB tests
@@ -172,6 +198,10 @@ def setup_test_database():
     is_unit_path_run = any(
         "/tests/unit/" in arg
         or "\\tests\\unit\\" in arg
+        or arg.startswith("tests/unit/")
+        or arg.startswith("tests\\unit\\")
+        or arg == "tests/unit"
+        or arg == "tests\\unit"
         or arg.endswith("/tests/unit")
         or arg.endswith("\\tests\\unit")
         for arg in cli_args
@@ -195,6 +225,7 @@ def setup_test_database():
                 print(f"[!] Migration warnings: {result.stderr}")
                 from sqlalchemy import create_engine
 
+                import src.models  # noqa: F401 - ensure all model tables are registered
                 from src.database import Base
 
                 engine = create_engine(database_url)
@@ -205,6 +236,7 @@ def setup_test_database():
             try:
                 from sqlalchemy import create_engine
 
+                import src.models  # noqa: F401 - ensure all model tables are registered
                 from src.database import Base
 
                 engine = create_engine(database_url)

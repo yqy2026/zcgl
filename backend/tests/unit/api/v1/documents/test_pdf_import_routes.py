@@ -3,6 +3,7 @@ PDF Import Routes 测试
 测试 PDF 导入路由的端点
 """
 
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, mock_open, patch
 
 import pytest
@@ -48,7 +49,7 @@ def mock_pdf_service():
 
 
 @pytest.fixture
-def client(mock_db, mock_user, mock_pdf_service):
+def client(mock_db, mock_user, mock_pdf_service, monkeypatch):
     """测试客户端"""
 
     async def override_get_db():
@@ -63,6 +64,10 @@ def client(mock_db, mock_user, mock_pdf_service):
     app.dependency_overrides[get_async_db] = override_get_db
     app.dependency_overrides[get_current_active_user] = override_get_user
     app.dependency_overrides[get_pdf_import_service] = override_get_pdf_service
+    monkeypatch.setattr(
+        "src.middleware.auth.authz_service.check_access",
+        AsyncMock(return_value=SimpleNamespace(allowed=True, reason_code="ALLOW")),
+    )
 
     with TestClient(app) as test_client:
         yield test_client

@@ -14,19 +14,49 @@ from uuid import uuid4
 import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import create_engine
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, sessionmaker
 
 # 添加backend根目录到Python路径
 backend_root = Path(__file__).parent
 sys.path.insert(0, str(backend_root))
 
+
+def _resolve_test_database_url() -> str | None:
+    """
+    Resolve TEST_DATABASE_URL from env first, then backend/.env as fallback.
+
+    This keeps db-backed tests usable when developers only configure backend/.env
+    without exporting shell-level environment variables.
+    """
+    env_value = os.getenv("TEST_DATABASE_URL")
+    if env_value:
+        return env_value
+
+    env_file = backend_root / ".env"
+    if not env_file.exists():
+        return None
+
+    for raw_line in env_file.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if line == "" or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        if key.strip() != "TEST_DATABASE_URL":
+            continue
+        parsed_value = value.strip().strip("\"'")
+        if parsed_value:
+            return parsed_value
+    return None
+
 # 设置测试模式环境变量（在导入app之前）
 os.environ["TESTING_MODE"] = "true"
 os.environ["ENVIRONMENT"] = "testing"
 os.environ["DEBUG"] = "true"  # 启用调试模式以允许访问调试端点
 
-TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
+TEST_DATABASE_URL = _resolve_test_database_url()
 if TEST_DATABASE_URL:
+    os.environ["TEST_DATABASE_URL"] = TEST_DATABASE_URL
     os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 elif not os.getenv("DATABASE_URL"):
     # Fallback placeholder to satisfy settings import in non-DB tests
@@ -104,7 +134,16 @@ def test_engine():
 
     os.environ["DATABASE_URL"] = TEST_DATABASE_URL
     engine = create_engine(TEST_DATABASE_URL, pool_pre_ping=True)
-    Base.metadata.create_all(bind=engine)
+    try:
+        with engine.connect():
+            pass
+        Base.metadata.create_all(bind=engine)
+    except SQLAlchemyError as exc:
+        engine.dispose()
+        pytest.skip(
+            f"TEST_DATABASE_URL unreachable for database tests: {exc}",
+            allow_module_level=True,
+        )
     yield engine
     try:
         Base.metadata.drop_all(bind=engine)

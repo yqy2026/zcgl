@@ -1,9 +1,10 @@
 from sqlalchemy import select
 
-from src.crud.query_builder import QueryBuilder, TenantFilter
+from src.crud.query_builder import PartyFilter, QueryBuilder
 from src.models.asset import Asset  # Using Asset as a test model
 from src.models.ownership import Ownership
 from src.models.rbac import Role
+from src.models.system_dictionary import AssetCustomField
 
 
 class TestQueryBuilder:
@@ -89,34 +90,136 @@ class TestQueryBuilder:
         assert "assets.data_status = '已删除'" in compiled
         assert "assets.data_status IS NULL" not in compiled
 
-    def test_build_query_applies_tenant_filter_for_organization_id(self):
+    def test_build_query_applies_party_filter_for_party_id(self):
         qb = QueryBuilder(Role)
         query = qb.build_query(
-            tenant_filter=TenantFilter(organization_ids=["org-1", "org-2"])
+            party_filter=PartyFilter(
+                party_ids=["party-1", "party-2"],
+                filter_mode="owner",
+            )
         )
         compiled = str(query.compile(compile_kwargs={"literal_binds": True}))
 
-        assert "roles.organization_id IN ('org-1', 'org-2')" in compiled
+        assert "roles.party_id IN ('party-1', 'party-2')" in compiled
 
-    def test_build_count_query_applies_tenant_filter_for_organization_id(self):
+    def test_build_count_query_applies_party_filter_for_party_id(self):
         qb = QueryBuilder(Role)
         query = qb.build_count_query(
-            tenant_filter=TenantFilter(organization_ids=["org-1"])
+            party_filter=PartyFilter(
+                party_ids=["party-1"],
+                filter_mode="owner",
+            )
         )
         compiled = str(query.compile(compile_kwargs={"literal_binds": True}))
 
-        assert "roles.organization_id IN ('org-1')" in compiled
+        assert "roles.party_id IN ('party-1')" in compiled
 
-    def test_build_query_fail_closed_when_tenant_filter_has_no_org_ids(self):
+    def test_build_query_fail_closed_when_party_filter_has_no_party_ids(self):
         qb = QueryBuilder(Role)
-        query = qb.build_query(tenant_filter=TenantFilter(organization_ids=[]))
+        query = qb.build_query(party_filter=PartyFilter(party_ids=[]))
         compiled = str(query.compile(compile_kwargs={"literal_binds": True}))
 
         assert "false" in compiled.lower() or "0 = 1" in compiled
 
-    def test_build_query_skips_tenant_filter_when_model_has_no_organization_id(self):
-        qb = QueryBuilder(Ownership)
-        query = qb.build_query(tenant_filter=TenantFilter(organization_ids=["org-1"]))
+    def test_build_query_skips_party_filter_when_model_has_no_party_column(self):
+        qb = QueryBuilder(AssetCustomField)
+        query = qb.build_query(
+            party_filter=PartyFilter(
+                party_ids=["party-1"],
+                filter_mode="owner",
+            )
+        )
         compiled = str(query.compile(compile_kwargs={"literal_binds": True}))
 
-        assert "ownerships.organization_id" not in compiled
+        assert "false" not in compiled.lower()
+        assert "0 = 1" not in compiled
+
+    def test_build_count_query_skips_party_filter_when_model_has_no_party_column(self):
+        qb = QueryBuilder(AssetCustomField)
+        query = qb.build_count_query(
+            party_filter=PartyFilter(
+                party_ids=["party-1"],
+                filter_mode="owner",
+            )
+        )
+        compiled = str(query.compile(compile_kwargs={"literal_binds": True}))
+
+        assert "false" not in compiled.lower()
+        assert "0 = 1" not in compiled
+
+    def test_build_query_any_party_filter_handles_multiple_party_columns(self):
+        qb = QueryBuilder(Asset)
+        query = qb.build_query(
+            party_filter=PartyFilter(
+                party_ids=["party-1"],
+                filter_mode="any",
+            )
+        )
+        compiled = str(query.compile(compile_kwargs={"literal_binds": True}))
+
+        assert "assets.owner_party_id IN ('party-1')" in compiled
+        assert "assets.manager_party_id IN ('party-1')" in compiled
+        assert "assets.organization_id IN ('party-1')" in compiled
+
+    def test_build_query_should_keep_owner_and_manager_scope_separate(self):
+        qb = QueryBuilder(Asset)
+        query = qb.build_query(
+            party_filter=PartyFilter(
+                party_ids=["owner-1", "manager-1"],
+                owner_party_ids=["owner-1"],
+                manager_party_ids=["manager-1"],
+            )
+        )
+        compiled = str(query.compile(compile_kwargs={"literal_binds": True}))
+
+        assert "assets.owner_party_id IN ('owner-1')" in compiled
+        assert "assets.manager_party_id IN ('manager-1')" in compiled
+        assert "assets.owner_party_id IN ('manager-1')" not in compiled
+        assert "assets.manager_party_id IN ('owner-1')" not in compiled
+
+    def test_build_query_should_only_apply_owner_scope_when_manager_scope_empty(self):
+        qb = QueryBuilder(Asset)
+        query = qb.build_query(
+            party_filter=PartyFilter(
+                party_ids=["owner-1"],
+                owner_party_ids=["owner-1"],
+                manager_party_ids=[],
+                filter_mode="owner",
+            )
+        )
+        compiled = str(query.compile(compile_kwargs={"literal_binds": True}))
+
+        assert "assets.owner_party_id IN ('owner-1')" in compiled
+        assert "assets.manager_party_id IN" not in compiled
+
+    def test_build_query_should_fallback_to_legacy_org_when_owner_party_is_null(self):
+        qb = QueryBuilder(Asset)
+        query = qb.build_query(
+            party_filter=PartyFilter(
+                party_ids=["owner-1"],
+                owner_party_ids=["owner-1"],
+                manager_party_ids=[],
+                filter_mode="owner",
+            )
+        )
+        compiled = str(query.compile(compile_kwargs={"literal_binds": True}))
+
+        assert "assets.owner_party_id IN ('owner-1')" in compiled
+        assert "assets.owner_party_id IS NULL" in compiled
+        assert "assets.organization_id IN ('owner-1')" in compiled
+
+    def test_build_query_should_fallback_to_legacy_org_when_manager_party_is_null(self):
+        qb = QueryBuilder(Asset)
+        query = qb.build_query(
+            party_filter=PartyFilter(
+                party_ids=["manager-1"],
+                owner_party_ids=[],
+                manager_party_ids=["manager-1"],
+                filter_mode="manager",
+            )
+        )
+        compiled = str(query.compile(compile_kwargs={"literal_binds": True}))
+
+        assert "assets.manager_party_id IN ('manager-1')" in compiled
+        assert "assets.manager_party_id IS NULL" in compiled
+        assert "assets.organization_id IN ('manager-1')" in compiled

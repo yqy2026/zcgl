@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.crud.query_builder import TenantFilter
+from src.crud.query_builder import PartyFilter
 from src.models.pdf_import_session import (
     PDFImportSession,
     ProcessingStep,
@@ -171,48 +171,48 @@ class TestTenantFilterResolution:
     """测试租户过滤解析"""
 
     @pytest.mark.asyncio
-    async def test_resolve_tenant_filter_success(self, pdf_service, mock_db):
-        """测试从用户可访问组织解析租户过滤"""
-        mock_org_service = MagicMock()
-        mock_org_service.get_user_accessible_organizations = AsyncMock(
-            return_value=["1", "2"]
-        )
+    async def test_resolve_party_filter_success(self, pdf_service, mock_db):
+        """测试从 user_party_bindings 解析租户过滤"""
+        binding_1 = MagicMock()
+        binding_1.party_id = "party-1"
+        binding_2 = MagicMock()
+        binding_2.party_id = "party-2"
 
         with patch(
-            "src.services.organization_permission_service.OrganizationPermissionService",
-            return_value=mock_org_service,
+            "src.services.party_scope.party_crud.get_user_bindings",
+            new=AsyncMock(return_value=[binding_1, binding_2]),
         ):
-            result = await pdf_service._resolve_tenant_filter(
+            result = await pdf_service._resolve_party_filter(
                 mock_db,
                 current_user_id="user-1",
             )
 
-        assert result == TenantFilter(organization_ids=[1, 2])
+        assert result == PartyFilter(party_ids=["party-1", "party-2"])
 
     @pytest.mark.asyncio
-    async def test_resolve_tenant_filter_fail_closed(self, pdf_service, mock_db):
+    async def test_resolve_party_filter_fail_closed(self, pdf_service, mock_db):
         """测试解析异常时返回 fail-closed 过滤"""
         with patch(
-            "src.services.organization_permission_service.OrganizationPermissionService",
-            side_effect=RuntimeError("boom"),
+            "src.services.party_scope.party_crud.get_user_bindings",
+            new=AsyncMock(side_effect=RuntimeError("boom")),
         ):
-            result = await pdf_service._resolve_tenant_filter(
+            result = await pdf_service._resolve_party_filter(
                 mock_db,
                 current_user_id="user-1",
             )
 
-        assert result == TenantFilter(organization_ids=[])
+        assert result == PartyFilter(party_ids=[])
 
     @pytest.mark.asyncio
-    async def test_get_session_map_async_passes_resolved_tenant_filter(
+    async def test_get_session_map_async_passes_resolved_party_filter(
         self, pdf_service, mock_db
     ):
         """测试会话映射查询透传解析后的租户过滤"""
-        resolved_filter = TenantFilter(organization_ids=[1])
+        resolved_filter = PartyFilter(party_ids=[1])
 
         with patch.object(
             pdf_service,
-            "_resolve_tenant_filter",
+            "_resolve_party_filter",
             new=AsyncMock(return_value=resolved_filter),
         ):
             with patch(
@@ -228,7 +228,7 @@ class TestTenantFilterResolution:
         mock_get_map.assert_awaited_once_with(
             mock_db,
             ["session-1"],
-            tenant_filter=resolved_filter,
+            party_filter=resolved_filter,
         )
 
 

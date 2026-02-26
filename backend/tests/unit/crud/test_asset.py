@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from src.crud.asset import AssetCRUD
-from src.crud.query_builder import TenantFilter
+from src.crud.query_builder import PartyFilter
 from src.models.asset import Asset
 from src.models.asset_search_index import AssetSearchIndex
 
@@ -90,16 +90,16 @@ class TestCRUDAssetSoftDeleteGuard:
         execute_result = MagicMock()
         execute_result.scalars.return_value.first.return_value = None
         mock_db.execute.return_value = execute_result
-        tenant_filter = TenantFilter(organization_ids=["org-1"])
+        party_filter = PartyFilter(party_ids=["org-1"])
 
         with patch.object(
             crud.query_builder,
-            "apply_tenant_filter",
+            "apply_party_filter",
             side_effect=lambda stmt, _tf: stmt,
-        ) as mock_apply_tenant_filter:
-            await crud.get_async(mock_db, id="asset-1", tenant_filter=tenant_filter)
+        ) as mock_apply_party_filter:
+            await crud.get_async(mock_db, id="asset-1", party_filter=party_filter)
 
-        assert mock_apply_tenant_filter.call_args.args[1] == tenant_filter
+        assert mock_apply_party_filter.call_args.args[1] == party_filter
 
 
 class TestCRUDAssetGetByName:
@@ -160,7 +160,7 @@ class TestCRUDAssetGetMulti:
     async def test_get_multi_with_search_passes_tenant_filter(
         self, crud: AssetCRUD, mock_db: MagicMock
     ) -> None:
-        tenant_filter = TenantFilter(organization_ids=["org-1"])
+        party_filter = PartyFilter(party_ids=["org-1"])
         execute_result_assets = MagicMock()
         execute_result_assets.scalars.return_value.all.return_value = []
         execute_result_count = MagicMock()
@@ -179,11 +179,11 @@ class TestCRUDAssetGetMulti:
         ):
             await crud.get_multi_with_search_async(
                 mock_db,
-                tenant_filter=tenant_filter,
+                party_filter=party_filter,
             )
 
-        assert mock_build_query.call_args.kwargs.get("tenant_filter") == tenant_filter
-        assert mock_build_count_query.call_args.kwargs.get("tenant_filter") == tenant_filter
+        assert mock_build_query.call_args.kwargs.get("party_filter") == party_filter
+        assert mock_build_count_query.call_args.kwargs.get("party_filter") == party_filter
 
     async def test_get_multi_by_ids_decrypts_assets(
         self, crud: AssetCRUD, mock_db: MagicMock

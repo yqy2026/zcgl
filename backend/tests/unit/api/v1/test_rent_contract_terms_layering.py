@@ -1,5 +1,6 @@
 """分层约束测试：rent_contract terms 路由应委托服务层。"""
 
+import re
 from pathlib import Path
 from unittest.mock import ANY, AsyncMock, MagicMock
 
@@ -8,14 +9,36 @@ import pytest
 pytestmark = pytest.mark.api
 
 
-def test_terms_module_should_not_import_rent_contract_crud_directly() -> None:
-    """terms 路由模块不应直接导入 crud.rent_contract。"""
+def _read_module_source() -> str:
     from src.api.v1.rent_contracts import terms as terms_module
 
-    module_source = Path(terms_module.__file__).read_text(encoding="utf-8")
+    return Path(terms_module.__file__).read_text(encoding="utf-8")
+
+
+def test_terms_module_should_not_import_rent_contract_crud_directly() -> None:
+    """terms 路由模块不应直接导入 crud.rent_contract。"""
+    module_source = _read_module_source()
     assert "from ....crud.rent_contract" not in module_source
     assert "rent_term." not in module_source
     assert "rent_contract." not in module_source
+
+
+def test_terms_module_should_import_authz_dependency() -> None:
+    """terms 路由应引入统一 ABAC 依赖。"""
+    module_source = _read_module_source()
+    assert "AuthzContext" in module_source
+    assert "require_authz" in module_source
+
+
+def test_terms_endpoints_should_use_require_authz() -> None:
+    """条款查询和新增端点应接入 require_authz。"""
+    module_source = _read_module_source()
+    expected_patterns = [
+        r"async def get_contract_terms[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"rent_contract\"[\s\S]*?resource_id=\"\{contract_id\}\"[\s\S]*?deny_as_not_found=True",
+        r"async def add_rent_term[\s\S]*?require_authz\([\s\S]*?action=\"update\"[\s\S]*?resource_type=\"rent_contract\"[\s\S]*?resource_id=\"\{contract_id\}\"",
+    ]
+    for pattern in expected_patterns:
+        assert re.search(pattern, module_source), pattern
 
 
 @pytest.mark.asyncio

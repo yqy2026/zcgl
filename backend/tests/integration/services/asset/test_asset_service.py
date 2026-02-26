@@ -40,8 +40,8 @@ class AssetTestDataFactory:
             "property_name": "测试物业A",
             "address": "北京市朝阳区测试路123号",
             "ownership_status": "已确权",
-            "property_nature": "经营类",
-            "usage_status": "出租",
+            "property_nature": "商业",
+            "usage_status": "出租中",
             "land_area": Decimal("1000.00"),
             "actual_property_area": Decimal("2000.00"),
             "rentable_area": Decimal("1800.00"),
@@ -314,13 +314,13 @@ class TestAssetUpdate:
     async def test_update_asset_basic_fields(self):
         """测试更新资产基本信息"""
         update_data = AssetUpdate(
-            ownership_id=self.new_ownership.id, usage_status="闲置"
+            ownership_id=self.new_ownership.id, usage_status="空置"
         )
 
         updated = await self.service.update_asset(self.asset.id, update_data)
 
         assert updated.ownership_id == self.new_ownership.id
-        assert updated.usage_status == "闲置"
+        assert updated.usage_status == "空置"
 
     async def test_update_asset_creates_history(self):
         """测试更新资产时记录历史"""

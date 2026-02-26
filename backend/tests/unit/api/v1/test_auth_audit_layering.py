@@ -1,6 +1,7 @@
 """分层约束测试：auth audit 路由应委托服务层。"""
 
 import inspect
+import re
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -14,6 +15,27 @@ def test_auth_audit_module_should_not_use_crud_adapter_calls() -> None:
 
     module_source = inspect.getsource(audit)
     assert "audit_crud." not in module_source
+
+
+def test_auth_audit_module_should_import_authz_dependency() -> None:
+    """audit 路由应引入统一 ABAC 依赖。"""
+    from src.api.v1.auth.auth_modules import audit
+
+    module_source = inspect.getsource(audit)
+    assert "AuthzContext" in module_source
+    assert "require_authz" in module_source
+
+
+def test_auth_audit_endpoint_should_use_require_authz() -> None:
+    """审计统计端点应接入 require_authz。"""
+    from src.api.v1.auth.auth_modules import audit
+
+    module_source = inspect.getsource(audit)
+    pattern = (
+        r"async def get_audit_statistics[\s\S]*?require_authz\("
+        r"[\s\S]*?action=\"read\"[\s\S]*?resource_type=\"operation_log\""
+    )
+    assert re.search(pattern, module_source), pattern
 
 
 @pytest.mark.asyncio

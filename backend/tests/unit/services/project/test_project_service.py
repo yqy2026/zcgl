@@ -13,7 +13,7 @@ from src.core.exception_handler import (
     OperationNotAllowedError,
     ResourceNotFoundError,
 )
-from src.crud.query_builder import TenantFilter
+from src.crud.query_builder import PartyFilter
 from src.models import Project
 from src.schemas.project import ProjectCreate, ProjectSearchRequest, ProjectUpdate
 from src.services.project.service import ProjectService
@@ -328,13 +328,13 @@ class TestGetProjectById:
     async def test_get_project_by_id_resolves_tenant_filter(
         self, project_service: ProjectService, mock_db: MagicMock, mock_project: MagicMock
     ) -> None:
-        tenant_filter = TenantFilter(organization_ids=["org-1"])
+        party_filter = PartyFilter(party_ids=["org-1"])
 
         with (
             patch.object(
                 project_service,
-                "_resolve_tenant_filter",
-                new=AsyncMock(return_value=tenant_filter),
+                "_resolve_party_filter",
+                new=AsyncMock(return_value=party_filter),
             ) as mock_resolve,
             patch(
                 "src.crud.project.project_crud.get",
@@ -352,12 +352,12 @@ class TestGetProjectById:
         mock_resolve.assert_awaited_once_with(
             mock_db,
             current_user_id="user_1",
-            tenant_filter=None,
+            party_filter=None,
         )
         mock_get.assert_awaited_once_with(
             db=mock_db,
             id="project_123",
-            tenant_filter=tenant_filter,
+            party_filter=party_filter,
         )
 
     async def test_get_project_by_id_fail_closed_when_no_accessible_org(
@@ -365,8 +365,8 @@ class TestGetProjectById:
     ) -> None:
         with patch.object(
             project_service,
-            "_resolve_tenant_filter",
-            new=AsyncMock(return_value=TenantFilter(organization_ids=[])),
+            "_resolve_party_filter",
+            new=AsyncMock(return_value=PartyFilter(party_ids=[])),
         ):
             with patch(
                 "src.crud.project.project_crud.get",
@@ -380,3 +380,43 @@ class TestGetProjectById:
 
         assert result is None
         mock_get.assert_not_awaited()
+
+
+class TestTenantFilterResolution:
+    async def test_resolve_party_filter_uses_user_party_bindings(
+        self, project_service: ProjectService, mock_db: MagicMock
+    ) -> None:
+        """应使用 user_party_bindings 解析过滤范围。"""
+        binding = MagicMock()
+        binding.party_id = "party-1"
+
+        with patch(
+            "src.services.party_scope.party_crud.get_user_bindings",
+            new=AsyncMock(return_value=[binding]),
+        ):
+            party_filter = await project_service._resolve_party_filter(
+                mock_db,
+                current_user_id="user-1",
+            )
+
+        assert party_filter is not None
+        assert party_filter.party_ids == ["party-1"]
+
+    async def test_resolve_party_filter_keeps_bindings_when_org_lookup_fails(
+        self, project_service: ProjectService, mock_db: MagicMock
+    ) -> None:
+        """party binding 解析成功时应返回绑定范围。"""
+        binding = MagicMock()
+        binding.party_id = "party-1"
+
+        with patch(
+            "src.services.party_scope.party_crud.get_user_bindings",
+            new=AsyncMock(return_value=[binding]),
+        ):
+            party_filter = await project_service._resolve_party_filter(
+                mock_db,
+                current_user_id="user-1",
+            )
+
+        assert party_filter is not None
+        assert party_filter.party_ids == ["party-1"]

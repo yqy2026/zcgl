@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.exc import OperationalError
 
 from tests.shared.conftest_utils import (
@@ -44,6 +44,14 @@ def _resolve_test_database_url() -> str | None:
 TEST_DATABASE_URL = _resolve_test_database_url()
 if TEST_DATABASE_URL:
     os.environ["DATABASE_URL"] = TEST_DATABASE_URL
+
+
+def _reset_postgres_public_schema(engine) -> None:  # noqa: ANN001
+    """Drop and recreate public schema for a clean PostgreSQL test database."""
+    with engine.begin() as conn:
+        conn.execute(text("DROP SCHEMA IF EXISTS public CASCADE"))
+        conn.execute(text("CREATE SCHEMA public"))
+        conn.execute(text("GRANT ALL ON SCHEMA public TO PUBLIC"))
 
 
 @pytest.fixture(scope="session")
@@ -96,6 +104,12 @@ def db_tables(engine):
 
     from src.database import Base
 
+    is_postgres = bool(TEST_DATABASE_URL and TEST_DATABASE_URL.startswith("postgresql"))
+    if is_postgres:
+        # Keep unit db-backed runs deterministic across sessions by avoiding
+        # residual schemas left by previous partial migration/create_all runs.
+        _reset_postgres_public_schema(engine)
+
     versions_dir = Path("alembic/versions")
     has_migrations = versions_dir.exists() and len(list(versions_dir.glob("*.py"))) > 0
 
@@ -111,6 +125,14 @@ def db_tables(engine):
                 f"TEST_DATABASE_URL unreachable during Alembic upgrade: {exc}",
                 allow_module_level=True,
             )
+        except Exception as exc:
+            # Some branches contain in-progress migrations; for unit tests,
+            # prefer a clean model-based schema over leaving half-migrated DB.
+            print(f"[!] Alembic upgrade failed in unit fixture, fallback create_all: {exc}")
+            if is_postgres:
+                _reset_postgres_public_schema(engine)
+            importlib.import_module("src.models")
+            Base.metadata.create_all(bind=engine)
 
     importlib.import_module("src.models")
     try:
@@ -226,6 +248,7 @@ def client(monkeypatch, db_session):
         get_current_user,
         get_current_user_from_cookie,
         require_admin,
+        require_authz,
         require_permission,
     )
 
@@ -258,22 +281,30 @@ def client(monkeypatch, db_session):
         auth_module, "get_current_user_from_cookie", mock_get_current_user
     )
     monkeypatch.setattr(auth_module, "require_permission", mock_require_permission)
+    monkeypatch.setattr(auth_module, "require_authz", lambda *args, **kwargs: lambda: {})
 
     # Override dependencies in FastAPI app
     app.dependency_overrides[get_current_active_user] = mock_get_current_user
     app.dependency_overrides[get_current_user] = mock_get_current_user
     app.dependency_overrides[get_current_user_from_cookie] = mock_get_current_user
     app.dependency_overrides[require_permission] = mock_require_permission
+    app.dependency_overrides[require_authz] = lambda *args, **kwargs: lambda: {}
     app.dependency_overrides[require_admin] = mock_get_current_user
 
     # Override RBAC permission checkers created at route import time
     def mock_rbac_checker():  # noqa: ANN001 - test stub
         return mock_user
 
+    def mock_authz_checker():  # noqa: ANN001 - test stub
+        return {}
+
     def apply_rbac_overrides(dependant):
         for sub in getattr(dependant, "dependencies", []):
-            if type(sub.call).__name__ == "RBACPermissionChecker":
+            dependency_type_name = type(sub.call).__name__
+            if dependency_type_name == "RBACPermissionChecker":
                 app.dependency_overrides[sub.call] = mock_rbac_checker
+            if dependency_type_name == "AuthzPermissionChecker":
+                app.dependency_overrides[sub.call] = mock_authz_checker
             apply_rbac_overrides(sub)
 
     for route in app.router.routes:

@@ -1,6 +1,8 @@
 """分层约束测试：distribution 路由应委托 DistributionService。"""
 
 import inspect
+import re
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -16,6 +18,30 @@ def test_distribution_api_module_should_not_use_crud_adapter_calls():
 
     module_source = inspect.getsource(distribution)
     assert "asset_crud." not in module_source
+
+
+def test_distribution_module_should_import_authz_dependency() -> None:
+    """distribution 路由应引入统一 ABAC 依赖。"""
+    from src.api.v1.analytics.statistics_modules import distribution as module
+
+    module_source = Path(module.__file__).read_text(encoding="utf-8")
+    assert "AuthzContext" in module_source
+    assert "require_authz" in module_source
+
+
+def test_distribution_endpoints_should_use_require_authz() -> None:
+    """distribution 关键端点应接入 require_authz。"""
+    from src.api.v1.analytics.statistics_modules import distribution as module
+
+    module_source = Path(module.__file__).read_text(encoding="utf-8")
+    expected_patterns = [
+        r"async def get_ownership_distribution[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"analytics\"",
+        r"async def get_property_nature_distribution[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"analytics\"",
+        r"async def get_usage_status_distribution[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"analytics\"",
+        r"async def get_asset_distribution[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"analytics\"",
+    ]
+    for pattern in expected_patterns:
+        assert re.search(pattern, module_source), pattern
 
 
 @pytest.mark.asyncio

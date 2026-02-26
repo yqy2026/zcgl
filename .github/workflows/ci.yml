@@ -354,6 +354,11 @@ jobs:
         cd frontend
         pnpm type-check:e2e
 
+    - name: Run route authz mutual-exclusion gate (D10)
+      run: |
+        cd frontend
+        pnpm check:route-authz
+
     - name: Run type coverage check
       run: |
         cd frontend

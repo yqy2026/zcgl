@@ -7,7 +7,7 @@ import pytest
 
 from src.core.exception_handler import InvalidRequestError
 from src.crud.asset import asset_crud
-from src.crud.query_builder import TenantFilter
+from src.crud.query_builder import PartyFilter
 from src.crud.rbac import role_crud
 
 
@@ -131,13 +131,13 @@ class TestGetDistinctFieldValues:
         result_org_1 = await role_crud.get_distinct_field_values(
             mock_db,
             "name",
-            tenant_filter=TenantFilter(organization_ids=["org-1"]),
+            party_filter=PartyFilter(party_ids=["org-1"]),
             use_cache=True,
         )
         result_org_2 = await role_crud.get_distinct_field_values(
             mock_db,
             "name",
-            tenant_filter=TenantFilter(organization_ids=["org-2"]),
+            party_filter=PartyFilter(party_ids=["org-2"]),
             use_cache=True,
         )
 
@@ -166,7 +166,7 @@ class TestGetDistinctFieldValues:
         assert result == ["value1", "value2", "value3"]
 
     @pytest.mark.asyncio
-    async def test_distinct_values_apply_tenant_filter(self, mock_db: MagicMock):
+    async def test_distinct_values_apply_party_filter(self, mock_db: MagicMock):
         mock_result = MagicMock()
         mock_result.all.return_value = [("admin",)]
         mock_db.execute = AsyncMock(return_value=mock_result)
@@ -174,7 +174,7 @@ class TestGetDistinctFieldValues:
         await role_crud.get_distinct_field_values(
             mock_db,
             "name",
-            tenant_filter=TenantFilter(organization_ids=["org-1"]),
+            party_filter=PartyFilter(party_ids=["org-1"]),
             use_cache=False,
         )
 
@@ -192,7 +192,7 @@ class TestCountWithTenantFilter:
 
         total = await role_crud.count(
             mock_db,
-            tenant_filter=TenantFilter(organization_ids=["org-1", "org-2"]),
+            party_filter=PartyFilter(party_ids=["org-1", "org-2"]),
         )
 
         assert total == 3
@@ -208,7 +208,7 @@ class TestCountWithTenantFilter:
 
         total = await role_crud.count(
             mock_db,
-            tenant_filter=TenantFilter(organization_ids=[]),
+            party_filter=PartyFilter(party_ids=[]),
         )
 
         assert total == 0
@@ -230,7 +230,7 @@ class TestGetAndGetMultiWithTenantFilter:
             mock_db,
             id="role-1",
             use_cache=False,
-            tenant_filter=TenantFilter(organization_ids=["org-1"]),
+            party_filter=PartyFilter(party_ids=["org-1"]),
         )
 
         assert result is mock_role
@@ -250,7 +250,7 @@ class TestGetAndGetMultiWithTenantFilter:
             mock_db,
             id="role-1",
             use_cache=False,
-            tenant_filter=TenantFilter(organization_ids=[]),
+            party_filter=PartyFilter(party_ids=[]),
         )
 
         assert result is None
@@ -270,7 +270,7 @@ class TestGetAndGetMultiWithTenantFilter:
             skip=0,
             limit=20,
             use_cache=False,
-            tenant_filter=TenantFilter(organization_ids=["org-2"]),
+            party_filter=PartyFilter(party_ids=["org-2"]),
         )
 
         stmt = mock_db.execute.await_args.args[0]
@@ -281,11 +281,11 @@ class TestGetAndGetMultiWithTenantFilter:
 class TestCacheInvalidationWithTenantFilter:
     @pytest.mark.asyncio
     async def test_remove_clears_tenant_scoped_get_cache(self, mock_db: MagicMock):
-        tenant_filter = TenantFilter(organization_ids=["org-1"])
+        party_filter = PartyFilter(party_ids=["org-1"])
         cache_key = role_crud._get_cache_key(
             "get",
             id="role-1",
-            tenant_filter=role_crud._serialize_tenant_filter(tenant_filter),
+            party_filter=role_crud._serialize_party_filter(party_filter),
         )
         role_crud._set_cache(cache_key, MagicMock())
 
@@ -299,11 +299,11 @@ class TestCacheInvalidationWithTenantFilter:
 
     @pytest.mark.asyncio
     async def test_update_clears_tenant_scoped_get_cache(self, mock_db: MagicMock):
-        tenant_filter = TenantFilter(organization_ids=["org-1"])
+        party_filter = PartyFilter(party_ids=["org-1"])
         cache_key = role_crud._get_cache_key(
             "get",
             id="role-1",
-            tenant_filter=role_crud._serialize_tenant_filter(tenant_filter),
+            party_filter=role_crud._serialize_party_filter(party_filter),
         )
         role_crud._set_cache(cache_key, MagicMock())
 
@@ -345,3 +345,60 @@ class TestCacheKeyStability:
         string_key = role_crud._get_cache_key("get", id="1")
 
         assert numeric_key != string_key
+
+    def test_cache_key_distinguishes_relation_aware_owner_manager_scopes(self):
+        shared_party_ids = ["org-a", "org-b"]
+        owner_first_filter = PartyFilter(
+            party_ids=shared_party_ids,
+            owner_party_ids=["org-a"],
+            manager_party_ids=["org-b"],
+        )
+        manager_first_filter = PartyFilter(
+            party_ids=shared_party_ids,
+            owner_party_ids=["org-b"],
+            manager_party_ids=["org-a"],
+        )
+
+        owner_first_key = role_crud._get_cache_key(
+            "get_multi",
+            skip=0,
+            limit=20,
+            party_filter=role_crud._serialize_party_filter(owner_first_filter),
+        )
+        manager_first_key = role_crud._get_cache_key(
+            "get_multi",
+            skip=0,
+            limit=20,
+            party_filter=role_crud._serialize_party_filter(manager_first_filter),
+        )
+
+        assert owner_first_key != manager_first_key
+
+    def test_cache_key_distinguishes_none_and_empty_relation_scopes(self):
+        legacy_filter = PartyFilter(
+            party_ids=["org-a"],
+            owner_party_ids=None,
+            manager_party_ids=None,
+        )
+        relation_aware_empty_filter = PartyFilter(
+            party_ids=["org-a"],
+            owner_party_ids=[],
+            manager_party_ids=[],
+        )
+
+        legacy_key = role_crud._get_cache_key(
+            "get_multi",
+            skip=0,
+            limit=20,
+            party_filter=role_crud._serialize_party_filter(legacy_filter),
+        )
+        relation_aware_empty_key = role_crud._get_cache_key(
+            "get_multi",
+            skip=0,
+            limit=20,
+            party_filter=role_crud._serialize_party_filter(
+                relation_aware_empty_filter
+            ),
+        )
+
+        assert legacy_key != relation_aware_empty_key

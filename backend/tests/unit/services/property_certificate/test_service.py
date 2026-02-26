@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.crud.query_builder import TenantFilter
+from src.crud.query_builder import PartyFilter
 from src.models.property_certificate import PropertyCertificate
 from src.schemas.property_certificate import (
     PropertyCertificateCreate,
@@ -45,13 +45,13 @@ class TestPropertyCertificateServiceBasics:
 
     async def test_list_certificates_with_current_user_resolves_tenant_filter(self, mock_db):
         service = PropertyCertificateService(mock_db)
-        tenant_filter = TenantFilter(organization_ids=["org-1"])
+        party_filter = PartyFilter(party_ids=["org-1"])
         certs = [PropertyCertificate(certificate_number="PC-1", certificate_type="property")]
 
         with patch.object(
             service,
-            "_resolve_tenant_filter",
-            new=AsyncMock(return_value=tenant_filter),
+            "_resolve_party_filter",
+            new=AsyncMock(return_value=party_filter),
         ) as mock_resolve:
             with patch(
                 "src.services.property_certificate.service.property_certificate_crud.get_multi",
@@ -62,13 +62,13 @@ class TestPropertyCertificateServiceBasics:
         assert result == certs
         mock_resolve.assert_awaited_once_with(
             current_user_id="user-1",
-            tenant_filter=None,
+            party_filter=None,
         )
         mock_get_multi.assert_awaited_once_with(
             mock_db,
             skip=0,
             limit=100,
-            tenant_filter=tenant_filter,
+            party_filter=party_filter,
         )
 
     async def test_get_certificate_fail_closed_when_no_accessible_org(self, mock_db):
@@ -76,8 +76,8 @@ class TestPropertyCertificateServiceBasics:
 
         with patch.object(
             service,
-            "_resolve_tenant_filter",
-            new=AsyncMock(return_value=TenantFilter(organization_ids=[])),
+            "_resolve_party_filter",
+            new=AsyncMock(return_value=PartyFilter(party_ids=[])),
         ):
             with patch(
                 "src.services.property_certificate.service.property_certificate_crud.get",

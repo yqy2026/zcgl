@@ -9,7 +9,11 @@ from uuid import uuid4
 import pytest
 from fastapi.testclient import TestClient
 
+from src.models.enum_field import EnumFieldType, EnumFieldValue
 from src.models.ownership import Ownership
+from src.services.organization_permission_service import (
+    invalidate_user_accessible_organizations_cache,
+)
 
 pytestmark = pytest.mark.integration
 
@@ -18,6 +22,7 @@ pytestmark = pytest.mark.integration
 def authenticated_client(client: TestClient, test_data) -> TestClient:
     """通过真实登录流程注入认证 cookie。"""
     admin_user = test_data["admin"]
+    invalidate_user_accessible_organizations_cache(str(admin_user.id))
     response = client.post(
         "/api/v1/auth/login",
         json={"identifier": admin_user.username, "password": "Admin123!@#"},
@@ -45,6 +50,74 @@ def csrf_headers(authenticated_client: TestClient) -> dict[str, str]:
 
 class TestAssetLifecycle:
     """资产核心生命周期契约测试。"""
+
+    @staticmethod
+    def _ensure_asset_enum_data(db_session) -> None:
+        enum_defs: dict[str, tuple[str, list[str]]] = {
+            "ownership_status": ("确权状态", ["已确权", "部分确权", "未确权", "其它"]),
+            "property_nature": ("物业性质", ["经营类", "公房", "自用", "其它"]),
+            "usage_status": (
+                "使用状态",
+                ["出租", "闲置", "自用", "公房（出租）", "公房（闲置）", "其它"],
+            ),
+            "data_status": ("数据状态", ["正常", "已删除", "已归档"]),
+        }
+
+        for code, (name, values) in enum_defs.items():
+            enum_type = (
+                db_session.query(EnumFieldType)
+                .filter(EnumFieldType.code == code)
+                .first()
+            )
+            if enum_type is None:
+                enum_type = EnumFieldType(
+                    name=name,
+                    code=code,
+                    category="资产管理",
+                    is_system=True,
+                    status="active",
+                    is_deleted=False,
+                    created_by="integration_test",
+                    updated_by="integration_test",
+                )
+                db_session.add(enum_type)
+                db_session.flush()
+            else:
+                enum_type.status = "active"
+                enum_type.is_deleted = False
+                enum_type.updated_by = "integration_test"
+
+            existing_values = {
+                value_obj.value: value_obj
+                for value_obj in db_session.query(EnumFieldValue)
+                .filter(EnumFieldValue.enum_type_id == enum_type.id)
+                .all()
+            }
+
+            for sort_order, value in enumerate(values, start=1):
+                value_obj = existing_values.get(value)
+                if value_obj is None:
+                    db_session.add(
+                        EnumFieldValue(
+                            enum_type_id=enum_type.id,
+                            label=value,
+                            value=value,
+                            sort_order=sort_order,
+                            is_active=True,
+                            is_deleted=False,
+                            created_by="integration_test",
+                            updated_by="integration_test",
+                        )
+                    )
+                    continue
+
+                value_obj.label = value
+                value_obj.sort_order = sort_order
+                value_obj.is_active = True
+                value_obj.is_deleted = False
+                value_obj.updated_by = "integration_test"
+
+        db_session.commit()
 
     @staticmethod
     def _create_ownership(db_session, suffix: str) -> Ownership:
@@ -88,12 +161,16 @@ class TestAssetLifecycle:
         authenticated_client: TestClient,
         csrf_headers: dict[str, str],
         db_session,
+        test_data,
     ) -> None:
         suffix = uuid4().hex[:8]
+        self._ensure_asset_enum_data(db_session)
         ownership = self._create_ownership(db_session, suffix)
+        organization_id = str(test_data["organization"].id)
         payload = self._create_asset_payload(
             suffix=suffix,
             ownership_id=ownership.id,
+            organization_id=organization_id,
         )
 
         create_response = authenticated_client.post(
@@ -136,18 +213,23 @@ class TestAssetLifecycle:
         authenticated_client: TestClient,
         csrf_headers: dict[str, str],
         db_session,
+        test_data,
     ) -> None:
         suffix = uuid4().hex[:8]
+        self._ensure_asset_enum_data(db_session)
         ownership = self._create_ownership(db_session, suffix)
+        organization_id = str(test_data["organization"].id)
 
         payload_a = self._create_asset_payload(
             suffix=f"{suffix}a",
             ownership_id=ownership.id,
+            organization_id=organization_id,
             usage_status="出租",
         )
         payload_b = self._create_asset_payload(
             suffix=f"{suffix}b",
             ownership_id=ownership.id,
+            organization_id=organization_id,
             usage_status="闲置",
         )
 

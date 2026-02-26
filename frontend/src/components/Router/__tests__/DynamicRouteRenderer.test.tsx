@@ -36,8 +36,10 @@ describe('DynamicRouteRenderer', () => {
 
     expect(screen.getByText('加载 慢页面...')).toBeInTheDocument();
     expect(
-      errorSpy.mock.calls.some(([message]) =>
-        typeof message === 'string' && message.includes('tip only work in nest or fullscreen pattern')
+      errorSpy.mock.calls.some(
+        ([message]) =>
+          typeof message === 'string' &&
+          message.includes('tip only work in nest or fullscreen pattern')
       )
     ).toBe(false);
 

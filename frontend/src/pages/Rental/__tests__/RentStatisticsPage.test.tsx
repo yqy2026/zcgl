@@ -121,27 +121,23 @@ describe('RentStatisticsPage', () => {
     vi.mocked(rentContractService.getMonthlyStatistics).mockResolvedValue(monthlyStats);
   });
 
-  it(
-    'wraps charts with error boundary and uses functional label',
-    async () => {
-      renderWithProviders(<RentStatisticsPage />);
+  it('wraps charts with error boundary and uses functional label', async () => {
+    renderWithProviders(<RentStatisticsPage />);
 
-      await waitFor(
-        () => {
-          expect(plotMocks.pieSpy).toHaveBeenCalled();
-        },
-        { timeout: 15_000 }
-      );
+    await waitFor(
+      () => {
+        expect(plotMocks.pieSpy).toHaveBeenCalled();
+      },
+      { timeout: 15_000 }
+    );
 
-      const pieProps = plotMocks.pieSpy.mock.calls[0]?.[0] as {
-        label?: { content?: unknown };
-      };
-      const labelContent = pieProps.label?.content;
-      expect(typeof labelContent).toBe('function');
+    const pieProps = plotMocks.pieSpy.mock.calls[0]?.[0] as {
+      label?: { content?: unknown };
+    };
+    const labelContent = pieProps.label?.content;
+    expect(typeof labelContent).toBe('function');
 
-      const boundaries = screen.getAllByTestId('chart-error-boundary');
-      expect(boundaries.length).toBeGreaterThanOrEqual(1);
-    },
-    20_000
-  );
+    const boundaries = screen.getAllByTestId('chart-error-boundary');
+    expect(boundaries.length).toBeGreaterThanOrEqual(1);
+  }, 20_000);
 });
