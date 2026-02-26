@@ -9,11 +9,11 @@
 
 ## 项目概述
 
-**土地物业资产管理系统**（Real Estate Asset Management & Operations System）
+**土地物业资产运营管理系统**（Real Estate Asset Management & Operations System）
 
 ### 核心功能
-- 资产管理（58字段资产信息）| 租赁合同管理（PDF 智能提取）
-- RBAC 权限控制 | 数据分析报表 | 组织架构管理 | 产权证管理
+- 资产管理| 租赁合同管理（PDF 智能提取）
+- 数据分析报表 | 组织架构管理 | 产权证管理
 
 ### 技术栈
 
