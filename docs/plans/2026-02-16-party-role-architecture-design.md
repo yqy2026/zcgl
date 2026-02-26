@@ -106,7 +106,7 @@
 7. 本期不保留 `abac_policy_subjects`，直接删除表结构。  
 8. 门禁原则：数据正确性优先，未通过不发布。  
 9. ID 类型：统一为 `String`（与现网 22 张表一致，本轮不引入 UUID 类型迁移轴；新表 DDL 中 `UUID PK` 实际实现为 `String + Python uuid4()`）。  
-10. ABAC 条件引擎：JSONLogic（PyPI 包名 `json-logic`，当前 ≥0.6.3；备选 `python-jsonlogic` 或 `jsonlogic-rs`），需新增依赖。
+10. ABAC 条件引擎：JSONLogic（当前实现依赖 `python-jsonlogic>=0.1.0`；备选 `json-logic` 或 `jsonlogic-rs`），需新增依赖。
 
 ---
 
@@ -730,7 +730,7 @@ create 场景执行顺序（统一口径）：
 @dataclass(frozen=True)
 class PartyFilter:
     """主体过滤上下文（Party 维度）"""
-    party_ids: list[str]                       # 来源：user_party_bindings 展开结果
+    party_ids: list[str | int]                 # 来源：user_party_bindings 展开结果
     filter_mode: Literal["owner", "manager", "any"] = "any"
     mode: Literal["strict"] = "strict"
     allow_null: bool = False
@@ -757,7 +757,7 @@ def _apply_party_filter(self, query, model):
 | 操作 | 详细 |
 |---|---|
 | 字段替换（9 处） | `organization_id → owner_party_id/manager_party_id`（5 处）；`ownership_id → owner_party_id`（3 处）；`ownership_entity → manager_party_id`（1 处） |
-| 类删除（2 个） | `OrganizationWhitelist`、`OwnershipWhitelist` 整个类删除 |
+| 类处置（2 个） | `OrganizationWhitelist` 删除；`OwnershipWhitelist` 保留兼容并标记 `DEPRECATED` |
 
 ### `management_entity` 自由文本映射策略
 
@@ -849,9 +849,9 @@ for user in active_users:
 
 | # | Blocker | 关闭标准 |
 |---|---|---|
-| BG-1 | PartyFilter 替代方案落地并通过回归 | `_apply_party_filter` 覆盖所有 16+ 文件（含 CRUD/Service/API 层），无 `organization_id` 遍历引用 |
+| BG-1 | PartyFilter 替代方案落地并通过回归 | `_apply_party_filter` 覆盖所有 16+ 文件（含 CRUD/Service/API 层），无**非 deprecated** `organization_id` 运行时过滤引用 |
 | BG-2 | `roles.organization_id` 迁移完成 | FK 替换/删除 + `scope` 值域更新 + 相关 whitelist 同步 |
-| BG-3 | 权限判定路径统一为 ABAC | `PermissionGrant`/`ResourcePermission` 确认无运行时读取 + 标记 deprecated |
+| BG-3 | 权限判定路径统一为 ABAC | `PermissionGrant`/`ResourcePermission`/`OrganizationPermissionService`/`OrganizationPermissionChecker` 确认无**非 deprecated** 运行时读取 |
 | BG-4 | 台账链路 `ownership_id` 全清 | `RentLedger.ownership_id` 改为 `owner_party_id` + `ledger_service.py` 业务逻辑 + `RentContract.__init__` 验证 |
 
 ## 6.2 发布窗口执行
@@ -1113,3 +1113,4 @@ No-Go 规则：
 | 2026-02-18 | 3.7 | 语义收窄与实施增强：`headquarters` 展开结果仅并入 `manager_party_ids`（不再并入 `owner_party_ids`）；`parties` 新增 `external_ref` + `code` 治理口径 + 匹配优先级；`party_role_bindings` 本期定位明确为非实时 ABAC；`abac_policy_rules.action` 收为单值枚举 + 多动作拆单落库；`condition_expr` 本期唯一引擎 JSONLogic（CEL 后续预留）；新增 capabilities 最小 Schema 与版本兼容约束；新增 §9.2 RACI 发布责任矩阵；§4.4 可观测性要求；§4.7 策略更新约束；§6.1 Party 去重规则 + EXPLAIN 校验 + 步骤重编号；§7.5 Outbox/幂等验收；§7.7 人工清单审计；§10 capabilities 权威口径 | yellowUp + Antigravity |
 | 2026-02-19 | 3.8 | ABAC 条件引擎依赖名修正为 `json-logic`（PyPI 实测可用，当前 ≥0.6.3），取代此前错误的 `json-logic-py` | Antigravity |
 | 2026-02-19 | 3.9 | capabilities 契约一致性修复：§5.1 L631 出参描述由 singular `action`/`perspective` 统一为 plural `actions[]`/`perspectives[]`（对齐同节 JSON Schema L641-642）；§5.2 L673 `useCapabilities` 接口规范同步修复（字段名 + 补全 `/api/v1` 路径前缀） | Antigravity |
+| 2026-02-22 | 3.10 | 口径回写：ABAC 依赖与仓库实现对齐为 `python-jsonlogic>=0.1.0`；同步更新 PartyFilter 类型（`list[str | int]`）、whitelist 处置口径（`OrganizationWhitelist` 删除 / `OwnershipWhitelist` deprecated）与 BG-1/BG-3 的“非 deprecated”关闭标准 | Codex |
