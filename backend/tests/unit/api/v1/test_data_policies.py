@@ -49,7 +49,10 @@ def test_get_role_data_policies_wraps_unexpected_errors(mock_service_cls):
 
     assert getattr(exc_info.value, "code", None) == "INTERNAL_SERVER_ERROR"
     assert getattr(exc_info.value, "status_code", None) == 500
-    assert getattr(exc_info.value, "message", None) == "获取角色数据策略包失败"
+    assert (
+        getattr(exc_info.value, "message", None)
+        == "Failed to fetch role data policy packages."
+    )
 
 
 @patch("src.api.v1.auth.data_policies.DataPolicyService")
@@ -128,9 +131,12 @@ def test_put_role_data_policies_wraps_unexpected_errors(mock_service_cls):
             )
         )
 
-    assert getattr(exc_info.value, "code", None) == "INVALID_REQUEST"
-    assert getattr(exc_info.value, "status_code", None) == 400
-    assert getattr(exc_info.value, "message", None) == "invalid package"
+    assert getattr(exc_info.value, "code", None) == "INTERNAL_SERVER_ERROR"
+    assert getattr(exc_info.value, "status_code", None) == 500
+    assert (
+        getattr(exc_info.value, "message", None)
+        == "Failed to update role data policy packages."
+    )
 
 
 @patch("src.api.v1.auth.data_policies.DataPolicyService")
