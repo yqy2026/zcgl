@@ -204,8 +204,19 @@ async def _require_asset_create_authz(
         resource_context["manager_party_id"] = manager_party_id
     if ownership_id is not None:
         resource_context["ownership_id"] = ownership_id
+    if manager_party_id is None:
+        subject_scope_hint = await _build_subject_scope_hint(
+            db=db,
+            user_id=str(current_user.id),
+        )
+        inferred_manager_party_id = _normalize_optional_str(
+            subject_scope_hint.get("manager_party_id")
+        )
+        if inferred_manager_party_id is not None:
+            manager_party_id = inferred_manager_party_id
+            resource_context["manager_party_id"] = inferred_manager_party_id
     resolved_owner_party_id: str | None = None
-    if owner_party_id is None and manager_party_id is None and ownership_id is not None:
+    if owner_party_id is None and ownership_id is not None:
         resolved_owner_party_id = await _resolve_owner_party_scope_by_ownership_id(
             db=db,
             ownership_id=ownership_id,
@@ -216,8 +227,8 @@ async def _require_asset_create_authz(
     if organization_id is not None:
         resource_context["organization_id"] = organization_id
     resolved_party_id = (
-        owner_party_id
-        or manager_party_id
+        manager_party_id
+        or owner_party_id
         or resolved_owner_party_id
         or organization_id
         or _ASSET_CREATE_UNSCOPED_PARTY_ID

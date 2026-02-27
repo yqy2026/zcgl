@@ -33,6 +33,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 _CONTRACT_BULK_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:rent_contract:bulk_create"
+_ADMIN_BYPASS_REASON_CODE = "rbac_admin_bypass"
 
 if TYPE_CHECKING:
     from ....services.document.rent_contract_excel import RentContractExcelService
@@ -96,6 +97,8 @@ def _resolve_authz_scope_party_ids(
     list_field: str,
 ) -> list[str]:
     if not isinstance(authz_ctx, AuthzContext):
+        return []
+    if _normalize_optional_str(authz_ctx.reason_code) == _ADMIN_BYPASS_REASON_CODE:
         return []
     scope_ids = _normalize_identifier_sequence(
         authz_ctx.resource_context.get(list_field),

@@ -33,7 +33,7 @@ from .core.import_utils import (
 )
 from .core.observability import init_sentry
 from .core.response_handler import success_response
-from .database import get_database_status, init_db
+from .database import get_database_status, init_db, reset_database_manager
 from .security.logging_security import setup_logging_security
 
 if TYPE_CHECKING:
@@ -306,6 +306,12 @@ async def lifespan(app: FastAPI) -> Any:
         authz_event_bus.close()
     except Exception as e:
         logger.warning(f"鉴权事件总线关闭失败: {e}")
+
+    # 释放全局数据库管理器，避免测试多轮生命周期复用旧事件循环连接池
+    try:
+        await reset_database_manager()
+    except Exception as e:
+        logger.warning(f"数据库管理器关闭失败: {e}")
 
 
 # 创建FastAPI应用实例

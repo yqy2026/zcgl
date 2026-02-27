@@ -256,6 +256,55 @@ async def test_get_contracts_should_apply_authz_scope_filters() -> None:
 
 
 @pytest.mark.asyncio
+async def test_get_contracts_should_skip_scope_filters_for_admin_bypass() -> None:
+    """管理员 bypass 决策下不应套用 resource_context 的作用域提示。"""
+    from src.api.v1.rent_contracts import contracts as module
+    from src.api.v1.rent_contracts.contracts import get_contracts
+
+    mock_service = MagicMock()
+    mock_service.get_contract_page_async = AsyncMock(return_value=([], 0))
+
+    authz_ctx = module.AuthzContext(
+        current_user=MagicMock(id="admin-1"),
+        action="read",
+        resource_type="rent_contract",
+        resource_id=None,
+        resource_context={
+            "owner_party_id": "owner-party-hint",
+            "manager_party_id": "manager-party-hint",
+            "owner_party_ids": ["owner-party-hint"],
+            "manager_party_ids": ["manager-party-hint"],
+        },
+        allowed=True,
+        reason_code="rbac_admin_bypass",
+    )
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(module, "rent_contract_service", mock_service)
+        await get_contracts(
+            db=MagicMock(),
+            current_user=MagicMock(),
+            authz_ctx=authz_ctx,
+            page=1,
+            page_size=10,
+            contract_number=None,
+            tenant_name=None,
+            asset_id=None,
+            owner_party_id=None,
+            ownership_id=None,
+            contract_status=None,
+            start_date=None,
+            end_date=None,
+        )
+
+    call_kwargs = mock_service.get_contract_page_async.await_args.kwargs
+    assert call_kwargs["owner_party_ids"] is None
+    assert call_kwargs["manager_party_ids"] is None
+    assert call_kwargs["owner_party_id"] is None
+    assert call_kwargs["manager_party_id"] is None
+
+
+@pytest.mark.asyncio
 async def test_get_contracts_should_allow_owner_filter_within_owner_scope_union() -> None:
     """owner 过滤值在 owner scope 并集内时应允许并收敛为单值查询。"""
     from src.api.v1.rent_contracts import contracts as module
@@ -300,8 +349,9 @@ async def test_get_contracts_should_allow_owner_filter_within_owner_scope_union(
     mock_service.get_contract_page_async.assert_awaited_once()
     call_kwargs = mock_service.get_contract_page_async.await_args.kwargs
     assert call_kwargs["owner_party_ids"] == ["owner-party-2"]
-    assert call_kwargs["manager_party_ids"] == ["manager-party-1"]
+    assert call_kwargs["manager_party_ids"] is None
     assert call_kwargs["owner_party_id"] == "owner-party-2"
+    assert call_kwargs["manager_party_id"] is None
 
 
 @pytest.mark.asyncio
@@ -453,7 +503,7 @@ async def test_contract_create_authz_should_include_party_scope_context() -> Non
     assert result.resource_context["ownership_id"] == "ownership-1"
     assert result.resource_context["owner_party_id"] == "owner-party-1"
     assert result.resource_context["manager_party_id"] == "manager-party-1"
-    assert result.resource_context["party_id"] == "owner-party-1"
+    assert result.resource_context["party_id"] == "manager-party-1"
     _args, kwargs = mock_authz_service.check_access.await_args
     assert kwargs["resource_type"] == "rent_contract"
     assert kwargs["action"] == "create"
@@ -611,6 +661,55 @@ async def test_contract_create_authz_should_backfill_owner_party_id_for_persiste
         )
 
     assert contract_in.owner_party_id == "owner-party-from-ownership"
+
+
+@pytest.mark.asyncio
+async def test_contract_create_authz_should_infer_manager_scope_before_ownership_scope() -> None:
+    """创建合同在 legacy payload 下应先注入 manager scope，避免 manager-only 误拒绝。"""
+    from src.api.v1.rent_contracts import contracts as module
+
+    contract_in = _build_contract_create_payload()
+
+    mock_service = MagicMock()
+    mock_service.resolve_owner_party_scope_by_ownership_id_async = AsyncMock(
+        return_value="owner-party-from-ownership"
+    )
+    mock_authz_service = MagicMock()
+    mock_authz_service.check_access = AsyncMock(
+        return_value=MagicMock(
+            allowed=True,
+            reason_code="allow",
+        )
+    )
+    mock_authz_service.context_builder = MagicMock()
+    mock_authz_service.context_builder.build_subject_context = AsyncMock(
+        return_value=MagicMock(
+            owner_party_ids=[],
+            manager_party_ids=["subject-manager"],
+        )
+    )
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(module, "rent_contract_service", mock_service)
+        monkeypatch.setattr(module, "authz_service", mock_authz_service, raising=False)
+        result = await module._require_contract_create_authz(  # type: ignore[attr-defined]
+            contract_in=contract_in,
+            current_user=MagicMock(id="user-1"),
+            db=MagicMock(),
+        )
+
+    assert result.allowed is True
+    assert result.resource_context["manager_party_id"] == "subject-manager"
+    assert result.resource_context["owner_party_id"] == "owner-party-from-ownership"
+    assert result.resource_context["party_id"] == "subject-manager"
+    mock_service.resolve_owner_party_scope_by_ownership_id_async.assert_awaited_once_with(
+        db=ANY,
+        ownership_id="ownership-1",
+    )
+    _args, kwargs = mock_authz_service.check_access.await_args
+    assert kwargs["resource"]["manager_party_id"] == "subject-manager"
+    assert kwargs["resource"]["owner_party_id"] == "owner-party-from-ownership"
+    assert kwargs["resource"]["party_id"] == "subject-manager"
 
 
 @pytest.mark.asyncio

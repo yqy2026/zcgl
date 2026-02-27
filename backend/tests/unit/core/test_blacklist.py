@@ -5,6 +5,7 @@ Token Blacklist Manager 单元测试
 
 import time
 from datetime import datetime, timedelta
+from unittest.mock import MagicMock
 
 from src.security.token_blacklist import TokenBlacklistManager, blacklist_manager
 
@@ -220,6 +221,39 @@ class TestMiddlewareIntegration:
         assert _is_token_blacklisted(
             jti=None, user_id=user_id, token_iat=revoked_at + 1
         ) is False
+
+    def test_validate_jwt_token_should_not_log_unexpected_for_blacklisted_token(
+        self, monkeypatch
+    ):
+        """黑名单命中属于业务异常，不应记录为 Unexpected JWT validation error。"""
+        import src.middleware.auth as auth
+        from src.core.exception_handler import AuthenticationError
+
+        now_ts = int(time.time())
+        monkeypatch.setattr(
+            auth.jwt,
+            "decode",
+            lambda *_args, **_kwargs: {
+                "sub": "user-id",
+                "username": "tester",
+                "exp": now_ts + 3600,
+                "iat": now_ts,
+                "jti": "blacklisted-jti",
+            },
+        )
+        monkeypatch.setattr(auth, "_is_token_blacklisted", lambda **_kwargs: True)
+
+        unexpected_logger = MagicMock()
+        monkeypatch.setattr(auth.logger, "exception", unexpected_logger)
+
+        try:
+            auth._validate_jwt_token("dummy-token")
+        except AuthenticationError as exc:
+            assert exc.message == "Token已失效"
+        else:
+            raise AssertionError("Expected AuthenticationError for blacklisted token")
+
+        unexpected_logger.assert_not_called()
 
     def test_blacklist_fail_closed_when_circuit_open_in_production(self, monkeypatch):
         """生产环境下黑名单熔断应 fail-closed"""

@@ -143,6 +143,64 @@ async def test_export_contracts_to_excel_should_apply_authz_scope_filters() -> N
 
 
 @pytest.mark.asyncio
+async def test_export_contracts_to_excel_should_skip_scope_filters_for_admin_bypass() -> None:
+    """管理员 bypass 决策下导出不应被 resource_context scope hint 收窄。"""
+    from src.api.v1.rent_contracts import excel_ops as module
+    from src.api.v1.rent_contracts.excel_ops import export_contracts_to_excel
+    from src.middleware.auth import AuthzContext
+
+    mock_service = MagicMock()
+    mock_service.export_contracts_to_excel = AsyncMock(
+        return_value={
+            "success": True,
+            "file_path": "/tmp/contracts.xlsx",
+            "file_name": "contracts.xlsx",
+        }
+    )
+    authz_ctx = AuthzContext(
+        current_user=MagicMock(id="admin-1"),
+        action="read",
+        resource_type="rent_contract",
+        resource_id=None,
+        resource_context={
+            "owner_party_ids": ["owner-hint"],
+            "manager_party_ids": ["manager-hint"],
+            "owner_party_id": "owner-hint",
+            "manager_party_id": "manager-hint",
+        },
+        allowed=True,
+        reason_code="rbac_admin_bypass",
+    )
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(module, "EXCEL_SERVICE_AVAILABLE", True)
+        monkeypatch.setattr(module, "rent_contract_excel_service", mock_service)
+        await export_contracts_to_excel(
+            contract_ids=None,
+            current_user=MagicMock(),
+            authz_ctx=authz_ctx,
+            db=MagicMock(),
+            should_include_terms=True,
+            should_include_ledger=True,
+            start_date=None,
+            end_date=None,
+        )
+
+    mock_service.export_contracts_to_excel.assert_awaited_once_with(
+        db=ANY,
+        contract_ids=None,
+        include_terms=True,
+        include_ledger=True,
+        start_date=None,
+        end_date=None,
+        owner_party_id=None,
+        manager_party_id=None,
+        owner_party_ids=None,
+        manager_party_ids=None,
+    )
+
+
+@pytest.mark.asyncio
 async def test_excel_import_create_authz_should_include_organization_scope_context() -> None:
     """Excel 导入 create 鉴权应注入组织/主体上下文，避免空资源上下文放行。"""
     from src.api.v1.rent_contracts import excel_ops as module

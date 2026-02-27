@@ -236,17 +236,17 @@ class TestAnalyticsAPIContracts:
 
     def test_analytics_debug_cache_endpoint_exists(self, authenticated_client):
         """调试缓存端点在测试环境保持不可见（404）。"""
-        debug_client = TestClient(
+        with TestClient(
             authenticated_client.app,
             raise_server_exceptions=False,
-        )
-        debug_client.cookies.update(authenticated_client.cookies)
-        response = debug_client.get("/api/v1/analytics/debug/cache")
+        ) as debug_client:
+            debug_client.cookies.update(authenticated_client.cookies)
+            response = debug_client.get("/api/v1/analytics/debug/cache")
 
-        # debug-only + localhost 限制：测试环境应返回 404（不暴露端点）
-        assert response.status_code == 404
-        payload = response.json()
-        assert payload.get("success") is False
+            # debug-only + localhost 限制：测试环境应返回 404（不暴露端点）
+            assert response.status_code == 404
+            payload = response.json()
+            assert payload.get("success") is False
 
     def test_router_registration_via_openapi(self, authenticated_client):
         """路由应在 OpenAPI 中可见（真实注册验证）。"""

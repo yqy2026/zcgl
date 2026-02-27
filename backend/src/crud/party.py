@@ -127,6 +127,165 @@ class CRUDParty:
 
         return None
 
+    async def resolve_legacy_organization_scope_ids_by_party_ids(
+        self,
+        db: AsyncSession,
+        *,
+        party_ids: list[str],
+    ) -> dict[str, list[str]]:
+        normalized_party_ids = [
+            normalized
+            for raw_party_id in party_ids
+            if (
+                normalized := self._normalize_identifier(raw_party_id)
+            )
+            is not None
+        ]
+        if len(normalized_party_ids) == 0:
+            return {}
+
+        ordered_unique_party_ids = list(dict.fromkeys(normalized_party_ids))
+        normalized_party_id_set = set(ordered_unique_party_ids)
+
+        stmt = (
+            select(
+                Party.id.label("party_id"),
+                Party.external_ref.label("external_ref"),
+                Party.code.label("party_code"),
+                Party.name.label("party_name"),
+            )
+            .where(
+                Party.party_type == PartyType.ORGANIZATION.value,
+                or_(
+                    Party.id.in_(ordered_unique_party_ids),
+                    Party.external_ref.in_(ordered_unique_party_ids),
+                ),
+            )
+            .order_by(Party.id)
+        )
+        rows = (await db.execute(stmt)).mappings().all()
+
+        pending_party_ids: set[str] = set()
+        pending_party_codes: set[str] = set()
+        pending_party_names: set[str] = set()
+        for row in rows:
+            if self._normalize_identifier(row.get("external_ref")) is not None:
+                continue
+            party_id = self._normalize_identifier(row.get("party_id"))
+            party_code = self._normalize_identifier(row.get("party_code"))
+            party_name = self._normalize_identifier(row.get("party_name"))
+            if party_id is not None:
+                pending_party_ids.add(party_id)
+            if party_code is not None:
+                pending_party_codes.add(party_code)
+            if party_name is not None:
+                pending_party_names.add(party_name)
+
+        resolved_org_ids_by_party_id: dict[str, set[str]] = {}
+        resolved_org_ids_by_party_code: dict[str, set[str]] = {}
+        resolved_org_ids_by_party_name: dict[str, set[str]] = {}
+        if (
+            len(pending_party_ids) > 0
+            or len(pending_party_codes) > 0
+            or len(pending_party_names) > 0
+        ):
+            from ..models.organization import Organization
+
+            org_lookup_conditions = []
+            if len(pending_party_ids) > 0:
+                org_lookup_conditions.append(Organization.id.in_(sorted(pending_party_ids)))
+            if len(pending_party_codes) > 0:
+                org_lookup_conditions.append(
+                    Organization.code.in_(sorted(pending_party_codes))
+                )
+            if len(pending_party_names) > 0:
+                org_lookup_conditions.append(
+                    Organization.name.in_(sorted(pending_party_names))
+                )
+
+            if len(org_lookup_conditions) > 0:
+                org_stmt = (
+                    select(
+                        Organization.id.label("organization_id"),
+                        Organization.code.label("organization_code"),
+                        Organization.name.label("organization_name"),
+                    )
+                    .where(or_(*org_lookup_conditions))
+                    .order_by(Organization.id)
+                )
+                org_rows = (await db.execute(org_stmt)).mappings().all()
+                for org_row in org_rows:
+                    organization_id = self._normalize_identifier(
+                        org_row.get("organization_id")
+                    )
+                    organization_code = self._normalize_identifier(
+                        org_row.get("organization_code")
+                    )
+                    organization_name = self._normalize_identifier(
+                        org_row.get("organization_name")
+                    )
+                    if organization_id is None:
+                        continue
+                    if organization_id in pending_party_ids:
+                        resolved_org_ids_by_party_id.setdefault(
+                            organization_id,
+                            set(),
+                        ).add(organization_id)
+                    if organization_code is not None and organization_code in pending_party_codes:
+                        resolved_org_ids_by_party_code.setdefault(
+                            organization_code,
+                            set(),
+                        ).add(organization_id)
+                    if organization_name is not None and organization_name in pending_party_names:
+                        resolved_org_ids_by_party_name.setdefault(
+                            organization_name,
+                            set(),
+                        ).add(organization_id)
+
+        resolved_scope_ids: dict[str, set[str]] = {}
+        for row in rows:
+            matched_party_id = self._normalize_identifier(row.get("party_id"))
+            matched_external_ref = self._normalize_identifier(row.get("external_ref"))
+            matched_party_code = self._normalize_identifier(row.get("party_code"))
+            matched_party_name = self._normalize_identifier(row.get("party_name"))
+            matched_input_identifiers = {
+                identifier
+                for identifier in (matched_party_id, matched_external_ref)
+                if identifier is not None and identifier in normalized_party_id_set
+            }
+            if len(matched_input_identifiers) == 0:
+                continue
+
+            scoped_legacy_org_ids: set[str] = set()
+            if matched_external_ref is not None:
+                scoped_legacy_org_ids.add(matched_external_ref)
+            if matched_party_id is not None:
+                scoped_legacy_org_ids.update(
+                    resolved_org_ids_by_party_id.get(matched_party_id, set())
+                )
+            if matched_party_code is not None:
+                scoped_legacy_org_ids.update(
+                    resolved_org_ids_by_party_code.get(matched_party_code, set())
+                )
+            if matched_party_name is not None:
+                scoped_legacy_org_ids.update(
+                    resolved_org_ids_by_party_name.get(matched_party_name, set())
+                )
+
+            if len(scoped_legacy_org_ids) == 0:
+                continue
+
+            for matched_input_id in matched_input_identifiers:
+                resolved_scope_ids.setdefault(matched_input_id, set()).update(
+                    scoped_legacy_org_ids
+                )
+
+        return {
+            input_party_id: sorted(scope_ids)
+            for input_party_id, scope_ids in resolved_scope_ids.items()
+            if len(scope_ids) > 0
+        }
+
     async def resolve_legal_entity_party_id(
         self,
         db: AsyncSession,

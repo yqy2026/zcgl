@@ -34,6 +34,7 @@ from ....services.rent_contract import rent_contract_service
 router = APIRouter()
 _CONTRACT_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:rent_contract:create"
 _CONTRACT_MUTATION_UNSCOPED_PARTY_ID = "__unscoped__:rent_contract:mutation"
+_ADMIN_BYPASS_REASON_CODE = "rbac_admin_bypass"
 
 
 def _normalize_optional_str(value: Any) -> str | None:
@@ -51,6 +52,8 @@ def _resolve_authz_scope_party_id(
     field: str,
 ) -> str | None:
     if not isinstance(authz_ctx, AuthzContext):
+        return None
+    if _normalize_optional_str(authz_ctx.reason_code) == _ADMIN_BYPASS_REASON_CODE:
         return None
     return _normalize_optional_str(authz_ctx.resource_context.get(field))
 
@@ -74,6 +77,8 @@ def _resolve_authz_scope_party_ids(
     list_field: str,
 ) -> list[str]:
     if not isinstance(authz_ctx, AuthzContext):
+        return []
+    if _normalize_optional_str(authz_ctx.reason_code) == _ADMIN_BYPASS_REASON_CODE:
         return []
     scope_ids = _normalize_identifier_sequence(
         authz_ctx.resource_context.get(list_field),
@@ -99,6 +104,25 @@ async def _resolve_owner_party_scope_by_ownership_id(
         ownership_id=normalized_ownership_id,
     )
     return _normalize_optional_str(resolved_party_id)
+
+
+async def _infer_subject_manager_party_id(
+    *,
+    db: AsyncSession,
+    user_id: str,
+) -> str | None:
+    try:
+        subject_context = await authz_service.context_builder.build_subject_context(
+            db,
+            user_id=user_id,
+        )
+    except Exception:
+        return None
+
+    manager_party_ids = _normalize_identifier_sequence(
+        getattr(subject_context, "manager_party_ids", []),
+    )
+    return manager_party_ids[0] if manager_party_ids else None
 
 
 async def _require_contract_mutation_authz(
@@ -193,14 +217,22 @@ async def _require_contract_create_authz(
     resource_context: dict[str, Any] = {}
     if owner_party_id is not None:
         resource_context["owner_party_id"] = owner_party_id
-        resource_context["party_id"] = owner_party_id
     if manager_party_id is not None:
         resource_context["manager_party_id"] = manager_party_id
-        if "party_id" not in resource_context:
-            resource_context["party_id"] = manager_party_id
+    if manager_party_id is None:
+        inferred_manager_party_id = _normalize_optional_str(
+            await _infer_subject_manager_party_id(
+                db=db,
+                user_id=str(current_user.id),
+            )
+        )
+        if inferred_manager_party_id is not None:
+            manager_party_id = inferred_manager_party_id
+            resource_context["manager_party_id"] = inferred_manager_party_id
     if ownership_id is not None:
         resource_context["ownership_id"] = ownership_id
-    if "party_id" not in resource_context and ownership_id is not None:
+    resolved_owner_party_id: str | None = None
+    if owner_party_id is None and ownership_id is not None:
         resolved_owner_party_id = await _resolve_owner_party_scope_by_ownership_id(
             db=db,
             ownership_id=ownership_id,
@@ -208,8 +240,10 @@ async def _require_contract_create_authz(
         if resolved_owner_party_id is not None:
             contract_in.owner_party_id = resolved_owner_party_id
             resource_context["owner_party_id"] = resolved_owner_party_id
-            resource_context["party_id"] = resolved_owner_party_id
-    if "party_id" not in resource_context and ownership_id is None:
+    resolved_party_id = manager_party_id or owner_party_id or resolved_owner_party_id
+    if resolved_party_id is not None:
+        resource_context["party_id"] = resolved_party_id
+    elif ownership_id is None:
         resource_context["party_id"] = _CONTRACT_CREATE_UNSCOPED_PARTY_ID
 
     try:
@@ -423,9 +457,9 @@ async def get_contracts(
     elif scoped_owner_party_ids:
         effective_owner_party_ids = scoped_owner_party_ids
 
-    effective_manager_party_ids = (
-        scoped_manager_party_ids if scoped_manager_party_ids else None
-    )
+    effective_manager_party_ids: list[str] | None = None
+    if owner_party_id_value is None and scoped_manager_party_ids:
+        effective_manager_party_ids = scoped_manager_party_ids
 
     effective_owner_party_id = (
         effective_owner_party_ids[0] if effective_owner_party_ids else None

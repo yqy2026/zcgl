@@ -48,6 +48,70 @@ def _resolve_test_database_url() -> str | None:
     return None
 
 
+def _is_safe_test_database(database_url: str) -> bool:
+    """Best-effort guard to avoid destructive fallback on non-test databases."""
+    try:
+        from sqlalchemy.engine import make_url
+
+        parsed = make_url(database_url)
+        database_name = (parsed.database or "").lower()
+    except Exception:
+        database_name = database_url.lower()
+
+    return "test" in database_name
+
+
+def _recreate_test_schema_from_models(database_url: str) -> None:
+    """Recreate schema from ORM metadata for test DB fallback path."""
+    if not _is_safe_test_database(database_url):
+        raise RuntimeError(
+            "Refusing to recreate schema for non-test database URL. "
+            "Set TEST_DATABASE_URL to a dedicated *_test database."
+        )
+
+    from sqlalchemy import create_engine, text
+
+    import src.models  # noqa: F401 - ensure all model tables are registered
+    from src.database import Base
+
+    engine = create_engine(database_url)
+    try:
+        if engine.dialect.name == "postgresql":
+            with engine.begin() as conn:
+                conn.execute(text("DROP SCHEMA IF EXISTS public CASCADE"))
+                conn.execute(text("CREATE SCHEMA public"))
+        else:
+            Base.metadata.drop_all(bind=engine)
+
+        Base.metadata.create_all(bind=engine)
+    finally:
+        engine.dispose()
+
+
+def _reset_test_schema(database_url: str) -> None:
+    """Reset schema to empty state before running Alembic migrations."""
+    if not _is_safe_test_database(database_url):
+        raise RuntimeError(
+            "Refusing to reset schema for non-test database URL. "
+            "Set TEST_DATABASE_URL to a dedicated *_test database."
+        )
+
+    from sqlalchemy import create_engine, text
+
+    engine = create_engine(database_url)
+    try:
+        if engine.dialect.name == "postgresql":
+            with engine.begin() as conn:
+                conn.execute(text("DROP SCHEMA IF EXISTS public CASCADE"))
+                conn.execute(text("CREATE SCHEMA public"))
+        else:
+            from src.database import Base
+
+            Base.metadata.drop_all(bind=engine)
+    finally:
+        engine.dispose()
+
+
 # Set environment variables at the earliest possible moment
 # Use TEST_DATABASE_URL for database-backed tests
 # Integration/E2E tests should set their own *_TEST_DATABASE_URL
@@ -211,10 +275,22 @@ def setup_test_database():
     run_migrations = not (is_unit_marker_run or is_unit_path_run)
 
     if run_migrations and "postgresql" in database_url:
+        backend_root = Path(__file__).resolve().parents[1]
+        alembic_ini = backend_root / "alembic.ini"
         try:
             print(f"\n[*] Setting up test database: {database_url}")
+            _reset_test_schema(database_url)
             result = subprocess.run(
-                [sys.executable, "-m", "alembic", "upgrade", "head"],
+                [
+                    sys.executable,
+                    "-m",
+                    "alembic",
+                    "-c",
+                    str(alembic_ini),
+                    "upgrade",
+                    "head",
+                ],
+                cwd=str(backend_root),
                 capture_output=True,
                 text=True,
                 timeout=60,
@@ -222,26 +298,23 @@ def setup_test_database():
             if result.returncode == 0:
                 print("[OK] Database migrations completed successfully")
             else:
-                print(f"[!] Migration warnings: {result.stderr}")
-                from sqlalchemy import create_engine
+                stderr_text = (result.stderr or "").strip()
+                stdout_text = (result.stdout or "").strip()
+                detail_text = "\n".join(
+                    part for part in (stderr_text, stdout_text) if part != ""
+                )
+                if detail_text:
+                    print(f"[!] Migration warnings:\n{detail_text}")
+                else:
+                    print("[!] Migration warnings: subprocess returned non-zero exit code")
 
-                import src.models  # noqa: F401 - ensure all model tables are registered
-                from src.database import Base
-
-                engine = create_engine(database_url)
-                Base.metadata.create_all(bind=engine)
-                print("[OK] Database tables created (fallback)")
+                _recreate_test_schema_from_models(database_url)
+                print("[OK] Database schema recreated from models (fallback)")
         except Exception as e:
             print(f"[!] Database setup failed: {e}")
             try:
-                from sqlalchemy import create_engine
-
-                import src.models  # noqa: F401 - ensure all model tables are registered
-                from src.database import Base
-
-                engine = create_engine(database_url)
-                Base.metadata.create_all(bind=engine)
-                print("[OK] Database tables created (fallback)")
+                _recreate_test_schema_from_models(database_url)
+                print("[OK] Database schema recreated from models (fallback)")
             except Exception as e2:
                 print(f"[ERROR] Database setup failed completely: {e2}")
 

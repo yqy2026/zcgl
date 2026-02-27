@@ -58,7 +58,7 @@ async def test_project_create_authz_should_include_manager_scope_context() -> No
         monkeypatch.setattr(module, "authz_service", mock_authz_service, raising=False)
         result = await module._require_project_create_authz(  # type: ignore[attr-defined]
             project_in=project_in,
-            current_user=MagicMock(id="user-1"),
+            current_user=MagicMock(id="user-1", default_organization_id=None),
             db=MagicMock(),
         )
 
@@ -102,8 +102,8 @@ async def test_project_create_authz_should_normalize_party_fields_on_input_model
 
 
 @pytest.mark.asyncio
-async def test_project_create_authz_should_fallback_to_unscoped_party_context() -> None:
-    """创建项目缺少主体字段时应写入 unscoped 哨兵，避免空上下文放行。"""
+async def test_project_create_authz_should_infer_subject_scope_when_request_is_unscoped() -> None:
+    """创建项目缺少主体字段时应回退到 subject manager scope。"""
     from src.api.v1.assets import project as module
 
     project_in = MagicMock(
@@ -121,9 +121,59 @@ async def test_project_create_authz_should_fallback_to_unscoped_party_context() 
 
     with pytest.MonkeyPatch.context() as monkeypatch:
         monkeypatch.setattr(module, "authz_service", mock_authz_service, raising=False)
+        monkeypatch.setattr(
+            module,
+            "_build_subject_scope_hint",
+            AsyncMock(
+                return_value={
+                    "manager_party_id": "subject-manager-party-1",
+                    "manager_party_ids": ["subject-manager-party-1"],
+                    "party_id": "subject-manager-party-1",
+                }
+            ),
+            raising=False,
+        )
         result = await module._require_project_create_authz(  # type: ignore[attr-defined]
             project_in=project_in,
-            current_user=MagicMock(id="user-1"),
+            current_user=MagicMock(id="user-1", default_organization_id=None),
+            db=MagicMock(),
+        )
+
+    assert result.allowed is True
+    assert result.resource_context["manager_party_id"] == "subject-manager-party-1"
+    assert result.resource_context["party_id"] == "subject-manager-party-1"
+    assert result.resource_context["manager_party_ids"] == ["subject-manager-party-1"]
+
+
+@pytest.mark.asyncio
+async def test_project_create_authz_should_keep_unscoped_sentinel_when_subject_scope_is_empty() -> None:
+    """创建项目在无任何主体上下文时应保持 fail-closed 哨兵。"""
+    from src.api.v1.assets import project as module
+
+    project_in = MagicMock(
+        manager_party_id=None,
+        organization_id=None,
+    )
+
+    mock_authz_service = MagicMock()
+    mock_authz_service.check_access = AsyncMock(
+        return_value=MagicMock(
+            allowed=True,
+            reason_code="allow",
+        )
+    )
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(module, "authz_service", mock_authz_service, raising=False)
+        monkeypatch.setattr(
+            module,
+            "_build_subject_scope_hint",
+            AsyncMock(return_value={}),
+            raising=False,
+        )
+        result = await module._require_project_create_authz(  # type: ignore[attr-defined]
+            project_in=project_in,
+            current_user=MagicMock(id="user-1", default_organization_id=None),
             db=MagicMock(),
         )
 
@@ -132,8 +182,8 @@ async def test_project_create_authz_should_fallback_to_unscoped_party_context() 
 
 
 @pytest.mark.asyncio
-async def test_project_create_authz_should_backfill_manager_party_id_from_organization() -> None:
-    """创建项目使用 organization fallback 时应回填 manager_party_id 到入参对象。"""
+async def test_project_create_authz_should_backfill_manager_party_id_from_mapped_organization_party() -> None:
+    """创建项目应通过 organization->party 映射回填 manager_party_id。"""
     from src.api.v1.assets import project as module
 
     project_in = MagicMock(
@@ -151,13 +201,111 @@ async def test_project_create_authz_should_backfill_manager_party_id_from_organi
 
     with pytest.MonkeyPatch.context() as monkeypatch:
         monkeypatch.setattr(module, "authz_service", mock_authz_service, raising=False)
-        await module._require_project_create_authz(  # type: ignore[attr-defined]
+        monkeypatch.setattr(
+            module,
+            "_resolve_organization_party_id",
+            AsyncMock(return_value="party-org-1"),
+            raising=False,
+        )
+        result = await module._require_project_create_authz(  # type: ignore[attr-defined]
             project_in=project_in,
             current_user=MagicMock(id="user-1"),
             db=MagicMock(),
         )
 
-    assert project_in.manager_party_id == "org-1"
+    assert project_in.manager_party_id == "party-org-1"
+    assert result.resource_context["manager_party_id"] == "party-org-1"
+    assert result.resource_context["party_id"] == "party-org-1"
+
+
+@pytest.mark.asyncio
+async def test_project_create_authz_should_not_copy_raw_organization_id_into_manager_party_id(
+) -> None:
+    """organization 映射缺失时不应把原始 organization_id 写入 manager_party_id。"""
+    from src.api.v1.assets import project as module
+
+    project_in = MagicMock(
+        manager_party_id=None,
+        organization_id="org-1",
+    )
+
+    mock_authz_service = MagicMock()
+    mock_authz_service.check_access = AsyncMock(
+        return_value=MagicMock(
+            allowed=True,
+            reason_code="allow",
+        )
+    )
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(module, "authz_service", mock_authz_service, raising=False)
+        monkeypatch.setattr(
+            module,
+            "_resolve_organization_party_id",
+            AsyncMock(return_value=None),
+            raising=False,
+        )
+        monkeypatch.setattr(
+            module,
+            "_build_subject_scope_hint",
+            AsyncMock(return_value={}),
+            raising=False,
+        )
+        result = await module._require_project_create_authz(  # type: ignore[attr-defined]
+            project_in=project_in,
+            current_user=MagicMock(id="user-1"),
+            db=MagicMock(),
+        )
+
+    assert project_in.manager_party_id is None
+    assert result.resource_context["organization_id"] == "org-1"
+    assert "manager_party_id" not in result.resource_context
+    assert result.resource_context["party_id"] == "org-1"
+
+
+@pytest.mark.asyncio
+async def test_project_create_authz_should_use_default_org_scope_when_request_is_unscoped() -> None:
+    """创建项目请求未携带 organization_id 时应使用用户默认组织鉴权。"""
+    from src.api.v1.assets import project as module
+
+    project_in = MagicMock(
+        manager_party_id=None,
+        organization_id=None,
+    )
+
+    mock_authz_service = MagicMock()
+    mock_authz_service.check_access = AsyncMock(
+        return_value=MagicMock(
+            allowed=True,
+            reason_code="allow",
+        )
+    )
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(module, "authz_service", mock_authz_service, raising=False)
+        monkeypatch.setattr(
+            module,
+            "_resolve_organization_party_id",
+            AsyncMock(return_value="party-org-default"),
+            raising=False,
+        )
+        result = await module._require_project_create_authz(  # type: ignore[attr-defined]
+            project_in=project_in,
+            current_user=MagicMock(
+                id="user-1",
+                default_organization_id="org-default",
+            ),
+            db=MagicMock(),
+        )
+
+    assert result.allowed is True
+    assert project_in.manager_party_id == "party-org-default"
+    assert result.resource_context["organization_id"] == "org-default"
+    assert result.resource_context["manager_party_id"] == "party-org-default"
+    assert result.resource_context["party_id"] == "party-org-default"
+    _args, kwargs = mock_authz_service.check_access.await_args
+    assert kwargs["resource"]["organization_id"] == "org-default"
+    assert kwargs["resource"]["party_id"] == "party-org-default"
 
 
 @pytest.mark.asyncio
@@ -177,7 +325,10 @@ async def test_create_project_should_backfill_manager_party_from_authz_context()
         action="create",
         resource_type="project",
         resource_id=None,
-        resource_context={"manager_party_id": "manager-party-from-authz"},
+        resource_context={
+            "manager_party_id": "manager-party-from-authz",
+            "organization_id": "org-from-authz",
+        },
         allowed=True,
         reason_code="allow",
     )
@@ -194,6 +345,45 @@ async def test_create_project_should_backfill_manager_party_from_authz_context()
     assert project_in.manager_party_id == "manager-party-from-authz"
     assert result["id"] == "project-1"
     assert mock_service.create_project.await_args.kwargs["obj_in"] is project_in
+    assert mock_service.create_project.await_args.kwargs["organization_id"] == "org-from-authz"
+
+
+@pytest.mark.asyncio
+async def test_create_project_should_use_request_organization_id_before_default_organization() -> None:
+    """创建项目应优先使用请求 organization_id，再回退 default_organization_id。"""
+    from src.api.v1.assets import project as module
+
+    project_in = MagicMock(
+        manager_party_id="manager-party-1",
+        organization_id="org-request",
+    )
+    current_user = MagicMock(id="user-1", default_organization_id="org-default")
+
+    mock_service = MagicMock()
+    mock_service.create_project = AsyncMock(return_value=MagicMock(id="project-1"))
+    mock_service.project_to_response = MagicMock(return_value={"id": "project-1"})
+
+    authz_ctx = module.AuthzContext(
+        current_user=current_user,
+        action="create",
+        resource_type="project",
+        resource_id=None,
+        resource_context={},
+        allowed=True,
+        reason_code="allow",
+    )
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(module, "project_service", mock_service)
+        result = await module.create_project(  # type: ignore[attr-defined]
+            project_in=project_in,
+            db=MagicMock(),
+            current_user=current_user,
+            _authz_ctx=authz_ctx,
+        )
+
+    assert result["id"] == "project-1"
+    assert mock_service.create_project.await_args.kwargs["organization_id"] == "org-request"
 
 
 @pytest.mark.asyncio

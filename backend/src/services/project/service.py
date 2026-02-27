@@ -2,7 +2,6 @@ import logging
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.ext.asyncio import AsyncSession
 
 try:
@@ -51,11 +50,8 @@ class ProjectService:
         Returns:
             ProjectResponse: 转换后的响应 Schema
         """
-        data = {
-            attr.key: getattr(project, attr.key)
-            for attr in sa_inspect(project).mapper.column_attrs
-        }
-        return ProjectResponse.model_validate(data)
+        # 交由 ProjectResponse 的 model_validator 处理关系字段懒加载安全与兼容转换
+        return ProjectResponse.model_validate(project)
 
     @staticmethod
     def _utcnow_naive() -> datetime:

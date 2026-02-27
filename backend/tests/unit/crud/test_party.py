@@ -14,6 +14,12 @@ def _mapping_execute_result(row: dict[str, str] | None) -> MagicMock:
     return result
 
 
+def _mapping_execute_all_result(rows: list[dict[str, str | None]]) -> MagicMock:
+    result = MagicMock()
+    result.mappings.return_value.all.return_value = rows
+    return result
+
+
 @pytest.mark.asyncio
 async def test_create_party_adds_and_refreshes(mock_db) -> None:
     crud = CRUDParty()
@@ -156,4 +162,120 @@ async def test_resolve_legal_entity_party_id_should_return_none_for_blank_identi
     )
 
     assert resolved is None
+    mock_db.execute.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_resolve_legacy_organization_scope_ids_by_party_ids_should_map_party_and_external_ref(
+    mock_db,
+) -> None:
+    crud = CRUDParty()
+    mock_db.execute = AsyncMock(
+        return_value=_mapping_execute_all_result(
+            [
+                {
+                    "party_id": "party-org-1",
+                    "external_ref": "org-legacy-1",
+                    "party_code": "ORG-001",
+                    "party_name": "组织一",
+                },
+                {
+                    "party_id": "party-org-2",
+                    "external_ref": "org-legacy-2",
+                    "party_code": "ORG-002",
+                    "party_name": "组织二",
+                },
+            ]
+        )
+    )
+
+    result = await crud.resolve_legacy_organization_scope_ids_by_party_ids(
+        mock_db,
+        party_ids=["party-org-1", "org-legacy-2", "unknown"],
+    )
+
+    assert result == {
+        "party-org-1": ["org-legacy-1"],
+        "org-legacy-2": ["org-legacy-2"],
+    }
+
+
+@pytest.mark.asyncio
+async def test_resolve_legacy_organization_scope_ids_by_party_ids_should_resolve_org_id_via_metadata_lookup(
+    mock_db,
+) -> None:
+    crud = CRUDParty()
+    mock_db.execute = AsyncMock(
+        side_effect=[
+            _mapping_execute_all_result(
+                [
+                    {
+                        "party_id": "party-org-1",
+                        "external_ref": None,
+                        "party_code": "ORG-001",
+                        "party_name": "组织一",
+                    }
+                ]
+            ),
+            _mapping_execute_all_result(
+                [
+                    {
+                        "organization_id": "org-legacy-1",
+                        "organization_code": "ORG-001",
+                        "organization_name": "组织一",
+                    }
+                ]
+            ),
+        ]
+    )
+
+    result = await crud.resolve_legacy_organization_scope_ids_by_party_ids(
+        mock_db,
+        party_ids=["party-org-1"],
+    )
+
+    assert result == {"party-org-1": ["org-legacy-1"]}
+
+
+@pytest.mark.asyncio
+async def test_resolve_legacy_organization_scope_ids_by_party_ids_should_not_fallback_to_party_id_when_org_lookup_missing(
+    mock_db,
+) -> None:
+    crud = CRUDParty()
+    mock_db.execute = AsyncMock(
+        side_effect=[
+            _mapping_execute_all_result(
+                [
+                    {
+                        "party_id": "party-org-1",
+                        "external_ref": None,
+                        "party_code": "ORG-001",
+                        "party_name": "组织一",
+                    }
+                ]
+            ),
+            _mapping_execute_all_result([]),
+        ]
+    )
+
+    result = await crud.resolve_legacy_organization_scope_ids_by_party_ids(
+        mock_db,
+        party_ids=["party-org-1"],
+    )
+
+    assert result == {}
+
+
+@pytest.mark.asyncio
+async def test_resolve_legacy_organization_scope_ids_by_party_ids_should_skip_blank_input(
+    mock_db,
+) -> None:
+    crud = CRUDParty()
+
+    result = await crud.resolve_legacy_organization_scope_ids_by_party_ids(
+        mock_db,
+        party_ids=[" ", "", "\t"],
+    )
+
+    assert result == {}
     mock_db.execute.assert_not_called()

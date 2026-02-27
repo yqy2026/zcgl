@@ -1,6 +1,12 @@
 """ABAC model unit tests."""
 
-from src.models.abac import ABACPolicy, ABACPolicyRule, ABACRolePolicy
+from src.models.abac import (
+    ABACAction,
+    ABACEffect,
+    ABACPolicy,
+    ABACPolicyRule,
+    ABACRolePolicy,
+)
 
 
 def test_abac_policy_creation() -> None:
@@ -39,3 +45,11 @@ def test_abac_role_policy_unique_constraint_exists() -> None:
     }
 
     assert ("role_id", "policy_id") in unique_columns
+
+
+def test_abac_enum_columns_use_lowercase_values() -> None:
+    effect_type = ABACPolicy.__table__.c.effect.type
+    action_type = ABACPolicyRule.__table__.c.action.type
+
+    assert effect_type.enums == [member.value for member in ABACEffect]
+    assert action_type.enums == [member.value for member in ABACAction]

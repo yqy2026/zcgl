@@ -303,27 +303,28 @@ def test_permission_enforcement(
         role="user",
     )
 
-    admin_client = TestClient(client.app)
-    user_client = TestClient(client.app)
-
     # Login as admin and verify admin access
-    admin_client.post(
+    client.post(
         "/api/v1/auth/login",
         json={"identifier": "perm_admin", "password": "AdminPerm123!"},
     )
 
     # Test admin endpoint (e.g., list all users)
     # Admin should be able to access
-    admin_list_response = admin_client.get("/api/v1/auth/users")
+    admin_list_response = client.get("/api/v1/auth/users")
     assert admin_list_response.status_code == 200
 
+    # Reset auth state before logging in as regular user.
+    client.cookies.clear()
+
     # Login as regular user
-    user_client.post(
-        "/api/v1/auth/login", json={"identifier": "perm_user", "password": "UserPerm123!"}
+    client.post(
+        "/api/v1/auth/login",
+        json={"identifier": "perm_user", "password": "UserPerm123!"},
     )
 
     # Regular user should not be able to list all users
-    user_list_response = user_client.get("/api/v1/auth/users")
+    user_list_response = client.get("/api/v1/auth/users")
     assert user_list_response.status_code == 403
     payload = user_list_response.json()
     assert payload.get("success") is False

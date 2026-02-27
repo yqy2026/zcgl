@@ -172,6 +172,66 @@ async def test_get_rent_ledger_should_apply_authz_scope_filters() -> None:
 
 
 @pytest.mark.asyncio
+async def test_get_rent_ledger_should_skip_scope_filters_for_admin_bypass() -> None:
+    """管理员 bypass 决策下不应套用 resource_context 的作用域提示。"""
+    from src.api.v1.rent_contracts import ledger as module
+    from src.api.v1.rent_contracts.ledger import get_rent_ledger
+
+    mock_service = MagicMock()
+    mock_service.get_rent_ledger_page_async = AsyncMock(return_value=([], 0))
+
+    authz_ctx = module.AuthzContext(
+        current_user=MagicMock(id="admin-1"),
+        action="read",
+        resource_type="rent_contract",
+        resource_id=None,
+        resource_context={
+            "owner_party_ids": ["owner-party-hint"],
+            "manager_party_ids": ["manager-party-hint"],
+            "owner_party_id": "owner-party-hint",
+            "manager_party_id": "manager-party-hint",
+        },
+        allowed=True,
+        reason_code="rbac_admin_bypass",
+    )
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(module, "rent_contract_service", mock_service)
+        await get_rent_ledger(
+            db=MagicMock(),
+            current_user=MagicMock(),
+            authz_ctx=authz_ctx,
+            page=1,
+            page_size=10,
+            contract_id=None,
+            asset_id=None,
+            owner_party_id=None,
+            ownership_id=None,
+            year_month=None,
+            payment_status=None,
+            start_date=None,
+            end_date=None,
+        )
+
+    mock_service.get_rent_ledger_page_async.assert_awaited_once_with(
+        db=ANY,
+        skip=0,
+        limit=10,
+        contract_id=None,
+        asset_id=None,
+        owner_party_id=None,
+        manager_party_id=None,
+        owner_party_ids=None,
+        manager_party_ids=None,
+        ownership_id=None,
+        year_month=None,
+        payment_status=None,
+        start_date=None,
+        end_date=None,
+    )
+
+
+@pytest.mark.asyncio
 async def test_get_rent_ledger_should_allow_owner_filter_within_scoped_owner_collection() -> None:
     """请求 owner 过滤命中鉴权 owner 列表时应允许并按请求收窄。"""
     from src.api.v1.rent_contracts import ledger as module
@@ -220,9 +280,9 @@ async def test_get_rent_ledger_should_allow_owner_filter_within_scoped_owner_col
         contract_id=None,
         asset_id=None,
         owner_party_id="owner-party-2",
-        manager_party_id="manager-party-1",
+        manager_party_id=None,
         owner_party_ids=["owner-party-2"],
-        manager_party_ids=["manager-party-1", "manager-party-2"],
+        manager_party_ids=None,
         ownership_id=None,
         year_month=None,
         payment_status=None,

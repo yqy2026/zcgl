@@ -159,6 +159,50 @@ async def test_get_rent_statistics_should_apply_authz_scope_filters() -> None:
 
 
 @pytest.mark.asyncio
+async def test_get_rent_statistics_should_skip_scope_filters_for_admin_bypass() -> None:
+    """管理员 bypass 决策下统计查询不应套用 resource_context scope hint。"""
+    from src.api.v1.rent_contracts import statistics as module
+    from src.api.v1.rent_contracts.statistics import get_rent_statistics
+
+    expected = {"total_contracts": 1}
+    mock_service = MagicMock()
+    mock_service.get_statistics_async = AsyncMock(return_value=expected)
+
+    authz_ctx = module.AuthzContext(
+        current_user=MagicMock(id="admin-1"),
+        action="read",
+        resource_type="rent_contract",
+        resource_id=None,
+        resource_context={
+            "owner_party_ids": ["owner-party-hint"],
+            "manager_party_ids": ["manager-party-hint"],
+            "owner_party_id": "owner-party-hint",
+            "manager_party_id": "manager-party-hint",
+        },
+        allowed=True,
+        reason_code="rbac_admin_bypass",
+    )
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(module, "rent_contract_service", mock_service)
+        await get_rent_statistics(
+            db=MagicMock(),
+            current_user=MagicMock(),
+            authz_ctx=authz_ctx,
+            start_date=None,
+            end_date=None,
+            owner_party_ids=None,
+            ownership_ids=None,
+            asset_ids=None,
+            contract_status=None,
+        )
+
+    call_kwargs = mock_service.get_statistics_async.await_args.kwargs
+    assert call_kwargs["query_params"].owner_party_ids is None
+    assert call_kwargs["query_params"].manager_party_ids is None
+
+
+@pytest.mark.asyncio
 async def test_get_rent_statistics_should_allow_owner_filter_within_scoped_owner_collection() -> None:
     """请求 owner 过滤命中鉴权 owner 列表时应允许并按请求收窄。"""
     from src.api.v1.rent_contracts import statistics as module
@@ -199,10 +243,7 @@ async def test_get_rent_statistics_should_allow_owner_filter_within_scoped_owner
 
     call_kwargs = mock_service.get_statistics_async.await_args.kwargs
     assert call_kwargs["query_params"].owner_party_ids == ["owner-party-2"]
-    assert call_kwargs["query_params"].manager_party_ids == [
-        "manager-party-1",
-        "manager-party-2",
-    ]
+    assert call_kwargs["query_params"].manager_party_ids is None
 
 
 @pytest.mark.asyncio

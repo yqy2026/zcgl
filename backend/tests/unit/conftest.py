@@ -367,7 +367,8 @@ def unauthenticated_client():
     from src.main import app
 
     # Return client without auth headers
-    return TestClient(app)
+    with TestClient(app) as test_client:
+        yield test_client
 
 
 @pytest.fixture

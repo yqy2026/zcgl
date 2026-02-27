@@ -14,6 +14,7 @@ from ....core.exception_handler import (
     not_found,
 )
 from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
+from ....crud.party import party_crud
 from ....database import get_async_db
 from ....middleware.auth import AuthzContext, get_current_active_user, require_authz
 from ....models.auth import User
@@ -39,25 +40,139 @@ def _normalize_optional_str(value: Any) -> str | None:
     return normalized
 
 
+def _normalize_identifier_sequence(values: Any) -> list[str]:
+    if not isinstance(values, list):
+        return []
+
+    normalized_values: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        normalized_value = _normalize_optional_str(value)
+        if normalized_value is None or normalized_value in seen:
+            continue
+        seen.add(normalized_value)
+        normalized_values.append(normalized_value)
+    return normalized_values
+
+
+def _resolve_current_user_organization_id(current_user: User) -> str | None:
+    return _normalize_optional_str(getattr(current_user, "default_organization_id", None))
+
+
+def _resolve_effective_organization_id(
+    *,
+    project_in: ProjectCreate,
+    current_user: User,
+) -> str | None:
+    request_organization_id = _normalize_optional_str(project_in.organization_id)
+    if request_organization_id is not None:
+        return request_organization_id
+    return _resolve_current_user_organization_id(current_user)
+
+
+async def _resolve_organization_party_id(
+    *,
+    db: AsyncSession,
+    organization_id: str | None,
+) -> str | None:
+    normalized_organization_id = _normalize_optional_str(organization_id)
+    if normalized_organization_id is None:
+        return None
+
+    try:
+        resolved_party_id = await party_crud.resolve_organization_party_id(
+            db,
+            organization_id=normalized_organization_id,
+        )
+    except Exception:
+        return None
+    return _normalize_optional_str(resolved_party_id)
+
+
+async def _build_subject_scope_hint(
+    *,
+    db: AsyncSession,
+    user_id: str,
+) -> dict[str, Any]:
+    try:
+        subject_context = await authz_service.context_builder.build_subject_context(
+            db,
+            user_id=user_id,
+        )
+    except Exception:
+        return {}
+
+    owner_party_ids = _normalize_identifier_sequence(
+        getattr(subject_context, "owner_party_ids", [])
+    )
+    manager_party_ids = _normalize_identifier_sequence(
+        getattr(subject_context, "manager_party_ids", [])
+    )
+
+    scope_hint: dict[str, Any] = {}
+    if len(owner_party_ids) > 0:
+        scope_hint["owner_party_id"] = owner_party_ids[0]
+        scope_hint["owner_party_ids"] = owner_party_ids
+    if len(manager_party_ids) > 0:
+        scope_hint["manager_party_id"] = manager_party_ids[0]
+        scope_hint["manager_party_ids"] = manager_party_ids
+
+    if len(manager_party_ids) > 0:
+        scope_hint["party_id"] = manager_party_ids[0]
+    elif len(owner_party_ids) > 0:
+        scope_hint["party_id"] = owner_party_ids[0]
+
+    return scope_hint
+
+
 async def _require_project_create_authz(
     project_in: ProjectCreate,
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_async_db),
 ) -> AuthzContext:
     manager_party_id = _normalize_optional_str(project_in.manager_party_id)
-    organization_id = _normalize_optional_str(project_in.organization_id)
+    request_organization_id = _normalize_optional_str(project_in.organization_id)
+    effective_organization_id = _resolve_effective_organization_id(
+        project_in=project_in,
+        current_user=current_user,
+    )
     project_in.manager_party_id = manager_party_id
-    project_in.organization_id = organization_id
-    if manager_party_id is None and organization_id is not None:
-        manager_party_id = organization_id
-        project_in.manager_party_id = manager_party_id
+    project_in.organization_id = request_organization_id
+
+    if manager_party_id is None and effective_organization_id is not None:
+        resolved_party_id = await _resolve_organization_party_id(
+            db=db,
+            organization_id=effective_organization_id,
+        )
+        if resolved_party_id is not None:
+            manager_party_id = resolved_party_id
+            project_in.manager_party_id = resolved_party_id
+
     resource_context: dict[str, Any] = {}
     if manager_party_id is not None:
         resource_context["manager_party_id"] = manager_party_id
-    if organization_id is not None:
-        resource_context["organization_id"] = organization_id
+    if effective_organization_id is not None:
+        resource_context["organization_id"] = effective_organization_id
+    if manager_party_id is None:
+        subject_scope_hint = await _build_subject_scope_hint(
+            db=db,
+            user_id=str(current_user.id),
+        )
+        for key, value in subject_scope_hint.items():
+            resource_context.setdefault(key, value)
+        inferred_manager_party_id = _normalize_optional_str(
+            resource_context.get("manager_party_id")
+        )
+        if inferred_manager_party_id is not None:
+            manager_party_id = inferred_manager_party_id
+            project_in.manager_party_id = inferred_manager_party_id
+            resource_context["manager_party_id"] = inferred_manager_party_id
+
     resource_context["party_id"] = (
-        manager_party_id or organization_id or _PROJECT_CREATE_UNSCOPED_PARTY_ID
+        manager_party_id
+        or _normalize_optional_str(resource_context.get("party_id"))
+        or effective_organization_id
+        or _PROJECT_CREATE_UNSCOPED_PARTY_ID
     )
 
     try:
@@ -107,11 +222,18 @@ async def create_project(
                 and resolved_manager_party_id is not None
             ):
                 project_in.manager_party_id = resolved_manager_party_id
-        default_org_id = getattr(current_user, "default_organization_id", None)
+            resolved_organization_id = _normalize_optional_str(
+                _authz_ctx.resource_context.get("organization_id")
+            )
+        else:
+            resolved_organization_id = None
+
         organization_id = (
-            str(default_org_id)
-            if default_org_id is not None and str(default_org_id).strip() != ""
-            else None
+            resolved_organization_id
+            or _resolve_effective_organization_id(
+                project_in=project_in,
+                current_user=current_user,
+            )
         )
         project = await project_service.create_project(
             db=db,

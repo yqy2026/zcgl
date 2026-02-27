@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 from ..models.party import PartyType
 from ..models.user_party_binding import RelationType
@@ -27,6 +27,12 @@ class PartyBase(BaseModel):
 class PartyCreate(PartyBase):
     """Party create payload."""
 
+    metadata: dict[str, Any] | None = Field(
+        default=None,
+        validation_alias=AliasChoices("metadata", "metadata_json"),
+        description="扩展元数据",
+    )
+
 
 class PartyUpdate(BaseModel):
     """Party update payload."""
@@ -38,7 +44,7 @@ class PartyUpdate(BaseModel):
     status: str | None = Field(None, max_length=50, description="状态")
     metadata: dict[str, Any] | None = Field(
         default=None,
-        validation_alias="metadata_json",
+        validation_alias=AliasChoices("metadata", "metadata_json"),
         description="扩展元数据",
     )
 

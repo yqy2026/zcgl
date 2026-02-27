@@ -424,4 +424,5 @@ def unauthenticated_client():
     """Fixture providing unauthenticated client"""
     from src.main import app
 
-    return TestClient(app)
+    with TestClient(app) as test_client:
+        yield test_client

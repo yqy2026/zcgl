@@ -152,6 +152,73 @@ class ProjectResponse(ProjectBase):
     updated_by: str | None
     asset_count: int = 0
     ownership_relations: list[dict[str, Any]] | None = None
+    party_relations: list[dict[str, Any]] = Field(
+        default_factory=list, title="主体关系（兼容 ownership_relations 转换）"
+    )
+
+    @staticmethod
+    def _convert_relation_object_to_dict(relation: Any) -> dict[str, Any]:
+        relation_dict = {
+            "id": getattr(relation, "id", None),
+            "project_id": getattr(relation, "project_id", None),
+            "ownership_id": getattr(relation, "ownership_id", None),
+            "is_active": getattr(relation, "is_active", True),
+            "created_at": getattr(relation, "created_at", None),
+            "updated_at": getattr(relation, "updated_at", None),
+        }
+        ownership = getattr(relation, "ownership", None)
+        if ownership is not None:
+            relation_dict["ownership_name"] = getattr(ownership, "name", None)
+            relation_dict["ownership_code"] = getattr(ownership, "code", None)
+            relation_dict["ownership_short_name"] = getattr(ownership, "short_name", None)
+        return relation_dict
+
+    @classmethod
+    def _serialize_ownership_relations(cls, v: Any) -> list[dict[str, Any]] | Any:
+        if v is None:
+            return None
+        if not hasattr(v, "__iter__") or isinstance(v, dict):
+            return v
+
+        result: list[dict[str, Any]] = []
+        for relation in v:
+            if isinstance(relation, dict):
+                result.append(dict(relation))
+                continue
+            if hasattr(relation, "__dict__"):
+                result.append(cls._convert_relation_object_to_dict(relation))
+                continue
+            result.append({"ownership_id": relation})
+        return result
+
+    @staticmethod
+    def _build_party_relations(
+        ownership_relations: list[dict[str, Any]] | None,
+    ) -> list[dict[str, Any]]:
+        if ownership_relations is None:
+            return []
+
+        party_relations: list[dict[str, Any]] = []
+        for relation in ownership_relations:
+            if not isinstance(relation, dict):
+                continue
+            ownership_id = relation.get("ownership_id")
+            if ownership_id is None or str(ownership_id).strip() == "":
+                continue
+
+            is_primary_raw = relation.get("is_primary")
+            is_primary = True if is_primary_raw is None else bool(is_primary_raw)
+            party_relations.append(
+                {
+                    "id": relation.get("id"),
+                    "project_id": relation.get("project_id"),
+                    "party_id": str(ownership_id),
+                    "party_name": relation.get("ownership_name"),
+                    "relation_type": "owner",
+                    "is_primary": is_primary,
+                }
+            )
+        return party_relations
 
     @model_validator(mode="before")
     @classmethod
@@ -182,71 +249,40 @@ class ProjectResponse(ProjectBase):
         if "updated_by" not in data:
             data["updated_by"] = getattr(v, "updated_by", None)
 
+        data.setdefault("party_relations", data.get("ownership_relations"))
         return data
 
     @field_validator("ownership_relations", mode="before")
     @classmethod
     def convert_ownership_relations(cls, v: Any) -> Any:
         """转换权属方关系对象为字典格式"""
-        if v is None:  # pragma: no cover
-            return None  # pragma: no cover
+        return cls._serialize_ownership_relations(v)
 
-        # 如果是SQLAlchemy关系对象列表，转换为字典
-        if hasattr(v, "__iter__") and not isinstance(v, dict):  # pragma: no cover
-            result = []  # pragma: no cover
-            for relation in v:  # pragma: no cover
-                if hasattr(relation, "__dict__"):  # pragma: no cover
-                    # SQLAlchemy对象转换为字典
-                    relation_dict = {  # pragma: no cover
-                        "id": getattr(relation, "id", None),  # pragma: no cover
-                        "project_id": getattr(
-                            relation, "project_id", None
-                        ),  # pragma: no cover
-                        "ownership_id": getattr(
-                            relation, "ownership_id", None
-                        ),  # pragma: no cover
-                        "is_active": getattr(
-                            relation, "is_active", True
-                        ),  # pragma: no cover
-                        "created_at": getattr(
-                            relation, "created_at", None
-                        ),  # pragma: no cover
-                        "updated_at": getattr(
-                            relation, "updated_at", None
-                        ),  # pragma: no cover
-                    }  # pragma: no cover
+    @field_validator("party_relations", mode="before")
+    @classmethod
+    def convert_party_relations(cls, v: Any) -> list[dict[str, Any]]:
+        """兼容 ownership_relations 输入并统一输出 party_relations。"""
+        if v is None:
+            return []
 
-                    # 尝试获取关联的权属方名称
-                    if (
-                        hasattr(relation, "ownership") and relation.ownership
-                    ):  # pragma: no cover
-                        ownership = relation.ownership  # pragma: no cover
-                        relation_dict["ownership_name"] = getattr(  # pragma: no cover
-                            ownership,
-                            "name",
-                            None,  # pragma: no cover
-                        )  # pragma: no cover
-                        relation_dict["ownership_code"] = getattr(  # pragma: no cover
-                            ownership,
-                            "code",
-                            None,  # pragma: no cover
-                        )  # pragma: no cover
-                        relation_dict["ownership_short_name"] = (
-                            getattr(  # pragma: no cover
-                                ownership,
-                                "short_name",
-                                None,  # pragma: no cover
-                            )
-                        )  # pragma: no cover
+        if isinstance(v, list):
+            if len(v) == 0:
+                return []
+            first_item = v[0]
+            if isinstance(first_item, dict) and "party_id" in first_item:
+                return [dict(item) if isinstance(item, dict) else item for item in v]
 
-                    result.append(relation_dict)  # pragma: no cover
-                else:
-                    # 已经是字典格式，直接添加
-                    result.append(relation)  # pragma: no cover
-            return result  # pragma: no cover
+        ownership_relations = cls._serialize_ownership_relations(v)
+        if isinstance(ownership_relations, list):
+            return cls._build_party_relations(ownership_relations)
+        return []
 
-        # 如果是字典格式，直接返回
-        return v  # pragma: no cover
+    @model_validator(mode="after")
+    def ensure_party_relations(self) -> "ProjectResponse":
+        if len(self.party_relations) > 0:
+            return self
+        self.party_relations = self._build_party_relations(self.ownership_relations)
+        return self
 
     model_config = ConfigDict(from_attributes=True)
 

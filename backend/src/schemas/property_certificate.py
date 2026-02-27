@@ -198,6 +198,9 @@ class PropertyCertificateResponse(PropertyCertificateBase):
 
     id: str = Field(description="证书ID")
     asset_ids: list[str] = []
+    owners: list["PropertyOwnerResponse"] = Field(
+        default_factory=list, description="权利人列表"
+    )
     extraction_confidence: float | None = Field(
         default=None, description="LLM提取置信度"
     )
@@ -257,3 +260,6 @@ class PropertyOwnerResponse(PropertyOwnerBase):
     updated_at: datetime = Field(description="更新时间")
 
     model_config = ConfigDict(from_attributes=True)
+
+
+PropertyCertificateResponse.model_rebuild()

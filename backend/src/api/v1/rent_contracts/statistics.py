@@ -27,6 +27,7 @@ from ....schemas.rent_contract import (
 from ....services.rent_contract import rent_contract_service
 
 router = APIRouter()
+_ADMIN_BYPASS_REASON_CODE = "rbac_admin_bypass"
 
 
 def _normalize_optional_str(value: Any) -> str | None:
@@ -74,6 +75,8 @@ def _resolve_authz_scope_party_ids(
 ) -> list[str]:
     if not isinstance(authz_ctx, AuthzContext):
         return []
+    if _normalize_optional_str(authz_ctx.reason_code) == _ADMIN_BYPASS_REASON_CODE:
+        return []
     scope_ids = _normalize_identifier_sequence(
         authz_ctx.resource_context.get(list_field),
     )
@@ -118,9 +121,9 @@ def _resolve_effective_scope_filters(
     else:
         effective_owner_ids = None
 
-    effective_manager_ids = (
-        scoped_manager_party_ids if scoped_manager_party_ids else None
-    )
+    effective_manager_ids: list[str] | None = None
+    if requested_owner_ids is None and scoped_manager_party_ids:
+        effective_manager_ids = scoped_manager_party_ids
     return effective_owner_ids, effective_manager_ids
 
 

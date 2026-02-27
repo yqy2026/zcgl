@@ -2,7 +2,7 @@
 
 import re
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import ANY, AsyncMock, MagicMock
 
 import pytest
 
@@ -242,6 +242,62 @@ async def test_asset_create_authz_should_backfill_owner_party_id_for_persistence
         )
 
     assert asset_in.owner_party_id == "party-from-ownership"
+
+
+@pytest.mark.asyncio
+async def test_asset_create_authz_should_infer_manager_scope_before_ownership_scope() -> None:
+    """创建资产在 legacy payload 下应先注入 manager scope，避免 manager-only 误拒绝。"""
+    from src.api.v1.assets import assets as module
+
+    asset_in = MagicMock(
+        owner_party_id=None,
+        manager_party_id=None,
+        ownership_id="ownership-1",
+        organization_id=None,
+    )
+
+    mock_authz_service = MagicMock()
+    mock_authz_service.check_access = AsyncMock(
+        return_value=MagicMock(
+            allowed=True,
+            reason_code="allow",
+        )
+    )
+    mock_authz_service.context_builder = MagicMock()
+    mock_authz_service.context_builder.build_subject_context = AsyncMock(
+        return_value=MagicMock(
+            owner_party_ids=[],
+            manager_party_ids=["subject-manager"],
+        )
+    )
+    resolve_owner_scope = AsyncMock(return_value="owner-party-from-ownership")
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(module, "authz_service", mock_authz_service, raising=False)
+        monkeypatch.setattr(
+            module,
+            "_resolve_owner_party_scope_by_ownership_id",
+            resolve_owner_scope,
+            raising=False,
+        )
+        result = await module._require_asset_create_authz(  # type: ignore[attr-defined]
+            asset_in=asset_in,
+            current_user=MagicMock(id="user-1"),
+            db=MagicMock(),
+        )
+
+    assert result.allowed is True
+    assert result.resource_context["manager_party_id"] == "subject-manager"
+    assert result.resource_context["owner_party_id"] == "owner-party-from-ownership"
+    assert result.resource_context["party_id"] == "subject-manager"
+    resolve_owner_scope.assert_awaited_once_with(
+        db=ANY,
+        ownership_id="ownership-1",
+    )
+    _args, kwargs = mock_authz_service.check_access.await_args
+    assert kwargs["resource"]["manager_party_id"] == "subject-manager"
+    assert kwargs["resource"]["owner_party_id"] == "owner-party-from-ownership"
+    assert kwargs["resource"]["party_id"] == "subject-manager"
 
 
 @pytest.mark.asyncio

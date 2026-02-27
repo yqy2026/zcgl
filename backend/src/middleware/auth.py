@@ -6,6 +6,7 @@ import inspect
 import logging
 from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Any
 
 import jwt
@@ -16,7 +17,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.config import settings
 from ..core.environment import is_production
-from ..core.exception_handler import bad_request, forbidden, not_found, unauthorized
+from ..core.exception_handler import (
+    BaseBusinessError,
+    bad_request,
+    forbidden,
+    not_found,
+    unauthorized,
+)
 from ..crud.auth import AuditLogCRUD
 from ..database import get_async_db
 from ..models.auth import User
@@ -129,6 +136,8 @@ def _validate_jwt_token(token: str) -> TokenData:
             logger.error(f"TokenData validation failed: {e}")
             raise credentials_exception
 
+    except BaseBusinessError:
+        raise
     except JWTError as e:
         logger.warning(f"JWT decode error: {e}")
         raise credentials_exception
@@ -866,10 +875,20 @@ class AuthzPermissionChecker:
         if normalized_user_id is None:
             return {}
 
+        now = datetime.now(UTC).replace(tzinfo=None)
         binding_stmt = (
             select(UserPartyBinding.party_id.label("party_id"))
             .where(UserPartyBinding.user_id == normalized_user_id)
-            .order_by(UserPartyBinding.is_primary.desc(), UserPartyBinding.created_at.asc())
+            .where(UserPartyBinding.valid_from <= now)
+            .where(
+                (UserPartyBinding.valid_to.is_(None))
+                | (UserPartyBinding.valid_to >= now)
+            )
+            .order_by(
+                UserPartyBinding.is_primary.desc(),
+                UserPartyBinding.valid_from.desc(),
+                UserPartyBinding.created_at.desc(),
+            )
             .limit(1)
         )
         binding_row = (await db.execute(binding_stmt)).mappings().one_or_none()

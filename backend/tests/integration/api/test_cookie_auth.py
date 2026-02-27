@@ -281,18 +281,17 @@ def test_bearer_rejected_in_cookie_only_mode(client, test_data):
     access_token = login_response.cookies.get("auth_token")
     assert access_token is not None
 
-    stateless_client = TestClient(client.app)
+    with TestClient(client.app) as stateless_client:
+        # Access protected endpoint with Authorization header but NO cookie
+        # (simulate browser with cookies disabled)
+        protected_response = stateless_client.get(
+            "/api/v1/auth/me", headers={"Authorization": f"Bearer {access_token}"}
+        )
 
-    # Access protected endpoint with Authorization header but NO cookie
-    # (simulate browser with cookies disabled)
-    protected_response = stateless_client.get(
-        "/api/v1/auth/me", headers={"Authorization": f"Bearer {access_token}"}
-    )
-
-    # Cookie-only mode下仅Bearer应被拒绝
-    assert protected_response.status_code == 401
-    payload = protected_response.json()
-    assert payload.get("success") is False
-    error = payload.get("error", {})
-    assert isinstance(error, dict)
-    assert error.get("code") == "AUTHENTICATION_ERROR"
+        # Cookie-only mode下仅Bearer应被拒绝
+        assert protected_response.status_code == 401
+        payload = protected_response.json()
+        assert payload.get("success") is False
+        error = payload.get("error", {})
+        assert isinstance(error, dict)
+        assert error.get("code") == "AUTHENTICATION_ERROR"

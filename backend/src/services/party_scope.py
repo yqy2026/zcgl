@@ -24,6 +24,21 @@ def _normalize_relation_type(raw_value: object | None) -> str | None:
     return normalized.lower()
 
 
+def _normalize_identifier_sequence(values: list[object] | None) -> list[str]:
+    if values is None:
+        return []
+
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        identifier = _normalize_identifier(value)
+        if identifier is None or identifier in seen:
+            continue
+        seen.add(identifier)
+        normalized.append(identifier)
+    return normalized
+
+
 async def _resolve_legacy_default_organization_id(
     db: AsyncSession, *, current_user_id: str, logger: logging.Logger
 ) -> str | None:
@@ -97,6 +112,44 @@ async def _has_unrestricted_party_scope_access(
         return False
 
 
+async def _resolve_relation_legacy_organization_scope_ids(
+    db: AsyncSession,
+    *,
+    owner_party_ids: set[str],
+    manager_party_ids: set[str],
+    current_user_id: str,
+    logger: logging.Logger,
+) -> tuple[list[str], list[str]]:
+    relation_party_ids = sorted(owner_party_ids.union(manager_party_ids))
+    if len(relation_party_ids) == 0:
+        return [], []
+
+    try:
+        scope_ids_by_party_id = (
+            await party_crud.resolve_legacy_organization_scope_ids_by_party_ids(
+                db,
+                party_ids=relation_party_ids,
+            )
+        )
+    except Exception:
+        logger.exception(
+            "Failed to resolve relation legacy organization scope ids for user %s",
+            current_user_id,
+        )
+        return [], []
+
+    def _collect_scope_ids(scoped_party_ids: set[str]) -> list[str]:
+        resolved_scope_ids: set[str] = set()
+        for scoped_party_id in scoped_party_ids:
+            resolved_scope_ids.update(scope_ids_by_party_id.get(scoped_party_id, []))
+        return sorted(resolved_scope_ids)
+
+    return (
+        _collect_scope_ids(owner_party_ids),
+        _collect_scope_ids(manager_party_ids),
+    )
+
+
 async def resolve_user_party_filter(
     db: AsyncSession,
     *,
@@ -111,8 +164,9 @@ async def resolve_user_party_filter(
     - Missing/blank ``current_user_id`` keeps behavior unchanged (returns None).
     - Resolution failure returns empty PartyFilter for fail-closed.
     - Binding relation is preserved for owner/manager scoped filtering.
-    - No bindings checks privileged bypass before falling back to
-      ``users.default_organization_id`` and mapped organization party scope.
+    - Privileged users bypass party scope regardless of resolved bindings.
+    - Legacy ``users.default_organization_id`` mapping is used only when
+      no scope bindings are available for non-privileged users.
     """
     if party_filter is not None:
         return party_filter
@@ -137,8 +191,33 @@ async def resolve_user_party_filter(
                 if relation_type == "owner":
                     resolved_owner_party_ids.add(party_id)
                     continue
-                if relation_type in {"manager", "headquarters"}:
+                if relation_type == "manager":
                     resolved_manager_party_ids.add(party_id)
+                    continue
+                if relation_type == "headquarters":
+                    try:
+                        descendants = await party_crud.get_descendants(
+                            db,
+                            party_id=party_id,
+                            include_self=True,
+                        )
+                    except Exception:
+                        logger.exception(
+                            "Failed to resolve headquarters descendants for user %s party %s",
+                            current_user_id,
+                            party_id,
+                        )
+                        resolved_manager_party_ids.add(party_id)
+                        continue
+
+                    normalized_descendants = _normalize_identifier_sequence(
+                        descendants
+                    )
+                    if len(normalized_descendants) == 0:
+                        resolved_manager_party_ids.add(party_id)
+                        continue
+
+                    resolved_manager_party_ids.update(normalized_descendants)
                     continue
                 resolved_generic_party_ids.add(party_id)
     except Exception:
@@ -148,9 +227,30 @@ async def resolve_user_party_filter(
         )
         return PartyFilter(party_ids=[])
 
+    if await _has_unrestricted_party_scope_access(
+        db,
+        current_user_id=current_user_id,
+        logger=logger,
+    ):
+        logger.info(
+            "Bypassing party scope for privileged user %s",
+            current_user_id,
+        )
+        return None
+
     if len(resolved_owner_party_ids) > 0 or len(resolved_manager_party_ids) > 0:
         owner_party_ids = sorted(resolved_owner_party_ids)
         manager_party_ids = sorted(resolved_manager_party_ids)
+        (
+            owner_legacy_org_ids,
+            manager_legacy_org_ids,
+        ) = await _resolve_relation_legacy_organization_scope_ids(
+            db,
+            owner_party_ids=resolved_owner_party_ids,
+            manager_party_ids=resolved_manager_party_ids,
+            current_user_id=current_user_id,
+            logger=logger,
+        )
         merged_party_ids = sorted(
             resolved_owner_party_ids.union(resolved_manager_party_ids)
         )
@@ -165,21 +265,12 @@ async def resolve_user_party_filter(
             filter_mode=filter_mode,
             owner_party_ids=owner_party_ids,
             manager_party_ids=manager_party_ids,
+            owner_legacy_org_ids=owner_legacy_org_ids,
+            manager_legacy_org_ids=manager_legacy_org_ids,
         )
 
     if len(resolved_generic_party_ids) > 0:
         return PartyFilter(party_ids=sorted(resolved_generic_party_ids))
-
-    if await _has_unrestricted_party_scope_access(
-        db,
-        current_user_id=current_user_id,
-        logger=logger,
-    ):
-        logger.info(
-            "No party bindings/default organization for user %s; bypassing party scope for privileged account",
-            current_user_id,
-        )
-        return None
 
     legacy_org_id = await _resolve_legacy_default_organization_id(
         db,

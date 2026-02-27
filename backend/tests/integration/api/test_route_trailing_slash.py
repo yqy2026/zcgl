@@ -14,7 +14,8 @@ def client():
     """创建测试客户端"""
     from src.main import app
 
-    return TestClient(app)
+    with TestClient(app) as test_client:
+        yield test_client
 
 
 @pytest.mark.integration

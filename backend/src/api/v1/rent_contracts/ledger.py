@@ -39,6 +39,7 @@ _RENT_LEDGER_BATCH_UPDATE_UNSCOPED_PARTY_ID = (
 _RENT_LEDGER_GENERATE_UNSCOPED_PARTY_ID = "__unscoped__:rent_contract_ledger:generate"
 _RENT_LEDGER_READ_UNSCOPED_PARTY_ID = "__unscoped__:rent_contract_ledger:read"
 _RENT_LEDGER_UPDATE_UNSCOPED_PARTY_ID = "__unscoped__:rent_contract_ledger:update"
+_ADMIN_BYPASS_REASON_CODE = "rbac_admin_bypass"
 _RENT_LEDGER_BATCH_UPDATE_RESOURCE_CONTEXT: dict[str, str] = {
     "party_id": _RENT_LEDGER_BATCH_UPDATE_UNSCOPED_PARTY_ID,
     "owner_party_id": _RENT_LEDGER_BATCH_UPDATE_UNSCOPED_PARTY_ID,
@@ -74,6 +75,8 @@ def _resolve_authz_scope_party_ids(
     list_field: str,
 ) -> list[str]:
     if not isinstance(authz_ctx, AuthzContext):
+        return []
+    if _normalize_optional_str(authz_ctx.reason_code) == _ADMIN_BYPASS_REASON_CODE:
         return []
     scope_ids = _normalize_identifier_sequence(
         authz_ctx.resource_context.get(list_field),
@@ -456,9 +459,9 @@ async def get_rent_ledger(
     elif scoped_owner_party_ids:
         effective_owner_party_ids = scoped_owner_party_ids
 
-    effective_manager_party_ids = (
-        scoped_manager_party_ids if scoped_manager_party_ids else None
-    )
+    effective_manager_party_ids: list[str] | None = None
+    if owner_party_id_value is None and scoped_manager_party_ids:
+        effective_manager_party_ids = scoped_manager_party_ids
 
     effective_owner_party_id = (
         effective_owner_party_ids[0] if effective_owner_party_ids else None

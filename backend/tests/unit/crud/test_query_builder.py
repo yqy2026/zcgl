@@ -198,6 +198,7 @@ class TestQueryBuilder:
             party_filter=PartyFilter(
                 party_ids=["owner-1"],
                 owner_party_ids=["owner-1"],
+                owner_legacy_org_ids=["org-owner-legacy-1"],
                 manager_party_ids=[],
                 filter_mode="owner",
             )
@@ -206,7 +207,7 @@ class TestQueryBuilder:
 
         assert "assets.owner_party_id IN ('owner-1')" in compiled
         assert "assets.owner_party_id IS NULL" in compiled
-        assert "assets.organization_id IN ('owner-1')" in compiled
+        assert "assets.organization_id IN ('org-owner-legacy-1')" in compiled
 
     def test_build_query_should_fallback_to_legacy_org_when_manager_party_is_null(self):
         qb = QueryBuilder(Asset)
@@ -215,6 +216,7 @@ class TestQueryBuilder:
                 party_ids=["manager-1"],
                 owner_party_ids=[],
                 manager_party_ids=["manager-1"],
+                manager_legacy_org_ids=["org-manager-legacy-1"],
                 filter_mode="manager",
             )
         )
@@ -222,4 +224,38 @@ class TestQueryBuilder:
 
         assert "assets.manager_party_id IN ('manager-1')" in compiled
         assert "assets.manager_party_id IS NULL" in compiled
-        assert "assets.organization_id IN ('manager-1')" in compiled
+        assert "assets.organization_id IN ('org-manager-legacy-1')" in compiled
+
+    def test_build_query_should_not_use_party_ids_for_legacy_org_fallback_when_mapping_missing(
+        self,
+    ):
+        qb = QueryBuilder(Asset)
+        query = qb.build_query(
+            party_filter=PartyFilter(
+                party_ids=["manager-party-1"],
+                owner_party_ids=[],
+                manager_party_ids=["manager-party-1"],
+                filter_mode="manager",
+            )
+        )
+        compiled = str(query.compile(compile_kwargs={"literal_binds": True}))
+
+        assert "assets.manager_party_id IN ('manager-party-1')" in compiled
+        assert "assets.organization_id IN ('manager-party-1')" not in compiled
+
+    def test_build_query_should_use_legacy_org_ids_for_relation_aware_fallback(self):
+        qb = QueryBuilder(Asset)
+        query = qb.build_query(
+            party_filter=PartyFilter(
+                party_ids=["manager-party-1"],
+                owner_party_ids=[],
+                manager_party_ids=["manager-party-1"],
+                manager_legacy_org_ids=["org-legacy-1"],
+                filter_mode="manager",
+            )
+        )
+        compiled = str(query.compile(compile_kwargs={"literal_binds": True}))
+
+        assert "assets.manager_party_id IN ('manager-party-1')" in compiled
+        assert "assets.manager_party_id IS NULL" in compiled
+        assert "assets.organization_id IN ('org-legacy-1')" in compiled

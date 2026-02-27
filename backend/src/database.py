@@ -30,6 +30,7 @@ from src.constants.storage_constants import DatabasePoolConfig
 
 from .core.config import settings
 from .core.exception_handler import (
+    BaseBusinessError,
     ConfigurationError,
     InternalServerError,
     ServiceUnavailableError,
@@ -38,6 +39,24 @@ from .database_url import get_async_database_url as resolve_async_database_url
 from .database_url import get_database_url as resolve_database_url
 
 logger = logging.getLogger(__name__)
+
+
+async def _handle_session_exception(session: AsyncSession, error: Exception) -> None:
+    """Rollback session and log only unexpected infrastructure exceptions."""
+    await session.rollback()
+    if isinstance(error, BaseBusinessError):
+        return
+
+    logger.critical(
+        "数据库会话异常",
+        exc_info=True,
+        extra={
+            "error_id": ErrorIDs.Database.SESSION_ERROR,
+            "error_type": type(error).__name__,
+            "error_message": str(error),
+            "session_id": id(session),
+        },
+    )
 
 
 @dataclass
@@ -324,19 +343,16 @@ class DatabaseManager:
             try:
                 yield session
             except Exception as e:
-                await session.rollback()
-                # 🔒 安全修复: 添加完整的错误上下文信息
-                logger.critical(
-                    "数据库会话异常",
-                    exc_info=True,  # 包含完整的堆栈跟踪
-                    extra={
-                        "error_id": ErrorIDs.Database.SESSION_ERROR,
-                        "error_type": type(e).__name__,
-                        "error_message": str(e),
-                        "session_id": id(session),
-                    },
-                )
+                await _handle_session_exception(session, e)
                 raise
+
+    async def dispose(self) -> None:
+        """释放数据库引擎并清理会话工厂。"""
+        engine = self.engine
+        self.engine = None
+        self.session_factory = None
+        if engine is not None:
+            await engine.dispose()
 
     def get_metrics(self) -> DatabaseMetrics:
         """获取数据库性能指标"""
@@ -437,6 +453,24 @@ def _get_database_manager() -> DatabaseManager:
     return _database_manager
 
 
+async def reset_database_manager() -> None:
+    """Dispose and clear the global database manager instance."""
+    global _database_manager
+    manager = _database_manager
+    _database_manager = None
+    if manager is None:
+        return
+
+    try:
+        await manager.dispose()
+    except Exception as exc:  # pragma: no cover - best-effort cleanup
+        logger.warning(
+            "数据库管理器释放失败: %s",
+            exc,
+            exc_info=True,
+        )
+
+
 # 创建基础模型类
 Base: DeclarativeMeta = declarative_base()
 
@@ -463,17 +497,7 @@ async def get_async_db() -> AsyncGenerator[AsyncSession, None]:
         try:
             yield session
         except Exception as e:  # pragma: no cover
-            await session.rollback()  # pragma: no cover
-            logger.critical(
-                "数据库会话异常",
-                exc_info=True,
-                extra={
-                    "error_id": ErrorIDs.Database.SESSION_ERROR,
-                    "error_type": type(e).__name__,
-                    "error_message": str(e),
-                    "session_id": id(session),
-                },
-            )
+            await _handle_session_exception(session, e)  # pragma: no cover
             raise  # pragma: no cover
 
 
@@ -488,17 +512,7 @@ async def async_session_scope() -> AsyncGenerator[AsyncSession, None]:
         try:
             yield session
         except Exception as e:  # pragma: no cover
-            await session.rollback()  # pragma: no cover
-            logger.critical(
-                "数据库会话异常",
-                exc_info=True,
-                extra={
-                    "error_id": ErrorIDs.Database.SESSION_ERROR,
-                    "error_type": type(e).__name__,
-                    "error_message": str(e),
-                    "session_id": id(session),
-                },
-            )
+            await _handle_session_exception(session, e)  # pragma: no cover
             raise  # pragma: no cover
 
 

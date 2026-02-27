@@ -603,6 +603,15 @@ async def test_load_user_scope_context_uses_user_binding_party_id_when_present()
     assert context["owner_party_id"] == "party-1"
     assert context["manager_party_id"] == "party-1"
 
+    binding_stmt = db.execute.await_args_list[1].args[0]
+    binding_stmt_sql = str(binding_stmt).lower()
+    assert "user_party_bindings.valid_from <=" in binding_stmt_sql
+    assert "user_party_bindings.valid_to is null" in binding_stmt_sql
+    assert "user_party_bindings.valid_to >=" in binding_stmt_sql
+    assert "user_party_bindings.valid_from desc" in binding_stmt_sql
+    assert "user_party_bindings.created_at desc" in binding_stmt_sql
+    assert "user_party_bindings.created_at asc" not in binding_stmt_sql
+
 
 @pytest.mark.asyncio
 async def test_load_user_scope_context_uses_unscoped_sentinel_when_no_party_scope() -> None:
