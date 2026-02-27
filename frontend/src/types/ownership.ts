@@ -1,5 +1,6 @@
 /**
  * 权属方类型定义
+ * @deprecated Phase 3 兼容保留，待 Phase 4 完成 Party 全量迁移后移除。
  */
 
 export interface Ownership {

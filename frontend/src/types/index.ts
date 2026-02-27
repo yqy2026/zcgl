@@ -167,6 +167,36 @@ export type {
   // ProjectFormData, // Does not exist
 } from './project';
 
+export type {
+  // Party 相关
+  PartyType,
+  Party,
+  PartyListParams,
+  FrontendPartyHierarchyEdge,
+  PartyContact,
+  CertificatePartyRelationRole,
+  CertificatePartyRelation,
+} from './party';
+
+export type {
+  // 能力清单相关
+  AuthzAction,
+  ResourceType,
+  Perspective,
+  CapabilityDataScope,
+  CapabilityItem,
+  CapabilitiesResponse,
+} from './capability';
+
+export type {
+  // 数据策略包相关
+  DataPolicyPackageCode,
+  DataPolicyTemplate,
+  DataPolicyTemplatesResponse,
+  RoleDataPoliciesResponse,
+  RoleDataPoliciesUpdateRequest,
+} from './dataPolicy';
+
 // 组织相关类型已从 auth 模块导出，避免重复导出
 
 export type {
