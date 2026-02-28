@@ -1,9 +1,38 @@
-import { useState, useEffect, useCallback } from 'react';
-import { MessageManager } from '@/utils/messageManager';
-import { createLogger } from '@/utils/logger';
-import { AuthStorage } from '@/utils/AuthStorage';
+import { useCallback, useMemo } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useCapabilities } from '@/hooks/useCapabilities';
+import type { AuthzAction, ResourceType, TemporaryAdminAction } from '@/types/capability';
 
-const permLogger = createLogger('usePermission');
+const ACTION_ALIASES: Record<string, AuthzAction> = {
+  view: 'read',
+  edit: 'update',
+  import: 'create',
+  settings: 'update',
+  logs: 'read',
+  dictionary: 'read',
+  lock: 'update',
+  assign_permissions: 'update',
+};
+
+const RESOURCE_ALIASES: Record<string, ResourceType> = {
+  rental: 'rent_contract',
+  organization: 'party',
+  ownership: 'party',
+};
+
+const normalizeAction = (action: string): AuthzAction | TemporaryAdminAction => {
+  if (action === 'backup') {
+    return 'backup';
+  }
+  return ACTION_ALIASES[action] ?? (action as AuthzAction);
+};
+
+const normalizeResource = (resource: string): ResourceType => {
+  if (resource === 'system_settings' || resource === 'operation_log' || resource === 'dictionary') {
+    return 'system';
+  }
+  return RESOURCE_ALIASES[resource] ?? (resource as ResourceType);
+};
 
 export interface Permission {
   resource: string;
@@ -30,107 +59,81 @@ export interface MenuItem {
   children?: MenuItem[];
 }
 
+/**
+ * @deprecated Phase 3 迁移期兼容壳，请优先使用 useCapabilities。
+ */
 const usePermission = () => {
-  const [userPermissions, setUserPermissions] = useState<UserPermissions | null>(null);
-  const [loading, setLoading] = useState(false);
+  const { user, permissions } = useAuth();
+  const { canPerform, hasPartyAccess, loading } = useCapabilities();
 
-  // 加载用户权限信息
-  const loadUserPermissions = useCallback(async () => {
-    setLoading(true);
-    try {
-      // Get auth data from centralized AuthStorage
-      const authData = AuthStorage.getAuthData();
-
-      if (authData == null) {
-        setUserPermissions(null);
-        return;
-      }
-
-      // Create user permissions object
-      const userPermissionsData: UserPermissions = {
-        userId: authData.user.id,
-        username: authData.user.username,
-        roles:
-          authData.user.roles ?? (authData.user.role_name != null ? [authData.user.role_name] : []),
-        roleIds:
-          authData.user.role_ids ?? (authData.user.role_id != null ? [authData.user.role_id] : []),
-        isAdmin: authData.user.is_admin === true,
-        permissions: authData.permissions,
-        organizationId: authData.user.default_organization_id,
-      };
-
-      setUserPermissions(userPermissionsData);
-    } catch (error) {
-      permLogger.error('Failed to load user permissions:', error as Error);
-      MessageManager.error('Failed to load permissions');
-    } finally {
-      setLoading(false);
+  const userPermissions = useMemo<UserPermissions | null>(() => {
+    if (user == null) {
+      return null;
     }
-  }, []);
 
-  // 检查是否有特定权限
+    return {
+      userId: user.id,
+      username: user.username,
+      roles: user.roles ?? (user.role_name != null ? [user.role_name] : []),
+      roleIds: user.role_ids ?? (user.role_id != null ? [user.role_id] : []),
+      isAdmin: user.is_admin === true,
+      permissions,
+      organizationId: user.default_organization_id,
+    };
+  }, [permissions, user]);
+
   const hasPermission = useCallback(
     (resource: string, action: string): boolean => {
-      if (!userPermissions) return false;
+      const normalizedResource = normalizeResource(resource);
+      const normalizedAction = normalizeAction(action);
+      return canPerform(normalizedAction, normalizedResource);
+    },
+    [canPerform]
+  );
 
-      // 管理员拥有所有权限
-      if (userPermissions.isAdmin === true) {
+  const hasAnyPermission = useCallback(
+    (requiredPermissions: Array<{ resource: string; action: string }>): boolean => {
+      return requiredPermissions.some(permission =>
+        hasPermission(permission.resource, permission.action)
+      );
+    },
+    [hasPermission]
+  );
+
+  const hasAllPermissions = useCallback(
+    (requiredPermissions: Array<{ resource: string; action: string }>): boolean => {
+      return requiredPermissions.every(permission =>
+        hasPermission(permission.resource, permission.action)
+      );
+    },
+    [hasPermission]
+  );
+
+  const hasRole = useCallback(
+    (roleCode: string): boolean => {
+      return userPermissions?.roles.includes(roleCode) === true;
+    },
+    [userPermissions?.roles]
+  );
+
+  const isAdmin = useCallback((): boolean => {
+    return userPermissions?.isAdmin === true;
+  }, [userPermissions?.isAdmin]);
+
+  const canAccessOrganization = useCallback(
+    (organizationId: string): boolean => {
+      if (isAdmin()) {
         return true;
       }
 
-      // Check if user has permission matching resource and action
-      return userPermissions.permissions.some(
-        perm => perm.resource === resource && perm.action === action
+      return (
+        hasPartyAccess(organizationId, 'owner', 'party') ||
+        hasPartyAccess(organizationId, 'manager', 'party')
       );
     },
-    [userPermissions]
+    [hasPartyAccess, isAdmin]
   );
 
-  // 检查是否有任意一个权限
-  const hasAnyPermission = useCallback(
-    (permissions: Array<{ resource: string; action: string }>): boolean => {
-      return permissions.some(permission => hasPermission(permission.resource, permission.action));
-    },
-    [hasPermission]
-  );
-
-  // 检查是否有所有权限
-  const hasAllPermissions = useCallback(
-    (permissions: Array<{ resource: string; action: string }>): boolean => {
-      return permissions.every(permission => hasPermission(permission.resource, permission.action));
-    },
-    [hasPermission]
-  );
-
-  // 检查角色
-  const hasRole = useCallback(
-    (roleCode: string): boolean => {
-      if (!userPermissions) return false;
-      return userPermissions.roles.includes(roleCode);
-    },
-    [userPermissions]
-  );
-
-  // 检查是否是管理员
-  const isAdmin = useCallback((): boolean => {
-    return userPermissions?.isAdmin === true;
-  }, [userPermissions]);
-
-  // 检查是否有组织访问权限
-  const canAccessOrganization = useCallback(
-    (organizationId: string): boolean => {
-      if (!userPermissions) return false;
-
-      // 管理员可以访问所有组织
-      if (isAdmin()) return true;
-
-      // 检查是否是同一组织的用户
-      return userPermissions.organizationId === organizationId;
-    },
-    [userPermissions, isAdmin]
-  );
-
-  // 权限装饰器 - 用于包装组件
   const requirePermission = useCallback(
     (resource: string, action: string, fallback?: React.ReactNode) => {
       if (hasPermission(resource, action)) {
@@ -141,40 +144,33 @@ const usePermission = () => {
     [hasPermission]
   );
 
-  // 页面权限检查
   const checkPageAccess = useCallback(
     (pagePermissions: Array<{ resource: string; action: string }>): boolean => {
-      // 如果没有配置权限要求，则允许访问
-      if (pagePermissions == null || pagePermissions.length === 0) {
+      if (pagePermissions.length === 0) {
         return true;
       }
-
       return hasAnyPermission(pagePermissions);
     },
     [hasAnyPermission]
   );
 
-  // 获取可访问的菜单项
   const getAccessibleMenuItems = useCallback(
-    (menuItems: MenuItem[]) => {
-      if (userPermissions == null) return [];
-
+    (menuItems: MenuItem[]): MenuItem[] => {
       return menuItems.filter(item => {
-        if (item.permission == null) return true;
+        if (item.permission == null) {
+          return true;
+        }
+
         return hasPermission(item.permission.resource, item.permission.action);
       });
     },
-    [userPermissions, hasPermission]
+    [hasPermission]
   );
 
-  // 刷新权限信息
   const refreshPermissions = useCallback(async () => {
-    await loadUserPermissions();
-  }, [loadUserPermissions]);
-
-  useEffect(() => {
-    loadUserPermissions();
-  }, [loadUserPermissions]);
+    // 兼容壳：权限刷新统一由 AuthContext.refreshCapabilities 触发。
+    return Promise.resolve();
+  }, []);
 
   return {
     userPermissions,
@@ -194,29 +190,25 @@ const usePermission = () => {
 
 export default usePermission;
 
-// 权限常量定义
+// 兼容常量：调用方会在 P3e 统一移除。
 export const PERMISSIONS = {
-  // 用户管理权限
   USER_VIEW: { resource: 'user', action: 'read' },
   USER_CREATE: { resource: 'user', action: 'create' },
   USER_EDIT: { resource: 'user', action: 'update' },
   USER_DELETE: { resource: 'user', action: 'delete' },
   USER_LOCK: { resource: 'user', action: 'update' },
 
-  // 角色管理权限
   ROLE_VIEW: { resource: 'role', action: 'read' },
   ROLE_CREATE: { resource: 'role', action: 'create' },
   ROLE_EDIT: { resource: 'role', action: 'update' },
   ROLE_DELETE: { resource: 'role', action: 'delete' },
   ROLE_ASSIGN_PERMISSIONS: { resource: 'role', action: 'update' },
 
-  // 组织管理权限
-  ORGANIZATION_VIEW: { resource: 'organization', action: 'read' },
-  ORGANIZATION_CREATE: { resource: 'organization', action: 'create' },
-  ORGANIZATION_EDIT: { resource: 'organization', action: 'update' },
-  ORGANIZATION_DELETE: { resource: 'organization', action: 'delete' },
+  ORGANIZATION_VIEW: { resource: 'party', action: 'read' },
+  ORGANIZATION_CREATE: { resource: 'party', action: 'create' },
+  ORGANIZATION_EDIT: { resource: 'party', action: 'update' },
+  ORGANIZATION_DELETE: { resource: 'party', action: 'delete' },
 
-  // 资产管理权限
   ASSET_VIEW: { resource: 'asset', action: 'read' },
   ASSET_CREATE: { resource: 'asset', action: 'create' },
   ASSET_EDIT: { resource: 'asset', action: 'update' },
@@ -224,22 +216,19 @@ export const PERMISSIONS = {
   ASSET_IMPORT: { resource: 'asset', action: 'create' },
   ASSET_EXPORT: { resource: 'asset', action: 'export' },
 
-  // 租赁管理权限
   RENTAL_VIEW: { resource: 'rent_contract', action: 'read' },
   RENTAL_CREATE: { resource: 'rent_contract', action: 'create' },
   RENTAL_EDIT: { resource: 'rent_contract', action: 'update' },
   RENTAL_DELETE: { resource: 'rent_contract', action: 'delete' },
 
-  // 系统管理权限
   SYSTEM_SETTINGS: { resource: 'system_settings', action: 'update' },
   SYSTEM_SETTINGS_READ: { resource: 'system_settings', action: 'read' },
   SYSTEM_LOGS: { resource: 'operation_log', action: 'read' },
-  SYSTEM_BACKUP: { resource: 'system_settings', action: 'create' },
+  SYSTEM_BACKUP: { resource: 'system_settings', action: 'backup' },
   SYSTEM_DICTIONARY: { resource: 'dictionary', action: 'read' },
   SYSTEM_TEMPLATES: { resource: 'llm_prompt', action: 'read' },
 } as const;
 
-// 页面权限配置
 export const PAGE_PERMISSIONS = {
   '/system/users': [PERMISSIONS.USER_VIEW],
   '/system/roles': [PERMISSIONS.ROLE_VIEW],

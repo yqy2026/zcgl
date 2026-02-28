@@ -55,6 +55,7 @@ export const SYSTEM_ROUTES = {
   TEMPLATES: '/system/templates',
   LOGS: '/system/logs',
   SETTINGS: '/system/settings',
+  DATA_POLICIES: '/system/data-policies',
 } as const;
 
 // 其他模块路由
@@ -325,6 +326,11 @@ export const ROUTE_CONFIG: RouteConfig[] = [
           { resource: 'system_settings', action: 'read' },
           { resource: 'system_settings', action: 'update' },
         ],
+      },
+      {
+        path: SYSTEM_ROUTES.DATA_POLICIES,
+        title: '数据策略包',
+        permissions: [{ resource: 'role', action: 'update' }],
       },
     ],
   },

@@ -8,6 +8,7 @@ export { apiClient, ApiClient, createApiClient } from '@/api/client';
 export { assetService, AssetService } from './assetService';
 export { partyService, PartyService } from './partyService';
 export { capabilityService, CapabilityService } from './capabilityService';
+export { dataPolicyService, DataPolicyService } from './dataPolicyService';
 export { statisticsService, StatisticsService } from './statisticsService';
 export { excelService, ExcelService } from './excelService';
 export { backupService, BackupService } from './backupService';

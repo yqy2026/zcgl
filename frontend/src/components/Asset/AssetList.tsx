@@ -13,7 +13,7 @@ import type { Asset, AssetListResponse } from '@/types/asset';
 import { DataStatus } from '@/types/asset';
 import { formatArea, formatPercentage, formatDate, getStatusColor } from '@/utils/format';
 import { useSystemDictionary } from '@/hooks/useSystemDictionary';
-import usePermission from '@/hooks/usePermission';
+import { useAuth } from '@/contexts/AuthContext';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
 import { announceToScreenReader } from '@/utils/accessibility';
 import styles from './AssetList.module.css';
@@ -100,8 +100,7 @@ const AssetList: React.FC<AssetListProps> = ({
 }) => {
   // 使用系统字典获取权属类别
   const { options: ownershipCategoryOptions } = useSystemDictionary('ownership_category');
-  const { isAdmin } = usePermission();
-  const isAdminUser = isAdmin();
+  const { isAdmin: isAdminUser } = useAuth();
 
   const [hardDeleteTarget, setHardDeleteTarget] = useState<Asset | null>(null);
   const [hardDeleteInput, setHardDeleteInput] = useState('');

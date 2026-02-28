@@ -42,10 +42,9 @@ vi.mock('@/hooks/useSystemDictionary', () => ({
   })),
 }));
 
-vi.mock('@/hooks/usePermission', () => ({
-  __esModule: true,
-  default: () => ({
-    isAdmin: () => false,
+vi.mock('@/contexts/AuthContext', () => ({
+  useAuth: () => ({
+    isAdmin: false,
   }),
 }));
 

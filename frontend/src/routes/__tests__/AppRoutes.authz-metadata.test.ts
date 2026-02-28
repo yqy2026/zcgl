@@ -61,6 +61,7 @@ describe('AppRoutes authz metadata', () => {
       SYSTEM_ROUTES.TEMPLATES,
       SYSTEM_ROUTES.LOGS,
       SYSTEM_ROUTES.SETTINGS,
+      SYSTEM_ROUTES.DATA_POLICIES,
     ];
 
     const protectedRouteMap = new Map(protectedRoutes.map(route => [route.path, route]));

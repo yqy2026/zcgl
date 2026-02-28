@@ -56,8 +56,14 @@ function main() {
 
   assertPattern(
     appContent,
-    /<PermissionGuard[\s\S]*permissions=/,
-    '[capability-guard-wiring] App.tsx must wrap guarded routes with PermissionGuard when capability guard is enabled.'
+    /<CapabilityGuard[\s\S]*action=\{[^}]+\.action\}[\s\S]*resource=\{[^}]+\.resource\}/,
+    '[capability-guard-wiring] App.tsx must pass both action/resource from route permission metadata into CapabilityGuard.'
+  );
+
+  assertPattern(
+    appContent,
+    /canPerform\([^,]+\.action,\s*[^)]+\.resource\)/,
+    '[capability-guard-wiring] App.tsx must evaluate route permissions through canPerform(action, resource) for multi-permission branches.'
   );
 
   assertPattern(

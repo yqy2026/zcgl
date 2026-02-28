@@ -3,6 +3,8 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { Result, Button } from 'antd';
 import { LockOutlined, UserOutlined } from '@ant-design/icons';
 import { useAuth } from '@/hooks/useAuth';
+import { useCapabilities } from '@/hooks/useCapabilities';
+import type { AuthzAction, ResourceType } from '@/types/capability';
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -30,13 +32,31 @@ const AuthGuard: React.FC<AuthGuardProps> = ({
     />
   ),
 }) => {
-  const { isAuthenticated, hasPermission, hasAnyPermission, user } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+  const { canPerform, loading } = useCapabilities();
   const location = useLocation();
+
+  const normalizeAction = (action: string): AuthzAction => {
+    if (action === 'view') return 'read';
+    if (action === 'edit') return 'update';
+    if (action === 'import') return 'create';
+    return action as AuthzAction;
+  };
+
+  const normalizeResource = (resource: string): ResourceType => {
+    if (resource === 'rental') return 'rent_contract';
+    if (resource === 'organization') return 'party';
+    return resource as ResourceType;
+  };
 
   // 检查用户是否已认证
   if (!isAuthenticated) {
     const from = location.pathname + location.search + location.hash;
     return <Navigate to="/login" state={{ from, message: '请先登录后再访问此页面' }} replace />;
+  }
+
+  if (loading) {
+    return <div>权限检查中...</div>;
   }
 
   // 检查单个权限
@@ -45,7 +65,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({
     const [resource, action] = requiredPermission.includes(':')
       ? requiredPermission.split(':')
       : requiredPermission.split(' ');
-    if (!hasPermission(resource, action)) {
+    if (!canPerform(normalizeAction(action), normalizeResource(resource))) {
       return (
         <Result
           status="403"
@@ -67,7 +87,9 @@ const AuthGuard: React.FC<AuthGuardProps> = ({
     requiredPermissions !== undefined &&
     requiredPermissions !== null &&
     requiredPermissions.length > 0 &&
-    !hasAnyPermission(requiredPermissions)
+    !requiredPermissions.some(permission =>
+      canPerform(normalizeAction(permission.action), normalizeResource(permission.resource))
+    )
   ) {
     const permissionNames = requiredPermissions.map(p => `${p.resource}:${p.action}`).join(', ');
     return (

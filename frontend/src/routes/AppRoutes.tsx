@@ -1,5 +1,6 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
+import type { AuthzAction, ResourceType } from '@/types/capability';
 import {
   ASSET_ROUTES,
   RENTAL_ROUTES,
@@ -14,7 +15,7 @@ import {
 export interface ProtectedRouteItem {
   path: string;
   element: React.ComponentType;
-  permissions?: Array<{ action: string; resource: string }>;
+  permissions?: Array<{ action: AuthzAction; resource: ResourceType }>;
   permissionMode?: 'any' | 'all';
   adminOnly?: boolean;
   capabilityGuardBypass?: boolean;
@@ -209,6 +210,11 @@ const baseProtectedRoutes: ProtectedRouteItem[] = [
   {
     path: SYSTEM_ROUTES.SETTINGS,
     element: React.lazy(() => import('../pages/System/SystemSettingsPage')),
+    adminOnly: true,
+  },
+  {
+    path: SYSTEM_ROUTES.DATA_POLICIES,
+    element: React.lazy(() => import('../pages/System/DataPolicyManagementPage')),
     adminOnly: true,
   },
 ];

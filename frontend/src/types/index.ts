@@ -181,6 +181,8 @@ export type {
 export type {
   // 能力清单相关
   AuthzAction,
+  TemporaryAdminAction,
+  CapabilityAction,
   ResourceType,
   Perspective,
   CapabilityDataScope,
@@ -192,6 +194,7 @@ export type {
   // 数据策略包相关
   DataPolicyPackageCode,
   DataPolicyTemplate,
+  DataPolicyTemplateItem,
   DataPolicyTemplatesResponse,
   RoleDataPoliciesResponse,
   RoleDataPoliciesUpdateRequest,

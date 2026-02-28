@@ -1,6 +1,8 @@
 /** Capability types consumed from `/api/v1/auth/me/capabilities`. */
 
 export type AuthzAction = 'create' | 'read' | 'list' | 'update' | 'delete' | 'export';
+export type TemporaryAdminAction = 'backup';
+export type CapabilityAction = AuthzAction | TemporaryAdminAction;
 
 export type ResourceType =
   | 'analytics'
@@ -18,6 +20,8 @@ export type ResourceType =
   | 'notification'
   | 'occupancy'
   | 'operation_log'
+  | 'ledger'
+  | 'system'
   | 'organization'
   | 'ownership'
   | 'party'

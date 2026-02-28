@@ -17,6 +17,10 @@ export interface DataPolicyTemplate {
 
 export type DataPolicyTemplatesResponse = Record<DataPolicyPackageCode, DataPolicyTemplate>;
 
+export interface DataPolicyTemplateItem extends DataPolicyTemplate {
+  code: DataPolicyPackageCode;
+}
+
 export interface RoleDataPoliciesResponse {
   role_id: string;
   policy_packages: DataPolicyPackageCode[];

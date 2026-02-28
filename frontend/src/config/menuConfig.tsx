@@ -135,6 +135,11 @@ export const MENU_ITEMS: MenuProps['items'] = [
         icon: <AuditOutlined />,
         label: '操作日志',
       },
+      {
+        key: '/system/data-policies',
+        icon: <FileTextOutlined />,
+        label: '数据策略包',
+      },
     ],
   },
 ];

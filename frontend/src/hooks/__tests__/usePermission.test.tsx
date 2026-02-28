@@ -1,188 +1,101 @@
 import { renderHook } from '@/test/utils/test-helpers';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import usePermission from '../usePermission';
-import { AuthStorage } from '@/utils/AuthStorage';
 
-// Mock MessageManager to avoid console output
-vi.mock('@/utils/messageManager', () => ({
-  MessageManager: {
-    error: vi.fn(),
-  },
+const mockUseAuth = vi.hoisted(() => vi.fn());
+const mockUseCapabilities = vi.hoisted(() => vi.fn());
+
+vi.mock('@/contexts/AuthContext', () => ({
+  useAuth: mockUseAuth,
 }));
 
-describe('usePermission', () => {
+vi.mock('@/hooks/useCapabilities', () => ({
+  useCapabilities: mockUseCapabilities,
+}));
+
+describe('usePermission (compat shell)', () => {
   beforeEach(() => {
-    localStorage.clear();
-    AuthStorage.clearAuthData();
     vi.clearAllMocks();
   });
 
-  it('should load permissions from AuthStorage', () => {
-    const mockAuthData = {
-      user: {
-        id: '1',
-        username: 'test',
-        full_name: 'Test User',
-        role_id: 'role-user-id',
-        role_name: 'user',
-        is_active: true,
-        created_at: '2024-01-01T00:00:00Z',
-        updated_at: '2024-01-01T00:00:00Z',
-      },
-      permissions: [
-        { resource: 'assets', action: 'read' },
-        { resource: 'users', action: 'write' },
-      ],
-    };
-
-    AuthStorage.setAuthData(mockAuthData);
-
-    const { result } = renderHook(() => usePermission());
-
-    // Wait for the hook to complete loading
-    expect(result.current.userPermissions).toEqual({
-      userId: '1',
-      username: 'test',
-      roles: ['user'],
-      roleIds: ['role-user-id'],
-      isAdmin: false,
-      permissions: [
-        { resource: 'assets', action: 'read' },
-        { resource: 'users', action: 'write' },
-      ],
-      organizationId: undefined,
+  it('returns null userPermissions when user is missing', () => {
+    mockUseAuth.mockReturnValue({
+      user: null,
+      permissions: [],
     });
-    expect(result.current.loading).toBe(false);
-  });
+    mockUseCapabilities.mockReturnValue({
+      canPerform: vi.fn(() => false),
+      hasPartyAccess: vi.fn(() => false),
+      loading: false,
+    });
 
-  it('should return null permissions when not authenticated', () => {
     const { result } = renderHook(() => usePermission());
-
     expect(result.current.userPermissions).toBeNull();
-    expect(result.current.loading).toBe(false);
   });
 
-  it('should check permissions correctly', () => {
-    const mockAuthData = {
+  it('maps legacy permission vocabulary to capability checks', () => {
+    const canPerform = vi.fn(() => true);
+
+    mockUseAuth.mockReturnValue({
       user: {
-        id: '1',
-        username: 'test',
-        full_name: 'Test User',
-        role_id: 'role-user-id',
-        role_name: 'user',
-        is_active: true,
-        created_at: '2024-01-01T00:00:00Z',
-        updated_at: '2024-01-01T00:00:00Z',
-      },
-      permissions: [{ resource: 'assets', action: 'read' }],
-    };
-
-    AuthStorage.setAuthData(mockAuthData);
-
-    const { result } = renderHook(() => usePermission());
-
-    expect(result.current.hasPermission('assets', 'read')).toBe(true);
-    expect(result.current.hasPermission('assets', 'write')).toBe(false);
-  });
-
-  it('should check admin role correctly', () => {
-    const mockAuthData = {
-      user: {
-        id: '1',
-        username: 'admin',
-        full_name: 'Admin User',
-        role_id: 'role-admin-id',
-        role_name: 'admin',
-        roles: ['admin'],
-        is_admin: true,
-        is_active: true,
-        created_at: '2024-01-01T00:00:00Z',
-        updated_at: '2024-01-01T00:00:00Z',
-      },
-      permissions: [],
-    };
-
-    AuthStorage.setAuthData(mockAuthData);
-
-    const { result } = renderHook(() => usePermission());
-
-    expect(result.current.isAdmin()).toBe(true);
-    expect(result.current.hasRole('admin')).toBe(true);
-    // Admin should have all permissions
-    expect(result.current.hasPermission('any-resource', 'any-action')).toBe(true);
-  });
-
-  it('should not treat role name alone as admin when is_admin is false', () => {
-    const mockAuthData = {
-      user: {
-        id: '1',
-        username: 'admin',
-        full_name: 'Admin User',
-        role_id: 'role-admin-id',
-        role_name: 'admin',
-        roles: ['admin'],
+        id: 'u-1',
+        username: 'tester',
         is_admin: false,
-        is_active: true,
-        created_at: '2024-01-01T00:00:00Z',
-        updated_at: '2024-01-01T00:00:00Z',
+        roles: ['user'],
       },
       permissions: [],
-    };
-
-    AuthStorage.setAuthData(mockAuthData);
-
-    const { result } = renderHook(() => usePermission());
-
-    expect(result.current.isAdmin()).toBe(false);
-    expect(result.current.hasPermission('any-resource', 'any-action')).toBe(false);
-  });
-
-  it('should handle role from auth data', () => {
-    const mockAuthData = {
-      user: {
-        id: '1',
-        username: 'manager',
-        full_name: 'Manager User',
-        role_id: 'role-manager-id',
-        role_name: 'manager',
-        is_active: true,
-        created_at: '2024-01-01T00:00:00Z',
-        updated_at: '2024-01-01T00:00:00Z',
-      },
-      permissions: [{ resource: 'assets', action: 'read' }],
-    };
-
-    AuthStorage.setAuthData(mockAuthData);
+    });
+    mockUseCapabilities.mockReturnValue({
+      canPerform,
+      hasPartyAccess: vi.fn(() => false),
+      loading: false,
+    });
 
     const { result } = renderHook(() => usePermission());
-
-    expect(result.current.userPermissions?.roles).toEqual(['manager']);
-    expect(result.current.hasRole('manager')).toBe(true);
-    expect(result.current.hasRole('admin')).toBe(false);
+    expect(result.current.hasPermission('rental', 'view')).toBe(true);
+    expect(canPerform).toHaveBeenCalledWith('read', 'rent_contract');
   });
 
-  it('should handle organizationId', () => {
-    const mockAuthData = {
+  it('uses user.is_admin as admin source', () => {
+    mockUseAuth.mockReturnValue({
       user: {
-        id: '1',
-        username: 'test',
-        full_name: 'Test User',
-        role_id: 'role-user-id',
-        role_name: 'user',
-        is_active: true,
-        created_at: '2024-01-01T00:00:00Z',
-        updated_at: '2024-01-01T00:00:00Z',
-        default_organization_id: 'org-123',
+        id: 'u-1',
+        username: 'admin',
+        is_admin: true,
+        roles: ['admin'],
       },
       permissions: [],
-    };
-
-    AuthStorage.setAuthData(mockAuthData);
+    });
+    mockUseCapabilities.mockReturnValue({
+      canPerform: vi.fn(() => true),
+      hasPartyAccess: vi.fn(() => true),
+      loading: false,
+    });
 
     const { result } = renderHook(() => usePermission());
+    expect(result.current.isAdmin()).toBe(true);
+  });
 
-    expect(result.current.userPermissions?.organizationId).toBe('org-123');
-    expect(result.current.canAccessOrganization('org-123')).toBe(true);
-    expect(result.current.canAccessOrganization('org-456')).toBe(false);
+  it('checks organization access via party scope helper', () => {
+    const hasPartyAccess = vi.fn(() => true);
+
+    mockUseAuth.mockReturnValue({
+      user: {
+        id: 'u-1',
+        username: 'user',
+        is_admin: false,
+        roles: ['user'],
+      },
+      permissions: [],
+    });
+    mockUseCapabilities.mockReturnValue({
+      canPerform: vi.fn(() => false),
+      hasPartyAccess,
+      loading: false,
+    });
+
+    const { result } = renderHook(() => usePermission());
+    expect(result.current.canAccessOrganization('party-1')).toBe(true);
+    expect(hasPartyAccess).toHaveBeenCalledWith('party-1', 'owner', 'party');
   });
 });
