@@ -1,4 +1,5 @@
 import { apiClient } from '@/api/client';
+import type { ApiClientError } from '@/types/apiResponse';
 import type { Party, PartyListParams, PartyType } from '@/types/party';
 import { ApiErrorHandler } from '@/utils/responseExtractor';
 
@@ -61,6 +62,19 @@ const normalizePartyList = (
   };
 };
 
+const toServiceError = (enhancedError: ApiClientError): Error => {
+  const serviceError = new Error(enhancedError.message);
+  Object.assign(serviceError, {
+    code: enhancedError.code,
+    statusCode: enhancedError.statusCode,
+    type: enhancedError.type,
+    requestId: enhancedError.requestId,
+    details: enhancedError.details,
+    originalError: enhancedError.originalError,
+  });
+  return serviceError;
+};
+
 export class PartyService {
   async getParties(params: PartyListParams = {}): Promise<PartyListResult> {
     try {
@@ -89,7 +103,7 @@ export class PartyService {
       });
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      throw new Error(enhancedError.message);
+      throw toServiceError(enhancedError);
     }
   }
 
@@ -120,7 +134,7 @@ export class PartyService {
       return result.data;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      throw new Error(enhancedError.message);
+      throw toServiceError(enhancedError);
     }
   }
 
@@ -138,7 +152,7 @@ export class PartyService {
       return result.data;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      throw new Error(enhancedError.message);
+      throw toServiceError(enhancedError);
     }
   }
 
@@ -156,7 +170,7 @@ export class PartyService {
       return result.data;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      throw new Error(enhancedError.message);
+      throw toServiceError(enhancedError);
     }
   }
 
@@ -176,7 +190,7 @@ export class PartyService {
       return result.data;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      throw new Error(enhancedError.message);
+      throw toServiceError(enhancedError);
     }
   }
 }

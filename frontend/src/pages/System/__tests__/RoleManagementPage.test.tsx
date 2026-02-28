@@ -14,7 +14,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import userEvent from '@testing-library/user-event';
-import { act, fireEvent, screen, waitFor } from '@/test/utils/test-helpers';
+import { act, fireEvent, renderWithProviders, screen, waitFor } from '@/test/utils/test-helpers';
 import RoleManagementPage from '../RoleManagementPage';
 import { roleService } from '@/services/systemService';
 import { MessageManager } from '@/utils/messageManager';

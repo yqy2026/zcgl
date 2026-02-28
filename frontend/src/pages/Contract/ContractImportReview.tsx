@@ -54,6 +54,8 @@ interface ContractImportReviewProps {
 interface FormValues {
   contract_number: string;
   asset_id?: string;
+  owner_party_id?: string;
+  /** @deprecated 兼容字段，后续统一使用 owner_party_id。 */
   ownership_id?: string;
   tenant_name: string;
   tenant_contact?: string;
@@ -82,6 +84,27 @@ interface EvidenceSnippet {
   match_type?: string;
   source?: string;
 }
+
+type OwnerReferenceFields = Pick<FormValues, 'owner_party_id' | 'ownership_id'>;
+
+export const normalizeOptionalId = (value: string | undefined): string | undefined => {
+  if (value == null) {
+    return undefined;
+  }
+  const normalized = value.trim();
+  return normalized === '' ? undefined : normalized;
+};
+
+export const resolveOwnerReferences = (
+  validatedValues: OwnerReferenceFields,
+  storedValues: OwnerReferenceFields
+): { ownerPartyId: string | undefined; ownershipId: string | undefined } => {
+  const ownerPartyId = normalizeOptionalId(
+    validatedValues.owner_party_id ?? storedValues.owner_party_id
+  );
+  const ownershipId = normalizeOptionalId(validatedValues.ownership_id ?? storedValues.ownership_id);
+  return { ownerPartyId, ownershipId };
+};
 
 const ContractImportReview: React.FC<ContractImportReviewProps> = ({
   result,
@@ -203,6 +226,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
     form.setFieldsValue({
       contract_number: validatedData.contract_number ?? '',
       asset_id: recommendations.asset_id ?? '',
+      owner_party_id: recommendations.owner_party_id ?? '',
       ownership_id: recommendations.ownership_id ?? '',
       tenant_name: validatedData.tenant_name ?? '',
       tenant_contact: validatedData.tenant_contact ?? '',
@@ -239,13 +263,20 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
   // 确认导入
   const handleConfirm = async () => {
     try {
-      const values = (await form.validateFields()) as FormValues;
+      const validatedValues = (await form.validateFields()) as FormValues;
+      const storedValues = form.getFieldsValue(true) as FormValues;
+      const values: FormValues = {
+        ...storedValues,
+        ...validatedValues,
+      };
 
       // 转换日期格式
+      const { ownerPartyId, ownershipId } = resolveOwnerReferences(validatedValues, storedValues);
       const confirmedData: ConfirmedContractData = {
         contract_number: values.contract_number,
         asset_id: values.asset_id,
-        ownership_id: values.ownership_id,
+        owner_party_id: ownerPartyId,
+        ownership_id: ownershipId,
         tenant_name: values.tenant_name,
         tenant_contact: values.tenant_contact,
         tenant_phone: values.tenant_phone,
@@ -489,10 +520,10 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
         )}
       </div>
 
-      {/* 权属方匹配 */}
+      {/* 产权方主体匹配 */}
       <div>
         <Title level={5}>
-          权属方匹配
+          产权方主体匹配
           {result.matching_result.matched_ownerships.length > 0 && (
             <Tag color="green" className={styles.matchCountTag}>
               找到 {result.matching_result.matched_ownerships.length} 个匹配项
@@ -502,12 +533,12 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
 
         {result.matching_result.matched_ownerships.length > 0 ? (
           <Form.Item
-            label="选择权属方"
+            label="选择产权方主体"
             name="ownership_id"
-            rules={[{ required: true, message: '请选择关联的权属方' }]}
+            rules={[{ required: true, message: '请选择关联的产权方主体' }]}
           >
             <Select
-              placeholder="请选择匹配的权属方"
+              placeholder="请选择匹配的产权方主体"
               showSearch
               filterOption={(input, option) =>
                 String(option?.children || '')
@@ -537,8 +568,8 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
           </Form.Item>
         ) : (
           <Alert
-            title="未找到匹配的权属方"
-            description="请手动选择或创建新的权属方记录"
+            title="未找到匹配的产权方主体"
+            description="请手动选择或创建新的主体记录"
             type="warning"
             showIcon
           />

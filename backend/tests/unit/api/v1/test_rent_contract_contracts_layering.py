@@ -9,7 +9,11 @@ from unittest.mock import ANY, AsyncMock, MagicMock
 
 import pytest
 
-from src.core.exception_handler import PermissionDeniedError, ResourceNotFoundError
+from src.core.exception_handler import (
+    BusinessValidationError,
+    PermissionDeniedError,
+    ResourceNotFoundError,
+)
 from src.schemas.rent_contract import RentContractCreate, RentTermCreate
 
 pytestmark = pytest.mark.api
@@ -151,6 +155,124 @@ async def test_create_contract_should_validate_ownership_even_with_owner_party_i
         db=ANY,
         ownership_id="ownership-missing",
     )
+    mock_service.create_contract_async.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_create_contract_should_resolve_ownership_from_owner_party_when_missing() -> None:
+    """创建合同在 owner_party-only 场景应由服务端桥接补齐 ownership_id。"""
+    from src.api.v1.rent_contracts import contracts as module
+    from src.api.v1.rent_contracts.contracts import create_contract
+
+    contract_in = _build_contract_create_payload().model_copy(
+        update={
+            "owner_party_id": "party-1",
+            "ownership_id": None,
+        }
+    )
+
+    mock_service = MagicMock()
+    mock_service.get_assets_by_ids_async = AsyncMock(return_value=[MagicMock(id="asset-1")])
+    mock_service.get_owner_party_by_id_async = AsyncMock(return_value=MagicMock(id="party-1"))
+    mock_service.resolve_ownership_id_by_owner_party_id_async = AsyncMock(
+        return_value="ownership-resolved-1"
+    )
+    mock_service.get_ownership_by_id_async = AsyncMock(
+        return_value=MagicMock(id="ownership-resolved-1")
+    )
+    mock_service.resolve_owner_party_scope_by_ownership_id_async = AsyncMock(
+        return_value="party-1"
+    )
+    mock_service.create_contract_async = AsyncMock(return_value=MagicMock(id="contract-1"))
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(module, "rent_contract_service", mock_service)
+        result = await create_contract(
+            db=MagicMock(),
+            contract_in=contract_in,
+            current_user=MagicMock(),
+        )
+
+    assert getattr(result, "id", None) == "contract-1"
+    assert contract_in.ownership_id == "ownership-resolved-1"
+    assert (
+        mock_service.resolve_ownership_id_by_owner_party_id_async.await_count == 2
+    )  # 补齐 ownership 后会触发双向一致性校验
+    mock_service.resolve_ownership_id_by_owner_party_id_async.assert_awaited_with(
+        db=ANY,
+        owner_party_id="party-1",
+    )
+    mock_service.get_ownership_by_id_async.assert_awaited_once_with(
+        db=ANY,
+        ownership_id="ownership-resolved-1",
+    )
+    mock_service.create_contract_async.assert_awaited_once_with(
+        db=ANY,
+        obj_in=ANY,
+    )
+
+
+@pytest.mark.asyncio
+async def test_create_contract_should_fail_when_owner_party_cannot_map_to_ownership() -> None:
+    """owner_party-only 且无法映射 ownership 时应返回显式校验错误。"""
+    from src.api.v1.rent_contracts import contracts as module
+    from src.api.v1.rent_contracts.contracts import create_contract
+
+    contract_in = _build_contract_create_payload().model_copy(
+        update={
+            "asset_ids": [],
+            "owner_party_id": "party-1",
+            "ownership_id": None,
+        }
+    )
+
+    mock_service = MagicMock()
+    mock_service.get_owner_party_by_id_async = AsyncMock(return_value=MagicMock(id="party-1"))
+    mock_service.resolve_ownership_id_by_owner_party_id_async = AsyncMock(return_value=None)
+    mock_service.create_contract_async = AsyncMock(return_value=MagicMock(id="contract-1"))
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(module, "rent_contract_service", mock_service)
+        with pytest.raises(BusinessValidationError, match="未建立可用权属映射"):
+            await create_contract(
+                db=MagicMock(),
+                contract_in=contract_in,
+                current_user=MagicMock(),
+            )
+
+    mock_service.create_contract_async.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_create_contract_should_fail_closed_when_owner_ownership_mapping_unverifiable() -> None:
+    """同时提供 owner_party_id 与 ownership_id 且双向映射均不可验证时应拒绝创建。"""
+    from src.api.v1.rent_contracts import contracts as module
+    from src.api.v1.rent_contracts.contracts import create_contract
+
+    contract_in = _build_contract_create_payload().model_copy(
+        update={
+            "asset_ids": [],
+            "owner_party_id": "party-1",
+            "ownership_id": "ownership-1",
+        }
+    )
+
+    mock_service = MagicMock()
+    mock_service.get_owner_party_by_id_async = AsyncMock(return_value=MagicMock(id="party-1"))
+    mock_service.get_ownership_by_id_async = AsyncMock(return_value=MagicMock(id="ownership-1"))
+    mock_service.resolve_owner_party_scope_by_ownership_id_async = AsyncMock(return_value=None)
+    mock_service.resolve_ownership_id_by_owner_party_id_async = AsyncMock(return_value=None)
+    mock_service.create_contract_async = AsyncMock(return_value=MagicMock(id="contract-1"))
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(module, "rent_contract_service", mock_service)
+        with pytest.raises(BusinessValidationError, match="映射关系"):
+            await create_contract(
+                db=MagicMock(),
+                contract_in=contract_in,
+                current_user=MagicMock(),
+            )
+
     mock_service.create_contract_async.assert_not_awaited()
 
 
@@ -735,6 +857,12 @@ async def test_create_contract_should_backfill_owner_party_from_authz_context() 
     mock_service = MagicMock()
     mock_service.get_owner_party_by_id_async = AsyncMock(return_value=MagicMock(id="party-1"))
     mock_service.get_ownership_by_id_async = AsyncMock(return_value=MagicMock(id="ownership-1"))
+    mock_service.resolve_owner_party_scope_by_ownership_id_async = AsyncMock(
+        return_value="owner-party-from-authz"
+    )
+    mock_service.resolve_ownership_id_by_owner_party_id_async = AsyncMock(
+        return_value="ownership-1"
+    )
     mock_service.create_contract_async = AsyncMock(return_value=MagicMock(id="contract-1"))
 
     with pytest.MonkeyPatch.context() as monkeypatch:

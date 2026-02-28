@@ -6,11 +6,9 @@ test.describe('Mobile Smoke', () => {
     await ensureAuthenticated(page);
     await page.goto('/dashboard');
     await expect(page).toHaveURL(/\/dashboard/);
-    const hasDashboardTitle = await page
-      .getByText(/工作台|Dashboard|资产管理看板/)
-      .first()
-      .isVisible()
-      .catch(() => false);
-    expect(hasDashboardTitle).toBe(true);
+    const dashboardTitle = page
+      .getByRole('heading', { name: /资产管理看板|工作台|Dashboard/i })
+      .first();
+    await expect(dashboardTitle).toBeVisible({ timeout: 15_000 });
   });
 });

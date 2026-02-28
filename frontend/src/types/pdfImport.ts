@@ -520,6 +520,8 @@ export interface RentTermData {
 export interface ConfirmedContractData {
   contract_number: string;
   asset_id?: string;
+  owner_party_id?: string;
+  /** @deprecated Phase 3 迁移期兼容字段；仅透传旧链路，不应与 owner_party_id 强制互写。 */
   ownership_id?: string;
   tenant_name: string;
   tenant_contact?: string;

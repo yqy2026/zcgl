@@ -6,12 +6,11 @@ import React, { useState, useEffect } from 'react';
 import { Form, Input, Button, Space, Card, Tag } from 'antd';
 import type { RuleObject } from 'antd/es/form';
 import { MessageManager } from '@/utils/messageManager';
-import OwnershipSelect from '@/components/Ownership/OwnershipSelect';
+import PartySelector from '@/components/Common/PartySelector';
+import type { PartySelectorSelection } from '@/components/Common/PartySelector';
 
-import { ownershipService } from '@/services/ownershipService';
 import { projectService } from '@/services/projectService';
 import type { Project, ProjectCreate, ProjectUpdate } from '@/types/project';
-import type { Ownership } from '@/types/ownership';
 import { createLogger } from '@/utils/logger';
 import styles from './ProjectForm.module.css';
 
@@ -27,23 +26,8 @@ interface ProjectFormProps {
 const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSuccess, onCancel }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
-  const [selectedOwnerships, setSelectedOwnerships] = useState<Ownership[]>([]);
-
-  // 获取权属方列表
-  useEffect(() => {
-    const loadOwnerships = async () => {
-      try {
-        const response = await ownershipService.getOwnershipOptions(true);
-        setOwnerships(response);
-      } catch (error) {
-        componentLogger.error('获取权属方列表失败:', error as Error);
-        MessageManager.error('获取权属方列表失败');
-      }
-    };
-    loadOwnerships();
-  }, []);
-
-  const [ownerships, setOwnerships] = useState<Ownership[]>([]);
+  const [selectedOwnerParties, setSelectedOwnerParties] = useState<PartySelectorSelection[]>([]);
+  const [pendingOwnerPartyId, setPendingOwnerPartyId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     if (project !== undefined && project !== null) {
@@ -55,32 +39,40 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSuccess, onCancel 
 
       // 设置主体关联（Phase 3 主链）
       if (project.party_relations != null && project.party_relations.length > 0) {
-        const ownerPartyIds = project.party_relations
-          .map(relation => relation.party_id)
-          .filter((partyId): partyId is string => partyId.trim() !== '');
-        const selected = ownerships.filter(ownership => ownerPartyIds.includes(ownership.id));
-        setSelectedOwnerships(selected);
+        const selectedMap = new Map<string, PartySelectorSelection>();
+        project.party_relations.forEach(relation => {
+          const partyId = relation.party_id.trim();
+          if (partyId === '' || selectedMap.has(partyId)) {
+            return;
+          }
+          const partyName = relation.party_name?.trim();
+          selectedMap.set(partyId, {
+            party_id: partyId,
+            party_name: partyName != null && partyName !== '' ? partyName : partyId,
+          });
+        });
+        setSelectedOwnerParties(Array.from(selectedMap.values()));
       } else {
-        setSelectedOwnerships([]);
+        setSelectedOwnerParties([]);
       }
     } else {
       form.resetFields();
-      setSelectedOwnerships([]);
+      setSelectedOwnerParties([]);
     }
-  }, [project, form, ownerships]);
+    setPendingOwnerPartyId(undefined);
+  }, [project, form]);
 
-  // 添加权属方
-  const addOwnership = (ownership: Ownership) => {
-    if (!selectedOwnerships.find(o => o.id === ownership.id)) {
-      const newSelected = [...selectedOwnerships, ownership];
-      setSelectedOwnerships(newSelected);
+  // 添加所有方主体
+  const addOwnerParty = (selection: PartySelectorSelection) => {
+    if (selectedOwnerParties.some(item => item.party_id === selection.party_id)) {
+      return;
     }
+    setSelectedOwnerParties(prev => [...prev, selection]);
   };
 
-  // 移除权属方
-  const removeOwnership = (ownershipId: string) => {
-    const newSelected = selectedOwnerships.filter(o => o.id !== ownershipId);
-    setSelectedOwnerships(newSelected);
+  // 移除所有方主体
+  const removeOwnerParty = (partyId: string) => {
+    setSelectedOwnerParties(prev => prev.filter(item => item.party_id !== partyId));
   };
 
   // 表单提交
@@ -88,8 +80,8 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSuccess, onCancel 
     setLoading(true);
     try {
       // 构建 party_relations（前端主链）
-      const party_relations = selectedOwnerships.map(ownership => ({
-        party_id: ownership.id,
+      const party_relations = selectedOwnerParties.map(selection => ({
+        party_id: selection.party_id,
         relation_type: 'owner',
         is_primary: true,
       }));
@@ -141,36 +133,36 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSuccess, onCancel 
         </Form.Item>
       </Card>
 
-      <Card title="权属方关联" size="small" className={styles.ownershipCard}>
-        <Form.Item label="选择权属方">
+      <Card title="所有方主体关联" size="small" className={styles.ownershipCard}>
+        <Form.Item label="选择所有方主体">
           <div className={styles.ownershipSelectWrapper}>
-            <OwnershipSelect
-              placeholder="选择要关联的权属方"
-              variant="selectionOnly"
-              showSearch={true}
-              ariaLabel="项目关联权属方选择"
-              onChange={(_value, ownership) => {
-                if (ownership !== undefined && ownership !== null && !Array.isArray(ownership)) {
-                  addOwnership(ownership);
+            <PartySelector
+              placeholder="选择要关联的所有方主体"
+              value={pendingOwnerPartyId}
+              onChange={(value, selection) => {
+                setPendingOwnerPartyId(value);
+                if (selection != null) {
+                  addOwnerParty(selection);
+                  setPendingOwnerPartyId(undefined);
                 }
               }}
             />
           </div>
         </Form.Item>
 
-        {selectedOwnerships.length > 0 && (
+        {selectedOwnerParties.length > 0 && (
           <div className={styles.selectedOwnershipsSection}>
-            <div className={styles.selectedOwnershipsTitle}>已选择的权属方：</div>
+            <div className={styles.selectedOwnershipsTitle}>已选择的所有方主体：</div>
             <div className={styles.selectedOwnershipsList}>
-              {selectedOwnerships.map(ownership => (
+              {selectedOwnerParties.map(selection => (
                 <Tag
-                  key={ownership.id}
+                  key={selection.party_id}
                   color="blue"
                   closable
-                  onClose={() => removeOwnership(ownership.id)}
+                  onClose={() => removeOwnerParty(selection.party_id)}
                   className={styles.selectedOwnershipTag}
                 >
-                  {ownership.name}
+                  {selection.party_name}
                 </Tag>
               ))}
             </div>

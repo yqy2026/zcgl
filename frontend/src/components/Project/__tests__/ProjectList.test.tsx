@@ -8,7 +8,7 @@ import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 
 import { useQuery } from '@tanstack/react-query';
-import { ownershipService } from '@/services/ownershipService';
+import { partyService } from '@/services/partyService';
 
 // Mock message manager
 vi.mock('@/utils/messageManager', () => ({
@@ -27,9 +27,9 @@ vi.mock('@tanstack/react-query', async importOriginal => {
   };
 });
 
-vi.mock('@/services/ownershipService', () => ({
-  ownershipService: {
-    getOwnershipOptions: vi.fn(() => Promise.resolve([])),
+vi.mock('@/services/partyService', () => ({
+  partyService: {
+    searchParties: vi.fn(() => Promise.resolve({ items: [] })),
   },
 }));
 
@@ -59,11 +59,21 @@ vi.mock('@/components/Common/TableWithPagination', () => ({
           {String(item.name)}
           <div data-testid={`ownership-${String(item.id)}`}>
             {columns
-              ?.find(column => column.key === 'ownership_entity')
+              ?.find(column => column.key === 'owner_party')
               ?.render?.(
-                typeof item.ownership_entity === 'string' ? item.ownership_entity : '',
+                Array.isArray(item.party_relations) ? item.party_relations : [],
                 item
               )}
+          </div>
+          <div data-testid={`status-${String(item.id)}`}>
+            {columns
+              ?.find(column => column.key === 'is_active')
+              ?.render?.(item.is_active, item)}
+          </div>
+          <div data-testid={`area-status-${String(item.id)}`}>
+            {columns
+              ?.find(column => column.key === 'area_status')
+              ?.render?.(undefined, item)}
           </div>
         </div>
       ))}
@@ -181,15 +191,27 @@ vi.mock('antd', () => {
     children,
     placeholder,
     onChange,
+    onSearch,
+    showSearch,
   }: {
     children?: React.ReactNode;
     placeholder?: string;
     onChange?: (value: string) => void;
+    onSearch?: (value: string) => void;
+    showSearch?: boolean;
   }) => (
-    <select data-testid="select" onChange={e => onChange?.(e.target.value)}>
-      <option value="">{placeholder}</option>
-      {children}
-    </select>
+    <div data-testid="select-wrapper" data-placeholder={placeholder ?? ''}>
+      {showSearch && (
+        <input
+          data-testid={`select-search-${placeholder ?? 'unknown'}`}
+          onChange={e => onSearch?.((e.target as HTMLInputElement).value)}
+        />
+      )}
+      <select data-testid="select" onChange={e => onChange?.(e.target.value)}>
+        <option value="">{placeholder}</option>
+        {children}
+      </select>
+    </div>
   );
   Select.displayName = 'MockSelect';
   const Option = ({
@@ -363,8 +385,10 @@ describe('ProjectList', () => {
         };
       }
 
-      if (key === 'project-ownership-options') {
-        void ownershipService.getOwnershipOptions(true);
+      if (key === 'project-owner-party-options') {
+        const keyword =
+          Array.isArray(queryKey) && typeof queryKey[1] === 'string' ? queryKey[1] : '';
+        void partyService.searchParties(keyword, { status: 'active', limit: 20 });
         return {
           data: [],
           error: null,
@@ -450,6 +474,17 @@ describe('ProjectList', () => {
       const selects = screen.getAllByTestId('select');
       expect(selects.length).toBeGreaterThan(0);
     });
+
+    it('所有方主体筛选应使用后端远程搜索（关键词触发 searchParties）', async () => {
+      await renderProjectList();
+      const ownerSearchInput = screen.getByTestId('select-search-所有方主体');
+      fireEvent.change(ownerSearchInput, { target: { value: '主体关键字' } });
+
+      expect(partyService.searchParties).toHaveBeenCalledWith('主体关键字', {
+        status: 'active',
+        limit: 20,
+      });
+    });
   });
 
   describe('权属方显示', () => {
@@ -513,8 +548,10 @@ describe('ProjectList', () => {
           };
         }
 
-        if (key === 'project-ownership-options') {
-          void ownershipService.getOwnershipOptions(true);
+        if (key === 'project-owner-party-options') {
+          const keyword =
+            Array.isArray(queryKey) && typeof queryKey[1] === 'string' ? queryKey[1] : '';
+          void partyService.searchParties(keyword, { status: 'active', limit: 20 });
           return {
             data: [],
             error: null,
@@ -540,6 +577,79 @@ describe('ProjectList', () => {
     });
   });
 
+  describe('无资产项目展示', () => {
+    it('asset_count 为 0 时应显示待补绑定，且面积统计显示 N/A', async () => {
+      await renderProjectList();
+
+      expect(screen.getByTestId('status-2')).toHaveTextContent('待补绑定');
+      expect(screen.getByTestId('area-status-2')).toHaveTextContent('N/A');
+      expect(screen.getByTestId('status-1')).not.toHaveTextContent('待补绑定');
+    });
+
+    it('当缺失 asset_count 时，应回退使用 assets.length 判定是否待补绑定', async () => {
+      vi.mocked(useQuery).mockImplementation(options => {
+        const queryKey = (options as { queryKey?: unknown[] }).queryKey;
+        const key = Array.isArray(queryKey) ? queryKey[0] : undefined;
+
+        if (key === 'project-list') {
+          return {
+            data: {
+              items: [
+                {
+                  id: 'fallback-empty-assets',
+                  name: '无资产回退项目',
+                  code: 'PROJ-FALLBACK-EMPTY',
+                  is_active: true,
+                  assets: [],
+                },
+                {
+                  id: 'fallback-has-assets',
+                  name: '有资产回退项目',
+                  code: 'PROJ-FALLBACK-HAS',
+                  is_active: true,
+                  assets: [{ id: 'asset-1' }],
+                },
+              ],
+              total: 2,
+              page: 1,
+              page_size: 10,
+              pages: 1,
+            },
+            error: null,
+            isLoading: false,
+            isFetching: false,
+            refetch: mockRefetchProjects,
+          };
+        }
+
+        if (key === 'project-owner-party-options') {
+          void partyService.searchParties('', { status: 'active', limit: 50 });
+          return {
+            data: [],
+            error: null,
+            isLoading: false,
+            isFetching: false,
+            refetch: vi.fn(),
+          };
+        }
+
+        return {
+          data: undefined,
+          error: null,
+          isLoading: false,
+          isFetching: false,
+          refetch: vi.fn(),
+        };
+      });
+
+      await renderProjectList();
+
+      expect(screen.getByTestId('status-fallback-empty-assets')).toHaveTextContent('待补绑定');
+      expect(screen.getByTestId('area-status-fallback-empty-assets')).toHaveTextContent('N/A');
+      expect(screen.getByTestId('status-fallback-has-assets')).not.toHaveTextContent('待补绑定');
+    });
+  });
+
   describe('图标显示', () => {
     it('应该显示搜索图标', async () => {
       await renderProjectList();
@@ -548,10 +658,10 @@ describe('ProjectList', () => {
     });
   });
 
-  it('初始化时会加载列表和权属方选项', async () => {
+  it('初始化时会加载列表和主体选项', async () => {
     await renderProjectList();
 
     expect(useQuery).toHaveBeenCalled();
-    expect(ownershipService.getOwnershipOptions).toHaveBeenCalled();
+    expect(partyService.searchParties).toHaveBeenCalled();
   });
 });

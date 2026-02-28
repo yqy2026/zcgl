@@ -12,12 +12,6 @@ vi.mock('@/services/assetService', () => ({
   },
 }));
 
-vi.mock('@/services/ownershipService', () => ({
-  ownershipService: {
-    getOwnerships: vi.fn().mockResolvedValue({ items: [] }),
-  },
-}));
-
 vi.mock('@/utils/messageManager', () => ({
   MessageManager: {
     error: vi.fn(),
@@ -26,7 +20,8 @@ vi.mock('@/utils/messageManager', () => ({
   },
 }));
 
-vi.mock('antd', () => {
+vi.mock('antd', async importOriginal => {
+  const actual = await importOriginal<typeof import('antd')>();
   const Form = Object.assign(
     ({ children, onFinish }: { children: React.ReactNode; onFinish?: () => void }) => (
       <form
@@ -49,7 +44,10 @@ vi.mock('antd', () => {
     }
   );
 
-  return { Form };
+  return {
+    ...actual,
+    Form,
+  };
 });
 
 vi.mock('../RentContract', async () => {
@@ -75,7 +73,8 @@ describe('RentContractForm', () => {
     mockValidateFields = vi.fn().mockResolvedValue({
       contract_number: 'HT-TEST-001',
       asset_ids: ['asset-1'],
-      ownership_id: 'owner-1',
+      owner_party_id: 'party-owner-1',
+      manager_party_id: 'party-manager-1',
       tenant_name: '测试租户',
       start_date: dayjs('2026-02-01'),
       end_date: dayjs('2026-12-31'),
@@ -91,7 +90,8 @@ describe('RentContractForm', () => {
         initialData={{
           contract_number: 'HT-INIT',
           asset_ids: ['asset-1'],
-          ownership_id: 'owner-1',
+          owner_party_id: 'party-owner-1',
+          manager_party_id: 'party-manager-1',
           tenant_name: '测试租户',
           start_date: '2026-02-01',
           end_date: '2026-12-31',
@@ -113,5 +113,8 @@ describe('RentContractForm', () => {
     await waitFor(() => {
       expect(onSubmit).toHaveBeenCalledTimes(1);
     });
+
+    const submittedPayload = onSubmit.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(submittedPayload).not.toHaveProperty('ownership_id');
   });
 });

@@ -186,6 +186,15 @@ class RentContractBase(BaseModel):
             raise PydanticCustomError("empty_contract_number", "合同编号不能为空", {})
         return normalized
 
+    @field_validator("owner_party_id")
+    @classmethod
+    def normalize_owner_party_id(cls, v: str | None) -> str | None:
+        """将空白 owner_party_id 归一化为 None，避免空白字符串绕过联合校验。"""
+        if v is None:
+            return None
+        normalized = v.strip()
+        return normalized if normalized else None
+
     @model_validator(mode="after")
     def validate_owner_reference(self) -> "RentContractBase":
         if not self.owner_party_id and not self.ownership_id:
@@ -200,13 +209,17 @@ class RentContractBase(BaseModel):
 class RentContractCreate(RentContractBase):
     """创建租金合同Schema"""
 
-    ownership_id: str = Field(..., description="权属方ID（DEPRECATED）")
+    ownership_id: str | None = Field(None, description="权属方ID（DEPRECATED）")
     contract_number: str | None = Field(None, description="合同编号（手工录入）")
     rent_terms: list[RentTermCreate] = Field(..., description="租金条款列表")
 
     @field_validator("ownership_id")  # DEPRECATED alias validation
     @classmethod
-    def validate_ownership_id(cls, v: str) -> str:  # DEPRECATED alias validator
+    def validate_ownership_id(
+        cls, v: str | None
+    ) -> str | None:  # DEPRECATED alias validator
+        if v is None:
+            return None
         normalized = v.strip()
         if not normalized:
             raise PydanticCustomError("empty_ownership_id", "ownership_id 不能为空", {})
@@ -371,6 +384,15 @@ class RentLedgerBase(BaseModel):
                 {},
             )
         return v
+
+    @field_validator("owner_party_id")
+    @classmethod
+    def normalize_owner_party_id(cls, v: str | None) -> str | None:
+        """将空白 owner_party_id 归一化为 None，避免空白字符串绕过联合校验。"""
+        if v is None:
+            return None
+        normalized = v.strip()
+        return normalized if normalized else None
 
     @model_validator(mode="after")
     def validate_owner_reference(self) -> "RentLedgerBase":

@@ -3,8 +3,8 @@ import { Card, Input, Select, Button, Space } from 'antd';
 import { SearchOutlined, PlusOutlined } from '@ant-design/icons';
 import { ContractStatus, ContractStatusLabels } from '@/types/rentContract';
 import type { Asset } from '@/types/asset';
-import type { Ownership } from '@/types/ownership';
 import { ListToolbar } from '@/components/Common/ListToolbar';
+import PartySelector from '@/components/Common/PartySelector';
 import styles from './ContractFilterBar.module.css';
 
 const { Search } = Input;
@@ -12,7 +12,6 @@ const { Option } = Select;
 
 interface ContractFilterBarProps {
   assets: Asset[];
-  ownerships: Ownership[];
   onSearch: (values: Record<string, unknown>) => void;
   onReset: () => void;
   onCreate: () => void;
@@ -20,7 +19,6 @@ interface ContractFilterBarProps {
 
 const ContractFilterBar: React.FC<ContractFilterBarProps> = ({
   assets,
-  ownerships,
   onSearch,
   onReset,
   onCreate,
@@ -62,21 +60,15 @@ const ContractFilterBar: React.FC<ContractFilterBarProps> = ({
             ),
           },
           {
-            key: 'ownership',
+            key: 'owner-party',
             col: { xs: 24, sm: 12, lg: 4 },
             content: (
-              <Select
-                placeholder="选择权属方"
-                allowClear
-                onChange={value => onSearch({ ownership_id: value })}
-                className={styles.filterControl}
-              >
-                {ownerships.map(ownership => (
-                  <Option key={ownership.id} value={ownership.id}>
-                    {ownership.name}
-                  </Option>
-                ))}
-              </Select>
+              <PartySelector
+                placeholder="选择产权方主体"
+                filterMode="owner"
+                onChange={value => onSearch({ owner_party_id: value })}
+                style={{ width: '100%' }}
+              />
             ),
           },
           {

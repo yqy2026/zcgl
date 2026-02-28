@@ -159,6 +159,118 @@ class TestRentContractLifecycle:
         mock_history.assert_awaited_once()
 
     @pytest.mark.asyncio
+    async def test_create_contract_async_should_fail_when_owner_ownership_mapping_mismatch(
+        self, service, mock_db
+    ):
+        obj_in = _build_contract_create()
+        obj_in.owner_party_id = "party_001"
+        obj_in.ownership_id = "ownership_001"
+
+        with patch.object(
+            service,
+            "_check_asset_rent_conflicts_async",
+            new=AsyncMock(return_value=[]),
+        ), patch(
+            "src.services.rent_contract.lifecycle_service.asset_crud.get_multi_by_ids_async",
+            new=AsyncMock(return_value=[]),
+        ), patch.object(
+            service,
+            "resolve_owner_party_scope_by_ownership_id_async",
+            new=AsyncMock(return_value="party_002"),
+        ), patch.object(
+            service,
+            "resolve_ownership_id_by_owner_party_id_async",
+            new=AsyncMock(return_value="ownership_001"),
+        ), patch.object(
+            service, "_create_history_async", new=AsyncMock()
+        ):
+            with pytest.raises(BusinessValidationError, match="对应关系不一致"):
+                await service.create_contract_async(mock_db, obj_in=obj_in)
+
+        mock_db.commit.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_update_contract_async_should_fail_when_owner_ownership_mapping_mismatch(
+        self, service, mock_db
+    ):
+        db_obj = RentContract(
+            contract_number="CT-OLD-001",
+            ownership_id="ownership_legacy",
+            owner_party_id="party_legacy",
+            tenant_name="old tenant",
+            sign_date=date(2026, 1, 1),
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 12, 31),
+        )
+        db_obj.id = "contract_001"
+
+        update_data = RentContractUpdate(
+            owner_party_id="party_001",
+            ownership_id="ownership_001",
+        )
+
+        with patch.object(
+            service,
+            "resolve_owner_party_scope_by_ownership_id_async",
+            new=AsyncMock(return_value="party_002"),
+        ), patch.object(
+            service,
+            "resolve_ownership_id_by_owner_party_id_async",
+            new=AsyncMock(return_value="ownership_001"),
+        ), patch.object(
+            service, "_create_history_async", new=AsyncMock()
+        ):
+            with pytest.raises(BusinessValidationError, match="对应关系不一致"):
+                await service.update_contract_async(
+                    mock_db, db_obj=db_obj, obj_in=update_data
+                )
+
+        mock_db.commit.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_update_contract_async_should_backfill_ownership_when_only_owner_party_updated(
+        self, service, mock_db
+    ):
+        db_obj = RentContract(
+            contract_number="CT-OLD-001",
+            ownership_id="ownership_legacy",
+            owner_party_id="party_legacy",
+            tenant_name="old tenant",
+            sign_date=date(2026, 1, 1),
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 12, 31),
+        )
+        db_obj.id = "contract_001"
+
+        update_data = RentContractUpdate(
+            owner_party_id="party_001",
+        )
+
+        with patch.object(
+            service,
+            "resolve_ownership_id_by_owner_party_id_async",
+            new=AsyncMock(return_value="ownership_001"),
+        ) as mock_resolve_ownership, patch.object(
+            service,
+            "resolve_owner_party_scope_by_ownership_id_async",
+            new=AsyncMock(return_value="party_001"),
+        ), patch.object(
+            service, "_create_history_async", new=AsyncMock()
+        ) as mock_history:
+            result = await service.update_contract_async(
+                mock_db, db_obj=db_obj, obj_in=update_data
+            )
+
+        assert result.owner_party_id == "party_001"
+        assert result.ownership_id == "ownership_001"
+        mock_resolve_ownership.assert_awaited_once_with(
+            db=mock_db, owner_party_id="party_001"
+        )
+        mock_db.commit.assert_awaited_once()
+        mock_db.refresh.assert_awaited_once_with(db_obj)
+        mock_history.assert_awaited_once()
+
+    @pytest.mark.asyncio
     async def test_renew_contract_async_transfers_deposit_and_updates_original(
         self, service, mock_db
     ):
@@ -202,6 +314,48 @@ class TestRentContractLifecycle:
         assert result is renewed_contract
 
     @pytest.mark.asyncio
+    async def test_renew_contract_async_should_propagate_mapping_validation_error(
+        self, service, mock_db
+    ):
+        original_contract = MagicMock(spec=RentContract)
+        original_contract.id = "contract_old"
+        original_contract.total_deposit = Decimal("5000")
+        original_contract.contract_status = ContractStatus.ACTIVE.value
+        original_contract.end_date = date(2026, 12, 31)
+
+        mapping_validation_error = BusinessValidationError(
+            "owner_party_id 与 ownership_id 对应关系不一致，请修正后重试",
+            field_errors={
+                "owner_party_id": ["与 ownership_id 映射不一致"],
+                "ownership_id": ["与 owner_party_id 映射不一致"],
+            },
+        )
+
+        with patch.object(
+            service,
+            "get_contract_with_details_async",
+            new=AsyncMock(return_value=original_contract),
+        ), patch.object(
+            service,
+            "create_contract_async",
+            new=AsyncMock(side_effect=mapping_validation_error),
+        ), patch.object(
+            service, "_create_history_async", new=AsyncMock()
+        ) as mock_history:
+            with pytest.raises(BusinessValidationError, match="对应关系不一致"):
+                await service.renew_contract_async(
+                    mock_db,
+                    original_contract_id="contract_old",
+                    new_contract_data=_build_contract_create(total_deposit=Decimal("0")),
+                )
+
+        assert original_contract.contract_status == ContractStatus.ACTIVE.value
+        assert original_contract.end_date == date(2026, 12, 31)
+        mock_db.add.assert_not_called()
+        mock_db.commit.assert_not_awaited()
+        mock_history.assert_not_awaited()
+
+    @pytest.mark.asyncio
     async def test_terminate_contract_async_updates_status_and_notes(
         self, service, mock_db
     ):
@@ -235,6 +389,115 @@ class TestRentContractLifecycle:
         mock_db.commit.assert_awaited_once()
         mock_db.refresh.assert_awaited_once_with(contract)
         mock_history.assert_awaited_once()
+
+
+class TestRentContractOwnerOwnershipBridge:
+    @pytest.mark.asyncio
+    async def test_resolve_ownership_id_by_owner_party_id_prefers_external_ref(
+        self, service, mock_db
+    ) -> None:
+        owner_party = MagicMock()
+        owner_party.external_ref = "ownership-external"
+        owner_party.code = None
+        owner_party.name = None
+
+        with patch(
+            "src.services.rent_contract.service.party_crud.get_party",
+            new=AsyncMock(return_value=owner_party),
+        ), patch(
+            "src.services.rent_contract.service.ownership_crud.get",
+            new=AsyncMock(side_effect=[MagicMock(id="ownership-external"), None]),
+        ):
+            result = await service.resolve_ownership_id_by_owner_party_id_async(
+                mock_db,
+                owner_party_id="party-1",
+            )
+
+        assert result == "ownership-external"
+        mock_db.execute.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_resolve_ownership_id_by_owner_party_id_returns_none_on_ambiguous_code(
+        self, service, mock_db
+    ) -> None:
+        owner_party = MagicMock()
+        owner_party.external_ref = None
+        owner_party.code = "OWN-CODE"
+        owner_party.name = None
+
+        mock_execute_result = MagicMock()
+        mock_execute_result.scalars.return_value.all.return_value = ["ownership-1", "ownership-2"]
+        mock_db.execute = AsyncMock(return_value=mock_execute_result)
+
+        with patch(
+            "src.services.rent_contract.service.party_crud.get_party",
+            new=AsyncMock(return_value=owner_party),
+        ), patch(
+            "src.services.rent_contract.service.ownership_crud.get",
+            new=AsyncMock(return_value=None),
+        ):
+            result = await service.resolve_ownership_id_by_owner_party_id_async(
+                mock_db,
+                owner_party_id="party-1",
+            )
+
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_resolve_ownership_id_by_owner_party_id_filters_inactive_or_deleted_rows(
+        self, service, mock_db
+    ) -> None:
+        owner_party = MagicMock()
+        owner_party.external_ref = None
+        owner_party.code = "OWN-CODE"
+        owner_party.name = None
+
+        mock_execute_result = MagicMock()
+        mock_execute_result.scalars.return_value.all.return_value = ["ownership-active"]
+        mock_db.execute = AsyncMock(return_value=mock_execute_result)
+
+        with patch(
+            "src.services.rent_contract.service.party_crud.get_party",
+            new=AsyncMock(return_value=owner_party),
+        ), patch(
+            "src.services.rent_contract.service.ownership_crud.get",
+            new=AsyncMock(return_value=None),
+        ):
+            result = await service.resolve_ownership_id_by_owner_party_id_async(
+                mock_db,
+                owner_party_id="party-1",
+            )
+
+        assert result == "ownership-active"
+        (stmt,) = mock_db.execute.await_args.args
+        compiled_stmt = str(stmt)
+        assert "ownerships.is_active" in compiled_stmt
+        assert "ownerships.data_status" in compiled_stmt
+        assert "正常" in stmt.compile().params.values()
+
+    @pytest.mark.asyncio
+    async def test_resolve_ownership_id_by_owner_party_id_keeps_high_confidence_match_when_code_is_ambiguous(
+        self, service, mock_db
+    ) -> None:
+        owner_party = MagicMock()
+        owner_party.external_ref = "ownership-external"
+        owner_party.code = "OWN-CODE"
+        owner_party.name = None
+
+        with patch(
+            "src.services.rent_contract.service.party_crud.get_party",
+            new=AsyncMock(return_value=owner_party),
+        ), patch(
+            "src.services.rent_contract.service.ownership_crud.get",
+            new=AsyncMock(side_effect=[MagicMock(id="ownership-external"), None]),
+        ):
+            result = await service.resolve_ownership_id_by_owner_party_id_async(
+                mock_db,
+                owner_party_id="party-1",
+            )
+
+        assert result == "ownership-external"
+        mock_db.execute.assert_not_awaited()
 
 
 class TestRentContractLedger:

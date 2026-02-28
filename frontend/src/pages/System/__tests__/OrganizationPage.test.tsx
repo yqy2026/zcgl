@@ -1,12 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import {
-  renderWithProviders,
-  screen,
-  waitFor,
-  userEvent,
-  fireEvent,
-} from '@/test/utils/test-helpers';
+import { renderWithProviders, screen, waitFor } from '@/test/utils/test-helpers';
 import OrganizationPage from '../OrganizationPage';
 import { organizationService } from '@/services/organizationService';
 import { useDictionary } from '@/hooks/useDictionary';
@@ -126,9 +120,7 @@ describe('OrganizationPage', () => {
     errorSpy.mockRestore();
   });
 
-  it('loads enum options from dictionaries and submits enum values', async () => {
-    const user = userEvent.setup();
-
+  it('enforces read-only mode and disables write entry point', async () => {
     renderWithProviders(<OrganizationPage />);
 
     await waitFor(() => {
@@ -137,40 +129,7 @@ describe('OrganizationPage', () => {
       expect(useDictionary).toHaveBeenCalledWith('organization_status');
     });
 
-    await user.click(screen.getByRole('button', { name: /新建组织/ }));
-
-    await user.type(screen.getByPlaceholderText('请输入组织名称'), '事业部A');
-    await user.type(screen.getByPlaceholderText('请输入组织编码'), 'DIV001');
-
-    const typeLabel = screen
-      .getAllByText('组织类型')
-      .find(element => element.tagName.toLowerCase() === 'label');
-    const typeSelect = typeLabel?.closest('.ant-form-item')?.querySelector('.ant-select');
-    expect(typeSelect).toBeTruthy();
-    fireEvent.mouseDown(typeSelect!);
-    await user.click(screen.getByText('事业部'));
-
-    const statusLabel = screen
-      .getAllByText('状态')
-      .find(element => element.tagName.toLowerCase() === 'label');
-    const statusSelect = statusLabel?.closest('.ant-form-item')?.querySelector('.ant-select');
-    expect(statusSelect).toBeTruthy();
-    fireEvent.mouseDown(statusSelect!);
-    await user.click(screen.getByText('启用(自定义)'));
-
-    const formElement = document.querySelector('.ant-modal form');
-    expect(formElement).toBeTruthy();
-    fireEvent.submit(formElement!);
-
-    await waitFor(() => {
-      expect(organizationService.createOrganization).toHaveBeenCalledWith(
-        expect.objectContaining({
-          name: '事业部A',
-          code: 'DIV001',
-          type: 'division',
-          status: 'active',
-        })
-      );
-    });
-  }, 60000);
+    expect(screen.getByText(/组织架构当前为只读模式/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /新建组织/ })).toBeDisabled();
+  });
 });

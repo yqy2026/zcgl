@@ -17,7 +17,6 @@ const ContractListPage: React.FC = () => {
   const {
     state,
     assets,
-    ownerships,
     statistics,
     handleTableChange,
     handleSearch,
@@ -53,7 +52,6 @@ const ContractListPage: React.FC = () => {
       {/* 搜索区域 */}
       <ContractFilterBar
         assets={assets}
-        ownerships={ownerships}
         onSearch={handleSearch}
         onReset={handleReset}
         onCreate={handleCreate}

@@ -23,6 +23,7 @@ import {
 import { MessageManager } from '@/utils/messageManager';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
 import { ListToolbar } from '@/components/Common/ListToolbar';
+import PartySelector from '@/components/Common/PartySelector';
 import PageContainer from '@/components/Common/PageContainer';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -46,10 +47,8 @@ import {
   RentStatisticsOverview,
 } from '@/types/rentContract';
 import { Asset, AssetListResponse } from '@/types/asset';
-import { OwnershipListResponse } from '@/types/ownership';
 import { rentContractService } from '@/services/rentContractService';
 import { assetService } from '@/services/assetService';
-import { ownershipService } from '@/services/ownershipService';
 import { RENTAL_QUERY_KEYS } from '@/constants/queryKeys';
 import { useFormat } from '@/utils/format';
 import { createLogger } from '@/utils/logger';
@@ -187,13 +186,6 @@ const RentLedgerPage: React.FC = () => {
     retry: 1,
   });
 
-  const { data: ownershipsResponse, error: ownershipsError } = useQuery<OwnershipListResponse>({
-    queryKey: RENTAL_QUERY_KEYS.ledgerReferenceOwnerships,
-    queryFn: () => ownershipService.getOwnerships({ page_size: 100 }),
-    staleTime: 10 * 60 * 1000,
-    retry: 1,
-  });
-
   useEffect(() => {
     if (ledgersError != null) {
       pageLogger.error('加载台账列表失败:', ledgersError);
@@ -209,20 +201,14 @@ const RentLedgerPage: React.FC = () => {
   }, [statisticsError]);
 
   useEffect(() => {
-    if (assetsError != null || ownershipsError != null) {
-      if (assetsError != null) {
-        pageLogger.error('加载资产参考数据失败:', assetsError);
-      }
-      if (ownershipsError != null) {
-        pageLogger.error('加载权属方参考数据失败:', ownershipsError);
-      }
+    if (assetsError != null) {
+      pageLogger.error('加载资产参考数据失败:', assetsError);
       MessageManager.error('加载参考数据失败');
     }
-  }, [assetsError, ownershipsError]);
+  }, [assetsError]);
 
   const ledgers = ledgersResponse?.items ?? [];
   const assets: Asset[] = assetsResponse?.items ?? [];
-  const ownerships = ownershipsResponse?.items ?? [];
   const statisticsData = statistics ?? null;
   const loading = isLedgersLoading || isLedgersFetching;
   const pagination = useMemo(
@@ -368,10 +354,10 @@ const RentLedgerPage: React.FC = () => {
       render: (text: string) => resolveDisplayText(text),
     },
     {
-      title: '权属方',
-      dataIndex: ['ownership', 'name'],
-      key: 'ownership_name',
-      render: (text: string) => resolveDisplayText(text),
+      title: '产权方主体',
+      key: 'owner_party_name',
+      render: (_value: unknown, record: RentLedger) =>
+        resolveDisplayText(record.contract?.owner_party_name ?? record.ownership?.name),
     },
     {
       title: '应缴日期',
@@ -603,21 +589,15 @@ const RentLedgerPage: React.FC = () => {
               ),
             },
             {
-              key: 'ownership',
+              key: 'owner-party',
               col: { xs: 24, sm: 12, lg: 4 },
               content: (
-                <Select
-                  placeholder="选择权属方"
-                  allowClear
-                  onChange={value => handleSearch({ ownership_id: value })}
-                  className={styles.filterControl}
-                >
-                  {ownerships.map(ownership => (
-                    <Option key={ownership.id} value={ownership.id}>
-                      {ownership.name}
-                    </Option>
-                  ))}
-                </Select>
+                <PartySelector
+                  placeholder="选择产权方主体"
+                  filterMode="owner"
+                  onChange={value => handleSearch({ owner_party_id: value })}
+                  style={{ width: '100%' }}
+                />
               ),
             },
             {

@@ -3,12 +3,21 @@
  * 保留关键交互：渲染与取消操作
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { screen, fireEvent } from '@/test/utils/test-helpers';
+import { renderWithProviders, screen, fireEvent, waitFor } from '@/test/utils/test-helpers';
 import AssetForm from '../AssetForm';
 
-vi.mock('antd', () => {
+const setFieldsValueMock = vi.fn();
+const getFieldValueMock = vi.fn(() => 0);
+const getFieldsValueMock = vi.fn(() => ({}));
+const resetFieldsMock = vi.fn();
+const setCompletionRateMock = vi.fn();
+const setFileListMock = vi.fn();
+const setTerminalContractFileListMock = vi.fn();
+
+vi.mock('antd', async importOriginal => {
+  const actual = await importOriginal<typeof import('antd')>();
   const Form = ({ children, onFinish }: { children: React.ReactNode; onFinish?: () => void }) => (
     <form
       onSubmit={event => {
@@ -22,6 +31,7 @@ vi.mock('antd', () => {
   (Form as unknown as { useForm: () => [Record<string, unknown>] }).useForm = () => [{}];
 
   return {
+    ...actual,
     Form,
     Button: ({
       children,
@@ -55,17 +65,17 @@ vi.mock('../Asset', () => ({
   AssetFormProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   useAssetFormContext: () => ({
     form: {
-      setFieldsValue: vi.fn(),
-      getFieldValue: vi.fn(() => 0),
-      getFieldsValue: vi.fn(() => ({})),
-      resetFields: vi.fn(),
+      setFieldsValue: setFieldsValueMock,
+      getFieldValue: getFieldValueMock,
+      getFieldsValue: getFieldsValueMock,
+      resetFields: resetFieldsMock,
     },
     completionRate: 0,
-    setCompletionRate: vi.fn(),
+    setCompletionRate: setCompletionRateMock,
     fileList: [],
-    setFileList: vi.fn(),
+    setFileList: setFileListMock,
     terminalContractFileList: [],
-    setTerminalContractFileList: vi.fn(),
+    setTerminalContractFileList: setTerminalContractFileListMock,
   }),
   AssetBasicInfoSection: () => <div data-testid="asset-basic-section" />,
   AssetAreaSection: () => <div data-testid="asset-area-section" />,
@@ -75,6 +85,10 @@ vi.mock('../Asset', () => ({
 }));
 
 describe('AssetForm', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('应该渲染资产表单与操作按钮', () => {
     renderWithProviders(<AssetForm onSubmit={vi.fn()} onCancel={vi.fn()} />);
 
@@ -90,5 +104,24 @@ describe('AssetForm', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '取消' }));
     expect(handleCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('编辑态应将 legacy ownership_id 回填到 owner_party_id', async () => {
+    renderWithProviders(
+      <AssetForm
+        mode="edit"
+        initialData={{ ownership_id: 'party-legacy-owner' }}
+        onSubmit={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+
+    await waitFor(() => {
+      expect(setFieldsValueMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          owner_party_id: 'party-legacy-owner',
+        })
+      );
+    });
   });
 });

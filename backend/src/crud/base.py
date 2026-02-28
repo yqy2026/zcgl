@@ -79,8 +79,13 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
             "filter_mode": party_filter.filter_mode,
             "allow_null": int(party_filter.allow_null),
             "party_ids": _normalize_scope(party_filter.party_ids) or [],
+            "legacy_org_ids": _normalize_scope(party_filter.legacy_org_ids),
             "owner_party_ids": _normalize_scope(party_filter.owner_party_ids),
             "manager_party_ids": _normalize_scope(party_filter.manager_party_ids),
+            "owner_legacy_org_ids": _normalize_scope(party_filter.owner_legacy_org_ids),
+            "manager_legacy_org_ids": _normalize_scope(
+                party_filter.manager_legacy_org_ids
+            ),
         }
         return json.dumps(
             serialized_filter,

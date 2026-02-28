@@ -97,7 +97,8 @@ export const resolveLogoutCredential = (): Credentials | null =>
     readNodeEnv('E2E_LOGOUT_PASSWORD')
   );
 
-const usernameSelector = 'input#login_username, input[name="username"]';
+const usernameSelector =
+  'input#identifier, input[name="identifier"], input#login_username, input[name="username"]';
 const passwordSelector = 'input#login_password, input[name="password"]';
 const submitSelector = 'button[type="submit"]';
 

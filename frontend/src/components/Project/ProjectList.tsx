@@ -35,13 +35,13 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 
 import { projectService } from '@/services/projectService';
-import { ownershipService } from '@/services/ownershipService';
+import { partyService } from '@/services/partyService';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
 import { ListToolbar } from '@/components/Common/ListToolbar';
 import { useQuery } from '@tanstack/react-query';
 import { getIconButtonProps } from '@/utils/accessibility';
 import type { Project, ProjectListResponse, ProjectStatisticsResponse } from '@/types/project';
-import type { Ownership } from '@/types/ownership';
+import type { Party } from '@/types/party';
 import { ProjectForm } from '@/components/Forms';
 import ProjectDetail from './ProjectDetail';
 import styles from './ProjectList.module.css';
@@ -51,6 +51,10 @@ interface LegacyOwnershipRelation {
   id?: string;
   ownership_id?: string;
   is_active?: boolean;
+}
+
+interface ProjectWithAssetsFallback extends Project {
+  assets?: unknown[];
 }
 
 const resolveLegacyOwnershipRelations = (project: Project): LegacyOwnershipRelation[] => {
@@ -101,19 +105,34 @@ const isRelationActive = (
   return false;
 };
 
+const getProjectAssetCount = (project: Project): number => {
+  if (typeof project.asset_count === 'number' && Number.isFinite(project.asset_count)) {
+    return project.asset_count;
+  }
+
+  const fallbackAssets = (project as ProjectWithAssetsFallback).assets;
+  if (Array.isArray(fallbackAssets)) {
+    return fallbackAssets.length;
+  }
+
+  return 0;
+};
+
+const isPendingBindingProject = (project: Project): boolean => getProjectAssetCount(project) === 0;
+
 // 项目查询参数接口
 interface ProjectQueryParams {
   page: number;
   page_size: number;
   keyword?: string;
   is_active?: boolean;
-  ownership_id?: string;
+  owner_party_id?: string;
 }
 
 interface ProjectFilters {
   keyword: string;
   isActive: boolean | null;
-  ownershipId: string;
+  ownerPartyId: string;
 }
 
 const { Search } = Input;
@@ -129,8 +148,9 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
   const [filters, setFilters] = useState<ProjectFilters>({
     keyword: '',
     isActive: null,
-    ownershipId: '',
+    ownerPartyId: '',
   });
+  const [ownerPartySearchKeyword, setOwnerPartySearchKeyword] = useState('');
   const [paginationState, setPaginationState] = useState({
     current: 1,
     pageSize: 10,
@@ -155,16 +175,16 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
       params.is_active = filters.isActive;
     }
 
-    const trimmedOwnership = filters.ownershipId.trim();
-    if (trimmedOwnership !== '') {
-      params.ownership_id = trimmedOwnership;
+    const trimmedOwnerPartyId = filters.ownerPartyId.trim();
+    if (trimmedOwnerPartyId !== '') {
+      params.owner_party_id = trimmedOwnerPartyId;
     }
 
     return await projectService.getProjects(params);
   }, [
     filters.isActive,
     filters.keyword,
-    filters.ownershipId,
+    filters.ownerPartyId,
     paginationState.current,
     paginationState.pageSize,
   ]);
@@ -216,17 +236,23 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
   }, [projects]);
 
   const {
-    data: ownerships = [],
-    isLoading: isOwnershipsLoading,
-    isFetching: isOwnershipsFetching,
-  } = useQuery<Ownership[]>({
-    queryKey: ['project-ownership-options'],
-    queryFn: () => ownershipService.getOwnershipOptions(true),
+    data: ownerParties = [],
+    isLoading: isOwnerPartiesLoading,
+    isFetching: isOwnerPartiesFetching,
+  } = useQuery<Party[]>({
+    queryKey: ['project-owner-party-options', ownerPartySearchKeyword],
+    queryFn: async () =>
+      (
+        await partyService.searchParties(ownerPartySearchKeyword, {
+          status: 'active',
+          limit: 20,
+        })
+      ).items,
     staleTime: 10 * 60 * 1000,
     retry: 1,
   });
 
-  const ownershipsLoading = isOwnershipsLoading || isOwnershipsFetching;
+  const ownerPartiesLoading = isOwnerPartiesLoading || isOwnerPartiesFetching;
 
   const refreshProjects = useCallback(() => {
     void refetchProjects();
@@ -241,8 +267,9 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
     setFilters({
       keyword: '',
       isActive: null,
-      ownershipId: '',
+      ownerPartyId: '',
     });
+    setOwnerPartySearchKeyword('');
     setPaginationState(prev => ({ ...prev, current: 1 }));
   }, []);
 
@@ -330,17 +357,12 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
       width: 120,
     },
     {
-      title: '权属方',
-      dataIndex: 'ownership_entity',
-      key: 'ownership_entity',
+      title: '所有方主体',
+      dataIndex: 'party_relations',
+      key: 'owner_party',
       width: 150,
-      render: (text: string, record: Project) => {
-        // 如果有直接权属方字段，显示它
-        if (text != null && text !== '') {
-          return <Tag color="blue">{text}</Tag>;
-        }
-
-        // 如果有主体关系，显示主要主体
+      render: (_relations: Project['party_relations'], record: Project) => {
+        // 优先展示 active 的 party_relations
         if (record.party_relations != null && record.party_relations.length > 0) {
           const activeRelations = record.party_relations.filter(rel =>
             isRelationActive(record, rel)
@@ -380,15 +402,25 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
       dataIndex: 'asset_count',
       key: 'asset_count',
       width: 100,
-      render: (count: number) => count ?? 0,
+      render: (_count: number, record: Project) => getProjectAssetCount(record),
+    },
+    {
+      title: '面积统计',
+      key: 'area_status',
+      width: 100,
+      render: (_value: unknown, record: Project) =>
+        isPendingBindingProject(record) ? <Tag color="default">N/A</Tag> : '-',
     },
     {
       title: '状态',
       dataIndex: 'is_active',
       key: 'is_active',
       width: 80,
-      render: (isActive: boolean, _record: Project) => (
-        <Badge status={isActive ? 'success' : 'error'} text={isActive ? '启用' : '禁用'} />
+      render: (isActive: boolean, record: Project) => (
+        <Space size="small">
+          <Badge status={isActive ? 'success' : 'error'} text={isActive ? '启用' : '禁用'} />
+          {isPendingBindingProject(record) && <Tag color="warning">待补绑定</Tag>}
+        </Space>
       ),
     },
     {
@@ -479,12 +511,16 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
     [updateFilters]
   );
 
-  const handleOwnershipChange = useCallback(
+  const handleOwnerPartyChange = useCallback(
     (value: string | undefined) => {
-      updateFilters({ ownershipId: value ?? '' });
+      updateFilters({ ownerPartyId: value ?? '' });
     },
     [updateFilters]
   );
+
+  const handleOwnerPartySearch = useCallback((value: string) => {
+    setOwnerPartySearchKeyword(value.trim());
+  }, []);
 
   return (
     <div className="project-list">
@@ -533,7 +569,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
           <Card className={`${styles.statsCard} ${styles.statsAssets}`}>
             <Statistic
               title="总关联资产"
-              value={projects.reduce((sum, project) => sum + (project.asset_count ?? 0), 0)}
+              value={projects.reduce((sum, project) => sum + getProjectAssetCount(project), 0)}
               prefix={
                 <span className={styles.statPrefixInfo} aria-hidden>
                   <BankOutlined />
@@ -582,22 +618,20 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
             col: { xs: 24, sm: 12, md: 6, lg: 4 },
             content: (
               <Select
-                placeholder="权属方"
+                placeholder="所有方主体"
                 allowClear
                 className={styles.fullWidthSelect}
-                value={filters.ownershipId === '' ? undefined : filters.ownershipId}
-                onChange={handleOwnershipChange}
-                loading={ownershipsLoading}
+                value={filters.ownerPartyId === '' ? undefined : filters.ownerPartyId}
+                onChange={handleOwnerPartyChange}
+                onSearch={handleOwnerPartySearch}
+                onClear={() => setOwnerPartySearchKeyword('')}
+                loading={ownerPartiesLoading}
                 showSearch
-                filterOption={(input, option) =>
-                  String(option?.children || '')
-                    .toLowerCase()
-                    .includes(input.toLowerCase())
-                }
+                filterOption={false}
               >
-                {ownerships.map(ownership => (
-                  <Option key={ownership.id} value={ownership.id}>
-                    {ownership.name}
+                {ownerParties.map(party => (
+                  <Option key={party.id} value={party.id}>
+                    {party.name}
                   </Option>
                 ))}
               </Select>

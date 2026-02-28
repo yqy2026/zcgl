@@ -3,7 +3,6 @@ import { renderHook, act, waitFor } from '@/test/utils/test-helpers';
 import { useContractList } from '../useContractList';
 import { rentContractService } from '@/services/rentContractService';
 import { assetService } from '@/services/assetService';
-import { ownershipService } from '@/services/ownershipService';
 import { Modal } from 'antd';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
@@ -22,12 +21,6 @@ vi.mock('@/services/rentContractService', () => ({
 vi.mock('@/services/assetService', () => ({
   assetService: {
     getAssets: vi.fn(),
-  },
-}));
-
-vi.mock('@/services/ownershipService', () => ({
-  ownershipService: {
-    getOwnershipOptions: vi.fn(),
   },
 }));
 
@@ -76,7 +69,6 @@ describe('useContractList', () => {
       total_records: 0,
     });
     vi.mocked(assetService.getAssets).mockResolvedValue({ items: [] });
-    vi.mocked(ownershipService.getOwnershipOptions).mockResolvedValue([]);
   });
 
   it('should initialize with default state', async () => {
@@ -87,11 +79,9 @@ describe('useContractList', () => {
     await waitFor(() => {
       expect(result.current.state.loading).toBe(false);
       expect(assetService.getAssets).toHaveBeenCalled();
-      expect(ownershipService.getOwnershipOptions).toHaveBeenCalled();
     });
     expect(result.current.state.pagination.current).toBe(1);
     expect(result.current.assets).toEqual([]);
-    expect(result.current.ownerships).toEqual([]);
   });
 
   it('should load data on mount', async () => {
@@ -99,12 +89,10 @@ describe('useContractList', () => {
     const mockContracts = { items: [{ id: '1' }], total: 1, pages: 1 };
     const mockStats = { total_records: 1 };
     const mockAssets = { items: [{ id: 'a1' }] };
-    const mockOwnerships = [{ id: 'o1' }];
 
     vi.mocked(rentContractService.getContracts).mockResolvedValue(mockContracts);
     vi.mocked(rentContractService.getRentStatistics).mockResolvedValue(mockStats);
     vi.mocked(assetService.getAssets).mockResolvedValue(mockAssets);
-    vi.mocked(ownershipService.getOwnershipOptions).mockResolvedValue(mockOwnerships);
 
     const { result } = renderHook(() => useContractList(), {
       wrapper: createQueryWrapper(),
@@ -114,14 +102,12 @@ describe('useContractList', () => {
     await waitFor(() => {
       expect(rentContractService.getContracts).toHaveBeenCalled();
       expect(assetService.getAssets).toHaveBeenCalled();
-      expect(ownershipService.getOwnershipOptions).toHaveBeenCalled();
     });
 
     await waitFor(() => {
       expect(result.current.state.contracts).toEqual(mockContracts.items);
     });
     expect(result.current.assets).toEqual(mockAssets.items);
-    expect(result.current.ownerships).toEqual(mockOwnerships);
     expect(result.current.statistics).toEqual(mockStats);
   });
 

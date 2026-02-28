@@ -15,7 +15,7 @@ test.describe('Access Control', () => {
 
   const regularCredential = resolveRegularCredential();
 
-  test('should block regular user from admin user page', async ({ page }) => {
+  test('should reject regular user from admin-only API', async ({ page }) => {
     test.skip(
       regularCredential == null,
       'Set E2E_REGULAR_USERNAME and E2E_REGULAR_PASSWORD to run this test.'
@@ -32,20 +32,7 @@ test.describe('Access Control', () => {
       return;
     }
 
-    await page.goto('/system/users');
-
-    const currentPath = new URL(page.url()).pathname;
-    const redirectedByPath =
-      currentPath.startsWith('/dashboard') ||
-      currentPath.startsWith('/login') ||
-      currentPath.startsWith('/403');
-
-    const deniedByView = await page
-      .locator('text=403, text=无权限, text=Access Denied')
-      .first()
-      .isVisible()
-      .catch(() => false);
-
-    expect(redirectedByPath || deniedByView).toBe(true);
+    const response = await page.request.get('/api/v1/system/backup/stats');
+    expect([401, 403]).toContain(response.status());
   });
 });

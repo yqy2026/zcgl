@@ -8,7 +8,6 @@ import React from 'react';
 import { renderWithProviders, screen, fireEvent, waitFor } from '@/test/utils/test-helpers';
 import ProjectForm from '../ProjectForm';
 import { projectService } from '@/services/projectService';
-import { ownershipService } from '@/services/ownershipService';
 
 vi.mock('@/services/projectService', () => ({
   projectService: {
@@ -17,10 +16,8 @@ vi.mock('@/services/projectService', () => ({
   },
 }));
 
-vi.mock('@/services/ownershipService', () => ({
-  ownershipService: {
-    getOwnershipOptions: vi.fn(() => Promise.resolve([])),
-  },
+vi.mock('@/components/Common/PartySelector', () => ({
+  default: () => <div data-testid="party-selector">PartySelector</div>,
 }));
 
 vi.mock('@/utils/messageManager', () => ({
@@ -36,7 +33,6 @@ describe('ProjectForm', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(ownershipService.getOwnershipOptions).mockResolvedValue([]);
     vi.mocked(projectService.createProject).mockResolvedValue({
       id: 'project-001',
       name: '测试项目',
@@ -51,11 +47,8 @@ describe('ProjectForm', () => {
   it('应该渲染表单并支持取消', async () => {
     renderWithProviders(<ProjectForm project={null} onSuccess={onSuccess} onCancel={onCancel} />);
 
-    await waitFor(() => {
-      expect(ownershipService.getOwnershipOptions).toHaveBeenCalled();
-    });
-
     expect(screen.getByText('项目信息')).toBeInTheDocument();
+    expect(screen.getByTestId('party-selector')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /取\s*消/ })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /取\s*消/ }));
@@ -64,12 +57,7 @@ describe('ProjectForm', () => {
 
   it('应该使用语义样式类组织布局', async () => {
     renderWithProviders(<ProjectForm project={null} onSuccess={onSuccess} onCancel={onCancel} />);
-
-    await waitFor(() => {
-      expect(ownershipService.getOwnershipOptions).toHaveBeenCalled();
-    });
-
-    expect(screen.getByText('权属方关联').closest('[class*="ownershipCard"]')).toBeInTheDocument();
+    expect(screen.getByText('所有方主体关联').closest('[class*="ownershipCard"]')).toBeInTheDocument();
     expect(document.querySelector('[class*="formActions"]')).toBeInTheDocument();
   });
 

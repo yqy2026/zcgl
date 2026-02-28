@@ -5,7 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { screen, fireEvent, waitFor } from '@/test/utils/test-helpers';
+import { renderWithProviders, screen, fireEvent, waitFor } from '@/test/utils/test-helpers';
 import { useMutation } from '@tanstack/react-query';
 
 // Mock services
@@ -44,28 +44,32 @@ interface MutationOptionsLike {
   onSuccess?: (payload: MutationSuccessPayload) => void;
 }
 
-vi.mock('@tanstack/react-query', () => ({
-  useMutation: vi.fn(() => ({
-    mutate: mockMutate,
-    mutateAsync: vi.fn(() => Promise.resolve({ url: '/download/export.xlsx' })),
-    isPending: false,
-    isSuccess: false,
-    isError: false,
-  })),
-  useQuery: vi.fn(() => ({
-    data: [
-      {
-        id: '1',
-        filename: 'export_20240101.xlsx',
-        created_at: '2024-01-01T00:00:00.000Z',
-        status: 'completed',
-        record_count: 100,
-      },
-    ],
-    isLoading: false,
-    refetch: vi.fn(),
-  })),
-}));
+vi.mock('@tanstack/react-query', async importOriginal => {
+  const actual = await importOriginal<typeof import('@tanstack/react-query')>();
+  return {
+    ...actual,
+    useMutation: vi.fn(() => ({
+      mutate: mockMutate,
+      mutateAsync: vi.fn(() => Promise.resolve({ url: '/download/export.xlsx' })),
+      isPending: false,
+      isSuccess: false,
+      isError: false,
+    })),
+    useQuery: vi.fn(() => ({
+      data: [
+        {
+          id: '1',
+          filename: 'export_20240101.xlsx',
+          created_at: '2024-01-01T00:00:00.000Z',
+          status: 'completed',
+          record_count: 100,
+        },
+      ],
+      isLoading: false,
+      refetch: vi.fn(),
+    })),
+  };
+});
 
 // Mock message manager
 vi.mock('@/utils/messageManager', () => ({
@@ -86,7 +90,8 @@ const mockFormInstance = {
 };
 
 // Mock Ant Design
-vi.mock('antd', () => {
+vi.mock('antd', async importOriginal => {
+  const actual = await importOriginal<typeof import('antd')>();
   const Card = ({
     children,
     title,
@@ -354,6 +359,7 @@ vi.mock('antd', () => {
   Tooltip.displayName = 'MockTooltip';
 
   return {
+    ...actual,
     Card,
     Form,
     Select,

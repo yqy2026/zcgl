@@ -21,6 +21,7 @@ export interface OrganizationListTabProps {
   total: number;
   activeFilterCount: number;
   loading: boolean;
+  isReadOnlyMode: boolean;
   organizations: Organization[];
   paginationState: PaginationState;
   getTypeIcon: (type: string) => ReactNode;
@@ -40,6 +41,7 @@ const OrganizationListTab: React.FC<OrganizationListTabProps> = ({
   total,
   activeFilterCount,
   loading,
+  isReadOnlyMode,
   organizations,
   paginationState,
   getTypeIcon,
@@ -96,15 +98,17 @@ const OrganizationListTab: React.FC<OrganizationListTabProps> = ({
         key: 'action',
         render: (_, record) => (
           <Space size={4} className={styles.tableActionGroup}>
-            <Button
-              type="text"
-              icon={<EditOutlined />}
-              onClick={() => onEdit(record)}
-              className={styles.tableActionButton}
-              aria-label={`编辑组织 ${record.name}`}
-            >
-              编辑
-            </Button>
+            {!isReadOnlyMode && (
+              <Button
+                type="text"
+                icon={<EditOutlined />}
+                onClick={() => onEdit(record)}
+                className={styles.tableActionButton}
+                aria-label={`编辑组织 ${record.name}`}
+              >
+                编辑
+              </Button>
+            )}
             <Button
               type="text"
               icon={<HistoryOutlined />}
@@ -114,27 +118,29 @@ const OrganizationListTab: React.FC<OrganizationListTabProps> = ({
             >
               历史
             </Button>
-            <Popconfirm
-              title="确定要删除这个组织吗？"
-              onConfirm={() => onDelete(record.id)}
-              okText="确定"
-              cancelText="取消"
-            >
-              <Button
-                type="text"
-                danger
-                icon={<DeleteOutlined />}
-                className={styles.tableActionButton}
-                aria-label={`删除组织 ${record.name}`}
+            {!isReadOnlyMode && (
+              <Popconfirm
+                title="确定要删除这个组织吗？"
+                onConfirm={() => onDelete(record.id)}
+                okText="确定"
+                cancelText="取消"
               >
-                删除
-              </Button>
-            </Popconfirm>
+                <Button
+                  type="text"
+                  danger
+                  icon={<DeleteOutlined />}
+                  className={styles.tableActionButton}
+                  aria-label={`删除组织 ${record.name}`}
+                >
+                  删除
+                </Button>
+              </Popconfirm>
+            )}
           </Space>
         ),
       },
     ],
-    [getStatusTag, getTypeIcon, getTypeLabel, onDelete, onEdit, onViewHistory]
+    [getStatusTag, getTypeIcon, getTypeLabel, isReadOnlyMode, onDelete, onEdit, onViewHistory]
   );
 
   return (
@@ -174,6 +180,8 @@ const OrganizationListTab: React.FC<OrganizationListTabProps> = ({
               type="primary"
               icon={<PlusOutlined />}
               onClick={onCreate}
+              disabled={isReadOnlyMode}
+              title={isReadOnlyMode ? '组织架构已切换为只读模式' : undefined}
               className={styles.actionButton}
               aria-label="新建组织"
             >

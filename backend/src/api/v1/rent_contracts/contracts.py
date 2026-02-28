@@ -14,6 +14,7 @@ from ....core.exception_handler import (
     forbidden,
     internal_error,
     not_found,
+    validation_error,
 )
 from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
 from ....database import get_async_db
@@ -320,6 +321,9 @@ async def create_contract(
             ):
                 contract_in.owner_party_id = resolved_owner_party_id
 
+        contract_in.owner_party_id = _normalize_optional_str(contract_in.owner_party_id)
+        contract_in.ownership_id = _normalize_optional_str(contract_in.ownership_id)
+
         if contract_in.asset_ids:
             assets = await rent_contract_service.get_assets_by_ids_async(
                 db=db,
@@ -350,6 +354,24 @@ async def create_contract(
                     resource_type="party",
                     resource_id=str(contract_in.owner_party_id),
                 )
+
+        if contract_in.ownership_id is None and contract_in.owner_party_id is not None:
+            resolved_ownership_id = _normalize_optional_str(
+                await rent_contract_service.resolve_ownership_id_by_owner_party_id_async(
+                    db=db,
+                    owner_party_id=contract_in.owner_party_id,
+                )
+            )
+            if resolved_ownership_id is None:
+                raise validation_error(
+                    "当前产权主体未建立可用权属映射，请联系管理员补齐映射或显式传入 ownership_id",
+                    field_errors={
+                        "owner_party_id": "未匹配到唯一权属方",
+                        "ownership_id": "缺少有效权属映射",
+                    },
+                )
+            contract_in.ownership_id = resolved_ownership_id
+
         if contract_in.ownership_id:  # DEPRECATED compatibility path
             # DEPRECATED: 兼容旧 ownership_id 校验链路。
             ownership_obj = await rent_contract_service.get_ownership_by_id_async(
@@ -361,6 +383,53 @@ async def create_contract(
                     "关联的权属方不存在",
                     resource_type="ownership",
                     resource_id=str(contract_in.ownership_id),  # DEPRECATED alias
+                )
+
+        if (
+            contract_in.owner_party_id is not None
+            and contract_in.ownership_id is not None
+        ):
+            resolved_owner_party_id = _normalize_optional_str(
+                await rent_contract_service.resolve_owner_party_scope_by_ownership_id_async(
+                    db=db,
+                    ownership_id=contract_in.ownership_id,
+                )
+            )
+            resolved_ownership_id = _normalize_optional_str(
+                await rent_contract_service.resolve_ownership_id_by_owner_party_id_async(
+                    db=db,
+                    owner_party_id=contract_in.owner_party_id,
+                )
+            )
+            if (
+                resolved_owner_party_id is not None
+                and resolved_owner_party_id != contract_in.owner_party_id
+            ):
+                raise validation_error(
+                    "owner_party_id 与 ownership_id 对应关系不一致，请修正后重试",
+                    field_errors={
+                        "owner_party_id": "与 ownership_id 映射不一致",
+                        "ownership_id": "与 owner_party_id 映射不一致",
+                    },
+                )
+            if (
+                resolved_ownership_id is not None
+                and resolved_ownership_id != contract_in.ownership_id
+            ):
+                raise validation_error(
+                    "owner_party_id 与 ownership_id 对应关系不一致，请修正后重试",
+                    field_errors={
+                        "owner_party_id": "与 ownership_id 映射不一致",
+                        "ownership_id": "与 owner_party_id 映射不一致",
+                    },
+                )
+            if resolved_owner_party_id is None and resolved_ownership_id is None:
+                raise validation_error(
+                    "无法验证 owner_party_id 与 ownership_id 的映射关系，请联系管理员补齐映射后重试",
+                    field_errors={
+                        "owner_party_id": "映射关系不可验证",
+                        "ownership_id": "映射关系不可验证",
+                    },
                 )
 
         contract = await rent_contract_service.create_contract_async(

@@ -31,6 +31,7 @@ interface OrganizationFormModalProps {
   isStatusOptionsLoading: boolean;
   getTypeIcon: (type: string) => ReactNode;
   getStatusTag: (status: string, className?: string) => ReactNode;
+  readOnlyMode: boolean;
   onCancel: () => void;
   onSubmit: (values: OrganizationFormData) => Promise<void>;
 }
@@ -46,6 +47,7 @@ const OrganizationFormModal: React.FC<OrganizationFormModalProps> = ({
   isStatusOptionsLoading,
   getTypeIcon,
   getStatusTag,
+  readOnlyMode,
   onCancel,
   onSubmit,
 }) => {
@@ -57,7 +59,7 @@ const OrganizationFormModal: React.FC<OrganizationFormModalProps> = ({
       footer={null}
       width={800}
     >
-      <Form form={form} layout="vertical" onFinish={onSubmit}>
+      <Form form={form} layout="vertical" onFinish={onSubmit} disabled={readOnlyMode}>
         <Row gutter={16}>
           <Col xs={24} sm={12}>
             <Form.Item
@@ -169,6 +171,7 @@ const OrganizationFormModal: React.FC<OrganizationFormModalProps> = ({
             <Button
               type="primary"
               htmlType="submit"
+              disabled={readOnlyMode}
               className={`${styles.actionButton} ${styles.modalActionButton}`}
             >
               {editingOrganization != null ? '更新' : '创建'}

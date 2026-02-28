@@ -217,17 +217,19 @@ class TestSchemaValidation:
                 rent_terms=[],  # Empty - should fail
             )
 
-    def test_owner_party_id_without_ownership_id_is_rejected(self, default_term):
-        """Create schema should reject owner_party-only payloads until DB schema migration is complete."""
-        with pytest.raises(ValueError, match="ownership_id"):
-            RentContractCreate(
-                tenant_name="测试租户",
-                owner_party_id="party_001",
-                sign_date=date(2026, 1, 1),
-                start_date=date(2026, 1, 1),
-                end_date=date(2026, 12, 31),
-                rent_terms=[default_term],
-            )
+    def test_owner_party_id_without_ownership_id_is_allowed(self, default_term):
+        """Create schema should allow owner_party-only payloads; ownership bridge happens server-side."""
+        contract_in = RentContractCreate(
+            tenant_name="测试租户",
+            owner_party_id="party_001",
+            sign_date=date(2026, 1, 1),
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 12, 31),
+            rent_terms=[default_term],
+        )
+
+        assert contract_in.owner_party_id == "party_001"
+        assert contract_in.ownership_id is None
 
     def test_tiered_rent_terms(self):
         """Test tiered (stepped) rent terms"""

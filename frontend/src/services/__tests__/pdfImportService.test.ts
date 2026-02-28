@@ -227,6 +227,17 @@ describe('PDFImportService', () => {
 
       expect(result.success).toBe(true);
       expect(result.contract_id).toBe('contract-123');
+      expect(apiClient.post).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          session_id: 'session-123',
+          confirmed_data: expect.objectContaining({
+            contract_data: expect.objectContaining({
+              contract_number: 'HT-001',
+            }),
+          }),
+        })
+      );
     });
 
     it('should handle import failure', async () => {
@@ -248,7 +259,7 @@ describe('PDFImportService', () => {
       expect(result.success).toBe(false);
     });
 
-    it('should normalize owner_party_id to both new and legacy payload keys', async () => {
+    it('should keep owner_party_id without backfilling legacy ownership_id', async () => {
       vi.mocked(apiClient.post).mockResolvedValue({
         data: {
           success: true,
@@ -271,13 +282,23 @@ describe('PDFImportService', () => {
         expect.objectContaining({
           confirmed_data: expect.objectContaining({
             owner_party_id: 'party-123',
-            ownership_id: 'party-123',
+            contract_data: expect.objectContaining({
+              owner_party_id: 'party-123',
+            }),
           }),
         })
       );
+      const requestBody = vi.mocked(apiClient.post).mock.calls[0]?.[1] as {
+        confirmed_data?: Record<string, unknown>;
+      };
+      expect(requestBody.confirmed_data).not.toHaveProperty('ownership_id');
+      const nestedContractData = requestBody.confirmed_data?.contract_data as
+        | Record<string, unknown>
+        | undefined;
+      expect(nestedContractData).not.toHaveProperty('ownership_id');
     });
 
-    it('should accept legacy ownership_id and backfill owner_party_id', async () => {
+    it('should keep legacy ownership_id without backfilling owner_party_id', async () => {
       vi.mocked(apiClient.post).mockResolvedValue({
         data: {
           success: true,
@@ -299,11 +320,21 @@ describe('PDFImportService', () => {
         expect.any(String),
         expect.objectContaining({
           confirmed_data: expect.objectContaining({
-            owner_party_id: 'party-legacy',
             ownership_id: 'party-legacy',
+            contract_data: expect.objectContaining({
+              ownership_id: 'party-legacy',
+            }),
           }),
         })
       );
+      const requestBody = vi.mocked(apiClient.post).mock.calls[0]?.[1] as {
+        confirmed_data?: Record<string, unknown>;
+      };
+      expect(requestBody.confirmed_data).not.toHaveProperty('owner_party_id');
+      const nestedContractData = requestBody.confirmed_data?.contract_data as
+        | Record<string, unknown>
+        | undefined;
+      expect(nestedContractData).not.toHaveProperty('owner_party_id');
     });
   });
 

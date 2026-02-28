@@ -125,7 +125,7 @@ secrets:
 	@cd backend && $(PYTHON) -m src.core.encryption
 
 migrate:
-	cd backend && alembic upgrade head
+	cd backend && $(PYTHON) -m alembic upgrade head
 
 # 运行集成测试
 test-integration:

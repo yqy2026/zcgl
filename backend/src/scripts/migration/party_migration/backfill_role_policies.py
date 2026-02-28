@@ -50,6 +50,9 @@ def _choose_policy_package(role: dict[str, Any]) -> str:
         return "asset_owner_operator"
     if "manager" in token or "运营" in token:
         return "asset_manager_operator"
+    # Baseline business user should be dual-path read-only, not deny-all.
+    if name == "user" or category == "business" or "普通用户" in display_name:
+        return "dual_party_viewer"
     if "viewer" in token or "read" in token or "只读" in token:
         return "dual_party_viewer"
     return "no_data_access"

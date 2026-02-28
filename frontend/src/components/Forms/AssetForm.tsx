@@ -31,6 +31,21 @@ interface AssetFormProps {
   mode?: 'create' | 'edit';
 }
 
+const normalizeOptionalId = (value: unknown): string | undefined => {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+  const normalized = value.trim();
+  return normalized !== '' ? normalized : undefined;
+};
+
+const resolveOwnerPartyId = (value: {
+  owner_party_id?: unknown;
+  ownership_id?: unknown;
+}): string | undefined => {
+  return normalizeOptionalId(value.owner_party_id) ?? normalizeOptionalId(value.ownership_id);
+};
+
 /**
  * Form completion progress bar component
  */
@@ -147,8 +162,13 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
   // Initialize form data
   useEffect(() => {
     if (initialData !== undefined && initialData !== null) {
+      const ownerPartyId = resolveOwnerPartyId({
+        owner_party_id: initialData.owner_party_id,
+        ownership_id: initialData.ownership_id,
+      });
       const formData = {
         ...initialData,
+        owner_party_id: ownerPartyId,
         contract_start_date:
           initialData.contract_start_date != null
             ? dayjs(String(initialData.contract_start_date))
@@ -222,7 +242,7 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
     valuesChangeTimer.current = setTimeout(() => {
       const requiredFields = [
         'property_name',
-        'ownership_id',
+        'owner_party_id',
         'address',
         'ownership_status',
         'property_nature',
@@ -264,7 +284,7 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
       ): value is AssetCreateRequest => {
         const requiredFields = [
           'property_name',
-          'ownership_id',
+          'owner_party_id',
           'address',
           'ownership_status',
           'property_nature',
@@ -282,8 +302,10 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
         return parsed.isValid() ? parsed.format('YYYY-MM-DD') : undefined;
       };
 
+      const ownerPartyId = resolveOwnerPartyId(values);
       const submitData = {
         ...values,
+        owner_party_id: ownerPartyId,
         include_in_occupancy_rate: toBoolean(values.include_in_occupancy_rate),
         is_sublease: toBoolean(values.is_sublease),
         is_litigated: toBoolean(values.is_litigated),

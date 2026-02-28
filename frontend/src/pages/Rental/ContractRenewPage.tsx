@@ -87,7 +87,9 @@ const ContractRenewPage: React.FC = () => {
     return {
       // 继承基本信息
       contract_type: originalContract.contract_type,
-      ownership_id: originalContract.ownership_id,
+      owner_party_id: originalContract.owner_party_id ?? originalContract.ownership_id,
+      manager_party_id: originalContract.manager_party_id,
+      tenant_party_id: originalContract.tenant_party_id,
       tenant_name: originalContract.tenant_name,
       tenant_contact: originalContract.tenant_contact,
       tenant_phone: originalContract.tenant_phone,

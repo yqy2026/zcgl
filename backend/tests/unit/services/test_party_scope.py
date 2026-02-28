@@ -61,7 +61,10 @@ class TestResolveUserPartyFilter:
                 logger=logging.getLogger(__name__),
             )
 
-        assert result == PartyFilter(party_ids=["party-legacy"])
+        assert result == PartyFilter(
+            party_ids=["party-legacy"],
+            legacy_org_ids=["org-legacy"],
+        )
 
     async def test_should_fail_closed_when_legacy_org_not_mapped_to_party(self) -> None:
         db = MagicMock()
@@ -156,7 +159,9 @@ class TestResolveUserPartyFilter:
 
         assert result is None
 
-    async def test_should_bypass_filter_when_global_read_permission_present(self) -> None:
+    async def test_should_not_bypass_filter_when_only_global_read_permission_present(
+        self,
+    ) -> None:
         db = MagicMock()
         execute_result = MagicMock()
         execute_result.scalar_one_or_none.return_value = None
@@ -179,9 +184,9 @@ class TestResolveUserPartyFilter:
                 logger=logging.getLogger(__name__),
             )
 
-        assert result is None
+        assert result == PartyFilter(party_ids=[])
         service_instance.is_admin.assert_awaited_once_with("user-1")
-        service_instance.check_permission.assert_awaited_once()
+        service_instance.check_permission.assert_not_awaited()
 
     async def test_should_bypass_filter_for_privileged_user_even_with_bindings(self) -> None:
         db = MagicMock()
@@ -230,6 +235,33 @@ class TestResolveUserPartyFilter:
 
         assert result is not None
         assert result.filter_mode == "manager"
+
+    async def test_should_attach_legacy_org_scope_for_generic_party_bindings(self) -> None:
+        db = MagicMock()
+        binding = MagicMock()
+        binding.party_id = "party-1"
+        binding.relation_type = None
+
+        with patch(
+            "src.services.party_scope.party_crud.get_user_bindings",
+            new=AsyncMock(return_value=[binding]),
+        ), patch(
+            "src.services.party_scope.party_crud.resolve_legacy_organization_scope_ids_by_party_ids",
+            new=AsyncMock(return_value={"party-1": ["org-legacy-1"]}),
+        ), patch(
+            "src.services.party_scope._has_unrestricted_party_scope_access",
+            new=AsyncMock(return_value=False),
+        ):
+            result = await resolve_user_party_filter(
+                db,
+                current_user_id="user-1",
+                party_filter=None,
+                logger=logging.getLogger(__name__),
+            )
+
+        assert result is not None
+        assert result.party_ids == ["party-1"]
+        assert result.legacy_org_ids == ["org-legacy-1"]
 
     async def test_should_expand_headquarters_binding_to_descendant_manager_scope(
         self,
@@ -303,5 +335,6 @@ class TestResolveUserPartyFilter:
         assert result is not None
         assert result.owner_party_ids == ["owner-party-1"]
         assert result.manager_party_ids == ["manager-party-1"]
+        assert result.legacy_org_ids == ["org-manager-legacy-1", "org-owner-legacy-1"]
         assert result.owner_legacy_org_ids == ["org-owner-legacy-1"]
         assert result.manager_legacy_org_ids == ["org-manager-legacy-1"]

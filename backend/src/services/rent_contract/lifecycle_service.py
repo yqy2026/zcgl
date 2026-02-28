@@ -17,8 +17,95 @@ from ...utils.model_utils import model_to_dict
 from .helpers import RentContractHelperMixin
 
 
+def _normalize_optional_str(value: object) -> str | None:
+    if value is None:
+        return None
+    normalized = str(value).strip()
+    if normalized == "":
+        return None
+    return normalized
+
+
 class RentContractLifecycleService(RentContractHelperMixin):
     """合同生命周期相关服务"""
+
+    async def _normalize_owner_ownership_mapping_async(
+        self,
+        db: AsyncSession,
+        *,
+        owner_party_id: str | None,
+        ownership_id: str | None,
+    ) -> tuple[str | None, str | None]:
+        normalized_owner_party_id = _normalize_optional_str(owner_party_id)
+        normalized_ownership_id = _normalize_optional_str(ownership_id)
+        resolved_ownership_id_from_owner: str | None = None
+
+        if normalized_ownership_id is None and normalized_owner_party_id is not None:
+            resolved_ownership_id_from_owner = _normalize_optional_str(
+                await self.resolve_ownership_id_by_owner_party_id_async(
+                    db=db,
+                    owner_party_id=normalized_owner_party_id,
+                )
+            )
+            if resolved_ownership_id_from_owner is None:
+                raise BusinessValidationError(
+                    "当前产权主体未建立可用权属映射，请联系管理员补齐映射或显式传入 ownership_id",
+                    field_errors={
+                        "owner_party_id": ["未匹配到唯一权属方"],
+                        "ownership_id": ["缺少有效权属映射"],
+                    },
+                )
+            normalized_ownership_id = resolved_ownership_id_from_owner
+
+        if (
+            normalized_owner_party_id is not None
+            and normalized_ownership_id is not None
+        ):
+            resolved_owner_party_id = _normalize_optional_str(
+                await self.resolve_owner_party_scope_by_ownership_id_async(
+                    db=db,
+                    ownership_id=normalized_ownership_id,
+                )
+            )
+            resolved_ownership_id = resolved_ownership_id_from_owner or _normalize_optional_str(
+                await self.resolve_ownership_id_by_owner_party_id_async(
+                    db=db,
+                    owner_party_id=normalized_owner_party_id,
+                )
+            )
+
+            if (
+                resolved_owner_party_id is not None
+                and resolved_owner_party_id != normalized_owner_party_id
+            ):
+                raise BusinessValidationError(
+                    "owner_party_id 与 ownership_id 对应关系不一致，请修正后重试",
+                    field_errors={
+                        "owner_party_id": ["与 ownership_id 映射不一致"],
+                        "ownership_id": ["与 owner_party_id 映射不一致"],
+                    },
+                )
+            if (
+                resolved_ownership_id is not None
+                and resolved_ownership_id != normalized_ownership_id
+            ):
+                raise BusinessValidationError(
+                    "owner_party_id 与 ownership_id 对应关系不一致，请修正后重试",
+                    field_errors={
+                        "owner_party_id": ["与 ownership_id 映射不一致"],
+                        "ownership_id": ["与 owner_party_id 映射不一致"],
+                    },
+                )
+            if resolved_owner_party_id is None and resolved_ownership_id is None:
+                raise BusinessValidationError(
+                    "无法验证 owner_party_id 与 ownership_id 的映射关系，请联系管理员补齐映射后重试",
+                    field_errors={
+                        "owner_party_id": ["映射关系不可验证"],
+                        "ownership_id": ["映射关系不可验证"],
+                    },
+                )
+
+        return normalized_owner_party_id, normalized_ownership_id
 
     async def create_contract_async(
         self, db: AsyncSession, *, obj_in: RentContractCreate
@@ -29,6 +116,14 @@ class RentContractLifecycleService(RentContractHelperMixin):
                 field_errors={"contract_number": ["不能为空"]},
             )
         obj_in.contract_number = obj_in.contract_number.strip()
+        (
+            obj_in.owner_party_id,
+            obj_in.ownership_id,
+        ) = await self._normalize_owner_ownership_mapping_async(
+            db=db,
+            owner_party_id=obj_in.owner_party_id,
+            ownership_id=obj_in.ownership_id,
+        )
 
         if obj_in.asset_ids:
             conflicts = await self._check_asset_rent_conflicts_async(
@@ -106,10 +201,37 @@ class RentContractLifecycleService(RentContractHelperMixin):
         self, db: AsyncSession, *, db_obj: RentContract, obj_in: RentContractUpdate
     ) -> RentContract:
         old_data = model_to_dict(db_obj)
+        incoming_fields = set(obj_in.model_fields_set)
+        owner_party_updated = "owner_party_id" in incoming_fields
+        ownership_updated = "ownership_id" in incoming_fields
 
         update_data = obj_in.model_dump(
             exclude_unset=True, exclude={"rent_terms", "asset_ids"}
         )
+        if owner_party_updated or ownership_updated:
+            target_owner_party_id = (
+                obj_in.owner_party_id if owner_party_updated else db_obj.owner_party_id
+            )
+            target_ownership_id = (
+                obj_in.ownership_id
+                if ownership_updated
+                else (None if owner_party_updated else db_obj.ownership_id)
+            )
+            (
+                normalized_owner_party_id,
+                normalized_ownership_id,
+            ) = await self._normalize_owner_ownership_mapping_async(
+                db=db,
+                owner_party_id=target_owner_party_id,
+                ownership_id=target_ownership_id,
+            )
+            if owner_party_updated:
+                update_data["owner_party_id"] = normalized_owner_party_id
+            if ownership_updated or (
+                owner_party_updated and normalized_owner_party_id is not None
+            ):
+                update_data["ownership_id"] = normalized_ownership_id
+
         for field, value in update_data.items():
             setattr(db_obj, field, value)
 

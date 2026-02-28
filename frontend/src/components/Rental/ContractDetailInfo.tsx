@@ -350,9 +350,10 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
                 render: (address: string) => address || '-',
               },
               {
-                title: '权属方',
-                dataIndex: 'ownership_entity',
-                key: 'ownership_entity',
+                title: '产权方主体',
+                key: 'owner_party_name',
+                render: (_value: unknown, asset: (typeof contract.assets)[number]) =>
+                  asset.owner_party_name ?? asset.ownership_entity ?? '-',
               },
             ]}
           />

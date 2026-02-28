@@ -61,6 +61,10 @@
   margin-bottom: var(--spacing-xl);
 }
 
+.readonlyAlert {
+  margin-bottom: var(--spacing-lg);
+}
+
 .statsCard {
   height: 100%;
 }

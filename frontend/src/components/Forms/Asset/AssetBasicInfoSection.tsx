@@ -1,7 +1,7 @@
 import React from 'react';
 import { Form, Input, Row, Col, Card } from 'antd';
 import { DictionarySelect } from '@/components/Dictionary';
-import OwnershipSelect from '@/components/Ownership/OwnershipSelect';
+import PartySelector from '@/components/Common/PartySelector';
 import ProjectSelect from '@/components/Project/ProjectSelect';
 import { generateFormFieldIds } from '@/utils/accessibility';
 import styles from './AssetBasicInfoSection.module.css';
@@ -12,7 +12,7 @@ import styles from './AssetBasicInfoSection.module.css';
  */
 const AssetBasicInfoSection: React.FC = () => {
   // 为必填字段生成可访问性 ID
-  const ownershipIds = generateFormFieldIds('ownership');
+  const ownerPartyIds = generateFormFieldIds('owner-party');
   const propertyNameIds = generateFormFieldIds('property-name');
   const addressIds = generateFormFieldIds('address');
 
@@ -21,18 +21,17 @@ const AssetBasicInfoSection: React.FC = () => {
       <Row gutter={16}>
         <Col span={12}>
           <Form.Item
-            label="权属方"
-            name="ownership_id"
-            rules={[{ required: true, message: '请选择权属方' }]}
+            label="权属主体"
+            name="owner_party_id"
+            rules={[{ required: true, message: '请选择权属主体' }]}
             aria-required="true"
-            htmlFor={ownershipIds.inputId}
+            htmlFor={ownerPartyIds.inputId}
           >
-            <OwnershipSelect
-              placeholder="请选择权属方"
+            <PartySelector
+              filterMode="owner"
+              placeholder="请选择权属主体"
               allowClear={false}
-              variant="full"
-              ariaLabel="请选择权属方"
-              onChange={(_value, _ownership) => {
+              onChange={(_value, _party) => {
                 // When ownership is selected, can auto-fill related info
               }}
             />

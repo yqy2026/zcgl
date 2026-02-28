@@ -3,6 +3,7 @@ from sqlalchemy import select
 from src.crud.query_builder import PartyFilter, QueryBuilder
 from src.models.asset import Asset  # Using Asset as a test model
 from src.models.ownership import Ownership
+from src.models.property_certificate import PropertyCertificate
 from src.models.rbac import Role
 from src.models.system_dictionary import AssetCustomField
 
@@ -259,3 +260,27 @@ class TestQueryBuilder:
         assert "assets.manager_party_id IN ('manager-party-1')" in compiled
         assert "assets.manager_party_id IS NULL" in compiled
         assert "assets.organization_id IN ('org-legacy-1')" in compiled
+
+    def test_build_query_should_use_legacy_org_ids_when_model_has_only_org_column(self):
+        qb = QueryBuilder(PropertyCertificate)
+        query = qb.build_query(
+            party_filter=PartyFilter(
+                party_ids=["party-1"],
+                legacy_org_ids=["org-legacy-1"],
+            )
+        )
+        compiled = str(query.compile(compile_kwargs={"literal_binds": True}))
+
+        assert "property_certificates.organization_id IN ('org-legacy-1')" in compiled
+        assert "property_certificates.organization_id IN ('party-1')" not in compiled
+
+    def test_build_query_should_fail_closed_for_legacy_org_only_model_without_mapping(self):
+        qb = QueryBuilder(PropertyCertificate)
+        query = qb.build_query(
+            party_filter=PartyFilter(
+                party_ids=["party-1"],
+            )
+        )
+        compiled = str(query.compile(compile_kwargs={"literal_binds": True}))
+
+        assert "false" in compiled.lower() or "0 = 1" in compiled

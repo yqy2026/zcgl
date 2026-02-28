@@ -2,6 +2,9 @@
 export interface Asset {
   id: string;
   // 基本信息 - 按照权属方、权属类别、项目名称、物业名称、物业地址顺序
+  owner_party_id?: string;
+  manager_party_id?: string;
+  /** @deprecated Phase 3 迁移期兼容字段，请使用 owner_party_id。 */
   ownership_id?: string;
   ownership_entity?: string;
   ownership_category?: string;

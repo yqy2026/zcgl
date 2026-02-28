@@ -5,6 +5,7 @@
 
 import '@testing-library/jest-dom';
 import { vi } from 'vitest';
+import { renderWithProviders } from '@/test/utils/test-helpers';
 
 type MswServer = {
   listen: (options?: { onUnhandledRequest?: 'warn' | 'error' | 'bypass' }) => void;
@@ -20,11 +21,17 @@ let mswServer: MswServer | null = null;
 
 // 在所有测试之前启动MSW服务器
 beforeAll(async () => {
-  const { mswServer: resolvedServer } = await import('@/mocks/server');
-  mswServer = resolvedServer;
-  mswServer.listen({
-    onUnhandledRequest: 'warn', // 对未处理的请求警告（不阻止测试）
-  });
+  try {
+    const { mswServer: resolvedServer } = await import('@/mocks/server');
+    mswServer = resolvedServer;
+    mswServer.listen({
+      onUnhandledRequest: 'warn', // 对未处理的请求警告（不阻止测试）
+    });
+  } catch (error) {
+    // 某些测试会 mock handlers 依赖模块，导致 MSW 入口不可用；降级为无 MSW 运行
+    mswServer = null;
+    console.warn('[test/setup] MSW server bootstrap skipped:', error);
+  }
 });
 
 // 在每个测试之后重置handlers，确保测试隔离
@@ -49,6 +56,9 @@ vi.stubGlobal('import.meta', {
     NODE_ENV: 'test',
   },
 });
+
+// 为历史测试文件提供统一渲染入口，避免遗漏导入导致的运行时失败
+vi.stubGlobal('renderWithProviders', renderWithProviders);
 
 // =============================================================================
 // 浏览器API Mock

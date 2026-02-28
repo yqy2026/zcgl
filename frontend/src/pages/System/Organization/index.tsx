@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Card, Form, Tag } from 'antd';
+import { Alert, Card, Form, Tag } from 'antd';
 import type { DataNode } from 'antd/es/tree';
 import PageContainer from '@/components/Common/PageContainer';
 import { MessageManager } from '@/utils/messageManager';
@@ -7,6 +7,12 @@ import { organizationService } from '@/services/organizationService';
 import { useArrayListData } from '@/hooks/useArrayListData';
 import { useDictionary } from '@/hooks/useDictionary';
 import type { Organization, OrganizationHistory } from '@/types/organization';
+import {
+  ORGANIZATION_READ_ONLY_BLOCK_MESSAGE,
+  ORGANIZATION_READ_ONLY_NOTICE,
+  ORGANIZATION_READ_ONLY_TITLE,
+  isOrganizationReadOnlyMode,
+} from '@/constants/organization';
 import { organizationTypeIconMap } from './constants';
 import { useOrganizationData } from './hooks/useOrganizationData';
 import {
@@ -50,6 +56,7 @@ const OrganizationPage: React.FC = () => {
   const [selectedOrganization, setSelectedOrganization] = useState<Organization | null>(null);
   const [organizationHistory, setOrganizationHistory] = useState<OrganizationHistory[]>([]);
   const [activeTab, setActiveTab] = useState('list');
+  const readOnlyMode = isOrganizationReadOnlyMode();
 
   const [form] = Form.useForm<OrganizationFormData>();
 
@@ -196,13 +203,21 @@ const OrganizationPage: React.FC = () => {
   }, [refetchOrganizationTree]);
 
   const handleCreate = useCallback(() => {
+    if (readOnlyMode) {
+      MessageManager.warning(ORGANIZATION_READ_ONLY_BLOCK_MESSAGE);
+      return;
+    }
     setEditingOrganization(null);
     form.resetFields();
     setModalVisible(true);
-  }, [form]);
+  }, [form, readOnlyMode]);
 
   const handleEdit = useCallback(
     (organization: Organization) => {
+      if (readOnlyMode) {
+        MessageManager.warning(ORGANIZATION_READ_ONLY_BLOCK_MESSAGE);
+        return;
+      }
       setEditingOrganization(organization);
       form.setFieldsValue({
         name: organization.name,
@@ -215,11 +230,15 @@ const OrganizationPage: React.FC = () => {
       });
       setModalVisible(true);
     },
-    [form]
+    [form, readOnlyMode]
   );
 
   const handleDelete = useCallback(
     async (id: string) => {
+      if (readOnlyMode) {
+        MessageManager.warning(ORGANIZATION_READ_ONLY_BLOCK_MESSAGE);
+        return;
+      }
       try {
         await organizationService.deleteOrganization(id);
         MessageManager.success('删除成功');
@@ -228,7 +247,7 @@ const OrganizationPage: React.FC = () => {
         MessageManager.error('删除失败');
       }
     },
-    [refreshOrganizations]
+    [readOnlyMode, refreshOrganizations]
   );
 
   const handleViewHistory = useCallback(async (organization: Organization) => {
@@ -259,6 +278,10 @@ const OrganizationPage: React.FC = () => {
 
   const handleSubmit = useCallback(
     async (values: OrganizationFormData) => {
+      if (readOnlyMode) {
+        MessageManager.warning(ORGANIZATION_READ_ONLY_BLOCK_MESSAGE);
+        return;
+      }
       try {
         if (editingOrganization != null) {
           await organizationService.updateOrganization(editingOrganization.id, values);
@@ -273,7 +296,7 @@ const OrganizationPage: React.FC = () => {
         MessageManager.error(editingOrganization != null ? '更新失败' : '创建失败');
       }
     },
-    [editingOrganization, refreshOrganizations]
+    [editingOrganization, readOnlyMode, refreshOrganizations]
   );
 
   return (
@@ -282,6 +305,16 @@ const OrganizationPage: React.FC = () => {
       title="组织管理"
       subTitle="维护组织结构、层级关系与组织历史记录"
     >
+      {readOnlyMode && (
+        <Alert
+          type="warning"
+          showIcon
+          title={ORGANIZATION_READ_ONLY_TITLE}
+          description={ORGANIZATION_READ_ONLY_NOTICE}
+          className={styles.readonlyAlert}
+        />
+      )}
+
       {statistics != null && <OrganizationStatisticsCards statistics={statistics} />}
 
       <Card>
@@ -305,6 +338,7 @@ const OrganizationPage: React.FC = () => {
             onEdit: handleEdit,
             onDelete: handleDelete,
             onViewHistory: handleViewHistory,
+            isReadOnlyMode: readOnlyMode,
           }}
           treeData={organizationTreeDataNodes}
           isTreeLoading={isOrganizationTreeFetching}
@@ -323,6 +357,7 @@ const OrganizationPage: React.FC = () => {
         isStatusOptionsLoading={isStatusOptionsLoading}
         getTypeIcon={getTypeIcon}
         getStatusTag={getStatusTag}
+        readOnlyMode={readOnlyMode}
         onCancel={() => setModalVisible(false)}
         onSubmit={handleSubmit}
       />

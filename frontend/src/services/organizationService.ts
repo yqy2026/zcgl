@@ -22,6 +22,10 @@ import {
 import { apiClient } from '@/api/client';
 import { ApiErrorHandler } from '@/utils/responseExtractor';
 import { createLogger } from '@/utils/logger';
+import {
+  getOrganizationReadOnlyErrorMessage,
+  isOrganizationWriteEnabled,
+} from '@/constants/organization';
 
 const logger = createLogger('OrganizationService');
 
@@ -35,6 +39,13 @@ interface TreeNode {
 
 class OrganizationService {
   private baseUrl = '/organizations';
+
+  private assertWriteAllowed(actionLabel: string): void {
+    if (isOrganizationWriteEnabled()) {
+      return;
+    }
+    throw new Error(getOrganizationReadOnlyErrorMessage(actionLabel));
+  }
 
   private extractList<T>(data: unknown): T[] {
     if (Array.isArray(data)) {
@@ -110,6 +121,7 @@ class OrganizationService {
    */
   async createOrganization(organization: OrganizationCreate): Promise<Organization> {
     try {
+      this.assertWriteAllowed('新增组织');
       const result = await apiClient.post<Organization>(this.baseUrl, organization, {
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
         smartExtract: true,
@@ -131,6 +143,7 @@ class OrganizationService {
    */
   async updateOrganization(id: string, organization: OrganizationUpdate): Promise<Organization> {
     try {
+      this.assertWriteAllowed('编辑组织');
       const result = await apiClient.put<Organization>(`${this.baseUrl}/${id}`, organization, {
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
         smartExtract: true,
@@ -152,6 +165,7 @@ class OrganizationService {
    */
   async deleteOrganization(id: string, deletedBy?: string): Promise<void> {
     try {
+      this.assertWriteAllowed('删除组织');
       const params =
         deletedBy !== null && deletedBy !== undefined && deletedBy !== ''
           ? { deleted_by: deletedBy }
@@ -370,6 +384,7 @@ class OrganizationService {
     moveRequest: OrganizationMoveRequest
   ): Promise<OrganizationMoveResult> {
     try {
+      this.assertWriteAllowed('移动组织');
       const result = await apiClient.post<OrganizationMoveResult>(
         `${this.baseUrl}/${id}/move`,
         moveRequest,
@@ -397,6 +412,7 @@ class OrganizationService {
     batchRequest: OrganizationBatchRequest
   ): Promise<OrganizationBatchResult> {
     try {
+      this.assertWriteAllowed('批量组织操作');
       const result = await apiClient.post<OrganizationBatchResult>(
         `${this.baseUrl}/batch`,
         batchRequest,
@@ -469,6 +485,7 @@ class OrganizationService {
     data?: unknown;
   }> {
     try {
+      this.assertWriteAllowed('导入组织');
       const formData = new FormData();
       formData.append('file', file);
 

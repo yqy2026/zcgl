@@ -21,6 +21,35 @@ make check
 
 ---
 
+## 0. dev/p3b_api_probe.sh
+
+**P3b 联调直连探针脚本** - 固化 `auth/login -> auth/me/capabilities -> parties?search` 三步验证，并强制 `--noproxy '*'` 避免本地代理导致 503 假故障。
+
+### 使用方法
+
+```bash
+PASSWORD='<非管理员账号密码>' \
+PROBE_USERNAME='manager1' \
+scripts/dev/p3b_api_probe.sh
+```
+
+### 可选参数（环境变量）
+
+- `BASE_URL`（默认：`http://127.0.0.1:8002/api/v1`）
+- `PROBE_USERNAME`（默认：`manager1`）
+- `PASSWORD`（必填）
+- `SEARCH_A`（默认：`P3B`）
+- `SEARCH_B`（默认：`甲`）
+- `WORK_DIR`（默认：`tmp`）
+
+### 成功判定
+
+- `login` 返回 `200`
+- capabilities 含 `party.read`
+- 两次 `parties?search` 返回 `200` 且输出命中结果摘要
+
+---
+
 ## 1. check_file_naming.py
 
 **文件命名规范检查脚本** - 自动检查前端和后端文件是否符合项目命名规范。

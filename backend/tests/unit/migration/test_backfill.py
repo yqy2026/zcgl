@@ -210,7 +210,11 @@ def test_choose_policy_package_uses_role_signals() -> None:
         _choose_policy_package({"name": "viewer", "is_system_role": True})
         == "dual_party_viewer"
     )
+    assert _choose_policy_package({"name": "user"}) == "dual_party_viewer"
+    assert _choose_policy_package({"category": "business"}) == "dual_party_viewer"
+    assert _choose_policy_package({"display_name": "普通用户"}) == "dual_party_viewer"
     assert _choose_policy_package({"display_name": "审计角色"}) == "audit_viewer"
     assert _choose_policy_package({"category": "project"}) == "project_manager_operator"
     assert _choose_policy_package({"name": "owner_view"}) == "asset_owner_operator"
     assert _choose_policy_package({"name": "manager_ops"}) == "asset_manager_operator"
+    assert _choose_policy_package({"name": "custom_role_x"}) == "no_data_access"

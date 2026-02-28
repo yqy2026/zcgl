@@ -116,10 +116,10 @@ const ContractTable: React.FC<ContractTableProps> = ({
       },
     },
     {
-      title: '权属方',
-      dataIndex: ['ownership', 'name'],
-      key: 'ownership_name',
-      render: (text: string | undefined) => text ?? '未知',
+      title: '产权方主体',
+      key: 'owner_party_name',
+      render: (_: unknown, record: RentContract) =>
+        record.owner_party_name ?? record.ownership?.name ?? '未知',
     },
     {
       title: '租期',

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Form, Select, Row, Col, Card } from 'antd';
-import OwnershipSelect from '@/components/Ownership/OwnershipSelect';
+import PartySelector from '@/components/Common/PartySelector';
 import { useRentContractFormContext } from './RentContractFormContext';
 import styles from './RelationInfoSection.module.css';
 
@@ -8,7 +8,7 @@ const { Option } = Select;
 
 /**
  * RentContractForm - Relation Info Section
- * Fields: asset, ownership
+ * Fields: asset, owner party, manager party, tenant party
  */
 const RelationInfoSection: React.FC = () => {
   const { assets, loadingAssets } = useRentContractFormContext();
@@ -16,7 +16,7 @@ const RelationInfoSection: React.FC = () => {
   return (
     <Card title="关联信息" size="small" className={styles.relationCard}>
       <Row gutter={16}>
-        <Col span={12}>
+        <Col span={24}>
           <Form.Item
             label="关联资产"
             name="asset_ids"
@@ -42,17 +42,33 @@ const RelationInfoSection: React.FC = () => {
             </Select>
           </Form.Item>
         </Col>
-        <Col span={12}>
+      </Row>
+      <Row gutter={16}>
+        <Col xs={24} md={8}>
           <Form.Item
-            label="权属方"
-            name="ownership_id"
-            rules={[{ required: true, message: '请选择权属方' }]}
+            label="产权方主体"
+            name="owner_party_id"
+            rules={[{ required: true, message: '请选择产权方主体' }]}
           >
-            <OwnershipSelect
-              placeholder="选择权属方"
-              variant="compact"
-              ariaLabel="租赁合同权属方选择"
+            <PartySelector filterMode="owner" placeholder="请选择产权方主体" allowClear={false} />
+          </Form.Item>
+        </Col>
+        <Col xs={24} md={8}>
+          <Form.Item
+            label="经营管理方主体"
+            name="manager_party_id"
+            rules={[{ required: true, message: '请选择经营管理方主体' }]}
+          >
+            <PartySelector
+              filterMode="manager"
+              placeholder="请选择经营管理方主体"
+              allowClear={false}
             />
+          </Form.Item>
+        </Col>
+        <Col xs={24} md={8}>
+          <Form.Item label="承租方主体" name="tenant_party_id">
+            <PartySelector filterMode="tenant" placeholder="请选择承租方主体（可选）" />
           </Form.Item>
         </Col>
       </Row>

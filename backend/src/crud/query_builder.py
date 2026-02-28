@@ -19,6 +19,7 @@ class PartyFilter:
     """主体维度过滤上下文。"""
 
     party_ids: list[PartyIdentifier]
+    legacy_org_ids: list[PartyIdentifier] | None = None
     filter_mode: Literal["owner", "manager", "any"] = "any"
     owner_party_ids: list[PartyIdentifier] | None = None
     manager_party_ids: list[PartyIdentifier] | None = None
@@ -225,6 +226,7 @@ class QueryBuilder[ModelType]:
                 self.model.__name__,
             )
             return query.where(false())
+        legacy_org_ids = self._normalize_party_ids(party_filter.legacy_org_ids)
 
         columns: list[Any] = []
         if party_filter.filter_mode == "owner":
@@ -261,7 +263,29 @@ class QueryBuilder[ModelType]:
             )
             return query
 
-        conditions = [column.in_(party_ids) for column in columns]
+        legacy_org_only_filter = (
+            legacy_org_column is not None
+            and len(columns) == 1
+            and columns[0] is legacy_org_column
+        )
+        if legacy_org_only_filter and len(legacy_org_ids) == 0:
+            logger.warning(
+                "Applying fail-closed party filter for %s: legacy organization mapping is missing",
+                self.model.__name__,
+            )
+            return query.where(false())
+
+        conditions: list[Any] = []
+        for column in columns:
+            scope_ids = party_ids
+            if (
+                legacy_org_column is not None
+                and column is legacy_org_column
+                and len(legacy_org_ids) > 0
+            ):
+                scope_ids = legacy_org_ids
+            conditions.append(column.in_(scope_ids))
+
         if party_filter.allow_null:
             conditions = [
                 or_(column.is_(None), condition)

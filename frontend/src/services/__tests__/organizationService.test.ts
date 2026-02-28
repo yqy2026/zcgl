@@ -3,7 +3,7 @@
  * 测试组织架构管理服务的核心功能
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { organizationService } from '../organizationService';
 
 // =============================================================================
@@ -82,6 +82,11 @@ const mockChildOrganization = {
 describe('OrganizationService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubEnv('VITE_ENABLE_ORGANIZATION_WRITE', 'true');
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   describe('getOrganizations', () => {
@@ -243,6 +248,39 @@ describe('OrganizationService', () => {
       });
 
       await expect(organizationService.deleteOrganization('org-1')).rejects.toThrow();
+    });
+  });
+
+  describe('read-only guard', () => {
+    it('should reject write operations when organization write is disabled', async () => {
+      vi.stubEnv('VITE_ENABLE_ORGANIZATION_WRITE', 'false');
+
+      await expect(
+        organizationService.createOrganization({
+          name: '只读组织',
+          code: 'READ_ONLY',
+          type: 'division',
+          status: 'active',
+        })
+      ).rejects.toThrow(/只读模式/);
+      await expect(
+        organizationService.updateOrganization('org-1', {
+          name: '只读更新',
+        })
+      ).rejects.toThrow(/只读模式/);
+      await expect(organizationService.deleteOrganization('org-1')).rejects.toThrow(/只读模式/);
+      await expect(
+        organizationService.moveOrganization('org-1', {
+          target_parent_id: 'org-root',
+        })
+      ).rejects.toThrow(/只读模式/);
+      await expect(
+        organizationService.importOrganizations(new File(['content'], 'organization.csv'))
+      ).rejects.toThrow(/只读模式/);
+
+      expect(apiClient.post).not.toHaveBeenCalled();
+      expect(apiClient.put).not.toHaveBeenCalled();
+      expect(apiClient.delete).not.toHaveBeenCalled();
     });
   });
 

@@ -2,7 +2,7 @@
 
 **文档类型**: 实施计划  
 **创建日期**: 2026-02-20  
-**最后更新**: 2026-02-27（v1.53 — P3b 预检收口：ABAC 覆盖矩阵门禁按主路由词表对齐，并回填实证口径）
+**最后更新**: 2026-02-28（v1.55 — P3c Exit 验收闭环与执行证据回填）
 **上游依赖**: [Party-Role 架构设计 v3.9](./2026-02-16-party-role-architecture-design.md) / [Phase 2](./2026-02-19-phase2-implementation-plan.md)  
 **阶段定位**: Phase 2 后端域全量改造之上的前端全量迁移。**破坏性变更阶段**——替换全部旧主体字段类型、切换服务层接口参数、重构权限 Hook 与路由守卫、新增策略包管理页面。
 
@@ -1158,6 +1158,7 @@ graph LR
 | **Entry** | P3a Exit + P2c Exit 全部通过 | — |
 | **Entry** | ABAC 角色策略表存在（避免门禁 SQL 在前置迁移未完成时误失败） | `${DB_PSQL_CMD} -c "\\dt abac_role_policies"` 与 `${DB_PSQL_CMD} -c "\\dt abac_policy_rules"` 均返回存在 |
 | **Entry** | `party.read` 不仅存在规则，且已绑定到至少一个非管理员角色（PartySelector 依赖此权限，否则非管理员 403） | `${DB_PSQL_CMD} -c "SELECT COUNT(*) FROM abac_role_policies arp JOIN abac_policies ap ON ap.id = arp.policy_id JOIN abac_policy_rules apr ON apr.policy_id = arp.policy_id JOIN roles r ON r.id = arp.role_id WHERE arp.enabled = true AND ap.enabled = true AND ap.effect = 'allow' AND apr.resource_type='party' AND apr.action='read' AND lower(coalesce(r.name,'')) NOT IN ('admin','super_admin','superadmin','platform_admin');"` 结果 ≥ 1（仅统计 allow 策略，拒绝策略不计入）；并以非管理员账号调用 `/api/v1/auth/me/capabilities` 确认返回含 `party.read` |
+| **Entry** | 角色策略包映射与设计冻结一致（避免 `user` 被误回填到 deny 包） | `${DB_PSQL_CMD} -c "SELECT r.name, ap.name FROM roles r JOIN abac_role_policies arp ON arp.role_id = r.id JOIN abac_policies ap ON ap.id = arp.policy_id WHERE lower(r.name) IN ('user','viewer','manager') ORDER BY r.name;"` 结果应满足 `user -> dual_party_viewer`、`viewer -> dual_party_viewer`；若不满足，先执行 `cd backend && ./.venv/bin/python -m src.scripts.migration.party_migration.backfill_role_policies --database-url \"$DATABASE_URL\"` 再复核 |
 | **Entry** | `/api/v1/parties` `search` 模糊检索接口已上线（P3b 硬门禁） | API 契约验证：`GET /api/v1/parties?search=<keyword>&limit=20` 可按关键词过滤返回；不再依赖“全量拉取 + 前端过滤”作为生产路径 |
 | **Entry** | `search` 响应可判定“是否截断”（推荐分页信封） | 优先验证返回 `{items,total,skip,limit}`；若暂未交付分页信封，必须在 `partyService` 记录近似判定策略与风险说明 |
 | **Entry** | ABAC seed 覆盖矩阵满足 Phase 3 最小面（按主路由权限词表） | SQL/联调证据：至少可验证 `party.read`、`project.read`、`rent_contract.read`、`property_certificate.read`、`asset.create`、`asset.delete` 在非管理员角色存在可达策略；若环境尚无 `project.list`、`ledger.read`、`asset.export` 规则，必须登记兼容映射（`project 列表页 -> project.read`、`/rental/ledger -> rent_contract.read`、`asset.export -> P3d 按按钮级能力补齐或 admin-only 临时豁免`） |
@@ -1186,6 +1187,9 @@ graph LR
 | **Exit** | `PartySelector` 组件可正常搜索与选择 | 浏览器验证 |
 | **Exit** | 组件测试无新增 failure | `cd frontend && pnpm test` |
 | **Exit** | lint + type-check + guard:ui 通过 | `cd frontend && pnpm lint && pnpm guard:ui && pnpm type-check && pnpm type-check:e2e` |
+
+> [!NOTE]
+> `v1.55` 执行回填：P3c Exit 已于 2026-02-28 完成，门禁证据归档于 `docs/plans/execution/phase3c-exit-readiness-20260228.md`。
 
 #### P3d — useCapabilities + 策略包管理 UI
 
@@ -1817,6 +1821,8 @@ if (import.meta.env.DEV || import.meta.env.MODE === 'test') {
 
 | 日期 | 版本 | 变更 |
 |---|---|---|
+| 2026-02-28 | 1.55 | 文档修订（P3c Exit 验收闭环）：1) 页首“最后更新”提升至 v1.55；2) 在 §5.1 P3c 段落回填“P3c Exit 已完成”注记并挂接执行证据；3) 新增 `docs/plans/execution/phase3c-exit-readiness-20260228.md`，记录编译/测试/门禁通过结果与验收结论。 |
+| 2026-02-28 | 1.54 | 文档修订（P3b 误判根因收口）：1) 在 P3b Entry 新增“角色策略包映射一致性”门禁（显式校验 `user -> dual_party_viewer`）；2) 固化 `party.read` SQL 仅统计 `allow` 策略口径并保持 API spot-check 双证据；3) 更新页首版本说明，补充“本地联调需走直连脚本避免代理 503 误判”的执行约束。 |
 | 2026-02-27 | 1.53 | 文档修订（P3b 预检收口）：1) 将 P3b Entry「ABAC seed 覆盖矩阵」门禁从设计态词表收口为“主路由权限词表”阻断口径；2) 明确当 `project.list`/`ledger.read`/`asset.export` 缺失时的兼容映射与处置要求（不得无记录放行）；3) 新增 `v1.53` 实证注记，固定 2026-02-27 预检环境观测结论并下沉扩展词条到 P3d 能力细粒度阶段。 |
 | 2026-02-27 | 1.52 | 复核修订（问题修复）：1) 补齐后端产权证响应契约 `PropertyCertificateResponse.owners[]`（与冻结结论 `owners[]` 对齐）；2) 新增单测 `backend/tests/unit/schemas/test_property_certificate_response_schema.py`，验证 schema 包含 `owners` 且可从对象属性序列化；3) 收敛 §4.3 产权证改造口径为“Phase 3 主链读取 `owners[]`”。 |
 | 2026-02-27 | 1.51 | 文档修订（前置门禁闭环）：1) 将 Phase 2-patch 中“产权证契约冻结”“ABAC 403 结构化拒绝标识”状态回填为 Done；2) 新增证据文档 `phase3c-property-certificate-contract-freeze.md` 与 `phase3d-abac-403-evidence.md`。 |

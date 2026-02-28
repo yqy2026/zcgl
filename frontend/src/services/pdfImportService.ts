@@ -182,7 +182,7 @@ export interface ConfirmedContractData {
   contract_number: string;
   asset_id?: string;
   owner_party_id?: string;
-  /** @deprecated 兼容旧字段，后续统一使用 owner_party_id。 */
+  /** @deprecated 兼容旧字段；仅在后端仍要求 ownership_id 的链路透传，不应与 owner_party_id 强制互写。 */
   [legacyOwnerFilterField]?: string;
   tenant_name: string;
   tenant_contact?: string;
@@ -240,16 +240,31 @@ function isAxiosError(error: unknown): error is {
 
 export class PDFImportService {
   private normalizeConfirmedContractData(payload: ConfirmedContractData): ConfirmedContractData {
-    const ownerPartyId = payload.owner_party_id ?? payload[legacyOwnerFilterField];
-    if (ownerPartyId == null || ownerPartyId === '') {
-      return payload;
+    const normalizeOptionalId = (raw: string | undefined): string | undefined => {
+      if (raw == null) {
+        return undefined;
+      }
+      const normalized = raw.trim();
+      return normalized === '' ? undefined : normalized;
+    };
+
+    const normalizedPayload: ConfirmedContractData = { ...payload };
+    const normalizedOwnerPartyId = normalizeOptionalId(payload.owner_party_id);
+    const normalizedOwnershipId = normalizeOptionalId(payload[legacyOwnerFilterField]);
+
+    if (normalizedOwnerPartyId != null) {
+      normalizedPayload.owner_party_id = normalizedOwnerPartyId;
+    } else if ('owner_party_id' in normalizedPayload) {
+      delete normalizedPayload.owner_party_id;
     }
 
-    return {
-      ...payload,
-      owner_party_id: ownerPartyId,
-      [legacyOwnerFilterField]: ownerPartyId,
-    };
+    if (normalizedOwnershipId != null) {
+      normalizedPayload[legacyOwnerFilterField] = normalizedOwnershipId;
+    } else if (legacyOwnerFilterField in normalizedPayload) {
+      delete normalizedPayload[legacyOwnerFilterField];
+    }
+
+    return normalizedPayload;
   }
 
   /**
@@ -385,7 +400,10 @@ export class PDFImportService {
         `${API_BASE_URL}/confirm_import`,
         {
           session_id: sessionId,
-          confirmed_data: normalizedConfirmedData,
+          confirmed_data: {
+            ...normalizedConfirmedData,
+            contract_data: normalizedConfirmedData,
+          },
         }
       );
 

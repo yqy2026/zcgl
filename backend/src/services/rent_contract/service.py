@@ -4,6 +4,7 @@ from typing import Any, cast
 from uuid import uuid4
 
 from fastapi import UploadFile
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.enums import ContractStatus
@@ -20,6 +21,7 @@ from src.crud.rent_contract import (
 from src.crud.rent_contract_attachment import (
     rent_contract_attachment_crud,
 )
+from src.models.ownership import Ownership
 from src.models.rent_contract import (
     RentContract,
     RentContractAttachment,
@@ -194,6 +196,93 @@ class RentContractService(
             ownership_name=ownership_name,
         )
         return _normalize_optional_str(resolved_party_id)
+
+    async def resolve_ownership_id_by_owner_party_id_async(
+        self,
+        db: AsyncSession,
+        *,
+        owner_party_id: str,
+    ) -> str | None:
+        normalized_owner_party_id = _normalize_optional_str(owner_party_id)
+        if normalized_owner_party_id is None:
+            return None
+
+        owner_party = await party_crud.get_party(db, normalized_owner_party_id)
+        if owner_party is None:
+            return None
+
+        candidate_ownership_ids: list[str] = []
+        seen_candidate_ids: set[str] = set()
+
+        async def _append_candidate_if_exists(candidate_id: str | None) -> None:
+            normalized_candidate_id = _normalize_optional_str(candidate_id)
+            if (
+                normalized_candidate_id is None
+                or normalized_candidate_id in seen_candidate_ids
+            ):
+                return
+            ownership_obj = await ownership_crud.get(db, id=normalized_candidate_id)
+            if ownership_obj is None:
+                return
+            candidate_ownership_ids.append(normalized_candidate_id)
+            seen_candidate_ids.add(normalized_candidate_id)
+
+        async def _query_ownership_ids_by_field(
+            *,
+            field: str,
+            value: str | None,
+        ) -> list[str]:
+            normalized_value = _normalize_optional_str(value)
+            if normalized_value is None:
+                return []
+
+            column = Ownership.code if field == "code" else Ownership.name
+            stmt = (
+                select(Ownership.id)
+                .where(
+                    column == normalized_value,
+                    Ownership.is_active.is_(True),
+                    Ownership.data_status == "正常",
+                )
+                .order_by(Ownership.id)
+            )
+            rows = (await db.execute(stmt)).scalars().all()
+            return [str(ownership_id) for ownership_id in rows if ownership_id is not None]
+
+        # Highest confidence: explicit external reference / ID aliasing.
+        await _append_candidate_if_exists(getattr(owner_party, "external_ref", None))
+        await _append_candidate_if_exists(normalized_owner_party_id)
+        if len(candidate_ownership_ids) == 1:
+            return candidate_ownership_ids[0]
+        if len(candidate_ownership_ids) > 1:
+            return None
+
+        owner_party_code = _normalize_optional_str(getattr(owner_party, "code", None))
+        owner_party_name = _normalize_optional_str(getattr(owner_party, "name", None))
+        ownership_ids_by_code = await _query_ownership_ids_by_field(
+            field="code",
+            value=owner_party_code,
+        )
+        ownership_ids_by_name = await _query_ownership_ids_by_field(
+            field="name",
+            value=owner_party_name,
+        )
+
+        if len(ownership_ids_by_code) > 1:
+            return None
+        if len(ownership_ids_by_name) > 1:
+            return None
+
+        if len(ownership_ids_by_code) == 1 and len(ownership_ids_by_name) == 1:
+            if ownership_ids_by_code[0] != ownership_ids_by_name[0]:
+                return None
+            return ownership_ids_by_code[0]
+
+        if len(ownership_ids_by_code) == 1:
+            return ownership_ids_by_code[0]
+        if len(ownership_ids_by_name) == 1:
+            return ownership_ids_by_name[0]
+        return None
 
     async def get_asset_contracts_async(
         self,

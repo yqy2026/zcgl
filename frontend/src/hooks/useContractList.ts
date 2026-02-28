@@ -5,7 +5,6 @@ import { MessageManager } from '@/utils/messageManager';
 import { createLogger } from '@/utils/logger';
 import { rentContractService } from '@/services/rentContractService';
 import { assetService } from '@/services/assetService';
-import { ownershipService } from '@/services/ownershipService';
 import { RENTAL_QUERY_KEYS } from '@/constants/queryKeys';
 import type {
   RentContract,
@@ -15,7 +14,6 @@ import type {
   RentStatisticsOverview,
 } from '@/types/rentContract';
 import type { Asset, AssetListResponse } from '@/types/asset';
-import type { Ownership } from '@/types/ownership';
 
 const logger = createLogger('useContractList');
 
@@ -65,13 +63,6 @@ export const useContractList = () => {
     retry: 1,
   });
 
-  const { data: ownershipsData, error: ownershipsError } = useQuery<Ownership[]>({
-    queryKey: RENTAL_QUERY_KEYS.referenceOwnerships,
-    queryFn: () => ownershipService.getOwnershipOptions(true),
-    staleTime: 10 * 60 * 1000,
-    retry: 1,
-  });
-
   useEffect(() => {
     if (contractsError != null) {
       logger.error('加载合同列表失败:', contractsError);
@@ -88,14 +79,13 @@ export const useContractList = () => {
   }, [statisticsError]);
 
   useEffect(() => {
-    if (assetsError != null || ownershipsError != null) {
+    if (assetsError != null) {
       MessageManager.error('加载参考数据失败');
     }
-  }, [assetsError, ownershipsError]);
+  }, [assetsError]);
 
   const contracts = Array.isArray(contractsResponse?.items) ? contractsResponse.items : [];
   const assets: Asset[] = assetsResponse?.items ?? [];
-  const ownerships = ownershipsData ?? [];
   const statisticsData = statistics ?? null;
   const loading = isContractsLoading || isContractsFetching;
   const pagination = useMemo(
@@ -219,7 +209,6 @@ export const useContractList = () => {
   return {
     state,
     assets,
-    ownerships,
     statistics: statisticsData,
     handleTableChange,
     handleSearch,

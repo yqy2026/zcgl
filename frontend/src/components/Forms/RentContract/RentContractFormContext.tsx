@@ -4,7 +4,6 @@ import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 import { MessageManager } from '@/utils/messageManager';
 import { Asset } from '@/types/asset';
-import { Ownership } from '@/types/ownership';
 import {
   RentContractCreate,
   RentTermCreate,
@@ -12,7 +11,6 @@ import {
   PaymentCycle,
 } from '@/types/rentContract';
 import { assetService } from '@/services/assetService';
-import { ownershipService } from '@/services/ownershipService';
 import { createLogger } from '@/utils/logger';
 
 const componentLogger = createLogger('RentContractFormContext');
@@ -31,7 +29,11 @@ export interface RentTermData {
 export interface RentContractInitialData {
   contract_number?: string;
   asset_ids: string[]; // V2
-  ownership_id: string;
+  owner_party_id?: string;
+  /** @deprecated 兼容字段，后续统一使用 owner_party_id。 */
+  ownership_id?: string;
+  manager_party_id?: string;
+  tenant_party_id?: string;
   // V2: Contract Type & Upstream
   contract_type?: string;
   upstream_contract_id?: string;
@@ -71,7 +73,11 @@ export interface RentTermFormData {
 export interface RentContractFormValues {
   contract_number: string;
   asset_ids: string[];
-  ownership_id: string;
+  owner_party_id: string;
+  manager_party_id: string;
+  tenant_party_id?: string;
+  /** @deprecated 兼容字段，后续统一使用 owner_party_id。 */
+  ownership_id?: string;
   contract_type?: ContractType;
   upstream_contract_id?: string;
   service_fee_rate?: number;
@@ -107,11 +113,9 @@ export interface RentContractFormContextValue {
   isLoading: boolean;
   // Data
   assets: Asset[];
-  ownerships: Ownership[];
   rentTerms: RentTermFormData[];
   setRentTerms: React.Dispatch<React.SetStateAction<RentTermFormData[]>>;
   loadingAssets: boolean;
-  loadingOwnerships: boolean;
   // Modal state
   showRentTermModal: boolean;
   setShowRentTermModal: (show: boolean) => void;
@@ -158,14 +162,12 @@ export const RentContractFormProvider: React.FC<RentContractFormProviderProps> =
   children,
 }) => {
   const [assets, setAssets] = useState<Asset[]>([]);
-  const [ownerships, setOwnerships] = useState<Ownership[]>([]);
   const [rentTerms, setRentTerms] = useState<RentTermFormData[]>([]);
   const [loadingAssets, setLoadingAssets] = useState(false);
-  const [loadingOwnerships, setLoadingOwnerships] = useState(false);
   const [showRentTermModal, setShowRentTermModal] = useState(false);
   const [editingTerm, setEditingTerm] = useState<RentTermFormData | null>(null);
 
-  // Load assets and ownerships
+  // Load assets
   useEffect(() => {
     const loadAssets = async () => {
       setLoadingAssets(true);
@@ -180,28 +182,16 @@ export const RentContractFormProvider: React.FC<RentContractFormProviderProps> =
       }
     };
 
-    const loadOwnerships = async () => {
-      setLoadingOwnerships(true);
-      try {
-        const response = await ownershipService.getOwnerships({ page_size: 100 });
-        setOwnerships(response.items);
-      } catch (error) {
-        componentLogger.error('加载权属方列表失败:', error as Error);
-        MessageManager.error('加载权属方列表失败');
-      } finally {
-        setLoadingOwnerships(false);
-      }
-    };
-
-    loadAssets();
-    loadOwnerships();
+    void loadAssets();
   }, []);
 
   // Initialize form data
   useEffect(() => {
     if (initialData !== undefined && initialData !== null && mode === 'edit') {
+      const ownerPartyId = initialData.owner_party_id ?? initialData.ownership_id;
       const formData = {
         ...initialData,
+        owner_party_id: ownerPartyId,
         sign_date: initialData.sign_date != null ? dayjs(initialData.sign_date) : undefined,
         start_date: initialData.start_date != null ? dayjs(initialData.start_date) : undefined,
         end_date: initialData.end_date != null ? dayjs(initialData.end_date) : undefined,
@@ -246,7 +236,9 @@ export const RentContractFormProvider: React.FC<RentContractFormProviderProps> =
       const contractData: RentContractCreate = {
         contract_number: values.contract_number,
         asset_ids: values.asset_ids, // V2
-        ownership_id: values.ownership_id,
+        owner_party_id: values.owner_party_id,
+        manager_party_id: values.manager_party_id,
+        tenant_party_id: values.tenant_party_id,
         contract_type: values.contract_type, // V2
         upstream_contract_id: values.upstream_contract_id, // V2
         service_fee_rate: values.service_fee_rate, // V2
@@ -321,11 +313,9 @@ export const RentContractFormProvider: React.FC<RentContractFormProviderProps> =
     mode,
     isLoading,
     assets,
-    ownerships,
     rentTerms,
     setRentTerms,
     loadingAssets,
-    loadingOwnerships,
     showRentTermModal,
     setShowRentTermModal,
     editingTerm,

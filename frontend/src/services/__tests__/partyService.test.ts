@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ApiErrorType } from '@/types/apiResponse';
 import { PartyService } from '../partyService';
 
 vi.mock('@/api/client', () => ({
@@ -18,6 +19,7 @@ vi.mock('@/utils/responseExtractor', () => ({
 }));
 
 import { apiClient } from '@/api/client';
+import { ApiErrorHandler } from '@/utils/responseExtractor';
 
 describe('PartyService', () => {
   let service: PartyService;
@@ -130,5 +132,22 @@ describe('PartyService', () => {
         params: { include_self: true },
       })
     );
+  });
+
+  it('preserves structured error metadata for forbidden detection consumers', async () => {
+    vi.mocked(apiClient.get).mockRejectedValue(new Error('request failed'));
+    vi.mocked(ApiErrorHandler.handleError).mockReturnValue({
+      type: ApiErrorType.AUTH_ERROR,
+      code: 'HTTP_403',
+      message: '权限不足，无法访问',
+      statusCode: 403,
+      timestamp: '2026-02-28T00:00:00Z',
+    });
+
+    await expect(service.searchParties('acme')).rejects.toMatchObject({
+      message: '权限不足，无法访问',
+      code: 'HTTP_403',
+      statusCode: 403,
+    });
   });
 });

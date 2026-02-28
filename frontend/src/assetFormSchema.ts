@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const assetFormSchema = z
   .object({
     property_name: z.string().min(1, '物业名称不能为空'),
-    ownership_id: z.string().min(1, '权属方不能为空'),
+    owner_party_id: z.string().min(1, '权属主体不能为空'),
     management_entity: z.string().optional(),
     address: z.string().min(1, '所在地址不能为空'),
     land_area: z.number().min(0, '土地面积不能为负数').optional(),

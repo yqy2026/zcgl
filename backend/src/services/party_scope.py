@@ -85,25 +85,12 @@ async def _has_unrestricted_party_scope_access(
     current_user_id: str,
     logger: logging.Logger,
 ) -> bool:
-    """Check whether user should bypass party scoping when no bindings are present."""
+    """Only administrators may bypass party scoping."""
     try:
-        from ..schemas.rbac import PermissionCheckRequest
         from .permission.rbac_service import RBACService
 
         rbac_service = RBACService(db)
-        if await rbac_service.is_admin(current_user_id):
-            return True
-
-        response = await rbac_service.check_permission(
-            current_user_id,
-            PermissionCheckRequest(
-                resource="organization",
-                action="read",
-                resource_id=None,
-                context=None,
-            ),
-        )
-        return bool(response.has_permission)
+        return bool(await rbac_service.is_admin(current_user_id))
     except Exception:
         logger.exception(
             "Failed to resolve unrestricted party scope access for user %s",
@@ -148,6 +135,36 @@ async def _resolve_relation_legacy_organization_scope_ids(
         _collect_scope_ids(owner_party_ids),
         _collect_scope_ids(manager_party_ids),
     )
+
+
+async def _resolve_generic_legacy_organization_scope_ids(
+    db: AsyncSession,
+    *,
+    party_ids: set[str],
+    current_user_id: str,
+    logger: logging.Logger,
+) -> list[str]:
+    if len(party_ids) == 0:
+        return []
+
+    try:
+        scope_ids_by_party_id = (
+            await party_crud.resolve_legacy_organization_scope_ids_by_party_ids(
+                db,
+                party_ids=sorted(party_ids),
+            )
+        )
+    except Exception:
+        logger.exception(
+            "Failed to resolve generic legacy organization scope ids for user %s",
+            current_user_id,
+        )
+        return []
+
+    resolved_scope_ids: set[str] = set()
+    for party_id in party_ids:
+        resolved_scope_ids.update(scope_ids_by_party_id.get(party_id, []))
+    return sorted(resolved_scope_ids)
 
 
 async def resolve_user_party_filter(
@@ -260,8 +277,12 @@ async def resolve_user_party_filter(
         elif len(manager_party_ids) > 0 and len(owner_party_ids) == 0:
             filter_mode = "manager"
 
+        legacy_org_ids = sorted(
+            set(owner_legacy_org_ids).union(manager_legacy_org_ids)
+        )
         return PartyFilter(
             party_ids=merged_party_ids,
+            legacy_org_ids=legacy_org_ids if len(legacy_org_ids) > 0 else None,
             filter_mode=filter_mode,
             owner_party_ids=owner_party_ids,
             manager_party_ids=manager_party_ids,
@@ -270,7 +291,17 @@ async def resolve_user_party_filter(
         )
 
     if len(resolved_generic_party_ids) > 0:
-        return PartyFilter(party_ids=sorted(resolved_generic_party_ids))
+        generic_party_ids = sorted(resolved_generic_party_ids)
+        legacy_org_ids = await _resolve_generic_legacy_organization_scope_ids(
+            db,
+            party_ids=resolved_generic_party_ids,
+            current_user_id=current_user_id,
+            logger=logger,
+        )
+        return PartyFilter(
+            party_ids=generic_party_ids,
+            legacy_org_ids=legacy_org_ids if len(legacy_org_ids) > 0 else None,
+        )
 
     legacy_org_id = await _resolve_legacy_default_organization_id(
         db,
@@ -289,7 +320,10 @@ async def resolve_user_party_filter(
                 "No party bindings for user %s, fallback to mapped legacy default organization party scope",
                 current_user_id,
             )
-            return PartyFilter(party_ids=[legacy_party_id])
+            return PartyFilter(
+                party_ids=[legacy_party_id],
+                legacy_org_ids=[legacy_org_id],
+            )
 
         logger.warning(
             "No party bindings for user %s, legacy default organization %s has no mapped party scope; fail-closed",
