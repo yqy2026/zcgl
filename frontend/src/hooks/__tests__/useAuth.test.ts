@@ -19,6 +19,7 @@ vi.mock('@/services/authService', () => ({
     logout: vi.fn(),
     getCurrentUser: vi.fn(),
     getCurrentUserPermissions: vi.fn(),
+    getCurrentUserCapabilities: vi.fn(),
     refreshToken: vi.fn(),
     hasPermission: vi.fn(),
     hasAnyPermission: vi.fn(),
@@ -31,7 +32,12 @@ vi.mock('@/utils/AuthStorage', () => ({
   AuthStorage: {
     getAuthData: vi.fn(),
     getAuthPersistence: vi.fn(),
+    getCurrentUser: vi.fn(),
+    getPermissions: vi.fn(),
+    getCapabilities: vi.fn(),
     setAuthData: vi.fn(),
+    setCapabilitiesSnapshot: vi.fn(),
+    clearCapabilitiesSnapshot: vi.fn(),
     clearAuthData: vi.fn(),
   },
 }));
@@ -96,9 +102,17 @@ describe('useAuth Hook', () => {
     clearDocumentCookies();
     vi.mocked(AuthStorage.getAuthData).mockReturnValue(null);
     vi.mocked(AuthStorage.getAuthPersistence).mockReturnValue('session');
+    vi.mocked(AuthStorage.getCurrentUser).mockReturnValue(null);
+    vi.mocked(AuthStorage.getPermissions).mockReturnValue([]);
+    vi.mocked(AuthStorage.getCapabilities).mockReturnValue([]);
     vi.mocked(AuthService.verifyAuth).mockResolvedValue(true);
     vi.mocked(AuthService.getCurrentUser).mockRejectedValue(new Error('Unauthorized'));
     vi.mocked(AuthService.getCurrentUserPermissions).mockResolvedValue([]);
+    vi.mocked(AuthService.getCurrentUserCapabilities).mockResolvedValue({
+      version: 'v1',
+      generated_at: '2026-02-27T00:00:00Z',
+      capabilities: [],
+    });
     vi.mocked(AuthService.getLocalPermissions).mockReturnValue([]);
     vi.mocked(AuthService.hasPermission).mockReturnValue(false);
     vi.mocked(AuthService.hasAnyPermission).mockReturnValue(false);
@@ -153,6 +167,37 @@ describe('useAuth Hook', () => {
         },
         { persistence: 'local' }
       );
+    });
+
+    it('本地用户与当前Cookie用户不一致时，应立即清空旧 capabilities', async () => {
+      vi.mocked(AuthStorage.getAuthData).mockReturnValue({
+        user: mockUser,
+        permissions: [{ resource: 'legacy', action: 'read' }],
+      });
+      vi.mocked(AuthStorage.getCapabilities).mockReturnValue([
+        {
+          resource: 'legacy',
+          actions: ['delete'],
+          perspectives: [],
+          data_scope: { owner_party_ids: [], manager_party_ids: [] },
+        },
+      ]);
+      vi.mocked(AuthService.getCurrentUser).mockResolvedValue(anotherUser);
+      vi.mocked(AuthService.getCurrentUserPermissions).mockResolvedValue([]);
+      vi.mocked(AuthService.getCurrentUserCapabilities).mockImplementation(
+        () =>
+          new Promise(() => undefined) as ReturnType<typeof AuthService.getCurrentUserCapabilities>
+      );
+
+      const { result } = renderHook(() => useAuth(), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.user).toEqual(anotherUser);
+      });
+
+      expect(result.current.capabilities).toEqual([]);
+      expect(result.current.hasPermission('legacy', 'delete')).toBe(false);
+      expect(result.current.capabilitiesLoading).toBe(true);
     });
 
     it('本地无认证信息且无会话Cookie提示时，不应探测用户会话', async () => {
@@ -221,6 +266,28 @@ describe('useAuth Hook', () => {
         { persistence: 'session' }
       );
     });
+
+    it('capabilities 接口挂起时，不应阻塞初始化完成', async () => {
+      vi.mocked(AuthStorage.getAuthData).mockReturnValue({
+        user: mockUser,
+        permissions: [],
+      });
+      vi.mocked(AuthService.getCurrentUser).mockResolvedValue(mockUser);
+      vi.mocked(AuthService.getCurrentUserPermissions).mockResolvedValue([]);
+      vi.mocked(AuthService.getCurrentUserCapabilities).mockImplementation(
+        () =>
+          new Promise(() => undefined) as ReturnType<typeof AuthService.getCurrentUserCapabilities>
+      );
+
+      const { result } = renderHook(() => useAuth(), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.initializing).toBe(false);
+      });
+
+      expect(result.current.user).toEqual(mockUser);
+      expect(result.current.capabilitiesLoading).toBe(true);
+    });
   });
 
   describe('login', () => {
@@ -276,6 +343,41 @@ describe('useAuth Hook', () => {
       expect(result.current.error).toBe('Network error');
       expect(MessageManager.error).toHaveBeenCalledWith('Network error');
     });
+
+    it('capabilities 刷新挂起时，不应阻塞登录流程完成', async () => {
+      vi.mocked(AuthService.login).mockResolvedValue({
+        success: true,
+        data: {
+          user: mockUser,
+          permissions: [],
+        },
+        message: '登录成功',
+      });
+      vi.mocked(AuthService.getCurrentUserCapabilities).mockImplementation(
+        () =>
+          new Promise(() => undefined) as ReturnType<typeof AuthService.getCurrentUserCapabilities>
+      );
+
+      const { result } = renderHook(() => useAuth(), { wrapper });
+
+      let loginPromise: Promise<void> | null = null;
+      act(() => {
+        loginPromise = result.current.login({ identifier: 'testuser', password: 'password' });
+      });
+
+      await waitFor(() => {
+        expect(result.current.user).toEqual(mockUser);
+      });
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(loginPromise).not.toBeNull();
+      if (loginPromise != null) {
+        await expect(loginPromise).resolves.toBeUndefined();
+      }
+      expect(MessageManager.success).toHaveBeenCalledWith('登录成功');
+    });
   });
 
   describe('logout', () => {
@@ -299,6 +401,62 @@ describe('useAuth Hook', () => {
       expect(result.current.user).toBeNull();
       expect(AuthStorage.clearAuthData).toHaveBeenCalled();
       expect(MessageManager.success).toHaveBeenCalledWith('已退出登录');
+    });
+
+    it('should ignore stale capability response when logout happens during in-flight login refresh', async () => {
+      let resolveCapabilities: ((value: unknown) => void) | null = null;
+
+      vi.mocked(AuthService.login).mockResolvedValue({
+        success: true,
+        data: {
+          user: mockUser,
+          permissions: [],
+        },
+        message: '登录成功',
+      });
+      vi.mocked(AuthService.getCurrentUserCapabilities).mockImplementation(
+        () =>
+          new Promise(resolve => {
+            resolveCapabilities = resolve;
+          }) as ReturnType<typeof AuthService.getCurrentUserCapabilities>
+      );
+
+      const { result } = renderHook(() => useAuth(), { wrapper });
+
+      let loginPromise: Promise<void> | null = null;
+      act(() => {
+        loginPromise = result.current.login({ identifier: 'testuser', password: 'password' });
+      });
+
+      await waitFor(() => {
+        expect(result.current.user?.id).toBe(mockUser.id);
+      });
+
+      await act(async () => {
+        await result.current.logout();
+      });
+
+      resolveCapabilities?.({
+        version: 'v1',
+        generated_at: '2026-02-27T00:00:00Z',
+        capabilities: [
+          {
+            resource: 'asset',
+            actions: ['read'],
+            perspectives: [],
+            data_scope: { owner_party_ids: [], manager_party_ids: [] },
+          },
+        ],
+      });
+
+      if (loginPromise != null) {
+        await act(async () => {
+          await loginPromise;
+        });
+      }
+
+      expect(result.current.user).toBeNull();
+      expect(result.current.capabilities).toEqual([]);
     });
   });
 });

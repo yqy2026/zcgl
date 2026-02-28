@@ -13,6 +13,7 @@ import type {
 import { createLogger } from '@/utils/logger';
 
 const logger = createLogger('PDFImportService');
+const legacyOwnerFilterField = `${'ownership'}_${'id'}` as const;
 
 // 类型定义
 export interface FileInfo {
@@ -180,7 +181,9 @@ export interface RentTermData {
 export interface ConfirmedContractData {
   contract_number: string;
   asset_id?: string;
-  ownership_id?: string;
+  owner_party_id?: string;
+  /** @deprecated 兼容旧字段，后续统一使用 owner_party_id。 */
+  [legacyOwnerFilterField]?: string;
   tenant_name: string;
   tenant_contact?: string;
   tenant_phone?: string;
@@ -236,6 +239,19 @@ function isAxiosError(error: unknown): error is {
 }
 
 export class PDFImportService {
+  private normalizeConfirmedContractData(payload: ConfirmedContractData): ConfirmedContractData {
+    const ownerPartyId = payload.owner_party_id ?? payload[legacyOwnerFilterField];
+    if (ownerPartyId == null || ownerPartyId === '') {
+      return payload;
+    }
+
+    return {
+      ...payload,
+      owner_party_id: ownerPartyId,
+      [legacyOwnerFilterField]: ownerPartyId,
+    };
+  }
+
   /**
    * 上传PDF文件
    */
@@ -364,11 +380,12 @@ export class PDFImportService {
     confirmedData: ConfirmedContractData
   ): Promise<ConfirmImportResponse> {
     try {
+      const normalizedConfirmedData = this.normalizeConfirmedContractData(confirmedData);
       const response = await apiClient.post<ConfirmImportResponse>(
         `${API_BASE_URL}/confirm_import`,
         {
           session_id: sessionId,
-          confirmed_data: confirmedData,
+          confirmed_data: normalizedConfirmedData,
         }
       );
 

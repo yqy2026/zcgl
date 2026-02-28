@@ -247,6 +247,64 @@ describe('PDFImportService', () => {
 
       expect(result.success).toBe(false);
     });
+
+    it('should normalize owner_party_id to both new and legacy payload keys', async () => {
+      vi.mocked(apiClient.post).mockResolvedValue({
+        data: {
+          success: true,
+          message: '导入成功',
+        },
+      });
+
+      await pdfImportService.confirmImport('session-123', {
+        contract_number: 'HT-002',
+        owner_party_id: 'party-123',
+        tenant_name: '测试租户',
+        start_date: '2026-01-01',
+        end_date: '2026-12-31',
+        monthly_rent_base: '10000',
+        rent_terms: [],
+      });
+
+      expect(apiClient.post).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          confirmed_data: expect.objectContaining({
+            owner_party_id: 'party-123',
+            ownership_id: 'party-123',
+          }),
+        })
+      );
+    });
+
+    it('should accept legacy ownership_id and backfill owner_party_id', async () => {
+      vi.mocked(apiClient.post).mockResolvedValue({
+        data: {
+          success: true,
+          message: '导入成功',
+        },
+      });
+
+      await pdfImportService.confirmImport('session-123', {
+        contract_number: 'HT-003',
+        ownership_id: 'party-legacy',
+        tenant_name: '测试租户',
+        start_date: '2026-01-01',
+        end_date: '2026-12-31',
+        monthly_rent_base: '10000',
+        rent_terms: [],
+      });
+
+      expect(apiClient.post).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          confirmed_data: expect.objectContaining({
+            owner_party_id: 'party-legacy',
+            ownership_id: 'party-legacy',
+          }),
+        })
+      );
+    });
   });
 
   // ==========================================================================

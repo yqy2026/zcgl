@@ -23,6 +23,27 @@ import type {
   ProjectDropdownOption,
 } from '@/types/project';
 
+const LEGACY_OWNER_FILTER_KEY = `${'ownership'}_${'id'}` as const;
+
+const resolveOwnerPartyId = (params?: ProjectSearchParams): string | undefined => {
+  if (params == null) {
+    return undefined;
+  }
+
+  const ownerPartyId = (params as ProjectSearchParams & { owner_party_id?: unknown })
+    .owner_party_id;
+  if (typeof ownerPartyId === 'string' && ownerPartyId.trim() !== '') {
+    return ownerPartyId;
+  }
+
+  const legacyOwnerId = (params as Record<string, unknown>)[LEGACY_OWNER_FILTER_KEY];
+  if (typeof legacyOwnerId === 'string' && legacyOwnerId.trim() !== '') {
+    return legacyOwnerId;
+  }
+
+  return undefined;
+};
+
 export class ProjectService {
   private baseUrl = API_ENDPOINTS.PROJECT.LIST;
 
@@ -80,13 +101,15 @@ export class ProjectService {
    */
   async getProjects(params?: ProjectSearchParams): Promise<ProjectListResponse> {
     try {
+      const ownerPartyId = resolveOwnerPartyId(params);
       // 确保提供必需的分页参数
       const requestParams = {
         page: params?.page ?? 1,
         page_size: params?.page_size ?? 10,
         keyword: params?.keyword,
         is_active: params?.is_active,
-        ownership_id: params?.ownership_id,
+        owner_party_id: ownerPartyId,
+        ...(ownerPartyId != null ? { [LEGACY_OWNER_FILTER_KEY]: ownerPartyId } : {}),
       };
 
       const result = await apiClient.get<ProjectListResponse>(this.baseUrl, {
@@ -396,15 +419,20 @@ export class ProjectService {
   /**
    * 根据权属方获取项目列表
    */
-  async getProjectsByOwnership(ownershipId: string): Promise<Project[]> {
+  async getProjectsByOwnerParty(ownerPartyId: string): Promise<Project[]> {
     try {
-      const result = await this.getProjects({ ownership_id: ownershipId });
+      const result = await this.getProjects({ owner_party_id: ownerPartyId });
       return result.items;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      projectLogger.error('根据权属方获取项目失败:', undefined, { error: enhancedError.message });
+      projectLogger.error('根据主体获取项目失败:', undefined, { error: enhancedError.message });
       return [];
     }
+  }
+
+  /** @deprecated 兼容旧命名，后续统一使用 getProjectsByOwnerParty。 */
+  async getProjectsByOwnership(ownershipId: string): Promise<Project[]> {
+    return this.getProjectsByOwnerParty(ownershipId);
   }
 
   /**

@@ -47,6 +47,60 @@ import ProjectDetail from './ProjectDetail';
 import styles from './ProjectList.module.css';
 // import OwnershipSelect from '@/components/Ownership/OwnershipSelect';
 
+interface LegacyOwnershipRelation {
+  id?: string;
+  ownership_id?: string;
+  is_active?: boolean;
+}
+
+const resolveLegacyOwnershipRelations = (project: Project): LegacyOwnershipRelation[] => {
+  const legacyRelations = (
+    project as Project & {
+      ownership_relations?: LegacyOwnershipRelation[];
+    }
+  ).ownership_relations;
+
+  return Array.isArray(legacyRelations) ? legacyRelations : [];
+};
+
+const isRelationActive = (
+  project: Project,
+  relation: { id?: string; party_id: string; is_active?: boolean }
+): boolean => {
+  if (relation.is_active === true) {
+    return true;
+  }
+
+  if (relation.is_active === false) {
+    return false;
+  }
+
+  const legacyRelations = resolveLegacyOwnershipRelations(project);
+  if (legacyRelations.length === 0) {
+    return false;
+  }
+
+  const relationId = relation.id?.trim();
+  if (relationId != null && relationId !== '') {
+    const matchedById = legacyRelations.find(legacyRelation => legacyRelation.id === relationId);
+    if (matchedById != null) {
+      return matchedById.is_active === true;
+    }
+  }
+
+  const partyId = relation.party_id.trim();
+  if (partyId !== '') {
+    const matchedByOwnershipId = legacyRelations.find(
+      legacyRelation => legacyRelation.ownership_id === partyId
+    );
+    if (matchedByOwnershipId != null) {
+      return matchedByOwnershipId.is_active === true;
+    }
+  }
+
+  return false;
+};
+
 // 项目查询参数接口
 interface ProjectQueryParams {
   page: number;
@@ -286,15 +340,21 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
           return <Tag color="blue">{text}</Tag>;
         }
 
-        // 如果有权属方关系，显示主要权属方
-        if (record.ownership_relations != null && record.ownership_relations.length > 0) {
-          const activeRelations = record.ownership_relations.filter(rel => rel.is_active === true);
+        // 如果有主体关系，显示主要主体
+        if (record.party_relations != null && record.party_relations.length > 0) {
+          const activeRelations = record.party_relations.filter(rel =>
+            isRelationActive(record, rel)
+          );
           if (activeRelations.length > 0) {
             return (
               <div>
-                {activeRelations.slice(0, 2).map((rel, _index) => (
-                  <Tag key={rel.id} color="blue" className={styles.ownershipTag}>
-                    {rel.ownership_name ?? '权属方已关联'}
+                {activeRelations.slice(0, 2).map((rel, index) => (
+                  <Tag
+                    key={rel.id ?? `${rel.party_id}-${index}`}
+                    color="blue"
+                    className={styles.ownershipTag}
+                  >
+                    {rel.party_name ?? '主体已关联'}
                   </Tag>
                 ))}
                 {activeRelations.length > 2 && (

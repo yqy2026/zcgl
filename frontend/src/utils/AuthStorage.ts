@@ -1,4 +1,5 @@
 import type { User } from '@/types/auth';
+import type { CapabilitiesResponse, CapabilityItem } from '@/types/capability';
 
 export interface AuthData {
   user: User;
@@ -7,6 +8,10 @@ export interface AuthData {
     action: string;
     description?: string;
   }>;
+  capabilities?: CapabilityItem[];
+  capabilities_cached_at?: string;
+  capabilities_version?: string;
+  capabilities_generated_at?: string;
 }
 
 export type AuthDataPersistence = 'local' | 'session';
@@ -33,11 +38,7 @@ export class AuthStorageClass {
     try {
       // Keep only one active metadata source to avoid stale cross-storage reads.
       this.clearAuthDataFromStorage(secondaryStorage);
-      targetStorage.setItem(this.AUTH_DATA_KEY, JSON.stringify(data));
-      targetStorage.setItem(this.AUTH_DATA_UPDATED_AT_KEY, String(Date.now()));
-      // Store user and permissions for legacy consumers
-      targetStorage.setItem(this.USER_KEY, JSON.stringify(data.user));
-      targetStorage.setItem(this.PERMISSIONS_KEY, JSON.stringify(data.permissions));
+      this.writeAuthDataToStorage(targetStorage, data);
       this.clearLegacyTokenKeys(localStorage);
       this.clearLegacyTokenKeys(sessionStorage);
     } catch (error) {
@@ -100,6 +101,44 @@ export class AuthStorageClass {
     return authData?.permissions ?? [];
   }
 
+  getCapabilities(): CapabilityItem[] {
+    const authData = this.getAuthData();
+    return authData?.capabilities ?? [];
+  }
+
+  getCapabilitiesCachedAt(): string | null {
+    const authData = this.getAuthData();
+    return authData?.capabilities_cached_at ?? null;
+  }
+
+  setCapabilitiesSnapshot(snapshot: CapabilitiesResponse): void {
+    const authData = this.getAuthData();
+    if (authData == null) {
+      return;
+    }
+
+    const persistence = this.getAuthPersistence() ?? 'session';
+    this.setAuthData(
+      {
+        ...authData,
+        capabilities: snapshot.capabilities,
+        capabilities_cached_at: new Date().toISOString(),
+        capabilities_version: snapshot.version,
+        capabilities_generated_at: snapshot.generated_at,
+      },
+      { persistence }
+    );
+  }
+
+  clearCapabilitiesSnapshot(): void {
+    try {
+      this.clearCapabilitiesFromStorage(localStorage);
+      this.clearCapabilitiesFromStorage(sessionStorage);
+    } catch (error) {
+      console.error('Failed to clear capabilities snapshot:', error);
+    }
+  }
+
   /**
    * Clear all authentication metadata from session/local storage.
    */
@@ -124,6 +163,13 @@ export class AuthStorageClass {
 
   private getStorageByPersistence(persistence: AuthDataPersistence): Storage {
     return persistence === 'session' ? sessionStorage : localStorage;
+  }
+
+  private writeAuthDataToStorage(storage: Storage, data: AuthData): void {
+    storage.setItem(this.AUTH_DATA_KEY, JSON.stringify(data));
+    storage.setItem(this.AUTH_DATA_UPDATED_AT_KEY, String(Date.now()));
+    storage.setItem(this.USER_KEY, JSON.stringify(data.user));
+    storage.setItem(this.PERMISSIONS_KEY, JSON.stringify(data.permissions));
   }
 
   private resolvePreferredPersistence(
@@ -183,6 +229,21 @@ export class AuthStorageClass {
     storage.removeItem(this.USER_KEY);
     storage.removeItem(this.PERMISSIONS_KEY);
     storage.removeItem('currentUser');
+  }
+
+  private clearCapabilitiesFromStorage(storage: Storage): void {
+    const authData = this.getAuthDataFromStorage(storage);
+    if (authData == null) {
+      return;
+    }
+
+    const nextAuthData: AuthData = { ...authData };
+    delete nextAuthData.capabilities;
+    delete nextAuthData.capabilities_cached_at;
+    delete nextAuthData.capabilities_version;
+    delete nextAuthData.capabilities_generated_at;
+
+    this.writeAuthDataToStorage(storage, nextAuthData);
   }
 
   private clearLegacyTokenKeys(storage: Storage): void {

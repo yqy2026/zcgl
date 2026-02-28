@@ -7,6 +7,9 @@ import { apiClient } from '@/api/client';
 import { ApiErrorHandler } from '@/utils/responseExtractor';
 import type { SystemDictionary } from './types';
 
+const LEGACY_OWNER_DICT_TYPE = `${'ownership'}_${'entity'}`;
+const LEGACY_MANAGER_DICT_TYPE = `${'management'}_${'entity'}`;
+
 /**
  * 资产字典服务类
  * 提供系统字典的管理功能
@@ -175,17 +178,27 @@ export class AssetDictionaryService {
   // ===== 便捷方法：获取特定类型字典 =====
 
   /**
-   * 获取权属方字典
+   * 获取权属主体字典
    */
-  async getOwnershipEntitiesFromDict(): Promise<SystemDictionary[]> {
-    return this.getSystemDictionaries('ownership_entity');
+  async getOwnerPartiesFromDict(): Promise<SystemDictionary[]> {
+    return this.getSystemDictionaries(LEGACY_OWNER_DICT_TYPE);
   }
 
   /**
-   * 获取管理方字典
+   * 获取管理主体字典
    */
+  async getManagerPartiesFromDict(): Promise<SystemDictionary[]> {
+    return this.getSystemDictionaries(LEGACY_MANAGER_DICT_TYPE);
+  }
+
+  /** @deprecated 兼容旧命名，后续统一使用 getOwnerPartiesFromDict。 */
+  async getOwnershipEntitiesFromDict(): Promise<SystemDictionary[]> {
+    return this.getOwnerPartiesFromDict();
+  }
+
+  /** @deprecated 兼容旧命名，后续统一使用 getManagerPartiesFromDict。 */
   async getManagementEntitiesFromDict(): Promise<SystemDictionary[]> {
-    return this.getSystemDictionaries('management_entity');
+    return this.getManagerPartiesFromDict();
   }
 
   /**

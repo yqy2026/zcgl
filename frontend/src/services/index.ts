@@ -6,6 +6,8 @@
 // 现代化API客户端 - Re-exported from new api/ location
 export { apiClient, ApiClient, createApiClient } from '@/api/client';
 export { assetService, AssetService } from './assetService';
+export { partyService, PartyService } from './partyService';
+export { capabilityService, CapabilityService } from './capabilityService';
 export { statisticsService, StatisticsService } from './statisticsService';
 export { excelService, ExcelService } from './excelService';
 export { backupService, BackupService } from './backupService';

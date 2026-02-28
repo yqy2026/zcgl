@@ -2,10 +2,12 @@ import { AUTH_API } from '@/constants/api';
 import { apiClient } from '@/api/client';
 import { ApiErrorHandler } from '@/utils/responseExtractor';
 import type { AuthResponse, StandardApiResponse } from '@/types/apiResponse';
+import type { CapabilitiesResponse } from '@/types/capability';
 
 import type { LoginCredentials, User, UserActivity } from '@/types/auth';
 import { createLogger } from '@/utils/logger';
 import { AuthStorage } from '@/utils/AuthStorage';
+import { capabilityService } from './capabilityService';
 
 const logger = createLogger('AuthService');
 
@@ -83,6 +85,7 @@ export class AuthService {
 
       // Keep metadata persistence aligned with cookie lifetime.
       const authPersistence = credentials.remember === true ? 'local' : 'session';
+      capabilityService.clearCache();
       AuthStorage.setAuthData({ user, permissions }, { persistence: authPersistence });
 
       return {
@@ -237,6 +240,19 @@ export class AuthService {
     }
   }
 
+  static async getCurrentUserCapabilities(options?: {
+    forceRefresh?: boolean;
+  }): Promise<CapabilitiesResponse> {
+    try {
+      return await capabilityService.getCapabilities({
+        forceRefresh: options?.forceRefresh === true,
+      });
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
   // 检查认证状态 - 验证cookie是否有效
   static isAuthenticated(): boolean {
     // 检查本地存储的用户信息作为快速检查
@@ -294,6 +310,7 @@ export class AuthService {
   private static clearAuthData(): void {
     // Tokens are in httpOnly cookies, cleared by backend logout endpoint
     // Only clear local auth metadata
+    capabilityService.clearCache();
     AuthStorage.clearAuthData();
     // Note: auth_token and refreshToken keys removed - tokens are now in cookies
   }
@@ -349,6 +366,10 @@ export class AuthService {
         {
           user: updatedUser,
           permissions: existing?.permissions ?? [],
+          capabilities: existing?.capabilities,
+          capabilities_cached_at: existing?.capabilities_cached_at,
+          capabilities_version: existing?.capabilities_version,
+          capabilities_generated_at: existing?.capabilities_generated_at,
         },
         {
           persistence: existingPersistence ?? 'local',

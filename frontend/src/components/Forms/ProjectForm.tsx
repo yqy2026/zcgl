@@ -53,10 +53,12 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSuccess, onCancel 
         description: project.description ?? '',
       });
 
-      // 设置权属方关联
-      if (project.ownership_relations && project.ownership_relations.length > 0) {
-        const ownershipIds = project.ownership_relations.map(rel => rel.ownership_id);
-        const selected = ownerships.filter(ownership => ownershipIds.includes(ownership.id));
+      // 设置主体关联（Phase 3 主链）
+      if (project.party_relations != null && project.party_relations.length > 0) {
+        const ownerPartyIds = project.party_relations
+          .map(relation => relation.party_id)
+          .filter((partyId): partyId is string => partyId.trim() !== '');
+        const selected = ownerships.filter(ownership => ownerPartyIds.includes(ownership.id));
         setSelectedOwnerships(selected);
       } else {
         setSelectedOwnerships([]);
@@ -85,15 +87,16 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSuccess, onCancel 
   const handleSubmit = async (values: Record<string, unknown>) => {
     setLoading(true);
     try {
-      // 构建简化的ownership_relations数据
-      const ownership_relations = selectedOwnerships.map(ownership => ({
-        ownership_id: ownership.id,
-        relation_type: '关联',
+      // 构建 party_relations（前端主链）
+      const party_relations = selectedOwnerships.map(ownership => ({
+        party_id: ownership.id,
+        relation_type: 'owner',
+        is_primary: true,
       }));
 
       const submitData = {
         ...values,
-        ownership_relations,
+        party_relations,
       };
 
       if (project !== undefined && project !== null) {

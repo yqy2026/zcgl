@@ -7,6 +7,7 @@ vi.mock('@/api/client', () => ({
   apiClient: {
     post: vi.fn(),
     get: vi.fn(),
+    put: vi.fn(),
   },
 }));
 
@@ -312,5 +313,62 @@ describe('AuthService - Login with Permissions', () => {
     expect(result.success).toBe(true);
     expect(localStorage.getItem('authData')).not.toBeNull();
     expect(sessionStorage.getItem('authData')).toBeNull();
+  });
+
+  it('should preserve capability snapshot when updating profile metadata', async () => {
+    AuthStorage.setAuthData(
+      {
+        user: {
+          id: '1',
+          username: 'testuser',
+          full_name: 'Old Name',
+          phone: '123',
+          is_active: true,
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-01-01T00:00:00Z',
+        },
+        permissions: [{ resource: 'asset', action: 'read' }],
+        capabilities: [
+          {
+            resource: 'asset',
+            actions: ['read'],
+            perspectives: [],
+            data_scope: { owner_party_ids: ['party-1'], manager_party_ids: [] },
+          },
+        ],
+        capabilities_cached_at: '2026-02-27T00:00:00Z',
+        capabilities_version: 'v1',
+        capabilities_generated_at: '2026-02-27T00:00:00Z',
+      },
+      { persistence: 'local' }
+    );
+
+    vi.mocked(apiClient.put).mockResolvedValue({
+      success: true,
+      data: {
+        id: '1',
+        username: 'testuser',
+        full_name: 'New Name',
+        phone: '123',
+        is_active: true,
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-02-27T00:00:00Z',
+      },
+    });
+
+    await AuthService.updateProfile({ fullName: 'New Name' });
+
+    const updated = AuthStorage.getAuthData();
+    expect(updated?.capabilities).toEqual([
+      {
+        resource: 'asset',
+        actions: ['read'],
+        perspectives: [],
+        data_scope: { owner_party_ids: ['party-1'], manager_party_ids: [] },
+      },
+    ]);
+    expect(updated?.capabilities_cached_at).toBe('2026-02-27T00:00:00Z');
+    expect(updated?.capabilities_version).toBe('v1');
+    expect(updated?.capabilities_generated_at).toBe('2026-02-27T00:00:00Z');
   });
 });

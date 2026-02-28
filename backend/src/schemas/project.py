@@ -208,6 +208,8 @@ class ProjectResponse(ProjectBase):
 
             is_primary_raw = relation.get("is_primary")
             is_primary = True if is_primary_raw is None else bool(is_primary_raw)
+            is_active_raw = relation.get("is_active")
+            is_active = True if is_active_raw is None else bool(is_active_raw)
             party_relations.append(
                 {
                     "id": relation.get("id"),
@@ -216,6 +218,7 @@ class ProjectResponse(ProjectBase):
                     "party_name": relation.get("ownership_name"),
                     "relation_type": "owner",
                     "is_primary": is_primary,
+                    "is_active": is_active,
                 }
             )
         return party_relations

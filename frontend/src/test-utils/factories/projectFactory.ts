@@ -18,7 +18,7 @@ const defaultProject: Project = {
   data_status: '正常',
   created_at: '2024-01-01T00:00:00Z',
   updated_at: '2024-01-01T00:00:00Z',
-  ownership_relations: [],
+  party_relations: [],
 };
 
 /**
@@ -53,7 +53,7 @@ export function createMockProjectCreate(overrides?: Partial<ProjectCreate>): Pro
   return {
     name: '测试项目',
     description: '测试项目描述',
-    ownership_relations: [],
+    party_relations: [],
     ...overrides,
   };
 }
@@ -66,11 +66,12 @@ export function createProjectWithOwnerships(
   overrides?: Partial<Project>
 ): Project {
   return createMockProject({
-    ownership_relations: Array.from({ length: ownershipCount }, (_, i) => ({
+    party_relations: Array.from({ length: ownershipCount }, (_, i) => ({
       id: `relation-${i + 1}`,
-      ownership_id: `ownership-${i + 1}`,
-      ownership_name: `权属方 ${i + 1}`,
-      relation_type: '管理',
+      party_id: `ownership-${i + 1}`,
+      party_name: `权属方 ${i + 1}`,
+      relation_type: 'owner',
+      is_primary: i === 0,
       is_active: true,
     })),
     ...overrides,

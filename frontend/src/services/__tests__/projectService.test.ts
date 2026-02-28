@@ -111,6 +111,25 @@ describe('ProjectService', () => {
       );
     });
 
+    it('should apply owner_party_id filter and keep legacy compatibility param', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        success: true,
+        data: { items: [], total: 0, page: 1, page_size: 10, pages: 0 },
+      });
+
+      await service.getProjects({ owner_party_id: 'party-1' });
+
+      expect(apiClient.get).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          params: expect.objectContaining({
+            owner_party_id: 'party-1',
+            ownership_id: 'party-1',
+          }),
+        })
+      );
+    });
+
     it('should throw error on API failure', async () => {
       vi.mocked(apiClient.get).mockResolvedValue({
         success: false,
@@ -505,6 +524,34 @@ describe('ProjectService', () => {
       const result = await service.getProjectsByOwnership('own-1');
 
       expect(result).toEqual([]);
+    });
+  });
+
+  describe('getProjectsByOwnerParty', () => {
+    it('should return projects for owner party', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        success: true,
+        data: {
+          items: [{ id: '1' }],
+          total: 1,
+          page: 1,
+          page_size: 10,
+          pages: 1,
+        },
+      });
+
+      const result = await service.getProjectsByOwnerParty('party-1');
+
+      expect(result).toHaveLength(1);
+      expect(apiClient.get).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          params: expect.objectContaining({
+            owner_party_id: 'party-1',
+            ownership_id: 'party-1',
+          }),
+        })
+      );
     });
   });
 

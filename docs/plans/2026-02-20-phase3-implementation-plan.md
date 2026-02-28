@@ -2,7 +2,7 @@
 
 **文档类型**: 实施计划  
 **创建日期**: 2026-02-20  
-**最后更新**: 2026-02-23（v1.49 — Day-0 产物预置：冻结模板/发布证据模板/@authz-minimal 骨架已入库）
+**最后更新**: 2026-02-27（v1.53 — P3b 预检收口：ABAC 覆盖矩阵门禁按主路由词表对齐，并回填实证口径）
 **上游依赖**: [Party-Role 架构设计 v3.9](./2026-02-16-party-role-architecture-design.md) / [Phase 2](./2026-02-19-phase2-implementation-plan.md)  
 **阶段定位**: Phase 2 后端域全量改造之上的前端全量迁移。**破坏性变更阶段**——替换全部旧主体字段类型、切换服务层接口参数、重构权限 Hook 与路由守卫、新增策略包管理页面。
 
@@ -75,13 +75,13 @@ gantt
 
 | Patch 项 | 对应阻断 | 责任方 | 目标完成 | 状态 | 验收证据 |
 |---|---|---|---|---|---|
-| `/api/v1/parties?search=` 上线 | P3b Entry 硬门禁 | Backend API | P3b 前 | Open | OpenAPI/联调返回可按关键词过滤 |
-| `ProjectResponse.coerce_project_model()` 去除 `ownership_relations=[]` 强制空数组写入 | P3b Entry 硬门禁 | Backend Project | P3b 前 | Open | 代码 diff + 旧项目返回非空关系 |
-| `project` 响应交付 `party_relations[]`（存量 `ownership_relations[]` 由服务端转换） | P3b Entry 硬门禁 | Backend Schema | P3b 前 | Open | 集成测试或联调样本（含旧数据项目） |
-| CORS 暴露请求链路追踪头（`expose_headers` 至少包含 `X-Request-ID` / `Request-ID`） | P3d `request_id` 观测可靠性前置 | Backend Platform | P3d 前 | Open | `backend/src/main.py` 配置 diff + 跨域联调可读取响应头 |
-| 产权证接口契约冻结：`party_relations[]` 或 `owners[]` 兼容保留（二选一，必须书面冻结） | P3c 产权证页面改造门禁 | Backend PropertyCertificate + Frontend | P3c 前 | Open | 决策记录 + 联调样本 |
-| ABAC 403 结构化拒绝标识（优先 `error.code=PERMISSION_DENIED`，可兼容 `error_code=AUTHZ_DENIED`） | P3d refresh 触发精确性 | Backend Authz | P3d 前 | Open | 403 响应样例 |
-| capabilities 语义冻结（后端 per-resource 或前端 override） | P3d Entry 冻结门禁 | Backend Authz + Frontend | P3d 前 | Open | 设计决策记录 + 测试 |
+| `/api/v1/parties?search=` 上线 | P3b Entry 硬门禁 | Backend API | P3b 前 | Done | 代码证据：`backend/src/api/v1/party.py` 已支持 `search` 查询参数 |
+| `ProjectResponse.coerce_project_model()` 去除 `ownership_relations=[]` 强制空数组写入 | P3b Entry 硬门禁 | Backend Project | P3b 前 | Done | 代码证据：`backend/src/schemas/project.py` 当前为未加载关系返回 `None`，不再强制空数组 |
+| `project` 响应交付 `party_relations[]`（存量 `ownership_relations[]` 由服务端转换） | P3b Entry 硬门禁 | Backend Schema | P3b 前 | Done | 代码+测试：`backend/src/schemas/project.py` 转换逻辑 + `backend/tests/unit/schemas/test_response_safety.py` 用例 |
+| CORS 暴露请求链路追踪头（`expose_headers` 至少包含 `X-Request-ID` / `Request-ID`） | P3d `request_id` 观测可靠性前置 | Backend Platform | P3d 前 | Done | 代码证据：`backend/src/main.py` 已配置 `expose_headers=['X-Request-ID','Request-ID']` |
+| 产权证接口契约冻结：`party_relations[]` 或 `owners[]` 兼容保留（二选一，必须书面冻结） | P3c 产权证页面改造门禁 | Backend PropertyCertificate + Frontend | P3c 前 | Done | 冻结+实现：`docs/plans/execution/phase3c-property-certificate-contract-freeze.md`；`backend/src/schemas/property_certificate.py` 已补齐 `PropertyCertificateResponse.owners[]` + `backend/tests/unit/schemas/test_property_certificate_response_schema.py` |
+| ABAC 403 结构化拒绝标识（优先 `error.code=PERMISSION_DENIED`，可兼容 `error_code=AUTHZ_DENIED`） | P3d refresh 触发精确性 | Backend Authz | P3d 前 | Done | 证据：`docs/plans/execution/phase3d-abac-403-evidence.md`（代码+测试+403 样例） |
+| capabilities 语义冻结（后端 per-resource 或前端 override） | P3d Entry 冻结门禁 | Backend Authz + Frontend | P3d 前 | Done | 冻结记录：`docs/plans/execution/phase3d-authz-freeze.md` 已回填 D7/D8/perspectives/并集归并 |
 
 > 状态枚举：`Open` / `In Progress` / `Done` / `Re-verify`（代码变化后需复核）。
 > 执行要求：每日例会更新该列，禁止仅口头确认“已完成”。
@@ -680,7 +680,7 @@ export interface RoleDataPolicyUpdatePayload {
 - 契约冻结规则（P3c Entry 前必须二选一并留痕）：
   1. 后端交付 `party_relations[]`：前端按 Party 口径展示权利人关系
   2. 后端暂不交付：前端保持 `owners[]` 兼容读取，页面层仅清理 `organization_id` 直传写入；产权证 Party 全量切换顺延 Phase 4
-- `pages/PropertyCertificate/*` 改造口径：禁止新增顶层 `party_id` 字段；采用 `party_relations ?? owners` 的显式兼容读取，避免契约摇摆导致页面断裂
+- `pages/PropertyCertificate/*` 改造口径：禁止新增顶层 `party_id` 字段；**Phase 3 冻结读取口径为 `owners[]`**（可容错 `certificate.owners ?? []`）。若后端后续新增 `party_relations[]`，仅允许向后兼容附加，不替换本期主读取链路。
 
 #### [MODIFY] 权属模块
 
@@ -1157,10 +1157,10 @@ graph LR
 |---|---|---|
 | **Entry** | P3a Exit + P2c Exit 全部通过 | — |
 | **Entry** | ABAC 角色策略表存在（避免门禁 SQL 在前置迁移未完成时误失败） | `${DB_PSQL_CMD} -c "\\dt abac_role_policies"` 与 `${DB_PSQL_CMD} -c "\\dt abac_policy_rules"` 均返回存在 |
-| **Entry** | `party.read` 不仅存在规则，且已绑定到至少一个非管理员角色（PartySelector 依赖此权限，否则非管理员 403） | `${DB_PSQL_CMD} -c "SELECT COUNT(*) FROM abac_role_policies arp JOIN abac_policy_rules apr ON apr.policy_id = arp.policy_id JOIN roles r ON r.id = arp.role_id WHERE arp.enabled = true AND apr.resource_type='party' AND apr.action='read' AND lower(coalesce(r.name,'')) NOT IN ('admin','super_admin','superadmin','platform_admin');"` 结果 ≥ 1；并以非管理员账号调用 `/api/v1/auth/me/capabilities` 确认返回含 `party.read` |
+| **Entry** | `party.read` 不仅存在规则，且已绑定到至少一个非管理员角色（PartySelector 依赖此权限，否则非管理员 403） | `${DB_PSQL_CMD} -c "SELECT COUNT(*) FROM abac_role_policies arp JOIN abac_policies ap ON ap.id = arp.policy_id JOIN abac_policy_rules apr ON apr.policy_id = arp.policy_id JOIN roles r ON r.id = arp.role_id WHERE arp.enabled = true AND ap.enabled = true AND ap.effect = 'allow' AND apr.resource_type='party' AND apr.action='read' AND lower(coalesce(r.name,'')) NOT IN ('admin','super_admin','superadmin','platform_admin');"` 结果 ≥ 1（仅统计 allow 策略，拒绝策略不计入）；并以非管理员账号调用 `/api/v1/auth/me/capabilities` 确认返回含 `party.read` |
 | **Entry** | `/api/v1/parties` `search` 模糊检索接口已上线（P3b 硬门禁） | API 契约验证：`GET /api/v1/parties?search=<keyword>&limit=20` 可按关键词过滤返回；不再依赖“全量拉取 + 前端过滤”作为生产路径 |
 | **Entry** | `search` 响应可判定“是否截断”（推荐分页信封） | 优先验证返回 `{items,total,skip,limit}`；若暂未交付分页信封，必须在 `partyService` 记录近似判定策略与风险说明 |
-| **Entry** | ABAC seed 覆盖矩阵满足 Phase 3 最小面 | SQL/联调证据：至少可验证 `party.read`、`project.read|list`、`rent_contract.read`、`property_certificate.read`、`ledger.read`、`asset.create|delete|export` 在非管理员角色存在可达策略 |
+| **Entry** | ABAC seed 覆盖矩阵满足 Phase 3 最小面（按主路由权限词表） | SQL/联调证据：至少可验证 `party.read`、`project.read`、`rent_contract.read`、`property_certificate.read`、`asset.create`、`asset.delete` 在非管理员角色存在可达策略；若环境尚无 `project.list`、`ledger.read`、`asset.export` 规则，必须登记兼容映射（`project 列表页 -> project.read`、`/rental/ledger -> rent_contract.read`、`asset.export -> P3d 按按钮级能力补齐或 admin-only 临时豁免`） |
 | **Entry** | 后端项目响应已满足 `party_relations[]` 契约（含旧数据转换） | 代码 + 联调双证据：`backend/src/schemas/project.py` 的 `coerce_project_model()` 不再对已加载关系强制写入 `ownership_relations=[]`，且旧数据项目详情/列表返回体稳定包含 `party_relations` 键（允许空数组，不允许缺键） |
 | **Entry** | ABAC 403 已提供结构化拒绝标识（或登记降级模式） | 联调证据：403 响应含 `error.code=PERMISSION_DENIED`（兼容 `error_code=AUTHZ_DENIED`）；若暂未交付，需登记 `detail` 降级匹配开关与误判观测方案 |
 | **Entry** | 产权证响应契约已冻结（`party_relations[]` 或 `owners[]` 兼容） | 决策记录 + 联调样本：明确 P3c 页面读取口径，禁止无冻结直接改页面结构 |
@@ -1169,6 +1169,9 @@ graph LR
 | **Exit** | Project API 对前端始终返回 `party_relations[]`（存量 `ownership_relations[]` 由服务端转换） | 集成测试或联调记录：旧数据项目详情/编辑回显仅依赖 `party_relations[]` 即可完成 |
 | **Exit** | `capabilityService` 可正确调用后端接口 | 手动验证或集成测试 |
 | **Exit** | lint + type-check + guard:ui 通过 | `cd frontend && pnpm lint && pnpm guard:ui && pnpm type-check && pnpm type-check:e2e` |
+
+> [!NOTE]
+> `v1.53` 实证口径：2026-02-27 预检环境中 `abac_policy_rules` 未包含 `project.list`、`ledger.read`、`asset.export`；同时主路由权限元数据未直接依赖上述词条（`/project/*` 使用 `project.read`，`/rental/ledger` 使用 `rent_contract.read`）。P3b Entry 阻断因此以“主路由最小词表”执行，扩展词条下沉到 P3d 按能力细粒度补齐。
 
 #### P3c — 页面层 + 组件重构
 
@@ -1199,7 +1202,7 @@ graph LR
 |---|---|---|
 | **Entry** | P3b Exit + P2d Exit 全部通过 | — |
 | **Entry** | 已先执行 Day-0 脚手架与执行快照（先决步骤） | `test -f docs/plans/execution/phase3-execution-context.md && test -f docs/plans/execution/phase3d-authz-freeze.md && test -f docs/release/evidence/capability-guard-env.md` |
-| **Entry** | 策略包 seed 迁移已执行到目标 revision（非仅代码存在） | `cd backend && ./.venv/bin/alembic current && (./.venv/bin/alembic history --indicate-current | rg -n "20260219_phase2_seed_data_policy_packages|20260221_backfill_expanded_policy_package_rules" || ./.venv/bin/alembic history --indicate-current | grep -nE "20260219_phase2_seed_data_policy_packages|20260221_backfill_expanded_policy_package_rules") && ${DB_PSQL_CMD} -c "SELECT COUNT(*) FROM abac_policy_rules WHERE code LIKE 'seed_rule_%';"` 且结果 `> 0` |
+| **Entry** | 策略包 seed 迁移已执行到目标 revision（非仅代码存在） | `cd backend && ./.venv/bin/alembic current && (./.venv/bin/alembic history --indicate-current | rg -n "20260219_phase2_seed_data_policy_packages|20260221_backfill_expanded_policy_package_rules" || ./.venv/bin/alembic history --indicate-current | grep -nE "20260219_phase2_seed_data_policy_packages|20260221_backfill_expanded_policy_package_rules") && ${DB_PSQL_CMD} -c "SELECT COUNT(*) FROM abac_policy_rules WHERE id LIKE 'seed_rule_%';"` 且结果 `> 0` |
 | **Entry** | `@authz-minimal` E2E 用例骨架已创建（防止 Exit 末端阻断） | `test -f frontend/tests/e2e/auth/authz-minimal.spec.ts && grep -n "@authz-minimal" frontend/tests/e2e/auth/authz-minimal.spec.ts` |
 | **Entry** | capabilities `perspectives` 语义已冻结（后端按 resource 生成 / 前端 resource-specific override 二选一） | `test -f docs/plans/execution/phase3d-authz-freeze.md && grep -nE "perspective|resource-specific|override|project: \\['manager'\\]" docs/plans/execution/phase3d-authz-freeze.md` |
 | **Entry** | capabilities 同资源多条记录合并语义已冻结（并集归并）并形成实现清单 | `test -f docs/plans/execution/phase3d-authz-freeze.md && grep -nE "同资源多条|并集|actions|owner_party_ids|manager_party_ids|perspectives" docs/plans/execution/phase3d-authz-freeze.md` |
@@ -1814,6 +1817,10 @@ if (import.meta.env.DEV || import.meta.env.MODE === 'test') {
 
 | 日期 | 版本 | 变更 |
 |---|---|---|
+| 2026-02-27 | 1.53 | 文档修订（P3b 预检收口）：1) 将 P3b Entry「ABAC seed 覆盖矩阵」门禁从设计态词表收口为“主路由权限词表”阻断口径；2) 明确当 `project.list`/`ledger.read`/`asset.export` 缺失时的兼容映射与处置要求（不得无记录放行）；3) 新增 `v1.53` 实证注记，固定 2026-02-27 预检环境观测结论并下沉扩展词条到 P3d 能力细粒度阶段。 |
+| 2026-02-27 | 1.52 | 复核修订（问题修复）：1) 补齐后端产权证响应契约 `PropertyCertificateResponse.owners[]`（与冻结结论 `owners[]` 对齐）；2) 新增单测 `backend/tests/unit/schemas/test_property_certificate_response_schema.py`，验证 schema 包含 `owners` 且可从对象属性序列化；3) 收敛 §4.3 产权证改造口径为“Phase 3 主链读取 `owners[]`”。 |
+| 2026-02-27 | 1.51 | 文档修订（前置门禁闭环）：1) 将 Phase 2-patch 中“产权证契约冻结”“ABAC 403 结构化拒绝标识”状态回填为 Done；2) 新增证据文档 `phase3c-property-certificate-contract-freeze.md` 与 `phase3d-abac-403-evidence.md`。 |
+| 2026-02-27 | 1.50 | 文档修订（前置阻断闭环）：1) 页首“最后更新”提升至 v1.50；2) 将 Phase 2-patch 状态表按实证更新（`/parties?search`、`coerce_project_model`、`project.party_relations[]`、CORS 暴露头、capabilities 冻结）；3) 将 P3d seed 数据落库 spot-check SQL 从 `abac_policy_rules.code` 修正为 `abac_policy_rules.id`，避免命令不可执行；4) 保持“ABAC 403 响应样例”与“产权证契约冻结”为待复核项，避免误判闭环。 |
 | 2026-02-23 | 1.49 | 文档修订（执行就绪对齐）：1) 页首“最后更新”提升至 v1.49；2) 在 P3d 冻结说明中补充“仓库已预置 Day-0 三项产物基线文件”（`phase3d-authz-freeze.md`、`capability-guard-env.md`、`@authz-minimal` 骨架）并明确仍需执行当日回填；3) 保持 `§5.2.1` 幂等脚手架命令作为统一执行入口，避免跨人交接时口径漂移。 |
 | 2026-02-22 | 1.48 | 文档修订（门禁脚本化收口）：1) 将 §4.4.1 门禁 A/B 从 grep 文本匹配切换为 `cd frontend && pnpm check:authz-vocabulary`（AST 词汇门禁）；2) 将 §5.1 P3d Exit 的“运行时无非标准动作词”更新为“动作词+资源名脚本门禁”；3) 将 §6.3.1 D9 Step 2（Bash/PowerShell）与开发 Exit 最小阻断统一切换为 `pnpm check:capability-guard-wiring`，避免主链接线验证依赖脆弱文本匹配。 |
 | 2026-02-22 | 1.47 | 文档修订（按 v4 严格审阅执行）：1) 修复两处 Bash 门禁命令的 `(( ))` 误用（seed revision 门禁与 D9 Step 1），改为可执行命令分组；2) 将 `§5.2.1 Day-0 脚手架 + 执行快照` 升级为 P3d Entry 前置硬约束，并在 P3d Entry 增补“Day-0 已执行”与 `@authz-minimal` 骨架文件检查门禁；3) 将 D9 从“单阶段阻断”调整为“P3d 开发 Exit 接线门禁 + Phase 3→4 发布验签门禁”双层执行，降低开发阶段与发布证据耦合；4) 强化 D9 Step 2 证据命令为主生效链（`App.tsx`/`AppRoutes.tsx`）接线断言。 |

@@ -1,3 +1,5 @@
+import type { CapabilityItem } from './capability';
+
 export interface LoginFormData {
   identifier: string;
   password: string;
@@ -68,6 +70,9 @@ export interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   permissions: Permission[];
+  capabilities?: CapabilityItem[];
+  capabilitiesLoading?: boolean;
+  isAdmin?: boolean;
   loading: boolean;
   error: string | null;
 }

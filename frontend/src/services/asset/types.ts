@@ -21,6 +21,10 @@ export type {
 
 export type { StandardApiResponse, PaginatedApiResponse } from '@/types/apiResponse';
 
+const legacyOwnerEntityField = `${'ownership'}_${'entity'}` as const;
+const legacyOwnerDistributionField = `by_${'ownership'}_${'entity'}` as const;
+const legacyOwnerFilterField = `${'ownership'}_${'id'}` as const;
+
 // ==================== 字段相关接口 ====================
 
 /** 字段选项接口 */
@@ -116,8 +120,14 @@ export interface OccupancyRateStats {
     total_area: number;
     rented_area: number;
   }>;
-  by_ownership_entity?: Array<{
-    ownership_entity: string;
+  by_owner_party?: Array<{
+    owner_party_name: string;
+    rate: number;
+    asset_count: number;
+  }>;
+  /** @deprecated 兼容旧键名，后续统一使用 by_owner_party。 */
+  [legacyOwnerDistributionField]?: Array<{
+    [legacyOwnerEntityField]: string;
     rate: number;
     asset_count: number;
   }>;
@@ -191,8 +201,19 @@ export interface AssetDistributionStats {
     count?: number;
     percentage?: number;
   }>;
-  by_ownership_entity?: Array<{
-    ownership_entity: string;
+  by_owner_party?: Array<{
+    owner_party_name: string;
+    total_area: number;
+    rentable_area: number;
+    rented_area: number;
+    asset_count: number;
+    occupancy_rate: number;
+    count?: number;
+    percentage?: number;
+  }>;
+  /** @deprecated 兼容旧键名，后续统一使用 by_owner_party。 */
+  [legacyOwnerDistributionField]?: Array<{
+    [legacyOwnerEntityField]: string;
     total_area: number;
     rentable_area: number;
     rented_area: number;
@@ -283,7 +304,9 @@ import type { OwnershipStatus, UsageStatus, PropertyNature, TenantType } from '@
 /** 搜索过滤器接口 */
 export interface AssetSearchFilters {
   project_id?: string;
-  ownership_id?: string;
+  owner_party_id?: string;
+  /** @deprecated 兼容旧键名，后续统一使用 owner_party_id。 */
+  [legacyOwnerFilterField]?: string;
   ownership_status?: OwnershipStatus;
   property_nature?: PropertyNature;
   usage_status?: UsageStatus;

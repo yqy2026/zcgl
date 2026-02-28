@@ -5,7 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { screen, fireEvent, act } from '@/test/utils/test-helpers';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 
 import { useQuery } from '@tanstack/react-query';
 import { ownershipService } from '@/services/ownershipService';
@@ -19,9 +19,13 @@ vi.mock('@/utils/messageManager', () => ({
   },
 }));
 
-vi.mock('@tanstack/react-query', () => ({
-  useQuery: vi.fn(),
-}));
+vi.mock('@tanstack/react-query', async importOriginal => {
+  const actual = await importOriginal<typeof import('@tanstack/react-query')>();
+  return {
+    ...actual,
+    useQuery: vi.fn(),
+  };
+});
 
 vi.mock('@/services/ownershipService', () => ({
   ownershipService: {
@@ -38,11 +42,29 @@ vi.mock('../ProjectDetail', () => ({
 }));
 
 vi.mock('@/components/Common/TableWithPagination', () => ({
-  TableWithPagination: ({ dataSource }: { dataSource?: Array<{ id: string; name: string }> }) => (
+  TableWithPagination: ({
+    dataSource,
+    columns,
+  }: {
+    dataSource?: Array<Record<string, unknown>>;
+    columns?: Array<{
+      key?: string;
+      render?: (value: unknown, record: Record<string, unknown>) => React.ReactNode;
+      dataIndex?: string;
+    }>;
+  }) => (
     <div data-testid="table">
       {dataSource?.map(item => (
-        <div key={item.id} data-testid={`row-${item.id}`}>
-          {item.name}
+        <div key={String(item.id)} data-testid={`row-${String(item.id)}`}>
+          {String(item.name)}
+          <div data-testid={`ownership-${String(item.id)}`}>
+            {columns
+              ?.find(column => column.key === 'ownership_entity')
+              ?.render?.(
+                typeof item.ownership_entity === 'string' ? item.ownership_entity : '',
+                item
+              )}
+          </div>
         </div>
       ))}
     </div>
@@ -307,7 +329,7 @@ const flushPromises = () =>
 
 const renderProjectList = async (props?: React.ComponentProps<typeof ProjectList>) => {
   await act(async () => {
-    renderWithProviders(<ProjectList {...props} />);
+    render(<ProjectList {...props} />);
     await flushPromises();
   });
 };
@@ -427,6 +449,94 @@ describe('ProjectList', () => {
 
       const selects = screen.getAllByTestId('select');
       expect(selects.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('权属方显示', () => {
+    it('应过滤停用关系，避免将停用主体显示为有效主体', async () => {
+      vi.mocked(useQuery).mockImplementation(options => {
+        const queryKey = (options as { queryKey?: unknown[] }).queryKey;
+        const key = Array.isArray(queryKey) ? queryKey[0] : undefined;
+
+        if (key === 'project-list') {
+          return {
+            data: {
+              items: [
+                {
+                  id: 'project-1',
+                  name: '项目关系过滤测试',
+                  code: 'PROJ-REL-001',
+                  is_active: true,
+                  asset_count: 0,
+                  party_relations: [
+                    {
+                      id: 'rel-inactive',
+                      party_id: 'ownership-inactive',
+                      party_name: '已停用主体',
+                      relation_type: 'owner',
+                    },
+                    {
+                      id: 'rel-active',
+                      party_id: 'ownership-active',
+                      party_name: '有效主体',
+                      relation_type: 'owner',
+                      is_active: true,
+                    },
+                  ],
+                  ownership_relations: [
+                    {
+                      id: 'rel-inactive',
+                      ownership_id: 'ownership-inactive',
+                      ownership_name: '已停用主体',
+                      relation_type: 'owner',
+                      is_active: false,
+                    },
+                    {
+                      id: 'rel-active',
+                      ownership_id: 'ownership-active',
+                      ownership_name: '有效主体',
+                      relation_type: 'owner',
+                      is_active: true,
+                    },
+                  ],
+                },
+              ],
+              total: 1,
+              page: 1,
+              page_size: 10,
+              pages: 1,
+            },
+            error: null,
+            isLoading: false,
+            isFetching: false,
+            refetch: mockRefetchProjects,
+          };
+        }
+
+        if (key === 'project-ownership-options') {
+          void ownershipService.getOwnershipOptions(true);
+          return {
+            data: [],
+            error: null,
+            isLoading: false,
+            isFetching: false,
+            refetch: vi.fn(),
+          };
+        }
+
+        return {
+          data: undefined,
+          error: null,
+          isLoading: false,
+          isFetching: false,
+          refetch: vi.fn(),
+        };
+      });
+
+      await renderProjectList();
+
+      expect(screen.getByText('有效主体')).toBeInTheDocument();
+      expect(screen.queryByText('已停用主体')).not.toBeInTheDocument();
     });
   });
 

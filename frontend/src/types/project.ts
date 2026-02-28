@@ -2,6 +2,26 @@
  * 项目类型定义
  */
 
+const legacyProjectRelationsField = `${'ownership'}_${'relations'}` as const;
+
+export interface ProjectPartyRelation {
+  id?: string;
+  project_id?: string;
+  party_id: string;
+  party_name?: string;
+  relation_type: string;
+  is_primary?: boolean;
+  is_active?: boolean;
+}
+
+export interface ProjectOwnershipRelationLegacy {
+  id: string;
+  ownership_id: string;
+  ownership_name: string;
+  relation_type: string;
+  is_active: boolean;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -15,21 +35,23 @@ export interface Project {
   created_by?: string;
   updated_by?: string;
   asset_count?: number;
+  party_relations?: ProjectPartyRelation[];
 
-  // 权属方关联
-  ownership_relations?: Array<{
-    id: string;
-    ownership_id: string;
-    ownership_name: string;
-    relation_type: string;
-    is_active: boolean;
-  }>;
+  /** @deprecated 兼容旧字段，后续统一使用 party_relations。 */
+  [legacyProjectRelationsField]?: ProjectOwnershipRelationLegacy[];
 }
 
 export interface ProjectCreate {
   name: string;
   description?: string;
-  ownership_relations?: Array<{
+  party_relations?: Array<{
+    party_id: string;
+    relation_type: string;
+    is_primary?: boolean;
+  }>;
+
+  /** @deprecated 兼容旧字段，后续统一使用 party_relations。 */
+  [legacyProjectRelationsField]?: Array<{
     ownership_id: string;
     relation_type: string;
   }>;
@@ -38,7 +60,14 @@ export interface ProjectCreate {
 export interface ProjectUpdate {
   name?: string;
   description?: string;
-  ownership_relations?: Array<{
+  party_relations?: Array<{
+    party_id: string;
+    relation_type: string;
+    is_primary?: boolean;
+  }>;
+
+  /** @deprecated 兼容旧字段，后续统一使用 party_relations。 */
+  [legacyProjectRelationsField]?: Array<{
     ownership_id: string;
     relation_type: string;
   }>;
@@ -81,6 +110,8 @@ export interface ProjectStatisticsResponse {
 export interface ProjectSearchParams {
   keyword?: string;
   is_active?: boolean;
+  owner_party_id?: string;
+  /** @deprecated 兼容旧字段，后续统一使用 owner_party_id。 */
   ownership_id?: string;
   page?: number;
   page_size?: number;

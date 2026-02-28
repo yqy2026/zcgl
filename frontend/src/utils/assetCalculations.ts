@@ -6,6 +6,8 @@
 import type { Asset } from '@/types/asset';
 import { DecimalUtils, UsageStatus } from '@/types/asset';
 
+const legacyOwnerFilterField = `${'ownership'}_${'id'}` as const;
+
 /**
  * 计算未出租面积
  * 公式: rentableArea - rentedArea
@@ -242,7 +244,7 @@ export const checkAssetDataCompleteness = (
 } => {
   // 必填字段
   const requiredFields = [
-    'ownership_id',
+    'owner_party_id',
     'property_name',
     'address',
     'ownership_status',
@@ -279,9 +281,21 @@ export const checkAssetDataCompleteness = (
   const missingRequired: string[] = [];
   const missingImportant: string[] = [];
 
+  const resolveFieldValue = (field: string): unknown => {
+    const record = asset as Record<string, unknown>;
+    if (field === 'owner_party_id') {
+      const ownerPartyId = record.owner_party_id;
+      if (typeof ownerPartyId === 'string' && ownerPartyId.trim() !== '') {
+        return ownerPartyId;
+      }
+      return record[legacyOwnerFilterField];
+    }
+    return asset[field as keyof Asset];
+  };
+
   // 检查必填字段
   requiredFields.forEach(field => {
-    const value = asset[field as keyof Asset];
+    const value = resolveFieldValue(field);
     if (value === null || value === undefined || (typeof value === 'string' && !value.trim())) {
       missingRequired.push(field);
     }

@@ -100,6 +100,7 @@ def test_project_response_builds_party_relations_from_ownership_relations() -> N
             "party_name": "测试权属方",
             "relation_type": "owner",
             "is_primary": True,
+            "is_active": True,
         }
     ]
 
