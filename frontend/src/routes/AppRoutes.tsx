@@ -9,8 +9,6 @@ import {
   SYSTEM_ROUTES,
   BASE_PATHS,
   PROPERTY_CERTIFICATE_ROUTES,
-  ROUTE_CONFIG,
-  type RouteConfig,
 } from '@/constants/routes';
 
 export interface ProtectedRouteItem {
@@ -22,53 +20,6 @@ export interface ProtectedRouteItem {
   capabilityGuardBypass?: boolean;
   fallback?: React.ReactNode;
 }
-
-type RoutePermission = { action: string; resource: string };
-
-const collectPermissionsByPath = (routes: RouteConfig[]): Map<string, RoutePermission[]> => {
-  const permissionsByPath = new Map<string, RoutePermission[]>();
-
-  const walk = (items: RouteConfig[]): void => {
-    for (const route of items) {
-      if (route.permissions != null && route.permissions.length > 0) {
-        permissionsByPath.set(
-          route.path,
-          route.permissions.map(permission => ({
-            action: permission.action,
-            resource: permission.resource,
-          }))
-        );
-      }
-
-      if (route.children != null && route.children.length > 0) {
-        walk(route.children);
-      }
-    }
-  };
-
-  walk(routes);
-  return permissionsByPath;
-};
-
-const ROUTE_PERMISSIONS_BY_PATH = collectPermissionsByPath(ROUTE_CONFIG);
-
-const withDerivedAuthzMetadata = (routes: ProtectedRouteItem[]): ProtectedRouteItem[] => {
-  return routes.map(route => {
-    if (route.permissions != null || route.adminOnly === true) {
-      return route;
-    }
-
-    const derivedPermissions = ROUTE_PERMISSIONS_BY_PATH.get(route.path);
-    if (derivedPermissions == null || derivedPermissions.length === 0) {
-      return route;
-    }
-
-    return {
-      ...route,
-      permissions: derivedPermissions,
-    };
-  });
-};
 
 /**
  * 受保护的路由配置
@@ -92,105 +43,129 @@ const baseProtectedRoutes: ProtectedRouteItem[] = [
   {
     path: ASSET_ROUTES.NEW,
     element: React.lazy(() => import('../pages/Assets/AssetCreatePage')),
+    permissions: [{ resource: 'asset', action: 'create' }],
   },
   {
     path: ASSET_ROUTES.IMPORT,
     element: React.lazy(() => import('../pages/Assets/AssetImportPage')),
+    permissions: [{ resource: 'asset', action: 'create' }],
   },
   {
     path: ASSET_ROUTES.ANALYTICS,
     element: React.lazy(() => import('../pages/Assets/AssetAnalyticsPage')),
+    permissions: [{ resource: 'analytics', action: 'read' }],
   },
   {
     path: ASSET_ROUTES.ANALYTICS_SIMPLE,
     element: React.lazy(() => import('../pages/Assets/SimpleAnalyticsPage')),
+    permissions: [{ resource: 'analytics', action: 'read' }],
   },
   {
     path: ASSET_ROUTES.LIST,
     element: React.lazy(() => import('../pages/Assets/AssetListPage')),
+    permissions: [{ resource: 'asset', action: 'read' }],
   },
   {
     path: ASSET_ROUTES.DETAIL_PATH,
     element: React.lazy(() => import('../pages/Assets/AssetDetailPage')),
+    permissions: [{ resource: 'asset', action: 'read' }],
   },
 
   // 租赁管理模块 - 注意路由顺序，具体路径必须在动态路径之前
   {
     path: RENTAL_ROUTES.CONTRACTS.LIST,
     element: React.lazy(() => import('../pages/Rental/ContractListPage')),
+    permissions: [{ resource: 'rent_contract', action: 'read' }],
   },
   {
     path: RENTAL_ROUTES.CONTRACTS.NEW, // 具体路由 - 创建合同
     element: React.lazy(() => import('../pages/Rental/ContractCreatePage')),
+    permissions: [{ resource: 'rent_contract', action: 'create' }],
   },
   {
     path: RENTAL_ROUTES.CONTRACTS.CREATE, // 具体路由 - 创建合同（备用）
     element: React.lazy(() => import('../pages/Rental/ContractCreatePage')),
+    permissions: [{ resource: 'rent_contract', action: 'create' }],
   },
   {
     path: RENTAL_ROUTES.CONTRACTS.PDF_IMPORT, // 具体路由 - PDF导入
     element: React.lazy(() => import('../pages/Contract/PDFImportPage')),
+    permissions: [{ resource: 'rent_contract', action: 'create' }],
   },
   {
     path: RENTAL_ROUTES.CONTRACTS.RENEW_PATH, // 具体路由 - 续签合同（必须在 :id/edit 之前）
     element: React.lazy(() => import('../pages/Rental/ContractRenewPage')),
+    permissions: [{ resource: 'rent_contract', action: 'update' }],
   },
   {
     path: RENTAL_ROUTES.CONTRACTS.DETAIL_PATH, // 动态路由 - 合同详情页
     element: React.lazy(() => import('../pages/Rental/ContractDetailPage')),
+    permissions: [{ resource: 'rent_contract', action: 'read' }],
   },
   {
     path: RENTAL_ROUTES.CONTRACTS.EDIT_PATH, // 动态路由 - 编辑合同
     element: React.lazy(() => import('../pages/Rental/ContractCreatePage')),
+    permissions: [{ resource: 'rent_contract', action: 'update' }],
   },
   {
     path: RENTAL_ROUTES.LEDGER,
     element: React.lazy(() => import('../pages/Rental/RentLedgerPage')),
+    permissions: [{ resource: 'ledger', action: 'read' }],
   },
   {
     path: RENTAL_ROUTES.STATISTICS,
     element: React.lazy(() => import('../pages/Rental/RentStatisticsPage')),
+    permissions: [{ resource: 'rent_contract', action: 'read' }],
   },
 
   {
     path: PROPERTY_CERTIFICATE_ROUTES.LIST,
     element: React.lazy(() => import('../pages/PropertyCertificate/PropertyCertificateList')),
+    permissions: [{ resource: 'property_certificate', action: 'read' }],
   },
   {
     path: PROPERTY_CERTIFICATE_ROUTES.IMPORT,
     element: React.lazy(() => import('../pages/PropertyCertificate/PropertyCertificateImport')),
+    permissions: [{ resource: 'property_certificate', action: 'create' }],
   },
   {
     path: PROPERTY_CERTIFICATE_ROUTES.DETAIL_PATH,
     element: React.lazy(() => import('../pages/PropertyCertificate/PropertyCertificateDetailPage')),
+    permissions: [{ resource: 'property_certificate', action: 'read' }],
   },
 
   // 权属方管理 - 注意路由顺序，详情页必须在列表页之前
   {
     path: OWNERSHIP_ROUTES.EDIT_PATH,
     element: React.lazy(() => import('../pages/Ownership/OwnershipManagementPage')),
+    permissions: [{ resource: 'party', action: 'read' }],
   },
   {
     path: OWNERSHIP_ROUTES.DETAIL_PATH,
     element: React.lazy(() => import('../pages/Ownership/OwnershipDetailPage')),
+    permissions: [{ resource: 'party', action: 'read' }],
   },
   {
     path: OWNERSHIP_ROUTES.LIST,
     element: React.lazy(() => import('../pages/Ownership/OwnershipManagementPage')),
+    permissions: [{ resource: 'party', action: 'read' }],
   },
 
   // 项目管理 - 注意路由顺序，详情页必须在列表页之前
   {
     path: PROJECT_ROUTES.EDIT_PATH,
     element: React.lazy(() => import('../pages/Project/ProjectManagementPage')),
+    permissions: [{ resource: 'project', action: 'read' }],
   },
   {
     path: PROJECT_ROUTES.DETAIL_PATH,
     element: React.lazy(() => import('../pages/Project/ProjectDetailPage')),
+    permissions: [{ resource: 'project', action: 'read' }],
   },
   {
     path: PROJECT_ROUTES.LIST,
     element: React.lazy(() => import('../pages/Project/ProjectManagementPage')),
+    permissions: [{ resource: 'project', action: 'read' }],
   },
 
   // 个人中心
@@ -204,31 +179,38 @@ const baseProtectedRoutes: ProtectedRouteItem[] = [
   {
     path: SYSTEM_ROUTES.USERS,
     element: React.lazy(() => import('../pages/System/UserManagementPage')),
+    adminOnly: true,
   },
   {
     path: SYSTEM_ROUTES.ROLES,
     element: React.lazy(() => import('../pages/System/RoleManagementPage')),
+    adminOnly: true,
   },
   {
     path: SYSTEM_ROUTES.ORGANIZATIONS,
     element: React.lazy(() => import('../pages/System/OrganizationPage')),
+    adminOnly: true,
   },
   {
     path: SYSTEM_ROUTES.DICTIONARIES,
     element: React.lazy(() => import('../pages/System/DictionaryPage')),
+    adminOnly: true,
   },
   {
     path: SYSTEM_ROUTES.LOGS,
     element: React.lazy(() => import('../pages/System/OperationLogPage')),
+    adminOnly: true,
   },
   {
     path: SYSTEM_ROUTES.TEMPLATES,
     element: React.lazy(() => import('../pages/System/TemplateManagementPage')),
+    adminOnly: true,
   },
   {
     path: SYSTEM_ROUTES.SETTINGS,
     element: React.lazy(() => import('../pages/System/SystemSettingsPage')),
+    adminOnly: true,
   },
 ];
 
-export const protectedRoutes: ProtectedRouteItem[] = withDerivedAuthzMetadata(baseProtectedRoutes);
+export const protectedRoutes: ProtectedRouteItem[] = baseProtectedRoutes;

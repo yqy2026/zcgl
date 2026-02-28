@@ -57,7 +57,9 @@ describe('ProjectForm', () => {
 
   it('应该使用语义样式类组织布局', async () => {
     renderWithProviders(<ProjectForm project={null} onSuccess={onSuccess} onCancel={onCancel} />);
-    expect(screen.getByText('所有方主体关联').closest('[class*="ownershipCard"]')).toBeInTheDocument();
+    expect(
+      screen.getByText('所有方主体关联').closest('[class*="ownershipCard"]')
+    ).toBeInTheDocument();
     expect(document.querySelector('[class*="formActions"]')).toBeInTheDocument();
   });
 

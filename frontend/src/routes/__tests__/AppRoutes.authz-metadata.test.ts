@@ -1,57 +1,41 @@
 import { describe, expect, it } from 'vitest';
 import { protectedRoutes, type ProtectedRouteItem } from '@/routes/AppRoutes';
-import { ROUTE_CONFIG, type RouteConfig } from '@/constants/routes';
+import {
+  OWNERSHIP_ROUTES,
+  PROJECT_ROUTES,
+  PROPERTY_CERTIFICATE_ROUTES,
+  RENTAL_ROUTES,
+  SYSTEM_ROUTES,
+} from '@/constants/routes';
 
 type RoutePermission = { action: string; resource: string };
-
-type ExpectedAuthzRoute = {
-  path: string;
-  permissions: RoutePermission[];
-};
 
 const normalizePermissions = (permissions: RoutePermission[]): string[] =>
   permissions.map(permission => `${permission.resource}:${permission.action}`).sort();
 
-const collectExpectedAuthzRoutes = (routes: RouteConfig[]): ExpectedAuthzRoute[] => {
-  const collected: ExpectedAuthzRoute[] = [];
-
-  for (const route of routes) {
-    if (route.permissions != null && route.permissions.length > 0) {
-      collected.push({
-        path: route.path,
-        permissions: route.permissions,
-      });
-    }
-
-    if (route.children != null && route.children.length > 0) {
-      collected.push(...collectExpectedAuthzRoutes(route.children));
-    }
-  }
-
-  return collected;
-};
-
 describe('AppRoutes authz metadata', () => {
-  it('keeps protectedRoutes permissions aligned with ROUTE_CONFIG', () => {
-    const expectedAuthzRoutes = collectExpectedAuthzRoutes(ROUTE_CONFIG);
+  it('keeps Phase 3d critical route resource mappings aligned', () => {
+    const expectedByPath = new Map<string, string>([
+      [OWNERSHIP_ROUTES.LIST, 'party:read'],
+      [OWNERSHIP_ROUTES.DETAIL_PATH, 'party:read'],
+      [OWNERSHIP_ROUTES.EDIT_PATH, 'party:read'],
+      [PROJECT_ROUTES.LIST, 'project:read'],
+      [PROJECT_ROUTES.DETAIL_PATH, 'project:read'],
+      [PROJECT_ROUTES.EDIT_PATH, 'project:read'],
+      [PROPERTY_CERTIFICATE_ROUTES.LIST, 'property_certificate:read'],
+      [PROPERTY_CERTIFICATE_ROUTES.DETAIL_PATH, 'property_certificate:read'],
+      [PROPERTY_CERTIFICATE_ROUTES.IMPORT, 'property_certificate:create'],
+      [RENTAL_ROUTES.LEDGER, 'ledger:read'],
+    ]);
+
     const protectedRouteMap = new Map(protectedRoutes.map(route => [route.path, route]));
 
-    const overlappingExpectedRoutes = expectedAuthzRoutes.filter(({ path }) =>
-      protectedRouteMap.has(path)
-    );
-
-    expect(overlappingExpectedRoutes.length).toBeGreaterThan(0);
-
-    const mismatchedRoutes = overlappingExpectedRoutes.filter(({ path, permissions }) => {
+    for (const [path, expectedPermission] of expectedByPath.entries()) {
       const route = protectedRouteMap.get(path);
+      expect(route).toBeDefined();
       const actualPermissions = route?.permissions ?? [];
-      return (
-        JSON.stringify(normalizePermissions(actualPermissions)) !==
-        JSON.stringify(normalizePermissions(permissions))
-      );
-    });
-
-    expect(mismatchedRoutes).toEqual([]);
+      expect(normalizePermissions(actualPermissions)).toEqual([expectedPermission]);
+    }
   });
 
   it('requires explicit capability metadata for each protected route', () => {
@@ -68,24 +52,24 @@ describe('AppRoutes authz metadata', () => {
     expect(unguardedRoutes).toEqual([]);
   });
 
-  it('keeps ownership and analytics resources aligned with backend vocabularies', () => {
-    const expectedByPath = new Map<string, string>([
-      ['/assets/analytics', 'analytics:read'],
-      ['/assets/analytics-simple', 'analytics:read'],
-      ['/ownership', 'ownership:read'],
-      ['/ownership/:id', 'ownership:read'],
-      ['/ownership/:id/edit', 'ownership:update'],
-    ]);
+  it('marks system management routes as adminOnly', () => {
+    const systemPaths = [
+      SYSTEM_ROUTES.USERS,
+      SYSTEM_ROUTES.ROLES,
+      SYSTEM_ROUTES.ORGANIZATIONS,
+      SYSTEM_ROUTES.DICTIONARIES,
+      SYSTEM_ROUTES.TEMPLATES,
+      SYSTEM_ROUTES.LOGS,
+      SYSTEM_ROUTES.SETTINGS,
+    ];
 
-    const permissionsByPath = new Map(
-      collectExpectedAuthzRoutes(ROUTE_CONFIG).map(route => [
-        route.path,
-        normalizePermissions(route.permissions).join(','),
-      ])
-    );
+    const protectedRouteMap = new Map(protectedRoutes.map(route => [route.path, route]));
 
-    for (const [path, expectedPermission] of expectedByPath.entries()) {
-      expect(permissionsByPath.get(path)).toBe(expectedPermission);
+    for (const path of systemPaths) {
+      const route = protectedRouteMap.get(path);
+      expect(route).toBeDefined();
+      expect(route?.adminOnly).toBe(true);
+      expect((route?.permissions?.length ?? 0) > 0).toBe(false);
     }
   });
 });

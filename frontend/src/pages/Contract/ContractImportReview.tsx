@@ -102,7 +102,9 @@ export const resolveOwnerReferences = (
   const ownerPartyId = normalizeOptionalId(
     validatedValues.owner_party_id ?? storedValues.owner_party_id
   );
-  const ownershipId = normalizeOptionalId(validatedValues.ownership_id ?? storedValues.ownership_id);
+  const ownershipId = normalizeOptionalId(
+    validatedValues.ownership_id ?? storedValues.ownership_id
+  );
   return { ownerPartyId, ownershipId };
 };
 

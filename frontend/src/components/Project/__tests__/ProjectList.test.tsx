@@ -60,20 +60,13 @@ vi.mock('@/components/Common/TableWithPagination', () => ({
           <div data-testid={`ownership-${String(item.id)}`}>
             {columns
               ?.find(column => column.key === 'owner_party')
-              ?.render?.(
-                Array.isArray(item.party_relations) ? item.party_relations : [],
-                item
-              )}
+              ?.render?.(Array.isArray(item.party_relations) ? item.party_relations : [], item)}
           </div>
           <div data-testid={`status-${String(item.id)}`}>
-            {columns
-              ?.find(column => column.key === 'is_active')
-              ?.render?.(item.is_active, item)}
+            {columns?.find(column => column.key === 'is_active')?.render?.(item.is_active, item)}
           </div>
           <div data-testid={`area-status-${String(item.id)}`}>
-            {columns
-              ?.find(column => column.key === 'area_status')
-              ?.render?.(undefined, item)}
+            {columns?.find(column => column.key === 'area_status')?.render?.(undefined, item)}
           </div>
         </div>
       ))}

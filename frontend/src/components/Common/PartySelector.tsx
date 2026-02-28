@@ -216,9 +216,7 @@ const PartySelector: React.FC<PartySelectorProps> = ({
     [loadOptions]
   );
 
-  const handleChange = useCallback<
-    NonNullable<SelectProps<string, PartyOption>['onChange']>
-  >(
+  const handleChange = useCallback<NonNullable<SelectProps<string, PartyOption>['onChange']>>(
     (nextValue, option) => {
       const selectedValue = typeof nextValue === 'string' ? nextValue : undefined;
       if (selectedValue == null || selectedValue === '') {

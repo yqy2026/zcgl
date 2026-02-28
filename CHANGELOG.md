@@ -4,6 +4,10 @@
 
 ### 🛠️ 本次修复 (Current Fixes)
 
+- Frontend 全量检查门禁清理（2026-02-28）：修复仓库内历史格式阻断，执行 `oxfmt --write` 清理 5 个文件（`src/components/Common/PartySelector.tsx`、`src/components/Common/__tests__/PartySelector.test.tsx`、`src/components/Forms/__tests__/ProjectForm.test.tsx`、`src/components/Project/__tests__/ProjectList.test.tsx`、`src/pages/Contract/ContractImportReview.tsx`）。验证：`cd frontend && pnpm check`（PASS，全链路通过）。
+
+- Phase 3 P3d Entry 开工门禁修复（2026-02-28）：修复 `ROUTE_CONFIG` 回流导致的 P3d Entry 阻断。1) `frontend/src/routes/AppRoutes.tsx` 移除对 `ROUTE_CONFIG` 的运行时派生依赖，改为在 `protectedRoutes` 上显式声明权限元数据；同步完成关键映射收口（`/ownership/* -> party:read`、`/project/* -> project:read`、`/rental/ledger -> ledger:read`）并将系统管理路由统一为 `adminOnly`。2) 更新回归测试 `frontend/src/routes/__tests__/AppRoutes.authz-metadata.test.ts`，改为校验 P3d 关键路由映射与系统路由 `adminOnly` 约束。3) 回填执行证据 `docs/plans/execution/phase3d-authz-freeze.md` 与 `docs/plans/execution/phase3d-entry-readiness-20260228.md`。验证：`grep ROUTE_CONFIG` 门禁（PASS）；`pnpm -C frontend check:route-authz`（PASS）；`pnpm -C frontend check:authz-vocabulary`（PASS）；`pnpm -C frontend check:capability-guard-wiring`（PASS）；`pnpm -C frontend type-check`（PASS）；`pnpm -C frontend vitest run src/routes/__tests__/AppRoutes.authz-metadata.test.ts`（3 passed）。
+
 - Phase 3 P3c E2E 权限拒绝用例稳定性修复（2026-02-28）：`frontend/tests/e2e/security/access-denied.spec.ts` 的“普通账号受限”断言从页面重定向/文案匹配改为校验 admin-only API（`GET /api/v1/system/backup/stats`）返回 `401/403`。该修复消除对前端 capability guard 开关与页面文案差异的脆弱依赖，保持授权拒绝语义稳定。
 
 - Phase 3 P3c Exit 验收闭环（2026-02-28）：1) 修复前端全量单测阻断根因，`frontend/src/components/Asset/__tests__/AssetExport.test.tsx` 与 `frontend/src/pages/System/__tests__/RoleManagementPage.test.tsx` 补齐 `renderWithProviders` 导入，并将 `AssetExport` 测试中的 `@tanstack/react-query` / `antd` mock 调整为“保留真实导出 + 局部覆盖”；2) `frontend/src/test/setup.ts` 新增全局 `renderWithProviders` 注入，并将 MSW 启动改为容错降级（模块 mock 冲突时跳过 server bootstrap），恢复跨文件测试基座稳定性；3) 回填 P3c 执行证据 `docs/plans/execution/phase3c-exit-readiness-20260228.md`，并将计划文档提升至 v1.55。验证：`pnpm -C frontend test`（通过）；`pnpm -C frontend lint && pnpm -C frontend guard:ui && pnpm -C frontend type-check && pnpm -C frontend type-check:e2e`（通过）。

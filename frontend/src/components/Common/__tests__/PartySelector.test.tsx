@@ -90,9 +90,7 @@ describe('PartySelector', () => {
   });
 
   it('shows 403 message when party.read is denied', async () => {
-    vi.mocked(partyService.searchParties).mockRejectedValue(
-      new Error('403 PERMISSION_DENIED')
-    );
+    vi.mocked(partyService.searchParties).mockRejectedValue(new Error('403 PERMISSION_DENIED'));
 
     renderWithProviders(<PartySelector />);
 
