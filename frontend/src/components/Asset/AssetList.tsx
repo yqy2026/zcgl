@@ -66,6 +66,24 @@ function getOccupancyRateClassName(rate: number): string {
   return styles.occupancyRateError;
 }
 
+const normalizeOwnerName = (value: string | undefined): string | undefined => {
+  if (value == null) {
+    return undefined;
+  }
+  const normalized = value.trim();
+  return normalized === '' ? undefined : normalized;
+};
+
+export function resolveOwnerPartyName(
+  record: Pick<Asset, 'owner_party_name' | 'ownership_entity'>
+): string | undefined {
+  const ownerPartyName = normalizeOwnerName(record.owner_party_name);
+  if (ownerPartyName != null) {
+    return ownerPartyName;
+  }
+  return normalizeOwnerName(record.ownership_entity);
+}
+
 interface AssetListProps {
   data?: AssetListResponse;
   loading?: boolean;
@@ -188,14 +206,20 @@ const AssetList: React.FC<AssetListProps> = ({
       },
       {
         title: '权属方',
-        dataIndex: 'owner_party_name',
-        key: 'owner_party_name',
+        dataIndex: 'ownership_entity',
+        key: 'ownership_entity',
         width: 150,
         sorter: true,
         ellipsis: {
           showTitle: false,
         },
-        render: (text: string | undefined) => <Tooltip title={text}>{text ?? '-'}</Tooltip>,
+        render: (text: string | undefined, record: Asset) => {
+          const displayText = resolveOwnerPartyName({
+            owner_party_name: record.owner_party_name,
+            ownership_entity: text ?? record.ownership_entity,
+          });
+          return <Tooltip title={displayText}>{displayText ?? '-'}</Tooltip>;
+        },
       },
       {
         title: '权属类别',

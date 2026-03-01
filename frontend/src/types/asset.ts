@@ -5,6 +5,8 @@ export interface Asset {
   owner_party_id?: string;
   manager_party_id?: string;
   owner_party_name?: string;
+  /** @deprecated 兼容旧字段，后续统一使用 owner_party_name。 */
+  ownership_entity?: string;
   manager_party_name?: string;
   ownership_category?: string;
   project_name?: string;
@@ -253,6 +255,8 @@ export interface AssetSearchParams {
   usage_status?: UsageStatus;
   property_nature?: PropertyNature;
   owner_party_id?: string;
+  /** @deprecated 兼容旧筛选键名，后续统一使用 owner_party_id。 */
+  ownership_id?: string;
   manager_party_id?: string;
   owner_party_name?: string;
   manager_party_name?: string;

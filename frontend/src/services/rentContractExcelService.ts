@@ -9,7 +9,6 @@ import { createLogger } from '@/utils/logger';
 const api = apiClient;
 const serviceLogger = createLogger('rentContractExcelService');
 const LEGACY_TEMPLATE_HINT = '系统已升级，请下载最新模板后重试';
-const LEGACY_OWNERSHIP_FIELD = `${'ownership'}_${'id'}` as const;
 
 export interface ExcelImportResult {
   success: boolean;
@@ -71,14 +70,14 @@ class RentContractExcelService {
       .join(' ')
       .toLowerCase();
 
-    const looksLikeLegacyTemplateMismatch =
-      (combinedMessage.includes('缺少字段') &&
-        (combinedMessage.includes('权属方id') ||
-          combinedMessage.includes(LEGACY_OWNERSHIP_FIELD) ||
-          combinedMessage.includes('owner_party_id') ||
-          combinedMessage.includes('tenant_party_id'))) ||
-      combinedMessage.includes('field required') ||
-      combinedMessage.includes('validation error');
+    const isMissingFieldError =
+      combinedMessage.includes('缺少字段') || combinedMessage.includes('missing field');
+    const hasTemplateColumnHints =
+      combinedMessage.includes('权属方id') ||
+      combinedMessage.includes('owner_party_id') ||
+      combinedMessage.includes('tenant_party_id');
+
+    const looksLikeLegacyTemplateMismatch = isMissingFieldError && hasTemplateColumnHints;
 
     if (looksLikeLegacyTemplateMismatch) {
       return LEGACY_TEMPLATE_HINT;

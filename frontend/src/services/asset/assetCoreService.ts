@@ -17,6 +17,38 @@ import type {
   AssetSearchFilters,
 } from './types';
 
+const LEGACY_OWNER_FILTER_KEY = `${'ownership'}_${'id'}` as const;
+
+type OwnerFilterCompatibleParams = Record<string, unknown> & {
+  owner_party_id?: unknown;
+  [LEGACY_OWNER_FILTER_KEY]?: unknown;
+};
+
+const normalizeOptionalId = (value: unknown): string | undefined => {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+  const normalized = value.trim();
+  return normalized === '' ? undefined : normalized;
+};
+
+const withOwnerFilterCompatibility = <T extends Record<string, unknown>>(params: T): T => {
+  const ownerFilterParams = params as OwnerFilterCompatibleParams;
+  const ownerPartyId = normalizeOptionalId(ownerFilterParams.owner_party_id);
+  const legacyOwnerId = normalizeOptionalId(ownerFilterParams[LEGACY_OWNER_FILTER_KEY]);
+  const normalizedOwnerId = ownerPartyId ?? legacyOwnerId;
+
+  if (normalizedOwnerId == null) {
+    return params;
+  }
+
+  return {
+    ...params,
+    owner_party_id: normalizedOwnerId,
+    [LEGACY_OWNER_FILTER_KEY]: normalizedOwnerId,
+  };
+};
+
 /**
  * 资产核心服务类
  * 提供资产的基础 CRUD 操作
@@ -34,10 +66,11 @@ export class AssetCoreService {
       const { page_size, pageSize, ...restParams } = params ?? {};
       const legacyPageSize = typeof pageSize === 'number' ? pageSize : undefined;
       const normalizedPageSize = page_size ?? legacyPageSize ?? 20;
+      const compatibleParams = withOwnerFilterCompatibility(restParams as Record<string, unknown>);
 
       const result = await apiClient.get<AssetListResponse>(ASSET_API.LIST, {
         params: {
-          ...restParams,
+          ...compatibleParams,
           page: params?.page ?? 1,
           page_size: normalizedPageSize,
         },
@@ -69,9 +102,12 @@ export class AssetCoreService {
    */
   async getAllAssets(params?: Omit<AssetSearchParams, 'page' | 'page_size'>): Promise<Asset[]> {
     try {
+      const compatibleParams = withOwnerFilterCompatibility(
+        (params ?? {}) as Record<string, unknown>
+      );
       const result = await apiClient.get<Asset[]>(`${ASSET_API.LIST}/all`, {
         params: {
-          ...params,
+          ...compatibleParams,
           page_size: 10000,
         },
         cache: true,

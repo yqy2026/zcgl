@@ -132,6 +132,56 @@ describe('AssetCoreService', () => {
       );
     });
 
+    it('should send both owner_party_id and ownership_id when owner filter uses owner_party_id', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        success: true,
+        data: {
+          items: [],
+          total: 0,
+          page: 1,
+          page_size: 20,
+          pages: 0,
+        },
+      });
+
+      await service.getAssets({ owner_party_id: 'party-1' });
+
+      expect(apiClient.get).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          params: expect.objectContaining({
+            owner_party_id: 'party-1',
+            ownership_id: 'party-1',
+          }),
+        })
+      );
+    });
+
+    it('should send both owner_party_id and ownership_id when owner filter uses ownership_id', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        success: true,
+        data: {
+          items: [],
+          total: 0,
+          page: 1,
+          page_size: 20,
+          pages: 0,
+        },
+      });
+
+      await service.getAssets({ ownership_id: 'party-legacy' });
+
+      expect(apiClient.get).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          params: expect.objectContaining({
+            owner_party_id: 'party-legacy',
+            ownership_id: 'party-legacy',
+          }),
+        })
+      );
+    });
+
     it('should return empty list when API returns success false', async () => {
       vi.mocked(apiClient.get).mockResolvedValue({
         success: false,
@@ -601,6 +651,25 @@ describe('AssetCoreService', () => {
         expect.any(String),
         expect.objectContaining({
           params: expect.objectContaining({ ownership_id: 'own-1' }),
+        })
+      );
+    });
+
+    it('should keep owner filter compatibility in all-assets endpoint', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        success: true,
+        data: [],
+      });
+
+      await service.getAllAssets({ owner_party_id: 'party-2' });
+
+      expect(apiClient.get).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          params: expect.objectContaining({
+            owner_party_id: 'party-2',
+            ownership_id: 'party-2',
+          }),
         })
       );
     });

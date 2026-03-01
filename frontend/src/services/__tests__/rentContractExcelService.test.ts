@@ -108,4 +108,15 @@ describe('rentContractExcelService', () => {
       '系统已升级，请下载最新模板后重试'
     );
   });
+
+  it('keeps original import error details for non-template validation errors', async () => {
+    const file = new File(['excel-content'], 'contracts.xlsx', {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    vi.mocked(apiClient.post).mockRejectedValue(new Error('合同编号重复'));
+
+    await expect(rentContractExcelService.importFromFile(file)).rejects.toThrow(
+      '导入Excel失败: 合同编号重复'
+    );
+  });
 });

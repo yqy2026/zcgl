@@ -25,6 +25,7 @@ interface AssetSearchFormValues {
   usage_status?: string;
   data_status?: string;
   owner_party_id?: string;
+  ownership_id?: string;
   business_category?: string;
   areaRange?: [number, number];
   dateRange?: [Dayjs, Dayjs];
@@ -43,6 +44,14 @@ interface AssetSearchProps {
   showSaveButton?: boolean;
   showHistoryButton?: boolean;
 }
+
+const normalizeOptionalId = (value: unknown): string | undefined => {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+  const normalized = value.trim();
+  return normalized === '' ? undefined : normalized;
+};
 
 const AssetSearch: React.FC<AssetSearchProps> = ({
   onSearch,
@@ -119,7 +128,19 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
   // 设置初始值
   useEffect(() => {
     if (Object.keys(initialValues).length > 0) {
-      form.setFieldsValue(initialValues);
+      const normalizedInitialValues: Partial<AssetSearchParams> & Record<string, unknown> = {
+        ...initialValues,
+      };
+      const normalizedOwnerId =
+        normalizeOptionalId(initialValues.owner_party_id) ??
+        normalizeOptionalId(initialValues.ownership_id);
+
+      if (normalizedOwnerId != null) {
+        normalizedInitialValues.owner_party_id = normalizedOwnerId;
+        normalizedInitialValues.ownership_id = normalizedOwnerId;
+      }
+
+      form.setFieldsValue(normalizedInitialValues);
     }
   }, [initialValues, form]);
 
@@ -151,6 +172,16 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
       values.area_min = values.areaRange[0];
       values.area_max = values.areaRange[1];
       delete values.areaRange;
+    }
+
+    const normalizedOwnerId =
+      normalizeOptionalId(values.owner_party_id) ?? normalizeOptionalId(values.ownership_id);
+    if (normalizedOwnerId != null) {
+      values.owner_party_id = normalizedOwnerId;
+      values.ownership_id = normalizedOwnerId;
+    } else {
+      delete values.owner_party_id;
+      delete values.ownership_id;
     }
 
     // 过滤空值

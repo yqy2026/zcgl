@@ -550,6 +550,25 @@ describe('AssetSearch', () => {
       expect(handleSearch).toHaveBeenCalled();
     });
 
+    it('搜索时应同时携带 owner_party_id 与 ownership_id 兼容筛选键', () => {
+      const handleSearch = vi.fn();
+      mockFormInstance.getFieldsValue.mockReturnValue({
+        owner_party_id: 'party-123',
+        search: '测试关键词',
+      });
+
+      renderWithProviders(<AssetSearch {...defaultProps} onSearch={handleSearch} />);
+      fireEvent.click(screen.getByText('搜索'));
+
+      expect(handleSearch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          owner_party_id: 'party-123',
+          ownership_id: 'party-123',
+          search: '测试关键词',
+        })
+      );
+    });
+
     it('点击重置按钮应该触发onReset', () => {
       const handleReset = vi.fn();
       renderWithProviders(<AssetSearch {...defaultProps} onReset={handleReset} />);
