@@ -97,4 +97,15 @@ describe('rentContractExcelService', () => {
     expect(params?.toString()).toContain('contract_ids=c-1');
     expect(params?.toString()).toContain('contract_ids=c-2');
   });
+
+  it('throws upgrade hint when import fails due to legacy template fields', async () => {
+    const file = new File(['excel-content'], 'contracts.xlsx', {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    vi.mocked(apiClient.post).mockRejectedValue(new Error('第 2 行缺少字段: 权属方ID'));
+
+    await expect(rentContractExcelService.importFromFile(file)).rejects.toThrow(
+      '系统已升级，请下载最新模板后重试'
+    );
+  });
 });

@@ -3,10 +3,13 @@
  */
 
 import { apiClient } from '@/api/client';
+import { ApiErrorHandler } from '@/utils/responseExtractor';
 import { createLogger } from '@/utils/logger';
 
 const api = apiClient;
 const serviceLogger = createLogger('rentContractExcelService');
+const LEGACY_TEMPLATE_HINT = '系统已升级，请下载最新模板后重试';
+const LEGACY_OWNERSHIP_FIELD = `${'ownership'}_${'id'}` as const;
 
 export interface ExcelImportResult {
   success: boolean;
@@ -41,6 +44,52 @@ export interface ExcelTemplateResult {
 
 class RentContractExcelService {
   private baseUrl = '/rental-contracts';
+
+  private normalizeText(value: unknown): string {
+    if (typeof value === 'string') {
+      return value;
+    }
+    if (value == null) {
+      return '';
+    }
+    return String(value);
+  }
+
+  private resolveImportErrorMessage(error: unknown): string {
+    const enhancedError = ApiErrorHandler.handleError(error);
+    const detailsText =
+      typeof enhancedError.details === 'string'
+        ? enhancedError.details
+        : enhancedError.details != null
+          ? JSON.stringify(enhancedError.details)
+          : '';
+    const combinedMessage = [
+      this.normalizeText(enhancedError.code),
+      this.normalizeText(enhancedError.message),
+      detailsText,
+    ]
+      .join(' ')
+      .toLowerCase();
+
+    const looksLikeLegacyTemplateMismatch =
+      (combinedMessage.includes('缺少字段') &&
+        (combinedMessage.includes('权属方id') ||
+          combinedMessage.includes(LEGACY_OWNERSHIP_FIELD) ||
+          combinedMessage.includes('owner_party_id') ||
+          combinedMessage.includes('tenant_party_id'))) ||
+      combinedMessage.includes('field required') ||
+      combinedMessage.includes('validation error');
+
+    if (looksLikeLegacyTemplateMismatch) {
+      return LEGACY_TEMPLATE_HINT;
+    }
+
+    if (enhancedError.message.trim() !== '') {
+      return `导入Excel失败: ${enhancedError.message}`;
+    }
+
+    return '导入Excel失败';
+  }
 
   /**
    * 下载Excel导入模板
@@ -85,7 +134,7 @@ class RentContractExcelService {
       return response.data as ExcelImportResult;
     } catch (error) {
       serviceLogger.error('导入Excel失败:', error as Error);
-      throw new Error('导入Excel失败');
+      throw new Error(this.resolveImportErrorMessage(error));
     }
   }
 
