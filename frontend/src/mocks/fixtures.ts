@@ -11,7 +11,7 @@ import { Asset, OwnershipStatus, PropertyNature, UsageStatus } from '@/types/ass
 
 export const mockAsset: Asset = {
   id: 'asset-001',
-  ownership_entity: '测试权属方',
+  owner_party_name: '测试权属方',
   ownership_category: '企业',
   project_name: '测试项目',
   property_name: '测试物业A',

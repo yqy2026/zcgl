@@ -130,7 +130,7 @@ const AssetCard: React.FC<AssetCardProps> = ({ asset, onView, onEdit, onDelete }
               <Space>
                 <UserOutlined className={styles.detailIcon} />
                 <Text type="secondary" className={styles.detailText}>
-                  {asset.ownership_entity}
+                  {asset.owner_party_name ?? '-'}
                 </Text>
               </Space>
             </div>

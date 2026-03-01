@@ -89,7 +89,7 @@ describe('AssetCard', () => {
     });
 
     it('应该显示权属方', () => {
-      const asset = createMockAsset({ ownership_entity: '测试集团有限公司' });
+      const asset = createMockAsset({ owner_party_name: '测试集团有限公司' });
       renderWithProviders(<AssetCard asset={asset} {...defaultProps} />);
 
       expect(screen.getByText(/权属方：测试集团有限公司/)).toBeInTheDocument();
@@ -466,7 +466,7 @@ describe('AssetCard', () => {
       const asset = createMockAsset({
         property_name: '',
         address: '',
-        ownership_entity: '',
+        owner_party_name: '',
       });
       renderWithProviders(<AssetCard asset={asset} {...defaultProps} />);
 

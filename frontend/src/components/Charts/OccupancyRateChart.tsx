@@ -29,8 +29,8 @@ interface _OccupancyRateData {
     total_area: number;
     rented_area: number;
   }>;
-  by_ownership_entity: Array<{
-    ownership_entity: string;
+  by_owner_party: Array<{
+    owner_party_name: string;
     rate: number;
     asset_count: number;
   }>;
@@ -199,15 +199,15 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({ filters, height
   const ownershipChartConfig = useMemo(
     () => ({
       data:
-        data?.by_ownership_entity?.map(
+        data?.by_owner_party?.map(
           (item): ColumnDataPoint => ({
             ownership:
-              item.ownership_entity.length > 10
-                ? item.ownership_entity.substring(0, 10) + '...'
-                : item.ownership_entity,
+              item.owner_party_name.length > 10
+                ? item.owner_party_name.substring(0, 10) + '...'
+                : item.owner_party_name,
             rate: item.rate,
             asset_count: item.asset_count,
-            full_name: item.ownership_entity,
+            full_name: item.owner_party_name,
             value: item.rate,
           })
         ) ?? [],
@@ -363,7 +363,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({ filters, height
           <Card className={styles.summaryCard}>
             <Statistic
               title="权属方数量"
-              value={data?.by_ownership_entity?.length ?? 0}
+              value={data?.by_owner_party?.length ?? 0}
               suffix="个"
               className={styles.statisticAccent}
             />

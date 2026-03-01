@@ -36,8 +36,8 @@ interface _AssetDistributionData {
     count: number;
     percentage: number;
   }>;
-  by_ownership_entity: Array<{
-    ownership_entity: string;
+  by_owner_party: Array<{
+    owner_party_name: string;
     count: number;
     percentage: number;
     total_area: number;
@@ -197,16 +197,16 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
   const ownershipEntityChartConfig = useMemo(
     () => ({
       data:
-        data?.by_ownership_entity?.slice(0, 10).map(
+        data?.by_owner_party?.slice(0, 10).map(
           (item): ColumnDataPoint => ({
             entity:
-              item.ownership_entity.length > 8
-                ? item.ownership_entity.substring(0, 8) + '...'
-                : item.ownership_entity,
+              item.owner_party_name.length > 8
+                ? item.owner_party_name.substring(0, 8) + '...'
+                : item.owner_party_name,
             count: item.count ?? 0,
             percentage: item.percentage,
             total_area: item.total_area,
-            full_name: item.ownership_entity,
+            full_name: item.owner_party_name,
             value: item.count ?? 0,
           })
         ) ?? [],
@@ -317,7 +317,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
           <Card className={styles.summaryCard}>
             <Statistic
               title="权属方数量"
-              value={data?.by_ownership_entity?.length ?? 0}
+              value={data?.by_owner_party?.length ?? 0}
               suffix="个"
               prefix={<UserOutlined />}
               className={styles.statisticAccent}

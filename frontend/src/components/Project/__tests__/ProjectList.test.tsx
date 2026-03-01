@@ -514,14 +514,14 @@ describe('ProjectList', () => {
                   ownership_relations: [
                     {
                       id: 'rel-inactive',
-                      ownership_id: 'ownership-inactive',
+                      party_id: 'ownership-inactive',
                       ownership_name: '已停用主体',
                       relation_type: 'owner',
                       is_active: false,
                     },
                     {
                       id: 'rel-active',
-                      ownership_id: 'ownership-active',
+                      party_id: 'ownership-active',
                       ownership_name: '有效主体',
                       relation_type: 'owner',
                       is_active: true,

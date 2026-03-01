@@ -30,8 +30,6 @@ export interface RentContractInitialData {
   contract_number?: string;
   asset_ids: string[]; // V2
   owner_party_id?: string;
-  /** @deprecated 兼容字段，后续统一使用 owner_party_id。 */
-  ownership_id?: string;
   manager_party_id?: string;
   tenant_party_id?: string;
   // V2: Contract Type & Upstream
@@ -76,8 +74,6 @@ export interface RentContractFormValues {
   owner_party_id: string;
   manager_party_id: string;
   tenant_party_id?: string;
-  /** @deprecated 兼容字段，后续统一使用 owner_party_id。 */
-  ownership_id?: string;
   contract_type?: ContractType;
   upstream_contract_id?: string;
   service_fee_rate?: number;
@@ -188,10 +184,9 @@ export const RentContractFormProvider: React.FC<RentContractFormProviderProps> =
   // Initialize form data
   useEffect(() => {
     if (initialData !== undefined && initialData !== null && mode === 'edit') {
-      const ownerPartyId = initialData.owner_party_id ?? initialData.ownership_id;
       const formData = {
         ...initialData,
-        owner_party_id: ownerPartyId,
+        owner_party_id: initialData.owner_party_id,
         sign_date: initialData.sign_date != null ? dayjs(initialData.sign_date) : undefined,
         start_date: initialData.start_date != null ? dayjs(initialData.start_date) : undefined,
         end_date: initialData.end_date != null ? dayjs(initialData.end_date) : undefined,

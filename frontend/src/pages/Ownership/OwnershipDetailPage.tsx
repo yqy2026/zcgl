@@ -87,7 +87,7 @@ const OwnershipDetailPage: React.FC = () => {
     queryKey: ['ownership-assets', id],
     queryFn: () =>
       assetService.getAssets({
-        ownership_id: id,
+        owner_party_id: id,
         page: 1,
         page_size: 100,
       }),
@@ -99,7 +99,7 @@ const OwnershipDetailPage: React.FC = () => {
     queryKey: ['ownership-contracts', id],
     queryFn: () =>
       rentContractService.getContracts({
-        ownership_id: id,
+        owner_party_id: id,
         page: 1,
         pageSize: 100,
       }),
@@ -111,7 +111,7 @@ const OwnershipDetailPage: React.FC = () => {
     queryKey: ['ownership-finance', id],
     queryFn: () =>
       rentContractService.getOwnershipStatistics({
-        ownership_ids: [id as string],
+        owner_party_ids: [id as string],
       }),
     enabled: id !== null && id !== undefined && id.length > 0,
   });

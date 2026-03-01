@@ -119,7 +119,7 @@ const AssetCard: React.FC<AssetCardProps> = ({
             </div>
             <div className={styles.metaRow}>
               <UserOutlined className={styles.metaIcon} />
-              <span className={styles.metaText}>权属方：{asset.ownership_entity}</span>
+              <span className={styles.metaText}>权属方：{asset.owner_party_name ?? '-'}</span>
             </div>
           </div>
         }

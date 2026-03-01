@@ -589,7 +589,7 @@ describe('AssetSearch', () => {
       renderWithProviders(<AssetSearch {...defaultProps} />);
 
       // 高级字段不应该显示
-      expect(screen.queryByTestId('form-item-ownership_id')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('form-item-owner_party_id')).not.toBeInTheDocument();
     });
 
     it('展开后应该显示高级搜索字段', () => {
@@ -600,7 +600,7 @@ describe('AssetSearch', () => {
       fireEvent.click(expandButton);
 
       // 高级字段应该显示
-      expect(screen.getByTestId('form-item-ownership_id')).toBeInTheDocument();
+      expect(screen.getByTestId('form-item-owner_party_id')).toBeInTheDocument();
       expect(screen.getByTestId('form-item-business_category')).toBeInTheDocument();
       expect(screen.getByTestId('form-item-is_litigated')).toBeInTheDocument();
     });

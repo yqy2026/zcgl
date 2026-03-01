@@ -264,13 +264,13 @@ const RentStatisticsPage: React.FC = () => {
   const ownershipColumns: ColumnsType<OwnershipRentStatistics> = [
     {
       title: '权属方名称',
-      dataIndex: 'ownership_name',
-      key: 'ownership_name',
+      dataIndex: 'owner_party_name',
+      key: 'owner_party_name',
       render: (text: string, record) => (
         <div className={styles.nameCell}>
           <div className={styles.primaryText}>{text}</div>
           <div className={styles.secondaryText}>
-            {truncateText(record.ownership_short_name, 24)}
+            {truncateText(record.owner_party_short_name, 24)}
           </div>
         </div>
       ),
@@ -432,7 +432,7 @@ const RentStatisticsPage: React.FC = () => {
 
   // 准备图表数据
   const ownershipChartData: PieChartDatum[] = ownershipStats.map(item => ({
-    type: item.ownership_name,
+    type: item.owner_party_name,
     value: Number(item.total_due_amount),
     paid: Number(item.total_paid_amount),
     overdue: Number(item.total_overdue_amount),
@@ -554,7 +554,7 @@ const RentStatisticsPage: React.FC = () => {
               <Table
                 columns={ownershipColumns}
                 dataSource={ownershipStats}
-                rowKey="ownership_id"
+                rowKey="owner_party_id"
                 pagination={false}
                 loading={isStatisticsLoading}
                 scroll={{ x: 800 }}

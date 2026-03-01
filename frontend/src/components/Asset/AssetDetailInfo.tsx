@@ -89,7 +89,7 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
               </span>
             }
           >
-            {asset.ownership_entity ?? '-'}
+            {asset.owner_party_name ?? '-'}
           </Descriptions.Item>
 
           <Descriptions.Item

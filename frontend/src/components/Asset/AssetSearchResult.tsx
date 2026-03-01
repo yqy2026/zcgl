@@ -109,13 +109,13 @@ const AssetSearchResult: React.FC<AssetSearchResultProps> = ({
                     <Space>
                       <UserOutlined className={styles.mutedIcon} />
                       <Text type="secondary">
-                        权属方: {highlightSearchText(asset.ownership_entity ?? '')}
+                        权属方: {highlightSearchText(asset.owner_party_name ?? '')}
                       </Text>
-                      {asset.management_entity != null && (
+                      {asset.manager_party_name != null && (
                         <>
                           <Text type="secondary">|</Text>
                           <Text type="secondary">
-                            管理方: {highlightSearchText(asset.management_entity)}
+                            管理方: {highlightSearchText(asset.manager_party_name)}
                           </Text>
                         </>
                       )}

@@ -55,8 +55,6 @@ interface FormValues {
   contract_number: string;
   asset_id?: string;
   owner_party_id?: string;
-  /** @deprecated 兼容字段，后续统一使用 owner_party_id。 */
-  ownership_id?: string;
   tenant_name: string;
   tenant_contact?: string;
   tenant_phone?: string;
@@ -85,7 +83,7 @@ interface EvidenceSnippet {
   source?: string;
 }
 
-type OwnerReferenceFields = Pick<FormValues, 'owner_party_id' | 'ownership_id'>;
+type OwnerReferenceFields = Pick<FormValues, 'owner_party_id'>;
 
 export const normalizeOptionalId = (value: string | undefined): string | undefined => {
   if (value == null) {
@@ -98,14 +96,11 @@ export const normalizeOptionalId = (value: string | undefined): string | undefin
 export const resolveOwnerReferences = (
   validatedValues: OwnerReferenceFields,
   storedValues: OwnerReferenceFields
-): { ownerPartyId: string | undefined; ownershipId: string | undefined } => {
+): { ownerPartyId: string | undefined } => {
   const ownerPartyId = normalizeOptionalId(
     validatedValues.owner_party_id ?? storedValues.owner_party_id
   );
-  const ownershipId = normalizeOptionalId(
-    validatedValues.ownership_id ?? storedValues.ownership_id
-  );
-  return { ownerPartyId, ownershipId };
+  return { ownerPartyId };
 };
 
 const ContractImportReview: React.FC<ContractImportReviewProps> = ({
@@ -229,7 +224,6 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
       contract_number: validatedData.contract_number ?? '',
       asset_id: recommendations.asset_id ?? '',
       owner_party_id: recommendations.owner_party_id ?? '',
-      ownership_id: recommendations.ownership_id ?? '',
       tenant_name: validatedData.tenant_name ?? '',
       tenant_contact: validatedData.tenant_contact ?? '',
       sign_date: validatedData.sign_date != null ? dayjs(String(validatedData.sign_date)) : null,
@@ -273,12 +267,11 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
       };
 
       // 转换日期格式
-      const { ownerPartyId, ownershipId } = resolveOwnerReferences(validatedValues, storedValues);
+      const { ownerPartyId } = resolveOwnerReferences(validatedValues, storedValues);
       const confirmedData: ConfirmedContractData = {
         contract_number: values.contract_number,
         asset_id: values.asset_id,
         owner_party_id: ownerPartyId,
-        ownership_id: ownershipId,
         tenant_name: values.tenant_name,
         tenant_contact: values.tenant_contact,
         tenant_phone: values.tenant_phone,
@@ -536,7 +529,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
         {result.matching_result.matched_ownerships.length > 0 ? (
           <Form.Item
             label="选择产权方主体"
-            name="ownership_id"
+            name="owner_party_id"
             rules={[{ required: true, message: '请选择关联的产权方主体' }]}
           >
             <Select

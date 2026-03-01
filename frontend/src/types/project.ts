@@ -16,8 +16,8 @@ export interface ProjectPartyRelation {
 
 export interface ProjectOwnershipRelationLegacy {
   id: string;
-  ownership_id: string;
-  ownership_name: string;
+  party_id: string;
+  party_name: string;
   relation_type: string;
   is_active: boolean;
 }
@@ -49,12 +49,6 @@ export interface ProjectCreate {
     relation_type: string;
     is_primary?: boolean;
   }>;
-
-  /** @deprecated 兼容旧字段，后续统一使用 party_relations。 */
-  [legacyProjectRelationsField]?: Array<{
-    ownership_id: string;
-    relation_type: string;
-  }>;
 }
 
 export interface ProjectUpdate {
@@ -64,12 +58,6 @@ export interface ProjectUpdate {
     party_id: string;
     relation_type: string;
     is_primary?: boolean;
-  }>;
-
-  /** @deprecated 兼容旧字段，后续统一使用 party_relations。 */
-  [legacyProjectRelationsField]?: Array<{
-    ownership_id: string;
-    relation_type: string;
   }>;
 }
 
@@ -111,8 +99,6 @@ export interface ProjectSearchParams {
   keyword?: string;
   is_active?: boolean;
   owner_party_id?: string;
-  /** @deprecated 兼容旧字段，后续统一使用 owner_party_id。 */
-  ownership_id?: string;
   page?: number;
   page_size?: number;
 }

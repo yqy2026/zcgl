@@ -19,5 +19,4 @@ export * as Ownership from './Ownership';
 export * as Project from './Project';
 export * as PropertyCertificate from './PropertyCertificate';
 export * as Rental from './Rental';
-export * as Router from './Router';
 export * as System from './System';

@@ -106,11 +106,11 @@ describe('AssetForm', () => {
     expect(handleCancel).toHaveBeenCalledTimes(1);
   });
 
-  it('编辑态应将 legacy ownership_id 回填到 owner_party_id', async () => {
+  it('编辑态应回填 owner_party_id', async () => {
     renderWithProviders(
       <AssetForm
         mode="edit"
-        initialData={{ ownership_id: 'party-legacy-owner' }}
+        initialData={{ owner_party_id: 'party-owner' }}
         onSubmit={vi.fn()}
         onCancel={vi.fn()}
       />
@@ -119,7 +119,7 @@ describe('AssetForm', () => {
     await waitFor(() => {
       expect(setFieldsValueMock).toHaveBeenCalledWith(
         expect.objectContaining({
-          owner_party_id: 'party-legacy-owner',
+          owner_party_id: 'party-owner',
         })
       );
     });

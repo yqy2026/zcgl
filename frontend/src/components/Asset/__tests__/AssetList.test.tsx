@@ -61,7 +61,7 @@ vi.mock('@/components/Common/TableWithPagination', () => ({
     dataSource?: Array<{
       id?: string;
       property_name?: string;
-      ownership_entity?: string;
+      owner_party_name?: string;
     }>;
     columns?: unknown;
     paginationState?: { current?: number; pageSize?: number; total?: number };
@@ -89,7 +89,7 @@ vi.mock('@/components/Common/TableWithPagination', () => ({
             'data-id': item.id,
             'data-property-name': item.property_name,
           },
-          `${item.property_name} - ${item.ownership_entity}`
+          `${item.property_name} - ${item.owner_party_name}`
         )
       )
     );
@@ -109,7 +109,7 @@ describe('AssetList - 组件导入测试', () => {
 describe('AssetList - 基础渲染测试', () => {
   const mockAsset = {
     id: '1',
-    ownership_entity: '测试权属方',
+    owner_party_name: '测试权属方',
     ownership_category: '1',
     project_name: '测试项目',
     property_name: '测试物业A',
@@ -203,7 +203,7 @@ describe('AssetList - 数据渲染测试', () => {
   const mockAssets = [
     {
       id: '1',
-      ownership_entity: '权属方A',
+      owner_party_name: '权属方A',
       ownership_category: '1',
       project_name: '项目1',
       property_name: '物业1',
@@ -222,7 +222,7 @@ describe('AssetList - 数据渲染测试', () => {
     },
     {
       id: '2',
-      ownership_entity: '权属方B',
+      owner_party_name: '权属方B',
       ownership_category: '2',
       project_name: '项目2',
       property_name: '物业2',
@@ -274,7 +274,7 @@ describe('AssetList - 数据渲染测试', () => {
 describe('AssetList - 交互操作测试', () => {
   const mockAsset = {
     id: 'asset-123',
-    ownership_entity: '测试权属方',
+    owner_party_name: '测试权属方',
     ownership_category: '1',
     project_name: '测试项目',
     property_name: '测试物业',
@@ -327,7 +327,7 @@ describe('AssetList - 行选择测试', () => {
   const mockAssets = [
     {
       id: '1',
-      ownership_entity: '权属方A',
+      owner_party_name: '权属方A',
       project_name: '项目1',
       property_name: '物业1',
       address: '地址1',
@@ -340,7 +340,7 @@ describe('AssetList - 行选择测试', () => {
     },
     {
       id: '2',
-      ownership_entity: '权属方B',
+      owner_party_name: '权属方B',
       project_name: '项目2',
       property_name: '物业2',
       address: '地址2',
@@ -449,7 +449,7 @@ describe('AssetList - 汇总行测试', () => {
   const mockAssets = [
     {
       id: '1',
-      ownership_entity: '权属方A',
+      owner_party_name: '权属方A',
       property_name: '物业1',
       address: '地址1',
       ownership_status: '已确权',
@@ -465,7 +465,7 @@ describe('AssetList - 汇总行测试', () => {
     },
     {
       id: '2',
-      ownership_entity: '权属方B',
+      owner_party_name: '权属方B',
       property_name: '物业2',
       address: '地址2',
       ownership_status: '未确权',

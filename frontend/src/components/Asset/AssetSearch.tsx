@@ -24,7 +24,7 @@ interface AssetSearchFormValues {
   property_nature?: string;
   usage_status?: string;
   data_status?: string;
-  ownership_id?: string;
+  owner_party_id?: string;
   business_category?: string;
   areaRange?: [number, number];
   dateRange?: [Dayjs, Dayjs];

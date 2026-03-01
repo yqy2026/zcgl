@@ -96,15 +96,15 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({ filters, heig
   // 权属方面积对比图表配置 - DualAxes for area + occupancy rate
   const ownershipEntityData = useMemo(
     () =>
-      data?.by_ownership_entity?.slice(0, 10).map(
+      data?.by_owner_party?.slice(0, 10).map(
         (item): DualAxesDataPoint => ({
           entity:
-            item.ownership_entity.length > 8
-              ? item.ownership_entity.substring(0, 8) + '...'
-              : item.ownership_entity,
+            item.owner_party_name.length > 8
+              ? item.owner_party_name.substring(0, 8) + '...'
+              : item.owner_party_name,
           total_area: item.total_area,
           occupancy_rate: item.occupancy_rate,
-          full_name: item.ownership_entity,
+          full_name: item.owner_party_name,
         })
       ) ?? [],
     [data]

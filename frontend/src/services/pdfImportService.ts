@@ -182,7 +182,7 @@ export interface ConfirmedContractData {
   contract_number: string;
   asset_id?: string;
   owner_party_id?: string;
-  /** @deprecated 兼容旧字段；仅在后端仍要求 ownership_id 的链路透传，不应与 owner_party_id 强制互写。 */
+  /** @deprecated 兼容旧字段透传，不应与 owner_party_id 强制互写。 */
   [legacyOwnerFilterField]?: string;
   tenant_name: string;
   tenant_contact?: string;

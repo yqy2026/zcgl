@@ -12,7 +12,7 @@ import { OwnershipStatus, PropertyNature, UsageStatus } from '@/types/asset';
 const defaultAsset: Asset = {
   id: 'test-asset-1',
   property_name: '测试物业',
-  ownership_entity: '测试权属方',
+  owner_party_name: '测试权属方',
   address: '测试地址',
   ownership_status: OwnershipStatus.CONFIRMED,
   property_nature: PropertyNature.COMMERCIAL,

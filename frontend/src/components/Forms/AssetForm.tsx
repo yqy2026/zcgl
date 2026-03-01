@@ -39,13 +39,6 @@ const normalizeOptionalId = (value: unknown): string | undefined => {
   return normalized !== '' ? normalized : undefined;
 };
 
-const resolveOwnerPartyId = (value: {
-  owner_party_id?: unknown;
-  ownership_id?: unknown;
-}): string | undefined => {
-  return normalizeOptionalId(value.owner_party_id) ?? normalizeOptionalId(value.ownership_id);
-};
-
 /**
  * Form completion progress bar component
  */
@@ -162,13 +155,9 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
   // Initialize form data
   useEffect(() => {
     if (initialData !== undefined && initialData !== null) {
-      const ownerPartyId = resolveOwnerPartyId({
-        owner_party_id: initialData.owner_party_id,
-        ownership_id: initialData.ownership_id,
-      });
       const formData = {
         ...initialData,
-        owner_party_id: ownerPartyId,
+        owner_party_id: normalizeOptionalId(initialData.owner_party_id),
         contract_start_date:
           initialData.contract_start_date != null
             ? dayjs(String(initialData.contract_start_date))
@@ -302,7 +291,7 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
         return parsed.isValid() ? parsed.format('YYYY-MM-DD') : undefined;
       };
 
-      const ownerPartyId = resolveOwnerPartyId(values);
+      const ownerPartyId = normalizeOptionalId(values.owner_party_id);
       const submitData = {
         ...values,
         owner_party_id: ownerPartyId,

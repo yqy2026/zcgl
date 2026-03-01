@@ -48,7 +48,7 @@ export const AdvancedSearchFields = React.memo(function AdvancedSearchFields({
     <>
       <Row gutter={16}>
         <Col xs={24} sm={12} md={8} lg={6}>
-          <Form.Item name="ownership_id" label="权属方">
+          <Form.Item name="owner_party_id" label="权属方">
             <Select
               placeholder="选择权属方"
               allowClear

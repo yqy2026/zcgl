@@ -52,8 +52,7 @@ export interface PropertyOwner {
   id_number: string | null;
   phone: string | null;
   address: string | null;
-  /** @deprecated Phase 3 兼容字段，待 Party 关联字段在 Phase 4 收敛后移除。 */
-  organization_id: string | null;
+  party_id: string | null;
   created_at: string;
   updated_at: string;
 }

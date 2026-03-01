@@ -353,7 +353,7 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
                 title: '产权方主体',
                 key: 'owner_party_name',
                 render: (_value: unknown, asset: (typeof contract.assets)[number]) =>
-                  asset.owner_party_name ?? asset.ownership_entity ?? '-',
+                  asset.owner_party_name ?? '-',
               },
             ]}
           />

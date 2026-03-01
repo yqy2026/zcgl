@@ -40,7 +40,7 @@ export interface ExcelTemplateResult {
 }
 
 class RentContractExcelService {
-  private baseUrl = '/api/rental';
+  private baseUrl = '/rental-contracts';
 
   /**
    * 下载Excel导入模板

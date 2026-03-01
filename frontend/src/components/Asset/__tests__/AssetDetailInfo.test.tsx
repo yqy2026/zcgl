@@ -271,7 +271,7 @@ describe('AssetDetailInfo', () => {
     });
 
     it('应该显示权属方', () => {
-      const asset = createMockAsset({ ownership_entity: '测试集团有限公司' });
+      const asset = createMockAsset({ owner_party_name: '测试集团有限公司' });
       renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       expect(screen.getByText('测试集团有限公司')).toBeInTheDocument();
@@ -536,7 +536,7 @@ describe('AssetDetailInfo', () => {
     });
 
     it('应该处理缺失的权属方', () => {
-      const asset = createMockAsset({ ownership_entity: undefined });
+      const asset = createMockAsset({ owner_party_name: undefined });
       renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       const dashElements = screen.getAllByText('-');

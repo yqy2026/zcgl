@@ -67,10 +67,6 @@ export interface RentContractAsset {
   address?: string;
   owner_party_name?: string;
   manager_party_name?: string;
-  /** @deprecated Phase 3 迁移期兼容字段，请优先使用 owner_party_name。 */
-  ownership_entity?: string;
-  /** @deprecated Phase 3 迁移期兼容字段，请优先使用 manager_party_name。 */
-  management_entity?: string;
 }
 
 export interface RentContract {
@@ -81,8 +77,6 @@ export interface RentContract {
   owner_party_id?: string;
   manager_party_id?: string;
   tenant_party_id?: string;
-  /** @deprecated Phase 3 迁移期兼容字段，请优先使用 owner_party_id。 */
-  ownership_id?: string;
   // V2: 合同类型和上游关联
   contract_type: ContractType;
   upstream_contract_id?: string;
@@ -120,8 +114,6 @@ export interface RentLedger {
   asset_id: string;
   owner_party_id?: string;
   manager_party_id?: string;
-  /** @deprecated Phase 3 迁移期兼容字段，请优先使用 owner_party_id。 */
-  ownership_id?: string;
   year_month: string;
   due_date: string;
   due_amount: number;
@@ -196,8 +188,6 @@ export interface RentContractCreate {
   owner_party_id: string;
   manager_party_id: string;
   tenant_party_id?: string;
-  /** @deprecated Phase 3 迁移期兼容字段，请优先使用 owner_party_id。 */
-  ownership_id?: string;
   contract_type?: ContractType;
   upstream_contract_id?: string;
   service_fee_rate?: number;
@@ -224,8 +214,6 @@ export interface RentContractUpdate {
   owner_party_id?: string;
   manager_party_id?: string;
   tenant_party_id?: string;
-  /** @deprecated Phase 3 迁移期兼容字段，请优先使用 owner_party_id。 */
-  ownership_id?: string;
   contract_type?: ContractType;
   upstream_contract_id?: string;
   service_fee_rate?: number;
@@ -270,8 +258,6 @@ export interface RentLedgerCreate {
   contract_id: string;
   asset_id: string;
   owner_party_id?: string;
-  /** @deprecated Phase 3 迁移期兼容字段，请优先使用 owner_party_id。 */
-  ownership_id?: string;
   year_month: string;
   due_date: string;
   due_amount: number;
@@ -314,9 +300,9 @@ export interface GenerateLedgerRequest {
 
 // 统计相关类型
 export interface OwnershipRentStatistics {
-  ownership_id: string;
-  ownership_name: string;
-  ownership_short_name: string;
+  owner_party_id: string;
+  owner_party_name: string;
+  owner_party_short_name: string;
   contract_count: number;
   total_due_amount: number;
   total_paid_amount: number;
@@ -349,8 +335,6 @@ export interface RentStatisticsQuery {
   end_date?: string;
   owner_party_ids?: string[];
   manager_party_ids?: string[];
-  /** @deprecated Phase 3 迁移期兼容字段，请优先使用 owner_party_ids。 */
-  ownership_ids?: string[];
   asset_ids?: string[];
 }
 
@@ -366,8 +350,6 @@ export interface RentContractQueryParams {
   manager_party_id?: string;
   owner_party_ids?: string[];
   manager_party_ids?: string[];
-  /** @deprecated Phase 3 迁移期兼容字段，请优先使用 owner_party_id。 */
-  ownership_id?: string;
   contract_status?: string;
   start_date?: string;
   end_date?: string;
@@ -383,8 +365,6 @@ export interface RentLedgerQueryParams {
   manager_party_id?: string;
   owner_party_ids?: string[];
   manager_party_ids?: string[];
-  /** @deprecated Phase 3 迁移期兼容字段，请优先使用 owner_party_id。 */
-  ownership_id?: string;
   year_month?: string;
   payment_status?: string;
   start_date?: string;
@@ -435,8 +415,6 @@ export interface RentContractFormData {
     owner_party_id: string;
     manager_party_id: string;
     tenant_party_id?: string;
-    /** @deprecated Phase 3 迁移期兼容字段，请优先使用 owner_party_id。 */
-    ownership_id?: string;
     contract_type?: ContractType;
     upstream_contract_id?: string;
     service_fee_rate?: number;
@@ -491,8 +469,6 @@ export interface RentContractSearchFilters {
   keyword?: string;
   asset_id?: string;
   owner_party_id?: string;
-  /** @deprecated Phase 3 迁移期兼容字段，请优先使用 owner_party_id。 */
-  ownership_id?: string;
   contract_status?: string;
   date_range?: [string, string];
 }
@@ -501,8 +477,6 @@ export interface RentLedgerSearchFilters {
   keyword?: string;
   asset_id?: string;
   owner_party_id?: string;
-  /** @deprecated Phase 3 迁移期兼容字段，请优先使用 owner_party_id。 */
-  ownership_id?: string;
   contract_id?: string;
   payment_status?: string;
   year_month?: string;

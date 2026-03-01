@@ -49,7 +49,7 @@ import styles from './ProjectList.module.css';
 
 interface LegacyOwnershipRelation {
   id?: string;
-  ownership_id?: string;
+  party_id?: string;
   is_active?: boolean;
 }
 
@@ -94,11 +94,11 @@ const isRelationActive = (
 
   const partyId = relation.party_id.trim();
   if (partyId !== '') {
-    const matchedByOwnershipId = legacyRelations.find(
-      legacyRelation => legacyRelation.ownership_id === partyId
+    const matchedByPartyId = legacyRelations.find(
+      legacyRelation => legacyRelation.party_id === partyId
     );
-    if (matchedByOwnershipId != null) {
-      return matchedByOwnershipId.is_active === true;
+    if (matchedByPartyId != null) {
+      return matchedByPartyId.is_active === true;
     }
   }
 

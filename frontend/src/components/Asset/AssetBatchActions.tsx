@@ -267,7 +267,7 @@ const AssetBatchActions: React.FC<AssetBatchActionsProps> = ({
             </Select>
           </Form.Item>
 
-          <Form.Item name="management_entity" label="经营管理方">
+          <Form.Item name="manager_party_id" label="经营管理方ID">
             <Input placeholder="请输入（不修改请留空）" />
           </Form.Item>
 
@@ -319,11 +319,11 @@ const AssetBatchActions: React.FC<AssetBatchActionsProps> = ({
             <Select
               mode="multiple"
               placeholder="选择要导出的字段"
-              defaultValue={['property_name', 'ownership_entity', 'address']}
+              defaultValue={['property_name', 'owner_party_name', 'address']}
             >
               <Option value="property_name">物业名称</Option>
-              <Option value="ownership_entity">权属方</Option>
-              <Option value="management_entity">经营管理方</Option>
+              <Option value="owner_party_name">权属方</Option>
+              <Option value="manager_party_name">经营管理方</Option>
               <Option value="address">所在地址</Option>
               <Option value="land_area">土地面积</Option>
               <Option value="actual_property_area">实际面积</Option>

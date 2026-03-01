@@ -18,6 +18,11 @@ import { dataPolicyService } from '@/services/dataPolicyService';
 import { MessageManager } from '@/utils/messageManager';
 import type { DataPolicyPackageCode } from '@/types/dataPolicy';
 
+interface UpdateRolePoliciesVariables {
+  roleId: string;
+  policyPackages: DataPolicyPackageCode[];
+}
+
 const DataPolicyManagementPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [roleIdInput, setRoleIdInput] = useState('');
@@ -48,18 +53,30 @@ const DataPolicyManagementPage: React.FC = () => {
     }
   }, [rolePoliciesQuery.data?.policy_packages]);
 
+  const hasActiveRole = activeRoleId != null && activeRoleId.trim() !== '';
+  const isCurrentRolePoliciesLoaded =
+    hasActiveRole &&
+    rolePoliciesQuery.isSuccess &&
+    rolePoliciesQuery.data?.role_id === activeRoleId;
+
   const updateMutation = useMutation({
-    mutationFn: async () => {
-      if (activeRoleId == null || activeRoleId.trim() === '') {
+    mutationFn: async (variables: UpdateRolePoliciesVariables) => {
+      if (variables.roleId.trim() === '') {
         throw new Error('请先选择角色 ID');
       }
-      return dataPolicyService.updateRoleDataPolicies(activeRoleId, {
-        policy_packages: selectedPackages,
+
+      if (!isCurrentRolePoliciesLoaded) {
+        throw new Error('请先成功加载当前角色策略后再保存');
+      }
+
+      return dataPolicyService.updateRoleDataPolicies(variables.roleId, {
+        policy_packages: variables.policyPackages,
       });
     },
-    onSuccess: data => {
+    onSuccess: (data, variables) => {
       MessageManager.success('策略包配置已保存');
-      queryClient.setQueryData(['role-data-policies', activeRoleId], data);
+      const responseRoleId = data.role_id.trim() !== '' ? data.role_id : variables.roleId;
+      queryClient.setQueryData(['role-data-policies', responseRoleId], data);
     },
     onError: error => {
       const message = error instanceof Error ? error.message : '保存失败';
@@ -138,9 +155,18 @@ const DataPolicyManagementPage: React.FC = () => {
           extra={
             <Button
               type="primary"
-              onClick={() => void updateMutation.mutateAsync()}
+              onClick={() => {
+                if (activeRoleId == null || activeRoleId.trim() === '') {
+                  return;
+                }
+
+                void updateMutation.mutateAsync({
+                  roleId: activeRoleId,
+                  policyPackages: selectedPackages,
+                });
+              }}
               loading={updateMutation.isPending}
-              disabled={activeRoleId == null || activeRoleId.trim() === ''}
+              disabled={!isCurrentRolePoliciesLoaded}
             >
               保存配置
             </Button>

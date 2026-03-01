@@ -188,14 +188,14 @@ const AssetList: React.FC<AssetListProps> = ({
       },
       {
         title: '权属方',
-        dataIndex: 'ownership_entity',
-        key: 'ownership_entity',
+        dataIndex: 'owner_party_name',
+        key: 'owner_party_name',
         width: 150,
         sorter: true,
         ellipsis: {
           showTitle: false,
         },
-        render: (text: string) => <Tooltip title={text}>{text}</Tooltip>,
+        render: (text: string | undefined) => <Tooltip title={text}>{text ?? '-'}</Tooltip>,
       },
       {
         title: '权属类别',

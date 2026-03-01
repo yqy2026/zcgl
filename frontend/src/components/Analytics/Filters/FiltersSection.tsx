@@ -145,8 +145,8 @@ const FiltersSection: React.FC = () => {
           className={styles.fieldControl}
           placeholder="请选择权属主体"
           allowClear
-          value={localFilters.ownership_id}
-          onChange={value => handleFilterChange('ownership_id', value)}
+          value={localFilters.owner_party_id}
+          onChange={value => handleFilterChange('owner_party_id', value)}
           loading={loading || ownershipLoading}
           options={ownershipOptions}
         ></Select>

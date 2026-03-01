@@ -1,7 +1,6 @@
 import React from 'react';
 import { Button, Result } from 'antd';
 import { useCapabilities } from '@/hooks/useCapabilities';
-import { PERMISSIONS } from '@/hooks/usePermission';
 import type { AuthzAction, ResourceType } from '@/types/capability';
 
 interface PermissionGuardProps {
@@ -87,32 +86,3 @@ const PermissionGuard: React.FC<PermissionGuardProps> = ({
 
 export default PermissionGuard;
 export { PermissionGuard };
-
-// 预定义的权限保护组件
-export const UserManagementGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <PermissionGuard permissions={[PERMISSIONS.USER_VIEW]}>{children}</PermissionGuard>
-);
-
-export const RoleManagementGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <PermissionGuard permissions={[PERMISSIONS.ROLE_VIEW]}>{children}</PermissionGuard>
-);
-
-export const OrganizationManagementGuard: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => <PermissionGuard permissions={[PERMISSIONS.ORGANIZATION_VIEW]}>{children}</PermissionGuard>;
-
-export const SystemLogsGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <PermissionGuard permissions={[PERMISSIONS.SYSTEM_LOGS]}>{children}</PermissionGuard>
-);
-
-export const AssetManagementGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <PermissionGuard permissions={[PERMISSIONS.ASSET_VIEW]}>{children}</PermissionGuard>
-);
-
-export const AssetCreateGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <PermissionGuard permissions={[PERMISSIONS.ASSET_CREATE]}>{children}</PermissionGuard>
-);
-
-export const RentalManagementGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <PermissionGuard permissions={[PERMISSIONS.RENTAL_VIEW]}>{children}</PermissionGuard>
-);

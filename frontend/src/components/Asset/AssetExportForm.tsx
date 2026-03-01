@@ -144,8 +144,8 @@ const AssetExportForm: React.FC<AssetExportFormProps> = ({
                             ownership_status: '确权状态',
                             property_nature: '物业性质',
                             usage_status: '使用状态',
-                            ownership_entity: '权属方',
-                            management_entity: '管理方',
+                            owner_party_name: '权属方',
+                            manager_party_name: '管理方',
                             business_category: '业态类别',
                           };
 

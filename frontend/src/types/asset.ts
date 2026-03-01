@@ -4,9 +4,8 @@ export interface Asset {
   // 基本信息 - 按照权属方、权属类别、项目名称、物业名称、物业地址顺序
   owner_party_id?: string;
   manager_party_id?: string;
-  /** @deprecated Phase 3 迁移期兼容字段，请使用 owner_party_id。 */
-  ownership_id?: string;
-  ownership_entity?: string;
+  owner_party_name?: string;
+  manager_party_name?: string;
   ownership_category?: string;
   project_name?: string;
   property_name: string;
@@ -45,7 +44,6 @@ export interface Asset {
 
   // 管理相关字段
   manager_name?: string;
-  management_entity?: string; // 管理方
   business_model?: BusinessModel; // 接收模式
   operation_status?: OperationStatus;
 
@@ -218,7 +216,8 @@ export type AssetFormData = Omit<
   | 'unrented_area'
   | 'occupancy_rate'
   | 'net_income'
-  | 'ownership_entity'
+  | 'owner_party_name'
+  | 'manager_party_name'
 >;
 
 // API响应接口
@@ -253,7 +252,10 @@ export interface AssetSearchParams {
   ownership_status?: OwnershipStatus;
   usage_status?: UsageStatus;
   property_nature?: PropertyNature;
-  management_entity?: string;
+  owner_party_id?: string;
+  manager_party_id?: string;
+  owner_party_name?: string;
+  manager_party_name?: string;
   business_category?: string; // 改为string类型以匹配使用
   is_litigated?: boolean;
   tenant_type?: TenantType;
@@ -279,7 +281,6 @@ export interface AssetSearchParams {
   operation_status?: string;
   // V2: 关联筛选
   project_id?: string;
-  ownership_id?: string;
   // 添加索引签名以支持动态字段访问
   [key: string]: unknown;
 }
@@ -293,7 +294,8 @@ export type AssetCreateRequest = Omit<
   | 'unrented_area'
   | 'occupancy_rate'
   | 'net_income'
-  | 'ownership_entity'
+  | 'owner_party_name'
+  | 'manager_party_name'
   | 'tenant_name'
   | 'lease_contract_number'
   | 'contract_start_date'
@@ -413,7 +415,7 @@ export interface AssetValidationRules {
 // 面积统计数据接口
 export interface AreaStatistics {
   by_property_nature?: PropertyNatureStat[];
-  by_ownership_entity?: OwnershipEntityStat[];
+  by_owner_party?: OwnerPartyAreaStat[];
   area_ranges?: AreaRangeStat[];
   by_usage_status?: Array<{
     usage_status: string;
@@ -441,8 +443,8 @@ export interface PropertyNatureStat {
 }
 
 // 按权属方统计
-export interface OwnershipEntityStat {
-  ownership_entity: string;
+export interface OwnerPartyAreaStat {
+  owner_party_name: string;
   total_area: number;
   occupancy_rate: number;
 }
