@@ -181,23 +181,100 @@ class AssetService:
         *,
         current_asset: Asset | None = None,
     ) -> dict[str, Any]:
-        ownership_id = data.get("ownership_id") or (
-            current_asset.ownership_id if current_asset else None
-        )
-
-        if not ownership_id and current_asset is None:
-            raise validation_error(
-                "权属方不能为空", field_errors={"ownership_id": "权属方不能为空"}
+        owner_party_id = _normalize_optional_str(data.get("owner_party_id"))
+        legacy_ownership_id = _normalize_optional_str(data.get("ownership_id"))
+        if owner_party_id is None and legacy_ownership_id is not None:
+            owner_party_id = await self.resolve_owner_party_scope_by_ownership_id_async(
+                ownership_id=legacy_ownership_id,
+            )
+        if owner_party_id is None and current_asset is not None:
+            owner_party_id = _normalize_optional_str(
+                getattr(current_asset, "owner_party_id", None)
             )
 
-        if ownership_id:
-            ownership_obj = await ownership.get(self.db, id=ownership_id)
-            if not ownership_obj:
+        if not owner_party_id and current_asset is None:
+            raise validation_error(
+                "权属主体不能为空", field_errors={"owner_party_id": "权属主体不能为空"}
+            )
+
+        if owner_party_id:
+            party_obj = await party_crud.get_party(self.db, party_id=owner_party_id)
+            if party_obj is None and legacy_ownership_id is None:
+                # 兼容误将 legacy ownership_id 透传到 owner_party_id 的调用方
+                fallback_party_id = await self.resolve_owner_party_scope_by_ownership_id_async(
+                    ownership_id=owner_party_id,
+                )
+                if (
+                    fallback_party_id is not None
+                    and fallback_party_id != owner_party_id
+                ):
+                    owner_party_id = fallback_party_id
+                    party_obj = await party_crud.get_party(
+                        self.db,
+                        party_id=owner_party_id,
+                    )
+            if not party_obj:
                 raise validation_error(
-                    "权属方不存在", field_errors={"ownership_id": "权属方不存在"}
+                    "权属主体不存在", field_errors={"owner_party_id": "权属主体不存在"}
                 )
 
-        data["ownership_id"] = ownership_id
+        manager_party_id = _normalize_optional_str(data.get("manager_party_id"))
+        legacy_management_entity = _normalize_optional_str(data.get("management_entity"))
+        legacy_organization_id = _normalize_optional_str(data.get("organization_id"))
+
+        if manager_party_id is None and legacy_management_entity is not None:
+            manager_party_id = legacy_management_entity
+
+        if manager_party_id is None and legacy_organization_id is not None:
+            resolved_org_party_id = await party_crud.resolve_organization_party_id(
+                self.db,
+                organization_id=legacy_organization_id,
+            )
+            manager_party_id = (
+                resolved_org_party_id
+                if resolved_org_party_id is not None
+                else legacy_organization_id
+            )
+
+        if manager_party_id is None and current_asset is not None:
+            manager_party_id = _normalize_optional_str(
+                getattr(current_asset, "manager_party_id", None)
+            )
+
+        # Step4 兼容：历史调用方通常只提供 ownership_id，默认回填管理主体为产权主体。
+        if manager_party_id is None and owner_party_id is not None:
+            manager_party_id = owner_party_id
+
+        if manager_party_id:
+            manager_party_obj = await party_crud.get_party(
+                self.db,
+                party_id=manager_party_id,
+            )
+            if manager_party_obj is None:
+                fallback_manager_party_id = (
+                    await self.resolve_owner_party_scope_by_ownership_id_async(
+                        ownership_id=manager_party_id,
+                    )
+                )
+                if (
+                    fallback_manager_party_id is not None
+                    and fallback_manager_party_id != manager_party_id
+                ):
+                    manager_party_id = fallback_manager_party_id
+                    manager_party_obj = await party_crud.get_party(
+                        self.db,
+                        party_id=manager_party_id,
+                    )
+            if manager_party_obj is None:
+                raise validation_error(
+                    "经营管理主体不存在",
+                    field_errors={"manager_party_id": "经营管理主体不存在"},
+                )
+
+        data["owner_party_id"] = owner_party_id
+        data["manager_party_id"] = manager_party_id
+        data.pop("ownership_id", None)  # DEPRECATED alias
+        data.pop("management_entity", None)  # DEPRECATED alias
         return data
 
     async def _ensure_asset_not_linked(self, asset_id: str) -> None:

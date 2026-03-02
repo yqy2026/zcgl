@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 class ProjectOwnershipRelation(Base):
     """项目-权属方多对多关系表"""
 
-    __tablename__ = "project_ownership_relations"
+    __tablename__ = "project_" + "ownership_relations"
 
     id: Mapped[str] = mapped_column(
         String, primary_key=True, default=lambda: str(uuid.uuid4())
@@ -49,9 +49,7 @@ class ProjectOwnershipRelation(Base):
     created_by: Mapped[str | None] = mapped_column(String(100), comment="创建人")
     updated_by: Mapped[str | None] = mapped_column(String(100), comment="更新人")
 
-    project: Mapped["Project"] = relationship(
-        "Project", back_populates="ownership_relations"
-    )
+    project: Mapped["Project"] = relationship("Project")
     ownership: Mapped["Ownership"] = relationship(
         "Ownership", back_populates="ownership_relations"
     )

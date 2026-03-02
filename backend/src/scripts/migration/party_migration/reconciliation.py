@@ -28,6 +28,20 @@ def _table_exists(connection: sa.engine.Connection, table_name: str) -> bool:
     return sa.inspect(connection).has_table(table_name)
 
 
+def _column_exists(
+    connection: sa.engine.Connection,
+    table_name: str,
+    column_name: str,
+) -> bool:
+    if not _table_exists(connection, table_name):
+        return False
+    inspector = sa.inspect(connection)
+    return any(
+        str(column.get("name")) == column_name
+        for column in inspector.get_columns(table_name)
+    )
+
+
 def _count_query(connection: sa.engine.Connection, sql_text: str) -> int:
     return int(connection.execute(sa.text(sql_text)).scalar() or 0)
 
@@ -37,45 +51,42 @@ def _result_label(failed_count: int) -> str:
 
 
 def _check_assets_owner_party_not_null(connection: sa.engine.Connection) -> tuple[str, int]:
-    if not _table_exists(connection, "assets"):
+    if not _column_exists(connection, "assets", "owner_party_id"):
         return "SKIP", 0
     failed = _count_query(
         connection,
         """
         SELECT count(*)
         FROM assets
-        WHERE ownership_id IS NOT NULL
-          AND (owner_party_id IS NULL OR owner_party_id = '')
+        WHERE owner_party_id IS NULL OR owner_party_id = ''
         """,
     )
     return _result_label(failed), failed
 
 
 def _check_assets_manager_party_not_null(connection: sa.engine.Connection) -> tuple[str, int]:
-    if not _table_exists(connection, "assets"):
+    if not _column_exists(connection, "assets", "manager_party_id"):
         return "SKIP", 0
     failed = _count_query(
         connection,
         """
         SELECT count(*)
         FROM assets
-        WHERE organization_id IS NOT NULL
-          AND (manager_party_id IS NULL OR manager_party_id = '')
+        WHERE manager_party_id IS NULL OR manager_party_id = ''
         """,
     )
     return _result_label(failed), failed
 
 
 def _check_projects_manager_party_not_null(connection: sa.engine.Connection) -> tuple[str, int]:
-    if not _table_exists(connection, "projects"):
+    if not _column_exists(connection, "projects", "manager_party_id"):
         return "SKIP", 0
     failed = _count_query(
         connection,
         """
         SELECT count(*)
         FROM projects
-        WHERE organization_id IS NOT NULL
-          AND (manager_party_id IS NULL OR manager_party_id = '')
+        WHERE manager_party_id IS NULL OR manager_party_id = ''
         """,
     )
     return _result_label(failed), failed
@@ -84,15 +95,14 @@ def _check_projects_manager_party_not_null(connection: sa.engine.Connection) -> 
 def _check_rent_contracts_owner_party_not_null(
     connection: sa.engine.Connection,
 ) -> tuple[str, int]:
-    if not _table_exists(connection, "rent_contracts"):
+    if not _column_exists(connection, "rent_contracts", "owner_party_id"):
         return "SKIP", 0
     failed = _count_query(
         connection,
         """
         SELECT count(*)
         FROM rent_contracts
-        WHERE ownership_id IS NOT NULL
-          AND (owner_party_id IS NULL OR owner_party_id = '')
+        WHERE owner_party_id IS NULL OR owner_party_id = ''
         """,
     )
     return _result_label(failed), failed
@@ -101,7 +111,7 @@ def _check_rent_contracts_owner_party_not_null(
 def _check_rent_contracts_manager_party_not_null(
     connection: sa.engine.Connection,
 ) -> tuple[str, int]:
-    if not _table_exists(connection, "rent_contracts"):
+    if not _column_exists(connection, "rent_contracts", "manager_party_id"):
         return "SKIP", 0
     failed = _count_query(
         connection,
@@ -117,15 +127,14 @@ def _check_rent_contracts_manager_party_not_null(
 def _check_rent_ledger_owner_party_not_null(
     connection: sa.engine.Connection,
 ) -> tuple[str, int]:
-    if not _table_exists(connection, "rent_ledger"):
+    if not _column_exists(connection, "rent_ledger", "owner_party_id"):
         return "SKIP", 0
     failed = _count_query(
         connection,
         """
         SELECT count(*)
         FROM rent_ledger
-        WHERE ownership_id IS NOT NULL
-          AND (owner_party_id IS NULL OR owner_party_id = '')
+        WHERE owner_party_id IS NULL OR owner_party_id = ''
         """,
     )
     return _result_label(failed), failed

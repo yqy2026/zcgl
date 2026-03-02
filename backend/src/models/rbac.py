@@ -22,7 +22,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from ..database import Base
 
 if TYPE_CHECKING:
-    from .organization import Organization
     from .party import Party
     from .user import User
 
@@ -70,13 +69,7 @@ class Role(Base):
         Boolean, nullable=False, default=True, comment="是否激活"
     )
 
-    # 组织关联
-    organization_id: Mapped[str | None] = mapped_column(  # DEPRECATED legacy column
-        String,
-        ForeignKey("organizations.id"),
-        comment="所属组织ID（DEPRECATED）",
-        info={"deprecated": True},
-    )
+    # 主体关联
     party_id: Mapped[str | None] = mapped_column(
         String,
         ForeignKey("parties.id"),
@@ -107,7 +100,6 @@ class Role(Base):
     updated_by: Mapped[str | None] = mapped_column(String(100), comment="更新人")
 
     # 关系
-    organization: Mapped["Organization"] = relationship("Organization")
     party: Mapped["Party | None"] = relationship("Party")
     permissions: Mapped[list["Permission"]] = relationship(
         "Permission", secondary=role_permissions, back_populates="roles"

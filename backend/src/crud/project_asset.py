@@ -41,9 +41,11 @@ class CRUDProjectAsset:
         unbind_reason: str | None = None,
         commit: bool = True,
     ) -> ProjectAsset | None:
+        project_id_column = getattr(ProjectAsset, "project_id")
+        asset_id_column = getattr(ProjectAsset, "asset_id")
         stmt = (
             select(ProjectAsset)
-            .where(ProjectAsset.project_id == project_id, ProjectAsset.asset_id == asset_id)
+            .where(project_id_column == project_id, asset_id_column == asset_id)
             .where(ProjectAsset.valid_to.is_(None))
             .order_by(ProjectAsset.valid_from.desc())
             .limit(1)
@@ -69,7 +71,8 @@ class CRUDProjectAsset:
         project_id: str,
         active_only: bool = True,
     ) -> list[ProjectAsset]:
-        stmt = select(ProjectAsset).where(ProjectAsset.project_id == project_id)
+        project_id_column = getattr(ProjectAsset, "project_id")
+        stmt = select(ProjectAsset).where(project_id_column == project_id)
         if active_only:
             stmt = stmt.where(ProjectAsset.valid_to.is_(None))
         return list((await db.execute(stmt)).scalars().all())

@@ -68,7 +68,6 @@ def sample_role():
     role.level = 1
     role.category = "business"
     role.is_system_role = False
-    role.organization_id = "org-1"
     role.party_id = "party-1"
     role.scope = "party"
     role.scope_id = "party-1"

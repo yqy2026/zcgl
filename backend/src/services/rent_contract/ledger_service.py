@@ -70,7 +70,6 @@ class RentContractLedgerService(RentContractHelperMixin):
                 db_ledger.contract_id = request.contract_id
                 db_ledger.asset_id = None
                 db_ledger.owner_party_id = contract.owner_party_id
-                db_ledger.ownership_id = contract.ownership_id  # DEPRECATED legacy column
                 db_ledger.year_month = year_month
                 db_ledger.due_date = due_date
                 db_ledger.due_amount = due_amount

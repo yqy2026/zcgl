@@ -7,11 +7,17 @@
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
+from starlette.requests import Request
 
 from src.core.exception_handler import (
+    AUTHZ_STALE_HEADER_NAME,
     BusinessValidationError,
     DuplicateResourceError,
+    ExceptionHandler,
+    bad_request,
+    forbidden,
     handle_service_exception,
 )
 
@@ -65,6 +71,54 @@ class TestExceptionHelpers:
 
         # 验证日志记录
         assert "TestService - test_operation failed" in caplog.text
+
+
+class TestAuthzStaleHeaderContract:
+    """测试 X-Authz-Stale 响应头契约。"""
+
+    @staticmethod
+    def _build_request(path: str = "/api/v1/system/backup/stats") -> Request:
+        return Request(
+            {
+                "type": "http",
+                "http_version": "1.1",
+                "method": "GET",
+                "scheme": "http",
+                "path": path,
+                "raw_path": path.encode("utf-8"),
+                "query_string": b"",
+                "headers": [],
+                "client": ("127.0.0.1", 54321),
+                "server": ("testserver", 80),
+            }
+        )
+
+    def test_business_forbidden_should_include_authz_stale_header(self) -> None:
+        handler = ExceptionHandler()
+        response = handler.handle_business_exception(
+            self._build_request(),
+            forbidden("权限不足"),
+        )
+        assert response.status_code == 403
+        assert response.headers.get(AUTHZ_STALE_HEADER_NAME.lower()) == "true"
+
+    def test_http_exception_403_should_include_authz_stale_header(self) -> None:
+        handler = ExceptionHandler()
+        response = handler.handle_http_exception(
+            self._build_request(),
+            HTTPException(status_code=403, detail="权限不足"),
+        )
+        assert response.status_code == 403
+        assert response.headers.get(AUTHZ_STALE_HEADER_NAME.lower()) == "true"
+
+    def test_non_auth_error_should_not_include_authz_stale_header(self) -> None:
+        handler = ExceptionHandler()
+        response = handler.handle_business_exception(
+            self._build_request(path="/api/v1/assets"),
+            bad_request("参数无效"),
+        )
+        assert response.status_code == 400
+        assert response.headers.get(AUTHZ_STALE_HEADER_NAME.lower()) is None
 
 
 class TestAPIExceptionHandling:

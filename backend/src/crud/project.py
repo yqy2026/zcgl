@@ -3,9 +3,9 @@ from typing import Any
 from sqlalchemy import Select, desc, false, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..models.asset import Asset
 from ..models.auth import User
 from ..models.project import Project
+from ..models.project_asset import ProjectAsset
 from ..schemas.project import ProjectCreate, ProjectSearchRequest, ProjectUpdate
 from .base import CRUDBase
 from .query_builder import PartyFilter
@@ -51,6 +51,30 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
         if not principals:
             return stmt.where(false())
         return stmt.where(Project.created_by.in_(principals))
+
+    @staticmethod
+    def _supports_party_scope_columns() -> bool:
+        return any(
+            hasattr(Project, column_name)
+            for column_name in (
+                "owner_party_id",
+                "manager_party_id",
+                "party_id",
+                "organization_id",
+            )
+        )
+
+    async def _apply_project_party_filter(
+        self,
+        db: AsyncSession,
+        stmt: Select[Any],
+        party_filter: PartyFilter,
+    ) -> Select[Any]:
+        if self._supports_party_scope_columns():
+            return self.query_builder.apply_party_filter(stmt, party_filter)
+
+        principals = await self._resolve_creator_principals(db, party_filter)
+        return self._apply_creator_scope(stmt, principals)
 
     async def create(
         self,
@@ -134,11 +158,7 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
             )
 
         stmt = select(Project).where(Project.id == id)
-        if hasattr(Project, "organization_id"):  # DEPRECATED legacy column fallback
-            stmt = self.query_builder.apply_party_filter(stmt, party_filter)
-        else:
-            principals = await self._resolve_creator_principals(db, party_filter)
-            stmt = self._apply_creator_scope(stmt, principals)
+        stmt = await self._apply_project_party_filter(db, stmt, party_filter)
 
         return (await db.execute(stmt)).scalars().first()
 
@@ -157,11 +177,7 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
         stmt = select(Project)
 
         if party_filter is not None:
-            if hasattr(Project, "organization_id"):  # DEPRECATED legacy column fallback
-                stmt = self.query_builder.apply_party_filter(stmt, party_filter)
-            else:
-                principals = await self._resolve_creator_principals(db, party_filter)
-                stmt = self._apply_creator_scope(stmt, principals)
+            stmt = await self._apply_project_party_filter(db, stmt, party_filter)
 
         if is_active is not None:
             stmt = stmt.where(Project.is_active == is_active)
@@ -204,11 +220,7 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
             project_status=search_params.project_status,
         )
         if party_filter is not None:
-            if hasattr(Project, "organization_id"):  # DEPRECATED legacy column fallback
-                query = self.query_builder.apply_party_filter(query, party_filter)
-            else:
-                principals = await self._resolve_creator_principals(db, party_filter)
-                query = self._apply_creator_scope(query, principals)
+            query = await self._apply_project_party_filter(db, query, party_filter)
 
         # 负责人筛选
         # Schema ProjectSearchRequest has no project_manager field
@@ -240,7 +252,11 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
 
     async def get_asset_count(self, db: AsyncSession, project_id: str) -> int:
         """获取项目关联的资产数量"""
-        stmt = select(func.count(Asset.id)).where(Asset.project_id == project_id)
+        project_id_column = getattr(ProjectAsset, "project_id")
+        stmt = select(func.count(ProjectAsset.id)).where(
+            project_id_column == project_id,
+            ProjectAsset.valid_to.is_(None),
+        )
         result = await db.execute(stmt)
         return int(result.scalar() or 0)
 
@@ -260,19 +276,16 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
         active_query = select(Project.id).where(Project.project_status == "doing")
 
         if party_filter is not None:
-            if hasattr(Project, "organization_id"):  # DEPRECATED legacy column fallback
-                total_query = self.query_builder.apply_party_filter(
-                    total_query,
-                    party_filter,
-                )
-                active_query = self.query_builder.apply_party_filter(
-                    active_query,
-                    party_filter,
-                )
-            else:
-                principals = await self._resolve_creator_principals(db, party_filter)
-                total_query = self._apply_creator_scope(total_query, principals)
-                active_query = self._apply_creator_scope(active_query, principals)
+            total_query = await self._apply_project_party_filter(
+                db,
+                total_query,
+                party_filter,
+            )
+            active_query = await self._apply_project_party_filter(
+                db,
+                active_query,
+                party_filter,
+            )
 
         total_stmt = select(func.count()).select_from(total_query.subquery())
         active_stmt = select(func.count()).select_from(active_query.subquery())

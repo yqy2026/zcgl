@@ -6,6 +6,7 @@ import base64
 import os
 import sys
 import unittest.mock as _mock
+from datetime import UTC, datetime
 from pathlib import Path
 
 # Work around Python's MagicMock(spec=..., __dict__=...) init bug in tests.
@@ -112,6 +113,206 @@ def _reset_test_schema(database_url: str) -> None:
         engine.dispose()
 
 
+def _ensure_baseline_enum_data(database_url: str) -> None:
+    """Seed baseline enum-field data for integration/e2e API validations."""
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+
+    from src.models.enum_field import EnumFieldType, EnumFieldValue
+
+    enum_defs: dict[str, tuple[str, list[str]]] = {
+        "ownership_status": (
+            "确权状态",
+            ["已确权", "待确权", "部分确权", "未确权", "确权中", "其它"],
+        ),
+        "property_nature": (
+            "物业性质",
+            [
+                "经营类",
+                "非经营类",
+                "经营性",
+                "商业",
+                "住宅",
+                "工业",
+                "办公",
+                "综合",
+                "公房",
+                "自用",
+                "其它",
+            ],
+        ),
+        "usage_status": (
+            "使用状态",
+            ["出租", "闲置", "自用", "在用", "空置", "公房（出租）", "公房（闲置）", "其它"],
+        ),
+        "data_status": ("数据状态", ["正常", "冻结", "已删除", "已归档"]),
+    }
+
+    engine = create_engine(database_url, pool_pre_ping=True)
+    session_factory = sessionmaker(bind=engine)
+    session = session_factory()
+    try:
+        for code, (name, values) in enum_defs.items():
+            enum_type = (
+                session.query(EnumFieldType)
+                .filter(EnumFieldType.code == code)
+                .first()
+            )
+            if enum_type is None:
+                enum_type = EnumFieldType(
+                    name=name,
+                    code=code,
+                    category="资产管理",
+                    description=f"测试基线枚举: {name}",
+                    is_system=True,
+                    status="active",
+                    is_deleted=False,
+                    created_by="test_fixture",
+                    updated_by="test_fixture",
+                )
+                session.add(enum_type)
+                session.flush()
+            else:
+                enum_type.name = name
+                enum_type.status = "active"
+                enum_type.is_deleted = False
+                enum_type.updated_by = "test_fixture"
+
+            existing_values = {
+                value_obj.value: value_obj
+                for value_obj in (
+                    session.query(EnumFieldValue)
+                    .filter(EnumFieldValue.enum_type_id == enum_type.id)
+                    .all()
+                )
+            }
+
+            for sort_order, value in enumerate(values, start=1):
+                value_obj = existing_values.get(value)
+                if value_obj is None:
+                    session.add(
+                        EnumFieldValue(
+                            enum_type_id=enum_type.id,
+                            label=value,
+                            value=value,
+                            sort_order=sort_order,
+                            is_active=True,
+                            is_deleted=False,
+                            created_by="test_fixture",
+                            updated_by="test_fixture",
+                        )
+                    )
+                    continue
+
+                value_obj.label = value
+                value_obj.sort_order = sort_order
+                value_obj.is_active = True
+                value_obj.is_deleted = False
+                value_obj.updated_by = "test_fixture"
+
+        session.commit()
+    finally:
+        session.close()
+        engine.dispose()
+
+
+@pytest.fixture(scope="session", autouse=True)
+def ensure_legacy_party_mapping_hooks() -> None:
+    """Auto-sync legacy Organization/Ownership inserts to Party rows in tests."""
+    from sqlalchemy import event, select
+
+    from src.models.organization import Organization
+    from src.models.ownership import Ownership
+    from src.models.party import Party, PartyType
+
+    party_table = Party.__table__
+
+    def _utcnow_naive() -> datetime:
+        return datetime.now(UTC).replace(tzinfo=None)
+
+    def _build_safe_code(
+        connection, *, party_type: str, preferred_code: str | None, entity_id: str
+    ) -> str:
+        normalized_code = (preferred_code or "").strip()
+        if normalized_code == "":
+            normalized_code = f"{party_type[:3].upper()}-{str(entity_id)[:8]}"
+
+        existing_party_id = connection.execute(
+            select(party_table.c.id)
+            .where(
+                party_table.c.party_type == party_type,
+                party_table.c.code == normalized_code,
+            )
+            .limit(1)
+        ).scalar_one_or_none()
+        if existing_party_id is None or str(existing_party_id) == str(entity_id):
+            return normalized_code
+        return f"{normalized_code}-{str(entity_id)[:8]}"
+
+    def _ensure_party_row(
+        connection,
+        *,
+        party_id: str,
+        party_type: str,
+        name: str | None,
+        code: str | None,
+        external_ref: str | None,
+    ) -> None:
+        existing = connection.execute(
+            select(party_table.c.id).where(party_table.c.id == party_id).limit(1)
+        ).scalar_one_or_none()
+        if existing is not None:
+            return
+
+        safe_name = (name or "").strip() or f"{party_type}-{str(party_id)[:8]}"
+        safe_code = _build_safe_code(
+            connection,
+            party_type=party_type,
+            preferred_code=code,
+            entity_id=party_id,
+        )
+        now = _utcnow_naive()
+        connection.execute(
+            party_table.insert().values(
+                id=str(party_id),
+                party_type=party_type,
+                name=safe_name,
+                code=safe_code,
+                external_ref=(external_ref or "").strip() or str(party_id),
+                status="active",
+                created_at=now,
+                updated_at=now,
+            )
+        )
+
+    @event.listens_for(Organization, "after_insert")
+    def _sync_organization_party(_mapper, connection, target) -> None:
+        _ensure_party_row(
+            connection,
+            party_id=str(target.id),
+            party_type=PartyType.ORGANIZATION.value,
+            name=getattr(target, "name", None),
+            code=getattr(target, "code", None),
+            external_ref=str(target.id),
+        )
+
+    @event.listens_for(Ownership, "after_insert")
+    def _sync_ownership_party(_mapper, connection, target) -> None:
+        _ensure_party_row(
+            connection,
+            party_id=str(target.id),
+            party_type=PartyType.LEGAL_ENTITY.value,
+            name=getattr(target, "name", None),
+            code=getattr(target, "code", None),
+            external_ref=str(target.id),
+        )
+
+    yield
+
+    event.remove(Organization, "after_insert", _sync_organization_party)
+    event.remove(Ownership, "after_insert", _sync_ownership_party)
+
+
 # Set environment variables at the earliest possible moment
 # Use TEST_DATABASE_URL for database-backed tests
 # Integration/E2E tests should set their own *_TEST_DATABASE_URL
@@ -176,6 +377,8 @@ DEFAULT_TEST_DATA_ENCRYPTION_KEY = "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
 os.environ["DEBUG"] = "False"
 os.environ["ENVIRONMENT"] = "testing"
 os.environ["PYDANTIC_SETTINGS_IGNORE_DOT_ENV"] = "1"
+# Keep Phase 4 migration deterministic in tests unless explicitly overridden.
+os.environ.setdefault("PHASE4_TENANT_NOT_NULL_DECISION", "B")
 
 
 def pytest_collection_modifyitems(items, config):
@@ -310,11 +513,16 @@ def setup_test_database():
 
                 _recreate_test_schema_from_models(database_url)
                 print("[OK] Database schema recreated from models (fallback)")
+
+            _ensure_baseline_enum_data(database_url)
+            print("[OK] Baseline enum data ensured")
         except Exception as e:
             print(f"[!] Database setup failed: {e}")
             try:
                 _recreate_test_schema_from_models(database_url)
                 print("[OK] Database schema recreated from models (fallback)")
+                _ensure_baseline_enum_data(database_url)
+                print("[OK] Baseline enum data ensured")
             except Exception as e2:
                 print(f"[ERROR] Database setup failed completely: {e2}")
 

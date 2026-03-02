@@ -176,14 +176,20 @@ class TestCRUDAssetGetMulti:
             patch.object(
                 crud.query_builder, "build_count_query", return_value=MagicMock()
             ) as mock_build_count_query,
+            patch.object(
+                crud.query_builder,
+                "apply_party_filter",
+                side_effect=lambda stmt, _party_filter: stmt,
+            ) as mock_apply_party_filter,
         ):
             await crud.get_multi_with_search_async(
                 mock_db,
                 party_filter=party_filter,
             )
 
-        assert mock_build_query.call_args.kwargs.get("party_filter") == party_filter
-        assert mock_build_count_query.call_args.kwargs.get("party_filter") == party_filter
+        assert mock_build_query.call_args.kwargs.get("party_filter") is None
+        assert mock_build_count_query.call_args.kwargs.get("party_filter") is None
+        assert mock_apply_party_filter.call_count == 2
 
     async def test_get_multi_by_ids_decrypts_assets(
         self, crud: AssetCRUD, mock_db: MagicMock

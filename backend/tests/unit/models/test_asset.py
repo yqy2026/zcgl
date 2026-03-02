@@ -95,7 +95,7 @@ class TestAssetModelCreation:
         """Test that optional fields can be None"""
         assert sample_asset.ownership_category is None
         assert sample_asset.project_name is None
-        assert sample_asset.management_entity is None
+        assert sample_asset.management_entity == "Test Corporation"
 
     def test_asset_id_generation(self, sample_asset):
         """Test that Asset ID is auto-generated"""

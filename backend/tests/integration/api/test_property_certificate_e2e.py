@@ -141,6 +141,7 @@ def test_upload_returns_asset_matches(
 
     asset = Asset(
         ownership_id=ownership.id,
+        manager_party_id=ownership.id,
         property_name=asset_data["property_name"],
         address=asset_data["address"],
         ownership_status=asset_data["ownership_status"],
@@ -298,6 +299,7 @@ def test_certificate_with_asset_link(
 
     asset = Asset(
         ownership_id=ownership.id,
+        manager_party_id=ownership.id,
         property_name=asset_data["property_name"],
         address=asset_data["address"],
         ownership_status=asset_data["ownership_status"],

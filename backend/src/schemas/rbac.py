@@ -80,7 +80,7 @@ class RoleResponse(RoleBase):
     id: str
     is_system_role: bool
     is_active: bool
-    organization_id: str | None
+    organization_id: str | None = None
     party_id: str | None
     created_at: datetime
     updated_at: datetime

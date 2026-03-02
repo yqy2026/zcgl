@@ -11,7 +11,6 @@ from ..core.enums import ContractStatus
 from ..crud.asset import SensitiveDataHandler
 from ..crud.base import CRUDBase
 from ..models.associations import rent_contract_assets
-from ..models.ownership import Ownership
 from ..models.party import Party
 from ..models.rent_contract import (
     ContractType,
@@ -368,26 +367,10 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
                 scope_filters.append(
                     RentContract.manager_party_id.in_(resolved_manager_party_ids)
                 )
-        legacy_scope_filter = None
-        if ownership_id:  # DEPRECATED alias
-            legacy_scope_filter = and_(
-                RentContract.ownership_id == ownership_id,  # DEPRECATED
-                or_(
-                    RentContract.owner_party_id.is_(None),
-                    RentContract.owner_party_id == "",
-                ),
-                or_(
-                    RentContract.manager_party_id.is_(None),
-                    RentContract.manager_party_id == "",
-                ),
-            )
         if scope_filters:
-            if legacy_scope_filter is not None:
-                stmt = stmt.where(or_(or_(*scope_filters), legacy_scope_filter))
-            else:
-                stmt = stmt.where(or_(*scope_filters))
+            stmt = stmt.where(or_(*scope_filters))
         elif ownership_id:  # DEPRECATED alias
-            stmt = stmt.where(RentContract.ownership_id == ownership_id)  # DEPRECATED
+            stmt = stmt.where(RentContract.owner_party_id == ownership_id)
         if contract_status:
             stmt = stmt.where(RentContract.contract_status == contract_status)
 
@@ -430,8 +413,6 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
         self, db: AsyncSession, owner_party_id: str
     ) -> int:
         """统计产权主体的活跃合同数（状态为'有效'）"""
-        from sqlalchemy import and_
-
         stmt = select(func.count(RentContract.id)).where(
             and_(
                 RentContract.owner_party_id == owner_party_id,
@@ -445,7 +426,7 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
         self, db: AsyncSession, ownership_id: str  # DEPRECATED alias
     ) -> int:
         stmt = select(func.count(RentContract.id)).where(
-            RentContract.ownership_id == ownership_id  # DEPRECATED legacy column
+            RentContract.owner_party_id == ownership_id
         )
         result = await db.execute(stmt)
         return int(result.scalar() or 0)
@@ -453,11 +434,9 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
     async def count_active_by_ownership_async(  # DEPRECATED compatibility path
         self, db: AsyncSession, ownership_id: str  # DEPRECATED alias
     ) -> int:
-        from sqlalchemy import and_
-
         stmt = select(func.count(RentContract.id)).where(
             and_(
-                RentContract.ownership_id == ownership_id,  # DEPRECATED legacy column
+                RentContract.owner_party_id == ownership_id,
                 RentContract.contract_status == "有效",
             )
         )
@@ -471,16 +450,10 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
         owner_party_ids: list[str],
     ) -> list[str]:
         """DEPRECATED: Resolve legacy ownership IDs from owner-party scoped contracts."""
-        if not owner_party_ids:
-            return []
-
-        stmt = select(func.distinct(RentContract.ownership_id)).where(  # DEPRECATED legacy column
-            RentContract.owner_party_id.in_(owner_party_ids),
-            RentContract.ownership_id.is_not(None),  # DEPRECATED legacy column
-            RentContract.ownership_id != "",  # DEPRECATED legacy column
-        )
-        ownership_ids = (await db.execute(stmt)).scalars().all()  # DEPRECATED legacy identifiers
-        return [str(ownership_id) for ownership_id in ownership_ids if ownership_id]  # DEPRECATED legacy identifiers
+        # Step4 删除 ownership_id 后，此兼容桥接接口不再返回旧标识。
+        _ = db
+        _ = owner_party_ids
+        return []
 
     async def get_distinct_owner_party_ids_by_ownership_ids_async(  # DEPRECATED bridge helper
         self,
@@ -493,7 +466,7 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
             return []
 
         stmt = select(func.distinct(RentContract.owner_party_id)).where(
-            RentContract.ownership_id.in_(ownership_ids),  # DEPRECATED legacy column + alias
+            RentContract.owner_party_id.in_(ownership_ids),
             RentContract.owner_party_id.is_not(None),
             RentContract.owner_party_id != "",
         )
@@ -548,7 +521,7 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
         if scope_filters:
             stmt = stmt.where(or_(*scope_filters))
         elif ownership_ids:  # DEPRECATED alias
-            stmt = stmt.where(RentContract.ownership_id.in_(ownership_ids))  # DEPRECATED
+            stmt = stmt.where(RentContract.owner_party_id.in_(ownership_ids))
 
         result = await db.execute(stmt)
         return list(result.scalars().all())
@@ -576,7 +549,7 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
         if scope_filters:
             stmt = stmt.where(or_(*scope_filters))
         elif ownership_ids:  # DEPRECATED alias
-            stmt = stmt.where(RentContract.ownership_id.in_(ownership_ids))  # DEPRECATED
+            stmt = stmt.where(RentContract.owner_party_id.in_(ownership_ids))
 
         if start_date and end_date:
             stmt = stmt.where(
@@ -733,7 +706,7 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
         if scope_filters:
             stmt = stmt.where(or_(*scope_filters))
         elif ownership_id:  # DEPRECATED alias
-            stmt = stmt.where(RentLedger.ownership_id == ownership_id)  # DEPRECATED
+            stmt = stmt.where(RentLedger.owner_party_id == ownership_id)
         if year_month:
             stmt = stmt.where(RentLedger.year_month == year_month)
         if payment_status:
@@ -748,8 +721,6 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
     async def get_by_contract_and_month_async(
         self, db: AsyncSession, contract_id: str, year_month: str
     ) -> RentLedger | None:
-        from sqlalchemy import and_
-
         stmt = select(RentLedger).where(
             and_(
                 RentLedger.contract_id == contract_id,
@@ -895,7 +866,7 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
         self, db: AsyncSession, ownership_id: str  # DEPRECATED alias
     ) -> float:
         contract_ids = select(RentContract.id).where(
-            RentContract.ownership_id == ownership_id  # DEPRECATED legacy column
+            RentContract.owner_party_id == ownership_id
         )
         stmt = select(func.coalesce(func.sum(RentLedger.due_amount), 0)).where(
             RentLedger.contract_id.in_(contract_ids)
@@ -907,7 +878,7 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
         self, db: AsyncSession, ownership_id: str  # DEPRECATED alias
     ) -> float:
         contract_ids = select(RentContract.id).where(
-            RentContract.ownership_id == ownership_id  # DEPRECATED legacy column
+            RentContract.owner_party_id == ownership_id
         )
         stmt = select(func.coalesce(func.sum(RentLedger.paid_amount), 0)).where(
             RentLedger.contract_id.in_(contract_ids)
@@ -919,7 +890,7 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
         self, db: AsyncSession, ownership_id: str  # DEPRECATED alias
     ) -> float:
         contract_ids = select(RentContract.id).where(
-            RentContract.ownership_id == ownership_id  # DEPRECATED legacy column
+            RentContract.owner_party_id == ownership_id
         )
         stmt = select(func.coalesce(func.sum(RentLedger.overdue_amount), 0)).where(
             RentLedger.contract_id.in_(contract_ids)
@@ -960,7 +931,7 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
         if scope_filters:
             filters.append(or_(*scope_filters))
         elif ownership_ids:  # DEPRECATED alias
-            filters.append(RentLedger.ownership_id.in_(ownership_ids))  # DEPRECATED
+            filters.append(RentLedger.owner_party_id.in_(ownership_ids))
         if asset_ids:
             filters.append(RentLedger.asset_id.in_(asset_ids))
 
@@ -1013,7 +984,7 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
         if scope_filters:
             filters.append(or_(*scope_filters))
         elif ownership_ids:  # DEPRECATED alias
-            filters.append(RentLedger.ownership_id.in_(ownership_ids))  # DEPRECATED
+            filters.append(RentLedger.owner_party_id.in_(ownership_ids))
         if asset_ids:
             filters.append(RentLedger.asset_id.in_(asset_ids))
 
@@ -1060,7 +1031,7 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
         if scope_filters:
             filters.append(or_(*scope_filters))
         elif ownership_ids:  # DEPRECATED alias
-            filters.append(RentLedger.ownership_id.in_(ownership_ids))  # DEPRECATED
+            filters.append(RentLedger.owner_party_id.in_(ownership_ids))
         if asset_ids:
             filters.append(RentLedger.asset_id.in_(asset_ids))
 
@@ -1117,19 +1088,22 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
         ownership_ids: list[str] | None = None,  # DEPRECATED alias
         legacy_only: bool = False,
     ) -> list[Any]:
+        if legacy_only:
+            return []
+
         stmt = (
             select(
-                Ownership.id,
-                Ownership.name,
-                Ownership.short_name,
+                Party.id,
+                Party.name,
+                Party.code,
                 func.count(RentContract.id).label("contract_count"),
                 func.sum(RentLedger.due_amount).label("total_due_amount"),
                 func.sum(RentLedger.paid_amount).label("total_paid_amount"),
                 func.sum(RentLedger.overdue_amount).label("total_overdue_amount"),
             )
-            .join(RentContract, RentContract.ownership_id == Ownership.id)  # DEPRECATED
+            .join(RentContract, RentContract.owner_party_id == Party.id)
             .join(RentLedger, RentLedger.contract_id == RentContract.id)
-            .group_by(Ownership.id, Ownership.name, Ownership.short_name)
+            .group_by(Party.id, Party.name, Party.code)
         )
 
         if start_date:
@@ -1139,14 +1113,7 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
         if manager_party_ids:
             stmt = stmt.where(RentContract.manager_party_id.in_(manager_party_ids))
         if ownership_ids:  # DEPRECATED alias
-            stmt = stmt.where(Ownership.id.in_(ownership_ids))  # DEPRECATED
-        if legacy_only:
-            stmt = stmt.where(
-                or_(
-                    RentContract.owner_party_id.is_(None),
-                    RentContract.owner_party_id == "",
-                )
-            )
+            stmt = stmt.where(Party.id.in_(ownership_ids))
 
         result = await db.execute(stmt)
         return list(result.all())

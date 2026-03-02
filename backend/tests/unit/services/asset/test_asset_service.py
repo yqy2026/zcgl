@@ -485,16 +485,28 @@ class TestGetOwnershipEntityNames:
 
 
 class TestOwnershipResolution:
-    async def test_resolve_ownership_uses_crud_get(self, service):
+    async def test_resolve_ownership_resolves_legacy_ownership_id_to_owner_party_id(
+        self, service
+    ):
         with patch(
-            "src.services.asset.asset_service.ownership.get",
+            "src.services.asset.asset_service.AssetService.resolve_owner_party_scope_by_ownership_id_async",
             new_callable=AsyncMock,
-            return_value=MagicMock(id="ownership-id"),
-        ) as mock_get:
-            result = await service._resolve_ownership({"ownership_id": "ownership-id"})
+            return_value="party-1",
+        ) as mock_resolve:
+            with patch(
+                "src.services.asset.asset_service.party_crud.get_party",
+                new_callable=AsyncMock,
+                return_value=MagicMock(id="party-1"),
+            ) as mock_get_party:
+                result = await service._resolve_ownership(
+                    {"ownership_id": "ownership-id"}
+                )
 
-        assert result["ownership_id"] == "ownership-id"
-        mock_get.assert_awaited_once_with(service.db, id="ownership-id")
+        assert result["owner_party_id"] == "party-1"
+        assert "ownership_id" not in result
+        mock_resolve.assert_awaited_once_with(ownership_id="ownership-id")
+        assert mock_get_party.await_count == 2
+        mock_get_party.assert_any_await(service.db, party_id="party-1")
 
 
 # ============================================================================

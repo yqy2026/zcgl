@@ -16,14 +16,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ...core.config import settings
 from ...core.exception_handler import BusinessValidationError, ResourceNotFoundError
 from ...crud.asset import asset_crud
-from ...crud.property_certificate import property_certificate_crud, property_owner_crud
+from ...crud.property_certificate import property_certificate_crud
 from ...crud.query_builder import PartyFilter
 from ...models.asset import Asset
 from ...models.property_certificate import PropertyCertificate
 from ...schemas.property_certificate import (
     PropertyCertificateCreate,
     PropertyCertificateUpdate,
-    PropertyOwnerCreate,
 )
 from ...services.document.extractors.property_cert_adapter import PropertyCertAdapter
 from ...services.document.ocr_extraction_service import OCRExtractionService
@@ -131,11 +130,19 @@ class PropertyCertificateService:
         organization_id: str | None = None,
     ) -> PropertyCertificate:
         """创建产权证"""
+        payload = certificate.model_dump()
+        payload.pop("organization_id", None)  # DEPRECATED alias
+        if created_by is not None and created_by.strip() != "":
+            payload["created_by"] = created_by
+        if organization_id is not None and organization_id.strip() != "":
+            logger.debug(
+                "Ignoring deprecated organization_id during certificate creation: %s",
+                organization_id,
+            )
+
         return await property_certificate_crud.create(
             self.db,
-            obj_in=certificate,
-            created_by=created_by,
-            organization_id=organization_id,
+            obj_in=payload,
         )
 
     async def update_certificate(
@@ -330,29 +337,11 @@ class PropertyCertificateService:
                 "created_by": created_by,
             }
 
-            owner_create_data_list: list[PropertyOwnerCreate] = []
-            for owner_data in owners_data:
-                owner_create_data_list.append(
-                    PropertyOwnerCreate(
-                        owner_type=owner_data.get("owner_type", "个人"),
-                        name=owner_data.get("name"),
-                        id_type=owner_data.get("id_type"),
-                        id_number=owner_data.get("id_number"),
-                        phone=owner_data.get("phone"),
-                        address=owner_data.get("address"),
-                        organization_id=owner_data.get("organization_id"),
-                    )
-                )
-
-            owner_ids: list[str] = []
-            if owner_create_data_list:
-                owner_create_objects: list[PropertyOwnerCreate | dict[str, Any]] = list(
-                    owner_create_data_list
-                )
-                owners = await property_owner_crud.create_multi_async(
-                    self.db, objects_in=owner_create_objects, commit=False
-                )
-                owner_ids = [owner.id for owner in owners if owner.id is not None]
+            owner_ids = [
+                str(owner_data.get("party_id")).strip()
+                for owner_data in owners_data
+                if str(owner_data.get("party_id") or "").strip() != ""
+            ]
 
             certificate_create = PropertyCertificateCreate.model_validate(
                 certificate_create_data

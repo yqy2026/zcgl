@@ -868,7 +868,11 @@ class PDFImportService:
 
             contract = RentContract()
             contract.contract_number = contract_data["contract_number"]
-            contract.ownership_id = contract_data.get("ownership_id", "")
+            owner_party_id = (
+                contract_data.get("owner_party_id")
+                or contract_data.get("ownership_id")  # DEPRECATED alias
+            )
+            contract.owner_party_id = owner_party_id
             contract.contract_type = contract_type
             contract.tenant_name = contract_data["tenant_name"]
             contract.tenant_contact = contract_data.get("tenant_contact")

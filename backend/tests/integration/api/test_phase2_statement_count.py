@@ -5,11 +5,12 @@ from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import event
+from sqlalchemy import event, select
 from sqlalchemy.engine import Engine
 
 from src.crud.asset import asset_crud
 from src.models.asset import Asset
+from src.models.party import Party, PartyType
 
 pytestmark = pytest.mark.integration
 
@@ -69,6 +70,22 @@ def _seed_assets(
     count: int,
     name_prefix: str,
 ) -> list[str]:
+    party_stmt = select(Party).where(
+        Party.party_type == PartyType.ORGANIZATION.value,
+        Party.external_ref == organization_id,
+    )
+    party = db_session.execute(party_stmt).scalar_one_or_none()
+    if party is None:
+        party = Party(
+            party_type=PartyType.ORGANIZATION.value,
+            name=f"StatementCountOrg-{organization_id[:8]}",
+            code=f"STMT-ORG-{organization_id[:8]}",
+            external_ref=organization_id,
+            status="active",
+        )
+        db_session.add(party)
+        db_session.flush()
+
     created_ids: list[str] = []
     for idx in range(count):
         asset = Asset(
@@ -78,7 +95,8 @@ def _seed_assets(
             property_nature="商业",
             usage_status="在用",
             business_category="商服",
-            organization_id=organization_id,
+            owner_party_id=party.id,
+            manager_party_id=party.id,
             data_status="正常",
         )
         db_session.add(asset)

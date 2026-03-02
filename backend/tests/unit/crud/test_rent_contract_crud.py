@@ -129,10 +129,10 @@ class TestContractV2MultiAsset:
         assert "manager_party_id" in str(items_stmt)
         assert "manager_party_id" in str(count_stmt)
 
-    async def test_get_contracts_should_keep_legacy_ownership_fallback_with_scope_filters(
+    async def test_get_contracts_should_ignore_legacy_ownership_alias_when_scope_filters_present(
         self, mock_db, sample_contract
     ):
-        """存在 owner/manager scope 时应保留 ownership legacy 回退条件。"""
+        """owner/manager scope 生效时应忽略 ownership_id 别名过滤。"""
         mock_items_result = MagicMock()
         mock_items_scalars = MagicMock()
         mock_items_scalars.all.return_value = [sample_contract]
@@ -155,10 +155,9 @@ class TestContractV2MultiAsset:
         items_stmt = mock_db.execute.await_args_list[0].args[0]
         count_stmt = mock_db.execute.await_args_list[1].args[0]
         assert "owner_party_id" in str(items_stmt)
-        assert "ownership_id" in str(items_stmt)
-        assert "owner_party_id IS NULL" in str(items_stmt)
-        assert "manager_party_id IS NULL" in str(items_stmt)
-        assert "ownership_id" in str(count_stmt)
+        assert "owner_party_id" in str(count_stmt)
+        assert "ownership_id" not in str(items_stmt)
+        assert "ownership_id" not in str(count_stmt)
 
     async def test_get_contracts_should_support_owner_manager_scope_collections(
         self, mock_db, sample_contract

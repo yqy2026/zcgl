@@ -45,6 +45,9 @@ TEST_DATABASE_URL = _resolve_test_database_url()
 if TEST_DATABASE_URL:
     os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 
+# Keep Phase 4 migration deterministic in tests unless explicitly overridden.
+os.environ.setdefault("PHASE4_TENANT_NOT_NULL_DECISION", "B")
+
 
 def _reset_postgres_public_schema(engine) -> None:  # noqa: ANN001
     """Drop and recreate public schema for a clean PostgreSQL test database."""

@@ -37,6 +37,11 @@ def test_role_and_permission_creation() -> None:
     assert "asset" in repr(permission)
 
 
+def test_role_model_should_not_expose_legacy_organization_column() -> None:
+    """Phase4 Step4: roles.organization_id 已删除，ORM 不应再映射该列。"""
+    assert "organization_id" not in Role.__table__.columns.keys()
+
+
 def test_assignment_and_grant_models_creation() -> None:
     assignment = UserRoleAssignment(user_id="user-1", role_id="role-1")
     grant = PermissionGrant(user_id="user-1", permission_id="perm-1")
@@ -61,4 +66,3 @@ def test_assignment_and_grant_models_creation() -> None:
 
     assert audit.action == "grant"
     assert "grant" in repr(audit)
-

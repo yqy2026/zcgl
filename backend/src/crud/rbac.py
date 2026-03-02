@@ -62,6 +62,13 @@ class CRUDRole(CRUDBase[Role, RoleCreate, RoleUpdate]):
 
         # 移除permission_ids字段（这不是Role模型的字段）
         obj_in_data.pop("permission_ids", None)
+        legacy_organization_id = obj_in_data.pop("organization_id", None)  # DEPRECATED alias
+        if (
+            obj_in_data.get("party_id") in (None, "")
+            and legacy_organization_id is not None
+            and str(legacy_organization_id).strip() != ""
+        ):
+            obj_in_data["party_id"] = str(legacy_organization_id).strip()
 
         return await super().create(db, obj_in=obj_in_data, commit=commit, **kwargs)
 
@@ -127,12 +134,8 @@ class CRUDRole(CRUDBase[Role, RoleCreate, RoleUpdate]):
 
         base_query = select(Role)
         if legacy_org_scope_id:
-            base_query = base_query.where(
-                or_(
-                    Role.party_id == legacy_org_scope_id,
-                    Role.organization_id == legacy_org_scope_id,  # DEPRECATED legacy column
-                )
-            )
+            # Phase4: 旧组织列已删除，DEPRECATED alias 仅映射到 `party_id`。
+            base_query = base_query.where(Role.party_id == legacy_org_scope_id)
 
         stmt = self.query_builder.build_query(
             filters=filters,

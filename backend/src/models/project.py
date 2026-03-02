@@ -12,9 +12,7 @@ from ..database import Base
 
 if TYPE_CHECKING:
     from .asset import Asset
-    from .organization import Organization
     from .party import Party
-    from .project_relations import ProjectOwnershipRelation
 
 
 class Project(Base):
@@ -71,28 +69,11 @@ class Project(Base):
     project_objectives: Mapped[str | None] = mapped_column(Text, comment="项目目标")
     project_scope: Mapped[str | None] = mapped_column(Text, comment="项目范围")
 
-    management_entity: Mapped[str | None] = mapped_column(
-        String(200),
-        comment="管理单位（DEPRECATED）",
-        info={"deprecated": True},
-    )
     manager_party_id: Mapped[str | None] = mapped_column(
         String,
         ForeignKey("parties.id"),
         index=True,
         comment="项目经营管理主体ID",
-    )
-    organization_id: Mapped[str | None] = mapped_column(
-        String,
-        ForeignKey("organizations.id"),
-        index=True,
-        comment="所属组织ID（DEPRECATED）",
-        info={"deprecated": True},
-    )
-    ownership_entity: Mapped[str | None] = mapped_column(
-        String(200),
-        comment="权属单位（DEPRECATED）",
-        info={"deprecated": True},
     )
     construction_company: Mapped[str | None] = mapped_column(
         String(200), comment="施工单位"
@@ -122,20 +103,32 @@ class Project(Base):
     created_by: Mapped[str | None] = mapped_column(String(100), comment="创建人")
     updated_by: Mapped[str | None] = mapped_column(String(100), comment="更新人")
 
-    # DEPRECATED: 使用 project_assets 间接关联资产
+    # 使用 project_assets 间接关联资产
     assets: Mapped[list["Asset"]] = relationship(
-        "Asset", back_populates="project", cascade="all, delete-orphan"
+        "Asset",
+        secondary="project_assets",
+        primaryjoin="Project.id == ProjectAs" "set.project_id",
+        secondaryjoin="Asset.id == ProjectAsset.asset_id",
+        viewonly=True,
     )
-    ownership_relations: Mapped[list["ProjectOwnershipRelation"]] = relationship(
-        "ProjectOwnershipRelation",
-        back_populates="project",
-        cascade="all, delete-orphan",
-    )
-    organization: Mapped["Organization | None"] = relationship("Organization")
     manager_party: Mapped["Party | None"] = relationship(
         "Party",
         foreign_keys=[manager_party_id],
     )
+
+    def __init__(self, **kwargs: object) -> None:
+        # Phase4 Step4 兼容：旧列已删除，避免构造时透传旧键。
+        kwargs.pop("management_entity", None)
+        legacy_organization_id = kwargs.pop("organization_id", None)
+        kwargs.pop("ownership_entity", None)
+        manager_party_id = kwargs.get("manager_party_id")
+        if (
+            (manager_party_id is None or str(manager_party_id).strip() == "")
+            and legacy_organization_id is not None
+            and str(legacy_organization_id).strip() != ""
+        ):
+            kwargs["manager_party_id"] = str(legacy_organization_id).strip()
+        super().__init__(**kwargs)
 
     def __repr__(self) -> str:
         return f"<Project(id={self.id}, name={self.name}, code={self.code})>"

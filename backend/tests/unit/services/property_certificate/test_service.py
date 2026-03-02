@@ -144,35 +144,29 @@ class TestPropertyCertificateConfirmImport:
     async def test_confirm_import_creates_new(self, mock_db):
         service = PropertyCertificateService(mock_db)
         created = PropertyCertificate(certificate_number="PC-NEW", certificate_type="property")
-        owner = MagicMock(id="owner-1")
 
         with patch(
             "src.services.property_certificate.service.property_certificate_crud.get_by_certificate_number_async",
             new=AsyncMock(return_value=None),
         ):
             with patch(
-                "src.services.property_certificate.service.property_owner_crud.create_multi_async",
-                new=AsyncMock(return_value=[owner]),
-            ):
-                with patch(
-                    "src.services.property_certificate.service.property_certificate_crud.create_with_owners_async",
-                    new=AsyncMock(return_value=created),
-                ) as mock_create_with_owners:
-                    data = {
-                        "extracted_data": {
-                            "certificate_number": "PC-NEW",
-                            "certificate_type": "property",
-                        },
-                        "asset_ids": ["asset-1"],
-                        "asset_link_id": "asset-1",
-                        "should_create_new_asset": False,
-                        "owners": [
-                            {"name": "Owner", "id_number": "123"}
-                        ],
-                    }
-                    result = await service.confirm_import(data)
+                "src.services.property_certificate.service.property_certificate_crud.create_with_owners_async",
+                new=AsyncMock(return_value=created),
+            ) as mock_create_with_owners:
+                data = {
+                    "extracted_data": {
+                        "certificate_number": "PC-NEW",
+                        "certificate_type": "property",
+                    },
+                    "asset_ids": ["asset-1"],
+                    "asset_link_id": "asset-1",
+                    "should_create_new_asset": False,
+                    "owners": [{"party_id": "party-owner-1"}],
+                }
+                result = await service.confirm_import(data)
 
-                    assert result == created
-                    mock_create_with_owners.assert_called_once()
-                    kwargs = mock_create_with_owners.call_args.kwargs
-                    assert kwargs["asset_ids"] == ["asset-1"]
+                assert result == created
+                mock_create_with_owners.assert_called_once()
+                kwargs = mock_create_with_owners.call_args.kwargs
+                assert kwargs["asset_ids"] == ["asset-1"]
+                assert kwargs["owner_ids"] == ["party-owner-1"]

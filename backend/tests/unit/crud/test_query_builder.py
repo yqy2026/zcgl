@@ -160,7 +160,7 @@ class TestQueryBuilder:
 
         assert "assets.owner_party_id IN ('party-1')" in compiled
         assert "assets.manager_party_id IN ('party-1')" in compiled
-        assert "assets.organization_id IN ('party-1')" in compiled
+        assert "assets.organization_id IN ('party-1')" not in compiled
 
     def test_build_query_should_keep_owner_and_manager_scope_separate(self):
         qb = QueryBuilder(Asset)
@@ -193,7 +193,9 @@ class TestQueryBuilder:
         assert "assets.owner_party_id IN ('owner-1')" in compiled
         assert "assets.manager_party_id IN" not in compiled
 
-    def test_build_query_should_fallback_to_legacy_org_when_owner_party_is_null(self):
+    def test_build_query_should_ignore_legacy_org_fallback_when_owner_scope_has_no_legacy_column(
+        self,
+    ):
         qb = QueryBuilder(Asset)
         query = qb.build_query(
             party_filter=PartyFilter(
@@ -207,10 +209,12 @@ class TestQueryBuilder:
         compiled = str(query.compile(compile_kwargs={"literal_binds": True}))
 
         assert "assets.owner_party_id IN ('owner-1')" in compiled
-        assert "assets.owner_party_id IS NULL" in compiled
-        assert "assets.organization_id IN ('org-owner-legacy-1')" in compiled
+        assert "assets.owner_party_id IS NULL" not in compiled
+        assert "assets.organization_id IN ('org-owner-legacy-1')" not in compiled
 
-    def test_build_query_should_fallback_to_legacy_org_when_manager_party_is_null(self):
+    def test_build_query_should_ignore_legacy_org_fallback_when_manager_scope_has_no_legacy_column(
+        self,
+    ):
         qb = QueryBuilder(Asset)
         query = qb.build_query(
             party_filter=PartyFilter(
@@ -224,8 +228,8 @@ class TestQueryBuilder:
         compiled = str(query.compile(compile_kwargs={"literal_binds": True}))
 
         assert "assets.manager_party_id IN ('manager-1')" in compiled
-        assert "assets.manager_party_id IS NULL" in compiled
-        assert "assets.organization_id IN ('org-manager-legacy-1')" in compiled
+        assert "assets.manager_party_id IS NULL" not in compiled
+        assert "assets.organization_id IN ('org-manager-legacy-1')" not in compiled
 
     def test_build_query_should_not_use_party_ids_for_legacy_org_fallback_when_mapping_missing(
         self,
@@ -244,7 +248,9 @@ class TestQueryBuilder:
         assert "assets.manager_party_id IN ('manager-party-1')" in compiled
         assert "assets.organization_id IN ('manager-party-1')" not in compiled
 
-    def test_build_query_should_use_legacy_org_ids_for_relation_aware_fallback(self):
+    def test_build_query_should_ignore_relation_aware_legacy_org_ids_without_legacy_column(
+        self,
+    ):
         qb = QueryBuilder(Asset)
         query = qb.build_query(
             party_filter=PartyFilter(
@@ -258,10 +264,10 @@ class TestQueryBuilder:
         compiled = str(query.compile(compile_kwargs={"literal_binds": True}))
 
         assert "assets.manager_party_id IN ('manager-party-1')" in compiled
-        assert "assets.manager_party_id IS NULL" in compiled
-        assert "assets.organization_id IN ('org-legacy-1')" in compiled
+        assert "assets.manager_party_id IS NULL" not in compiled
+        assert "assets.organization_id IN ('org-legacy-1')" not in compiled
 
-    def test_build_query_should_use_legacy_org_ids_when_model_has_only_org_column(self):
+    def test_build_query_should_skip_party_filter_when_model_has_no_party_columns(self):
         qb = QueryBuilder(PropertyCertificate)
         query = qb.build_query(
             party_filter=PartyFilter(
@@ -271,10 +277,11 @@ class TestQueryBuilder:
         )
         compiled = str(query.compile(compile_kwargs={"literal_binds": True}))
 
-        assert "property_certificates.organization_id IN ('org-legacy-1')" in compiled
-        assert "property_certificates.organization_id IN ('party-1')" not in compiled
+        assert "property_certificates.organization_id" not in compiled
+        assert "false" not in compiled.lower()
+        assert "0 = 1" not in compiled
 
-    def test_build_query_should_fail_closed_for_legacy_org_only_model_without_mapping(self):
+    def test_build_query_should_not_fail_closed_when_model_has_no_party_columns(self):
         qb = QueryBuilder(PropertyCertificate)
         query = qb.build_query(
             party_filter=PartyFilter(
@@ -283,4 +290,5 @@ class TestQueryBuilder:
         )
         compiled = str(query.compile(compile_kwargs={"literal_binds": True}))
 
-        assert "false" in compiled.lower() or "0 = 1" in compiled
+        assert "false" not in compiled.lower()
+        assert "0 = 1" not in compiled

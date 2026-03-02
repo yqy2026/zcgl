@@ -12,9 +12,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from ..database import Base
 
 if TYPE_CHECKING:
-    from .asset import Asset
     from .project_relations import ProjectOwnershipRelation
-    from .rent_contract import RentContract
 
 
 class Ownership(Base):
@@ -62,12 +60,6 @@ class Ownership(Base):
     updated_by: Mapped[str | None] = mapped_column(String(100), comment="更新人")
 
     # 关联关系
-    owned_rent_contracts: Mapped[list["RentContract"]] = relationship(
-        "RentContract", back_populates="ownership", cascade="all, delete-orphan"
-    )
-    assets: Mapped[list["Asset"]] = relationship(
-        "Asset", back_populates="ownership", passive_deletes=True
-    )  # 注意：不使用 cascade="all, delete-orphan"，因为资产不应随权属方删除而自动删除
     ownership_relations: Mapped[list["ProjectOwnershipRelation"]] = relationship(
         "ProjectOwnershipRelation",
         back_populates="ownership",

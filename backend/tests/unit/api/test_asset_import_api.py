@@ -5,9 +5,25 @@ This test module covers the asset import functionality:
 - POST /import - Batch import assets with different modes
 """
 
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
+import pytest
+
 from src.schemas.asset import AssetImportResponse
+
+
+@pytest.fixture(autouse=True)
+def allow_asset_import_authz(monkeypatch):
+    """Bypass row-level authz in unit tests and focus on endpoint behavior."""
+
+    async def _allow(*args, **kwargs):
+        return SimpleNamespace(allowed=True)
+
+    monkeypatch.setattr(
+        "src.api.v1.assets.asset_import.authz_service.check_access",
+        _allow,
+    )
 
 
 class TestAssetImport:

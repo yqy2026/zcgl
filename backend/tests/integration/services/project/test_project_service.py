@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.crud.project import project_crud
+from src.models.party import Party, PartyType
 from src.models.project import Project
 from src.schemas.project import ProjectCreate, ProjectUpdate
 from src.services.project.service import ProjectService
@@ -28,12 +29,25 @@ class TestProjectBasic:
     async def setup(self, db_session: AsyncSession, project_service: ProjectService):
         self.db = db_session
         self.service = project_service
+        manager_party = Party(
+            party_type=PartyType.ORGANIZATION.value,
+            name="Project Service Test Manager",
+            code="PJT-SVC-MANAGER",
+            external_ref="PJT-SVC-MANAGER",
+            status="active",
+        )
+        self.db.add(manager_party)
+        await self.db.flush()
+        self.manager_party_id = manager_party.id
 
     async def test_create_and_get_project(self):
         """测试创建和获取项目"""
         # 创建项目
         project_data = ProjectCreate(
-            name="测试项目", code="PJ2401001", project_status="规划中"
+            name="测试项目",
+            code="PJ2401001",
+            project_status="规划中",
+            manager_party_id=self.manager_party_id,
         )
         project = await self.service.create_project(self.db, obj_in=project_data)
 
@@ -52,7 +66,10 @@ class TestProjectBasic:
         project = await self.service.create_project(
             self.db,
             obj_in=ProjectCreate(
-                name="原始项目", code="PJ2401002", project_status="规划中"
+                name="原始项目",
+                code="PJ2401002",
+                project_status="规划中",
+                manager_party_id=self.manager_party_id,
             ),
         )
 
@@ -70,7 +87,10 @@ class TestProjectBasic:
         project = await self.service.create_project(
             self.db,
             obj_in=ProjectCreate(
-                name="状态测试项目", code="PJ2401003", project_status="规划中"
+                name="状态测试项目",
+                code="PJ2401003",
+                project_status="规划中",
+                manager_party_id=self.manager_party_id,
             ),
         )
 
@@ -83,7 +103,10 @@ class TestProjectBasic:
         project = await self.service.create_project(
             self.db,
             obj_in=ProjectCreate(
-                name="待删除项目", code="PJ2401004", project_status="规划中"
+                name="待删除项目",
+                code="PJ2401004",
+                project_status="规划中",
+                manager_party_id=self.manager_party_id,
             ),
         )
         project_id = project.id

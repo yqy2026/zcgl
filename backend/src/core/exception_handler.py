@@ -19,6 +19,7 @@ from ..constants.message_constants import ErrorMessages
 
 logger = logging.getLogger(__name__)
 ErrorDetails = dict[str, object]
+AUTHZ_STALE_HEADER_NAME = "X-Authz-Stale"
 
 
 class BaseBusinessError(Exception):
@@ -387,7 +388,22 @@ class ExceptionHandler:
             "request_id": self._get_request_id(request),
         }
 
-        return JSONResponse(status_code=exc.status_code, content=response_data)
+        response_headers: dict[str, str] = {}
+        if self._should_set_authz_stale_header(exc):
+            response_headers[AUTHZ_STALE_HEADER_NAME] = "true"
+
+        return JSONResponse(
+            status_code=exc.status_code,
+            content=response_data,
+            headers=response_headers,
+        )
+
+    def _should_set_authz_stale_header(self, exc: BaseBusinessError) -> bool:
+        """Expose authz-stale signal for auth failures to support client refresh logic."""
+        return exc.status_code in {
+            status.HTTP_401_UNAUTHORIZED,
+            status.HTTP_403_FORBIDDEN,
+        }
 
     def _sanitize_exception_details(
         self, details: ErrorDetails | None

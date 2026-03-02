@@ -225,12 +225,16 @@ class RentContractLifecycleService(RentContractHelperMixin):
                 owner_party_id=target_owner_party_id,
                 ownership_id=target_ownership_id,
             )
-            if owner_party_updated:
-                update_data["owner_party_id"] = normalized_owner_party_id
-            if ownership_updated or (
-                owner_party_updated and normalized_owner_party_id is not None
+            resolved_owner_party_for_update = normalized_owner_party_id
+            if (
+                resolved_owner_party_for_update is None
+                and ownership_updated
+                and normalized_ownership_id is not None
             ):
-                update_data["ownership_id"] = normalized_ownership_id
+                # Legacy compatibility: ownership_id-only payloads fallback to owner scope.
+                resolved_owner_party_for_update = normalized_ownership_id
+            if owner_party_updated or ownership_updated:
+                update_data["owner_party_id"] = resolved_owner_party_for_update
 
         for field, value in update_data.items():
             setattr(db_obj, field, value)

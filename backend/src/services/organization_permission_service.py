@@ -146,8 +146,9 @@ class OrganizationPermissionService:  # DEPRECATED
 
         roles = await self._get_user_roles(user_id)
         for role in roles:
-            if role.organization_id:
-                org_ids.add(str(role.organization_id))
+            role_party_id = getattr(role, "party_id", None)
+            if role_party_id:
+                org_ids.add(str(role_party_id))
 
         role_ids = [role.id for role in roles]
         if role_ids:
@@ -235,7 +236,9 @@ class OrganizationPermissionService:  # DEPRECATED
 
         roles = await self._get_user_roles(user_id)
         if target_org:
-            matching = [role for role in roles if role.organization_id == target_org]
+            matching = [
+                role for role in roles if getattr(role, "party_id", None) == target_org
+            ]
             if matching:
                 matching.sort(key=lambda r: r.level or 0)
                 return matching[0].name
@@ -255,11 +258,20 @@ class OrganizationPermissionService:  # DEPRECATED
             entity = desc.get("entity")
             if entity is None:
                 continue
-            if hasattr(entity, "organization_id"):
+            party_column = getattr(entity, "party_id", None)
+            if party_column is not None:
                 if hasattr(query, "filter"):
-                    return query.filter(entity.organization_id.in_(org_ids))
+                    return query.filter(party_column.in_(org_ids))
                 if hasattr(query, "where"):
-                    return query.where(entity.organization_id.in_(org_ids))
+                    return query.where(party_column.in_(org_ids))
+                return query
+
+            organization_column = getattr(entity, "organization_id", None)
+            if organization_column is not None:
+                if hasattr(query, "filter"):
+                    return query.filter(organization_column.in_(org_ids))
+                if hasattr(query, "where"):
+                    return query.where(organization_column.in_(org_ids))
                 return query
 
         logger.debug(

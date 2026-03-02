@@ -12,8 +12,10 @@ from sqlalchemy.orm import Session
 from src.models.abac import ABACPolicy, ABACPolicyRule, ABACRolePolicy
 from src.models.auth import User
 from src.models.organization import Organization
+from src.models.party import Party, PartyType
 from src.models.project import Project
 from src.models.rbac import Role, UserRoleAssignment
+from src.models.user_party_binding import RelationType, UserPartyBinding
 from src.services.core.password_service import PasswordService
 
 
@@ -101,6 +103,23 @@ def test_non_admin_project_visibility_isolation(client: TestClient, db_session: 
     db_session.add_all([org_a, org_b])
     db_session.flush()
 
+    party_a = Party(
+        party_type=PartyType.ORGANIZATION.value,
+        name=f"Visibility Party A-{suffix}",
+        code=f"VIS-PARTY-A-{suffix}",
+        external_ref=org_a.id,
+        status="active",
+    )
+    party_b = Party(
+        party_type=PartyType.ORGANIZATION.value,
+        name=f"Visibility Party B-{suffix}",
+        code=f"VIS-PARTY-B-{suffix}",
+        external_ref=org_b.id,
+        status="active",
+    )
+    db_session.add_all([party_a, party_b])
+    db_session.flush()
+
     user_a = User(
         username=f"vis_user_a_{suffix}",
         email=f"vis_user_a_{suffix}@example.com",
@@ -126,18 +145,35 @@ def test_non_admin_project_visibility_isolation(client: TestClient, db_session: 
     db_session.add_all([user_a, user_b])
     db_session.flush()
 
+    db_session.add_all(
+        [
+            UserPartyBinding(
+                user_id=user_a.id,
+                party_id=party_a.id,
+                relation_type=RelationType.MANAGER,
+                is_primary=True,
+            ),
+            UserPartyBinding(
+                user_id=user_b.id,
+                party_id=party_b.id,
+                relation_type=RelationType.MANAGER,
+                is_primary=True,
+            ),
+        ]
+    )
+
     project_a = Project(
         name=f"Visibility Project A-{suffix}",
         code=_build_project_code(),
         project_status="active",
-        organization_id=org_a.id,
+        manager_party_id=party_a.id,
         created_by=user_a.id,
     )
     project_b = Project(
         name=f"Visibility Project B-{suffix}",
         code=_build_project_code(),
         project_status="active",
-        organization_id=org_b.id,
+        manager_party_id=party_b.id,
         created_by=user_b.id,
     )
     db_session.add_all([project_a, project_b])

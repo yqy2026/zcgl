@@ -94,7 +94,8 @@ def sample_asset_data(db_session: Session) -> dict:
 
     return {
         "property_name": f"测试物业-{suffix}",
-        "ownership_id": ownership.id,
+        "owner_party_id": ownership.id,
+        "manager_party_id": ownership.id,
         "address": "北京市朝阳区某某街道123号",
         "manager_name": "王经理",
         "business_category": "商业",

@@ -7,7 +7,7 @@ from ..models.collection import CollectionRecord
 from ..models.llm_prompt import PromptTemplate
 from ..models.ownership import Ownership
 from ..models.project import Project
-from ..models.property_certificate import PropertyCertificate, PropertyOwner
+from ..models.property_certificate import PropertyCertificate
 from ..models.rbac import (
     Permission,
     PermissionAuditLog,
@@ -29,14 +29,13 @@ from .field_whitelist import (
     AsyncTaskWhitelist,
     CollectionRecordWhitelist,
     ExcelTaskConfigWhitelist,
+    OwnershipWhitelist,
     PermissionAuditLogWhitelist,
     PermissionGrantWhitelist,
     PermissionWhitelist,
-    OwnershipWhitelist,
     ProjectWhitelist,
     PromptTemplateWhitelist,
     PropertyCertificateWhitelist,
-    PropertyOwnerWhitelist,
     RentContractWhitelist,
     RentLedgerWhitelist,
     RentTermWhitelist,
@@ -63,7 +62,6 @@ register_whitelist(PromptTemplate, PromptTemplateWhitelist())
 register_whitelist(Project, ProjectWhitelist())
 register_whitelist(Ownership, OwnershipWhitelist())
 register_whitelist(PropertyCertificate, PropertyCertificateWhitelist())
-register_whitelist(PropertyOwner, PropertyOwnerWhitelist())
 register_whitelist(RentTerm, RentTermWhitelist())
 register_whitelist(RentLedger, RentLedgerWhitelist())
 register_whitelist(UserRoleAssignment, UserRoleAssignmentWhitelist())

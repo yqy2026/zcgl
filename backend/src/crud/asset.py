@@ -21,9 +21,7 @@ from ..models.asset import Asset
 from ..models.asset_history import AssetHistory
 from ..models.asset_search_index import AssetSearchIndex
 from ..models.auth import User
-from ..models.ownership import Ownership
-from ..models.project import Project
-from ..models.project_relations import ProjectOwnershipRelation
+from ..models.party import Party
 from ..models.rent_contract import RentContract
 from ..schemas.asset import AssetCreate, AssetUpdate
 from .asset_support import (
@@ -76,7 +74,11 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         include_contract_projection: bool = True,
     ) -> tuple[object, ...]:
         """资产投影字段所需的关系预加载选项。"""
-        options: list[object] = [joinedload(Asset.ownership)]
+        options: list[object] = [
+            joinedload(Asset.owner_party),
+            joinedload(Asset.manager_party),
+            joinedload(Asset.project),
+        ]
         if include_contract_projection:
             options.append(
                 selectinload(Asset.rent_contracts).options(
@@ -196,9 +198,6 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         注意：集合关系使用 selectinload，避免 joinedload 导致的行膨胀。
         """
         return select(Asset).options(
-            joinedload(Asset.project)
-            .selectinload(Project.ownership_relations)
-            .joinedload(ProjectOwnershipRelation.ownership),
             *self._asset_projection_load_options(
                 include_contract_projection=include_contract_projection
             ),
@@ -270,6 +269,30 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             return stmt.where(false())
         return stmt.where(Asset.created_by.in_(principals))
 
+    @staticmethod
+    def _supports_party_scope_columns() -> bool:
+        return any(
+            hasattr(Asset, column_name)
+            for column_name in (
+                "owner_party_id",
+                "manager_party_id",
+                "party_id",
+                "organization_id",
+            )
+        )
+
+    async def _apply_asset_party_filter(
+        self,
+        db: AsyncSession,
+        stmt: Select[object],
+        party_filter: PartyFilter,
+    ) -> Select[object]:
+        if self._supports_party_scope_columns():
+            return self.query_builder.apply_party_filter(stmt, party_filter)
+
+        principals = await self._resolve_creator_principals(db, party_filter)
+        return self._apply_creator_scope(stmt, principals)
+
     async def create_async(
         self,
         db: AsyncSession,
@@ -314,11 +337,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             getattr(self.model, "id") == id
         )
         if party_filter is not None:
-            if hasattr(Asset, "organization_id"):  # DEPRECATED legacy column fallback
-                stmt = self.query_builder.apply_party_filter(stmt, party_filter)
-            else:
-                principals = await self._resolve_creator_principals(db, party_filter)
-                stmt = self._apply_creator_scope(stmt, principals)
+            stmt = await self._apply_asset_party_filter(db, stmt, party_filter)
         if not include_deleted:
             stmt = stmt.filter(self._not_deleted_clause(Asset.data_status))
 
@@ -397,11 +416,6 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
     ) -> tuple[list[Asset], int]:
         qb_filters = self._normalize_filters(filters)
         normalized_sort_field = self._normalize_sort_field(sort_field)
-        effective_party_filter = party_filter
-        creator_principals: set[str] | None = None
-        if party_filter is not None and not hasattr(Asset, "organization_id"):  # DEPRECATED legacy column guard
-            creator_principals = await self._resolve_creator_principals(db, party_filter)
-            effective_party_filter = None
 
         non_pii_search_fields = ["property_name", "business_category"]
         pii_search_fields = ["address"]
@@ -439,7 +453,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
                             getattr(Asset, field).ilike(f"%{search}%")
                         )
 
-            search_conditions.append(Ownership.name.ilike(f"%{search}%"))
+            search_conditions.append(Party.name.ilike(f"%{search}%"))
 
             if not search_conditions:
                 search_conditions = None
@@ -457,10 +471,14 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         )
         if search_conditions:
             base_query = base_query.join(
-                Ownership, Asset.ownership_id == Ownership.id, isouter=True
+                Party, Asset.owner_party_id == Party.id, isouter=True
             )
-        if creator_principals is not None:
-            base_query = self._apply_creator_scope(base_query, creator_principals)
+        if party_filter is not None:
+            base_query = await self._apply_asset_party_filter(
+                db,
+                base_query,
+                party_filter,
+            )
         query: Select[object] = self.query_builder.build_query(
             filters=qb_filters,
             search_conditions=search_conditions,
@@ -469,7 +487,6 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             skip=skip,
             limit=limit,
             base_query=base_query,
-            party_filter=effective_party_filter,
         )
         result = await db.execute(query)
         assets: list[Asset] = await _scalars_all(result)
@@ -477,12 +494,13 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         count_base_query: Select[object] = select(Asset.id)
         if search_conditions:
             count_base_query = count_base_query.join(
-                Ownership, Asset.ownership_id == Ownership.id, isouter=True
+                Party, Asset.owner_party_id == Party.id, isouter=True
             )
-        if creator_principals is not None:
-            count_base_query = self._apply_creator_scope(
+        if party_filter is not None:
+            count_base_query = await self._apply_asset_party_filter(
+                db,
                 count_base_query,
-                creator_principals,
+                party_filter,
             )
 
         cnt_query = self.query_builder.build_count_query(
@@ -490,7 +508,6 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             search_conditions=search_conditions,
             base_query=count_base_query,
             distinct_column=Asset.id,
-            party_filter=effective_party_filter,
         )
         total_result = await db.execute(cnt_query)
         total_raw = await _result_scalar(total_result)
@@ -514,8 +531,13 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
     ) -> Asset:
         obj_in_data = obj_in.model_dump()
         self._clean_asset_data(obj_in_data, remove_relation_fields=False)
-        if organization_id is not None and organization_id.strip() != "":  # DEPRECATED alias
-            obj_in_data["organization_id"] = organization_id  # DEPRECATED legacy column
+        if (
+            organization_id is not None
+            and organization_id.strip() != ""
+            and obj_in_data.get("manager_party_id") in (None, "")
+        ):
+            # 仅保留最小兼容：旧 organization_id 输入不再写库列，按 manager_party_id 别名处理。
+            obj_in_data["manager_party_id"] = organization_id
         encrypted_data = self.sensitive_data_handler.encrypt_data(obj_in_data.copy())
 
         db_obj = Asset(**encrypted_data)
@@ -687,8 +709,8 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
     ) -> list[Asset]:
         stmt = (
             select(Asset)
-            .join(Ownership, Asset.ownership_id == Ownership.id, isouter=True)
-            .where(Ownership.name.ilike(f"%{ownership_name}%"))
+            .join(Party, Asset.owner_party_id == Party.id, isouter=True)
+            .where(Party.name.ilike(f"%{ownership_name}%"))
         )
         if not include_deleted:
             stmt = stmt.where(self._not_deleted_clause(Asset.data_status))
@@ -934,7 +956,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
 
     async def count_by_ownership_async(self, db: AsyncSession, ownership_id: str) -> int:
         """统计权属方的资产数量"""
-        stmt = select(func.count(Asset.id)).where(Asset.ownership_id == ownership_id)
+        stmt = select(func.count(Asset.id)).where(Asset.owner_party_id == ownership_id)
         result = await db.execute(stmt)
         return int((await _result_scalar(result)) or 0)
 
@@ -945,9 +967,9 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         if not ownership_ids:
             return {}
         stmt = (
-            select(Asset.ownership_id, func.count(Asset.id))
-            .where(Asset.ownership_id.in_(ownership_ids))
-            .group_by(Asset.ownership_id)
+            select(Asset.owner_party_id, func.count(Asset.id))
+            .where(Asset.owner_party_id.in_(ownership_ids))
+            .group_by(Asset.owner_party_id)
         )
         result = await db.execute(stmt)
         return {

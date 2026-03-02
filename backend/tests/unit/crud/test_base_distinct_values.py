@@ -180,7 +180,7 @@ class TestGetDistinctFieldValues:
 
         stmt = mock_db.execute.await_args.args[0]
         compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
-        assert "roles.organization_id IN ('org-1')" in compiled
+        assert "roles.party_id IN ('org-1')" in compiled
 
 
 class TestCountWithTenantFilter:
@@ -198,7 +198,7 @@ class TestCountWithTenantFilter:
         assert total == 3
         stmt = mock_db.execute.await_args.args[0]
         compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
-        assert "roles.organization_id IN ('org-1', 'org-2')" in compiled
+        assert "roles.party_id IN ('org-1', 'org-2')" in compiled
 
     @pytest.mark.asyncio
     async def test_count_fail_closed_when_tenant_filter_empty(self, mock_db: MagicMock):
@@ -237,7 +237,7 @@ class TestGetAndGetMultiWithTenantFilter:
         stmt = mock_db.execute.await_args.args[0]
         compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
         assert "roles.id = 'role-1'" in compiled
-        assert "roles.organization_id IN ('org-1')" in compiled
+        assert "roles.party_id IN ('org-1')" in compiled
 
     @pytest.mark.asyncio
     async def test_get_fail_closed_when_tenant_filter_empty(self, mock_db: MagicMock):
@@ -275,7 +275,7 @@ class TestGetAndGetMultiWithTenantFilter:
 
         stmt = mock_db.execute.await_args.args[0]
         compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
-        assert "roles.organization_id IN ('org-2')" in compiled
+        assert "roles.party_id IN ('org-2')" in compiled
 
 
 class TestCacheInvalidationWithTenantFilter:
@@ -307,7 +307,7 @@ class TestCacheInvalidationWithTenantFilter:
         )
         role_crud._set_cache(cache_key, MagicMock())
 
-        role = SimpleNamespace(id="role-1", name="old-role", organization_id="org-1")
+        role = SimpleNamespace(id="role-1", name="old-role", party_id="org-1")
         mock_db.commit = AsyncMock()
         mock_db.refresh = AsyncMock()
 

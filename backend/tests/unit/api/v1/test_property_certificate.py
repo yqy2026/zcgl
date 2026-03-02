@@ -10,6 +10,7 @@ Test coverage for Property Certificate API endpoints:
 
 import io
 from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi import status
@@ -24,12 +25,24 @@ from src.services.property_certificate.service import PropertyCertificateService
 @pytest.fixture
 def admin_user_headers(client, admin_user, monkeypatch):
     """管理员用户认证头"""
+    from src.api.v1.assets import property_certificate as property_certificate_module
     from src.middleware.auth import RBACPermissionChecker
 
     def allow_admin(self, current_user=None, db=None):  # noqa: ANN001 - test stub
         return admin_user
 
+    mock_authz_service = MagicMock()
+    mock_authz_service.check_access = AsyncMock(
+        return_value=MagicMock(allowed=True, reason_code="allow")
+    )
+
     monkeypatch.setattr(RBACPermissionChecker, "__call__", allow_admin)
+    monkeypatch.setattr(
+        property_certificate_module,
+        "authz_service",
+        mock_authz_service,
+        raising=False,
+    )
     return {}
 
 

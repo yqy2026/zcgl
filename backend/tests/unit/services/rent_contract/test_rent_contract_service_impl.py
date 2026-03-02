@@ -228,7 +228,7 @@ class TestRentContractLifecycle:
         mock_db.commit.assert_not_awaited()
 
     @pytest.mark.asyncio
-    async def test_update_contract_async_should_backfill_ownership_when_only_owner_party_updated(
+    async def test_update_contract_async_should_keep_owner_party_when_only_owner_party_updated(
         self, service, mock_db
     ):
         db_obj = RentContract(
@@ -262,7 +262,8 @@ class TestRentContractLifecycle:
             )
 
         assert result.owner_party_id == "party_001"
-        assert result.ownership_id == "ownership_001"
+        assert result.ownership_id == "party_001"
+        assert result.owner_party_id != "ownership_001"
         mock_resolve_ownership.assert_awaited_once_with(
             db=mock_db, owner_party_id="party_001"
         )

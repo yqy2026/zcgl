@@ -199,7 +199,7 @@ class QueryOptimizer:
             stmt = select(Asset)
             if should_include_related:
                 stmt = stmt.options(
-                    joinedload(Asset.project), joinedload(Asset.ownership)
+                    joinedload(Asset.project), joinedload(Asset.owner_party)
                 )
 
             return stmt
@@ -214,7 +214,7 @@ class QueryOptimizer:
     ) -> Any:
         """优化资产列表查询"""
         from ..models.asset import Asset
-        from ..models.ownership import Ownership
+        from ..models.party import Party
 
         with self.query_with_monitoring("optimized_asset_list_query"):
             stmt = select(Asset)
@@ -224,10 +224,10 @@ class QueryOptimizer:
                 search_conditions = [
                     Asset.property_name.ilike(f"%{search}%"),
                     Asset.address.ilike(f"%{search}%"),
-                    Ownership.name.ilike(f"%{search}%"),
+                    Party.name.ilike(f"%{search}%"),
                 ]
                 stmt = stmt.join(
-                    Ownership, Asset.ownership_id == Ownership.id, isouter=True
+                    Party, Asset.owner_party_id == Party.id, isouter=True
                 ).where(*search_conditions)
 
             # 添加筛选条件
@@ -344,7 +344,7 @@ class DatabaseOptimizer:
                 "idx_asset_property_nature", Asset.property_nature
             ),  # pragma: no cover
             Index("idx_asset_usage_status", Asset.usage_status),  # pragma: no cover
-            Index("idx_asset_project_id", Asset.project_id),  # pragma: no cover
+            Index("idx_asset_owner_party_id", Asset.owner_party_id),  # pragma: no cover
             Index("idx_asset_created_at", Asset.created_at),  # pragma: no cover
             # 复合索引
             Index(

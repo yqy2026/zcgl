@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from .asset import Asset
-    from .ownership import Ownership
     from .party import Party
 
 from sqlalchemy import (
@@ -74,13 +73,6 @@ class RentContract(Base):
         String(100), unique=True, nullable=False, comment="合同编号"
     )
     # V2: 移除 asset_id，改用多对多关联
-    ownership_id: Mapped[str] = mapped_column(  # DEPRECATED legacy column
-        String,
-        ForeignKey("ownerships.id"),
-        nullable=False,
-        comment="权属方ID（DEPRECATED）",
-        info={"deprecated": True},
-    )
     owner_party_id: Mapped[str | None] = mapped_column(
         String,
         ForeignKey("parties.id"),
@@ -214,9 +206,6 @@ class RentContract(Base):
     assets: Mapped[list["Asset"]] = relationship(
         "Asset", secondary=rent_contract_assets, back_populates="rent_contracts"
     )
-    ownership: Mapped["Ownership"] = relationship(
-        "Ownership", back_populates="owned_rent_contracts"
-    )
     owner_party: Mapped["Party | None"] = relationship(
         "Party",
         foreign_keys=[owner_party_id],
@@ -268,8 +257,22 @@ class RentContract(Base):
             else:
                 kwargs.pop("assets", None)
         owner_party_id = kwargs.get("owner_party_id")
-        ownership_id = kwargs.get("ownership_id")  # DEPRECATED alias
-        if owner_party_id in (None, "") and ownership_id in (None, "") and all(  # DEPRECATED fallback
+        legacy_ownership_id = kwargs.pop("ownership_id", None)  # DEPRECATED alias
+        if (
+            owner_party_id in (None, "")
+            and legacy_ownership_id not in (None, "")
+        ):
+            kwargs["owner_party_id"] = legacy_ownership_id
+            owner_party_id = legacy_ownership_id
+
+        if kwargs.get("manager_party_id") in (None, "") and owner_party_id not in (
+            None,
+            "",
+        ):
+            # Step4 兼容：历史路径仅提供 owner/ownership 时，默认同主体作为管理方。
+            kwargs["manager_party_id"] = owner_party_id
+
+        if owner_party_id in (None, "") and all(
             field in kwargs
             for field in ("tenant_name", "sign_date", "start_date", "end_date")
         ):
@@ -279,6 +282,15 @@ class RentContract(Base):
         if kwargs.get("contract_type") is None:
             kwargs["contract_type"] = ContractType.LEASE_DOWNSTREAM
         super().__init__(**kwargs)
+
+    @property
+    def ownership_id(self) -> str | None:
+        """DEPRECATED alias: 兼容旧链路读取 ownership_id。"""
+        return self.owner_party_id
+
+    @ownership_id.setter
+    def ownership_id(self, value: str | None) -> None:
+        self.owner_party_id = value
 
     @property
     def status(self) -> ContractStatus:
@@ -436,13 +448,6 @@ class RentLedger(Base):
     asset_id: Mapped[str | None] = mapped_column(
         String, ForeignKey("assets.id"), nullable=True, comment="关联资产ID"
     )
-    ownership_id: Mapped[str] = mapped_column(  # DEPRECATED legacy column
-        String,
-        ForeignKey("ownerships.id"),
-        nullable=False,
-        comment="权属方ID（DEPRECATED）",
-        info={"deprecated": True},
-    )
     owner_party_id: Mapped[str | None] = mapped_column(
         String,
         ForeignKey("parties.id"),
@@ -511,11 +516,30 @@ class RentLedger(Base):
         "RentContract", back_populates="rent_ledger"
     )
     asset: Mapped["Asset | None"] = relationship("Asset")
-    ownership: Mapped["Ownership"] = relationship("Ownership")
     owner_party: Mapped["Party | None"] = relationship(
         "Party",
         foreign_keys=[owner_party_id],
     )
+
+    def __init__(self, **kwargs: Any) -> None:
+        owner_party_id = kwargs.get("owner_party_id")
+        legacy_ownership_id = kwargs.pop("ownership_id", None)
+        if (
+            owner_party_id in (None, "")
+            and legacy_ownership_id is not None
+            and str(legacy_ownership_id).strip() != ""
+        ):
+            kwargs["owner_party_id"] = str(legacy_ownership_id).strip()
+        super().__init__(**kwargs)
+
+    @property
+    def ownership_id(self) -> str | None:
+        """DEPRECATED alias: 兼容旧链路读取 ownership_id。"""
+        return self.owner_party_id
+
+    @ownership_id.setter
+    def ownership_id(self, value: str | None) -> None:
+        self.owner_party_id = value
 
     def __repr__(self) -> str:
         return f"<RentLedger(contract_id={self.contract_id}, year_month={self.year_month}, payment_status={self.payment_status})>"  # pragma: no cover

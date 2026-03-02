@@ -158,11 +158,9 @@ class TestCRUDRole:
         count_froms = count_stmt.get_final_froms()
 
         assert "roles.party_id" in query_sql
-        assert "roles.organization_id" in query_sql
-        assert " OR " in query_sql
+        assert "roles.organization_id" not in query_sql
         assert "roles.party_id" in count_sql
-        assert "roles.organization_id" in count_sql
-        assert " OR " in count_sql
+        assert "roles.organization_id" not in count_sql
         assert len(count_froms) == 1
         assert "anon_1, roles" not in count_sql
 

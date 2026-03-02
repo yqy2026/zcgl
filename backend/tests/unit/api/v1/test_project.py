@@ -41,7 +41,33 @@ def test_organization(db_session: Session):
 
 
 @pytest.fixture
-def project_data(db_session: Session, test_organization):
+def test_org_party(db_session: Session, test_organization):
+    """创建与组织映射的 Party 数据（Phase4 必需）。"""
+    from sqlalchemy import select
+
+    from src.models.party import Party, PartyType
+
+    party_stmt = select(Party).where(
+        Party.party_type == PartyType.ORGANIZATION.value,
+        Party.external_ref == test_organization.id,
+    )
+    party = db_session.execute(party_stmt).scalar_one_or_none()
+    if party is None:
+        party = Party(
+            party_type=PartyType.ORGANIZATION.value,
+            name=f"Unit Test Party {test_organization.name}",
+            code="PARTY-UNIT-TEST-001",
+            external_ref=test_organization.id,
+            status="active",
+        )
+        db_session.add(party)
+        db_session.flush()
+    db_session.refresh(party)
+    return party
+
+
+@pytest.fixture
+def project_data(db_session: Session, test_organization, test_org_party):
     """创建测试项目数据"""
     from src.models.project import Project
 
@@ -53,8 +79,7 @@ def project_data(db_session: Session, test_organization):
         address="Test Address 123",
         project_type="commercial",
         project_status="planning",
-        ownership_entity="owner-001",
-        organization_id=test_organization.id,
+        manager_party_id=test_org_party.id,
     )
     db_session.add(project)
     db_session.flush()
@@ -68,7 +93,7 @@ def project_data(db_session: Session, test_organization):
 
 
 @pytest.fixture
-def admin_user_headers(client, admin_user, test_organization, monkeypatch):
+def admin_user_headers(client, admin_user, test_organization, test_org_party, monkeypatch):
     """管理员用户认证头"""
     from src.api.v1.assets import project as project_module
     from src.main import app
@@ -466,7 +491,12 @@ class TestSearchProjects:
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
     def test_delete_project_success(
-        self, client, admin_user_headers, db_session: Session, test_organization
+        self,
+        client,
+        admin_user_headers,
+        db_session: Session,
+        test_organization,
+        test_org_party,
     ):
         """测试成功删除项目"""
         from src.models.project import Project
@@ -476,7 +506,7 @@ class TestSearchProjects:
             name="To Be Deleted",
             code="PJ2509007",
             city="Test City",
-            organization_id=test_organization.id,
+            manager_party_id=test_org_party.id,
         )
         db_session.add(project)
         db_session.flush()

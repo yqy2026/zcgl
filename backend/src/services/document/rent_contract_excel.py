@@ -552,7 +552,7 @@ class RentContractExcelService:
             contract_rows.append(
                 {
                     CONTRACT_COLUMNS["contract_number"]: contract.contract_number,
-                    CONTRACT_COLUMNS["ownership_id"]: contract.ownership_id,
+                    CONTRACT_COLUMNS["ownership_id"]: contract.owner_party_id,
                     CONTRACT_COLUMNS["contract_type"]: str(contract.contract_type),
                     CONTRACT_COLUMNS["tenant_name"]: contract.tenant_name,
                     CONTRACT_COLUMNS["sign_date"]: contract.sign_date,

@@ -611,9 +611,6 @@ class AuthzPermissionChecker:
             Asset.id.label("asset_id"),
             Asset.owner_party_id,
             Asset.manager_party_id,
-            Asset.organization_id,
-            Asset.ownership_id,
-            Asset.project_id,
         ).where(Asset.id == asset_id)
         row = (await db.execute(stmt)).mappings().one_or_none()
         if row is None:
@@ -623,31 +620,6 @@ class AuthzPermissionChecker:
         normalized_manager_party_id = self._normalize_optional_str(
             row.get("manager_party_id")
         )
-        normalized_organization_id = self._normalize_optional_str(
-            row.get("organization_id")
-        )
-        normalized_ownership_id = self._normalize_optional_str(row.get("ownership_id"))
-        if normalized_owner_party_id is None and normalized_ownership_id is not None:
-            normalized_owner_party_id = await self._resolve_ownership_party_id(
-                db=db,
-                ownership_id=normalized_ownership_id,
-                ownership_code=None,
-                ownership_name=None,
-            )
-            if normalized_owner_party_id is None:
-                normalized_owner_party_id = normalized_ownership_id
-        if (
-            normalized_manager_party_id is None
-            and normalized_organization_id is not None
-        ):
-            normalized_manager_party_id = await self._resolve_organization_party_id(
-                db=db,
-                organization_id=normalized_organization_id,
-                organization_code=None,
-                organization_name=None,
-            )
-            if normalized_manager_party_id is None:
-                normalized_manager_party_id = normalized_organization_id
         scoped_party_id = normalized_owner_party_id or normalized_manager_party_id
 
         return self._normalize_scope_context(
@@ -656,9 +628,6 @@ class AuthzPermissionChecker:
                 "owner_party_id": normalized_owner_party_id,
                 "manager_party_id": normalized_manager_party_id,
                 "party_id": scoped_party_id,
-                "organization_id": normalized_organization_id,
-                "ownership_id": normalized_ownership_id,
-                "project_id": row.get("project_id"),
             }
         )
 
@@ -673,7 +642,6 @@ class AuthzPermissionChecker:
         stmt = select(
             Project.id.label("project_id"),
             Project.manager_party_id,
-            Project.organization_id,
         ).where(Project.id == project_id)
         row = (await db.execute(stmt)).mappings().one_or_none()
         if row is None:
@@ -682,28 +650,12 @@ class AuthzPermissionChecker:
         normalized_manager_party_id = self._normalize_optional_str(
             row.get("manager_party_id")
         )
-        normalized_organization_id = self._normalize_optional_str(
-            row.get("organization_id")
-        )
-        if (
-            normalized_manager_party_id is None
-            and normalized_organization_id is not None
-        ):
-            normalized_manager_party_id = await self._resolve_organization_party_id(
-                db=db,
-                organization_id=normalized_organization_id,
-                organization_code=None,
-                organization_name=None,
-            )
-            if normalized_manager_party_id is None:
-                normalized_manager_party_id = normalized_organization_id
 
         return self._normalize_scope_context(
             {
                 "project_id": row.get("project_id"),
                 "manager_party_id": normalized_manager_party_id,
                 "party_id": normalized_manager_party_id,
-                "organization_id": normalized_organization_id,
             }
         )
 
@@ -720,7 +672,6 @@ class AuthzPermissionChecker:
             RentContract.owner_party_id,
             RentContract.manager_party_id,
             RentContract.tenant_party_id,
-            RentContract.ownership_id,
         ).where(RentContract.id == contract_id)
         row = (await db.execute(stmt)).mappings().one_or_none()
         if row is None:
@@ -730,16 +681,6 @@ class AuthzPermissionChecker:
         normalized_manager_party_id = self._normalize_optional_str(
             row.get("manager_party_id")
         )
-        normalized_ownership_id = self._normalize_optional_str(row.get("ownership_id"))
-        if normalized_owner_party_id is None and normalized_ownership_id is not None:
-            normalized_owner_party_id = await self._resolve_ownership_party_id(
-                db=db,
-                ownership_id=normalized_ownership_id,
-                ownership_code=None,
-                ownership_name=None,
-            )
-            if normalized_owner_party_id is None:
-                normalized_owner_party_id = normalized_ownership_id
 
         return self._normalize_scope_context(
             {
@@ -748,7 +689,6 @@ class AuthzPermissionChecker:
                 "manager_party_id": normalized_manager_party_id,
                 "party_id": normalized_owner_party_id or normalized_manager_party_id,
                 "tenant_party_id": row.get("tenant_party_id"),
-                "ownership_id": normalized_ownership_id,
             }
         )
 
@@ -817,7 +757,6 @@ class AuthzPermissionChecker:
         stmt = select(
             Role.id.label("role_id"),
             Role.party_id,
-            Role.organization_id,
         ).where(Role.id == role_id)
         row = (await db.execute(stmt)).mappings().one_or_none()
         if row is None:
@@ -828,16 +767,6 @@ class AuthzPermissionChecker:
             return {}
 
         scoped_party_id = self._normalize_optional_str(row.get("party_id"))
-        normalized_organization_id = self._normalize_optional_str(row.get("organization_id"))
-        if scoped_party_id is None and normalized_organization_id is not None:
-            scoped_party_id = await self._resolve_organization_party_id(
-                db=db,
-                organization_id=normalized_organization_id,
-                organization_code=None,
-                organization_name=None,
-            )
-            if scoped_party_id is None:
-                scoped_party_id = normalized_organization_id
         if scoped_party_id is None:
             scoped_party_id = self._build_unscoped_party_id(
                 resource_type="role",
@@ -847,7 +776,6 @@ class AuthzPermissionChecker:
         return self._normalize_scope_context(
             {
                 "role_id": normalized_role_id,
-                "organization_id": normalized_organization_id,
                 "party_id": scoped_party_id,
                 "owner_party_id": scoped_party_id,
                 "manager_party_id": scoped_party_id,
@@ -1110,32 +1038,38 @@ class AuthzPermissionChecker:
         db: AsyncSession,
         certificate_id: str,
     ) -> dict[str, Any]:
+        from ..models.certificate_party_relation import CertificatePartyRelation
         from ..models.property_certificate import PropertyCertificate
 
-        stmt = select(
+        certificate_stmt = select(
             PropertyCertificate.id.label("certificate_id"),
-            PropertyCertificate.organization_id,
         ).where(PropertyCertificate.id == certificate_id)
-        row = (await db.execute(stmt)).mappings().one_or_none()
+        row = (await db.execute(certificate_stmt)).mappings().one_or_none()
         if row is None:
             return {}
 
-        normalized_organization_id = self._normalize_optional_str(row.get("organization_id"))
-        scoped_party_id: str | None = None
-        if normalized_organization_id is not None:
-            scoped_party_id = await self._resolve_organization_party_id(
-                db=db,
-                organization_id=normalized_organization_id,
-                organization_code=None,
-                organization_name=None,
+        relation_stmt = (
+            select(CertificatePartyRelation.party_id.label("party_id"))
+            .where(CertificatePartyRelation.certificate_id == certificate_id)
+            .order_by(
+                CertificatePartyRelation.is_primary.desc(),
+                CertificatePartyRelation.created_at.desc(),
             )
-            if scoped_party_id is None:
-                scoped_party_id = normalized_organization_id
+            .limit(1)
+        )
+        relation_row = (await db.execute(relation_stmt)).mappings().one_or_none()
+        scoped_party_id = self._normalize_optional_str(
+            relation_row.get("party_id") if relation_row is not None else None
+        )
+        if scoped_party_id is None:
+            scoped_party_id = self._build_unscoped_party_id(
+                resource_type="property_certificate",
+                resource_id=str(certificate_id).strip(),
+            )
 
         return self._normalize_scope_context(
             {
                 "certificate_id": row.get("certificate_id"),
-                "organization_id": normalized_organization_id,
                 "party_id": scoped_party_id,
                 "owner_party_id": scoped_party_id,
                 "manager_party_id": scoped_party_id,

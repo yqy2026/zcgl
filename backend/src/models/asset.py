@@ -21,15 +21,13 @@ from sqlalchemy import (
     Text,
     inspect,
 )
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship, synonym
 from sqlalchemy.orm import attributes as orm_attributes
 
 from ..database import Base
 
 if TYPE_CHECKING:
     from .asset_history import AssetDocument, AssetHistory
-    from .organization import Organization
-    from .ownership import Ownership
     from .party import Party
     from .project import Project
     from .property_certificate import PropertyCertificate
@@ -78,12 +76,6 @@ class Asset(Base):
     )
     usage_status: Mapped[str] = mapped_column(
         String(50), nullable=False, index=True, comment="使用状态"
-    )
-    management_entity: Mapped[str | None] = mapped_column(
-        String(200),
-        index=True,
-        comment="经营管理单位（DEPRECATED）",
-        info={"deprecated": True},
     )
     business_category: Mapped[str | None] = mapped_column(
         String(100), comment="业态类别"
@@ -206,13 +198,6 @@ class Asset(Base):
         secondary="property_cert_assets",
         back_populates="assets",
     )
-    project_id: Mapped[str | None] = mapped_column(
-        String,
-        ForeignKey("projects.id"),
-        index=True,
-        comment="项目ID（DEPRECATED，改由 project_assets 关联）",
-        info={"deprecated": True},
-    )
     owner_party_id: Mapped[str | None] = mapped_column(
         String,
         ForeignKey("parties.id"),
@@ -225,23 +210,18 @@ class Asset(Base):
         index=True,
         comment="经营管理方主体ID",
     )
-    organization_id: Mapped[str | None] = mapped_column(
-        String,
-        ForeignKey("organizations.id"),
-        index=True,
-        comment="所属组织ID（DEPRECATED）",
-        info={"deprecated": True},
-    )
-    ownership_id: Mapped[str | None] = mapped_column(
-        String,
-        ForeignKey("ownerships.id"),
-        index=True,
-        comment="权属方ID（DEPRECATED）",
-        info={"deprecated": True},
-    )
-
+    # Phase4 兼容别名：旧字段语义映射到主体字段
+    ownership_id = synonym("owner_party_id")
+    management_entity = synonym("manager_party_id")
     # 关系定义
-    project: Mapped["Project"] = relationship("Project", back_populates="assets")
+    project: Mapped["Project | None"] = relationship(
+        "Project",
+        secondary="project_assets",
+        primaryjoin="Asset.id == ProjectAsset.asset_id",
+        secondaryjoin="Project.id == ProjectAs" "set.project_id",
+        uselist=False,
+        viewonly=True,
+    )
     owner_party: Mapped["Party | None"] = relationship(
         "Party",
         foreign_keys=[owner_party_id],
@@ -250,8 +230,6 @@ class Asset(Base):
         "Party",
         foreign_keys=[manager_party_id],
     )
-    organization: Mapped["Organization | None"] = relationship("Organization")
-    ownership: Mapped["Ownership"] = relationship("Ownership", back_populates="assets")
 
     def _get_loaded_relationship_value(
         self, relationship_name: str, *, projection_field: str
@@ -259,7 +237,16 @@ class Asset(Base):
         state = inspect(self)
         if state is None:
             return None
-        relationship_value = state.attrs[relationship_name].loaded_value
+        resolved_relationship_name = relationship_name
+        if (
+            relationship_name == "ownership"
+            and relationship_name not in state.attrs
+            and "owner_party" in state.attrs
+        ):
+            resolved_relationship_name = "owner_party"
+        if resolved_relationship_name not in state.attrs:
+            return getattr(self, relationship_name, None)
+        relationship_value = state.attrs[resolved_relationship_name].loaded_value
         no_value = getattr(orm_attributes, "NO_VALUE", None)
         if relationship_value is no_value:
             if state.transient or state.pending:
@@ -282,13 +269,17 @@ class Asset(Base):
 
     @property
     def ownership_entity(self) -> str | None:
-        ownership_value = self._get_loaded_relationship_value(
+        legacy_ownership = self.__dict__.get("ownership")
+        if legacy_ownership is not None:
+            return getattr(legacy_ownership, "name", None)
+
+        owner_party_value = self._get_loaded_relationship_value(
             "ownership",
             projection_field="ownership_entity",
         )
-        if ownership_value is None:
+        if owner_party_value is None:
             return None
-        return getattr(ownership_value, "name", None)
+        return getattr(owner_party_value, "name", None)
 
     def _pick_preferred_contract(
         self,
@@ -431,6 +422,44 @@ class Asset(Base):
         return round(rate, 2)
 
     def __init__(self, **kwargs: Any) -> None:
+        # Phase4 Step4 兼容：旧列已删除，避免构造时将旧键传入 ORM。
+        legacy_management_entity = kwargs.pop("management_entity", None)
+        kwargs.pop("project_id", None)
+        legacy_organization_id = kwargs.pop("organization_id", None)
+        owner_party_id = kwargs.get("owner_party_id")
+        legacy_ownership_id = kwargs.pop("ownership_id", None)
+        if (
+            owner_party_id is None or str(owner_party_id).strip() == ""
+        ) and legacy_ownership_id is not None and str(legacy_ownership_id).strip() != "":
+            kwargs["owner_party_id"] = str(legacy_ownership_id).strip()
+            owner_party_id = kwargs["owner_party_id"]
+        if (
+            kwargs.get("manager_party_id") in (None, "")
+            and legacy_management_entity is not None
+            and str(legacy_management_entity).strip() != ""
+        ):
+            kwargs["manager_party_id"] = str(legacy_management_entity).strip()
+        if (
+            kwargs.get("manager_party_id") in (None, "")
+            and legacy_organization_id is not None
+            and str(legacy_organization_id).strip() != ""
+        ):
+            kwargs["manager_party_id"] = str(legacy_organization_id).strip()
+        if (
+            (owner_party_id is None or str(owner_party_id).strip() == "")
+            and legacy_organization_id is not None
+            and str(legacy_organization_id).strip() != ""
+        ):
+            kwargs["owner_party_id"] = str(legacy_organization_id).strip()
+        resolved_owner_party_id = kwargs.get("owner_party_id")
+        if (
+            kwargs.get("manager_party_id") in (None, "")
+            and resolved_owner_party_id is not None
+            and str(resolved_owner_party_id).strip() != ""
+        ):
+            # Step4 兼容：历史写入路径仅提供 ownership_id 时，默认同主体作为管理方。
+            kwargs["manager_party_id"] = str(resolved_owner_party_id).strip()
+
         kwargs.setdefault("id", str(uuid.uuid4()))
         kwargs.setdefault("data_status", "正常")
         kwargs.setdefault("version", 1)

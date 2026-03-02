@@ -931,7 +931,7 @@ def _ensure_whitelists_registered() -> None:
         from ..models.llm_prompt import PromptTemplate
         from ..models.ownership import Ownership
         from ..models.project import Project
-        from ..models.property_certificate import PropertyCertificate, PropertyOwner
+        from ..models.property_certificate import PropertyCertificate
         from ..models.rbac import (
             Permission,
             PermissionAuditLog,
@@ -955,7 +955,6 @@ def _ensure_whitelists_registered() -> None:
         register_whitelist(Project, ProjectWhitelist())
         register_whitelist(Ownership, OwnershipWhitelist())
         register_whitelist(PropertyCertificate, PropertyCertificateWhitelist())
-        register_whitelist(PropertyOwner, PropertyOwnerWhitelist())
         register_whitelist(RentTerm, RentTermWhitelist())
         register_whitelist(RentLedger, RentLedgerWhitelist())
         register_whitelist(UserRoleAssignment, UserRoleAssignmentWhitelist())

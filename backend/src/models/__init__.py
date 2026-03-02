@@ -57,7 +57,6 @@ from .property_certificate import (  # noqa: F401
     CertificateType,
     OwnerType,
     PropertyCertificate,
-    PropertyOwner,
 )
 from .rbac import (  # noqa: F401
     Permission,
@@ -163,7 +162,6 @@ __all__ = [
     "CertificateType",
     "OwnerType",
     "PropertyCertificate",
-    "PropertyOwner",
     # Task models
     "AsyncTask",
     "ExcelTaskConfig",

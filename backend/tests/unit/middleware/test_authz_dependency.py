@@ -287,14 +287,13 @@ async def test_load_property_certificate_scope_context_includes_party_scope_fiel
     )
 
     assert context["certificate_id"] == "cert-1"
-    assert context["organization_id"] == "org-1"
     assert context["party_id"] == "party-1"
     assert context["owner_party_id"] == "party-1"
     assert context["manager_party_id"] == "party-1"
 
 
 @pytest.mark.asyncio
-async def test_load_property_certificate_scope_context_falls_back_to_org_id_when_party_missing() -> None:
+async def test_load_property_certificate_scope_context_falls_back_to_unscoped_when_party_missing() -> None:
     checker = require_authz(
         action="read",
         resource_type="property_certificate",
@@ -320,14 +319,13 @@ async def test_load_property_certificate_scope_context_falls_back_to_org_id_when
     )
 
     assert context["certificate_id"] == "cert-legacy"
-    assert context["organization_id"] == "org-legacy"
-    assert context["party_id"] == "org-legacy"
-    assert context["owner_party_id"] == "org-legacy"
-    assert context["manager_party_id"] == "org-legacy"
+    assert context["party_id"] == "__unscoped__:property_certificate:cert-legacy"
+    assert context["owner_party_id"] == "__unscoped__:property_certificate:cert-legacy"
+    assert context["manager_party_id"] == "__unscoped__:property_certificate:cert-legacy"
 
 
 @pytest.mark.asyncio
-async def test_load_asset_scope_context_resolves_legacy_party_scope_when_party_columns_missing() -> None:
+async def test_load_asset_scope_context_uses_party_columns_directly() -> None:
     checker = require_authz(
         action="read",
         resource_type="asset",
@@ -338,57 +336,27 @@ async def test_load_asset_scope_context_resolves_legacy_party_scope_when_party_c
         side_effect=[
             _mapping_result(
                 {
-                    "asset_id": "asset-legacy",
-                    "owner_party_id": None,
-                    "manager_party_id": None,
-                    "organization_id": "org-legacy",
-                    "ownership_id": "ownership-legacy",
-                    "project_id": "project-1",
+                    "asset_id": "asset-1",
+                    "owner_party_id": "owner-party-1",
+                    "manager_party_id": "manager-party-1",
                 }
             ),
         ]
     )
 
-    with (
-        patch.object(
-            checker,
-            "_resolve_ownership_party_id",
-            new=AsyncMock(return_value="owner-party-legacy"),
-        ) as mock_resolve_ownership_party,
-        patch.object(
-            checker,
-            "_resolve_organization_party_id",
-            new=AsyncMock(return_value="manager-party-legacy"),
-        ) as mock_resolve_org_party,
-    ):
-        context = await checker._load_asset_scope_context(
-            db=db,
-            asset_id="asset-legacy",
-        )
+    context = await checker._load_asset_scope_context(
+        db=db,
+        asset_id="asset-1",
+    )
 
-    assert context["asset_id"] == "asset-legacy"
-    assert context["ownership_id"] == "ownership-legacy"
-    assert context["organization_id"] == "org-legacy"
-    assert context["project_id"] == "project-1"
-    assert context["owner_party_id"] == "owner-party-legacy"
-    assert context["manager_party_id"] == "manager-party-legacy"
-    assert context["party_id"] == "owner-party-legacy"
-    mock_resolve_ownership_party.assert_awaited_once_with(
-        db=db,
-        ownership_id="ownership-legacy",
-        ownership_code=None,
-        ownership_name=None,
-    )
-    mock_resolve_org_party.assert_awaited_once_with(
-        db=db,
-        organization_id="org-legacy",
-        organization_code=None,
-        organization_name=None,
-    )
+    assert context["asset_id"] == "asset-1"
+    assert context["owner_party_id"] == "owner-party-1"
+    assert context["manager_party_id"] == "manager-party-1"
+    assert context["party_id"] == "owner-party-1"
 
 
 @pytest.mark.asyncio
-async def test_load_project_scope_context_resolves_manager_party_from_legacy_org() -> None:
+async def test_load_project_scope_context_uses_manager_party_directly() -> None:
     checker = require_authz(
         action="read",
         resource_type="project",
@@ -399,38 +367,25 @@ async def test_load_project_scope_context_resolves_manager_party_from_legacy_org
         side_effect=[
             _mapping_result(
                 {
-                    "project_id": "project-legacy",
-                    "manager_party_id": None,
-                    "organization_id": "org-legacy",
+                    "project_id": "project-1",
+                    "manager_party_id": "manager-party-1",
                 }
             ),
         ]
     )
 
-    with patch.object(
-        checker,
-        "_resolve_organization_party_id",
-        new=AsyncMock(return_value="manager-party-legacy"),
-    ) as mock_resolve_org_party:
-        context = await checker._load_project_scope_context(
-            db=db,
-            project_id="project-legacy",
-        )
-
-    assert context["project_id"] == "project-legacy"
-    assert context["organization_id"] == "org-legacy"
-    assert context["manager_party_id"] == "manager-party-legacy"
-    assert context["party_id"] == "manager-party-legacy"
-    mock_resolve_org_party.assert_awaited_once_with(
+    context = await checker._load_project_scope_context(
         db=db,
-        organization_id="org-legacy",
-        organization_code=None,
-        organization_name=None,
+        project_id="project-1",
     )
+
+    assert context["project_id"] == "project-1"
+    assert context["manager_party_id"] == "manager-party-1"
+    assert context["party_id"] == "manager-party-1"
 
 
 @pytest.mark.asyncio
-async def test_load_rent_contract_scope_context_resolves_owner_party_from_legacy_ownership() -> None:
+async def test_load_rent_contract_scope_context_uses_party_columns_directly() -> None:
     checker = require_authz(
         action="read",
         resource_type="rent_contract",
@@ -441,38 +396,25 @@ async def test_load_rent_contract_scope_context_resolves_owner_party_from_legacy
         side_effect=[
             _mapping_result(
                 {
-                    "contract_id": "contract-legacy",
-                    "owner_party_id": None,
-                    "manager_party_id": None,
+                    "contract_id": "contract-1",
+                    "owner_party_id": "owner-party-1",
+                    "manager_party_id": "manager-party-1",
                     "tenant_party_id": "tenant-party-1",
-                    "ownership_id": "ownership-legacy",
                 }
             ),
         ]
     )
 
-    with patch.object(
-        checker,
-        "_resolve_ownership_party_id",
-        new=AsyncMock(return_value="owner-party-legacy"),
-    ) as mock_resolve_ownership_party:
-        context = await checker._load_rent_contract_scope_context(
-            db=db,
-            contract_id="contract-legacy",
-        )
-
-    assert context["contract_id"] == "contract-legacy"
-    assert context["ownership_id"] == "ownership-legacy"
-    assert context["tenant_party_id"] == "tenant-party-1"
-    assert context["owner_party_id"] == "owner-party-legacy"
-    assert context["party_id"] == "owner-party-legacy"
-    assert "manager_party_id" not in context
-    mock_resolve_ownership_party.assert_awaited_once_with(
+    context = await checker._load_rent_contract_scope_context(
         db=db,
-        ownership_id="ownership-legacy",
-        ownership_code=None,
-        ownership_name=None,
+        contract_id="contract-1",
     )
+
+    assert context["contract_id"] == "contract-1"
+    assert context["tenant_party_id"] == "tenant-party-1"
+    assert context["owner_party_id"] == "owner-party-1"
+    assert context["manager_party_id"] == "manager-party-1"
+    assert context["party_id"] == "owner-party-1"
 
 
 @pytest.mark.asyncio
@@ -539,7 +481,7 @@ async def test_load_role_scope_context_uses_role_party_id_when_present() -> None
 
 
 @pytest.mark.asyncio
-async def test_load_role_scope_context_falls_back_to_org_id_when_party_missing() -> None:
+async def test_load_role_scope_context_falls_back_to_unscoped_when_party_missing() -> None:
     checker = require_authz(
         action="read",
         resource_type="role",
@@ -552,11 +494,8 @@ async def test_load_role_scope_context_falls_back_to_org_id_when_party_missing()
                 {
                     "role_id": "role-legacy",
                     "party_id": None,
-                    "organization_id": "org-legacy",
                 }
             ),
-            _mapping_result(None),
-            _mapping_result(None),
         ]
     )
 
@@ -566,10 +505,9 @@ async def test_load_role_scope_context_falls_back_to_org_id_when_party_missing()
     )
 
     assert context["role_id"] == "role-legacy"
-    assert context["organization_id"] == "org-legacy"
-    assert context["party_id"] == "org-legacy"
-    assert context["owner_party_id"] == "org-legacy"
-    assert context["manager_party_id"] == "org-legacy"
+    assert context["party_id"] == "__unscoped__:role:role-legacy"
+    assert context["owner_party_id"] == "__unscoped__:role:role-legacy"
+    assert context["manager_party_id"] == "__unscoped__:role:role-legacy"
 
 
 @pytest.mark.asyncio

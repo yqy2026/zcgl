@@ -1,7 +1,6 @@
-"""
-Property Certificate CRUD Operations
-产权证CRUD操作
-"""
+"""Property certificate CRUD operations."""
+
+from __future__ import annotations
 
 from typing import Any
 
@@ -9,147 +8,23 @@ from sqlalchemy import false, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models.asset import Asset
-from ..models.property_certificate import (
-    PropertyCertificate,
-    PropertyOwner,
-    property_certificate_owners,
+from ..models.certificate_party_relation import (
+    CertificatePartyRelation,
+    CertificateRelationRole,
 )
+from ..models.property_certificate import PropertyCertificate
 from ..schemas.property_certificate import (
     PropertyCertificateCreate,
     PropertyCertificateUpdate,
-    PropertyOwnerCreate,
-    PropertyOwnerUpdate,
 )
-from .asset import SensitiveDataHandler
 from .base import CRUDBase
 from .query_builder import PartyFilter
-
-
-class CRUDPropertyOwner(
-    CRUDBase[PropertyOwner, PropertyOwnerCreate, PropertyOwnerUpdate]
-):
-    """权利人CRUD操作 - 支持敏感字段加密"""
-
-    def __init__(self, model: type[PropertyOwner]) -> None:
-        super().__init__(model)
-        # 🔒 安全修复: PropertyOwner 敏感字段处理（使用确定性加密以支持搜索）
-        self.sensitive_data_handler = SensitiveDataHandler(
-            searchable_fields={
-                "id_number",  # 证件号码 - 高度敏感PII，需要搜索
-                "phone",  # 联系电话 - 敏感PII，需要搜索
-            }
-        )
-
-    async def create_async(
-        self,
-        db: AsyncSession,
-        *,
-        obj_in: PropertyOwnerCreate | dict[str, Any],
-        commit: bool = True,
-        **kwargs: Any,
-    ) -> PropertyOwner:
-        if isinstance(obj_in, dict):
-            obj_in_data = obj_in
-        else:
-            obj_in_data = obj_in.model_dump()
-
-        encrypted_data = self.sensitive_data_handler.encrypt_data(obj_in_data)
-        return await super().create(
-            db=db, obj_in=encrypted_data, commit=commit, **kwargs
-        )
-
-    async def create_multi_async(
-        self,
-        db: AsyncSession,
-        *,
-        objects_in: list[PropertyOwnerCreate | dict[str, Any]],
-        commit: bool = True,
-    ) -> list[PropertyOwner]:
-        if len(objects_in) == 0:
-            return []
-
-        encrypted_rows: list[dict[str, Any]] = []
-        for obj_in in objects_in:
-            if isinstance(obj_in, dict):
-                obj_data = obj_in
-            else:
-                obj_data = obj_in.model_dump()
-            encrypted_rows.append(self.sensitive_data_handler.encrypt_data(obj_data))
-
-        owners = [PropertyOwner(**row) for row in encrypted_rows]
-        db.add_all(owners)
-        if commit:
-            await db.commit()
-        else:
-            await db.flush()
-        for owner in owners:
-            self.sensitive_data_handler.decrypt_data(owner.__dict__)
-        return owners
-
-    async def get_async(
-        self, db: AsyncSession, id: Any, use_cache: bool = True
-    ) -> PropertyOwner | None:
-        result = await super().get(db=db, id=id, use_cache=use_cache)
-        if result is not None:
-            self.sensitive_data_handler.decrypt_data(result.__dict__)
-        return result
-
-    async def get_multi_async(
-        self,
-        db: AsyncSession,
-        *,
-        skip: int = 0,
-        limit: int = 100,
-        use_cache: bool = False,
-        **kwargs: Any,
-    ) -> list[PropertyOwner]:
-        results = await super().get_multi(
-            db=db, skip=skip, limit=limit, use_cache=use_cache, **kwargs
-        )
-        for item in results:
-            self.sensitive_data_handler.decrypt_data(item.__dict__)
-        return results
-
-    async def update_async(
-        self,
-        db: AsyncSession,
-        *,
-        db_obj: PropertyOwner,
-        obj_in: PropertyOwnerUpdate | dict[str, Any],
-        commit: bool = True,
-    ) -> PropertyOwner:
-        if isinstance(obj_in, dict):
-            update_data = obj_in
-        else:
-            update_data = obj_in.model_dump(exclude_unset=True)
-
-        encrypted_data = self.sensitive_data_handler.encrypt_data(update_data)
-        return await super().update(
-            db=db, db_obj=db_obj, obj_in=encrypted_data, commit=commit
-        )
-
-    async def search_by_id_number_async(
-        self, db: AsyncSession, id_number: str, skip: int = 0, limit: int = 100
-    ) -> list[PropertyOwner]:
-        encrypted_id_number = self.sensitive_data_handler.encrypt_field(
-            "id_number", id_number
-        )
-        stmt = (
-            select(self.model)
-            .where(self.model.id_number == encrypted_id_number)
-            .offset(skip)
-            .limit(limit)
-        )
-        results = list((await db.execute(stmt)).scalars().all())
-        for item in results:
-            self.sensitive_data_handler.decrypt_data(item.__dict__)
-        return results
 
 
 class CRUDPropertyCertificate(
     CRUDBase[PropertyCertificate, PropertyCertificateCreate, PropertyCertificateUpdate]
 ):
-    """产权证CRUD操作类"""
+    """产权证 CRUD。"""
 
     async def get(
         self,
@@ -158,30 +33,22 @@ class CRUDPropertyCertificate(
         use_cache: bool = True,
         party_filter: PartyFilter | None = None,
     ) -> PropertyCertificate | None:
-        if party_filter is not None and not hasattr(  # DEPRECATED legacy column guard
-            PropertyCertificate,
-            "organization_id",  # DEPRECATED legacy column name
-        ):
-            org_ids = [
-                str(org_id).strip()
-                for org_id in party_filter.party_ids
-                if str(org_id).strip() != ""
+        if party_filter is not None:
+            party_ids = [
+                str(party_id).strip()
+                for party_id in party_filter.party_ids
+                if str(party_id).strip() != ""
             ]
             stmt = select(PropertyCertificate).where(PropertyCertificate.id == id)
-            if not org_ids:
+            if len(party_ids) == 0:
                 stmt = stmt.where(false())
                 return (await db.execute(stmt)).scalars().first()
             stmt = (
                 stmt.join(
-                    property_certificate_owners,
-                    property_certificate_owners.c.certificate_id
-                    == PropertyCertificate.id,
+                    CertificatePartyRelation,
+                    CertificatePartyRelation.certificate_id == PropertyCertificate.id,
                 )
-                .join(
-                    PropertyOwner,
-                    property_certificate_owners.c.owner_id == PropertyOwner.id,
-                )
-                .where(PropertyOwner.organization_id.in_(org_ids))  # DEPRECATED legacy column
+                .where(CertificatePartyRelation.party_id.in_(party_ids))
                 .distinct()
             )
             return (await db.execute(stmt)).scalars().first()
@@ -203,31 +70,22 @@ class CRUDPropertyCertificate(
         party_filter: PartyFilter | None = None,
         **kwargs: Any,
     ) -> list[PropertyCertificate]:
-        if party_filter is not None and not hasattr(  # DEPRECATED legacy column guard
-            PropertyCertificate,
-            "organization_id",  # DEPRECATED legacy column name
-        ):
-            org_ids = [
-                str(org_id).strip()
-                for org_id in party_filter.party_ids
-                if str(org_id).strip() != ""
+        if party_filter is not None:
+            party_ids = [
+                str(party_id).strip()
+                for party_id in party_filter.party_ids
+                if str(party_id).strip() != ""
             ]
             stmt = select(PropertyCertificate)
-            if not org_ids:
+            if len(party_ids) == 0:
                 stmt = stmt.where(false()).offset(skip).limit(limit)
                 return list((await db.execute(stmt)).scalars().all())
             stmt = (
-                stmt
-                .join(
-                    property_certificate_owners,
-                    property_certificate_owners.c.certificate_id
-                    == PropertyCertificate.id,
+                stmt.join(
+                    CertificatePartyRelation,
+                    CertificatePartyRelation.certificate_id == PropertyCertificate.id,
                 )
-                .join(
-                    PropertyOwner,
-                    property_certificate_owners.c.owner_id == PropertyOwner.id,
-                )
-                .where(PropertyOwner.organization_id.in_(org_ids))  # DEPRECATED legacy column
+                .where(CertificatePartyRelation.party_id.in_(party_ids))
                 .distinct()
                 .offset(skip)
                 .limit(limit)
@@ -262,19 +120,27 @@ class CRUDPropertyCertificate(
         commit: bool = True,
     ) -> PropertyCertificate:
         payload = obj_in.model_dump()
-        if organization_id is not None and organization_id.strip() != "":  # DEPRECATED alias
-            payload["organization_id"] = organization_id  # DEPRECATED legacy column
+        payload.pop("organization_id", None)
+        if organization_id is not None and organization_id.strip() != "":
+            # Step4 后 organization_id 不再落库，兼容透传但忽略写入。
+            pass
+
         db_obj = PropertyCertificate(**payload)
         db.add(db_obj)
         await db.flush()
 
         if owner_ids:
-            owner_result = await db.execute(
-                select(PropertyOwner).where(PropertyOwner.id.in_(owner_ids))
-            )
-            owners: list[PropertyOwner] = list(owner_result.scalars().all())
-            if owners:
-                db_obj.owners.extend(owners)
+            normalized_owner_ids = [
+                owner_id.strip() for owner_id in owner_ids if owner_id.strip() != ""
+            ]
+            for index, owner_id in enumerate(normalized_owner_ids):
+                relation = CertificatePartyRelation(
+                    certificate_id=db_obj.id,
+                    party_id=owner_id,
+                    relation_role=CertificateRelationRole.OWNER,
+                    is_primary=index == 0,
+                )
+                db.add(relation)
 
         if asset_ids:
             asset_result = await db.execute(select(Asset).where(Asset.id.in_(asset_ids)))
@@ -291,4 +157,3 @@ class CRUDPropertyCertificate(
 
 
 property_certificate_crud = CRUDPropertyCertificate(PropertyCertificate)
-property_owner_crud = CRUDPropertyOwner(PropertyOwner)
