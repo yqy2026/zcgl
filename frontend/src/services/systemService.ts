@@ -64,6 +64,36 @@ export interface UpdateUserData {
   default_organization_id?: string;
 }
 
+export type UserPartyRelationType = 'owner' | 'manager' | 'headquarters';
+
+export interface UserPartyBinding {
+  id: string;
+  user_id: string;
+  party_id: string;
+  relation_type: UserPartyRelationType;
+  is_primary: boolean;
+  valid_from: string;
+  valid_to: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserPartyBindingUpsertData {
+  party_id: string;
+  relation_type: UserPartyRelationType;
+  is_primary?: boolean;
+  valid_from?: string;
+  valid_to?: string | null;
+}
+
+export interface UserPartyBindingUpdateData {
+  party_id?: string;
+  relation_type?: UserPartyRelationType;
+  is_primary?: boolean;
+  valid_from?: string;
+  valid_to?: string | null;
+}
+
 export const userService = {
   // 获取用户列表
   async getUsers(params?: {
@@ -94,6 +124,39 @@ export const userService = {
   // 获取用户详情
   async getUser(id: string) {
     const response = await api.get(SYSTEM_API.USER_DETAIL(id));
+    return response.data;
+  },
+
+  // 获取用户主体绑定
+  async getUserPartyBindings(userId: string, params?: { active_only?: boolean }) {
+    const response = await api.get<UserPartyBinding[]>(`/users/${userId}/party-bindings`, {
+      params,
+    });
+    return response.data ?? [];
+  },
+
+  // 新增用户主体绑定
+  async createUserPartyBinding(userId: string, data: UserPartyBindingUpsertData) {
+    const response = await api.post<UserPartyBinding>(`/users/${userId}/party-bindings`, data);
+    return response.data;
+  },
+
+  // 更新用户主体绑定
+  async updateUserPartyBinding(
+    userId: string,
+    bindingId: string,
+    data: UserPartyBindingUpdateData
+  ) {
+    const response = await api.put<UserPartyBinding>(
+      `/users/${userId}/party-bindings/${bindingId}`,
+      data
+    );
+    return response.data;
+  },
+
+  // 关闭用户主体绑定
+  async closeUserPartyBinding(userId: string, bindingId: string) {
+    const response = await api.delete(`/users/${userId}/party-bindings/${bindingId}`);
     return response.data;
   },
 
@@ -189,7 +252,7 @@ export const roleService = {
 
   // 创建角色
   async createRole(data: CreateRoleData) {
-    const response = await api.post(SYSTEM_API.ROLES, data);
+    const response = await api.post(SYSTEM_API.ROLES, data, { retry: false });
     return response.data;
   },
 

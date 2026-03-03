@@ -2,7 +2,7 @@
 Focused async unit tests for CustomFieldService.
 """
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import ANY, AsyncMock, patch
 
 import pytest
 
@@ -11,6 +11,7 @@ from src.core.exception_handler import (
     DuplicateResourceError,
     ResourceNotFoundError,
 )
+from src.crud.query_builder import PartyFilter
 from src.models.system_dictionary import AssetCustomField
 from src.schemas.asset import (
     AssetCustomFieldCreate,
@@ -78,6 +79,31 @@ class TestCreateCustomField:
         ):
             with pytest.raises(DuplicateResourceError):
                 await service.create_custom_field_async(mock_db, obj_in=obj_in)
+
+
+class TestTenantFilterResolution:
+    async def test_resolve_party_filter_disables_legacy_default_org_fallback(
+        self, service, mock_db
+    ):
+        resolved_filter = PartyFilter(party_ids=["party-1"])
+
+        with patch(
+            "src.services.custom_field.service.resolve_user_party_filter",
+            new=AsyncMock(return_value=resolved_filter),
+        ) as mock_resolve:
+            result = await service._resolve_party_filter(
+                mock_db,
+                current_user_id="user-1",
+            )
+
+        assert result == resolved_filter
+        mock_resolve.assert_awaited_once_with(
+            mock_db,
+            current_user_id="user-1",
+            party_filter=None,
+            logger=ANY,
+            allow_legacy_default_organization_fallback=False,
+        )
 
 
 class TestUpdateCustomField:

@@ -91,6 +91,29 @@ class TestResolveUserPartyFilter:
 
         assert result == PartyFilter(party_ids=[])
 
+    async def test_should_fail_closed_when_legacy_fallback_disabled(self) -> None:
+        db = MagicMock()
+        execute_result = MagicMock()
+        execute_result.scalar_one_or_none.return_value = "org-legacy"
+        db.execute = AsyncMock(return_value=execute_result)
+
+        with patch(
+            "src.services.party_scope.party_crud.get_user_bindings",
+            new=AsyncMock(return_value=[]),
+        ), patch(
+            "src.services.party_scope._has_unrestricted_party_scope_access",
+            new=AsyncMock(return_value=False),
+        ):
+            result = await resolve_user_party_filter(
+                db,
+                current_user_id="user-1",
+                party_filter=None,
+                logger=logging.getLogger(__name__),
+                allow_legacy_default_organization_fallback=False,
+            )
+
+        assert result == PartyFilter(party_ids=[])
+
     async def test_should_bypass_privileged_user_before_legacy_org_fallback(
         self,
     ) -> None:

@@ -7,7 +7,6 @@ from ...core.exception_handler import (
     ResourceConflictError,
 )
 from ...crud.asset import asset_crud
-from ...crud.rent_contract import rent_term
 from ...models.rent_contract import (
     RentContract,
     RentTerm,
@@ -254,13 +253,22 @@ class RentContractLifecycleService(RentContractHelperMixin):
                 setattr(db_obj, "assets", sa_assets)
 
         if obj_in.rent_terms is not None:
-            await rent_term.delete_by_contract_async(db, db_obj.id)
-
+            replacement_terms: list[RentTerm] = []
             for term_data in obj_in.rent_terms:
                 term_data_dict = term_data.model_dump()
+                if term_data_dict.get("total_monthly_amount") is None:
+                    monthly_rent = term_data_dict.get("monthly_rent", Decimal("0"))
+                    management_fee = term_data_dict.get("management_fee", Decimal("0"))
+                    other_fees = term_data_dict.get("other_fees", Decimal("0"))
+                    term_data_dict["total_monthly_amount"] = (
+                        monthly_rent + management_fee + other_fees
+                    )
                 term_data_dict["contract_id"] = db_obj.id
-                db_term = RentTerm(**term_data_dict)
-                db.add(db_term)
+                replacement_terms.append(RentTerm(**term_data_dict))
+
+            # Use ORM collection replacement to keep relationship state consistent
+            # with loaded contract details, avoiding stale-state errors in API flows.
+            db_obj.rent_terms = replacement_terms
 
         db.add(db_obj)
         await db.commit()

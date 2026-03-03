@@ -1,6 +1,6 @@
 """Simplified async tests for PropertyCertificateService."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import ANY, AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -42,6 +42,27 @@ class TestPropertyCertificateServiceBasics:
         ):
             result = await service.get_certificate("id-1")
             assert result == cert
+
+    async def test_resolve_party_filter_disables_legacy_default_org_fallback(
+        self, mock_db
+    ):
+        service = PropertyCertificateService(mock_db)
+        resolved_filter = PartyFilter(party_ids=["party-1"])
+
+        with patch(
+            "src.services.property_certificate.service.resolve_user_party_filter",
+            new=AsyncMock(return_value=resolved_filter),
+        ) as mock_resolve:
+            result = await service._resolve_party_filter(current_user_id="user-1")
+
+        assert result == resolved_filter
+        mock_resolve.assert_awaited_once_with(
+            mock_db,
+            current_user_id="user-1",
+            party_filter=None,
+            logger=ANY,
+            allow_legacy_default_organization_fallback=False,
+        )
 
     async def test_list_certificates_with_current_user_resolves_tenant_filter(self, mock_db):
         service = PropertyCertificateService(mock_db)

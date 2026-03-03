@@ -98,6 +98,7 @@ class AssetService:
             current_user_id=current_user_id,
             party_filter=party_filter,
             logger=logger,
+            allow_legacy_default_organization_fallback=False,
         )
 
     @staticmethod

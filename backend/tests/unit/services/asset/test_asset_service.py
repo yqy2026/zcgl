@@ -4,7 +4,7 @@
 测试 AssetService 的所有主要方法
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import ANY, AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -247,6 +247,24 @@ class TestGetAssets:
 
 
 class TestTenantFilterResolution:
+    async def test_resolve_party_filter_disables_legacy_default_org_fallback(self, service):
+        resolved_filter = PartyFilter(party_ids=["party-1"])
+
+        with patch(
+            "src.services.asset.asset_service.resolve_user_party_filter",
+            new=AsyncMock(return_value=resolved_filter),
+        ) as mock_resolve:
+            result = await service._resolve_party_filter(current_user_id="user-1")
+
+        assert result == resolved_filter
+        mock_resolve.assert_awaited_once_with(
+            service.db,
+            current_user_id="user-1",
+            party_filter=None,
+            logger=ANY,
+            allow_legacy_default_organization_fallback=False,
+        )
+
     async def test_resolve_party_filter_returns_party_binding_ids(self, service):
         """测试 user_party_bindings 会被转换为 PartyFilter。"""
         binding_1 = MagicMock()

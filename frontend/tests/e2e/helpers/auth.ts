@@ -102,8 +102,36 @@ const usernameSelector =
 const passwordSelector = 'input#login_password, input[name="password"]';
 const submitSelector = 'button[type="submit"]';
 
+const navigateWithRetry = async (
+  page: Page,
+  path: string,
+  attempts: number = 2
+): Promise<void> => {
+  let lastError: unknown = null;
+
+  for (let index = 0; index < attempts; index += 1) {
+    try {
+      await page.goto(path, {
+        waitUntil: 'domcontentloaded',
+        timeout: 20_000,
+      });
+      return;
+    } catch (error) {
+      lastError = error;
+      if (index + 1 >= attempts) {
+        throw error;
+      }
+      await page.waitForTimeout(300);
+    }
+  }
+
+  if (lastError instanceof Error) {
+    throw lastError;
+  }
+};
+
 export const loginWithCredential = async (page: Page, credential: Credentials): Promise<boolean> => {
-  await page.goto(LOGIN_PATH);
+  await navigateWithRetry(page, LOGIN_PATH);
 
   const usernameInput = page.locator(usernameSelector).first();
   const passwordInput = page.locator(passwordSelector).first();
@@ -146,7 +174,7 @@ export const loginAsAdmin = async (page: Page): Promise<Credentials> => {
 };
 
 export const ensureAuthenticated = async (page: Page): Promise<Credentials> => {
-  await page.goto('/dashboard');
+  await navigateWithRetry(page, '/dashboard');
   await page
     .waitForURL(
       url => url.pathname.startsWith('/dashboard') || url.pathname.startsWith(LOGIN_PATH),
@@ -177,7 +205,7 @@ export const ensureAuthenticated = async (page: Page): Promise<Credentials> => {
 
 export const clearAuthState = async (page: Page): Promise<void> => {
   await page.context().clearCookies();
-  await page.goto(LOGIN_PATH);
+  await navigateWithRetry(page, LOGIN_PATH);
   await page.evaluate(() => {
     localStorage.clear();
     sessionStorage.clear();

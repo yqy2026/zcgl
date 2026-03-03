@@ -173,6 +173,7 @@ async def resolve_user_party_filter(
     current_user_id: str | None,
     party_filter: PartyFilter | None,
     logger: logging.Logger,
+    allow_legacy_default_organization_fallback: bool = True,
 ) -> PartyFilter | None:
     """Resolve PartyFilter using party bindings with legacy org fallback.
 
@@ -182,7 +183,7 @@ async def resolve_user_party_filter(
     - Resolution failure returns empty PartyFilter for fail-closed.
     - Binding relation is preserved for owner/manager scoped filtering.
     - Privileged users bypass party scope regardless of resolved bindings.
-    - Legacy ``users.default_organization_id`` mapping is used only when
+    - Legacy ``users.default_organization_id`` mapping is optional and used only when
       no scope bindings are available for non-privileged users.
     """
     if party_filter is not None:
@@ -302,6 +303,13 @@ async def resolve_user_party_filter(
             party_ids=generic_party_ids,
             legacy_org_ids=legacy_org_ids if len(legacy_org_ids) > 0 else None,
         )
+
+    if not allow_legacy_default_organization_fallback:
+        logger.info(
+            "No party bindings for user %s and legacy fallback disabled; fail-closed",
+            current_user_id,
+        )
+        return PartyFilter(party_ids=[])
 
     legacy_org_id = await _resolve_legacy_default_organization_id(
         db,

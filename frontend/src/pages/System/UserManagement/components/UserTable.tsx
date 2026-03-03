@@ -6,6 +6,7 @@ import {
   ExclamationCircleOutlined,
   EyeOutlined,
   LockOutlined,
+  TagsOutlined,
   UnlockOutlined,
   UserOutlined,
 } from '@ant-design/icons';
@@ -23,6 +24,7 @@ interface UserTableProps {
   paginationState: PaginationState;
   onPageChange: (next: { current?: number; pageSize?: number }) => void;
   onViewDetail: (user: User) => void;
+  onManagePartyBindings: (user: User) => void;
   onEdit: (user: User) => void;
   onToggleLock: (user: User) => void | Promise<void>;
   onToggleStatus: (user: User, status: 'active' | 'inactive') => void | Promise<void>;
@@ -36,6 +38,7 @@ const UserTable: React.FC<UserTableProps> = ({
   paginationState,
   onPageChange,
   onViewDetail,
+  onManagePartyBindings,
   onEdit,
   onToggleLock,
   onToggleStatus,
@@ -130,6 +133,15 @@ const UserTable: React.FC<UserTableProps> = ({
                 aria-label={`编辑用户${record.username}`}
               />
             </Tooltip>
+            <Tooltip title="主体标签绑定">
+              <Button
+                type="text"
+                icon={<TagsOutlined />}
+                className={styles.tableActionButton}
+                onClick={() => onManagePartyBindings(record)}
+                aria-label={`主体绑定用户${record.username}`}
+              />
+            </Tooltip>
             <Tooltip title={record.is_locked ? '解锁' : '锁定'}>
               <Button
                 type="text"
@@ -185,7 +197,7 @@ const UserTable: React.FC<UserTableProps> = ({
         ),
       },
     ],
-    [getStatusTag, onDelete, onEdit, onToggleLock, onToggleStatus, onViewDetail]
+    [getStatusTag, onDelete, onEdit, onManagePartyBindings, onToggleLock, onToggleStatus, onViewDetail]
   );
 
   return (

@@ -85,6 +85,30 @@ async def test_get_parties_applies_search_filter(mock_db) -> None:
 
 
 @pytest.mark.asyncio
+async def test_get_parties_applies_scoped_party_ids_filter(mock_db) -> None:
+    crud = CRUDParty()
+    execute_result = MagicMock()
+    execute_result.scalars.return_value.all.return_value = []
+    mock_db.execute = AsyncMock(return_value=execute_result)
+
+    await crud.get_parties(mock_db, scoped_party_ids=["party-1", "party-2"])
+
+    stmt = mock_db.execute.await_args.args[0]
+    sql = str(stmt)
+    assert "parties.id IN" in sql
+
+
+@pytest.mark.asyncio
+async def test_get_parties_returns_empty_when_scoped_party_ids_is_empty(mock_db) -> None:
+    crud = CRUDParty()
+
+    result = await crud.get_parties(mock_db, scoped_party_ids=[])
+
+    assert result == []
+    mock_db.execute.assert_not_called()
+
+
+@pytest.mark.asyncio
 async def test_resolve_legal_entity_party_id_should_match_external_ref(mock_db) -> None:
     crud = CRUDParty()
     mock_db.execute = AsyncMock(

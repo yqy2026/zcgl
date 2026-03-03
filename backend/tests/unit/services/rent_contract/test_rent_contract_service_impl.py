@@ -142,10 +142,7 @@ class TestRentContractLifecycle:
         with patch(
             "src.services.rent_contract.lifecycle_service.asset_crud.get_multi_by_ids_async",
             new=AsyncMock(return_value=[]),
-        ), patch(
-            "src.services.rent_contract.lifecycle_service.rent_term.delete_by_contract_async",
-            new=AsyncMock(),
-        ) as mock_delete_terms, patch.object(
+        ), patch.object(
             service, "_create_history_async", new=AsyncMock()
         ) as mock_history:
             result = await service.update_contract_async(
@@ -153,7 +150,8 @@ class TestRentContractLifecycle:
             )
 
         assert result.tenant_name == "new tenant"
-        mock_delete_terms.assert_awaited_once_with(mock_db, "contract_001")
+        assert len(result.rent_terms) == 1
+        assert result.rent_terms[0].monthly_rent == Decimal("1200")
         assert mock_db.commit.await_count == 1
         assert mock_db.refresh.await_count == 1
         mock_history.assert_awaited_once()

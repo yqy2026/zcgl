@@ -3,6 +3,7 @@ import React from 'react';
 import { fireEvent, renderWithProviders, screen, waitFor } from '@/test/utils/test-helpers';
 import UserManagementPage from '../UserManagementPage';
 import { userService } from '@/services/systemService';
+import { partyService } from '@/services/partyService';
 import { MessageManager } from '@/utils/messageManager';
 import { useUserManagementData } from '../UserManagement/hooks/useUserManagementData';
 
@@ -84,6 +85,14 @@ describe('UserManagementPage', () => {
     vi.mocked(useUserManagementData).mockReturnValue(buildHookResult());
     vi.spyOn(userService, 'lockUser').mockResolvedValue(undefined);
     vi.spyOn(userService, 'updateUser').mockResolvedValue({ id: mockUser.id });
+    vi.spyOn(userService, 'getUserPartyBindings').mockResolvedValue([]);
+    vi.spyOn(partyService, 'getParties').mockResolvedValue({
+      items: [],
+      total: 0,
+      skip: 0,
+      limit: 500,
+      isTruncated: false,
+    });
   });
 
   it('renders page with toolbar summary and actions', () => {
@@ -138,6 +147,18 @@ describe('UserManagementPage', () => {
 
     await waitFor(() => {
       expect(MessageManager.error).toHaveBeenCalledWith('加载用户列表失败');
+    });
+  }, 20_000);
+
+  it('opens party binding modal from table action', async () => {
+    renderWithProviders(<UserManagementPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: '主体绑定用户zhangsan' }));
+
+    expect(await screen.findByText('主体标签绑定 - 张三')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(userService.getUserPartyBindings).toHaveBeenCalledWith('user-1', { active_only: true });
+      expect(partyService.getParties).toHaveBeenCalledWith({ limit: 500 });
     });
   }, 20_000);
 });

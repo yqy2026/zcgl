@@ -1,11 +1,40 @@
 """Party API behavior tests."""
 
+from unittest.mock import AsyncMock, patch
+
 from fastapi import status
+
+
+def _create_user(
+    db_session,
+    *,
+    user_id: str,
+    default_organization_id: str | None = None,
+) -> None:
+    from src.models.auth import User
+
+    db_session.add(
+        User(
+            id=user_id,
+            username=f"user_{user_id}",
+            email=f"{user_id}@example.com",
+            phone="13800000001",
+            full_name=f"用户{user_id}",
+            password_hash="hashed-password",
+            is_active=True,
+            is_locked=False,
+            default_organization_id=default_organization_id,
+        )
+    )
+    db_session.flush()
 
 
 def test_list_parties_should_filter_by_search_query(client, db_session) -> None:
     """`/parties` 应根据 search 过滤名称/编码匹配结果。"""
     from src.models.party import Party, PartyType
+    from src.models.user_party_binding import RelationType, UserPartyBinding
+
+    _create_user(db_session, user_id="test_user_001")
 
     matching_party = Party(
         party_type=PartyType.ORGANIZATION,
@@ -21,6 +50,15 @@ def test_list_parties_should_filter_by_search_query(client, db_session) -> None:
     )
     db_session.add_all([matching_party, other_party])
     db_session.flush()
+    db_session.add(
+        UserPartyBinding(
+            user_id="test_user_001",
+            party_id=matching_party.id,
+            relation_type=RelationType.OWNER,
+            is_primary=True,
+        )
+    )
+    db_session.flush()
 
     response = client.get("/api/v1/parties?search=acme")
 
@@ -35,6 +73,9 @@ def test_list_parties_should_filter_by_search_query(client, db_session) -> None:
 def test_list_parties_should_filter_by_search_code(client, db_session) -> None:
     """`/parties` 应支持按编码模糊搜索。"""
     from src.models.party import Party, PartyType
+    from src.models.user_party_binding import RelationType, UserPartyBinding
+
+    _create_user(db_session, user_id="test_user_001")
 
     matching_party = Party(
         party_type=PartyType.ORGANIZATION,
@@ -50,6 +91,15 @@ def test_list_parties_should_filter_by_search_code(client, db_session) -> None:
     )
     db_session.add_all([matching_party, other_party])
     db_session.flush()
+    db_session.add(
+        UserPartyBinding(
+            user_id="test_user_001",
+            party_id=matching_party.id,
+            relation_type=RelationType.OWNER,
+            is_primary=True,
+        )
+    )
+    db_session.flush()
 
     response = client.get("/api/v1/parties?search=ACME-001")
 
@@ -59,3 +109,208 @@ def test_list_parties_should_filter_by_search_code(client, db_session) -> None:
     assert len(payload) == 1
     assert payload[0]["name"] == "Code Match Party"
     assert payload[0]["code"] == "ACME-001"
+
+
+def test_list_parties_should_fail_closed_when_user_has_no_bindings(client, db_session) -> None:
+    """无绑定时列表接口应 fail-closed 返回空列表。"""
+    from src.models.party import Party, PartyType
+
+    db_session.add(
+        Party(
+            party_type=PartyType.ORGANIZATION,
+            name="Acme Holdings",
+            code="ACME-001",
+            status="active",
+        )
+    )
+    db_session.flush()
+
+    response = client.get("/api/v1/parties")
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == []
+
+
+def test_user_party_bindings_crud_should_work(client, db_session) -> None:
+    """用户主体绑定接口应支持新增、查询、更新和关闭。"""
+    from src.models.auth import User
+    from src.models.party import Party, PartyType
+
+    user = User(
+        id="binding-user-1",
+        username="binding_user_1",
+        email="binding.user.1@example.com",
+        phone="13900000001",
+        full_name="绑定用户1",
+        password_hash="hashed-password",
+        is_active=True,
+        is_locked=False,
+    )
+    party = Party(
+        party_type=PartyType.ORGANIZATION,
+        name="Binding Party",
+        code="BIND-001",
+        status="active",
+    )
+    db_session.add_all([user, party])
+    db_session.flush()
+
+    create_response = client.post(
+        f"/api/v1/users/{user.id}/party-bindings",
+        json={
+            "party_id": party.id,
+            "relation_type": "owner",
+            "is_primary": True,
+        },
+    )
+    assert create_response.status_code == status.HTTP_201_CREATED
+    created_payload = create_response.json()
+    assert created_payload["user_id"] == user.id
+    assert created_payload["party_id"] == party.id
+    assert created_payload["relation_type"] == "owner"
+    assert created_payload["is_primary"] is True
+
+    list_response = client.get(f"/api/v1/users/{user.id}/party-bindings")
+    assert list_response.status_code == status.HTTP_200_OK
+    listed_payload = list_response.json()
+    assert isinstance(listed_payload, list)
+    assert len(listed_payload) == 1
+    assert listed_payload[0]["id"] == created_payload["id"]
+
+    update_response = client.put(
+        f"/api/v1/users/{user.id}/party-bindings/{created_payload['id']}",
+        json={
+            "relation_type": "manager",
+            "is_primary": False,
+        },
+    )
+    assert update_response.status_code == status.HTTP_200_OK
+    updated_payload = update_response.json()
+    assert updated_payload["relation_type"] == "manager"
+    assert updated_payload["is_primary"] is False
+
+    delete_response = client.delete(
+        f"/api/v1/users/{user.id}/party-bindings/{created_payload['id']}"
+    )
+    assert delete_response.status_code == status.HTTP_200_OK
+    assert delete_response.json()["message"] == "用户主体绑定已关闭"
+
+    active_response = client.get(
+        f"/api/v1/users/{user.id}/party-bindings?active_only=true"
+    )
+    assert active_response.status_code == status.HTTP_200_OK
+    assert active_response.json() == []
+
+
+def test_create_user_party_binding_should_return_400_for_invalid_time_range(
+    client, db_session
+) -> None:
+    """生效区间非法时应返回业务 400，而不是 500。"""
+    from datetime import UTC, datetime, timedelta
+
+    from src.models.auth import User
+    from src.models.party import Party, PartyType
+
+    user = User(
+        id="binding-user-invalid-time",
+        username="binding_user_invalid_time",
+        email="binding.user.invalid.time@example.com",
+        phone="13900000002",
+        full_name="绑定用户非法时间",
+        password_hash="hashed-password",
+        is_active=True,
+        is_locked=False,
+    )
+    party = Party(
+        party_type=PartyType.ORGANIZATION,
+        name="Binding Party Invalid Time",
+        code="BIND-002",
+        status="active",
+    )
+    db_session.add_all([user, party])
+    db_session.flush()
+
+    response = client.post(
+        f"/api/v1/users/{user.id}/party-bindings",
+        json={
+            "party_id": party.id,
+            "relation_type": "owner",
+            "valid_to": (
+                datetime.now(UTC).replace(tzinfo=None) - timedelta(days=1)
+            ).isoformat(),
+        },
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+
+def test_list_parties_should_ignore_legacy_default_org_fallback(client, db_session) -> None:
+    """无绑定时即使存在 legacy default_organization 映射也应 fail-closed。"""
+    from src.models.organization import Organization
+    from src.models.party import Party, PartyType
+
+    organization = Organization(
+        id="org-legacy-1",
+        name="组织一",
+        code="ORG-001",
+        level=1,
+        type="company",
+        status="active",
+    )
+    db_session.add(organization)
+    db_session.flush()
+
+    _create_user(
+        db_session,
+        user_id="test_user_001",
+        default_organization_id=organization.id,
+    )
+    db_session.add(
+        Party(
+            party_type=PartyType.ORGANIZATION,
+            name="映射主体",
+            code="PARTY-ORG-001",
+            external_ref=organization.id,
+            status="active",
+        )
+    )
+    db_session.flush()
+
+    response = client.get("/api/v1/parties")
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == []
+
+
+def test_list_parties_should_bypass_scope_for_admin_user(client, db_session) -> None:
+    """管理员应保留全量旁路能力。"""
+    from src.models.party import Party, PartyType
+
+    db_session.add_all(
+        [
+            Party(
+                party_type=PartyType.ORGANIZATION,
+                name="Acme Holdings",
+                code="ACME-001",
+                status="active",
+            ),
+            Party(
+                party_type=PartyType.ORGANIZATION,
+                name="Beta Group",
+                code="BETA-001",
+                status="active",
+            ),
+        ]
+    )
+    db_session.flush()
+
+    with patch(
+        "src.services.party_scope._has_unrestricted_party_scope_access",
+        new=AsyncMock(return_value=True),
+    ):
+        response = client.get("/api/v1/parties")
+
+    assert response.status_code == status.HTTP_200_OK
+    payload = response.json()
+    assert isinstance(payload, list)
+    assert len(payload) == 2

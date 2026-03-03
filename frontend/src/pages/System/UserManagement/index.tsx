@@ -18,6 +18,7 @@ import UserFiltersToolbar from './components/UserFiltersToolbar';
 import UserTable from './components/UserTable';
 import UserFormModal from './components/UserFormModal';
 import UserDetailDrawer from './components/UserDetailDrawer';
+import UserPartyBindingModal from './components/UserPartyBindingModal';
 import styles from '../UserManagementPage.module.css';
 
 const pageLogger = createLogger('UserManagement');
@@ -51,8 +52,10 @@ const UserManagementPage: React.FC = () => {
   });
   const [modalVisible, setModalVisible] = useState(false);
   const [detailDrawerVisible, setDetailDrawerVisible] = useState(false);
+  const [bindingModalVisible, setBindingModalVisible] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [bindingUser, setBindingUser] = useState<User | null>(null);
 
   const [form] = Form.useForm();
 
@@ -223,6 +226,11 @@ const UserManagementPage: React.FC = () => {
     setDetailDrawerVisible(true);
   }, []);
 
+  const handleManagePartyBindings = useCallback((user: User) => {
+    setBindingUser(user);
+    setBindingModalVisible(true);
+  }, []);
+
   const handleSubmit = useCallback(
     async (values: CreateUserData | UpdateUserData) => {
       try {
@@ -317,6 +325,7 @@ const UserManagementPage: React.FC = () => {
           paginationState={tablePagination}
           onPageChange={handlePageChange}
           onViewDetail={handleViewDetail}
+          onManagePartyBindings={handleManagePartyBindings}
           onEdit={handleEdit}
           onToggleLock={handleToggleLock}
           onToggleStatus={handleToggleStatus}
@@ -344,6 +353,13 @@ const UserManagementPage: React.FC = () => {
         onEdit={handleEditFromDrawer}
         onToggleLock={handleToggleLockFromDrawer}
         getStatusTag={getStatusTag}
+      />
+
+      <UserPartyBindingModal
+        open={bindingModalVisible}
+        user={bindingUser}
+        onClose={() => setBindingModalVisible(false)}
+        onChanged={refreshUsersAndStatistics}
       />
     </PageContainer>
   );

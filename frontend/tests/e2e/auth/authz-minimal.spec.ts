@@ -5,7 +5,6 @@ import { clearAuthState } from '../helpers/auth';
 test.describe('@authz-minimal', () => {
   test('allow: anonymous user can access login page', async ({ page }) => {
     await clearAuthState(page);
-    await page.goto('/login');
     await expect(page).toHaveURL(/\/login/);
   });
 

@@ -97,6 +97,82 @@ describe('userService', () => {
     });
   });
 
+  describe('user party bindings', () => {
+    it('成功获取用户主体绑定列表', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        success: true,
+        data: [
+          {
+            id: 'binding-1',
+            user_id: 'user_1',
+            party_id: 'party-1',
+            relation_type: 'owner',
+            is_primary: true,
+            valid_from: '2026-03-01T00:00:00Z',
+            valid_to: null,
+            created_at: '2026-03-01T00:00:00Z',
+            updated_at: '2026-03-01T00:00:00Z',
+          },
+        ],
+      });
+
+      const result = await userService.getUserPartyBindings('user_1', { active_only: true });
+
+      expect(result).toHaveLength(1);
+      expect(apiClient.get).toHaveBeenCalledWith('/users/user_1/party-bindings', {
+        params: { active_only: true },
+      });
+    });
+
+    it('成功创建用户主体绑定', async () => {
+      vi.mocked(apiClient.post).mockResolvedValue({
+        success: true,
+        data: { id: 'binding-1' },
+      });
+
+      const result = await userService.createUserPartyBinding('user_1', {
+        party_id: 'party-1',
+        relation_type: 'owner',
+        is_primary: true,
+      });
+
+      expect(result?.id).toBe('binding-1');
+      expect(apiClient.post).toHaveBeenCalledWith('/users/user_1/party-bindings', {
+        party_id: 'party-1',
+        relation_type: 'owner',
+        is_primary: true,
+      });
+    });
+
+    it('成功更新用户主体绑定', async () => {
+      vi.mocked(apiClient.put).mockResolvedValue({
+        success: true,
+        data: { id: 'binding-1', is_primary: false },
+      });
+
+      const result = await userService.updateUserPartyBinding('user_1', 'binding-1', {
+        is_primary: false,
+      });
+
+      expect(result?.is_primary).toBe(false);
+      expect(apiClient.put).toHaveBeenCalledWith('/users/user_1/party-bindings/binding-1', {
+        is_primary: false,
+      });
+    });
+
+    it('成功关闭用户主体绑定', async () => {
+      vi.mocked(apiClient.delete).mockResolvedValue({
+        success: true,
+        data: { message: 'ok' },
+      });
+
+      const result = await userService.closeUserPartyBinding('user_1', 'binding-1');
+
+      expect(result?.message).toBe('ok');
+      expect(apiClient.delete).toHaveBeenCalledWith('/users/user_1/party-bindings/binding-1');
+    });
+  });
+
   describe('createUser', () => {
     it('成功创建用户', async () => {
       const newUser = {
@@ -213,6 +289,7 @@ describe('roleService', () => {
 
       const result = await roleService.createRole(newRole);
 
+      expect(apiClient.post).toHaveBeenCalledWith('/roles', newRole, { retry: false });
       expect(result.id).toBe('role_new');
     });
   });

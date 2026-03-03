@@ -128,6 +128,26 @@ class UserPartyBindingCreate(BaseModel):
     valid_to: datetime | None = Field(None, description="失效时间")
 
 
+class UserPartyBindingUpsert(BaseModel):
+    """Create/update user-party binding payload without user_id."""
+
+    party_id: str = Field(..., description="主体ID")
+    relation_type: RelationType = Field(..., description="关系类型")
+    is_primary: bool = Field(default=False, description="是否主关系")
+    valid_from: datetime | None = Field(None, description="生效时间")
+    valid_to: datetime | None = Field(None, description="失效时间")
+
+
+class UserPartyBindingUpdate(BaseModel):
+    """Update user-party binding payload."""
+
+    party_id: str | None = Field(None, description="主体ID")
+    relation_type: RelationType | None = Field(None, description="关系类型")
+    is_primary: bool | None = Field(None, description="是否主关系")
+    valid_from: datetime | None = Field(None, description="生效时间")
+    valid_to: datetime | None = Field(None, description="失效时间")
+
+
 class UserPartyBindingResponse(BaseModel):
     """User-party binding response."""
 
@@ -154,5 +174,7 @@ __all__ = [
     "PartyContactUpdate",
     "PartyContactResponse",
     "UserPartyBindingCreate",
+    "UserPartyBindingUpsert",
+    "UserPartyBindingUpdate",
     "UserPartyBindingResponse",
 ]

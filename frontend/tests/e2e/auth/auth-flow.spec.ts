@@ -37,17 +37,12 @@ test.describe('Authentication Flow', () => {
   });
 
   test('should revoke session after logout endpoint call', async ({ page }) => {
-    test.skip(
-      logoutCredential == null,
-      'Set E2E_LOGOUT_USERNAME and E2E_LOGOUT_PASSWORD to isolate logout revocation test.'
-    );
-
     if (logoutCredential == null) {
-      return;
+      await loginAsAdmin(page);
+    } else {
+      const loginSuccess = await loginWithCredential(page, logoutCredential);
+      expect(loginSuccess).toBe(true);
     }
-
-    const loginSuccess = await loginWithCredential(page, logoutCredential);
-    expect(loginSuccess).toBe(true);
     await expect(page).toHaveURL(/\/dashboard/);
 
     const csrfToken = await page.evaluate(() => {

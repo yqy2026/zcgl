@@ -81,6 +81,7 @@ class PDFImportService:
             current_user_id=current_user_id,
             party_filter=party_filter,
             logger=logger,
+            allow_legacy_default_organization_fallback=False,
         )
 
     async def upload_file(self, file_content: bytes, filename: str) -> dict[str, Any]:

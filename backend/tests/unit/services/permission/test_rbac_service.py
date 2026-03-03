@@ -5,7 +5,7 @@ RBAC服务单元测试
 """
 
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import ANY, AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
@@ -516,6 +516,28 @@ class TestGetRoles:
 
 
 class TestTenantFilterResolution:
+    async def test_resolve_party_filter_disables_legacy_default_org_fallback(
+        self, rbac_service
+    ):
+        resolved_filter = PartyFilter(party_ids=["party-1"])
+
+        with patch(
+            "src.services.permission.rbac_service.resolve_user_party_filter",
+            new=AsyncMock(return_value=resolved_filter),
+        ) as mock_resolve:
+            party_filter = await rbac_service._resolve_party_filter(
+                current_user_id="user-1"
+            )
+
+        assert party_filter == resolved_filter
+        mock_resolve.assert_awaited_once_with(
+            rbac_service.db,
+            current_user_id="user-1",
+            party_filter=None,
+            logger=ANY,
+            allow_legacy_default_organization_fallback=False,
+        )
+
     async def test_resolve_party_filter_returns_party_binding_ids(self, rbac_service):
         """测试 user_party_bindings 返回的 party_id 会生成 PartyFilter。"""
         binding_1 = MagicMock()

@@ -17,7 +17,7 @@ from src.core.exception_handler import BusinessValidationError, ResourceConflict
 from src.models.asset import Asset
 from src.models.associations import rent_contract_assets
 from src.models.ownership import Ownership
-from src.models.rent_contract import RentContractHistory, RentTerm
+from src.models.rent_contract import RentContract, RentContractHistory, RentTerm
 from src.schemas.rent_contract import (
     ContractType,
     GenerateLedgerRequest,
@@ -449,3 +449,51 @@ class TestMonthlyLedger:
 
         assert len(ledgers) == 1
         assert ledgers[0].due_date.day == 1
+
+
+class TestContractDelete:
+    """合同删除测试"""
+
+    @pytest.fixture(autouse=True)
+    async def setup(
+        self, db_session: Session, contract_service: RentContractService, test_ownership
+    ):
+        self.db = db_session
+        self.async_db = AsyncSessionAdapter(db_session)
+        self.service = contract_service
+        self.ownership = test_ownership
+        self.factory = RentContractTestDataFactory()
+
+        term = RentTermCreate(**self.factory.create_rent_term_dict())
+        contract_data = RentContractCreate(
+            **self.factory.create_contract_dict(
+                ownership_id=self.ownership.id,
+                rent_terms=[term],
+            )
+        )
+        self.contract = await self.service.create_contract_async(
+            self.async_db, obj_in=contract_data
+        )
+
+    async def test_delete_contract_cleans_history_and_contract(self):
+        before_history_count = (
+            self.db.query(RentContractHistory)
+            .filter(RentContractHistory.contract_id == self.contract.id)
+            .count()
+        )
+        assert before_history_count >= 1
+
+        await self.service.delete_contract_by_id_async(
+            self.async_db,
+            contract_id=self.contract.id,
+        )
+
+        deleted_contract = self.db.query(RentContract).filter_by(id=self.contract.id).first()
+        assert deleted_contract is None
+
+        after_history_count = (
+            self.db.query(RentContractHistory)
+            .filter(RentContractHistory.contract_id == self.contract.id)
+            .count()
+        )
+        assert after_history_count == 0

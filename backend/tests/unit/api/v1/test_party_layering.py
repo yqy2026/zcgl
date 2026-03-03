@@ -43,6 +43,10 @@ def test_party_endpoints_should_use_require_authz() -> None:
         r"async def delete_party_hierarchy[\s\S]*?require_authz\([\s\S]*?action=\"delete\"[\s\S]*?resource_type=\"party\"[\s\S]*?resource_id=\"\{party_id\}\"",
         r"async def get_party_contacts[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"party\"[\s\S]*?resource_id=\"\{party_id\}\"[\s\S]*?deny_as_not_found=True",
         r"async def create_party_contact[\s\S]*?require_authz\([\s\S]*?action=\"create\"[\s\S]*?resource_type=\"party\"[\s\S]*?resource_id=\"\{party_id\}\"",
+        r"async def get_user_party_bindings[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"user\"[\s\S]*?resource_id=\"\{user_id\}\"",
+        r"async def create_user_party_binding[\s\S]*?require_authz\([\s\S]*?action=\"update\"[\s\S]*?resource_type=\"user\"[\s\S]*?resource_id=\"\{user_id\}\"",
+        r"async def update_user_party_binding[\s\S]*?require_authz\([\s\S]*?action=\"update\"[\s\S]*?resource_type=\"user\"[\s\S]*?resource_id=\"\{user_id\}\"",
+        r"async def close_user_party_binding[\s\S]*?require_authz\([\s\S]*?action=\"delete\"[\s\S]*?resource_type=\"user\"[\s\S]*?resource_id=\"\{user_id\}\"",
     ]
 
     for pattern in expected_patterns:
@@ -69,6 +73,8 @@ async def test_list_parties_should_delegate_to_service() -> None:
 
     mock_service = MagicMock()
     mock_service.get_parties = AsyncMock(return_value=[])
+    mock_user = MagicMock()
+    mock_user.id = "user-1"
 
     with pytest.MonkeyPatch.context() as monkeypatch:
         monkeypatch.setattr(module, "party_service", mock_service)
@@ -79,7 +85,7 @@ async def test_list_parties_should_delegate_to_service() -> None:
             status="active",
             search=None,
             db=MagicMock(),
-            current_user=MagicMock(),
+            current_user=mock_user,
         )
 
     assert result == []
@@ -90,6 +96,7 @@ async def test_list_parties_should_delegate_to_service() -> None:
         party_type="owner",
         status="active",
         search=None,
+        current_user_id="user-1",
     )
 
 
@@ -101,6 +108,8 @@ async def test_list_parties_should_pass_search_keyword_to_service() -> None:
 
     mock_service = MagicMock()
     mock_service.get_parties = AsyncMock(return_value=[])
+    mock_user = MagicMock()
+    mock_user.id = "user-1"
 
     with pytest.MonkeyPatch.context() as monkeypatch:
         monkeypatch.setattr(module, "party_service", mock_service)
@@ -111,7 +120,7 @@ async def test_list_parties_should_pass_search_keyword_to_service() -> None:
             status=None,
             search="acme",
             db=MagicMock(),
-            current_user=MagicMock(),
+            current_user=mock_user,
         )
 
     assert result == []
@@ -122,4 +131,5 @@ async def test_list_parties_should_pass_search_keyword_to_service() -> None:
         party_type=None,
         status=None,
         search="acme",
+        current_user_id="user-1",
     )

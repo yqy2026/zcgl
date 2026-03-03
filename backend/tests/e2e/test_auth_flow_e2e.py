@@ -379,3 +379,211 @@ def test_role_based_permissions(
         assert len(data["permissions"]) >= expected_permission_count, (
             f"{role} role should have at least {expected_permission_count} permissions, got {len(data['permissions'])}"
         )
+
+
+def test_cookie_post_requires_csrf_header(
+    db_session: Session,
+    client: TestClient,
+    create_test_user_factory,
+):
+    """
+    Verify cookie-authenticated state-changing requests require CSRF header.
+    """
+    create_test_user_factory(
+        username="csrf_required_user",
+        email="csrf_required_user@example.com",
+        password="CsrfPass123!",
+        full_name="CSRF Required User",
+        role="user",
+    )
+
+    login_response = client.post(
+        "/api/v1/auth/login",
+        json={"identifier": "csrf_required_user", "password": "CsrfPass123!"},
+    )
+    assert login_response.status_code == 200
+    assert login_response.cookies.get("auth_token") is not None
+    assert login_response.cookies.get("csrf_token") is not None
+
+    # Missing X-CSRF-Token must be rejected.
+    logout_response = client.post("/api/v1/auth/logout")
+    assert logout_response.status_code == 403
+
+
+def test_bearer_only_request_rejected_in_cookie_mode(
+    db_session: Session,
+    client: TestClient,
+    create_test_user_factory,
+):
+    """
+    Verify Authorization header alone is rejected when cookie auth is required.
+    """
+    create_test_user_factory(
+        username="bearer_only_user",
+        email="bearer_only_user@example.com",
+        password="BearerPass123!",
+        full_name="Bearer Only User",
+        role="user",
+    )
+
+    login_response = client.post(
+        "/api/v1/auth/login",
+        json={"identifier": "bearer_only_user", "password": "BearerPass123!"},
+    )
+    assert login_response.status_code == 200
+    auth_token = login_response.cookies.get("auth_token")
+    assert auth_token is not None
+
+    client.cookies.clear()
+    me_response = client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {auth_token}"},
+    )
+    assert me_response.status_code == 401
+    payload = me_response.json()
+    assert payload.get("success") is False
+    error = payload.get("error", {})
+    assert isinstance(error, dict)
+    assert error.get("code") == "AUTHENTICATION_ERROR"
+
+
+def test_refresh_without_cookie_returns_invalid_request(
+    client: TestClient,
+):
+    """
+    Verify refresh endpoint rejects requests without refresh cookie.
+    """
+    response = client.post("/api/v1/auth/refresh")
+    assert response.status_code == 400
+    payload = response.json()
+    assert payload.get("success") is False
+    error = payload.get("error", {})
+    assert isinstance(error, dict)
+    assert error.get("code") == "INVALID_REQUEST"
+
+
+def test_relogin_switches_cookie_session_identity(
+    db_session: Session,
+    client: TestClient,
+    create_test_user_factory,
+):
+    """
+    Verify a new login overwrites cookie session and /me reflects latest identity.
+    """
+    create_test_user_factory(
+        username="switch_user_a",
+        email="switch_user_a@example.com",
+        password="SwitchPassA123!",
+        full_name="Switch User A",
+        role="user",
+    )
+    create_test_user_factory(
+        username="switch_user_b",
+        email="switch_user_b@example.com",
+        password="SwitchPassB123!",
+        full_name="Switch User B",
+        role="user",
+    )
+
+    login_a = client.post(
+        "/api/v1/auth/login",
+        json={"identifier": "switch_user_a", "password": "SwitchPassA123!"},
+    )
+    assert login_a.status_code == 200
+    token_a = login_a.cookies.get("auth_token")
+    assert token_a is not None
+
+    me_a = client.get("/api/v1/auth/me")
+    assert me_a.status_code == 200
+    assert me_a.json().get("username") == "switch_user_a"
+
+    login_b = client.post(
+        "/api/v1/auth/login",
+        json={"identifier": "switch_user_b", "password": "SwitchPassB123!"},
+    )
+    assert login_b.status_code == 200
+    token_b = login_b.cookies.get("auth_token")
+    assert token_b is not None
+    assert token_b != token_a
+
+    me_b = client.get("/api/v1/auth/me")
+    assert me_b.status_code == 200
+    assert me_b.json().get("username") == "switch_user_b"
+
+
+def test_refresh_with_cookie_requires_csrf_header(
+    db_session: Session,
+    client: TestClient,
+    create_test_user_factory,
+):
+    """
+    Verify refresh is rejected by CSRF middleware when cookie auth is present.
+    """
+    create_test_user_factory(
+        username="refresh_csrf_user",
+        email="refresh_csrf_user@example.com",
+        password="RefreshCsrf123!",
+        full_name="Refresh CSRF User",
+        role="user",
+    )
+
+    login_response = client.post(
+        "/api/v1/auth/login",
+        json={"identifier": "refresh_csrf_user", "password": "RefreshCsrf123!"},
+    )
+    assert login_response.status_code == 200
+    assert login_response.cookies.get("auth_token") is not None
+    assert login_response.cookies.get("refresh_token") is not None
+    assert login_response.cookies.get("csrf_token") is not None
+
+    refresh_response = client.post("/api/v1/auth/refresh")
+    assert refresh_response.status_code == 403
+    payload = refresh_response.json()
+    assert payload.get("success") is False
+    assert payload.get("error_type") == "csrf_missing"
+
+
+def test_logout_revokes_other_active_sessions_for_same_user(
+    db_session: Session,
+    client: TestClient,
+    create_test_user_factory,
+):
+    """
+    Verify logout revokes all sessions, including sessions from another client.
+    """
+    create_test_user_factory(
+        username="multi_session_user",
+        email="multi_session_user@example.com",
+        password="MultiSess123!",
+        full_name="Multi Session User",
+        role="user",
+    )
+
+    primary_login = client.post(
+        "/api/v1/auth/login",
+        json={"identifier": "multi_session_user", "password": "MultiSess123!"},
+    )
+    assert primary_login.status_code == 200
+    primary_csrf = primary_login.cookies.get("csrf_token") or client.cookies.get(
+        "csrf_token"
+    )
+    primary_logout_headers = {"X-CSRF-Token": primary_csrf} if primary_csrf else {}
+
+    with TestClient(client.app) as secondary_client:
+        secondary_login = secondary_client.post(
+            "/api/v1/auth/login",
+            json={"identifier": "multi_session_user", "password": "MultiSess123!"},
+        )
+        assert secondary_login.status_code == 200
+
+        secondary_me_before = secondary_client.get("/api/v1/auth/me")
+        assert secondary_me_before.status_code == 200
+
+        logout_response = client.post(
+            "/api/v1/auth/logout",
+            headers=primary_logout_headers,
+        )
+        assert logout_response.status_code == 200
+
+        secondary_me_after = secondary_client.get("/api/v1/auth/me")
+        assert secondary_me_after.status_code == 401

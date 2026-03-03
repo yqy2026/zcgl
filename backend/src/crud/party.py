@@ -339,8 +339,21 @@ class CRUDParty:
         party_type: str | None = None,
         status: str | None = None,
         search: str | None = None,
+        scoped_party_ids: list[str] | None = None,
     ) -> list[Party]:
         stmt = select(Party)
+        if scoped_party_ids is not None:
+            normalized_scope_ids = [
+                normalized
+                for raw_party_id in scoped_party_ids
+                if (
+                    normalized := self._normalize_identifier(raw_party_id)
+                )
+                is not None
+            ]
+            if len(normalized_scope_ids) == 0:
+                return []
+            stmt = stmt.where(Party.id.in_(normalized_scope_ids))
         if party_type is not None:
             stmt = stmt.where(Party.party_type == party_type)
         if status is not None:
@@ -519,6 +532,66 @@ class CRUDParty:
             await db.flush()
         await db.refresh(binding)
         return binding
+
+    async def get_user_binding(
+        self,
+        db: AsyncSession,
+        *,
+        user_id: str,
+        binding_id: str,
+    ) -> UserPartyBinding | None:
+        stmt = select(UserPartyBinding).where(
+            UserPartyBinding.user_id == user_id,
+            UserPartyBinding.id == binding_id,
+        )
+        return (await db.execute(stmt)).scalars().first()
+
+    async def update_user_party_binding(
+        self,
+        db: AsyncSession,
+        *,
+        db_obj: UserPartyBinding,
+        obj_in: dict[str, Any],
+        commit: bool = True,
+    ) -> UserPartyBinding:
+        for key, value in obj_in.items():
+            setattr(db_obj, key, value)
+
+        if commit:
+            await db.commit()
+        else:
+            await db.flush()
+        await db.refresh(db_obj)
+        return db_obj
+
+    async def clear_primary_bindings_for_relation(
+        self,
+        db: AsyncSession,
+        *,
+        user_id: str,
+        relation_type: str,
+        exclude_binding_id: str | None = None,
+        commit: bool = True,
+    ) -> int:
+        stmt = select(UserPartyBinding).where(
+            UserPartyBinding.user_id == user_id,
+            UserPartyBinding.relation_type == relation_type,
+            UserPartyBinding.is_primary.is_(True),
+        )
+        if exclude_binding_id is not None:
+            stmt = stmt.where(UserPartyBinding.id != exclude_binding_id)
+
+        bindings = list((await db.execute(stmt)).scalars().all())
+        for binding in bindings:
+            binding.is_primary = False
+            binding.updated_at = _utcnow_naive()
+
+        if commit:
+            await db.commit()
+        else:
+            await db.flush()
+
+        return len(bindings)
 
     async def get_user_bindings(
         self,

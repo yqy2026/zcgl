@@ -158,3 +158,219 @@ def test_asset_search_and_filter_e2e(
             headers=csrf_headers,
         )
         assert response.status_code == 204
+
+
+def test_asset_create_requires_csrf_header_e2e(
+    authenticated_client: TestClient,
+    db_session,
+) -> None:
+    suffix = uuid4().hex[:8]
+    ownership = _create_ownership(db_session, suffix)
+    payload = _create_asset_payload(
+        suffix=f"{suffix}no-csrf",
+        ownership_id=ownership.id,
+    )
+
+    response = authenticated_client.post("/api/v1/assets", json=payload)
+    assert response.status_code == 403
+
+
+def test_deleted_asset_not_returned_in_search_e2e(
+    authenticated_client: TestClient,
+    csrf_headers: dict[str, str],
+    db_session,
+) -> None:
+    suffix = uuid4().hex[:8]
+    ownership = _create_ownership(db_session, suffix)
+    payload = _create_asset_payload(
+        suffix=f"{suffix}hidden",
+        ownership_id=ownership.id,
+    )
+
+    create_response = authenticated_client.post(
+        "/api/v1/assets",
+        json=payload,
+        headers=csrf_headers,
+    )
+    assert create_response.status_code == 201
+    created = create_response.json()
+    asset_id = created.get("id")
+    assert isinstance(asset_id, str)
+
+    delete_response = authenticated_client.delete(
+        f"/api/v1/assets/{asset_id}",
+        headers=csrf_headers,
+    )
+    assert delete_response.status_code == 204
+
+    search_response = authenticated_client.get(
+        f"/api/v1/assets?page=1&page_size=20&search={suffix}"
+    )
+    assert search_response.status_code == 200
+    payload_data = search_response.json()
+    assert payload_data.get("success") is True
+    items = payload_data.get("data", {}).get("items", [])
+    assert isinstance(items, list)
+    listed_ids = {
+        item.get("id")
+        for item in items
+        if isinstance(item, dict) and item.get("id") is not None
+    }
+    assert asset_id not in listed_ids
+
+
+def test_asset_restore_after_soft_delete_e2e(
+    authenticated_client: TestClient,
+    csrf_headers: dict[str, str],
+    db_session,
+) -> None:
+    suffix = uuid4().hex[:8]
+    ownership = _create_ownership(db_session, suffix)
+    payload = _create_asset_payload(
+        suffix=f"{suffix}restore",
+        ownership_id=ownership.id,
+    )
+
+    create_response = authenticated_client.post(
+        "/api/v1/assets",
+        json=payload,
+        headers=csrf_headers,
+    )
+    assert create_response.status_code == 201
+    created = create_response.json()
+    asset_id = created.get("id")
+    assert isinstance(asset_id, str)
+
+    delete_response = authenticated_client.delete(
+        f"/api/v1/assets/{asset_id}",
+        headers=csrf_headers,
+    )
+    assert delete_response.status_code == 204
+
+    restore_response = authenticated_client.post(
+        f"/api/v1/assets/{asset_id}/restore",
+        headers=csrf_headers,
+    )
+    assert restore_response.status_code == 200
+    restored = restore_response.json()
+    assert restored.get("id") == asset_id
+
+    detail_response = authenticated_client.get(f"/api/v1/assets/{asset_id}")
+    assert detail_response.status_code == 200
+    detail = detail_response.json()
+    assert detail.get("id") == asset_id
+
+
+def test_asset_update_and_delete_require_csrf_header_e2e(
+    authenticated_client: TestClient,
+    csrf_headers: dict[str, str],
+    db_session,
+) -> None:
+    suffix = uuid4().hex[:8]
+    ownership = _create_ownership(db_session, suffix)
+    payload = _create_asset_payload(
+        suffix=f"{suffix}csrf-update-delete",
+        ownership_id=ownership.id,
+    )
+
+    create_response = authenticated_client.post(
+        "/api/v1/assets",
+        json=payload,
+        headers=csrf_headers,
+    )
+    assert create_response.status_code == 201
+    asset_id = create_response.json().get("id")
+    assert isinstance(asset_id, str)
+
+    update_without_csrf = authenticated_client.put(
+        f"/api/v1/assets/{asset_id}",
+        json={"usage_status": "闲置", "updated_by": "e2e_test"},
+    )
+    assert update_without_csrf.status_code == 403
+
+    delete_without_csrf = authenticated_client.delete(f"/api/v1/assets/{asset_id}")
+    assert delete_without_csrf.status_code == 403
+
+    cleanup_response = authenticated_client.delete(
+        f"/api/v1/assets/{asset_id}",
+        headers=csrf_headers,
+    )
+    assert cleanup_response.status_code == 204
+
+
+def test_asset_hard_delete_requires_deleted_state_e2e(
+    authenticated_client: TestClient,
+    csrf_headers: dict[str, str],
+    db_session,
+) -> None:
+    suffix = uuid4().hex[:8]
+    ownership = _create_ownership(db_session, suffix)
+    payload = _create_asset_payload(
+        suffix=f"{suffix}hard-delete-precheck",
+        ownership_id=ownership.id,
+    )
+
+    create_response = authenticated_client.post(
+        "/api/v1/assets",
+        json=payload,
+        headers=csrf_headers,
+    )
+    assert create_response.status_code == 201
+    asset_id = create_response.json().get("id")
+    assert isinstance(asset_id, str)
+
+    hard_delete_response = authenticated_client.delete(
+        f"/api/v1/assets/{asset_id}/hard-delete",
+        headers=csrf_headers,
+    )
+    assert hard_delete_response.status_code == 400
+    payload_data = hard_delete_response.json()
+    assert payload_data.get("success") is False
+    error = payload_data.get("error", {})
+    assert isinstance(error, dict)
+    assert error.get("code") == "OPERATION_NOT_ALLOWED"
+
+
+def test_asset_hard_delete_blocks_restore_e2e(
+    authenticated_client: TestClient,
+    csrf_headers: dict[str, str],
+    db_session,
+) -> None:
+    suffix = uuid4().hex[:8]
+    ownership = _create_ownership(db_session, suffix)
+    payload = _create_asset_payload(
+        suffix=f"{suffix}hard-delete",
+        ownership_id=ownership.id,
+    )
+
+    create_response = authenticated_client.post(
+        "/api/v1/assets",
+        json=payload,
+        headers=csrf_headers,
+    )
+    assert create_response.status_code == 201
+    asset_id = create_response.json().get("id")
+    assert isinstance(asset_id, str)
+
+    soft_delete_response = authenticated_client.delete(
+        f"/api/v1/assets/{asset_id}",
+        headers=csrf_headers,
+    )
+    assert soft_delete_response.status_code == 204
+
+    hard_delete_response = authenticated_client.delete(
+        f"/api/v1/assets/{asset_id}/hard-delete",
+        headers=csrf_headers,
+    )
+    assert hard_delete_response.status_code == 204
+
+    restore_response = authenticated_client.post(
+        f"/api/v1/assets/{asset_id}/restore",
+        headers=csrf_headers,
+    )
+    assert restore_response.status_code == 404
+    payload_data = restore_response.json()
+    assert payload_data.get("success") is False
+    error = payload_data.get("error", {})
+    assert isinstance(error, dict)
+    assert error.get("code") == "RESOURCE_NOT_FOUND"

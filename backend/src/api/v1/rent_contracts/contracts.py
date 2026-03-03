@@ -600,7 +600,13 @@ async def update_contract(
             raise not_found(
                 "合同不存在", resource_type="contract", resource_id=contract_id
             )
-        return updated_contract
+        # Reload with eager relations to avoid lazy-load serialization failures
+        # when response_model accesses assets/rent_terms after mutation.
+        updated_with_details = await rent_contract_service.get_contract_with_details_async(
+            db=db,
+            contract_id=contract_id,
+        )
+        return updated_with_details or updated_contract
     except Exception as e:
         if isinstance(e, BaseBusinessError):
             raise

@@ -4,7 +4,7 @@ from typing import Any, cast
 from uuid import uuid4
 
 from fastapi import UploadFile
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.enums import ContractStatus
@@ -25,6 +25,7 @@ from src.models.ownership import Ownership
 from src.models.rent_contract import (
     RentContract,
     RentContractAttachment,
+    RentContractHistory,
     RentLedger,
     RentTerm,
 )
@@ -150,6 +151,12 @@ class RentContractService(
     async def delete_contract_by_id_async(
         self, db: AsyncSession, *, contract_id: str
     ) -> None:
+        # Keep FK integrity: history table references rent_contracts without ON DELETE CASCADE.
+        await db.execute(
+            delete(RentContractHistory).where(
+                RentContractHistory.contract_id == contract_id
+            )
+        )
         await rent_contract_crud.remove(db, id=contract_id)
 
     async def get_assets_by_ids_async(

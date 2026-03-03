@@ -27,6 +27,16 @@ const toneClassMap: Record<Tone, string> = {
   neutral: styles.toneNeutral,
 };
 
+const resolveErrorMessage = (error: unknown): string | null => {
+  if (error != null && typeof error === 'object' && 'message' in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === 'string' && message.trim() !== '') {
+      return message;
+    }
+  }
+  return null;
+};
+
 const RoleManagementPage: React.FC = () => {
   const [filters, setFilters] = useState<RoleFilters>({
     keyword: '',
@@ -192,12 +202,14 @@ const RoleManagementPage: React.FC = () => {
   }, []);
 
   const handleSubmit = useCallback(
-    async (values: {
+    async (
+      values: {
       name: string;
       code: string;
       description: string;
       status: 'active' | 'inactive';
-    }) => {
+      },
+    ) => {
       try {
         if (editingRole != null) {
           await roleService.updateRole(editingRole.id, {
@@ -218,8 +230,9 @@ const RoleManagementPage: React.FC = () => {
         }
         setModalVisible(false);
         refreshRolesAndStatistics();
-      } catch {
-        MessageManager.error(editingRole != null ? '更新失败' : '创建失败');
+      } catch (error) {
+        const fallback = editingRole != null ? '更新失败' : '创建失败';
+        MessageManager.error(resolveErrorMessage(error) ?? fallback);
       }
     },
     [editingRole, refreshRolesAndStatistics, targetPermissions]

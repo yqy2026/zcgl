@@ -1,6 +1,7 @@
 """Party domain service orchestration."""
 
 import logging
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import select
@@ -8,6 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.exception_handler import OperationNotAllowedError, ResourceNotFoundError
 from ...crud.party import CRUDParty, party_crud
+from ...crud.query_builder import PartyFilter
+from ...models.auth import User
 from ...models.party import Party, PartyContact, PartyHierarchy
 from ...models.user_party_binding import UserPartyBinding
 from ...schemas.party import (
@@ -15,7 +18,9 @@ from ...schemas.party import (
     PartyCreate,
     PartyUpdate,
     UserPartyBindingCreate,
+    UserPartyBindingUpdate,
 )
+from ...services.party_scope import resolve_user_party_filter
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +47,17 @@ class PartyService:
         party_type: str | None = None,
         status: str | None = None,
         search: str | None = None,
+        current_user_id: str | None = None,
+        party_filter: PartyFilter | None = None,
     ) -> list[Party]:
+        resolved_party_filter = await resolve_user_party_filter(
+            db,
+            current_user_id=current_user_id,
+            party_filter=party_filter,
+            logger=logger,
+            allow_legacy_default_organization_fallback=False,
+        )
+        scoped_party_ids = self._resolve_scoped_party_ids(resolved_party_filter)
         return await self.party_crud.get_parties(
             db,
             skip=skip,
@@ -50,6 +65,7 @@ class PartyService:
             party_type=party_type,
             status=status,
             search=search,
+            scoped_party_ids=scoped_party_ids,
         )
 
     async def update_party(
@@ -170,10 +186,144 @@ class PartyService:
         *,
         obj_in: UserPartyBindingCreate,
     ) -> UserPartyBinding:
+        await self._assert_user_exists(db, user_id=obj_in.user_id)
+        await self._assert_party_exists(db, party_id=obj_in.party_id)
+
         payload = obj_in.model_dump(exclude_none=True)
-        binding = await self.party_crud.create_user_party_binding(db, obj_in=payload)
+        if "valid_from" not in payload:
+            payload["valid_from"] = self._utcnow_naive()
+        self._validate_binding_valid_range(payload)
+        relation_type = str(payload["relation_type"])
+        is_primary = bool(payload.get("is_primary", False))
+        if is_primary:
+            await self.party_crud.clear_primary_bindings_for_relation(
+                db,
+                user_id=obj_in.user_id,
+                relation_type=relation_type,
+                commit=False,
+            )
+
+        binding = await self.party_crud.create_user_party_binding(
+            db,
+            obj_in=payload,
+            commit=True,
+        )
         await self._publish_user_scope_invalidation(str(binding.user_id))
         return binding
+
+    async def get_user_party_bindings(
+        self,
+        db: AsyncSession,
+        *,
+        user_id: str,
+        active_only: bool = True,
+    ) -> list[UserPartyBinding]:
+        await self._assert_user_exists(db, user_id=user_id)
+        return await self.party_crud.get_user_bindings(
+            db,
+            user_id=user_id,
+            active_only=active_only,
+        )
+
+    async def update_user_party_binding(
+        self,
+        db: AsyncSession,
+        *,
+        user_id: str,
+        binding_id: str,
+        obj_in: UserPartyBindingUpdate,
+    ) -> UserPartyBinding:
+        await self._assert_user_exists(db, user_id=user_id)
+        binding = await self.party_crud.get_user_binding(
+            db,
+            user_id=user_id,
+            binding_id=binding_id,
+        )
+        if binding is None:
+            raise ResourceNotFoundError("用户主体绑定", binding_id)
+
+        payload = obj_in.model_dump(exclude_unset=True)
+        if "party_id" in payload:
+            party_id = payload.get("party_id")
+            if party_id is None or str(party_id).strip() == "":
+                raise OperationNotAllowedError(
+                    "party_id 不能为空",
+                    reason="user_party_binding_missing_party_id",
+                )
+            await self._assert_party_exists(db, party_id=str(party_id))
+
+        if "relation_type" in payload and payload["relation_type"] is None:
+            raise OperationNotAllowedError(
+                "relation_type 不能为空",
+                reason="user_party_binding_missing_relation_type",
+            )
+        if "valid_from" in payload and payload["valid_from"] is None:
+            raise OperationNotAllowedError(
+                "valid_from 不能为空",
+                reason="user_party_binding_missing_valid_from",
+            )
+
+        merged_payload = {
+            "valid_from": payload.get("valid_from", binding.valid_from),
+            "valid_to": payload.get("valid_to", binding.valid_to),
+        }
+        self._validate_binding_valid_range(merged_payload)
+
+        next_relation_type = str(payload.get("relation_type", binding.relation_type))
+        next_is_primary = bool(payload.get("is_primary", binding.is_primary))
+        if next_is_primary:
+            await self.party_crud.clear_primary_bindings_for_relation(
+                db,
+                user_id=user_id,
+                relation_type=next_relation_type,
+                exclude_binding_id=binding_id,
+                commit=False,
+            )
+
+        updated = await self.party_crud.update_user_party_binding(
+            db,
+            db_obj=binding,
+            obj_in=payload,
+            commit=True,
+        )
+        await self._publish_user_scope_invalidation(user_id)
+        return updated
+
+    async def close_user_party_binding(
+        self,
+        db: AsyncSession,
+        *,
+        user_id: str,
+        binding_id: str,
+    ) -> bool:
+        await self._assert_user_exists(db, user_id=user_id)
+        binding = await self.party_crud.get_user_binding(
+            db,
+            user_id=user_id,
+            binding_id=binding_id,
+        )
+        if binding is None:
+            return False
+
+        now = self._utcnow_naive()
+        if binding.valid_to is not None and binding.valid_to <= now:
+            return False
+
+        close_time = now
+        if binding.valid_from > now:
+            close_time = binding.valid_from
+
+        await self.party_crud.update_user_party_binding(
+            db,
+            db_obj=binding,
+            obj_in={
+                "valid_to": close_time,
+                "is_primary": False,
+            },
+            commit=True,
+        )
+        await self._publish_user_scope_invalidation(user_id)
+        return True
 
     @staticmethod
     async def _publish_user_scope_invalidation(user_id: str) -> None:
@@ -196,10 +346,56 @@ class PartyService:
             )
 
     @staticmethod
+    def _resolve_scoped_party_ids(
+        party_filter: PartyFilter | None,
+    ) -> list[str] | None:
+        if party_filter is None:
+            return None
+
+        normalized_ids: list[str] = []
+        seen_ids: set[str] = set()
+        for raw_value in [
+            *(party_filter.party_ids or []),
+            *(party_filter.owner_party_ids or []),
+            *(party_filter.manager_party_ids or []),
+        ]:
+            normalized = str(raw_value).strip()
+            if normalized == "" or normalized in seen_ids:
+                continue
+            seen_ids.add(normalized)
+            normalized_ids.append(normalized)
+        return normalized_ids
+
+    @staticmethod
+    def _validate_binding_valid_range(payload: dict[str, Any]) -> None:
+        valid_from = payload.get("valid_from")
+        valid_to = payload.get("valid_to")
+        if valid_to is not None and valid_from is not None and valid_to < valid_from:
+            raise OperationNotAllowedError(
+                "失效时间不能早于生效时间",
+                reason="user_party_binding_invalid_valid_range",
+            )
+
+    async def _assert_user_exists(self, db: AsyncSession, *, user_id: str) -> None:
+        stmt = select(User.id).where(User.id == user_id).limit(1)
+        exists = (await db.execute(stmt)).scalar_one_or_none()
+        if exists is None:
+            raise ResourceNotFoundError("用户", user_id)
+
+    async def _assert_party_exists(self, db: AsyncSession, *, party_id: str) -> None:
+        party = await self.party_crud.get_party(db, party_id=party_id)
+        if party is None:
+            raise ResourceNotFoundError("主体", party_id)
+
+    @staticmethod
     def _normalize_party_payload(payload: dict[str, Any]) -> dict[str, Any]:
         if "metadata" in payload:
             payload["metadata_json"] = payload.pop("metadata")
         return payload
+
+    @staticmethod
+    def _utcnow_naive() -> datetime:
+        return datetime.now(UTC).replace(tzinfo=None)
 
 
 party_service = PartyService()

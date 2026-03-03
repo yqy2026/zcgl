@@ -5,7 +5,7 @@
 import asyncio
 from datetime import date
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import ANY, AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -169,6 +169,30 @@ class TestConcurrencyControl:
 # ============================================================================
 class TestTenantFilterResolution:
     """测试租户过滤解析"""
+
+    @pytest.mark.asyncio
+    async def test_resolve_party_filter_disables_legacy_default_org_fallback(
+        self, pdf_service, mock_db
+    ):
+        resolved_filter = PartyFilter(party_ids=["party-1"])
+
+        with patch(
+            "src.services.document.pdf_import_service.resolve_user_party_filter",
+            new=AsyncMock(return_value=resolved_filter),
+        ) as mock_resolve:
+            result = await pdf_service._resolve_party_filter(
+                mock_db,
+                current_user_id="user-1",
+            )
+
+        assert result == resolved_filter
+        mock_resolve.assert_awaited_once_with(
+            mock_db,
+            current_user_id="user-1",
+            party_filter=None,
+            logger=ANY,
+            allow_legacy_default_organization_fallback=False,
+        )
 
     @pytest.mark.asyncio
     async def test_resolve_party_filter_success(self, pdf_service, mock_db):
