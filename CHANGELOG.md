@@ -4,6 +4,8 @@
 
 ### 🛠️ 本次修复 (Current Fixes)
 
+- 依赖安全复核与修复（2026-03-03）：针对推送后安全告警执行前端依赖收敛。1) 升级直接依赖 `axios` 至 `^1.13.6`、`lodash` 至 `^4.17.23`；2) 在 `frontend/package.json` 新增 `pnpm.overrides`，统一锁定 `rollup@4.59.0`、`minimatch@10.2.4`、`@isaacs/brace-expansion@5.0.1`、`ajv@8.18.0`，修复对应传递依赖高危/中危；3) 复核安装树已命中目标版本（`pnpm -C frontend ls ...`）；4) 审计剩余项仅 `xlsx@0.18.5` 两个高危（GHSA-4r6h-8v6p-xvw6 / GHSA-5pgg-2g8v-p4x9），原因是 npm 渠道无可用修复版本。验证：`pnpm -C frontend type-check`（PASS）；`pnpm -C frontend audit --json`（`high=2, moderate=0, critical=0`）。
+
 - 前端用户可用性 E2E 补齐（2026-03-03）：新增 `frontend/tests/e2e/user/user-usability.spec.ts`，覆盖“登录用户核心模块可达（`/dashboard`、`/assets/list`、`/rental/contracts`、`/project`、`/property-certificates`）”“关键创建入口可用（新增资产/创建合同/新建项目/新建产权证）”“匿名访问受保护路由重定向到登录页”三类主链路；并加入页面稳定化等待与重载兜底，减少首屏慢加载误报，创建入口校验采用“资产/产权证按钮优先+路由兜底、项目弹窗入口显式可见断言”口径。验证：`pnpm -C frontend type-check:e2e`（PASS）；`pnpm -C frontend e2e tests/e2e/user/user-usability.spec.ts --project=chromium`（`3 passed`）；`pnpm -C frontend e2e tests/e2e/user/user-usability.spec.ts --project=chromium --repeat-each=2`（`6 passed`）。
 
 - 合同续签原合同结束日期收口 E2E 回归（2026-03-03）：新增 `test_contract_renew_updates_original_end_date_when_new_start_earlier_e2e`，覆盖“新合同起始日早于原合同结束日”时原合同 `end_date` 必须收口到新合同 `start_date` 的业务语义，防止续签生命周期字段回退；并与现有续签主链路用例联合验证。验证：`cd backend && ./.venv/bin/pytest --no-cov -q tests/e2e/test_contract_workflow_e2e.py::test_contract_renew_lifecycle_e2e tests/e2e/test_contract_workflow_e2e.py::test_contract_renew_updates_original_end_date_when_new_start_earlier_e2e`（`2 passed`）；`cd backend && ./.venv/bin/ruff check tests/e2e/test_contract_workflow_e2e.py`（PASS）。
