@@ -479,6 +479,13 @@ async def refresh_token(
         "platform": None,
     }
     tokens = auth_service.create_tokens(user, device_info)
+    await session_service.rotate_refresh_session(
+        session,
+        tokens.refresh_token,
+        getattr(tokens, "session_id", None),
+        client_ip=client_ip,
+        user_agent=user_agent,
+    )
     persistent_login = _resolve_persistent_login(getattr(session, "device_info", None))
     cookie_manager.set_auth_cookie(
         response, tokens.access_token, persistent=persistent_login

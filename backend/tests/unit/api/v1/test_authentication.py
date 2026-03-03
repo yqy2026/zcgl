@@ -1111,6 +1111,9 @@ class TestRefreshToken:
         mock_auth_service.validate_refresh_token = AsyncMock(return_value=mock_session)
         mock_auth_service.create_tokens.return_value = mock_tokens
         mock_auth_service_class.return_value = mock_auth_service
+        mock_session_service = MagicMock()
+        mock_session_service.rotate_refresh_session = AsyncMock(return_value=mock_session)
+        mock_session_service_class.return_value = mock_session_service
 
         mock_audit_crud = MagicMock()
         mock_audit_crud.create_async = AsyncMock()
@@ -1168,6 +1171,9 @@ class TestRefreshToken:
         mock_auth_service.validate_refresh_token = AsyncMock(return_value=mock_session)
         mock_auth_service.create_tokens.return_value = mock_tokens
         mock_auth_service_class.return_value = mock_auth_service
+        mock_session_service = MagicMock()
+        mock_session_service.rotate_refresh_session = AsyncMock(return_value=mock_session)
+        mock_session_service_class.return_value = mock_session_service
 
         mock_audit_crud = MagicMock()
         mock_audit_crud.create_async = AsyncMock()
@@ -1220,6 +1226,9 @@ class TestRefreshToken:
         mock_auth_service.validate_refresh_token = AsyncMock(return_value=mock_session)
         mock_auth_service.create_tokens.return_value = mock_tokens
         mock_auth_service_class.return_value = mock_auth_service
+        mock_session_service = MagicMock()
+        mock_session_service.rotate_refresh_session = AsyncMock(return_value=mock_session)
+        mock_session_service_class.return_value = mock_session_service
 
         mock_audit_crud = MagicMock()
         mock_audit_crud.create_async = AsyncMock()
@@ -1436,6 +1445,9 @@ class TestRefreshToken:
         mock_auth_service.validate_refresh_token = AsyncMock(return_value=mock_session)
         mock_auth_service.create_tokens.return_value = mock_tokens
         mock_auth_service_class.return_value = mock_auth_service
+        mock_session_service = MagicMock()
+        mock_session_service.rotate_refresh_session = AsyncMock(return_value=mock_session)
+        mock_session_service_class.return_value = mock_session_service
 
         mock_audit_crud = MagicMock()
         mock_audit_crud.create_async = AsyncMock()
@@ -1478,6 +1490,9 @@ class TestRefreshToken:
         mock_auth_service.validate_refresh_token = AsyncMock(return_value=mock_session)
         mock_auth_service.create_tokens.return_value = mock_tokens
         mock_auth_service_class.return_value = mock_auth_service
+        mock_session_service = MagicMock()
+        mock_session_service.rotate_refresh_session = AsyncMock(return_value=mock_session)
+        mock_session_service_class.return_value = mock_session_service
 
         mock_audit_crud = MagicMock()
         mock_audit_crud.create_async = AsyncMock()

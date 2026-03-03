@@ -85,6 +85,35 @@ class AsyncSessionService:
         await self.db.refresh(user_session)
         return user_session
 
+    async def rotate_refresh_session(
+        self,
+        session: UserSession,
+        refresh_token: str,
+        session_id: str | None,
+        *,
+        client_ip: str | None = None,
+        user_agent: str | None = None,
+    ) -> UserSession:
+        """
+        Rotate refresh token/session id for an existing active session.
+
+        This keeps cookie refresh flow consistent: once backend issues a new
+        refresh token, the persisted session must be updated accordingly.
+        """
+        now = _naive_utc_now()
+        session.refresh_token = refresh_token
+        session.session_id = session_id
+        session.last_accessed_at = now
+        session.expires_at = now + timedelta(days=settings.SESSION_EXPIRE_DAYS)
+        if client_ip is not None and client_ip != "":
+            session.ip_address = client_ip
+        if user_agent is not None and user_agent != "":
+            session.user_agent = user_agent
+
+        await self.db.commit()
+        await self.db.refresh(session)
+        return session
+
     async def get_user_sessions(
         self, user_id: str, active_only: bool = True
     ) -> list[UserSession]:

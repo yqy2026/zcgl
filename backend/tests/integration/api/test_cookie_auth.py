@@ -266,6 +266,39 @@ def test_csrf_allows_cookie_post_with_header(client, test_data):
     assert response.status_code == 200
 
 
+def test_refresh_token_can_rotate_multiple_times(client, test_data):
+    """Refreshing tokens repeatedly should keep the session alive."""
+    admin_user = test_data["admin"]
+
+    login_response = client.post(
+        "/api/v1/auth/login",
+        json={
+            "identifier": admin_user.username,
+            "password": "Admin123!@#",
+            "remember": True,
+        },
+    )
+    assert login_response.status_code == 200
+    assert client.cookies.get("refresh_token") is not None
+    assert client.cookies.get("csrf_token") is not None
+
+    first_csrf = client.cookies.get("csrf_token")
+    assert first_csrf is not None
+    first_refresh = client.post(
+        "/api/v1/auth/refresh",
+        headers={"X-CSRF-Token": first_csrf},
+    )
+    assert first_refresh.status_code == 200
+
+    second_csrf = client.cookies.get("csrf_token")
+    assert second_csrf is not None
+    second_refresh = client.post(
+        "/api/v1/auth/refresh",
+        headers={"X-CSRF-Token": second_csrf},
+    )
+    assert second_refresh.status_code == 200
+
+
 def test_bearer_rejected_in_cookie_only_mode(client, test_data):
     """Test that Authorization header is rejected in cookie-only auth"""
     admin_user = test_data["admin"]
