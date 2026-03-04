@@ -5,12 +5,13 @@
 资产计算逻辑（AssetCalculator）应在 API 或 Service 层调用。
 """
 
-from typing import Any, cast
+from typing import Any, NamedTuple, TypeVar, cast
 
 from sqlalchemy import Float, Select, case, delete, false, func, insert, or_, select
 from sqlalchemy import cast as sql_cast
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, load_only, selectinload, with_loader_criteria
+from sqlalchemy.sql.base import ExecutableOption
 
 from ..constants.business_constants import DataStatusValues, DateTimeFields
 from ..core.exception_handler import ResourceNotFoundError
@@ -39,6 +40,32 @@ from .asset_support import (
 )
 from .base import CRUDBase
 from .query_builder import PartyFilter
+
+TSelectRow = TypeVar("TSelectRow", bound=tuple[Any, ...])
+
+
+class OccupancyAggregationRow(NamedTuple):
+    total_assets: int | None
+    total_rentable_area: float | None
+    total_rented_area: float | None
+    rentable_assets_count: int | None
+
+
+class OccupancyCategoryAggregationRow(NamedTuple):
+    category: str | None
+    total_rentable_area: float | None
+    total_rented_area: float | None
+    total_assets: int | None
+    rentable_assets_count: int | None
+
+
+class AreaSummaryAggregationRow(NamedTuple):
+    total_assets: int | None
+    total_land_area: float | None
+    total_rentable_area: float | None
+    total_rented_area: float | None
+    total_non_commercial_area: float | None
+    assets_with_area_data: int | None
 
 
 class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
@@ -74,9 +101,9 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
     def _asset_projection_load_options(
         *,
         include_contract_projection: bool = True,
-    ) -> tuple[Any, ...]:
+    ) -> tuple[ExecutableOption, ...]:
         """资产投影字段所需的关系预加载选项。"""
-        options: list[Any] = [
+        options: list[ExecutableOption] = [
             joinedload(Asset.owner_party),
             joinedload(Asset.manager_party),
             joinedload(Asset.project),
@@ -193,7 +220,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         self,
         *,
         include_contract_projection: bool = True,
-    ) -> Select[Any]:
+    ) -> Select[tuple[Asset]]:
         """
         资产列表/批量查询的基础查询（预加载高频关系，避免 N+1）
 
@@ -264,9 +291,9 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
 
     @staticmethod
     def _apply_creator_scope(
-        stmt: Select[Any],
+        stmt: Select[TSelectRow],
         principals: set[str],
-    ) -> Select[Any]:
+    ) -> Select[TSelectRow]:
         if not principals:
             return stmt.where(false())
         return stmt.where(Asset.created_by.in_(principals))
@@ -424,7 +451,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
 
         non_pii_search_fields = ["property_name", "business_category"]
         pii_search_fields = ["address"]
-        search_conditions: list[object] | None = None
+        search_conditions: list[Any] | None = None
         if search:
             search_conditions = []
             for field in non_pii_search_fields:
@@ -463,7 +490,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             if not search_conditions:
                 search_conditions = None
 
-        base_query = (
+        base_query: Select[tuple[Asset]] = (
             self._asset_base_query_with_relations(
                 include_contract_projection=include_contract_projection
             )
@@ -496,7 +523,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         result = await db.execute(query)
         assets: list[Asset] = await _scalars_all(result)
 
-        count_base_query: Select[Any] = select(Asset.id)
+        count_base_query: Select[tuple[str]] = select(Asset.id)
         if search_conditions:
             count_base_query = count_base_query.join(
                 Party, Asset.owner_party_id == Party.id, isouter=True
@@ -690,7 +717,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         if not ids:
             return []
 
-        base_query = (
+        base_query: Select[tuple[Asset]] = (
             self._asset_base_query_with_relations()
             if include_relations
             else select(Asset).options(*self._asset_projection_load_options())
@@ -780,8 +807,8 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         return assets, used_blind_index
 
     def _apply_simple_asset_filters(
-        self, stmt: Select[Any], filters: AssetFilterData | None
-    ) -> Select[Any]:
+        self, stmt: Select[TSelectRow], filters: AssetFilterData | None
+    ) -> Select[TSelectRow]:
         """应用 analytics 场景下的简单等值过滤。"""
         if not filters:
             return stmt
@@ -794,7 +821,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
 
     async def get_occupancy_aggregation_async(
         self, db: AsyncSession, *, filters: AssetFilterData | None = None
-    ) -> object | None:
+    ) -> OccupancyAggregationRow | None:
         stmt = self._apply_simple_asset_filters(select(Asset), filters)
         agg_stmt = stmt.with_only_columns(
             func.count(Asset.id).label("total_assets"),
@@ -809,7 +836,8 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             ),
         )
         result = await db.execute(agg_stmt)
-        return await _result_first(result)
+        aggregation_row: OccupancyAggregationRow | None = await _result_first(result)
+        return aggregation_row
 
     async def get_occupancy_by_category_aggregation_async(
         self,
@@ -817,7 +845,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         *,
         category_field: str,
         filters: AssetFilterData | None = None,
-    ) -> list[object]:
+    ) -> list[OccupancyCategoryAggregationRow]:
         if not hasattr(Asset, category_field):
             return []
 
@@ -839,11 +867,12 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             ).group_by(category_column)
         )
         result = await db.execute(agg_stmt)
-        return await _result_all(result)
+        rows: list[OccupancyCategoryAggregationRow] = await _result_all(result)
+        return rows
 
     async def get_area_summary_aggregation_async(
         self, db: AsyncSession, *, filters: AssetFilterData | None = None
-    ) -> object | None:
+    ) -> AreaSummaryAggregationRow | None:
         stmt = self._apply_simple_asset_filters(select(Asset), filters)
         agg_stmt = stmt.with_only_columns(
             func.count(Asset.id).label("total_assets"),
@@ -864,7 +893,8 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             ),
         )
         result = await db.execute(agg_stmt)
-        return await _result_first(result)
+        summary_row: AreaSummaryAggregationRow | None = await _result_first(result)
+        return summary_row
 
     async def has_rent_contracts_async(
         self, db: AsyncSession, asset_id: str
@@ -878,8 +908,8 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             .limit(1)
         )
         result = await db.execute(stmt)
-        row: object | None = await _result_first(result)
-        return row is not None
+        first_row: tuple[str] | None = await _result_first(result)
+        return first_row is not None
 
     async def has_property_certs_async(
         self, db: AsyncSession, asset_id: str
@@ -893,8 +923,8 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             .limit(1)
         )
         result = await db.execute(stmt)
-        row: object | None = await _result_first(result)
-        return row is not None
+        first_row: tuple[str] | None = await _result_first(result)
+        return first_row is not None
 
     async def has_rent_ledger_async(self, db: AsyncSession, asset_id: str) -> bool:
         """检查资产是否有租金台账记录"""
@@ -902,8 +932,8 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
 
         stmt = select(RentLedger.id).where(RentLedger.asset_id == asset_id).limit(1)
         result = await db.execute(stmt)
-        row: object | None = await _result_first(result)
-        return row is not None
+        first_row: tuple[str] | None = await _result_first(result)
+        return first_row is not None
 
     async def get_assets_with_rent_contracts_async(
         self, db: AsyncSession, asset_ids: list[str]
@@ -917,8 +947,8 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             rent_contract_assets.c.asset_id.in_(asset_ids)
         )
         result = await db.execute(stmt)
-        scoped_asset_ids: list[object] = await _scalars_all(result)
-        return [str(asset_id) for asset_id in scoped_asset_ids]
+        matched_asset_ids: list[str] = await _scalars_all(result)
+        return [str(asset_id) for asset_id in matched_asset_ids]
 
     async def get_assets_with_property_certs_async(
         self, db: AsyncSession, asset_ids: list[str]
@@ -932,8 +962,8 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             property_cert_assets.c.asset_id.in_(asset_ids)
         )
         result = await db.execute(stmt)
-        scoped_asset_ids: list[object] = await _scalars_all(result)
-        return [str(asset_id) for asset_id in scoped_asset_ids]
+        matched_asset_ids: list[str] = await _scalars_all(result)
+        return [str(asset_id) for asset_id in matched_asset_ids]
 
     async def get_assets_with_rent_ledger_async(
         self, db: AsyncSession, asset_ids: list[str]
@@ -945,8 +975,8 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
 
         stmt = select(RentLedger.asset_id).where(RentLedger.asset_id.in_(asset_ids))
         result = await db.execute(stmt)
-        scoped_asset_ids: list[object] = await _scalars_all(result)
-        return [str(asset_id) for asset_id in scoped_asset_ids]
+        matched_asset_ids: list[str] = await _scalars_all(result)
+        return [str(asset_id) for asset_id in matched_asset_ids]
 
     async def get_by_property_names_async(
         self,
