@@ -1,10 +1,10 @@
-.PHONY: help dev dev-backend dev-frontend \
+.PHONY: help setup setup-backend setup-frontend dev dev-backend dev-frontend \
 	lint lint-backend lint-frontend scan-frontend scan-frontend-report type-check type-check-e2e \
 	test test-backend test-frontend test-frontend-ci test-e2e test-e2e-backend test-e2e-frontend \
 	test-e2e-import test-e2e-import-backend test-e2e-import-frontend \
 	test-integration test-coverage \
 	build-frontend backend-import check ci-gate \
-	backend-org-cov secrets migrate check-migration-naming
+	backend-org-cov secrets migrate check-migration-naming docs-lint
 
 ROOT_DIR := $(CURDIR)
 BACKEND_VENV ?= $(ROOT_DIR)/backend/.venv
@@ -12,6 +12,9 @@ PYTHON ?= $(shell if [ -x "$(BACKEND_VENV)/Scripts/python.exe" ]; then echo "$(B
 
 help:
 	@echo "Targets:"
+	@echo "  setup             Install backend + frontend dependencies"
+	@echo "  setup-backend     Sync backend dependencies with uv (dev extras)"
+	@echo "  setup-frontend    Install frontend dependencies with pnpm"
 	@echo "  dev               Run backend and frontend dev servers"
 	@echo "  dev-backend       Run backend dev server"
 	@echo "  dev-frontend      Run frontend dev server"
@@ -37,9 +40,19 @@ help:
 	@echo "  backend-import    Import backend app to validate runtime"
 	@echo "  check             Run lint, tests, build, and import checks"
 	@echo "  ci-gate           Run CI gate (ruff + tsgo + unit tests)"
+	@echo "  docs-lint         Run requirements authority matrix checks"
 	@echo "  backend-org-cov   Run org CRUD coverage test"
 	@echo "  secrets           Generate SECRET_KEY and DATA_ENCRYPTION_KEY"
 	@echo "  migrate           Run alembic upgrade head"
+
+setup:
+	@$(MAKE) -j2 setup-backend setup-frontend
+
+setup-backend:
+	cd backend && uv sync --frozen --extra dev
+
+setup-frontend:
+	cd frontend && pnpm install --frozen-lockfile
 
 dev:
 	@$(MAKE) -j2 dev-backend dev-frontend
@@ -53,7 +66,7 @@ dev-frontend:
 lint: lint-backend lint-frontend
 
 lint-backend:
-	cd backend && $(PYTHON) -m ruff check . && $(PYTHON) scripts/migration/check_migration_naming.py
+	cd backend && uv run --extra dev python -m ruff check . && uv run python scripts/migration/check_migration_naming.py
 
 check-migration-naming:
 	cd backend && $(PYTHON) scripts/migration/check_migration_naming.py
@@ -141,6 +154,9 @@ secrets:
 
 migrate:
 	cd backend && $(PYTHON) -m alembic upgrade head
+
+docs-lint:
+	$(PYTHON) scripts/check_requirements_authority.py
 
 # 运行集成测试
 test-integration:

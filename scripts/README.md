@@ -19,6 +19,30 @@ make check
 
 默认输出到控制台；如需日志，请自行重定向到 `logs/`。
 
+补充：需求文档权威入口检查（SSOT Matrix）可单独运行：
+```bash
+make docs-lint
+```
+
+---
+
+## 0. check_requirements_authority.py
+
+**需求文档权威入口检查脚本** - 校验非 Canonical 文档是否错误声明权威口径，防止回退到旧基线引用。
+
+### 功能特性
+- ✅ 检查历史遗留“`requirements-specification.md` 直接权威”表述
+- ✅ 校验关键参考文档是否包含 `requirements-authority-matrix.md` 引用
+- ✅ 跳过 `docs/archive/` 归档文档，减少误报
+
+### 使用方法
+
+```bash
+python scripts/check_requirements_authority.py
+# 或
+make docs-lint
+```
+
 ---
 
 ## 0. dev/p3b_api_probe.sh
