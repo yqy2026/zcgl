@@ -158,14 +158,60 @@ export const loginWithCredential = async (page: Page, credential: Credentials): 
   return !currentPath.startsWith(LOGIN_PATH);
 };
 
+export const loginWithCredentialRetry = async (
+  page: Page,
+  credential: Credentials,
+  attempts: number = 2
+): Promise<boolean> => {
+  let lastError: unknown = null;
+
+  for (let index = 0; index < attempts; index += 1) {
+    try {
+      return await loginWithCredential(page, credential);
+    } catch (error) {
+      lastError = error;
+      if (index + 1 >= attempts) {
+        throw error;
+      }
+      await page.waitForTimeout(300);
+    }
+  }
+
+  if (lastError instanceof Error) {
+    throw lastError;
+  }
+  return false;
+};
+
+export const resolveCsrfToken = async (page: Page): Promise<string | null> =>
+  await page.evaluate(() => {
+    const csrfCookie = document.cookie
+      .split('; ')
+      .find(item => item.startsWith('csrf_token='));
+    if (csrfCookie == null || csrfCookie === '') {
+      return null;
+    }
+    return decodeURIComponent(csrfCookie.split('=').slice(1).join('='));
+  });
+
+export const resolveCsrfHeaders = async (page: Page): Promise<Record<string, string>> => {
+  const csrfToken = await resolveCsrfToken(page);
+  if (csrfToken == null || csrfToken === '') {
+    return {};
+  }
+
+  return { 'X-CSRF-Token': csrfToken };
+};
+
 export const loginAsAdmin = async (page: Page): Promise<Credentials> => {
   const credentialCandidates = resolveAdminCredentialCandidates();
 
   for (const credential of credentialCandidates) {
-    const success = await loginWithCredential(page, credential);
+    const success = await loginWithCredentialRetry(page, credential, 2);
     if (success) {
       return credential;
     }
+    await clearAuthState(page);
   }
 
   throw new Error(

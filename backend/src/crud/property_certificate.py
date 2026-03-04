@@ -134,12 +134,11 @@ class CRUDPropertyCertificate(
                 owner_id.strip() for owner_id in owner_ids if owner_id.strip() != ""
             ]
             for index, owner_id in enumerate(normalized_owner_ids):
-                relation = CertificatePartyRelation(
-                    certificate_id=db_obj.id,
-                    party_id=owner_id,
-                    relation_role=CertificateRelationRole.OWNER,
-                    is_primary=index == 0,
-                )
+                relation = CertificatePartyRelation()
+                relation.certificate_id = db_obj.id
+                relation.party_id = owner_id
+                relation.relation_role = CertificateRelationRole.OWNER
+                relation.is_primary = index == 0
                 db.add(relation)
 
         if asset_ids:

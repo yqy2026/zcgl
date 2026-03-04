@@ -292,6 +292,23 @@ class PropertyCertificateService:
                 field_errors={"certificate_number": ["缺少证书编号"]},
             )
 
+        parsed_date_fields: dict[str, date | None] = {}
+        date_field_errors: dict[str, list[str]] = {}
+        for field_name in ("registration_date", "land_use_term_start", "land_use_term_end"):
+            raw_value = extracted_data.get(field_name)
+            try:
+                parsed_date_fields[field_name] = self._parse_date(raw_value)
+            except ValueError:
+                date_field_errors[field_name] = [
+                    "日期格式无效，请使用 YYYY-MM-DD / YYYY/MM/DD / YYYY年MM月DD日",
+                ]
+
+        if date_field_errors:
+            raise BusinessValidationError(
+                "日期字段格式无效",
+                field_errors=date_field_errors,
+            )
+
         logger.info(f"确认导入产权证: {certificate_number}")
         try:
             existing = await property_certificate_crud.get_by_certificate_number_async(
@@ -317,21 +334,15 @@ class PropertyCertificateService:
                 "extraction_confidence": extraction_confidence,
                 "extraction_source": "llm",
                 "is_verified": False,
-                "registration_date": self._parse_date(
-                    extracted_data.get("registration_date")
-                ),
+                "registration_date": parsed_date_fields.get("registration_date"),
                 "property_address": extracted_data.get("property_address"),
                 "property_type": extracted_data.get("property_type"),
                 "building_area": extracted_data.get("building_area"),
                 "floor_info": extracted_data.get("floor_info"),
                 "land_area": extracted_data.get("land_area"),
                 "land_use_type": extracted_data.get("land_use_type"),
-                "land_use_term_start": self._parse_date(
-                    extracted_data.get("land_use_term_start")
-                ),
-                "land_use_term_end": self._parse_date(
-                    extracted_data.get("land_use_term_end")
-                ),
+                "land_use_term_start": parsed_date_fields.get("land_use_term_start"),
+                "land_use_term_end": parsed_date_fields.get("land_use_term_end"),
                 "co_ownership": extracted_data.get("co_ownership"),
                 "restrictions": extracted_data.get("restrictions"),
                 "remarks": extracted_data.get("remarks"),
@@ -366,31 +377,41 @@ class PropertyCertificateService:
             )
             raise
 
-    def _parse_date(self, date_str: str | None) -> date | None:
+    def _parse_date(self, date_input: Any) -> date | None:
         """
         解析日期字符串
 
         Args:
-            date_str: 日期字符串 (格式: YYYY-MM-DD 或 YYYY/MM/DD)
+            date_input: 日期输入 (支持 YYYY-MM-DD / YYYY/MM/DD / YYYY年MM月DD日)
 
         Returns:
             date | None: 解析后的日期对象
+
+        Raises:
+            ValueError: 非空但日期格式非法
         """
-        if not date_str:
+        if date_input is None:
             return None
 
         from datetime import datetime
+
+        if isinstance(date_input, date):
+            return date_input
+
+        normalized_date = str(date_input).strip()
+        if normalized_date == "":
+            return None
 
         # 尝试常见日期格式
         formats = ["%Y-%m-%d", "%Y/%m/%d", "%Y年%m月%d日"]
         for fmt in formats:
             try:
-                return datetime.strptime(date_str, fmt).date()
+                return datetime.strptime(normalized_date, fmt).date()
             except ValueError:
                 continue
 
-        logger.warning(f"无法解析日期: {date_str}")
-        return None
+        logger.warning(f"无法解析日期: {normalized_date}")
+        raise ValueError(f"invalid date format: {normalized_date}")
 
     async def match_assets(
         self, extracted_data: dict[str, Any], limit: int = 5

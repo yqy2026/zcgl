@@ -5,7 +5,7 @@
 """
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -75,10 +75,11 @@ class OccupancyService:
                     "calculation_method": "aggregation",
                 }
 
-            total_rentable_area = to_float(result.total_rentable_area)
-            total_rented_area = to_float(result.total_rented_area)
-            total_assets = int(result.total_assets or 0)
-            rentable_assets_count = int(result.rentable_assets_count or 0)
+            agg_result = cast(Any, result)
+            total_rentable_area = to_float(agg_result.total_rentable_area)
+            total_rented_area = to_float(agg_result.total_rented_area)
+            total_assets = int(agg_result.total_assets or 0)
+            rentable_assets_count = int(agg_result.rentable_assets_count or 0)
 
             # 计算出租率
             overall_rate = (
@@ -180,11 +181,12 @@ class OccupancyService:
 
             categories = {}
             for result in results:
-                category = result.category or "未知"
-                total_rentable = to_float(result.total_rentable_area)
-                total_rented = to_float(result.total_rented_area)
-                total_assets = int(result.total_assets or 0)
-                rentable_assets = int(result.rentable_assets_count or 0)
+                category_result = cast(Any, result)
+                category = category_result.category or "未知"
+                total_rentable = to_float(category_result.total_rentable_area)
+                total_rented = to_float(category_result.total_rented_area)
+                total_assets = int(category_result.total_assets or 0)
+                rentable_assets = int(category_result.rentable_assets_count or 0)
 
                 overall_rate = (
                     (total_rented / total_rentable * 100) if total_rentable > 0 else 0.0

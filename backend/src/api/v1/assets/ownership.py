@@ -129,7 +129,7 @@ async def get_ownership_dropdown_options(
     db: Annotated[AsyncSession, Depends(get_async_db)],
     is_active: bool | None = Query(True, description="是否启用"),
     _authz_ctx: Annotated[
-        AuthzContext,
+        AuthzContext | None,
         Depends(
             require_authz(
                 action="read",
@@ -193,7 +193,7 @@ async def update_ownership(
     ownership_in: OwnershipUpdate,
     current_user: Annotated[User, Depends(get_current_active_user)],
     _authz_ctx: Annotated[
-        AuthzContext,
+        AuthzContext | None,
         Depends(
             require_authz(
                 action="update",
@@ -225,7 +225,7 @@ async def update_ownership_projects(
     project_ids: list[str] = Body(..., description="关联项目ID列表"),
     current_user: Annotated[User, Depends(get_current_active_user)],
     _authz_ctx: Annotated[
-        AuthzContext,
+        AuthzContext | None,
         Depends(
             require_authz(
                 action="update",
@@ -275,7 +275,7 @@ async def delete_ownership(
     ownership_id: str,
     current_user: Annotated[User, Depends(get_current_active_user)],
     _authz_ctx: Annotated[
-        AuthzContext,
+        AuthzContext | None,
         Depends(
             require_authz(
                 action="delete",
@@ -322,7 +322,7 @@ async def get_ownerships(
     keyword: str | None = Query(None, description="搜索关键词"),
     is_active: bool | None = Query(None, description="是否启用"),
     _authz_ctx: Annotated[
-        AuthzContext,
+        AuthzContext | None,
         Depends(
             require_authz(
                 action="read",
@@ -368,7 +368,7 @@ async def search_ownerships(
     search_params: OwnershipSearchRequest,
     current_user: Annotated[User, Depends(get_current_active_user)],
     _authz_ctx: Annotated[
-        AuthzContext,
+        AuthzContext | None,
         Depends(
             require_authz(
                 action="read",
@@ -408,7 +408,7 @@ async def get_ownership_statistics(
     db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
     _authz_ctx: Annotated[
-        AuthzContext,
+        AuthzContext | None,
         Depends(
             require_authz(
                 action="read",
@@ -444,7 +444,7 @@ async def toggle_ownership_status(
     ownership_id: str,
     current_user: Annotated[User, Depends(get_current_active_user)],
     _authz_ctx: Annotated[
-        AuthzContext,
+        AuthzContext | None,
         Depends(
             require_authz(
                 action="update",
@@ -473,7 +473,7 @@ async def get_ownership_financial_summary(
     db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
     _authz_ctx: Annotated[
-        AuthzContext,
+        AuthzContext | None,
         Depends(
             require_authz(
                 action="read",

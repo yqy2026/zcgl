@@ -3,6 +3,7 @@
 import uuid
 from datetime import UTC, datetime
 from enum import StrEnum
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     Boolean,
@@ -16,6 +17,9 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..database import Base
+
+if TYPE_CHECKING:
+    from .party import Party
 
 
 def _utcnow_naive() -> datetime:
@@ -84,7 +88,7 @@ class UserPartyBinding(Base):
         comment="更新时间",
     )
 
-    party = relationship("Party", back_populates="user_bindings")
+    party: Mapped["Party"] = relationship("Party", back_populates="user_bindings")
 
     def __repr__(self) -> str:
         return (

@@ -539,12 +539,13 @@ async def drop_tables() -> None:
 async def get_database_status() -> dict[str, object]:
     """获取数据库状态信息"""
     manager = _get_database_manager()
-    status = {
-        "database_url": DATABASE_URL,
-        "engine_type": type(manager.engine).__name__ if manager.engine else "Unknown",
-        "metrics": manager.get_metrics().__dict__,
-        "health_check": await manager.run_health_check(),
-    }
+    status: dict[str, object] = {}
+    status["database_url"] = DATABASE_URL
+    status["engine_type"] = (
+        type(manager.engine).__name__ if manager.engine else "Unknown"
+    )
+    status["metrics"] = manager.get_metrics().__dict__
+    status["health_check"] = await manager.run_health_check()
     return status
 
 

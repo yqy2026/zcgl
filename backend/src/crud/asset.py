@@ -5,6 +5,8 @@
 资产计算逻辑（AssetCalculator）应在 API 或 Service 层调用。
 """
 
+from typing import Any, cast
+
 from sqlalchemy import Float, Select, case, delete, false, func, insert, or_, select
 from sqlalchemy import cast as sql_cast
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -65,16 +67,16 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
     RELATION_MUTATION_FIELDS = ("ownership_entity",)
 
     @staticmethod
-    def _not_deleted_clause(column: object) -> object:
+    def _not_deleted_clause(column: Any) -> Any:
         return or_(column.is_(None), column != DataStatusValues.ASSET_DELETED)
 
     @staticmethod
     def _asset_projection_load_options(
         *,
         include_contract_projection: bool = True,
-    ) -> tuple[object, ...]:
+    ) -> tuple[Any, ...]:
         """资产投影字段所需的关系预加载选项。"""
-        options: list[object] = [
+        options: list[Any] = [
             joinedload(Asset.owner_party),
             joinedload(Asset.manager_party),
             joinedload(Asset.project),
@@ -191,7 +193,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         self,
         *,
         include_contract_projection: bool = True,
-    ) -> Select[object]:
+    ) -> Select[Any]:
         """
         资产列表/批量查询的基础查询（预加载高频关系，避免 N+1）
 
@@ -251,7 +253,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             User.default_organization_id.in_(org_ids)  # DEPRECATED legacy org scope fallback
         )
         result = await db.execute(stmt)
-        rows = await _result_all(result)
+        rows: list[tuple[object, object]] = await _result_all(result)
         principals: set[str] = set()
         for user_id, username in rows:
             if user_id is not None and str(user_id).strip() != "":
@@ -262,9 +264,9 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
 
     @staticmethod
     def _apply_creator_scope(
-        stmt: Select[object],
+        stmt: Select[Any],
         principals: set[str],
-    ) -> Select[object]:
+    ) -> Select[Any]:
         if not principals:
             return stmt.where(false())
         return stmt.where(Asset.created_by.in_(principals))
@@ -284,9 +286,9 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
     async def _apply_asset_party_filter(
         self,
         db: AsyncSession,
-        stmt: Select[object],
+        stmt: Select[Any],
         party_filter: PartyFilter,
-    ) -> Select[object]:
+    ) -> Select[Any]:
         if self._supports_party_scope_columns():
             return self.query_builder.apply_party_filter(stmt, party_filter)
 
@@ -309,7 +311,10 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         obj_in_data.update(kwargs)
         self._clean_asset_data(obj_in_data)
 
-        encrypted_data = self.sensitive_data_handler.encrypt_data(obj_in_data.copy())
+        encrypted_data = cast(
+            AssetMutationData,
+            self.sensitive_data_handler.encrypt_data(obj_in_data.copy()),
+        )
         db_obj = Asset(**encrypted_data)
         db.add(db_obj)
         await db.flush()
@@ -396,7 +401,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             stmt = stmt.filter(self._not_deleted_clause(Asset.data_status))
 
         result = await db.execute(stmt)
-        asset = await _scalars_first(result)
+        asset: Asset | None = await _scalars_first(result)
         if asset is not None:
             self._decrypt_asset_object(asset)
         return asset
@@ -479,7 +484,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
                 base_query,
                 party_filter,
             )
-        query: Select[object] = self.query_builder.build_query(
+        query: Select[Any] = self.query_builder.build_query(
             filters=qb_filters,
             search_conditions=search_conditions,
             sort_by=normalized_sort_field,
@@ -491,7 +496,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         result = await db.execute(query)
         assets: list[Asset] = await _scalars_all(result)
 
-        count_base_query: Select[object] = select(Asset.id)
+        count_base_query: Select[Any] = select(Asset.id)
         if search_conditions:
             count_base_query = count_base_query.join(
                 Party, Asset.owner_party_id == Party.id, isouter=True
@@ -511,7 +516,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         )
         total_result = await db.execute(cnt_query)
         total_raw = await _result_scalar(total_result)
-        total = int(total_raw) if total_raw is not None else 0
+        total = int(cast(int | float | str, total_raw)) if total_raw is not None else 0
 
         for asset in assets:
             self._decrypt_asset_object(asset)
@@ -538,7 +543,10 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         ):
             # 仅保留最小兼容：旧 organization_id 输入不再写库列，按 manager_party_id 别名处理。
             obj_in_data["manager_party_id"] = organization_id
-        encrypted_data = self.sensitive_data_handler.encrypt_data(obj_in_data.copy())
+        encrypted_data = cast(
+            AssetMutationData,
+            self.sensitive_data_handler.encrypt_data(obj_in_data.copy()),
+        )
 
         db_obj = Asset(**encrypted_data)
         db.add(db_obj)
@@ -772,8 +780,8 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         return assets, used_blind_index
 
     def _apply_simple_asset_filters(
-        self, stmt: Select[object], filters: AssetFilterData | None
-    ) -> Select[object]:
+        self, stmt: Select[Any], filters: AssetFilterData | None
+    ) -> Select[Any]:
         """应用 analytics 场景下的简单等值过滤。"""
         if not filters:
             return stmt
@@ -870,7 +878,8 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             .limit(1)
         )
         result = await db.execute(stmt)
-        return (await _result_first(result)) is not None
+        row: object | None = await _result_first(result)
+        return row is not None
 
     async def has_property_certs_async(
         self, db: AsyncSession, asset_id: str
@@ -884,7 +893,8 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             .limit(1)
         )
         result = await db.execute(stmt)
-        return (await _result_first(result)) is not None
+        row: object | None = await _result_first(result)
+        return row is not None
 
     async def has_rent_ledger_async(self, db: AsyncSession, asset_id: str) -> bool:
         """检查资产是否有租金台账记录"""
@@ -892,7 +902,8 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
 
         stmt = select(RentLedger.id).where(RentLedger.asset_id == asset_id).limit(1)
         result = await db.execute(stmt)
-        return (await _result_first(result)) is not None
+        row: object | None = await _result_first(result)
+        return row is not None
 
     async def get_assets_with_rent_contracts_async(
         self, db: AsyncSession, asset_ids: list[str]
@@ -906,7 +917,8 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             rent_contract_assets.c.asset_id.in_(asset_ids)
         )
         result = await db.execute(stmt)
-        return [str(asset_id) for asset_id in await _scalars_all(result)]
+        scoped_asset_ids: list[object] = await _scalars_all(result)
+        return [str(asset_id) for asset_id in scoped_asset_ids]
 
     async def get_assets_with_property_certs_async(
         self, db: AsyncSession, asset_ids: list[str]
@@ -920,7 +932,8 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             property_cert_assets.c.asset_id.in_(asset_ids)
         )
         result = await db.execute(stmt)
-        return [str(asset_id) for asset_id in await _scalars_all(result)]
+        scoped_asset_ids: list[object] = await _scalars_all(result)
+        return [str(asset_id) for asset_id in scoped_asset_ids]
 
     async def get_assets_with_rent_ledger_async(
         self, db: AsyncSession, asset_ids: list[str]
@@ -932,7 +945,8 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
 
         stmt = select(RentLedger.asset_id).where(RentLedger.asset_id.in_(asset_ids))
         result = await db.execute(stmt)
-        return [str(asset_id) for asset_id in await _scalars_all(result)]
+        scoped_asset_ids: list[object] = await _scalars_all(result)
+        return [str(asset_id) for asset_id in scoped_asset_ids]
 
     async def get_by_property_names_async(
         self,
@@ -948,7 +962,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         if exclude_deleted:
             stmt = stmt.where(Asset.data_status != DataStatusValues.ASSET_DELETED)
         result = await db.execute(stmt)
-        assets = await _scalars_all(result)
+        assets: list[Asset] = await _scalars_all(result)
         if decrypt:
             for asset in assets:
                 self._decrypt_asset_object(asset)
@@ -958,7 +972,8 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         """统计权属方的资产数量"""
         stmt = select(func.count(Asset.id)).where(Asset.owner_party_id == ownership_id)
         result = await db.execute(stmt)
-        return int((await _result_scalar(result)) or 0)
+        count_raw = await _result_scalar(result)
+        return int(cast(int | float | str, count_raw)) if count_raw is not None else 0
 
     async def get_counts_by_ownerships_async(
         self, db: AsyncSession, ownership_ids: list[str]
@@ -972,9 +987,12 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             .group_by(Asset.owner_party_id)
         )
         result = await db.execute(stmt)
+        rows: list[tuple[object, object]] = await _result_all(result)
         return {
-            str(ownership_id): int(count or 0)
-            for ownership_id, count in await _result_all(result)
+            str(ownership_id): (
+                int(cast(int | float | str, count)) if count is not None else 0
+            )
+            for ownership_id, count in rows
             if ownership_id is not None
         }
 

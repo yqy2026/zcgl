@@ -3,7 +3,7 @@
 import uuid
 from datetime import UTC, datetime
 from enum import StrEnum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import (
     Boolean,
@@ -18,6 +18,9 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..database import Base
+
+if TYPE_CHECKING:
+    from .rbac import Role
 
 
 def _utcnow_naive() -> datetime:
@@ -180,7 +183,7 @@ class ABACRolePolicy(Base):
     policy: Mapped["ABACPolicy"] = relationship(
         "ABACPolicy", back_populates="role_policies"
     )
-    role = relationship("Role")
+    role: Mapped["Role"] = relationship("Role")
 
     def __repr__(self) -> str:
         return f"<ABACRolePolicy(role_id={self.role_id}, policy_id={self.policy_id})>"

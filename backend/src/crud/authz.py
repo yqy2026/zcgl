@@ -119,7 +119,8 @@ class CRUDAuthz:
             await db.commit()
         else:
             await db.flush()
-        return int(result.rowcount or 0)
+        rowcount = getattr(result, "rowcount", 0)
+        return int(rowcount or 0)
 
 
 crud_authz = CRUDAuthz()

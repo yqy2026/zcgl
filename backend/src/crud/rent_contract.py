@@ -1,5 +1,6 @@
 from datetime import date
 from typing import Any
+from typing import cast as typing_cast
 
 from sqlalchemy import String, and_, cast, delete, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,7 +9,7 @@ from sqlalchemy.orm import selectinload
 from ..constants.business_constants import DataStatusValues
 from ..constants.rent_contract_constants import PaymentStatus
 from ..core.enums import ContractStatus
-from ..crud.asset import SensitiveDataHandler
+from ..crud.asset_support import SensitiveDataHandler
 from ..crud.base import CRUDBase
 from ..models.associations import rent_contract_assets
 from ..models.party import Party
@@ -91,7 +92,9 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
             obj_in_data = obj_in
         else:
             obj_in_data = obj_in.model_dump()
-        encrypted_data = self.sensitive_data_handler.encrypt_data(obj_in_data)
+        encrypted_data = typing_cast(
+            dict[str, Any], self.sensitive_data_handler.encrypt_data(obj_in_data)
+        )
         return await super().create(db=db, obj_in=encrypted_data, **kwargs)
 
     async def update_async(

@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any, Literal, TypeVar
 
@@ -18,13 +19,13 @@ logger = logging.getLogger(__name__)
 class PartyFilter:
     """主体维度过滤上下文。"""
 
-    party_ids: list[PartyIdentifier]
-    legacy_org_ids: list[PartyIdentifier] | None = None
+    party_ids: Sequence[PartyIdentifier]
+    legacy_org_ids: Sequence[PartyIdentifier] | None = None
     filter_mode: Literal["owner", "manager", "any"] = "any"
-    owner_party_ids: list[PartyIdentifier] | None = None
-    manager_party_ids: list[PartyIdentifier] | None = None
-    owner_legacy_org_ids: list[PartyIdentifier] | None = None
-    manager_legacy_org_ids: list[PartyIdentifier] | None = None
+    owner_party_ids: Sequence[PartyIdentifier] | None = None
+    manager_party_ids: Sequence[PartyIdentifier] | None = None
+    owner_legacy_org_ids: Sequence[PartyIdentifier] | None = None
+    manager_legacy_org_ids: Sequence[PartyIdentifier] | None = None
     mode: Literal["strict"] = "strict"
     allow_null: bool = False
 
@@ -465,7 +466,7 @@ class QueryBuilder[ModelType]:
 
     @staticmethod
     def _normalize_party_ids(
-        party_ids: list[PartyIdentifier] | None,
+        party_ids: Sequence[PartyIdentifier] | None,
     ) -> list[PartyIdentifier]:
         if party_ids is None:
             return []

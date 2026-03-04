@@ -49,7 +49,7 @@ async def list_parties(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     _authz_ctx: Annotated[
-        AuthzContext,
+        AuthzContext | None,
         Depends(
             require_authz(
                 action="read",
@@ -77,7 +77,7 @@ async def create_party(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     _authz_ctx: Annotated[
-        AuthzContext,
+        AuthzContext | None,
         Depends(
             require_authz(
                 action="create",
@@ -103,7 +103,7 @@ async def get_party(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     _authz_ctx: Annotated[
-        AuthzContext,
+        AuthzContext | None,
         Depends(
             require_authz(
                 action="read",
@@ -128,7 +128,7 @@ async def update_party(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     _authz_ctx: Annotated[
-        AuthzContext,
+        AuthzContext | None,
         Depends(
             require_authz(
                 action="update",
@@ -154,7 +154,7 @@ async def delete_party(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     _authz_ctx: Annotated[
-        AuthzContext,
+        AuthzContext | None,
         Depends(
             require_authz(
                 action="delete",
@@ -182,7 +182,7 @@ async def get_party_hierarchy(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     _authz_ctx: Annotated[
-        AuthzContext,
+        AuthzContext | None,
         Depends(
             require_authz(
                 action="read",
@@ -216,7 +216,7 @@ async def add_party_hierarchy(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     _authz_ctx: Annotated[
-        AuthzContext,
+        AuthzContext | None,
         Depends(
             require_authz(
                 action="create",
@@ -247,7 +247,7 @@ async def delete_party_hierarchy(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     _authz_ctx: Annotated[
-        AuthzContext,
+        AuthzContext | None,
         Depends(
             require_authz(
                 action="delete",
@@ -278,7 +278,7 @@ async def get_party_contacts(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     _authz_ctx: Annotated[
-        AuthzContext,
+        AuthzContext | None,
         Depends(
             require_authz(
                 action="read",
@@ -309,7 +309,7 @@ async def create_party_contact(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     _authz_ctx: Annotated[
-        AuthzContext,
+        AuthzContext | None,
         Depends(
             require_authz(
                 action="create",
@@ -341,7 +341,7 @@ async def get_user_party_bindings(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_admin),
     _authz_ctx: Annotated[
-        AuthzContext,
+        AuthzContext | None,
         Depends(
             require_authz(
                 action="read",
@@ -372,7 +372,7 @@ async def create_user_party_binding(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_admin),
     _authz_ctx: Annotated[
-        AuthzContext,
+        AuthzContext | None,
         Depends(
             require_authz(
                 action="update",
@@ -411,7 +411,7 @@ async def update_user_party_binding(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_admin),
     _authz_ctx: Annotated[
-        AuthzContext,
+        AuthzContext | None,
         Depends(
             require_authz(
                 action="update",
@@ -446,7 +446,7 @@ async def close_user_party_binding(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(require_admin),
     _authz_ctx: Annotated[
-        AuthzContext,
+        AuthzContext | None,
         Depends(
             require_authz(
                 action="delete",

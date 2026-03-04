@@ -43,7 +43,7 @@ async def _result_first(result: object) -> TResultRow | None:
 
 async def _result_scalar(result: object) -> object | None:
     """兼容真实 AsyncSession 与测试 AsyncMock 的 result.scalar() 行为。"""
-    return cast(object | None, await _invoke_result_chain(result, "scalar"))
+    return await _invoke_result_chain(result, "scalar")
 
 
 async def _invoke_result_chain(target: object, *method_chain: str) -> object:

@@ -5,7 +5,7 @@
 """
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -77,14 +77,15 @@ class AreaService:
                     "calculation_method": "aggregation",
                 }
 
-            total_assets = int(result.total_assets or 0)
-            total_land_area = to_float(result.total_land_area)
-            total_rentable_area = to_float(result.total_rentable_area)
-            total_rented_area = to_float(result.total_rented_area)
+            area_result = cast(Any, result)
+            total_assets = int(area_result.total_assets or 0)
+            total_land_area = to_float(area_result.total_land_area)
+            total_rentable_area = to_float(area_result.total_rentable_area)
+            total_rented_area = to_float(area_result.total_rented_area)
             # 计算未出租面积（可出租面积 - 已出租面积）
             total_unrented_area = max(total_rentable_area - total_rented_area, 0.0)
-            total_non_commercial_area = to_float(result.total_non_commercial_area)
-            assets_with_area_data = int(result.assets_with_area_data or 0)
+            total_non_commercial_area = to_float(area_result.total_non_commercial_area)
+            assets_with_area_data = int(area_result.assets_with_area_data or 0)
 
             # 计算整体出租率
             overall_occupancy_rate = (

@@ -54,6 +54,80 @@ const getConfidenceMeta = (confidence: number): { tone: Tone; label: string } =>
   return { tone: 'error', label: '低' };
 };
 
+const DATE_FIELD_KEYS = ['registration_date', 'land_use_term_start', 'land_use_term_end'] as const;
+
+const normalizeIsoDate = (year: number, month: number, day: number): string | null => {
+  if (
+    !Number.isInteger(year) ||
+    !Number.isInteger(month) ||
+    !Number.isInteger(day) ||
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > 31
+  ) {
+    return null;
+  }
+
+  const candidate = new Date(Date.UTC(year, month - 1, day));
+  if (
+    candidate.getUTCFullYear() !== year ||
+    candidate.getUTCMonth() + 1 !== month ||
+    candidate.getUTCDate() !== day
+  ) {
+    return null;
+  }
+
+  return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+};
+
+const normalizeDateFieldValue = (value: unknown): string | null => {
+  if (value == null) {
+    return null;
+  }
+
+  if (dayjs.isDayjs(value)) {
+    return value.isValid() ? value.format('YYYY-MM-DD') : null;
+  }
+
+  const rawValue = String(value).trim();
+  if (rawValue === '') {
+    return null;
+  }
+
+  const isoMatch = rawValue.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (isoMatch != null) {
+    const [, year, month, day] = isoMatch;
+    return normalizeIsoDate(Number(year), Number(month), Number(day));
+  }
+
+  const slashMatch = rawValue.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
+  if (slashMatch != null) {
+    const [, year, month, day] = slashMatch;
+    return normalizeIsoDate(Number(year), Number(month), Number(day));
+  }
+
+  const chineseMatch = rawValue.match(/^(\d{4})年(\d{1,2})月(\d{1,2})日$/);
+  if (chineseMatch != null) {
+    const [, year, month, day] = chineseMatch;
+    return normalizeIsoDate(Number(year), Number(month), Number(day));
+  }
+
+  return null;
+};
+
+const normalizeCertificateDateFields = (
+  values: Record<string, unknown>
+): Record<string, unknown> => {
+  const normalizedValues: Record<string, unknown> = { ...values };
+  for (const fieldKey of DATE_FIELD_KEYS) {
+    if (fieldKey in normalizedValues) {
+      normalizedValues[fieldKey] = normalizeDateFieldValue(normalizedValues[fieldKey]);
+    }
+  }
+  return normalizedValues;
+};
+
 export const PropertyCertificateReview: React.FC<PropertyCertificateReviewProps> = ({
   extractionResult,
   onConfirm,
@@ -64,6 +138,15 @@ export const PropertyCertificateReview: React.FC<PropertyCertificateReviewProps>
 
   const { extracted_data, confidence_score, asset_matches, validation_errors, warnings } =
     extractionResult;
+  const normalizedInitialRegistrationDate = normalizeDateFieldValue(
+    extracted_data.registration_date
+  );
+  const normalizedInitialLandUseTermStart = normalizeDateFieldValue(
+    extracted_data.land_use_term_start
+  );
+  const normalizedInitialLandUseTermEnd = normalizeDateFieldValue(
+    extracted_data.land_use_term_end
+  );
   const confidenceMeta = getConfidenceMeta(confidence_score);
   const toneClassMap: Record<Tone, string> = {
     primary: styles.tonePrimary,
@@ -75,10 +158,15 @@ export const PropertyCertificateReview: React.FC<PropertyCertificateReviewProps>
   const handleConfirm = async () => {
     try {
       const values = await form.validateFields();
+      const mergedValues: Record<string, unknown> = {
+        ...extracted_data,
+        ...values,
+      };
+      const normalizedValues = normalizeCertificateDateFields(mergedValues);
       onConfirm({
         session_id: extractionResult.session_id,
         asset_ids: selectedAssetId != null ? [selectedAssetId] : [],
-        extracted_data: values,
+        extracted_data: normalizedValues,
         asset_link_id: selectedAssetId,
         should_create_new_asset: selectedAssetId == null,
         owners: [],
@@ -196,14 +284,14 @@ export const PropertyCertificateReview: React.FC<PropertyCertificateReviewProps>
           layout="vertical"
           initialValues={{
             ...extracted_data,
-            registration_date: extracted_data.registration_date
-              ? dayjs(extracted_data.registration_date as string)
+            registration_date: normalizedInitialRegistrationDate
+              ? dayjs(normalizedInitialRegistrationDate)
               : null,
-            land_use_term_start: extracted_data.land_use_term_start
-              ? dayjs(extracted_data.land_use_term_start as string)
+            land_use_term_start: normalizedInitialLandUseTermStart
+              ? dayjs(normalizedInitialLandUseTermStart)
               : null,
-            land_use_term_end: extracted_data.land_use_term_end
-              ? dayjs(extracted_data.land_use_term_end as string)
+            land_use_term_end: normalizedInitialLandUseTermEnd
+              ? dayjs(normalizedInitialLandUseTermEnd)
               : null,
           }}
           onFinish={handleConfirm}

@@ -1,13 +1,14 @@
 """Authz service orchestration for ABAC checks and capability snapshots."""
 
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...crud.authz import CRUDAuthz, crud_authz
 from ...models.abac import ABACEffect
 from ...schemas.authz import (
+    AuthzAction,
     CapabilitiesResponse,
     CapabilityItem,
     DataScope,
@@ -144,10 +145,14 @@ class AuthzService:
         perspectives = self._resolve_perspectives(subject_context)
         capabilities: list[CapabilityItem] = []
         for resource, actions in sorted(actions_by_resource.items()):
+            normalized_actions: list[AuthzAction] = []
+            for action in sorted(actions):
+                if action in {"create", "read", "list", "update", "delete", "export"}:
+                    normalized_actions.append(cast(AuthzAction, action))
             capabilities.append(
                 CapabilityItem(
                     resource=resource,
-                    actions=sorted(actions),
+                    actions=normalized_actions,
                     perspectives=perspectives,
                     data_scope=DataScope(
                         owner_party_ids=subject_context.owner_party_ids,

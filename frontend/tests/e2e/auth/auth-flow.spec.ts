@@ -3,6 +3,7 @@ import {
   clearAuthState,
   loginAsAdmin,
   loginWithCredential,
+  resolveCsrfHeaders,
   resolveLogoutCredential,
 } from '../helpers/auth';
 
@@ -45,21 +46,7 @@ test.describe('Authentication Flow', () => {
     }
     await expect(page).toHaveURL(/\/dashboard/);
 
-    const csrfToken = await page.evaluate(() => {
-      const csrfCookie = document.cookie
-        .split('; ')
-        .find(item => item.startsWith('csrf_token='));
-      if (csrfCookie == null || csrfCookie === '') {
-        return null;
-      }
-      return decodeURIComponent(csrfCookie.split('=').slice(1).join('='));
-    });
-
-    const headers: Record<string, string> = {};
-    if (csrfToken != null && csrfToken !== '') {
-      headers['X-CSRF-Token'] = csrfToken;
-    }
-
+    const headers = await resolveCsrfHeaders(page);
     const response = await page.request.post('/api/v1/auth/logout', { headers });
     expect(response.ok()).toBe(true);
 

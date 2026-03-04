@@ -408,10 +408,9 @@ class CRUDParty:
         child_party_id: str,
         commit: bool = True,
     ) -> PartyHierarchy:
-        relation = PartyHierarchy(
-            parent_party_id=parent_party_id,
-            child_party_id=child_party_id,
-        )
+        relation = PartyHierarchy()
+        relation.parent_party_id = parent_party_id
+        relation.child_party_id = child_party_id
         db.add(relation)
         if commit:
             await db.commit()
@@ -437,7 +436,8 @@ class CRUDParty:
             await db.commit()
         else:
             await db.flush()
-        return int(result.rowcount or 0)
+        rowcount = getattr(result, "rowcount", 0)
+        return int(rowcount or 0)
 
     async def get_descendants(
         self,

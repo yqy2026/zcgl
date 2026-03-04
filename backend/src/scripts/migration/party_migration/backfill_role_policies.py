@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import uuid
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from typing import Any
 
@@ -34,7 +35,7 @@ def _table_exists(connection: sa.engine.Connection, table_name: str) -> bool:
     return sa.inspect(connection).has_table(table_name)
 
 
-def _choose_policy_package(role: dict[str, Any]) -> str:
+def _choose_policy_package(role: Mapping[str, Any]) -> str:
     name = _normalize_text(role.get("name"))
     category = _normalize_text(role.get("category"))
     display_name = _normalize_text(role.get("display_name"))
@@ -132,7 +133,7 @@ def main() -> int:
                 now = _utcnow_naive()
                 for role in role_rows:
                     role_id = str(role["id"])
-                    package_code = _choose_policy_package(role)
+                    package_code = _choose_policy_package(dict(role))
                     policy_name = policy_name_to_id.get(package_code)
                     if policy_name is None or policy_name not in policy_by_name:
                         skipped += 1

@@ -241,9 +241,13 @@ class OrganizationPermissionService:  # DEPRECATED
             ]
             if matching:
                 matching.sort(key=lambda r: r.level or 0)
-                return matching[0].name
+                name = getattr(matching[0], "name", None)
+                return str(name) if name is not None else None
 
-        return roles[0].name if roles else None
+        if not roles:
+            return None
+        name = getattr(roles[0], "name", None)
+        return str(name) if name is not None else None
 
     async def _apply_organization_filter(self, query: Any, user_id: str) -> Any:
         org_ids = await self.get_user_accessible_organizations(user_id)

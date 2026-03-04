@@ -4,6 +4,7 @@ import {
   clearAuthState,
   loginAsAdmin,
   loginWithCredential,
+  resolveCsrfHeaders,
   resolveRegularCredential,
 } from '../helpers/auth';
 
@@ -42,25 +43,6 @@ const extractData = <T>(payload: unknown): T => {
   }
 
   return payload as T;
-};
-
-const resolveCsrfHeaders = async (
-  page: Page
-): Promise<Record<string, string>> => {
-  const csrfToken = await page.evaluate(() => {
-    const csrfCookie = document.cookie
-      .split('; ')
-      .find(item => item.startsWith('csrf_token='));
-    if (csrfCookie == null || csrfCookie === '') {
-      return null;
-    }
-    return decodeURIComponent(csrfCookie.split('=').slice(1).join('='));
-  });
-
-  if (csrfToken == null || csrfToken === '') {
-    return {};
-  }
-  return { 'X-CSRF-Token': csrfToken };
 };
 
 const resolveNonAdminRoleId = async (

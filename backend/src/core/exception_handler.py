@@ -186,7 +186,7 @@ class ResourceConflictError(BaseBusinessError):
         resource_type: str | None = None,
         details: ErrorDetails | None = None,
     ):
-        payload = {"resource_type": resource_type} if resource_type else {}
+        payload: ErrorDetails = {"resource_type": resource_type} if resource_type else {}
         if details:
             payload.update(details)
         super().__init__(
@@ -206,7 +206,7 @@ class ServiceUnavailableError(BaseBusinessError):
         service_name: str | None = None,
         details: ErrorDetails | None = None,
     ):
-        payload = {"service": service_name} if service_name else {}
+        payload: ErrorDetails = {"service": service_name} if service_name else {}
         if details:
             payload.update(details)
         super().__init__(
@@ -226,7 +226,7 @@ class OperationNotAllowedError(BaseBusinessError):
         reason: str | None = None,
         details: ErrorDetails | None = None,
     ):
-        payload = {"reason": reason} if reason else {}
+        payload: ErrorDetails = {"reason": reason} if reason else {}
         if details:
             payload.update(details)
         super().__init__(
@@ -246,7 +246,9 @@ class InternalServerError(BaseBusinessError):
         original_error: Exception | None = None,
         details: ErrorDetails | None = None,
     ):
-        payload = {"original_error": str(original_error)} if original_error else {}
+        payload: ErrorDetails = (
+            {"original_error": str(original_error)} if original_error else {}
+        )
         if details:
             payload.update(details)
         super().__init__(
@@ -438,7 +440,7 @@ class ExceptionHandler:
         # 清理错误详情，移除不可序列化的对象
         cleaned_errors = []
         for error in exc.errors():
-            cleaned_error = {}
+            cleaned_error: dict[str, object] = {}
             for key, value in error.items():
                 # 跳过'input'字段，因为它可能包含不可序列化的Decimal对象
                 if key == "input":  # pragma: no cover
@@ -680,7 +682,7 @@ def operation_not_allowed(
 def setup_exception_handlers(app: FastAPI) -> None:
     """设置应用异常处理器"""
 
-    TExc = TypeVar("TExc", bound=BaseException)
+    TExc = TypeVar("TExc", bound=Exception)
 
     def register_handler(
         exc_type: type[TExc],
@@ -789,12 +791,12 @@ def raise_external_service_error(
     message: str, service_name: str | None = None, **kwargs: object
 ) -> NoReturn:
     """抛出外部服务异常"""
-    raise ExternalServiceError(message, service_name, **kwargs)
+    raise ExternalServiceError(message, service_name, details=kwargs)
 
 
 def raise_rate_limit(retry_after: int | None = None, **kwargs: object) -> NoReturn:
     """抛出频率限制异常"""
-    raise RateLimitError(retry_after=retry_after, **kwargs)
+    raise RateLimitError(retry_after=retry_after, details=kwargs)
 
 
 if __name__ == "__main__":

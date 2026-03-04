@@ -90,8 +90,9 @@ class AsyncUserManagementService:
     async def create_user(
         self, user_data: UserCreate, assigned_by: str | None = None
     ) -> User:
+        normalized_email = str(user_data.email or "")
         existing_user = await _user_crud.find_by_username_or_email_async(
-            self.db, user_data.username, user_data.email
+            self.db, user_data.username, normalized_email
         )
         if existing_user:
             if existing_user.username == user_data.username:

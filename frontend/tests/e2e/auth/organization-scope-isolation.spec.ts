@@ -1,6 +1,11 @@
 import { expect, test, type APIResponse, type Page } from '@playwright/test';
 
-import { clearAuthState, ensureAuthenticated, loginWithCredential } from '../helpers/auth';
+import {
+  clearAuthState,
+  ensureAuthenticated,
+  loginWithCredentialRetry,
+  resolveCsrfHeaders,
+} from '../helpers/auth';
 
 interface PermissionItem {
   id: string;
@@ -99,23 +104,6 @@ const buildPhone = (serial: number): string => {
   return `13${suffix}`;
 };
 
-const resolveCsrfHeaders = async (page: Page): Promise<Record<string, string>> => {
-  const csrfToken = await page.evaluate(() => {
-    const csrfCookie = document.cookie
-      .split('; ')
-      .find(item => item.startsWith('csrf_token='));
-    if (csrfCookie == null || csrfCookie === '') {
-      return null;
-    }
-    return decodeURIComponent(csrfCookie.split('=').slice(1).join('='));
-  });
-
-  if (csrfToken == null || csrfToken === '') {
-    return {};
-  }
-  return { 'X-CSRF-Token': csrfToken };
-};
-
 const parsePaginatedItems = <T>(payload: unknown): T[] => {
   const extracted = extractData<{ items?: unknown }>(payload);
   if (
@@ -153,31 +141,6 @@ const readResponseSnippet = async (response: APIResponse): Promise<string> => {
   } catch {
     return '<unavailable>';
   }
-};
-
-const loginWithRetry = async (
-  page: Page,
-  credential: { username: string; password: string },
-  attempts: number = 2
-): Promise<boolean> => {
-  let lastError: unknown = null;
-
-  for (let index = 0; index < attempts; index += 1) {
-    try {
-      return await loginWithCredential(page, credential);
-    } catch (error) {
-      lastError = error;
-      if (index + 1 >= attempts) {
-        throw error;
-      }
-      await page.waitForTimeout(300);
-    }
-  }
-
-  if (lastError instanceof Error) {
-    throw lastError;
-  }
-  return false;
 };
 
 const resolveRoleCandidateIds = async (page: Page): Promise<string[]> => {
@@ -653,7 +616,7 @@ test.describe('@authz-org-scope New User Organization Scope Isolation', () => {
         expectOwnOwnershipAssets: boolean;
       }): Promise<void> => {
         await clearAuthState(page);
-        const loginOk = await loginWithRetry(
+        const loginOk = await loginWithCredentialRetry(
           page,
           {
             username,
@@ -814,7 +777,7 @@ test.describe('@authz-org-scope New User Organization Scope Isolation', () => {
       }
 
       await clearAuthState(page);
-      const loginOk = await loginWithRetry(
+      const loginOk = await loginWithCredentialRetry(
         page,
         {
           username: createdUser.username,

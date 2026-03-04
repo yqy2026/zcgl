@@ -28,6 +28,22 @@ def _normalize_optional_str(value: object) -> str | None:
 class RentContractLifecycleService(RentContractHelperMixin):
     """合同生命周期相关服务"""
 
+    async def resolve_ownership_id_by_owner_party_id_async(
+        self,
+        db: AsyncSession,
+        *,
+        owner_party_id: str,
+    ) -> str | None:
+        raise NotImplementedError
+
+    async def resolve_owner_party_scope_by_ownership_id_async(
+        self,
+        db: AsyncSession,
+        *,
+        ownership_id: str,
+    ) -> str | None:
+        raise NotImplementedError
+
     async def _normalize_owner_ownership_mapping_async(
         self,
         db: AsyncSession,

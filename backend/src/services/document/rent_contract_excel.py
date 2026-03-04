@@ -409,6 +409,9 @@ class RentContractExcelService:
                 contract_data = RentContractCreate(
                     contract_number=contract_number,
                     ownership_id=ownership_id,
+                    owner_party_id=None,
+                    manager_party_id=None,
+                    tenant_party_id=None,
                     contract_type=contract_type,
                     tenant_name=tenant_name,
                     sign_date=sign_date,

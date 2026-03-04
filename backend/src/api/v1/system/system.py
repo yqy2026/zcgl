@@ -18,6 +18,12 @@ router = APIRouter(
 )
 
 
+def _as_dict(value: object) -> dict[str, Any]:
+    if isinstance(value, dict):
+        return value
+    return {}
+
+
 @router.get("/monitoring/health")
 async def health_check(
     _authz_ctx: AuthzContext = Depends(
@@ -34,13 +40,9 @@ async def health_check(
     try:
         db_status = await get_database_status()
 
-        health_check = db_status.get("health_check", {})
-        metrics = db_status.get("metrics", {})
-        pool_status = (
-            health_check.get("checks", {}).get("connection_pool", {})
-            if isinstance(health_check, dict)
-            else {}
-        )
+        health_check = _as_dict(db_status.get("health_check", {}))
+        metrics = _as_dict(db_status.get("metrics", {}))
+        pool_status = _as_dict(_as_dict(health_check.get("checks", {})).get("connection_pool", {}))
 
         health_data: dict[str, Any] = {
             "status": "healthy",

@@ -121,13 +121,11 @@ class DataPolicyService:
 
         for package_code in normalized_packages:
             policy = template_policies[package_code]
-            self.db.add(
-                ABACRolePolicy(
-                    role_id=role_id,
-                    policy_id=str(policy.id),
-                    enabled=True,
-                )
-            )
+            role_policy = ABACRolePolicy()
+            role_policy.role_id = role_id
+            role_policy.policy_id = str(policy.id)
+            role_policy.enabled = True
+            self.db.add(role_policy)
 
         await self.db.commit()
         await self._publish_role_policy_event(role_id, normalized_packages)

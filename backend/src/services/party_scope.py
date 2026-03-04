@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Sequence
+from typing import Literal
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,7 +26,7 @@ def _normalize_relation_type(raw_value: object | None) -> str | None:
     return normalized.lower()
 
 
-def _normalize_identifier_sequence(values: list[object] | None) -> list[str]:
+def _normalize_identifier_sequence(values: Sequence[object] | None) -> list[str]:
     if values is None:
         return []
 
@@ -272,7 +274,7 @@ async def resolve_user_party_filter(
         merged_party_ids = sorted(
             resolved_owner_party_ids.union(resolved_manager_party_ids)
         )
-        filter_mode = "any"
+        filter_mode: Literal["owner", "manager", "any"] = "any"
         if len(owner_party_ids) > 0 and len(manager_party_ids) == 0:
             filter_mode = "owner"
         elif len(manager_party_ids) > 0 and len(owner_party_ids) == 0:

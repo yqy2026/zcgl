@@ -7,62 +7,17 @@ from uuid import uuid4
 import pytest
 from fastapi.testclient import TestClient
 
-from src.models.ownership import Ownership
+from tests.e2e.factories import (
+    create_contract_asset_payload as _create_asset_payload,
+)
+from tests.e2e.factories import (
+    create_contract_ownership as _create_ownership,
+)
+from tests.e2e.factories import (
+    create_contract_payload as _create_contract_payload,
+)
 
 pytestmark = pytest.mark.e2e
-
-
-def _create_ownership(db_session, suffix: str) -> Ownership:
-    ownership = Ownership(
-        name=f"E2E合同权属方-{suffix}",
-        code=f"E2E-CON-OWN-{suffix}",
-        short_name=f"EC{suffix[:4]}",
-        data_status="正常",
-    )
-    db_session.add(ownership)
-    db_session.commit()
-    db_session.refresh(ownership)
-    return ownership
-
-
-def _create_contract_payload(*, suffix: str, ownership_id: str) -> dict[str, object]:
-    return {
-        "contract_number": f"E2E-CON-{suffix}",
-        "contract_type": "lease_downstream",
-        "tenant_name": f"E2E租户-{suffix}",
-        "tenant_contact": "张三",
-        "tenant_phone": "13800138000",
-        "tenant_usage": "办公",
-        "asset_ids": [],
-        "ownership_id": ownership_id,
-        "sign_date": "2026-01-01",
-        "start_date": "2026-01-01",
-        "end_date": "2026-12-31",
-        "total_deposit": 10000,
-        "monthly_rent_base": 5000,
-        "payment_cycle": "monthly",
-        "rent_terms": [
-            {
-                "start_date": "2026-01-01",
-                "end_date": "2026-12-31",
-                "monthly_rent": 5000,
-            }
-        ],
-    }
-
-
-def _create_asset_payload(*, suffix: str, ownership_id: str) -> dict[str, object]:
-    return {
-        "ownership_id": ownership_id,
-        "property_name": f"E2E合同资产-{suffix}",
-        "address": f"E2E合同资产地址-{suffix}",
-        "ownership_status": "已确权",
-        "property_nature": "经营类",
-        "usage_status": "出租",
-        "business_category": f"E2E合同业态-{suffix}",
-        "data_status": "正常",
-        "created_by": "e2e_contract_test",
-    }
 
 
 def _extract_contract_ids_from_list_response(payload: dict[str, object]) -> set[str]:

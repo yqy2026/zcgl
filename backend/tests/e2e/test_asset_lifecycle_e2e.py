@@ -7,41 +7,14 @@ from uuid import uuid4
 import pytest
 from fastapi.testclient import TestClient
 
-from src.models.ownership import Ownership
+from tests.e2e.factories import (
+    create_asset_ownership as _create_ownership,
+)
+from tests.e2e.factories import (
+    create_asset_payload as _create_asset_payload,
+)
 
 pytestmark = pytest.mark.e2e
-
-
-def _create_ownership(db_session, suffix: str) -> Ownership:
-    ownership = Ownership(
-        name=f"E2E权属方-{suffix}",
-        code=f"E2E-OWN-{suffix}",
-        short_name=f"E2E{suffix[:4]}",
-        data_status="正常",
-    )
-    db_session.add(ownership)
-    db_session.commit()
-    db_session.refresh(ownership)
-    return ownership
-
-
-def _create_asset_payload(
-    *,
-    suffix: str,
-    ownership_id: str,
-    usage_status: str = "出租",
-) -> dict[str, object]:
-    return {
-        "ownership_id": ownership_id,
-        "property_name": f"E2E资产-{suffix}",
-        "address": f"E2E地址-{suffix}",
-        "ownership_status": "已确权",
-        "property_nature": "经营类",
-        "usage_status": usage_status,
-        "business_category": f"E2E业态-{suffix}",
-        "data_status": "正常",
-        "created_by": "e2e_test",
-    }
 
 
 def test_asset_complete_lifecycle_e2e(

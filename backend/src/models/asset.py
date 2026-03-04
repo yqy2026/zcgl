@@ -211,8 +211,8 @@ class Asset(Base):
         comment="经营管理方主体ID",
     )
     # Phase4 兼容别名：旧字段语义映射到主体字段
-    ownership_id = synonym("owner_party_id")
-    management_entity = synonym("manager_party_id")
+    ownership_id: Mapped[str | None] = synonym("owner_party_id")
+    management_entity: Mapped[str | None] = synonym("manager_party_id")
     # 关系定义
     project: Mapped["Project | None"] = relationship(
         "Project",

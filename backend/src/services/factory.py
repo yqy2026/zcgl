@@ -24,6 +24,8 @@ Service Factory — 统一管理 Service 层的实例化与依赖注入
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .core.authentication_service import AsyncAuthenticationService
@@ -115,7 +117,7 @@ class ServiceFactory:
 # ============================================================================
 
 
-def get_service_factory():  # noqa: ANN201
+def get_service_factory() -> Callable[..., Awaitable[ServiceFactory]]:
     """
     创建可被 FastAPI Depends 使用的 ServiceFactory 依赖函数。
 

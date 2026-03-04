@@ -5,6 +5,7 @@
 import json
 import logging
 import time
+from collections.abc import Sequence
 from typing import Any, Literal, Protocol, TypeVar, cast
 
 from sqlalchemy import Select, func, select
@@ -62,7 +63,7 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
             return None
 
         def _normalize_scope(
-            party_ids: list[Any] | None,
+            party_ids: Sequence[Any] | None,
         ) -> list[str] | None:
             if party_ids is None:
                 return None
