@@ -5,60 +5,89 @@
 """
 
 import logging
-from collections.abc import Iterable
+from collections.abc import Awaitable, Iterable
 from inspect import isawaitable
-from typing import TypeVar, cast
+from typing import Any, Protocol, TypeVar, cast, overload
 
-AssetMutationData = dict[str, object]
-AssetFilterData = dict[str, object]
+AssetMutationData = dict[str, Any]
+AssetFilterData = dict[str, Any]
 AssetIdentifier = str | int
 
 TResultRow = TypeVar("TResultRow")
 TScalar = TypeVar("TScalar")
+TResultRow_co = TypeVar("TResultRow_co", covariant=True)
+TScalar_co = TypeVar("TScalar_co", covariant=True)
+TMaybeAwaitable = TypeVar("TMaybeAwaitable")
 
 logger = logging.getLogger(__name__)
 
+class SupportsAll(Protocol[TResultRow_co]):
+    """Protocol for results supporting .all()."""
 
-async def _result_all(result: object) -> list[TResultRow]:
+    def all(self) -> Iterable[TResultRow_co] | Awaitable[Iterable[TResultRow_co]]: ...
+
+
+class SupportsFirst(Protocol[TResultRow_co]):
+    """Protocol for results supporting .first()."""
+
+    def first(self) -> TResultRow_co | None | Awaitable[TResultRow_co | None]: ...
+
+
+class SupportsScalar(Protocol[TScalar_co]):
+    """Protocol for results supporting .scalar()."""
+
+    def scalar(self) -> TScalar_co | None | Awaitable[TScalar_co | None]: ...
+
+
+class ScalarResultLike(
+    SupportsAll[TScalar_co], SupportsFirst[TScalar_co], Protocol[TScalar_co]
+):
+    """Protocol for scalar result proxies from .scalars()."""
+
+
+class SupportsScalars(Protocol[TScalar_co]):
+    """Protocol for results supporting .scalars()."""
+
+    def scalars(
+        self,
+    ) -> ScalarResultLike[TScalar_co] | Awaitable[ScalarResultLike[TScalar_co]]: ...
+
+
+async def _resolve_maybe_awaitable(
+    value: TMaybeAwaitable | Awaitable[TMaybeAwaitable],
+) -> TMaybeAwaitable:
+    if isawaitable(value):
+        return await cast(Awaitable[TMaybeAwaitable], value)
+    return value
+
+
+async def _result_all(result: SupportsAll[Any]) -> list[TResultRow]:
     """兼容真实 AsyncSession 与测试 AsyncMock 的 result.all() 行为。"""
-    all_result = await _invoke_result_chain(result, "all")
+    all_result = await _resolve_maybe_awaitable(result.all())
     return list(cast(Iterable[TResultRow], all_result))
 
 
-async def _scalars_all(result: object) -> list[TScalar]:
+async def _scalars_all(result: SupportsScalars[Any]) -> list[TScalar]:
     """兼容真实 AsyncSession 与测试 AsyncMock 的 result.scalars().all() 行为。"""
-    all_result = await _invoke_result_chain(result, "scalars", "all")
+    scalar_result = await _resolve_maybe_awaitable(result.scalars())
+    all_result = await _resolve_maybe_awaitable(scalar_result.all())
     return list(cast(Iterable[TScalar], all_result))
 
 
-async def _scalars_first(result: object) -> TScalar | None:
+async def _scalars_first(result: SupportsScalars[Any]) -> TScalar | None:
     """兼容真实 AsyncSession 与测试 AsyncMock 的 result.scalars().first() 行为。"""
-    return cast(TScalar | None, await _invoke_result_chain(result, "scalars", "first"))
+    scalar_result = await _resolve_maybe_awaitable(result.scalars())
+    return cast(TScalar | None, await _resolve_maybe_awaitable(scalar_result.first()))
 
 
-async def _result_first(result: object) -> TResultRow | None:
+async def _result_first(result: SupportsFirst[Any]) -> TResultRow | None:
     """兼容真实 AsyncSession 与测试 AsyncMock 的 result.first() 行为。"""
-    return cast(TResultRow | None, await _invoke_result_chain(result, "first"))
+    return cast(TResultRow | None, await _resolve_maybe_awaitable(result.first()))
 
 
-async def _result_scalar(result: object) -> object | None:
+async def _result_scalar(result: SupportsScalar[Any]) -> TScalar | None:
     """兼容真实 AsyncSession 与测试 AsyncMock 的 result.scalar() 行为。"""
-    return await _invoke_result_chain(result, "scalar")
-
-
-async def _invoke_result_chain(target: object, *method_chain: str) -> object:
-    """按方法链逐层调用并兼容 awaitable 返回值。"""
-    current: object = target
-    for method_name in method_chain:
-        method = getattr(current, method_name, None)
-        if not callable(method):
-            raise AttributeError(
-                f"Result object {type(current)!r} has no callable '{method_name}'"
-            )
-        current = method()
-        if isawaitable(current):
-            current = await current
-    return current
+    return cast(TScalar | None, await _resolve_maybe_awaitable(result.scalar()))
 
 
 class SensitiveDataHandler:
@@ -165,6 +194,12 @@ class SensitiveDataHandler:
         # 非PII字段，返回原值
         return value
 
+    @overload
+    def encrypt_data(self, data: AssetMutationData) -> AssetMutationData: ...
+
+    @overload
+    def encrypt_data(self, data: list[AssetMutationData]) -> list[AssetMutationData]: ...
+
     def encrypt_data(
         self, data: AssetMutationData | list[AssetMutationData]
     ) -> AssetMutationData | list[AssetMutationData]:
@@ -190,6 +225,12 @@ class SensitiveDataHandler:
                                 field_name, item[field_name]
                             )
         return data
+
+    @overload
+    def decrypt_data(self, data: AssetMutationData) -> AssetMutationData: ...
+
+    @overload
+    def decrypt_data(self, data: list[AssetMutationData]) -> list[AssetMutationData]: ...
 
     def decrypt_data(
         self, data: AssetMutationData | list[AssetMutationData]
