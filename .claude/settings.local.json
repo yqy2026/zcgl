@@ -42,7 +42,11 @@
       "mcp__plugin_serena_serena__find_symbol",
       "mcp__plugin_serena_serena__write_memory",
       "mcp__plugin_serena_serena__replace_content",
-      "mcp__plugin_serena_serena__search_for_pattern"
+      "mcp__plugin_serena_serena__search_for_pattern",
+      "Bash(.venv/Scripts/python.exe -m pip list)",
+      "Bash(where uv)",
+      "Bash(uv --version)",
+      "Bash(uv sync --dev)"
     ]
   },
   "outputStyle": "Explanatory"
