@@ -1032,3 +1032,5 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
 
 # 创建全局实例
 asset_crud = AssetCRUD()
+
+__all__ = ["AssetCRUD", "SensitiveDataHandler", "asset_crud"]
