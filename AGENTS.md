@@ -9,7 +9,6 @@
 4、如果一个任务需要改三个以上的文件，先停下来，把它拆成更小的任务再做。
 5、遇到 bug 的时候，先写一个能复现这个 bug 的测试，然后修到测试通过为止。
 6、每次我纠正你的时候，想想自己哪里做错了，拿出一个方案确保以后不再犯同样的错。
-
 **Last Updated**: 2026-03-04
 
 ---
@@ -29,7 +28,7 @@
 | 前端 | React 19.x + TypeScript 5.x + Vite 6.x + Ant Design 6.x + pnpm |
 | 后端 | FastAPI 0.104+ + Python 3.12+ + SQLAlchemy 2.0+ + Pydantic v2 + Alembic |
 | 数据库 | PostgreSQL 18.x+（开发/测试/生产统一） |
-| 缓存 | Redis 8.x+ |
+| 缓存 | Redis 8.x+（服务端）/ redis-py 7.x（Python 客户端）|
 | 文档AI | Qwen-VL / GLM-4V / Hunyuan Vision / DeepSeek-VL |
 
 ---
@@ -155,6 +154,12 @@ uv run python -m src.core.encryption
 - ORM + QueryBuilder
 - 集合关系用 `selectinload` 避免 N+1
 - ❌ 不要在 schema validator 中触发懒加载
+
+### Python 环境与依赖（UV）
+- ✅ 后端依赖安装统一使用 `uv sync`
+- ✅ 后端命令执行统一使用 `uv run <command>`
+- ✅ 默认虚拟环境为 `backend/.venv`（由 UV 管理）
+- ❌ 不要直接使用系统 `python/pip` 或 Conda 运行后端命令
 
 ### PII 数据加密
 - `SensitiveDataHandler` 对身份证号/手机号做 AES-256-CBC 确定性加密
@@ -303,7 +308,47 @@ VITE_API_BASE_URL=http://127.0.0.1:8002/api/v1
 
 ---
 
-## 文档索引
+## 文档治理规范（AI 必读）
+
+### 唯一入口
+- 项目文档根目录：`docs/`，入口索引：[`docs/index.md`](docs/index.md)
+- **新建文档统一放 `docs/` 对应子目录，不在 `backend/docs/` 中新建**
+- `frontend/docs/` 保留前端内部技术参考（设计系统、动画规范等），不迁移
+
+### 目录职责速查
+
+| 目录 | 放什么 | 不放什么 |
+|------|--------|----------|
+| `docs/guides/` | 操作性开发指南（环境、规范、部署、测试） | AI 任务执行报告 |
+| `docs/integrations/` | API 规范、系统组件手册 | 业务需求描述 |
+| `docs/architecture/` | 架构概览、ADR | 临时方案草稿 |
+| `docs/security/` | 加密、认证、权限设计 | — |
+| `docs/features/` | 需求附录（字段清单、模块清单） | 非冻结需求内容 |
+| `docs/plans/` | **仅活跃方案**（🔄进行中 / ⏸搁置） | 已完结方案 |
+| `docs/incidents/` | 事故复盘（Post-Mortem） | 普通 bug 记录 |
+| `docs/issues/` | 技术债务排查报告 | — |
+| `docs/archive/` | 所有不再维护的历史内容 | 当前基线文档 |
+
+### 强制规则
+
+1. **AI 任务执行报告**（summary / report / fix-summary 类文件）→ 直接归入 `docs/archive/`，**禁止放 `docs/guides/`**
+2. **plans/ 生命周期**：方案标记为 ✅ 后必须移入 `docs/archive/backend-plans/`，`plans/` 只保留 🔄 和 ⏸
+3. **文档命名**：全部小写 + 连字符，禁止大写文件名（如 `BREAKING_CHANGES.md` → 归档）
+4. **单文档行数**：超过 800 行须拆分，否则在 PR 说明中注明理由
+5. **新建子目录**：必须同时创建 `README.md`（说明目录用途 + 文件列表）
+6. **内容修改后**：同步更新 `CHANGELOG.md`，保持 Last Updated 日期
+
+### 文件命名规范
+
+| 类型 | 格式 | 示例 |
+|------|------|------|
+| 普通指南 | `<topic>.md` | `database.md` |
+| 方案设计 | `YYYY-MM-DD-<slug>.md` | `2026-02-16-party-role-architecture.md` |
+| 事故复盘 | `YYYY-MM-<slug>.md` | `2026-02-git-conflict-postmortem.md` |
+| 问题追踪 | `YYYY-MM-DD-<slug>.md` | `2026-03-03-project-issues-analysis.md` |
+| ADR | `ADR-NNNN-<slug>.md` | `ADR-0001-party-role-architecture.md` |
+
+### 常用文档入口
 
 - [快速开始](docs/guides/getting-started.md) | [环境配置](docs/guides/environment-setup.md)
 - [后端开发](docs/guides/backend.md) | [前端开发](docs/guides/frontend.md)
