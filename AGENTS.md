@@ -276,6 +276,15 @@ VITE_API_BASE_URL=http://127.0.0.1:8002/api/v1
 
 > 📖 详细复盘与标准化流程见 [Git 冲突处理复盘](docs/incidents/2026-02-git-conflict-postmortem.md)
 
+### ⚠️ Rebase / Cherry-pick 完整性核查（AI 必读）
+
+> rebase 遇到冲突时 `--continue` 会静默丢弃文件，**必须在 push 前完成以下核查**：
+
+1. `git reflog | grep "commit:"` — 确认原始链每个 hash 都有对应重放版本
+2. `git show <orig> --name-status` vs `git show <rebase> --name-status` — 文件数必须吻合
+3. 冲突 commit 额外 grep 关键符号（类/函数/常量）确认实际存在于文件中
+4. 丢失 commit 用 `git cherry-pick <hash>` 恢复；部分文件丢失用 `git show <orig> -- <file> | patch -p1`
+
 ---
 
 ## 排障速查
