@@ -70,7 +70,7 @@ const templates: TemplateInfo[] = [
       '是否涉诉',
       '物业性质',
       '是否计入出租率',
-      '接收模式',
+      '经营模式',
       '接收协议开始日期',
       '接收协议结束日期',
     ],
@@ -481,3 +481,4 @@ const TemplateManagementPage: React.FC = () => {
 };
 
 export default TemplateManagementPage;
+

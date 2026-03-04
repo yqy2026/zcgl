@@ -144,7 +144,7 @@ const AssetFormHelp: React.FC<AssetFormHelpProps> = ({ visible = false, onClose 
           </Paragraph>
           <Paragraph>
             <Text strong>有业态类别：</Text>
-            显示接收模式字段。
+            显示经营模式字段。
           </Paragraph>
           <Paragraph>
             <Text strong>有五羊项目：</Text>
@@ -267,3 +267,4 @@ export const AssetFormHelpButton: React.FC = () => {
 };
 
 export default AssetFormHelp;
+

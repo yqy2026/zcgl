@@ -50,7 +50,7 @@ export const AVAILABLE_EXPORT_FIELDS: ExportFieldOption[] = [
   { key: 'certificated_usage', label: '证载用途' },
   { key: 'actual_usage', label: '实际用途' },
   { key: 'business_category', label: '业态类别' },
-  { key: 'business_model', label: '接收模式' },
+  { key: 'revenue_mode', label: '经营模式' },
   { key: 'occupancy_rate', label: '出租率' },
   { key: 'tenant_name', label: '承租方名称' },
   { key: 'lease_contract_number', label: '租赁合同编号' },
@@ -66,3 +66,4 @@ export const AVAILABLE_EXPORT_FIELDS: ExportFieldOption[] = [
   { key: 'created_at', label: '创建时间' },
   { key: 'updated_at', label: '更新时间' },
 ];
+

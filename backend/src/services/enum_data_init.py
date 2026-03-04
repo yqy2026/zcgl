@@ -81,10 +81,10 @@ STANDARD_ENUMS: dict[str, EnumTypeConfig] = {
             {"value": "其它", "label": "其它", "sort_order": 3},
         ],
     },
-    "business_model": {
-        "name": "接收模式",
+    "revenue_mode": {
+        "name": "经营模式",
         "category": "资产管理",
-        "description": "资产的接收/经营模式",
+        "description": "资产的经营模式",
         "values": [
             {"value": "承租转租", "label": "承租转租", "sort_order": 1},
             {"value": "委托经营", "label": "委托经营", "sort_order": 2},
@@ -296,3 +296,4 @@ async def init_enum_data(
     await db.commit()
     logger.info(f"枚举数据初始化完成: {stats}")
     return stats
+

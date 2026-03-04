@@ -154,12 +154,12 @@ export const DICTIONARY_CONFIGS: Record<string, DictionaryConfig> = {
     ],
   },
 
-  business_model: {
-    code: 'business_model',
+  revenue_mode: {
+    code: 'revenue_mode',
     name: '经营模式',
     category: '经营信息',
     description: '经营模式分类',
-    apiEndpoint: '/system/dictionaries/business_model/options',
+    apiEndpoint: '/system/dictionaries/revenue_mode/options',
     fallbackOptions: [
       { label: '承租转租', value: 'sublease', code: 'sublease', sort_order: 1 },
       { label: '委托经营', value: 'entrusted', code: 'entrusted', sort_order: 2 },
@@ -260,3 +260,4 @@ export const getDictionaryCodes = (): string[] => {
 export const isDictionaryTypeExists = (code: string): boolean => {
   return code in DICTIONARY_CONFIGS;
 };
+

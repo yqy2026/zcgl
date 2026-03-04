@@ -468,7 +468,7 @@ class TestAssetManagementFields:
             usage_status="Status",
             management_entity="Management Corp",
             business_category="零售",
-            business_model="直接接收",
+            revenue_mode="直接接收",
             operation_status="正常经营",
             manager_name="John Doe",
         )
@@ -729,3 +729,4 @@ class TestAssetDefaultsAndConstraints:
         )
 
         assert asset.version == 1
+

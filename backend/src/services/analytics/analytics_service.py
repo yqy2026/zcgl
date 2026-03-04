@@ -320,7 +320,7 @@ class AnalyticsService:
             "usage_status",
             "ownership_status",
             "manager_name",
-            "business_model",
+            "revenue_mode",
             "operation_status",
             "project_name",
         }
@@ -364,3 +364,4 @@ class AnalyticsService:
             "data": dict(distribution),
             "total": len(distribution),
         }
+

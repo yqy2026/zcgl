@@ -116,7 +116,7 @@ class AssetWhitelist(ModelFieldWhitelist):
         "certificated_usage",
         "actual_usage",
         # Business model
-        "business_model",
+        "revenue_mode",
     }
 
     # Search fields (text fields for partial matching)
@@ -130,7 +130,7 @@ class AssetWhitelist(ModelFieldWhitelist):
         "ownership_status",
         "certificated_usage",
         "actual_usage",
-        "business_model",
+        "revenue_mode",
         "business_category",
     }
 
@@ -1014,3 +1014,4 @@ class EmptyWhitelist(ModelFieldWhitelist):
 
     def can_sort(self, field_name: str) -> bool:
         return False
+

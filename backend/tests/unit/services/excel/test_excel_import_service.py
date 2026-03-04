@@ -365,7 +365,7 @@ class TestFieldMapping:
                 "是否涉诉": "是",
                 "物业性质（经营类、非经营类）": "经营类",
                 "是否计入出租率": "是",
-                "接收模式": "租赁",
+                "经营模式": "租赁",
                 "(当前)接收协议开始日期": "2024-01-01",
                 "(当前)接收协议结束日期": "2024-12-31",
             }
@@ -391,7 +391,7 @@ class TestFieldMapping:
         assert asset_data["is_litigated"] is True
         assert asset_data["property_nature"] == "经营类"
         assert asset_data["include_in_occupancy_rate"] is True
-        assert asset_data["reception_mode"] == "租赁"
+        assert asset_data["revenue_mode"] == "租赁"
         assert (
             asset_data["operation_agreement_start_date"] == datetime(2024, 1, 1).date()
         )
@@ -901,3 +901,4 @@ class TestFieldMappingConstant:
     def test_field_mapping_count(self):
         """测试字段映射数量"""
         assert len(FIELD_MAPPING) == 22
+

@@ -100,7 +100,7 @@ class TestAsyncEnumValidationService:
                 'ownership_status': 'invalid',
                 'usage_status': 'ok',
                 'property_nature': 'ok',
-                'business_model': 'ok',
+                'revenue_mode': 'ok',
                 'operation_status': 'ok',
                 'tenant_type': 'ok',
                 'data_status': 'ok',
@@ -109,3 +109,4 @@ class TestAsyncEnumValidationService:
 
         assert is_valid is False
         assert errors == ['ownership_status: bad']
+

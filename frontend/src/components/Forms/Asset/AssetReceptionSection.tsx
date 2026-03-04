@@ -4,7 +4,7 @@ import { MessageManager } from '@/utils/messageManager';
 import { UploadOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
 import type { UploadFile, UploadProps } from 'antd/es/upload/interface';
 import GroupedSelectSingle from '@/components/Common/GroupedSelect';
-import { BusinessModelOptions } from '@/utils/enumHelpers';
+import { RevenueModeOptions } from '@/utils/enumHelpers';
 import { useAssetFormContext } from './AssetFormContext';
 import { generateFormFieldIds } from '@/utils/accessibility';
 import styles from './AssetReceptionSection.module.css';
@@ -13,13 +13,13 @@ const { Title } = Typography;
 
 /**
  * AssetForm - Reception Info Section
- * Fields: business model, agreement dates, agreement attachments
+ * Fields: revenue mode, agreement dates, agreement attachments
  */
 const AssetReceptionSection: React.FC = () => {
   const { fileList, setFileList } = useAssetFormContext();
 
   // 为字段生成可访问性 ID
-  const businessModelIds = generateFormFieldIds('business-model');
+  const revenueModeIds = generateFormFieldIds('revenue-mode');
   const agreementStartDateIds = generateFormFieldIds('agreement-start-date');
   const agreementEndDateIds = generateFormFieldIds('agreement-end-date');
   const attachmentsIds = generateFormFieldIds('attachments');
@@ -51,13 +51,13 @@ const AssetReceptionSection: React.FC = () => {
       <Title level={5}>接收信息</Title>
       <Row gutter={16}>
         <Col span={8}>
-          <Form.Item label="接收模式" name="business_model" htmlFor={businessModelIds.inputId}>
+          <Form.Item label="经营模式" name="revenue_mode" htmlFor={revenueModeIds.inputId}>
             <GroupedSelectSingle
-              groups={[{ label: '接收模式', options: BusinessModelOptions }]}
-              placeholder="请选择接收模式"
+              groups={[{ label: '经营模式', options: RevenueModeOptions }]}
+              placeholder="请选择经营模式"
               showGroupLabel={false}
-              id={businessModelIds.inputId}
-              aria-label={businessModelIds.labelId}
+              id={revenueModeIds.inputId}
+              aria-label={revenueModeIds.labelId}
             />
           </Form.Item>
         </Col>
@@ -162,3 +162,4 @@ const AssetReceptionSection: React.FC = () => {
 };
 
 export default AssetReceptionSection;
+

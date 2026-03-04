@@ -45,7 +45,7 @@ FIELD_MAPPING = {
     "是否涉诉": "is_litigated",
     "物业性质（经营类、非经营类）": "property_nature",
     "是否计入出租率": "include_in_occupancy_rate",
-    "接收模式": "reception_mode",
+    "经营模式": "revenue_mode",
     "(当前)接收协议开始日期": "operation_agreement_start_date",
     "(当前)接收协议结束日期": "operation_agreement_end_date",
 }
@@ -640,3 +640,4 @@ class ExcelImportService:
 
         except Exception as e:
             raise BusinessValidationError(f"预览Excel文件失败: {str(e)}")
+

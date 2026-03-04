@@ -273,7 +273,7 @@ export const checkAssetDataCompleteness = (
     'lease_contract_number',
     'deposit',
     'manager_name',
-    'business_model',
+    'revenue_mode',
     'operation_status',
     'notes',
   ];
@@ -320,3 +320,4 @@ export const checkAssetDataCompleteness = (
     optionalFields: trulyOptionalFields,
   };
 };
+

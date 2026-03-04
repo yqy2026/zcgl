@@ -7,7 +7,7 @@ import {
   PropertyNature,
   UsageStatus,
   OwnershipStatus,
-  BusinessModel,
+  RevenueMode,
   TenantType,
   OperationStatus,
 } from '@/types/asset';
@@ -187,12 +187,12 @@ export const OwnershipStatusOptions: EnumOption[] = [
   },
 ];
 
-// BusinessModel 配置
-export const BusinessModelOptions: EnumOption[] = [
-  { value: BusinessModel.LEASE_SUBLEASE, label: '承租转租', description: '从第三方承租后转租' },
-  { value: BusinessModel.ENTRUSTED_OPERATION, label: '委托经营', description: '委托第三方经营' },
-  { value: BusinessModel.SELF_OPERATION, label: '自营', description: '自主经营' },
-  { value: BusinessModel.OTHER, label: '其他', description: '其他经营模式' },
+// RevenueMode 配置
+export const RevenueModeOptions: EnumOption[] = [
+  { value: RevenueMode.LEASE_SUBLEASE, label: '承租转租', description: '从第三方承租后转租' },
+  { value: RevenueMode.ENTRUSTED_OPERATION, label: '委托经营', description: '委托第三方经营' },
+  { value: RevenueMode.SELF_OPERATION, label: '自营', description: '自主经营' },
+  { value: RevenueMode.OTHER, label: '其他', description: '其他经营模式' },
 ];
 
 // TenantType 配置
@@ -319,8 +319,8 @@ export class EnumFormatter {
       : value;
   }
 
-  static formatBusinessModel(value: string): string {
-    const option = BusinessModelOptions.find(opt => opt.value === value);
+  static formatRevenueMode(value: string): string {
+    const option = RevenueModeOptions.find(opt => opt.value === value);
     return option !== null &&
       option !== undefined &&
       option.label !== null &&
@@ -374,8 +374,8 @@ export class EnumFormatter {
       : 'default';
   }
 
-  static getBusinessModelColor(value: string): string {
-    const option = BusinessModelOptions.find(opt => opt.value === value);
+  static getRevenueModeColor(value: string): string {
+    const option = RevenueModeOptions.find(opt => opt.value === value);
     return option !== null &&
       option !== undefined &&
       option.color !== null &&
@@ -418,8 +418,8 @@ export class EnumFormatter {
     return EnumSearchHelper.getDescriptionByValue(UsageStatusGroups, value);
   }
 
-  static getBusinessModelDescription(value: string): string | undefined {
-    const option = BusinessModelOptions.find(opt => opt.value === value);
+  static getRevenueModeDescription(value: string): string | undefined {
+    const option = RevenueModeOptions.find(opt => opt.value === value);
     return option?.description;
   }
 
@@ -446,7 +446,7 @@ export interface EnumValidationData {
   property_nature?: string;
   usage_status?: string;
   ownership_status?: string;
-  business_model?: string;
+  revenue_mode?: string;
   tenant_type?: string;
   operation_status?: string;
   [key: string]: unknown;
@@ -480,10 +480,10 @@ export class EnumValidator {
   }
 
   /**
-   * 验证BusinessModel值是否有效
+   * 验证RevenueMode值是否有效
    */
-  static isValidBusinessModel(value: string): boolean {
-    return BusinessModelOptions.some(option => option.value === value);
+  static isValidRevenueMode(value: string): boolean {
+    return RevenueModeOptions.some(option => option.value === value);
   }
 
   /**
@@ -539,14 +539,14 @@ export class EnumValidator {
     }
 
     if (
-      data.business_model !== null &&
-      data.business_model !== undefined &&
-      !this.isValidBusinessModel(data.business_model)
+      data.revenue_mode !== null &&
+      data.revenue_mode !== undefined &&
+      !this.isValidRevenueMode(data.revenue_mode)
     ) {
       errors.push({
-        field: 'business_model',
-        value: data.business_model,
-        expectedType: 'BusinessModel',
+        field: 'revenue_mode',
+        value: data.revenue_mode,
+        expectedType: 'RevenueMode',
       });
     }
 
@@ -573,3 +573,4 @@ export class EnumValidator {
     return errors;
   }
 }
+

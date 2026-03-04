@@ -76,7 +76,7 @@ def mock_enum_validation_service():
             'property_nature': ['商业', '住宅', '工业', '办公'],
             'usage_status': ['在租', '空置', '自用', '装修中'],
             'data_status': ['正常', '冻结', '已删除'],
-            'business_model': ['自持', '租赁', '混合'],
+            'revenue_mode': ['自持', '租赁', '混合'],
             'operation_status': ['运营中', '停业', '筹备中'],
             'tenant_type': ['企业', '个人', '政府'],
         }
@@ -308,3 +308,4 @@ pytest tests/unit/ --cov=src --cov-report=html
 1. 先修复关键路径测试
 2. 将低优先级测试标记为 xfail
 3. 逐步修复其他测试
+

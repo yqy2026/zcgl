@@ -215,7 +215,7 @@ def mock_enum_validation_service(request):
             "property_nature": ["商业", "住宅", "工业", "办公", "综合"],
             "usage_status": ["在租", "空置", "自用", "装修中"],
             "data_status": ["正常", "冻结", "已删除"],
-            "business_model": ["自持", "租赁", "混合"],
+            "revenue_mode": ["自持", "租赁", "混合"],
             "operation_status": ["运营中", "停业", "筹备中"],
             "tenant_type": ["企业", "个人", "政府", "事业单位"],
             "business_category": ["零售", "餐饮", "办公", "仓储"],
@@ -403,3 +403,4 @@ def client_normal_user(db_session, normal_user):
         yield test_client
 
     app.dependency_overrides.clear()
+

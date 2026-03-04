@@ -90,6 +90,7 @@ export const PropertyNature: Record<string, unknown> = {};
 export const OwnershipStatus: Record<string, unknown> = {};
 export const UsageStatus: Record<string, unknown> = {};
 export const TenantType: Record<string, unknown> = {};
-export const BusinessModel: Record<string, unknown> = {};
+export const RevenueMode: Record<string, unknown> = {};
 export const OperationStatus: Record<string, unknown> = {};
 export const DataStatus: Record<string, unknown> = {};
+

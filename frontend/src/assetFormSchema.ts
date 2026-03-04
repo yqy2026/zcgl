@@ -19,7 +19,7 @@ export const assetFormSchema = z
     usage_status: z.enum(['出租', '闲置', '自用', '公房', '其他']),
     is_litigated: z.boolean().optional(),
     property_nature: z.enum(['经营类', '非经营类']),
-    business_model: z.string().optional(),
+    revenue_mode: z.string().optional(),
     include_in_occupancy_rate: z.boolean().optional(),
     occupancy_rate: z.string().optional(),
     ownership_category: z.string().optional(),
@@ -53,3 +53,4 @@ export const assetFormSchema = z
   );
 
 export type AssetFormData = z.infer<typeof assetFormSchema>;
+

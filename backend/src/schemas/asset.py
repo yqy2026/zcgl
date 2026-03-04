@@ -118,7 +118,7 @@ class AssetBase(BaseModel):
     manager_name: str | None = Field(
         None, max_length=100, description="管理责任人（网格员）"
     )
-    business_model: str | None = Field(None, description="接收模式")
+    revenue_mode: str | None = Field(None, description="经营模式（承租/代理）")
     operation_status: str | None = Field(None, description="经营状态")
 
     # 财务相关字段已移除
@@ -274,7 +274,7 @@ class AssetUpdate(BaseModel):
     manager_name: str | None = Field(
         None, max_length=100, description="管理责任人（网格员）"
     )
-    business_model: str | None = Field(None, description="接收模式")
+    revenue_mode: str | None = Field(None, description="经营模式（承租/代理）")
     operation_status: str | None = Field(None, description="经营状态")
 
     # 财务相关字段已移除
@@ -399,7 +399,7 @@ class AssetResponseBase(BaseModel):
 
     # 管理相关字段
     manager_name: str | None = Field(None, description="管理责任人（网格员）")
-    business_model: str | None = Field(None, description="接收模式")
+    revenue_mode: str | None = Field(None, description="经营模式（承租/代理）")
     operation_status: str | None = Field(None, description="经营状态")
 
     # 接收相关字段
@@ -750,3 +750,4 @@ class AssetCustomFieldAssignment(BaseModel):
                 {},
             )  # pragma: no cover
         return v  # pragma: no cover
+

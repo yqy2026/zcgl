@@ -25,7 +25,7 @@ async def update_dictionary_categories():
         "business_category": "资产分类",
         "tenant_type": "租赁信息",
         "contract_status": "租赁信息",
-        "business_model": "接收信息",
+        "revenue_mode": "经营信息",
         "operation_status": "经营信息",
         "ownership_category": "资产属性",
         "certificated_usage": "资产用途",
@@ -70,3 +70,4 @@ async def update_dictionary_categories():
 
 if __name__ == "__main__":
     asyncio.run(update_dictionary_categories())
+

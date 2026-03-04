@@ -57,9 +57,9 @@ const assetFieldVisibilityRules: FieldVisibilityRule<AssetFormData>[] = [
     dependsOn: ['property_nature'],
   },
 
-  // 有业态类别时显示接收模式
+  // 有业态类别时显示经营模式
   {
-    field: 'business_model',
+    field: 'revenue_mode',
     condition: values => values.business_category?.trim() !== '',
     dependsOn: ['business_category'],
   },
@@ -293,3 +293,4 @@ export const useDynamicValidation = (watch: UseFormWatch<AssetFormData>) => {
 
 // 导出规则以便其他地方使用
 export { assetFieldVisibilityRules };
+

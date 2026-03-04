@@ -94,8 +94,8 @@ async def init_asset_dictionaries():
                 {"label": "待签署", "value": "pending", "code": "pending"},
             ],
         },
-        "business_model": {
-            "description": "资产接收模式分类",
+        "revenue_mode": {
+            "description": "资产经营模式分类",
             "options": [
                 {"label": "承租转租", "value": "sublease", "code": "sublease"},
                 {"label": "委托经营", "value": "entrusted", "code": "entrusted"},
@@ -207,3 +207,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+

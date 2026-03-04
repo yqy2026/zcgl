@@ -274,7 +274,7 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
             label: DESCRIPTIONS_LABEL_STYLE_DEFAULT,
           }}
         >
-          <Descriptions.Item label="接收模式">{asset.business_model ?? '-'}</Descriptions.Item>
+          <Descriptions.Item label="经营模式">{asset.revenue_mode ?? '-'}</Descriptions.Item>
 
           <Descriptions.Item label="是否计入出租率">
             <Tag color={asset.include_in_occupancy_rate ? 'green' : 'default'}>
@@ -394,3 +394,4 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
 };
 
 export default AssetDetailInfo;
+

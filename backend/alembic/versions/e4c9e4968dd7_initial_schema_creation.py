@@ -733,7 +733,7 @@ def upgrade() -> None:
             comment="是否分租/转租",
         ),
         sa.Column("sublease_notes", sa.Text(), comment="分租/转租备注"),
-        sa.Column("business_model", sa.String(50), comment="接收模式"),
+        sa.Column("revenue_mode", sa.String(50), comment="经营模式"),
         sa.Column("operation_status", sa.String(20), comment="经营状态"),
         sa.Column("manager_name", sa.String(100), comment="管理责任人"),
         sa.Column(
@@ -2046,3 +2046,4 @@ def downgrade() -> None:
     op.drop_table("employees")
     op.drop_table("positions")
     op.drop_table("organizations")
+

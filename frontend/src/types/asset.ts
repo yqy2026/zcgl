@@ -46,7 +46,8 @@ export interface Asset {
 
   // 管理相关字段
   manager_name?: string;
-  business_model?: BusinessModel; // 接收模式
+  management_entity?: string; // 管理方
+  revenue_mode?: RevenueMode; // 经营模式（承租/代理）
   operation_status?: OperationStatus;
 
   // 接收相关字段
@@ -132,12 +133,12 @@ export enum TenantType {
   OTHER = '其他',
 }
 
-export enum BusinessModel {
+export enum RevenueMode {
   LEASE_SUBLEASE = '承租转租',
   ENTRUSTED_OPERATION = '委托经营',
   SELF_OPERATION = '自营',
   OTHER = '其他',
-} // 接收模式枚举
+} // 经营模式枚举
 
 export enum OperationStatus {
   NORMAL = '正常经营',

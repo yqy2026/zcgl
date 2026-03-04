@@ -157,7 +157,7 @@ class AsyncEnumValidationService:
             "ownership_status": ("ownership_status", False),
             "usage_status": ("usage_status", False),
             "property_nature": ("property_nature", False),
-            "business_model": ("business_model", True),
+            "revenue_mode": ("revenue_mode", True),
             "operation_status": ("operation_status", True),
             "tenant_type": ("tenant_type", True),
             "data_status": ("data_status", True),
@@ -201,3 +201,4 @@ def get_enum_validation_service_async(
     service = AsyncEnumValidationService(db)
     _ASYNC_SERVICE_CACHE[db] = service
     return service
+

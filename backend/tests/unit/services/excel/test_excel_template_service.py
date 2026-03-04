@@ -84,7 +84,7 @@ class TestGenerateTemplateSuccess:
             "是否涉诉",
             "物业性质（经营类、非经营类）",
             "是否计入出租率",
-            "接收模式",
+            "经营模式",
             "(当前)接收协议开始日期",
             "(当前)接收协议结束日期",
         ]
@@ -459,3 +459,4 @@ class TestExcelTemplateServiceInitialization:
 
 预期覆盖率：90%+
 """
+

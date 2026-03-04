@@ -124,7 +124,7 @@ async def get_occupancy_rate_by_category(
         "usage_status",
         "ownership_status",
         "manager_name",
-        "business_model",
+        "revenue_mode",
         "operation_status",
         "project_name",
     ]
@@ -227,3 +227,4 @@ async def get_occupancy_rate_statistics(
         },
         "message": "出租率统计数据获取成功",
     }
+

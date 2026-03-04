@@ -134,7 +134,9 @@ class Asset(Base):
     sublease_notes: Mapped[str | None] = mapped_column(Text, comment="分租/转租备注")
 
     # 管理相关字段
-    business_model: Mapped[str | None] = mapped_column(String(50), comment="接收模式")
+    revenue_mode: Mapped[str | None] = mapped_column(
+        String(50), comment="经营模式（承租/代理）"
+    )
     operation_status: Mapped[str | None] = mapped_column(String(20), comment="经营状态")
     manager_name: Mapped[str | None] = mapped_column(
         String(100), index=True, comment="管理责任人（网格员）"
@@ -480,3 +482,4 @@ class Asset(Base):
 
 
 __all__ = ["Asset"]
+

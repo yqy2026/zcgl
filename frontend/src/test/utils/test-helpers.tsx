@@ -132,7 +132,7 @@ export const mockAsset = {
   contractEndDate: '2025-12-31',
   monthlyRent: 50000,
   deposit: 150000,
-  businessModel: '自营',
+  revenueMode: '自营',
   operationStatus: '正常运营',
   managerName: '张三',
   isLitigated: false,
@@ -246,3 +246,4 @@ export const mockSessionStorage = {
   },
   key: vi.fn(),
 };
+

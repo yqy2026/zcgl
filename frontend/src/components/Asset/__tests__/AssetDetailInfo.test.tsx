@@ -407,8 +407,8 @@ describe('AssetDetailInfo', () => {
   });
 
   describe('接收信息显示', () => {
-    it('应该显示接收模式', () => {
-      const asset = createMockAsset({ business_model: '委托经营' });
+    it('应该显示经营模式', () => {
+      const asset = createMockAsset({ revenue_mode: '委托经营' });
       renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       expect(screen.getByText('委托经营')).toBeInTheDocument();
@@ -621,3 +621,4 @@ describe('AssetDetailInfo', () => {
     });
   });
 });
+

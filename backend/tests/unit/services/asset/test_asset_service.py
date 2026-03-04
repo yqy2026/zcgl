@@ -1082,7 +1082,7 @@ class TestEdgeCases:
             "tenant_type": "企业",
             "is_sublease": False,
             "manager_name": "管理员A",
-            "business_model": "自营",
+            "revenue_mode": "自营",
             "operation_status": "正常",
             "data_status": "正常",
         }
@@ -1247,3 +1247,4 @@ class TestOwnershipPartyScopeResolution:
             )
 
         assert resolved is None
+

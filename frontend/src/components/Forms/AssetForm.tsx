@@ -149,7 +149,7 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
     'certificated_usage',
     'actual_usage',
     'tenant_type',
-    'business_model',
+    'revenue_mode',
   ]);
 
   // Initialize form data
@@ -389,3 +389,4 @@ const AssetForm: React.FC<AssetFormProps> = ({
 };
 
 export default AssetForm;
+
