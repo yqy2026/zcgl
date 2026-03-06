@@ -6,7 +6,7 @@
 
 from fastapi import APIRouter
 
-from . import attachments, contracts, excel_ops, ledger, lifecycle, statistics, terms
+from . import attachments, contract_groups, contracts, excel_ops, ledger, lifecycle, statistics, terms
 
 # 创建主路由器
 router = APIRouter()
@@ -20,5 +20,8 @@ router.include_router(excel_ops.router)
 router.include_router(attachments.router)
 router.include_router(statistics.router)
 
+# 合同组/合同路由（独立于 /rental-contracts 路径前缀）
+contract_groups_router = contract_groups.router
+
 # 向后兼容导出
-__all__ = ["router"]
+__all__ = ["router", "contract_groups_router"]

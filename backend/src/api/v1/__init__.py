@@ -38,7 +38,7 @@ from .documents.pdf_import import router as pdf_import_router
 from .llm_prompts import router as llm_prompts_router
 
 # 导入各个模块的路由 - Rent Contract
-from .rent_contracts import router as rent_contract_router
+from .rent_contracts import contract_groups_router, router as rent_contract_router
 
 # 导入各个模块的路由 - System
 from .system.backup import router as backup_router
@@ -133,6 +133,8 @@ api_router.include_router(project_router, prefix="/projects", tags=["项目管�
 api_router.include_router(
     rent_contract_router, prefix="/rental-contracts", tags=["租赁合同管理"]
 )
+# 合同组体系（REQ-RNT-001）：/contract-groups/* 和 /contracts/*
+api_router.include_router(contract_groups_router, tags=["合同组管理"])
 # Analytics路由 - Service层重构版 (2026-01-04)
 # 原始 2017 行的 analytics.py 已重构为使用 AnalyticsService
 # 业务逻辑迁移至 src/services/analytics/analytics_service.py

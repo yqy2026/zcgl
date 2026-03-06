@@ -148,6 +148,8 @@ _RW_ACTIONS = ("create", "read", "update", "delete")
 _READ_ONLY_ACTIONS = ("read",)
 _EXPANDED_RESOURCE_TYPES = (
     "rent_contract",
+    "contract_group",
+    "contract",
     "property_certificate",
     "ownership",
     "occupancy",
