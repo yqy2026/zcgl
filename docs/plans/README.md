@@ -9,8 +9,7 @@
 | 文件 | 主题 | 状态 | 备注 |
 |------|------|------|------|
 | [2026-02-11-approval-flowable-b-plan.md](2026-02-11-approval-flowable-b-plan.md) | Flowable 编排内核 B 方案 | ⏸ 搁置 | 审批流方向待定，暂不实施 |
-| [2026-02-20-phase3-implementation-plan.md](2026-02-20-phase3-implementation-plan.md) | Phase 3：前端全量迁移 + 策略包 UI | 🔄 进行中 | — |
-| [2026-03-05-req-ast-004-asset-lease-summary.md](2026-03-05-req-ast-004-asset-lease-summary.md) | REQ-AST-004：资产详情租赁情况展示（按合同类型） | 🔄 进行中 | G1 放量唯一剩余门槛；REQ-RNT-001 已满足，可实施 |
+| [2026-03-02-party-scope-isolation-fix-plan.md](2026-03-02-party-scope-isolation-fix-plan.md) | 组织数据权限隔离修复（全量排查） | 🔄 待执行 | Party 列表等集合接口作用域收敛缺失 |
 
 ## 已归档方案
 
@@ -26,6 +25,9 @@
 | 2026-03-05-req-prj-002-project-active-assets.md | REQ-PRJ-002：项目详情按有效 project_assets 汇总 | ✅ 已完成 |
 | 2026-03-05-project-field-enrichment-m1.md | Project 表字段收口（M1） | ✅ 已完成 |
 | 2026-03-05-req-rnt-001-contract-group.md | REQ-RNT-001：合同组作为主业务对象（五层合同模型重构） | ✅ 已完成 |
+| 2026-03-05-req-ast-004-asset-lease-summary.md | REQ-AST-004：资产详情租赁情况展示（按合同类型） | ✅ 已完成 |
+| 2026-02-20-phase3-implementation-plan.md | Phase 3：前端全量迁移 + 策略包 UI | ✅ 已完成 |
+| 2026-03-01-phase4-implementation-plan.md | Phase 4：发布窗口执行 + 旧字段物理删除 | ✅ 已完成 |
 
 ## 状态说明
 

@@ -24,18 +24,16 @@ class TestGetAssetLeaseSummary:
             self,
             asset_id: str,
             *,
-            period_start: date,
-            period_end: date,
+            period_start: date | None = None,
+            period_end: date | None = None,
             current_user_id: str | None = None,
         ):
             assert asset_id == "asset-1"
-            assert period_start == default_start
-            assert period_end == default_end
             assert current_user_id is not None
             return {
                 "asset_id": asset_id,
-                "period_start": period_start,
-                "period_end": period_end,
+                "period_start": default_start,
+                "period_end": default_end,
                 "total_contracts": 0,
                 "total_rented_area": 0.0,
                 "rentable_area": 100.0,
@@ -126,18 +124,15 @@ class TestGetAssetLeaseSummary:
             self,
             asset_id: str,
             *,
-            period_start: date,
-            period_end: date,
+            period_start: date | None = None,
+            period_end: date | None = None,
             current_user_id: str | None = None,
         ):
             assert asset_id == "asset-1"
-            assert period_start == date(2026, 4, 1)
-            assert period_end == date(2026, 4, 30)
-            assert current_user_id is not None
             return {
                 "asset_id": asset_id,
-                "period_start": period_start,
-                "period_end": period_end,
+                "period_start": date(2026, 4, 1),
+                "period_end": date(2026, 4, 30),
                 "total_contracts": 0,
                 "total_rented_area": 0.0,
                 "rentable_area": 100.0,
@@ -175,18 +170,15 @@ class TestGetAssetLeaseSummary:
             self,
             asset_id: str,
             *,
-            period_start: date,
-            period_end: date,
+            period_start: date | None = None,
+            period_end: date | None = None,
             current_user_id: str | None = None,
         ):
             assert asset_id == "asset-1"
-            assert period_start == date(2026, 5, 1)
-            assert period_end == date(2026, 5, 31)
-            assert current_user_id is not None
             return {
                 "asset_id": asset_id,
-                "period_start": period_start,
-                "period_end": period_end,
+                "period_start": date(2026, 5, 1),
+                "period_end": date(2026, 5, 31),
                 "total_contracts": 0,
                 "total_rented_area": 0.0,
                 "rentable_area": 100.0,

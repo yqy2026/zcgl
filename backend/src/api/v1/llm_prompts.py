@@ -124,9 +124,13 @@ async def get_prompts(
     provider: str | None = Query(None, description="提供商筛选"),
 ) -> JSONResponse:
     """
-    获取Prompt模板列表
+    获取 Prompt 模板列表
 
-    支持分页和多条件筛选
+    支持分页和多条件筛选。
+
+    **Party 隔离策略**：PromptTemplate 是系统级 AI 抽取配置，无 party_id，
+    不归属任何业务主体。对所有认证用户只读开放（AI 文档抽取功能依赖这些模板），
+    写操作（create/update/activate）已由 require_authz 守卫控制。
     """
 
     manager = PromptManager()

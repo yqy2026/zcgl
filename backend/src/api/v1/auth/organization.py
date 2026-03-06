@@ -168,7 +168,13 @@ async def get_organizations(
         require_authz(action="read", resource_type="organization")
     ),
 ) -> JSONResponse:
-    """获取组织列表"""
+    """
+    获取组织列表
+
+    **Party 隔离策略**：Organization 是系统内部管理层级（总部→分公司→部门），
+    无 party_id 外键，与业务主体（Party）为独立概念。组织架构是全局共享只读元数据，
+    所有认证用户均可读取（用于选择归属组织、审批路由等），不按 party 隔离。
+    """
     skip = (page - 1) * page_size
     organizations, total = await organization_service.get_organizations(
         db,

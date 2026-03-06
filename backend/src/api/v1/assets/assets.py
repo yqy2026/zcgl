@@ -50,7 +50,6 @@ from ....schemas.asset import (
 from ....services.asset.asset_service import (
     AssetService,
     AsyncAssetService,
-    normalize_summary_period,
 )
 from ....services.authz import authz_service
 
@@ -486,7 +485,6 @@ async def get_asset_lease_summary(
         )
     ),
 ) -> APIResponse[AssetLeaseSummaryResponse]:
-    period_start, period_end = normalize_summary_period(period_start, period_end)
     asset_service = AsyncAssetService(db)
     summary = await asset_service.get_asset_lease_summary(
         asset_id,

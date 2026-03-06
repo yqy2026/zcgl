@@ -239,3 +239,33 @@ class TestGetAssetLeaseSummary:
         ):
             with pytest.raises(ResourceNotFoundError):
                 await service.get_asset_lease_summary(asset_id="missing")
+
+    async def test_excludes_non_active_status(self, service):
+        """CRUD 只返回活跃合同；服务层直接消费 CRUD 返回值，此处验证非活跃合同不计入汇总。"""
+        from src.services.asset import asset_service as asset_service_module
+
+        asset = SimpleNamespace(
+            id="asset-1",
+            data_status="正常",
+            rentable_area=Decimal("200"),
+        )
+        # CRUD 层已过滤，service 收到的就是空列表（DRAFT/PENDING_REVIEW/EXPIRED/TERMINATED 全被排除）
+        with patch.object(service, "get_asset", new=AsyncMock(return_value=asset)):
+            asset_service_module.contract_crud = SimpleNamespace(  # type: ignore[attr-defined]
+                get_active_by_asset_id=AsyncMock(return_value=[])
+            )
+            result = await service.get_asset_lease_summary(asset_id="asset-1")
+
+        assert result.total_contracts == 0
+        assert all(item.contract_count == 0 for item in result.by_type)
+        assert result.customer_summary == []
+
+    async def test_deleted_asset_raises_not_found(self, service):
+        """data_status=已删除 的资产通过 get_asset 路径抛出 404。"""
+        with patch.object(
+            service,
+            "get_asset",
+            new=AsyncMock(side_effect=ResourceNotFoundError("Asset", "deleted-id")),
+        ):
+            with pytest.raises(ResourceNotFoundError):
+                await service.get_asset_lease_summary(asset_id="deleted-id")

@@ -161,7 +161,7 @@
   - 反审核后可恢复可编辑状态。
   - 审核态关键字段变更受控。
 
-#### REQ-AST-004 资产详情口径清晰展示 📋
+#### REQ-AST-004 资产详情口径清晰展示 ✅
 - 描述：资产详情必须默认展示经营所需核心信息。
 - **实现依赖**：REQ-RNT-001（五层合同模型）✅ 已于 2026-03-06 落地，前置依赖已满足。
 - 验收：
@@ -179,6 +179,16 @@
   - 汇总行展示：总合同数、总出租/管理面积、出租率（`已出租面积 / 可出租面积`）。
   - 客户摘要展示：**仅展示对外出约合同的对方承租方**（`下游`、`直租` 的 `lessee_party_id` 对应名称）；内部入约合同（`上游`、`委托`）不计入客户摘要。
   - 注：`ContractType` 旧枚举（`LEASE_UPSTREAM/LEASE_DOWNSTREAM/ENTRUSTED`）已废弃（见附录 §10.1），不以此为分类依据。
+- 代码证据：
+  - `backend/src/crud/contract.py`（`CRUDContract.get_active_by_asset_id`）
+  - `backend/src/schemas/asset.py`（`ContractTypeSummary` / `ContractPartyItem` / `AssetLeaseSummaryResponse`）
+  - `backend/src/services/asset/asset_service.py`（`AsyncAssetService.get_asset_lease_summary`）
+  - `backend/src/api/v1/assets/assets.py`（`GET /api/v1/assets/{asset_id}/lease-summary`）
+  - `backend/tests/unit/services/asset/test_asset_lease_summary.py`
+  - `backend/tests/unit/api/v1/test_asset_lease_summary.py`
+  - `frontend/src/types/asset.ts`（`AssetLeaseSummaryResponse` / `ContractTypeSummary` / `ContractPartyItem`）
+  - `frontend/src/services/assetService.ts`（`getAssetLeaseSummary`）
+  - `frontend/src/pages/Assets/AssetDetailPage.tsx`（租赁情况卡片 + 月份切换）
 
 ### 6.2 项目与主体关系域
 
@@ -495,7 +505,7 @@
 | REQ-AST-001 | ✅ | `/api/v1/assets` (CRUD + batch + import) | `test_assets_projection_guard.py`, `test_asset_service.py` |
 | REQ-AST-002 | 🚧 | 投影/关联 | `test_asset.py` |
 | REQ-AST-003 | 📋 | — | — |
-| REQ-AST-004 | 📋 | `GET /api/v1/assets/{id}/lease-summary` | — |
+| REQ-AST-004 | ✅ | `GET /api/v1/assets/{id}/lease-summary` | `test_asset_lease_summary.py` (service + api) |
 | REQ-PRJ-001 | ✅ | `/api/v1/projects` (CRUD + search) | `test_project.py`, `test_project_service.py` |
 | REQ-PRJ-002 | ✅ | `/api/v1/projects/{project_id}/assets` | `test_project_service.py`, `test_project.py` |
 | REQ-RNT-001 | ✅ | M1 ORM/DDL ✅ M2 Schema/CRUD/Service ✅ M3 API ✅ | — |

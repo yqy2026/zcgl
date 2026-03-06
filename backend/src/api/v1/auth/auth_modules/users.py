@@ -241,6 +241,11 @@ async def get_users(
     - 支持分页
     - 支持按角色、状态、组织筛选
     - 支持关键词搜索
+
+    **Party 隔离策略**：User 表本身无 party_id，用户通过 user_party_bindings 关联
+    Party。本接口为超管专属全局视图（require_admin 门控），不按 party 隔离。
+    若未来需要「主体级管理员」查看子集，须在 service 层扩展 party_filter 参数，
+    当前暂不实现（无该角色需求），但设计意图须保持明确：普通用户不得访问本接口。
     """
 
     if isinstance(factory, ServiceFactory):

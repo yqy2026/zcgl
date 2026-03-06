@@ -5,7 +5,7 @@
  * @module pages/Project
  */
 
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Typography,
   Button,
@@ -18,13 +18,19 @@ import {
   Tag,
   Statistic,
   Badge,
+  DatePicker,
+  Table,
+  Skeleton,
+  Tooltip,
 } from 'antd';
-import { EditOutlined, HomeOutlined, AreaChartOutlined, TeamOutlined } from '@ant-design/icons';
+import { EditOutlined, HomeOutlined, AreaChartOutlined, TeamOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import dayjs, { type Dayjs } from 'dayjs';
 import { projectService } from '@/services/projectService';
+import { assetService } from '@/services/assetService';
 import type { ColumnsType } from 'antd/es/table';
-import type { Asset } from '@/types/asset';
+import type { Asset, AssetLeaseSummaryResponse } from '@/types/asset';
 import { useArrayListData } from '@/hooks/useArrayListData';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
 import { PageContainer } from '@/components/Common';
@@ -39,6 +45,101 @@ const PROJECT_STATUS_MAP: Record<string, { text: string; color: string; active: 
   terminated: { text: '已终止', color: 'red', active: false },
 };
 
+const RELATION_TYPE_LABELS: Record<string, string> = {
+  上游: '上游承租',
+  下游: '下游转租',
+  委托: '委托协议',
+  直租: '直租合同',
+};
+
+const RELATION_TYPE_COLORS: Record<string, string> = {
+  上游: 'gold',
+  下游: 'blue',
+  委托: 'cyan',
+  直租: 'green',
+};
+
+const buildPeriodParams = (month: Dayjs) => ({
+  period_start: month.startOf('month').format('YYYY-MM-DD'),
+  period_end: month.endOf('month').format('YYYY-MM-DD'),
+});
+
+// 子组件：逐资产获取租赁汇总，避免在 map 中调用 hook
+interface AssetLeaseSummaryRowData {
+  assetId: string;
+  assetName: string;
+  periodParams: { period_start: string; period_end: string };
+}
+
+const useAssetLeaseSummary = (
+  assetId: string,
+  periodParams: { period_start: string; period_end: string },
+) =>
+  useQuery<AssetLeaseSummaryResponse>({
+    queryKey: ['asset-lease-summary', assetId, periodParams.period_start, periodParams.period_end],
+    queryFn: () => assetService.getAssetLeaseSummary(assetId, periodParams),
+    staleTime: 60_000,
+  });
+
+const AssetLeaseSummaryRow: React.FC<AssetLeaseSummaryRowData & { onNavigate: (id: string) => void }> = ({
+  assetId,
+  assetName,
+  periodParams,
+  onNavigate,
+}) => {
+  const { data, isLoading } = useAssetLeaseSummary(assetId, periodParams);
+
+  if (isLoading) {
+    return (
+      <tr>
+        <td colSpan={7}><Skeleton active paragraph={{ rows: 1 }} title={false} /></td>
+      </tr>
+    );
+  }
+
+  const byType = data?.by_type ?? [];
+  const typeMap = Object.fromEntries(byType.map(t => [t.group_relation_type, t.contract_count]));
+  const totalContracts = data?.total_contracts ?? 0;
+  const occupancyRate = data?.occupancy_rate ?? 0;
+  const customerCount = data?.customer_summary.length ?? 0;
+
+  return (
+    <tr>
+      <td>
+        <Button type="link" style={{ padding: 0 }} onClick={() => onNavigate(assetId)}>
+          {assetName}
+        </Button>
+      </td>
+      {['上游', '下游', '委托', '直租'].map(rt => (
+        <td key={rt} style={{ textAlign: 'center' }}>
+          {(typeMap[rt] ?? 0) > 0 ? (
+            <Tag color={RELATION_TYPE_COLORS[rt]}>{typeMap[rt]}</Tag>
+          ) : (
+            <Text type="secondary">—</Text>
+          )}
+        </td>
+      ))}
+      <td style={{ textAlign: 'right' }}>
+        <Text strong={occupancyRate > 0}>{occupancyRate > 0 ? `${occupancyRate.toFixed(1)}%` : '—'}</Text>
+      </td>
+      <td style={{ textAlign: 'center' }}>
+        {customerCount > 0 ? (
+          <Tooltip
+            title={data?.customer_summary.map(c => c.party_name).join('、')}
+          >
+            <Tag>{customerCount} 家</Tag>
+          </Tooltip>
+        ) : (
+          <Text type="secondary">—</Text>
+        )}
+      </td>
+      <td style={{ textAlign: 'right' }}>
+        <Text type="secondary" style={{ fontSize: 12 }}>{totalContracts} 份合同</Text>
+      </td>
+    </tr>
+  );
+};
+
 /**
  * ProjectDetailPage - 项目详情页面组件
  *
@@ -47,10 +148,13 @@ const PROJECT_STATUS_MAP: Record<string, { text: string; color: string; active: 
  * - 展示项目基本信息
  * - 展示关联资产列表
  * - 展示统计卡片（资产数量、总面积、出租率）
+ * - 展示各资产租赁情况汇总（合同口径，按 group_relation_type 分类）
  */
 const ProjectDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [selectedMonth, setSelectedMonth] = useState<Dayjs>(() => dayjs().startOf('month'));
+  const periodParams = useMemo(() => buildPeriodParams(selectedMonth), [selectedMonth]);
 
   // 获取项目详情
   const {
@@ -310,6 +414,62 @@ const ProjectDetailPage: React.FC = () => {
               locale={{ emptyText: '暂无关联资产' }}
             />
           </Card>
+
+          {/* 租赁情况（合同口径） */}
+          {assets.length > 0 && (
+            <Card
+              className={styles.assetTableCard}
+              title={
+                <Space>
+                  <span>租赁情况（合同口径）</span>
+                  <Tooltip title="数据来源：各资产活跃合同，不含草稿/待审/已终止/已到期">
+                    <InfoCircleOutlined style={{ color: 'var(--color-text-secondary)' }} />
+                  </Tooltip>
+                </Space>
+              }
+              extra={
+                <DatePicker
+                  picker="month"
+                  allowClear={false}
+                  value={selectedMonth}
+                  onChange={value => setSelectedMonth((value ?? dayjs()).startOf('month'))}
+                  inputReadOnly
+                />
+              }
+            >
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
+                      <th style={{ textAlign: 'left', padding: '8px 12px', fontWeight: 600 }}>资产</th>
+                      {['上游', '下游', '委托', '直租'].map(rt => (
+                        <th key={rt} style={{ textAlign: 'center', padding: '8px 12px', fontWeight: 600 }}>
+                          <Tag color={RELATION_TYPE_COLORS[rt]} style={{ margin: 0 }}>{RELATION_TYPE_LABELS[rt]}</Tag>
+                        </th>
+                      ))}
+                      <th style={{ textAlign: 'right', padding: '8px 12px', fontWeight: 600 }}>出租率</th>
+                      <th style={{ textAlign: 'center', padding: '8px 12px', fontWeight: 600 }}>客户摘要</th>
+                      <th style={{ textAlign: 'right', padding: '8px 12px', fontWeight: 600 }}>合同数</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {assets.map(asset => (
+                      <AssetLeaseSummaryRow
+                        key={asset.id}
+                        assetId={asset.id}
+                        assetName={asset.asset_name}
+                        periodParams={periodParams}
+                        onNavigate={assetId => navigate(`/assets/${assetId}`)}
+                      />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <Text type="secondary" style={{ display: 'block', marginTop: 8, fontSize: 12 }}>
+                注：MVP 阶段面积字段以合同台账落地后口径为准；出租率目前为占位值 0%，待台账覆盖后升级。
+              </Text>
+            </Card>
+          )}
         </>
       )}
     </PageContainer>
