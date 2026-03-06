@@ -518,6 +518,33 @@ class AssetListItemResponse(AssetResponseBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class ContractTypeSummary(BaseModel):
+    group_relation_type: str = Field(..., description="合同角色")
+    label: str = Field(..., description="展示标签")
+    contract_count: int = Field(..., description="合同数量")
+    total_area: float = Field(..., description="面积汇总（MVP 固定 0）")
+    monthly_amount: float = Field(..., description="月度金额汇总")
+
+
+class ContractPartyItem(BaseModel):
+    party_id: str | None = Field(None, description="承租方主体 ID")
+    party_name: str = Field(..., description="承租方名称")
+    group_relation_type: str = Field(..., description="合同角色")
+    contract_count: int = Field(..., description="合同数量")
+
+
+class AssetLeaseSummaryResponse(BaseModel):
+    asset_id: str = Field(..., description="资产 ID")
+    period_start: date = Field(..., description="展示周期开始")
+    period_end: date = Field(..., description="展示周期结束")
+    total_contracts: int = Field(..., description="合同总数")
+    total_rented_area: float = Field(..., description="已出租/管理面积")
+    rentable_area: float = Field(..., description="可出租面积")
+    occupancy_rate: float = Field(..., description="出租率")
+    by_type: list[ContractTypeSummary] = Field(..., description="按合同角色汇总")
+    customer_summary: list[ContractPartyItem] = Field(..., description="客户摘要")
+
+
 class AssetListResponse(BaseModel):
     """资产列表响应模型"""
 
@@ -811,4 +838,3 @@ class AssetCustomFieldAssignment(BaseModel):
                 {},
             )  # pragma: no cover
         return v  # pragma: no cover
-

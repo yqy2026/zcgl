@@ -8,6 +8,7 @@ import type { AreaStatistics } from '@/types/asset';
 // Re-export types from asset.ts for convenience
 export type {
   Asset,
+  AssetLeaseSummaryResponse,
   AssetSearchParams,
   AssetListResponse,
   AssetCreateRequest,
@@ -15,6 +16,8 @@ export type {
   AssetHistory,
   SystemDictionary,
   AssetCustomField,
+  ContractPartyItem,
+  ContractTypeSummary,
   CustomFieldValue,
   AreaStatistics,
 } from '@/types/asset';

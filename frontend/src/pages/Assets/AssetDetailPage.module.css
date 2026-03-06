@@ -1,0 +1,109 @@
+.pageContent {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.leaseCard {
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.summaryContent {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+
+.heroPanel {
+  height: 100%;
+  padding: 24px;
+  border: 1px solid #d9e7f5;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at top right, rgba(24, 144, 255, 0.14), transparent 34%),
+    linear-gradient(135deg, #f8fbff 0%, #eef5ff 100%);
+}
+
+.heroEyebrow {
+  display: inline-block;
+  margin-bottom: 8px;
+  letter-spacing: 0.08em;
+}
+
+.heroStatistic :global(.ant-statistic-content) {
+  font-size: 40px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.heroMeta {
+  display: block;
+}
+
+.metricCard {
+  height: 100%;
+  border-radius: 18px;
+  background: #fbfcfe;
+}
+
+.metricCard :global(.ant-statistic) {
+  height: 100%;
+}
+
+.sectionBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.summaryTable :global(.ant-table-thead > tr > th) {
+  background: #f5f7fa;
+  font-weight: 600;
+}
+
+.customerList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.customerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  flex-wrap: wrap;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f0f2f5;
+}
+
+.customerRow:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.note {
+  display: block;
+  padding-top: 4px;
+}
+
+@media (max-width: 768px) {
+  .heroPanel {
+    padding: 20px;
+  }
+
+  .heroStatistic :global(.ant-statistic-content) {
+    font-size: 32px;
+  }
+}

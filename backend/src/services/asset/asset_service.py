@@ -1,6 +1,8 @@
 import logging
+from collections import defaultdict
 from contextlib import asynccontextmanager
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
+from decimal import Decimal
 from typing import Any, cast
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,6 +16,7 @@ from ...core.exception_handler import (
     operation_not_allowed,
     validation_error,
 )
+from ...crud.contract import contract_crud
 from ...crud.history import history_crud
 from ...crud.ownership import ownership
 from ...crud.party import party_crud
@@ -21,12 +24,20 @@ from ...crud.query_builder import PartyFilter
 from ...models.asset import Asset
 from ...models.asset_history import AssetHistory
 from ...models.auth import User
-from ...schemas.asset import AssetCreate, AssetUpdate
+from ...models.contract_group import ContractLifecycleStatus, GroupRelationType
+from ...schemas.asset import (
+    AssetCreate,
+    AssetLeaseSummaryResponse,
+    AssetUpdate,
+    ContractPartyItem,
+    ContractTypeSummary,
+)
 from ...services.asset.asset_calculator import AssetCalculator
 from ...services.enum_validation_service import get_enum_validation_service_async
 from ...services.party_scope import resolve_user_party_filter
 
 logger = logging.getLogger(__name__)
+ACTIVE_CONTRACT_STATUSES = {ContractLifecycleStatus.ACTIVE}
 
 
 def _utcnow_naive() -> datetime:
@@ -41,6 +52,42 @@ def _normalize_optional_str(value: Any) -> str | None:
     if normalized == "":
         return None
     return normalized
+
+
+def _as_decimal(value: Any) -> Decimal:
+    if value is None:
+        return Decimal("0")
+    if isinstance(value, Decimal):
+        return value
+    return Decimal(str(value))
+
+
+def _default_summary_period() -> tuple[date, date]:
+    today = date.today()
+    start = today.replace(day=1)
+    end = (start.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
+    return start, end
+
+
+def _month_bounds(anchor: date) -> tuple[date, date]:
+    start = anchor.replace(day=1)
+    end = (start.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
+    return start, end
+
+
+def normalize_summary_period(
+    period_start: date | None,
+    period_end: date | None,
+) -> tuple[date, date]:
+    if period_start is None and period_end is None:
+        return _default_summary_period()
+    if period_start is None:
+        normalized_start, _ = _month_bounds(period_end)
+        return normalized_start, period_end
+    if period_end is None:
+        _, normalized_end = _month_bounds(period_start)
+        return period_start, normalized_end
+    return period_start, period_end
 
 
 def _normalize_bool_filter(
@@ -419,6 +466,106 @@ class AssetService:
         if not asset or asset.data_status == DataStatusValues.ASSET_DELETED:
             raise ResourceNotFoundError("Asset", asset_id)
         return asset
+
+    async def get_asset_lease_summary(
+        self,
+        asset_id: str,
+        *,
+        period_start: date | None = None,
+        period_end: date | None = None,
+        current_user_id: str | None = None,
+    ) -> AssetLeaseSummaryResponse:
+        period_start, period_end = normalize_summary_period(period_start, period_end)
+
+        asset = await self.get_asset(asset_id, current_user_id=current_user_id)
+        contracts = await contract_crud.get_active_by_asset_id(
+            self.db,
+            asset_id=asset_id,
+            active_statuses=ACTIVE_CONTRACT_STATUSES,
+        )
+
+        type_buckets: dict[str, list[Any]] = defaultdict(list)
+        for contract in contracts:
+            relation_type = getattr(contract, "group_relation_type", None)
+            key = relation_type.value if isinstance(relation_type, GroupRelationType) else str(relation_type)
+            type_buckets[key].append(contract)
+
+        by_type: list[ContractTypeSummary] = []
+        for relation_type, label in (
+            ("上游", "上游承租"),
+            ("下游", "下游转租"),
+            ("委托", "委托协议"),
+            ("直租", "直租合同"),
+        ):
+            bucket = type_buckets.get(relation_type, [])
+            monthly_amount = sum(
+                (
+                    _as_decimal(getattr(contract.lease_detail, "monthly_rent_base", None))
+                    for contract in bucket
+                    if getattr(contract, "lease_detail", None) is not None
+                ),
+                start=Decimal("0"),
+            )
+            by_type.append(
+                ContractTypeSummary(
+                    group_relation_type=relation_type,
+                    label=label,
+                    contract_count=len(bucket),
+                    total_area=0.0,
+                    monthly_amount=float(monthly_amount),
+                )
+            )
+
+        party_counter: dict[tuple[str, str], tuple[str | None, int]] = {}
+        outbound_types = {
+            GroupRelationType.DOWNSTREAM.value,
+            GroupRelationType.DIRECT_LEASE.value,
+        }
+        for contract in contracts:
+            relation_type = getattr(contract, "group_relation_type", None)
+            relation_value = (
+                relation_type.value
+                if isinstance(relation_type, GroupRelationType)
+                else str(relation_type)
+            )
+            if relation_value not in outbound_types:
+                continue
+
+            lease_detail = getattr(contract, "lease_detail", None)
+            lessee_party = getattr(contract, "lessee_party", None)
+            lessee_name = (
+                getattr(lease_detail, "tenant_name", None)
+                or getattr(lessee_party, "name", None)
+                or "未知租户"
+            )
+            party_id = str(getattr(contract, "lessee_party_id", "")).strip() or None
+            key = (lessee_name, relation_value)
+            prev_party_id, prev_count = party_counter.get(key, (party_id, 0))
+            party_counter[key] = (prev_party_id or party_id, prev_count + 1)
+
+        customer_summary = [
+            ContractPartyItem(
+                party_id=party_id,
+                party_name=party_name,
+                group_relation_type=relation_type,
+                contract_count=contract_count,
+            )
+            for (party_name, relation_type), (party_id, contract_count) in party_counter.items()
+        ]
+
+        rentable_area = _as_decimal(getattr(asset, "rentable_area", None))
+
+        return AssetLeaseSummaryResponse(
+            asset_id=str(getattr(asset, "id")),
+            period_start=period_start,
+            period_end=period_end,
+            total_contracts=len(contracts),
+            total_rented_area=0.0,
+            rentable_area=float(rentable_area),
+            occupancy_rate=0.0,
+            by_type=by_type,
+            customer_summary=customer_summary,
+        )
 
     async def get_asset_history_records(
         self,

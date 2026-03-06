@@ -3,7 +3,13 @@
  * 提供模拟API响应的测试数据
  */
 
-import { Asset, OwnershipStatus, PropertyNature, UsageStatus } from '@/types/asset';
+import {
+  Asset,
+  AssetLeaseSummaryResponse,
+  OwnershipStatus,
+  PropertyNature,
+  UsageStatus,
+} from '@/types/asset';
 
 // =============================================================================
 // 资产相关 Fixtures
@@ -103,6 +109,54 @@ export const paginatedResponse = <T>(
 export const assetListResponse = paginatedResponse(mockAssetList, 1, 20, 3);
 
 export const assetDetailResponse = successResponse(mockAsset);
+
+export const assetLeaseSummaryResponse = successResponse<AssetLeaseSummaryResponse>({
+  asset_id: mockAsset.id,
+  period_start: '2026-03-01',
+  period_end: '2026-03-31',
+  total_contracts: 3,
+  total_rented_area: 3200,
+  rentable_area: 4000,
+  occupancy_rate: 80,
+  by_type: [
+    {
+      group_relation_type: '上游',
+      label: '上游承租',
+      contract_count: 1,
+      total_area: 0,
+      monthly_amount: 22000,
+    },
+    {
+      group_relation_type: '下游',
+      label: '下游转租',
+      contract_count: 2,
+      total_area: 0,
+      monthly_amount: 46000,
+    },
+    {
+      group_relation_type: '委托',
+      label: '委托协议',
+      contract_count: 0,
+      total_area: 0,
+      monthly_amount: 0,
+    },
+    {
+      group_relation_type: '直租',
+      label: '直租合同',
+      contract_count: 0,
+      total_area: 0,
+      monthly_amount: 0,
+    },
+  ],
+  customer_summary: [
+    {
+      party_id: 'party-001',
+      party_name: '测试租户A',
+      group_relation_type: '下游',
+      contract_count: 2,
+    },
+  ],
+});
 
 export const assetCreateResponse = successResponse({
   ...mockAsset,

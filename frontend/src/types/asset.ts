@@ -249,6 +249,35 @@ export interface AssetSummary {
   netIncome: number;
 }
 
+export type AssetLeaseGroupRelationType = '上游' | '下游' | '委托' | '直租';
+
+export interface ContractTypeSummary {
+  group_relation_type: AssetLeaseGroupRelationType;
+  label: string;
+  contract_count: number;
+  total_area: number;
+  monthly_amount: number;
+}
+
+export interface ContractPartyItem {
+  party_id: string | null;
+  party_name: string;
+  group_relation_type: AssetLeaseGroupRelationType;
+  contract_count: number;
+}
+
+export interface AssetLeaseSummaryResponse {
+  asset_id: string;
+  period_start: string;
+  period_end: string;
+  total_contracts: number;
+  total_rented_area: number;
+  rentable_area: number;
+  occupancy_rate: number;
+  by_type: ContractTypeSummary[];
+  customer_summary: ContractPartyItem[];
+}
+
 // 搜索参数
 export interface AssetSearchParams {
   page?: number;

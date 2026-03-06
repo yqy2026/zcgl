@@ -42,6 +42,7 @@ import { assetFieldService } from './asset/assetFieldService';
 
 import type {
   Asset,
+  AssetLeaseSummaryResponse,
   AssetSearchParams,
   AssetListResponse,
   AssetCreateRequest,
@@ -92,6 +93,13 @@ export class AssetService {
 
   async getAsset(id: string): Promise<Asset> {
     return assetCoreService.getAsset(id);
+  }
+
+  async getAssetLeaseSummary(
+    id: string,
+    params?: { period_start?: string; period_end?: string }
+  ): Promise<AssetLeaseSummaryResponse> {
+    return assetCoreService.getAssetLeaseSummary(id, params);
   }
 
   async createAsset(data: AssetCreateRequest): Promise<Asset> {

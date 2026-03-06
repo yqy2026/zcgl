@@ -74,6 +74,7 @@ export const ASSET_API = {
   // 统计数据
   STATISTICS: '/assets/statistics',
   SUMMARY: '/assets/summary',
+  LEASE_SUMMARY: (id: string) => `/assets/${id}/lease-summary`,
 
   // 文件操作
   UPLOAD_IMAGE: '/assets/upload/image',

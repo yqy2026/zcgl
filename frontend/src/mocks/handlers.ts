@@ -11,6 +11,7 @@ import type { Asset } from '@/types/asset';
 import {
   assetListResponse,
   assetDetailResponse,
+  assetLeaseSummaryResponse,
   assetCreateResponse,
   assetUpdateResponse,
   assetDeleteResponse,
@@ -98,6 +99,30 @@ export const getAssetByIdHandler = http.get(`${API_BASE_URL}/assets/:id`, async 
     data: { ...assetDetailResponse.data, id: params.id },
   });
 });
+
+/**
+ * GET /assets/:id/lease-summary - 获取资产租赁汇总
+ */
+export const getAssetLeaseSummaryHandler = http.get(
+  `${API_BASE_URL}/assets/:id/lease-summary`,
+  async ({ params, request }) => {
+    await delay(50);
+
+    const searchParams = getSearchParams(request);
+    const periodStart = searchParams.period_start ?? assetLeaseSummaryResponse.data.period_start;
+    const periodEnd = searchParams.period_end ?? assetLeaseSummaryResponse.data.period_end;
+
+    return HttpResponse.json({
+      ...assetLeaseSummaryResponse,
+      data: {
+        ...assetLeaseSummaryResponse.data,
+        asset_id: String(params.id),
+        period_start: periodStart,
+        period_end: periodEnd,
+      },
+    });
+  }
+);
 
 /**
  * POST /assets - 创建资产
@@ -314,6 +339,7 @@ export const handlers: HttpHandler[] = [
   // 资产管理
   getAssetsHandler,
   getAssetByIdHandler,
+  getAssetLeaseSummaryHandler,
   createAssetHandler,
   updateAssetHandler,
   deleteAssetHandler,

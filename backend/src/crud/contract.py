@@ -145,6 +145,37 @@ class CRUDContract:
         )
         return (await db.execute(stmt)).scalar_one()
 
+    async def get_active_by_asset_id(
+        self,
+        db: AsyncSession,
+        *,
+        asset_id: str,
+        active_statuses: set[ContractLifecycleStatus] | list[ContractLifecycleStatus],
+    ) -> list[Contract]:
+        """按资产查询活跃合同，并预加载租赁/代理明细与承租方主体。"""
+        normalized_statuses = list(active_statuses)
+        if len(normalized_statuses) == 0:
+            return []
+
+        stmt = (
+            select(Contract)
+            .join(
+                contract_assets,
+                contract_assets.c.contract_id == Contract.contract_id,
+            )
+            .where(
+                contract_assets.c.asset_id == asset_id,
+                Contract.status.in_(normalized_statuses),
+                Contract.data_status == "正常",
+            )
+            .options(
+                selectinload(Contract.lease_detail),
+                selectinload(Contract.agency_detail),
+                selectinload(Contract.lessee_party),
+            )
+        )
+        return list((await db.execute(stmt)).scalars().unique().all())
+
     async def _replace_assets(
         self,
         db: AsyncSession,

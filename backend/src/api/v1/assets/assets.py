@@ -10,6 +10,7 @@
 
 import os
 from collections.abc import Sequence
+from datetime import date
 from typing import Any
 
 from fastapi import (
@@ -20,6 +21,7 @@ from fastapi import (
     Request,
     Response,
 )
+from fastapi.encoders import jsonable_encoder
 from pydantic import TypeAdapter
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.status import HTTP_204_NO_CONTENT
@@ -40,11 +42,16 @@ from ....middleware.security_middleware import get_client_ip
 from ....models.auth import User
 from ....schemas.asset import (
     AssetCreate,
+    AssetLeaseSummaryResponse,
     AssetListItemResponse,
     AssetResponse,
     AssetUpdate,
 )
-from ....services.asset.asset_service import AssetService, AsyncAssetService
+from ....services.asset.asset_service import (
+    AssetService,
+    AsyncAssetService,
+    normalize_summary_period,
+)
 from ....services.authz import authz_service
 
 # 导入子路由模块
@@ -457,6 +464,41 @@ async def get_asset(
         current_user_id=str(current_user.id),
     )
     return AssetResponse.model_validate(asset)
+
+
+@router.get(
+    "/{asset_id}/lease-summary",
+    response_model=APIResponse[AssetLeaseSummaryResponse],
+    summary="获取资产租赁汇总",
+)
+async def get_asset_lease_summary(
+    asset_id: str = Path(..., description="资产ID"),
+    period_start: date | None = Query(None, description="展示周期开始"),
+    period_end: date | None = Query(None, description="展示周期结束"),
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="asset",
+            resource_id="{asset_id}",
+            deny_as_not_found=True,
+        )
+    ),
+) -> APIResponse[AssetLeaseSummaryResponse]:
+    period_start, period_end = normalize_summary_period(period_start, period_end)
+    asset_service = AsyncAssetService(db)
+    summary = await asset_service.get_asset_lease_summary(
+        asset_id,
+        period_start=period_start,
+        period_end=period_end,
+        current_user_id=str(current_user.id),
+    )
+    payload = jsonable_encoder(summary)
+    return ResponseHandler.success(
+        data=payload,
+        message="获取资产租赁汇总成功",
+    )
 
 
 @router.post("", response_model=AssetResponse, summary="创建新资产", status_code=201)
