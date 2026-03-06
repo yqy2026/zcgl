@@ -41,8 +41,8 @@ class RentContractHelperMixin:
             if overlapping_assets:
                 if start_date <= contract.end_date and end_date >= contract.start_date:
                     overlapping_asset_names = [
-                        a.property_name
-                        if getattr(a, "property_name", None)
+                        a.asset_name
+                        if getattr(a, "asset_name", None)
                         else getattr(a, "name", None)
                         for a in contract.assets
                         if a.id in overlapping_assets

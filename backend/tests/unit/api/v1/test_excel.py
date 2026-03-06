@@ -210,7 +210,7 @@ class TestCreateExcelConfig:
             field_mapping=[
                 ExcelFieldMapping(
                     excel_column="物业名称",
-                    system_field="property_name",
+                    system_field="asset_name",
                     data_type="string",
                     required=True,
                 )

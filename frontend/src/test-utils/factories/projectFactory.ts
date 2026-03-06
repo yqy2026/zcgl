@@ -10,12 +10,11 @@ import type { Project, ProjectCreate } from '@/types/project';
  */
 const defaultProject: Project = {
   id: 'test-project-1',
-  name: '测试项目',
-  code: 'PRJ001',
-  short_name: '测试',
-  description: '测试项目描述',
-  is_active: true,
+  project_name: '测试项目',
+  project_code: 'PRJ-TEST01-000001',
+  status: 'active',
   data_status: '正常',
+  review_status: 'draft',
   created_at: '2024-01-01T00:00:00Z',
   updated_at: '2024-01-01T00:00:00Z',
   party_relations: [],
@@ -39,8 +38,8 @@ export function createMockProjects(
     const override = typeof overrides === 'function' ? overrides(index) : overrides;
     return createMockProject({
       id: `test-project-${index + 1}`,
-      name: `测试项目 ${index + 1}`,
-      code: `PRJ${String(index + 1).padStart(3, '0')}`,
+      project_name: `测试项目 ${index + 1}`,
+      project_code: `PRJ-TEST${String(index + 1).padStart(2, '0')}-000001`,
       ...override,
     });
   });
@@ -51,8 +50,9 @@ export function createMockProjects(
  */
 export function createMockProjectCreate(overrides?: Partial<ProjectCreate>): ProjectCreate {
   return {
-    name: '测试项目',
-    description: '测试项目描述',
+    project_name: '测试项目',
+    project_code: 'PRJ-TEST01-000001',
+    status: 'active',
     party_relations: [],
     ...overrides,
   };

@@ -253,7 +253,7 @@ class RentContractStatisticsService(RentContractHelperMixin):
             asset_stats.append(
                 {
                     "asset_id": result.id,
-                    "asset_name": result.property_name,
+                    "asset_name": result.asset_name,
                     "asset_address": result.address,
                     "contract_count": result.contract_count,
                     "total_due_amount": total_due,

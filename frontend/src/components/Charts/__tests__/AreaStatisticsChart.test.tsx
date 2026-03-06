@@ -85,9 +85,9 @@ const mockAreaData = {
     { range: '1000㎡以上', count: 40, total_area: 33500, percentage: 26.7 },
   ],
   top_assets_by_area: [
-    { property_name: '资产A', property_area: 5000, rentable_area: 4500, occupancy_rate: 90.0 },
-    { property_name: '资产B', property_area: 4000, rentable_area: 3500, occupancy_rate: 85.0 },
-    { property_name: '资产C', property_area: 3500, rentable_area: 3000, occupancy_rate: 80.0 },
+    { asset_name: '资产A', property_area: 5000, rentable_area: 4500, occupancy_rate: 90.0 },
+    { asset_name: '资产B', property_area: 4000, rentable_area: 3500, occupancy_rate: 85.0 },
+    { asset_name: '资产C', property_area: 3500, rentable_area: 3000, occupancy_rate: 80.0 },
   ],
 };
 

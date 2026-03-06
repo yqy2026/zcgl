@@ -9,7 +9,7 @@ vi.mock('../RentContractFormContext', () => ({
     assets: [
       {
         id: 'asset-1',
-        property_name: '测试资产A',
+        asset_name: '测试资产A',
         address: '测试地址A',
       },
     ],

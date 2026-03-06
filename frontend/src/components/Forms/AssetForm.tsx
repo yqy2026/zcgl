@@ -39,6 +39,14 @@ const normalizeOptionalId = (value: unknown): string | undefined => {
   return normalized !== '' ? normalized : undefined;
 };
 
+const normalizeOptionalText = (value: unknown): string | undefined => {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+  const normalized = value.trim();
+  return normalized !== '' ? normalized : undefined;
+};
+
 /**
  * Form completion progress bar component
  */
@@ -230,9 +238,9 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
 
     valuesChangeTimer.current = setTimeout(() => {
       const requiredFields = [
-        'property_name',
+        'asset_name',
         'owner_party_id',
-        'address',
+        'address_detail',
         'ownership_status',
         'property_nature',
         'usage_status',
@@ -272,9 +280,9 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
         value: Record<string, unknown>
       ): value is AssetCreateRequest => {
         const requiredFields = [
-          'property_name',
+          'asset_name',
           'owner_party_id',
-          'address',
+          'address_detail',
           'ownership_status',
           'property_nature',
           'usage_status',
@@ -292,9 +300,14 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
       };
 
       const ownerPartyId = normalizeOptionalId(values.owner_party_id);
+      const normalizedAddressDetail =
+        normalizeOptionalText(values.address_detail) ?? normalizeOptionalText(values.address);
+      const normalizedAddress = normalizeOptionalText(values.address) ?? normalizedAddressDetail;
       const submitData = {
         ...values,
         owner_party_id: ownerPartyId,
+        address_detail: normalizedAddressDetail,
+        address: normalizedAddress,
         include_in_occupancy_rate: toBoolean(values.include_in_occupancy_rate),
         is_sublease: toBoolean(values.is_sublease),
         is_litigated: toBoolean(values.is_litigated),

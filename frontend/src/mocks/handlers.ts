@@ -65,9 +65,9 @@ export const getAssetsHandler = http.get(`${API_BASE_URL}/assets`, async ({ requ
   if (params.search != null && params.search.length > 0) {
     const filteredItems = assetListResponse.data.items.filter((asset: Asset) =>
       Boolean(
-        asset.property_name != null &&
-        asset.property_name.length > 0 &&
-        asset.property_name.includes(params.search)
+        asset.asset_name != null &&
+        asset.asset_name.length > 0 &&
+        asset.asset_name.includes(params.search)
       )
     );
 
@@ -108,9 +108,9 @@ export const createAssetHandler = http.post(`${API_BASE_URL}/assets`, async ({ r
   const body = await request.json();
   const payload =
     body != null && typeof body === 'object'
-      ? (body as { property_name?: string; propertyName?: string })
+      ? (body as { asset_name?: string; propertyName?: string })
       : {};
-  const propertyName = payload.property_name ?? payload.propertyName;
+  const propertyName = payload.asset_name ?? payload.propertyName;
 
   // 模拟验证错误
   if (propertyName == null || propertyName === '') {

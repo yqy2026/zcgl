@@ -120,6 +120,7 @@ export const OWNERSHIP_API = {
 export const PROJECT_API = {
   LIST: '/projects',
   DETAIL: (id: string) => `/projects/${id}`,
+  ASSETS: (id: string) => `/projects/${id}/assets`,
   CREATE: '/projects',
   UPDATE: (id: string) => `/projects/${id}`,
   DELETE: (id: string) => `/projects/${id}`,

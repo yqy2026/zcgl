@@ -222,7 +222,7 @@ class QueryOptimizer:
             # 添加搜索条件
             if search:
                 search_conditions = [
-                    Asset.property_name.ilike(f"%{search}%"),
+                    Asset.asset_name.ilike(f"%{search}%"),
                     Asset.address.ilike(f"%{search}%"),
                     Party.name.ilike(f"%{search}%"),
                 ]
@@ -335,7 +335,7 @@ class DatabaseOptimizer:
 
         indexes = [  # pragma: no cover
             # 资产相关索引
-            Index("idx_asset_property_name", Asset.property_name),  # pragma: no cover
+            Index("idx_asset_asset_name", Asset.asset_name),  # pragma: no cover
             Index("idx_asset_address", Asset.address),  # pragma: no cover
             Index(
                 "idx_asset_ownership_status", Asset.ownership_status
@@ -351,7 +351,7 @@ class DatabaseOptimizer:
                 "idx_asset_status_usage", Asset.ownership_status, Asset.usage_status
             ),  # pragma: no cover
             Index(
-                "idx_asset_search", Asset.property_name, Asset.address
+                "idx_asset_search", Asset.asset_name, Asset.address
             ),  # pragma: no cover
         ]  # pragma: no cover
 

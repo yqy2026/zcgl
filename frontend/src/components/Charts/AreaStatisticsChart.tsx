@@ -430,7 +430,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({ filters, heig
             <div className={styles.detailList}>
               {data?.top_assets_by_area?.map((asset, index) => (
                 <div
-                  key={asset.property_name}
+                  key={asset.asset_name}
                   className={
                     index < (data.top_assets_by_area?.length ?? 0) - 1
                       ? styles.detailItem
@@ -439,7 +439,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({ filters, heig
                 >
                   <div className={styles.topAssetHeader}>
                     <div className={styles.topAssetLeft}>
-                      <Text strong>{asset.property_name}</Text>
+                      <Text strong>{asset.asset_name}</Text>
                       <br />
                       <Text type="secondary" className={styles.detailMeta}>
                         房产面积: {asset.property_area?.toLocaleString()} ㎡

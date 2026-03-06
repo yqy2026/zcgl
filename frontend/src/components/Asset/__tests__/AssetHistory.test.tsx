@@ -292,7 +292,7 @@ describe('AssetHistory', () => {
         change_type: 'create',
         operator: '张三',
         operation_time: '2024-01-01T00:00:00.000Z',
-        changed_fields: ['property_name'],
+        changed_fields: ['asset_name'],
       },
       {
         id: '2',

@@ -111,7 +111,7 @@ class TestQueryBuilderSecurityIntegration:
         qb = QueryBuilder(Asset)
 
         # Include both safe and blocked fields
-        search_fields = ["property_name", "manager_name", "address"]
+        search_fields = ["asset_name", "manager_name", "address"]
 
         # Should not raise error - blocked fields skipped silently
         query = qb.build_query(
@@ -149,7 +149,7 @@ class TestQueryBuilderSecurityIntegration:
         sort_fields = [
             "created_at",
             "updated_at",
-            "property_name",
+            "asset_name",
             "actual_property_area",
         ]
 

@@ -486,7 +486,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
                 <Select.Option key={asset.id} value={asset.id}>
                   <div>
                     <Space>
-                      <span>{asset.property_name}</span>
+                      <span>{asset.asset_name}</span>
                       <Tag
                         color={
                           asset.similarity >= 80

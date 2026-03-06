@@ -340,8 +340,8 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
             columns={[
               {
                 title: '物业名称',
-                dataIndex: 'property_name',
-                key: 'property_name',
+                dataIndex: 'asset_name',
+                key: 'asset_name',
               },
               {
                 title: '地址',

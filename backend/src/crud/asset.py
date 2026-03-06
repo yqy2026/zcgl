@@ -418,11 +418,11 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
     async def get_by_name_async(
         self,
         db: AsyncSession,
-        property_name: str,
+        asset_name: str,
         include_deleted: bool = False,
     ) -> Asset | None:
         stmt = select(Asset).options(*self._asset_projection_load_options()).filter(
-            Asset.property_name == property_name
+            Asset.asset_name == asset_name
         )
         if not include_deleted:
             stmt = stmt.filter(self._not_deleted_clause(Asset.data_status))
@@ -449,7 +449,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         qb_filters = self._normalize_filters(filters)
         normalized_sort_field = self._normalize_sort_field(sort_field)
 
-        non_pii_search_fields = ["property_name", "business_category"]
+        non_pii_search_fields = ["asset_name", "business_category"]
         pii_search_fields = ["address"]
         search_conditions: list[Any] | None = None
         if search:
@@ -586,7 +586,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         history = AssetHistory()
         history.asset_id = db_obj.id
         history.operation_type = "CREATE"
-        history.description = f"创建资产: {db_obj.property_name}"
+        history.description = f"创建资产: {db_obj.asset_name}"
         history.operator = operator
         history.ip_address = ip_address
         history.user_agent = user_agent
@@ -978,17 +978,17 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         matched_asset_ids: list[str] = await _scalars_all(result)
         return [str(asset_id) for asset_id in matched_asset_ids]
 
-    async def get_by_property_names_async(
+    async def get_by_asset_names_async(
         self,
         db: AsyncSession,
-        property_names: list[str],
+        asset_names: list[str],
         exclude_deleted: bool = True,
         decrypt: bool = False,
     ) -> list[Asset]:
         """批量获取资产（按属性名列表），用于导入去重检查"""
-        if not property_names:
+        if not asset_names:
             return []
-        stmt = select(Asset).where(Asset.property_name.in_(property_names))
+        stmt = select(Asset).where(Asset.asset_name.in_(asset_names))
         if exclude_deleted:
             stmt = stmt.where(Asset.data_status != DataStatusValues.ASSET_DELETED)
         result = await db.execute(stmt)

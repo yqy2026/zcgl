@@ -2,158 +2,156 @@
 项目管理相关数据模式
 """
 
+import re
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from pydantic_core import PydanticCustomError
 from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.orm import attributes as orm_attributes
 
+if TYPE_CHECKING:
+    from .asset import AssetListItemResponse
+
+# project_code 格式：PRJ-<SEGMENT>-<SERIAL>
+_PROJECT_CODE_PATTERN = re.compile(r"^PRJ-[A-Z0-9]{4,12}-\d{6}$")
+
+_VALID_STATUSES = {"planning", "active", "paused", "completed", "terminated"}
+
 
 class ProjectBase(BaseModel):
-    """项目基础模式"""
+    """项目基础模式（仅包含规格 §3.2 冻结字段）。"""
 
-    name: str = Field(..., title="项目名称", min_length=1, max_length=200)
-    short_name: str | None = Field(None, title="项目简称", max_length=100)
-    code: str | None = Field(None, title="项目编码", min_length=1, max_length=100)
-    project_type: str | None = Field(None, title="项目类型", max_length=50)
-    project_scale: str | None = Field(None, title="项目规模", max_length=50)
-    project_status: str = Field("规划中", title="项目状态", max_length=50)
-    start_date: str | None = Field(None, title="开始日期")
-    end_date: str | None = Field(None, title="结束日期")
-    expected_completion_date: str | None = Field(None, title="预计完成日期")
-    actual_completion_date: str | None = Field(None, title="实际完成日期")
-    address: str | None = Field(None, title="项目地址", max_length=500)
-    city: str | None = Field(None, title="城市", max_length=100)
-    district: str | None = Field(None, title="区域", max_length=100)
-    province: str | None = Field(None, title="省份", max_length=100)
-    project_manager: str | None = Field(None, title="项目经理", max_length=100)
-    project_phone: str | None = Field(None, title="项目电话", max_length=50)
-    project_email: str | None = Field(None, title="项目邮箱", max_length=100)
-    total_investment: float | None = Field(None, title="总投资")
-    planned_investment: float | None = Field(None, title="计划投资")
-    actual_investment: float | None = Field(None, title="实际投资")
-    project_budget: float | None = Field(None, title="项目预算")
-    project_description: str | None = Field(None, title="项目描述")
-    project_objectives: str | None = Field(None, title="项目目标")
-    project_scope: str | None = Field(None, title="项目范围")
-    management_entity: str | None = Field(
-        None, title="管理单位（DEPRECATED）", max_length=200
-    )
-    organization_id: str | None = Field(None, title="所属组织ID（DEPRECATED）")
-    manager_party_id: str | None = Field(None, title="经营管理主体ID")
-    ownership_entity: str | None = Field(
-        None, title="权属单位（DEPRECATED）", max_length=200
-    )
-    construction_company: str | None = Field(None, title="施工单位", max_length=200)
-    design_company: str | None = Field(None, title="设计单位", max_length=200)
-    supervision_company: str | None = Field(None, title="监理单位", max_length=200)
-    is_active: bool = Field(True, title="是否启用")
+    project_name: str = Field(..., title="项目名称", min_length=1, max_length=200)
+    project_code: str | None = Field(None, title="项目编码", min_length=1, max_length=100)
+    status: str = Field("planning", title="业务状态", max_length=20)
+    manager_party_id: str | None = Field(None, title="运营管理主体ID")
     data_status: str = Field("正常", title="数据状态", max_length=20)
 
-    @field_validator("code")
+    @field_validator("status")
     @classmethod
-    def validate_code(cls, v: str | None) -> str | None:
-        """验证项目编码格式"""
-        if v is not None:  # pragma: no cover
-            # 验证编码格式：[前缀][年月][序号]
-            import re  # pragma: no cover
+    def validate_status(cls, v: str) -> str:
+        if v not in _VALID_STATUSES:
+            raise PydanticCustomError(
+                "invalid_project_status",
+                f"项目状态必须为 {sorted(_VALID_STATUSES)} 之一",
+                {},
+            )
+        return v
 
-            pattern = r"^[A-Z]{2}\d{7,8}$"  # pragma: no cover
-            if not re.match(pattern, v):  # pragma: no cover
-                raise PydanticCustomError(  # pragma: no cover
-                    "invalid_project_code",
-                    "项目编码格式必须为: [2字母前缀][4位年月][3位序号]，例如: PJ2509001 或 PJ25091001",
-                    {},
-                )  # pragma: no cover
-            return v.upper()  # pragma: no cover
-        return v  # pragma: no cover
+    @field_validator("project_code")
+    @classmethod
+    def validate_project_code(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        v = v.strip().upper()
+        if not _PROJECT_CODE_PATTERN.match(v):
+            raise PydanticCustomError(
+                "invalid_project_code",
+                "项目编码格式必须为 PRJ-<4-12位大写字母数字>-<6位序号>，例如: PRJ-ABCD01-000001",
+                {},
+            )
+        return v
+
+
+class ProjectPartyRelationInput(BaseModel):
+    """项目主体关系入参（当前仅支持 owner 关系）。"""
+
+    party_id: str = Field(..., title="主体ID", min_length=1)
+    relation_type: str = Field("owner", title="关系类型", max_length=20)
+    is_primary: bool = Field(True, title="是否主关系")
+    is_active: bool = Field(True, title="是否生效")
+
+    @field_validator("party_id")
+    @classmethod
+    def validate_party_id(cls, v: str) -> str:
+        party_id = v.strip()
+        if party_id == "":
+            raise PydanticCustomError(
+                "invalid_party_id",
+                "主体ID不能为空",
+                {},
+            )
+        return party_id
+
+    @field_validator("relation_type")
+    @classmethod
+    def validate_relation_type(cls, v: str) -> str:
+        relation_type = v.strip()
+        if relation_type != "owner":
+            raise PydanticCustomError(
+                "invalid_relation_type",
+                "当前仅支持 owner 关系类型",
+                {},
+            )
+        return relation_type
 
 
 class ProjectCreate(ProjectBase):
     """创建项目模式"""
 
-    ownership_relations: list[dict[str, Any]] | None = Field(None, title="权属方关系")
-    ownership_ids: list[str] | None = Field(None, title="权属方ID列表（DEPRECATED）")
-
+    party_relations: list[ProjectPartyRelationInput] | None = Field(
+        None, title="主体关系"
+    )
+    organization_id: str | None = Field(None, title="关联组织ID（用于推断 manager_party_id）")
 
 class ProjectUpdate(BaseModel):
-    """更新项目模式"""
+    """更新项目模式（所有字段可选）。"""
 
-    name: str | None = Field(None, title="项目名称", min_length=1, max_length=200)
-    short_name: str | None = Field(None, title="项目简称", max_length=100)
-    code: str | None = Field(None, title="项目编码", min_length=1, max_length=100)
-    project_type: str | None = Field(None, title="项目类型", max_length=50)
-    project_scale: str | None = Field(None, title="项目规模", max_length=50)
-    project_status: str | None = Field(None, title="项目状态", max_length=50)
-    start_date: str | None = Field(None, title="开始日期")
-    end_date: str | None = Field(None, title="结束日期")
-    expected_completion_date: str | None = Field(None, title="预计完成日期")
-    actual_completion_date: str | None = Field(None, title="实际完成日期")
-    address: str | None = Field(None, title="项目地址", max_length=500)
-    city: str | None = Field(None, title="城市", max_length=100)
-    district: str | None = Field(None, title="区域", max_length=100)
-    province: str | None = Field(None, title="省份", max_length=100)
-    project_manager: str | None = Field(None, title="项目经理", max_length=100)
-    project_phone: str | None = Field(None, title="项目电话", max_length=50)
-    project_email: str | None = Field(None, title="项目邮箱", max_length=100)
-    total_investment: float | None = Field(None, title="总投资")
-    planned_investment: float | None = Field(None, title="计划投资")
-    actual_investment: float | None = Field(None, title="实际投资")
-    project_budget: float | None = Field(None, title="项目预算")
-    project_description: str | None = Field(None, title="项目描述")
-    project_objectives: str | None = Field(None, title="项目目标")
-    project_scope: str | None = Field(None, title="项目范围")
-    management_entity: str | None = Field(
-        None, title="管理单位（DEPRECATED）", max_length=200
-    )
-    organization_id: str | None = Field(None, title="所属组织ID（DEPRECATED）")
-    manager_party_id: str | None = Field(None, title="经营管理主体ID")
-    ownership_entity: str | None = Field(
-        None, title="权属单位（DEPRECATED）", max_length=200
-    )
-    construction_company: str | None = Field(None, title="施工单位", max_length=200)
-    design_company: str | None = Field(None, title="设计单位", max_length=200)
-    supervision_company: str | None = Field(None, title="监理单位", max_length=200)
-    is_active: bool | None = Field(None, title="是否启用")
+    project_name: str | None = Field(None, title="项目名称", min_length=1, max_length=200)
+    project_code: str | None = Field(None, title="项目编码", min_length=1, max_length=100)
+    status: str | None = Field(None, title="业务状态", max_length=20)
+    manager_party_id: str | None = Field(None, title="运营管理主体ID")
     data_status: str | None = Field(None, title="数据状态", max_length=20)
-    ownership_relations: list[dict[str, Any]] | None = Field(None, title="权属方关系")
-    ownership_ids: list[str] | None = Field(None, title="权属方ID列表（DEPRECATED）")
+    party_relations: list[ProjectPartyRelationInput] | None = Field(
+        None, title="主体关系"
+    )
 
-    @field_validator("code")
+    @field_validator("project_code")
     @classmethod
-    def validate_code(cls, v: str | None) -> str | None:
-        """验证项目编码格式"""
-        if v is not None:  # pragma: no cover
-            # 验证编码格式：[前缀][年月][序号]
-            import re  # pragma: no cover
+    def validate_project_code(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        v = v.strip().upper()
+        if not _PROJECT_CODE_PATTERN.match(v):
+            raise PydanticCustomError(
+                "invalid_project_code",
+                "项目编码格式必须为 PRJ-<4-12位大写字母数字>-<6位序号>，例如: PRJ-ABCD01-000001",
+                {},
+            )
+        return v
 
-            pattern = r"^[A-Z]{2}\d{7,8}$"  # pragma: no cover
-            if not re.match(pattern, v):  # pragma: no cover
-                raise PydanticCustomError(  # pragma: no cover
-                    "invalid_project_code",
-                    "项目编码格式必须为: [2字母前缀][4位年月][3位序号]，例如: PJ2509001 或 PJ25091001",
-                    {},
-                )  # pragma: no cover
-            return v.upper()  # pragma: no cover
-        return v  # pragma: no cover
+    @field_validator("status")
+    @classmethod
+    def validate_status(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        if v not in _VALID_STATUSES:
+            raise PydanticCustomError(
+                "invalid_project_status",
+                f"项目状态必须为 {sorted(_VALID_STATUSES)} 之一",
+                {},
+            )
+        return v
 
 
 class ProjectResponse(ProjectBase):
-    """项目响应模式"""
+    """项目响应模式。"""
 
     id: str
-    is_active: bool
     data_status: str
+    review_status: str
+    review_by: str | None = None
+    reviewed_at: datetime | None = None
+    review_reason: str | None = None
     created_at: datetime
     updated_at: datetime
-    created_by: str | None
-    updated_by: str | None
+    created_by: str | None = None
+    updated_by: str | None = None
     asset_count: int = 0
-    ownership_relations: list[dict[str, Any]] | None = None
     party_relations: list[dict[str, Any]] = Field(
-        default_factory=list, title="主体关系（兼容 ownership_relations 转换）"
+        default_factory=list, title="主体关系"
     )
 
     @staticmethod
@@ -168,17 +166,16 @@ class ProjectResponse(ProjectBase):
         }
         ownership = getattr(relation, "ownership", None)
         if ownership is not None:
-            relation_dict["ownership_name"] = getattr(ownership, "name", None)
-            relation_dict["ownership_code"] = getattr(ownership, "code", None)
-            relation_dict["ownership_short_name"] = getattr(ownership, "short_name", None)
+            relation_dict["ownership_name"] = getattr(ownership, "project_name", None) or getattr(ownership, "name", None)
+            relation_dict["ownership_code"] = getattr(ownership, "project_code", None) or getattr(ownership, "code", None)
         return relation_dict
 
     @classmethod
-    def _serialize_ownership_relations(cls, v: Any) -> list[dict[str, Any]] | Any:
+    def _serialize_ownership_relations(cls, v: Any) -> list[dict[str, Any]]:
         if v is None:
-            return None
-        if not hasattr(v, "__iter__") or isinstance(v, dict):
-            return v
+            return []
+        if isinstance(v, dict) or not hasattr(v, "__iter__"):
+            return []
 
         result: list[dict[str, Any]] = []
         for relation in v:
@@ -193,11 +190,8 @@ class ProjectResponse(ProjectBase):
 
     @staticmethod
     def _build_party_relations(
-        ownership_relations: list[dict[str, Any]] | None,
+        ownership_relations: list[dict[str, Any]],
     ) -> list[dict[str, Any]]:
-        if ownership_relations is None:
-            return []
-
         party_relations: list[dict[str, Any]] = []
         for relation in ownership_relations:
             if not isinstance(relation, dict):
@@ -240,9 +234,9 @@ class ProjectResponse(ProjectBase):
             rel_state = state.attrs.ownership_relations
             rel_value = rel_state.loaded_value
             no_value = getattr(orm_attributes, "NO_VALUE", None)
-            data["ownership_relations"] = None if rel_value is no_value else rel_value
+            data["party_relations"] = [] if rel_value is no_value else rel_value
         except Exception:
-            data["ownership_relations"] = None
+            data["party_relations"] = []
 
         if hasattr(v, "asset_count"):
             data["asset_count"] = getattr(v, "asset_count")
@@ -252,19 +246,13 @@ class ProjectResponse(ProjectBase):
         if "updated_by" not in data:
             data["updated_by"] = getattr(v, "updated_by", None)
 
-        data.setdefault("party_relations", data.get("ownership_relations"))
+        data.setdefault("party_relations", [])
         return data
-
-    @field_validator("ownership_relations", mode="before")
-    @classmethod
-    def convert_ownership_relations(cls, v: Any) -> Any:
-        """转换权属方关系对象为字典格式"""
-        return cls._serialize_ownership_relations(v)
 
     @field_validator("party_relations", mode="before")
     @classmethod
     def convert_party_relations(cls, v: Any) -> list[dict[str, Any]]:
-        """兼容 ownership_relations 输入并统一输出 party_relations。"""
+        """转换主体关系对象并统一输出 party_relations。"""
         if v is None:
             return []
 
@@ -276,15 +264,12 @@ class ProjectResponse(ProjectBase):
                 return [dict(item) if isinstance(item, dict) else item for item in v]
 
         ownership_relations = cls._serialize_ownership_relations(v)
-        if isinstance(ownership_relations, list):
-            return cls._build_party_relations(ownership_relations)
-        return []
+        return cls._build_party_relations(ownership_relations)
 
     @model_validator(mode="after")
     def ensure_party_relations(self) -> "ProjectResponse":
-        if len(self.party_relations) > 0:
-            return self
-        self.party_relations = self._build_party_relations(self.ownership_relations)
+        if self.party_relations is None:
+            self.party_relations = []
         return self
 
     model_config = ConfigDict(from_attributes=True)
@@ -300,6 +285,23 @@ class ProjectListResponse(BaseModel):
     pages: int
 
 
+class ProjectAssetSummary(BaseModel):
+    """项目有效资产面积汇总。"""
+
+    total_assets: int
+    total_rentable_area: float
+    total_rented_area: float
+    occupancy_rate: float
+
+
+class ProjectActiveAssetsResponse(BaseModel):
+    """项目有效关联资产列表响应。"""
+
+    items: list["AssetListItemResponse"]
+    total: int
+    summary: ProjectAssetSummary
+
+
 class ProjectDeleteResponse(BaseModel):
     """项目删除响应模式"""
 
@@ -312,12 +314,8 @@ class ProjectSearchRequest(BaseModel):
     """项目搜索请求模式"""
 
     keyword: str | None = Field(None, description="搜索关键词")
-    is_active: bool | None = Field(None, description="是否启用")
-    project_type: str | None = Field(None, description="项目类型")
-    project_status: str | None = Field(None, description="项目状态")
-    city: str | None = Field(None, description="城市")
-    ownership_id: str | None = Field(None, description="权属方ID")
-    ownership_entity: str | None = Field(None, description="权属方名称")
+    status: str | None = Field(None, description="业务状态")
+    owner_party_id: str | None = Field(None, description="产权方主体ID")
     page: int = Field(1, ge=1, description="页码")
     page_size: int = Field(10, ge=1, le=100, description="每页大小")
 
@@ -325,11 +323,5 @@ class ProjectSearchRequest(BaseModel):
 class ProjectStatisticsResponse(BaseModel):
     """项目统计响应模式"""
 
-    total_count: int
-    active_count: int
-    inactive_count: int
-    type_distribution: dict[str, int] | None = None
-    status_distribution: dict[str, int] | None = None
-    city_distribution: dict[str, int] | None = None
-    investment_stats: dict[str, float] | None = None
-    recent_created: list[dict[str, Any]] | None = None
+    total_projects: int
+    active_projects: int

@@ -248,8 +248,8 @@ describe('ContractDetailInfo V2 Tests', () => {
     payment_cycle: 'quarterly',
     contract_status: '有效',
     assets: [
-      { id: 'asset_001', property_name: '物业A' },
-      { id: 'asset_002', property_name: '物业B' },
+      { id: 'asset_001', asset_name: '物业A' },
+      { id: 'asset_002', asset_name: '物业B' },
     ],
     rent_terms: [{ start_date: '2026-01-01', end_date: '2026-12-31', monthly_rent: 10000 }],
   };
@@ -272,7 +272,7 @@ describe('ContractDetailInfo V2 Tests', () => {
     monthly_rent_base: 12000,
     payment_cycle: 'monthly',
     contract_status: '有效',
-    assets: [{ id: 'asset_001', property_name: '物业A' }],
+    assets: [{ id: 'asset_001', asset_name: '物业A' }],
     rent_terms: [],
   };
 

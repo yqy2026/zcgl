@@ -1,11 +1,11 @@
 """项目模型。"""
 
+import enum
 import uuid
-from datetime import UTC, date, datetime
-from decimal import Decimal
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DECIMAL, Boolean, Date, DateTime, ForeignKey, String, Text
+from sqlalchemy import DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..database import Base
@@ -15,8 +15,25 @@ if TYPE_CHECKING:
     from .party import Party
 
 
+class ProjectStatus(str, enum.Enum):
+    """项目业务状态（英文代码值）。"""
+    PLANNING = "planning"
+    ACTIVE = "active"
+    PAUSED = "paused"
+    COMPLETED = "completed"
+    TERMINATED = "terminated"
+
+
+class ProjectReviewStatus(str, enum.Enum):
+    """项目审核状态（英文代码值）。"""
+    DRAFT = "draft"
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
 class Project(Base):
-    """项目模型"""
+    """项目模型（运营管理归集单元）。"""
 
     __tablename__ = "projects"
 
@@ -24,70 +41,37 @@ class Project(Base):
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
     )
 
-    name: Mapped[str] = mapped_column(String(200), nullable=False, comment="项目名称")
-    short_name: Mapped[str | None] = mapped_column(String(100), comment="项目简称")
-    code: Mapped[str] = mapped_column(
-        String(100), unique=True, nullable=False, comment="项目编码"
+    project_name: Mapped[str] = mapped_column(String(200), nullable=False, comment="项目名称")
+    project_code: Mapped[str] = mapped_column(
+        String(100), unique=True, nullable=False, comment="项目编码（PRJ-<SEGMENT>-<SERIAL>）"
     )
-    project_type: Mapped[str | None] = mapped_column(String(50), comment="项目类型")
-    project_scale: Mapped[str | None] = mapped_column(String(50), comment="项目规模")
-    project_status: Mapped[str] = mapped_column(
-        String(50), nullable=False, default="规划中", comment="项目状态"
+    status: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default=ProjectStatus.PLANNING.value,
+        comment="业务状态：planning/active/paused/completed/terminated",
     )
-    start_date: Mapped[date | None] = mapped_column(Date, comment="开始日期")
-    end_date: Mapped[date | None] = mapped_column(Date, comment="结束日期")
-    expected_completion_date: Mapped[date | None] = mapped_column(
-        Date, comment="预计完成日期"
-    )
-    actual_completion_date: Mapped[date | None] = mapped_column(
-        Date, comment="实际完成日期"
-    )
-
-    address: Mapped[str | None] = mapped_column(String(500), comment="项目地址")
-    city: Mapped[str | None] = mapped_column(String(100), comment="城市")
-    district: Mapped[str | None] = mapped_column(String(100), comment="区域")
-    province: Mapped[str | None] = mapped_column(String(100), comment="省份")
-
-    project_manager: Mapped[str | None] = mapped_column(String(100), comment="项目经理")
-    project_phone: Mapped[str | None] = mapped_column(String(50), comment="项目电话")
-    project_email: Mapped[str | None] = mapped_column(String(100), comment="项目邮箱")
-
-    total_investment: Mapped[Decimal | None] = mapped_column(
-        DECIMAL(15, 2), comment="总投资"
-    )
-    planned_investment: Mapped[Decimal | None] = mapped_column(
-        DECIMAL(15, 2), comment="计划投资"
-    )
-    actual_investment: Mapped[Decimal | None] = mapped_column(
-        DECIMAL(15, 2), comment="实际投资"
-    )
-    project_budget: Mapped[Decimal | None] = mapped_column(
-        DECIMAL(15, 2), comment="项目预算"
-    )
-
-    project_description: Mapped[str | None] = mapped_column(Text, comment="项目描述")
-    project_objectives: Mapped[str | None] = mapped_column(Text, comment="项目目标")
-    project_scope: Mapped[str | None] = mapped_column(Text, comment="项目范围")
 
     manager_party_id: Mapped[str | None] = mapped_column(
         String,
         ForeignKey("parties.id"),
         index=True,
-        comment="项目经营管理主体ID",
-    )
-    construction_company: Mapped[str | None] = mapped_column(
-        String(200), comment="施工单位"
-    )
-    design_company: Mapped[str | None] = mapped_column(String(200), comment="设计单位")
-    supervision_company: Mapped[str | None] = mapped_column(
-        String(200), comment="监理单位"
+        comment="项目运营管理主体ID",
     )
 
-    is_active: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=True, comment="是否启用"
+    # 审核字段
+    review_status: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default=ProjectReviewStatus.DRAFT.value,
+        comment="审核状态：draft/pending/approved/rejected",
     )
+    review_by: Mapped[str | None] = mapped_column(String(100), comment="审核人")
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime, comment="审核时间")
+    review_reason: Mapped[str | None] = mapped_column(Text, comment="审核原因（反审核时必填）")
+
     data_status: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="正常", comment="数据状态"
+        String(20), nullable=False, default="正常", comment="数据状态：正常/已删除"
     )
 
     created_at: Mapped[datetime] = mapped_column(
@@ -117,21 +101,23 @@ class Project(Base):
     )
 
     def __init__(self, **kwargs: object) -> None:
-        # Phase4 Step4 兼容：旧列已删除，避免构造时透传旧键。
-        kwargs.pop("management_entity", None)
-        legacy_organization_id = kwargs.pop("organization_id", None)
-        kwargs.pop("ownership_entity", None)
-        manager_party_id = kwargs.get("manager_party_id")
-        if (
-            (manager_party_id is None or str(manager_party_id).strip() == "")
-            and legacy_organization_id is not None
-            and str(legacy_organization_id).strip() != ""
+        # 丢弃已废弃的旧字段键，防止构造时报错
+        for _legacy in (
+            "management_entity", "ownership_entity", "organization_id",
+            "name", "code", "project_status", "is_active",
+            "short_name", "project_type", "project_scale",
+            "start_date", "end_date", "expected_completion_date", "actual_completion_date",
+            "address", "city", "district", "province",
+            "project_manager", "project_phone", "project_email",
+            "total_investment", "planned_investment", "actual_investment", "project_budget",
+            "project_description", "project_objectives", "project_scope",
+            "construction_company", "design_company", "supervision_company",
         ):
-            kwargs["manager_party_id"] = str(legacy_organization_id).strip()
+            kwargs.pop(_legacy, None)
         super().__init__(**kwargs)
 
     def __repr__(self) -> str:
-        return f"<Project(id={self.id}, name={self.name}, code={self.code})>"
+        return f"<Project(id={self.id}, project_name={self.project_name}, project_code={self.project_code})>"
 
 
-__all__ = ["Project"]
+__all__ = ["Project", "ProjectStatus", "ProjectReviewStatus"]

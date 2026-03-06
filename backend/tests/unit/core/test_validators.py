@@ -70,7 +70,7 @@ class TestAssetValidator:
 
     def test_validate_asset_data_field_rules(self):
         data = {
-            "property_name": "",
+            "asset_name": "",
             "property_address": "x",
             "ownership_status": "owned",
             "property_nature": "commercial",

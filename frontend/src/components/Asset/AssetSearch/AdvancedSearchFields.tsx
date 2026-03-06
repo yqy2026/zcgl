@@ -128,7 +128,7 @@ export const AdvancedSearchFields = React.memo(function AdvancedSearchFields({
               <Form.Item name="sort_field" noStyle>
                 <Select className={styles.sortFieldSelect} defaultValue="created_at">
                   <Option value="created_at">创建时间</Option>
-                  <Option value="property_name">物业名称</Option>
+                  <Option value="asset_name">物业名称</Option>
                   <Option value="actual_property_area">建筑面积</Option>
                   <Option value="rentable_area">可租面积</Option>
                   <Option value="occupancy_rate">出租率</Option>

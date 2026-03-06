@@ -180,7 +180,7 @@ class TestPropertyCertificateEdgeCases:
         """测试产权证号验证"""
         certificate_data = {
             "certificate_number": "",  # 空证号
-            "property_name": "Test Property",
+            "asset_name": "Test Property",
         }
 
         response = client.post(
@@ -195,7 +195,7 @@ class TestPropertyCertificateEdgeCases:
         """测试产权面积验证"""
         certificate_data = {
             "certificate_number": "CERT-001",
-            "property_name": "Test Property",
+            "asset_name": "Test Property",
             "area": -100.0,  # 负面积
         }
 
@@ -229,7 +229,7 @@ class TestPropertyCertificateEdgeCases:
         """测试创建包含Unicode的产权证"""
         unicode_data = {
             "certificate_number": "测试证号001",
-            "property_name": "测试房产名称",
+            "asset_name": "测试房产名称",
             "address": "北京市朝阳区测试地址",
         }
 
@@ -245,7 +245,7 @@ class TestPropertyCertificateEdgeCases:
         """测试发证日期验证"""
         certificate_data = {
             "certificate_number": "CERT-002",
-            "property_name": "Test Property",
+            "asset_name": "Test Property",
             "issue_date": "invalid-date",  # 无效日期
         }
 
@@ -263,7 +263,7 @@ class TestPropertyCertificateEdgeCases:
 
         certificate_data = {
             "certificate_number": "CERT-003",
-            "property_name": "Test Property",
+            "asset_name": "Test Property",
             "issue_date": (datetime.now() + timedelta(days=30)).isoformat(),  # 未来日期
             "expiry_date": datetime.now().isoformat(),  # 过去日期
         }
@@ -281,7 +281,7 @@ class TestPropertyCertificateEdgeCases:
         # 先创建第一个产权证
         first_certificate = {
             "certificate_number": "DUPLICATE-001",
-            "property_name": "First Property",
+            "asset_name": "First Property",
         }
 
         response1 = client.post(
@@ -293,7 +293,7 @@ class TestPropertyCertificateEdgeCases:
         # 尝试创建相同证号的第二个产权证
         second_certificate = {
             "certificate_number": "DUPLICATE-001",  # 重复证号
-            "property_name": "Second Property",
+            "asset_name": "Second Property",
         }
 
         response2 = client.post(

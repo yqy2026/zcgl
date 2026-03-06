@@ -465,7 +465,7 @@ const PropertyCertificateDetailPage: React.FC = () => {
             >
               {(assetResponse?.items ?? []).map((asset: Asset) => (
                 <Select.Option key={asset.id} value={asset.id}>
-                  {asset.property_name} - {asset.address}
+                  {asset.asset_name} - {asset.address}
                 </Select.Option>
               ))}
             </Select>

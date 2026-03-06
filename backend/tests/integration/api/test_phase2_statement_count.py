@@ -89,7 +89,7 @@ def _seed_assets(
     created_ids: list[str] = []
     for idx in range(count):
         asset = Asset(
-            property_name=f"{name_prefix}-{idx}",
+            asset_name=f"{name_prefix}-{idx}",
             address=f"statement-count-address-{idx}",
             ownership_status="已确权",
             property_nature="商业",

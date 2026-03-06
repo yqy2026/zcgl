@@ -33,7 +33,7 @@ EXPORT_FIELD_MAPPING = {
     "ownership_entity": "权属方",
     "ownership_category": "权属类别",
     "project_name": "项目名称",
-    "property_name": "物业名称",
+    "asset_name": "物业名称",
     "address": "物业地址",
     "land_area": "土地面积(平方米)",
     "actual_property_area": "实际房产面积(平方米)",

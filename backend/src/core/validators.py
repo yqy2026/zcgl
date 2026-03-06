@@ -89,7 +89,7 @@ class AssetValidator(BaseValidator):
     """资产数据验证器"""
 
     REQUIRED_FIELDS = [
-        "property_name",
+        "asset_name",
         "property_address",
         "ownership_status",
         "property_nature",
@@ -114,8 +114,8 @@ class AssetValidator(BaseValidator):
                 errors.append(f"缺少必填字段: {field}")
 
         # 验证物业名称
-        if "property_name" in data:
-            if not cls.validate_length(data["property_name"], 1, 200):
+        if "asset_name" in data:
+            if not cls.validate_length(data["asset_name"], 1, 200):
                 errors.append("物业名称长度应在1-200个字符之间")
 
         # 验证物业地址
@@ -146,14 +146,14 @@ class AssetValidator(BaseValidator):
 
     @classmethod
     async def validate_asset_unique(
-        cls, db: AsyncSession, property_name: str, exclude_id: str | None = None
+        cls, db: AsyncSession, asset_name: str, exclude_id: str | None = None
     ) -> list[str]:
         """
         验证资产唯一性
 
         Args:
             db: 数据库会话
-            property_name: 物业名称
+            asset_name: 物业名称
             exclude_id: 排除的资产ID（用于更新时）
 
         Returns:
@@ -161,13 +161,13 @@ class AssetValidator(BaseValidator):
         """
         from ..models.asset import Asset  # pragma: no cover
 
-        stmt = select(Asset).where(Asset.property_name == property_name)
+        stmt = select(Asset).where(Asset.asset_name == asset_name)
         if exclude_id:
             stmt = stmt.where(Asset.id != exclude_id)
 
         existing = (await db.execute(stmt)).scalars().first()
         if existing:
-            return [f"物业名称 '{property_name}' 已存在"]
+            return [f"物业名称 '{asset_name}' 已存在"]
 
         return []
 

@@ -102,7 +102,7 @@ vi.mock('react-router-dom', async () => {
 
 const renderPage = () => renderWithProviders(<AssetListPage />);
 
-let mockData: Array<{ id: string; property_name: string }> = [];
+let mockData: Array<{ id: string; asset_name: string }> = [];
 let mockIsAssetsInitialLoading = false;
 let mockIsAssetsFetching = false;
 let mockError: Error | null = null;
@@ -146,8 +146,8 @@ describe('AssetListPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockData = [
-      { id: 'asset_1', property_name: '资产A' },
-      { id: 'asset_2', property_name: '资产B' },
+      { id: 'asset_1', asset_name: '资产A' },
+      { id: 'asset_2', asset_name: '资产B' },
     ];
     mockIsAssetsInitialLoading = false;
     mockIsAssetsFetching = false;

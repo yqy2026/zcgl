@@ -63,7 +63,7 @@ export interface RentTerm {
 
 export interface RentContractAsset {
   id: string;
-  property_name: string;
+  asset_name: string;
   address?: string;
   owner_party_name?: string;
   manager_party_name?: string;

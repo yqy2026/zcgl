@@ -80,7 +80,7 @@ class AssetWhitelist(ModelFieldWhitelist):
         # Basic identifiers
         "id",
         # Primary property identifier (public name)
-        "property_name",
+        "asset_name",
         # Public classification fields
         "ownership_status",
         "property_nature",
@@ -121,7 +121,7 @@ class AssetWhitelist(ModelFieldWhitelist):
 
     # Search fields (text fields for partial matching)
     search_fields: ClassVar[set[str]] = {
-        "property_name",  # Primary identifier
+        "asset_name",  # Primary identifier
         "address",  # Address is public record for properties
         "project_name",  # Project names are public
         "notes",  # User's own notes
@@ -146,7 +146,7 @@ class AssetWhitelist(ModelFieldWhitelist):
         "rented_area",
         "cached_occupancy_rate",
         # Alphabetic sorting
-        "property_name",
+        "asset_name",
         "project_name",
         # Version tracking
         "version",
@@ -468,50 +468,30 @@ class ProjectWhitelist(ModelFieldWhitelist):
 
     filter_fields: ClassVar[set[str]] = {
         "id",
-        "name",
-        "short_name",
-        "code",
-        "project_type",
-        "project_scale",
-        "project_status",
-        "start_date",
-        "end_date",
-        "expected_completion_date",
-        "actual_completion_date",
-        "city",
-        "district",
-        "province",
+        "project_name",
+        "project_code",
+        "status",
         "manager_party_id",
-        "is_active",
+        "review_status",
         "data_status",
         DateTimeFields.CREATED_AT,
         DateTimeFields.UPDATED_AT,
     }
 
     search_fields: ClassVar[set[str]] = {
-        "name",
-        "short_name",
-        "code",
-        "address",
-        "city",
-        "district",
-        "province",
+        "project_name",
+        "project_code",
     }
 
     sort_fields: ClassVar[set[str]] = {
-        "name",
-        "code",
-        "project_status",
-        "start_date",
-        "end_date",
+        "project_name",
+        "project_code",
+        "status",
         DateTimeFields.CREATED_AT,
         DateTimeFields.UPDATED_AT,
     }
 
-    blocked_fields: ClassVar[set[str]] = {
-        "project_phone",
-        "project_email",
-    }
+    blocked_fields: ClassVar[set[str]] = set()
 
 
 # ============================================================================

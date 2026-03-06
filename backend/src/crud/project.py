@@ -4,8 +4,10 @@ from sqlalchemy import Select, desc, false, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models.auth import User
+from ..models.party import Party, PartyType
 from ..models.project import Project
 from ..models.project_asset import ProjectAsset
+from ..models.project_relations import ProjectOwnershipRelation
 from ..schemas.project import ProjectCreate, ProjectSearchRequest, ProjectUpdate
 from .base import CRUDBase
 from .query_builder import PartyFilter
@@ -93,18 +95,19 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
         # 移除关系字段（这些字段通过 SQLAlchemy relationship 管理）
         obj_in_data.pop("assets", None)
         obj_in_data.pop("ownership_relations", None)
+        obj_in_data.pop("party_relations", None)
         obj_in_data.pop("ownership_ids", None)
 
         return await super().create(db, obj_in=obj_in_data, commit=commit, **kwargs)
 
     async def get_by_code(self, db: AsyncSession, code: str) -> Project | None:
         """通过编码获取项目"""
-        stmt = select(Project).where(Project.code == code)
+        stmt = select(Project).where(Project.project_code == code)
         return (await db.execute(stmt)).scalars().first()
 
     async def get_by_name(self, db: AsyncSession, name: str) -> Project | None:
         """通过名称获取项目"""
-        stmt = select(Project).where(Project.name == name)
+        stmt = select(Project).where(Project.project_name == name)
         return (await db.execute(stmt)).scalars().first()
 
     async def get_latest_by_code_prefix(
@@ -112,8 +115,8 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
     ) -> Project | None:
         stmt = (
             select(Project)
-            .where(Project.code.like(f"{prefix}%"))
-            .order_by(Project.code.desc())
+            .where(Project.project_code.like(f"{prefix}%"))
+            .order_by(Project.project_code.desc())
             .limit(1)
         )
         return (await db.execute(stmt)).scalars().first()
@@ -135,6 +138,7 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
         # 移除关系字段
         update_data.pop("assets", None)
         update_data.pop("ownership_relations", None)
+        update_data.pop("party_relations", None)
         update_data.pop("ownership_ids", None)
 
         return await super().update(
@@ -168,7 +172,7 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
         *,
         skip: int = 0,
         limit: int = 100,
-        is_active: bool | None = None,
+        status: str | None = None,
         keyword: str | None = None,
         party_filter: PartyFilter | None = None,
         **kwargs: Any,  # 扩展参数，与基类兼容
@@ -179,10 +183,7 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
         if party_filter is not None:
             stmt = await self._apply_project_party_filter(db, stmt, party_filter)
 
-        if is_active is not None:
-            stmt = stmt.where(Project.is_active == is_active)
-
-        stmt = self._apply_project_filters(stmt, keyword=keyword)
+        stmt = self._apply_project_filters(stmt, keyword=keyword, status=status)
         result = await db.execute(stmt.offset(skip).limit(limit))
         return list(result.scalars().all())
 
@@ -191,19 +192,19 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
         stmt: Select[Any],
         *,
         keyword: str | None = None,
-        project_status: str | None = None,
+        status: str | None = None,
     ) -> Select[Any]:
         if keyword:
             like_keyword = f"%{keyword}%"
             stmt = stmt.where(
                 or_(
-                    Project.name.ilike(like_keyword),
-                    Project.code.ilike(like_keyword),
+                    Project.project_name.ilike(like_keyword),
+                    Project.project_code.ilike(like_keyword),
                 )
             )
 
-        if project_status:
-            stmt = stmt.where(Project.project_status == project_status)
+        if status:
+            stmt = stmt.where(Project.status == status)
 
         return stmt
 
@@ -217,24 +218,30 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
         query = self._apply_project_filters(
             select(Project),
             keyword=search_params.keyword,
-            project_status=search_params.project_status,
+            status=search_params.status,
         )
         if party_filter is not None:
             query = await self._apply_project_party_filter(db, query, party_filter)
 
-        # 负责人筛选
-        # Schema ProjectSearchRequest has no project_manager field
-        # This functionality removed in current schema
-
-        # 部门筛选 - Schema doesn't have it. Removed.
-
-        # Ownership filter
-        if search_params.ownership_id:
-            # Complex join might be needed? Or simplified text check if ownership_entity is stored text.
-            # Model has ownership_entity string.
-            # Also has ownerships relation.
-            # For now, let's filter by ownership_entity text if provided.
-            pass
+        if search_params.owner_party_id:
+            owner_party_id = str(search_params.owner_party_id).strip()
+            if owner_party_id != "":
+                mapped_ownership_ids = select(Party.external_ref).where(
+                    Party.id == owner_party_id,
+                    Party.party_type == PartyType.LEGAL_ENTITY.value,
+                    Party.external_ref.is_not(None),
+                    Party.external_ref != "",
+                )
+                relation_project_ids = select(ProjectOwnershipRelation.project_id).where(
+                    ProjectOwnershipRelation.is_active.is_(True),
+                    or_(
+                        ProjectOwnershipRelation.ownership_id == owner_party_id,
+                        ProjectOwnershipRelation.ownership_id.in_(mapped_ownership_ids),
+                    ),
+                )
+                query = query.where(Project.id.in_(relation_project_ids))
+            else:
+                query = query.where(false())
 
         # 计算总数
         total_stmt = select(func.count()).select_from(query.subquery())
@@ -262,9 +269,11 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
 
     async def get_dropdown_options(self, db: AsyncSession) -> list[dict[str, Any]]:
         """获取下拉选项"""
-        stmt = select(Project.id, Project.name).where(Project.is_active.is_(True))
+        stmt = select(Project.id, Project.project_name).where(
+            Project.data_status == "正常"
+        )
         projects = (await db.execute(stmt)).all()
-        return [{"value": p.id, "label": p.name} for p in projects]
+        return [{"value": p.id, "label": p.project_name} for p in projects]
 
     async def get_statistics(
         self,
@@ -273,7 +282,7 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
     ) -> dict[str, Any]:
         """获取统计信息"""
         total_query = select(Project.id)
-        active_query = select(Project.id).where(Project.project_status == "doing")
+        active_query = select(Project.id).where(Project.status == "active")
 
         if party_filter is not None:
             total_query = await self._apply_project_party_filter(
@@ -291,9 +300,7 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
         active_stmt = select(func.count()).select_from(active_query.subquery())
         total = int((await db.execute(total_stmt)).scalar() or 0)
         active = int((await db.execute(active_stmt)).scalar() or 0)
-        # ... logic reduced for brevity, keeping simpler stats in CRUD is okay or move to service?
-        # Keeping minimal here.
-        return {"total_projects": total, "active_projects": active or 0}
+        return {"total_projects": total, "active_projects": active}
 
     async def get_ids_by_filter_async(
         self, db: AsyncSession, ids: list[str]

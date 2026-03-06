@@ -177,18 +177,18 @@ class AsyncAssetBatchService:
             base_updates
         )
 
-        property_name_owner_id: str | None = None
-        property_name_raw = base_updates.get("property_name")
-        property_name = (
-            str(property_name_raw).strip() if property_name_raw is not None else ""
+        asset_name_owner_id: str | None = None
+        asset_name_raw = base_updates.get("asset_name")
+        asset_name = (
+            str(asset_name_raw).strip() if asset_name_raw is not None else ""
         )
-        if property_name != "":
-            base_updates["property_name"] = property_name
+        if asset_name != "":
+            base_updates["asset_name"] = asset_name
             existing_asset = await asset_crud.get_by_name_async(
-                db=self.db, property_name=property_name
+                db=self.db, asset_name=asset_name
             )
             if existing_asset and getattr(existing_asset, "id", None):
-                property_name_owner_id = str(existing_asset.id)
+                asset_name_owner_id = str(existing_asset.id)
 
         for asset_id in asset_ids:
             savepoint = await self.db.begin_nested()
@@ -215,14 +215,14 @@ class AsyncAssetBatchService:
                             asset, "ownership_id", None
                         )
 
-                new_name = update_payload.get("property_name")
-                if new_name and new_name != asset.property_name:
+                new_name = update_payload.get("asset_name")
+                if new_name and new_name != asset.asset_name:
                     if (
-                        property_name_owner_id is not None
-                        and property_name_owner_id != str(asset_id)
+                        asset_name_owner_id is not None
+                        and asset_name_owner_id != str(asset_id)
                     ):
                         raise ValueError("物业名称已存在")
-                    property_name_owner_id = str(asset_id)
+                    asset_name_owner_id = str(asset_id)
 
                 update_schema = AssetUpdate(**update_payload)
                 await asset_crud.update_async(
@@ -343,7 +343,7 @@ class AsyncAssetBatchService:
                         db=self.db,
                         asset_id=asset_id,
                         operation_type="DELETE",
-                        description=f"批量删除资产: {asset.property_name}",
+                        description=f"批量删除资产: {asset.asset_name}",
                         operator=operator,
                         commit=False,
                     )

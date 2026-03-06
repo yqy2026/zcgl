@@ -38,7 +38,7 @@ class AssetTestDataFactory:
     @staticmethod
     def create_asset(**kwargs):
         default_data = {
-            "property_name": f"测试资产-{uuid4().hex[:8]}",
+            "asset_name": f"测试资产-{uuid4().hex[:8]}",
             "address": "北京市朝阳区测试路",
             "ownership_status": "已确权",
             "property_nature": "经营类",

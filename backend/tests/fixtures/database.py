@@ -17,7 +17,7 @@ class DatabaseFixture:
 
         default_data = {
             "ownership_id": None,
-            "property_name": "测试物业",
+            "asset_name": "测试物业",
             "address": "测试地址",
             "ownership_status": "已确权",
             "property_nature": "商业用途",

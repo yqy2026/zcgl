@@ -106,10 +106,10 @@ const ContractTable: React.FC<ContractTableProps> = ({
         const assetList = record.assets ?? [];
         if (assetList.length === 0) return '未关联';
         if (assetList.length === 1) {
-          return <Tooltip title={assetList[0].address ?? ''}>{assetList[0].property_name}</Tooltip>;
+          return <Tooltip title={assetList[0].address ?? ''}>{assetList[0].asset_name}</Tooltip>;
         }
         return (
-          <Tooltip title={assetList.map(a => a.property_name).join(', ')}>
+          <Tooltip title={assetList.map(a => a.asset_name).join(', ')}>
             <Tag className={styles.assetCountTag}>{assetList.length}个资产</Tag>
           </Tooltip>
         );

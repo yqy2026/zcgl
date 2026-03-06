@@ -34,7 +34,7 @@ export interface ExportTaskWithApiFields {
 }
 
 export const AVAILABLE_EXPORT_FIELDS: ExportFieldOption[] = [
-  { key: 'property_name', label: '物业名称', required: true },
+  { key: 'asset_name', label: '物业名称', required: true },
   { key: 'owner_party_name', label: '权属方', required: true },
   { key: 'manager_party_name', label: '经营管理方' },
   { key: 'address', label: '所在地址', required: true },

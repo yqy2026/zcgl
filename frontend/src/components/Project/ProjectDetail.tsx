@@ -24,17 +24,17 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onEdit }) => {
     return new Date(dateStr).toLocaleDateString('zh-CN');
   };
 
-  const getStatusColor = (status?: string) => {
-    switch (status) {
-      case '正常':
-        return 'green';
-      case '禁用':
-        return 'red';
-      case '删除':
-        return 'default';
-      default:
-        return 'default';
-    }
+  const statusMap: Record<string, { color: string; text: string; active: boolean }> = {
+    planning: { color: 'default', text: '规划中', active: false },
+    active: { color: 'green', text: '进行中', active: true },
+    paused: { color: 'orange', text: '已暂停', active: false },
+    completed: { color: 'blue', text: '已完成', active: false },
+    terminated: { color: 'red', text: '已终止', active: false },
+  };
+  const statusMeta = statusMap[project.status] ?? {
+    color: 'default',
+    text: project.status,
+    active: false,
   };
 
   return (
@@ -44,10 +44,10 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onEdit }) => {
         <div className={styles.headerRow}>
           <div>
             <Space>
-              <h2 className={styles.projectTitle}>{project.name}</h2>
+              <h2 className={styles.projectTitle}>{project.project_name}</h2>
               <Badge
-                status={project.is_active ? 'success' : 'error'}
-                text={project.is_active ? '启用' : '禁用'}
+                status={statusMeta.active ? 'success' : 'default'}
+                text={statusMeta.text}
               />
             </Space>
           </div>
@@ -63,19 +63,13 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onEdit }) => {
       <Card title="项目信息" size="small" className={styles.sectionCard}>
         <Descriptions column={2} size="small">
           <Descriptions.Item label="项目编码">
-            <Text code>{project.code}</Text>
+            <Text code>{project.project_code}</Text>
+          </Descriptions.Item>
+          <Descriptions.Item label="业务状态">
+            <Tag color={statusMeta.color}>{statusMeta.text}</Tag>
           </Descriptions.Item>
           <Descriptions.Item label="项目状态">
-            <Tag color={getStatusColor(project.data_status)}>{project.data_status}</Tag>
-          </Descriptions.Item>
-          <Descriptions.Item label="项目描述">
-            <Text>
-              {project.description !== null &&
-              project.description !== undefined &&
-              project.description !== ''
-                ? project.description
-                : '-'}
-            </Text>
+            <Tag color={project.data_status === '正常' ? 'green' : 'default'}>{project.data_status}</Tag>
           </Descriptions.Item>
           <Descriptions.Item label="关联资产数量">
             <Badge count={project.asset_count ?? 0} />

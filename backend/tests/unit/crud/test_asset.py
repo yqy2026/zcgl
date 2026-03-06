@@ -36,7 +36,7 @@ class TestCRUDAssetGet:
     async def test_get_existing_asset(self, crud: AssetCRUD, mock_db: MagicMock) -> None:
         mock_asset = MagicMock(spec=Asset)
         mock_asset.id = "1"
-        mock_asset.property_name = "测试物业"
+        mock_asset.asset_name = "测试物业"
 
         with patch.object(crud, "get", new_callable=AsyncMock, return_value=mock_asset):
             result = await crud.get(mock_db, id="1")
@@ -105,7 +105,7 @@ class TestCRUDAssetSoftDeleteGuard:
 class TestCRUDAssetGetByName:
     async def test_get_by_name_exists(self, crud: AssetCRUD, mock_db: MagicMock) -> None:
         mock_asset = MagicMock(spec=Asset)
-        mock_asset.property_name = "测试物业A"
+        mock_asset.asset_name = "测试物业A"
 
         with patch.object(
             crud,
@@ -113,10 +113,10 @@ class TestCRUDAssetGetByName:
             new_callable=AsyncMock,
             return_value=mock_asset,
         ):
-            result = await crud.get_by_name_async(mock_db, property_name="测试物业A")
+            result = await crud.get_by_name_async(mock_db, asset_name="测试物业A")
 
         assert result is not None
-        assert result.property_name == "测试物业A"
+        assert result.asset_name == "测试物业A"
 
     async def test_get_by_name_not_exists(self, crud: AssetCRUD, mock_db: MagicMock) -> None:
         with patch.object(
@@ -125,7 +125,7 @@ class TestCRUDAssetGetByName:
             new_callable=AsyncMock,
             return_value=None,
         ):
-            result = await crud.get_by_name_async(mock_db, property_name="不存在的物业")
+            result = await crud.get_by_name_async(mock_db, asset_name="不存在的物业")
 
         assert result is None
 
@@ -231,7 +231,7 @@ class TestCRUDAssetGetMulti:
 
 
 class TestCRUDAssetGetByPropertyNames:
-    async def test_get_by_property_names_defaults_to_encrypted_rows(
+    async def test_get_by_asset_names_defaults_to_encrypted_rows(
         self, crud: AssetCRUD, mock_db: MagicMock
     ) -> None:
         mock_assets = [MagicMock(spec=Asset)]
@@ -240,16 +240,16 @@ class TestCRUDAssetGetByPropertyNames:
         mock_db.execute.return_value = execute_result
 
         with patch.object(crud, "_decrypt_asset_object") as mock_decrypt:
-            result = await crud.get_by_property_names_async(
+            result = await crud.get_by_asset_names_async(
                 mock_db,
-                property_names=["物业A"],
+                asset_names=["物业A"],
             )
 
         assert result == mock_assets
         mock_db.execute.assert_awaited_once()
         mock_decrypt.assert_not_called()
 
-    async def test_get_by_property_names_can_decrypt_on_demand(
+    async def test_get_by_asset_names_can_decrypt_on_demand(
         self, crud: AssetCRUD, mock_db: MagicMock
     ) -> None:
         mock_assets = [MagicMock(spec=Asset), MagicMock(spec=Asset)]
@@ -258,9 +258,9 @@ class TestCRUDAssetGetByPropertyNames:
         mock_db.execute.return_value = execute_result
 
         with patch.object(crud, "_decrypt_asset_object") as mock_decrypt:
-            result = await crud.get_by_property_names_async(
+            result = await crud.get_by_asset_names_async(
                 mock_db,
-                property_names=["物业A", "物业B"],
+                asset_names=["物业A", "物业B"],
                 decrypt=True,
             )
 
@@ -312,7 +312,7 @@ class TestCRUDAssetQueryNormalization:
 
 class TestCRUDAssetCreate:
     async def test_create_asset(self, crud: AssetCRUD, mock_db: MagicMock) -> None:
-        create_data = {"property_name": "新物业", "address": "测试地址123号"}
+        create_data = {"asset_name": "新物业", "address": "测试地址123号"}
         mock_asset = MagicMock(spec=Asset)
         mock_asset.id = "new-id"
 
@@ -331,7 +331,7 @@ class TestCRUDAssetUpdate:
     async def test_update_asset(self, crud: AssetCRUD, mock_db: MagicMock) -> None:
         mock_asset = MagicMock(spec=Asset)
         mock_asset.id = "1"
-        update_data = {"property_name": "更新后的物业名称"}
+        update_data = {"asset_name": "更新后的物业名称"}
 
         with patch.object(
             crud,
@@ -436,7 +436,7 @@ class TestAssetSearchIndexRefresh:
             await crud._refresh_search_index_entries(
                 mock_db,
                 asset_id="asset-1",
-                data={"property_name": "测试物业"},
+                data={"asset_name": "测试物业"},
             )
 
         mock_db.execute.assert_not_awaited()

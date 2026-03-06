@@ -53,7 +53,7 @@ const ContractFilterBar: React.FC<ContractFilterBarProps> = ({
               >
                 {assets.map(asset => (
                   <Option key={asset.id} value={asset.id}>
-                    {asset.property_name}
+                    {asset.asset_name}
                   </Option>
                 ))}
               </Select>

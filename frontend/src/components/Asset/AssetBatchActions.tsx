@@ -319,9 +319,9 @@ const AssetBatchActions: React.FC<AssetBatchActionsProps> = ({
             <Select
               mode="multiple"
               placeholder="选择要导出的字段"
-              defaultValue={['property_name', 'owner_party_name', 'address']}
+              defaultValue={['asset_name', 'owner_party_name', 'address']}
             >
-              <Option value="property_name">物业名称</Option>
+              <Option value="asset_name">物业名称</Option>
               <Option value="owner_party_name">权属方</Option>
               <Option value="manager_party_name">经营管理方</Option>
               <Option value="address">所在地址</Option>

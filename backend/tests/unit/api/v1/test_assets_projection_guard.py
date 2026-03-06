@@ -28,7 +28,7 @@ class _AssetServiceStub:
 def _build_asset() -> Asset:
     return Asset(
         ownership_id="ownership-1",
-        property_name="测试资产",
+        asset_name="测试资产",
         address="测试地址",
         ownership_status="已确权",
         property_nature="商业",

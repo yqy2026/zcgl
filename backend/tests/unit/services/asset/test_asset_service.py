@@ -54,7 +54,7 @@ def mock_asset():
     """模拟资产对象"""
     asset = Asset()
     asset.id = TEST_ASSET_ID
-    asset.property_name = "测试物业"
+    asset.asset_name = "测试物业"
     asset.ownership_id = "ownership-id"
     ownership = MagicMock()
     ownership.name = "权属方A"
@@ -82,8 +82,8 @@ def asset_create_dict():
     """资产创建数据"""
     return {
         "ownership_id": "ownership-id",
-        "property_name": "新测试物业",
-        "address": "新测试地址456",
+        "asset_name": "新测试物业",
+        "address_detail": "新测试地址456号",
         "ownership_status": "已确权",
         "property_nature": "商业",
         "usage_status": "空置",
@@ -183,11 +183,11 @@ class TestGetAssets:
             new_callable=AsyncMock,
             return_value=(mock_assets, 1),
         ) as mock_get:
-            result = await service.get_assets(sort_field="property_name", sort_order="asc")
+            result = await service.get_assets(sort_field="asset_name", sort_order="asc")
 
             assert result == (mock_assets, 1)
             call_kwargs = mock_get.call_args.kwargs
-            assert call_kwargs["sort_field"] == "property_name"
+            assert call_kwargs["sort_field"] == "asset_name"
             assert call_kwargs["sort_order"] == "asc"
 
     async def test_get_assets_with_include_relations(self, service, mock_db):
@@ -384,7 +384,7 @@ class TestGetAsset:
             result = await service.get_asset(TEST_ASSET_ID)
 
             assert result.id == TEST_ASSET_ID
-            assert result.property_name == "测试物业"
+            assert result.asset_name == "测试物业"
 
     async def test_get_asset_not_found(self, service):
         """测试资产不存在"""
@@ -599,7 +599,7 @@ class TestCreateAsset:
                     await service.create_asset(asset_in)
 
                 assert "Asset" in str(excinfo.value)
-                assert "property_name" in str(excinfo.value)
+                assert "asset_name" in str(excinfo.value)
 
     async def test_create_asset_area_validation_fails(self, service, asset_create_dict):
         """测试面积一致性验证失败"""
@@ -647,6 +647,73 @@ class TestCreateAsset:
                     result = await service.create_asset(asset_in, current_user=user)
 
                     assert result == mock_asset
+
+    async def test_create_asset_should_fail_fast_when_address_sources_missing(
+        self, service, asset_create_dict
+    ):
+        """测试地址来源全缺失时在服务层返回验证错误而不是落到 DB 约束"""
+        invalid_data = asset_create_dict.copy()
+        invalid_data.pop("address", None)
+        invalid_data.pop("address_detail", None)
+        asset_in = AssetCreate(**invalid_data)
+
+        with patch(
+            "src.services.asset.asset_service.get_enum_validation_service_async"
+        ) as mock_validation:
+            mock_validation_service = MagicMock()
+            mock_validation_service.validate_asset_data = AsyncMock()
+            mock_validation_service.validate_asset_data.return_value = (True, [])
+            mock_validation.return_value = mock_validation_service
+
+            with patch(
+                "src.crud.asset.asset_crud.get_by_name_async",
+                new_callable=AsyncMock,
+                return_value=None,
+            ):
+                with patch(
+                    "src.crud.asset.asset_crud.create_with_history_async",
+                    new_callable=AsyncMock,
+                ) as mock_create:
+                    with pytest.raises(BaseBusinessError) as excinfo:
+                        await service.create_asset(asset_in)
+
+        assert excinfo.value.status_code == 422
+        assert "地址" in str(excinfo.value.message)
+        mock_create.assert_not_awaited()
+
+    async def test_create_asset_rejects_legacy_address_without_address_detail(
+        self, service, asset_create_dict, mock_asset
+    ):
+        """不做兼容：仅传 address（不传 address_detail）应直接失败。"""
+        legacy_data = asset_create_dict.copy()
+        legacy_data.pop("address_detail", None)
+        legacy_data["address"] = "历史地址-仅整串"
+        asset_in = AssetCreate(**legacy_data)
+
+        with patch(
+            "src.services.asset.asset_service.get_enum_validation_service_async"
+        ) as mock_validation:
+            mock_validation_service = MagicMock()
+            mock_validation_service.validate_asset_data = AsyncMock()
+            mock_validation_service.validate_asset_data.return_value = (True, [])
+            mock_validation.return_value = mock_validation_service
+
+            with patch(
+                "src.crud.asset.asset_crud.get_by_name_async",
+                new_callable=AsyncMock,
+                return_value=None,
+            ):
+                with patch(
+                    "src.crud.asset.asset_crud.create_with_history_async",
+                    new_callable=AsyncMock,
+                    return_value=mock_asset,
+                ) as mock_create:
+                    with pytest.raises(BaseBusinessError) as excinfo:
+                        await service.create_asset(asset_in)
+
+        assert excinfo.value.status_code == 422
+        assert "address_detail" in str(excinfo.value.details)
+        mock_create.assert_not_awaited()
 
 
 # ============================================================================
@@ -712,7 +779,7 @@ class TestUpdateAsset:
 
     async def test_update_asset_not_found(self, service):
         """测试更新不存在的资产"""
-        update_data = {"property_name": "新名称"}
+        update_data = {"asset_name": "新名称"}
         asset_in = AssetUpdate(**update_data)
 
         with patch(
@@ -752,7 +819,7 @@ class TestUpdateAsset:
 
     async def test_update_asset_duplicate_name(self, service, mock_asset):
         """测试更新为重复的名称"""
-        update_data = {"property_name": "已存在的物业名称"}
+        update_data = {"asset_name": "已存在的物业名称"}
         asset_in = AssetUpdate(**update_data)
 
         # 创建另一个已存在的资产
@@ -781,12 +848,12 @@ class TestUpdateAsset:
                         await service.update_asset(TEST_ASSET_ID, asset_in)
 
                     assert "Asset" in str(excinfo.value)
-                    assert "property_name" in str(excinfo.value)
+                    assert "asset_name" in str(excinfo.value)
 
     async def test_update_asset_same_name_allowed(self, service, mock_asset):
         """测试更新为相同名称（允许）"""
         # 使用相同的名称
-        update_data = {"property_name": mock_asset.property_name}
+        update_data = {"asset_name": mock_asset.asset_name}
         asset_in = AssetUpdate(**update_data)
 
         with patch(
@@ -1063,8 +1130,8 @@ class TestEdgeCases:
             "ownership_id": "ownership-id",
             "ownership_category": "国有",
             "project_name": "测试项目",
-            "property_name": "完整物业",
-            "address": "完整地址123号",
+            "asset_name": "完整物业",
+            "address_detail": "完整地址123号",
             "ownership_status": "已确权",
             "property_nature": "商业",
             "usage_status": "在租",
@@ -1247,4 +1314,3 @@ class TestOwnershipPartyScopeResolution:
             )
 
         assert resolved is None
-

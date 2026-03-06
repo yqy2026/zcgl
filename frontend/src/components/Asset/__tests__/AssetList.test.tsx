@@ -60,7 +60,7 @@ vi.mock('@/components/Common/TableWithPagination', () => ({
   }: {
     dataSource?: Array<{
       id?: string;
-      property_name?: string;
+      asset_name?: string;
       owner_party_name?: string;
     }>;
     columns?: unknown;
@@ -87,9 +87,9 @@ vi.mock('@/components/Common/TableWithPagination', () => ({
             key: item.id || idx,
             'data-testid': `table-row-${idx}`,
             'data-id': item.id,
-            'data-property-name': item.property_name,
+            'data-property-name': item.asset_name,
           },
-          `${item.property_name} - ${item.owner_party_name}`
+          `${item.asset_name} - ${item.owner_party_name}`
         )
       )
     );
@@ -112,7 +112,7 @@ describe('AssetList - 基础渲染测试', () => {
     owner_party_name: '测试权属方',
     ownership_category: '1',
     project_name: '测试项目',
-    property_name: '测试物业A',
+    asset_name: '测试物业A',
     address: '测试地址123号',
     ownership_status: '已确权',
     property_nature: '经营性',
@@ -206,7 +206,7 @@ describe('AssetList - 数据渲染测试', () => {
       owner_party_name: '权属方A',
       ownership_category: '1',
       project_name: '项目1',
-      property_name: '物业1',
+      asset_name: '物业1',
       address: '地址1',
       ownership_status: '已确权',
       property_nature: '经营性',
@@ -225,7 +225,7 @@ describe('AssetList - 数据渲染测试', () => {
       owner_party_name: '权属方B',
       ownership_category: '2',
       project_name: '项目2',
-      property_name: '物业2',
+      asset_name: '物业2',
       address: '地址2',
       ownership_status: '未确权',
       property_nature: '非经营性',
@@ -277,7 +277,7 @@ describe('AssetList - 交互操作测试', () => {
     owner_party_name: '测试权属方',
     ownership_category: '1',
     project_name: '测试项目',
-    property_name: '测试物业',
+    asset_name: '测试物业',
     address: '测试地址',
     ownership_status: '已确权',
     property_nature: '经营性',
@@ -329,7 +329,7 @@ describe('AssetList - 行选择测试', () => {
       id: '1',
       owner_party_name: '权属方A',
       project_name: '项目1',
-      property_name: '物业1',
+      asset_name: '物业1',
       address: '地址1',
       ownership_status: '已确权',
       property_nature: '经营性',
@@ -342,7 +342,7 @@ describe('AssetList - 行选择测试', () => {
       id: '2',
       owner_party_name: '权属方B',
       project_name: '项目2',
-      property_name: '物业2',
+      asset_name: '物业2',
       address: '地址2',
       ownership_status: '未确权',
       property_nature: '非经营性',
@@ -450,7 +450,7 @@ describe('AssetList - 汇总行测试', () => {
     {
       id: '1',
       owner_party_name: '权属方A',
-      property_name: '物业1',
+      asset_name: '物业1',
       address: '地址1',
       ownership_status: '已确权',
       property_nature: '经营性',
@@ -466,7 +466,7 @@ describe('AssetList - 汇总行测试', () => {
     {
       id: '2',
       owner_party_name: '权属方B',
-      property_name: '物业2',
+      asset_name: '物业2',
       address: '地址2',
       ownership_status: '未确权',
       property_nature: '非经营性',

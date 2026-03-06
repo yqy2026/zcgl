@@ -56,14 +56,14 @@ vi.mock('@/components/Common/TableWithPagination', () => ({
     <div data-testid="table">
       {dataSource?.map(item => (
         <div key={String(item.id)} data-testid={`row-${String(item.id)}`}>
-          {String(item.name)}
+          {String(item.project_name)}
           <div data-testid={`ownership-${String(item.id)}`}>
             {columns
               ?.find(column => column.key === 'owner_party')
               ?.render?.(Array.isArray(item.party_relations) ? item.party_relations : [], item)}
           </div>
           <div data-testid={`status-${String(item.id)}`}>
-            {columns?.find(column => column.key === 'is_active')?.render?.(item.is_active, item)}
+            {columns?.find(column => column.key === 'status_indicator')?.render?.(item.status, item)}
           </div>
           <div data-testid={`area-status-${String(item.id)}`}>
             {columns?.find(column => column.key === 'area_status')?.render?.(undefined, item)}
@@ -363,8 +363,20 @@ describe('ProjectList', () => {
         return {
           data: {
             items: [
-              { id: '1', name: '项目1', code: 'PROJ-001', is_active: true, asset_count: 2 },
-              { id: '2', name: '项目2', code: 'PROJ-002', is_active: false, asset_count: 0 },
+              {
+                id: '1',
+                project_name: '项目1',
+                project_code: 'PRJ-001',
+                status: 'active',
+                asset_count: 2,
+              },
+              {
+                id: '2',
+                project_name: '项目2',
+                project_code: 'PRJ-002',
+                status: 'paused',
+                asset_count: 0,
+              },
             ],
             total: 2,
             page: 1,
@@ -492,9 +504,9 @@ describe('ProjectList', () => {
               items: [
                 {
                   id: 'project-1',
-                  name: '项目关系过滤测试',
-                  code: 'PROJ-REL-001',
-                  is_active: true,
+                  project_name: '项目关系过滤测试',
+                  project_code: 'PRJ-REL-001',
+                  status: 'active',
                   asset_count: 0,
                   party_relations: [
                     {
@@ -502,27 +514,12 @@ describe('ProjectList', () => {
                       party_id: 'ownership-inactive',
                       party_name: '已停用主体',
                       relation_type: 'owner',
-                    },
-                    {
-                      id: 'rel-active',
-                      party_id: 'ownership-active',
-                      party_name: '有效主体',
-                      relation_type: 'owner',
-                      is_active: true,
-                    },
-                  ],
-                  ownership_relations: [
-                    {
-                      id: 'rel-inactive',
-                      party_id: 'ownership-inactive',
-                      ownership_name: '已停用主体',
-                      relation_type: 'owner',
                       is_active: false,
                     },
                     {
                       id: 'rel-active',
                       party_id: 'ownership-active',
-                      ownership_name: '有效主体',
+                      party_name: '有效主体',
                       relation_type: 'owner',
                       is_active: true,
                     },
@@ -579,7 +576,7 @@ describe('ProjectList', () => {
       expect(screen.getByTestId('status-1')).not.toHaveTextContent('待补绑定');
     });
 
-    it('当缺失 asset_count 时，应回退使用 assets.length 判定是否待补绑定', async () => {
+    it('当缺失 asset_count 时，应按 0 处理并显示待补绑定', async () => {
       vi.mocked(useQuery).mockImplementation(options => {
         const queryKey = (options as { queryKey?: unknown[] }).queryKey;
         const key = Array.isArray(queryKey) ? queryKey[0] : undefined;
@@ -590,17 +587,15 @@ describe('ProjectList', () => {
               items: [
                 {
                   id: 'fallback-empty-assets',
-                  name: '无资产回退项目',
-                  code: 'PROJ-FALLBACK-EMPTY',
-                  is_active: true,
-                  assets: [],
+                  project_name: '无资产回退项目',
+                  project_code: 'PRJ-FALLBACK-EMPTY',
+                  status: 'active',
                 },
                 {
                   id: 'fallback-has-assets',
-                  name: '有资产回退项目',
-                  code: 'PROJ-FALLBACK-HAS',
-                  is_active: true,
-                  assets: [{ id: 'asset-1' }],
+                  project_name: '有资产回退项目',
+                  project_code: 'PRJ-FALLBACK-HAS',
+                  status: 'active',
                 },
               ],
               total: 2,
@@ -639,7 +634,8 @@ describe('ProjectList', () => {
 
       expect(screen.getByTestId('status-fallback-empty-assets')).toHaveTextContent('待补绑定');
       expect(screen.getByTestId('area-status-fallback-empty-assets')).toHaveTextContent('N/A');
-      expect(screen.getByTestId('status-fallback-has-assets')).not.toHaveTextContent('待补绑定');
+      expect(screen.getByTestId('status-fallback-has-assets')).toHaveTextContent('待补绑定');
+      expect(screen.getByTestId('area-status-fallback-has-assets')).toHaveTextContent('N/A');
     });
   });
 

@@ -120,8 +120,8 @@ const OwnershipDetailPage: React.FC = () => {
   const assetColumns: ColumnsType<Asset> = [
     {
       title: '物业名称',
-      dataIndex: 'property_name',
-      key: 'property_name',
+      dataIndex: 'asset_name',
+      key: 'asset_name',
       render: (text: string, record: Asset) => (
         <Button
           type="link"

@@ -30,7 +30,7 @@ FIELD_MAPPING = {
     "权属方ID": "ownership_id",
     "权属类别": "ownership_category",
     "项目名称": "project_name",
-    "物业名称": "property_name",
+    "物业名称": "asset_name",
     "物业地址": "address",
     "土地面积(平方米)": "land_area",
     "实际房产面积(平方米)": "actual_property_area",
@@ -151,11 +151,11 @@ class ExcelImportService:
             if should_create_assets and self.db:
                 ownership_ids_to_load: set[str] = set()
                 ownership_names_to_load: set[str] = set()
-                property_names_to_load: set[str] = set()
+                asset_names_to_load: set[str] = set()
                 for _, row in df.iterrows():
                     ownership_id_raw = row.get("权属方ID", row.get("ownership_id"))
                     ownership_name_raw = row.get("权属方", row.get("ownership_entity"))
-                    property_name_raw = row.get("物业名称", row.get("property_name"))
+                    asset_name_raw = row.get("物业名称", row.get("asset_name"))
                     if ownership_id_raw is not None and pd.notna(ownership_id_raw):
                         ownership_id_value = str(ownership_id_raw).strip()
                         if ownership_id_value != "":
@@ -164,10 +164,10 @@ class ExcelImportService:
                         ownership_name_value = str(ownership_name_raw).strip()
                         if ownership_name_value != "":
                             ownership_names_to_load.add(ownership_name_value)
-                    if property_name_raw is not None and pd.notna(property_name_raw):
-                        property_name_value = str(property_name_raw).strip()
-                        if property_name_value != "":
-                            property_names_to_load.add(property_name_value)
+                    if asset_name_raw is not None and pd.notna(asset_name_raw):
+                        asset_name_value = str(asset_name_raw).strip()
+                        if asset_name_value != "":
+                            asset_names_to_load.add(asset_name_value)
 
                 if ownership_ids_to_load:
                     ownership_rows = await ownership.get_by_ids_async(
@@ -181,17 +181,17 @@ class ExcelImportService:
                     )
                     ownership_by_name = {str(o.name): o for o in ownership_rows}
 
-                if property_names_to_load:
-                    asset_rows = await asset_crud.get_by_property_names_async(
+                if asset_names_to_load:
+                    asset_rows = await asset_crud.get_by_asset_names_async(
                         self.db,
-                        list(property_names_to_load),
+                        list(asset_names_to_load),
                         exclude_deleted=True,
                         decrypt=False,
                     )
                     existing_assets_by_name = {
-                        str(asset.property_name): asset
+                        str(asset.asset_name): asset
                         for asset in asset_rows
-                        if getattr(asset, "property_name", None) is not None
+                        if getattr(asset, "asset_name", None) is not None
                     }
 
             # 处理每一行数据
@@ -319,11 +319,11 @@ class ExcelImportService:
 
                         asset_data.pop("ownership_entity", None)
 
-                        property_name = asset_data.get("property_name")
-                        if property_name:
-                            property_name_key = str(property_name).strip()
+                        asset_name = asset_data.get("asset_name")
+                        if asset_name:
+                            asset_name_key = str(asset_name).strip()
                             existing_by_name = existing_assets_by_name.get(
-                                property_name_key
+                                asset_name_key
                             )
                             if existing_by_name and (
                                 not existing_asset
@@ -332,7 +332,7 @@ class ExcelImportService:
                                 results["errors"].append(
                                     {
                                         "row": idx + 2,
-                                        "field": "property_name",
+                                        "field": "asset_name",
                                         "error": "物业名称已存在",
                                     }
                                 )
@@ -353,7 +353,7 @@ class ExcelImportService:
                                 obj_in=update_schema,
                             )
                             existing_assets_by_name[
-                                str(existing_asset.property_name)
+                                str(existing_asset.asset_name)
                             ] = existing_asset
                             results["updated_assets"] += 1
                         elif not existing_asset:
@@ -363,9 +363,9 @@ class ExcelImportService:
                                 obj_in=create_schema,
                                 organization_id=organization_id,
                             )
-                            if getattr(created_asset, "property_name", None) is not None:
+                            if getattr(created_asset, "asset_name", None) is not None:
                                 existing_assets_by_name[
-                                    str(created_asset.property_name)
+                                    str(created_asset.asset_name)
                                 ] = created_asset
                             results["created_assets"] += 1
                         else:
@@ -507,20 +507,20 @@ class ExcelImportService:
             return None
 
         try:
-            property_name_raw = asset_data.get("property_name")
-            property_name = (
-                str(property_name_raw).strip()
-                if property_name_raw is not None
+            asset_name_raw = asset_data.get("asset_name")
+            asset_name = (
+                str(asset_name_raw).strip()
+                if asset_name_raw is not None
                 else ""
             )
             if existing_assets_by_name is not None:
-                if property_name == "":
+                if asset_name == "":
                     return None
-                return existing_assets_by_name.get(property_name)
+                return existing_assets_by_name.get(asset_name)
 
             # 使用物业名称和地址作为唯一标识
             filters = {
-                "property_name": asset_data.get("property_name"),
+                "asset_name": asset_data.get("asset_name"),
                 "address": asset_data.get("address"),
             }
 

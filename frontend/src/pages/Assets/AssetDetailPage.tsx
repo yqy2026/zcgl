@@ -44,7 +44,7 @@ const AssetDetailPage: React.FC = () => {
 
   return (
     <PageContainer
-      title={asset?.property_name ?? '资产详情'}
+      title={asset?.asset_name ?? '资产详情'}
       loading={isLoading}
       onBack={() => navigate('/assets')}
       extra={

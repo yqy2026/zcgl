@@ -153,7 +153,7 @@ const AssetList: React.FC<AssetListProps> = ({
     if (input === '') {
       return false;
     }
-    return input === hardDeleteTarget.property_name || input === hardDeleteTarget.id;
+    return input === hardDeleteTarget.asset_name || input === hardDeleteTarget.id;
   }, [hardDeleteInput, hardDeleteTarget]);
 
   const handleConfirmHardDelete = useCallback(async () => {
@@ -193,8 +193,8 @@ const AssetList: React.FC<AssetListProps> = ({
       },
       {
         title: '物业名称',
-        dataIndex: 'property_name',
-        key: 'property_name',
+        dataIndex: 'asset_name',
+        key: 'asset_name',
         width: 200,
         fixed: 'left',
         sorter: true,
@@ -410,7 +410,7 @@ const AssetList: React.FC<AssetListProps> = ({
                   icon={<EyeOutlined />}
                   onClick={() => onView(record)}
                   size="small"
-                  aria-label={`查看资产详情: ${record.property_name}`}
+                  aria-label={`查看资产详情: ${record.asset_name}`}
                   title="查看详情"
                 />
               </Tooltip>
@@ -422,7 +422,7 @@ const AssetList: React.FC<AssetListProps> = ({
                     icon={<EditOutlined />}
                     onClick={() => onEdit(record)}
                     size="small"
-                    aria-label={`编辑资产: ${record.property_name}`}
+                    aria-label={`编辑资产: ${record.asset_name}`}
                     title="编辑"
                   />
                 </Tooltip>
@@ -434,7 +434,7 @@ const AssetList: React.FC<AssetListProps> = ({
                   icon={<HistoryOutlined />}
                   onClick={() => onViewHistory(record)}
                   size="small"
-                  aria-label={`查看历史记录: ${record.property_name}`}
+                  aria-label={`查看历史记录: ${record.asset_name}`}
                   title="查看历史"
                 />
               </Tooltip>
@@ -454,7 +454,7 @@ const AssetList: React.FC<AssetListProps> = ({
                       danger
                       icon={<DeleteOutlined />}
                       size="small"
-                      aria-label={`删除资产: ${record.property_name}`}
+                      aria-label={`删除资产: ${record.asset_name}`}
                       title="删除"
                     />
                   </Tooltip>
@@ -472,7 +472,7 @@ const AssetList: React.FC<AssetListProps> = ({
                   <Button
                     type="link"
                     size="small"
-                    aria-label={`恢复资产: ${record.property_name}`}
+                    aria-label={`恢复资产: ${record.asset_name}`}
                     title="恢复资产"
                   >
                     恢复
@@ -487,7 +487,7 @@ const AssetList: React.FC<AssetListProps> = ({
                     danger
                     size="small"
                     onClick={() => handleOpenHardDelete(record)}
-                    aria-label={`彻底删除资产: ${record.property_name}`}
+                    aria-label={`彻底删除资产: ${record.asset_name}`}
                     title="彻底删除（不可恢复）"
                   >
                     彻底删除
@@ -604,7 +604,7 @@ const AssetList: React.FC<AssetListProps> = ({
       onChange: onSelectChange,
       hideSelectAll: true,
       getCheckboxProps: (record: Asset) => ({
-        name: record.property_name,
+        name: record.asset_name,
       }),
     };
   }, [onSelectChange, selectedRowKeys]);
@@ -671,7 +671,7 @@ const AssetList: React.FC<AssetListProps> = ({
             此操作不可恢复。请输入物业名称或资产 ID 以确认删除：
             <strong>
               {hardDeleteTarget != null
-                ? ` ${hardDeleteTarget.property_name} / ${hardDeleteTarget.id}`
+                ? ` ${hardDeleteTarget.asset_name} / ${hardDeleteTarget.id}`
                 : ''}
             </strong>
           </div>

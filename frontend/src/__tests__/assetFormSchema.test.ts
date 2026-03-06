@@ -3,7 +3,7 @@ import { assetFormSchema } from '@/assetFormSchema';
 
 describe('assetFormSchema', () => {
   const basePayload = {
-    property_name: '测试物业',
+    asset_name: '测试物业',
     address: '测试地址',
     ownership_status: '已确权' as const,
     property_nature: '经营类' as const,

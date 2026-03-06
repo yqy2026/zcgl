@@ -69,7 +69,7 @@ class TestAssetModelCreation:
         """Create a sample Asset instance"""
         return Asset(
             ownership_id="Test Corporation",
-            property_name="Test Property",
+            asset_name="Test Property",
             address="123 Test Street",
             ownership_status="已确权",
             property_nature="商业",
@@ -79,7 +79,7 @@ class TestAssetModelCreation:
     def test_asset_creation(self, sample_asset):
         """Test basic Asset creation"""
         assert sample_asset.ownership_id == "Test Corporation"
-        assert sample_asset.property_name == "Test Property"
+        assert sample_asset.asset_name == "Test Property"
         assert sample_asset.address == "123 Test Street"
         assert sample_asset.ownership_status == "已确权"
 
@@ -111,7 +111,7 @@ class TestAssetBasicFields:
     def asset(self):
         return Asset(
             ownership_id="Owner",
-            property_name="Property",
+            asset_name="Property",
             address="Address",
             ownership_status="Status",
             property_nature="Nature",
@@ -121,7 +121,7 @@ class TestAssetBasicFields:
     def test_string_fields(self, asset):
         """Test string field types"""
         assert isinstance(asset.ownership_id, str)
-        assert isinstance(asset.property_name, str)
+        assert isinstance(asset.asset_name, str)
         assert isinstance(asset.address, str)
 
     def test_ownership_entity_property(self):
@@ -129,7 +129,7 @@ class TestAssetBasicFields:
         ownership = Ownership(name="Test Owner", code="OWN-001")
         asset = Asset(
             ownership_id="owner-id",
-            property_name="Property",
+            asset_name="Property",
             address="Address",
             ownership_status="Status",
             property_nature="Nature",
@@ -158,7 +158,7 @@ class TestAssetRelationshipProjectionSafety:
     def _build_asset(self) -> Asset:
         return Asset(
             ownership_id="Owner",
-            property_name="Property",
+            asset_name="Property",
             address="Address",
             ownership_status="Status",
             property_nature="Nature",
@@ -234,7 +234,7 @@ class TestAssetAreaFields:
     def asset_with_areas(self):
         return Asset(
             ownership_id="Owner",
-            property_name="Property",
+            asset_name="Property",
             address="Address",
             ownership_status="Status",
             property_nature="Nature",
@@ -262,7 +262,7 @@ class TestAssetAreaFields:
         """Test that area fields can be None"""
         asset = Asset(
             ownership_id="Owner",
-            property_name="Property",
+            asset_name="Property",
             address="Address",
             ownership_status="Status",
             property_nature="Nature",
@@ -279,7 +279,7 @@ class TestAssetContractFields:
     def asset_with_contract(self):
         asset = Asset(
             ownership_id="Owner",
-            property_name="Property",
+            asset_name="Property",
             address="Address",
             ownership_status="Status",
             property_nature="Nature",
@@ -319,7 +319,7 @@ class TestAssetContractFields:
         """Test EXPIRING contract is treated as active projection source."""
         asset = Asset(
             ownership_id="Owner",
-            property_name="Property",
+            asset_name="Property",
             address="Address",
             ownership_status="Status",
             property_nature="Nature",
@@ -346,7 +346,7 @@ class TestAssetContractFields:
         """Repeated projection field access should reuse active contract selection."""
         asset = Asset(
             ownership_id="Owner",
-            property_name="Property",
+            asset_name="Property",
             address="Address",
             ownership_status="Status",
             property_nature="Nature",
@@ -388,7 +388,7 @@ class TestAssetContractFields:
         """Replacing rent contract collection should invalidate active contract cache."""
         asset = Asset(
             ownership_id="Owner",
-            property_name="Property",
+            asset_name="Property",
             address="Address",
             ownership_status="Status",
             property_nature="Nature",
@@ -432,7 +432,7 @@ class TestAssetTimestamps:
     def asset(self):
         return Asset(
             ownership_id="Owner",
-            property_name="Property",
+            asset_name="Property",
             address="Address",
             ownership_status="Status",
             property_nature="Nature",
@@ -461,7 +461,7 @@ class TestAssetManagementFields:
     def managed_asset(self):
         return Asset(
             ownership_id="Owner",
-            property_name="Property",
+            asset_name="Property",
             address="Address",
             ownership_status="Status",
             property_nature="Nature",
@@ -488,7 +488,7 @@ class TestAssetUsageFields:
     def asset_with_usage(self):
         return Asset(
             ownership_id="Owner",
-            property_name="Property",
+            asset_name="Property",
             address="Address",
             ownership_status="Status",
             property_nature="Nature",
@@ -510,7 +510,7 @@ class TestAssetSystemFields:
     def system_asset(self):
         return Asset(
             ownership_id="Owner",
-            property_name="Property",
+            asset_name="Property",
             address="Address",
             ownership_status="Status",
             property_nature="Nature",
@@ -533,7 +533,7 @@ class TestAssetSystemFields:
         """Test version field can be incremented"""
         asset = Asset(
             ownership_id="Owner",
-            property_name="Property",
+            asset_name="Property",
             address="Address",
             ownership_status="Status",
             property_nature="Nature",
@@ -552,7 +552,7 @@ class TestAssetValidation:
         # This would need application-level validation
         asset = Asset(
             ownership_id="Owner",
-            property_name="Property",
+            asset_name="Property",
             address="Address",
             ownership_status="Status",
             property_nature="Nature",
@@ -568,7 +568,7 @@ class TestAssetValidation:
         future_date = date(2030, 12, 31)
         asset = Asset(
             ownership_id="Owner",
-            property_name="Property",
+            asset_name="Property",
             address="Address",
             ownership_status="Status",
             property_nature="Nature",
@@ -594,7 +594,7 @@ class TestAssetRelationships:
     def asset(self):
         return Asset(
             ownership_id="Owner",
-            property_name="Property",
+            asset_name="Property",
             address="Address",
             ownership_status="Status",
             property_nature="Nature",
@@ -622,7 +622,7 @@ class TestAssetStringRepresentation:
     def asset(self):
         return Asset(
             ownership_id="Test Owner",
-            property_name="Test Property Name",
+            asset_name="Test Property Name",
             address="123 Test Address",
             ownership_status="Status",
             property_nature="Nature",
@@ -635,9 +635,9 @@ class TestAssetStringRepresentation:
         # Repr should contain class name at minimum
         assert "Asset" in repr_str
 
-    def test_property_name_display(self, asset):
-        """Test property_name is the main display field"""
-        assert asset.property_name == "Test Property Name"
+    def test_asset_name_display(self, asset):
+        """Test asset_name is the main display field"""
+        assert asset.asset_name == "Test Property Name"
 
 
 class TestAssetEdgeCases:
@@ -650,38 +650,38 @@ class TestAssetEdgeCases:
         # This should be validated at application level
         asset = Asset(
             ownership_id="Owner",
-            property_name=long_name,
+            asset_name=long_name,
             address="Address",
             ownership_status="Status",
             property_nature="Nature",
             usage_status="Status",
         )
-        assert len(asset.property_name) == 300
+        assert len(asset.asset_name) == 300
 
     def test_special_characters_in_name(self):
         """Test handling of special characters"""
         asset = Asset(
             ownership_id="Owner",
-            property_name="Property <script>alert('xss')</script>",
+            asset_name="Property <script>alert('xss')</script>",
             address="Address",
             ownership_status="Status",
             property_nature="Nature",
             usage_status="Status",
         )
-        assert "<script>" in asset.property_name
+        assert "<script>" in asset.asset_name
 
     def test_unicode_characters(self):
         """Test handling of unicode characters"""
         asset = Asset(
             ownership_id="业主单位",
-            property_name="物业名称",
+            asset_name="物业名称",
             address="地址",
             ownership_status="状态",
             property_nature="性质",
             usage_status="状态",
         )
         assert asset.ownership_id == "业主单位"
-        assert asset.property_name == "物业名称"
+        assert asset.asset_name == "物业名称"
 
 
 class TestAssetDefaultsAndConstraints:
@@ -691,7 +691,7 @@ class TestAssetDefaultsAndConstraints:
         """Test that all required fields are identified"""
         required_fields = [
             "ownership_id",
-            "property_name",
+            "asset_name",
             "address",
             "ownership_status",
             "property_nature",
@@ -706,7 +706,7 @@ class TestAssetDefaultsAndConstraints:
         """Test default values for boolean fields"""
         asset = Asset(
             ownership_id="Owner",
-            property_name="Property",
+            asset_name="Property",
             address="Address",
             ownership_status="Status",
             property_nature="Nature",
@@ -721,7 +721,7 @@ class TestAssetDefaultsAndConstraints:
         """Test default values for integer fields"""
         asset = Asset(
             ownership_id="Owner",
-            property_name="Property",
+            asset_name="Property",
             address="Address",
             ownership_status="Status",
             property_nature="Nature",

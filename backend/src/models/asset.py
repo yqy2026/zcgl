@@ -2,6 +2,7 @@
 资产相关数据库模型
 """
 
+import enum
 import logging
 import uuid
 from datetime import UTC, date, datetime
@@ -42,6 +43,48 @@ def _utcnow_naive() -> datetime:
 logger = logging.getLogger(__name__)
 
 
+class AssetForm(str, enum.Enum):
+    """资产形态"""
+
+    LAND = "land"              # 土地
+    BUILDING = "building"      # 建筑
+    STRUCTURE = "structure"    # 构筑物
+    PARKING = "parking"        # 车位
+    WAREHOUSE = "warehouse"    # 仓储
+    OTHER = "other"            # 其他
+
+
+class SpatialLevel(str, enum.Enum):
+    """空间层级"""
+
+    PLOT = "plot"          # 地块
+    CAMPUS = "campus"      # 园区
+    BUILDING = "building"  # 楼宇
+    FLOOR = "floor"        # 楼层
+    ROOM = "room"          # 房间
+    SHOP = "shop"          # 商铺
+
+
+class BusinessUsage(str, enum.Enum):
+    """经营用途"""
+
+    COMMERCIAL = "commercial"  # 商业
+    OFFICE = "office"          # 办公
+    WAREHOUSE = "warehouse"    # 仓储
+    INDUSTRIAL = "industrial"  # 工业
+    MIXED = "mixed"            # 综合
+    OTHER = "other"            # 其他
+
+
+class AssetReviewStatus(str, enum.Enum):
+    """资产审核状态"""
+
+    DRAFT = "draft"          # 草稿
+    PENDING = "pending"      # 待审
+    APPROVED = "approved"    # 已审
+    REJECTED = "rejected"    # 反审核
+
+
 class Asset(Base):
     """资产模型"""
 
@@ -51,7 +94,7 @@ class Asset(Base):
         String, primary_key=True, default=lambda: str(uuid.uuid4())
     )
 
-    # 基本信息 - 按照权属方、权属类别、项目名称、物业名称、物业地址顺序
+    # 基本信息 - 按照权属方、权属类别、资产编码、资产名称、资产分类、地址顺序
     # ownership_entity 移除：使用 ownership_id 作为权属唯一来源
     ownership_category: Mapped[str | None] = mapped_column(
         String(100), comment="权属类别"
@@ -62,11 +105,36 @@ class Asset(Base):
         comment="项目名称（DEPRECATED，仅搜索兼容）",
         info={"deprecated": True},
     )
-    property_name: Mapped[str] = mapped_column(
-        String(200), nullable=False, unique=True, comment="物业名称"
+    asset_code: Mapped[str | None] = mapped_column(
+        String(50), unique=True, index=True, comment="资产编码（全局唯一，按产权方编码段生成）"
+    )
+    asset_name: Mapped[str] = mapped_column(
+        String(200), nullable=False, unique=True, comment="资产名称"
+    )
+    asset_form: Mapped[str | None] = mapped_column(
+        String(20), index=True, comment="资产形态：land/building/structure/parking/warehouse/other"
+    )
+    spatial_level: Mapped[str | None] = mapped_column(
+        String(20), comment="空间层级：plot/campus/building/floor/room/shop"
+    )
+    business_usage: Mapped[str | None] = mapped_column(
+        String(20), comment="经营用途：commercial/office/warehouse/industrial/mixed/other"
+    )
+    # 半结构化地址（行政区三级 + 详细地址）
+    province_code: Mapped[str | None] = mapped_column(
+        String(20), comment="省级行政区代码"
+    )
+    city_code: Mapped[str | None] = mapped_column(
+        String(20), comment="市级行政区代码"
+    )
+    district_code: Mapped[str | None] = mapped_column(
+        String(20), comment="区县行政区代码"
+    )
+    address_detail: Mapped[str | None] = mapped_column(
+        String(200), comment="详细地址（trim 后长度 5-200）"
     )
     address: Mapped[str] = mapped_column(
-        String(500), nullable=False, comment="物业地址"
+        String(500), nullable=False, comment="物业地址（系统拼接只读展示字段，不对外开放直写）"
     )
     ownership_status: Mapped[str] = mapped_column(
         String(50), nullable=False, index=True, comment="确权状态"
@@ -156,6 +224,20 @@ class Asset(Base):
     # 终端合同相关字段
     terminal_contract_files: Mapped[str | None] = mapped_column(
         Text, comment="终端合同文件"
+    )
+
+    # 审核字段
+    review_status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default=AssetReviewStatus.DRAFT.value, comment="审核状态"
+    )
+    review_by: Mapped[str | None] = mapped_column(
+        String(100), comment="审核人（通过/反审核时必填）"
+    )
+    reviewed_at: Mapped[datetime | None] = mapped_column(
+        DateTime, comment="审核时间（通过/反审核时必填）"
+    )
+    review_reason: Mapped[str | None] = mapped_column(
+        Text, comment="审核原因（反审核时必填）"
     )
 
     # 系统字段
@@ -464,6 +546,7 @@ class Asset(Base):
 
         kwargs.setdefault("id", str(uuid.uuid4()))
         kwargs.setdefault("data_status", "正常")
+        kwargs.setdefault("review_status", AssetReviewStatus.DRAFT.value)
         kwargs.setdefault("version", 1)
         kwargs.setdefault("is_litigated", False)
         kwargs.setdefault("include_in_occupancy_rate", True)
@@ -473,7 +556,7 @@ class Asset(Base):
         super().__init__(**kwargs)
 
     def __repr__(self) -> str:
-        return f"<Asset(id={self.id}, name={self.property_name})>"
+        return f"<Asset(id={self.id}, name={self.asset_name})>"
 
     def clear_cached_properties(self) -> None:
         """清除缓存的计算属性"""
@@ -481,5 +564,5 @@ class Asset(Base):
         self.__dict__.pop("occupancy_rate", None)
 
 
-__all__ = ["Asset"]
+__all__ = ["Asset", "AssetForm", "SpatialLevel", "BusinessUsage", "AssetReviewStatus"]
 

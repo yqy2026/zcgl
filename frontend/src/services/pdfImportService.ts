@@ -92,7 +92,7 @@ export interface ExtendedSessionProgress extends SessionProgress {
 
 export interface AssetMatch {
   id: string;
-  property_name: string;
+  asset_name: string;
   address: string;
   similarity: number;
 }

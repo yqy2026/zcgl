@@ -1,6 +1,8 @@
-"""Unit tests for project schema compatibility fields."""
+"""Unit tests for project schema fields."""
 
 from datetime import UTC, datetime
+
+import pytest
 
 from src.schemas.project import ProjectResponse
 
@@ -8,8 +10,10 @@ from src.schemas.project import ProjectResponse
 def _build_project_payload() -> dict[str, object]:
     return {
         "id": "project-1",
-        "name": "测试项目",
-        "is_active": True,
+        "project_name": "测试项目",
+        "project_code": "PRJ-TEST01-000001",
+        "status": "planning",
+        "review_status": "draft",
         "data_status": "正常",
         "created_at": datetime.now(UTC),
         "updated_at": datetime.now(UTC),
@@ -18,21 +22,23 @@ def _build_project_payload() -> dict[str, object]:
     }
 
 
-def test_project_response_party_relations_keep_is_active_from_ownership_relations() -> None:
+def test_project_response_party_relations_keep_is_active() -> None:
     payload = _build_project_payload()
-    payload["ownership_relations"] = [
+    payload["party_relations"] = [
         {
             "id": "rel-inactive",
             "project_id": "project-1",
-            "ownership_id": "ownership-inactive",
-            "ownership_name": "停用主体",
+            "party_id": "ownership-inactive",
+            "party_name": "停用主体",
+            "relation_type": "owner",
             "is_active": False,
         },
         {
             "id": "rel-active",
             "project_id": "project-1",
-            "ownership_id": "ownership-active",
-            "ownership_name": "有效主体",
+            "party_id": "ownership-active",
+            "party_name": "有效主体",
+            "relation_type": "owner",
             "is_active": True,
         },
     ]
@@ -40,3 +46,11 @@ def test_project_response_party_relations_keep_is_active_from_ownership_relation
     project = ProjectResponse.model_validate(payload)
 
     assert [relation["is_active"] for relation in project.party_relations] == [False, True]
+
+
+def test_project_response_rejects_legacy_project_code() -> None:
+    payload = _build_project_payload()
+    payload["project_code"] = "legacy-001"
+
+    with pytest.raises(Exception):
+        ProjectResponse.model_validate(payload)

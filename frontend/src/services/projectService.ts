@@ -13,6 +13,7 @@ import { createLogger } from '@/utils/logger';
 const projectLogger = createLogger('Project');
 import type {
   Project,
+  ProjectActiveAssetsResponse,
   ProjectCreate,
   ProjectUpdate,
   ProjectListResponse,
@@ -22,27 +23,6 @@ import type {
   ProjectSearchParams,
   ProjectDropdownOption,
 } from '@/types/project';
-
-const LEGACY_OWNER_FILTER_KEY = `${'ownership'}_${'id'}` as const;
-
-const resolveOwnerPartyId = (params?: ProjectSearchParams): string | undefined => {
-  if (params == null) {
-    return undefined;
-  }
-
-  const ownerPartyId = (params as ProjectSearchParams & { owner_party_id?: unknown })
-    .owner_party_id;
-  if (typeof ownerPartyId === 'string' && ownerPartyId.trim() !== '') {
-    return ownerPartyId;
-  }
-
-  const legacyOwnerId = (params as Record<string, unknown>)[LEGACY_OWNER_FILTER_KEY];
-  if (typeof legacyOwnerId === 'string' && legacyOwnerId.trim() !== '') {
-    return legacyOwnerId;
-  }
-
-  return undefined;
-};
 
 export class ProjectService {
   private baseUrl = API_ENDPOINTS.PROJECT.LIST;
@@ -97,19 +77,44 @@ export class ProjectService {
   }
 
   /**
+   * 获取项目有效关联资产（基于 project_assets 当前有效关系）
+   */
+  async getProjectAssets(projectId: string): Promise<ProjectActiveAssetsResponse> {
+    try {
+      const result = await apiClient.get<ProjectActiveAssetsResponse>(
+        API_ENDPOINTS.PROJECT.ASSETS(projectId),
+        {
+          cache: true,
+          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+          smartExtract: true,
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`获取项目关联资产失败: ${result.error}`);
+      }
+
+      return result.data!;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
+  /**
    * 获取项目列表
    */
   async getProjects(params?: ProjectSearchParams): Promise<ProjectListResponse> {
     try {
-      const ownerPartyId = resolveOwnerPartyId(params);
       // 确保提供必需的分页参数
       const requestParams = {
         page: params?.page ?? 1,
         page_size: params?.page_size ?? 10,
-        keyword: params?.keyword,
-        is_active: params?.is_active,
-        owner_party_id: ownerPartyId,
-        ...(ownerPartyId != null ? { [LEGACY_OWNER_FILTER_KEY]: ownerPartyId } : {}),
+        ...(params?.keyword != null && params.keyword.trim() !== '' ? { keyword: params.keyword } : {}),
+        ...(params?.status != null && params.status.trim() !== '' ? { status: params.status } : {}),
+        ...(params?.owner_party_id != null && params.owner_party_id.trim() !== ''
+          ? { owner_party_id: params.owner_party_id }
+          : {}),
       };
 
       const result = await apiClient.get<ProjectListResponse>(this.baseUrl, {
@@ -251,11 +256,19 @@ export class ProjectService {
   /**
    * 获取项目选项列表
    */
-  async getProjectOptions(isActive: boolean = true): Promise<ProjectDropdownOption[]> {
+  async getProjectOptions(status: string = 'active'): Promise<ProjectDropdownOption[]> {
     try {
+      const normalizedStatus = status.trim();
+      const params =
+        normalizedStatus !== ''
+          ? {
+              status: normalizedStatus,
+            }
+          : undefined;
       const result = await apiClient.get<ProjectDropdownOption[]>(
-        `${this.baseUrl}/dropdown-options?is_active=${isActive}`,
+        `${this.baseUrl}/dropdown-options`,
         {
+          params,
           cache: true,
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
           smartExtract: true,
@@ -286,7 +299,15 @@ export class ProjectService {
     try {
       const promises = ids.map(id => this.getProject(id));
       const projects = await Promise.all(promises);
-      return projects.filter(project => project != null && project.is_active);
+      return projects.filter(project => {
+        if (project == null) {
+          return false;
+        }
+        if (project.data_status != null && project.data_status !== '正常') {
+          return false;
+        }
+        return true;
+      });
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       projectLogger.error('批量获取项目信息失败:', undefined, { error: enhancedError.message });
@@ -322,7 +343,7 @@ export class ProjectService {
   async validateProjectCode(code: string, excludeId?: string): Promise<boolean> {
     try {
       const result = await this.getProjects({ keyword: code });
-      return !result.items.some(item => item.code === code && item.id !== excludeId);
+      return !result.items.some(item => item.project_code === code && item.id !== excludeId);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       projectLogger.error('验证项目编码失败:', undefined, { error: enhancedError.message });
@@ -336,7 +357,7 @@ export class ProjectService {
   async validateProjectName(name: string, excludeId?: string): Promise<boolean> {
     try {
       const result = await this.getProjects({ keyword: name });
-      return !result.items.some(item => item.name === name && item.id !== excludeId);
+      return !result.items.some(item => item.project_name === name && item.id !== excludeId);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       projectLogger.error('验证项目名称失败:', undefined, { error: enhancedError.message });
@@ -393,7 +414,7 @@ export class ProjectService {
       const options = await this.getProjectOptions();
       return options.map(option => ({
         value: option.id,
-        label: `${option.name} (${option.code})`,
+        label: `${option.project_name} (${option.project_code})`,
       }));
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
@@ -430,17 +451,12 @@ export class ProjectService {
     }
   }
 
-  /** @deprecated 兼容旧命名，后续统一使用 getProjectsByOwnerParty。 */
-  async getProjectsByOwnership(ownershipId: string): Promise<Project[]> {
-    return this.getProjectsByOwnerParty(ownershipId);
-  }
-
   /**
    * 获取活跃项目列表
    */
   async getActiveProjects(): Promise<Project[]> {
     try {
-      const result = await this.getProjects({ is_active: true });
+      const result = await this.getProjects({ status: 'active' });
       return result.items;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
@@ -454,7 +470,7 @@ export class ProjectService {
    */
   async getInactiveProjects(): Promise<Project[]> {
     try {
-      const result = await this.getProjects({ is_active: false });
+      const result = await this.getProjects({ status: 'terminated' });
       return result.items;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
@@ -537,15 +553,9 @@ export class ProjectService {
     lastUpdated: string;
   }> {
     try {
-      const [project, statistics] = await Promise.all([
-        this.getProject(id),
-        this.getProjectStatistics(),
-      ]);
-
-      // 从统计中查找当前项目的数据
-      const projectStats = statistics.projects?.find(p => p.id === id);
-      const assetCount = projectStats?.asset_count ?? project.asset_count ?? 0;
-      const totalArea = projectStats?.total_area ?? 0;
+      const project = await this.getProject(id);
+      const assetCount = project.asset_count ?? 0;
+      const totalArea = 0;
 
       return {
         project,

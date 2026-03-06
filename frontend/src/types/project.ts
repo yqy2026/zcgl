@@ -2,7 +2,7 @@
  * 项目类型定义
  */
 
-const legacyProjectRelationsField = `${'ownership'}_${'relations'}` as const;
+import type { Asset } from '@/types/asset';
 
 export interface ProjectPartyRelation {
   id?: string;
@@ -14,51 +14,40 @@ export interface ProjectPartyRelation {
   is_active?: boolean;
 }
 
-export interface ProjectOwnershipRelationLegacy {
-  id: string;
-  party_id: string;
-  party_name: string;
-  relation_type: string;
-  is_active: boolean;
-}
-
 export interface Project {
   id: string;
-  name: string;
-  code: string;
-  short_name?: string; // 项目简称
-  description?: string;
-  is_active: boolean;
+  project_name: string;
+  project_code: string;
+  status: string;
+  manager_party_id?: string;
   data_status: string;
+  review_status: string;
+  review_by?: string;
+  reviewed_at?: string;
+  review_reason?: string;
   created_at: string;
   updated_at: string;
   created_by?: string;
   updated_by?: string;
   asset_count?: number;
   party_relations?: ProjectPartyRelation[];
-
-  /** @deprecated 兼容旧字段，后续统一使用 party_relations。 */
-  [legacyProjectRelationsField]?: ProjectOwnershipRelationLegacy[];
 }
 
 export interface ProjectCreate {
-  name: string;
-  description?: string;
-  party_relations?: Array<{
-    party_id: string;
-    relation_type: string;
-    is_primary?: boolean;
-  }>;
+  project_name: string;
+  project_code?: string;
+  status?: string;
+  manager_party_id?: string;
+  party_relations?: ProjectPartyRelation[];
 }
 
 export interface ProjectUpdate {
-  name?: string;
-  description?: string;
-  party_relations?: Array<{
-    party_id: string;
-    relation_type: string;
-    is_primary?: boolean;
-  }>;
+  project_name?: string;
+  project_code?: string;
+  status?: string;
+  manager_party_id?: string;
+  data_status?: string;
+  party_relations?: ProjectPartyRelation[];
 }
 
 export type ProjectResponse = Project;
@@ -74,30 +63,39 @@ export interface ProjectListResponse {
 export interface ProjectDeleteResponse {
   message: string;
   deleted_id: string;
+  affected_assets?: number;
 }
 
 export interface ProjectSearchRequest {
   keyword?: string;
-  is_active?: boolean;
+  status?: string;
+  owner_party_id?: string;
   page?: number;
   page_size?: number;
 }
 
 export interface ProjectStatisticsResponse {
-  total_count: number;
-  active_count: number;
-  inactive_count: number;
-  projects?: Array<{
-    id: string;
-    asset_count?: number;
-    total_area?: number;
-  }>;
+  total_projects: number;
+  active_projects: number;
+}
+
+export interface ProjectAssetSummary {
+  total_assets: number;
+  total_rentable_area: number;
+  total_rented_area: number;
+  occupancy_rate: number;
+}
+
+export interface ProjectActiveAssetsResponse {
+  items: Asset[];
+  total: number;
+  summary: ProjectAssetSummary;
 }
 
 // 项目搜索参数类型
 export interface ProjectSearchParams {
   keyword?: string;
-  is_active?: boolean;
+  status?: string;
   owner_party_id?: string;
   page?: number;
   page_size?: number;
@@ -114,14 +112,12 @@ export interface ProjectOption {
 export interface ProjectStats {
   total: number;
   active: number;
-  inactive: number;
 }
 
 // 项目下拉选项类型
 export interface ProjectDropdownOption {
   id: string;
-  name: string;
-  code: string;
-  short_name?: string;
-  is_active: boolean;
+  project_name: string;
+  project_code: string;
+  status?: string;
 }

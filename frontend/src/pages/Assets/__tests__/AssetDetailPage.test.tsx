@@ -23,8 +23,8 @@ vi.mock('@/services/assetService', () => ({
 
 // Mock AssetDetailInfo component
 vi.mock('@/components/Asset/AssetDetailInfo', () => ({
-  default: ({ asset }: { asset: { property_name: string } }) => (
-    <div data-testid="asset-detail-info">Asset Info: {asset.property_name}</div>
+  default: ({ asset }: { asset: { asset_name: string } }) => (
+    <div data-testid="asset-detail-info">Asset Info: {asset.asset_name}</div>
   ),
 }));
 
@@ -78,7 +78,7 @@ describe('AssetDetailPage', () => {
     it('显示资产详情', async () => {
       const mockAsset = {
         id: 'asset_123',
-        property_name: '测试资产A栋',
+        asset_name: '测试资产A栋',
         building_name: 'A栋',
         floor: 5,
         area: 120.5,
@@ -101,7 +101,7 @@ describe('AssetDetailPage', () => {
     it('显示资产名称作为标题', async () => {
       const mockAsset = {
         id: 'asset_456',
-        property_name: '商业中心B座',
+        asset_name: '商业中心B座',
       };
 
       vi.mocked(assetService.getAsset).mockResolvedValue(mockAsset);
@@ -116,7 +116,7 @@ describe('AssetDetailPage', () => {
     it('资产名称为空时显示默认标题', async () => {
       const mockAsset = {
         id: 'asset_789',
-        property_name: null,
+        asset_name: null,
       };
 
       vi.mocked(assetService.getAsset).mockResolvedValue(mockAsset);
@@ -157,7 +157,7 @@ describe('AssetDetailPage', () => {
     it('点击返回列表按钮导航到资产列表', async () => {
       const mockAsset = {
         id: 'asset_nav',
-        property_name: '导航测试资产',
+        asset_name: '导航测试资产',
       };
 
       vi.mocked(assetService.getAsset).mockResolvedValue(mockAsset);
@@ -178,7 +178,7 @@ describe('AssetDetailPage', () => {
     it('点击编辑资产按钮导航到编辑页', async () => {
       const mockAsset = {
         id: 'asset_edit',
-        property_name: '编辑测试资产',
+        asset_name: '编辑测试资产',
       };
 
       vi.mocked(assetService.getAsset).mockResolvedValue(mockAsset);
@@ -201,7 +201,7 @@ describe('AssetDetailPage', () => {
     it('使用正确的资产ID调用服务', async () => {
       const mockAsset = {
         id: 'specific_asset_id',
-        property_name: '特定资产',
+        asset_name: '特定资产',
       };
 
       vi.mocked(assetService.getAsset).mockResolvedValue(mockAsset);

@@ -23,7 +23,6 @@ import { EditOutlined, HomeOutlined, AreaChartOutlined, TeamOutlined } from '@an
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { projectService } from '@/services/projectService';
-import { assetService } from '@/services/assetService';
 import type { ColumnsType } from 'antd/es/table';
 import type { Asset } from '@/types/asset';
 import { useArrayListData } from '@/hooks/useArrayListData';
@@ -32,6 +31,13 @@ import { PageContainer } from '@/components/Common';
 import styles from './ProjectDetailPage.module.css';
 
 const { Text } = Typography;
+const PROJECT_STATUS_MAP: Record<string, { text: string; color: string; active: boolean }> = {
+  planning: { text: '规划中', color: 'default', active: false },
+  active: { text: '进行中', color: 'green', active: true },
+  paused: { text: '已暂停', color: 'orange', active: false },
+  completed: { text: '已完成', color: 'blue', active: false },
+  terminated: { text: '已终止', color: 'red', active: false },
+};
 
 /**
  * ProjectDetailPage - 项目详情页面组件
@@ -60,12 +66,7 @@ const ProjectDetailPage: React.FC = () => {
   // 获取项目关联资产
   const { data: assetsData, isLoading: assetsLoading } = useQuery({
     queryKey: ['project-assets', id],
-    queryFn: () =>
-      assetService.getAssets({
-        project_id: id,
-        page: 1,
-        page_size: 100,
-      }),
+    queryFn: () => projectService.getProjectAssets(id as string),
     enabled: id !== null && id !== undefined && id.length > 0,
   });
 
@@ -73,8 +74,8 @@ const ProjectDetailPage: React.FC = () => {
   const assetColumns: ColumnsType<Asset> = [
     {
       title: '物业名称',
-      dataIndex: 'property_name',
-      key: 'property_name',
+      dataIndex: 'asset_name',
+      key: 'asset_name',
       render: (text: string, record: Asset) => (
         <Button
           type="link"
@@ -123,10 +124,16 @@ const ProjectDetailPage: React.FC = () => {
 
   // 计算统计数据
   const assets = useMemo(() => assetsData?.items ?? [], [assetsData?.items]);
-  const totalAssets = assets.length;
-  const totalRentableArea = assets.reduce((sum, a) => sum + (a.rentable_area ?? 0), 0);
-  const totalRentedArea = assets.reduce((sum, a) => sum + (a.rented_area ?? 0), 0);
-  const occupancyRate = totalRentableArea > 0 ? (totalRentedArea / totalRentableArea) * 100 : 0;
+  const summary = assetsData?.summary ?? {
+    total_assets: 0,
+    total_rentable_area: 0,
+    total_rented_area: 0,
+    occupancy_rate: 0,
+  };
+  const totalAssets = summary.total_assets;
+  const totalRentableArea = summary.total_rentable_area;
+  const totalRentedArea = summary.total_rented_area;
+  const occupancyRate = summary.occupancy_rate;
   const occupancyToneClass =
     occupancyRate >= 80
       ? styles.occupancySuccess
@@ -177,11 +184,11 @@ const ProjectDetailPage: React.FC = () => {
     <PageContainer
       title={
         <span className={styles.projectTitle}>
-          <span>{project?.name}</span>
+          <span>{project?.project_name}</span>
           {project && (
             <Badge
-              status={project.is_active ? 'success' : 'error'}
-              text={project.is_active ? '启用' : '禁用'}
+              status={(PROJECT_STATUS_MAP[project.status]?.active ?? false) ? 'success' : 'default'}
+              text={PROJECT_STATUS_MAP[project.status]?.text ?? project.status}
               className={styles.projectStatus}
             />
           )}
@@ -255,7 +262,12 @@ const ProjectDetailPage: React.FC = () => {
           <Card title="项目信息" className={styles.infoCard}>
             <Descriptions column={2}>
               <Descriptions.Item label="项目编码">
-                <Text code>{project.code}</Text>
+                <Text code>{project.project_code}</Text>
+              </Descriptions.Item>
+              <Descriptions.Item label="业务状态">
+                <Tag color={PROJECT_STATUS_MAP[project.status]?.color ?? 'default'}>
+                  {PROJECT_STATUS_MAP[project.status]?.text ?? project.status}
+                </Tag>
               </Descriptions.Item>
               <Descriptions.Item label="项目状态">
                 <Tag
@@ -264,9 +276,6 @@ const ProjectDetailPage: React.FC = () => {
                 >
                   {project.data_status}
                 </Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="项目描述" span={2} className={styles.projectDescription}>
-                {project.description ?? '-'}
               </Descriptions.Item>
               <Descriptions.Item label="创建时间">
                 {project.created_at ? new Date(project.created_at).toLocaleString('zh-CN') : '-'}

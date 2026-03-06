@@ -9,6 +9,7 @@ from uuid import uuid4
 import pytest
 from fastapi.testclient import TestClient
 
+from src.crud.asset_support import SensitiveDataHandler
 from src.models.enum_field import EnumFieldType, EnumFieldValue
 from src.models.ownership import Ownership
 from src.services.organization_permission_service import (
@@ -140,11 +141,18 @@ class TestAssetLifecycle:
         organization_id: str | None = None,
         property_nature: str = "经营类",
         usage_status: str = "出租",
+        address_detail: str | None = None,
+        address: str | None = None,
     ) -> dict[str, object]:
+        detail = (
+            address_detail
+            if address_detail is not None
+            else f"生命周期地址明细-{suffix}"
+        )
         payload: dict[str, object] = {
             "ownership_id": ownership_id,
-            "property_name": f"生命周期资产-{suffix}",
-            "address": f"生命周期地址-{suffix}",
+            "asset_name": f"生命周期资产-{suffix}",
+            "address_detail": detail,
             "ownership_status": "已确权",
             "property_nature": property_nature,
             "usage_status": usage_status,
@@ -152,9 +160,151 @@ class TestAssetLifecycle:
             "data_status": "正常",
             "created_by": "integration_test",
         }
+        if address is not None:
+            payload["address"] = address
         if organization_id is not None and organization_id.strip() != "":
             payload["organization_id"] = organization_id
         return payload
+
+    def test_asset_create_with_address_only_should_use_legacy_address_fallback(
+        self,
+        authenticated_client: TestClient,
+        csrf_headers: dict[str, str],
+        db_session,
+        test_data,
+    ) -> None:
+        suffix = uuid4().hex[:8]
+        self._ensure_asset_enum_data(db_session)
+        ownership = self._create_ownership(db_session, suffix)
+        organization_id = str(test_data["organization"].id)
+        payload = self._create_asset_payload(
+            suffix=f"{suffix}addr-only",
+            ownership_id=ownership.id,
+            organization_id=organization_id,
+            address_detail=None,
+            address=f"仅地址字段-{suffix}",
+        )
+        payload.pop("address_detail", None)
+
+        response = authenticated_client.post(
+            "/api/v1/assets",
+            json=payload,
+            headers=csrf_headers,
+        )
+
+        assert response.status_code == 201
+        created = response.json()
+        created_id = created.get("id")
+        assert isinstance(created_id, str)
+
+        created_address = created.get("address")
+        assert isinstance(created_address, str)
+
+        address_handler = SensitiveDataHandler(searchable_fields={"address"})
+        decrypted_created_address = address_handler.decrypt_field(
+            "address", created_address
+        )
+        assert isinstance(decrypted_created_address, str)
+        assert decrypted_created_address == payload["address"]
+
+        detail_response = authenticated_client.get(f"/api/v1/assets/{created_id}")
+        assert detail_response.status_code == 200
+        detail_payload = detail_response.json()
+        detail_address = detail_payload.get("address")
+        assert isinstance(detail_address, str)
+
+        decrypted_detail_address = address_handler.decrypt_field("address", detail_address)
+        assert isinstance(decrypted_detail_address, str)
+        assert decrypted_detail_address == payload["address"]
+
+    def test_asset_create_with_blank_legacy_address_should_return_422(
+        self,
+        authenticated_client: TestClient,
+        csrf_headers: dict[str, str],
+        db_session,
+        test_data,
+    ) -> None:
+        suffix = uuid4().hex[:8]
+        self._ensure_asset_enum_data(db_session)
+        ownership = self._create_ownership(db_session, suffix)
+        organization_id = str(test_data["organization"].id)
+        payload = self._create_asset_payload(
+            suffix=f"{suffix}blank-address",
+            ownership_id=ownership.id,
+            organization_id=organization_id,
+            address_detail=None,
+            address="   ",
+        )
+        payload.pop("address_detail", None)
+
+        response = authenticated_client.post(
+            "/api/v1/assets",
+            json=payload,
+            headers=csrf_headers,
+        )
+
+        assert response.status_code == 422
+        response_data = response.json()
+        assert response_data.get("success") is False
+        error = response_data.get("error", {})
+        assert isinstance(error, dict)
+        assert error.get("code") == "VALIDATION_ERROR"
+        details = error.get("details", {})
+        assert isinstance(details, dict)
+        field_errors = details.get("field_errors", {})
+        assert isinstance(field_errors, dict)
+        address_detail_errors = field_errors.get("address_detail", [])
+        assert isinstance(address_detail_errors, list)
+        assert "required_for_address_composition" in address_detail_errors
+
+    def test_asset_create_should_ignore_manual_address_and_use_composed_value(
+        self,
+        authenticated_client: TestClient,
+        csrf_headers: dict[str, str],
+        db_session,
+        test_data,
+    ) -> None:
+        suffix = uuid4().hex[:8]
+        self._ensure_asset_enum_data(db_session)
+        ownership = self._create_ownership(db_session, suffix)
+        organization_id = str(test_data["organization"].id)
+        detail = f"系统拼接地址明细-{suffix}"
+        manual_address = f"伪造地址-{suffix}"
+        payload = self._create_asset_payload(
+            suffix=f"{suffix}compose",
+            ownership_id=ownership.id,
+            organization_id=organization_id,
+            address_detail=detail,
+            address=manual_address,
+        )
+
+        create_response = authenticated_client.post(
+            "/api/v1/assets",
+            json=payload,
+            headers=csrf_headers,
+        )
+        assert create_response.status_code == 201
+        created = create_response.json()
+        created_id = created.get("id")
+        assert isinstance(created_id, str)
+        created_address = created.get("address")
+        assert isinstance(created_address, str)
+        address_handler = SensitiveDataHandler(searchable_fields={"address"})
+        decrypted_created_address = address_handler.decrypt_field(
+            "address", created_address
+        )
+        assert isinstance(decrypted_created_address, str)
+        assert decrypted_created_address == detail
+        assert decrypted_created_address != manual_address
+
+        detail_response = authenticated_client.get(f"/api/v1/assets/{created_id}")
+        assert detail_response.status_code == 200
+        detail_payload = detail_response.json()
+        detail_address = detail_payload.get("address")
+        assert isinstance(detail_address, str)
+        decrypted_detail_address = address_handler.decrypt_field("address", detail_address)
+        assert isinstance(decrypted_detail_address, str)
+        assert decrypted_detail_address == detail
 
     def test_complete_asset_lifecycle(
         self,
@@ -182,7 +332,7 @@ class TestAssetLifecycle:
         created = create_response.json()
         asset_id = created.get("id")
         assert isinstance(asset_id, str)
-        assert created.get("property_name") == payload["property_name"]
+        assert created.get("asset_name") == payload["asset_name"]
 
         detail_response = authenticated_client.get(f"/api/v1/assets/{asset_id}")
         assert detail_response.status_code == 200

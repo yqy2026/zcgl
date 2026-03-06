@@ -150,7 +150,7 @@ describe('assetCalculations', () => {
   it('checkAssetDataCompleteness 应返回完整度与缺失字段', () => {
     const result = checkAssetDataCompleteness({
       ownership_id: 'own-1',
-      property_name: 'P1',
+      asset_name: 'P1',
       address: 'A1',
       ownership_status: '已确权' as Asset['ownership_status'],
       property_nature: '经营性' as Asset['property_nature'],

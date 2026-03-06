@@ -102,7 +102,7 @@ const AssetCard: React.FC<AssetCardProps> = ({ asset, onView, onEdit, onDelete }
         title={
           <div>
             <Title level={5} className={styles.cardTitle}>
-              {asset.property_name}
+              {asset.asset_name}
             </Title>
             <Space wrap>
               <Tag color={asset.property_nature === PropertyNature.COMMERCIAL ? 'green' : 'blue'}>

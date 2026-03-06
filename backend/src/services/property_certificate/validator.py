@@ -135,11 +135,11 @@ class PropertyCertificateValidator:
             )
         return True
 
-    def validate_property_name(self, name: str | None) -> bool:
+    def validate_asset_name(self, name: str | None) -> bool:
         if not name:
-            self._raise_validation_error("房产名称不能为空", field="property_name")
+            self._raise_validation_error("房产名称不能为空", field="asset_name")
         if len(name.strip()) < 3:
-            self._raise_validation_error("房产名称过短", field="property_name")
+            self._raise_validation_error("房产名称过短", field="asset_name")
         return True
 
     def validate_address(self, address: str | None) -> bool:
@@ -150,7 +150,7 @@ class PropertyCertificateValidator:
     def validate_certificate_data(self, data: dict[str, Any]) -> bool:
         required_fields = [
             "certificate_number",
-            "property_name",
+            "asset_name",
             "area",
             "issue_date",
             "expiry_date",
@@ -162,7 +162,7 @@ class PropertyCertificateValidator:
                     "缺少必填字段", field=field, details={"missing_field": field}
                 )
         self.validate_certificate_number(data.get("certificate_number"))
-        self.validate_property_name(data.get("property_name"))
+        self.validate_asset_name(data.get("asset_name"))
         self.validate_area(data.get("area"))
         self.validate_issue_date(data.get("issue_date"))
         self.validate_expiry_date(data.get("expiry_date"), data.get("issue_date"))

@@ -10,7 +10,11 @@ export interface Asset {
   manager_party_name?: string;
   ownership_category?: string;
   project_name?: string;
-  property_name: string;
+  asset_name: string;
+  province_code?: string;
+  city_code?: string;
+  district_code?: string;
+  address_detail?: string;
   address: string;
   ownership_status: OwnershipStatus;
   property_nature: PropertyNature;
@@ -429,7 +433,7 @@ export interface AreaStatistics {
     average_area: number;
   }>;
   top_assets_by_area?: Array<{
-    property_name: string;
+    asset_name: string;
     property_area: number;
     rentable_area: number;
     rented_area: number;

@@ -4,13 +4,13 @@ from src.models.project import Project
 
 
 def test_project_creation_and_repr() -> None:
-    project = Project(name="Urban Renewal", code="PRJ-001", project_status="在建")
+    project = Project(project_name="Urban Renewal", project_code="PRJ-URB001-000001", status="planning")
 
-    assert project.name == "Urban Renewal"
-    assert project.code == "PRJ-001"
-    assert project.project_status == "在建"
+    assert project.project_name == "Urban Renewal"
+    assert project.project_code == "PRJ-URB001-000001"
+    assert project.status == "planning"
     assert "Urban Renewal" in repr(project)
-    assert "PRJ-001" in repr(project)
+    assert "PRJ-URB001-000001" in repr(project)
 
 
 def test_project_table_name() -> None:

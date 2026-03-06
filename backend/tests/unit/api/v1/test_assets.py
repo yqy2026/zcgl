@@ -61,7 +61,7 @@ def sample_asset_response():
     """Sample asset response data"""
     return {
         "id": "asset-123",
-        "property_name": "Test Property",
+        "asset_name": "Test Property",
         "address": "123 Test St",
         "ownership_status": "已确权",
         "property_nature": "商业",
@@ -269,7 +269,7 @@ class TestGetSingleAsset:
         )
 
         assert result["id"] == "asset-123"
-        assert result["property_name"] == "Test Property"
+        assert result["asset_name"] == "Test Property"
         mock_asset_service.get_asset.assert_called_once()
 
     @pytest.mark.asyncio
@@ -302,7 +302,7 @@ class TestCreateAsset:
         """Test successful asset creation"""
         asset_data = {
             "ownership_id": "ownership-001",
-            "property_name": "New Property",
+            "asset_name": "New Property",
             "address": "456 New St",
             "ownership_status": "已确权",
             "property_nature": "办公",
@@ -313,7 +313,7 @@ class TestCreateAsset:
         }
         mock_asset_service.create_asset.return_value = {
             **sample_asset_response,
-            "property_name": asset_data["property_name"],
+            "asset_name": asset_data["asset_name"],
             "area": asset_data["area"],
             "operation_agreement_attachments": asset_data[
                 "operation_agreement_attachments"
@@ -325,7 +325,7 @@ class TestCreateAsset:
             db=MagicMock(), asset_data=asset_data, user=MagicMock()
         )
 
-        assert result["property_name"] == "New Property"
+        assert result["asset_name"] == "New Property"
         assert result["area"] == 2000.0
         assert (
             result["operation_agreement_attachments"]
@@ -347,7 +347,7 @@ class TestCreateAsset:
         with pytest.raises(ValueError) as exc_info:
             mock_asset_service.create_asset(
                 db=MagicMock(),
-                asset_data={"property_name": "", "area": -100},
+                asset_data={"asset_name": "", "area": -100},
                 user=MagicMock(),
             )
 
@@ -369,13 +369,13 @@ class TestUpdateAsset:
         """Test successful asset update"""
         mock_asset_service.update_asset.return_value = {
             **sample_asset_response,
-            "property_name": "Updated Property",
+            "asset_name": "Updated Property",
             "operation_agreement_attachments": "receive-4.pdf",
             "terminal_contract_files": "terminal-3.pdf,terminal-4.pdf",
         }
 
         update_data = {
-            "property_name": "Updated Property",
+            "asset_name": "Updated Property",
             "operation_agreement_attachments": "receive-4.pdf",
             "terminal_contract_files": "terminal-3.pdf,terminal-4.pdf",
         }
@@ -387,7 +387,7 @@ class TestUpdateAsset:
             user=MagicMock(),
         )
 
-        assert result["property_name"] == "Updated Property"
+        assert result["asset_name"] == "Updated Property"
         assert result["operation_agreement_attachments"] == "receive-4.pdf"
         assert result["terminal_contract_files"] == "terminal-3.pdf,terminal-4.pdf"
         mock_asset_service.update_asset.assert_called_once()
@@ -403,7 +403,7 @@ class TestUpdateAsset:
             mock_asset_service.update_asset(
                 db=MagicMock(),
                 asset_id="nonexistent",
-                update_data={"property_name": "New Name"},
+                update_data={"asset_name": "New Name"},
                 user=MagicMock(),
             )
 

@@ -1137,7 +1137,7 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
         stmt = (
             select(
                 Asset.id,
-                Asset.property_name,
+                Asset.asset_name,
                 Asset.address,
                 func.count(RentContract.id).label("contract_count"),
                 func.sum(RentLedger.due_amount).label("total_due_amount"),
@@ -1147,7 +1147,7 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
             .join(rent_contract_assets, rent_contract_assets.c.asset_id == Asset.id)
             .join(RentContract, RentContract.id == rent_contract_assets.c.contract_id)
             .join(RentLedger, RentLedger.contract_id == RentContract.id)
-            .group_by(Asset.id, Asset.property_name, Asset.address)
+            .group_by(Asset.id, Asset.asset_name, Asset.address)
         )
 
         if start_date:

@@ -6,7 +6,7 @@
  * import { createMockAsset, createAntdMock } from '@/test-utils';
  *
  * // 创建 Mock 数据
- * const asset = createMockAsset({ property_name: '自定义名称' });
+ * const asset = createMockAsset({ asset_name: '自定义名称' });
  *
  * // Mock Ant Design
  * vi.mock('antd', () => createAntdMock());

@@ -19,8 +19,8 @@ class AssetNotFoundError(ResourceNotFoundError):
 class DuplicateAssetError(DuplicateResourceError):
     """重复资产异常（兼容包装）"""
 
-    def __init__(self, property_name: str):
-        super().__init__("Asset", "property_name", property_name)
+    def __init__(self, asset_name: str):
+        super().__init__("Asset", "asset_name", asset_name)
 
 
 class BusinessLogicError(BaseBusinessError):

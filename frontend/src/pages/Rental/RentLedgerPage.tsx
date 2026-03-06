@@ -349,8 +349,8 @@ const RentLedgerPage: React.FC = () => {
     },
     {
       title: '物业名称',
-      dataIndex: ['asset', 'property_name'],
-      key: 'property_name',
+      dataIndex: ['asset', 'asset_name'],
+      key: 'asset_name',
       render: (text: string) => resolveDisplayText(text),
     },
     {
@@ -582,7 +582,7 @@ const RentLedgerPage: React.FC = () => {
                 >
                   {assets.map(asset => (
                     <Option key={asset.id} value={asset.id}>
-                      {asset.property_name}
+                      {asset.asset_name}
                     </Option>
                   ))}
                 </Select>

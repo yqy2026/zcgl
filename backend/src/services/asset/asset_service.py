@@ -73,6 +73,36 @@ def _get_default_asset_crud() -> Any:
     return asset_module.asset_crud
 
 
+_ADDRESS_SUB_FIELDS = ("province_code", "city_code", "district_code", "address_detail")
+
+
+def _compose_address(data: dict[str, Any], current_asset: "Asset | None" = None) -> str | None:
+    """根据半结构化地址子字段拼接只读展示用 address.
+
+    优先使用 data 中的字段，缺少时回退到 current_asset 的现有字段。
+    若 address_detail 缺到，返回 None（不覆盖现有 address）。
+    """
+    def _get(key: str) -> str | None:
+        if key in data and data[key] is not None:
+            return str(data[key]).strip() or None
+        if current_asset is not None:
+            val = getattr(current_asset, key, None)
+            return str(val).strip() if val else None
+        return None
+
+    detail = _get("address_detail")
+    if not detail:
+        return None  # 没有 address_detail 不拼接
+
+    parts = [
+        _get("province_code"),
+        _get("city_code"),
+        _get("district_code"),
+        detail,
+    ]
+    return " ".join(p for p in parts if p)
+
+
 class AssetService:
     def __init__(
         self,
@@ -500,11 +530,11 @@ class AssetService:
 
             # 2. 名称查重
             existing_asset = await asset_crud.get_by_name_async(
-                db=self.db, property_name=asset_in.property_name
+                db=self.db, asset_name=asset_in.asset_name
             )
             if existing_asset:
                 raise DuplicateResourceError(
-                    "Asset", "property_name", asset_in.property_name
+                    "Asset", "asset_name", asset_in.asset_name
                 )
 
             # 3. 自动计算与一致性验证
@@ -512,6 +542,16 @@ class AssetService:
             asset_data = await self._resolve_ownership(asset_data)
             calculated_fields = AssetCalculator.auto_calculate_fields(asset_data)
             final_data = {**asset_data, **calculated_fields}
+
+            # 3a. 拼接半结构化地址（address 为只读展示字段，创建时必须由子字段生成）
+            composed_address = _compose_address(final_data)
+            if composed_address is not None:
+                final_data["address"] = composed_address
+            else:
+                raise validation_error(
+                    "地址信息不完整：请提供 address_detail 以生成地址",
+                    field_errors={"address_detail": "required_for_address_composition"},
+                )
 
             area_errors = AssetCalculator.validate_area_consistency(final_data)
             if area_errors:
@@ -595,13 +635,13 @@ class AssetService:
                 )
 
                 # 3. 名称查重 (如果修改了名称)
-                new_name = update_data_raw.get("property_name")
-                if new_name and new_name != asset.property_name:
+                new_name = update_data_raw.get("asset_name")
+                if new_name and new_name != asset.asset_name:
                     existing_asset = await asset_crud.get_by_name_async(
-                        db=self.db, property_name=new_name
+                        db=self.db, asset_name=new_name
                     )
                     if existing_asset and existing_asset.id != asset_id:
-                        raise DuplicateResourceError("Asset", "property_name", new_name)
+                        raise DuplicateResourceError("Asset", "asset_name", new_name)
 
                 # 4. 自动计算与一致性验证
                 # 需要合并当前数据和更新数据
@@ -635,6 +675,13 @@ class AssetService:
                         if k not in update_data_raw
                     },
                 }
+
+                # 4a. 如地址子字段有变更，重新拼接 address
+                if any(f in final_update for f in _ADDRESS_SUB_FIELDS):
+                    composed_address = _compose_address(final_update, current_asset=asset)
+                    if composed_address:
+                        final_update["address"] = composed_address
+
                 calculated_asset_in = AssetUpdate(**final_update)
 
                 updated = cast(
@@ -678,7 +725,7 @@ class AssetService:
                 history = AssetHistory()
                 history.asset_id = asset.id
                 history.operation_type = "DELETE"
-                history.description = f"删除资产: {asset.property_name}"
+                history.description = f"删除资产: {asset.asset_name}"
                 history.operator = str(operator) if operator is not None else None
                 self.db.add(history)
                 asset.data_status = DataStatusValues.ASSET_DELETED
@@ -721,7 +768,7 @@ class AssetService:
                 history = AssetHistory()
                 history.asset_id = asset.id
                 history.operation_type = "RESTORE"
-                history.description = f"恢复资产: {asset.property_name}"
+                history.description = f"恢复资产: {asset.asset_name}"
                 history.operator = str(operator) if operator is not None else None
                 self.db.add(history)
                 asset.data_status = DataStatusValues.ASSET_NORMAL

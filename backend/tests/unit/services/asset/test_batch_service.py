@@ -117,7 +117,7 @@ def mock_asset():
     """创建模拟资产对象"""
     asset = MagicMock(spec=Asset)
     asset.id = "asset_test_001"
-    asset.property_name = "测试物业"
+    asset.asset_name = "测试物业"
     asset.address = "北京市朝阳区测试路123号"
     asset.ownership_status = "已确权"
     asset.property_nature = "商业"
@@ -129,7 +129,7 @@ def mock_asset():
 def valid_asset_data():
     """有效的资产数据"""
     return {
-        "property_name": "测试物业",
+        "asset_name": "测试物业",
         "address": "北京市朝阳区测试路123号",
         "ownership_status": "已确权",
         "property_nature": "商业",
@@ -145,7 +145,7 @@ def valid_asset_data():
 def invalid_asset_data():
     """无效的资产数据"""
     return {
-        "property_name": "",  # 空值
+        "asset_name": "",  # 空值
         "address": None,  # 缺失
         "ownership_status": "已确权",
         "property_nature": "商业",
@@ -326,7 +326,7 @@ class TestBatchUpdate:
     ):
         """测试多个资产批量更新成功"""
         mock_assets = [
-            MagicMock(id=f"asset_{i}", property_name=f"物业{i}") for i in range(1, 4)
+            MagicMock(id=f"asset_{i}", asset_name=f"物业{i}") for i in range(1, 4)
         ]
         mock_asset_crud.get_async = AsyncMock(side_effect=mock_assets)
         mock_asset_crud.update_async = AsyncMock(return_value=MagicMock())
@@ -525,8 +525,8 @@ class TestBatchUpdate:
         self, mock_asset_crud, batch_service, mock_db
     ):
         """测试批量更新优先走一次性资产预取"""
-        asset_1 = MagicMock(id="asset_1", property_name="物业1")
-        asset_2 = MagicMock(id="asset_2", property_name="物业2")
+        asset_1 = MagicMock(id="asset_1", asset_name="物业1")
+        asset_2 = MagicMock(id="asset_2", asset_name="物业2")
         _set_asset_query_result(
             mock_db, [asset_1, asset_2], mock_asset_crud=mock_asset_crud
         )
@@ -609,7 +609,7 @@ class TestBatchDelete:
         self, mock_asset_crud, batch_service, mock_db
     ):
         """测试单个资产删除成功"""
-        mock_asset = MagicMock(id="asset_1", property_name="测试物业")
+        mock_asset = MagicMock(id="asset_1", asset_name="测试物业")
         mock_asset.data_status = "正常"
         mock_asset_crud.get_async = AsyncMock(return_value=mock_asset)
         _set_batch_delete_query_results(
@@ -639,7 +639,7 @@ class TestBatchDelete:
     ):
         """测试多个资产删除成功"""
         mock_assets = [
-            MagicMock(id=f"asset_{i}", property_name=f"测试物业{i}")
+            MagicMock(id=f"asset_{i}", asset_name=f"测试物业{i}")
             for i in range(1, 4)
         ]
         for asset in mock_assets:
@@ -734,8 +734,8 @@ class TestBatchDelete:
         self, mock_asset_crud, batch_service, mock_db
     ):
         """测试批量删除使用一次性关联检查"""
-        asset_1 = MagicMock(id="asset_1", property_name="物业1")
-        asset_2 = MagicMock(id="asset_2", property_name="物业2")
+        asset_1 = MagicMock(id="asset_1", asset_name="物业1")
+        asset_2 = MagicMock(id="asset_2", asset_name="物业2")
         asset_1.data_status = "正常"
         asset_2.data_status = "正常"
 
@@ -787,12 +787,12 @@ class TestValidateAssetData:
         assert is_valid is False
         assert len(errors) > 0
         error_fields = [e["field"] for e in errors]
-        assert "property_name" in error_fields
+        assert "asset_name" in error_fields
 
     async def test_validate_missing_required_fields(self, batch_service):
         """测试缺少必填字段"""
         data = {
-            "property_name": "测试",
+            "asset_name": "测试",
             # 缺少其他必填字段
         }
 
@@ -806,7 +806,7 @@ class TestValidateAssetData:
     async def test_validate_invalid_numeric_fields(self, batch_service):
         """测试无效数值字段"""
         data = {
-            "property_name": "测试物业",
+            "asset_name": "测试物业",
             "address": "北京市朝阳区",
             "ownership_status": "已确权",
             "property_nature": "商业",
@@ -824,7 +824,7 @@ class TestValidateAssetData:
     async def test_validate_area_consistency_error(self, batch_service):
         """测试面积一致性错误"""
         data = {
-            "property_name": "测试物业",
+            "asset_name": "测试物业",
             "address": "北京市朝阳区",
             "ownership_status": "已确权",
             "property_nature": "商业",
@@ -843,7 +843,7 @@ class TestValidateAssetData:
     async def test_validate_invalid_date_format(self, batch_service):
         """测试无效日期格式"""
         data = {
-            "property_name": "测试物业",
+            "asset_name": "测试物业",
             "address": "北京市朝阳区",
             "ownership_status": "已确权",
             "property_nature": "商业",
@@ -861,7 +861,7 @@ class TestValidateAssetData:
     async def test_validate_suggestions_warnings(self, batch_service):
         """测试建议性警告"""
         data = {
-            "property_name": "测试物业",
+            "asset_name": "测试物业",
             "address": "北京市朝阳区",
             "ownership_status": "已确权",
             "property_nature": "商业",
@@ -881,7 +881,7 @@ class TestValidateAssetData:
     async def test_validate_custom_rules(self, batch_service):
         """测试自定义验证规则"""
         data = {
-            "property_name": "测试物业",
+            "asset_name": "测试物业",
             "address": "北京市朝阳区",
             "ownership_status": "已确权",
             "property_nature": "商业",
@@ -904,7 +904,7 @@ class TestValidateAssetData:
         mock_enum_service.validate_value = AsyncMock(return_value=(True, ""))
 
         data = {
-            "property_name": "测试物业",
+            "asset_name": "测试物业",
             "address": "北京市朝阳区",
             "ownership_status": "已确权",
             "property_nature": "商业",
@@ -932,7 +932,7 @@ class TestValidateAssetData:
         )
 
         data = {
-            "property_name": "测试物业",
+            "asset_name": "测试物业",
             "address": "北京市朝阳区",
             "ownership_status": "invalid_value",
             "property_nature": "商业",
@@ -1271,7 +1271,7 @@ class TestIntegrationScenarios:
         """测试批量更新前的验证流程"""
         # 首先验证数据
         data = {
-            "property_name": "测试物业",
+            "asset_name": "测试物业",
             "address": "北京市朝阳区",
             "ownership_status": "已确权",
             "property_nature": "商业",
@@ -1285,7 +1285,7 @@ class TestIntegrationScenarios:
         assert is_valid is True
 
         # 然后执行批量更新
-        mock_asset = MagicMock(id="asset_1", property_name="测试物业")
+        mock_asset = MagicMock(id="asset_1", asset_name="测试物业")
         mock_asset_crud.get_async = AsyncMock(return_value=mock_asset)
         mock_asset_crud.get_by_name_async = AsyncMock(return_value=None)
         mock_asset_crud.update_async = AsyncMock(return_value=mock_asset)

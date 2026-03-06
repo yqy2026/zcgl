@@ -640,9 +640,9 @@ class TestSensitiveDataHandler:
 
     def test_non_pii_field_unchanged(self, valid_handler):
         """测试非PII字段不变"""
-        value = "property_name_value"
+        value = "asset_name_value"
 
-        encrypted = valid_handler.encrypt_field("property_name", value)
+        encrypted = valid_handler.encrypt_field("asset_name", value)
         assert encrypted == value  # 非PII字段不应被加密
 
     def test_decrypt_pii_field(self, valid_handler):

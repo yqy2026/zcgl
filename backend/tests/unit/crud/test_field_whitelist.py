@@ -83,7 +83,7 @@ class TestAssetWhitelist:
         """Public text fields should be searchable."""
         whitelist = AssetWhitelist()
 
-        assert whitelist.can_search("property_name")
+        assert whitelist.can_search("asset_name")
         assert whitelist.can_search("address")
         assert whitelist.can_search("project_name")
         assert whitelist.can_search("notes")
@@ -116,7 +116,7 @@ class TestAssetWhitelist:
         assert whitelist.can_sort("cached_occupancy_rate")
 
         # Alphabetic sorting
-        assert whitelist.can_sort("property_name")
+        assert whitelist.can_sort("asset_name")
         assert whitelist.can_sort("project_name")
         assert not whitelist.can_sort("ownership_entity")
 

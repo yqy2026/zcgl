@@ -48,7 +48,7 @@ async def test_import_assets_should_delegate_to_import_service() -> None:
     from src.api.v1.assets.asset_import import import_assets
 
     request = AssetImportRequest(
-        data=[{"property_name": "测试资产"}],
+        data=[{"asset_name": "测试资产"}],
         import_mode="create",
         should_skip_errors=False,
         is_dry_run=True,

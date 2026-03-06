@@ -47,7 +47,7 @@ class TestAssetImport:
         import_data = {
             "data": [
                 {
-                    "property_name": "Test Property",
+                    "asset_name": "Test Property",
                     "address": "123 Test St",
                     "area": 100.5,
                     "asset_type": "building",
@@ -87,7 +87,7 @@ class TestAssetImport:
         import_data = {
             "data": [
                 {
-                    "property_name": "Test Property",
+                    "asset_name": "Test Property",
                     "address": "123 Test St",
                 }
             ],
@@ -131,7 +131,7 @@ class TestAssetImport:
         import_data = {
             "data": [
                 {
-                    "property_name": "Test Property",
+                    "asset_name": "Test Property",
                     "address": "123 Test St",
                 }
             ],
@@ -160,7 +160,7 @@ class TestAssetImport:
                 errors=[
                     {
                         "row_index": 1,
-                        "field": "property_name",
+                        "field": "asset_name",
                         "message": "Validation failed",
                         "code": "VALIDATION_ERROR",
                     }
@@ -172,8 +172,8 @@ class TestAssetImport:
 
         import_data = {
             "data": [
-                {"property_name": "Invalid Asset"},
-                {"property_name": "Valid Asset", "address": "123 Test St"},
+                {"asset_name": "Invalid Asset"},
+                {"asset_name": "Valid Asset", "address": "123 Test St"},
             ],
             "import_mode": "create",
             "should_skip_errors": True,
@@ -208,7 +208,7 @@ class TestAssetImport:
         import_data = {
             "data": [
                 {
-                    "property_name": "Existing Property",
+                    "asset_name": "Existing Property",
                     "address": "123 Test St",
                 }
             ],
@@ -278,7 +278,7 @@ class TestAssetImport:
         response = client.post(
             "/api/v1/assets/import",
             json={
-                "data": [{"property_name": "Test"}],
+                "data": [{"asset_name": "Test"}],
                 "import_mode": "create",
                 "should_skip_errors": False,
                 "is_dry_run": False,
@@ -296,7 +296,7 @@ class TestAssetImportUnauthorized:
     def test_import_unauthorized(self, unauthenticated_client):
         """Test that unauthorized users cannot import assets"""
         import_data = {
-            "data": [{"property_name": "Test"}],
+            "data": [{"asset_name": "Test"}],
             "import_mode": "create",
             "should_skip_errors": False,
             "is_dry_run": False,

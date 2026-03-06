@@ -30,7 +30,7 @@ interface ApiErrorResponse {
 // 项目查询参数接口
 interface ProjectQueryParams {
   keyword?: string;
-  is_active?: boolean;
+  status?: string;
   owner_party_id?: string;
   page?: number;
   page_size?: number;
@@ -46,14 +46,14 @@ interface UseProjectOptionsResult {
 /**
  * 获取项目选项列表
  */
-export const useProjectOptions = (isActive: boolean = true): UseProjectOptionsResult => {
-  const queryKey = ['project-options', isActive];
+export const useProjectOptions = (status: string = 'active'): UseProjectOptionsResult => {
+  const queryKey = ['project-options', status];
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey,
     queryFn: async () => {
       try {
-        const response = await projectService.getProjectOptions(isActive);
+        const response = await projectService.getProjectOptions(status);
         return response;
       } catch (error) {
         projectLogger.error('Error fetching projects:', error as Error);

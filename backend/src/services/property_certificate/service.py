@@ -491,7 +491,7 @@ class PropertyCertificateService:
             matches.append(
                 {
                     "asset_id": asset.id,
-                    "name": getattr(asset, "property_name", "") or "",
+                    "name": getattr(asset, "asset_name", "") or "",
                     "address": getattr(asset, "address", "") or "",
                     "confidence": confidence,
                     "match_reasons": match_reasons,

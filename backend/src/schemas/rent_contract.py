@@ -314,7 +314,7 @@ class AssetSimpleResponse(BaseModel):
     """资产简要响应（用于合同关联）"""
 
     id: str
-    property_name: str
+    asset_name: str
     address: str | None = None
     ownership_entity: str | None = None
     management_entity: str | None = None

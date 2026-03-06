@@ -68,14 +68,14 @@ describe('AssetCard', () => {
 
   describe('渲染测试', () => {
     it('应该正确渲染卡片', () => {
-      const asset = createMockAsset({ property_name: '测试物业' });
+      const asset = createMockAsset({ asset_name: '测试物业' });
       const { container } = renderWithProviders(<AssetCard asset={asset} {...defaultProps} />);
 
       expect(container.querySelector('.asset-card')).toBeInTheDocument();
     });
 
     it('应该显示物业名称', () => {
-      const asset = createMockAsset({ property_name: '测试物业A栋' });
+      const asset = createMockAsset({ asset_name: '测试物业A栋' });
       renderWithProviders(<AssetCard asset={asset} {...defaultProps} />);
 
       expect(screen.getByText('测试物业A栋')).toBeInTheDocument();
@@ -464,7 +464,7 @@ describe('AssetCard', () => {
   describe('边界情况', () => {
     it('应该处理空字符串属性', () => {
       const asset = createMockAsset({
-        property_name: '',
+        asset_name: '',
         address: '',
         owner_party_name: '',
       });
