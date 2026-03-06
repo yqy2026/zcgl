@@ -41,7 +41,7 @@
 ## 3. 产品目标与成功指标
 
 ### 3.1 MVP 一票否决目标（未达标不放量）
-- 清晰展示资产基本信息、租赁情况（汇总/内部/终端）与客户信息。
+- 清晰展示资产基本信息、租赁情况（按合同类型：上游承租/下游转租/委托运营汇总）与客户信息。
 - 建立"合同组"能力，支撑承租模式与代理模式，且二者不混用。
 - 提供可审计的合同审核/反审核与纠错闭环（作废/冲销 + 重建）。
 - 提供经营统计口径：总收入合计 + 自营租金/代理服务费拆分。
@@ -109,7 +109,7 @@
 - UI 必须显式展示"当前视角标签"和"合同角色标签"，避免同名主体误判为重复数据。
 
 ### 5.4 核心场景
-- 场景 S1：资产详情页一屏展示资产基本信息、租赁情况（汇总/内部/终端）、客户摘要。
+- 场景 S1：资产详情页一屏展示资产基本信息、租赁情况（按合同类型汇总：上游承租/下游转租/委托运营）、客户摘要。
 - 场景 S2：项目详情页汇总当前有效资产并展示同口径租赁与客户信息。
 - 场景 S3：承租模式与代理模式按合同组管理，支持关键合同联审。
 - 场景 S4：统计页展示总收入合计及自营租金/代理服务费拆分。
@@ -136,6 +136,9 @@
 - 代码证据：
   - `backend/src/api/v1/assets/assets.py`
   - `backend/src/services/asset/asset_service.py`
+  - `backend/src/models/asset.py`（`AssetForm`/`SpatialLevel`/`BusinessUsage`/`AssetReviewStatus` 枚举，新增分类字段和半结构化地址字段，`_compose_address` 自动拼接）
+  - `backend/src/schemas/asset.py`（`asset_name`/`asset_code`/`asset_form`/`spatial_level`/`business_usage`/`address_detail` 校验器）
+  - `backend/alembic/versions/20260305_asset_field_enrichment_m1.py`
   - `backend/tests/unit/api/v1/test_assets_projection_guard.py`
   - `backend/tests/unit/services/asset/test_asset_service.py`
   - `backend/src/api/v1/assets/asset_batch.py`
@@ -160,18 +163,26 @@
 
 #### REQ-AST-004 资产详情口径清晰展示 📋
 - 描述：资产详情必须默认展示经营所需核心信息。
+- **实现依赖**：REQ-RNT-001（五层合同模型）✅ 已于 2026-03-06 落地，前置依赖已满足。
 - 验收：
-  - 展示资产基本信息、租赁情况（汇总/内部/终端）、客户摘要。
+  - 展示资产基本信息、租赁情况（按合同角色分类汇总）、客户摘要。
   - 默认展示周期为"本月"，并支持周期切换。
-  - 内部/终端判定规则采用"客户类型优先，合同类型兜底"。
-  - 判定规则（MVP 冻结）：
-    - `if customer_type in {INTERNAL, AFFILIATED}: 内部`
-    - `elif contract_type in {INTERNAL_LEASE, SELF_USE}: 内部`
-    - `else: 终端`
+  - 租赁情况分类维度：按 `Contract.group_relation_type`（附录 §3.4）+ `ContractGroup.revenue_mode` 分两组四类：
+    - 承租模式（`revenue_mode = lease`）：
+      - `group_relation_type = 上游`（上游承租）：运营方与产权方签署，运营方为承租方；内部入约合同。
+      - `group_relation_type = 下游`（下游转租）：运营方与终端租户签署，运营方为出租方；对外出约合同。
+    - 代理模式（`revenue_mode = agency`）：
+      - `group_relation_type = 委托`（委托协议）：运营方与产权方签署，运营方为受托管理方；内部入约合同。
+      - `group_relation_type = 直租`（直租合同）：产权方与终端租户直接签署，运营方代为管理；对外出约合同。
+  - MVP 约束：一个资产只属于一种运营模式（承租或代理），禁止混用，不做系统强制校验，依赖录入规范。
+  - 各类型分别展示：合同数量、租用/管理面积、月度金额合计。
+  - 汇总行展示：总合同数、总出租/管理面积、出租率（`已出租面积 / 可出租面积`）。
+  - 客户摘要展示：**仅展示对外出约合同的对方承租方**（`下游`、`直租` 的 `lessee_party_id` 对应名称）；内部入约合同（`上游`、`委托`）不计入客户摘要。
+  - 注：`ContractType` 旧枚举（`LEASE_UPSTREAM/LEASE_DOWNSTREAM/ENTRUSTED`）已废弃（见附录 §10.1），不以此为分类依据。
 
 ### 6.2 项目与主体关系域
 
-#### REQ-PRJ-001 项目关系遵循运营管理语义 📋
+#### REQ-PRJ-001 项目关系遵循运营管理语义 ✅
 - 描述：项目是资产运营管理归集单元，需明确与资产、运营管理方、产权方的关系边界。
 - 验收：
   - 先有资产后有项目，项目可关联多个资产。
@@ -179,19 +190,45 @@
   - 项目不直接绑定产权方，产权关系归属于项目下资产。
   - 单项目可通过资产间接关联多个产权方。
 - 字段映射（附录 v0.3 / 3.2 Project）：
-  - `project_code`：按运营方编码段生成。
+  - `project_code`：按 `PRJ-YYYYMM-NNNNNN` 格式自动生成。
+  - `project_name`：项目名称，必填。
   - `status`：项目业务状态代码值冻结为 `planning/active/paused/completed/terminated`（展示值：`规划中/进行中/暂停/已完成/已终止`）；`data_status` 仅用于逻辑删除（`正常/已删除`）。
+  - `review_status`：代码值冻结为 `draft/pending/approved/rejected`。
   - `manager_party_id`：项目运营管理主体，单值必填。
+- 字段清出（DB 已存在但不在运营管理语义内，M1 迁移时 DROP）：
+  - 工程管理类：`short_name`、`project_type`、`project_scale`、`start_date`、`end_date`、`expected_completion_date`、`actual_completion_date`、`construction_company`、`design_company`、`supervision_company`
+  - 投资金额类：`total_investment`、`planned_investment`、`actual_investment`、`project_budget`
+  - 文本描述类：`project_description`、`project_objectives`、`project_scope`
+  - 地址/联系人类：`address`、`city`、`district`、`province`、`project_manager`、`project_phone`、`project_email`
+  - 冗余状态类：`is_active`（已由 `data_status` 替代）
+  - 以上字段均属早期工程项目管理模板残留，与资产运营管理定位无关，不保留兼容。
+- 代码证据：
+  - `backend/src/models/project.py`
+  - `backend/alembic/versions/20260305_project_field_enrichment_m1.py`
+  - `backend/src/schemas/project.py`
+  - `backend/src/crud/project.py`
+  - `backend/src/services/project/service.py`
+  - `frontend/src/types/project.ts`
+  - `frontend/src/services/projectService.ts`
 
-#### REQ-PRJ-002 项目详情默认按当前有效资产汇总 📋
+#### REQ-PRJ-002 项目详情默认按当前有效资产汇总 ✅
 - 描述：项目页面默认聚合当前有效资产，不混入历史失效资产。
 - 验收：
   - 默认统计范围为 `project_assets` 当前有效关系。
-  - 资产、项目双入口可进入同一合同组详情。
+  - 资产、项目双入口可进入同一合同组详情（合同组双入口，M2 实现，依赖 REQ-RNT-001）。
+- 代码证据：
+  - `backend/src/api/v1/assets/project.py`（`GET /api/v1/projects/{project_id}/assets`）
+  - `backend/src/services/project/service.py`（`get_project_active_assets`）
+  - `backend/src/schemas/project.py`（`ProjectAssetSummary` / `ProjectActiveAssetsResponse`）
+  - `backend/tests/unit/services/project/test_project_service.py`（`TestGetProjectActiveAssets`）
+  - `backend/tests/unit/api/v1/test_project.py`（`TestGetProjectActiveAssets`）
+  - `frontend/src/services/projectService.ts`（`getProjectAssets`）
+  - `frontend/src/pages/Project/ProjectDetailPage.tsx`
+  - `frontend/src/types/project.ts`
 
 ### 6.3 租赁与合同组域
 
-#### REQ-RNT-001 合同组作为主业务对象 📋
+#### REQ-RNT-001 合同组作为主业务对象 ✅
 - 描述：系统以"合同组（交易包）"管理一笔经营关系，不以单合同孤立管理。
 - 验收：
   - 合同组至少包含：经营模式、运营方、产权方、状态、生效区间、关联资产、上下游合同、结算规则、收入归集口径、分润规则、风险标签。
@@ -199,13 +236,31 @@
   - 一个合同组只能属于一种经营模式（承租或代理），禁止混用。
 - 字段映射（附录 v0.3 / 3.3 ContractGroup）：
   - `group_code`：按经营主责方编码段生成（承租/代理均按运营方）。
+- 代码证据（M1–M3 已完成）：
+  - ORM 模型：`backend/src/models/contract_group.py`
+  - Alembic 迁移：`backend/alembic/versions/20260305_contract_group_m1.py`
+  - Pydantic Schema：`backend/src/schemas/contract_group.py`
+  - CRUD 层：`backend/src/crud/contract_group.py`、`backend/src/crud/contract.py`
+  - Service 层：`backend/src/services/rent_contract/contract_group_service.py`
+  - API 端点：`backend/src/api/v1/rent_contracts/contract_groups.py`（`/api/v1/contract-groups/*`，`/api/v1/contracts/*`）
+  - 单元测试：`backend/tests/unit/services/rent_contract/test_contract_group_service.py`、`backend/tests/unit/api/v1/test_contract_groups_layering.py`
 
 #### REQ-RNT-002 承租模式与代理模式并行支持 📋
-- 描述：系统需同时支持两种现实经营模式。
+- 描述：系统需同时支持两种现实经营模式，通过 `ContractGroup.revenue_mode` + `Contract.group_relation_type` 覆盖完整业务结构。
 - 验收：
-  - 承租模式支持"上游承租 + 下游转租"关系。
-  - 代理模式支持"委托管理协议 + 终端租约 + 服务费规则"关系。
+  - 承租模式（`revenue_mode = lease`）：
+    - `group_relation_type = 上游`：运营方与产权方签署，运营方为承租方；为内部入约合同。
+    - `group_relation_type = 下游`：运营方与终端租户签署，运营方为出租方；为对外出约合同。
+    - 终端租户（`下游` 合同的 `lessee_party`）在资产详情客户摘要中可见。
+  - 代理模式（`revenue_mode = agency`）：
+    - `group_relation_type = 委托`：运营方与产权方签署，运营方为受托管理方；为内部入约合同。对应 `AgencyAgreementDetail`。
+    - `group_relation_type = 直租`：产权方与终端租户直接签署，运营方代为管理；为对外出约合同。对应 `LeaseContractDetail`。
+    - 终端租户（`直租` 合同的 `lessee_party`）在资产详情客户摘要中可见。
+  - MVP 约束：一个合同组（ContractGroup）只能属于一种运营模式，禁止混用。
   - 代理模式数据在运营视角下可见，且必须标注"代理口径，非自营出租"。
+- 字段映射（附录 v0.3 / §3.3 ContractGroup + §3.4 Contract）：
+  - `ContractGroup.revenue_mode`：`lease`(承租模式) / `agency`(代理模式)。
+  - `Contract.group_relation_type`：`上游` / `下游` / `委托` / `直租`。
 
 #### REQ-RNT-003 合同生命周期与状态流转 🚧
 - 描述：合同组与组内合同需有可追溯状态管理。
@@ -264,7 +319,7 @@
 - 描述：客户统计需同时反映主体规模与合同规模。
 - 验收：
   - 同时展示"客户主体数"和"客户合同数"。
-  - 支持按内部/终端维度拆分。
+  - 支持按合同类型（上游承租/下游转租/委托运营）维度拆分。
 
 ### 6.5 搜索域
 
@@ -421,13 +476,13 @@
 ## 10. 里程碑与发布策略
 
 ### 10.1 里程碑
-1. M1：资产/项目清晰展示能力上线（含内部/终端租赁与客户摘要）。目标窗口：`2026-03-04 ~ 2026-03-31`。
+1. M1：资产/项目清晰展示能力上线（含按合同类型分类的租赁情况与客户摘要）。目标窗口：`2026-03-04 ~ 2026-03-31`。
 2. M2：合同组与承租/代理模式能力上线（含联审与纠错闭环）。目标窗口：`2026-04-01 ~ 2026-05-10`。
 3. M3：经营统计口径上线（总收入 + 自营/代理拆分 + 客户双指标）。目标窗口：`2026-05-11 ~ 2026-06-07`。
 4. M4：搜索、权限、审计与上线验收闭环。目标窗口：`2026-06-08 ~ 2026-06-30`。
 
 ### 10.2 MVP 放量硬门槛（访谈冻结）
-- G1：资产页/项目页可清晰展示资产信息 + 内部/终端租赁 + 客户摘要。
+- G1：资产页/项目页可清晰展示资产信息 + 按合同类型分类的租赁情况（上游承租/下游转租/委托运营）+ 客户摘要。
 - G2：合同组能力可用（承租/代理、关键合同联审、状态流转）。
 - G3：统计口径可用（总收入合计 + 自营租金/代理服务费拆分 + 客户主体数/客户合同数）。
 
@@ -440,8 +495,10 @@
 | REQ-AST-001 | ✅ | `/api/v1/assets` (CRUD + batch + import) | `test_assets_projection_guard.py`, `test_asset_service.py` |
 | REQ-AST-002 | 🚧 | 投影/关联 | `test_asset.py` |
 | REQ-AST-003 | 📋 | — | — |
-| REQ-AST-004 | 📋 | — | — |
-| REQ-RNT-001 | 📋 | — | — |
+| REQ-AST-004 | 📋 | `GET /api/v1/assets/{id}/lease-summary` | — |
+| REQ-PRJ-001 | ✅ | `/api/v1/projects` (CRUD + search) | `test_project.py`, `test_project_service.py` |
+| REQ-PRJ-002 | ✅ | `/api/v1/projects/{project_id}/assets` | `test_project_service.py`, `test_project.py` |
+| REQ-RNT-001 | ✅ | M1 ORM/DDL ✅ M2 Schema/CRUD/Service ✅ M3 API ✅ | — |
 | REQ-RNT-002 | 📋 | — | — |
 | REQ-RNT-003 | 🚧 | 生命周期 + 冲突检测 | `lifecycle_service.py` |
 | REQ-RNT-004 | 📋 | — | — |

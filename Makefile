@@ -4,7 +4,7 @@
 	test-e2e-import test-e2e-import-backend test-e2e-import-frontend \
 	test-integration test-coverage \
 	build-frontend backend-import check ci-gate \
-	backend-org-cov secrets migrate check-migration-naming docs-lint
+	backend-org-cov secrets migrate check-migration-naming docs-lint check-field-drift
 
 ROOT_DIR := $(CURDIR)
 BACKEND_VENV ?= $(ROOT_DIR)/backend/.venv
@@ -40,7 +40,8 @@ help:
 	@echo "  backend-import    Import backend app to validate runtime"
 	@echo "  check             Run lint, tests, build, and import checks"
 	@echo "  ci-gate           Run CI gate (ruff + tsgo + unit tests)"
-	@echo "  docs-lint         Run requirements authority matrix checks"
+	@echo "  docs-lint         Run all docs checks (authority + code-evidence + plans + field drift)"
+	@echo "  check-field-drift Run field spec vs ORM drift report"
 	@echo "  backend-org-cov   Run org CRUD coverage test"
 	@echo "  secrets           Generate SECRET_KEY and DATA_ENCRYPTION_KEY"
 	@echo "  migrate           Run alembic upgrade head"
@@ -134,7 +135,7 @@ backend-import:
 		fi; \
 		DATABASE_URL="$$RESOLVED_DATABASE_URL" $(PYTHON) -c "from src.main import app; print('import ok')"
 
-check: lint-backend lint-frontend scan-frontend type-check test-backend test-frontend build-frontend backend-import
+check: lint-backend lint-frontend scan-frontend type-check test-backend test-frontend build-frontend backend-import docs-lint
 
 ci-gate: lint-backend type-check test-backend test-frontend-ci
 
@@ -157,6 +158,10 @@ migrate:
 
 docs-lint:
 	$(PYTHON) scripts/check_requirements_authority.py
+	$(PYTHON) scripts/check_field_drift.py
+
+check-field-drift:
+	$(PYTHON) scripts/check_field_drift.py
 
 # 运行集成测试
 test-integration:

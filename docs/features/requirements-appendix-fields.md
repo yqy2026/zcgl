@@ -73,6 +73,38 @@
 | `reviewed_at` | datetime | 否 | 审核时间（通过/反审核时必填） | 已确认 |
 | `review_reason` | string | 否 | 审核原因（反审核时必填） | 已确认 |
 
+### 3.2.1 废弃字段（M1 迁移时 DROP）
+
+以下字段在数据库中存在，但不属于运营管理语义，M1 里程碑迁移时物理删除：
+
+| 字段 | 废弃理由 |
+|------|----------|
+| `short_name` | 工程管理模板残留，无业务用途 |
+| `project_type` | 工程管理模板残留，无业务用途 |
+| `project_scale` | 工程管理模板残留，无业务用途 |
+| `start_date` | 工程周期字段，非运营管理语境 |
+| `end_date` | 工程周期字段，非运营管理语境 |
+| `expected_completion_date` | 工程周期字段，非运营管理语境 |
+| `actual_completion_date` | 工程周期字段，非运营管理语境 |
+| `address` | 项目无独立地址，地址归属于资产 |
+| `city` | 同上 |
+| `district` | 同上 |
+| `province` | 同上 |
+| `project_manager` | 联系人信息，不在运营管理对象模型内 |
+| `project_phone` | 联系人信息，不在运营管理对象模型内 |
+| `project_email` | 联系人信息，不在运营管理对象模型内 |
+| `total_investment` | 投融资字段，不在运营管理语境 |
+| `planned_investment` | 投融资字段，不在运营管理语境 |
+| `actual_investment` | 投融资字段，不在运营管理语境 |
+| `project_budget` | 投融资字段，不在运营管理语境 |
+| `project_description` | 工程文本模板残留 |
+| `project_objectives` | 工程文本模板残留 |
+| `project_scope` | 工程文本模板残留 |
+| `construction_company` | 施工管理字段，与本系统无关 |
+| `design_company` | 施工管理字段，与本系统无关 |
+| `supervision_company` | 施工管理字段，与本系统无关 |
+| `is_active` | 已由 `data_status` 替代，冗余 |
+
 ## 3.3 ContractGroup（合同组/交易包）
 
 > 定位：纯容器，用于将同一笔交易涉及的所有合同打包管理。ContractGroup **不拥有独立生命周期状态**，其“状态”由组内合同状态派生计算（见 §8）。审核在合同级进行，不在组级进行。
@@ -107,7 +139,7 @@
 | `contract_id` | string | 是 | 合同主键 | 已确认 |
 | `contract_group_id` | string | 是 | 所属合同组 FK → ContractGroup | 已确认 |
 | `contract_direction` | enum | 是 | `出租` / `承租`（从哪个视角看这份合同） | 已确认 |
-| `group_relation_type` | enum | 是 | `上游` / `下游` / `委托` / `终端` | 已确认 |
+| `group_relation_type` | enum | 是 | `上游` / `下游` / `委托` / `直租` | 已确认 |
 | `lessor_party_id` | string | 是 | 出租方/委托方主体（代理模式下 lessor = 委托方） | 已确认 |
 | `lessee_party_id` | string | 是 | 承租方/受托方主体（代理模式下 lessee = 受托方） | 已确认 |
 | `asset_ids` | string[] | 否 | 关联资产 ID 列表（多对多），为所属 ContractGroup.asset_ids 的子集 | 已确认 |
@@ -134,10 +166,8 @@
 | `lease_detail_id` | string | 是 | 明细主键 | 已确认 |
 | `contract_id` | string | 是 | FK → Contract 基表 | 已确认 |
 | `total_deposit` | decimal(18,2) | 否 | 总押金金额，>=0 | 已确认 |
-| `rent_amount` | `LeaseContractDetail.rent_amount` |
-
-| `rent_amount_excl_tax` | `LeaseContractDetail.rent_amount_excl_tax`（派生） |
-
+| `rent_amount` | decimal(18,2) | 是 | 合同级租金汇总金额（>=0）；不替代 RentTerm 分阶段明细，台账按 RentTerm 生成 | 已确认 |
+| `rent_amount_excl_tax` | decimal(18,2) | 否 | 不含税金额（派生） | 已确认（派生） |
 | `monthly_rent_base` | decimal(15,2) | 否 | 基础月租金 | 已确认 |
 | `payment_cycle` | enum | 否 | 付款周期：`月付/季付/半年付/年付`，默认 `月付` | 已确认 |
 | `payment_terms` | text | 否 | 支付条款 | 已确认 |
@@ -164,7 +194,7 @@
 | `fee_calculation_base` | enum | 是 | 计费基数：`actual_received`(实收租金) / `due_amount`(应收租金)；MVP 默认 `actual_received` | 已确认 |
 | `agency_scope` | text | 否 | 代理范围描述（自由文本） | 已确认 |
 
-> 说明：代理交易包结构 = 1 份委托协议（关联 AgencyAgreementDetail）+ N 份终端租赁合同（关联 LeaseContractDetail），通过 ContractRelation 建立关联。
+> 说明：代理交易包结构 = 1 份委托协议（关联 AgencyAgreementDetail）+ N 份直租合同（`group_relation_type=直租`，关联 LeaseContractDetail），通过 ContractRelation 建立关联。
 
 ## 3.7 ContractRelation（合同关系）
 
@@ -175,7 +205,7 @@
 | `relation_id` | string | 是 | 关系主键 | 已确认 |
 | `parent_contract_id` | string | 是 | FK → Contract，上级合同（上游 / 委托协议 / 旧合同） | 已确认 |
 | `child_contract_id` | string | 是 | FK → Contract，下级合同（下游 / 终端合同 / 新合同） | 已确认 |
-| `relation_type` | enum | 是 | `upstream_downstream`(上下游) / `agency_terminal`(代理-终端) / `renewal`(续签) | 已确认 |
+| `relation_type` | enum | 是 | `upstream_downstream`(上下游) / `agency_direct`(代理-直租) / `renewal`(续签) | 已确认 |
 | `created_at` | datetime | 是 | 系统字段 | 已确认 |
 
 **约束**：
@@ -559,8 +589,8 @@
 | As-Built 字段 | 新归属 |
 |---|---|
 | `total_deposit` | `LeaseContractDetail.total_deposit` |
-| `rent_amount` | decimal(18,2) | 是 | 合同级租金汇总金额（>=0）；不替代 RentTerm 分阶段明细，台账按 RentTerm 生成 | 已确认 |
-| `rent_amount_excl_tax` | decimal(18,2) | 否 | 不含税金额（派生） | 已确认（派生） |
+| `rent_amount` | `LeaseContractDetail.rent_amount` |
+| `rent_amount_excl_tax` | `LeaseContractDetail.rent_amount_excl_tax`（派生） |
 | `monthly_rent_base` | `LeaseContractDetail.monthly_rent_base` |
 | `payment_cycle` | `LeaseContractDetail.payment_cycle` |
 | `payment_terms` | `LeaseContractDetail.payment_terms` |
@@ -587,7 +617,6 @@
 | `manager_party_id` | 保留 | 经营管理方 |
 | `tenant_party_id` | `lessee_party_id` | 语义升级为承租方/受托方 |
 | `asset_ids`（新增） | `asset_ids` | 关联资产（多对多），为 ContractGroup.asset_ids 子集 |
-
 | `contract_notes` | `contract_notes` | 保留 |
 | `data_status` / `version` | 保留 | 系统字段 |
 | `created_at` / `updated_at` | 保留 | 系统字段 |
@@ -598,7 +627,7 @@
 |---|---|---|
 | `contract_group_id` | Contract 基表 | 所属合同组 |
 | `contract_direction` | Contract 基表 | 出租/承租 |
-| `group_relation_type` | Contract 基表 | 上游/下游/委托/终端 |
+| `group_relation_type` | Contract 基表 | 上游/下游/委托/直租 |
 | `review_*` 四件套 | Contract 基表 | 审核状态/人/时间/原因 |
 | `fee_calculation_base` | AgencyAgreementDetail | 计费基数 |
 | `agency_scope` | AgencyAgreementDetail | 代理范围 |
