@@ -5,8 +5,10 @@ from __future__ import annotations
 import sqlalchemy as sa
 
 from src.scripts.migration.party_migration.backfill_business_tables import (
+    LEGACY_CONTRACTS_TABLE,
     _apply_mapping_updates,
     _backfill_role_scope,
+    _build_operations,
 )
 from src.scripts.migration.party_migration.backfill_role_policies import (
     _choose_policy_package,
@@ -173,6 +175,25 @@ def test_backfill_role_scope_updates_organization_scope() -> None:
         assert row_r2[1] == "party-2"
     finally:
         _close_connection(connection)
+
+
+def test_build_operations_uses_legacy_contract_summary_key() -> None:
+    legacy_summary_key = ".".join(("legacy_contracts", "owner_party_id"))
+    retired_summary_key = ".".join((LEGACY_CONTRACTS_TABLE, "owner_party_id"))
+
+    operations = _build_operations(
+        org_to_party_map={"org-1": "party-1"},
+        ownership_to_party_map={"own-1": "party-1"},
+    )
+
+    assert any(
+        operation[0] == legacy_summary_key
+        and operation[1] == LEGACY_CONTRACTS_TABLE
+        and operation[2] == "ownership_id"
+        and operation[3] == "owner_party_id"
+        for operation in operations
+    )
+    assert not any(operation[0] == retired_summary_key for operation in operations)
 
 
 def test_reconciliation_role_scope_integrity_fails_for_invalid_scope() -> None:

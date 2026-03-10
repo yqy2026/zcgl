@@ -132,8 +132,8 @@ describe('AppSidebar - 渲染与交互测试', () => {
     expect(screen.getByText('数据看板')).toBeInTheDocument();
     expect(screen.getAllByText('资产管理').length).toBeGreaterThan(0);
     expect(screen.getByText('资产列表')).toBeInTheDocument();
-    expect(screen.getByText('租赁管理')).toBeInTheDocument();
-    expect(screen.getByText('合同列表')).toBeInTheDocument();
+    expect(screen.getByText('合同组管理')).toBeInTheDocument();
+    expect(screen.getAllByText('旧租赁前端已退休').length).toBeGreaterThan(0);
     expect(screen.getByText('系统管理')).toBeInTheDocument();
     expect(screen.getByText('用户管理')).toBeInTheDocument();
   });

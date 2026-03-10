@@ -549,8 +549,8 @@ class AuthzPermissionChecker:
                 db=db,
                 project_id=normalized_resource_id,
             )
-        if self.resource_type == "rent_contract":
-            return await self._load_rent_contract_scope_context(
+        if self.resource_type == "contract":
+            return await self._load_contract_scope_context(
                 db=db,
                 contract_id=normalized_resource_id,
             )
@@ -659,20 +659,23 @@ class AuthzPermissionChecker:
             }
         )
 
-    async def _load_rent_contract_scope_context(
+    async def _load_contract_scope_context(
         self,
         *,
         db: AsyncSession,
         contract_id: str,
     ) -> dict[str, Any]:
-        from ..models.rent_contract import RentContract
+        from ..models.contract_group import Contract, ContractGroup
 
         stmt = select(
-            RentContract.id.label("contract_id"),
-            RentContract.owner_party_id,
-            RentContract.manager_party_id,
-            RentContract.tenant_party_id,
-        ).where(RentContract.id == contract_id)
+            Contract.contract_id.label("contract_id"),
+            ContractGroup.owner_party_id.label("owner_party_id"),
+            ContractGroup.operator_party_id.label("manager_party_id"),
+            Contract.lessee_party_id.label("tenant_party_id"),
+        ).join(
+            ContractGroup,
+            Contract.contract_group_id == ContractGroup.contract_group_id,
+        ).where(Contract.contract_id == contract_id)
         row = (await db.execute(stmt)).mappings().one_or_none()
         if row is None:
             return {}
@@ -1500,7 +1503,7 @@ async def can_edit_contract(user: User, db: AsyncSession, contract_id: str) -> b
     # 使用RBAC服务进行细粒度权限检查
     try:
         permission_request = PermissionCheckRequest(
-            resource="rent_contract",
+            resource="contract",
             action="edit",
             resource_id=contract_id,
             context=None,

@@ -19,7 +19,6 @@ import {
   Statistic,
   Badge,
   DatePicker,
-  Table,
   Skeleton,
   Tooltip,
 } from 'antd';
@@ -134,7 +133,7 @@ const AssetLeaseSummaryRow: React.FC<AssetLeaseSummaryRowData & { onNavigate: (i
         )}
       </td>
       <td style={{ textAlign: 'right' }}>
-        <Text type="secondary" style={{ fontSize: 12 }}>{totalContracts} 份合同</Text>
+        <Text type="secondary" style={{ fontSize: '0.75rem' }}>{totalContracts} 份合同</Text>
       </td>
     </tr>
   );
@@ -438,18 +437,18 @@ const ProjectDetailPage: React.FC = () => {
               }
             >
               <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
                   <thead>
-                    <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
-                      <th style={{ textAlign: 'left', padding: '8px 12px', fontWeight: 600 }}>资产</th>
+                    <tr style={{ borderBottom: 'var(--border-width-thin) solid var(--color-border)' }}>
+                      <th style={{ textAlign: 'left', padding: '0.5rem 0.75rem', fontWeight: 600 }}>资产</th>
                       {['上游', '下游', '委托', '直租'].map(rt => (
-                        <th key={rt} style={{ textAlign: 'center', padding: '8px 12px', fontWeight: 600 }}>
+                        <th key={rt} style={{ textAlign: 'center', padding: '0.5rem 0.75rem', fontWeight: 600 }}>
                           <Tag color={RELATION_TYPE_COLORS[rt]} style={{ margin: 0 }}>{RELATION_TYPE_LABELS[rt]}</Tag>
                         </th>
                       ))}
-                      <th style={{ textAlign: 'right', padding: '8px 12px', fontWeight: 600 }}>出租率</th>
-                      <th style={{ textAlign: 'center', padding: '8px 12px', fontWeight: 600 }}>客户摘要</th>
-                      <th style={{ textAlign: 'right', padding: '8px 12px', fontWeight: 600 }}>合同数</th>
+                      <th style={{ textAlign: 'right', padding: '0.5rem 0.75rem', fontWeight: 600 }}>出租率</th>
+                      <th style={{ textAlign: 'center', padding: '0.5rem 0.75rem', fontWeight: 600 }}>客户摘要</th>
+                      <th style={{ textAlign: 'right', padding: '0.5rem 0.75rem', fontWeight: 600 }}>合同数</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -465,7 +464,7 @@ const ProjectDetailPage: React.FC = () => {
                   </tbody>
                 </table>
               </div>
-              <Text type="secondary" style={{ display: 'block', marginTop: 8, fontSize: 12 }}>
+              <Text type="secondary" style={{ display: 'block', marginTop: '0.5rem', fontSize: '0.75rem' }}>
                 注：MVP 阶段面积字段以合同台账落地后口径为准；出租率目前为占位值 0%，待台账覆盖后升级。
               </Text>
             </Card>

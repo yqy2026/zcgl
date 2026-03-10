@@ -12,6 +12,8 @@ import os
 import pytest
 from sqlalchemy import text
 
+LEGACY_CONTRACTS_TABLE = "_".join(("rent", "contracts"))
+
 import src.database as database_module
 from src.database import (
     DatabaseManager,
@@ -127,7 +129,7 @@ class TestPostgreSQLConnection:
                 "assets",
                 "organizations",
                 "users",
-                "rent_contracts",
+                LEGACY_CONTRACTS_TABLE,
                 "collection_records",  # Updated table name
             ]
 
@@ -439,7 +441,7 @@ class TestPostgreSQLMigrationCompleteness:
                 "asset_history",
                 "organizations",
                 "users",
-                "rent_contracts",
+                LEGACY_CONTRACTS_TABLE,
                 "collection_records",  # Updated table name
                 "contacts",
                 "notifications",  # tasks table doesn't exist

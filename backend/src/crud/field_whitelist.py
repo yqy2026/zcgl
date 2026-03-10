@@ -167,57 +167,44 @@ class AssetWhitelist(ModelFieldWhitelist):
     }
 
 
-# ============================================================================
-# RentContract Whitelist
-# ============================================================================
-
-
-class RentContractWhitelist(ModelFieldWhitelist):
-    """Whitelist for RentContract model."""
+class ContractWhitelist(ModelFieldWhitelist):
+    """Whitelist for new Contract model."""
 
     filter_fields: ClassVar[set[str]] = {
-        # Basic identifiers
-        "id",
-        # Contract fields
+        "contract_id",
+        "contract_group_id",
         "contract_number",
-        "contract_status",
-        # References
-        "owner_party_id",
-        # Date fields
-        "start_date",
-        "end_date",
-        # Payment terms
-        "payment_cycle",
-        "rent_increase_rate",
-        # Booleans
-        "is_active",
-        # System fields
+        "contract_direction",
+        "group_relation_type",
+        "lessor_party_id",
+        "lessee_party_id",
+        "sign_date",
+        "effective_from",
+        "effective_to",
+        "status",
+        "review_status",
+        "data_status",
         "created_at",
         "updated_at",
     }
 
     search_fields: ClassVar[set[str]] = {
         "contract_number",
-        "notes",
+        "contract_notes",
     }
 
     sort_fields: ClassVar[set[str]] = {
-        # Time-based
+        "contract_number",
+        "sign_date",
+        "effective_from",
+        "effective_to",
         "created_at",
         "updated_at",
-        "start_date",
-        "end_date",
-        # Financial (sorting allowed)
-        "monthly_rent_base",
-        "total_deposit",
     }
 
     blocked_fields: ClassVar[set[str]] = {
-        # PII (even if encrypted, should not be discoverable)
-        "owner_phone",
-        "tenant_phone",
-        "tenant_name",  # Business sensitive
-        # Audit trail
+        "review_by",
+        "review_reason",
         "created_by",
         "updated_by",
     }
@@ -601,75 +588,6 @@ class PropertyOwnerWhitelist(ModelFieldWhitelist):
 
 
 # ============================================================================
-# RentTerm / RentLedger Whitelist
-# ============================================================================
-
-
-class RentTermWhitelist(ModelFieldWhitelist):
-    """Whitelist for RentTerm model."""
-
-    filter_fields: ClassVar[set[str]] = {
-        "id",
-        "contract_id",
-        "start_date",
-        "end_date",
-        "monthly_rent",
-        "total_monthly_amount",
-        DateTimeFields.CREATED_AT,
-        DateTimeFields.UPDATED_AT,
-    }
-
-    search_fields: ClassVar[set[str]] = {
-        "rent_description",
-    }
-
-    sort_fields: ClassVar[set[str]] = {
-        "start_date",
-        "end_date",
-        "monthly_rent",
-        "total_monthly_amount",
-        DateTimeFields.CREATED_AT,
-        DateTimeFields.UPDATED_AT,
-    }
-
-    blocked_fields: ClassVar[set[str]] = set()
-
-
-class RentLedgerWhitelist(ModelFieldWhitelist):
-    """Whitelist for RentLedger model."""
-
-    filter_fields: ClassVar[set[str]] = {
-        "id",
-        "contract_id",
-        "asset_id",
-        "owner_party_id",
-        "year_month",
-        "due_date",
-        "payment_status",
-        "data_status",
-        DateTimeFields.CREATED_AT,
-        DateTimeFields.UPDATED_AT,
-    }
-
-    search_fields: ClassVar[set[str]] = set()
-
-    sort_fields: ClassVar[set[str]] = {
-        "year_month",
-        "due_date",
-        "due_amount",
-        "paid_amount",
-        "overdue_amount",
-        DateTimeFields.CREATED_AT,
-        DateTimeFields.UPDATED_AT,
-    }
-
-    blocked_fields: ClassVar[set[str]] = {
-        "payment_reference",
-        "notes",
-    }
-
-
-# ============================================================================
 # RBAC Whitelists
 # ============================================================================
 
@@ -903,11 +821,10 @@ def register_whitelist(model_class: type, whitelist: ModelFieldWhitelist) -> Non
 
 
 def _ensure_whitelists_registered() -> None:
-    if WHITELIST_REGISTRY:
-        return
     try:
         from ..models.asset import Asset
         from ..models.collection import CollectionRecord
+        from ..models.contract_group import Contract
         from ..models.llm_prompt import PromptTemplate
         from ..models.ownership import Ownership
         from ..models.project import Project
@@ -920,29 +837,32 @@ def _ensure_whitelists_registered() -> None:
             Role,
             UserRoleAssignment,
         )
-        from ..models.rent_contract import RentContract, RentLedger, RentTerm
         from ..models.system_dictionary import AssetCustomField, SystemDictionary
         from ..models.task import AsyncTask, ExcelTaskConfig
 
-        register_whitelist(Asset, AssetWhitelist())
-        register_whitelist(RentContract, RentContractWhitelist())
-        register_whitelist(Role, RoleWhitelist())
-        register_whitelist(SystemDictionary, SystemDictionaryWhitelist())
-        register_whitelist(AssetCustomField, AssetCustomFieldWhitelist())
-        register_whitelist(Permission, PermissionWhitelist())
-        register_whitelist(CollectionRecord, CollectionRecordWhitelist())
-        register_whitelist(PromptTemplate, PromptTemplateWhitelist())
-        register_whitelist(Project, ProjectWhitelist())
-        register_whitelist(Ownership, OwnershipWhitelist())
-        register_whitelist(PropertyCertificate, PropertyCertificateWhitelist())
-        register_whitelist(RentTerm, RentTermWhitelist())
-        register_whitelist(RentLedger, RentLedgerWhitelist())
-        register_whitelist(UserRoleAssignment, UserRoleAssignmentWhitelist())
-        register_whitelist(ResourcePermission, ResourcePermissionWhitelist())  # DEPRECATED
-        register_whitelist(PermissionGrant, PermissionGrantWhitelist())  # DEPRECATED
-        register_whitelist(PermissionAuditLog, PermissionAuditLogWhitelist())
-        register_whitelist(AsyncTask, AsyncTaskWhitelist())
-        register_whitelist(ExcelTaskConfig, ExcelTaskConfigWhitelist())
+        default_whitelists = (
+            (Asset, AssetWhitelist),
+            (Contract, ContractWhitelist),
+            (Role, RoleWhitelist),
+            (SystemDictionary, SystemDictionaryWhitelist),
+            (AssetCustomField, AssetCustomFieldWhitelist),
+            (Permission, PermissionWhitelist),
+            (CollectionRecord, CollectionRecordWhitelist),
+            (PromptTemplate, PromptTemplateWhitelist),
+            (Project, ProjectWhitelist),
+            (Ownership, OwnershipWhitelist),
+            (PropertyCertificate, PropertyCertificateWhitelist),
+            (UserRoleAssignment, UserRoleAssignmentWhitelist),
+            (ResourcePermission, ResourcePermissionWhitelist),  # DEPRECATED
+            (PermissionGrant, PermissionGrantWhitelist),  # DEPRECATED
+            (PermissionAuditLog, PermissionAuditLogWhitelist),
+            (AsyncTask, AsyncTaskWhitelist),
+            (ExcelTaskConfig, ExcelTaskConfigWhitelist),
+        )
+
+        for model_class, whitelist_class in default_whitelists:
+            if model_class not in WHITELIST_REGISTRY:
+                register_whitelist(model_class, whitelist_class())
     except Exception as exc:
         logger.warning(f"Failed to initialize whitelist registry: {exc}")
 
@@ -994,4 +914,3 @@ class EmptyWhitelist(ModelFieldWhitelist):
 
     def can_sort(self, field_name: str) -> bool:
         return False
-

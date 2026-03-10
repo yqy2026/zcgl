@@ -24,8 +24,8 @@ from ..models.asset import Asset
 from ..models.asset_history import AssetHistory
 from ..models.asset_search_index import AssetSearchIndex
 from ..models.auth import User
+from ..models.contract_group import Contract, LeaseContractDetail
 from ..models.party import Party
-from ..models.rent_contract import RentContract
 from ..schemas.asset import AssetCreate, AssetUpdate
 from .asset_support import (
     AssetFilterData,
@@ -110,24 +110,26 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         ]
         if include_contract_projection:
             options.append(
-                selectinload(Asset.rent_contracts).options(
+                selectinload(Asset.contracts).options(
                     load_only(
-                        RentContract.id,
-                        RentContract.contract_status,
-                        RentContract.tenant_name,
-                        RentContract.contract_number,
-                        RentContract.start_date,
-                        RentContract.end_date,
-                        RentContract.monthly_rent_base,
-                        RentContract.total_deposit,
-                        RentContract.created_at,
-                        RentContract.data_status,
-                    )
+                        Contract.contract_id,
+                        Contract.status,
+                        Contract.contract_number,
+                        Contract.effective_from,
+                        Contract.effective_to,
+                        Contract.created_at,
+                        Contract.data_status,
+                    ),
+                    joinedload(Contract.lease_detail).load_only(
+                        LeaseContractDetail.tenant_name,
+                        LeaseContractDetail.monthly_rent_base,
+                        LeaseContractDetail.total_deposit,
+                    ),
                 )
             )
             options.append(
                 with_loader_criteria(
-                    RentContract,
+                    Contract,
                     lambda cls: or_(
                         cls.data_status.is_(None),
                         cls.data_status != DataStatusValues.ASSET_DELETED,
@@ -896,15 +898,13 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         summary_row: AreaSummaryAggregationRow | None = await _result_first(result)
         return summary_row
 
-    async def has_rent_contracts_async(
-        self, db: AsyncSession, asset_id: str
-    ) -> bool:
-        """检查资产是否关联租赁合同（通过关联表）"""
-        from ..models.associations import rent_contract_assets
+    async def has_contracts_async(self, db: AsyncSession, asset_id: str) -> bool:
+        """检查资产是否关联合同（通过新合同关联表）"""
+        from ..models.associations import contract_assets
 
         stmt = (
-            select(rent_contract_assets.c.asset_id)
-            .where(rent_contract_assets.c.asset_id == asset_id)
+            select(contract_assets.c.asset_id)
+            .where(contract_assets.c.asset_id == asset_id)
             .limit(1)
         )
         result = await db.execute(stmt)
@@ -926,25 +926,36 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         first_row: tuple[str] | None = await _result_first(result)
         return first_row is not None
 
-    async def has_rent_ledger_async(self, db: AsyncSession, asset_id: str) -> bool:
-        """检查资产是否有租金台账记录"""
-        from ..models.rent_contract import RentLedger
+    async def has_contract_ledger_entries_async(
+        self, db: AsyncSession, asset_id: str
+    ) -> bool:
+        """检查资产是否有关联合同台账记录"""
+        from ..models.associations import contract_assets
+        from ..models.contract_group import ContractLedgerEntry
 
-        stmt = select(RentLedger.id).where(RentLedger.asset_id == asset_id).limit(1)
+        stmt = (
+            select(ContractLedgerEntry.entry_id)
+            .join(
+                contract_assets,
+                ContractLedgerEntry.contract_id == contract_assets.c.contract_id,
+            )
+            .where(contract_assets.c.asset_id == asset_id)
+            .limit(1)
+        )
         result = await db.execute(stmt)
         first_row: tuple[str] | None = await _result_first(result)
         return first_row is not None
 
-    async def get_assets_with_rent_contracts_async(
+    async def get_assets_with_contracts_async(
         self, db: AsyncSession, asset_ids: list[str]
     ) -> list[str]:
-        """批量获取有租赁合同关联的资产ID列表"""
+        """批量获取有关联合同的资产 ID 列表"""
         if not asset_ids:
             return []
-        from ..models.associations import rent_contract_assets
+        from ..models.associations import contract_assets
 
-        stmt = select(rent_contract_assets.c.asset_id).where(
-            rent_contract_assets.c.asset_id.in_(asset_ids)
+        stmt = select(contract_assets.c.asset_id).where(
+            contract_assets.c.asset_id.in_(asset_ids)
         )
         result = await db.execute(stmt)
         matched_asset_ids: list[str] = await _scalars_all(result)
@@ -965,15 +976,24 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         matched_asset_ids: list[str] = await _scalars_all(result)
         return [str(asset_id) for asset_id in matched_asset_ids]
 
-    async def get_assets_with_rent_ledger_async(
+    async def get_assets_with_contract_ledger_entries_async(
         self, db: AsyncSession, asset_ids: list[str]
     ) -> list[str]:
-        """批量获取有租金台账记录的资产ID列表"""
+        """批量获取有关联合同台账记录的资产 ID 列表"""
         if not asset_ids:
             return []
-        from ..models.rent_contract import RentLedger
+        from ..models.associations import contract_assets
+        from ..models.contract_group import ContractLedgerEntry
 
-        stmt = select(RentLedger.asset_id).where(RentLedger.asset_id.in_(asset_ids))
+        stmt = (
+            select(contract_assets.c.asset_id)
+            .distinct()
+            .join(
+                ContractLedgerEntry,
+                ContractLedgerEntry.contract_id == contract_assets.c.contract_id,
+            )
+            .where(contract_assets.c.asset_id.in_(asset_ids))
+        )
         result = await db.execute(stmt)
         matched_asset_ids: list[str] = await _scalars_all(result)
         return [str(asset_id) for asset_id in matched_asset_ids]

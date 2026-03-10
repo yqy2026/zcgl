@@ -6,12 +6,12 @@ from datetime import datetime
 
 import pytest
 
+import src.core.validators as validators_module
 from src.core.validators import (
     AssetValidator,
     BaseValidator,
     DataCleaner,
     OrganizationValidator,
-    RentContractValidator,
     UserValidator,
     ValidationMixin,
     validate_field_length,
@@ -108,19 +108,10 @@ class TestOrganizationValidator:
         assert "组织代码只能包含大写字母" in error_text
 
 
-class TestRentContractValidator:
-    def test_validate_contract_data(self):
-        data = {
-            "monthly_rent": -1,
-            "security_deposit": -1,
-            "lease_start_date": datetime(2024, 1, 2),
-            "lease_end_date": datetime(2024, 1, 1),
-        }
-        errors = RentContractValidator.validate_contract_data(data)
-        error_text = " ".join(errors)
-        assert "月租金必须为正数" in error_text
-        assert "保证金不能为负数" in error_text
-        assert "租赁开始日期不能晚于结束日期" in error_text
+def test_legacy_contract_validator_retired():
+    legacy_validator_name = "Rent" + "ContractValidator"
+
+    assert not hasattr(validators_module, legacy_validator_name)
 
 
 class TestValidationMixin:

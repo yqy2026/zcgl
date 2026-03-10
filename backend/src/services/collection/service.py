@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ...core.exception_handler import ResourceNotFoundError
 from ...crud.collection import collection_crud
 from ...models.collection import CollectionRecord, CollectionStatus
-from ...models.rent_contract import RentLedger
+from ...models.contract_group import ContractLedgerEntry
 from ...schemas.collection import (
     CollectionRecordCreate,
     CollectionRecordUpdate,
@@ -96,7 +96,7 @@ class CollectionService:
 
     async def get_ledger_by_id_async(
         self, db: AsyncSession, *, ledger_id: str
-    ) -> RentLedger | None:
+    ) -> ContractLedgerEntry | None:
         return await collection_crud.get_ledger_by_id_async(db, ledger_id=ledger_id)
 
     async def create_async(

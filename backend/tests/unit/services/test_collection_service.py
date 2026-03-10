@@ -131,3 +131,13 @@ class TestCollectionModelStructure:
         # 检查关联
         assert hasattr(CollectionRecord, "ledger")
         assert hasattr(CollectionRecord, "contract")
+
+    def test_collection_record_foreign_keys_target_new_contract_tables(self):
+        """TC-COL-008: 催缴记录应挂到新合同台账和新合同基表"""
+        from src.models.collection import CollectionRecord
+
+        ledger_fk = next(iter(CollectionRecord.__table__.c.ledger_id.foreign_keys))
+        contract_fk = next(iter(CollectionRecord.__table__.c.contract_id.foreign_keys))
+
+        assert ledger_fk.target_fullname == "contract_ledger_entries.entry_id"
+        assert contract_fk.target_fullname == "contracts.contract_id"

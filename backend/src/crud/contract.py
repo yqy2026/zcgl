@@ -83,6 +83,15 @@ class CRUDContract:
             )
         return (await db.execute(stmt)).scalars().first()
 
+    async def get_by_contract_number(
+        self,
+        db: AsyncSession,
+        *,
+        contract_number: str,
+    ) -> Contract | None:
+        stmt = select(Contract).where(Contract.contract_number == contract_number)
+        return (await db.execute(stmt)).scalars().first()
+
     async def update(
         self,
         db: AsyncSession,
@@ -144,6 +153,28 @@ class CRUDContract:
             Contract.data_status == "正常",
         )
         return (await db.execute(stmt)).scalar_one()
+
+    async def get_expiring_contracts_async(
+        self,
+        db: AsyncSession,
+        *,
+        today: Any,
+        warning_date: Any,
+    ) -> list[Contract]:
+        stmt = (
+            select(Contract)
+            .where(
+                Contract.status == ContractLifecycleStatus.ACTIVE,
+                Contract.effective_to <= warning_date,
+                Contract.effective_to >= today,
+                Contract.data_status == "正常",
+            )
+            .options(
+                selectinload(Contract.lease_detail),
+                selectinload(Contract.lessee_party),
+            )
+        )
+        return list((await db.execute(stmt)).scalars().all())
 
     async def get_active_by_asset_id(
         self,

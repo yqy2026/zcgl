@@ -21,7 +21,7 @@ pytestmark = pytest.mark.api
 
 
 def _module_source() -> str:
-    from src.api.v1.rent_contracts import contract_groups as mod
+    from src.api.v1.contracts import contract_groups as mod
 
     return Path(mod.__file__).read_text(encoding="utf-8")
 
@@ -74,7 +74,7 @@ def test_all_write_endpoints_check_base_business_error() -> None:
 def _mock_group_detail(group_id: str = "grp-001") -> MagicMock:
     detail = MagicMock()
     detail.contract_group_id = group_id
-    detail.group_code = f"GRP-TEST0001-202603-0001"
+    detail.group_code = "GRP-TEST0001-202603-0001"
     detail.derived_status = "筹备中"
     detail.contracts = []
     detail.upstream_contract_ids = []
@@ -107,20 +107,20 @@ async def test_create_contract_group_delegates_to_service(
 
     with (
         patch(
-            "src.api.v1.rent_contracts.contract_groups.party_service.get_party",
+            "src.api.v1.contracts.contract_groups.party_service.get_party",
             new=_mock_get_party,
         ),
         patch(
-            "src.api.v1.rent_contracts.contract_groups.contract_group_service.generate_group_code",
+            "src.api.v1.contracts.contract_groups.contract_group_service.generate_group_code",
             new_callable=AsyncMock,
             return_value="GRP-TEST0001-202603-0001",
         ),
         patch(
-            "src.api.v1.rent_contracts.contract_groups.contract_group_service.create_contract_group",
+            "src.api.v1.contracts.contract_groups.contract_group_service.create_contract_group",
             new=mock_create,
         ),
         patch(
-            "src.api.v1.rent_contracts.contract_groups.contract_group_service.get_group_detail",
+            "src.api.v1.contracts.contract_groups.contract_group_service.get_group_detail",
             new=mock_detail,
         ),
     ):
@@ -148,12 +148,10 @@ async def test_create_contract_group_404_when_party_missing(
 ) -> None:
     """POST /contract-groups 当 operator_party 不存在时返回 404。"""
     with patch(
-        "src.api.v1.rent_contracts.contract_groups.party_service.get_party",
+        "src.api.v1.contracts.contract_groups.party_service.get_party",
         new_callable=AsyncMock,
         return_value=None,
     ):
-        from datetime import date
-
         payload = {
             "revenue_mode": "lease",
             "operator_party_id": "nonexistent-party",
@@ -186,7 +184,7 @@ async def test_create_contract_group_404_when_owner_party_missing(
         return party
 
     with patch(
-        "src.api.v1.rent_contracts.contract_groups.party_service.get_party",
+        "src.api.v1.contracts.contract_groups.party_service.get_party",
         new=_get_party_with_missing_owner,
     ):
         payload = {
@@ -214,7 +212,7 @@ async def test_get_contract_group_route_exists(
     from src.core.exception_handler import ResourceNotFoundError
 
     with patch(
-        "src.api.v1.rent_contracts.contract_groups.contract_group_service.get_group_detail",
+        "src.api.v1.contracts.contract_groups.contract_group_service.get_group_detail",
         new_callable=AsyncMock,
         side_effect=ResourceNotFoundError("合同组", "grp-notexist"),
     ):
@@ -234,6 +232,7 @@ async def test_add_contract_group_id_mismatch_returns_422(
     """
     payload = {
         "contract_group_id": "different-group-id",  # 故意与路径 id 不同
+        "contract_number": "HT-2026-0001",
         "contract_direction": "出租",    # ContractDirection.LESSOR.value
         "group_relation_type": "上游",   # GroupRelationType.UPSTREAM.value
         "lessor_party_id": "party-a",
@@ -248,7 +247,7 @@ async def test_add_contract_group_id_mismatch_returns_422(
 
 def test_route_paths_cover_all_spec_endpoints() -> None:
     """路由表应覆盖技术方案要求的全部9条端点。"""
-    from src.api.v1.rent_contracts.contract_groups import router
+    from src.api.v1.contracts.contract_groups import router
 
     paths = {r.path for r in router.routes}  # type: ignore[attr-defined]
     required = {

@@ -1,5 +1,10 @@
 import { expect, test, type Page, type Request } from '@playwright/test';
 import { clearAuthState, ensureAuthenticated } from '../helpers/auth';
+import {
+  LEGACY_CONTRACT_EXCEL_IMPORT_API,
+  LEGACY_CONTRACT_ROUTES,
+  legacyContractRoutePattern,
+} from '../helpers/legacyContract';
 
 type FileInputScope = Page | { locator: Page['locator'] };
 
@@ -35,8 +40,8 @@ test.describe('@user-usable 导入入口校验', () => {
   });
 
   test('contract excel import should reject non-excel file before request', async ({ page }) => {
-    await page.goto('/rental/contracts');
-    await expect(page).toHaveURL(/\/rental\/contracts/);
+    await page.goto(LEGACY_CONTRACT_ROUTES.LIST);
+    await expect(page).toHaveURL(legacyContractRoutePattern(LEGACY_CONTRACT_ROUTES.LIST));
 
     await page.getByRole('button', { name: '导入Excel' }).first().click();
     const importModal = page.getByRole('dialog', { name: /导入Excel文件/i });
@@ -50,8 +55,8 @@ test.describe('@user-usable 导入入口校验', () => {
   test('contract excel import should not send request when file type is rejected', async ({
     page,
   }) => {
-    await page.goto('/rental/contracts');
-    await expect(page).toHaveURL(/\/rental\/contracts/);
+    await page.goto(LEGACY_CONTRACT_ROUTES.LIST);
+    await expect(page).toHaveURL(legacyContractRoutePattern(LEGACY_CONTRACT_ROUTES.LIST));
 
     await page.getByRole('button', { name: '导入Excel' }).first().click();
     const importModal = page.getByRole('dialog', { name: /导入Excel文件/i });
@@ -59,10 +64,7 @@ test.describe('@user-usable 导入入口校验', () => {
 
     let importRequestCount = 0;
     const requestListener = (request: Request) => {
-      if (
-        request.method() === 'POST' &&
-        request.url().includes('/api/v1/rental-contracts/excel/import')
-      ) {
+      if (request.method() === 'POST' && request.url().includes(LEGACY_CONTRACT_EXCEL_IMPORT_API)) {
         importRequestCount += 1;
       }
     };
@@ -78,8 +80,8 @@ test.describe('@user-usable 导入入口校验', () => {
   });
 
   test('pdf import should reject non-pdf file before request', async ({ page }) => {
-    await page.goto('/rental/contracts/pdf-import');
-    await expect(page).toHaveURL(/\/rental\/contracts\/pdf-import/);
+    await page.goto(LEGACY_CONTRACT_ROUTES.PDF_IMPORT);
+    await expect(page).toHaveURL(legacyContractRoutePattern(LEGACY_CONTRACT_ROUTES.PDF_IMPORT));
     await expect(page.getByRole('heading', { name: /PDF合同智能导入/i })).toBeVisible();
 
     await uploadPlainTextFile(page, 'contract.txt');
@@ -87,8 +89,8 @@ test.describe('@user-usable 导入入口校验', () => {
   });
 
   test('pdf import should not send upload request when file type is rejected', async ({ page }) => {
-    await page.goto('/rental/contracts/pdf-import');
-    await expect(page).toHaveURL(/\/rental\/contracts\/pdf-import/);
+    await page.goto(LEGACY_CONTRACT_ROUTES.PDF_IMPORT);
+    await expect(page).toHaveURL(legacyContractRoutePattern(LEGACY_CONTRACT_ROUTES.PDF_IMPORT));
     await expect(page.getByRole('heading', { name: /PDF合同智能导入/i })).toBeVisible();
 
     let uploadRequestCount = 0;
@@ -153,7 +155,7 @@ test.describe('@user-usable 导入路由匿名拦截', () => {
 
     const protectedImportRoutes = [
       '/assets/import',
-      '/rental/contracts/pdf-import',
+      LEGACY_CONTRACT_ROUTES.PDF_IMPORT,
       '/property-certificates/import',
     ];
 

@@ -9,7 +9,7 @@ from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...crud.rent_contract import rent_contract, rent_ledger
+from ...crud.contract_group import contract_group_crud
 
 logger = logging.getLogger(__name__)
 
@@ -80,27 +80,27 @@ class OwnershipFinancialService:
             OwnershipFinancialResult
         """
         # 统计应收总额
-        due_amount = await rent_ledger.sum_due_amount_by_ownership_async(
+        due_amount = await contract_group_crud.sum_due_amount_by_ownership_async(
             db, ownership_id
         )
 
         # 统计实收总额
-        paid_amount = await rent_ledger.sum_paid_amount_by_ownership_async(
+        paid_amount = await contract_group_crud.sum_paid_amount_by_ownership_async(
             db, ownership_id
         )
 
         # 统计欠款总额
-        arrears_amount = await rent_ledger.sum_overdue_amount_by_ownership_async(
+        arrears_amount = await contract_group_crud.sum_overdue_amount_by_ownership_async(
             db, ownership_id
         )
 
         # 统计合同数量
-        total_contracts = await rent_contract.count_by_ownership_async(
+        total_contracts = await contract_group_crud.count_by_ownership_async(
             db, ownership_id
         )
 
         # 统计活跃合同数
-        active_contracts = await rent_contract.count_active_by_ownership_async(
+        active_contracts = await contract_group_crud.count_active_by_ownership_async(
             db, ownership_id
         )
 

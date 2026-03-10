@@ -251,9 +251,9 @@
   - Alembic 迁移：`backend/alembic/versions/20260305_contract_group_m1.py`
   - Pydantic Schema：`backend/src/schemas/contract_group.py`
   - CRUD 层：`backend/src/crud/contract_group.py`、`backend/src/crud/contract.py`
-  - Service 层：`backend/src/services/rent_contract/contract_group_service.py`
-  - API 端点：`backend/src/api/v1/rent_contracts/contract_groups.py`（`/api/v1/contract-groups/*`，`/api/v1/contracts/*`）
-  - 单元测试：`backend/tests/unit/services/rent_contract/test_contract_group_service.py`、`backend/tests/unit/api/v1/test_contract_groups_layering.py`
+  - Service 层：`backend/src/services/contract/contract_group_service.py`
+  - API 端点：`backend/src/api/v1/contracts/contract_groups.py`（`/api/v1/contract-groups/*`，`/api/v1/contracts/*`）
+  - 单元测试：`backend/tests/unit/services/contract/test_contract_group_service.py`、`backend/tests/unit/api/v1/test_contract_groups_layering.py`
 
 #### REQ-RNT-002 承租模式与代理模式并行支持 📋
 - 描述：系统需同时支持两种现实经营模式，通过 `ContractGroup.revenue_mode` + `Contract.group_relation_type` 覆盖完整业务结构。
@@ -281,8 +281,8 @@
 - 字段映射（附录 v0.3 / 3.3 ContractGroup）：
   - `settlement_rule`：最小必填键固定为 `version/cycle/settlement_mode/amount_rule/payment_rule`。
 - 代码证据：
-  - `backend/src/services/rent_contract/lifecycle_service.py`
-  - `backend/src/api/v1/rent_contracts/lifecycle.py`（冲突检测与状态流转）
+  - `backend/src/services/contract/contract_group_service.py`
+  - `backend/src/api/v1/contracts/contract_groups.py`（冲突检测与状态流转）
 
 #### REQ-RNT-004 合同组主审与关键合同联审 📋
 - 描述：审核机制采用"合同组主审 + 关键合同联审"。
@@ -310,8 +310,8 @@
   - `rent_amount` / `currency_code` / `tax_rate` / `is_tax_included`：金额税口径冻结。
   - `rent_amount_excl_tax`：派生字段，不允许直接写入。
 - 代码证据：
-  - `backend/src/api/v1/rent_contracts/ledger.py`
-  - `backend/src/services/rent_contract/ledger_service.py`
+  - `backend/src/api/v1/contracts/contract_groups.py`
+  - `backend/src/services/contract/ledger_service_v2.py`
 
 ### 6.4 客户域
 
@@ -510,10 +510,10 @@
 | REQ-PRJ-002 | ✅ | `/api/v1/projects/{project_id}/assets` | `test_project_service.py`, `test_project.py` |
 | REQ-RNT-001 | ✅ | M1 ORM/DDL ✅ M2 Schema/CRUD/Service ✅ M3 API ✅ | — |
 | REQ-RNT-002 | 📋 | — | — |
-| REQ-RNT-003 | 🚧 | 生命周期 + 冲突检测 | `lifecycle_service.py` |
+| REQ-RNT-003 | 🚧 | `/api/v1/contracts/{contract_id}/*` 生命周期 + 冲突检测 | `test_contract_lifecycle_api.py`, `test_contract_group_service.py` |
 | REQ-RNT-004 | 📋 | — | — |
 | REQ-RNT-005 | 📋 | — | — |
-| REQ-RNT-006 | 🚧 | `/rental-contracts/ledger/*` | `ledger_service.py` |
+| REQ-RNT-006 | 🚧 | `/api/v1/contracts/{contract_id}/ledger/*` | `test_ledger_service_v2.py`, `test_contract_ledger_entries_migration.py` |
 | REQ-CUS-001 | 📋 | — | — |
 | REQ-CUS-002 | 📋 | — | — |
 | REQ-SCH-001 | 📋 | — | — |

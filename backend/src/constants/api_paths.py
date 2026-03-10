@@ -99,27 +99,32 @@ class OrganizationPaths:
     CHILDREN = "/organizations/{org_id}/children"
 
 
-# 租赁管理API路径 (统一使用连字符)
-class RentalPaths:
+# 合同管理 API 路径
+class ContractPaths:
+    GROUPS = {
+        "BASE": "/contract-groups",
+        "LIST": "/contract-groups",
+        "CREATE": "/contract-groups",
+        "DETAIL": "/contract-groups/{group_id}",
+        "UPDATE": "/contract-groups/{group_id}",
+        "DELETE": "/contract-groups/{group_id}",
+        "SUBMIT_REVIEW": "/contract-groups/{group_id}/submit-review",
+        "CONTRACTS": "/contract-groups/{group_id}/contracts",
+    }
     CONTRACTS = {
-        "BASE": "/rental-contracts",
-        "LIST": "/rental-contracts",
-        "CREATE": "/rental-contracts",
-        "DETAIL": "/rental-contracts/{contract_id}",
-        "UPDATE": "/rental-contracts/{contract_id}",
-        "DELETE": "/rental-contracts/{contract_id}",
-        "TERMINATE": "/rental-contracts/{contract_id}/terminate",
-        "RENEW": "/rental-contracts/{contract_id}/renew",
+        "DETAIL": "/contracts/{contract_id}",
+        "DELETE": "/contracts/{contract_id}",
+        "SUBMIT_REVIEW": "/contracts/{contract_id}/submit-review",
+        "APPROVE": "/contracts/{contract_id}/approve",
+        "REJECT": "/contracts/{contract_id}/reject",
+        "EXPIRE": "/contracts/{contract_id}/expire",
+        "TERMINATE": "/contracts/{contract_id}/terminate",
+        "VOID": "/contracts/{contract_id}/void",
+        "RENT_TERMS": "/contracts/{contract_id}/rent-terms",
+        "RENT_TERM_DETAIL": "/contracts/rent-terms/{rent_term_id}",
+        "LEDGER": "/contracts/{contract_id}/ledger",
+        "LEDGER_BATCH_UPDATE_STATUS": "/contracts/{contract_id}/ledger/batch-update-status",
     }
-    LEDGER = {
-        "BASE": "/rental-ledger",
-        "LIST": "/rental-ledger",
-        "CREATE": "/rental-ledger",
-        "DETAIL": "/rental-ledger/{ledger_id}",
-        "UPDATE": "/rental-ledger/{ledger_id}",
-        "DELETE": "/rental-ledger/{ledger_id}",
-    }
-    STATISTICS = "/rental-statistics"
 
 
 # 权属方管理API路径
@@ -232,7 +237,7 @@ API_PATHS = {
     "users": UserPaths,
     "roles": RolePaths,
     "organizations": OrganizationPaths,
-    "rental": RentalPaths,
+    "contracts": ContractPaths,
     "ownerships": OwnershipPaths,
     "projects": ProjectPaths,
     "analytics": AnalyticsPaths,
@@ -259,8 +264,8 @@ PREFIX_MAPPING = {
     "users": "/users",
     "roles": "/roles",
     "organizations": "/organizations",
-    "rental_contracts": "/rental-contracts",
-    "rental_ledger": "/rental-ledger",
+    "contract_groups": "/contract-groups",
+    "contracts": "/contracts",
     "ownerships": "/ownerships",
     "projects": "/projects",
     "analytics": "/analytics",
@@ -281,7 +286,7 @@ __all__ = [
     "UserPaths",
     "RolePaths",
     "OrganizationPaths",
-    "RentalPaths",
+    "ContractPaths",
     "OwnershipPaths",
     "ProjectPaths",
     "AnalyticsPaths",

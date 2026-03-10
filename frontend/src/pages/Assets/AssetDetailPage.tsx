@@ -25,7 +25,7 @@ import type {
   ContractPartyItem,
   ContractTypeSummary,
 } from '@/types/asset';
-import { formatArea, formatCurrency, formatPercentage } from '@/utils/format';
+import { formatArea, formatCurrency } from '@/utils/format';
 import AssetDetailInfo from '@/components/Asset/AssetDetailInfo';
 import { PageContainer } from '@/components/Common';
 import styles from './AssetDetailPage.module.css';

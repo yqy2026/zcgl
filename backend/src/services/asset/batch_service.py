@@ -100,14 +100,16 @@ class AsyncAssetBatchService:
         if not asset_ids:
             return {}
         try:
-            contract_asset_ids = await asset_crud.get_assets_with_rent_contracts_async(
+            contract_asset_ids = await asset_crud.get_assets_with_contracts_async(
                 self.db, asset_ids
             )
             certificate_asset_ids = await asset_crud.get_assets_with_property_certs_async(
                 self.db, asset_ids
             )
-            ledger_asset_ids = await asset_crud.get_assets_with_rent_ledger_async(
-                self.db, asset_ids
+            ledger_asset_ids = (
+                await asset_crud.get_assets_with_contract_ledger_entries_async(
+                    self.db, asset_ids
+                )
             )
         except Exception:
             return {}
@@ -122,7 +124,7 @@ class AsyncAssetBatchService:
         return linked_errors
 
     async def _ensure_asset_not_linked(self, asset_id: str) -> None:
-        has_contract = await asset_crud.has_rent_contracts_async(self.db, asset_id)
+        has_contract = await asset_crud.has_contracts_async(self.db, asset_id)
         if has_contract:
             raise ValueError("资产已关联合同，禁止删除")
 
@@ -130,7 +132,9 @@ class AsyncAssetBatchService:
         if has_certificate:
             raise ValueError("资产已关联产权证，禁止删除")
 
-        has_ledger = await asset_crud.has_rent_ledger_async(self.db, asset_id)
+        has_ledger = await asset_crud.has_contract_ledger_entries_async(
+            self.db, asset_id
+        )
         if has_ledger:
             raise ValueError("资产已有租金台账记录，禁止删除")
 

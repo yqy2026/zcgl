@@ -49,7 +49,7 @@ class BaseVisionAdapter(ContractExtractorInterface):
     """
 
     # Standard extraction prompt (unified format for all adapters)
-    # Aligned with RentContract and RentTerm database models
+    # Aligned with the new Contract and ContractRentTerm data model
     EXTRACTION_PROMPT_TEMPLATE = """请分析这份中国房地产租赁合同图片，提取以下信息并返回JSON格式：
 
 {{

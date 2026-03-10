@@ -8,9 +8,8 @@ from decimal import Decimal
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..constants.rent_contract_constants import PaymentStatus
 from ..models.collection import CollectionRecord, CollectionStatus
-from ..models.rent_contract import RentLedger
+from ..models.contract_group import ContractLedgerEntry
 from ..schemas.collection import CollectionRecordCreate, CollectionRecordUpdate
 from .base import CRUDBase
 
@@ -25,19 +24,27 @@ class CRUDCollectionRecord(
     ) -> tuple[int, Decimal]:
         stmt = (
             select(
-                func.count(RentLedger.id).label("total_count"),
-                func.sum(RentLedger.overdue_amount).label("total_amount"),
+                func.count(ContractLedgerEntry.entry_id).label("total_count"),
+                func.coalesce(
+                    func.sum(
+                        func.greatest(
+                            ContractLedgerEntry.amount_due
+                            - ContractLedgerEntry.paid_amount,
+                            0,
+                        )
+                    ),
+                    0,
+                ).label("total_amount"),
             )
             .where(
                 and_(
-                    RentLedger.payment_status.in_(
-                        [PaymentStatus.UNPAID, PaymentStatus.PARTIAL]
+                    ContractLedgerEntry.payment_status.in_(
+                        ["unpaid", "partial", "overdue"]
                     ),
-                    RentLedger.due_date < today,
-                    RentLedger.data_status == "正常",
+                    ContractLedgerEntry.due_date < today,
                 )
             )
-            .select_from(RentLedger)
+            .select_from(ContractLedgerEntry)
         )
         stats = (await db.execute(stmt)).first()
         total_count = int(stats.total_count) if stats and stats.total_count else 0
@@ -107,8 +114,10 @@ class CRUDCollectionRecord(
 
     async def get_ledger_by_id_async(
         self, db: AsyncSession, *, ledger_id: str
-    ) -> RentLedger | None:
-        stmt = select(RentLedger).where(RentLedger.id == ledger_id)
+    ) -> ContractLedgerEntry | None:
+        stmt = select(ContractLedgerEntry).where(
+            ContractLedgerEntry.entry_id == ledger_id
+        )
         return (await db.execute(stmt)).scalars().first()
 
 

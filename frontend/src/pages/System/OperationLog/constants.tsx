@@ -34,7 +34,7 @@ export const ACTION_META_MAP = ACTION_OPTIONS.reduce<Record<string, ActionMeta>>
 export const MODULE_OPTIONS: ModuleMeta[] = [
   { value: 'dashboard', label: '数据看板', tone: 'primary' },
   { value: 'assets', label: '资产管理', tone: 'success' },
-  { value: 'rental', label: '租赁管理', tone: 'warning' },
+  { value: 'rental', label: '旧租赁前端已退休', tone: 'warning' },
   { value: 'ownership', label: '权属方管理', tone: 'primary' },
   { value: 'project', label: '项目管理', tone: 'success' },
   { value: 'system', label: '系统管理', tone: 'error' },

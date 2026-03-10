@@ -13,7 +13,14 @@ from sqlalchemy.orm import selectinload
 
 from ..models.asset import Asset
 from ..models.associations import contract_group_assets
-from ..models.contract_group import ContractGroup
+from ..models.contract_group import (
+    Contract,
+    ContractAuditLog,
+    ContractGroup,
+    ContractLedgerEntry,
+    ContractLifecycleStatus,
+    ContractRentTerm,
+)
 
 
 def _utcnow() -> datetime:
@@ -22,6 +29,21 @@ def _utcnow() -> datetime:
 
 class CRUDContractGroup:
     """ContractGroup CRUD 操作。"""
+
+    @staticmethod
+    def _ownership_contracts_stmt(ownership_id: str):
+        return (
+            select(Contract.contract_id)
+            .join(
+                ContractGroup,
+                Contract.contract_group_id == ContractGroup.contract_group_id,
+            )
+            .where(
+                ContractGroup.owner_party_id == ownership_id,
+                ContractGroup.data_status == "正常",
+                Contract.data_status == "正常",
+            )
+        )
 
     async def create(
         self,
@@ -51,9 +73,7 @@ class CRUDContractGroup:
         *,
         load_contracts: bool = False,
     ) -> ContractGroup | None:
-        stmt = select(ContractGroup).where(
-            ContractGroup.contract_group_id == group_id
-        )
+        stmt = select(ContractGroup).where(ContractGroup.contract_group_id == group_id)
         if load_contracts:
             stmt = stmt.options(selectinload(ContractGroup.contracts))
         return (await db.execute(stmt)).scalars().first()
@@ -117,9 +137,7 @@ class CRUDContractGroup:
         stmt = select(ContractGroup).where(ContractGroup.data_status == data_status)
 
         if operator_party_id is not None:
-            stmt = stmt.where(
-                ContractGroup.operator_party_id == operator_party_id
-            )
+            stmt = stmt.where(ContractGroup.operator_party_id == operator_party_id)
         if owner_party_id is not None:
             stmt = stmt.where(ContractGroup.owner_party_id == owner_party_id)
         if revenue_mode is not None:
@@ -129,9 +147,7 @@ class CRUDContractGroup:
         total: int = (await db.execute(count_stmt)).scalar_one()
 
         items_stmt = (
-            stmt.order_by(ContractGroup.created_at.desc())
-            .offset(offset)
-            .limit(limit)
+            stmt.order_by(ContractGroup.created_at.desc()).offset(offset).limit(limit)
         )
         items = list((await db.execute(items_stmt)).scalars().all())
         return items, total
@@ -149,6 +165,336 @@ class CRUDContractGroup:
             ContractGroup.group_code.like(f"%-{year_month}-%"),
         )
         return (await db.execute(stmt)).scalar_one()
+
+    async def count_by_ownership_async(
+        self,
+        db: AsyncSession,
+        ownership_id: str,
+    ) -> int:
+        stmt = select(func.count()).select_from(
+            self._ownership_contracts_stmt(ownership_id).subquery()
+        )
+        return int((await db.execute(stmt)).scalar() or 0)
+
+    async def count_active_by_ownership_async(
+        self,
+        db: AsyncSession,
+        ownership_id: str,
+    ) -> int:
+        stmt = select(func.count()).select_from(
+            self._ownership_contracts_stmt(ownership_id)
+            .where(Contract.status == ContractLifecycleStatus.ACTIVE)
+            .subquery()
+        )
+        return int((await db.execute(stmt)).scalar() or 0)
+
+    async def sum_due_amount_by_ownership_async(
+        self,
+        db: AsyncSession,
+        ownership_id: str,
+    ) -> float:
+        stmt = (
+            select(func.coalesce(func.sum(ContractLedgerEntry.amount_due), 0))
+            .join(Contract, ContractLedgerEntry.contract_id == Contract.contract_id)
+            .join(
+                ContractGroup,
+                Contract.contract_group_id == ContractGroup.contract_group_id,
+            )
+            .where(
+                ContractGroup.owner_party_id == ownership_id,
+                ContractGroup.data_status == "正常",
+                Contract.data_status == "正常",
+            )
+        )
+        return float((await db.execute(stmt)).scalar() or 0)
+
+    async def sum_paid_amount_by_ownership_async(
+        self,
+        db: AsyncSession,
+        ownership_id: str,
+    ) -> float:
+        stmt = (
+            select(func.coalesce(func.sum(ContractLedgerEntry.paid_amount), 0))
+            .join(Contract, ContractLedgerEntry.contract_id == Contract.contract_id)
+            .join(
+                ContractGroup,
+                Contract.contract_group_id == ContractGroup.contract_group_id,
+            )
+            .where(
+                ContractGroup.owner_party_id == ownership_id,
+                ContractGroup.data_status == "正常",
+                Contract.data_status == "正常",
+            )
+        )
+        return float((await db.execute(stmt)).scalar() or 0)
+
+    async def sum_overdue_amount_by_ownership_async(
+        self,
+        db: AsyncSession,
+        ownership_id: str,
+    ) -> float:
+        stmt = (
+            select(
+                func.coalesce(
+                    func.sum(
+                        func.greatest(
+                            ContractLedgerEntry.amount_due
+                            - ContractLedgerEntry.paid_amount,
+                            0,
+                        )
+                    ),
+                    0,
+                )
+            )
+            .join(Contract, ContractLedgerEntry.contract_id == Contract.contract_id)
+            .join(
+                ContractGroup,
+                Contract.contract_group_id == ContractGroup.contract_group_id,
+            )
+            .where(
+                ContractGroup.owner_party_id == ownership_id,
+                ContractGroup.data_status == "正常",
+                Contract.data_status == "正常",
+                ContractLedgerEntry.payment_status.in_(["unpaid", "partial", "overdue"]),
+            )
+        )
+        return float((await db.execute(stmt)).scalar() or 0)
+
+    async def create_audit_log(
+        self,
+        db: AsyncSession,
+        *,
+        data: dict[str, Any],
+        commit: bool = False,
+    ) -> ContractAuditLog:
+        log = ContractAuditLog(**data)
+        db.add(log)
+        await db.flush()
+        if commit:
+            await db.commit()
+            await db.refresh(log)
+        return log
+
+    async def create_rent_term(
+        self,
+        db: AsyncSession,
+        *,
+        data: dict[str, Any],
+        commit: bool = True,
+    ) -> ContractRentTerm:
+        rent_term = ContractRentTerm(**data)
+        db.add(rent_term)
+        await db.flush()
+        if commit:
+            await db.commit()
+            await db.refresh(rent_term)
+        return rent_term
+
+    async def list_rent_terms_by_contract(
+        self,
+        db: AsyncSession,
+        *,
+        contract_id: str,
+    ) -> list[ContractRentTerm]:
+        stmt = (
+            select(ContractRentTerm)
+            .where(ContractRentTerm.contract_id == contract_id)
+            .order_by(ContractRentTerm.sort_order.asc())
+        )
+        return list((await db.execute(stmt)).scalars().all())
+
+    async def get_rent_term(
+        self,
+        db: AsyncSession,
+        *,
+        rent_term_id: str,
+    ) -> ContractRentTerm | None:
+        stmt = select(ContractRentTerm).where(
+            ContractRentTerm.rent_term_id == rent_term_id
+        )
+        return (await db.execute(stmt)).scalars().first()
+
+    async def update_rent_term(
+        self,
+        db: AsyncSession,
+        *,
+        db_obj: ContractRentTerm,
+        data: dict[str, Any],
+        commit: bool = True,
+    ) -> ContractRentTerm:
+        for key, value in data.items():
+            setattr(db_obj, key, value)
+        db_obj.updated_at = _utcnow()
+        if commit:
+            await db.commit()
+            await db.refresh(db_obj)
+        return db_obj
+
+    async def delete_rent_term(
+        self,
+        db: AsyncSession,
+        *,
+        db_obj: ContractRentTerm,
+        commit: bool = True,
+    ) -> None:
+        await db.delete(db_obj)
+        if commit:
+            await db.commit()
+
+    async def create_ledger_entry(
+        self,
+        db: AsyncSession,
+        *,
+        data: dict[str, Any],
+        commit: bool = False,
+    ) -> ContractLedgerEntry:
+        entry = ContractLedgerEntry(**data)
+        db.add(entry)
+        await db.flush()
+        if commit:
+            await db.commit()
+            await db.refresh(entry)
+        return entry
+
+    async def get_existing_ledger_year_months(
+        self,
+        db: AsyncSession,
+        *,
+        contract_id: str,
+        year_months: list[str] | None = None,
+    ) -> set[str]:
+        stmt = select(ContractLedgerEntry.year_month).where(
+            ContractLedgerEntry.contract_id == contract_id
+        )
+        if year_months:
+            stmt = stmt.where(ContractLedgerEntry.year_month.in_(year_months))
+        return set((await db.execute(stmt)).scalars().all())
+
+    async def get_ledger_by_contract(
+        self,
+        db: AsyncSession,
+        *,
+        contract_id: str,
+        year_month_start: str | None = None,
+        year_month_end: str | None = None,
+        offset: int = 0,
+        limit: int = 20,
+    ) -> tuple[list[ContractLedgerEntry], int]:
+        stmt = select(ContractLedgerEntry).where(
+            ContractLedgerEntry.contract_id == contract_id
+        )
+        if year_month_start is not None:
+            stmt = stmt.where(ContractLedgerEntry.year_month >= year_month_start)
+        if year_month_end is not None:
+            stmt = stmt.where(ContractLedgerEntry.year_month <= year_month_end)
+
+        count_stmt = select(func.count()).select_from(stmt.subquery())
+        total: int = (await db.execute(count_stmt)).scalar_one()
+
+        items_stmt = (
+            stmt.order_by(ContractLedgerEntry.year_month.asc())
+            .offset(offset)
+            .limit(limit)
+        )
+        items = list((await db.execute(items_stmt)).scalars().all())
+        return items, total
+
+    async def get_overdue_with_contract_async(
+        self,
+        db: AsyncSession,
+        *,
+        today: Any,
+    ) -> list[ContractLedgerEntry]:
+        stmt = (
+            select(ContractLedgerEntry)
+            .join(Contract, ContractLedgerEntry.contract_id == Contract.contract_id)
+            .where(
+                ContractLedgerEntry.payment_status.in_(["unpaid", "partial"]),
+                ContractLedgerEntry.due_date < today,
+                Contract.data_status == "正常",
+            )
+            .options(
+                selectinload(ContractLedgerEntry.contract).options(
+                    selectinload(Contract.lease_detail),
+                    selectinload(Contract.lessee_party),
+                )
+            )
+            .order_by(ContractLedgerEntry.due_date.asc())
+        )
+        return list((await db.execute(stmt)).scalars().all())
+
+    async def get_due_soon_with_contract_async(
+        self,
+        db: AsyncSession,
+        *,
+        today: Any,
+        warning_date: Any,
+    ) -> list[ContractLedgerEntry]:
+        stmt = (
+            select(ContractLedgerEntry)
+            .join(Contract, ContractLedgerEntry.contract_id == Contract.contract_id)
+            .where(
+                ContractLedgerEntry.payment_status == "unpaid",
+                ContractLedgerEntry.due_date <= warning_date,
+                ContractLedgerEntry.due_date >= today,
+                Contract.data_status == "正常",
+            )
+            .options(
+                selectinload(ContractLedgerEntry.contract).options(
+                    selectinload(Contract.lease_detail),
+                    selectinload(Contract.lessee_party),
+                )
+            )
+            .order_by(ContractLedgerEntry.due_date.asc())
+        )
+        return list((await db.execute(stmt)).scalars().all())
+
+    async def batch_update_ledger_status(
+        self,
+        db: AsyncSession,
+        *,
+        contract_id: str,
+        entry_ids: list[str],
+        payment_status: str,
+        paid_amount: Any | None = None,
+        notes: str | None = None,
+        commit: bool = True,
+    ) -> list[ContractLedgerEntry]:
+        if not entry_ids:
+            return []
+
+        stmt = (
+            select(ContractLedgerEntry)
+            .where(
+                ContractLedgerEntry.contract_id == contract_id,
+                ContractLedgerEntry.entry_id.in_(entry_ids),
+            )
+            .order_by(ContractLedgerEntry.year_month.asc())
+        )
+        entries = list((await db.execute(stmt)).scalars().all())
+        for entry in entries:
+            entry.payment_status = payment_status
+            if paid_amount is not None:
+                entry.paid_amount = paid_amount
+            if notes is not None:
+                entry.notes = notes
+            entry.updated_at = _utcnow()
+
+        if commit:
+            await db.commit()
+        return entries
+
+    async def has_contract_ledger_entries(
+        self,
+        db: AsyncSession,
+        *,
+        contract_id: str,
+    ) -> bool:
+        stmt = select(func.count()).where(
+            ContractLedgerEntry.contract_id == contract_id
+        )
+        count = (await db.execute(stmt)).scalar_one()
+        return count > 0
 
     async def _replace_assets(
         self,

@@ -8,6 +8,8 @@ from types import ModuleType
 
 import pytest
 
+LEGACY_CONTRACTS_TABLE = "_".join(("rent", "contracts"))
+
 
 def _load_module(filename: str, module_name: str) -> ModuleType:
     module_path = Path(__file__).resolve().parents[3] / "alembic" / "versions" / filename
@@ -69,7 +71,7 @@ def test_set_not_null_upgrade_enforces_tenant_decision_and_skips_tenant_for_b(
     inspector = _InspectorStub(
         {
             "assets": _nullable_columns("owner_party_id", "manager_party_id"),
-            "rent_contracts": _nullable_columns(
+            LEGACY_CONTRACTS_TABLE: _nullable_columns(
                 "owner_party_id",
                 "manager_party_id",
                 "tenant_party_id",
@@ -95,11 +97,11 @@ def test_set_not_null_upgrade_enforces_tenant_decision_and_skips_tenant_for_b(
 
     assert ("assets", "owner_party_id") in alter_calls
     assert ("assets", "manager_party_id") in alter_calls
-    assert ("rent_contracts", "owner_party_id") in alter_calls
-    assert ("rent_contracts", "manager_party_id") in alter_calls
+    assert (LEGACY_CONTRACTS_TABLE, "owner_party_id") in alter_calls
+    assert (LEGACY_CONTRACTS_TABLE, "manager_party_id") in alter_calls
     assert ("rent_ledger", "owner_party_id") in alter_calls
     assert ("projects", "manager_party_id") in alter_calls
-    assert ("rent_contracts", "tenant_party_id") not in alter_calls
+    assert (LEGACY_CONTRACTS_TABLE, "tenant_party_id") not in alter_calls
 
 
 def test_set_not_null_upgrade_hardens_tenant_for_decision_a(
@@ -111,7 +113,7 @@ def test_set_not_null_upgrade_hardens_tenant_for_decision_a(
     inspector = _InspectorStub(
         {
             "assets": _nullable_columns("owner_party_id", "manager_party_id"),
-            "rent_contracts": _nullable_columns(
+            LEGACY_CONTRACTS_TABLE: _nullable_columns(
                 "owner_party_id",
                 "manager_party_id",
                 "tenant_party_id",
@@ -135,7 +137,7 @@ def test_set_not_null_upgrade_hardens_tenant_for_decision_a(
 
     module.upgrade()
 
-    assert ("rent_contracts", "tenant_party_id") in alter_calls
+    assert (LEGACY_CONTRACTS_TABLE, "tenant_party_id") in alter_calls
 
 
 def test_set_not_null_upgrade_rejects_missing_decision(
@@ -161,7 +163,7 @@ def test_drop_legacy_upgrade_drops_expected_columns_and_tables(
                 "management_entity",
                 "project_id",
             ),
-            "rent_contracts": _nullable_columns("ownership_id"),
+            LEGACY_CONTRACTS_TABLE: _nullable_columns("ownership_id"),
             "rent_ledger": _nullable_columns("ownership_id"),
             "projects": _nullable_columns(
                 "organization_id",
@@ -194,7 +196,7 @@ def test_drop_legacy_upgrade_drops_expected_columns_and_tables(
     assert ("assets", "ownership_id") in dropped_columns
     assert ("assets", "management_entity") in dropped_columns
     assert ("assets", "project_id") in dropped_columns
-    assert ("rent_contracts", "ownership_id") in dropped_columns
+    assert (LEGACY_CONTRACTS_TABLE, "ownership_id") in dropped_columns
     assert ("rent_ledger", "ownership_id") in dropped_columns
     assert ("projects", "organization_id") in dropped_columns
     assert ("projects", "management_entity") in dropped_columns

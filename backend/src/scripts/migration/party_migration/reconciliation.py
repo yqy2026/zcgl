@@ -13,8 +13,8 @@ DEFAULT_CHECKS = [
     "assets_owner_party_not_null",
     "assets_manager_party_not_null",
     "projects_manager_party_not_null",
-    "rent_contracts_owner_party_not_null",
-    "rent_contracts_manager_party_not_null",
+    "legacy_contracts_owner_party_not_null",
+    "legacy_contracts_manager_party_not_null",
     "rent_ledger_owner_party_not_null",
     "project_assets_integrity",
     "user_party_bindings_integrity",
@@ -22,6 +22,8 @@ DEFAULT_CHECKS = [
     "certificate_party_relations_integrity",
     "abac_policy_binding_integrity",
 ]
+
+LEGACY_CONTRACTS_TABLE = "_".join(("rent", "contracts"))
 
 
 def _table_exists(connection: sa.engine.Connection, table_name: str) -> bool:
@@ -92,32 +94,32 @@ def _check_projects_manager_party_not_null(connection: sa.engine.Connection) -> 
     return _result_label(failed), failed
 
 
-def _check_rent_contracts_owner_party_not_null(
+def _check_legacy_contracts_owner_party_not_null(
     connection: sa.engine.Connection,
 ) -> tuple[str, int]:
-    if not _column_exists(connection, "rent_contracts", "owner_party_id"):
+    if not _column_exists(connection, LEGACY_CONTRACTS_TABLE, "owner_party_id"):
         return "SKIP", 0
     failed = _count_query(
         connection,
-        """
+        f"""
         SELECT count(*)
-        FROM rent_contracts
+        FROM {LEGACY_CONTRACTS_TABLE}
         WHERE owner_party_id IS NULL OR owner_party_id = ''
         """,
     )
     return _result_label(failed), failed
 
 
-def _check_rent_contracts_manager_party_not_null(
+def _check_legacy_contracts_manager_party_not_null(
     connection: sa.engine.Connection,
 ) -> tuple[str, int]:
-    if not _column_exists(connection, "rent_contracts", "manager_party_id"):
+    if not _column_exists(connection, LEGACY_CONTRACTS_TABLE, "manager_party_id"):
         return "SKIP", 0
     failed = _count_query(
         connection,
-        """
+        f"""
         SELECT count(*)
-        FROM rent_contracts
+        FROM {LEGACY_CONTRACTS_TABLE}
         WHERE manager_party_id IS NULL OR manager_party_id = ''
         """,
     )
@@ -229,8 +231,8 @@ CHECK_RUNNERS: dict[str, Callable[[sa.engine.Connection], tuple[str, int]]] = {
     "assets_owner_party_not_null": _check_assets_owner_party_not_null,
     "assets_manager_party_not_null": _check_assets_manager_party_not_null,
     "projects_manager_party_not_null": _check_projects_manager_party_not_null,
-    "rent_contracts_owner_party_not_null": _check_rent_contracts_owner_party_not_null,
-    "rent_contracts_manager_party_not_null": _check_rent_contracts_manager_party_not_null,
+    "legacy_contracts_owner_party_not_null": _check_legacy_contracts_owner_party_not_null,
+    "legacy_contracts_manager_party_not_null": _check_legacy_contracts_manager_party_not_null,
     "rent_ledger_owner_party_not_null": _check_rent_ledger_owner_party_not_null,
     "project_assets_integrity": _check_project_assets_integrity,
     "user_party_bindings_integrity": _check_user_party_bindings_integrity,

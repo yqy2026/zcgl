@@ -299,49 +299,6 @@ class OrganizationValidator(BaseValidator):
         return errors
 
 
-class RentContractValidator(BaseValidator):
-    """租赁合同验证器"""
-
-    @classmethod
-    def validate_contract_data(cls, data: dict[str, Any]) -> list[str]:
-        """
-        验证租赁合同数据
-
-        Args:
-            data: 合同数据字典
-
-        Returns:
-            错误消息列表
-        """
-        errors = []
-
-        # 验证合同编号
-        if "contract_number" in data:  # pragma: no cover
-            if not cls.validate_length(
-                data["contract_number"], 1, 100
-            ):  # pragma: no cover
-                errors.append("合同编号长度应在1-100个字符之间")  # pragma: no cover
-
-        # 验证租金金额
-        if "monthly_rent" in data and data["monthly_rent"]:
-            if not cls.validate_positive_number(data["monthly_rent"]):
-                errors.append("月租金必须为正数")
-
-        # 验证保证金
-        if "security_deposit" in data and data["security_deposit"]:
-            if not cls.validate_non_negative_number(data["security_deposit"]):
-                errors.append("保证金不能为负数")
-
-        # 验证租赁期限
-        if "lease_start_date" in data and "lease_end_date" in data:
-            if not cls.validate_date_range(
-                data["lease_start_date"], data["lease_end_date"]
-            ):
-                errors.append("租赁开始日期不能晚于结束日期")
-
-        return errors
-
-
 class ValidationMixin:
     """验证混入类"""
 

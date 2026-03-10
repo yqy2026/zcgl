@@ -1,5 +1,9 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { clearAuthState, ensureAuthenticated } from '../helpers/auth';
+import {
+  LEGACY_CONTRACT_ROUTES,
+  legacyContractRoutePattern,
+} from '../helpers/legacyContract';
 
 interface UsabilityRouteCase {
   path: string;
@@ -7,6 +11,9 @@ interface UsabilityRouteCase {
   titlePattern: RegExp;
   readySelectors: string[];
 }
+
+const LEGACY_CONTRACT_RETIRED_TITLE_PATTERN = /租赁前端模块已退休/i;
+const LEGACY_CONTRACT_RETIRED_READY_SELECTORS = ['.ant-result', '.ant-alert'];
 
 const CORE_ROUTE_CASES: UsabilityRouteCase[] = [
   {
@@ -22,10 +29,10 @@ const CORE_ROUTE_CASES: UsabilityRouteCase[] = [
     readySelectors: ['.ant-table', '.ant-empty'],
   },
   {
-    path: '/rental/contracts',
-    urlPattern: /\/rental\/contracts/,
-    titlePattern: /租金合同管理|合同管理/i,
-    readySelectors: ['.ant-table', '.ant-empty'],
+    path: LEGACY_CONTRACT_ROUTES.LIST,
+    urlPattern: legacyContractRoutePattern(LEGACY_CONTRACT_ROUTES.LIST),
+    titlePattern: LEGACY_CONTRACT_RETIRED_TITLE_PATTERN,
+    readySelectors: LEGACY_CONTRACT_RETIRED_READY_SELECTORS,
   },
   {
     path: '/project',
@@ -104,7 +111,9 @@ test.describe('@user-usable 用户可用性冒烟', () => {
     }
   });
 
-  test('authenticated user can reach key creation entries', async ({ page }) => {
+  test('authenticated user can reach key creation entries and see retired contract entry state', async ({
+    page,
+  }) => {
     await page.goto('/assets/list');
     await expect(page).toHaveURL(/\/assets\/list/);
     const createAssetButton = page.getByRole('button', { name: /新增资产/ }).first();
@@ -116,15 +125,10 @@ test.describe('@user-usable 用户可用性冒烟', () => {
     await expect(page).toHaveURL(/\/assets\/new/);
     await expect(page.getByRole('heading', { name: /新增资产|编辑资产/i })).toBeVisible();
 
-    await page.goto('/rental/contracts');
-    await expect(page).toHaveURL(/\/rental\/contracts/);
-    const createContractButton = page.getByRole('button', { name: /创建合同/ }).first();
-    if (await isLocatorVisible(createContractButton)) {
-      await createContractButton.click();
-    } else {
-      await page.goto('/rental/contracts/create');
-    }
-    await expect(page).toHaveURL(/\/rental\/contracts\/(create|new)/);
+    await page.goto(LEGACY_CONTRACT_ROUTES.LIST);
+    await expect(page).toHaveURL(legacyContractRoutePattern(LEGACY_CONTRACT_ROUTES.LIST));
+    await expect(page.getByText(/租赁前端模块已退休/i).first()).toBeVisible();
+    await expect(page.getByText(/旧合同前端页面已下线/i).first()).toBeVisible();
 
     await page.goto('/project');
     await expect(page).toHaveURL(/\/project/);

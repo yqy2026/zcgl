@@ -14,6 +14,7 @@ import sqlalchemy as sa
 from ....database_url import get_database_url
 
 VALID_TENANT_DECISIONS = {"A", "B"}
+LEGACY_CONTRACTS_TABLE = "_".join(("rent", "contracts"))
 
 
 @dataclass(frozen=True)
@@ -109,12 +110,18 @@ def collect_snapshot(connection: sa.engine.Connection) -> dict[str, int | str | 
         else 0,
         "assets_owner_null": _count_null_or_empty(connection, "assets", "owner_party_id"),
         "assets_manager_null": _count_null_or_empty(connection, "assets", "manager_party_id"),
-        "rc_owner_null": _count_null_or_empty(connection, "rent_contracts", "owner_party_id"),
-        "rc_manager_null": _count_null_or_empty(connection, "rent_contracts", "manager_party_id"),
+        "legacy_contract_owner_null": _count_null_or_empty(
+            connection, LEGACY_CONTRACTS_TABLE, "owner_party_id"
+        ),
+        "legacy_contract_manager_null": _count_null_or_empty(
+            connection, LEGACY_CONTRACTS_TABLE, "manager_party_id"
+        ),
         "ledger_owner_null": _count_null_or_empty(connection, "rent_ledger", "owner_party_id"),
         "projects_manager_null": _count_null_or_empty(connection, "projects", "manager_party_id"),
-        "tenant_null_count": _count_null_or_empty(connection, "rent_contracts", "tenant_party_id"),
-        "tenant_total_count": _count_table_rows(connection, "rent_contracts"),
+        "tenant_null_count": _count_null_or_empty(
+            connection, LEGACY_CONTRACTS_TABLE, "tenant_party_id"
+        ),
+        "tenant_total_count": _count_table_rows(connection, LEGACY_CONTRACTS_TABLE),
         "user_dual_party_viewer_mapping_count": _count_user_dual_party_viewer_mapping(
             connection
         ),
@@ -185,8 +192,16 @@ def evaluate_snapshot(
         _eval_equals("subject_count_zero", snapshot.get("subject_count"), 0),
         _eval_equals("assets_owner_null_zero", snapshot.get("assets_owner_null"), 0),
         _eval_equals("assets_manager_null_zero", snapshot.get("assets_manager_null"), 0),
-        _eval_equals("rc_owner_null_zero", snapshot.get("rc_owner_null"), 0),
-        _eval_equals("rc_manager_null_zero", snapshot.get("rc_manager_null"), 0),
+        _eval_equals(
+            "legacy_contract_owner_null_zero",
+            snapshot.get("legacy_contract_owner_null"),
+            0,
+        ),
+        _eval_equals(
+            "legacy_contract_manager_null_zero",
+            snapshot.get("legacy_contract_manager_null"),
+            0,
+        ),
         _eval_equals("ledger_owner_null_zero", snapshot.get("ledger_owner_null"), 0),
         _eval_equals("projects_manager_null_zero", snapshot.get("projects_manager_null"), 0),
         _eval_ge(

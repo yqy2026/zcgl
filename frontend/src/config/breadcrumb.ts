@@ -17,13 +17,13 @@ export const staticBreadcrumbMap: Record<string, string> = {
   '/assets/analytics-simple': '简易分析',
 
   // 租赁管理
-  '/rental': '租赁管理',
-  '/rental/contracts': '合同管理',
-  '/rental/contracts/new': '新建合同',
-  '/rental/contracts/create': '创建合同',
-  '/rental/contracts/pdf-import': '导入合同',
-  '/rental/ledger': '租金台账',
-  '/rental/statistics': '租赁统计',
+  '/rental': '旧租赁前端已退休',
+  '/rental/contracts': '旧租赁前端已退休',
+  '/rental/contracts/new': '旧租赁前端已退休',
+  '/rental/contracts/create': '旧租赁前端已退休',
+  '/rental/contracts/pdf-import': '跳转至PDF导入',
+  '/rental/ledger': '旧租赁台账已退休',
+  '/rental/statistics': '旧租赁统计已退休',
 
   // 财务管理
   '/finance': '财务中心',
@@ -49,6 +49,11 @@ export const staticBreadcrumbMap: Record<string, string> = {
   // 项目管理
   '/project': '项目管理',
 
+  // 合同组管理
+  '/contract-groups': '合同组管理',
+  '/contract-groups/import': 'PDF导入',
+  '/contract-groups/new': '新建合同组',
+
   // 系统管理
   '/system': '系统管理',
   '/system/users': '用户管理',
@@ -71,9 +76,11 @@ export const dynamicBreadcrumbMap: Record<string, string> = {
   '/assets/:id/edit': '编辑资产',
 
   // 合同
-  '/rental/contracts/:id': '合同详情',
-  '/rental/contracts/:id/renew': '续签合同',
-  '/rental/contracts/:id/edit': '编辑合同',
+  '/contract-groups/:id': '合同组详情',
+  '/contract-groups/:id/edit': '编辑合同组',
+  '/rental/contracts/:id': '旧合同详情入口已退休',
+  '/rental/contracts/:id/renew': '旧合同续签入口已退休',
+  '/rental/contracts/:id/edit': '旧合同编辑入口已退休',
 
   // 产权证
   '/property-certificates/:id': '产权证详情',

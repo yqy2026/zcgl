@@ -85,13 +85,13 @@ def _set_batch_delete_query_results(
     )
     if mock_asset_crud is not None:
         mock_asset_crud.get_multi_by_ids_async = AsyncMock(return_value=list(assets))
-        mock_asset_crud.get_assets_with_rent_contracts_async = AsyncMock(
+        mock_asset_crud.get_assets_with_contracts_async = AsyncMock(
             return_value=list(contract_links or [])
         )
         mock_asset_crud.get_assets_with_property_certs_async = AsyncMock(
             return_value=list(certificate_links or [])
         )
-        mock_asset_crud.get_assets_with_rent_ledger_async = AsyncMock(
+        mock_asset_crud.get_assets_with_contract_ledger_entries_async = AsyncMock(
             return_value=list(ledger_links or [])
         )
 

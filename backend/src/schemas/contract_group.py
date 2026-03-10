@@ -56,11 +56,17 @@ class ContractGroupCreate(BaseModel):
     owner_party_id: str = Field(..., min_length=1, description="产权方主体 ID")
     effective_from: date = Field(..., description="合同组有效开始日期")
     effective_to: date | None = Field(None, description="合同组有效结束日期（可空）")
-    settlement_rule: SettlementRuleSchema = Field(..., description="结算规则（五键必填）")
-    revenue_attribution_rule: dict[str, Any] | None = Field(None, description="收益归属规则")
+    settlement_rule: SettlementRuleSchema = Field(
+        ..., description="结算规则（五键必填）"
+    )
+    revenue_attribution_rule: dict[str, Any] | None = Field(
+        None, description="收益归属规则"
+    )
     revenue_share_rule: dict[str, Any] | None = Field(None, description="收益分成规则")
     risk_tags: list[str] | None = Field(None, description="风险标签列表")
-    predecessor_group_id: str | None = Field(None, description="前驱合同组 ID（续签用）")
+    predecessor_group_id: str | None = Field(
+        None, description="前驱合同组 ID（续签用）"
+    )
     asset_ids: list[str] = Field(default_factory=list, description="关联资产 ID 列表")
 
     @model_validator(mode="after")
@@ -82,7 +88,9 @@ class ContractGroupUpdate(BaseModel):
     revenue_attribution_rule: dict[str, Any] | None = Field(None)
     revenue_share_rule: dict[str, Any] | None = Field(None)
     risk_tags: list[str] | None = Field(None)
-    asset_ids: list[str] | None = Field(None, description="替换资产关联，None 表示不修改")
+    asset_ids: list[str] | None = Field(
+        None, description="替换资产关联，None 表示不修改"
+    )
 
 
 class ContractGroupListItem(BaseModel):
@@ -199,6 +207,7 @@ class ContractCreate(BaseModel):
     """创建合同入参"""
 
     contract_group_id: str = Field(..., min_length=1, description="所属合同组 ID")
+    contract_number: str = Field(..., min_length=1, max_length=100, description="合同编号")
     contract_direction: ContractDirection = Field(..., description="合同方向")
     group_relation_type: GroupRelationType = Field(..., description="合同角色")
     lessor_party_id: str = Field(..., min_length=1, description="出租方/委托方主体 ID")
@@ -232,6 +241,7 @@ class ContractSummary(BaseModel):
     """合同组内合同摘要"""
 
     contract_id: str
+    contract_number: str
     contract_direction: ContractDirection
     group_relation_type: GroupRelationType
     lessor_party_id: str
@@ -249,6 +259,7 @@ class ContractDetail(BaseModel):
 
     contract_id: str
     contract_group_id: str
+    contract_number: str
     contract_direction: ContractDirection
     group_relation_type: GroupRelationType
     lessor_party_id: str
@@ -273,6 +284,137 @@ class ContractDetail(BaseModel):
     agency_detail: AgencyDetailResponse | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ContractLifecycleAction(BaseModel):
+    """合同生命周期操作入参。"""
+
+    reason: str | None = Field(None, description="驳回 / 终止 / 作废原因")
+    related_entry_id: str | None = Field(None, description="关联单号")
+
+
+class AuditLogResponse(BaseModel):
+    """审计日志出参。"""
+
+    log_id: str
+    contract_id: str
+    action: str
+    old_status: str | None
+    new_status: str | None
+    review_status_old: str | None
+    review_status_new: str | None
+    reason: str | None
+    operator_id: str | None
+    operator_name: str | None
+    related_entry_id: str | None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ContractRentTermCreate(BaseModel):
+    """创建租金条款入参。"""
+
+    sort_order: int = Field(..., ge=1)
+    start_date: date
+    end_date: date
+    monthly_rent: Decimal = Field(..., ge=0)
+    management_fee: Decimal = Field(Decimal("0"), ge=0)
+    other_fees: Decimal = Field(Decimal("0"), ge=0)
+    notes: str | None = None
+
+    @model_validator(mode="after")
+    def validate_date_range(self) -> "ContractRentTermCreate":
+        if self.end_date < self.start_date:
+            raise PydanticCustomError(
+                "invalid_rent_term_date_range",
+                "租金条款结束日期不得早于开始日期",
+                {},
+            )
+        return self
+
+
+class ContractRentTermUpdate(BaseModel):
+    """更新租金条款入参。"""
+
+    sort_order: int | None = Field(None, ge=1)
+    start_date: date | None = None
+    end_date: date | None = None
+    monthly_rent: Decimal | None = Field(None, ge=0)
+    management_fee: Decimal | None = Field(None, ge=0)
+    other_fees: Decimal | None = Field(None, ge=0)
+    notes: str | None = None
+
+    @model_validator(mode="after")
+    def validate_date_range(self) -> "ContractRentTermUpdate":
+        if (
+            self.start_date is not None
+            and self.end_date is not None
+            and self.end_date < self.start_date
+        ):
+            raise PydanticCustomError(
+                "invalid_rent_term_date_range",
+                "租金条款结束日期不得早于开始日期",
+                {},
+            )
+        return self
+
+
+class ContractRentTermResponse(BaseModel):
+    """租金条款出参。"""
+
+    rent_term_id: str
+    contract_id: str
+    sort_order: int
+    start_date: date
+    end_date: date
+    monthly_rent: Decimal
+    management_fee: Decimal
+    other_fees: Decimal
+    total_monthly_amount: Decimal | None
+    notes: str | None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ContractLedgerEntryResponse(BaseModel):
+    """合同台账条目出参。"""
+
+    entry_id: str
+    contract_id: str
+    year_month: str
+    due_date: date
+    amount_due: Decimal
+    currency_code: str
+    is_tax_included: bool
+    tax_rate: Decimal | None
+    payment_status: str
+    paid_amount: Decimal
+    notes: str | None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ContractLedgerListResponse(BaseModel):
+    """合同台账分页出参。"""
+
+    items: list[ContractLedgerEntryResponse]
+    total: int
+    offset: int
+    limit: int
+
+
+class ContractLedgerBatchUpdateRequest(BaseModel):
+    """批量更新合同台账状态。"""
+
+    entry_ids: list[str] = Field(..., min_length=1)
+    payment_status: str = Field(..., min_length=1)
+    paid_amount: Decimal | None = Field(None, ge=0)
+    notes: str | None = None
 
 
 class ContractRelationCreate(BaseModel):

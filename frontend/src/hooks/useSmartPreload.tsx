@@ -39,7 +39,7 @@ interface PreloadConfig {
 const DEFAULT_CONFIG: PreloadConfig = {
   threshold: 200,
   maxConcurrent: 3,
-  enabledRoutes: ['/assets/list', '/rental/contracts', '/system/users', '/dashboard'],
+  enabledRoutes: ['/assets/list', '/system/users', '/dashboard'],
   priorityRoutes: ['/dashboard', '/assets/list'],
 };
 
@@ -191,7 +191,6 @@ class SmartPreloadManager {
       '/dashboard': () => import('../pages/Dashboard/DashboardPage'),
       '/assets/list': () => import('../pages/Assets/AssetListPage'),
       '/assets/new': () => import('../pages/Assets/AssetCreatePage'),
-      '/rental/contracts': () => import('../pages/Rental/ContractListPage'),
       '/system/users': () => import('../pages/System/UserManagementPage'),
       '/system/roles': () => import('../pages/System/RoleManagementPage'),
     };
@@ -223,11 +222,9 @@ class SmartPreloadManager {
 
     // 根据当前路由预测
     if (currentRoute === '/dashboard') {
-      predictions.push('/assets/list', '/rental/contracts');
+      predictions.push('/assets/list');
     } else if (currentRoute === '/assets/list') {
       predictions.push('/assets/new', '/assets/analytics');
-    } else if (currentRoute === '/rental/contracts') {
-      predictions.push('/rental/contracts/new');
     }
 
     // 优先返回高优先级路由

@@ -81,10 +81,15 @@ def engine(test_database_url):
 
     Uses PostgreSQL (either provided URL or testcontainers).
     """
+    global TEST_DATABASE_URL
+
     if os.getenv("TEST_USE_POSTGRES") == "true" and HAS_TESTCONTAINERS:
-        postgres = PostgresContainer("postgres:18.2")
+        postgres = PostgresContainer("postgres:18.2", driver="psycopg")
         postgres.start()
         db_url = postgres.get_connection_url()
+        TEST_DATABASE_URL = db_url
+        os.environ["TEST_DATABASE_URL"] = db_url
+        os.environ["DATABASE_URL"] = db_url
         engine = create_engine(db_url, pool_pre_ping=True)
         yield engine
         postgres.stop()

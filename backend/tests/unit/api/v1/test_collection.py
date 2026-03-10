@@ -81,7 +81,7 @@ def mock_collection_record():
 @pytest.fixture
 def mock_rent_ledger():
     """Create mock rent ledger"""
-    from src.constants.rent_contract_constants import PaymentStatus
+    from src.constants.contract_constants import PaymentStatus
 
     ledger = MagicMock()
     ledger.id = "ledger-123"

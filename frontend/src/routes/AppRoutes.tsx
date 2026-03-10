@@ -3,7 +3,8 @@ import { Navigate } from 'react-router-dom';
 import type { AuthzAction, ResourceType } from '@/types/capability';
 import {
   ASSET_ROUTES,
-  RENTAL_ROUTES,
+  CONTRACT_GROUP_ROUTES,
+  LEGACY_RENTAL_ROUTES,
   OWNERSHIP_ROUTES,
   PROJECT_ROUTES,
   PROFILE_ROUTES,
@@ -27,6 +28,14 @@ export interface ProtectedRouteItem {
  * 这些路由需要用户认证后才能访问,并会被 AppLayout 包装
  * 注意: 登录页面路由不应该在此定义,应该在 App.tsx 中作为公共路由处理
  */
+const legacyRentalRetiredPage = React.lazy(
+  () => import('../pages/Rental/LegacyRentalRetiredPage')
+);
+
+const legacyRentalPdfImportRedirect: React.FC = () => (
+  <Navigate to={CONTRACT_GROUP_ROUTES.IMPORT} replace />
+);
+
 const baseProtectedRoutes: ProtectedRouteItem[] = [
   // 仪表板 - 首页
   {
@@ -74,51 +83,76 @@ const baseProtectedRoutes: ProtectedRouteItem[] = [
 
   // 租赁管理模块 - 注意路由顺序，具体路径必须在动态路径之前
   {
-    path: RENTAL_ROUTES.CONTRACTS.LIST,
-    element: React.lazy(() => import('../pages/Rental/ContractListPage')),
-    permissions: [{ resource: 'rent_contract', action: 'read' }],
+    path: LEGACY_RENTAL_ROUTES.CONTRACTS.LIST,
+    element: legacyRentalRetiredPage,
+    permissions: [{ resource: 'contract', action: 'read' }],
   },
   {
-    path: RENTAL_ROUTES.CONTRACTS.NEW, // 具体路由 - 创建合同
-    element: React.lazy(() => import('../pages/Rental/ContractCreatePage')),
-    permissions: [{ resource: 'rent_contract', action: 'create' }],
+    path: LEGACY_RENTAL_ROUTES.CONTRACTS.NEW, // 具体路由 - 创建合同
+    element: legacyRentalRetiredPage,
+    permissions: [{ resource: 'contract', action: 'read' }],
   },
   {
-    path: RENTAL_ROUTES.CONTRACTS.CREATE, // 具体路由 - 创建合同（备用）
-    element: React.lazy(() => import('../pages/Rental/ContractCreatePage')),
-    permissions: [{ resource: 'rent_contract', action: 'create' }],
+    path: LEGACY_RENTAL_ROUTES.CONTRACTS.CREATE, // 具体路由 - 创建合同（备用）
+    element: legacyRentalRetiredPage,
+    permissions: [{ resource: 'contract', action: 'read' }],
   },
   {
-    path: RENTAL_ROUTES.CONTRACTS.PDF_IMPORT, // 具体路由 - PDF导入
-    element: React.lazy(() => import('../pages/Contract/PDFImportPage')),
-    permissions: [{ resource: 'rent_contract', action: 'create' }],
+    path: LEGACY_RENTAL_ROUTES.CONTRACTS.PDF_IMPORT, // 具体路由 - PDF导入
+    element: legacyRentalPdfImportRedirect,
+    permissions: [{ resource: 'contract_group', action: 'create' }],
   },
   {
-    path: RENTAL_ROUTES.CONTRACTS.RENEW_PATH, // 具体路由 - 续签合同（必须在 :id/edit 之前）
-    element: React.lazy(() => import('../pages/Rental/ContractRenewPage')),
-    permissions: [{ resource: 'rent_contract', action: 'update' }],
+    path: LEGACY_RENTAL_ROUTES.CONTRACTS.RENEW_PATH, // 具体路由 - 续签合同（必须在 :id/edit 之前）
+    element: legacyRentalRetiredPage,
+    permissions: [{ resource: 'contract', action: 'read' }],
   },
   {
-    path: RENTAL_ROUTES.CONTRACTS.DETAIL_PATH, // 动态路由 - 合同详情页
-    element: React.lazy(() => import('../pages/Rental/ContractDetailPage')),
-    permissions: [{ resource: 'rent_contract', action: 'read' }],
+    path: LEGACY_RENTAL_ROUTES.CONTRACTS.DETAIL_PATH, // 动态路由 - 合同详情页
+    element: legacyRentalRetiredPage,
+    permissions: [{ resource: 'contract', action: 'read' }],
   },
   {
-    path: RENTAL_ROUTES.CONTRACTS.EDIT_PATH, // 动态路由 - 编辑合同
-    element: React.lazy(() => import('../pages/Rental/ContractCreatePage')),
-    permissions: [{ resource: 'rent_contract', action: 'update' }],
+    path: LEGACY_RENTAL_ROUTES.CONTRACTS.EDIT_PATH, // 动态路由 - 编辑合同
+    element: legacyRentalRetiredPage,
+    permissions: [{ resource: 'contract', action: 'read' }],
   },
   {
-    path: RENTAL_ROUTES.LEDGER,
-    element: React.lazy(() => import('../pages/Rental/RentLedgerPage')),
-    permissions: [{ resource: 'ledger', action: 'read' }],
+    path: LEGACY_RENTAL_ROUTES.LEDGER,
+    element: legacyRentalRetiredPage,
+    permissions: [{ resource: 'contract', action: 'read' }],
   },
   {
-    path: RENTAL_ROUTES.STATISTICS,
-    element: React.lazy(() => import('../pages/Rental/RentStatisticsPage')),
-    permissions: [{ resource: 'rent_contract', action: 'read' }],
+    path: LEGACY_RENTAL_ROUTES.STATISTICS,
+    element: legacyRentalRetiredPage,
+    permissions: [{ resource: 'contract', action: 'read' }],
   },
 
+  {
+    path: CONTRACT_GROUP_ROUTES.LIST,
+    element: React.lazy(() => import('../pages/ContractGroup/ContractGroupListPage')),
+    permissions: [{ resource: 'contract_group', action: 'read' }],
+  },
+  {
+    path: CONTRACT_GROUP_ROUTES.NEW,
+    element: React.lazy(() => import('../pages/ContractGroup/ContractGroupFormPage')),
+    permissions: [{ resource: 'contract_group', action: 'create' }],
+  },
+  {
+    path: CONTRACT_GROUP_ROUTES.IMPORT,
+    element: React.lazy(() => import('../pages/Contract/PDFImportPage')),
+    permissions: [{ resource: 'contract_group', action: 'create' }],
+  },
+  {
+    path: CONTRACT_GROUP_ROUTES.DETAIL_PATH,
+    element: React.lazy(() => import('../pages/ContractGroup/ContractGroupDetailPage')),
+    permissions: [{ resource: 'contract_group', action: 'read' }],
+  },
+  {
+    path: CONTRACT_GROUP_ROUTES.EDIT_PATH,
+    element: React.lazy(() => import('../pages/ContractGroup/ContractGroupFormPage')),
+    permissions: [{ resource: 'contract_group', action: 'update' }],
+  },
   {
     path: PROPERTY_CERTIFICATE_ROUTES.LIST,
     element: React.lazy(() => import('../pages/PropertyCertificate/PropertyCertificateList')),

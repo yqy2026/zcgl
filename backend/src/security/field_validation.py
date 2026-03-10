@@ -13,14 +13,14 @@ from ..crud import field_whitelist as crud_field_whitelist
 from ..crud.field_whitelist import ModelFieldWhitelist
 from ..models.asset import Asset
 from ..models.contact import Contact
+from ..models.contract_group import Contract
 from ..models.organization import Organization
-from ..models.rent_contract import RentContract
 
 logger = logging.getLogger(__name__)
 
 MODEL_REGISTRY: dict[str, type] = {
     "Asset": Asset,
-    "RentContract": RentContract,
+    "Contract": Contract,
     "Organization": Organization,
     "Contact": Contact,
 }

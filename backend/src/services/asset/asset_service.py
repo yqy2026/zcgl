@@ -358,7 +358,7 @@ class AssetService:
     async def _ensure_asset_not_linked(self, asset_id: str) -> None:
         asset_crud = self.asset_crud
 
-        has_contract = await asset_crud.has_rent_contracts_async(self.db, asset_id)
+        has_contract = await asset_crud.has_contracts_async(self.db, asset_id)
         if has_contract:
             raise operation_not_allowed(
                 "资产已关联合同，禁止删除",
@@ -372,7 +372,9 @@ class AssetService:
                 reason="asset_has_certificates",
             )
 
-        has_ledger = await asset_crud.has_rent_ledger_async(self.db, asset_id)
+        has_ledger = await asset_crud.has_contract_ledger_entries_async(
+            self.db, asset_id
+        )
         if has_ledger:
             raise operation_not_allowed(
                 "资产已有租金台账记录，禁止删除",

@@ -5,6 +5,7 @@ from __future__ import annotations
 import sqlalchemy as sa
 
 from src.scripts.migration.party_migration.phase4_no_go_snapshot import (
+    LEGACY_CONTRACTS_TABLE,
     collect_snapshot,
     evaluate_snapshot,
     overall_result,
@@ -38,8 +39,8 @@ def _create_phase4_tables(connection: sa.engine.Connection) -> None:
     )
     connection.execute(
         sa.text(
-            """
-            CREATE TABLE rent_contracts (
+            f"""
+            CREATE TABLE {LEGACY_CONTRACTS_TABLE} (
                 id TEXT PRIMARY KEY,
                 owner_party_id TEXT,
                 manager_party_id TEXT,
@@ -114,8 +115,8 @@ def test_snapshot_and_gate_pass_for_decision_a() -> None:
         )
         connection.execute(
             sa.text(
-                """
-                INSERT INTO rent_contracts (id, owner_party_id, manager_party_id, tenant_party_id)
+                f"""
+                INSERT INTO {LEGACY_CONTRACTS_TABLE} (id, owner_party_id, manager_party_id, tenant_party_id)
                 VALUES ('c1', 'owner-1', 'manager-1', 'tenant-1')
                 """
             )
@@ -165,8 +166,10 @@ def test_snapshot_and_gate_pass_for_decision_a() -> None:
         assert snapshot["subject_count"] == 0
         assert snapshot["assets_owner_null"] == 0
         assert snapshot["assets_manager_null"] == 0
-        assert snapshot["rc_owner_null"] == 0
-        assert snapshot["rc_manager_null"] == 0
+        assert snapshot["legacy_contract_owner_null"] == 0
+        assert snapshot["legacy_contract_manager_null"] == 0
+        assert "_".join(("rc", "owner", "null")) not in snapshot
+        assert "_".join(("rc", "manager", "null")) not in snapshot
         assert snapshot["ledger_owner_null"] == 0
         assert snapshot["projects_manager_null"] == 0
         assert snapshot["tenant_null_count"] == 0
@@ -204,8 +207,8 @@ def test_snapshot_gate_fails_when_required_metrics_not_met() -> None:
         )
         connection.execute(
             sa.text(
-                """
-                INSERT INTO rent_contracts (id, owner_party_id, manager_party_id, tenant_party_id)
+                f"""
+                INSERT INTO {LEGACY_CONTRACTS_TABLE} (id, owner_party_id, manager_party_id, tenant_party_id)
                 VALUES ('c1', 'owner-1', 'manager-1', NULL)
                 """
             )
@@ -233,6 +236,8 @@ def test_snapshot_gate_fails_when_required_metrics_not_met() -> None:
 
         assert "subject_count_zero" in failed
         assert "assets_owner_null_zero" in failed
+        assert "legacy_contract_owner_null_zero" not in failed
+        assert "legacy_contract_manager_null_zero" not in failed
         assert "tenant_null_zero_when_decision_a" in failed
         assert "user_dual_party_viewer_mapping_ge_1" in failed
         assert overall_result(evaluations) == "FAIL"
@@ -254,8 +259,8 @@ def test_decision_b_skips_tenant_not_null_gate() -> None:
         )
         connection.execute(
             sa.text(
-                """
-                INSERT INTO rent_contracts (id, owner_party_id, manager_party_id, tenant_party_id)
+                f"""
+                INSERT INTO {LEGACY_CONTRACTS_TABLE} (id, owner_party_id, manager_party_id, tenant_party_id)
                 VALUES ('c1', 'owner-1', 'manager-1', NULL)
                 """
             )

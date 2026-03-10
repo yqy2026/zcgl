@@ -299,6 +299,6 @@ class TestSecurityIntegration:
         # Verify protected fields structure
         protected_fields = data["protected_fields"]
         assert "Organization" in protected_fields
-        assert "RentContract" in protected_fields
+        assert "Contract" in protected_fields
         assert "Contact" in protected_fields
         assert "Asset" in protected_fields

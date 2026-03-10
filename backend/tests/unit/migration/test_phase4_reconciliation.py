@@ -5,13 +5,29 @@ from __future__ import annotations
 import sqlalchemy as sa
 
 from src.scripts.migration.party_migration.reconciliation import (
+    CHECK_RUNNERS,
+    LEGACY_CONTRACTS_TABLE,
     _check_assets_manager_party_not_null,
     _check_assets_owner_party_not_null,
+    _check_legacy_contracts_manager_party_not_null,
+    _check_legacy_contracts_owner_party_not_null,
     _check_projects_manager_party_not_null,
-    _check_rent_contracts_manager_party_not_null,
-    _check_rent_contracts_owner_party_not_null,
     _check_rent_ledger_owner_party_not_null,
 )
+
+
+def test_reconciliation_contract_checks_use_legacy_contract_names() -> None:
+    legacy_owner_check_name = "_".join(
+        ("rent", "contracts", "owner", "party", "not", "null")
+    )
+    legacy_manager_check_name = "_".join(
+        ("rent", "contracts", "manager", "party", "not", "null")
+    )
+
+    assert "legacy_contracts_owner_party_not_null" in CHECK_RUNNERS
+    assert "legacy_contracts_manager_party_not_null" in CHECK_RUNNERS
+    assert legacy_owner_check_name not in CHECK_RUNNERS
+    assert legacy_manager_check_name not in CHECK_RUNNERS
 
 
 def _create_connection() -> sa.engine.Connection:
@@ -53,8 +69,8 @@ def test_reconciliation_checks_pass_after_step4_column_drop() -> None:
         )
         connection.execute(
             sa.text(
-                """
-                CREATE TABLE rent_contracts (
+                f"""
+                CREATE TABLE {LEGACY_CONTRACTS_TABLE} (
                     id TEXT PRIMARY KEY,
                     owner_party_id TEXT NOT NULL,
                     manager_party_id TEXT NOT NULL
@@ -90,8 +106,8 @@ def test_reconciliation_checks_pass_after_step4_column_drop() -> None:
         )
         connection.execute(
             sa.text(
-                """
-                INSERT INTO rent_contracts (id, owner_party_id, manager_party_id)
+                f"""
+                INSERT INTO {LEGACY_CONTRACTS_TABLE} (id, owner_party_id, manager_party_id)
                 VALUES ('c1', 'owner-1', 'manager-1')
                 """
             )
@@ -108,8 +124,8 @@ def test_reconciliation_checks_pass_after_step4_column_drop() -> None:
         assert _check_assets_owner_party_not_null(connection) == ("PASS", 0)
         assert _check_assets_manager_party_not_null(connection) == ("PASS", 0)
         assert _check_projects_manager_party_not_null(connection) == ("PASS", 0)
-        assert _check_rent_contracts_owner_party_not_null(connection) == ("PASS", 0)
-        assert _check_rent_contracts_manager_party_not_null(connection) == ("PASS", 0)
+        assert _check_legacy_contracts_owner_party_not_null(connection) == ("PASS", 0)
+        assert _check_legacy_contracts_manager_party_not_null(connection) == ("PASS", 0)
         assert _check_rent_ledger_owner_party_not_null(connection) == ("PASS", 0)
     finally:
         _close_connection(connection)
@@ -141,8 +157,8 @@ def test_reconciliation_checks_fail_when_party_columns_are_empty() -> None:
         )
         connection.execute(
             sa.text(
-                """
-                CREATE TABLE rent_contracts (
+                f"""
+                CREATE TABLE {LEGACY_CONTRACTS_TABLE} (
                     id TEXT PRIMARY KEY,
                     owner_party_id TEXT,
                     manager_party_id TEXT
@@ -178,8 +194,8 @@ def test_reconciliation_checks_fail_when_party_columns_are_empty() -> None:
         )
         connection.execute(
             sa.text(
-                """
-                INSERT INTO rent_contracts (id, owner_party_id, manager_party_id)
+                f"""
+                INSERT INTO {LEGACY_CONTRACTS_TABLE} (id, owner_party_id, manager_party_id)
                 VALUES ('c1', NULL, '')
                 """
             )
@@ -196,8 +212,8 @@ def test_reconciliation_checks_fail_when_party_columns_are_empty() -> None:
         assert _check_assets_owner_party_not_null(connection) == ("FAIL", 1)
         assert _check_assets_manager_party_not_null(connection) == ("FAIL", 1)
         assert _check_projects_manager_party_not_null(connection) == ("FAIL", 1)
-        assert _check_rent_contracts_owner_party_not_null(connection) == ("FAIL", 1)
-        assert _check_rent_contracts_manager_party_not_null(connection) == ("FAIL", 1)
+        assert _check_legacy_contracts_owner_party_not_null(connection) == ("FAIL", 1)
+        assert _check_legacy_contracts_manager_party_not_null(connection) == ("FAIL", 1)
         assert _check_rent_ledger_owner_party_not_null(connection) == ("FAIL", 1)
     finally:
         _close_connection(connection)

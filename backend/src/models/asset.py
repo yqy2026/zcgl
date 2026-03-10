@@ -29,10 +29,10 @@ from ..database import Base
 
 if TYPE_CHECKING:
     from .asset_history import AssetDocument, AssetHistory
+    from .contract_group import Contract
     from .party import Party
     from .project import Project
     from .property_certificate import PropertyCertificate
-    from .rent_contract import RentContract
 
 
 def _utcnow_naive() -> datetime:
@@ -271,11 +271,11 @@ class Asset(Base):
     documents: Mapped[list["AssetDocument"]] = relationship(
         "AssetDocument", back_populates="asset", cascade="all, delete-orphan"
     )
-    rent_contracts: Mapped[list["RentContract"]] = relationship(
-        "RentContract",
-        secondary="rent_contract_assets",
-        back_populates="assets",
+    contracts: Mapped[list["Contract"]] = relationship(
+        "Contract",
+        secondary="contract_assets",
         lazy="selectin",
+        overlaps="assets",
     )
     certificates: Mapped[list["PropertyCertificate"]] = relationship(
         "PropertyCertificate",
@@ -367,31 +367,40 @@ class Asset(Base):
 
     def _pick_preferred_contract(
         self,
-        contracts_value: list["RentContract"],
+        contracts_value: list["Contract"],
         active_statuses: set[str],
         *,
         today: date,
-    ) -> "RentContract | None":
-        latest_active: RentContract | None = None
+    ) -> "Contract | None":
+        latest_active: Contract | None = None
         latest_active_rank: tuple[date, datetime] | None = None
-        latest_effective: RentContract | None = None
+        latest_effective: Contract | None = None
         latest_effective_rank: tuple[date, datetime] | None = None
 
         for contract in contracts_value:
-            if getattr(contract, "contract_status", None) not in active_statuses:
+            status = getattr(contract, "status", None)
+            status_name = getattr(status, "name", None)
+            status_value = getattr(status, "value", None)
+            if (
+                status_name not in active_statuses
+                and status_value not in active_statuses
+                and str(status) not in active_statuses
+            ):
                 continue
 
             rank = (
-                contract.start_date or date.min,
-                contract.created_at or datetime.min,
+                getattr(contract, "effective_from", None) or date.min,
+                getattr(contract, "created_at", None) or datetime.min,
             )
 
             if latest_active_rank is None or rank > latest_active_rank:
                 latest_active = contract
                 latest_active_rank = rank
 
-            if (contract.start_date is None or contract.start_date <= today) and (
-                contract.end_date is None or contract.end_date >= today
+            effective_from = getattr(contract, "effective_from", None)
+            effective_to = getattr(contract, "effective_to", None)
+            if (effective_from is None or effective_from <= today) and (
+                effective_to is None or effective_to >= today
             ):
                 if latest_effective_rank is None or rank > latest_effective_rank:
                     latest_effective = contract
@@ -401,18 +410,18 @@ class Asset(Base):
 
     def _get_cached_active_contract(
         self,
-        contracts_value: list["RentContract"],
+        contracts_value: list["Contract"],
         active_statuses: set[str],
         *,
         today: date,
-    ) -> "RentContract | None":
+    ) -> "Contract | None":
         cache_token = (id(contracts_value), len(contracts_value))
         cached_token = self.__dict__.get("_active_contract_cache_token")
         if (
             cached_token == cache_token
             and "_active_contract_cache_value" in self.__dict__
         ):
-            return cast("RentContract | None", self.__dict__["_active_contract_cache_value"])
+            return cast("Contract | None", self.__dict__["_active_contract_cache_value"])
 
         selected_contract = self._pick_preferred_contract(
             contracts_value,
@@ -424,25 +433,17 @@ class Asset(Base):
         return selected_contract
 
     @property
-    def active_contract(self) -> "RentContract | None":
+    def active_contract(self) -> "Contract | None":
         """获取当前有效合同。"""
-        from ..core.enums import ContractStatus
-
         contracts_value = self._get_loaded_relationship_value(
-            "rent_contracts",
+            "contracts",
             projection_field="active_contract",
         )
         if contracts_value is None:
             return None
 
         today = date.today()
-        active_statuses = {
-            ContractStatus.ACTIVE.value,
-            ContractStatus.EXPIRING.value,
-            "有效",
-            "执行中",
-            "即将到期",
-        }
+        active_statuses = {"ACTIVE", "生效"}
         return self._get_cached_active_contract(
             contracts_value,
             active_statuses,
@@ -452,7 +453,8 @@ class Asset(Base):
     @property
     def tenant_name(self) -> str | None:
         contract = self.active_contract
-        return contract.tenant_name if contract else None
+        lease_detail = getattr(contract, "lease_detail", None) if contract else None
+        return getattr(lease_detail, "tenant_name", None)
 
     @property
     def lease_contract_number(self) -> str | None:
@@ -462,22 +464,24 @@ class Asset(Base):
     @property
     def contract_start_date(self) -> date | None:
         contract = self.active_contract
-        return contract.start_date if contract else None
+        return contract.effective_from if contract else None
 
     @property
     def contract_end_date(self) -> date | None:
         contract = self.active_contract
-        return contract.end_date if contract else None
+        return contract.effective_to if contract else None
 
     @property
     def monthly_rent(self) -> Decimal | None:
         contract = self.active_contract
-        return contract.monthly_rent_base if contract else None
+        lease_detail = getattr(contract, "lease_detail", None) if contract else None
+        return getattr(lease_detail, "monthly_rent_base", None)
 
     @property
     def deposit(self) -> Decimal | None:
         contract = self.active_contract
-        return contract.total_deposit if contract else None
+        lease_detail = getattr(contract, "lease_detail", None) if contract else None
+        return getattr(lease_detail, "total_deposit", None)
 
     # 计算属性 - 未出租面积（自动计算，不存储）
     @cached_property
@@ -565,4 +569,3 @@ class Asset(Base):
 
 
 __all__ = ["Asset", "AssetForm", "SpatialLevel", "BusinessUsage", "AssetReviewStatus"]
-

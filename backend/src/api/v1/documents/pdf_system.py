@@ -41,7 +41,7 @@ def get_system_info(
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="read",
-            resource_type="rent_contract",
+            resource_type="contract",
         )
     ),
 ) -> SystemInfoResponse:
@@ -120,7 +120,7 @@ async def health_check(
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="read",
-            resource_type="rent_contract",
+            resource_type="contract",
         )
     ),
     perf_monitor: PerformanceMonitor = Depends(get_performance_monitor),
@@ -162,7 +162,7 @@ def get_pdf_import_sessions(
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="read",
-            resource_type="rent_contract",
+            resource_type="contract",
         )
     ),
 ) -> dict[str, Any]:

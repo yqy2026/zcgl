@@ -11,7 +11,6 @@ import {
 } from '@ant-design/icons';
 import { MessageManager } from '@/utils/messageManager';
 import { assetService } from '@/services/assetService';
-import { rentContractExcelService } from '@/services/rentContractExcelService';
 import type { ColumnsType } from 'antd/es/table';
 import { createLogger } from '@/utils/logger';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
@@ -79,7 +78,7 @@ const templates: TemplateInfo[] = [
   {
     key: 'rent-contract-import',
     name: '租赁合同导入模板',
-    description: '用于批量导入租赁合同信息的Excel模板',
+    description: '旧租赁合同导入模板已退休，前端正在迁移到新 contract/contract-group 体系',
     type: 'rent-contract',
     version: 'v1.0',
     updateDate: '2025-09-20',
@@ -95,7 +94,7 @@ const templates: TemplateInfo[] = [
       '付款方式',
       '合同状态',
     ],
-    status: 'active',
+    status: 'deprecated',
   },
 ];
 
@@ -174,8 +173,7 @@ const TemplateManagementPage: React.FC = () => {
         await assetService.downloadImportTemplate();
         MessageManager.success('资产导入模板下载成功');
       } else if (template.type === 'rent-contract') {
-        await rentContractExcelService.downloadTemplateFile();
-        MessageManager.success('租赁合同导入模板下载成功');
+        MessageManager.info('租赁合同导入模板已退休，请等待新 contract/contract-group 模板入口');
       }
     } catch (error: unknown) {
       _pageLogger.error('下载模板失败:', error as Error);
@@ -481,4 +479,3 @@ const TemplateManagementPage: React.FC = () => {
 };
 
 export default TemplateManagementPage;
-

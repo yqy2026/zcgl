@@ -178,12 +178,34 @@ export interface RentTermData {
   total_monthly_amount?: string;
 }
 
+export type PdfImportRevenueMode = 'LEASE' | 'AGENCY';
+export type PdfImportContractDirection = 'LESSOR' | 'LESSEE';
+export type PdfImportGroupRelationType =
+  | 'UPSTREAM'
+  | 'DOWNSTREAM'
+  | 'ENTRUSTED'
+  | 'DIRECT_LEASE';
+
+export interface PdfImportSettlementRule {
+  version: string;
+  cycle: string;
+  settlement_mode: string;
+  amount_rule: Record<string, unknown>;
+  payment_rule: Record<string, unknown>;
+}
+
 export interface ConfirmedContractData {
+  revenue_mode: PdfImportRevenueMode;
+  contract_direction: PdfImportContractDirection;
+  group_relation_type: PdfImportGroupRelationType;
+  operator_party_id: string;
   contract_number: string;
   asset_id?: string;
   owner_party_id?: string;
   /** @deprecated 兼容旧字段透传，不应与 owner_party_id 强制互写。 */
   [legacyOwnerFilterField]?: string;
+  lessor_party_id: string;
+  lessee_party_id: string;
   tenant_name: string;
   tenant_contact?: string;
   tenant_phone?: string;
@@ -196,12 +218,14 @@ export interface ConfirmedContractData {
   contract_status?: string;
   payment_terms?: string;
   contract_notes?: string;
+  settlement_rule: PdfImportSettlementRule;
   rent_terms: RentTermData[];
 }
 
 export interface ConfirmImportResponse {
   success: boolean;
   message: string;
+  contract_group_id?: string;
   contract_id?: string;
   contract_number?: string;
   created_terms_count?: number;
@@ -249,8 +273,18 @@ export class PDFImportService {
     };
 
     const normalizedPayload: ConfirmedContractData = { ...payload };
+    const normalizedAssetId = normalizeOptionalId(payload.asset_id);
     const normalizedOwnerPartyId = normalizeOptionalId(payload.owner_party_id);
     const normalizedOwnershipId = normalizeOptionalId(payload[legacyOwnerFilterField]);
+    normalizedPayload.operator_party_id = payload.operator_party_id.trim();
+    normalizedPayload.lessor_party_id = payload.lessor_party_id.trim();
+    normalizedPayload.lessee_party_id = payload.lessee_party_id.trim();
+
+    if (normalizedAssetId != null) {
+      normalizedPayload.asset_id = normalizedAssetId;
+    } else if ('asset_id' in normalizedPayload) {
+      delete normalizedPayload.asset_id;
+    }
 
     if (normalizedOwnerPartyId != null) {
       normalizedPayload.owner_party_id = normalizedOwnerPartyId;
@@ -397,7 +431,7 @@ export class PDFImportService {
     try {
       const normalizedConfirmedData = this.normalizeConfirmedContractData(confirmedData);
       const response = await apiClient.post<ConfirmImportResponse>(
-        `${API_BASE_URL}/confirm_import`,
+        PDF_API.CONFIRM_IMPORT,
         {
           session_id: sessionId,
           confirmed_data: {

@@ -602,7 +602,7 @@ class TestSensitiveDataHandler:
         from src.crud.asset import SensitiveDataHandler
 
         # 默认情况下，SensitiveDataHandler 没有配置任何字段
-        # 子类（如 OrganizationCRUD, RentContractCRUD）应该通过参数配置
+        # 子类（如 OrganizationCRUD, AssetCRUD）应该通过参数配置
         assert len(SensitiveDataHandler.SEARCHABLE_FIELDS) == 0
         assert len(SensitiveDataHandler.NON_SEARCHABLE_FIELDS) == 0
 

@@ -29,7 +29,11 @@ from ....core.exception_handler import BaseBusinessError, bad_request, internal_
 from ....database import get_async_db
 from ....middleware.auth import AuthzContext, get_current_active_user, require_authz
 from ....models.auth import User
-from ....schemas.pdf_import import FileUploadResponse
+from ....schemas.pdf_import import (
+    ConfirmImportRequest,
+    ConfirmImportResponse,
+    FileUploadResponse,
+)
 from ....security.file_validation import validate_upload_file
 from ....services.document.pdf_import_service import PDFImportService
 from ....utils.file_security import generate_safe_filename
@@ -38,11 +42,11 @@ from ..dependencies import get_optional_services, get_pdf_import_service
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["PDF上传"])
-_RENT_CONTRACT_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:rent_contract:create"
-_RENT_CONTRACT_CREATE_RESOURCE_CONTEXT: dict[str, str] = {
-    "party_id": _RENT_CONTRACT_CREATE_UNSCOPED_PARTY_ID,
-    "owner_party_id": _RENT_CONTRACT_CREATE_UNSCOPED_PARTY_ID,
-    "manager_party_id": _RENT_CONTRACT_CREATE_UNSCOPED_PARTY_ID,
+_CONTRACT_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:contract:create"
+_CONTRACT_CREATE_RESOURCE_CONTEXT: dict[str, str] = {
+    "party_id": _CONTRACT_CREATE_UNSCOPED_PARTY_ID,
+    "owner_party_id": _CONTRACT_CREATE_UNSCOPED_PARTY_ID,
+    "manager_party_id": _CONTRACT_CREATE_UNSCOPED_PARTY_ID,
 }
 
 
@@ -59,8 +63,8 @@ async def upload_pdf_file(
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="create",
-            resource_type="rent_contract",
-            resource_context=_RENT_CONTRACT_CREATE_RESOURCE_CONTEXT,
+            resource_type="contract",
+            resource_context=_CONTRACT_CREATE_RESOURCE_CONTEXT,
         )
     ),
 ) -> FileUploadResponse:
@@ -167,3 +171,29 @@ async def upload_pdf_file(
         session_id=resolved_session_id,
         estimated_time="30-60秒",
     )
+
+
+@router.post("/confirm", response_model=ConfirmImportResponse)
+async def confirm_import(
+    payload: ConfirmImportRequest,
+    db: AsyncSession = Depends(get_async_db),
+    pdf_service: PDFImportService = Depends(get_pdf_import_service),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="create",
+            resource_type="contract",
+            resource_context=_CONTRACT_CREATE_RESOURCE_CONTEXT,
+        )
+    ),
+) -> ConfirmImportResponse:
+    """确认导入并落库到新合同组/合同模型。"""
+
+    _ = _authz_ctx
+    result = await pdf_service.confirm_import(
+        db,
+        payload.session_id,
+        payload.confirmed_data,
+        user_id=str(current_user.id),
+    )
+    return ConfirmImportResponse(**result)

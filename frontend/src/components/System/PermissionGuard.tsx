@@ -22,7 +22,7 @@ const ACTION_ALIASES: Record<string, AuthzAction> = {
 };
 
 const RESOURCE_ALIASES: Record<string, ResourceType> = {
-  rental: 'rent_contract',
+  rental: 'contract',
   organization: 'party',
   ownership: 'party',
   system_settings: 'system',

@@ -8,10 +8,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.constants.rent_contract_constants import PaymentStatus
 from src.models.auth import User
+from src.models.contract_group import Contract, ContractLedgerEntry
 from src.models.notification import Notification, NotificationPriority, NotificationType
-from src.models.rent_contract import RentContract, RentLedger
 from src.services.notification.scheduler import (
     NotificationSchedulerService,
     run_notification_tasks,
@@ -50,27 +49,28 @@ def scheduler_service(mock_db):
 
 @pytest.fixture
 def mock_contract():
-    contract = MagicMock(spec=RentContract)
-    contract.id = "contract_123"
+    contract = MagicMock(spec=Contract)
+    contract.contract_id = "contract_123"
     contract.contract_number = "HT2024001"
-    contract.tenant_name = "测试租户"
-    contract.contract_status = "有效"
-    contract.end_date = date.today() + timedelta(days=15)
+    contract.lease_detail = MagicMock(tenant_name="测试租户")
+    contract.lessee_party = MagicMock(name="测试租户")
+    contract.status = "ACTIVE"
+    contract.effective_to = date.today() + timedelta(days=15)
     return contract
 
 
 @pytest.fixture
 def mock_ledger():
-    ledger = MagicMock(spec=RentLedger)
-    ledger.id = "ledger_123"
+    ledger = MagicMock(spec=ContractLedgerEntry)
+    ledger.entry_id = "ledger_123"
     ledger.year_month = "2024-01"
-    ledger.due_amount = 10000.0
-    ledger.payment_status = PaymentStatus.UNPAID
+    ledger.amount_due = 10000.0
+    ledger.payment_status = "unpaid"
     ledger.due_date = date.today() - timedelta(days=5)
-    ledger.data_status = "正常"
-    ledger.contract = MagicMock()
+    ledger.contract = MagicMock(spec=Contract)
     ledger.contract.contract_number = "HT2024001"
-    ledger.contract.tenant_name = "测试租户"
+    ledger.contract.lease_detail = MagicMock(tenant_name="测试租户")
+    ledger.contract.lessee_party = MagicMock(name="测试租户")
     return ledger
 
 
@@ -210,6 +210,30 @@ class TestCreateAndSendNotification:
 
 
 class TestCheckContractExpiry:
+    async def test_expiry_uses_new_contract_crud(self, scheduler_service, mock_contract):
+        with (
+            patch(
+                "src.services.notification.scheduler.contract_crud.get_expiring_contracts_async",
+                new_callable=AsyncMock,
+                return_value=[mock_contract],
+            ) as mock_get_expiring,
+            patch(
+                "src.services.notification.scheduler.notification_service"
+            ) as mock_service,
+            patch.object(
+                scheduler_service, "_create_and_send_notification", new_callable=AsyncMock
+            ),
+        ):
+            mock_service.list_active_users_async = AsyncMock(return_value=[])
+            mock_service.find_existing_notification_pairs_async = AsyncMock(
+                return_value=set()
+            )
+
+            result = await scheduler_service.check_contract_expiry(days_ahead=30)
+
+        assert result == 1
+        mock_get_expiring.assert_awaited_once()
+
     async def test_no_expiring_contracts(self, scheduler_service, mock_db):
         mock_db.execute = AsyncMock(return_value=_result_with_scalars([]))
 
@@ -219,11 +243,12 @@ class TestCheckContractExpiry:
         mock_db.commit.assert_awaited_once()
 
     async def test_contract_expiring_today(self, scheduler_service, mock_db):
-        contract = MagicMock(spec=RentContract)
-        contract.id = "contract_123"
+        contract = MagicMock(spec=Contract)
+        contract.contract_id = "contract_123"
         contract.contract_number = "HT001"
-        contract.tenant_name = "租户A"
-        contract.end_date = date.today()
+        contract.lease_detail = MagicMock(tenant_name="租户A")
+        contract.lessee_party = MagicMock(name="租户A")
+        contract.effective_to = date.today()
 
         mock_db.execute = AsyncMock(return_value=_result_with_scalars([contract]))
 
@@ -255,7 +280,7 @@ class TestCheckContractExpiry:
         ) as mock_service:
             mock_service.list_active_users_async = AsyncMock(return_value=[user])
             mock_service.find_existing_notification_pairs_async = AsyncMock(
-                return_value={(str(user.id), str(mock_contract.id))}
+                return_value={(str(user.id), str(mock_contract.contract_id))}
             )
 
             with patch.object(
@@ -273,6 +298,38 @@ class TestCheckContractExpiry:
 
 
 class TestCheckPaymentOverdue:
+    async def test_overdue_uses_new_contract_ledger_crud(
+        self, scheduler_service, mock_ledger
+    ):
+        with (
+            patch(
+                "src.services.notification.scheduler.contract_group_crud.get_overdue_with_contract_async",
+                new_callable=AsyncMock,
+                return_value=[mock_ledger],
+            ) as mock_get_overdue,
+            patch(
+                "src.services.notification.scheduler.notification_service"
+            ) as mock_service,
+            patch.object(
+                scheduler_service, "_create_and_send_notification", new_callable=AsyncMock
+            ),
+        ):
+            mock_service.list_active_users_async = AsyncMock(return_value=[])
+            mock_service.find_existing_notification_pairs_async = AsyncMock(
+                return_value=set()
+            )
+
+            result = await scheduler_service.check_payment_overdue()
+
+        assert result == 0
+        mock_get_overdue.assert_awaited_once()
+        assert (
+            mock_service.find_existing_notification_pairs_async.await_args.kwargs[
+                "related_entity_type"
+            ]
+            == "contract_ledger_entry"
+        )
+
     async def test_no_overdue_payments(self, scheduler_service, mock_db):
         mock_db.execute = AsyncMock(return_value=_result_with_scalars([]))
 
@@ -311,7 +368,7 @@ class TestCheckPaymentOverdue:
         ) as mock_service:
             mock_service.list_active_users_async = AsyncMock(return_value=[user])
             mock_service.find_existing_notification_pairs_async = AsyncMock(
-                return_value={(str(user.id), str(mock_ledger.id))}
+                return_value={(str(user.id), str(mock_ledger.entry_id))}
             )
 
             with patch.object(
@@ -329,6 +386,38 @@ class TestCheckPaymentOverdue:
 
 
 class TestCheckPaymentDueSoon:
+    async def test_due_soon_uses_new_contract_ledger_crud(
+        self, scheduler_service, mock_ledger
+    ):
+        with (
+            patch(
+                "src.services.notification.scheduler.contract_group_crud.get_due_soon_with_contract_async",
+                new_callable=AsyncMock,
+                return_value=[mock_ledger],
+            ) as mock_get_due_soon,
+            patch(
+                "src.services.notification.scheduler.notification_service"
+            ) as mock_service,
+            patch.object(
+                scheduler_service, "_create_and_send_notification", new_callable=AsyncMock
+            ),
+        ):
+            mock_service.list_active_users_async = AsyncMock(return_value=[])
+            mock_service.find_existing_notification_pairs_async = AsyncMock(
+                return_value=set()
+            )
+
+            result = await scheduler_service.check_payment_due_soon(days_ahead=7)
+
+        assert result == 0
+        mock_get_due_soon.assert_awaited_once()
+        assert (
+            mock_service.find_existing_notification_pairs_async.await_args.kwargs[
+                "related_entity_type"
+            ]
+            == "contract_ledger_entry"
+        )
+
     async def test_no_payments_due(self, scheduler_service, mock_db):
         mock_db.execute = AsyncMock(return_value=_result_with_scalars([]))
 
@@ -418,12 +507,13 @@ class TestRunNotificationTasks:
 
 class TestSchedulerEdgeCases:
     async def test_contract_with_datetime_end_date(self, scheduler_service, mock_db):
-        contract = MagicMock(spec=RentContract)
+        contract = MagicMock(spec=Contract)
         end_datetime = datetime.combine(date.today(), datetime.min.time())
-        contract.end_date = end_datetime
+        contract.effective_to = end_datetime
         contract.contract_number = "HT001"
-        contract.tenant_name = "租户A"
-        contract.id = "contract_123"
+        contract.lease_detail = MagicMock(tenant_name="租户A")
+        contract.lessee_party = MagicMock(name="租户A")
+        contract.contract_id = "contract_123"
 
         mock_db.execute = AsyncMock(return_value=_result_with_scalars([contract]))
 
@@ -442,18 +532,18 @@ class TestSchedulerEdgeCases:
                 assert result == 1
 
     async def test_ledger_with_datetime_due_date(self, scheduler_service, mock_db):
-        ledger = MagicMock(spec=RentLedger)
+        ledger = MagicMock(spec=ContractLedgerEntry)
         due_datetime = datetime.combine(
             date.today() - timedelta(days=5), datetime.min.time()
         )
         ledger.due_date = due_datetime
-        ledger.data_status = "正常"
-        ledger.payment_status = PaymentStatus.UNPAID
+        ledger.payment_status = "unpaid"
         ledger.year_month = "2024-01"
-        ledger.due_amount = 5000.0
-        ledger.contract = MagicMock()
+        ledger.amount_due = 5000.0
+        ledger.contract = MagicMock(spec=Contract)
         ledger.contract.contract_number = "HT001"
-        ledger.contract.tenant_name = "租户A"
+        ledger.contract.lease_detail = MagicMock(tenant_name="租户A")
+        ledger.contract.lessee_party = MagicMock(name="租户A")
 
         mock_db.execute = AsyncMock(return_value=_result_with_scalars([ledger]))
 

@@ -64,6 +64,11 @@ export const MENU_ITEMS: MenuProps['items'] = [
     ],
   },
   {
+    key: '/contract-groups',
+    icon: <FileTextOutlined />,
+    label: '合同组管理',
+  },
+  {
     key: '/ownership',
     icon: <IdcardOutlined />,
     label: '权属方管理',
@@ -76,27 +81,12 @@ export const MENU_ITEMS: MenuProps['items'] = [
   {
     key: 'rental',
     icon: <AccountBookOutlined />,
-    label: '租赁管理',
+    label: '旧租赁前端已退休',
     children: [
       {
         key: '/rental/contracts',
-        icon: <UnorderedListOutlined />,
-        label: '合同列表',
-      },
-      {
-        key: '/rental/contracts/pdf-import',
         icon: <FileTextOutlined />,
-        label: 'PDF智能导入',
-      },
-      {
-        key: '/rental/ledger',
-        icon: <AccountBookOutlined />,
-        label: '租金台账',
-      },
-      {
-        key: '/rental/statistics',
-        icon: <BarChartOutlined />,
-        label: '统计报表',
+        label: '旧租赁前端已退休',
       },
     ],
   },
@@ -167,6 +157,15 @@ export function getSelectedKeys(pathname: string): string[] {
   }
   if (pathname.startsWith('/property-certificates')) {
     return ['/property-certificates'];
+  }
+  if (pathname === '/rental/contracts/pdf-import') {
+    return ['/contract-groups'];
+  }
+  if (pathname.startsWith('/contract-groups')) {
+    return ['/contract-groups'];
+  }
+  if (pathname.startsWith('/rental')) {
+    return ['/rental/contracts'];
   }
 
   return [pathname];

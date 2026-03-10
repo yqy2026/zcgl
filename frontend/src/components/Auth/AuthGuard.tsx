@@ -44,7 +44,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({
   };
 
   const normalizeResource = (resource: string): ResourceType => {
-    if (resource === 'rental') return 'rent_contract';
+    if (resource === 'rental') return 'contract';
     if (resource === 'organization') return 'party';
     return resource as ResourceType;
   };

@@ -46,7 +46,7 @@ from .associations import contract_assets, contract_group_assets
 class RevenueMode(str, enum.Enum):
     """经营模式"""
 
-    LEASE = "lease"    # 承租模式
+    LEASE = "lease"  # 承租模式
     AGENCY = "agency"  # 代理模式
 
 
@@ -93,8 +93,8 @@ class ContractRelationType(str, enum.Enum):
     """合同间关系类型"""
 
     UPSTREAM_DOWNSTREAM = "upstream_downstream"  # 上下游（承租模式）
-    AGENCY_DIRECT = "agency_direct"               # 代理-直租（代理模式）
-    RENEWAL = "renewal"                           # 续签
+    AGENCY_DIRECT = "agency_direct"  # 代理-直租（代理模式）
+    RENEWAL = "renewal"  # 续签
 
 
 # ===================== Models =====================
@@ -228,7 +228,9 @@ class ContractGroup(Base):
     )
 
     def __repr__(self) -> str:  # pragma: no cover
-        return f"<ContractGroup(group_code={self.group_code}, mode={self.revenue_mode})>"
+        return (
+            f"<ContractGroup(group_code={self.group_code}, mode={self.revenue_mode})>"
+        )
 
 
 class Contract(Base):
@@ -238,8 +240,8 @@ class Contract(Base):
     - LeaseContractDetail（租赁类：上游承租 / 下游出租 / 直租）
     - AgencyAgreementDetail（代理类：委托协议）
 
-    台账（RentLedger / ServiceFeeLedger）的 FK 在 M1b 迁移中从
-    rent_contracts.id 切换为 contracts.contract_id。
+    历史台账模型已收口到 `ContractLedgerEntry`；当前台账 FK 指向
+    `contracts.contract_id`。
     """
 
     __tablename__ = "contracts"
@@ -255,6 +257,13 @@ class Contract(Base):
         nullable=False,
         index=True,
         comment="所属合同组",
+    )
+    contract_number: Mapped[str] = mapped_column(
+        String(100),
+        unique=True,
+        nullable=False,
+        index=True,
+        comment="合同编号",
     )
     contract_direction: Mapped[ContractDirection] = mapped_column(
         Enum(ContractDirection, values_callable=lambda e: [m.name for m in e]),
@@ -417,6 +426,21 @@ class Contract(Base):
         foreign_keys="[ContractRelation.parent_contract_id]",
         back_populates="parent_contract",
     )
+    audit_logs: Mapped[list["ContractAuditLog"]] = relationship(
+        "ContractAuditLog",
+        back_populates="contract",
+        cascade="all, delete-orphan",
+    )
+    rent_terms: Mapped[list["ContractRentTerm"]] = relationship(
+        "ContractRentTerm",
+        back_populates="contract",
+        cascade="all, delete-orphan",
+    )
+    ledger_entries: Mapped[list["ContractLedgerEntry"]] = relationship(
+        "ContractLedgerEntry",
+        back_populates="contract",
+        cascade="all, delete-orphan",
+    )
 
     def __repr__(self) -> str:  # pragma: no cover
         return (
@@ -456,7 +480,7 @@ class LeaseContractDetail(Base):
     rent_amount: Mapped[Decimal] = mapped_column(
         DECIMAL(18, 2),
         nullable=False,
-        comment="合同级租金汇总金额（不替代 RentTerm 分阶段明细）",
+        comment="合同级租金汇总金额（不替代 ContractRentTerm 分阶段明细）",
     )
     monthly_rent_base: Mapped[Decimal | None] = mapped_column(
         DECIMAL(15, 2),
@@ -616,3 +640,197 @@ class ContractRelation(Base):
             f"<ContractRelation(type={self.relation_type}, "
             f"parent={self.parent_contract_id}, child={self.child_contract_id})>"
         )
+
+
+class ContractAuditLog(Base):
+    """合同生命周期审计日志。"""
+
+    __tablename__ = "contract_audit_logs"
+
+    log_id: Mapped[str] = mapped_column(
+        String,
+        primary_key=True,
+        default=lambda: str(uuid.uuid4()),
+    )
+    contract_id: Mapped[str] = mapped_column(
+        String,
+        ForeignKey("contracts.contract_id"),
+        nullable=False,
+        index=True,
+        comment="关联合同 ID",
+    )
+    action: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        comment="动作：submit_review / approve / reject / expire / terminate / void",
+    )
+    old_status: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    new_status: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    review_status_old: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    review_status_new: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    operator_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    operator_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    related_entry_id: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+        comment="关联单号（如冲销台账单号）",
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+    )
+
+    contract: Mapped["Contract"] = relationship(
+        "Contract",
+        back_populates="audit_logs",
+    )
+
+
+class ContractRentTerm(Base):
+    """分阶段租金条款。"""
+
+    __tablename__ = "contract_rent_terms"
+    __table_args__ = (
+        UniqueConstraint(
+            "contract_id",
+            "sort_order",
+            name="uq_contract_rent_term_order",
+        ),
+    )
+
+    rent_term_id: Mapped[str] = mapped_column(
+        String,
+        primary_key=True,
+        default=lambda: str(uuid.uuid4()),
+    )
+    contract_id: Mapped[str] = mapped_column(
+        String,
+        ForeignKey("contracts.contract_id"),
+        nullable=False,
+        index=True,
+        comment="关联合同 ID",
+    )
+    sort_order: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        comment="阶段排序，从 1 开始",
+    )
+    start_date: Mapped[date] = mapped_column(Date, nullable=False)
+    end_date: Mapped[date] = mapped_column(Date, nullable=False)
+    monthly_rent: Mapped[Decimal] = mapped_column(DECIMAL(15, 2), nullable=False)
+    management_fee: Mapped[Decimal] = mapped_column(
+        DECIMAL(15, 2),
+        nullable=False,
+        default=Decimal("0"),
+    )
+    other_fees: Mapped[Decimal] = mapped_column(
+        DECIMAL(15, 2),
+        nullable=False,
+        default=Decimal("0"),
+    )
+    total_monthly_amount: Mapped[Decimal | None] = mapped_column(
+        DECIMAL(15, 2),
+        nullable=True,
+        comment="派生金额：monthly_rent + management_fee + other_fees",
+    )
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        onupdate=lambda: datetime.now(UTC).replace(tzinfo=None),
+    )
+
+    contract: Mapped["Contract"] = relationship(
+        "Contract",
+        back_populates="rent_terms",
+    )
+
+
+class ContractLedgerEntry(Base):
+    """合同月度台账条目。"""
+
+    __tablename__ = "contract_ledger_entries"
+    __table_args__ = (
+        UniqueConstraint(
+            "contract_id",
+            "year_month",
+            name="uq_contract_ledger_entry_month",
+        ),
+    )
+
+    entry_id: Mapped[str] = mapped_column(
+        String,
+        primary_key=True,
+        default=lambda: str(uuid.uuid4()),
+    )
+    contract_id: Mapped[str] = mapped_column(
+        String,
+        ForeignKey("contracts.contract_id"),
+        nullable=False,
+        index=True,
+        comment="关联合同 ID",
+    )
+    year_month: Mapped[str] = mapped_column(
+        String(7),
+        nullable=False,
+        comment="台账所属年月，格式 YYYY-MM",
+    )
+    due_date: Mapped[date] = mapped_column(
+        Date,
+        nullable=False,
+        comment="本账期应收日",
+    )
+    amount_due: Mapped[Decimal] = mapped_column(
+        DECIMAL(15, 2),
+        nullable=False,
+        comment="本账期应收金额",
+    )
+    currency_code: Mapped[str] = mapped_column(
+        String(10),
+        nullable=False,
+        default="CNY",
+    )
+    is_tax_included: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=True,
+    )
+    tax_rate: Mapped[Decimal | None] = mapped_column(
+        DECIMAL(5, 4),
+        nullable=True,
+    )
+    payment_status: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default="unpaid",
+    )
+    paid_amount: Mapped[Decimal] = mapped_column(
+        DECIMAL(15, 2),
+        nullable=False,
+        default=Decimal("0"),
+    )
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        onupdate=lambda: datetime.now(UTC).replace(tzinfo=None),
+    )
+
+    contract: Mapped["Contract"] = relationship(
+        "Contract",
+        back_populates="ledger_entries",
+    )

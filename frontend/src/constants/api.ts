@@ -129,43 +129,11 @@ export const PROJECT_API = {
   DROPDOWN_OPTIONS: '/projects/dropdown-options',
 } as const;
 
-// 租赁合同API
-export const RENT_CONTRACT_API = {
-  LIST: '/rental-contracts/contracts',
-  DETAIL: (id: string) => `/rental-contracts/contracts/${id}`,
-  CREATE: '/rental-contracts/contracts',
-  UPDATE: (id: string) => `/rental-contracts/contracts/${id}`,
-  DELETE: (id: string) => `/rental-contracts/contracts/${id}`,
-
-  // 租金条款
-  TERMS: (id: string) => `/rental-contracts/contracts/${id}/terms`,
-  ADD_TERM: (id: string) => `/rental-contracts/contracts/${id}/terms`,
-
-  // 租金台账
-  LEDGER: (id: string) => `/rental-contracts/contracts/${id}/ledger`,
-  LEDGER_LIST: '/rental-contracts/ledger',
-  LEDGER_DETAIL: (id: string) => `/rental-contracts/ledger/${id}`,
-  LEDGER_UPDATE: (id: string) => `/rental-contracts/ledger/${id}`,
-  LEDGER_BATCH_UPDATE: '/rental-contracts/ledger/batch',
-  LEDGER_GENERATE: '/rental-contracts/ledger/generate',
-  LEDGER_EXPORT: '/rental-contracts/ledger/export',
-
-  // 租金管理
-  PAYMENTS: '/rental-contracts/payments',
-  PAYMENT_HISTORY: (contractId: string) => `/rental-contracts/contracts/${contractId}/payments`,
-
-  // 合同状态
-  ACTIVATE: (id: string) => `/rental-contracts/contracts/${id}/activate`,
-  TERMINATE: (id: string) => `/rental-contracts/contracts/${id}/terminate`,
-  RENEW: (id: string) => `/rental-contracts/contracts/${id}/renew`,
-  CONTRACTS_EXPORT: '/rental-contracts/contracts/export',
-
-  // 租赁统计
-  STATISTICS_OVERVIEW: '/rental-contracts/statistics/overview',
-  STATISTICS_OWNERSHIP: '/rental-contracts/statistics/ownership',
-  STATISTICS_ASSET: '/rental-contracts/statistics/asset',
-  STATISTICS_MONTHLY: '/rental-contracts/statistics/monthly',
-  STATISTICS_EXPORT: '/rental-contracts/statistics/export',
+export const CONTRACT_GROUP_API = {
+  LIST: '/contract-groups',
+  DETAIL: (id: string) => `/contract-groups/${id}`,
+  CREATE: '/contract-groups',
+  UPDATE: (id: string) => `/contract-groups/${id}`,
 } as const;
 
 // 数据统计API
@@ -228,7 +196,7 @@ export const PDF_API = {
   QUALITY_ANALYZE: '/pdf-import/quality/analyze',
 
   // 导入确认
-  CONFIRM_IMPORT: '/pdf-import/confirm_import',
+  CONFIRM_IMPORT: '/pdf-import/confirm',
   CANCEL_SESSION: (sessionId: string) => `/pdf-import/session/${sessionId}`,
 
   // 历史记录
@@ -408,7 +376,7 @@ export const API_ENDPOINTS = {
   ORGANIZATION: ORGANIZATION_API,
   OWNERSHIP: OWNERSHIP_API,
   PROJECT: PROJECT_API,
-  RENT_CONTRACT: RENT_CONTRACT_API,
+  CONTRACT_GROUP: CONTRACT_GROUP_API,
   STATISTICS: STATISTICS_API,
   EXCEL: EXCEL_API,
   PDF: PDF_API,

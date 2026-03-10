@@ -12,11 +12,11 @@ from ....middleware.auth import AuthzContext, get_current_active_user, require_a
 from ....models.auth import User
 
 router = APIRouter(tags=["PDF智能导入"])
-_RENT_CONTRACT_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:rent_contract:create"
-_RENT_CONTRACT_CREATE_RESOURCE_CONTEXT: dict[str, str] = {
-    "party_id": _RENT_CONTRACT_CREATE_UNSCOPED_PARTY_ID,
-    "owner_party_id": _RENT_CONTRACT_CREATE_UNSCOPED_PARTY_ID,
-    "manager_party_id": _RENT_CONTRACT_CREATE_UNSCOPED_PARTY_ID,
+_CONTRACT_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:contract:create"
+_CONTRACT_CREATE_RESOURCE_CONTEXT: dict[str, str] = {
+    "party_id": _CONTRACT_CREATE_UNSCOPED_PARTY_ID,
+    "owner_party_id": _CONTRACT_CREATE_UNSCOPED_PARTY_ID,
+    "manager_party_id": _CONTRACT_CREATE_UNSCOPED_PARTY_ID,
 }
 
 
@@ -26,7 +26,7 @@ def get_pdf_import_info(
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="read",
-            resource_type="rent_contract",
+            resource_type="contract",
         )
     ),
 ) -> JSONResponse:
@@ -57,7 +57,7 @@ def get_pdf_import_sessions(
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="read",
-            resource_type="rent_contract",
+            resource_type="contract",
         )
     ),
 ) -> JSONResponse:
@@ -77,8 +77,8 @@ def upload_pdf_for_import(
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="create",
-            resource_type="rent_contract",
-            resource_context=_RENT_CONTRACT_CREATE_RESOURCE_CONTEXT,
+            resource_type="contract",
+            resource_context=_CONTRACT_CREATE_RESOURCE_CONTEXT,
         )
     ),
 ) -> JSONResponse:

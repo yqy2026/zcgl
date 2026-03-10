@@ -33,14 +33,14 @@ MODELS_DIR = ROOT / "backend" / "src" / "models"
 ENTITY_MODEL_MAP: dict[str, tuple[str, str]] = {
     "Asset": ("asset.py", "Asset"),
     "Project": ("project.py", "Project"),
-    # ContractGroup not yet implemented as a separate ORM model.
-    # Contract (base table) maps to RentContract.
-    "Contract": ("rent_contract.py", "RentContract"),
-    "RentContract": ("rent_contract.py", "RentContract"),
+    "ContractGroup": ("contract_group.py", "ContractGroup"),
+    "Contract": ("contract_group.py", "Contract"),
+    "LeaseContractDetail": ("contract_group.py", "LeaseContractDetail"),
+    "AgencyAgreementDetail": ("contract_group.py", "AgencyAgreementDetail"),
+    "ContractRelation": ("contract_group.py", "ContractRelation"),
     "PropertyCertificate": ("property_certificate.py", "PropertyCertificate"),
     "Ownership": ("ownership.py", "Ownership"),
     "Party": ("party.py", "Party"),
-    # LeaseContractDetail, AgencyAgreementDetail, ContractRelation,
     # CustomerProfile, AnalyticsMetrics not yet implemented as separate ORM models.
 }
 

@@ -9,6 +9,7 @@
 ROOT_DIR := $(CURDIR)
 BACKEND_VENV ?= $(ROOT_DIR)/backend/.venv
 PYTHON ?= $(shell if [ -x "$(BACKEND_VENV)/Scripts/python.exe" ]; then echo "$(BACKEND_VENV)/Scripts/python.exe"; elif [ -x "$(BACKEND_VENV)/bin/python" ]; then echo "$(BACKEND_VENV)/bin/python"; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi)
+BACKEND_IMPORT_FALLBACK_SECRET_KEY ?= ZcglBackendImportSmoke2026StrongKey!42
 
 help:
 	@echo "Targets:"
@@ -124,8 +125,12 @@ build-frontend:
 backend-import:
 	@cd backend && \
 		RESOLVED_DATABASE_URL="$${DATABASE_URL:-$${TEST_DATABASE_URL:-$${INTEGRATION_TEST_DATABASE_URL:-}}}"; \
+		RESOLVED_SECRET_KEY="$${SECRET_KEY:-}"; \
 		if [ -z "$$RESOLVED_DATABASE_URL" ] && [ -f .env ]; then \
 			RESOLVED_DATABASE_URL="$$(awk -F= '/^DATABASE_URL=/{print substr($$0, index($$0, "=") + 1)}' .env | tail -n 1)"; \
+		fi; \
+		if [ -z "$$RESOLVED_SECRET_KEY" ] && [ -f .env ]; then \
+			RESOLVED_SECRET_KEY="$$(awk -F= '/^SECRET_KEY=/{print substr($$0, index($$0, "=") + 1)}' .env | tail -n 1)"; \
 		fi; \
 		if [ -z "$$RESOLVED_DATABASE_URL" ]; then \
 			echo "[ERROR] backend-import requires DATABASE_URL."; \
@@ -133,7 +138,10 @@ backend-import:
 			echo "Example: DATABASE_URL=postgresql+psycopg://user:pass@localhost:5432/zcgl make backend-import"; \
 			exit 2; \
 		fi; \
-		DATABASE_URL="$$RESOLVED_DATABASE_URL" $(PYTHON) -c "from src.main import app; print('import ok')"
+		if [ -z "$$RESOLVED_SECRET_KEY" ]; then \
+			RESOLVED_SECRET_KEY="$(BACKEND_IMPORT_FALLBACK_SECRET_KEY)"; \
+		fi; \
+		SECRET_KEY="$$RESOLVED_SECRET_KEY" DATABASE_URL="$$RESOLVED_DATABASE_URL" $(PYTHON) -c "from src.main import app; print('import ok')"
 
 check: lint-backend lint-frontend scan-frontend type-check test-backend test-frontend build-frontend backend-import docs-lint
 

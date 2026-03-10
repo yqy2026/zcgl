@@ -15,7 +15,6 @@ from ..models.rbac import (
     ResourcePermission,
     UserRoleAssignment,
 )
-from ..models.rent_contract import RentContract, RentLedger, RentTerm
 from ..models.system_dictionary import AssetCustomField, SystemDictionary
 from ..models.task import AsyncTask, ExcelTaskConfig
 from .asset import asset_crud
@@ -36,9 +35,6 @@ from .field_whitelist import (
     ProjectWhitelist,
     PromptTemplateWhitelist,
     PropertyCertificateWhitelist,
-    RentContractWhitelist,
-    RentLedgerWhitelist,
-    RentTermWhitelist,
     ResourcePermissionWhitelist,
     SystemDictionaryWhitelist,
     UserRoleAssignmentWhitelist,
@@ -49,11 +45,9 @@ from .party import party_crud
 from .project import project_crud
 from .project_asset import project_asset_crud
 from .rbac import permission_grant_crud
-from .rent_contract import rent_contract, rent_ledger, rent_term
 
 # Register whitelists for each model to prevent unauthorized field access
 register_whitelist(Asset, AssetWhitelist())
-register_whitelist(RentContract, RentContractWhitelist())
 register_whitelist(SystemDictionary, SystemDictionaryWhitelist())
 register_whitelist(AssetCustomField, AssetCustomFieldWhitelist())
 register_whitelist(Permission, PermissionWhitelist())
@@ -62,8 +56,6 @@ register_whitelist(PromptTemplate, PromptTemplateWhitelist())
 register_whitelist(Project, ProjectWhitelist())
 register_whitelist(Ownership, OwnershipWhitelist())
 register_whitelist(PropertyCertificate, PropertyCertificateWhitelist())
-register_whitelist(RentTerm, RentTermWhitelist())
-register_whitelist(RentLedger, RentLedgerWhitelist())
 register_whitelist(UserRoleAssignment, UserRoleAssignmentWhitelist())
 register_whitelist(ResourcePermission, ResourcePermissionWhitelist())
 register_whitelist(PermissionGrant, PermissionGrantWhitelist())
@@ -87,7 +79,4 @@ __all__ = [
     "project_asset_crud",
     "permission_grant_crud",
     "prompt_template_crud",
-    "rent_contract",
-    "rent_ledger",
-    "rent_term",
 ]

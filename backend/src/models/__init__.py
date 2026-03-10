@@ -17,7 +17,6 @@ from .associations import (  # noqa: F401  # noqa: F401
     contract_assets,
     contract_group_assets,
     property_cert_assets,
-    rent_contract_assets,
 )
 from .auth import AuditLog, User, UserSession  # noqa: F401
 from .certificate_party_relation import (  # noqa: F401
@@ -84,18 +83,6 @@ from .rbac import (  # noqa: F401
     Role,
     UserRoleAssignment,
 )
-from .rent_contract import (  # noqa: F401
-    ContractType,
-    DepositTransactionType,
-    PaymentCycle,
-    RentContract,
-    RentContractAttachment,
-    RentContractHistory,
-    RentDepositLedger,
-    RentLedger,
-    RentTerm,
-    ServiceFeeLedger,
-)
 from .security_event import (  # noqa: F401
     SecurityEvent,
     SecurityEventType,
@@ -131,17 +118,6 @@ __all__ = [
     "EnumFieldValue",
     "EnumFieldUsage",
     "EnumFieldHistory",
-    "RentContract",
-    "RentTerm",
-    "RentLedger",
-    "RentContractHistory",
-    "RentContractAttachment",
-    "RentDepositLedger",
-    "ServiceFeeLedger",
-    "ContractType",
-    "DepositTransactionType",
-    "PaymentCycle",
-    "rent_contract_assets",
     "property_cert_assets",
     # 合同组体系（REQ-RNT-001）
     "ContractGroup",

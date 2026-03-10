@@ -93,7 +93,7 @@ describe('AuthGuard', () => {
     const canPerform = vi.fn(() => true);
     renderAuthGuard({ requiredPermission: 'rental:view' }, {}, { canPerform });
 
-    expect(canPerform).toHaveBeenCalledWith('read', 'rent_contract');
+    expect(canPerform).toHaveBeenCalledWith('read', 'contract');
     expect(screen.getByTestId('protected')).toBeInTheDocument();
   });
 
