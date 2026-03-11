@@ -271,6 +271,7 @@
 | `agency_service_income` | number | 是 | 代理服务费收入（派生） | 已确认（派生） |
 | `customer_entity_count` | number | 是 | 客户主体数（派生）；按 `customer_party_id` 去重 | 已确认（派生） |
 | `customer_contract_count` | number | 是 | 客户合同数（派生）；按 `contract_id` 去重 | 已确认（派生） |
+| `metrics_version` | string | 是 | 统计口径版本标识；导出结果必须显式携带 | 已确认 |
 | `internal_rent_income` | number | 否 | 内部租赁收入（派生） | 已确认（派生） |
 | `terminal_rent_income` | number | 否 | 终端租赁收入（派生） | 已确认（派生） |
 
@@ -322,6 +323,24 @@
 **约束**：
 - 仅允许 INSERT，禁止 UPDATE / DELETE（审计表不可篡改）。
 - 每次成功状态流转必须同事务内写入一条日志。
+
+---
+
+## 3.10 Party（主体主档）
+
+| 字段 | 类型 | 必填 | 规则/说明 | 状态 |
+|---|---|---|---|---|
+| `id` | string | 是 | 主体主键 | 已确认 |
+| `party_type` | enum | 是 | `organization/legal_entity` | 已确认 |
+| `name` | string | 是 | 主体名称 | 已确认 |
+| `code` | string | 是 | 主体编码；同类型内唯一 | 已确认 |
+| `external_ref` | string | 否 | 外部系统引用 | 已确认 |
+| `status` | enum | 是 | `active/inactive` | 已确认 |
+| `review_status` | enum | 是 | `draft/pending/approved/rejected` | 已确认 |
+| `review_by` | string | 否 | 审核人；通过/驳回时写入 | 已确认 |
+| `reviewed_at` | datetime | 否 | 审核时间；通过/驳回时写入 | 已确认 |
+| `review_reason` | string | 否 | 驳回原因；驳回时必填 | 已确认 |
+| `metadata` | json | 否 | 扩展信息 | 已确认 |
 
 ---
 
@@ -493,7 +512,7 @@
 ## 7. 当前系统项目字段对照（As-Built -> v0.3，已收敛）
 
 > 目的：以当前实现字段为基准，给出项目域“直接收口”落地策略。  
-> 说明：本章用于指导项目域字段修订，不替代第 3.2 节冻结口径。
+> 说明：本章用于识别 As-Built 残留并给出收口策略；若与第 3.2 节冻结口径或正文 `REQ-PRJ-001` 冲突，以冻结口径为准。
 
 ### 7.1 当前项目主表字段与拟处理策略
 
@@ -501,36 +520,36 @@
 |---|---|---|---|
 | `id` | 项目主键 | 对应 `project_id` | 直接更名为 `project_id`，不保留 `id` 兼容字段 |
 | `name` | 项目名称 | 对应 `project_name` | 直接更名为 `project_name` |
-| `short_name` | 项目简称 | v0.3 未纳入核心 | 保留为扩展字段 |
+| `short_name` | 项目简称 | v0.3 未纳入核心 | 直接下线删除（当前 As-Built 仍存在，待物理收口） |
 | `code` | 项目编码 | 对应 `project_code` | 直接更名为 `project_code`；统一格式 `PRJ-[A-Z0-9]{4,12}-[0-9]{6}` |
-| `project_type` | 项目类型 | v0.3 未纳入核心 | 保留为扩展字段 |
-| `project_scale` | 项目规模 | v0.3 未纳入核心 | 保留为扩展字段 |
+| `project_type` | 项目类型 | v0.3 未纳入核心 | 直接下线删除（当前 As-Built 仍存在，待物理收口） |
+| `project_scale` | 项目规模 | v0.3 未纳入核心 | 直接下线删除（当前 As-Built 仍存在，待物理收口） |
 | `project_status` | 项目业务状态 | 对应 `status` | 直接收敛为 `status`；枚举代码值冻结为 `planning/active/paused/completed/terminated` |
-| `start_date` | 开始日期 | v0.3 未纳入核心 | 保留为扩展字段 |
-| `end_date` | 结束日期 | v0.3 未纳入核心 | 保留为扩展字段 |
-| `expected_completion_date` | 预计完成日期 | v0.3 未纳入核心 | 保留为扩展字段 |
-| `actual_completion_date` | 实际完成日期 | v0.3 未纳入核心 | 保留为扩展字段 |
-| `address` | 项目地址 | v0.3 未纳入核心 | 保留为扩展字段 |
-| `city` | 城市 | v0.3 未纳入核心 | 保留为扩展字段 |
-| `district` | 区域 | v0.3 未纳入核心 | 保留为扩展字段 |
-| `province` | 省份 | v0.3 未纳入核心 | 保留为扩展字段 |
-| `project_manager` | 项目经理 | v0.3 未纳入核心 | 保留为扩展字段 |
-| `project_phone` | 项目电话 | v0.3 未纳入核心 | 保留为扩展字段 |
-| `project_email` | 项目邮箱 | v0.3 未纳入核心 | 保留为扩展字段 |
-| `total_investment` | 总投资 | v0.3 未纳入核心 | 保留为扩展字段 |
-| `planned_investment` | 计划投资 | v0.3 未纳入核心 | 保留为扩展字段 |
-| `actual_investment` | 实际投资 | v0.3 未纳入核心 | 保留为扩展字段 |
-| `project_budget` | 项目预算 | v0.3 未纳入核心 | 保留为扩展字段 |
-| `project_description` | 项目描述 | v0.3 未纳入核心 | 保留为扩展字段 |
-| `project_objectives` | 项目目标 | v0.3 未纳入核心 | 保留为扩展字段 |
-| `project_scope` | 项目范围 | v0.3 未纳入核心 | 保留为扩展字段 |
+| `start_date` | 开始日期 | v0.3 未纳入核心 | 直接下线删除（当前 As-Built 仍存在，待物理收口） |
+| `end_date` | 结束日期 | v0.3 未纳入核心 | 直接下线删除（当前 As-Built 仍存在，待物理收口） |
+| `expected_completion_date` | 预计完成日期 | v0.3 未纳入核心 | 直接下线删除（当前 As-Built 仍存在，待物理收口） |
+| `actual_completion_date` | 实际完成日期 | v0.3 未纳入核心 | 直接下线删除（当前 As-Built 仍存在，待物理收口） |
+| `address` | 项目地址 | v0.3 未纳入核心 | 直接下线删除（当前 As-Built 仍存在，待物理收口） |
+| `city` | 城市 | v0.3 未纳入核心 | 直接下线删除（当前 As-Built 仍存在，待物理收口） |
+| `district` | 区域 | v0.3 未纳入核心 | 直接下线删除（当前 As-Built 仍存在，待物理收口） |
+| `province` | 省份 | v0.3 未纳入核心 | 直接下线删除（当前 As-Built 仍存在，待物理收口） |
+| `project_manager` | 项目经理 | v0.3 未纳入核心 | 直接下线删除（当前 As-Built 仍存在，待物理收口） |
+| `project_phone` | 项目电话 | v0.3 未纳入核心 | 直接下线删除（当前 As-Built 仍存在，待物理收口） |
+| `project_email` | 项目邮箱 | v0.3 未纳入核心 | 直接下线删除（当前 As-Built 仍存在，待物理收口） |
+| `total_investment` | 总投资 | v0.3 未纳入核心 | 直接下线删除（当前 As-Built 仍存在，待物理收口） |
+| `planned_investment` | 计划投资 | v0.3 未纳入核心 | 直接下线删除（当前 As-Built 仍存在，待物理收口） |
+| `actual_investment` | 实际投资 | v0.3 未纳入核心 | 直接下线删除（当前 As-Built 仍存在，待物理收口） |
+| `project_budget` | 项目预算 | v0.3 未纳入核心 | 直接下线删除（当前 As-Built 仍存在，待物理收口） |
+| `project_description` | 项目描述 | v0.3 未纳入核心 | 直接下线删除（当前 As-Built 仍存在，待物理收口） |
+| `project_objectives` | 项目目标 | v0.3 未纳入核心 | 直接下线删除（当前 As-Built 仍存在，待物理收口） |
+| `project_scope` | 项目范围 | v0.3 未纳入核心 | 直接下线删除（当前 As-Built 仍存在，待物理收口） |
 | `management_entity` | 管理单位（DEPRECATED） | v0.3 用 `manager_party_id` | 直接下线删除，不做兼容 |
 | `manager_party_id` | 项目经营管理主体 | 同名核心字段 | 保留核心字段；单值必填 |
 | `organization_id` | 所属组织 ID（DEPRECATED） | v0.3 未纳入核心 | 直接下线删除（含 API/Service alias 与 CRUD fallback） |
 | `ownership_entity` | 权属单位（DEPRECATED） | v0.3 未纳入核心 | 直接下线删除，不做兼容 |
-| `construction_company` | 施工单位 | v0.3 未纳入核心 | 保留为扩展字段 |
-| `design_company` | 设计单位 | v0.3 未纳入核心 | 保留为扩展字段 |
-| `supervision_company` | 监理单位 | v0.3 未纳入核心 | 保留为扩展字段 |
+| `construction_company` | 施工单位 | v0.3 未纳入核心 | 直接下线删除（当前 As-Built 仍存在，待物理收口） |
+| `design_company` | 设计单位 | v0.3 未纳入核心 | 直接下线删除（当前 As-Built 仍存在，待物理收口） |
+| `supervision_company` | 监理单位 | v0.3 未纳入核心 | 直接下线删除（当前 As-Built 仍存在，待物理收口） |
 | `is_active` | 是否启用 | 与 `status` 语义重叠 | 直接下线删除，统一使用 `status` |
 | `data_status` | 数据状态 | 对应 `data_status` | 保留核心字段；枚举 `正常/已删除`，仅逻辑删除 |
 | `created_at` | 创建时间 | 跨对象统一字段 | 保留系统字段；系统自动写入且只读 |
@@ -761,4 +780,3 @@
 - 旧组保持 `已结束` 状态，不允许重新激活。
 
 - 续签时系统自动复制旧组的 `asset_ids`、`revenue_mode`、相同主体信息作为新组初始值。
-

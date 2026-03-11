@@ -155,9 +155,9 @@
   - `backend/src/models/asset.py`（`Asset.project` relationship 仅加载 `valid_to IS NULL` 的活跃绑定；`owner_party_id`/`manager_party_id` 单值 FK）
   - `backend/src/models/project_asset.py`（`ProjectAsset` 时间窗口绑定 + partial unique index `uq_project_assets_active_asset`）
   - `backend/src/models/asset_management_history.py`（`AssetManagementHistory` 经营方变更历史表）
-  - `backend/src/crud/asset_management_history.py`（`create`/`close_active`/`get_by_asset_id`）
+  - `backend/src/crud/asset_management_history.py`（经营方历史 `create`/`close_active`/`get_by_asset_id`）
   - `backend/src/services/asset/asset_service.py`（`update_asset` 经营方变更自动留痕 + `get_asset_management_history`/`get_asset_project_history`）
-  - `backend/src/api/v1/assets/assets.py`（`GET /{id}/management-history`、`GET /{id}/project-history`）
+  - `backend/src/api/v1/assets/assets.py`（`GET /api/v1/assets/{asset_id}/management-history`、`GET /api/v1/assets/{asset_id}/project-history`）
   - `backend/tests/unit/test_req_ast_002.py`（9 个单元测试）
   - `backend/alembic/versions/20260311_req_ast_002_active_project_unique.py`
 
@@ -279,7 +279,7 @@
   - `ContractGroup.revenue_mode`：`lease`(承租模式) / `agency`(代理模式)。
   - `Contract.group_relation_type`：`上游` / `下游` / `委托` / `直租`。
 
-#### REQ-RNT-003 合同生命周期与状态流转 🚧
+#### REQ-RNT-003 合同生命周期与状态流转 ✅
 - 描述：合同组为纯容器，不拥有独立生命周期状态；生命周期状态管理在合同级进行。
 - 验收：
   - 合同组状态为派生只读字段 `derived_status`，由组内合同状态实时计算：`筹备中`（组内无生效合同）/ `生效中`（存在至少一份生效合同）/ `已结束`（全部合同已到期或已终止）。不允许手工写入。
@@ -288,8 +288,11 @@
 - 字段映射（附录 v0.3 / 3.3 ContractGroup）：
   - `settlement_rule`：最小必填键固定为 `version/cycle/settlement_mode/amount_rule/payment_rule`。
 - 代码证据：
-  - `backend/src/services/contract/contract_group_service.py`
-  - `backend/src/api/v1/contracts/contract_groups.py`（冲突检测与状态流转）
+  - `backend/src/models/contract_group.py`（`ContractLifecycleStatus` 枚举 DRAFT/PENDING_REVIEW/ACTIVE/EXPIRED/TERMINATED + `ContractAuditLog` 审计日志模型 + `calculate_derived_status()` 派生状态）
+  - `backend/src/services/contract/contract_group_service.py`（`submit_review`/`approve`/`reject`/`expire`/`terminate_contract_v2`/`void_contract` 状态转换 + `submit_group_review` 组批量提审 + `_append_audit_log` 全程留痕）
+  - `backend/src/api/v1/contracts/contract_groups.py`（6 个生命周期端点 + 冲突检测）
+  - `backend/tests/unit/api/v1/test_contract_lifecycle_api.py`
+  - `backend/tests/unit/services/contract/test_contract_group_service.py`
 
 #### REQ-RNT-004 关键合同联审 📋
 - 描述：审核在合同级进行，关键合同提审时可触发同组关联合同联审。
@@ -407,20 +410,31 @@
 
 ### 6.8 主体（Party）域
 
-#### REQ-PTY-001 Party 单一主档管理 📋
+#### REQ-PTY-001 Party 单一主档管理 🚧
 - 描述：Party 作为跨资产、项目、合同、客户的统一主体主档，必须可维护且可追溯。
 - 验收：
   - 支持 Party 新增、编辑、启停用、查询。
   - 支持统一标识去重与重名校验。
   - Party 变更保留审计轨迹。
+ - 代码证据：
+  - `backend/src/models/party.py`
+  - `backend/src/schemas/party.py`
+  - `backend/src/crud/party.py`
+  - `backend/src/services/party/service.py`
+  - `backend/src/api/v1/party.py`
 
-#### REQ-PTY-002 Party 数据来源与创建路径 📋
+#### REQ-PTY-002 Party 数据来源与创建路径 🚧
 - 描述：Party 支持"初始化导入 + 业务过程创建"双路径进入主档。
 - 验收：
   - 支持初始化批量导入主体主档。
   - 合同组创建流程支持按权限快速创建 Party 草稿并进入审核。
   - 草稿 Party 允许挂在草稿合同/草稿合同组上；但合同进入 `待审` 状态时，系统校验关联的所有 Party 必须为 `已审核` 状态，否则阻断提审。
   - 未审核通过的 Party 不得进入统计口径。
+ - 代码证据：
+  - `backend/src/models/party.py`（`review_status/review_by/reviewed_at/review_reason`）
+  - `backend/src/services/party/service.py`（主体提审/通过/驳回 + `assert_parties_approved`）
+  - `backend/src/api/v1/party.py`（`/parties/{party_id}/submit-review|approve-review|reject-review`）
+  - `backend/src/services/contract/contract_group_service.py`（合同提审前主体审核门禁）
 
 ---
 
@@ -511,14 +525,14 @@
 | 需求ID | 状态 | 关键端点/能力 | 关键测试证据 |
 |---|---|---|---|
 | REQ-AST-001 | ✅ | `/api/v1/assets` (CRUD + batch + import) | `test_assets_projection_guard.py`, `test_asset_service.py` |
-| REQ-AST-002 | 🚧 | 投影/关联 | `test_asset.py` |
+| REQ-AST-002 | ✅ | 当前有效项目投影 + 项目/经营方历史关系 | `test_project_asset.py`, `test_assets_history_layering.py`, `test_asset_service.py` |
 | REQ-AST-003 | 📋 | — | — |
 | REQ-AST-004 | ✅ | `GET /api/v1/assets/{id}/lease-summary` | `test_asset_lease_summary.py` (service + api) |
 | REQ-PRJ-001 | ✅ | `/api/v1/projects` (CRUD + search) | `test_project.py`, `test_project_service.py` |
 | REQ-PRJ-002 | ✅ | `/api/v1/projects/{project_id}/assets` | `test_project_service.py`, `test_project.py` |
 | REQ-RNT-001 | ✅ | M1 ORM/DDL ✅ M2 Schema/CRUD/Service ✅ M3 API ✅ | — |
 | REQ-RNT-002 | 📋 | — | — |
-| REQ-RNT-003 | 🚧 | `/api/v1/contracts/{contract_id}/*` 生命周期 + 冲突检测 | `test_contract_lifecycle_api.py`, `test_contract_group_service.py` |
+| REQ-RNT-003 | ✅ | `/api/v1/contracts/{contract_id}/*` 生命周期 6 端点 + 派生状态 + 审计日志 | `test_contract_lifecycle_api.py`, `test_contract_group_service.py` |
 | REQ-RNT-004 | 📋 | — | — |
 | REQ-RNT-005 | 📋 | — | — |
 | REQ-RNT-006 | 🚧 | `/api/v1/contracts/{contract_id}/ledger/*` | `test_ledger_service_v2.py`, `test_contract_ledger_entries_migration.py` |
@@ -528,9 +542,9 @@
 | REQ-AUTH-001 | ✅ | `/auth/login`, `/auth/refresh` | `test_optional_auth.py` |
 | REQ-AUTH-002 | 📋 | — | — |
 | REQ-DOC-001 | ✅ | `/pdf-import/*` | `pdf_import.py` |
-| REQ-ANA-001 | 🚧 | `/analytics/*` | `analytics_service.py` |
-| REQ-PTY-001 | 📋 | — | — |
-| REQ-PTY-002 | 📋 | — | — |
+| REQ-ANA-001 | 🚧 | `/analytics/*`（综合分析 + 导出带口径版本） | `test_analytics_service.py`, `test_analytics.py`, `analytics_service.py` |
+| REQ-PTY-001 | 🚧 | `/api/v1/parties` (CRUD + review fields) | `test_party_api.py`, `test_party_service.py` |
+| REQ-PTY-002 | 🚧 | `/api/v1/parties/{party_id}/submit-review|approve-review|reject-review` + 合同提审门禁 | `test_party_api.py`, `test_party_service.py`, `test_contract_group_service.py` |
 
 ---
 
