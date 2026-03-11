@@ -2,6 +2,9 @@
 
 ## [Unreleased] - 2026-03-06
 
+### 2026-03-11
+- docs(plans): 台账 M2 技术方案复核修订——修复 voided 唯一约束冲突、补充触发机制说明、完善 include_voided/due_date/路由注册/筛选约束，测试用例 15→19
+
 ### 🛠️ 本次变更 (Current Changes)
 
 - 迁移枚举 cast 回归修复（2026-03-11）：修复 `backend/alembic/versions/20260306_m2_legacy_contract_backfill.py` 在 PostgreSQL 上执行 legacy backfill 时，`CASE` 表达式返回 text 导致 enum 列写入失败的问题。对 `revenue_mode`、`contract_direction`、`group_relation_type`、`status`、`review_status`、`relation_type` 六处表达式补显式 `::enum_type` cast，并新增回归测试 `backend/tests/unit/migration/test_contract_group_legacy_backfill_migration.py::test_upgrade_sql_should_cast_case_results_to_enum_types` 锁定 SQL 语义，防止全新库迁移链再次在该步骤失败。
