@@ -745,6 +745,11 @@
 - 代理协议合同（`AgencyAgreementDetail`，无 `ContractRentTerm`）激活时台账生成跳过，不报错；服务费台账为 M3 范围。
 - 合同 `已到期/已终止` 后停止生成未来台账，历史台账只读。
 - 幂等：`(contract_id, year_month)` 唯一约束保证重复触发不重复生成。
+- 变更重算（M2）：金额/周期/计费规则变更并重新生效后，仅对受影响区间的台账条目标记作废并重建；未受影响区间保持不变。
+- 跨合同聚合查询（M2）：支持按资产 ID、主体 ID、时间区间（`year_month_start` / `year_month_end`）跨合同查询台账条目。
+- 导出（M3）：台账查询结果支持导出为 Excel/CSV。
+- 补偿任务（M3）：每日离线扫描缺失台账条目并补齐。
+- 代理协议服务费台账（M3）：`ServiceFeeLedger` 按 `AgencyAgreementDetail.service_fee_ratio` 从租金台账派生。
 
 ### 11.3 统计入库
 

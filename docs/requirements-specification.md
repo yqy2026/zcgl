@@ -309,19 +309,22 @@
 
 #### REQ-RNT-006 台账自动化 🚧
 - 描述：合同生效后自动生成台账并支持批量维护。
-- 验收：
-  - 支持按合同、资产、主体、时间区间查询。
-  - 支持批量更新支付状态并导出。
-  - 触发时机（MVP 冻结）：
+- 验收（分期交付）：
+  - **M2 范围（台账核心正确性）**：
     - 初次生成：合同 `status` 变为 `生效`（ACTIVE）时，由 `approve()` 在同一事务内按 `ContractRentTerm` 展开自然月生成 `ContractLedgerEntry`（对齐附录 §11.2）。
+    - 跨合同聚合查询：支持按资产、主体、时间区间跨合同查询台账条目。
+    - 批量状态更新：支持按合同批量更新支付状态（`payment_status` + `paid_amount`）。
     - 变更重算：金额/周期/计费规则变更并重新生效后，仅对受影响区间作废并重建。
+  - **M3 范围（运营增强）**：
+    - 导出：支持台账查询结果导出为 Excel/CSV。
     - 补偿任务：每日离线任务扫描缺失条目并补齐，确保覆盖率指标可达成。
-- 字段映射（附录 v0.3 / 3.4 RentContract）：
-  - `rent_amount` / `currency_code` / `tax_rate` / `is_tax_included`：金额税口径冻结。
-  - `rent_amount_excl_tax`：派生字段，不允许直接写入。
+    - 代理协议服务费台账（`ServiceFeeLedger`）。
+- 字段映射（附录 v0.3 / 3.10 ContractLedgerEntry）：
+  - `amount_due` / `currency_code` / `tax_rate` / `is_tax_included`：金额税口径冻结。
+  - 台账金额来源：`ContractRentTerm.total_monthly_amount`（派生字段，= `monthly_rent + management_fee + other_fees`）。
 - 代码证据：
-  - `backend/src/api/v1/contracts/contract_groups.py`
-  - `backend/src/services/contract/ledger_service_v2.py`
+  - `backend/src/api/v1/contracts/contract_groups.py`（`GET /contracts/{id}/ledger` + `PATCH /contracts/{id}/ledger`）
+  - `backend/src/services/contract/ledger_service_v2.py`（`generate_ledger_on_activation` + `query_ledger` + `batch_update_status`）
 
 ### 6.4 客户域
 
@@ -509,8 +512,8 @@
 
 ### 10.1 里程碑
 1. M1：资产/项目清晰展示能力上线（含按合同类型分类的租赁情况与客户摘要）。目标窗口：`2026-03-04 ~ 2026-03-31`。
-2. M2：合同组与承租/代理模式能力上线（含联审与纠错闭环）。目标窗口：`2026-04-01 ~ 2026-05-10`。
-3. M3：经营统计口径上线（总收入 + 自营/代理拆分 + 客户双指标）。目标窗口：`2026-05-11 ~ 2026-06-07`。
+2. M2：合同生命周期 + 台账核心正确性（生成/聚合查询/批量更新/变更重算）。目标窗口：`2026-04-01 ~ 2026-05-10`。
+3. M3：台账运营增强（导出/补偿任务/服务费台账）+ 经营统计口径上线（总收入 + 自营/代理拆分 + 客户双指标）。目标窗口：`2026-05-11 ~ 2026-06-07`。
 4. M4：搜索、权限、审计与上线验收闭环。目标窗口：`2026-06-08 ~ 2026-06-30`。
 
 ### 10.2 MVP 放量硬门槛（访谈冻结）
