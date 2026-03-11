@@ -15,7 +15,9 @@ const contractGroupLogger = createLogger('ContractGroup');
 export class ContractGroupService {
   private readonly baseUrl = API_ENDPOINTS.CONTRACT_GROUP.LIST;
 
-  async getContractGroups(params: ContractGroupListParams = {}): Promise<ContractGroupListResponse> {
+  async getContractGroups(
+    params: ContractGroupListParams = {}
+  ): Promise<ContractGroupListResponse> {
     try {
       const requestParams = {
         offset: params.offset ?? 0,
@@ -50,11 +52,14 @@ export class ContractGroupService {
 
   async getContractGroup(id: string): Promise<ContractGroupDetail> {
     try {
-      const result = await apiClient.get<ContractGroupDetail>(API_ENDPOINTS.CONTRACT_GROUP.DETAIL(id), {
-        cache: false,
-        retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
-        smartExtract: true,
-      });
+      const result = await apiClient.get<ContractGroupDetail>(
+        API_ENDPOINTS.CONTRACT_GROUP.DETAIL(id),
+        {
+          cache: false,
+          retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+          smartExtract: true,
+        }
+      );
 
       if (!result.success || result.data == null) {
         throw new Error(`获取合同组详情失败: ${result.error}`);
@@ -70,10 +75,14 @@ export class ContractGroupService {
 
   async createContractGroup(payload: ContractGroupCreate): Promise<ContractGroupDetail> {
     try {
-      const result = await apiClient.post<ContractGroupDetail>(API_ENDPOINTS.CONTRACT_GROUP.CREATE, payload, {
-        retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
-        smartExtract: true,
-      });
+      const result = await apiClient.post<ContractGroupDetail>(
+        API_ENDPOINTS.CONTRACT_GROUP.CREATE,
+        payload,
+        {
+          retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+          smartExtract: true,
+        }
+      );
 
       if (!result.success || result.data == null) {
         throw new Error(`创建合同组失败: ${result.error}`);
@@ -87,12 +96,19 @@ export class ContractGroupService {
     }
   }
 
-  async updateContractGroup(id: string, payload: ContractGroupUpdate): Promise<ContractGroupDetail> {
+  async updateContractGroup(
+    id: string,
+    payload: ContractGroupUpdate
+  ): Promise<ContractGroupDetail> {
     try {
-      const result = await apiClient.put<ContractGroupDetail>(API_ENDPOINTS.CONTRACT_GROUP.UPDATE(id), payload, {
-        retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
-        smartExtract: true,
-      });
+      const result = await apiClient.put<ContractGroupDetail>(
+        API_ENDPOINTS.CONTRACT_GROUP.UPDATE(id),
+        payload,
+        {
+          retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+          smartExtract: true,
+        }
+      );
 
       if (!result.success || result.data == null) {
         throw new Error(`更新合同组失败: ${result.error}`);

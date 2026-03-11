@@ -2,8 +2,6 @@
 
 from datetime import UTC, datetime
 
-import pytest
-
 from src.schemas.project import ProjectResponse
 
 
@@ -48,9 +46,10 @@ def test_project_response_party_relations_keep_is_active() -> None:
     assert [relation["is_active"] for relation in project.party_relations] == [False, True]
 
 
-def test_project_response_rejects_legacy_project_code() -> None:
+def test_project_response_allows_legacy_project_code_for_read_path() -> None:
     payload = _build_project_payload()
     payload["project_code"] = "legacy-001"
 
-    with pytest.raises(Exception):
-        ProjectResponse.model_validate(payload)
+    project = ProjectResponse.model_validate(payload)
+
+    assert project.project_code == "legacy-001"

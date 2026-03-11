@@ -1,5 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Form, Modal, Popconfirm, Select, Space, Switch, Table, Tag, Typography } from 'antd';
+import {
+  Button,
+  Form,
+  Modal,
+  Popconfirm,
+  Select,
+  Space,
+  Switch,
+  Table,
+  Tag,
+  Typography,
+} from 'antd';
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useQuery } from '@tanstack/react-query';
@@ -217,9 +228,13 @@ const UserPartyBindingModal: React.FC<UserPartyBindingModalProps> = ({
         key: 'is_primary',
         render: (isPrimary: boolean) =>
           isPrimary ? (
-            <Tag className={`${styles.semanticTag} ${styles.statusTag} ${styles.toneSuccess}`}>是</Tag>
+            <Tag className={`${styles.semanticTag} ${styles.statusTag} ${styles.toneSuccess}`}>
+              是
+            </Tag>
           ) : (
-            <Tag className={`${styles.semanticTag} ${styles.statusTag} ${styles.toneNeutral}`}>否</Tag>
+            <Tag className={`${styles.semanticTag} ${styles.statusTag} ${styles.toneNeutral}`}>
+              否
+            </Tag>
           ),
       },
       {
@@ -228,7 +243,9 @@ const UserPartyBindingModal: React.FC<UserPartyBindingModalProps> = ({
         render: (_, record) => {
           const validFrom = dayjs(record.valid_from).format('YYYY-MM-DD HH:mm');
           const validTo =
-            record.valid_to != null ? dayjs(record.valid_to).format('YYYY-MM-DD HH:mm') : '长期有效';
+            record.valid_to != null
+              ? dayjs(record.valid_to).format('YYYY-MM-DD HH:mm')
+              : '长期有效';
           return `${validFrom} ~ ${validTo}`;
         },
       },

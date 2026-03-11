@@ -394,4 +394,3 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
 };
 
 export default AssetDetailInfo;
-

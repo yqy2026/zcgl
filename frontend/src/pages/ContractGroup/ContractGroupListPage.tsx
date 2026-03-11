@@ -45,7 +45,9 @@ const ContractGroupListPage: React.FC = () => {
         title: '经营模式',
         dataIndex: 'revenue_mode',
         key: 'revenue_mode',
-        render: (value: RevenueMode) => <Tag color={value === 'LEASE' ? 'blue' : 'purple'}>{value}</Tag>,
+        render: (value: RevenueMode) => (
+          <Tag color={value === 'LEASE' ? 'blue' : 'purple'}>{value}</Tag>
+        ),
       },
       {
         title: '运营方主体 ID',

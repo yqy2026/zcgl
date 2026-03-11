@@ -3,7 +3,6 @@ Project API integration tests with real DB/auth flow.
 """
 
 import uuid
-from datetime import datetime
 
 import pytest
 from fastapi.testclient import TestClient
@@ -40,9 +39,9 @@ def _request_with_reauth(
 
 
 def _build_project_code() -> str:
-    prefix = datetime.now().strftime("%y%m")
-    suffix = f"{uuid.uuid4().int % 10000:04d}"
-    return f"PJ{prefix}{suffix}"
+    segment = uuid.uuid4().hex[:6].upper()
+    serial = f"{uuid.uuid4().int % 1000000:06d}"
+    return f"PRJ-{segment}-{serial}"
 
 
 @pytest.mark.integration
@@ -53,13 +52,9 @@ def test_project_crud_real_flow(client: TestClient, test_data):
 
     project_name = f"IT-Real-Project-{uuid.uuid4().hex[:8]}"
     create_payload = {
-        "name": project_name,
-        "code": _build_project_code(),
-        "city": "Shanghai",
-        "district": "Pudong",
-        "address": "No.1 Real Integration Road",
-        "project_type": "office",
-        "project_status": "active",
+        "project_name": project_name,
+        "project_code": _build_project_code(),
+        "status": "active",
     }
 
     create_response = client.post(
@@ -82,16 +77,16 @@ def test_project_crud_real_flow(client: TestClient, test_data):
     detail_response = client.get(f"/api/v1/projects/{project_id}", headers=headers)
     assert detail_response.status_code == 200
     detail = detail_response.json()
-    assert detail["name"] == project_name
-    assert detail["code"] == create_payload["code"]
+    assert detail["project_name"] == project_name
+    assert detail["project_code"] == create_payload["project_code"]
 
     update_response = client.put(
         f"/api/v1/projects/{project_id}",
-        json={"city": "Suzhou", "district": "Gusu"},
+        json={"status": "paused"},
         headers=headers,
     )
     assert update_response.status_code == 200
-    assert update_response.json()["city"] == "Suzhou"
+    assert update_response.json()["status"] == "paused"
 
     delete_response = client.delete(f"/api/v1/projects/{project_id}", headers=headers)
     assert delete_response.status_code == 200

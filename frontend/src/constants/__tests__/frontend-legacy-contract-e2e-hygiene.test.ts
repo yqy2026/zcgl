@@ -7,14 +7,18 @@ const readSource = (relativePath: string): string =>
 
 describe('frontend legacy contract e2e hygiene', () => {
   it('stores the import success e2e spec under the legacy-contract directory', () => {
-    expect(existsSync(resolve(process.cwd(), 'tests/e2e/legacy-contract/import-success.spec.ts'))).toBe(
-      true
+    expect(
+      existsSync(resolve(process.cwd(), 'tests/e2e/legacy-contract/import-success.spec.ts'))
+    ).toBe(true);
+    expect(existsSync(resolve(process.cwd(), 'tests/e2e/rental/import-success.spec.ts'))).toBe(
+      false
     );
-    expect(existsSync(resolve(process.cwd(), 'tests/e2e/rental/import-success.spec.ts'))).toBe(false);
   });
 
   it('retires the stale rental contract workflow e2e spec from disk', () => {
-    expect(existsSync(resolve(process.cwd(), 'tests/e2e/rental/contract-workflow.spec.ts'))).toBe(false);
+    expect(existsSync(resolve(process.cwd(), 'tests/e2e/rental/contract-workflow.spec.ts'))).toBe(
+      false
+    );
   });
 
   it('keeps the import success e2e spec free from raw legacy excel import api tokens', () => {

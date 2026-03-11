@@ -110,7 +110,9 @@ export class ProjectService {
       const requestParams = {
         page: params?.page ?? 1,
         page_size: params?.page_size ?? 10,
-        ...(params?.keyword != null && params.keyword.trim() !== '' ? { keyword: params.keyword } : {}),
+        ...(params?.keyword != null && params.keyword.trim() !== ''
+          ? { keyword: params.keyword }
+          : {}),
         ...(params?.status != null && params.status.trim() !== '' ? { status: params.status } : {}),
         ...(params?.owner_party_id != null && params.owner_party_id.trim() !== ''
           ? { owner_party_id: params.owner_party_id }

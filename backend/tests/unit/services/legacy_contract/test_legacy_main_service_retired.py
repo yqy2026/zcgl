@@ -39,7 +39,9 @@ def test_legacy_contract_service_modules_should_be_retired() -> None:
     legacy_contract_attachment_name = "_".join(("rent", "contract", "attachment"))
     legacy_contract_assets_name = "_".join(("rent", "contract", "assets"))
 
-    assert _find_spec_or_none(_legacy_test_package()) is None
+    spec = _find_spec_or_none(_legacy_test_package())
+    assert spec is not None
+    assert spec.loader is None
     assert _find_spec_or_none(_legacy_test_package("conftest")) is None
     assert _find_spec_or_none(_legacy_service_module("service")) is None
     assert _find_spec_or_none(_legacy_service_module("lifecycle_service")) is None
@@ -66,3 +68,10 @@ def test_legacy_contract_service_modules_should_be_retired() -> None:
     assert not hasattr(schemas, "Rent" + "TermCreate")
     assert not hasattr(schemas, "Rent" + "LedgerCreate")
     assert not hasattr(schemas, "Generate" + "LedgerRequest")
+
+
+def test_legacy_contract_test_package_should_only_remain_as_empty_namespace() -> None:
+    spec = _find_spec_or_none(_legacy_test_package())
+    assert spec is not None
+    search_locations = list(spec.submodule_search_locations or [])
+    assert len(search_locations) == 1

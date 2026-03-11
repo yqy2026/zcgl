@@ -197,7 +197,15 @@ const UserTable: React.FC<UserTableProps> = ({
         ),
       },
     ],
-    [getStatusTag, onDelete, onEdit, onManagePartyBindings, onToggleLock, onToggleStatus, onViewDetail]
+    [
+      getStatusTag,
+      onDelete,
+      onEdit,
+      onManagePartyBindings,
+      onToggleLock,
+      onToggleStatus,
+      onViewDetail,
+    ]
   );
 
   return (

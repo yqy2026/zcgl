@@ -66,4 +66,3 @@ export const AVAILABLE_EXPORT_FIELDS: ExportFieldOption[] = [
   { key: 'created_at', label: '创建时间' },
   { key: 'updated_at', label: '更新时间' },
 ];
-

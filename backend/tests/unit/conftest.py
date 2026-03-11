@@ -3,6 +3,7 @@ Unit test configuration and fixtures
 """
 
 import os
+import sys
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -52,9 +53,45 @@ os.environ.setdefault("PHASE4_TENANT_NOT_NULL_DECISION", "B")
 def _reset_postgres_public_schema(engine) -> None:  # noqa: ANN001
     """Drop and recreate public schema for a clean PostgreSQL test database."""
     with engine.begin() as conn:
+        conn.execute(
+            text(
+                """
+                SELECT pg_terminate_backend(pid)
+                FROM pg_stat_activity
+                WHERE datname = current_database()
+                  AND pid <> pg_backend_pid()
+                """
+            )
+        )
         conn.execute(text("DROP SCHEMA IF EXISTS public CASCADE"))
         conn.execute(text("CREATE SCHEMA public"))
         conn.execute(text("GRANT ALL ON SCHEMA public TO PUBLIC"))
+
+
+def _is_unit_only_invocation() -> bool:
+    marker_expr = ""
+    cli_args = sys.argv[1:]
+    if "-m" in cli_args:
+        marker_index = cli_args.index("-m")
+        if marker_index + 1 < len(cli_args):
+            marker_expr = cli_args[marker_index + 1]
+
+    if marker_expr.strip() == "unit":
+        return True
+
+    unit_targets = [
+        arg
+        for arg in cli_args
+        if arg.startswith("tests/unit")
+        or "/tests/unit/" in arg
+        or "\\tests\\unit\\" in arg
+    ]
+    non_unit_targets = [
+        arg
+        for arg in cli_args
+        if arg.startswith("tests/") and not arg.startswith("tests/unit")
+    ]
+    return len(unit_targets) > 0 and len(non_unit_targets) == 0
 
 
 @pytest.fixture(scope="session")
@@ -108,7 +145,8 @@ def db_tables(engine):
     from src.database import Base
 
     is_postgres = bool(TEST_DATABASE_URL and TEST_DATABASE_URL.startswith("postgresql"))
-    if is_postgres:
+    unit_only_invocation = _is_unit_only_invocation()
+    if is_postgres and unit_only_invocation:
         # Keep unit db-backed runs deterministic across sessions by avoiding
         # residual schemas left by previous partial migration/create_all runs.
         _reset_postgres_public_schema(engine)
@@ -116,7 +154,7 @@ def db_tables(engine):
     versions_dir = Path("alembic/versions")
     has_migrations = versions_dir.exists() and len(list(versions_dir.glob("*.py"))) > 0
 
-    if has_migrations:
+    if has_migrations and unit_only_invocation:
         from alembic import command
 
         alembic_cfg = Config("alembic.ini")
@@ -132,26 +170,28 @@ def db_tables(engine):
             # Some branches contain in-progress migrations; for unit tests,
             # prefer a clean model-based schema over leaving half-migrated DB.
             print(f"[!] Alembic upgrade failed in unit fixture, fallback create_all: {exc}")
-            if is_postgres:
+            if is_postgres and unit_only_invocation:
                 _reset_postgres_public_schema(engine)
             importlib.import_module("src.models")
             Base.metadata.create_all(bind=engine)
 
-    importlib.import_module("src.models")
-    try:
-        Base.metadata.create_all(bind=engine)
-    except OperationalError as exc:
-        pytest.skip(
-            f"TEST_DATABASE_URL unreachable during table setup: {exc}",
-            allow_module_level=True,
-        )
+    if unit_only_invocation:
+        importlib.import_module("src.models")
+        try:
+            Base.metadata.create_all(bind=engine)
+        except OperationalError as exc:
+            pytest.skip(
+                f"TEST_DATABASE_URL unreachable during table setup: {exc}",
+                allow_module_level=True,
+            )
 
     yield
 
-    try:
-        Base.metadata.drop_all(bind=engine)
-    except Exception:
-        pass
+    if unit_only_invocation:
+        try:
+            Base.metadata.drop_all(bind=engine)
+        except Exception:
+            pass
 
 
 @pytest.fixture(scope="function")
@@ -403,4 +443,3 @@ def client_normal_user(db_session, normal_user):
         yield test_client
 
     app.dependency_overrides.clear()
-

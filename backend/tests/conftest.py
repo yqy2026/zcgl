@@ -103,6 +103,16 @@ def _reset_test_schema(database_url: str) -> None:
     try:
         if engine.dialect.name == "postgresql":
             with engine.begin() as conn:
+                conn.execute(
+                    text(
+                        """
+                        SELECT pg_terminate_backend(pid)
+                        FROM pg_stat_activity
+                        WHERE datname = current_database()
+                          AND pid <> pg_backend_pid()
+                        """
+                    )
+                )
                 conn.execute(text("DROP SCHEMA IF EXISTS public CASCADE"))
                 conn.execute(text("CREATE SCHEMA public"))
         else:

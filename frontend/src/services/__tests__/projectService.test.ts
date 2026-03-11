@@ -696,7 +696,9 @@ describe('ProjectService', () => {
       vi.mocked(apiClient.get).mockResolvedValue({
         success: true,
         data: {
-          items: [{ id: '2', status: 'terminated', project_name: '项目B', project_code: 'PRJ-002' }],
+          items: [
+            { id: '2', status: 'terminated', project_name: '项目B', project_code: 'PRJ-002' },
+          ],
           total: 1,
           page: 1,
           page_size: 10,

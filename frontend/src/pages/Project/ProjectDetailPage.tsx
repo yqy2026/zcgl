@@ -22,7 +22,13 @@ import {
   Skeleton,
   Tooltip,
 } from 'antd';
-import { EditOutlined, HomeOutlined, AreaChartOutlined, TeamOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import {
+  EditOutlined,
+  HomeOutlined,
+  AreaChartOutlined,
+  TeamOutlined,
+  InfoCircleOutlined,
+} from '@ant-design/icons';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import dayjs, { type Dayjs } from 'dayjs';
@@ -72,7 +78,7 @@ interface AssetLeaseSummaryRowData {
 
 const useAssetLeaseSummary = (
   assetId: string,
-  periodParams: { period_start: string; period_end: string },
+  periodParams: { period_start: string; period_end: string }
 ) =>
   useQuery<AssetLeaseSummaryResponse>({
     queryKey: ['asset-lease-summary', assetId, periodParams.period_start, periodParams.period_end],
@@ -80,18 +86,17 @@ const useAssetLeaseSummary = (
     staleTime: 60_000,
   });
 
-const AssetLeaseSummaryRow: React.FC<AssetLeaseSummaryRowData & { onNavigate: (id: string) => void }> = ({
-  assetId,
-  assetName,
-  periodParams,
-  onNavigate,
-}) => {
+const AssetLeaseSummaryRow: React.FC<
+  AssetLeaseSummaryRowData & { onNavigate: (id: string) => void }
+> = ({ assetId, assetName, periodParams, onNavigate }) => {
   const { data, isLoading } = useAssetLeaseSummary(assetId, periodParams);
 
   if (isLoading) {
     return (
       <tr>
-        <td colSpan={7}><Skeleton active paragraph={{ rows: 1 }} title={false} /></td>
+        <td colSpan={7}>
+          <Skeleton active paragraph={{ rows: 1 }} title={false} />
+        </td>
       </tr>
     );
   }
@@ -119,13 +124,13 @@ const AssetLeaseSummaryRow: React.FC<AssetLeaseSummaryRowData & { onNavigate: (i
         </td>
       ))}
       <td style={{ textAlign: 'right' }}>
-        <Text strong={occupancyRate > 0}>{occupancyRate > 0 ? `${occupancyRate.toFixed(1)}%` : '—'}</Text>
+        <Text strong={occupancyRate > 0}>
+          {occupancyRate > 0 ? `${occupancyRate.toFixed(1)}%` : '—'}
+        </Text>
       </td>
       <td style={{ textAlign: 'center' }}>
         {customerCount > 0 ? (
-          <Tooltip
-            title={data?.customer_summary.map(c => c.party_name).join('、')}
-          >
+          <Tooltip title={data?.customer_summary.map(c => c.party_name).join('、')}>
             <Tag>{customerCount} 家</Tag>
           </Tooltip>
         ) : (
@@ -133,7 +138,9 @@ const AssetLeaseSummaryRow: React.FC<AssetLeaseSummaryRowData & { onNavigate: (i
         )}
       </td>
       <td style={{ textAlign: 'right' }}>
-        <Text type="secondary" style={{ fontSize: '0.75rem' }}>{totalContracts} 份合同</Text>
+        <Text type="secondary" style={{ fontSize: '0.75rem' }}>
+          {totalContracts} 份合同
+        </Text>
       </td>
     </tr>
   );
@@ -439,16 +446,41 @@ const ProjectDetailPage: React.FC = () => {
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
                   <thead>
-                    <tr style={{ borderBottom: 'var(--border-width-thin) solid var(--color-border)' }}>
-                      <th style={{ textAlign: 'left', padding: '0.5rem 0.75rem', fontWeight: 600 }}>资产</th>
+                    <tr
+                      style={{ borderBottom: 'var(--border-width-thin) solid var(--color-border)' }}
+                    >
+                      <th style={{ textAlign: 'left', padding: '0.5rem 0.75rem', fontWeight: 600 }}>
+                        资产
+                      </th>
                       {['上游', '下游', '委托', '直租'].map(rt => (
-                        <th key={rt} style={{ textAlign: 'center', padding: '0.5rem 0.75rem', fontWeight: 600 }}>
-                          <Tag color={RELATION_TYPE_COLORS[rt]} style={{ margin: 0 }}>{RELATION_TYPE_LABELS[rt]}</Tag>
+                        <th
+                          key={rt}
+                          style={{
+                            textAlign: 'center',
+                            padding: '0.5rem 0.75rem',
+                            fontWeight: 600,
+                          }}
+                        >
+                          <Tag color={RELATION_TYPE_COLORS[rt]} style={{ margin: 0 }}>
+                            {RELATION_TYPE_LABELS[rt]}
+                          </Tag>
                         </th>
                       ))}
-                      <th style={{ textAlign: 'right', padding: '0.5rem 0.75rem', fontWeight: 600 }}>出租率</th>
-                      <th style={{ textAlign: 'center', padding: '0.5rem 0.75rem', fontWeight: 600 }}>客户摘要</th>
-                      <th style={{ textAlign: 'right', padding: '0.5rem 0.75rem', fontWeight: 600 }}>合同数</th>
+                      <th
+                        style={{ textAlign: 'right', padding: '0.5rem 0.75rem', fontWeight: 600 }}
+                      >
+                        出租率
+                      </th>
+                      <th
+                        style={{ textAlign: 'center', padding: '0.5rem 0.75rem', fontWeight: 600 }}
+                      >
+                        客户摘要
+                      </th>
+                      <th
+                        style={{ textAlign: 'right', padding: '0.5rem 0.75rem', fontWeight: 600 }}
+                      >
+                        合同数
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -464,8 +496,12 @@ const ProjectDetailPage: React.FC = () => {
                   </tbody>
                 </table>
               </div>
-              <Text type="secondary" style={{ display: 'block', marginTop: '0.5rem', fontSize: '0.75rem' }}>
-                注：MVP 阶段面积字段以合同台账落地后口径为准；出租率目前为占位值 0%，待台账覆盖后升级。
+              <Text
+                type="secondary"
+                style={{ display: 'block', marginTop: '0.5rem', fontSize: '0.75rem' }}
+              >
+                注：MVP 阶段面积字段以合同台账落地后口径为准；出租率目前为占位值
+                0%，待台账覆盖后升级。
               </Text>
             </Card>
           )}

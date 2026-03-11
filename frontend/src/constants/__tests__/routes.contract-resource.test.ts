@@ -64,7 +64,8 @@ describe('rental route config contract resources', () => {
     expect(contractGroupSection?.breadcrumb).toEqual(['合同组管理']);
 
     const routePermissions = (contractGroupSection?.children ?? []).map(
-      child => child.permissions?.map(permission => `${permission.resource}:${permission.action}`) ?? []
+      child =>
+        child.permissions?.map(permission => `${permission.resource}:${permission.action}`) ?? []
     );
 
     expect(routePermissions).toEqual([

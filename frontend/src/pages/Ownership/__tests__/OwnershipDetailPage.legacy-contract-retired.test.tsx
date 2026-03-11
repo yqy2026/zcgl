@@ -32,7 +32,10 @@ import { ownershipService } from '@/services/ownershipService';
 import { assetService } from '@/services/assetService';
 
 const readOwnershipDetailSource = (): string => {
-  return readFileSync(resolve(process.cwd(), 'src/pages/Ownership/OwnershipDetailPage.tsx'), 'utf8');
+  return readFileSync(
+    resolve(process.cwd(), 'src/pages/Ownership/OwnershipDetailPage.tsx'),
+    'utf8'
+  );
 };
 
 describe('OwnershipDetailPage legacy contract retirement', () => {

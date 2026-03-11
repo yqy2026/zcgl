@@ -8,7 +8,6 @@ This conftest.py is specifically for end-to-end tests and ensures:
 """
 
 import os
-from pathlib import Path
 from uuid import uuid4
 
 import pytest
@@ -143,32 +142,9 @@ def engine(test_database_url):
 
 @pytest.fixture(scope="session")
 def db_tables(engine):
-    """Create all database tables using Alembic migrations."""
-    from alembic.config import Config
-
-    from alembic import command
-    from src.database import Base
-
-    # Check if Alembic migrations exist
-    versions_dir = Path("alembic/versions")
-    has_migrations = versions_dir.exists() and len(list(versions_dir.glob("*.py"))) > 0
-
-    # Run Alembic migrations to create tables
-    if has_migrations:
-        alembic_cfg = Config("alembic.ini")
-        alembic_cfg.set_main_option("sqlalchemy.url", TEST_DATABASE_URL)
-        command.upgrade(alembic_cfg, "head")
-        Base.metadata.create_all(bind=engine)
-    else:
-        Base.metadata.create_all(bind=engine)
-
+    """Reuse the root test DB bootstrap to avoid duplicate Alembic/setup work."""
+    _ = engine
     yield
-
-    # Clean up: Drop all tables after test session
-    try:
-        Base.metadata.drop_all(bind=engine)
-    except Exception:
-        pass
 
 
 @pytest.fixture(scope="function")

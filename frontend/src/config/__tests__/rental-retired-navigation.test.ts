@@ -5,7 +5,8 @@ import { dynamicBreadcrumbMap, staticBreadcrumbMap } from '@/config/breadcrumb';
 describe('rental retired navigation config', () => {
   it('collapses rental menu to a single retired entry and keeps rental paths selected on that entry', () => {
     const rentalSection = (MENU_ITEMS ?? []).find(item => item?.key === 'rental');
-    const rentalChildren = 'children' in (rentalSection ?? {}) ? rentalSection?.children ?? [] : [];
+    const rentalChildren =
+      'children' in (rentalSection ?? {}) ? (rentalSection?.children ?? []) : [];
 
     expect(rentalSection?.label).toBe('旧租赁前端已退休');
     expect(rentalChildren).toHaveLength(1);

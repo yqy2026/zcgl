@@ -53,4 +53,3 @@ export const assetFormSchema = z
   );
 
 export type AssetFormData = z.infer<typeof assetFormSchema>;
-

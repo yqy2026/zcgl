@@ -16,7 +16,8 @@ describe('legacy rental frontend retirement routing', () => {
   it('keeps non-import /rental routes mapped to the retired page component', () => {
     const retiredRentalRoutes = protectedRoutes.filter(
       route =>
-        route.path.startsWith('/rental/') && route.path !== LEGACY_RENTAL_ROUTES.CONTRACTS.PDF_IMPORT
+        route.path.startsWith('/rental/') &&
+        route.path !== LEGACY_RENTAL_ROUTES.CONTRACTS.PDF_IMPORT
     );
 
     expect(retiredRentalRoutes.length).toBeGreaterThan(0);
@@ -68,9 +69,9 @@ describe('legacy rental frontend retirement routing', () => {
   it('retires the legacy rental list page and hook modules from disk', () => {
     expect(existsSync(resolve(process.cwd(), 'src/pages/Rental/ContractListPage.tsx'))).toBe(false);
     expect(existsSync(resolve(process.cwd(), 'src/hooks/useContractList.ts'))).toBe(false);
-    expect(existsSync(resolve(process.cwd(), 'src/components/Rental/RentContractExcelImport.tsx'))).toBe(
-      false
-    );
+    expect(
+      existsSync(resolve(process.cwd(), 'src/components/Rental/RentContractExcelImport.tsx'))
+    ).toBe(false);
     expect(existsSync(resolve(process.cwd(), 'src/services/rentContractExcelService.ts'))).toBe(
       false
     );
@@ -78,16 +79,26 @@ describe('legacy rental frontend retirement routing', () => {
       existsSync(resolve(process.cwd(), 'src/components/Rental/ContractList/ContractFilterBar.tsx'))
     ).toBe(false);
     expect(
-      existsSync(resolve(process.cwd(), 'src/components/Rental/ContractList/ContractStatsCards.tsx'))
+      existsSync(
+        resolve(process.cwd(), 'src/components/Rental/ContractList/ContractStatsCards.tsx')
+      )
     ).toBe(false);
     expect(
       existsSync(resolve(process.cwd(), 'src/components/Rental/ContractList/ContractTable.tsx'))
     ).toBe(false);
-    expect(existsSync(resolve(process.cwd(), 'src/pages/Rental/RentStatisticsPage.tsx'))).toBe(false);
+    expect(existsSync(resolve(process.cwd(), 'src/pages/Rental/RentStatisticsPage.tsx'))).toBe(
+      false
+    );
     expect(existsSync(resolve(process.cwd(), 'src/pages/Rental/RentLedgerPage.tsx'))).toBe(false);
-    expect(existsSync(resolve(process.cwd(), 'src/pages/Rental/ContractCreatePage.tsx'))).toBe(false);
-    expect(existsSync(resolve(process.cwd(), 'src/pages/Rental/ContractRenewPage.tsx'))).toBe(false);
-    expect(existsSync(resolve(process.cwd(), 'src/pages/Rental/ContractDetailPage.tsx'))).toBe(false);
+    expect(existsSync(resolve(process.cwd(), 'src/pages/Rental/ContractCreatePage.tsx'))).toBe(
+      false
+    );
+    expect(existsSync(resolve(process.cwd(), 'src/pages/Rental/ContractRenewPage.tsx'))).toBe(
+      false
+    );
+    expect(existsSync(resolve(process.cwd(), 'src/pages/Rental/ContractDetailPage.tsx'))).toBe(
+      false
+    );
     expect(existsSync(resolve(process.cwd(), 'src/components/Rental/ContractDetailInfo.tsx'))).toBe(
       false
     );

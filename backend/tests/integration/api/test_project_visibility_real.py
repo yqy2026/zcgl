@@ -3,7 +3,6 @@ Project visibility integration tests for non-admin users across organizations.
 """
 
 import uuid
-from datetime import datetime
 
 import pytest
 from fastapi.testclient import TestClient
@@ -20,9 +19,9 @@ from src.services.core.password_service import PasswordService
 
 
 def _build_project_code() -> str:
-    prefix = datetime.now().strftime("%y%m")
-    suffix = f"{uuid.uuid4().int % 10000:04d}"
-    return f"PJ{prefix}{suffix}"
+    segment = uuid.uuid4().hex[:6].upper()
+    serial = f"{uuid.uuid4().int % 1000000:06d}"
+    return f"PRJ-{segment}-{serial}"
 
 
 def _login(client: TestClient, username: str, password: str) -> None:
@@ -163,16 +162,16 @@ def test_non_admin_project_visibility_isolation(client: TestClient, db_session: 
     )
 
     project_a = Project(
-        name=f"Visibility Project A-{suffix}",
-        code=_build_project_code(),
-        project_status="active",
+        project_name=f"Visibility Project A-{suffix}",
+        project_code=_build_project_code(),
+        status="active",
         manager_party_id=party_a.id,
         created_by=user_a.id,
     )
     project_b = Project(
-        name=f"Visibility Project B-{suffix}",
-        code=_build_project_code(),
-        project_status="active",
+        project_name=f"Visibility Project B-{suffix}",
+        project_code=_build_project_code(),
+        status="active",
         manager_party_id=party_b.id,
         created_by=user_b.id,
     )

@@ -240,7 +240,9 @@ const ContractGroupFormPage: React.FC = () => {
         await contractGroupService.updateContractGroup(id as string, buildUpdatePayload(formState));
         navigate(CONTRACT_GROUP_ROUTES.DETAIL(id as string));
       } else {
-        const created = await contractGroupService.createContractGroup(buildCreatePayload(formState));
+        const created = await contractGroupService.createContractGroup(
+          buildCreatePayload(formState)
+        );
         navigate(CONTRACT_GROUP_ROUTES.DETAIL(created.contract_group_id));
       }
     } catch (error) {
@@ -254,7 +256,11 @@ const ContractGroupFormPage: React.FC = () => {
     <PageContainer
       title={isEditMode ? '编辑合同组' : '新建合同组'}
       subTitle="当前表单直接贴合后端 schema；主体、日期和规则 JSON 都按原始字段提交。"
-      onBack={() => navigate(isEditMode ? CONTRACT_GROUP_ROUTES.DETAIL(id as string) : CONTRACT_GROUP_ROUTES.LIST)}
+      onBack={() =>
+        navigate(
+          isEditMode ? CONTRACT_GROUP_ROUTES.DETAIL(id as string) : CONTRACT_GROUP_ROUTES.LIST
+        )
+      }
     >
       {error != null && (
         <Alert
@@ -390,9 +396,12 @@ const ContractGroupFormPage: React.FC = () => {
                   value={formState.risk_tags}
                   onChange={value => updateField('risk_tags', value)}
                 />
-                {isEditMode && data != null && data.predecessor_group_id != null && data.predecessor_group_id !== '' && (
-                  <Tag>前驱合同组：{data.predecessor_group_id}</Tag>
-                )}
+                {isEditMode &&
+                  data != null &&
+                  data.predecessor_group_id != null &&
+                  data.predecessor_group_id !== '' && (
+                    <Tag>前驱合同组：{data.predecessor_group_id}</Tag>
+                  )}
               </Space>
             </Card>
 

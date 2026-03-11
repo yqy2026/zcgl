@@ -58,7 +58,7 @@ def create_asset_payload(
     return {
         "ownership_id": ownership_id,
         "asset_name": f"{name_prefix}-{suffix}",
-        "address": f"{address_prefix}-{suffix}",
+        "address_detail": f"{address_prefix}-{suffix}",
         "ownership_status": "已确权",
         "property_nature": "经营类",
         "usage_status": usage_status,

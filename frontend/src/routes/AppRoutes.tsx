@@ -28,9 +28,7 @@ export interface ProtectedRouteItem {
  * 这些路由需要用户认证后才能访问,并会被 AppLayout 包装
  * 注意: 登录页面路由不应该在此定义,应该在 App.tsx 中作为公共路由处理
  */
-const legacyRentalRetiredPage = React.lazy(
-  () => import('../pages/Rental/LegacyRentalRetiredPage')
-);
+const legacyRentalRetiredPage = React.lazy(() => import('../pages/Rental/LegacyRentalRetiredPage'));
 
 const legacyRentalPdfImportRedirect: React.FC = () => (
   <Navigate to={CONTRACT_GROUP_ROUTES.IMPORT} replace />

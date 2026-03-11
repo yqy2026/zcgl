@@ -144,9 +144,7 @@ export const PropertyCertificateReview: React.FC<PropertyCertificateReviewProps>
   const normalizedInitialLandUseTermStart = normalizeDateFieldValue(
     extracted_data.land_use_term_start
   );
-  const normalizedInitialLandUseTermEnd = normalizeDateFieldValue(
-    extracted_data.land_use_term_end
-  );
+  const normalizedInitialLandUseTermEnd = normalizeDateFieldValue(extracted_data.land_use_term_end);
   const confidenceMeta = getConfidenceMeta(confidence_score);
   const toneClassMap: Record<Tone, string> = {
     primary: styles.tonePrimary,

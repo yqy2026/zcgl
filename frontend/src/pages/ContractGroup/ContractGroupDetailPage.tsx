@@ -84,7 +84,10 @@ const ContractGroupDetailPage: React.FC = () => {
       onBack={() => navigate(CONTRACT_GROUP_ROUTES.LIST)}
       extra={
         data != null ? (
-          <Button type="primary" onClick={() => navigate(CONTRACT_GROUP_ROUTES.EDIT(data.contract_group_id))}>
+          <Button
+            type="primary"
+            onClick={() => navigate(CONTRACT_GROUP_ROUTES.EDIT(data.contract_group_id))}
+          >
             编辑合同组
           </Button>
         ) : null
@@ -95,12 +98,16 @@ const ContractGroupDetailPage: React.FC = () => {
           <Descriptions bordered column={2}>
             <Descriptions.Item label="合同组编码">{data.group_code}</Descriptions.Item>
             <Descriptions.Item label="经营模式">
-              <Tag color={data.revenue_mode === 'LEASE' ? 'blue' : 'purple'}>{data.revenue_mode}</Tag>
+              <Tag color={data.revenue_mode === 'LEASE' ? 'blue' : 'purple'}>
+                {data.revenue_mode}
+              </Tag>
             </Descriptions.Item>
             <Descriptions.Item label="运营方主体 ID">{data.operator_party_id}</Descriptions.Item>
             <Descriptions.Item label="产权方主体 ID">{data.owner_party_id}</Descriptions.Item>
             <Descriptions.Item label="生效开始日">{data.effective_from}</Descriptions.Item>
-            <Descriptions.Item label="生效结束日">{data.effective_to ?? '未设定'}</Descriptions.Item>
+            <Descriptions.Item label="生效结束日">
+              {data.effective_to ?? '未设定'}
+            </Descriptions.Item>
             <Descriptions.Item label="派生状态">{data.derived_status}</Descriptions.Item>
             <Descriptions.Item label="数据状态">{data.data_status}</Descriptions.Item>
             <Descriptions.Item label="风险标签" span={2}>

@@ -47,7 +47,8 @@ import ProjectDetail from './ProjectDetail';
 import styles from './ProjectList.module.css';
 // import OwnershipSelect from '@/components/Ownership/OwnershipSelect';
 
-const isRelationActive = (relation: { is_active?: boolean }): boolean => relation.is_active === true;
+const isRelationActive = (relation: { is_active?: boolean }): boolean =>
+  relation.is_active === true;
 
 const getProjectAssetCount = (project: Project): number => {
   if (typeof project.asset_count === 'number' && Number.isFinite(project.asset_count)) {
@@ -309,9 +310,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
       render: (_relations: Project['party_relations'], record: Project) => {
         // 优先展示 active 的 party_relations
         if (record.party_relations != null && record.party_relations.length > 0) {
-          const activeRelations = record.party_relations.filter(rel =>
-            isRelationActive(rel)
-          );
+          const activeRelations = record.party_relations.filter(rel => isRelationActive(rel));
           if (activeRelations.length > 0) {
             return (
               <div>

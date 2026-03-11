@@ -23,10 +23,10 @@ def _build_asset_data(**overrides):
     data = {
         "ownership_id": "ownership-default",
         "asset_name": "测试物业A",
-        "address": "北京市朝阳区测试路123号",
+        "address_detail": "北京市朝阳区测试路123号",
         "ownership_status": "已确权",
         "property_nature": "商业",
-        "usage_status": "出租中",
+        "usage_status": "出租",
         "rentable_area": Decimal("1000.00"),
         "rented_area": Decimal("600.00"),
     }

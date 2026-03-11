@@ -10,12 +10,14 @@ from sqlalchemy.orm import Session
 from src.crud.project import project_crud
 from src.crud.query_builder import PartyFilter
 from src.models.organization import Organization
+from src.models.party import Party, PartyType
 from src.models.project import Project
 from tests.integration.conftest import AsyncSessionAdapter
 
 
 def _build_code(prefix: str) -> str:
-    return f"PJ{prefix}{uuid.uuid4().int % 10000:04d}"
+    serial = f"{uuid.uuid4().int % 1000000:06d}"
+    return f"PRJ-{prefix.upper()}-{serial}"
 
 
 @pytest.mark.integration
@@ -42,17 +44,34 @@ async def test_project_get_multi_respects_tenant_filter(db_session: Session):
     db_session.add_all([org_a, org_b])
     db_session.flush()
 
+    party_a = Party(
+        party_type=PartyType.ORGANIZATION.value,
+        name=f"Tenant Scope Party A-{uuid.uuid4().hex[:6]}",
+        code=f"TEN-PARTY-A-{uuid.uuid4().hex[:6]}",
+        external_ref=org_a.id,
+        status="active",
+    )
+    party_b = Party(
+        party_type=PartyType.ORGANIZATION.value,
+        name=f"Tenant Scope Party B-{uuid.uuid4().hex[:6]}",
+        code=f"TEN-PARTY-B-{uuid.uuid4().hex[:6]}",
+        external_ref=org_b.id,
+        status="active",
+    )
+    db_session.add_all([party_a, party_b])
+    db_session.flush()
+
     project_a = Project(
-        name=f"Tenant Scoped Project A-{uuid.uuid4().hex[:6]}",
-        code=_build_code("26"),
-        organization_id=org_a.id,
-        project_status="active",
+        project_name=f"Tenant Scoped Project A-{uuid.uuid4().hex[:6]}",
+        project_code=_build_code("TENA01"),
+        manager_party_id=party_a.id,
+        status="active",
     )
     project_b = Project(
-        name=f"Tenant Scoped Project B-{uuid.uuid4().hex[:6]}",
-        code=_build_code("27"),
-        organization_id=org_b.id,
-        project_status="active",
+        project_name=f"Tenant Scoped Project B-{uuid.uuid4().hex[:6]}",
+        project_code=_build_code("TENB01"),
+        manager_party_id=party_b.id,
+        status="active",
     )
     db_session.add_all([project_a, project_b])
     db_session.flush()
@@ -61,7 +80,7 @@ async def test_project_get_multi_respects_tenant_filter(db_session: Session):
         async_db,
         skip=0,
         limit=50,
-        party_filter=PartyFilter(party_ids=[org_a.id]),
+        party_filter=PartyFilter(party_ids=[party_a.id]),
     )
     org_a_ids = {project.id for project in org_a_projects}
     assert project_a.id in org_a_ids
@@ -71,7 +90,7 @@ async def test_project_get_multi_respects_tenant_filter(db_session: Session):
         async_db,
         skip=0,
         limit=50,
-        party_filter=PartyFilter(party_ids=[org_b.id]),
+        party_filter=PartyFilter(party_ids=[party_b.id]),
     )
     org_b_ids = {project.id for project in org_b_projects}
     assert project_b.id in org_b_ids

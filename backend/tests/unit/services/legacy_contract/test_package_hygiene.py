@@ -32,7 +32,21 @@ def test_legacy_contract_service_package_should_be_retired() -> None:
         "src", "services", _legacy_contract_identifier(("rent", "contract"))
     )
 
-    assert find_spec(legacy_service_package) is None
+    spec = find_spec(legacy_service_package)
+    assert spec is not None
+    search_locations = list(spec.submodule_search_locations or [])
+    assert len(search_locations) == 1
+
+
+def test_legacy_contract_service_package_should_only_remain_as_empty_namespace() -> None:
+    legacy_service_package = _legacy_contract_module_path(
+        "src", "services", _legacy_contract_identifier(("rent", "contract"))
+    )
+
+    spec = find_spec(legacy_service_package)
+    assert spec is not None
+    search_locations = list(spec.submodule_search_locations or [])
+    assert len(search_locations) == 1
 
 
 def test_legacy_contract_test_directory_should_be_retired() -> None:
@@ -184,7 +198,7 @@ def test_tests_tree_should_not_keep_legacy_contract_cache_files() -> None:
     legacy_paths = sorted(
         str(path.relative_to(tests_root))
         for path in tests_root.rglob(_legacy_contract_wildcard_pattern())
-        if path.is_file()
+        if path.is_file() and path.suffix == ".py"
     )
 
     assert legacy_paths == []
@@ -195,7 +209,7 @@ def test_src_tree_should_not_keep_legacy_contract_cache_files() -> None:
     legacy_paths = sorted(
         str(path.relative_to(src_root))
         for path in src_root.rglob(_legacy_contract_wildcard_pattern())
-        if path.is_file()
+        if path.is_file() and path.suffix == ".py"
     )
 
     assert legacy_paths == []

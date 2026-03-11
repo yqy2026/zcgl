@@ -40,20 +40,6 @@ class ProjectBase(BaseModel):
             )
         return v
 
-    @field_validator("project_code")
-    @classmethod
-    def validate_project_code(cls, v: str | None) -> str | None:
-        if v is None:
-            return v
-        v = v.strip().upper()
-        if not _PROJECT_CODE_PATTERN.match(v):
-            raise PydanticCustomError(
-                "invalid_project_code",
-                "项目编码格式必须为 PRJ-<4-12位大写字母数字>-<6位序号>，例如: PRJ-ABCD01-000001",
-                {},
-            )
-        return v
-
 
 class ProjectPartyRelationInput(BaseModel):
     """项目主体关系入参（当前仅支持 owner 关系）。"""
@@ -95,6 +81,20 @@ class ProjectCreate(ProjectBase):
         None, title="主体关系"
     )
     organization_id: str | None = Field(None, title="关联组织ID（用于推断 manager_party_id）")
+
+    @field_validator("project_code")
+    @classmethod
+    def validate_project_code(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        v = v.strip().upper()
+        if not _PROJECT_CODE_PATTERN.match(v):
+            raise PydanticCustomError(
+                "invalid_project_code",
+                "项目编码格式必须为 PRJ-<4-12位大写字母数字>-<6位序号>，例如: PRJ-ABCD01-000001",
+                {},
+            )
+        return v
 
 class ProjectUpdate(BaseModel):
     """更新项目模式（所有字段可选）。"""

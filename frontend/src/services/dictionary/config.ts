@@ -260,4 +260,3 @@ export const getDictionaryCodes = (): string[] => {
 export const isDictionaryTypeExists = (code: string): boolean => {
   return code in DICTIONARY_CONFIGS;
 };
-

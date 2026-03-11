@@ -51,7 +51,9 @@ const summaryColumns: ColumnsType<ContractTypeSummary> = [
     key: 'label',
     render: (_, record) => (
       <Space size={8}>
-        <Tag color={RELATION_TYPE_COLORS[record.group_relation_type]}>{record.group_relation_type}</Tag>
+        <Tag color={RELATION_TYPE_COLORS[record.group_relation_type]}>
+          {record.group_relation_type}
+        </Tag>
         <span>{record.label}</span>
       </Space>
     ),
@@ -139,7 +141,9 @@ const AssetDetailPage: React.FC = () => {
             className={styles.customerRow}
           >
             <Space size={8} wrap>
-              <Tag color={RELATION_TYPE_COLORS[item.group_relation_type]}>{item.group_relation_type}</Tag>
+              <Tag color={RELATION_TYPE_COLORS[item.group_relation_type]}>
+                {item.group_relation_type}
+              </Tag>
               <Text strong>{item.party_name}</Text>
             </Space>
             <Text type="secondary">关联 {item.contract_count} 份合同</Text>

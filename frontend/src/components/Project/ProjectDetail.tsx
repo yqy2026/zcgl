@@ -45,10 +45,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onEdit }) => {
           <div>
             <Space>
               <h2 className={styles.projectTitle}>{project.project_name}</h2>
-              <Badge
-                status={statusMeta.active ? 'success' : 'default'}
-                text={statusMeta.text}
-              />
+              <Badge status={statusMeta.active ? 'success' : 'default'} text={statusMeta.text} />
             </Space>
           </div>
           <div>
@@ -69,7 +66,9 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onEdit }) => {
             <Tag color={statusMeta.color}>{statusMeta.text}</Tag>
           </Descriptions.Item>
           <Descriptions.Item label="项目状态">
-            <Tag color={project.data_status === '正常' ? 'green' : 'default'}>{project.data_status}</Tag>
+            <Tag color={project.data_status === '正常' ? 'green' : 'default'}>
+              {project.data_status}
+            </Tag>
           </Descriptions.Item>
           <Descriptions.Item label="关联资产数量">
             <Badge count={project.asset_count ?? 0} />

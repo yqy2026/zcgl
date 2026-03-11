@@ -166,7 +166,7 @@ class TestAssetLifecycle:
             payload["organization_id"] = organization_id
         return payload
 
-    def test_asset_create_with_address_only_should_use_legacy_address_fallback(
+    def test_asset_create_with_address_only_should_return_422(
         self,
         authenticated_client: TestClient,
         csrf_headers: dict[str, str],
@@ -192,30 +192,10 @@ class TestAssetLifecycle:
             headers=csrf_headers,
         )
 
-        assert response.status_code == 201
-        created = response.json()
-        created_id = created.get("id")
-        assert isinstance(created_id, str)
-
-        created_address = created.get("address")
-        assert isinstance(created_address, str)
-
-        address_handler = SensitiveDataHandler(searchable_fields={"address"})
-        decrypted_created_address = address_handler.decrypt_field(
-            "address", created_address
-        )
-        assert isinstance(decrypted_created_address, str)
-        assert decrypted_created_address == payload["address"]
-
-        detail_response = authenticated_client.get(f"/api/v1/assets/{created_id}")
-        assert detail_response.status_code == 200
-        detail_payload = detail_response.json()
-        detail_address = detail_payload.get("address")
-        assert isinstance(detail_address, str)
-
-        decrypted_detail_address = address_handler.decrypt_field("address", detail_address)
-        assert isinstance(decrypted_detail_address, str)
-        assert decrypted_detail_address == payload["address"]
+        assert response.status_code == 422
+        response_payload = response.json()
+        response_text = str(response_payload)
+        assert "address_detail" in response_text
 
     def test_asset_create_with_blank_legacy_address_should_return_422(
         self,

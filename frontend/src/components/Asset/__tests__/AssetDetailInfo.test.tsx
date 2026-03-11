@@ -621,4 +621,3 @@ describe('AssetDetailInfo', () => {
     });
   });
 });
-

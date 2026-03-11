@@ -320,4 +320,3 @@ export const checkAssetDataCompleteness = (
     optionalFields: trulyOptionalFields,
   };
 };
-
