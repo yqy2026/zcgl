@@ -5,7 +5,7 @@ from typing import Any
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
-from ..models.party import PartyType
+from ..models.party import PartyReviewStatus, PartyType
 from ..models.user_party_binding import RelationType
 
 
@@ -53,10 +53,20 @@ class PartyResponse(PartyBase):
     """Party response."""
 
     id: str
+    review_status: PartyReviewStatus | None = None
+    review_by: str | None = None
+    reviewed_at: datetime | None = None
+    review_reason: str | None = None
     created_at: datetime
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+
+class PartyReviewRejectRequest(BaseModel):
+    """Party review reject payload."""
+
+    reason: str = Field(..., min_length=1, max_length=500, description="驳回原因")
 
 
 class PartyHierarchyCreate(BaseModel):
@@ -168,6 +178,7 @@ __all__ = [
     "PartyCreate",
     "PartyUpdate",
     "PartyResponse",
+    "PartyReviewRejectRequest",
     "PartyHierarchyCreate",
     "PartyHierarchyResponse",
     "PartyContactCreate",

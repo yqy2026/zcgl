@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 
 from src.models.organization import Organization
 from src.models.ownership import Ownership
+from src.models.party import Party, PartyReviewStatus, PartyType
 from src.models.pdf_import_session import (
     PDFImportSession,
     ProcessingStep,
@@ -128,6 +129,36 @@ class TestContractGroupRoutes:
         db_session.refresh(lessee)
         db_session.refresh(owner)
 
+        operator_party = Party(
+            party_type=PartyType.ORGANIZATION.value,
+            name="M2 集成测试运营方 Party",
+            code="M2-INT-OPERATOR-PARTY",
+            external_ref=operator.id,
+            status="active",
+            review_status=PartyReviewStatus.APPROVED.value,
+        )
+        lessee_party = Party(
+            party_type=PartyType.ORGANIZATION.value,
+            name="M2 集成测试承租方 Party",
+            code="M2-INT-LESSEE-PARTY",
+            external_ref=lessee.id,
+            status="active",
+            review_status=PartyReviewStatus.APPROVED.value,
+        )
+        owner_party = Party(
+            party_type=PartyType.LEGAL_ENTITY.value,
+            name="M2 集成测试产权方 Party",
+            code="M2-INT-OWNER-PARTY",
+            external_ref=owner.id,
+            status="active",
+            review_status=PartyReviewStatus.APPROVED.value,
+        )
+        db_session.add_all([operator_party, lessee_party, owner_party])
+        db_session.commit()
+        db_session.refresh(operator_party)
+        db_session.refresh(lessee_party)
+        db_session.refresh(owner_party)
+
         import_session = PDFImportSession(
             session_id="session-m2-contract-ledger-flow",
             original_filename="m2-contract.pdf",
@@ -162,12 +193,12 @@ class TestContractGroupRoutes:
                     "total_deposit": "5000.00",
                     "payment_cycle": "月付",
                     "revenue_mode": "LEASE",
-                    "operator_party_id": operator.id,
-                    "owner_party_id": owner.id,
+                    "operator_party_id": operator_party.id,
+                    "owner_party_id": owner_party.id,
                     "contract_direction": "LESSOR",
                     "group_relation_type": "UPSTREAM",
-                    "lessor_party_id": owner.id,
-                    "lessee_party_id": lessee.id,
+                    "lessor_party_id": owner_party.id,
+                    "lessee_party_id": lessee_party.id,
                     "settlement_rule": {
                         "version": "v1",
                         "cycle": "月付",

@@ -12,6 +12,7 @@
 
 from datetime import date
 from decimal import Decimal
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -488,3 +489,90 @@ class TestAddContractToGroup:
 
         assert result.contract_id == "contract-001"
         assert mock_create.await_args.kwargs["data"]["contract_number"] == "HT-2026-0099"
+
+
+class TestSubmitReviewRequiresApprovedParties:
+    async def test_submit_review_should_block_when_related_party_not_approved(
+        self, mock_db: MagicMock
+    ) -> None:
+        service = ContractGroupService()
+        contract = MagicMock(spec=Contract)
+        contract.contract_id = "contract-001"
+        contract.contract_group_id = "group-001"
+        contract.sign_date = date(2026, 1, 1)
+        contract.status = ContractLifecycleStatus.DRAFT
+        contract.lessor_party_id = "party-lessor"
+        contract.lessee_party_id = "party-lessee"
+
+        group = SimpleNamespace(
+            contract_group_id="group-001",
+            operator_party_id="party-operator",
+            owner_party_id="party-owner",
+        )
+
+        with (
+            patch.object(service, "_get_contract_or_raise", AsyncMock(return_value=contract)),
+            patch(
+                "src.services.contract.contract_group_service.contract_group_crud.get",
+                new_callable=AsyncMock,
+                return_value=group,
+            ),
+            patch(
+                "src.services.contract.contract_group_service.party_service.assert_parties_approved",
+                new_callable=AsyncMock,
+                side_effect=OperationNotAllowedError("存在未审核主体"),
+            ) as mock_assert,
+            patch.object(service, "_transition_contract", AsyncMock()) as mock_transition,
+        ):
+            with pytest.raises(OperationNotAllowedError, match="未审核主体"):
+                await service.submit_review(mock_db, contract_id="contract-001")
+
+        mock_assert.assert_awaited_once_with(
+            mock_db,
+            party_ids=[
+                "party-lessor",
+                "party-lessee",
+                "party-operator",
+                "party-owner",
+            ],
+            operation="合同提审",
+        )
+        mock_transition.assert_not_awaited()
+
+    async def test_submit_review_should_transition_when_all_related_parties_approved(
+        self, mock_db: MagicMock
+    ) -> None:
+        service = ContractGroupService()
+        contract = MagicMock(spec=Contract)
+        contract.contract_id = "contract-001"
+        contract.contract_group_id = "group-001"
+        contract.sign_date = date(2026, 1, 1)
+        contract.status = ContractLifecycleStatus.DRAFT
+        contract.lessor_party_id = "party-lessor"
+        contract.lessee_party_id = "party-lessee"
+
+        group = SimpleNamespace(
+            contract_group_id="group-001",
+            operator_party_id="party-operator",
+            owner_party_id="party-owner",
+        )
+
+        with (
+            patch.object(service, "_get_contract_or_raise", AsyncMock(return_value=contract)),
+            patch(
+                "src.services.contract.contract_group_service.contract_group_crud.get",
+                new_callable=AsyncMock,
+                return_value=group,
+            ),
+            patch(
+                "src.services.contract.contract_group_service.party_service.assert_parties_approved",
+                new_callable=AsyncMock,
+                return_value=None,
+            ) as mock_assert,
+            patch.object(service, "_transition_contract", AsyncMock(return_value=contract)) as mock_transition,
+        ):
+            result = await service.submit_review(mock_db, contract_id="contract-001")
+
+        assert result is contract
+        mock_assert.assert_awaited_once()
+        mock_transition.assert_awaited_once()

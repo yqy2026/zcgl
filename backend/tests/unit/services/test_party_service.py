@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import ANY, AsyncMock, MagicMock, patch
 
@@ -5,7 +6,12 @@ import pytest
 
 from src.core.exception_handler import OperationNotAllowedError
 from src.crud.query_builder import PartyFilter
-from src.schemas.party import UserPartyBindingCreate, UserPartyBindingUpdate
+from src.models.party import PartyReviewStatus, PartyType
+from src.schemas.party import (
+    PartyCreate,
+    UserPartyBindingCreate,
+    UserPartyBindingUpdate,
+)
 from src.services.party.service import PartyService
 
 pytestmark = pytest.mark.asyncio
@@ -231,3 +237,59 @@ class TestPartyServiceScopeAndBindingBehavior:
 
         assert "失效时间不能早于生效时间" in str(exc_info.value)
         party_crud.create_user_party_binding.assert_not_called()
+
+
+class TestPartyServiceReviewFlow:
+    async def test_create_party_should_default_review_status_to_draft(self) -> None:
+        db = MagicMock()
+        created_party = SimpleNamespace(id="party-1")
+        party_crud = MagicMock()
+        party_crud.create_party = AsyncMock(return_value=created_party)
+        service = PartyService(data_access=party_crud)
+
+        payload = PartyCreate(
+            party_type=PartyType.ORGANIZATION,
+            name="测试主体",
+            code="PARTY-001",
+        )
+
+        result = await service.create_party(db, obj_in=payload)
+
+        assert result is created_party
+        create_payload = party_crud.create_party.await_args.kwargs["obj_in"]
+        assert create_payload["review_status"] == PartyReviewStatus.DRAFT.value
+        assert create_payload["review_by"] is None
+        assert create_payload["reviewed_at"] is None
+        assert create_payload["review_reason"] is None
+
+    async def test_approve_party_review_should_update_review_fields(self) -> None:
+        db = MagicMock()
+        now = datetime.now(UTC).replace(tzinfo=None)
+        party = SimpleNamespace(id="party-1", review_status=PartyReviewStatus.PENDING.value)
+        updated_party = SimpleNamespace(
+            id="party-1",
+            review_status=PartyReviewStatus.APPROVED.value,
+        )
+        party_crud = MagicMock()
+        party_crud.get_party = AsyncMock(return_value=party)
+        party_crud.update_party = AsyncMock(return_value=updated_party)
+        service = PartyService(data_access=party_crud)
+
+        with patch.object(PartyService, "_utcnow_naive", return_value=now):
+            result = await service.approve_party_review(
+                db,
+                party_id="party-1",
+                reviewer="reviewer-1",
+            )
+
+        assert result is updated_party
+        party_crud.update_party.assert_awaited_once_with(
+            db,
+            db_obj=party,
+            obj_in={
+                "review_status": PartyReviewStatus.APPROVED.value,
+                "review_by": "reviewer-1",
+                "reviewed_at": now,
+                "review_reason": None,
+            },
+        )

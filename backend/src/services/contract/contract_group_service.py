@@ -47,6 +47,7 @@ from src.schemas.contract_group import (
     ContractSummary,
 )
 from src.services.contract.ledger_service_v2 import ledger_service_v2
+from src.services.party import party_service
 
 # ── 业务常量 ─────────────────────────────────────────────────────────────────
 
@@ -622,6 +623,19 @@ class ContractGroupService:
         commit: bool = True,
     ) -> Contract:
         contract = await self._get_contract_or_raise(db, contract_id=contract_id)
+        group = await contract_group_crud.get(db, contract.contract_group_id)
+        if group is None:
+            raise ResourceNotFoundError("合同组", contract.contract_group_id)
+        await party_service.assert_parties_approved(
+            db,
+            party_ids=[
+                contract.lessor_party_id,
+                contract.lessee_party_id,
+                group.operator_party_id,
+                group.owner_party_id,
+            ],
+            operation="合同提审",
+        )
         validate_sign_date_for_status(
             ContractLifecycleStatus.PENDING_REVIEW, contract.sign_date
         )

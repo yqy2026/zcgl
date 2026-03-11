@@ -11,7 +11,7 @@ from ...core.exception_handler import OperationNotAllowedError, ResourceNotFound
 from ...crud.party import CRUDParty, party_crud
 from ...crud.query_builder import PartyFilter
 from ...models.auth import User
-from ...models.party import Party, PartyContact, PartyHierarchy
+from ...models.party import Party, PartyContact, PartyHierarchy, PartyReviewStatus
 from ...models.user_party_binding import UserPartyBinding
 from ...schemas.party import (
     PartyContactCreate,
@@ -33,6 +33,10 @@ class PartyService:
 
     async def create_party(self, db: AsyncSession, *, obj_in: PartyCreate) -> Party:
         payload = self._normalize_party_payload(obj_in.model_dump())
+        payload.setdefault("review_status", PartyReviewStatus.DRAFT.value)
+        payload.setdefault("review_by", None)
+        payload.setdefault("reviewed_at", None)
+        payload.setdefault("review_reason", None)
         return await self.party_crud.create_party(db, obj_in=payload)
 
     async def get_party(self, db: AsyncSession, *, party_id: str) -> Party | None:
@@ -89,6 +93,125 @@ class PartyService:
 
         await self.party_crud.delete_party(db, db_obj=party)
         return True
+
+    async def submit_party_review(self, db: AsyncSession, *, party_id: str) -> Party:
+        party = await self.party_crud.get_party(db, party_id=party_id)
+        if party is None:
+            raise ResourceNotFoundError("主体", party_id)
+        if party.review_status != PartyReviewStatus.DRAFT:
+            raise OperationNotAllowedError(
+                "仅草稿状态的主体允许提审",
+                reason="party_review_submit_invalid_status",
+            )
+
+        return await self.party_crud.update_party(
+            db,
+            db_obj=party,
+            obj_in={
+                "review_status": PartyReviewStatus.PENDING.value,
+                "review_by": None,
+                "reviewed_at": None,
+                "review_reason": None,
+            },
+        )
+
+    async def approve_party_review(
+        self,
+        db: AsyncSession,
+        *,
+        party_id: str,
+        reviewer: str | None = None,
+    ) -> Party:
+        party = await self.party_crud.get_party(db, party_id=party_id)
+        if party is None:
+            raise ResourceNotFoundError("主体", party_id)
+        if party.review_status != PartyReviewStatus.PENDING:
+            raise OperationNotAllowedError(
+                "仅待审状态的主体允许审核通过",
+                reason="party_review_approve_invalid_status",
+            )
+
+        return await self.party_crud.update_party(
+            db,
+            db_obj=party,
+            obj_in={
+                "review_status": PartyReviewStatus.APPROVED.value,
+                "review_by": reviewer,
+                "reviewed_at": self._utcnow_naive(),
+                "review_reason": None,
+            },
+        )
+
+    async def reject_party_review(
+        self,
+        db: AsyncSession,
+        *,
+        party_id: str,
+        reviewer: str | None = None,
+        reason: str,
+    ) -> Party:
+        normalized_reason = str(reason).strip()
+        if normalized_reason == "":
+            raise OperationNotAllowedError(
+                "驳回主体审核时必须填写原因",
+                reason="party_review_reject_missing_reason",
+            )
+
+        party = await self.party_crud.get_party(db, party_id=party_id)
+        if party is None:
+            raise ResourceNotFoundError("主体", party_id)
+        if party.review_status != PartyReviewStatus.PENDING:
+            raise OperationNotAllowedError(
+                "仅待审状态的主体允许驳回",
+                reason="party_review_reject_invalid_status",
+            )
+
+        return await self.party_crud.update_party(
+            db,
+            db_obj=party,
+            obj_in={
+                "review_status": PartyReviewStatus.REJECTED.value,
+                "review_by": reviewer,
+                "reviewed_at": self._utcnow_naive(),
+                "review_reason": normalized_reason,
+            },
+        )
+
+    async def assert_parties_approved(
+        self,
+        db: AsyncSession,
+        *,
+        party_ids: list[str],
+        operation: str,
+    ) -> None:
+        normalized_party_ids: list[str] = []
+        seen_party_ids: set[str] = set()
+        for raw_party_id in party_ids:
+            normalized_party_id = str(raw_party_id).strip()
+            if normalized_party_id == "" or normalized_party_id in seen_party_ids:
+                continue
+            seen_party_ids.add(normalized_party_id)
+            normalized_party_ids.append(normalized_party_id)
+
+        if len(normalized_party_ids) == 0:
+            return
+
+        blocked_parties: list[str] = []
+        for party_id in normalized_party_ids:
+            party = await self.party_crud.get_party(db, party_id=party_id)
+            if party is None:
+                blocked_parties.append(f"{party_id}(missing)")
+                continue
+            if party.review_status != PartyReviewStatus.APPROVED:
+                party_name = str(getattr(party, "name", party_id)).strip() or party_id
+                blocked_parties.append(f"{party_name}({party_id})")
+
+        if len(blocked_parties) > 0:
+            raise OperationNotAllowedError(
+                f"{operation}前，关联主体必须全部已审核，未通过主体：" + ", ".join(blocked_parties),
+                reason="party_review_not_approved",
+                details={"party_ids": normalized_party_ids},
+            )
 
     async def add_hierarchy(
         self,

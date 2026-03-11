@@ -35,6 +35,13 @@ class PartyType(StrEnum):
     LEGAL_ENTITY = "legal_entity"
 
 
+class PartyReviewStatus(StrEnum):
+    DRAFT = "draft"
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
 class Party(Base):
     """Canonical legal/business party."""
 
@@ -56,6 +63,18 @@ class Party(Base):
     )
     status: Mapped[str] = mapped_column(
         String(50), nullable=False, default="active", comment="状态"
+    )
+    review_status: Mapped[PartyReviewStatus] = mapped_column(
+        String(50), nullable=False, default=PartyReviewStatus.DRAFT, comment="审核状态"
+    )
+    review_by: Mapped[str | None] = mapped_column(
+        String(100), nullable=True, comment="审核人"
+    )
+    reviewed_at: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True, comment="审核时间"
+    )
+    review_reason: Mapped[str | None] = mapped_column(
+        Text, nullable=True, comment="审核原因/驳回原因"
     )
     metadata_json: Mapped[dict[str, Any] | None] = mapped_column(
         "metadata", JSONB, comment="扩展信息"
@@ -205,6 +224,7 @@ class PartyContact(Base):
 
 __all__ = [
     "PartyType",
+    "PartyReviewStatus",
     "Party",
     "PartyHierarchy",
     "PartyContact",

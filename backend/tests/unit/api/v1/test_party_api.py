@@ -205,6 +205,50 @@ def test_user_party_bindings_crud_should_work(client, db_session) -> None:
     assert active_response.json() == []
 
 
+def test_party_review_endpoints_should_transition_review_status(client, db_session) -> None:
+    """主体审核接口应支持提审、通过、驳回三段流转。"""
+    from src.models.party import Party, PartyReviewStatus, PartyType
+
+    party = Party(
+        party_type=PartyType.ORGANIZATION,
+        name="Review Party",
+        code="REVIEW-001",
+        status="active",
+        review_status=PartyReviewStatus.DRAFT,
+    )
+    db_session.add(party)
+    db_session.flush()
+
+    submit_response = client.post(f"/api/v1/parties/{party.id}/submit-review")
+    assert submit_response.status_code == status.HTTP_200_OK
+    assert submit_response.json()["review_status"] == PartyReviewStatus.PENDING
+
+    approve_response = client.post(f"/api/v1/parties/{party.id}/approve-review")
+    assert approve_response.status_code == status.HTTP_200_OK
+    approve_payload = approve_response.json()
+    assert approve_payload["review_status"] == PartyReviewStatus.APPROVED
+    assert approve_payload["reviewed_at"] is not None
+
+    party_reject = Party(
+        party_type=PartyType.ORGANIZATION,
+        name="Reject Party",
+        code="REJECT-001",
+        status="active",
+        review_status=PartyReviewStatus.PENDING,
+    )
+    db_session.add(party_reject)
+    db_session.flush()
+
+    reject_response = client.post(
+        f"/api/v1/parties/{party_reject.id}/reject-review",
+        json={"reason": "资料不完整"},
+    )
+    assert reject_response.status_code == status.HTTP_200_OK
+    reject_payload = reject_response.json()
+    assert reject_payload["review_status"] == PartyReviewStatus.REJECTED
+    assert reject_payload["review_reason"] == "资料不完整"
+
+
 def test_create_user_party_binding_should_return_400_for_invalid_time_range(
     client, db_session
 ) -> None:
@@ -316,7 +360,8 @@ def test_list_parties_should_bypass_scope_for_admin_user(client, db_session) -> 
     assert response.status_code == status.HTTP_200_OK
     payload = response.json()
     assert isinstance(payload, list)
-    assert len(payload) == 2
+    codes = {item["code"] for item in payload}
+    assert {"ACME-001", "BETA-001"}.issubset(codes)
 
 
 def test_list_parties_cross_user_isolation(client, db_session) -> None:

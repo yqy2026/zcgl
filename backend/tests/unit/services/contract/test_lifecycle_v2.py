@@ -33,10 +33,13 @@ def _make_contract(
 ) -> MagicMock:
     contract = MagicMock(spec=Contract)
     contract.contract_id = contract_id
+    contract.contract_group_id = "group-001"
     contract.status = status
     contract.review_status = review_status
     contract.sign_date = sign_date
     contract.data_status = data_status
+    contract.lessor_party_id = "party-lessor"
+    contract.lessee_party_id = "party-lessee"
     contract.review_by = None
     contract.review_reason = None
     contract.reviewed_at = None
@@ -64,6 +67,20 @@ class TestContractLifecycleV2:
             patch(
                 "src.services.contract.contract_group_service.contract_crud.get",
                 new=AsyncMock(return_value=contract),
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_group_crud.get",
+                new=AsyncMock(
+                    return_value=MagicMock(
+                        contract_group_id="group-001",
+                        operator_party_id="party-operator",
+                        owner_party_id="party-owner",
+                    )
+                ),
+            ),
+            patch(
+                "src.services.contract.contract_group_service.party_service.assert_parties_approved",
+                new=AsyncMock(return_value=None),
             ),
             patch(
                 "src.services.contract.contract_group_service.contract_crud.update",
@@ -105,6 +122,18 @@ class TestContractLifecycleV2:
         with patch(
             "src.services.contract.contract_group_service.contract_crud.get",
             new=AsyncMock(return_value=contract),
+        ), patch(
+            "src.services.contract.contract_group_service.contract_group_crud.get",
+            new=AsyncMock(
+                return_value=MagicMock(
+                    contract_group_id="group-001",
+                    operator_party_id="party-operator",
+                    owner_party_id="party-owner",
+                )
+            ),
+        ), patch(
+            "src.services.contract.contract_group_service.party_service.assert_parties_approved",
+            new=AsyncMock(return_value=None),
         ):
             with pytest.raises(OperationNotAllowedError, match="sign_date"):
                 await submit_review(
