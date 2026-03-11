@@ -292,10 +292,17 @@ class TestAnalyticsServiceComprehensiveAnalytics:
         mock_occupancy_cls.return_value = mock_occupancy_service
 
         mock_assets = [MagicMock(data_status="正常")]
-        with patch(
-            "src.crud.asset.asset_crud.get_multi_with_search_async",
-            new_callable=AsyncMock,
-        ) as mock_get_assets:
+        with (
+            patch(
+                "src.crud.asset.asset_crud.get_multi_with_search_async",
+                new_callable=AsyncMock,
+            ) as mock_get_assets,
+            patch.object(
+                analytics_service,
+                "_list_active_contracts",
+                AsyncMock(return_value=[]),
+            ),
+        ):
             mock_get_assets.return_value = (mock_assets, len(mock_assets))
 
             result = await analytics_service.get_comprehensive_analytics(
@@ -329,10 +336,17 @@ class TestAnalyticsServiceComprehensiveAnalytics:
         mock_occupancy_cls.return_value = mock_occupancy_service
 
         mock_assets = [MagicMock(data_status="正常")]
-        with patch(
-            "src.crud.asset.asset_crud.get_multi_with_search_async",
-            new_callable=AsyncMock,
-        ) as mock_get_assets:
+        with (
+            patch(
+                "src.crud.asset.asset_crud.get_multi_with_search_async",
+                new_callable=AsyncMock,
+            ) as mock_get_assets,
+            patch.object(
+                analytics_service,
+                "_list_active_contracts",
+                AsyncMock(return_value=[]),
+            ),
+        ):
             mock_get_assets.return_value = (mock_assets, len(mock_assets))
 
             filters = {"include_deleted": False, "date_from": "2024-01-01"}
@@ -367,10 +381,17 @@ class TestAnalyticsServiceComprehensiveAnalytics:
                     MagicMock(data_status="正常"),
                     MagicMock(data_status="已删除"),
                 ]
-                with patch(
-                    "src.crud.asset.asset_crud.get_multi_with_search_async",
-                    new_callable=AsyncMock,
-                ) as mock_get_assets:
+                with (
+                    patch(
+                        "src.crud.asset.asset_crud.get_multi_with_search_async",
+                        new_callable=AsyncMock,
+                    ) as mock_get_assets,
+                    patch.object(
+                        analytics_service,
+                        "_list_active_contracts",
+                        AsyncMock(return_value=[]),
+                    ),
+                ):
                     mock_get_assets.return_value = (mock_assets, len(mock_assets))
 
                     filters = {"include_deleted": True}
@@ -1014,10 +1035,17 @@ class TestServiceIntegration:
         mock_occupancy_cls.return_value = mock_occupancy_service
 
         mock_assets = [MagicMock(data_status="正常")]
-        with patch(
-            "src.crud.asset.asset_crud.get_multi_with_search_async",
-            new_callable=AsyncMock,
-        ) as mock_get_assets:
+        with (
+            patch(
+                "src.crud.asset.asset_crud.get_multi_with_search_async",
+                new_callable=AsyncMock,
+            ) as mock_get_assets,
+            patch.object(
+                analytics_service,
+                "_list_active_contracts",
+                AsyncMock(return_value=[]),
+            ),
+        ):
             mock_get_assets.return_value = (mock_assets, len(mock_assets))
 
             result = await analytics_service.get_comprehensive_analytics(
@@ -1053,10 +1081,17 @@ class TestServiceIntegration:
                 mock_occupancy_cls.return_value = mock_occupancy_service
 
                 mock_assets = [MagicMock(data_status="正常")]
-                with patch(
-                    "src.crud.asset.asset_crud.get_multi_with_search_async",
-                    new_callable=AsyncMock,
-                ) as mock_get_assets:
+                with (
+                    patch(
+                        "src.crud.asset.asset_crud.get_multi_with_search_async",
+                        new_callable=AsyncMock,
+                    ) as mock_get_assets,
+                    patch.object(
+                        analytics_service,
+                        "_list_active_contracts",
+                        AsyncMock(return_value=[]),
+                    ),
+                ):
                     mock_get_assets.return_value = (mock_assets, len(mock_assets))
 
                     result = await analytics_service.get_comprehensive_analytics(
