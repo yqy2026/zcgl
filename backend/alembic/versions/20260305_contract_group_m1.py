@@ -9,8 +9,9 @@
   - agency_agreement_details 代理协议明细（1:1 → contracts）
   - contract_relations     合同间关系（上下游 / 代理-直租 / 续签）
 
-本迁移为 DDL only（仅建表），数据迁移（rent_contracts → contracts）在 M1b 中进行。
-旧 rent_contracts 及其子表 FK 在 M1b 中处理。
+本迁移负责 DDL（建表）；数据迁移在
+`20260306_m2_legacy_contract_backfill` 中完成。
+旧 rent_contracts 及其子表 FK 在后续 M2 迁移中切换。
 
 Revision ID: 20260305_contract_group_m1
 Revises: 20260305_project_field_enrichment_m1

@@ -18,10 +18,61 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
+def _column_exists(
+    inspector: sa.engine.reflection.Inspector,
+    table_name: str,
+    column_name: str,
+) -> bool:
+    if not inspector.has_table(table_name):
+        return False
+    return any(
+        str(column.get("name")) == column_name
+        for column in inspector.get_columns(table_name)
+    )
+
+
 def upgrade() -> None:
-    op.add_column(
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+
+    if not _column_exists(inspector, "contracts", "contract_number"):
+        op.add_column(
+            "contracts",
+            sa.Column(
+                "contract_number",
+                sa.String(length=100),
+                nullable=True,
+                comment="合同编号",
+            ),
+        )
+
+    op.execute(
+        sa.text(
+            """
+            UPDATE contracts AS c
+            SET contract_number = legacy.contract_number
+            FROM rent_contracts AS legacy
+            WHERE c.contract_id = legacy.id
+              AND (c.contract_number IS NULL OR c.contract_number = '')
+              AND legacy.contract_number IS NOT NULL
+              AND legacy.contract_number <> ''
+            """
+        )
+    )
+    op.execute(
+        sa.text(
+            """
+            UPDATE contracts
+            SET contract_number = 'AUTO-' || contract_id
+            WHERE contract_number IS NULL OR contract_number = ''
+            """
+        )
+    )
+    op.alter_column(
         "contracts",
-        sa.Column("contract_number", sa.String(length=100), nullable=False, comment="合同编号"),
+        "contract_number",
+        existing_type=sa.String(length=100),
+        nullable=False,
     )
     op.create_index(
         "ix_contracts_contract_number",
