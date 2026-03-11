@@ -10,6 +10,7 @@
 |------|------|------|------|
 | [2026-02-11-approval-flowable-b-plan.md](2026-02-11-approval-flowable-b-plan.md) | Flowable 编排内核 B 方案 | ⏸ 搁置 | 审批流方向待定，暂不实施 |
 | [2026-03-02-party-scope-isolation-fix-plan.md](2026-03-02-party-scope-isolation-fix-plan.md) | 组织数据权限隔离修复（全量排查） | 🔄 待执行 | Party 列表等集合接口作用域收敛缺失 |
+| [2026-03-11-m2-ledger-aggregate-and-recalc.md](2026-03-11-m2-ledger-aggregate-and-recalc.md) | M2 台账跨合同聚合查询 + 变更重算 | 🔄 待执行 | REQ-RNT-006 M2 范围最后两项 |
 
 ## 已归档方案
 
