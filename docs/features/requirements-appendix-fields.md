@@ -290,7 +290,7 @@
 | `currency_code` | string | 是 | 币种，MVP 固定 `CNY` | 已确认 |
 | `is_tax_included` | boolean | 是 | 含税标记，从所属合同继承 | 已确认 |
 | `tax_rate` | decimal(5,4) | 否 | 税率，从所属合同继承；范围 `[0,1]` | 已确认 |
-| `payment_status` | enum | 是 | `unpaid`（未付）/ `paid`（已付）/ `overdue`（逾期）/ `partial`（部分付）；默认 `unpaid` | 已确认 |
+| `payment_status` | enum | 是 | `unpaid`（未付）/ `paid`（已付）/ `overdue`（逾期）/ `partial`（部分付）/ `voided`（作废，系统保留）；默认 `unpaid` | 已确认 |
 | `paid_amount` | decimal(18,2) | 否 | 实收金额，>=0，默认 0 | 已确认 |
 | `notes` | text | 否 | 备注 | 已确认 |
 | `created_at` | datetime | 是 | 系统字段 | 已确认 |
@@ -299,6 +299,7 @@
 **约束**：
 - 合同 `已到期/已终止` 后停止生成未来台账，历史台账只读。
 - `payment_status` 由人工或外部回款系统更新，不自动计算。
+- `voided` 为系统保留状态，仅允许由台账重算流程写入；人工批量更新不得直接设置为 `voided`。
 - 幂等：`year_month` 已存在则跳过，不重新生成。
 
 ## 3.11 ContractAuditLog（合同操作审计日志）

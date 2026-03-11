@@ -323,8 +323,9 @@
   - `amount_due` / `currency_code` / `tax_rate` / `is_tax_included`：金额税口径冻结。
   - 台账金额来源：`ContractRentTerm.total_monthly_amount`（派生字段，= `monthly_rent + management_fee + other_fees`）。
 - 代码证据：
-  - `backend/src/api/v1/contracts/contract_groups.py`（`GET /contracts/{id}/ledger` + `PATCH /contracts/{id}/ledger`）
-  - `backend/src/services/contract/ledger_service_v2.py`（`generate_ledger_on_activation` + `query_ledger` + `batch_update_status`）
+  - `backend/src/api/v1/contracts/contract_groups.py`（`GET /contracts/{id}/ledger` + `PATCH /contracts/{id}/ledger/batch-update-status`）
+  - `backend/src/api/v1/contracts/ledger.py`（`GET /ledger/entries` + `POST /contracts/{id}/ledger/recalculate`）
+  - `backend/src/services/contract/ledger_service_v2.py`（`generate_ledger_on_activation` + `query_ledger` + `query_ledger_entries` + `recalculate_ledger` + `batch_update_status`）
 
 ### 6.4 客户域
 
@@ -538,7 +539,7 @@
 | REQ-RNT-003 | ✅ | `/api/v1/contracts/{contract_id}/*` 生命周期 6 端点 + 派生状态 + 审计日志 | `test_contract_lifecycle_api.py`, `test_contract_group_service.py` |
 | REQ-RNT-004 | 📋 | — | — |
 | REQ-RNT-005 | 📋 | — | — |
-| REQ-RNT-006 | 🚧 | `/api/v1/contracts/{contract_id}/ledger/*` | `test_ledger_service_v2.py`, `test_contract_ledger_entries_migration.py` |
+| REQ-RNT-006 | 🚧 | `/api/v1/ledger/entries`, `/api/v1/contracts/{contract_id}/ledger/*` | `test_ledger_service_v2.py`, `test_ledger_aggregate_query.py`, `test_ledger_recalculate.py`, `test_ledger_api.py`, `test_contract_ledger_entries_migration.py` |
 | REQ-CUS-001 | 📋 | — | — |
 | REQ-CUS-002 | 📋 | — | — |
 | REQ-SCH-001 | 📋 | — | — |

@@ -3,6 +3,10 @@
 ## [Unreleased] - 2026-03-06
 
 ### 2026-03-11
+- fix(ledger): 继续收口批量更新状态约束——`batch_update_status()` 在 service 层新增完整支付状态白名单，内部调用者不能再绕过 API schema 写入任意未知状态。
+- test(ledger): 补充聚合查询 service 边界回归——新增 `year_month_start > year_month_end` 单测，锁定 service 层账期范围校验不回退。
+- fix(ledger): 收口台账 review follow-up——`query_ledger_entries()` 在 service 层补“至少一个核心筛选条件 + 账期范围”校验，`batch_update_status()` 在 service 层禁止 `voided` 绕过，REQ 代码证据中的旧批量更新路径同步修正。
+- feat(ledger): 完成 REQ-RNT-006 M2 台账跨合同聚合查询与变更重算——新增 `GET /api/v1/ledger/entries` 与 `POST /api/v1/contracts/{contract_id}/ledger/recalculate`，`payment_status` 新增系统保留值 `voided` 并禁止批量接口直接写入；`ledger_service_v2` 补充聚合查询与重算能力，需求证据/字段附录同步更新，新增 `test_ledger_aggregate_query.py`、`test_ledger_recalculate.py`、`test_ledger_api.py`。
 - docs(plans): 台账 M2 技术方案复核修订——修复 voided 唯一约束冲突、补充触发机制说明、完善 include_voided/due_date/路由注册/筛选约束，测试用例 15→19
 - docs(plans): 台账 M2 方案二次收口（小米 review）——文件清单补 req-spec/CHANGELOG、重算补 due_date 刷新、路由注册链路精确描述、voided 设为系统保留状态，测试用例 19→22
 

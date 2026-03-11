@@ -6,7 +6,7 @@
 
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic_core import PydanticCustomError
@@ -399,6 +399,61 @@ class ContractLedgerEntryResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class LedgerAggregateQueryParams(BaseModel):
+    """跨合同台账聚合查询参数。"""
+
+    asset_id: str | None = Field(None, min_length=1, description="资产 ID")
+    party_id: str | None = Field(None, min_length=1, description="主体 ID")
+    contract_id: str | None = Field(None, min_length=1, description="合同 ID")
+    year_month_start: str | None = Field(
+        None,
+        pattern=r"^\d{4}-\d{2}$",
+        description="开始账期，格式 YYYY-MM",
+    )
+    year_month_end: str | None = Field(
+        None,
+        pattern=r"^\d{4}-\d{2}$",
+        description="结束账期，格式 YYYY-MM",
+    )
+    payment_status: Literal[
+        "unpaid",
+        "paid",
+        "overdue",
+        "partial",
+        "voided",
+    ] | None = Field(None, description="支付状态")
+    include_voided: bool = Field(False, description="是否包含作废条目")
+    offset: int = Field(0, ge=0, description="分页偏移")
+    limit: int = Field(20, ge=1, le=200, description="每页条数")
+
+    @model_validator(mode="after")
+    def validate_filters(self) -> "LedgerAggregateQueryParams":
+        if not any(
+            [
+                self.asset_id is not None,
+                self.party_id is not None,
+                self.contract_id is not None,
+                self.year_month_start is not None,
+            ]
+        ):
+            raise PydanticCustomError(
+                "missing_ledger_filters",
+                "asset_id、party_id、contract_id、year_month_start 至少需要一个筛选条件",
+                {},
+            )
+        if (
+            self.year_month_start is not None
+            and self.year_month_end is not None
+            and self.year_month_start > self.year_month_end
+        ):
+            raise PydanticCustomError(
+                "invalid_year_month_range",
+                "开始账期不能晚于结束账期",
+                {},
+            )
+        return self
+
+
 class ContractLedgerListResponse(BaseModel):
     """合同台账分页出参。"""
 
@@ -412,9 +467,29 @@ class ContractLedgerBatchUpdateRequest(BaseModel):
     """批量更新合同台账状态。"""
 
     entry_ids: list[str] = Field(..., min_length=1)
-    payment_status: str = Field(..., min_length=1)
+    payment_status: Literal["unpaid", "paid", "overdue", "partial"] = Field(
+        ..., description="支付状态（voided 为系统保留状态）"
+    )
     paid_amount: Decimal | None = Field(None, ge=0)
     notes: str | None = None
+
+
+class LedgerRecalculateSkippedEntry(BaseModel):
+    """重算时跳过的台账条目。"""
+
+    entry_id: str
+    year_month: str
+    payment_status: str
+    reason: str
+
+
+class LedgerRecalculateResponse(BaseModel):
+    """台账重算结果摘要。"""
+
+    created: int = Field(..., ge=0)
+    updated: int = Field(..., ge=0)
+    voided: int = Field(..., ge=0)
+    skipped_entries: list[LedgerRecalculateSkippedEntry] = Field(default_factory=list)
 
 
 class ContractRelationCreate(BaseModel):

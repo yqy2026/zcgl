@@ -7,12 +7,12 @@ CRUD helpers for ContractGroup（合同组）。
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import exists, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from ..models.asset import Asset
-from ..models.associations import contract_group_assets
+from ..models.associations import contract_assets, contract_group_assets
 from ..models.contract_group import (
     Contract,
     ContractAuditLog,
@@ -370,6 +370,19 @@ class CRUDContractGroup:
             stmt = stmt.where(ContractLedgerEntry.year_month.in_(year_months))
         return set((await db.execute(stmt)).scalars().all())
 
+    async def list_ledger_entries_by_contract(
+        self,
+        db: AsyncSession,
+        *,
+        contract_id: str,
+    ) -> list[ContractLedgerEntry]:
+        stmt = (
+            select(ContractLedgerEntry)
+            .where(ContractLedgerEntry.contract_id == contract_id)
+            .order_by(ContractLedgerEntry.year_month.asc())
+        )
+        return list((await db.execute(stmt)).scalars().all())
+
     async def get_ledger_by_contract(
         self,
         db: AsyncSession,
@@ -393,6 +406,68 @@ class CRUDContractGroup:
 
         items_stmt = (
             stmt.order_by(ContractLedgerEntry.year_month.asc())
+            .offset(offset)
+            .limit(limit)
+        )
+        items = list((await db.execute(items_stmt)).scalars().all())
+        return items, total
+
+    async def query_ledger_entries(
+        self,
+        db: AsyncSession,
+        *,
+        asset_id: str | None = None,
+        party_id: str | None = None,
+        contract_id: str | None = None,
+        year_month_start: str | None = None,
+        year_month_end: str | None = None,
+        payment_status: str | None = None,
+        include_voided: bool = False,
+        offset: int = 0,
+        limit: int = 20,
+    ) -> tuple[list[ContractLedgerEntry], int]:
+        stmt = select(ContractLedgerEntry).join(
+            Contract, ContractLedgerEntry.contract_id == Contract.contract_id
+        )
+
+        if asset_id is not None:
+            stmt = stmt.where(
+                exists(
+                    select(1)
+                    .select_from(contract_assets)
+                    .where(
+                        contract_assets.c.contract_id == Contract.contract_id,
+                        contract_assets.c.asset_id == asset_id,
+                    )
+                )
+            )
+        if party_id is not None:
+            stmt = stmt.where(
+                (Contract.lessor_party_id == party_id)
+                | (Contract.lessee_party_id == party_id)
+            )
+        if contract_id is not None:
+            stmt = stmt.where(ContractLedgerEntry.contract_id == contract_id)
+        if year_month_start is not None:
+            stmt = stmt.where(ContractLedgerEntry.year_month >= year_month_start)
+        if year_month_end is not None:
+            stmt = stmt.where(ContractLedgerEntry.year_month <= year_month_end)
+        if payment_status is not None:
+            stmt = stmt.where(ContractLedgerEntry.payment_status == payment_status)
+        if not include_voided:
+            stmt = stmt.where(ContractLedgerEntry.payment_status != "voided")
+
+        stmt = stmt.where(Contract.data_status == "正常")
+
+        count_stmt = select(func.count()).select_from(stmt.subquery())
+        total: int = (await db.execute(count_stmt)).scalar_one()
+
+        items_stmt = (
+            stmt.order_by(
+                ContractLedgerEntry.year_month.asc(),
+                ContractLedgerEntry.contract_id.asc(),
+                ContractLedgerEntry.entry_id.asc(),
+            )
             .offset(offset)
             .limit(limit)
         )

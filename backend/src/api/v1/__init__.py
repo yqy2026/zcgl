@@ -31,7 +31,7 @@ from .auth.organization import router as organization_router
 from .auth.roles import router as roles_router
 
 # 导入各个模块的路由 - Contracts
-from .contracts import contract_groups_router
+from .contracts import contract_groups_router, ledger_router
 
 # 导入各个模块的路由 - Documents
 from .documents.excel import router as excel_router
@@ -132,6 +132,7 @@ api_router.include_router(ownership_router, prefix="/ownerships", tags=["权属�
 api_router.include_router(project_router, prefix="/projects", tags=["项目管理"])
 # 合同组体系（REQ-RNT-001）：/contract-groups/* 和 /contracts/*
 api_router.include_router(contract_groups_router, tags=["合同组管理"])
+api_router.include_router(ledger_router, tags=["台账管理"])
 # Analytics路由 - Service层重构版 (2026-01-04)
 # 原始 2017 行的 analytics.py 已重构为使用 AnalyticsService
 # 业务逻辑迁移至 src/services/analytics/analytics_service.py

@@ -10,7 +10,6 @@
 |------|------|------|------|
 | [2026-02-11-approval-flowable-b-plan.md](2026-02-11-approval-flowable-b-plan.md) | Flowable 编排内核 B 方案 | ⏸ 搁置 | 审批流方向待定，暂不实施 |
 | [2026-03-02-party-scope-isolation-fix-plan.md](2026-03-02-party-scope-isolation-fix-plan.md) | 组织数据权限隔离修复（全量排查） | 🔄 待执行 | Party 列表等集合接口作用域收敛缺失 |
-| [2026-03-11-m2-ledger-aggregate-and-recalc.md](2026-03-11-m2-ledger-aggregate-and-recalc.md) | M2 台账跨合同聚合查询 + 变更重算 | 🔄 待执行 | REQ-RNT-006 M2 范围最后两项 |
 
 ## 已归档方案
 
@@ -30,6 +29,7 @@
 | 2026-02-20-phase3-implementation-plan.md | Phase 3：前端全量迁移 + 策略包 UI | ✅ 已完成 |
 | 2026-03-01-phase4-implementation-plan.md | Phase 4：发布窗口执行 + 旧字段物理删除 | ✅ 已完成 |
 | 2026-03-06-m2-contract-lifecycle-and-ledger.md | M2：合同组生命周期、审核闭环与台账自动化 | ✅ 已实现 |
+| 2026-03-11-m2-ledger-aggregate-and-recalc.md | M2 台账跨合同聚合查询 + 变更重算 | ✅ 已实现 |
 
 ## 状态说明
 
