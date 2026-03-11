@@ -276,6 +276,123 @@ async def test_recalculate_ledger_requires_active_contract() -> None:
             )
 
 
+async def test_recalculate_ledger_skips_partial_entry() -> None:
+    """R-05: partial 条目应被跳过并记入 skipped_entries。"""
+    contract = _make_contract()
+    rent_terms = [
+        _make_rent_term(
+            start_date=date(2026, 5, 1),
+            end_date=date(2026, 5, 31),
+            monthly_rent="800.00",
+            total_monthly_amount="1000.00",
+        )
+    ]
+    partial_entry = _make_entry(
+        entry_id="entry-partial",
+        year_month="2026-05",
+        amount_due="500.00",
+        due_date=date(2026, 5, 1),
+        payment_status="partial",
+        paid_amount="200.00",
+    )
+    mock_db = MagicMock()
+    mock_db.flush = AsyncMock()
+    mock_db.commit = AsyncMock()
+
+    with (
+        patch(
+            "src.services.contract.ledger_service_v2.contract_crud.get",
+            new=AsyncMock(return_value=contract),
+        ),
+        patch(
+            "src.services.contract.ledger_service_v2.contract_group_crud.list_rent_terms_by_contract",
+            new=AsyncMock(return_value=rent_terms),
+        ),
+        patch(
+            "src.services.contract.ledger_service_v2.contract_group_crud.list_ledger_entries_by_contract",
+            new=AsyncMock(return_value=[partial_entry]),
+        ),
+        patch(
+            "src.services.contract.ledger_service_v2.contract_group_crud.create_ledger_entry",
+            new=AsyncMock(),
+        ),
+    ):
+        result = await ledger_service_v2.recalculate_ledger(
+            mock_db,
+            contract_id="contract-ledger",
+        )
+
+    assert result["skipped_entries"] == [
+        {
+            "entry_id": "entry-partial",
+            "year_month": "2026-05",
+            "payment_status": "partial",
+            "reason": "paid_or_partial_entry_requires_manual_resolution",
+        }
+    ]
+    assert result["created"] == 0
+    assert result["updated"] == 0
+    assert result["voided"] == 0
+    # partial 条目的金额不应被修改
+    assert partial_entry.amount_due == Decimal("500.00")
+    assert partial_entry.paid_amount == Decimal("200.00")
+
+
+async def test_recalculate_ledger_updates_due_date_only_when_amount_unchanged() -> None:
+    """R-10: payment_cycle 变化导致仅 due_date 变更，amount_due 不变。"""
+    # 季付 → due_date 为季初
+    contract = _make_contract(payment_cycle="季付")
+    rent_terms = [
+        _make_rent_term(
+            start_date=date(2026, 2, 1),
+            end_date=date(2026, 2, 28),
+            monthly_rent="3000.00",
+            total_monthly_amount="3000.00",
+        )
+    ]
+    # 现有条目 amount_due 已匹配，但 due_date 是月付的（月初）
+    existing_entry = _make_entry(
+        entry_id="entry-due-only",
+        year_month="2026-02",
+        amount_due="3000.00",
+        due_date=date(2026, 2, 1),  # 月付 due_date
+    )
+    mock_db = MagicMock()
+    mock_db.flush = AsyncMock()
+    mock_db.commit = AsyncMock()
+
+    with (
+        patch(
+            "src.services.contract.ledger_service_v2.contract_crud.get",
+            new=AsyncMock(return_value=contract),
+        ),
+        patch(
+            "src.services.contract.ledger_service_v2.contract_group_crud.list_rent_terms_by_contract",
+            new=AsyncMock(return_value=rent_terms),
+        ),
+        patch(
+            "src.services.contract.ledger_service_v2.contract_group_crud.list_ledger_entries_by_contract",
+            new=AsyncMock(return_value=[existing_entry]),
+        ),
+        patch(
+            "src.services.contract.ledger_service_v2.contract_group_crud.create_ledger_entry",
+            new=AsyncMock(),
+        ),
+    ):
+        result = await ledger_service_v2.recalculate_ledger(
+            mock_db,
+            contract_id="contract-ledger",
+        )
+
+    # 季付 due_date = 季初 = 2026-01-01
+    assert existing_entry.due_date == date(2026, 1, 1)
+    # amount_due 不变
+    assert existing_entry.amount_due == Decimal("3000.00")
+    assert result["updated"] == 1
+    assert result["created"] == 0
+    assert result["voided"] == 0
+
+
 async def test_batch_update_status_rejects_voided_for_internal_callers() -> None:
     with pytest.raises(
         BusinessValidationError,
