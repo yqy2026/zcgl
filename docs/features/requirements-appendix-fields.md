@@ -1,7 +1,7 @@
 # 需求规格附录：字段冻结清单（v0.3）
 
 ## ✅ Status
-**当前状态**: Draft Freeze Candidate (2026-03-01, v0.3)  
+**当前状态**: Draft Freeze Candidate (2026-03-06, v0.4 — M2 字段采纣更新：新增 §3.5.1 ContractRentTerm / §3.10 ContractLedgerEntry / §3.11 ContractAuditLog；更新 §11.2 台账生成口径)  
 **对应主文档**: `docs/requirements-specification.md`  
 **用途**: 将业务口径转为可评审字段口径（必填/枚举/校验/展示）
 
@@ -47,8 +47,8 @@
 | `rentable_area` | number | 是 | 可出租面积，>=0 | 已确认 |
 | `rented_area` | number | 否 | 已出租面积（总口径），>=0 | 已确认 |
 | `occupancy_rate_total` | number | 否 | 总出租率（派生） | 已确认（派生） |
-| `project_ids` | string[] | 否 | 关联项目 ID 列表 | 已确认 |
-| `owner_party_ids` | string[] | 是 | 关联产权主体列表（至少 1 个） | 已确认 |
+| `project_id` | string | 否 | 当前有效关联项目 ID（单值，同一时点只允许一个当前有效项目，历史关联通过审计日志追溯） | 已确认 |
+| `owner_party_id` | string | 是 | 当前有效主产权主体（单值，同一时点只允许一个主产权主体，历史关联通过审计日志追溯） | 已确认 |
 | `manager_party_id` | string | 是 | 运营管理主体 | 已确认 |
 | `data_status` | enum | 是 | 正常/已删除 | 已确认 |
 | `review_status` | enum | 是 | 草稿/待审/已审/反审核 | 已确认 |
@@ -182,6 +182,31 @@
 
 > 说明：RentTerm（分阶段租金条款）保持为独立子表 FK → Contract 基表，不归入 LeaseContractDetail。
 
+### 3.5.1 ContractRentTerm（分阶段租金条款子表）
+
+> 定位：`LeaseContractDetail` 关联的分阶段租金条款，一份合同可有多个阶段（如阶梯租金）。台账按本表逐阶段展开自然月生成，不依赖 `monthly_rent_base`。  
+> 独立子表：`contract_rent_terms`，FK → `contracts.contract_id`（非旧 `rent_contracts`）。
+
+| 字段 | 类型 | 必填 | 规则/说明 | 状态 |
+|---|---|---|---|---|
+| `rent_term_id` | string | 是 | 主键（UUID） | 已确认 |
+| `contract_id` | string | 是 | FK → Contract 基表（`contracts.contract_id`） | 已确认 |
+| `sort_order` | int | 是 | 条款排序，从 1 开始；唯一约束：`(contract_id, sort_order)` | 已确认 |
+| `start_date` | date | 是 | 本阶段开始日 | 已确认 |
+| `end_date` | date | 是 | 本阶段结束日；须 `> start_date` | 已确认 |
+| `monthly_rent` | decimal(15,2) | 是 | 本阶段月租金，>=0 | 已确认 |
+| `management_fee` | decimal(15,2) | 否 | 管理费，>=0，默认 0 | 已确认 |
+| `other_fees` | decimal(15,2) | 否 | 其他费用，>=0，默认 0 | 已确认 |
+| `total_monthly_amount` | decimal(15,2) | 否 | 月合计金额（派生：`monthly_rent + management_fee + other_fees`） | 已确认（派生） |
+| `notes` | text | 否 | 阶段备注 | 已确认 |
+| `created_at` | datetime | 是 | 系统字段 | 已确认 |
+| `updated_at` | datetime | 是 | 系统字段 | 已确认 |
+
+**约束**：
+- 同一合同各阶段日期范围不得重叠。
+- 台账生成时按 `sort_order` 升序遍历，每阶段覆盖 `[start_date, end_date]` 内的完整自然月。
+- `total_monthly_amount` 为派生字段，禁止直接写入；由 Service 层计算后写库。
+
 ## 3.6 AgencyAgreementDetail（代理协议明细）
 
 > 定位：代理模式下委托协议的专有字段。一份 Contract 最多关联一条 AgencyAgreementDetail。代理模式下 `lessor_party_id` = 委托方（产权方），`lessee_party_id` = 受托方（运营方），不另设 `principal_party_id` / `agent_party_id`。
@@ -244,10 +269,59 @@
 | `total_income` | number | 是 | 总收入合计（派生） | 已确认（派生） |
 | `self_operated_rent_income` | number | 是 | 自营租金收入（派生） | 已确认（派生） |
 | `agency_service_income` | number | 是 | 代理服务费收入（派生） | 已确认（派生） |
-| `customer_entity_count` | number | 是 | 客户主体数（派生） | 已确认（派生） |
-| `customer_contract_count` | number | 是 | 客户合同数（派生） | 已确认（派生） |
+| `customer_entity_count` | number | 是 | 客户主体数（派生）；按 `customer_party_id` 去重 | 已确认（派生） |
+| `customer_contract_count` | number | 是 | 客户合同数（派生）；按 `contract_id` 去重 | 已确认（派生） |
 | `internal_rent_income` | number | 否 | 内部租赁收入（派生） | 已确认（派生） |
 | `terminal_rent_income` | number | 否 | 终端租赁收入（派生） | 已确认（派生） |
+
+## 3.10 ContractLedgerEntry（合同台账条目）
+
+> 定位：合同激活（`status → ACTIVE`）时自动生成的月度台账，记录每个自然月的应收/应付金额与回款状态。  
+> 物理表：`contract_ledger_entries`，FK → `contracts.contract_id`，完全取代旧 `rent_ledger`。
+
+| 字段 | 类型 | 必填 | 规则/说明 | 状态 |
+|---|---|---|---|---|
+| `entry_id` | string | 是 | 主键（UUID） | 已确认 |
+| `contract_id` | string | 是 | FK → Contract 基表（`contracts.contract_id`） | 已确认 |
+| `year_month` | string | 是 | 账期，格式 `YYYY-MM`；唯一约束：`(contract_id, year_month)` 防重复生成 | 已确认 |
+| `due_date` | date | 是 | 应付/应收日（按 `LeaseContractDetail.payment_cycle` 规则计算） | 已确认 |
+| `amount_due` | decimal(18,2) | 是 | 应付金额，>=0；含税/不含税口径与 `is_tax_included` 一致 | 已确认 |
+| `currency_code` | string | 是 | 币种，MVP 固定 `CNY` | 已确认 |
+| `is_tax_included` | boolean | 是 | 含税标记，从所属合同继承 | 已确认 |
+| `tax_rate` | decimal(5,4) | 否 | 税率，从所属合同继承；范围 `[0,1]` | 已确认 |
+| `payment_status` | enum | 是 | `unpaid`（未付）/ `paid`（已付）/ `overdue`（逾期）/ `partial`（部分付）；默认 `unpaid` | 已确认 |
+| `paid_amount` | decimal(18,2) | 否 | 实收金额，>=0，默认 0 | 已确认 |
+| `notes` | text | 否 | 备注 | 已确认 |
+| `created_at` | datetime | 是 | 系统字段 | 已确认 |
+| `updated_at` | datetime | 是 | 系统字段 | 已确认 |
+
+**约束**：
+- 合同 `已到期/已终止` 后停止生成未来台账，历史台账只读。
+- `payment_status` 由人工或外部回款系统更新，不自动计算。
+- 幂等：`year_month` 已存在则跳过，不重新生成。
+
+## 3.11 ContractAuditLog（合同操作审计日志）
+
+> 定位：合同每次状态流转或关键操作的审计留痕，不可修改。物理表：`contract_audit_logs`。
+
+| 字段 | 类型 | 必填 | 规则/说明 | 状态 |
+|---|---|---|---|---|
+| `log_id` | string | 是 | 主键（UUID） | 已确认 |
+| `contract_id` | string | 是 | FK → Contract 基表 | 已确认 |
+| `action` | string | 是 | 操作类型：`submit_review` / `approve` / `reject` / `expire` / `terminate` / `void` | 已确认 |
+| `old_status` | string | 否 | 操作前的 `status` 值 | 已确认 |
+| `new_status` | string | 否 | 操作后的 `status` 值 | 已确认 |
+| `review_status_old` | string | 否 | 操作前的 `review_status` 值 | 已确认 |
+| `review_status_new` | string | 否 | 操作后的 `review_status` 值 | 已确认 |
+| `reason` | string | 条件必填 | `reject` / `void` / `terminate` 时必填 | 已确认 |
+| `operator_id` | string | 否 | 操作人 ID | 已确认 |
+| `operator_name` | string | 否 | 操作人姓名（冗余展示） | 已确认 |
+| `related_entry_id` | string | 否 | 关联单号（冲销台账时填写，对应 `ContractLedgerEntry.entry_id`） | 已确认 |
+| `created_at` | datetime | 是 | 系统字段；操作时刻，不可修改 | 已确认 |
+
+**约束**：
+- 仅允许 INSERT，禁止 UPDATE / DELETE（审计表不可篡改）。
+- 每次成功状态流转必须同事务内写入一条日志。
 
 ---
 
@@ -274,7 +348,7 @@
 |---|---|---|---|
 | `id` | 资产主键 | 对应 `asset_id` | 直接更名为 `asset_id`，不保留 `id` 兼容字段 |
 | `ownership_category` | 权属类别 | v0.3 未纳入核心 | 直接删除，不再作为资产主档字段保留 |
-| `project_name` | 项目名称（冗余展示字段） | v0.3 用 `project_ids` | 直接删除；项目名称通过 `project_ids` 关联 `Project.project_name` 获取 |
+| `project_name` | 项目名称（冗余展示字段） | v0.3 用 `project_id` | 直接删除；项目名称通过 `project_id` 关联 `Project.project_name` 获取 |
 | `property_name` | 物业名称 | 对应 `asset_name` | 直接改为 `asset_name` |
 | `address` | 资产地址 | 同名字段 | 保留；v1.0 必填，不可空 |
 | `ownership_status` | 产权确权状态 | v0.3 未纳入核心 | 更名为 `title_status`；定义为法律确权状态，建议枚举：`已确权/部分确权/未确权/权属争议` |
@@ -311,11 +385,11 @@
 | `audit_notes` | 审核备注（旧口径） | 近似 `review_reason` | 直接收敛到 `review_reason`；迁移完成后删除 `audit_notes` |
 | `created_at` | 创建时间 | 跨对象统一字段 | 保留系统字段；系统自动写入，只读 |
 | `updated_at` | 更新时间 | 跨对象统一字段 | 保留系统字段；系统自动更新，只读 |
-| `project_id` | 单项目关联（deprecated） | v0.3 用 `project_ids` | 直接下线删除；统一使用 `project_ids`（经 `project_assets` 关系） |
-| `owner_party_id` | 单产权主体 | v0.3 用 `owner_party_ids` | 直接升级为 `owner_party_ids` 主字段；迁移完成后删除 `owner_party_id` |
+| `project_id` | 单项目关联 | 对应 `project_id` | 保留为当前有效项目关联（单值）；历史关联通过审计日志追溯 |
+| `owner_party_id` | 单产权主体 | 对应 `owner_party_id` | 保留为当前有效主产权主体（单值）；历史关联通过审计日志追溯 |
 | `manager_party_id` | 运营管理主体 | 同名字段 | 保留核心字段；单值必填，不升级多值 |
 | `organization_id` | 组织 ID（deprecated） | v0.3 未纳入核心 | 直接下线删除；不再作为资产主档字段 |
-| `ownership_id` | 权属 ID（deprecated） | v0.3 用主体关系 | 直接下线删除；统一使用主体关系字段（`owner_party_ids`） |
+| `ownership_id` | 权属 ID（deprecated） | v0.3 用主体关系 | 直接下线删除；统一使用 `owner_party_id` |
 
 ### 6.2 当前已存在的投影/计算字段（非主表列）
 
@@ -339,8 +413,8 @@
 | `asset_form` | 新增枚举列 |
 | `spatial_level` | 新增枚举列 |
 | `business_usage` | 新增枚举列 |
-| `project_ids` | 读模型聚合字段（由 `project_assets` 映射） |
-| `owner_party_ids` | 关系字段，v1.0 落地（含 `owner_party_id -> owner_party_ids` 迁移） |
+| `project_id` | 当前有效项目关联（单值，As-Built 已存在，直接保留） |
+| `owner_party_id` | 当前有效主产权主体（单值，As-Built 已存在，直接保留） |
 | `review_status` | 新增审核状态字段，v1.0 落地 |
 | `review_by` | 新增审核人字段，v1.0 落地 |
 | `reviewed_at` | 新增审核时间字段，v1.0 落地 |
@@ -349,7 +423,7 @@
 ### 6.4 已拍板决策（2026-03-03）
 
 1. `address` 保持必填，不调整为可选。
-2. 将 `owner_party_id` 升级为多值 `owner_party_ids`，并在 v1.0 落地。
+2. `owner_party_id` 保持单值，表示当前有效主产权主体；历史产权变更通过审计日志追溯。
 3. `review_*`（`review_status/review_by/reviewed_at/review_reason`）在 v1.0 落地。
 4. Asset 地址校验策略冻结为“半结构化地址”：
    - 字段形态：`province_code`、`city_code`、`district_code` + `address_detail`（均必填）。
@@ -362,7 +436,7 @@
 
 1. `id`：直接更名为 `asset_id`，不保留 `id` 兼容字段。
 2. `ownership_category`：直接删除，不再作为资产主档字段保留。
-3. `project_name`：直接下线删除；所属项目名称通过 `project_ids` 关联 `Project.project_name` 获取。
+3. `project_name`：直接下线删除；所属项目名称通过 `project_id` 关联 `Project.project_name` 获取。
 4. `property_name`：直接更名为 `asset_name`，不保留旧字段。
 5. `address`：保持必填，采用半结构化地址规则（行政区三级 + `address_detail`），`address_detail` 需 `trim` 后长度 `5-200`。
 6. `ownership_status`：更名为 `title_status`（显示名：产权确权状态），用于表达法律确权状态，不承载经营或使用语义。
@@ -399,11 +473,11 @@
 37. `audit_notes`：直接收敛到 `review_reason`，迁移完成后删除 `audit_notes`。
 38. `created_at`：保留系统字段，系统自动写入且只读。
 39. `updated_at`：保留系统字段，系统自动更新且只读。
-40. `project_id`：直接下线删除，统一使用 `project_ids`（通过 `project_assets` 关系聚合）。
-41. `owner_party_id`：升级为 `owner_party_ids` 并在 v1.0 落地，`owner_party_id` 迁移后删除。
+40. `project_id`：保留为当前有效项目关联（单值）；历史关联通过审计日志追溯。
+41. `owner_party_id`：保留为当前有效主产权主体（单值）；历史产权变更通过审计日志追溯。
 42. `manager_party_id`：保留核心字段，单值必填，不升级多值。
 43. `organization_id`：直接下线删除，不再作为资产主档字段保留。
-44. `ownership_id`：直接下线删除，统一使用主体关系字段（`owner_party_ids`）。
+44. `ownership_id`：直接下线删除，统一使用 `owner_party_id`。
 
 补充落地项（非 As-Built 字段映射）：
 - `review_*`（`review_status/review_by/reviewed_at/review_reason`）在 v1.0 全量落地。
@@ -646,11 +720,12 @@
 
 ### 11.2 台账生成
 
-- 触发时机：合同 `status` 变为 `生效` 时。
-- 数据来源：按 `RentTerm`（分阶段租金条款）生成月度 `RentLedger`。
-- 台账 FK 挂 `Contract` 基表（不区分租赁/代理）。
-- `ServiceFeeLedger` 按 `AgencyAgreementDetail.service_fee_ratio` 和 `fee_calculation_base` 从租金台账派生。
+- 触发时机：合同 `status` 变为 `生效`（`ACTIVE`）时，由 `approve()` 在同一事务内触发。
+- 数据来源：按 **`ContractRentTerm`**（分阶段租金条款子表，见 §3.5.1）逐阶段展开自然月，生成月度 **`ContractLedgerEntry`**（见 §3.10，物理表 `contract_ledger_entries`）。
+- 台账 FK 挂 `contracts.contract_id`（新 Contract 基表，不区分租赁/代理）。
+- 代理协议合同（`AgencyAgreementDetail`，无 `ContractRentTerm`）激活时台账生成跳过，不报错；服务费台账为 M3 范围。
 - 合同 `已到期/已终止` 后停止生成未来台账，历史台账只读。
+- 幂等：`(contract_id, year_month)` 唯一约束保证重复触发不重复生成。
 
 ### 11.3 统计入库
 
