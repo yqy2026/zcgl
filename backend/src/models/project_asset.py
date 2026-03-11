@@ -3,7 +3,7 @@
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, String
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, String, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..database import Base
@@ -21,6 +21,12 @@ class ProjectAsset(Base):
         CheckConstraint(
             "valid_to IS NULL OR valid_to >= valid_from",
             name="ck_project_assets_valid_range",
+        ),
+        Index(
+            "uq_project_assets_active_asset",
+            "asset_id",
+            unique=True,
+            postgresql_where=text("valid_to IS NULL"),
         ),
     )
 

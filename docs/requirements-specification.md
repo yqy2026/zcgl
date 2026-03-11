@@ -145,14 +145,21 @@
   - `backend/src/api/v1/assets/asset_import.py`
   - `backend/src/api/v1/assets/asset_attachments.py`
 
-#### REQ-AST-002 资产与项目、权属关系可追踪 🚧
+#### REQ-AST-002 资产与项目、权属关系可追踪 ✅
 - 描述：资产需可关联项目与权属并支持关系变更留痕。
 - 验收：
-  - 单资产支持多维关联信息展示。
+  - 单资产在任意时点只允许一个当前有效项目、一个当前有效主产权主体；其他关联关系均为历史记录。
+  - 单资产支持多维关联信息展示（含当前有效关系与历史关系）。
   - 关系变更保留审计记录。
 - 代码证据：
-  - `backend/src/models/asset.py`（`ownership_entity` 动态投影已实现）
-  - `backend/src/crud/asset.py`（计算/投影字段不落库）
+  - `backend/src/models/asset.py`（`Asset.project` relationship 仅加载 `valid_to IS NULL` 的活跃绑定；`owner_party_id`/`manager_party_id` 单值 FK）
+  - `backend/src/models/project_asset.py`（`ProjectAsset` 时间窗口绑定 + partial unique index `uq_project_assets_active_asset`）
+  - `backend/src/models/asset_management_history.py`（`AssetManagementHistory` 经营方变更历史表）
+  - `backend/src/crud/asset_management_history.py`（`create`/`close_active`/`get_by_asset_id`）
+  - `backend/src/services/asset/asset_service.py`（`update_asset` 经营方变更自动留痕 + `get_asset_management_history`/`get_asset_project_history`）
+  - `backend/src/api/v1/assets/assets.py`（`GET /{id}/management-history`、`GET /{id}/project-history`）
+  - `backend/tests/unit/test_req_ast_002.py`（9 个单元测试）
+  - `backend/alembic/versions/20260311_req_ast_002_active_project_unique.py`
 
 #### REQ-AST-003 关键主数据支持审核与反审核 📋
 - 描述：资产等关键主数据需支持审核状态流转。
@@ -273,19 +280,19 @@
   - `Contract.group_relation_type`：`上游` / `下游` / `委托` / `直租`。
 
 #### REQ-RNT-003 合同生命周期与状态流转 🚧
-- 描述：合同组与组内合同需有可追溯状态管理。
+- 描述：合同组为纯容器，不拥有独立生命周期状态；生命周期状态管理在合同级进行。
 - 验收：
-  - 合同组状态最小集为：`草稿 -> 待审 -> 生效 -> 变更中 -> 已到期 / 已终止`。
-  - `已到期` 表示按合同自然到期结束；`已终止` 表示提前解约或提前终止。
-  - 合同组"已终止"判定为组内全部关键合同终止。
+  - 合同组状态为派生只读字段 `derived_status`，由组内合同状态实时计算：`筹备中`（组内无生效合同）/ `生效中`（存在至少一份生效合同）/ `已结束`（全部合同已到期或已终止）。不允许手工写入。
+  - 合同状态最小集为：`草稿 -> 待审 -> 生效 -> 已到期 / 已终止`。审核在合同级进行，不在组级进行。
+  - `已到期` 表示按合同自然到期结束；`已终止` 表示提前解约或提前终止。二者互斥。
 - 字段映射（附录 v0.3 / 3.3 ContractGroup）：
   - `settlement_rule`：最小必填键固定为 `version/cycle/settlement_mode/amount_rule/payment_rule`。
 - 代码证据：
   - `backend/src/services/contract/contract_group_service.py`
   - `backend/src/api/v1/contracts/contract_groups.py`（冲突检测与状态流转）
 
-#### REQ-RNT-004 合同组主审与关键合同联审 📋
-- 描述：审核机制采用"合同组主审 + 关键合同联审"。
+#### REQ-RNT-004 关键合同联审 📋
+- 描述：审核在合同级进行，关键合同提审时可触发同组关联合同联审。
 - 验收：
   - 支持混合联审策略：金额/周期/计费/分润/主体/资产变更走强联审，非关键文本类改动可单审。
   - 审核记录包含审核范围、审核结论与关联合同清单。
@@ -303,7 +310,7 @@
   - 支持按合同、资产、主体、时间区间查询。
   - 支持批量更新支付状态并导出。
   - 触发时机（MVP 冻结）：
-    - 初次生成：合同组状态由 `待审 -> 生效` 后立即按全生效区间生成台账。
+    - 初次生成：合同 `status` 变为 `生效`（ACTIVE）时，由 `approve()` 在同一事务内按 `ContractRentTerm` 展开自然月生成 `ContractLedgerEntry`（对齐附录 §11.2）。
     - 变更重算：金额/周期/计费规则变更并重新生效后，仅对受影响区间作废并重建。
     - 补偿任务：每日离线任务扫描缺失条目并补齐，确保覆盖率指标可达成。
 - 字段映射（附录 v0.3 / 3.4 RentContract）：
@@ -392,7 +399,7 @@
 - 描述：提供可直接用于经营决策的分析能力。
 - 验收：
   - 提供总收入合计并强制拆分"自营租金收入/代理服务费收入"。
-  - 提供客户双指标（主体数/合同数）。
+  - 提供客户双指标（主体数/合同数）。去重口径：`customer_entity_count`（客户主体数）按 `customer_party_id` 去重；`customer_contract_count`（客户合同数）按 `contract_id` 去重。
   - 支持结果导出并标记统计口径版本。
 - 代码证据：
   - `backend/src/api/v1/analytics/analytics.py`（综合分析/趋势/分布已实现）
@@ -412,6 +419,7 @@
 - 验收：
   - 支持初始化批量导入主体主档。
   - 合同组创建流程支持按权限快速创建 Party 草稿并进入审核。
+  - 草稿 Party 允许挂在草稿合同/草稿合同组上；但合同进入 `待审` 状态时，系统校验关联的所有 Party 必须为 `已审核` 状态，否则阻断提审。
   - 未审核通过的 Party 不得进入统计口径。
 
 ---
@@ -581,7 +589,7 @@ pytest -m unit tests/unit/api/v1/test_roles_permission_grants.py -q
 - 客户口径：客户为"当前视角下合同对方主体"，非固定身份。
 - 视角机制：首次手动选择，后续默认最近选择，支持全局切换。
 - 经营模式：承租模式与代理模式并存，合同组单模式不混用。
-- 审核策略：合同组主审 + 关键合同混合联审。
+- 审核策略：审核在合同级进行，关键合同提审时触发同组关联合同联审。
 - 反审核策略：已出账场景仅允许作废/冲销 + 重建，禁止物理删除。
 - 搜索策略：统一入口 + 模块内搜索并存，未授权对象不返回。
 - 字段冻结补充：编码规则按主体编码段生成（资产=产权方、项目=运营方、合同组=经营主责方），资产分类拆分为 `asset_form/spatial_level/business_usage` 三字段。

@@ -16,10 +16,12 @@ from ...core.exception_handler import (
     operation_not_allowed,
     validation_error,
 )
+from ...crud.asset_management_history import asset_management_history_crud
 from ...crud.contract import contract_crud
 from ...crud.history import history_crud
 from ...crud.ownership import ownership
 from ...crud.party import party_crud
+from ...crud.project_asset import project_asset_crud
 from ...crud.query_builder import PartyFilter
 from ...models.asset import Asset
 from ...models.asset_history import AssetHistory
@@ -587,6 +589,40 @@ class AssetService:
         )
         return history_records
 
+    async def get_asset_management_history(
+        self,
+        asset_id: str,
+        *,
+        party_filter: PartyFilter | None = None,
+        current_user_id: str | None = None,
+    ) -> list:
+        """获取资产经营方变更历史。"""
+        await self.get_asset(
+            asset_id,
+            party_filter=party_filter,
+            current_user_id=current_user_id,
+        )
+        return await asset_management_history_crud.get_by_asset_id(
+            self.db, asset_id=asset_id,
+        )
+
+    async def get_asset_project_history(
+        self,
+        asset_id: str,
+        *,
+        party_filter: PartyFilter | None = None,
+        current_user_id: str | None = None,
+    ) -> list:
+        """获取资产项目关联历史（含当前有效和已终止绑定）。"""
+        await self.get_asset(
+            asset_id,
+            party_filter=party_filter,
+            current_user_id=current_user_id,
+        )
+        return await project_asset_crud.get_asset_projects(
+            self.db, asset_id=asset_id, active_only=False,
+        )
+
     async def get_distinct_field_values(
         self,
         field_name: str,
@@ -832,6 +868,27 @@ class AssetService:
                         final_update["address"] = composed_address
 
                 calculated_asset_in = AssetUpdate(**final_update)
+
+                # REQ-AST-002: 经营方变更自动记录历史
+                new_manager = _normalize_optional_str(final_update.get("manager_party_id"))
+                old_manager = _normalize_optional_str(getattr(asset, "manager_party_id", None))
+                if new_manager and old_manager and new_manager != old_manager:
+                    # 结束旧经营方记录
+                    await asset_management_history_crud.close_active(
+                        self.db,
+                        asset_id=asset_id,
+                        manager_party_id=old_manager,
+                        commit=False,
+                    )
+                    # 创建新经营方记录
+                    await asset_management_history_crud.create(
+                        self.db,
+                        asset_id=asset_id,
+                        manager_party_id=new_manager,
+                        change_reason=f"经营方变更: {old_manager} → {new_manager}",
+                        changed_by=str(operator) if operator is not None else None,
+                        commit=False,
+                    )
 
                 updated = cast(
                     Asset,

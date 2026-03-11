@@ -20,12 +20,14 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    and_,
     inspect,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship, synonym
 from sqlalchemy.orm import attributes as orm_attributes
 
 from ..database import Base
+from .project_asset import ProjectAsset
 
 if TYPE_CHECKING:
     from .asset_history import AssetDocument, AssetHistory
@@ -301,8 +303,11 @@ class Asset(Base):
     project: Mapped["Project | None"] = relationship(
         "Project",
         secondary="project_assets",
-        primaryjoin="Asset.id == ProjectAsset.asset_id",
-        secondaryjoin="Project.id == ProjectAs" "set.project_id",
+        primaryjoin=lambda: and_(
+            Asset.id == ProjectAsset.asset_id,
+            ProjectAsset.valid_to.is_(None),
+        ),
+        secondaryjoin="Project.id == ProjectAsset.project_id",
         uselist=False,
         viewonly=True,
     )

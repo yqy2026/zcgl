@@ -674,3 +674,49 @@ async def get_asset_history(
         current_user_id=str(current_user.id),
     )
     return {"asset_id": asset_id, "history": history_records}
+
+
+@router.get("/{asset_id}/management-history", summary="获取资产经营方变更历史")
+async def get_asset_management_history(
+    asset_id: str = Path(..., description="资产ID"),
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="asset",
+            resource_id="{asset_id}",
+            deny_as_not_found=True,
+        )
+    ),
+) -> dict[str, Any]:
+    """获取资产的经营管理方变更历史记录。"""
+    asset_service = AsyncAssetService(db)
+    records = await asset_service.get_asset_management_history(
+        asset_id,
+        current_user_id=str(current_user.id),
+    )
+    return {"asset_id": asset_id, "management_history": records}
+
+
+@router.get("/{asset_id}/project-history", summary="获取资产项目关联历史")
+async def get_asset_project_history(
+    asset_id: str = Path(..., description="资产ID"),
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="asset",
+            resource_id="{asset_id}",
+            deny_as_not_found=True,
+        )
+    ),
+) -> dict[str, Any]:
+    """获取资产的项目关联历史（含当前有效和已终止绑定）。"""
+    asset_service = AsyncAssetService(db)
+    records = await asset_service.get_asset_project_history(
+        asset_id,
+        current_user_id=str(current_user.id),
+    )
+    return {"asset_id": asset_id, "project_history": records}
