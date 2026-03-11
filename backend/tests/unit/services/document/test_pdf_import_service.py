@@ -883,6 +883,93 @@ class TestConfirmImport:
         assert result["success"] is False
         assert "not found" in result["error"]
 
+    @pytest.mark.asyncio
+    async def test_confirm_import_agency_payload_creates_agency_detail(
+        self, pdf_service, mock_db
+    ):
+        """AGENCY 模式确认导入应显式创建 agency_detail。"""
+        mock_import_session = MagicMock(spec=PDFImportSession)
+        mock_import_session.status = SessionStatus.READY_FOR_REVIEW
+        mock_import_session.processing_result = {"existing": "data"}
+
+        mock_db.commit = AsyncMock()
+        mock_db.refresh = AsyncMock()
+
+        operator_party = MagicMock()
+        operator_party.code = "operator-001"
+        owner_party = MagicMock()
+
+        created_group = MagicMock()
+        created_group.contract_group_id = "group-agency-123"
+
+        created_contract = MagicMock()
+        created_contract.contract_id = "contract-agency-456"
+
+        confirmed_data = {
+            "revenue_mode": "AGENCY",
+            "operator_party_id": "party-op",
+            "owner_party_id": "party-owner",
+            "contract_direction": "承租",
+            "group_relation_type": "委托",
+            "lessor_party_id": "party-owner",
+            "lessee_party_id": "party-operator",
+            "settlement_rule": {
+                "version": "v1",
+                "cycle": "月付",
+                "settlement_mode": "manual",
+                "amount_rule": {"basis": "actual_received"},
+                "payment_rule": {"due_day": 15},
+            },
+            "contract_data": {
+                "contract_number": "AG-001",
+                "tenant_name": "Agency Tenant",
+                "start_date": "2024-01-01",
+                "end_date": "2024-12-31",
+                "monthly_rent_base": "5000",
+                "agency_detail": {
+                    "service_fee_ratio": "0.08",
+                    "fee_calculation_base": "actual_received",
+                    "agency_scope": "招商及代收租金",
+                },
+                "rent_terms": [],
+            },
+        }
+
+        with patch(
+            "src.services.document.pdf_import_service.pdf_import_session_crud.get_by_session_id_async",
+            new=AsyncMock(return_value=mock_import_session),
+        ), patch(
+            "src.services.document.pdf_import_service.party_service.get_party",
+            new=AsyncMock(side_effect=[operator_party, owner_party]),
+        ), patch(
+            "src.services.document.pdf_import_service.contract_group_service.generate_group_code",
+            new=AsyncMock(return_value="GRP-OPERATOR-202603-0002"),
+        ), patch(
+            "src.services.document.pdf_import_service.contract_group_service.create_contract_group",
+            new=AsyncMock(return_value=created_group),
+        ), patch(
+            "src.services.document.pdf_import_service.contract_group_service.add_contract_to_group",
+            new=AsyncMock(return_value=created_contract),
+        ) as mock_add_contract, patch(
+            "src.services.document.pdf_import_service.contract_group_service.create_rent_term",
+            new=AsyncMock(),
+        ) as mock_create_rent_term:
+            result = await pdf_service.confirm_import(
+                mock_db, "session_agency_123", confirmed_data, user_id=1
+            )
+
+        assert result["success"] is True
+        created_contract_payload = mock_add_contract.await_args.kwargs["obj_in"]
+        assert created_contract_payload.lease_detail is None
+        assert created_contract_payload.agency_detail is not None
+        assert str(created_contract_payload.agency_detail.service_fee_ratio) == "0.08"
+        assert (
+            created_contract_payload.agency_detail.fee_calculation_base
+            == "actual_received"
+        )
+        assert created_contract_payload.agency_detail.agency_scope == "招商及代收租金"
+        mock_create_rent_term.assert_not_awaited()
+
 
 # ============================================================================
 # Test cancel_processing

@@ -180,11 +180,7 @@ export interface RentTermData {
 
 export type PdfImportRevenueMode = 'LEASE' | 'AGENCY';
 export type PdfImportContractDirection = 'LESSOR' | 'LESSEE';
-export type PdfImportGroupRelationType =
-  | 'UPSTREAM'
-  | 'DOWNSTREAM'
-  | 'ENTRUSTED'
-  | 'DIRECT_LEASE';
+export type PdfImportGroupRelationType = 'UPSTREAM' | 'DOWNSTREAM' | 'ENTRUSTED' | 'DIRECT_LEASE';
 
 export interface PdfImportSettlementRule {
   version: string;
@@ -192,6 +188,12 @@ export interface PdfImportSettlementRule {
   settlement_mode: string;
   amount_rule: Record<string, unknown>;
   payment_rule: Record<string, unknown>;
+}
+
+export interface PdfImportAgencyDetail {
+  service_fee_ratio: string;
+  fee_calculation_base: 'actual_received' | 'due_amount';
+  agency_scope?: string;
 }
 
 export interface ConfirmedContractData {
@@ -219,6 +221,7 @@ export interface ConfirmedContractData {
   payment_terms?: string;
   contract_notes?: string;
   settlement_rule: PdfImportSettlementRule;
+  agency_detail?: PdfImportAgencyDetail;
   rent_terms: RentTermData[];
 }
 
@@ -430,16 +433,13 @@ export class PDFImportService {
   ): Promise<ConfirmImportResponse> {
     try {
       const normalizedConfirmedData = this.normalizeConfirmedContractData(confirmedData);
-      const response = await apiClient.post<ConfirmImportResponse>(
-        PDF_API.CONFIRM_IMPORT,
-        {
-          session_id: sessionId,
-          confirmed_data: {
-            ...normalizedConfirmedData,
-            contract_data: normalizedConfirmedData,
-          },
-        }
-      );
+      const response = await apiClient.post<ConfirmImportResponse>(PDF_API.CONFIRM_IMPORT, {
+        session_id: sessionId,
+        confirmed_data: {
+          ...normalizedConfirmedData,
+          contract_data: normalizedConfirmedData,
+        },
+      });
 
       const responseData = response.data;
       if (!responseData) {

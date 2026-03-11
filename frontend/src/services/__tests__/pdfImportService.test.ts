@@ -364,6 +364,65 @@ describe('PDFImportService', () => {
         | undefined;
       expect(nestedContractData).not.toHaveProperty('owner_party_id');
     });
+
+    it('should include agency_detail for agency confirmations', async () => {
+      vi.mocked(apiClient.post).mockResolvedValue({
+        data: {
+          success: true,
+          message: '导入成功',
+        },
+      });
+
+      await pdfImportService.confirmImport('session-123', {
+        revenue_mode: 'AGENCY',
+        contract_direction: 'LESSEE',
+        group_relation_type: 'ENTRUSTED',
+        operator_party_id: 'party-operator',
+        owner_party_id: 'party-owner',
+        lessor_party_id: 'party-owner',
+        lessee_party_id: 'party-operator',
+        contract_number: 'AG-001',
+        tenant_name: '代理租户',
+        start_date: '2026-01-01',
+        end_date: '2026-12-31',
+        monthly_rent_base: '10000',
+        settlement_rule: {
+          version: 'v1',
+          cycle: '月付',
+          settlement_mode: 'manual',
+          amount_rule: { basis: 'actual_received' },
+          payment_rule: { due_day: 15 },
+        },
+        agency_detail: {
+          service_fee_ratio: '0.08',
+          fee_calculation_base: 'actual_received',
+          agency_scope: '招商及代收租金',
+        },
+        rent_terms: [],
+      });
+
+      expect(apiClient.post).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          confirmed_data: expect.objectContaining({
+            revenue_mode: 'AGENCY',
+            agency_detail: {
+              service_fee_ratio: '0.08',
+              fee_calculation_base: 'actual_received',
+              agency_scope: '招商及代收租金',
+            },
+            contract_data: expect.objectContaining({
+              revenue_mode: 'AGENCY',
+              agency_detail: {
+                service_fee_ratio: '0.08',
+                fee_calculation_base: 'actual_received',
+                agency_scope: '招商及代收租金',
+              },
+            }),
+          }),
+        })
+      );
+    });
   });
 
   // ==========================================================================
