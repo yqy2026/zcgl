@@ -104,20 +104,21 @@ POST /api/v1/contracts/{contract_id}/ledger/recalculate
 3. 对比现有台账条目：
    - **新增月份**：
      - 先检查该 `(contract_id, year_month)` 是否已存在 `voided` 条目。
-     - 若存在：复活该条目——更新 `amount_due`、`payment_status=unpaid`、`paid_amount=0`、`updated_at`。
+     - 若存在：复活该条目——更新 `amount_due`、`due_date`、`payment_status=unpaid`、`paid_amount=0`、`updated_at`。
      - 若不存在：INSERT 新条目（`payment_status=unpaid`）。
      - **原因**：`(contract_id, year_month)` 唯一约束要求不能对同月 INSERT 两次，voided 条目物理未删除会阻塞新插入。
    - **删除月份**（旧条款覆盖但新条款不再覆盖）：标记 `payment_status=voided`（不物理删除）。
-   - **金额变动月份**（月份仍覆盖但 `amount_due` 变化）：
-     - 若 `payment_status` 为 `unpaid`：直接更新 `amount_due`。
+   - **金额/周期变动月份**（月份仍覆盖但 `amount_due` 或 `due_date` 变化）：
+     - 若 `payment_status` 为 `unpaid`：直接更新 `amount_due` + `due_date`。
      - 若已部分付/已付（`paid`/`partial`）：不自动覆盖，跳过并记入返回值 `skipped_entries`，由人工决策处理。
 4. 返回变更摘要：`{ created: N, updated: N, voided: N, skipped: [...] }`。
 
 **设计决策**：
 - 不引入新的"作废+重建"表，直接在 `ContractLedgerEntry` 上操作——`voided` 作为 `payment_status` 新值标记废弃条目。
+- **`voided` 为系统保留状态**：仅允许 `recalculate_ledger()` 写入，`batch_update_ledger_status()` 需增加白名单校验，合法值限 `unpaid`/`paid`/`overdue`/`partial`，传入 `voided` 返回 422。
 - 已收款条目不自动覆盖，避免财务数据被意外篡改。
-- 新建条目的 `due_date` 复用现有 `_calculate_due_date(month_date, payment_cycle)` 函数，`payment_cycle` 从 `LeaseContractDetail` 获取。
-- `voided` 状态需同步更新到附录 §3.10 `payment_status` 枚举定义。
+- 新建/复活/更新条目的 `due_date` 均复用现有 `_calculate_due_date(month_date, payment_cycle)` 函数，`payment_cycle` 从 `LeaseContractDetail` 获取。
+- `voided` 状态需同步更新到附录 §3.10 `payment_status` 枚举定义（标注"系统保留，不可人工设置"）。
 
 ---
 
@@ -128,16 +129,18 @@ POST /api/v1/contracts/{contract_id}/ledger/recalculate
 | 1 | `backend/src/crud/contract_group.py` | 修改 | 新增 `query_ledger_entries()` 方法（跨合同聚合查询，JOIN contract_assets/contracts） |
 | 2 | `backend/src/services/contract/ledger_service_v2.py` | 修改 | 新增 `query_ledger_entries()` + `recalculate_ledger()` 方法 |
 | 3 | `backend/src/api/v1/contracts/ledger.py` | 新建 | 独立台账路由：`GET /ledger/entries` + `POST /contracts/{id}/ledger/recalculate` |
-| 3a | `backend/src/api/v1/contracts/__init__.py` | 修改 | 导出 `ledger_router`，供 `api/v1/__init__.py` 注册 |
-| 3b | `backend/src/api/v1/__init__.py` | 修改 | `api_router.include_router(ledger_router, tags=["台账管理"])` |
-| 4 | `backend/src/schemas/contract_group.py` | 修改 | 新增 `LedgerAggregateQueryParams`、`LedgerRecalculateResponse` schema |
+| 3a | `backend/src/api/v1/contracts/__init__.py` | 修改 | 导出 `ledger_router` |
+| 3b | `backend/src/api/v1/__init__.py` | 修改 | `api_router.include_router(ledger_router, tags=["台账管理"])`——最终由 `route_registry.register_router(api_router)` 统一挂载到 app，无需额外注册 |
+| 4 | `backend/src/schemas/contract_group.py` | 修改 | 新增 `LedgerAggregateQueryParams`、`LedgerRecalculateResponse` schema；`ContractLedgerBatchUpdateRequest.payment_status` 增加 `Literal` 白名单校验（排除 `voided`） |
 | 5 | `backend/tests/unit/services/contract/test_ledger_aggregate_query.py` | 新建 | 聚合查询单测（按资产/主体/时间区间/组合筛选） |
 | 6 | `backend/tests/unit/services/contract/test_ledger_recalculate.py` | 新建 | 变更重算单测（新增/作废/金额变动/已付跳过） |
 | 7 | `backend/tests/unit/api/v1/test_ledger_api.py` | 新建 | API 分层测试（聚合查询 + 重算端点） |
 
-| 8 | `docs/features/requirements-appendix-fields.md` | 修改 | §3.10 `payment_status` 枚举新增 `voided` 值 |
+| 8 | `docs/features/requirements-appendix-fields.md` | 修改 | §3.10 `payment_status` 枚举新增 `voided`（系统保留） |
+| 9 | `docs/requirements-specification.md` | 修改 | REQ-RNT-006 代码证据补充新端点路径 |
+| 10 | `CHANGELOG.md` | 修改 | 记录本次变更 |
 
-共计 **6 修改 + 4 新建 = 10 文件**。
+共计 **8 修改 + 4 新建 = 12 文件**。
 
 ---
 
@@ -150,7 +153,7 @@ Step 2: Schema 层 — LedgerAggregateQueryParams + LedgerRecalculateResponse
   ↓
 Step 3: Service 层 — query_ledger_entries() + recalculate_ledger()
   ↓
-Step 4: API 层 — 新建 ledger.py 路由 + 修改 contracts/__init__.py + api/v1/__init__.py 注册
+Step 4: API 层 — 新建 ledger.py 路由 + contracts/__init__.py 导出 + api/v1/__init__.py 并入 api_router（由 route_registry 统一挂载）
   ↓
 Step 5: 测试 — 单测 + API 测试
   ↓
@@ -183,12 +186,14 @@ Step 6: 文档更新 — appendix voided 枚举 + REQ-RNT-006 代码证据 + CHA
 |---|------|------|
 | R-01 | RentTerm 新增覆盖 3 个月 | 创建 3 条新台账（unpaid） |
 | R-02 | RentTerm 删除使 2 个月不再覆盖 | 2 条台账标记 voided |
-| R-03 | RentTerm 金额变更，台账 unpaid | 直接更新 amount_due |
+| R-03 | RentTerm 金额变更，台账 unpaid | 直接更新 amount_due + due_date |
 | R-04 | RentTerm 金额变更，台账 paid | 跳过，记入 skipped_entries |
 | R-05 | RentTerm 金额变更，台账 partial | 跳过，记入 skipped_entries |
 | R-06 | 合同非 ACTIVE 状态 | 返回 422 |
 | R-07 | 重算幂等：连续调用两次，第二次无变化 | created=0, updated=0, voided=0 |
-| R-08 | 月份先 voided 再 RentTerm 恢复覆盖 | 复活已有 voided 条目（UPDATE 而非 INSERT），不触发唯一约束冲突 |
+| R-08 | 月份先 voided 再 RentTerm 恢复覆盖 | 复活已有 voided 条目（UPDATE 而非 INSERT），amount_due + due_date 均刷新，不触发唯一约束冲突 |
+| R-09 | 批量更新接口传入 `payment_status=voided` | 返回 422，voided 为系统保留状态 |
+| R-10 | RentTerm 周期变更（payment_cycle 变化），金额不变 | due_date 更新，amount_due 不变 |
 
 ---
 
@@ -202,7 +207,8 @@ Step 6: 文档更新 — appendix voided 枚举 + REQ-RNT-006 代码证据 + CHA
 | 聚合查询数据量大（无筛选条件） | 强制至少一个筛选条件（`asset_id`/`party_id`/`contract_id`/`year_month_start`），否则 422 |
 | voided 条目在后续查询中的展示 | 聚合查询默认排除 voided；`include_voided=true` 参数可选包含 |
 | `(contract_id, year_month)` 唯一约束 vs voided 复活 | 新增月份先查 voided 条目，存在则 UPDATE 复活，否则 INSERT |
-| 重算 `due_date` 计算 | 复用 `_calculate_due_date()`，从 `LeaseContractDetail.payment_cycle` 取参 |
+| 重算 `due_date` 计算 | 复用 `_calculate_due_date()`，从 `LeaseContractDetail.payment_cycle` 取参；金额变动/复活/新增均刷新 `due_date` |
+| `voided` 状态被人工滥用 | Schema 层 `ContractLedgerBatchUpdateRequest.payment_status` 白名单校验排除 `voided`；仅 `recalculate_ledger()` 内部可写入 |
 
 ---
 

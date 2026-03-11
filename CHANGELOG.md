@@ -4,8 +4,11 @@
 
 ### 2026-03-11
 - docs(plans): 台账 M2 技术方案复核修订——修复 voided 唯一约束冲突、补充触发机制说明、完善 include_voided/due_date/路由注册/筛选约束，测试用例 15→19
+- docs(plans): 台账 M2 方案二次收口（小米 review）——文件清单补 req-spec/CHANGELOG、重算补 due_date 刷新、路由注册链路精确描述、voided 设为系统保留状态，测试用例 19→22
 
 ### 🛠️ 本次变更 (Current Changes)
+
+- 测试基建回归修复（2026-03-11）：① `backend/tests/e2e/factories.py` 的资产创建工厂已从旧 `address` 输入切换为当前口径要求的 `address_detail`，修复资产生命周期 e2e 在创建阶段返回 `422` 的问题；② `backend/tests/conftest.py` 与 `backend/tests/unit/conftest.py` 的 PostgreSQL schema reset 现在会先终止同库其他连接，再执行 `DROP SCHEMA public`，避免测试库清理被锁等待；③ `backend/tests/e2e/conftest.py::db_tables` 不再重复执行 Alembic/`create_all`，避免与根级 `setup_test_database` 预热流程互相打架，修复单条 e2e 运行时的重复迁移问题。验证：`tests/e2e/test_asset_lifecycle_e2e.py::test_asset_complete_lifecycle_e2e` 在显式测试库环境下通过。
 
 - 迁移枚举 cast 回归修复（2026-03-11）：修复 `backend/alembic/versions/20260306_m2_legacy_contract_backfill.py` 在 PostgreSQL 上执行 legacy backfill 时，`CASE` 表达式返回 text 导致 enum 列写入失败的问题。对 `revenue_mode`、`contract_direction`、`group_relation_type`、`status`、`review_status`、`relation_type` 六处表达式补显式 `::enum_type` cast，并新增回归测试 `backend/tests/unit/migration/test_contract_group_legacy_backfill_migration.py::test_upgrade_sql_should_cast_case_results_to_enum_types` 锁定 SQL 语义，防止全新库迁移链再次在该步骤失败。
 
