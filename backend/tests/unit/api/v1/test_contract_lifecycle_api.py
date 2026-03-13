@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from fastapi import Response
 
 pytestmark = pytest.mark.api
 
@@ -47,11 +48,12 @@ async def test_submit_contract_review_delegates_to_service() -> None:
 
     user = MagicMock(id="user-001", username="tester")
     detail = MagicMock(contract_id="contract-001")
+    response = Response()
 
     with (
         patch(
             "src.api.v1.contracts.contract_groups.contract_group_service.submit_review",
-            new=AsyncMock(return_value=MagicMock(contract_id="contract-001")),
+            new=AsyncMock(return_value=(MagicMock(contract_id="contract-001"), [])),
         ) as mock_submit_review,
         patch(
             "src.api.v1.contracts.contract_groups.contract_group_service.get_contract_detail",
@@ -60,6 +62,8 @@ async def test_submit_contract_review_delegates_to_service() -> None:
     ):
         result = await endpoint(
             contract_id="contract-001",
+            payload=None,
+            response=response,
             db=AsyncMock(),
             current_user=user,
             _authz=None,

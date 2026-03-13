@@ -517,6 +517,11 @@ class TestSubmitReviewRequiresApprovedParties:
                 new_callable=AsyncMock,
                 return_value=group,
             ),
+            patch.object(
+                mock_db,
+                "execute",
+                new=AsyncMock(return_value=MagicMock(all=MagicMock(return_value=[]))),
+            ),
             patch(
                 "src.services.contract.contract_group_service.party_service.assert_parties_approved",
                 new_callable=AsyncMock,
@@ -564,6 +569,11 @@ class TestSubmitReviewRequiresApprovedParties:
                 new_callable=AsyncMock,
                 return_value=group,
             ),
+            patch.object(
+                mock_db,
+                "execute",
+                new=AsyncMock(return_value=MagicMock(all=MagicMock(return_value=[]))),
+            ),
             patch(
                 "src.services.contract.contract_group_service.party_service.assert_parties_approved",
                 new_callable=AsyncMock,
@@ -573,6 +583,6 @@ class TestSubmitReviewRequiresApprovedParties:
         ):
             result = await service.submit_review(mock_db, contract_id="contract-001")
 
-        assert result is contract
+        assert result == (contract, [])
         mock_assert.assert_awaited_once()
         mock_transition.assert_awaited_once()

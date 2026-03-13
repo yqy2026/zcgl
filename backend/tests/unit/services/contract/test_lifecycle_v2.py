@@ -83,6 +83,10 @@ class TestContractLifecycleV2:
                 new=AsyncMock(return_value=None),
             ),
             patch(
+                "src.services.contract.contract_group_service.select",
+                wraps=__import__("sqlalchemy").select,
+            ),
+            patch(
                 "src.services.contract.contract_group_service.contract_crud.update",
                 new=AsyncMock(
                     side_effect=lambda db, db_obj, data, commit=False: _apply_update(
@@ -95,8 +99,10 @@ class TestContractLifecycleV2:
                 new=AsyncMock(),
             ) as mock_create_audit_log,
         ):
-            result = await submit_review(
-                AsyncMock(),
+            db = AsyncMock()
+            db.execute.return_value = MagicMock(all=MagicMock(return_value=[]))
+            result, warnings = await submit_review(
+                db,
                 contract_id=contract.contract_id,
                 current_user="user-001",
                 operator_name="测试用户",
@@ -104,6 +110,7 @@ class TestContractLifecycleV2:
 
         assert result.status == ContractLifecycleStatus.PENDING_REVIEW
         assert result.review_status == ContractReviewStatus.PENDING
+        assert warnings == []
         mock_update.assert_awaited_once()
         audit_payload = mock_create_audit_log.await_args.kwargs["data"]
         assert audit_payload["action"] == "submit_review"
@@ -299,3 +306,50 @@ class TestContractLifecycleV2:
                 )
 
         mock_update.assert_not_called()
+
+    async def test_submit_group_review_should_aggregate_asset_warnings(self):
+        service = ContractGroupService()
+        submit_group_review = getattr(service, "submit_group_review", None)
+        assert submit_group_review is not None, (
+            "ContractGroupService.submit_group_review 尚未实现"
+        )
+
+        group = MagicMock(contract_group_id="group-001")
+        draft_a = _make_contract(contract_id="draft-a")
+        draft_b = _make_contract(contract_id="draft-b")
+
+        with (
+            patch(
+                "src.services.contract.contract_group_service.contract_group_crud.get",
+                new=AsyncMock(return_value=group),
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.list_by_group",
+                new=AsyncMock(return_value=[draft_a, draft_b]),
+            ),
+            patch.object(
+                service,
+                "submit_review",
+                new=AsyncMock(
+                    side_effect=[
+                        (draft_a, ["合同 A: 关联资产 A 尚未审核通过"]),
+                        (draft_b, ["合同 B: 关联资产 B 尚未审核通过"]),
+                    ]
+                ),
+            ) as mock_submit_review,
+        ):
+            db = AsyncMock()
+            result = await submit_group_review(
+                db,
+                group_id="group-001",
+                current_user="user-001",
+                operator_name="测试用户",
+            )
+
+        assert result["updated_count"] == 2
+        assert result["warnings"] == [
+            "合同 A: 关联资产 A 尚未审核通过",
+            "合同 B: 关联资产 B 尚未审核通过",
+        ]
+        mock_submit_review.assert_awaited()
+        db.commit.assert_awaited_once()

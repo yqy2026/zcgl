@@ -45,6 +45,8 @@ from ....schemas.asset import (
     AssetLeaseSummaryResponse,
     AssetListItemResponse,
     AssetResponse,
+    AssetReviewLogResponse,
+    AssetReviewRejectRequest,
     AssetUpdate,
 )
 from ....services.asset.asset_service import (
@@ -91,6 +93,14 @@ def _normalize_identifier_sequence(values: Any) -> list[str]:
             continue
         normalized_values.append(normalized_value)
     return normalized_values
+
+
+def _resolve_operator_name(current_user: User) -> str:
+    return (
+        str(getattr(current_user, "full_name", "")).strip()
+        or str(getattr(current_user, "username", "")).strip()
+        or str(current_user.id)
+    )
 
 
 async def _resolve_owner_party_scope_by_ownership_id(
@@ -463,6 +473,160 @@ async def get_asset(
         current_user_id=str(current_user.id),
     )
     return AssetResponse.model_validate(asset)
+
+
+@router.post(
+    "/{asset_id}/submit-review",
+    response_model=AssetResponse,
+    summary="提交资产审核",
+)
+async def submit_asset_review(
+    asset_id: str = Path(..., description="资产ID"),
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="asset",
+            resource_id="{asset_id}",
+        )
+    ),
+) -> AssetResponse:
+    _ = _authz
+    asset = await AsyncAssetService(db).submit_asset_review(
+        asset_id,
+        operator=_resolve_operator_name(current_user),
+    )
+    return AssetResponse.model_validate(asset)
+
+
+@router.post(
+    "/{asset_id}/approve-review",
+    response_model=AssetResponse,
+    summary="审核通过资产",
+)
+async def approve_asset_review(
+    asset_id: str = Path(..., description="资产ID"),
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="asset",
+            resource_id="{asset_id}",
+        )
+    ),
+) -> AssetResponse:
+    _ = _authz
+    asset = await AsyncAssetService(db).approve_asset_review(
+        asset_id,
+        reviewer=_resolve_operator_name(current_user),
+    )
+    return AssetResponse.model_validate(asset)
+
+
+@router.post(
+    "/{asset_id}/reject-review",
+    response_model=AssetResponse,
+    summary="驳回资产审核",
+)
+async def reject_asset_review(
+    payload: AssetReviewRejectRequest,
+    asset_id: str = Path(..., description="资产ID"),
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="asset",
+            resource_id="{asset_id}",
+        )
+    ),
+) -> AssetResponse:
+    _ = _authz
+    asset = await AsyncAssetService(db).reject_asset_review(
+        asset_id,
+        reviewer=_resolve_operator_name(current_user),
+        reason=payload.reason,
+    )
+    return AssetResponse.model_validate(asset)
+
+
+@router.post(
+    "/{asset_id}/reverse-review",
+    response_model=AssetResponse,
+    summary="反审核资产",
+)
+async def reverse_asset_review(
+    payload: AssetReviewRejectRequest,
+    asset_id: str = Path(..., description="资产ID"),
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="asset",
+            resource_id="{asset_id}",
+        )
+    ),
+) -> AssetResponse:
+    _ = _authz
+    asset = await AsyncAssetService(db).reverse_asset_review(
+        asset_id,
+        reviewer=_resolve_operator_name(current_user),
+        reason=payload.reason,
+    )
+    return AssetResponse.model_validate(asset)
+
+
+@router.post(
+    "/{asset_id}/resubmit-review",
+    response_model=AssetResponse,
+    summary="重提资产审核",
+)
+async def resubmit_asset_review(
+    asset_id: str = Path(..., description="资产ID"),
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="asset",
+            resource_id="{asset_id}",
+        )
+    ),
+) -> AssetResponse:
+    _ = _authz
+    asset = await AsyncAssetService(db).resubmit_asset_review(
+        asset_id,
+        operator=_resolve_operator_name(current_user),
+    )
+    return AssetResponse.model_validate(asset)
+
+
+@router.get(
+    "/{asset_id}/review-logs",
+    response_model=list[AssetReviewLogResponse],
+    summary="获取资产审核历史",
+)
+async def get_asset_review_logs(
+    asset_id: str = Path(..., description="资产ID"),
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="asset",
+            resource_id="{asset_id}",
+            deny_as_not_found=True,
+        )
+    ),
+) -> list[AssetReviewLogResponse]:
+    _ = _authz
+    return await AsyncAssetService(db).get_asset_review_logs(
+        asset_id,
+        current_user_id=str(current_user.id),
+    )
 
 
 @router.get(

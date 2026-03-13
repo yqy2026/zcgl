@@ -5,6 +5,7 @@ from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import Any, cast
 
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.exc import StaleDataError
 
@@ -23,10 +24,16 @@ from ...crud.ownership import ownership
 from ...crud.party import party_crud
 from ...crud.project_asset import project_asset_crud
 from ...crud.query_builder import PartyFilter
-from ...models.asset import Asset
+from ...models.asset import Asset, AssetReviewStatus
 from ...models.asset_history import AssetHistory
+from ...models.asset_review_log import AssetReviewLog
+from ...models.associations import contract_assets
 from ...models.auth import User
-from ...models.contract_group import ContractLifecycleStatus, GroupRelationType
+from ...models.contract_group import (
+    Contract,
+    ContractLifecycleStatus,
+    GroupRelationType,
+)
 from ...schemas.asset import (
     AssetCreate,
     AssetLeaseSummaryResponse,
@@ -40,6 +47,9 @@ from ...services.party_scope import resolve_user_party_filter
 
 logger = logging.getLogger(__name__)
 ACTIVE_CONTRACT_STATUSES = {ContractLifecycleStatus.ACTIVE}
+_EDIT_BLOCKED_REVIEW_STATUSES = frozenset(
+    {AssetReviewStatus.PENDING.value, AssetReviewStatus.APPROVED.value}
+)
 
 
 def _utcnow_naive() -> datetime:
@@ -623,6 +633,264 @@ class AssetService:
             self.db, asset_id=asset_id, active_only=False,
         )
 
+    async def _list_asset_review_logs(self, asset_id: str) -> list[AssetReviewLog]:
+        stmt = (
+            select(AssetReviewLog)
+            .where(AssetReviewLog.asset_id == asset_id)
+            .order_by(AssetReviewLog.created_at.desc())
+        )
+        return list((await self.db.execute(stmt)).scalars().all())
+
+    async def get_asset_review_logs(
+        self,
+        asset_id: str,
+        *,
+        party_filter: PartyFilter | None = None,
+        current_user_id: str | None = None,
+    ) -> list[AssetReviewLog]:
+        await self.get_asset(
+            asset_id,
+            party_filter=party_filter,
+            current_user_id=current_user_id,
+        )
+        return await self._list_asset_review_logs(asset_id)
+
+    @staticmethod
+    def _require_review_reason(action: str, reason: str) -> str:
+        normalized_reason = reason.strip()
+        if normalized_reason == "":
+            raise validation_error(
+                f"{action}原因不能为空",
+                field_errors={"reason": "required"},
+            )
+        return normalized_reason
+
+    @staticmethod
+    def _ensure_allowed_review_status(
+        asset: Asset,
+        *,
+        allowed_statuses: set[str],
+        action: str,
+    ) -> None:
+        if asset.review_status not in allowed_statuses:
+            allowed_labels = ", ".join(sorted(allowed_statuses))
+            raise operation_not_allowed(
+                f"资产当前审核状态为 {asset.review_status}，仅允许在 {allowed_labels} 状态执行{action}",
+                reason="asset_invalid_review_status_transition",
+            )
+
+    async def _append_asset_review_log(
+        self,
+        *,
+        asset_id: str,
+        action: str,
+        from_status: str,
+        to_status: str,
+        operator: str,
+        reason: str | None = None,
+        context: dict[str, Any] | None = None,
+    ) -> None:
+        self.db.add(
+            AssetReviewLog(
+                asset_id=asset_id,
+                action=action,
+                from_status=from_status,
+                to_status=to_status,
+                operator=operator,
+                reason=reason,
+                context=context,
+            )
+        )
+
+    async def _count_active_contracts_for_asset(self, asset_id: str) -> int:
+        stmt = (
+            select(func.count(Contract.contract_id))
+            .select_from(Contract)
+            .join(contract_assets, contract_assets.c.contract_id == Contract.contract_id)
+            .where(
+                contract_assets.c.asset_id == asset_id,
+                Contract.data_status == "正常",
+                Contract.status == ContractLifecycleStatus.ACTIVE,
+            )
+        )
+        return int((await self.db.execute(stmt)).scalar_one())
+
+    async def submit_asset_review(self, asset_id: str, operator: str) -> Asset:
+        try:
+            async with self._transaction():
+                asset = await self.get_asset(asset_id, use_cache=False)
+                self._ensure_allowed_review_status(
+                    asset,
+                    allowed_statuses={AssetReviewStatus.DRAFT.value},
+                    action="提审",
+                )
+                from_status = asset.review_status
+                asset.review_status = AssetReviewStatus.PENDING.value
+                asset.review_by = None
+                asset.reviewed_at = None
+                asset.review_reason = None
+                asset.updated_by = operator
+                asset.updated_at = _utcnow_naive()
+                self.db.add(asset)
+                await self._append_asset_review_log(
+                    asset_id=asset.id,
+                    action="submit",
+                    from_status=from_status,
+                    to_status=asset.review_status,
+                    operator=operator,
+                )
+                await self.db.flush()
+                return asset
+        except StaleDataError as exc:
+            raise conflict(
+                "资产已被其他人更新，请刷新后重试",
+                resource_type="Asset",
+            ) from exc
+
+    async def approve_asset_review(self, asset_id: str, reviewer: str) -> Asset:
+        try:
+            async with self._transaction():
+                asset = await self.get_asset(asset_id, use_cache=False)
+                self._ensure_allowed_review_status(
+                    asset,
+                    allowed_statuses={AssetReviewStatus.PENDING.value},
+                    action="审核通过",
+                )
+                from_status = asset.review_status
+                asset.review_status = AssetReviewStatus.APPROVED.value
+                asset.review_by = reviewer
+                asset.reviewed_at = _utcnow_naive()
+                asset.review_reason = None
+                asset.updated_by = reviewer
+                asset.updated_at = _utcnow_naive()
+                self.db.add(asset)
+                await self._append_asset_review_log(
+                    asset_id=asset.id,
+                    action="approve",
+                    from_status=from_status,
+                    to_status=asset.review_status,
+                    operator=reviewer,
+                )
+                await self.db.flush()
+                return asset
+        except StaleDataError as exc:
+            raise conflict(
+                "资产已被其他人更新，请刷新后重试",
+                resource_type="Asset",
+            ) from exc
+
+    async def reject_asset_review(
+        self,
+        asset_id: str,
+        reviewer: str,
+        reason: str,
+    ) -> Asset:
+        normalized_reason = self._require_review_reason("驳回", reason)
+        try:
+            async with self._transaction():
+                asset = await self.get_asset(asset_id, use_cache=False)
+                self._ensure_allowed_review_status(
+                    asset,
+                    allowed_statuses={AssetReviewStatus.PENDING.value},
+                    action="驳回",
+                )
+                from_status = asset.review_status
+                asset.review_status = AssetReviewStatus.DRAFT.value
+                asset.review_by = reviewer
+                asset.reviewed_at = _utcnow_naive()
+                asset.review_reason = normalized_reason
+                asset.updated_by = reviewer
+                asset.updated_at = _utcnow_naive()
+                self.db.add(asset)
+                await self._append_asset_review_log(
+                    asset_id=asset.id,
+                    action="reject",
+                    from_status=from_status,
+                    to_status=asset.review_status,
+                    operator=reviewer,
+                    reason=normalized_reason,
+                )
+                await self.db.flush()
+                return asset
+        except StaleDataError as exc:
+            raise conflict(
+                "资产已被其他人更新，请刷新后重试",
+                resource_type="Asset",
+            ) from exc
+
+    async def reverse_asset_review(
+        self,
+        asset_id: str,
+        reviewer: str,
+        reason: str,
+    ) -> Asset:
+        normalized_reason = self._require_review_reason("反审核", reason)
+        try:
+            async with self._transaction():
+                asset = await self.get_asset(asset_id, use_cache=False)
+                self._ensure_allowed_review_status(
+                    asset,
+                    allowed_statuses={AssetReviewStatus.APPROVED.value},
+                    action="反审核",
+                )
+                from_status = asset.review_status
+                asset.review_status = AssetReviewStatus.REVERSED.value
+                asset.review_by = reviewer
+                asset.reviewed_at = _utcnow_naive()
+                asset.review_reason = normalized_reason
+                asset.updated_by = reviewer
+                asset.updated_at = _utcnow_naive()
+                active_contract_count = await self._count_active_contracts_for_asset(asset.id)
+                self.db.add(asset)
+                await self._append_asset_review_log(
+                    asset_id=asset.id,
+                    action="reverse",
+                    from_status=from_status,
+                    to_status=asset.review_status,
+                    operator=reviewer,
+                    reason=normalized_reason,
+                    context={"active_contract_count": active_contract_count},
+                )
+                await self.db.flush()
+                return asset
+        except StaleDataError as exc:
+            raise conflict(
+                "资产已被其他人更新，请刷新后重试",
+                resource_type="Asset",
+            ) from exc
+
+    async def resubmit_asset_review(self, asset_id: str, operator: str) -> Asset:
+        try:
+            async with self._transaction():
+                asset = await self.get_asset(asset_id, use_cache=False)
+                self._ensure_allowed_review_status(
+                    asset,
+                    allowed_statuses={AssetReviewStatus.REVERSED.value},
+                    action="重提审",
+                )
+                from_status = asset.review_status
+                asset.review_status = AssetReviewStatus.PENDING.value
+                asset.review_by = None
+                asset.reviewed_at = None
+                asset.review_reason = None
+                asset.updated_by = operator
+                asset.updated_at = _utcnow_naive()
+                self.db.add(asset)
+                await self._append_asset_review_log(
+                    asset_id=asset.id,
+                    action="resubmit",
+                    from_status=from_status,
+                    to_status=asset.review_status,
+                    operator=operator,
+                )
+                await self.db.flush()
+                return asset
+        except StaleDataError as exc:
+            raise conflict(
+                "资产已被其他人更新，请刷新后重试",
+                resource_type="Asset",
+            ) from exc
+
     async def get_distinct_field_values(
         self,
         field_name: str,
@@ -791,6 +1059,12 @@ class AssetService:
                     current_user_id=str(user_id) if user_id is not None else None,
                 )
 
+                if asset.review_status in _EDIT_BLOCKED_REVIEW_STATUSES:
+                    raise operation_not_allowed(
+                        f"资产处于 {asset.review_status} 状态，不允许编辑业务字段，请先反审核",
+                        reason="asset_edit_blocked_by_review_status",
+                    )
+
                 # 2. 枚举值验证 (如果提供了更新数据)
                 validation_service = get_enum_validation_service_async(self.db)
                 # only validate fields that are present
@@ -922,6 +1196,11 @@ class AssetService:
                     use_cache=False,
                     current_user_id=str(user_id) if user_id is not None else None,
                 )
+                if asset.review_status in _EDIT_BLOCKED_REVIEW_STATUSES:
+                    raise operation_not_allowed(
+                        f"资产处于 {asset.review_status} 状态，不允许删除，请先反审核",
+                        reason="asset_delete_blocked_by_review_status",
+                    )
                 await self._ensure_asset_not_linked(asset_id)
                 operator = (
                     getattr(current_user, "username", None)

@@ -15,6 +15,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.exception_handler import (
@@ -25,6 +26,8 @@ from src.core.exception_handler import (
 )
 from src.crud.contract import contract_crud
 from src.crud.contract_group import contract_group_crud
+from src.models.asset import Asset, AssetReviewStatus
+from src.models.associations import contract_assets
 from src.models.contract_group import (
     Contract,
     ContractAuditLog,
@@ -621,7 +624,7 @@ class ContractGroupService:
         current_user: str | None = None,
         operator_name: str | None = None,
         commit: bool = True,
-    ) -> Contract:
+    ) -> tuple[Contract, list[str]]:
         contract = await self._get_contract_or_raise(db, contract_id=contract_id)
         group = await contract_group_crud.get(db, contract.contract_group_id)
         if group is None:
@@ -639,7 +642,21 @@ class ContractGroupService:
         validate_sign_date_for_status(
             ContractLifecycleStatus.PENDING_REVIEW, contract.sign_date
         )
-        return await self._transition_contract(
+        stmt = (
+            select(Asset.asset_name, Asset.review_status)
+            .join(contract_assets, contract_assets.c.asset_id == Asset.id)
+            .where(
+                contract_assets.c.contract_id == contract_id,
+                Asset.review_status != AssetReviewStatus.APPROVED.value,
+            )
+        )
+        non_approved_assets = (await db.execute(stmt)).all()
+        asset_warnings = [
+            f"关联资产 {row.asset_name} 尚未审核通过（当前状态：{row.review_status}），请注意核实"
+            for row in non_approved_assets
+        ]
+
+        updated_contract = await self._transition_contract(
             db,
             contract=contract,
             allowed_statuses={ContractLifecycleStatus.DRAFT},
@@ -650,6 +667,7 @@ class ContractGroupService:
             operator_name=operator_name,
             commit=commit,
         )
+        return updated_contract, asset_warnings
 
     async def approve(
         self,
@@ -841,8 +859,9 @@ class ContractGroupService:
             )
 
         updated_contract_ids: list[str] = []
+        warnings: list[str] = []
         for contract in draft_contracts:
-            await self.submit_review(
+            _, contract_warnings = await self.submit_review(
                 db,
                 contract_id=contract.contract_id,
                 current_user=current_user,
@@ -850,6 +869,7 @@ class ContractGroupService:
                 commit=False,
             )
             updated_contract_ids.append(contract.contract_id)
+            warnings.extend(contract_warnings)
 
         if updated_contract_ids:
             await db.commit()
@@ -858,6 +878,7 @@ class ContractGroupService:
             "updated_count": len(updated_contract_ids),
             "skipped_count": len(contracts) - len(updated_contract_ids),
             "contract_ids": updated_contract_ids,
+            "warnings": warnings,
         }
 
     # ─── Rent Terms ─────────────────────────────────────────────────────

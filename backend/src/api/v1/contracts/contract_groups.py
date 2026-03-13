@@ -7,9 +7,10 @@
   /contracts/{id}           (合同 CRUD)
 """
 
+import json
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ....core.exception_handler import BaseBusinessError, internal_error, not_found
@@ -429,6 +430,7 @@ async def submit_contract_group_review(
 async def submit_contract_review(
     contract_id: str,
     payload: ContractLifecycleAction | None = None,
+    response: Response = None,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     _authz: Annotated[
@@ -445,12 +447,16 @@ async def submit_contract_review(
     _ = payload
     _ = _authz
     try:
-        await contract_group_service.submit_review(
+        _, warnings = await contract_group_service.submit_review(
             db,
             contract_id=contract_id,
             current_user=str(current_user.id),
             operator_name=current_user.username,
         )
+        if warnings:
+            response.headers["X-Asset-Review-Warnings"] = json.dumps(
+                warnings,
+            )
         return await contract_group_service.get_contract_detail(
             db,
             contract_id=contract_id,

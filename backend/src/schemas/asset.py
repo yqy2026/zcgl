@@ -382,6 +382,28 @@ class AssetUpdate(BaseModel):
         return v  # pragma: no cover
 
 
+class AssetReviewRejectRequest(BaseModel):
+    """资产驳回/反审核请求。"""
+
+    reason: str = Field(..., min_length=1, max_length=500, description="原因（必填）")
+
+
+class AssetReviewLogResponse(BaseModel):
+    """资产审核日志响应。"""
+
+    id: str = Field(..., description="日志ID")
+    asset_id: str = Field(..., description="资产ID")
+    action: str = Field(..., description="动作")
+    from_status: str = Field(..., description="变更前状态")
+    to_status: str = Field(..., description="变更后状态")
+    operator: str | None = Field(None, description="操作人")
+    reason: str | None = Field(None, description="原因")
+    context: dict[str, Any] | None = Field(None, description="附加上下文")
+    created_at: datetime = Field(..., description="创建时间")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class AssetResponseBase(BaseModel):
     """
     资产响应基础模型 - 使用宽松的str类型
@@ -476,7 +498,7 @@ class AssetResponseBase(BaseModel):
     tags: str | None = Field(None, description="标签")
 
     # 审核字段
-    review_status: str = Field("draft", description="审核状态：draft/pending/approved/rejected")
+    review_status: str = Field("draft", description="审核状态：draft/pending/approved/reversed")
     review_by: str | None = Field(None, description="审核人")
     reviewed_at: datetime | None = Field(None, description="审核时间")
     review_reason: str | None = Field(None, description="审核原因")

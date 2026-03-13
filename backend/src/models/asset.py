@@ -31,6 +31,7 @@ from .project_asset import ProjectAsset
 
 if TYPE_CHECKING:
     from .asset_history import AssetDocument, AssetHistory
+    from .asset_review_log import AssetReviewLog
     from .contract_group import Contract
     from .party import Party
     from .project import Project
@@ -84,7 +85,7 @@ class AssetReviewStatus(str, enum.Enum):
     DRAFT = "draft"          # 草稿
     PENDING = "pending"      # 待审
     APPROVED = "approved"    # 已审
-    REJECTED = "rejected"    # 反审核
+    REVERSED = "reversed"    # 反审核
 
 
 class Asset(Base):
@@ -239,7 +240,7 @@ class Asset(Base):
         DateTime, comment="审核时间（通过/反审核时必填）"
     )
     review_reason: Mapped[str | None] = mapped_column(
-        Text, comment="审核原因（反审核时必填）"
+        Text, comment="审核原因（驳回/反审核时必填）"
     )
 
     # 系统字段
@@ -269,6 +270,12 @@ class Asset(Base):
     # 关联关系
     history_records: Mapped[list["AssetHistory"]] = relationship(
         "AssetHistory", back_populates="asset", cascade="all, delete-orphan"
+    )
+    review_logs: Mapped[list["AssetReviewLog"]] = relationship(
+        "AssetReviewLog",
+        back_populates="asset",
+        cascade="all, delete-orphan",
+        order_by="AssetReviewLog.created_at.desc()",
     )
     documents: Mapped[list["AssetDocument"]] = relationship(
         "AssetDocument", back_populates="asset", cascade="all, delete-orphan"
