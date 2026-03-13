@@ -112,6 +112,13 @@ describe('AppBreadcrumb', () => {
     expect(screen.getByText('用户管理')).toBeInTheDocument();
   });
 
+  it('renders system party detail breadcrumb path', () => {
+    renderBreadcrumb('/system/parties/party-1');
+
+    expect(screen.getByText('系统管理')).toBeInTheDocument();
+    expect(screen.getByText('主体详情')).toBeInTheDocument();
+  });
+
   it('renders breadcrumb container', () => {
     renderBreadcrumb('/assets/list');
 

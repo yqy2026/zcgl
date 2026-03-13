@@ -117,6 +117,48 @@ describe('PartyService', () => {
     expect(updated.name).toBe('甲方-更新');
   });
 
+  it('submits, approves, and rejects party review', async () => {
+    vi.mocked(apiClient.post)
+      .mockResolvedValueOnce({
+        success: true,
+        data: { id: 'party-1', review_status: 'pending' },
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        data: { id: 'party-1', review_status: 'approved' },
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        data: { id: 'party-1', review_status: 'draft', review_reason: '资料不完整' },
+      });
+
+    const submitted = await service.submitReview('party-1');
+    const approved = await service.approveReview('party-1');
+    const rejected = await service.rejectReview('party-1', { reason: '资料不完整' });
+
+    expect(submitted.review_status).toBe('pending');
+    expect(approved.review_status).toBe('approved');
+    expect(rejected.review_status).toBe('draft');
+    expect(apiClient.post).toHaveBeenNthCalledWith(
+      1,
+      '/parties/party-1/submit-review',
+      undefined,
+      expect.objectContaining({ smartExtract: true })
+    );
+    expect(apiClient.post).toHaveBeenNthCalledWith(
+      2,
+      '/parties/party-1/approve-review',
+      undefined,
+      expect.objectContaining({ smartExtract: true })
+    );
+    expect(apiClient.post).toHaveBeenNthCalledWith(
+      3,
+      '/parties/party-1/reject-review',
+      { reason: '资料不完整' },
+      expect.objectContaining({ smartExtract: true })
+    );
+  });
+
   it('fetches party hierarchy', async () => {
     vi.mocked(apiClient.get).mockResolvedValue({
       success: true,

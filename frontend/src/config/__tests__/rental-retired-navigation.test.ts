@@ -50,4 +50,15 @@ describe('rental retired navigation config', () => {
     expect(dynamicBreadcrumbMap['/contract-groups/:id']).toBe('合同组详情');
     expect(dynamicBreadcrumbMap['/contract-groups/:id/edit']).toBe('编辑合同组');
   });
+
+  it('keeps party detail routes highlighted under system party menu', () => {
+    const systemSection = (MENU_ITEMS ?? []).find(item => item?.key === 'system');
+    const systemChildren =
+      'children' in (systemSection ?? {}) ? (systemSection?.children ?? []) : [];
+    const partyEntry = systemChildren.find(item => item?.key === '/system/parties');
+
+    expect(partyEntry?.label).toBe('主体管理');
+    expect(getSelectedKeys('/system/parties')).toEqual(['/system/parties']);
+    expect(getSelectedKeys('/system/parties/party-1')).toEqual(['/system/parties']);
+  });
 });

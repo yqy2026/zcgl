@@ -4,14 +4,19 @@ import logging
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...core.exception_handler import OperationNotAllowedError, ResourceNotFoundError
+from ...core.exception_handler import (
+    DuplicateResourceError,
+    OperationNotAllowedError,
+    ResourceNotFoundError,
+)
 from ...crud.party import CRUDParty, party_crud
 from ...crud.query_builder import PartyFilter
 from ...models.auth import User
 from ...models.party import Party, PartyContact, PartyHierarchy, PartyReviewStatus
+from ...models.party_review_log import PartyReviewLog
 from ...models.user_party_binding import UserPartyBinding
 from ...schemas.party import (
     PartyContactCreate,
@@ -37,6 +42,19 @@ class PartyService:
         payload.setdefault("review_by", None)
         payload.setdefault("reviewed_at", None)
         payload.setdefault("review_reason", None)
+
+        party_type = payload.get("party_type", "")
+        code = payload.get("code", "")
+        existing = await self.party_crud.get_party_by_type_and_code(
+            db, party_type=party_type, code=code
+        )
+        if existing is not None:
+            raise DuplicateResourceError(
+                resource_type="主体",
+                field="party_type+code",
+                value=f"{party_type}/{code}",
+            )
+
         return await self.party_crud.create_party(db, obj_in=payload)
 
     async def get_party(self, db: AsyncSession, *, party_id: str) -> Party | None:
@@ -83,6 +101,15 @@ class PartyService:
         if party is None:
             raise ResourceNotFoundError("主体", party_id)
 
+        if party.review_status in (
+            PartyReviewStatus.PENDING,
+            PartyReviewStatus.APPROVED,
+        ):
+            raise OperationNotAllowedError(
+                "待审或已审核状态的主体不允许编辑，请先驳回或反审核",
+                reason="party_update_forbidden_by_review_status",
+            )
+
         payload = self._normalize_party_payload(obj_in.model_dump(exclude_unset=True))
         return await self.party_crud.update_party(db, db_obj=party, obj_in=payload)
 
@@ -90,6 +117,17 @@ class PartyService:
         party = await self.party_crud.get_party(db, party_id=party_id)
         if party is None:
             return False
+
+        if party.review_status in (
+            PartyReviewStatus.PENDING,
+            PartyReviewStatus.APPROVED,
+        ):
+            raise OperationNotAllowedError(
+                "待审或已审核状态的主体不允许删除",
+                reason="party_delete_forbidden_by_review_status",
+            )
+
+        await self._assert_no_references(db, party_id=party_id)
 
         await self.party_crud.delete_party(db, db_obj=party)
         return True
@@ -104,7 +142,8 @@ class PartyService:
                 reason="party_review_submit_invalid_status",
             )
 
-        return await self.party_crud.update_party(
+        from_status = party.review_status.value if isinstance(party.review_status, PartyReviewStatus) else str(party.review_status)
+        result = await self.party_crud.update_party(
             db,
             db_obj=party,
             obj_in={
@@ -114,6 +153,14 @@ class PartyService:
                 "review_reason": None,
             },
         )
+        await self._write_review_log(
+            db,
+            party_id=party_id,
+            action="submit",
+            from_status=from_status,
+            to_status=PartyReviewStatus.PENDING.value,
+        )
+        return result
 
     async def approve_party_review(
         self,
@@ -131,7 +178,8 @@ class PartyService:
                 reason="party_review_approve_invalid_status",
             )
 
-        return await self.party_crud.update_party(
+        from_status = party.review_status.value if isinstance(party.review_status, PartyReviewStatus) else str(party.review_status)
+        result = await self.party_crud.update_party(
             db,
             db_obj=party,
             obj_in={
@@ -141,6 +189,15 @@ class PartyService:
                 "review_reason": None,
             },
         )
+        await self._write_review_log(
+            db,
+            party_id=party_id,
+            action="approve",
+            from_status=from_status,
+            to_status=PartyReviewStatus.APPROVED.value,
+            operator=reviewer,
+        )
+        return result
 
     async def reject_party_review(
         self,
@@ -166,16 +223,91 @@ class PartyService:
                 reason="party_review_reject_invalid_status",
             )
 
-        return await self.party_crud.update_party(
+        from_status = party.review_status.value if isinstance(party.review_status, PartyReviewStatus) else str(party.review_status)
+        result = await self.party_crud.update_party(
             db,
             db_obj=party,
             obj_in={
-                "review_status": PartyReviewStatus.REJECTED.value,
+                "review_status": PartyReviewStatus.DRAFT.value,
                 "review_by": reviewer,
                 "reviewed_at": self._utcnow_naive(),
                 "review_reason": normalized_reason,
             },
         )
+        await self._write_review_log(
+            db,
+            party_id=party_id,
+            action="reject",
+            from_status=from_status,
+            to_status=PartyReviewStatus.DRAFT.value,
+            operator=reviewer,
+            reason=normalized_reason,
+        )
+        return result
+
+    async def _assert_no_references(
+        self, db: AsyncSession, *, party_id: str
+    ) -> None:
+        """Check if this party is referenced by assets or contract groups."""
+        from ...models.asset import Asset
+        from ...models.contract_group import ContractGroup, LeaseContractDetail
+
+        # Check assets referencing this party as owner or manager
+        asset_count_stmt = select(func.count()).select_from(Asset).where(
+            (Asset.owner_party_id == party_id) | (Asset.manager_party_id == party_id)
+        )
+        asset_count = (await db.execute(asset_count_stmt)).scalar() or 0
+        if asset_count > 0:
+            raise OperationNotAllowedError(
+                f"该主体被 {asset_count} 个资产引用，无法删除",
+                reason="party_delete_has_asset_references",
+            )
+
+        # Check contract groups referencing this party
+        cg_count_stmt = select(func.count()).select_from(ContractGroup).where(
+            (ContractGroup.operator_party_id == party_id)
+            | (ContractGroup.owner_party_id == party_id)
+        )
+        cg_count = (await db.execute(cg_count_stmt)).scalar() or 0
+        if cg_count > 0:
+            raise OperationNotAllowedError(
+                f"该主体被 {cg_count} 个合同组引用，无法删除",
+                reason="party_delete_has_contract_group_references",
+            )
+
+        # Check lease contract details referencing this party
+        lcd_count_stmt = select(func.count()).select_from(LeaseContractDetail).where(
+            (LeaseContractDetail.lessor_party_id == party_id)
+            | (LeaseContractDetail.lessee_party_id == party_id)
+        )
+        lcd_count = (await db.execute(lcd_count_stmt)).scalar() or 0
+        if lcd_count > 0:
+            raise OperationNotAllowedError(
+                f"该主体被 {lcd_count} 个租赁合同引用，无法删除",
+                reason="party_delete_has_lease_contract_references",
+            )
+
+    async def _write_review_log(
+        self,
+        db: AsyncSession,
+        *,
+        party_id: str,
+        action: str,
+        from_status: str,
+        to_status: str,
+        operator: str | None = None,
+        reason: str | None = None,
+    ) -> None:
+        log = PartyReviewLog(
+            party_id=party_id,
+            action=action,
+            from_status=from_status,
+            to_status=to_status,
+            operator=operator,
+            reason=reason,
+        )
+        db.add(log)
+        await db.flush()
 
     async def assert_parties_approved(
         self,

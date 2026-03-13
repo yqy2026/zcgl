@@ -58,6 +58,9 @@ export const CONTRACT_GROUP_ROUTES = {
 
 // 系统管理路由
 export const SYSTEM_ROUTES = {
+  PARTIES: '/system/parties',
+  PARTY_DETAIL_PATH: '/system/parties/:id',
+  PARTY_DETAIL: (id: string) => `/system/parties/${id}`,
   USERS: '/system/users',
   ROLES: '/system/roles',
   ORGANIZATIONS: '/system/organizations',
@@ -335,6 +338,16 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     icon: 'setting',
     breadcrumb: ['系统管理'],
     children: [
+      {
+        path: SYSTEM_ROUTES.PARTIES,
+        title: '主体管理',
+        permissions: [{ resource: 'party', action: 'read' }],
+      },
+      {
+        path: SYSTEM_ROUTES.PARTY_DETAIL_PATH,
+        title: '主体详情',
+        permissions: [{ resource: 'party', action: 'read' }],
+      },
       {
         path: SYSTEM_ROUTES.USERS,
         title: '用户管理',

@@ -96,6 +96,11 @@ export const MENU_ITEMS: MenuProps['items'] = [
     label: '系统管理',
     children: [
       {
+        key: '/system/parties',
+        icon: <IdcardOutlined />,
+        label: '主体管理',
+      },
+      {
         key: '/system/users',
         icon: <UserOutlined />,
         label: '用户管理',
@@ -166,6 +171,9 @@ export function getSelectedKeys(pathname: string): string[] {
   }
   if (pathname.startsWith('/rental')) {
     return ['/rental/contracts'];
+  }
+  if (pathname.startsWith('/system/parties')) {
+    return ['/system/parties'];
   }
 
   return [pathname];

@@ -56,6 +56,7 @@ export const staticBreadcrumbMap: Record<string, string> = {
 
   // 系统管理
   '/system': '系统管理',
+  '/system/parties': '主体管理',
   '/system/users': '用户管理',
   '/system/roles': '角色权限',
   '/system/logs': '操作日志',
@@ -92,4 +93,7 @@ export const dynamicBreadcrumbMap: Record<string, string> = {
   // 项目
   '/project/:id': '项目详情',
   '/project/:id/edit': '编辑项目',
+
+  // 主体管理
+  '/system/parties/:id': '主体详情',
 };

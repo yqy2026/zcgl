@@ -42,8 +42,25 @@ class CRUDParty:
         await db.refresh(party)
         return party
 
-    async def get_party(self, db: AsyncSession, party_id: str) -> Party | None:
+    async def get_party(
+        self, db: AsyncSession, party_id: str, *, include_deleted: bool = False
+    ) -> Party | None:
         stmt = select(Party).where(Party.id == party_id)
+        if not include_deleted:
+            stmt = stmt.where(Party.deleted_at.is_(None))
+        return (await db.execute(stmt)).scalars().first()
+
+    async def get_party_by_type_and_code(
+        self,
+        db: AsyncSession,
+        *,
+        party_type: str,
+        code: str,
+    ) -> Party | None:
+        stmt = select(Party).where(
+            Party.party_type == party_type,
+            Party.code == code,
+        )
         return (await db.execute(stmt)).scalars().first()
 
     async def resolve_organization_party_id(
@@ -341,7 +358,7 @@ class CRUDParty:
         search: str | None = None,
         scoped_party_ids: list[str] | None = None,
     ) -> list[Party]:
-        stmt = select(Party)
+        stmt = select(Party).where(Party.deleted_at.is_(None))
         if scoped_party_ids is not None:
             normalized_scope_ids = [
                 normalized
@@ -394,11 +411,12 @@ class CRUDParty:
         db_obj: Party,
         commit: bool = True,
     ) -> None:
-        await db.delete(db_obj)
+        db_obj.deleted_at = _utcnow_naive()
         if commit:
             await db.commit()
         else:
             await db.flush()
+        await db.refresh(db_obj)
 
     async def add_hierarchy(
         self,

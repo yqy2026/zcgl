@@ -68,6 +68,7 @@ describe('AppRoutes authz metadata', () => {
 
   it('marks system management routes as adminOnly', () => {
     const systemPaths = [
+      SYSTEM_ROUTES.PARTIES,
       SYSTEM_ROUTES.USERS,
       SYSTEM_ROUTES.ROLES,
       SYSTEM_ROUTES.ORGANIZATIONS,

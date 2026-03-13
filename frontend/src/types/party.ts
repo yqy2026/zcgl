@@ -1,6 +1,7 @@
 /** Party domain types (Phase 3). */
 
 export type PartyType = 'organization' | 'legal_entity' | 'individual';
+export type PartyReviewStatus = 'draft' | 'pending' | 'approved' | 'reversed';
 
 export interface Party {
   id: string;
@@ -10,6 +11,10 @@ export interface Party {
   external_ref?: string | null;
   status: string;
   metadata?: Record<string, unknown>;
+  review_status?: PartyReviewStatus | null;
+  review_by?: string | null;
+  reviewed_at?: string | null;
+  review_reason?: string | null;
   created_at: string;
   updated_at: string;
 }

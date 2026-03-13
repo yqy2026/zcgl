@@ -210,6 +210,16 @@ const baseProtectedRoutes: ProtectedRouteItem[] = [
 
   // 系统管理
   {
+    path: SYSTEM_ROUTES.PARTY_DETAIL_PATH,
+    element: React.lazy(() => import('../pages/System/PartyDetailPage')),
+    adminOnly: true,
+  },
+  {
+    path: SYSTEM_ROUTES.PARTIES,
+    element: React.lazy(() => import('../pages/System/PartyListPage')),
+    adminOnly: true,
+  },
+  {
     path: SYSTEM_ROUTES.USERS,
     element: React.lazy(() => import('../pages/System/UserManagementPage')),
     adminOnly: true,

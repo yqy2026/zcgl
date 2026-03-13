@@ -245,7 +245,7 @@ def test_party_review_endpoints_should_transition_review_status(client, db_sessi
     )
     assert reject_response.status_code == status.HTTP_200_OK
     reject_payload = reject_response.json()
-    assert reject_payload["review_status"] == PartyReviewStatus.REJECTED
+    assert reject_payload["review_status"] == PartyReviewStatus.DRAFT
     assert reject_payload["review_reason"] == "资料不完整"
 
 

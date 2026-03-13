@@ -22,6 +22,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from ..database import Base
 
 if TYPE_CHECKING:
+    from .party_review_log import PartyReviewLog
     from .party_role import PartyRoleBinding
     from .user_party_binding import UserPartyBinding
 
@@ -33,13 +34,14 @@ def _utcnow_naive() -> datetime:
 class PartyType(StrEnum):
     ORGANIZATION = "organization"
     LEGAL_ENTITY = "legal_entity"
+    INDIVIDUAL = "individual"
 
 
 class PartyReviewStatus(StrEnum):
     DRAFT = "draft"
     PENDING = "pending"
     APPROVED = "approved"
-    REJECTED = "rejected"
+    REVERSED = "reversed"
 
 
 class Party(Base):
@@ -89,6 +91,9 @@ class Party(Base):
         onupdate=_utcnow_naive,
         comment="更新时间",
     )
+    deleted_at: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True, default=None, comment="软删除时间"
+    )
 
     contacts: Mapped[list["PartyContact"]] = relationship(
         "PartyContact", back_populates="party", cascade="all, delete-orphan"
@@ -110,6 +115,9 @@ class Party(Base):
     )
     user_bindings: Mapped[list["UserPartyBinding"]] = relationship(
         "UserPartyBinding", back_populates="party", cascade="all, delete-orphan"
+    )
+    review_logs: Mapped[list["PartyReviewLog"]] = relationship(
+        "PartyReviewLog", back_populates="party", cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:
