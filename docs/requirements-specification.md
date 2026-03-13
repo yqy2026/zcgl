@@ -161,12 +161,28 @@
   - `backend/tests/unit/test_req_ast_002.py`（9 个单元测试）
   - `backend/alembic/versions/20260311_req_ast_002_active_project_unique.py`
 
-#### REQ-AST-003 关键主数据支持审核与反审核 📋
+#### REQ-AST-003 关键主数据支持审核与反审核 ✅
 - 描述：资产等关键主数据需支持审核状态流转。
+- **技术方案**：`docs/archive/backend-plans/2026-03-11-req-ast-003-asset-review.md`
 - 验收：
   - 审核前后状态可追踪，保留操作者与时间。
-  - 反审核后可恢复可编辑状态。
-  - 审核态关键字段变更受控。
+  - 反审核后可恢复可编辑状态（APPROVED → REVERSED → 可编辑 → 重提审）。
+  - 审核态（APPROVED/PENDING）关键字段变更受控：禁止编辑一切业务字段，需先反审核。
+  - 审核状态机：DRAFT → PENDING → APPROVED，PENDING → DRAFT（驳回），APPROVED → REVERSED（反审核），REVERSED → PENDING（重提审）。
+  - 每次状态转换写入 `AssetReviewLog` 审计日志。
+  - 合同提审时关联资产未审核仅软警告（不阻断）。
+- 代码证据：
+  - `backend/src/models/asset.py`（`AssetReviewStatus.REVERSED` + `review_logs` 关系）
+  - `backend/src/models/asset_review_log.py`（`AssetReviewLog` 审计日志模型）
+  - `backend/alembic/versions/20260311_req_ast_003_asset_review.py`（审计表建表 + `rejected → reversed` 数据迁移）
+  - `backend/src/services/asset/asset_service.py`（5 个审核动作 + 编辑/删除守卫 + 审计日志查询）
+  - `backend/src/api/v1/assets/assets.py`（5 个审核端点 + `GET /review-logs`）
+  - `backend/src/services/contract/contract_group_service.py`（合同提审资产审核软警告）
+  - `backend/src/api/v1/contracts/contract_groups.py`（`X-Asset-Review-Warnings` 响应头）
+  - `backend/tests/unit/services/asset/test_asset_review.py`
+  - `backend/tests/unit/api/v1/test_asset_review_api.py`
+  - `backend/tests/unit/models/test_asset_review_status.py`
+  - `backend/tests/unit/migration/test_req_ast_003_asset_review_migration.py`
 
 #### REQ-AST-004 资产详情口径清晰展示 ✅
 - 描述：资产详情必须默认展示经营所需核心信息。
@@ -423,9 +439,13 @@
  - 代码证据：
   - `backend/src/models/party.py`
   - `backend/src/schemas/party.py`
-  - `backend/src/crud/party.py`
-  - `backend/src/services/party/service.py`
-  - `backend/src/api/v1/party.py`
+ - `backend/src/crud/party.py`
+ - `backend/src/services/party/service.py`
+ - `backend/src/api/v1/party.py`
+  - `frontend/src/constants/routes.ts`
+  - `frontend/src/routes/AppRoutes.tsx`
+  - `frontend/src/pages/System/PartyListPage.tsx`
+  - `frontend/src/pages/System/PartyDetailPage.tsx`
 
 #### REQ-PTY-002 Party 数据来源与创建路径 🚧
 - 描述：Party 支持"初始化导入 + 业务过程创建"双路径进入主档。
@@ -435,10 +455,12 @@
   - 草稿 Party 允许挂在草稿合同/草稿合同组上；但合同进入 `待审` 状态时，系统校验关联的所有 Party 必须为 `已审核` 状态，否则阻断提审。
   - 未审核通过的 Party 不得进入统计口径。
  - 代码证据：
-  - `backend/src/models/party.py`（`review_status/review_by/reviewed_at/review_reason`）
-  - `backend/src/services/party/service.py`（主体提审/通过/驳回 + `assert_parties_approved`）
-  - `backend/src/api/v1/party.py`（`/parties/{party_id}/submit-review|approve-review|reject-review`）
-  - `backend/src/services/contract/contract_group_service.py`（合同提审前主体审核门禁）
+ - `backend/src/models/party.py`（`review_status/review_by/reviewed_at/review_reason`）
+ - `backend/src/services/party/service.py`（主体提审/通过/驳回 + `assert_parties_approved`）
+ - `backend/src/api/v1/party.py`（`/parties/{party_id}/submit-review|approve-review|reject-review`）
+ - `backend/src/services/contract/contract_group_service.py`（合同提审前主体审核门禁）
+  - `frontend/src/services/partyService.ts`（主体提审/通过/驳回调用）
+  - `frontend/src/pages/System/PartyDetailPage.tsx`（审核按钮与编辑守卫提示）
 
 ---
 
@@ -530,7 +552,7 @@
 |---|---|---|---|
 | REQ-AST-001 | ✅ | `/api/v1/assets` (CRUD + batch + import) | `test_assets_projection_guard.py`, `test_asset_service.py` |
 | REQ-AST-002 | ✅ | 当前有效项目投影 + 项目/经营方历史关系 | `test_project_asset.py`, `test_assets_history_layering.py`, `test_asset_service.py` |
-| REQ-AST-003 | 📋 | — | — |
+| REQ-AST-003 | ✅ | `POST /api/v1/assets/{id}/submit-review` + `approve-review` + `reject-review` + `reverse-review` + `resubmit-review` + `GET review-logs` | `test_asset_review.py`, `test_asset_review_api.py`, `test_asset_review_status.py`, `test_req_ast_003_asset_review_migration.py` |
 | REQ-AST-004 | ✅ | `GET /api/v1/assets/{id}/lease-summary` | `test_asset_lease_summary.py` (service + api) |
 | REQ-PRJ-001 | ✅ | `/api/v1/projects` (CRUD + search) | `test_project.py`, `test_project_service.py` |
 | REQ-PRJ-002 | ✅ | `/api/v1/projects/{project_id}/assets` | `test_project_service.py`, `test_project.py` |
@@ -547,8 +569,8 @@
 | REQ-AUTH-002 | 📋 | — | — |
 | REQ-DOC-001 | ✅ | `/pdf-import/*` | `pdf_import.py` |
 | REQ-ANA-001 | 🚧 | `/analytics/*`（综合分析 + 导出带口径版本） | `test_analytics_service.py`, `test_analytics.py`, `analytics_service.py` |
-| REQ-PTY-001 | 🚧 | `/api/v1/parties` (CRUD + review fields) | `test_party_api.py`, `test_party_service.py` |
-| REQ-PTY-002 | 🚧 | `/api/v1/parties/{party_id}/submit-review|approve-review|reject-review` + 合同提审门禁 | `test_party_api.py`, `test_party_service.py`, `test_contract_group_service.py` |
+| REQ-PTY-001 | 🚧 | `/api/v1/parties` (CRUD + review fields) + `/system/parties` | `test_party_api.py`, `test_party_service.py`, `partyService.test.ts`, `PartyPages.test.tsx` |
+| REQ-PTY-002 | 🚧 | `/api/v1/parties/{party_id}/submit-review|approve-review|reject-review` + 合同提审门禁 + `/system/parties/:id` | `test_party_api.py`, `test_party_service.py`, `test_contract_group_service.py`, `partyService.test.ts`, `PartyPages.test.tsx` |
 
 ---
 

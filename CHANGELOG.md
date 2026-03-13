@@ -2,7 +2,13 @@
 
 ## [Unreleased] - 2026-03-06
 
+### 2026-03-12
+- feat(party): 完成 REQ-PTY-001/002 本轮主体主档 Gap 修复闭环。后端已收口 `PartyReviewStatus` 为 `draft/pending/approved/reversed`、驳回回草稿、`PENDING/APPROVED` 编辑/删除守卫、`deleted_at` 软删除、`PartyReviewLog` 审计日志、删除前资产/合同/租赁引用保护，以及 `(party_type, code)` 友好去重；前端新增系统管理入口 `/system/parties` 与主体详情页 `/system/parties/:id`，补齐主体列表、详情编辑、提审/通过/驳回操作和菜单/面包屑/路由配置；新增前端回归测试 `frontend/src/pages/System/__tests__/PartyPages.test.tsx`、`frontend/src/services/__tests__/partyService.test.ts`，并同步 SSOT 需求证据与方案归档。
+- feat(analytics-ui): ANA-001 经营口径字段前端完整对接。`AnalyticsStatsCard.tsx` 新增 `RevenueStatsGrid` 组件（总收入/自营租金收入/代理服务费收入/客户主体数/客户合同数 + 口径版本 Tag）；`AssetAnalyticsPage.tsx` 在财务指标下方新增「经营口径」Card；`useAssetAnalytics.ts` 导出数据补入 6 个 ANA-001 字段；`analyticsExportService.ts` Excel/CSV/HTML 三种导出格式全部补入经营口径数据。TypeScript 类型检查通过。
+- feat(asset): 完成 REQ-AST-003 资产审核与反审核闭环。新增 `AssetReviewLog` 审计日志模型与迁移 `backend/alembic/versions/20260311_req_ast_003_asset_review.py`，资产审核状态从 `draft/pending/approved/reversed` 完整流转，`backend/src/services/asset/asset_service.py` 增加提审/通过/驳回/反审核/重提审、审核日志查询，以及 `APPROVED/PENDING` 编辑与删除守卫；`backend/src/api/v1/assets/assets.py` 新增 6 个审核相关端点；合同提审在 `backend/src/services/contract/contract_group_service.py` / `backend/src/api/v1/contracts/contract_groups.py` 增加资产审核软警告并通过 `X-Asset-Review-Warnings` 返回；review follow-up 继续补齐两项稳定性修复：5 个资产审核动作统一把 `StaleDataError` 转换为 409 冲突语义，合同组批量提审返回聚合后的 `warnings` 列表，避免软警告静默丢失；SSOT 文档与方案归档同步更新。新增测试：`backend/tests/unit/services/asset/test_asset_review.py`、`backend/tests/unit/api/v1/test_asset_review_api.py`、`backend/tests/unit/models/test_asset_review_status.py`、`backend/tests/unit/migration/test_req_ast_003_asset_review_migration.py`。
+
 ### 2026-03-11
+- docs(plans): REQ-AST-003 资产审核与反审核技术方案——状态机 5 条转换（DRAFT→PENDING→APPROVED、PENDING→DRAFT 驳回、APPROVED→REVERSED 反审核、REVERSED→PENDING 重提审）+ 编辑/删除守卫（APPROVED/PENDING 禁止编辑和删除）+ `AssetReviewLog` 审计日志表（含 context JSON）+ 合同提审资产软警告（`submit_review` 改返回 tuple + X-Asset-Review-Warnings header）+ `AssetReviewStatus.REJECTED→REVERSED` 对齐合同侧命名 + 合同保持实时引用资产不做快照 + 反审核不联动合同状态；15 个文件涉及（6 新建 + 9 修改）；28 个测试用例（T-01~21 service + TA-01~05 api + TM-01~02 model）。复核修正 6 个问题（P1~P6）。需求状态 📋→🚧。
 - fix(ledger): 继续收口批量更新状态约束——`batch_update_status()` 在 service 层新增完整支付状态白名单，内部调用者不能再绕过 API schema 写入任意未知状态。
 - test(ledger): 补充聚合查询 service 边界回归——新增 `year_month_start > year_month_end` 单测，锁定 service 层账期范围校验不回退。
 - fix(ledger): 收口台账 review follow-up——`query_ledger_entries()` 在 service 层补“至少一个核心筛选条件 + 账期范围”校验，`batch_update_status()` 在 service 层禁止 `voided` 绕过，REQ 代码证据中的旧批量更新路径同步修正。
