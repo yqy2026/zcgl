@@ -16,6 +16,12 @@ export interface AnalyticsExportData {
     total_annual_expense: number;
     total_net_income: number;
     total_monthly_rent: number;
+    total_income?: number;
+    self_operated_rent_income?: number;
+    agency_service_income?: number;
+    customer_entity_count?: number;
+    customer_contract_count?: number;
+    metrics_version?: string;
   };
   property_nature_distribution: Array<{
     name: string;
@@ -64,6 +70,14 @@ class AnalyticsExportService {
         ['年支出', data.summary.total_annual_expense.toFixed(2), '元'],
         ['净收益', data.summary.total_net_income.toFixed(2), '元'],
         ['月租金', data.summary.total_monthly_rent.toFixed(2), '元'],
+        [],
+        ['经营口径指标', '', ''],
+        ['总收入（经营口径）', (data.summary.total_income ?? 0).toFixed(2), '元'],
+        ['自营租金收入', (data.summary.self_operated_rent_income ?? 0).toFixed(2), '元'],
+        ['代理服务费收入', (data.summary.agency_service_income ?? 0).toFixed(2), '元'],
+        ['客户主体数', data.summary.customer_entity_count ?? 0, '个'],
+        ['客户合同数', data.summary.customer_contract_count ?? 0, '份'],
+        ['口径版本', data.summary.metrics_version ?? '', ''],
       ];
       const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
       XLSX.utils.book_append_sheet(workbook, summarySheet, '概览统计');
@@ -172,6 +186,15 @@ class AnalyticsExportService {
       csvData.push(['年支出', data.summary.total_annual_expense.toFixed(2), '元']);
       csvData.push(['净收益', data.summary.total_net_income.toFixed(2), '元']);
       csvData.push(['月租金', data.summary.total_monthly_rent.toFixed(2), '元']);
+      csvData.push([]);
+      csvData.push(['经营口径指标']);
+      csvData.push(['指标', '数值', '单位']);
+      csvData.push(['总收入（经营口径）', (data.summary.total_income ?? 0).toFixed(2), '元']);
+      csvData.push(['自营租金收入', (data.summary.self_operated_rent_income ?? 0).toFixed(2), '元']);
+      csvData.push(['代理服务费收入', (data.summary.agency_service_income ?? 0).toFixed(2), '元']);
+      csvData.push(['客户主体数', data.summary.customer_entity_count ?? 0, '个']);
+      csvData.push(['客户合同数', data.summary.customer_contract_count ?? 0, '份']);
+      csvData.push(['口径版本', data.summary.metrics_version ?? '', '']);
       csvData.push([]);
 
       // 添加物业性质分布
@@ -333,6 +356,37 @@ class AnalyticsExportService {
                 <h3>整体出租率</h3>
                 <div class="value">${data.summary.occupancy_rate.toFixed(2)}</div>
                 <div class="unit">%</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>经营口径${data.summary.metrics_version != null && data.summary.metrics_version !== '' ? ` <small style="color:#999">(${data.summary.metrics_version})</small>` : ''}</h2>
+        <div class="summary-grid">
+            <div class="summary-card">
+                <h3>总收入（经营口径）</h3>
+                <div class="value">${(data.summary.total_income ?? 0).toFixed(2)}</div>
+                <div class="unit">元</div>
+            </div>
+            <div class="summary-card">
+                <h3>自营租金收入</h3>
+                <div class="value">${(data.summary.self_operated_rent_income ?? 0).toFixed(2)}</div>
+                <div class="unit">元</div>
+            </div>
+            <div class="summary-card">
+                <h3>代理服务费收入</h3>
+                <div class="value">${(data.summary.agency_service_income ?? 0).toFixed(2)}</div>
+                <div class="unit">元</div>
+            </div>
+            <div class="summary-card">
+                <h3>客户主体数</h3>
+                <div class="value">${data.summary.customer_entity_count ?? 0}</div>
+                <div class="unit">个</div>
+            </div>
+            <div class="summary-card">
+                <h3>客户合同数</h3>
+                <div class="value">${data.summary.customer_contract_count ?? 0}</div>
+                <div class="unit">份</div>
             </div>
         </div>
     </div>
