@@ -13,16 +13,20 @@ vi.mock('@tanstack/react-query', () => ({
   useQuery: vi.fn(),
 }));
 
+const mockUseView = vi.fn(() => ({
+  currentView: {
+    key: 'manager:party-1',
+    perspective: 'manager',
+    partyId: 'party-1',
+    partyName: '运营主体A',
+    label: '运营方 · 运营主体A',
+  },
+  selectionRequired: false,
+  isViewReady: true,
+}));
+
 vi.mock('@/contexts/ViewContext', () => ({
-  useView: () => ({
-    currentView: {
-      key: 'manager:party-1',
-      perspective: 'manager',
-      partyId: 'party-1',
-      partyName: '运营主体A',
-      label: '运营方 · 运营主体A',
-    },
-  }),
+  useView: () => mockUseView(),
 }));
 
 vi.mock('react-router-dom', async () => {
@@ -47,6 +51,17 @@ vi.mock('@/hooks/useArrayListData', () => ({
 describe('ProjectDetailPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseView.mockReturnValue({
+      currentView: {
+        key: 'manager:party-1',
+        perspective: 'manager',
+        partyId: 'party-1',
+        partyName: '运营主体A',
+        label: '运营方 · 运营主体A',
+      },
+      selectionRequired: false,
+      isViewReady: true,
+    });
     vi.mocked(useQuery).mockImplementation(options => {
       const [scope] = options.queryKey as [string, ...unknown[]];
       if (scope === 'project') {
@@ -134,6 +149,29 @@ describe('ProjectDetailPage', () => {
           expect.any(String),
           expect.any(String),
         ],
+      })
+    );
+  });
+
+  it('视角未就绪时不应启用项目详情相关查询', () => {
+    mockUseView.mockReturnValue({
+      currentView: null,
+      selectionRequired: true,
+      isViewReady: false,
+    });
+
+    renderWithProviders(<ProjectDetailPage />);
+
+    expect(useQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: ['project', 'user:user-1|view:manager:party-1', 'project-1'],
+        enabled: false,
+      })
+    );
+    expect(useQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: ['project-assets', 'user:user-1|view:manager:party-1', 'project-1'],
+        enabled: false,
       })
     );
   });

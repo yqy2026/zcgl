@@ -14,16 +14,20 @@ vi.mock('@/utils/queryScope', () => ({
   buildQueryScopeKey: () => 'user:user-1|view:manager:party-1',
 }));
 
+const mockUseView = vi.fn(() => ({
+  currentView: {
+    key: 'manager:party-1',
+    perspective: 'manager',
+    partyId: 'party-1',
+    partyName: '运营主体A',
+    label: '运营方 · 运营主体A',
+  },
+  selectionRequired: false,
+  isViewReady: true,
+}));
+
 vi.mock('@/contexts/ViewContext', () => ({
-  useView: () => ({
-    currentView: {
-      key: 'manager:party-1',
-      perspective: 'manager',
-      partyId: 'party-1',
-      partyName: '运营主体A',
-      label: '运营方 · 运营主体A',
-    },
-  }),
+  useView: () => mockUseView(),
 }));
 // Mock message manager
 vi.mock('@/utils/messageManager', () => ({
@@ -371,6 +375,17 @@ const mockRefetchProjects = vi.fn();
 describe('ProjectList', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseView.mockReturnValue({
+      currentView: {
+        key: 'manager:party-1',
+        perspective: 'manager',
+        partyId: 'party-1',
+        partyName: '运营主体A',
+        label: '运营方 · 运营主体A',
+      },
+      selectionRequired: false,
+      isViewReady: true,
+    });
     mockRefetchProjects.mockClear();
     vi.mocked(useQuery).mockImplementation(options => {
       const queryKey = (options as { queryKey?: unknown[] }).queryKey;
@@ -475,6 +490,29 @@ describe('ProjectList', () => {
       expect(useQuery).toHaveBeenCalledWith(
         expect.objectContaining({
           queryKey: ['project-owner-party-options', 'user:user-1|view:manager:party-1', ''],
+        })
+      );
+    });
+
+    it('视角未就绪时不应启用项目列表和主体选项查询', async () => {
+      mockUseView.mockReturnValue({
+        currentView: null,
+        selectionRequired: true,
+        isViewReady: false,
+      });
+
+      await renderProjectList();
+
+      expect(useQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          queryKey: ['project-list', expect.any(String), 1, 10, { keyword: '', status: '', ownerPartyId: '' }],
+          enabled: false,
+        })
+      );
+      expect(useQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          queryKey: ['project-owner-party-options', expect.any(String), ''],
+          enabled: false,
         })
       );
     });

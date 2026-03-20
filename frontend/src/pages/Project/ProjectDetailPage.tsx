@@ -83,7 +83,8 @@ interface AssetLeaseSummaryRowData {
 const useAssetLeaseSummary = (
   queryScopeKey: string,
   assetId: string,
-  periodParams: { period_start: string; period_end: string }
+  periodParams: { period_start: string; period_end: string },
+  enabled: boolean
 ) =>
   useQuery<AssetLeaseSummaryResponse>({
     queryKey: [
@@ -95,12 +96,13 @@ const useAssetLeaseSummary = (
     ],
     queryFn: () => assetService.getAssetLeaseSummary(assetId, periodParams),
     staleTime: 60_000,
+    enabled,
   });
 
 const AssetLeaseSummaryRow: React.FC<
-  AssetLeaseSummaryRowData & { onNavigate: (id: string) => void }
-> = ({ queryScopeKey, assetId, assetName, periodParams, onNavigate }) => {
-  const { data, isLoading } = useAssetLeaseSummary(queryScopeKey, assetId, periodParams);
+  AssetLeaseSummaryRowData & { onNavigate: (id: string) => void; enabled: boolean }
+> = ({ queryScopeKey, assetId, assetName, periodParams, onNavigate, enabled }) => {
+  const { data, isLoading } = useAssetLeaseSummary(queryScopeKey, assetId, periodParams, enabled);
 
   if (isLoading) {
     return (
@@ -170,10 +172,12 @@ const AssetLeaseSummaryRow: React.FC<
 const ProjectDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { currentView } = useView();
+  const { currentView, isViewReady } = useView();
   const [selectedMonth, setSelectedMonth] = useState<Dayjs>(() => dayjs().startOf('month'));
   const periodParams = useMemo(() => buildPeriodParams(selectedMonth), [selectedMonth]);
   const queryScopeKey = buildQueryScopeKey(currentView);
+  const hasProjectId = id != null && id.length > 0;
+  const canQuery = hasProjectId && isViewReady;
 
   // 获取项目详情
   const {
@@ -183,14 +187,14 @@ const ProjectDetailPage: React.FC = () => {
   } = useQuery({
     queryKey: ['project', queryScopeKey, id],
     queryFn: () => projectService.getProject(id as string),
-    enabled: id !== null && id !== undefined && id.length > 0,
+    enabled: canQuery,
   });
 
   // 获取项目关联资产
   const { data: assetsData, isLoading: assetsLoading } = useQuery({
     queryKey: ['project-assets', queryScopeKey, id],
     queryFn: () => projectService.getProjectAssets(id as string),
-    enabled: id !== null && id !== undefined && id.length > 0,
+    enabled: canQuery,
   });
 
   // 资产表格列定义
@@ -279,6 +283,14 @@ const ProjectDetailPage: React.FC = () => {
   useEffect(() => {
     void loadAssetList({ page: 1 });
   }, [assets, loadAssetList]);
+
+  if (!canQuery) {
+    return (
+      <PageContainer title="项目详情" loading onBack={() => navigate('/project')}>
+        <div />
+      </PageContainer>
+    );
+  }
 
   // 错误状态
   if (projectError) {
@@ -504,6 +516,7 @@ const ProjectDetailPage: React.FC = () => {
                         assetId={asset.id}
                         assetName={asset.asset_name}
                         periodParams={periodParams}
+                        enabled={canQuery}
                         onNavigate={assetId => navigate(`/assets/${assetId}`)}
                       />
                     ))}

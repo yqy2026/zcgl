@@ -49,7 +49,7 @@ interface UseProjectOptionsResult {
  * 获取项目选项列表
  */
 export const useProjectOptions = (status: string = 'active'): UseProjectOptionsResult => {
-  const { currentView } = useView();
+  const { currentView, isViewReady } = useView();
   const queryScopeKey = buildQueryScopeKey(currentView);
   const queryKey = ['project-options', queryScopeKey, status];
 
@@ -70,6 +70,7 @@ export const useProjectOptions = (status: string = 'active'): UseProjectOptionsR
     refetchOnMount: false,
     refetchOnReconnect: false,
     retry: 1,
+    enabled: isViewReady,
   });
 
   return {
@@ -91,7 +92,7 @@ interface UseProjectDetailResult {
  * 获取单个项目详情
  */
 export const useProjectDetail = (id?: string): UseProjectDetailResult => {
-  const { currentView } = useView();
+  const { currentView, isViewReady } = useView();
   const queryScopeKey = buildQueryScopeKey(currentView);
   const queryKey = ['project', queryScopeKey, id];
 
@@ -113,7 +114,7 @@ export const useProjectDetail = (id?: string): UseProjectDetailResult => {
     refetchOnMount: false,
     refetchOnReconnect: false,
     retry: 1,
-    enabled: id != null,
+    enabled: isViewReady && id != null,
   });
 
   return {

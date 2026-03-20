@@ -95,7 +95,7 @@ interface ProjectListProps {
 }
 
 const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list' }) => {
-  const { currentView } = useView();
+  const { currentView, isViewReady } = useView();
   const [filters, setFilters] = useState<ProjectFilters>({
     keyword: '',
     status: '',
@@ -157,6 +157,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
     ],
     queryFn: fetchProjectList,
     retry: 1,
+    enabled: isViewReady,
   });
 
   useEffect(() => {
@@ -207,6 +208,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
       ).items,
     staleTime: 10 * 60 * 1000,
     retry: 1,
+    enabled: isViewReady,
   });
 
   const ownerPartiesLoading = isOwnerPartiesLoading || isOwnerPartiesFetching;

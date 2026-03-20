@@ -24,7 +24,7 @@ const isAnalyticsData = (value: unknown): value is AnalyticsData => {
 };
 
 export const useAssetAnalytics = () => {
-  const { currentView } = useView();
+  const { currentView, isViewReady } = useView();
   const [filters, setFilters] = useState<AssetSearchParams>({});
   const [dimension, setDimension] = useState<AnalysisDimension>('area');
   const queryScopeKey = buildQueryScopeKey(currentView);
@@ -44,6 +44,7 @@ export const useAssetAnalytics = () => {
     },
     staleTime: 5 * 60 * 1000, // 5分钟缓存
     refetchOnWindowFocus: false,
+    enabled: isViewReady,
   });
 
   // 解析数据

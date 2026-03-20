@@ -85,9 +85,10 @@ const summaryColumns: ColumnsType<ContractTypeSummary> = [
 const AssetDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { currentView } = useView();
+  const { currentView, isViewReady } = useView();
   const [selectedMonth, setSelectedMonth] = useState<Dayjs>(() => dayjs().startOf('month'));
   const hasAssetId = id != null && id !== '';
+  const canQuery = hasAssetId && isViewReady;
   const periodParams = useMemo(() => buildPeriodParams(selectedMonth), [selectedMonth]);
   const queryScopeKey = buildQueryScopeKey(currentView);
 
@@ -98,7 +99,7 @@ const AssetDetailPage: React.FC = () => {
   } = useQuery({
     queryKey: ['asset', queryScopeKey, id],
     queryFn: () => assetService.getAsset(id as string),
-    enabled: hasAssetId,
+    enabled: canQuery,
   });
 
   const {
@@ -114,8 +115,16 @@ const AssetDetailPage: React.FC = () => {
       periodParams.period_end,
     ],
     queryFn: () => assetService.getAssetLeaseSummary(id as string, periodParams),
-    enabled: hasAssetId,
+    enabled: canQuery,
   });
+
+  if (!canQuery) {
+    return (
+      <PageContainer title="资产详情" loading onBack={() => navigate('/assets')}>
+        <div />
+      </PageContainer>
+    );
+  }
 
   if (assetError) {
     return (
