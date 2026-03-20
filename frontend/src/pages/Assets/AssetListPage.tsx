@@ -29,7 +29,7 @@ type AssetListFilters = Omit<AssetSearchParams, 'page' | 'page_size'>;
 
 const AssetListPage: React.FC = () => {
   const navigate = useNavigate();
-  const { currentView } = useView();
+  const { currentView, isViewReady } = useView();
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [filters, setFilters] = useState<AssetListFilters>({});
   const [pagination, setPagination] = useState({
@@ -53,6 +53,7 @@ const AssetListPage: React.FC = () => {
         page_size: pagination.pageSize,
       }),
     retry: 1,
+    enabled: isViewReady,
   });
 
   useEffect(() => {
@@ -84,6 +85,7 @@ const AssetListPage: React.FC = () => {
   } = useQuery({
     queryKey: ['analytics', queryScopeKey, analyticsFilters],
     queryFn: () => analyticsService.getComprehensiveAnalytics(analyticsFilters),
+    enabled: isViewReady,
   });
 
   const listData = useMemo(

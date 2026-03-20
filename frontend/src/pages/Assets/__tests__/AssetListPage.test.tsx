@@ -94,16 +94,20 @@ vi.mock('@/utils/messageManager', () => ({
   },
 }));
 
+const mockUseView = vi.fn(() => ({
+  currentView: {
+    key: 'owner:party-1',
+    perspective: 'owner',
+    partyId: 'party-1',
+    partyName: '主体A',
+    label: '产权方 · 主体A',
+  },
+  selectionRequired: false,
+  isViewReady: true,
+}));
+
 vi.mock('@/contexts/ViewContext', () => ({
-  useView: () => ({
-    currentView: {
-      key: 'owner:party-1',
-      perspective: 'owner',
-      partyId: 'party-1',
-      partyName: '主体A',
-      label: '产权方 · 主体A',
-    },
-  }),
+  useView: () => mockUseView(),
 }));
 
 vi.mock('@/utils/queryScope', () => ({
@@ -169,6 +173,17 @@ const buildFallbackQueryResult = () =>
 describe('AssetListPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseView.mockReturnValue({
+      currentView: {
+        key: 'owner:party-1',
+        perspective: 'owner',
+        partyId: 'party-1',
+        partyName: '主体A',
+        label: '产权方 · 主体A',
+      },
+      selectionRequired: false,
+      isViewReady: true,
+    });
     mockData = [
       { id: 'asset_1', asset_name: '资产A' },
       { id: 'asset_2', asset_name: '资产B' },
@@ -249,6 +264,29 @@ describe('AssetListPage', () => {
       expect(useQuery).toHaveBeenCalledWith(
         expect.objectContaining({
           queryKey: ['analytics', expect.stringContaining('owner:party-1'), {}],
+        })
+      );
+    });
+
+    it('视角未就绪时不应启用资产列表和统计查询', () => {
+      mockUseView.mockReturnValue({
+        currentView: null,
+        selectionRequired: true,
+        isViewReady: false,
+      });
+
+      renderPage();
+
+      expect(useQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          queryKey: ['assets-list', expect.any(String), 1, 20, {}],
+          enabled: false,
+        })
+      );
+      expect(useQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          queryKey: ['analytics', expect.any(String), {}],
+          enabled: false,
         })
       );
     });

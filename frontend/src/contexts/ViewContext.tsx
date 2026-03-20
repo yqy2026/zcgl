@@ -21,6 +21,7 @@ interface ViewContextValue {
   availableViews: ViewSelectionOption[];
   selectionRequired: boolean;
   selectorOpen: boolean;
+  isViewReady: boolean;
   openSelector: () => void;
   closeSelector: () => void;
   selectView: (key: string) => void;
@@ -289,6 +290,7 @@ export const ViewProvider: React.FC<ViewProviderProps> = ({ children }) => {
       availableViews,
       selectionRequired,
       selectorOpen,
+      isViewReady: selectionRequired !== true && currentView != null,
       openSelector,
       closeSelector,
       selectView,

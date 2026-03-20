@@ -6,7 +6,7 @@ import type { AnalyticsResponse } from '@/types/analytics';
 import { buildQueryScopeKey } from '@/utils/queryScope';
 
 export const useAnalytics = (filters?: AssetSearchParams) => {
-  const { currentView } = useView();
+  const { currentView, isViewReady } = useView();
   const queryScopeKey = buildQueryScopeKey(currentView);
 
   return useQuery<AnalyticsResponse>({
@@ -22,12 +22,12 @@ export const useAnalytics = (filters?: AssetSearchParams) => {
     refetchOnWindowFocus: false, // 禁用自动刷新避免循环请求
     refetchOnMount: true,
     // 添加依赖项数组，确保filters变化时重新请求
-    enabled: true,
+    enabled: isViewReady,
   });
 };
 
 export const useBasicStatistics = (filters?: AssetSearchParams) => {
-  const { currentView } = useView();
+  const { currentView, isViewReady } = useView();
   const queryScopeKey = buildQueryScopeKey(currentView);
 
   return useQuery<AnalyticsResponse>({
@@ -35,11 +35,12 @@ export const useBasicStatistics = (filters?: AssetSearchParams) => {
     queryFn: () => analyticsService.getBasicStatistics(filters),
     staleTime: 2 * 60 * 1000, // 2分钟缓存
     gcTime: 5 * 60 * 1000, // 5分钟缓存
+    enabled: isViewReady,
   });
 };
 
 export const useAreaSummary = () => {
-  const { currentView } = useView();
+  const { currentView, isViewReady } = useView();
   const queryScopeKey = buildQueryScopeKey(currentView);
 
   return useQuery<AnalyticsResponse>({
@@ -47,11 +48,12 @@ export const useAreaSummary = () => {
     queryFn: () => analyticsService.getAreaSummary(),
     staleTime: 3 * 60 * 1000, // 3分钟缓存
     gcTime: 6 * 60 * 1000, // 6分钟缓存
+    enabled: isViewReady,
   });
 };
 
 export const useFinancialSummary = () => {
-  const { currentView } = useView();
+  const { currentView, isViewReady } = useView();
   const queryScopeKey = buildQueryScopeKey(currentView);
 
   return useQuery<AnalyticsResponse>({
@@ -59,5 +61,6 @@ export const useFinancialSummary = () => {
     queryFn: () => analyticsService.getFinancialSummary(),
     staleTime: 3 * 60 * 1000, // 3分钟缓存
     gcTime: 6 * 60 * 1000, // 6分钟缓存
+    enabled: isViewReady,
   });
 };

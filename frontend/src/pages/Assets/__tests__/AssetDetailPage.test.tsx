@@ -19,16 +19,20 @@ vi.mock('@/utils/queryScope', () => ({
   buildQueryScopeKey: () => 'user:user-1|view:owner:party-1',
 }));
 
+const mockUseView = vi.fn(() => ({
+  currentView: {
+    key: 'owner:party-1',
+    perspective: 'owner',
+    partyId: 'party-1',
+    partyName: '主体A',
+    label: '产权方 · 主体A',
+  },
+  selectionRequired: false,
+  isViewReady: true,
+}));
+
 vi.mock('@/contexts/ViewContext', () => ({
-  useView: () => ({
-    currentView: {
-      key: 'owner:party-1',
-      perspective: 'owner',
-      partyId: 'party-1',
-      partyName: '主体A',
-      label: '产权方 · 主体A',
-    },
-  }),
+  useView: () => mockUseView(),
 }));
 
 vi.mock('antd', async () => {
@@ -159,6 +163,17 @@ const renderAssetDetailPage = (assetId: string) => {
 describe('AssetDetailPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseView.mockReturnValue({
+      currentView: {
+        key: 'owner:party-1',
+        perspective: 'owner',
+        partyId: 'party-1',
+        partyName: '主体A',
+        label: '产权方 · 主体A',
+      },
+      selectionRequired: false,
+      isViewReady: true,
+    });
     vi.mocked(assetService.getAssetLeaseSummary).mockResolvedValue(buildLeaseSummary());
   });
 
@@ -171,6 +186,22 @@ describe('AssetDetailPage', () => {
       renderAssetDetailPage('asset_123');
 
       expect(document.querySelector('.ant-spin-spinning')).toBeInTheDocument();
+    });
+
+    it('视角未就绪时不应请求资产详情和租赁汇总', async () => {
+      mockUseView.mockReturnValue({
+        currentView: null,
+        selectionRequired: true,
+        isViewReady: false,
+      });
+
+      renderAssetDetailPage('asset_123');
+
+      await waitFor(() => {
+        expect(assetService.getAsset).not.toHaveBeenCalled();
+      });
+      expect(assetService.getAssetLeaseSummary).not.toHaveBeenCalled();
+      expect(screen.queryByText('资产不存在')).not.toBeInTheDocument();
     });
   });
 
