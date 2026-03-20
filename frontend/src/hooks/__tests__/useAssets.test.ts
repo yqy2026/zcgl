@@ -3,8 +3,38 @@
  * 测试资产管理相关的自定义Hooks（简化版本）
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { act, createTestQueryClient, renderHookWithProviders, waitFor } from '@/test/test-utils';
 import * as useAssetsHooks from '../useAssets';
+
+vi.mock('@/contexts/ViewContext', () => ({
+  useView: () => ({
+    currentView: {
+      key: 'owner:party-1',
+      perspective: 'owner',
+      partyId: 'party-1',
+      partyName: '主体A',
+      label: '产权方 · 主体A',
+    },
+  }),
+}));
+
+vi.mock('@/utils/queryScope', () => ({
+  buildQueryScopeKey: () => 'user:user-1|view:owner:party-1',
+}));
+
+vi.mock('@/utils/messageManager', () => ({
+  MessageManager: {
+    success: vi.fn(),
+    error: vi.fn(),
+  },
+}));
+
+vi.mock('@/services/ownershipService', () => ({
+  ownershipService: {
+    getOwnershipSelectOptions: vi.fn(() => Promise.resolve([])),
+  },
+}));
 
 // =============================================================================
 // 类型定义
@@ -50,11 +80,17 @@ vi.mock('@/services/assetService', () => ({
   },
 }));
 
+import { assetService } from '@/services/assetService';
+
 // =============================================================================
 // useAssets Hook 测试
 // =============================================================================
 
 describe('useAssets - Hook验证', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('应该导出useAssets hook', () => {
     expect(typeof useAssetsHooks.useAssets).toBe('function');
   });
@@ -105,5 +141,128 @@ describe('useAssets - Hook验证', () => {
 
   it('应该导出useValidateAsset hook', () => {
     expect(typeof useAssetsHooks.useValidateAsset).toBe('function');
+  });
+
+  it('useAsset 应把当前视角纳入详情 queryKey', async () => {
+    const queryClient = createTestQueryClient();
+
+    renderHookWithProviders(() => useAssetsHooks.useAsset('asset-1'), { queryClient });
+
+    await waitFor(() => {
+      expect(assetService.getAsset).toHaveBeenCalledWith('asset-1');
+    });
+
+    const queryKeys = queryClient
+      .getQueryCache()
+      .getAll()
+      .map(query => query.queryKey);
+
+    expect(
+      queryKeys.some(
+        queryKey =>
+          Array.isArray(queryKey) &&
+          queryKey[0] === 'asset' &&
+          queryKey[1] === 'user:user-1|view:owner:party-1' &&
+          queryKey[2] === 'asset-1'
+      )
+    ).toBe(true);
+  });
+
+  it('useAssets 应把当前视角纳入列表 queryKey 并使用 assets-list 前缀', async () => {
+    const queryClient = createTestQueryClient();
+
+    renderHookWithProviders(() => useAssetsHooks.useAssets({ keyword: '园区' } as never), {
+      queryClient,
+    });
+
+    await waitFor(() => {
+      expect(assetService.getAssets).toHaveBeenCalledWith({ keyword: '园区' });
+    });
+
+    const queryKeys = queryClient
+      .getQueryCache()
+      .getAll()
+      .map(query => query.queryKey);
+
+    expect(
+      queryKeys.some(
+        queryKey =>
+          Array.isArray(queryKey) &&
+          queryKey[0] === 'assets-list' &&
+          queryKey[1] === 'user:user-1|view:owner:party-1' &&
+          typeof queryKey[2] === 'object' &&
+          queryKey[2] !== null &&
+          'keyword' in queryKey[2] &&
+          queryKey[2].keyword === '园区'
+      )
+    ).toBe(true);
+  });
+
+  it('useCreateAsset 成功后应失效资产列表与分析查询前缀', async () => {
+    const queryClient = createTestQueryClient();
+    const invalidateQueriesSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+    const { result } = renderHookWithProviders(() => useAssetsHooks.useCreateAsset(), {
+      queryClient,
+    });
+
+    await act(async () => {
+      await result.current.mutateAsync({ asset_name: '新增资产' } as never);
+    });
+
+    expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: ['assets-list'] });
+    expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: ['analytics'] });
+  });
+
+  it('useUpdateAsset 成功后应失效资产列表与详情的 scoped 查询前缀', async () => {
+    const queryClient = createTestQueryClient();
+    const invalidateQueriesSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+    const { result } = renderHookWithProviders(() => useAssetsHooks.useUpdateAsset(), {
+      queryClient,
+    });
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        id: 'asset-1',
+        data: { asset_name: '更新后的资产' } as never,
+      });
+    });
+
+    expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: ['assets-list'] });
+    expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: ['asset'] });
+    expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: ['analytics'] });
+  });
+
+  it('useDeleteAsset 成功后应失效资产列表与分析查询前缀', async () => {
+    const queryClient = createTestQueryClient();
+    const invalidateQueriesSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+    const { result } = renderHookWithProviders(() => useAssetsHooks.useDeleteAsset(), {
+      queryClient,
+    });
+
+    await act(async () => {
+      await result.current.mutateAsync('asset-1');
+    });
+
+    expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: ['assets-list'] });
+    expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: ['analytics'] });
+  });
+
+  it('useBatchDeleteAssets 成功后应失效资产列表与分析查询前缀', async () => {
+    const queryClient = createTestQueryClient();
+    const invalidateQueriesSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+    const { result } = renderHookWithProviders(() => useAssetsHooks.useBatchDeleteAssets(), {
+      queryClient,
+    });
+
+    await act(async () => {
+      await result.current.mutateAsync(['asset-1', 'asset-2']);
+    });
+
+    expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: ['assets-list'] });
+    expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: ['analytics'] });
   });
 });

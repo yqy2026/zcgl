@@ -10,6 +10,21 @@ import { render, screen, fireEvent, act } from '@testing-library/react';
 import { useQuery } from '@tanstack/react-query';
 import { partyService } from '@/services/partyService';
 
+vi.mock('@/utils/queryScope', () => ({
+  buildQueryScopeKey: () => 'user:user-1|view:manager:party-1',
+}));
+
+vi.mock('@/contexts/ViewContext', () => ({
+  useView: () => ({
+    currentView: {
+      key: 'manager:party-1',
+      perspective: 'manager',
+      partyId: 'party-1',
+      partyName: '运营主体A',
+      label: '运营方 · 运营主体A',
+    },
+  }),
+}));
 // Mock message manager
 vi.mock('@/utils/messageManager', () => ({
   MessageManager: {
@@ -394,7 +409,7 @@ describe('ProjectList', () => {
 
       if (key === 'project-owner-party-options') {
         const keyword =
-          Array.isArray(queryKey) && typeof queryKey[1] === 'string' ? queryKey[1] : '';
+          Array.isArray(queryKey) && typeof queryKey[2] === 'string' ? queryKey[2] : '';
         void partyService.searchParties(keyword, { status: 'active', limit: 20 });
         return {
           data: [],
@@ -434,6 +449,34 @@ describe('ProjectList', () => {
 
       expect(screen.getByTestId('row-1')).toBeInTheDocument();
       expect(screen.getByText('项目1')).toBeInTheDocument();
+    });
+
+    it('应该显示当前视角标签', async () => {
+      await renderProjectList();
+
+      expect(screen.getByText('当前视角')).toBeInTheDocument();
+      expect(screen.getByText('运营方 · 运营主体A')).toBeInTheDocument();
+    });
+
+    it('项目列表与主体搜索查询应把当前视角纳入 queryKey', async () => {
+      await renderProjectList();
+
+      expect(useQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          queryKey: [
+            'project-list',
+            'user:user-1|view:manager:party-1',
+            1,
+            10,
+            { keyword: '', status: '', ownerPartyId: '' },
+          ],
+        })
+      );
+      expect(useQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          queryKey: ['project-owner-party-options', 'user:user-1|view:manager:party-1', ''],
+        })
+      );
     });
   });
 
@@ -542,7 +585,7 @@ describe('ProjectList', () => {
 
         if (key === 'project-owner-party-options') {
           const keyword =
-            Array.isArray(queryKey) && typeof queryKey[1] === 'string' ? queryKey[1] : '';
+            Array.isArray(queryKey) && typeof queryKey[2] === 'string' ? queryKey[2] : '';
           void partyService.searchParties(keyword, { status: 'active', limit: 20 });
           return {
             data: [],

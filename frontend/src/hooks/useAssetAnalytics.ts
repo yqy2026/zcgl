@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useView } from '@/contexts/ViewContext';
 import { analyticsService } from '@/services/analyticsService';
 import { exportAnalyticsData } from '@/services/analyticsExportService';
 import { MessageManager } from '@/utils/messageManager';
 import { createLogger } from '@/utils/logger';
 import type { AssetSearchParams } from '@/types/asset';
 import type { AnalyticsData } from '@/types/analytics';
+import { buildQueryScopeKey } from '@/utils/queryScope';
 
 const logger = createLogger('useAssetAnalytics');
 
@@ -22,8 +24,10 @@ const isAnalyticsData = (value: unknown): value is AnalyticsData => {
 };
 
 export const useAssetAnalytics = () => {
+  const { currentView } = useView();
   const [filters, setFilters] = useState<AssetSearchParams>({});
   const [dimension, setDimension] = useState<AnalysisDimension>('area');
+  const queryScopeKey = buildQueryScopeKey(currentView);
 
   // 获取分析数据
   const {
@@ -32,7 +36,7 @@ export const useAssetAnalytics = () => {
     error,
     refetch,
   } = useQuery({
-    queryKey: ['asset-analytics', filters],
+    queryKey: ['analytics', queryScopeKey, 'comprehensive', filters],
     queryFn: async () => {
       const result = await analyticsService.getComprehensiveAnalytics(filters);
       logger.debug('Analytics API Result:', { result });

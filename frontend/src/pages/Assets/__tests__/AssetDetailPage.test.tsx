@@ -15,6 +15,22 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import AssetDetailPage from '../AssetDetailPage';
 
+vi.mock('@/utils/queryScope', () => ({
+  buildQueryScopeKey: () => 'user:user-1|view:owner:party-1',
+}));
+
+vi.mock('@/contexts/ViewContext', () => ({
+  useView: () => ({
+    currentView: {
+      key: 'owner:party-1',
+      perspective: 'owner',
+      partyId: 'party-1',
+      partyName: '主体A',
+      label: '产权方 · 主体A',
+    },
+  }),
+}));
+
 vi.mock('antd', async () => {
   const antd = await vi.importActual<typeof import('antd')>('antd');
   const dayjsModule = await vi.importActual<typeof import('dayjs')>('dayjs');
@@ -123,7 +139,7 @@ const createTestQueryClient = () =>
 const renderAssetDetailPage = (assetId: string) => {
   const queryClient = createTestQueryClient();
 
-  return renderWithAppProviders(
+  const renderResult = renderWithAppProviders(
     <QueryClientProvider client={queryClient}>
       <Routes>
         <Route path="/assets/:id" element={<AssetDetailPage />} />
@@ -133,6 +149,11 @@ const renderAssetDetailPage = (assetId: string) => {
     </QueryClientProvider>,
     { route: `/assets/${assetId}` }
   );
+
+  return {
+    ...renderResult,
+    queryClient,
+  };
 };
 
 describe('AssetDetailPage', () => {
@@ -154,6 +175,47 @@ describe('AssetDetailPage', () => {
   });
 
   describe('成功加载', () => {
+    it('资产详情与租赁汇总查询应把当前视角纳入 queryKey', async () => {
+      vi.mocked(assetService.getAsset).mockResolvedValue({
+        id: 'asset_123',
+        asset_name: '测试资产A栋',
+      });
+      vi.mocked(assetService.getAssetLeaseSummary).mockResolvedValue(buildLeaseSummary());
+
+      const { queryClient } = renderAssetDetailPage('asset_123');
+
+      await waitFor(() => {
+        expect(assetService.getAsset).toHaveBeenCalled();
+        expect(assetService.getAssetLeaseSummary).toHaveBeenCalled();
+      });
+
+      const queryKeys = queryClient
+        .getQueryCache()
+        .getAll()
+        .map(query => query.queryKey);
+
+      expect(
+        queryKeys.some(
+          queryKey =>
+            Array.isArray(queryKey) &&
+            queryKey[0] === 'asset' &&
+            queryKey[1] === 'user:user-1|view:owner:party-1' &&
+            queryKey[2] === 'asset_123'
+        )
+      ).toBe(true);
+      expect(
+        queryKeys.some(
+          queryKey =>
+            Array.isArray(queryKey) &&
+            queryKey[0] === 'asset-lease-summary' &&
+            queryKey[1] === 'user:user-1|view:owner:party-1' &&
+            queryKey[2] === 'asset_123' &&
+            queryKey[3] === dayjs().startOf('month').format('YYYY-MM-DD') &&
+            queryKey[4] === dayjs().endOf('month').format('YYYY-MM-DD')
+        )
+      ).toBe(true);
+    });
+
     it('显示资产详情', async () => {
       const mockAsset = {
         id: 'asset_123',

@@ -38,12 +38,15 @@ import { projectService } from '@/services/projectService';
 import { partyService } from '@/services/partyService';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
 import { ListToolbar } from '@/components/Common/ListToolbar';
+import CurrentViewBanner from '@/components/System/CurrentViewBanner';
+import { useView } from '@/contexts/ViewContext';
 import { useQuery } from '@tanstack/react-query';
 import { getIconButtonProps } from '@/utils/accessibility';
 import type { Project, ProjectListResponse, ProjectStatisticsResponse } from '@/types/project';
 import type { Party } from '@/types/party';
 import { ProjectForm } from '@/components/Forms';
 import ProjectDetail from './ProjectDetail';
+import { buildQueryScopeKey } from '@/utils/queryScope';
 import styles from './ProjectList.module.css';
 // import OwnershipSelect from '@/components/Ownership/OwnershipSelect';
 
@@ -92,6 +95,7 @@ interface ProjectListProps {
 }
 
 const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list' }) => {
+  const { currentView } = useView();
   const [filters, setFilters] = useState<ProjectFilters>({
     keyword: '',
     status: '',
@@ -106,6 +110,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isDetailVisible, setIsDetailVisible] = useState(false);
+  const queryScopeKey = buildQueryScopeKey(currentView);
 
   const fetchProjectList = useCallback(async () => {
     const params: ProjectQueryParams = {
@@ -143,7 +148,13 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
     isFetching: isProjectsFetching,
     refetch: refetchProjects,
   } = useQuery<ProjectListResponse>({
-    queryKey: ['project-list', paginationState.current, paginationState.pageSize, filters],
+    queryKey: [
+      'project-list',
+      queryScopeKey,
+      paginationState.current,
+      paginationState.pageSize,
+      filters,
+    ],
     queryFn: fetchProjectList,
     retry: 1,
   });
@@ -186,7 +197,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
     isLoading: isOwnerPartiesLoading,
     isFetching: isOwnerPartiesFetching,
   } = useQuery<Party[]>({
-    queryKey: ['project-owner-party-options', ownerPartySearchKeyword],
+    queryKey: ['project-owner-party-options', queryScopeKey, ownerPartySearchKeyword],
     queryFn: async () =>
       (
         await partyService.searchParties(ownerPartySearchKeyword, {

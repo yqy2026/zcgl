@@ -835,7 +835,7 @@ export class ApiClient {
    */
   private generateCacheKey(method: string, url: string, params?: Record<string, unknown>): string {
     const paramsStr = params ? JSON.stringify(this.normalizeParams(params)) : '';
-    return `${method}:${url}:${paramsStr}`;
+    return `${method}:${url}:${paramsStr}:scope:${getCurrentRequestScopeKey()}`;
   }
 
   private normalizeParams(value: unknown): unknown {
