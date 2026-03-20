@@ -1,5 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { screen } from '@testing-library/react';
 import { QueryClient } from '@tanstack/react-query';
 import { renderWithProviders, waitFor } from '@/test/test-utils';
 import AssetCreatePage from '../AssetCreatePage';
@@ -11,16 +12,20 @@ vi.mock('@/utils/queryScope', () => ({
   buildQueryScopeKey: () => 'user:user-1|view:owner:party-1',
 }));
 
+const mockUseView = vi.fn(() => ({
+  currentView: {
+    key: 'owner:party-1',
+    perspective: 'owner',
+    partyId: 'party-1',
+    partyName: '主体A',
+    label: '产权方 · 主体A',
+  },
+  selectionRequired: false,
+  isViewReady: true,
+}));
+
 vi.mock('@/contexts/ViewContext', () => ({
-  useView: () => ({
-    currentView: {
-      key: 'owner:party-1',
-      perspective: 'owner',
-      partyId: 'party-1',
-      partyName: '主体A',
-      label: '产权方 · 主体A',
-    },
-  }),
+  useView: () => mockUseView(),
 }));
 
 vi.mock('react-router-dom', async () => {
@@ -99,6 +104,17 @@ import { assetService } from '@/services/assetService';
 describe('AssetCreatePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseView.mockReturnValue({
+      currentView: {
+        key: 'owner:party-1',
+        perspective: 'owner',
+        partyId: 'party-1',
+        partyName: '主体A',
+        label: '产权方 · 主体A',
+      },
+      selectionRequired: false,
+      isViewReady: true,
+    });
   });
 
   it('编辑态资产详情查询应把当前视角纳入 queryKey', async () => {
@@ -151,5 +167,21 @@ describe('AssetCreatePage', () => {
     expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['assets-list'] });
     expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['asset'] });
     expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['analytics'] });
+  });
+
+  it('视角未就绪时编辑态不应渲染表单或请求资产详情', async () => {
+    mockUseView.mockReturnValue({
+      currentView: null,
+      selectionRequired: true,
+      isViewReady: false,
+    });
+
+    renderWithProviders(<AssetCreatePage />, { route: '/assets/asset-1/edit' });
+
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: 'submit' })).not.toBeInTheDocument();
+    });
+
+    expect(assetService.getAsset).not.toHaveBeenCalled();
   });
 });
