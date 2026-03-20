@@ -15,6 +15,7 @@ import { useAssetAnalytics, AnalysisDimension } from '@/hooks/useAssetAnalytics'
 import { useFullscreen } from '@/hooks/useFullscreen';
 import AssetDistributionGrid from '@/components/Analytics/AssetDistributionGrid';
 import AssetDistributionDetails from '@/components/Analytics/AssetDistributionDetails';
+import { useView } from '@/contexts/ViewContext';
 
 const pageLogger = createLogger('AssetAnalytics');
 const CHART_PRIMARY_COLOR = 'var(--color-primary)';
@@ -22,6 +23,7 @@ const CHART_PRIMARY_COLOR = 'var(--color-primary)';
 const { Text } = Typography;
 
 const AssetAnalyticsPage: React.FC = () => {
+  const { isViewReady } = useView();
   const {
     analyticsData,
     loading,
@@ -38,7 +40,7 @@ const AssetAnalyticsPage: React.FC = () => {
 
   const { isFullscreen, toggleFullscreen } = useFullscreen();
 
-  if (loading) {
+  if (!isViewReady || loading) {
     return (
       <div className={styles.loadingContainer}>
         <Spin size="large" />

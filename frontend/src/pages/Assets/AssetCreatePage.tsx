@@ -27,18 +27,27 @@ const AssetCreatePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { currentView } = useView();
+  const { currentView, isViewReady } = useView();
   const _form = Form.useForm();
   const queryScopeKey = buildQueryScopeKey(currentView);
 
   const isEdit = id != null;
+  const shouldBlockForViewSelection = isEdit && !isViewReady;
 
   // 获取资产详情（编辑模式）
   const { data: asset, isLoading } = useQuery({
     queryKey: ['asset', queryScopeKey, id],
     queryFn: () => assetService.getAsset(id!),
-    enabled: isEdit,
+    enabled: isEdit && isViewReady,
   });
+
+  if (shouldBlockForViewSelection) {
+    return (
+      <PageContainer title="编辑资产" loading onBack={() => navigate(`/assets/${id}`)}>
+        <div />
+      </PageContainer>
+    );
+  }
 
   // 创建资产
   const createMutation = useMutation({
