@@ -6,11 +6,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import React from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuth } from '../useAuth';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { apiClient } from '@/api/client';
 import { AuthService } from '@/services/authService';
 import { AuthStorage } from '@/utils/AuthStorage';
 import { MessageManager } from '@/utils/messageManager';
+
+vi.mock('@/api/client', () => ({
+  apiClient: {
+    clearCache: vi.fn(),
+  },
+}));
 
 vi.mock('@/services/authService', () => ({
   AuthService: {
@@ -60,8 +68,27 @@ vi.mock('@/utils/messageManager', () => ({
   },
 }));
 
+const createTestQueryClient = () =>
+  new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+        gcTime: Infinity,
+      },
+      mutations: {
+        retry: false,
+      },
+    },
+  });
+
+let queryClient: QueryClient;
+
 const wrapper = ({ children }: { children: React.ReactNode }) =>
-  React.createElement(AuthProvider, null, children);
+  React.createElement(
+    QueryClientProvider,
+    { client: queryClient },
+    React.createElement(AuthProvider, null, children)
+  );
 
 const clearDocumentCookies = () => {
   const cookieEntries = document.cookie.split(';');
@@ -99,6 +126,7 @@ describe('useAuth Hook', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    queryClient = createTestQueryClient();
     clearDocumentCookies();
     vi.mocked(AuthStorage.getAuthData).mockReturnValue(null);
     vi.mocked(AuthStorage.getAuthPersistence).mockReturnValue('session');
@@ -381,6 +409,69 @@ describe('useAuth Hook', () => {
   });
 
   describe('logout', () => {
+    it('同标签登出后重新登录时，应该清空 React Query 缓存避免复用旧会话数据', async () => {
+      const staleQueryKey = ['asset', 'user:1|view:owner:party-1', 'asset_123'];
+      const staleAsset = {
+        id: 'asset_123',
+        asset_name: '旧会话资产',
+      };
+
+      vi.mocked(AuthStorage.getAuthData).mockReturnValue({
+        user: mockUser,
+        permissions: [],
+      });
+      vi.mocked(AuthService.getCurrentUser).mockResolvedValue(mockUser);
+      vi.mocked(AuthService.getCurrentUserPermissions).mockResolvedValue([]);
+      vi.mocked(AuthService.login).mockResolvedValue({
+        success: true,
+        data: {
+          user: mockUser,
+          permissions: [],
+        },
+        message: '登录成功',
+      });
+
+      queryClient.setQueryData(staleQueryKey, staleAsset);
+
+      const { result } = renderHook(() => useAuth(), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.user).toEqual(mockUser);
+      });
+
+      expect(queryClient.getQueryData(staleQueryKey)).toEqual(staleAsset);
+
+      await act(async () => {
+        await result.current.logout();
+      });
+
+      await act(async () => {
+        await result.current.login({ identifier: 'testuser', password: 'password' });
+      });
+
+      expect(queryClient.getQueryData(staleQueryKey)).toBeUndefined();
+    });
+
+    it('应该在登出时清空 API 内存缓存', async () => {
+      vi.mocked(AuthStorage.getAuthData).mockReturnValue({
+        user: mockUser,
+        permissions: [],
+      });
+      vi.mocked(AuthService.verifyAuth).mockResolvedValue(true);
+
+      const { result } = renderHook(() => useAuth(), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.user).toEqual(mockUser);
+      });
+
+      await act(async () => {
+        await result.current.logout();
+      });
+
+      expect(apiClient.clearCache).toHaveBeenCalledTimes(1);
+    });
+
     it('应该处理登出', async () => {
       vi.mocked(AuthStorage.getAuthData).mockReturnValue({
         user: mockUser,

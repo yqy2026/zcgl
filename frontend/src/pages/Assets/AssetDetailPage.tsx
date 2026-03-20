@@ -19,12 +19,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import dayjs, { type Dayjs } from 'dayjs';
 import { assetService } from '@/services/assetService';
+import { useView } from '@/contexts/ViewContext';
 import type {
   AssetLeaseGroupRelationType,
   AssetLeaseSummaryResponse,
   ContractPartyItem,
   ContractTypeSummary,
 } from '@/types/asset';
+import { buildQueryScopeKey } from '@/utils/queryScope';
 import { formatArea, formatCurrency } from '@/utils/format';
 import AssetDetailInfo from '@/components/Asset/AssetDetailInfo';
 import { PageContainer } from '@/components/Common';
@@ -83,16 +85,18 @@ const summaryColumns: ColumnsType<ContractTypeSummary> = [
 const AssetDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { currentView } = useView();
   const [selectedMonth, setSelectedMonth] = useState<Dayjs>(() => dayjs().startOf('month'));
   const hasAssetId = id != null && id !== '';
   const periodParams = useMemo(() => buildPeriodParams(selectedMonth), [selectedMonth]);
+  const queryScopeKey = buildQueryScopeKey(currentView);
 
   const {
     data: asset,
     isLoading: isAssetLoading,
     error: assetError,
   } = useQuery({
-    queryKey: ['asset', id],
+    queryKey: ['asset', queryScopeKey, id],
     queryFn: () => assetService.getAsset(id as string),
     enabled: hasAssetId,
   });
@@ -102,7 +106,13 @@ const AssetDetailPage: React.FC = () => {
     isLoading: isLeaseSummaryLoading,
     error: leaseSummaryError,
   } = useQuery<AssetLeaseSummaryResponse>({
-    queryKey: ['asset-lease-summary', id, periodParams.period_start, periodParams.period_end],
+    queryKey: [
+      'asset-lease-summary',
+      queryScopeKey,
+      id,
+      periodParams.period_start,
+      periodParams.period_end,
+    ],
     queryFn: () => assetService.getAssetLeaseSummary(id as string, periodParams),
     enabled: hasAssetId,
   });

@@ -16,6 +16,7 @@ import axios, {
 import { ResponseExtractor, ApiErrorHandler } from '@/utils/responseExtractor';
 import { ApiClientConfig, RetryConfig, ExtractResult } from '@/types/apiResponse';
 import { isDevelopmentMode } from '@/utils/runtimeEnv';
+import { getCurrentRequestScopeKey } from '@/utils/queryScope';
 import { API_BASE_URL } from './config';
 import {
   apiLogger,
@@ -419,7 +420,7 @@ export class ApiClient {
    */
   private generateCacheKey(method: string, url: string, params?: Record<string, unknown>): string {
     const paramsStr = params ? JSON.stringify(this.normalizeParams(params)) : '';
-    return `${method}:${url}:${paramsStr}`;
+    return `${method}:${url}:${paramsStr}:scope:${getCurrentRequestScopeKey()}`;
   }
 
   private normalizeParams(value: unknown): unknown {

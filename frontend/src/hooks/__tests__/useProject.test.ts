@@ -6,9 +6,39 @@
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, waitFor } from '@/test/utils/test-helpers';
+import { act, renderHook, waitFor } from '@/test/utils/test-helpers';
 import { projectService } from '@/services/projectService';
-import { useProjectList, useProjectStatistics } from '../useProject';
+import {
+  useProjectOptions,
+  useProjectDetail,
+  useProjectList,
+  useProjectStatistics,
+  useToggleProjectStatus,
+  useUpdateProject,
+} from '../useProject';
+
+vi.mock('@/contexts/ViewContext', () => ({
+  useView: () => ({
+    currentView: {
+      key: 'manager:party-1',
+      perspective: 'manager',
+      partyId: 'party-1',
+      partyName: '运营主体A',
+      label: '运营方 · 运营主体A',
+    },
+  }),
+}));
+
+vi.mock('@/utils/queryScope', () => ({
+  buildQueryScopeKey: () => 'user:user-1|view:manager:party-1',
+}));
+
+vi.mock('@/utils/messageManager', () => ({
+  MessageManager: {
+    success: vi.fn(),
+    error: vi.fn(),
+  },
+}));
 
 // =============================================================================
 // Mock projectService
@@ -127,6 +157,26 @@ const createQueryWrapper = () => {
   return QueryWrapper;
 };
 
+const createQueryHarness = () => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+        gcTime: 0,
+      },
+      mutations: {
+        retry: false,
+      },
+    },
+  });
+
+  const wrapper: React.FC<{ children: React.ReactNode }> = ({ children }) =>
+    React.createElement(QueryClientProvider, { client: queryClient }, children);
+  wrapper.displayName = 'QueryHarness';
+
+  return { queryClient, wrapper };
+};
+
 describe('useProject - Hook验证', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -235,5 +285,72 @@ describe('useProject - Hook验证', () => {
     expect(result.current.pagination.pageSize).toBe(20);
     expect(result.current.pagination.total).toBe(41);
     expect(result.current.projects[0]?.project_name).toBe('项目二');
+  });
+
+  it('useProjectOptions 应把当前视角纳入选项 queryKey', async () => {
+    const { queryClient, wrapper } = createQueryHarness();
+
+    renderHook(() => useProjectOptions('active'), { wrapper });
+
+    await waitFor(() => {
+      expect(projectService.getProjectOptions).toHaveBeenCalledWith('active');
+    });
+
+    const queryKeys = queryClient
+      .getQueryCache()
+      .getAll()
+      .map(query => query.queryKey);
+
+    expect(queryKeys).toContainEqual([
+      'project-options',
+      'user:user-1|view:manager:party-1',
+      'active',
+    ]);
+  });
+
+  it('useProjectDetail 应把当前视角纳入详情 queryKey', async () => {
+    const { queryClient, wrapper } = createQueryHarness();
+
+    renderHook(() => useProjectDetail('1'), { wrapper });
+
+    await waitFor(() => {
+      expect(projectService.getProject).toHaveBeenCalledWith('1');
+    });
+
+    const queryKeys = queryClient
+      .getQueryCache()
+      .getAll()
+      .map(query => query.queryKey);
+
+    expect(queryKeys).toContainEqual(['project', 'user:user-1|view:manager:party-1', '1']);
+  });
+
+  it('useUpdateProject 成功后应失效 scoped 项目详情查询前缀', async () => {
+    const { queryClient, wrapper } = createQueryHarness();
+    const invalidateQueriesSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+    const { result } = renderHook(() => useUpdateProject(), { wrapper });
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        id: '1',
+        data: { project_name: '更新项目' } as never,
+      });
+    });
+
+    expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: ['project'] });
+  });
+
+  it('useToggleProjectStatus 成功后应失效 scoped 项目详情查询前缀', async () => {
+    const { queryClient, wrapper } = createQueryHarness();
+    const invalidateQueriesSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+    const { result } = renderHook(() => useToggleProjectStatus(), { wrapper });
+
+    await act(async () => {
+      await result.current.mutateAsync('1');
+    });
+
+    expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: ['project'] });
   });
 });

@@ -5,6 +5,10 @@ import { useQuery } from '@tanstack/react-query';
 
 import ProjectDetailPage from '../ProjectDetailPage';
 
+vi.mock('@/utils/queryScope', () => ({
+  buildQueryScopeKey: () => 'user:user-1|view:manager:party-1',
+}));
+
 vi.mock('@tanstack/react-query', () => ({
   useQuery: vi.fn(),
 }));
@@ -63,14 +67,31 @@ describe('ProjectDetailPage', () => {
       if (scope === 'project-assets') {
         return {
           data: {
-            items: [],
-            total: 0,
+            items: [
+              {
+                id: 'asset-1',
+                asset_name: '资产A',
+              },
+            ],
+            total: 1,
             summary: {
-              total_assets: 0,
+              total_assets: 1,
               total_rentable_area: 0,
               total_rented_area: 0,
               occupancy_rate: 0,
             },
+          },
+          isLoading: false,
+          error: null,
+        };
+      }
+      if (scope === 'asset-lease-summary') {
+        return {
+          data: {
+            total_contracts: 0,
+            occupancy_rate: 0,
+            customer_summary: [],
+            by_type: [],
           },
           isLoading: false,
           error: null,
@@ -89,5 +110,31 @@ describe('ProjectDetailPage', () => {
 
     expect(screen.getByText('当前视角')).toBeInTheDocument();
     expect(screen.getByText('运营方 · 运营主体A')).toBeInTheDocument();
+  });
+
+  it('project detail queries should include current view in queryKey', () => {
+    renderWithProviders(<ProjectDetailPage />);
+
+    expect(useQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: ['project', 'user:user-1|view:manager:party-1', 'project-1'],
+      })
+    );
+    expect(useQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: ['project-assets', 'user:user-1|view:manager:party-1', 'project-1'],
+      })
+    );
+    expect(useQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: [
+          'asset-lease-summary',
+          'user:user-1|view:manager:party-1',
+          'asset-1',
+          expect.any(String),
+          expect.any(String),
+        ],
+      })
+    );
   });
 });
