@@ -15,6 +15,7 @@ import { analyticsService } from '@/services/analyticsService';
 import AssetList from '@/components/Asset/AssetList';
 import AssetSearch from '@/components/Asset/AssetSearch';
 import AssetAreaSummary from '@/components/Asset/AssetAreaSummary';
+import CurrentViewBanner from '@/components/System/CurrentViewBanner';
 import type { Asset, AssetSearchParams } from '@/types/asset';
 import { createLogger } from '@/utils/logger';
 import { PageContainer } from '@/components/Common';
@@ -326,6 +327,8 @@ const AssetListPage: React.FC = () => {
         </Space>
       }
     >
+      <CurrentViewBanner />
+
       {/* 搜索组件 */}
       <AssetSearch
         onSearch={handleSearch}

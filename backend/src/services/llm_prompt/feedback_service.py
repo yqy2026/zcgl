@@ -5,7 +5,6 @@
 """
 
 import logging
-from datetime import UTC, datetime
 from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,14 +13,10 @@ from ...core.exception_handler import ResourceNotFoundError
 from ...crud.llm_prompt import extraction_feedback_crud
 from ...models.llm_prompt import ExtractionFeedback
 from ...schemas.llm_prompt import ExtractionFeedbackCreate, ExtractionFeedbackResponse
+from ...utils.time import utcnow_naive
 from .prompt_manager import PromptManager
 
 logger = logging.getLogger(__name__)
-
-
-def _utcnow_naive() -> datetime:
-    """返回 naive UTC 时间。"""
-    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class FeedbackService:
@@ -64,7 +59,7 @@ class FeedbackService:
         feedback.user_action = feedback_in.user_action
         feedback.user_id = user_id
         if getattr(feedback, "created_at", None) is None:
-            feedback.created_at = _utcnow_naive()
+            feedback.created_at = utcnow_naive()
 
         db.add(feedback)
         await db.commit()

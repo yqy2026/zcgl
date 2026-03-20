@@ -1,16 +1,13 @@
 """Project-asset relation model for time-bounded bindings."""
 
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime
 
 from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, String, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..database import Base
-
-
-def _utcnow_naive() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+from ..utils.time import utcnow_naive
 
 
 class ProjectAsset(Base):
@@ -48,21 +45,19 @@ class ProjectAsset(Base):
         comment="资产ID",
     )
     valid_from: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=_utcnow_naive, comment="生效时间"
+        DateTime, nullable=False, default=utcnow_naive, comment="生效时间"
     )
     valid_to: Mapped[datetime | None] = mapped_column(DateTime, comment="失效时间")
     bind_reason: Mapped[str | None] = mapped_column(String(500), comment="绑定原因")
-    unbind_reason: Mapped[str | None] = mapped_column(
-        String(500), comment="解绑原因"
-    )
+    unbind_reason: Mapped[str | None] = mapped_column(String(500), comment="解绑原因")
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=_utcnow_naive, comment="创建时间"
+        DateTime, nullable=False, default=utcnow_naive, comment="创建时间"
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        default=_utcnow_naive,
-        onupdate=_utcnow_naive,
+        default=utcnow_naive,
+        onupdate=utcnow_naive,
         comment="更新时间",
     )
 

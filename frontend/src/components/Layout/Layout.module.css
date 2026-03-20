@@ -69,6 +69,12 @@
   gap: var(--spacing-sm);
 }
 
+.viewSwitcherSlot {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--layout-control-size);
+}
+
 .headerIconButton {
   display: flex;
   align-items: center;

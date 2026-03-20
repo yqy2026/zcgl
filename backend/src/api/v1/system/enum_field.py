@@ -34,18 +34,6 @@ router = APIRouter(
     tags=["枚举字段管理"],
     dependencies=[Depends(get_current_active_user)],
 )
-_ENUM_FIELD_TYPE_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:enum_field_type:create"
-_ENUM_FIELD_TYPE_CREATE_RESOURCE_CONTEXT: dict[str, str] = {
-    "party_id": _ENUM_FIELD_TYPE_CREATE_UNSCOPED_PARTY_ID,
-    "owner_party_id": _ENUM_FIELD_TYPE_CREATE_UNSCOPED_PARTY_ID,
-    "manager_party_id": _ENUM_FIELD_TYPE_CREATE_UNSCOPED_PARTY_ID,
-}
-_ENUM_FIELD_USAGE_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:enum_field_usage:create"
-_ENUM_FIELD_USAGE_CREATE_RESOURCE_CONTEXT: dict[str, str] = {
-    "party_id": _ENUM_FIELD_USAGE_CREATE_UNSCOPED_PARTY_ID,
-    "owner_party_id": _ENUM_FIELD_USAGE_CREATE_UNSCOPED_PARTY_ID,
-    "manager_party_id": _ENUM_FIELD_USAGE_CREATE_UNSCOPED_PARTY_ID,
-}
 
 
 def _strip_enum_children(enum_values: list[Any] | None) -> None:
@@ -153,7 +141,6 @@ async def create_enum_field_type(
         require_authz(
             action="create",
             resource_type="enum_field",
-            resource_context=_ENUM_FIELD_TYPE_CREATE_RESOURCE_CONTEXT,
         )
     ),
     service: EnumFieldService = Depends(get_enum_field_service),
@@ -415,7 +402,6 @@ async def create_enum_field_usage(
         require_authz(
             action="create",
             resource_type="enum_field",
-            resource_context=_ENUM_FIELD_USAGE_CREATE_RESOURCE_CONTEXT,
         )
     ),
     service: EnumFieldService = Depends(get_enum_field_service),

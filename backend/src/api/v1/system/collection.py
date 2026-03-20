@@ -22,6 +22,10 @@ from ....schemas.collection import (
     CollectionTaskSummary,
 )
 from ....services.collection import collection_service
+from ....services.view_scope import (
+    coerce_selected_view_party_filter,
+    resolve_selected_view_party_filter_dependency,
+)
 
 router = APIRouter(prefix="/collection", tags=["催缴管理"])
 _COLLECTION_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:collection:create"
@@ -38,6 +42,7 @@ _COLLECTION_CREATE_RESOURCE_CONTEXT: dict[str, str] = {
 async def get_collection_summary(
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_async_db),
+    selected_view_party_filter=Depends(resolve_selected_view_party_filter_dependency),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="read",
@@ -45,7 +50,14 @@ async def get_collection_summary(
         )
     ),
 ) -> CollectionTaskSummary:
-    return await collection_service.get_summary_async(db)
+    selected_view_party_filter = coerce_selected_view_party_filter(
+        selected_view_party_filter
+    )
+    return await collection_service.get_summary_async(
+        db,
+        current_user_id=str(current_user.id),
+        party_filter=selected_view_party_filter,
+    )
 
 
 @router.get(
@@ -61,6 +73,7 @@ async def list_collection_records(
     page_size: int = Query(20, ge=1, le=100, description="每页记录数"),
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_async_db),
+    selected_view_party_filter=Depends(resolve_selected_view_party_filter_dependency),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="read",
@@ -68,6 +81,9 @@ async def list_collection_records(
         )
     ),
 ) -> JSONResponse:
+    selected_view_party_filter = coerce_selected_view_party_filter(
+        selected_view_party_filter
+    )
     result = await collection_service.list_records_async(
         db,
         ledger_id=ledger_id,
@@ -75,6 +91,8 @@ async def list_collection_records(
         collection_status=collection_status,
         page=page,
         page_size=page_size,
+        current_user_id=str(current_user.id),
+        party_filter=selected_view_party_filter,
     )
 
     items = [
@@ -99,6 +117,7 @@ async def get_collection_record(
     record_id: str,
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_async_db),
+    selected_view_party_filter=Depends(resolve_selected_view_party_filter_dependency),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="read",
@@ -108,7 +127,15 @@ async def get_collection_record(
         )
     ),
 ) -> CollectionRecordResponse:
-    record = await collection_service.get_by_id_async(db, record_id=record_id)
+    selected_view_party_filter = coerce_selected_view_party_filter(
+        selected_view_party_filter
+    )
+    record = await collection_service.get_by_id_async(
+        db,
+        record_id=record_id,
+        current_user_id=str(current_user.id),
+        party_filter=selected_view_party_filter,
+    )
     if not record:
         raise not_found(
             "催缴记录不存在",
@@ -139,6 +166,7 @@ async def create_collection_record(
             obj_in=record_data,
             operator=str(current_user.username or current_user.email),
             operator_id=str(current_user.id),
+            current_user_id=str(current_user.id),
         )
     except BaseBusinessError:
         raise
@@ -164,7 +192,11 @@ async def update_collection_record(
         )
     ),
 ) -> CollectionRecordResponse:
-    record = await collection_service.get_by_id_async(db, record_id=record_id)
+    record = await collection_service.get_by_id_async(
+        db,
+        record_id=record_id,
+        current_user_id=str(current_user.id),
+    )
     if not record:
         updated_record = None
     else:
@@ -193,7 +225,11 @@ async def delete_collection_record(
         )
     ),
 ) -> dict[str, str]:
-    record = await collection_service.get_by_id_async(db, record_id=record_id)
+    record = await collection_service.get_by_id_async(
+        db,
+        record_id=record_id,
+        current_user_id=str(current_user.id),
+    )
     if not record:
         deleted = False
     else:

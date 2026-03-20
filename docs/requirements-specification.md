@@ -400,11 +400,94 @@
   - `backend/src/services/permission/rbac_service.py`
   - `backend/tests/unit/api/v1/test_roles_permission_grants.py`
 
-#### REQ-AUTH-002 视角上下文强制注入 📋
+#### REQ-AUTH-002 视角上下文强制注入 🚧
 - 描述：所有业务请求需携带当前视角上下文。
 - 验收：
   - 业务查询、统计、搜索均使用当前视角口径。
+  - Party-scoped 集合接口必须同时满足“ABAC 放行 + 查询作用域收敛”，不得仅鉴权不收敛。
+  - 当 `current_user_id` 与显式 `party_filter` 同时存在时，普通用户最终范围只能缩小、不能放大。
+  - scope 解析失败时，party-scoped 集合接口必须 Fail-Closed（空集合或拒绝），不得放行全量。
   - 当默认视角权限失效时，系统要求重新选择视角。
+- 当前活跃方案：
+  - `docs/plans/2026-03-15-m1-closure-acceptance-plan.md`
+- 当前状态说明：
+  - Party-scope 泄露修复已完成并归档至 `docs/archive/backend-plans/2026-03-02-party-scope-isolation-fix-plan.md`。
+  - 前端已具备“全局主体/视角选择 + 最近选择持久化 + stale 后强制重新选择 + 请求头携带当前视角”的最小闭环。
+  - 后端已消费 `X-View-Perspective/X-View-Party-Id` 并在主要主读链路上，将 caller 的并集可见范围进一步收窄到当前选中视角：`party`、`asset`、`project`、`contract_group`、`contract ledger`、`collection`、`history`、`property_certificate`。
+  - 前端关键页面已开始显式展示“当前视角”标签，且 `PartySelector` 默认会跟随当前视角切换 owner/manager 搜索口径。
+  - 仍保留 `🚧`：selected-view 收窄尚未覆盖所有业务读链路，且业务页面的“当前视角标签/口径”展示还未覆盖全部核心模块。
+- 代码证据：
+  - `backend/src/middleware/auth.py`
+  - `backend/src/services/party_scope.py`
+  - `backend/src/services/view_scope.py`
+  - `backend/src/services/party/service.py`
+  - `backend/src/api/v1/system/contact.py`
+  - `backend/src/api/v1/assets/assets.py`
+  - `backend/src/api/v1/assets/project.py`
+  - `backend/src/api/v1/contracts/contract_groups.py`
+  - `backend/src/api/v1/contracts/ledger.py`
+  - `backend/src/api/v1/system/collection.py`
+  - `backend/src/api/v1/system/history.py`
+  - `backend/src/api/v1/assets/property_certificate.py`
+  - `backend/src/api/v1/contracts/contract_groups.py`
+  - `backend/src/api/v1/contracts/ledger.py`
+  - `backend/src/services/contract/contract_group_service.py`
+  - `backend/src/services/contract/ledger_service_v2.py`
+  - `backend/src/crud/contract_group.py`
+  - `backend/src/services/collection/service.py`
+  - `backend/src/crud/collection.py`
+  - `backend/src/services/history/history_service.py`
+  - `backend/src/services/asset/asset_service.py`
+  - `backend/src/services/project/service.py`
+  - `backend/src/services/property_certificate/service.py`
+  - `frontend/src/api/client.ts`
+  - `frontend/src/contexts/AuthContext.tsx`
+  - `frontend/src/contexts/ViewContext.tsx`
+  - `frontend/src/components/System/GlobalViewSwitcher.tsx`
+  - `frontend/src/components/System/CurrentViewBanner.tsx`
+  - `frontend/src/components/Common/PartySelector.tsx`
+  - `frontend/src/pages/Assets/AssetListPage.tsx`
+  - `frontend/src/components/Project/ProjectList.tsx`
+  - `frontend/src/pages/Project/ProjectDetailPage.tsx`
+  - `frontend/src/utils/viewSelectionStorage.ts`
+  - `backend/tests/unit/api/v1/test_contract_groups_layering.py`
+  - `backend/tests/unit/api/v1/test_ledger_api.py`
+  - `backend/tests/unit/api/v1/test_contact_layering.py`
+  - `backend/tests/unit/api/v1/test_view_scope.py`
+  - `backend/tests/unit/middleware/test_authz_dependency.py`
+  - `backend/tests/unit/services/contract/test_contract_group_service.py`
+  - `backend/tests/unit/services/contract/test_ledger_aggregate_query.py`
+  - `backend/tests/unit/crud/test_contract_group.py`
+  - `backend/tests/integration/api/test_contract_visibility_real.py`
+  - `backend/tests/unit/api/v1/test_collection_layering.py`
+  - `backend/tests/unit/services/collection/test_collection_service_scope.py`
+  - `backend/tests/unit/crud/test_collection.py`
+  - `backend/tests/integration/api/test_collection_visibility_real.py`
+  - `backend/tests/unit/api/v1/test_history_layering.py`
+  - `backend/tests/unit/services/history/test_history_service_scope.py`
+  - `backend/tests/integration/api/test_history_visibility_real.py`
+  - `backend/tests/integration/api/test_contact_visibility_real.py`
+  - `backend/tests/integration/api/test_assets_visibility_real.py`
+  - `backend/tests/integration/api/test_project_visibility_real.py`
+  - `backend/tests/integration/api/test_contract_visibility_real.py`
+  - `backend/tests/integration/api/test_collection_visibility_real.py`
+  - `backend/tests/integration/api/test_history_visibility_real.py`
+  - `backend/tests/integration/api/test_property_certificate_visibility_real.py`
+  - `backend/tests/integration/api/test_party_api_real.py`
+  - `backend/tests/unit/services/test_party_scope.py`
+  - `backend/tests/unit/services/test_party_service.py`
+  - `backend/tests/integration/api/test_assets_visibility_real.py`
+  - `backend/tests/integration/api/test_project_visibility_real.py`
+  - `backend/tests/integration/api/test_property_certificate_visibility_real.py`
+  - `backend/tests/integration/api/test_property_certificate_e2e.py`
+  - `frontend/src/api/__tests__/client.test.ts`
+  - `frontend/src/hooks/__tests__/useAuth.test.ts`
+  - `frontend/src/contexts/__tests__/ViewContext.test.tsx`
+  - `frontend/src/components/System/__tests__/GlobalViewSwitcher.test.tsx`
+  - `frontend/src/pages/Assets/__tests__/AssetListPage.test.tsx`
+  - `frontend/src/components/Project/__tests__/ProjectList.test.tsx`
+  - `frontend/src/pages/Project/__tests__/ProjectDetailPage.test.tsx`
+  - `frontend/src/components/Common/__tests__/PartySelector.test.tsx`
 
 ### 6.7 文档与分析域
 
@@ -434,14 +517,16 @@
 - 描述：Party 作为跨资产、项目、合同、客户的统一主体主档，必须可维护且可追溯。
 - 验收：
   - 支持 Party 新增、编辑、启停用、查询。
-  - 支持统一标识去重与重名校验。
+ - 支持统一标识去重与重名校验。
   - Party 变更保留审计轨迹。
  - 代码证据：
   - `backend/src/models/party.py`
+  - `backend/src/models/party_review_log.py`
   - `backend/src/schemas/party.py`
  - `backend/src/crud/party.py`
  - `backend/src/services/party/service.py`
  - `backend/src/api/v1/party.py`
+  - `backend/alembic/versions/20260312_party_soft_delete_review_log.py`
   - `frontend/src/constants/routes.ts`
   - `frontend/src/routes/AppRoutes.tsx`
   - `frontend/src/pages/System/PartyListPage.tsx`
@@ -456,9 +541,11 @@
   - 未审核通过的 Party 不得进入统计口径。
  - 代码证据：
  - `backend/src/models/party.py`（`review_status/review_by/reviewed_at/review_reason`）
- - `backend/src/services/party/service.py`（主体提审/通过/驳回 + `assert_parties_approved`）
- - `backend/src/api/v1/party.py`（`/parties/{party_id}/submit-review|approve-review|reject-review`）
- - `backend/src/services/contract/contract_group_service.py`（合同提审前主体审核门禁）
+  - `backend/src/services/party/service.py`（主体提审/通过/驳回 + `assert_parties_approved`）
+  - `backend/src/api/v1/party.py`（`/parties/{party_id}/submit-review|approve-review|reject-review`）
+  - `backend/src/services/analytics/analytics_service.py`（未审核主体不进入经营统计口径）
+  - `backend/src/services/contract/contract_group_service.py`（合同提审前主体审核门禁）
+  - `backend/alembic/versions/20260315_party_review_status_backfill.py`（历史 `rejected` 状态回填为 `draft`）
   - `frontend/src/services/partyService.ts`（主体提审/通过/驳回调用）
   - `frontend/src/pages/System/PartyDetailPage.tsx`（审核按钮与编辑守卫提示）
 
@@ -566,7 +653,7 @@
 | REQ-CUS-002 | 📋 | — | — |
 | REQ-SCH-001 | 📋 | — | — |
 | REQ-AUTH-001 | ✅ | `/auth/login`, `/auth/refresh` | `test_optional_auth.py` |
-| REQ-AUTH-002 | 📋 | — | — |
+| REQ-AUTH-002 | 🚧 | 集合作用域收敛（Party / ContractGroup / ContractLedger / Collection / History / Asset / Project / Property Certificate / Contact）+ 视角上下文强制注入 | `test_contract_groups_layering.py`, `test_ledger_api.py`, `test_authz_dependency.py`, `test_contact_layering.py`, `test_contract_group_service.py`, `test_ledger_aggregate_query.py`, `test_contract_group.py`, `test_contract_visibility_real.py`, `test_collection_layering.py`, `test_collection_service_scope.py`, `test_collection.py`, `test_collection_visibility_real.py`, `test_history_layering.py`, `test_history_service_scope.py`, `test_history_visibility_real.py`, `test_contact_visibility_real.py`, `test_party_scope.py`, `test_party_service.py`, `test_assets_visibility_real.py`, `test_project_visibility_real.py`, `test_property_certificate_visibility_real.py`, `test_property_certificate_e2e.py`, `client.test.ts`, `useAuth.test.ts` |
 | REQ-DOC-001 | ✅ | `/pdf-import/*` | `pdf_import.py` |
 | REQ-ANA-001 | 🚧 | `/analytics/*`（综合分析 + 导出带口径版本） | `test_analytics_service.py`, `test_analytics.py`, `analytics_service.py` |
 | REQ-PTY-001 | 🚧 | `/api/v1/parties` (CRUD + review fields) + `/system/parties` | `test_party_api.py`, `test_party_service.py`, `partyService.test.ts`, `PartyPages.test.tsx` |
@@ -586,6 +673,9 @@
 - P1：登录后 Cookie 写入成功。
 - P2：刷新令牌走 Cookie 读取流程。
 - P3：普通用户访问他人权限摘要被拒绝。
+- P4：`GET /api/v1/parties` 对非管理员仅返回其绑定 scope 内主体，不得泄露未绑定主体。
+- P5：party-scoped 集合接口在 scope 解析失败时返回空集合或拒绝，不得放行全量。
+- P6：普通用户显式传入 `party_filter` 时只能缩小作用域，不能扩大到未绑定主体。
 
 ### 12.3 租赁
 - R1：创建合同时关联资产不存在应失败。

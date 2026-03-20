@@ -58,12 +58,6 @@ _TASK_DELETE_RESOURCE_CONTEXT: dict[str, str] = {
     "owner_party_id": _TASK_DELETE_UNSCOPED_PARTY_ID,
     "manager_party_id": _TASK_DELETE_UNSCOPED_PARTY_ID,
 }
-_EXCEL_CONFIG_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:excel_config:create"
-_EXCEL_CONFIG_CREATE_RESOURCE_CONTEXT: dict[str, str] = {
-    "party_id": _EXCEL_CONFIG_CREATE_UNSCOPED_PARTY_ID,
-    "owner_party_id": _EXCEL_CONFIG_CREATE_UNSCOPED_PARTY_ID,
-    "manager_party_id": _EXCEL_CONFIG_CREATE_UNSCOPED_PARTY_ID,
-}
 
 
 @router.post("/", response_model=TaskResponse, summary="创建新任务")
@@ -429,7 +423,6 @@ async def create_excel_config(
         require_authz(
             action="create",
             resource_type="excel_config",
-            resource_context=_EXCEL_CONFIG_CREATE_RESOURCE_CONTEXT,
         )
     ),
     service: TaskService = Depends(get_task_service),

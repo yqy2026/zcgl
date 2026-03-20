@@ -28,12 +28,6 @@ from ....services.operation_log.service import (
 from ..utils import handle_api_errors
 
 router = APIRouter(tags=["操作日志"])
-_OPERATION_LOG_DELETE_UNSCOPED_PARTY_ID = "__unscoped__:operation_log:delete"
-_OPERATION_LOG_DELETE_RESOURCE_CONTEXT: dict[str, str] = {
-    "party_id": _OPERATION_LOG_DELETE_UNSCOPED_PARTY_ID,
-    "owner_party_id": _OPERATION_LOG_DELETE_UNSCOPED_PARTY_ID,
-    "manager_party_id": _OPERATION_LOG_DELETE_UNSCOPED_PARTY_ID,
-}
 
 # ==================== Schema定义 ====================
 
@@ -392,7 +386,6 @@ async def cleanup_old_logs(
         require_authz(
             action="delete",
             resource_type="operation_log",
-            resource_context=_OPERATION_LOG_DELETE_RESOURCE_CONTEXT,
         )
     ),
     service: OperationLogService = Depends(get_operation_log_service),

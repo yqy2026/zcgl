@@ -109,6 +109,46 @@ describe('ContractImportReview confirm context', () => {
     vi.clearAllMocks();
   });
 
+  it('sanitizes invalid validated_data values before hydrating review fields', async () => {
+    const result = buildResult();
+    result.validation_result.validated_data = {
+      ...result.validation_result.validated_data,
+      revenue_mode: { invalid: true },
+      contract_direction: { invalid: true },
+      group_relation_type: { invalid: true },
+      operator_party_id: { invalid: true },
+      contract_number: { invalid: true },
+      lessor_party_id: { invalid: true },
+      lessee_party_id: { invalid: true },
+      tenant_name: { invalid: true },
+      tenant_contact: { invalid: true },
+      sign_date: { invalid: true },
+      rent_terms: { invalid: true },
+    };
+
+    renderWithProviders(
+      <ContractImportReview
+        sessionId="session-123"
+        result={result}
+        onConfirm={vi.fn()}
+        onCancel={vi.fn()}
+        onBack={vi.fn()}
+      />
+    );
+
+    expect(screen.getByPlaceholderText('请输入合同编号')).toHaveValue('');
+    expect(screen.getByPlaceholderText('请输入承租方名称')).toHaveValue('');
+
+    fireEvent.click(screen.getByRole('tab', { name: '新体系上下文' }));
+
+    expect(screen.getByLabelText('经营模式')).toHaveValue('');
+    expect(screen.getByLabelText('合同方向')).toHaveValue('');
+    expect(screen.getByLabelText('合同角色')).toHaveValue('');
+    expect(screen.getByLabelText('运营方主体 ID')).toHaveValue('');
+    expect(screen.getByLabelText('出租方/委托方主体 ID')).toHaveValue('');
+    expect(screen.getByLabelText('承租方/受托方主体 ID')).toHaveValue('');
+  });
+
   it('submits the explicit contract-group context and navigates to the new group detail page', async () => {
     const onConfirm = vi.fn().mockResolvedValue({
       success: true,

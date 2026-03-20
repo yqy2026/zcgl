@@ -5,7 +5,7 @@ LLM Prompt管理API路由
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,51 +28,6 @@ from ...services.llm_prompt.feedback_service import FeedbackService
 from ...services.llm_prompt.prompt_manager import PromptManager
 
 router = APIRouter(prefix="/llm-prompts", tags=["LLM Prompts"])
-_LLM_PROMPT_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:llm_prompt:create"
-
-
-def _normalize_optional_str(value: Any) -> str | None:
-    if value is None:
-        return None
-    normalized = str(value).strip()
-    if normalized == "":
-        return None
-    return normalized
-
-
-def _build_party_scope_context(
-    *,
-    scoped_party_id: str,
-    organization_id: str | None = None,
-) -> dict[str, str]:
-    context: dict[str, str] = {
-        "party_id": scoped_party_id,
-        "owner_party_id": scoped_party_id,
-        "manager_party_id": scoped_party_id,
-    }
-    if organization_id is not None:
-        context["organization_id"] = organization_id
-    return context
-
-
-async def _resolve_llm_prompt_create_resource_context(request: Request) -> dict[str, str]:
-    try:
-        payload = await request.json()
-    except Exception:
-        payload = {}
-
-    if not isinstance(payload, dict):
-        payload = {}
-
-    party_id = _normalize_optional_str(payload.get("party_id"))
-    organization_id = _normalize_optional_str(payload.get("organization_id"))
-    scoped_party_id = (
-        party_id or organization_id or _LLM_PROMPT_CREATE_UNSCOPED_PARTY_ID
-    )
-    return _build_party_scope_context(
-        scoped_party_id=scoped_party_id,
-        organization_id=organization_id,
-    )
 
 
 @router.post("/", response_model=PromptTemplateResponse)
@@ -85,7 +40,6 @@ async def create_prompt(
         require_authz(
             action="create",
             resource_type="llm_prompt",
-            resource_context=_resolve_llm_prompt_create_resource_context,
         )
     ),
 ) -> PromptTemplate:
@@ -102,7 +56,9 @@ async def create_prompt(
 
     manager = PromptManager()
     try:
-        prompt = await manager.create_prompt_async(db, prompt_in, user_id=current_user.id)
+        prompt = await manager.create_prompt_async(
+            db, prompt_in, user_id=current_user.id
+        )
         return prompt
     except BaseBusinessError:
         raise
@@ -348,7 +304,6 @@ async def collect_feedback(
         require_authz(
             action="create",
             resource_type="llm_prompt",
-            resource_context=_resolve_llm_prompt_create_resource_context,
         )
     ),
 ) -> ExtractionFeedbackResponse:

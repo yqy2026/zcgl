@@ -1,15 +1,12 @@
 """CRUD helpers for asset management-party history."""
 
-from datetime import UTC, date, datetime
+from datetime import date
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models.asset_management_history import AssetManagementHistory
-
-
-def _utcnow_naive() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+from ..utils.time import utcnow_naive
 
 
 class CRUDAssetManagementHistory:
@@ -67,7 +64,7 @@ class CRUDAssetManagementHistory:
         if record is None:
             return None
         record.end_date = end_date or date.today()
-        record.updated_at = _utcnow_naive()
+        record.updated_at = utcnow_naive()
         if commit:
             await db.commit()
         else:

@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from src.crud.contract_group import CRUDContractGroup
+from src.crud.query_builder import PartyFilter
 
 pytestmark = pytest.mark.asyncio
 
@@ -111,3 +112,76 @@ class TestOwnershipAggregates:
         assert "paid_amount" in compiled
         assert "owner_party_id = 'owner-1'" in compiled
         assert "rent_ledger" not in compiled
+
+
+class TestTenantScopeFilters:
+    async def test_list_by_filters_applies_owner_and_operator_scope(
+        self, crud: CRUDContractGroup, mock_db: MagicMock
+    ) -> None:
+        count_result = MagicMock()
+        count_result.scalar_one.return_value = 1
+        items_result = MagicMock()
+        items_result.scalars.return_value.all.return_value = []
+        mock_db.execute = AsyncMock(side_effect=[count_result, items_result])
+
+        party_filter = PartyFilter(
+            party_ids=["owner-1", "manager-1"],
+            owner_party_ids=["owner-1"],
+            manager_party_ids=["manager-1"],
+        )
+
+        await crud.list_by_filters(mock_db, party_filter=party_filter)
+
+        stmt = mock_db.execute.await_args_list[0].args[0]
+        compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+        assert "contract_groups.owner_party_id IN ('owner-1')" in compiled
+        assert "contract_groups.operator_party_id IN ('manager-1')" in compiled
+
+    async def test_list_by_filters_returns_empty_for_fail_closed_scope(
+        self, crud: CRUDContractGroup, mock_db: MagicMock
+    ) -> None:
+        result = await crud.list_by_filters(
+            mock_db,
+            party_filter=PartyFilter(party_ids=[]),
+        )
+
+        assert result == ([], 0)
+        mock_db.execute.assert_not_called()
+
+    async def test_query_ledger_entries_applies_owner_and_operator_scope(
+        self, crud: CRUDContractGroup, mock_db: MagicMock
+    ) -> None:
+        count_result = MagicMock()
+        count_result.scalar_one.return_value = 1
+        items_result = MagicMock()
+        items_result.scalars.return_value.all.return_value = []
+        mock_db.execute = AsyncMock(side_effect=[count_result, items_result])
+
+        party_filter = PartyFilter(
+            party_ids=["owner-1", "manager-1"],
+            owner_party_ids=["owner-1"],
+            manager_party_ids=["manager-1"],
+        )
+
+        await crud.query_ledger_entries(
+            mock_db,
+            contract_id="contract-001",
+            party_filter=party_filter,
+        )
+
+        stmt = mock_db.execute.await_args_list[0].args[0]
+        compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+        assert "contract_groups.owner_party_id IN ('owner-1')" in compiled
+        assert "contract_groups.operator_party_id IN ('manager-1')" in compiled
+
+    async def test_query_ledger_entries_returns_empty_for_fail_closed_scope(
+        self, crud: CRUDContractGroup, mock_db: MagicMock
+    ) -> None:
+        result = await crud.query_ledger_entries(
+            mock_db,
+            contract_id="contract-001",
+            party_filter=PartyFilter(party_ids=[]),
+        )
+
+        assert result == ([], 0)
+        mock_db.execute.assert_not_called()

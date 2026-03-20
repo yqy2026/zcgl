@@ -53,6 +53,34 @@ async def test_get_descendants_returns_recursive_ids(mock_db) -> None:
 
 
 @pytest.mark.asyncio
+async def test_get_party_filters_soft_deleted_by_default(mock_db) -> None:
+    crud = CRUDParty()
+    execute_result = MagicMock()
+    execute_result.scalars.return_value.first.return_value = None
+    mock_db.execute = AsyncMock(return_value=execute_result)
+
+    await crud.get_party(mock_db, "party-1")
+
+    stmt = mock_db.execute.await_args.args[0]
+    sql = str(stmt)
+    assert "parties.deleted_at IS NULL" in sql
+
+
+@pytest.mark.asyncio
+async def test_get_party_can_include_deleted_records(mock_db) -> None:
+    crud = CRUDParty()
+    execute_result = MagicMock()
+    execute_result.scalars.return_value.first.return_value = None
+    mock_db.execute = AsyncMock(return_value=execute_result)
+
+    await crud.get_party(mock_db, "party-1", include_deleted=True)
+
+    stmt = mock_db.execute.await_args.args[0]
+    sql = str(stmt)
+    assert "parties.deleted_at IS NULL" not in sql
+
+
+@pytest.mark.asyncio
 async def test_remove_hierarchy_returns_deleted_count(mock_db) -> None:
     crud = CRUDParty()
     mock_db.execute = AsyncMock(return_value=SimpleNamespace(rowcount=1))
@@ -99,6 +127,20 @@ async def test_get_parties_applies_scoped_party_ids_filter(mock_db) -> None:
 
 
 @pytest.mark.asyncio
+async def test_get_parties_filters_soft_deleted_by_default(mock_db) -> None:
+    crud = CRUDParty()
+    execute_result = MagicMock()
+    execute_result.scalars.return_value.all.return_value = []
+    mock_db.execute = AsyncMock(return_value=execute_result)
+
+    await crud.get_parties(mock_db)
+
+    stmt = mock_db.execute.await_args.args[0]
+    sql = str(stmt)
+    assert "parties.deleted_at IS NULL" in sql
+
+
+@pytest.mark.asyncio
 async def test_get_parties_returns_empty_when_scoped_party_ids_is_empty(mock_db) -> None:
     crud = CRUDParty()
 
@@ -106,6 +148,18 @@ async def test_get_parties_returns_empty_when_scoped_party_ids_is_empty(mock_db)
 
     assert result == []
     mock_db.execute.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_delete_party_sets_deleted_at_and_flushes(mock_db) -> None:
+    crud = CRUDParty()
+    db_obj = SimpleNamespace(deleted_at=None)
+
+    await crud.delete_party(mock_db, db_obj=db_obj, commit=False)
+
+    assert db_obj.deleted_at is not None
+    mock_db.flush.assert_awaited_once()
+    mock_db.refresh.assert_awaited_once_with(db_obj)
 
 
 @pytest.mark.asyncio

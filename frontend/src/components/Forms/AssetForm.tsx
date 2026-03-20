@@ -9,6 +9,7 @@ import { useDictionaries } from '@/hooks/useDictionary';
 import { COLORS } from '@/styles/colorMap';
 import { announceToScreenReader } from '@/utils/accessibility';
 import styles from './AssetForm.module.css';
+import { normalizeOptionalId } from '@/utils/normalize';
 
 // Section components
 import {
@@ -30,14 +31,6 @@ interface AssetFormProps {
   isLoading?: boolean;
   mode?: 'create' | 'edit';
 }
-
-const normalizeOptionalId = (value: unknown): string | undefined => {
-  if (typeof value !== 'string') {
-    return undefined;
-  }
-  const normalized = value.trim();
-  return normalized !== '' ? normalized : undefined;
-};
 
 const normalizeOptionalText = (value: unknown): string | undefined => {
   if (typeof value !== 'string') {

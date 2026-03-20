@@ -48,12 +48,6 @@ except ImportError as e:
 
 
 router = APIRouter()
-_SYSTEM_MONITORING_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:system_monitoring:create"
-_SYSTEM_MONITORING_CREATE_RESOURCE_CONTEXT: dict[str, str] = {
-    "party_id": _SYSTEM_MONITORING_CREATE_UNSCOPED_PARTY_ID,
-    "owner_party_id": _SYSTEM_MONITORING_CREATE_UNSCOPED_PARTY_ID,
-    "manager_party_id": _SYSTEM_MONITORING_CREATE_UNSCOPED_PARTY_ID,
-}
 
 
 @router.get("/system-metrics", response_model=SystemMetrics, summary="获取系统性能指标")
@@ -217,7 +211,6 @@ def trigger_metrics_collection(
         require_authz(
             action="create",
             resource_type="system_monitoring",
-            resource_context=_SYSTEM_MONITORING_CREATE_RESOURCE_CONTEXT,
         )
     ),
 ) -> dict[str, Any]:

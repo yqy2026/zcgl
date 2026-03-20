@@ -7,10 +7,11 @@ CRUD helpers for ContractGroup（合同组）。
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import exists, func, select
+from sqlalchemy import exists, false, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from ..crud.query_builder import PartyFilter
 from ..models.asset import Asset
 from ..models.associations import contract_assets, contract_group_assets
 from ..models.contract_group import (
@@ -29,6 +30,44 @@ def _utcnow() -> datetime:
 
 class CRUDContractGroup:
     """ContractGroup CRUD 操作。"""
+
+    @staticmethod
+    def _normalize_scope_ids(raw_ids: list[str] | tuple[str, ...] | None) -> list[str]:
+        if raw_ids is None:
+            return []
+        return [str(raw_id).strip() for raw_id in raw_ids if str(raw_id).strip() != ""]
+
+    def _apply_contract_group_party_filter(
+        self,
+        stmt: Any,
+        *,
+        party_filter: PartyFilter,
+    ) -> Any:
+        owner_party_ids = self._normalize_scope_ids(
+            list(party_filter.owner_party_ids or [])
+        )
+        manager_party_ids = self._normalize_scope_ids(
+            list(party_filter.manager_party_ids or [])
+        )
+
+        if len(owner_party_ids) == 0 and len(manager_party_ids) == 0:
+            generic_party_ids = self._normalize_scope_ids(list(party_filter.party_ids))
+            if len(generic_party_ids) == 0:
+                return stmt.where(false())
+            owner_party_ids = generic_party_ids
+            manager_party_ids = generic_party_ids
+
+        conditions: list[Any] = []
+        if len(owner_party_ids) > 0:
+            conditions.append(ContractGroup.owner_party_id.in_(owner_party_ids))
+        if len(manager_party_ids) > 0:
+            conditions.append(ContractGroup.operator_party_id.in_(manager_party_ids))
+
+        if len(conditions) == 0:
+            return stmt.where(false())
+        if len(conditions) == 1:
+            return stmt.where(conditions[0])
+        return stmt.where(or_(*conditions))
 
     @staticmethod
     def _ownership_contracts_stmt(ownership_id: str):
@@ -72,8 +111,17 @@ class CRUDContractGroup:
         group_id: str,
         *,
         load_contracts: bool = False,
+        party_filter: PartyFilter | None = None,
     ) -> ContractGroup | None:
         stmt = select(ContractGroup).where(ContractGroup.contract_group_id == group_id)
+        if party_filter is not None:
+            normalized_scope_ids = self._normalize_scope_ids(list(party_filter.party_ids))
+            if len(normalized_scope_ids) == 0:
+                return None
+            stmt = self._apply_contract_group_party_filter(
+                stmt,
+                party_filter=party_filter,
+            )
         if load_contracts:
             stmt = stmt.options(selectinload(ContractGroup.contracts))
         return (await db.execute(stmt)).scalars().first()
@@ -132,9 +180,19 @@ class CRUDContractGroup:
         data_status: str = "正常",
         offset: int = 0,
         limit: int = 20,
+        party_filter: PartyFilter | None = None,
     ) -> tuple[list[ContractGroup], int]:
         """分页查询合同组，返回 (items, total)。"""
         stmt = select(ContractGroup).where(ContractGroup.data_status == data_status)
+
+        if party_filter is not None:
+            normalized_scope_ids = self._normalize_scope_ids(list(party_filter.party_ids))
+            if len(normalized_scope_ids) == 0:
+                return [], 0
+            stmt = self._apply_contract_group_party_filter(
+                stmt,
+                party_filter=party_filter,
+            )
 
         if operator_party_id is not None:
             stmt = stmt.where(ContractGroup.operator_party_id == operator_party_id)
@@ -425,10 +483,23 @@ class CRUDContractGroup:
         include_voided: bool = False,
         offset: int = 0,
         limit: int = 20,
+        party_filter: PartyFilter | None = None,
     ) -> tuple[list[ContractLedgerEntry], int]:
         stmt = select(ContractLedgerEntry).join(
             Contract, ContractLedgerEntry.contract_id == Contract.contract_id
+        ).join(
+            ContractGroup,
+            Contract.contract_group_id == ContractGroup.contract_group_id,
         )
+
+        if party_filter is not None:
+            normalized_scope_ids = self._normalize_scope_ids(list(party_filter.party_ids))
+            if len(normalized_scope_ids) == 0:
+                return [], 0
+            stmt = self._apply_contract_group_party_filter(
+                stmt,
+                party_filter=party_filter,
+            )
 
         if asset_id is not None:
             stmt = stmt.where(

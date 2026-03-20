@@ -89,6 +89,88 @@ async def test_asset_create_authz_should_include_party_scope_context() -> None:
 
 
 @pytest.mark.asyncio
+async def test_get_assets_should_pass_selected_view_party_filter_to_service() -> None:
+    """资产列表必须把当前已选视角收窄条件透传到 service。"""
+    from src.api.v1.assets import assets as module
+
+    selected_view_party_filter = MagicMock()
+    mock_asset_service = MagicMock()
+    mock_asset_service.get_assets = AsyncMock(return_value=([], 0))
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(module, "AsyncAssetService", lambda db: mock_asset_service)
+        monkeypatch.setattr(
+            module._asset_list_item_adapter,
+            "validate_python",
+            MagicMock(return_value=[]),
+        )
+
+        await module.get_assets(
+            request=MagicMock(),
+            page=1,
+            page_size=20,
+            search=None,
+            ownership_status=None,
+            property_nature=None,
+            usage_status=None,
+            ownership_id=None,
+            management_entity=None,
+            business_category=None,
+            data_status=None,
+            min_area=None,
+            max_area=None,
+            min_occupancy_rate=None,
+            max_occupancy_rate=None,
+            is_litigated=None,
+            db=MagicMock(),
+            current_user=MagicMock(id="user-1"),
+            _authz_ctx=MagicMock(),
+            selected_view_party_filter=selected_view_party_filter,
+            sort_field=None,
+            sort_by=None,
+            sort_order="desc",
+            include_relations=False,
+        )
+
+    _args, kwargs = mock_asset_service.get_assets.await_args
+    assert kwargs["party_filter"] is selected_view_party_filter
+    assert kwargs["current_user_id"] == "user-1"
+
+
+@pytest.mark.asyncio
+async def test_get_asset_should_pass_selected_view_party_filter_to_service() -> None:
+    """资产详情必须把当前已选视角收窄条件透传到 service。"""
+    from src.api.v1.assets import assets as module
+
+    selected_view_party_filter = MagicMock()
+    mock_asset_service = MagicMock()
+    asset_result = MagicMock(name="asset-result")
+    mock_asset_service.get_asset = AsyncMock(return_value=asset_result)
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(module, "AsyncAssetService", lambda db: mock_asset_service)
+        monkeypatch.setattr(
+            module.AssetResponse,
+            "model_validate",
+            MagicMock(return_value=asset_result),
+        )
+
+        result = await module.get_asset(
+            request=MagicMock(),
+            asset_id="asset-1",
+            current_user=MagicMock(id="user-1"),
+            db=MagicMock(),
+            _authz_ctx=MagicMock(),
+            selected_view_party_filter=selected_view_party_filter,
+        )
+
+    _args, kwargs = mock_asset_service.get_asset.await_args
+    assert kwargs["party_filter"] is selected_view_party_filter
+    assert kwargs["current_user_id"] == "user-1"
+    assert result is asset_result
+
+
+@pytest.mark.asyncio
 async def test_asset_create_authz_should_normalize_party_fields_on_input_model() -> None:
     """创建资产鉴权应将 owner/manager/ownership/org 字段归一化回写到入参。"""
     from src.api.v1.assets import assets as module

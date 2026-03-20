@@ -25,6 +25,10 @@ from ....middleware.auth import (
 from ....models.auth import User
 from ....schemas.asset import AssetHistoryResponse
 from ....services.history.history_service import HistoryService, get_history_service
+from ....services.view_scope import (
+    coerce_selected_view_party_filter,
+    resolve_selected_view_party_filter_dependency,
+)
 
 # 创建历史路由器
 router = APIRouter(dependencies=[Depends(get_current_active_user)])
@@ -46,6 +50,8 @@ async def get_history_list(
     page_size: int = Query(20, ge=1, le=100, description="每页记录数"),
     asset_id: str | None = Query(None, description="资产ID筛选"),
     db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    selected_view_party_filter=Depends(resolve_selected_view_party_filter_dependency),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="read",
@@ -63,6 +69,9 @@ async def get_history_list(
     """
 
     try:
+        selected_view_party_filter = coerce_selected_view_party_filter(
+            selected_view_party_filter
+        )
         skip = (page - 1) * page_size
         resolved_service = _resolve_service(service)
         history_records, total = await resolved_service.get_history_list(
@@ -70,6 +79,8 @@ async def get_history_list(
             skip=skip,
             limit=page_size,
             asset_id=asset_id,
+            current_user_id=str(current_user.id),
+            party_filter=selected_view_party_filter,
         )
 
         items = [
@@ -95,6 +106,8 @@ async def get_history_list(
 async def get_history_detail(
     history_id: str = Path(..., description="历史记录ID"),
     db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    selected_view_party_filter=Depends(resolve_selected_view_party_filter_dependency),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="read",
@@ -111,10 +124,15 @@ async def get_history_detail(
     """
 
     try:
+        selected_view_party_filter = coerce_selected_view_party_filter(
+            selected_view_party_filter
+        )
         resolved_service = _resolve_service(service)
         history_record = await resolved_service.get_history_detail(
             db=db,
             history_id=history_id,
+            current_user_id=str(current_user.id),
+            party_filter=selected_view_party_filter,
         )
 
         return AssetHistoryResponse.model_validate(history_record)

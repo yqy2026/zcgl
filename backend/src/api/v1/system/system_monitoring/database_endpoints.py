@@ -45,18 +45,6 @@ except ImportError as e:
 
 
 router = APIRouter()
-_SYSTEM_MONITORING_UPDATE_UNSCOPED_PARTY_ID = "__unscoped__:system_monitoring:update"
-_SYSTEM_MONITORING_UPDATE_RESOURCE_CONTEXT: dict[str, str] = {
-    "party_id": _SYSTEM_MONITORING_UPDATE_UNSCOPED_PARTY_ID,
-    "owner_party_id": _SYSTEM_MONITORING_UPDATE_UNSCOPED_PARTY_ID,
-    "manager_party_id": _SYSTEM_MONITORING_UPDATE_UNSCOPED_PARTY_ID,
-}
-_SYSTEM_MONITORING_DELETE_UNSCOPED_PARTY_ID = "__unscoped__:system_monitoring:delete"
-_SYSTEM_MONITORING_DELETE_RESOURCE_CONTEXT: dict[str, str] = {
-    "party_id": _SYSTEM_MONITORING_DELETE_UNSCOPED_PARTY_ID,
-    "owner_party_id": _SYSTEM_MONITORING_DELETE_UNSCOPED_PARTY_ID,
-    "manager_party_id": _SYSTEM_MONITORING_DELETE_UNSCOPED_PARTY_ID,
-}
 
 
 @router.get(
@@ -164,7 +152,6 @@ def optimize_database(
         require_authz(
             action="update",
             resource_type="system_monitoring",
-            resource_context=_SYSTEM_MONITORING_UPDATE_RESOURCE_CONTEXT,
         )
     ),
 ) -> DatabaseOptimizationReport:
@@ -227,7 +214,6 @@ def cleanup_database(
         require_authz(
             action="delete",
             resource_type="system_monitoring",
-            resource_context=_SYSTEM_MONITORING_DELETE_RESOURCE_CONTEXT,
         )
     ),
 ) -> dict[str, Any]:

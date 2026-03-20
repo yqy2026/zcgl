@@ -35,41 +35,31 @@ def test_custom_fields_endpoints_should_use_require_authz() -> None:
     expected_patterns = [
         r"async def get_custom_fields[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"custom_field\"",
         r"async def get_custom_field[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"custom_field\"[\s\S]*?resource_id=\"\{field_id\}\"",
-        r"async def create_custom_field[\s\S]*?require_authz\([\s\S]*?action=\"create\"[\s\S]*?resource_type=\"asset\"[\s\S]*?resource_context=_ASSET_CUSTOM_FIELD_CREATE_RESOURCE_CONTEXT",
-        r"async def update_custom_field[\s\S]*?require_authz\([\s\S]*?action=\"update\"[\s\S]*?resource_type=\"asset\"[\s\S]*?resource_id=\"\{field_id\}\"",
-        r"async def delete_custom_field[\s\S]*?require_authz\([\s\S]*?action=\"delete\"[\s\S]*?resource_type=\"asset\"[\s\S]*?resource_id=\"\{field_id\}\"",
+        r"async def create_custom_field[\s\S]*?require_authz\([\s\S]*?action=\"create\"[\s\S]*?resource_type=\"custom_field\"",
+        r"async def update_custom_field[\s\S]*?require_authz\([\s\S]*?action=\"update\"[\s\S]*?resource_type=\"custom_field\"[\s\S]*?resource_id=\"\{field_id\}\"",
+        r"async def delete_custom_field[\s\S]*?require_authz\([\s\S]*?action=\"delete\"[\s\S]*?resource_type=\"custom_field\"[\s\S]*?resource_id=\"\{field_id\}\"",
         r"async def validate_custom_field_value[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"custom_field\"",
         r"async def get_asset_custom_field_values[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"asset\"[\s\S]*?resource_id=\"\{asset_id\}\"[\s\S]*?deny_as_not_found=True",
         r"async def update_asset_custom_field_values[\s\S]*?require_authz\([\s\S]*?action=\"update\"[\s\S]*?resource_type=\"asset\"[\s\S]*?resource_id=\"\{asset_id\}\"",
-        r"async def batch_set_custom_field_values[\s\S]*?require_authz\([\s\S]*?action=\"update\"[\s\S]*?resource_type=\"asset\"[\s\S]*?resource_context=_ASSET_CUSTOM_FIELD_BATCH_UPDATE_RESOURCE_CONTEXT",
+        r"async def batch_set_custom_field_values[\s\S]*?require_authz\([\s\S]*?action=\"update\"[\s\S]*?resource_type=\"custom_field\"",
     ]
     for pattern in expected_patterns:
         assert re.search(pattern, module_source), pattern
 
 
-def test_custom_field_unscoped_write_context_should_be_defined() -> None:
+def test_custom_field_should_not_define_fake_unscoped_write_context() -> None:
     from src.api.v1.assets import custom_fields
 
-    expected_create = "__unscoped__:asset_custom_field:create"
-    assert (
-        custom_fields._ASSET_CUSTOM_FIELD_CREATE_UNSCOPED_PARTY_ID == expected_create
+    assert not hasattr(custom_fields, "_ASSET_CUSTOM_FIELD_CREATE_UNSCOPED_PARTY_ID")
+    assert not hasattr(custom_fields, "_ASSET_CUSTOM_FIELD_CREATE_RESOURCE_CONTEXT")
+    assert not hasattr(
+        custom_fields,
+        "_ASSET_CUSTOM_FIELD_BATCH_UPDATE_UNSCOPED_PARTY_ID",
     )
-    assert custom_fields._ASSET_CUSTOM_FIELD_CREATE_RESOURCE_CONTEXT == {
-        "party_id": expected_create,
-        "owner_party_id": expected_create,
-        "manager_party_id": expected_create,
-    }
-
-    expected_batch = "__unscoped__:asset_custom_field:batch_update_values"
-    assert (
-        custom_fields._ASSET_CUSTOM_FIELD_BATCH_UPDATE_UNSCOPED_PARTY_ID
-        == expected_batch
+    assert not hasattr(
+        custom_fields,
+        "_ASSET_CUSTOM_FIELD_BATCH_UPDATE_RESOURCE_CONTEXT",
     )
-    assert custom_fields._ASSET_CUSTOM_FIELD_BATCH_UPDATE_RESOURCE_CONTEXT == {
-        "party_id": expected_batch,
-        "owner_party_id": expected_batch,
-        "manager_party_id": expected_batch,
-    }
 
 
 @pytest.mark.asyncio
@@ -108,7 +98,6 @@ async def test_get_custom_fields_should_delegate_custom_field_service() -> None:
             "is_required": True,
             "is_active": True,
         },
-        current_user_id="user-1",
     )
 
 
@@ -140,7 +129,6 @@ async def test_get_custom_field_should_delegate_custom_field_service() -> None:
     mock_service.get_custom_field_async.assert_awaited_once_with(
         db=ANY,
         field_id="field-1",
-        current_user_id="user-1",
     )
 
 

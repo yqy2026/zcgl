@@ -1,26 +1,18 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   Button,
-  Card,
   Form,
-  Input,
   Modal,
-  Select,
   Space,
   Switch,
   Tag,
   Popconfirm,
-  Row,
-  Col,
-  Badge,
 } from 'antd';
 import { MessageManager } from '@/utils/messageManager';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
-import { SearchOutlined } from '@ant-design/icons';
-import type { EnumFieldType, EnumFieldValue } from '@/services/dictionary';
+import type { EnumFieldType } from '@/services/dictionary';
 import type { SystemDictionary } from '@/types/dictionary';
-import EnumValuePreview from '@/components/Dictionary/EnumValuePreview';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
 import PageContainer from '@/components/Common/PageContainer';
 import { useArrayListData } from '@/hooks/useArrayListData';
@@ -33,23 +25,15 @@ import {
   useToggleEnumValueActiveMutation,
   useUpdateEnumValueMutation,
 } from '@/hooks/useDictionaryManagement';
+import DictionaryEditor from './DictionaryEditor';
+import DictionaryList, {
+  type EnumFieldWithType,
+  type OverviewFilters,
+} from './DictionaryList';
 import styles from './DictionaryPage.module.css';
-
-const { Option } = Select;
-const { Search } = Input;
-
-interface EnumFieldWithType {
-  type: EnumFieldType;
-  values: EnumFieldValue[];
-}
 
 interface EditState {
   visible: boolean;
-}
-
-interface OverviewFilters {
-  keyword: string;
-  category: string;
 }
 
 type Tone = 'primary' | 'success' | 'warning' | 'error';
@@ -372,69 +356,6 @@ const DictionaryPage: React.FC = () => {
     setDetailModalVisible(true);
   }, []);
 
-  // 概览视图列定义
-  const overviewColumns: ColumnsType<EnumFieldWithType> = useMemo(
-    () => [
-      {
-        title: '类型名称',
-        dataIndex: ['type', 'name'],
-        width: 200,
-        render: (name: string, record) => (
-          <div className={styles.typeNameCell}>
-            <div className={styles.typeName}>{name}</div>
-            <div className={styles.typeCode}>
-              <Tag className={[styles.codeTag, styles.tonePrimary].join(' ')}>
-                {record.type.code}
-              </Tag>
-            </div>
-          </div>
-        ),
-      },
-      {
-        title: '分类',
-        dataIndex: ['type', 'category'],
-        width: 120,
-        render: (category: string) => resolveText(category, '未分类'),
-      },
-      {
-        title: '描述',
-        dataIndex: ['type', 'description'],
-        width: 200,
-        ellipsis: true,
-        render: (desc: string) => resolveText(desc, '-'),
-      },
-      {
-        title: '枚举值预览',
-        width: 300,
-        render: (_, record) => (
-          <EnumValuePreview
-            values={record.values}
-            maxDisplay={3}
-            size="small"
-            showInactiveCount={true}
-          />
-        ),
-      },
-      {
-        title: '操作',
-        key: 'action',
-        width: 100,
-        render: (_, record) => (
-          <Button
-            type="text"
-            size="small"
-            className={styles.viewDetailButton}
-            onClick={() => handleViewDetail(record.type.code)}
-            aria-label={`查看类型 ${record.type.name}`}
-          >
-            查看详情
-          </Button>
-        ),
-      },
-    ],
-    [handleViewDetail]
-  );
-
   const columns: ColumnsType<SystemDictionary> = useMemo(
     () => [
       {
@@ -534,166 +455,42 @@ const DictionaryPage: React.FC = () => {
 
   return (
     <PageContainer title="枚举值字段管理" subTitle="管理系统字典类型、枚举值与启用状态">
-      <Card
-        title={
-          <Space>
-            <span>枚举值字段管理</span>
-            <Badge count={enumTypes.length} showZero />
-          </Space>
-        }
-        extra={
-          <Space>
-            <Button
-              className={styles.refreshButton}
-              onClick={() => {
-                void refetchEnumTypes();
-                void refetchEnumData();
-                if (activeType != null && activeType !== '') {
-                  void refetchDetailSource();
-                }
-              }}
-            >
-              刷新
-            </Button>
-          </Space>
-        }
-      >
-        {/* 搜索和筛选区域 */}
-        <Row gutter={[16, 16]} className={styles.filtersRow}>
-          <Col xs={24} md={10} xl={8}>
-            <Search
-              placeholder="搜索枚举类型或值"
-              value={overviewFilters.keyword}
-              onChange={e => applyOverviewFilters({ ...overviewFilters, keyword: e.target.value })}
-              prefix={<SearchOutlined />}
-              allowClear
-            />
-          </Col>
-          <Col xs={24} md={7} xl={6}>
-            <Select
-              placeholder="选择分类"
-              value={overviewFilters.category}
-              onChange={value => applyOverviewFilters({ ...overviewFilters, category: value })}
-              className={styles.fullWidthControl}
-            >
-              {categories.map(cat => (
-                <Option key={cat} value={cat}>
-                  {cat === 'all' ? '全部分类' : cat}
-                </Option>
-              ))}
-            </Select>
-          </Col>
-          <Col xs={24} md={7} xl={6}>
-            <Select
-              placeholder="选择字典类型"
-              value={activeType}
-              onChange={handleActiveTypeChange}
-              className={styles.fullWidthControl}
-              allowClear
-            >
-              {enumTypes.map(t => (
-                <Option key={t.code} value={t.code}>
-                  {t.name} ({t.code})
-                </Option>
-              ))}
-            </Select>
-          </Col>
-          <Col xs={24} xl={4}>
-            <div className={styles.typeTotal}>
-              <span className={styles.typeTotalText}>共 {overviewPagination.total} 个类型</span>
-            </div>
-          </Col>
-        </Row>
+      <DictionaryList
+        enumTypes={enumTypes}
+        overviewData={overviewData}
+        overviewLoading={overviewLoading}
+        overviewPagination={overviewPagination}
+        overviewFilters={overviewFilters}
+        categories={categories}
+        activeType={activeType}
+        onActiveTypeChange={handleActiveTypeChange}
+        onApplyOverviewFilters={applyOverviewFilters}
+        onUpdateOverviewPagination={updateOverviewPagination}
+        onViewDetail={handleViewDetail}
+        onRefresh={() => {
+          void refetchEnumTypes();
+          void refetchEnumData();
+          if (activeType != null && activeType !== '') {
+            void refetchDetailSource();
+          }
+        }}
+      />
 
-        {/* 列表视图 */}
-        <TableWithPagination
-          rowKey={record => record.type.id}
-          loading={overviewLoading}
-          columns={overviewColumns}
-          dataSource={overviewData}
-          paginationState={overviewPagination}
-          onPageChange={updateOverviewPagination}
-          paginationProps={{
-            showSizeChanger: false,
-            showQuickJumper: false,
-            showTotal: (total: number, range: [number, number]) =>
-              `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
-          }}
-          scroll={{ x: 1200 }}
-          size="middle"
-        />
-      </Card>
-
-      <Modal
+      <DictionaryEditor
         open={edit.visible}
-        title={editingRecord ? '编辑枚举值' : '新增枚举值'}
-        onOk={submit}
+        editingRecord={editingRecord}
+        form={form}
+        activeType={activeType}
+        activeEnumType={activeEnumType}
+        onSubmit={() => {
+          void submit();
+        }}
         onCancel={() => {
           form.resetFields();
           setEdit({ visible: false });
           setEditingRecord(null);
         }}
-        okText="保存"
-        cancelText="取消"
-        width={600}
-      >
-        <Form form={form} layout="vertical">
-          <Form.Item name="dict_type" label="字典类型">
-            <Input disabled placeholder="自动填充" />
-          </Form.Item>
-
-          <Form.Item
-            name="dict_label"
-            label="显示标签"
-            rules={[{ required: true, message: '请输入显示标签' }]}
-          >
-            <Input placeholder="如：已确权、经营性等" />
-          </Form.Item>
-
-          <Form.Item
-            name="dict_value"
-            label="枚举值"
-            rules={[{ required: true, message: '请输入枚举值' }]}
-          >
-            <Input placeholder="如：CONFIRMED、COMMERCIAL等" />
-          </Form.Item>
-
-          <Form.Item name="dict_code" label="编码">
-            <Input placeholder="可选，如：confirmed、commercial等" />
-          </Form.Item>
-
-          <Form.Item name="description" label="描述">
-            <Input.TextArea rows={2} placeholder="可选描述信息" />
-          </Form.Item>
-
-          <Form.Item name="sort_order" label="排序">
-            <Input type="number" placeholder="排序，数值越小越靠前" />
-          </Form.Item>
-
-          {activeEnumType != null && (
-            <div className={styles.typeInfoBlock}>
-              <div>
-                <strong>枚举类型：</strong>
-                {activeEnumType.name}
-              </div>
-              <div>
-                <strong>类型编码：</strong>
-                {activeType}
-              </div>
-              <div>
-                <strong>分类：</strong>
-                {activeEnumType.category ?? '未分类'}
-              </div>
-              {activeEnumType.description != null && (
-                <div>
-                  <strong>描述：</strong>
-                  {activeEnumType.description}
-                </div>
-              )}
-            </div>
-          )}
-        </Form>
-      </Modal>
+      />
 
       {/* 详情模态框 */}
       <Modal

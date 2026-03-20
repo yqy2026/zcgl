@@ -26,7 +26,7 @@ def test_excel_config_endpoints_should_use_require_authz() -> None:
     assert "require_permission(" not in module_source
 
     patterns = [
-        r"async def create_excel_config[\s\S]*?require_authz\([\s\S]*?action=\"create\"[\s\S]*?resource_type=\"excel_config\"[\s\S]*?resource_context=_EXCEL_CONFIG_CREATE_RESOURCE_CONTEXT",
+        r"async def create_excel_config[\s\S]*?require_authz\([\s\S]*?action=\"create\"[\s\S]*?resource_type=\"excel_config\"",
         r"async def get_excel_configs[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"excel_config\"",
         r"async def get_default_excel_config[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"excel_config\"",
         r"async def get_excel_config[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"excel_config\"",
@@ -81,13 +81,8 @@ def test_tasks_unscoped_write_context_should_be_defined() -> None:
         "manager_party_id": expected_task_delete,
     }
 
-    expected_excel_create = "__unscoped__:excel_config:create"
-    assert tasks._EXCEL_CONFIG_CREATE_UNSCOPED_PARTY_ID == expected_excel_create
-    assert tasks._EXCEL_CONFIG_CREATE_RESOURCE_CONTEXT == {
-        "party_id": expected_excel_create,
-        "owner_party_id": expected_excel_create,
-        "manager_party_id": expected_excel_create,
-    }
+    assert not hasattr(tasks, "_EXCEL_CONFIG_CREATE_UNSCOPED_PARTY_ID")
+    assert not hasattr(tasks, "_EXCEL_CONFIG_CREATE_RESOURCE_CONTEXT")
 
 
 @pytest.mark.asyncio

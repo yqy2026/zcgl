@@ -13,11 +13,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.exception_handler import BusinessValidationError, ResourceNotFoundError
 from src.crud.contract import contract_crud
 from src.crud.contract_group import contract_group_crud
+from src.crud.query_builder import PartyFilter
 from src.models.contract_group import (
     ContractLedgerEntry,
     ContractLifecycleStatus,
     ContractRentTerm,
 )
+from src.services.party_scope import resolve_user_party_filter
 
 logger = logging.getLogger(__name__)
 _MANUAL_LEDGER_PAYMENT_STATUSES = frozenset({"unpaid", "paid", "overdue", "partial"})
@@ -87,6 +89,30 @@ def _resolve_amount_due(rent_term: ContractRentTerm) -> Decimal:
 
 class ContractLedgerServiceV2:
     """合同月度台账服务。"""
+
+    async def _resolve_party_filter(
+        self,
+        db: AsyncSession,
+        *,
+        current_user_id: str | None = None,
+        party_filter: PartyFilter | None = None,
+    ) -> PartyFilter | None:
+        return await resolve_user_party_filter(
+            db,
+            current_user_id=current_user_id,
+            party_filter=party_filter,
+            logger=logger,
+            allow_legacy_default_organization_fallback=False,
+        )
+
+    @staticmethod
+    def _is_fail_closed_party_filter(party_filter: PartyFilter | None) -> bool:
+        if party_filter is None:
+            return False
+        return (
+            len([party_id for party_id in party_filter.party_ids if str(party_id).strip() != ""])
+            == 0
+        )
 
     @staticmethod
     def _build_ledger_entry_data(
@@ -187,7 +213,29 @@ class ContractLedgerServiceV2:
         year_month_end: str | None = None,
         offset: int = 0,
         limit: int = 20,
+        current_user_id: str | None = None,
+        party_filter: PartyFilter | None = None,
     ) -> dict[str, Any]:
+        resolved_party_filter = await self._resolve_party_filter(
+            db,
+            current_user_id=current_user_id,
+            party_filter=party_filter,
+        )
+        if self._is_fail_closed_party_filter(resolved_party_filter):
+            raise ResourceNotFoundError("合同", contract_id)
+
+        contract = await contract_crud.get(db, contract_id)
+        if contract is None:
+            raise ResourceNotFoundError("合同", contract_id)
+        if resolved_party_filter is not None:
+            scoped_group = await contract_group_crud.get(
+                db,
+                contract.contract_group_id,
+                party_filter=resolved_party_filter,
+            )
+            if scoped_group is None:
+                raise ResourceNotFoundError("合同", contract_id)
+
         items, total = await contract_group_crud.get_ledger_by_contract(
             db,
             contract_id=contract_id,
@@ -216,6 +264,8 @@ class ContractLedgerServiceV2:
         include_voided: bool = False,
         offset: int = 0,
         limit: int = 20,
+        current_user_id: str | None = None,
+        party_filter: PartyFilter | None = None,
     ) -> dict[str, Any]:
         if not any(
             [
@@ -235,6 +285,19 @@ class ContractLedgerServiceV2:
         ):
             raise BusinessValidationError("开始账期不能晚于结束账期")
 
+        resolved_party_filter = await self._resolve_party_filter(
+            db,
+            current_user_id=current_user_id,
+            party_filter=party_filter,
+        )
+        if self._is_fail_closed_party_filter(resolved_party_filter):
+            return {
+                "items": [],
+                "total": 0,
+                "offset": offset,
+                "limit": limit,
+            }
+
         items, total = await contract_group_crud.query_ledger_entries(
             db,
             asset_id=asset_id,
@@ -246,6 +309,7 @@ class ContractLedgerServiceV2:
             include_voided=include_voided,
             offset=offset,
             limit=limit,
+            party_filter=resolved_party_filter,
         )
         return {
             "items": items,

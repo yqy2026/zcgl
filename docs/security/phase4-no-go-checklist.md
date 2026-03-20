@@ -31,8 +31,10 @@
 
 5. `X-Authz-Stale` 契约（代码/单测）
 - 代码探针：`rg -n "X-Authz-Stale" backend/src` -> `src/core/exception_handler.py`
-- 单测：`pytest --no-cov tests/unit/core/test_exception_handling.py -q` -> `11 passed`
-- 状态：`PASS_LOCAL`（本地 HTTP 样例：`401 + X-Authz-Stale=true`）
+- 单测：`cd backend && uv run python -m pytest --no-cov tests/unit/core/test_exception_handling.py::TestAuthzStaleHeaderContract tests/unit/middleware/test_authz_dependency.py::test_require_authz_denied_write_with_stale_selected_view_marks_authz_stale tests/unit/middleware/test_authz_dependency.py::test_require_authz_denied_read_with_stale_selected_view_keeps_not_found_and_marks_stale -q` -> `7 passed`
+- 前端联动：`cd frontend && pnpm exec vitest run src/api/__tests__/client.test.ts src/hooks/__tests__/useAuth.test.ts` -> `44 passed`
+- 状态：`PASS_LOCAL`
+- 2026-03-16 契约收紧：仅“已保存视角失效导致的拒绝”返回 `X-Authz-Stale`，覆盖普通 `403` 与掩码 `404`；普通 `401/403/404` 不再默认带该头。
 
 6. 后端全量非慢测
 - command: `cd backend && ./.venv/bin/pytest --no-cov -m "not slow" -q -x`

@@ -42,18 +42,10 @@ from ....schemas.rbac import (
     UserRoleAssignmentResponse,
 )
 from ....services import RBACService
+from ....utils.str import normalize_optional_str
 
 router = APIRouter(tags=["角色管理"])
 _ROLE_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:role:create"
-
-
-def _normalize_optional_str(value: Any) -> str | None:
-    if value is None:
-        return None
-    normalized = str(value).strip()
-    if normalized == "":
-        return None
-    return normalized
 
 
 def _build_party_scope_context(
@@ -80,8 +72,8 @@ async def _resolve_role_create_resource_context(request: Request) -> dict[str, s
     if not isinstance(payload, dict):
         payload = {}
 
-    party_id = _normalize_optional_str(payload.get("party_id"))
-    organization_id = _normalize_optional_str(payload.get("organization_id"))
+    party_id = normalize_optional_str(payload.get("party_id"))
+    organization_id = normalize_optional_str(payload.get("organization_id"))
     scoped_party_id = party_id or organization_id or _ROLE_CREATE_UNSCOPED_PARTY_ID
     return _build_party_scope_context(
         scoped_party_id=scoped_party_id,
@@ -97,7 +89,8 @@ async def _resolve_user_assignment_resource_id(request: Request) -> str | None:
 
     if not isinstance(payload, dict):
         return None
-    return _normalize_optional_str(payload.get("user_id"))
+    return normalize_optional_str(payload.get("user_id"))
+
 
 # ==================== Schema定义 ====================
 
@@ -511,7 +504,9 @@ async def get_permission_grants(
         )
 
         return ResponseHandler.paginated(
-            data=[PermissionGrantResponse.model_validate(grant) for grant in grants],  # DEPRECATED
+            data=[
+                PermissionGrantResponse.model_validate(grant) for grant in grants
+            ],  # DEPRECATED
             page=page,
             page_size=page_size,
             total=total,

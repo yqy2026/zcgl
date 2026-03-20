@@ -9,7 +9,12 @@ from fastapi.params import Depends as DependsParam
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ....core.exception_handler import BaseBusinessError, internal_error, not_found
+from ....core.exception_handler import (
+    BaseBusinessError,
+    forbidden,
+    internal_error,
+    not_found,
+)
 from ....core.response_handler import APIResponse, PaginatedData, ResponseHandler
 from ....database import get_async_db
 from ....middleware.auth import AuthzContext, get_current_active_user, require_authz
@@ -20,15 +25,185 @@ from ....schemas.contact import (
     ContactUpdate,
     PrimaryContactResponse,
 )
+from ....services.authz import authz_service
 from ....services.contact import ContactService, get_contact_service
 
 router = APIRouter()
-_CONTACT_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:contact:create"
-_CONTACT_CREATE_RESOURCE_CONTEXT: dict[str, str] = {
-    "party_id": _CONTACT_CREATE_UNSCOPED_PARTY_ID,
-    "owner_party_id": _CONTACT_CREATE_UNSCOPED_PARTY_ID,
-    "manager_party_id": _CONTACT_CREATE_UNSCOPED_PARTY_ID,
-}
+
+
+async def _resolve_contact_scope_context_by_entity(
+    *,
+    db: AsyncSession,
+    entity_type: str,
+    entity_id: str,
+) -> dict[str, Any]:
+    checker = require_authz(action="read", resource_type="contact")
+    return await checker._load_contact_parent_scope_context(
+        db=db,
+        entity_type=entity_type,
+        entity_id=entity_id,
+    )
+
+
+async def _resolve_contact_scope_context_by_id(
+    *,
+    db: AsyncSession,
+    contact_id: str,
+) -> dict[str, Any]:
+    checker = require_authz(action="read", resource_type="contact")
+    return await checker._load_contact_scope_context(
+        db=db,
+        contact_id=contact_id,
+        request_context={},
+    )
+
+
+async def _check_contact_access(
+    *,
+    db: AsyncSession,
+    current_user: User,
+    action: str,
+    resource_id: str | None,
+    resource_context: dict[str, Any],
+    deny_as_not_found: bool = False,
+) -> AuthzContext:
+    decision = await authz_service.check_access(
+        db,
+        user_id=str(current_user.id),
+        resource_type="contact",
+        action=action,
+        resource_id=resource_id,
+        resource=resource_context,
+    )
+    if not decision.allowed:
+        if deny_as_not_found:
+            raise not_found(resource_type="contact", resource_id=resource_id)
+        raise forbidden("权限不足")
+
+    return AuthzContext(
+        current_user=current_user,
+        action=action,
+        resource_type="contact",
+        resource_id=resource_id,
+        resource_context=resource_context,
+        allowed=True,
+        reason_code=decision.reason_code,
+    )
+
+
+async def _require_contact_create_authz(
+    contact_in: ContactCreate,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_async_db),
+) -> AuthzContext:
+    resource_context = await _resolve_contact_scope_context_by_entity(
+        db=db,
+        entity_type=str(contact_in.entity_type),
+        entity_id=str(contact_in.entity_id),
+    )
+    return await _check_contact_access(
+        db=db,
+        current_user=current_user,
+        action="create",
+        resource_id=str(contact_in.entity_id),
+        resource_context=resource_context,
+    )
+
+
+async def _require_contact_entity_read_authz(
+    entity_type: str,
+    entity_id: str,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_async_db),
+) -> AuthzContext:
+    resource_context = await _resolve_contact_scope_context_by_entity(
+        db=db,
+        entity_type=entity_type,
+        entity_id=entity_id,
+    )
+    return await _check_contact_access(
+        db=db,
+        current_user=current_user,
+        action="read",
+        resource_id=entity_id,
+        resource_context=resource_context,
+        deny_as_not_found=True,
+    )
+
+
+async def _require_contact_entity_create_authz(
+    entity_type: str,
+    entity_id: str,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_async_db),
+) -> AuthzContext:
+    resource_context = await _resolve_contact_scope_context_by_entity(
+        db=db,
+        entity_type=entity_type,
+        entity_id=entity_id,
+    )
+    return await _check_contact_access(
+        db=db,
+        current_user=current_user,
+        action="create",
+        resource_id=entity_id,
+        resource_context=resource_context,
+    )
+
+
+async def _require_contact_detail_authz(
+    contact_id: str,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_async_db),
+) -> AuthzContext:
+    resource_context = await _resolve_contact_scope_context_by_id(
+        db=db,
+        contact_id=contact_id,
+    )
+    return await _check_contact_access(
+        db=db,
+        current_user=current_user,
+        action="read",
+        resource_id=contact_id,
+        resource_context=resource_context,
+        deny_as_not_found=True,
+    )
+
+
+async def _require_contact_update_authz(
+    contact_id: str,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_async_db),
+) -> AuthzContext:
+    resource_context = await _resolve_contact_scope_context_by_id(
+        db=db,
+        contact_id=contact_id,
+    )
+    return await _check_contact_access(
+        db=db,
+        current_user=current_user,
+        action="update",
+        resource_id=contact_id,
+        resource_context=resource_context,
+    )
+
+
+async def _require_contact_delete_authz(
+    contact_id: str,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_async_db),
+) -> AuthzContext:
+    resource_context = await _resolve_contact_scope_context_by_id(
+        db=db,
+        contact_id=contact_id,
+    )
+    return await _check_contact_access(
+        db=db,
+        current_user=current_user,
+        action="delete",
+        resource_id=contact_id,
+        resource_context=resource_context,
+    )
 
 
 def _resolve_service(service: ContactService | Any) -> ContactService | Any:
@@ -43,13 +218,6 @@ async def create_contact(
     db: AsyncSession = Depends(get_async_db),
     contact_in: ContactCreate,
     current_user: User = Depends(get_current_active_user),
-    _authz_ctx: AuthzContext = Depends(
-        require_authz(
-            action="create",
-            resource_type="contact",
-            resource_context=_CONTACT_CREATE_RESOURCE_CONTEXT,
-        )
-    ),
     service: ContactService = Depends(get_contact_service),
 ) -> Any:
     """
@@ -64,6 +232,11 @@ async def create_contact(
     contact_data["updated_by"] = current_user.username
 
     try:
+        await _require_contact_create_authz(
+            contact_in=contact_in,
+            current_user=current_user,
+            db=db,
+        )
         resolved_service = _resolve_service(service)
         contact = await resolved_service.create_contact(
             db=db,
@@ -71,6 +244,8 @@ async def create_contact(
         )
         return ContactResponse.model_validate(contact)
     except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
         raise internal_error(f"创建联系人失败: {str(e)}")
 
 
@@ -79,14 +254,7 @@ async def get_contact(
     contact_id: str,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
-    _authz_ctx: AuthzContext = Depends(
-        require_authz(
-            action="read",
-            resource_type="contact",
-            resource_id="{contact_id}",
-            deny_as_not_found=True,
-        )
-    ),
+    _authz_ctx: AuthzContext = Depends(_require_contact_detail_authz),
     service: ContactService = Depends(get_contact_service),
 ) -> Any:
     """获取联系人详情"""
@@ -110,14 +278,7 @@ async def get_entity_contacts(
     current_user: User = Depends(get_current_active_user),
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(10, ge=1, le=100, description="每页数量"),
-    _authz_ctx: AuthzContext = Depends(
-        require_authz(
-            action="read",
-            resource_type="contact",
-            resource_id="{entity_id}",
-            deny_as_not_found=True,
-        )
-    ),
+    _authz_ctx: AuthzContext = Depends(_require_contact_entity_read_authz),
     service: ContactService = Depends(get_contact_service),
 ) -> JSONResponse:
     """
@@ -159,14 +320,7 @@ async def get_primary_contact(
     entity_id: str,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
-    _authz_ctx: AuthzContext = Depends(
-        require_authz(
-            action="read",
-            resource_type="contact",
-            resource_id="{entity_id}",
-            deny_as_not_found=True,
-        )
-    ),
+    _authz_ctx: AuthzContext = Depends(_require_contact_entity_read_authz),
     service: ContactService = Depends(get_contact_service),
 ) -> Any:
     """
@@ -196,13 +350,7 @@ async def update_contact(
     db: AsyncSession = Depends(get_async_db),
     contact_in: ContactUpdate,
     current_user: User = Depends(get_current_active_user),
-    _authz_ctx: AuthzContext = Depends(
-        require_authz(
-            action="update",
-            resource_type="contact",
-            resource_id="{contact_id}",
-        )
-    ),
+    _authz_ctx: AuthzContext = Depends(_require_contact_update_authz),
     service: ContactService = Depends(get_contact_service),
 ) -> Any:
     """更新联系人信息"""
@@ -235,13 +383,7 @@ async def delete_contact(
     contact_id: str,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
-    _authz_ctx: AuthzContext = Depends(
-        require_authz(
-            action="delete",
-            resource_type="contact",
-            resource_id="{contact_id}",
-        )
-    ),
+    _authz_ctx: AuthzContext = Depends(_require_contact_delete_authz),
     service: ContactService = Depends(get_contact_service),
 ) -> Any:
     """
@@ -271,13 +413,7 @@ async def create_contacts_batch(
     db: AsyncSession = Depends(get_async_db),
     contacts_in: list[ContactCreate],
     current_user: User = Depends(get_current_active_user),
-    _authz_ctx: AuthzContext = Depends(
-        require_authz(
-            action="create",
-            resource_type="contact",
-            resource_id="{entity_id}",
-        )
-    ),
+    _authz_ctx: AuthzContext = Depends(_require_contact_entity_create_authz),
     service: ContactService = Depends(get_contact_service),
 ) -> Any:
     """

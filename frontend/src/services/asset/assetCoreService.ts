@@ -8,6 +8,7 @@ import { ownershipService } from '@/services/ownershipService';
 import { ApiErrorHandler } from '@/utils/responseExtractor';
 import { ASSET_API } from '@/constants/api';
 import { convertBackendToFrontend } from '@/utils/dataConversion';
+import { normalizeOptionalId } from '@/utils/normalize';
 import type {
   Asset,
   AssetLeaseSummaryResponse,
@@ -23,14 +24,6 @@ const LEGACY_OWNER_FILTER_KEY = `${'ownership'}_${'id'}` as const;
 type OwnerFilterCompatibleParams = Record<string, unknown> & {
   owner_party_id?: unknown;
   [LEGACY_OWNER_FILTER_KEY]?: unknown;
-};
-
-const normalizeOptionalId = (value: unknown): string | undefined => {
-  if (typeof value !== 'string') {
-    return undefined;
-  }
-  const normalized = value.trim();
-  return normalized === '' ? undefined : normalized;
 };
 
 const withOwnerFilterCompatibility = <T extends Record<string, unknown>>(params: T): T => {

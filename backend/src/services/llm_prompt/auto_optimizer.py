@@ -5,7 +5,7 @@
 
 import logging
 from collections import Counter, defaultdict
-from datetime import UTC, datetime, timedelta
+from datetime import timedelta
 from typing import Any
 from uuid import uuid4
 
@@ -21,14 +21,10 @@ from ...models.llm_prompt import (
     PromptTemplate,
     PromptVersion,
 )
+from ...utils.time import utcnow_naive
 from .prompt_manager import PromptManager
 
 logger = logging.getLogger(__name__)
-
-
-def _utcnow_naive() -> datetime:
-    """返回 naive UTC 时间。"""
-    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class AutoOptimizer:
@@ -91,7 +87,7 @@ class AutoOptimizer:
             (是否需要优化, 原因)
         """
         # 1. 检查最近7天的反馈数量
-        week_ago = _utcnow_naive() - timedelta(days=7)
+        week_ago = utcnow_naive() - timedelta(days=7)
         feedback_count = await extraction_feedback_crud.count_since_async(
             db,
             template_id=prompt.id,
@@ -186,7 +182,7 @@ class AutoOptimizer:
         template.system_prompt = updated_system_prompt
         template.version = new_version
         template.current_version_id = version_record.id
-        template.updated_at = _utcnow_naive()
+        template.updated_at = utcnow_naive()
 
         db.add(version_record)
         await db.commit()

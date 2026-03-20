@@ -32,28 +32,17 @@ from ....schemas.organization import (
 )
 from ....services.authz import authz_service
 from ....services.organization import organization_service
+from ....services.organization_permission_service import OrganizationPermissionService
+from ....utils.str import normalize_optional_str
 
 router = APIRouter(tags=["组织架构管理"])
 _ORGANIZATION_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:organization:create"
-_ORGANIZATION_BATCH_UPDATE_UNSCOPED_PARTY_ID = "__unscoped__:organization:batch_update"
-_ORGANIZATION_BATCH_UPDATE_RESOURCE_CONTEXT: dict[str, str] = {
-    "party_id": _ORGANIZATION_BATCH_UPDATE_UNSCOPED_PARTY_ID,
-    "owner_party_id": _ORGANIZATION_BATCH_UPDATE_UNSCOPED_PARTY_ID,
-    "manager_party_id": _ORGANIZATION_BATCH_UPDATE_UNSCOPED_PARTY_ID,
-}
-
-
-def _normalize_optional_str(value: Any) -> str | None:
-    if value is None:
-        return None
-    normalized = str(value).strip()
-    if normalized == "":
-        return None
-    return normalized
 
 
 def _resolve_current_user_organization_id(current_user: User) -> str | None:
-    return _normalize_optional_str(getattr(current_user, "default_organization_id", None))
+    return normalize_optional_str(
+        getattr(current_user, "default_organization_id", None)
+    )
 
 
 async def _resolve_organization_party_id(
@@ -61,7 +50,7 @@ async def _resolve_organization_party_id(
     db: AsyncSession,
     organization_id: str | None,
 ) -> str | None:
-    normalized_organization_id = _normalize_optional_str(organization_id)
+    normalized_organization_id = normalize_optional_str(organization_id)
     if normalized_organization_id is None:
         return None
 
@@ -80,7 +69,7 @@ async def _resolve_organization_party_id(
         .limit(1)
     )
     row = (await db.execute(stmt)).mappings().one_or_none()
-    return _normalize_optional_str(row.get("party_id") if row is not None else None)
+    return normalize_optional_str(row.get("party_id") if row is not None else None)
 
 
 def _build_party_scope_context(
@@ -104,7 +93,7 @@ async def _require_organization_create_authz(
     db: AsyncSession = Depends(get_async_db),
 ) -> AuthzContext:
     # 创建组织时优先沿 parent_id 建立作用域，缺失时回退到当前用户默认组织。
-    scoped_organization_id = _normalize_optional_str(organization.parent_id)
+    scoped_organization_id = normalize_optional_str(organization.parent_id)
     if scoped_organization_id is None:
         scoped_organization_id = _resolve_current_user_organization_id(current_user)
 
@@ -410,7 +399,9 @@ async def update_organization(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     _authz_ctx: AuthzContext = Depends(
-        require_authz(action="update", resource_type="organization", resource_id="{org_id}")
+        require_authz(
+            action="update", resource_type="organization", resource_id="{org_id}"
+        )
     ),
 ) -> OrganizationResponse:
     """更新组织"""
@@ -434,7 +425,9 @@ async def delete_organization(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     _authz_ctx: AuthzContext = Depends(
-        require_authz(action="delete", resource_type="organization", resource_id="{org_id}")
+        require_authz(
+            action="delete", resource_type="organization", resource_id="{org_id}"
+        )
     ),
 ) -> dict[str, str]:
     """删除组织（软删除）"""
@@ -460,7 +453,9 @@ async def move_organization(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     _authz_ctx: AuthzContext = Depends(
-        require_authz(action="update", resource_type="organization", resource_id="{org_id}")
+        require_authz(
+            action="update", resource_type="organization", resource_id="{org_id}"
+        )
     ),
 ) -> dict[str, Any]:
     """移动组织到新的父组织下"""
@@ -492,15 +487,23 @@ async def batch_organization_operation(
         require_authz(
             action="update",
             resource_type="organization",
-            resource_context=_ORGANIZATION_BATCH_UPDATE_RESOURCE_CONTEXT,
         )
     ),
 ) -> dict[str, Any]:
     """批量操作组织"""
     results: list[dict[str, str]] = []
     errors: list[dict[str, str]] = []
+    organization_permission_service = OrganizationPermissionService(db)
     for org_id in batch_request.organization_ids:
         try:
+            can_manage = await organization_permission_service.can_manage_organization(
+                str(current_user.id),
+                org_id,
+            )
+            if not can_manage:
+                errors.append({"id": org_id, "error": "无权管理该组织"})
+                continue
+
             if batch_request.action == "delete":
                 success = await organization_service.delete_organization(
                     db, org_id=org_id, deleted_by=batch_request.updated_by
@@ -511,6 +514,8 @@ async def batch_organization_operation(
                     )
                 else:
                     errors.append({"id": org_id, "error": "组织不存在"})
+            elif batch_request.action == "move":
+                errors.append({"id": org_id, "error": "批量移动暂未实现"})
         except BaseBusinessError as e:
             errors.append({"id": org_id, "error": str(e)})
         except ValueError as e:

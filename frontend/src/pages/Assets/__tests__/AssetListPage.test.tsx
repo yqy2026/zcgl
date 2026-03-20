@@ -88,6 +88,18 @@ vi.mock('@/utils/messageManager', () => ({
   },
 }));
 
+vi.mock('@/contexts/ViewContext', () => ({
+  useView: () => ({
+    currentView: {
+      key: 'owner:party-1',
+      perspective: 'owner',
+      partyId: 'party-1',
+      partyName: '主体A',
+      label: '产权方 · 主体A',
+    },
+  }),
+}));
+
 import { assetService } from '@/services/assetService';
 import { MessageManager } from '@/utils/messageManager';
 
@@ -199,6 +211,13 @@ describe('AssetListPage', () => {
       renderPage();
 
       expect(screen.getByTestId('asset-list')).toBeInTheDocument();
+    });
+
+    it('显示当前视角标签', () => {
+      renderPage();
+
+      expect(screen.getByText('当前视角')).toBeInTheDocument();
+      expect(screen.getByText('产权方 · 主体A')).toBeInTheDocument();
     });
   });
 

@@ -1,6 +1,5 @@
 """Excel 任务 CRUD 协调服务层。"""
 
-from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,14 +8,11 @@ from ...crud.task import task_crud
 from ...enums.task import TaskStatus
 from ...models.task import AsyncTask
 from ...schemas.task import TaskCreate
+from ...utils.time import utcnow_naive
 
 
 class ExcelTaskService:
     """封装 Excel 场景下任务的创建/查询/更新。"""
-
-    @staticmethod
-    def _utcnow_naive() -> datetime:
-        return datetime.now(UTC).replace(tzinfo=None)
 
     async def create_task(
         self,
@@ -70,7 +66,7 @@ class ExcelTaskService:
                 "progress": 0,
                 "processed_items": 0,
                 "failed_items": 0,
-                "completed_at": self._utcnow_naive(),
+                "completed_at": utcnow_naive(),
                 "result_data": None,
             },
         )

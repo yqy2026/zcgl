@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Select, Typography } from 'antd';
 import type { SelectProps } from 'antd';
 import type { DefaultOptionType } from 'antd/es/select';
+import { useView } from '@/contexts/ViewContext';
 import { partyService } from '@/services/partyService';
 import type { Party, PartyType } from '@/types/party';
 import styles from './PartySelector.module.css';
@@ -43,6 +44,15 @@ export interface PartySelectorProps {
   filterMode?: PartySelectorFilterMode;
   fetcher?: PartyFetcher;
 }
+
+const resolveCurrentViewFilterMode = (
+  perspective: string | undefined
+): PartySelectorFilterMode => {
+  if (perspective === 'owner' || perspective === 'manager') {
+    return perspective;
+  }
+  return 'any';
+};
 
 const mergeAndDedupeParties = (partyGroups: Party[][]): Party[] => {
   const deduped = new Map<string, Party>();
@@ -158,9 +168,10 @@ const PartySelector: React.FC<PartySelectorProps> = ({
   allowClear = true,
   size = 'middle',
   style,
-  filterMode = 'any',
+  filterMode,
   fetcher = defaultFetcher,
 }) => {
+  const { currentView } = useView();
   const [options, setOptions] = useState<PartyOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [statusText, setStatusText] = useState<string | null>(null);
@@ -174,6 +185,9 @@ const PartySelector: React.FC<PartySelectorProps> = ({
     return map;
   }, [options]);
 
+  const resolvedFilterMode: PartySelectorFilterMode =
+    filterMode ?? resolveCurrentViewFilterMode(currentView?.perspective);
+
   const loadOptions = useCallback(
     async (query: string) => {
       requestIdRef.current += 1;
@@ -182,7 +196,7 @@ const PartySelector: React.FC<PartySelectorProps> = ({
       setStatusText(null);
 
       try {
-        const parties = await fetcher(query, filterMode);
+        const parties = await fetcher(query, resolvedFilterMode);
         if (currentRequestId !== requestIdRef.current) {
           return;
         }
@@ -201,7 +215,7 @@ const PartySelector: React.FC<PartySelectorProps> = ({
         }
       }
     },
-    [fetcher, filterMode]
+    [fetcher, resolvedFilterMode]
   );
 
   useEffect(() => {

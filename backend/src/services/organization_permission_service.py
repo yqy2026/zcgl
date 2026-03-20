@@ -5,7 +5,6 @@ Provides organization access checks and helper filters for organization-scoped d
 """
 
 import logging
-from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,6 +16,7 @@ from ..crud.auth import UserCRUD
 from ..crud.organization import organization as organization_crud
 from ..crud.rbac import resource_permission_crud, role_crud
 from ..schemas.rbac import PermissionCheckRequest
+from ..utils.time import utcnow_naive
 from .permission.rbac_service import RBACService
 
 logger = logging.getLogger(__name__)
@@ -24,11 +24,6 @@ logger = logging.getLogger(__name__)
 _user_crud = UserCRUD()
 ORG_ACCESS_CACHE_NAMESPACE = "organization_permission"
 ORG_ACCESS_CACHE_TTL = CacheTTL.MEDIUM_SECONDS
-
-
-def _utcnow_naive() -> datetime:
-    """返回 naive UTC 时间。"""
-    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _user_org_cache_key(user_id: str) -> str:
@@ -288,7 +283,7 @@ class OrganizationPermissionService:  # DEPRECATED
 
     async def _get_user_roles(self, user_id: str) -> list[Any]:
         return await role_crud.get_roles_by_user_async(
-            self.db, user_id, now=_utcnow_naive()
+            self.db, user_id, now=utcnow_naive()
         )
 
     async def _get_all_organization_ids(self) -> list[str]:
@@ -304,7 +299,7 @@ class OrganizationPermissionService:  # DEPRECATED
             resource_type="organization",
             user_id=user_id,
             role_ids=role_ids,
-            now=_utcnow_naive(),
+            now=utcnow_naive(),
         )
 
     async def _has_global_permission(self, user_id: str, action: str) -> bool:

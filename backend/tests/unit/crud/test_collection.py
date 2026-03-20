@@ -9,6 +9,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from src.crud.collection import CRUDCollectionRecord
+from src.crud.query_builder import PartyFilter
 from src.models.collection import CollectionRecord
 
 pytestmark = pytest.mark.asyncio
@@ -67,3 +68,41 @@ class TestCollectionCrudV2:
         assert "contract_ledger_entries" in compiled
         assert "entry_id = 'entry-1'" in compiled
         assert "rent_ledger" not in compiled
+
+    async def test_get_multi_with_filters_applies_contract_group_scope(
+        self, crud: CRUDCollectionRecord, mock_db: MagicMock
+    ) -> None:
+        count_result = MagicMock()
+        count_result.scalar.return_value = 1
+        items_result = MagicMock()
+        items_result.scalars.return_value.all.return_value = []
+        mock_db.execute = AsyncMock(side_effect=[count_result, items_result])
+
+        party_filter = PartyFilter(
+            party_ids=["owner-1", "manager-1"],
+            owner_party_ids=["owner-1"],
+            manager_party_ids=["manager-1"],
+        )
+
+        await crud.get_multi_with_filters_async(
+            mock_db,
+            contract_id="contract-1",
+            party_filter=party_filter,
+        )
+
+        stmt = mock_db.execute.await_args_list[0].args[0]
+        compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+        assert "contract_groups.owner_party_id IN ('owner-1')" in compiled
+        assert "contract_groups.operator_party_id IN ('manager-1')" in compiled
+
+    async def test_get_by_id_returns_none_for_fail_closed_scope(
+        self, crud: CRUDCollectionRecord, mock_db: MagicMock
+    ) -> None:
+        result = await crud.get_by_id_async(
+            mock_db,
+            record_id="record-1",
+            party_filter=PartyFilter(party_ids=[]),
+        )
+
+        assert result is None
+        mock_db.execute.assert_not_called()

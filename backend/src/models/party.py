@@ -1,7 +1,7 @@
 """Party-domain models for Party-Role architecture."""
 
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
@@ -20,15 +20,12 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..database import Base
+from ..utils.time import utcnow_naive
 
 if TYPE_CHECKING:
     from .party_review_log import PartyReviewLog
     from .party_role import PartyRoleBinding
     from .user_party_binding import UserPartyBinding
-
-
-def _utcnow_naive() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class PartyType(StrEnum):
@@ -82,13 +79,13 @@ class Party(Base):
         "metadata", JSONB, comment="扩展信息"
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=_utcnow_naive, comment="创建时间"
+        DateTime, nullable=False, default=utcnow_naive, comment="创建时间"
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        default=_utcnow_naive,
-        onupdate=_utcnow_naive,
+        default=utcnow_naive,
+        onupdate=utcnow_naive,
         comment="更新时间",
     )
     deleted_at: Mapped[datetime | None] = mapped_column(
@@ -157,13 +154,13 @@ class PartyHierarchy(Base):
         comment="子主体ID",
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=_utcnow_naive, comment="创建时间"
+        DateTime, nullable=False, default=utcnow_naive, comment="创建时间"
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        default=_utcnow_naive,
-        onupdate=_utcnow_naive,
+        default=utcnow_naive,
+        onupdate=utcnow_naive,
         comment="更新时间",
     )
 
@@ -175,9 +172,7 @@ class PartyHierarchy(Base):
     )
 
     def __repr__(self) -> str:
-        return (
-            f"<PartyHierarchy(parent={self.parent_party_id}, child={self.child_party_id})>"
-        )
+        return f"<PartyHierarchy(parent={self.parent_party_id}, child={self.child_party_id})>"
 
 
 class PartyContact(Base):
@@ -214,13 +209,13 @@ class PartyContact(Base):
     )
     notes: Mapped[str | None] = mapped_column(Text, comment="备注")
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=_utcnow_naive, comment="创建时间"
+        DateTime, nullable=False, default=utcnow_naive, comment="创建时间"
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        default=_utcnow_naive,
-        onupdate=_utcnow_naive,
+        default=utcnow_naive,
+        onupdate=utcnow_naive,
         comment="更新时间",
     )
 

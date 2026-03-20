@@ -199,3 +199,135 @@ def test_non_admin_project_visibility_isolation(client: TestClient, db_session: 
     ids_b = {item["id"] for item in items_b}
     assert project_b.id in ids_b
     assert project_a.id not in ids_b
+
+
+@pytest.mark.integration
+def test_selected_view_headers_should_narrow_project_results(
+    client: TestClient,
+    db_session: Session,
+) -> None:
+    suffix = uuid.uuid4().hex[:8]
+    password = "User123!@#"
+    password_hash = PasswordService().get_password_hash(password)
+
+    org_a = Organization(
+        name=f"Selected View Org A-{suffix}",
+        code=f"SV-ORG-A-{suffix}",
+        level=1,
+        type="department",
+        status="active",
+    )
+    org_b = Organization(
+        name=f"Selected View Org B-{suffix}",
+        code=f"SV-ORG-B-{suffix}",
+        level=1,
+        type="department",
+        status="active",
+    )
+    db_session.add_all([org_a, org_b])
+    db_session.flush()
+
+    party_a = Party(
+        party_type=PartyType.ORGANIZATION.value,
+        name=f"Selected View Party A-{suffix}",
+        code=f"SV-PARTY-A-{suffix}",
+        external_ref=org_a.id,
+        status="active",
+    )
+    party_b = Party(
+        party_type=PartyType.ORGANIZATION.value,
+        name=f"Selected View Party B-{suffix}",
+        code=f"SV-PARTY-B-{suffix}",
+        external_ref=org_b.id,
+        status="active",
+    )
+    db_session.add_all([party_a, party_b])
+    db_session.flush()
+
+    user = User(
+        username=f"project_selected_view_user_{suffix}",
+        email=f"project_selected_view_user_{suffix}@example.com",
+        phone=f"138{uuid.uuid4().int % 10**8:08d}",
+        full_name="Project Selected View User",
+        password_hash=password_hash,
+        is_active=True,
+        default_organization_id=org_a.id,
+        created_by="integration_test",
+        updated_by="integration_test",
+    )
+    db_session.add(user)
+    db_session.flush()
+
+    db_session.add_all(
+        [
+            UserPartyBinding(
+                user_id=user.id,
+                party_id=party_a.id,
+                relation_type=RelationType.MANAGER,
+                is_primary=True,
+            ),
+            UserPartyBinding(
+                user_id=user.id,
+                party_id=party_b.id,
+                relation_type=RelationType.MANAGER,
+                is_primary=False,
+            ),
+        ]
+    )
+
+    project_a = Project(
+        project_name=f"Selected View Project A-{suffix}",
+        project_code=_build_project_code(),
+        status="active",
+        manager_party_id=party_a.id,
+        created_by=user.id,
+    )
+    project_b = Project(
+        project_name=f"Selected View Project B-{suffix}",
+        project_code=_build_project_code(),
+        status="active",
+        manager_party_id=party_b.id,
+        created_by=user.id,
+    )
+    db_session.add_all([project_a, project_b])
+    _bind_project_read_policy(
+        db_session,
+        suffix=suffix,
+        user_ids=[user.id],
+    )
+    db_session.commit()
+
+    _login(client, user.username, password)
+    base_response = client.get("/api/v1/projects/")
+    assert base_response.status_code == 200
+    base_ids = {item["id"] for item in base_response.json()["data"]["items"]}
+    assert base_ids == {project_a.id, project_b.id}
+
+    narrowed_response = client.get(
+        "/api/v1/projects/",
+        headers={
+            "X-View-Perspective": "manager",
+            "X-View-Party-Id": party_a.id,
+        },
+    )
+    assert narrowed_response.status_code == 200
+    narrowed_ids = {item["id"] for item in narrowed_response.json()["data"]["items"]}
+    assert narrowed_ids == {project_a.id}
+
+    narrowed_detail_ok = client.get(
+        f"/api/v1/projects/{project_a.id}",
+        headers={
+            "X-View-Perspective": "manager",
+            "X-View-Party-Id": party_a.id,
+        },
+    )
+    assert narrowed_detail_ok.status_code == 200
+
+    narrowed_detail_other = client.get(
+        f"/api/v1/projects/{project_b.id}",
+        headers={
+            "X-View-Perspective": "manager",
+            "X-View-Party-Id": party_a.id,
+        },
+    )
+    assert narrowed_detail_other.status_code == 404

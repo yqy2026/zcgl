@@ -20,12 +20,6 @@ from src.services.excel.excel_config_service import (
 )
 
 router = APIRouter()
-_EXCEL_CONFIG_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:excel_config:create"
-_EXCEL_CONFIG_CREATE_RESOURCE_CONTEXT: dict[str, str] = {
-    "party_id": _EXCEL_CONFIG_CREATE_UNSCOPED_PARTY_ID,
-    "owner_party_id": _EXCEL_CONFIG_CREATE_UNSCOPED_PARTY_ID,
-    "manager_party_id": _EXCEL_CONFIG_CREATE_UNSCOPED_PARTY_ID,
-}
 
 
 def _resolve_service(service: ExcelConfigService | Any) -> ExcelConfigService | Any:
@@ -67,7 +61,6 @@ async def create_excel_config(
         require_authz(
             action="create",
             resource_type="excel_config",
-            resource_context=_EXCEL_CONFIG_CREATE_RESOURCE_CONTEXT,
         )
     ),
     service: ExcelConfigService = Depends(get_excel_config_service),

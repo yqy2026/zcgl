@@ -1,5 +1,5 @@
 import logging
-from datetime import UTC, datetime
+from datetime import datetime
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
@@ -34,6 +34,7 @@ from ...schemas.project import (
     ProjectUpdate,
 )
 from ...services.party_scope import resolve_user_party_filter
+from ...utils.time import utcnow_naive
 
 logger = logging.getLogger(__name__)
 
@@ -57,10 +58,6 @@ class ProjectService:
         """
         # 交由 ProjectResponse 的 model_validator 处理关系字段懒加载安全与兼容转换
         return ProjectResponse.model_validate(project)
-
-    @staticmethod
-    def _utcnow_naive() -> datetime:
-        return datetime.now(UTC).replace(tzinfo=None)
 
     @staticmethod
     def _is_fail_closed_party_filter(party_filter: PartyFilter | None) -> bool:
@@ -173,12 +170,18 @@ class ProjectService:
         try:
             # 1. 生成项目编码 (如果未提供)
             if not obj_in.project_code:
-                obj_in.project_code = await self.generate_project_code(db, obj_in.project_name)
+                obj_in.project_code = await self.generate_project_code(
+                    db, obj_in.project_name
+                )
 
             # 2. 检查编码唯一性
-            existing_project = await project_crud.get_by_code(db, code=obj_in.project_code)
+            existing_project = await project_crud.get_by_code(
+                db, code=obj_in.project_code
+            )
             if existing_project:
-                raise DuplicateResourceError("项目", "project_code", obj_in.project_code)
+                raise DuplicateResourceError(
+                    "项目", "project_code", obj_in.project_code
+                )
 
             # 3. 创建项目
             project: Project = await project_crud.create(
@@ -283,7 +286,7 @@ class ProjectService:
             project.status = "active"
 
         project.updated_by = updated_by
-        project.updated_at = self._utcnow_naive()
+        project.updated_at = utcnow_naive()
         db.add(project)
         await db.commit()
         await db.refresh(project)
@@ -431,12 +434,13 @@ class ProjectService:
         *,
         project_id: str,
         current_user_id: str | None = None,
+        party_filter: PartyFilter | None = None,
     ) -> tuple[list[Asset], ProjectAssetSummary]:
         """获取项目当前有效关联资产列表及面积汇总。"""
         resolved_party_filter = await self._resolve_party_filter(
             db,
             current_user_id=current_user_id,
-            party_filter=None,
+            party_filter=party_filter,
         )
         if self._is_fail_closed_party_filter(resolved_party_filter):
             raise ResourceNotFoundError("项目", project_id)
@@ -495,11 +499,17 @@ class ProjectService:
         ]
 
         total_rentable_area = sum(
-            (self._as_decimal(getattr(asset, "rentable_area", None)) for asset in ordered_assets),
+            (
+                self._as_decimal(getattr(asset, "rentable_area", None))
+                for asset in ordered_assets
+            ),
             start=Decimal(0),
         )
         total_rented_area = sum(
-            (self._as_decimal(getattr(asset, "rented_area", None)) for asset in ordered_assets),
+            (
+                self._as_decimal(getattr(asset, "rented_area", None))
+                for asset in ordered_assets
+            ),
             start=Decimal(0),
         )
         if total_rentable_area == Decimal(0):

@@ -3,7 +3,7 @@
  * 提供 Prompt 模板的列表展示、筛选、激活、版本管理等功能
  */
 
-import React, { useState, useEffect, useCallback, useMemo, type ReactNode } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Card,
   Button,
@@ -27,8 +27,6 @@ import {
   ReloadOutlined,
   CheckCircleOutlined,
   FileTextOutlined,
-  ClockCircleOutlined,
-  StopOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
@@ -50,108 +48,21 @@ import { TableWithPagination } from '@/components/Common/TableWithPagination';
 import { ListToolbar } from '@/components/Common/ListToolbar';
 import PageContainer from '@/components/Common/PageContainer';
 import { useQuery } from '@tanstack/react-query';
+import {
+  DOC_TYPE_META_MAP,
+  PROVIDER_META_MAP,
+  STATUS_META_MAP,
+  VERSION_SOURCE_META,
+  getAccuracyTone,
+  getConfidenceTone,
+  getToneClassName,
+  normalizeVersion,
+  type PromptFilters,
+} from './promptListConstants';
 import styles from './PromptListPage.module.css';
 
 const logger = createLogger('PromptListPage');
 const { Option } = Select;
-
-type Tone = 'primary' | 'success' | 'warning' | 'error' | 'neutral';
-type MetricTone = Extract<Tone, 'success' | 'warning' | 'error'>;
-
-interface MetaTagConfig {
-  label: string;
-  hint?: string;
-  tone: Tone;
-  icon?: ReactNode;
-}
-
-const DOC_TYPE_META_MAP: Record<DocType, MetaTagConfig> = {
-  [DocType.CONTRACT]: { label: '租赁合同', tone: 'primary' },
-  [DocType.PROPERTY_CERT]: { label: '产权证', tone: 'success' },
-};
-
-const PROVIDER_META_MAP: Record<LLMProvider, MetaTagConfig> = {
-  [LLMProvider.QWEN]: { label: 'Qwen', tone: 'primary' },
-  [LLMProvider.HUNYUAN]: { label: '混元', tone: 'warning' },
-  [LLMProvider.DEEPSEEK]: { label: 'DeepSeek', tone: 'error' },
-  [LLMProvider.GLM]: { label: '智谱', tone: 'neutral' },
-};
-
-const STATUS_META_MAP: Record<PromptStatus, MetaTagConfig> = {
-  [PromptStatus.ACTIVE]: {
-    label: '活跃',
-    hint: '在线生效',
-    tone: 'success',
-    icon: <CheckCircleOutlined />,
-  },
-  [PromptStatus.DRAFT]: {
-    label: '草稿',
-    hint: '待发布',
-    tone: 'warning',
-    icon: <ClockCircleOutlined />,
-  },
-  [PromptStatus.ARCHIVED]: {
-    label: '已归档',
-    hint: '仅历史',
-    tone: 'neutral',
-    icon: <StopOutlined />,
-  },
-};
-
-const VERSION_SOURCE_META = {
-  auto: { label: '自动', hint: '系统生成', tone: 'primary' as Tone },
-  manual: { label: '手动', hint: '人工维护', tone: 'neutral' as Tone },
-};
-
-const getAccuracyTone = (value: number): MetricTone => {
-  if (value >= 0.9) {
-    return 'success';
-  }
-  if (value >= 0.7) {
-    return 'warning';
-  }
-  return 'error';
-};
-
-const getConfidenceTone = (value: number): MetricTone => {
-  if (value >= 0.8) {
-    return 'success';
-  }
-  if (value >= 0.6) {
-    return 'warning';
-  }
-  return 'error';
-};
-
-const getToneClassName = (tone: Tone): string => {
-  if (tone === 'primary') {
-    return styles.tonePrimary;
-  }
-  if (tone === 'success') {
-    return styles.toneSuccess;
-  }
-  if (tone === 'warning') {
-    return styles.toneWarning;
-  }
-  if (tone === 'neutral') {
-    return styles.toneNeutral;
-  }
-  return styles.toneError;
-};
-
-const normalizeVersion = (version: string | number): string => {
-  const versionText = String(version).trim();
-  if (versionText.toLowerCase().startsWith('v')) {
-    return versionText;
-  }
-  return `v${versionText}`;
-};
-
-interface PromptFilters {
-  doc_type?: DocType;
-  status?: PromptStatus;
-  provider?: LLMProvider;
-}
 
 const PromptListPage: React.FC = () => {
   const [filters, setFilters] = useState<PromptFilters>({

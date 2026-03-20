@@ -32,11 +32,13 @@ class BaseBusinessError(Exception):
         code: str = "BUSINESS_ERROR",
         details: ErrorDetails | None = None,
         status_code: int = status.HTTP_400_BAD_REQUEST,
+        authz_stale: bool = False,
     ):
         self.message = message
         self.code = code
         self.details: ErrorDetailDict = dict(details or {})
         self.status_code = status_code
+        self.authz_stale = authz_stale
         self.timestamp = datetime.now(UTC)
         super().__init__(message)
 
@@ -79,6 +81,7 @@ class ResourceNotFoundError(BaseBusinessError):
         resource_type: str,
         resource_id: str | None = None,
         details: ErrorDetails | None = None,
+        authz_stale: bool = False,
     ):
         message = (
             f"{resource_type}{ErrorMessages.RESOURCE_NOT_FOUND.replace('资源', '')}"
@@ -95,6 +98,7 @@ class ResourceNotFoundError(BaseBusinessError):
                 **(details or {}),
             },
             status_code=status.HTTP_404_NOT_FOUND,
+            authz_stale=authz_stale,
         )
 
 
@@ -131,12 +135,14 @@ class PermissionDeniedError(BaseBusinessError):
         message: str | None = None,
         required_permission: str | None = None,
         details: ErrorDetails | None = None,
+        authz_stale: bool = False,
     ):
         super().__init__(
             message=message or ErrorMessages.PERMISSION_DENIED,
             code="PERMISSION_DENIED",
             details={"required_permission": required_permission, **(details or {})},
             status_code=status.HTTP_403_FORBIDDEN,
+            authz_stale=authz_stale,
         )
 
 
@@ -393,22 +399,10 @@ class ExceptionHandler:
             "request_id": self._get_request_id(request),
         }
 
-        response_headers: dict[str, str] = {}
-        if self._should_set_authz_stale_header(exc):
-            response_headers[AUTHZ_STALE_HEADER_NAME] = "true"
-
         return JSONResponse(
             status_code=exc.status_code,
             content=response_data,
-            headers=response_headers,
         )
-
-    def _should_set_authz_stale_header(self, exc: BaseBusinessError) -> bool:
-        """Expose authz-stale signal for auth failures to support client refresh logic."""
-        return exc.status_code in {
-            status.HTTP_401_UNAUTHORIZED,
-            status.HTTP_403_FORBIDDEN,
-        }
 
     def _sanitize_exception_details(
         self, details: ErrorDetails | None
@@ -582,15 +576,21 @@ def not_found(
     *,
     resource_type: str | None = None,
     resource_id: str | None = None,
+    authz_stale: bool = False,
 ) -> BaseBusinessError:
     if resource_type:
-        return ResourceNotFoundError(resource_type, resource_id)
+        return ResourceNotFoundError(
+            resource_type,
+            resource_id,
+            authz_stale=authz_stale,
+        )
 
     return BaseBusinessError(
         message=message,
         code="RESOURCE_NOT_FOUND",
         details={"resource_id": resource_id} if resource_id else {},
         status_code=status.HTTP_404_NOT_FOUND,
+        authz_stale=authz_stale,
     )
 
 
@@ -635,8 +635,10 @@ def unauthorized(message: str = "未授权，请登录") -> BaseBusinessError:
     return AuthenticationError(message=message)
 
 
-def forbidden(message: str = "权限不足") -> BaseBusinessError:
-    return PermissionDeniedError(message=message)
+def forbidden(
+    message: str = "权限不足", *, authz_stale: bool = False
+) -> BaseBusinessError:
+    return PermissionDeniedError(message=message, authz_stale=authz_stale)
 
 
 def conflict(

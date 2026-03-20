@@ -16,6 +16,7 @@ import { MessageManager } from '@/utils/messageManager';
 import { CSRF_CONFIG } from '@/api/config';
 
 const logger = createLogger('AuthContext');
+const AUTHZ_STALE_EVENT_NAME = 'authz-stale';
 
 interface AuthContextType {
   user: User | null;
@@ -92,6 +93,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [error, setError] = useState<string | null>(null);
   const currentUserIdRef = useRef<string | null>(AuthStorage.getCurrentUser()?.id ?? null);
   const capabilityRequestVersionRef = useRef(0);
+  const authzStaleRefreshRef = useRef<Promise<void> | null>(null);
 
   const persistAuthDataSafely = useCallback(
     (
@@ -494,6 +496,48 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const clearError = useCallback(() => {
     setError(null);
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const handleAuthzStale = () => {
+      const userId = currentUserIdRef.current;
+      if (userId == null || userId === '') {
+        return;
+      }
+      if (authzStaleRefreshRef.current != null) {
+        return;
+      }
+
+      invalidateCapabilityRequests();
+      AuthStorage.clearCapabilitiesSnapshot();
+      setCapabilities([]);
+      setCapabilitiesLoading(true);
+      setError('当前权限视角已更新，正在刷新访问权限');
+      MessageManager.warning('当前权限视角已更新，正在刷新访问权限');
+
+      const refreshPromise = refreshUser()
+        .catch(refreshError => {
+          logger.error(
+            '处理权限视角失效事件失败',
+            refreshError instanceof Error ? refreshError : new Error(String(refreshError))
+          );
+        })
+        .finally(() => {
+          if (authzStaleRefreshRef.current === refreshPromise) {
+            authzStaleRefreshRef.current = null;
+          }
+        });
+      authzStaleRefreshRef.current = refreshPromise;
+    };
+
+    window.addEventListener(AUTHZ_STALE_EVENT_NAME, handleAuthzStale);
+    return () => {
+      window.removeEventListener(AUTHZ_STALE_EVENT_NAME, handleAuthzStale);
+    };
+  }, [invalidateCapabilityRequests, refreshUser]);
 
   // Token自动刷新机制 - Now handled by httpOnly cookies and API client interceptor
   // The API client automatically handles 401 errors and refreshes tokens via cookies

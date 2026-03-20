@@ -51,9 +51,7 @@ def test_excel_config_key_endpoints_should_use_require_authz() -> None:
     create_kwargs = _get_require_authz_keywords("create_excel_config")
     assert _require_str_value(create_kwargs, "action") == "create"
     assert _require_str_value(create_kwargs, "resource_type") == "excel_config"
-    create_context = create_kwargs.get("resource_context")
-    assert isinstance(create_context, ast.Name)
-    assert create_context.id == "_EXCEL_CONFIG_CREATE_RESOURCE_CONTEXT"
+    assert "resource_context" not in create_kwargs
 
     list_kwargs = _get_require_authz_keywords("get_excel_configs")
     assert _require_str_value(list_kwargs, "action") == "read"
@@ -81,12 +79,7 @@ def test_excel_config_key_endpoints_should_use_require_authz() -> None:
     assert _require_str_value(delete_kwargs, "resource_id") == "{config_id}"
 
 
-def test_excel_config_unscoped_create_context_should_be_defined() -> None:
+def test_excel_config_should_not_define_fake_unscoped_create_context() -> None:
     module = _read_module()
-    expected_sentinel = "__unscoped__:excel_config:create"
-    assert module._EXCEL_CONFIG_CREATE_UNSCOPED_PARTY_ID == expected_sentinel
-    assert module._EXCEL_CONFIG_CREATE_RESOURCE_CONTEXT == {
-        "party_id": expected_sentinel,
-        "owner_party_id": expected_sentinel,
-        "manager_party_id": expected_sentinel,
-    }
+    assert not hasattr(module, "_EXCEL_CONFIG_CREATE_UNSCOPED_PARTY_ID")
+    assert not hasattr(module, "_EXCEL_CONFIG_CREATE_RESOURCE_CONTEXT")

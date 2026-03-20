@@ -2,6 +2,12 @@
  * 字典管理服务 - 统一响应处理版本
  *
  * @description 字典的完整CRUD操作，主要用于管理界面，支持枚举类型和枚举值的管理
+ *
+ * 本文件是 re-export hub：
+ *   - 类型定义来自 ./dictionaryTypes
+ *   - 缓存逻辑来自 ./dictionaryCache
+ *   - 批量操作/搜索/验证来自 ./dictionarySync
+ *
  * @author Claude Code
  */
 
@@ -9,173 +15,67 @@ import { apiClient } from '@/api/client';
 import { ApiErrorHandler } from '@/utils/responseExtractor';
 import { DICTIONARY_CONFIGS } from './config';
 import { createLogger } from '@/utils/logger';
+import { EnumTypeCache } from './dictionaryCache';
+import {
+  batchAddEnumValues as _batchAdd,
+  batchUpdateEnumValues as _batchUpdate,
+  batchDeleteEnumValues as _batchDelete,
+  searchEnumTypes as _searchEnumTypes,
+  validateDictionaryData as _validateDictionaryData,
+  validateEnumTypeCode as _validateEnumTypeCode,
+} from './dictionarySync';
+
+// ── Re-export all types for backward compatibility ──
+export type {
+  EnumFieldType,
+  EnumFieldValue,
+  EnumFieldWithType,
+  DictionaryManagerResult,
+  DictionaryUsageStats,
+  DictionaryBatchResult,
+  CreateEnumFieldTypeRequest,
+  UpdateEnumFieldTypeRequest,
+  CreateEnumFieldValueRequest,
+  UpdateEnumFieldValueRequest,
+} from './dictionaryTypes';
+
+// Re-export sub-modules for direct access
+export { EnumTypeCache } from './dictionaryCache';
+export type { EnumTypeResolveResult } from './dictionaryCache';
+export {
+  chunkArray,
+  batchAddEnumValues,
+  batchUpdateEnumValues,
+  batchDeleteEnumValues,
+  searchEnumTypes,
+  validateDictionaryData,
+  validateEnumTypeCode,
+} from './dictionarySync';
+export type { DictionaryCoreCrud } from './dictionarySync';
+
+// Import concrete types needed by the class implementation
+import type {
+  EnumFieldType,
+  EnumFieldValue,
+  EnumFieldWithType,
+  DictionaryBatchResult,
+  CreateEnumFieldTypeRequest,
+  UpdateEnumFieldTypeRequest,
+  CreateEnumFieldValueRequest,
+  UpdateEnumFieldValueRequest,
+  DictionaryUsageStats,
+} from './dictionaryTypes';
 
 const dictLogger = createLogger('Dictionary');
-
-// 枚举字段类型接口
-export interface EnumFieldType {
-  id: string;
-  name: string;
-  code: string;
-  category?: string;
-  description?: string;
-  is_system: boolean;
-  is_multiple: boolean;
-  is_hierarchical: boolean;
-  default_value?: string;
-  validation_rules?: Record<string, unknown>;
-  display_config?: Record<string, unknown>;
-  status: 'active' | 'inactive';
-  is_deleted?: boolean;
-  created_by?: string;
-  updated_by?: string;
-  created_at: string;
-  updated_at: string;
-  enum_values?: Array<{
-    id: string;
-    enum_type_id: string;
-    label: string;
-    value: string;
-    code?: string;
-    description?: string;
-    parent_id?: string;
-    level: number;
-    sort_order: number;
-    color?: string;
-    icon?: string;
-    extra_properties?: Record<string, unknown>;
-    is_active: boolean;
-    is_default: boolean;
-    path?: string;
-    is_deleted?: boolean;
-    created_at: string;
-    updated_at: string;
-    created_by?: string;
-    updated_by?: string;
-    children?: unknown[];
-  }>;
-}
-
-// 枚举字段值接口
-export interface EnumFieldValue {
-  id: string;
-  enum_type_id: string;
-  label: string;
-  value: string;
-  code?: string;
-  description?: string;
-  parent_id?: string;
-  level: number;
-  sort_order: number;
-  color?: string;
-  icon?: string;
-  is_active: boolean;
-  is_default: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-// 枚举字段与值的组合接口
-export interface EnumFieldWithType {
-  type: EnumFieldType;
-  values: EnumFieldValue[];
-}
-
-// 字典管理操作结果接口
-export interface DictionaryManagerResult<T = unknown> {
-  success: boolean;
-  data?: T;
-  message: string;
-  error?: string;
-  operationType: string;
-  timestamp: string;
-}
-
-// 字典使用统计接口
-export interface DictionaryUsageStats {
-  total_records: number;
-  active_records: number;
-  usage_by_field: Record<string, number>;
-  last_updated: string;
-  popular_values: Array<{
-    value: string;
-    label: string;
-    usage_count: number;
-  }>;
-}
-
-// 字典批量操作结果接口
-export interface DictionaryBatchResult {
-  success: number;
-  failed: number;
-  total: number;
-  results: DictionaryManagerResult[];
-  operationSummary: {
-    operation: string;
-    duration: number; // 毫秒
-    errors: string[];
-  };
-}
-
-// 创建枚举类型请求接口
-export interface CreateEnumFieldTypeRequest {
-  name: string;
-  code: string;
-  category?: string;
-  description?: string;
-  is_multiple?: boolean;
-  is_hierarchical?: boolean;
-  default_value?: string;
-}
-
-// 更新枚举类型请求接口
-export interface UpdateEnumFieldTypeRequest {
-  name?: string;
-  code?: string;
-  category?: string;
-  description?: string;
-  is_multiple?: boolean;
-  is_hierarchical?: boolean;
-  default_value?: string;
-  status?: 'active' | 'inactive';
-}
-
-// 创建枚举值请求接口
-export interface CreateEnumFieldValueRequest {
-  label: string;
-  value: string;
-  code?: string;
-  description?: string;
-  sort_order?: number;
-  color?: string;
-  icon?: string;
-  is_default?: boolean;
-}
-
-// 更新枚举值请求接口
-export interface UpdateEnumFieldValueRequest {
-  label?: string;
-  value?: string;
-  code?: string;
-  description?: string;
-  sort_order?: number;
-  color?: string;
-  icon?: string;
-  is_active?: boolean;
-  is_default?: boolean;
-}
 
 /**
  * 字典管理服务类
  */
 class DictionaryManagerService {
   private readonly baseUrl = '/enum-fields';
-  private readonly DEFAULT_TIMEOUT = 10000; // 默认超时时间
-  private readonly BATCH_SIZE = 50; // 批量操作大小
-  private readonly enumTypeCacheTtlMs = 5 * 60 * 1000;
-  private enumTypeIdByCode = new Map<string, string>();
-  private enumTypeCodeById = new Map<string, string>();
-  private enumTypeCacheAt: number | null = null;
+  private readonly DEFAULT_TIMEOUT = 10000;
+  private readonly BATCH_SIZE = 50;
+  private readonly cache = new EnumTypeCache(5 * 60 * 1000);
 
   /**
    * 获取所有枚举类型（用于管理界面）
@@ -195,11 +95,9 @@ class DictionaryManagerService {
 
       // 处理后端返回的字符串数组，转换为完整的枚举类型对象数组
       if (Array.isArray(data) && data.length > 0 && typeof data[0] === 'string') {
-        // 如果是字符串数组，转换为完整的枚举类型对象
         const enumTypes: EnumFieldType[] = (data as unknown[]).map(
           (item: unknown, index: number): EnumFieldType => {
             const typeCode = String(item);
-            // 从DICTIONARY_CONFIGS中查找配置
             const config = Object.values(DICTIONARY_CONFIGS).find(c => c.code === typeCode);
 
             return {
@@ -220,22 +118,19 @@ class DictionaryManagerService {
           }
         );
 
-        this.refreshEnumTypeCache(enumTypes);
-
+        this.cache.refresh(enumTypes);
         return enumTypes;
       }
 
-      // 如果不是字符串数组，直接返回
       const normalized = Array.isArray(data) ? data : [];
-      this.refreshEnumTypeCache(normalized);
+      this.cache.refresh(normalized);
       return normalized;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       dictLogger.error('获取枚举类型失败:', undefined, { error: enhancedError.message });
 
-      // 返回基于配置的备用数据
       const fallback = this.getFallbackEnumFieldTypes();
-      this.refreshEnumTypeCache(fallback);
+      this.cache.refresh(fallback);
       return fallback;
     }
   }
@@ -260,66 +155,11 @@ class DictionaryManagerService {
     }));
   }
 
-  private refreshEnumTypeCache(types: EnumFieldType[]): void {
-    this.enumTypeIdByCode.clear();
-    this.enumTypeCodeById.clear();
-
-    for (const type of types) {
-      if (type.code !== undefined && type.code !== null && type.code !== '') {
-        this.enumTypeIdByCode.set(type.code, type.id);
-      }
-      if (type.id !== undefined && type.id !== null && type.id !== '') {
-        this.enumTypeCodeById.set(type.id, type.code);
-      }
-    }
-
-    this.enumTypeCacheAt = Date.now();
-  }
-
-  private isEnumTypeCacheFresh(): boolean {
-    if (this.enumTypeCacheAt === null) {
-      return false;
-    }
-
-    return Date.now() - this.enumTypeCacheAt < this.enumTypeCacheTtlMs;
-  }
-
-  private async resolveEnumTypeInfo(typeIdOrCode: string): Promise<{ id: string; code?: string }> {
-    if (typeIdOrCode === '') {
-      return { id: typeIdOrCode };
-    }
-
-    const cachedId = this.enumTypeIdByCode.get(typeIdOrCode);
-    if (cachedId !== undefined) {
-      return { id: cachedId, code: typeIdOrCode };
-    }
-
-    const cachedCode = this.enumTypeCodeById.get(typeIdOrCode);
-    if (cachedCode !== undefined) {
-      return { id: typeIdOrCode, code: cachedCode };
-    }
-
-    if (this.isEnumTypeCacheFresh() === false) {
-      const types = await this.getEnumFieldTypes();
-      const matchByCode = types.find(type => type.code === typeIdOrCode);
-      if (matchByCode !== undefined) {
-        return { id: matchByCode.id, code: matchByCode.code };
-      }
-
-      const matchById = types.find(type => type.id === typeIdOrCode);
-      if (matchById !== undefined) {
-        return { id: matchById.id, code: matchById.code };
-      }
-    }
-
-    return { id: typeIdOrCode };
-  }
-
   /**
    * 获取特定类型的枚举值
    */
   async getEnumFieldValues(typeId: string): Promise<EnumFieldValue[]> {
-    const resolved = await this.resolveEnumTypeInfo(typeId);
+    const resolved = await this.cache.resolve(typeId, () => this.getEnumFieldTypes());
     const requestTypeId = resolved.id;
     const requestTypeCode = resolved.code ?? typeId;
 
@@ -343,11 +183,8 @@ class DictionaryManagerService {
       }
 
       const data = result.data!;
-
-      // 确保返回数组格式
       const dataArray = Array.isArray(data) ? data : [];
 
-      // 映射数据到标准格式
       const mappedData = dataArray.map((rawOption: unknown, index: number) => {
         const option = rawOption as Record<string, unknown>;
         const id = typeof option.id === 'string' ? option.id : undefined;
@@ -400,7 +237,6 @@ class DictionaryManagerService {
       const enhancedError = ApiErrorHandler.handleError(error);
       dictLogger.error(`获取枚举值失败 [${typeId}]:`, undefined, { error: enhancedError.message });
 
-      // 尝试从配置中获取备用数据
       const config = Object.values(DICTIONARY_CONFIGS).find(c => c.code === requestTypeCode);
       if (config) {
         return config.fallbackOptions.map((option, index) => {
@@ -435,27 +271,22 @@ class DictionaryManagerService {
       const types = await this.getEnumFieldTypes();
       const data: EnumFieldWithType[] = [];
 
-      // 安全检查：确保types是可迭代的数组
       if (!Array.isArray(types)) {
         dictLogger.warn('getEnumFieldData: types is not an array, using empty array');
         return [];
       }
 
-      // 并行获取所有类型的值以提高性能
       const valuePromises = types.map(async type => {
         let values: EnumFieldValue[] = [];
 
-        // 首先尝试使用type.code获取枚举值
         if (type.code !== undefined && type.code !== null && type.code !== '') {
           values = await this.getEnumFieldValues(type.code);
         }
 
-        // 如果没有获取到值，则尝试使用type.id
         if (values.length === 0 && type.id) {
           values = await this.getEnumFieldValues(type.id);
         }
 
-        // 最后的备用方案：如果有enum_values数据，则使用它
         if (values.length === 0 && type.enum_values && Array.isArray(type.enum_values)) {
           values = type.enum_values.map(val => ({
             id: val.id,
@@ -502,8 +333,7 @@ class DictionaryManagerService {
    */
   async createEnumFieldType(data: CreateEnumFieldTypeRequest): Promise<EnumFieldType | null> {
     try {
-      // 验证代码
-      const validation = this.validateEnumTypeCode(data.code);
+      const validation = _validateEnumTypeCode(data.code);
       if (!validation.valid) {
         throw new Error(`代码验证失败: ${validation.errors.join(', ')}`);
       }
@@ -533,9 +363,8 @@ class DictionaryManagerService {
     data: UpdateEnumFieldTypeRequest
   ): Promise<EnumFieldType | null> {
     try {
-      // 如果更新了代码，需要验证新代码
       if (data.code !== undefined && data.code !== null && data.code !== '') {
-        const validation = this.validateEnumTypeCode(data.code);
+        const validation = _validateEnumTypeCode(data.code);
         if (validation.valid === false) {
           throw new Error(`代码验证失败: ${validation.errors.join(', ')}`);
         }
@@ -591,7 +420,7 @@ class DictionaryManagerService {
     data: CreateEnumFieldValueRequest
   ): Promise<EnumFieldValue | null> {
     try {
-      const resolved = await this.resolveEnumTypeInfo(typeId);
+      const resolved = await this.cache.resolve(typeId, () => this.getEnumFieldTypes());
       const result = await apiClient.post<EnumFieldValue>(
         `${this.baseUrl}/types/${resolved.id}/values`,
         data,
@@ -673,7 +502,7 @@ class DictionaryManagerService {
    */
   async getEnumFieldUsageStats(typeId: string): Promise<DictionaryUsageStats> {
     try {
-      const resolved = typeId !== '' ? await this.resolveEnumTypeInfo(typeId) : { id: '' };
+      const resolved = typeId !== '' ? await this.cache.resolve(typeId, () => this.getEnumFieldTypes()) : { id: '' };
       const params: Record<string, string> = {};
       if (resolved.id !== '') {
         params.enum_type_id = resolved.id;
@@ -710,7 +539,6 @@ class DictionaryManagerService {
         }
       });
 
-      // 确保返回完整的统计信息
       return {
         total_records: usageRecords.length,
         active_records: activeCount,
@@ -722,7 +550,6 @@ class DictionaryManagerService {
       const enhancedError = ApiErrorHandler.handleError(error);
       dictLogger.error('获取枚举字段使用统计失败:', undefined, { error: enhancedError.message });
 
-      // 返回默认统计信息
       return {
         total_records: 0,
         active_records: 0,
@@ -737,29 +564,7 @@ class DictionaryManagerService {
    * 验证枚举类型代码
    */
   validateEnumTypeCode(code: string): { valid: boolean; errors: string[] } {
-    const errors: string[] = [];
-
-    if (code === undefined || code === null || code === '') {
-      errors.push('代码不能为空');
-    }
-
-    if (!/^[a-z][a-z0-9_]*$/.test(code)) {
-      errors.push('代码只能包含小写字母、数字和下划线，且必须以字母开头');
-    }
-
-    if (code.length > 50) {
-      errors.push('代码长度不能超过50个字符');
-    }
-
-    // 检查是否与系统字典冲突
-    if (code in DICTIONARY_CONFIGS) {
-      errors.push('代码与系统字典冲突');
-    }
-
-    return {
-      valid: errors.length === 0,
-      errors,
-    };
+    return _validateEnumTypeCode(code);
   }
 
   /**
@@ -820,218 +625,28 @@ class DictionaryManagerService {
     }
   }
 
-  /**
-   * 批量添加枚举值
-   */
+  // ── 批量操作（委托到 dictionarySync 模块） ──
+
   async batchAddEnumValues(
     typeId: string,
     values: CreateEnumFieldValueRequest[]
   ): Promise<DictionaryBatchResult> {
-    const startTime = Date.now();
-    const results: DictionaryManagerResult[] = [];
-    let successCount = 0;
-    let failedCount = 0;
-
-    // 分批处理以避免性能问题
-    const batches = this.chunkArray(values, this.BATCH_SIZE);
-
-    for (const batch of batches) {
-      const batchPromises = batch.map(async (valueData, _index) => {
-        try {
-          const result = await this.addEnumFieldValue(typeId, valueData);
-          return {
-            success: true,
-            data: result,
-            message: `枚举值添加成功: ${valueData.label}`,
-            operationType: 'batchAddEnumValue',
-            timestamp: new Date().toISOString(),
-          };
-        } catch (error) {
-          const enhancedError = ApiErrorHandler.handleError(error);
-          return {
-            success: false,
-            message: `枚举值添加失败: ${enhancedError.message}`,
-            error: enhancedError.message,
-            operationType: 'batchAddEnumValue',
-            timestamp: new Date().toISOString(),
-          };
-        }
-      });
-
-      const batchResults = await Promise.allSettled(batchPromises);
-
-      batchResults.forEach(promiseResult => {
-        if (promiseResult.status === 'fulfilled') {
-          results.push(promiseResult.value);
-          if (promiseResult.value.success) {
-            successCount++;
-          } else {
-            failedCount++;
-          }
-        } else {
-          failedCount++;
-        }
-      });
-    }
-
-    const duration = Date.now() - startTime;
-    const errors = results.filter(r => !r.success).map(r => r.message || 'Unknown error');
-
-    return {
-      success: successCount,
-      failed: failedCount,
-      total: values.length,
-      results,
-      operationSummary: {
-        operation: 'batchAddEnumValues',
-        duration,
-        errors,
-      },
-    };
+    return _batchAdd(this, typeId, values, this.BATCH_SIZE);
   }
 
-  /**
-   * 批量更新枚举值
-   */
   async batchUpdateEnumValues(
     typeId: string,
-    updates: Array<{
-      valueId: string;
-      data: UpdateEnumFieldValueRequest;
-    }>
+    updates: Array<{ valueId: string; data: UpdateEnumFieldValueRequest }>
   ): Promise<DictionaryBatchResult> {
-    const startTime = Date.now();
-    const results: DictionaryManagerResult[] = [];
-    let successCount = 0;
-    let failedCount = 0;
-
-    // 分批处理
-    const batches = this.chunkArray(updates, this.BATCH_SIZE);
-
-    for (const batch of batches) {
-      const batchPromises = batch.map(async ({ valueId, data }) => {
-        try {
-          const result = await this.updateEnumFieldValue(typeId, valueId, data);
-          return {
-            success: true,
-            data: result,
-            message: `枚举值更新成功: ${valueId}`,
-            operationType: 'batchUpdateEnumValues',
-            timestamp: new Date().toISOString(),
-          };
-        } catch (error) {
-          const enhancedError = ApiErrorHandler.handleError(error);
-          return {
-            success: false,
-            message: `枚举值更新失败: ${enhancedError.message}`,
-            error: enhancedError.message,
-            operationType: 'batchUpdateEnumValues',
-            timestamp: new Date().toISOString(),
-          };
-        }
-      });
-
-      const batchResults = await Promise.allSettled(batchPromises);
-
-      batchResults.forEach(promiseResult => {
-        if (promiseResult.status === 'fulfilled') {
-          results.push(promiseResult.value);
-          if (promiseResult.value.success) {
-            successCount++;
-          } else {
-            failedCount++;
-          }
-        } else {
-          failedCount++;
-        }
-      });
-    }
-
-    const duration = Date.now() - startTime;
-    const errors = results.filter(r => !r.success).map(r => r.message || 'Unknown error');
-
-    return {
-      success: successCount,
-      failed: failedCount,
-      total: updates.length,
-      results,
-      operationSummary: {
-        operation: 'batchUpdateEnumValues',
-        duration,
-        errors,
-      },
-    };
+    return _batchUpdate(this, typeId, updates, this.BATCH_SIZE);
   }
 
-  /**
-   * 批量删除枚举值
-   */
   async batchDeleteEnumValues(typeId: string, valueIds: string[]): Promise<DictionaryBatchResult> {
-    const startTime = Date.now();
-    const results: DictionaryManagerResult[] = [];
-    let successCount = 0;
-    let failedCount = 0;
-
-    // 分批处理
-    const batches = this.chunkArray(valueIds, this.BATCH_SIZE);
-
-    for (const batch of batches) {
-      const batchPromises = batch.map(async valueId => {
-        try {
-          const success = await this.deleteEnumFieldValue(typeId, valueId);
-          return {
-            success,
-            message: success ? `枚举值删除成功: ${valueId}` : `枚举值删除失败: ${valueId}`,
-            operationType: 'batchDeleteEnumValues',
-            timestamp: new Date().toISOString(),
-          };
-        } catch (error) {
-          const enhancedError = ApiErrorHandler.handleError(error);
-          return {
-            success: false,
-            message: `枚举值删除失败: ${enhancedError.message}`,
-            error: enhancedError.message,
-            operationType: 'batchDeleteEnumValues',
-            timestamp: new Date().toISOString(),
-          };
-        }
-      });
-
-      const batchResults = await Promise.allSettled(batchPromises);
-
-      batchResults.forEach(promiseResult => {
-        if (promiseResult.status === 'fulfilled') {
-          results.push(promiseResult.value);
-          if (promiseResult.value.success) {
-            successCount++;
-          } else {
-            failedCount++;
-          }
-        } else {
-          failedCount++;
-        }
-      });
-    }
-
-    const duration = Date.now() - startTime;
-    const errors = results.filter(r => !r.success).map(r => r.message || 'Unknown error');
-
-    return {
-      success: successCount,
-      failed: failedCount,
-      total: valueIds.length,
-      results,
-      operationSummary: {
-        operation: 'batchDeleteEnumValues',
-        duration,
-        errors,
-      },
-    };
+    return _batchDelete(this, typeId, valueIds, this.BATCH_SIZE);
   }
 
-  /**
-   * 搜索枚举类型
-   */
+  // ── 搜索（委托到 dictionarySync 模块，带 API 优先策略） ──
+
   async searchEnumTypes(
     keyword: string,
     filters?: {
@@ -1063,134 +678,19 @@ class DictionaryManagerService {
       dictLogger.error('搜索枚举类型失败:', undefined, { error: enhancedError.message });
 
       // 本地搜索作为备用方案
-      const allTypes = await this.getEnumFieldTypes();
-      const lowerKeyword = keyword.toLowerCase();
-
-      return allTypes.filter(type => {
-        let matches =
-          type.name.toLowerCase().includes(lowerKeyword) ||
-          type.code.toLowerCase().includes(lowerKeyword) ||
-          (type.description !== undefined &&
-            type.description !== null &&
-            type.description.toLowerCase().includes(lowerKeyword));
-
-        if (filters) {
-          if (filters.category !== undefined && type.category !== filters.category) {
-            matches = false;
-          }
-          if (filters.status !== undefined && type.status !== filters.status) {
-            matches = false;
-          }
-          if (filters.is_system !== undefined && type.is_system !== filters.is_system) {
-            matches = false;
-          }
-        }
-
-        return matches;
-      });
+      return _searchEnumTypes(this, keyword, filters);
     }
   }
 
-  /**
-   * 验证字典数据完整性
-   */
+  // ── 验证（委托到 dictionarySync 模块） ──
+
   async validateDictionaryData(typeId: string): Promise<{
     isValid: boolean;
     issues: string[];
     suggestions: string[];
     warnings: string[];
   }> {
-    try {
-      const issues: string[] = [];
-      const suggestions: string[] = [];
-      const warnings: string[] = [];
-
-      // 获取类型信息
-      const types = await this.getEnumFieldTypes();
-      const targetType = types.find(t => t.id === typeId || t.code === typeId);
-
-      if (!targetType) {
-        issues.push(`字典类型不存在: ${typeId}`);
-        return { isValid: false, issues, suggestions, warnings };
-      }
-
-      // 获取值信息
-      const values = await this.getEnumFieldValues(targetType.code);
-
-      // 检查是否有值
-      if (values.length === 0) {
-        issues.push('字典类型没有任何值');
-        suggestions.push('添加至少一个枚举值');
-      }
-
-      // 检查重复值
-      const valueLabels = values.map(v => v.label.toLowerCase());
-      const valueCodes = values.map(v => v.value.toLowerCase());
-      const duplicateLabels = valueLabels.filter(
-        (label, index) => valueLabels.indexOf(label) !== index
-      );
-      const duplicateCodes = valueCodes.filter((code, index) => valueCodes.indexOf(code) !== index);
-
-      if (duplicateLabels.length > 0) {
-        warnings.push(`发现重复的标签: ${[...new Set(duplicateLabels)].join(', ')}`);
-        suggestions.push('确保所有标签都是唯一的');
-      }
-
-      if (duplicateCodes.length > 0) {
-        issues.push(`发现重复的值: ${[...new Set(duplicateCodes)].join(', ')}`);
-        suggestions.push('确保所有值都是唯一的');
-      }
-
-      // 检查必需字段
-      const invalidValues = values.filter(v => !v.label || !v.value);
-      if (invalidValues.length > 0) {
-        issues.push(`发现${invalidValues.length}个缺少必需字段的枚举值`);
-        suggestions.push('确保所有枚举值都有label和value');
-      }
-
-      // 检查默认值
-      const defaultValues = values.filter(v => v.is_default);
-      if (defaultValues.length === 0) {
-        warnings.push('没有设置默认值');
-        suggestions.push('考虑设置一个默认值');
-      } else if (defaultValues.length > 1) {
-        warnings.push(`发现${defaultValues.length}个默认值`);
-        suggestions.push('只应该设置一个默认值');
-      }
-
-      // 检查排序
-      const unsortedValues = values.filter(v => !v.sort_order);
-      if (unsortedValues.length > 0) {
-        warnings.push(`发现${unsortedValues.length}个未设置排序的枚举值`);
-        suggestions.push('为所有枚举值设置排序顺序');
-      }
-
-      return {
-        isValid: issues.length === 0,
-        issues,
-        suggestions,
-        warnings,
-      };
-    } catch (error) {
-      const enhancedError = ApiErrorHandler.handleError(error);
-      return {
-        isValid: false,
-        issues: [`验证失败: ${enhancedError.message}`],
-        suggestions: ['检查网络连接和权限'],
-        warnings: [],
-      };
-    }
-  }
-
-  /**
-   * 工具方法：数组分块
-   */
-  private chunkArray<T>(array: T[], chunkSize: number): T[][] {
-    const chunks: T[][] = [];
-    for (let i = 0; i < array.length; i += chunkSize) {
-      chunks.push(array.slice(i, i + chunkSize));
-    }
-    return chunks;
+    return _validateDictionaryData(this, typeId);
   }
 }
 

@@ -3,12 +3,26 @@ Analytics API 集成测试
 测试 analytics.py 的真实认证与真实数据链路
 """
 
+from datetime import date
+from decimal import Decimal
 from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
 
 from src.models.asset import Asset
+from src.models.contract_group import (
+    AgencyAgreementDetail,
+    Contract,
+    ContractDirection,
+    ContractGroup,
+    ContractLifecycleStatus,
+    ContractReviewStatus,
+    GroupRelationType,
+    LeaseContractDetail,
+    RevenueMode,
+)
+from src.models.party import Party, PartyReviewStatus, PartyType
 
 pytestmark = pytest.mark.integration
 
@@ -84,6 +98,364 @@ def _seed_assets_for_analytics(
     return unique_nature_normal, unique_nature_deleted
 
 
+def _seed_operational_contracts_for_analytics(
+    db_session,
+    *,
+    suffix: str,
+    same_customer_for_direct: bool = False,
+    direct_customer_review_status: str = PartyReviewStatus.APPROVED.value,
+    entrusted_party_review_status: str | None = None,
+    direct_rent_amount: Decimal = Decimal("2000.00"),
+    extra_direct_rent_amounts: tuple[Decimal, ...] = (),
+    include_agency_detail: bool = True,
+) -> dict[str, float | int | str]:
+    """写入 ANA-001 最小口径样本。"""
+    operator_party = Party(
+        party_type=PartyType.ORGANIZATION.value,
+        name=f"分析运营方-{suffix}",
+        code=f"ANA-OP-{suffix}",
+        status="active",
+        review_status=PartyReviewStatus.APPROVED.value,
+    )
+    owner_party = Party(
+        party_type=PartyType.LEGAL_ENTITY.value,
+        name=f"分析产权方-{suffix}",
+        code=f"ANA-OWNER-{suffix}",
+        status="active",
+        review_status=PartyReviewStatus.APPROVED.value,
+    )
+    customer_one = Party(
+        party_type=PartyType.ORGANIZATION.value,
+        name=f"分析客户一-{suffix}",
+        code=f"ANA-C1-{suffix}",
+        status="active",
+        review_status=PartyReviewStatus.APPROVED.value,
+    )
+    customer_two = Party(
+        party_type=PartyType.ORGANIZATION.value,
+        name=f"分析客户二-{suffix}",
+        code=f"ANA-C2-{suffix}",
+        status="active",
+        review_status=direct_customer_review_status,
+    )
+    db_session.add_all([operator_party, owner_party, customer_one, customer_two])
+    db_session.flush()
+
+    entrusted_party = operator_party
+    if entrusted_party_review_status is not None:
+        entrusted_party = Party(
+            party_type=PartyType.ORGANIZATION.value,
+            name=f"分析委托受托方-{suffix}",
+            code=f"ANA-ENTRUSTED-{suffix}",
+            status="active",
+            review_status=entrusted_party_review_status,
+        )
+        db_session.add(entrusted_party)
+        db_session.flush()
+
+    settlement_rule = {
+        "version": "v1",
+        "cycle": "月付",
+        "settlement_mode": "manual",
+        "amount_rule": {"basis": "fixed"},
+        "payment_rule": {"due_day": 1},
+    }
+    lease_group = ContractGroup(
+        group_code=f"ANA-LEASE-{suffix}",
+        revenue_mode=RevenueMode.LEASE,
+        operator_party_id=operator_party.id,
+        owner_party_id=owner_party.id,
+        effective_from=date(2026, 1, 1),
+        effective_to=date(2026, 12, 31),
+        settlement_rule=settlement_rule,
+        data_status="正常",
+    )
+    agency_group = ContractGroup(
+        group_code=f"ANA-AGENCY-{suffix}",
+        revenue_mode=RevenueMode.AGENCY,
+        operator_party_id=operator_party.id,
+        owner_party_id=owner_party.id,
+        effective_from=date(2026, 1, 1),
+        effective_to=date(2026, 12, 31),
+        settlement_rule=settlement_rule,
+        data_status="正常",
+    )
+    db_session.add_all([lease_group, agency_group])
+    db_session.flush()
+
+    lease_contract = Contract(
+        contract_group_id=lease_group.contract_group_id,
+        contract_number=f"ANA-LEASE-CONTRACT-{suffix}",
+        contract_direction=ContractDirection.LESSOR,
+        group_relation_type=GroupRelationType.DOWNSTREAM,
+        lessor_party_id=owner_party.id,
+        lessee_party_id=customer_one.id,
+        sign_date=date(2026, 1, 1),
+        effective_from=date(2026, 1, 1),
+        effective_to=date(2026, 12, 31),
+        status=ContractLifecycleStatus.ACTIVE,
+        review_status=ContractReviewStatus.APPROVED,
+        data_status="正常",
+    )
+    lease_contract.lease_detail = LeaseContractDetail(
+        rent_amount=Decimal("1000.00"),
+        total_deposit=Decimal("0.00"),
+        payment_cycle="月付",
+    )
+
+    entrusted_contract = Contract(
+        contract_group_id=agency_group.contract_group_id,
+        contract_number=f"ANA-ENTRUSTED-CONTRACT-{suffix}",
+        contract_direction=ContractDirection.LESSEE,
+        group_relation_type=GroupRelationType.ENTRUSTED,
+        lessor_party_id=owner_party.id,
+        lessee_party_id=entrusted_party.id,
+        sign_date=date(2026, 1, 1),
+        effective_from=date(2026, 1, 1),
+        effective_to=date(2026, 12, 31),
+        status=ContractLifecycleStatus.ACTIVE,
+        review_status=ContractReviewStatus.APPROVED,
+        data_status="正常",
+    )
+    if include_agency_detail:
+        entrusted_contract.agency_detail = AgencyAgreementDetail(
+            service_fee_ratio=Decimal("0.1000"),
+            fee_calculation_base="actual_received",
+        )
+
+    direct_customer = customer_one if same_customer_for_direct else customer_two
+
+    direct_contracts: list[Contract] = []
+    direct_rent_amounts = (direct_rent_amount, *extra_direct_rent_amounts)
+    for index, rent_amount in enumerate(direct_rent_amounts, start=1):
+        direct_contract = Contract(
+            contract_group_id=agency_group.contract_group_id,
+            contract_number=f"ANA-DIRECT-CONTRACT-{suffix}-{index}",
+            contract_direction=ContractDirection.LESSOR,
+            group_relation_type=GroupRelationType.DIRECT_LEASE,
+            lessor_party_id=owner_party.id,
+            lessee_party_id=direct_customer.id,
+            sign_date=date(2026, 1, 1),
+            effective_from=date(2026, 1, 1),
+            effective_to=date(2026, 12, 31),
+            status=ContractLifecycleStatus.ACTIVE,
+            review_status=ContractReviewStatus.APPROVED,
+            data_status="正常",
+        )
+        direct_contract.lease_detail = LeaseContractDetail(
+            rent_amount=rent_amount,
+            total_deposit=Decimal("0.00"),
+            payment_cycle="月付",
+        )
+        direct_contracts.append(direct_contract)
+
+    db_session.add_all([lease_contract, entrusted_contract, *direct_contracts])
+    db_session.commit()
+
+    direct_contract_is_eligible = (
+        direct_customer_review_status == PartyReviewStatus.APPROVED.value
+    )
+    entrusted_ratio_is_eligible = (
+        entrusted_party_review_status is None
+        or entrusted_party_review_status == PartyReviewStatus.APPROVED.value
+    )
+    agency_service_income = (
+        float(
+            (
+                sum(direct_rent_amounts, start=Decimal("0.00")) * Decimal("0.1000")
+            ).quantize(Decimal("0.01"))
+        )
+        if direct_contract_is_eligible
+        and entrusted_ratio_is_eligible
+        and include_agency_detail
+        else 0.0
+    )
+
+    return {
+        "total_income": 1000.0 + agency_service_income,
+        "self_operated_rent_income": 1000.0,
+        "agency_service_income": agency_service_income,
+        "customer_entity_count": (
+            1
+            if same_customer_for_direct
+            else (
+                2
+                if direct_contract_is_eligible
+                else 1
+            )
+        ),
+        "customer_contract_count": (
+            1 + len(direct_rent_amounts)
+            if direct_contract_is_eligible
+            else 1
+        ),
+        "metrics_version": "req-ana-001-v1",
+    }
+
+
+def _seed_self_operated_group_party_unapproved_for_analytics(
+    db_session,
+    *,
+    suffix: str,
+    lease_group_operator_review_status: str = PartyReviewStatus.DRAFT.value,
+) -> dict[str, float | int | str]:
+    """写入自营组内主体未审核、代理链路仍合规的 ANA-001 样本。"""
+    lease_operator_party = Party(
+        party_type=PartyType.ORGANIZATION.value,
+        name=f"分析自营运营方-{suffix}",
+        code=f"ANA-LEASE-OP-{suffix}",
+        status="active",
+        review_status=lease_group_operator_review_status,
+    )
+    lease_owner_party = Party(
+        party_type=PartyType.LEGAL_ENTITY.value,
+        name=f"分析自营产权方-{suffix}",
+        code=f"ANA-LEASE-OWNER-{suffix}",
+        status="active",
+        review_status=PartyReviewStatus.APPROVED.value,
+    )
+    agency_operator_party = Party(
+        party_type=PartyType.ORGANIZATION.value,
+        name=f"分析代理运营方-{suffix}",
+        code=f"ANA-AGENCY-OP-{suffix}",
+        status="active",
+        review_status=PartyReviewStatus.APPROVED.value,
+    )
+    agency_owner_party = Party(
+        party_type=PartyType.LEGAL_ENTITY.value,
+        name=f"分析代理产权方-{suffix}",
+        code=f"ANA-AGENCY-OWNER-{suffix}",
+        status="active",
+        review_status=PartyReviewStatus.APPROVED.value,
+    )
+    lease_customer = Party(
+        party_type=PartyType.ORGANIZATION.value,
+        name=f"分析自营客户-{suffix}",
+        code=f"ANA-LEASE-CUSTOMER-{suffix}",
+        status="active",
+        review_status=PartyReviewStatus.APPROVED.value,
+    )
+    agency_customer = Party(
+        party_type=PartyType.ORGANIZATION.value,
+        name=f"分析代理客户-{suffix}",
+        code=f"ANA-AGENCY-CUSTOMER-{suffix}",
+        status="active",
+        review_status=PartyReviewStatus.APPROVED.value,
+    )
+    db_session.add_all(
+        [
+            lease_operator_party,
+            lease_owner_party,
+            agency_operator_party,
+            agency_owner_party,
+            lease_customer,
+            agency_customer,
+        ]
+    )
+    db_session.flush()
+
+    settlement_rule = {
+        "version": "v1",
+        "cycle": "月付",
+        "settlement_mode": "manual",
+        "amount_rule": {"basis": "fixed"},
+        "payment_rule": {"due_day": 1},
+    }
+    lease_group = ContractGroup(
+        group_code=f"ANA-LEASE-GROUP-{suffix}",
+        revenue_mode=RevenueMode.LEASE,
+        operator_party_id=lease_operator_party.id,
+        owner_party_id=lease_owner_party.id,
+        effective_from=date(2026, 1, 1),
+        effective_to=date(2026, 12, 31),
+        settlement_rule=settlement_rule,
+        data_status="正常",
+    )
+    agency_group = ContractGroup(
+        group_code=f"ANA-AGENCY-GROUP-{suffix}",
+        revenue_mode=RevenueMode.AGENCY,
+        operator_party_id=agency_operator_party.id,
+        owner_party_id=agency_owner_party.id,
+        effective_from=date(2026, 1, 1),
+        effective_to=date(2026, 12, 31),
+        settlement_rule=settlement_rule,
+        data_status="正常",
+    )
+    db_session.add_all([lease_group, agency_group])
+    db_session.flush()
+
+    lease_contract = Contract(
+        contract_group_id=lease_group.contract_group_id,
+        contract_number=f"ANA-LEASE-GROUP-CONTRACT-{suffix}",
+        contract_direction=ContractDirection.LESSOR,
+        group_relation_type=GroupRelationType.DOWNSTREAM,
+        lessor_party_id=lease_owner_party.id,
+        lessee_party_id=lease_customer.id,
+        sign_date=date(2026, 1, 1),
+        effective_from=date(2026, 1, 1),
+        effective_to=date(2026, 12, 31),
+        status=ContractLifecycleStatus.ACTIVE,
+        review_status=ContractReviewStatus.APPROVED,
+        data_status="正常",
+    )
+    lease_contract.lease_detail = LeaseContractDetail(
+        rent_amount=Decimal("1000.00"),
+        total_deposit=Decimal("0.00"),
+        payment_cycle="月付",
+    )
+
+    entrusted_contract = Contract(
+        contract_group_id=agency_group.contract_group_id,
+        contract_number=f"ANA-AGENCY-ENTRUSTED-{suffix}",
+        contract_direction=ContractDirection.LESSEE,
+        group_relation_type=GroupRelationType.ENTRUSTED,
+        lessor_party_id=agency_owner_party.id,
+        lessee_party_id=agency_operator_party.id,
+        sign_date=date(2026, 1, 1),
+        effective_from=date(2026, 1, 1),
+        effective_to=date(2026, 12, 31),
+        status=ContractLifecycleStatus.ACTIVE,
+        review_status=ContractReviewStatus.APPROVED,
+        data_status="正常",
+    )
+    entrusted_contract.agency_detail = AgencyAgreementDetail(
+        service_fee_ratio=Decimal("0.1000"),
+        fee_calculation_base="actual_received",
+    )
+
+    direct_contract = Contract(
+        contract_group_id=agency_group.contract_group_id,
+        contract_number=f"ANA-AGENCY-DIRECT-{suffix}",
+        contract_direction=ContractDirection.LESSOR,
+        group_relation_type=GroupRelationType.DIRECT_LEASE,
+        lessor_party_id=agency_owner_party.id,
+        lessee_party_id=agency_customer.id,
+        sign_date=date(2026, 1, 1),
+        effective_from=date(2026, 1, 1),
+        effective_to=date(2026, 12, 31),
+        status=ContractLifecycleStatus.ACTIVE,
+        review_status=ContractReviewStatus.APPROVED,
+        data_status="正常",
+    )
+    direct_contract.lease_detail = LeaseContractDetail(
+        rent_amount=Decimal("2000.00"),
+        total_deposit=Decimal("0.00"),
+        payment_cycle="月付",
+    )
+
+    db_session.add_all([lease_contract, entrusted_contract, direct_contract])
+    db_session.commit()
+
+    return {
+        "total_income": 200.0,
+        "self_operated_rent_income": 0.0,
+        "agency_service_income": 200.0,
+        "customer_entity_count": 1,
+        "customer_contract_count": 1,
+        "metrics_version": "req-ana-001-v1",
+    }
+
+
 class TestAnalyticsAPIContracts:
     """Analytics API 真实契约测试。"""
 
@@ -117,6 +489,37 @@ class TestAnalyticsAPIContracts:
         payload = response.json()
         assert payload.get("success") is True
 
+    def test_comprehensive_includes_req_ana_001_operational_metrics(
+        self,
+        authenticated_client: TestClient,
+        db_session,
+    ) -> None:
+        """ANA-001 口径字段应走真实数据库链路返回正确值。"""
+        suffix = uuid4().hex[:8]
+        expected = _seed_operational_contracts_for_analytics(
+            db_session,
+            suffix=suffix,
+        )
+
+        response = authenticated_client.get(
+            "/api/v1/analytics/comprehensive?should_use_cache=false"
+        )
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload.get("success") is True
+
+        data = payload["data"]
+        assert data["total_income"] == expected["total_income"]
+        assert (
+            data["self_operated_rent_income"]
+            == expected["self_operated_rent_income"]
+        )
+        assert data["agency_service_income"] == expected["agency_service_income"]
+        assert data["customer_entity_count"] == expected["customer_entity_count"]
+        assert data["customer_contract_count"] == expected["customer_contract_count"]
+        assert data["metrics_version"] == expected["metrics_version"]
+
     def test_comprehensive_include_deleted_expands_scope(
         self,
         authenticated_client: TestClient,
@@ -148,6 +551,224 @@ class TestAnalyticsAPIContracts:
         assert isinstance(without_total, int)
         assert isinstance(with_total, int)
         assert with_total >= without_total + 1
+
+    def test_comprehensive_deduplicates_customer_entities_for_req_ana_001(
+        self,
+        authenticated_client: TestClient,
+        db_session,
+    ) -> None:
+        """同一客户主体多份合同时应只计 1 个客户主体。"""
+        suffix = uuid4().hex[:8]
+        expected = _seed_operational_contracts_for_analytics(
+            db_session,
+            suffix=suffix,
+            same_customer_for_direct=True,
+        )
+
+        response = authenticated_client.get(
+            "/api/v1/analytics/comprehensive?should_use_cache=false"
+        )
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload.get("success") is True
+
+        data = payload["data"]
+        assert data["total_income"] == expected["total_income"]
+        assert data["customer_entity_count"] == 1
+        assert data["customer_entity_count"] == expected["customer_entity_count"]
+        assert data["customer_contract_count"] == 2
+        assert data["customer_contract_count"] == expected["customer_contract_count"]
+
+    def test_comprehensive_excludes_unapproved_party_from_req_ana_001(
+        self,
+        authenticated_client: TestClient,
+        db_session,
+    ) -> None:
+        """未审核通过的相关 Party 不得进入 ANA-001 统计。"""
+        suffix = uuid4().hex[:8]
+        expected = _seed_operational_contracts_for_analytics(
+            db_session,
+            suffix=suffix,
+            direct_customer_review_status=PartyReviewStatus.DRAFT.value,
+        )
+
+        response = authenticated_client.get(
+            "/api/v1/analytics/comprehensive?should_use_cache=false"
+        )
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload.get("success") is True
+
+        data = payload["data"]
+        assert data["total_income"] == 1000.0
+        assert data["total_income"] == expected["total_income"]
+        assert data["agency_service_income"] == 0.0
+        assert data["agency_service_income"] == expected["agency_service_income"]
+        assert data["customer_entity_count"] == 1
+        assert data["customer_entity_count"] == expected["customer_entity_count"]
+        assert data["customer_contract_count"] == 1
+        assert data["customer_contract_count"] == expected["customer_contract_count"]
+
+    def test_comprehensive_returns_zero_agency_income_when_direct_rent_is_zero(
+        self,
+        authenticated_client: TestClient,
+        db_session,
+    ) -> None:
+        """代理直租金额为 0 时不应产生代理服务费收入。"""
+        suffix = uuid4().hex[:8]
+        expected = _seed_operational_contracts_for_analytics(
+            db_session,
+            suffix=suffix,
+            direct_rent_amount=Decimal("0.00"),
+        )
+
+        response = authenticated_client.get(
+            "/api/v1/analytics/comprehensive?should_use_cache=false"
+        )
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload.get("success") is True
+
+        data = payload["data"]
+        assert data["total_income"] == 1000.0
+        assert data["total_income"] == expected["total_income"]
+        assert data["agency_service_income"] == 0.0
+        assert data["agency_service_income"] == expected["agency_service_income"]
+        assert data["customer_entity_count"] == 2
+        assert data["customer_entity_count"] == expected["customer_entity_count"]
+        assert data["customer_contract_count"] == 2
+        assert data["customer_contract_count"] == expected["customer_contract_count"]
+
+    def test_comprehensive_does_not_use_ratio_from_unapproved_entrusted_party(
+        self,
+        authenticated_client: TestClient,
+        db_session,
+    ) -> None:
+        """未审核委托协议不得为代理收入提供费率口径。"""
+        suffix = uuid4().hex[:8]
+        expected = _seed_operational_contracts_for_analytics(
+            db_session,
+            suffix=suffix,
+            entrusted_party_review_status=PartyReviewStatus.DRAFT.value,
+        )
+
+        response = authenticated_client.get(
+            "/api/v1/analytics/comprehensive?should_use_cache=false"
+        )
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload.get("success") is True
+
+        data = payload["data"]
+        assert data["total_income"] == 1000.0
+        assert data["total_income"] == expected["total_income"]
+        assert data["agency_service_income"] == 0.0
+        assert data["agency_service_income"] == expected["agency_service_income"]
+        assert data["customer_entity_count"] == 2
+        assert data["customer_entity_count"] == expected["customer_entity_count"]
+        assert data["customer_contract_count"] == 2
+        assert data["customer_contract_count"] == expected["customer_contract_count"]
+
+    def test_comprehensive_returns_zero_agency_income_without_agency_detail(
+        self,
+        authenticated_client: TestClient,
+        db_session,
+    ) -> None:
+        """委托协议缺失费率明细时代理收入应为 0。"""
+        suffix = uuid4().hex[:8]
+        expected = _seed_operational_contracts_for_analytics(
+            db_session,
+            suffix=suffix,
+            include_agency_detail=False,
+        )
+
+        response = authenticated_client.get(
+            "/api/v1/analytics/comprehensive?should_use_cache=false"
+        )
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload.get("success") is True
+
+        data = payload["data"]
+        assert data["total_income"] == 1000.0
+        assert data["total_income"] == expected["total_income"]
+        assert data["agency_service_income"] == 0.0
+        assert data["agency_service_income"] == expected["agency_service_income"]
+        assert data["customer_entity_count"] == 2
+        assert data["customer_entity_count"] == expected["customer_entity_count"]
+        assert data["customer_contract_count"] == 2
+        assert data["customer_contract_count"] == expected["customer_contract_count"]
+
+    def test_comprehensive_counts_multiple_direct_leases_for_same_customer(
+        self,
+        authenticated_client: TestClient,
+        db_session,
+    ) -> None:
+        """同一代理客户多份直租合同时主体数去重、合同数累计。"""
+        suffix = uuid4().hex[:8]
+        expected = _seed_operational_contracts_for_analytics(
+            db_session,
+            suffix=suffix,
+            extra_direct_rent_amounts=(Decimal("1500.00"),),
+        )
+
+        response = authenticated_client.get(
+            "/api/v1/analytics/comprehensive?should_use_cache=false"
+        )
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload.get("success") is True
+
+        data = payload["data"]
+        assert data["total_income"] == 1350.0
+        assert data["total_income"] == expected["total_income"]
+        assert data["agency_service_income"] == 350.0
+        assert data["agency_service_income"] == expected["agency_service_income"]
+        assert data["customer_entity_count"] == 2
+        assert data["customer_entity_count"] == expected["customer_entity_count"]
+        assert data["customer_contract_count"] == 3
+        assert data["customer_contract_count"] == expected["customer_contract_count"]
+
+    def test_comprehensive_excludes_self_operated_income_when_group_party_unapproved(
+        self,
+        authenticated_client: TestClient,
+        db_session,
+    ) -> None:
+        """自营组内主体未审核时，自营收入应被排除但代理链路仍可统计。"""
+        suffix = uuid4().hex[:8]
+        expected = _seed_self_operated_group_party_unapproved_for_analytics(
+            db_session,
+            suffix=suffix,
+        )
+
+        response = authenticated_client.get(
+            "/api/v1/analytics/comprehensive?should_use_cache=false"
+        )
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload.get("success") is True
+
+        data = payload["data"]
+        assert data["total_income"] == 200.0
+        assert data["total_income"] == expected["total_income"]
+        assert data["self_operated_rent_income"] == 0.0
+        assert (
+            data["self_operated_rent_income"]
+            == expected["self_operated_rent_income"]
+        )
+        assert data["agency_service_income"] == 200.0
+        assert data["agency_service_income"] == expected["agency_service_income"]
+        assert data["customer_entity_count"] == 1
+        assert data["customer_entity_count"] == expected["customer_entity_count"]
+        assert data["customer_contract_count"] == 1
+        assert data["customer_contract_count"] == expected["customer_contract_count"]
 
     def test_analytics_cache_stats_endpoint_exists(self, authenticated_client):
         """缓存统计端点返回统一结构。"""

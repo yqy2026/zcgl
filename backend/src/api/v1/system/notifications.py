@@ -21,12 +21,6 @@ from ....services.notification.scheduler import run_notification_tasks
 from ....services.permission.rbac_service import RBACService
 
 router = APIRouter(tags=["Notifications"])
-_NOTIFICATION_UPDATE_UNSCOPED_PARTY_ID = "__unscoped__:notification:update"
-_NOTIFICATION_UPDATE_RESOURCE_CONTEXT: dict[str, str] = {
-    "party_id": _NOTIFICATION_UPDATE_UNSCOPED_PARTY_ID,
-    "owner_party_id": _NOTIFICATION_UPDATE_UNSCOPED_PARTY_ID,
-    "manager_party_id": _NOTIFICATION_UPDATE_UNSCOPED_PARTY_ID,
-}
 
 
 # ==================== Pydantic 模型 ====================
@@ -180,7 +174,6 @@ async def mark_all_as_read(
         require_authz(
             action="update",
             resource_type="notification",
-            resource_context=_NOTIFICATION_UPDATE_RESOURCE_CONTEXT,
         )
     ),
 ) -> dict[str, str]:
@@ -230,7 +223,6 @@ async def run_notification_tasks_endpoint(
         require_authz(
             action="update",
             resource_type="notification",
-            resource_context=_NOTIFICATION_UPDATE_RESOURCE_CONTEXT,
         )
     ),
 ) -> dict[str, str]:

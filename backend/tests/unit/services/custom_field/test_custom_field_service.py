@@ -1,8 +1,6 @@
-"""
-Focused async unit tests for CustomFieldService.
-"""
+"""Focused async unit tests for CustomFieldService."""
 
-from unittest.mock import ANY, AsyncMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -11,7 +9,6 @@ from src.core.exception_handler import (
     DuplicateResourceError,
     ResourceNotFoundError,
 )
-from src.crud.query_builder import PartyFilter
 from src.models.system_dictionary import AssetCustomField
 from src.schemas.asset import (
     AssetCustomFieldCreate,
@@ -81,29 +78,39 @@ class TestCreateCustomField:
                 await service.create_custom_field_async(mock_db, obj_in=obj_in)
 
 
-class TestTenantFilterResolution:
-    async def test_resolve_party_filter_disables_legacy_default_org_fallback(
+class TestGlobalResourceBehavior:
+    async def test_get_custom_fields_should_not_resolve_party_scope(
         self, service, mock_db
     ):
-        resolved_filter = PartyFilter(party_ids=["party-1"])
-
         with patch(
-            "src.services.custom_field.service.resolve_user_party_filter",
-            new=AsyncMock(return_value=resolved_filter),
-        ) as mock_resolve:
-            result = await service._resolve_party_filter(
+            "src.services.custom_field.service.custom_field_crud.get_multi_with_filters_async",
+            new=AsyncMock(return_value=[]),
+        ) as mock_get:
+            result = await service.get_custom_fields_async(
                 mock_db,
-                current_user_id="user-1",
+                filters={"field_type": "text"},
             )
 
-        assert result == resolved_filter
-        mock_resolve.assert_awaited_once_with(
-            mock_db,
-            current_user_id="user-1",
-            party_filter=None,
-            logger=ANY,
-            allow_legacy_default_organization_fallback=False,
+        assert result == []
+        mock_get.assert_awaited_once_with(
+            db=mock_db,
+            filters={"field_type": "text"},
         )
+
+    async def test_get_custom_field_should_read_directly_without_party_scope(
+        self, service, mock_db, sample_field
+    ):
+        with patch(
+            "src.services.custom_field.service.custom_field_crud.get",
+            new=AsyncMock(return_value=sample_field),
+        ) as mock_get:
+            result = await service.get_custom_field_async(
+                mock_db,
+                field_id=TEST_FIELD_ID,
+            )
+
+        assert result == sample_field
+        mock_get.assert_awaited_once_with(db=mock_db, id=TEST_FIELD_ID)
 
 
 class TestUpdateCustomField:

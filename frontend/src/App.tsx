@@ -6,6 +6,7 @@ import AppLayout from './components/Layout/AppLayout';
 import LoginPage from './pages/LoginPage';
 import ErrorBoundary from './components/ErrorHandling/ErrorBoundary';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ViewProvider } from './contexts/ViewContext';
 import { ErrorHandlingProvider } from './contexts/ErrorHandlingContext';
 import { CapabilityGuard } from './components/System/CapabilityGuard';
 import { MessageManager } from './utils/messageManager';
@@ -196,18 +197,20 @@ const App: React.FC = () => {
       <ThemeProvider>
         <ErrorHandlingProvider>
           <AuthProvider>
-            <AntdApp>
-              <AppInitializer>
-                <BrowserRouter
-                  future={{
-                    v7_startTransition: true,
-                    v7_relativeSplatPath: true,
-                  }}
-                >
-                  <AppContent />
-                </BrowserRouter>
-              </AppInitializer>
-            </AntdApp>
+            <ViewProvider>
+              <AntdApp>
+                <AppInitializer>
+                  <BrowserRouter
+                    future={{
+                      v7_startTransition: true,
+                      v7_relativeSplatPath: true,
+                    }}
+                  >
+                    <AppContent />
+                  </BrowserRouter>
+                </AppInitializer>
+              </AntdApp>
+            </ViewProvider>
           </AuthProvider>
         </ErrorHandlingProvider>
       </ThemeProvider>

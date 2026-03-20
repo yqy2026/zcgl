@@ -82,7 +82,7 @@ export const FilenameValidator: React.FC<FilenameValidatorProps> = ({
     const hasChineseSpecial = Object.keys(chineseSpecialCharsMap).some(char =>
       fname.includes(char)
     );
-    if (hasChineseSpecial !== undefined && hasChineseSpecial !== null) {
+    if (hasChineseSpecial) {
       issues.push('包含中文特殊字符');
       suggestions.push('建议将中文特殊字符替换为标准字符');
       if (severity === 'low') severity = 'medium';
@@ -90,7 +90,7 @@ export const FilenameValidator: React.FC<FilenameValidatorProps> = ({
 
     // Unicode字符检查
     const hasUnicode = [...fname].some(char => char.charCodeAt(0) > 127);
-    if (hasUnicode !== undefined && hasUnicode !== null) {
+    if (hasUnicode) {
       issues.push('包含Unicode字符');
       suggestions.push('确保系统支持Unicode字符');
     }

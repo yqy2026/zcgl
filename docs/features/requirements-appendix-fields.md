@@ -332,16 +332,19 @@
 | 字段 | 类型 | 必填 | 规则/说明 | 状态 |
 |---|---|---|---|---|
 | `id` | string | 是 | 主体主键 | 已确认 |
-| `party_type` | enum | 是 | `organization/legal_entity` | 已确认 |
+| `party_type` | enum | 是 | `organization/legal_entity/individual` | 已确认 |
 | `name` | string | 是 | 主体名称 | 已确认 |
 | `code` | string | 是 | 主体编码；同类型内唯一 | 已确认 |
 | `external_ref` | string | 否 | 外部系统引用 | 已确认 |
 | `status` | enum | 是 | `active/inactive` | 已确认 |
-| `review_status` | enum | 是 | `draft/pending/approved/rejected` | 已确认 |
+| `review_status` | enum | 是 | `draft/pending/approved/reversed`；驳回动作回到 `draft`，`reversed` 预留给后续反审核 | 已确认 |
 | `review_by` | string | 否 | 审核人；通过/驳回时写入 | 已确认 |
 | `reviewed_at` | datetime | 否 | 审核时间；通过/驳回时写入 | 已确认 |
 | `review_reason` | string | 否 | 驳回原因；驳回时必填 | 已确认 |
-| `metadata` | json | 否 | 扩展信息 | 已确认 |
+| `metadata_json` | json | 否 | ORM 列名；API 字段别名为 `metadata`，存放扩展信息 | 已确认 |
+| `created_at` | datetime | 是 | 创建时间，只读 | 已确认 |
+| `updated_at` | datetime | 是 | 更新时间，只读 | 已确认 |
+| `deleted_at` | datetime | 否 | 软删除时间，`NULL` 表示未删除 | 已确认 |
 
 ---
 

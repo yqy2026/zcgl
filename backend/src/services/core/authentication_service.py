@@ -14,6 +14,7 @@ from ...crud.auth import UserCRUD, UserSessionCRUD
 from ...exceptions import BusinessLogicError
 from ...models.auth import User, UserSession
 from ...security.token_blacklist import blacklist_manager
+from ...utils.time import utcnow_naive
 from .password_service import PasswordService
 from .session_service import AsyncSessionService
 from .user_management_service import AsyncUserManagementService
@@ -35,11 +36,6 @@ ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
 REFRESH_TOKEN_EXPIRE_DAYS = settings.REFRESH_TOKEN_EXPIRE_DAYS
 JWT_AUDIENCE = settings.JWT_AUDIENCE
 JWT_ISSUER = settings.JWT_ISSUER
-
-
-def _utcnow_naive() -> datetime:
-    """返回 naive UTC 时间。"""
-    return datetime.now(UTC).replace(tzinfo=None)
 
 
 @dataclass(frozen=True)
@@ -246,7 +242,9 @@ class AsyncAuthenticationService:
             logger.error(f"JWT validation failed: {str(e)}")
             return None
 
-        session: UserSession | None = await _session_crud.get_active_by_refresh_token_async(
+        session: (
+            UserSession | None
+        ) = await _session_crud.get_active_by_refresh_token_async(
             self.db, refresh_token
         )
 
@@ -287,7 +285,7 @@ class AsyncAuthenticationService:
                 await self.db.commit()
                 return None
 
-        session.last_accessed_at = _utcnow_naive()
+        session.last_accessed_at = utcnow_naive()
         if client_ip:
             setattr(session, "ip_address", client_ip)
         if user_agent:

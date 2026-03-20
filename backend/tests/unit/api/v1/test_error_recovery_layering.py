@@ -34,7 +34,7 @@ def test_error_recovery_endpoints_should_use_require_authz() -> None:
         r"async def reset_circuit_breaker[\s\S]*?require_authz\([\s\S]*?action=\"update\"[\s\S]*?resource_type=\"error_recovery\"[\s\S]*?resource_id=\"\{category\}\"",
         r"async def get_recovery_history[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"error_recovery\"",
         r"async def test_error_recovery[\s\S]*?require_authz\([\s\S]*?action=\"update\"[\s\S]*?resource_type=\"error_recovery\"[\s\S]*?resource_id=_resolve_test_recovery_category_resource_id",
-        r"async def clear_recovery_history[\s\S]*?require_authz\([\s\S]*?action=\"delete\"[\s\S]*?resource_type=\"error_recovery\"[\s\S]*?resource_context=_ERROR_RECOVERY_DELETE_RESOURCE_CONTEXT",
+        r"async def clear_recovery_history[\s\S]*?require_authz\([\s\S]*?action=\"delete\"[\s\S]*?resource_type=\"error_recovery\"",
     ]
 
     for pattern in expected_patterns:
@@ -51,13 +51,8 @@ def test_error_recovery_test_endpoint_should_not_use_path_template_for_body_cate
     ).group(0)
 
 
-def test_error_recovery_unscoped_delete_context_should_be_defined() -> None:
+def test_error_recovery_should_not_define_fake_unscoped_delete_context() -> None:
     from src.api.v1.system import error_recovery as module
 
-    expected_sentinel = "__unscoped__:error_recovery:delete"
-    assert module._ERROR_RECOVERY_DELETE_UNSCOPED_PARTY_ID == expected_sentinel
-    assert module._ERROR_RECOVERY_DELETE_RESOURCE_CONTEXT == {
-        "party_id": expected_sentinel,
-        "owner_party_id": expected_sentinel,
-        "manager_party_id": expected_sentinel,
-    }
+    assert not hasattr(module, "_ERROR_RECOVERY_DELETE_UNSCOPED_PARTY_ID")
+    assert not hasattr(module, "_ERROR_RECOVERY_DELETE_RESOURCE_CONTEXT")

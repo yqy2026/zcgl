@@ -237,6 +237,8 @@ class AnalyticsService:
 
         agency_group_ratios: dict[str, Decimal] = {}
         for contract in contracts:
+            if not self._is_contract_statistically_eligible(contract):
+                continue
             group = getattr(contract, "contract_group", None)
             if group is None or getattr(group, "revenue_mode", None) != RevenueMode.AGENCY:
                 continue

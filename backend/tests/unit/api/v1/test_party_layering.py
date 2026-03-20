@@ -86,6 +86,7 @@ async def test_list_parties_should_delegate_to_service() -> None:
             search=None,
             db=MagicMock(),
             current_user=mock_user,
+            selected_view_party_filter=None,
         )
 
     assert result == []
@@ -97,6 +98,7 @@ async def test_list_parties_should_delegate_to_service() -> None:
         status="active",
         search=None,
         current_user_id="user-1",
+        party_filter=None,
     )
 
 
@@ -121,6 +123,7 @@ async def test_list_parties_should_pass_search_keyword_to_service() -> None:
             search="acme",
             db=MagicMock(),
             current_user=mock_user,
+            selected_view_party_filter=None,
         )
 
     assert result == []
@@ -132,4 +135,5 @@ async def test_list_parties_should_pass_search_keyword_to_service() -> None:
         status=None,
         search="acme",
         current_user_id="user-1",
+        party_filter=None,
     )

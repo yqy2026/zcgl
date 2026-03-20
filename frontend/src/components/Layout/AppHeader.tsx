@@ -16,6 +16,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { AuthService } from '@/services/authService';
 import { NotificationCenter } from '@/components/Notification';
+import GlobalViewSwitcher from '@/components/System/GlobalViewSwitcher';
 
 import styles from './Layout.module.css';
 
@@ -132,6 +133,10 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) =
 
       {/* 右侧 */}
       <Space size={8} className={styles.headerRight} wrap>
+        <div className={styles.viewSwitcherSlot}>
+          <GlobalViewSwitcher />
+        </div>
+
         {/* 语言切换 */}
         <Tooltip title="语言切换">
           <Button

@@ -11,6 +11,12 @@ import { partyService } from '@/services/partyService';
 import type { Party, PartyType } from '@/types/party';
 import PartySelector, { createDefaultPartyFetcher } from '../PartySelector';
 
+const mockUseView = vi.fn();
+
+vi.mock('@/contexts/ViewContext', () => ({
+  useView: () => mockUseView(),
+}));
+
 vi.mock('@/services/partyService', () => ({
   partyService: {
     searchParties: vi.fn(),
@@ -35,6 +41,9 @@ describe('PartySelector', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseView.mockReturnValue({
+      currentView: null,
+    });
     vi.mocked(partyService.searchParties).mockResolvedValue({
       items: [
         {
@@ -106,6 +115,53 @@ describe('PartySelector', () => {
 
     await waitFor(() => {
       expect(fetcher).toHaveBeenCalledWith('', 'tenant');
+    });
+  });
+
+  it('defaults to owner-scoped search when current view is owner', async () => {
+    mockUseView.mockReturnValue({
+      currentView: {
+        key: 'owner:party-1',
+        perspective: 'owner',
+        partyId: 'party-1',
+        partyName: '主体A',
+        label: '产权方 · 主体A',
+      },
+    });
+
+    vi.mocked(partyService.searchParties)
+      .mockResolvedValueOnce({ items: [], skip: 0, limit: 20, isTruncated: false })
+      .mockResolvedValueOnce({ items: [], skip: 0, limit: 20, isTruncated: false });
+
+    renderWithProviders(<PartySelector />);
+
+    await waitFor(() => {
+      expect(partyService.searchParties).toHaveBeenCalledWith('', {
+        limit: 20,
+        party_type: 'organization',
+      });
+      expect(partyService.searchParties).toHaveBeenCalledWith('', {
+        limit: 20,
+        party_type: 'legal_entity',
+      });
+    });
+  });
+
+  it('keeps explicit filterMode over current view default', async () => {
+    mockUseView.mockReturnValue({
+      currentView: {
+        key: 'owner:party-1',
+        perspective: 'owner',
+        partyId: 'party-1',
+        partyName: '主体A',
+        label: '产权方 · 主体A',
+      },
+    });
+
+    renderWithProviders(<PartySelector filterMode="tenant" />);
+
+    await waitFor(() => {
+      expect(partyService.searchParties).toHaveBeenCalledWith('', { limit: 20 });
     });
   });
 

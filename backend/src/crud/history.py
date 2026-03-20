@@ -7,11 +7,26 @@ from typing import Any
 from sqlalchemy import delete, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..models.asset import Asset
 from ..models.asset_history import AssetHistory
+from .query_builder import PartyFilter, QueryBuilder
 
 
 class HistoryCRUD:
     """资产历史CRUD操作类"""
+
+    def __init__(self) -> None:
+        self.asset_query_builder = QueryBuilder(Asset)
+
+    @staticmethod
+    def _apply_asset_filter(stmt: Any, *, asset_id: str | None) -> Any:
+        if asset_id:
+            return stmt.where(AssetHistory.asset_id == asset_id)
+        return stmt
+
+    def _apply_party_scope(self, stmt: Any, *, party_filter: PartyFilter) -> Any:
+        scoped_stmt = stmt.join(Asset, Asset.id == AssetHistory.asset_id)
+        return self.asset_query_builder.apply_party_filter(scoped_stmt, party_filter)
 
     async def get_async(self, db: AsyncSession, id: str) -> AssetHistory | None:
         stmt = select(AssetHistory).where(AssetHistory.id == id)
@@ -36,19 +51,24 @@ class HistoryCRUD:
         skip: int = 0,
         limit: int = 100,
         asset_id: str | None = None,
+        party_filter: PartyFilter | None = None,
     ) -> tuple[list[AssetHistory], int]:
-        clauses = []
-        if asset_id:
-            clauses.append(AssetHistory.asset_id == asset_id)
-
-        count_stmt = select(func.count(AssetHistory.id))
-        if clauses:
-            count_stmt = count_stmt.where(*clauses)
+        count_stmt = select(func.count(AssetHistory.id)).select_from(AssetHistory)
+        if party_filter is not None:
+            count_stmt = self._apply_party_scope(
+                count_stmt,
+                party_filter=party_filter,
+            )
+        count_stmt = self._apply_asset_filter(count_stmt, asset_id=asset_id)
         total = int((await db.execute(count_stmt)).scalar() or 0)
 
         stmt = select(AssetHistory).order_by(desc(AssetHistory.operation_time))
-        if clauses:
-            stmt = stmt.where(*clauses)
+        if party_filter is not None:
+            stmt = self._apply_party_scope(
+                stmt,
+                party_filter=party_filter,
+            )
+        stmt = self._apply_asset_filter(stmt, asset_id=asset_id)
         stmt = stmt.offset(skip).limit(limit)
         result = await db.execute(stmt)
         items = list(result.scalars().all())

@@ -1,7 +1,8 @@
 /**
  * 组织架构管理服务 - 统一响应处理版本
  *
- * @description 组织架构管理核心服务，提供组织树、搜索、批量操作等完整功能
+ * @description 组织架构管理核心服务，提供组织树、搜索、批量操作等完整功能。
+ *              查询/搜索/工具逻辑已提取至 organizationQuery.ts，本文件作为 hub 保持完整的对外 API。
  * @author Claude Code
  */
 
@@ -9,33 +10,40 @@ import {
   Organization,
   OrganizationCreate,
   OrganizationUpdate,
-  OrganizationTree,
-  OrganizationHistory,
-  OrganizationStatistics,
   OrganizationMoveRequest,
   OrganizationBatchRequest,
   OrganizationBatchResult,
   OrganizationMoveResult,
-  OrganizationPath,
-  OrganizationSearchCriteria,
 } from '@/types/organization';
 import { apiClient } from '@/api/client';
 import { ApiErrorHandler } from '@/utils/responseExtractor';
-import { createLogger } from '@/utils/logger';
 import {
   getOrganizationReadOnlyErrorMessage,
   isOrganizationWriteEnabled,
 } from '@/constants/organization';
 
-const logger = createLogger('OrganizationService');
+import {
+  extractList,
+  fetchOrganizationTree,
+  fetchOrganizationChildren,
+  fetchOrganizationPath,
+  searchOrganizations as searchOrganizationsImpl,
+  detailedSearchOrganizations as detailedSearchOrganizationsImpl,
+  fetchStatistics,
+  fetchOrganizationHistory,
+  buildOrganizationTreeData as buildOrganizationTreeDataImpl,
+  getOrganizationLevelPath as getOrganizationLevelPathImpl,
+  canMoveOrganization as canMoveOrganizationImpl,
+  formatOrganizationDisplayName as formatOrganizationDisplayNameImpl,
+  getOrganizationDepth as getOrganizationDepthImpl,
+  getAllChildOrganizationIds as getAllChildOrganizationIdsImpl,
+  validateOrganizationCode as validateOrganizationCodeImpl,
+  getRootOrganizations as getRootOrganizationsImpl,
+  findOrganizationByName as findOrganizationByNameImpl,
+} from './organizationQuery';
 
-// 树节点接口
-interface TreeNode {
-  key: string;
-  value: string;
-  title: string;
-  children?: TreeNode[];
-}
+import type { TreeNode } from './organizationQuery';
+export type { TreeNode };
 
 class OrganizationService {
   private baseUrl = '/organizations';
@@ -45,27 +53,6 @@ class OrganizationService {
       return;
     }
     throw new Error(getOrganizationReadOnlyErrorMessage(actionLabel));
-  }
-
-  private extractList<T>(data: unknown): T[] {
-    if (Array.isArray(data)) {
-      return data as T[];
-    }
-
-    if (data != null && typeof data === 'object') {
-      const record = data as Record<string, unknown>;
-      const items = record.items;
-      if (Array.isArray(items)) {
-        return items as T[];
-      }
-
-      const nested = record.data;
-      if (Array.isArray(nested)) {
-        return nested as T[];
-      }
-    }
-
-    return [];
   }
 
   // ==================== 基础CRUD操作 ====================
@@ -86,7 +73,7 @@ class OrganizationService {
         throw new Error(`获取组织列表失败: ${result.error}`);
       }
 
-      return this.extractList<Organization>(result.data);
+      return extractList<Organization>(result.data);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       console.error('获取组织列表失败:', enhancedError.message);
@@ -184,197 +171,43 @@ class OrganizationService {
     }
   }
 
-  // ==================== 组织树形结构 ====================
+  // ==================== 组织树形结构（委托 organizationQuery） ====================
 
-  /**
-   * 获取组织树形结构
-   */
-  async getOrganizationTree(parentId?: string): Promise<OrganizationTree[]> {
-    try {
-      const params =
-        parentId !== null && parentId !== undefined && parentId !== ''
-          ? { parent_id: parentId }
-          : {};
-      const result = await apiClient.get<OrganizationTree[]>(`${this.baseUrl}/tree`, {
-        params,
-        cache: true,
-        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-        smartExtract: true,
-      });
-
-      if (!result.success) {
-        throw new Error(`获取组织树失�? ${result.error}`);
-      }
-
-      return result.data!;
-    } catch (error) {
-      const enhancedError = ApiErrorHandler.handleError(error);
-      console.error('获取组织树失�?', enhancedError.message);
-      return [];
-    }
+  async getOrganizationTree(...args: Parameters<typeof fetchOrganizationTree>) {
+    return fetchOrganizationTree(...args);
   }
 
-  /**
-   * 获取组织的子组织
-   */
-  async getOrganizationChildren(id: string, recursive: boolean = false): Promise<Organization[]> {
-    try {
-      const result = await apiClient.get<Organization[]>(`${this.baseUrl}/${id}/children`, {
-        params: { recursive },
-        cache: true,
-        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-        smartExtract: true,
-      });
-
-      if (!result.success) {
-        throw new Error(`获取子组织失�? ${result.error}`);
-      }
-
-      return result.data!;
-    } catch (error) {
-      const enhancedError = ApiErrorHandler.handleError(error);
-      throw new Error(enhancedError.message);
-    }
+  async getOrganizationChildren(...args: Parameters<typeof fetchOrganizationChildren>) {
+    return fetchOrganizationChildren(...args);
   }
 
-  /**
-   * 获取组织到根节点的路�?   */
-  async getOrganizationPath(id: string): Promise<OrganizationPath> {
-    try {
-      const result = await apiClient.get<Organization[]>(`${this.baseUrl}/${id}/path`, {
-        cache: true,
-        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-        smartExtract: true,
-      });
-
-      if (!result.success) {
-        throw new Error(`获取组织路径失败: ${result.error}`);
-      }
-
-      const organizations = result.data!;
-      const pathString = organizations.map((org: Organization) => org.name).join(' > ');
-      return { organizations, path_string: pathString };
-    } catch (error) {
-      const enhancedError = ApiErrorHandler.handleError(error);
-      throw new Error(enhancedError.message);
-    }
+  async getOrganizationPath(...args: Parameters<typeof fetchOrganizationPath>) {
+    return fetchOrganizationPath(...args);
   }
 
-  // ==================== 搜索功能 ====================
+  // ==================== 搜索功能（委托 organizationQuery） ====================
 
-  /**
-   * 搜索组织
-   */
-  async searchOrganizations(
-    keyword: string,
-    params?: { page?: number; page_size?: number }
-  ): Promise<Organization[]> {
-    try {
-      const result = await apiClient.get<Organization[]>(`${this.baseUrl}/search`, {
-        params: {
-          keyword,
-          ...params,
-          page: params?.page ?? 1,
-          page_size: params?.page_size ?? 20,
-        },
-        cache: true,
-        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-        smartExtract: true,
-      });
-
-      if (!result.success) {
-        throw new Error(`搜索组织失败: ${result.error}`);
-      }
-
-      return this.extractList<Organization>(result.data);
-    } catch (error) {
-      const enhancedError = ApiErrorHandler.handleError(error);
-      throw new Error(enhancedError.message);
-    }
+  async searchOrganizations(...args: Parameters<typeof searchOrganizationsImpl>) {
+    return searchOrganizationsImpl(...args);
   }
 
-  /**
-   * 高级搜索组织
-   */
   async detailedSearchOrganizations(
-    searchRequest: OrganizationSearchCriteria
-  ): Promise<Organization[]> {
-    try {
-      const result = await apiClient.post<Organization[]>(
-        `${this.baseUrl}/advanced-search`,
-        searchRequest,
-        {
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true,
-        }
-      );
-
-      if (!result.success) {
-        throw new Error(`高级搜索组织失败: ${result.error}`);
-      }
-
-      return this.extractList<Organization>(result.data);
-    } catch (error) {
-      const enhancedError = ApiErrorHandler.handleError(error);
-      throw new Error(enhancedError.message);
-    }
+    ...args: Parameters<typeof detailedSearchOrganizationsImpl>
+  ) {
+    return detailedSearchOrganizationsImpl(...args);
   }
 
-  // ==================== 统计和分�?====================
+  // ==================== 统计和分析（委托 organizationQuery） ====================
 
-  /**
-   * 获取组织统计信息
-   */
-  async getStatistics(): Promise<OrganizationStatistics> {
-    try {
-      const result = await apiClient.get<OrganizationStatistics>(`${this.baseUrl}/statistics`, {
-        cache: true,
-        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-        smartExtract: true,
-      });
-
-      if (!result.success) {
-        throw new Error(`获取组织统计失败: ${result.error}`);
-      }
-
-      return result.data!;
-    } catch (error) {
-      const enhancedError = ApiErrorHandler.handleError(error);
-      throw new Error(enhancedError.message);
-    }
+  async getStatistics() {
+    return fetchStatistics();
   }
 
-  /**
-   * 获取组织变更历史
-   */
-  async getOrganizationHistory(
-    id: string,
-    params?: { page?: number; page_size?: number }
-  ): Promise<OrganizationHistory[]> {
-    try {
-      const result = await apiClient.get<OrganizationHistory[]>(`${this.baseUrl}/${id}/history`, {
-        params: {
-          ...params,
-          page: params?.page ?? 1,
-          page_size: params?.page_size ?? 20,
-        },
-        cache: true,
-        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-        smartExtract: true,
-      });
-
-      if (!result.success) {
-        throw new Error(`获取组织历史失败: ${result.error}`);
-      }
-
-      return this.extractList<OrganizationHistory>(result.data);
-    } catch (error) {
-      const enhancedError = ApiErrorHandler.handleError(error);
-      throw new Error(enhancedError.message);
-    }
+  async getOrganizationHistory(...args: Parameters<typeof fetchOrganizationHistory>) {
+    return fetchOrganizationHistory(...args);
   }
 
-  // ==================== 组织操作 ====================
+  // ==================== 组织操作（写入） ====================
 
   /**
    * 移动组织
@@ -512,193 +345,46 @@ class OrganizationService {
     }
   }
 
-  // ==================== 工具方法 ====================
+  // ==================== 工具方法（委托 organizationQuery） ====================
 
-  /**
-   * 构建组织树形数据
-   */
-  buildOrganizationTreeData(organizations: Organization[]): TreeNode[] {
-    const treeData: TreeNode[] = [];
-    const organizationMap = new Map<string, Organization>();
-
-    // 创建组织映射
-    organizations.forEach(org => {
-      organizationMap.set(org.id, org);
-    });
-
-    // 构建树形结构
-    organizations.forEach(org => {
-      const treeNode = {
-        key: org.id,
-        value: org.id,
-        title: org.name,
-        children: [] as TreeNode[],
-      };
-
-      if (org.parent_id === null || org.parent_id === undefined || org.parent_id === '') {
-        treeData.push(treeNode);
-      } else {
-        const parent = organizationMap.get(org.parent_id);
-        if (parent) {
-          // 找到父节点并添加子节�?          this.addChildToTreeNode(treeData, org.parent_id, treeNode);
-        }
-      }
-    });
-
-    return treeData;
+  buildOrganizationTreeData(...args: Parameters<typeof buildOrganizationTreeDataImpl>) {
+    return buildOrganizationTreeDataImpl(...args);
   }
 
-  /**
-   * 向树节点添加子节�?   */
-  private addChildToTreeNode(treeData: TreeNode[], parentId: string, childNode: TreeNode): boolean {
-    for (const node of treeData) {
-      if (node.key === parentId) {
-        node.children = node.children ?? [];
-        node.children.push(childNode);
-        return true;
-      }
-      if (node.children && this.addChildToTreeNode(node.children, parentId, childNode)) {
-        return true;
-      }
-    }
-    return false;
+  getOrganizationLevelPath(...args: Parameters<typeof getOrganizationLevelPathImpl>) {
+    return getOrganizationLevelPathImpl(...args);
   }
 
-  /**
-   * 获取组织层级路径
-   */
-  getOrganizationLevelPath(organization: Organization, allOrganizations: Organization[]): string[] {
-    const path: string[] = [];
-    let current: Organization | null = organization;
-
-    while (current) {
-      path.unshift(current.name);
-      if (
-        current.parent_id !== null &&
-        current.parent_id !== undefined &&
-        current.parent_id !== ''
-      ) {
-        const parentOrg = allOrganizations.find(org => org.id === current!.parent_id);
-        current = parentOrg || null;
-      } else {
-        break;
-      }
-    }
-
-    return path;
+  canMoveOrganization(...args: Parameters<typeof canMoveOrganizationImpl>) {
+    return canMoveOrganizationImpl(...args);
   }
 
-  /**
-   * 检查是否可以移动组织（避免循环引用�?   */
-  canMoveOrganization(
-    organizationId: string,
-    targetParentId: string,
-    allOrganizations: Organization[]
-  ): boolean {
-    if (organizationId === targetParentId) {
-      return false;
-    }
-
-    // 检查目标父组织是否是当前组织的子组织
-    const isDescendant = (parentId: string, childId: string): boolean => {
-      const children = allOrganizations.filter(org => org.parent_id === parentId);
-      for (const child of children) {
-        if (child.id === childId || isDescendant(child.id, childId)) {
-          return true;
-        }
-      }
-      return false;
-    };
-
-    return !isDescendant(organizationId, targetParentId);
+  formatOrganizationDisplayName(...args: Parameters<typeof formatOrganizationDisplayNameImpl>) {
+    return formatOrganizationDisplayNameImpl(...args);
   }
 
-  /**
-   * 格式化组织显示名称
-   */
-  formatOrganizationDisplayName(organization: Organization): string {
-    return organization.name;
+  getOrganizationDepth(...args: Parameters<typeof getOrganizationDepthImpl>) {
+    return getOrganizationDepthImpl(...args);
   }
 
-  /**
-   * 获取组织层级深度
-   */
-  getOrganizationDepth(organization: Organization, allOrganizations: Organization[]): number {
-    let depth = 1;
-    let current: Organization | null = organization;
-
-    while (
-      current !== null &&
-      current !== undefined &&
-      current.parent_id !== null &&
-      current.parent_id !== undefined &&
-      current.parent_id !== ''
-    ) {
-      depth++;
-      const parentOrg = allOrganizations.find(org => org.id === current!.parent_id);
-      current = parentOrg || null;
-    }
-
-    return depth;
+  getAllChildOrganizationIds(...args: Parameters<typeof getAllChildOrganizationIdsImpl>) {
+    return getAllChildOrganizationIdsImpl(...args);
   }
 
-  /**
-   * 获取组织的所有子组织ID（递归�?   */
-  getAllChildOrganizationIds(organizationId: string, allOrganizations: Organization[]): string[] {
-    const childIds: string[] = [];
-    const children = allOrganizations.filter(org => org.parent_id === organizationId);
+  // ==================== 带 API 查询的工具方法（委托 organizationQuery） ====================
 
-    for (const child of children) {
-      childIds.push(child.id);
-      const grandChildren = this.getAllChildOrganizationIds(child.id, allOrganizations);
-      childIds.push(...grandChildren);
-    }
-
-    return childIds;
+  async validateOrganizationCode(code: string, excludeId?: string) {
+    return validateOrganizationCodeImpl(code, excludeId, (params) =>
+      this.getOrganizations(params)
+    );
   }
 
-  /**
-   * 验证组织编码唯一�?   */
-  async validateOrganizationCode(code: string, excludeId?: string): Promise<{ exists: boolean }> {
-    try {
-      const organizations = await this.getOrganizations({ page_size: 1000 });
-      const existingOrg = organizations.find(org => org.code === code && org.id !== excludeId);
-      return { exists: !!existingOrg };
-    } catch (error) {
-      const enhancedError = ApiErrorHandler.handleError(error);
-      logger.warn('验证组织编码失败', { error: enhancedError.message });
-      return { exists: false };
-    }
+  async getRootOrganizations() {
+    return getRootOrganizationsImpl((params) => this.getOrganizations(params));
   }
 
-  /**
-   * 获取根级组织列表
-   */
-  async getRootOrganizations(): Promise<Organization[]> {
-    try {
-      const organizations = await this.getOrganizations();
-      return organizations.filter(
-        org => org.parent_id === null || org.parent_id === undefined || org.parent_id === ''
-      );
-    } catch (error) {
-      const enhancedError = ApiErrorHandler.handleError(error);
-      logger.warn('获取根级组织失败', { error: enhancedError.message });
-      return [];
-    }
-  }
-
-  /**
-   * 根据名称查找组织
-   */
-  async findOrganizationByName(name: string): Promise<Organization | null> {
-    try {
-      const organizations = await this.getOrganizations({ page_size: 1000 });
-      return organizations.find(org => org.name === name) || null;
-    } catch (error) {
-      const enhancedError = ApiErrorHandler.handleError(error);
-      logger.warn('根据名称查找组织失败', { error: enhancedError.message });
-      return null;
-    }
+  async findOrganizationByName(name: string) {
+    return findOrganizationByNameImpl(name, (params) => this.getOrganizations(params));
   }
 }
 

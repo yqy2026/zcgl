@@ -5,7 +5,6 @@ Excel导入操作模块 - 同步与异步导入
 import logging
 import os
 import tempfile
-from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, File, Query, UploadFile
@@ -29,6 +28,7 @@ from src.services.excel.excel_task_service import (
     ExcelTaskService,
     get_excel_task_service,
 )
+from src.utils.time import utcnow_naive
 
 logger = logging.getLogger(__name__)
 
@@ -39,10 +39,6 @@ _ASSET_CREATE_RESOURCE_CONTEXT: dict[str, str] = {
     "owner_party_id": _ASSET_CREATE_UNSCOPED_PARTY_ID,
     "manager_party_id": _ASSET_CREATE_UNSCOPED_PARTY_ID,
 }
-
-
-def _utcnow_naive() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _resolve_task_service(
@@ -250,7 +246,7 @@ async def _process_excel_import_async(
         task = await resolved_task_service.get_task(db=db_session, task_id=task_id)
         if not task:
             return
-        started_at = _utcnow_naive()
+        started_at = utcnow_naive()
         await resolved_task_service.update_task(
             db=db_session,
             task=task,
@@ -277,7 +273,7 @@ async def _process_excel_import_async(
             organization_id=organization_id,
         )
 
-        completed_at = _utcnow_naive()
+        completed_at = utcnow_naive()
         await resolved_task_service.update_task(
             db=db_session,
             task=task,

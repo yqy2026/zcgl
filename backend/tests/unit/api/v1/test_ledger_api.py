@@ -70,6 +70,8 @@ def test_get_ledger_entries_delegates_to_service(client) -> None:
         include_voided=False,
         offset=0,
         limit=20,
+        current_user_id="test_user_001",
+        party_filter=None,
     )
 
 
@@ -108,4 +110,3 @@ def test_batch_update_ledger_rejects_voided_status(client) -> None:
     )
 
     assert response.status_code == 422
-

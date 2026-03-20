@@ -142,7 +142,9 @@ class TestGetCollectionSummary:
             collection_success_rate=Decimal("62.50"),
         )
 
-        result = await get_collection_summary(db=mock_db, current_user=mock_current_user)
+        result = await get_collection_summary(
+            db=mock_db, current_user=mock_current_user
+        )
 
         assert result.total_overdue_count == 5
         assert result.pending_collection_count == 3
@@ -162,7 +164,9 @@ class TestGetCollectionSummary:
             collection_success_rate=Decimal("0"),
         )
 
-        result = await get_collection_summary(db=mock_db, current_user=mock_current_user)
+        result = await get_collection_summary(
+            db=mock_db, current_user=mock_current_user
+        )
 
         assert result.total_overdue_count == 0
         assert result.total_overdue_amount == Decimal("0.00")
@@ -182,7 +186,9 @@ class TestGetCollectionSummary:
             collection_success_rate=None,
         )
 
-        result = await get_collection_summary(db=mock_db, current_user=mock_current_user)
+        result = await get_collection_summary(
+            db=mock_db, current_user=mock_current_user
+        )
         assert result.total_overdue_count == 0
         assert result.collection_success_rate is None
 
@@ -232,6 +238,8 @@ class TestListCollectionRecords:
             collection_status=None,
             page=1,
             page_size=20,
+            current_user_id="test-user-id",
+            party_filter=None,
         )
 
     async def test_list_records_with_ledger_filter(
@@ -270,6 +278,8 @@ class TestListCollectionRecords:
             collection_status=None,
             page=1,
             page_size=20,
+            current_user_id="test-user-id",
+            party_filter=None,
         )
 
     async def test_list_records_with_contract_filter(
@@ -308,6 +318,8 @@ class TestListCollectionRecords:
             collection_status=None,
             page=1,
             page_size=20,
+            current_user_id="test-user-id",
+            party_filter=None,
         )
 
     async def test_list_records_with_status_filter(
@@ -346,6 +358,8 @@ class TestListCollectionRecords:
             collection_status=CollectionStatus.SUCCESS,
             page=1,
             page_size=20,
+            current_user_id="test-user-id",
+            party_filter=None,
         )
 
     async def test_list_records_with_all_filters(
@@ -384,6 +398,8 @@ class TestListCollectionRecords:
             collection_status=CollectionStatus.PENDING,
             page=1,
             page_size=20,
+            current_user_id="test-user-id",
+            party_filter=None,
         )
 
     async def test_list_records_pagination(
@@ -423,6 +439,8 @@ class TestListCollectionRecords:
             collection_status=None,
             page=2,
             page_size=10,
+            current_user_id="test-user-id",
+            party_filter=None,
         )
 
     async def test_list_records_empty_result(
@@ -508,7 +526,10 @@ class TestGetCollectionRecord:
         assert result.ledger_id == "ledger-123"
         assert result.collection_method == "phone"
         mock_collection_service.get_by_id_async.assert_called_once_with(
-            mock_db, record_id="record-123"
+            mock_db,
+            record_id="record-123",
+            current_user_id="test-user-id",
+            party_filter=None,
         )
 
     async def test_get_record_not_found(
@@ -568,6 +589,7 @@ class TestCreateCollectionRecord:
             obj_in=record_data,
             operator="testuser",
             operator_id="test-user-id",
+            current_user_id="test-user-id",
         )
 
     async def test_create_record_with_operator_info(
@@ -602,6 +624,7 @@ class TestCreateCollectionRecord:
             obj_in=record_data,
             operator="testuser",
             operator_id="test-user-id",
+            current_user_id="test-user-id",
         )
 
     async def test_create_record_ledger_not_found(
@@ -700,7 +723,7 @@ class TestUpdateCollectionRecord:
 
         assert result.id == "record-123"
         mock_collection_service.get_by_id_async.assert_called_once_with(
-            mock_db, record_id="record-123"
+            mock_db, record_id="record-123", current_user_id="test-user-id"
         )
         mock_collection_service.update_async.assert_called_once_with(
             mock_db, db_obj=mock_collection_record, obj_in=update_data
@@ -916,7 +939,9 @@ class TestCollectionEdgeCases:
             collection_success_rate=None,
         )
 
-        result = await get_collection_summary(db=mock_db, current_user=mock_current_user)
+        result = await get_collection_summary(
+            db=mock_db, current_user=mock_current_user
+        )
         assert result.total_overdue_count == 2
         assert result.collection_success_rate is None
 
@@ -951,4 +976,5 @@ class TestCollectionEdgeCases:
             obj_in=record_data,
             operator="testuser@example.com",
             operator_id="test-user-id",
+            current_user_id="test-user-id",
         )

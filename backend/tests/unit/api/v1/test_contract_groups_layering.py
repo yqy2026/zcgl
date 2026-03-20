@@ -222,6 +222,24 @@ async def test_get_contract_group_route_exists(
 
 
 @pytest.mark.asyncio
+async def test_list_contract_groups_should_pass_current_user_id_to_service(
+    client: ANY,
+) -> None:
+    """GET /contract-groups 必须把 current_user.id 透传给 Service 做作用域收敛。"""
+    mock_list = AsyncMock(return_value=([], 0))
+
+    with patch(
+        "src.api.v1.contracts.contract_groups.contract_group_service.list_groups",
+        new=mock_list,
+    ):
+        resp = client.get("/api/v1/contract-groups")
+
+    assert resp.status_code == 200, resp.text
+    mock_list.assert_awaited_once()
+    assert mock_list.await_args.kwargs["current_user_id"] == "test_user_001"
+
+
+@pytest.mark.asyncio
 async def test_add_contract_group_id_mismatch_returns_422(
     client: ANY,
 ) -> None:

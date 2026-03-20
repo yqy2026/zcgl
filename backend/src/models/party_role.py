@@ -1,7 +1,7 @@
 """Role definition and binding models for party authorization."""
 
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import (
@@ -15,13 +15,10 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..database import Base
+from ..utils.time import utcnow_naive
 
 if TYPE_CHECKING:
     from .party import Party
-
-
-def _utcnow_naive() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class PartyRoleDef(Base):
@@ -29,7 +26,9 @@ class PartyRoleDef(Base):
 
     __tablename__ = "party_role_defs"
     __table_args__ = (
-        UniqueConstraint("role_code", "scope_type", name="uq_party_role_defs_code_scope"),
+        UniqueConstraint(
+            "role_code", "scope_type", name="uq_party_role_defs_code_scope"
+        ),
     )
 
     id: Mapped[str] = mapped_column(
@@ -89,20 +88,18 @@ class PartyRoleBinding(Base):
     )
     scope_id: Mapped[str | None] = mapped_column(String, comment="作用域资源ID")
     valid_from: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=_utcnow_naive, comment="生效时间"
+        DateTime, nullable=False, default=utcnow_naive, comment="生效时间"
     )
     valid_to: Mapped[datetime | None] = mapped_column(DateTime, comment="失效时间")
-    attributes: Mapped[dict[str, Any] | None] = mapped_column(
-        JSONB, comment="动态属性"
-    )
+    attributes: Mapped[dict[str, Any] | None] = mapped_column(JSONB, comment="动态属性")
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=_utcnow_naive, comment="创建时间"
+        DateTime, nullable=False, default=utcnow_naive, comment="创建时间"
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        default=_utcnow_naive,
-        onupdate=_utcnow_naive,
+        default=utcnow_naive,
+        onupdate=utcnow_naive,
         comment="更新时间",
     )
 
@@ -112,9 +109,7 @@ class PartyRoleBinding(Base):
     )
 
     def __repr__(self) -> str:
-        return (
-            f"<PartyRoleBinding(id={self.id}, party_id={self.party_id}, scope={self.scope_type})>"
-        )
+        return f"<PartyRoleBinding(id={self.id}, party_id={self.party_id}, scope={self.scope_type})>"
 
 
 __all__ = [

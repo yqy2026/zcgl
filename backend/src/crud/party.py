@@ -1,6 +1,6 @@
 """CRUD helpers for party-domain entities."""
 
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
 
 from sqlalchemy import delete, or_, select, text
@@ -8,10 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models.party import Party, PartyContact, PartyHierarchy, PartyType
 from ..models.user_party_binding import UserPartyBinding
-
-
-def _utcnow_naive() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+from ..utils.time import utcnow_naive
 
 
 class CRUDParty:
@@ -153,10 +150,7 @@ class CRUDParty:
         normalized_party_ids = [
             normalized
             for raw_party_id in party_ids
-            if (
-                normalized := self._normalize_identifier(raw_party_id)
-            )
-            is not None
+            if (normalized := self._normalize_identifier(raw_party_id)) is not None
         ]
         if len(normalized_party_ids) == 0:
             return {}
@@ -210,7 +204,9 @@ class CRUDParty:
 
             org_lookup_conditions = []
             if len(pending_party_ids) > 0:
-                org_lookup_conditions.append(Organization.id.in_(sorted(pending_party_ids)))
+                org_lookup_conditions.append(
+                    Organization.id.in_(sorted(pending_party_ids))
+                )
             if len(pending_party_codes) > 0:
                 org_lookup_conditions.append(
                     Organization.code.in_(sorted(pending_party_codes))
@@ -248,12 +244,18 @@ class CRUDParty:
                             organization_id,
                             set(),
                         ).add(organization_id)
-                    if organization_code is not None and organization_code in pending_party_codes:
+                    if (
+                        organization_code is not None
+                        and organization_code in pending_party_codes
+                    ):
                         resolved_org_ids_by_party_code.setdefault(
                             organization_code,
                             set(),
                         ).add(organization_id)
-                    if organization_name is not None and organization_name in pending_party_names:
+                    if (
+                        organization_name is not None
+                        and organization_name in pending_party_names
+                    ):
                         resolved_org_ids_by_party_name.setdefault(
                             organization_name,
                             set(),
@@ -363,10 +365,7 @@ class CRUDParty:
             normalized_scope_ids = [
                 normalized
                 for raw_party_id in scoped_party_ids
-                if (
-                    normalized := self._normalize_identifier(raw_party_id)
-                )
-                is not None
+                if (normalized := self._normalize_identifier(raw_party_id)) is not None
             ]
             if len(normalized_scope_ids) == 0:
                 return []
@@ -411,7 +410,7 @@ class CRUDParty:
         db_obj: Party,
         commit: bool = True,
     ) -> None:
-        db_obj.deleted_at = _utcnow_naive()
+        db_obj.deleted_at = utcnow_naive()
         if commit:
             await db.commit()
         else:
@@ -602,7 +601,7 @@ class CRUDParty:
         bindings = list((await db.execute(stmt)).scalars().all())
         for binding in bindings:
             binding.is_primary = False
-            binding.updated_at = _utcnow_naive()
+            binding.updated_at = utcnow_naive()
 
         if commit:
             await db.commit()
@@ -626,9 +625,10 @@ class CRUDParty:
             stmt = stmt.where(UserPartyBinding.relation_type == relation_type)
 
         if active_only:
-            now = at_time or _utcnow_naive()
+            now = at_time or utcnow_naive()
             stmt = stmt.where(UserPartyBinding.valid_from <= now).where(
-                (UserPartyBinding.valid_to.is_(None)) | (UserPartyBinding.valid_to >= now)
+                (UserPartyBinding.valid_to.is_(None))
+                | (UserPartyBinding.valid_to >= now)
             )
 
         return list((await db.execute(stmt)).scalars().all())

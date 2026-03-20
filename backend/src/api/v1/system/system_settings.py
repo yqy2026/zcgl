@@ -44,18 +44,6 @@ from ....services.system_settings import (
 # 创建系统设置路由器
 router = APIRouter()
 logger = logging.getLogger(__name__)
-_SYSTEM_SETTINGS_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:system_settings:create"
-_SYSTEM_SETTINGS_CREATE_RESOURCE_CONTEXT: dict[str, str] = {
-    "party_id": _SYSTEM_SETTINGS_CREATE_UNSCOPED_PARTY_ID,
-    "owner_party_id": _SYSTEM_SETTINGS_CREATE_UNSCOPED_PARTY_ID,
-    "manager_party_id": _SYSTEM_SETTINGS_CREATE_UNSCOPED_PARTY_ID,
-}
-_SYSTEM_SETTINGS_UPDATE_UNSCOPED_PARTY_ID = "__unscoped__:system_settings:update"
-_SYSTEM_SETTINGS_UPDATE_RESOURCE_CONTEXT: dict[str, str] = {
-    "party_id": _SYSTEM_SETTINGS_UPDATE_UNSCOPED_PARTY_ID,
-    "owner_party_id": _SYSTEM_SETTINGS_UPDATE_UNSCOPED_PARTY_ID,
-    "manager_party_id": _SYSTEM_SETTINGS_UPDATE_UNSCOPED_PARTY_ID,
-}
 
 
 def _resolve_system_settings_service(
@@ -412,7 +400,6 @@ async def test_security_alert(
         require_authz(
             action="update",
             resource_type="system_settings",
-            resource_context=_SYSTEM_SETTINGS_UPDATE_RESOURCE_CONTEXT,
         )
     ),
 ) -> dict[str, Any]:
@@ -611,7 +598,6 @@ async def update_system_settings(
         require_authz(
             action="update",
             resource_type="system_settings",
-            resource_context=_SYSTEM_SETTINGS_UPDATE_RESOURCE_CONTEXT,
         )
     ),
 ) -> SystemSettingsResponse:
@@ -691,7 +677,6 @@ async def backup_system(
         require_authz(
             action="create",
             resource_type="system_settings",
-            resource_context=_SYSTEM_SETTINGS_CREATE_RESOURCE_CONTEXT,
         )
     ),
 ) -> SystemBackupResponse:
@@ -739,7 +724,6 @@ async def restore_system(
         require_authz(
             action="update",
             resource_type="system_settings",
-            resource_context=_SYSTEM_SETTINGS_UPDATE_RESOURCE_CONTEXT,
         )
     ),
 ) -> SystemRestoreResponse:

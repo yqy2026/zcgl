@@ -5,7 +5,7 @@ Excel导出操作模块 - 同步与异步导出
 import logging
 import os
 from collections.abc import Generator
-from datetime import UTC, datetime
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -35,14 +35,11 @@ from src.services.excel.excel_task_service import (
     get_excel_task_service,
 )
 from src.services.task.access import ensure_task_access
+from src.utils.time import utcnow_naive
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-
-
-def _utcnow_naive() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _resolve_task_service(
@@ -235,7 +232,7 @@ async def _process_excel_export_async(
             task = await resolved_task_service.get_task(db=session, task_id=task_id)
             if not task:
                 return
-            started_at = _utcnow_naive()
+            started_at = utcnow_naive()
             await resolved_task_service.update_task(
                 db=session,
                 task=task,
@@ -268,7 +265,7 @@ async def _process_excel_export_async(
                 limit=5000,
             )
 
-            completed_at = _utcnow_naive()
+            completed_at = utcnow_naive()
             await resolved_task_service.update_task(
                 db=session,
                 task=task,

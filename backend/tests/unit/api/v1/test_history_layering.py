@@ -49,6 +49,7 @@ async def test_get_history_list_should_delegate_to_service(mock_db):
         page_size=20,
         asset_id="asset-1",
         db=mock_db,
+        current_user=MagicMock(id="user-1"),
         service=mock_service,
     )
 
@@ -59,6 +60,39 @@ async def test_get_history_list_should_delegate_to_service(mock_db):
         skip=0,
         limit=20,
         asset_id="asset-1",
+        current_user_id="user-1",
+        party_filter=None,
+    )
+
+
+@pytest.mark.asyncio
+async def test_get_history_detail_should_delegate_current_user_id(mock_db):
+    """详情路由应把 current_user.id 透传给 service。"""
+    from src.api.v1.system import history as history_module
+    from src.api.v1.system.history import get_history_detail
+
+    mock_service = MagicMock()
+    mock_service.get_history_detail = AsyncMock(return_value=MagicMock(id="history-1"))
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(
+            history_module.AssetHistoryResponse,
+            "model_validate",
+            staticmethod(lambda _: MagicMock(id="history-1")),
+        )
+        result = await get_history_detail(
+            history_id="history-1",
+            db=mock_db,
+            current_user=MagicMock(id="user-1"),
+            service=mock_service,
+        )
+
+    assert result.id == "history-1"
+    mock_service.get_history_detail.assert_awaited_once_with(
+        db=mock_db,
+        history_id="history-1",
+        current_user_id="user-1",
+        party_filter=None,
     )
 
 

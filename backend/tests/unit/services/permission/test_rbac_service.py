@@ -149,9 +149,7 @@ class TestCreateRole:
                 with patch.object(
                     rbac_service, "update_role_permissions", new=AsyncMock()
                 ):
-                    role = await rbac_service.create_role(
-                        role_data, created_by="admin"
-                    )
+                    role = await rbac_service.create_role(role_data, created_by="admin")
 
         assert role.name == "new_role"
         assert role.display_name == "新角色"
@@ -197,9 +195,7 @@ class TestCreateRole:
                 "src.crud.rbac.role_crud.create",
                 new=AsyncMock(return_value=created_role),
             ):
-                role = await rbac_service.create_role(
-                    role_data, created_by="admin"
-                )
+                role = await rbac_service.create_role(role_data, created_by="admin")
 
         # 不应该调用 _assign_permissions_to_role
         assert role.name == "simple_role"
@@ -250,15 +246,15 @@ class TestUpdateRole:
         """测试更新不存在的角色"""
         role_data = RoleUpdate(display_name="新名称")
 
-        with patch(
-            "src.crud.rbac.role_crud.get", new=AsyncMock(return_value=None)
-        ):
+        with patch("src.crud.rbac.role_crud.get", new=AsyncMock(return_value=None)):
             with pytest.raises(ResourceNotFoundError, match="角色不存在"):
                 await rbac_service.update_role(
                     "nonexistent", role_data, updated_by="admin"
                 )
 
-    async def test_update_system_role_forbidden(self, rbac_service, mock_db, sample_role):
+    async def test_update_system_role_forbidden(
+        self, rbac_service, mock_db, sample_role
+    ):
         """测试禁止修改系统角色"""
         sample_role.is_system_role = True
         role_data = RoleUpdate(display_name="尝试修改")
@@ -267,9 +263,7 @@ class TestUpdateRole:
             "src.crud.rbac.role_crud.get", new=AsyncMock(return_value=sample_role)
         ):
             with pytest.raises(OperationNotAllowedError, match="系统角色不能修改"):
-                await rbac_service.update_role(
-                    "role-1", role_data, updated_by="admin"
-                )
+                await rbac_service.update_role("role-1", role_data, updated_by="admin")
 
     async def test_update_role_duplicate_display_name(
         self, rbac_service, mock_db, sample_role
@@ -289,9 +283,7 @@ class TestUpdateRole:
         ):
             mock_db.execute = AsyncMock(return_value=mock_result)
             with pytest.raises(DuplicateResourceError, match="角色已存在"):
-                await rbac_service.update_role(
-                    "role-1", role_data, updated_by="admin"
-                )
+                await rbac_service.update_role("role-1", role_data, updated_by="admin")
 
 
 # ============================================================================
@@ -306,16 +298,18 @@ class TestUpdateRolePermissions:
         self, rbac_service, sample_role
     ):
         """更新角色权限后应触发角色相关缓存失效"""
-        with patch(
-            "src.crud.rbac.role_crud.get",
-            new=AsyncMock(return_value=sample_role),
-        ), patch.object(
-            rbac_service, "_assign_permissions_to_role", new=AsyncMock()
-        ), patch.object(
-            rbac_service,
-            "_invalidate_permission_cache_for_role",
-            new=AsyncMock(),
-        ) as mock_invalidate_role_cache:
+        with (
+            patch(
+                "src.crud.rbac.role_crud.get",
+                new=AsyncMock(return_value=sample_role),
+            ),
+            patch.object(rbac_service, "_assign_permissions_to_role", new=AsyncMock()),
+            patch.object(
+                rbac_service,
+                "_invalidate_permission_cache_for_role",
+                new=AsyncMock(),
+            ) as mock_invalidate_role_cache,
+        ):
             await rbac_service.update_role_permissions(
                 role_id="role-1",
                 permission_ids=["perm-1"],
@@ -356,13 +350,13 @@ class TestDeleteRole:
 
     async def test_delete_role_not_found(self, rbac_service, mock_db):
         """测试删除不存在的角色"""
-        with patch(
-            "src.crud.rbac.role_crud.get", new=AsyncMock(return_value=None)
-        ):
+        with patch("src.crud.rbac.role_crud.get", new=AsyncMock(return_value=None)):
             result = await rbac_service.delete_role("nonexistent", deleted_by="admin")
             assert result is False
 
-    async def test_delete_system_role_forbidden(self, rbac_service, mock_db, sample_role):
+    async def test_delete_system_role_forbidden(
+        self, rbac_service, mock_db, sample_role
+    ):
         """测试禁止删除系统角色"""
         sample_role.is_system_role = True
 
@@ -372,7 +366,9 @@ class TestDeleteRole:
             with pytest.raises(OperationNotAllowedError, match="系统角色不能删除"):
                 await rbac_service.delete_role("role-1", deleted_by="admin")
 
-    async def test_delete_role_with_active_users(self, rbac_service, mock_db, sample_role):
+    async def test_delete_role_with_active_users(
+        self, rbac_service, mock_db, sample_role
+    ):
         """测试删除有活跃用户的角色"""
         with patch(
             "src.crud.rbac.role_crud.get", new=AsyncMock(return_value=sample_role)
@@ -406,9 +402,7 @@ class TestGetRole:
 
     async def test_get_role_not_found(self, rbac_service, mock_db):
         """测试获取不存在的角色"""
-        with patch(
-            "src.crud.rbac.role_crud.get", new=AsyncMock(return_value=None)
-        ):
+        with patch("src.crud.rbac.role_crud.get", new=AsyncMock(return_value=None)):
             role = await rbac_service.get_role("nonexistent")
             assert role is None
 
@@ -468,7 +462,9 @@ class TestGetRoles:
             assert len(roles) == 1
             assert total == 1
 
-    async def test_get_roles_with_category_filter(self, rbac_service, mock_db, sample_role):
+    async def test_get_roles_with_category_filter(
+        self, rbac_service, mock_db, sample_role
+    ):
         """测试按类别筛选角色"""
         with patch(
             "src.crud.rbac.role_crud.get_multi_with_filters",
@@ -578,7 +574,9 @@ class TestTenantFilterResolution:
 class TestCreatePermission:
     """测试创建权限"""
 
-    async def test_create_permission_success(self, rbac_service, mock_db, sample_permission):
+    async def test_create_permission_success(
+        self, rbac_service, mock_db, sample_permission
+    ):
         """测试成功创建权限"""
         perm_data = PermissionCreate(
             name="asset.create",
@@ -740,6 +738,27 @@ class TestGetPermissions:
 
         assert len(permissions) == 1
 
+    async def test_get_permissions_should_not_resolve_party_filter(
+        self, rbac_service, sample_permission
+    ):
+        with (
+            patch.object(
+                rbac_service,
+                "_resolve_party_filter",
+                new=AsyncMock(),
+            ) as mock_resolve,
+            patch(
+                "src.services.permission.rbac_service.permission_crud.get_multi_with_count_async",
+                new=AsyncMock(return_value=([sample_permission], 1)),
+            ) as mock_get,
+        ):
+            permissions, total = await rbac_service.get_permissions(resource="asset")
+
+        assert len(permissions) == 1
+        assert total == 1
+        mock_resolve.assert_not_awaited()
+        assert "party_filter" not in mock_get.await_args.kwargs
+
 
 # ============================================================================
 # assign_role_to_user 测试
@@ -749,7 +768,9 @@ class TestGetPermissions:
 class TestAssignRoleToUser:
     """测试为用户分配角色"""
 
-    async def test_assign_role_success(self, rbac_service, mock_db, sample_user, sample_role):
+    async def test_assign_role_success(
+        self, rbac_service, mock_db, sample_user, sample_role
+    ):
         """测试成功分配角色"""
         assignment_data = UserRoleAssignmentCreate(
             user_id="user-1",
@@ -819,9 +840,7 @@ class TestAssignRoleToUser:
             "get_async",
             new=AsyncMock(return_value=sample_user),
         ):
-            with patch(
-                "src.crud.rbac.role_crud.get", new=AsyncMock(return_value=None)
-            ):
+            with patch("src.crud.rbac.role_crud.get", new=AsyncMock(return_value=None)):
                 with pytest.raises(ResourceNotFoundError, match="角色不存在"):
                     await rbac_service.assign_role_to_user(
                         assignment_data, assigned_by="admin"
@@ -872,24 +891,32 @@ class TestAssignRoleToUser:
         mock_cache_service = Mock()
         mock_cache_service.invalidate_user_cache = AsyncMock(return_value=True)
 
-        with patch.object(
-            rbac_service.user_crud, "get_async", new=AsyncMock(return_value=sample_user)
-        ), patch(
-            "src.crud.rbac.role_crud.get", new=AsyncMock(return_value=sample_role)
-        ), patch(
-            "src.crud.rbac.user_role_assignment_crud.get_by_user_and_role",
-            new=AsyncMock(return_value=None),
-        ), patch(
-            "src.crud.rbac.user_role_assignment_crud.create",
-            new=AsyncMock(return_value=assignment),
-        ), patch.object(
-            rbac_service, "_create_permission_audit_log", new=AsyncMock()
-        ), patch(
-            "src.services.permission.rbac_service.get_permission_cache_service",
-            return_value=mock_cache_service,
-        ), patch(
-            "src.services.permission.rbac_service.invalidate_user_accessible_organizations_cache"
-        ) as mock_invalidate_org_cache:
+        with (
+            patch.object(
+                rbac_service.user_crud,
+                "get_async",
+                new=AsyncMock(return_value=sample_user),
+            ),
+            patch(
+                "src.crud.rbac.role_crud.get", new=AsyncMock(return_value=sample_role)
+            ),
+            patch(
+                "src.crud.rbac.user_role_assignment_crud.get_by_user_and_role",
+                new=AsyncMock(return_value=None),
+            ),
+            patch(
+                "src.crud.rbac.user_role_assignment_crud.create",
+                new=AsyncMock(return_value=assignment),
+            ),
+            patch.object(rbac_service, "_create_permission_audit_log", new=AsyncMock()),
+            patch(
+                "src.services.permission.rbac_service.get_permission_cache_service",
+                return_value=mock_cache_service,
+            ),
+            patch(
+                "src.services.permission.rbac_service.invalidate_user_accessible_organizations_cache"
+            ) as mock_invalidate_org_cache,
+        ):
             await rbac_service.assign_role_to_user(assignment_data, assigned_by="admin")
 
         mock_cache_service.invalidate_user_cache.assert_awaited_once_with("user-1")
@@ -941,17 +968,20 @@ class TestRevokeRoleFromUser:
         mock_cache_service = Mock()
         mock_cache_service.invalidate_user_cache = AsyncMock(return_value=True)
 
-        with patch(
-            "src.crud.rbac.user_role_assignment_crud.get_by_user_and_role",
-            new=AsyncMock(return_value=assignment),
-        ), patch.object(
-            rbac_service, "_create_permission_audit_log", new=AsyncMock()
-        ), patch(
-            "src.services.permission.rbac_service.get_permission_cache_service",
-            return_value=mock_cache_service,
-        ), patch(
-            "src.services.permission.rbac_service.invalidate_user_accessible_organizations_cache"
-        ) as mock_invalidate_org_cache:
+        with (
+            patch(
+                "src.crud.rbac.user_role_assignment_crud.get_by_user_and_role",
+                new=AsyncMock(return_value=assignment),
+            ),
+            patch.object(rbac_service, "_create_permission_audit_log", new=AsyncMock()),
+            patch(
+                "src.services.permission.rbac_service.get_permission_cache_service",
+                return_value=mock_cache_service,
+            ),
+            patch(
+                "src.services.permission.rbac_service.invalidate_user_accessible_organizations_cache"
+            ) as mock_invalidate_org_cache,
+        ):
             result = await rbac_service.revoke_role_from_user(
                 "user-1", "role-1", revoked_by="admin"
             )
@@ -980,7 +1010,9 @@ class TestGetUserRoles:
         assert len(roles) == 1
         assert roles[0].id == "role-1"
 
-    async def test_get_user_roles_include_inactive(self, rbac_service, mock_db, sample_role):
+    async def test_get_user_roles_include_inactive(
+        self, rbac_service, mock_db, sample_role
+    ):
         """测试获取用户所有角色（包括非活跃）"""
         list_result = Mock()
         list_result.scalars.return_value.all.return_value = [sample_role]
@@ -999,7 +1031,9 @@ class TestGetUserRoles:
 class TestCheckPermission:
     """测试权限检查"""
 
-    async def test_check_permission_admin_user(self, rbac_service, mock_db, sample_user):
+    async def test_check_permission_admin_user(
+        self, rbac_service, mock_db, sample_user
+    ):
         """测试管理员用户拥有所有权限"""
         admin_role = Mock(spec=Role)
         admin_permission = Mock(spec=Permission)
@@ -1037,7 +1071,9 @@ class TestCheckPermission:
         assert response.has_permission is False
         assert "用户不存在或已禁用" in response.reason
 
-    async def test_check_permission_user_inactive(self, rbac_service, mock_db, sample_user):
+    async def test_check_permission_user_inactive(
+        self, rbac_service, mock_db, sample_user
+    ):
         """测试已禁用用户"""
         sample_user.is_active = False
 
@@ -1099,7 +1135,9 @@ class TestGetUserPermissionsSummary:
             new=AsyncMock(return_value=sample_user),
         ):
             with patch.object(
-                rbac_service, "get_user_roles", new=AsyncMock(return_value=[sample_role])
+                rbac_service,
+                "get_user_roles",
+                new=AsyncMock(return_value=[sample_role]),
             ):
                 summary = await rbac_service.get_user_permissions_summary("user-1")
 
@@ -1124,14 +1162,20 @@ class TestGetUserPermissionsSummary:
             return_value=cached_summary
         )
 
-        with patch.object(
-            rbac_service.user_crud, "get_async", new=AsyncMock(return_value=sample_user)
-        ), patch(
-            "src.services.permission.rbac_service.get_permission_cache_service",
-            return_value=mock_cache_service,
-        ), patch.object(
-            rbac_service, "get_user_roles", new=AsyncMock()
-        ) as mock_get_user_roles:
+        with (
+            patch.object(
+                rbac_service.user_crud,
+                "get_async",
+                new=AsyncMock(return_value=sample_user),
+            ),
+            patch(
+                "src.services.permission.rbac_policy.get_permission_cache_service",
+                return_value=mock_cache_service,
+            ),
+            patch.object(
+                rbac_service, "get_user_roles", new=AsyncMock()
+            ) as mock_get_user_roles,
+        ):
             summary = await rbac_service.get_user_permissions_summary("user-1")
 
         assert summary.user_id == "user-1"
@@ -1150,13 +1194,21 @@ class TestGetUserPermissionsSummary:
         mock_cache_service.get_user_permission_summary = AsyncMock(return_value=None)
         mock_cache_service.set_user_permission_summary = AsyncMock(return_value=True)
 
-        with patch.object(
-            rbac_service.user_crud, "get_async", new=AsyncMock(return_value=sample_user)
-        ), patch.object(
-            rbac_service, "get_user_roles", new=AsyncMock(return_value=[sample_role])
-        ), patch(
-            "src.services.permission.rbac_service.get_permission_cache_service",
-            return_value=mock_cache_service,
+        with (
+            patch.object(
+                rbac_service.user_crud,
+                "get_async",
+                new=AsyncMock(return_value=sample_user),
+            ),
+            patch.object(
+                rbac_service,
+                "get_user_roles",
+                new=AsyncMock(return_value=[sample_role]),
+            ),
+            patch(
+                "src.services.permission.rbac_policy.get_permission_cache_service",
+                return_value=mock_cache_service,
+            ),
         ):
             summary = await rbac_service.get_user_permissions_summary("user-1")
 
@@ -1241,7 +1293,9 @@ class TestCanManageRole:
 class TestRoleHasPermission:
     """测试角色权限检查"""
 
-    async def test_role_has_permission(self, rbac_service, sample_role, sample_permission):
+    async def test_role_has_permission(
+        self, rbac_service, sample_role, sample_permission
+    ):
         """测试角色有权限"""
         sample_role.permissions = [sample_permission]
 
@@ -1298,9 +1352,7 @@ class TestIsAdminRole:
 
         assert rbac_service._role_has_admin_permission(role) is True
 
-    async def test_detect_admin_by_legacy_system_manage_permission(
-        self, rbac_service
-    ):
+    async def test_detect_admin_by_legacy_system_manage_permission(self, rbac_service):
         """兼容 legacy system:manage 权限"""
         role = Mock(spec=Role)
         role.name = "legacy_ops_role"

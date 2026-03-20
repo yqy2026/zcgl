@@ -52,7 +52,7 @@ def test_enum_field_endpoints_should_use_require_authz() -> None:
         r"async def get_enum_field_types[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"enum_field\"",
         r"async def get_enum_field_statistics[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"enum_field\"",
         r"async def get_enum_field_type[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"enum_field\"[\s\S]*?resource_id=\"\{type_id\}\"[\s\S]*?deny_as_not_found=True",
-        r"async def create_enum_field_type[\s\S]*?require_authz\([\s\S]*?action=\"create\"[\s\S]*?resource_type=\"enum_field\"[\s\S]*?resource_context=_ENUM_FIELD_TYPE_CREATE_RESOURCE_CONTEXT",
+        r"async def create_enum_field_type[\s\S]*?require_authz\([\s\S]*?action=\"create\"[\s\S]*?resource_type=\"enum_field\"",
         r"async def update_enum_field_type[\s\S]*?require_authz\([\s\S]*?action=\"update\"[\s\S]*?resource_type=\"enum_field\"[\s\S]*?resource_id=\"\{type_id\}\"",
         r"async def delete_enum_field_type[\s\S]*?require_authz\([\s\S]*?action=\"delete\"[\s\S]*?resource_type=\"enum_field\"[\s\S]*?resource_id=\"\{type_id\}\"",
         r"async def get_enum_field_categories[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"enum_field\"",
@@ -64,7 +64,7 @@ def test_enum_field_endpoints_should_use_require_authz() -> None:
         r"async def delete_enum_field_value[\s\S]*?require_authz\([\s\S]*?action=\"delete\"[\s\S]*?resource_type=\"enum_field\"[\s\S]*?resource_id=\"\{value_id\}\"",
         r"async def batch_create_enum_field_values[\s\S]*?require_authz\([\s\S]*?action=\"create\"[\s\S]*?resource_type=\"enum_field\"[\s\S]*?resource_id=\"\{type_id\}\"",
         r"async def get_enum_field_usage[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"enum_field\"",
-        r"async def create_enum_field_usage[\s\S]*?require_authz\([\s\S]*?action=\"create\"[\s\S]*?resource_type=\"enum_field\"[\s\S]*?resource_context=_ENUM_FIELD_USAGE_CREATE_RESOURCE_CONTEXT",
+        r"async def create_enum_field_usage[\s\S]*?require_authz\([\s\S]*?action=\"create\"[\s\S]*?resource_type=\"enum_field\"",
         r"async def update_enum_field_usage[\s\S]*?require_authz\([\s\S]*?action=\"update\"[\s\S]*?resource_type=\"enum_field\"[\s\S]*?resource_id=\"\{usage_id\}\"",
         r"async def delete_enum_field_usage[\s\S]*?require_authz\([\s\S]*?action=\"delete\"[\s\S]*?resource_type=\"enum_field\"[\s\S]*?resource_id=\"\{usage_id\}\"",
         r"async def get_enum_field_type_history[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"enum_field\"[\s\S]*?resource_id=\"\{type_id\}\"[\s\S]*?deny_as_not_found=True",
@@ -75,24 +75,13 @@ def test_enum_field_endpoints_should_use_require_authz() -> None:
         assert re.search(pattern, module_source), pattern
 
 
-def test_enum_field_create_unscoped_context_should_be_defined() -> None:
+def test_enum_field_should_not_define_fake_unscoped_create_context() -> None:
     from src.api.v1.system import enum_field as module
 
-    expected_type_create = "__unscoped__:enum_field_type:create"
-    assert module._ENUM_FIELD_TYPE_CREATE_UNSCOPED_PARTY_ID == expected_type_create
-    assert module._ENUM_FIELD_TYPE_CREATE_RESOURCE_CONTEXT == {
-        "party_id": expected_type_create,
-        "owner_party_id": expected_type_create,
-        "manager_party_id": expected_type_create,
-    }
-
-    expected_usage_create = "__unscoped__:enum_field_usage:create"
-    assert module._ENUM_FIELD_USAGE_CREATE_UNSCOPED_PARTY_ID == expected_usage_create
-    assert module._ENUM_FIELD_USAGE_CREATE_RESOURCE_CONTEXT == {
-        "party_id": expected_usage_create,
-        "owner_party_id": expected_usage_create,
-        "manager_party_id": expected_usage_create,
-    }
+    assert not hasattr(module, "_ENUM_FIELD_TYPE_CREATE_UNSCOPED_PARTY_ID")
+    assert not hasattr(module, "_ENUM_FIELD_TYPE_CREATE_RESOURCE_CONTEXT")
+    assert not hasattr(module, "_ENUM_FIELD_USAGE_CREATE_UNSCOPED_PARTY_ID")
+    assert not hasattr(module, "_ENUM_FIELD_USAGE_CREATE_RESOURCE_CONTEXT")
 
 
 @pytest.mark.asyncio

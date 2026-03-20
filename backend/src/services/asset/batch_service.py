@@ -6,7 +6,6 @@
 
 import logging
 from collections.abc import Sequence
-from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import BaseModel, Field, model_validator
@@ -18,14 +17,10 @@ from ...crud.history import history_crud
 from ...crud.ownership import ownership
 from ...models.asset import Asset
 from ...schemas.asset import AssetUpdate
+from ...utils.time import utcnow_naive
 from .validators import AssetBatchValidator
 
 logger = logging.getLogger(__name__)
-
-
-def _utcnow_naive() -> datetime:
-    """Return UTC now as naive datetime to match current DB column types."""
-    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class BatchOperationResult(BaseModel):
@@ -80,7 +75,9 @@ class AsyncAssetBatchService:
             return value
         if isinstance(value, tuple):
             return list(value)
-        if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        if isinstance(value, Sequence) and not isinstance(
+            value, (str, bytes, bytearray)
+        ):
             return list(value)
         return []
 
@@ -103,8 +100,10 @@ class AsyncAssetBatchService:
             contract_asset_ids = await asset_crud.get_assets_with_contracts_async(
                 self.db, asset_ids
             )
-            certificate_asset_ids = await asset_crud.get_assets_with_property_certs_async(
-                self.db, asset_ids
+            certificate_asset_ids = (
+                await asset_crud.get_assets_with_property_certs_async(
+                    self.db, asset_ids
+                )
             )
             ledger_asset_ids = (
                 await asset_crud.get_assets_with_contract_ledger_entries_async(
@@ -177,15 +176,14 @@ class AsyncAssetBatchService:
         result = BatchOperationResult(total_count=len(asset_ids))
         assets_by_id = await self._load_assets_map(asset_ids)
         base_updates: dict[str, Any] = updates.copy() if updates else {}
-        has_ownership_update, batch_ownership_id = await self._resolve_batch_ownership_id(
-            base_updates
-        )
+        (
+            has_ownership_update,
+            batch_ownership_id,
+        ) = await self._resolve_batch_ownership_id(base_updates)
 
         asset_name_owner_id: str | None = None
         asset_name_raw = base_updates.get("asset_name")
-        asset_name = (
-            str(asset_name_raw).strip() if asset_name_raw is not None else ""
-        )
+        asset_name = str(asset_name_raw).strip() if asset_name_raw is not None else ""
         if asset_name != "":
             base_updates["asset_name"] = asset_name
             existing_asset = await asset_crud.get_by_name_async(
@@ -221,9 +219,8 @@ class AsyncAssetBatchService:
 
                 new_name = update_payload.get("asset_name")
                 if new_name and new_name != asset.asset_name:
-                    if (
-                        asset_name_owner_id is not None
-                        and asset_name_owner_id != str(asset_id)
+                    if asset_name_owner_id is not None and asset_name_owner_id != str(
+                        asset_id
                     ):
                         raise ValueError("物业名称已存在")
                     asset_name_owner_id = str(asset_id)
@@ -339,7 +336,9 @@ class AsyncAssetBatchService:
 
                     linked_error = linked_errors_by_asset_id.get(asset_id)
                     if linked_error:
-                        result.errors.append({"asset_id": asset_id, "error": linked_error})
+                        result.errors.append(
+                            {"asset_id": asset_id, "error": linked_error}
+                        )
                         result.failed_count += 1
                         continue
 
@@ -353,7 +352,7 @@ class AsyncAssetBatchService:
                     )
                     asset.data_status = "已删除"
                     asset.updated_by = operator
-                    asset.updated_at = _utcnow_naive()
+                    asset.updated_at = utcnow_naive()
                     self.db.add(asset)
                     await self.db.flush()
                     result.success_count += 1

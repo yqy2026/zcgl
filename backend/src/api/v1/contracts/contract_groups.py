@@ -39,6 +39,7 @@ from ....schemas.contract_group import (
 from ....services.contract.contract_group_service import contract_group_service
 from ....services.contract.ledger_service_v2 import ledger_service_v2
 from ....services.party import party_service
+from ....services.view_scope import resolve_selected_view_party_filter_dependency
 
 router = APIRouter()
 
@@ -116,6 +117,7 @@ async def list_contract_groups(
     limit: int = Query(20, ge=1, le=200, description="每页条数"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    selected_view_party_filter=Depends(resolve_selected_view_party_filter_dependency),
     _authz: Annotated[
         AuthzContext | None,
         Depends(
@@ -126,7 +128,6 @@ async def list_contract_groups(
         ),
     ] = None,
 ) -> dict:
-    _ = current_user
     _ = _authz
     items, total = await contract_group_service.list_groups(
         db,
@@ -135,6 +136,8 @@ async def list_contract_groups(
         revenue_mode=revenue_mode,
         offset=offset,
         limit=limit,
+        current_user_id=str(current_user.id),
+        party_filter=selected_view_party_filter,
     )
     return {
         "items": [item.model_dump() for item in items],
@@ -153,6 +156,7 @@ async def get_contract_group(
     group_id: str,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    selected_view_party_filter=Depends(resolve_selected_view_party_filter_dependency),
     _authz: Annotated[
         AuthzContext | None,
         Depends(
@@ -165,10 +169,14 @@ async def get_contract_group(
         ),
     ] = None,
 ) -> ContractGroupDetail:
-    _ = current_user
     _ = _authz
     try:
-        return await contract_group_service.get_group_detail(db, group_id=group_id)
+        return await contract_group_service.get_group_detail(
+            db,
+            group_id=group_id,
+            current_user_id=str(current_user.id),
+            party_filter=selected_view_party_filter,
+        )
     except BaseBusinessError:
         raise
     except Exception as exc:
@@ -297,6 +305,7 @@ async def list_contracts_in_group(
     group_id: str,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    selected_view_party_filter=Depends(resolve_selected_view_party_filter_dependency),
     _authz: Annotated[
         AuthzContext | None,
         Depends(
@@ -309,11 +318,13 @@ async def list_contracts_in_group(
         ),
     ] = None,
 ) -> list[ContractSummary]:
-    _ = current_user
     _ = _authz
     try:
         contracts = await contract_group_service.list_contracts_in_group(
-            db, group_id=group_id
+            db,
+            group_id=group_id,
+            current_user_id=str(current_user.id),
+            party_filter=selected_view_party_filter,
         )
         return [ContractSummary.model_validate(c) for c in contracts]
     except BaseBusinessError:
@@ -334,6 +345,7 @@ async def get_contract(
     contract_id: str,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    selected_view_party_filter=Depends(resolve_selected_view_party_filter_dependency),
     _authz: Annotated[
         AuthzContext | None,
         Depends(
@@ -346,11 +358,13 @@ async def get_contract(
         ),
     ] = None,
 ) -> ContractDetail:
-    _ = current_user
     _ = _authz
     try:
         return await contract_group_service.get_contract_detail(
-            db, contract_id=contract_id
+            db,
+            contract_id=contract_id,
+            current_user_id=str(current_user.id),
+            party_filter=selected_view_party_filter,
         )
     except BaseBusinessError:
         raise
@@ -713,6 +727,7 @@ async def list_contract_rent_terms(
     contract_id: str,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    selected_view_party_filter=Depends(resolve_selected_view_party_filter_dependency),
     _authz: Annotated[
         AuthzContext | None,
         Depends(
@@ -725,12 +740,13 @@ async def list_contract_rent_terms(
         ),
     ] = None,
 ) -> list[ContractRentTermResponse]:
-    _ = current_user
     _ = _authz
     try:
         return await contract_group_service.list_rent_terms(
             db,
             contract_id=contract_id,
+            current_user_id=str(current_user.id),
+            party_filter=selected_view_party_filter,
         )
     except BaseBusinessError:
         raise
@@ -823,6 +839,7 @@ async def get_contract_ledger(
     limit: int = Query(20, ge=1, le=200, description="每页条数"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    selected_view_party_filter=Depends(resolve_selected_view_party_filter_dependency),
     _authz: Annotated[
         AuthzContext | None,
         Depends(
@@ -835,7 +852,6 @@ async def get_contract_ledger(
         ),
     ] = None,
 ) -> ContractLedgerListResponse:
-    _ = current_user
     _ = _authz
     try:
         return await ledger_service_v2.query_ledger(
@@ -845,6 +861,8 @@ async def get_contract_ledger(
             year_month_end=year_month_end,
             offset=offset,
             limit=limit,
+            current_user_id=str(current_user.id),
+            party_filter=selected_view_party_filter,
         )
     except BaseBusinessError:
         raise

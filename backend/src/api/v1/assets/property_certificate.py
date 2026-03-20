@@ -30,7 +30,9 @@ from ....schemas.property_certificate import (
 )
 from ....services.authz import authz_service
 from ....services.property_certificate.service import PropertyCertificateService
+from ....services.view_scope import resolve_selected_view_party_filter_dependency
 from ....utils.file_security import generate_safe_filename, validate_file_extension
+from ....utils.str import normalize_optional_str
 
 logger = logging.getLogger(__name__)
 
@@ -40,17 +42,10 @@ _PROPERTY_CERTIFICATE_CREATE_UNSCOPED_PARTY_ID = (
 )
 
 
-def _normalize_optional_str(value: Any) -> str | None:
-    if value is None:
-        return None
-    normalized = str(value).strip()
-    if normalized == "":
-        return None
-    return normalized
-
-
 def _resolve_current_user_organization_id(current_user: User) -> str | None:
-    return _normalize_optional_str(getattr(current_user, "default_organization_id", None))
+    return normalize_optional_str(
+        getattr(current_user, "default_organization_id", None)
+    )
 
 
 async def _resolve_organization_party_id(
@@ -58,7 +53,7 @@ async def _resolve_organization_party_id(
     db: AsyncSession,
     organization_id: str | None,
 ) -> str | None:
-    normalized_organization_id = _normalize_optional_str(organization_id)
+    normalized_organization_id = normalize_optional_str(organization_id)
     if normalized_organization_id is None:
         return None
 
@@ -77,7 +72,7 @@ async def _resolve_organization_party_id(
         .limit(1)
     )
     row = (await db.execute(stmt)).mappings().one_or_none()
-    return _normalize_optional_str(row.get("party_id") if row is not None else None)
+    return normalize_optional_str(row.get("party_id") if row is not None else None)
 
 
 async def _build_property_certificate_create_resource_context(
@@ -89,7 +84,9 @@ async def _build_property_certificate_create_resource_context(
     resource_context: dict[str, Any] = {}
     if organization_id is None:
         resource_context["party_id"] = _PROPERTY_CERTIFICATE_CREATE_UNSCOPED_PARTY_ID
-        resource_context["owner_party_id"] = _PROPERTY_CERTIFICATE_CREATE_UNSCOPED_PARTY_ID
+        resource_context["owner_party_id"] = (
+            _PROPERTY_CERTIFICATE_CREATE_UNSCOPED_PARTY_ID
+        )
         resource_context["manager_party_id"] = (
             _PROPERTY_CERTIFICATE_CREATE_UNSCOPED_PARTY_ID
         )
@@ -100,7 +97,9 @@ async def _build_property_certificate_create_resource_context(
         db=db,
         organization_id=organization_id,
     )
-    resolved_party_id = scoped_party_id if scoped_party_id is not None else organization_id
+    resolved_party_id = (
+        scoped_party_id if scoped_party_id is not None else organization_id
+    )
     resource_context["party_id"] = resolved_party_id
     resource_context["owner_party_id"] = resolved_party_id
     resource_context["manager_party_id"] = resolved_party_id
@@ -311,6 +310,7 @@ async def list_certificates(
     limit: int = 100,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    selected_view_party_filter=Depends(resolve_selected_view_party_filter_dependency),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="read",
@@ -335,6 +335,7 @@ async def list_certificates(
             skip=skip,
             limit=limit,
             current_user_id=str(current_user.id),
+            party_filter=selected_view_party_filter,
         )
         logger.debug(
             "Retrieved %d certificates (skip=%d, limit=%d)",
@@ -359,6 +360,7 @@ async def get_certificate(
     certificate_id: str,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    selected_view_party_filter=Depends(resolve_selected_view_party_filter_dependency),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="read",
@@ -386,6 +388,7 @@ async def get_certificate(
         cert = await service.get_certificate(
             certificate_id,
             current_user_id=str(current_user.id),
+            party_filter=selected_view_party_filter,
         )
         if not cert:
             logger.warning(f"Certificate not found: {certificate_id}")

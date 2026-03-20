@@ -48,21 +48,13 @@ from .....services.core.session_service import AsyncSessionService
 from .....services.core.user_management_service import AsyncUserManagementService
 from .....services.factory import ServiceFactory, get_service_factory
 from .....services.permission.rbac_service import RBACService
+from .....utils.str import normalize_optional_str
 
 router = APIRouter(prefix="/users", tags=["用户管理"])
 
 _get_factory = get_service_factory()
 UserCRUD = getattr(import_module("src.crud.auth"), "UserCRUD")
 _USER_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:user:create"
-
-
-def _normalize_optional_str(value: Any) -> str | None:
-    if value is None:
-        return None
-    normalized = str(value).strip()
-    if normalized == "":
-        return None
-    return normalized
 
 
 def _build_party_scope_context(
@@ -89,7 +81,7 @@ async def _resolve_user_create_resource_context(request: Request) -> dict[str, s
     if not isinstance(payload, dict):
         payload = {}
 
-    organization_id = _normalize_optional_str(payload.get("default_organization_id"))
+    organization_id = normalize_optional_str(payload.get("default_organization_id"))
     scoped_party_id = (
         organization_id
         if organization_id is not None

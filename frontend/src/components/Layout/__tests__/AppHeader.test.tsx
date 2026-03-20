@@ -86,6 +86,10 @@ vi.mock('../../Notification', () => ({
   NotificationCenter: () => <div data-testid="notification-center" />,
 }));
 
+vi.mock('@/components/System/GlobalViewSwitcher', () => ({
+  default: () => <div data-testid="global-view-switcher">Global View Switcher</div>,
+}));
+
 // Mock MessageManager
 vi.mock('@/utils/messageManager', () => ({
   MessageManager: {
@@ -218,6 +222,7 @@ describe('AppHeader - 渲染与交互测试', () => {
     renderWithProviders(<AppHeader collapsed={false} onToggleCollapsed={vi.fn()} />);
 
     expect(screen.getByText('土地房产资产管理系统')).toBeInTheDocument();
+    expect(screen.getByTestId('global-view-switcher')).toBeInTheDocument();
     expect(screen.getByText('测试用户')).toBeInTheDocument();
     expect(screen.getByTestId('notification-center')).toBeInTheDocument();
   });

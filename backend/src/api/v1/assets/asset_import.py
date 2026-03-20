@@ -14,19 +14,11 @@ from ....schemas.asset import AssetImportRequest, AssetImportResponse
 from ....services.asset.asset_service import AsyncAssetService
 from ....services.asset.import_service import AsyncAssetImportService
 from ....services.authz import authz_service
+from ....utils.str import normalize_optional_str
 
 # 创建导入路由器
 router = APIRouter()
 _ASSET_IMPORT_UNSCOPED_PARTY_ID = "__unscoped__:asset:import"
-
-
-def _normalize_optional_str(value: Any) -> str | None:
-    if value is None:
-        return None
-    normalized = str(value).strip()
-    if normalized == "":
-        return None
-    return normalized
 
 
 async def _resolve_owner_party_scope_by_ownership_id(
@@ -34,7 +26,7 @@ async def _resolve_owner_party_scope_by_ownership_id(
     db: AsyncSession,
     ownership_id: str | None,
 ) -> str | None:
-    normalized_ownership_id = _normalize_optional_str(ownership_id)
+    normalized_ownership_id = normalize_optional_str(ownership_id)
     if normalized_ownership_id is None:
         return None
     resolved_party_id = await AsyncAssetService(
@@ -42,7 +34,7 @@ async def _resolve_owner_party_scope_by_ownership_id(
     ).resolve_owner_party_scope_by_ownership_id_async(
         ownership_id=normalized_ownership_id
     )
-    return _normalize_optional_str(resolved_party_id)
+    return normalize_optional_str(resolved_party_id)
 
 
 async def _resolve_organization_party_scope_by_organization_id(
@@ -50,7 +42,7 @@ async def _resolve_organization_party_scope_by_organization_id(
     db: AsyncSession,
     organization_id: str | None,
 ) -> str | None:
-    normalized_organization_id = _normalize_optional_str(organization_id)
+    normalized_organization_id = normalize_optional_str(organization_id)
     if normalized_organization_id is None:
         return None
 
@@ -69,7 +61,7 @@ async def _resolve_organization_party_scope_by_organization_id(
         .limit(1)
     )
     row = (await db.execute(stmt)).mappings().one_or_none()
-    return _normalize_optional_str(row.get("party_id") if row is not None else None)
+    return normalize_optional_str(row.get("party_id") if row is not None else None)
 
 
 async def _build_asset_import_resource_context(
@@ -79,10 +71,10 @@ async def _build_asset_import_resource_context(
     ownership_scope_cache: dict[str, str | None],
     organization_scope_cache: dict[str, str | None],
 ) -> dict[str, Any]:
-    owner_party_id = _normalize_optional_str(record.get("owner_party_id"))
-    manager_party_id = _normalize_optional_str(record.get("manager_party_id"))
-    ownership_id = _normalize_optional_str(record.get("ownership_id"))
-    organization_id = _normalize_optional_str(record.get("organization_id"))
+    owner_party_id = normalize_optional_str(record.get("owner_party_id"))
+    manager_party_id = normalize_optional_str(record.get("manager_party_id"))
+    ownership_id = normalize_optional_str(record.get("ownership_id"))
+    organization_id = normalize_optional_str(record.get("organization_id"))
 
     resource_context: dict[str, Any] = {}
     if owner_party_id is not None:
@@ -99,11 +91,11 @@ async def _build_asset_import_resource_context(
 
     if owner_party_id is None and ownership_id is not None:
         if ownership_id not in ownership_scope_cache:
-            ownership_scope_cache[ownership_id] = (
-                await _resolve_owner_party_scope_by_ownership_id(
-                    db=db,
-                    ownership_id=ownership_id,
-                )
+            ownership_scope_cache[
+                ownership_id
+            ] = await _resolve_owner_party_scope_by_ownership_id(
+                db=db,
+                ownership_id=ownership_id,
             )
         resolved_owner_party_id = ownership_scope_cache.get(ownership_id)
         if resolved_owner_party_id is not None:
@@ -113,11 +105,11 @@ async def _build_asset_import_resource_context(
 
     if "party_id" not in resource_context and organization_id is not None:
         if organization_id not in organization_scope_cache:
-            organization_scope_cache[organization_id] = (
-                await _resolve_organization_party_scope_by_organization_id(
-                    db=db,
-                    organization_id=organization_id,
-                )
+            organization_scope_cache[
+                organization_id
+            ] = await _resolve_organization_party_scope_by_organization_id(
+                db=db,
+                organization_id=organization_id,
             )
         resolved_organization_party_id = organization_scope_cache.get(organization_id)
         resource_context["party_id"] = (
@@ -153,10 +145,7 @@ async def _require_asset_import_create_authz(
             organization_scope_cache=organization_scope_cache,
         )
         normalized_key = tuple(
-            sorted(
-                (str(key), str(value))
-                for key, value in resource_context.items()
-            )
+            sorted((str(key), str(value)) for key, value in resource_context.items())
         )
         if normalized_key in seen_context_keys:
             continue

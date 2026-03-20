@@ -29,21 +29,17 @@ from ....schemas.project import (
 )
 from ....services.authz import authz_service
 from ....services.project import project_service
+from ....services.view_scope import (
+    coerce_selected_view_party_filter,
+    resolve_selected_view_party_filter_dependency,
+)
+from ....utils.str import normalize_optional_str
 
 router = APIRouter()
 _PROJECT_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:project:create"
 ProjectActiveAssetsResponse.model_rebuild(
     _types_namespace={"AssetListItemResponse": AssetListItemResponse}
 )
-
-
-def _normalize_optional_str(value: Any) -> str | None:
-    if value is None:
-        return None
-    normalized = str(value).strip()
-    if normalized == "":
-        return None
-    return normalized
 
 
 def _normalize_identifier_sequence(values: Any) -> list[str]:
@@ -53,7 +49,7 @@ def _normalize_identifier_sequence(values: Any) -> list[str]:
     normalized_values: list[str] = []
     seen: set[str] = set()
     for value in values:
-        normalized_value = _normalize_optional_str(value)
+        normalized_value = normalize_optional_str(value)
         if normalized_value is None or normalized_value in seen:
             continue
         seen.add(normalized_value)
@@ -62,7 +58,9 @@ def _normalize_identifier_sequence(values: Any) -> list[str]:
 
 
 def _resolve_current_user_organization_id(current_user: User) -> str | None:
-    return _normalize_optional_str(getattr(current_user, "default_organization_id", None))
+    return normalize_optional_str(
+        getattr(current_user, "default_organization_id", None)
+    )
 
 
 def _resolve_effective_organization_id(
@@ -70,7 +68,7 @@ def _resolve_effective_organization_id(
     project_in: ProjectCreate,
     current_user: User,
 ) -> str | None:
-    request_organization_id = _normalize_optional_str(project_in.organization_id)
+    request_organization_id = normalize_optional_str(project_in.organization_id)
     if request_organization_id is not None:
         return request_organization_id
     return _resolve_current_user_organization_id(current_user)
@@ -81,7 +79,7 @@ async def _resolve_organization_party_id(
     db: AsyncSession,
     organization_id: str | None,
 ) -> str | None:
-    normalized_organization_id = _normalize_optional_str(organization_id)
+    normalized_organization_id = normalize_optional_str(organization_id)
     if normalized_organization_id is None:
         return None
 
@@ -92,7 +90,7 @@ async def _resolve_organization_party_id(
         )
     except Exception:
         return None
-    return _normalize_optional_str(resolved_party_id)
+    return normalize_optional_str(resolved_party_id)
 
 
 async def _build_subject_scope_hint(
@@ -136,8 +134,8 @@ async def _require_project_create_authz(
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_async_db),
 ) -> AuthzContext:
-    manager_party_id = _normalize_optional_str(project_in.manager_party_id)
-    request_organization_id = _normalize_optional_str(project_in.organization_id)
+    manager_party_id = normalize_optional_str(project_in.manager_party_id)
+    request_organization_id = normalize_optional_str(project_in.organization_id)
     effective_organization_id = _resolve_effective_organization_id(
         project_in=project_in,
         current_user=current_user,
@@ -166,7 +164,7 @@ async def _require_project_create_authz(
         )
         for key, value in subject_scope_hint.items():
             resource_context.setdefault(key, value)
-        inferred_manager_party_id = _normalize_optional_str(
+        inferred_manager_party_id = normalize_optional_str(
             resource_context.get("manager_party_id")
         )
         if inferred_manager_party_id is not None:
@@ -176,7 +174,7 @@ async def _require_project_create_authz(
 
     resource_context["party_id"] = (
         manager_party_id
-        or _normalize_optional_str(resource_context.get("party_id"))
+        or normalize_optional_str(resource_context.get("party_id"))
         or effective_organization_id
         or _PROJECT_CREATE_UNSCOPED_PARTY_ID
     )
@@ -220,15 +218,15 @@ async def create_project(
     """
     try:
         if isinstance(_authz_ctx, AuthzContext):
-            resolved_manager_party_id = _normalize_optional_str(
+            resolved_manager_party_id = normalize_optional_str(
                 _authz_ctx.resource_context.get("manager_party_id")
             )
             if (
-                _normalize_optional_str(project_in.manager_party_id) is None
+                normalize_optional_str(project_in.manager_party_id) is None
                 and resolved_manager_party_id is not None
             ):
                 project_in.manager_party_id = resolved_manager_party_id
-            resolved_organization_id = _normalize_optional_str(
+            resolved_organization_id = normalize_optional_str(
                 _authz_ctx.resource_context.get("organization_id")
             )
         else:
@@ -267,6 +265,7 @@ async def create_project(
 async def list_projects(
     db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
+    selected_view_party_filter=Depends(resolve_selected_view_party_filter_dependency),
     _authz_ctx: AuthzContext = Depends(
         require_authz(action="read", resource_type="project")
     ),
@@ -282,6 +281,9 @@ async def list_projects(
     分页参数使用 page/page_size
     """
     try:
+        selected_view_party_filter = coerce_selected_view_party_filter(
+            selected_view_party_filter
+        )
         search_params = ProjectSearchRequest(
             page=page,
             page_size=page_size,
@@ -293,8 +295,12 @@ async def list_projects(
             db=db,
             search_params=search_params,
             current_user_id=str(current_user.id),
+            party_filter=selected_view_party_filter,
         )
-        items = [project_service.project_to_response(item) for item in result.get("items", [])]
+        items = [
+            project_service.project_to_response(item)
+            for item in result.get("items", [])
+        ]
         return ResponseHandler.paginated(
             data=items,
             page=result.get("page", page),
@@ -315,6 +321,7 @@ async def search_projects(
     search_params: ProjectSearchRequest,
     db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
+    selected_view_party_filter=Depends(resolve_selected_view_party_filter_dependency),
     _authz_ctx: AuthzContext = Depends(
         require_authz(action="read", resource_type="project")
     ),
@@ -323,12 +330,19 @@ async def search_projects(
     搜索项目列表
     """
     try:
+        selected_view_party_filter = coerce_selected_view_party_filter(
+            selected_view_party_filter
+        )
         result = await project_service.search_projects(
             db=db,
             search_params=search_params,
             current_user_id=str(current_user.id),
+            party_filter=selected_view_party_filter,
         )
-        items = [project_service.project_to_response(item) for item in result.get("items", [])]
+        items = [
+            project_service.project_to_response(item)
+            for item in result.get("items", [])
+        ]
         return ResponseHandler.paginated(
             data=items,
             page=result.get("page", search_params.page),
@@ -344,16 +358,21 @@ async def search_projects(
 async def get_project_options(
     db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
+    selected_view_party_filter=Depends(resolve_selected_view_party_filter_dependency),
     _authz_ctx: AuthzContext = Depends(
         require_authz(action="read", resource_type="project")
     ),
     status: str | None = Query("active", description="项目状态过滤，留空返回全部状态"),
 ) -> list[dict[str, Any]]:
     """获取项目下拉列表选项（标准端点）"""
+    selected_view_party_filter = coerce_selected_view_party_filter(
+        selected_view_party_filter
+    )
     return await project_service.get_project_dropdown_options(
         db,
         status=status,
         current_user_id=str(current_user.id),
+        party_filter=selected_view_party_filter,
     )
 
 
@@ -365,6 +384,7 @@ async def get_project_options(
 async def get_project_statistics(
     db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
+    selected_view_party_filter=Depends(resolve_selected_view_party_filter_dependency),
     _authz_ctx: AuthzContext = Depends(
         require_authz(action="read", resource_type="project")
     ),
@@ -372,9 +392,13 @@ async def get_project_statistics(
     """
     获取项目统计概览
     """
+    selected_view_party_filter = coerce_selected_view_party_filter(
+        selected_view_party_filter
+    )
     return await project_service.get_project_statistics(
         db=db,
         current_user_id=str(current_user.id),
+        party_filter=selected_view_party_filter,
     )
 
 
@@ -387,6 +411,7 @@ async def get_project_active_assets(
     project_id: Annotated[str, Path(description="项目ID")],
     db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
+    selected_view_party_filter=Depends(resolve_selected_view_party_filter_dependency),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="read",
@@ -398,10 +423,14 @@ async def get_project_active_assets(
 ) -> Any:
     """获取项目有效关联资产列表及面积汇总。"""
     try:
+        selected_view_party_filter = coerce_selected_view_party_filter(
+            selected_view_party_filter
+        )
         assets, summary = await project_service.get_project_active_assets(
             db=db,
             project_id=project_id,
             current_user_id=str(current_user.id),
+            party_filter=selected_view_party_filter,
         )
         items = [AssetListItemResponse.model_validate(asset) for asset in assets]
         response_payload = ProjectActiveAssetsResponse(
@@ -424,6 +453,7 @@ async def get_project(
     project_id: Annotated[str, Path(description="项目ID")],
     db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
+    selected_view_party_filter=Depends(resolve_selected_view_party_filter_dependency),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="read",
@@ -436,10 +466,14 @@ async def get_project(
     """
     获取项目详情
     """
+    selected_view_party_filter = coerce_selected_view_party_filter(
+        selected_view_party_filter
+    )
     project = await project_service.get_project_by_id(
         db=db,
         project_id=project_id,
         current_user_id=str(current_user.id),
+        party_filter=selected_view_party_filter,
     )
     if not project:
         raise not_found("项目不存在", resource_type="project", resource_id=project_id)

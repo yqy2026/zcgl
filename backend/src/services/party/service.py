@@ -1,7 +1,6 @@
 """Party domain service orchestration."""
 
 import logging
-from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import func, select
@@ -26,6 +25,7 @@ from ...schemas.party import (
     UserPartyBindingUpdate,
 )
 from ...services.party_scope import resolve_user_party_filter
+from ...utils.time import utcnow_naive
 
 logger = logging.getLogger(__name__)
 
@@ -57,8 +57,34 @@ class PartyService:
 
         return await self.party_crud.create_party(db, obj_in=payload)
 
-    async def get_party(self, db: AsyncSession, *, party_id: str) -> Party | None:
-        return await self.party_crud.get_party(db, party_id=party_id)
+    async def get_party(
+        self,
+        db: AsyncSession,
+        *,
+        party_id: str,
+        current_user_id: str | None = None,
+        party_filter: PartyFilter | None = None,
+    ) -> Party | None:
+        party = await self.party_crud.get_party(db, party_id=party_id)
+        if party is None:
+            return None
+
+        resolved_party_filter = await resolve_user_party_filter(
+            db,
+            current_user_id=current_user_id,
+            party_filter=party_filter,
+            logger=logger,
+            allow_legacy_default_organization_fallback=False,
+        )
+        if resolved_party_filter is None:
+            return party
+
+        scoped_party_ids = self._resolve_scoped_party_ids(resolved_party_filter)
+        if scoped_party_ids is None:
+            return party
+        if party.id not in scoped_party_ids:
+            return None
+        return party
 
     async def get_parties(
         self,
@@ -142,7 +168,11 @@ class PartyService:
                 reason="party_review_submit_invalid_status",
             )
 
-        from_status = party.review_status.value if isinstance(party.review_status, PartyReviewStatus) else str(party.review_status)
+        from_status = (
+            party.review_status.value
+            if isinstance(party.review_status, PartyReviewStatus)
+            else str(party.review_status)
+        )
         result = await self.party_crud.update_party(
             db,
             db_obj=party,
@@ -178,14 +208,18 @@ class PartyService:
                 reason="party_review_approve_invalid_status",
             )
 
-        from_status = party.review_status.value if isinstance(party.review_status, PartyReviewStatus) else str(party.review_status)
+        from_status = (
+            party.review_status.value
+            if isinstance(party.review_status, PartyReviewStatus)
+            else str(party.review_status)
+        )
         result = await self.party_crud.update_party(
             db,
             db_obj=party,
             obj_in={
                 "review_status": PartyReviewStatus.APPROVED.value,
                 "review_by": reviewer,
-                "reviewed_at": self._utcnow_naive(),
+                "reviewed_at": utcnow_naive(),
                 "review_reason": None,
             },
         )
@@ -223,14 +257,18 @@ class PartyService:
                 reason="party_review_reject_invalid_status",
             )
 
-        from_status = party.review_status.value if isinstance(party.review_status, PartyReviewStatus) else str(party.review_status)
+        from_status = (
+            party.review_status.value
+            if isinstance(party.review_status, PartyReviewStatus)
+            else str(party.review_status)
+        )
         result = await self.party_crud.update_party(
             db,
             db_obj=party,
             obj_in={
                 "review_status": PartyReviewStatus.DRAFT.value,
                 "review_by": reviewer,
-                "reviewed_at": self._utcnow_naive(),
+                "reviewed_at": utcnow_naive(),
                 "review_reason": normalized_reason,
             },
         )
@@ -245,16 +283,20 @@ class PartyService:
         )
         return result
 
-    async def _assert_no_references(
-        self, db: AsyncSession, *, party_id: str
-    ) -> None:
+    async def _assert_no_references(self, db: AsyncSession, *, party_id: str) -> None:
         """Check if this party is referenced by assets or contract groups."""
         from ...models.asset import Asset
-        from ...models.contract_group import ContractGroup, LeaseContractDetail
+        from ...models.contract_group import Contract, ContractGroup
+        from ...models.project import Project
 
         # Check assets referencing this party as owner or manager
-        asset_count_stmt = select(func.count()).select_from(Asset).where(
-            (Asset.owner_party_id == party_id) | (Asset.manager_party_id == party_id)
+        asset_count_stmt = (
+            select(func.count())
+            .select_from(Asset)
+            .where(
+                (Asset.owner_party_id == party_id)
+                | (Asset.manager_party_id == party_id)
+            )
         )
         asset_count = (await db.execute(asset_count_stmt)).scalar() or 0
         if asset_count > 0:
@@ -264,9 +306,13 @@ class PartyService:
             )
 
         # Check contract groups referencing this party
-        cg_count_stmt = select(func.count()).select_from(ContractGroup).where(
-            (ContractGroup.operator_party_id == party_id)
-            | (ContractGroup.owner_party_id == party_id)
+        cg_count_stmt = (
+            select(func.count())
+            .select_from(ContractGroup)
+            .where(
+                (ContractGroup.operator_party_id == party_id)
+                | (ContractGroup.owner_party_id == party_id)
+            )
         )
         cg_count = (await db.execute(cg_count_stmt)).scalar() or 0
         if cg_count > 0:
@@ -275,16 +321,33 @@ class PartyService:
                 reason="party_delete_has_contract_group_references",
             )
 
-        # Check lease contract details referencing this party
-        lcd_count_stmt = select(func.count()).select_from(LeaseContractDetail).where(
-            (LeaseContractDetail.lessor_party_id == party_id)
-            | (LeaseContractDetail.lessee_party_id == party_id)
+        # Check contracts referencing this party as lessor or lessee
+        contract_count_stmt = (
+            select(func.count())
+            .select_from(Contract)
+            .where(
+                (Contract.lessor_party_id == party_id)
+                | (Contract.lessee_party_id == party_id)
+            )
         )
-        lcd_count = (await db.execute(lcd_count_stmt)).scalar() or 0
-        if lcd_count > 0:
+        contract_count = (await db.execute(contract_count_stmt)).scalar() or 0
+        if contract_count > 0:
             raise OperationNotAllowedError(
-                f"该主体被 {lcd_count} 个租赁合同引用，无法删除",
+                f"该主体被 {contract_count} 个租赁合同引用，无法删除",
                 reason="party_delete_has_lease_contract_references",
+            )
+
+        # Check projects referencing this party as manager
+        project_count_stmt = (
+            select(func.count())
+            .select_from(Project)
+            .where(Project.manager_party_id == party_id)
+        )
+        project_count = (await db.execute(project_count_stmt)).scalar() or 0
+        if project_count > 0:
+            raise OperationNotAllowedError(
+                f"该主体被 {project_count} 个项目引用，无法删除",
+                reason="party_delete_has_project_references",
             )
 
     async def _write_review_log(
@@ -340,7 +403,8 @@ class PartyService:
 
         if len(blocked_parties) > 0:
             raise OperationNotAllowedError(
-                f"{operation}前，关联主体必须全部已审核，未通过主体：" + ", ".join(blocked_parties),
+                f"{operation}前，关联主体必须全部已审核，未通过主体："
+                + ", ".join(blocked_parties),
                 reason="party_review_not_approved",
                 details={"party_ids": normalized_party_ids},
             )
@@ -430,7 +494,9 @@ class PartyService:
         payload = obj_in.model_dump(exclude_none=True)
         return await self.party_crud.create_contact(db, obj_in=payload)
 
-    async def get_contacts(self, db: AsyncSession, *, party_id: str) -> list[PartyContact]:
+    async def get_contacts(
+        self, db: AsyncSession, *, party_id: str
+    ) -> list[PartyContact]:
         stmt = select(PartyContact).where(PartyContact.party_id == party_id)
         result = await db.execute(stmt)
         return list(result.scalars().all())
@@ -446,7 +512,7 @@ class PartyService:
 
         payload = obj_in.model_dump(exclude_none=True)
         if "valid_from" not in payload:
-            payload["valid_from"] = self._utcnow_naive()
+            payload["valid_from"] = utcnow_naive()
         self._validate_binding_valid_range(payload)
         relation_type = str(payload["relation_type"])
         is_primary = bool(payload.get("is_primary", False))
@@ -560,7 +626,7 @@ class PartyService:
         if binding is None:
             return False
 
-        now = self._utcnow_naive()
+        now = utcnow_naive()
         if binding.valid_to is not None and binding.valid_to <= now:
             return False
 
@@ -647,10 +713,6 @@ class PartyService:
         if "metadata" in payload:
             payload["metadata_json"] = payload.pop("metadata")
         return payload
-
-    @staticmethod
-    def _utcnow_naive() -> datetime:
-        return datetime.now(UTC).replace(tzinfo=None)
 
 
 party_service = PartyService()

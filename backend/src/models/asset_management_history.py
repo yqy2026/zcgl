@@ -1,21 +1,18 @@
 """Asset management-party history model."""
 
 import uuid
-from datetime import UTC, date, datetime
+from datetime import date, datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Date, DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..database import Base
+from ..utils.time import utcnow_naive
 
 if TYPE_CHECKING:
     from .asset import Asset
     from .party import Party
-
-
-def _utcnow_naive() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class AssetManagementHistory(Base):
@@ -46,13 +43,13 @@ class AssetManagementHistory(Base):
     change_reason: Mapped[str | None] = mapped_column(String(500), comment="变更原因")
     changed_by: Mapped[str | None] = mapped_column(String(100), comment="变更人")
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=_utcnow_naive, comment="创建时间"
+        DateTime, nullable=False, default=utcnow_naive, comment="创建时间"
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        default=_utcnow_naive,
-        onupdate=_utcnow_naive,
+        default=utcnow_naive,
+        onupdate=utcnow_naive,
         comment="更新时间",
     )
 

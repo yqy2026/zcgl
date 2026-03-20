@@ -28,22 +28,17 @@ def test_notifications_endpoints_should_use_require_authz() -> None:
         r"async def get_notifications[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"notification\"",
         r"async def get_unread_count[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"notification\"",
         r"async def mark_notification_as_read[\s\S]*?require_authz\([\s\S]*?action=\"update\"[\s\S]*?resource_type=\"notification\"[\s\S]*?resource_id=\"\{notification_id\}\"",
-        r"async def mark_all_as_read[\s\S]*?require_authz\([\s\S]*?action=\"update\"[\s\S]*?resource_type=\"notification\"[\s\S]*?resource_context=_NOTIFICATION_UPDATE_RESOURCE_CONTEXT",
+        r"async def mark_all_as_read[\s\S]*?require_authz\([\s\S]*?action=\"update\"[\s\S]*?resource_type=\"notification\"",
         r"async def delete_notification[\s\S]*?require_authz\([\s\S]*?action=\"delete\"[\s\S]*?resource_type=\"notification\"[\s\S]*?resource_id=\"\{notification_id\}\"",
-        r"async def run_notification_tasks_endpoint[\s\S]*?require_authz\([\s\S]*?action=\"update\"[\s\S]*?resource_type=\"notification\"[\s\S]*?resource_context=_NOTIFICATION_UPDATE_RESOURCE_CONTEXT",
+        r"async def run_notification_tasks_endpoint[\s\S]*?require_authz\([\s\S]*?action=\"update\"[\s\S]*?resource_type=\"notification\"",
     ]
 
     for pattern in patterns:
         assert re.search(pattern, module_source), pattern
 
 
-def test_notifications_unscoped_update_context_should_be_defined() -> None:
+def test_notifications_should_not_define_fake_unscoped_update_context() -> None:
     from src.api.v1.system import notifications
 
-    expected_sentinel = "__unscoped__:notification:update"
-    assert notifications._NOTIFICATION_UPDATE_UNSCOPED_PARTY_ID == expected_sentinel
-    assert notifications._NOTIFICATION_UPDATE_RESOURCE_CONTEXT == {
-        "party_id": expected_sentinel,
-        "owner_party_id": expected_sentinel,
-        "manager_party_id": expected_sentinel,
-    }
+    assert not hasattr(notifications, "_NOTIFICATION_UPDATE_UNSCOPED_PARTY_ID")
+    assert not hasattr(notifications, "_NOTIFICATION_UPDATE_RESOURCE_CONTEXT")

@@ -15,6 +15,7 @@ import { BasicSearchFields } from '@/components/Asset/AssetSearch/BasicSearchFie
 import { SaveSearchModal } from '@/components/Asset/AssetSearch/SaveSearchModal';
 import { SearchActionButtons } from '@/components/Asset/AssetSearch/SearchActionButtons';
 import { SearchHistoryModal } from '@/components/Asset/AssetSearch/SearchHistoryModal';
+import { normalizeOptionalId } from '@/utils/normalize';
 
 const componentLogger = createLogger('AssetSearch');
 
@@ -44,14 +45,6 @@ interface AssetSearchProps {
   showSaveButton?: boolean;
   showHistoryButton?: boolean;
 }
-
-const normalizeOptionalId = (value: unknown): string | undefined => {
-  if (typeof value !== 'string') {
-    return undefined;
-  }
-  const normalized = value.trim();
-  return normalized === '' ? undefined : normalized;
-};
 
 const AssetSearch: React.FC<AssetSearchProps> = ({
   onSearch,

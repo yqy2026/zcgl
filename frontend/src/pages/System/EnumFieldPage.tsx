@@ -1,31 +1,17 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Form,
-  Space,
-  Tag,
-  Button,
   Card,
   Input,
   Select,
-  Tooltip,
   Col,
   Row,
   Modal,
-  Popconfirm,
-  Badge,
   Statistic,
   Tabs,
   Switch,
 } from 'antd';
 import { MessageManager } from '@/utils/messageManager';
-import type { ColumnsType } from 'antd/es/table';
-import {
-  PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  EyeOutlined,
-  SearchOutlined,
-} from '@ant-design/icons';
 import type {
   EnumFieldType,
   EnumFieldValue,
@@ -34,8 +20,6 @@ import type {
   CreateEnumFieldValueRequest,
   UpdateEnumFieldValueRequest,
 } from '@/services/dictionary';
-import EnumValuePreview from '@/components/Dictionary/EnumValuePreview';
-import { TableWithPagination } from '@/components/Common/TableWithPagination';
 import { useArrayListData } from '@/hooks/useArrayListData';
 import PageContainer from '@/components/Common/PageContainer';
 import {
@@ -49,11 +33,12 @@ import {
   useUpdateEnumFieldTypeMutation,
   useUpdateEnumFieldValueMutation,
 } from '@/hooks/useDictionaryManagement';
+import EnumFieldList from './EnumFieldList';
+import EnumFieldValueManager from './EnumFieldValueManager';
 import styles from './EnumFieldPage.module.css';
 
 const { TextArea } = Input;
 const { Option } = Select;
-const { Search } = Input;
 
 // 错误类型定义
 interface ApiError {
@@ -69,22 +54,6 @@ interface ApiError {
 interface EnumTypeFilters {
   keyword: string;
 }
-
-type Tone = 'primary' | 'success' | 'warning' | 'error';
-
-const resolveText = (value: string | null | undefined, fallback: string): string => {
-  if (value == null) {
-    return fallback;
-  }
-  const normalizedValue = value.trim();
-  return normalizedValue !== '' ? normalizedValue : fallback;
-};
-
-const getTypeStatusTone = (status: EnumFieldType['status']): Tone =>
-  status === 'active' ? 'success' : 'warning';
-
-const buildColorPreviewStyle = (color: string): React.CSSProperties =>
-  ({ ['--preview-color' as string]: color }) as React.CSSProperties;
 
 const EnumFieldPage: React.FC = () => {
   const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null);
@@ -207,12 +176,6 @@ const EnumFieldPage: React.FC = () => {
     () => isValueSourceLoading || valuesTableLoading,
     [isValueSourceLoading, valuesTableLoading]
   );
-  const toneClassMap: Record<Tone, string> = {
-    primary: styles.tonePrimary,
-    success: styles.toneSuccess,
-    warning: styles.toneWarning,
-    error: styles.toneError,
-  };
 
   // 监听模态框打开和编辑值的变化
   useEffect(() => {
@@ -258,206 +221,6 @@ const EnumFieldPage: React.FC = () => {
       }
     }
   }, [valueModalVisible, editingValue, selectedTypeId, valueForm]);
-
-  // 枚举类型表格列定义
-  const typeColumns: ColumnsType<EnumFieldType> = [
-    {
-      title: '类型名称',
-      dataIndex: 'name',
-      key: 'name',
-      render: (text, record) => (
-        <Space className={styles.typeNameCell}>
-          <span className={styles.typeNameText}>{text}</span>
-          {record.is_system && (
-            <Tag className={[styles.statusTag, styles.tonePrimary].join(' ')}>系统</Tag>
-          )}
-        </Space>
-      ),
-    },
-    {
-      title: '编码',
-      dataIndex: 'code',
-      key: 'code',
-      render: text => <code className={styles.codeValue}>{text}</code>,
-    },
-    {
-      title: '类别',
-      dataIndex: 'category',
-      key: 'category',
-      render: text => resolveText(text, '-'),
-    },
-    {
-      title: '配置',
-      key: 'config',
-      render: (_, record) => (
-        <Space className={styles.configTagGroup}>
-          {record.is_multiple && (
-            <Tag className={[styles.statusTag, styles.toneSuccess].join(' ')}>多选</Tag>
-          )}
-          {record.is_hierarchical && (
-            <Tag className={[styles.statusTag, styles.toneWarning].join(' ')}>层级</Tag>
-          )}
-        </Space>
-      ),
-    },
-    {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
-      render: status => {
-        const tone = getTypeStatusTone(status);
-        return (
-          <Space size={6} className={styles.statusGroup}>
-            <Badge status={status === 'active' ? 'success' : 'default'} />
-            <span className={[styles.statusText, toneClassMap[tone]].join(' ')}>
-              {status === 'active' ? '启用' : '禁用'}
-            </span>
-          </Space>
-        );
-      },
-    },
-    {
-      title: '枚举值预览',
-      key: 'enum_values_preview',
-      render: (_, record) => (
-        <EnumValuePreview
-          values={record.enum_values ?? []}
-          maxDisplay={5}
-          size="small"
-          showInactiveCount={false}
-        />
-      ),
-    },
-    {
-      title: '操作',
-      key: 'action',
-      render: (_, record) => (
-        <Space className={styles.actionGroup}>
-          <Tooltip title="查看枚举值">
-            <Button
-              type="text"
-              icon={<EyeOutlined />}
-              className={styles.tableActionButton}
-              onClick={() => {
-                setSelectedTypeId(record.id);
-                setActiveTab('values');
-              }}
-              aria-label={`查看类型 ${record.name} 的枚举值`}
-            />
-          </Tooltip>
-          <Tooltip title="编辑">
-            <Button
-              type="text"
-              icon={<EditOutlined />}
-              className={styles.tableActionButton}
-              onClick={() => handleEditType(record)}
-              aria-label={`编辑类型 ${record.name}`}
-            />
-          </Tooltip>
-          {!record.is_system && (
-            <Popconfirm
-              title="确定删除此枚举类型吗？"
-              onConfirm={() => handleDeleteType(record.id)}
-            >
-              <Button
-                type="text"
-                danger
-                icon={<DeleteOutlined />}
-                className={styles.tableActionButton}
-                aria-label={`删除类型 ${record.name}`}
-              />
-            </Popconfirm>
-          )}
-        </Space>
-      ),
-    },
-  ];
-
-  // 枚举值表格列定义
-  const valueColumns: ColumnsType<EnumFieldValue> = [
-    {
-      title: '标签',
-      dataIndex: 'label',
-      key: 'label',
-    },
-    {
-      title: '值',
-      dataIndex: 'value',
-      key: 'value',
-      render: text => <code className={styles.codeValue}>{text}</code>,
-    },
-    {
-      title: '编码',
-      dataIndex: 'code',
-      key: 'code',
-      render: text => (text != null ? <code className={styles.codeValue}>{text}</code> : '-'),
-    },
-    {
-      title: '颜色',
-      dataIndex: 'color',
-      key: 'color',
-      render: color =>
-        color != null ? (
-          <Space className={styles.colorCell}>
-            <span className={styles.colorPreview} style={buildColorPreviewStyle(color)} />
-            <span className={styles.colorValue}>{color}</span>
-          </Space>
-        ) : (
-          '-'
-        ),
-    },
-    {
-      title: '排序',
-      dataIndex: 'sort_order',
-      key: 'sort_order',
-    },
-    {
-      title: '状态',
-      key: 'status',
-      render: (_, record) => (
-        <Space className={styles.configTagGroup}>
-          <Space size={6} className={styles.statusGroup}>
-            <Badge status={record.is_active ? 'success' : 'default'} />
-            <span
-              className={[
-                styles.statusText,
-                record.is_active ? styles.toneSuccess : styles.toneWarning,
-              ].join(' ')}
-            >
-              {record.is_active ? '启用' : '禁用'}
-            </span>
-          </Space>
-          {record.is_default === true && (
-            <Tag className={[styles.statusTag, styles.toneWarning].join(' ')}>默认</Tag>
-          )}
-        </Space>
-      ),
-    },
-    {
-      title: '操作',
-      key: 'action',
-      render: (_, record) => (
-        <Space className={styles.actionGroup}>
-          <Button
-            type="text"
-            icon={<EditOutlined />}
-            className={styles.tableActionButton}
-            onClick={() => handleEditValue(record)}
-            aria-label={`编辑枚举值 ${record.label}`}
-          />
-          <Popconfirm title="确定删除此枚举值吗？" onConfirm={() => handleDeleteValue(record.id)}>
-            <Button
-              type="text"
-              danger
-              icon={<DeleteOutlined />}
-              className={styles.tableActionButton}
-              aria-label={`删除枚举值 ${record.label}`}
-            />
-          </Popconfirm>
-        </Space>
-      ),
-    },
-  ];
 
   // 处理函数
   const handleCreateType = () => {
@@ -597,87 +360,41 @@ const EnumFieldPage: React.FC = () => {
       key: 'types',
       label: '枚举类型',
       children: (
-        <>
-          <div className={styles.toolbarSection}>
-            <Space className={styles.typeToolbar} size={12} wrap>
-              <Search
-                placeholder="搜索类型名称、编码或类别"
-                prefix={<SearchOutlined />}
-                value={typeFilters.keyword}
-                onChange={event => applyTypeFilters({ keyword: event.target.value })}
-                allowClear
-                className={styles.typeSearch}
-              />
-              <div className={styles.typeSummaryText}>共 {typePagination.total} 个类型</div>
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                className={styles.actionButton}
-                onClick={handleCreateType}
-              >
-                新建枚举类型
-              </Button>
-            </Space>
-          </div>
-          <TableWithPagination
-            columns={typeColumns}
-            dataSource={enumTypes}
-            rowKey="id"
-            loading={typesLoading}
-            paginationState={typePagination}
-            onPageChange={updateTypePagination}
-            paginationProps={{
-              showTotal: (total: number) => `共 ${total} 条记录`,
-            }}
-          />
-        </>
+        <EnumFieldList
+          enumTypes={enumTypes}
+          loading={typesLoading}
+          pagination={typePagination}
+          keyword={typeFilters.keyword}
+          onKeywordChange={keyword => applyTypeFilters({ keyword })}
+          onCreateType={handleCreateType}
+          onPageChange={updateTypePagination}
+          onViewValues={typeId => {
+            setSelectedTypeId(typeId);
+            setActiveTab('values');
+          }}
+          onEditType={handleEditType}
+          onDeleteType={handleDeleteType}
+        />
       ),
     },
     {
       key: 'values',
       label: '枚举值管理',
       children: (
-        <>
-          <div className={styles.toolbarSection}>
-            <Space className={styles.valueToolbar} wrap>
-              <Select
-                placeholder="选择枚举类型"
-                className={styles.typeSelect}
-                value={selectedTypeId ?? undefined}
-                onChange={(value?: string) => {
-                  setSelectedTypeId(value ?? null);
-                }}
-                allowClear
-              >
-                {enumTypeSource.map(type => (
-                  <Option key={type.id} value={type.id}>
-                    {type.name}
-                  </Option>
-                ))}
-              </Select>
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                className={styles.actionButton}
-                onClick={handleCreateValue}
-                disabled={selectedTypeId == null}
-              >
-                新建枚举值
-              </Button>
-            </Space>
-          </div>
-          <TableWithPagination
-            columns={valueColumns}
-            dataSource={enumValues}
-            rowKey="id"
-            loading={valuesLoading}
-            paginationState={valuePagination}
-            onPageChange={updateValuePagination}
-            paginationProps={{
-              showTotal: (total: number) => `共 ${total} 条记录`,
-            }}
-          />
-        </>
+        <EnumFieldValueManager
+          enumTypes={enumTypeSource}
+          enumValues={enumValues}
+          selectedTypeId={selectedTypeId}
+          loading={valuesLoading}
+          pagination={valuePagination}
+          onSelectType={value => {
+            setSelectedTypeId(value ?? null);
+          }}
+          onCreateValue={handleCreateValue}
+          onPageChange={updateValuePagination}
+          onEditValue={handleEditValue}
+          onDeleteValue={handleDeleteValue}
+        />
       ),
     },
   ];

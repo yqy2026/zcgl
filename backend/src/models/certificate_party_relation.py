@@ -1,7 +1,7 @@
 """Certificate-party relation model."""
 
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime
 from enum import StrEnum
 from typing import Any
 
@@ -20,10 +20,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..database import Base
-
-
-def _utcnow_naive() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+from ..utils.time import utcnow_naive
 
 
 class CertificateRelationRole(StrEnum):
@@ -85,31 +82,27 @@ class CertificatePartyRelation(Base):
     is_primary: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, comment="是否主角色"
     )
-    share_ratio: Mapped[float | None] = mapped_column(
-        Numeric(5, 2), comment="占比(%)"
-    )
+    share_ratio: Mapped[float | None] = mapped_column(Numeric(5, 2), comment="占比(%)")
     valid_from: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=_utcnow_naive, comment="生效时间"
+        DateTime, nullable=False, default=utcnow_naive, comment="生效时间"
     )
     valid_to: Mapped[datetime | None] = mapped_column(DateTime, comment="失效时间")
     metadata_json: Mapped[dict[str, Any] | None] = mapped_column(
         "metadata", JSONB, comment="扩展元数据"
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=_utcnow_naive, comment="创建时间"
+        DateTime, nullable=False, default=utcnow_naive, comment="创建时间"
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        default=_utcnow_naive,
-        onupdate=_utcnow_naive,
+        default=utcnow_naive,
+        onupdate=utcnow_naive,
         comment="更新时间",
     )
 
     def __repr__(self) -> str:
-        return (
-            f"<CertificatePartyRelation(certificate_id={self.certificate_id}, party_id={self.party_id}, role={self.relation_role})>"
-        )
+        return f"<CertificatePartyRelation(certificate_id={self.certificate_id}, party_id={self.party_id}, role={self.relation_role})>"
 
 
 __all__ = ["CertificateRelationRole", "CertificatePartyRelation"]

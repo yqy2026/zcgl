@@ -1103,6 +1103,7 @@ class TestGetProjectActiveAssets:
             *,
             project_id: str,
             current_user_id: str | None = None,
+            party_filter=None,
         ):
             assert project_id == project_data.id
             assert current_user_id is not None
@@ -1166,6 +1167,7 @@ class TestGetProjectActiveAssets:
             *,
             project_id: str,
             current_user_id: str | None = None,
+            party_filter=None,
         ):
             raise ResourceNotFoundError("项目", project_id)
 
@@ -1199,6 +1201,7 @@ class TestProjectStatistics:
             db,
             *,
             current_user_id: str | None = None,
+            party_filter=None,
         ):
             assert current_user_id is not None
             return {
@@ -1240,6 +1243,7 @@ class TestProjectDropdownOptions:
             *,
             status: str | None = "active",
             current_user_id: str | None = None,
+            party_filter=None,
         ):
             assert current_user_id is not None
             assert status == "paused"

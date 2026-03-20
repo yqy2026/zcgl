@@ -29,12 +29,6 @@ from ....services.error_recovery_service import (
 )
 
 router = APIRouter(prefix="/error-recovery", tags=["错误恢复"])
-_ERROR_RECOVERY_DELETE_UNSCOPED_PARTY_ID = "__unscoped__:error_recovery:delete"
-_ERROR_RECOVERY_DELETE_RESOURCE_CONTEXT: dict[str, str] = {
-    "party_id": _ERROR_RECOVERY_DELETE_UNSCOPED_PARTY_ID,
-    "owner_party_id": _ERROR_RECOVERY_DELETE_UNSCOPED_PARTY_ID,
-    "manager_party_id": _ERROR_RECOVERY_DELETE_UNSCOPED_PARTY_ID,
-}
 
 
 async def _resolve_test_recovery_category_resource_id(request: Request) -> str | None:
@@ -496,7 +490,6 @@ async def clear_recovery_history(
         require_authz(
             action="delete",
             resource_type="error_recovery",
-            resource_context=_ERROR_RECOVERY_DELETE_RESOURCE_CONTEXT,
         )
     ),
     before_time: datetime | None = Query(None, description="清理此时间之前的记录"),

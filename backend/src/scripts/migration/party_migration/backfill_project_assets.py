@@ -4,15 +4,11 @@ from __future__ import annotations
 
 import argparse
 import uuid
-from datetime import UTC, datetime
 
 import sqlalchemy as sa
 
 from ....database_url import get_database_url
-
-
-def _utcnow_naive() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+from ....utils.time import utcnow_naive
 
 
 def _table_exists(connection: sa.engine.Connection, table_name: str) -> bool:
@@ -52,19 +48,23 @@ def main() -> int:
                     print("[SKIP] assets/project_assets table missing")
                     return 0
 
-                asset_rows = conn.execute(
-                    sa.text(
-                        """
+                asset_rows = (
+                    conn.execute(
+                        sa.text(
+                            """
                         SELECT id, project_id
                         FROM assets
                         WHERE project_id IS NOT NULL
                           AND project_id <> ''
                         """
+                        )
                     )
-                ).mappings().all()
+                    .mappings()
+                    .all()
+                )
                 scanned = len(asset_rows)
 
-                now = _utcnow_naive()
+                now = utcnow_naive()
                 for row in asset_rows:
                     project_id = str(row["project_id"])
                     asset_id = str(row["id"])

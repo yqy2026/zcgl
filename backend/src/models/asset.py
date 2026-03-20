@@ -27,6 +27,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship, synonym
 from sqlalchemy.orm import attributes as orm_attributes
 
 from ..database import Base
+from ..utils.time import utcnow_naive
 from .project_asset import ProjectAsset
 
 if TYPE_CHECKING:
@@ -38,54 +39,49 @@ if TYPE_CHECKING:
     from .property_certificate import PropertyCertificate
 
 
-def _utcnow_naive() -> datetime:
-    """Return UTC now as naive datetime to match current DB column types."""
-    return datetime.now(UTC).replace(tzinfo=None)
-
-
 logger = logging.getLogger(__name__)
 
 
 class AssetForm(str, enum.Enum):
     """资产形态"""
 
-    LAND = "land"              # 土地
-    BUILDING = "building"      # 建筑
-    STRUCTURE = "structure"    # 构筑物
-    PARKING = "parking"        # 车位
-    WAREHOUSE = "warehouse"    # 仓储
-    OTHER = "other"            # 其他
+    LAND = "land"  # 土地
+    BUILDING = "building"  # 建筑
+    STRUCTURE = "structure"  # 构筑物
+    PARKING = "parking"  # 车位
+    WAREHOUSE = "warehouse"  # 仓储
+    OTHER = "other"  # 其他
 
 
 class SpatialLevel(str, enum.Enum):
     """空间层级"""
 
-    PLOT = "plot"          # 地块
-    CAMPUS = "campus"      # 园区
+    PLOT = "plot"  # 地块
+    CAMPUS = "campus"  # 园区
     BUILDING = "building"  # 楼宇
-    FLOOR = "floor"        # 楼层
-    ROOM = "room"          # 房间
-    SHOP = "shop"          # 商铺
+    FLOOR = "floor"  # 楼层
+    ROOM = "room"  # 房间
+    SHOP = "shop"  # 商铺
 
 
 class BusinessUsage(str, enum.Enum):
     """经营用途"""
 
     COMMERCIAL = "commercial"  # 商业
-    OFFICE = "office"          # 办公
-    WAREHOUSE = "warehouse"    # 仓储
+    OFFICE = "office"  # 办公
+    WAREHOUSE = "warehouse"  # 仓储
     INDUSTRIAL = "industrial"  # 工业
-    MIXED = "mixed"            # 综合
-    OTHER = "other"            # 其他
+    MIXED = "mixed"  # 综合
+    OTHER = "other"  # 其他
 
 
 class AssetReviewStatus(str, enum.Enum):
     """资产审核状态"""
 
-    DRAFT = "draft"          # 草稿
-    PENDING = "pending"      # 待审
-    APPROVED = "approved"    # 已审
-    REVERSED = "reversed"    # 反审核
+    DRAFT = "draft"  # 草稿
+    PENDING = "pending"  # 待审
+    APPROVED = "approved"  # 已审
+    REVERSED = "reversed"  # 反审核
 
 
 class Asset(Base):
@@ -109,27 +105,31 @@ class Asset(Base):
         info={"deprecated": True},
     )
     asset_code: Mapped[str | None] = mapped_column(
-        String(50), unique=True, index=True, comment="资产编码（全局唯一，按产权方编码段生成）"
+        String(50),
+        unique=True,
+        index=True,
+        comment="资产编码（全局唯一，按产权方编码段生成）",
     )
     asset_name: Mapped[str] = mapped_column(
         String(200), nullable=False, unique=True, comment="资产名称"
     )
     asset_form: Mapped[str | None] = mapped_column(
-        String(20), index=True, comment="资产形态：land/building/structure/parking/warehouse/other"
+        String(20),
+        index=True,
+        comment="资产形态：land/building/structure/parking/warehouse/other",
     )
     spatial_level: Mapped[str | None] = mapped_column(
         String(20), comment="空间层级：plot/campus/building/floor/room/shop"
     )
     business_usage: Mapped[str | None] = mapped_column(
-        String(20), comment="经营用途：commercial/office/warehouse/industrial/mixed/other"
+        String(20),
+        comment="经营用途：commercial/office/warehouse/industrial/mixed/other",
     )
     # 半结构化地址（行政区三级 + 详细地址）
     province_code: Mapped[str | None] = mapped_column(
         String(20), comment="省级行政区代码"
     )
-    city_code: Mapped[str | None] = mapped_column(
-        String(20), comment="市级行政区代码"
-    )
+    city_code: Mapped[str | None] = mapped_column(String(20), comment="市级行政区代码")
     district_code: Mapped[str | None] = mapped_column(
         String(20), comment="区县行政区代码"
     )
@@ -137,7 +137,9 @@ class Asset(Base):
         String(200), comment="详细地址（trim 后长度 5-200）"
     )
     address: Mapped[str] = mapped_column(
-        String(500), nullable=False, comment="物业地址（系统拼接只读展示字段，不对外开放直写）"
+        String(500),
+        nullable=False,
+        comment="物业地址（系统拼接只读展示字段，不对外开放直写）",
     )
     ownership_status: Mapped[str] = mapped_column(
         String(50), nullable=False, index=True, comment="确权状态"
@@ -231,7 +233,10 @@ class Asset(Base):
 
     # 审核字段
     review_status: Mapped[str] = mapped_column(
-        String(20), nullable=False, default=AssetReviewStatus.DRAFT.value, comment="审核状态"
+        String(20),
+        nullable=False,
+        default=AssetReviewStatus.DRAFT.value,
+        comment="审核状态",
     )
     review_by: Mapped[str | None] = mapped_column(
         String(100), comment="审核人（通过/反审核时必填）"
@@ -258,7 +263,9 @@ class Asset(Base):
 
     # 时间戳
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None), comment="创建时间"
+        DateTime,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        comment="创建时间",
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
@@ -433,7 +440,9 @@ class Asset(Base):
             cached_token == cache_token
             and "_active_contract_cache_value" in self.__dict__
         ):
-            return cast("Contract | None", self.__dict__["_active_contract_cache_value"])
+            return cast(
+                "Contract | None", self.__dict__["_active_contract_cache_value"]
+            )
 
         selected_contract = self._pick_preferred_contract(
             contracts_value,
@@ -529,8 +538,10 @@ class Asset(Base):
         owner_party_id = kwargs.get("owner_party_id")
         legacy_ownership_id = kwargs.pop("ownership_id", None)
         if (
-            owner_party_id is None or str(owner_party_id).strip() == ""
-        ) and legacy_ownership_id is not None and str(legacy_ownership_id).strip() != "":
+            (owner_party_id is None or str(owner_party_id).strip() == "")
+            and legacy_ownership_id is not None
+            and str(legacy_ownership_id).strip() != ""
+        ):
             kwargs["owner_party_id"] = str(legacy_ownership_id).strip()
             owner_party_id = kwargs["owner_party_id"]
         if (
@@ -567,8 +578,8 @@ class Asset(Base):
         kwargs.setdefault("is_litigated", False)
         kwargs.setdefault("include_in_occupancy_rate", True)
         kwargs.setdefault("is_sublease", False)
-        kwargs.setdefault("created_at", _utcnow_naive())
-        kwargs.setdefault("updated_at", _utcnow_naive())
+        kwargs.setdefault("created_at", utcnow_naive())
+        kwargs.setdefault("updated_at", utcnow_naive())
         super().__init__(**kwargs)
 
     def __repr__(self) -> str:

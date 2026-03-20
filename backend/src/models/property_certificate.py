@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, date, datetime
+from datetime import date, datetime
 from enum import Enum
 from typing import TYPE_CHECKING
 
@@ -12,15 +12,12 @@ from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..database import Base
+from ..utils.time import utcnow_naive
 from .associations import property_cert_assets
 
 if TYPE_CHECKING:
     from .asset import Asset
     from .certificate_party_relation import CertificatePartyRelation
-
-
-def _utcnow_naive() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class CertificateType(str, Enum):
@@ -94,12 +91,12 @@ class PropertyCertificate(Base):
     remarks: Mapped[str | None] = mapped_column(Text, comment="备注")
 
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=_utcnow_naive, comment="创建时间"
+        DateTime, default=utcnow_naive, comment="创建时间"
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=_utcnow_naive,
-        onupdate=_utcnow_naive,
+        default=utcnow_naive,
+        onupdate=utcnow_naive,
         comment="更新时间",
     )
     created_by: Mapped[str | None] = mapped_column(String(100), comment="创建人ID")

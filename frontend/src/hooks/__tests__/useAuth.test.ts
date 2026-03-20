@@ -459,4 +459,131 @@ describe('useAuth Hook', () => {
       expect(result.current.capabilities).toEqual([]);
     });
   });
+
+  describe('authz stale event', () => {
+    it('should refresh permissions and capabilities when authz-stale is dispatched', async () => {
+      vi.mocked(AuthStorage.getAuthData).mockReturnValue({
+        user: mockUser,
+        permissions: [],
+      });
+      vi.mocked(AuthService.getCurrentUser).mockResolvedValue(mockUser);
+      vi.mocked(AuthService.getCurrentUserPermissions).mockResolvedValue([
+        { resource: 'contacts', action: 'read' },
+      ]);
+      vi.mocked(AuthService.getCurrentUserCapabilities).mockResolvedValue({
+        version: 'v2',
+        generated_at: '2026-03-16T00:00:00Z',
+        capabilities: [
+          {
+            resource: 'contact',
+            actions: ['read'],
+            perspectives: [],
+            data_scope: { owner_party_ids: ['party-1'], manager_party_ids: [] },
+          },
+        ],
+      });
+      vi.mocked(AuthService.isAuthenticated).mockReturnValue(true);
+
+      const { result } = renderHook(() => useAuth(), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.user).toEqual(mockUser);
+      });
+
+      vi.mocked(AuthService.getCurrentUser).mockClear();
+      vi.mocked(AuthService.getCurrentUserPermissions).mockClear();
+      vi.mocked(AuthService.getCurrentUserCapabilities).mockClear();
+      vi.mocked(AuthStorage.clearCapabilitiesSnapshot).mockClear();
+      vi.mocked(AuthStorage.setCapabilitiesSnapshot).mockClear();
+      vi.mocked(MessageManager.warning).mockClear();
+
+      await act(async () => {
+        window.dispatchEvent(new CustomEvent('authz-stale'));
+      });
+
+      await waitFor(() => {
+        expect(MessageManager.warning).toHaveBeenCalledWith('当前权限视角已更新，正在刷新访问权限');
+      });
+
+      expect(AuthStorage.clearCapabilitiesSnapshot).toHaveBeenCalled();
+      expect(AuthService.getCurrentUser).toHaveBeenCalledTimes(1);
+      expect(AuthService.getCurrentUserPermissions).toHaveBeenCalledTimes(1);
+      expect(AuthService.getCurrentUserCapabilities).toHaveBeenCalledTimes(1);
+      expect(AuthStorage.setCapabilitiesSnapshot).toHaveBeenCalledWith({
+        version: 'v2',
+        generated_at: '2026-03-16T00:00:00Z',
+        capabilities: [
+          {
+            resource: 'contact',
+            actions: ['read'],
+            perspectives: [],
+            data_scope: { owner_party_ids: ['party-1'], manager_party_ids: [] },
+          },
+        ],
+      });
+    });
+
+    it('should coalesce repeated authz-stale events into a single refresh wave', async () => {
+      vi.mocked(AuthStorage.getAuthData).mockReturnValue({
+        user: mockUser,
+        permissions: [],
+      });
+      vi.mocked(AuthService.getCurrentUser).mockResolvedValue(mockUser);
+      vi.mocked(AuthService.getCurrentUserPermissions).mockResolvedValue([
+        { resource: 'contacts', action: 'read' },
+      ]);
+      vi.mocked(AuthService.getCurrentUserCapabilities).mockResolvedValue({
+        version: 'v2',
+        generated_at: '2026-03-16T00:00:00Z',
+        capabilities: [
+          {
+            resource: 'contact',
+            actions: ['read'],
+            perspectives: [],
+            data_scope: { owner_party_ids: ['party-1'], manager_party_ids: [] },
+          },
+        ],
+      });
+      vi.mocked(AuthService.isAuthenticated).mockReturnValue(true);
+
+      const { result } = renderHook(() => useAuth(), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.user).toEqual(mockUser);
+      });
+
+      let resolveRefreshUser: ((user: typeof mockUser) => void) | null = null;
+      const refreshUserPromise = new Promise<typeof mockUser>(resolve => {
+        resolveRefreshUser = resolve;
+      });
+      vi.mocked(AuthService.getCurrentUser).mockClear();
+      vi.mocked(AuthService.getCurrentUser).mockReturnValue(
+        refreshUserPromise as ReturnType<typeof AuthService.getCurrentUser>
+      );
+      vi.mocked(AuthService.getCurrentUserPermissions).mockClear();
+      vi.mocked(AuthService.getCurrentUserCapabilities).mockClear();
+      vi.mocked(AuthStorage.clearCapabilitiesSnapshot).mockClear();
+      vi.mocked(AuthStorage.setCapabilitiesSnapshot).mockClear();
+      vi.mocked(MessageManager.warning).mockClear();
+
+      await act(async () => {
+        window.dispatchEvent(new CustomEvent('authz-stale'));
+        window.dispatchEvent(new CustomEvent('authz-stale'));
+        window.dispatchEvent(new CustomEvent('authz-stale'));
+      });
+
+      expect(MessageManager.warning).toHaveBeenCalledTimes(1);
+      expect(AuthStorage.clearCapabilitiesSnapshot).toHaveBeenCalledTimes(1);
+      expect(AuthService.getCurrentUser).toHaveBeenCalledTimes(1);
+      expect(AuthService.getCurrentUserPermissions).not.toHaveBeenCalled();
+      expect(AuthService.getCurrentUserCapabilities).not.toHaveBeenCalled();
+
+      resolveRefreshUser?.(mockUser);
+
+      await waitFor(() => {
+        expect(AuthService.getCurrentUserPermissions).toHaveBeenCalledTimes(1);
+      });
+      expect(AuthService.getCurrentUserCapabilities).toHaveBeenCalledTimes(1);
+    });
+  });
 });

@@ -4,6 +4,7 @@ from decimal import Decimal
 from unittest.mock import MagicMock
 
 import pytest
+from starlette.requests import Request
 
 from src.api.v1.assets import assets as assets_api
 from src.models.asset import Asset
@@ -71,6 +72,18 @@ def _build_contract(
     return contract
 
 
+def _build_request() -> Request:
+    return Request(
+        {
+            "type": "http",
+            "method": "GET",
+            "path": "/api/v1/assets",
+            "headers": [],
+            "query_string": b"",
+        }
+    )
+
+
 @pytest.mark.asyncio
 async def test_get_assets_without_relations_keeps_contract_projection_empty(
     monkeypatch, caplog
@@ -81,6 +94,7 @@ async def test_get_assets_without_relations_keeps_contract_projection_empty(
 
     with caplog.at_level("WARNING"):
         response = await assets_api.get_assets(
+            request=_build_request(),
             page=1,
             page_size=20,
             search=None,
@@ -113,7 +127,9 @@ async def test_get_assets_without_relations_keeps_contract_projection_empty(
     assert item["lease_contract_number"] is None
     assert item["contract_start_date"] is None
     assert item["contract_end_date"] is None
-    assert not any("Asset.active_contract accessed" in record.message for record in caplog.records)
+    assert not any(
+        "Asset.active_contract accessed" in record.message for record in caplog.records
+    )
 
 
 @pytest.mark.asyncio
@@ -142,6 +158,7 @@ async def test_get_assets_with_relations_projects_active_contract(monkeypatch):
     monkeypatch.setattr(assets_api, "AsyncAssetService", lambda _: service_stub)
 
     response = await assets_api.get_assets(
+        request=_build_request(),
         page=1,
         page_size=20,
         search=None,

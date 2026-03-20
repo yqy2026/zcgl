@@ -30,6 +30,7 @@ from ...schemas.party import (
     UserPartyBindingUpsert,
 )
 from ...services.party import party_service
+from ...services.view_scope import resolve_selected_view_party_filter_dependency
 
 router = APIRouter(tags=["主体管理"])
 _PARTY_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:party:create"
@@ -49,6 +50,7 @@ async def list_parties(
     search: str | None = Query(None, description="名称/编码模糊搜索"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    selected_view_party_filter=Depends(resolve_selected_view_party_filter_dependency),
     _authz_ctx: Annotated[
         AuthzContext | None,
         Depends(
@@ -68,6 +70,7 @@ async def list_parties(
         status=status,
         search=search,
         current_user_id=current_user_id if current_user_id != "" else None,
+        party_filter=selected_view_party_filter,
     )
     return [PartyResponse.model_validate(party) for party in parties]
 
@@ -103,6 +106,7 @@ async def get_party(
     party_id: str,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    selected_view_party_filter=Depends(resolve_selected_view_party_filter_dependency),
     _authz_ctx: Annotated[
         AuthzContext | None,
         Depends(
@@ -116,7 +120,12 @@ async def get_party(
     ] = None,
 ) -> PartyResponse:
     _ = current_user
-    party = await party_service.get_party(db, party_id=party_id)
+    party = await party_service.get_party(
+        db,
+        party_id=party_id,
+        current_user_id=str(current_user.id),
+        party_filter=selected_view_party_filter,
+    )
     if party is None:
         raise not_found("主体不存在", resource_type="party", resource_id=party_id)
     return PartyResponse.model_validate(party)

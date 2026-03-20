@@ -10,6 +10,18 @@ import { render, screen, fireEvent, act } from '@testing-library/react';
 import { useQuery } from '@tanstack/react-query';
 import { partyService } from '@/services/partyService';
 
+vi.mock('@/contexts/ViewContext', () => ({
+  useView: () => ({
+    currentView: {
+      key: 'manager:party-1',
+      perspective: 'manager',
+      partyId: 'party-1',
+      partyName: '运营主体A',
+      label: '运营方 · 运营主体A',
+    },
+  }),
+}));
+
 // Mock message manager
 vi.mock('@/utils/messageManager', () => ({
   MessageManager: {
@@ -253,9 +265,20 @@ vi.mock('antd', () => {
   );
   Spin.displayName = 'MockSpin';
 
-  const Alert = ({ message, type }: { message: string; type?: string }) => (
+  const Alert = ({
+    message,
+    title,
+    description,
+    type,
+  }: {
+    message?: React.ReactNode;
+    title?: React.ReactNode;
+    description?: React.ReactNode;
+    type?: string;
+  }) => (
     <div data-testid="alert" data-type={type}>
-      {message}
+      <div>{title ?? message}</div>
+      <div>{description}</div>
     </div>
   );
   Alert.displayName = 'MockAlert';
@@ -434,6 +457,13 @@ describe('ProjectList', () => {
 
       expect(screen.getByTestId('row-1')).toBeInTheDocument();
       expect(screen.getByText('项目1')).toBeInTheDocument();
+    });
+
+    it('应该显示当前视角标签', async () => {
+      await renderProjectList();
+
+      expect(screen.getByText('当前视角')).toBeInTheDocument();
+      expect(screen.getByText('运营方 · 运营主体A')).toBeInTheDocument();
     });
   });
 

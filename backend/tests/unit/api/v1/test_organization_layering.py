@@ -2,7 +2,7 @@
 
 import inspect
 import re
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import ANY, AsyncMock, MagicMock
 
 import pytest
 
@@ -38,7 +38,7 @@ def test_organization_endpoints_should_use_require_authz() -> None:
         r"async def update_organization[\s\S]*?require_authz\([\s\S]*?action=\"update\"[\s\S]*?resource_id=\"\{org_id\}\"",
         r"async def delete_organization[\s\S]*?require_authz\([\s\S]*?action=\"delete\"[\s\S]*?resource_id=\"\{org_id\}\"",
         r"async def move_organization[\s\S]*?require_authz\([\s\S]*?action=\"update\"[\s\S]*?resource_id=\"\{org_id\}\"",
-        r"async def batch_organization_operation[\s\S]*?require_authz\([\s\S]*?action=\"update\"[\s\S]*?resource_type=\"organization\"[\s\S]*?resource_context=_ORGANIZATION_BATCH_UPDATE_RESOURCE_CONTEXT",
+        r"async def batch_organization_operation[\s\S]*?require_authz\([\s\S]*?action=\"update\"[\s\S]*?resource_type=\"organization\"",
         r"async def advanced_search_organizations[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"organization\"",
     ]
 
@@ -102,13 +102,50 @@ async def test_organization_create_authz_should_fallback_to_unscoped_sentinel() 
     }
 
 
-def test_organization_batch_update_unscoped_context_should_be_defined() -> None:
+def test_organization_batch_update_should_not_define_fake_unscoped_context() -> None:
     from src.api.v1.auth import organization as module
 
-    expected = "__unscoped__:organization:batch_update"
-    assert module._ORGANIZATION_BATCH_UPDATE_UNSCOPED_PARTY_ID == expected  # type: ignore[attr-defined]
-    assert module._ORGANIZATION_BATCH_UPDATE_RESOURCE_CONTEXT == {  # type: ignore[attr-defined]
-        "party_id": expected,
-        "owner_party_id": expected,
-        "manager_party_id": expected,
-    }
+    assert not hasattr(module, "_ORGANIZATION_BATCH_UPDATE_UNSCOPED_PARTY_ID")
+    assert not hasattr(module, "_ORGANIZATION_BATCH_UPDATE_RESOURCE_CONTEXT")
+
+
+@pytest.mark.asyncio
+async def test_batch_organization_operation_should_check_manage_permission() -> None:
+    from src.api.v1.auth import organization as module
+    from src.api.v1.auth.organization import batch_organization_operation
+    from src.schemas.organization import OrganizationBatchRequest
+
+    batch_request = OrganizationBatchRequest(
+        organization_ids=["org-1", "org-2"],
+        action="delete",
+        updated_by="admin",
+    )
+    mock_permission_service = MagicMock()
+    mock_permission_service.can_manage_organization = AsyncMock(
+        side_effect=[True, False]
+    )
+    mock_org_service = MagicMock()
+    mock_org_service.delete_organization = AsyncMock(return_value=True)
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(
+            module,
+            "OrganizationPermissionService",
+            MagicMock(return_value=mock_permission_service),
+        )
+        monkeypatch.setattr(module, "organization_service", mock_org_service)
+        result = await batch_organization_operation(
+            batch_request=batch_request,
+            db=MagicMock(),
+            current_user=MagicMock(id="user-1"),
+        )
+
+    assert len(result["results"]) == 1
+    assert len(result["errors"]) == 1
+    assert result["errors"][0]["id"] == "org-2"
+    assert result["errors"][0]["error"] == "无权管理该组织"
+    mock_org_service.delete_organization.assert_awaited_once_with(
+        ANY,
+        org_id="org-1",
+        deleted_by="admin",
+    )

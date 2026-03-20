@@ -5,12 +5,12 @@ from __future__ import annotations
 import argparse
 import uuid
 from collections.abc import Mapping
-from datetime import UTC, datetime
 from typing import Any
 
 import sqlalchemy as sa
 
 from ....database_url import get_database_url
+from ....utils.time import utcnow_naive
 
 POLICY_PACKAGE_TO_NAME: dict[str, str] = {
     "platform_admin": "platform_admin",
@@ -21,10 +21,6 @@ POLICY_PACKAGE_TO_NAME: dict[str, str] = {
     "audit_viewer": "audit_viewer",
     "no_data_access": "no_data_access",
 }
-
-
-def _utcnow_naive() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _normalize_text(value: Any) -> str:
@@ -97,10 +93,14 @@ def main() -> int:
                     print("[SKIP] roles/abac_* table missing")
                     return 0
 
-                policy_rows = conn.execute(
-                    sa.text("SELECT id, name FROM abac_policies")
-                ).mappings().all()
-                policy_by_name = {str(row["name"]): str(row["id"]) for row in policy_rows}
+                policy_rows = (
+                    conn.execute(sa.text("SELECT id, name FROM abac_policies"))
+                    .mappings()
+                    .all()
+                )
+                policy_by_name = {
+                    str(row["name"]): str(row["id"]) for row in policy_rows
+                }
 
                 template_policy_ids = [
                     policy_by_name[name]
@@ -108,14 +108,18 @@ def main() -> int:
                     if name in policy_by_name
                 ]
 
-                role_rows = conn.execute(
-                    sa.text(
-                        """
+                role_rows = (
+                    conn.execute(
+                        sa.text(
+                            """
                         SELECT id, name, display_name, category, is_system_role
                         FROM roles
                         """
+                        )
                     )
-                ).mappings().all()
+                    .mappings()
+                    .all()
+                )
                 scanned = len(role_rows)
 
                 role_policy_table = sa.table(
@@ -130,7 +134,7 @@ def main() -> int:
                     ),
                 )
 
-                now = _utcnow_naive()
+                now = utcnow_naive()
                 for role in role_rows:
                     role_id = str(role["id"])
                     package_code = _choose_policy_package(dict(role))

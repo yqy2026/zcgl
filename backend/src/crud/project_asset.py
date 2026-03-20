@@ -1,16 +1,12 @@
 """CRUD helpers for project-asset bindings."""
 
-from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models.project_asset import ProjectAsset
-
-
-def _utcnow_naive() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+from ..utils.time import utcnow_naive
 
 
 class CRUDProjectAsset:
@@ -54,7 +50,7 @@ class CRUDProjectAsset:
         if relation is None:
             return None
 
-        relation.valid_to = _utcnow_naive()
+        relation.valid_to = utcnow_naive()
         relation.unbind_reason = unbind_reason
 
         if commit:

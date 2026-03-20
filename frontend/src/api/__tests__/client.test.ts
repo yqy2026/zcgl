@@ -7,16 +7,28 @@ import type { AxiosError, AxiosResponse } from 'axios';
 import { AxiosHeaders, InternalAxiosRequestConfig } from 'axios';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Logger } from '@/utils/logger';
-import { ApiClient, apiClient } from '../client';
+import { ApiClient } from '../client';
 import { API_BASE_URL } from '../config';
 
-const { mockClearAuthData } = vi.hoisted(() => ({
+const { mockClearAuthData, mockClearCapabilitiesSnapshot, mockGetCurrentUser, mockGetViewSelection } =
+  vi.hoisted(() => ({
   mockClearAuthData: vi.fn(),
+  mockClearCapabilitiesSnapshot: vi.fn(),
+  mockGetCurrentUser: vi.fn(),
+  mockGetViewSelection: vi.fn(),
 }));
 
 vi.mock('@/utils/AuthStorage', () => ({
   AuthStorage: {
     clearAuthData: mockClearAuthData,
+    clearCapabilitiesSnapshot: mockClearCapabilitiesSnapshot,
+    getCurrentUser: mockGetCurrentUser,
+  },
+}));
+
+vi.mock('@/utils/viewSelectionStorage', () => ({
+  viewSelectionStorage: {
+    get: (...args: unknown[]) => mockGetViewSelection(...args),
   },
 }));
 
@@ -143,6 +155,13 @@ describe('ApiClient', () => {
   let client: ApiClient;
 
   beforeEach(() => {
+    vi.restoreAllMocks();
+    mockClearAuthData.mockReset();
+    mockClearCapabilitiesSnapshot.mockReset();
+    mockGetCurrentUser.mockReset();
+    mockGetViewSelection.mockReset();
+    mockGetCurrentUser.mockReturnValue(null);
+    mockGetViewSelection.mockReturnValue(null);
     client = new ApiClient({
       baseURL: API_BASE_URL,
       enableAutoRetry: false,
@@ -334,6 +353,44 @@ describe('ApiClient', () => {
   describe('Token刷新处理', () => {
     let originalLocation: Location;
 
+    const buildAuthzError = (
+      status: number,
+      responseHeaders: Record<string, string>,
+      requestHeaders?: Record<string, string>
+    ): AxiosError => {
+      const configHeaders = new AxiosHeaders();
+      if (requestHeaders != null) {
+        Object.entries(requestHeaders).forEach(([key, value]) => {
+          configHeaders.set(key, value);
+        });
+      }
+
+      const config: InternalAxiosRequestConfig = {
+        url: '/assets',
+        method: 'get',
+        headers: configHeaders,
+      };
+
+      return {
+        config,
+        response: {
+          status,
+          statusText: status === 404 ? 'Not Found' : 'Forbidden',
+          data: {
+            detail: {
+              message: status === 404 ? '资源不存在' : '权限不足',
+            },
+          },
+          headers: responseHeaders,
+          config,
+        } as AxiosResponse,
+        isAxiosError: true,
+        name: 'AxiosError',
+        message: status === 404 ? 'Not Found' : 'Forbidden',
+        toJSON: () => ({}),
+      } as AxiosError;
+    };
+
     const setTestLocation = (pathname: string, search: string, hash: string): void => {
       Object.defineProperty(window, 'location', {
         value: {
@@ -350,6 +407,7 @@ describe('ApiClient', () => {
     beforeEach(() => {
       originalLocation = window.location;
       mockClearAuthData.mockReset();
+      mockClearCapabilitiesSnapshot.mockReset();
     });
 
     afterEach(() => {
@@ -440,6 +498,130 @@ describe('ApiClient', () => {
       expect(mockClearAuthData).toHaveBeenCalledTimes(1);
       expect(window.location.href).toBe(`/login?redirect=${encodeURIComponent('/assets')}`);
     });
+
+    it('403 + X-Authz-Stale 时应清理能力快照并广播失效事件', async () => {
+      const axiosInstance = client.getAxiosInstance();
+      const responseInterceptor = axiosInstance.interceptors.response.handlers[0]?.rejected;
+      if (responseInterceptor == null) {
+        throw new Error('Response interceptor is not registered');
+      }
+
+      mockGetCurrentUser.mockReturnValue({ id: 'user-1' });
+      mockGetViewSelection.mockReturnValue({
+        key: 'owner:party-1',
+        perspective: 'owner',
+        partyId: 'party-1',
+      });
+      const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
+      const error = buildAuthzError(
+        403,
+        {
+          'x-authz-stale': 'true',
+        },
+        {
+          'X-View-Perspective': 'owner',
+          'X-View-Party-Id': 'party-1',
+        }
+      );
+
+      await expect(responseInterceptor(error)).rejects.toMatchObject({
+        message: expect.any(String),
+      });
+
+      expect(mockClearCapabilitiesSnapshot).toHaveBeenCalledTimes(1);
+      expect(mockClearAuthData).not.toHaveBeenCalled();
+      expect(dispatchSpy).toHaveBeenCalledTimes(1);
+
+      const event = dispatchSpy.mock.calls[0]?.[0];
+      expect(event).toBeInstanceOf(CustomEvent);
+      expect((event as CustomEvent<{ headerName: string }>).type).toBe('authz-stale');
+      expect((event as CustomEvent<{ headerName: string }>).detail).toEqual({
+        headerName: 'X-Authz-Stale',
+      });
+    });
+
+    it('404 + X-Authz-Stale 时也应广播失效事件', async () => {
+      const axiosInstance = client.getAxiosInstance();
+      const responseInterceptor = axiosInstance.interceptors.response.handlers[0]?.rejected;
+      if (responseInterceptor == null) {
+        throw new Error('Response interceptor is not registered');
+      }
+
+      mockGetCurrentUser.mockReturnValue({ id: 'user-1' });
+      mockGetViewSelection.mockReturnValue({
+        key: 'manager:party-2',
+        perspective: 'manager',
+        partyId: 'party-2',
+      });
+      const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
+
+      const error = buildAuthzError(
+        404,
+        {
+          'x-authz-stale': 'true',
+        },
+        {
+          'X-View-Perspective': 'manager',
+          'X-View-Party-Id': 'party-2',
+        }
+      );
+
+      await expect(responseInterceptor(error)).rejects.toMatchObject({
+        message: expect.any(String),
+      });
+
+      expect(mockClearCapabilitiesSnapshot).toHaveBeenCalledTimes(1);
+      expect(dispatchSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('已清空或切换视角后，晚到的 stale 响应不应重复广播事件', async () => {
+      const axiosInstance = client.getAxiosInstance();
+      const responseInterceptor = axiosInstance.interceptors.response.handlers[0]?.rejected;
+      if (responseInterceptor == null) {
+        throw new Error('Response interceptor is not registered');
+      }
+
+      mockGetCurrentUser.mockReturnValue({ id: 'user-1' });
+      mockGetViewSelection
+        .mockReturnValueOnce({
+          key: 'owner:party-1',
+          perspective: 'owner',
+          partyId: 'party-1',
+        })
+        .mockReturnValueOnce(null);
+      const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
+
+      const firstError = buildAuthzError(
+        403,
+        {
+          'x-authz-stale': 'true',
+        },
+        {
+          'X-View-Perspective': 'owner',
+          'X-View-Party-Id': 'party-1',
+        }
+      );
+      const lateError = buildAuthzError(
+        403,
+        {
+          'x-authz-stale': 'true',
+        },
+        {
+          'X-View-Perspective': 'owner',
+          'X-View-Party-Id': 'party-1',
+        }
+      );
+
+      await expect(responseInterceptor(firstError)).rejects.toMatchObject({
+        message: expect.any(String),
+      });
+      await expect(responseInterceptor(lateError)).rejects.toMatchObject({
+        message: expect.any(String),
+      });
+
+      expect(dispatchSpy).toHaveBeenCalledTimes(1);
+      expect(mockClearCapabilitiesSnapshot).toHaveBeenCalledTimes(1);
+    });
   });
 });
 
@@ -519,70 +701,32 @@ describe('URL Validation', () => {
     if (!requestInterceptor) {
       throw new Error('Request interceptor is not registered');
     }
-    const config = buildRequestConfig('/assets/list');
+    const config = buildRequestConfig('/assets/detail');
     requestInterceptor(config);
 
-    expect(config.url).toBe('assets/list');
+    expect(config.url).toBe('assets/detail');
     expect(warnSpy).not.toHaveBeenCalled();
   });
 
-  it('should not validate relative URLs (not starting with /)', () => {
-    const axiosInstance = client.getAxiosInstance();
-    const requestInterceptor = axiosInstance.interceptors.request.handlers[0]?.fulfilled;
-    if (!requestInterceptor) {
-      throw new Error('Request interceptor is not registered');
-    }
-    requestInterceptor(buildRequestConfig('relative-path'));
-
-    expect(console.warn).not.toHaveBeenCalled();
-  });
-
-  it('should not validate URLs without / prefix (full URLs)', () => {
-    const axiosInstance = client.getAxiosInstance();
-    const requestInterceptor = axiosInstance.interceptors.request.handlers[0]?.fulfilled;
-    if (!requestInterceptor) {
-      throw new Error('Request interceptor is not registered');
-    }
-    requestInterceptor(buildRequestConfig('https://api.example.com/data'));
-
-    expect(console.warn).not.toHaveBeenCalled();
-  });
-});
-
-// =============================================================================
-// Default Instance 测试
-// =============================================================================
-
-describe('Default Instance', () => {
-  it('should export default apiClient instance', () => {
-    expect(apiClient).toBeInstanceOf(ApiClient);
-  });
-
-  it('should have correct configuration on default instance', () => {
-    const config = apiClient.getConfig();
-    expect(config.baseURL).toBe(API_BASE_URL);
-    expect(config.timeout).toBe(30000);
-  });
-});
-
-// =============================================================================
-// 工厂函数测试
-// =============================================================================
-
-describe('工厂函数', () => {
-  it('createApiClient应该创建新实例', async () => {
-    const { createApiClient } = await import('../client');
-    const client = createApiClient({
-      baseURL: '/custom',
+  it('should attach current view headers when selection exists', () => {
+    mockGetCurrentUser.mockReturnValue({ id: 'user-1' });
+    mockGetViewSelection.mockReturnValue({
+      key: 'owner:party-1',
+      perspective: 'owner',
+      partyId: 'party-1',
     });
 
-    expect(client).toBeInstanceOf(ApiClient);
-    expect(client.getConfig().baseURL).toBe('/custom');
-  });
+    const axiosInstance = client.getAxiosInstance();
+    const requestInterceptor = axiosInstance.interceptors.request.handlers[0]?.fulfilled;
+    if (!requestInterceptor) {
+      throw new Error('Request interceptor is not registered');
+    }
 
-  it('应该导出默认的apiClient实例', async () => {
-    const { apiClient } = await import('../client');
+    const config = buildRequestConfig('/assets');
+    requestInterceptor(config);
 
-    expect(apiClient).toBeInstanceOf(ApiClient);
+    expect(config.headers.get('X-View-Perspective')).toBe('owner');
+    expect(config.headers.get('X-View-Party-Id')).toBe('party-1');
+    expect(mockGetViewSelection).toHaveBeenCalledWith('user-1');
   });
 });

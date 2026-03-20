@@ -25,20 +25,6 @@ from ....services.custom_field import custom_field_service
 
 # 创建自定义字段路由器
 router = APIRouter()
-_ASSET_CUSTOM_FIELD_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:asset_custom_field:create"
-_ASSET_CUSTOM_FIELD_CREATE_RESOURCE_CONTEXT: dict[str, str] = {
-    "party_id": _ASSET_CUSTOM_FIELD_CREATE_UNSCOPED_PARTY_ID,
-    "owner_party_id": _ASSET_CUSTOM_FIELD_CREATE_UNSCOPED_PARTY_ID,
-    "manager_party_id": _ASSET_CUSTOM_FIELD_CREATE_UNSCOPED_PARTY_ID,
-}
-_ASSET_CUSTOM_FIELD_BATCH_UPDATE_UNSCOPED_PARTY_ID = (
-    "__unscoped__:asset_custom_field:batch_update_values"
-)
-_ASSET_CUSTOM_FIELD_BATCH_UPDATE_RESOURCE_CONTEXT: dict[str, str] = {
-    "party_id": _ASSET_CUSTOM_FIELD_BATCH_UPDATE_UNSCOPED_PARTY_ID,
-    "owner_party_id": _ASSET_CUSTOM_FIELD_BATCH_UPDATE_UNSCOPED_PARTY_ID,
-    "manager_party_id": _ASSET_CUSTOM_FIELD_BATCH_UPDATE_UNSCOPED_PARTY_ID,
-}
 
 
 @router.get(
@@ -81,7 +67,6 @@ async def get_custom_fields(
         fields = await custom_field_service.get_custom_fields_async(
             db=db,
             filters=filters,
-            current_user_id=str(current_user.id),
         )
         return [AssetCustomFieldResponse.model_validate(f) for f in fields]
 
@@ -114,7 +99,6 @@ async def get_custom_field(
         field = await custom_field_service.get_custom_field_async(
             db=db,
             field_id=field_id,
-            current_user_id=str(current_user.id),
         )
         if not field:
             raise not_found(
@@ -143,8 +127,7 @@ async def create_custom_field(
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="create",
-            resource_type="asset",
-            resource_context=_ASSET_CUSTOM_FIELD_CREATE_RESOURCE_CONTEXT,
+            resource_type="custom_field",
         )
     ),
 ) -> AssetCustomFieldResponse:
@@ -176,7 +159,7 @@ async def update_custom_field(
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="update",
-            resource_type="asset",
+            resource_type="custom_field",
             resource_id="{field_id}",
         )
     ),
@@ -207,7 +190,7 @@ async def delete_custom_field(
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="delete",
-            resource_type="asset",
+            resource_type="custom_field",
             resource_id="{field_id}",
         )
     ),
@@ -372,8 +355,7 @@ async def batch_set_custom_field_values(
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="update",
-            resource_type="asset",
-            resource_context=_ASSET_CUSTOM_FIELD_BATCH_UPDATE_RESOURCE_CONTEXT,
+            resource_type="custom_field",
         )
     ),
 ) -> dict[str, Any]:

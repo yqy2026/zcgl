@@ -15,14 +15,12 @@ from ...core.exception_handler import (
     ResourceNotFoundError,
 )
 from ...crud.custom_field import custom_field_crud
-from ...crud.query_builder import PartyFilter
 from ...models.system_dictionary import AssetCustomField
 from ...schemas.asset import (
     AssetCustomFieldCreate,
     AssetCustomFieldUpdate,
     CustomFieldValueItem,
 )
-from ...services.party_scope import resolve_user_party_filter
 
 logger = logging.getLogger(__name__)
 
@@ -44,21 +42,6 @@ class CustomFieldService:
             ordered.append(value)
         return ordered
 
-    async def _resolve_party_filter(
-        self,
-        db: AsyncSession,
-        *,
-        current_user_id: str | None = None,
-        party_filter: PartyFilter | None = None,
-    ) -> PartyFilter | None:
-        return await resolve_user_party_filter(
-            db,
-            current_user_id=current_user_id,
-            party_filter=party_filter,
-            logger=logger,
-            allow_legacy_default_organization_fallback=False,
-        )
-
     async def create_custom_field_async(
         self, db: AsyncSession, *, obj_in: AssetCustomFieldCreate
     ) -> AssetCustomField:
@@ -76,18 +59,10 @@ class CustomFieldService:
         db: AsyncSession,
         *,
         filters: dict[str, Any] | None = None,
-        party_filter: PartyFilter | None = None,
-        current_user_id: str | None = None,
     ) -> list[AssetCustomField]:
-        resolved_party_filter = await self._resolve_party_filter(
-            db,
-            current_user_id=current_user_id,
-            party_filter=party_filter,
-        )
         return await custom_field_crud.get_multi_with_filters_async(
             db=db,
             filters=filters or {},
-            party_filter=resolved_party_filter,
         )
 
     async def get_custom_field_async(
@@ -95,25 +70,8 @@ class CustomFieldService:
         db: AsyncSession,
         *,
         field_id: str,
-        party_filter: PartyFilter | None = None,
-        current_user_id: str | None = None,
     ) -> AssetCustomField | None:
-        resolved_party_filter = await self._resolve_party_filter(
-            db,
-            current_user_id=current_user_id,
-            party_filter=party_filter,
-        )
-        if resolved_party_filter is None:
-            return await custom_field_crud.get(db=db, id=field_id)
-
-        records = await custom_field_crud.get_with_filters(
-            db,
-            filters={"id": field_id},
-            skip=0,
-            limit=1,
-            party_filter=resolved_party_filter,
-        )
-        return records[0] if records else None
+        return await custom_field_crud.get(db=db, id=field_id)
 
     async def update_custom_field_async(
         self, db: AsyncSession, *, id: str, obj_in: AssetCustomFieldUpdate

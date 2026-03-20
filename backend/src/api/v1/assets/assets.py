@@ -8,6 +8,7 @@
 - asset_attachments.py: 附件相关端点
 """
 
+import logging
 import os
 from collections.abc import Sequence
 from datetime import date
@@ -54,6 +55,8 @@ from ....services.asset.asset_service import (
     AsyncAssetService,
 )
 from ....services.authz import authz_service
+from ....services.view_scope import resolve_selected_view_party_filter_dependency
+from ....utils.str import normalize_optional_str
 
 # 导入子路由模块
 from . import asset_attachments, asset_batch, asset_import
@@ -63,6 +66,7 @@ DEV_MODE = os.getenv("DEV_MODE", "false").lower() == "true"
 
 # 创建资产路由器
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 # 包含子路由器
 router.include_router(asset_batch.router, tags=["资产批量操作"])
@@ -74,21 +78,12 @@ _asset_list_item_adapter = TypeAdapter(list[AssetListItemResponse])
 _ASSET_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:asset:create"
 
 
-def _normalize_optional_str(value: Any) -> str | None:
-    if value is None:
-        return None
-    normalized = str(value).strip()
-    if normalized == "":
-        return None
-    return normalized
-
-
 def _normalize_identifier_sequence(values: Any) -> list[str]:
     if not isinstance(values, list):
         return []
     normalized_values: list[str] = []
     for value in values:
-        normalized_value = _normalize_optional_str(value)
+        normalized_value = normalize_optional_str(value)
         if normalized_value is None:
             continue
         normalized_values.append(normalized_value)
@@ -108,7 +103,7 @@ async def _resolve_owner_party_scope_by_ownership_id(
     db: AsyncSession,
     ownership_id: str | None,
 ) -> str | None:
-    normalized_ownership_id = _normalize_optional_str(ownership_id)
+    normalized_ownership_id = normalize_optional_str(ownership_id)
     if normalized_ownership_id is None:
         return None
     resolved_party_id = await AsyncAssetService(
@@ -116,7 +111,7 @@ async def _resolve_owner_party_scope_by_ownership_id(
     ).resolve_owner_party_scope_by_ownership_id_async(
         ownership_id=normalized_ownership_id
     )
-    return _normalize_optional_str(resolved_party_id)
+    return normalize_optional_str(resolved_party_id)
 
 
 async def _build_subject_scope_hint(
@@ -155,7 +150,7 @@ async def _require_asset_collection_read_authz(
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_async_db),
 ) -> AuthzContext:
-    normalized_ownership_id = _normalize_optional_str(ownership_id)
+    normalized_ownership_id = normalize_optional_str(ownership_id)
     resource_context: dict[str, Any] = {}
     if normalized_ownership_id is not None:
         resource_context["ownership_id"] = normalized_ownership_id
@@ -205,10 +200,10 @@ async def _require_asset_create_authz(
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_async_db),
 ) -> AuthzContext:
-    owner_party_id = _normalize_optional_str(asset_in.owner_party_id)
-    manager_party_id = _normalize_optional_str(asset_in.manager_party_id)
-    ownership_id = _normalize_optional_str(asset_in.ownership_id)
-    organization_id = _normalize_optional_str(asset_in.organization_id)
+    owner_party_id = normalize_optional_str(asset_in.owner_party_id)
+    manager_party_id = normalize_optional_str(asset_in.manager_party_id)
+    ownership_id = normalize_optional_str(asset_in.ownership_id)
+    organization_id = normalize_optional_str(asset_in.organization_id)
     asset_in.owner_party_id = owner_party_id
     asset_in.manager_party_id = manager_party_id
     asset_in.ownership_id = ownership_id
@@ -225,7 +220,7 @@ async def _require_asset_create_authz(
             db=db,
             user_id=str(current_user.id),
         )
-        inferred_manager_party_id = _normalize_optional_str(
+        inferred_manager_party_id = normalize_optional_str(
             subject_scope_hint.get("manager_party_id")
         )
         if inferred_manager_party_id is not None:
@@ -294,6 +289,7 @@ async def _get_distinct_values(
     summary="获取资产列表",
 )
 async def get_assets(
+    request: Request,
     page: int = Query(PaginationLimits.DEFAULT_PAGE, ge=1, description="页码"),
     page_size: int = Query(
         PaginationLimits.DEFAULT_PAGE_SIZE,
@@ -320,6 +316,7 @@ async def get_assets(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     _authz_ctx: AuthzContext = Depends(_require_asset_collection_read_authz),
+    selected_view_party_filter=Depends(resolve_selected_view_party_filter_dependency),
     sort_field: str | None = Query(None, description="排序字段"),
     sort_by: str | None = Query(None, description="排序字段（兼容参数）"),
     sort_order: str = Query("desc", pattern="^(asc|desc)$", description="排序方向"),
@@ -371,6 +368,7 @@ async def get_assets(
         sort_field=resolved_sort_field,
         sort_order=sort_order,
         include_relations=include_relations,
+        party_filter=selected_view_party_filter,
         current_user_id=str(current_user.id),
     )
 
@@ -450,6 +448,7 @@ async def get_ownership_statuses(
 
 @router.get("/{asset_id}", response_model=AssetResponse, summary="获取资产详情")
 async def get_asset(
+    request: Request,
     asset_id: str = Path(..., description="资产ID"),
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_async_db),
@@ -461,6 +460,7 @@ async def get_asset(
             deny_as_not_found=True,
         )
     ),
+    selected_view_party_filter=Depends(resolve_selected_view_party_filter_dependency),
 ) -> AssetResponse:
     """
     根据ID获取单个资产的详细信息
@@ -470,6 +470,7 @@ async def get_asset(
     asset_service = AsyncAssetService(db)
     asset = await asset_service.get_asset(
         asset_id,
+        party_filter=selected_view_party_filter,
         current_user_id=str(current_user.id),
     )
     return AssetResponse.model_validate(asset)
@@ -679,11 +680,11 @@ async def create_asset(
     """
     asset_service = AsyncAssetService(db)
     if isinstance(_authz_ctx, AuthzContext):
-        resolved_owner_party_id = _normalize_optional_str(
+        resolved_owner_party_id = normalize_optional_str(
             _authz_ctx.resource_context.get("owner_party_id")
         )
         if (
-            _normalize_optional_str(asset_in.owner_party_id) is None
+            normalize_optional_str(asset_in.owner_party_id) is None
             and resolved_owner_party_id is not None
         ):
             asset_in.owner_party_id = resolved_owner_party_id

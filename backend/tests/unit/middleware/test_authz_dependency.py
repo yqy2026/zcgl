@@ -23,19 +23,23 @@ def _build_request(
     path: str,
     path_params: dict[str, str] | None = None,
     body: dict[str, Any] | None = None,
+    headers: dict[str, str] | None = None,
 ) -> Request:
     payload = b""
-    headers: list[tuple[bytes, bytes]] = []
+    scope_headers: list[tuple[bytes, bytes]] = []
     if body is not None:
         payload = json.dumps(body).encode("utf-8")
-        headers.append((b"content-type", b"application/json"))
+        scope_headers.append((b"content-type", b"application/json"))
+    if headers is not None:
+        for key, value in headers.items():
+            scope_headers.append((key.lower().encode("utf-8"), value.encode("utf-8")))
 
     scope = {
         "type": "http",
         "method": method,
         "path": path,
         "query_string": b"",
-        "headers": headers,
+        "headers": scope_headers,
         "path_params": path_params or {},
     }
     consumed = False
@@ -64,7 +68,9 @@ def _mapping_result(payload: dict[str, Any] | None) -> MagicMock:
 
 
 @pytest.mark.asyncio
-async def test_require_authz_ignores_untrusted_body_scope_and_prefers_trusted_context() -> None:
+async def test_require_authz_ignores_untrusted_body_scope_and_prefers_trusted_context() -> (
+    None
+):
     checker = require_authz(
         action="update",
         resource_type="asset",
@@ -93,7 +99,7 @@ async def test_require_authz_ignores_untrusted_body_scope_and_prefers_trusted_co
             ),
         ),
         patch(
-            "src.middleware.auth.authz_service.check_access",
+            "src.middleware.auth_authz.authz_service.check_access",
             new=AsyncMock(
                 return_value=AuthzDecision(
                     allowed=True,
@@ -141,13 +147,27 @@ async def test_require_authz_denied_read_maps_to_not_found() -> None:
         path_params={"asset_id": "asset-1"},
     )
 
-    with patch(
-        "src.middleware.auth.authz_service.check_access",
-        new=AsyncMock(
-            return_value=AuthzDecision(
-                allowed=False,
-                reason_code="deny",
-            )
+    with (
+        patch(
+            "src.middleware.auth_authz.authz_service.check_access",
+            new=AsyncMock(
+                return_value=AuthzDecision(
+                    allowed=False,
+                    reason_code="deny",
+                )
+            ),
+        ),
+        patch(
+            "src.middleware.auth_authz.authz_service.context_builder.build_subject_context",
+            new=AsyncMock(
+                return_value=SubjectContext(
+                    user_id="user-1",
+                    owner_party_ids=["party-1"],
+                    manager_party_ids=[],
+                    headquarters_party_ids=[],
+                    role_ids=[],
+                )
+            ),
         ),
     ):
         with pytest.raises(Exception) as exc_info:
@@ -174,8 +194,61 @@ async def test_require_authz_denied_write_maps_to_forbidden() -> None:
         path_params={"project_id": "project-1"},
     )
 
+    with (
+        patch(
+            "src.middleware.auth_authz.authz_service.check_access",
+            new=AsyncMock(
+                return_value=AuthzDecision(
+                    allowed=False,
+                    reason_code="deny",
+                )
+            ),
+        ),
+        patch(
+            "src.middleware.auth_authz.authz_service.context_builder.build_subject_context",
+            new=AsyncMock(
+                return_value=SubjectContext(
+                    user_id="user-1",
+                    owner_party_ids=[],
+                    manager_party_ids=["party-2"],
+                    headquarters_party_ids=[],
+                    role_ids=[],
+                )
+            ),
+        ),
+    ):
+        with pytest.raises(Exception) as exc_info:
+            await checker(
+                request=request,
+                current_user=_UserStub("user-1"),
+                db=MagicMock(),
+            )
+
+    error = exc_info.value
+    assert getattr(error, "status_code", None) == 403
+
+
+@pytest.mark.asyncio
+async def test_require_authz_denied_write_with_selected_view_headers_does_not_mark_authz_stale() -> (
+    None
+):
+    checker = require_authz(
+        action="delete",
+        resource_type="project",
+        resource_id="{project_id}",
+    )
+    request = _build_request(
+        method="DELETE",
+        path="/api/v1/projects/project-1",
+        path_params={"project_id": "project-1"},
+        headers={
+            "X-View-Perspective": "owner",
+            "X-View-Party-Id": "party-missing",
+        },
+    )
+
     with patch(
-        "src.middleware.auth.authz_service.check_access",
+        "src.middleware.auth_authz.authz_service.check_access",
         new=AsyncMock(
             return_value=AuthzDecision(
                 allowed=False,
@@ -192,6 +265,48 @@ async def test_require_authz_denied_write_maps_to_forbidden() -> None:
 
     error = exc_info.value
     assert getattr(error, "status_code", None) == 403
+    assert getattr(error, "authz_stale", None) in {None, False}
+
+
+@pytest.mark.asyncio
+async def test_require_authz_denied_read_with_selected_view_headers_keeps_not_found_without_stale() -> (
+    None
+):
+    checker = require_authz(
+        action="read",
+        resource_type="asset",
+        resource_id="{asset_id}",
+        deny_as_not_found=True,
+    )
+    request = _build_request(
+        method="GET",
+        path="/api/v1/assets/asset-1",
+        path_params={"asset_id": "asset-1"},
+        headers={
+            "X-View-Perspective": "manager",
+            "X-View-Party-Id": "party-missing",
+        },
+    )
+
+    with patch(
+        "src.middleware.auth_authz.authz_service.check_access",
+        new=AsyncMock(
+            return_value=AuthzDecision(
+                allowed=False,
+                reason_code="deny",
+            )
+        ),
+    ):
+        with pytest.raises(Exception) as exc_info:
+            await checker(
+                request=request,
+                current_user=_UserStub("user-1"),
+                db=MagicMock(),
+            )
+
+    error = exc_info.value
+    assert getattr(error, "status_code", None) == 404
+    assert getattr(error, "authz_stale", None) in {None, False}
 
 
 @pytest.mark.asyncio
@@ -227,7 +342,9 @@ async def test_load_organization_scope_context_includes_party_scope_fields() -> 
 
 
 @pytest.mark.asyncio
-async def test_load_organization_scope_context_falls_back_to_org_id_when_party_missing() -> None:
+async def test_load_organization_scope_context_falls_back_to_org_id_when_party_missing() -> (
+    None
+):
     checker = require_authz(
         action="read",
         resource_type="organization",
@@ -262,7 +379,9 @@ async def test_load_organization_scope_context_falls_back_to_org_id_when_party_m
 
 
 @pytest.mark.asyncio
-async def test_load_property_certificate_scope_context_includes_party_scope_fields() -> None:
+async def test_load_property_certificate_scope_context_includes_party_scope_fields() -> (
+    None
+):
     checker = require_authz(
         action="read",
         resource_type="property_certificate",
@@ -293,7 +412,9 @@ async def test_load_property_certificate_scope_context_includes_party_scope_fiel
 
 
 @pytest.mark.asyncio
-async def test_load_property_certificate_scope_context_falls_back_to_unscoped_when_party_missing() -> None:
+async def test_load_property_certificate_scope_context_falls_back_to_unscoped_when_party_missing() -> (
+    None
+):
     checker = require_authz(
         action="read",
         resource_type="property_certificate",
@@ -321,7 +442,9 @@ async def test_load_property_certificate_scope_context_falls_back_to_unscoped_wh
     assert context["certificate_id"] == "cert-legacy"
     assert context["party_id"] == "__unscoped__:property_certificate:cert-legacy"
     assert context["owner_party_id"] == "__unscoped__:property_certificate:cert-legacy"
-    assert context["manager_party_id"] == "__unscoped__:property_certificate:cert-legacy"
+    assert (
+        context["manager_party_id"] == "__unscoped__:property_certificate:cert-legacy"
+    )
 
 
 @pytest.mark.asyncio
@@ -385,7 +508,88 @@ async def test_load_project_scope_context_uses_manager_party_directly() -> None:
 
 
 @pytest.mark.asyncio
-async def test_resolve_trusted_resource_context_loads_contract_scope_from_new_tables() -> None:
+async def test_load_contact_scope_context_resolves_parent_entity_scope() -> None:
+    checker = require_authz(
+        action="read",
+        resource_type="contact",
+        resource_id="{contact_id}",
+    )
+    db = AsyncMock(spec=AsyncSession)
+    db.execute = AsyncMock(
+        return_value=_mapping_result(
+            {
+                "contact_id": "contact-1",
+                "entity_type": "ownership",
+                "entity_id": "ownership-1",
+            }
+        )
+    )
+
+    with patch.object(
+        checker,
+        "_load_contact_parent_scope_context",
+        new=AsyncMock(
+            return_value={
+                "ownership_id": "ownership-1",
+                "party_id": "party-1",
+                "owner_party_id": "party-1",
+            }
+        ),
+    ) as mock_load_parent:
+        context = await checker._load_contact_scope_context(
+            db=db,
+            contact_id="contact-1",
+            request_context={},
+        )
+
+    assert context["contact_id"] == "contact-1"
+    assert context["ownership_id"] == "ownership-1"
+    assert context["party_id"] == "party-1"
+    assert context["owner_party_id"] == "party-1"
+    mock_load_parent.assert_awaited_once_with(
+        db=db,
+        entity_type="ownership",
+        entity_id="ownership-1",
+    )
+
+
+@pytest.mark.asyncio
+async def test_load_contract_group_scope_context_uses_owner_and_manager_party_directly() -> (
+    None
+):
+    checker = require_authz(
+        action="read",
+        resource_type="contract_group",
+        resource_id="{group_id}",
+    )
+    db = AsyncMock(spec=AsyncSession)
+    db.execute = AsyncMock(
+        side_effect=[
+            _mapping_result(
+                {
+                    "contract_group_id": "group-1",
+                    "owner_party_id": "owner-party-1",
+                    "manager_party_id": "manager-party-1",
+                }
+            ),
+        ]
+    )
+
+    context = await checker._load_contract_group_scope_context(
+        db=db,
+        group_id="group-1",
+    )
+
+    assert context["contract_group_id"] == "group-1"
+    assert context["owner_party_id"] == "owner-party-1"
+    assert context["manager_party_id"] == "manager-party-1"
+    assert context["party_id"] == "owner-party-1"
+
+
+@pytest.mark.asyncio
+async def test_resolve_trusted_resource_context_loads_contract_scope_from_new_tables() -> (
+    None
+):
     checker = require_authz(
         action="read",
         resource_type="contract",
@@ -424,6 +628,38 @@ async def test_resolve_trusted_resource_context_loads_contract_scope_from_new_ta
 
 
 @pytest.mark.asyncio
+async def test_resolve_trusted_resource_context_skips_contract_lookup_without_resource_id() -> (
+    None
+):
+    checker = require_authz(
+        action="create",
+        resource_type="contract",
+        resource_context={
+            "party_id": "__unscoped__:contract:create",
+            "owner_party_id": "__unscoped__:contract:create",
+            "manager_party_id": "__unscoped__:contract:create",
+        },
+    )
+    db = AsyncMock(spec=AsyncSession)
+    db.execute = AsyncMock(
+        side_effect=AssertionError("contract lookup should be skipped")
+    )
+
+    context = await checker._resolve_trusted_resource_context(
+        db=db,
+        resource_id=None,
+        request_context={
+            "party_id": "__unscoped__:contract:create",
+            "owner_party_id": "__unscoped__:contract:create",
+            "manager_party_id": "__unscoped__:contract:create",
+        },
+    )
+
+    assert context == {}
+    db.execute.assert_not_awaited()
+
+
+@pytest.mark.asyncio
 async def test_can_edit_contract_checks_contract_resource() -> None:
     user = _UserStub("user-1")
     db = AsyncMock(spec=AsyncSession)
@@ -433,7 +669,7 @@ async def test_can_edit_contract_checks_contract_resource() -> None:
         return_value=MagicMock(has_permission=True)
     )
 
-    with patch("src.middleware.auth.RBACService", return_value=rbac_service):
+    with patch("src.middleware.auth_utils.RBACService", return_value=rbac_service):
         result = await can_edit_contract(user, db, "contract-1")
 
     assert result is True
@@ -508,7 +744,9 @@ async def test_load_role_scope_context_uses_role_party_id_when_present() -> None
 
 
 @pytest.mark.asyncio
-async def test_load_role_scope_context_falls_back_to_unscoped_when_party_missing() -> None:
+async def test_load_role_scope_context_falls_back_to_unscoped_when_party_missing() -> (
+    None
+):
     checker = require_authz(
         action="read",
         resource_type="role",
@@ -538,7 +776,9 @@ async def test_load_role_scope_context_falls_back_to_unscoped_when_party_missing
 
 
 @pytest.mark.asyncio
-async def test_load_user_scope_context_uses_user_binding_party_id_when_present() -> None:
+async def test_load_user_scope_context_uses_user_binding_party_id_when_present() -> (
+    None
+):
     checker = require_authz(
         action="read",
         resource_type="user",
@@ -579,7 +819,9 @@ async def test_load_user_scope_context_uses_user_binding_party_id_when_present()
 
 
 @pytest.mark.asyncio
-async def test_load_user_scope_context_uses_unscoped_sentinel_when_no_party_scope() -> None:
+async def test_load_user_scope_context_uses_unscoped_sentinel_when_no_party_scope() -> (
+    None
+):
     checker = require_authz(
         action="read",
         resource_type="user",
@@ -610,7 +852,9 @@ async def test_load_user_scope_context_uses_unscoped_sentinel_when_no_party_scop
 
 
 @pytest.mark.asyncio
-async def test_load_task_scope_context_uses_task_user_party_scope_when_present() -> None:
+async def test_load_task_scope_context_uses_task_user_party_scope_when_present() -> (
+    None
+):
     checker = require_authz(
         action="read",
         resource_type="task",
@@ -657,7 +901,9 @@ async def test_load_task_scope_context_uses_task_user_party_scope_when_present()
 
 
 @pytest.mark.asyncio
-async def test_load_task_scope_context_uses_unscoped_sentinel_when_task_user_missing() -> None:
+async def test_load_task_scope_context_uses_unscoped_sentinel_when_task_user_missing() -> (
+    None
+):
     checker = require_authz(
         action="read",
         resource_type="task",
@@ -699,7 +945,7 @@ async def test_require_authz_collection_read_infers_party_scope_hint() -> None:
 
     with (
         patch(
-            "src.middleware.auth.authz_service.context_builder.build_subject_context",
+            "src.middleware.auth_authz.authz_service.context_builder.build_subject_context",
             new=AsyncMock(
                 return_value=SubjectContext(
                     user_id="user-1",
@@ -711,7 +957,7 @@ async def test_require_authz_collection_read_infers_party_scope_hint() -> None:
             ),
         ),
         patch(
-            "src.middleware.auth.authz_service.check_access",
+            "src.middleware.auth_authz.authz_service.check_access",
             new=AsyncMock(
                 return_value=AuthzDecision(
                     allowed=True,
@@ -756,7 +1002,7 @@ async def test_require_authz_collection_read_keeps_explicit_scope_context() -> N
 
     with (
         patch(
-            "src.middleware.auth.authz_service.context_builder.build_subject_context",
+            "src.middleware.auth_authz.authz_service.context_builder.build_subject_context",
             new=AsyncMock(
                 return_value=SubjectContext(
                     user_id="user-1",
@@ -768,7 +1014,7 @@ async def test_require_authz_collection_read_keeps_explicit_scope_context() -> N
             ),
         ),
         patch(
-            "src.middleware.auth.authz_service.check_access",
+            "src.middleware.auth_authz.authz_service.check_access",
             new=AsyncMock(
                 return_value=AuthzDecision(
                     allowed=True,

@@ -60,7 +60,7 @@ def _build_contract(
 
 class TestGetAssetLeaseSummary:
     async def test_active_contracts_by_group_relation_type(self, service):
-        from src.services.asset import asset_service as asset_service_module
+        from src.services.asset import asset_query_service as aq_module
 
         asset = SimpleNamespace(
             id="asset-1",
@@ -96,7 +96,7 @@ class TestGetAssetLeaseSummary:
         with (
             patch.object(service, "get_asset", new=AsyncMock(return_value=asset)),
         ):
-            asset_service_module.contract_crud = SimpleNamespace(  # type: ignore[attr-defined]
+            aq_module.contract_crud = SimpleNamespace(  # type: ignore[attr-defined]
                 get_active_by_asset_id=AsyncMock(return_value=contracts)
             )
             result = await service.get_asset_lease_summary(
@@ -123,7 +123,7 @@ class TestGetAssetLeaseSummary:
         ]
 
     async def test_customer_summary_only_outbound_and_dedup(self, service):
-        from src.services.asset import asset_service as asset_service_module
+        from src.services.asset import asset_query_service as aq_module
 
         asset = SimpleNamespace(
             id="asset-1",
@@ -169,18 +169,21 @@ class TestGetAssetLeaseSummary:
         with (
             patch.object(service, "get_asset", new=AsyncMock(return_value=asset)),
         ):
-            asset_service_module.contract_crud = SimpleNamespace(  # type: ignore[attr-defined]
+            aq_module.contract_crud = SimpleNamespace(  # type: ignore[attr-defined]
                 get_active_by_asset_id=AsyncMock(return_value=contracts)
             )
             result = await service.get_asset_lease_summary(asset_id="asset-1")
 
-        assert [(item.party_name, item.group_relation_type, item.contract_count) for item in result.customer_summary] == [
+        assert [
+            (item.party_name, item.group_relation_type, item.contract_count)
+            for item in result.customer_summary
+        ] == [
             ("租户A", "下游", 2),
             ("直租租户", "直租", 1),
         ]
 
     async def test_no_active_contracts_and_zero_rentable_area(self, service):
-        from src.services.asset import asset_service as asset_service_module
+        from src.services.asset import asset_query_service as aq_module
 
         asset = SimpleNamespace(
             id="asset-1",
@@ -191,7 +194,7 @@ class TestGetAssetLeaseSummary:
         with (
             patch.object(service, "get_asset", new=AsyncMock(return_value=asset)),
         ):
-            asset_service_module.contract_crud = SimpleNamespace(  # type: ignore[attr-defined]
+            aq_module.contract_crud = SimpleNamespace(  # type: ignore[attr-defined]
                 get_active_by_asset_id=AsyncMock(return_value=[])
             )
             result = await service.get_asset_lease_summary(asset_id="asset-1")
@@ -203,7 +206,7 @@ class TestGetAssetLeaseSummary:
         assert [item.contract_count for item in result.by_type] == [0, 0, 0, 0]
 
     async def test_partial_period_aligns_to_provided_month(self, service):
-        from src.services.asset import asset_service as asset_service_module
+        from src.services.asset import asset_query_service as aq_module
 
         asset = SimpleNamespace(
             id="asset-1",
@@ -214,7 +217,7 @@ class TestGetAssetLeaseSummary:
         with (
             patch.object(service, "get_asset", new=AsyncMock(return_value=asset)),
         ):
-            asset_service_module.contract_crud = SimpleNamespace(  # type: ignore[attr-defined]
+            aq_module.contract_crud = SimpleNamespace(  # type: ignore[attr-defined]
                 get_active_by_asset_id=AsyncMock(return_value=[])
             )
             start_only_result = await service.get_asset_lease_summary(
@@ -242,7 +245,7 @@ class TestGetAssetLeaseSummary:
 
     async def test_excludes_non_active_status(self, service):
         """CRUD 只返回活跃合同；服务层直接消费 CRUD 返回值，此处验证非活跃合同不计入汇总。"""
-        from src.services.asset import asset_service as asset_service_module
+        from src.services.asset import asset_query_service as aq_module
 
         asset = SimpleNamespace(
             id="asset-1",
@@ -251,7 +254,7 @@ class TestGetAssetLeaseSummary:
         )
         # CRUD 层已过滤，service 收到的就是空列表（DRAFT/PENDING_REVIEW/EXPIRED/TERMINATED 全被排除）
         with patch.object(service, "get_asset", new=AsyncMock(return_value=asset)):
-            asset_service_module.contract_crud = SimpleNamespace(  # type: ignore[attr-defined]
+            aq_module.contract_crud = SimpleNamespace(  # type: ignore[attr-defined]
                 get_active_by_asset_id=AsyncMock(return_value=[])
             )
             result = await service.get_asset_lease_summary(asset_id="asset-1")

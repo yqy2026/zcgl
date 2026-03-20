@@ -11,6 +11,9 @@ Test coverage for Contact API endpoints:
 - Authentication and authorization
 """
 
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
+
 import pytest
 from fastapi import status
 from sqlalchemy.orm import Session
@@ -29,6 +32,15 @@ def disable_contact_field_encryption(monkeypatch):
         contact_crud.sensitive_data_handler,
         "encryption_enabled",
         False,
+    )
+
+
+@pytest.fixture(autouse=True)
+def allow_contact_authz(monkeypatch):
+    """联系人 API 单测聚焦路由/CRUD 行为，默认跳过真实鉴权决策。"""
+    monkeypatch.setattr(
+        "src.api.v1.system.contact.authz_service.check_access",
+        AsyncMock(return_value=SimpleNamespace(allowed=True, reason_code="allow")),
     )
 
 

@@ -8,6 +8,7 @@ PostgreSQL数据库迁移集成测试
 """
 
 import os
+from pathlib import Path
 
 import pytest
 from sqlalchemy import text
@@ -472,6 +473,24 @@ class TestPostgreSQLMigrationCompleteness:
             count = result.scalar()
 
             assert count == 1, "alembic_version table should exist"
+
+    async def test_alembic_version_should_match_current_script_heads(self):
+        """测试测试库版本号应对齐当前 Alembic heads。"""
+        from alembic.config import Config
+        from alembic.script import ScriptDirectory
+
+        mgr = get_database_manager()
+        alembic_cfg = Config(str(Path(__file__).resolve().parents[2] / "alembic.ini"))
+        script_directory = ScriptDirectory.from_config(alembic_cfg)
+        expected_heads = sorted(script_directory.get_heads())
+
+        async with mgr.get_session() as session:
+            result = await session.execute(
+                text("SELECT version_num FROM alembic_version ORDER BY version_num")
+            )
+            actual_heads = sorted(str(row[0]) for row in result.fetchall())
+
+        assert actual_heads == expected_heads
 
     async def test_foreign_key_constraints(self):
         """测试外键约束存在"""

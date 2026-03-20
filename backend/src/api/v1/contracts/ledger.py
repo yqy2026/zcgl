@@ -21,6 +21,7 @@ from ....schemas.contract_group import (
     LedgerRecalculateResponse,
 )
 from ....services.contract.ledger_service_v2 import ledger_service_v2
+from ....services.view_scope import resolve_selected_view_party_filter_dependency
 
 router = APIRouter()
 
@@ -61,6 +62,7 @@ async def get_ledger_entries(
     params: LedgerAggregateQueryParams = Depends(resolve_ledger_query_params),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    selected_view_party_filter=Depends(resolve_selected_view_party_filter_dependency),
     _authz: Annotated[
         AuthzContext | None,
         Depends(
@@ -71,7 +73,6 @@ async def get_ledger_entries(
         ),
     ] = None,
 ) -> ContractLedgerListResponse:
-    _ = current_user
     _ = _authz
     try:
         return await ledger_service_v2.query_ledger_entries(
@@ -85,6 +86,8 @@ async def get_ledger_entries(
             include_voided=params.include_voided,
             offset=params.offset,
             limit=params.limit,
+            current_user_id=str(current_user.id),
+            party_filter=selected_view_party_filter,
         )
     except BaseBusinessError:
         raise

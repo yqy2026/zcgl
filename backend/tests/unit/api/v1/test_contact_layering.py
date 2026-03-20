@@ -21,7 +21,7 @@ def test_contact_api_module_should_not_use_crud_adapter_calls():
 
 
 def test_contact_endpoints_should_use_require_authz() -> None:
-    """contact 关键端点应接入 require_authz。"""
+    """contact 关键端点应接入统一鉴权依赖。"""
     from src.api.v1.system import contact
 
     module_source = inspect.getsource(contact)
@@ -29,28 +29,31 @@ def test_contact_endpoints_should_use_require_authz() -> None:
     assert "require_authz" in module_source
 
     patterns = [
-        r"async def create_contact[\s\S]*?require_authz\([\s\S]*?action=\"create\"[\s\S]*?resource_type=\"contact\"[\s\S]*?resource_context=_CONTACT_CREATE_RESOURCE_CONTEXT",
-        r"async def get_contact[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"contact\"[\s\S]*?resource_id=\"\{contact_id\}\"[\s\S]*?deny_as_not_found=True",
-        r"async def get_entity_contacts[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"contact\"[\s\S]*?resource_id=\"\{entity_id\}\"[\s\S]*?deny_as_not_found=True",
-        r"async def get_primary_contact[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"contact\"[\s\S]*?resource_id=\"\{entity_id\}\"[\s\S]*?deny_as_not_found=True",
-        r"async def update_contact[\s\S]*?require_authz\([\s\S]*?action=\"update\"[\s\S]*?resource_type=\"contact\"[\s\S]*?resource_id=\"\{contact_id\}\"",
-        r"async def delete_contact[\s\S]*?require_authz\([\s\S]*?action=\"delete\"[\s\S]*?resource_type=\"contact\"[\s\S]*?resource_id=\"\{contact_id\}\"",
-        r"async def create_contacts_batch[\s\S]*?require_authz\([\s\S]*?action=\"create\"[\s\S]*?resource_type=\"contact\"[\s\S]*?resource_id=\"\{entity_id\}\"",
+        r"async def _resolve_contact_scope_context_by_entity",
+        r"async def _resolve_contact_scope_context_by_id",
+        r"async def _require_contact_create_authz",
+        r"async def _require_contact_entity_read_authz",
+        r"async def _require_contact_detail_authz",
+        r"async def _require_contact_update_authz",
+        r"async def _require_contact_delete_authz",
+        r"async def create_contact[\s\S]*?_require_contact_create_authz",
+        r"async def get_contact[\s\S]*?_require_contact_detail_authz",
+        r"async def get_entity_contacts[\s\S]*?_require_contact_entity_read_authz",
+        r"async def get_primary_contact[\s\S]*?_require_contact_entity_read_authz",
+        r"async def update_contact[\s\S]*?_require_contact_update_authz",
+        r"async def delete_contact[\s\S]*?_require_contact_delete_authz",
+        r"async def create_contacts_batch[\s\S]*?_require_contact_entity_create_authz",
     ]
     for pattern in patterns:
         assert re.search(pattern, module_source), pattern
 
 
-def test_contact_create_unscoped_context_should_be_defined() -> None:
+def test_contact_scope_helpers_should_be_defined() -> None:
     from src.api.v1.system import contact as module
 
-    expected = "__unscoped__:contact:create"
-    assert module._CONTACT_CREATE_UNSCOPED_PARTY_ID == expected
-    assert module._CONTACT_CREATE_RESOURCE_CONTEXT == {
-        "party_id": expected,
-        "owner_party_id": expected,
-        "manager_party_id": expected,
-    }
+    assert hasattr(module, "_resolve_contact_scope_context_by_entity")
+    assert hasattr(module, "_resolve_contact_scope_context_by_id")
+    assert hasattr(module, "_check_contact_access")
 
 
 @pytest.mark.asyncio

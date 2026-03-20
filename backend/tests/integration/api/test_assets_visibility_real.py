@@ -99,6 +99,17 @@ def _bind_asset_owner_read_policy(
     )
 
 
+def _extract_asset_ids(response_json: dict[str, object]) -> set[str]:
+    items = response_json.get("data", {}).get("items", [])  # type: ignore[union-attr]
+    if not isinstance(items, list):
+        return set()
+    return {
+        item.get("id")
+        for item in items
+        if isinstance(item, dict) and isinstance(item.get("id"), str)
+    }
+
+
 @pytest.mark.integration
 def test_non_admin_owner_scoped_asset_list_should_not_be_forbidden(
     client: TestClient,
@@ -200,3 +211,111 @@ def test_non_admin_owner_scoped_asset_list_should_not_be_forbidden(
     assert scoped_asset.id in item_ids
     assert other_asset.id not in item_ids
 
+
+@pytest.mark.integration
+def test_selected_view_headers_should_narrow_asset_results(
+    client: TestClient,
+    db_session: Session,
+    test_data: dict[str, object],
+) -> None:
+    suffix = uuid.uuid4().hex[:8]
+    password = "User123!@#"
+    password_hash = PasswordService().get_password_hash(password)
+
+    owner_party_a = Party(
+        party_type=PartyType.ORGANIZATION.value,
+        name=f"Scoped Owner A {suffix}",
+        code=f"SCOPED-OWNER-A-{suffix}",
+        external_ref=f"SCOPED-OWNER-A-EXT-{suffix}",
+        status="active",
+    )
+    owner_party_b = Party(
+        party_type=PartyType.ORGANIZATION.value,
+        name=f"Scoped Owner B {suffix}",
+        code=f"SCOPED-OWNER-B-{suffix}",
+        external_ref=f"SCOPED-OWNER-B-EXT-{suffix}",
+        status="active",
+    )
+    db_session.add_all([owner_party_a, owner_party_b])
+    db_session.flush()
+
+    organization_id = str(getattr(test_data["organization"], "id"))  # type: ignore[index]
+    scoped_user = User(
+        username=f"asset_selected_view_user_{suffix}",
+        email=f"asset_selected_view_user_{suffix}@example.com",
+        phone=f"137{uuid.uuid4().int % 10**8:08d}",
+        full_name="Asset Selected View User",
+        password_hash=password_hash,
+        is_active=True,
+        default_organization_id=organization_id,
+        created_by="integration_test",
+        updated_by="integration_test",
+    )
+    db_session.add(scoped_user)
+    db_session.flush()
+
+    db_session.add_all(
+        [
+            UserPartyBinding(
+                user_id=scoped_user.id,
+                party_id=owner_party_a.id,
+                relation_type=RelationType.OWNER,
+                is_primary=True,
+            ),
+            UserPartyBinding(
+                user_id=scoped_user.id,
+                party_id=owner_party_b.id,
+                relation_type=RelationType.OWNER,
+                is_primary=False,
+            ),
+        ]
+    )
+
+    asset_a = Asset(
+        asset_name=f"资产视角命中-A-{suffix}",
+        address=f"视角地址-A-{suffix}",
+        ownership_status="已确权",
+        property_nature="经营类",
+        usage_status="出租",
+        data_status="正常",
+        owner_party_id=owner_party_a.id,
+        organization_id=organization_id,
+        created_by="integration_test",
+        updated_by="integration_test",
+    )
+    asset_b = Asset(
+        asset_name=f"资产视角命中-B-{suffix}",
+        address=f"视角地址-B-{suffix}",
+        ownership_status="已确权",
+        property_nature="经营类",
+        usage_status="出租",
+        data_status="正常",
+        owner_party_id=owner_party_b.id,
+        organization_id=organization_id,
+        created_by="integration_test",
+        updated_by="integration_test",
+    )
+    db_session.add_all([asset_a, asset_b])
+
+    _bind_asset_owner_read_policy(
+        db_session,
+        suffix=suffix,
+        user_id=scoped_user.id,
+    )
+    db_session.commit()
+
+    _login(client, scoped_user.username, password)
+
+    base_response = client.get(f"/api/v1/assets?page=1&page_size=20&search={suffix}")
+    assert base_response.status_code == 200
+    assert _extract_asset_ids(base_response.json()) == {asset_a.id, asset_b.id}
+
+    narrowed_response = client.get(
+        f"/api/v1/assets?page=1&page_size=20&search={suffix}",
+        headers={
+            "X-View-Perspective": "owner",
+            "X-View-Party-Id": owner_party_a.id,
+        },
+    )
+    assert narrowed_response.status_code == 200
+    assert _extract_asset_ids(narrowed_response.json()) == {asset_a.id}

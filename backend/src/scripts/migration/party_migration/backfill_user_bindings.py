@@ -5,16 +5,12 @@ from __future__ import annotations
 import argparse
 import json
 import uuid
-from datetime import UTC, datetime
 from pathlib import Path
 
 import sqlalchemy as sa
 
 from ....database_url import get_database_url
-
-
-def _utcnow_naive() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+from ....utils.time import utcnow_naive
 
 
 def _table_exists(connection: sa.engine.Connection, table_name: str) -> bool:
@@ -70,34 +66,46 @@ def main() -> int:
                     "user_role_assignments",
                     "user_party_bindings",
                 ]
-                if not all(_table_exists(conn, table_name) for table_name in required_tables):
+                if not all(
+                    _table_exists(conn, table_name) for table_name in required_tables
+                ):
                     if args.dry_run:
                         transaction.rollback()
                     else:
                         transaction.commit()
-                    print("[SKIP] users/roles/user_role_assignments/user_party_bindings table missing")
+                    print(
+                        "[SKIP] users/roles/user_role_assignments/user_party_bindings table missing"
+                    )
                     return 0
 
-                role_party_rows = conn.execute(
-                    sa.text(
-                        """
+                role_party_rows = (
+                    conn.execute(
+                        sa.text(
+                            """
                         SELECT ura.user_id, r.party_id
                         FROM user_role_assignments AS ura
                         JOIN roles AS r ON r.id = ura.role_id
                         WHERE ura.is_active = true
                           AND r.party_id IS NOT NULL
                         """
+                        )
                     )
-                ).mappings().all()
-                default_org_rows = conn.execute(
-                    sa.text(
-                        """
+                    .mappings()
+                    .all()
+                )
+                default_org_rows = (
+                    conn.execute(
+                        sa.text(
+                            """
                         SELECT id AS user_id, default_organization_id
                         FROM users
                         WHERE default_organization_id IS NOT NULL
                         """
+                        )
                     )
-                ).mappings().all()
+                    .mappings()
+                    .all()
+                )
 
                 user_to_parties: dict[str, set[str]] = {}
                 for row in role_party_rows:
@@ -113,7 +121,7 @@ def main() -> int:
                     user_to_parties.setdefault(user_id, set()).add(mapped_party_id)
 
                 scanned = len(user_to_parties)
-                now = _utcnow_naive()
+                now = utcnow_naive()
                 for user_id, party_ids in user_to_parties.items():
                     sorted_parties = sorted(party_ids)
                     for index, party_id in enumerate(sorted_parties):

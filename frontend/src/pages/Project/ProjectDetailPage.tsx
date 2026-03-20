@@ -34,6 +34,7 @@ import { useQuery } from '@tanstack/react-query';
 import dayjs, { type Dayjs } from 'dayjs';
 import { projectService } from '@/services/projectService';
 import { assetService } from '@/services/assetService';
+import CurrentViewBanner from '@/components/System/CurrentViewBanner';
 import type { ColumnsType } from 'antd/es/table';
 import type { Asset, AssetLeaseSummaryResponse } from '@/types/asset';
 import { useArrayListData } from '@/hooks/useArrayListData';
@@ -317,6 +318,8 @@ const ProjectDetailPage: React.FC = () => {
         </Button>
       }
     >
+      <CurrentViewBanner />
+
       <Row gutter={[16, 16]} className={styles.metricsRow}>
         <Col xs={24} sm={12} lg={6}>
           <Card className={styles.metricCard}>

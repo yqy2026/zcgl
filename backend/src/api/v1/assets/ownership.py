@@ -29,22 +29,16 @@ from ....schemas.ownership import (
 )
 from ....services.authz import authz_service
 from ....services.ownership import ownership_service
+from ....utils.str import normalize_optional_str
 
 router = APIRouter()
 _OWNERSHIP_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:ownership:create"
 
 
-def _normalize_optional_str(value: Any) -> str | None:
-    if value is None:
-        return None
-    normalized = str(value).strip()
-    if normalized == "":
-        return None
-    return normalized
-
-
 def _resolve_current_user_organization_id(current_user: User) -> str | None:
-    return _normalize_optional_str(getattr(current_user, "default_organization_id", None))
+    return normalize_optional_str(
+        getattr(current_user, "default_organization_id", None)
+    )
 
 
 async def _resolve_organization_party_id(
@@ -52,7 +46,7 @@ async def _resolve_organization_party_id(
     db: AsyncSession,
     organization_id: str | None,
 ) -> str | None:
-    normalized_organization_id = _normalize_optional_str(organization_id)
+    normalized_organization_id = normalize_optional_str(organization_id)
     if normalized_organization_id is None:
         return None
 
@@ -71,7 +65,7 @@ async def _resolve_organization_party_id(
         .limit(1)
     )
     row = (await db.execute(stmt)).mappings().one_or_none()
-    return _normalize_optional_str(row.get("party_id") if row is not None else None)
+    return normalize_optional_str(row.get("party_id") if row is not None else None)
 
 
 async def _require_ownership_create_authz(

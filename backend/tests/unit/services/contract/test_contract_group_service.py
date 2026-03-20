@@ -13,12 +13,13 @@
 from datetime import date
 from decimal import Decimal
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import ANY, AsyncMock, MagicMock, patch
 
 import pytest
 from pydantic import ValidationError
 
 from src.core.exception_handler import DuplicateResourceError, OperationNotAllowedError
+from src.crud.query_builder import PartyFilter
 from src.models.contract_group import (
     Contract,
     ContractGroup,
@@ -229,6 +230,92 @@ class TestValidateSignDate:
         validate_sign_date_for_status(
             ContractLifecycleStatus.ACTIVE, date(2026, 1, 1)
         )
+
+
+class TestTenantFilterResolution:
+    async def test_resolve_party_filter_disables_legacy_default_org_fallback(self):
+        service = ContractGroupService()
+        db = MagicMock()
+        resolved_filter = PartyFilter(party_ids=["party-1"])
+
+        with patch(
+            "src.services.contract.contract_group_service.resolve_user_party_filter",
+            new=AsyncMock(return_value=resolved_filter),
+        ) as mock_resolve:
+            result = await service._resolve_party_filter(
+                db,
+                current_user_id="user-1",
+            )
+
+        assert result == resolved_filter
+        mock_resolve.assert_awaited_once_with(
+            db,
+            current_user_id="user-1",
+            party_filter=None,
+            logger=ANY,
+            allow_legacy_default_organization_fallback=False,
+        )
+
+
+class TestListGroups:
+    async def test_list_groups_should_resolve_and_forward_party_filter(self):
+        service = ContractGroupService()
+        db = MagicMock()
+        party_filter = PartyFilter(
+            party_ids=["owner-1", "manager-1"],
+            owner_party_ids=["owner-1"],
+            manager_party_ids=["manager-1"],
+        )
+
+        with (
+            patch.object(
+                service,
+                "_resolve_party_filter",
+                new=AsyncMock(return_value=party_filter),
+            ) as mock_resolve,
+            patch(
+                "src.services.contract.contract_group_service.contract_group_crud.list_by_filters",
+                new=AsyncMock(return_value=([], 0)),
+            ) as mock_list,
+        ):
+            items, total = await service.list_groups(
+                db,
+                current_user_id="user-1",
+            )
+
+        assert total == 0
+        assert items == []
+        mock_resolve.assert_awaited_once_with(
+            db,
+            current_user_id="user-1",
+            party_filter=None,
+        )
+        assert mock_list.await_args.kwargs["party_filter"] == party_filter
+
+    async def test_list_groups_should_fail_closed_for_empty_party_scope(self):
+        service = ContractGroupService()
+        db = MagicMock()
+        fail_closed_filter = PartyFilter(party_ids=[])
+
+        with (
+            patch.object(
+                service,
+                "_resolve_party_filter",
+                new=AsyncMock(return_value=fail_closed_filter),
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_group_crud.list_by_filters",
+                new=AsyncMock(),
+            ) as mock_list,
+        ):
+            items, total = await service.list_groups(
+                db,
+                current_user_id="user-1",
+            )
+
+        assert items == []
+        assert total == 0
+        mock_list.assert_not_awaited()
 
 
 # ─── SettlementRuleSchema ─────────────────────────────────────────────────────

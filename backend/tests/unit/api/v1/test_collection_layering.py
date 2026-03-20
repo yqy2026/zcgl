@@ -87,4 +87,36 @@ async def test_list_collection_records_should_delegate_to_service(mock_db) -> No
         collection_status=None,
         page=1,
         page_size=20,
+        current_user_id="user-1",
+        party_filter=None,
+    )
+
+
+@pytest.mark.asyncio
+async def test_get_collection_summary_should_delegate_current_user_id(mock_db) -> None:
+    from src.api.v1.system import collection as module
+    from src.api.v1.system.collection import get_collection_summary
+
+    mock_service = MagicMock()
+    mock_service.get_summary_async = AsyncMock(
+        return_value={
+            "total_overdue_count": 0,
+            "total_overdue_amount": "0",
+            "pending_collection_count": 0,
+            "this_month_collection_count": 0,
+            "collection_success_rate": None,
+        }
+    )
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(module, "collection_service", mock_service)
+        await get_collection_summary(
+            current_user=MagicMock(id="user-1"),
+            db=mock_db,
+        )
+
+    mock_service.get_summary_async.assert_awaited_once_with(
+        mock_db,
+        current_user_id="user-1",
+        party_filter=None,
     )

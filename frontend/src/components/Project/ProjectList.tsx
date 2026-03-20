@@ -1,63 +1,42 @@
 /**
- * 项目列表组件 - 精简版本
+ * 项目列表组件 - 容器组件
+ * 表格列定义见 ProjectTable.tsx，操作弹窗见 ProjectActions.tsx
  */
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Button,
   Space,
-  Tag,
-  Tooltip,
-  Modal,
   Card,
   Row,
   Col,
   Statistic,
-  Badge,
   Input,
   Select,
-  Switch,
 } from 'antd';
 import { MessageManager } from '@/utils/messageManager';
 import {
   PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  EyeOutlined,
   SearchOutlined,
   ReloadOutlined,
-  ExclamationCircleOutlined,
   BarChartOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
   BankOutlined,
 } from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
 
 import { projectService } from '@/services/projectService';
 import { partyService } from '@/services/partyService';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
 import { ListToolbar } from '@/components/Common/ListToolbar';
+import CurrentViewBanner from '@/components/System/CurrentViewBanner';
 import { useQuery } from '@tanstack/react-query';
-import { getIconButtonProps } from '@/utils/accessibility';
 import type { Project, ProjectListResponse, ProjectStatisticsResponse } from '@/types/project';
 import type { Party } from '@/types/party';
-import { ProjectForm } from '@/components/Forms';
-import ProjectDetail from './ProjectDetail';
 import styles from './ProjectList.module.css';
-// import OwnershipSelect from '@/components/Ownership/OwnershipSelect';
 
-const isRelationActive = (relation: { is_active?: boolean }): boolean =>
-  relation.is_active === true;
-
-const getProjectAssetCount = (project: Project): number => {
-  if (typeof project.asset_count === 'number' && Number.isFinite(project.asset_count)) {
-    return project.asset_count;
-  }
-  return 0;
-};
-
-const isPendingBindingProject = (project: Project): boolean => getProjectAssetCount(project) === 0;
+import { getProjectColumns, getProjectAssetCount } from './ProjectTable';
+import { confirmDeleteProject, toggleProjectStatus, ProjectFormModal, ProjectDetailModal } from './ProjectActions';
 
 // 项目查询参数接口
 interface ProjectQueryParams {
@@ -74,17 +53,8 @@ interface ProjectFilters {
   ownerPartyId: string;
 }
 
-const PROJECT_STATUS_MAP: Record<string, { text: string; color: string }> = {
-  planning: { text: '规划中', color: 'default' },
-  active: { text: '进行中', color: 'green' },
-  paused: { text: '已暂停', color: 'orange' },
-  completed: { text: '已完成', color: 'blue' },
-  terminated: { text: '已终止', color: 'red' },
-};
-
 const { Search } = Input;
 const { Option } = Select;
-const { confirm } = Modal;
 
 interface ProjectListProps {
   onSelectProject?: (project: Project) => void;
@@ -226,227 +196,62 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
     }));
   }, []);
 
-  // 删除项目
-  const handleDelete = (project: Project) => {
-    confirm({
-      title: '确认删除',
-      icon: <ExclamationCircleOutlined />,
-      content: `确定要删除项目 "${project.project_name}" 吗？`,
-      okText: '确认',
-      cancelText: '取消',
-      onOk: async () => {
-        try {
-          await projectService.deleteProject(project.id);
-          MessageManager.success('项目删除成功');
-          refreshProjects();
-        } catch (error) {
-          console.error('删除项目失败:', error);
-          MessageManager.error('删除项目失败');
-        }
-      },
-    });
-  };
+  // --- 操作回调 ---
 
-  // 切换项目状态
-  const handleToggleStatus = async (project: Project) => {
-    try {
-      await projectService.toggleProjectStatus(project.id);
-      MessageManager.success('项目状态切换成功');
-      refreshProjects();
-    } catch (error) {
-      console.error('切换项目状态失败:', error);
-      MessageManager.error('切换项目状态失败');
-    }
-  };
+  const handleDelete = useCallback(
+    (project: Project) => {
+      confirmDeleteProject(project, refreshProjects);
+    },
+    [refreshProjects]
+  );
 
-  // 查看项目详情
-  const handleView = (project: Project) => {
+  const handleToggleStatus = useCallback(
+    async (project: Project) => {
+      await toggleProjectStatus(project, refreshProjects);
+    },
+    [refreshProjects]
+  );
+
+  const handleView = useCallback((project: Project) => {
     setSelectedProject(project);
     setIsDetailVisible(true);
-  };
+  }, []);
 
-  // 编辑项目
-  const handleEdit = (project: Project) => {
+  const handleEdit = useCallback((project: Project) => {
     setEditingProject(project);
     setIsModalVisible(true);
-  };
+  }, []);
 
-  // 创建项目
-  const handleCreate = () => {
+  const handleCreate = useCallback(() => {
     setEditingProject(null);
     setIsModalVisible(true);
-  };
+  }, []);
 
-  // 选择项目（在选择模式下）
-  const handleSelect = (project: Project) => {
-    if (mode === 'select' && onSelectProject) {
-      onSelectProject(project);
-    }
-  };
+  const handleSelect = useCallback(
+    (project: Project) => {
+      if (mode === 'select' && onSelectProject != null) {
+        onSelectProject(project);
+      }
+    },
+    [mode, onSelectProject]
+  );
 
-  // 表格列定义
-  const columns: ColumnsType<Project> = [
-    {
-      title: '项目名称',
-      dataIndex: 'project_name',
-      key: 'project_name',
-      render: (text: string, record: Project) => (
-        <Button type="link" onClick={() => handleView(record)} className={styles.projectNameButton}>
-          {text}
-        </Button>
-      ),
-    },
-    {
-      title: '项目编码',
-      dataIndex: 'project_code',
-      key: 'project_code',
-      width: 120,
-    },
-    {
-      title: '所有方主体',
-      dataIndex: 'party_relations',
-      key: 'owner_party',
-      width: 150,
-      render: (_relations: Project['party_relations'], record: Project) => {
-        // 优先展示 active 的 party_relations
-        if (record.party_relations != null && record.party_relations.length > 0) {
-          const activeRelations = record.party_relations.filter(rel => isRelationActive(rel));
-          if (activeRelations.length > 0) {
-            return (
-              <div>
-                {activeRelations.slice(0, 2).map((rel, index) => (
-                  <Tag
-                    key={rel.id ?? `${rel.party_id}-${index}`}
-                    color="blue"
-                    className={styles.ownershipTag}
-                  >
-                    {rel.party_name ?? '主体已关联'}
-                  </Tag>
-                ))}
-                {activeRelations.length > 2 && (
-                  <Tag color="gray">+{activeRelations.length - 2}</Tag>
-                )}
-              </div>
-            );
-          }
-        }
+  // --- 表格列 ---
 
-        return '-';
-      },
-    },
-    {
-      title: '业务状态',
-      dataIndex: 'status',
-      key: 'status',
-      width: 120,
-      render: (status: string) => (
-        <Tag color={PROJECT_STATUS_MAP[status]?.color ?? 'default'}>
-          {PROJECT_STATUS_MAP[status]?.text ?? status}
-        </Tag>
-      ),
-    },
-    {
-      title: '关联资产',
-      dataIndex: 'asset_count',
-      key: 'asset_count',
-      width: 100,
-      render: (_count: number, record: Project) => getProjectAssetCount(record),
-    },
-    {
-      title: '面积统计',
-      key: 'area_status',
-      width: 100,
-      render: (_value: unknown, record: Project) =>
-        isPendingBindingProject(record) ? <Tag color="default">N/A</Tag> : '-',
-    },
-    {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status_indicator',
-      width: 80,
-      render: (status: string, record: Project) => (
-        <Space size="small">
-          <Badge
-            status={status === 'active' ? 'success' : 'default'}
-            text={status === 'active' ? '启用' : '非启用'}
-          />
-          {isPendingBindingProject(record) && <Tag color="warning">待补绑定</Tag>}
-        </Space>
-      ),
-    },
-    {
-      title: '数据状态',
-      dataIndex: 'data_status',
-      key: 'data_status',
-      width: 100,
-      render: (text: string) => {
-        let color = 'default';
-        switch (text) {
-          case '正常':
-            color = 'green';
-            break;
-          case '禁用':
-            color = 'red';
-            break;
-          case '删除':
-            color = 'default';
-            break;
-        }
-        return <Tag color={color}>{text ?? '-'}</Tag>;
-      },
-    },
-    {
-      title: '操作',
-      key: 'action',
-      width: 180,
-      render: (_, record: Project) => (
-        <Space size="small">
-          {mode === 'select' && (
-            <Button type="primary" size="small" onClick={() => handleSelect(record)}>
-              选择
-            </Button>
-          )}
-          {mode === 'list' && (
-            <>
-              <Tooltip title="查看详情">
-                <Button
-                  type="text"
-                  icon={<EyeOutlined />}
-                  onClick={() => handleView(record)}
-                  {...getIconButtonProps('view', '项目')}
-                />
-              </Tooltip>
-              <Tooltip title="编辑">
-                <Button
-                  type="text"
-                  icon={<EditOutlined />}
-                  onClick={() => handleEdit(record)}
-                  {...getIconButtonProps('edit', '项目')}
-                />
-              </Tooltip>
-              <Tooltip title="删除">
-                <Button
-                  type="text"
-                  danger
-                  icon={<DeleteOutlined />}
-                  onClick={() => handleDelete(record)}
-                  {...getIconButtonProps('delete', '项目')}
-                />
-              </Tooltip>
-            </>
-          )}
-          <Switch
-            size="small"
-            checked={record.status === 'active'}
-            onChange={() => handleToggleStatus(record)}
-            checkedChildren="启用"
-            unCheckedChildren="禁用"
-            aria-label={`${record.status === 'active' ? '停用' : '启用'}项目 ${record.project_name}`}
-          />
-        </Space>
-      ),
-    },
-  ];
+  const columns = useMemo(
+    () =>
+      getProjectColumns({
+        onView: handleView,
+        onEdit: handleEdit,
+        onDelete: handleDelete,
+        onSelect: handleSelect,
+        onToggleStatus: handleToggleStatus,
+        mode,
+      }),
+    [handleDelete, handleEdit, handleSelect, handleToggleStatus, handleView, mode]
+  );
+
+  // --- 筛选回调 ---
 
   const handleKeywordChange = useCallback(
     (value: string) => {
@@ -475,6 +280,8 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
 
   return (
     <div className="project-list">
+      <CurrentViewBanner />
+
       {/* 统计卡片 */}
       <Row gutter={[16, 16]} className={styles.statisticsRow}>
         <Col xs={24} sm={12} md={6}>
@@ -641,54 +448,34 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
       </Card>
 
       {/* 项目表单弹窗 */}
-      <Modal
-        title={editingProject ? '编辑项目' : '新建项目'}
-        open={isModalVisible}
-        onCancel={() => {
+      <ProjectFormModal
+        visible={isModalVisible}
+        editingProject={editingProject}
+        onClose={() => {
           setIsModalVisible(false);
           setEditingProject(null);
         }}
-        footer={null}
-        width={600}
-        destroyOnHidden
-      >
-        <ProjectForm
-          project={editingProject}
-          onSuccess={() => {
-            setIsModalVisible(false);
-            setEditingProject(null);
-            refreshProjects();
-          }}
-          onCancel={() => {
-            setIsModalVisible(false);
-            setEditingProject(null);
-          }}
-        />
-      </Modal>
+        onSuccess={() => {
+          setIsModalVisible(false);
+          setEditingProject(null);
+          refreshProjects();
+        }}
+      />
 
       {/* 项目详情弹窗 */}
-      <Modal
-        title="项目详情"
-        open={isDetailVisible}
-        onCancel={() => {
+      <ProjectDetailModal
+        visible={isDetailVisible}
+        project={selectedProject}
+        onClose={() => {
           setIsDetailVisible(false);
           setSelectedProject(null);
         }}
-        footer={null}
-        width={800}
-        destroyOnHidden
-      >
-        {selectedProject && (
-          <ProjectDetail
-            project={selectedProject}
-            onEdit={() => {
-              setIsDetailVisible(false);
-              setEditingProject(selectedProject);
-              setIsModalVisible(true);
-            }}
-          />
-        )}
-      </Modal>
+        onEdit={() => {
+          setIsDetailVisible(false);
+          setEditingProject(selectedProject);
+          setIsModalVisible(true);
+        }}
+      />
     </div>
   );
 };

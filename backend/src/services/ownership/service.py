@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,14 +15,11 @@ from ...crud.project import project_crud
 from ...models.ownership import Ownership
 from ...models.project_relations import ProjectOwnershipRelation
 from ...schemas.ownership import OwnershipCreate, OwnershipUpdate
+from ...utils.time import utcnow_naive
 
 
 class OwnershipService:
     """权属方服务层"""
-
-    @staticmethod
-    def _utcnow_naive() -> datetime:
-        return datetime.now(UTC).replace(tzinfo=None)
 
     async def get_ownership(
         self, db: AsyncSession, *, ownership_id: str
@@ -116,7 +113,7 @@ class OwnershipService:
                 raise DuplicateResourceError("权属方", "name", obj_in.name)
 
         update_data = obj_in.model_dump(exclude_unset=True)
-        update_data["updated_at"] = self._utcnow_naive()
+        update_data["updated_at"] = utcnow_naive()
 
         return await ownership_crud.update(db, db_obj=db_obj, obj_in=update_data)
 
@@ -246,7 +243,9 @@ class OwnershipService:
             return []
 
         # 批量获取资产计数（按权属方分组）
-        asset_counts = await asset_crud.get_counts_by_ownerships_async(db, ownership_ids)
+        asset_counts = await asset_crud.get_counts_by_ownerships_async(
+            db, ownership_ids
+        )
 
         # 批量获取项目计数（按权属方分组）
         project_counts = await ownership_crud.get_project_counts_by_ownerships_async(

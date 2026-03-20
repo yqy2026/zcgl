@@ -12,13 +12,13 @@ from sqlalchemy.exc import IntegrityError
 from starlette.requests import Request
 
 from src.core.exception_handler import (
-    AUTHZ_STALE_HEADER_NAME,
     BusinessValidationError,
     DuplicateResourceError,
     ExceptionHandler,
     bad_request,
     forbidden,
     handle_service_exception,
+    not_found,
 )
 
 
@@ -73,8 +73,8 @@ class TestExceptionHelpers:
         assert "TestService - test_operation failed" in caplog.text
 
 
-class TestAuthzStaleHeaderContract:
-    """测试 X-Authz-Stale 响应头契约。"""
+class TestAuthzErrorResponseContract:
+    """测试权限类错误不再暴露 stale 响应头。"""
 
     @staticmethod
     def _build_request(path: str = "/api/v1/system/backup/stats") -> Request:
@@ -93,23 +93,43 @@ class TestAuthzStaleHeaderContract:
             }
         )
 
-    def test_business_forbidden_should_include_authz_stale_header(self) -> None:
+    def test_plain_forbidden_should_not_include_authz_stale_header(self) -> None:
         handler = ExceptionHandler()
         response = handler.handle_business_exception(
             self._build_request(),
             forbidden("权限不足"),
         )
         assert response.status_code == 403
-        assert response.headers.get(AUTHZ_STALE_HEADER_NAME.lower()) == "true"
+        assert response.headers.get("x-authz-stale") is None
 
-    def test_http_exception_403_should_include_authz_stale_header(self) -> None:
+    def test_forbidden_should_ignore_legacy_authz_stale_signal(self) -> None:
+        handler = ExceptionHandler()
+        response = handler.handle_business_exception(
+            self._build_request(),
+            forbidden("权限视角失效", authz_stale=True),
+        )
+        assert response.status_code == 403
+        assert response.headers.get("x-authz-stale") is None
+
+    def test_not_found_should_not_include_authz_stale_header(self) -> None:
+        handler = ExceptionHandler()
+        response = handler.handle_business_exception(
+            self._build_request(path="/api/v1/system/contact/contact-1"),
+            not_found(
+                resource_type="contact", resource_id="contact-1", authz_stale=True
+            ),
+        )
+        assert response.status_code == 404
+        assert response.headers.get("x-authz-stale") is None
+
+    def test_http_exception_403_should_not_include_authz_stale_header(self) -> None:
         handler = ExceptionHandler()
         response = handler.handle_http_exception(
             self._build_request(),
             HTTPException(status_code=403, detail="权限不足"),
         )
         assert response.status_code == 403
-        assert response.headers.get(AUTHZ_STALE_HEADER_NAME.lower()) == "true"
+        assert response.headers.get("x-authz-stale") is None
 
     def test_non_auth_error_should_not_include_authz_stale_header(self) -> None:
         handler = ExceptionHandler()
@@ -118,13 +138,15 @@ class TestAuthzStaleHeaderContract:
             bad_request("参数无效"),
         )
         assert response.status_code == 400
-        assert response.headers.get(AUTHZ_STALE_HEADER_NAME.lower()) is None
+        assert response.headers.get("x-authz-stale") is None
 
 
 class TestAPIExceptionHandling:
     """测试API层异常处理"""
 
-    @patch("src.api.v1.assets.assets.AsyncAssetService.get_asset", new_callable=AsyncMock)
+    @patch(
+        "src.api.v1.assets.assets.AsyncAssetService.get_asset", new_callable=AsyncMock
+    )
     def test_api_propagates_business_exceptions(self, mock_get_asset, client):
         """测试API层业务异常保持契约语义"""
         mock_get_asset.side_effect = BusinessValidationError(
@@ -140,7 +162,9 @@ class TestAPIExceptionHandling:
         assert data["error"]["code"] == "VALIDATION_ERROR"
         assert data["error"]["message"] == "资产ID格式不正确"
 
-    @patch("src.api.v1.assets.assets.AsyncAssetService.get_asset", new_callable=AsyncMock)
+    @patch(
+        "src.api.v1.assets.assets.AsyncAssetService.get_asset", new_callable=AsyncMock
+    )
     def test_api_general_exception_masked_as_internal_error(
         self, mock_get_asset, client
     ):

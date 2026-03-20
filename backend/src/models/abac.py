@@ -1,7 +1,7 @@
 """ABAC policy models."""
 
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
@@ -18,13 +18,10 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..database import Base
+from ..utils.time import utcnow_naive
 
 if TYPE_CHECKING:
     from .rbac import Role
-
-
-def _utcnow_naive() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _enum_values(enum_cls: type[StrEnum]) -> list[str]:
@@ -72,13 +69,13 @@ class ABACPolicy(Base):
         Boolean, nullable=False, default=True, comment="是否启用"
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=_utcnow_naive, comment="创建时间"
+        DateTime, nullable=False, default=utcnow_naive, comment="创建时间"
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        default=_utcnow_naive,
-        onupdate=_utcnow_naive,
+        default=utcnow_naive,
+        onupdate=utcnow_naive,
         comment="更新时间",
     )
 
@@ -123,16 +120,12 @@ class ABACPolicyRule(Base):
     condition_expr: Mapped[dict[str, Any]] = mapped_column(
         JSONB, nullable=False, comment="JSONLogic 条件表达式"
     )
-    field_mask: Mapped[dict[str, Any] | None] = mapped_column(
-        JSONB, comment="字段掩码"
-    )
+    field_mask: Mapped[dict[str, Any] | None] = mapped_column(JSONB, comment="字段掩码")
 
     policy: Mapped["ABACPolicy"] = relationship("ABACPolicy", back_populates="rules")
 
     def __repr__(self) -> str:
-        return (
-            f"<ABACPolicyRule(policy_id={self.policy_id}, resource={self.resource_type}, action={self.action})>"
-        )
+        return f"<ABACPolicyRule(policy_id={self.policy_id}, resource={self.resource_type}, action={self.action})>"
 
 
 class ABACRolePolicy(Base):
@@ -140,7 +133,9 @@ class ABACRolePolicy(Base):
 
     __tablename__ = "abac_role_policies"
     __table_args__ = (
-        UniqueConstraint("role_id", "policy_id", name="uq_abac_role_policies_role_policy"),
+        UniqueConstraint(
+            "role_id", "policy_id", name="uq_abac_role_policies_role_policy"
+        ),
     )
 
     id: Mapped[str] = mapped_column(
@@ -163,20 +158,18 @@ class ABACRolePolicy(Base):
     enabled: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True, comment="是否启用"
     )
-    priority_override: Mapped[int | None] = mapped_column(
-        Integer, comment="优先级覆盖"
-    )
+    priority_override: Mapped[int | None] = mapped_column(Integer, comment="优先级覆盖")
     params_override: Mapped[dict[str, Any] | None] = mapped_column(
         JSONB, comment="参数覆盖"
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=_utcnow_naive, comment="创建时间"
+        DateTime, nullable=False, default=utcnow_naive, comment="创建时间"
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        default=_utcnow_naive,
-        onupdate=_utcnow_naive,
+        default=utcnow_naive,
+        onupdate=utcnow_naive,
         comment="更新时间",
     )
 

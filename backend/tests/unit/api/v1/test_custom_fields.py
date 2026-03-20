@@ -93,7 +93,9 @@ class TestGetCustomFields:
     ):
         from src.api.v1.assets.custom_fields import get_custom_fields
 
-        with patch("src.api.v1.assets.custom_fields.custom_field_service") as mock_service:
+        with patch(
+            "src.api.v1.assets.custom_fields.custom_field_service"
+        ) as mock_service:
             mock_service.get_custom_fields_async = AsyncMock(
                 return_value=mock_custom_field_list
             )
@@ -111,7 +113,6 @@ class TestGetCustomFields:
         mock_service.get_custom_fields_async.assert_awaited_once_with(
             db=mock_db,
             filters={},
-            current_user_id="test-user-id",
         )
 
     async def test_get_custom_fields_with_filters(
@@ -119,7 +120,9 @@ class TestGetCustomFields:
     ):
         from src.api.v1.assets.custom_fields import get_custom_fields
 
-        with patch("src.api.v1.assets.custom_fields.custom_field_service") as mock_service:
+        with patch(
+            "src.api.v1.assets.custom_fields.custom_field_service"
+        ) as mock_service:
             mock_service.get_custom_fields_async = AsyncMock(
                 return_value=[mock_custom_field_list[0]]
             )
@@ -142,7 +145,9 @@ class TestGetCustomFields:
     async def test_get_custom_fields_exception(self, mock_db, mock_current_user):
         from src.api.v1.assets.custom_fields import get_custom_fields
 
-        with patch("src.api.v1.assets.custom_fields.custom_field_service") as mock_service:
+        with patch(
+            "src.api.v1.assets.custom_fields.custom_field_service"
+        ) as mock_service:
             mock_service.get_custom_fields_async = AsyncMock(
                 side_effect=Exception("Database error")
             )
@@ -166,8 +171,12 @@ class TestGetCustomField:
     ):
         from src.api.v1.assets.custom_fields import get_custom_field
 
-        with patch("src.api.v1.assets.custom_fields.custom_field_service") as mock_service:
-            mock_service.get_custom_field_async = AsyncMock(return_value=mock_custom_field)
+        with patch(
+            "src.api.v1.assets.custom_fields.custom_field_service"
+        ) as mock_service:
+            mock_service.get_custom_field_async = AsyncMock(
+                return_value=mock_custom_field
+            )
             result = await get_custom_field(
                 field_id="test-field-id",
                 db=mock_db,
@@ -179,13 +188,14 @@ class TestGetCustomField:
         mock_service.get_custom_field_async.assert_awaited_once_with(
             db=mock_db,
             field_id="test-field-id",
-            current_user_id="test-user-id",
         )
 
     async def test_get_custom_field_not_found(self, mock_db, mock_current_user):
         from src.api.v1.assets.custom_fields import get_custom_field
 
-        with patch("src.api.v1.assets.custom_fields.custom_field_service") as mock_service:
+        with patch(
+            "src.api.v1.assets.custom_fields.custom_field_service"
+        ) as mock_service:
             mock_service.get_custom_field_async = AsyncMock(return_value=None)
             with pytest.raises(BaseBusinessError) as exc_info:
                 await get_custom_field(
@@ -213,8 +223,12 @@ class TestCreateCustomField:
             is_active=True,
         )
 
-        with patch("src.api.v1.assets.custom_fields.custom_field_service") as mock_service:
-            mock_service.create_custom_field_async = AsyncMock(return_value=mock_custom_field)
+        with patch(
+            "src.api.v1.assets.custom_fields.custom_field_service"
+        ) as mock_service:
+            mock_service.create_custom_field_async = AsyncMock(
+                return_value=mock_custom_field
+            )
             result = await create_custom_field(
                 field_in=field_data,
                 db=mock_db,
@@ -236,9 +250,13 @@ class TestCreateCustomField:
             field_type="text",
         )
 
-        with patch("src.api.v1.assets.custom_fields.custom_field_service") as mock_service:
+        with patch(
+            "src.api.v1.assets.custom_fields.custom_field_service"
+        ) as mock_service:
             mock_service.create_custom_field_async = AsyncMock(
-                side_effect=DuplicateResourceError("字段", "field_name", "existing_field")
+                side_effect=DuplicateResourceError(
+                    "字段", "field_name", "existing_field"
+                )
             )
             with pytest.raises(BaseBusinessError) as exc_info:
                 await create_custom_field(
@@ -259,8 +277,12 @@ class TestUpdateCustomField:
 
         update_data = AssetCustomFieldUpdate(display_name="Updated Display Name")
 
-        with patch("src.api.v1.assets.custom_fields.custom_field_service") as mock_service:
-            mock_service.update_custom_field_async = AsyncMock(return_value=mock_custom_field)
+        with patch(
+            "src.api.v1.assets.custom_fields.custom_field_service"
+        ) as mock_service:
+            mock_service.update_custom_field_async = AsyncMock(
+                return_value=mock_custom_field
+            )
             result = await update_custom_field(
                 field_id="test-field-id",
                 field_in=update_data,
@@ -279,7 +301,9 @@ class TestUpdateCustomField:
 
         update_data = AssetCustomFieldUpdate(display_name="Updated Name")
 
-        with patch("src.api.v1.assets.custom_fields.custom_field_service") as mock_service:
+        with patch(
+            "src.api.v1.assets.custom_fields.custom_field_service"
+        ) as mock_service:
             mock_service.update_custom_field_async = AsyncMock(
                 side_effect=ResourceNotFoundError("字段", "nonexistent-id")
             )
@@ -298,7 +322,9 @@ class TestDeleteCustomField:
     async def test_delete_custom_field_success(self, mock_db, mock_current_user):
         from src.api.v1.assets.custom_fields import delete_custom_field
 
-        with patch("src.api.v1.assets.custom_fields.custom_field_service") as mock_service:
+        with patch(
+            "src.api.v1.assets.custom_fields.custom_field_service"
+        ) as mock_service:
             mock_service.delete_custom_field_async = AsyncMock(return_value=None)
             result = await delete_custom_field(
                 field_id="test-field-id",
@@ -314,7 +340,9 @@ class TestDeleteCustomField:
     async def test_delete_custom_field_not_found(self, mock_db, mock_current_user):
         from src.api.v1.assets.custom_fields import delete_custom_field
 
-        with patch("src.api.v1.assets.custom_fields.custom_field_service") as mock_service:
+        with patch(
+            "src.api.v1.assets.custom_fields.custom_field_service"
+        ) as mock_service:
             mock_service.delete_custom_field_async = AsyncMock(
                 side_effect=ResourceNotFoundError("字段", "nonexistent-id")
             )
@@ -334,7 +362,9 @@ class TestValidateCustomFieldValue:
     ):
         from src.api.v1.assets.custom_fields import validate_custom_field_value
 
-        with patch("src.api.v1.assets.custom_fields.custom_field_service") as mock_service:
+        with patch(
+            "src.api.v1.assets.custom_fields.custom_field_service"
+        ) as mock_service:
             mock_service.validate_custom_field_value_async = AsyncMock(
                 return_value=(True, None)
             )
@@ -353,10 +383,14 @@ class TestValidateCustomFieldValue:
             value="test value",
         )
 
-    async def test_validate_custom_field_value_not_found(self, mock_db, mock_current_user):
+    async def test_validate_custom_field_value_not_found(
+        self, mock_db, mock_current_user
+    ):
         from src.api.v1.assets.custom_fields import validate_custom_field_value
 
-        with patch("src.api.v1.assets.custom_fields.custom_field_service") as mock_service:
+        with patch(
+            "src.api.v1.assets.custom_fields.custom_field_service"
+        ) as mock_service:
             mock_service.validate_custom_field_value_async = AsyncMock(
                 side_effect=ResourceNotFoundError("字段", "nonexistent-id")
             )
@@ -382,12 +416,18 @@ class TestGetFieldTypes:
 
 
 class TestGetAssetCustomFieldValues:
-    async def test_get_asset_custom_field_values_success(self, mock_db, mock_current_user):
+    async def test_get_asset_custom_field_values_success(
+        self, mock_db, mock_current_user
+    ):
         from src.api.v1.assets.custom_fields import get_asset_custom_field_values
 
         mock_values = [{"field_name": "field1", "value": "value1"}]
-        with patch("src.api.v1.assets.custom_fields.custom_field_service") as mock_service:
-            mock_service.get_asset_field_values_async = AsyncMock(return_value=mock_values)
+        with patch(
+            "src.api.v1.assets.custom_fields.custom_field_service"
+        ) as mock_service:
+            mock_service.get_asset_field_values_async = AsyncMock(
+                return_value=mock_values
+            )
             result = await get_asset_custom_field_values(
                 asset_id="asset-123",
                 db=mock_db,
@@ -402,14 +442,18 @@ class TestGetAssetCustomFieldValues:
 
 
 class TestUpdateAssetCustomFieldValues:
-    async def test_update_asset_custom_field_values_success(self, mock_db, mock_current_user):
+    async def test_update_asset_custom_field_values_success(
+        self, mock_db, mock_current_user
+    ):
         from src.api.v1.assets.custom_fields import update_asset_custom_field_values
         from src.schemas.asset import CustomFieldValueUpdate
 
         values_update = CustomFieldValueUpdate(
             values=[{"field_name": "field1", "value": "new_value1"}]
         )
-        with patch("src.api.v1.assets.custom_fields.custom_field_service") as mock_service:
+        with patch(
+            "src.api.v1.assets.custom_fields.custom_field_service"
+        ) as mock_service:
             mock_service.update_asset_field_values_async = AsyncMock(
                 return_value=values_update.values
             )
@@ -432,7 +476,9 @@ class TestUpdateAssetCustomFieldValues:
         values_update = CustomFieldValueUpdate(
             values=[{"field_name": "field1", "value": "invalid"}]
         )
-        with patch("src.api.v1.assets.custom_fields.custom_field_service") as mock_service:
+        with patch(
+            "src.api.v1.assets.custom_fields.custom_field_service"
+        ) as mock_service:
             mock_service.update_asset_field_values_async = AsyncMock(
                 side_effect=BusinessValidationError(
                     message="字段值验证失败",
@@ -451,14 +497,18 @@ class TestUpdateAssetCustomFieldValues:
 
 
 class TestBatchSetCustomFieldValues:
-    async def test_batch_set_custom_field_values_success(self, mock_db, mock_current_user):
+    async def test_batch_set_custom_field_values_success(
+        self, mock_db, mock_current_user
+    ):
         from src.api.v1.assets.custom_fields import batch_set_custom_field_values
 
         updates = [
             {"asset_id": "asset-1", "values": [{"field_name": "f1", "value": "v1"}]},
             {"asset_id": "asset-2", "values": [{"field_name": "f2", "value": "v2"}]},
         ]
-        with patch("src.api.v1.assets.custom_fields.custom_field_service") as mock_service:
+        with patch(
+            "src.api.v1.assets.custom_fields.custom_field_service"
+        ) as mock_service:
             mock_service.update_asset_field_values_async = AsyncMock(
                 side_effect=[updates[0]["values"], updates[1]["values"]]
             )
@@ -481,7 +531,9 @@ class TestBatchSetCustomFieldValues:
             {"asset_id": "asset-1", "values": [{"field_name": "f1", "value": "v1"}]},
             {"asset_id": "asset-2", "values": [{"field_name": "f2", "value": "v2"}]},
         ]
-        with patch("src.api.v1.assets.custom_fields.custom_field_service") as mock_service:
+        with patch(
+            "src.api.v1.assets.custom_fields.custom_field_service"
+        ) as mock_service:
             mock_service.update_asset_field_values_async = AsyncMock(
                 side_effect=[updates[0]["values"], Exception("Update failed")]
             )
@@ -506,7 +558,9 @@ class TestBatchSetCustomFieldValues:
             {"values": [{"field_name": "f2", "value": "v2"}]},
             {"asset_id": "asset-3", "values": [{"field_name": "f3", "value": "v3"}]},
         ]
-        with patch("src.api.v1.assets.custom_fields.custom_field_service") as mock_service:
+        with patch(
+            "src.api.v1.assets.custom_fields.custom_field_service"
+        ) as mock_service:
             mock_service.update_asset_field_values_async = AsyncMock(
                 side_effect=[updates[0]["values"], updates[2]["values"]]
             )
@@ -517,4 +571,7 @@ class TestBatchSetCustomFieldValues:
             )
 
         assert len(result["results"]) == 2
-        assert {item["asset_id"] for item in result["results"]} == {"asset-1", "asset-3"}
+        assert {item["asset_id"] for item in result["results"]} == {
+            "asset-1",
+            "asset-3",
+        }

@@ -4,16 +4,12 @@ RBAC服务层
 
 import logging
 from datetime import UTC, datetime
-from inspect import isawaitable
 from typing import Any
 
-from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.exception_handler import (
     DuplicateResourceError,
-    InternalServerError,
-    InvalidRequestError,
     OperationNotAllowedError,
     ResourceConflictError,
     ResourceNotFoundError,
@@ -23,305 +19,65 @@ from ...crud.query_builder import PartyFilter
 from ...crud.rbac import (
     permission_audit_log_crud,
     permission_crud,
-    permission_grant_crud,
-    resource_permission_crud,
     role_crud,
     user_role_assignment_crud,
 )
-from ...models.rbac import (  # DEPRECATED
-    Permission,
-    PermissionGrant,  # DEPRECATED
-    Role,
-    UserRoleAssignment,
-)
+from ...models.rbac import Permission, Role, UserRoleAssignment
 from ...schemas.rbac import (
     PermissionCheckRequest,
     PermissionCheckResponse,
     PermissionCreate,
-    PermissionGrantUpdate,  # DEPRECATED
-    PermissionResponse,
-    ResourcePermissionResponse,  # DEPRECATED
-    RoleCreate,
-    RoleResponse,
-    RoleUpdate,
     UserPermissionSummary,
     UserRoleAssignmentCreate,
 )
 from ...services.party_scope import resolve_user_party_filter
-from .permission_cache_service import get_permission_cache_service
+from .rbac_cache import (
+    invalidate_permission_cache_for_role,
+)
+from .rbac_grant import RBACGrantMixin
+from .rbac_policy import (
+    ADMIN_PERMISSION_ACTION,
+    ADMIN_PERMISSION_RESOURCE,
+    LEGACY_ADMIN_PERMISSION_ACTION,
+    calculate_effective_permissions,
+    conditions_match,
+    get_role_permission_conditions,
+    get_user_permissions_summary,
+    role_has_admin_permission,
+    role_has_permission,
+    scope_matches,
+    user_has_admin_permission,
+)
+from .rbac_role import RBACRoleMixin
 
-# Global admin permission used for full access
-ADMIN_PERMISSION_RESOURCE = "system"
-ADMIN_PERMISSION_ACTION = "admin"
-LEGACY_ADMIN_PERMISSION_ACTION = "manage"
-VALID_GRANT_EFFECTS = {"allow", "deny"}
+# Re-export public constants for backward compatibility
+__all__ = [
+    "ADMIN_PERMISSION_ACTION",
+    "ADMIN_PERMISSION_RESOURCE",
+    "LEGACY_ADMIN_PERMISSION_ACTION",
+    "RBACService",
+]
+
 logger = logging.getLogger(__name__)
 
 _user_crud = UserCRUD()
 
 
-def invalidate_user_accessible_organizations_cache(user_id: str | None = None) -> None:
-    """
-    失效组织可见范围缓存（延迟导入避免循环依赖）。
-    """
-    from ..organization_permission_service import (
-        invalidate_user_accessible_organizations_cache as _invalidate_cache,
-    )
-
-    _invalidate_cache(user_id)
+# Backward-compat re-export (used by __init__.py and external callers)
+from .rbac_cache import (  # noqa: E402, F811
+    get_permission_cache_service,
+    invalidate_user_accessible_organizations_cache,
+)
 
 
-class RBACService:
+class RBACService(RBACRoleMixin, RBACGrantMixin):
     """RBAC服务"""
 
     def __init__(self, db: AsyncSession):
         self.db = db
         self.user_crud = UserCRUD()
 
-    # ==================== 角色管理 ====================
-
-    async def create_role(self, role_data: RoleCreate, created_by: str) -> Role:
-        """创建角色"""
-        existing_role = await role_crud.get_by_name(self.db, name=role_data.name)
-        if existing_role:
-            raise DuplicateResourceError("角色", "name", role_data.name)
-
-        role = await role_crud.create(
-            self.db, obj_in=role_data, created_by=created_by
-        )
-
-        # 添加权限
-        if role_data.permission_ids:
-            await self.update_role_permissions(
-                role_id=str(role.id),
-                permission_ids=role_data.permission_ids,
-                updated_by=created_by,
-            )
-
-        return role
-
-    async def update_role(
-        self,
-        role_id: str,
-        role_data: RoleUpdate,
-        updated_by: str,
-        party_filter: PartyFilter | None = None,
-        current_user_id: str | None = None,
-    ) -> Role:
-        """更新角色"""
-        resolved_party_filter = await self._resolve_party_filter(
-            current_user_id=current_user_id,
-            party_filter=party_filter,
-        )
-        role = await role_crud.get(
-            self.db,
-            id=role_id,
-            party_filter=resolved_party_filter,
-        )
-        if not role:
-            raise ResourceNotFoundError("角色", role_id)
-
-        if role.is_system_role:
-            raise OperationNotAllowedError("系统角色不能修改", reason="system_role")
-
-        # 检查名称唯一性
-        if role_data.display_name and role_data.display_name != role.display_name:
-            if await role_crud.check_display_name_exists_async(
-                self.db, role_data.display_name, exclude_role_id=role_id
-            ):
-                raise DuplicateResourceError("角色", "display_name", role_data.display_name)
-
-        # 更新字段
-        update_data = role_data.model_dump(
-            exclude_unset=True, exclude={"permission_ids"}
-        )
-        if update_data:
-            update_data["updated_at"] = datetime.now(UTC)
-            update_data["updated_by"] = updated_by
-            role = await role_crud.update(self.db, db_obj=role, obj_in=update_data)
-
-        # 更新权限
-        if role_data.permission_ids is not None:
-            await self.update_role_permissions(
-                role_id=str(role.id),
-                permission_ids=role_data.permission_ids,
-                updated_by=updated_by,
-                party_filter=resolved_party_filter,
-                current_user_id=current_user_id,
-            )
-
-        return role
-
-    async def delete_role(
-        self,
-        role_id: str,
-        deleted_by: str,
-        party_filter: PartyFilter | None = None,
-        current_user_id: str | None = None,
-    ) -> bool:
-        """删除角色"""
-        resolved_party_filter = await self._resolve_party_filter(
-            current_user_id=current_user_id,
-            party_filter=party_filter,
-        )
-        role = await role_crud.get(
-            self.db,
-            id=role_id,
-            party_filter=resolved_party_filter,
-        )
-        if not role:
-            return False
-
-        if role.is_system_role:
-            raise OperationNotAllowedError("系统角色不能删除", reason="system_role")
-
-        # 保存角色名称用于审计日志（在删除之前）
-        role_name = role.name
-
-        # 检查是否有用户使用此角色
-        user_count = await user_role_assignment_crud.count_by_role(
-            self.db, role_id=role_id
-        )
-
-        if user_count > 0:
-            raise OperationNotAllowedError(
-                f"角色正在被 {user_count} 个用户使用，无法删除",
-                reason="role_in_use",
-            )
-
-        try:
-            await role_crud.remove(self.db, id=role_id)
-        except Exception as exc:  # pragma: no cover - defensive for DB layer errors
-            raise InternalServerError("删除角色失败", original_error=exc) from exc
-
-        await self._invalidate_permission_cache_for_role(role_id)
-
-        # 记录审计日志（使用保存的role_name，因为role已被删除）
-        await self._create_permission_audit_log(
-            action="role_delete",
-            resource_type="role",
-            resource_id=role_id,
-            operator_id=deleted_by,
-            old_permissions={"role_name": role_name},
-            reason="角色删除",
-        )
-
-        return True
-
-    async def update_role_permissions(
-        self,
-        *,
-        role_id: str,
-        permission_ids: list[str],
-        updated_by: str,
-        party_filter: PartyFilter | None = None,
-        current_user_id: str | None = None,
-    ) -> None:
-        """更新角色权限"""
-        resolved_party_filter = await self._resolve_party_filter(
-            current_user_id=current_user_id,
-            party_filter=party_filter,
-        )
-        role = await role_crud.get(
-            self.db,
-            id=role_id,
-            party_filter=resolved_party_filter,
-        )
-        if not role:
-            raise ResourceNotFoundError("角色", role_id)
-        if role.is_system_role:
-            raise OperationNotAllowedError("系统角色权限无法修改", reason="system_role")
-
-        await self._assign_permissions_to_role(role_id, permission_ids, updated_by)
-        await self.db.commit()
-        await self._invalidate_permission_cache_for_role(role_id)
-
-    async def get_role(
-        self,
-        role_id: str,
-        party_filter: PartyFilter | None = None,
-        current_user_id: str | None = None,
-    ) -> Role | None:
-        """获取角色详情"""
-        resolved_party_filter = await self._resolve_party_filter(
-            current_user_id=current_user_id,
-            party_filter=party_filter,
-        )
-        return await role_crud.get(
-            self.db,
-            id=role_id,
-            party_filter=resolved_party_filter,
-        )
-
-    async def get_roles(
-        self,
-        skip: int = 0,
-        limit: int = 100,
-        search: str | None = None,
-        category: str | None = None,
-        is_active: bool | None = None,
-        party_id: str | None = None,
-        organization_id: str | None = None,  # DEPRECATED alias
-        party_filter: PartyFilter | None = None,
-        current_user_id: str | None = None,
-    ) -> tuple[list[Role], int]:
-        """获取角色列表"""
-        resolved_party_filter = await self._resolve_party_filter(
-            current_user_id=current_user_id,
-            party_filter=party_filter,
-        )
-        return await role_crud.get_multi_with_filters(
-            db=self.db,
-            skip=skip,
-            limit=limit,
-            search=search,
-            category=category,
-            is_active=is_active,
-            party_id=party_id,
-            organization_id=organization_id,  # DEPRECATED alias
-            party_filter=resolved_party_filter,
-        )
-
-    async def get_role_users(
-        self,
-        role_id: str,
-        *,
-        skip: int = 0,
-        limit: int = 100,
-        party_filter: PartyFilter | None = None,
-        current_user_id: str | None = None,
-    ) -> tuple[list[Any], int]:
-        role = await self.get_role(
-            role_id,
-            party_filter=party_filter,
-            current_user_id=current_user_id,
-        )
-        if not role:
-            raise ResourceNotFoundError("角色", role_id)
-        return await self.user_crud.get_users_by_role(self.db, role_id, skip, limit)
-
-    async def get_role_statistics(self) -> dict[str, Any]:
-        by_category = await role_crud.count_by_category(self.db)
-        counts = await role_crud.count_by_flags(self.db)
-        return {
-            "total_roles": counts["total"],
-            "active_roles": counts["active"],
-            "system_roles": counts["system"],
-            "custom_roles": counts["custom"],
-            "by_category": by_category,
-        }
-
-    async def get_all_permissions_grouped(
-        self, *, limit: int = 10000
-    ) -> tuple[dict[str, list[Permission]], int]:
-        permissions = await permission_crud.get_multi(self.db, skip=0, limit=limit)
-        grouped: dict[str, list[Permission]] = {}
-        for permission in permissions:
-            resource = str(permission.resource)
-            if resource not in grouped:
-                grouped[resource] = []
-            grouped[resource].append(permission)
-        return grouped, len(permissions)
+    # 角色管理方法继承自 RBACRoleMixin
 
     # ==================== 权限管理 ====================
 
@@ -351,14 +107,8 @@ class RBACService:
         resource: str | None = None,
         action: str | None = None,
         is_system_permission: bool | None = None,
-        party_filter: PartyFilter | None = None,
-        current_user_id: str | None = None,
     ) -> tuple[list[Permission], int]:
-        """获取权限列表"""
-        resolved_party_filter = await self._resolve_party_filter(
-            current_user_id=current_user_id,
-            party_filter=party_filter,
-        )
+        """获取权限列表（全局权限元数据，不按主体隔离）。"""
         return await permission_crud.get_multi_with_count_async(
             self.db,
             skip=skip,
@@ -367,7 +117,6 @@ class RBACService:
             resource=resource,
             action=action,
             is_system_permission=is_system_permission,
-            party_filter=resolved_party_filter,
         )
 
     async def _resolve_party_filter(
@@ -488,240 +237,19 @@ class RBACService:
     async def check_permission(
         self, user_id: str, permission_request: PermissionCheckRequest
     ) -> PermissionCheckResponse:
-        """检查用户权限"""
+        """检查用户权限。
+
+        Uses instance methods ``get_user_roles``, ``_user_has_admin_permission``
+        and ``_get_matching_permission_grants`` so that tests can patch them on
+        the service instance.
+        """
         user = await self.user_crud.get_async(self.db, user_id)
         if not user or not user.is_active:
             return PermissionCheckResponse(
                 has_permission=False, reason="用户不存在或已禁用", conditions=None
             )
 
-        static_result = await self._check_static_permission(user_id, permission_request)
-        if static_result.has_permission:
-            return static_result
-
-        grant_result = await self._check_grant_permission(user_id, permission_request)
-        if grant_result.has_permission:
-            return grant_result
-
-        if grant_result.reason == "命中拒绝授权":
-            deny_reason = grant_result.reason
-        else:
-            deny_reason = static_result.reason or grant_result.reason or "权限不足"
-        return PermissionCheckResponse(
-            has_permission=False,
-            granted_by=[],
-            conditions=None,
-            reason=deny_reason,
-        )
-
-    async def is_admin(self, user_id: str) -> bool:
-        """判断用户是否为管理员（兼容 system:admin / system:manage）"""
-        admin_request = PermissionCheckRequest(
-            resource=ADMIN_PERMISSION_RESOURCE,
-            action=ADMIN_PERMISSION_ACTION,
-            resource_id=None,
-            context=None,
-        )
-        result = await self.check_permission(user_id, admin_request)
-        return result.has_permission
-
-    async def get_user_role_summary(self, user_id: str) -> dict[str, Any]:
-        """获取用户角色汇总信息（含主角色与管理员标记）"""
-        roles = await self.get_user_roles(user_id)
-        roles_sorted = sorted(roles, key=lambda role: role.level or 0)
-        primary = roles_sorted[0] if roles_sorted else None
-        is_admin = await self._user_has_admin_permission(user_id, roles_sorted)
-        return {
-            "roles": [role.name for role in roles_sorted],
-            "role_ids": [str(role.id) for role in roles_sorted],
-            "primary_role_id": str(primary.id) if primary else None,
-            "primary_role_name": (
-                primary.display_name if primary and primary.display_name else None
-            ),
-            "is_admin": is_admin,
-        }
-
-    async def get_user_permissions_summary(self, user_id: str) -> UserPermissionSummary:
-        """获取用户权限汇总"""
-        user = await self.user_crud.get_async(self.db, user_id)
-        if not user:
-            raise ResourceNotFoundError("用户", user_id)
-
-        cache_service = get_permission_cache_service()
-        cached_summary = await cache_service.get_user_permission_summary(user_id)
-        if isinstance(cached_summary, dict):
-            try:
-                return UserPermissionSummary.model_validate(cached_summary)
-            except Exception:
-                logger.warning(
-                    "Invalid cached permission summary for user %s, fallback to DB",
-                    user_id,
-                    exc_info=True,
-                )
-
-        # 获取用户角色
-        roles = await self.get_user_roles(user_id)
-
-        # 获取角色权限
-        role_permissions = set()
-        for role in roles:
-            for permission in role.permissions:
-                role_permissions.add(permission)
-
-        # 获取统一授权权限（动态/临时/资源级授权合并）
-        granted_permissions = await permission_grant_crud.get_granted_permissions_async(
-            self.db, user_id, now=datetime.now()
-        )
-        for permission in granted_permissions:
-            role_permissions.add(permission)
-
-        # 获取资源权限
-        resource_permissions = await resource_permission_crud.get_multi(
-            self.db,
-            filters={
-                "user_id": user_id,
-                "is_active": True,
-            },
-            skip=0,
-            limit=10000,
-        )
-
-        # 计算有效权限
-        effective_permissions = self._calculate_effective_permissions(
-            roles, resource_permissions, granted_permissions
-        )
-
-        roles_response = [RoleResponse.model_validate(role) for role in roles]
-        permissions_response = [
-            PermissionResponse.model_validate(permission)
-            for permission in role_permissions
-        ]
-        resource_permissions_response = [
-            ResourcePermissionResponse.model_validate(resource_permission)  # DEPRECATED
-            for resource_permission in resource_permissions
-        ]
-
-        summary = UserPermissionSummary(
-            user_id=user_id,
-            username=user.username,
-            roles=roles_response,
-            permissions=permissions_response,
-            resource_permissions=resource_permissions_response,
-            effective_permissions=effective_permissions,
-        )
-        await cache_service.set_user_permission_summary(
-            user_id,
-            summary.model_dump(mode="json"),
-        )
-        return summary
-
-    # ==================== 私有方法 ====================
-
-    async def _invalidate_user_permission_cache(self, user_id: str) -> None:
-        """失效单用户权限缓存与组织可见范围缓存。"""
-        cache_service = get_permission_cache_service()
-        try:
-            await cache_service.invalidate_user_cache(user_id)
-        except Exception:
-            logger.warning(
-                "Failed to invalidate permission cache for user %s",
-                user_id,
-                exc_info=True,
-            )
-
-        try:
-            invalidate_user_accessible_organizations_cache(user_id)
-        except Exception:
-            logger.warning(
-                "Failed to invalidate organization access cache for user %s",
-                user_id,
-                exc_info=True,
-            )
-
-        try:
-            from ..authz import AUTHZ_USER_ROLE_UPDATED, authz_event_bus
-
-            authz_event_bus.publish_invalidation(
-                event_type=AUTHZ_USER_ROLE_UPDATED,
-                payload={"user_id": user_id},
-            )
-        except Exception:
-            logger.warning(
-                "Failed to publish authz user-role invalidation event for user %s",
-                user_id,
-                exc_info=True,
-            )
-
-    async def _get_active_user_ids_by_role(self, role_id: str) -> list[str]:
-        """查询当前角色关联的活跃用户ID列表。"""
-        now = datetime.now(UTC)
-        stmt = select(UserRoleAssignment.user_id).where(
-            UserRoleAssignment.role_id == role_id,
-            UserRoleAssignment.is_active.is_(True),
-            or_(
-                UserRoleAssignment.expires_at.is_(None),
-                UserRoleAssignment.expires_at > now,
-            ),
-        )
-        rows = (await self.db.execute(stmt)).all()
-        if isawaitable(rows):
-            rows = await rows
-        user_ids = [str(row[0]) for row in rows if row and row[0] is not None]
-        return sorted(set(user_ids))
-
-    async def _invalidate_permission_cache_for_role(self, role_id: str) -> None:
-        """角色维度缓存失效（角色缓存 + 受影响用户缓存）。"""
-        cache_service = get_permission_cache_service()
-        try:
-            await cache_service.invalidate_role_cache(role_id)
-        except Exception:
-            logger.warning(
-                "Failed to invalidate role cache for %s",
-                role_id,
-                exc_info=True,
-            )
-
-        user_ids = await self._get_active_user_ids_by_role(role_id)
-        for user_id in user_ids:
-            await self._invalidate_user_permission_cache(user_id)
-
-    async def _assign_permissions_to_role(
-        self, role_id: str, permission_ids: list[str], operator_id: str
-    ) -> None:
-        """为角色分配权限"""
-        role = await role_crud.get(self.db, id=role_id)
-        if not role:
-            raise ResourceNotFoundError("角色", role_id)
-        if role.is_system_role:
-            raise OperationNotAllowedError(
-                "系统角色权限无法修改", reason="system_role"
-            )
-
-        permissions: list[Permission] = []
-        if permission_ids:
-            permissions = await permission_crud.get_by_ids_async(self.db, permission_ids)
-            found_ids = {str(permission.id) for permission in permissions}
-            missing_ids = sorted(set(permission_ids) - found_ids)
-            if missing_ids:
-                raise ResourceNotFoundError(
-                    "权限",
-                    ",".join(missing_ids),
-                    details={"missing_permission_ids": missing_ids},
-                )
-
-        role.permissions.clear()
-        if permissions:
-            role.permissions.extend(permissions)
-        role.updated_at = datetime.now(UTC)
-        role.updated_by = operator_id
-
-        await self.db.flush()
-        await role_crud.update_permissions_created_by_async(self.db, role_id, operator_id)
-
-    async def _check_static_permission(
-        self, user_id: str, permission_request: PermissionCheckRequest
-    ) -> PermissionCheckResponse:
-        """检查静态RBAC权限（角色+系统管理员权限）"""
+        # --- static RBAC (roles + admin) ---
         user_roles = await self.get_user_roles(user_id)
         if await self._user_has_admin_permission(user_id, user_roles):
             return PermissionCheckResponse(
@@ -730,59 +258,47 @@ class RBACService:
                 conditions=None,
                 reason=None,
             )
-        if not user_roles:
-            return PermissionCheckResponse(
-                has_permission=False, granted_by=[], conditions=None, reason="用户未分配任何角色"
-            )
+        if user_roles:
+            granted_by: list[str] = []
+            conditions: dict[str, Any] | None = None
+            for role in user_roles:
+                if not role_has_permission(role, permission_request):
+                    continue
+                granted_by.append(f"role_{role.name}")
+                role_conditions = get_role_permission_conditions(
+                    role, permission_request
+                )
+                if role_conditions:
+                    if conditions is None:
+                        conditions = dict(role_conditions)
+                    else:
+                        conditions = {**conditions, **role_conditions}
+            if granted_by:
+                return PermissionCheckResponse(
+                    has_permission=True,
+                    granted_by=granted_by,
+                    conditions=conditions,
+                    reason=None,
+                )
+            static_reason = "静态角色权限未命中"
+        else:
+            static_reason = "用户未分配任何角色"
 
-        granted_by: list[str] = []
-        conditions: dict[str, Any] | None = None
-        for role in user_roles:
-            if not self._role_has_permission(role, permission_request):
-                continue
-            granted_by.append(f"role_{role.name}")
-            role_conditions = self._get_role_permission_conditions(
-                role, permission_request
-            )
-            if role_conditions:
-                if conditions is None:
-                    conditions = dict(role_conditions)
-                else:
-                    conditions = {**conditions, **role_conditions}
-
-        if granted_by:
-            return PermissionCheckResponse(
-                has_permission=True,
-                granted_by=granted_by,
-                conditions=conditions,
-                reason=None,
-            )
-
-        return PermissionCheckResponse(
-            has_permission=False,
-            granted_by=[],
-            conditions=None,
-            reason="静态角色权限未命中",
-        )
-
-    async def _check_grant_permission(
-        self, user_id: str, permission_request: PermissionCheckRequest
-    ) -> PermissionCheckResponse:
-        """检查统一授权记录权限（动态/临时/资源级）"""
+        # --- grant-based permission ---
         grants = await self._get_matching_permission_grants(user_id, permission_request)
         if not grants:
             return PermissionCheckResponse(
                 has_permission=False,
                 granted_by=[],
                 conditions=None,
-                reason="统一授权未命中",
+                reason=static_reason,
             )
 
         valid_grants = [
-            grant
-            for grant in grants
-            if self._scope_matches(grant, permission_request)
-            and self._conditions_match(grant, permission_request)
+            g
+            for g in grants
+            if scope_matches(g, permission_request)
+            and conditions_match(g, permission_request)
         ]
         if not valid_grants:
             return PermissionCheckResponse(
@@ -792,16 +308,17 @@ class RBACService:
                 reason="统一授权条件不满足",
             )
 
-        def _grant_sort_key(grant: PermissionGrant) -> tuple[int, float]:  # DEPRECATED
-            created_at = getattr(grant, "created_at", None)
-            created_at_ts = (
-                created_at.timestamp()
-                if isinstance(created_at, datetime)
-                else 0.0
-            )
-            return int(getattr(grant, "priority", 0) or 0), created_at_ts
-
-        valid_grants.sort(key=_grant_sort_key, reverse=True)
+        valid_grants.sort(
+            key=lambda g: (
+                int(getattr(g, "priority", 0) or 0),
+                (
+                    getattr(g, "created_at").timestamp()
+                    if hasattr(getattr(g, "created_at", None), "timestamp")
+                    else 0.0
+                ),
+            ),
+            reverse=True,
+        )
 
         deny_grants = [g for g in valid_grants if (g.effect or "allow") == "deny"]
         if deny_grants:
@@ -838,407 +355,123 @@ class RBACService:
             reason=None,
         )
 
-    async def _get_matching_permission_grants(
-        self, user_id: str, permission_request: PermissionCheckRequest
-    ) -> list[PermissionGrant]:  # DEPRECATED
-        return await permission_grant_crud.get_matching_grants_async(
-            self.db,
-            user_id=user_id,
-            resource=permission_request.resource,
-            action=permission_request.action,
-            now=datetime.now(),
+    async def is_admin(self, user_id: str) -> bool:
+        """判断用户是否为管理员（兼容 system:admin / system:manage）"""
+        admin_request = PermissionCheckRequest(
+            resource=ADMIN_PERMISSION_RESOURCE,
+            action=ADMIN_PERMISSION_ACTION,
+            resource_id=None,
+            context=None,
         )
+        result = await self.check_permission(user_id, admin_request)
+        return result.has_permission
 
-    def _scope_matches(
-        self, grant: PermissionGrant, permission_request: PermissionCheckRequest  # DEPRECATED
-    ) -> bool:
-        scope = (grant.scope or "global").lower()
-        if scope == "global":
-            return True
-
-        request_resource_id = permission_request.resource_id
-        request_context = permission_request.context or {}
-
-        if grant.scope_id is None:
-            return True
-
-        if request_resource_id and str(request_resource_id) == str(grant.scope_id):
-            return True
-
-        context_scope_keys = [
-            f"{scope}_id",
-            "scope_id",
-            "organization_id",  # DEPRECATED context key
-            "party_id",
-            "project_id",
-            "asset_id",
-        ]
-        for key in context_scope_keys:
-            context_value = request_context.get(key)
-            if context_value is not None and str(context_value) == str(grant.scope_id):
-                return True
-        return False
-
-    def _conditions_match(
-        self, grant: PermissionGrant, permission_request: PermissionCheckRequest  # DEPRECATED
-    ) -> bool:
-        if not grant.conditions:
-            return True
-
-        context = permission_request.context or {}
-        for key, expected in grant.conditions.items():
-            if key == "resource_id":
-                actual = permission_request.resource_id
-            else:
-                actual = context.get(key)
-
-            if isinstance(expected, list):
-                if actual not in expected:
-                    return False
-            elif actual != expected:
-                return False
-        return True
-
-    async def grant_permission_to_user(
-        self,
-        *,
-        user_id: str,
-        permission_id: str,
-        grant_type: str,
-        granted_by: str,
-        effect: str = "allow",
-        scope: str = "global",
-        scope_id: str | None = None,
-        conditions: dict[str, Any] | None = None,
-        starts_at: datetime | None = None,
-        expires_at: datetime | None = None,
-        priority: int = 100,
-        source_type: str | None = None,
-        source_id: str | None = None,
-        reason: str | None = None,
-    ) -> PermissionGrant:  # DEPRECATED
-        """创建统一授权记录"""
-        user = await self.user_crud.get_async(self.db, user_id)
-        if not user:
-            raise ResourceNotFoundError("用户", user_id)
-
-        permission = await permission_crud.get(self.db, id=permission_id)
-        if not permission:
-            raise ResourceNotFoundError("权限", permission_id)
-
-        normalized_effect = (effect or "allow").strip().lower()
-        if normalized_effect not in VALID_GRANT_EFFECTS:
-            raise InvalidRequestError(
-                "授权效果必须是 allow 或 deny",
-                field="effect",
-                details={"allowed_values": sorted(VALID_GRANT_EFFECTS)},
-            )
-
-        if starts_at and expires_at and expires_at <= starts_at:
-            raise InvalidRequestError(
-                "expires_at 必须晚于 starts_at",
-                field="expires_at",
-            )
-
-        grant = await permission_grant_crud.create(
-            self.db,
-            obj_in={
-                "user_id": user_id,
-                "permission_id": permission_id,
-                "grant_type": (grant_type or "direct").strip().lower(),
-                "effect": normalized_effect,
-                "scope": (scope or "global").strip().lower(),
-                "scope_id": scope_id,
-                "conditions": conditions,
-                "starts_at": starts_at,
-                "expires_at": expires_at,
-                "priority": priority,
-                "source_type": source_type,
-                "source_id": source_id,
-                "granted_by": granted_by,
-                "reason": reason,
-                "is_active": True,
-            },
+    async def get_user_role_summary(self, user_id: str) -> dict[str, Any]:
+        """获取用户角色汇总信息（含主角色与管理员标记）"""
+        roles = await self.get_user_roles(user_id)
+        roles_sorted = sorted(roles, key=lambda role: role.level or 0)
+        primary = roles_sorted[0] if roles_sorted else None
+        is_admin = await user_has_admin_permission(
+            self.db, user_id, roles_sorted, self.get_user_roles
         )
-
-        await self._invalidate_user_permission_cache(user_id)
-
-        await self._create_permission_audit_log(
-            action="permission_grant_create",
-            resource_type="permission_grant",
-            resource_id=str(grant.id),
-            operator_id=granted_by,
-            new_permissions={
-                "user_id": user_id,
-                "permission_id": permission_id,
-                "grant_type": grant.grant_type,
-                "effect": grant.effect,
-                "scope": grant.scope,
-                "scope_id": grant.scope_id,
-            },
-            reason=reason,
-        )
-        return grant
-
-    async def get_permission_grant(self, grant_id: str) -> PermissionGrant | None:  # DEPRECATED
-        """获取统一授权记录详情"""
-        return await permission_grant_crud.get(self.db, id=grant_id)
-
-    async def list_permission_grants(
-        self,
-        *,
-        skip: int = 0,
-        limit: int = 20,
-        user_id: str | None = None,
-        permission_id: str | None = None,
-        grant_type: str | None = None,
-        effect: str | None = None,
-        scope: str | None = None,
-        is_active: bool | None = None,
-    ) -> tuple[list[PermissionGrant], int]:  # DEPRECATED
-        """分页查询统一授权记录"""
-        return await permission_grant_crud.list_with_filters_async(
-            self.db,
-            skip=skip,
-            limit=limit,
-            user_id=user_id,
-            permission_id=permission_id,
-            grant_type=grant_type,
-            effect=effect,
-            scope=scope,
-            is_active=is_active,
-        )
-
-    async def update_permission_grant(
-        self, grant_id: str, grant_data: PermissionGrantUpdate, updated_by: str  # DEPRECATED
-    ) -> PermissionGrant:  # DEPRECATED
-        """更新统一授权记录"""
-        grant = await permission_grant_crud.get(self.db, id=grant_id)
-        if not grant:
-            raise ResourceNotFoundError("统一授权记录", grant_id)
-
-        update_data = grant_data.model_dump(exclude_unset=True)
-        old_state = {
-            "effect": grant.effect,
-            "scope": grant.scope,
-            "scope_id": grant.scope_id,
-            "starts_at": grant.starts_at.isoformat() if grant.starts_at else None,
-            "expires_at": grant.expires_at.isoformat() if grant.expires_at else None,
-            "priority": grant.priority,
-            "is_active": grant.is_active,
+        return {
+            "roles": [role.name for role in roles_sorted],
+            "role_ids": [str(role.id) for role in roles_sorted],
+            "primary_role_id": str(primary.id) if primary else None,
+            "primary_role_name": (
+                primary.display_name if primary and primary.display_name else None
+            ),
+            "is_admin": is_admin,
         }
 
-        if "effect" in update_data and update_data["effect"] is not None:
-            normalized_effect = str(update_data["effect"]).strip().lower()
-            if normalized_effect not in VALID_GRANT_EFFECTS:
-                raise InvalidRequestError(
-                    "授权效果必须是 allow 或 deny",
-                    field="effect",
-                    details={"allowed_values": sorted(VALID_GRANT_EFFECTS)},
+    async def get_user_permissions_summary(self, user_id: str) -> UserPermissionSummary:
+        """获取用户权限汇总"""
+        return await get_user_permissions_summary(
+            self.db, user_id, self.get_user_roles, user_crud=self.user_crud
+        )
+
+    # 统一授权记录管理方法继承自 RBACGrantMixin
+
+    # ==================== 私有方法 ====================
+
+    async def _invalidate_user_permission_cache(self, user_id: str) -> None:
+        """失效单用户权限缓存与组织可见范围缓存。
+
+        NOTE: 内联缓存操作而非委托给 ``rbac_cache.invalidate_user_permission_cache``，
+        确保测试 ``patch("src.services.permission.rbac_service.get_permission_cache_service")``
+        能正确拦截调用。
+        """
+        cache_service = get_permission_cache_service()
+        try:
+            await cache_service.invalidate_user_cache(user_id)
+        except Exception:
+            logger.warning(
+                "Failed to invalidate permission cache for user %s",
+                user_id,
+                exc_info=True,
+            )
+
+        try:
+            invalidate_user_accessible_organizations_cache(user_id)
+        except Exception:
+            logger.warning(
+                "Failed to invalidate organization access cache for user %s",
+                user_id,
+                exc_info=True,
+            )
+
+        try:
+            from ..authz import AUTHZ_USER_ROLE_UPDATED, authz_event_bus
+
+            authz_event_bus.publish_invalidation(
+                event_type=AUTHZ_USER_ROLE_UPDATED,
+                payload={"user_id": user_id},
+            )
+        except Exception:
+            logger.warning(
+                "Failed to publish authz user-role invalidation event for user %s",
+                user_id,
+                exc_info=True,
+            )
+
+    async def _invalidate_permission_cache_for_role(self, role_id: str) -> None:
+        """角色维度缓存失效（角色缓存 + 受影响用户缓存）。"""
+        await invalidate_permission_cache_for_role(self.db, role_id)
+
+    async def _assign_permissions_to_role(
+        self, role_id: str, permission_ids: list[str], operator_id: str
+    ) -> None:
+        """为角色分配权限"""
+        role = await role_crud.get(self.db, id=role_id)
+        if not role:
+            raise ResourceNotFoundError("角色", role_id)
+        if role.is_system_role:
+            raise OperationNotAllowedError("系统角色权限无法修改", reason="system_role")
+
+        permissions: list[Permission] = []
+        if permission_ids:
+            permissions = await permission_crud.get_by_ids_async(
+                self.db, permission_ids
+            )
+            found_ids = {str(permission.id) for permission in permissions}
+            missing_ids = sorted(set(permission_ids) - found_ids)
+            if missing_ids:
+                raise ResourceNotFoundError(
+                    "权限",
+                    ",".join(missing_ids),
+                    details={"missing_permission_ids": missing_ids},
                 )
-            update_data["effect"] = normalized_effect
 
-        if "scope" in update_data and update_data["scope"] is not None:
-            update_data["scope"] = str(update_data["scope"]).strip().lower()
+        role.permissions.clear()
+        if permissions:
+            role.permissions.extend(permissions)
+        role.updated_at = datetime.now(UTC)
+        role.updated_by = operator_id
 
-        starts_at = update_data.get("starts_at", grant.starts_at)
-        expires_at = update_data.get("expires_at", grant.expires_at)
-        if starts_at and expires_at and expires_at <= starts_at:
-            raise InvalidRequestError(
-                "expires_at 必须晚于 starts_at",
-                field="expires_at",
-            )
-
-        if update_data.get("is_active") is False and grant.is_active:
-            update_data["revoked_at"] = datetime.now(UTC)
-            update_data["revoked_by"] = updated_by
-        if update_data.get("is_active") is True and not grant.is_active:
-            update_data["revoked_at"] = None
-            update_data["revoked_by"] = None
-
-        update_data["updated_at"] = datetime.now(UTC)
-        updated_grant = await permission_grant_crud.update(
-            self.db,
-            db_obj=grant,
-            obj_in=update_data,
+        await self.db.flush()
+        await role_crud.update_permissions_created_by_async(
+            self.db, role_id, operator_id
         )
-
-        target_user_id = str(
-            getattr(updated_grant, "user_id", getattr(grant, "user_id", ""))
-        ).strip()
-        if target_user_id != "":
-            await self._invalidate_user_permission_cache(target_user_id)
-
-        await self._create_permission_audit_log(
-            action="permission_grant_update",
-            resource_type="permission_grant",
-            resource_id=str(updated_grant.id),
-            operator_id=updated_by,
-            old_permissions=old_state,
-            new_permissions={
-                "effect": updated_grant.effect,
-                "scope": updated_grant.scope,
-                "scope_id": updated_grant.scope_id,
-                "starts_at": (
-                    updated_grant.starts_at.isoformat()
-                    if updated_grant.starts_at
-                    else None
-                ),
-                "expires_at": (
-                    updated_grant.expires_at.isoformat()
-                    if updated_grant.expires_at
-                    else None
-                ),
-                "priority": updated_grant.priority,
-                "is_active": updated_grant.is_active,
-            },
-            reason=update_data.get("reason"),
-        )
-        return updated_grant
-
-    async def revoke_permission_grant(self, grant_id: str, revoked_by: str) -> bool:
-        """撤销统一授权记录"""
-        grant = await permission_grant_crud.get(self.db, id=grant_id)
-        if not grant:
-            return False
-        if not grant.is_active:
-            return True
-
-        grant.is_active = False
-        grant.revoked_at = datetime.now(UTC)
-        grant.revoked_by = revoked_by
-        grant.updated_at = datetime.now(UTC)
-        await self.db.commit()
-        await self.db.refresh(grant)
-        target_user_id = str(getattr(grant, "user_id", "")).strip()
-        if target_user_id != "":
-            await self._invalidate_user_permission_cache(target_user_id)
-
-        await self._create_permission_audit_log(
-            action="permission_grant_revoke",
-            resource_type="permission_grant",
-            resource_id=grant_id,
-            operator_id=revoked_by,
-            old_permissions={
-                "effect": grant.effect,
-                "scope": grant.scope,
-                "scope_id": grant.scope_id,
-                "is_active": True,
-            },
-            new_permissions={
-                "effect": grant.effect,
-                "scope": grant.scope,
-                "scope_id": grant.scope_id,
-                "is_active": False,
-            },
-            reason=grant.reason,
-        )
-        return True
-
-    def _role_has_admin_permission(self, role: Role) -> bool:
-        """检查角色是否具有系统管理员权限（兼容 legacy manage）"""
-        for permission in role.permissions:
-            if (
-                permission.resource == ADMIN_PERMISSION_RESOURCE
-                and permission.action
-                in {ADMIN_PERMISSION_ACTION, LEGACY_ADMIN_PERMISSION_ACTION}
-            ):
-                return True
-
-        return False
-
-    async def _user_has_admin_permission(
-        self, user_id: str, roles: list[Role]
-    ) -> bool:
-        """检查用户是否具备系统管理员权限（基于权限而非角色名）"""
-        if any(self._role_has_admin_permission(role) for role in roles):
-            return True
-
-        for action in {ADMIN_PERMISSION_ACTION, LEGACY_ADMIN_PERMISSION_ACTION}:
-            admin_request = PermissionCheckRequest(
-                resource=ADMIN_PERMISSION_RESOURCE,
-                action=action,
-                resource_id=None,
-                context=None,
-            )
-            grant_result = await self._check_grant_permission(user_id, admin_request)
-            if grant_result.has_permission:
-                return True
-        return False
-
-    def _role_has_permission(
-        self, role: Role, permission_request: PermissionCheckRequest
-    ) -> bool:
-        """检查角色是否有权限"""
-        for permission in role.permissions:
-            if (
-                permission.resource == permission_request.resource
-                and permission.action == permission_request.action
-            ):
-                return True
-        return False
-
-    def _get_role_permission_conditions(
-        self, role: Role, permission_request: PermissionCheckRequest
-    ) -> dict[str, Any] | None:
-        """获取角色权限条件"""
-        for permission in role.permissions:
-            if (
-                permission.resource == permission_request.resource
-                and permission.action == permission_request.action
-            ):
-                return permission.conditions if permission.conditions else None
-        return None  # pragma: no cover  # Defensive: only reached if role_has_permission check is bypassed
-
-    def _calculate_effective_permissions(
-        self,
-        roles: list[Role],
-        resource_permissions: list[Any],
-        granted_permissions: list[Permission] | None = None,
-    ) -> dict[str, list[str]]:
-        """计算有效权限"""
-        effective_permissions: dict[str, list[str]] = {}
-
-        # 角色权限
-        for role in roles:
-            for permission in role.permissions:
-                resource = permission.resource
-                action = permission.action
-
-                if resource not in effective_permissions:
-                    effective_permissions[resource] = []
-                if action not in effective_permissions[resource]:
-                    effective_permissions[resource].append(action)
-
-        # 资源权限
-        for rp in resource_permissions:
-            resource = rp.resource_type
-
-            # 根据权限级别添加权限
-            level_actions = {
-                "read": ["read"],
-                "write": ["read", "write"],
-                "delete": ["read", "write", "delete"],
-                "admin": ["read", "write", "delete", "admin"],
-            }
-
-            actions = level_actions.get(rp.permission_level, [])
-            for action in actions:
-                if resource not in effective_permissions:
-                    effective_permissions[resource] = []
-                if action not in effective_permissions[resource]:
-                    effective_permissions[resource].append(action)
-
-        # 统一授权记录（permission_grants）映射出的权限
-        for permission in granted_permissions or []:
-            resource = permission.resource
-            action = permission.action
-            if resource not in effective_permissions:
-                effective_permissions[resource] = []
-            if action not in effective_permissions[resource]:
-                effective_permissions[resource].append(action)
-
-        return effective_permissions
 
     async def _create_permission_audit_log(
         self,
@@ -1268,35 +501,66 @@ class RBACService:
             },
         )
 
-    def _can_manage_role(self, manager_level: int, subordinate_level: int) -> bool:
+    # ==================== 向后兼容实例方法代理 ====================
+    # 以下方法已提取为 rbac_policy.py 的独立函数，
+    # 但保留实例方法签名以兼容现有测试的 `service._xxx(...)` 调用。
+
+    def _role_has_permission(
+        self, role: Role, permission_request: PermissionCheckRequest
+    ) -> bool:
+        return role_has_permission(role, permission_request)
+
+    def _role_has_admin_permission(self, role: Role) -> bool:
+        return role_has_admin_permission(role)
+
+    def _get_role_permission_conditions(
+        self, role: Role, permission_request: PermissionCheckRequest
+    ) -> dict[str, Any] | None:
+        return get_role_permission_conditions(role, permission_request)
+
+    def _calculate_effective_permissions(
+        self,
+        roles: list[Role],
+        resource_permissions: list[Any],
+        granted_permissions: list[Permission] | None = None,
+    ) -> dict[str, list[str]]:
+        return calculate_effective_permissions(
+            roles, resource_permissions, granted_permissions
+        )
+
+    async def _user_has_admin_permission(self, user_id: str, roles: list[Role]) -> bool:
+        return await user_has_admin_permission(
+            self.db, user_id, roles, self.get_user_roles
+        )
+
+    @staticmethod
+    def _can_manage_role(manager_level: int, subordinate_level: int) -> bool:
         """检查是否可以管理指定级别的角色"""
         return manager_level > subordinate_level
 
+    async def _get_matching_permission_grants(
+        self,
+        user_id: str,
+        permission_request: PermissionCheckRequest,
+    ) -> list:
+        """向后兼容代理 — 供测试 ``patch.object(service, '_get_matching_permission_grants', ...)``。"""
+        from .rbac_policy import get_matching_permission_grants
+
+        return await get_matching_permission_grants(
+            self.db, user_id, permission_request
+        )
+
     # ==================== Permission Decorator Adapter Methods ====================
-    # These methods provide the interface expected by permission decorators
-    # They adapt the existing check_permission method to the decorator's expected signature
 
     async def check_user_permission(
         self, user_id: str, resource: str, action: str
     ) -> bool:
-        """
-        检查用户权限 - 适配器方法供装饰器使用
-
-        Args:
-            user_id: 用户ID
-            resource: 资源名称 (如: 'asset', 'user', 'role')
-            action: 操作类型 (如: 'view', 'create', 'edit', 'delete')
-
-        Returns:
-            bool: 是否有权限
-        """
-        if (
-            resource == ADMIN_PERMISSION_RESOURCE
-            and action in {ADMIN_PERMISSION_ACTION, LEGACY_ADMIN_PERMISSION_ACTION}
-        ):
+        """检查用户权限 - 适配器方法供装饰器使用"""
+        if resource == ADMIN_PERMISSION_RESOURCE and action in {
+            ADMIN_PERMISSION_ACTION,
+            LEGACY_ADMIN_PERMISSION_ACTION,
+        }:
             return await self.is_admin(user_id)
-
-        from ...schemas.rbac import PermissionCheckRequest
 
         permission_request = PermissionCheckRequest(
             resource=resource,
@@ -1311,20 +575,7 @@ class RBACService:
     async def check_resource_access(
         self, user_id: str, resource: str, resource_id: str, action: str
     ) -> bool:
-        """
-        检查资源访问权限 - 适配器方法供装饰器使用
-
-        Args:
-            user_id: 用户ID
-            resource: 资源名称
-            resource_id: 资源ID
-            action: 操作类型
-
-        Returns:
-            bool: 是否有访问权限
-        """
-        from ...schemas.rbac import PermissionCheckRequest
-
+        """检查资源访问权限 - 适配器方法供装饰器使用"""
         permission_request = PermissionCheckRequest(
             resource=resource,
             action=action,
@@ -1336,20 +587,11 @@ class RBACService:
         return response.has_permission
 
     async def check_organization_access(  # DEPRECATED compatibility API
-        self, user_id: str, organization_id: str  # DEPRECATED alias
+        self,
+        user_id: str,
+        organization_id: str,  # DEPRECATED alias
     ) -> bool:
-        """
-        检查组织访问权限 - 适配器方法供装饰器使用
-
-        Args:
-            user_id: 用户ID
-            organization_id: 组织ID（DEPRECATED）
-
-        Returns:
-            bool: 是否有组织访问权限
-        """
-        from ...schemas.rbac import PermissionCheckRequest
-
+        """检查组织访问权限 - 适配器方法供装饰器使用"""
         permission_request = PermissionCheckRequest(
             resource="organization",
             action="view",

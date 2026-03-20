@@ -56,22 +56,17 @@ def test_operation_logs_endpoints_should_use_require_authz() -> None:
         r"async def get_error_operation_statistics[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"operation_log\"",
         r"async def get_operation_log_summary[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"operation_log\"",
         r"async def export_operation_logs[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"operation_log\"",
-        r"async def cleanup_old_logs[\s\S]*?require_authz\([\s\S]*?action=\"delete\"[\s\S]*?resource_type=\"operation_log\"[\s\S]*?resource_context=_OPERATION_LOG_DELETE_RESOURCE_CONTEXT",
+        r"async def cleanup_old_logs[\s\S]*?require_authz\([\s\S]*?action=\"delete\"[\s\S]*?resource_type=\"operation_log\"",
     ]
     for pattern in patterns:
         assert re.search(pattern, module_source), pattern
 
 
-def test_operation_logs_unscoped_delete_context_should_be_defined() -> None:
+def test_operation_logs_should_not_define_fake_unscoped_delete_context() -> None:
     from src.api.v1.system import operation_logs as module
 
-    expected_sentinel = "__unscoped__:operation_log:delete"
-    assert module._OPERATION_LOG_DELETE_UNSCOPED_PARTY_ID == expected_sentinel
-    assert module._OPERATION_LOG_DELETE_RESOURCE_CONTEXT == {
-        "party_id": expected_sentinel,
-        "owner_party_id": expected_sentinel,
-        "manager_party_id": expected_sentinel,
-    }
+    assert not hasattr(module, "_OPERATION_LOG_DELETE_UNSCOPED_PARTY_ID")
+    assert not hasattr(module, "_OPERATION_LOG_DELETE_RESOURCE_CONTEXT")
 
 
 def _build_mock_log() -> MagicMock:

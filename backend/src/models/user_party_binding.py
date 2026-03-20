@@ -1,7 +1,7 @@
 """User to party relationship bindings."""
 
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
@@ -17,13 +17,10 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..database import Base
+from ..utils.time import utcnow_naive
 
 if TYPE_CHECKING:
     from .party import Party
-
-
-def _utcnow_naive() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class RelationType(StrEnum):
@@ -74,26 +71,24 @@ class UserPartyBinding(Base):
         Boolean, nullable=False, default=False, comment="是否主关系"
     )
     valid_from: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=_utcnow_naive, comment="生效时间"
+        DateTime, nullable=False, default=utcnow_naive, comment="生效时间"
     )
     valid_to: Mapped[datetime | None] = mapped_column(DateTime, comment="失效时间")
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=_utcnow_naive, comment="创建时间"
+        DateTime, nullable=False, default=utcnow_naive, comment="创建时间"
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        default=_utcnow_naive,
-        onupdate=_utcnow_naive,
+        default=utcnow_naive,
+        onupdate=utcnow_naive,
         comment="更新时间",
     )
 
     party: Mapped["Party"] = relationship("Party", back_populates="user_bindings")
 
     def __repr__(self) -> str:
-        return (
-            f"<UserPartyBinding(user_id={self.user_id}, party_id={self.party_id}, relation={self.relation_type})>"
-        )
+        return f"<UserPartyBinding(user_id={self.user_id}, party_id={self.party_id}, relation={self.relation_type})>"
 
 
 __all__ = [

@@ -11,7 +11,6 @@ import json
 import logging
 import os
 from collections.abc import Awaitable
-from datetime import UTC, datetime
 from typing import Any, cast
 
 import pandas as pd
@@ -19,13 +18,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...config.excel_config import STANDARD_SHEET_NAME
 from ...crud.asset import asset_crud
+from ...utils.time import utcnow_naive
 
 logger = logging.getLogger(__name__)
-
-
-def _utcnow_naive() -> datetime:
-    """返回 naive UTC 时间。"""
-    return datetime.now(UTC).replace(tzinfo=None)
 
 
 # 反向字段映射：数据库字段名 -> Excel中文列名
@@ -235,7 +230,7 @@ class ExcelExportService:
                 "file_path": file_path,
                 "file_name": os.path.basename(file_path),
                 "file_size": file_size,
-                "export_time": _utcnow_naive().isoformat(),
+                "export_time": utcnow_naive().isoformat(),
             }
         except Exception as e:
             logger.error(f"导出到文件失败: {str(e)}")
@@ -272,7 +267,7 @@ class ExcelExportService:
                 "file_path": file_path,
                 "file_name": os.path.basename(file_path),
                 "file_size": file_size,
-                "export_time": _utcnow_naive().isoformat(),
+                "export_time": utcnow_naive().isoformat(),
             }
         except Exception as e:
             logger.error(f"导出到文件失败: {str(e)}")
