@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
@@ -95,3 +96,58 @@ def test_frontend_coverage_gate_should_follow_vitest_artifact_paths() -> None:
     assert "test-results/frontend/reports/" in upload_path
     assert "\n          frontend/coverage/\n" not in upload_path
     assert "\n          frontend/test-results.json\n" not in upload_path
+
+
+def test_e2e_jobs_should_use_dedicated_test_database_names() -> None:
+    workflow = _load_ci_workflow()
+    expected_database_names = {
+        "backend-e2e": "zcgl_e2e_test",
+        "frontend-e2e": "zcgl_e2e_test",
+        "import-e2e": "zcgl_import_e2e_test",
+    }
+
+    for job_name, database_name in expected_database_names.items():
+        job = workflow["jobs"][job_name]
+        env = job.get("env")
+        services = job.get("services")
+
+        assert isinstance(env, dict)
+        assert isinstance(services, dict)
+        postgres_service = services.get("postgres")
+        assert isinstance(postgres_service, dict)
+        postgres_env = postgres_service.get("env")
+        assert isinstance(postgres_env, dict)
+
+        expected_suffix = f"/{database_name}"
+        assert str(env.get("DATABASE_URL", "")).endswith(expected_suffix)
+        assert str(env.get("TEST_DATABASE_URL", "")).endswith(expected_suffix)
+        if "E2E_TEST_DATABASE_URL" in env:
+            assert str(env.get("E2E_TEST_DATABASE_URL", "")).endswith(expected_suffix)
+
+        assert postgres_env.get("POSTGRES_DB") == database_name
+
+        service_options = str(postgres_service.get("options", ""))
+        assert database_name in service_options
+
+
+def test_import_e2e_targets_should_only_reference_existing_backend_specs() -> None:
+    repo_root = _repo_root()
+    makefile_text = (repo_root / "Makefile").read_text(encoding="utf-8")
+    script_text = (repo_root / "scripts" / "dev" / "run_import_e2e.sh").read_text(
+        encoding="utf-8"
+    )
+
+    referenced_tests = {
+        match
+        for match in re.findall(r"tests/e2e/[A-Za-z0-9_./-]+\.py", makefile_text + "\n" + script_text)
+    }
+    missing_tests = sorted(
+        str(path)
+        for path in referenced_tests
+        if not (repo_root / "backend" / path).exists()
+    )
+
+    assert not missing_tests, (
+        "Import-focused E2E targets must not reference deleted backend specs: "
+        f"{missing_tests}"
+    )

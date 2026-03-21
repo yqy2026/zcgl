@@ -113,7 +113,7 @@ test-e2e-import:
 
 test-e2e-import-backend:
 	cd backend && E2E_TEST_DATABASE_URL="$${E2E_TEST_DATABASE_URL:-$${TEST_DATABASE_URL:-}}" $(PYTHON) -m pytest \
-		tests/e2e/test_pdf_import_e2e.py tests/e2e/test_excel_import_e2e.py tests/e2e/test_property_certificate_import_e2e.py -m e2e --no-cov
+		tests/e2e/test_pdf_import_e2e.py tests/e2e/test_property_certificate_import_e2e.py -m e2e --no-cov
 
 test-e2e-import-frontend:
 	@curl -fsS http://127.0.0.1:8002/docs >/dev/null || (echo "[ERROR] Backend API is required at http://127.0.0.1:8002"; exit 2)
