@@ -2,6 +2,7 @@
 枚举字段管理API路由
 """
 
+import logging
 from typing import Any
 
 from fastapi import APIRouter, Depends, Path, Query
@@ -34,6 +35,7 @@ router = APIRouter(
     tags=["枚举字段管理"],
     dependencies=[Depends(get_current_active_user)],
 )
+logger = logging.getLogger(__name__)
 _ENUM_FIELD_TYPE_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:enum_field_type:create"
 _ENUM_FIELD_TYPE_CREATE_RESOURCE_CONTEXT: dict[str, str] = {
     "party_id": _ENUM_FIELD_TYPE_CREATE_UNSCOPED_PARTY_ID,
@@ -48,21 +50,36 @@ _ENUM_FIELD_USAGE_CREATE_RESOURCE_CONTEXT: dict[str, str] = {
 }
 
 
+def _clear_enum_children(value: Any) -> None:
+    try:
+        set_committed_value(value, "children", [])
+        return
+    except Exception as exc:
+        last_error = exc
+
+    try:
+        object.__setattr__(value, "children", [])
+        return
+    except Exception as exc:
+        last_error = exc
+
+    try:
+        setattr(value, "children", [])
+    except Exception as exc:
+        logger.debug(
+            "failed to clear enum children for %r: %s (previous: %s)",
+            value,
+            exc,
+            last_error,
+        )
+
+
 def _strip_enum_children(enum_values: list[Any] | None) -> None:
     """Remove children relationships to avoid async lazy-load in response models."""
     if not enum_values:
         return
     for value in enum_values:
-        try:
-            set_committed_value(value, "children", [])
-        except Exception:
-            try:
-                object.__setattr__(value, "children", [])
-            except Exception:
-                try:
-                    setattr(value, "children", [])
-                except Exception:
-                    continue
+        _clear_enum_children(value)
 
 
 def _resolve_service(service: EnumFieldService | Any) -> EnumFieldService | Any:

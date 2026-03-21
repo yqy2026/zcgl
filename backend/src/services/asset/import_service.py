@@ -183,7 +183,6 @@ class AsyncAssetImportService:
                         operator=operator_value,
                         organization_id=organization_id,  # DEPRECATED alias
                     )
-                    assert new_asset is not None
                     if getattr(new_asset, "asset_name", None) is not None:
                         existing_assets_by_name[str(new_asset.asset_name)] = new_asset
                     imported_assets.append(str(new_asset.id))
@@ -235,7 +234,6 @@ class AsyncAssetImportService:
                     operator=operator_value,
                     organization_id=organization_id,  # DEPRECATED alias
                 )
-                assert new_asset is not None
                 if getattr(new_asset, "asset_name", None) is not None:
                     existing_assets_by_name[str(new_asset.asset_name)] = new_asset
                 imported_assets.append(str(new_asset.id))

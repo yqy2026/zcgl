@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -14,6 +15,14 @@ import sqlalchemy as sa
 
 from ....core.exception_handler import ConfigurationError
 from ....database_url import get_database_url
+
+_IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def _validate_identifier(identifier: str) -> str:
+    if not _IDENTIFIER_RE.fullmatch(identifier):
+        raise ValueError(f"Invalid SQL identifier: {identifier}")
+    return identifier
 
 
 @dataclass(frozen=True)
@@ -154,8 +163,11 @@ def _fetch_rows(
     if not inspector.has_table(table_name):
         return []
 
-    selected_columns = ", ".join(columns)
-    statement = sa.text(f"SELECT {selected_columns} FROM {table_name}")
+    safe_table_name = _validate_identifier(table_name)
+    selected_columns = ", ".join(_validate_identifier(column) for column in columns)
+    statement = sa.text(
+        f"SELECT {selected_columns} FROM {safe_table_name}"  # nosec B608 - identifiers validated with _validate_identifier
+    )
     return [dict(row) for row in connection.execute(statement).mappings().all()]
 
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import re
 from collections.abc import Callable
 
 import sqlalchemy as sa
@@ -24,6 +25,13 @@ DEFAULT_CHECKS = [
 ]
 
 LEGACY_CONTRACTS_TABLE = "_".join(("rent", "contracts"))
+_IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def _validate_identifier(identifier: str) -> str:
+    if not _IDENTIFIER_RE.fullmatch(identifier):
+        raise ValueError(f"Invalid SQL identifier: {identifier}")
+    return identifier
 
 
 def _table_exists(connection: sa.engine.Connection, table_name: str) -> bool:
@@ -105,13 +113,14 @@ def _check_legacy_contracts_owner_party_not_null(
 ) -> tuple[str, int]:
     if not _column_exists(connection, LEGACY_CONTRACTS_TABLE, "owner_party_id"):
         return "SKIP", 0
+    safe_table_name = _validate_identifier(LEGACY_CONTRACTS_TABLE)
     failed = _count_query(
         connection,
         f"""
         SELECT count(*)
-        FROM {LEGACY_CONTRACTS_TABLE}
+        FROM {safe_table_name}
         WHERE owner_party_id IS NULL OR owner_party_id = ''
-        """,
+        """,  # nosec B608 - validated identifier
     )
     return _result_label(failed), failed
 
@@ -121,13 +130,14 @@ def _check_legacy_contracts_manager_party_not_null(
 ) -> tuple[str, int]:
     if not _column_exists(connection, LEGACY_CONTRACTS_TABLE, "manager_party_id"):
         return "SKIP", 0
+    safe_table_name = _validate_identifier(LEGACY_CONTRACTS_TABLE)
     failed = _count_query(
         connection,
         f"""
         SELECT count(*)
-        FROM {LEGACY_CONTRACTS_TABLE}
+        FROM {safe_table_name}
         WHERE manager_party_id IS NULL OR manager_party_id = ''
-        """,
+        """,  # nosec B608 - validated identifier
     )
     return _result_label(failed), failed
 

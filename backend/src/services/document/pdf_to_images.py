@@ -123,5 +123,5 @@ def cleanup_temp_images(image_paths: list[str]) -> None:
     parent = Path(image_paths[0]).parent
     try:
         parent.rmdir()
-    except Exception:  # pragma: no cover - best effort
-        pass
+    except Exception as exc:  # pragma: no cover - best effort
+        logger.debug("Failed to remove temp image parent %s: %s", parent, exc)

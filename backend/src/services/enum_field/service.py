@@ -1,3 +1,4 @@
+import logging
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -31,22 +32,39 @@ from ...schemas.enum_field import (
 class EnumFieldService:
     """枚举字段业务服务。"""
 
+    logger = logging.getLogger(__name__)
+
+    @staticmethod
+    def _clear_enum_children(value: Any) -> None:
+        try:
+            set_committed_value(value, "children", [])
+            return
+        except Exception as exc:
+            last_error = exc
+
+        try:
+            object.__setattr__(value, "children", [])
+            return
+        except Exception as exc:
+            last_error = exc
+
+        try:
+            setattr(value, "children", [])
+        except Exception as exc:
+            EnumFieldService.logger.debug(
+                "failed to clear enum children for %r: %s (previous: %s)",
+                value,
+                exc,
+                last_error,
+            )
+
     @staticmethod
     def _strip_enum_children(enum_values: list[Any] | None) -> None:
         """Remove children relationships to avoid async lazy-load in response models."""
         if not enum_values:
             return
         for value in enum_values:
-            try:
-                set_committed_value(value, "children", [])
-            except Exception:
-                try:
-                    object.__setattr__(value, "children", [])
-                except Exception:
-                    try:
-                        setattr(value, "children", [])
-                    except Exception:
-                        continue
+            EnumFieldService._clear_enum_children(value)
 
     def _build_tree_response(self, values: list[Any]) -> list[EnumFieldTree]:
         tree: list[EnumFieldTree] = []

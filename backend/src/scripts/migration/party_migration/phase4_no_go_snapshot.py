@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from typing import Any
@@ -15,6 +16,13 @@ from ....database_url import get_database_url
 
 VALID_TENANT_DECISIONS = {"A", "B"}
 LEGACY_CONTRACTS_TABLE = "_".join(("rent", "contracts"))
+_IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def _validate_identifier(identifier: str) -> str:
+    if not _IDENTIFIER_RE.fullmatch(identifier):
+        raise ValueError(f"Invalid SQL identifier: {identifier}")
+    return identifier
 
 
 @dataclass(frozen=True)
@@ -55,7 +63,11 @@ def _count_table_rows(
 ) -> int | None:
     if not _table_exists(connection, table_name):
         return None
-    return _count_query(connection, f"SELECT COUNT(*) FROM {table_name}")
+    safe_table_name = _validate_identifier(table_name)
+    return _count_query(
+        connection,
+        f"SELECT COUNT(*) FROM {safe_table_name}",  # nosec B608 - validated identifier
+    )
 
 
 def _count_null_or_empty(
@@ -65,13 +77,15 @@ def _count_null_or_empty(
 ) -> int | None:
     if not _column_exists(connection, table_name, column_name):
         return None
+    safe_table_name = _validate_identifier(table_name)
+    safe_column_name = _validate_identifier(column_name)
     return _count_query(
         connection,
         f"""
         SELECT COUNT(*)
-        FROM {table_name}
-        WHERE {column_name} IS NULL OR {column_name} = ''
-        """,
+        FROM {safe_table_name}
+        WHERE {safe_column_name} IS NULL OR {safe_column_name} = ''
+        """,  # nosec B608 - validated identifiers
     )
 
 

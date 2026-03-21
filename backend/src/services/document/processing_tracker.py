@@ -488,7 +488,11 @@ class BatchStatusTracker:
 
         # 尝试连接 Redis
         if REDIS_AVAILABLE and redis_host:
-            assert redis is not None
+            if redis is None:
+                logger.info(
+                    "Redis module unavailable, using in-memory batch status storage"
+                )
+                return
             try:
                 self._redis_client = redis.Redis(
                     host=redis_host,

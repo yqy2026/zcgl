@@ -96,11 +96,9 @@ def normalize_summary_period(
     if period_start is None and period_end is None:
         return _default_summary_period()
     if period_start is None:
-        assert period_end is not None
         normalized_start, _ = _month_bounds(period_end)
         return normalized_start, period_end
     if period_end is None:
-        assert period_start is not None
         _, normalized_end = _month_bounds(period_start)
         return period_start, normalized_end
     return period_start, period_end
