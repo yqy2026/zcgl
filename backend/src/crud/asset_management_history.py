@@ -27,14 +27,13 @@ class CRUDAssetManagementHistory:
         agreement: str | None = None,
         commit: bool = True,
     ) -> AssetManagementHistory:
-        record = AssetManagementHistory(
-            asset_id=asset_id,
-            manager_party_id=manager_party_id,
-            start_date=start_date or date.today(),
-            change_reason=change_reason,
-            changed_by=changed_by,
-            agreement=agreement,
-        )
+        record = AssetManagementHistory()
+        record.asset_id = asset_id
+        record.manager_party_id = manager_party_id
+        record.start_date = start_date or date.today()
+        record.change_reason = change_reason
+        record.changed_by = changed_by
+        record.agreement = agreement
         db.add(record)
         if commit:
             await db.commit()

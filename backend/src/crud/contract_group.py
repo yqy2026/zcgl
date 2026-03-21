@@ -7,7 +7,7 @@ CRUD helpers for ContractGroup（合同组）。
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import exists, func, select
+from sqlalchemy import Select, exists, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -31,7 +31,7 @@ class CRUDContractGroup:
     """ContractGroup CRUD 操作。"""
 
     @staticmethod
-    def _ownership_contracts_stmt(ownership_id: str):
+    def _ownership_contracts_stmt(ownership_id: str) -> Select[tuple[str]]:
         return (
             select(Contract.contract_id)
             .join(
@@ -581,7 +581,7 @@ class CRUDContractGroup:
     ) -> None:
         """整体替换合同组的资产关联（先删后插）。"""
         await db.execute(
-            contract_group_assets.delete().where(  # type: ignore[attr-defined]
+            contract_group_assets.delete().where(
                 contract_group_assets.c.contract_group_id == group_id
             )
         )
@@ -596,7 +596,7 @@ class CRUDContractGroup:
             if aid in existing_ids
         ]
         if rows:
-            await db.execute(contract_group_assets.insert(), rows)  # type: ignore[attr-defined]
+            await db.execute(contract_group_assets.insert(), rows)
 
 
 contract_group_crud = CRUDContractGroup()

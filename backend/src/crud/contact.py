@@ -2,7 +2,7 @@
 联系人 CRUD 操作 - 支持敏感字段加密
 """
 
-from typing import Any, cast
+from typing import Any
 
 from sqlalchemy import Select, and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -81,9 +81,7 @@ class ContactCRUD:
         return self._decrypt_contact(obj)
 
     async def create_async(self, db: AsyncSession, obj_in: dict[str, Any]) -> Contact:
-        encrypted_data = cast(
-            dict[str, Any], self.sensitive_data_handler.encrypt_data(obj_in.copy())
-        )
+        encrypted_data = self.sensitive_data_handler.encrypt_data(obj_in.copy())
         if encrypted_data.get("is_primary", False):
             await db.execute(
                 select(Contact)
@@ -121,8 +119,7 @@ class ContactCRUD:
             return []
 
         encrypted_batch: list[dict[str, Any]] = [
-            cast(dict[str, Any], self.sensitive_data_handler.encrypt_data(obj.copy()))
-            for obj in objects_in
+            self.sensitive_data_handler.encrypt_data(obj.copy()) for obj in objects_in
         ]
 
         last_primary_index_by_entity: dict[tuple[str, str], int] = {}

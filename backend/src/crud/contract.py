@@ -45,19 +45,15 @@ class CRUDContract:
         await db.flush()
 
         if lease_detail_data is not None:
-            detail = LeaseContractDetail(
-                **lease_detail_data,
-                lease_detail_id=str(uuid.uuid4()),
-                contract_id=contract.contract_id,
-            )
+            detail = LeaseContractDetail(**lease_detail_data)
+            detail.lease_detail_id = str(uuid.uuid4())
+            detail.contract = contract
             db.add(detail)
 
         if agency_detail_data is not None:
-            detail_agency = AgencyAgreementDetail(
-                **agency_detail_data,
-                agency_detail_id=str(uuid.uuid4()),
-                contract_id=contract.contract_id,
-            )
+            detail_agency = AgencyAgreementDetail(**agency_detail_data)
+            detail_agency.agency_detail_id = str(uuid.uuid4())
+            detail_agency.contract = contract
             db.add(detail_agency)
 
         if asset_ids:
@@ -213,9 +209,7 @@ class CRUDContract:
     ) -> None:
         """整体替换合同的资产关联。"""
         await db.execute(
-            contract_assets.delete().where(  # type: ignore[attr-defined]
-                contract_assets.c.contract_id == contract_id
-            )
+            contract_assets.delete().where(contract_assets.c.contract_id == contract_id)
         )
         if not asset_ids:
             return
@@ -227,7 +221,7 @@ class CRUDContract:
             if aid in existing_ids
         ]
         if rows:
-            await db.execute(contract_assets.insert(), rows)  # type: ignore[attr-defined]
+            await db.execute(contract_assets.insert(), rows)
 
 
 contract_crud = CRUDContract()

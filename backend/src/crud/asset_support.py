@@ -40,6 +40,12 @@ class SupportsScalar(Protocol[TScalar_co]):
     def scalar(self) -> TScalar_co | None | Awaitable[TScalar_co | None]: ...
 
 
+class SupportsScalarOne(Protocol[TScalar_co]):
+    """Protocol for results supporting .scalar_one()."""
+
+    def scalar_one(self) -> TScalar_co | Awaitable[TScalar_co]: ...
+
+
 class ScalarResultLike(
     SupportsAll[TScalar_co], SupportsFirst[TScalar_co], Protocol[TScalar_co]
 ):
@@ -89,6 +95,11 @@ async def _result_first(result: SupportsFirst[Any]) -> TResultRow | None:
 async def _result_scalar(result: SupportsScalar[Any]) -> TScalar | None:
     """兼容真实 AsyncSession 与测试 AsyncMock 的 result.scalar() 行为。"""
     return cast(TScalar | None, await _resolve_maybe_awaitable(result.scalar()))
+
+
+async def _result_scalar_one(result: SupportsScalarOne[Any]) -> TScalar:
+    """兼容真实 AsyncSession 与测试 AsyncMock 的 result.scalar_one() 行为。"""
+    return cast(TScalar, await _resolve_maybe_awaitable(result.scalar_one()))
 
 
 class SensitiveDataHandler:

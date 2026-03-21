@@ -376,7 +376,7 @@ async def get_project_statistics(
     _authz_ctx: AuthzContext = Depends(
         require_authz(action="read", resource_type="project")
     ),
-) -> ProjectStatisticsResponse:
+) -> dict[str, Any]:
     """
     获取项目统计概览
     """

@@ -8,7 +8,7 @@
 """
 
 import json
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -125,7 +125,7 @@ async def list_contract_groups(
             )
         ),
     ] = None,
-) -> dict:
+) -> dict[str, Any]:
     _ = current_user
     _ = _authz
     items, total = await contract_group_service.list_groups(
@@ -407,7 +407,7 @@ async def submit_contract_group_review(
             )
         ),
     ] = None,
-) -> dict:
+) -> dict[str, Any]:
     _ = _authz
     try:
         return await contract_group_service.submit_group_review(
@@ -429,8 +429,8 @@ async def submit_contract_group_review(
 )
 async def submit_contract_review(
     contract_id: str,
+    response: Response,
     payload: ContractLifecycleAction | None = None,
-    response: Response = None,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     _authz: Annotated[
@@ -689,7 +689,7 @@ async def create_contract_rent_term(
             )
         ),
     ] = None,
-) -> ContractRentTermResponse:
+) -> Any:
     _ = current_user
     _ = _authz
     try:
@@ -724,7 +724,7 @@ async def list_contract_rent_terms(
             )
         ),
     ] = None,
-) -> list[ContractRentTermResponse]:
+) -> list[Any]:
     _ = current_user
     _ = _authz
     try:
@@ -759,7 +759,7 @@ async def update_contract_rent_term(
             )
         ),
     ] = None,
-) -> ContractRentTermResponse:
+) -> Any:
     _ = current_user
     _ = _authz
     try:
@@ -834,7 +834,7 @@ async def get_contract_ledger(
             )
         ),
     ] = None,
-) -> ContractLedgerListResponse:
+) -> dict[str, Any]:
     _ = current_user
     _ = _authz
     try:
@@ -872,7 +872,7 @@ async def batch_update_contract_ledger_status(
             )
         ),
     ] = None,
-) -> list[ContractLedgerEntryResponse]:
+) -> list[Any]:
     _ = current_user
     _ = _authz
     try:

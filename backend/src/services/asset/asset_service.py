@@ -26,6 +26,7 @@ from ...crud.project_asset import project_asset_crud
 from ...crud.query_builder import PartyFilter
 from ...models.asset import Asset, AssetReviewStatus
 from ...models.asset_history import AssetHistory
+from ...models.asset_management_history import AssetManagementHistory
 from ...models.asset_review_log import AssetReviewLog
 from ...models.associations import contract_assets
 from ...models.auth import User
@@ -34,6 +35,7 @@ from ...models.contract_group import (
     ContractLifecycleStatus,
     GroupRelationType,
 )
+from ...models.project_asset import ProjectAsset
 from ...schemas.asset import (
     AssetCreate,
     AssetLeaseSummaryResponse,
@@ -94,9 +96,11 @@ def normalize_summary_period(
     if period_start is None and period_end is None:
         return _default_summary_period()
     if period_start is None:
+        assert period_end is not None
         normalized_start, _ = _month_bounds(period_end)
         return normalized_start, period_end
     if period_end is None:
+        assert period_start is not None
         _, normalized_end = _month_bounds(period_start)
         return period_start, normalized_end
     return period_start, period_end
@@ -506,12 +510,12 @@ class AssetService:
         type_buckets: dict[str, list[Any]] = defaultdict(list)
         for contract in contracts:
             relation_type = getattr(contract, "group_relation_type", None)
-            key = (
+            relation_bucket_key = (
                 relation_type.value
                 if isinstance(relation_type, GroupRelationType)
                 else str(relation_type)
             )
-            type_buckets[key].append(contract)
+            type_buckets[relation_bucket_key].append(contract)
 
         by_type: list[ContractTypeSummary] = []
         for relation_type, label in (
@@ -564,9 +568,9 @@ class AssetService:
                 or "未知租户"
             )
             party_id = str(getattr(contract, "lessee_party_id", "")).strip() or None
-            key = (lessee_name, relation_value)
-            prev_party_id, prev_count = party_counter.get(key, (party_id, 0))
-            party_counter[key] = (prev_party_id or party_id, prev_count + 1)
+            party_key = (lessee_name, relation_value)
+            prev_party_id, prev_count = party_counter.get(party_key, (party_id, 0))
+            party_counter[party_key] = (prev_party_id or party_id, prev_count + 1)
 
         customer_summary = [
             ContractPartyItem(
@@ -619,7 +623,7 @@ class AssetService:
         *,
         party_filter: PartyFilter | None = None,
         current_user_id: str | None = None,
-    ) -> list:
+    ) -> list[AssetManagementHistory]:
         """获取资产经营方变更历史。"""
         await self.get_asset(
             asset_id,
@@ -637,7 +641,7 @@ class AssetService:
         *,
         party_filter: PartyFilter | None = None,
         current_user_id: str | None = None,
-    ) -> list:
+    ) -> list[ProjectAsset]:
         """获取资产项目关联历史（含当前有效和已终止绑定）。"""
         await self.get_asset(
             asset_id,
@@ -707,17 +711,15 @@ class AssetService:
         reason: str | None = None,
         context: dict[str, Any] | None = None,
     ) -> None:
-        self.db.add(
-            AssetReviewLog(
-                asset_id=asset_id,
-                action=action,
-                from_status=from_status,
-                to_status=to_status,
-                operator=operator,
-                reason=reason,
-                context=context,
-            )
-        )
+        log = AssetReviewLog()
+        log.asset_id = asset_id
+        log.action = action
+        log.from_status = from_status
+        log.to_status = to_status
+        log.operator = operator
+        log.reason = reason
+        log.context = context
+        self.db.add(log)
 
     async def _count_active_contracts_for_asset(self, asset_id: str) -> int:
         stmt = (

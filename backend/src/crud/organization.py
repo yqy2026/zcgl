@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, cast
+from typing import Any
 
 from sqlalchemy import and_, func, literal, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -29,9 +29,7 @@ class CRUDOrganization(CRUDBase[Organization, OrganizationCreate, OrganizationUp
             obj_in_data = obj_in
         else:
             obj_in_data = obj_in.model_dump()
-        encrypted_data = cast(
-            dict[str, Any], self.sensitive_data_handler.encrypt_data(obj_in_data)
-        )
+        encrypted_data = self.sensitive_data_handler.encrypt_data(obj_in_data)
         return await super().create(db=db, obj_in=encrypted_data, **kwargs)
 
     async def get_async(

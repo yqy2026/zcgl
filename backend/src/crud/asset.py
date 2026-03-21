@@ -342,10 +342,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         obj_in_data.update(kwargs)
         self._clean_asset_data(obj_in_data)
 
-        encrypted_data = cast(
-            AssetMutationData,
-            self.sensitive_data_handler.encrypt_data(obj_in_data.copy()),
-        )
+        encrypted_data = self.sensitive_data_handler.encrypt_data(obj_in_data.copy())
         db_obj = Asset(**encrypted_data)
         db.add(db_obj)
         await db.flush()
@@ -550,8 +547,8 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             distinct_column=Asset.id,
         )
         total_result = await db.execute(cnt_query)
-        total_raw = await _result_scalar(total_result)
-        total = int(cast(int | float | str, total_raw)) if total_raw is not None else 0
+        total_raw: int | float | str | None = await _result_scalar(total_result)
+        total = int(total_raw) if total_raw is not None else 0
 
         for asset in assets:
             self._decrypt_asset_object(asset)
@@ -578,10 +575,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         ):
             # 仅保留最小兼容：旧 organization_id 输入不再写库列，按 manager_party_id 别名处理。
             obj_in_data["manager_party_id"] = organization_id
-        encrypted_data = cast(
-            AssetMutationData,
-            self.sensitive_data_handler.encrypt_data(obj_in_data.copy()),
-        )
+        encrypted_data = self.sensitive_data_handler.encrypt_data(obj_in_data.copy())
 
         db_obj = Asset(**encrypted_data)
         db.add(db_obj)
@@ -1026,8 +1020,8 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         """统计权属方的资产数量"""
         stmt = select(func.count(Asset.id)).where(Asset.owner_party_id == ownership_id)
         result = await db.execute(stmt)
-        count_raw = await _result_scalar(result)
-        return int(cast(int | float | str, count_raw)) if count_raw is not None else 0
+        count_raw: int | float | str | None = await _result_scalar(result)
+        return int(count_raw) if count_raw is not None else 0
 
     async def get_counts_by_ownerships_async(
         self, db: AsyncSession, ownership_ids: list[str]

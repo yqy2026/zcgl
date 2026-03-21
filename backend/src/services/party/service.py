@@ -260,7 +260,7 @@ class PartyService:
     async def _assert_no_references(self, db: AsyncSession, *, party_id: str) -> None:
         """Check if this party is referenced by assets or contract groups."""
         from ...models.asset import Asset
-        from ...models.contract_group import ContractGroup, LeaseContractDetail
+        from ...models.contract_group import Contract, ContractGroup
 
         # Check assets referencing this party as owner or manager
         asset_count_stmt = (
@@ -294,13 +294,12 @@ class PartyService:
                 reason="party_delete_has_contract_group_references",
             )
 
-        # Check lease contract details referencing this party
+        # Check contracts referencing this party as lessor or lessee
         lcd_count_stmt = (
             select(func.count())
-            .select_from(LeaseContractDetail)
+            .select_from(Contract)
             .where(
-                (LeaseContractDetail.lessor_party_id == party_id)
-                | (LeaseContractDetail.lessee_party_id == party_id)
+                (Contract.lessor_party_id == party_id) | (Contract.lessee_party_id == party_id)
             )
         )
         lcd_count = (await db.execute(lcd_count_stmt)).scalar() or 0
@@ -321,14 +320,13 @@ class PartyService:
         operator: str | None = None,
         reason: str | None = None,
     ) -> None:
-        log = PartyReviewLog(
-            party_id=party_id,
-            action=action,
-            from_status=from_status,
-            to_status=to_status,
-            operator=operator,
-            reason=reason,
-        )
+        log = PartyReviewLog()
+        log.party_id = party_id
+        log.action = action
+        log.from_status = from_status
+        log.to_status = to_status
+        log.operator = operator
+        log.reason = reason
         db.add(log)
         await db.flush()
 
