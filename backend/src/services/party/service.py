@@ -299,7 +299,8 @@ class PartyService:
             select(func.count())
             .select_from(Contract)
             .where(
-                (Contract.lessor_party_id == party_id) | (Contract.lessee_party_id == party_id)
+                (Contract.lessor_party_id == party_id)
+                | (Contract.lessee_party_id == party_id)
             )
         )
         lcd_count = (await db.execute(lcd_count_stmt)).scalar() or 0
