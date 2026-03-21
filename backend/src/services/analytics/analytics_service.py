@@ -155,6 +155,7 @@ class AnalyticsService:
         """
         # 获取基础数据
         from ...crud.asset import asset_crud
+
         query_filters = self._build_asset_status_filters(
             include_deleted=filters.get("include_deleted", False)
         )
@@ -181,11 +182,15 @@ class AnalyticsService:
         occupancy_service = OccupancyService(self.db)
 
         # 面积汇总
-        area_stats = await area_service.calculate_summary_with_aggregation(filters=filters)
+        area_stats = await area_service.calculate_summary_with_aggregation(
+            filters=filters
+        )
         stats["area_summary"] = area_stats
 
         # 出租率统计
-        occupancy_stats = await occupancy_service.calculate_with_aggregation(filters=filters)
+        occupancy_stats = await occupancy_service.calculate_with_aggregation(
+            filters=filters
+        )
         stats["occupancy_rate"] = occupancy_stats
 
         active_contracts = await self._list_active_contracts(filters)
@@ -222,14 +227,19 @@ class AnalyticsService:
                 overlap_clauses.append(Contract.effective_from <= date_to)
             if date_from is not None:
                 overlap_clauses.append(
-                    or_(Contract.effective_to.is_(None), Contract.effective_to >= date_from)
+                    or_(
+                        Contract.effective_to.is_(None),
+                        Contract.effective_to >= date_from,
+                    )
                 )
             if len(overlap_clauses) > 0:
                 stmt = stmt.where(and_(*overlap_clauses))
 
         return list((await self.db.execute(stmt)).scalars().unique().all())
 
-    def _calculate_operational_metrics(self, contracts: list[Contract]) -> dict[str, Any]:
+    def _calculate_operational_metrics(
+        self, contracts: list[Contract]
+    ) -> dict[str, Any]:
         self_operated_rent_income = Decimal("0")
         agency_service_income = Decimal("0")
         customer_party_ids: set[str] = set()
@@ -238,9 +248,15 @@ class AnalyticsService:
         agency_group_ratios: dict[str, Decimal] = {}
         for contract in contracts:
             group = getattr(contract, "contract_group", None)
-            if group is None or getattr(group, "revenue_mode", None) != RevenueMode.AGENCY:
+            if (
+                group is None
+                or getattr(group, "revenue_mode", None) != RevenueMode.AGENCY
+            ):
                 continue
-            if getattr(contract, "group_relation_type", None) != GroupRelationType.ENTRUSTED:
+            if (
+                getattr(contract, "group_relation_type", None)
+                != GroupRelationType.ENTRUSTED
+            ):
                 continue
             agency_detail = getattr(contract, "agency_detail", None)
             if agency_detail is None:
@@ -263,7 +279,10 @@ class AnalyticsService:
             relation_type = getattr(contract, "group_relation_type", None)
             group_mode = getattr(group, "revenue_mode", None)
 
-            if group_mode == RevenueMode.LEASE and relation_type == GroupRelationType.DOWNSTREAM:
+            if (
+                group_mode == RevenueMode.LEASE
+                and relation_type == GroupRelationType.DOWNSTREAM
+            ):
                 lease_detail = getattr(contract, "lease_detail", None)
                 if lease_detail is not None:
                     self_operated_rent_income += self._to_decimal(
@@ -272,20 +291,28 @@ class AnalyticsService:
                 lessee_party_id = str(getattr(contract, "lessee_party_id", "")).strip()
                 if lessee_party_id != "":
                     customer_party_ids.add(lessee_party_id)
-                customer_contract_ids.add(str(getattr(contract, "contract_id", "")).strip())
+                customer_contract_ids.add(
+                    str(getattr(contract, "contract_id", "")).strip()
+                )
 
-            if group_mode == RevenueMode.AGENCY and relation_type == GroupRelationType.DIRECT_LEASE:
+            if (
+                group_mode == RevenueMode.AGENCY
+                and relation_type == GroupRelationType.DIRECT_LEASE
+            ):
                 lease_detail = getattr(contract, "lease_detail", None)
                 if lease_detail is not None:
                     group_id = self._resolve_contract_group_id(contract, group)
                     ratio = agency_group_ratios.get(group_id, Decimal("0"))
                     agency_service_income += self._quantize_money(
-                        self._to_decimal(getattr(lease_detail, "rent_amount", None)) * ratio
+                        self._to_decimal(getattr(lease_detail, "rent_amount", None))
+                        * ratio
                     )
                 lessee_party_id = str(getattr(contract, "lessee_party_id", "")).strip()
                 if lessee_party_id != "":
                     customer_party_ids.add(lessee_party_id)
-                customer_contract_ids.add(str(getattr(contract, "contract_id", "")).strip())
+                customer_contract_ids.add(
+                    str(getattr(contract, "contract_id", "")).strip()
+                )
 
         total_income = self._quantize_money(
             self_operated_rent_income + agency_service_income
@@ -295,12 +322,14 @@ class AnalyticsService:
             "self_operated_rent_income": float(
                 self._quantize_money(self_operated_rent_income)
             ),
-            "agency_service_income": float(
-                self._quantize_money(agency_service_income)
-            ),
+            "agency_service_income": float(self._quantize_money(agency_service_income)),
             "customer_entity_count": len(customer_party_ids),
             "customer_contract_count": len(
-                [contract_id for contract_id in customer_contract_ids if contract_id != ""]
+                [
+                    contract_id
+                    for contract_id in customer_contract_ids
+                    if contract_id != ""
+                ]
             ),
             "metrics_version": ANALYTICS_METRICS_VERSION,
         }
@@ -331,7 +360,9 @@ class AnalyticsService:
         )
 
     @staticmethod
-    def _resolve_contract_group_id(contract: Contract, group: ContractGroup | None) -> str:
+    def _resolve_contract_group_id(
+        contract: Contract, group: ContractGroup | None
+    ) -> str:
         raw_direct_group_id = getattr(contract, "contract_group_id", None)
         if isinstance(raw_direct_group_id, str):
             direct_group_id = raw_direct_group_id.strip()
@@ -426,7 +457,9 @@ class AnalyticsService:
         # 获取资产数据
         from ...crud.asset import asset_crud
 
-        include_deleted = bool(filters.get("include_deleted", False)) if filters else False
+        include_deleted = (
+            bool(filters.get("include_deleted", False)) if filters else False
+        )
         query_filters = self._build_asset_status_filters(
             include_deleted=include_deleted
         )
@@ -523,7 +556,9 @@ class AnalyticsService:
 
         from ...crud.asset import asset_crud
 
-        include_deleted = bool(filters.get("include_deleted", False)) if filters else False
+        include_deleted = (
+            bool(filters.get("include_deleted", False)) if filters else False
+        )
         query_filters = self._build_asset_status_filters(
             include_deleted=include_deleted
         )

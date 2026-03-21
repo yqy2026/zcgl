@@ -139,8 +139,10 @@ async def get_dashboard_data(
 
     occupancy_service = OccupancyService(db)
     occupancy_stats_data = await occupancy_service.calculate_with_aggregation(filters)
-    category_occupancy_stats = await occupancy_service.calculate_category_with_aggregation(
-        "business_category", filters
+    category_occupancy_stats = (
+        await occupancy_service.calculate_category_with_aggregation(
+            "business_category", filters
+        )
     )
 
     area_summary = AreaSummaryResponse(

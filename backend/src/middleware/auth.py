@@ -325,7 +325,10 @@ def require_permissions(required_permissions: list[str]) -> PermissionChecker:
 ResourceIdResolver = Callable[[Request], str | None | Awaitable[str | None]]
 ResourceContextResolver = Callable[
     [Request],
-    Mapping[str, Any] | dict[str, Any] | None | Awaitable[Mapping[str, Any] | dict[str, Any] | None],
+    Mapping[str, Any]
+    | dict[str, Any]
+    | None
+    | Awaitable[Mapping[str, Any] | dict[str, Any] | None],
 ]
 
 
@@ -616,7 +619,9 @@ class AuthzPermissionChecker:
         if row is None:
             return {}
 
-        normalized_owner_party_id = self._normalize_optional_str(row.get("owner_party_id"))
+        normalized_owner_party_id = self._normalize_optional_str(
+            row.get("owner_party_id")
+        )
         normalized_manager_party_id = self._normalize_optional_str(
             row.get("manager_party_id")
         )
@@ -667,20 +672,26 @@ class AuthzPermissionChecker:
     ) -> dict[str, Any]:
         from ..models.contract_group import Contract, ContractGroup
 
-        stmt = select(
-            Contract.contract_id.label("contract_id"),
-            ContractGroup.owner_party_id.label("owner_party_id"),
-            ContractGroup.operator_party_id.label("manager_party_id"),
-            Contract.lessee_party_id.label("tenant_party_id"),
-        ).join(
-            ContractGroup,
-            Contract.contract_group_id == ContractGroup.contract_group_id,
-        ).where(Contract.contract_id == contract_id)
+        stmt = (
+            select(
+                Contract.contract_id.label("contract_id"),
+                ContractGroup.owner_party_id.label("owner_party_id"),
+                ContractGroup.operator_party_id.label("manager_party_id"),
+                Contract.lessee_party_id.label("tenant_party_id"),
+            )
+            .join(
+                ContractGroup,
+                Contract.contract_group_id == ContractGroup.contract_group_id,
+            )
+            .where(Contract.contract_id == contract_id)
+        )
         row = (await db.execute(stmt)).mappings().one_or_none()
         if row is None:
             return {}
 
-        normalized_owner_party_id = self._normalize_optional_str(row.get("owner_party_id"))
+        normalized_owner_party_id = self._normalize_optional_str(
+            row.get("owner_party_id")
+        )
         normalized_manager_party_id = self._normalize_optional_str(
             row.get("manager_party_id")
         )

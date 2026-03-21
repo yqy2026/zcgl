@@ -135,9 +135,7 @@ class UserCRUD:
             organization_id=organization_id,
         )
         total = int((await db.execute(count_stmt)).scalar() or 0)
-        result = await db.execute(
-            stmt.distinct(User.id).offset(skip).limit(limit)
-        )
+        result = await db.execute(stmt.distinct(User.id).offset(skip).limit(limit))
         users = list(result.scalars().all())
         return users, total
 
@@ -258,9 +256,7 @@ class UserCRUD:
         self, db: AsyncSession, identifier: str
     ) -> User | None:
         """通过用户名或手机号查找用户（不区分启用状态，用于审计等场景）。"""
-        return await self._find_by_identifier_async(
-            db, identifier, active_only=False
-        )
+        return await self._find_by_identifier_async(db, identifier, active_only=False)
 
     async def find_active_by_identifier_async(
         self, db: AsyncSession, identifier: str

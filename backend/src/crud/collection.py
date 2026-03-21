@@ -48,7 +48,9 @@ class CRUDCollectionRecord(
         )
         stats = (await db.execute(stmt)).first()
         total_count = int(stats.total_count) if stats and stats.total_count else 0
-        total_amount = stats.total_amount if stats and stats.total_amount else Decimal("0")
+        total_amount = (
+            stats.total_amount if stats and stats.total_amount else Decimal("0")
+        )
         return total_count, total_amount
 
     async def count_by_statuses_async(

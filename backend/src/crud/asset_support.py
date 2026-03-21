@@ -21,6 +21,7 @@ TMaybeAwaitable = TypeVar("TMaybeAwaitable")
 
 logger = logging.getLogger(__name__)
 
+
 class SupportsAll(Protocol[TResultRow_co]):
     """Protocol for results supporting .all()."""
 
@@ -37,6 +38,12 @@ class SupportsScalar(Protocol[TScalar_co]):
     """Protocol for results supporting .scalar()."""
 
     def scalar(self) -> TScalar_co | None | Awaitable[TScalar_co | None]: ...
+
+
+class SupportsScalarOne(Protocol[TScalar_co]):
+    """Protocol for results supporting .scalar_one()."""
+
+    def scalar_one(self) -> TScalar_co | Awaitable[TScalar_co]: ...
 
 
 class ScalarResultLike(
@@ -88,6 +95,11 @@ async def _result_first(result: SupportsFirst[Any]) -> TResultRow | None:
 async def _result_scalar(result: SupportsScalar[Any]) -> TScalar | None:
     """兼容真实 AsyncSession 与测试 AsyncMock 的 result.scalar() 行为。"""
     return cast(TScalar | None, await _resolve_maybe_awaitable(result.scalar()))
+
+
+async def _result_scalar_one(result: SupportsScalarOne[Any]) -> TScalar:
+    """兼容真实 AsyncSession 与测试 AsyncMock 的 result.scalar_one() 行为。"""
+    return cast(TScalar, await _resolve_maybe_awaitable(result.scalar_one()))
 
 
 class SensitiveDataHandler:
@@ -198,7 +210,9 @@ class SensitiveDataHandler:
     def encrypt_data(self, data: AssetMutationData) -> AssetMutationData: ...
 
     @overload
-    def encrypt_data(self, data: list[AssetMutationData]) -> list[AssetMutationData]: ...
+    def encrypt_data(
+        self, data: list[AssetMutationData]
+    ) -> list[AssetMutationData]: ...
 
     def encrypt_data(
         self, data: AssetMutationData | list[AssetMutationData]
@@ -230,7 +244,9 @@ class SensitiveDataHandler:
     def decrypt_data(self, data: AssetMutationData) -> AssetMutationData: ...
 
     @overload
-    def decrypt_data(self, data: list[AssetMutationData]) -> list[AssetMutationData]: ...
+    def decrypt_data(
+        self, data: list[AssetMutationData]
+    ) -> list[AssetMutationData]: ...
 
     def decrypt_data(
         self, data: AssetMutationData | list[AssetMutationData]

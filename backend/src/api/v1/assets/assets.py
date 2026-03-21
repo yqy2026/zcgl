@@ -24,6 +24,7 @@ from fastapi import (
 from fastapi.encoders import jsonable_encoder
 from pydantic import TypeAdapter
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.responses import JSONResponse
 from starlette.status import HTTP_204_NO_CONTENT
 
 from ....constants.api_constants import PaginationLimits
@@ -621,7 +622,7 @@ async def get_asset_review_logs(
             deny_as_not_found=True,
         )
     ),
-) -> list[AssetReviewLogResponse]:
+) -> list[Any]:
     _ = _authz
     return await AsyncAssetService(db).get_asset_review_logs(
         asset_id,
@@ -648,7 +649,7 @@ async def get_asset_lease_summary(
             deny_as_not_found=True,
         )
     ),
-) -> APIResponse[AssetLeaseSummaryResponse]:
+) -> JSONResponse:
     asset_service = AsyncAssetService(db)
     summary = await asset_service.get_asset_lease_summary(
         asset_id,

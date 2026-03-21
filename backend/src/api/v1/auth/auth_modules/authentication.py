@@ -170,9 +170,7 @@ async def login(
         rbac_service = factory.rbac
         audit_db = factory.db
     else:
-        auth_service, session_service, _, rbac_service = (
-            _build_legacy_services(db)
-        )
+        auth_service, session_service, _, rbac_service = _build_legacy_services(db)
         audit_db = db
 
     client_ip = get_client_ip(request)

@@ -15,7 +15,9 @@ vi.mock('xlsx', () => ({
   writeFile: vi.fn(),
 }));
 
-const makeExportData = (overrides?: Partial<AnalyticsExportData['summary']>): AnalyticsExportData => ({
+const makeExportData = (
+  overrides?: Partial<AnalyticsExportData['summary']>
+): AnalyticsExportData => ({
   summary: {
     total_assets: 10,
     total_area: 5000,

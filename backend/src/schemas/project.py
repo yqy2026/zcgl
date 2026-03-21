@@ -24,7 +24,9 @@ class ProjectBase(BaseModel):
     """项目基础模式（仅包含规格 §3.2 冻结字段）。"""
 
     project_name: str = Field(..., title="项目名称", min_length=1, max_length=200)
-    project_code: str | None = Field(None, title="项目编码", min_length=1, max_length=100)
+    project_code: str | None = Field(
+        None, title="项目编码", min_length=1, max_length=100
+    )
     status: str = Field("planning", title="业务状态", max_length=20)
     manager_party_id: str | None = Field(None, title="运营管理主体ID")
     data_status: str = Field("正常", title="数据状态", max_length=20)
@@ -80,7 +82,9 @@ class ProjectCreate(ProjectBase):
     party_relations: list[ProjectPartyRelationInput] | None = Field(
         None, title="主体关系"
     )
-    organization_id: str | None = Field(None, title="关联组织ID（用于推断 manager_party_id）")
+    organization_id: str | None = Field(
+        None, title="关联组织ID（用于推断 manager_party_id）"
+    )
 
     @field_validator("project_code")
     @classmethod
@@ -96,11 +100,16 @@ class ProjectCreate(ProjectBase):
             )
         return v
 
+
 class ProjectUpdate(BaseModel):
     """更新项目模式（所有字段可选）。"""
 
-    project_name: str | None = Field(None, title="项目名称", min_length=1, max_length=200)
-    project_code: str | None = Field(None, title="项目编码", min_length=1, max_length=100)
+    project_name: str | None = Field(
+        None, title="项目名称", min_length=1, max_length=200
+    )
+    project_code: str | None = Field(
+        None, title="项目编码", min_length=1, max_length=100
+    )
     status: str | None = Field(None, title="业务状态", max_length=20)
     manager_party_id: str | None = Field(None, title="运营管理主体ID")
     data_status: str | None = Field(None, title="数据状态", max_length=20)
@@ -166,8 +175,12 @@ class ProjectResponse(ProjectBase):
         }
         ownership = getattr(relation, "ownership", None)
         if ownership is not None:
-            relation_dict["ownership_name"] = getattr(ownership, "project_name", None) or getattr(ownership, "name", None)
-            relation_dict["ownership_code"] = getattr(ownership, "project_code", None) or getattr(ownership, "code", None)
+            relation_dict["ownership_name"] = getattr(
+                ownership, "project_name", None
+            ) or getattr(ownership, "name", None)
+            relation_dict["ownership_code"] = getattr(
+                ownership, "project_code", None
+            ) or getattr(ownership, "code", None)
         return relation_dict
 
     @classmethod

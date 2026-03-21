@@ -99,6 +99,7 @@ async def _resolve_user_assignment_resource_id(request: Request) -> str | None:
         return None
     return _normalize_optional_str(payload.get("user_id"))
 
+
 # ==================== Schema定义 ====================
 
 
@@ -511,7 +512,9 @@ async def get_permission_grants(
         )
 
         return ResponseHandler.paginated(
-            data=[PermissionGrantResponse.model_validate(grant) for grant in grants],  # DEPRECATED
+            data=[
+                PermissionGrantResponse.model_validate(grant) for grant in grants
+            ],  # DEPRECATED
             page=page,
             page_size=page_size,
             total=total,

@@ -91,7 +91,9 @@ class PartyContactCreate(BaseModel):
     """Create contact payload."""
 
     party_id: str | None = Field(None, description="主体ID")
-    contact_name: str = Field(..., min_length=1, max_length=100, description="联系人姓名")
+    contact_name: str = Field(
+        ..., min_length=1, max_length=100, description="联系人姓名"
+    )
     contact_phone: str | None = Field(None, max_length=50, description="联系电话")
     contact_email: str | None = Field(None, max_length=255, description="联系邮箱")
     position: str | None = Field(None, max_length=100, description="职位")
@@ -102,7 +104,9 @@ class PartyContactCreate(BaseModel):
 class PartyContactUpdate(BaseModel):
     """Update contact payload."""
 
-    contact_name: str | None = Field(None, min_length=1, max_length=100, description="联系人姓名")
+    contact_name: str | None = Field(
+        None, min_length=1, max_length=100, description="联系人姓名"
+    )
     contact_phone: str | None = Field(None, max_length=50, description="联系电话")
     contact_email: str | None = Field(None, max_length=255, description="联系邮箱")
     position: str | None = Field(None, max_length=100, description="职位")

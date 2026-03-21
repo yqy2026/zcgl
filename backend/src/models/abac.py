@@ -123,16 +123,12 @@ class ABACPolicyRule(Base):
     condition_expr: Mapped[dict[str, Any]] = mapped_column(
         JSONB, nullable=False, comment="JSONLogic 条件表达式"
     )
-    field_mask: Mapped[dict[str, Any] | None] = mapped_column(
-        JSONB, comment="字段掩码"
-    )
+    field_mask: Mapped[dict[str, Any] | None] = mapped_column(JSONB, comment="字段掩码")
 
     policy: Mapped["ABACPolicy"] = relationship("ABACPolicy", back_populates="rules")
 
     def __repr__(self) -> str:
-        return (
-            f"<ABACPolicyRule(policy_id={self.policy_id}, resource={self.resource_type}, action={self.action})>"
-        )
+        return f"<ABACPolicyRule(policy_id={self.policy_id}, resource={self.resource_type}, action={self.action})>"
 
 
 class ABACRolePolicy(Base):
@@ -140,7 +136,9 @@ class ABACRolePolicy(Base):
 
     __tablename__ = "abac_role_policies"
     __table_args__ = (
-        UniqueConstraint("role_id", "policy_id", name="uq_abac_role_policies_role_policy"),
+        UniqueConstraint(
+            "role_id", "policy_id", name="uq_abac_role_policies_role_policy"
+        ),
     )
 
     id: Mapped[str] = mapped_column(
@@ -163,9 +161,7 @@ class ABACRolePolicy(Base):
     enabled: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True, comment="是否启用"
     )
-    priority_override: Mapped[int | None] = mapped_column(
-        Integer, comment="优先级覆盖"
-    )
+    priority_override: Mapped[int | None] = mapped_column(Integer, comment="优先级覆盖")
     params_override: Mapped[dict[str, Any] | None] = mapped_column(
         JSONB, comment="参数覆盖"
     )

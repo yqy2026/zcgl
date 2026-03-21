@@ -580,7 +580,9 @@ async def close_user_party_binding(
     return {"message": "用户主体绑定已关闭"}
 
 
-route_registry.register_router(router, prefix="/api/v1", tags=["主体管理"], version="v1")
+route_registry.register_router(
+    router, prefix="/api/v1", tags=["主体管理"], version="v1"
+)
 
 
 __all__ = ["router"]

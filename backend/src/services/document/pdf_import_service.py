@@ -26,7 +26,13 @@ from ...core.exception_handler import (
 from ...core.task_queue import get_task_queue  # 现有任务队列系统
 from ...crud.pdf_import_session import pdf_import_session_crud
 from ...crud.query_builder import PartyFilter
-from ...models.contract_group import ContractDirection, GroupRelationType, RevenueMode
+from ...models.contract_group import (
+    ContractDirection,
+    ContractLifecycleStatus,
+    ContractReviewStatus,
+    GroupRelationType,
+    RevenueMode,
+)
 from ...models.pdf_import_session import PDFImportSession, ProcessingStep, SessionStatus
 from ...schemas.contract_group import (
     AgencyDetailCreate,
@@ -910,7 +916,9 @@ class PDFImportService:
             "lessee_party_id",
             "settlement_rule",
         ]
-        missing_fields = [field for field in required_fields if merged_data.get(field) in (None, "")]
+        missing_fields = [
+            field for field in required_fields if merged_data.get(field) in (None, "")
+        ]
         if missing_fields:
             return {
                 "success": False,
@@ -925,7 +933,11 @@ class PDFImportService:
         group_relation_type = _parse_enum_member(
             GroupRelationType, merged_data.get("group_relation_type")
         )
-        if revenue_mode is None or contract_direction is None or group_relation_type is None:
+        if (
+            revenue_mode is None
+            or contract_direction is None
+            or group_relation_type is None
+        ):
             return {
                 "success": False,
                 "message": "Invalid enum values in confirmed_data",
@@ -1057,6 +1069,10 @@ class PDFImportService:
                     tenant_contact=_normalize_text(merged_data.get("tenant_contact")),
                     tenant_phone=_normalize_text(merged_data.get("tenant_phone")),
                     tenant_address=_normalize_text(merged_data.get("tenant_address")),
+                    tenant_usage=_normalize_text(merged_data.get("tenant_usage")),
+                    owner_name=_normalize_text(merged_data.get("owner_name")),
+                    owner_contact=_normalize_text(merged_data.get("owner_contact")),
+                    owner_phone=_normalize_text(merged_data.get("owner_phone")),
                 )
             else:
                 agency_detail_data = merged_data.get("agency_detail")
@@ -1095,6 +1111,11 @@ class PDFImportService:
                 sign_date=sign_date,
                 effective_from=effective_from,
                 effective_to=effective_to,
+                currency_code="CNY",
+                tax_rate=None,
+                is_tax_included=True,
+                status=ContractLifecycleStatus.DRAFT,
+                review_status=ContractReviewStatus.DRAFT,
                 contract_notes=_normalize_text(merged_data.get("contract_notes")),
                 source_session_id=session_id,
                 asset_ids=asset_ids,

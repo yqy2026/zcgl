@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from typing import Any
@@ -15,6 +16,13 @@ from ....database_url import get_database_url
 
 VALID_TENANT_DECISIONS = {"A", "B"}
 LEGACY_CONTRACTS_TABLE = "_".join(("rent", "contracts"))
+_IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def _validate_identifier(identifier: str) -> str:
+    if not _IDENTIFIER_RE.fullmatch(identifier):
+        raise ValueError(f"Invalid SQL identifier: {identifier}")
+    return identifier
 
 
 @dataclass(frozen=True)
@@ -55,7 +63,11 @@ def _count_table_rows(
 ) -> int | None:
     if not _table_exists(connection, table_name):
         return None
-    return _count_query(connection, f"SELECT COUNT(*) FROM {table_name}")
+    safe_table_name = _validate_identifier(table_name)
+    return _count_query(
+        connection,
+        f"SELECT COUNT(*) FROM {safe_table_name}",  # nosec B608 - validated identifier
+    )
 
 
 def _count_null_or_empty(
@@ -65,17 +77,21 @@ def _count_null_or_empty(
 ) -> int | None:
     if not _column_exists(connection, table_name, column_name):
         return None
+    safe_table_name = _validate_identifier(table_name)
+    safe_column_name = _validate_identifier(column_name)
     return _count_query(
         connection,
         f"""
         SELECT COUNT(*)
-        FROM {table_name}
-        WHERE {column_name} IS NULL OR {column_name} = ''
-        """,
+        FROM {safe_table_name}
+        WHERE {safe_column_name} IS NULL OR {safe_column_name} = ''
+        """,  # nosec B608 - validated identifiers
     )
 
 
-def _count_user_dual_party_viewer_mapping(connection: sa.engine.Connection) -> int | None:
+def _count_user_dual_party_viewer_mapping(
+    connection: sa.engine.Connection,
+) -> int | None:
     if not _table_exists(connection, "roles"):
         return None
     if not _column_exists(connection, "roles", "name"):
@@ -108,16 +124,24 @@ def collect_snapshot(connection: sa.engine.Connection) -> dict[str, int | str | 
         "subject_count": _count_table_rows(connection, "abac_policy_subjects")
         if subject_exists
         else 0,
-        "assets_owner_null": _count_null_or_empty(connection, "assets", "owner_party_id"),
-        "assets_manager_null": _count_null_or_empty(connection, "assets", "manager_party_id"),
+        "assets_owner_null": _count_null_or_empty(
+            connection, "assets", "owner_party_id"
+        ),
+        "assets_manager_null": _count_null_or_empty(
+            connection, "assets", "manager_party_id"
+        ),
         "legacy_contract_owner_null": _count_null_or_empty(
             connection, LEGACY_CONTRACTS_TABLE, "owner_party_id"
         ),
         "legacy_contract_manager_null": _count_null_or_empty(
             connection, LEGACY_CONTRACTS_TABLE, "manager_party_id"
         ),
-        "ledger_owner_null": _count_null_or_empty(connection, "rent_ledger", "owner_party_id"),
-        "projects_manager_null": _count_null_or_empty(connection, "projects", "manager_party_id"),
+        "ledger_owner_null": _count_null_or_empty(
+            connection, "rent_ledger", "owner_party_id"
+        ),
+        "projects_manager_null": _count_null_or_empty(
+            connection, "projects", "manager_party_id"
+        ),
         "tenant_null_count": _count_null_or_empty(
             connection, LEGACY_CONTRACTS_TABLE, "tenant_party_id"
         ),
@@ -191,7 +215,9 @@ def evaluate_snapshot(
     evaluations = [
         _eval_equals("subject_count_zero", snapshot.get("subject_count"), 0),
         _eval_equals("assets_owner_null_zero", snapshot.get("assets_owner_null"), 0),
-        _eval_equals("assets_manager_null_zero", snapshot.get("assets_manager_null"), 0),
+        _eval_equals(
+            "assets_manager_null_zero", snapshot.get("assets_manager_null"), 0
+        ),
         _eval_equals(
             "legacy_contract_owner_null_zero",
             snapshot.get("legacy_contract_owner_null"),
@@ -203,7 +229,9 @@ def evaluate_snapshot(
             0,
         ),
         _eval_equals("ledger_owner_null_zero", snapshot.get("ledger_owner_null"), 0),
-        _eval_equals("projects_manager_null_zero", snapshot.get("projects_manager_null"), 0),
+        _eval_equals(
+            "projects_manager_null_zero", snapshot.get("projects_manager_null"), 0
+        ),
         _eval_ge(
             "user_dual_party_viewer_mapping_ge_1",
             snapshot.get("user_dual_party_viewer_mapping_count"),

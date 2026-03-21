@@ -391,7 +391,9 @@ class CustomFieldService:
         fields_by_id: dict[str, AssetCustomField] = {}
         if field_ids:
             fields = await custom_field_crud.get_multi_by_ids_async(db, field_ids)
-            fields_by_id = {str(field.id): field for field in fields if field.id is not None}
+            fields_by_id = {
+                str(field.id): field for field in fields if field.id is not None
+            }
 
         fields_by_name: dict[str, AssetCustomField] = {}
         if field_names:
@@ -463,7 +465,6 @@ class CustomFieldService:
             raise ResourceNotFoundError("字段", field_id)
         return self.validate_field_value(field, value)
 
-
     async def toggle_active_status_async(
         self, db: AsyncSession, *, id: str
     ) -> AssetCustomField:
@@ -498,7 +499,9 @@ class CustomFieldService:
             return []
 
         fields = await custom_field_crud.get_multi_by_ids_async(db, ordered_ids)
-        fields_by_id = {str(field.id): field for field in fields if field.id is not None}
+        fields_by_id = {
+            str(field.id): field for field in fields if field.id is not None
+        }
 
         updated_fields: list[AssetCustomField] = []
         for field_id in ordered_ids:
@@ -511,5 +514,6 @@ class CustomFieldService:
 
         await db.commit()
         return updated_fields
+
 
 custom_field_service = CustomFieldService()

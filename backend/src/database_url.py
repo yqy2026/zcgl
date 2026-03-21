@@ -93,4 +93,6 @@ def get_database_url() -> str:
 
 def get_async_database_url() -> str:
     """Convert sync psycopg URL to asyncpg URL."""
-    return get_database_url().replace("postgresql+psycopg://", "postgresql+asyncpg://", 1)
+    return get_database_url().replace(
+        "postgresql+psycopg://", "postgresql+asyncpg://", 1
+    )

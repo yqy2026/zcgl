@@ -89,7 +89,9 @@ class AreaStatsService:
                 "total_land_area": round(total_land_area, 2),
                 "total_rentable_area": round(total_rentable_area, 2),
                 "total_rented_area": round(total_rented_area, 2),
-                "total_unrented_area": round(total_rentable_area - total_rented_area, 2),
+                "total_unrented_area": round(
+                    total_rentable_area - total_rented_area, 2
+                ),
                 "occupancy_rate": round(occupancy_rate, 2),
                 "total_assets": len(assets),
                 "filters_applied": filters,

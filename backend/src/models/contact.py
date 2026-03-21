@@ -80,7 +80,11 @@ class Contact(Base):
     is_active = Column(Boolean, default=True, nullable=False, comment="是否启用")
 
     # 时间戳
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None), comment="创建时间")
+    created_at = Column(
+        DateTime,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        comment="创建时间",
+    )
     updated_at = Column(
         DateTime,
         default=lambda: datetime.now(UTC).replace(tzinfo=None),

@@ -99,11 +99,11 @@ async def _build_asset_import_resource_context(
 
     if owner_party_id is None and ownership_id is not None:
         if ownership_id not in ownership_scope_cache:
-            ownership_scope_cache[ownership_id] = (
-                await _resolve_owner_party_scope_by_ownership_id(
-                    db=db,
-                    ownership_id=ownership_id,
-                )
+            ownership_scope_cache[
+                ownership_id
+            ] = await _resolve_owner_party_scope_by_ownership_id(
+                db=db,
+                ownership_id=ownership_id,
             )
         resolved_owner_party_id = ownership_scope_cache.get(ownership_id)
         if resolved_owner_party_id is not None:
@@ -113,11 +113,11 @@ async def _build_asset_import_resource_context(
 
     if "party_id" not in resource_context and organization_id is not None:
         if organization_id not in organization_scope_cache:
-            organization_scope_cache[organization_id] = (
-                await _resolve_organization_party_scope_by_organization_id(
-                    db=db,
-                    organization_id=organization_id,
-                )
+            organization_scope_cache[
+                organization_id
+            ] = await _resolve_organization_party_scope_by_organization_id(
+                db=db,
+                organization_id=organization_id,
             )
         resolved_organization_party_id = organization_scope_cache.get(organization_id)
         resource_context["party_id"] = (
@@ -153,10 +153,7 @@ async def _require_asset_import_create_authz(
             organization_scope_cache=organization_scope_cache,
         )
         normalized_key = tuple(
-            sorted(
-                (str(key), str(value))
-                for key, value in resource_context.items()
-            )
+            sorted((str(key), str(value)) for key, value in resource_context.items())
         )
         if normalized_key in seen_context_keys:
             continue

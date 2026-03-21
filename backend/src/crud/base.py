@@ -128,10 +128,7 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
         if isinstance(value, (list, tuple)):
             return [cls._normalize_cache_value(item) for item in value]
         if isinstance(value, set):
-            return sorted(
-                cls._normalize_cache_value(item)
-                for item in value
-            )
+            return sorted(cls._normalize_cache_value(item) for item in value)
 
         return repr(value)
 

@@ -48,10 +48,12 @@ class CommonDictionaryService:
                 for value in enum_values
             ]
 
-        system_dicts = await system_dictionary_crud.get_by_type_with_active_filter_async(
-            db,
-            dict_type=dict_type,
-            is_active=is_active,
+        system_dicts = (
+            await system_dictionary_crud.get_by_type_with_active_filter_async(
+                db,
+                dict_type=dict_type,
+                is_active=is_active,
+            )
         )
 
         return [

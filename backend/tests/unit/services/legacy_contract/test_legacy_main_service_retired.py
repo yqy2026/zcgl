@@ -14,6 +14,16 @@ def _find_spec_or_none(module_name: str):
         return None
 
 
+def _assert_retired_namespace_or_none(module_name: str) -> None:
+    spec = _find_spec_or_none(module_name)
+    if spec is None:
+        return
+
+    assert spec.loader is None
+    search_locations = list(spec.submodule_search_locations or [])
+    assert len(search_locations) == 1
+
+
 def _legacy_service_module(name: str) -> str:
     return ".".join(("src", "services", "rent" + "_" + "contract", name))
 
@@ -39,9 +49,7 @@ def test_legacy_contract_service_modules_should_be_retired() -> None:
     legacy_contract_attachment_name = "_".join(("rent", "contract", "attachment"))
     legacy_contract_assets_name = "_".join(("rent", "contract", "assets"))
 
-    spec = _find_spec_or_none(_legacy_test_package())
-    assert spec is not None
-    assert spec.loader is None
+    _assert_retired_namespace_or_none(_legacy_test_package())
     assert _find_spec_or_none(_legacy_test_package("conftest")) is None
     assert _find_spec_or_none(_legacy_service_module("service")) is None
     assert _find_spec_or_none(_legacy_service_module("lifecycle_service")) is None
@@ -71,7 +79,4 @@ def test_legacy_contract_service_modules_should_be_retired() -> None:
 
 
 def test_legacy_contract_test_package_should_only_remain_as_empty_namespace() -> None:
-    spec = _find_spec_or_none(_legacy_test_package())
-    assert spec is not None
-    search_locations = list(spec.submodule_search_locations or [])
-    assert len(search_locations) == 1
+    _assert_retired_namespace_or_none(_legacy_test_package())

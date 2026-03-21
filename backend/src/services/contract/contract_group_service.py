@@ -527,7 +527,9 @@ class ContractGroupService:
             contract_number=obj_in.contract_number,
         )
         if existing_contract is not None:
-            raise DuplicateResourceError("合同", "contract_number", obj_in.contract_number)
+            raise DuplicateResourceError(
+                "合同", "contract_number", obj_in.contract_number
+            )
 
         now = _utcnow()
         data: dict[str, Any] = {

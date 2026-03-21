@@ -29,7 +29,9 @@ class PartyRoleDef(Base):
 
     __tablename__ = "party_role_defs"
     __table_args__ = (
-        UniqueConstraint("role_code", "scope_type", name="uq_party_role_defs_code_scope"),
+        UniqueConstraint(
+            "role_code", "scope_type", name="uq_party_role_defs_code_scope"
+        ),
     )
 
     id: Mapped[str] = mapped_column(
@@ -92,9 +94,7 @@ class PartyRoleBinding(Base):
         DateTime, nullable=False, default=_utcnow_naive, comment="生效时间"
     )
     valid_to: Mapped[datetime | None] = mapped_column(DateTime, comment="失效时间")
-    attributes: Mapped[dict[str, Any] | None] = mapped_column(
-        JSONB, comment="动态属性"
-    )
+    attributes: Mapped[dict[str, Any] | None] = mapped_column(JSONB, comment="动态属性")
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=_utcnow_naive, comment="创建时间"
     )
@@ -112,9 +112,7 @@ class PartyRoleBinding(Base):
     )
 
     def __repr__(self) -> str:
-        return (
-            f"<PartyRoleBinding(id={self.id}, party_id={self.party_id}, scope={self.scope_type})>"
-        )
+        return f"<PartyRoleBinding(id={self.id}, party_id={self.party_id}, scope={self.scope_type})>"
 
 
 __all__ = [

@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 
 class ProjectStatus(str, enum.Enum):
     """项目业务状态（英文代码值）。"""
+
     PLANNING = "planning"
     ACTIVE = "active"
     PAUSED = "paused"
@@ -26,6 +27,7 @@ class ProjectStatus(str, enum.Enum):
 
 class ProjectReviewStatus(str, enum.Enum):
     """项目审核状态（英文代码值）。"""
+
     DRAFT = "draft"
     PENDING = "pending"
     APPROVED = "approved"
@@ -41,9 +43,14 @@ class Project(Base):
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
     )
 
-    project_name: Mapped[str] = mapped_column(String(200), nullable=False, comment="项目名称")
+    project_name: Mapped[str] = mapped_column(
+        String(200), nullable=False, comment="项目名称"
+    )
     project_code: Mapped[str] = mapped_column(
-        String(100), unique=True, nullable=False, comment="项目编码（PRJ-<SEGMENT>-<SERIAL>）"
+        String(100),
+        unique=True,
+        nullable=False,
+        comment="项目编码（PRJ-<SEGMENT>-<SERIAL>）",
     )
     status: Mapped[str] = mapped_column(
         String(20),
@@ -68,14 +75,19 @@ class Project(Base):
     )
     review_by: Mapped[str | None] = mapped_column(String(100), comment="审核人")
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime, comment="审核时间")
-    review_reason: Mapped[str | None] = mapped_column(Text, comment="审核原因（反审核时必填）")
+    review_reason: Mapped[str | None] = mapped_column(
+        Text, comment="审核原因（反审核时必填）"
+    )
 
     data_status: Mapped[str] = mapped_column(
         String(20), nullable=False, default="正常", comment="数据状态：正常/已删除"
     )
 
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=lambda: datetime.now(UTC).replace(tzinfo=None), comment="创建时间"
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        comment="创建时间",
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
@@ -91,7 +103,7 @@ class Project(Base):
     assets: Mapped[list["Asset"]] = relationship(
         "Asset",
         secondary="project_assets",
-        primaryjoin="Project.id == ProjectAs" "set.project_id",
+        primaryjoin="Project.id == ProjectAsset.project_id",
         secondaryjoin="Asset.id == ProjectAsset.asset_id",
         viewonly=True,
     )
@@ -103,15 +115,37 @@ class Project(Base):
     def __init__(self, **kwargs: object) -> None:
         # 丢弃已废弃的旧字段键，防止构造时报错
         for _legacy in (
-            "management_entity", "ownership_entity", "organization_id",
-            "name", "code", "project_status", "is_active",
-            "short_name", "project_type", "project_scale",
-            "start_date", "end_date", "expected_completion_date", "actual_completion_date",
-            "address", "city", "district", "province",
-            "project_manager", "project_phone", "project_email",
-            "total_investment", "planned_investment", "actual_investment", "project_budget",
-            "project_description", "project_objectives", "project_scope",
-            "construction_company", "design_company", "supervision_company",
+            "management_entity",
+            "ownership_entity",
+            "organization_id",
+            "name",
+            "code",
+            "project_status",
+            "is_active",
+            "short_name",
+            "project_type",
+            "project_scale",
+            "start_date",
+            "end_date",
+            "expected_completion_date",
+            "actual_completion_date",
+            "address",
+            "city",
+            "district",
+            "province",
+            "project_manager",
+            "project_phone",
+            "project_email",
+            "total_investment",
+            "planned_investment",
+            "actual_investment",
+            "project_budget",
+            "project_description",
+            "project_objectives",
+            "project_scope",
+            "construction_company",
+            "design_company",
+            "supervision_company",
         ):
             kwargs.pop(_legacy, None)
         super().__init__(**kwargs)

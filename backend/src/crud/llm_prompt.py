@@ -45,7 +45,9 @@ class CRUDPromptTemplate(
         return (await db.execute(stmt)).scalars().first()
 
     async def get_active_prompts_async(self, db: AsyncSession) -> list[PromptTemplate]:
-        stmt = select(PromptTemplate).where(PromptTemplate.status == PromptStatus.ACTIVE)
+        stmt = select(PromptTemplate).where(
+            PromptTemplate.status == PromptStatus.ACTIVE
+        )
         return list((await db.execute(stmt)).scalars().all())
 
     async def archive_active_by_doc_type_async(

@@ -86,9 +86,7 @@ class RBACService:
         if existing_role:
             raise DuplicateResourceError("角色", "name", role_data.name)
 
-        role = await role_crud.create(
-            self.db, obj_in=role_data, created_by=created_by
-        )
+        role = await role_crud.create(self.db, obj_in=role_data, created_by=created_by)
 
         # 添加权限
         if role_data.permission_ids:
@@ -129,7 +127,9 @@ class RBACService:
             if await role_crud.check_display_name_exists_async(
                 self.db, role_data.display_name, exclude_role_id=role_id
             ):
-                raise DuplicateResourceError("角色", "display_name", role_data.display_name)
+                raise DuplicateResourceError(
+                    "角色", "display_name", role_data.display_name
+                )
 
         # 更新字段
         update_data = role_data.model_dump(
@@ -693,13 +693,13 @@ class RBACService:
         if not role:
             raise ResourceNotFoundError("角色", role_id)
         if role.is_system_role:
-            raise OperationNotAllowedError(
-                "系统角色权限无法修改", reason="system_role"
-            )
+            raise OperationNotAllowedError("系统角色权限无法修改", reason="system_role")
 
         permissions: list[Permission] = []
         if permission_ids:
-            permissions = await permission_crud.get_by_ids_async(self.db, permission_ids)
+            permissions = await permission_crud.get_by_ids_async(
+                self.db, permission_ids
+            )
             found_ids = {str(permission.id) for permission in permissions}
             missing_ids = sorted(set(permission_ids) - found_ids)
             if missing_ids:
@@ -716,7 +716,9 @@ class RBACService:
         role.updated_by = operator_id
 
         await self.db.flush()
-        await role_crud.update_permissions_created_by_async(self.db, role_id, operator_id)
+        await role_crud.update_permissions_created_by_async(
+            self.db, role_id, operator_id
+        )
 
     async def _check_static_permission(
         self, user_id: str, permission_request: PermissionCheckRequest
@@ -732,7 +734,10 @@ class RBACService:
             )
         if not user_roles:
             return PermissionCheckResponse(
-                has_permission=False, granted_by=[], conditions=None, reason="用户未分配任何角色"
+                has_permission=False,
+                granted_by=[],
+                conditions=None,
+                reason="用户未分配任何角色",
             )
 
         granted_by: list[str] = []
@@ -795,9 +800,7 @@ class RBACService:
         def _grant_sort_key(grant: PermissionGrant) -> tuple[int, float]:  # DEPRECATED
             created_at = getattr(grant, "created_at", None)
             created_at_ts = (
-                created_at.timestamp()
-                if isinstance(created_at, datetime)
-                else 0.0
+                created_at.timestamp() if isinstance(created_at, datetime) else 0.0
             )
             return int(getattr(grant, "priority", 0) or 0), created_at_ts
 
@@ -850,7 +853,9 @@ class RBACService:
         )
 
     def _scope_matches(
-        self, grant: PermissionGrant, permission_request: PermissionCheckRequest  # DEPRECATED
+        self,
+        grant: PermissionGrant,
+        permission_request: PermissionCheckRequest,  # DEPRECATED
     ) -> bool:
         scope = (grant.scope or "global").lower()
         if scope == "global":
@@ -880,7 +885,9 @@ class RBACService:
         return False
 
     def _conditions_match(
-        self, grant: PermissionGrant, permission_request: PermissionCheckRequest  # DEPRECATED
+        self,
+        grant: PermissionGrant,
+        permission_request: PermissionCheckRequest,  # DEPRECATED
     ) -> bool:
         if not grant.conditions:
             return True
@@ -980,7 +987,9 @@ class RBACService:
         )
         return grant
 
-    async def get_permission_grant(self, grant_id: str) -> PermissionGrant | None:  # DEPRECATED
+    async def get_permission_grant(
+        self, grant_id: str
+    ) -> PermissionGrant | None:  # DEPRECATED
         """获取统一授权记录详情"""
         return await permission_grant_crud.get(self.db, id=grant_id)
 
@@ -1010,7 +1019,10 @@ class RBACService:
         )
 
     async def update_permission_grant(
-        self, grant_id: str, grant_data: PermissionGrantUpdate, updated_by: str  # DEPRECATED
+        self,
+        grant_id: str,
+        grant_data: PermissionGrantUpdate,
+        updated_by: str,  # DEPRECATED
     ) -> PermissionGrant:  # DEPRECATED
         """更新统一授权记录"""
         grant = await permission_grant_crud.get(self.db, id=grant_id)
@@ -1147,9 +1159,7 @@ class RBACService:
 
         return False
 
-    async def _user_has_admin_permission(
-        self, user_id: str, roles: list[Role]
-    ) -> bool:
+    async def _user_has_admin_permission(self, user_id: str, roles: list[Role]) -> bool:
         """检查用户是否具备系统管理员权限（基于权限而非角色名）"""
         if any(self._role_has_admin_permission(role) for role in roles):
             return True
@@ -1290,10 +1300,10 @@ class RBACService:
         Returns:
             bool: 是否有权限
         """
-        if (
-            resource == ADMIN_PERMISSION_RESOURCE
-            and action in {ADMIN_PERMISSION_ACTION, LEGACY_ADMIN_PERMISSION_ACTION}
-        ):
+        if resource == ADMIN_PERMISSION_RESOURCE and action in {
+            ADMIN_PERMISSION_ACTION,
+            LEGACY_ADMIN_PERMISSION_ACTION,
+        }:
             return await self.is_admin(user_id)
 
         from ...schemas.rbac import PermissionCheckRequest
@@ -1336,7 +1346,9 @@ class RBACService:
         return response.has_permission
 
     async def check_organization_access(  # DEPRECATED compatibility API
-        self, user_id: str, organization_id: str  # DEPRECATED alias
+        self,
+        user_id: str,
+        organization_id: str,  # DEPRECATED alias
     ) -> bool:
         """
         检查组织访问权限 - 适配器方法供装饰器使用

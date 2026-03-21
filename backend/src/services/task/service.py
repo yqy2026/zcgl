@@ -465,9 +465,7 @@ class TaskService:
             obj_in=config_data,
         )
 
-    async def delete_excel_config(
-        self, db: AsyncSession, *, config_id: str
-    ) -> bool:
+    async def delete_excel_config(self, db: AsyncSession, *, config_id: str) -> bool:
         config = await self.get_excel_config(db, config_id=config_id)
         if not config:
             return False

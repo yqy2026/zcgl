@@ -53,7 +53,9 @@ def _normalize_optional_str(value: Any) -> str | None:
 
 
 def _resolve_current_user_organization_id(current_user: User) -> str | None:
-    return _normalize_optional_str(getattr(current_user, "default_organization_id", None))
+    return _normalize_optional_str(
+        getattr(current_user, "default_organization_id", None)
+    )
 
 
 async def _resolve_organization_party_id(
@@ -410,7 +412,9 @@ async def update_organization(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     _authz_ctx: AuthzContext = Depends(
-        require_authz(action="update", resource_type="organization", resource_id="{org_id}")
+        require_authz(
+            action="update", resource_type="organization", resource_id="{org_id}"
+        )
     ),
 ) -> OrganizationResponse:
     """更新组织"""
@@ -434,7 +438,9 @@ async def delete_organization(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     _authz_ctx: AuthzContext = Depends(
-        require_authz(action="delete", resource_type="organization", resource_id="{org_id}")
+        require_authz(
+            action="delete", resource_type="organization", resource_id="{org_id}"
+        )
     ),
 ) -> dict[str, str]:
     """删除组织（软删除）"""
@@ -460,7 +466,9 @@ async def move_organization(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     _authz_ctx: AuthzContext = Depends(
-        require_authz(action="update", resource_type="organization", resource_id="{org_id}")
+        require_authz(
+            action="update", resource_type="organization", resource_id="{org_id}"
+        )
     ),
 ) -> dict[str, Any]:
     """移动组织到新的父组织下"""

@@ -172,7 +172,8 @@ class Permission(Base):
         "Role", secondary=role_permissions, back_populates="permissions"
     )
     permission_grants: Mapped[list["PermissionGrant"]] = relationship(  # DEPRECATED
-        "PermissionGrant", back_populates="permission"  # DEPRECATED
+        "PermissionGrant",
+        back_populates="permission",  # DEPRECATED
     )
 
     @property

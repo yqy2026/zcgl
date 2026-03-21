@@ -42,7 +42,9 @@ async def health_check(
 
         health_check = _as_dict(db_status.get("health_check", {}))
         metrics = _as_dict(db_status.get("metrics", {}))
-        pool_status = _as_dict(_as_dict(health_check.get("checks", {})).get("connection_pool", {}))
+        pool_status = _as_dict(
+            _as_dict(health_check.get("checks", {})).get("connection_pool", {})
+        )
 
         health_data: dict[str, Any] = {
             "status": "healthy",
