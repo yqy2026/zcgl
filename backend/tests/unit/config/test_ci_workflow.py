@@ -188,3 +188,13 @@ def test_frontend_e2e_job_should_install_full_browser_matrix() -> None:
     assert "chromium" in install_script
     assert "firefox" in install_script
     assert "webkit" in install_script
+
+
+def test_frontend_e2e_seed_should_provision_non_admin_role() -> None:
+    workflow = _load_ci_workflow()
+    frontend_e2e_job = workflow["jobs"]["frontend-e2e"]
+    seed_step = _step_by_name(frontend_e2e_job, "Seed admin user for E2E")
+    seed_script = str(seed_step.get("run", ""))
+
+    assert "ensure_regular_role" in seed_script
+    assert 'Role.name == "user"' in seed_script

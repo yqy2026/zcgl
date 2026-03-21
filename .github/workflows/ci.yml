@@ -732,6 +732,25 @@ jobs:
                 await db.refresh(role)
             return role
 
+        async def ensure_regular_role(db):
+            role_result = await db.execute(select(Role).where(Role.name == "user"))
+            role = role_result.scalars().first()
+            if role is None:
+                role = Role(
+                    name="user",
+                    display_name="普通用户",
+                    description="Frontend E2E regular role",
+                    is_system_role=True,
+                    is_active=True,
+                    scope="global",
+                    created_by="ci-e2e",
+                    updated_by="ci-e2e",
+                )
+                db.add(role)
+                await db.commit()
+                await db.refresh(role)
+            return role
+
         async def ensure_admin_permission(db):
             permission_result = await db.execute(
                 select(Permission).where(
@@ -838,6 +857,7 @@ jobs:
             async with async_session_scope() as db:
                 organization = await ensure_organization(db)
                 admin_role = await ensure_admin_role(db)
+                await ensure_regular_role(db)
                 admin_permission = await ensure_admin_permission(db)
                 await ensure_role_permission(db, admin_role.id, admin_permission.id)
 
