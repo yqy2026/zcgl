@@ -272,9 +272,20 @@ vi.mock('antd', () => {
   );
   Spin.displayName = 'MockSpin';
 
-  const Alert = ({ message, type }: { message: string; type?: string }) => (
+  const Alert = ({
+    message,
+    title,
+    description,
+    type,
+  }: {
+    message?: React.ReactNode;
+    title?: React.ReactNode;
+    description?: React.ReactNode;
+    type?: string;
+  }) => (
     <div data-testid="alert" data-type={type}>
-      {message}
+      <div>{title ?? message}</div>
+      <div>{description}</div>
     </div>
   );
   Alert.displayName = 'MockAlert';

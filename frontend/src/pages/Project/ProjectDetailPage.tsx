@@ -342,6 +342,8 @@ const ProjectDetailPage: React.FC = () => {
         </Button>
       }
     >
+      <CurrentViewBanner />
+
       <Row gutter={[16, 16]} className={styles.metricsRow}>
         <Col xs={24} sm={12} lg={6}>
           <Card className={styles.metricCard}>

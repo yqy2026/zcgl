@@ -340,6 +340,8 @@ const AssetListPage: React.FC = () => {
         </Space>
       }
     >
+      <CurrentViewBanner />
+
       {/* 搜索组件 */}
       <AssetSearch
         onSearch={handleSearch}

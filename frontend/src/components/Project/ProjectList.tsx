@@ -488,6 +488,8 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
 
   return (
     <div className="project-list">
+      <CurrentViewBanner />
+
       {/* 统计卡片 */}
       <Row gutter={[16, 16]} className={styles.statisticsRow}>
         <Col xs={24} sm={12} md={6}>
