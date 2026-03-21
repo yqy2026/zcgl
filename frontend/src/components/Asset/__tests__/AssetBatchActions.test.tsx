@@ -58,13 +58,9 @@ vi.mock('@tanstack/react-query', () => ({
 vi.mock('antd', async () => {
   const actual = await vi.importActual<typeof import('antd')>('antd');
 
-  const Button = ({
-    children,
-    onClick,
-  }: {
-    children?: React.ReactNode;
-    onClick?: () => void;
-  }) => <button onClick={onClick}>{children}</button>;
+  const Button = ({ children, onClick }: { children?: React.ReactNode; onClick?: () => void }) => (
+    <button onClick={onClick}>{children}</button>
+  );
 
   const Modal = ({
     open,
@@ -106,11 +102,17 @@ vi.mock('antd', async () => {
   };
 
   const Input = ({ children }: { children?: React.ReactNode }) => <div>{children}</div>;
-  const TextArea = ({ children }: { children?: React.ReactNode }) => <textarea>{children}</textarea>;
-  const Select = ({ children }: { children?: React.ReactNode }) => <select>{children}</select>;
-  const Option = ({ children, value }: { children?: React.ReactNode; value?: string | boolean }) => (
-    <option value={String(value)}>{children}</option>
+  const TextArea = ({ children }: { children?: React.ReactNode }) => (
+    <textarea>{children}</textarea>
   );
+  const Select = ({ children }: { children?: React.ReactNode }) => <select>{children}</select>;
+  const Option = ({
+    children,
+    value,
+  }: {
+    children?: React.ReactNode;
+    value?: string | boolean;
+  }) => <option value={String(value)}>{children}</option>;
   const Form = ({ children }: { children?: React.ReactNode }) => <form>{children}</form>;
 
   return {

@@ -516,7 +516,13 @@ describe('ProjectList', () => {
 
       expect(useQuery).toHaveBeenCalledWith(
         expect.objectContaining({
-          queryKey: ['project-list', expect.any(String), 1, 10, { keyword: '', status: '', ownerPartyId: '' }],
+          queryKey: [
+            'project-list',
+            expect.any(String),
+            1,
+            10,
+            { keyword: '', status: '', ownerPartyId: '' },
+          ],
           enabled: false,
         })
       );

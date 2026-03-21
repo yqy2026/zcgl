@@ -77,7 +77,9 @@ const buildRawViewOptions = (
   return Array.from(options.values());
 };
 
-const normalizeStoredSelection = (selection: StoredViewSelection | null): StoredViewSelection | null => {
+const normalizeStoredSelection = (
+  selection: StoredViewSelection | null
+): StoredViewSelection | null => {
   if (selection == null) {
     return null;
   }
@@ -243,7 +245,7 @@ export const ViewProvider: React.FC<ViewProviderProps> = ({ children }) => {
       const restoredSelection =
         storedSelection == null
           ? null
-          : resolvedOptions.find(item => item.key === storedSelection.key) ?? null;
+          : (resolvedOptions.find(item => item.key === storedSelection.key) ?? null);
 
       if (restoredSelection != null) {
         startTransition(() => {
@@ -295,7 +297,15 @@ export const ViewProvider: React.FC<ViewProviderProps> = ({ children }) => {
       closeSelector,
       selectView,
     }),
-    [availableViews, closeSelector, currentView, openSelector, selectView, selectionRequired, selectorOpen]
+    [
+      availableViews,
+      closeSelector,
+      currentView,
+      openSelector,
+      selectView,
+      selectionRequired,
+      selectorOpen,
+    ]
   );
 
   return <ViewContext.Provider value={value}>{children}</ViewContext.Provider>;

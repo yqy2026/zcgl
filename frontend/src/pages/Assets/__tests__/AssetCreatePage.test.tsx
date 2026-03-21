@@ -76,9 +76,8 @@ vi.mock('@/services/assetService', () => ({
 }));
 
 vi.mock('@tanstack/react-query', async () => {
-  const actual = await vi.importActual<typeof import('@tanstack/react-query')>(
-    '@tanstack/react-query'
-  );
+  const actual =
+    await vi.importActual<typeof import('@tanstack/react-query')>('@tanstack/react-query');
 
   return {
     ...actual,
@@ -150,7 +149,9 @@ describe('AssetCreatePage', () => {
   });
 
   it('编辑成功后应失效 scoped 资产列表与详情查询前缀', async () => {
-    const { getByRole } = renderWithProviders(<AssetCreatePage />, { route: '/assets/asset-1/edit' });
+    const { getByRole } = renderWithProviders(<AssetCreatePage />, {
+      route: '/assets/asset-1/edit',
+    });
 
     await waitFor(() => {
       expect(assetService.getAsset).toHaveBeenCalledWith('asset-1');

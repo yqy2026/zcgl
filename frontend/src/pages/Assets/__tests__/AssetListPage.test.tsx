@@ -251,13 +251,7 @@ describe('AssetListPage', () => {
 
       expect(useQuery).toHaveBeenCalledWith(
         expect.objectContaining({
-          queryKey: [
-            'assets-list',
-            expect.stringContaining('owner:party-1'),
-            1,
-            20,
-            {},
-          ],
+          queryKey: ['assets-list', expect.stringContaining('owner:party-1'), 1, 20, {}],
         })
       );
       expect(useQuery).toHaveBeenCalledWith(

@@ -81,9 +81,14 @@ describe('useAnalytics', () => {
     renderHookWithProviders(() => useAnalytics({ keyword: '园区' }), { queryClient });
 
     await waitFor(() => {
-      const query = queryClient
-        .getQueryCache()
-        .find({ queryKey: ['analytics', 'user:user-1|view:owner:party-1', 'comprehensive', { keyword: '园区' }] });
+      const query = queryClient.getQueryCache().find({
+        queryKey: [
+          'analytics',
+          'user:user-1|view:owner:party-1',
+          'comprehensive',
+          { keyword: '园区' },
+        ],
+      });
 
       expect(query?.state.fetchStatus ?? 'idle').toBe('idle');
     });

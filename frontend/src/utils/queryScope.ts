@@ -4,9 +4,12 @@ import { viewSelectionStorage } from '@/utils/viewSelectionStorage';
 const ANONYMOUS_USER_SCOPE = 'user:anonymous';
 const NO_VIEW_SCOPE = 'view:none';
 
-type ScopeView = {
-  key: string;
-} | null | undefined;
+type ScopeView =
+  | {
+      key: string;
+    }
+  | null
+  | undefined;
 
 const normalizeUserScope = (userId: string | null | undefined): string => {
   const normalizedUserId = userId?.trim() ?? '';
