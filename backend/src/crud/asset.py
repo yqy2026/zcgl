@@ -279,7 +279,9 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             return set()
 
         stmt = select(User.id, User.username).where(
-            User.default_organization_id.in_(org_ids)  # DEPRECATED legacy org scope fallback
+            User.default_organization_id.in_(
+                org_ids
+            )  # DEPRECATED legacy org scope fallback
         )
         result = await db.execute(stmt)
         rows: list[tuple[object, object]] = await _result_all(result)
@@ -367,8 +369,10 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         include_deleted: bool = False,
         party_filter: PartyFilter | None = None,
     ) -> Asset | None:
-        stmt = select(Asset).options(*self._asset_projection_load_options()).filter(
-            getattr(self.model, "id") == id
+        stmt = (
+            select(Asset)
+            .options(*self._asset_projection_load_options())
+            .filter(getattr(self.model, "id") == id)
         )
         if party_filter is not None:
             stmt = await self._apply_asset_party_filter(db, stmt, party_filter)
@@ -423,8 +427,10 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         asset_name: str,
         include_deleted: bool = False,
     ) -> Asset | None:
-        stmt = select(Asset).options(*self._asset_projection_load_options()).filter(
-            Asset.asset_name == asset_name
+        stmt = (
+            select(Asset)
+            .options(*self._asset_projection_load_options())
+            .filter(Asset.asset_name == asset_name)
         )
         if not include_deleted:
             stmt = stmt.filter(self._not_deleted_clause(Asset.data_status))
@@ -853,21 +859,19 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
 
         stmt = self._apply_simple_asset_filters(select(Asset), filters)
         category_column = getattr(Asset, category_field)
-        agg_stmt = (
-            stmt.with_only_columns(
-                category_column.label("category"),
-                sql_cast(func.sum(func.coalesce(Asset.rentable_area, 0)), Float).label(
-                    "total_rentable_area"
-                ),
-                sql_cast(func.sum(func.coalesce(Asset.rented_area, 0)), Float).label(
-                    "total_rented_area"
-                ),
-                func.count(Asset.id).label("total_assets"),
-                func.count(case((Asset.rentable_area > 0, 1))).label(
-                    "rentable_assets_count"
-                ),
-            ).group_by(category_column)
-        )
+        agg_stmt = stmt.with_only_columns(
+            category_column.label("category"),
+            sql_cast(func.sum(func.coalesce(Asset.rentable_area, 0)), Float).label(
+                "total_rentable_area"
+            ),
+            sql_cast(func.sum(func.coalesce(Asset.rented_area, 0)), Float).label(
+                "total_rented_area"
+            ),
+            func.count(Asset.id).label("total_assets"),
+            func.count(case((Asset.rentable_area > 0, 1))).label(
+                "rentable_assets_count"
+            ),
+        ).group_by(category_column)
         result = await db.execute(agg_stmt)
         rows: list[OccupancyCategoryAggregationRow] = await _result_all(result)
         return rows
@@ -887,9 +891,9 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             sql_cast(func.sum(func.coalesce(Asset.rented_area, 0)), Float).label(
                 "total_rented_area"
             ),
-            sql_cast(func.sum(func.coalesce(Asset.non_commercial_area, 0)), Float).label(
-                "total_non_commercial_area"
-            ),
+            sql_cast(
+                func.sum(func.coalesce(Asset.non_commercial_area, 0)), Float
+            ).label("total_non_commercial_area"),
             func.count(case((Asset.land_area.isnot(None), 1))).label(
                 "assets_with_area_data"
             ),
@@ -911,9 +915,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         first_row: tuple[str] | None = await _result_first(result)
         return first_row is not None
 
-    async def has_property_certs_async(
-        self, db: AsyncSession, asset_id: str
-    ) -> bool:
+    async def has_property_certs_async(self, db: AsyncSession, asset_id: str) -> bool:
         """检查资产是否关联产权证（通过关联表）"""
         from ..models.associations import property_cert_assets
 
@@ -1018,7 +1020,9 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
                 self._decrypt_asset_object(asset)
         return assets
 
-    async def count_by_ownership_async(self, db: AsyncSession, ownership_id: str) -> int:
+    async def count_by_ownership_async(
+        self, db: AsyncSession, ownership_id: str
+    ) -> int:
         """统计权属方的资产数量"""
         stmt = select(func.count(Asset.id)).where(Asset.owner_party_id == ownership_id)
         result = await db.execute(stmt)

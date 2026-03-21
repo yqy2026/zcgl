@@ -55,7 +55,9 @@ def _build_party_scope_context(
     return context
 
 
-async def _resolve_llm_prompt_create_resource_context(request: Request) -> dict[str, str]:
+async def _resolve_llm_prompt_create_resource_context(
+    request: Request,
+) -> dict[str, str]:
     try:
         payload = await request.json()
     except Exception:
@@ -102,7 +104,9 @@ async def create_prompt(
 
     manager = PromptManager()
     try:
-        prompt = await manager.create_prompt_async(db, prompt_in, user_id=current_user.id)
+        prompt = await manager.create_prompt_async(
+            db, prompt_in, user_id=current_user.id
+        )
         return prompt
     except BaseBusinessError:
         raise

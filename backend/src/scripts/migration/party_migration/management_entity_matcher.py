@@ -89,34 +89,44 @@ def main() -> int:
                 {"id": str(row["id"]), "name": str(row["name"])}
                 for row in conn.execute(
                     sa.text("SELECT id, name FROM parties WHERE name IS NOT NULL")
-                ).mappings().all()
+                )
+                .mappings()
+                .all()
             ]
 
             entity_values: set[str] = set()
             if _table_exists(conn, "assets"):
-                rows = conn.execute(
-                    sa.text(
-                        """
+                rows = (
+                    conn.execute(
+                        sa.text(
+                            """
                         SELECT DISTINCT management_entity
                         FROM assets
                         WHERE management_entity IS NOT NULL
                           AND management_entity <> ''
                         """
+                        )
                     )
-                ).scalars().all()
+                    .scalars()
+                    .all()
+                )
                 entity_values.update(str(value) for value in rows)
 
             if _table_exists(conn, "projects"):
-                rows = conn.execute(
-                    sa.text(
-                        """
+                rows = (
+                    conn.execute(
+                        sa.text(
+                            """
                         SELECT DISTINCT management_entity
                         FROM projects
                         WHERE management_entity IS NOT NULL
                           AND management_entity <> ''
                         """
+                        )
                     )
-                ).scalars().all()
+                    .scalars()
+                    .all()
+                )
                 entity_values.update(str(value) for value in rows)
     finally:
         engine.dispose()

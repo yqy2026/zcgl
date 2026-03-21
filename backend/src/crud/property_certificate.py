@@ -142,7 +142,9 @@ class CRUDPropertyCertificate(
                 db.add(relation)
 
         if asset_ids:
-            asset_result = await db.execute(select(Asset).where(Asset.id.in_(asset_ids)))
+            asset_result = await db.execute(
+                select(Asset).where(Asset.id.in_(asset_ids))
+            )
             assets: list[Asset] = list(asset_result.scalars().all())
             if assets:
                 db_obj.assets.extend(assets)

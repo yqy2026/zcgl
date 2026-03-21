@@ -69,7 +69,10 @@ class EnumFieldType(Base):
 
     # 时间信息
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=lambda: datetime.now(UTC).replace(tzinfo=None), comment="创建时间"
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        comment="创建时间",
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
@@ -140,7 +143,10 @@ class EnumFieldValue(Base):
 
     # 时间信息
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=lambda: datetime.now(UTC).replace(tzinfo=None), comment="创建时间"
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        comment="创建时间",
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
@@ -207,7 +213,10 @@ class EnumFieldUsage(Base):
 
     # 时间信息
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=lambda: datetime.now(UTC).replace(tzinfo=None), comment="创建时间"
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        comment="创建时间",
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,

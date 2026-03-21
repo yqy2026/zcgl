@@ -364,7 +364,9 @@ def require_organization_permission(
     """
     组织权限装饰器工厂函数
     """
-    return OrganizationPermissionChecker(required_permission, organization_id_param)  # DEPRECATED
+    return OrganizationPermissionChecker(
+        required_permission, organization_id_param
+    )  # DEPRECATED
 
 
 # 从现有中间件导入需要的函数已在顶部完成

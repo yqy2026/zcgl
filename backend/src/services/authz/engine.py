@@ -110,7 +110,9 @@ class AuthzEngine:
                     reason_code="policy_allow",
                     matched_policy_id=matched_policy_id,
                     matched_rule_id=matched_rule_id,
-                    field_mask=self._normalize_field_mask(getattr(rule, "field_mask", None)),
+                    field_mask=self._normalize_field_mask(
+                        getattr(rule, "field_mask", None)
+                    ),
                 )
 
         return AuthzDecision(
@@ -181,32 +183,44 @@ class AuthzEngine:
         if operator == "==":
             if len(args) < 2:
                 return False
-            return self._fallback_eval(args[0], data) == self._fallback_eval(args[1], data)
+            return self._fallback_eval(args[0], data) == self._fallback_eval(
+                args[1], data
+            )
 
         if operator == "!=":
             if len(args) < 2:
                 return False
-            return self._fallback_eval(args[0], data) != self._fallback_eval(args[1], data)
+            return self._fallback_eval(args[0], data) != self._fallback_eval(
+                args[1], data
+            )
 
         if operator == ">":
             if len(args) < 2:
                 return False
-            return self._fallback_eval(args[0], data) > self._fallback_eval(args[1], data)
+            return self._fallback_eval(args[0], data) > self._fallback_eval(
+                args[1], data
+            )
 
         if operator == ">=":
             if len(args) < 2:
                 return False
-            return self._fallback_eval(args[0], data) >= self._fallback_eval(args[1], data)
+            return self._fallback_eval(args[0], data) >= self._fallback_eval(
+                args[1], data
+            )
 
         if operator == "<":
             if len(args) < 2:
                 return False
-            return self._fallback_eval(args[0], data) < self._fallback_eval(args[1], data)
+            return self._fallback_eval(args[0], data) < self._fallback_eval(
+                args[1], data
+            )
 
         if operator == "<=":
             if len(args) < 2:
                 return False
-            return self._fallback_eval(args[0], data) <= self._fallback_eval(args[1], data)
+            return self._fallback_eval(args[0], data) <= self._fallback_eval(
+                args[1], data
+            )
 
         if operator == "and":
             return all(bool(self._fallback_eval(arg, data)) for arg in args)

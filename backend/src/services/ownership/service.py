@@ -246,7 +246,9 @@ class OwnershipService:
             return []
 
         # 批量获取资产计数（按权属方分组）
-        asset_counts = await asset_crud.get_counts_by_ownerships_async(db, ownership_ids)
+        asset_counts = await asset_crud.get_counts_by_ownerships_async(
+            db, ownership_ids
+        )
 
         # 批量获取项目计数（按权属方分组）
         project_counts = await ownership_crud.get_project_counts_by_ownerships_async(

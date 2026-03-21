@@ -227,4 +227,3 @@ async def get_occupancy_rate_statistics(
         },
         "message": "出租率统计数据获取成功",
     }
-

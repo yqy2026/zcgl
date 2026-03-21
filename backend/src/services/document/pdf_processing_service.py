@@ -50,6 +50,7 @@ class PDFProcessingService:
         page_limit = max_pages if max_pages is not None else self.max_pages
 
         try:
+
             def _extract() -> tuple[str, int, int]:
                 with fitz.open(str(path)) as doc:
                     page_count = len(doc)

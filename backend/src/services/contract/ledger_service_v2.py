@@ -140,10 +140,12 @@ class ContractLedgerServiceV2:
             return []
 
         all_year_months = _expand_year_months(rent_terms)
-        existing_year_months = await contract_group_crud.get_existing_ledger_year_months(
-            db,
-            contract_id=contract_id,
-            year_months=all_year_months,
+        existing_year_months = (
+            await contract_group_crud.get_existing_ledger_year_months(
+                db,
+                contract_id=contract_id,
+                year_months=all_year_months,
+            )
         )
 
         created_entries: list[ContractLedgerEntry] = []
@@ -279,9 +281,7 @@ class ContractLedgerServiceV2:
         lease_detail = getattr(contract, "lease_detail", None)
         payment_cycle = getattr(lease_detail, "payment_cycle", None) or "月付"
         now = _utcnow()
-        existing_by_month = {
-            entry.year_month: entry for entry in existing_entries
-        }
+        existing_by_month = {entry.year_month: entry for entry in existing_entries}
         target_year_months = _expand_year_months(rent_terms)
         target_year_month_set = set(target_year_months)
 
@@ -395,8 +395,7 @@ class ContractLedgerServiceV2:
             raise BusinessValidationError("voided 为系统保留状态，不允许人工批量更新")
         if payment_status not in _MANUAL_LEDGER_PAYMENT_STATUSES:
             raise BusinessValidationError(
-                "payment_status 必须为 "
-                f"{sorted(_MANUAL_LEDGER_PAYMENT_STATUSES)} 之一"
+                f"payment_status 必须为 {sorted(_MANUAL_LEDGER_PAYMENT_STATUSES)} 之一"
             )
 
         return await contract_group_crud.batch_update_ledger_status(

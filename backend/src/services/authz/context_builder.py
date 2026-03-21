@@ -88,10 +88,12 @@ class AuthzContextBuilder:
                 user_id=user_id,
             )
             if legacy_org_id is not None:
-                legacy_party_id = await self._resolve_legacy_default_organization_party_id(
-                    db,
-                    user_id=user_id,
-                    organization_id=legacy_org_id,
+                legacy_party_id = (
+                    await self._resolve_legacy_default_organization_party_id(
+                        db,
+                        user_id=user_id,
+                        organization_id=legacy_org_id,
+                    )
                 )
                 if legacy_party_id is not None:
                     owner_party_ids.add(legacy_party_id)

@@ -62,7 +62,9 @@ def _normalize_identifier_sequence(values: Any) -> list[str]:
 
 
 def _resolve_current_user_organization_id(current_user: User) -> str | None:
-    return _normalize_optional_str(getattr(current_user, "default_organization_id", None))
+    return _normalize_optional_str(
+        getattr(current_user, "default_organization_id", None)
+    )
 
 
 def _resolve_effective_organization_id(
@@ -294,7 +296,10 @@ async def list_projects(
             search_params=search_params,
             current_user_id=str(current_user.id),
         )
-        items = [project_service.project_to_response(item) for item in result.get("items", [])]
+        items = [
+            project_service.project_to_response(item)
+            for item in result.get("items", [])
+        ]
         return ResponseHandler.paginated(
             data=items,
             page=result.get("page", page),
@@ -328,7 +333,10 @@ async def search_projects(
             search_params=search_params,
             current_user_id=str(current_user.id),
         )
-        items = [project_service.project_to_response(item) for item in result.get("items", [])]
+        items = [
+            project_service.project_to_response(item)
+            for item in result.get("items", [])
+        ]
         return ResponseHandler.paginated(
             data=items,
             page=result.get("page", search_params.page),

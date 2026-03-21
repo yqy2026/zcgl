@@ -79,7 +79,10 @@ class Notification(Base):
     extra_data = Column(Text, comment="额外数据（JSON格式）")
 
     created_at = Column(
-        DateTime, nullable=False, default=lambda: datetime.now(UTC).replace(tzinfo=None), comment="创建时间"
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        comment="创建时间",
     )
     updated_at = Column(
         DateTime,

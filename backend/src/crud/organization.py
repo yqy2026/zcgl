@@ -238,7 +238,6 @@ class CRUDOrganization(CRUDBase[Organization, OrganizationCreate, OrganizationUp
             db, skip=skip, limit=limit, keyword=keyword
         )
 
-
     async def get_statistics_async(self, db: AsyncSession) -> dict[str, Any]:
         """获取组织统计数据（按状态/类型/层级分组）"""
         base_condition = Organization.is_deleted.is_(False)
@@ -327,17 +326,14 @@ class CRUDOrganization(CRUDBase[Organization, OrganizationCreate, OrganizationUp
         base_path = parent_path if parent_path else f"/{parent_org_id}"
         parent_parent_id: str | None = getattr(parent_org, "parent_id", None)
 
-        base = (
-            select(
-                literal(parent_org_id, type_=Organization.id.type).label("id"),
-                literal(
-                    parent_parent_id, type_=Organization.parent_id.type
-                ).label("parent_id"),
-                literal(base_path, type_=Organization.path.type).label("path"),
-                literal(parent_level, type_=Organization.level.type).label("level"),
-            )
-            .cte(name="org_tree", recursive=True)
-        )
+        base = select(
+            literal(parent_org_id, type_=Organization.id.type).label("id"),
+            literal(parent_parent_id, type_=Organization.parent_id.type).label(
+                "parent_id"
+            ),
+            literal(base_path, type_=Organization.path.type).label("path"),
+            literal(parent_level, type_=Organization.level.type).label("level"),
+        ).cte(name="org_tree", recursive=True)
         recursive = select(
             Organization.id,
             Organization.parent_id,
@@ -367,9 +363,7 @@ class CRUDOrganization(CRUDBase[Organization, OrganizationCreate, OrganizationUp
         self, db: AsyncSession, *, is_deleted: bool = False
     ) -> list[str]:
         """获取满足条件的所有组织ID"""
-        stmt = select(Organization.id).where(
-            Organization.is_deleted.is_(is_deleted)
-        )
+        stmt = select(Organization.id).where(Organization.is_deleted.is_(is_deleted))
         result = await db.execute(stmt)
         return [str(org_id) for org_id in result.scalars().all()]
 

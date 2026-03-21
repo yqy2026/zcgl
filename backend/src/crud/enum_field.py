@@ -78,10 +78,14 @@ class EnumFieldTypeCRUD:
         )
         if is_active is not None:
             stmt = stmt.where(EnumFieldValue.is_active.is_(is_active))
-        stmt = stmt.order_by(EnumFieldValue.enum_type_id, EnumFieldValue.sort_order.asc())
+        stmt = stmt.order_by(
+            EnumFieldValue.enum_type_id, EnumFieldValue.sort_order.asc()
+        )
 
         rows = list((await db.execute(stmt)).scalars().all())
-        values_by_type: dict[str, list[EnumFieldValue]] = {enum_id: [] for enum_id in enum_type_ids}
+        values_by_type: dict[str, list[EnumFieldValue]] = {
+            enum_id: [] for enum_id in enum_type_ids
+        }
         for value in rows:
             type_id = str(value.enum_type_id)
             values_by_type.setdefault(type_id, []).append(value)
@@ -209,10 +213,14 @@ class EnumFieldTypeCRUD:
         if not db_obj:
             return False
 
-        value_count_stmt = select(func.count()).select_from(EnumFieldValue).where(
-            and_(
-                EnumFieldValue.enum_type_id == enum_type_id,
-                EnumFieldValue.is_deleted.is_(False),
+        value_count_stmt = (
+            select(func.count())
+            .select_from(EnumFieldValue)
+            .where(
+                and_(
+                    EnumFieldValue.enum_type_id == enum_type_id,
+                    EnumFieldValue.is_deleted.is_(False),
+                )
             )
         )
         value_count = int((await db.execute(value_count_stmt)).scalar() or 0)
@@ -220,10 +228,14 @@ class EnumFieldTypeCRUD:
         if value_count > 0:
             raise OperationNotAllowedError("无法删除包含枚举值的枚举类型")
 
-        usage_count_stmt = select(func.count()).select_from(EnumFieldUsage).where(
-            and_(
-                EnumFieldUsage.enum_type_id == enum_type_id,
-                EnumFieldUsage.is_active.is_(True),
+        usage_count_stmt = (
+            select(func.count())
+            .select_from(EnumFieldUsage)
+            .where(
+                and_(
+                    EnumFieldUsage.enum_type_id == enum_type_id,
+                    EnumFieldUsage.is_active.is_(True),
+                )
             )
         )
         usage_count = int((await db.execute(usage_count_stmt)).scalar() or 0)
@@ -259,13 +271,19 @@ class EnumFieldTypeCRUD:
         return [r[0] for r in result.all() if r[0]]
 
     async def get_statistics_async(self, db: AsyncSession) -> dict[str, Any]:
-        total_stmt = select(func.count()).select_from(EnumFieldType).where(
-            EnumFieldType.is_deleted.is_(False)
+        total_stmt = (
+            select(func.count())
+            .select_from(EnumFieldType)
+            .where(EnumFieldType.is_deleted.is_(False))
         )
         total_types = int((await db.execute(total_stmt)).scalar() or 0)
-        active_stmt = select(func.count()).select_from(EnumFieldType).where(
-            EnumFieldType.is_deleted.is_(False),
-            EnumFieldType.status == "active",
+        active_stmt = (
+            select(func.count())
+            .select_from(EnumFieldType)
+            .where(
+                EnumFieldType.is_deleted.is_(False),
+                EnumFieldType.status == "active",
+            )
         )
         active_types = int((await db.execute(active_stmt)).scalar() or 0)
 
@@ -314,15 +332,21 @@ class EnumFieldValueCRUD:
         return select(EnumFieldValue).where(EnumFieldValue.is_deleted.is_(False))
 
     async def count_all_async(self, db: AsyncSession) -> int:
-        stmt = select(func.count()).select_from(EnumFieldValue).where(
-            EnumFieldValue.is_deleted.is_(False)
+        stmt = (
+            select(func.count())
+            .select_from(EnumFieldValue)
+            .where(EnumFieldValue.is_deleted.is_(False))
         )
         return int((await db.execute(stmt)).scalar() or 0)
 
     async def count_active_async(self, db: AsyncSession) -> int:
-        stmt = select(func.count()).select_from(EnumFieldValue).where(
-            EnumFieldValue.is_deleted.is_(False),
-            EnumFieldValue.is_active.is_(True),
+        stmt = (
+            select(func.count())
+            .select_from(EnumFieldValue)
+            .where(
+                EnumFieldValue.is_deleted.is_(False),
+                EnumFieldValue.is_active.is_(True),
+            )
         )
         return int((await db.execute(stmt)).scalar() or 0)
 
@@ -510,10 +534,14 @@ class EnumFieldValueCRUD:
         if not db_obj:
             return False
 
-        children_count_stmt = select(func.count()).select_from(EnumFieldValue).where(
-            and_(
-                EnumFieldValue.parent_id == enum_value_id,
-                EnumFieldValue.is_deleted.is_(False),
+        children_count_stmt = (
+            select(func.count())
+            .select_from(EnumFieldValue)
+            .where(
+                and_(
+                    EnumFieldValue.parent_id == enum_value_id,
+                    EnumFieldValue.is_deleted.is_(False),
+                )
             )
         )
         children_count = int((await db.execute(children_count_stmt)).scalar() or 0)
@@ -559,7 +587,9 @@ class EnumFieldValueCRUD:
             )
             parent_rows = list((await db.execute(parent_stmt)).scalars().all())
             parents_by_id = {
-                str(parent.id): parent for parent in parent_rows if parent.id is not None
+                str(parent.id): parent
+                for parent in parent_rows
+                if parent.id is not None
             }
 
         created_values: list[EnumFieldValue] = []
@@ -632,14 +662,14 @@ class EnumFieldUsageCRUD:
         return select(EnumFieldUsage)
 
     async def count_active_async(self, db: AsyncSession) -> int:
-        stmt = select(func.count()).select_from(EnumFieldUsage).where(
-            EnumFieldUsage.is_active.is_(True)
+        stmt = (
+            select(func.count())
+            .select_from(EnumFieldUsage)
+            .where(EnumFieldUsage.is_active.is_(True))
         )
         return int((await db.execute(stmt)).scalar() or 0)
 
-    async def get_async(
-        self, db: AsyncSession, usage_id: str
-    ) -> EnumFieldUsage | None:
+    async def get_async(self, db: AsyncSession, usage_id: str) -> EnumFieldUsage | None:
         stmt = self._usage_query_async().where(EnumFieldUsage.id == usage_id)
         return (await db.execute(stmt)).scalars().first()
 
@@ -657,7 +687,9 @@ class EnumFieldUsageCRUD:
     async def get_by_enum_type_async(
         self, db: AsyncSession, enum_type_id: str
     ) -> list[EnumFieldUsage]:
-        stmt = self._usage_query_async().where(EnumFieldUsage.enum_type_id == enum_type_id)
+        stmt = self._usage_query_async().where(
+            EnumFieldUsage.enum_type_id == enum_type_id
+        )
         result = await db.execute(stmt)
         return list(result.scalars().all())
 
@@ -712,9 +744,7 @@ class EnumFieldHistoryCRUD:
         if enum_value_id:
             stmt = stmt.where(EnumFieldHistory.enum_value_id == enum_value_id)
         result = await db.execute(
-            stmt.order_by(EnumFieldHistory.created_at.desc())
-            .offset(skip)
-            .limit(limit)
+            stmt.order_by(EnumFieldHistory.created_at.desc()).offset(skip).limit(limit)
         )
         return list(result.scalars().all())
 

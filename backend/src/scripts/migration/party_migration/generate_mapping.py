@@ -159,7 +159,9 @@ def _fetch_rows(
     return [dict(row) for row in connection.execute(statement).mappings().all()]
 
 
-def load_source_rows(database_url: str) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+def load_source_rows(
+    database_url: str,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
     engine = sa.create_engine(database_url, future=True)
     try:
         with engine.connect() as conn:
@@ -201,9 +203,14 @@ def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
     database_url: str | None = args.database_url
-    should_skip_db_lookup = args.dry_run and database_url is None and os.getenv("DATABASE_URL") in (
-        None,
-        "",
+    should_skip_db_lookup = (
+        args.dry_run
+        and database_url is None
+        and os.getenv("DATABASE_URL")
+        in (
+            None,
+            "",
+        )
     )
     if database_url is None and not should_skip_db_lookup:
         try:

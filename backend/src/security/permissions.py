@@ -30,10 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 def _is_admin_permission(resource: str, action: str) -> bool:
-    return (
-        resource == ADMIN_PERMISSION_RESOURCE
-        and action == ADMIN_PERMISSION_ACTION
-    )
+    return resource == ADMIN_PERMISSION_RESOURCE and action == ADMIN_PERMISSION_ACTION
 
 
 def permission_required[**P, R](

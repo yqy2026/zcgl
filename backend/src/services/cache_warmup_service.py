@@ -21,8 +21,14 @@ class CacheWarmupService:
 
     def _build_tasks(self, db: AsyncSession) -> list[tuple[str, WarmupTask]]:
         return [
-            ("system_dictionary.types", lambda: system_dictionary_service.get_types_async(db)),
-            ("organization.statistics", lambda: organization_service.get_statistics(db)),
+            (
+                "system_dictionary.types",
+                lambda: system_dictionary_service.get_types_async(db),
+            ),
+            (
+                "organization.statistics",
+                lambda: organization_service.get_statistics(db),
+            ),
         ]
 
     @staticmethod

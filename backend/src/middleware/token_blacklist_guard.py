@@ -32,7 +32,9 @@ class TokenBlacklistGuard:
         self.circuit = CircuitBreaker(max_failures=5, cooldown=60)
 
     @staticmethod
-    def _trim_recent_events(events: deque[float], window_seconds: int, now: float) -> int:
+    def _trim_recent_events(
+        events: deque[float], window_seconds: int, now: float
+    ) -> int:
         while events and now - events[0] > window_seconds:
             events.popleft()
         return len(events)
@@ -78,7 +80,9 @@ class TokenBlacklistGuard:
                 window_seconds=TOKEN_BLACKLIST_DEGRADE_WINDOW_SECONDS,
             )
 
-    def _record_error(self, error: Exception, jti: str | None, user_id: str | None) -> None:
+    def _record_error(
+        self, error: Exception, jti: str | None, user_id: str | None
+    ) -> None:
         now = time()
         self._error_events.append(now)
         recent = self._trim_recent_events(

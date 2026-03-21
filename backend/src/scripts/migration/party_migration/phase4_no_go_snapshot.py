@@ -75,7 +75,9 @@ def _count_null_or_empty(
     )
 
 
-def _count_user_dual_party_viewer_mapping(connection: sa.engine.Connection) -> int | None:
+def _count_user_dual_party_viewer_mapping(
+    connection: sa.engine.Connection,
+) -> int | None:
     if not _table_exists(connection, "roles"):
         return None
     if not _column_exists(connection, "roles", "name"):
@@ -108,16 +110,24 @@ def collect_snapshot(connection: sa.engine.Connection) -> dict[str, int | str | 
         "subject_count": _count_table_rows(connection, "abac_policy_subjects")
         if subject_exists
         else 0,
-        "assets_owner_null": _count_null_or_empty(connection, "assets", "owner_party_id"),
-        "assets_manager_null": _count_null_or_empty(connection, "assets", "manager_party_id"),
+        "assets_owner_null": _count_null_or_empty(
+            connection, "assets", "owner_party_id"
+        ),
+        "assets_manager_null": _count_null_or_empty(
+            connection, "assets", "manager_party_id"
+        ),
         "legacy_contract_owner_null": _count_null_or_empty(
             connection, LEGACY_CONTRACTS_TABLE, "owner_party_id"
         ),
         "legacy_contract_manager_null": _count_null_or_empty(
             connection, LEGACY_CONTRACTS_TABLE, "manager_party_id"
         ),
-        "ledger_owner_null": _count_null_or_empty(connection, "rent_ledger", "owner_party_id"),
-        "projects_manager_null": _count_null_or_empty(connection, "projects", "manager_party_id"),
+        "ledger_owner_null": _count_null_or_empty(
+            connection, "rent_ledger", "owner_party_id"
+        ),
+        "projects_manager_null": _count_null_or_empty(
+            connection, "projects", "manager_party_id"
+        ),
         "tenant_null_count": _count_null_or_empty(
             connection, LEGACY_CONTRACTS_TABLE, "tenant_party_id"
         ),
@@ -191,7 +201,9 @@ def evaluate_snapshot(
     evaluations = [
         _eval_equals("subject_count_zero", snapshot.get("subject_count"), 0),
         _eval_equals("assets_owner_null_zero", snapshot.get("assets_owner_null"), 0),
-        _eval_equals("assets_manager_null_zero", snapshot.get("assets_manager_null"), 0),
+        _eval_equals(
+            "assets_manager_null_zero", snapshot.get("assets_manager_null"), 0
+        ),
         _eval_equals(
             "legacy_contract_owner_null_zero",
             snapshot.get("legacy_contract_owner_null"),
@@ -203,7 +215,9 @@ def evaluate_snapshot(
             0,
         ),
         _eval_equals("ledger_owner_null_zero", snapshot.get("ledger_owner_null"), 0),
-        _eval_equals("projects_manager_null_zero", snapshot.get("projects_manager_null"), 0),
+        _eval_equals(
+            "projects_manager_null_zero", snapshot.get("projects_manager_null"), 0
+        ),
         _eval_ge(
             "user_dual_party_viewer_mapping_ge_1",
             snapshot.get("user_dual_party_viewer_mapping_count"),

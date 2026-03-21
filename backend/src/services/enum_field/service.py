@@ -110,7 +110,9 @@ class EnumFieldService:
         )
         for enum_type in enum_types:
             self._strip_enum_children(getattr(enum_type, "enum_values", None))
-        return [EnumFieldTypeResponse.model_validate(enum_type) for enum_type in enum_types]
+        return [
+            EnumFieldTypeResponse.model_validate(enum_type) for enum_type in enum_types
+        ]
 
     async def get_enum_field_statistics(self, db: AsyncSession) -> EnumFieldStatistics:
         type_crud = get_enum_field_type_crud(db)
@@ -137,7 +139,9 @@ class EnumFieldService:
         crud = get_enum_field_type_crud(db)
         enum_type = await crud.get_async(db, type_id)
         if not enum_type:
-            raise not_found("枚举类型不存在", resource_type="enum_type", resource_id=type_id)
+            raise not_found(
+                "枚举类型不存在", resource_type="enum_type", resource_id=type_id
+            )
         self._strip_enum_children(getattr(enum_type, "enum_values", None))
         return EnumFieldTypeResponse.model_validate(enum_type)
 
@@ -165,12 +169,16 @@ class EnumFieldService:
         crud = get_enum_field_type_crud(db)
         db_enum_type = await crud.get_async(db, type_id)
         if not db_enum_type:
-            raise not_found("枚举类型不存在", resource_type="enum_type", resource_id=type_id)
+            raise not_found(
+                "枚举类型不存在", resource_type="enum_type", resource_id=type_id
+            )
 
         if enum_type.code and enum_type.code != db_enum_type.code:
             existing = await crud.get_by_code_async(db, enum_type.code)
             if existing and existing.id != type_id:
-                raise conflict(f"编码 {enum_type.code} 已存在", resource_type="enum_type")
+                raise conflict(
+                    f"编码 {enum_type.code} 已存在", resource_type="enum_type"
+                )
 
         try:
             updated_enum_type = await crud.update_async(db, db_enum_type, enum_type)
@@ -189,7 +197,9 @@ class EnumFieldService:
         try:
             success = await crud.delete_async(db, type_id, deleted_by=deleted_by)
             if not success:
-                raise not_found("枚举类型不存在", resource_type="enum_type", resource_id=type_id)
+                raise not_found(
+                    "枚举类型不存在", resource_type="enum_type", resource_id=type_id
+                )
             return {"message": "枚举类型删除成功"}
         except ValueError as e:
             raise bad_request(str(e))
@@ -227,7 +237,9 @@ class EnumFieldService:
         crud = get_enum_field_value_crud(db)
         enum_value = await crud.get_async(db, value_id)
         if not enum_value:
-            raise not_found("枚举值不存在", resource_type="enum_value", resource_id=value_id)
+            raise not_found(
+                "枚举值不存在", resource_type="enum_value", resource_id=value_id
+            )
         self._strip_enum_children([enum_value])
         return EnumFieldValueResponse.model_validate(enum_value)
 
@@ -243,9 +255,13 @@ class EnumFieldService:
 
         enum_type = await type_crud.get_async(db, type_id)
         if not enum_type:
-            raise not_found("枚举类型不存在", resource_type="enum_type", resource_id=type_id)
+            raise not_found(
+                "枚举类型不存在", resource_type="enum_type", resource_id=type_id
+            )
 
-        existing = await value_crud.get_by_type_and_value_async(db, type_id, enum_value.value)
+        existing = await value_crud.get_by_type_and_value_async(
+            db, type_id, enum_value.value
+        )
         if existing:
             raise conflict(f"值 {enum_value.value} 已存在", resource_type="enum_value")
 
@@ -267,14 +283,18 @@ class EnumFieldService:
         crud = get_enum_field_value_crud(db)
         db_enum_value = await crud.get_async(db, value_id)
         if not db_enum_value:
-            raise not_found("枚举值不存在", resource_type="enum_value", resource_id=value_id)
+            raise not_found(
+                "枚举值不存在", resource_type="enum_value", resource_id=value_id
+            )
 
         if enum_value.value and enum_value.value != db_enum_value.value:
             existing = await crud.get_by_type_and_value_async(
                 db, getattr(db_enum_value, "enum_type_id", ""), enum_value.value
             )
             if existing and existing.id != value_id:
-                raise conflict(f"值 {enum_value.value} 已存在", resource_type="enum_value")
+                raise conflict(
+                    f"值 {enum_value.value} 已存在", resource_type="enum_value"
+                )
 
         try:
             updated_enum_value = await crud.update_async(db, db_enum_value, enum_value)
@@ -293,7 +313,9 @@ class EnumFieldService:
         try:
             success = await crud.delete_async(db, value_id, deleted_by=deleted_by)
             if not success:
-                raise not_found("枚举值不存在", resource_type="enum_value", resource_id=value_id)
+                raise not_found(
+                    "枚举值不存在", resource_type="enum_value", resource_id=value_id
+                )
             return {"message": "枚举值删除成功"}
         except ValueError as e:
             raise bad_request(str(e))
@@ -309,7 +331,9 @@ class EnumFieldService:
         type_crud = get_enum_field_type_crud(db)
         enum_type = await type_crud.get_async(db, type_id)
         if not enum_type:
-            raise not_found("枚举类型不存在", resource_type="enum_type", resource_id=type_id)
+            raise not_found(
+                "枚举类型不存在", resource_type="enum_type", resource_id=type_id
+            )
 
         try:
             created_values = await value_crud.batch_create_async(
@@ -360,7 +384,9 @@ class EnumFieldService:
         crud = get_enum_field_usage_crud(db)
         db_usage = await crud.get_async(db, usage_id)
         if not db_usage:
-            raise not_found("使用记录不存在", resource_type="enum_usage", resource_id=usage_id)
+            raise not_found(
+                "使用记录不存在", resource_type="enum_usage", resource_id=usage_id
+            )
 
         updated_usage = await crud.update_async(db, db_usage, usage)
         return EnumFieldUsageResponse.model_validate(updated_usage)
@@ -371,7 +397,9 @@ class EnumFieldService:
         crud = get_enum_field_usage_crud(db)
         success = await crud.delete_async(db, usage_id)
         if not success:
-            raise not_found("使用记录不存在", resource_type="enum_usage", resource_id=usage_id)
+            raise not_found(
+                "使用记录不存在", resource_type="enum_usage", resource_id=usage_id
+            )
         return {"message": "使用记录删除成功"}
 
     async def get_enum_field_type_history(
@@ -388,7 +416,8 @@ class EnumFieldService:
             db, enum_type_id=type_id, skip=skip, limit=page_size
         )
         return [
-            EnumFieldHistoryResponse.model_validate(history) for history in history_records
+            EnumFieldHistoryResponse.model_validate(history)
+            for history in history_records
         ]
 
     async def get_enum_field_value_history(
@@ -405,7 +434,8 @@ class EnumFieldService:
             db, enum_value_id=value_id, skip=skip, limit=page_size
         )
         return [
-            EnumFieldHistoryResponse.model_validate(history) for history in history_records
+            EnumFieldHistoryResponse.model_validate(history)
+            for history in history_records
         ]
 
 
@@ -414,4 +444,3 @@ enum_field_service = EnumFieldService()
 
 def get_enum_field_service() -> EnumFieldService:
     return enum_field_service
-

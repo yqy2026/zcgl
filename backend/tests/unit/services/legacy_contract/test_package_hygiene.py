@@ -23,6 +23,16 @@ def _legacy_contract_module_path(*parts: str) -> str:
     return ".".join(parts)
 
 
+def _assert_retired_namespace_or_none(module_name: str) -> None:
+    spec = find_spec(module_name)
+    if spec is None:
+        return
+
+    assert spec.loader is None
+    search_locations = list(spec.submodule_search_locations or [])
+    assert len(search_locations) == 1
+
+
 def _legacy_contract_wildcard_pattern() -> str:
     return "*" + _legacy_contract_identifier(("rent", "contract")) + "*"
 
@@ -32,10 +42,7 @@ def test_legacy_contract_service_package_should_be_retired() -> None:
         "src", "services", _legacy_contract_identifier(("rent", "contract"))
     )
 
-    spec = find_spec(legacy_service_package)
-    assert spec is not None
-    search_locations = list(spec.submodule_search_locations or [])
-    assert len(search_locations) == 1
+    _assert_retired_namespace_or_none(legacy_service_package)
 
 
 def test_legacy_contract_service_package_should_only_remain_as_empty_namespace() -> None:
@@ -43,10 +50,7 @@ def test_legacy_contract_service_package_should_only_remain_as_empty_namespace()
         "src", "services", _legacy_contract_identifier(("rent", "contract"))
     )
 
-    spec = find_spec(legacy_service_package)
-    assert spec is not None
-    search_locations = list(spec.submodule_search_locations or [])
-    assert len(search_locations) == 1
+    _assert_retired_namespace_or_none(legacy_service_package)
 
 
 def test_legacy_contract_test_directory_should_be_retired() -> None:

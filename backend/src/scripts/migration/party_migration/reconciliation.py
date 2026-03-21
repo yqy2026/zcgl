@@ -52,7 +52,9 @@ def _result_label(failed_count: int) -> str:
     return "PASS" if failed_count == 0 else "FAIL"
 
 
-def _check_assets_owner_party_not_null(connection: sa.engine.Connection) -> tuple[str, int]:
+def _check_assets_owner_party_not_null(
+    connection: sa.engine.Connection,
+) -> tuple[str, int]:
     if not _column_exists(connection, "assets", "owner_party_id"):
         return "SKIP", 0
     failed = _count_query(
@@ -66,7 +68,9 @@ def _check_assets_owner_party_not_null(connection: sa.engine.Connection) -> tupl
     return _result_label(failed), failed
 
 
-def _check_assets_manager_party_not_null(connection: sa.engine.Connection) -> tuple[str, int]:
+def _check_assets_manager_party_not_null(
+    connection: sa.engine.Connection,
+) -> tuple[str, int]:
     if not _column_exists(connection, "assets", "manager_party_id"):
         return "SKIP", 0
     failed = _count_query(
@@ -80,7 +84,9 @@ def _check_assets_manager_party_not_null(connection: sa.engine.Connection) -> tu
     return _result_label(failed), failed
 
 
-def _check_projects_manager_party_not_null(connection: sa.engine.Connection) -> tuple[str, int]:
+def _check_projects_manager_party_not_null(
+    connection: sa.engine.Connection,
+) -> tuple[str, int]:
     if not _column_exists(connection, "projects", "manager_party_id"):
         return "SKIP", 0
     failed = _count_query(
@@ -142,7 +148,9 @@ def _check_rent_ledger_owner_party_not_null(
     return _result_label(failed), failed
 
 
-def _check_project_assets_integrity(connection: sa.engine.Connection) -> tuple[str, int]:
+def _check_project_assets_integrity(
+    connection: sa.engine.Connection,
+) -> tuple[str, int]:
     if not _table_exists(connection, "project_assets"):
         return "SKIP", 0
     failed = _count_query(
@@ -176,7 +184,9 @@ def _check_user_party_bindings_integrity(
     return _result_label(failed), failed
 
 
-def _check_role_party_scope_integrity(connection: sa.engine.Connection) -> tuple[str, int]:
+def _check_role_party_scope_integrity(
+    connection: sa.engine.Connection,
+) -> tuple[str, int]:
     if not _table_exists(connection, "roles"):
         return "SKIP", 0
     failed = _count_query(

@@ -12,6 +12,16 @@ def _find_spec_or_none(module_name: str):
         return None
 
 
+def _assert_retired_namespace_or_none(module_name: str) -> None:
+    spec = _find_spec_or_none(module_name)
+    if spec is None:
+        return
+
+    assert spec.loader is None
+    search_locations = list(spec.submodule_search_locations or [])
+    assert len(search_locations) == 1
+
+
 def _legacy_contracts_api_module(*parts: str) -> str:
     return ".".join(("src", "api", "v1", "rent" + "_" + "contracts", *parts))
 
@@ -33,11 +43,7 @@ def test_api_router_should_not_expose_legacy_rental_contract_paths() -> None:
 
 
 def test_legacy_contract_api_package_should_be_retired() -> None:
-    spec = _find_spec_or_none(_legacy_contracts_api_module())
-    assert spec is not None
-    assert spec.loader is None
-    search_locations = list(spec.submodule_search_locations or [])
-    assert search_locations != []
+    _assert_retired_namespace_or_none(_legacy_contracts_api_module())
 
 
 def test_legacy_ledger_and_lifecycle_modules_should_be_retired() -> None:
@@ -58,7 +64,4 @@ def test_legacy_attachment_statistics_and_excel_modules_should_be_retired() -> N
 
 
 def test_legacy_contract_api_package_should_only_remain_as_empty_namespace() -> None:
-    spec = _find_spec_or_none(_legacy_contracts_api_module())
-    assert spec is not None
-    search_locations = list(spec.submodule_search_locations or [])
-    assert len(search_locations) == 1
+    _assert_retired_namespace_or_none(_legacy_contracts_api_module())

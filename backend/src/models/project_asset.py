@@ -52,9 +52,7 @@ class ProjectAsset(Base):
     )
     valid_to: Mapped[datetime | None] = mapped_column(DateTime, comment="失效时间")
     bind_reason: Mapped[str | None] = mapped_column(String(500), comment="绑定原因")
-    unbind_reason: Mapped[str | None] = mapped_column(
-        String(500), comment="解绑原因"
-    )
+    unbind_reason: Mapped[str | None] = mapped_column(String(500), comment="解绑原因")
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=_utcnow_naive, comment="创建时间"
     )

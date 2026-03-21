@@ -195,15 +195,15 @@ class NotificationSchedulerService:
 
         existing_pairs_by_type: dict[str, set[tuple[str, str]]] = {}
         for notification_type, contract_ids in contract_ids_by_type.items():
-            existing_pairs_by_type[notification_type] = (
-                await notification_service.find_existing_notification_pairs_async(
-                    self.db,
-                    recipient_ids=active_user_ids,
-                    related_entity_type="contract",
-                    related_entity_ids=contract_ids,
-                    notification_type=notification_type,
-                    require_unread=True,
-                )
+            existing_pairs_by_type[
+                notification_type
+            ] = await notification_service.find_existing_notification_pairs_async(
+                self.db,
+                recipient_ids=active_user_ids,
+                related_entity_type="contract",
+                related_entity_ids=contract_ids,
+                notification_type=notification_type,
+                require_unread=True,
             )
 
         # 为每个用户创建通知
@@ -287,13 +287,15 @@ class NotificationSchedulerService:
                 }
             )
 
-        existing_pairs = await notification_service.find_existing_notification_pairs_async(
-            self.db,
-            recipient_ids=active_user_ids,
-            related_entity_type="contract_ledger_entry",
-            related_entity_ids=[alert["ledger_id"] for alert in ledger_alerts],
-            notification_type=NotificationType.PAYMENT_OVERDUE,
-            created_since=today,
+        existing_pairs = (
+            await notification_service.find_existing_notification_pairs_async(
+                self.db,
+                recipient_ids=active_user_ids,
+                related_entity_type="contract_ledger_entry",
+                related_entity_ids=[alert["ledger_id"] for alert in ledger_alerts],
+                notification_type=NotificationType.PAYMENT_OVERDUE,
+                created_since=today,
+            )
         )
 
         for ledger_alert in ledger_alerts:
@@ -378,13 +380,15 @@ class NotificationSchedulerService:
                 }
             )
 
-        existing_pairs = await notification_service.find_existing_notification_pairs_async(
-            self.db,
-            recipient_ids=active_user_ids,
-            related_entity_type="contract_ledger_entry",
-            related_entity_ids=[alert["ledger_id"] for alert in ledger_alerts],
-            notification_type=NotificationType.PAYMENT_DUE,
-            created_since=today,
+        existing_pairs = (
+            await notification_service.find_existing_notification_pairs_async(
+                self.db,
+                recipient_ids=active_user_ids,
+                related_entity_type="contract_ledger_entry",
+                related_entity_ids=[alert["ledger_id"] for alert in ledger_alerts],
+                notification_type=NotificationType.PAYMENT_DUE,
+                created_since=today,
+            )
         )
 
         for ledger_alert in ledger_alerts:

@@ -910,7 +910,9 @@ class PDFImportService:
             "lessee_party_id",
             "settlement_rule",
         ]
-        missing_fields = [field for field in required_fields if merged_data.get(field) in (None, "")]
+        missing_fields = [
+            field for field in required_fields if merged_data.get(field) in (None, "")
+        ]
         if missing_fields:
             return {
                 "success": False,
@@ -925,7 +927,11 @@ class PDFImportService:
         group_relation_type = _parse_enum_member(
             GroupRelationType, merged_data.get("group_relation_type")
         )
-        if revenue_mode is None or contract_direction is None or group_relation_type is None:
+        if (
+            revenue_mode is None
+            or contract_direction is None
+            or group_relation_type is None
+        ):
             return {
                 "success": False,
                 "message": "Invalid enum values in confirmed_data",

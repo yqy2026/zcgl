@@ -153,10 +153,7 @@ class CRUDParty:
         normalized_party_ids = [
             normalized
             for raw_party_id in party_ids
-            if (
-                normalized := self._normalize_identifier(raw_party_id)
-            )
-            is not None
+            if (normalized := self._normalize_identifier(raw_party_id)) is not None
         ]
         if len(normalized_party_ids) == 0:
             return {}
@@ -210,7 +207,9 @@ class CRUDParty:
 
             org_lookup_conditions = []
             if len(pending_party_ids) > 0:
-                org_lookup_conditions.append(Organization.id.in_(sorted(pending_party_ids)))
+                org_lookup_conditions.append(
+                    Organization.id.in_(sorted(pending_party_ids))
+                )
             if len(pending_party_codes) > 0:
                 org_lookup_conditions.append(
                     Organization.code.in_(sorted(pending_party_codes))
@@ -248,12 +247,18 @@ class CRUDParty:
                             organization_id,
                             set(),
                         ).add(organization_id)
-                    if organization_code is not None and organization_code in pending_party_codes:
+                    if (
+                        organization_code is not None
+                        and organization_code in pending_party_codes
+                    ):
                         resolved_org_ids_by_party_code.setdefault(
                             organization_code,
                             set(),
                         ).add(organization_id)
-                    if organization_name is not None and organization_name in pending_party_names:
+                    if (
+                        organization_name is not None
+                        and organization_name in pending_party_names
+                    ):
                         resolved_org_ids_by_party_name.setdefault(
                             organization_name,
                             set(),
@@ -363,10 +368,7 @@ class CRUDParty:
             normalized_scope_ids = [
                 normalized
                 for raw_party_id in scoped_party_ids
-                if (
-                    normalized := self._normalize_identifier(raw_party_id)
-                )
-                is not None
+                if (normalized := self._normalize_identifier(raw_party_id)) is not None
             ]
             if len(normalized_scope_ids) == 0:
                 return []
@@ -628,7 +630,8 @@ class CRUDParty:
         if active_only:
             now = at_time or _utcnow_naive()
             stmt = stmt.where(UserPartyBinding.valid_from <= now).where(
-                (UserPartyBinding.valid_to.is_(None)) | (UserPartyBinding.valid_to >= now)
+                (UserPartyBinding.valid_to.is_(None))
+                | (UserPartyBinding.valid_to >= now)
             )
 
         return list((await db.execute(stmt)).scalars().all())

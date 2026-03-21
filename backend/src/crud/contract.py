@@ -143,9 +143,7 @@ class CRUDContract:
             )
         return list((await db.execute(stmt)).scalars().all())
 
-    async def count_active_in_group(
-        self, db: AsyncSession, *, group_id: str
-    ) -> int:
+    async def count_active_in_group(self, db: AsyncSession, *, group_id: str) -> int:
         """统计合同组内生效中（ACTIVE）的合同数量，用于删除前校验。"""
         stmt = select(func.count()).where(
             Contract.contract_group_id == group_id,

@@ -21,6 +21,7 @@ TMaybeAwaitable = TypeVar("TMaybeAwaitable")
 
 logger = logging.getLogger(__name__)
 
+
 class SupportsAll(Protocol[TResultRow_co]):
     """Protocol for results supporting .all()."""
 
@@ -198,7 +199,9 @@ class SensitiveDataHandler:
     def encrypt_data(self, data: AssetMutationData) -> AssetMutationData: ...
 
     @overload
-    def encrypt_data(self, data: list[AssetMutationData]) -> list[AssetMutationData]: ...
+    def encrypt_data(
+        self, data: list[AssetMutationData]
+    ) -> list[AssetMutationData]: ...
 
     def encrypt_data(
         self, data: AssetMutationData | list[AssetMutationData]
@@ -230,7 +233,9 @@ class SensitiveDataHandler:
     def decrypt_data(self, data: AssetMutationData) -> AssetMutationData: ...
 
     @overload
-    def decrypt_data(self, data: list[AssetMutationData]) -> list[AssetMutationData]: ...
+    def decrypt_data(
+        self, data: list[AssetMutationData]
+    ) -> list[AssetMutationData]: ...
 
     def decrypt_data(
         self, data: AssetMutationData | list[AssetMutationData]

@@ -34,7 +34,9 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
             return set()
 
         stmt = select(User.id, User.username).where(
-            User.default_organization_id.in_(org_ids)  # DEPRECATED legacy org scope fallback
+            User.default_organization_id.in_(
+                org_ids
+            )  # DEPRECATED legacy org scope fallback
         )
         rows = (await db.execute(stmt)).all()
         principals: set[str] = set()
@@ -232,7 +234,9 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
                     Party.external_ref.is_not(None),
                     Party.external_ref != "",
                 )
-                relation_project_ids = select(ProjectOwnershipRelation.project_id).where(
+                relation_project_ids = select(
+                    ProjectOwnershipRelation.project_id
+                ).where(
                     ProjectOwnershipRelation.is_active.is_(True),
                     or_(
                         ProjectOwnershipRelation.ownership_id == owner_party_id,

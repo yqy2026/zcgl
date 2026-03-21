@@ -817,7 +817,10 @@ class BatchStatusTracker:
                             batch[k] = int(v)
                         else:
                             batch[k] = v
-                    if status_filter is not None and batch.get("status") != status_filter:
+                    if (
+                        status_filter is not None
+                        and batch.get("status") != status_filter
+                    ):
                         continue
                     if not self._is_batch_visible(
                         batch,

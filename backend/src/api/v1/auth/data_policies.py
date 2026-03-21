@@ -1,4 +1,4 @@
-﻿"""Role data-policy package configuration endpoints."""
+"""Role data-policy package configuration endpoints."""
 
 from __future__ import annotations
 

@@ -255,7 +255,9 @@ class CRUDContractGroup:
                 ContractGroup.owner_party_id == ownership_id,
                 ContractGroup.data_status == "正常",
                 Contract.data_status == "正常",
-                ContractLedgerEntry.payment_status.in_(["unpaid", "partial", "overdue"]),
+                ContractLedgerEntry.payment_status.in_(
+                    ["unpaid", "partial", "overdue"]
+                ),
             )
         )
         return float((await db.execute(stmt)).scalar() or 0)

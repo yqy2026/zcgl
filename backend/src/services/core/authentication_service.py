@@ -246,7 +246,9 @@ class AsyncAuthenticationService:
             logger.error(f"JWT validation failed: {str(e)}")
             return None
 
-        session: UserSession | None = await _session_crud.get_active_by_refresh_token_async(
+        session: (
+            UserSession | None
+        ) = await _session_crud.get_active_by_refresh_token_async(
             self.db, refresh_token
         )
 

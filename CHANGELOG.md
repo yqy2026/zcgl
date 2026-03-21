@@ -2,6 +2,14 @@
 
 ## [Unreleased] - 2026-03-06
 
+### 2026-03-21
+- docs(plan): 新增 `docs/plans/2026-03-21-ci-baseline-restoration-plan.md`，将当前 CI 基线恢复拆为独立工作流：先修 `.github/workflows/security.yml` 中失效的 Trivy action pin，再按 <=20 文件批次治理 `backend/src/**` 的 Ruff format 漂移与 `frontend/src/**` 的 Oxfmt 漂移；同步更新 `docs/plans/README.md` 索引，明确该修复需独立 PR 进行，避免与 `pr/2026-03-17-perspective-final` 的业务补丁混改。
+- docs(plan): `2026-03-21-ci-baseline-restoration-plan.md` 已在实施完成后移入 `docs/archive/backend-plans/`，`docs/plans/README.md` 同步从活跃方案移除并登记为 ✅ 已完成，满足活跃方案目录只保留进行中/搁置项的治理规则。
+- fix(ci): `security.yml` 中的 Trivy workflow pin 已从 GitHub 无法解析的 `aquasecurity/trivy-action@0.24.0` 切换为 commit-pinned `57a97c7e7821a5776cebc9bb87c984fa69cba8f1`（对应 `v0.35.0`），保留现有 `scan-type/scan-ref/format/output` 输入不变，恢复 Security Scanning 工作流的可解析性。
+- style(backend): 已按 6 个批次清理 `backend/src/**` 的 Ruff format 基线漂移，共修正 120 个后端源码文件；本地验证 `cd backend && uv run ruff format --check src && uv run ruff check src` 已通过，消除 `Backend Lint & Type Check` 在 formatting step 的既有红灯。
+- style(frontend): 已修正 `frontend/src/**` 下 4 个 Oxfmt 漂移文件：`src/components/Analytics/AnalyticsStatsCard.tsx`、`src/pages/Assets/AssetAnalyticsPage.tsx`、`src/services/analyticsExportService.ts`、`src/services/__tests__/analyticsExportService.ana001.test.ts`；本地验证 `pnpm format:check && pnpm lint && pnpm type-check && pnpm type-check:e2e && pnpm check:route-authz` 已通过。
+- test(legacy-contract): 修正 3 个 legacy-contract 退休测试文件的过时断言，统一将“旧包已退休”定义为“模块完全不存在”或“仅保留空 namespace 占位”两种状态都可接受，消除测试对已删除 `src.api.v1.rent_contracts`、`src.services.rent_contract`、`tests.integration.services.rent_contract` 的自相矛盾要求。验证：`cd backend && .venv/bin/pytest --no-cov -q tests/unit/api/v1/test_legacy_contract_runtime_retired.py tests/unit/services/legacy_contract/test_legacy_main_service_retired.py tests/unit/services/legacy_contract/test_package_hygiene.py`（20 passed）。
+
 ### 2026-03-12
 - feat(party): 完成 REQ-PTY-001/002 本轮主体主档 Gap 修复闭环。后端已收口 `PartyReviewStatus` 为 `draft/pending/approved/reversed`、驳回回草稿、`PENDING/APPROVED` 编辑/删除守卫、`deleted_at` 软删除、`PartyReviewLog` 审计日志、删除前资产/合同/租赁引用保护，以及 `(party_type, code)` 友好去重；前端新增系统管理入口 `/system/parties` 与主体详情页 `/system/parties/:id`，补齐主体列表、详情编辑、提审/通过/驳回操作和菜单/面包屑/路由配置；新增前端回归测试 `frontend/src/pages/System/__tests__/PartyPages.test.tsx`、`frontend/src/services/__tests__/partyService.test.ts`，并同步 SSOT 需求证据与方案归档。
 - feat(analytics-ui): ANA-001 经营口径字段前端完整对接。`AnalyticsStatsCard.tsx` 新增 `RevenueStatsGrid` 组件（总收入/自营租金收入/代理服务费收入/客户主体数/客户合同数 + 口径版本 Tag）；`AssetAnalyticsPage.tsx` 在财务指标下方新增「经营口径」Card；`useAssetAnalytics.ts` 导出数据补入 6 个 ANA-001 字段；`analyticsExportService.ts` Excel/CSV/HTML 三种导出格式全部补入经营口径数据。TypeScript 类型检查通过。

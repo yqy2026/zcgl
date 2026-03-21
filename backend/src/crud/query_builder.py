@@ -201,9 +201,7 @@ class QueryBuilder[ModelType]:
         if relation_aware_filter:
             return self._apply_relation_aware_party_filter(
                 query,
-                owner_party_ids=self._normalize_party_ids(
-                    party_filter.owner_party_ids
-                ),
+                owner_party_ids=self._normalize_party_ids(party_filter.owner_party_ids),
                 manager_party_ids=self._normalize_party_ids(
                     party_filter.manager_party_ids
                 ),
@@ -357,12 +355,8 @@ class QueryBuilder[ModelType]:
             fallback_to_legacy_org_when_null: bool = False,
         ) -> None:
             normalized_legacy_org_ids = legacy_org_ids or []
-            if (
-                column is None
-                or (
-                    len(party_ids) == 0
-                    and len(normalized_legacy_org_ids) == 0
-                )
+            if column is None or (
+                len(party_ids) == 0 and len(normalized_legacy_org_ids) == 0
             ):
                 return
             column_key = id(column)
