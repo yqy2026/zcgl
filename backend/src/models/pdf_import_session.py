@@ -23,6 +23,11 @@ from sqlalchemy.sql import func
 from ..database import Base
 
 
+def _enum_values(enum_cls: type[enum.Enum]) -> list[str]:
+    """Persist enum `.value` strings to match the string-based Alembic baseline."""
+    return [str(member.value) for member in enum_cls]
+
+
 class SessionStatus(str, enum.Enum):
     """会话状态枚举"""
 
@@ -72,9 +77,21 @@ class PDFImportSession(Base):
 
     # 状态信息
     status: Mapped[SessionStatus] = mapped_column(
-        Enum(SessionStatus), default=SessionStatus.UPLOADING, nullable=False
+        Enum(
+            SessionStatus,
+            native_enum=False,
+            values_callable=_enum_values,
+        ),
+        default=SessionStatus.UPLOADING,
+        nullable=False,
     )
-    current_step: Mapped[ProcessingStep | None] = mapped_column(Enum(ProcessingStep))
+    current_step: Mapped[ProcessingStep | None] = mapped_column(
+        Enum(
+            ProcessingStep,
+            native_enum=False,
+            values_callable=_enum_values,
+        )
+    )
     progress_percentage: Mapped[float] = mapped_column(Float, default=0.0)
     error_message: Mapped[str | None] = mapped_column(Text)
 
@@ -149,7 +166,14 @@ class SessionLog(Base):
     session_id: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
 
     # 日志信息
-    step: Mapped[ProcessingStep] = mapped_column(Enum(ProcessingStep), nullable=False)
+    step: Mapped[ProcessingStep] = mapped_column(
+        Enum(
+            ProcessingStep,
+            native_enum=False,
+            values_callable=_enum_values,
+        ),
+        nullable=False,
+    )
     status: Mapped[str] = mapped_column(
         String(50), nullable=False
     )  # started, completed, failed, warning
