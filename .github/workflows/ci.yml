@@ -96,6 +96,8 @@ jobs:
     env:
       ENVIRONMENT: testing
       TESTING_MODE: "true"
+      SECRET_KEY: ZcglCiJwtMaterial20260321OnlyForGithub0001
+      PHASE4_TENANT_NOT_NULL_DECISION: "B"
       DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_test
       TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_test
     services:
@@ -218,6 +220,8 @@ jobs:
     env:
       ENVIRONMENT: testing
       TESTING_MODE: "true"
+      SECRET_KEY: ZcglCiJwtMaterial20260321OnlyForGithub0001
+      PHASE4_TENANT_NOT_NULL_DECISION: "B"
       DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_e2e
       TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_e2e
       E2E_TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_e2e
@@ -425,15 +429,17 @@ jobs:
     - name: Check coverage threshold
       run: |
         cd frontend
+        SUMMARY_FILE=../test-results/frontend/coverage/coverage-summary.json
+
         # Extract coverage from JSON summary
-        COVERAGE=$(node -e "const fs = require('fs'); const data = JSON.parse(fs.readFileSync('coverage/coverage-summary.json', 'utf8')); console.log(data.total.lines.pct)")
+        COVERAGE=$(node -e "const fs = require('fs'); const data = JSON.parse(fs.readFileSync(process.argv[1], 'utf8')); console.log(data.total.lines.pct)" "$SUMMARY_FILE")
 
         echo "Current coverage: ${COVERAGE}%"
         echo "Target: ${{ env.FRONTEND_COVERAGE_THRESHOLD }}%"
 
         # Use Python script for incremental checking
         python ../.github/scripts/incremental_coverage_check.py \
-          coverage/coverage-summary.json \
+          "$SUMMARY_FILE" \
           0 \
           --target=${{ env.FRONTEND_COVERAGE_THRESHOLD }} \
           --soft-threshold=50 \
@@ -445,14 +451,14 @@ jobs:
       with:
         name: frontend-reports
         path: |
-          frontend/coverage/
-          frontend/test-results.json
+          test-results/frontend/coverage/
+          test-results/frontend/reports/
         retention-days: 30
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4
       with:
-        file: ./frontend/coverage/lcov.info
+        file: ./test-results/frontend/coverage/lcov.info
         flags: frontend
         name: frontend-coverage
         fail_ci_if_error: false
@@ -480,6 +486,8 @@ jobs:
     env:
       ENVIRONMENT: testing
       TESTING_MODE: "true"
+      SECRET_KEY: ZcglCiJwtMaterial20260321OnlyForGithub0001
+      PHASE4_TENANT_NOT_NULL_DECISION: "B"
       DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_test
       TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_test
     services:
@@ -575,6 +583,8 @@ jobs:
     env:
       ENVIRONMENT: testing
       TESTING_MODE: "true"
+      SECRET_KEY: ZcglCiJwtMaterial20260321OnlyForGithub0001
+      PHASE4_TENANT_NOT_NULL_DECISION: "B"
       DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_e2e
       TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_e2e
       E2E_ADMIN_USERNAME: admin
@@ -921,6 +931,8 @@ jobs:
     env:
       ENVIRONMENT: testing
       TESTING_MODE: "true"
+      SECRET_KEY: ZcglCiJwtMaterial20260321OnlyForGithub0001
+      PHASE4_TENANT_NOT_NULL_DECISION: "B"
       DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_import_e2e
       TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_import_e2e
       E2E_TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_import_e2e
@@ -1288,6 +1300,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: [backend-test, frontend-test, backend-e2e, frontend-e2e, import-e2e]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    env:
+      ENVIRONMENT: testing
+      TESTING_MODE: "true"
+      SECRET_KEY: ZcglCiJwtMaterial20260321OnlyForGithub0001
+      PHASE4_TENANT_NOT_NULL_DECISION: "B"
 
     services:
       postgres:

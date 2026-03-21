@@ -3,6 +3,7 @@
 ## [Unreleased] - 2026-03-06
 
 ### 2026-03-21
+- fix(ci): 继续收口 PR #44 的 workflow 配置漏口。`.github/workflows/ci.yml` 为所有会执行 `uv run alembic upgrade head` 的 job（`backend-test`、`backend-e2e`、`make-quality-gate`、`frontend-e2e`、`import-e2e`、`integration`）统一补齐 CI 专用 `SECRET_KEY` 与 `PHASE4_TENANT_NOT_NULL_DECISION=B`，修复测试数据库初始化先后被 `Settings.SECRET_KEY` 缺失和 Phase4 tenant 决策门阻断的问题；同时将前端覆盖率检查、artifact 上传和 Codecov 路径从失效的 `frontend/coverage/*` / `frontend/test-results.json` 改为 `test-results/frontend/{coverage,reports}/...`，与 `frontend/vitest.config.ts` 的真实输出目录对齐；新增 `backend/tests/unit/config/test_ci_workflow.py` 回归测试锁定上述约束。验证：`cd backend && uv run pytest tests/unit/config/test_ci_workflow.py --no-cov -q`（2 passed）；GitHub Actions 失败日志已确认原始根因分别为 `SECRET_KEY` 缺失、`PHASE4_TENANT_NOT_NULL_DECISION` 缺失链，以及 `coverage/coverage-summary.json` 不存在。
 - docs(plan): 新增 `docs/plans/2026-03-21-ci-baseline-restoration-plan.md`，将当前 CI 基线恢复拆为独立工作流：先修 `.github/workflows/security.yml` 中失效的 Trivy action pin，再按 <=20 文件批次治理 `backend/src/**` 的 Ruff format 漂移与 `frontend/src/**` 的 Oxfmt 漂移；同步更新 `docs/plans/README.md` 索引，明确该修复需独立 PR 进行，避免与 `pr/2026-03-17-perspective-final` 的业务补丁混改。
 - docs(plan): `2026-03-21-ci-baseline-restoration-plan.md` 已在实施完成后移入 `docs/archive/backend-plans/`，`docs/plans/README.md` 同步从活跃方案移除并登记为 ✅ 已完成，满足活跃方案目录只保留进行中/搁置项的治理规则。
 - fix(ci): `security.yml` 中的 Trivy workflow pin 已从 GitHub 无法解析的 `aquasecurity/trivy-action@0.24.0` 切换为 commit-pinned `57a97c7e7821a5776cebc9bb87c984fa69cba8f1`（对应 `v0.35.0`），保留现有 `scan-type/scan-ref/format/output` 输入不变，恢复 Security Scanning 工作流的可解析性。
