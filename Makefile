@@ -117,7 +117,7 @@ test-e2e-import-backend:
 
 test-e2e-import-frontend:
 	@curl -fsS http://127.0.0.1:8002/docs >/dev/null || (echo "[ERROR] Backend API is required at http://127.0.0.1:8002"; exit 2)
-	cd frontend && pnpm e2e tests/e2e/user/import-guardrails.spec.ts tests/e2e/rental/import-success.spec.ts tests/e2e/user/property-certificate-import-success.spec.ts --project=chromium
+	cd frontend && pnpm e2e tests/e2e/user/import-guardrails.spec.ts tests/e2e/legacy-contract/import-success.spec.ts tests/e2e/user/property-certificate-import-success.spec.ts --project=chromium
 
 build-frontend:
 	cd frontend && pnpm build

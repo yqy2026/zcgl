@@ -666,7 +666,7 @@ jobs:
     - name: Install Playwright browser
       run: |
         cd frontend
-        pnpm exec playwright install --with-deps chromium
+        pnpm exec playwright install --with-deps chromium firefox webkit
 
     - name: Initialize database schema
       run: |

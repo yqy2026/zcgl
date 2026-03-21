@@ -298,7 +298,7 @@ run_frontend_import_e2e() {
   cd "$FRONTEND_DIR"
   pnpm e2e \
     tests/e2e/user/import-guardrails.spec.ts \
-    tests/e2e/rental/import-success.spec.ts \
+    tests/e2e/legacy-contract/import-success.spec.ts \
     tests/e2e/user/property-certificate-import-success.spec.ts \
     --project=chromium
 }

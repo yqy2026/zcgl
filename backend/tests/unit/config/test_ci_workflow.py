@@ -151,3 +151,40 @@ def test_import_e2e_targets_should_only_reference_existing_backend_specs() -> No
         "Import-focused E2E targets must not reference deleted backend specs: "
         f"{missing_tests}"
     )
+
+
+def test_import_e2e_targets_should_only_reference_existing_frontend_specs() -> None:
+    repo_root = _repo_root()
+    makefile_text = (repo_root / "Makefile").read_text(encoding="utf-8")
+    script_text = (repo_root / "scripts" / "dev" / "run_import_e2e.sh").read_text(
+        encoding="utf-8"
+    )
+
+    referenced_specs = {
+        match
+        for match in re.findall(
+            r"tests/e2e/[A-Za-z0-9_./-]+\.spec\.ts", makefile_text + "\n" + script_text
+        )
+    }
+    missing_specs = sorted(
+        str(path)
+        for path in referenced_specs
+        if not (repo_root / "frontend" / path).exists()
+    )
+
+    assert not missing_specs, (
+        "Import-focused E2E targets must not reference deleted frontend specs: "
+        f"{missing_specs}"
+    )
+
+
+def test_frontend_e2e_job_should_install_full_browser_matrix() -> None:
+    workflow = _load_ci_workflow()
+    frontend_e2e_job = workflow["jobs"]["frontend-e2e"]
+    install_step = _step_by_name(frontend_e2e_job, "Install Playwright browser")
+    install_script = str(install_step.get("run", ""))
+
+    assert "playwright install --with-deps" in install_script
+    assert "chromium" in install_script
+    assert "firefox" in install_script
+    assert "webkit" in install_script
