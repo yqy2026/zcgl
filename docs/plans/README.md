@@ -10,6 +10,7 @@
 |------|------|------|------|
 | [2026-02-11-approval-flowable-b-plan.md](2026-02-11-approval-flowable-b-plan.md) | Flowable 编排内核 B 方案 | ⏸ 搁置 | 审批流方向待定，暂不实施 |
 | [2026-03-02-party-scope-isolation-fix-plan.md](2026-03-02-party-scope-isolation-fix-plan.md) | 组织数据权限隔离修复（全量排查） | 🔄 待执行 | Party 列表等集合接口作用域收敛缺失 |
+| [2026-03-22-perspective-simplification-v2-follow-up.md](2026-03-22-perspective-simplification-v2-follow-up.md) | 前端视角简化 v2 后续收口 | 📋 待评审 | 以路由前缀替代 ViewContext/本地选择存储，完成 owner/manager 规范化 |
 | [2026-03-21-ci-baseline-restoration-plan.md](2026-03-21-ci-baseline-restoration-plan.md) | CI 基线恢复与格式治理 | 📋 待评审 | 独立修复 Trivy action 失效与 backend/frontend 现有格式红灯，不与业务 PR 混改 |
 
 ## 已归档方案

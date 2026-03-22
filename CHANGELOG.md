@@ -3,6 +3,8 @@
 ## [Unreleased] - 2026-03-06
 
 ### 2026-03-22
+- chore(ci): 升级 GitHub Actions 依赖到 Node 24 兼容大版本，收口 runner 弃用告警。`.github/workflows/ci.yml`、`.github/workflows/security.yml`、`.github/workflows/quality-trends.yml` 中的 `actions/checkout`、`actions/setup-python`、`actions/setup-node`、`actions/cache`、`actions/upload-artifact` 与 `codecov/codecov-action` 已从会触发 Node 20 弃用提示的旧大版本提升到新的兼容大版本；项目作业里安装的业务 Node 版本仍保持 20，不引入额外运行时漂移。新增回归：`backend/tests/unit/config/test_ci_workflow.py` 现在显式禁止这三条 workflow 再 pin 到旧的 Node 20 action major。验证待本轮 CI/workflow 定向校验补充。
+- docs(plans): 新增 `docs/plans/2026-03-22-perspective-simplification-v2-follow-up.md`，把“视角简化 v2”后续工作收敛为单一前端计划：以路由前缀替代 `ViewContext` / `viewSelectionStorage`，完成 owner/manager canonical route 收口、内部导航切换和 targeted E2E 回归；`docs/plans/README.md` 同步登记为 📋 待评审活跃方案。验证待本轮 docs 校验补充。
 - fix(frontend-nav): 修复视角前缀落地后仍从 legacy 路径起跑的剩余 active-path 漏口。`frontend/src/pages/PropertyCertificate/PropertyCertificateImport.tsx` 的导入成功跳转、`frontend/src/pages/PropertyCertificate/PropertyCertificateDetailPage.tsx` 的返回/删除成功跳转，现统一落到 active owner 列表 `/owner/property-certificates`，避免 capability 无 owner 绑定时再经过 legacy `/property-certificates` 被 `LegacyRouteRedirect` 打回 `/dashboard`；同时把 `frontend/tests/e2e/asset-flow.spec.ts`、`frontend/tests/e2e/user/user-usability.spec.ts`、`frontend/tests/e2e/user/import-guardrails.spec.ts` 的资产/项目/合同导入起跑路径切到 active route（`/owner/assets`、`/manager/projects`、`/contract-groups/import`），并收紧 `frontend/tests/e2e/helpers/auth.ts` 的 `clearAuthState()`，避免 webkit 在登录页重定向瞬间清理 storage 时触发 execution context destroyed。新增/扩展回归：`frontend/src/pages/PropertyCertificate/__tests__/PropertyCertificateImport.test.tsx` 锁定导入成功后的 owner 列表跳转。验证待本轮 hotfix 回归补充。
 
 ### 2026-03-21
