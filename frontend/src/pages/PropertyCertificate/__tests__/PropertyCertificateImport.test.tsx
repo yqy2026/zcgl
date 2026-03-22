@@ -14,6 +14,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React from 'react';
 import { act, screen, waitFor } from '@testing-library/react';
 import { message } from 'antd';
+import { OWNER_ROUTES } from '@/constants/routes';
 import { renderWithProviders } from '@/test/utils/test-helpers';
 
 import { PropertyCertificateImport } from '../PropertyCertificateImport';
@@ -25,6 +26,16 @@ import type {
   CertificateImportConfirm,
   CertificateType,
 } from '@/types/propertyCertificate';
+
+const mockNavigate = vi.fn();
+
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
 
 // Mock child components
 vi.mock('@/components/PropertyCertificate/PropertyCertificateUpload', () => ({
@@ -90,6 +101,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   Object.defineProperty(window, 'location', {
     configurable: true,
     value: originalLocation,
@@ -217,6 +229,29 @@ describe('PropertyCertificateImport - 确认导入测试', () => {
     await waitFor(() => {
       expect(message.success).toHaveBeenCalledWith('产权证创建成功！ID: cert-001');
     });
+  });
+
+  it('确认导入成功后应该跳转到 owner 产权证列表', async () => {
+    vi.mocked(propertyCertificateService.confirmImport).mockResolvedValue({
+      certificate_id: 'cert-001',
+    });
+
+    renderPage();
+    await waitFor(() => expect(PropertyCertificateUpload).toHaveBeenCalled());
+
+    await act(async () => {
+      getUploadProps().onSuccess(createMockExtractionResult());
+    });
+
+    await waitFor(() => expect(PropertyCertificateReview).toHaveBeenCalled());
+
+    await act(async () => {
+      vi.useFakeTimers();
+      await getReviewProps().onConfirm(createMockConfirmData());
+      await vi.runAllTimersAsync();
+    });
+
+    expect(mockNavigate).toHaveBeenCalledWith(OWNER_ROUTES.PROPERTY_CERTIFICATES);
   });
 
   it('确认导入失败应该显示错误消息', async () => {

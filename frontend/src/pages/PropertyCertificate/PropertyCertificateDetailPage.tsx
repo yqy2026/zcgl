@@ -29,7 +29,7 @@ import {
 import dayjs from 'dayjs';
 import { propertyCertificateService } from '@/services/propertyCertificateService';
 import type { PropertyOwner, CertificateType } from '@/types/propertyCertificate';
-import { PROPERTY_CERTIFICATE_ROUTES } from '@/constants/routes';
+import { OWNER_ROUTES } from '@/constants/routes';
 import type { ColumnsType } from 'antd/es/table';
 import { assetService } from '@/services/assetService';
 import type { Asset } from '@/types/asset';
@@ -79,7 +79,7 @@ const PropertyCertificateDetailPage: React.FC = () => {
 
   if (error) {
     return (
-      <PageContainer title="产权证详情" onBack={() => navigate(PROPERTY_CERTIFICATE_ROUTES.LIST)}>
+      <PageContainer title="产权证详情" onBack={() => navigate(OWNER_ROUTES.PROPERTY_CERTIFICATES)}>
         <Alert type="error" title="加载失败" />
       </PageContainer>
     );
@@ -87,7 +87,7 @@ const PropertyCertificateDetailPage: React.FC = () => {
 
   if (!isLoading && !certificate) {
     return (
-      <PageContainer title="产权证详情" onBack={() => navigate(PROPERTY_CERTIFICATE_ROUTES.LIST)}>
+      <PageContainer title="产权证详情" onBack={() => navigate(OWNER_ROUTES.PROPERTY_CERTIFICATES)}>
         <Alert type="warning" title="未找到产权证信息" />
       </PageContainer>
     );
@@ -173,7 +173,7 @@ const PropertyCertificateDetailPage: React.FC = () => {
     try {
       await propertyCertificateService.deleteCertificate(id);
       message.success('删除成功');
-      navigate(PROPERTY_CERTIFICATE_ROUTES.LIST);
+      navigate(OWNER_ROUTES.PROPERTY_CERTIFICATES);
     } catch {
       message.error('删除失败');
     } finally {
@@ -263,7 +263,7 @@ const PropertyCertificateDetailPage: React.FC = () => {
         </Space>
       }
       loading={isLoading}
-      onBack={() => navigate(PROPERTY_CERTIFICATE_ROUTES.LIST)}
+      onBack={() => navigate(OWNER_ROUTES.PROPERTY_CERTIFICATES)}
       extra={
         certificate && (
           <Space>

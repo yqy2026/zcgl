@@ -3,6 +3,7 @@ import { clearAuthState, ensureAuthenticated } from '../helpers/auth';
 import { LEGACY_CONTRACT_ROUTES, legacyContractRoutePattern } from '../helpers/legacyContract';
 
 type FileInputScope = Page | { locator: Page['locator'] };
+const ACTIVE_CONTRACT_PDF_IMPORT_PATH = '/contract-groups/import';
 
 const uploadPlainTextFile = async (scope: FileInputScope, filename: string): Promise<void> => {
   const uploadInput = scope.locator('input[type="file"]').first();
@@ -55,8 +56,8 @@ test.describe('@user-usable 导入入口校验', () => {
   });
 
   test('pdf import should reject non-pdf file before request', async ({ page }) => {
-    await page.goto(LEGACY_CONTRACT_ROUTES.PDF_IMPORT);
-    await expect(page).toHaveURL(legacyContractRoutePattern(LEGACY_CONTRACT_ROUTES.PDF_IMPORT));
+    await page.goto(ACTIVE_CONTRACT_PDF_IMPORT_PATH);
+    await expect(page).toHaveURL(/\/contract-groups\/import$/);
     await expect(page.getByRole('heading', { name: /PDF合同智能导入/i })).toBeVisible();
 
     await uploadPlainTextFile(page, 'contract.txt');
@@ -64,8 +65,8 @@ test.describe('@user-usable 导入入口校验', () => {
   });
 
   test('pdf import should not send upload request when file type is rejected', async ({ page }) => {
-    await page.goto(LEGACY_CONTRACT_ROUTES.PDF_IMPORT);
-    await expect(page).toHaveURL(legacyContractRoutePattern(LEGACY_CONTRACT_ROUTES.PDF_IMPORT));
+    await page.goto(ACTIVE_CONTRACT_PDF_IMPORT_PATH);
+    await expect(page).toHaveURL(/\/contract-groups\/import$/);
     await expect(page.getByRole('heading', { name: /PDF合同智能导入/i })).toBeVisible();
 
     let uploadRequestCount = 0;
@@ -130,7 +131,7 @@ test.describe('@user-usable 导入路由匿名拦截', () => {
 
     const protectedImportRoutes = [
       '/assets/import',
-      LEGACY_CONTRACT_ROUTES.PDF_IMPORT,
+      ACTIVE_CONTRACT_PDF_IMPORT_PATH,
       '/property-certificates/import',
     ];
 
