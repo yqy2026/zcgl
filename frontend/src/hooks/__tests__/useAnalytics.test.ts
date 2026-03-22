@@ -5,24 +5,15 @@ import { createTestQueryClient, renderHookWithProviders, waitFor } from '@/test/
 
 import { useAnalytics } from '../useAnalytics';
 
-const mockUseView = vi.fn(() => ({
-  currentView: {
-    key: 'owner:party-1',
+vi.mock('@/routes/perspective', () => ({
+  useRoutePerspective: () => ({
     perspective: 'owner',
-    partyId: 'party-1',
-    partyName: '主体A',
-    label: '产权方 · 主体A',
-  },
-  selectionRequired: false,
-  isViewReady: true,
-}));
-
-vi.mock('@/contexts/ViewContext', () => ({
-  useView: () => mockUseView(),
+    isPerspectiveRoute: true,
+  }),
 }));
 
 vi.mock('@/utils/queryScope', () => ({
-  buildQueryScopeKey: () => 'user:user-1|view:owner:party-1',
+  buildQueryScopeKey: () => 'user:user-1|perspective:owner',
 }));
 
 vi.mock('@/services/analyticsService', () => ({
@@ -34,17 +25,6 @@ vi.mock('@/services/analyticsService', () => ({
 describe('useAnalytics', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseView.mockReturnValue({
-      currentView: {
-        key: 'owner:party-1',
-        perspective: 'owner',
-        partyId: 'party-1',
-        partyName: '主体A',
-        label: '产权方 · 主体A',
-      },
-      selectionRequired: false,
-      isViewReady: true,
-    });
   });
 
   it('应把综合分析 queryKey 绑定到当前视角作用域', async () => {
@@ -63,36 +43,19 @@ describe('useAnalytics', () => {
 
     expect(queryKeys).toContainEqual([
       'analytics',
-      'user:user-1|view:owner:party-1',
+      'user:user-1|perspective:owner',
       'comprehensive',
       { keyword: '园区' },
     ]);
   });
 
-  it('视角未就绪时不应发起综合分析请求', async () => {
+  it('不再依赖视角就绪门闸才发起综合分析请求', async () => {
     const queryClient = createTestQueryClient();
-
-    mockUseView.mockReturnValue({
-      currentView: null,
-      selectionRequired: true,
-      isViewReady: false,
-    });
 
     renderHookWithProviders(() => useAnalytics({ keyword: '园区' }), { queryClient });
 
     await waitFor(() => {
-      const query = queryClient.getQueryCache().find({
-        queryKey: [
-          'analytics',
-          'user:user-1|view:owner:party-1',
-          'comprehensive',
-          { keyword: '园区' },
-        ],
-      });
-
-      expect(query?.state.fetchStatus ?? 'idle').toBe('idle');
+      expect(analyticsService.getComprehensiveAnalytics).toHaveBeenCalledWith({ keyword: '园区' });
     });
-
-    expect(analyticsService.getComprehensiveAnalytics).not.toHaveBeenCalled();
   });
 });

@@ -15,24 +15,17 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import AssetDetailPage from '../AssetDetailPage';
 
+const mockBuildQueryScopeKey = vi.fn(() => 'user:user-1|perspective:owner');
+
 vi.mock('@/utils/queryScope', () => ({
-  buildQueryScopeKey: () => 'user:user-1|view:owner:party-1',
+  buildQueryScopeKey: (value: unknown) => mockBuildQueryScopeKey(value),
 }));
 
-const mockUseView = vi.fn(() => ({
-  currentView: {
-    key: 'owner:party-1',
+vi.mock('@/routes/perspective', () => ({
+  useRoutePerspective: () => ({
     perspective: 'owner',
-    partyId: 'party-1',
-    partyName: '主体A',
-    label: '产权方 · 主体A',
-  },
-  selectionRequired: false,
-  isViewReady: true,
-}));
-
-vi.mock('@/contexts/ViewContext', () => ({
-  useView: () => mockUseView(),
+    isPerspectiveRoute: true,
+  }),
 }));
 
 vi.mock('antd', async () => {
@@ -147,11 +140,12 @@ const renderAssetDetailPage = (assetId: string) => {
     <QueryClientProvider client={queryClient}>
       <Routes>
         <Route path="/assets/:id" element={<AssetDetailPage />} />
+        <Route path="/owner/assets/:id" element={<AssetDetailPage />} />
         <Route path="/assets" element={<div>Asset List</div>} />
         <Route path="/assets/:id/edit" element={<div>Edit Asset</div>} />
       </Routes>
     </QueryClientProvider>,
-    { route: `/assets/${assetId}` }
+    { route: `/owner/assets/${assetId}` }
   );
 
   return {
@@ -163,17 +157,6 @@ const renderAssetDetailPage = (assetId: string) => {
 describe('AssetDetailPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseView.mockReturnValue({
-      currentView: {
-        key: 'owner:party-1',
-        perspective: 'owner',
-        partyId: 'party-1',
-        partyName: '主体A',
-        label: '产权方 · 主体A',
-      },
-      selectionRequired: false,
-      isViewReady: true,
-    });
     vi.mocked(assetService.getAssetLeaseSummary).mockResolvedValue(buildLeaseSummary());
   });
 
@@ -188,20 +171,21 @@ describe('AssetDetailPage', () => {
       expect(document.querySelector('.ant-spin-spinning')).toBeInTheDocument();
     });
 
-    it('视角未就绪时不应请求资产详情和租赁汇总', async () => {
-      mockUseView.mockReturnValue({
-        currentView: null,
-        selectionRequired: true,
-        isViewReady: false,
-      });
+    it('legacy 详情路径不再依赖视角就绪门闸', async () => {
+      const queryClient = createTestQueryClient();
 
-      renderAssetDetailPage('asset_123');
+      renderWithAppProviders(
+        <QueryClientProvider client={queryClient}>
+          <Routes>
+            <Route path="/assets/:id" element={<AssetDetailPage />} />
+          </Routes>
+        </QueryClientProvider>,
+        { route: '/assets/asset_123' }
+      );
 
       await waitFor(() => {
-        expect(assetService.getAsset).not.toHaveBeenCalled();
+        expect(assetService.getAsset).toHaveBeenCalled();
       });
-      expect(assetService.getAssetLeaseSummary).not.toHaveBeenCalled();
-      expect(screen.queryByText('资产不存在')).not.toBeInTheDocument();
     });
   });
 
@@ -218,6 +202,7 @@ describe('AssetDetailPage', () => {
       await waitFor(() => {
         expect(assetService.getAsset).toHaveBeenCalled();
         expect(assetService.getAssetLeaseSummary).toHaveBeenCalled();
+        expect(mockBuildQueryScopeKey).toHaveBeenCalledWith('owner');
       });
 
       const queryKeys = queryClient
@@ -230,7 +215,7 @@ describe('AssetDetailPage', () => {
           queryKey =>
             Array.isArray(queryKey) &&
             queryKey[0] === 'asset' &&
-            queryKey[1] === 'user:user-1|view:owner:party-1' &&
+            queryKey[1] === 'user:user-1|perspective:owner' &&
             queryKey[2] === 'asset_123'
         )
       ).toBe(true);
@@ -239,7 +224,7 @@ describe('AssetDetailPage', () => {
           queryKey =>
             Array.isArray(queryKey) &&
             queryKey[0] === 'asset-lease-summary' &&
-            queryKey[1] === 'user:user-1|view:owner:party-1' &&
+            queryKey[1] === 'user:user-1|perspective:owner' &&
             queryKey[2] === 'asset_123' &&
             queryKey[3] === dayjs().startOf('month').format('YYYY-MM-DD') &&
             queryKey[4] === dayjs().endOf('month').format('YYYY-MM-DD')

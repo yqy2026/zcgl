@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useView } from '@/contexts/ViewContext';
+import { useRoutePerspective } from '@/routes/perspective';
 import { analyticsService } from '@/services/analyticsService';
 import { exportAnalyticsData } from '@/services/analyticsExportService';
 import { MessageManager } from '@/utils/messageManager';
@@ -24,10 +24,10 @@ const isAnalyticsData = (value: unknown): value is AnalyticsData => {
 };
 
 export const useAssetAnalytics = () => {
-  const { currentView, isViewReady } = useView();
+  const { perspective } = useRoutePerspective();
   const [filters, setFilters] = useState<AssetSearchParams>({});
   const [dimension, setDimension] = useState<AnalysisDimension>('area');
-  const queryScopeKey = buildQueryScopeKey(currentView);
+  const queryScopeKey = buildQueryScopeKey(perspective);
 
   // 获取分析数据
   const {
@@ -44,7 +44,6 @@ export const useAssetAnalytics = () => {
     },
     staleTime: 5 * 60 * 1000, // 5分钟缓存
     refetchOnWindowFocus: false,
-    enabled: isViewReady,
   });
 
   // 解析数据

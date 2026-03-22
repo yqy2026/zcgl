@@ -106,12 +106,18 @@ const mockUseView = vi.fn(() => ({
   isViewReady: true,
 }));
 
-vi.mock('@/contexts/ViewContext', () => ({
-  useView: () => mockUseView(),
+const mockBuildQueryScopeKey = vi.fn(() => 'user:user-1|perspective:owner');
+const mockUseRoutePerspective = vi.fn(() => ({
+  perspective: 'owner',
+  isPerspectiveRoute: true,
 }));
 
 vi.mock('@/utils/queryScope', () => ({
-  buildQueryScopeKey: () => 'user:user-1|view:owner:party-1',
+  buildQueryScopeKey: (value: unknown) => mockBuildQueryScopeKey(value),
+}));
+
+vi.mock('@/routes/perspective', () => ({
+  useRoutePerspective: () => mockUseRoutePerspective(),
 }));
 import { assetService } from '@/services/assetService';
 import { MessageManager } from '@/utils/messageManager';
@@ -125,7 +131,7 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-const renderPage = () => renderWithProviders(<AssetListPage />);
+const renderPage = (route = '/owner/assets') => renderWithProviders(<AssetListPage />, { route });
 
 let mockData: Array<{ id: string; asset_name: string }> = [];
 let mockIsAssetsInitialLoading = false;
@@ -183,6 +189,10 @@ describe('AssetListPage', () => {
       selectionRequired: false,
       isViewReady: true,
     });
+    mockUseRoutePerspective.mockReturnValue({
+      perspective: 'owner',
+      isPerspectiveRoute: true,
+    });
     mockData = [
       { id: 'asset_1', asset_name: '资产A' },
       { id: 'asset_2', asset_name: '资产B' },
@@ -211,6 +221,7 @@ describe('AssetListPage', () => {
       renderPage();
 
       expect(screen.getByText('资产列表')).toBeInTheDocument();
+      expect(mockBuildQueryScopeKey).toHaveBeenCalledWith('owner');
     });
 
     it('渲染操作按钮', () => {
@@ -243,7 +254,7 @@ describe('AssetListPage', () => {
       renderPage();
 
       expect(screen.getByText('当前视角')).toBeInTheDocument();
-      expect(screen.getByText('产权方 · 主体A')).toBeInTheDocument();
+      expect(screen.getByText('业主视角')).toBeInTheDocument();
     });
 
     it('资产列表与统计查询应把当前视角纳入 queryKey', () => {
@@ -251,35 +262,33 @@ describe('AssetListPage', () => {
 
       expect(useQuery).toHaveBeenCalledWith(
         expect.objectContaining({
-          queryKey: ['assets-list', expect.stringContaining('owner:party-1'), 1, 20, {}],
+          queryKey: ['assets-list', 'user:user-1|perspective:owner', 1, 20, {}],
         })
       );
       expect(useQuery).toHaveBeenCalledWith(
         expect.objectContaining({
-          queryKey: ['analytics', expect.stringContaining('owner:party-1'), {}],
+          queryKey: ['analytics', 'user:user-1|perspective:owner', {}],
         })
       );
     });
 
-    it('视角未就绪时不应启用资产列表和统计查询', () => {
-      mockUseView.mockReturnValue({
-        currentView: null,
-        selectionRequired: true,
-        isViewReady: false,
+    it('legacy 路径不显示视角标签，但仍启用资产列表和统计查询', () => {
+      mockUseRoutePerspective.mockReturnValue({
+        perspective: null,
+        isPerspectiveRoute: false,
       });
 
-      renderPage();
+      renderPage('/assets/list');
 
+      expect(screen.queryByText('当前视角')).not.toBeInTheDocument();
       expect(useQuery).toHaveBeenCalledWith(
         expect.objectContaining({
-          queryKey: ['assets-list', expect.any(String), 1, 20, {}],
-          enabled: false,
+          queryKey: ['assets-list', 'user:user-1|perspective:owner', 1, 20, {}],
         })
       );
       expect(useQuery).toHaveBeenCalledWith(
         expect.objectContaining({
-          queryKey: ['analytics', expect.any(String), {}],
-          enabled: false,
+          queryKey: ['analytics', 'user:user-1|perspective:owner', {}],
         })
       );
     });
@@ -425,7 +434,7 @@ describe('AssetListPage', () => {
           if (!Array.isArray(queryKey) || queryKey[0] !== 'assets-list') {
             return false;
           }
-          if (queryKey[1] !== 'user:user-1|view:owner:party-1') {
+          if (queryKey[1] !== 'user:user-1|perspective:owner') {
             return false;
           }
           const filters = queryKey[4];
@@ -452,7 +461,7 @@ describe('AssetListPage', () => {
           if (!Array.isArray(queryKey) || queryKey[0] !== 'assets-list') {
             return false;
           }
-          if (queryKey[1] !== 'user:user-1|view:owner:party-1') {
+          if (queryKey[1] !== 'user:user-1|perspective:owner') {
             return false;
           }
           const filters = queryKey[4];

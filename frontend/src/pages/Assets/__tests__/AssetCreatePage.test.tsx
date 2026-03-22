@@ -8,24 +8,17 @@ import AssetCreatePage from '../AssetCreatePage';
 const mockNavigate = vi.fn();
 const mockInvalidateQueries = vi.fn();
 
+const mockBuildQueryScopeKey = vi.fn(() => 'user:user-1|perspective:owner');
+
 vi.mock('@/utils/queryScope', () => ({
-  buildQueryScopeKey: () => 'user:user-1|view:owner:party-1',
+  buildQueryScopeKey: (value: unknown) => mockBuildQueryScopeKey(value),
 }));
 
-const mockUseView = vi.fn(() => ({
-  currentView: {
-    key: 'owner:party-1',
+vi.mock('@/routes/perspective', () => ({
+  useRoutePerspective: () => ({
     perspective: 'owner',
-    partyId: 'party-1',
-    partyName: '主体A',
-    label: '产权方 · 主体A',
-  },
-  selectionRequired: false,
-  isViewReady: true,
-}));
-
-vi.mock('@/contexts/ViewContext', () => ({
-  useView: () => mockUseView(),
+    isPerspectiveRoute: true,
+  }),
 }));
 
 vi.mock('react-router-dom', async () => {
@@ -103,17 +96,6 @@ import { assetService } from '@/services/assetService';
 describe('AssetCreatePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseView.mockReturnValue({
-      currentView: {
-        key: 'owner:party-1',
-        perspective: 'owner',
-        partyId: 'party-1',
-        partyName: '主体A',
-        label: '产权方 · 主体A',
-      },
-      selectionRequired: false,
-      isViewReady: true,
-    });
   });
 
   it('编辑态资产详情查询应把当前视角纳入 queryKey', async () => {
@@ -142,10 +124,11 @@ describe('AssetCreatePage', () => {
         queryKey =>
           Array.isArray(queryKey) &&
           queryKey[0] === 'asset' &&
-          queryKey[1] === 'user:user-1|view:owner:party-1' &&
+          queryKey[1] === 'user:user-1|perspective:owner' &&
           queryKey[2] === 'asset-1'
       )
     ).toBe(true);
+    expect(mockBuildQueryScopeKey).toHaveBeenCalledWith('owner');
   });
 
   it('编辑成功后应失效 scoped 资产列表与详情查询前缀', async () => {
@@ -170,19 +153,13 @@ describe('AssetCreatePage', () => {
     expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['analytics'] });
   });
 
-  it('视角未就绪时编辑态不应渲染表单或请求资产详情', async () => {
-    mockUseView.mockReturnValue({
-      currentView: null,
-      selectionRequired: true,
-      isViewReady: false,
-    });
-
+  it('编辑态不再依赖视角就绪门闸才请求资产详情', async () => {
     renderWithProviders(<AssetCreatePage />, { route: '/assets/asset-1/edit' });
 
     await waitFor(() => {
-      expect(screen.queryByRole('button', { name: 'submit' })).not.toBeInTheDocument();
+      expect(assetService.getAsset).toHaveBeenCalledWith('asset-1');
     });
 
-    expect(assetService.getAsset).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'submit' })).toBeInTheDocument();
   });
 });

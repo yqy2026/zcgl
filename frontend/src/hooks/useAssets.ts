@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { useView } from '@/contexts/ViewContext';
+import { useRoutePerspective } from '@/routes/perspective';
 import { assetService } from '@/services/assetService';
 import { ownershipService } from '@/services/ownershipService';
 import { MessageManager } from '@/utils/messageManager';
@@ -15,8 +15,8 @@ import { buildQueryScopeKey } from '@/utils/queryScope';
  * Zustand 仅用于 UI 状态（selectedAsset、searchParams 等）。
  */
 export const useAssets = (params?: AssetSearchParams) => {
-  const { currentView } = useView();
-  const queryScopeKey = buildQueryScopeKey(currentView);
+  const { perspective } = useRoutePerspective();
+  const queryScopeKey = buildQueryScopeKey(perspective);
 
   return useQuery({
     queryKey: ['assets-list', queryScopeKey, params],
@@ -30,8 +30,8 @@ export const useAssets = (params?: AssetSearchParams) => {
  * 单个资产查询 Hook
  */
 export const useAsset = (id: string) => {
-  const { currentView } = useView();
-  const queryScopeKey = buildQueryScopeKey(currentView);
+  const { perspective } = useRoutePerspective();
+  const queryScopeKey = buildQueryScopeKey(perspective);
 
   return useQuery({
     queryKey: ['asset', queryScopeKey, id],
@@ -183,8 +183,8 @@ export const useBusinessCategories = () => {
  */
 export const useAssetSearch = () => {
   const queryClient = useQueryClient();
-  const { currentView } = useView();
-  const queryScopeKey = buildQueryScopeKey(currentView);
+  const { perspective } = useRoutePerspective();
+  const queryScopeKey = buildQueryScopeKey(perspective);
 
   return useMutation({
     mutationFn: ({ query, filters }: { query: string; filters?: AssetSearchFilters }) =>

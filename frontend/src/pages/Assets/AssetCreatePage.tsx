@@ -4,7 +4,7 @@ import { MessageManager } from '@/utils/messageManager';
 import { useParams, useNavigate } from 'react-router-dom';
 import { PageContainer } from '@/components/Common';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useView } from '@/contexts/ViewContext';
+import { useRoutePerspective } from '@/routes/perspective';
 import { assetService } from '@/services/assetService';
 import { AssetForm } from '@/components/Forms';
 import type { AssetCreateRequest, AssetUpdateRequest } from '@/types/asset';
@@ -27,27 +27,18 @@ const AssetCreatePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { currentView, isViewReady } = useView();
+  const { perspective } = useRoutePerspective();
   const _form = Form.useForm();
-  const queryScopeKey = buildQueryScopeKey(currentView);
+  const queryScopeKey = buildQueryScopeKey(perspective);
 
   const isEdit = id != null;
-  const shouldBlockForViewSelection = isEdit && !isViewReady;
 
   // 获取资产详情（编辑模式）
   const { data: asset, isLoading } = useQuery({
     queryKey: ['asset', queryScopeKey, id],
     queryFn: () => assetService.getAsset(id!),
-    enabled: isEdit && isViewReady,
+    enabled: isEdit,
   });
-
-  if (shouldBlockForViewSelection) {
-    return (
-      <PageContainer title="编辑资产" loading onBack={() => navigate(`/assets/${id}`)}>
-        <div />
-      </PageContainer>
-    );
-  }
 
   // 创建资产
   const createMutation = useMutation({

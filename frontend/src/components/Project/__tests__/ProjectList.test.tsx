@@ -10,24 +10,18 @@ import { render, screen, fireEvent, act } from '@testing-library/react';
 import { useQuery } from '@tanstack/react-query';
 import { partyService } from '@/services/partyService';
 
+const mockBuildQueryScopeKey = vi.fn(() => 'user:user-1|perspective:manager');
+const mockUseRoutePerspective = vi.fn(() => ({
+  perspective: 'manager',
+  isPerspectiveRoute: true,
+}));
+
 vi.mock('@/utils/queryScope', () => ({
-  buildQueryScopeKey: () => 'user:user-1|view:manager:party-1',
+  buildQueryScopeKey: (value: unknown) => mockBuildQueryScopeKey(value),
 }));
 
-const mockUseView = vi.fn(() => ({
-  currentView: {
-    key: 'manager:party-1',
-    perspective: 'manager',
-    partyId: 'party-1',
-    partyName: '运营主体A',
-    label: '运营方 · 运营主体A',
-  },
-  selectionRequired: false,
-  isViewReady: true,
-}));
-
-vi.mock('@/contexts/ViewContext', () => ({
-  useView: () => mockUseView(),
+vi.mock('@/routes/perspective', () => ({
+  useRoutePerspective: () => mockUseRoutePerspective(),
 }));
 // Mock message manager
 vi.mock('@/utils/messageManager', () => ({
@@ -376,6 +370,7 @@ const flushPromises = () =>
 
 const renderProjectList = async (props?: React.ComponentProps<typeof ProjectList>) => {
   await act(async () => {
+    window.history.pushState({}, 'Test page', '/manager/projects');
     render(<ProjectList {...props} />);
     await flushPromises();
   });
@@ -386,16 +381,9 @@ const mockRefetchProjects = vi.fn();
 describe('ProjectList', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseView.mockReturnValue({
-      currentView: {
-        key: 'manager:party-1',
-        perspective: 'manager',
-        partyId: 'party-1',
-        partyName: '运营主体A',
-        label: '运营方 · 运营主体A',
-      },
-      selectionRequired: false,
-      isViewReady: true,
+    mockUseRoutePerspective.mockReturnValue({
+      perspective: 'manager',
+      isPerspectiveRoute: true,
     });
     mockRefetchProjects.mockClear();
     vi.mocked(useQuery).mockImplementation(options => {
@@ -481,7 +469,7 @@ describe('ProjectList', () => {
       await renderProjectList();
 
       expect(screen.getByText('当前视角')).toBeInTheDocument();
-      expect(screen.getByText('运营方 · 运营主体A')).toBeInTheDocument();
+      expect(screen.getByText('经营视角')).toBeInTheDocument();
     });
 
     it('项目列表与主体搜索查询应把当前视角纳入 queryKey', async () => {
@@ -491,7 +479,7 @@ describe('ProjectList', () => {
         expect.objectContaining({
           queryKey: [
             'project-list',
-            'user:user-1|view:manager:party-1',
+            'user:user-1|perspective:manager',
             1,
             10,
             { keyword: '', status: '', ownerPartyId: '' },
@@ -500,36 +488,36 @@ describe('ProjectList', () => {
       );
       expect(useQuery).toHaveBeenCalledWith(
         expect.objectContaining({
-          queryKey: ['project-owner-party-options', 'user:user-1|view:manager:party-1', ''],
+          queryKey: ['project-owner-party-options', 'user:user-1|perspective:manager', ''],
         })
       );
+      expect(mockBuildQueryScopeKey).toHaveBeenCalledWith('manager');
     });
 
-    it('视角未就绪时不应启用项目列表和主体选项查询', async () => {
-      mockUseView.mockReturnValue({
-        currentView: null,
-        selectionRequired: true,
-        isViewReady: false,
+    it('legacy 路径不显示视角标签，但列表和主体选项查询仍继续执行', async () => {
+      mockUseRoutePerspective.mockReturnValue({
+        perspective: null,
+        isPerspectiveRoute: false,
       });
+      window.history.pushState({}, 'Legacy project page', '/project');
 
       await renderProjectList();
 
+      expect(screen.queryByText('当前视角')).not.toBeInTheDocument();
       expect(useQuery).toHaveBeenCalledWith(
         expect.objectContaining({
           queryKey: [
             'project-list',
-            expect.any(String),
+            'user:user-1|perspective:manager',
             1,
             10,
             { keyword: '', status: '', ownerPartyId: '' },
           ],
-          enabled: false,
         })
       );
       expect(useQuery).toHaveBeenCalledWith(
         expect.objectContaining({
-          queryKey: ['project-owner-party-options', expect.any(String), ''],
-          enabled: false,
+          queryKey: ['project-owner-party-options', 'user:user-1|perspective:manager', ''],
         })
       );
     });

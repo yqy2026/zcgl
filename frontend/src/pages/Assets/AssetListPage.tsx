@@ -16,7 +16,7 @@ import AssetList from '@/components/Asset/AssetList';
 import AssetSearch from '@/components/Asset/AssetSearch';
 import AssetAreaSummary from '@/components/Asset/AssetAreaSummary';
 import CurrentViewBanner from '@/components/System/CurrentViewBanner';
-import { useView } from '@/contexts/ViewContext';
+import { useRoutePerspective } from '@/routes/perspective';
 import type { Asset, AssetSearchParams } from '@/types/asset';
 import { createLogger } from '@/utils/logger';
 import { buildQueryScopeKey } from '@/utils/queryScope';
@@ -29,14 +29,14 @@ type AssetListFilters = Omit<AssetSearchParams, 'page' | 'page_size'>;
 
 const AssetListPage: React.FC = () => {
   const navigate = useNavigate();
-  const { currentView, isViewReady } = useView();
+  const { perspective } = useRoutePerspective();
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [filters, setFilters] = useState<AssetListFilters>({});
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 20,
   });
-  const queryScopeKey = buildQueryScopeKey(currentView);
+  const queryScopeKey = buildQueryScopeKey(perspective);
 
   const {
     data: assetsData,
@@ -53,7 +53,6 @@ const AssetListPage: React.FC = () => {
         page_size: pagination.pageSize,
       }),
     retry: 1,
-    enabled: isViewReady,
   });
 
   useEffect(() => {
@@ -85,7 +84,6 @@ const AssetListPage: React.FC = () => {
   } = useQuery({
     queryKey: ['analytics', queryScopeKey, analyticsFilters],
     queryFn: () => analyticsService.getComprehensiveAnalytics(analyticsFilters),
-    enabled: isViewReady,
   });
 
   const listData = useMemo(

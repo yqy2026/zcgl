@@ -1,10 +1,41 @@
 import { AuthStorage } from '@/utils/AuthStorage';
-import { viewSelectionStorage } from '@/utils/viewSelectionStorage';
+import type { Perspective } from '@/types/capability';
 
 const ANONYMOUS_USER_SCOPE = 'user:anonymous';
-const NO_VIEW_SCOPE = 'view:none';
+const NO_PERSPECTIVE_SCOPE = 'perspective:none';
 
-type ScopeView =
+type ScopePerspective =
+  | Extract<Perspective, 'owner' | 'manager'>
+  | {
+      perspective?: Perspective | null;
+    }
+  | null
+  | undefined;
+
+const normalizePerspective = (
+  value: ScopePerspective
+): Extract<Perspective, 'owner' | 'manager'> | null => {
+  if (value == null) {
+    return null;
+  }
+
+  if (typeof value === 'string') {
+    return value === 'owner' || value === 'manager' ? (value as 'owner' | 'manager') : null;
+  }
+
+  const perspective = value.perspective;
+  if (perspective === 'owner') {
+    return 'owner';
+  }
+
+  if (perspective === 'manager') {
+    return 'manager';
+  }
+
+  return null;
+};
+
+type ScopeViewLegacy =
   | {
       key: string;
     }
@@ -16,20 +47,19 @@ const normalizeUserScope = (userId: string | null | undefined): string => {
   return normalizedUserId !== '' ? `user:${normalizedUserId}` : ANONYMOUS_USER_SCOPE;
 };
 
-const normalizeViewScope = (view: ScopeView): string => {
-  const normalizedViewKey = view?.key?.trim() ?? '';
-  return normalizedViewKey !== '' ? `view:${normalizedViewKey}` : NO_VIEW_SCOPE;
+const normalizePerspectiveScope = (value: ScopePerspective): string => {
+  const perspective = normalizePerspective(value);
+  return perspective != null ? `perspective:${perspective}` : NO_PERSPECTIVE_SCOPE;
 };
 
-export const buildQueryScopeKey = (view: ScopeView): string => {
+export const buildQueryScopeKey = (view: ScopePerspective | ScopeViewLegacy): string => {
   const currentUser = AuthStorage.getCurrentUser();
-  return `${normalizeUserScope(currentUser?.id)}|${normalizeViewScope(view)}`;
+  return `${normalizeUserScope(currentUser?.id)}|${normalizePerspectiveScope(
+    view as ScopePerspective
+  )}`;
 };
 
-export const getCurrentRequestScopeKey = (): string => {
+export const getCurrentRequestScopeKey = (perspective?: ScopePerspective): string => {
   const currentUser = AuthStorage.getCurrentUser();
-  const currentUserId = currentUser?.id?.trim() ?? '';
-  const currentView = currentUserId !== '' ? viewSelectionStorage.get(currentUserId) : null;
-
-  return `${normalizeUserScope(currentUserId)}|${normalizeViewScope(currentView)}`;
+  return `${normalizeUserScope(currentUser?.id)}|${normalizePerspectiveScope(perspective)}`;
 };
