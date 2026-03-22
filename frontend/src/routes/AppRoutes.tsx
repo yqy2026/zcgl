@@ -1,11 +1,14 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import type { AuthzAction, ResourceType } from '@/types/capability';
+import LegacyRouteRedirect from './LegacyRouteRedirect';
 import {
   ASSET_ROUTES,
   CONTRACT_GROUP_ROUTES,
   LEGACY_RENTAL_ROUTES,
+  MANAGER_ROUTES,
   OWNERSHIP_ROUTES,
+  OWNER_ROUTES,
   PROJECT_ROUTES,
   PROFILE_ROUTES,
   SYSTEM_ROUTES,
@@ -29,6 +32,22 @@ export interface ProtectedRouteItem {
  * 注意: 登录页面路由不应该在此定义,应该在 App.tsx 中作为公共路由处理
  */
 const legacyRentalRetiredPage = React.lazy(() => import('../pages/Rental/LegacyRentalRetiredPage'));
+const assetListPage = React.lazy(() => import('../pages/Assets/AssetListPage'));
+const assetDetailPage = React.lazy(() => import('../pages/Assets/AssetDetailPage'));
+const contractGroupListPage = React.lazy(
+  () => import('../pages/ContractGroup/ContractGroupListPage')
+);
+const contractGroupDetailPage = React.lazy(
+  () => import('../pages/ContractGroup/ContractGroupDetailPage')
+);
+const propertyCertificateListPage = React.lazy(
+  () => import('../pages/PropertyCertificate/PropertyCertificateList')
+);
+const propertyCertificateDetailPage = React.lazy(
+  () => import('../pages/PropertyCertificate/PropertyCertificateDetailPage')
+);
+const projectManagementPage = React.lazy(() => import('../pages/Project/ProjectManagementPage'));
+const projectDetailPage = React.lazy(() => import('../pages/Project/ProjectDetailPage'));
 
 const legacyRentalPdfImportRedirect: React.FC = () => (
   <Navigate to={CONTRACT_GROUP_ROUTES.IMPORT} replace />
@@ -43,8 +62,8 @@ const baseProtectedRoutes: ProtectedRouteItem[] = [
   },
   {
     path: BASE_PATHS.ASSETS,
-    element: () => <Navigate to={ASSET_ROUTES.LIST} replace />,
-    capabilityGuardBypass: true,
+    element: () => <LegacyRouteRedirect legacyPath={BASE_PATHS.ASSETS} />,
+    permissions: [{ resource: 'asset', action: 'read' }],
   },
 
   // 资产管理模块 - 注意路由顺序，更具体的路径要在前面
@@ -70,12 +89,32 @@ const baseProtectedRoutes: ProtectedRouteItem[] = [
   },
   {
     path: ASSET_ROUTES.LIST,
-    element: React.lazy(() => import('../pages/Assets/AssetListPage')),
+    element: () => <LegacyRouteRedirect legacyPath={ASSET_ROUTES.LIST} />,
     permissions: [{ resource: 'asset', action: 'read' }],
   },
   {
     path: ASSET_ROUTES.DETAIL_PATH,
-    element: React.lazy(() => import('../pages/Assets/AssetDetailPage')),
+    element: assetDetailPage,
+    permissions: [{ resource: 'asset', action: 'read' }],
+  },
+  {
+    path: OWNER_ROUTES.ASSETS,
+    element: assetListPage,
+    permissions: [{ resource: 'asset', action: 'read' }],
+  },
+  {
+    path: OWNER_ROUTES.ASSET_DETAIL_PATH,
+    element: assetDetailPage,
+    permissions: [{ resource: 'asset', action: 'read' }],
+  },
+  {
+    path: MANAGER_ROUTES.ASSETS,
+    element: assetListPage,
+    permissions: [{ resource: 'asset', action: 'read' }],
+  },
+  {
+    path: MANAGER_ROUTES.ASSET_DETAIL_PATH,
+    element: assetDetailPage,
     permissions: [{ resource: 'asset', action: 'read' }],
   },
 
@@ -128,7 +167,7 @@ const baseProtectedRoutes: ProtectedRouteItem[] = [
 
   {
     path: CONTRACT_GROUP_ROUTES.LIST,
-    element: React.lazy(() => import('../pages/ContractGroup/ContractGroupListPage')),
+    element: () => <LegacyRouteRedirect legacyPath={CONTRACT_GROUP_ROUTES.LIST} />,
     permissions: [{ resource: 'contract_group', action: 'read' }],
   },
   {
@@ -143,7 +182,27 @@ const baseProtectedRoutes: ProtectedRouteItem[] = [
   },
   {
     path: CONTRACT_GROUP_ROUTES.DETAIL_PATH,
-    element: React.lazy(() => import('../pages/ContractGroup/ContractGroupDetailPage')),
+    element: contractGroupDetailPage,
+    permissions: [{ resource: 'contract_group', action: 'read' }],
+  },
+  {
+    path: OWNER_ROUTES.CONTRACT_GROUPS,
+    element: contractGroupListPage,
+    permissions: [{ resource: 'contract_group', action: 'read' }],
+  },
+  {
+    path: OWNER_ROUTES.CONTRACT_GROUP_DETAIL_PATH,
+    element: contractGroupDetailPage,
+    permissions: [{ resource: 'contract_group', action: 'read' }],
+  },
+  {
+    path: MANAGER_ROUTES.CONTRACT_GROUPS,
+    element: contractGroupListPage,
+    permissions: [{ resource: 'contract_group', action: 'read' }],
+  },
+  {
+    path: MANAGER_ROUTES.CONTRACT_GROUP_DETAIL_PATH,
+    element: contractGroupDetailPage,
     permissions: [{ resource: 'contract_group', action: 'read' }],
   },
   {
@@ -153,7 +212,7 @@ const baseProtectedRoutes: ProtectedRouteItem[] = [
   },
   {
     path: PROPERTY_CERTIFICATE_ROUTES.LIST,
-    element: React.lazy(() => import('../pages/PropertyCertificate/PropertyCertificateList')),
+    element: () => <LegacyRouteRedirect legacyPath={PROPERTY_CERTIFICATE_ROUTES.LIST} />,
     permissions: [{ resource: 'property_certificate', action: 'read' }],
   },
   {
@@ -163,7 +222,17 @@ const baseProtectedRoutes: ProtectedRouteItem[] = [
   },
   {
     path: PROPERTY_CERTIFICATE_ROUTES.DETAIL_PATH,
-    element: React.lazy(() => import('../pages/PropertyCertificate/PropertyCertificateDetailPage')),
+    element: propertyCertificateDetailPage,
+    permissions: [{ resource: 'property_certificate', action: 'read' }],
+  },
+  {
+    path: OWNER_ROUTES.PROPERTY_CERTIFICATES,
+    element: propertyCertificateListPage,
+    permissions: [{ resource: 'property_certificate', action: 'read' }],
+  },
+  {
+    path: OWNER_ROUTES.PROPERTY_CERTIFICATE_DETAIL_PATH,
+    element: propertyCertificateDetailPage,
     permissions: [{ resource: 'property_certificate', action: 'read' }],
   },
 
@@ -187,17 +256,27 @@ const baseProtectedRoutes: ProtectedRouteItem[] = [
   // 项目管理 - 注意路由顺序，详情页必须在列表页之前
   {
     path: PROJECT_ROUTES.EDIT_PATH,
-    element: React.lazy(() => import('../pages/Project/ProjectManagementPage')),
+    element: projectManagementPage,
     permissions: [{ resource: 'project', action: 'read' }],
   },
   {
     path: PROJECT_ROUTES.DETAIL_PATH,
-    element: React.lazy(() => import('../pages/Project/ProjectDetailPage')),
+    element: projectDetailPage,
     permissions: [{ resource: 'project', action: 'read' }],
   },
   {
     path: PROJECT_ROUTES.LIST,
-    element: React.lazy(() => import('../pages/Project/ProjectManagementPage')),
+    element: () => <LegacyRouteRedirect legacyPath={PROJECT_ROUTES.LIST} />,
+    permissions: [{ resource: 'project', action: 'read' }],
+  },
+  {
+    path: MANAGER_ROUTES.PROJECTS,
+    element: projectManagementPage,
+    permissions: [{ resource: 'project', action: 'read' }],
+  },
+  {
+    path: MANAGER_ROUTES.PROJECT_DETAIL_PATH,
+    element: projectDetailPage,
     permissions: [{ resource: 'project', action: 'read' }],
   },
 
