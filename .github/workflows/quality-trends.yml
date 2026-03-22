@@ -13,17 +13,17 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         fetch-depth: 0  # Full history for trends (完整历史用于趋势分析)
 
     - name: Setup Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v6
       with:
         python-version: '3.12'
 
     - name: Setup Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v6
       with:
         node-version: '20'
 
@@ -123,7 +123,7 @@ jobs:
     # Upload Reports
     # ===========================
     - name: Upload quality reports
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: weekly-quality-report-${{ github.run_number }}
         path: reports/

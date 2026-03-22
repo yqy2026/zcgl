@@ -19,6 +19,11 @@ def _load_ci_workflow() -> dict[str, Any]:
     return yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
 
 
+def _load_workflow(workflow_name: str) -> dict[str, Any]:
+    workflow_path = _repo_root() / ".github" / "workflows" / workflow_name
+    return yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
+
+
 def _job_steps(job: dict[str, Any]) -> Iterable[dict[str, Any]]:
     steps = job.get("steps")
     if isinstance(steps, list):
@@ -198,3 +203,42 @@ def test_frontend_e2e_seed_should_provision_non_admin_role() -> None:
 
     assert "ensure_regular_role" in seed_script
     assert 'Role.name == "user"' in seed_script
+
+
+def test_workflows_should_not_pin_deprecated_node20_action_majors() -> None:
+    deprecated_action_versions = {
+        "actions/checkout@v4",
+        "actions/setup-python@v4",
+        "actions/setup-node@v4",
+        "actions/cache@v4",
+        "actions/upload-artifact@v4",
+        "codecov/codecov-action@v4",
+    }
+    workflow_names = ("ci.yml", "security.yml", "quality-trends.yml")
+
+    deprecated_usage_by_workflow: dict[str, list[str]] = {}
+    for workflow_name in workflow_names:
+        workflow = _load_workflow(workflow_name)
+        jobs = workflow.get("jobs")
+        if not isinstance(jobs, dict):
+            continue
+
+        matched_uses: set[str] = set()
+        for job in jobs.values():
+            if not isinstance(job, dict):
+                continue
+
+            for step in _job_steps(job):
+                uses = step.get("uses")
+                if not isinstance(uses, str):
+                    continue
+                if uses in deprecated_action_versions:
+                    matched_uses.add(uses)
+
+        if matched_uses:
+            deprecated_usage_by_workflow[workflow_name] = sorted(matched_uses)
+
+    assert not deprecated_usage_by_workflow, (
+        "Workflows should not pin GitHub-hosted actions that still run on deprecated Node 20 "
+        f"majors: {deprecated_usage_by_workflow}"
+    )
