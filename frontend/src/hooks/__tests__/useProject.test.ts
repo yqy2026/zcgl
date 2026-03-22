@@ -17,20 +17,29 @@ import {
   useUpdateProject,
 } from '../useProject';
 
+const mockUseView = vi.fn(() => ({
+  currentView: {
+    key: 'manager:party-1',
+    perspective: 'manager',
+    partyId: 'party-1',
+    partyName: '运营主体A',
+    label: '运营方 · 运营主体A',
+  },
+}));
+
 vi.mock('@/contexts/ViewContext', () => ({
-  useView: () => ({
-    currentView: {
-      key: 'manager:party-1',
-      perspective: 'manager',
-      partyId: 'party-1',
-      partyName: '运营主体A',
-      label: '运营方 · 运营主体A',
-    },
+  useView: () => mockUseView(),
+}));
+
+vi.mock('@/routes/perspective', () => ({
+  useRoutePerspective: () => ({
+    perspective: 'manager',
+    isPerspectiveRoute: true,
   }),
 }));
 
 vi.mock('@/utils/queryScope', () => ({
-  buildQueryScopeKey: () => 'user:user-1|view:manager:party-1',
+  buildQueryScopeKey: () => 'user:user-1|perspective:manager',
 }));
 
 vi.mock('@/utils/messageManager', () => ({
@@ -303,9 +312,10 @@ describe('useProject - Hook验证', () => {
 
     expect(queryKeys).toContainEqual([
       'project-options',
-      'user:user-1|view:manager:party-1',
+      'user:user-1|perspective:manager',
       'active',
     ]);
+    expect(mockUseView).not.toHaveBeenCalled();
   });
 
   it('useProjectDetail 应把当前视角纳入详情 queryKey', async () => {
@@ -322,7 +332,8 @@ describe('useProject - Hook验证', () => {
       .getAll()
       .map(query => query.queryKey);
 
-    expect(queryKeys).toContainEqual(['project', 'user:user-1|view:manager:party-1', '1']);
+    expect(queryKeys).toContainEqual(['project', 'user:user-1|perspective:manager', '1']);
+    expect(mockUseView).not.toHaveBeenCalled();
   });
 
   it('useUpdateProject 成功后应失效 scoped 项目详情查询前缀', async () => {

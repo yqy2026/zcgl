@@ -21,8 +21,15 @@ vi.mock('@/contexts/ViewContext', () => ({
   useView: () => mockUseView(),
 }));
 
+vi.mock('@/routes/perspective', () => ({
+  useRoutePerspective: () => ({
+    perspective: 'owner',
+    isPerspectiveRoute: true,
+  }),
+}));
+
 vi.mock('@/utils/queryScope', () => ({
-  buildQueryScopeKey: () => 'user:user-1|view:owner:party-1',
+  buildQueryScopeKey: () => 'user:user-1|perspective:owner',
 }));
 
 vi.mock('@/services/analyticsService', () => ({
@@ -63,13 +70,14 @@ describe('useAnalytics', () => {
 
     expect(queryKeys).toContainEqual([
       'analytics',
-      'user:user-1|view:owner:party-1',
+      'user:user-1|perspective:owner',
       'comprehensive',
       { keyword: '园区' },
     ]);
+    expect(mockUseView).not.toHaveBeenCalled();
   });
 
-  it('视角未就绪时不应发起综合分析请求', async () => {
+  it('不再依赖视角就绪门闸才发起综合分析请求', async () => {
     const queryClient = createTestQueryClient();
 
     mockUseView.mockReturnValue({
@@ -81,18 +89,9 @@ describe('useAnalytics', () => {
     renderHookWithProviders(() => useAnalytics({ keyword: '园区' }), { queryClient });
 
     await waitFor(() => {
-      const query = queryClient.getQueryCache().find({
-        queryKey: [
-          'analytics',
-          'user:user-1|view:owner:party-1',
-          'comprehensive',
-          { keyword: '园区' },
-        ],
-      });
-
-      expect(query?.state.fetchStatus ?? 'idle').toBe('idle');
+      expect(analyticsService.getComprehensiveAnalytics).toHaveBeenCalledWith({ keyword: '园区' });
     });
 
-    expect(analyticsService.getComprehensiveAnalytics).not.toHaveBeenCalled();
+    expect(mockUseView).not.toHaveBeenCalled();
   });
 });

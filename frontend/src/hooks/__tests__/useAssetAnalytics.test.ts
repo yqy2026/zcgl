@@ -5,20 +5,29 @@ import { analyticsService } from '@/services/analyticsService';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 
+const mockUseView = vi.fn(() => ({
+  currentView: {
+    key: 'owner:party-1',
+    perspective: 'owner',
+    partyId: 'party-1',
+    partyName: '主体A',
+    label: '产权方 · 主体A',
+  },
+}));
+
 vi.mock('@/contexts/ViewContext', () => ({
-  useView: () => ({
-    currentView: {
-      key: 'owner:party-1',
-      perspective: 'owner',
-      partyId: 'party-1',
-      partyName: '主体A',
-      label: '产权方 · 主体A',
-    },
+  useView: () => mockUseView(),
+}));
+
+vi.mock('@/routes/perspective', () => ({
+  useRoutePerspective: () => ({
+    perspective: 'owner',
+    isPerspectiveRoute: true,
   }),
 }));
 
 vi.mock('@/utils/queryScope', () => ({
-  buildQueryScopeKey: () => 'user:user-1|view:owner:party-1',
+  buildQueryScopeKey: () => 'user:user-1|perspective:owner',
 }));
 
 // Mock dependencies
@@ -122,10 +131,11 @@ describe('useAssetAnalytics', () => {
         queryKey =>
           Array.isArray(queryKey) &&
           queryKey[0] === 'analytics' &&
-          queryKey[1] === 'user:user-1|view:owner:party-1' &&
+          queryKey[1] === 'user:user-1|perspective:owner' &&
           queryKey[2] === 'comprehensive'
       )
     ).toBe(true);
+    expect(mockUseView).not.toHaveBeenCalled();
   });
 
   it('should update filters and refetch', async () => {
