@@ -10,6 +10,25 @@ import { render, screen, fireEvent, act } from '@testing-library/react';
 import { useQuery } from '@tanstack/react-query';
 import { partyService } from '@/services/partyService';
 
+vi.mock('@/utils/queryScope', () => ({
+  buildQueryScopeKey: () => 'user:user-1|view:manager:party-1',
+}));
+
+const mockUseView = vi.fn(() => ({
+  currentView: {
+    key: 'manager:party-1',
+    perspective: 'manager',
+    partyId: 'party-1',
+    partyName: '运营主体A',
+    label: '运营方 · 运营主体A',
+  },
+  selectionRequired: false,
+  isViewReady: true,
+}));
+
+vi.mock('@/contexts/ViewContext', () => ({
+  useView: () => mockUseView(),
+}));
 // Mock message manager
 vi.mock('@/utils/messageManager', () => ({
   MessageManager: {
@@ -253,9 +272,20 @@ vi.mock('antd', () => {
   );
   Spin.displayName = 'MockSpin';
 
-  const Alert = ({ message, type }: { message: string; type?: string }) => (
+  const Alert = ({
+    message,
+    title,
+    description,
+    type,
+  }: {
+    message?: React.ReactNode;
+    title?: React.ReactNode;
+    description?: React.ReactNode;
+    type?: string;
+  }) => (
     <div data-testid="alert" data-type={type}>
-      {message}
+      <div>{title ?? message}</div>
+      <div>{description}</div>
     </div>
   );
   Alert.displayName = 'MockAlert';
@@ -356,6 +386,17 @@ const mockRefetchProjects = vi.fn();
 describe('ProjectList', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseView.mockReturnValue({
+      currentView: {
+        key: 'manager:party-1',
+        perspective: 'manager',
+        partyId: 'party-1',
+        partyName: '运营主体A',
+        label: '运营方 · 运营主体A',
+      },
+      selectionRequired: false,
+      isViewReady: true,
+    });
     mockRefetchProjects.mockClear();
     vi.mocked(useQuery).mockImplementation(options => {
       const queryKey = (options as { queryKey?: unknown[] }).queryKey;
@@ -394,7 +435,7 @@ describe('ProjectList', () => {
 
       if (key === 'project-owner-party-options') {
         const keyword =
-          Array.isArray(queryKey) && typeof queryKey[1] === 'string' ? queryKey[1] : '';
+          Array.isArray(queryKey) && typeof queryKey[2] === 'string' ? queryKey[2] : '';
         void partyService.searchParties(keyword, { status: 'active', limit: 20 });
         return {
           data: [],
@@ -434,6 +475,63 @@ describe('ProjectList', () => {
 
       expect(screen.getByTestId('row-1')).toBeInTheDocument();
       expect(screen.getByText('项目1')).toBeInTheDocument();
+    });
+
+    it('应该显示当前视角标签', async () => {
+      await renderProjectList();
+
+      expect(screen.getByText('当前视角')).toBeInTheDocument();
+      expect(screen.getByText('运营方 · 运营主体A')).toBeInTheDocument();
+    });
+
+    it('项目列表与主体搜索查询应把当前视角纳入 queryKey', async () => {
+      await renderProjectList();
+
+      expect(useQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          queryKey: [
+            'project-list',
+            'user:user-1|view:manager:party-1',
+            1,
+            10,
+            { keyword: '', status: '', ownerPartyId: '' },
+          ],
+        })
+      );
+      expect(useQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          queryKey: ['project-owner-party-options', 'user:user-1|view:manager:party-1', ''],
+        })
+      );
+    });
+
+    it('视角未就绪时不应启用项目列表和主体选项查询', async () => {
+      mockUseView.mockReturnValue({
+        currentView: null,
+        selectionRequired: true,
+        isViewReady: false,
+      });
+
+      await renderProjectList();
+
+      expect(useQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          queryKey: [
+            'project-list',
+            expect.any(String),
+            1,
+            10,
+            { keyword: '', status: '', ownerPartyId: '' },
+          ],
+          enabled: false,
+        })
+      );
+      expect(useQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          queryKey: ['project-owner-party-options', expect.any(String), ''],
+          enabled: false,
+        })
+      );
     });
   });
 
@@ -542,7 +640,7 @@ describe('ProjectList', () => {
 
         if (key === 'project-owner-party-options') {
           const keyword =
-            Array.isArray(queryKey) && typeof queryKey[1] === 'string' ? queryKey[1] : '';
+            Array.isArray(queryKey) && typeof queryKey[2] === 'string' ? queryKey[2] : '';
           void partyService.searchParties(keyword, { status: 'active', limit: 20 });
           return {
             data: [],

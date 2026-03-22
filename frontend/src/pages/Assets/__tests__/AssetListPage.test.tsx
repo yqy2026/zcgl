@@ -29,17 +29,23 @@ vi.mock('@/components/Asset/AssetList', () => ({
     data: _data,
     onEdit,
     onDelete,
+    onRestore,
+    onHardDelete,
     onView,
   }: {
     data: unknown;
     onEdit: (asset: { id: string }) => void;
     onDelete: (id: string) => void;
+    onRestore: (id: string) => void;
+    onHardDelete: (id: string) => void;
     onView: (asset: { id: string }) => void;
   }) => (
     <div data-testid="asset-list">
       Asset List Component
       <button onClick={() => onEdit({ id: 'asset_1' })}>Edit</button>
       <button onClick={() => onDelete('asset_1')}>Delete</button>
+      <button onClick={() => onRestore('asset_1')}>Restore</button>
+      <button onClick={() => onHardDelete('asset_1')}>HardDelete</button>
       <button onClick={() => onView({ id: 'asset_1' })}>View</button>
     </div>
   ),
@@ -88,6 +94,25 @@ vi.mock('@/utils/messageManager', () => ({
   },
 }));
 
+const mockUseView = vi.fn(() => ({
+  currentView: {
+    key: 'owner:party-1',
+    perspective: 'owner',
+    partyId: 'party-1',
+    partyName: '主体A',
+    label: '产权方 · 主体A',
+  },
+  selectionRequired: false,
+  isViewReady: true,
+}));
+
+vi.mock('@/contexts/ViewContext', () => ({
+  useView: () => mockUseView(),
+}));
+
+vi.mock('@/utils/queryScope', () => ({
+  buildQueryScopeKey: () => 'user:user-1|view:owner:party-1',
+}));
 import { assetService } from '@/services/assetService';
 import { MessageManager } from '@/utils/messageManager';
 
@@ -111,6 +136,7 @@ let mockAnalyticsData: { data: Record<string, unknown> } = { data: {} };
 let mockAnalyticsLoading = false;
 
 const mockRefetchAssets = vi.fn().mockResolvedValue({ data: undefined });
+const mockRefetchAnalytics = vi.fn().mockResolvedValue({ data: undefined });
 const mockFallbackRefetch = vi.fn().mockResolvedValue({ data: undefined });
 
 const buildAssetsQueryResult = () =>
@@ -131,6 +157,7 @@ const buildAnalyticsQueryResult = () =>
   ({
     data: mockAnalyticsData,
     isLoading: mockAnalyticsLoading,
+    refetch: mockRefetchAnalytics,
   }) as unknown as ReturnType<typeof useQuery>;
 
 const buildFallbackQueryResult = () =>
@@ -145,6 +172,17 @@ const buildFallbackQueryResult = () =>
 describe('AssetListPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseView.mockReturnValue({
+      currentView: {
+        key: 'owner:party-1',
+        perspective: 'owner',
+        partyId: 'party-1',
+        partyName: '主体A',
+        label: '产权方 · 主体A',
+      },
+      selectionRequired: false,
+      isViewReady: true,
+    });
     mockData = [
       { id: 'asset_1', asset_name: '资产A' },
       { id: 'asset_2', asset_name: '资产B' },
@@ -199,6 +237,51 @@ describe('AssetListPage', () => {
       renderPage();
 
       expect(screen.getByTestId('asset-list')).toBeInTheDocument();
+    });
+
+    it('显示当前视角标签', () => {
+      renderPage();
+
+      expect(screen.getByText('当前视角')).toBeInTheDocument();
+      expect(screen.getByText('产权方 · 主体A')).toBeInTheDocument();
+    });
+
+    it('资产列表与统计查询应把当前视角纳入 queryKey', () => {
+      renderPage();
+
+      expect(useQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          queryKey: ['assets-list', expect.stringContaining('owner:party-1'), 1, 20, {}],
+        })
+      );
+      expect(useQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          queryKey: ['analytics', expect.stringContaining('owner:party-1'), {}],
+        })
+      );
+    });
+
+    it('视角未就绪时不应启用资产列表和统计查询', () => {
+      mockUseView.mockReturnValue({
+        currentView: null,
+        selectionRequired: true,
+        isViewReady: false,
+      });
+
+      renderPage();
+
+      expect(useQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          queryKey: ['assets-list', expect.any(String), 1, 20, {}],
+          enabled: false,
+        })
+      );
+      expect(useQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          queryKey: ['analytics', expect.any(String), {}],
+          enabled: false,
+        })
+      );
     });
   });
 
@@ -281,6 +364,8 @@ describe('AssetListPage', () => {
       await waitFor(() => {
         expect(assetService.deleteAsset).toHaveBeenCalledWith('asset_1');
         expect(MessageManager.success).toHaveBeenCalledWith('删除成功，已移入回收站');
+        expect(mockRefetchAssets).toHaveBeenCalledTimes(1);
+        expect(mockRefetchAnalytics).toHaveBeenCalledTimes(1);
       });
     });
 
@@ -293,6 +378,36 @@ describe('AssetListPage', () => {
 
       await waitFor(() => {
         expect(MessageManager.error).toHaveBeenCalledWith('删除失败');
+      });
+    });
+
+    it('恢复成功后应同时刷新资产列表和统计摘要', async () => {
+      vi.mocked(assetService.restoreAsset).mockResolvedValue(undefined);
+
+      renderPage();
+
+      fireEvent.click(screen.getByText('Restore'));
+
+      await waitFor(() => {
+        expect(assetService.restoreAsset).toHaveBeenCalledWith('asset_1');
+        expect(MessageManager.success).toHaveBeenCalledWith('恢复成功');
+        expect(mockRefetchAssets).toHaveBeenCalledTimes(1);
+        expect(mockRefetchAnalytics).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it('彻底删除成功后应同时刷新资产列表和统计摘要', async () => {
+      vi.mocked(assetService.hardDeleteAsset).mockResolvedValue(undefined);
+
+      renderPage();
+
+      fireEvent.click(screen.getByText('HardDelete'));
+
+      await waitFor(() => {
+        expect(assetService.hardDeleteAsset).toHaveBeenCalledWith('asset_1');
+        expect(MessageManager.success).toHaveBeenCalledWith('彻底删除成功');
+        expect(mockRefetchAssets).toHaveBeenCalledTimes(1);
+        expect(mockRefetchAnalytics).toHaveBeenCalledTimes(1);
       });
     });
   });
@@ -310,7 +425,10 @@ describe('AssetListPage', () => {
           if (!Array.isArray(queryKey) || queryKey[0] !== 'assets-list') {
             return false;
           }
-          const filters = queryKey[3];
+          if (queryKey[1] !== 'user:user-1|view:owner:party-1') {
+            return false;
+          }
+          const filters = queryKey[4];
           if (filters == null || typeof filters !== 'object') {
             return false;
           }
@@ -334,7 +452,10 @@ describe('AssetListPage', () => {
           if (!Array.isArray(queryKey) || queryKey[0] !== 'assets-list') {
             return false;
           }
-          const filters = queryKey[3];
+          if (queryKey[1] !== 'user:user-1|view:owner:party-1') {
+            return false;
+          }
+          const filters = queryKey[4];
           if (filters == null || typeof filters !== 'object') {
             return false;
           }

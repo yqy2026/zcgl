@@ -4,6 +4,7 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useView } from '@/contexts/ViewContext';
 import { projectService } from '@/services/projectService';
 import type {
   Project,
@@ -15,6 +16,7 @@ import type {
 } from '@/types/project';
 import { MessageManager } from '@/utils/messageManager';
 import { createLogger } from '@/utils/logger';
+import { buildQueryScopeKey } from '@/utils/queryScope';
 
 const projectLogger = createLogger('useProject');
 
@@ -47,7 +49,9 @@ interface UseProjectOptionsResult {
  * 获取项目选项列表
  */
 export const useProjectOptions = (status: string = 'active'): UseProjectOptionsResult => {
-  const queryKey = ['project-options', status];
+  const { currentView, isViewReady } = useView();
+  const queryScopeKey = buildQueryScopeKey(currentView);
+  const queryKey = ['project-options', queryScopeKey, status];
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey,
@@ -66,6 +70,7 @@ export const useProjectOptions = (status: string = 'active'): UseProjectOptionsR
     refetchOnMount: false,
     refetchOnReconnect: false,
     retry: 1,
+    enabled: isViewReady,
   });
 
   return {
@@ -87,7 +92,9 @@ interface UseProjectDetailResult {
  * 获取单个项目详情
  */
 export const useProjectDetail = (id?: string): UseProjectDetailResult => {
-  const queryKey = ['project-detail', id];
+  const { currentView, isViewReady } = useView();
+  const queryScopeKey = buildQueryScopeKey(currentView);
+  const queryKey = ['project', queryScopeKey, id];
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey,
@@ -107,7 +114,7 @@ export const useProjectDetail = (id?: string): UseProjectDetailResult => {
     refetchOnMount: false,
     refetchOnReconnect: false,
     retry: 1,
-    enabled: id != null,
+    enabled: isViewReady && id != null,
   });
 
   return {
@@ -248,12 +255,12 @@ export const useUpdateProject = () => {
     mutationFn: async ({ id, data }: { id: string; data: ProjectUpdate }) => {
       return await projectService.updateProject(id, data);
     },
-    onSuccess: data => {
+    onSuccess: () => {
       // 使相关缓存失效
       queryClient.invalidateQueries({ queryKey: ['project-list'] });
       queryClient.invalidateQueries({ queryKey: ['project-options'] });
       queryClient.invalidateQueries({ queryKey: ['project-statistics'] });
-      queryClient.invalidateQueries({ queryKey: ['project-detail', data.id] });
+      queryClient.invalidateQueries({ queryKey: ['project'] });
       MessageManager.success('项目更新成功');
     },
     onError: (error: unknown) => {
@@ -299,12 +306,12 @@ export const useToggleProjectStatus = () => {
     mutationFn: async (id: string) => {
       return await projectService.toggleProjectStatus(id);
     },
-    onSuccess: data => {
+    onSuccess: () => {
       // 使相关缓存失效
       queryClient.invalidateQueries({ queryKey: ['project-list'] });
       queryClient.invalidateQueries({ queryKey: ['project-options'] });
       queryClient.invalidateQueries({ queryKey: ['project-statistics'] });
-      queryClient.invalidateQueries({ queryKey: ['project-detail', data.id] });
+      queryClient.invalidateQueries({ queryKey: ['project'] });
       MessageManager.success('项目状态切换成功');
     },
     onError: (error: unknown) => {

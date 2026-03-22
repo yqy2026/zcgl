@@ -1,11 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
+import { useView } from '@/contexts/ViewContext';
 import { analyticsService } from '@/services/analyticsService';
 import type { AssetSearchParams } from '@/types/asset';
 import type { AnalyticsResponse } from '@/types/analytics';
+import { buildQueryScopeKey } from '@/utils/queryScope';
 
 export const useAnalytics = (filters?: AssetSearchParams) => {
+  const { currentView, isViewReady } = useView();
+  const queryScopeKey = buildQueryScopeKey(currentView);
+
   return useQuery<AnalyticsResponse>({
-    queryKey: ['analytics', 'comprehensive', filters],
+    queryKey: ['analytics', queryScopeKey, 'comprehensive', filters],
     queryFn: async (): Promise<AnalyticsResponse> => {
       const result = await analyticsService.getComprehensiveAnalytics(filters);
       return result;
@@ -17,33 +22,45 @@ export const useAnalytics = (filters?: AssetSearchParams) => {
     refetchOnWindowFocus: false, // 禁用自动刷新避免循环请求
     refetchOnMount: true,
     // 添加依赖项数组，确保filters变化时重新请求
-    enabled: true,
+    enabled: isViewReady,
   });
 };
 
 export const useBasicStatistics = (filters?: AssetSearchParams) => {
+  const { currentView, isViewReady } = useView();
+  const queryScopeKey = buildQueryScopeKey(currentView);
+
   return useQuery<AnalyticsResponse>({
-    queryKey: ['basic-statistics', filters],
+    queryKey: ['analytics', queryScopeKey, 'basic-statistics', filters],
     queryFn: () => analyticsService.getBasicStatistics(filters),
     staleTime: 2 * 60 * 1000, // 2分钟缓存
     gcTime: 5 * 60 * 1000, // 5分钟缓存
+    enabled: isViewReady,
   });
 };
 
 export const useAreaSummary = () => {
+  const { currentView, isViewReady } = useView();
+  const queryScopeKey = buildQueryScopeKey(currentView);
+
   return useQuery<AnalyticsResponse>({
-    queryKey: ['area-summary'],
+    queryKey: ['analytics', queryScopeKey, 'area-summary'],
     queryFn: () => analyticsService.getAreaSummary(),
     staleTime: 3 * 60 * 1000, // 3分钟缓存
     gcTime: 6 * 60 * 1000, // 6分钟缓存
+    enabled: isViewReady,
   });
 };
 
 export const useFinancialSummary = () => {
+  const { currentView, isViewReady } = useView();
+  const queryScopeKey = buildQueryScopeKey(currentView);
+
   return useQuery<AnalyticsResponse>({
-    queryKey: ['financial-summary'],
+    queryKey: ['analytics', queryScopeKey, 'financial-summary'],
     queryFn: () => analyticsService.getFinancialSummary(),
     staleTime: 3 * 60 * 1000, // 3分钟缓存
     gcTime: 6 * 60 * 1000, // 6分钟缓存
+    enabled: isViewReady,
   });
 };

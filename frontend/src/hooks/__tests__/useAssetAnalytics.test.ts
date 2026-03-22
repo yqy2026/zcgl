@@ -5,6 +5,22 @@ import { analyticsService } from '@/services/analyticsService';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 
+vi.mock('@/contexts/ViewContext', () => ({
+  useView: () => ({
+    currentView: {
+      key: 'owner:party-1',
+      perspective: 'owner',
+      partyId: 'party-1',
+      partyName: '主体A',
+      label: '产权方 · 主体A',
+    },
+  }),
+}));
+
+vi.mock('@/utils/queryScope', () => ({
+  buildQueryScopeKey: () => 'user:user-1|view:owner:party-1',
+}));
+
 // Mock dependencies
 vi.mock('@/services/analyticsService', () => ({
   analyticsService: {
@@ -74,6 +90,42 @@ describe('useAssetAnalytics', () => {
     expect(analyticsService.getComprehensiveAnalytics).toHaveBeenCalledWith({});
     expect(result.current.analyticsData).toEqual(mockData.data);
     expect(result.current.hasData).toBe(true);
+  });
+
+  it('should scope analytics cache keys to the current view', async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+        },
+      },
+    });
+    const Wrapper = ({ children }: { children: React.ReactNode }) =>
+      React.createElement(QueryClientProvider, { client: queryClient }, children);
+    Wrapper.displayName = 'ScopedQueryClientWrapper';
+
+    renderHook(() => useAssetAnalytics(), {
+      wrapper: Wrapper,
+    });
+
+    await waitFor(() => {
+      expect(analyticsService.getComprehensiveAnalytics).toHaveBeenCalledWith({});
+    });
+
+    const queryKeys = queryClient
+      .getQueryCache()
+      .getAll()
+      .map(query => query.queryKey);
+
+    expect(
+      queryKeys.some(
+        queryKey =>
+          Array.isArray(queryKey) &&
+          queryKey[0] === 'analytics' &&
+          queryKey[1] === 'user:user-1|view:owner:party-1' &&
+          queryKey[2] === 'comprehensive'
+      )
+    ).toBe(true);
   });
 
   it('should update filters and refetch', async () => {

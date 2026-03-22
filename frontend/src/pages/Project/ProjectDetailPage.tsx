@@ -34,11 +34,14 @@ import { useQuery } from '@tanstack/react-query';
 import dayjs, { type Dayjs } from 'dayjs';
 import { projectService } from '@/services/projectService';
 import { assetService } from '@/services/assetService';
+import CurrentViewBanner from '@/components/System/CurrentViewBanner';
+import { useView } from '@/contexts/ViewContext';
 import type { ColumnsType } from 'antd/es/table';
 import type { Asset, AssetLeaseSummaryResponse } from '@/types/asset';
 import { useArrayListData } from '@/hooks/useArrayListData';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
 import { PageContainer } from '@/components/Common';
+import { buildQueryScopeKey } from '@/utils/queryScope';
 import styles from './ProjectDetailPage.module.css';
 
 const { Text } = Typography;
@@ -71,25 +74,35 @@ const buildPeriodParams = (month: Dayjs) => ({
 
 // 子组件：逐资产获取租赁汇总，避免在 map 中调用 hook
 interface AssetLeaseSummaryRowData {
+  queryScopeKey: string;
   assetId: string;
   assetName: string;
   periodParams: { period_start: string; period_end: string };
 }
 
 const useAssetLeaseSummary = (
+  queryScopeKey: string,
   assetId: string,
-  periodParams: { period_start: string; period_end: string }
+  periodParams: { period_start: string; period_end: string },
+  enabled: boolean
 ) =>
   useQuery<AssetLeaseSummaryResponse>({
-    queryKey: ['asset-lease-summary', assetId, periodParams.period_start, periodParams.period_end],
+    queryKey: [
+      'asset-lease-summary',
+      queryScopeKey,
+      assetId,
+      periodParams.period_start,
+      periodParams.period_end,
+    ],
     queryFn: () => assetService.getAssetLeaseSummary(assetId, periodParams),
     staleTime: 60_000,
+    enabled,
   });
 
 const AssetLeaseSummaryRow: React.FC<
-  AssetLeaseSummaryRowData & { onNavigate: (id: string) => void }
-> = ({ assetId, assetName, periodParams, onNavigate }) => {
-  const { data, isLoading } = useAssetLeaseSummary(assetId, periodParams);
+  AssetLeaseSummaryRowData & { onNavigate: (id: string) => void; enabled: boolean }
+> = ({ queryScopeKey, assetId, assetName, periodParams, onNavigate, enabled }) => {
+  const { data, isLoading } = useAssetLeaseSummary(queryScopeKey, assetId, periodParams, enabled);
 
   if (isLoading) {
     return (
@@ -159,8 +172,12 @@ const AssetLeaseSummaryRow: React.FC<
 const ProjectDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { currentView, isViewReady } = useView();
   const [selectedMonth, setSelectedMonth] = useState<Dayjs>(() => dayjs().startOf('month'));
   const periodParams = useMemo(() => buildPeriodParams(selectedMonth), [selectedMonth]);
+  const queryScopeKey = buildQueryScopeKey(currentView);
+  const hasProjectId = id != null && id.length > 0;
+  const canQuery = hasProjectId && isViewReady;
 
   // 获取项目详情
   const {
@@ -168,16 +185,16 @@ const ProjectDetailPage: React.FC = () => {
     isLoading: projectLoading,
     error: projectError,
   } = useQuery({
-    queryKey: ['project', id],
+    queryKey: ['project', queryScopeKey, id],
     queryFn: () => projectService.getProject(id as string),
-    enabled: id !== null && id !== undefined && id.length > 0,
+    enabled: canQuery,
   });
 
   // 获取项目关联资产
   const { data: assetsData, isLoading: assetsLoading } = useQuery({
-    queryKey: ['project-assets', id],
+    queryKey: ['project-assets', queryScopeKey, id],
     queryFn: () => projectService.getProjectAssets(id as string),
-    enabled: id !== null && id !== undefined && id.length > 0,
+    enabled: canQuery,
   });
 
   // 资产表格列定义
@@ -267,6 +284,14 @@ const ProjectDetailPage: React.FC = () => {
     void loadAssetList({ page: 1 });
   }, [assets, loadAssetList]);
 
+  if (!canQuery) {
+    return (
+      <PageContainer title="项目详情" loading onBack={() => navigate('/project')}>
+        <div />
+      </PageContainer>
+    );
+  }
+
   // 错误状态
   if (projectError) {
     return (
@@ -317,6 +342,8 @@ const ProjectDetailPage: React.FC = () => {
         </Button>
       }
     >
+      <CurrentViewBanner />
+
       <Row gutter={[16, 16]} className={styles.metricsRow}>
         <Col xs={24} sm={12} lg={6}>
           <Card className={styles.metricCard}>
@@ -487,9 +514,11 @@ const ProjectDetailPage: React.FC = () => {
                     {assets.map(asset => (
                       <AssetLeaseSummaryRow
                         key={asset.id}
+                        queryScopeKey={queryScopeKey}
                         assetId={asset.id}
                         assetName={asset.asset_name}
                         periodParams={periodParams}
+                        enabled={canQuery}
                         onNavigate={assetId => navigate(`/assets/${assetId}`)}
                       />
                     ))}

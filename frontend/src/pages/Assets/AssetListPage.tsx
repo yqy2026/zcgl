@@ -15,8 +15,11 @@ import { analyticsService } from '@/services/analyticsService';
 import AssetList from '@/components/Asset/AssetList';
 import AssetSearch from '@/components/Asset/AssetSearch';
 import AssetAreaSummary from '@/components/Asset/AssetAreaSummary';
+import CurrentViewBanner from '@/components/System/CurrentViewBanner';
+import { useView } from '@/contexts/ViewContext';
 import type { Asset, AssetSearchParams } from '@/types/asset';
 import { createLogger } from '@/utils/logger';
+import { buildQueryScopeKey } from '@/utils/queryScope';
 import { PageContainer } from '@/components/Common';
 import { LoadingContainer } from '@/components/Common/StateContainer';
 
@@ -26,12 +29,14 @@ type AssetListFilters = Omit<AssetSearchParams, 'page' | 'page_size'>;
 
 const AssetListPage: React.FC = () => {
   const navigate = useNavigate();
+  const { currentView, isViewReady } = useView();
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [filters, setFilters] = useState<AssetListFilters>({});
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 20,
   });
+  const queryScopeKey = buildQueryScopeKey(currentView);
 
   const {
     data: assetsData,
@@ -40,7 +45,7 @@ const AssetListPage: React.FC = () => {
     isFetching: isAssetsFetching,
     refetch: refetchAssets,
   } = useQuery({
-    queryKey: ['assets-list', pagination.current, pagination.pageSize, filters],
+    queryKey: ['assets-list', queryScopeKey, pagination.current, pagination.pageSize, filters],
     queryFn: () =>
       assetService.getAssets({
         ...filters,
@@ -48,6 +53,7 @@ const AssetListPage: React.FC = () => {
         page_size: pagination.pageSize,
       }),
     retry: 1,
+    enabled: isViewReady,
   });
 
   useEffect(() => {
@@ -72,9 +78,14 @@ const AssetListPage: React.FC = () => {
   }, [filters]);
 
   // 获取统计分析数据
-  const { data: analyticsData, isLoading: analyticsLoading } = useQuery({
-    queryKey: ['analytics', analyticsFilters],
+  const {
+    data: analyticsData,
+    isLoading: analyticsLoading,
+    refetch: refetchAnalytics,
+  } = useQuery({
+    queryKey: ['analytics', queryScopeKey, analyticsFilters],
     queryFn: () => analyticsService.getComprehensiveAnalytics(analyticsFilters),
+    enabled: isViewReady,
   });
 
   const listData = useMemo(
@@ -162,12 +173,13 @@ const AssetListPage: React.FC = () => {
         await assetService.deleteAsset(id);
         MessageManager.success('删除成功，已移入回收站');
         void refetchAssets();
+        void refetchAnalytics();
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : '删除失败';
         MessageManager.error(errorMessage);
       }
     },
-    [refetchAssets]
+    [refetchAssets, refetchAnalytics]
   );
 
   const handleRestore = useCallback(
@@ -176,12 +188,13 @@ const AssetListPage: React.FC = () => {
         await assetService.restoreAsset(id);
         MessageManager.success('恢复成功');
         void refetchAssets();
+        void refetchAnalytics();
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : '恢复失败';
         MessageManager.error(errorMessage);
       }
     },
-    [refetchAssets]
+    [refetchAssets, refetchAnalytics]
   );
 
   const handleHardDelete = useCallback(
@@ -190,13 +203,14 @@ const AssetListPage: React.FC = () => {
         await assetService.hardDeleteAsset(id);
         MessageManager.success('彻底删除成功');
         void refetchAssets();
+        void refetchAnalytics();
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : '彻底删除失败';
         MessageManager.error(errorMessage);
         throw error;
       }
     },
-    [refetchAssets]
+    [refetchAssets, refetchAnalytics]
   );
 
   // 处理查看
@@ -326,6 +340,8 @@ const AssetListPage: React.FC = () => {
         </Space>
       }
     >
+      <CurrentViewBanner />
+
       {/* 搜索组件 */}
       <AssetSearch
         onSearch={handleSearch}
