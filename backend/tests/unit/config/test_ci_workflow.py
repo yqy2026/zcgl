@@ -212,6 +212,7 @@ def test_workflows_should_not_pin_deprecated_node20_action_majors() -> None:
         "actions/setup-node@v4",
         "actions/cache@v4",
         "actions/upload-artifact@v4",
+        "actions/upload-artifact@v5",
         "codecov/codecov-action@v4",
     }
     workflow_names = ("ci.yml", "security.yml", "quality-trends.yml")

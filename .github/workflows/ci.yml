@@ -191,7 +191,7 @@ jobs:
           --increment=1
 
     - name: Upload backend reports
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: backend-reports
@@ -282,7 +282,7 @@ jobs:
         uv run pytest tests/e2e/ -m e2e --no-cov -v --junitxml=../test-results/backend/junit/junit-e2e.xml
 
     - name: Upload backend E2E reports
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: backend-e2e-reports
@@ -369,7 +369,7 @@ jobs:
         pnpm type-coverage:check || true  # Non-blocking for now
 
     - name: Upload frontend lint reports
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: frontend-lint-reports
@@ -446,7 +446,7 @@ jobs:
           --increment=1 || true  # Non-blocking until we reach baseline
 
     - name: Upload frontend reports
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: frontend-reports
@@ -469,7 +469,7 @@ jobs:
         npm run build
 
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v7
       with:
         name: frontend-dist
         path: frontend/dist/
@@ -924,7 +924,7 @@ jobs:
         pnpm e2e:ci
 
     - name: Upload frontend E2E reports
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: frontend-e2e-reports
@@ -1213,7 +1213,7 @@ jobs:
         make test-e2e-import
 
     - name: Upload import E2E reports
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: import-e2e-reports
@@ -1389,7 +1389,7 @@ jobs:
         # REMOVED || true - integration tests should pass on main branch
 
     - name: Upload integration test results
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: integration-reports
