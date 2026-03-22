@@ -6,6 +6,10 @@ import { useQuery } from '@tanstack/react-query';
 import ProjectDetailPage from '../ProjectDetailPage';
 
 const mockBuildQueryScopeKey = vi.fn(() => 'user:user-1|perspective:manager');
+const mockUseRoutePerspective = vi.fn(() => ({
+  perspective: 'manager',
+  isPerspectiveRoute: true,
+}));
 
 vi.mock('@/utils/queryScope', () => ({
   buildQueryScopeKey: (value: unknown) => mockBuildQueryScopeKey(value),
@@ -32,10 +36,7 @@ vi.mock('@/contexts/ViewContext', () => ({
 }));
 
 vi.mock('@/routes/perspective', () => ({
-  useRoutePerspective: () => ({
-    perspective: 'manager',
-    isPerspectiveRoute: true,
-  }),
+  useRoutePerspective: () => mockUseRoutePerspective(),
 }));
 
 vi.mock('react-router-dom', async () => {
@@ -70,6 +71,10 @@ describe('ProjectDetailPage', () => {
       },
       selectionRequired: false,
       isViewReady: true,
+    });
+    mockUseRoutePerspective.mockReturnValue({
+      perspective: 'manager',
+      isPerspectiveRoute: true,
     });
     vi.mocked(useQuery).mockImplementation(options => {
       const [scope] = options.queryKey as [string, ...unknown[]];
@@ -130,10 +135,10 @@ describe('ProjectDetailPage', () => {
   });
 
   it('renders current view label', () => {
-    renderWithProviders(<ProjectDetailPage />);
+    renderWithProviders(<ProjectDetailPage />, { route: '/manager/projects/project-1' });
 
     expect(screen.getByText('当前视角')).toBeInTheDocument();
-    expect(screen.getByText('运营方 · 运营主体A')).toBeInTheDocument();
+    expect(screen.getByText('经营视角')).toBeInTheDocument();
   });
 
   it('project detail queries should include current view in queryKey', () => {
@@ -163,25 +168,30 @@ describe('ProjectDetailPage', () => {
     expect(mockBuildQueryScopeKey).toHaveBeenCalledWith('manager');
   });
 
-  it('视角未就绪时不应启用项目详情相关查询', () => {
+  it('legacy 路径不显示视角标签，但仍继续执行详情查询', () => {
     mockUseView.mockReturnValue({
       currentView: null,
       selectionRequired: true,
       isViewReady: false,
     });
+    mockUseRoutePerspective.mockReturnValue({
+      perspective: null,
+      isPerspectiveRoute: false,
+    });
 
-    renderWithProviders(<ProjectDetailPage />);
+    renderWithProviders(<ProjectDetailPage />, { route: '/project/project-1' });
 
+    expect(screen.queryByText('当前视角')).not.toBeInTheDocument();
     expect(useQuery).toHaveBeenCalledWith(
       expect.objectContaining({
         queryKey: ['project', 'user:user-1|perspective:manager', 'project-1'],
-        enabled: false,
+        enabled: true,
       })
     );
     expect(useQuery).toHaveBeenCalledWith(
       expect.objectContaining({
         queryKey: ['project-assets', 'user:user-1|perspective:manager', 'project-1'],
-        enabled: false,
+        enabled: true,
       })
     );
   });

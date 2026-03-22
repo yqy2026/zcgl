@@ -11,16 +11,17 @@ const appFilePath = path.resolve(currentDir, '../App.tsx');
 const readAppSource = (): string => fs.readFileSync(appFilePath, 'utf8');
 
 describe('App ViewProvider wiring', () => {
-  it('should import ViewProvider for runtime useView consumers', () => {
+  it('should not import ViewProvider once route-derived perspective is in use', () => {
     const source = readAppSource();
 
-    expect(source).toContain("import { ViewProvider } from './contexts/ViewContext';");
+    expect(source).not.toContain("import { ViewProvider } from './contexts/ViewContext';");
   });
 
-  it('should nest ViewProvider between AuthProvider and AntdApp', () => {
+  it('should nest AntdApp directly under AuthProvider', () => {
     const source = readAppSource();
 
-    expect(source).toMatch(/<AuthProvider>\s*<ViewProvider>\s*<AntdApp>/s);
-    expect(source).toMatch(/<\/AntdApp>\s*<\/ViewProvider>\s*<\/AuthProvider>/s);
+    expect(source).toMatch(/<AuthProvider>\s*<AntdApp>/s);
+    expect(source).toMatch(/<\/AntdApp>\s*<\/AuthProvider>/s);
+    expect(source).not.toContain('<ViewProvider>');
   });
 });

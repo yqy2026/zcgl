@@ -3,18 +3,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen } from '@testing-library/react';
 import { renderWithProviders } from '@/test/test-utils';
 
-const mockUseView = vi.fn(() => ({
-  currentView: {
-    key: 'owner:party-1',
-    perspective: 'owner',
-    partyId: 'party-1',
-    partyName: '主体A',
-    label: '产权方 · 主体A',
-  },
-  selectionRequired: false,
-  isViewReady: true,
-}));
-
 const mockUseAssetAnalytics = vi.fn(() => ({
   analyticsData: {
     area_summary: {
@@ -45,10 +33,6 @@ const mockUseAssetAnalytics = vi.fn(() => ({
   handleFilterReset: vi.fn(),
   handleDimensionChange: vi.fn(),
   handleExport: vi.fn(),
-}));
-
-vi.mock('@/contexts/ViewContext', () => ({
-  useView: () => mockUseView(),
 }));
 
 vi.mock('@/hooks/useAssetAnalytics', () => ({
@@ -92,17 +76,6 @@ import AssetAnalyticsPage from '../AssetAnalyticsPage';
 describe('AssetAnalyticsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseView.mockReturnValue({
-      currentView: {
-        key: 'owner:party-1',
-        perspective: 'owner',
-        partyId: 'party-1',
-        partyName: '主体A',
-        label: '产权方 · 主体A',
-      },
-      selectionRequired: false,
-      isViewReady: true,
-    });
     mockUseAssetAnalytics.mockReturnValue({
       analyticsData: {
         area_summary: {
@@ -136,15 +109,10 @@ describe('AssetAnalyticsPage', () => {
     });
   });
 
-  it('视角未就绪时不应误显示暂无数据', () => {
-    mockUseView.mockReturnValue({
-      currentView: null,
-      selectionRequired: true,
-      isViewReady: false,
-    });
+  it('loading 时不应误显示暂无数据', () => {
     mockUseAssetAnalytics.mockReturnValue({
       analyticsData: null,
-      loading: false,
+      loading: true,
       error: null,
       refetch: vi.fn(),
       filters: {},

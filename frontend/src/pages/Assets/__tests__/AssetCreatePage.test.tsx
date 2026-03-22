@@ -180,7 +180,7 @@ describe('AssetCreatePage', () => {
     expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['analytics'] });
   });
 
-  it('视角未就绪时编辑态不应渲染表单或请求资产详情', async () => {
+  it('编辑态不再依赖视角就绪门闸才请求资产详情', async () => {
     mockUseView.mockReturnValue({
       currentView: null,
       selectionRequired: true,
@@ -190,9 +190,9 @@ describe('AssetCreatePage', () => {
     renderWithProviders(<AssetCreatePage />, { route: '/assets/asset-1/edit' });
 
     await waitFor(() => {
-      expect(screen.queryByRole('button', { name: 'submit' })).not.toBeInTheDocument();
+      expect(assetService.getAsset).toHaveBeenCalledWith('asset-1');
     });
 
-    expect(assetService.getAsset).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'submit' })).toBeInTheDocument();
   });
 });

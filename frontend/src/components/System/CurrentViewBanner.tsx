@@ -1,19 +1,21 @@
 import React from 'react';
 import { Alert } from 'antd';
 
-import { useView } from '@/contexts/ViewContext';
+import { useRoutePerspective } from '@/routes/perspective';
 
 const CurrentViewBanner: React.FC = () => {
-  const { currentView } = useView();
+  const { perspective } = useRoutePerspective();
 
-  if (currentView == null) {
+  if (perspective == null) {
     return null;
   }
+
+  const description = perspective === 'owner' ? '业主视角' : '经营视角';
 
   return (
     <Alert
       title="当前视角"
-      description={currentView.label}
+      description={description}
       type="info"
       showIcon
       style={{ marginBottom: 16 }}

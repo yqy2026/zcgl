@@ -111,16 +111,17 @@ vi.mock('@/contexts/ViewContext', () => ({
 }));
 
 const mockBuildQueryScopeKey = vi.fn(() => 'user:user-1|perspective:owner');
+const mockUseRoutePerspective = vi.fn(() => ({
+  perspective: 'owner',
+  isPerspectiveRoute: true,
+}));
 
 vi.mock('@/utils/queryScope', () => ({
   buildQueryScopeKey: (value: unknown) => mockBuildQueryScopeKey(value),
 }));
 
 vi.mock('@/routes/perspective', () => ({
-  useRoutePerspective: () => ({
-    perspective: 'owner',
-    isPerspectiveRoute: true,
-  }),
+  useRoutePerspective: () => mockUseRoutePerspective(),
 }));
 import { assetService } from '@/services/assetService';
 import { MessageManager } from '@/utils/messageManager';
@@ -134,7 +135,7 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-const renderPage = () => renderWithProviders(<AssetListPage />);
+const renderPage = (route = '/owner/assets') => renderWithProviders(<AssetListPage />, { route });
 
 let mockData: Array<{ id: string; asset_name: string }> = [];
 let mockIsAssetsInitialLoading = false;
@@ -191,6 +192,10 @@ describe('AssetListPage', () => {
       },
       selectionRequired: false,
       isViewReady: true,
+    });
+    mockUseRoutePerspective.mockReturnValue({
+      perspective: 'owner',
+      isPerspectiveRoute: true,
     });
     mockData = [
       { id: 'asset_1', asset_name: '资产A' },
@@ -253,7 +258,7 @@ describe('AssetListPage', () => {
       renderPage();
 
       expect(screen.getByText('当前视角')).toBeInTheDocument();
-      expect(screen.getByText('产权方 · 主体A')).toBeInTheDocument();
+      expect(screen.getByText('业主视角')).toBeInTheDocument();
     });
 
     it('资产列表与统计查询应把当前视角纳入 queryKey', () => {
@@ -271,25 +276,28 @@ describe('AssetListPage', () => {
       );
     });
 
-    it('视角未就绪时不应启用资产列表和统计查询', () => {
+    it('legacy 路径不显示视角标签，但仍启用资产列表和统计查询', () => {
       mockUseView.mockReturnValue({
         currentView: null,
         selectionRequired: true,
         isViewReady: false,
       });
+      mockUseRoutePerspective.mockReturnValue({
+        perspective: null,
+        isPerspectiveRoute: false,
+      });
 
-      renderPage();
+      renderPage('/assets/list');
 
+      expect(screen.queryByText('当前视角')).not.toBeInTheDocument();
       expect(useQuery).toHaveBeenCalledWith(
         expect.objectContaining({
-          queryKey: ['assets-list', expect.any(String), 1, 20, {}],
-          enabled: false,
+          queryKey: ['assets-list', 'user:user-1|perspective:owner', 1, 20, {}],
         })
       );
       expect(useQuery).toHaveBeenCalledWith(
         expect.objectContaining({
-          queryKey: ['analytics', expect.any(String), {}],
-          enabled: false,
+          queryKey: ['analytics', 'user:user-1|perspective:owner', {}],
         })
       );
     });

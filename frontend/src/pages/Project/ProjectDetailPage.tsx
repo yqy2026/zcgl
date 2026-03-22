@@ -35,7 +35,6 @@ import dayjs, { type Dayjs } from 'dayjs';
 import { projectService } from '@/services/projectService';
 import { assetService } from '@/services/assetService';
 import CurrentViewBanner from '@/components/System/CurrentViewBanner';
-import { useView } from '@/contexts/ViewContext';
 import { useRoutePerspective } from '@/routes/perspective';
 import type { ColumnsType } from 'antd/es/table';
 import type { Asset, AssetLeaseSummaryResponse } from '@/types/asset';
@@ -173,13 +172,12 @@ const AssetLeaseSummaryRow: React.FC<
 const ProjectDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isViewReady } = useView();
   const { perspective } = useRoutePerspective();
   const [selectedMonth, setSelectedMonth] = useState<Dayjs>(() => dayjs().startOf('month'));
   const periodParams = useMemo(() => buildPeriodParams(selectedMonth), [selectedMonth]);
   const queryScopeKey = buildQueryScopeKey(perspective);
   const hasProjectId = id != null && id.length > 0;
-  const canQuery = hasProjectId && isViewReady;
+  const canQuery = hasProjectId;
 
   // 获取项目详情
   const {

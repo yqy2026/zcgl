@@ -156,11 +156,12 @@ const renderAssetDetailPage = (assetId: string) => {
     <QueryClientProvider client={queryClient}>
       <Routes>
         <Route path="/assets/:id" element={<AssetDetailPage />} />
+        <Route path="/owner/assets/:id" element={<AssetDetailPage />} />
         <Route path="/assets" element={<div>Asset List</div>} />
         <Route path="/assets/:id/edit" element={<div>Edit Asset</div>} />
       </Routes>
     </QueryClientProvider>,
-    { route: `/assets/${assetId}` }
+    { route: `/owner/assets/${assetId}` }
   );
 
   return {
@@ -197,20 +198,27 @@ describe('AssetDetailPage', () => {
       expect(document.querySelector('.ant-spin-spinning')).toBeInTheDocument();
     });
 
-    it('视角未就绪时不应请求资产详情和租赁汇总', async () => {
+    it('legacy 详情路径不再依赖视角就绪门闸', async () => {
       mockUseView.mockReturnValue({
         currentView: null,
         selectionRequired: true,
         isViewReady: false,
       });
 
-      renderAssetDetailPage('asset_123');
+      const queryClient = createTestQueryClient();
+
+      renderWithAppProviders(
+        <QueryClientProvider client={queryClient}>
+          <Routes>
+            <Route path="/assets/:id" element={<AssetDetailPage />} />
+          </Routes>
+        </QueryClientProvider>,
+        { route: '/assets/asset_123' }
+      );
 
       await waitFor(() => {
-        expect(assetService.getAsset).not.toHaveBeenCalled();
+        expect(assetService.getAsset).toHaveBeenCalled();
       });
-      expect(assetService.getAssetLeaseSummary).not.toHaveBeenCalled();
-      expect(screen.queryByText('资产不存在')).not.toBeInTheDocument();
     });
   });
 

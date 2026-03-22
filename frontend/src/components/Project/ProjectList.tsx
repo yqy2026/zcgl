@@ -39,7 +39,6 @@ import { partyService } from '@/services/partyService';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
 import { ListToolbar } from '@/components/Common/ListToolbar';
 import CurrentViewBanner from '@/components/System/CurrentViewBanner';
-import { useView } from '@/contexts/ViewContext';
 import { useRoutePerspective } from '@/routes/perspective';
 import { useQuery } from '@tanstack/react-query';
 import { getIconButtonProps } from '@/utils/accessibility';
@@ -96,7 +95,6 @@ interface ProjectListProps {
 }
 
 const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list' }) => {
-  const { isViewReady } = useView();
   const { perspective } = useRoutePerspective();
   const [filters, setFilters] = useState<ProjectFilters>({
     keyword: '',
@@ -159,7 +157,6 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
     ],
     queryFn: fetchProjectList,
     retry: 1,
-    enabled: isViewReady,
   });
 
   useEffect(() => {
@@ -210,7 +207,6 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
       ).items,
     staleTime: 10 * 60 * 1000,
     retry: 1,
-    enabled: isViewReady,
   });
 
   const ownerPartiesLoading = isOwnerPartiesLoading || isOwnerPartiesFetching;
