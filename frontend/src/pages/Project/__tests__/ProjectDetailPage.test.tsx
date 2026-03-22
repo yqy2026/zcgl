@@ -1,6 +1,6 @@
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { renderWithProviders, screen } from '@/test/utils/test-helpers';
+import { fireEvent, renderWithProviders, screen } from '@/test/utils/test-helpers';
 import { useQuery } from '@tanstack/react-query';
 
 import ProjectDetailPage from '../ProjectDetailPage';
@@ -10,6 +10,7 @@ const mockUseRoutePerspective = vi.fn(() => ({
   perspective: 'manager',
   isPerspectiveRoute: true,
 }));
+const mockNavigate = vi.fn();
 
 vi.mock('@/utils/queryScope', () => ({
   buildQueryScopeKey: (value: unknown) => mockBuildQueryScopeKey(value),
@@ -28,7 +29,7 @@ vi.mock('react-router-dom', async () => {
   return {
     ...actual,
     useParams: () => ({ id: 'project-1' }),
-    useNavigate: () => vi.fn(),
+    useNavigate: () => mockNavigate,
   };
 });
 
@@ -162,5 +163,13 @@ describe('ProjectDetailPage', () => {
         enabled: true,
       })
     );
+  });
+
+  it('uses canonical manager projects route for back navigation', () => {
+    renderWithProviders(<ProjectDetailPage />, { route: '/manager/projects/project-1' });
+
+    fireEvent.click(screen.getByLabelText('返回'));
+
+    expect(mockNavigate).toHaveBeenCalledWith('/manager/projects');
   });
 });

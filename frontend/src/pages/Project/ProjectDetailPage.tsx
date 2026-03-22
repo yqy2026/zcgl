@@ -42,6 +42,7 @@ import { useArrayListData } from '@/hooks/useArrayListData';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
 import { PageContainer } from '@/components/Common';
 import { buildQueryScopeKey } from '@/utils/queryScope';
+import { MANAGER_ROUTES } from '@/constants/routes';
 import styles from './ProjectDetailPage.module.css';
 
 const { Text } = Typography;
@@ -286,7 +287,7 @@ const ProjectDetailPage: React.FC = () => {
 
   if (!canQuery) {
     return (
-      <PageContainer title="项目详情" loading onBack={() => navigate('/project')}>
+      <PageContainer title="项目详情" loading onBack={() => navigate(MANAGER_ROUTES.PROJECTS)}>
         <div />
       </PageContainer>
     );
@@ -295,7 +296,7 @@ const ProjectDetailPage: React.FC = () => {
   // 错误状态
   if (projectError) {
     return (
-      <PageContainer title="项目详情" onBack={() => navigate('/project')}>
+      <PageContainer title="项目详情" onBack={() => navigate(MANAGER_ROUTES.PROJECTS)}>
         <Alert
           title="数据加载失败"
           description={`错误详情: ${projectError instanceof Error ? projectError.message : '未知错误'}`}
@@ -309,7 +310,7 @@ const ProjectDetailPage: React.FC = () => {
   // 数据不存在状态
   if (!projectLoading && !project) {
     return (
-      <PageContainer title="项目详情" onBack={() => navigate('/project')}>
+      <PageContainer title="项目详情" onBack={() => navigate(MANAGER_ROUTES.PROJECTS)}>
         <Alert title="项目不存在" description="未找到指定的项目信息" type="warning" showIcon />
       </PageContainer>
     );
@@ -330,7 +331,7 @@ const ProjectDetailPage: React.FC = () => {
         </span>
       }
       loading={projectLoading}
-      onBack={() => navigate('/project')}
+      onBack={() => navigate(MANAGER_ROUTES.PROJECTS)}
       extra={
         <Button
           type="primary"
