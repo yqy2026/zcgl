@@ -20,6 +20,7 @@ import { useQuery } from '@tanstack/react-query';
 import dayjs, { type Dayjs } from 'dayjs';
 import { assetService } from '@/services/assetService';
 import { useView } from '@/contexts/ViewContext';
+import { useRoutePerspective } from '@/routes/perspective';
 import type {
   AssetLeaseGroupRelationType,
   AssetLeaseSummaryResponse,
@@ -85,12 +86,13 @@ const summaryColumns: ColumnsType<ContractTypeSummary> = [
 const AssetDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { currentView, isViewReady } = useView();
+  const { isViewReady } = useView();
+  const { perspective } = useRoutePerspective();
   const [selectedMonth, setSelectedMonth] = useState<Dayjs>(() => dayjs().startOf('month'));
   const hasAssetId = id != null && id !== '';
   const canQuery = hasAssetId && isViewReady;
   const periodParams = useMemo(() => buildPeriodParams(selectedMonth), [selectedMonth]);
-  const queryScopeKey = buildQueryScopeKey(currentView);
+  const queryScopeKey = buildQueryScopeKey(perspective);
 
   const {
     data: asset,

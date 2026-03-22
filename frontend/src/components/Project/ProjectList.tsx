@@ -40,6 +40,7 @@ import { TableWithPagination } from '@/components/Common/TableWithPagination';
 import { ListToolbar } from '@/components/Common/ListToolbar';
 import CurrentViewBanner from '@/components/System/CurrentViewBanner';
 import { useView } from '@/contexts/ViewContext';
+import { useRoutePerspective } from '@/routes/perspective';
 import { useQuery } from '@tanstack/react-query';
 import { getIconButtonProps } from '@/utils/accessibility';
 import type { Project, ProjectListResponse, ProjectStatisticsResponse } from '@/types/project';
@@ -95,7 +96,8 @@ interface ProjectListProps {
 }
 
 const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list' }) => {
-  const { currentView, isViewReady } = useView();
+  const { isViewReady } = useView();
+  const { perspective } = useRoutePerspective();
   const [filters, setFilters] = useState<ProjectFilters>({
     keyword: '',
     status: '',
@@ -110,7 +112,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isDetailVisible, setIsDetailVisible] = useState(false);
-  const queryScopeKey = buildQueryScopeKey(currentView);
+  const queryScopeKey = buildQueryScopeKey(perspective);
 
   const fetchProjectList = useCallback(async () => {
     const params: ProjectQueryParams = {

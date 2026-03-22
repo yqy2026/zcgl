@@ -5,8 +5,10 @@ import { useQuery } from '@tanstack/react-query';
 
 import ProjectDetailPage from '../ProjectDetailPage';
 
+const mockBuildQueryScopeKey = vi.fn(() => 'user:user-1|perspective:manager');
+
 vi.mock('@/utils/queryScope', () => ({
-  buildQueryScopeKey: () => 'user:user-1|view:manager:party-1',
+  buildQueryScopeKey: (value: unknown) => mockBuildQueryScopeKey(value),
 }));
 
 vi.mock('@tanstack/react-query', () => ({
@@ -27,6 +29,13 @@ const mockUseView = vi.fn(() => ({
 
 vi.mock('@/contexts/ViewContext', () => ({
   useView: () => mockUseView(),
+}));
+
+vi.mock('@/routes/perspective', () => ({
+  useRoutePerspective: () => ({
+    perspective: 'manager',
+    isPerspectiveRoute: true,
+  }),
 }));
 
 vi.mock('react-router-dom', async () => {
@@ -132,25 +141,26 @@ describe('ProjectDetailPage', () => {
 
     expect(useQuery).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: ['project', 'user:user-1|view:manager:party-1', 'project-1'],
+        queryKey: ['project', 'user:user-1|perspective:manager', 'project-1'],
       })
     );
     expect(useQuery).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: ['project-assets', 'user:user-1|view:manager:party-1', 'project-1'],
+        queryKey: ['project-assets', 'user:user-1|perspective:manager', 'project-1'],
       })
     );
     expect(useQuery).toHaveBeenCalledWith(
       expect.objectContaining({
         queryKey: [
           'asset-lease-summary',
-          'user:user-1|view:manager:party-1',
+          'user:user-1|perspective:manager',
           'asset-1',
           expect.any(String),
           expect.any(String),
         ],
       })
     );
+    expect(mockBuildQueryScopeKey).toHaveBeenCalledWith('manager');
   });
 
   it('视角未就绪时不应启用项目详情相关查询', () => {
@@ -164,13 +174,13 @@ describe('ProjectDetailPage', () => {
 
     expect(useQuery).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: ['project', 'user:user-1|view:manager:party-1', 'project-1'],
+        queryKey: ['project', 'user:user-1|perspective:manager', 'project-1'],
         enabled: false,
       })
     );
     expect(useQuery).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: ['project-assets', 'user:user-1|view:manager:party-1', 'project-1'],
+        queryKey: ['project-assets', 'user:user-1|perspective:manager', 'project-1'],
         enabled: false,
       })
     );

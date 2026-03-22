@@ -110,8 +110,17 @@ vi.mock('@/contexts/ViewContext', () => ({
   useView: () => mockUseView(),
 }));
 
+const mockBuildQueryScopeKey = vi.fn(() => 'user:user-1|perspective:owner');
+
 vi.mock('@/utils/queryScope', () => ({
-  buildQueryScopeKey: () => 'user:user-1|view:owner:party-1',
+  buildQueryScopeKey: (value: unknown) => mockBuildQueryScopeKey(value),
+}));
+
+vi.mock('@/routes/perspective', () => ({
+  useRoutePerspective: () => ({
+    perspective: 'owner',
+    isPerspectiveRoute: true,
+  }),
 }));
 import { assetService } from '@/services/assetService';
 import { MessageManager } from '@/utils/messageManager';
@@ -211,6 +220,7 @@ describe('AssetListPage', () => {
       renderPage();
 
       expect(screen.getByText('资产列表')).toBeInTheDocument();
+      expect(mockBuildQueryScopeKey).toHaveBeenCalledWith('owner');
     });
 
     it('渲染操作按钮', () => {
@@ -251,12 +261,12 @@ describe('AssetListPage', () => {
 
       expect(useQuery).toHaveBeenCalledWith(
         expect.objectContaining({
-          queryKey: ['assets-list', expect.stringContaining('owner:party-1'), 1, 20, {}],
+          queryKey: ['assets-list', 'user:user-1|perspective:owner', 1, 20, {}],
         })
       );
       expect(useQuery).toHaveBeenCalledWith(
         expect.objectContaining({
-          queryKey: ['analytics', expect.stringContaining('owner:party-1'), {}],
+          queryKey: ['analytics', 'user:user-1|perspective:owner', {}],
         })
       );
     });
@@ -425,7 +435,7 @@ describe('AssetListPage', () => {
           if (!Array.isArray(queryKey) || queryKey[0] !== 'assets-list') {
             return false;
           }
-          if (queryKey[1] !== 'user:user-1|view:owner:party-1') {
+          if (queryKey[1] !== 'user:user-1|perspective:owner') {
             return false;
           }
           const filters = queryKey[4];
@@ -452,7 +462,7 @@ describe('AssetListPage', () => {
           if (!Array.isArray(queryKey) || queryKey[0] !== 'assets-list') {
             return false;
           }
-          if (queryKey[1] !== 'user:user-1|view:owner:party-1') {
+          if (queryKey[1] !== 'user:user-1|perspective:owner') {
             return false;
           }
           const filters = queryKey[4];

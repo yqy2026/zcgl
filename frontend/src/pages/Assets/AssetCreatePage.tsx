@@ -5,6 +5,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { PageContainer } from '@/components/Common';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useView } from '@/contexts/ViewContext';
+import { useRoutePerspective } from '@/routes/perspective';
 import { assetService } from '@/services/assetService';
 import { AssetForm } from '@/components/Forms';
 import type { AssetCreateRequest, AssetUpdateRequest } from '@/types/asset';
@@ -27,9 +28,10 @@ const AssetCreatePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { currentView, isViewReady } = useView();
+  const { isViewReady } = useView();
+  const { perspective } = useRoutePerspective();
   const _form = Form.useForm();
-  const queryScopeKey = buildQueryScopeKey(currentView);
+  const queryScopeKey = buildQueryScopeKey(perspective);
 
   const isEdit = id != null;
   const shouldBlockForViewSelection = isEdit && !isViewReady;

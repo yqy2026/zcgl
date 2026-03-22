@@ -36,6 +36,7 @@ import { projectService } from '@/services/projectService';
 import { assetService } from '@/services/assetService';
 import CurrentViewBanner from '@/components/System/CurrentViewBanner';
 import { useView } from '@/contexts/ViewContext';
+import { useRoutePerspective } from '@/routes/perspective';
 import type { ColumnsType } from 'antd/es/table';
 import type { Asset, AssetLeaseSummaryResponse } from '@/types/asset';
 import { useArrayListData } from '@/hooks/useArrayListData';
@@ -172,10 +173,11 @@ const AssetLeaseSummaryRow: React.FC<
 const ProjectDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { currentView, isViewReady } = useView();
+  const { isViewReady } = useView();
+  const { perspective } = useRoutePerspective();
   const [selectedMonth, setSelectedMonth] = useState<Dayjs>(() => dayjs().startOf('month'));
   const periodParams = useMemo(() => buildPeriodParams(selectedMonth), [selectedMonth]);
-  const queryScopeKey = buildQueryScopeKey(currentView);
+  const queryScopeKey = buildQueryScopeKey(perspective);
   const hasProjectId = id != null && id.length > 0;
   const canQuery = hasProjectId && isViewReady;
 

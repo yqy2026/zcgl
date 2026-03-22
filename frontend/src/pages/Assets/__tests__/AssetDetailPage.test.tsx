@@ -15,8 +15,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import AssetDetailPage from '../AssetDetailPage';
 
+const mockBuildQueryScopeKey = vi.fn(() => 'user:user-1|perspective:owner');
+
 vi.mock('@/utils/queryScope', () => ({
-  buildQueryScopeKey: () => 'user:user-1|view:owner:party-1',
+  buildQueryScopeKey: (value: unknown) => mockBuildQueryScopeKey(value),
 }));
 
 const mockUseView = vi.fn(() => ({
@@ -33,6 +35,13 @@ const mockUseView = vi.fn(() => ({
 
 vi.mock('@/contexts/ViewContext', () => ({
   useView: () => mockUseView(),
+}));
+
+vi.mock('@/routes/perspective', () => ({
+  useRoutePerspective: () => ({
+    perspective: 'owner',
+    isPerspectiveRoute: true,
+  }),
 }));
 
 vi.mock('antd', async () => {
@@ -218,6 +227,7 @@ describe('AssetDetailPage', () => {
       await waitFor(() => {
         expect(assetService.getAsset).toHaveBeenCalled();
         expect(assetService.getAssetLeaseSummary).toHaveBeenCalled();
+        expect(mockBuildQueryScopeKey).toHaveBeenCalledWith('owner');
       });
 
       const queryKeys = queryClient
@@ -230,7 +240,7 @@ describe('AssetDetailPage', () => {
           queryKey =>
             Array.isArray(queryKey) &&
             queryKey[0] === 'asset' &&
-            queryKey[1] === 'user:user-1|view:owner:party-1' &&
+            queryKey[1] === 'user:user-1|perspective:owner' &&
             queryKey[2] === 'asset_123'
         )
       ).toBe(true);
@@ -239,7 +249,7 @@ describe('AssetDetailPage', () => {
           queryKey =>
             Array.isArray(queryKey) &&
             queryKey[0] === 'asset-lease-summary' &&
-            queryKey[1] === 'user:user-1|view:owner:party-1' &&
+            queryKey[1] === 'user:user-1|perspective:owner' &&
             queryKey[2] === 'asset_123' &&
             queryKey[3] === dayjs().startOf('month').format('YYYY-MM-DD') &&
             queryKey[4] === dayjs().endOf('month').format('YYYY-MM-DD')

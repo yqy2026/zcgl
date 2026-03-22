@@ -8,8 +8,10 @@ import AssetCreatePage from '../AssetCreatePage';
 const mockNavigate = vi.fn();
 const mockInvalidateQueries = vi.fn();
 
+const mockBuildQueryScopeKey = vi.fn(() => 'user:user-1|perspective:owner');
+
 vi.mock('@/utils/queryScope', () => ({
-  buildQueryScopeKey: () => 'user:user-1|view:owner:party-1',
+  buildQueryScopeKey: (value: unknown) => mockBuildQueryScopeKey(value),
 }));
 
 const mockUseView = vi.fn(() => ({
@@ -26,6 +28,13 @@ const mockUseView = vi.fn(() => ({
 
 vi.mock('@/contexts/ViewContext', () => ({
   useView: () => mockUseView(),
+}));
+
+vi.mock('@/routes/perspective', () => ({
+  useRoutePerspective: () => ({
+    perspective: 'owner',
+    isPerspectiveRoute: true,
+  }),
 }));
 
 vi.mock('react-router-dom', async () => {
@@ -142,10 +151,11 @@ describe('AssetCreatePage', () => {
         queryKey =>
           Array.isArray(queryKey) &&
           queryKey[0] === 'asset' &&
-          queryKey[1] === 'user:user-1|view:owner:party-1' &&
+          queryKey[1] === 'user:user-1|perspective:owner' &&
           queryKey[2] === 'asset-1'
       )
     ).toBe(true);
+    expect(mockBuildQueryScopeKey).toHaveBeenCalledWith('owner');
   });
 
   it('编辑成功后应失效 scoped 资产列表与详情查询前缀', async () => {

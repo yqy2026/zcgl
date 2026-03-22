@@ -10,8 +10,10 @@ import { render, screen, fireEvent, act } from '@testing-library/react';
 import { useQuery } from '@tanstack/react-query';
 import { partyService } from '@/services/partyService';
 
+const mockBuildQueryScopeKey = vi.fn(() => 'user:user-1|perspective:manager');
+
 vi.mock('@/utils/queryScope', () => ({
-  buildQueryScopeKey: () => 'user:user-1|view:manager:party-1',
+  buildQueryScopeKey: (value: unknown) => mockBuildQueryScopeKey(value),
 }));
 
 const mockUseView = vi.fn(() => ({
@@ -28,6 +30,13 @@ const mockUseView = vi.fn(() => ({
 
 vi.mock('@/contexts/ViewContext', () => ({
   useView: () => mockUseView(),
+}));
+
+vi.mock('@/routes/perspective', () => ({
+  useRoutePerspective: () => ({
+    perspective: 'manager',
+    isPerspectiveRoute: true,
+  }),
 }));
 // Mock message manager
 vi.mock('@/utils/messageManager', () => ({
@@ -491,7 +500,7 @@ describe('ProjectList', () => {
         expect.objectContaining({
           queryKey: [
             'project-list',
-            'user:user-1|view:manager:party-1',
+            'user:user-1|perspective:manager',
             1,
             10,
             { keyword: '', status: '', ownerPartyId: '' },
@@ -500,9 +509,10 @@ describe('ProjectList', () => {
       );
       expect(useQuery).toHaveBeenCalledWith(
         expect.objectContaining({
-          queryKey: ['project-owner-party-options', 'user:user-1|view:manager:party-1', ''],
+          queryKey: ['project-owner-party-options', 'user:user-1|perspective:manager', ''],
         })
       );
+      expect(mockBuildQueryScopeKey).toHaveBeenCalledWith('manager');
     });
 
     it('视角未就绪时不应启用项目列表和主体选项查询', async () => {
