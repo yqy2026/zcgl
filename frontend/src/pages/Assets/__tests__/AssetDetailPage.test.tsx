@@ -21,22 +21,6 @@ vi.mock('@/utils/queryScope', () => ({
   buildQueryScopeKey: (value: unknown) => mockBuildQueryScopeKey(value),
 }));
 
-const mockUseView = vi.fn(() => ({
-  currentView: {
-    key: 'owner:party-1',
-    perspective: 'owner',
-    partyId: 'party-1',
-    partyName: '主体A',
-    label: '产权方 · 主体A',
-  },
-  selectionRequired: false,
-  isViewReady: true,
-}));
-
-vi.mock('@/contexts/ViewContext', () => ({
-  useView: () => mockUseView(),
-}));
-
 vi.mock('@/routes/perspective', () => ({
   useRoutePerspective: () => ({
     perspective: 'owner',
@@ -173,17 +157,6 @@ const renderAssetDetailPage = (assetId: string) => {
 describe('AssetDetailPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseView.mockReturnValue({
-      currentView: {
-        key: 'owner:party-1',
-        perspective: 'owner',
-        partyId: 'party-1',
-        partyName: '主体A',
-        label: '产权方 · 主体A',
-      },
-      selectionRequired: false,
-      isViewReady: true,
-    });
     vi.mocked(assetService.getAssetLeaseSummary).mockResolvedValue(buildLeaseSummary());
   });
 
@@ -199,12 +172,6 @@ describe('AssetDetailPage', () => {
     });
 
     it('legacy 详情路径不再依赖视角就绪门闸', async () => {
-      mockUseView.mockReturnValue({
-        currentView: null,
-        selectionRequired: true,
-        isViewReady: false,
-      });
-
       const queryClient = createTestQueryClient();
 
       renderWithAppProviders(

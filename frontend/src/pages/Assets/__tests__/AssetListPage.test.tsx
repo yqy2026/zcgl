@@ -106,10 +106,6 @@ const mockUseView = vi.fn(() => ({
   isViewReady: true,
 }));
 
-vi.mock('@/contexts/ViewContext', () => ({
-  useView: () => mockUseView(),
-}));
-
 const mockBuildQueryScopeKey = vi.fn(() => 'user:user-1|perspective:owner');
 const mockUseRoutePerspective = vi.fn(() => ({
   perspective: 'owner',
@@ -277,11 +273,6 @@ describe('AssetListPage', () => {
     });
 
     it('legacy 路径不显示视角标签，但仍启用资产列表和统计查询', () => {
-      mockUseView.mockReturnValue({
-        currentView: null,
-        selectionRequired: true,
-        isViewReady: false,
-      });
       mockUseRoutePerspective.mockReturnValue({
         perspective: null,
         isPerspectiveRoute: false,

@@ -14,22 +14,6 @@ vi.mock('@/utils/queryScope', () => ({
   buildQueryScopeKey: (value: unknown) => mockBuildQueryScopeKey(value),
 }));
 
-const mockUseView = vi.fn(() => ({
-  currentView: {
-    key: 'owner:party-1',
-    perspective: 'owner',
-    partyId: 'party-1',
-    partyName: '主体A',
-    label: '产权方 · 主体A',
-  },
-  selectionRequired: false,
-  isViewReady: true,
-}));
-
-vi.mock('@/contexts/ViewContext', () => ({
-  useView: () => mockUseView(),
-}));
-
 vi.mock('@/routes/perspective', () => ({
   useRoutePerspective: () => ({
     perspective: 'owner',
@@ -112,17 +96,6 @@ import { assetService } from '@/services/assetService';
 describe('AssetCreatePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseView.mockReturnValue({
-      currentView: {
-        key: 'owner:party-1',
-        perspective: 'owner',
-        partyId: 'party-1',
-        partyName: '主体A',
-        label: '产权方 · 主体A',
-      },
-      selectionRequired: false,
-      isViewReady: true,
-    });
   });
 
   it('编辑态资产详情查询应把当前视角纳入 queryKey', async () => {
@@ -181,12 +154,6 @@ describe('AssetCreatePage', () => {
   });
 
   it('编辑态不再依赖视角就绪门闸才请求资产详情', async () => {
-    mockUseView.mockReturnValue({
-      currentView: null,
-      selectionRequired: true,
-      isViewReady: false,
-    });
-
     renderWithProviders(<AssetCreatePage />, { route: '/assets/asset-1/edit' });
 
     await waitFor(() => {

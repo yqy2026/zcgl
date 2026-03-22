@@ -20,22 +20,6 @@ vi.mock('@/utils/queryScope', () => ({
   buildQueryScopeKey: (value: unknown) => mockBuildQueryScopeKey(value),
 }));
 
-const mockUseView = vi.fn(() => ({
-  currentView: {
-    key: 'manager:party-1',
-    perspective: 'manager',
-    partyId: 'party-1',
-    partyName: '运营主体A',
-    label: '运营方 · 运营主体A',
-  },
-  selectionRequired: false,
-  isViewReady: true,
-}));
-
-vi.mock('@/contexts/ViewContext', () => ({
-  useView: () => mockUseView(),
-}));
-
 vi.mock('@/routes/perspective', () => ({
   useRoutePerspective: () => mockUseRoutePerspective(),
 }));
@@ -397,17 +381,6 @@ const mockRefetchProjects = vi.fn();
 describe('ProjectList', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseView.mockReturnValue({
-      currentView: {
-        key: 'manager:party-1',
-        perspective: 'manager',
-        partyId: 'party-1',
-        partyName: '运营主体A',
-        label: '运营方 · 运营主体A',
-      },
-      selectionRequired: false,
-      isViewReady: true,
-    });
     mockUseRoutePerspective.mockReturnValue({
       perspective: 'manager',
       isPerspectiveRoute: true,
@@ -522,11 +495,6 @@ describe('ProjectList', () => {
     });
 
     it('legacy 路径不显示视角标签，但列表和主体选项查询仍继续执行', async () => {
-      mockUseView.mockReturnValue({
-        currentView: null,
-        selectionRequired: true,
-        isViewReady: false,
-      });
       mockUseRoutePerspective.mockReturnValue({
         perspective: null,
         isPerspectiveRoute: false,

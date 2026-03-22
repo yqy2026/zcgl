@@ -7,20 +7,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { act, createTestQueryClient, renderHookWithProviders, waitFor } from '@/test/test-utils';
 import * as useAssetsHooks from '../useAssets';
 
-const mockUseView = vi.fn(() => ({
-  currentView: {
-    key: 'owner:party-1',
-    perspective: 'owner',
-    partyId: 'party-1',
-    partyName: '主体A',
-    label: '产权方 · 主体A',
-  },
-}));
-
-vi.mock('@/contexts/ViewContext', () => ({
-  useView: () => mockUseView(),
-}));
-
 vi.mock('@/routes/perspective', () => ({
   useRoutePerspective: () => ({
     perspective: 'owner',
@@ -175,7 +161,6 @@ describe('useAssets - Hook验证', () => {
           queryKey[2] === 'asset-1'
       )
     ).toBe(true);
-    expect(mockUseView).not.toHaveBeenCalled();
   });
 
   it('useAssets 应把当前视角纳入列表 queryKey 并使用 assets-list 前缀', async () => {
@@ -206,7 +191,6 @@ describe('useAssets - Hook验证', () => {
           queryKey[2].keyword === '园区'
       )
     ).toBe(true);
-    expect(mockUseView).not.toHaveBeenCalled();
   });
 
   it('useCreateAsset 成功后应失效资产列表与分析查询前缀', async () => {

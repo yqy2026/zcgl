@@ -19,22 +19,6 @@ vi.mock('@tanstack/react-query', () => ({
   useQuery: vi.fn(),
 }));
 
-const mockUseView = vi.fn(() => ({
-  currentView: {
-    key: 'manager:party-1',
-    perspective: 'manager',
-    partyId: 'party-1',
-    partyName: '运营主体A',
-    label: '运营方 · 运营主体A',
-  },
-  selectionRequired: false,
-  isViewReady: true,
-}));
-
-vi.mock('@/contexts/ViewContext', () => ({
-  useView: () => mockUseView(),
-}));
-
 vi.mock('@/routes/perspective', () => ({
   useRoutePerspective: () => mockUseRoutePerspective(),
 }));
@@ -61,17 +45,6 @@ vi.mock('@/hooks/useArrayListData', () => ({
 describe('ProjectDetailPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseView.mockReturnValue({
-      currentView: {
-        key: 'manager:party-1',
-        perspective: 'manager',
-        partyId: 'party-1',
-        partyName: '运营主体A',
-        label: '运营方 · 运营主体A',
-      },
-      selectionRequired: false,
-      isViewReady: true,
-    });
     mockUseRoutePerspective.mockReturnValue({
       perspective: 'manager',
       isPerspectiveRoute: true,
@@ -169,11 +142,6 @@ describe('ProjectDetailPage', () => {
   });
 
   it('legacy 路径不显示视角标签，但仍继续执行详情查询', () => {
-    mockUseView.mockReturnValue({
-      currentView: null,
-      selectionRequired: true,
-      isViewReady: false,
-    });
     mockUseRoutePerspective.mockReturnValue({
       perspective: null,
       isPerspectiveRoute: false,

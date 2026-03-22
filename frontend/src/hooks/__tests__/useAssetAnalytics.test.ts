@@ -5,20 +5,6 @@ import { analyticsService } from '@/services/analyticsService';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 
-const mockUseView = vi.fn(() => ({
-  currentView: {
-    key: 'owner:party-1',
-    perspective: 'owner',
-    partyId: 'party-1',
-    partyName: '主体A',
-    label: '产权方 · 主体A',
-  },
-}));
-
-vi.mock('@/contexts/ViewContext', () => ({
-  useView: () => mockUseView(),
-}));
-
 vi.mock('@/routes/perspective', () => ({
   useRoutePerspective: () => ({
     perspective: 'owner',
@@ -135,7 +121,6 @@ describe('useAssetAnalytics', () => {
           queryKey[2] === 'comprehensive'
       )
     ).toBe(true);
-    expect(mockUseView).not.toHaveBeenCalled();
   });
 
   it('should update filters and refetch', async () => {
