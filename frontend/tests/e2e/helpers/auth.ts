@@ -252,8 +252,21 @@ export const ensureAuthenticated = async (page: Page): Promise<Credentials> => {
 export const clearAuthState = async (page: Page): Promise<void> => {
   await page.context().clearCookies();
   await navigateWithRetry(page, LOGIN_PATH);
-  await page.evaluate(() => {
-    localStorage.clear();
-    sessionStorage.clear();
-  });
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    await page.waitForLoadState('domcontentloaded').catch(() => undefined);
+
+    try {
+      await page.evaluate(() => {
+        localStorage.clear();
+        sessionStorage.clear();
+      });
+      return;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!message.includes('Execution context was destroyed') || attempt === 2) {
+        throw error;
+      }
+    }
+  }
 };
