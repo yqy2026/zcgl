@@ -119,6 +119,24 @@ describe('AppBreadcrumb', () => {
     expect(screen.getByText('主体详情')).toBeInTheDocument();
   });
 
+  it('uses manager-prefixed project list link for legacy project detail breadcrumbs', () => {
+    renderBreadcrumb('/project/project-1');
+
+    const links = screen.getAllByTestId('link');
+    expect(links.map(link => link.getAttribute('data-link-to'))).toEqual(
+      expect.arrayContaining(['/manager/projects'])
+    );
+  });
+
+  it('uses owner-prefixed certificate list link for legacy property certificate detail breadcrumbs', () => {
+    renderBreadcrumb('/property-certificates/cert-1');
+
+    const links = screen.getAllByTestId('link');
+    expect(links.map(link => link.getAttribute('data-link-to'))).toEqual(
+      expect.arrayContaining(['/owner/property-certificates'])
+    );
+  });
+
   it('renders breadcrumb container', () => {
     renderBreadcrumb('/assets/list');
 
