@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { CONTRACT_GROUP_ROUTES, LEGACY_RENTAL_ROUTES } from '@/constants/routes';
@@ -45,8 +45,9 @@ describe('legacy rental frontend retirement routing', () => {
 
   it('renders an explicit retirement notice instead of calling deleted legacy APIs', () => {
     render(
-      <MemoryRouter>
+      <MemoryRouter initialEntries={['/rental/contracts']}>
         <LegacyRentalRetiredPage />
+        <LocationProbe />
       </MemoryRouter>
     );
 
@@ -57,6 +58,9 @@ describe('legacy rental frontend retirement routing', () => {
     expect(screen.getByText('当前状态')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '查看合同组' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'PDF导入' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: '查看资产' }));
+    expect(screen.getByTestId('location-probe')).toHaveTextContent('/owner/assets');
   });
 
   it('does not keep raw legacy rental-contracts tokens in active retirement page source', () => {

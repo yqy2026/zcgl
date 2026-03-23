@@ -9,6 +9,7 @@ import { assetService } from '@/services/assetService';
 import { AssetForm } from '@/components/Forms';
 import type { AssetCreateRequest, AssetUpdateRequest } from '@/types/asset';
 import { buildQueryScopeKey } from '@/utils/queryScope';
+import { OWNER_ROUTES } from '@/constants/routes';
 
 // 错误类型接口
 interface ApiError {
@@ -47,7 +48,7 @@ const AssetCreatePage: React.FC = () => {
       MessageManager.success('资产创建成功');
       queryClient.invalidateQueries({ queryKey: ['assets-list'] });
       queryClient.invalidateQueries({ queryKey: ['analytics'] });
-      navigate('/assets/list');
+      navigate(OWNER_ROUTES.ASSETS);
     },
     onError: (error: unknown) => {
       const apiError = error as ApiError;

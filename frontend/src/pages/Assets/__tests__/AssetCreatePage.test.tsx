@@ -7,6 +7,7 @@ import AssetCreatePage from '../AssetCreatePage';
 
 const mockNavigate = vi.fn();
 const mockInvalidateQueries = vi.fn();
+const mockUseParams = vi.fn(() => ({ id: 'asset-1' }));
 
 const mockBuildQueryScopeKey = vi.fn(() => 'user:user-1|perspective:owner');
 
@@ -26,7 +27,7 @@ vi.mock('react-router-dom', async () => {
   return {
     ...actual,
     useNavigate: () => mockNavigate,
-    useParams: () => ({ id: 'asset-1' }),
+    useParams: () => mockUseParams(),
   };
 });
 
@@ -96,6 +97,7 @@ import { assetService } from '@/services/assetService';
 describe('AssetCreatePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseParams.mockReturnValue({ id: 'asset-1' });
   });
 
   it('编辑态资产详情查询应把当前视角纳入 queryKey', async () => {
@@ -161,5 +163,23 @@ describe('AssetCreatePage', () => {
     });
 
     expect(screen.getByRole('button', { name: 'submit' })).toBeInTheDocument();
+  });
+
+  it('创建成功后应返回 canonical owner 资产列表', async () => {
+    mockUseParams.mockReturnValue({});
+
+    const { getByRole } = renderWithProviders(<AssetCreatePage />, {
+      route: '/assets/new',
+    });
+
+    getByRole('button', { name: 'submit' }).click();
+
+    await waitFor(() => {
+      expect(assetService.createAsset).toHaveBeenCalledWith({
+        asset_name: '更新后的资产',
+      });
+    });
+
+    expect(mockNavigate).toHaveBeenCalledWith('/owner/assets');
   });
 });
