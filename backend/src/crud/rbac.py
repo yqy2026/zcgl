@@ -62,7 +62,9 @@ class CRUDRole(CRUDBase[Role, RoleCreate, RoleUpdate]):
 
         # 移除permission_ids字段（这不是Role模型的字段）
         obj_in_data.pop("permission_ids", None)
-        legacy_organization_id = obj_in_data.pop("organization_id", None)  # DEPRECATED alias
+        legacy_organization_id = obj_in_data.pop(
+            "organization_id", None
+        )  # DEPRECATED alias
         if (
             obj_in_data.get("party_id") in (None, "")
             and legacy_organization_id is not None
@@ -74,8 +76,10 @@ class CRUDRole(CRUDBase[Role, RoleCreate, RoleUpdate]):
 
     async def get_by_name(self, db: AsyncSession, name: str) -> Role | None:
         """根据名称获取角色"""
-        stmt = select(Role).where(Role.name == name).options(
-            selectinload(Role.permissions)
+        stmt = (
+            select(Role)
+            .where(Role.name == name)
+            .options(selectinload(Role.permissions))
         )
         return (await db.execute(stmt)).scalars().first()
 
@@ -87,11 +91,7 @@ class CRUDRole(CRUDBase[Role, RoleCreate, RoleUpdate]):
         party_filter: PartyFilter | None = None,
     ) -> Role | None:
         """根据ID获取单个记录（预加载权限）"""
-        stmt = (
-            select(Role)
-            .where(Role.id == id)
-            .options(selectinload(Role.permissions))
-        )
+        stmt = select(Role).where(Role.id == id).options(selectinload(Role.permissions))
         if party_filter is not None:
             stmt = self.query_builder.apply_party_filter(stmt, party_filter)
         result = (await db.execute(stmt)).scalars().first()
@@ -205,6 +205,7 @@ class CRUDRole(CRUDBase[Role, RoleCreate, RoleUpdate]):
     ) -> None:
         """更新角色权限关联表的 created_by 字段"""
         from sqlalchemy import update
+
         stmt = (
             update(role_permissions)
             .where(role_permissions.c.role_id == role_id)
@@ -383,7 +384,9 @@ class CRUDUserRoleAssignment(
 
 
 class CRUDResourcePermission(  # DEPRECATED
-    CRUDBase[ResourcePermission, ResourcePermissionCreate, ResourcePermissionUpdate]  # DEPRECATED
+    CRUDBase[
+        ResourcePermission, ResourcePermissionCreate, ResourcePermissionUpdate
+    ]  # DEPRECATED
 ):
     """资源权限CRUD"""
 
@@ -413,7 +416,9 @@ class CRUDResourcePermission(  # DEPRECATED
         else:
             return []
 
-        stmt = select(ResourcePermission.resource_id).where(and_(*conditions))  # DEPRECATED
+        stmt = select(ResourcePermission.resource_id).where(
+            and_(*conditions)
+        )  # DEPRECATED
         resource_ids = await _scalars_all(await db.execute(stmt))
         return [str(resource_id) for resource_id in resource_ids]
 
@@ -427,7 +432,9 @@ class CRUDPermissionAuditLog(
 
 
 class CRUDPermissionGrant(  # DEPRECATED
-    CRUDBase[PermissionGrant, PermissionGrantCreate, PermissionGrantUpdate]  # DEPRECATED
+    CRUDBase[
+        PermissionGrant, PermissionGrantCreate, PermissionGrantUpdate
+    ]  # DEPRECATED
 ):
     """统一权限授权CRUD"""
 
@@ -444,15 +451,23 @@ class CRUDPermissionGrant(  # DEPRECATED
         _now = now or func.now()
         stmt = (
             select(PermissionGrant)  # DEPRECATED
-            .join(Permission, Permission.id == PermissionGrant.permission_id)  # DEPRECATED
+            .join(
+                Permission, Permission.id == PermissionGrant.permission_id
+            )  # DEPRECATED
             .where(
                 and_(
                     PermissionGrant.user_id == user_id,  # DEPRECATED
                     PermissionGrant.is_active,  # DEPRECATED
                     Permission.resource == resource,
                     Permission.action == action,
-                    or_(PermissionGrant.starts_at.is_(None), PermissionGrant.starts_at <= _now),  # DEPRECATED
-                    or_(PermissionGrant.expires_at.is_(None), PermissionGrant.expires_at > _now),  # DEPRECATED
+                    or_(
+                        PermissionGrant.starts_at.is_(None),
+                        PermissionGrant.starts_at <= _now,
+                    ),  # DEPRECATED
+                    or_(
+                        PermissionGrant.expires_at.is_(None),
+                        PermissionGrant.expires_at > _now,
+                    ),  # DEPRECATED
                 )
             )
         )
@@ -481,15 +496,21 @@ class CRUDPermissionGrant(  # DEPRECATED
         if permission_id:
             filters.append(PermissionGrant.permission_id == permission_id)  # DEPRECATED
         if grant_type:
-            filters.append(PermissionGrant.grant_type == grant_type.strip().lower())  # DEPRECATED
+            filters.append(
+                PermissionGrant.grant_type == grant_type.strip().lower()
+            )  # DEPRECATED
         if effect:
-            filters.append(PermissionGrant.effect == effect.strip().lower())  # DEPRECATED
+            filters.append(
+                PermissionGrant.effect == effect.strip().lower()
+            )  # DEPRECATED
         if scope:
             filters.append(PermissionGrant.scope == scope.strip().lower())  # DEPRECATED
         if is_active is not None:
             filters.append(PermissionGrant.is_active == is_active)  # DEPRECATED
 
-        stmt = select(PermissionGrant).order_by(desc(PermissionGrant.created_at))  # DEPRECATED
+        stmt = select(PermissionGrant).order_by(
+            desc(PermissionGrant.created_at)
+        )  # DEPRECATED
         count_stmt = select(func.count(PermissionGrant.id))  # DEPRECATED
 
         if filters:
@@ -508,14 +529,22 @@ class CRUDPermissionGrant(  # DEPRECATED
         _now = now or func.now()
         stmt = (
             select(Permission)
-            .join(PermissionGrant, PermissionGrant.permission_id == Permission.id)  # DEPRECATED
+            .join(
+                PermissionGrant, PermissionGrant.permission_id == Permission.id
+            )  # DEPRECATED
             .where(
                 and_(
                     PermissionGrant.user_id == user_id,  # DEPRECATED
                     PermissionGrant.is_active,  # DEPRECATED
                     PermissionGrant.effect == "allow",  # DEPRECATED
-                    or_(PermissionGrant.starts_at.is_(None), PermissionGrant.starts_at <= _now),  # DEPRECATED
-                    or_(PermissionGrant.expires_at.is_(None), PermissionGrant.expires_at > _now),  # DEPRECATED
+                    or_(
+                        PermissionGrant.starts_at.is_(None),
+                        PermissionGrant.starts_at <= _now,
+                    ),  # DEPRECATED
+                    or_(
+                        PermissionGrant.expires_at.is_(None),
+                        PermissionGrant.expires_at > _now,
+                    ),  # DEPRECATED
                 )
             )
         )

@@ -78,7 +78,7 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
               </span>
             }
           >
-            <span className={styles.propertyName}>{asset.property_name ?? '-'}</span>
+            <span className={styles.propertyName}>{asset.asset_name ?? '-'}</span>
           </Descriptions.Item>
 
           <Descriptions.Item
@@ -394,4 +394,3 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
 };
 
 export default AssetDetailInfo;
-

@@ -42,8 +42,25 @@ class CRUDParty:
         await db.refresh(party)
         return party
 
-    async def get_party(self, db: AsyncSession, party_id: str) -> Party | None:
+    async def get_party(
+        self, db: AsyncSession, party_id: str, *, include_deleted: bool = False
+    ) -> Party | None:
         stmt = select(Party).where(Party.id == party_id)
+        if not include_deleted:
+            stmt = stmt.where(Party.deleted_at.is_(None))
+        return (await db.execute(stmt)).scalars().first()
+
+    async def get_party_by_type_and_code(
+        self,
+        db: AsyncSession,
+        *,
+        party_type: str,
+        code: str,
+    ) -> Party | None:
+        stmt = select(Party).where(
+            Party.party_type == party_type,
+            Party.code == code,
+        )
         return (await db.execute(stmt)).scalars().first()
 
     async def resolve_organization_party_id(
@@ -136,10 +153,7 @@ class CRUDParty:
         normalized_party_ids = [
             normalized
             for raw_party_id in party_ids
-            if (
-                normalized := self._normalize_identifier(raw_party_id)
-            )
-            is not None
+            if (normalized := self._normalize_identifier(raw_party_id)) is not None
         ]
         if len(normalized_party_ids) == 0:
             return {}
@@ -193,7 +207,9 @@ class CRUDParty:
 
             org_lookup_conditions = []
             if len(pending_party_ids) > 0:
-                org_lookup_conditions.append(Organization.id.in_(sorted(pending_party_ids)))
+                org_lookup_conditions.append(
+                    Organization.id.in_(sorted(pending_party_ids))
+                )
             if len(pending_party_codes) > 0:
                 org_lookup_conditions.append(
                     Organization.code.in_(sorted(pending_party_codes))
@@ -231,12 +247,18 @@ class CRUDParty:
                             organization_id,
                             set(),
                         ).add(organization_id)
-                    if organization_code is not None and organization_code in pending_party_codes:
+                    if (
+                        organization_code is not None
+                        and organization_code in pending_party_codes
+                    ):
                         resolved_org_ids_by_party_code.setdefault(
                             organization_code,
                             set(),
                         ).add(organization_id)
-                    if organization_name is not None and organization_name in pending_party_names:
+                    if (
+                        organization_name is not None
+                        and organization_name in pending_party_names
+                    ):
                         resolved_org_ids_by_party_name.setdefault(
                             organization_name,
                             set(),
@@ -341,15 +363,12 @@ class CRUDParty:
         search: str | None = None,
         scoped_party_ids: list[str] | None = None,
     ) -> list[Party]:
-        stmt = select(Party)
+        stmt = select(Party).where(Party.deleted_at.is_(None))
         if scoped_party_ids is not None:
             normalized_scope_ids = [
                 normalized
                 for raw_party_id in scoped_party_ids
-                if (
-                    normalized := self._normalize_identifier(raw_party_id)
-                )
-                is not None
+                if (normalized := self._normalize_identifier(raw_party_id)) is not None
             ]
             if len(normalized_scope_ids) == 0:
                 return []
@@ -394,11 +413,12 @@ class CRUDParty:
         db_obj: Party,
         commit: bool = True,
     ) -> None:
-        await db.delete(db_obj)
+        db_obj.deleted_at = _utcnow_naive()
         if commit:
             await db.commit()
         else:
             await db.flush()
+        await db.refresh(db_obj)
 
     async def add_hierarchy(
         self,
@@ -610,7 +630,8 @@ class CRUDParty:
         if active_only:
             now = at_time or _utcnow_naive()
             stmt = stmt.where(UserPartyBinding.valid_from <= now).where(
-                (UserPartyBinding.valid_to.is_(None)) | (UserPartyBinding.valid_to >= now)
+                (UserPartyBinding.valid_to.is_(None))
+                | (UserPartyBinding.valid_to >= now)
             )
 
         return list((await db.execute(stmt)).scalars().all())

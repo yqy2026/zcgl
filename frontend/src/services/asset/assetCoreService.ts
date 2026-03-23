@@ -10,6 +10,7 @@ import { ASSET_API } from '@/constants/api';
 import { convertBackendToFrontend } from '@/utils/dataConversion';
 import type {
   Asset,
+  AssetLeaseSummaryResponse,
   AssetSearchParams,
   AssetListResponse,
   AssetCreateRequest,
@@ -172,6 +173,36 @@ export class AssetCoreService {
         throw new Error('资产详情为空');
       }
       return convertBackendToFrontend<Asset>(result.data);
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
+  /**
+   * 获取资产租赁汇总
+   */
+  async getAssetLeaseSummary(
+    id: string,
+    params?: { period_start?: string; period_end?: string }
+  ): Promise<AssetLeaseSummaryResponse> {
+    try {
+      const result = await apiClient.get<AssetLeaseSummaryResponse>(ASSET_API.LEASE_SUMMARY(id), {
+        params,
+        cache: true,
+        retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
+
+      if (!result.success) {
+        throw new Error(`获取资产租赁汇总失败: ${result.error}`);
+      }
+
+      if (result.data == null) {
+        throw new Error('资产租赁汇总为空');
+      }
+
+      return result.data;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);

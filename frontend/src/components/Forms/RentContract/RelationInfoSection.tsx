@@ -36,7 +36,7 @@ const RelationInfoSection: React.FC = () => {
             >
               {(assets.length > 0 ? assets : []).map(asset => (
                 <Option key={asset.id} value={asset.id}>
-                  {asset.property_name} - {asset.address}
+                  {asset.asset_name} - {asset.address}
                 </Option>
               ))}
             </Select>

@@ -8,6 +8,7 @@ import { Row, Col, Steps, message, Card } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { PropertyCertificateUpload } from '@/components/PropertyCertificate/PropertyCertificateUpload';
 import { PropertyCertificateReview } from '@/components/PropertyCertificate/PropertyCertificateReview';
+import { OWNER_ROUTES } from '@/constants/routes';
 import { propertyCertificateService } from '@/services/propertyCertificateService';
 import PageContainer from '@/components/Common/PageContainer';
 import type {
@@ -36,7 +37,7 @@ export const PropertyCertificateImport: React.FC = () => {
       message.success(`产权证创建成功！ID: ${response.certificate_id}`);
       setCurrentStep(2);
       window.setTimeout(() => {
-        navigate('/property-certificates');
+        navigate(OWNER_ROUTES.PROPERTY_CERTIFICATES);
       }, 800);
     } catch {
       message.error('创建失败，请重试');

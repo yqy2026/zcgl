@@ -56,16 +56,16 @@ class TestExcelImportServiceErrorHandling:
             # Mock 验证器返回失败
             excel_service.validator.validate_all = MagicMock(
                 side_effect=[
-                    (False, [{"field": "property_name", "error": "不能为空"}], [], []),
-                    (True, [], [], ["property_name"]),
+                    (False, [{"field": "asset_name", "error": "不能为空"}], [], []),
+                    (True, [], [], ["asset_name"]),
                 ]
             )
 
             # Mock _map_excel_row_to_asset_data (returns tuple)
             excel_service._map_excel_row_to_asset_data = MagicMock(
                 side_effect=[
-                    ({"property_name": "", "address": "地址1"}, []),
-                    ({"property_name": "有效资产", "address": "地址2"}, []),
+                    ({"asset_name": "", "address": "地址1"}, []),
+                    ({"asset_name": "有效资产", "address": "地址2"}, []),
                 ]
             )
 
@@ -85,7 +85,7 @@ class TestExcelImportServiceErrorHandling:
                 result["created_assets"] == 0
             )  # Nothing created because create_assets=False
             assert len(result["errors"]) == 1
-            assert "property_name" in result["errors"][0]["error"]
+            assert "asset_name" in result["errors"][0]["error"]
 
     @pytest.mark.asyncio
     async def test_import_with_validation_errors_strict_mode(self, excel_service):
@@ -101,14 +101,14 @@ class TestExcelImportServiceErrorHandling:
             excel_service.validator.validate_all = MagicMock(
                 return_value=(
                     False,
-                    [{"field": "property_name", "error": "不能为空"}],
+                    [{"field": "asset_name", "error": "不能为空"}],
                     [],
                     [],
                 )
             )
 
             excel_service._map_excel_row_to_asset_data = MagicMock(
-                return_value=({"property_name": "", "address": "地址1"}, [])
+                return_value=({"asset_name": "", "address": "地址1"}, [])
             )
 
             with pytest.raises(BusinessValidationError) as excinfo:
@@ -133,11 +133,11 @@ class TestExcelImportServiceErrorHandling:
             )
 
             excel_service.validator.validate_all = MagicMock(
-                return_value=(True, [], [], ["property_name"])
+                return_value=(True, [], [], ["asset_name"])
             )
 
             excel_service._map_excel_row_to_asset_data = MagicMock(
-                return_value=({"property_name": "已存在资产", "address": "地址1"}, [])
+                return_value=({"asset_name": "已存在资产", "address": "地址1"}, [])
             )
 
             # Mock 找到已存在的资产
@@ -146,7 +146,7 @@ class TestExcelImportServiceErrorHandling:
             )
             with patch("src.services.excel.excel_import_service.asset_crud") as mock_crud:
                 mock_crud.get_by_name_async = AsyncMock(return_value=None)
-                mock_crud.get_by_property_names_async = AsyncMock(return_value=[])
+                mock_crud.get_by_asset_names_async = AsyncMock(return_value=[])
 
                 result = await excel_service.import_assets_from_excel(
                     file_path="test.xlsx",
@@ -174,14 +174,14 @@ class TestExcelImportServiceErrorHandling:
             )
 
             excel_service.validator.validate_all = MagicMock(
-                return_value=(True, [], [], ["property_name"])
+                return_value=(True, [], [], ["asset_name"])
             )
 
             # 提供完整的资产数据（包含必填字段）
             def make_asset_data(row, idx):
                 return (
                     {
-                        "property_name": f"资产{idx}",
+                        "asset_name": f"资产{idx}",
                         "address": f"地址{idx}",
                         "ownership_entity": "测试单位",
                         "ownership_status": "自有",
@@ -206,7 +206,7 @@ class TestExcelImportServiceErrorHandling:
             ) as mock_crud:
                 mock_crud.create_async = AsyncMock(return_value=MagicMock(id="new_id"))
                 mock_crud.get_by_name_async = AsyncMock(return_value=None)
-                mock_crud.get_by_property_names_async = AsyncMock(return_value=[])
+                mock_crud.get_by_asset_names_async = AsyncMock(return_value=[])
 
                 result = await excel_service.import_assets_from_excel(
                     file_path="test.xlsx",
@@ -235,14 +235,14 @@ class TestExcelImportServiceErrorHandling:
             )
 
             excel_service.validator.validate_all = MagicMock(
-                return_value=(True, [], [], ["property_name"])
+                return_value=(True, [], [], ["asset_name"])
             )
 
             # 提供完整的资产数据（包含必填字段）
             complete_assets = [
                 (
                     {
-                        "property_name": "资产1",
+                        "asset_name": "资产1",
                         "address": "地址1",
                         "ownership_entity": "测试单位",
                         "ownership_status": "自有",
@@ -253,7 +253,7 @@ class TestExcelImportServiceErrorHandling:
                 ),
                 (
                     {
-                        "property_name": "资产2",
+                        "asset_name": "资产2",
                         "address": "地址2",
                         "ownership_entity": "测试单位",
                         "ownership_status": "自有",
@@ -285,7 +285,7 @@ class TestExcelImportServiceErrorHandling:
                     ]
                 )
                 mock_crud.get_by_name_async = AsyncMock(return_value=None)
-                mock_crud.get_by_property_names_async = AsyncMock(return_value=[])
+                mock_crud.get_by_asset_names_async = AsyncMock(return_value=[])
 
                 with pytest.raises(Exception) as excinfo:
                     await excel_service.import_assets_from_excel(
@@ -314,7 +314,7 @@ class TestExcelImportServiceErrorHandling:
             excel_service._map_excel_row_to_asset_data = MagicMock(
                 return_value=(
                     {
-                        "property_name": "资产1",
+                        "asset_name": "资产1",
                         "address": "地址1",
                         "operation_agreement_start_date": None,  # 日期解析失败返回None
                     },
@@ -323,7 +323,7 @@ class TestExcelImportServiceErrorHandling:
             )
 
             excel_service.validator.validate_all = MagicMock(
-                return_value=(True, [], [], ["property_name"])
+                return_value=(True, [], [], ["asset_name"])
             )
 
             result = await excel_service.import_assets_from_excel(
@@ -376,7 +376,7 @@ class TestFieldMapping:
         assert asset_data["ownership_entity"] == "测试权属方"
         assert asset_data["ownership_category"] == "国有"
         assert asset_data["project_name"] == "测试项目"
-        assert asset_data["property_name"] == "测试物业"
+        assert asset_data["asset_name"] == "测试物业"
         assert asset_data["address"] == "测试地址"
         assert asset_data["land_area"] == 1000.0
         assert asset_data["actual_property_area"] == 800.0
@@ -511,7 +511,7 @@ class TestFieldMapping:
 
         asset_data, warnings = excel_service._map_excel_row_to_asset_data(row, 1)
 
-        assert asset_data["property_name"] == "测试"
+        assert asset_data["asset_name"] == "测试"
         assert asset_data["address"] == "地址"
         assert "ownership_entity" not in asset_data
         assert "land_area" not in asset_data
@@ -530,7 +530,7 @@ class TestFieldMapping:
 
         asset_data, warnings = excel_service._map_excel_row_to_asset_data(row, 1)
 
-        assert asset_data["property_name"] == "测试"
+        assert asset_data["asset_name"] == "测试"
         assert "land_area" not in asset_data
         assert "is_litigated" not in asset_data
 
@@ -544,7 +544,7 @@ class TestFindExistingAsset:
     @pytest.mark.asyncio
     async def test_find_existing_asset_found(self, excel_service, mock_db):
         """测试找到已存在资产"""
-        asset_data = {"property_name": "测试物业", "address": "测试地址"}
+        asset_data = {"asset_name": "测试物业", "address": "测试地址"}
 
         with patch("src.services.excel.excel_import_service.asset_crud") as mock_crud:
             mock_asset = MagicMock(id="existing_123")
@@ -561,7 +561,7 @@ class TestFindExistingAsset:
     @pytest.mark.asyncio
     async def test_find_existing_asset_not_found(self, excel_service, mock_db):
         """测试未找到资产"""
-        asset_data = {"property_name": "新物业", "address": "新地址"}
+        asset_data = {"asset_name": "新物业", "address": "新地址"}
 
         with patch("src.services.excel.excel_import_service.asset_crud") as mock_crud:
             mock_crud.get_multi_with_search_async = AsyncMock(return_value=([], 0))
@@ -574,7 +574,7 @@ class TestFindExistingAsset:
     async def test_find_existing_asset_no_db(self, excel_service):
         """测试无数据库会话"""
         excel_service.db = None
-        asset_data = {"property_name": "测试", "address": "地址"}
+        asset_data = {"asset_name": "测试", "address": "地址"}
 
         result = await excel_service._find_existing_asset(asset_data)
 
@@ -583,7 +583,7 @@ class TestFindExistingAsset:
     @pytest.mark.asyncio
     async def test_find_existing_asset_exception(self, excel_service, mock_db):
         """测试查找异常"""
-        asset_data = {"property_name": "测试", "address": "地址"}
+        asset_data = {"asset_name": "测试", "address": "地址"}
 
         with patch("src.services.excel.excel_import_service.asset_crud") as mock_crud:
             mock_crud.get_multi_with_search_async = AsyncMock(
@@ -614,13 +614,13 @@ class TestUpdateExistingAssets:
             )
 
             excel_service.validator.validate_all = MagicMock(
-                return_value=(True, [], [], ["property_name"])
+                return_value=(True, [], [], ["asset_name"])
             )
 
             excel_service._map_excel_row_to_asset_data = MagicMock(
                 return_value=(
                     {
-                        "property_name": "已存在资产",
+                        "asset_name": "已存在资产",
                         "address": "地址1",
                         "ownership_entity": "新权属方",
                     },
@@ -640,7 +640,7 @@ class TestUpdateExistingAssets:
             ) as mock_crud:
                 mock_crud.get_by_name_async = AsyncMock(return_value=None)
                 mock_crud.update_async = AsyncMock(return_value=existing_asset)
-                mock_crud.get_by_property_names_async = AsyncMock(return_value=[])
+                mock_crud.get_by_asset_names_async = AsyncMock(return_value=[])
                 result = await excel_service.import_assets_from_excel(
                     file_path="test.xlsx",
                     should_validate_data=True,
@@ -664,12 +664,12 @@ class TestUpdateExistingAssets:
             )
 
             excel_service.validator.validate_all = MagicMock(
-                return_value=(True, [], [], ["property_name"])
+                return_value=(True, [], [], ["asset_name"])
             )
 
             excel_service._map_excel_row_to_asset_data = MagicMock(
                 return_value=(
-                    {"property_name": "已存在资产", "address": "地址1"},
+                    {"asset_name": "已存在资产", "address": "地址1"},
                     [],
                 )
             )
@@ -681,7 +681,7 @@ class TestUpdateExistingAssets:
                 "src.services.excel.excel_import_service.asset_crud"
             ) as mock_crud:
                 mock_crud.get_by_name_async = AsyncMock(return_value=None)
-                mock_crud.get_by_property_names_async = AsyncMock(return_value=[])
+                mock_crud.get_by_asset_names_async = AsyncMock(return_value=[])
                 result = await excel_service.import_assets_from_excel(
                     file_path="test.xlsx",
                     should_validate_data=True,
@@ -852,7 +852,7 @@ class TestWarningsCollection:
 
             excel_service._map_excel_row_to_asset_data = MagicMock(
                 return_value=(
-                    {"property_name": "资产1", "address": "地址1"},
+                    {"asset_name": "资产1", "address": "地址1"},
                     [
                         {
                             "field": "land_area",
@@ -864,7 +864,7 @@ class TestWarningsCollection:
             )
 
             excel_service.validator.validate_all = MagicMock(
-                return_value=(True, [], [], ["property_name"])
+                return_value=(True, [], [], ["asset_name"])
             )
 
             result = await excel_service.import_assets_from_excel(
@@ -895,7 +895,7 @@ class TestFieldMappingConstant:
     def test_field_mapping_values(self):
         """测试字段映射值"""
         assert FIELD_MAPPING["权属方"] == "ownership_entity"
-        assert FIELD_MAPPING["物业名称"] == "property_name"
+        assert FIELD_MAPPING["物业名称"] == "asset_name"
         assert FIELD_MAPPING["物业地址"] == "address"
 
     def test_field_mapping_count(self):

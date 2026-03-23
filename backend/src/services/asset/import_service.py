@@ -49,7 +49,9 @@ class AsyncAssetImportService:
             or "system"
         )
         operator_value = str(operator) if operator is not None else None
-        default_org_id = getattr(current_user, "default_organization_id", None)  # DEPRECATED legacy org scope fallback
+        default_org_id = getattr(
+            current_user, "default_organization_id", None
+        )  # DEPRECATED legacy org scope fallback
         organization_id = (  # DEPRECATED alias
             str(default_org_id)
             if default_org_id is not None and str(default_org_id).strip() != ""
@@ -68,12 +70,15 @@ class AsyncAssetImportService:
                 validation_request = AssetValidationRequest(
                     data=asset_data, validate_rules=None
                 )
-                is_valid, validation_errors, _, _ = (
-                    await self.batch_service.validate_asset_data(
-                        data=validation_request.data,
-                        validate_rules=validation_request.validate_rules,
-                        enum_validation_service=enum_service,
-                    )
+                (
+                    is_valid,
+                    validation_errors,
+                    _,
+                    _,
+                ) = await self.batch_service.validate_asset_data(
+                    data=validation_request.data,
+                    validate_rules=validation_request.validate_rules,
+                    enum_validation_service=enum_service,
                 )
 
                 error_models = [
@@ -92,9 +97,9 @@ class AsyncAssetImportService:
                     continue
 
                 existing_asset = None
-                property_name = self._normalize_string(asset_data.get("property_name"))
-                if request.import_mode in ["merge", "update"] and property_name != "":
-                    existing_asset = existing_assets_by_name.get(property_name)
+                asset_name = self._normalize_string(asset_data.get("asset_name"))
+                if request.import_mode in ["merge", "update"] and asset_name != "":
+                    existing_asset = existing_assets_by_name.get(asset_name)
 
                 ownership_id = self._normalize_string(asset_data.get("ownership_id"))
                 ownership_entity = self._normalize_string(
@@ -131,9 +136,8 @@ class AsyncAssetImportService:
                         failed_count += 1
                         continue
 
-                    if (
-                        ownership_entity != ""
-                        and ownership_entity != str(ownership.name)
+                    if ownership_entity != "" and ownership_entity != str(
+                        ownership.name
                     ):
                         errors.append(
                             self._build_batch_error(
@@ -150,8 +154,8 @@ class AsyncAssetImportService:
 
                 asset_data.pop("ownership_entity", None)
 
-                if property_name:
-                    existing_by_name = existing_assets_by_name.get(property_name)
+                if asset_name:
+                    existing_by_name = existing_assets_by_name.get(asset_name)
                     if existing_by_name and (
                         not existing_asset
                         or str(existing_by_name.id) != str(existing_asset.id)
@@ -159,7 +163,7 @@ class AsyncAssetImportService:
                         errors.append(
                             self._build_batch_error(
                                 row_index=index + 1,
-                                field="property_name",
+                                field="asset_name",
                                 message="物业名称已存在",
                                 code="DUPLICATE_RESOURCE",
                             )
@@ -179,9 +183,8 @@ class AsyncAssetImportService:
                         operator=operator_value,
                         organization_id=organization_id,  # DEPRECATED alias
                     )
-                    assert new_asset is not None
-                    if getattr(new_asset, "property_name", None) is not None:
-                        existing_assets_by_name[str(new_asset.property_name)] = new_asset
+                    if getattr(new_asset, "asset_name", None) is not None:
+                        existing_assets_by_name[str(new_asset.asset_name)] = new_asset
                     imported_assets.append(str(new_asset.id))
                     success_count += 1
                     continue
@@ -200,8 +203,8 @@ class AsyncAssetImportService:
                         obj_in=asset_update,
                         operator=operator_value,
                     )
-                    if getattr(updated_asset, "property_name", None) is not None:
-                        existing_assets_by_name[str(updated_asset.property_name)] = (
+                    if getattr(updated_asset, "asset_name", None) is not None:
+                        existing_assets_by_name[str(updated_asset.asset_name)] = (
                             updated_asset
                         )
                     imported_assets.append(str(updated_asset.id))
@@ -216,8 +219,8 @@ class AsyncAssetImportService:
                         obj_in=asset_update,
                         operator=operator_value,
                     )
-                    if getattr(updated_asset, "property_name", None) is not None:
-                        existing_assets_by_name[str(updated_asset.property_name)] = (
+                    if getattr(updated_asset, "asset_name", None) is not None:
+                        existing_assets_by_name[str(updated_asset.asset_name)] = (
                             updated_asset
                         )
                     imported_assets.append(str(updated_asset.id))
@@ -231,9 +234,8 @@ class AsyncAssetImportService:
                     operator=operator_value,
                     organization_id=organization_id,  # DEPRECATED alias
                 )
-                assert new_asset is not None
-                if getattr(new_asset, "property_name", None) is not None:
-                    existing_assets_by_name[str(new_asset.property_name)] = new_asset
+                if getattr(new_asset, "asset_name", None) is not None:
+                    existing_assets_by_name[str(new_asset.asset_name)] = new_asset
                 imported_assets.append(str(new_asset.id))
                 success_count += 1
 
@@ -292,25 +294,25 @@ class AsyncAssetImportService:
         self,
         data: list[dict[str, Any]],
     ) -> dict[str, Asset]:
-        property_names_to_load = {
-            self._normalize_string(item.get("property_name"))
+        asset_names_to_load = {
+            self._normalize_string(item.get("asset_name"))
             for item in data
-            if self._normalize_string(item.get("property_name")) != ""
+            if self._normalize_string(item.get("asset_name")) != ""
         }
 
-        if not property_names_to_load:
+        if not asset_names_to_load:
             return {}
 
-        existing_asset_rows = await asset_crud.get_by_property_names_async(
+        existing_asset_rows = await asset_crud.get_by_asset_names_async(
             self.db,
-            list(property_names_to_load),
+            list(asset_names_to_load),
             exclude_deleted=True,
             decrypt=False,
         )
         return {
-            str(asset.property_name): asset
+            str(asset.asset_name): asset
             for asset in existing_asset_rows
-            if getattr(asset, "property_name", None) is not None
+            if getattr(asset, "asset_name", None) is not None
         }
 
     @staticmethod

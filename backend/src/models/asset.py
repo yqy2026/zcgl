@@ -2,6 +2,7 @@
 资产相关数据库模型
 """
 
+import enum
 import logging
 import uuid
 from datetime import UTC, date, datetime
@@ -19,19 +20,22 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    and_,
     inspect,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship, synonym
 from sqlalchemy.orm import attributes as orm_attributes
 
 from ..database import Base
+from .project_asset import ProjectAsset
 
 if TYPE_CHECKING:
     from .asset_history import AssetDocument, AssetHistory
+    from .asset_review_log import AssetReviewLog
+    from .contract_group import Contract
     from .party import Party
     from .project import Project
     from .property_certificate import PropertyCertificate
-    from .rent_contract import RentContract
 
 
 def _utcnow_naive() -> datetime:
@@ -40,6 +44,48 @@ def _utcnow_naive() -> datetime:
 
 
 logger = logging.getLogger(__name__)
+
+
+class AssetForm(str, enum.Enum):
+    """资产形态"""
+
+    LAND = "land"  # 土地
+    BUILDING = "building"  # 建筑
+    STRUCTURE = "structure"  # 构筑物
+    PARKING = "parking"  # 车位
+    WAREHOUSE = "warehouse"  # 仓储
+    OTHER = "other"  # 其他
+
+
+class SpatialLevel(str, enum.Enum):
+    """空间层级"""
+
+    PLOT = "plot"  # 地块
+    CAMPUS = "campus"  # 园区
+    BUILDING = "building"  # 楼宇
+    FLOOR = "floor"  # 楼层
+    ROOM = "room"  # 房间
+    SHOP = "shop"  # 商铺
+
+
+class BusinessUsage(str, enum.Enum):
+    """经营用途"""
+
+    COMMERCIAL = "commercial"  # 商业
+    OFFICE = "office"  # 办公
+    WAREHOUSE = "warehouse"  # 仓储
+    INDUSTRIAL = "industrial"  # 工业
+    MIXED = "mixed"  # 综合
+    OTHER = "other"  # 其他
+
+
+class AssetReviewStatus(str, enum.Enum):
+    """资产审核状态"""
+
+    DRAFT = "draft"  # 草稿
+    PENDING = "pending"  # 待审
+    APPROVED = "approved"  # 已审
+    REVERSED = "reversed"  # 反审核
 
 
 class Asset(Base):
@@ -51,7 +97,7 @@ class Asset(Base):
         String, primary_key=True, default=lambda: str(uuid.uuid4())
     )
 
-    # 基本信息 - 按照权属方、权属类别、项目名称、物业名称、物业地址顺序
+    # 基本信息 - 按照权属方、权属类别、资产编码、资产名称、资产分类、地址顺序
     # ownership_entity 移除：使用 ownership_id 作为权属唯一来源
     ownership_category: Mapped[str | None] = mapped_column(
         String(100), comment="权属类别"
@@ -62,11 +108,42 @@ class Asset(Base):
         comment="项目名称（DEPRECATED，仅搜索兼容）",
         info={"deprecated": True},
     )
-    property_name: Mapped[str] = mapped_column(
-        String(200), nullable=False, unique=True, comment="物业名称"
+    asset_code: Mapped[str | None] = mapped_column(
+        String(50),
+        unique=True,
+        index=True,
+        comment="资产编码（全局唯一，按产权方编码段生成）",
+    )
+    asset_name: Mapped[str] = mapped_column(
+        String(200), nullable=False, unique=True, comment="资产名称"
+    )
+    asset_form: Mapped[str | None] = mapped_column(
+        String(20),
+        index=True,
+        comment="资产形态：land/building/structure/parking/warehouse/other",
+    )
+    spatial_level: Mapped[str | None] = mapped_column(
+        String(20), comment="空间层级：plot/campus/building/floor/room/shop"
+    )
+    business_usage: Mapped[str | None] = mapped_column(
+        String(20),
+        comment="经营用途：commercial/office/warehouse/industrial/mixed/other",
+    )
+    # 半结构化地址（行政区三级 + 详细地址）
+    province_code: Mapped[str | None] = mapped_column(
+        String(20), comment="省级行政区代码"
+    )
+    city_code: Mapped[str | None] = mapped_column(String(20), comment="市级行政区代码")
+    district_code: Mapped[str | None] = mapped_column(
+        String(20), comment="区县行政区代码"
+    )
+    address_detail: Mapped[str | None] = mapped_column(
+        String(200), comment="详细地址（trim 后长度 5-200）"
     )
     address: Mapped[str] = mapped_column(
-        String(500), nullable=False, comment="物业地址"
+        String(500),
+        nullable=False,
+        comment="物业地址（系统拼接只读展示字段，不对外开放直写）",
     )
     ownership_status: Mapped[str] = mapped_column(
         String(50), nullable=False, index=True, comment="确权状态"
@@ -158,6 +235,23 @@ class Asset(Base):
         Text, comment="终端合同文件"
     )
 
+    # 审核字段
+    review_status: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default=AssetReviewStatus.DRAFT.value,
+        comment="审核状态",
+    )
+    review_by: Mapped[str | None] = mapped_column(
+        String(100), comment="审核人（通过/反审核时必填）"
+    )
+    reviewed_at: Mapped[datetime | None] = mapped_column(
+        DateTime, comment="审核时间（通过/反审核时必填）"
+    )
+    review_reason: Mapped[str | None] = mapped_column(
+        Text, comment="审核原因（驳回/反审核时必填）"
+    )
+
     # 系统字段
     data_status: Mapped[str] = mapped_column(
         String(20), nullable=False, default="正常", comment="数据状态"
@@ -173,7 +267,9 @@ class Asset(Base):
 
     # 时间戳
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None), comment="创建时间"
+        DateTime,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        comment="创建时间",
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
@@ -186,14 +282,20 @@ class Asset(Base):
     history_records: Mapped[list["AssetHistory"]] = relationship(
         "AssetHistory", back_populates="asset", cascade="all, delete-orphan"
     )
+    review_logs: Mapped[list["AssetReviewLog"]] = relationship(
+        "AssetReviewLog",
+        back_populates="asset",
+        cascade="all, delete-orphan",
+        order_by="AssetReviewLog.created_at.desc()",
+    )
     documents: Mapped[list["AssetDocument"]] = relationship(
         "AssetDocument", back_populates="asset", cascade="all, delete-orphan"
     )
-    rent_contracts: Mapped[list["RentContract"]] = relationship(
-        "RentContract",
-        secondary="rent_contract_assets",
-        back_populates="assets",
+    contracts: Mapped[list["Contract"]] = relationship(
+        "Contract",
+        secondary="contract_assets",
         lazy="selectin",
+        overlaps="assets",
     )
     certificates: Mapped[list["PropertyCertificate"]] = relationship(
         "PropertyCertificate",
@@ -219,8 +321,11 @@ class Asset(Base):
     project: Mapped["Project | None"] = relationship(
         "Project",
         secondary="project_assets",
-        primaryjoin="Asset.id == ProjectAsset.asset_id",
-        secondaryjoin="Project.id == ProjectAs" "set.project_id",
+        primaryjoin=lambda: and_(
+            Asset.id == ProjectAsset.asset_id,
+            ProjectAsset.valid_to.is_(None),
+        ),
+        secondaryjoin="Project.id == ProjectAsset.project_id",
         uselist=False,
         viewonly=True,
     )
@@ -285,31 +390,40 @@ class Asset(Base):
 
     def _pick_preferred_contract(
         self,
-        contracts_value: list["RentContract"],
+        contracts_value: list["Contract"],
         active_statuses: set[str],
         *,
         today: date,
-    ) -> "RentContract | None":
-        latest_active: RentContract | None = None
+    ) -> "Contract | None":
+        latest_active: Contract | None = None
         latest_active_rank: tuple[date, datetime] | None = None
-        latest_effective: RentContract | None = None
+        latest_effective: Contract | None = None
         latest_effective_rank: tuple[date, datetime] | None = None
 
         for contract in contracts_value:
-            if getattr(contract, "contract_status", None) not in active_statuses:
+            status = getattr(contract, "status", None)
+            status_name = getattr(status, "name", None)
+            status_value = getattr(status, "value", None)
+            if (
+                status_name not in active_statuses
+                and status_value not in active_statuses
+                and str(status) not in active_statuses
+            ):
                 continue
 
             rank = (
-                contract.start_date or date.min,
-                contract.created_at or datetime.min,
+                getattr(contract, "effective_from", None) or date.min,
+                getattr(contract, "created_at", None) or datetime.min,
             )
 
             if latest_active_rank is None or rank > latest_active_rank:
                 latest_active = contract
                 latest_active_rank = rank
 
-            if (contract.start_date is None or contract.start_date <= today) and (
-                contract.end_date is None or contract.end_date >= today
+            effective_from = getattr(contract, "effective_from", None)
+            effective_to = getattr(contract, "effective_to", None)
+            if (effective_from is None or effective_from <= today) and (
+                effective_to is None or effective_to >= today
             ):
                 if latest_effective_rank is None or rank > latest_effective_rank:
                     latest_effective = contract
@@ -319,18 +433,20 @@ class Asset(Base):
 
     def _get_cached_active_contract(
         self,
-        contracts_value: list["RentContract"],
+        contracts_value: list["Contract"],
         active_statuses: set[str],
         *,
         today: date,
-    ) -> "RentContract | None":
+    ) -> "Contract | None":
         cache_token = (id(contracts_value), len(contracts_value))
         cached_token = self.__dict__.get("_active_contract_cache_token")
         if (
             cached_token == cache_token
             and "_active_contract_cache_value" in self.__dict__
         ):
-            return cast("RentContract | None", self.__dict__["_active_contract_cache_value"])
+            return cast(
+                "Contract | None", self.__dict__["_active_contract_cache_value"]
+            )
 
         selected_contract = self._pick_preferred_contract(
             contracts_value,
@@ -342,25 +458,17 @@ class Asset(Base):
         return selected_contract
 
     @property
-    def active_contract(self) -> "RentContract | None":
+    def active_contract(self) -> "Contract | None":
         """获取当前有效合同。"""
-        from ..core.enums import ContractStatus
-
         contracts_value = self._get_loaded_relationship_value(
-            "rent_contracts",
+            "contracts",
             projection_field="active_contract",
         )
         if contracts_value is None:
             return None
 
         today = date.today()
-        active_statuses = {
-            ContractStatus.ACTIVE.value,
-            ContractStatus.EXPIRING.value,
-            "有效",
-            "执行中",
-            "即将到期",
-        }
+        active_statuses = {"ACTIVE", "生效"}
         return self._get_cached_active_contract(
             contracts_value,
             active_statuses,
@@ -370,7 +478,8 @@ class Asset(Base):
     @property
     def tenant_name(self) -> str | None:
         contract = self.active_contract
-        return contract.tenant_name if contract else None
+        lease_detail = getattr(contract, "lease_detail", None) if contract else None
+        return getattr(lease_detail, "tenant_name", None)
 
     @property
     def lease_contract_number(self) -> str | None:
@@ -380,22 +489,24 @@ class Asset(Base):
     @property
     def contract_start_date(self) -> date | None:
         contract = self.active_contract
-        return contract.start_date if contract else None
+        return contract.effective_from if contract else None
 
     @property
     def contract_end_date(self) -> date | None:
         contract = self.active_contract
-        return contract.end_date if contract else None
+        return contract.effective_to if contract else None
 
     @property
     def monthly_rent(self) -> Decimal | None:
         contract = self.active_contract
-        return contract.monthly_rent_base if contract else None
+        lease_detail = getattr(contract, "lease_detail", None) if contract else None
+        return getattr(lease_detail, "monthly_rent_base", None)
 
     @property
     def deposit(self) -> Decimal | None:
         contract = self.active_contract
-        return contract.total_deposit if contract else None
+        lease_detail = getattr(contract, "lease_detail", None) if contract else None
+        return getattr(lease_detail, "total_deposit", None)
 
     # 计算属性 - 未出租面积（自动计算，不存储）
     @cached_property
@@ -431,8 +542,10 @@ class Asset(Base):
         owner_party_id = kwargs.get("owner_party_id")
         legacy_ownership_id = kwargs.pop("ownership_id", None)
         if (
-            owner_party_id is None or str(owner_party_id).strip() == ""
-        ) and legacy_ownership_id is not None and str(legacy_ownership_id).strip() != "":
+            (owner_party_id is None or str(owner_party_id).strip() == "")
+            and legacy_ownership_id is not None
+            and str(legacy_ownership_id).strip() != ""
+        ):
             kwargs["owner_party_id"] = str(legacy_ownership_id).strip()
             owner_party_id = kwargs["owner_party_id"]
         if (
@@ -464,6 +577,7 @@ class Asset(Base):
 
         kwargs.setdefault("id", str(uuid.uuid4()))
         kwargs.setdefault("data_status", "正常")
+        kwargs.setdefault("review_status", AssetReviewStatus.DRAFT.value)
         kwargs.setdefault("version", 1)
         kwargs.setdefault("is_litigated", False)
         kwargs.setdefault("include_in_occupancy_rate", True)
@@ -473,7 +587,7 @@ class Asset(Base):
         super().__init__(**kwargs)
 
     def __repr__(self) -> str:
-        return f"<Asset(id={self.id}, name={self.property_name})>"
+        return f"<Asset(id={self.id}, name={self.asset_name})>"
 
     def clear_cached_properties(self) -> None:
         """清除缓存的计算属性"""
@@ -481,5 +595,4 @@ class Asset(Base):
         self.__dict__.pop("occupancy_rate", None)
 
 
-__all__ = ["Asset"]
-
+__all__ = ["Asset", "AssetForm", "SpatialLevel", "BusinessUsage", "AssetReviewStatus"]

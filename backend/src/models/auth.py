@@ -65,7 +65,9 @@ class User(Base):
         DateTime, comment="锁定到期时间"
     )
     password_last_changed: Mapped[datetime] = mapped_column(
-        DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None), comment="密码最后修改时间"
+        DateTime,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        comment="密码最后修改时间",
     )
 
     # 组织关联
@@ -75,7 +77,10 @@ class User(Base):
 
     # 审计信息
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=lambda: datetime.now(UTC).replace(tzinfo=None), comment="创建时间"
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        comment="创建时间",
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
@@ -188,7 +193,10 @@ class UserSession(Base):
 
     # 时间信息
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=lambda: datetime.now(UTC).replace(tzinfo=None), comment="创建时间"
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        comment="创建时间",
     )
     last_accessed_at: Mapped[datetime] = mapped_column(
         DateTime,
@@ -263,7 +271,10 @@ class AuditLog(Base):
 
     # 时间信息
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=lambda: datetime.now(UTC).replace(tzinfo=None), comment="创建时间"
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        comment="创建时间",
     )
 
     # 关系

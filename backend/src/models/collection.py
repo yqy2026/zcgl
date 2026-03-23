@@ -23,8 +23,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from ..database import Base
 
 if TYPE_CHECKING:
-    from .rent_contract import RentContract
-    from .rent_ledger import RentLedger
+    from .contract_group import Contract, ContractLedgerEntry
 
 
 class CollectionMethod(str, enum.Enum):
@@ -59,13 +58,13 @@ class CollectionRecord(Base):
     # 关联信息
     ledger_id = Column(
         String,
-        ForeignKey("rent_ledger.id"),
+        ForeignKey("contract_ledger_entries.entry_id"),
         nullable=False,
         comment="关联的租金台账ID",
     )
     contract_id = Column(
         String,
-        ForeignKey("rent_contracts.id"),
+        ForeignKey("contracts.contract_id"),
         nullable=False,
         comment="关联合同ID",
     )
@@ -105,7 +104,11 @@ class CollectionRecord(Base):
     operator_id = Column(String(50), comment="操作人ID")
 
     # 时间戳
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC).replace(tzinfo=None), comment="创建时间")
+    created_at = Column(
+        DateTime,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        comment="创建时间",
+    )
     updated_at = Column(
         DateTime,
         default=lambda: datetime.now(UTC).replace(tzinfo=None),
@@ -114,8 +117,8 @@ class CollectionRecord(Base):
     )
 
     # 关联关系
-    ledger: Mapped["RentLedger"] = relationship("RentLedger")
-    contract: Mapped["RentContract"] = relationship("RentContract")
+    ledger: Mapped["ContractLedgerEntry"] = relationship("ContractLedgerEntry")
+    contract: Mapped["Contract"] = relationship("Contract")
 
     def __repr__(self) -> str:
         return f"<CollectionRecord(ledger_id={self.ledger_id}, method={self.collection_method}, status={self.collection_status})>"  # pragma: no cover

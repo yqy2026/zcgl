@@ -111,7 +111,7 @@ class TestQueryBuilderSecurityIntegration:
         qb = QueryBuilder(Asset)
 
         # Include both safe and blocked fields
-        search_fields = ["property_name", "manager_name", "address"]
+        search_fields = ["asset_name", "manager_name", "address"]
 
         # Should not raise error - blocked fields skipped silently
         query = qb.build_query(
@@ -149,7 +149,7 @@ class TestQueryBuilderSecurityIntegration:
         sort_fields = [
             "created_at",
             "updated_at",
-            "property_name",
+            "asset_name",
             "actual_property_area",
         ]
 
@@ -337,35 +337,6 @@ class TestSecurityAttackScenarios:
 
         assert "created_by" in str(exc_info.value)
 
-    def test_contract_discovery_blocked(self, db_session):
-        """Attempting to discover contract details should be blocked."""
-        from src.models.rent_contract import RentContract
-
-        qb = QueryBuilder(RentContract)
-
-        # Try to filter by tenant name
-        filters = {"tenant_name": "test"}
-
-        with pytest.raises(InvalidRequestError) as exc_info:
-            qb.build_query(filters=filters)
-
-        assert "tenant_name" in str(exc_info.value)
-
-    def test_phone_discovery_blocked(self, db_session):
-        """Attempting to discover phone numbers should be blocked."""
-        from src.models.rent_contract import RentContract
-
-        qb = QueryBuilder(RentContract)
-
-        # Try to filter by phone
-        filters = {"owner_phone": "13800138000"}
-
-        with pytest.raises(InvalidRequestError) as exc_info:
-            qb.build_query(filters=filters)
-
-        assert "owner_phone" in str(exc_info.value)
-
-
 class TestWhitelistCompliance:
     """Test that all models comply with whitelist requirements."""
 
@@ -380,17 +351,17 @@ class TestWhitelistCompliance:
             "Asset should have explicit whitelist, not empty"
         )
 
-    def test_rent_contract_has_whitelist(self):
-        """RentContract model should have a whitelist registered."""
+    def test_contract_has_whitelist(self):
+        """New Contract model should have a whitelist registered."""
         from src.crud.field_whitelist import (
             EmptyWhitelist,
             get_whitelist_for_model,
         )
-        from src.models.rent_contract import RentContract
+        from src.models.contract_group import Contract
 
-        whitelist = get_whitelist_for_model(RentContract)
+        whitelist = get_whitelist_for_model(Contract)
         assert not isinstance(whitelist, EmptyWhitelist), (
-            "RentContract should have explicit whitelist"
+            "Contract should have explicit whitelist"
         )
 
     def test_ownership_has_whitelist(self):

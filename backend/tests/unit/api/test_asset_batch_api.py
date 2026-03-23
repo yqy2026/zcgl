@@ -116,14 +116,14 @@ class TestValidateAssetData:
                         "code": "OPTIONAL_MISSING",
                     }
                 ],
-                ["property_name"],
+                ["asset_name"],
             )
         )
         mock_batch_service.return_value = mock_service_instance
 
         validation_request = {
             "data": {
-                "property_name": "Test Property",
+                "asset_name": "Test Property",
                 "address": "123 Test St",
                 "area": 100.5,
             },
@@ -156,7 +156,7 @@ class TestValidateAssetData:
                         "code": "INVALID_VALUE",
                     },
                     {
-                        "field": "property_name",
+                        "field": "asset_name",
                         "error": "Missing required field",
                         "code": "REQUIRED",
                     },
@@ -243,11 +243,11 @@ class TestGetAllAssets:
         """Test successful retrieval of all assets"""
         # Mock assets
         mock_assets = [
-            MagicMock(id="id1", property_name="Property 1"),
-            MagicMock(id="id2", property_name="Property 2"),
+            MagicMock(id="id1", asset_name="Property 1"),
+            MagicMock(id="id2", asset_name="Property 2"),
         ]
         mock_model_validate.side_effect = (
-            lambda asset: {"id": asset.id, "property_name": asset.property_name}
+            lambda asset: {"id": asset.id, "asset_name": asset.asset_name}
         )
         mock_service_instance = MagicMock()
         mock_service_instance.get_assets = AsyncMock(return_value=(mock_assets, 2))
@@ -286,12 +286,12 @@ class TestGetAssetsByIds:
     ):
         """Test successful retrieval of assets by IDs"""
         mock_assets = [
-            MagicMock(id="id1", property_name="Property 1"),
-            MagicMock(id="id2", property_name="Property 2"),
-            MagicMock(id="id3", property_name="Property 3"),
+            MagicMock(id="id1", asset_name="Property 1"),
+            MagicMock(id="id2", asset_name="Property 2"),
+            MagicMock(id="id3", asset_name="Property 3"),
         ]
         mock_model_validate.side_effect = (
-            lambda asset: {"id": asset.id, "property_name": asset.property_name}
+            lambda asset: {"id": asset.id, "asset_name": asset.asset_name}
         )
 
         mock_service_instance = MagicMock()
@@ -315,10 +315,10 @@ class TestGetAssetsByIds:
     ):
         """Test getting assets by IDs when some don't exist"""
         mock_assets = [
-            MagicMock(id="id1", property_name="Property 1"),
+            MagicMock(id="id1", asset_name="Property 1"),
         ]
         mock_model_validate.side_effect = (
-            lambda asset: {"id": asset.id, "property_name": asset.property_name}
+            lambda asset: {"id": asset.id, "asset_name": asset.asset_name}
         )
 
         mock_service_instance = MagicMock()
@@ -411,7 +411,7 @@ class TestBatchOperationsUnauthorized:
     def test_validate_authorized(self, unauthenticated_client):
         """Test that validate requires authentication"""
         validation_request = {
-            "data": {"property_name": "Test"},
+            "data": {"asset_name": "Test"},
         }
         response = unauthenticated_client.post(
             "/api/v1/assets/validate", json=validation_request

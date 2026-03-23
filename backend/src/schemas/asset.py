@@ -40,8 +40,7 @@ def _reject_legacy_asset_fields(data: Any) -> Any:
         return data
 
     replacement_mapping = "、".join(
-        f"{field}->{LEGACY_ASSET_FIELD_REPLACEMENTS[field]}"
-        for field in legacy_fields
+        f"{field}->{LEGACY_ASSET_FIELD_REPLACEMENTS[field]}" for field in legacy_fields
     )
     raise PydanticCustomError(
         "legacy_asset_field_not_supported",
@@ -53,7 +52,7 @@ def _reject_legacy_asset_fields(data: Any) -> Any:
 class AssetBase(BaseModel):
     """资产基础模型"""
 
-    # 基本信息 - 按照权属方、权属类别、项目名称、物业名称、物业地址顺序
+    # 基本信息 - 按照权属方、权属类别、资产编码、资产名称、分类、地址顺序
     organization_id: str | None = Field(None, description="所属组织ID（DEPRECATED）")
     ownership_id: str | None = Field(None, description="权属方ID（DEPRECATED）")
     manager_party_id: str | None = Field(None, description="经营管理方主体ID")
@@ -66,17 +65,34 @@ class AssetBase(BaseModel):
         max_length=FieldLengthLimits.SHORT_TEXT_MAX,
         description="项目名称",
     )
-    property_name: str = Field(
+    asset_code: str | None = Field(
+        None, max_length=50, description="资产编码（系统生成，新建时可留空）"
+    )
+    asset_name: str = Field(
         ...,
         min_length=1,
         max_length=FieldLengthLimits.SHORT_TEXT_MAX,
-        description="物业名称",
+        description="资产名称",
     )
-    address: str = Field(
-        ...,
-        min_length=1,
-        max_length=FieldLengthLimits.MEDIUM_TEXT_MAX,
-        description="物业地址",
+    asset_form: str | None = Field(
+        None, description="资产形态：land/building/structure/parking/warehouse/other"
+    )
+    spatial_level: str | None = Field(
+        None, description="空间层级：plot/campus/building/floor/room/shop"
+    )
+    business_usage: str | None = Field(
+        None, description="经营用途：commercial/office/warehouse/industrial/mixed/other"
+    )
+    # 半结构化地址子字段（所有三级行政区上线前可暂时为 null）
+    province_code: str | None = Field(None, max_length=20, description="省级行政区代码")
+    city_code: str | None = Field(None, max_length=20, description="市级行政区代码")
+    district_code: str | None = Field(None, max_length=20, description="区县行政区代码")
+    address_detail: str | None = Field(
+        None, max_length=200, description="详细地址（trim 后长度 5-200）"
+    )
+    # address 不对外开放直写，由 Service 层自动拼接，必须保留在 schema 中才能通过 CRUD 传入 ORM
+    address: str | None = Field(
+        None, description="物业地址（系统拼接只读，不接受外部直写）"
     )
     ownership_status: str = Field(..., description="确权状态")
     property_nature: str = Field(..., description="物业性质")
@@ -149,6 +165,22 @@ class AssetBase(BaseModel):
     # last_audit_date, audit_status, auditor 字段已移除
     audit_notes: str | None = Field(None, description="审核备注")
 
+    @field_validator("address_detail")
+    @classmethod
+    def validate_address_detail(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        stripped = v.strip()
+        if len(stripped) < 5:
+            raise PydanticCustomError(
+                "address_detail_too_short", "详细地址 trim 后不得少于 5 个字符", {}
+            )
+        if len(stripped) > 200:
+            raise PydanticCustomError(
+                "address_detail_too_long", "详细地址 trim 后不得超过 200 个字符", {}
+            )
+        return stripped
+
     @model_validator(mode="before")
     @classmethod
     def reject_legacy_fields(cls, data: Any) -> Any:
@@ -215,7 +247,7 @@ class AssetCreate(AssetBase):
 class AssetUpdate(BaseModel):
     """更新资产模型"""
 
-    # 基本信息 - 按照权属方、权属类别、项目名称、物业名称、物业地址顺序
+    # 基本信息 - 按照权属方、权属类别、资产编码、资产名称、分类、地址顺序
     organization_id: str | None = Field(None, description="所属组织ID（DEPRECATED）")
     ownership_id: str | None = Field(None, description="权属方ID（DEPRECATED）")
     manager_party_id: str | None = Field(None, description="经营管理方主体ID")
@@ -226,11 +258,20 @@ class AssetUpdate(BaseModel):
         max_length=200,
         description="项目名称",
     )
-    property_name: str | None = Field(
-        None, min_length=1, max_length=200, description="物业名称"
+    asset_code: str | None = Field(None, max_length=50, description="资产编码")
+    asset_name: str | None = Field(
+        None, min_length=1, max_length=200, description="资产名称"
     )
+    asset_form: str | None = Field(None, description="资产形态")
+    spatial_level: str | None = Field(None, description="空间层级")
+    business_usage: str | None = Field(None, description="经营用途")
+    province_code: str | None = Field(None, max_length=20, description="省级行政区代码")
+    city_code: str | None = Field(None, max_length=20, description="市级行政区代码")
+    district_code: str | None = Field(None, max_length=20, description="区县行政区代码")
+    address_detail: str | None = Field(None, max_length=200, description="详细地址")
+    # address 不对外开放直写
     address: str | None = Field(
-        None, min_length=1, max_length=500, description="物业地址"
+        None, description="物业地址（系统拼接，不接受外部直写）"
     )
     ownership_status: str | None = Field(None, description="确权状态")
     property_nature: str | None = Field(None, description="物业性质")
@@ -304,9 +345,25 @@ class AssetUpdate(BaseModel):
     # last_audit_date, audit_status, auditor 字段已移除
     audit_notes: str | None = Field(None, description="审核备注")
 
+    @field_validator("address_detail")
+    @classmethod
+    def validate_address_detail_update(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        stripped = v.strip()
+        if len(stripped) < 5:
+            raise PydanticCustomError(
+                "address_detail_too_short", "详细地址 trim 后不得少于 5 个字符", {}
+            )
+        if len(stripped) > 200:
+            raise PydanticCustomError(
+                "address_detail_too_long", "详细地址 trim 后不得超过 200 个字符", {}
+            )
+        return stripped
+
     @model_validator(mode="before")
     @classmethod
-    def reject_legacy_fields(cls, data: Any) -> Any:
+    def reject_legacy_fields_update(cls, data: Any) -> Any:
         return _reject_legacy_asset_fields(data)
 
     @field_validator(
@@ -336,6 +393,28 @@ class AssetUpdate(BaseModel):
         return v  # pragma: no cover
 
 
+class AssetReviewRejectRequest(BaseModel):
+    """资产驳回/反审核请求。"""
+
+    reason: str = Field(..., min_length=1, max_length=500, description="原因（必填）")
+
+
+class AssetReviewLogResponse(BaseModel):
+    """资产审核日志响应。"""
+
+    id: str = Field(..., description="日志ID")
+    asset_id: str = Field(..., description="资产ID")
+    action: str = Field(..., description="动作")
+    from_status: str = Field(..., description="变更前状态")
+    to_status: str = Field(..., description="变更后状态")
+    operator: str | None = Field(None, description="操作人")
+    reason: str | None = Field(None, description="原因")
+    context: dict[str, Any] | None = Field(None, description="附加上下文")
+    created_at: datetime = Field(..., description="创建时间")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class AssetResponseBase(BaseModel):
     """
     资产响应基础模型 - 使用宽松的str类型
@@ -345,13 +424,19 @@ class AssetResponseBase(BaseModel):
     """
 
     # 基本信息
-    ownership_entity: str | None = Field(
-        None, description="权属方名称（动态获取）"
-    )
+    ownership_entity: str | None = Field(None, description="权属方名称（动态获取）")
     ownership_category: str | None = Field(None, description="权属类别")
     project_name: str | None = Field(None, description="项目名称")
-    property_name: str = Field(..., description="物业名称")
-    address: str = Field(..., description="物业地址")
+    asset_code: str | None = Field(None, description="资产编码")
+    asset_name: str = Field(..., description="资产名称")
+    asset_form: str | None = Field(None, description="资产形态")
+    spatial_level: str | None = Field(None, description="空间层级")
+    business_usage: str | None = Field(None, description="经营用途")
+    province_code: str | None = Field(None, description="省级行政区代码")
+    city_code: str | None = Field(None, description="市级行政区代码")
+    district_code: str | None = Field(None, description="区县行政区代码")
+    address_detail: str | None = Field(None, description="详细地址")
+    address: str = Field(..., description="物业地址（系统拼接只读）")
 
     # 枚举字段 - 使用str类型以兼容遗留数据
     ownership_status: str = Field(..., description="确权状态")
@@ -421,7 +506,16 @@ class AssetResponseBase(BaseModel):
     version: int = Field(1, description="版本号")
     tags: str | None = Field(None, description="标签")
 
-    # 审核相关字段
+    # 审核字段
+    review_status: str = Field(
+        "draft", description="审核状态：draft/pending/approved/reversed"
+    )
+    review_by: str | None = Field(None, description="审核人")
+    reviewed_at: datetime | None = Field(None, description="审核时间")
+    review_reason: str | None = Field(None, description="审核原因")
+
+    # 审核相关字段已简化
+    # last_audit_date, audit_status, auditor 字段已移除
     audit_notes: str | None = Field(None, description="审核备注")
 
 
@@ -431,7 +525,9 @@ class AssetResponse(AssetResponseBase):
     id: str = Field(..., description="资产ID")
     organization_id: str | None = Field(None, description="所属组织ID（DEPRECATED）")
     project_id: str | None = Field(None, description="项目ID")  # 对齐Model
-    ownership_id: str | None = Field(None, description="权属ID（DEPRECATED）")  # 对齐Model
+    ownership_id: str | None = Field(
+        None, description="权属ID（DEPRECATED）"
+    )  # 对齐Model
     manager_party_id: str | None = Field(None, description="经营管理方主体ID")
     owner_party_id: str | None = Field(None, description="产权方主体ID")
     project: ProjectResponse | None = Field(None, description="关联项目")
@@ -455,6 +551,33 @@ class AssetListItemResponse(AssetResponseBase):
     updated_at: datetime = Field(..., description="更新时间")
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ContractTypeSummary(BaseModel):
+    group_relation_type: str = Field(..., description="合同角色")
+    label: str = Field(..., description="展示标签")
+    contract_count: int = Field(..., description="合同数量")
+    total_area: float = Field(..., description="面积汇总（MVP 固定 0）")
+    monthly_amount: float = Field(..., description="月度金额汇总")
+
+
+class ContractPartyItem(BaseModel):
+    party_id: str | None = Field(None, description="承租方主体 ID")
+    party_name: str = Field(..., description="承租方名称")
+    group_relation_type: str = Field(..., description="合同角色")
+    contract_count: int = Field(..., description="合同数量")
+
+
+class AssetLeaseSummaryResponse(BaseModel):
+    asset_id: str = Field(..., description="资产 ID")
+    period_start: date = Field(..., description="展示周期开始")
+    period_end: date = Field(..., description="展示周期结束")
+    total_contracts: int = Field(..., description="合同总数")
+    total_rented_area: float = Field(..., description="已出租/管理面积")
+    rentable_area: float = Field(..., description="可出租面积")
+    occupancy_rate: float = Field(..., description="出租率")
+    by_type: list[ContractTypeSummary] = Field(..., description="按合同角色汇总")
+    customer_summary: list[ContractPartyItem] = Field(..., description="客户摘要")
 
 
 class AssetListResponse(BaseModel):
@@ -750,4 +873,3 @@ class AssetCustomFieldAssignment(BaseModel):
                 {},
             )  # pragma: no cover
         return v  # pragma: no cover
-

@@ -40,7 +40,9 @@ async def check_authz(
         raise internal_error("ABAC 判定失败", original_error=exc) from exc
 
 
-route_registry.register_router(router, prefix="/api/v1", tags=["鉴权服务"], version="v1")
+route_registry.register_router(
+    router, prefix="/api/v1", tags=["鉴权服务"], version="v1"
+)
 
 
 __all__ = ["router"]

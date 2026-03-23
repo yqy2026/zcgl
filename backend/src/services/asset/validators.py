@@ -20,7 +20,7 @@ class AssetBatchValidator:
 
     # 必填字段定义
     REQUIRED_FIELDS = [
-        "property_name",
+        "asset_name",
         "address",
         "ownership_status",
         "property_nature",

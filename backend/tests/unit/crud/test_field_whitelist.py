@@ -11,9 +11,9 @@ Tests cover:
 from src.crud.field_whitelist import (
     WHITELIST_REGISTRY,
     AssetWhitelist,
+    ContractWhitelist,
     EmptyWhitelist,
     OwnershipWhitelist,
-    RentContractWhitelist,
     get_whitelist_for_model,
     register_whitelist,
 )
@@ -83,7 +83,7 @@ class TestAssetWhitelist:
         """Public text fields should be searchable."""
         whitelist = AssetWhitelist()
 
-        assert whitelist.can_search("property_name")
+        assert whitelist.can_search("asset_name")
         assert whitelist.can_search("address")
         assert whitelist.can_search("project_name")
         assert whitelist.can_search("notes")
@@ -116,7 +116,7 @@ class TestAssetWhitelist:
         assert whitelist.can_sort("cached_occupancy_rate")
 
         # Alphabetic sorting
-        assert whitelist.can_sort("property_name")
+        assert whitelist.can_sort("asset_name")
         assert whitelist.can_sort("project_name")
         assert not whitelist.can_sort("ownership_entity")
 
@@ -131,46 +131,30 @@ class TestAssetWhitelist:
         assert not whitelist.can_sort("updated_by")
 
 
-class TestRentContractWhitelist:
-    """Test RentContract whitelist configuration."""
+class TestContractWhitelist:
+    """Test new Contract whitelist configuration."""
 
     def test_safe_fields_allowed(self):
-        """Safe contract fields should be accessible."""
-        whitelist = RentContractWhitelist()
+        """New contract core fields should be accessible."""
+        whitelist = ContractWhitelist()
 
-        assert whitelist.can_filter("contract_status")
-        assert whitelist.can_filter("start_date")
-        assert whitelist.can_filter("end_date")
-        assert whitelist.can_filter("payment_cycle")
+        assert whitelist.can_filter("contract_id")
+        assert whitelist.can_filter("contract_number")
+        assert whitelist.can_filter("status")
+        assert whitelist.can_filter("effective_from")
+        assert whitelist.can_filter("effective_to")
+        assert whitelist.can_filter("contract_group_id")
         assert whitelist.can_search("contract_number")
-        assert whitelist.can_sort("start_date")
+        assert whitelist.can_sort("effective_from")
 
-    def test_phone_fields_blocked(self):
-        """Encrypted phone fields should not be discoverable."""
-        whitelist = RentContractWhitelist()
+    def test_sensitive_fields_blocked(self):
+        """Audit and reviewer fields should stay blocked."""
+        whitelist = ContractWhitelist()
 
-        # Phone fields should be blocked for all operations
-        assert not whitelist.can_filter("owner_phone")
-        assert not whitelist.can_filter("tenant_phone")
-        assert not whitelist.can_search("owner_phone")
-        assert not whitelist.can_search("tenant_phone")
-        assert not whitelist.can_sort("owner_phone")
-        assert not whitelist.can_sort("tenant_phone")
-
-    def test_tenant_name_blocked(self):
-        """Tenant name is business-sensitive, should be blocked."""
-        whitelist = RentContractWhitelist()
-
-        assert not whitelist.can_filter("tenant_name")
-        assert not whitelist.can_search("tenant_name")
-
-    def test_financial_sorting_allowed(self):
-        """Financial fields can be sorted but not filtered."""
-        whitelist = RentContractWhitelist()
-
-        # Sorting allowed for display
-        assert whitelist.can_sort("monthly_rent_base")
-        assert whitelist.can_sort("total_deposit")
+        assert not whitelist.can_filter("review_by")
+        assert not whitelist.can_filter("created_by")
+        assert not whitelist.can_search("review_reason")
+        assert not whitelist.can_sort("updated_by")
 
 
 class TestEmptyWhitelist:
@@ -249,7 +233,7 @@ class TestWhitelistRegistry:
                 __name__ = "Model2"
 
             whitelist1 = AssetWhitelist()
-            whitelist2 = RentContractWhitelist()
+            whitelist2 = ContractWhitelist()
 
             register_whitelist(Model1, whitelist1)
             register_whitelist(Model2, whitelist2)
@@ -258,6 +242,25 @@ class TestWhitelistRegistry:
             assert get_whitelist_for_model(Model2) is whitelist2
         finally:
             # Restore original registry
+            WHITELIST_REGISTRY.clear()
+            for model, whitelist in original_registry.items():
+                WHITELIST_REGISTRY[model] = whitelist
+
+    def test_missing_core_whitelist_is_backfilled_for_partial_registry(self):
+        """Partial registry should still backfill core model whitelists."""
+        from src.models.asset import Asset
+        from src.models.contract_group import Contract
+
+        original_registry = dict(WHITELIST_REGISTRY)
+
+        try:
+            WHITELIST_REGISTRY.clear()
+            register_whitelist(Asset, AssetWhitelist())
+
+            contract_whitelist = get_whitelist_for_model(Contract)
+
+            assert isinstance(contract_whitelist, ContractWhitelist)
+        finally:
             WHITELIST_REGISTRY.clear()
             for model, whitelist in original_registry.items():
                 WHITELIST_REGISTRY[model] = whitelist
@@ -340,17 +343,20 @@ class TestSecurityScenarios:
         assert not whitelist.can_search("created_by")
         assert not whitelist.can_sort("created_by")
 
-    def test_cannot_enumerate_phone_numbers(self):
-        """Should not be able to enumerate phone numbers."""
-        whitelist = RentContractWhitelist()
+    def test_legacy_contract_whitelist_retired(self):
+        """Legacy rent contract whitelist should be removed."""
+        import src.crud.field_whitelist as whitelist_module
 
-        # Phone fields should be completely blocked
-        assert not whitelist.can_filter("owner_phone")
-        assert not whitelist.can_filter("tenant_phone")
-        assert not whitelist.can_search("owner_phone")
-        assert not whitelist.can_search("tenant_phone")
-        assert not whitelist.can_sort("owner_phone")
-        assert not whitelist.can_sort("tenant_phone")
+        legacy_whitelist_name = "Rent" + "ContractWhitelist"
+
+        assert not hasattr(whitelist_module, legacy_whitelist_name)
+
+    def test_legacy_rent_term_and_ledger_whitelists_retired(self):
+        """Legacy rent term/ledger whitelists should be removed."""
+        import src.crud.field_whitelist as whitelist_module
+
+        assert not hasattr(whitelist_module, "RentTermWhitelist")
+        assert not hasattr(whitelist_module, "RentLedgerWhitelist")
 
     def test_cannot_discover_operational_status(self):
         """Operational intelligence should be protected."""

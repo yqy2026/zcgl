@@ -67,17 +67,19 @@ class NotificationCRUD:
         )
         total = int((await db.execute(count_stmt)).scalar() or 0)
         result = await db.execute(
-            base_stmt.order_by(Notification.created_at.desc())
-            .offset(skip)
-            .limit(limit)
+            base_stmt.order_by(Notification.created_at.desc()).offset(skip).limit(limit)
         )
         items = list(result.scalars().all())
         return items, total
 
     async def count_unread_async(self, db: AsyncSession, *, recipient_id: str) -> int:
-        stmt = select(func.count()).select_from(Notification).where(
-            Notification.recipient_id == recipient_id,
-            Notification.is_read.is_(False),
+        stmt = (
+            select(func.count())
+            .select_from(Notification)
+            .where(
+                Notification.recipient_id == recipient_id,
+                Notification.is_read.is_(False),
+            )
         )
         return int((await db.execute(stmt)).scalar() or 0)
 

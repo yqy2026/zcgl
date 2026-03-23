@@ -80,6 +80,7 @@ class ConfirmImportResponse(BaseModel):
 
     success: bool
     message: str
+    contract_group_id: str | None = None
     contract_id: str | None = None
     contract_number: str | None = None
     created_terms_count: int | None = None

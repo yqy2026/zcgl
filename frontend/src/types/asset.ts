@@ -10,7 +10,11 @@ export interface Asset {
   manager_party_name?: string;
   ownership_category?: string;
   project_name?: string;
-  property_name: string;
+  asset_name: string;
+  province_code?: string;
+  city_code?: string;
+  district_code?: string;
+  address_detail?: string;
   address: string;
   ownership_status: OwnershipStatus;
   property_nature: PropertyNature;
@@ -245,6 +249,35 @@ export interface AssetSummary {
   netIncome: number;
 }
 
+export type AssetLeaseGroupRelationType = '上游' | '下游' | '委托' | '直租';
+
+export interface ContractTypeSummary {
+  group_relation_type: AssetLeaseGroupRelationType;
+  label: string;
+  contract_count: number;
+  total_area: number;
+  monthly_amount: number;
+}
+
+export interface ContractPartyItem {
+  party_id: string | null;
+  party_name: string;
+  group_relation_type: AssetLeaseGroupRelationType;
+  contract_count: number;
+}
+
+export interface AssetLeaseSummaryResponse {
+  asset_id: string;
+  period_start: string;
+  period_end: string;
+  total_contracts: number;
+  total_rented_area: number;
+  rentable_area: number;
+  occupancy_rate: number;
+  by_type: ContractTypeSummary[];
+  customer_summary: ContractPartyItem[];
+}
+
 // 搜索参数
 export interface AssetSearchParams {
   page?: number;
@@ -429,7 +462,7 @@ export interface AreaStatistics {
     average_area: number;
   }>;
   top_assets_by_area?: Array<{
-    property_name: string;
+    asset_name: string;
     property_area: number;
     rentable_area: number;
     rented_area: number;

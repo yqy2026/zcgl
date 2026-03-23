@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const assetFormSchema = z
   .object({
-    property_name: z.string().min(1, '物业名称不能为空'),
+    asset_name: z.string().min(1, '物业名称不能为空'),
     owner_party_id: z.string().min(1, '权属主体不能为空'),
     manager_party_id: z.string().optional(),
     address: z.string().min(1, '所在地址不能为空'),
@@ -53,4 +53,3 @@ export const assetFormSchema = z
   );
 
 export type AssetFormData = z.infer<typeof assetFormSchema>;
-

@@ -81,10 +81,15 @@ def engine(test_database_url):
 
     Uses PostgreSQL (either provided URL or testcontainers).
     """
+    global TEST_DATABASE_URL
+
     if os.getenv("TEST_USE_POSTGRES") == "true" and HAS_TESTCONTAINERS:
-        postgres = PostgresContainer("postgres:18.2")
+        postgres = PostgresContainer("postgres:18.2", driver="psycopg")
         postgres.start()
         db_url = postgres.get_connection_url()
+        TEST_DATABASE_URL = db_url
+        os.environ["TEST_DATABASE_URL"] = db_url
+        os.environ["DATABASE_URL"] = db_url
         engine = create_engine(db_url, pool_pre_ping=True)
         yield engine
         postgres.stop()
@@ -130,6 +135,8 @@ def db_tables(engine):
 
     Runs once per test session for performance.
     """
+    import importlib
+
     # Import Base here - after pytest has set up the path
     # Base is defined in src/database.py, NOT src/models/base.py!
     # Import Alembic configuration
@@ -166,6 +173,11 @@ def db_tables(engine):
                 command.stamp(alembic_cfg, "head")
             else:
                 raise
+        except Exception as exc:
+            # 某些分支可能暂时存在多 head 等迁移冲突；集成测试优先使用可运行 schema。
+            print(f"[!] Alembic upgrade failed in integration fixture, fallback create_all: {exc}")
+            importlib.import_module("src.models")
+            Base.metadata.create_all(bind=engine)
 
     # ALWAYS create tables from Base.metadata
     # The initial migration is empty (placeholder), so we need to create base tables

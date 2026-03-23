@@ -239,7 +239,7 @@ class TestEnrichAssetWithCalculations:
         """测试丰富资产数据"""
         asset_data = {
             "id": 1,
-            "property_name": "测试物业",
+            "asset_name": "测试物业",
             "rentable_area": 100.0,
             "rented_area": 50.0,
         }
@@ -247,7 +247,7 @@ class TestEnrichAssetWithCalculations:
 
         # 应该包含原始数据
         assert result["id"] == 1
-        assert result["property_name"] == "测试物业"
+        assert result["asset_name"] == "测试物业"
         assert result["rentable_area"] == 100.0
         assert result["rented_area"] == 50.0
 
@@ -255,7 +255,7 @@ class TestEnrichAssetWithCalculations:
         """测试不修改原始数据"""
         asset_data = {
             "id": 1,
-            "property_name": "测试物业",
+            "asset_name": "测试物业",
         }
         original_data = asset_data.copy()
         AssetCalculator.enrich_asset_with_calculations(asset_data)

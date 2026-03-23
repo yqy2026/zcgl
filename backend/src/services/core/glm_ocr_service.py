@@ -37,9 +37,8 @@ class GLMOCRService:
             from src.core.config import settings
 
             self.api_key = settings.GLM_OCR_API_KEY or os.getenv("GLM_OCR_API_KEY")
-            self.base_url = (
-                settings.GLM_OCR_BASE_URL
-                or os.getenv("GLM_OCR_BASE_URL", self.DEFAULT_BASE_URL)
+            self.base_url = settings.GLM_OCR_BASE_URL or os.getenv(
+                "GLM_OCR_BASE_URL", self.DEFAULT_BASE_URL
             )
             self.model = settings.GLM_OCR_MODEL or os.getenv(
                 "GLM_OCR_MODEL", self.DEFAULT_MODEL

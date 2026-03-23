@@ -202,14 +202,12 @@ const RoleManagementPage: React.FC = () => {
   }, []);
 
   const handleSubmit = useCallback(
-    async (
-      values: {
+    async (values: {
       name: string;
       code: string;
       description: string;
       status: 'active' | 'inactive';
-      },
-    ) => {
+    }) => {
       try {
         if (editingRole != null) {
           await roleService.updateRole(editingRole.id, {

@@ -57,8 +57,8 @@ def create_asset_payload(
 ) -> dict[str, object]:
     return {
         "ownership_id": ownership_id,
-        "property_name": f"{name_prefix}-{suffix}",
-        "address": f"{address_prefix}-{suffix}",
+        "asset_name": f"{name_prefix}-{suffix}",
+        "address_detail": f"{address_prefix}-{suffix}",
         "ownership_status": "已确权",
         "property_nature": "经营类",
         "usage_status": usage_status,

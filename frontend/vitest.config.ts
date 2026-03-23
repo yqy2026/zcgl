@@ -75,13 +75,9 @@ export default defineConfig({
     isolate: true,
     pool: 'threads',
     singleThread: false,
-    ...(isCI
-      ? {
-          // 覆盖率模式下系统页测试对CPU争用敏感，CI串行可显著降低超时抖动
-          maxWorkers: 1,
-          minWorkers: 1,
-        }
-      : {}),
+    // 当前仓库全量前端用例在并发 worker > 1 时存在随机超时，默认串行保障稳定性
+    maxWorkers: 1,
+    minWorkers: 1,
 
     // 报告器
     reporters: ['verbose', 'json', 'html'],

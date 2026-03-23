@@ -151,7 +151,7 @@ def test_non_admin_owner_scoped_asset_list_should_not_be_forbidden(
     )
 
     scoped_asset = Asset(
-        property_name=f"资产作用域命中-{suffix}",
+        asset_name=f"资产作用域命中-{suffix}",
         address=f"作用域地址-A-{suffix}",
         ownership_status="已确权",
         property_nature="经营类",
@@ -163,7 +163,7 @@ def test_non_admin_owner_scoped_asset_list_should_not_be_forbidden(
         updated_by="integration_test",
     )
     other_asset = Asset(
-        property_name=f"资产作用域隔离-{suffix}",
+        asset_name=f"资产作用域隔离-{suffix}",
         address=f"作用域地址-B-{suffix}",
         ownership_status="已确权",
         property_nature="经营类",

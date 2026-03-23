@@ -22,10 +22,12 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Import get_database_engine to ensure initialization
 from src.database import get_database_engine, get_database_url
-from src.models.rent_contract import ContractType, PaymentCycle
+
+DEFAULT_LEGACY_CONTRACT_TYPE = "lease_downstream"
+DEFAULT_LEGACY_PAYMENT_CYCLE = "monthly"
 
 
-async def run_migration():
+async def run_migration() -> None:
     logger.info("Starting V2 Data Migration...")
 
     # Initialize the database engine explicitly
@@ -42,7 +44,7 @@ async def run_migration():
                 SET contract_type = :default_type
                 WHERE contract_type IS NULL
             """),
-            {"default_type": ContractType.LEASE_DOWNSTREAM.value},
+            {"default_type": DEFAULT_LEGACY_CONTRACT_TYPE},
         )
         logger.info(f"Updated {result.rowcount} contracts with default contract_type.")
 
@@ -54,7 +56,7 @@ async def run_migration():
                 SET payment_cycle = :default_cycle
                 WHERE payment_cycle IS NULL
             """),
-            {"default_cycle": PaymentCycle.MONTHLY.value},
+            {"default_cycle": DEFAULT_LEGACY_PAYMENT_CYCLE},
         )
         logger.info(f"Updated {result.rowcount} contracts with default payment_cycle.")
 

@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ...core.exception_handler import ResourceNotFoundError
 from ...crud.collection import collection_crud
 from ...models.collection import CollectionRecord, CollectionStatus
-from ...models.rent_contract import RentLedger
+from ...models.contract_group import ContractLedgerEntry
 from ...schemas.collection import (
     CollectionRecordCreate,
     CollectionRecordUpdate,
@@ -29,9 +29,10 @@ class CollectionService:
         today = date.today()
         current_month_start = date(today.year, today.month, 1)
 
-        total_overdue_count, total_overdue_amount = (
-            await collection_crud.get_overdue_ledger_stats_async(db, today=today)
-        )
+        (
+            total_overdue_count,
+            total_overdue_amount,
+        ) = await collection_crud.get_overdue_ledger_stats_async(db, today=today)
 
         pending_collection_count = await collection_crud.count_by_statuses_async(
             db,
@@ -52,7 +53,9 @@ class CollectionService:
         collection_success_rate = None
         if total_collection_count > 0:
             collection_success_rate = (
-                Decimal(success_count) / Decimal(total_collection_count) * Decimal("100")
+                Decimal(success_count)
+                / Decimal(total_collection_count)
+                * Decimal("100")
             )
 
         return CollectionTaskSummary(
@@ -96,7 +99,7 @@ class CollectionService:
 
     async def get_ledger_by_id_async(
         self, db: AsyncSession, *, ledger_id: str
-    ) -> RentLedger | None:
+    ) -> ContractLedgerEntry | None:
         return await collection_crud.get_ledger_by_id_async(db, ledger_id=ledger_id)
 
     async def create_async(
@@ -128,9 +131,7 @@ class CollectionService:
     ) -> CollectionRecord:
         return await collection_crud.update(db, db_obj=db_obj, obj_in=obj_in)
 
-    async def delete_async(
-        self, db: AsyncSession, *, db_obj: CollectionRecord
-    ) -> None:
+    async def delete_async(self, db: AsyncSession, *, db_obj: CollectionRecord) -> None:
         await collection_crud.remove(db, id=str(db_obj.id))
 
 

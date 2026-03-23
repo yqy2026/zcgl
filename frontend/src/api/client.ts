@@ -14,6 +14,7 @@ import { ResponseExtractor, ApiErrorHandler } from '@/utils/responseExtractor';
 import { ApiClientConfig, RetryConfig, ExtractResult } from '@/types/apiResponse';
 import { createLogger } from '@/utils/logger';
 import { isDevelopmentMode } from '@/utils/runtimeEnv';
+import { getCurrentRequestScopeKey } from '@/utils/queryScope';
 import { API_BASE_URL, CSRF_CONFIG } from './config';
 import { AuthStorage } from '@/utils/AuthStorage';
 
@@ -835,7 +836,7 @@ export class ApiClient {
    */
   private generateCacheKey(method: string, url: string, params?: Record<string, unknown>): string {
     const paramsStr = params ? JSON.stringify(this.normalizeParams(params)) : '';
-    return `${method}:${url}:${paramsStr}`;
+    return `${method}:${url}:${paramsStr}:scope:${getCurrentRequestScopeKey()}`;
   }
 
   private normalizeParams(value: unknown): unknown {

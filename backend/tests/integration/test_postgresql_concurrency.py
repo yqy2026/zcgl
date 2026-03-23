@@ -93,7 +93,7 @@ class TestPostgreSQLConcurrency:
             await session.flush()
 
             asset_data = {
-                "property_name": f"隔离测试资产-{suffix}",
+                "asset_name": f"隔离测试资产-{suffix}",
                 "ownership_id": ownership.id,
                 "address": "隔离测试地址",
                 "ownership_status": "已确权",

@@ -32,7 +32,9 @@ class CRUDAuthz:
         )
 
         if enabled_only:
-            stmt = stmt.where(ABACPolicy.enabled.is_(True), ABACRolePolicy.enabled.is_(True))
+            stmt = stmt.where(
+                ABACPolicy.enabled.is_(True), ABACRolePolicy.enabled.is_(True)
+            )
 
         return list((await db.execute(stmt)).scalars().all())
 

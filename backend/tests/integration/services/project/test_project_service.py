@@ -44,21 +44,21 @@ class TestProjectBasic:
         """测试创建和获取项目"""
         # 创建项目
         project_data = ProjectCreate(
-            name="测试项目",
-            code="PJ2401001",
-            project_status="规划中",
+            project_name="测试项目",
+            project_code="PRJ-TEST01-240001",
+            status="planning",
             manager_party_id=self.manager_party_id,
         )
         project = await self.service.create_project(self.db, obj_in=project_data)
 
         assert project.id is not None
-        assert project.name == "测试项目"
-        assert project.code == "PJ2401001"
+        assert project.project_name == "测试项目"
+        assert project.project_code == "PRJ-TEST01-240001"
 
         # 获取项目
         retrieved = await project_crud.get(self.db, project.id)
         assert retrieved is not None
-        assert retrieved.name == "测试项目"
+        assert retrieved.project_name == "测试项目"
 
     async def test_update_project(self):
         """测试更新项目"""
@@ -66,46 +66,46 @@ class TestProjectBasic:
         project = await self.service.create_project(
             self.db,
             obj_in=ProjectCreate(
-                name="原始项目",
-                code="PJ2401002",
-                project_status="规划中",
+                project_name="原始项目",
+                project_code="PRJ-TEST02-240002",
+                status="planning",
                 manager_party_id=self.manager_party_id,
             ),
         )
 
         # 更新项目
-        update_data = ProjectUpdate(name="更新后的项目", project_status="进行中")
+        update_data = ProjectUpdate(project_name="更新后的项目", status="active")
         updated = await self.service.update_project(
             self.db, project_id=project.id, obj_in=update_data
         )
 
-        assert updated.name == "更新后的项目"
-        assert updated.project_status == "进行中"
+        assert updated.project_name == "更新后的项目"
+        assert updated.status == "active"
 
     async def test_toggle_status(self):
         """测试切换状态"""
         project = await self.service.create_project(
             self.db,
             obj_in=ProjectCreate(
-                name="状态测试项目",
-                code="PJ2401003",
-                project_status="规划中",
+                project_name="状态测试项目",
+                project_code="PRJ-TEST03-240003",
+                status="planning",
                 manager_party_id=self.manager_party_id,
             ),
         )
 
         # 从规划中切换到暂停
         toggled = await self.service.toggle_status(self.db, project_id=project.id)
-        assert toggled.project_status == "暂停"
+        assert toggled.status == "paused"
 
     async def test_delete_project(self):
         """测试删除项目"""
         project = await self.service.create_project(
             self.db,
             obj_in=ProjectCreate(
-                name="待删除项目",
-                code="PJ2401004",
-                project_status="规划中",
+                project_name="待删除项目",
+                project_code="PRJ-TEST04-240004",
+                status="planning",
                 manager_party_id=self.manager_party_id,
             ),
         )

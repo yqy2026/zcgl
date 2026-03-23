@@ -6,10 +6,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+import src.crud.asset as asset_crud_module
 from src.crud.asset import AssetCRUD
 from src.crud.query_builder import PartyFilter
 from src.models.asset import Asset
 from src.models.asset_search_index import AssetSearchIndex
+from src.models.contract_group import Contract
 
 pytestmark = pytest.mark.asyncio
 
@@ -36,7 +38,7 @@ class TestCRUDAssetGet:
     async def test_get_existing_asset(self, crud: AssetCRUD, mock_db: MagicMock) -> None:
         mock_asset = MagicMock(spec=Asset)
         mock_asset.id = "1"
-        mock_asset.property_name = "测试物业"
+        mock_asset.asset_name = "测试物业"
 
         with patch.object(crud, "get", new_callable=AsyncMock, return_value=mock_asset):
             result = await crud.get(mock_db, id="1")
@@ -51,6 +53,21 @@ class TestCRUDAssetGet:
 
 
 class TestCRUDAssetSoftDeleteGuard:
+    async def test_legacy_guard_method_names_retired(self, crud: AssetCRUD) -> None:
+        legacy_contract_guard_name = "has_" + "_".join(("rent", "contracts")) + "_async"
+        legacy_asset_contract_guard_name = (
+            "get_assets_with_" + "_".join(("rent", "contracts")) + "_async"
+        )
+
+        assert hasattr(crud, "has_contracts_async")
+        assert hasattr(crud, "has_contract_ledger_entries_async")
+        assert hasattr(crud, "get_assets_with_contracts_async")
+        assert hasattr(crud, "get_assets_with_contract_ledger_entries_async")
+        assert not hasattr(crud, legacy_contract_guard_name)
+        assert not hasattr(crud, "has_rent_ledger_async")
+        assert not hasattr(crud, legacy_asset_contract_guard_name)
+        assert not hasattr(crud, "get_assets_with_rent_ledger_async")
+
     async def test_get_async_excludes_deleted_by_default(
         self, crud: AssetCRUD, mock_db: MagicMock
     ) -> None:
@@ -105,7 +122,7 @@ class TestCRUDAssetSoftDeleteGuard:
 class TestCRUDAssetGetByName:
     async def test_get_by_name_exists(self, crud: AssetCRUD, mock_db: MagicMock) -> None:
         mock_asset = MagicMock(spec=Asset)
-        mock_asset.property_name = "测试物业A"
+        mock_asset.asset_name = "测试物业A"
 
         with patch.object(
             crud,
@@ -113,10 +130,10 @@ class TestCRUDAssetGetByName:
             new_callable=AsyncMock,
             return_value=mock_asset,
         ):
-            result = await crud.get_by_name_async(mock_db, property_name="测试物业A")
+            result = await crud.get_by_name_async(mock_db, asset_name="测试物业A")
 
         assert result is not None
-        assert result.property_name == "测试物业A"
+        assert result.asset_name == "测试物业A"
 
     async def test_get_by_name_not_exists(self, crud: AssetCRUD, mock_db: MagicMock) -> None:
         with patch.object(
@@ -125,7 +142,7 @@ class TestCRUDAssetGetByName:
             new_callable=AsyncMock,
             return_value=None,
         ):
-            result = await crud.get_by_name_async(mock_db, property_name="不存在的物业")
+            result = await crud.get_by_name_async(mock_db, asset_name="不存在的物业")
 
         assert result is None
 
@@ -231,7 +248,7 @@ class TestCRUDAssetGetMulti:
 
 
 class TestCRUDAssetGetByPropertyNames:
-    async def test_get_by_property_names_defaults_to_encrypted_rows(
+    async def test_get_by_asset_names_defaults_to_encrypted_rows(
         self, crud: AssetCRUD, mock_db: MagicMock
     ) -> None:
         mock_assets = [MagicMock(spec=Asset)]
@@ -240,16 +257,16 @@ class TestCRUDAssetGetByPropertyNames:
         mock_db.execute.return_value = execute_result
 
         with patch.object(crud, "_decrypt_asset_object") as mock_decrypt:
-            result = await crud.get_by_property_names_async(
+            result = await crud.get_by_asset_names_async(
                 mock_db,
-                property_names=["物业A"],
+                asset_names=["物业A"],
             )
 
         assert result == mock_assets
         mock_db.execute.assert_awaited_once()
         mock_decrypt.assert_not_called()
 
-    async def test_get_by_property_names_can_decrypt_on_demand(
+    async def test_get_by_asset_names_can_decrypt_on_demand(
         self, crud: AssetCRUD, mock_db: MagicMock
     ) -> None:
         mock_assets = [MagicMock(spec=Asset), MagicMock(spec=Asset)]
@@ -258,9 +275,9 @@ class TestCRUDAssetGetByPropertyNames:
         mock_db.execute.return_value = execute_result
 
         with patch.object(crud, "_decrypt_asset_object") as mock_decrypt:
-            result = await crud.get_by_property_names_async(
+            result = await crud.get_by_asset_names_async(
                 mock_db,
-                property_names=["物业A", "物业B"],
+                asset_names=["物业A", "物业B"],
                 decrypt=True,
             )
 
@@ -269,6 +286,138 @@ class TestCRUDAssetGetByPropertyNames:
         assert mock_decrypt.call_count == 2
         mock_decrypt.assert_any_call(mock_assets[0])
         mock_decrypt.assert_any_call(mock_assets[1])
+
+
+class TestCRUDAssetLedgerGuards:
+    async def test_asset_projection_load_options_use_new_contract_model(
+        self, crud: AssetCRUD, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        recorded_selectinload_args: list[object] = []
+        recorded_load_only_args: list[tuple[object, ...]] = []
+        recorded_with_loader_models: list[object] = []
+
+        class _Loader:
+            def __init__(self, attr: object) -> None:
+                self.attr = attr
+                self.nested: tuple[object, ...] = ()
+
+            def options(self, *nested: object) -> "_Loader":
+                self.nested = nested
+                return self
+
+            def load_only(self, *fields: object) -> "_Loader":
+                self.nested = fields
+                return self
+
+        monkeypatch.setattr(asset_crud_module, "joinedload", lambda attr: _Loader(attr))
+
+        def _fake_selectinload(attr: object) -> _Loader:
+            recorded_selectinload_args.append(attr)
+            return _Loader(attr)
+
+        def _fake_load_only(*fields: object) -> tuple[object, ...]:
+            recorded_load_only_args.append(fields)
+            return fields
+
+        monkeypatch.setattr(asset_crud_module, "selectinload", _fake_selectinload)
+        monkeypatch.setattr(asset_crud_module, "load_only", _fake_load_only)
+        monkeypatch.setattr(
+            asset_crud_module,
+            "with_loader_criteria",
+            lambda model, predicate, include_aliases: recorded_with_loader_models.append(model)
+            or (model, include_aliases),
+        )
+
+        options = crud._asset_projection_load_options()
+
+        assert recorded_selectinload_args[0] is Asset.contracts
+        assert Contract in recorded_with_loader_models
+        assert all(model is not Contract for model in recorded_with_loader_models[1:])
+        contract_load_fields = {
+            field
+            for fields in recorded_load_only_args
+            for field in fields
+            if getattr(field, "class_", None) is Contract
+        }
+        assert Contract.contract_number in contract_load_fields
+        assert Contract.effective_from in contract_load_fields
+        assert Contract.effective_to in contract_load_fields
+        assert Contract.status in contract_load_fields
+        assert options
+
+    async def test_has_contracts_uses_new_contract_asset_table(
+        self, crud: AssetCRUD, mock_db: MagicMock
+    ) -> None:
+        legacy_contract_asset_table = "_".join(("rent", "contract", "assets"))
+        execute_result = MagicMock()
+        execute_result.first.return_value = ("asset-1",)
+        mock_db.execute.return_value = execute_result
+
+        result = await crud.has_contracts_async(mock_db, asset_id="asset-1")
+
+        stmt = mock_db.execute.await_args.args[0]
+        compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+
+        assert result is True
+        assert "contract_assets" in compiled
+        assert legacy_contract_asset_table not in compiled
+
+    async def test_has_contract_ledger_entries_uses_new_contract_ledger_tables(
+        self, crud: AssetCRUD, mock_db: MagicMock
+    ) -> None:
+        execute_result = MagicMock()
+        execute_result.first.return_value = ("entry-1",)
+        mock_db.execute.return_value = execute_result
+
+        result = await crud.has_contract_ledger_entries_async(mock_db, asset_id="asset-1")
+
+        stmt = mock_db.execute.await_args.args[0]
+        compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+
+        assert result is True
+        assert "contract_ledger_entries" in compiled
+        assert "contract_assets" in compiled
+        assert "rent_ledger" not in compiled
+
+    async def test_get_assets_with_contracts_uses_new_contract_asset_table(
+        self, crud: AssetCRUD, mock_db: MagicMock
+    ) -> None:
+        legacy_contract_asset_table = "_".join(("rent", "contract", "assets"))
+        execute_result = MagicMock()
+        execute_result.scalars.return_value.all.return_value = ["asset-1", "asset-2"]
+        mock_db.execute.return_value = execute_result
+
+        result = await crud.get_assets_with_contracts_async(
+            mock_db,
+            asset_ids=["asset-1", "asset-2", "asset-3"],
+        )
+
+        stmt = mock_db.execute.await_args.args[0]
+        compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+
+        assert result == ["asset-1", "asset-2"]
+        assert "contract_assets" in compiled
+        assert legacy_contract_asset_table not in compiled
+
+    async def test_get_assets_with_contract_ledger_entries_uses_new_contract_ledger_tables(
+        self, crud: AssetCRUD, mock_db: MagicMock
+    ) -> None:
+        execute_result = MagicMock()
+        execute_result.scalars.return_value.all.return_value = ["asset-1", "asset-2"]
+        mock_db.execute.return_value = execute_result
+
+        result = await crud.get_assets_with_contract_ledger_entries_async(
+            mock_db,
+            asset_ids=["asset-1", "asset-2", "asset-3"],
+        )
+
+        stmt = mock_db.execute.await_args.args[0]
+        compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+
+        assert result == ["asset-1", "asset-2"]
+        assert "contract_ledger_entries" in compiled
+        assert "contract_assets" in compiled
+        assert "rent_ledger" not in compiled
 
 
 class TestCRUDAssetQueryNormalization:
@@ -312,7 +461,7 @@ class TestCRUDAssetQueryNormalization:
 
 class TestCRUDAssetCreate:
     async def test_create_asset(self, crud: AssetCRUD, mock_db: MagicMock) -> None:
-        create_data = {"property_name": "新物业", "address": "测试地址123号"}
+        create_data = {"asset_name": "新物业", "address": "测试地址123号"}
         mock_asset = MagicMock(spec=Asset)
         mock_asset.id = "new-id"
 
@@ -331,7 +480,7 @@ class TestCRUDAssetUpdate:
     async def test_update_asset(self, crud: AssetCRUD, mock_db: MagicMock) -> None:
         mock_asset = MagicMock(spec=Asset)
         mock_asset.id = "1"
-        update_data = {"property_name": "更新后的物业名称"}
+        update_data = {"asset_name": "更新后的物业名称"}
 
         with patch.object(
             crud,
@@ -436,7 +585,7 @@ class TestAssetSearchIndexRefresh:
             await crud._refresh_search_index_entries(
                 mock_db,
                 asset_id="asset-1",
-                data={"property_name": "测试物业"},
+                data={"asset_name": "测试物业"},
             )
 
         mock_db.execute.assert_not_awaited()

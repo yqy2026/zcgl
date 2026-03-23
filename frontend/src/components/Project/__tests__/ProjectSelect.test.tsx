@@ -34,10 +34,9 @@ vi.mock('@/components/Project/ProjectList', () => ({
       onClick={() =>
         onSelectProject({
           id: 'project-002',
-          name: '项目二',
-          code: 'PROJ-002',
-          short_name: '二期',
-          is_active: true,
+          project_name: '项目二',
+          project_code: 'PRJ-002',
+          status: 'active',
         })
       }
     >
@@ -55,17 +54,13 @@ describe('ProjectSelect', () => {
       projects: [
         {
           id: 'project-001',
-          name: '项目一',
-          code: 'PROJ-001',
-          short_name: '一期',
-          is_active: true,
+          project_name: '项目一',
+          project_code: 'PRJ-001',
         },
         {
           id: 'project-002',
-          name: '项目二',
-          code: 'PROJ-002',
-          short_name: '二期',
-          is_active: true,
+          project_name: '项目二',
+          project_code: 'PRJ-002',
         },
       ],
       loading: false,
@@ -92,7 +87,7 @@ describe('ProjectSelect', () => {
         'project-001',
         expect.objectContaining({
           id: 'project-001',
-          code: 'PROJ-001',
+          project_code: 'PRJ-001',
         })
       );
     });
@@ -124,7 +119,7 @@ describe('ProjectSelect', () => {
         'project-002',
         expect.objectContaining({
           id: 'project-002',
-          code: 'PROJ-002',
+          project_code: 'PRJ-002',
         })
       );
     });

@@ -65,7 +65,7 @@ const AssetBasicInfoSection: React.FC = () => {
         <Col span={12}>
           <Form.Item
             label="物业名称"
-            name="property_name"
+            name="asset_name"
             rules={[{ required: true, message: '请输入物业名称' }]}
             aria-required="true"
             htmlFor={propertyNameIds.inputId}
@@ -77,7 +77,7 @@ const AssetBasicInfoSection: React.FC = () => {
 
       <Form.Item
         label="物业地址"
-        name="address"
+        name="address_detail"
         rules={[{ required: true, message: '请输入物业地址' }]}
         aria-required="true"
         htmlFor={addressIds.inputId}

@@ -10,6 +10,19 @@ import { render, screen, fireEvent, act } from '@testing-library/react';
 import { useQuery } from '@tanstack/react-query';
 import { partyService } from '@/services/partyService';
 
+const mockBuildQueryScopeKey = vi.fn(() => 'user:user-1|perspective:manager');
+const mockUseRoutePerspective = vi.fn(() => ({
+  perspective: 'manager',
+  isPerspectiveRoute: true,
+}));
+
+vi.mock('@/utils/queryScope', () => ({
+  buildQueryScopeKey: (value: unknown) => mockBuildQueryScopeKey(value),
+}));
+
+vi.mock('@/routes/perspective', () => ({
+  useRoutePerspective: () => mockUseRoutePerspective(),
+}));
 // Mock message manager
 vi.mock('@/utils/messageManager', () => ({
   MessageManager: {
@@ -56,14 +69,16 @@ vi.mock('@/components/Common/TableWithPagination', () => ({
     <div data-testid="table">
       {dataSource?.map(item => (
         <div key={String(item.id)} data-testid={`row-${String(item.id)}`}>
-          {String(item.name)}
+          {String(item.project_name)}
           <div data-testid={`ownership-${String(item.id)}`}>
             {columns
               ?.find(column => column.key === 'owner_party')
               ?.render?.(Array.isArray(item.party_relations) ? item.party_relations : [], item)}
           </div>
           <div data-testid={`status-${String(item.id)}`}>
-            {columns?.find(column => column.key === 'is_active')?.render?.(item.is_active, item)}
+            {columns
+              ?.find(column => column.key === 'status_indicator')
+              ?.render?.(item.status, item)}
           </div>
           <div data-testid={`area-status-${String(item.id)}`}>
             {columns?.find(column => column.key === 'area_status')?.render?.(undefined, item)}
@@ -251,9 +266,20 @@ vi.mock('antd', () => {
   );
   Spin.displayName = 'MockSpin';
 
-  const Alert = ({ message, type }: { message: string; type?: string }) => (
+  const Alert = ({
+    message,
+    title,
+    description,
+    type,
+  }: {
+    message?: React.ReactNode;
+    title?: React.ReactNode;
+    description?: React.ReactNode;
+    type?: string;
+  }) => (
     <div data-testid="alert" data-type={type}>
-      {message}
+      <div>{title ?? message}</div>
+      <div>{description}</div>
     </div>
   );
   Alert.displayName = 'MockAlert';
@@ -344,6 +370,7 @@ const flushPromises = () =>
 
 const renderProjectList = async (props?: React.ComponentProps<typeof ProjectList>) => {
   await act(async () => {
+    window.history.pushState({}, 'Test page', '/manager/projects');
     render(<ProjectList {...props} />);
     await flushPromises();
   });
@@ -354,6 +381,10 @@ const mockRefetchProjects = vi.fn();
 describe('ProjectList', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseRoutePerspective.mockReturnValue({
+      perspective: 'manager',
+      isPerspectiveRoute: true,
+    });
     mockRefetchProjects.mockClear();
     vi.mocked(useQuery).mockImplementation(options => {
       const queryKey = (options as { queryKey?: unknown[] }).queryKey;
@@ -363,8 +394,20 @@ describe('ProjectList', () => {
         return {
           data: {
             items: [
-              { id: '1', name: '项目1', code: 'PROJ-001', is_active: true, asset_count: 2 },
-              { id: '2', name: '项目2', code: 'PROJ-002', is_active: false, asset_count: 0 },
+              {
+                id: '1',
+                project_name: '项目1',
+                project_code: 'PRJ-001',
+                status: 'active',
+                asset_count: 2,
+              },
+              {
+                id: '2',
+                project_name: '项目2',
+                project_code: 'PRJ-002',
+                status: 'paused',
+                asset_count: 0,
+              },
             ],
             total: 2,
             page: 1,
@@ -380,7 +423,7 @@ describe('ProjectList', () => {
 
       if (key === 'project-owner-party-options') {
         const keyword =
-          Array.isArray(queryKey) && typeof queryKey[1] === 'string' ? queryKey[1] : '';
+          Array.isArray(queryKey) && typeof queryKey[2] === 'string' ? queryKey[2] : '';
         void partyService.searchParties(keyword, { status: 'active', limit: 20 });
         return {
           data: [],
@@ -420,6 +463,63 @@ describe('ProjectList', () => {
 
       expect(screen.getByTestId('row-1')).toBeInTheDocument();
       expect(screen.getByText('项目1')).toBeInTheDocument();
+    });
+
+    it('应该显示当前视角标签', async () => {
+      await renderProjectList();
+
+      expect(screen.getByText('当前视角')).toBeInTheDocument();
+      expect(screen.getByText('经营视角')).toBeInTheDocument();
+    });
+
+    it('项目列表与主体搜索查询应把当前视角纳入 queryKey', async () => {
+      await renderProjectList();
+
+      expect(useQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          queryKey: [
+            'project-list',
+            'user:user-1|perspective:manager',
+            1,
+            10,
+            { keyword: '', status: '', ownerPartyId: '' },
+          ],
+        })
+      );
+      expect(useQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          queryKey: ['project-owner-party-options', 'user:user-1|perspective:manager', ''],
+        })
+      );
+      expect(mockBuildQueryScopeKey).toHaveBeenCalledWith('manager');
+    });
+
+    it('legacy 路径不显示视角标签，但列表和主体选项查询仍继续执行', async () => {
+      mockUseRoutePerspective.mockReturnValue({
+        perspective: null,
+        isPerspectiveRoute: false,
+      });
+      window.history.pushState({}, 'Legacy project page', '/project');
+
+      await renderProjectList();
+
+      expect(screen.queryByText('当前视角')).not.toBeInTheDocument();
+      expect(useQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          queryKey: [
+            'project-list',
+            'user:user-1|perspective:manager',
+            1,
+            10,
+            { keyword: '', status: '', ownerPartyId: '' },
+          ],
+        })
+      );
+      expect(useQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          queryKey: ['project-owner-party-options', 'user:user-1|perspective:manager', ''],
+        })
+      );
     });
   });
 
@@ -492,9 +592,9 @@ describe('ProjectList', () => {
               items: [
                 {
                   id: 'project-1',
-                  name: '项目关系过滤测试',
-                  code: 'PROJ-REL-001',
-                  is_active: true,
+                  project_name: '项目关系过滤测试',
+                  project_code: 'PRJ-REL-001',
+                  status: 'active',
                   asset_count: 0,
                   party_relations: [
                     {
@@ -502,27 +602,12 @@ describe('ProjectList', () => {
                       party_id: 'ownership-inactive',
                       party_name: '已停用主体',
                       relation_type: 'owner',
-                    },
-                    {
-                      id: 'rel-active',
-                      party_id: 'ownership-active',
-                      party_name: '有效主体',
-                      relation_type: 'owner',
-                      is_active: true,
-                    },
-                  ],
-                  ownership_relations: [
-                    {
-                      id: 'rel-inactive',
-                      party_id: 'ownership-inactive',
-                      ownership_name: '已停用主体',
-                      relation_type: 'owner',
                       is_active: false,
                     },
                     {
                       id: 'rel-active',
                       party_id: 'ownership-active',
-                      ownership_name: '有效主体',
+                      party_name: '有效主体',
                       relation_type: 'owner',
                       is_active: true,
                     },
@@ -543,7 +628,7 @@ describe('ProjectList', () => {
 
         if (key === 'project-owner-party-options') {
           const keyword =
-            Array.isArray(queryKey) && typeof queryKey[1] === 'string' ? queryKey[1] : '';
+            Array.isArray(queryKey) && typeof queryKey[2] === 'string' ? queryKey[2] : '';
           void partyService.searchParties(keyword, { status: 'active', limit: 20 });
           return {
             data: [],
@@ -579,7 +664,7 @@ describe('ProjectList', () => {
       expect(screen.getByTestId('status-1')).not.toHaveTextContent('待补绑定');
     });
 
-    it('当缺失 asset_count 时，应回退使用 assets.length 判定是否待补绑定', async () => {
+    it('当缺失 asset_count 时，应按 0 处理并显示待补绑定', async () => {
       vi.mocked(useQuery).mockImplementation(options => {
         const queryKey = (options as { queryKey?: unknown[] }).queryKey;
         const key = Array.isArray(queryKey) ? queryKey[0] : undefined;
@@ -590,17 +675,15 @@ describe('ProjectList', () => {
               items: [
                 {
                   id: 'fallback-empty-assets',
-                  name: '无资产回退项目',
-                  code: 'PROJ-FALLBACK-EMPTY',
-                  is_active: true,
-                  assets: [],
+                  project_name: '无资产回退项目',
+                  project_code: 'PRJ-FALLBACK-EMPTY',
+                  status: 'active',
                 },
                 {
                   id: 'fallback-has-assets',
-                  name: '有资产回退项目',
-                  code: 'PROJ-FALLBACK-HAS',
-                  is_active: true,
-                  assets: [{ id: 'asset-1' }],
+                  project_name: '有资产回退项目',
+                  project_code: 'PRJ-FALLBACK-HAS',
+                  status: 'active',
                 },
               ],
               total: 2,
@@ -639,7 +722,8 @@ describe('ProjectList', () => {
 
       expect(screen.getByTestId('status-fallback-empty-assets')).toHaveTextContent('待补绑定');
       expect(screen.getByTestId('area-status-fallback-empty-assets')).toHaveTextContent('N/A');
-      expect(screen.getByTestId('status-fallback-has-assets')).not.toHaveTextContent('待补绑定');
+      expect(screen.getByTestId('status-fallback-has-assets')).toHaveTextContent('待补绑定');
+      expect(screen.getByTestId('area-status-fallback-has-assets')).toHaveTextContent('N/A');
     });
   });
 

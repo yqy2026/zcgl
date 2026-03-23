@@ -216,15 +216,15 @@
 }
 
 .bindingFieldParty {
-  min-width: 320px;
+  min-width: 20rem;
 }
 
 .bindingFieldRelation {
-  min-width: 220px;
+  min-width: 13.75rem;
 }
 
 .bindingFieldPrimary {
-  min-width: 120px;
+  min-width: 7.5rem;
 }
 
 .bindingFormActions {

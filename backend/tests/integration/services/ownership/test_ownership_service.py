@@ -200,7 +200,7 @@ class TestOwnershipDeletion:
         self.db.add(
             Asset(
                 ownership_id=ownership.id,
-                property_name="测试物业-ownership-delete-check",
+                asset_name="测试物业-ownership-delete-check",
                 address="测试地址",
                 ownership_status="已确权",
                 property_nature="经营类",

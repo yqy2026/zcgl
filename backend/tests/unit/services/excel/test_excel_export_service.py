@@ -43,7 +43,7 @@ def sample_asset():
     asset.ownership_entity = "测试公司"
     asset.ownership_category = "国有"
     asset.project_name = "测试项目"
-    asset.property_name = "测试物业"
+    asset.asset_name = "测试物业"
     asset.address = "北京市朝阳区测试路123号"
     asset.land_area = 1000.0
     asset.actual_property_area = 2000.0
@@ -87,7 +87,7 @@ class TestConvertAssetsToExportFormat:
     def test_convert_single_asset_specific_fields(self, excel_service, sample_asset):
         """测试转换单个资产（指定字段）"""
         assets = [sample_asset]
-        fields = ["property_name", "address", "land_area"]
+        fields = ["asset_name", "address", "land_area"]
         result = excel_service._convert_assets_to_export_format(assets, fields=fields)
 
         assert len(result) == 1
@@ -103,7 +103,7 @@ class TestConvertAssetsToExportFormat:
     def test_convert_asset_with_none_values(self, excel_service):
         """测试转换包含None值的资产"""
         asset = Mock()
-        asset.property_name = "测试物业"
+        asset.asset_name = "测试物业"
         asset.address = None
         asset.land_area = None
         asset.actual_property_area = None
@@ -166,7 +166,7 @@ class TestConvertAssetsToExportFormat:
                 value = None
             setattr(asset2, field, value)
 
-        asset2.property_name = "第二个物业"
+        asset2.asset_name = "第二个物业"
 
         assets = [sample_asset, asset2]
         result = excel_service._convert_assets_to_export_format(assets)
@@ -219,7 +219,7 @@ class TestGetEmptyExportData:
 
     def test_empty_data_specific_fields(self, excel_service):
         """测试获取指定字段的空数据"""
-        fields = ["property_name", "address", "land_area"]
+        fields = ["asset_name", "address", "land_area"]
         result = excel_service._get_empty_export_data(fields=fields)
 
         assert len(result) == 1
@@ -233,7 +233,7 @@ class TestGetEmptyExportData:
 
     def test_empty_data_invalid_field(self, excel_service):
         """测试无效字段被忽略"""
-        fields = ["property_name", "invalid_field", "address"]
+        fields = ["asset_name", "invalid_field", "address"]
         result = excel_service._get_empty_export_data(fields=fields)
 
         # 无效字段应该被忽略
@@ -317,7 +317,7 @@ class TestExportAssetsToExcel:
         """测试指定字段的导出"""
         mock_crud.get_multi_with_search.return_value = ([sample_asset], 1)
 
-        fields = ["property_name", "address"]
+        fields = ["asset_name", "address"]
         buffer = excel_service.export_assets_to_excel(fields=fields)
 
         assert isinstance(buffer, io.BytesIO)

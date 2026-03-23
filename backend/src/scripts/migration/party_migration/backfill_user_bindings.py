@@ -70,34 +70,46 @@ def main() -> int:
                     "user_role_assignments",
                     "user_party_bindings",
                 ]
-                if not all(_table_exists(conn, table_name) for table_name in required_tables):
+                if not all(
+                    _table_exists(conn, table_name) for table_name in required_tables
+                ):
                     if args.dry_run:
                         transaction.rollback()
                     else:
                         transaction.commit()
-                    print("[SKIP] users/roles/user_role_assignments/user_party_bindings table missing")
+                    print(
+                        "[SKIP] users/roles/user_role_assignments/user_party_bindings table missing"
+                    )
                     return 0
 
-                role_party_rows = conn.execute(
-                    sa.text(
-                        """
+                role_party_rows = (
+                    conn.execute(
+                        sa.text(
+                            """
                         SELECT ura.user_id, r.party_id
                         FROM user_role_assignments AS ura
                         JOIN roles AS r ON r.id = ura.role_id
                         WHERE ura.is_active = true
                           AND r.party_id IS NOT NULL
                         """
+                        )
                     )
-                ).mappings().all()
-                default_org_rows = conn.execute(
-                    sa.text(
-                        """
+                    .mappings()
+                    .all()
+                )
+                default_org_rows = (
+                    conn.execute(
+                        sa.text(
+                            """
                         SELECT id AS user_id, default_organization_id
                         FROM users
                         WHERE default_organization_id IS NOT NULL
                         """
+                        )
                     )
-                ).mappings().all()
+                    .mappings()
+                    .all()
+                )
 
                 user_to_parties: dict[str, set[str]] = {}
                 for row in role_party_rows:

@@ -1,4 +1,4 @@
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Mapping
 from typing import NoReturn, TypeVar, cast
 
 """
@@ -18,7 +18,8 @@ from sqlalchemy.exc import IntegrityError
 from ..constants.message_constants import ErrorMessages
 
 logger = logging.getLogger(__name__)
-ErrorDetails = dict[str, object]
+ErrorDetails = Mapping[str, object]
+ErrorDetailDict = dict[str, object]
 AUTHZ_STALE_HEADER_NAME = "X-Authz-Stale"
 
 
@@ -34,12 +35,12 @@ class BaseBusinessError(Exception):
     ):
         self.message = message
         self.code = code
-        self.details = details or {}
+        self.details: ErrorDetailDict = dict(details or {})
         self.status_code = status_code
         self.timestamp = datetime.now(UTC)
         super().__init__(message)
 
-    def to_dict(self) -> ErrorDetails:
+    def to_dict(self) -> ErrorDetailDict:
         """转换为字典格式"""
         return {
             "success": False,
@@ -164,7 +165,7 @@ class InvalidRequestError(BaseBusinessError):
         field: str | None = None,
         details: ErrorDetails | None = None,
     ):
-        detail_payload: ErrorDetails = {}
+        detail_payload: ErrorDetailDict = {}
         if field:
             detail_payload["field"] = field
         if details:
@@ -186,7 +187,9 @@ class ResourceConflictError(BaseBusinessError):
         resource_type: str | None = None,
         details: ErrorDetails | None = None,
     ):
-        payload: ErrorDetails = {"resource_type": resource_type} if resource_type else {}
+        payload: ErrorDetailDict = (
+            {"resource_type": resource_type} if resource_type else {}
+        )
         if details:
             payload.update(details)
         super().__init__(
@@ -206,7 +209,7 @@ class ServiceUnavailableError(BaseBusinessError):
         service_name: str | None = None,
         details: ErrorDetails | None = None,
     ):
-        payload: ErrorDetails = {"service": service_name} if service_name else {}
+        payload: ErrorDetailDict = {"service": service_name} if service_name else {}
         if details:
             payload.update(details)
         super().__init__(
@@ -226,7 +229,7 @@ class OperationNotAllowedError(BaseBusinessError):
         reason: str | None = None,
         details: ErrorDetails | None = None,
     ):
-        payload: ErrorDetails = {"reason": reason} if reason else {}
+        payload: ErrorDetailDict = {"reason": reason} if reason else {}
         if details:
             payload.update(details)
         super().__init__(
@@ -246,7 +249,7 @@ class InternalServerError(BaseBusinessError):
         original_error: Exception | None = None,
         details: ErrorDetails | None = None,
     ):
-        payload: ErrorDetails = (
+        payload: ErrorDetailDict = (
             {"original_error": str(original_error)} if original_error else {}
         )
         if details:
@@ -409,7 +412,7 @@ class ExceptionHandler:
 
     def _sanitize_exception_details(
         self, details: ErrorDetails | None
-    ) -> ErrorDetails | str | None:
+    ) -> ErrorDetailDict | str | None:
         """清理异常详情中的不可序列化内容"""
         if details is None:
             return None
@@ -418,8 +421,9 @@ class ExceptionHandler:
             import json
 
             # 测试序列化
-            json.dumps(details)
-            return details
+            details_dict = dict(details)
+            json.dumps(details_dict)
+            return details_dict
         except (TypeError, ValueError):
             # 如果无法序列化，转换为字符串
             try:
@@ -438,7 +442,7 @@ class ExceptionHandler:
         from decimal import Decimal
 
         # 清理错误详情，移除不可序列化的对象
-        cleaned_errors = []
+        cleaned_errors: list[dict[str, object]] = []
         for error in exc.errors():
             cleaned_error: dict[str, object] = {}
             for key, value in error.items():
@@ -528,7 +532,7 @@ class ExceptionHandler:
         )
 
         message = "内部服务器错误"
-        details: ErrorDetails = {}
+        details: ErrorDetailDict = {}
 
         business_exc = BaseBusinessError(
             message=message,
@@ -596,7 +600,7 @@ def bad_request(
     field: str | None = None,
     details: str | ErrorDetails | list[str] | None = None,
 ) -> BaseBusinessError:
-    error_details: ErrorDetails = {}
+    error_details: ErrorDetailDict = {}
     if details is not None:
         error_details["details"] = details
 
@@ -791,12 +795,12 @@ def raise_external_service_error(
     message: str, service_name: str | None = None, **kwargs: object
 ) -> NoReturn:
     """抛出外部服务异常"""
-    raise ExternalServiceError(message, service_name, details=kwargs)
+    raise ExternalServiceError(message, service_name, details=kwargs or None)
 
 
 def raise_rate_limit(retry_after: int | None = None, **kwargs: object) -> NoReturn:
     """抛出频率限制异常"""
-    raise RateLimitError(retry_after=retry_after, details=kwargs)
+    raise RateLimitError(retry_after=retry_after, details=kwargs or None)
 
 
 if __name__ == "__main__":

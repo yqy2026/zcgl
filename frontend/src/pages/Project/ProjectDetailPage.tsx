@@ -5,7 +5,7 @@
  * @module pages/Project
  */
 
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Typography,
   Button,
@@ -18,20 +18,147 @@ import {
   Tag,
   Statistic,
   Badge,
+  DatePicker,
+  Skeleton,
+  Tooltip,
 } from 'antd';
-import { EditOutlined, HomeOutlined, AreaChartOutlined, TeamOutlined } from '@ant-design/icons';
+import {
+  EditOutlined,
+  HomeOutlined,
+  AreaChartOutlined,
+  TeamOutlined,
+  InfoCircleOutlined,
+} from '@ant-design/icons';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import dayjs, { type Dayjs } from 'dayjs';
 import { projectService } from '@/services/projectService';
 import { assetService } from '@/services/assetService';
+import CurrentViewBanner from '@/components/System/CurrentViewBanner';
+import { useRoutePerspective } from '@/routes/perspective';
 import type { ColumnsType } from 'antd/es/table';
-import type { Asset } from '@/types/asset';
+import type { Asset, AssetLeaseSummaryResponse } from '@/types/asset';
 import { useArrayListData } from '@/hooks/useArrayListData';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
 import { PageContainer } from '@/components/Common';
+import { buildQueryScopeKey } from '@/utils/queryScope';
+import { MANAGER_ROUTES } from '@/constants/routes';
 import styles from './ProjectDetailPage.module.css';
 
 const { Text } = Typography;
+const PROJECT_STATUS_MAP: Record<string, { text: string; color: string; active: boolean }> = {
+  planning: { text: '规划中', color: 'default', active: false },
+  active: { text: '进行中', color: 'green', active: true },
+  paused: { text: '已暂停', color: 'orange', active: false },
+  completed: { text: '已完成', color: 'blue', active: false },
+  terminated: { text: '已终止', color: 'red', active: false },
+};
+
+const RELATION_TYPE_LABELS: Record<string, string> = {
+  上游: '上游承租',
+  下游: '下游转租',
+  委托: '委托协议',
+  直租: '直租合同',
+};
+
+const RELATION_TYPE_COLORS: Record<string, string> = {
+  上游: 'gold',
+  下游: 'blue',
+  委托: 'cyan',
+  直租: 'green',
+};
+
+const buildPeriodParams = (month: Dayjs) => ({
+  period_start: month.startOf('month').format('YYYY-MM-DD'),
+  period_end: month.endOf('month').format('YYYY-MM-DD'),
+});
+
+// 子组件：逐资产获取租赁汇总，避免在 map 中调用 hook
+interface AssetLeaseSummaryRowData {
+  queryScopeKey: string;
+  assetId: string;
+  assetName: string;
+  periodParams: { period_start: string; period_end: string };
+}
+
+const useAssetLeaseSummary = (
+  queryScopeKey: string,
+  assetId: string,
+  periodParams: { period_start: string; period_end: string },
+  enabled: boolean
+) =>
+  useQuery<AssetLeaseSummaryResponse>({
+    queryKey: [
+      'asset-lease-summary',
+      queryScopeKey,
+      assetId,
+      periodParams.period_start,
+      periodParams.period_end,
+    ],
+    queryFn: () => assetService.getAssetLeaseSummary(assetId, periodParams),
+    staleTime: 60_000,
+    enabled,
+  });
+
+const AssetLeaseSummaryRow: React.FC<
+  AssetLeaseSummaryRowData & { onNavigate: (id: string) => void; enabled: boolean }
+> = ({ queryScopeKey, assetId, assetName, periodParams, onNavigate, enabled }) => {
+  const { data, isLoading } = useAssetLeaseSummary(queryScopeKey, assetId, periodParams, enabled);
+
+  if (isLoading) {
+    return (
+      <tr>
+        <td colSpan={7}>
+          <Skeleton active paragraph={{ rows: 1 }} title={false} />
+        </td>
+      </tr>
+    );
+  }
+
+  const byType = data?.by_type ?? [];
+  const typeMap = Object.fromEntries(byType.map(t => [t.group_relation_type, t.contract_count]));
+  const totalContracts = data?.total_contracts ?? 0;
+  const occupancyRate = data?.occupancy_rate ?? 0;
+  const customerCount = data?.customer_summary.length ?? 0;
+
+  return (
+    <tr>
+      <td>
+        <Button type="link" style={{ padding: 0 }} onClick={() => onNavigate(assetId)}>
+          {assetName}
+        </Button>
+      </td>
+      {['上游', '下游', '委托', '直租'].map(rt => (
+        <td key={rt} style={{ textAlign: 'center' }}>
+          {(typeMap[rt] ?? 0) > 0 ? (
+            <Tag color={RELATION_TYPE_COLORS[rt]}>{typeMap[rt]}</Tag>
+          ) : (
+            <Text type="secondary">—</Text>
+          )}
+        </td>
+      ))}
+      <td style={{ textAlign: 'right' }}>
+        <Text strong={occupancyRate > 0}>
+          {occupancyRate > 0 ? `${occupancyRate.toFixed(1)}%` : '—'}
+        </Text>
+      </td>
+      <td style={{ textAlign: 'center' }}>
+        {customerCount > 0 ? (
+          <Tooltip title={data?.customer_summary.map(c => c.party_name).join('、')}>
+            <Tag>{customerCount} 家</Tag>
+          </Tooltip>
+        ) : (
+          <Text type="secondary">—</Text>
+        )}
+      </td>
+      <td style={{ textAlign: 'right' }}>
+        <Text type="secondary" style={{ fontSize: '0.75rem' }}>
+          {totalContracts} 份合同
+        </Text>
+      </td>
+    </tr>
+  );
+};
 
 /**
  * ProjectDetailPage - 项目详情页面组件
@@ -41,10 +168,17 @@ const { Text } = Typography;
  * - 展示项目基本信息
  * - 展示关联资产列表
  * - 展示统计卡片（资产数量、总面积、出租率）
+ * - 展示各资产租赁情况汇总（合同口径，按 group_relation_type 分类）
  */
 const ProjectDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { perspective } = useRoutePerspective();
+  const [selectedMonth, setSelectedMonth] = useState<Dayjs>(() => dayjs().startOf('month'));
+  const periodParams = useMemo(() => buildPeriodParams(selectedMonth), [selectedMonth]);
+  const queryScopeKey = buildQueryScopeKey(perspective);
+  const hasProjectId = id != null && id.length > 0;
+  const canQuery = hasProjectId;
 
   // 获取项目详情
   const {
@@ -52,29 +186,24 @@ const ProjectDetailPage: React.FC = () => {
     isLoading: projectLoading,
     error: projectError,
   } = useQuery({
-    queryKey: ['project', id],
+    queryKey: ['project', queryScopeKey, id],
     queryFn: () => projectService.getProject(id as string),
-    enabled: id !== null && id !== undefined && id.length > 0,
+    enabled: canQuery,
   });
 
   // 获取项目关联资产
   const { data: assetsData, isLoading: assetsLoading } = useQuery({
-    queryKey: ['project-assets', id],
-    queryFn: () =>
-      assetService.getAssets({
-        project_id: id,
-        page: 1,
-        page_size: 100,
-      }),
-    enabled: id !== null && id !== undefined && id.length > 0,
+    queryKey: ['project-assets', queryScopeKey, id],
+    queryFn: () => projectService.getProjectAssets(id as string),
+    enabled: canQuery,
   });
 
   // 资产表格列定义
   const assetColumns: ColumnsType<Asset> = [
     {
       title: '物业名称',
-      dataIndex: 'property_name',
-      key: 'property_name',
+      dataIndex: 'asset_name',
+      key: 'asset_name',
       render: (text: string, record: Asset) => (
         <Button
           type="link"
@@ -123,10 +252,16 @@ const ProjectDetailPage: React.FC = () => {
 
   // 计算统计数据
   const assets = useMemo(() => assetsData?.items ?? [], [assetsData?.items]);
-  const totalAssets = assets.length;
-  const totalRentableArea = assets.reduce((sum, a) => sum + (a.rentable_area ?? 0), 0);
-  const totalRentedArea = assets.reduce((sum, a) => sum + (a.rented_area ?? 0), 0);
-  const occupancyRate = totalRentableArea > 0 ? (totalRentedArea / totalRentableArea) * 100 : 0;
+  const summary = assetsData?.summary ?? {
+    total_assets: 0,
+    total_rentable_area: 0,
+    total_rented_area: 0,
+    occupancy_rate: 0,
+  };
+  const totalAssets = summary.total_assets;
+  const totalRentableArea = summary.total_rentable_area;
+  const totalRentedArea = summary.total_rented_area;
+  const occupancyRate = summary.occupancy_rate;
   const occupancyToneClass =
     occupancyRate >= 80
       ? styles.occupancySuccess
@@ -150,10 +285,18 @@ const ProjectDetailPage: React.FC = () => {
     void loadAssetList({ page: 1 });
   }, [assets, loadAssetList]);
 
+  if (!canQuery) {
+    return (
+      <PageContainer title="项目详情" loading onBack={() => navigate(MANAGER_ROUTES.PROJECTS)}>
+        <div />
+      </PageContainer>
+    );
+  }
+
   // 错误状态
   if (projectError) {
     return (
-      <PageContainer title="项目详情" onBack={() => navigate('/project')}>
+      <PageContainer title="项目详情" onBack={() => navigate(MANAGER_ROUTES.PROJECTS)}>
         <Alert
           title="数据加载失败"
           description={`错误详情: ${projectError instanceof Error ? projectError.message : '未知错误'}`}
@@ -167,7 +310,7 @@ const ProjectDetailPage: React.FC = () => {
   // 数据不存在状态
   if (!projectLoading && !project) {
     return (
-      <PageContainer title="项目详情" onBack={() => navigate('/project')}>
+      <PageContainer title="项目详情" onBack={() => navigate(MANAGER_ROUTES.PROJECTS)}>
         <Alert title="项目不存在" description="未找到指定的项目信息" type="warning" showIcon />
       </PageContainer>
     );
@@ -177,18 +320,18 @@ const ProjectDetailPage: React.FC = () => {
     <PageContainer
       title={
         <span className={styles.projectTitle}>
-          <span>{project?.name}</span>
+          <span>{project?.project_name}</span>
           {project && (
             <Badge
-              status={project.is_active ? 'success' : 'error'}
-              text={project.is_active ? '启用' : '禁用'}
+              status={(PROJECT_STATUS_MAP[project.status]?.active ?? false) ? 'success' : 'default'}
+              text={PROJECT_STATUS_MAP[project.status]?.text ?? project.status}
               className={styles.projectStatus}
             />
           )}
         </span>
       }
       loading={projectLoading}
-      onBack={() => navigate('/project')}
+      onBack={() => navigate(MANAGER_ROUTES.PROJECTS)}
       extra={
         <Button
           type="primary"
@@ -200,6 +343,8 @@ const ProjectDetailPage: React.FC = () => {
         </Button>
       }
     >
+      <CurrentViewBanner />
+
       <Row gutter={[16, 16]} className={styles.metricsRow}>
         <Col xs={24} sm={12} lg={6}>
           <Card className={styles.metricCard}>
@@ -255,7 +400,12 @@ const ProjectDetailPage: React.FC = () => {
           <Card title="项目信息" className={styles.infoCard}>
             <Descriptions column={2}>
               <Descriptions.Item label="项目编码">
-                <Text code>{project.code}</Text>
+                <Text code>{project.project_code}</Text>
+              </Descriptions.Item>
+              <Descriptions.Item label="业务状态">
+                <Tag color={PROJECT_STATUS_MAP[project.status]?.color ?? 'default'}>
+                  {PROJECT_STATUS_MAP[project.status]?.text ?? project.status}
+                </Tag>
               </Descriptions.Item>
               <Descriptions.Item label="项目状态">
                 <Tag
@@ -264,9 +414,6 @@ const ProjectDetailPage: React.FC = () => {
                 >
                   {project.data_status}
                 </Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="项目描述" span={2} className={styles.projectDescription}>
-                {project.description ?? '-'}
               </Descriptions.Item>
               <Descriptions.Item label="创建时间">
                 {project.created_at ? new Date(project.created_at).toLocaleString('zh-CN') : '-'}
@@ -301,6 +448,93 @@ const ProjectDetailPage: React.FC = () => {
               locale={{ emptyText: '暂无关联资产' }}
             />
           </Card>
+
+          {/* 租赁情况（合同口径） */}
+          {assets.length > 0 && (
+            <Card
+              className={styles.assetTableCard}
+              title={
+                <Space>
+                  <span>租赁情况（合同口径）</span>
+                  <Tooltip title="数据来源：各资产活跃合同，不含草稿/待审/已终止/已到期">
+                    <InfoCircleOutlined style={{ color: 'var(--color-text-secondary)' }} />
+                  </Tooltip>
+                </Space>
+              }
+              extra={
+                <DatePicker
+                  picker="month"
+                  allowClear={false}
+                  value={selectedMonth}
+                  onChange={value => setSelectedMonth((value ?? dayjs()).startOf('month'))}
+                  inputReadOnly
+                />
+              }
+            >
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+                  <thead>
+                    <tr
+                      style={{ borderBottom: 'var(--border-width-thin) solid var(--color-border)' }}
+                    >
+                      <th style={{ textAlign: 'left', padding: '0.5rem 0.75rem', fontWeight: 600 }}>
+                        资产
+                      </th>
+                      {['上游', '下游', '委托', '直租'].map(rt => (
+                        <th
+                          key={rt}
+                          style={{
+                            textAlign: 'center',
+                            padding: '0.5rem 0.75rem',
+                            fontWeight: 600,
+                          }}
+                        >
+                          <Tag color={RELATION_TYPE_COLORS[rt]} style={{ margin: 0 }}>
+                            {RELATION_TYPE_LABELS[rt]}
+                          </Tag>
+                        </th>
+                      ))}
+                      <th
+                        style={{ textAlign: 'right', padding: '0.5rem 0.75rem', fontWeight: 600 }}
+                      >
+                        出租率
+                      </th>
+                      <th
+                        style={{ textAlign: 'center', padding: '0.5rem 0.75rem', fontWeight: 600 }}
+                      >
+                        客户摘要
+                      </th>
+                      <th
+                        style={{ textAlign: 'right', padding: '0.5rem 0.75rem', fontWeight: 600 }}
+                      >
+                        合同数
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {assets.map(asset => (
+                      <AssetLeaseSummaryRow
+                        key={asset.id}
+                        queryScopeKey={queryScopeKey}
+                        assetId={asset.id}
+                        assetName={asset.asset_name}
+                        periodParams={periodParams}
+                        enabled={canQuery}
+                        onNavigate={assetId => navigate(`/assets/${assetId}`)}
+                      />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <Text
+                type="secondary"
+                style={{ display: 'block', marginTop: '0.5rem', fontSize: '0.75rem' }}
+              >
+                注：MVP 阶段面积字段以合同台账落地后口径为准；出租率目前为占位值
+                0%，待台账覆盖后升级。
+              </Text>
+            </Card>
+          )}
         </>
       )}
     </PageContainer>

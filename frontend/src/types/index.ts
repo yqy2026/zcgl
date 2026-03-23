@@ -147,6 +147,9 @@ export type {
 export type {
   // 资产相关
   Asset,
+  AssetLeaseSummaryResponse,
+  ContractPartyItem,
+  ContractTypeSummary,
   // AssetListItem, // Does not exist
   AssetFormData,
   // AssetAreaSummary, // Does not exist (use AssetSummary)

@@ -36,6 +36,10 @@ async def get_audit_statistics(
 ) -> dict[str, Any]:
     """
     获取审计日志统计（仅管理员）
+
+    **Party 隔离策略**：返回系统全局聚合统计数字（登录成功/失败次数、活跃用户数），
+    非行级数据，不存在 party 级数据泄露风险。require_admin 门控，仅超管可见。
+    若未来需要按主体分区统计，须在 AuditLog 模型中增加 party_id 列并修改查询。
     """
 
     return await audit_service.get_login_statistics(days=days)

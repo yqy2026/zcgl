@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useRoutePerspective } from '@/routes/perspective';
 import { analyticsService } from '@/services/analyticsService';
 import { exportAnalyticsData } from '@/services/analyticsExportService';
 import { MessageManager } from '@/utils/messageManager';
 import { createLogger } from '@/utils/logger';
 import type { AssetSearchParams } from '@/types/asset';
 import type { AnalyticsData } from '@/types/analytics';
+import { buildQueryScopeKey } from '@/utils/queryScope';
 
 const logger = createLogger('useAssetAnalytics');
 
@@ -22,8 +24,10 @@ const isAnalyticsData = (value: unknown): value is AnalyticsData => {
 };
 
 export const useAssetAnalytics = () => {
+  const { perspective } = useRoutePerspective();
   const [filters, setFilters] = useState<AssetSearchParams>({});
   const [dimension, setDimension] = useState<AnalysisDimension>('area');
+  const queryScopeKey = buildQueryScopeKey(perspective);
 
   // 获取分析数据
   const {
@@ -32,7 +36,7 @@ export const useAssetAnalytics = () => {
     error,
     refetch,
   } = useQuery({
-    queryKey: ['asset-analytics', filters],
+    queryKey: ['analytics', queryScopeKey, 'comprehensive', filters],
     queryFn: async () => {
       const result = await analyticsService.getComprehensiveAnalytics(filters);
       logger.debug('Analytics API Result:', { result });
@@ -82,6 +86,12 @@ export const useAssetAnalytics = () => {
           total_annual_expense: analyticsData.financial_summary.total_annual_expense,
           total_net_income: analyticsData.financial_summary.total_net_income,
           total_monthly_rent: analyticsData.financial_summary.total_monthly_rent,
+          total_income: analyticsData.total_income ?? 0,
+          self_operated_rent_income: analyticsData.self_operated_rent_income ?? 0,
+          agency_service_income: analyticsData.agency_service_income ?? 0,
+          customer_entity_count: analyticsData.customer_entity_count ?? 0,
+          customer_contract_count: analyticsData.customer_contract_count ?? 0,
+          metrics_version: analyticsData.metrics_version ?? '',
         },
         property_nature_distribution: analyticsData.property_nature_distribution ?? [],
         ownership_status_distribution: analyticsData.ownership_status_distribution ?? [],

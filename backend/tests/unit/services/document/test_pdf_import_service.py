@@ -15,7 +15,6 @@ from src.models.pdf_import_session import (
     ProcessingStep,
     SessionStatus,
 )
-from src.models.rent_contract import ContractType, PaymentCycle
 from src.services.document import pdf_import_service as pdf_import_service_module
 from src.services.document.pdf_import_service import PDFImportService
 
@@ -698,135 +697,278 @@ class TestConfirmImport:
     """测试确认导入"""
 
     @pytest.mark.asyncio
-    async def test_confirm_import_success(self, pdf_service, mock_db):
-        """测试成功确认导入"""
+    async def test_confirm_import_creates_contract_group_and_contract(
+        self, pdf_service, mock_db
+    ):
+        """确认导入应创建新合同组、合同和租金条款，并回写会话状态。"""
         mock_import_session = MagicMock(spec=PDFImportSession)
         mock_import_session.status = SessionStatus.READY_FOR_REVIEW
+        mock_import_session.processing_result = {"existing": "data"}
 
-        mock_db.execute = AsyncMock(
-            return_value=_mock_execute_scalars_first(mock_import_session)
-        )
+        mock_db.commit = AsyncMock()
+        mock_db.refresh = AsyncMock()
+
+        operator_party = MagicMock()
+        operator_party.code = "operator-001"
+        owner_party = MagicMock()
+
+        created_group = MagicMock()
+        created_group.contract_group_id = "group-123"
+
+        created_contract = MagicMock()
+        created_contract.contract_id = "contract-456"
 
         confirmed_data = {
+            "revenue_mode": "LEASE",
+            "operator_party_id": "party-op",
+            "owner_party_id": "party-owner",
+            "contract_direction": "出租",
+            "group_relation_type": "上游",
+            "lessor_party_id": "party-lessor",
+            "lessee_party_id": "party-lessee",
+            "asset_id": "asset-001",
+            "settlement_rule": {
+                "version": "v1",
+                "cycle": "月付",
+                "settlement_mode": "manual",
+                "amount_rule": {"basis": "fixed"},
+                "payment_rule": {"due_day": 15},
+            },
             "contract_data": {
                 "contract_number": "HT001",
                 "tenant_name": "Test Tenant",
                 "start_date": "2024-01-01",
                 "end_date": "2024-12-31",
-                "contract_type": "lease_downstream",
-                "payment_cycle": "monthly",
-                "monthly_rent": 5000,
+                "sign_date": "2023-12-25",
+                "payment_terms": "月付",
+                "tenant_contact": "张三",
+                "tenant_phone": "13800000000",
+                "tenant_address": "测试地址",
+                "monthly_rent_base": "5000",
+                "total_deposit": "10000",
+                "contract_notes": "导入备注",
+                "rent_terms": [
+                    {
+                        "start_date": "2024-01-01",
+                        "end_date": "2024-06-30",
+                        "monthly_rent": "5000",
+                        "management_fee": "200",
+                        "other_fees": "50",
+                        "rent_description": "第一阶段",
+                    },
+                    {
+                        "start_date": "2024-07-01",
+                        "end_date": "2024-12-31",
+                        "monthly_rent": "5500",
+                        "rent_description": "第二阶段",
+                    },
+                ],
             }
         }
 
-        result = await pdf_service.confirm_import(
-            mock_db, "session_123", confirmed_data, user_id=1
-        )
+        with patch(
+            "src.services.document.pdf_import_service.pdf_import_session_crud.get_by_session_id_async",
+            new=AsyncMock(return_value=mock_import_session),
+        ), patch(
+            "src.services.document.pdf_import_service.party_service.get_party",
+            new=AsyncMock(side_effect=[operator_party, owner_party]),
+        ), patch(
+            "src.services.document.pdf_import_service.contract_group_service.generate_group_code",
+            new=AsyncMock(return_value="GRP-OPERATOR-202603-0001"),
+        ), patch(
+            "src.services.document.pdf_import_service.contract_group_service.create_contract_group",
+            new=AsyncMock(return_value=created_group),
+        ) as mock_create_group, patch(
+            "src.services.document.pdf_import_service.contract_group_service.add_contract_to_group",
+            new=AsyncMock(return_value=created_contract),
+        ) as mock_add_contract, patch(
+            "src.services.document.pdf_import_service.contract_group_service.create_rent_term",
+            new=AsyncMock(),
+        ) as mock_create_rent_term:
+            result = await pdf_service.confirm_import(
+                mock_db, "session_123", confirmed_data, user_id=1
+            )
 
         assert result["success"] is True
-        assert "contract_id" in result
+        assert result["contract_group_id"] == "group-123"
+        assert result["contract_id"] == "contract-456"
+        assert result["created_terms_count"] == 2
+
+        created_group_payload = mock_create_group.await_args.kwargs["obj_in"]
+        assert created_group_payload.revenue_mode.name == "LEASE"
+        assert created_group_payload.operator_party_id == "party-op"
+        assert created_group_payload.owner_party_id == "party-owner"
+        assert created_group_payload.effective_from == date(2024, 1, 1)
+        assert created_group_payload.effective_to == date(2024, 12, 31)
+        assert created_group_payload.asset_ids == ["asset-001"]
+        assert created_group_payload.settlement_rule.version == "v1"
+
+        created_contract_payload = mock_add_contract.await_args.kwargs["obj_in"]
+        assert created_contract_payload.contract_group_id == "group-123"
+        assert created_contract_payload.contract_number == "HT001"
+        assert created_contract_payload.contract_direction.name == "LESSOR"
+        assert created_contract_payload.group_relation_type.name == "UPSTREAM"
+        assert created_contract_payload.lessor_party_id == "party-lessor"
+        assert created_contract_payload.lessee_party_id == "party-lessee"
+        assert created_contract_payload.source_session_id == "session_123"
+        assert created_contract_payload.asset_ids == ["asset-001"]
+        assert created_contract_payload.lease_detail is not None
+        assert str(created_contract_payload.lease_detail.rent_amount) == "5000"
+        assert str(created_contract_payload.lease_detail.total_deposit) == "10000"
+
+        first_rent_term = mock_create_rent_term.await_args_list[0].kwargs["obj_in"]
+        second_rent_term = mock_create_rent_term.await_args_list[1].kwargs["obj_in"]
+        assert first_rent_term.sort_order == 1
+        assert first_rent_term.start_date == date(2024, 1, 1)
+        assert str(first_rent_term.management_fee) == "200"
+        assert str(first_rent_term.other_fees) == "50"
+        assert first_rent_term.notes == "第一阶段"
+        assert second_rent_term.sort_order == 2
+        assert second_rent_term.start_date == date(2024, 7, 1)
+
         assert mock_import_session.status == SessionStatus.CONFIRMED
+        assert mock_import_session.current_step == ProcessingStep.FINAL_REVIEW
+        assert mock_import_session.progress_percentage == 100.0
+        assert mock_import_session.completed_at is not None
+        assert mock_import_session.processing_result["created_contract_group_id"] == "group-123"
+        assert mock_import_session.processing_result["created_contract_id"] == "contract-456"
+        mock_db.commit.assert_awaited_once()
+        mock_db.refresh.assert_awaited_once_with(mock_import_session)
 
     @pytest.mark.asyncio
     async def test_confirm_import_missing_fields(self, pdf_service, mock_db):
-        """测试缺失必填字段"""
+        """缺少新体系必填上下文时应 fail-closed。"""
         mock_import_session = MagicMock(spec=PDFImportSession)
-        mock_db.execute = AsyncMock(
-            return_value=_mock_execute_scalars_first(mock_import_session)
-        )
+        mock_import_session.status = SessionStatus.READY_FOR_REVIEW
+        mock_db.commit = AsyncMock()
 
         confirmed_data = {
+            "owner_party_id": "party-owner",
             "contract_data": {
                 "contract_number": "HT001",
-                # Missing tenant_name, start_date, end_date
+                "tenant_name": "Test Tenant",
+                "start_date": "2024-01-01",
+                "end_date": "2024-12-31",
             }
         }
 
-        result = await pdf_service.confirm_import(
-            mock_db, "session_123", confirmed_data, user_id=1
-        )
+        with patch(
+            "src.services.document.pdf_import_service.pdf_import_session_crud.get_by_session_id_async",
+            new=AsyncMock(return_value=mock_import_session),
+        ):
+            result = await pdf_service.confirm_import(
+                mock_db, "session_123", confirmed_data, user_id=1
+            )
 
         assert result["success"] is False
         assert "Missing required fields" in result["error"]
+        assert "revenue_mode" in result["error"]
+        assert "operator_party_id" in result["error"]
+        assert "settlement_rule" in result["error"]
+        mock_db.commit.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_confirm_import_session_not_found(self, pdf_service, mock_db):
         """测试会话未找到"""
-        mock_db.execute = AsyncMock(return_value=_mock_execute_scalars_first(None))
-
         confirmed_data = {"contract_data": {}}
 
-        result = await pdf_service.confirm_import(
-            mock_db, "nonexistent", confirmed_data, user_id=1
-        )
+        with patch(
+            "src.services.document.pdf_import_service.pdf_import_session_crud.get_by_session_id_async",
+            new=AsyncMock(return_value=None),
+        ):
+            result = await pdf_service.confirm_import(
+                mock_db, "nonexistent", confirmed_data, user_id=1
+            )
 
         assert result["success"] is False
         assert "not found" in result["error"]
 
     @pytest.mark.asyncio
-    async def test_confirm_import_contract_type_mapping(self, pdf_service, mock_db):
-        """测试合同类型映射"""
+    async def test_confirm_import_agency_payload_creates_agency_detail(
+        self, pdf_service, mock_db
+    ):
+        """AGENCY 模式确认导入应显式创建 agency_detail。"""
         mock_import_session = MagicMock(spec=PDFImportSession)
-        mock_db.execute = AsyncMock(
-            return_value=_mock_execute_scalars_first(mock_import_session)
+        mock_import_session.status = SessionStatus.READY_FOR_REVIEW
+        mock_import_session.processing_result = {"existing": "data"}
+
+        mock_db.commit = AsyncMock()
+        mock_db.refresh = AsyncMock()
+
+        operator_party = MagicMock()
+        operator_party.code = "operator-001"
+        owner_party = MagicMock()
+
+        created_group = MagicMock()
+        created_group.contract_group_id = "group-agency-123"
+
+        created_contract = MagicMock()
+        created_contract.contract_id = "contract-agency-456"
+
+        confirmed_data = {
+            "revenue_mode": "AGENCY",
+            "operator_party_id": "party-op",
+            "owner_party_id": "party-owner",
+            "contract_direction": "承租",
+            "group_relation_type": "委托",
+            "lessor_party_id": "party-owner",
+            "lessee_party_id": "party-operator",
+            "settlement_rule": {
+                "version": "v1",
+                "cycle": "月付",
+                "settlement_mode": "manual",
+                "amount_rule": {"basis": "actual_received"},
+                "payment_rule": {"due_day": 15},
+            },
+            "contract_data": {
+                "contract_number": "AG-001",
+                "tenant_name": "Agency Tenant",
+                "start_date": "2024-01-01",
+                "end_date": "2024-12-31",
+                "monthly_rent_base": "5000",
+                "agency_detail": {
+                    "service_fee_ratio": "0.08",
+                    "fee_calculation_base": "actual_received",
+                    "agency_scope": "招商及代收租金",
+                },
+                "rent_terms": [],
+            },
+        }
+
+        with patch(
+            "src.services.document.pdf_import_service.pdf_import_session_crud.get_by_session_id_async",
+            new=AsyncMock(return_value=mock_import_session),
+        ), patch(
+            "src.services.document.pdf_import_service.party_service.get_party",
+            new=AsyncMock(side_effect=[operator_party, owner_party]),
+        ), patch(
+            "src.services.document.pdf_import_service.contract_group_service.generate_group_code",
+            new=AsyncMock(return_value="GRP-OPERATOR-202603-0002"),
+        ), patch(
+            "src.services.document.pdf_import_service.contract_group_service.create_contract_group",
+            new=AsyncMock(return_value=created_group),
+        ), patch(
+            "src.services.document.pdf_import_service.contract_group_service.add_contract_to_group",
+            new=AsyncMock(return_value=created_contract),
+        ) as mock_add_contract, patch(
+            "src.services.document.pdf_import_service.contract_group_service.create_rent_term",
+            new=AsyncMock(),
+        ) as mock_create_rent_term:
+            result = await pdf_service.confirm_import(
+                mock_db, "session_agency_123", confirmed_data, user_id=1
+            )
+
+        assert result["success"] is True
+        created_contract_payload = mock_add_contract.await_args.kwargs["obj_in"]
+        assert created_contract_payload.lease_detail is None
+        assert created_contract_payload.agency_detail is not None
+        assert str(created_contract_payload.agency_detail.service_fee_ratio) == "0.08"
+        assert (
+            created_contract_payload.agency_detail.fee_calculation_base
+            == "actual_received"
         )
-
-        contract_types = [
-            ("lease_upstream", ContractType.LEASE_UPSTREAM),
-            ("lease_downstream", ContractType.LEASE_DOWNSTREAM),
-            ("entrusted", ContractType.ENTRUSTED),
-        ]
-
-        for type_str, expected_enum in contract_types:
-            confirmed_data = {
-                "contract_data": {
-                    "contract_number": f"HT{type_str}",
-                    "tenant_name": "Tenant",
-                    "start_date": "2024-01-01",
-                    "end_date": "2024-12-31",
-                    "contract_type": type_str,
-                }
-            }
-
-            with patch.object(pdf_service, "_parse_date", return_value=date.today()):
-                result = await pdf_service.confirm_import(
-                    mock_db, "session_123", confirmed_data, user_id=1
-                )
-
-                assert result["success"] is True
-
-    @pytest.mark.asyncio
-    async def test_confirm_import_payment_cycle_mapping(self, pdf_service, mock_db):
-        """测试付款周期映射"""
-        mock_import_session = MagicMock(spec=PDFImportSession)
-        mock_db.execute = AsyncMock(
-            return_value=_mock_execute_scalars_first(mock_import_session)
-        )
-
-        payment_cycles = [
-            ("monthly", PaymentCycle.MONTHLY),
-            ("quarterly", PaymentCycle.QUARTERLY),
-            ("semi_annual", PaymentCycle.SEMI_ANNUAL),
-            ("annual", PaymentCycle.ANNUAL),
-        ]
-
-        for cycle_str, expected_enum in payment_cycles:
-            confirmed_data = {
-                "contract_data": {
-                    "contract_number": f"HT{cycle_str}",
-                    "tenant_name": "Tenant",
-                    "start_date": "2024-01-01",
-                    "end_date": "2024-12-31",
-                    "payment_cycle": cycle_str,
-                }
-            }
-
-            with patch.object(pdf_service, "_parse_date", return_value=date.today()):
-                result = await pdf_service.confirm_import(
-                    mock_db, "session_123", confirmed_data, user_id=1
-                )
-
-                assert result["success"] is True
+        assert created_contract_payload.agency_detail.agency_scope == "招商及代收租金"
+        mock_create_rent_term.assert_not_awaited()
 
 
 # ============================================================================

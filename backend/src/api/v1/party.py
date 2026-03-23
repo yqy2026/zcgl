@@ -22,6 +22,7 @@ from ...schemas.party import (
     PartyHierarchyCreate,
     PartyHierarchyResponse,
     PartyResponse,
+    PartyReviewRejectRequest,
     PartyUpdate,
     UserPartyBindingCreate,
     UserPartyBindingResponse,
@@ -169,6 +170,114 @@ async def delete_party(
     if not deleted:
         raise not_found("主体不存在", resource_type="party", resource_id=party_id)
     return {"message": "主体已删除"}
+
+
+@router.post(
+    "/parties/{party_id}/submit-review",
+    response_model=PartyResponse,
+    summary="提交主体审核",
+)
+async def submit_party_review(
+    party_id: str,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: Annotated[
+        AuthzContext | None,
+        Depends(
+            require_authz(
+                action="update",
+                resource_type="party",
+                resource_id="{party_id}",
+            )
+        ),
+    ] = None,
+) -> PartyResponse:
+    _ = current_user
+    try:
+        party = await party_service.submit_party_review(db, party_id=party_id)
+        return PartyResponse.model_validate(party)
+    except BaseBusinessError:
+        raise
+    except Exception as exc:
+        raise internal_error("提交主体审核失败", original_error=exc) from exc
+
+
+@router.post(
+    "/parties/{party_id}/approve-review",
+    response_model=PartyResponse,
+    summary="审核通过主体",
+)
+async def approve_party_review(
+    party_id: str,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: Annotated[
+        AuthzContext | None,
+        Depends(
+            require_authz(
+                action="update",
+                resource_type="party",
+                resource_id="{party_id}",
+            )
+        ),
+    ] = None,
+) -> PartyResponse:
+    reviewer = (
+        str(getattr(current_user, "full_name", "")).strip()
+        or str(getattr(current_user, "username", "")).strip()
+        or str(current_user.id)
+    )
+    try:
+        party = await party_service.approve_party_review(
+            db,
+            party_id=party_id,
+            reviewer=reviewer,
+        )
+        return PartyResponse.model_validate(party)
+    except BaseBusinessError:
+        raise
+    except Exception as exc:
+        raise internal_error("审核通过主体失败", original_error=exc) from exc
+
+
+@router.post(
+    "/parties/{party_id}/reject-review",
+    response_model=PartyResponse,
+    summary="驳回主体审核",
+)
+async def reject_party_review(
+    party_id: str,
+    payload: PartyReviewRejectRequest,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: Annotated[
+        AuthzContext | None,
+        Depends(
+            require_authz(
+                action="update",
+                resource_type="party",
+                resource_id="{party_id}",
+            )
+        ),
+    ] = None,
+) -> PartyResponse:
+    reviewer = (
+        str(getattr(current_user, "full_name", "")).strip()
+        or str(getattr(current_user, "username", "")).strip()
+        or str(current_user.id)
+    )
+    try:
+        party = await party_service.reject_party_review(
+            db,
+            party_id=party_id,
+            reviewer=reviewer,
+            reason=payload.reason,
+        )
+        return PartyResponse.model_validate(party)
+    except BaseBusinessError:
+        raise
+    except Exception as exc:
+        raise internal_error("驳回主体审核失败", original_error=exc) from exc
 
 
 @router.get(
@@ -471,7 +580,9 @@ async def close_user_party_binding(
     return {"message": "用户主体绑定已关闭"}
 
 
-route_registry.register_router(router, prefix="/api/v1", tags=["主体管理"], version="v1")
+route_registry.register_router(
+    router, prefix="/api/v1", tags=["主体管理"], version="v1"
+)
 
 
 __all__ = ["router"]

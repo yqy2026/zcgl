@@ -11,7 +11,7 @@ import { OwnershipStatus, PropertyNature, UsageStatus } from '@/types/asset';
  */
 const defaultAsset: Asset = {
   id: 'test-asset-1',
-  property_name: '测试物业',
+  asset_name: '测试物业',
   owner_party_name: '测试权属方',
   address: '测试地址',
   ownership_status: OwnershipStatus.CONFIRMED,
@@ -47,7 +47,7 @@ export function createMockAssets(
     const override = typeof overrides === 'function' ? overrides(index) : overrides;
     return createMockAsset({
       id: `test-asset-${index + 1}`,
-      property_name: `测试物业 ${index + 1}`,
+      asset_name: `测试物业 ${index + 1}`,
       ...override,
     });
   });

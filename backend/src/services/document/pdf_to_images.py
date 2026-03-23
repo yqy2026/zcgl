@@ -9,12 +9,19 @@ from __future__ import annotations
 import logging
 import tempfile
 import uuid
+from collections.abc import Callable
 from functools import partial
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import anyio
 
 logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:  # pragma: no cover - typing only
+    from PIL.Image import Image
+
+Pdf2ImageConvert = Callable[..., list["Image"]]
 
 try:  # pragma: no cover - optional dependency
     import fitz  # PyMuPDF
@@ -25,7 +32,9 @@ except Exception:  # pragma: no cover - optional dependency
     PYMUPDF_AVAILABLE = False
 
 try:  # pragma: no cover - optional dependency
-    from pdf2image import convert_from_path
+    from pdf2image import convert_from_path as _convert_from_path
+
+    convert_from_path: Pdf2ImageConvert | None = _convert_from_path
 
     PDF2IMAGE_AVAILABLE = True
 except Exception:  # pragma: no cover - optional dependency
@@ -114,5 +123,5 @@ def cleanup_temp_images(image_paths: list[str]) -> None:
     parent = Path(image_paths[0]).parent
     try:
         parent.rmdir()
-    except Exception:  # pragma: no cover - best effort
-        pass
+    except Exception as exc:  # pragma: no cover - best effort
+        logger.debug("Failed to remove temp image parent %s: %s", parent, exc)

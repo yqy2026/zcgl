@@ -18,7 +18,7 @@ import type { Asset } from '../../types/asset';
 const mockAsset = {
   id: 'asset-001',
   ownership_entity: '权属方A',
-  property_name: '物业A',
+  asset_name: '物业A',
   address: '地址A',
   ownership_status: '自有',
   property_nature: '商业',
@@ -197,12 +197,12 @@ describe('useAssetStore - 搜索参数', () => {
 
     act(() => {
       result.current.setSearchParams({
-        sort_field: 'property_name',
+        sort_field: 'asset_name',
         sort_order: 'asc',
       });
     });
 
-    expect(result.current.searchParams.sort_field).toBe('property_name');
+    expect(result.current.searchParams.sort_field).toBe('asset_name');
     expect(result.current.searchParams.sort_order).toBe('asc');
   });
 });

@@ -4,7 +4,7 @@
 测试 OwnershipFinancialService 的所有主要方法
 """
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -121,6 +121,49 @@ class TestDataClasses:
 # ============================================================================
 class TestGetFinancialSummary:
     """测试获取财务汇总"""
+
+    async def test_get_financial_summary_uses_new_contract_group_crud(
+        self, service, mock_db
+    ):
+        """必须改走新 contracts/contract_groups/contract_ledger_entries 聚合路径。"""
+        with (
+            patch(
+                "src.services.asset.ownership_financial_service.contract_group_crud.sum_due_amount_by_ownership_async",
+                new=AsyncMock(return_value=10000.0),
+            ) as mock_due,
+            patch(
+                "src.services.asset.ownership_financial_service.contract_group_crud.sum_paid_amount_by_ownership_async",
+                new=AsyncMock(return_value=8000.0),
+            ) as mock_paid,
+            patch(
+                "src.services.asset.ownership_financial_service.contract_group_crud.sum_overdue_amount_by_ownership_async",
+                new=AsyncMock(return_value=2000.0),
+            ) as mock_overdue,
+            patch(
+                "src.services.asset.ownership_financial_service.contract_group_crud.count_by_ownership_async",
+                new=AsyncMock(return_value=10),
+            ) as mock_count,
+            patch(
+                "src.services.asset.ownership_financial_service.contract_group_crud.count_active_by_ownership_async",
+                new=AsyncMock(return_value=8),
+            ) as mock_active_count,
+        ):
+            result = await service.get_financial_summary(
+                mock_db,
+                TEST_OWNERSHIP_ID,
+                TEST_OWNERSHIP_NAME,
+            )
+
+        assert result.financial_summary.total_due_amount == 10000.0
+        assert result.financial_summary.total_paid_amount == 8000.0
+        assert result.financial_summary.total_arrears_amount == 2000.0
+        assert result.contract_summary.total_contracts == 10
+        assert result.contract_summary.active_contracts == 8
+        mock_due.assert_awaited_once_with(mock_db, TEST_OWNERSHIP_ID)
+        mock_paid.assert_awaited_once_with(mock_db, TEST_OWNERSHIP_ID)
+        mock_overdue.assert_awaited_once_with(mock_db, TEST_OWNERSHIP_ID)
+        mock_count.assert_awaited_once_with(mock_db, TEST_OWNERSHIP_ID)
+        mock_active_count.assert_awaited_once_with(mock_db, TEST_OWNERSHIP_ID)
 
     async def test_get_financial_summary_success(self, service, mock_db):
         """测试成功获取财务汇总"""

@@ -7,7 +7,11 @@ import {
   FullscreenOutlined,
   FullscreenExitOutlined,
 } from '@ant-design/icons';
-import { AnalyticsStatsGrid, FinancialStatsGrid } from '@/components/Analytics/AnalyticsStatsCard';
+import {
+  AnalyticsStatsGrid,
+  FinancialStatsGrid,
+  RevenueStatsGrid,
+} from '@/components/Analytics/AnalyticsStatsCard';
 import { AnalyticsLineChart, chartDataUtils } from '@/components/Analytics/AnalyticsChart';
 import AnalyticsFilters from '@/components/Analytics/AnalyticsFilters';
 import { createLogger } from '@/utils/logger';
@@ -165,6 +169,21 @@ const AssetAnalyticsPage: React.FC = () => {
           {/* 财务指标 */}
           <Card title="财务指标" className={styles.sectionCard}>
             <FinancialStatsGrid data={analyticsData.financial_summary} loading={loading} />
+          </Card>
+
+          {/* 经营口径（ANA-001） */}
+          <Card title="经营口径" className={styles.sectionCard}>
+            <RevenueStatsGrid
+              data={{
+                total_income: analyticsData.total_income ?? 0,
+                self_operated_rent_income: analyticsData.self_operated_rent_income ?? 0,
+                agency_service_income: analyticsData.agency_service_income ?? 0,
+                customer_entity_count: analyticsData.customer_entity_count ?? 0,
+                customer_contract_count: analyticsData.customer_contract_count ?? 0,
+                metrics_version: analyticsData.metrics_version,
+              }}
+              loading={loading}
+            />
           </Card>
 
           {/* 出租率趋势 */}

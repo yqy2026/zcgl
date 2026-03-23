@@ -12,8 +12,13 @@ from .abac import (  # noqa: F401
 from .asset import Asset  # noqa: F401
 from .asset_history import AssetDocument, AssetHistory  # noqa: F401
 from .asset_management_history import AssetManagementHistory  # noqa: F401
+from .asset_review_log import AssetReviewLog  # noqa: F401
 from .asset_search_index import AssetSearchIndex  # noqa: F401
-from .associations import property_cert_assets, rent_contract_assets  # noqa: F401
+from .associations import (  # noqa: F401  # noqa: F401
+    contract_assets,
+    contract_group_assets,
+    property_cert_assets,
+)
 from .auth import AuditLog, User, UserSession  # noqa: F401
 from .certificate_party_relation import (  # noqa: F401
     CertificatePartyRelation,
@@ -25,6 +30,19 @@ from .collection import (  # noqa: F401
     CollectionStatus,
 )
 from .contact import Contact, ContactType  # noqa: F401
+from .contract_group import (  # noqa: F401
+    AgencyAgreementDetail,
+    Contract,
+    ContractDirection,
+    ContractGroup,
+    ContractLifecycleStatus,
+    ContractRelation,
+    ContractRelationType,
+    ContractReviewStatus,
+    GroupRelationType,
+    LeaseContractDetail,
+    RevenueMode,
+)
 from .enum_field import (  # noqa: F401
     EnumFieldHistory,
     EnumFieldType,
@@ -48,7 +66,14 @@ from .organization import (  # noqa: F401
     OrganizationHistory,
 )
 from .ownership import Ownership  # noqa: F401
-from .party import Party, PartyContact, PartyHierarchy, PartyType  # noqa: F401
+from .party import (  # noqa: F401
+    Party,
+    PartyContact,
+    PartyHierarchy,
+    PartyReviewStatus,
+    PartyType,
+)
+from .party_review_log import PartyReviewLog  # noqa: F401
 from .party_role import PartyRoleBinding, PartyRoleDef  # noqa: F401
 from .project import Project  # noqa: F401
 from .project_asset import ProjectAsset  # noqa: F401
@@ -66,18 +91,6 @@ from .rbac import (  # noqa: F401
     Role,
     UserRoleAssignment,
 )
-from .rent_contract import (  # noqa: F401
-    ContractType,
-    DepositTransactionType,
-    PaymentCycle,
-    RentContract,
-    RentContractAttachment,
-    RentContractHistory,
-    RentDepositLedger,
-    RentLedger,
-    RentTerm,
-    ServiceFeeLedger,
-)
 from .security_event import (  # noqa: F401
     SecurityEvent,
     SecurityEventType,
@@ -92,6 +105,7 @@ __all__ = [
     "AssetManagementHistory",
     "AssetHistory",
     "AssetDocument",
+    "AssetReviewLog",
     "Ownership",
     "Project",
     "ProjectOwnershipRelation",
@@ -113,18 +127,21 @@ __all__ = [
     "EnumFieldValue",
     "EnumFieldUsage",
     "EnumFieldHistory",
-    "RentContract",
-    "RentTerm",
-    "RentLedger",
-    "RentContractHistory",
-    "RentContractAttachment",
-    "RentDepositLedger",
-    "ServiceFeeLedger",
-    "ContractType",
-    "DepositTransactionType",
-    "PaymentCycle",
-    "rent_contract_assets",
     "property_cert_assets",
+    # 合同组体系（REQ-RNT-001）
+    "ContractGroup",
+    "Contract",
+    "LeaseContractDetail",
+    "AgencyAgreementDetail",
+    "ContractRelation",
+    "RevenueMode",
+    "ContractDirection",
+    "GroupRelationType",
+    "ContractLifecycleStatus",
+    "ContractReviewStatus",
+    "ContractRelationType",
+    "contract_group_assets",
+    "contract_assets",
     # Contact models
     "Contact",
     "ContactType",
@@ -143,6 +160,7 @@ __all__ = [
     "PromptMetrics",
     "PromptStatus",
     "PartyType",
+    "PartyReviewStatus",
     "Party",
     "PartyHierarchy",
     "PartyContact",

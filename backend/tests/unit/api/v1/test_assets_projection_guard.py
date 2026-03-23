@@ -6,10 +6,15 @@ from unittest.mock import MagicMock
 import pytest
 
 from src.api.v1.assets import assets as assets_api
-from src.core.enums import ContractStatus
 from src.models.asset import Asset
+from src.models.contract_group import (
+    Contract,
+    ContractDirection,
+    ContractLifecycleStatus,
+    GroupRelationType,
+    LeaseContractDetail,
+)
 from src.models.ownership import Ownership
-from src.models.rent_contract import RentContract
 
 pytestmark = [pytest.mark.unit, pytest.mark.api]
 
@@ -28,12 +33,42 @@ class _AssetServiceStub:
 def _build_asset() -> Asset:
     return Asset(
         ownership_id="ownership-1",
-        property_name="测试资产",
+        asset_name="测试资产",
         address="测试地址",
         ownership_status="已确权",
         property_nature="商业",
         usage_status="在用",
     )
+
+
+def _build_contract(
+    *,
+    contract_number: str,
+    tenant_name: str,
+    effective_from: date,
+    effective_to: date,
+    monthly_rent: Decimal,
+    deposit: Decimal,
+) -> Contract:
+    contract = Contract(
+        contract_group_id="group-001",
+        contract_number=contract_number,
+        contract_direction=ContractDirection.LESSOR,
+        group_relation_type=GroupRelationType.DOWNSTREAM,
+        lessor_party_id="party-lessor",
+        lessee_party_id="party-lessee",
+        sign_date=effective_from,
+        effective_from=effective_from,
+        effective_to=effective_to,
+        status=ContractLifecycleStatus.ACTIVE,
+    )
+    contract.lease_detail = LeaseContractDetail(
+        rent_amount=monthly_rent,
+        monthly_rent_base=monthly_rent,
+        total_deposit=deposit,
+        tenant_name=tenant_name,
+    )
+    return contract
 
 
 @pytest.mark.asyncio
@@ -92,17 +127,14 @@ async def test_get_assets_with_relations_projects_active_contract(monkeypatch):
         created_at=datetime.now(UTC).replace(tzinfo=None),
         updated_at=datetime.now(UTC).replace(tzinfo=None),
     )
-    asset.rent_contracts = [
-        RentContract(
+    asset.contracts = [
+        _build_contract(
             contract_number="RC-2026-001",
-            ownership_id="ownership-1",
             tenant_name="测试租户",
-            sign_date=date(2026, 1, 1),
-            start_date=date(2026, 1, 1),
-            end_date=date(2026, 12, 31),
-            contract_status=ContractStatus.ACTIVE.value,
-            monthly_rent_base=Decimal("3500.00"),
-            total_deposit=Decimal("7000.00"),
+            effective_from=date(2026, 1, 1),
+            effective_to=date(2026, 12, 31),
+            monthly_rent=Decimal("3500.00"),
+            deposit=Decimal("7000.00"),
         )
     ]
 

@@ -533,7 +533,7 @@ if __name__ == "__main__":  # pragma: no cover
     """  # pragma: no cover
 
     # 测试固定租金合同提取  # pragma: no cover
-    def extract_fixed_rent_contract_info(
+    def extract_fixed_contract_info(
         contract_text: str,
     ) -> dict[str, Any]:  # pragma: no cover
         """
@@ -576,6 +576,6 @@ if __name__ == "__main__":  # pragma: no cover
             }
 
     # 运行测试  # pragma: no cover
-    result = extract_fixed_rent_contract_info(test_text)  # pragma: no cover
+    result = extract_fixed_contract_info(test_text)  # pragma: no cover
     _log_debug("固定租金提取器测试结果:")  # pragma: no cover
     _log_debug(json.dumps(result, ensure_ascii=False, indent=2))  # pragma: no cover

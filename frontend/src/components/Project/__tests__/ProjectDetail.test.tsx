@@ -11,11 +11,11 @@ import ProjectDetail from '../ProjectDetail';
 
 const createMockProject = (overrides: Partial<Project> = {}): Project => ({
   id: 'project-001',
-  name: '测试项目',
-  code: 'PROJ-001',
-  description: '项目描述',
-  is_active: true,
+  project_name: '测试项目',
+  project_code: 'PRJ-001',
+  status: 'active',
   data_status: '正常',
+  review_status: 'draft',
   created_at: '2024-01-01T00:00:00Z',
   updated_at: '2024-01-02T00:00:00Z',
   created_by: 'admin',
@@ -29,7 +29,8 @@ describe('ProjectDetail', () => {
     renderWithProviders(<ProjectDetail project={createMockProject()} onEdit={vi.fn()} />);
 
     expect(screen.getByText('测试项目')).toBeInTheDocument();
-    expect(screen.getByText('PROJ-001')).toBeInTheDocument();
+    expect(screen.getByText('PRJ-001')).toBeInTheDocument();
+    expect(screen.getAllByText('进行中').length).toBeGreaterThan(0);
     expect(screen.getByText('编辑项目')).toBeInTheDocument();
     expect(screen.getByText('项目信息')).toBeInTheDocument();
     expect(screen.getByText('系统信息')).toBeInTheDocument();
@@ -39,7 +40,6 @@ describe('ProjectDetail', () => {
     renderWithProviders(
       <ProjectDetail
         project={createMockProject({
-          description: '',
           created_by: '',
           updated_by: '',
           created_at: '',

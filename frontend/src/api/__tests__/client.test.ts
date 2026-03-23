@@ -10,14 +10,37 @@ import { Logger } from '@/utils/logger';
 import { ApiClient, apiClient } from '../client';
 import { API_BASE_URL } from '../config';
 
-const { mockClearAuthData } = vi.hoisted(() => ({
+const {
+  mockClearAuthData,
+  mockClearCapabilitiesSnapshot,
+  mockGetCurrentUser,
+  mockGetViewSelection,
+} = vi.hoisted(() => ({
   mockClearAuthData: vi.fn(),
+  mockClearCapabilitiesSnapshot: vi.fn(),
+  mockGetCurrentUser: vi.fn(),
+  mockGetViewSelection: vi.fn(),
 }));
 
 vi.mock('@/utils/AuthStorage', () => ({
   AuthStorage: {
     clearAuthData: mockClearAuthData,
   },
+}));
+
+vi.mock('@/utils/queryScope', () => ({
+  getCurrentRequestScopeKey: () => {
+    const currentUser = mockGetCurrentUser();
+    const viewSelection = mockGetViewSelection();
+    const userId = currentUser?.id ?? 'anonymous';
+    if (viewSelection == null) {
+      return `user:${userId}|view:none`;
+    }
+    return `user:${userId}|view:${viewSelection.perspective}:${viewSelection.partyId}`;
+  },
+  clearCapabilitiesSnapshot: mockClearCapabilitiesSnapshot,
+  getCurrentUser: mockGetCurrentUser,
+  getViewSelection: mockGetViewSelection,
 }));
 
 // =============================================================================
@@ -266,6 +289,38 @@ describe('ApiClient', () => {
       expect(result.data?.page_size).toBe(10);
       expect(result.data?.total).toBe(1);
       expect(result.data?.pages).toBe(1);
+    });
+
+    it('GET 缓存键应区分当前用户与视角', () => {
+      const cacheClient = new ApiClient({
+        baseURL: API_BASE_URL,
+        enableAutoRetry: false,
+        enableCaching: true,
+        enableLogging: false,
+        defaultCacheConfig: {
+          enabled: true,
+          ttl: 5000,
+          maxSize: 10,
+        },
+      });
+
+      mockGetCurrentUser.mockReturnValue({ id: 'user-1' });
+      mockGetViewSelection.mockReturnValue({
+        key: 'owner:party-1',
+        perspective: 'owner',
+        partyId: 'party-1',
+      });
+      const ownerScopeKey = cacheClient['generateCacheKey']('GET', '/api/test', { page: 1 });
+
+      mockGetCurrentUser.mockReturnValue({ id: 'user-2' });
+      mockGetViewSelection.mockReturnValue({
+        key: 'manager:party-2',
+        perspective: 'manager',
+        partyId: 'party-2',
+      });
+      const managerScopeKey = cacheClient['generateCacheKey']('GET', '/api/test', { page: 1 });
+
+      expect(ownerScopeKey).not.toBe(managerScopeKey);
     });
   });
 

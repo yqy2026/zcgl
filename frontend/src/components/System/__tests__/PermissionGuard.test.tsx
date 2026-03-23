@@ -114,4 +114,21 @@ describe('PermissionGuard (deprecated compat shell)', () => {
 
     expect(screen.getByText('allowed-content')).toBeInTheDocument();
   });
+
+  it('maps rental alias to contract resource', () => {
+    const canPerform = vi.fn(() => true);
+    mockUseCapabilities.mockReturnValue({
+      canPerform,
+      loading: false,
+    });
+
+    render(
+      <PermissionGuard permissions={[{ resource: 'rental', action: 'view' }]}>
+        <div>allowed-content</div>
+      </PermissionGuard>
+    );
+
+    expect(canPerform).toHaveBeenCalledWith('read', 'contract');
+    expect(screen.getByText('allowed-content')).toBeInTheDocument();
+  });
 });

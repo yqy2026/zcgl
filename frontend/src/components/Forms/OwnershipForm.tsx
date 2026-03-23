@@ -39,7 +39,7 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({ initialValues, onSuccess,
   const loadProjectOptions = async () => {
     try {
       // Loading project options
-      const response = await projectService.getProjectOptions(true);
+      const response = await projectService.getProjectOptions('active');
       // Got project options response
       const projects = Array.isArray(response) ? response : [];
       setProjectOptions(projects);
@@ -171,7 +171,7 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({ initialValues, onSuccess,
               >
                 {(projectOptions.length > 0 ? projectOptions : []).map(project => (
                   <Option key={project.id} value={project.id}>
-                    {project.name} ({project.code})
+                    {project.project_name} ({project.project_code})
                   </Option>
                 ))}
               </Select>

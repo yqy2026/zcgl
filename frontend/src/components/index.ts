@@ -18,5 +18,4 @@ export * as Notification from './Notification';
 export * as Ownership from './Ownership';
 export * as Project from './Project';
 export * as PropertyCertificate from './PropertyCertificate';
-export * as Rental from './Rental';
 export * as System from './System';

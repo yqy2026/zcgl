@@ -1,7 +1,7 @@
 /**
  * 权属方详情页面 - V2
  *
- * @description 展示权属方的完整信息，包括基本信息、关联资产、关联合同和财务统计
+ * @description 展示权属方的完整信息，包括基本信息、关联资产，以及已退休的旧合同/财务入口提示
  * @module pages/Ownership
  */
 
@@ -19,21 +19,13 @@ import {
   Badge,
   Tabs,
 } from 'antd';
-import {
-  EditOutlined,
-  HomeOutlined,
-  DollarOutlined,
-  FileTextOutlined,
-  PercentageOutlined,
-} from '@ant-design/icons';
+import { EditOutlined, HomeOutlined, FileTextOutlined } from '@ant-design/icons';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ownershipService } from '@/services/ownershipService';
 import { assetService } from '@/services/assetService';
-import { rentContractService } from '@/services/rentContractService';
 import type { ColumnsType } from 'antd/es/table';
 import type { Asset } from '@/types/asset';
-import type { RentContract } from '@/types/rentContract';
 import { useArrayListData } from '@/hooks/useArrayListData';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
 import { PageContainer } from '@/components/Common';
@@ -41,31 +33,13 @@ import styles from './OwnershipDetailPage.module.css';
 
 const { Text } = Typography;
 
-type Tone = 'primary' | 'success' | 'warning' | 'error' | 'neutral';
-
-const getToneClassName = (tone: Tone): string => {
-  switch (tone) {
-    case 'success':
-      return styles.toneSuccess;
-    case 'warning':
-      return styles.toneWarning;
-    case 'error':
-      return styles.toneError;
-    case 'neutral':
-      return styles.toneNeutral;
-    default:
-      return styles.tonePrimary;
-  }
-};
-
 /**
  * OwnershipDetailPage - 权属方详情页面组件
  *
  * 功能：
  * - 展示权属方基本信息
  * - 展示关联资产列表
- * - 展示关联合同列表
- * - 展示财务统计（应收/实收/收缴率）
+ * - 旧合同与财务入口显式标记为迁移中
  */
 const OwnershipDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -94,34 +68,12 @@ const OwnershipDetailPage: React.FC = () => {
     enabled: id !== null && id !== undefined && id.length > 0,
   });
 
-  // 获取关联合同
-  const { data: contractsData, isLoading: contractsLoading } = useQuery({
-    queryKey: ['ownership-contracts', id],
-    queryFn: () =>
-      rentContractService.getContracts({
-        owner_party_id: id,
-        page: 1,
-        pageSize: 100,
-      }),
-    enabled: id !== null && id !== undefined && id.length > 0,
-  });
-
-  // 获取财务统计
-  const { data: financeStats } = useQuery({
-    queryKey: ['ownership-finance', id],
-    queryFn: () =>
-      rentContractService.getOwnershipStatistics({
-        owner_party_ids: [id as string],
-      }),
-    enabled: id !== null && id !== undefined && id.length > 0,
-  });
-
   // 资产表格列定义
   const assetColumns: ColumnsType<Asset> = [
     {
       title: '物业名称',
-      dataIndex: 'property_name',
-      key: 'property_name',
+      dataIndex: 'asset_name',
+      key: 'asset_name',
       render: (text: string, record: Asset) => (
         <Button
           type="link"
@@ -160,82 +112,8 @@ const OwnershipDetailPage: React.FC = () => {
     },
   ];
 
-  // 合同表格列定义
-  const contractColumns: ColumnsType<RentContract> = [
-    {
-      title: '合同编号',
-      dataIndex: 'contract_number',
-      key: 'contract_number',
-      render: (text: string, record: RentContract) => (
-        <Button
-          type="link"
-          onClick={() => navigate(`/rental/contracts/${record.id}`)}
-          className={styles.inlineLinkButton}
-        >
-          {text}
-        </Button>
-      ),
-    },
-    {
-      title: '合同类型',
-      dataIndex: 'contract_type',
-      key: 'contract_type',
-      render: (type: string) => {
-        const typeMap: Record<string, { label: string; color: string }> = {
-          lease_upstream: { label: '上游租赁', color: 'blue' },
-          lease_downstream: { label: '下游租赁', color: 'green' },
-          entrusted: { label: '委托运营', color: 'purple' },
-        };
-        const info = typeMap[type] ?? { label: type, color: 'default' };
-        return <Tag color={info.color}>{info.label}</Tag>;
-      },
-    },
-    {
-      title: '承租方',
-      dataIndex: 'tenant_name',
-      key: 'tenant_name',
-    },
-    {
-      title: '合同状态',
-      dataIndex: 'contract_status',
-      key: 'contract_status',
-      render: (status: string) => {
-        const colorMap: Record<string, string> = {
-          有效: 'green',
-          终止: 'red',
-          已续签: 'blue',
-          待生效: 'gold',
-        };
-        return <Tag color={colorMap[status] || 'default'}>{status}</Tag>;
-      },
-    },
-    {
-      title: '租期',
-      key: 'period',
-      render: (_: unknown, record: RentContract) => (
-        <span>
-          {record.start_date} ~ {record.end_date}
-        </span>
-      ),
-    },
-  ];
-
   // 计算统计数据
   const assets = useMemo(() => assetsData?.items ?? [], [assetsData?.items]);
-  const contracts = useMemo(() => contractsData?.items ?? [], [contractsData?.items]);
-  const stats = financeStats?.[0] || {
-    total_due_amount: 0,
-    total_paid_amount: 0,
-    total_overdue_amount: 0,
-  };
-
-  const collectionRate =
-    stats.total_due_amount > 0
-      ? ((stats.total_paid_amount / stats.total_due_amount) * 100).toFixed(1)
-      : '0';
-  const collectionRateValue = Number(collectionRate);
-  const collectionRateTone: Tone =
-    collectionRateValue >= 90 ? 'success' : collectionRateValue >= 70 ? 'warning' : 'error';
 
   const {
     data: assetRows,
@@ -249,25 +127,9 @@ const OwnershipDetailPage: React.FC = () => {
     initialPageSize: 10,
   });
 
-  const {
-    data: contractRows,
-    loading: contractTableLoading,
-    pagination: contractPagination,
-    loadList: loadContractList,
-    updatePagination: updateContractPagination,
-  } = useArrayListData<RentContract, Record<string, never>>({
-    items: contracts,
-    initialFilters: {},
-    initialPageSize: 10,
-  });
-
   useEffect(() => {
     void loadAssetList({ page: 1 });
   }, [assets, loadAssetList]);
-
-  useEffect(() => {
-    void loadContractList({ page: 1 });
-  }, [contracts, loadContractList]);
 
   // 错误状态
   if (ownershipError) {
@@ -323,22 +185,15 @@ const OwnershipDetailPage: React.FC = () => {
       label: (
         <span className={styles.tabLabel}>
           <FileTextOutlined />
-          关联合同 ({contracts.length})
+          关联合同（迁移中）
         </span>
       ),
       children: (
-        <TableWithPagination
-          columns={contractColumns}
-          dataSource={contractRows}
-          rowKey="id"
-          loading={contractsLoading || contractTableLoading}
-          paginationState={contractPagination}
-          onPageChange={updateContractPagination}
-          paginationProps={{
-            showTotal: (total: number) => `共 ${total} 条`,
-          }}
-          locale={{ emptyText: '暂无关联合同' }}
-          scroll={{ x: 960 }}
+        <Alert
+          title="旧租赁合同与财务汇总入口已退休"
+          description="该权属方详情页不再请求旧租赁合同与财务统计接口，请改走新合同流程完成关联与汇总查询。"
+          type="info"
+          showIcon
         />
       ),
     },
@@ -386,36 +241,13 @@ const OwnershipDetailPage: React.FC = () => {
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} xl={6}>
+        <Col xs={24} xl={18}>
           <Card className={styles.statsCard}>
-            <Statistic
-              title="应收总额"
-              value={stats.total_due_amount || 0}
-              precision={2}
-              prefix={<DollarOutlined />}
-              suffix="元"
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} xl={6}>
-          <Card className={`${styles.statsCard} ${styles.toneSuccess}`}>
-            <Statistic
-              title="实收总额"
-              value={stats.total_paid_amount || 0}
-              precision={2}
-              prefix={<DollarOutlined />}
-              suffix="元"
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} xl={6}>
-          <Card className={`${styles.statsCard} ${getToneClassName(collectionRateTone)}`}>
-            <Statistic
-              title="收缴率"
-              value={collectionRate}
-              precision={1}
-              prefix={<PercentageOutlined />}
-              suffix="%"
+            <Alert
+              title="财务汇总迁移中"
+              description="旧租赁财务汇总入口已退休，后续将由新合同与台账链路提供。"
+              type="info"
+              showIcon
             />
           </Card>
         </Col>
@@ -424,6 +256,14 @@ const OwnershipDetailPage: React.FC = () => {
       {/* 基本信息 */}
       {ownership && (
         <>
+          <Alert
+            title="旧租赁合同与财务汇总入口已退休"
+            description="该权属方详情页已停止加载旧租赁合同与权属财务接口，请改走新合同流程。"
+            type="info"
+            showIcon
+            className={styles.detailsCard}
+          />
+
           <Card title="基本信息" className={styles.detailsCard}>
             <Descriptions column={2}>
               <Descriptions.Item label="权属方全称">{ownership.name}</Descriptions.Item>
@@ -437,9 +277,7 @@ const OwnershipDetailPage: React.FC = () => {
                 />
               </Descriptions.Item>
               <Descriptions.Item label="关联合同数量">
-                <Tag className={`${styles.countTag} ${styles.tonePrimary}`}>
-                  {contracts.length} 个
-                </Tag>
+                <Tag className={`${styles.countTag} ${styles.toneNeutral}`}>迁移中</Tag>
               </Descriptions.Item>
               <Descriptions.Item label="创建时间">
                 {ownership.created_at

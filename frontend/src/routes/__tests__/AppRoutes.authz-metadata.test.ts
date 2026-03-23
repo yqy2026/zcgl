@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { protectedRoutes, type ProtectedRouteItem } from '@/routes/AppRoutes';
 import {
+  CONTRACT_GROUP_ROUTES,
   OWNERSHIP_ROUTES,
   PROJECT_ROUTES,
   PROPERTY_CERTIFICATE_ROUTES,
-  RENTAL_ROUTES,
+  LEGACY_RENTAL_ROUTES,
   SYSTEM_ROUTES,
 } from '@/constants/routes';
 
@@ -22,10 +23,23 @@ describe('AppRoutes authz metadata', () => {
       [PROJECT_ROUTES.LIST, 'project:read'],
       [PROJECT_ROUTES.DETAIL_PATH, 'project:read'],
       [PROJECT_ROUTES.EDIT_PATH, 'project:read'],
+      [CONTRACT_GROUP_ROUTES.LIST, 'contract_group:read'],
+      [CONTRACT_GROUP_ROUTES.NEW, 'contract_group:create'],
+      [CONTRACT_GROUP_ROUTES.IMPORT, 'contract_group:create'],
+      [CONTRACT_GROUP_ROUTES.DETAIL_PATH, 'contract_group:read'],
+      [CONTRACT_GROUP_ROUTES.EDIT_PATH, 'contract_group:update'],
       [PROPERTY_CERTIFICATE_ROUTES.LIST, 'property_certificate:read'],
       [PROPERTY_CERTIFICATE_ROUTES.DETAIL_PATH, 'property_certificate:read'],
       [PROPERTY_CERTIFICATE_ROUTES.IMPORT, 'property_certificate:create'],
-      [RENTAL_ROUTES.LEDGER, 'ledger:read'],
+      [LEGACY_RENTAL_ROUTES.CONTRACTS.LIST, 'contract:read'],
+      [LEGACY_RENTAL_ROUTES.CONTRACTS.NEW, 'contract:read'],
+      [LEGACY_RENTAL_ROUTES.CONTRACTS.CREATE, 'contract:read'],
+      [LEGACY_RENTAL_ROUTES.CONTRACTS.PDF_IMPORT, 'contract_group:create'],
+      [LEGACY_RENTAL_ROUTES.CONTRACTS.RENEW_PATH, 'contract:read'],
+      [LEGACY_RENTAL_ROUTES.CONTRACTS.DETAIL_PATH, 'contract:read'],
+      [LEGACY_RENTAL_ROUTES.CONTRACTS.EDIT_PATH, 'contract:read'],
+      [LEGACY_RENTAL_ROUTES.LEDGER, 'contract:read'],
+      [LEGACY_RENTAL_ROUTES.STATISTICS, 'contract:read'],
     ]);
 
     const protectedRouteMap = new Map(protectedRoutes.map(route => [route.path, route]));
@@ -54,6 +68,7 @@ describe('AppRoutes authz metadata', () => {
 
   it('marks system management routes as adminOnly', () => {
     const systemPaths = [
+      SYSTEM_ROUTES.PARTIES,
       SYSTEM_ROUTES.USERS,
       SYSTEM_ROUTES.ROLES,
       SYSTEM_ROUTES.ORGANIZATIONS,

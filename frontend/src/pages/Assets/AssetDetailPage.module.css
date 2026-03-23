@@ -1,0 +1,109 @@
+.pageContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xl);
+}
+
+.leaseCard {
+  border-radius: 1.25rem;
+  overflow: hidden;
+}
+
+.summaryContent {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+}
+
+.heroPanel {
+  height: 100%;
+  padding: var(--spacing-xl);
+  border: var(--border-width-thin) solid #d9e7f5;
+  border-radius: 1.125rem;
+  background:
+    radial-gradient(circle at top right, rgba(24, 144, 255, 0.14), transparent 34%),
+    linear-gradient(135deg, #f8fbff 0%, #eef5ff 100%);
+}
+
+.heroEyebrow {
+  display: inline-block;
+  margin-bottom: var(--spacing-sm);
+  letter-spacing: 0.08em;
+}
+
+.heroStatistic :global(.ant-statistic-content) {
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.heroMeta {
+  display: block;
+}
+
+.metricCard {
+  height: 100%;
+  border-radius: 1.125rem;
+  background: #fbfcfe;
+}
+
+.metricCard :global(.ant-statistic) {
+  height: 100%;
+}
+
+.sectionBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+}
+
+.summaryTable :global(.ant-table-thead > tr > th) {
+  background: #f5f7fa;
+  font-weight: 600;
+}
+
+.customerList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.customerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  width: 100%;
+  flex-wrap: wrap;
+  padding-bottom: var(--spacing-md);
+  border-bottom: var(--border-width-thin) solid #f0f2f5;
+}
+
+.customerRow:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.note {
+  display: block;
+  padding-top: var(--spacing-xs);
+}
+
+@media (max-width: var(--breakpoint-sm)) {
+  .heroPanel {
+    padding: 1.25rem;
+  }
+
+  .heroStatistic :global(.ant-statistic-content) {
+    font-size: 2rem;
+  }
+}

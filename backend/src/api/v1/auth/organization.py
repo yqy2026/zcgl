@@ -53,7 +53,9 @@ def _normalize_optional_str(value: Any) -> str | None:
 
 
 def _resolve_current_user_organization_id(current_user: User) -> str | None:
-    return _normalize_optional_str(getattr(current_user, "default_organization_id", None))
+    return _normalize_optional_str(
+        getattr(current_user, "default_organization_id", None)
+    )
 
 
 async def _resolve_organization_party_id(
@@ -168,7 +170,13 @@ async def get_organizations(
         require_authz(action="read", resource_type="organization")
     ),
 ) -> JSONResponse:
-    """获取组织列表"""
+    """
+    获取组织列表
+
+    **Party 隔离策略**：Organization 是系统内部管理层级（总部→分公司→部门），
+    无 party_id 外键，与业务主体（Party）为独立概念。组织架构是全局共享只读元数据，
+    所有认证用户均可读取（用于选择归属组织、审批路由等），不按 party 隔离。
+    """
     skip = (page - 1) * page_size
     organizations, total = await organization_service.get_organizations(
         db,
@@ -404,7 +412,9 @@ async def update_organization(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     _authz_ctx: AuthzContext = Depends(
-        require_authz(action="update", resource_type="organization", resource_id="{org_id}")
+        require_authz(
+            action="update", resource_type="organization", resource_id="{org_id}"
+        )
     ),
 ) -> OrganizationResponse:
     """更新组织"""
@@ -428,7 +438,9 @@ async def delete_organization(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     _authz_ctx: AuthzContext = Depends(
-        require_authz(action="delete", resource_type="organization", resource_id="{org_id}")
+        require_authz(
+            action="delete", resource_type="organization", resource_id="{org_id}"
+        )
     ),
 ) -> dict[str, str]:
     """删除组织（软删除）"""
@@ -454,7 +466,9 @@ async def move_organization(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     _authz_ctx: AuthzContext = Depends(
-        require_authz(action="update", resource_type="organization", resource_id="{org_id}")
+        require_authz(
+            action="update", resource_type="organization", resource_id="{org_id}"
+        )
     ),
 ) -> dict[str, Any]:
     """移动组织到新的父组织下"""

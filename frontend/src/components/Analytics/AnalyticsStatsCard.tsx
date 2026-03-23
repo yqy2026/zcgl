@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Statistic, Row, Col } from 'antd';
+import { Card, Statistic, Row, Col, Tag } from 'antd';
 import {
   ArrowUpOutlined,
   ArrowDownOutlined,
@@ -9,6 +9,9 @@ import {
   MoneyCollectOutlined,
   TransactionOutlined,
   AreaChartOutlined,
+  DollarOutlined,
+  TeamOutlined,
+  FileTextOutlined,
 } from '@ant-design/icons';
 import { getTrendColor, getOccupancyRateColor, COLORS } from '@/styles/colorMap';
 import styles from './AnalyticsStatsCard.module.css';
@@ -270,5 +273,87 @@ export const FinancialStatsGrid: React.FC<FinancialStatsGridProps> = ({
         </Card>
       </Col>
     </Row>
+  );
+};
+
+// 经营口径统计网格组件（ANA-001）
+interface RevenueStatsGridProps {
+  data: {
+    total_income: number;
+    self_operated_rent_income: number;
+    agency_service_income: number;
+    customer_entity_count: number;
+    customer_contract_count: number;
+    metrics_version?: string;
+  };
+  loading?: boolean;
+}
+
+export const RevenueStatsGrid: React.FC<RevenueStatsGridProps> = ({ data, loading = false }) => {
+  return (
+    <>
+      <Row gutter={[16, 16]} className={styles.statsGrid}>
+        <Col xs={24} sm={12} lg={8}>
+          <StatCard
+            title="总收入（经营口径）"
+            value={data.total_income}
+            precision={2}
+            suffix="元"
+            icon={<DollarOutlined />}
+            color={COLORS.success}
+            loading={loading}
+          />
+        </Col>
+        <Col xs={24} sm={12} lg={8}>
+          <StatCard
+            title="自营租金收入"
+            value={data.self_operated_rent_income}
+            precision={2}
+            suffix="元"
+            icon={<MoneyCollectOutlined />}
+            color={COLORS.primary}
+            loading={loading}
+          />
+        </Col>
+        <Col xs={24} sm={12} lg={8}>
+          <StatCard
+            title="代理服务费收入"
+            value={data.agency_service_income}
+            precision={2}
+            suffix="元"
+            icon={<TransactionOutlined />}
+            color={COLORS.warning}
+            loading={loading}
+          />
+        </Col>
+        <Col xs={24} sm={12} lg={8}>
+          <StatCard
+            title="客户主体数"
+            value={data.customer_entity_count}
+            precision={0}
+            suffix="个"
+            icon={<TeamOutlined />}
+            color={COLORS.primary}
+            loading={loading}
+          />
+        </Col>
+        <Col xs={24} sm={12} lg={8}>
+          <StatCard
+            title="客户合同数"
+            value={data.customer_contract_count}
+            precision={0}
+            suffix="份"
+            icon={<FileTextOutlined />}
+            color={COLORS.success}
+            loading={loading}
+          />
+        </Col>
+      </Row>
+      {data.metrics_version != null && data.metrics_version !== '' && (
+        <div style={{ textAlign: 'right', marginTop: 8 }}>
+          <Tag color="blue">口径版本: {data.metrics_version}</Tag>
+        </div>
+      )}
+    </>
   );
 };

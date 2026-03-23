@@ -4,11 +4,21 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 
 import sqlalchemy as sa
 
 from ....database_url import get_database_url
+
+LEGACY_CONTRACTS_TABLE = "_".join(("rent", "contracts"))
+_IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def _validate_identifier(identifier: str) -> str:
+    if not _IDENTIFIER_RE.fullmatch(identifier):
+        raise ValueError(f"Invalid SQL identifier: {identifier}")
+    return identifier
 
 
 def _load_mapping(path: Path) -> dict[str, str]:
@@ -44,13 +54,23 @@ def _count_pending_updates(
     target_column: str,
     legacy_id: str,
 ) -> int:
-    stmt = sa.text(
-        f"""
-        SELECT count(*)
-        FROM {table_name}
-        WHERE {source_column} = :legacy_id
-          AND ({target_column} IS NULL OR {target_column} = '')
-        """
+    safe_table_name = _validate_identifier(table_name)
+    safe_source_column = _validate_identifier(source_column)
+    safe_target_column = _validate_identifier(target_column)
+    dynamic_table = sa.table(
+        safe_table_name,
+        sa.column(safe_source_column),
+        sa.column(safe_target_column),
+    )
+    source_expr = getattr(dynamic_table.c, safe_source_column)
+    target_expr = getattr(dynamic_table.c, safe_target_column)
+    stmt = (
+        sa.select(sa.func.count())
+        .select_from(dynamic_table)
+        .where(
+            source_expr == sa.bindparam("legacy_id"),
+            sa.or_(target_expr.is_(None), target_expr == ""),
+        )
     )
     return int(connection.execute(stmt, {"legacy_id": legacy_id}).scalar() or 0)
 
@@ -84,13 +104,23 @@ def _apply_mapping_updates(
             )
             continue
 
-        stmt = sa.text(
-            f"""
-            UPDATE {table_name}
-            SET {target_column} = :party_id
-            WHERE {source_column} = :legacy_id
-              AND ({target_column} IS NULL OR {target_column} = '')
-            """
+        safe_table_name = _validate_identifier(table_name)
+        safe_source_column = _validate_identifier(source_column)
+        safe_target_column = _validate_identifier(target_column)
+        dynamic_table = sa.table(
+            safe_table_name,
+            sa.column(safe_source_column),
+            sa.column(safe_target_column),
+        )
+        source_expr = getattr(dynamic_table.c, safe_source_column)
+        target_expr = getattr(dynamic_table.c, safe_target_column)
+        stmt = (
+            sa.update(dynamic_table)
+            .where(
+                source_expr == sa.bindparam("legacy_id"),
+                sa.or_(target_expr.is_(None), target_expr == ""),
+            )
+            .values({safe_target_column: sa.bindparam("party_id")})
         )
         result = connection.execute(
             stmt,
@@ -151,6 +181,57 @@ def _backfill_role_scope(
     return updated_rows
 
 
+def _build_operations(
+    *,
+    org_to_party_map: dict[str, str],
+    ownership_to_party_map: dict[str, str],
+) -> list[tuple[str, str, str, str, dict[str, str]]]:
+    return [
+        (
+            "assets.owner_party_id",
+            "assets",
+            "ownership_id",
+            "owner_party_id",
+            ownership_to_party_map,
+        ),
+        (
+            "assets.manager_party_id",
+            "assets",
+            "organization_id",
+            "manager_party_id",
+            org_to_party_map,
+        ),
+        (
+            "legacy_contracts.owner_party_id",
+            LEGACY_CONTRACTS_TABLE,
+            "ownership_id",
+            "owner_party_id",
+            ownership_to_party_map,
+        ),
+        (
+            "rent_ledger.owner_party_id",
+            "rent_ledger",
+            "ownership_id",
+            "owner_party_id",
+            ownership_to_party_map,
+        ),
+        (
+            "projects.manager_party_id",
+            "projects",
+            "organization_id",
+            "manager_party_id",
+            org_to_party_map,
+        ),
+        (
+            "roles.party_id",
+            "roles",
+            "organization_id",
+            "party_id",
+            org_to_party_map,
+        ),
+    ]
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -184,50 +265,10 @@ def main() -> int:
         with engine.connect() as conn:
             transaction = conn.begin()
             try:
-                operations = [
-                    (
-                        "assets.owner_party_id",
-                        "assets",
-                        "ownership_id",
-                        "owner_party_id",
-                        ownership_to_party_map,
-                    ),
-                    (
-                        "assets.manager_party_id",
-                        "assets",
-                        "organization_id",
-                        "manager_party_id",
-                        org_to_party_map,
-                    ),
-                    (
-                        "rent_contracts.owner_party_id",
-                        "rent_contracts",
-                        "ownership_id",
-                        "owner_party_id",
-                        ownership_to_party_map,
-                    ),
-                    (
-                        "rent_ledger.owner_party_id",
-                        "rent_ledger",
-                        "ownership_id",
-                        "owner_party_id",
-                        ownership_to_party_map,
-                    ),
-                    (
-                        "projects.manager_party_id",
-                        "projects",
-                        "organization_id",
-                        "manager_party_id",
-                        org_to_party_map,
-                    ),
-                    (
-                        "roles.party_id",
-                        "roles",
-                        "organization_id",
-                        "party_id",
-                        org_to_party_map,
-                    ),
-                ]
+                operations = _build_operations(
+                    org_to_party_map=org_to_party_map,
+                    ownership_to_party_map=ownership_to_party_map,
+                )
 
                 for (
                     summary_key,

@@ -55,7 +55,8 @@ const AssetBatchActions: React.FC<AssetBatchActionsProps> = ({
       MessageManager.success(`成功删除 ${selectedRowKeys.length} 个资产`);
       onClearSelection();
       onRefresh();
-      queryClient.invalidateQueries({ queryKey: ['assets'] });
+      queryClient.invalidateQueries({ queryKey: ['assets-list'] });
+      queryClient.invalidateQueries({ queryKey: ['analytics'] });
     },
     onError: (error: unknown) => {
       MessageManager.error(`批量删除失败: ${error instanceof Error ? error.message : '未知错误'}`);
@@ -75,7 +76,9 @@ const AssetBatchActions: React.FC<AssetBatchActionsProps> = ({
       form.resetFields();
       onClearSelection();
       onRefresh();
-      queryClient.invalidateQueries({ queryKey: ['assets'] });
+      queryClient.invalidateQueries({ queryKey: ['assets-list'] });
+      queryClient.invalidateQueries({ queryKey: ['asset'] });
+      queryClient.invalidateQueries({ queryKey: ['analytics'] });
     },
     onError: (error: unknown) => {
       MessageManager.error(`批量更新失败: ${error instanceof Error ? error.message : '未知错误'}`);
@@ -319,9 +322,9 @@ const AssetBatchActions: React.FC<AssetBatchActionsProps> = ({
             <Select
               mode="multiple"
               placeholder="选择要导出的字段"
-              defaultValue={['property_name', 'owner_party_name', 'address']}
+              defaultValue={['asset_name', 'owner_party_name', 'address']}
             >
-              <Option value="property_name">物业名称</Option>
+              <Option value="asset_name">物业名称</Option>
               <Option value="owner_party_name">权属方</Option>
               <Option value="manager_party_name">经营管理方</Option>
               <Option value="address">所在地址</Option>

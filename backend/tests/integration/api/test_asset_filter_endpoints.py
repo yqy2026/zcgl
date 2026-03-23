@@ -44,7 +44,7 @@ class TestAssetFilterEndpoints:
         db_session.add_all(
             [
                 Asset(
-                    property_name=f"筛选资产-A-{suffix}",
+                    asset_name=f"筛选资产-A-{suffix}",
                     address="集成测试地址-A",
                     ownership_status=f"已确权-{suffix}",
                     property_nature=f"经营类-{suffix}",
@@ -54,7 +54,7 @@ class TestAssetFilterEndpoints:
                     data_status="正常",
                 ),
                 Asset(
-                    property_name=f"筛选资产-B-{suffix}",
+                    asset_name=f"筛选资产-B-{suffix}",
                     address="集成测试地址-B",
                     ownership_status=f"待确权-{suffix}",
                     property_nature=f"非经营类-{suffix}",
@@ -64,7 +64,7 @@ class TestAssetFilterEndpoints:
                     data_status="正常",
                 ),
                 Asset(
-                    property_name=f"筛选资产-C-{suffix}",
+                    asset_name=f"筛选资产-C-{suffix}",
                     address="集成测试地址-C",
                     ownership_status=f"已确权-{suffix}",
                     property_nature=f"经营类-{suffix}",
@@ -74,7 +74,7 @@ class TestAssetFilterEndpoints:
                     data_status="正常",
                 ),
                 Asset(
-                    property_name=f"筛选资产-D-{suffix}",
+                    asset_name=f"筛选资产-D-{suffix}",
                     address="集成测试地址-D",
                     ownership_status=f"已确权-{suffix}",
                     property_nature=f"经营类-{suffix}",

@@ -16,7 +16,7 @@ class TestValidateRequiredFields:
     def test_all_required_fields_present(self):
         """测试所有必填字段都存在"""
         data = {
-            "property_name": "测试物业",
+            "asset_name": "测试物业",
             "address": "北京市朝阳区",
             "ownership_status": "已确权",
             "property_nature": "商业",
@@ -28,7 +28,7 @@ class TestValidateRequiredFields:
     def test_missing_one_required_field(self):
         """测试缺少一个必填字段"""
         data = {
-            "property_name": "测试物业",
+            "asset_name": "测试物业",
             "address": "北京市朝阳区",
             "ownership_status": "已确权",
             "property_nature": "商业",
@@ -48,7 +48,7 @@ class TestValidateRequiredFields:
     def test_empty_string_treated_as_missing(self):
         """测试空字符串视为缺失"""
         data = {
-            "property_name": "",  # 空字符串
+            "asset_name": "",  # 空字符串
             "address": "北京市朝阳区",
             "ownership_status": "已确权",
             "property_nature": "商业",
@@ -56,12 +56,12 @@ class TestValidateRequiredFields:
         }
         errors = AssetBatchValidator.validate_required_fields(data)
         assert len(errors) == 1
-        assert errors[0]["field"] == "property_name"
+        assert errors[0]["field"] == "asset_name"
 
     def test_none_treated_as_missing(self):
         """测试 None 视为缺失"""
         data = {
-            "property_name": None,
+            "asset_name": None,
             "address": "北京市朝阳区",
             "ownership_status": "已确权",
             "property_nature": "商业",
@@ -69,12 +69,12 @@ class TestValidateRequiredFields:
         }
         errors = AssetBatchValidator.validate_required_fields(data)
         assert len(errors) == 1
-        assert errors[0]["field"] == "property_name"
+        assert errors[0]["field"] == "asset_name"
 
     def test_zero_accepted_for_non_required_fields(self):
         """测试非必填字段接受 0"""
         data = {
-            "property_name": "测试物业",
+            "asset_name": "测试物业",
             "address": "北京市朝阳区",
             "ownership_status": "已确权",
             "property_nature": "商业",
@@ -341,7 +341,7 @@ class TestValidateAll:
     def test_valid_data_returns_valid(self):
         """测试有效数据返回验证通过"""
         data = {
-            "property_name": "测试物业",
+            "asset_name": "测试物业",
             "address": "北京市朝阳区",
             "ownership_status": "已确权",
             "property_nature": "商业",
@@ -364,7 +364,7 @@ class TestValidateAll:
     def test_missing_required_field_returns_invalid(self):
         """测试缺少必填字段返回验证失败"""
         data = {
-            "property_name": "测试物业",
+            "asset_name": "测试物业",
             # 缺少其他必填字段
         }
         is_valid, errors, warnings, validated_fields = AssetBatchValidator.validate_all(
@@ -378,7 +378,7 @@ class TestValidateAll:
     def test_invalid_numeric_format_returns_error(self):
         """测试无效数值格式返回错误"""
         data = {
-            "property_name": "测试物业",
+            "asset_name": "测试物业",
             "address": "北京市朝阳区",
             "ownership_status": "已确权",
             "property_nature": "商业",
@@ -395,7 +395,7 @@ class TestValidateAll:
     def test_custom_validation_rules(self):
         """测试自定义验证规则"""
         data = {
-            "property_name": "测试物业",
+            "asset_name": "测试物业",
             "address": "北京市朝阳区",
             "ownership_status": "已确权",
             "property_nature": "商业",
@@ -414,7 +414,7 @@ class TestValidateAll:
     def test_validated_fields_list(self):
         """测试已验证字段列表"""
         data = {
-            "property_name": "测试物业",
+            "asset_name": "测试物业",
             "address": "北京市朝阳区",
             "ownership_status": "已确权",
             "property_nature": "商业",
@@ -429,7 +429,7 @@ class TestValidateAll:
         )
 
         # 应该包含所有通过验证的字段
-        assert "property_name" in validated_fields
+        assert "asset_name" in validated_fields
         assert "address" in validated_fields
         assert "land_area" in validated_fields
         assert "operation_agreement_start_date" in validated_fields

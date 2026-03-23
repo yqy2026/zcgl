@@ -24,7 +24,7 @@ class TestAssetSchemaAttachments:
     def test_asset_create_includes_attachments_fields(self) -> None:
         asset = AssetCreate(
             ownership_id="owner-001",
-            property_name="测试物业",
+            asset_name="测试物业",
             address="测试地址",
             ownership_status="已确权",
             property_nature="经营类",
@@ -62,7 +62,7 @@ class TestAssetSchemaAttachments:
         now = datetime.now(UTC).replace(tzinfo=None)
         asset = AssetResponse(
             id="asset-001",
-            property_name="测试物业",
+            asset_name="测试物业",
             address="测试地址",
             ownership_status="已确权",
             property_nature="经营类",
@@ -82,7 +82,7 @@ class TestAssetSchemaAttachments:
         with pytest.raises(ValidationError) as error:
             AssetCreate(
                 ownership_id="owner-001",
-                property_name="测试物业",
+                asset_name="测试物业",
                 address="测试地址",
                 ownership_status="已确权",
                 property_nature="经营类",
@@ -98,7 +98,7 @@ class TestAssetSchemaAttachments:
     def test_asset_create_allows_owner_party_id_without_ownership_id(self) -> None:
         model = AssetCreate(
             owner_party_id="party-001",
-            property_name="测试物业",
+            asset_name="测试物业",
             address="测试地址",
             ownership_status="已确权",
             property_nature="经营类",

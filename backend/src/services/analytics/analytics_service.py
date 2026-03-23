@@ -13,20 +13,33 @@ Analytics Service - 综合分析服务
 import asyncio
 import logging
 from collections import defaultdict
-from datetime import datetime
+from datetime import date, datetime
+from decimal import ROUND_HALF_UP, Decimal
 from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
     from ...models.auth import User
 
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from ...constants.business_constants import DataStatusValues
 from ...core.cache_manager import analytics_cache
 from ...core.response_handler import ResponseHandler
 from ...models.asset import Asset
+from ...models.contract_group import (
+    Contract,
+    ContractGroup,
+    ContractLifecycleStatus,
+    GroupRelationType,
+    RevenueMode,
+)
+from ...models.party import PartyReviewStatus
 
 logger = logging.getLogger(__name__)
+
+ANALYTICS_METRICS_VERSION = "req-ana-001-v1"
 
 
 class AnalyticsService:
@@ -142,6 +155,7 @@ class AnalyticsService:
         """
         # 获取基础数据
         from ...crud.asset import asset_crud
+
         query_filters = self._build_asset_status_filters(
             include_deleted=filters.get("include_deleted", False)
         )
@@ -168,14 +182,219 @@ class AnalyticsService:
         occupancy_service = OccupancyService(self.db)
 
         # 面积汇总
-        area_stats = await area_service.calculate_summary_with_aggregation(filters=filters)
+        area_stats = await area_service.calculate_summary_with_aggregation(
+            filters=filters
+        )
         stats["area_summary"] = area_stats
 
         # 出租率统计
-        occupancy_stats = await occupancy_service.calculate_with_aggregation(filters=filters)
+        occupancy_stats = await occupancy_service.calculate_with_aggregation(
+            filters=filters
+        )
         stats["occupancy_rate"] = occupancy_stats
 
+        active_contracts = await self._list_active_contracts(filters)
+        stats.update(self._calculate_operational_metrics(active_contracts))
+
         return stats
+
+    async def _list_active_contracts(self, filters: dict[str, Any]) -> list[Contract]:
+        stmt = (
+            select(Contract)
+            .where(
+                Contract.status == ContractLifecycleStatus.ACTIVE,
+                Contract.data_status == "正常",
+            )
+            .options(
+                selectinload(Contract.contract_group).selectinload(
+                    ContractGroup.operator_party
+                ),
+                selectinload(Contract.contract_group).selectinload(
+                    ContractGroup.owner_party
+                ),
+                selectinload(Contract.lease_detail),
+                selectinload(Contract.agency_detail),
+                selectinload(Contract.lessor_party),
+                selectinload(Contract.lessee_party),
+            )
+        )
+
+        date_from = self._safe_parse_date(filters.get("date_from"))
+        date_to = self._safe_parse_date(filters.get("date_to"))
+        if date_from is not None or date_to is not None:
+            overlap_clauses: list[Any] = []
+            if date_to is not None:
+                overlap_clauses.append(Contract.effective_from <= date_to)
+            if date_from is not None:
+                overlap_clauses.append(
+                    or_(
+                        Contract.effective_to.is_(None),
+                        Contract.effective_to >= date_from,
+                    )
+                )
+            if len(overlap_clauses) > 0:
+                stmt = stmt.where(and_(*overlap_clauses))
+
+        return list((await self.db.execute(stmt)).scalars().unique().all())
+
+    def _calculate_operational_metrics(
+        self, contracts: list[Contract]
+    ) -> dict[str, Any]:
+        self_operated_rent_income = Decimal("0")
+        agency_service_income = Decimal("0")
+        customer_party_ids: set[str] = set()
+        customer_contract_ids: set[str] = set()
+
+        agency_group_ratios: dict[str, Decimal] = {}
+        for contract in contracts:
+            group = getattr(contract, "contract_group", None)
+            if (
+                group is None
+                or getattr(group, "revenue_mode", None) != RevenueMode.AGENCY
+            ):
+                continue
+            if (
+                getattr(contract, "group_relation_type", None)
+                != GroupRelationType.ENTRUSTED
+            ):
+                continue
+            agency_detail = getattr(contract, "agency_detail", None)
+            if agency_detail is None:
+                continue
+            group_id = self._resolve_contract_group_id(contract, group)
+            if group_id == "":
+                continue
+            agency_group_ratios[group_id] = self._to_decimal(
+                getattr(agency_detail, "service_fee_ratio", None)
+            )
+
+        for contract in contracts:
+            if not self._is_contract_statistically_eligible(contract):
+                continue
+
+            group = getattr(contract, "contract_group", None)
+            if group is None:
+                continue
+
+            relation_type = getattr(contract, "group_relation_type", None)
+            group_mode = getattr(group, "revenue_mode", None)
+
+            if (
+                group_mode == RevenueMode.LEASE
+                and relation_type == GroupRelationType.DOWNSTREAM
+            ):
+                lease_detail = getattr(contract, "lease_detail", None)
+                if lease_detail is not None:
+                    self_operated_rent_income += self._to_decimal(
+                        getattr(lease_detail, "rent_amount", None)
+                    )
+                lessee_party_id = str(getattr(contract, "lessee_party_id", "")).strip()
+                if lessee_party_id != "":
+                    customer_party_ids.add(lessee_party_id)
+                customer_contract_ids.add(
+                    str(getattr(contract, "contract_id", "")).strip()
+                )
+
+            if (
+                group_mode == RevenueMode.AGENCY
+                and relation_type == GroupRelationType.DIRECT_LEASE
+            ):
+                lease_detail = getattr(contract, "lease_detail", None)
+                if lease_detail is not None:
+                    group_id = self._resolve_contract_group_id(contract, group)
+                    ratio = agency_group_ratios.get(group_id, Decimal("0"))
+                    agency_service_income += self._quantize_money(
+                        self._to_decimal(getattr(lease_detail, "rent_amount", None))
+                        * ratio
+                    )
+                lessee_party_id = str(getattr(contract, "lessee_party_id", "")).strip()
+                if lessee_party_id != "":
+                    customer_party_ids.add(lessee_party_id)
+                customer_contract_ids.add(
+                    str(getattr(contract, "contract_id", "")).strip()
+                )
+
+        total_income = self._quantize_money(
+            self_operated_rent_income + agency_service_income
+        )
+        return {
+            "total_income": float(total_income),
+            "self_operated_rent_income": float(
+                self._quantize_money(self_operated_rent_income)
+            ),
+            "agency_service_income": float(self._quantize_money(agency_service_income)),
+            "customer_entity_count": len(customer_party_ids),
+            "customer_contract_count": len(
+                [
+                    contract_id
+                    for contract_id in customer_contract_ids
+                    if contract_id != ""
+                ]
+            ),
+            "metrics_version": ANALYTICS_METRICS_VERSION,
+        }
+
+    @staticmethod
+    def _is_party_approved(party: Any) -> bool:
+        if party is None:
+            return False
+        return getattr(party, "review_status", None) == PartyReviewStatus.APPROVED.value
+
+    def _is_contract_statistically_eligible(self, contract: Contract) -> bool:
+        if getattr(contract, "status", None) != ContractLifecycleStatus.ACTIVE:
+            return False
+        if getattr(contract, "data_status", None) != "正常":
+            return False
+
+        group = getattr(contract, "contract_group", None)
+        if group is None or getattr(group, "data_status", "正常") != "正常":
+            return False
+
+        return all(
+            (
+                self._is_party_approved(getattr(contract, "lessor_party", None)),
+                self._is_party_approved(getattr(contract, "lessee_party", None)),
+                self._is_party_approved(getattr(group, "operator_party", None)),
+                self._is_party_approved(getattr(group, "owner_party", None)),
+            )
+        )
+
+    @staticmethod
+    def _resolve_contract_group_id(
+        contract: Contract, group: ContractGroup | None
+    ) -> str:
+        raw_direct_group_id = getattr(contract, "contract_group_id", None)
+        if isinstance(raw_direct_group_id, str):
+            direct_group_id = raw_direct_group_id.strip()
+            if direct_group_id != "":
+                return direct_group_id
+        if group is None:
+            return ""
+        return str(getattr(group, "contract_group_id", "")).strip()
+
+    @staticmethod
+    def _to_decimal(value: Any) -> Decimal:
+        if isinstance(value, Decimal):
+            return value
+        if value is None:
+            return Decimal("0")
+        return Decimal(str(value))
+
+    @staticmethod
+    def _quantize_money(value: Decimal) -> Decimal:
+        return value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+    @staticmethod
+    def _safe_parse_date(value: Any) -> date | None:
+        if value is None:
+            return None
+        try:
+            normalized = str(value).strip()
+            if normalized == "":
+                return None
+            return date.fromisoformat(normalized)
+        except ValueError:
+            return None
 
     async def clear_cache(self) -> dict[str, Any]:
         """清除分析缓存"""
@@ -238,7 +457,9 @@ class AnalyticsService:
         # 获取资产数据
         from ...crud.asset import asset_crud
 
-        include_deleted = bool(filters.get("include_deleted", False)) if filters else False
+        include_deleted = (
+            bool(filters.get("include_deleted", False)) if filters else False
+        )
         query_filters = self._build_asset_status_filters(
             include_deleted=include_deleted
         )
@@ -335,7 +556,9 @@ class AnalyticsService:
 
         from ...crud.asset import asset_crud
 
-        include_deleted = bool(filters.get("include_deleted", False)) if filters else False
+        include_deleted = (
+            bool(filters.get("include_deleted", False)) if filters else False
+        )
         query_filters = self._build_asset_status_filters(
             include_deleted=include_deleted
         )
@@ -364,4 +587,3 @@ class AnalyticsService:
             "data": dict(distribution),
             "total": len(distribution),
         }
-

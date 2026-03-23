@@ -74,6 +74,23 @@ def _load_missing_resource_backfill_module() -> ModuleType:
     return module
 
 
+def _load_cleanup_legacy_contract_rules_module() -> ModuleType:
+    module_path = (
+        Path(__file__).resolve().parents[3]
+        / "alembic"
+        / "versions"
+        / "20260307_m2_cleanup_legacy_contract_policy_rules.py"
+    )
+    spec = spec_from_file_location(
+        "cleanup_legacy_contract_policy_rules", module_path
+    )
+    assert spec is not None
+    assert spec.loader is not None
+    module = module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 def _merged_policy_seeds() -> list[dict[str, object]]:
     seed_module = _load_seed_module()
     backfill_module = _load_backfill_module()
@@ -242,6 +259,12 @@ def test_backfill_expanded_resource_types_should_match_non_base_api_authz_resour
     assert set(module._EXPANDED_RESOURCE_TYPES) == non_base_api_resources
 
 
+def test_backfill_expanded_resource_types_should_not_keep_legacy_contract_resource() -> None:
+    module = _load_backfill_module()
+
+    assert "rent_contract" not in set(module._EXPANDED_RESOURCE_TYPES)
+
+
 def test_backfill_expanded_resource_types_should_include_task() -> None:
     module = _load_backfill_module()
 
@@ -259,6 +282,12 @@ def test_backfill_migration_targets_already_migrated_databases() -> None:
 
     assert module.down_revision == "20260219_phase2_seed_data_policy_packages"
     assert len(module.BACKFILL_POLICY_SEEDS) > 0
+
+
+def test_cleanup_legacy_contract_rule_migration_should_follow_current_head() -> None:
+    module = _load_cleanup_legacy_contract_rules_module()
+
+    assert module.down_revision == "20260307_m2_contract_number_on_contracts"
 
 
 def test_seed_migration_should_keep_original_predecessor_for_upgrade_continuity() -> None:
@@ -468,6 +497,61 @@ def test_missing_resource_backfill_upgrade_should_insert_expected_rules() -> Non
 
     assert stored_expr == expected_expr
     assert total_inserted == len(expected_rule_ids)
+
+
+def test_cleanup_legacy_contract_rule_migration_should_delete_retired_rules() -> None:
+    module = _load_cleanup_legacy_contract_rules_module()
+    engine = sa.create_engine("sqlite+pysqlite:///:memory:", future=True)
+
+    metadata = sa.MetaData()
+    rule_table = sa.Table(
+        "abac_policy_rules",
+        metadata,
+        sa.Column("id", sa.String, primary_key=True),
+        sa.Column("policy_id", sa.String, nullable=False),
+        sa.Column("resource_type", sa.String, nullable=False),
+        sa.Column("action", sa.String, nullable=False),
+        sa.Column("condition_expr", sa.JSON, nullable=False),
+        sa.Column("field_mask", sa.JSON, nullable=True),
+    )
+    metadata.create_all(engine)
+
+    with engine.begin() as connection:
+        connection.execute(
+            rule_table.insert(),
+            [
+                {
+                    "id": "legacy_contract_rule",
+                    "policy_id": "policy_1",
+                    "resource_type": "rent_contract",
+                    "action": "read",
+                    "condition_expr": {"==": [1, 1]},
+                    "field_mask": None,
+                },
+                {
+                    "id": "active_contract_rule",
+                    "policy_id": "policy_1",
+                    "resource_type": "contract",
+                    "action": "read",
+                    "condition_expr": {"==": [1, 1]},
+                    "field_mask": None,
+                },
+            ],
+        )
+
+        original_get_bind = module.op.get_bind
+        module.op.get_bind = lambda: connection
+        try:
+            module.upgrade()
+        finally:
+            module.op.get_bind = original_get_bind
+
+        remaining_resources = set(
+            connection.execute(sa.select(rule_table.c.resource_type)).scalars().all()
+        )
+
+    assert "rent_contract" not in remaining_resources
+    assert "contract" in remaining_resources
 
 
 def test_scoped_policy_packages_should_not_use_tautology_conditions() -> None:

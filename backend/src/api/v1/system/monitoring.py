@@ -103,7 +103,9 @@ async def report_route_performance(
             )
             total_errors = sum(m.error_count for m in report.metrics)
 
-            logger.info(f"平均加载时间: {avg_load_time:.2f}ms, 总错误数: {total_errors}")
+            logger.info(
+                f"平均加载时间: {avg_load_time:.2f}ms, 总错误数: {total_errors}"
+            )
 
             for metric in report.metrics:
                 if metric.route_load_time > 5000:
@@ -124,7 +126,7 @@ async def report_route_performance(
 @router.get("/system-health", summary="获取系统健康状态", response_model=HealthCheck)
 def get_system_health(
     _authz_ctx: AuthzContext = Depends(
-    require_authz(action="read", resource_type="system_monitoring")
+        require_authz(action="read", resource_type="system_monitoring")
     ),
 ) -> HealthCheck:
     """
@@ -155,7 +157,7 @@ async def get_performance_dashboard(
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_async_db),
     _authz_ctx: AuthzContext = Depends(
-    require_authz(action="read", resource_type="system_monitoring")
+        require_authz(action="read", resource_type="system_monitoring")
     ),
 ) -> dict[str, Any]:
     """
@@ -349,7 +351,7 @@ async def get_system_metrics(
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_async_db),
     _authz_ctx: AuthzContext = Depends(
-    require_authz(action="read", resource_type="system_monitoring")
+        require_authz(action="read", resource_type="system_monitoring")
     ),
 ) -> SystemMetrics:
     """获取当前系统性能指标"""
@@ -366,7 +368,7 @@ async def get_application_metrics(
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_async_db),
     _authz_ctx: AuthzContext = Depends(
-    require_authz(action="read", resource_type="system_monitoring")
+        require_authz(action="read", resource_type="system_monitoring")
     ),
 ) -> ApplicationMetrics:
     """获取应用性能指标"""
@@ -379,7 +381,7 @@ async def get_system_monitoring_dashboard(
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_async_db),
     _authz_ctx: AuthzContext = Depends(
-    require_authz(action="read", resource_type="system_monitoring")
+        require_authz(action="read", resource_type="system_monitoring")
     ),
 ) -> dict[str, Any]:
     """获取系统监控仪表板综合数据"""

@@ -38,7 +38,7 @@ def test_asset_complete_lifecycle_e2e(
     created = create_response.json()
     asset_id = created.get("id")
     assert isinstance(asset_id, str)
-    assert created.get("property_name") == payload["property_name"]
+    assert created.get("asset_name") == payload["asset_name"]
 
     detail_response = authenticated_client.get(f"/api/v1/assets/{asset_id}")
     assert detail_response.status_code == 200

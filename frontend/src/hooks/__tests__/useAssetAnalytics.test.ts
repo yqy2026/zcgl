@@ -5,6 +5,17 @@ import { analyticsService } from '@/services/analyticsService';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 
+vi.mock('@/routes/perspective', () => ({
+  useRoutePerspective: () => ({
+    perspective: 'owner',
+    isPerspectiveRoute: true,
+  }),
+}));
+
+vi.mock('@/utils/queryScope', () => ({
+  buildQueryScopeKey: () => 'user:user-1|perspective:owner',
+}));
+
 // Mock dependencies
 vi.mock('@/services/analyticsService', () => ({
   analyticsService: {
@@ -76,6 +87,42 @@ describe('useAssetAnalytics', () => {
     expect(result.current.hasData).toBe(true);
   });
 
+  it('should scope analytics cache keys to the current view', async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+        },
+      },
+    });
+    const Wrapper = ({ children }: { children: React.ReactNode }) =>
+      React.createElement(QueryClientProvider, { client: queryClient }, children);
+    Wrapper.displayName = 'ScopedQueryClientWrapper';
+
+    renderHook(() => useAssetAnalytics(), {
+      wrapper: Wrapper,
+    });
+
+    await waitFor(() => {
+      expect(analyticsService.getComprehensiveAnalytics).toHaveBeenCalledWith({});
+    });
+
+    const queryKeys = queryClient
+      .getQueryCache()
+      .getAll()
+      .map(query => query.queryKey);
+
+    expect(
+      queryKeys.some(
+        queryKey =>
+          Array.isArray(queryKey) &&
+          queryKey[0] === 'analytics' &&
+          queryKey[1] === 'user:user-1|perspective:owner' &&
+          queryKey[2] === 'comprehensive'
+      )
+    ).toBe(true);
+  });
+
   it('should update filters and refetch', async () => {
     const { result } = renderHook(() => useAssetAnalytics(), {
       wrapper: createWrapper(),
@@ -102,5 +149,41 @@ describe('useAssetAnalytics', () => {
     });
 
     expect(result.current.dimension).toBe('count');
+  });
+
+  it('should pass ANA-001 fields through analyticsData', async () => {
+    const mockData = {
+      success: true,
+      data: {
+        area_summary: { total_assets: 5, total_area: 2000 },
+        financial_summary: { total_annual_income: 100000 },
+        total_income: 80000,
+        self_operated_rent_income: 50000,
+        agency_service_income: 30000,
+        customer_entity_count: 8,
+        customer_contract_count: 12,
+        metrics_version: 'req-ana-001-v1',
+        property_nature_distribution: [],
+        ownership_status_distribution: [],
+        usage_status_distribution: [],
+        business_category_distribution: [],
+        occupancy_trend: [],
+        occupancy_distribution: [],
+      },
+    };
+    vi.mocked(analyticsService.getComprehensiveAnalytics).mockResolvedValue(mockData);
+
+    const { result } = renderHook(() => useAssetAnalytics(), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.analyticsData?.total_income).toBe(80000);
+    expect(result.current.analyticsData?.self_operated_rent_income).toBe(50000);
+    expect(result.current.analyticsData?.agency_service_income).toBe(30000);
+    expect(result.current.analyticsData?.customer_entity_count).toBe(8);
+    expect(result.current.analyticsData?.customer_contract_count).toBe(12);
+    expect(result.current.analyticsData?.metrics_version).toBe('req-ana-001-v1');
   });
 });

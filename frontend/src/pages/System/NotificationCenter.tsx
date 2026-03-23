@@ -199,7 +199,7 @@ const NotificationCenter: React.FC = () => {
         item.type === NotificationType.CONTRACT_EXPIRING ||
         item.type === NotificationType.CONTRACT_EXPIRED
       ) {
-        navigate(`/rental/contracts/${item.related_entity_id}`);
+        MessageManager.info('合同通知详情入口迁移中，请改从新 contract/contract-group 页面处理');
       } else if (item.related_entity_type === 'asset') {
         navigate(`/assets/${item.related_entity_id}`);
       }

@@ -18,6 +18,12 @@ export type { AnalyticsData, AnalyticsResponse };
 interface RawApiData {
   area_summary?: RawAreaSummary;
   financial_summary?: RawFinancialSummary;
+  total_income?: number;
+  self_operated_rent_income?: number;
+  agency_service_income?: number;
+  customer_entity_count?: number;
+  customer_contract_count?: number;
+  metrics_version?: string;
   property_nature_distribution?: unknown[];
   ownership_status_distribution?: unknown[];
   usage_status_distribution?: unknown[];
@@ -201,6 +207,13 @@ export class AnalyticsService {
     const adaptedData: AnalyticsData = {
       area_summary,
       financial_summary,
+      total_income: toNumber(apiData.total_income),
+      self_operated_rent_income: toNumber(apiData.self_operated_rent_income),
+      agency_service_income: toNumber(apiData.agency_service_income),
+      customer_entity_count: toNumber(apiData.customer_entity_count),
+      customer_contract_count: toNumber(apiData.customer_contract_count),
+      metrics_version:
+        typeof apiData.metrics_version === 'string' ? apiData.metrics_version : undefined,
       property_nature_distribution,
       ownership_status_distribution,
       usage_status_distribution,

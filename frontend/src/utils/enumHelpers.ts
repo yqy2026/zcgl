@@ -573,4 +573,3 @@ export class EnumValidator {
     return errors;
   }
 }
-

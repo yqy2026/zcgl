@@ -257,6 +257,56 @@ describe('AssetCoreService', () => {
   });
 
   // ==========================================================================
+  // getAssetLeaseSummary 测试
+  // ==========================================================================
+
+  describe('getAssetLeaseSummary', () => {
+    it('should return lease summary on success', async () => {
+      const mockSummary = {
+        asset_id: 'asset-1',
+        period_start: '2026-03-01',
+        period_end: '2026-03-31',
+        total_contracts: 2,
+        total_rented_area: 1000,
+        rentable_area: 1200,
+        occupancy_rate: 83.33,
+        by_type: [],
+        customer_summary: [],
+      };
+
+      vi.mocked(apiClient.get).mockResolvedValue({
+        success: true,
+        data: mockSummary,
+      });
+
+      const result = await service.getAssetLeaseSummary('asset-1', {
+        period_start: '2026-03-01',
+        period_end: '2026-03-31',
+      });
+
+      expect(result).toEqual(mockSummary);
+      expect(apiClient.get).toHaveBeenCalledWith(
+        expect.stringContaining('/assets/asset-1/lease-summary'),
+        expect.objectContaining({
+          params: {
+            period_start: '2026-03-01',
+            period_end: '2026-03-31',
+          },
+        })
+      );
+    });
+
+    it('should throw error when lease summary request fails', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        success: false,
+        error: '资产租赁汇总不存在',
+      });
+
+      await expect(service.getAssetLeaseSummary('missing')).rejects.toThrow('获取资产租赁汇总失败');
+    });
+  });
+
+  // ==========================================================================
   // createAsset 测试
   // ==========================================================================
 

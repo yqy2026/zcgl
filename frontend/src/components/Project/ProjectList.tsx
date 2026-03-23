@@ -38,83 +38,25 @@ import { projectService } from '@/services/projectService';
 import { partyService } from '@/services/partyService';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
 import { ListToolbar } from '@/components/Common/ListToolbar';
+import CurrentViewBanner from '@/components/System/CurrentViewBanner';
+import { useRoutePerspective } from '@/routes/perspective';
 import { useQuery } from '@tanstack/react-query';
 import { getIconButtonProps } from '@/utils/accessibility';
 import type { Project, ProjectListResponse, ProjectStatisticsResponse } from '@/types/project';
 import type { Party } from '@/types/party';
 import { ProjectForm } from '@/components/Forms';
 import ProjectDetail from './ProjectDetail';
+import { buildQueryScopeKey } from '@/utils/queryScope';
 import styles from './ProjectList.module.css';
 // import OwnershipSelect from '@/components/Ownership/OwnershipSelect';
 
-interface LegacyOwnershipRelation {
-  id?: string;
-  party_id?: string;
-  is_active?: boolean;
-}
-
-interface ProjectWithAssetsFallback extends Project {
-  assets?: unknown[];
-}
-
-const resolveLegacyOwnershipRelations = (project: Project): LegacyOwnershipRelation[] => {
-  const legacyRelations = (
-    project as Project & {
-      ownership_relations?: LegacyOwnershipRelation[];
-    }
-  ).ownership_relations;
-
-  return Array.isArray(legacyRelations) ? legacyRelations : [];
-};
-
-const isRelationActive = (
-  project: Project,
-  relation: { id?: string; party_id: string; is_active?: boolean }
-): boolean => {
-  if (relation.is_active === true) {
-    return true;
-  }
-
-  if (relation.is_active === false) {
-    return false;
-  }
-
-  const legacyRelations = resolveLegacyOwnershipRelations(project);
-  if (legacyRelations.length === 0) {
-    return false;
-  }
-
-  const relationId = relation.id?.trim();
-  if (relationId != null && relationId !== '') {
-    const matchedById = legacyRelations.find(legacyRelation => legacyRelation.id === relationId);
-    if (matchedById != null) {
-      return matchedById.is_active === true;
-    }
-  }
-
-  const partyId = relation.party_id.trim();
-  if (partyId !== '') {
-    const matchedByPartyId = legacyRelations.find(
-      legacyRelation => legacyRelation.party_id === partyId
-    );
-    if (matchedByPartyId != null) {
-      return matchedByPartyId.is_active === true;
-    }
-  }
-
-  return false;
-};
+const isRelationActive = (relation: { is_active?: boolean }): boolean =>
+  relation.is_active === true;
 
 const getProjectAssetCount = (project: Project): number => {
   if (typeof project.asset_count === 'number' && Number.isFinite(project.asset_count)) {
     return project.asset_count;
   }
-
-  const fallbackAssets = (project as ProjectWithAssetsFallback).assets;
-  if (Array.isArray(fallbackAssets)) {
-    return fallbackAssets.length;
-  }
-
   return 0;
 };
 
@@ -125,15 +67,23 @@ interface ProjectQueryParams {
   page: number;
   page_size: number;
   keyword?: string;
-  is_active?: boolean;
+  status?: string;
   owner_party_id?: string;
 }
 
 interface ProjectFilters {
   keyword: string;
-  isActive: boolean | null;
+  status: string;
   ownerPartyId: string;
 }
+
+const PROJECT_STATUS_MAP: Record<string, { text: string; color: string }> = {
+  planning: { text: '规划中', color: 'default' },
+  active: { text: '进行中', color: 'green' },
+  paused: { text: '已暂停', color: 'orange' },
+  completed: { text: '已完成', color: 'blue' },
+  terminated: { text: '已终止', color: 'red' },
+};
 
 const { Search } = Input;
 const { Option } = Select;
@@ -145,9 +95,10 @@ interface ProjectListProps {
 }
 
 const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list' }) => {
+  const { perspective } = useRoutePerspective();
   const [filters, setFilters] = useState<ProjectFilters>({
     keyword: '',
-    isActive: null,
+    status: '',
     ownerPartyId: '',
   });
   const [ownerPartySearchKeyword, setOwnerPartySearchKeyword] = useState('');
@@ -159,6 +110,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isDetailVisible, setIsDetailVisible] = useState(false);
+  const queryScopeKey = buildQueryScopeKey(perspective);
 
   const fetchProjectList = useCallback(async () => {
     const params: ProjectQueryParams = {
@@ -171,8 +123,8 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
       params.keyword = trimmedKeyword;
     }
 
-    if (filters.isActive !== null) {
-      params.is_active = filters.isActive;
+    if (filters.status !== '') {
+      params.status = filters.status;
     }
 
     const trimmedOwnerPartyId = filters.ownerPartyId.trim();
@@ -182,9 +134,9 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
 
     return await projectService.getProjects(params);
   }, [
-    filters.isActive,
     filters.keyword,
     filters.ownerPartyId,
+    filters.status,
     paginationState.current,
     paginationState.pageSize,
   ]);
@@ -196,7 +148,13 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
     isFetching: isProjectsFetching,
     refetch: refetchProjects,
   } = useQuery<ProjectListResponse>({
-    queryKey: ['project-list', paginationState.current, paginationState.pageSize, filters],
+    queryKey: [
+      'project-list',
+      queryScopeKey,
+      paginationState.current,
+      paginationState.pageSize,
+      filters,
+    ],
     queryFn: fetchProjectList,
     retry: 1,
   });
@@ -227,11 +185,10 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
 
   const statistics = useMemo<ProjectStatisticsResponse>(() => {
     const totalCount = projects.length;
-    const activeCount = projects.filter(project => project.is_active === true).length;
+    const activeCount = projects.filter(project => project.status === 'active').length;
     return {
-      total_count: totalCount,
-      active_count: activeCount,
-      inactive_count: totalCount - activeCount,
+      total_projects: totalCount,
+      active_projects: activeCount,
     };
   }, [projects]);
 
@@ -240,7 +197,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
     isLoading: isOwnerPartiesLoading,
     isFetching: isOwnerPartiesFetching,
   } = useQuery<Party[]>({
-    queryKey: ['project-owner-party-options', ownerPartySearchKeyword],
+    queryKey: ['project-owner-party-options', queryScopeKey, ownerPartySearchKeyword],
     queryFn: async () =>
       (
         await partyService.searchParties(ownerPartySearchKeyword, {
@@ -266,7 +223,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
   const resetListFilters = useCallback(() => {
     setFilters({
       keyword: '',
-      isActive: null,
+      status: '',
       ownerPartyId: '',
     });
     setOwnerPartySearchKeyword('');
@@ -285,7 +242,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
     confirm({
       title: '确认删除',
       icon: <ExclamationCircleOutlined />,
-      content: `确定要删除项目 "${project.name}" 吗？`,
+      content: `确定要删除项目 "${project.project_name}" 吗？`,
       okText: '确认',
       cancelText: '取消',
       onOk: async () => {
@@ -342,8 +299,8 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
   const columns: ColumnsType<Project> = [
     {
       title: '项目名称',
-      dataIndex: 'name',
-      key: 'name',
+      dataIndex: 'project_name',
+      key: 'project_name',
       render: (text: string, record: Project) => (
         <Button type="link" onClick={() => handleView(record)} className={styles.projectNameButton}>
           {text}
@@ -352,8 +309,8 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
     },
     {
       title: '项目编码',
-      dataIndex: 'code',
-      key: 'code',
+      dataIndex: 'project_code',
+      key: 'project_code',
       width: 120,
     },
     {
@@ -364,9 +321,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
       render: (_relations: Project['party_relations'], record: Project) => {
         // 优先展示 active 的 party_relations
         if (record.party_relations != null && record.party_relations.length > 0) {
-          const activeRelations = record.party_relations.filter(rel =>
-            isRelationActive(record, rel)
-          );
+          const activeRelations = record.party_relations.filter(rel => isRelationActive(rel));
           if (activeRelations.length > 0) {
             return (
               <div>
@@ -391,11 +346,15 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
       },
     },
     {
-      title: '描述',
-      dataIndex: 'description',
-      key: 'description',
-      width: 200,
-      render: (text: string) => text ?? '-',
+      title: '业务状态',
+      dataIndex: 'status',
+      key: 'status',
+      width: 120,
+      render: (status: string) => (
+        <Tag color={PROJECT_STATUS_MAP[status]?.color ?? 'default'}>
+          {PROJECT_STATUS_MAP[status]?.text ?? status}
+        </Tag>
+      ),
     },
     {
       title: '关联资产',
@@ -413,12 +372,15 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
     },
     {
       title: '状态',
-      dataIndex: 'is_active',
-      key: 'is_active',
+      dataIndex: 'status',
+      key: 'status_indicator',
       width: 80,
-      render: (isActive: boolean, record: Project) => (
+      render: (status: string, record: Project) => (
         <Space size="small">
-          <Badge status={isActive ? 'success' : 'error'} text={isActive ? '启用' : '禁用'} />
+          <Badge
+            status={status === 'active' ? 'success' : 'default'}
+            text={status === 'active' ? '启用' : '非启用'}
+          />
           {isPendingBindingProject(record) && <Tag color="warning">待补绑定</Tag>}
         </Space>
       ),
@@ -486,11 +448,11 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
           )}
           <Switch
             size="small"
-            checked={record.is_active}
+            checked={record.status === 'active'}
             onChange={() => handleToggleStatus(record)}
             checkedChildren="启用"
             unCheckedChildren="禁用"
-            aria-label={`${record.is_active ? '停用' : '启用'}项目 ${record.name}`}
+            aria-label={`${record.status === 'active' ? '停用' : '启用'}项目 ${record.project_name}`}
           />
         </Space>
       ),
@@ -505,8 +467,8 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
   );
 
   const handleStatusChange = useCallback(
-    (value: boolean | undefined) => {
-      updateFilters({ isActive: value === undefined ? null : value });
+    (value: string | undefined) => {
+      updateFilters({ status: value ?? '' });
     },
     [updateFilters]
   );
@@ -524,13 +486,15 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
 
   return (
     <div className="project-list">
+      <CurrentViewBanner />
+
       {/* 统计卡片 */}
       <Row gutter={[16, 16]} className={styles.statisticsRow}>
         <Col xs={24} sm={12} md={6}>
           <Card className={`${styles.statsCard} ${styles.statsTotal}`}>
             <Statistic
               title="总项目数"
-              value={statistics?.total_count ?? 0}
+              value={statistics.total_projects}
               prefix={
                 <span className={styles.statPrefixPrimary} aria-hidden>
                   <BarChartOutlined />
@@ -543,7 +507,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
           <Card className={`${styles.statsCard} ${styles.statsActive}`}>
             <Statistic
               title="启用项目"
-              value={statistics?.active_count ?? 0}
+              value={statistics.active_projects}
               prefix={
                 <span className={styles.statPrefixSuccess} aria-hidden>
                   <CheckCircleOutlined />
@@ -556,7 +520,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
           <Card className={`${styles.statsCard} ${styles.statsInactive}`}>
             <Statistic
               title="禁用项目"
-              value={statistics?.inactive_count ?? 0}
+              value={Math.max(0, statistics.total_projects - statistics.active_projects)}
               prefix={
                 <span className={styles.statPrefixError} aria-hidden>
                   <CloseCircleOutlined />
@@ -605,11 +569,14 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
                 placeholder="状态"
                 allowClear
                 className={styles.fullWidthSelect}
-                value={filters.isActive === null ? undefined : filters.isActive}
+                value={filters.status === '' ? undefined : filters.status}
                 onChange={handleStatusChange}
               >
-                <Option value={true}>启用</Option>
-                <Option value={false}>禁用</Option>
+                <Option value="planning">规划中</Option>
+                <Option value="active">进行中</Option>
+                <Option value="paused">已暂停</Option>
+                <Option value="completed">已完成</Option>
+                <Option value="terminated">已终止</Option>
               </Select>
             ),
           },

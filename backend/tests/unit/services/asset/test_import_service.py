@@ -18,15 +18,15 @@ class TestAsyncAssetImportService:
         mock_db = MagicMock()
         service = AsyncAssetImportService(mock_db)
         existing_asset = MagicMock()
-        existing_asset.property_name = "物业A"
+        existing_asset.asset_name = "物业A"
 
         with patch(
-            "src.services.asset.import_service.asset_crud.get_by_property_names_async",
+            "src.services.asset.import_service.asset_crud.get_by_asset_names_async",
             new_callable=AsyncMock,
             return_value=[existing_asset],
         ) as mock_get_assets:
             result = await service._load_existing_assets_map(
-                [{"property_name": "物业A"}]
+                [{"asset_name": "物业A"}]
             )
 
         assert result == {"物业A": existing_asset}

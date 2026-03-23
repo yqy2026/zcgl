@@ -248,7 +248,10 @@ async def validate_custom_field_value(
     """
 
     try:
-        is_valid, error_message = await custom_field_service.validate_custom_field_value_async(
+        (
+            is_valid,
+            error_message,
+        ) = await custom_field_service.validate_custom_field_value_async(
             db=db,
             field_id=field_id,
             value=value,
@@ -394,8 +397,10 @@ async def batch_set_custom_field_values(
                 continue
 
             try:
-                updated_values = await custom_field_service.update_asset_field_values_async(
-                    db=db, asset_id=asset_id, values=values
+                updated_values = (
+                    await custom_field_service.update_asset_field_values_async(
+                        db=db, asset_id=asset_id, values=values
+                    )
                 )
                 results.append(
                     {

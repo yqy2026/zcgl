@@ -245,7 +245,7 @@ export const checkAssetDataCompleteness = (
   // 必填字段
   const requiredFields = [
     'owner_party_id',
-    'property_name',
+    'asset_name',
     'address',
     'ownership_status',
     'property_nature',
@@ -320,4 +320,3 @@ export const checkAssetDataCompleteness = (
     optionalFields: trulyOptionalFields,
   };
 };
-

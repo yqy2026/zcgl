@@ -42,7 +42,8 @@
 |---|---|---|
 | 数据看板 | `/dashboard` | `frontend/src/routes/AppRoutes.tsx` |
 | 资产管理 | `/assets/list`, `/assets/new`, `/assets/import`, `/assets/analytics` | `frontend/src/routes/AppRoutes.tsx` |
-| 租赁管理 | `/rental/contracts`, `/rental/contracts/pdf-import`, `/rental/ledger`, `/rental/statistics` | `frontend/src/routes/AppRoutes.tsx` |
+| 合同组管理 | `/contract-groups`, `/contract-groups/import`, `/contract-groups/new` | `frontend/src/routes/AppRoutes.tsx` |
+| 旧租赁退休入口 | `/rental/contracts`, `/rental/contracts/pdf-import`, `/rental/ledger`, `/rental/statistics` | `frontend/src/routes/AppRoutes.tsx` |
 | 产权证 | `/property-certificates`, `/property-certificates/import` | `frontend/src/routes/AppRoutes.tsx` |
 | 权属方 | `/ownership` | `frontend/src/routes/AppRoutes.tsx` |
 | 项目管理 | `/project` | `frontend/src/routes/AppRoutes.tsx` |
@@ -111,4 +112,3 @@
 - 新增 API 模块时，必须更新本附录第 1、2 章对应清单。
 - 若主 SRS 中新增 `REQ-*`，必须同步补充本附录的证据路径。
 - 若模块被废弃，需在本附录显式标注“废弃日期 + 替代能力”。
-

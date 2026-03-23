@@ -34,6 +34,10 @@ export interface PartyCreatePayload {
 
 export type PartyUpdatePayload = Partial<PartyCreatePayload>;
 
+export interface PartyReviewRejectPayload {
+  reason: string;
+}
+
 const normalizePartyList = (
   responseData: PartyListRawResponse,
   request: { skip: number; limit: number }
@@ -165,6 +169,68 @@ export class PartyService {
 
       if (!result.success || result.data == null) {
         throw new Error(`更新主体失败: ${result.error}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw toServiceError(enhancedError);
+    }
+  }
+
+  async submitReview(id: string): Promise<Party> {
+    try {
+      const result = await apiClient.post<Party>(
+        `${PARTY_BASE_URL}/${id}/submit-review`,
+        undefined,
+        {
+          retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+          smartExtract: true,
+        }
+      );
+
+      if (!result.success || result.data == null) {
+        throw new Error(`提交主体审核失败: ${result.error}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw toServiceError(enhancedError);
+    }
+  }
+
+  async approveReview(id: string): Promise<Party> {
+    try {
+      const result = await apiClient.post<Party>(
+        `${PARTY_BASE_URL}/${id}/approve-review`,
+        undefined,
+        {
+          retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+          smartExtract: true,
+        }
+      );
+
+      if (!result.success || result.data == null) {
+        throw new Error(`审核通过主体失败: ${result.error}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw toServiceError(enhancedError);
+    }
+  }
+
+  async rejectReview(id: string, payload: PartyReviewRejectPayload): Promise<Party> {
+    try {
+      const result = await apiClient.post<Party>(`${PARTY_BASE_URL}/${id}/reject-review`, payload, {
+        retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
+
+      if (!result.success || result.data == null) {
+        throw new Error(`驳回主体审核失败: ${result.error}`);
       }
 
       return result.data;

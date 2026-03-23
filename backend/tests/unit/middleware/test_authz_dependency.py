@@ -10,7 +10,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 
-from src.middleware.auth import require_authz
+from src.middleware.auth import can_edit_contract, require_authz
 from src.services.authz.context_builder import SubjectContext
 from src.services.authz.engine import AuthzDecision
 
@@ -385,10 +385,10 @@ async def test_load_project_scope_context_uses_manager_party_directly() -> None:
 
 
 @pytest.mark.asyncio
-async def test_load_rent_contract_scope_context_uses_party_columns_directly() -> None:
+async def test_resolve_trusted_resource_context_loads_contract_scope_from_new_tables() -> None:
     checker = require_authz(
         action="read",
-        resource_type="rent_contract",
+        resource_type="contract",
         resource_id="{contract_id}",
     )
     db = AsyncMock(spec=AsyncSession)
@@ -405,16 +405,43 @@ async def test_load_rent_contract_scope_context_uses_party_columns_directly() ->
         ]
     )
 
-    context = await checker._load_rent_contract_scope_context(
+    context = await checker._resolve_trusted_resource_context(
         db=db,
-        contract_id="contract-1",
+        resource_id="contract-1",
     )
+    statement = db.execute.await_args.args[0]
+    sql = str(statement)
+    legacy_contract_table = "_".join(("rent", "contracts"))
 
     assert context["contract_id"] == "contract-1"
     assert context["tenant_party_id"] == "tenant-party-1"
     assert context["owner_party_id"] == "owner-party-1"
     assert context["manager_party_id"] == "manager-party-1"
     assert context["party_id"] == "owner-party-1"
+    assert "contract_groups" in sql
+    assert "contracts" in sql
+    assert legacy_contract_table not in sql
+
+
+@pytest.mark.asyncio
+async def test_can_edit_contract_checks_contract_resource() -> None:
+    user = _UserStub("user-1")
+    db = AsyncMock(spec=AsyncSession)
+    rbac_service = MagicMock()
+    rbac_service.is_admin = AsyncMock(return_value=False)
+    rbac_service.check_permission = AsyncMock(
+        return_value=MagicMock(has_permission=True)
+    )
+
+    with patch("src.middleware.auth.RBACService", return_value=rbac_service):
+        result = await can_edit_contract(user, db, "contract-1")
+
+    assert result is True
+    args, _kwargs = rbac_service.check_permission.await_args
+    assert args[0] == "user-1"
+    assert args[1].resource == "contract"
+    assert args[1].action == "edit"
+    assert args[1].resource_id == "contract-1"
 
 
 @pytest.mark.asyncio

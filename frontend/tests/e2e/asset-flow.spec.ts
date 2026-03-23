@@ -7,8 +7,8 @@ test.describe('Asset Management Flow', () => {
   });
 
   test('should load list and support keyword search', async ({ page }) => {
-    await page.goto('/assets/list');
-    await expect(page).toHaveURL(/\/assets\/list/);
+    await page.goto('/owner/assets');
+    await expect(page).toHaveURL(/\/owner\/assets$/);
 
     const searchInput = page
       .locator('input[id="search"], input[placeholder*="搜索"], input[placeholder*="关键字"]')

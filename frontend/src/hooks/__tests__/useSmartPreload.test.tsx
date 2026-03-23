@@ -6,6 +6,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@/test/utils/test-helpers';
 import React from 'react';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 // Mock react-router-dom
 vi.mock('react-router-dom', () => ({
@@ -133,6 +135,20 @@ describe('useSmartPreload - 配置测试', () => {
 
     expect(result.current.config.threshold).toBe(500);
     expect(result.current.config.maxConcurrent).toBe(5);
+  });
+
+  it('活跃预加载源码不应继续保留旧租赁路由 token', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/hooks/useSmartPreload.tsx'), 'utf8');
+    const legacyRentalRoute = ['/rental', 'contracts'].join('/');
+
+    expect(source).not.toContain(legacyRentalRoute);
+  });
+
+  it('默认预加载配置不应继续保留 legacy 资产列表路由', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/hooks/useSmartPreload.tsx'), 'utf8');
+
+    expect(source).not.toContain("'/assets/list'");
+    expect(source).toContain("'/owner/assets'");
   });
 });
 

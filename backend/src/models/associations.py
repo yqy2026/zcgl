@@ -6,10 +6,17 @@ from sqlalchemy import Column, DateTime, ForeignKey, String, Table
 
 from ..database import Base
 
-rent_contract_assets = Table(
-    "rent_contract_assets",
+# ---- 合同组-资产（REQ-RNT-001 五层合同体系）----
+
+contract_group_assets = Table(
+    "contract_group_assets",
     Base.metadata,
-    Column("contract_id", String, ForeignKey("rent_contracts.id"), primary_key=True),
+    Column(
+        "contract_group_id",
+        String,
+        ForeignKey("contract_groups.contract_group_id"),
+        primary_key=True,
+    ),
     Column("asset_id", String, ForeignKey("assets.id"), primary_key=True),
     Column(
         "created_at",
@@ -17,8 +24,27 @@ rent_contract_assets = Table(
         default=lambda: datetime.now(UTC).replace(tzinfo=None),
         comment="关联创建时间",
     ),
+    comment="合同组-资产多对多关联",
 )
 
+contract_assets = Table(
+    "contract_assets",
+    Base.metadata,
+    Column(
+        "contract_id",
+        String,
+        ForeignKey("contracts.contract_id"),
+        primary_key=True,
+    ),
+    Column("asset_id", String, ForeignKey("assets.id"), primary_key=True),
+    Column(
+        "created_at",
+        DateTime,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        comment="关联创建时间",
+    ),
+    comment="合同-资产多对多关联（ContractGroup.asset_ids 的子集）",
+)
 
 property_cert_assets = Table(
     "property_cert_assets",
@@ -36,4 +62,8 @@ property_cert_assets = Table(
 )
 
 
-__all__ = ["rent_contract_assets", "property_cert_assets"]
+__all__ = [
+    "contract_group_assets",
+    "contract_assets",
+    "property_cert_assets",
+]

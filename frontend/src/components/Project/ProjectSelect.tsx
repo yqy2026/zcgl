@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Select, Button, Modal, Space, Tooltip } from 'antd';
 import type { SelectProps } from 'antd';
 import type { DefaultOptionType } from 'antd/es/select';
@@ -41,49 +41,18 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
 }) => {
   const [selectModalVisible, setSelectModalVisible] = useState(false);
 
-  // 内部状态，用于管理显示的项目名称
-  const [displayValue, setDisplayValue] = useState('');
-
   // 使用React Query获取项目数据
-  const { projects: allProjects, loading, refresh } = useProjectOptions(onlyActive);
+  const statusFilter = onlyActive ? 'active' : '';
+  const { projects: allProjects, loading, refresh } = useProjectOptions(statusFilter);
 
   // 所有可用项目（搜索功能由Select的filterOption处理）
   const filteredProjects = useMemo(() => {
     return allProjects;
   }, [allProjects]);
 
-  // 当前选中的项目
-  const _selectedProject = useMemo(() => {
-    if (value == null || value === '') return null;
-    return allProjects.find(p => p.id === value) ?? allProjects.find(p => p.name === value) ?? null;
-  }, [value, allProjects]);
-
-  // 监听value变化，更新显示值
-  useEffect(() => {
-    if (value == null || value === '') {
-      setDisplayValue('');
-      return;
-    }
-
-    const project = allProjects.find(p => p.id === value);
-    if (project != null) {
-      const displayName =
-        project.short_name != null ? `${project.name} (${project.short_name})` : project.name;
-      setDisplayValue(displayName);
-    } else {
-      // 如果在allProjects中找不到项目，不要覆盖现有的显示值
-      // 这可能发生在项目数据还在加载中的情况
-      // 只有当displayValue为空时才设置为原始value
-      if (displayValue == null || displayValue === '') {
-        setDisplayValue(value);
-      }
-    }
-  }, [value, allProjects, displayValue]);
-
   // 处理选择
   const handleChange: SelectProps<string, ProjectOption>['onChange'] = (selectedValue, option) => {
     if (selectedValue == null) {
-      setDisplayValue('');
       onChange?.('');
       return;
     }
@@ -93,10 +62,8 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
     const selected = filteredProjects.find(p => p.id === realValue);
 
     if (selected != null) {
-      setDisplayValue(selectedValue);
       onChange?.(selected.id, selected);
     } else {
-      setDisplayValue(selectedValue);
       onChange?.(selectedValue);
     }
   };
@@ -109,7 +76,6 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
   // 处理清除
   const handleClear = () => {
     onChange?.('');
-    setDisplayValue('');
   };
 
   // 打开选择弹窗
@@ -119,11 +85,6 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
 
   // 从弹窗中选择项目
   const handleModalSelect = (project: Project) => {
-    // 更新显示值
-    const displayName =
-      project.short_name != null ? `${project.name} (${project.short_name})` : project.name;
-    setDisplayValue(displayName);
-
     // 调用父组件的onChange
     onChange?.(project.id, project);
     setSelectModalVisible(false);
@@ -144,7 +105,7 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
     <div style={style}>
       <Space.Compact className={styles.fullWidthCompact}>
         <Select<string, ProjectOption>
-          value={displayValue || undefined}
+          value={value}
           onChange={handleChange}
           onClear={handleClear}
           placeholder={placeholder}
@@ -156,24 +117,19 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
           showSearch
           filterOption={filterOption}
           notFoundContent={loading ? '加载中...' : '暂无数据'}
-          optionLabelProp="label"
-          // 自定义显示文本，确保选择项目后显示项目名称而不是ID
+          optionLabelProp="title"
           options={filteredProjects.map(project => {
-            const nameLabel =
-              project.short_name != null ? `${project.name} (${project.short_name})` : project.name;
+            const title = `${project.project_name} [${project.project_code}]`;
             return {
               label: (
                 <Space>
-                  <span>{project.name}</span>
-                  {project.short_name != null && (
-                    <span className={styles.shortNameText}>({project.short_name})</span>
-                  )}
-                  <span className={styles.codeText}>[{project.code}]</span>
+                  <span>{project.project_name}</span>
+                  <span className={styles.codeText}>[{project.project_code}]</span>
                 </Space>
               ),
-              value: nameLabel,
+              value: project.id,
               realValue: project.id,
-              title: `${nameLabel} [${project.code}]`,
+              title,
             };
           })}
         />

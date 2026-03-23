@@ -50,7 +50,9 @@ def _normalize_optional_str(value: Any) -> str | None:
 
 
 def _resolve_current_user_organization_id(current_user: User) -> str | None:
-    return _normalize_optional_str(getattr(current_user, "default_organization_id", None))
+    return _normalize_optional_str(
+        getattr(current_user, "default_organization_id", None)
+    )
 
 
 async def _resolve_organization_party_id(
@@ -89,7 +91,9 @@ async def _build_property_certificate_create_resource_context(
     resource_context: dict[str, Any] = {}
     if organization_id is None:
         resource_context["party_id"] = _PROPERTY_CERTIFICATE_CREATE_UNSCOPED_PARTY_ID
-        resource_context["owner_party_id"] = _PROPERTY_CERTIFICATE_CREATE_UNSCOPED_PARTY_ID
+        resource_context["owner_party_id"] = (
+            _PROPERTY_CERTIFICATE_CREATE_UNSCOPED_PARTY_ID
+        )
         resource_context["manager_party_id"] = (
             _PROPERTY_CERTIFICATE_CREATE_UNSCOPED_PARTY_ID
         )
@@ -100,7 +104,9 @@ async def _build_property_certificate_create_resource_context(
         db=db,
         organization_id=organization_id,
     )
-    resolved_party_id = scoped_party_id if scoped_party_id is not None else organization_id
+    resolved_party_id = (
+        scoped_party_id if scoped_party_id is not None else organization_id
+    )
     resource_context["party_id"] = resolved_party_id
     resource_context["owner_party_id"] = resolved_party_id
     resource_context["manager_party_id"] = resolved_party_id

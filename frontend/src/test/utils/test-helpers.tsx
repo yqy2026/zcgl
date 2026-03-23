@@ -246,4 +246,3 @@ export const mockSessionStorage = {
   },
   key: vi.fn(),
 };
-

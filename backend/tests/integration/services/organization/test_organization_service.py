@@ -11,6 +11,7 @@ from sqlalchemy.pool import NullPool
 from src import database as database
 from src.core.cache_manager import cache_manager
 from src.core.exception_handler import OperationNotAllowedError, ResourceNotFoundError
+from src.models.enum_field import EnumFieldType, EnumFieldValue
 from src.models.organization import OrganizationHistory
 from src.schemas.organization import OrganizationCreate, OrganizationUpdate
 from src.services.organization.service import OrganizationService
@@ -37,6 +38,72 @@ class OrganizationTestDataFactory:
         }
         default_data.update(kwargs)
         return default_data
+
+
+async def _ensure_organization_enum_data(db_session: AsyncSession) -> None:
+    enum_defs: dict[str, tuple[str, list[str]]] = {
+        "organization_type": (
+            "组织类型",
+            ["company", "group", "division", "department", "team", "branch", "office"],
+        ),
+        "organization_status": (
+            "组织状态",
+            ["active", "inactive", "suspended"],
+        ),
+    }
+
+    for code, (name, values) in enum_defs.items():
+        result = await db_session.execute(
+            select(EnumFieldType).where(EnumFieldType.code == code)
+        )
+        enum_type = result.scalars().first()
+        if enum_type is None:
+            enum_type = EnumFieldType(
+                name=name,
+                code=code,
+                category="系统管理",
+                is_system=True,
+                status="active",
+                is_deleted=False,
+                created_by="integration_test",
+                updated_by="integration_test",
+            )
+            db_session.add(enum_type)
+            await db_session.flush()
+        else:
+            enum_type.status = "active"
+            enum_type.is_deleted = False
+            enum_type.updated_by = "integration_test"
+
+        value_result = await db_session.execute(
+            select(EnumFieldValue).where(EnumFieldValue.enum_type_id == enum_type.id)
+        )
+        existing_values = {value_obj.value: value_obj for value_obj in value_result.scalars().all()}
+
+        for sort_order, value in enumerate(values, start=1):
+            value_obj = existing_values.get(value)
+            if value_obj is None:
+                db_session.add(
+                    EnumFieldValue(
+                        enum_type_id=enum_type.id,
+                        label=value,
+                        value=value,
+                        sort_order=sort_order,
+                        is_active=True,
+                        is_deleted=False,
+                        created_by="integration_test",
+                        updated_by="integration_test",
+                    )
+                )
+                continue
+
+            value_obj.label = value
+            value_obj.sort_order = sort_order
+            value_obj.is_active = True
+            value_obj.is_deleted = False
+            value_obj.updated_by = "integration_test"
+
+    await db_session.flush()
 
 
 # ============================================================================
@@ -97,6 +164,7 @@ class TestOrganizationCreation:
         self.db = db_session
         self.service = organization_service
         self.factory = OrganizationTestDataFactory()
+        await _ensure_organization_enum_data(self.db)
 
     async def test_create_organization_success(self):
         """测试成功创建组织"""
@@ -183,6 +251,7 @@ class TestOrganizationUpdate:
         self.db = db_session
         self.service = organization_service
         self.factory = OrganizationTestDataFactory()
+        await _ensure_organization_enum_data(self.db)
 
         # 创建测试组织
         org_data = OrganizationCreate(**self.factory.create_org_dict())

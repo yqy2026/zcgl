@@ -37,8 +37,8 @@ class AssetTestDataFactory:
         """生成资产创建数据"""
         default_data = {
             "ownership_id": "ownership-default",
-            "property_name": "测试物业A",
-            "address": "北京市朝阳区测试路123号",
+            "asset_name": "测试物业A",
+            "address_detail": "北京市朝阳区测试路123号",
             "ownership_status": "已确权",
             "property_nature": "商业",
             "usage_status": "出租中",
@@ -115,7 +115,7 @@ class TestAssetCreation:
         asset = await self.service.create_asset(asset_data)
 
         assert asset.id is not None
-        assert asset.property_name == "测试物业A"
+        assert asset.asset_name == "测试物业A"
         assert asset.ownership_id == "ownership-default"
         assert asset.ownership_status == "已确权"
 
@@ -133,7 +133,7 @@ class TestAssetCreation:
         assert history is not None
         assert history.operation_type == "CREATE"
 
-    async def test_create_duplicate_property_name_raises_error(self):
+    async def test_create_duplicate_asset_name_raises_error(self):
         """测试创建重复物业名称抛出异常"""
         asset_data = AssetCreate(**self.factory.create_asset_dict())
 
@@ -215,14 +215,14 @@ class TestAssetQuery:
         self.asset1 = await self.service.create_asset(
             AssetCreate(
                 **self.factory.create_asset_dict(
-                    property_name=self.asset_name_a, ownership_id=ownership_a.id
+                    asset_name=self.asset_name_a, ownership_id=ownership_a.id
                 )
             )
         )
         self.asset2 = await self.service.create_asset(
             AssetCreate(
                 **self.factory.create_asset_dict(
-                    property_name=self.asset_name_b, ownership_id=ownership_b.id
+                    asset_name=self.asset_name_b, ownership_id=ownership_b.id
                 )
             )
         )
@@ -235,7 +235,7 @@ class TestAssetQuery:
 
         assert isinstance(assets, list)
         assert total == 2
-        asset_names = {asset.property_name for asset in assets}
+        asset_names = {asset.asset_name for asset in assets}
         assert asset_names == {self.asset_name_a, self.asset_name_b}
 
     async def test_get_assets_with_pagination(self):
@@ -255,7 +255,7 @@ class TestAssetQuery:
         assert isinstance(assets, list)
         assert total == 1
         assert len(assets) == 1
-        assert assets[0].property_name == self.asset_name_a
+        assert assets[0].asset_name == self.asset_name_a
 
     async def test_get_assets_without_relations_serializes_ownership_entity(self):
         """测试非关联查询结果可安全序列化 ownership_entity（避免懒加载异常）"""
@@ -274,7 +274,7 @@ class TestAssetQuery:
         asset = await self.service.get_asset(self.asset1.id)
 
         assert asset.id == self.asset1.id
-        assert asset.property_name == self.asset_name_a
+        assert asset.asset_name == self.asset_name_a
 
     async def test_get_asset_by_id_not_found_raises_error(self):
         """测试获取不存在的资产抛出异常"""
@@ -342,12 +342,12 @@ class TestAssetUpdate:
         """测试更新为重复名称抛出异常"""
         # 创建第二个资产
         await self.service.create_asset(
-            AssetCreate(**self.factory.create_asset_dict(property_name="物业B"))
+            AssetCreate(**self.factory.create_asset_dict(asset_name="物业B"))
         )
 
         # 尝试将第一个资产更新为与第二个资产相同的名称
         with pytest.raises(DuplicateResourceError):
-            await self.service.update_asset(self.asset.id, AssetUpdate(property_name="物业B"))
+            await self.service.update_asset(self.asset.id, AssetUpdate(asset_name="物业B"))
 
     async def test_update_nonexistent_asset_raises_error(self):
         """测试更新不存在的资产抛出异常"""
@@ -435,7 +435,7 @@ class TestFieldValuesQuery:
             AssetCreate(
                 **self.factory.create_asset_dict(
                     ownership_id=ownership_a.id,
-                    property_name=f"字段值测试物业A-{self.field_values_marker}",
+                    asset_name=f"字段值测试物业A-{self.field_values_marker}",
                 )
             )
         )
@@ -443,7 +443,7 @@ class TestFieldValuesQuery:
             AssetCreate(
                 **self.factory.create_asset_dict(
                     ownership_id=ownership_b.id,
-                    property_name=f"字段值测试物业B-{self.field_values_marker}",
+                    asset_name=f"字段值测试物业B-{self.field_values_marker}",
                 )
             )
         )
@@ -451,7 +451,7 @@ class TestFieldValuesQuery:
             AssetCreate(
                 **self.factory.create_asset_dict(
                     ownership_id=ownership_a.id,  # 重复
-                    property_name=f"字段值测试物业C-{self.field_values_marker}",
+                    asset_name=f"字段值测试物业C-{self.field_values_marker}",
                 )
             )
         )

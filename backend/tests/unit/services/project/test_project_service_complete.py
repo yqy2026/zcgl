@@ -47,15 +47,11 @@ def sample_project():
     """Sample project object"""
     project = MagicMock(spec=Project)
     project.id = "project-123"
-    project.name = "Test Project"
-    project.code = "PRJ001"
-    project.project_description = "Test project description"
-    project.project_status = "规划中"
-    project.start_date = datetime(2024, 1, 1)
-    project.end_date = datetime(2024, 12, 31)
-    project.project_budget = 1000000.0
-    project.project_manager = "user-123"
-    project.is_active = True
+    project.project_name = "Test Project"
+    project.project_code = "PRJ-TEST01-000001"
+    project.status = "planning"
+    project.data_status = "正常"
+    project.manager_party_id = None
     return project
 
 
@@ -70,18 +66,13 @@ class TestCreateProject:
     async def test_create_project_success(self, project_service, mock_db):
         """Test successful project creation"""
         project_data = ProjectCreate(
-            name="New Project",
-            code="PJ2501002",
-            project_description="New project description",
-            start_date="2024-02-01",
-            end_date="2024-06-30",
-            project_budget=500000.0,
-            project_manager="user-456",
+            project_name="New Project",
+            project_code="PRJ-TEST01-000002",
         )
         created_project = MagicMock(spec=Project)
         created_project.id = "project-999"
-        created_project.name = "New Project"
-        created_project.code = "PJ2501002"
+        created_project.project_name = "New Project"
+        created_project.project_code = "PRJ-TEST01-000002"
 
         with patch("src.crud.project.project_crud.get_by_code", return_value=None):
             with patch(
@@ -94,11 +85,8 @@ class TestCreateProject:
     async def test_create_project_validates_dates(self, project_service, mock_db):
         """Test that project dates are accepted"""
         project_data = ProjectCreate(
-            name="Date Project",
-            code="PJ2501003",
-            start_date="2024-12-31",
-            end_date="2025-01-01",
-            project_budget=100000.0,
+            project_name="Date Project",
+            project_code="PRJ-TEST01-000003",
         )
         created_project = MagicMock(spec=Project)
         created_project.id = "project-998"
@@ -114,11 +102,8 @@ class TestCreateProject:
     async def test_create_project_validates_budget(self, project_service, mock_db):
         """Test that project budget is accepted"""
         project_data = ProjectCreate(
-            name="Budget Project",
-            code="PJ2501004",
-            start_date="2024-01-01",
-            end_date="2024-12-31",
-            project_budget=100000.0,
+            project_name="Budget Project",
+            project_code="PRJ-TEST01-000004",
         )
         created_project = MagicMock(spec=Project)
         created_project.id = "project-997"
@@ -134,15 +119,12 @@ class TestCreateProject:
     async def test_create_project_sets_default_status(self, project_service, mock_db):
         """Test that new projects get default status"""
         project_data = ProjectCreate(
-            name="Default Status Project",
-            code="PJ2501005",
-            start_date="2024-01-01",
-            end_date="2024-12-31",
-            project_budget=100000.0,
+            project_name="Default Status Project",
+            project_code="PRJ-TEST01-000005",
         )
         created_project = MagicMock(spec=Project)
         created_project.id = "project-996"
-        created_project.project_status = project_data.project_status
+        created_project.status = project_data.status
 
         with patch("src.crud.project.project_crud.get_by_code", return_value=None):
             with patch(
@@ -150,16 +132,13 @@ class TestCreateProject:
                 return_value=created_project,
             ):
                 result = await project_service.create_project(mock_db, obj_in=project_data)
-                assert result.project_status == "规划中"
+                assert result.status == "planning"
 
     async def test_create_project_duplicate_code(self, project_service, mock_db):
         """Test that duplicate project codes are rejected"""
         project_data = ProjectCreate(
-            name="Duplicate Code Project",
-            code="PJ2501001",
-            start_date="2024-01-01",
-            end_date="2024-12-31",
-            project_budget=100000.0,
+            project_name="Duplicate Code Project",
+            project_code="PRJ-TEST01-000001",
         )
 
         with patch(
@@ -180,8 +159,7 @@ class TestUpdateProject:
     async def test_update_project_name(self, project_service, mock_db, sample_project):
         """Test updating project name"""
         update_data = ProjectUpdate(
-            name="Updated Project Name",
-            updated_by="user-123",
+            project_name="Updated Project Name",
         )
         with patch("src.crud.project.project_crud.get", return_value=sample_project):
             with patch(
@@ -198,8 +176,7 @@ class TestUpdateProject:
         """Test status workflow transitions"""
         # Valid transition: 规划中 -> 进行中
         update_data = ProjectUpdate(
-            project_status="进行中",
-            updated_by="user-123",
+            status="active",
         )
         with patch("src.crud.project.project_crud.get", return_value=sample_project):
             with patch(
@@ -215,10 +192,9 @@ class TestUpdateProject:
     ):
         """Test that invalid status transitions are rejected"""
         # Invalid transition: 已完成 -> 规划中
-        sample_project.project_status = "已完成"
+        sample_project.status = "completed"
         update_data = ProjectUpdate(
-            project_status="规划中",  # Cannot go back
-            updated_by="user-123",
+            status="planning",
         )
         with patch("src.crud.project.project_crud.get", return_value=sample_project):
             with patch(
@@ -232,9 +208,7 @@ class TestUpdateProject:
     async def test_update_project_dates(self, project_service, mock_db, sample_project):
         """Test updating project dates"""
         update_data = ProjectUpdate(
-            start_date="2024-02-01",
-            end_date="2025-01-31",
-            updated_by="user-123",
+            project_name="Updated Date Project",
         )
         with patch("src.crud.project.project_crud.get", return_value=sample_project):
             with patch(
@@ -248,8 +222,7 @@ class TestUpdateProject:
     async def test_update_project_budget(self, project_service, mock_db, sample_project):
         """Test updating project budget"""
         update_data = ProjectUpdate(
-            project_budget=1500000.0,
-            updated_by="user-123",
+            project_name="Updated Budget Project",
         )
         with patch("src.crud.project.project_crud.get", return_value=sample_project):
             with patch(
@@ -263,8 +236,7 @@ class TestUpdateProject:
     async def test_update_nonexistent_project(self, project_service, mock_db):
         """Test updating non-existent project"""
         update_data = ProjectUpdate(
-            name="Updated Name",
-            updated_by="user-123",
+            project_name="Updated Name",
         )
         with patch("src.crud.project.project_crud.get", return_value=None):
             with pytest.raises(ResourceNotFoundError, match="项目.*不存在"):
@@ -459,11 +431,7 @@ class TestProjectErrorHandling:
             ):
                 with pytest.raises(InternalServerError, match="创建项目失败"):
                     project_data = ProjectCreate(
-                        name="Test Project",
-                        code="PJ2501001",
-                        start_date="2024-01-01",
-                        end_date="2024-12-31",
-                        project_budget=100000.0,
+                        project_name="Test Project",
                     )
                     await project_service.create_project(db=mock_db, obj_in=project_data)
 
@@ -471,7 +439,7 @@ class TestProjectErrorHandling:
         self, project_service, mock_db, sample_project
     ):
         """Test handling database error during update"""
-        update_data = ProjectUpdate(name="Updated Name")
+        update_data = ProjectUpdate(project_name="Updated Name")
         with patch("src.crud.project.project_crud.get", return_value=sample_project):
             with patch(
                 "src.crud.project.project_crud.update",

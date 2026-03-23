@@ -294,7 +294,7 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
         # 移除可能包含对象引用的模式
         import re
 
-        # 移除类似 "<class 'src.models.rent_contract.RentLedger'>" 的内容
+        # 移除类似 "<class 'src.models.contract_group.ContractLedgerEntry'>" 的内容
         message = re.sub(r"<class '[^']*'>", "<模型对象>", message)
         # 移除可能的对象ID引用
         message = re.sub(r"object at 0x[0-9a-fA-F]+>", "<对象实例>", message)

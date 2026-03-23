@@ -104,6 +104,12 @@ export interface ComparisonData {
 export interface AnalyticsData {
   area_summary: AreaSummary;
   financial_summary: FinancialSummary;
+  total_income?: number;
+  self_operated_rent_income?: number;
+  agency_service_income?: number;
+  customer_entity_count?: number;
+  customer_contract_count?: number;
+  metrics_version?: string;
   occupancy_distribution: OccupancyDistribution[];
   property_nature_distribution: PropertyNatureDistribution[];
   ownership_status_distribution: OwnershipStatusDistribution[];
@@ -125,6 +131,12 @@ export interface AnalyticsResponse {
   // Flat structure for direct access (compatible with AnalyticsData)
   area_summary?: AreaSummary;
   financial_summary?: FinancialSummary;
+  total_income?: number;
+  self_operated_rent_income?: number;
+  agency_service_income?: number;
+  customer_entity_count?: number;
+  customer_contract_count?: number;
+  metrics_version?: string;
   occupancy_distribution?: OccupancyDistribution[];
   property_nature_distribution?: PropertyNatureDistribution[];
   ownership_status_distribution?: OwnershipStatusDistribution[];

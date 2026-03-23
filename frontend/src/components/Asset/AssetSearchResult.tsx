@@ -81,7 +81,7 @@ const AssetSearchResult: React.FC<AssetSearchResultProps> = ({
                 <Space>
                   <HomeOutlined className={styles.titleIcon} />
                   <Text strong className={styles.propertyTitle}>
-                    {highlightSearchText(asset.property_name)}
+                    {highlightSearchText(asset.asset_name)}
                   </Text>
                   <Tag color={getStatusColor(asset.ownership_status, 'ownership')}>
                     {asset.ownership_status}

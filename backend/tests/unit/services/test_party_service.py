@@ -1,11 +1,18 @@
+from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import ANY, AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.core.exception_handler import OperationNotAllowedError
+from src.core.exception_handler import DuplicateResourceError, OperationNotAllowedError
 from src.crud.query_builder import PartyFilter
-from src.schemas.party import UserPartyBindingCreate, UserPartyBindingUpdate
+from src.models.party import PartyReviewStatus, PartyType
+from src.schemas.party import (
+    PartyCreate,
+    PartyUpdate,
+    UserPartyBindingCreate,
+    UserPartyBindingUpdate,
+)
 from src.services.party.service import PartyService
 
 pytestmark = pytest.mark.asyncio
@@ -231,3 +238,369 @@ class TestPartyServiceScopeAndBindingBehavior:
 
         assert "失效时间不能早于生效时间" in str(exc_info.value)
         party_crud.create_user_party_binding.assert_not_called()
+
+
+class TestPartyServiceReviewFlow:
+    async def test_create_party_should_default_review_status_to_draft(self) -> None:
+        db = MagicMock()
+        created_party = SimpleNamespace(id="party-1")
+        party_crud = MagicMock()
+        party_crud.get_party_by_type_and_code = AsyncMock(return_value=None)
+        party_crud.create_party = AsyncMock(return_value=created_party)
+        service = PartyService(data_access=party_crud)
+
+        payload = PartyCreate(
+            party_type=PartyType.ORGANIZATION,
+            name="测试主体",
+            code="PARTY-001",
+        )
+
+        result = await service.create_party(db, obj_in=payload)
+
+        assert result is created_party
+        create_payload = party_crud.create_party.await_args.kwargs["obj_in"]
+        assert create_payload["review_status"] == PartyReviewStatus.DRAFT.value
+        assert create_payload["review_by"] is None
+        assert create_payload["reviewed_at"] is None
+        assert create_payload["review_reason"] is None
+
+    async def test_approve_party_review_should_update_review_fields(self) -> None:
+        db = MagicMock()
+        db.add = MagicMock()
+        db.flush = AsyncMock()
+        now = datetime.now(UTC).replace(tzinfo=None)
+        party = SimpleNamespace(id="party-1", review_status=PartyReviewStatus.PENDING.value)
+        updated_party = SimpleNamespace(
+            id="party-1",
+            review_status=PartyReviewStatus.APPROVED.value,
+        )
+        party_crud = MagicMock()
+        party_crud.get_party = AsyncMock(return_value=party)
+        party_crud.update_party = AsyncMock(return_value=updated_party)
+        service = PartyService(data_access=party_crud)
+
+        with patch.object(PartyService, "_utcnow_naive", return_value=now):
+            result = await service.approve_party_review(
+                db,
+                party_id="party-1",
+                reviewer="reviewer-1",
+            )
+
+        assert result is updated_party
+        party_crud.update_party.assert_awaited_once_with(
+            db,
+            db_obj=party,
+            obj_in={
+                "review_status": PartyReviewStatus.APPROVED.value,
+                "review_by": "reviewer-1",
+                "reviewed_at": now,
+                "review_reason": None,
+            },
+        )
+
+    async def test_reject_party_review_should_reset_to_draft(self) -> None:
+        """驳回后状态应回到 DRAFT，而不是 REJECTED。"""
+        db = MagicMock()
+        db.add = MagicMock()
+        db.flush = AsyncMock()
+        now = datetime.now(UTC).replace(tzinfo=None)
+        party = SimpleNamespace(id="party-1", review_status=PartyReviewStatus.PENDING.value)
+        updated_party = SimpleNamespace(
+            id="party-1",
+            review_status=PartyReviewStatus.DRAFT.value,
+        )
+        party_crud = MagicMock()
+        party_crud.get_party = AsyncMock(return_value=party)
+        party_crud.update_party = AsyncMock(return_value=updated_party)
+        service = PartyService(data_access=party_crud)
+
+        with patch.object(PartyService, "_utcnow_naive", return_value=now):
+            result = await service.reject_party_review(
+                db,
+                party_id="party-1",
+                reviewer="reviewer-1",
+                reason="资料不完整",
+            )
+
+        assert result is updated_party
+        party_crud.update_party.assert_awaited_once_with(
+            db,
+            db_obj=party,
+            obj_in={
+                "review_status": PartyReviewStatus.DRAFT.value,
+                "review_by": "reviewer-1",
+                "reviewed_at": now,
+                "review_reason": "资料不完整",
+            },
+        )
+
+    async def test_update_party_should_block_when_pending(self) -> None:
+        """待审状态的主体不允许编辑。"""
+        db = MagicMock()
+        party = SimpleNamespace(id="party-1", review_status=PartyReviewStatus.PENDING.value)
+        party_crud = MagicMock()
+        party_crud.get_party = AsyncMock(return_value=party)
+        service = PartyService(data_access=party_crud)
+
+        with pytest.raises(OperationNotAllowedError, match="不允许编辑"):
+            await service.update_party(
+                db,
+                party_id="party-1",
+                obj_in=PartyUpdate(name="新名称"),
+            )
+
+    async def test_update_party_should_block_when_approved(self) -> None:
+        """已审核状态的主体不允许编辑。"""
+        db = MagicMock()
+        party = SimpleNamespace(id="party-1", review_status=PartyReviewStatus.APPROVED.value)
+        party_crud = MagicMock()
+        party_crud.get_party = AsyncMock(return_value=party)
+        service = PartyService(data_access=party_crud)
+
+        with pytest.raises(OperationNotAllowedError, match="不允许编辑"):
+            await service.update_party(
+                db,
+                party_id="party-1",
+                obj_in=PartyUpdate(name="新名称"),
+            )
+
+    async def test_update_party_should_allow_when_draft(self) -> None:
+        """草稿状态的主体允许编辑。"""
+        db = MagicMock()
+        party = SimpleNamespace(id="party-1", review_status=PartyReviewStatus.DRAFT.value)
+        updated_party = SimpleNamespace(id="party-1", name="新名称")
+        party_crud = MagicMock()
+        party_crud.get_party = AsyncMock(return_value=party)
+        party_crud.update_party = AsyncMock(return_value=updated_party)
+        service = PartyService(data_access=party_crud)
+
+        result = await service.update_party(
+            db,
+            party_id="party-1",
+            obj_in=PartyUpdate(name="新名称"),
+        )
+
+        assert result is updated_party
+
+    async def test_delete_party_should_block_when_pending(self) -> None:
+        """待审状态的主体不允许删除。"""
+        db = MagicMock()
+        party = SimpleNamespace(id="party-1", review_status=PartyReviewStatus.PENDING.value)
+        party_crud = MagicMock()
+        party_crud.get_party = AsyncMock(return_value=party)
+        service = PartyService(data_access=party_crud)
+
+        with pytest.raises(OperationNotAllowedError, match="不允许删除"):
+            await service.delete_party(db, party_id="party-1")
+
+    async def test_delete_party_should_block_when_approved(self) -> None:
+        """已审核状态的主体不允许删除。"""
+        db = MagicMock()
+        party = SimpleNamespace(id="party-1", review_status=PartyReviewStatus.APPROVED.value)
+        party_crud = MagicMock()
+        party_crud.get_party = AsyncMock(return_value=party)
+        service = PartyService(data_access=party_crud)
+
+        with pytest.raises(OperationNotAllowedError, match="不允许删除"):
+            await service.delete_party(db, party_id="party-1")
+
+    async def test_delete_party_should_allow_when_draft(self) -> None:
+        """草稿状态的主体允许删除。"""
+        db = MagicMock()
+        party = SimpleNamespace(id="party-1", review_status=PartyReviewStatus.DRAFT.value)
+        party_crud = MagicMock()
+        party_crud.get_party = AsyncMock(return_value=party)
+        party_crud.delete_party = AsyncMock(return_value=None)
+        service = PartyService(data_access=party_crud)
+
+        with patch.object(service, "_assert_no_references", AsyncMock(return_value=None)):
+            result = await service.delete_party(db, party_id="party-1")
+
+        assert result is True
+
+    async def test_create_party_should_reject_duplicate_type_and_code(self) -> None:
+        """相同 party_type + code 应抛 DuplicateResourceError。"""
+        db = MagicMock()
+        existing = SimpleNamespace(id="existing-1")
+        party_crud = MagicMock()
+        party_crud.get_party_by_type_and_code = AsyncMock(return_value=existing)
+        service = PartyService(data_access=party_crud)
+
+        payload = PartyCreate(
+            party_type=PartyType.ORGANIZATION,
+            name="重复主体",
+            code="DUP-001",
+        )
+
+        with pytest.raises(DuplicateResourceError, match="主体"):
+            await service.create_party(db, obj_in=payload)
+
+        party_crud.create_party.assert_not_called()
+
+    async def test_create_party_should_succeed_when_no_duplicate(self) -> None:
+        """不重复时应正常创建。"""
+        db = MagicMock()
+        created = SimpleNamespace(id="party-new")
+        party_crud = MagicMock()
+        party_crud.get_party_by_type_and_code = AsyncMock(return_value=None)
+        party_crud.create_party = AsyncMock(return_value=created)
+        service = PartyService(data_access=party_crud)
+
+        payload = PartyCreate(
+            party_type=PartyType.ORGANIZATION,
+            name="新主体",
+            code="NEW-001",
+        )
+
+        result = await service.create_party(db, obj_in=payload)
+
+        assert result is created
+
+
+class TestPartyServiceSoftDelete:
+    async def test_delete_party_should_check_asset_references(self) -> None:
+        """被资产引用的主体不允许删除。"""
+        db = MagicMock()
+        party = SimpleNamespace(id="party-1", review_status=PartyReviewStatus.DRAFT.value)
+        party_crud = MagicMock()
+        party_crud.get_party = AsyncMock(return_value=party)
+        service = PartyService(data_access=party_crud)
+
+        with patch.object(
+            service,
+            "_assert_no_references",
+            AsyncMock(
+                side_effect=OperationNotAllowedError(
+                    "该主体被 2 个资产引用，无法删除",
+                    reason="party_delete_has_asset_references",
+                )
+            ),
+        ):
+            with pytest.raises(OperationNotAllowedError, match="资产引用"):
+                await service.delete_party(db, party_id="party-1")
+
+    async def test_delete_party_should_check_contract_references(self) -> None:
+        """被合同组引用的主体不允许删除。"""
+        db = MagicMock()
+        party = SimpleNamespace(id="party-1", review_status=PartyReviewStatus.DRAFT.value)
+        party_crud = MagicMock()
+        party_crud.get_party = AsyncMock(return_value=party)
+        service = PartyService(data_access=party_crud)
+
+        with patch.object(
+            service,
+            "_assert_no_references",
+            AsyncMock(
+                side_effect=OperationNotAllowedError(
+                    "该主体被 1 个合同组引用，无法删除",
+                    reason="party_delete_has_contract_group_references",
+                )
+            ),
+        ):
+            with pytest.raises(OperationNotAllowedError, match="合同组引用"):
+                await service.delete_party(db, party_id="party-1")
+
+    async def test_delete_party_soft_deletes_via_crud(self) -> None:
+        """删除应调用 CRUD 软删除。"""
+        db = MagicMock()
+        party = SimpleNamespace(id="party-1", review_status=PartyReviewStatus.DRAFT.value)
+        party_crud = MagicMock()
+        party_crud.get_party = AsyncMock(return_value=party)
+        party_crud.delete_party = AsyncMock(return_value=None)
+        service = PartyService(data_access=party_crud)
+
+        with patch.object(service, "_assert_no_references", AsyncMock(return_value=None)):
+            result = await service.delete_party(db, party_id="party-1")
+
+        assert result is True
+        party_crud.delete_party.assert_awaited_once_with(db, db_obj=party)
+
+
+class TestPartyServiceReviewLog:
+    async def test_submit_review_should_write_log(self) -> None:
+        """提审应写入审核日志。"""
+        db = MagicMock()
+        db.add = MagicMock()
+        db.flush = AsyncMock()
+        party = SimpleNamespace(id="party-1", review_status=PartyReviewStatus.DRAFT)
+        updated = SimpleNamespace(id="party-1", review_status=PartyReviewStatus.PENDING.value)
+        party_crud = MagicMock()
+        party_crud.get_party = AsyncMock(return_value=party)
+        party_crud.update_party = AsyncMock(return_value=updated)
+        service = PartyService(data_access=party_crud)
+
+        result = await service.submit_party_review(db, party_id="party-1")
+
+        assert result is updated
+        # Verify db.add was called with a PartyReviewLog
+        from src.models.party_review_log import PartyReviewLog
+
+        add_calls = db.add.call_args_list
+        log_calls = [c for c in add_calls if isinstance(c[0][0], PartyReviewLog)]
+        assert len(log_calls) == 1
+        log_obj = log_calls[0][0][0]
+        assert log_obj.party_id == "party-1"
+        assert log_obj.action == "submit"
+        assert log_obj.from_status == "draft"
+        assert log_obj.to_status == "pending"
+
+    async def test_approve_review_should_write_log(self) -> None:
+        """通过审核应写入审核日志。"""
+        db = MagicMock()
+        db.add = MagicMock()
+        db.flush = AsyncMock()
+        now = datetime.now(UTC).replace(tzinfo=None)
+        party = SimpleNamespace(id="party-1", review_status=PartyReviewStatus.PENDING)
+        updated = SimpleNamespace(id="party-1", review_status=PartyReviewStatus.APPROVED.value)
+        party_crud = MagicMock()
+        party_crud.get_party = AsyncMock(return_value=party)
+        party_crud.update_party = AsyncMock(return_value=updated)
+        service = PartyService(data_access=party_crud)
+
+        with patch.object(PartyService, "_utcnow_naive", return_value=now):
+            result = await service.approve_party_review(
+                db, party_id="party-1", reviewer="审核人A"
+            )
+
+        assert result is updated
+        from src.models.party_review_log import PartyReviewLog
+
+        add_calls = db.add.call_args_list
+        log_calls = [c for c in add_calls if isinstance(c[0][0], PartyReviewLog)]
+        assert len(log_calls) == 1
+        log_obj = log_calls[0][0][0]
+        assert log_obj.action == "approve"
+        assert log_obj.from_status == "pending"
+        assert log_obj.to_status == "approved"
+        assert log_obj.operator == "审核人A"
+
+    async def test_reject_review_should_write_log(self) -> None:
+        """驳回应写入审核日志。"""
+        db = MagicMock()
+        db.add = MagicMock()
+        db.flush = AsyncMock()
+        now = datetime.now(UTC).replace(tzinfo=None)
+        party = SimpleNamespace(id="party-1", review_status=PartyReviewStatus.PENDING)
+        updated = SimpleNamespace(id="party-1", review_status=PartyReviewStatus.DRAFT.value)
+        party_crud = MagicMock()
+        party_crud.get_party = AsyncMock(return_value=party)
+        party_crud.update_party = AsyncMock(return_value=updated)
+        service = PartyService(data_access=party_crud)
+
+        with patch.object(PartyService, "_utcnow_naive", return_value=now):
+            result = await service.reject_party_review(
+                db, party_id="party-1", reviewer="审核人B", reason="信息不全"
+            )
+
+        assert result is updated
+        from src.models.party_review_log import PartyReviewLog
+
+        add_calls = db.add.call_args_list
+        log_calls = [c for c in add_calls if isinstance(c[0][0], PartyReviewLog)]
+        assert len(log_calls) == 1
+        log_obj = log_calls[0][0][0]
+        assert log_obj.action == "reject"
+        assert log_obj.from_status == "pending"
+        assert log_obj.to_status == "draft"
+        assert log_obj.operator == "审核人B"
+        assert log_obj.reason == "信息不全"

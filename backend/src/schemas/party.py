@@ -5,7 +5,7 @@ from typing import Any
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
-from ..models.party import PartyType
+from ..models.party import PartyReviewStatus, PartyType
 from ..models.user_party_binding import RelationType
 
 
@@ -53,10 +53,20 @@ class PartyResponse(PartyBase):
     """Party response."""
 
     id: str
+    review_status: PartyReviewStatus | None = None
+    review_by: str | None = None
+    reviewed_at: datetime | None = None
+    review_reason: str | None = None
     created_at: datetime
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+
+class PartyReviewRejectRequest(BaseModel):
+    """Party review reject payload."""
+
+    reason: str = Field(..., min_length=1, max_length=500, description="驳回原因")
 
 
 class PartyHierarchyCreate(BaseModel):
@@ -81,7 +91,9 @@ class PartyContactCreate(BaseModel):
     """Create contact payload."""
 
     party_id: str | None = Field(None, description="主体ID")
-    contact_name: str = Field(..., min_length=1, max_length=100, description="联系人姓名")
+    contact_name: str = Field(
+        ..., min_length=1, max_length=100, description="联系人姓名"
+    )
     contact_phone: str | None = Field(None, max_length=50, description="联系电话")
     contact_email: str | None = Field(None, max_length=255, description="联系邮箱")
     position: str | None = Field(None, max_length=100, description="职位")
@@ -92,7 +104,9 @@ class PartyContactCreate(BaseModel):
 class PartyContactUpdate(BaseModel):
     """Update contact payload."""
 
-    contact_name: str | None = Field(None, min_length=1, max_length=100, description="联系人姓名")
+    contact_name: str | None = Field(
+        None, min_length=1, max_length=100, description="联系人姓名"
+    )
     contact_phone: str | None = Field(None, max_length=50, description="联系电话")
     contact_email: str | None = Field(None, max_length=255, description="联系邮箱")
     position: str | None = Field(None, max_length=100, description="职位")
@@ -168,6 +182,7 @@ __all__ = [
     "PartyCreate",
     "PartyUpdate",
     "PartyResponse",
+    "PartyReviewRejectRequest",
     "PartyHierarchyCreate",
     "PartyHierarchyResponse",
     "PartyContactCreate",

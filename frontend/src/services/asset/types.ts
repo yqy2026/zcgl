@@ -8,6 +8,7 @@ import type { AreaStatistics } from '@/types/asset';
 // Re-export types from asset.ts for convenience
 export type {
   Asset,
+  AssetLeaseSummaryResponse,
   AssetSearchParams,
   AssetListResponse,
   AssetCreateRequest,
@@ -15,6 +16,8 @@ export type {
   AssetHistory,
   SystemDictionary,
   AssetCustomField,
+  ContractPartyItem,
+  ContractTypeSummary,
   CustomFieldValue,
   AreaStatistics,
 } from '@/types/asset';
@@ -142,7 +145,7 @@ export interface OccupancyRateStats {
   trend_percentage?: number;
   trend?: 'up' | 'down' | 'stable';
   top_performers?: Array<{
-    property_name: string;
+    asset_name: string;
     occupancy_rate: number;
     total_area: number;
     rented_area: number;
@@ -150,7 +153,7 @@ export interface OccupancyRateStats {
     rate?: number;
   }>;
   low_performers?: Array<{
-    property_name: string;
+    asset_name: string;
     occupancy_rate: number;
     total_area: number;
     rented_area: number;

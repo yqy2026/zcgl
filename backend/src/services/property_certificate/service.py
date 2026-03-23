@@ -294,7 +294,11 @@ class PropertyCertificateService:
 
         parsed_date_fields: dict[str, date | None] = {}
         date_field_errors: dict[str, list[str]] = {}
-        for field_name in ("registration_date", "land_use_term_start", "land_use_term_end"):
+        for field_name in (
+            "registration_date",
+            "land_use_term_start",
+            "land_use_term_end",
+        ):
             raw_value = extracted_data.get(field_name)
             try:
                 parsed_date_fields[field_name] = self._parse_date(raw_value)
@@ -491,7 +495,7 @@ class PropertyCertificateService:
             matches.append(
                 {
                     "asset_id": asset.id,
-                    "name": getattr(asset, "property_name", "") or "",
+                    "name": getattr(asset, "asset_name", "") or "",
                     "address": getattr(asset, "address", "") or "",
                     "confidence": confidence,
                     "match_reasons": match_reasons,
@@ -522,7 +526,10 @@ class PropertyCertificateService:
                 include_deleted=False,
                 decrypt=True,
             )
-        assets, used_blind_index = await asset_crud.search_by_field_with_candidates_async(
+        (
+            assets,
+            used_blind_index,
+        ) = await asset_crud.search_by_field_with_candidates_async(
             self.db,
             field_name=field_name,
             candidates=candidates,

@@ -97,10 +97,14 @@ def main() -> int:
                     print("[SKIP] roles/abac_* table missing")
                     return 0
 
-                policy_rows = conn.execute(
-                    sa.text("SELECT id, name FROM abac_policies")
-                ).mappings().all()
-                policy_by_name = {str(row["name"]): str(row["id"]) for row in policy_rows}
+                policy_rows = (
+                    conn.execute(sa.text("SELECT id, name FROM abac_policies"))
+                    .mappings()
+                    .all()
+                )
+                policy_by_name = {
+                    str(row["name"]): str(row["id"]) for row in policy_rows
+                }
 
                 template_policy_ids = [
                     policy_by_name[name]
@@ -108,14 +112,18 @@ def main() -> int:
                     if name in policy_by_name
                 ]
 
-                role_rows = conn.execute(
-                    sa.text(
-                        """
+                role_rows = (
+                    conn.execute(
+                        sa.text(
+                            """
                         SELECT id, name, display_name, category, is_system_role
                         FROM roles
                         """
+                        )
                     )
-                ).mappings().all()
+                    .mappings()
+                    .all()
+                )
                 scanned = len(role_rows)
 
                 role_policy_table = sa.table(

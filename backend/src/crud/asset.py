@@ -5,12 +5,13 @@
 资产计算逻辑（AssetCalculator）应在 API 或 Service 层调用。
 """
 
-from typing import Any, cast
+from typing import Any, NamedTuple, TypeVar, cast
 
 from sqlalchemy import Float, Select, case, delete, false, func, insert, or_, select
 from sqlalchemy import cast as sql_cast
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, load_only, selectinload, with_loader_criteria
+from sqlalchemy.sql.base import ExecutableOption
 
 from ..constants.business_constants import DataStatusValues, DateTimeFields
 from ..core.exception_handler import ResourceNotFoundError
@@ -23,8 +24,8 @@ from ..models.asset import Asset
 from ..models.asset_history import AssetHistory
 from ..models.asset_search_index import AssetSearchIndex
 from ..models.auth import User
+from ..models.contract_group import Contract, LeaseContractDetail
 from ..models.party import Party
-from ..models.rent_contract import RentContract
 from ..schemas.asset import AssetCreate, AssetUpdate
 from .asset_support import (
     AssetFilterData,
@@ -39,6 +40,32 @@ from .asset_support import (
 )
 from .base import CRUDBase
 from .query_builder import PartyFilter
+
+TSelectRow = TypeVar("TSelectRow", bound=tuple[Any, ...])
+
+
+class OccupancyAggregationRow(NamedTuple):
+    total_assets: int | None
+    total_rentable_area: float | None
+    total_rented_area: float | None
+    rentable_assets_count: int | None
+
+
+class OccupancyCategoryAggregationRow(NamedTuple):
+    category: str | None
+    total_rentable_area: float | None
+    total_rented_area: float | None
+    total_assets: int | None
+    rentable_assets_count: int | None
+
+
+class AreaSummaryAggregationRow(NamedTuple):
+    total_assets: int | None
+    total_land_area: float | None
+    total_rentable_area: float | None
+    total_rented_area: float | None
+    total_non_commercial_area: float | None
+    assets_with_area_data: int | None
 
 
 class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
@@ -74,33 +101,35 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
     def _asset_projection_load_options(
         *,
         include_contract_projection: bool = True,
-    ) -> tuple[Any, ...]:
+    ) -> tuple[ExecutableOption, ...]:
         """资产投影字段所需的关系预加载选项。"""
-        options: list[Any] = [
+        options: list[ExecutableOption] = [
             joinedload(Asset.owner_party),
             joinedload(Asset.manager_party),
             joinedload(Asset.project),
         ]
         if include_contract_projection:
             options.append(
-                selectinload(Asset.rent_contracts).options(
+                selectinload(Asset.contracts).options(
                     load_only(
-                        RentContract.id,
-                        RentContract.contract_status,
-                        RentContract.tenant_name,
-                        RentContract.contract_number,
-                        RentContract.start_date,
-                        RentContract.end_date,
-                        RentContract.monthly_rent_base,
-                        RentContract.total_deposit,
-                        RentContract.created_at,
-                        RentContract.data_status,
-                    )
+                        Contract.contract_id,
+                        Contract.status,
+                        Contract.contract_number,
+                        Contract.effective_from,
+                        Contract.effective_to,
+                        Contract.created_at,
+                        Contract.data_status,
+                    ),
+                    joinedload(Contract.lease_detail).load_only(
+                        LeaseContractDetail.tenant_name,
+                        LeaseContractDetail.monthly_rent_base,
+                        LeaseContractDetail.total_deposit,
+                    ),
                 )
             )
             options.append(
                 with_loader_criteria(
-                    RentContract,
+                    Contract,
                     lambda cls: or_(
                         cls.data_status.is_(None),
                         cls.data_status != DataStatusValues.ASSET_DELETED,
@@ -193,7 +222,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         self,
         *,
         include_contract_projection: bool = True,
-    ) -> Select[Any]:
+    ) -> Select[tuple[Asset]]:
         """
         资产列表/批量查询的基础查询（预加载高频关系，避免 N+1）
 
@@ -250,7 +279,9 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             return set()
 
         stmt = select(User.id, User.username).where(
-            User.default_organization_id.in_(org_ids)  # DEPRECATED legacy org scope fallback
+            User.default_organization_id.in_(
+                org_ids
+            )  # DEPRECATED legacy org scope fallback
         )
         result = await db.execute(stmt)
         rows: list[tuple[object, object]] = await _result_all(result)
@@ -264,9 +295,9 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
 
     @staticmethod
     def _apply_creator_scope(
-        stmt: Select[Any],
+        stmt: Select[TSelectRow],
         principals: set[str],
-    ) -> Select[Any]:
+    ) -> Select[TSelectRow]:
         if not principals:
             return stmt.where(false())
         return stmt.where(Asset.created_by.in_(principals))
@@ -311,10 +342,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         obj_in_data.update(kwargs)
         self._clean_asset_data(obj_in_data)
 
-        encrypted_data = cast(
-            AssetMutationData,
-            self.sensitive_data_handler.encrypt_data(obj_in_data.copy()),
-        )
+        encrypted_data = self.sensitive_data_handler.encrypt_data(obj_in_data.copy())
         db_obj = Asset(**encrypted_data)
         db.add(db_obj)
         await db.flush()
@@ -338,8 +366,10 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         include_deleted: bool = False,
         party_filter: PartyFilter | None = None,
     ) -> Asset | None:
-        stmt = select(Asset).options(*self._asset_projection_load_options()).filter(
-            getattr(self.model, "id") == id
+        stmt = (
+            select(Asset)
+            .options(*self._asset_projection_load_options())
+            .filter(getattr(self.model, "id") == id)
         )
         if party_filter is not None:
             stmt = await self._apply_asset_party_filter(db, stmt, party_filter)
@@ -391,11 +421,13 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
     async def get_by_name_async(
         self,
         db: AsyncSession,
-        property_name: str,
+        asset_name: str,
         include_deleted: bool = False,
     ) -> Asset | None:
-        stmt = select(Asset).options(*self._asset_projection_load_options()).filter(
-            Asset.property_name == property_name
+        stmt = (
+            select(Asset)
+            .options(*self._asset_projection_load_options())
+            .filter(Asset.asset_name == asset_name)
         )
         if not include_deleted:
             stmt = stmt.filter(self._not_deleted_clause(Asset.data_status))
@@ -422,9 +454,9 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         qb_filters = self._normalize_filters(filters)
         normalized_sort_field = self._normalize_sort_field(sort_field)
 
-        non_pii_search_fields = ["property_name", "business_category"]
+        non_pii_search_fields = ["asset_name", "business_category"]
         pii_search_fields = ["address"]
-        search_conditions: list[object] | None = None
+        search_conditions: list[Any] | None = None
         if search:
             search_conditions = []
             for field in non_pii_search_fields:
@@ -463,7 +495,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             if not search_conditions:
                 search_conditions = None
 
-        base_query = (
+        base_query: Select[tuple[Asset]] = (
             self._asset_base_query_with_relations(
                 include_contract_projection=include_contract_projection
             )
@@ -496,7 +528,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         result = await db.execute(query)
         assets: list[Asset] = await _scalars_all(result)
 
-        count_base_query: Select[Any] = select(Asset.id)
+        count_base_query: Select[tuple[str]] = select(Asset.id)
         if search_conditions:
             count_base_query = count_base_query.join(
                 Party, Asset.owner_party_id == Party.id, isouter=True
@@ -515,8 +547,8 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             distinct_column=Asset.id,
         )
         total_result = await db.execute(cnt_query)
-        total_raw = await _result_scalar(total_result)
-        total = int(cast(int | float | str, total_raw)) if total_raw is not None else 0
+        total_raw: int | float | str | None = await _result_scalar(total_result)
+        total = int(total_raw) if total_raw is not None else 0
 
         for asset in assets:
             self._decrypt_asset_object(asset)
@@ -543,10 +575,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         ):
             # 仅保留最小兼容：旧 organization_id 输入不再写库列，按 manager_party_id 别名处理。
             obj_in_data["manager_party_id"] = organization_id
-        encrypted_data = cast(
-            AssetMutationData,
-            self.sensitive_data_handler.encrypt_data(obj_in_data.copy()),
-        )
+        encrypted_data = self.sensitive_data_handler.encrypt_data(obj_in_data.copy())
 
         db_obj = Asset(**encrypted_data)
         db.add(db_obj)
@@ -559,7 +588,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         history = AssetHistory()
         history.asset_id = db_obj.id
         history.operation_type = "CREATE"
-        history.description = f"创建资产: {db_obj.property_name}"
+        history.description = f"创建资产: {db_obj.asset_name}"
         history.operator = operator
         history.ip_address = ip_address
         history.user_agent = user_agent
@@ -690,7 +719,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         if not ids:
             return []
 
-        base_query = (
+        base_query: Select[tuple[Asset]] = (
             self._asset_base_query_with_relations()
             if include_relations
             else select(Asset).options(*self._asset_projection_load_options())
@@ -780,8 +809,8 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         return assets, used_blind_index
 
     def _apply_simple_asset_filters(
-        self, stmt: Select[Any], filters: AssetFilterData | None
-    ) -> Select[Any]:
+        self, stmt: Select[TSelectRow], filters: AssetFilterData | None
+    ) -> Select[TSelectRow]:
         """应用 analytics 场景下的简单等值过滤。"""
         if not filters:
             return stmt
@@ -794,7 +823,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
 
     async def get_occupancy_aggregation_async(
         self, db: AsyncSession, *, filters: AssetFilterData | None = None
-    ) -> object | None:
+    ) -> OccupancyAggregationRow | None:
         stmt = self._apply_simple_asset_filters(select(Asset), filters)
         agg_stmt = stmt.with_only_columns(
             func.count(Asset.id).label("total_assets"),
@@ -809,7 +838,8 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             ),
         )
         result = await db.execute(agg_stmt)
-        return await _result_first(result)
+        aggregation_row: OccupancyAggregationRow | None = await _result_first(result)
+        return aggregation_row
 
     async def get_occupancy_by_category_aggregation_async(
         self,
@@ -817,33 +847,32 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         *,
         category_field: str,
         filters: AssetFilterData | None = None,
-    ) -> list[object]:
+    ) -> list[OccupancyCategoryAggregationRow]:
         if not hasattr(Asset, category_field):
             return []
 
         stmt = self._apply_simple_asset_filters(select(Asset), filters)
         category_column = getattr(Asset, category_field)
-        agg_stmt = (
-            stmt.with_only_columns(
-                category_column.label("category"),
-                sql_cast(func.sum(func.coalesce(Asset.rentable_area, 0)), Float).label(
-                    "total_rentable_area"
-                ),
-                sql_cast(func.sum(func.coalesce(Asset.rented_area, 0)), Float).label(
-                    "total_rented_area"
-                ),
-                func.count(Asset.id).label("total_assets"),
-                func.count(case((Asset.rentable_area > 0, 1))).label(
-                    "rentable_assets_count"
-                ),
-            ).group_by(category_column)
-        )
+        agg_stmt = stmt.with_only_columns(
+            category_column.label("category"),
+            sql_cast(func.sum(func.coalesce(Asset.rentable_area, 0)), Float).label(
+                "total_rentable_area"
+            ),
+            sql_cast(func.sum(func.coalesce(Asset.rented_area, 0)), Float).label(
+                "total_rented_area"
+            ),
+            func.count(Asset.id).label("total_assets"),
+            func.count(case((Asset.rentable_area > 0, 1))).label(
+                "rentable_assets_count"
+            ),
+        ).group_by(category_column)
         result = await db.execute(agg_stmt)
-        return await _result_all(result)
+        rows: list[OccupancyCategoryAggregationRow] = await _result_all(result)
+        return rows
 
     async def get_area_summary_aggregation_async(
         self, db: AsyncSession, *, filters: AssetFilterData | None = None
-    ) -> object | None:
+    ) -> AreaSummaryAggregationRow | None:
         stmt = self._apply_simple_asset_filters(select(Asset), filters)
         agg_stmt = stmt.with_only_columns(
             func.count(Asset.id).label("total_assets"),
@@ -856,34 +885,31 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             sql_cast(func.sum(func.coalesce(Asset.rented_area, 0)), Float).label(
                 "total_rented_area"
             ),
-            sql_cast(func.sum(func.coalesce(Asset.non_commercial_area, 0)), Float).label(
-                "total_non_commercial_area"
-            ),
+            sql_cast(
+                func.sum(func.coalesce(Asset.non_commercial_area, 0)), Float
+            ).label("total_non_commercial_area"),
             func.count(case((Asset.land_area.isnot(None), 1))).label(
                 "assets_with_area_data"
             ),
         )
         result = await db.execute(agg_stmt)
-        return await _result_first(result)
+        summary_row: AreaSummaryAggregationRow | None = await _result_first(result)
+        return summary_row
 
-    async def has_rent_contracts_async(
-        self, db: AsyncSession, asset_id: str
-    ) -> bool:
-        """检查资产是否关联租赁合同（通过关联表）"""
-        from ..models.associations import rent_contract_assets
+    async def has_contracts_async(self, db: AsyncSession, asset_id: str) -> bool:
+        """检查资产是否关联合同（通过新合同关联表）"""
+        from ..models.associations import contract_assets
 
         stmt = (
-            select(rent_contract_assets.c.asset_id)
-            .where(rent_contract_assets.c.asset_id == asset_id)
+            select(contract_assets.c.asset_id)
+            .where(contract_assets.c.asset_id == asset_id)
             .limit(1)
         )
         result = await db.execute(stmt)
-        row: object | None = await _result_first(result)
-        return row is not None
+        first_row: tuple[str] | None = await _result_first(result)
+        return first_row is not None
 
-    async def has_property_certs_async(
-        self, db: AsyncSession, asset_id: str
-    ) -> bool:
+    async def has_property_certs_async(self, db: AsyncSession, asset_id: str) -> bool:
         """检查资产是否关联产权证（通过关联表）"""
         from ..models.associations import property_cert_assets
 
@@ -893,32 +919,43 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             .limit(1)
         )
         result = await db.execute(stmt)
-        row: object | None = await _result_first(result)
-        return row is not None
+        first_row: tuple[str] | None = await _result_first(result)
+        return first_row is not None
 
-    async def has_rent_ledger_async(self, db: AsyncSession, asset_id: str) -> bool:
-        """检查资产是否有租金台账记录"""
-        from ..models.rent_contract import RentLedger
+    async def has_contract_ledger_entries_async(
+        self, db: AsyncSession, asset_id: str
+    ) -> bool:
+        """检查资产是否有关联合同台账记录"""
+        from ..models.associations import contract_assets
+        from ..models.contract_group import ContractLedgerEntry
 
-        stmt = select(RentLedger.id).where(RentLedger.asset_id == asset_id).limit(1)
-        result = await db.execute(stmt)
-        row: object | None = await _result_first(result)
-        return row is not None
-
-    async def get_assets_with_rent_contracts_async(
-        self, db: AsyncSession, asset_ids: list[str]
-    ) -> list[str]:
-        """批量获取有租赁合同关联的资产ID列表"""
-        if not asset_ids:
-            return []
-        from ..models.associations import rent_contract_assets
-
-        stmt = select(rent_contract_assets.c.asset_id).where(
-            rent_contract_assets.c.asset_id.in_(asset_ids)
+        stmt = (
+            select(ContractLedgerEntry.entry_id)
+            .join(
+                contract_assets,
+                ContractLedgerEntry.contract_id == contract_assets.c.contract_id,
+            )
+            .where(contract_assets.c.asset_id == asset_id)
+            .limit(1)
         )
         result = await db.execute(stmt)
-        scoped_asset_ids: list[object] = await _scalars_all(result)
-        return [str(asset_id) for asset_id in scoped_asset_ids]
+        first_row: tuple[str] | None = await _result_first(result)
+        return first_row is not None
+
+    async def get_assets_with_contracts_async(
+        self, db: AsyncSession, asset_ids: list[str]
+    ) -> list[str]:
+        """批量获取有关联合同的资产 ID 列表"""
+        if not asset_ids:
+            return []
+        from ..models.associations import contract_assets
+
+        stmt = select(contract_assets.c.asset_id).where(
+            contract_assets.c.asset_id.in_(asset_ids)
+        )
+        result = await db.execute(stmt)
+        matched_asset_ids: list[str] = await _scalars_all(result)
+        return [str(asset_id) for asset_id in matched_asset_ids]
 
     async def get_assets_with_property_certs_async(
         self, db: AsyncSession, asset_ids: list[str]
@@ -932,33 +969,42 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             property_cert_assets.c.asset_id.in_(asset_ids)
         )
         result = await db.execute(stmt)
-        scoped_asset_ids: list[object] = await _scalars_all(result)
-        return [str(asset_id) for asset_id in scoped_asset_ids]
+        matched_asset_ids: list[str] = await _scalars_all(result)
+        return [str(asset_id) for asset_id in matched_asset_ids]
 
-    async def get_assets_with_rent_ledger_async(
+    async def get_assets_with_contract_ledger_entries_async(
         self, db: AsyncSession, asset_ids: list[str]
     ) -> list[str]:
-        """批量获取有租金台账记录的资产ID列表"""
+        """批量获取有关联合同台账记录的资产 ID 列表"""
         if not asset_ids:
             return []
-        from ..models.rent_contract import RentLedger
+        from ..models.associations import contract_assets
+        from ..models.contract_group import ContractLedgerEntry
 
-        stmt = select(RentLedger.asset_id).where(RentLedger.asset_id.in_(asset_ids))
+        stmt = (
+            select(contract_assets.c.asset_id)
+            .distinct()
+            .join(
+                ContractLedgerEntry,
+                ContractLedgerEntry.contract_id == contract_assets.c.contract_id,
+            )
+            .where(contract_assets.c.asset_id.in_(asset_ids))
+        )
         result = await db.execute(stmt)
-        scoped_asset_ids: list[object] = await _scalars_all(result)
-        return [str(asset_id) for asset_id in scoped_asset_ids]
+        matched_asset_ids: list[str] = await _scalars_all(result)
+        return [str(asset_id) for asset_id in matched_asset_ids]
 
-    async def get_by_property_names_async(
+    async def get_by_asset_names_async(
         self,
         db: AsyncSession,
-        property_names: list[str],
+        asset_names: list[str],
         exclude_deleted: bool = True,
         decrypt: bool = False,
     ) -> list[Asset]:
         """批量获取资产（按属性名列表），用于导入去重检查"""
-        if not property_names:
+        if not asset_names:
             return []
-        stmt = select(Asset).where(Asset.property_name.in_(property_names))
+        stmt = select(Asset).where(Asset.asset_name.in_(asset_names))
         if exclude_deleted:
             stmt = stmt.where(Asset.data_status != DataStatusValues.ASSET_DELETED)
         result = await db.execute(stmt)
@@ -968,12 +1014,14 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
                 self._decrypt_asset_object(asset)
         return assets
 
-    async def count_by_ownership_async(self, db: AsyncSession, ownership_id: str) -> int:
+    async def count_by_ownership_async(
+        self, db: AsyncSession, ownership_id: str
+    ) -> int:
         """统计权属方的资产数量"""
         stmt = select(func.count(Asset.id)).where(Asset.owner_party_id == ownership_id)
         result = await db.execute(stmt)
-        count_raw = await _result_scalar(result)
-        return int(cast(int | float | str, count_raw)) if count_raw is not None else 0
+        count_raw: int | float | str | None = await _result_scalar(result)
+        return int(count_raw) if count_raw is not None else 0
 
     async def get_counts_by_ownerships_async(
         self, db: AsyncSession, ownership_ids: list[str]
@@ -1002,3 +1050,5 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
 
 # 创建全局实例
 asset_crud = AssetCRUD()
+
+__all__ = ["AssetCRUD", "SensitiveDataHandler", "asset_crud"]

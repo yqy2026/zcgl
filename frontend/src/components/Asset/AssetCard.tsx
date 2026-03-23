@@ -100,7 +100,7 @@ const AssetCard: React.FC<AssetCardProps> = ({
       <Card.Meta
         title={
           <div className={styles.metaTitle}>
-            <span className={styles.propertyName}>{asset.property_name}</span>
+            <span className={styles.propertyName}>{asset.asset_name}</span>
             <Space>
               <Tag color={getStatusColor(asset.ownership_status, 'ownership')}>
                 {asset.ownership_status}

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { ensureAuthenticated, resolveCsrfHeaders } from '../helpers/auth';
+import { ensureAuthenticated } from '../helpers/auth';
 
 const PDF_MIME = 'application/pdf';
 const MINIMAL_PDF_BUFFER = Buffer.from(
@@ -17,38 +17,12 @@ const MINIMAL_PDF_BUFFER = Buffer.from(
   ].join('\n')
 );
 
-interface CertificateListItem {
-  id: string;
-  certificate_number?: string;
-}
-
 const expectMessageVisible = async (page: Page, messagePattern: RegExp): Promise<void> => {
   const messageNotice = page
     .locator('.ant-message-notice-content')
     .filter({ hasText: messagePattern })
     .first();
   await expect(messageNotice).toBeVisible();
-};
-
-const cleanupCertificateByNumber = async (
-  page: Page,
-  certificateNumber: string
-): Promise<void> => {
-  const listResponse = await page.request.get('/api/v1/property-certificates/');
-  if (!listResponse.ok()) {
-    return;
-  }
-
-  const listPayload = (await listResponse.json()) as CertificateListItem[];
-  const target = listPayload.find(item => item.certificate_number === certificateNumber);
-  if (target == null || target.id == null || target.id === '') {
-    return;
-  }
-
-  const csrfHeaders = await resolveCsrfHeaders(page);
-  await page.request.delete(`/api/v1/property-certificates/${target.id}`, {
-    headers: csrfHeaders,
-  });
 };
 
 test.describe('@property-certificate-import-success 导入成功路径', () => {
@@ -61,6 +35,7 @@ test.describe('@property-certificate-import-success 导入成功路径', () => {
   }) => {
     const certificateNumber = `E2E-PC-${Date.now()}`;
     const propertyAddress = `E2E坐落地址-${Date.now()}`;
+    const certificateId = `mock-cert-${Date.now()}`;
 
     await page.route('**/api/v1/property-certificates/upload', async route => {
       await route.fulfill({
@@ -83,33 +58,54 @@ test.describe('@property-certificate-import-success 导入成功路径', () => {
       });
     });
 
-    try {
-      await page.goto('/property-certificates/import');
-      await expect(page).toHaveURL(/\/property-certificates\/import/);
-      await expect(page.getByRole('heading', { name: /产权证导入/i })).toBeVisible();
-
-      const uploadInput = page.locator('input[type="file"]').first();
-      await uploadInput.setInputFiles({
-        name: `property-certificate-${Date.now()}.pdf`,
-        mimeType: PDF_MIME,
-        buffer: MINIMAL_PDF_BUFFER,
+    await page.route('**/api/v1/property-certificates/confirm-import', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          status: 'success',
+          certificate_id: certificateId,
+        }),
       });
+    });
 
-      const certificateNumberInput = page.getByLabel('证书编号');
-      await expect(certificateNumberInput).toBeVisible();
-      await expect(certificateNumberInput).toHaveValue(certificateNumber);
+    await page.route('**/api/v1/property-certificates/', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          {
+            id: certificateId,
+            certificate_number: certificateNumber,
+            property_address: propertyAddress,
+          },
+        ]),
+      });
+    });
 
-      const propertyAddressInput = page.getByLabel('坐落地址');
-      await expect(propertyAddressInput).toHaveValue(propertyAddress);
+    await page.goto('/property-certificates/import');
+    await expect(page).toHaveURL(/\/property-certificates\/import/);
+    await expect(page.getByRole('heading', { name: /产权证导入/i })).toBeVisible();
 
-      await page.getByRole('button', { name: /确认并创建产权证/i }).click();
+    const uploadInput = page.locator('input[type="file"]').first();
+    await uploadInput.setInputFiles({
+      name: `property-certificate-${Date.now()}.pdf`,
+      mimeType: PDF_MIME,
+      buffer: MINIMAL_PDF_BUFFER,
+    });
 
-      await expect(page).toHaveURL(/\/property-certificates$/);
-      await expect(page.getByRole('heading', { name: /产权证管理/i })).toBeVisible();
-      await expect(page.getByText(certificateNumber)).toBeVisible();
-    } finally {
-      await cleanupCertificateByNumber(page, certificateNumber);
-    }
+    const certificateNumberInput = page.getByLabel('证书编号');
+    await expect(certificateNumberInput).toBeVisible();
+    await expect(certificateNumberInput).toHaveValue(certificateNumber);
+
+    const propertyAddressInput = page.getByLabel('坐落地址');
+    await expect(propertyAddressInput).toHaveValue(propertyAddress);
+
+    await page.getByRole('button', { name: /确认并创建产权证/i }).click();
+
+    await expect(page).toHaveURL(/\/property-certificates$/);
+    await expect(page.getByRole('heading', { name: /产权证管理/i })).toBeVisible();
+    await expect(page.getByText(certificateNumber)).toBeVisible();
   });
 
   test('property certificate import should recover after oversized file rejection', async ({

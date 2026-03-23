@@ -3,7 +3,7 @@
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, String
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, String, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..database import Base
@@ -21,6 +21,12 @@ class ProjectAsset(Base):
         CheckConstraint(
             "valid_to IS NULL OR valid_to >= valid_from",
             name="ck_project_assets_valid_range",
+        ),
+        Index(
+            "uq_project_assets_active_asset",
+            "asset_id",
+            unique=True,
+            postgresql_where=text("valid_to IS NULL"),
         ),
     )
 
@@ -46,9 +52,7 @@ class ProjectAsset(Base):
     )
     valid_to: Mapped[datetime | None] = mapped_column(DateTime, comment="失效时间")
     bind_reason: Mapped[str | None] = mapped_column(String(500), comment="绑定原因")
-    unbind_reason: Mapped[str | None] = mapped_column(
-        String(500), comment="解绑原因"
-    )
+    unbind_reason: Mapped[str | None] = mapped_column(String(500), comment="解绑原因")
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=_utcnow_naive, comment="创建时间"
     )

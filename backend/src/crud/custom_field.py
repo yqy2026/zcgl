@@ -96,6 +96,7 @@ class CRUDCustomField(
         self, db: AsyncSession, *, asset_id: str
     ) -> list[dict[str, Any]]:
         return []
+
     # Removed: validate_field_value (moved to Service)
     # Removed: update_asset_field_values (moved to Service)
     # Removed: toggle_active_status (moved to Service)

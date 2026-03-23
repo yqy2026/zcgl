@@ -227,7 +227,7 @@ describe('AssetDetailInfo', () => {
 
   describe('基本渲染', () => {
     it('应该正确渲染组件', () => {
-      const asset = createMockAsset({ property_name: '测试物业' });
+      const asset = createMockAsset({ asset_name: '测试物业' });
       renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       expect(screen.getAllByTestId('card').length).toBeGreaterThan(0);
@@ -257,7 +257,7 @@ describe('AssetDetailInfo', () => {
 
   describe('基本信息显示', () => {
     it('应该显示物业名称', () => {
-      const asset = createMockAsset({ property_name: '测试物业A栋' });
+      const asset = createMockAsset({ asset_name: '测试物业A栋' });
       renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       expect(screen.getByText('测试物业A栋')).toBeInTheDocument();
@@ -520,7 +520,7 @@ describe('AssetDetailInfo', () => {
 
   describe('空值处理', () => {
     it('应该处理缺失的物业名称', () => {
-      const asset = createMockAsset({ property_name: undefined });
+      const asset = createMockAsset({ asset_name: undefined });
       renderWithProviders(<AssetDetailInfo asset={asset} />);
 
       const dashElements = screen.queryAllByText('-');
@@ -621,4 +621,3 @@ describe('AssetDetailInfo', () => {
     });
   });
 });
-

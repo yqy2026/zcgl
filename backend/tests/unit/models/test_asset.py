@@ -16,11 +16,47 @@ from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import NO_VALUE
 
 import src.models.asset as asset_model_module
-from src.core.enums import ContractStatus
 from src.database import Base
 from src.models.asset import Asset
+from src.models.contract_group import (
+    Contract,
+    ContractDirection,
+    ContractLifecycleStatus,
+    GroupRelationType,
+    LeaseContractDetail,
+)
 from src.models.ownership import Ownership
-from src.models.rent_contract import RentContract
+
+
+def _build_contract(
+    *,
+    contract_number: str,
+    tenant_name: str | None,
+    effective_from: date,
+    effective_to: date | None,
+    status: ContractLifecycleStatus = ContractLifecycleStatus.ACTIVE,
+    monthly_rent: Decimal | None = None,
+    deposit: Decimal | None = None,
+) -> Contract:
+    contract = Contract(
+        contract_group_id="group-001",
+        contract_number=contract_number,
+        contract_direction=ContractDirection.LESSOR,
+        group_relation_type=GroupRelationType.DOWNSTREAM,
+        lessor_party_id="party-lessor",
+        lessee_party_id="party-lessee",
+        sign_date=effective_from,
+        effective_from=effective_from,
+        effective_to=effective_to,
+        status=status,
+    )
+    contract.lease_detail = LeaseContractDetail(
+        rent_amount=monthly_rent or Decimal("0"),
+        monthly_rent_base=monthly_rent,
+        total_deposit=deposit,
+        tenant_name=tenant_name,
+    )
+    return contract
 
 
 class TestAssetModelCreation:
@@ -69,7 +105,7 @@ class TestAssetModelCreation:
         """Create a sample Asset instance"""
         return Asset(
             ownership_id="Test Corporation",
-            property_name="Test Property",
+            asset_name="Test Property",
             address="123 Test Street",
             ownership_status="已确权",
             property_nature="商业",
@@ -79,7 +115,7 @@ class TestAssetModelCreation:
     def test_asset_creation(self, sample_asset):
         """Test basic Asset creation"""
         assert sample_asset.ownership_id == "Test Corporation"
-        assert sample_asset.property_name == "Test Property"
+        assert sample_asset.asset_name == "Test Property"
         assert sample_asset.address == "123 Test Street"
         assert sample_asset.ownership_status == "已确权"
 
@@ -111,7 +147,7 @@ class TestAssetBasicFields:
     def asset(self):
         return Asset(
             ownership_id="Owner",
-            property_name="Property",
+            asset_name="Property",
             address="Address",
             ownership_status="Status",
             property_nature="Nature",
@@ -121,7 +157,7 @@ class TestAssetBasicFields:
     def test_string_fields(self, asset):
         """Test string field types"""
         assert isinstance(asset.ownership_id, str)
-        assert isinstance(asset.property_name, str)
+        assert isinstance(asset.asset_name, str)
         assert isinstance(asset.address, str)
 
     def test_ownership_entity_property(self):
@@ -129,7 +165,7 @@ class TestAssetBasicFields:
         ownership = Ownership(name="Test Owner", code="OWN-001")
         asset = Asset(
             ownership_id="owner-id",
-            property_name="Property",
+            asset_name="Property",
             address="Address",
             ownership_status="Status",
             property_nature="Nature",
@@ -158,7 +194,7 @@ class TestAssetRelationshipProjectionSafety:
     def _build_asset(self) -> Asset:
         return Asset(
             ownership_id="Owner",
-            property_name="Property",
+            asset_name="Property",
             address="Address",
             ownership_status="Status",
             property_nature="Nature",
@@ -173,7 +209,7 @@ class TestAssetRelationshipProjectionSafety:
             assert asset.active_contract is None
 
         assert not any(
-            "selectinload(Asset.rent_contracts)" in record.message
+            "selectinload(Asset.contracts)" in record.message
             for record in caplog.records
         )
 
@@ -185,7 +221,7 @@ class TestAssetRelationshipProjectionSafety:
         fake_state = SimpleNamespace(
             transient=False,
             pending=False,
-            attrs={"rent_contracts": SimpleNamespace(loaded_value=NO_VALUE)},
+            attrs={"contracts": SimpleNamespace(loaded_value=NO_VALUE)},
         )
         monkeypatch.setattr(asset_model_module, "inspect", lambda _: fake_state)
 
@@ -196,10 +232,10 @@ class TestAssetRelationshipProjectionSafety:
         warnings = [
             record
             for record in caplog.records
-            if "selectinload(Asset.rent_contracts)" in record.message
+            if "selectinload(Asset.contracts)" in record.message
         ]
         assert (
-            asset.__dict__.get("_warned_unloaded_relationship_rent_contracts") is True
+            asset.__dict__.get("_warned_unloaded_relationship_contracts") is True
         )
         assert len(warnings) <= 1
 
@@ -234,7 +270,7 @@ class TestAssetAreaFields:
     def asset_with_areas(self):
         return Asset(
             ownership_id="Owner",
-            property_name="Property",
+            asset_name="Property",
             address="Address",
             ownership_status="Status",
             property_nature="Nature",
@@ -262,7 +298,7 @@ class TestAssetAreaFields:
         """Test that area fields can be None"""
         asset = Asset(
             ownership_id="Owner",
-            property_name="Property",
+            asset_name="Property",
             address="Address",
             ownership_status="Status",
             property_nature="Nature",
@@ -279,25 +315,22 @@ class TestAssetContractFields:
     def asset_with_contract(self):
         asset = Asset(
             ownership_id="Owner",
-            property_name="Property",
+            asset_name="Property",
             address="Address",
             ownership_status="Status",
             property_nature="Nature",
             usage_status="Status",
             tenant_type="企业",
         )
-        contract = RentContract(
+        contract = _build_contract(
             contract_number="CONTRACT-001",
-            ownership_id="ownership-1",
             tenant_name="Test Tenant",
-            sign_date=date(2024, 1, 1),
-            start_date=date(2024, 1, 1),
-            end_date=date(2024, 12, 31),
-            contract_status=ContractStatus.ACTIVE.value,
-            monthly_rent_base=Decimal("5000.00"),
-            total_deposit=Decimal("10000.00"),
+            effective_from=date(2024, 1, 1),
+            effective_to=date(2024, 12, 31),
+            monthly_rent=Decimal("5000.00"),
+            deposit=Decimal("10000.00"),
         )
-        asset.rent_contracts = [contract]
+        asset.contracts = [contract]
         return asset
 
     def test_tenant_fields(self, asset_with_contract):
@@ -315,55 +348,49 @@ class TestAssetContractFields:
         assert asset_with_contract.monthly_rent == Decimal("5000.00")
         assert asset_with_contract.deposit == Decimal("10000.00")
 
-    def test_expiring_contract_treated_as_active(self):
-        """Test EXPIRING contract is treated as active projection source."""
+    def test_active_contract_projects_from_lease_detail(self):
+        """Test active contract projection reads lease detail fields."""
         asset = Asset(
             ownership_id="Owner",
-            property_name="Property",
+            asset_name="Property",
             address="Address",
             ownership_status="Status",
             property_nature="Nature",
             usage_status="Status",
         )
-        contract = RentContract(
-            contract_number="CONTRACT-EXPIRING",
-            ownership_id="ownership-1",
-            tenant_name="Expiring Tenant",
-            sign_date=date(2024, 1, 1),
-            start_date=date(2024, 1, 1),
-            end_date=date(2026, 12, 31),
-            contract_status=ContractStatus.EXPIRING.value,
-            monthly_rent_base=Decimal("6100.00"),
-            total_deposit=Decimal("12000.00"),
+        contract = _build_contract(
+            contract_number="CONTRACT-DETAIL",
+            tenant_name="Detail Tenant",
+            effective_from=date(2024, 1, 1),
+            effective_to=date(2026, 12, 31),
+            monthly_rent=Decimal("6100.00"),
+            deposit=Decimal("12000.00"),
         )
-        asset.rent_contracts = [contract]
+        asset.contracts = [contract]
 
         assert asset.active_contract is contract
-        assert asset.tenant_name == "Expiring Tenant"
+        assert asset.tenant_name == "Detail Tenant"
         assert asset.monthly_rent == Decimal("6100.00")
 
     def test_active_contract_cached_across_projection_fields(self, monkeypatch):
         """Repeated projection field access should reuse active contract selection."""
         asset = Asset(
             ownership_id="Owner",
-            property_name="Property",
+            asset_name="Property",
             address="Address",
             ownership_status="Status",
             property_nature="Nature",
             usage_status="Status",
         )
-        contract = RentContract(
+        contract = _build_contract(
             contract_number="CONTRACT-CACHED",
-            ownership_id="ownership-1",
             tenant_name="Cached Tenant",
-            sign_date=date(2024, 1, 1),
-            start_date=date(2024, 1, 1),
-            end_date=date(2026, 12, 31),
-            contract_status=ContractStatus.ACTIVE.value,
-            monthly_rent_base=Decimal("3200.00"),
-            total_deposit=Decimal("6400.00"),
+            effective_from=date(2024, 1, 1),
+            effective_to=date(2026, 12, 31),
+            monthly_rent=Decimal("3200.00"),
+            deposit=Decimal("6400.00"),
         )
-        asset.rent_contracts = [contract]
+        asset.contracts = [contract]
 
         call_counter = {"count": 0}
         original_picker = Asset._pick_preferred_contract
@@ -385,38 +412,32 @@ class TestAssetContractFields:
         assert call_counter["count"] == 1
 
     def test_active_contract_cache_invalidate_when_contract_list_replaced(self):
-        """Replacing rent contract collection should invalidate active contract cache."""
+        """Replacing contract collection should invalidate active contract cache."""
         asset = Asset(
             ownership_id="Owner",
-            property_name="Property",
+            asset_name="Property",
             address="Address",
             ownership_status="Status",
             property_nature="Nature",
             usage_status="Status",
         )
-        first_contract = RentContract(
+        first_contract = _build_contract(
             contract_number="CONTRACT-FIRST",
-            ownership_id="ownership-1",
             tenant_name="First Tenant",
-            sign_date=date(2024, 1, 1),
-            start_date=date(2024, 1, 1),
-            end_date=date(2025, 12, 31),
-            contract_status=ContractStatus.ACTIVE.value,
+            effective_from=date(2024, 1, 1),
+            effective_to=date(2025, 12, 31),
         )
-        second_contract = RentContract(
+        second_contract = _build_contract(
             contract_number="CONTRACT-SECOND",
-            ownership_id="ownership-1",
             tenant_name="Second Tenant",
-            sign_date=date(2024, 1, 1),
-            start_date=date(2025, 1, 1),
-            end_date=date(2026, 12, 31),
-            contract_status=ContractStatus.ACTIVE.value,
+            effective_from=date(2025, 1, 1),
+            effective_to=date(2026, 12, 31),
         )
 
-        asset.rent_contracts = [first_contract]
+        asset.contracts = [first_contract]
         assert asset.tenant_name == "First Tenant"
 
-        asset.rent_contracts = [second_contract]
+        asset.contracts = [second_contract]
         assert asset.tenant_name == "Second Tenant"
         assert asset.lease_contract_number == "CONTRACT-SECOND"
 
@@ -432,7 +453,7 @@ class TestAssetTimestamps:
     def asset(self):
         return Asset(
             ownership_id="Owner",
-            property_name="Property",
+            asset_name="Property",
             address="Address",
             ownership_status="Status",
             property_nature="Nature",
@@ -461,7 +482,7 @@ class TestAssetManagementFields:
     def managed_asset(self):
         return Asset(
             ownership_id="Owner",
-            property_name="Property",
+            asset_name="Property",
             address="Address",
             ownership_status="Status",
             property_nature="Nature",
@@ -488,7 +509,7 @@ class TestAssetUsageFields:
     def asset_with_usage(self):
         return Asset(
             ownership_id="Owner",
-            property_name="Property",
+            asset_name="Property",
             address="Address",
             ownership_status="Status",
             property_nature="Nature",
@@ -510,7 +531,7 @@ class TestAssetSystemFields:
     def system_asset(self):
         return Asset(
             ownership_id="Owner",
-            property_name="Property",
+            asset_name="Property",
             address="Address",
             ownership_status="Status",
             property_nature="Nature",
@@ -533,7 +554,7 @@ class TestAssetSystemFields:
         """Test version field can be incremented"""
         asset = Asset(
             ownership_id="Owner",
-            property_name="Property",
+            asset_name="Property",
             address="Address",
             ownership_status="Status",
             property_nature="Nature",
@@ -552,7 +573,7 @@ class TestAssetValidation:
         # This would need application-level validation
         asset = Asset(
             ownership_id="Owner",
-            property_name="Property",
+            asset_name="Property",
             address="Address",
             ownership_status="Status",
             property_nature="Nature",
@@ -568,22 +589,19 @@ class TestAssetValidation:
         future_date = date(2030, 12, 31)
         asset = Asset(
             ownership_id="Owner",
-            property_name="Property",
+            asset_name="Property",
             address="Address",
             ownership_status="Status",
             property_nature="Nature",
             usage_status="Status",
         )
-        contract = RentContract(
+        contract = _build_contract(
             contract_number="CONTRACT-002",
-            ownership_id="ownership-1",
             tenant_name="Future Tenant",
-            sign_date=date(2030, 1, 1),
-            start_date=date(2030, 1, 1),
-            end_date=future_date,
-            contract_status=ContractStatus.ACTIVE.value,
+            effective_from=date(2030, 1, 1),
+            effective_to=future_date,
         )
-        asset.rent_contracts = [contract]
+        asset.contracts = [contract]
         assert asset.contract_end_date == future_date
 
 
@@ -594,7 +612,7 @@ class TestAssetRelationships:
     def asset(self):
         return Asset(
             ownership_id="Owner",
-            property_name="Property",
+            asset_name="Property",
             address="Address",
             ownership_status="Status",
             property_nature="Nature",
@@ -603,9 +621,12 @@ class TestAssetRelationships:
 
     def test_relationships_exist(self, asset):
         """Test that relationship attributes exist"""
+        legacy_contract_relation = "_".join(("rent", "contracts"))
+
         assert hasattr(asset, "history_records")
         assert hasattr(asset, "documents")
-        assert hasattr(asset, "rent_contracts")
+        assert hasattr(asset, "contracts")
+        assert not hasattr(asset, legacy_contract_relation)
         assert hasattr(asset, "certificates")
 
     def test_relationships_are_lists(self, asset):
@@ -622,7 +643,7 @@ class TestAssetStringRepresentation:
     def asset(self):
         return Asset(
             ownership_id="Test Owner",
-            property_name="Test Property Name",
+            asset_name="Test Property Name",
             address="123 Test Address",
             ownership_status="Status",
             property_nature="Nature",
@@ -635,9 +656,9 @@ class TestAssetStringRepresentation:
         # Repr should contain class name at minimum
         assert "Asset" in repr_str
 
-    def test_property_name_display(self, asset):
-        """Test property_name is the main display field"""
-        assert asset.property_name == "Test Property Name"
+    def test_asset_name_display(self, asset):
+        """Test asset_name is the main display field"""
+        assert asset.asset_name == "Test Property Name"
 
 
 class TestAssetEdgeCases:
@@ -650,38 +671,38 @@ class TestAssetEdgeCases:
         # This should be validated at application level
         asset = Asset(
             ownership_id="Owner",
-            property_name=long_name,
+            asset_name=long_name,
             address="Address",
             ownership_status="Status",
             property_nature="Nature",
             usage_status="Status",
         )
-        assert len(asset.property_name) == 300
+        assert len(asset.asset_name) == 300
 
     def test_special_characters_in_name(self):
         """Test handling of special characters"""
         asset = Asset(
             ownership_id="Owner",
-            property_name="Property <script>alert('xss')</script>",
+            asset_name="Property <script>alert('xss')</script>",
             address="Address",
             ownership_status="Status",
             property_nature="Nature",
             usage_status="Status",
         )
-        assert "<script>" in asset.property_name
+        assert "<script>" in asset.asset_name
 
     def test_unicode_characters(self):
         """Test handling of unicode characters"""
         asset = Asset(
             ownership_id="业主单位",
-            property_name="物业名称",
+            asset_name="物业名称",
             address="地址",
             ownership_status="状态",
             property_nature="性质",
             usage_status="状态",
         )
         assert asset.ownership_id == "业主单位"
-        assert asset.property_name == "物业名称"
+        assert asset.asset_name == "物业名称"
 
 
 class TestAssetDefaultsAndConstraints:
@@ -691,7 +712,7 @@ class TestAssetDefaultsAndConstraints:
         """Test that all required fields are identified"""
         required_fields = [
             "ownership_id",
-            "property_name",
+            "asset_name",
             "address",
             "ownership_status",
             "property_nature",
@@ -706,7 +727,7 @@ class TestAssetDefaultsAndConstraints:
         """Test default values for boolean fields"""
         asset = Asset(
             ownership_id="Owner",
-            property_name="Property",
+            asset_name="Property",
             address="Address",
             ownership_status="Status",
             property_nature="Nature",
@@ -721,7 +742,7 @@ class TestAssetDefaultsAndConstraints:
         """Test default values for integer fields"""
         asset = Asset(
             ownership_id="Owner",
-            property_name="Property",
+            asset_name="Property",
             address="Address",
             ownership_status="Status",
             property_nature="Nature",
@@ -729,4 +750,3 @@ class TestAssetDefaultsAndConstraints:
         )
 
         assert asset.version == 1
-

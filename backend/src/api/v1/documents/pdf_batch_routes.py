@@ -66,23 +66,23 @@ router = APIRouter(
     tags=["PDF批量导入"],
     dependencies=[Depends(get_current_active_user)],
 )
-_RENT_CONTRACT_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:rent_contract:create"
-_RENT_CONTRACT_CREATE_RESOURCE_CONTEXT: dict[str, str] = {
-    "party_id": _RENT_CONTRACT_CREATE_UNSCOPED_PARTY_ID,
-    "owner_party_id": _RENT_CONTRACT_CREATE_UNSCOPED_PARTY_ID,
-    "manager_party_id": _RENT_CONTRACT_CREATE_UNSCOPED_PARTY_ID,
+_CONTRACT_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:contract:create"
+_CONTRACT_CREATE_RESOURCE_CONTEXT: dict[str, str] = {
+    "party_id": _CONTRACT_CREATE_UNSCOPED_PARTY_ID,
+    "owner_party_id": _CONTRACT_CREATE_UNSCOPED_PARTY_ID,
+    "manager_party_id": _CONTRACT_CREATE_UNSCOPED_PARTY_ID,
 }
-_RENT_CONTRACT_UPDATE_UNSCOPED_PARTY_ID = "__unscoped__:rent_contract:update"
-_RENT_CONTRACT_UPDATE_RESOURCE_CONTEXT: dict[str, str] = {
-    "party_id": _RENT_CONTRACT_UPDATE_UNSCOPED_PARTY_ID,
-    "owner_party_id": _RENT_CONTRACT_UPDATE_UNSCOPED_PARTY_ID,
-    "manager_party_id": _RENT_CONTRACT_UPDATE_UNSCOPED_PARTY_ID,
+_CONTRACT_UPDATE_UNSCOPED_PARTY_ID = "__unscoped__:contract:update"
+_CONTRACT_UPDATE_RESOURCE_CONTEXT: dict[str, str] = {
+    "party_id": _CONTRACT_UPDATE_UNSCOPED_PARTY_ID,
+    "owner_party_id": _CONTRACT_UPDATE_UNSCOPED_PARTY_ID,
+    "manager_party_id": _CONTRACT_UPDATE_UNSCOPED_PARTY_ID,
 }
-_RENT_CONTRACT_DELETE_UNSCOPED_PARTY_ID = "__unscoped__:rent_contract:delete"
-_RENT_CONTRACT_DELETE_RESOURCE_CONTEXT: dict[str, str] = {
-    "party_id": _RENT_CONTRACT_DELETE_UNSCOPED_PARTY_ID,
-    "owner_party_id": _RENT_CONTRACT_DELETE_UNSCOPED_PARTY_ID,
-    "manager_party_id": _RENT_CONTRACT_DELETE_UNSCOPED_PARTY_ID,
+_CONTRACT_DELETE_UNSCOPED_PARTY_ID = "__unscoped__:contract:delete"
+_CONTRACT_DELETE_RESOURCE_CONTEXT: dict[str, str] = {
+    "party_id": _CONTRACT_DELETE_UNSCOPED_PARTY_ID,
+    "owner_party_id": _CONTRACT_DELETE_UNSCOPED_PARTY_ID,
+    "manager_party_id": _CONTRACT_DELETE_UNSCOPED_PARTY_ID,
 }
 
 
@@ -238,8 +238,8 @@ async def batch_upload_pdfs(
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="create",
-            resource_type="rent_contract",
-            resource_context=_RENT_CONTRACT_CREATE_RESOURCE_CONTEXT,
+            resource_type="contract",
+            resource_context=_CONTRACT_CREATE_RESOURCE_CONTEXT,
         )
     ),
 ) -> JSONResponse:
@@ -437,7 +437,7 @@ async def get_batch_status(
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="read",
-            resource_type="rent_contract",
+            resource_type="contract",
         )
     ),
 ) -> JSONResponse:
@@ -535,7 +535,7 @@ async def list_batches(
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="read",
-            resource_type="rent_contract",
+            resource_type="contract",
         )
     ),
     status_filter: str | None = None,
@@ -607,8 +607,8 @@ async def cancel_batch(
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="update",
-            resource_type="rent_contract",
-            resource_context=_RENT_CONTRACT_UPDATE_RESOURCE_CONTEXT,
+            resource_type="contract",
+            resource_context=_CONTRACT_UPDATE_RESOURCE_CONTEXT,
         )
     ),
 ) -> JSONResponse:
@@ -686,8 +686,8 @@ def cleanup_completed_batches(
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="delete",
-            resource_type="rent_contract",
-            resource_context=_RENT_CONTRACT_DELETE_RESOURCE_CONTEXT,
+            resource_type="contract",
+            resource_context=_CONTRACT_DELETE_RESOURCE_CONTEXT,
         )
     ),
 ) -> JSONResponse:
@@ -837,7 +837,7 @@ def batch_health_check(
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="read",
-            resource_type="rent_contract",
+            resource_type="contract",
         )
     ),
 ) -> JSONResponse:

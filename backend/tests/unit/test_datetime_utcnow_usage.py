@@ -19,7 +19,6 @@ MODULE_PATHS = [
     "src/models/project.py",
     "src/models/project_relations.py",
     "src/models/property_certificate.py",
-    "src/models/rent_contract.py",
     "src/models/security_event.py",
     "src/models/system_dictionary.py",
     "src/models/task.py",

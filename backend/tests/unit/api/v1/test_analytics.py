@@ -52,6 +52,12 @@ def client(monkeypatch):
     ):
         return {
             "total_assets": 1,
+            "total_income": 1200.0,
+            "self_operated_rent_income": 1000.0,
+            "agency_service_income": 200.0,
+            "customer_entity_count": 2,
+            "customer_contract_count": 2,
+            "metrics_version": "req-ana-001-v1",
             "filters_applied": filters or {},
             "should_use_cache": should_use_cache,
             "requested_by": getattr(current_user, "username", None),
@@ -324,6 +330,23 @@ class TestAnalyticsResponseStructure:
         # 验证成功响应
         assert data["success"] is True
         assert isinstance(data["data"], dict)
+        assert data["data"]["total_income"] == 1200.0
+        assert data["data"]["self_operated_rent_income"] == 1000.0
+        assert data["data"]["agency_service_income"] == 200.0
+        assert data["data"]["customer_entity_count"] == 2
+        assert data["data"]["customer_contract_count"] == 2
+        assert data["data"]["metrics_version"] == "req-ana-001-v1"
+
+    def test_export_should_include_metrics_version_in_payload(
+        self, client, admin_user_headers
+    ):
+        response = client.post(
+            "/api/v1/analytics/export?export_format=csv",
+            headers=admin_user_headers,
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert "req-ana-001-v1" in response.text
 
     def test_cache_stats_response_structure(self, client, admin_user_headers):
         """测试缓存统计响应结构"""

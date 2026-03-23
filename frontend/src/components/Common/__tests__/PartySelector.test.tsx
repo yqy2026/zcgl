@@ -109,6 +109,60 @@ describe('PartySelector', () => {
     });
   });
 
+  it('defaults to owner-scoped search when route perspective is owner', async () => {
+    vi.mocked(partyService.searchParties)
+      .mockResolvedValueOnce({ items: [], skip: 0, limit: 20, isTruncated: false })
+      .mockResolvedValueOnce({ items: [], skip: 0, limit: 20, isTruncated: false });
+
+    renderWithProviders(<PartySelector />, { route: '/owner/assets' });
+
+    await waitFor(() => {
+      expect(partyService.searchParties).toHaveBeenCalledWith('', {
+        limit: 20,
+        party_type: 'organization',
+      });
+      expect(partyService.searchParties).toHaveBeenCalledWith('', {
+        limit: 20,
+        party_type: 'legal_entity',
+      });
+    });
+  });
+
+  it('defaults to manager-scoped search when route perspective is manager', async () => {
+    vi.mocked(partyService.searchParties)
+      .mockResolvedValueOnce({ items: [], skip: 0, limit: 20, isTruncated: false })
+      .mockResolvedValueOnce({ items: [], skip: 0, limit: 20, isTruncated: false });
+
+    renderWithProviders(<PartySelector />, { route: '/manager/assets' });
+
+    await waitFor(() => {
+      expect(partyService.searchParties).toHaveBeenCalledWith('', {
+        limit: 20,
+        party_type: 'organization',
+      });
+      expect(partyService.searchParties).toHaveBeenCalledWith('', {
+        limit: 20,
+        party_type: 'legal_entity',
+      });
+    });
+  });
+
+  it('defaults to unscoped search on non-perspective routes', async () => {
+    renderWithProviders(<PartySelector />, { route: '/dashboard' });
+
+    await waitFor(() => {
+      expect(partyService.searchParties).toHaveBeenCalledWith('', { limit: 20 });
+    });
+  });
+
+  it('keeps explicit filterMode over route-derived default', async () => {
+    renderWithProviders(<PartySelector filterMode="tenant" />, { route: '/owner/assets' });
+
+    await waitFor(() => {
+      expect(partyService.searchParties).toHaveBeenCalledWith('', { limit: 20 });
+    });
+  });
+
   it('applies owner filter mode in default fetcher with role-aligned party_type queries', async () => {
     vi.mocked(partyService.searchParties)
       .mockResolvedValueOnce({

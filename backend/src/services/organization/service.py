@@ -149,7 +149,9 @@ class OrganizationService:
         await db.refresh(db_obj)
 
         org_id_value: str = getattr(db_obj, "id")
-        await self._create_history(db, org_id_value, "create", created_by=obj_in.created_by)
+        await self._create_history(
+            db, org_id_value, "create", created_by=obj_in.created_by
+        )
         self._invalidate_organization_cache()
 
         return db_obj
@@ -294,7 +296,9 @@ class OrganizationService:
     async def _would_create_cycle(
         self, db: AsyncSession, org_id: str, new_parent_id: str
     ) -> bool:
-        return await organization_crud.would_create_cycle_async(db, org_id, new_parent_id)
+        return await organization_crud.would_create_cycle_async(
+            db, org_id, new_parent_id
+        )
 
     async def _update_children_path(
         self, db: AsyncSession, parent_org: Organization

@@ -20,7 +20,7 @@ class TestFieldFilteringValidation:
 
     def test_validate_asset_filter_fields_allowed(self):
         """Test that allowed filter fields pass validation"""
-        allowed_fields = ["property_name", "ownership_status", "land_area"]
+        allowed_fields = ["asset_name", "ownership_status", "land_area"]
 
         valid, invalid = FieldValidator.validate_filter_fields(
             "Asset", allowed_fields, raise_on_invalid=False
@@ -83,7 +83,7 @@ class TestFieldFilteringValidation:
     def test_sanitize_filters(self):
         """Test filter sanitization removes unauthorized fields"""
         filters = {
-            "property_name": "测试物业",  # Allowed
+            "asset_name": "测试物业",  # Allowed
             "ownership_status": "已确权",  # Allowed
             "manager_name": "张三",  # Blocked
             "tenant_name": "李四",  # Blocked
@@ -91,7 +91,7 @@ class TestFieldFilteringValidation:
 
         sanitized = FieldValidator.sanitize_filters("Asset", filters, strict=False)
 
-        assert "property_name" in sanitized
+        assert "asset_name" in sanitized
         assert "ownership_status" in sanitized
         assert "manager_name" not in sanitized
         assert "tenant_name" not in sanitized
@@ -100,7 +100,7 @@ class TestFieldFilteringValidation:
     def test_sanitize_filters_strict_mode(self):
         """Test that strict mode raises exception on unauthorized fields"""
         filters = {
-            "property_name": "测试物业",
+            "asset_name": "测试物业",
             "manager_name": "张三",  # Blocked
         }
 
@@ -114,9 +114,9 @@ class TestFieldFilteringValidation:
         sort_fields = FieldValidator.get_allowed_fields("Asset", "sort")
 
         # Verify some expected fields
-        assert "property_name" in filter_fields
-        assert "property_name" in search_fields
-        assert "property_name" in sort_fields
+        assert "asset_name" in filter_fields
+        assert "asset_name" in search_fields
+        assert "asset_name" in sort_fields
 
         # Verify blocked fields are not present
         assert "manager_name" not in filter_fields
@@ -133,9 +133,9 @@ class TestFieldFilteringValidation:
 
     def test_validate_search_fields_allowed(self):
         """Test search field validation for allowed fields"""
-        # property_name is in search_fields whitelist
+        # asset_name is in search_fields whitelist
         valid, invalid = FieldValidator.validate_search_fields(
-            "Asset", ["property_name", "address"], raise_on_invalid=False
+            "Asset", ["asset_name", "address"], raise_on_invalid=False
         )
 
         assert len(valid) == 2
@@ -154,7 +154,7 @@ class TestFieldFilteringValidation:
     def test_validate_sort_field_allowed(self):
         """Test sort field validation for allowed fields"""
         is_valid = FieldValidator.validate_sort_field(
-            "Asset", "property_name", raise_on_invalid=False
+            "Asset", "asset_name", raise_on_invalid=False
         )
 
         assert is_valid is True
@@ -299,6 +299,6 @@ class TestSecurityIntegration:
         # Verify protected fields structure
         protected_fields = data["protected_fields"]
         assert "Organization" in protected_fields
-        assert "RentContract" in protected_fields
+        assert "Contract" in protected_fields
         assert "Contact" in protected_fields
         assert "Asset" in protected_fields

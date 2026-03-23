@@ -55,7 +55,7 @@ def _seed_assets_for_analytics(
     db_session.add_all(
         [
             Asset(
-                property_name=f"分析资产-正常-{suffix}",
+                asset_name=f"分析资产-正常-{suffix}",
                 address=f"分析地址-正常-{suffix}",
                 ownership_status="已确权",
                 property_nature=unique_nature_normal,
@@ -67,7 +67,7 @@ def _seed_assets_for_analytics(
                 data_status="正常",
             ),
             Asset(
-                property_name=f"分析资产-删除-{suffix}",
+                asset_name=f"分析资产-删除-{suffix}",
                 address=f"分析地址-删除-{suffix}",
                 ownership_status="待确权",
                 property_nature=unique_nature_deleted,

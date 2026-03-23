@@ -222,7 +222,7 @@ class TestFieldValidator:
     def test_model_registry(self):
         """Test that model registry is configured"""
         assert "Asset" in MODEL_REGISTRY
-        assert "RentContract" in MODEL_REGISTRY
+        assert "Contract" in MODEL_REGISTRY
         assert "Organization" in MODEL_REGISTRY
         assert "Contact" in MODEL_REGISTRY
 
@@ -232,6 +232,13 @@ class TestFieldValidator:
 
         model_class = validator._get_model_class("Asset")
         assert model_class == Asset
+
+    def test_get_model_class_legacy_contract_alias_retired(self, validator):
+        """Legacy contract model alias should be rejected."""
+        legacy_model_name = "Rent" + "Contract"
+
+        with pytest.raises(InvalidRequestError, match="未知的模型"):
+            validator._get_model_class(legacy_model_name)
 
     def test_get_model_class_invalid(self, validator):
         """Test that invalid model raises error"""

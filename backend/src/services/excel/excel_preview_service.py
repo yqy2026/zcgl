@@ -52,7 +52,7 @@ class ExcelPreviewService:
 
         detected_mapping: list[dict[str, Any]] = []
         field_mapping_rules: dict[str, list[str]] = {
-            "物业名称": ["property_name", "物业名称", "资产名称"],
+            "物业名称": ["asset_name", "物业名称", "资产名称"],
             "地址": ["address", "物业地址", "地址", "位置"],
             "确权状态": ["ownership_status", "确权状态", "权属状态"],
             "物业性质": ["property_nature", "物业性质", "资产性质"],

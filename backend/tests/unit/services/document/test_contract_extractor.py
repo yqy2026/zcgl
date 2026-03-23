@@ -12,10 +12,12 @@ Contract Extractor Service 单元测试
 Total: 42 comprehensive tests
 """
 
+import inspect
 import logging
 
 import pytest
 
+import src.services.document.contract_extractor as contract_extractor_module
 from src.services.document.contract_extractor import (
     ContractExtractor,
     ExtractedField,
@@ -83,6 +85,13 @@ MALFORMED_DATES_CONTRACT = """
 
 class TestContractExtractorInitialization:
     """测试 ContractExtractor 初始化"""
+
+    @pytest.mark.unit
+    def test_legacy_fixed_contract_helper_name_is_retired(self):
+        module_source = inspect.getsource(contract_extractor_module)
+        legacy_helper_name = "extract_fixed_" + "_".join(("rent", "contract")) + "_info"
+
+        assert legacy_helper_name not in module_source
 
     @pytest.mark.unit
     def test_extractor_initialization(self):

@@ -29,17 +29,17 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Setup Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ env.PYTHON_VERSION }}
         cache: 'pip'
         cache-dependency-path: backend/pyproject.toml
 
     - name: Cache uv dependencies
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           ~/.cache/uv
@@ -96,6 +96,8 @@ jobs:
     env:
       ENVIRONMENT: testing
       TESTING_MODE: "true"
+      SECRET_KEY: ZcglCiJwtMaterial20260321OnlyForGithub0001
+      PHASE4_TENANT_NOT_NULL_DECISION: "B"
       DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_test
       TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_test
     services:
@@ -115,15 +117,15 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Setup Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ env.PYTHON_VERSION }}
 
     - name: Cache uv dependencies
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           ~/.cache/uv
@@ -189,7 +191,7 @@ jobs:
           --increment=1
 
     - name: Upload backend reports
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: backend-reports
@@ -200,7 +202,7 @@ jobs:
         retention-days: 30
 
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       with:
         file: ./backend/coverage.xml
         flags: backend
@@ -218,35 +220,37 @@ jobs:
     env:
       ENVIRONMENT: testing
       TESTING_MODE: "true"
-      DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_e2e
-      TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_e2e
-      E2E_TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_e2e
+      SECRET_KEY: ZcglCiJwtMaterial20260321OnlyForGithub0001
+      PHASE4_TENANT_NOT_NULL_DECISION: "B"
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_e2e_test
+      TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_e2e_test
+      E2E_TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_e2e_test
     services:
       postgres:
         image: postgres:16
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: zcgl_e2e
+          POSTGRES_DB: zcgl_e2e_test
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U postgres -d zcgl_e2e"
+          --health-cmd "pg_isready -U postgres -d zcgl_e2e_test"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Setup Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ env.PYTHON_VERSION }}
 
     - name: Cache uv dependencies
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           ~/.cache/uv
@@ -278,7 +282,7 @@ jobs:
         uv run pytest tests/e2e/ -m e2e --no-cov -v --junitxml=../test-results/backend/junit/junit-e2e.xml
 
     - name: Upload backend E2E reports
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: backend-e2e-reports
@@ -296,10 +300,10 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Setup Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v6
       with:
         node-version: ${{ env.NODE_VERSION }}
 
@@ -315,7 +319,7 @@ jobs:
         echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
 
     - name: Setup pnpm cache
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
         key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
@@ -365,7 +369,7 @@ jobs:
         pnpm type-coverage:check || true  # Non-blocking for now
 
     - name: Upload frontend lint reports
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: frontend-lint-reports
@@ -386,10 +390,10 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Setup Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v6
       with:
         node-version: ${{ env.NODE_VERSION }}
 
@@ -405,7 +409,7 @@ jobs:
         echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
 
     - name: Setup pnpm cache
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
         key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
@@ -425,34 +429,36 @@ jobs:
     - name: Check coverage threshold
       run: |
         cd frontend
+        SUMMARY_FILE=../test-results/frontend/coverage/coverage-summary.json
+
         # Extract coverage from JSON summary
-        COVERAGE=$(node -e "const fs = require('fs'); const data = JSON.parse(fs.readFileSync('coverage/coverage-summary.json', 'utf8')); console.log(data.total.lines.pct)")
+        COVERAGE=$(node -e "const fs = require('fs'); const data = JSON.parse(fs.readFileSync(process.argv[1], 'utf8')); console.log(data.total.lines.pct)" "$SUMMARY_FILE")
 
         echo "Current coverage: ${COVERAGE}%"
         echo "Target: ${{ env.FRONTEND_COVERAGE_THRESHOLD }}%"
 
         # Use Python script for incremental checking
         python ../.github/scripts/incremental_coverage_check.py \
-          coverage/coverage-summary.json \
+          "$SUMMARY_FILE" \
           0 \
           --target=${{ env.FRONTEND_COVERAGE_THRESHOLD }} \
           --soft-threshold=50 \
           --increment=1 || true  # Non-blocking until we reach baseline
 
     - name: Upload frontend reports
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: frontend-reports
         path: |
-          frontend/coverage/
-          frontend/test-results.json
+          test-results/frontend/coverage/
+          test-results/frontend/reports/
         retention-days: 30
 
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       with:
-        file: ./frontend/coverage/lcov.info
+        file: ./test-results/frontend/coverage/lcov.info
         flags: frontend
         name: frontend-coverage
         fail_ci_if_error: false
@@ -463,7 +469,7 @@ jobs:
         npm run build
 
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: frontend-dist
         path: frontend/dist/
@@ -480,6 +486,8 @@ jobs:
     env:
       ENVIRONMENT: testing
       TESTING_MODE: "true"
+      SECRET_KEY: ZcglCiJwtMaterial20260321OnlyForGithub0001
+      PHASE4_TENANT_NOT_NULL_DECISION: "B"
       DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_test
       TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_test
     services:
@@ -499,15 +507,15 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Setup Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ env.PYTHON_VERSION }}
 
     - name: Setup Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v6
       with:
         node-version: ${{ env.NODE_VERSION }}
 
@@ -517,7 +525,7 @@ jobs:
         version: 10
 
     - name: Cache uv dependencies
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           ~/.cache/uv
@@ -533,7 +541,7 @@ jobs:
         echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
 
     - name: Setup pnpm cache
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ${{ steps.pnpm-cache-make.outputs.STORE_PATH }}
         key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
@@ -575,8 +583,10 @@ jobs:
     env:
       ENVIRONMENT: testing
       TESTING_MODE: "true"
-      DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_e2e
-      TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_e2e
+      SECRET_KEY: ZcglCiJwtMaterial20260321OnlyForGithub0001
+      PHASE4_TENANT_NOT_NULL_DECISION: "B"
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_e2e_test
+      TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_e2e_test
       E2E_ADMIN_USERNAME: admin
       E2E_ADMIN_PASSWORD: Admin123!@#
       E2E_LOGOUT_USERNAME: e2e_logout_admin
@@ -590,26 +600,26 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: zcgl_e2e
+          POSTGRES_DB: zcgl_e2e_test
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U postgres -d zcgl_e2e"
+          --health-cmd "pg_isready -U postgres -d zcgl_e2e_test"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Setup Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ env.PYTHON_VERSION }}
 
     - name: Setup Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v6
       with:
         node-version: ${{ env.NODE_VERSION }}
 
@@ -619,7 +629,7 @@ jobs:
         version: 10
 
     - name: Cache uv dependencies
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           ~/.cache/uv
@@ -635,7 +645,7 @@ jobs:
         echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
 
     - name: Setup pnpm cache
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ${{ steps.pnpm-cache-e2e.outputs.STORE_PATH }}
         key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
@@ -656,7 +666,7 @@ jobs:
     - name: Install Playwright browser
       run: |
         cd frontend
-        pnpm exec playwright install --with-deps chromium
+        pnpm exec playwright install --with-deps chromium firefox webkit
 
     - name: Initialize database schema
       run: |
@@ -714,6 +724,25 @@ jobs:
                     display_name="管理员",
                     is_system_role=True,
                     is_active=True,
+                    created_by="ci-e2e",
+                    updated_by="ci-e2e",
+                )
+                db.add(role)
+                await db.commit()
+                await db.refresh(role)
+            return role
+
+        async def ensure_regular_role(db):
+            role_result = await db.execute(select(Role).where(Role.name == "user"))
+            role = role_result.scalars().first()
+            if role is None:
+                role = Role(
+                    name="user",
+                    display_name="普通用户",
+                    description="Frontend E2E regular role",
+                    is_system_role=True,
+                    is_active=True,
+                    scope="global",
                     created_by="ci-e2e",
                     updated_by="ci-e2e",
                 )
@@ -828,6 +857,7 @@ jobs:
             async with async_session_scope() as db:
                 organization = await ensure_organization(db)
                 admin_role = await ensure_admin_role(db)
+                await ensure_regular_role(db)
                 admin_permission = await ensure_admin_permission(db)
                 await ensure_role_permission(db, admin_role.id, admin_permission.id)
 
@@ -894,7 +924,7 @@ jobs:
         pnpm e2e:ci
 
     - name: Upload frontend E2E reports
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: frontend-e2e-reports
@@ -921,9 +951,11 @@ jobs:
     env:
       ENVIRONMENT: testing
       TESTING_MODE: "true"
-      DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_import_e2e
-      TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_import_e2e
-      E2E_TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_import_e2e
+      SECRET_KEY: ZcglCiJwtMaterial20260321OnlyForGithub0001
+      PHASE4_TENANT_NOT_NULL_DECISION: "B"
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_import_e2e_test
+      TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_import_e2e_test
+      E2E_TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/zcgl_import_e2e_test
       E2E_ADMIN_USERNAME: admin
       E2E_ADMIN_PASSWORD: Admin123!@#
       BASE_URL: http://127.0.0.1:5173
@@ -934,26 +966,26 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: zcgl_import_e2e
+          POSTGRES_DB: zcgl_import_e2e_test
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U postgres -d zcgl_import_e2e"
+          --health-cmd "pg_isready -U postgres -d zcgl_import_e2e_test"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Setup Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ env.PYTHON_VERSION }}
 
     - name: Setup Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v6
       with:
         node-version: ${{ env.NODE_VERSION }}
 
@@ -963,7 +995,7 @@ jobs:
         version: 10
 
     - name: Cache uv dependencies
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           ~/.cache/uv
@@ -979,7 +1011,7 @@ jobs:
         echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
 
     - name: Setup pnpm cache
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ${{ steps.pnpm-cache-import-e2e.outputs.STORE_PATH }}
         key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
@@ -1181,7 +1213,7 @@ jobs:
         make test-e2e-import
 
     - name: Upload import E2E reports
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: import-e2e-reports
@@ -1208,15 +1240,15 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Setup Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ env.PYTHON_VERSION }}
 
     - name: Setup Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v6
       with:
         node-version: ${{ env.NODE_VERSION }}
 
@@ -1288,6 +1320,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: [backend-test, frontend-test, backend-e2e, frontend-e2e, import-e2e]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    env:
+      ENVIRONMENT: testing
+      TESTING_MODE: "true"
+      SECRET_KEY: ZcglCiJwtMaterial20260321OnlyForGithub0001
+      PHASE4_TENANT_NOT_NULL_DECISION: "B"
 
     services:
       postgres:
@@ -1315,15 +1352,15 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Setup Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ env.PYTHON_VERSION }}
 
     - name: Cache uv dependencies
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           ~/.cache/uv
@@ -1352,7 +1389,7 @@ jobs:
         # REMOVED || true - integration tests should pass on main branch
 
     - name: Upload integration test results
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: always()
       with:
         name: integration-reports
@@ -1372,7 +1409,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Download all reports
       uses: actions/download-artifact@v4

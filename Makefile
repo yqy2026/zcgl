@@ -4,11 +4,12 @@
 	test-e2e-import test-e2e-import-backend test-e2e-import-frontend \
 	test-integration test-coverage \
 	build-frontend backend-import check ci-gate \
-	backend-org-cov secrets migrate check-migration-naming docs-lint
+	backend-org-cov secrets migrate check-migration-naming docs-lint check-field-drift
 
 ROOT_DIR := $(CURDIR)
 BACKEND_VENV ?= $(ROOT_DIR)/backend/.venv
 PYTHON ?= $(shell if [ -x "$(BACKEND_VENV)/Scripts/python.exe" ]; then echo "$(BACKEND_VENV)/Scripts/python.exe"; elif [ -x "$(BACKEND_VENV)/bin/python" ]; then echo "$(BACKEND_VENV)/bin/python"; elif command -v python >/dev/null 2>&1; then echo python; else echo python3; fi)
+BACKEND_IMPORT_FALLBACK_SECRET_KEY ?= ZcglBackendImportSmoke2026StrongKey!42
 
 help:
 	@echo "Targets:"
@@ -40,7 +41,8 @@ help:
 	@echo "  backend-import    Import backend app to validate runtime"
 	@echo "  check             Run lint, tests, build, and import checks"
 	@echo "  ci-gate           Run CI gate (ruff + tsgo + unit tests)"
-	@echo "  docs-lint         Run requirements authority matrix checks"
+	@echo "  docs-lint         Run all docs checks (authority + code-evidence + plans + field drift)"
+	@echo "  check-field-drift Run field spec vs ORM drift report"
 	@echo "  backend-org-cov   Run org CRUD coverage test"
 	@echo "  secrets           Generate SECRET_KEY and DATA_ENCRYPTION_KEY"
 	@echo "  migrate           Run alembic upgrade head"
@@ -111,11 +113,11 @@ test-e2e-import:
 
 test-e2e-import-backend:
 	cd backend && E2E_TEST_DATABASE_URL="$${E2E_TEST_DATABASE_URL:-$${TEST_DATABASE_URL:-}}" $(PYTHON) -m pytest \
-		tests/e2e/test_pdf_import_e2e.py tests/e2e/test_excel_import_e2e.py tests/e2e/test_property_certificate_import_e2e.py -m e2e --no-cov
+		tests/e2e/test_pdf_import_e2e.py tests/e2e/test_property_certificate_import_e2e.py -m e2e --no-cov
 
 test-e2e-import-frontend:
 	@curl -fsS http://127.0.0.1:8002/docs >/dev/null || (echo "[ERROR] Backend API is required at http://127.0.0.1:8002"; exit 2)
-	cd frontend && pnpm e2e tests/e2e/user/import-guardrails.spec.ts tests/e2e/rental/import-success.spec.ts tests/e2e/user/property-certificate-import-success.spec.ts --project=chromium
+	cd frontend && pnpm e2e tests/e2e/user/import-guardrails.spec.ts tests/e2e/legacy-contract/import-success.spec.ts tests/e2e/user/property-certificate-import-success.spec.ts --project=chromium
 
 build-frontend:
 	cd frontend && pnpm build
@@ -123,8 +125,12 @@ build-frontend:
 backend-import:
 	@cd backend && \
 		RESOLVED_DATABASE_URL="$${DATABASE_URL:-$${TEST_DATABASE_URL:-$${INTEGRATION_TEST_DATABASE_URL:-}}}"; \
+		RESOLVED_SECRET_KEY="$${SECRET_KEY:-}"; \
 		if [ -z "$$RESOLVED_DATABASE_URL" ] && [ -f .env ]; then \
 			RESOLVED_DATABASE_URL="$$(awk -F= '/^DATABASE_URL=/{print substr($$0, index($$0, "=") + 1)}' .env | tail -n 1)"; \
+		fi; \
+		if [ -z "$$RESOLVED_SECRET_KEY" ] && [ -f .env ]; then \
+			RESOLVED_SECRET_KEY="$$(awk -F= '/^SECRET_KEY=/{print substr($$0, index($$0, "=") + 1)}' .env | tail -n 1)"; \
 		fi; \
 		if [ -z "$$RESOLVED_DATABASE_URL" ]; then \
 			echo "[ERROR] backend-import requires DATABASE_URL."; \
@@ -132,9 +138,12 @@ backend-import:
 			echo "Example: DATABASE_URL=postgresql+psycopg://user:pass@localhost:5432/zcgl make backend-import"; \
 			exit 2; \
 		fi; \
-		DATABASE_URL="$$RESOLVED_DATABASE_URL" $(PYTHON) -c "from src.main import app; print('import ok')"
+		if [ -z "$$RESOLVED_SECRET_KEY" ]; then \
+			RESOLVED_SECRET_KEY="$(BACKEND_IMPORT_FALLBACK_SECRET_KEY)"; \
+		fi; \
+		SECRET_KEY="$$RESOLVED_SECRET_KEY" DATABASE_URL="$$RESOLVED_DATABASE_URL" $(PYTHON) -c "from src.main import app; print('import ok')"
 
-check: lint-backend lint-frontend scan-frontend type-check test-backend test-frontend build-frontend backend-import
+check: lint-backend lint-frontend scan-frontend type-check test-backend test-frontend build-frontend backend-import docs-lint
 
 ci-gate: lint-backend type-check test-backend test-frontend-ci
 
@@ -157,6 +166,10 @@ migrate:
 
 docs-lint:
 	$(PYTHON) scripts/check_requirements_authority.py
+	$(PYTHON) scripts/check_field_drift.py
+
+check-field-drift:
+	$(PYTHON) scripts/check_field_drift.py
 
 # 运行集成测试
 test-integration:

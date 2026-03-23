@@ -3,6 +3,7 @@ import logging
 import secrets
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from enum import Enum
 from typing import Any
 
 import jwt
@@ -26,6 +27,12 @@ logger = logging.getLogger(__name__)
 # Type aliases for better readability
 TokenType = str
 JtiType = str
+
+
+class AuthTokenKind(str, Enum):
+    BEARER = "bearer"
+    REFRESH = "refresh"
+
 
 # Legacy exported constants (kept for backward compatibility in tests/importers).
 # Runtime token operations below read from `settings` dynamically.
@@ -211,7 +218,7 @@ class AsyncAuthenticationService:
         return TokenPair(
             access_token=access_token,
             refresh_token=refresh_token,
-            token_type="bearer",
+            token_type=AuthTokenKind.BEARER.value,
             expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
             session_id=session_id,
         )
@@ -236,7 +243,7 @@ class AsyncAuthenticationService:
             session_id: Any = payload.get("session_id")
             token_device_fingerprint: Any = payload.get("device_fingerprint")
 
-            if user_id is None or token_type != "refresh":
+            if user_id is None or token_type != AuthTokenKind.REFRESH.value:
                 return None
 
             if self._is_token_revoked(jti, user_id=str(user_id) if user_id else None):
@@ -246,7 +253,9 @@ class AsyncAuthenticationService:
             logger.error(f"JWT validation failed: {str(e)}")
             return None
 
-        session: UserSession | None = await _session_crud.get_active_by_refresh_token_async(
+        session: (
+            UserSession | None
+        ) = await _session_crud.get_active_by_refresh_token_async(
             self.db, refresh_token
         )
 

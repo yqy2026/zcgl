@@ -5,7 +5,8 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { screen, fireEvent, waitFor, act } from '@/test/utils/test-helpers';
+import { QueryClient } from '@tanstack/react-query';
+import { screen, fireEvent, waitFor, act, renderWithProviders } from '@/test/utils/test-helpers';
 import AssetImport from '../AssetImport';
 
 interface UploadDraggerMockProps {
@@ -331,6 +332,53 @@ describe('AssetImport - 渲染与交互测试', () => {
       })
     );
     expect(screen.getByText(/导入成功/)).toBeInTheDocument();
+  });
+
+  it('导入成功后应失效资产列表、资产统计与分析查询前缀', async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+          gcTime: 0,
+        },
+        mutations: {
+          retry: false,
+        },
+      },
+    });
+    const invalidateQueriesSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+    importAssetsMock.mockResolvedValue({
+      success: 3,
+      failed: 0,
+      total: 3,
+      errors: [],
+      message: 'ok',
+      processing_time: 8,
+    });
+
+    renderWithProviders(<AssetImport />, { queryClient });
+    const draggerProps = uploadDraggerMock.mock.calls[0][0] as UploadDraggerMockProps;
+
+    act(() => {
+      draggerProps.beforeUpload?.(createUploadFile());
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('steps')).toHaveAttribute('data-current', '1');
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('开始导入'));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('steps')).toHaveAttribute('data-current', '2');
+    });
+
+    expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: ['assets-list'] });
+    expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: ['asset-stats'] });
+    expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: ['analytics'] });
   });
 
   it('导入失败应提示错误并显示失败摘要', async () => {

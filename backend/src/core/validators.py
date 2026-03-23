@@ -89,7 +89,7 @@ class AssetValidator(BaseValidator):
     """资产数据验证器"""
 
     REQUIRED_FIELDS = [
-        "property_name",
+        "asset_name",
         "property_address",
         "ownership_status",
         "property_nature",
@@ -114,8 +114,8 @@ class AssetValidator(BaseValidator):
                 errors.append(f"缺少必填字段: {field}")
 
         # 验证物业名称
-        if "property_name" in data:
-            if not cls.validate_length(data["property_name"], 1, 200):
+        if "asset_name" in data:
+            if not cls.validate_length(data["asset_name"], 1, 200):
                 errors.append("物业名称长度应在1-200个字符之间")
 
         # 验证物业地址
@@ -146,14 +146,14 @@ class AssetValidator(BaseValidator):
 
     @classmethod
     async def validate_asset_unique(
-        cls, db: AsyncSession, property_name: str, exclude_id: str | None = None
+        cls, db: AsyncSession, asset_name: str, exclude_id: str | None = None
     ) -> list[str]:
         """
         验证资产唯一性
 
         Args:
             db: 数据库会话
-            property_name: 物业名称
+            asset_name: 物业名称
             exclude_id: 排除的资产ID（用于更新时）
 
         Returns:
@@ -161,13 +161,13 @@ class AssetValidator(BaseValidator):
         """
         from ..models.asset import Asset  # pragma: no cover
 
-        stmt = select(Asset).where(Asset.property_name == property_name)
+        stmt = select(Asset).where(Asset.asset_name == asset_name)
         if exclude_id:
             stmt = stmt.where(Asset.id != exclude_id)
 
         existing = (await db.execute(stmt)).scalars().first()
         if existing:
-            return [f"物业名称 '{property_name}' 已存在"]
+            return [f"物业名称 '{asset_name}' 已存在"]
 
         return []
 
@@ -295,49 +295,6 @@ class OrganizationValidator(BaseValidator):
         if "email" in data and data["email"]:  # pragma: no cover
             if not cls.validate_email(data["email"]):  # pragma: no cover
                 errors.append("邮箱格式不正确")  # pragma: no cover
-
-        return errors
-
-
-class RentContractValidator(BaseValidator):
-    """租赁合同验证器"""
-
-    @classmethod
-    def validate_contract_data(cls, data: dict[str, Any]) -> list[str]:
-        """
-        验证租赁合同数据
-
-        Args:
-            data: 合同数据字典
-
-        Returns:
-            错误消息列表
-        """
-        errors = []
-
-        # 验证合同编号
-        if "contract_number" in data:  # pragma: no cover
-            if not cls.validate_length(
-                data["contract_number"], 1, 100
-            ):  # pragma: no cover
-                errors.append("合同编号长度应在1-100个字符之间")  # pragma: no cover
-
-        # 验证租金金额
-        if "monthly_rent" in data and data["monthly_rent"]:
-            if not cls.validate_positive_number(data["monthly_rent"]):
-                errors.append("月租金必须为正数")
-
-        # 验证保证金
-        if "security_deposit" in data and data["security_deposit"]:
-            if not cls.validate_non_negative_number(data["security_deposit"]):
-                errors.append("保证金不能为负数")
-
-        # 验证租赁期限
-        if "lease_start_date" in data and "lease_end_date" in data:
-            if not cls.validate_date_range(
-                data["lease_start_date"], data["lease_end_date"]
-            ):
-                errors.append("租赁开始日期不能晚于结束日期")
 
         return errors
 

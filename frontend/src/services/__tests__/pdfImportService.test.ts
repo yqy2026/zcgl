@@ -204,8 +204,26 @@ describe('PDFImportService', () => {
   // ==========================================================================
 
   describe('confirmImport', () => {
+    const requiredContext = {
+      revenue_mode: 'LEASE' as const,
+      contract_direction: 'LESSOR' as const,
+      group_relation_type: 'UPSTREAM' as const,
+      operator_party_id: 'party-operator',
+      lessor_party_id: 'party-lessor',
+      lessee_party_id: 'party-lessee',
+      settlement_rule: {
+        version: 'v1',
+        cycle: '月付',
+        settlement_mode: 'manual',
+        amount_rule: { basis: 'fixed' },
+        payment_rule: { due_day: 15 },
+      },
+    };
+
     it('should confirm import successfully', async () => {
       const confirmedData = {
+        ...requiredContext,
+        owner_party_id: 'party-owner',
         contract_number: 'HT-001',
         tenant_name: '测试租户',
         start_date: '2026-01-01',
@@ -218,6 +236,7 @@ describe('PDFImportService', () => {
         data: {
           success: true,
           message: '导入成功',
+          contract_group_id: 'group-123',
           contract_id: 'contract-123',
           contract_number: 'HT-001',
         },
@@ -226,13 +245,20 @@ describe('PDFImportService', () => {
       const result = await pdfImportService.confirmImport('session-123', confirmedData);
 
       expect(result.success).toBe(true);
+      expect(result.contract_group_id).toBe('group-123');
       expect(result.contract_id).toBe('contract-123');
       expect(apiClient.post).toHaveBeenCalledWith(
-        expect.any(String),
+        '/pdf-import/confirm',
         expect.objectContaining({
           session_id: 'session-123',
           confirmed_data: expect.objectContaining({
+            revenue_mode: 'LEASE',
+            contract_direction: 'LESSOR',
+            group_relation_type: 'UPSTREAM',
             contract_data: expect.objectContaining({
+              revenue_mode: 'LEASE',
+              contract_direction: 'LESSOR',
+              group_relation_type: 'UPSTREAM',
               contract_number: 'HT-001',
             }),
           }),
@@ -268,6 +294,7 @@ describe('PDFImportService', () => {
       });
 
       await pdfImportService.confirmImport('session-123', {
+        ...requiredContext,
         contract_number: 'HT-002',
         owner_party_id: 'party-123',
         tenant_name: '测试租户',
@@ -307,6 +334,7 @@ describe('PDFImportService', () => {
       });
 
       await pdfImportService.confirmImport('session-123', {
+        ...requiredContext,
         contract_number: 'HT-003',
         ownership_id: 'party-legacy',
         tenant_name: '测试租户',
@@ -335,6 +363,65 @@ describe('PDFImportService', () => {
         | Record<string, unknown>
         | undefined;
       expect(nestedContractData).not.toHaveProperty('owner_party_id');
+    });
+
+    it('should include agency_detail for agency confirmations', async () => {
+      vi.mocked(apiClient.post).mockResolvedValue({
+        data: {
+          success: true,
+          message: '导入成功',
+        },
+      });
+
+      await pdfImportService.confirmImport('session-123', {
+        revenue_mode: 'AGENCY',
+        contract_direction: 'LESSEE',
+        group_relation_type: 'ENTRUSTED',
+        operator_party_id: 'party-operator',
+        owner_party_id: 'party-owner',
+        lessor_party_id: 'party-owner',
+        lessee_party_id: 'party-operator',
+        contract_number: 'AG-001',
+        tenant_name: '代理租户',
+        start_date: '2026-01-01',
+        end_date: '2026-12-31',
+        monthly_rent_base: '10000',
+        settlement_rule: {
+          version: 'v1',
+          cycle: '月付',
+          settlement_mode: 'manual',
+          amount_rule: { basis: 'actual_received' },
+          payment_rule: { due_day: 15 },
+        },
+        agency_detail: {
+          service_fee_ratio: '0.08',
+          fee_calculation_base: 'actual_received',
+          agency_scope: '招商及代收租金',
+        },
+        rent_terms: [],
+      });
+
+      expect(apiClient.post).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          confirmed_data: expect.objectContaining({
+            revenue_mode: 'AGENCY',
+            agency_detail: {
+              service_fee_ratio: '0.08',
+              fee_calculation_base: 'actual_received',
+              agency_scope: '招商及代收租金',
+            },
+            contract_data: expect.objectContaining({
+              revenue_mode: 'AGENCY',
+              agency_detail: {
+                service_fee_ratio: '0.08',
+                fee_calculation_base: 'actual_received',
+                agency_scope: '招商及代收租金',
+              },
+            }),
+          }),
+        })
+      );
     });
   });
 

@@ -10,17 +10,21 @@ import PartySelector from '@/components/Common/PartySelector';
 import type { PartySelectorSelection } from '@/components/Common/PartySelector';
 
 import { projectService } from '@/services/projectService';
-import type { Project, ProjectCreate, ProjectUpdate } from '@/types/project';
+import type { Project, ProjectCreate } from '@/types/project';
 import { createLogger } from '@/utils/logger';
 import styles from './ProjectForm.module.css';
 
 const componentLogger = createLogger('ProjectForm');
-const { TextArea } = Input;
 
 interface ProjectFormProps {
   project?: Project | null;
   onSuccess: () => void;
   onCancel: () => void;
+}
+
+interface ProjectFormValues {
+  project_name: string;
+  project_code?: string;
 }
 
 const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSuccess, onCancel }) => {
@@ -33,8 +37,8 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSuccess, onCancel 
     if (project !== undefined && project !== null) {
       // 设置基本信息
       form.setFieldsValue({
-        name: project.name,
-        description: project.description ?? '',
+        project_name: project.project_name,
+        project_code: project.project_code,
       });
 
       // 设置主体关联（Phase 3 主链）
@@ -76,7 +80,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSuccess, onCancel 
   };
 
   // 表单提交
-  const handleSubmit = async (values: Record<string, unknown>) => {
+  const handleSubmit = async (values: ProjectFormValues) => {
     setLoading(true);
     try {
       // 构建 party_relations（前端主链）
@@ -86,16 +90,18 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSuccess, onCancel 
         is_primary: true,
       }));
 
-      const submitData = {
-        ...values,
+      const trimmedCode = values.project_code?.trim();
+      const submitData: ProjectCreate = {
+        project_name: values.project_name.trim(),
+        project_code: trimmedCode != null && trimmedCode !== '' ? trimmedCode : undefined,
         party_relations,
       };
 
       if (project !== undefined && project !== null) {
-        await projectService.updateProject(project.id, submitData as ProjectUpdate);
+        await projectService.updateProject(project.id, submitData);
         MessageManager.success('项目更新成功');
       } else {
-        await projectService.createProject(submitData as ProjectCreate);
+        await projectService.createProject(submitData);
         MessageManager.success('项目创建成功');
       }
       onSuccess();
@@ -122,14 +128,14 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSuccess, onCancel 
       <Card title="项目信息" size="small">
         <Form.Item
           label="项目名称"
-          name="name"
+          name="project_name"
           rules={[{ required: true, validator: validateProjectName }]}
         >
           <Input placeholder="请输入项目名称" maxLength={200} />
         </Form.Item>
 
-        <Form.Item label="项目描述" name="description">
-          <TextArea placeholder="请输入项目描述" rows={3} maxLength={1000} />
+        <Form.Item label="项目编码" name="project_code">
+          <Input placeholder="可选，留空则由系统自动生成" maxLength={100} />
         </Form.Item>
       </Card>
 

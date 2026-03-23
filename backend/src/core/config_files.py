@@ -7,12 +7,12 @@ from __future__ import annotations
 from pydantic import BaseModel, Field, field_validator
 from pydantic_core import PydanticCustomError
 
+from ..constants.contract_constants import CONTRACT_ATTACHMENT_SUBDIR
 from ..constants.file_size_constants import (
     DEFAULT_MAX_FILE_SIZE,
     MAX_FILE_SIZE_LIMIT,
     MIN_FILE_SIZE_BYTES,
 )
-from ..constants.rent_contract_constants import CONTRACT_ATTACHMENT_SUBDIR
 
 
 class FileUploadSettings(BaseModel):
@@ -24,9 +24,9 @@ class FileUploadSettings(BaseModel):
     UPLOAD_DIR: str = Field(
         default="./uploads", json_schema_extra={"env": "UPLOAD_DIR"}
     )
-    RENT_CONTRACT_ATTACHMENT_SUBDIR: str = Field(
+    CONTRACT_ATTACHMENT_SUBDIR: str = Field(
         default=CONTRACT_ATTACHMENT_SUBDIR,
-        json_schema_extra={"env": "RENT_CONTRACT_ATTACHMENT_SUBDIR"},
+        json_schema_extra={"env": "CONTRACT_ATTACHMENT_SUBDIR"},
     )
 
     @field_validator("MAX_FILE_SIZE")

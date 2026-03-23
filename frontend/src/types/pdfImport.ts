@@ -475,7 +475,7 @@ export interface FileInfo {
 // 资产匹配接口（复用原有）
 export interface AssetMatch {
   id: string;
-  property_name: string;
+  asset_name: string;
   address: string;
   similarity: number;
 }

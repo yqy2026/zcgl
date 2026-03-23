@@ -1,8 +1,11 @@
 import logging
+from collections import defaultdict
 from contextlib import asynccontextmanager
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
+from decimal import Decimal
 from typing import Any, cast
 
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.exc import StaleDataError
 
@@ -14,19 +17,41 @@ from ...core.exception_handler import (
     operation_not_allowed,
     validation_error,
 )
+from ...crud.asset_management_history import asset_management_history_crud
+from ...crud.contract import contract_crud
 from ...crud.history import history_crud
 from ...crud.ownership import ownership
 from ...crud.party import party_crud
+from ...crud.project_asset import project_asset_crud
 from ...crud.query_builder import PartyFilter
-from ...models.asset import Asset
+from ...models.asset import Asset, AssetReviewStatus
 from ...models.asset_history import AssetHistory
+from ...models.asset_management_history import AssetManagementHistory
+from ...models.asset_review_log import AssetReviewLog
+from ...models.associations import contract_assets
 from ...models.auth import User
-from ...schemas.asset import AssetCreate, AssetUpdate
+from ...models.contract_group import (
+    Contract,
+    ContractLifecycleStatus,
+    GroupRelationType,
+)
+from ...models.project_asset import ProjectAsset
+from ...schemas.asset import (
+    AssetCreate,
+    AssetLeaseSummaryResponse,
+    AssetUpdate,
+    ContractPartyItem,
+    ContractTypeSummary,
+)
 from ...services.asset.asset_calculator import AssetCalculator
 from ...services.enum_validation_service import get_enum_validation_service_async
 from ...services.party_scope import resolve_user_party_filter
 
 logger = logging.getLogger(__name__)
+ACTIVE_CONTRACT_STATUSES = {ContractLifecycleStatus.ACTIVE}
+_EDIT_BLOCKED_REVIEW_STATUSES = frozenset(
+    {AssetReviewStatus.PENDING.value, AssetReviewStatus.APPROVED.value}
+)
 
 
 def _utcnow_naive() -> datetime:
@@ -43,9 +68,45 @@ def _normalize_optional_str(value: Any) -> str | None:
     return normalized
 
 
-def _normalize_bool_filter(
-    value: bool | str | None, *, field_name: str
-) -> bool | None:
+def _as_decimal(value: Any) -> Decimal:
+    if value is None:
+        return Decimal("0")
+    if isinstance(value, Decimal):
+        return value
+    return Decimal(str(value))
+
+
+def _default_summary_period() -> tuple[date, date]:
+    today = date.today()
+    start = today.replace(day=1)
+    end = (start.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
+    return start, end
+
+
+def _month_bounds(anchor: date) -> tuple[date, date]:
+    start = anchor.replace(day=1)
+    end = (start.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
+    return start, end
+
+
+def normalize_summary_period(
+    period_start: date | None,
+    period_end: date | None,
+) -> tuple[date, date]:
+    if period_start is None and period_end is None:
+        return _default_summary_period()
+    if period_start is None:
+        if period_end is None:
+            return _default_summary_period()
+        normalized_start, _ = _month_bounds(period_end)
+        return normalized_start, period_end
+    if period_end is None:
+        _, normalized_end = _month_bounds(period_start)
+        return period_start, normalized_end
+    return period_start, period_end
+
+
+def _normalize_bool_filter(value: bool | str | None, *, field_name: str) -> bool | None:
     if isinstance(value, bool):
         return value
 
@@ -71,6 +132,39 @@ def _get_default_asset_crud() -> Any:
     from ...crud import asset as asset_module
 
     return asset_module.asset_crud
+
+
+_ADDRESS_SUB_FIELDS = ("province_code", "city_code", "district_code", "address_detail")
+
+
+def _compose_address(
+    data: dict[str, Any], current_asset: "Asset | None" = None
+) -> str | None:
+    """根据半结构化地址子字段拼接只读展示用 address.
+
+    优先使用 data 中的字段，缺少时回退到 current_asset 的现有字段。
+    若 address_detail 缺到，返回 None（不覆盖现有 address）。
+    """
+
+    def _get(key: str) -> str | None:
+        if key in data and data[key] is not None:
+            return str(data[key]).strip() or None
+        if current_asset is not None:
+            val = getattr(current_asset, key, None)
+            return str(val).strip() if val else None
+        return None
+
+    detail = _get("address_detail")
+    if not detail:
+        return None  # 没有 address_detail 不拼接
+
+    parts = [
+        _get("province_code"),
+        _get("city_code"),
+        _get("district_code"),
+        detail,
+    ]
+    return " ".join(p for p in parts if p)
 
 
 class AssetService:
@@ -202,8 +296,10 @@ class AssetService:
             party_obj = await party_crud.get_party(self.db, party_id=owner_party_id)
             if party_obj is None and legacy_ownership_id is None:
                 # 兼容误将 legacy ownership_id 透传到 owner_party_id 的调用方
-                fallback_party_id = await self.resolve_owner_party_scope_by_ownership_id_async(
-                    ownership_id=owner_party_id,
+                fallback_party_id = (
+                    await self.resolve_owner_party_scope_by_ownership_id_async(
+                        ownership_id=owner_party_id,
+                    )
                 )
                 if (
                     fallback_party_id is not None
@@ -220,7 +316,9 @@ class AssetService:
                 )
 
         manager_party_id = _normalize_optional_str(data.get("manager_party_id"))
-        legacy_management_entity = _normalize_optional_str(data.get("management_entity"))
+        legacy_management_entity = _normalize_optional_str(
+            data.get("management_entity")
+        )
         legacy_organization_id = _normalize_optional_str(data.get("organization_id"))
 
         if manager_party_id is None and legacy_management_entity is not None:
@@ -281,7 +379,7 @@ class AssetService:
     async def _ensure_asset_not_linked(self, asset_id: str) -> None:
         asset_crud = self.asset_crud
 
-        has_contract = await asset_crud.has_rent_contracts_async(self.db, asset_id)
+        has_contract = await asset_crud.has_contracts_async(self.db, asset_id)
         if has_contract:
             raise operation_not_allowed(
                 "资产已关联合同，禁止删除",
@@ -295,7 +393,9 @@ class AssetService:
                 reason="asset_has_certificates",
             )
 
-        has_ledger = await asset_crud.has_rent_ledger_async(self.db, asset_id)
+        has_ledger = await asset_crud.has_contract_ledger_entries_async(
+            self.db, asset_id
+        )
         if has_ledger:
             raise operation_not_allowed(
                 "资产已有租金台账记录，禁止删除",
@@ -390,6 +490,115 @@ class AssetService:
             raise ResourceNotFoundError("Asset", asset_id)
         return asset
 
+    async def get_asset_lease_summary(
+        self,
+        asset_id: str,
+        *,
+        period_start: date | None = None,
+        period_end: date | None = None,
+        current_user_id: str | None = None,
+    ) -> AssetLeaseSummaryResponse:
+        period_start, period_end = normalize_summary_period(period_start, period_end)
+
+        asset = await self.get_asset(asset_id, current_user_id=current_user_id)
+        contracts = await contract_crud.get_active_by_asset_id(
+            self.db,
+            asset_id=asset_id,
+            active_statuses=ACTIVE_CONTRACT_STATUSES,
+        )
+
+        type_buckets: dict[str, list[Any]] = defaultdict(list)
+        for contract in contracts:
+            relation_type = getattr(contract, "group_relation_type", None)
+            relation_bucket_key = (
+                relation_type.value
+                if isinstance(relation_type, GroupRelationType)
+                else str(relation_type)
+            )
+            type_buckets[relation_bucket_key].append(contract)
+
+        by_type: list[ContractTypeSummary] = []
+        for relation_type, label in (
+            ("上游", "上游承租"),
+            ("下游", "下游转租"),
+            ("委托", "委托协议"),
+            ("直租", "直租合同"),
+        ):
+            bucket = type_buckets.get(relation_type, [])
+            monthly_amount = sum(
+                (
+                    _as_decimal(
+                        getattr(contract.lease_detail, "monthly_rent_base", None)
+                    )
+                    for contract in bucket
+                    if getattr(contract, "lease_detail", None) is not None
+                ),
+                start=Decimal("0"),
+            )
+            by_type.append(
+                ContractTypeSummary(
+                    group_relation_type=relation_type,
+                    label=label,
+                    contract_count=len(bucket),
+                    total_area=0.0,
+                    monthly_amount=float(monthly_amount),
+                )
+            )
+
+        party_counter: dict[tuple[str, str], tuple[str | None, int]] = {}
+        outbound_types = {
+            GroupRelationType.DOWNSTREAM.value,
+            GroupRelationType.DIRECT_LEASE.value,
+        }
+        for contract in contracts:
+            relation_type = getattr(contract, "group_relation_type", None)
+            relation_value = (
+                relation_type.value
+                if isinstance(relation_type, GroupRelationType)
+                else str(relation_type)
+            )
+            if relation_value not in outbound_types:
+                continue
+
+            lease_detail = getattr(contract, "lease_detail", None)
+            lessee_party = getattr(contract, "lessee_party", None)
+            lessee_name = (
+                getattr(lease_detail, "tenant_name", None)
+                or getattr(lessee_party, "name", None)
+                or "未知租户"
+            )
+            party_id = str(getattr(contract, "lessee_party_id", "")).strip() or None
+            party_key = (lessee_name, relation_value)
+            prev_party_id, prev_count = party_counter.get(party_key, (party_id, 0))
+            party_counter[party_key] = (prev_party_id or party_id, prev_count + 1)
+
+        customer_summary = [
+            ContractPartyItem(
+                party_id=party_id,
+                party_name=party_name,
+                group_relation_type=relation_type,
+                contract_count=contract_count,
+            )
+            for (party_name, relation_type), (
+                party_id,
+                contract_count,
+            ) in party_counter.items()
+        ]
+
+        rentable_area = _as_decimal(getattr(asset, "rentable_area", None))
+
+        return AssetLeaseSummaryResponse(
+            asset_id=str(getattr(asset, "id")),
+            period_start=period_start,
+            period_end=period_end,
+            total_contracts=len(contracts),
+            total_rented_area=0.0,
+            rentable_area=float(rentable_area),
+            occupancy_rate=0.0,
+            by_type=by_type,
+            customer_summary=customer_summary,
+        )
+
     async def get_asset_history_records(
         self,
         asset_id: str,
@@ -407,6 +616,303 @@ class AssetService:
             asset_id=asset_id,
         )
         return history_records
+
+    async def get_asset_management_history(
+        self,
+        asset_id: str,
+        *,
+        party_filter: PartyFilter | None = None,
+        current_user_id: str | None = None,
+    ) -> list[AssetManagementHistory]:
+        """获取资产经营方变更历史。"""
+        await self.get_asset(
+            asset_id,
+            party_filter=party_filter,
+            current_user_id=current_user_id,
+        )
+        return await asset_management_history_crud.get_by_asset_id(
+            self.db,
+            asset_id=asset_id,
+        )
+
+    async def get_asset_project_history(
+        self,
+        asset_id: str,
+        *,
+        party_filter: PartyFilter | None = None,
+        current_user_id: str | None = None,
+    ) -> list[ProjectAsset]:
+        """获取资产项目关联历史（含当前有效和已终止绑定）。"""
+        await self.get_asset(
+            asset_id,
+            party_filter=party_filter,
+            current_user_id=current_user_id,
+        )
+        return await project_asset_crud.get_asset_projects(
+            self.db,
+            asset_id=asset_id,
+            active_only=False,
+        )
+
+    async def _list_asset_review_logs(self, asset_id: str) -> list[AssetReviewLog]:
+        stmt = (
+            select(AssetReviewLog)
+            .where(AssetReviewLog.asset_id == asset_id)
+            .order_by(AssetReviewLog.created_at.desc())
+        )
+        return list((await self.db.execute(stmt)).scalars().all())
+
+    async def get_asset_review_logs(
+        self,
+        asset_id: str,
+        *,
+        party_filter: PartyFilter | None = None,
+        current_user_id: str | None = None,
+    ) -> list[AssetReviewLog]:
+        await self.get_asset(
+            asset_id,
+            party_filter=party_filter,
+            current_user_id=current_user_id,
+        )
+        return await self._list_asset_review_logs(asset_id)
+
+    @staticmethod
+    def _require_review_reason(action: str, reason: str) -> str:
+        normalized_reason = reason.strip()
+        if normalized_reason == "":
+            raise validation_error(
+                f"{action}原因不能为空",
+                field_errors={"reason": "required"},
+            )
+        return normalized_reason
+
+    @staticmethod
+    def _ensure_allowed_review_status(
+        asset: Asset,
+        *,
+        allowed_statuses: set[str],
+        action: str,
+    ) -> None:
+        if asset.review_status not in allowed_statuses:
+            allowed_labels = ", ".join(sorted(allowed_statuses))
+            raise operation_not_allowed(
+                f"资产当前审核状态为 {asset.review_status}，仅允许在 {allowed_labels} 状态执行{action}",
+                reason="asset_invalid_review_status_transition",
+            )
+
+    async def _append_asset_review_log(
+        self,
+        *,
+        asset_id: str,
+        action: str,
+        from_status: str,
+        to_status: str,
+        operator: str,
+        reason: str | None = None,
+        context: dict[str, Any] | None = None,
+    ) -> None:
+        log = AssetReviewLog()
+        log.asset_id = asset_id
+        log.action = action
+        log.from_status = from_status
+        log.to_status = to_status
+        log.operator = operator
+        log.reason = reason
+        log.context = context
+        self.db.add(log)
+
+    async def _count_active_contracts_for_asset(self, asset_id: str) -> int:
+        stmt = (
+            select(func.count(Contract.contract_id))
+            .select_from(Contract)
+            .join(
+                contract_assets, contract_assets.c.contract_id == Contract.contract_id
+            )
+            .where(
+                contract_assets.c.asset_id == asset_id,
+                Contract.data_status == "正常",
+                Contract.status == ContractLifecycleStatus.ACTIVE,
+            )
+        )
+        return int((await self.db.execute(stmt)).scalar_one())
+
+    async def submit_asset_review(self, asset_id: str, operator: str) -> Asset:
+        try:
+            async with self._transaction():
+                asset = await self.get_asset(asset_id, use_cache=False)
+                self._ensure_allowed_review_status(
+                    asset,
+                    allowed_statuses={AssetReviewStatus.DRAFT.value},
+                    action="提审",
+                )
+                from_status = asset.review_status
+                asset.review_status = AssetReviewStatus.PENDING.value
+                asset.review_by = None
+                asset.reviewed_at = None
+                asset.review_reason = None
+                asset.updated_by = operator
+                asset.updated_at = _utcnow_naive()
+                self.db.add(asset)
+                await self._append_asset_review_log(
+                    asset_id=asset.id,
+                    action="submit",
+                    from_status=from_status,
+                    to_status=asset.review_status,
+                    operator=operator,
+                )
+                await self.db.flush()
+                return asset
+        except StaleDataError as exc:
+            raise conflict(
+                "资产已被其他人更新，请刷新后重试",
+                resource_type="Asset",
+            ) from exc
+
+    async def approve_asset_review(self, asset_id: str, reviewer: str) -> Asset:
+        try:
+            async with self._transaction():
+                asset = await self.get_asset(asset_id, use_cache=False)
+                self._ensure_allowed_review_status(
+                    asset,
+                    allowed_statuses={AssetReviewStatus.PENDING.value},
+                    action="审核通过",
+                )
+                from_status = asset.review_status
+                asset.review_status = AssetReviewStatus.APPROVED.value
+                asset.review_by = reviewer
+                asset.reviewed_at = _utcnow_naive()
+                asset.review_reason = None
+                asset.updated_by = reviewer
+                asset.updated_at = _utcnow_naive()
+                self.db.add(asset)
+                await self._append_asset_review_log(
+                    asset_id=asset.id,
+                    action="approve",
+                    from_status=from_status,
+                    to_status=asset.review_status,
+                    operator=reviewer,
+                )
+                await self.db.flush()
+                return asset
+        except StaleDataError as exc:
+            raise conflict(
+                "资产已被其他人更新，请刷新后重试",
+                resource_type="Asset",
+            ) from exc
+
+    async def reject_asset_review(
+        self,
+        asset_id: str,
+        reviewer: str,
+        reason: str,
+    ) -> Asset:
+        normalized_reason = self._require_review_reason("驳回", reason)
+        try:
+            async with self._transaction():
+                asset = await self.get_asset(asset_id, use_cache=False)
+                self._ensure_allowed_review_status(
+                    asset,
+                    allowed_statuses={AssetReviewStatus.PENDING.value},
+                    action="驳回",
+                )
+                from_status = asset.review_status
+                asset.review_status = AssetReviewStatus.DRAFT.value
+                asset.review_by = reviewer
+                asset.reviewed_at = _utcnow_naive()
+                asset.review_reason = normalized_reason
+                asset.updated_by = reviewer
+                asset.updated_at = _utcnow_naive()
+                self.db.add(asset)
+                await self._append_asset_review_log(
+                    asset_id=asset.id,
+                    action="reject",
+                    from_status=from_status,
+                    to_status=asset.review_status,
+                    operator=reviewer,
+                    reason=normalized_reason,
+                )
+                await self.db.flush()
+                return asset
+        except StaleDataError as exc:
+            raise conflict(
+                "资产已被其他人更新，请刷新后重试",
+                resource_type="Asset",
+            ) from exc
+
+    async def reverse_asset_review(
+        self,
+        asset_id: str,
+        reviewer: str,
+        reason: str,
+    ) -> Asset:
+        normalized_reason = self._require_review_reason("反审核", reason)
+        try:
+            async with self._transaction():
+                asset = await self.get_asset(asset_id, use_cache=False)
+                self._ensure_allowed_review_status(
+                    asset,
+                    allowed_statuses={AssetReviewStatus.APPROVED.value},
+                    action="反审核",
+                )
+                from_status = asset.review_status
+                asset.review_status = AssetReviewStatus.REVERSED.value
+                asset.review_by = reviewer
+                asset.reviewed_at = _utcnow_naive()
+                asset.review_reason = normalized_reason
+                asset.updated_by = reviewer
+                asset.updated_at = _utcnow_naive()
+                active_contract_count = await self._count_active_contracts_for_asset(
+                    asset.id
+                )
+                self.db.add(asset)
+                await self._append_asset_review_log(
+                    asset_id=asset.id,
+                    action="reverse",
+                    from_status=from_status,
+                    to_status=asset.review_status,
+                    operator=reviewer,
+                    reason=normalized_reason,
+                    context={"active_contract_count": active_contract_count},
+                )
+                await self.db.flush()
+                return asset
+        except StaleDataError as exc:
+            raise conflict(
+                "资产已被其他人更新，请刷新后重试",
+                resource_type="Asset",
+            ) from exc
+
+    async def resubmit_asset_review(self, asset_id: str, operator: str) -> Asset:
+        try:
+            async with self._transaction():
+                asset = await self.get_asset(asset_id, use_cache=False)
+                self._ensure_allowed_review_status(
+                    asset,
+                    allowed_statuses={AssetReviewStatus.REVERSED.value},
+                    action="重提审",
+                )
+                from_status = asset.review_status
+                asset.review_status = AssetReviewStatus.PENDING.value
+                asset.review_by = None
+                asset.reviewed_at = None
+                asset.review_reason = None
+                asset.updated_by = operator
+                asset.updated_at = _utcnow_naive()
+                self.db.add(asset)
+                await self._append_asset_review_log(
+                    asset_id=asset.id,
+                    action="resubmit",
+                    from_status=from_status,
+                    to_status=asset.review_status,
+                    operator=operator,
+                )
+                await self.db.flush()
+                return asset
+        except StaleDataError as exc:
+            raise conflict(
+                "资产已被其他人更新，请刷新后重试",
+                resource_type="Asset",
+            ) from exc
 
     async def get_distinct_field_values(
         self,
@@ -478,7 +984,9 @@ class AssetService:
             or getattr(current_user, "id", None)
             or "system"
         )
-        default_org_id = getattr(current_user, "default_organization_id", None)  # DEPRECATED legacy org scope fallback
+        default_org_id = getattr(
+            current_user, "default_organization_id", None
+        )  # DEPRECATED legacy org scope fallback
         organization_id = (  # DEPRECATED alias
             str(default_org_id)
             if default_org_id is not None and str(default_org_id).strip() != ""
@@ -500,18 +1008,26 @@ class AssetService:
 
             # 2. 名称查重
             existing_asset = await asset_crud.get_by_name_async(
-                db=self.db, property_name=asset_in.property_name
+                db=self.db, asset_name=asset_in.asset_name
             )
             if existing_asset:
-                raise DuplicateResourceError(
-                    "Asset", "property_name", asset_in.property_name
-                )
+                raise DuplicateResourceError("Asset", "asset_name", asset_in.asset_name)
 
             # 3. 自动计算与一致性验证
             asset_data = asset_in.model_dump()
             asset_data = await self._resolve_ownership(asset_data)
             calculated_fields = AssetCalculator.auto_calculate_fields(asset_data)
             final_data = {**asset_data, **calculated_fields}
+
+            # 3a. 拼接半结构化地址（address 为只读展示字段，创建时必须由子字段生成）
+            composed_address = _compose_address(final_data)
+            if composed_address is not None:
+                final_data["address"] = composed_address
+            else:
+                raise validation_error(
+                    "地址信息不完整：请提供 address_detail 以生成地址",
+                    field_errors={"address_detail": "required_for_address_composition"},
+                )
 
             area_errors = AssetCalculator.validate_area_consistency(final_data)
             if area_errors:
@@ -566,6 +1082,12 @@ class AssetService:
                     current_user_id=str(user_id) if user_id is not None else None,
                 )
 
+                if asset.review_status in _EDIT_BLOCKED_REVIEW_STATUSES:
+                    raise operation_not_allowed(
+                        f"资产处于 {asset.review_status} 状态，不允许编辑业务字段，请先反审核",
+                        reason="asset_edit_blocked_by_review_status",
+                    )
+
                 # 2. 枚举值验证 (如果提供了更新数据)
                 validation_service = get_enum_validation_service_async(self.db)
                 # only validate fields that are present
@@ -595,13 +1117,13 @@ class AssetService:
                 )
 
                 # 3. 名称查重 (如果修改了名称)
-                new_name = update_data_raw.get("property_name")
-                if new_name and new_name != asset.property_name:
+                new_name = update_data_raw.get("asset_name")
+                if new_name and new_name != asset.asset_name:
                     existing_asset = await asset_crud.get_by_name_async(
-                        db=self.db, property_name=new_name
+                        db=self.db, asset_name=new_name
                     )
                     if existing_asset and existing_asset.id != asset_id:
-                        raise DuplicateResourceError("Asset", "property_name", new_name)
+                        raise DuplicateResourceError("Asset", "asset_name", new_name)
 
                 # 4. 自动计算与一致性验证
                 # 需要合并当前数据和更新数据
@@ -635,7 +1157,41 @@ class AssetService:
                         if k not in update_data_raw
                     },
                 }
+
+                # 4a. 如地址子字段有变更，重新拼接 address
+                if any(f in final_update for f in _ADDRESS_SUB_FIELDS):
+                    composed_address = _compose_address(
+                        final_update, current_asset=asset
+                    )
+                    if composed_address:
+                        final_update["address"] = composed_address
+
                 calculated_asset_in = AssetUpdate(**final_update)
+
+                # REQ-AST-002: 经营方变更自动记录历史
+                new_manager = _normalize_optional_str(
+                    final_update.get("manager_party_id")
+                )
+                old_manager = _normalize_optional_str(
+                    getattr(asset, "manager_party_id", None)
+                )
+                if new_manager and old_manager and new_manager != old_manager:
+                    # 结束旧经营方记录
+                    await asset_management_history_crud.close_active(
+                        self.db,
+                        asset_id=asset_id,
+                        manager_party_id=old_manager,
+                        commit=False,
+                    )
+                    # 创建新经营方记录
+                    await asset_management_history_crud.create(
+                        self.db,
+                        asset_id=asset_id,
+                        manager_party_id=new_manager,
+                        change_reason=f"经营方变更: {old_manager} → {new_manager}",
+                        changed_by=str(operator) if operator is not None else None,
+                        commit=False,
+                    )
 
                 updated = cast(
                     Asset,
@@ -669,6 +1225,11 @@ class AssetService:
                     use_cache=False,
                     current_user_id=str(user_id) if user_id is not None else None,
                 )
+                if asset.review_status in _EDIT_BLOCKED_REVIEW_STATUSES:
+                    raise operation_not_allowed(
+                        f"资产处于 {asset.review_status} 状态，不允许删除，请先反审核",
+                        reason="asset_delete_blocked_by_review_status",
+                    )
                 await self._ensure_asset_not_linked(asset_id)
                 operator = (
                     getattr(current_user, "username", None)
@@ -678,7 +1239,7 @@ class AssetService:
                 history = AssetHistory()
                 history.asset_id = asset.id
                 history.operation_type = "DELETE"
-                history.description = f"删除资产: {asset.property_name}"
+                history.description = f"删除资产: {asset.asset_name}"
                 history.operator = str(operator) if operator is not None else None
                 self.db.add(history)
                 asset.data_status = DataStatusValues.ASSET_DELETED
@@ -721,7 +1282,7 @@ class AssetService:
                 history = AssetHistory()
                 history.asset_id = asset.id
                 history.operation_type = "RESTORE"
-                history.description = f"恢复资产: {asset.property_name}"
+                history.description = f"恢复资产: {asset.asset_name}"
                 history.operator = str(operator) if operator is not None else None
                 self.db.add(history)
                 asset.data_status = DataStatusValues.ASSET_NORMAL

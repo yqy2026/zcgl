@@ -52,16 +52,20 @@ def main() -> int:
                     print("[SKIP] assets/project_assets table missing")
                     return 0
 
-                asset_rows = conn.execute(
-                    sa.text(
-                        """
+                asset_rows = (
+                    conn.execute(
+                        sa.text(
+                            """
                         SELECT id, project_id
                         FROM assets
                         WHERE project_id IS NOT NULL
                           AND project_id <> ''
                         """
+                        )
                     )
-                ).mappings().all()
+                    .mappings()
+                    .all()
+                )
                 scanned = len(asset_rows)
 
                 now = _utcnow_naive()

@@ -30,7 +30,10 @@ class AsyncTask(Base):
 
     # 时间信息
     created_at = Column(
-        DateTime, nullable=False, default=lambda: datetime.now(UTC).replace(tzinfo=None), comment="创建时间"
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        comment="创建时间",
     )
     started_at = Column(DateTime, comment="开始时间")
     completed_at = Column(DateTime, comment="完成时间")
@@ -94,7 +97,9 @@ class AsyncTask(Base):
             return 0.0  # pragma: no cover
 
         completed_at = self.completed_at  # pragma: no cover
-        end_time = completed_at or datetime.now(UTC).replace(tzinfo=None)  # pragma: no cover
+        end_time = completed_at or datetime.now(UTC).replace(
+            tzinfo=None
+        )  # pragma: no cover
         return (end_time - started_at).total_seconds()  # pragma: no cover
 
 
@@ -113,7 +118,10 @@ class TaskHistory(Base):
 
     # 时间信息
     created_at = Column(
-        DateTime, nullable=False, default=lambda: datetime.now(UTC).replace(tzinfo=None), comment="创建时间"
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        comment="创建时间",
     )
 
     # 用户信息
@@ -149,7 +157,10 @@ class ExcelTaskConfig(Base):
     # 用户和创建信息
     created_by = Column(String(100), comment="创建者")
     created_at = Column(
-        DateTime, nullable=False, default=lambda: datetime.now(UTC).replace(tzinfo=None), comment="创建时间"
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        comment="创建时间",
     )
     updated_at = Column(
         DateTime,

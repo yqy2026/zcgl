@@ -157,7 +157,9 @@ describe('UserManagementPage', () => {
 
     expect(await screen.findByText('主体标签绑定 - 张三')).toBeInTheDocument();
     await waitFor(() => {
-      expect(userService.getUserPartyBindings).toHaveBeenCalledWith('user-1', { active_only: true });
+      expect(userService.getUserPartyBindings).toHaveBeenCalledWith('user-1', {
+        active_only: true,
+      });
       expect(partyService.getParties).toHaveBeenCalledWith({ limit: 500 });
     });
   }, 20_000);

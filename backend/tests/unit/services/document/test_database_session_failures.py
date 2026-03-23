@@ -7,9 +7,8 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from sqlalchemy.exc import IntegrityError, OperationalError, SQLAlchemyError
+from sqlalchemy.exc import OperationalError, SQLAlchemyError
 
-from src.core.exception_handler import InternalServerError
 from src.services.document.pdf_import_service import PDFImportService
 
 
@@ -134,25 +133,22 @@ class TestDatabaseSessionManagement:
         mock_context.__aexit__.assert_awaited_once()
 
     @pytest.mark.asyncio
-    async def test_confirm_import_integrity_error_returns_user_error(self):
-        """测试 confirm_import 在完整性约束冲突时返回用户错误"""
+    async def test_confirm_import_missing_required_context_does_not_commit(self):
+        """缺少新体系必填上下文时，confirm_import 不应提交任何事务。"""
         service = PDFImportService()
 
         mock_import_session = MagicMock()
+        mock_import_session.status = "ready_for_review"
         mock_db = MagicMock()
-        mock_db.execute = AsyncMock(
-            return_value=_mock_execute_scalars_first(mock_import_session)
-        )
         mock_db.flush = AsyncMock()
         mock_db.commit = AsyncMock()
         mock_db.refresh = AsyncMock()
         mock_db.rollback = AsyncMock()
-        mock_db.add = MagicMock(
-            side_effect=IntegrityError("Duplicate contract_number", None, None)
-        )
+        mock_db.add = MagicMock()
 
         session_id = "test-session"
         confirmed_data = {
+            "owner_party_id": "party-owner",
             "contract_data": {
                 "contract_number": "CT001",
                 "tenant_name": "Test Tenant",
@@ -161,45 +157,18 @@ class TestDatabaseSessionManagement:
             }
         }
 
-        result = await service.confirm_import(
-            mock_db, session_id, confirmed_data, user_id=1
-        )
+        with patch(
+            "src.services.document.pdf_import_service.pdf_import_session_crud.get_by_session_id_async",
+            new=AsyncMock(return_value=mock_import_session),
+        ):
+            result = await service.confirm_import(
+                mock_db, session_id, confirmed_data, user_id=1
+            )
 
         assert result["success"] is False
-        assert result["error_category"] == "USER_ERROR"
-        assert result["error_type"] == "INTEGRITY_ERROR"
-        assert "suggested_action" in result
-        mock_db.rollback.assert_awaited_once()
-
-    @pytest.mark.asyncio
-    async def test_confirm_import_operational_error_raises_exception(self):
-        """测试 confirm_import 在数据库操作错误时抛出异常（系统错误）"""
-        service = PDFImportService()
-
-        mock_import_session = MagicMock()
-        mock_db = MagicMock()
-        mock_db.execute = AsyncMock(
-            return_value=_mock_execute_scalars_first(mock_import_session)
-        )
-        mock_db.flush = AsyncMock()
-        mock_db.commit = AsyncMock(
-            side_effect=OperationalError("Connection timeout", None, None)
-        )
-        mock_db.refresh = AsyncMock()
-        mock_db.rollback = AsyncMock()
-        mock_db.add = MagicMock()
-
-        session_id = "test-session"
-        confirmed_data = {
-            "contract_data": {
-                "contract_number": "CT002",
-                "tenant_name": "Test",
-                "start_date": "2024-01-01",
-                "end_date": "2024-12-31",
-            }
-        }
-
-        with pytest.raises(InternalServerError) as exc_info:
-            await service.confirm_import(mock_db, session_id, confirmed_data, user_id=1)
-
-        assert "Database error creating contract" in str(exc_info.value)
+        assert "Missing required fields" in result["error"]
+        mock_db.add.assert_not_called()
+        mock_db.flush.assert_not_awaited()
+        mock_db.commit.assert_not_awaited()
+        mock_db.refresh.assert_not_awaited()
+        mock_db.rollback.assert_not_awaited()

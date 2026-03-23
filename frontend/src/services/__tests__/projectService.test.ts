@@ -57,8 +57,8 @@ describe('ProjectService', () => {
         success: true,
         data: {
           items: [
-            { id: '1', name: '项目A', code: 'PRJ-001' },
-            { id: '2', name: '项目B', code: 'PRJ-002' },
+            { id: '1', project_name: '项目A', project_code: 'PRJ-001', status: 'active' },
+            { id: '2', project_name: '项目B', project_code: 'PRJ-002', status: 'paused' },
           ],
           total: 2,
           page: 1,
@@ -97,21 +97,25 @@ describe('ProjectService', () => {
         data: { items: [], total: 0, page: 1, page_size: 10, pages: 0 },
       });
 
-      await service.getProjects({ keyword: '测试', is_active: true, ownership_id: 'own-1' });
+      await service.getProjects({ keyword: '测试', status: 'active', owner_party_id: 'own-1' });
 
       expect(apiClient.get).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({
           params: expect.objectContaining({
             keyword: '测试',
-            is_active: true,
-            ownership_id: 'own-1',
+            status: 'active',
+            owner_party_id: 'own-1',
           }),
         })
       );
+
+      const [, options] = vi.mocked(apiClient.get).mock.calls[0] ?? [];
+      const params = (options as { params?: Record<string, unknown> } | undefined)?.params;
+      expect(params).not.toHaveProperty('ownership_id');
     });
 
-    it('should apply owner_party_id filter and keep legacy compatibility param', async () => {
+    it('should apply owner_party_id filter', async () => {
       vi.mocked(apiClient.get).mockResolvedValue({
         success: true,
         data: { items: [], total: 0, page: 1, page_size: 10, pages: 0 },
@@ -124,10 +128,35 @@ describe('ProjectService', () => {
         expect.objectContaining({
           params: expect.objectContaining({
             owner_party_id: 'party-1',
-            ownership_id: 'party-1',
           }),
         })
       );
+
+      const [, options] = vi.mocked(apiClient.get).mock.calls[0] ?? [];
+      const params = (options as { params?: Record<string, unknown> } | undefined)?.params;
+      expect(params).not.toHaveProperty('ownership_id');
+    });
+
+    it('should only send status filter when status is provided', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        success: true,
+        data: { items: [], total: 0, page: 1, page_size: 10, pages: 0 },
+      });
+
+      await service.getProjects({ status: 'active' });
+
+      expect(apiClient.get).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          params: expect.objectContaining({
+            status: 'active',
+          }),
+        })
+      );
+
+      const [, options] = vi.mocked(apiClient.get).mock.calls[0] ?? [];
+      const params = (options as { params?: Record<string, unknown> } | undefined)?.params;
+      expect(params).not.toHaveProperty('project_status');
     });
 
     it('should throw error on API failure', async () => {
@@ -144,9 +173,13 @@ describe('ProjectService', () => {
     it('should return project detail', async () => {
       const mockProject = {
         id: '1',
-        name: '测试项目',
-        code: 'PRJ-001',
-        is_active: true,
+        project_name: '测试项目',
+        project_code: 'PRJ-001',
+        status: 'active',
+        data_status: '正常',
+        review_status: 'draft',
+        created_at: '2026-01-01',
+        updated_at: '2026-01-02',
       };
 
       vi.mocked(apiClient.get).mockResolvedValue({
@@ -156,8 +189,8 @@ describe('ProjectService', () => {
 
       const result = await service.getProject('1');
 
-      expect(result.name).toBe('测试项目');
-      expect(result.code).toBe('PRJ-001');
+      expect(result.project_name).toBe('测试项目');
+      expect(result.project_code).toBe('PRJ-001');
     });
 
     it('should throw error when not found', async () => {
@@ -170,12 +203,62 @@ describe('ProjectService', () => {
     });
   });
 
+  describe('getProjectAssets', () => {
+    it('should return active assets response', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        success: true,
+        data: {
+          items: [
+            {
+              id: 'asset-1',
+              asset_name: '资产A',
+              address: '测试地址',
+              ownership_status: '已确权',
+              property_nature: '经营性',
+              usage_status: '出租',
+              include_in_occupancy_rate: true,
+              is_litigated: false,
+              is_sublease: false,
+              created_at: '2026-01-01T00:00:00Z',
+              updated_at: '2026-01-01T00:00:00Z',
+            },
+          ],
+          total: 1,
+          summary: {
+            total_assets: 1,
+            total_rentable_area: 100,
+            total_rented_area: 80,
+            occupancy_rate: 80,
+          },
+        },
+      });
+
+      const result = await service.getProjectAssets('project-1');
+
+      expect(result.total).toBe(1);
+      expect(result.summary.occupancy_rate).toBe(80);
+      expect(apiClient.get).toHaveBeenCalledWith(
+        expect.stringContaining('/projects/project-1/assets'),
+        expect.any(Object)
+      );
+    });
+
+    it('should throw error when API returns failure', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        success: false,
+        error: '获取失败',
+      });
+
+      await expect(service.getProjectAssets('project-1')).rejects.toThrow();
+    });
+  });
+
   describe('createProject', () => {
     it('should create project successfully', async () => {
       const newProject = {
-        name: '新项目',
-        code: 'PRJ-003',
-        is_active: true,
+        project_name: '新项目',
+        project_code: 'PRJ-003',
+        status: 'active',
       };
 
       vi.mocked(apiClient.post).mockResolvedValue({
@@ -186,7 +269,7 @@ describe('ProjectService', () => {
       const result = await service.createProject(newProject);
 
       expect(result.id).toBe('3');
-      expect(result.name).toBe('新项目');
+      expect(result.project_name).toBe('新项目');
     });
 
     it('should throw error on creation failure', async () => {
@@ -195,15 +278,15 @@ describe('ProjectService', () => {
         error: '编码重复',
       });
 
-      await expect(service.createProject({ name: '测试', code: 'PRJ-001' })).rejects.toThrow(
-        '创建项目失败'
-      );
+      await expect(
+        service.createProject({ project_name: '测试', project_code: 'PRJ-001' })
+      ).rejects.toThrow('创建项目失败');
     });
   });
 
   describe('updateProject', () => {
     it('should update project successfully', async () => {
-      const updateData = { name: '更新后的名称' };
+      const updateData = { project_name: '更新后的名称' };
 
       vi.mocked(apiClient.put).mockResolvedValue({
         success: true,
@@ -212,7 +295,7 @@ describe('ProjectService', () => {
 
       const result = await service.updateProject('1', updateData);
 
-      expect(result.name).toBe('更新后的名称');
+      expect(result.project_name).toBe('更新后的名称');
     });
   });
 
@@ -247,7 +330,7 @@ describe('ProjectService', () => {
       vi.mocked(apiClient.post).mockResolvedValue({
         success: true,
         data: {
-          items: [{ id: '1', name: '搜索结果' }],
+          items: [{ id: '1', project_name: '搜索结果', project_code: 'PRJ-100', status: 'active' }],
           total: 1,
           page: 1,
           page_size: 10,
@@ -259,6 +342,31 @@ describe('ProjectService', () => {
 
       expect(result.items).toHaveLength(1);
     });
+
+    it('should forward owner_party_id filter', async () => {
+      vi.mocked(apiClient.post).mockResolvedValue({
+        success: true,
+        data: {
+          items: [],
+          total: 0,
+          page: 1,
+          page_size: 10,
+          pages: 0,
+        },
+      });
+
+      await service.searchProjects({ owner_party_id: 'party-1' });
+
+      expect(apiClient.post).toHaveBeenCalledWith(
+        '/projects/search',
+        expect.objectContaining({
+          owner_party_id: 'party-1',
+        }),
+        expect.objectContaining({
+          smartExtract: true,
+        })
+      );
+    });
   });
 
   describe('searchProjectsByKeyword', () => {
@@ -266,7 +374,7 @@ describe('ProjectService', () => {
       vi.mocked(apiClient.post).mockResolvedValue({
         success: true,
         data: {
-          items: [{ id: '1', name: '测试项目' }],
+          items: [{ id: '1', project_name: '测试项目', project_code: 'PRJ-100', status: 'active' }],
           total: 1,
           page: 1,
           page_size: 10,
@@ -296,22 +404,29 @@ describe('ProjectService', () => {
     it('should toggle status successfully', async () => {
       vi.mocked(apiClient.put).mockResolvedValue({
         success: true,
-        data: { id: '1', is_active: false },
+        data: {
+          id: '1',
+          project_name: '项目A',
+          project_code: 'PRJ-001',
+          status: 'paused',
+          data_status: '正常',
+          review_status: 'draft',
+          created_at: '2026-01-01',
+          updated_at: '2026-01-02',
+        },
       });
 
       const result = await service.toggleProjectStatus('1');
 
-      expect(result.is_active).toBe(false);
+      expect(result.status).toBe('paused');
     });
   });
 
   describe('getProjectStatistics', () => {
     it('should return statistics', async () => {
       const mockStats = {
-        total: 50,
-        active: 40,
-        inactive: 10,
-        total_assets: 200,
+        total_projects: 50,
+        active_projects: 40,
       };
 
       vi.mocked(apiClient.get).mockResolvedValue({
@@ -321,8 +436,8 @@ describe('ProjectService', () => {
 
       const result = await service.getProjectStatistics();
 
-      expect(result.total).toBe(50);
-      expect(result.active).toBe(40);
+      expect(result.total_projects).toBe(50);
+      expect(result.active_projects).toBe(40);
     });
   });
 
@@ -333,8 +448,8 @@ describe('ProjectService', () => {
   describe('getProjectOptions', () => {
     it('should return dropdown options', async () => {
       const mockOptions = [
-        { id: '1', name: '项目A', code: 'PRJ-001' },
-        { id: '2', name: '项目B', code: 'PRJ-002' },
+        { id: '1', project_name: '项目A', project_code: 'PRJ-001' },
+        { id: '2', project_name: '项目B', project_code: 'PRJ-002' },
       ];
 
       vi.mocked(apiClient.get).mockResolvedValue({
@@ -347,17 +462,19 @@ describe('ProjectService', () => {
       expect(result).toHaveLength(2);
     });
 
-    it('should filter by active status', async () => {
+    it('should pass status filter when loading dropdown options', async () => {
       vi.mocked(apiClient.get).mockResolvedValue({
         success: true,
         data: [],
       });
 
-      await service.getProjectOptions(false);
+      await service.getProjectOptions('paused');
 
       expect(apiClient.get).toHaveBeenCalledWith(
-        expect.stringContaining('is_active=false'),
-        expect.any(Object)
+        expect.stringContaining('/dropdown-options'),
+        expect.objectContaining({
+          params: expect.objectContaining({ status: 'paused' }),
+        })
       );
     });
   });
@@ -366,7 +483,7 @@ describe('ProjectService', () => {
     it('should return formatted select options', async () => {
       vi.mocked(apiClient.get).mockResolvedValue({
         success: true,
-        data: [{ id: '1', name: '项目A', code: 'PRJ-001' }],
+        data: [{ id: '1', project_name: '项目A', project_code: 'PRJ-001' }],
       });
 
       const result = await service.getProjectSelectOptions();
@@ -406,7 +523,7 @@ describe('ProjectService', () => {
       vi.mocked(apiClient.get).mockResolvedValue({
         success: true,
         data: {
-          items: [{ id: '1', code: 'PRJ-001' }],
+          items: [{ id: '1', project_code: 'PRJ-001', project_name: '项目A', status: 'active' }],
           total: 1,
           page: 1,
           page_size: 10,
@@ -423,7 +540,7 @@ describe('ProjectService', () => {
       vi.mocked(apiClient.get).mockResolvedValue({
         success: true,
         data: {
-          items: [{ id: '1', code: 'PRJ-001' }],
+          items: [{ id: '1', project_code: 'PRJ-001', project_name: '项目A', status: 'active' }],
           total: 1,
           page: 1,
           page_size: 10,
@@ -458,7 +575,17 @@ describe('ProjectService', () => {
     it('should return canDelete true when no assets', async () => {
       vi.mocked(apiClient.get).mockResolvedValue({
         success: true,
-        data: { id: '1', name: '测试', asset_count: 0 },
+        data: {
+          id: '1',
+          project_name: '测试',
+          project_code: 'PRJ-001',
+          status: 'active',
+          data_status: '正常',
+          review_status: 'draft',
+          created_at: '2026-01-01',
+          updated_at: '2026-01-02',
+          asset_count: 0,
+        },
       });
 
       const result = await service.canDeleteProject('1');
@@ -469,7 +596,17 @@ describe('ProjectService', () => {
     it('should return canDelete false when has assets', async () => {
       vi.mocked(apiClient.get).mockResolvedValue({
         success: true,
-        data: { id: '1', name: '测试', asset_count: 5 },
+        data: {
+          id: '1',
+          project_name: '测试',
+          project_code: 'PRJ-001',
+          status: 'active',
+          data_status: '正常',
+          review_status: 'draft',
+          created_at: '2026-01-01',
+          updated_at: '2026-01-02',
+          asset_count: 5,
+        },
       });
 
       const result = await service.canDeleteProject('1');
@@ -494,45 +631,12 @@ describe('ProjectService', () => {
   // 权属方筛选测试
   // ==========================================================================
 
-  describe('getProjectsByOwnership', () => {
-    it('should return projects for ownership', async () => {
-      vi.mocked(apiClient.get).mockResolvedValue({
-        success: true,
-        data: {
-          items: [{ id: '1', ownership_id: 'own-1' }],
-          total: 1,
-          page: 1,
-          page_size: 10,
-          pages: 1,
-        },
-      });
-
-      const result = await service.getProjectsByOwnership('own-1');
-
-      expect(result).toHaveLength(1);
-      expect(apiClient.get).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({
-          params: expect.objectContaining({ ownership_id: 'own-1' }),
-        })
-      );
-    });
-
-    it('should return empty array on error', async () => {
-      vi.mocked(apiClient.get).mockRejectedValue(new Error('Network error'));
-
-      const result = await service.getProjectsByOwnership('own-1');
-
-      expect(result).toEqual([]);
-    });
-  });
-
   describe('getProjectsByOwnerParty', () => {
     it('should return projects for owner party', async () => {
       vi.mocked(apiClient.get).mockResolvedValue({
         success: true,
         data: {
-          items: [{ id: '1' }],
+          items: [{ id: '1', project_name: '项目A', project_code: 'PRJ-001', status: 'active' }],
           total: 1,
           page: 1,
           page_size: 10,
@@ -548,10 +652,13 @@ describe('ProjectService', () => {
         expect.objectContaining({
           params: expect.objectContaining({
             owner_party_id: 'party-1',
-            ownership_id: 'party-1',
           }),
         })
       );
+
+      const [, options] = vi.mocked(apiClient.get).mock.calls[0] ?? [];
+      const params = (options as { params?: Record<string, unknown> } | undefined)?.params;
+      expect(params).not.toHaveProperty('ownership_id');
     });
   });
 
@@ -564,7 +671,7 @@ describe('ProjectService', () => {
       vi.mocked(apiClient.get).mockResolvedValue({
         success: true,
         data: {
-          items: [{ id: '1', is_active: true }],
+          items: [{ id: '1', status: 'active', project_name: '项目A', project_code: 'PRJ-001' }],
           total: 1,
           page: 1,
           page_size: 10,
@@ -578,7 +685,7 @@ describe('ProjectService', () => {
       expect(apiClient.get).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({
-          params: expect.objectContaining({ is_active: true }),
+          params: expect.objectContaining({ status: 'active' }),
         })
       );
     });
@@ -589,7 +696,9 @@ describe('ProjectService', () => {
       vi.mocked(apiClient.get).mockResolvedValue({
         success: true,
         data: {
-          items: [{ id: '2', is_active: false }],
+          items: [
+            { id: '2', status: 'terminated', project_name: '项目B', project_code: 'PRJ-002' },
+          ],
           total: 1,
           page: 1,
           page_size: 10,
@@ -610,8 +719,32 @@ describe('ProjectService', () => {
   describe('getProjectsByIds', () => {
     it('should return multiple projects', async () => {
       vi.mocked(apiClient.get)
-        .mockResolvedValueOnce({ success: true, data: { id: '1', is_active: true } })
-        .mockResolvedValueOnce({ success: true, data: { id: '2', is_active: true } });
+        .mockResolvedValueOnce({
+          success: true,
+          data: {
+            id: '1',
+            project_name: '项目A',
+            project_code: 'PRJ-001',
+            status: 'active',
+            data_status: '正常',
+            review_status: 'draft',
+            created_at: '2026-01-01',
+            updated_at: '2026-01-02',
+          },
+        })
+        .mockResolvedValueOnce({
+          success: true,
+          data: {
+            id: '2',
+            project_name: '项目B',
+            project_code: 'PRJ-002',
+            status: 'paused',
+            data_status: '正常',
+            review_status: 'draft',
+            created_at: '2026-01-01',
+            updated_at: '2026-01-02',
+          },
+        });
 
       const result = await service.getProjectsByIds(['1', '2']);
 
@@ -620,8 +753,32 @@ describe('ProjectService', () => {
 
     it('should filter out inactive projects', async () => {
       vi.mocked(apiClient.get)
-        .mockResolvedValueOnce({ success: true, data: { id: '1', is_active: true } })
-        .mockResolvedValueOnce({ success: true, data: { id: '2', is_active: false } });
+        .mockResolvedValueOnce({
+          success: true,
+          data: {
+            id: '1',
+            project_name: '项目A',
+            project_code: 'PRJ-001',
+            status: 'active',
+            data_status: '正常',
+            review_status: 'draft',
+            created_at: '2026-01-01',
+            updated_at: '2026-01-02',
+          },
+        })
+        .mockResolvedValueOnce({
+          success: true,
+          data: {
+            id: '2',
+            project_name: '项目B',
+            project_code: 'PRJ-002',
+            status: 'paused',
+            data_status: '删除',
+            review_status: 'draft',
+            created_at: '2026-01-01',
+            updated_at: '2026-01-02',
+          },
+        });
 
       const result = await service.getProjectsByIds(['1', '2']);
 
@@ -758,35 +915,43 @@ describe('ProjectService', () => {
 
   describe('getProjectFullDetails', () => {
     it('should return full project details', async () => {
-      vi.mocked(apiClient.get)
-        .mockResolvedValueOnce({
-          success: true,
-          data: { id: '1', name: '项目A', updated_at: '2026-01-30' },
-        })
-        .mockResolvedValueOnce({
-          success: true,
-          data: {
-            projects: [{ id: '1', asset_count: 10, total_area: 5000 }],
-          },
-        });
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        success: true,
+        data: {
+          id: '1',
+          project_name: '项目A',
+          project_code: 'PRJ-001',
+          status: 'active',
+          data_status: '正常',
+          review_status: 'draft',
+          created_at: '2026-01-01',
+          updated_at: '2026-01-30',
+          asset_count: 10,
+        },
+      });
 
       const result = await service.getProjectFullDetails('1');
 
-      expect(result.project.name).toBe('项目A');
+      expect(result.project.project_name).toBe('项目A');
       expect(result.assetCount).toBe(10);
-      expect(result.totalArea).toBe(5000);
+      expect(result.totalArea).toBe(0);
     });
 
     it('should handle missing statistics', async () => {
-      vi.mocked(apiClient.get)
-        .mockResolvedValueOnce({
-          success: true,
-          data: { id: '1', name: '项目A', asset_count: 5, updated_at: '2026-01-30' },
-        })
-        .mockResolvedValueOnce({
-          success: true,
-          data: { projects: [] },
-        });
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        success: true,
+        data: {
+          id: '1',
+          project_name: '项目A',
+          project_code: 'PRJ-001',
+          status: 'active',
+          data_status: '正常',
+          review_status: 'draft',
+          created_at: '2026-01-01',
+          updated_at: '2026-01-30',
+          asset_count: 5,
+        },
+      });
 
       const result = await service.getProjectFullDetails('1');
 

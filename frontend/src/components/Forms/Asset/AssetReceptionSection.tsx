@@ -162,4 +162,3 @@ const AssetReceptionSection: React.FC = () => {
 };
 
 export default AssetReceptionSection;
-

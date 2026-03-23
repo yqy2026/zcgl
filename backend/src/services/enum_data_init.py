@@ -296,4 +296,3 @@ async def init_enum_data(
     await db.commit()
     logger.info(f"枚举数据初始化完成: {stats}")
     return stats
-

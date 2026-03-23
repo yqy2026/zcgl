@@ -32,7 +32,9 @@ class EventSubscriber(Protocol):
 
 
 class ExternalEventSubscriber(Protocol):
-    def __call__(self, event: AuthzInvalidationEvent, source_instance_id: str) -> None: ...
+    def __call__(
+        self, event: AuthzInvalidationEvent, source_instance_id: str
+    ) -> None: ...
 
 
 class AuthzInvalidationTransport(Protocol):

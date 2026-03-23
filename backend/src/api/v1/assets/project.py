@@ -18,10 +18,13 @@ from ....crud.party import party_crud
 from ....database import get_async_db
 from ....middleware.auth import AuthzContext, get_current_active_user, require_authz
 from ....models.auth import User
+from ....schemas.asset import AssetListItemResponse
 from ....schemas.project import (
+    ProjectActiveAssetsResponse,
     ProjectCreate,
     ProjectResponse,
     ProjectSearchRequest,
+    ProjectStatisticsResponse,
     ProjectUpdate,
 )
 from ....services.authz import authz_service
@@ -29,6 +32,9 @@ from ....services.project import project_service
 
 router = APIRouter()
 _PROJECT_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:project:create"
+ProjectActiveAssetsResponse.model_rebuild(
+    _types_namespace={"AssetListItemResponse": AssetListItemResponse}
+)
 
 
 def _normalize_optional_str(value: Any) -> str | None:
@@ -56,7 +62,9 @@ def _normalize_identifier_sequence(values: Any) -> list[str]:
 
 
 def _resolve_current_user_organization_id(current_user: User) -> str | None:
-    return _normalize_optional_str(getattr(current_user, "default_organization_id", None))
+    return _normalize_optional_str(
+        getattr(current_user, "default_organization_id", None)
+    )
 
 
 def _resolve_effective_organization_id(
@@ -267,9 +275,8 @@ async def list_projects(
     page: int = 1,
     page_size: int = Query(20, ge=1, le=100),
     keyword: str | None = None,
-    is_active: bool | None = None,
-    ownership_id: str | None = None,
-    project_status: str | None = None,
+    status: str | None = None,
+    owner_party_id: str | None = None,
 ) -> Any:
     """
     获取项目列表，支持分页和筛选
@@ -281,19 +288,18 @@ async def list_projects(
             page=page,
             page_size=page_size,
             keyword=keyword,
-            is_active=is_active,
-            project_type=None,
-            project_status=project_status,
-            city=None,
-            ownership_id=ownership_id,
-            ownership_entity=None,
+            status=status,
+            owner_party_id=owner_party_id,
         )
         result = await project_service.search_projects(
             db=db,
             search_params=search_params,
             current_user_id=str(current_user.id),
         )
-        items = [project_service.project_to_response(item) for item in result.get("items", [])]
+        items = [
+            project_service.project_to_response(item)
+            for item in result.get("items", [])
+        ]
         return ResponseHandler.paginated(
             data=items,
             page=result.get("page", page),
@@ -327,7 +333,10 @@ async def search_projects(
             search_params=search_params,
             current_user_id=str(current_user.id),
         )
-        items = [project_service.project_to_response(item) for item in result.get("items", [])]
+        items = [
+            project_service.project_to_response(item)
+            for item in result.get("items", [])
+        ]
         return ResponseHandler.paginated(
             data=items,
             page=result.get("page", search_params.page),
@@ -346,17 +355,21 @@ async def get_project_options(
     _authz_ctx: AuthzContext = Depends(
         require_authz(action="read", resource_type="project")
     ),
-    is_active: bool | None = Query(True, description="是否仅返回启用项目"),
+    status: str | None = Query("active", description="项目状态过滤，留空返回全部状态"),
 ) -> list[dict[str, Any]]:
     """获取项目下拉列表选项（标准端点）"""
     return await project_service.get_project_dropdown_options(
         db,
-        is_active=is_active,
+        status=status,
         current_user_id=str(current_user.id),
     )
 
 
-@router.get("/stats/overview", summary="获取项目统计")
+@router.get(
+    "/stats/overview",
+    response_model=ProjectStatisticsResponse,
+    summary="获取项目统计",
+)
 async def get_project_statistics(
     db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
@@ -371,6 +384,47 @@ async def get_project_statistics(
         db=db,
         current_user_id=str(current_user.id),
     )
+
+
+@router.get(
+    "/{project_id}/assets",
+    response_model=APIResponse[ProjectActiveAssetsResponse],
+    summary="获取项目有效关联资产",
+)
+async def get_project_active_assets(
+    project_id: Annotated[str, Path(description="项目ID")],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="project",
+            resource_id="{project_id}",
+            deny_as_not_found=True,
+        )
+    ),
+) -> Any:
+    """获取项目有效关联资产列表及面积汇总。"""
+    try:
+        assets, summary = await project_service.get_project_active_assets(
+            db=db,
+            project_id=project_id,
+            current_user_id=str(current_user.id),
+        )
+        items = [AssetListItemResponse.model_validate(asset) for asset in assets]
+        response_payload = ProjectActiveAssetsResponse(
+            items=items,
+            total=len(items),
+            summary=summary,
+        )
+        return ResponseHandler.success(
+            data=response_payload.model_dump(mode="json"),
+            message="获取项目有效关联资产成功",
+        )
+    except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
+        raise internal_error(f"获取项目有效关联资产失败: {str(e)}")
 
 
 @router.get("/{project_id}", response_model=ProjectResponse, summary="获取项目详情")

@@ -2,10 +2,17 @@
 测试 AnalyticsService (综合分析服务)
 """
 
+from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from src.models.contract_group import (
+    ContractLifecycleStatus,
+    GroupRelationType,
+    RevenueMode,
+)
+from src.models.party import PartyReviewStatus
 from src.services.analytics.analytics_service import AnalyticsService
 
 
@@ -119,10 +126,17 @@ class TestAnalyticsService:
                 mock_occupancy_cls.return_value = mock_occupancy_service
 
                 mock_assets = [MagicMock(data_status="正常")]
-                with patch(
-                    "src.crud.asset.asset_crud.get_multi_with_search_async",
-                    new_callable=AsyncMock,
-                ) as mock_get_assets:
+                with (
+                    patch(
+                        "src.crud.asset.asset_crud.get_multi_with_search_async",
+                        new_callable=AsyncMock,
+                    ) as mock_get_assets,
+                    patch.object(
+                        analytics_service,
+                        "_list_active_contracts",
+                        AsyncMock(return_value=[]),
+                    ),
+                ):
                     mock_get_assets.return_value = (mock_assets, len(mock_assets))
 
                     result = await analytics_service.get_comprehensive_analytics(
@@ -327,3 +341,110 @@ class TestAnalyticsService:
         assert len(result) > 0
         assert result[0]["period"] == "2024-01"
         assert "total_rentable_area" in result[0]
+
+    def test_calculate_operational_metrics_should_split_income_and_count_customers(
+        self, analytics_service
+    ):
+        lease_group = MagicMock(revenue_mode=RevenueMode.LEASE, data_status="正常")
+        lease_group.operator_party = MagicMock(review_status=PartyReviewStatus.APPROVED.value)
+        lease_group.owner_party = MagicMock(review_status=PartyReviewStatus.APPROVED.value)
+
+        agency_group = MagicMock(revenue_mode=RevenueMode.AGENCY, data_status="正常")
+        agency_group.contract_group_id = "group-agency"
+        agency_group.operator_party = MagicMock(review_status=PartyReviewStatus.APPROVED.value)
+        agency_group.owner_party = MagicMock(review_status=PartyReviewStatus.APPROVED.value)
+
+        lease_contract = MagicMock(
+            contract_id="contract-lease-1",
+            status=MagicMock(),
+            data_status="正常",
+            group_relation_type=GroupRelationType.DOWNSTREAM,
+            contract_group=lease_group,
+            lease_detail=MagicMock(rent_amount=Decimal("1000.00")),
+            agency_detail=None,
+            lessee_party_id="customer-1",
+            lessor_party=MagicMock(review_status=PartyReviewStatus.APPROVED.value),
+            lessee_party=MagicMock(review_status=PartyReviewStatus.APPROVED.value),
+        )
+        lease_contract.status = ContractLifecycleStatus.ACTIVE
+
+        entrusted_contract = MagicMock(
+            contract_id="contract-agency-entrusted",
+            status=MagicMock(),
+            data_status="正常",
+            group_relation_type=GroupRelationType.ENTRUSTED,
+            contract_group=agency_group,
+            lease_detail=None,
+            agency_detail=MagicMock(service_fee_ratio=Decimal("0.1000")),
+            lessee_party_id="operator-1",
+            lessor_party=MagicMock(review_status=PartyReviewStatus.APPROVED.value),
+            lessee_party=MagicMock(review_status=PartyReviewStatus.APPROVED.value),
+        )
+        entrusted_contract.status = ContractLifecycleStatus.ACTIVE
+
+        direct_contract = MagicMock(
+            contract_id="contract-agency-direct-1",
+            status=MagicMock(),
+            data_status="正常",
+            group_relation_type=GroupRelationType.DIRECT_LEASE,
+            contract_group=agency_group,
+            lease_detail=MagicMock(rent_amount=Decimal("2000.00")),
+            agency_detail=None,
+            lessee_party_id="customer-2",
+            lessor_party=MagicMock(review_status=PartyReviewStatus.APPROVED.value),
+            lessee_party=MagicMock(review_status=PartyReviewStatus.APPROVED.value),
+        )
+        direct_contract.status = ContractLifecycleStatus.ACTIVE
+
+        metrics = analytics_service._calculate_operational_metrics(
+            [lease_contract, entrusted_contract, direct_contract]
+        )
+
+        assert metrics["self_operated_rent_income"] == 1000.0
+        assert metrics["agency_service_income"] == 200.0
+        assert metrics["total_income"] == 1200.0
+        assert metrics["customer_entity_count"] == 2
+        assert metrics["customer_contract_count"] == 2
+        assert metrics["metrics_version"]
+
+    @pytest.mark.asyncio
+    async def test_calculate_analytics_should_include_operational_metrics(
+        self, analytics_service
+    ):
+        with (
+            patch(
+                "src.crud.asset.asset_crud.get_multi_with_search_async",
+                new_callable=AsyncMock,
+                return_value=([], 0),
+            ),
+            patch("src.services.analytics.area_service.AreaService") as mock_area_cls,
+            patch(
+                "src.services.analytics.occupancy_service.OccupancyService"
+            ) as mock_occupancy_cls,
+            patch.object(
+                analytics_service,
+                "_list_active_contracts",
+                AsyncMock(return_value=[]),
+            ) as mock_list_contracts,
+        ):
+            mock_area_service = MagicMock()
+            mock_area_service.calculate_summary_with_aggregation = AsyncMock(
+                return_value={"total_assets": 0}
+            )
+            mock_area_cls.return_value = mock_area_service
+
+            mock_occupancy_service = MagicMock()
+            mock_occupancy_service.calculate_with_aggregation = AsyncMock(
+                return_value={"rate": 0}
+            )
+            mock_occupancy_cls.return_value = mock_occupancy_service
+
+            result = await analytics_service._calculate_analytics({})
+
+        mock_list_contracts.assert_awaited_once_with({})
+        assert "total_income" in result
+        assert "self_operated_rent_income" in result
+        assert "agency_service_income" in result
+        assert "customer_entity_count" in result
+        assert "customer_contract_count" in result
+        assert "metrics_version" in result

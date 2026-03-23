@@ -112,26 +112,26 @@ class TestPropertyCertificateValidator:
             validator.validate_expiry_date(expiry_date, issue_date)
         assert "expiry_date" in exc_info.value.field_errors
 
-    def test_validate_property_name_empty(self, validator):
+    def test_validate_asset_name_empty(self, validator):
         """测试空房产名称"""
         with pytest.raises(BusinessValidationError) as exc_info:
-            validator.validate_property_name("")
-        assert "property_name" in exc_info.value.field_errors
+            validator.validate_asset_name("")
+        assert "asset_name" in exc_info.value.field_errors
 
         with pytest.raises(BusinessValidationError) as exc_info:
-            validator.validate_property_name(None)
-        assert "property_name" in exc_info.value.field_errors
+            validator.validate_asset_name(None)
+        assert "asset_name" in exc_info.value.field_errors
 
-    def test_validate_property_name_valid(self, validator):
+    def test_validate_asset_name_valid(self, validator):
         """测试有效房产名称"""
-        result = validator.validate_property_name("测试房产名称")
+        result = validator.validate_asset_name("测试房产名称")
         assert result is True
 
-    def test_validate_property_name_too_short(self, validator):
+    def test_validate_asset_name_too_short(self, validator):
         """测试过短的房产名称"""
         with pytest.raises(BusinessValidationError) as exc_info:
-            validator.validate_property_name("ab")
-        assert "property_name" in exc_info.value.field_errors
+            validator.validate_asset_name("ab")
+        assert "asset_name" in exc_info.value.field_errors
 
     def test_validate_address_format(self, validator):
         """测试地址格式"""
@@ -149,7 +149,7 @@ class TestPropertyCertificateValidator:
         """测试完整的产权证数据"""
         certificate_data = {
             "certificate_number": "202012345678901234",
-            "property_name": "测试房产",
+            "asset_name": "测试房产",
             "area": 100.0,
             "issue_date": datetime(2020, 1, 1),
             "expiry_date": datetime(2030, 1, 1),
@@ -163,13 +163,13 @@ class TestPropertyCertificateValidator:
         """测试缺少必填字段"""
         incomplete_data = {
             "certificate_number": "202012345678901234",
-            # 缺少property_name
+            # 缺少asset_name
             "area": 100.0,
         }
 
         with pytest.raises(BusinessValidationError) as exc_info:
             validator.validate_certificate_data(incomplete_data)
-        assert "property_name" in exc_info.value.field_errors
+        assert "asset_name" in exc_info.value.field_errors
 
     def test_validate_registration_number_format(self, validator):
         """测试注册号格式"""

@@ -14,32 +14,13 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 # 错误处理包装 - 捕获模型导入错误
 try:
+    import src.models  # noqa: F401
     from src.database import Base
 
     logger = None
 
-    # Import all models so Alembic can detect them
-    # noqa: F401 - Models are imported for side effects (Alembic metadata)
-    from src.models import (
-        abac,
-        asset,
-        auth,
-        certificate_party_relation,
-        collection,
-        contact,
-        enum_field,
-        notification,
-        operation_log,
-        organization,
-        party,
-        party_role,
-        pdf_import_session,
-        project_asset,
-        rbac,
-        rent_contract,
-        task,
-        user_party_binding,
-    )
+    # Import the package once so models/__init__.py registers every mapped model
+    # onto Base.metadata for Alembic autogenerate.
 
 except ImportError as e:
     print(f"\n{'=' * 60}")

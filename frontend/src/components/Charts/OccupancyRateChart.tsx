@@ -41,12 +41,12 @@ interface _OccupancyRateData {
     rented_area: number;
   }>;
   top_performers: Array<{
-    property_name: string;
+    asset_name: string;
     rate: number;
     area: number;
   }>;
   low_performers: Array<{
-    property_name: string;
+    asset_name: string;
     rate: number;
     area: number;
   }>;
@@ -408,7 +408,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({ filters, height
             <div className={styles.rankingList}>
               {data?.top_performers?.map((asset, index) => (
                 <div
-                  key={asset.property_name}
+                  key={asset.asset_name}
                   className={
                     index < (data.top_performers?.length ?? 0) - 1
                       ? styles.rankingItem
@@ -416,7 +416,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({ filters, height
                   }
                 >
                   <div className={styles.rankingInfo}>
-                    <Text strong>{asset.property_name}</Text>
+                    <Text strong>{asset.asset_name}</Text>
                     <br />
                     <Text type="secondary" className={styles.rankingMeta}>
                       面积: {asset.area?.toLocaleString()} ㎡
@@ -437,7 +437,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({ filters, height
             <div className={styles.rankingList}>
               {data?.low_performers?.map((asset, index) => (
                 <div
-                  key={asset.property_name}
+                  key={asset.asset_name}
                   className={
                     index < (data.low_performers?.length ?? 0) - 1
                       ? styles.rankingItem
@@ -445,7 +445,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({ filters, height
                   }
                 >
                   <div className={styles.rankingInfo}>
-                    <Text strong>{asset.property_name}</Text>
+                    <Text strong>{asset.asset_name}</Text>
                     <br />
                     <Text type="secondary" className={styles.rankingMeta}>
                       面积: {asset.area?.toLocaleString()} ㎡

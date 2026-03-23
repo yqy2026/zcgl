@@ -20,14 +20,14 @@ def service() -> ProjectService:
 
 class TestProjectService:
     async def test_create_project_auto_code(self, service: ProjectService, mock_db):
-        obj_in = ProjectCreate(name="Test Project")
+        obj_in = ProjectCreate(project_name="Test Project")
 
         created_project = MagicMock(spec=Project)
         created_project.id = TEST_PROJECT_ID
-        created_project.code = "PJ2501001"
-        created_project.name = "Test Project"
+        created_project.project_code = "PRJ-TEST01-000001"
+        created_project.project_name = "Test Project"
 
-        with patch.object(service, "generate_project_code", return_value="PJ2501001"):
+        with patch.object(service, "generate_project_code", new_callable=AsyncMock, return_value="PRJ-TEST01-000001"):
             with patch("src.crud.project.project_crud.get_by_code", return_value=None):
                 with patch(
                     "src.crud.project.project_crud.create",
@@ -37,11 +37,11 @@ class TestProjectService:
                         mock_db, obj_in=obj_in, created_by=TEST_USER_ID
                     )
 
-        assert result.code == "PJ2501001"
+        assert result.project_code == "PRJ-TEST01-000001"
         mock_create.assert_awaited_once()
 
     async def test_create_project_duplicate_code(self, service: ProjectService, mock_db):
-        obj_in = ProjectCreate(name="Test Project", code="PJ2501002")
+        obj_in = ProjectCreate(project_name="Test Project", project_code="PRJ-TEST01-000002")
 
         with patch("src.crud.project.project_crud.get_by_code", return_value=MagicMock()):
             with pytest.raises(DuplicateResourceError) as excinfo:
@@ -52,12 +52,12 @@ class TestProjectService:
     async def test_update_project(self, service: ProjectService, mock_db):
         project = MagicMock(spec=Project)
         project.id = TEST_PROJECT_ID
-        project.name = "Old Name"
-        obj_in = ProjectUpdate(name="New Name")
+        project.project_name = "Old Name"
+        obj_in = ProjectUpdate(project_name="New Name")
 
         updated_project = MagicMock(spec=Project)
         updated_project.id = TEST_PROJECT_ID
-        updated_project.name = "New Name"
+        updated_project.project_name = "New Name"
 
         with patch("src.crud.project.project_crud.get", return_value=project):
             with patch(
@@ -68,22 +68,22 @@ class TestProjectService:
                     mock_db, project_id=TEST_PROJECT_ID, obj_in=obj_in
                 )
 
-        assert result.name == "New Name"
+        assert result.project_name == "New Name"
         mock_update.assert_awaited_once()
 
     async def test_toggle_status(self, service: ProjectService, mock_db):
         project = MagicMock(spec=Project)
         project.id = TEST_PROJECT_ID
-        project.project_status = "规划中"
+        project.status = "planning"
 
         with patch("src.crud.project.project_crud.get", return_value=project):
             result = await service.toggle_status(mock_db, project_id=TEST_PROJECT_ID)
-        assert result.project_status == "暂停"
+        assert result.status == "paused"
 
-        project.project_status = "暂停"
+        project.status = "paused"
         with patch("src.crud.project.project_crud.get", return_value=project):
             result = await service.toggle_status(mock_db, project_id=TEST_PROJECT_ID)
-        assert result.project_status == "进行中"
+        assert result.status == "active"
 
     async def test_delete_project_with_assets(self, service: ProjectService, mock_db):
         with patch("src.crud.project.project_crud.get_asset_count", return_value=5):
@@ -103,10 +103,7 @@ class TestProjectService:
             mock_crud.remove.assert_awaited_once_with(mock_db, id=TEST_PROJECT_ID)
 
     async def test_generate_project_code_fallback(self, service: ProjectService, mock_db):
-        mock_execute_result = MagicMock()
-        mock_execute_result.scalars.return_value.first.return_value = None
-        mock_db.execute = AsyncMock(return_value=mock_execute_result)
-
-        code = await service.generate_project_code(mock_db, name=None)
-        assert code.startswith("PJ")
-        assert len(code) == 9
+        with patch("src.crud.project.project_crud.get_latest_by_code_prefix", new_callable=AsyncMock, return_value=None):
+            code = await service.generate_project_code(mock_db, name=None)
+        assert code.startswith("PRJ-")
+        assert code[-6:].isdigit()

@@ -30,7 +30,9 @@ async def get_user_sessions(
     session_service: AsyncSessionService = Depends(get_session_service),
 ) -> list[UserSessionResponse]:
     """获取当前用户的所有会话"""
-    sessions = await session_service.get_user_sessions(current_user.id, active_only=True)
+    sessions = await session_service.get_user_sessions(
+        current_user.id, active_only=True
+    )
     return [UserSessionResponse.model_validate(session) for session in sessions]
 
 

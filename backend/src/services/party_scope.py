@@ -230,9 +230,7 @@ async def resolve_user_party_filter(
                         resolved_manager_party_ids.add(party_id)
                         continue
 
-                    normalized_descendants = _normalize_identifier_sequence(
-                        descendants
-                    )
+                    normalized_descendants = _normalize_identifier_sequence(descendants)
                     if len(normalized_descendants) == 0:
                         resolved_manager_party_ids.add(party_id)
                         continue
@@ -280,9 +278,7 @@ async def resolve_user_party_filter(
         elif len(manager_party_ids) > 0 and len(owner_party_ids) == 0:
             filter_mode = "manager"
 
-        legacy_org_ids = sorted(
-            set(owner_legacy_org_ids).union(manager_legacy_org_ids)
-        )
+        legacy_org_ids = sorted(set(owner_legacy_org_ids).union(manager_legacy_org_ids))
         return PartyFilter(
             party_ids=merged_party_ids,
             legacy_org_ids=legacy_org_ids if len(legacy_org_ids) > 0 else None,

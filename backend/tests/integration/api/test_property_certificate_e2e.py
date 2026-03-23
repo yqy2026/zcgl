@@ -127,7 +127,7 @@ def test_upload_returns_asset_matches(
 
     asset_data = {
         "ownership_entity": "测试权属方-匹配",
-        "property_name": "测试物业-匹配",
+        "asset_name": "测试物业-匹配",
         "address": "测试地址-匹配",
         "ownership_status": "已确权",
         "property_nature": "经营性",
@@ -142,7 +142,7 @@ def test_upload_returns_asset_matches(
     asset = Asset(
         ownership_id=ownership.id,
         manager_party_id=ownership.id,
-        property_name=asset_data["property_name"],
+        asset_name=asset_data["asset_name"],
         address=asset_data["address"],
         ownership_status=asset_data["ownership_status"],
         property_nature=asset_data["property_nature"],
@@ -285,7 +285,7 @@ def test_certificate_with_asset_link(
 
     asset_data = {
         "ownership_entity": "测试权属人",
-        "property_name": "测试物业_关联资产",
+        "asset_name": "测试物业_关联资产",
         "address": "测试资产地址123号",
         "ownership_status": "已确权",
         "property_nature": "经营性",
@@ -300,7 +300,7 @@ def test_certificate_with_asset_link(
     asset = Asset(
         ownership_id=ownership.id,
         manager_party_id=ownership.id,
-        property_name=asset_data["property_name"],
+        asset_name=asset_data["asset_name"],
         address=asset_data["address"],
         ownership_status=asset_data["ownership_status"],
         property_nature=asset_data["property_nature"],

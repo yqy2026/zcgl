@@ -24,6 +24,7 @@ import {
 } from 'antd';
 import { SaveOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import { useNavigate } from 'react-router-dom';
 import { MessageManager } from '@/utils/messageManager';
 import { createLogger } from '@/utils/logger';
 
@@ -34,6 +35,7 @@ import {
   type AssetMatch,
   type OwnershipMatch,
 } from '@/services/pdfImportService';
+import { CONTRACT_GROUP_ROUTES } from '@/constants/routes';
 import { ContractStatus, ContractStatusLabels } from '@/types/rentContract';
 import styles from './ContractImportReview.module.css';
 
@@ -42,6 +44,9 @@ const { TextArea } = Input;
 const pageLogger = createLogger('ContractImportReview');
 
 type ConfidenceTone = 'success' | 'warning' | 'error';
+type AgencyFeeCalculationBase = NonNullable<
+  ConfirmedContractData['agency_detail']
+>['fee_calculation_base'];
 
 interface ContractImportReviewProps {
   sessionId: string;
@@ -52,9 +57,15 @@ interface ContractImportReviewProps {
 }
 
 interface FormValues {
+  revenue_mode?: ConfirmedContractData['revenue_mode'];
+  contract_direction?: ConfirmedContractData['contract_direction'];
+  group_relation_type?: ConfirmedContractData['group_relation_type'];
+  operator_party_id?: string;
   contract_number: string;
   asset_id?: string;
   owner_party_id?: string;
+  lessor_party_id?: string;
+  lessee_party_id?: string;
   tenant_name: string;
   tenant_contact?: string;
   tenant_phone?: string;
@@ -68,6 +79,10 @@ interface FormValues {
   contract_status?: string;
   payment_terms?: string;
   contract_notes?: string;
+  settlement_rule_json?: string;
+  service_fee_ratio?: string;
+  fee_calculation_base?: string;
+  agency_scope?: string;
   rent_terms?: Array<{
     start_date: string;
     end_date: string;
@@ -84,6 +99,18 @@ interface EvidenceSnippet {
 }
 
 type OwnerReferenceFields = Pick<FormValues, 'owner_party_id'>;
+
+export const parseJsonObjectField = (value: string): ConfirmedContractData['settlement_rule'] => {
+  const normalized = value.trim();
+  if (normalized === '') {
+    throw new Error('结算规则 JSON 不能为空');
+  }
+  const parsed: unknown = JSON.parse(normalized);
+  if (parsed == null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('结算规则必须是合法 JSON 对象');
+  }
+  return parsed as ConfirmedContractData['settlement_rule'];
+};
 
 export const normalizeOptionalId = (value: string | undefined): string | undefined => {
   if (value == null) {
@@ -103,16 +130,35 @@ export const resolveOwnerReferences = (
   return { ownerPartyId };
 };
 
+const VALID_AGENCY_FEE_BASES = new Set<AgencyFeeCalculationBase>(['actual_received', 'due_amount']);
+
+const normalizeAgencyFeeCalculationBase = (
+  value: string | undefined
+): AgencyFeeCalculationBase | undefined => {
+  if (value == null) {
+    return undefined;
+  }
+  const normalized = value.trim();
+  if (VALID_AGENCY_FEE_BASES.has(normalized as AgencyFeeCalculationBase)) {
+    return normalized as AgencyFeeCalculationBase;
+  }
+  return undefined;
+};
+
 const ContractImportReview: React.FC<ContractImportReviewProps> = ({
   result,
   onConfirm,
   onBack,
 }) => {
+  const navigate = useNavigate();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [modifiedFields, setModifiedFields] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState('basic');
   const [showAdvancedFields, setShowAdvancedFields] = useState(false);
+  const [currentRevenueMode, setCurrentRevenueMode] = useState<
+    ConfirmedContractData['revenue_mode'] | undefined
+  >(undefined);
 
   const fieldEvidence = result.extraction_result.field_evidence ?? undefined;
   const fieldSources = result.extraction_result.field_sources ?? undefined;
@@ -218,12 +264,22 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
   useEffect(() => {
     const validatedData = result.validation_result.validated_data;
     const recommendations = result.matching_result.recommendations;
+    const agencyDetail =
+      validatedData.agency_detail != null && typeof validatedData.agency_detail === 'object'
+        ? (validatedData.agency_detail as Record<string, unknown>)
+        : undefined;
 
     // 设置表单初始值 - 确保数字字段正确转换
     form.setFieldsValue({
+      revenue_mode: validatedData.revenue_mode,
+      contract_direction: validatedData.contract_direction,
+      group_relation_type: validatedData.group_relation_type,
+      operator_party_id: validatedData.operator_party_id ?? '',
       contract_number: validatedData.contract_number ?? '',
       asset_id: recommendations.asset_id ?? '',
       owner_party_id: recommendations.owner_party_id ?? '',
+      lessor_party_id: validatedData.lessor_party_id ?? '',
+      lessee_party_id: validatedData.lessee_party_id ?? '',
       tenant_name: validatedData.tenant_name ?? '',
       tenant_contact: validatedData.tenant_contact ?? '',
       sign_date: validatedData.sign_date != null ? dayjs(String(validatedData.sign_date)) : null,
@@ -242,8 +298,22 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
       contract_status: validatedData.contract_status ?? ContractStatus.ACTIVE,
       payment_terms: validatedData.payment_terms ?? '',
       contract_notes: validatedData.contract_notes ?? '',
+      settlement_rule_json:
+        validatedData.settlement_rule != null
+          ? JSON.stringify(validatedData.settlement_rule, null, 2)
+          : '',
+      service_fee_ratio:
+        agencyDetail?.service_fee_ratio != null ? String(agencyDetail.service_fee_ratio) : '',
+      fee_calculation_base:
+        agencyDetail?.fee_calculation_base != null
+          ? String(agencyDetail.fee_calculation_base)
+          : undefined,
+      agency_scope: agencyDetail?.agency_scope != null ? String(agencyDetail.agency_scope) : '',
       rent_terms: validatedData.rent_terms ?? [],
     });
+    if (validatedData.revenue_mode === 'LEASE' || validatedData.revenue_mode === 'AGENCY') {
+      setCurrentRevenueMode(validatedData.revenue_mode);
+    }
   }, [result, form]);
 
   // 表单字段变更处理
@@ -254,6 +324,9 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
       newModifiedFields.add(fieldName);
     });
     setModifiedFields(newModifiedFields);
+    if (changedValues.revenue_mode === 'LEASE' || changedValues.revenue_mode === 'AGENCY') {
+      setCurrentRevenueMode(changedValues.revenue_mode);
+    }
   };
 
   // 确认导入
@@ -268,10 +341,45 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
 
       // 转换日期格式
       const { ownerPartyId } = resolveOwnerReferences(validatedValues, storedValues);
+      const settlementRule = parseJsonObjectField(values.settlement_rule_json ?? '');
+      const operatorPartyId = normalizeOptionalId(values.operator_party_id);
+      const lessorPartyId = normalizeOptionalId(values.lessor_party_id);
+      const lesseePartyId = normalizeOptionalId(values.lessee_party_id);
+      if (
+        values.revenue_mode == null ||
+        values.contract_direction == null ||
+        values.group_relation_type == null ||
+        operatorPartyId == null ||
+        ownerPartyId == null ||
+        lessorPartyId == null ||
+        lesseePartyId == null
+      ) {
+        MessageManager.error('请补全新合同上下文');
+        return;
+      }
+
+      const serviceFeeRatio = values.service_fee_ratio?.trim() ?? '';
+      const feeCalculationBase = normalizeAgencyFeeCalculationBase(values.fee_calculation_base);
+      if (values.revenue_mode === 'AGENCY' && feeCalculationBase == null) {
+        form.setFields([
+          {
+            name: 'fee_calculation_base',
+            errors: ['计费基数必须是 actual_received 或 due_amount'],
+          },
+        ]);
+        MessageManager.error('请检查表单填写是否正确');
+        return;
+      }
       const confirmedData: ConfirmedContractData = {
+        revenue_mode: values.revenue_mode,
+        contract_direction: values.contract_direction,
+        group_relation_type: values.group_relation_type,
+        operator_party_id: operatorPartyId,
         contract_number: values.contract_number,
-        asset_id: values.asset_id,
+        asset_id: normalizeOptionalId(values.asset_id),
         owner_party_id: ownerPartyId,
+        lessor_party_id: lessorPartyId,
+        lessee_party_id: lesseePartyId,
         tenant_name: values.tenant_name,
         tenant_contact: values.tenant_contact,
         tenant_phone: values.tenant_phone,
@@ -284,6 +392,16 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
         contract_status: values.contract_status,
         payment_terms: values.payment_terms,
         contract_notes: values.contract_notes,
+        settlement_rule: settlementRule,
+        ...(values.revenue_mode === 'AGENCY'
+          ? {
+              agency_detail: {
+                service_fee_ratio: serviceFeeRatio,
+                fee_calculation_base: feeCalculationBase!,
+                agency_scope: values.agency_scope?.trim() ?? '',
+              },
+            }
+          : {}),
         rent_terms:
           values.rent_terms?.map(term => ({
             start_date: term.start_date,
@@ -298,7 +416,9 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
 
       if (response.success) {
         MessageManager.success('合同导入成功！');
-        // 可以在这里添加跳转逻辑
+        if (response.contract_group_id != null && response.contract_group_id.trim() !== '') {
+          navigate(CONTRACT_GROUP_ROUTES.DETAIL(response.contract_group_id));
+        }
       } else {
         MessageManager.error(response.error ?? '导入失败');
       }
@@ -468,11 +588,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
         </Title>
 
         {result.matching_result.matched_assets.length > 0 ? (
-          <Form.Item
-            label="选择资产"
-            name="asset_id"
-            rules={[{ required: true, message: '请选择关联的资产' }]}
-          >
+          <Form.Item label="选择资产" name="asset_id">
             <Select
               placeholder="请选择匹配的资产"
               showSearch
@@ -486,7 +602,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
                 <Select.Option key={asset.id} value={asset.id}>
                   <div>
                     <Space>
-                      <span>{asset.property_name}</span>
+                      <span>{asset.asset_name}</span>
                       <Tag
                         color={
                           asset.similarity >= 80
@@ -506,12 +622,17 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
             </Select>
           </Form.Item>
         ) : (
-          <Alert
-            title="未找到匹配的资产"
-            description="请手动选择或创建新的资产记录"
-            type="warning"
-            showIcon
-          />
+          <>
+            <Alert
+              title="未找到匹配的资产"
+              description="资产关联保持可选；如需要，请手动填写资产 ID。"
+              type="warning"
+              showIcon
+            />
+            <Form.Item label="资产 ID（可选）" name="asset_id">
+              <Input placeholder="请输入资产 ID" />
+            </Form.Item>
+          </>
         )}
       </div>
 
@@ -562,12 +683,21 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
             </Select>
           </Form.Item>
         ) : (
-          <Alert
-            title="未找到匹配的产权方主体"
-            description="请手动选择或创建新的主体记录"
-            type="warning"
-            showIcon
-          />
+          <>
+            <Alert
+              title="未找到匹配的产权方主体"
+              description="新合同导入仍要求显式 owner_party_id，请手动填写。"
+              type="warning"
+              showIcon
+            />
+            <Form.Item
+              label="产权方主体 ID"
+              name="owner_party_id"
+              rules={[{ required: true, message: '请输入产权方主体 ID' }]}
+            >
+              <Input placeholder="请输入产权方主体 ID" />
+            </Form.Item>
+          </>
         )}
       </div>
     </div>
@@ -586,6 +716,156 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
     </Form>
   );
 
+  const ContractContextForm = () => (
+    <Form form={form} layout="vertical" onValuesChange={handleFieldChange}>
+      <Alert
+        type="info"
+        showIcon
+        className={styles.messageAlert}
+        title="新合同导入采用 fail-closed 模式，必须显式提供合同组与主体上下文。"
+      />
+
+      <Row gutter={16}>
+        <Col span={8}>
+          <Form.Item
+            label="经营模式"
+            name="revenue_mode"
+            rules={[{ required: true, message: '请选择经营模式' }]}
+            extra="请输入 LEASE 或 AGENCY"
+          >
+            <Input placeholder="LEASE / AGENCY" />
+          </Form.Item>
+        </Col>
+        <Col span={8}>
+          <Form.Item
+            label="合同方向"
+            name="contract_direction"
+            rules={[{ required: true, message: '请选择合同方向' }]}
+            extra="请输入 LESSOR 或 LESSEE"
+          >
+            <Input placeholder="LESSOR / LESSEE" />
+          </Form.Item>
+        </Col>
+        <Col span={8}>
+          <Form.Item
+            label="合同角色"
+            name="group_relation_type"
+            rules={[{ required: true, message: '请选择合同角色' }]}
+            extra="请输入 UPSTREAM / DOWNSTREAM / ENTRUSTED / DIRECT_LEASE"
+          >
+            <Input placeholder="UPSTREAM / DOWNSTREAM / ENTRUSTED / DIRECT_LEASE" />
+          </Form.Item>
+        </Col>
+      </Row>
+
+      <Row gutter={16}>
+        <Col span={8}>
+          <Form.Item
+            label="运营方主体 ID"
+            name="operator_party_id"
+            rules={[{ required: true, message: '请输入运营方主体 ID' }]}
+          >
+            <Input placeholder="请输入运营方主体 ID" />
+          </Form.Item>
+        </Col>
+        <Col span={8}>
+          <Form.Item
+            label="出租方/委托方主体 ID"
+            name="lessor_party_id"
+            rules={[{ required: true, message: '请输入出租方/委托方主体 ID' }]}
+          >
+            <Input placeholder="请输入出租方/委托方主体 ID" />
+          </Form.Item>
+        </Col>
+        <Col span={8}>
+          <Form.Item
+            label="承租方/受托方主体 ID"
+            name="lessee_party_id"
+            rules={[{ required: true, message: '请输入承租方/受托方主体 ID' }]}
+          >
+            <Input placeholder="请输入承租方/受托方主体 ID" />
+          </Form.Item>
+        </Col>
+      </Row>
+
+      <Form.Item
+        label="结算规则 JSON"
+        name="settlement_rule_json"
+        rules={[
+          { required: true, message: '请输入结算规则 JSON' },
+          {
+            validator: async (_, value: string | undefined) => {
+              try {
+                parseJsonObjectField(value ?? '');
+              } catch (error) {
+                throw new Error(error instanceof Error ? error.message : '结算规则必须是合法 JSON');
+              }
+            },
+          },
+        ]}
+      >
+        <TextArea
+          rows={6}
+          placeholder='{"version":"v1","cycle":"月付","settlement_mode":"manual","amount_rule":{},"payment_rule":{}}'
+        />
+      </Form.Item>
+
+      {currentRevenueMode === 'AGENCY' && (
+        <Row gutter={16}>
+          <Col span={8}>
+            <Form.Item
+              label="服务费比例"
+              name="service_fee_ratio"
+              rules={[
+                { required: true, message: '请输入服务费比例' },
+                {
+                  validator: async (_, value: string | undefined) => {
+                    const normalized = value?.trim() ?? '';
+                    const numericValue = Number(normalized);
+                    if (
+                      normalized === '' ||
+                      Number.isNaN(numericValue) ||
+                      numericValue < 0 ||
+                      numericValue > 1
+                    ) {
+                      throw new Error('服务费比例必须是 0 到 1 之间的小数');
+                    }
+                  },
+                },
+              ]}
+            >
+              <Input placeholder="例如 0.08" />
+            </Form.Item>
+          </Col>
+          <Col span={8}>
+            <Form.Item
+              label="计费基数"
+              name="fee_calculation_base"
+              rules={[
+                { required: true, message: '请输入计费基数' },
+                {
+                  validator: async (_, value: string | undefined) => {
+                    if (normalizeAgencyFeeCalculationBase(value) == null) {
+                      throw new Error('计费基数必须是 actual_received 或 due_amount');
+                    }
+                  },
+                },
+              ]}
+              extra="请输入 actual_received 或 due_amount"
+            >
+              <Input placeholder="actual_received / due_amount" />
+            </Form.Item>
+          </Col>
+          <Col span={8}>
+            <Form.Item label="代理范围说明" name="agency_scope">
+              <Input placeholder="请输入代理范围说明" />
+            </Form.Item>
+          </Col>
+        </Row>
+      )}
+    </Form>
+  );
+
   const tabItems = [
     {
       key: 'basic',
@@ -601,6 +881,11 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
       key: 'matching',
       label: '数据匹配',
       children: <MatchingForm />,
+    },
+    {
+      key: 'contract-context',
+      label: '新体系上下文',
+      children: <ContractContextForm />,
     },
     {
       key: 'advanced',
@@ -762,6 +1047,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
             loading={loading}
             onClick={handleConfirm}
             disabled={result.validation_result.errors.length > 0}
+            aria-label="确认导入"
           >
             确认导入
           </Button>
