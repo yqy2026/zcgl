@@ -207,7 +207,9 @@ class ContractCreate(BaseModel):
     """创建合同入参"""
 
     contract_group_id: str = Field(..., min_length=1, description="所属合同组 ID")
-    contract_number: str = Field(..., min_length=1, max_length=100, description="合同编号")
+    contract_number: str = Field(
+        ..., min_length=1, max_length=100, description="合同编号"
+    )
     contract_direction: ContractDirection = Field(..., description="合同方向")
     group_relation_type: GroupRelationType = Field(..., description="合同角色")
     lessor_party_id: str = Field(..., min_length=1, description="出租方/委托方主体 ID")
@@ -415,13 +417,16 @@ class LedgerAggregateQueryParams(BaseModel):
         pattern=r"^\d{4}-\d{2}$",
         description="结束账期，格式 YYYY-MM",
     )
-    payment_status: Literal[
-        "unpaid",
-        "paid",
-        "overdue",
-        "partial",
-        "voided",
-    ] | None = Field(None, description="支付状态")
+    payment_status: (
+        Literal[
+            "unpaid",
+            "paid",
+            "overdue",
+            "partial",
+            "voided",
+        ]
+        | None
+    ) = Field(None, description="支付状态")
     include_voided: bool = Field(False, description="是否包含作废条目")
     offset: int = Field(0, ge=0, description="分页偏移")
     limit: int = Field(20, ge=1, le=200, description="每页条数")

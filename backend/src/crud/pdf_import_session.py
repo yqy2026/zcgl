@@ -20,9 +20,7 @@ class PDFImportSessionCRUD:
         party_filter: PartyFilter | None = None,
     ) -> PDFImportSession | None:
         """根据会话ID获取导入会话（异步）"""
-        stmt = select(PDFImportSession).where(
-            PDFImportSession.session_id == session_id
-        )
+        stmt = select(PDFImportSession).where(PDFImportSession.session_id == session_id)
         if party_filter is not None:
             stmt = self.query_builder.apply_party_filter(stmt, party_filter)
         return (await db.execute(stmt)).scalars().first()

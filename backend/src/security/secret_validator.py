@@ -100,7 +100,9 @@ class SecretValidator:
                 except SecretValidationError as error:
                     logger.error("%s validation failed: %s", secret_name, error.message)
                     if error.suggestion:
-                        logger.info("Validation suggestion generated for %s", secret_name)
+                        logger.info(
+                            "Validation suggestion generated for %s", secret_name
+                        )
                     all_valid = False
 
         return all_valid

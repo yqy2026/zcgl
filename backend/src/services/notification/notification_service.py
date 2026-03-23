@@ -99,9 +99,7 @@ class NotificationService:
         )
 
     async def mark_all_as_read_async(self, db: AsyncSession, *, user_id: str) -> int:
-        return await notification_crud.mark_all_as_read_async(
-            db, recipient_id=user_id
-        )
+        return await notification_crud.mark_all_as_read_async(db, recipient_id=user_id)
 
     async def delete_notification_async(
         self, db: AsyncSession, *, user_id: str, notification_id: str

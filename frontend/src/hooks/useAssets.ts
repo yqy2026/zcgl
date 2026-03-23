@@ -1,10 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
+import { useRoutePerspective } from '@/routes/perspective';
 import { assetService } from '@/services/assetService';
 import { ownershipService } from '@/services/ownershipService';
 import { MessageManager } from '@/utils/messageManager';
 import type { AssetSearchParams, AssetCreateRequest, AssetUpdateRequest } from '@/types/asset';
 import type { AssetSearchFilters } from '@/services/asset/types';
+import { buildQueryScopeKey } from '@/utils/queryScope';
 
 /**
  * 资产列表查询 Hook
@@ -13,8 +15,11 @@ import type { AssetSearchFilters } from '@/services/asset/types';
  * Zustand 仅用于 UI 状态（selectedAsset、searchParams 等）。
  */
 export const useAssets = (params?: AssetSearchParams) => {
+  const { perspective } = useRoutePerspective();
+  const queryScopeKey = buildQueryScopeKey(perspective);
+
   return useQuery({
-    queryKey: ['assets', params],
+    queryKey: ['assets-list', queryScopeKey, params],
     queryFn: () => assetService.getAssets(params),
     placeholderData: previousData => previousData,
     staleTime: 30 * 1000, // 30秒内不重新请求
@@ -25,8 +30,11 @@ export const useAssets = (params?: AssetSearchParams) => {
  * 单个资产查询 Hook
  */
 export const useAsset = (id: string) => {
+  const { perspective } = useRoutePerspective();
+  const queryScopeKey = buildQueryScopeKey(perspective);
+
   return useQuery({
-    queryKey: ['asset', id],
+    queryKey: ['asset', queryScopeKey, id],
     queryFn: () => assetService.getAsset(id),
     enabled: !!id,
   });
@@ -42,7 +50,8 @@ export const useCreateAsset = () => {
     mutationFn: (data: AssetCreateRequest) => assetService.createAsset(data),
     onSuccess: () => {
       // 使响应缓存失效，触发重新查询
-      queryClient.invalidateQueries({ queryKey: ['assets'] });
+      queryClient.invalidateQueries({ queryKey: ['assets-list'] });
+      queryClient.invalidateQueries({ queryKey: ['analytics'] });
       MessageManager.success('资产创建成功');
     },
     onError: (error: { message: string }) => {
@@ -60,10 +69,11 @@ export const useUpdateAsset = () => {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: AssetUpdateRequest }) =>
       assetService.updateAsset(id, data),
-    onSuccess: asset => {
+    onSuccess: () => {
       // 使响应缓存失效，触发重新查询
-      queryClient.invalidateQueries({ queryKey: ['assets'] });
-      queryClient.invalidateQueries({ queryKey: ['asset', asset.id] });
+      queryClient.invalidateQueries({ queryKey: ['assets-list'] });
+      queryClient.invalidateQueries({ queryKey: ['asset'] });
+      queryClient.invalidateQueries({ queryKey: ['analytics'] });
       MessageManager.success('资产更新成功');
     },
     onError: (error: { message: string }) => {
@@ -82,7 +92,8 @@ export const useDeleteAsset = () => {
     mutationFn: (id: string) => assetService.deleteAsset(id),
     onSuccess: () => {
       // 使响应缓存失效，触发重新查询
-      queryClient.invalidateQueries({ queryKey: ['assets'] });
+      queryClient.invalidateQueries({ queryKey: ['assets-list'] });
+      queryClient.invalidateQueries({ queryKey: ['analytics'] });
       MessageManager.success('资产删除成功');
     },
     onError: (error: { message: string }) => {
@@ -101,7 +112,8 @@ export const useBatchDeleteAssets = () => {
     mutationFn: (ids: string[]) => assetService.deleteAssets(ids),
     onSuccess: (_, ids) => {
       // 更新缓存
-      queryClient.invalidateQueries({ queryKey: ['assets'] });
+      queryClient.invalidateQueries({ queryKey: ['assets-list'] });
+      queryClient.invalidateQueries({ queryKey: ['analytics'] });
 
       MessageManager.success(`成功删除 ${ids.length} 个资产`);
     },
@@ -171,13 +183,15 @@ export const useBusinessCategories = () => {
  */
 export const useAssetSearch = () => {
   const queryClient = useQueryClient();
+  const { perspective } = useRoutePerspective();
+  const queryScopeKey = buildQueryScopeKey(perspective);
 
   return useMutation({
     mutationFn: ({ query, filters }: { query: string; filters?: AssetSearchFilters }) =>
       assetService.searchAssets(query, filters),
     onSuccess: result => {
       // 可以选择性地更新缓存
-      queryClient.setQueryData(['assets', { search: result }], result);
+      queryClient.setQueryData(['assets-list', queryScopeKey, { search: result }], result);
     },
   });
 };

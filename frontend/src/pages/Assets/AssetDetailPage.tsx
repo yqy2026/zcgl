@@ -19,12 +19,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import dayjs, { type Dayjs } from 'dayjs';
 import { assetService } from '@/services/assetService';
+import { useRoutePerspective } from '@/routes/perspective';
 import type {
   AssetLeaseGroupRelationType,
   AssetLeaseSummaryResponse,
   ContractPartyItem,
   ContractTypeSummary,
 } from '@/types/asset';
+import { buildQueryScopeKey } from '@/utils/queryScope';
 import { formatArea, formatCurrency } from '@/utils/format';
 import AssetDetailInfo from '@/components/Asset/AssetDetailInfo';
 import { PageContainer } from '@/components/Common';
@@ -83,18 +85,21 @@ const summaryColumns: ColumnsType<ContractTypeSummary> = [
 const AssetDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { perspective } = useRoutePerspective();
   const [selectedMonth, setSelectedMonth] = useState<Dayjs>(() => dayjs().startOf('month'));
   const hasAssetId = id != null && id !== '';
+  const canQuery = hasAssetId;
   const periodParams = useMemo(() => buildPeriodParams(selectedMonth), [selectedMonth]);
+  const queryScopeKey = buildQueryScopeKey(perspective);
 
   const {
     data: asset,
     isLoading: isAssetLoading,
     error: assetError,
   } = useQuery({
-    queryKey: ['asset', id],
+    queryKey: ['asset', queryScopeKey, id],
     queryFn: () => assetService.getAsset(id as string),
-    enabled: hasAssetId,
+    enabled: canQuery,
   });
 
   const {
@@ -102,10 +107,24 @@ const AssetDetailPage: React.FC = () => {
     isLoading: isLeaseSummaryLoading,
     error: leaseSummaryError,
   } = useQuery<AssetLeaseSummaryResponse>({
-    queryKey: ['asset-lease-summary', id, periodParams.period_start, periodParams.period_end],
+    queryKey: [
+      'asset-lease-summary',
+      queryScopeKey,
+      id,
+      periodParams.period_start,
+      periodParams.period_end,
+    ],
     queryFn: () => assetService.getAssetLeaseSummary(id as string, periodParams),
-    enabled: hasAssetId,
+    enabled: canQuery,
   });
+
+  if (!canQuery) {
+    return (
+      <PageContainer title="资产详情" loading onBack={() => navigate('/assets')}>
+        <div />
+      </PageContainer>
+    );
+  }
 
   if (assetError) {
     return (

@@ -85,9 +85,7 @@ class CertificatePartyRelation(Base):
     is_primary: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, comment="是否主角色"
     )
-    share_ratio: Mapped[float | None] = mapped_column(
-        Numeric(5, 2), comment="占比(%)"
-    )
+    share_ratio: Mapped[float | None] = mapped_column(Numeric(5, 2), comment="占比(%)")
     valid_from: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=_utcnow_naive, comment="生效时间"
     )
@@ -107,9 +105,7 @@ class CertificatePartyRelation(Base):
     )
 
     def __repr__(self) -> str:
-        return (
-            f"<CertificatePartyRelation(certificate_id={self.certificate_id}, party_id={self.party_id}, role={self.relation_role})>"
-        )
+        return f"<CertificatePartyRelation(certificate_id={self.certificate_id}, party_id={self.party_id}, role={self.relation_role})>"
 
 
 __all__ = ["CertificateRelationRole", "CertificatePartyRelation"]

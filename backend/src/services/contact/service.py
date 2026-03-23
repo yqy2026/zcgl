@@ -16,9 +16,7 @@ class ContactService:
     ) -> Contact:
         return await contact_crud.create_async(db=db, obj_in=contact_data)
 
-    async def get_contact(
-        self, db: AsyncSession, *, contact_id: str
-    ) -> Contact | None:
+    async def get_contact(self, db: AsyncSession, *, contact_id: str) -> Contact | None:
         return await contact_crud.get_async(db, id=contact_id)
 
     async def get_entity_contacts(

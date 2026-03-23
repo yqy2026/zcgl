@@ -55,7 +55,8 @@ const AssetBatchActions: React.FC<AssetBatchActionsProps> = ({
       MessageManager.success(`成功删除 ${selectedRowKeys.length} 个资产`);
       onClearSelection();
       onRefresh();
-      queryClient.invalidateQueries({ queryKey: ['assets'] });
+      queryClient.invalidateQueries({ queryKey: ['assets-list'] });
+      queryClient.invalidateQueries({ queryKey: ['analytics'] });
     },
     onError: (error: unknown) => {
       MessageManager.error(`批量删除失败: ${error instanceof Error ? error.message : '未知错误'}`);
@@ -75,7 +76,9 @@ const AssetBatchActions: React.FC<AssetBatchActionsProps> = ({
       form.resetFields();
       onClearSelection();
       onRefresh();
-      queryClient.invalidateQueries({ queryKey: ['assets'] });
+      queryClient.invalidateQueries({ queryKey: ['assets-list'] });
+      queryClient.invalidateQueries({ queryKey: ['asset'] });
+      queryClient.invalidateQueries({ queryKey: ['analytics'] });
     },
     onError: (error: unknown) => {
       MessageManager.error(`批量更新失败: ${error instanceof Error ? error.message : '未知错误'}`);

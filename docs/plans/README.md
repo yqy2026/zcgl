@@ -10,6 +10,8 @@
 |------|------|------|------|
 | [2026-02-11-approval-flowable-b-plan.md](2026-02-11-approval-flowable-b-plan.md) | Flowable 编排内核 B 方案 | ⏸ 搁置 | 审批流方向待定，暂不实施 |
 | [2026-03-02-party-scope-isolation-fix-plan.md](2026-03-02-party-scope-isolation-fix-plan.md) | 组织数据权限隔离修复（全量排查） | 🔄 待执行 | Party 列表等集合接口作用域收敛缺失 |
+| [2026-03-22-perspective-simplification-v2-follow-up.md](2026-03-22-perspective-simplification-v2-follow-up.md) | 前端视角简化 v2 后续收口 | 📋 待评审 | 以路由前缀替代 ViewContext/本地选择存储，完成 owner/manager 规范化 |
+| [2026-03-21-ci-baseline-restoration-plan.md](2026-03-21-ci-baseline-restoration-plan.md) | CI 基线恢复与格式治理 | 📋 待评审 | 独立修复 Trivy action 失效与 backend/frontend 现有格式红灯，不与业务 PR 混改 |
 
 ## 已归档方案
 
@@ -26,6 +28,7 @@
 | 2026-03-05-project-field-enrichment-m1.md | Project 表字段收口（M1） | ✅ 已完成 |
 | 2026-03-05-req-rnt-001-contract-group.md | REQ-RNT-001：合同组作为主业务对象（五层合同模型重构） | ✅ 已完成 |
 | 2026-03-05-req-ast-004-asset-lease-summary.md | REQ-AST-004：资产详情租赁情况展示（按合同类型） | ✅ 已完成 |
+| 2026-03-21-ci-baseline-restoration-plan.md | CI 基线恢复与格式治理 | ✅ 已完成 |
 | 2026-03-11-req-ast-003-asset-review.md | REQ-AST-003：资产主数据审核与反审核 | ✅ 已完成 |
 | 2026-03-12-req-pty-001-002-party-remediation.md | REQ-PTY-001/002：主体主档管理 Gap 修复 | ✅ 已完成 |
 | 2026-02-20-phase3-implementation-plan.md | Phase 3：前端全量迁移 + 策略包 UI | ✅ 已完成 |
@@ -37,6 +40,7 @@
 
 | 图标 | 含义 |
 |------|------|
+| 📋 待评审 | 方案已编写，等待评审确认后开始实施 |
 | 🔄 进行中 | 当前正在实施 |
 | ⏸ 搁置 | 暂不实施，保留供参考 |
 | ✅ 已完成 / 已实现 | 方案已落地，已移入 archive/ |

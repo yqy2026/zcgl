@@ -91,9 +91,7 @@ class UserPartyBinding(Base):
     party: Mapped["Party"] = relationship("Party", back_populates="user_bindings")
 
     def __repr__(self) -> str:
-        return (
-            f"<UserPartyBinding(user_id={self.user_id}, party_id={self.party_id}, relation={self.relation_type})>"
-        )
+        return f"<UserPartyBinding(user_id={self.user_id}, party_id={self.party_id}, relation={self.relation_type})>"
 
 
 __all__ = [

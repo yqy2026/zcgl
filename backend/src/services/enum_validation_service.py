@@ -182,8 +182,7 @@ class AsyncEnumValidationService:
                 return {}
             return {enum_type_code: dict(self._validation_stats[enum_type_code])}
         return {
-            enum_code: dict(stat)
-            for enum_code, stat in self._validation_stats.items()
+            enum_code: dict(stat) for enum_code, stat in self._validation_stats.items()
         }
 
 
@@ -201,4 +200,3 @@ def get_enum_validation_service_async(
     service = AsyncEnumValidationService(db)
     _ASYNC_SERVICE_CACHE[db] = service
     return service
-

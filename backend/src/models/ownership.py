@@ -47,7 +47,10 @@ class Ownership(Base):
 
     # 时间戳
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=lambda: datetime.now(UTC).replace(tzinfo=None), comment="创建时间"
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        comment="创建时间",
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,

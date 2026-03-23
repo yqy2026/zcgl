@@ -175,9 +175,7 @@ class PartyHierarchy(Base):
     )
 
     def __repr__(self) -> str:
-        return (
-            f"<PartyHierarchy(parent={self.parent_party_id}, child={self.child_party_id})>"
-        )
+        return f"<PartyHierarchy(parent={self.parent_party_id}, child={self.child_party_id})>"
 
 
 class PartyContact(Base):

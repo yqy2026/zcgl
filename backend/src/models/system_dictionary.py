@@ -36,7 +36,10 @@ class SystemDictionary(Base):
         Boolean, nullable=False, default=True, comment="是否启用"
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=lambda: datetime.now(UTC).replace(tzinfo=None), comment="创建时间"
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        comment="创建时间",
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
@@ -82,7 +85,10 @@ class AssetCustomField(Base):
     help_text: Mapped[str | None] = mapped_column(Text, comment="帮助文本")
     description: Mapped[str | None] = mapped_column(Text, comment="描述")
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=lambda: datetime.now(UTC).replace(tzinfo=None), comment="创建时间"
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        comment="创建时间",
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,

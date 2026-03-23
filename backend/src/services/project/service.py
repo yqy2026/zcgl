@@ -173,12 +173,18 @@ class ProjectService:
         try:
             # 1. 生成项目编码 (如果未提供)
             if not obj_in.project_code:
-                obj_in.project_code = await self.generate_project_code(db, obj_in.project_name)
+                obj_in.project_code = await self.generate_project_code(
+                    db, obj_in.project_name
+                )
 
             # 2. 检查编码唯一性
-            existing_project = await project_crud.get_by_code(db, code=obj_in.project_code)
+            existing_project = await project_crud.get_by_code(
+                db, code=obj_in.project_code
+            )
             if existing_project:
-                raise DuplicateResourceError("项目", "project_code", obj_in.project_code)
+                raise DuplicateResourceError(
+                    "项目", "project_code", obj_in.project_code
+                )
 
             # 3. 创建项目
             project: Project = await project_crud.create(
@@ -495,11 +501,17 @@ class ProjectService:
         ]
 
         total_rentable_area = sum(
-            (self._as_decimal(getattr(asset, "rentable_area", None)) for asset in ordered_assets),
+            (
+                self._as_decimal(getattr(asset, "rentable_area", None))
+                for asset in ordered_assets
+            ),
             start=Decimal(0),
         )
         total_rented_area = sum(
-            (self._as_decimal(getattr(asset, "rented_area", None)) for asset in ordered_assets),
+            (
+                self._as_decimal(getattr(asset, "rented_area", None))
+                for asset in ordered_assets
+            ),
             start=Decimal(0),
         )
         if total_rentable_area == Decimal(0):

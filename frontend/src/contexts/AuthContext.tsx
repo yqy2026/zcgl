@@ -7,12 +7,14 @@ import React, {
   useRef,
   useState,
 } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { User, LoginCredentials, Permission } from '@/types/auth';
 import type { CapabilityItem } from '@/types/capability';
 import { AuthService } from '@/services/authService';
 import { AuthStorage } from '@/utils/AuthStorage';
 import { createLogger } from '@/utils/logger';
 import { MessageManager } from '@/utils/messageManager';
+import { apiClient } from '@/api/client';
 import { CSRF_CONFIG } from '@/api/config';
 
 const logger = createLogger('AuthContext');
@@ -76,6 +78,7 @@ export function useAuth() {
 }
 
 const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<User | null>(null);
   const [permissions, setPermissions] = useState<Permission[]>(() => {
     return AuthStorage.getPermissions() as Permission[];
@@ -380,6 +383,8 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = async () => {
     try {
       setLoading(true);
+      apiClient.clearCache();
+      queryClient.clear();
       currentUserIdRef.current = null;
       invalidateCapabilityRequests();
       AuthStorage.clearCapabilitiesSnapshot();

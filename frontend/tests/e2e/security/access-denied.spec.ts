@@ -46,7 +46,8 @@ const extractData = <T>(payload: unknown): T => {
 };
 
 const resolveNonAdminRoleId = async (
-  page: Page
+  page: Page,
+  headers?: Record<string, string>
 ): Promise<string> => {
   const explicitRoleId = normalizeNonEmpty(process.env.E2E_REGULAR_ROLE_ID);
   if (explicitRoleId != null) {
@@ -65,10 +66,42 @@ const resolveNonAdminRoleId = async (
   });
 
   const roleId = normalizeNonEmpty(role?.id);
-  if (roleId == null) {
+  if (roleId != null) {
+    return roleId;
+  }
+
+  if (headers == null || Object.keys(headers).length === 0) {
     throw new Error('No non-admin role is available for access-denied E2E.');
   }
-  return roleId;
+
+  const suffix = Date.now();
+  const createRoleResponse = await page.request.post('/api/v1/roles', {
+    headers,
+    data: {
+      name: `e2e_regular_role_${suffix}`,
+      display_name: `E2E Regular Role ${suffix}`,
+      description: 'Provisioned by access-denied E2E',
+      level: 1,
+      scope: 'global',
+      permission_ids: [],
+    },
+  });
+
+  if (createRoleResponse.status() !== 201) {
+    const body = await createRoleResponse.text();
+    throw new Error(
+      `No non-admin role is available for access-denied E2E. role_create_status=${createRoleResponse.status()} body=${body}`
+    );
+  }
+
+  const createdRolePayload = (await createRoleResponse.json()) as unknown;
+  const createdRole = extractData<RoleListItem>(createdRolePayload);
+  const createdRoleId = normalizeNonEmpty(createdRole.id);
+  if (createdRoleId == null) {
+    throw new Error('No non-admin role is available for access-denied E2E.');
+  }
+
+  return createdRoleId;
 };
 
 const provisionRegularCredential = async (
@@ -81,7 +114,7 @@ const provisionRegularCredential = async (
     throw new Error('Unable to provision regular user: csrf_token is missing.');
   }
 
-  const roleId = await resolveNonAdminRoleId(page);
+  const roleId = await resolveNonAdminRoleId(page, headers);
   const suffix = Date.now();
   const password = `Aa!${suffix}`;
   const createUserResponse = await page.request.post('/api/v1/auth/users', {

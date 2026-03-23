@@ -84,16 +84,12 @@ class DatabaseSettings(BaseModel):
                     {},
                 )
             if not self.REDIS_PASSWORD:
-                environment = str(
-                    getattr(self, "ENVIRONMENT", "development")
-                ).lower()
+                environment = str(getattr(self, "ENVIRONMENT", "development")).lower()
                 if environment == "production":
                     raise PydanticCustomError(
                         "missing_redis_password",
                         "生产环境启用 Redis 时必须设置 REDIS_PASSWORD",
                         {"environment": environment},
                     )
-                logger.warning(
-                    "Redis 已启用但未设置密码，建议配置 REDIS_PASSWORD"
-                )
+                logger.warning("Redis 已启用但未设置密码，建议配置 REDIS_PASSWORD")
         return self

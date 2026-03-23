@@ -1,12 +1,9 @@
 import { expect, test, type Page, type Request } from '@playwright/test';
 import { clearAuthState, ensureAuthenticated } from '../helpers/auth';
-import {
-  LEGACY_CONTRACT_EXCEL_IMPORT_API,
-  LEGACY_CONTRACT_ROUTES,
-  legacyContractRoutePattern,
-} from '../helpers/legacyContract';
+import { LEGACY_CONTRACT_ROUTES, legacyContractRoutePattern } from '../helpers/legacyContract';
 
 type FileInputScope = Page | { locator: Page['locator'] };
+const ACTIVE_CONTRACT_PDF_IMPORT_PATH = '/contract-groups/import';
 
 const uploadPlainTextFile = async (scope: FileInputScope, filename: string): Promise<void> => {
   const uploadInput = scope.locator('input[type="file"]').first();
@@ -39,49 +36,28 @@ test.describe('@user-usable 导入入口校验', () => {
     await ensureAuthenticated(page);
   });
 
-  test('contract excel import should reject non-excel file before request', async ({ page }) => {
-    await page.goto(LEGACY_CONTRACT_ROUTES.LIST);
-    await expect(page).toHaveURL(legacyContractRoutePattern(LEGACY_CONTRACT_ROUTES.LIST));
-
-    await page.getByRole('button', { name: '导入Excel' }).first().click();
-    const importModal = page.getByRole('dialog', { name: /导入Excel文件/i });
-    await expect(importModal).toBeVisible();
-
-    await uploadPlainTextFile(importModal, 'contracts.txt');
-    await expectMessageVisible(page, /请选择Excel文件（\.xlsx或\.xls格式）/);
-    await expect(importModal).toBeVisible();
-  });
-
-  test('contract excel import should not send request when file type is rejected', async ({
+  test('legacy contract list should expose retired state instead of excel import entry', async ({
     page,
   }) => {
     await page.goto(LEGACY_CONTRACT_ROUTES.LIST);
     await expect(page).toHaveURL(legacyContractRoutePattern(LEGACY_CONTRACT_ROUTES.LIST));
+    await expect(page.getByRole('heading', { name: /租赁前端模块已退休/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: '导入Excel' })).toHaveCount(0);
+    await expect(page.locator('input[type="file"]')).toHaveCount(0);
+  });
 
-    await page.getByRole('button', { name: '导入Excel' }).first().click();
-    const importModal = page.getByRole('dialog', { name: /导入Excel文件/i });
-    await expect(importModal).toBeVisible();
-
-    let importRequestCount = 0;
-    const requestListener = (request: Request) => {
-      if (request.method() === 'POST' && request.url().includes(LEGACY_CONTRACT_EXCEL_IMPORT_API)) {
-        importRequestCount += 1;
-      }
-    };
-    page.on('request', requestListener);
-    try {
-      await uploadPlainTextFile(importModal, 'contracts.txt');
-      await expectMessageVisible(page, /请选择Excel文件（\.xlsx或\.xls格式）/);
-      await page.waitForTimeout(500);
-      expect(importRequestCount).toBe(0);
-    } finally {
-      page.off('request', requestListener);
-    }
+  test('legacy contract list should direct users to active contract-group flows', async ({
+    page,
+  }) => {
+    await page.goto(LEGACY_CONTRACT_ROUTES.LIST);
+    await expect(page).toHaveURL(legacyContractRoutePattern(LEGACY_CONTRACT_ROUTES.LIST));
+    await expect(page.getByRole('button', { name: '查看合同组' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'PDF导入' })).toBeVisible();
   });
 
   test('pdf import should reject non-pdf file before request', async ({ page }) => {
-    await page.goto(LEGACY_CONTRACT_ROUTES.PDF_IMPORT);
-    await expect(page).toHaveURL(legacyContractRoutePattern(LEGACY_CONTRACT_ROUTES.PDF_IMPORT));
+    await page.goto(ACTIVE_CONTRACT_PDF_IMPORT_PATH);
+    await expect(page).toHaveURL(/\/contract-groups\/import$/);
     await expect(page.getByRole('heading', { name: /PDF合同智能导入/i })).toBeVisible();
 
     await uploadPlainTextFile(page, 'contract.txt');
@@ -89,8 +65,8 @@ test.describe('@user-usable 导入入口校验', () => {
   });
 
   test('pdf import should not send upload request when file type is rejected', async ({ page }) => {
-    await page.goto(LEGACY_CONTRACT_ROUTES.PDF_IMPORT);
-    await expect(page).toHaveURL(legacyContractRoutePattern(LEGACY_CONTRACT_ROUTES.PDF_IMPORT));
+    await page.goto(ACTIVE_CONTRACT_PDF_IMPORT_PATH);
+    await expect(page).toHaveURL(/\/contract-groups\/import$/);
     await expect(page.getByRole('heading', { name: /PDF合同智能导入/i })).toBeVisible();
 
     let uploadRequestCount = 0;
@@ -155,7 +131,7 @@ test.describe('@user-usable 导入路由匿名拦截', () => {
 
     const protectedImportRoutes = [
       '/assets/import',
-      LEGACY_CONTRACT_ROUTES.PDF_IMPORT,
+      ACTIVE_CONTRACT_PDF_IMPORT_PATH,
       '/property-certificates/import',
     ];
 

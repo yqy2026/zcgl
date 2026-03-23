@@ -1,6 +1,6 @@
 """合同台账聚合查询与重算 API。"""
 
-from typing import Annotated
+from typing import Annotated, Literal, cast
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.exceptions import RequestValidationError
@@ -24,6 +24,8 @@ from ....services.contract.ledger_service_v2 import ledger_service_v2
 
 router = APIRouter()
 
+LedgerPaymentStatus = Literal["unpaid", "paid", "overdue", "partial", "voided"]
+
 
 def resolve_ledger_query_params(
     asset_id: str | None = Query(None, description="资产 ID"),
@@ -37,13 +39,38 @@ def resolve_ledger_query_params(
     limit: int = Query(20, ge=1, le=200, description="每页条数"),
 ) -> LedgerAggregateQueryParams:
     try:
+        normalized_payment_status: LedgerPaymentStatus | None = None
+        if payment_status is not None:
+            allowed_payment_statuses: set[LedgerPaymentStatus] = {
+                "unpaid",
+                "paid",
+                "overdue",
+                "partial",
+                "voided",
+            }
+            if payment_status not in allowed_payment_statuses:
+                raise ValidationError.from_exception_data(
+                    "LedgerAggregateQueryParams",
+                    [
+                        {
+                            "type": "literal_error",
+                            "loc": ("payment_status",),
+                            "input": payment_status,
+                            "ctx": {
+                                "expected": ", ".join(sorted(allowed_payment_statuses)),
+                            },
+                        }
+                    ],
+                )
+            normalized_payment_status = cast(LedgerPaymentStatus, payment_status)
+
         return LedgerAggregateQueryParams(
             asset_id=asset_id,
             party_id=party_id,
             contract_id=contract_id,
             year_month_start=year_month_start,
             year_month_end=year_month_end,
-            payment_status=payment_status,
+            payment_status=normalized_payment_status,
             include_voided=include_voided,
             offset=offset,
             limit=limit,
@@ -74,7 +101,7 @@ async def get_ledger_entries(
     _ = current_user
     _ = _authz
     try:
-        return await ledger_service_v2.query_ledger_entries(
+        result = await ledger_service_v2.query_ledger_entries(
             db,
             asset_id=params.asset_id,
             party_id=params.party_id,
@@ -86,6 +113,7 @@ async def get_ledger_entries(
             offset=params.offset,
             limit=params.limit,
         )
+        return ContractLedgerListResponse.model_validate(result)
     except BaseBusinessError:
         raise
     except Exception as exc:
@@ -115,7 +143,8 @@ async def recalculate_contract_ledger(
     _ = current_user
     _ = _authz
     try:
-        return await ledger_service_v2.recalculate_ledger(db, contract_id=contract_id)
+        result = await ledger_service_v2.recalculate_ledger(db, contract_id=contract_id)
+        return LedgerRecalculateResponse.model_validate(result)
     except BaseBusinessError:
         raise
     except Exception as exc:

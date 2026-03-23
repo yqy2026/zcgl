@@ -190,7 +190,11 @@ class AnalyticsExportService {
       csvData.push(['经营口径指标']);
       csvData.push(['指标', '数值', '单位']);
       csvData.push(['总收入（经营口径）', (data.summary.total_income ?? 0).toFixed(2), '元']);
-      csvData.push(['自营租金收入', (data.summary.self_operated_rent_income ?? 0).toFixed(2), '元']);
+      csvData.push([
+        '自营租金收入',
+        (data.summary.self_operated_rent_income ?? 0).toFixed(2),
+        '元',
+      ]);
       csvData.push(['代理服务费收入', (data.summary.agency_service_income ?? 0).toFixed(2), '元']);
       csvData.push(['客户主体数', data.summary.customer_entity_count ?? 0, '个']);
       csvData.push(['客户合同数', data.summary.customer_contract_count ?? 0, '份']);

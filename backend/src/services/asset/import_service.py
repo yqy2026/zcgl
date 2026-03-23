@@ -49,7 +49,9 @@ class AsyncAssetImportService:
             or "system"
         )
         operator_value = str(operator) if operator is not None else None
-        default_org_id = getattr(current_user, "default_organization_id", None)  # DEPRECATED legacy org scope fallback
+        default_org_id = getattr(
+            current_user, "default_organization_id", None
+        )  # DEPRECATED legacy org scope fallback
         organization_id = (  # DEPRECATED alias
             str(default_org_id)
             if default_org_id is not None and str(default_org_id).strip() != ""
@@ -68,12 +70,15 @@ class AsyncAssetImportService:
                 validation_request = AssetValidationRequest(
                     data=asset_data, validate_rules=None
                 )
-                is_valid, validation_errors, _, _ = (
-                    await self.batch_service.validate_asset_data(
-                        data=validation_request.data,
-                        validate_rules=validation_request.validate_rules,
-                        enum_validation_service=enum_service,
-                    )
+                (
+                    is_valid,
+                    validation_errors,
+                    _,
+                    _,
+                ) = await self.batch_service.validate_asset_data(
+                    data=validation_request.data,
+                    validate_rules=validation_request.validate_rules,
+                    enum_validation_service=enum_service,
                 )
 
                 error_models = [
@@ -131,9 +136,8 @@ class AsyncAssetImportService:
                         failed_count += 1
                         continue
 
-                    if (
-                        ownership_entity != ""
-                        and ownership_entity != str(ownership.name)
+                    if ownership_entity != "" and ownership_entity != str(
+                        ownership.name
                     ):
                         errors.append(
                             self._build_batch_error(
@@ -179,7 +183,6 @@ class AsyncAssetImportService:
                         operator=operator_value,
                         organization_id=organization_id,  # DEPRECATED alias
                     )
-                    assert new_asset is not None
                     if getattr(new_asset, "asset_name", None) is not None:
                         existing_assets_by_name[str(new_asset.asset_name)] = new_asset
                     imported_assets.append(str(new_asset.id))
@@ -231,7 +234,6 @@ class AsyncAssetImportService:
                     operator=operator_value,
                     organization_id=organization_id,  # DEPRECATED alias
                 )
-                assert new_asset is not None
                 if getattr(new_asset, "asset_name", None) is not None:
                     existing_assets_by_name[str(new_asset.asset_name)] = new_asset
                 imported_assets.append(str(new_asset.id))

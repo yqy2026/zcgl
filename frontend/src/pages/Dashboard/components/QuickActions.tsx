@@ -10,6 +10,7 @@ import {
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import type { AntdIconProps } from '@ant-design/icons/lib/components/AntdIcon';
+import { OWNER_ROUTES } from '@/constants/routes';
 import styles from './QuickActions.module.css';
 
 type ActionTone = 'primary' | 'success' | 'warning' | 'info' | 'secondary' | 'neutral';
@@ -53,7 +54,7 @@ const QuickActions: React.FC = () => {
       description: '导出资产清单',
       icon: ExportOutlined,
       tone: 'warning',
-      onClick: () => navigate('/assets/list'),
+      onClick: () => navigate(OWNER_ROUTES.ASSETS),
     },
     {
       title: '资产分析',

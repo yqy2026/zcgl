@@ -6,6 +6,7 @@
 
 import logging
 import os
+import subprocess  # nosec B404
 from datetime import datetime
 from typing import Any
 
@@ -72,8 +73,6 @@ class BackupService:
 
             logger.info(f"开始创建数据备份: {backup_path}")
 
-            import subprocess
-
             database_url = self._normalize_postgres_url(database_url)
             cmd = [
                 "pg_dump",
@@ -85,7 +84,7 @@ class BackupService:
                 database_url,
             ]
             logger.info("执行 PostgreSQL 备份命令: pg_dump (custom format)")
-            subprocess.run(cmd, check=True)
+            subprocess.run(cmd, check=True)  # nosec B603
 
             # 获取备份文件信息
             backup_size = os.path.getsize(backup_path)
@@ -271,8 +270,6 @@ class BackupService:
                     current_backup_result["backup_path"],
                 )
 
-            import subprocess
-
             database_url = self._normalize_postgres_url(database_url)
             cmd = [
                 "pg_restore",
@@ -285,7 +282,7 @@ class BackupService:
                 backup_path,
             ]
             logger.info("执行 PostgreSQL 恢复命令: pg_restore")
-            subprocess.run(cmd, check=True)
+            subprocess.run(cmd, check=True)  # nosec B603
 
             return result
 

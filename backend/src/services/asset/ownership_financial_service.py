@@ -90,8 +90,10 @@ class OwnershipFinancialService:
         )
 
         # 统计欠款总额
-        arrears_amount = await contract_group_crud.sum_overdue_amount_by_ownership_async(
-            db, ownership_id
+        arrears_amount = (
+            await contract_group_crud.sum_overdue_amount_by_ownership_async(
+                db, ownership_id
+            )
         )
 
         # 统计合同数量

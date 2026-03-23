@@ -2,7 +2,7 @@ import React from 'react';
 import { Alert, Button, Result, Space, Typography } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { PageContainer } from '@/components/Common';
-import { CONTRACT_GROUP_ROUTES } from '@/constants/routes';
+import { CONTRACT_GROUP_ROUTES, OWNER_ROUTES } from '@/constants/routes';
 
 const LegacyRentalRetiredPage: React.FC = () => {
   const navigate = useNavigate();
@@ -25,7 +25,7 @@ const LegacyRentalRetiredPage: React.FC = () => {
             <Button type="link" onClick={() => navigate('/dashboard')}>
               返回工作台
             </Button>
-            <Button type="link" onClick={() => navigate('/assets/list')}>
+            <Button type="link" onClick={() => navigate(OWNER_ROUTES.ASSETS)}>
               查看资产
             </Button>
           </Space>

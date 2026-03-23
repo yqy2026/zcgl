@@ -40,8 +40,7 @@ def _reject_legacy_asset_fields(data: Any) -> Any:
         return data
 
     replacement_mapping = "、".join(
-        f"{field}->{LEGACY_ASSET_FIELD_REPLACEMENTS[field]}"
-        for field in legacy_fields
+        f"{field}->{LEGACY_ASSET_FIELD_REPLACEMENTS[field]}" for field in legacy_fields
     )
     raise PydanticCustomError(
         "legacy_asset_field_not_supported",
@@ -75,16 +74,26 @@ class AssetBase(BaseModel):
         max_length=FieldLengthLimits.SHORT_TEXT_MAX,
         description="资产名称",
     )
-    asset_form: str | None = Field(None, description="资产形态：land/building/structure/parking/warehouse/other")
-    spatial_level: str | None = Field(None, description="空间层级：plot/campus/building/floor/room/shop")
-    business_usage: str | None = Field(None, description="经营用途：commercial/office/warehouse/industrial/mixed/other")
+    asset_form: str | None = Field(
+        None, description="资产形态：land/building/structure/parking/warehouse/other"
+    )
+    spatial_level: str | None = Field(
+        None, description="空间层级：plot/campus/building/floor/room/shop"
+    )
+    business_usage: str | None = Field(
+        None, description="经营用途：commercial/office/warehouse/industrial/mixed/other"
+    )
     # 半结构化地址子字段（所有三级行政区上线前可暂时为 null）
     province_code: str | None = Field(None, max_length=20, description="省级行政区代码")
     city_code: str | None = Field(None, max_length=20, description="市级行政区代码")
     district_code: str | None = Field(None, max_length=20, description="区县行政区代码")
-    address_detail: str | None = Field(None, max_length=200, description="详细地址（trim 后长度 5-200）")
+    address_detail: str | None = Field(
+        None, max_length=200, description="详细地址（trim 后长度 5-200）"
+    )
     # address 不对外开放直写，由 Service 层自动拼接，必须保留在 schema 中才能通过 CRUD 传入 ORM
-    address: str | None = Field(None, description="物业地址（系统拼接只读，不接受外部直写）")
+    address: str | None = Field(
+        None, description="物业地址（系统拼接只读，不接受外部直写）"
+    )
     ownership_status: str = Field(..., description="确权状态")
     property_nature: str = Field(..., description="物业性质")
     usage_status: str = Field(..., description="使用状态")
@@ -261,7 +270,9 @@ class AssetUpdate(BaseModel):
     district_code: str | None = Field(None, max_length=20, description="区县行政区代码")
     address_detail: str | None = Field(None, max_length=200, description="详细地址")
     # address 不对外开放直写
-    address: str | None = Field(None, description="物业地址（系统拼接，不接受外部直写）")
+    address: str | None = Field(
+        None, description="物业地址（系统拼接，不接受外部直写）"
+    )
     ownership_status: str | None = Field(None, description="确权状态")
     property_nature: str | None = Field(None, description="物业性质")
     usage_status: str | None = Field(None, description="使用状态")
@@ -413,9 +424,7 @@ class AssetResponseBase(BaseModel):
     """
 
     # 基本信息
-    ownership_entity: str | None = Field(
-        None, description="权属方名称（动态获取）"
-    )
+    ownership_entity: str | None = Field(None, description="权属方名称（动态获取）")
     ownership_category: str | None = Field(None, description="权属类别")
     project_name: str | None = Field(None, description="项目名称")
     asset_code: str | None = Field(None, description="资产编码")
@@ -498,7 +507,9 @@ class AssetResponseBase(BaseModel):
     tags: str | None = Field(None, description="标签")
 
     # 审核字段
-    review_status: str = Field("draft", description="审核状态：draft/pending/approved/reversed")
+    review_status: str = Field(
+        "draft", description="审核状态：draft/pending/approved/reversed"
+    )
     review_by: str | None = Field(None, description="审核人")
     reviewed_at: datetime | None = Field(None, description="审核时间")
     review_reason: str | None = Field(None, description="审核原因")
@@ -514,7 +525,9 @@ class AssetResponse(AssetResponseBase):
     id: str = Field(..., description="资产ID")
     organization_id: str | None = Field(None, description="所属组织ID（DEPRECATED）")
     project_id: str | None = Field(None, description="项目ID")  # 对齐Model
-    ownership_id: str | None = Field(None, description="权属ID（DEPRECATED）")  # 对齐Model
+    ownership_id: str | None = Field(
+        None, description="权属ID（DEPRECATED）"
+    )  # 对齐Model
     manager_party_id: str | None = Field(None, description="经营管理方主体ID")
     owner_party_id: str | None = Field(None, description="产权方主体ID")
     project: ProjectResponse | None = Field(None, description="关联项目")

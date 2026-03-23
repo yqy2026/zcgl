@@ -174,7 +174,8 @@ class RedisCache(CacheBackend):
         if not REDIS_AVAILABLE:
             raise RuntimeError("Redis library not available")
 
-        assert redis is not None
+        if redis is None:
+            raise RuntimeError("Redis module unavailable")
         self.client = redis.Redis(
             host=host,
             port=port,

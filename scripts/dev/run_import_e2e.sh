@@ -85,7 +85,6 @@ run_backend_import_e2e() {
 
   "$BACKEND_PYTHON" -m pytest \
     tests/e2e/test_pdf_import_e2e.py \
-    tests/e2e/test_excel_import_e2e.py \
     tests/e2e/test_property_certificate_import_e2e.py \
     -m e2e \
     --no-cov \
@@ -299,7 +298,7 @@ run_frontend_import_e2e() {
   cd "$FRONTEND_DIR"
   pnpm e2e \
     tests/e2e/user/import-guardrails.spec.ts \
-    tests/e2e/rental/import-success.spec.ts \
+    tests/e2e/legacy-contract/import-success.spec.ts \
     tests/e2e/user/property-certificate-import-success.spec.ts \
     --project=chromium
 }

@@ -56,6 +56,7 @@ from .system.tasks import router as tasks_router
 
 logger = logging.getLogger(__name__)
 
+
 def _load_optional_router(
     module_path: str,
     *,

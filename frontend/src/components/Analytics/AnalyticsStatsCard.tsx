@@ -289,10 +289,7 @@ interface RevenueStatsGridProps {
   loading?: boolean;
 }
 
-export const RevenueStatsGrid: React.FC<RevenueStatsGridProps> = ({
-  data,
-  loading = false,
-}) => {
+export const RevenueStatsGrid: React.FC<RevenueStatsGridProps> = ({ data, loading = false }) => {
   return (
     <>
       <Row gutter={[16, 16]} className={styles.statsGrid}>

@@ -25,7 +25,9 @@ from ....services.system_dictionary import (
 router = APIRouter()
 
 
-def _resolve_service(service: SystemDictionaryService | Any) -> SystemDictionaryService | Any:
+def _resolve_service(
+    service: SystemDictionaryService | Any,
+) -> SystemDictionaryService | Any:
     if isinstance(service, DependsParam):
         return get_system_dictionary_service()
     return service

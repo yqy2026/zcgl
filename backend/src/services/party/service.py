@@ -142,7 +142,11 @@ class PartyService:
                 reason="party_review_submit_invalid_status",
             )
 
-        from_status = party.review_status.value if isinstance(party.review_status, PartyReviewStatus) else str(party.review_status)
+        from_status = (
+            party.review_status.value
+            if isinstance(party.review_status, PartyReviewStatus)
+            else str(party.review_status)
+        )
         result = await self.party_crud.update_party(
             db,
             db_obj=party,
@@ -178,7 +182,11 @@ class PartyService:
                 reason="party_review_approve_invalid_status",
             )
 
-        from_status = party.review_status.value if isinstance(party.review_status, PartyReviewStatus) else str(party.review_status)
+        from_status = (
+            party.review_status.value
+            if isinstance(party.review_status, PartyReviewStatus)
+            else str(party.review_status)
+        )
         result = await self.party_crud.update_party(
             db,
             db_obj=party,
@@ -223,7 +231,11 @@ class PartyService:
                 reason="party_review_reject_invalid_status",
             )
 
-        from_status = party.review_status.value if isinstance(party.review_status, PartyReviewStatus) else str(party.review_status)
+        from_status = (
+            party.review_status.value
+            if isinstance(party.review_status, PartyReviewStatus)
+            else str(party.review_status)
+        )
         result = await self.party_crud.update_party(
             db,
             db_obj=party,
@@ -245,16 +257,19 @@ class PartyService:
         )
         return result
 
-    async def _assert_no_references(
-        self, db: AsyncSession, *, party_id: str
-    ) -> None:
+    async def _assert_no_references(self, db: AsyncSession, *, party_id: str) -> None:
         """Check if this party is referenced by assets or contract groups."""
         from ...models.asset import Asset
-        from ...models.contract_group import ContractGroup, LeaseContractDetail
+        from ...models.contract_group import Contract, ContractGroup
 
         # Check assets referencing this party as owner or manager
-        asset_count_stmt = select(func.count()).select_from(Asset).where(
-            (Asset.owner_party_id == party_id) | (Asset.manager_party_id == party_id)
+        asset_count_stmt = (
+            select(func.count())
+            .select_from(Asset)
+            .where(
+                (Asset.owner_party_id == party_id)
+                | (Asset.manager_party_id == party_id)
+            )
         )
         asset_count = (await db.execute(asset_count_stmt)).scalar() or 0
         if asset_count > 0:
@@ -264,9 +279,13 @@ class PartyService:
             )
 
         # Check contract groups referencing this party
-        cg_count_stmt = select(func.count()).select_from(ContractGroup).where(
-            (ContractGroup.operator_party_id == party_id)
-            | (ContractGroup.owner_party_id == party_id)
+        cg_count_stmt = (
+            select(func.count())
+            .select_from(ContractGroup)
+            .where(
+                (ContractGroup.operator_party_id == party_id)
+                | (ContractGroup.owner_party_id == party_id)
+            )
         )
         cg_count = (await db.execute(cg_count_stmt)).scalar() or 0
         if cg_count > 0:
@@ -275,10 +294,14 @@ class PartyService:
                 reason="party_delete_has_contract_group_references",
             )
 
-        # Check lease contract details referencing this party
-        lcd_count_stmt = select(func.count()).select_from(LeaseContractDetail).where(
-            (LeaseContractDetail.lessor_party_id == party_id)
-            | (LeaseContractDetail.lessee_party_id == party_id)
+        # Check contracts referencing this party as lessor or lessee
+        lcd_count_stmt = (
+            select(func.count())
+            .select_from(Contract)
+            .where(
+                (Contract.lessor_party_id == party_id)
+                | (Contract.lessee_party_id == party_id)
+            )
         )
         lcd_count = (await db.execute(lcd_count_stmt)).scalar() or 0
         if lcd_count > 0:
@@ -298,14 +321,13 @@ class PartyService:
         operator: str | None = None,
         reason: str | None = None,
     ) -> None:
-        log = PartyReviewLog(
-            party_id=party_id,
-            action=action,
-            from_status=from_status,
-            to_status=to_status,
-            operator=operator,
-            reason=reason,
-        )
+        log = PartyReviewLog()
+        log.party_id = party_id
+        log.action = action
+        log.from_status = from_status
+        log.to_status = to_status
+        log.operator = operator
+        log.reason = reason
         db.add(log)
         await db.flush()
 
@@ -340,7 +362,8 @@ class PartyService:
 
         if len(blocked_parties) > 0:
             raise OperationNotAllowedError(
-                f"{operation}前，关联主体必须全部已审核，未通过主体：" + ", ".join(blocked_parties),
+                f"{operation}前，关联主体必须全部已审核，未通过主体："
+                + ", ".join(blocked_parties),
                 reason="party_review_not_approved",
                 details={"party_ids": normalized_party_ids},
             )
@@ -430,7 +453,9 @@ class PartyService:
         payload = obj_in.model_dump(exclude_none=True)
         return await self.party_crud.create_contact(db, obj_in=payload)
 
-    async def get_contacts(self, db: AsyncSession, *, party_id: str) -> list[PartyContact]:
+    async def get_contacts(
+        self, db: AsyncSession, *, party_id: str
+    ) -> list[PartyContact]:
         stmt = select(PartyContact).where(PartyContact.party_id == party_id)
         result = await db.execute(stmt)
         return list(result.scalars().all())

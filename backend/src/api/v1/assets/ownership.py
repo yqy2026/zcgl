@@ -44,7 +44,9 @@ def _normalize_optional_str(value: Any) -> str | None:
 
 
 def _resolve_current_user_organization_id(current_user: User) -> str | None:
-    return _normalize_optional_str(getattr(current_user, "default_organization_id", None))
+    return _normalize_optional_str(
+        getattr(current_user, "default_organization_id", None)
+    )
 
 
 async def _resolve_organization_party_id(

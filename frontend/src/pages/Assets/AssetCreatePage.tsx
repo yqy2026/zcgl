@@ -4,9 +4,12 @@ import { MessageManager } from '@/utils/messageManager';
 import { useParams, useNavigate } from 'react-router-dom';
 import { PageContainer } from '@/components/Common';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRoutePerspective } from '@/routes/perspective';
 import { assetService } from '@/services/assetService';
 import { AssetForm } from '@/components/Forms';
 import type { AssetCreateRequest, AssetUpdateRequest } from '@/types/asset';
+import { buildQueryScopeKey } from '@/utils/queryScope';
+import { OWNER_ROUTES } from '@/constants/routes';
 
 // 错误类型接口
 interface ApiError {
@@ -25,13 +28,15 @@ const AssetCreatePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { perspective } = useRoutePerspective();
   const _form = Form.useForm();
+  const queryScopeKey = buildQueryScopeKey(perspective);
 
   const isEdit = id != null;
 
   // 获取资产详情（编辑模式）
   const { data: asset, isLoading } = useQuery({
-    queryKey: ['asset', id],
+    queryKey: ['asset', queryScopeKey, id],
     queryFn: () => assetService.getAsset(id!),
     enabled: isEdit,
   });
@@ -41,8 +46,9 @@ const AssetCreatePage: React.FC = () => {
     mutationFn: (data: AssetCreateRequest) => assetService.createAsset(data),
     onSuccess: () => {
       MessageManager.success('资产创建成功');
-      queryClient.invalidateQueries({ queryKey: ['assets'] });
-      navigate('/assets/list');
+      queryClient.invalidateQueries({ queryKey: ['assets-list'] });
+      queryClient.invalidateQueries({ queryKey: ['analytics'] });
+      navigate(OWNER_ROUTES.ASSETS);
     },
     onError: (error: unknown) => {
       const apiError = error as ApiError;
@@ -55,8 +61,9 @@ const AssetCreatePage: React.FC = () => {
     mutationFn: (data: AssetUpdateRequest) => assetService.updateAsset(id!, data),
     onSuccess: () => {
       MessageManager.success('资产更新成功');
-      queryClient.invalidateQueries({ queryKey: ['assets'] });
-      queryClient.invalidateQueries({ queryKey: ['asset', id] });
+      queryClient.invalidateQueries({ queryKey: ['assets-list'] });
+      queryClient.invalidateQueries({ queryKey: ['asset'] });
+      queryClient.invalidateQueries({ queryKey: ['analytics'] });
       navigate(`/assets/${id}`);
     },
     onError: (error: unknown) => {

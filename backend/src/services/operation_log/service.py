@@ -58,7 +58,9 @@ class OperationLogService:
             search=search,
         )
 
-        missing_user_ids = {log.user_id for log in logs if log.user_id and not log.username}
+        missing_user_ids = {
+            log.user_id for log in logs if log.user_id and not log.username
+        }
         if missing_user_ids:
             username_map = await user_crud.get_username_map_async(db, missing_user_ids)
             for log in logs:
@@ -74,7 +76,9 @@ class OperationLogService:
         log = await log_crud.get_async(db, log_id)
 
         if not log:
-            raise not_found("日志不存在", resource_type="operation_log", resource_id=log_id)
+            raise not_found(
+                "日志不存在", resource_type="operation_log", resource_id=log_id
+            )
 
         if log.user_id and not log.username:
             user_crud = UserCRUD()
@@ -171,4 +175,3 @@ operation_log_service = OperationLogService()
 
 def get_operation_log_service() -> OperationLogService:
     return operation_log_service
-

@@ -93,9 +93,7 @@ class ExcelImportService:
     ) -> dict[str, Any]:
         from fastapi.concurrency import run_in_threadpool
 
-        df = await run_in_threadpool(
-            pd.read_excel, file_path, sheet_name=sheet_name
-        )
+        df = await run_in_threadpool(pd.read_excel, file_path, sheet_name=sheet_name)
         return await self._import_assets_from_dataframe(
             df=df,
             should_validate_data=should_validate_data,
@@ -118,7 +116,6 @@ class ExcelImportService:
         organization_id: str | None,
     ) -> dict[str, Any]:
         try:
-
             if df.empty:
                 empty_result: dict[str, Any] = {
                     "total": 0,
@@ -297,9 +294,8 @@ class ExcelImportService:
                                     )
                                 continue
 
-                            if (
-                                ownership_entity != ""
-                                and ownership_entity != str(ownership_record.name)
+                            if ownership_entity != "" and ownership_entity != str(
+                                ownership_record.name
                             ):
                                 results["errors"].append(
                                     {
@@ -352,9 +348,9 @@ class ExcelImportService:
                                 db_obj=existing_asset,
                                 obj_in=update_schema,
                             )
-                            existing_assets_by_name[
-                                str(existing_asset.asset_name)
-                            ] = existing_asset
+                            existing_assets_by_name[str(existing_asset.asset_name)] = (
+                                existing_asset
+                            )
                             results["updated_assets"] += 1
                         elif not existing_asset:
                             create_schema = AssetCreate(**asset_data)
@@ -509,9 +505,7 @@ class ExcelImportService:
         try:
             asset_name_raw = asset_data.get("asset_name")
             asset_name = (
-                str(asset_name_raw).strip()
-                if asset_name_raw is not None
-                else ""
+                str(asset_name_raw).strip() if asset_name_raw is not None else ""
             )
             if existing_assets_by_name is not None:
                 if asset_name == "":
@@ -640,4 +634,3 @@ class ExcelImportService:
 
         except Exception as e:
             raise BusinessValidationError(f"预览Excel文件失败: {str(e)}")
-

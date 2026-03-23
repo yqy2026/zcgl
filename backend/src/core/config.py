@@ -90,7 +90,9 @@ class Settings(
             # 从环境变量读取生产域名（兼容 JSON 数组与逗号分隔），如未设置则使用当前值并记录警告
             prod_origins = os.getenv("CORS_ORIGINS", "")  # pragma: no cover
             if prod_origins:  # pragma: no cover
-                self.CORS_ORIGINS = _parse_cors_origins(prod_origins)  # pragma: no cover
+                self.CORS_ORIGINS = _parse_cors_origins(
+                    prod_origins
+                )  # pragma: no cover
             else:  # pragma: no cover
                 logger.warning(  # pragma: no cover
                     "CORS_ORIGINS not set for production. Set CORS_ORIGINS env var."
@@ -100,6 +102,7 @@ class Settings(
             self.RELOAD = True  # pragma: no cover
 
         return self
+
 
 settings = Settings()
 

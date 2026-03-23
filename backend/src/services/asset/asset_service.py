@@ -26,6 +26,7 @@ from ...crud.project_asset import project_asset_crud
 from ...crud.query_builder import PartyFilter
 from ...models.asset import Asset, AssetReviewStatus
 from ...models.asset_history import AssetHistory
+from ...models.asset_management_history import AssetManagementHistory
 from ...models.asset_review_log import AssetReviewLog
 from ...models.associations import contract_assets
 from ...models.auth import User
@@ -34,6 +35,7 @@ from ...models.contract_group import (
     ContractLifecycleStatus,
     GroupRelationType,
 )
+from ...models.project_asset import ProjectAsset
 from ...schemas.asset import (
     AssetCreate,
     AssetLeaseSummaryResponse,
@@ -94,6 +96,8 @@ def normalize_summary_period(
     if period_start is None and period_end is None:
         return _default_summary_period()
     if period_start is None:
+        if period_end is None:
+            return _default_summary_period()
         normalized_start, _ = _month_bounds(period_end)
         return normalized_start, period_end
     if period_end is None:
@@ -102,9 +106,7 @@ def normalize_summary_period(
     return period_start, period_end
 
 
-def _normalize_bool_filter(
-    value: bool | str | None, *, field_name: str
-) -> bool | None:
+def _normalize_bool_filter(value: bool | str | None, *, field_name: str) -> bool | None:
     if isinstance(value, bool):
         return value
 
@@ -135,12 +137,15 @@ def _get_default_asset_crud() -> Any:
 _ADDRESS_SUB_FIELDS = ("province_code", "city_code", "district_code", "address_detail")
 
 
-def _compose_address(data: dict[str, Any], current_asset: "Asset | None" = None) -> str | None:
+def _compose_address(
+    data: dict[str, Any], current_asset: "Asset | None" = None
+) -> str | None:
     """根据半结构化地址子字段拼接只读展示用 address.
 
     优先使用 data 中的字段，缺少时回退到 current_asset 的现有字段。
     若 address_detail 缺到，返回 None（不覆盖现有 address）。
     """
+
     def _get(key: str) -> str | None:
         if key in data and data[key] is not None:
             return str(data[key]).strip() or None
@@ -291,8 +296,10 @@ class AssetService:
             party_obj = await party_crud.get_party(self.db, party_id=owner_party_id)
             if party_obj is None and legacy_ownership_id is None:
                 # 兼容误将 legacy ownership_id 透传到 owner_party_id 的调用方
-                fallback_party_id = await self.resolve_owner_party_scope_by_ownership_id_async(
-                    ownership_id=owner_party_id,
+                fallback_party_id = (
+                    await self.resolve_owner_party_scope_by_ownership_id_async(
+                        ownership_id=owner_party_id,
+                    )
                 )
                 if (
                     fallback_party_id is not None
@@ -309,7 +316,9 @@ class AssetService:
                 )
 
         manager_party_id = _normalize_optional_str(data.get("manager_party_id"))
-        legacy_management_entity = _normalize_optional_str(data.get("management_entity"))
+        legacy_management_entity = _normalize_optional_str(
+            data.get("management_entity")
+        )
         legacy_organization_id = _normalize_optional_str(data.get("organization_id"))
 
         if manager_party_id is None and legacy_management_entity is not None:
@@ -501,8 +510,12 @@ class AssetService:
         type_buckets: dict[str, list[Any]] = defaultdict(list)
         for contract in contracts:
             relation_type = getattr(contract, "group_relation_type", None)
-            key = relation_type.value if isinstance(relation_type, GroupRelationType) else str(relation_type)
-            type_buckets[key].append(contract)
+            relation_bucket_key = (
+                relation_type.value
+                if isinstance(relation_type, GroupRelationType)
+                else str(relation_type)
+            )
+            type_buckets[relation_bucket_key].append(contract)
 
         by_type: list[ContractTypeSummary] = []
         for relation_type, label in (
@@ -514,7 +527,9 @@ class AssetService:
             bucket = type_buckets.get(relation_type, [])
             monthly_amount = sum(
                 (
-                    _as_decimal(getattr(contract.lease_detail, "monthly_rent_base", None))
+                    _as_decimal(
+                        getattr(contract.lease_detail, "monthly_rent_base", None)
+                    )
                     for contract in bucket
                     if getattr(contract, "lease_detail", None) is not None
                 ),
@@ -553,9 +568,9 @@ class AssetService:
                 or "未知租户"
             )
             party_id = str(getattr(contract, "lessee_party_id", "")).strip() or None
-            key = (lessee_name, relation_value)
-            prev_party_id, prev_count = party_counter.get(key, (party_id, 0))
-            party_counter[key] = (prev_party_id or party_id, prev_count + 1)
+            party_key = (lessee_name, relation_value)
+            prev_party_id, prev_count = party_counter.get(party_key, (party_id, 0))
+            party_counter[party_key] = (prev_party_id or party_id, prev_count + 1)
 
         customer_summary = [
             ContractPartyItem(
@@ -564,7 +579,10 @@ class AssetService:
                 group_relation_type=relation_type,
                 contract_count=contract_count,
             )
-            for (party_name, relation_type), (party_id, contract_count) in party_counter.items()
+            for (party_name, relation_type), (
+                party_id,
+                contract_count,
+            ) in party_counter.items()
         ]
 
         rentable_area = _as_decimal(getattr(asset, "rentable_area", None))
@@ -605,7 +623,7 @@ class AssetService:
         *,
         party_filter: PartyFilter | None = None,
         current_user_id: str | None = None,
-    ) -> list:
+    ) -> list[AssetManagementHistory]:
         """获取资产经营方变更历史。"""
         await self.get_asset(
             asset_id,
@@ -613,7 +631,8 @@ class AssetService:
             current_user_id=current_user_id,
         )
         return await asset_management_history_crud.get_by_asset_id(
-            self.db, asset_id=asset_id,
+            self.db,
+            asset_id=asset_id,
         )
 
     async def get_asset_project_history(
@@ -622,7 +641,7 @@ class AssetService:
         *,
         party_filter: PartyFilter | None = None,
         current_user_id: str | None = None,
-    ) -> list:
+    ) -> list[ProjectAsset]:
         """获取资产项目关联历史（含当前有效和已终止绑定）。"""
         await self.get_asset(
             asset_id,
@@ -630,7 +649,9 @@ class AssetService:
             current_user_id=current_user_id,
         )
         return await project_asset_crud.get_asset_projects(
-            self.db, asset_id=asset_id, active_only=False,
+            self.db,
+            asset_id=asset_id,
+            active_only=False,
         )
 
     async def _list_asset_review_logs(self, asset_id: str) -> list[AssetReviewLog]:
@@ -690,23 +711,23 @@ class AssetService:
         reason: str | None = None,
         context: dict[str, Any] | None = None,
     ) -> None:
-        self.db.add(
-            AssetReviewLog(
-                asset_id=asset_id,
-                action=action,
-                from_status=from_status,
-                to_status=to_status,
-                operator=operator,
-                reason=reason,
-                context=context,
-            )
-        )
+        log = AssetReviewLog()
+        log.asset_id = asset_id
+        log.action = action
+        log.from_status = from_status
+        log.to_status = to_status
+        log.operator = operator
+        log.reason = reason
+        log.context = context
+        self.db.add(log)
 
     async def _count_active_contracts_for_asset(self, asset_id: str) -> int:
         stmt = (
             select(func.count(Contract.contract_id))
             .select_from(Contract)
-            .join(contract_assets, contract_assets.c.contract_id == Contract.contract_id)
+            .join(
+                contract_assets, contract_assets.c.contract_id == Contract.contract_id
+            )
             .where(
                 contract_assets.c.asset_id == asset_id,
                 Contract.data_status == "正常",
@@ -840,7 +861,9 @@ class AssetService:
                 asset.review_reason = normalized_reason
                 asset.updated_by = reviewer
                 asset.updated_at = _utcnow_naive()
-                active_contract_count = await self._count_active_contracts_for_asset(asset.id)
+                active_contract_count = await self._count_active_contracts_for_asset(
+                    asset.id
+                )
                 self.db.add(asset)
                 await self._append_asset_review_log(
                     asset_id=asset.id,
@@ -961,7 +984,9 @@ class AssetService:
             or getattr(current_user, "id", None)
             or "system"
         )
-        default_org_id = getattr(current_user, "default_organization_id", None)  # DEPRECATED legacy org scope fallback
+        default_org_id = getattr(
+            current_user, "default_organization_id", None
+        )  # DEPRECATED legacy org scope fallback
         organization_id = (  # DEPRECATED alias
             str(default_org_id)
             if default_org_id is not None and str(default_org_id).strip() != ""
@@ -986,9 +1011,7 @@ class AssetService:
                 db=self.db, asset_name=asset_in.asset_name
             )
             if existing_asset:
-                raise DuplicateResourceError(
-                    "Asset", "asset_name", asset_in.asset_name
-                )
+                raise DuplicateResourceError("Asset", "asset_name", asset_in.asset_name)
 
             # 3. 自动计算与一致性验证
             asset_data = asset_in.model_dump()
@@ -1137,15 +1160,21 @@ class AssetService:
 
                 # 4a. 如地址子字段有变更，重新拼接 address
                 if any(f in final_update for f in _ADDRESS_SUB_FIELDS):
-                    composed_address = _compose_address(final_update, current_asset=asset)
+                    composed_address = _compose_address(
+                        final_update, current_asset=asset
+                    )
                     if composed_address:
                         final_update["address"] = composed_address
 
                 calculated_asset_in = AssetUpdate(**final_update)
 
                 # REQ-AST-002: 经营方变更自动记录历史
-                new_manager = _normalize_optional_str(final_update.get("manager_party_id"))
-                old_manager = _normalize_optional_str(getattr(asset, "manager_party_id", None))
+                new_manager = _normalize_optional_str(
+                    final_update.get("manager_party_id")
+                )
+                old_manager = _normalize_optional_str(
+                    getattr(asset, "manager_party_id", None)
+                )
                 if new_manager and old_manager and new_manager != old_manager:
                     # 结束旧经营方记录
                     await asset_management_history_crud.close_active(

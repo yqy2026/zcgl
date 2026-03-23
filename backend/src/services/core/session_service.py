@@ -126,9 +126,7 @@ class AsyncSessionService:
         return await _session_crud.get_async(self.db, session_id)
 
     async def revoke_session(self, refresh_token: str) -> bool:
-        session = await _session_crud.get_by_refresh_token_async(
-            self.db, refresh_token
-        )
+        session = await _session_crud.get_by_refresh_token_async(self.db, refresh_token)
 
         if session:
             session.is_active = False

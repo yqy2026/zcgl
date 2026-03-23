@@ -7,7 +7,11 @@ import {
   FullscreenOutlined,
   FullscreenExitOutlined,
 } from '@ant-design/icons';
-import { AnalyticsStatsGrid, FinancialStatsGrid, RevenueStatsGrid } from '@/components/Analytics/AnalyticsStatsCard';
+import {
+  AnalyticsStatsGrid,
+  FinancialStatsGrid,
+  RevenueStatsGrid,
+} from '@/components/Analytics/AnalyticsStatsCard';
 import { AnalyticsLineChart, chartDataUtils } from '@/components/Analytics/AnalyticsChart';
 import AnalyticsFilters from '@/components/Analytics/AnalyticsFilters';
 import { createLogger } from '@/utils/logger';

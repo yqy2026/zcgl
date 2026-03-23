@@ -10,6 +10,19 @@ import { render, screen, fireEvent, act } from '@testing-library/react';
 import { useQuery } from '@tanstack/react-query';
 import { partyService } from '@/services/partyService';
 
+const mockBuildQueryScopeKey = vi.fn(() => 'user:user-1|perspective:manager');
+const mockUseRoutePerspective = vi.fn(() => ({
+  perspective: 'manager',
+  isPerspectiveRoute: true,
+}));
+
+vi.mock('@/utils/queryScope', () => ({
+  buildQueryScopeKey: (value: unknown) => mockBuildQueryScopeKey(value),
+}));
+
+vi.mock('@/routes/perspective', () => ({
+  useRoutePerspective: () => mockUseRoutePerspective(),
+}));
 // Mock message manager
 vi.mock('@/utils/messageManager', () => ({
   MessageManager: {
@@ -253,9 +266,20 @@ vi.mock('antd', () => {
   );
   Spin.displayName = 'MockSpin';
 
-  const Alert = ({ message, type }: { message: string; type?: string }) => (
+  const Alert = ({
+    message,
+    title,
+    description,
+    type,
+  }: {
+    message?: React.ReactNode;
+    title?: React.ReactNode;
+    description?: React.ReactNode;
+    type?: string;
+  }) => (
     <div data-testid="alert" data-type={type}>
-      {message}
+      <div>{title ?? message}</div>
+      <div>{description}</div>
     </div>
   );
   Alert.displayName = 'MockAlert';
@@ -346,6 +370,7 @@ const flushPromises = () =>
 
 const renderProjectList = async (props?: React.ComponentProps<typeof ProjectList>) => {
   await act(async () => {
+    window.history.pushState({}, 'Test page', '/manager/projects');
     render(<ProjectList {...props} />);
     await flushPromises();
   });
@@ -356,6 +381,10 @@ const mockRefetchProjects = vi.fn();
 describe('ProjectList', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseRoutePerspective.mockReturnValue({
+      perspective: 'manager',
+      isPerspectiveRoute: true,
+    });
     mockRefetchProjects.mockClear();
     vi.mocked(useQuery).mockImplementation(options => {
       const queryKey = (options as { queryKey?: unknown[] }).queryKey;
@@ -394,7 +423,7 @@ describe('ProjectList', () => {
 
       if (key === 'project-owner-party-options') {
         const keyword =
-          Array.isArray(queryKey) && typeof queryKey[1] === 'string' ? queryKey[1] : '';
+          Array.isArray(queryKey) && typeof queryKey[2] === 'string' ? queryKey[2] : '';
         void partyService.searchParties(keyword, { status: 'active', limit: 20 });
         return {
           data: [],
@@ -434,6 +463,63 @@ describe('ProjectList', () => {
 
       expect(screen.getByTestId('row-1')).toBeInTheDocument();
       expect(screen.getByText('项目1')).toBeInTheDocument();
+    });
+
+    it('应该显示当前视角标签', async () => {
+      await renderProjectList();
+
+      expect(screen.getByText('当前视角')).toBeInTheDocument();
+      expect(screen.getByText('经营视角')).toBeInTheDocument();
+    });
+
+    it('项目列表与主体搜索查询应把当前视角纳入 queryKey', async () => {
+      await renderProjectList();
+
+      expect(useQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          queryKey: [
+            'project-list',
+            'user:user-1|perspective:manager',
+            1,
+            10,
+            { keyword: '', status: '', ownerPartyId: '' },
+          ],
+        })
+      );
+      expect(useQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          queryKey: ['project-owner-party-options', 'user:user-1|perspective:manager', ''],
+        })
+      );
+      expect(mockBuildQueryScopeKey).toHaveBeenCalledWith('manager');
+    });
+
+    it('legacy 路径不显示视角标签，但列表和主体选项查询仍继续执行', async () => {
+      mockUseRoutePerspective.mockReturnValue({
+        perspective: null,
+        isPerspectiveRoute: false,
+      });
+      window.history.pushState({}, 'Legacy project page', '/project');
+
+      await renderProjectList();
+
+      expect(screen.queryByText('当前视角')).not.toBeInTheDocument();
+      expect(useQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          queryKey: [
+            'project-list',
+            'user:user-1|perspective:manager',
+            1,
+            10,
+            { keyword: '', status: '', ownerPartyId: '' },
+          ],
+        })
+      );
+      expect(useQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          queryKey: ['project-owner-party-options', 'user:user-1|perspective:manager', ''],
+        })
+      );
     });
   });
 
@@ -542,7 +628,7 @@ describe('ProjectList', () => {
 
         if (key === 'project-owner-party-options') {
           const keyword =
-            Array.isArray(queryKey) && typeof queryKey[1] === 'string' ? queryKey[1] : '';
+            Array.isArray(queryKey) && typeof queryKey[2] === 'string' ? queryKey[2] : '';
           void partyService.searchParties(keyword, { status: 'active', limit: 20 });
           return {
             data: [],

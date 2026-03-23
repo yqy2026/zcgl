@@ -14,7 +14,9 @@ AUTHZ_DECISION_NAMESPACE = "authz_decision"
 
 
 def compute_roles_hash(role_ids: list[str]) -> str:
-    normalized = ",".join(sorted({str(role_id) for role_id in role_ids if str(role_id)}))
+    normalized = ",".join(
+        sorted({str(role_id) for role_id in role_ids if str(role_id)})
+    )
     return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
 
