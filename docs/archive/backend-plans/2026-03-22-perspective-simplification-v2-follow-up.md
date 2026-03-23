@@ -1,5 +1,7 @@
 # Frontend Perspective Simplification V2 Follow-up Implementation Plan
 
+> **状态**：✅ 已完成，2026-03-23 归档。route-derived perspective core、ViewProvider 运行时退役以及 canonical active-path follow-up 均已并入 `develop`。
+
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Finish converting the merged owner/manager route shell into the canonical frontend perspective model, so perspective is derived from the route instead of persisted manual view selection.
