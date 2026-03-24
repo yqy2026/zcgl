@@ -348,6 +348,32 @@ class TestAnalyticsResponseStructure:
         assert response.status_code == status.HTTP_200_OK
         assert "req-ana-001-v1" in response.text
 
+    def test_export_csv_should_return_tabular_content_not_json(
+        self, client, admin_user_headers
+    ):
+        response = client.post(
+            "/api/v1/analytics/export?export_format=csv",
+            headers=admin_user_headers,
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert "指标,数值,单位" in response.text
+        assert "总收入（经营口径）" in response.text
+        assert '"total_income"' not in response.text
+
+    def test_export_pdf_should_return_not_implemented_error(
+        self, client, admin_user_headers
+    ):
+        response = client.post(
+            "/api/v1/analytics/export?export_format=pdf",
+            headers=admin_user_headers,
+        )
+
+        assert response.status_code == status.HTTP_501_NOT_IMPLEMENTED
+        payload = response.json()
+        assert payload["success"] is False
+        assert "尚未实现" in payload["message"]
+
     def test_cache_stats_response_structure(self, client, admin_user_headers):
         """测试缓存统计响应结构"""
         response = client.get(

@@ -168,25 +168,39 @@ class ExcelExportService:
             )
         )
 
-    def export_analytics_to_excel(self, analytics_data: dict[str, Any]) -> io.BytesIO:
+    def export_analytics_to_excel(
+        self, analytics_data: dict[str, Any] | list[dict[str, Any]]
+    ) -> io.BytesIO:
         try:
             rows: list[dict[str, Any]] = []
-            for key, value in analytics_data.items():
-                if isinstance(value, (str, int, float, bool)) or value is None:
-                    rows.append({"metric": key, "value": value})
-                else:
-                    rows.append(
-                        {
-                            "metric": key,
-                            "value": json.dumps(value, ensure_ascii=False),
-                        }
-                    )
+            if isinstance(analytics_data, list):
+                rows = [
+                    {
+                        "metric": item.get("metric", ""),
+                        "value": item.get("value", ""),
+                        "unit": item.get("unit", ""),
+                    }
+                    for item in analytics_data
+                ]
+            else:
+                for key, value in analytics_data.items():
+                    if isinstance(value, (str, int, float, bool)) or value is None:
+                        rows.append({"metric": key, "value": value, "unit": ""})
+                    else:
+                        rows.append(
+                            {
+                                "metric": key,
+                                "value": json.dumps(value, ensure_ascii=False),
+                                "unit": "",
+                            }
+                        )
 
             if not rows:
                 rows = [
                     {
                         "metric": "data",
                         "value": json.dumps(analytics_data, ensure_ascii=False),
+                        "unit": "",
                     }
                 ]
 

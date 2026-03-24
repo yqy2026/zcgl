@@ -20,6 +20,7 @@ vi.mock('@/utils/queryScope', () => ({
 vi.mock('@/services/analyticsService', () => ({
   analyticsService: {
     getComprehensiveAnalytics: vi.fn(),
+    downloadAnalyticsReport: vi.fn(),
   },
 }));
 
@@ -185,5 +186,45 @@ describe('useAssetAnalytics', () => {
     expect(result.current.analyticsData?.customer_entity_count).toBe(8);
     expect(result.current.analyticsData?.customer_contract_count).toBe(12);
     expect(result.current.analyticsData?.metrics_version).toBe('req-ana-001-v1');
+  });
+
+  it('should delegate export to analyticsService instead of local exportAnalyticsData', async () => {
+    const { exportAnalyticsData } = await import('@/services/analyticsExportService');
+    vi.mocked(analyticsService.getComprehensiveAnalytics).mockResolvedValue({
+      success: true,
+      data: {
+        area_summary: {
+          total_assets: 5,
+          total_area: 2000,
+          total_rentable_area: 1600,
+          occupancy_rate: 80,
+        },
+        financial_summary: {
+          total_annual_income: 100000,
+          total_annual_expense: 20000,
+          total_net_income: 80000,
+          total_monthly_rent: 9000,
+        },
+        property_nature_distribution: [],
+        ownership_status_distribution: [],
+        usage_status_distribution: [],
+        business_category_distribution: [],
+        occupancy_trend: [],
+        occupancy_distribution: [],
+      },
+    });
+
+    const { result } = renderHook(() => useAssetAnalytics(), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await act(async () => {
+      await result.current.handleExport();
+    });
+
+    expect(analyticsService.downloadAnalyticsReport).toHaveBeenCalledWith('excel', {});
+    expect(exportAnalyticsData).not.toHaveBeenCalled();
   });
 });

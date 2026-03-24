@@ -9,6 +9,7 @@ import { AnalyticsService, analyticsService } from '../analyticsService';
 vi.mock('@/api/client', () => ({
   apiClient: {
     get: vi.fn(),
+    post: vi.fn(),
   },
 }));
 
@@ -255,6 +256,67 @@ describe('AnalyticsService', () => {
       });
 
       await expect(service.getFinancialSummary()).rejects.toThrow();
+    });
+  });
+
+  describe('exportAnalyticsReport', () => {
+    it('passes date filters to backend export using date_from/date_to and should_include_deleted', async () => {
+      vi.mocked(apiClient.post).mockResolvedValue({
+        success: true,
+        data: new Blob(['csv']),
+      });
+
+      await service.exportAnalyticsReport('csv', {
+        start_date: '2026-03-01',
+        end_date: '2026-03-31',
+        include_deleted: true,
+      });
+
+      expect(apiClient.post).toHaveBeenCalledWith(
+        '/analytics/export',
+        undefined,
+        expect.objectContaining({
+          params: {
+            export_format: 'csv',
+            date_from: '2026-03-01',
+            date_to: '2026-03-31',
+            should_include_deleted: true,
+          },
+        })
+      );
+    });
+
+    it('downloadAnalyticsReport should trigger a browser download', async () => {
+      vi.mocked(apiClient.post).mockResolvedValue({
+        success: true,
+        data: new Blob(['csv']),
+      });
+
+      const createObjectURLSpy = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock');
+      const revokeObjectURLSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+      const click = vi.fn();
+      const remove = vi.fn();
+      const anchor = {
+        href: '',
+        download: '',
+        click,
+        remove,
+      } as unknown as HTMLAnchorElement;
+      const appendChildSpy = vi.spyOn(document.body, 'appendChild').mockImplementation(node => node);
+      const createElementSpy = vi.spyOn(document, 'createElement').mockReturnValue(anchor);
+
+      await service.downloadAnalyticsReport('csv', { start_date: '2026-03-01' }, 'analytics');
+
+      expect(apiClient.post).toHaveBeenCalled();
+      expect(anchor.download).toMatch(/^analytics_\d{8}T\d{6}\.csv$/);
+      expect(click).toHaveBeenCalled();
+      expect(remove).toHaveBeenCalled();
+      expect(revokeObjectURLSpy).toHaveBeenCalledWith('blob:mock');
+
+      createObjectURLSpy.mockRestore();
+      revokeObjectURLSpy.mockRestore();
+      appendChildSpy.mockRestore();
+      createElementSpy.mockRestore();
     });
   });
 

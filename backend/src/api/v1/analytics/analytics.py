@@ -7,14 +7,12 @@
 - 保持了原有的API签名和响应格式，确保向后兼容
 """
 
-import io
-import json
 import logging
 from collections.abc import AsyncIterator
 from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Query, Request, status
 from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,6 +22,7 @@ from ....database import get_async_db
 from ....middleware.auth import AuthzContext, get_current_active_user, require_authz
 from ....models.auth import User
 from ....security.route_guards import debug_only, require_localhost
+from ....services.analytics.analytics_export_service import AnalyticsExportService
 from ....services.analytics.analytics_service import AnalyticsService
 
 logger = logging.getLogger(__name__)
@@ -382,16 +381,16 @@ async def export_analytics(
             should_use_cache=False,
             current_user=current_user,
         )
+        export_service = AnalyticsExportService()
+        export_rows = export_service.build_export_rows(result)
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
         if export_format == "csv":
-            output = io.StringIO()
-            json.dump(result, output, ensure_ascii=False, indent=2)
-            output.seek(0)
+            csv_text = export_service.render_csv(export_rows)
 
             async def csv_generator() -> AsyncIterator[bytes]:
-                yield output.getvalue().encode("utf-8")
+                yield csv_text.encode("utf-8")
 
             return StreamingResponse(
                 csv_generator(),
@@ -405,7 +404,7 @@ async def export_analytics(
             from ....services.excel import ExcelExportService
 
             excel_service = ExcelExportService(None)
-            buffer = excel_service.export_analytics_to_excel(result)
+            buffer = excel_service.export_analytics_to_excel(export_rows)
 
             async def excel_generator() -> AsyncIterator[bytes]:
                 data = buffer.getvalue()
@@ -422,6 +421,7 @@ async def export_analytics(
 
         return ResponseHandler.error(
             message="PDF 导出功能尚未实现，请使用 Excel 或 CSV 格式",
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
             request_id=get_request_id(request),
         )
 

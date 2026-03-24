@@ -11,9 +11,10 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { renderWithProviders, screen, fireEvent } from '@/test/utils/test-helpers';
+import { renderWithProviders, screen, fireEvent, waitFor } from '@/test/utils/test-helpers';
 import React from 'react';
 import { useAnalytics } from '@/hooks/useAnalytics';
+import { analyticsService } from '@/services/analyticsService';
 
 // Mock hooks（这些 mock 是必要的）
 vi.mock('@/hooks/useAnalytics', () => ({
@@ -67,6 +68,12 @@ vi.mock('@/utils/logger', () => ({
     warn: vi.fn(),
     info: vi.fn(),
   }),
+}));
+
+vi.mock('@/services/analyticsService', () => ({
+  analyticsService: {
+    downloadAnalyticsReport: vi.fn(),
+  },
 }));
 
 vi.mock('@/api/config', async importOriginal => {
@@ -463,6 +470,20 @@ describe('AnalyticsDashboard - 导出功能测试', () => {
     fireEvent.mouseEnter(exportButton);
     fireEvent.mouseOver(exportButton);
     expect(await screen.findByText('导出为 CSV')).toBeInTheDocument();
+  });
+
+  it('点击CSV导出选项应该委托给 analyticsService', async () => {
+    const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
+    renderWithProviders(<AnalyticsDashboard />);
+
+    const exportButton = screen.getByRole('button', { name: /导出/ });
+    fireEvent.mouseEnter(exportButton);
+    fireEvent.mouseOver(exportButton);
+    fireEvent.click(await screen.findByText('导出为 CSV'));
+
+    await waitFor(() => {
+      expect(analyticsService.downloadAnalyticsReport).toHaveBeenCalledWith('csv', {});
+    });
   });
 });
 

@@ -16,6 +16,8 @@
 
 | 文件 | 主题 | 最终状态 |
 |------|------|----------|
+| 2026-03-24-req-ana-001-export-closure-design.md | REQ-ANA-001：导出链路收口设计 | ✅ 已完成 |
+| 2026-03-24-req-ana-001-export-closure-plan.md | REQ-ANA-001：导出链路收口实施计划 | ✅ 已完成 |
 | 2026-02-11-langextract-rollout-plan.md | langextract 灰度接入 PDF 链路 | ✅ 已采纳 |
 | 2026-02-15-phone-first-login-and-username-retention.md | 手机号优先登录与用户名保留 | ✅ 已实现 |
 | 2026-02-16-party-role-architecture-design.md | Party-Role 组织架构设计 | ✅ 已实现 |

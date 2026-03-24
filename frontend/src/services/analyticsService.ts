@@ -88,8 +88,33 @@ const toNumber = (value: unknown): number => {
   return 0;
 };
 
+type AnalyticsExportFilters = Pick<AssetSearchParams, 'start_date' | 'end_date'> & {
+  include_deleted?: boolean;
+};
+
 export class AnalyticsService {
   private api = apiClient;
+
+  private buildExportParams(
+    format: 'excel' | 'pdf' | 'csv',
+    filters?: AnalyticsExportFilters
+  ): Record<string, string | boolean> {
+    const params: Record<string, string | boolean> = {
+      export_format: format,
+    };
+
+    if (filters?.start_date != null && filters.start_date !== '') {
+      params.date_from = filters.start_date;
+    }
+    if (filters?.end_date != null && filters.end_date !== '') {
+      params.date_to = filters.end_date;
+    }
+    if (typeof filters?.include_deleted === 'boolean') {
+      params.should_include_deleted = filters.include_deleted;
+    }
+
+    return params;
+  }
 
   async getComprehensiveAnalytics(filters?: AssetSearchParams): Promise<AnalyticsResponse> {
     try {
@@ -276,23 +301,10 @@ export class AnalyticsService {
 
   async exportAnalyticsReport(
     format: 'excel' | 'pdf' | 'csv',
-    filters?: Pick<AssetSearchParams, 'start_date' | 'end_date' | 'include_deleted'>
+    filters?: AnalyticsExportFilters
   ): Promise<Blob> {
     try {
-      const params: Record<string, string | boolean> = {
-        export_format: format,
-      };
-
-      if (filters?.start_date != null && filters.start_date !== '') {
-        params.date_from = filters.start_date;
-      }
-      if (filters?.end_date != null && filters.end_date !== '') {
-        params.date_to = filters.end_date;
-      }
-      if (typeof filters?.include_deleted === 'boolean') {
-        params.include_deleted = filters.include_deleted;
-      }
-
+      const params = this.buildExportParams(format, filters);
       const response = await this.api.post<Blob>('/analytics/export', undefined, {
         params,
         responseType: 'blob',
@@ -309,6 +321,26 @@ export class AnalyticsService {
       serviceLogger.error('Analytics export API Error:', error as Error);
       throw error;
     }
+  }
+
+  async downloadAnalyticsReport(
+    format: 'excel' | 'pdf' | 'csv',
+    filters?: AnalyticsExportFilters,
+    filenamePrefix: string = 'analytics'
+  ): Promise<void> {
+    const blob = await this.exportAnalyticsReport(format, filters);
+    const url = window.URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '');
+    const extension = format === 'excel' ? 'xlsx' : format;
+
+    anchor.href = url;
+    anchor.download = `${filenamePrefix}_${timestamp}.${extension}`;
+
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.URL.revokeObjectURL(url);
   }
 }
 
