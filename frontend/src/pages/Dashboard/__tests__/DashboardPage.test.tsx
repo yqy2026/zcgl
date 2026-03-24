@@ -7,6 +7,7 @@ import {
   screen,
   fireEvent,
   renderWithProviders as renderWithAppProviders,
+  waitFor,
 } from '@/test/utils/test-helpers';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -15,6 +16,21 @@ import DashboardPage from '../DashboardPage';
 // Mock useAnalytics hook
 vi.mock('../../../hooks/useAnalytics', () => ({
   useAnalytics: vi.fn(),
+}));
+
+vi.mock('@/services/analyticsService', () => ({
+  analyticsService: {
+    downloadAnalyticsReport: vi.fn(),
+  },
+}));
+
+vi.mock('@/utils/messageManager', () => ({
+  MessageManager: {
+    loading: vi.fn(),
+    success: vi.fn(),
+    error: vi.fn(),
+    destroy: vi.fn(),
+  },
 }));
 
 // Mock CSS modules
@@ -71,6 +87,7 @@ vi.mock('../../../components/Dashboard/QuickInsights', () => ({
 }));
 
 import { useAnalytics } from '../../../hooks/useAnalytics';
+import { analyticsService } from '@/services/analyticsService';
 
 // 创建测试用 QueryClient
 const createTestQueryClient = () =>
@@ -245,6 +262,16 @@ describe('DashboardPage', () => {
       fireEvent.click(fullscreenButton);
 
       expect(document.documentElement.requestFullscreen).toHaveBeenCalled();
+    });
+
+    it('点击导出按钮默认委托 Excel 导出', async () => {
+      renderDashboardPage();
+
+      fireEvent.click(screen.getByText('导出'));
+
+      await waitFor(() => {
+        expect(analyticsService.downloadAnalyticsReport).toHaveBeenCalledWith('excel');
+      });
     });
   });
 

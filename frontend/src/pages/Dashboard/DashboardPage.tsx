@@ -10,6 +10,8 @@ import {
   PieChartOutlined,
 } from '@ant-design/icons';
 import { useAnalytics } from '@/hooks/useAnalytics';
+import { analyticsService } from '@/services/analyticsService';
+import { MessageManager } from '@/utils/messageManager';
 import DataTrendCard from '@/components/Dashboard/DataTrendCard';
 import QuickInsights from '@/components/Dashboard/QuickInsights';
 import styles from './DashboardPage.module.css';
@@ -59,9 +61,16 @@ const DashboardPage: React.FC = () => {
     }
   };
 
-  const handleExport = () => {
-    // 实现导出功能
-    // Exporting dashboard data
+  const handleExport = async () => {
+    try {
+      MessageManager.loading('正在导出数据...', 0);
+      await analyticsService.downloadAnalyticsReport('excel');
+      MessageManager.success('数据导出成功！');
+    } catch (error) {
+      MessageManager.error('导出失败，请重试');
+    } finally {
+      MessageManager.destroy();
+    }
   };
 
   if (error) {
