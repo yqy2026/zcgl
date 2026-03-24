@@ -2,6 +2,9 @@
 
 ## [Unreleased] - 2026-03-06
 
+### 2026-03-24
+- fix(frontend-system): 修复 `/system/users` 页面在关闭态弹窗下反复输出 `Instance created by useForm is not connected to any Form element` 控制台告警。`frontend/src/pages/System/UserManagement/components/UserFormModal.tsx` 与 `frontend/src/pages/System/UserManagement/components/UserPartyBindingModal.tsx` 现在对 Modal 启用 `forceRender`，并移除主体绑定弹窗在关闭态对未挂载表单执行 `resetFields()` 的路径；新增回归 `frontend/src/pages/System/__tests__/UserManagementPage.test.tsx::does not emit an unconnected useForm warning during page interactions` 锁定该告警不再出现。验证：`cd frontend && pnpm exec vitest run src/pages/System/__tests__/UserManagementPage.test.tsx --reporter=verbose --pool forks --maxWorkers 1`（5 passed）；`node .agents/skills/frontend-inspection/scripts/inspect_frontend.js --base-url http://localhost:5173 --chromium-path /home/y/.cache/ms-playwright/chromium-1208/chrome-linux64/chrome --out-dir output/playwright/frontend-inspection-system-users-fixed --route /system/users`（summary: total=1, ok=1, warn=0, fail=0）。
+
 ### 2026-03-23
 - docs(plan): 真正归档 `docs/plans/2026-03-02-party-scope-isolation-fix-plan.md`，修正文档状态漂移。该方案已移至 `docs/archive/backend-plans/2026-03-02-party-scope-isolation-fix-plan.md`，并在文首补充“已完成/已归档”说明，明确主体数据权限隔离全量排查与跨主体回归已落地；`docs/plans/README.md` 同步移除这条已完成方案，避免继续把它当作活跃计划。
 - docs(plan): 归档已完成的前端视角简化 v2 follow-up 方案。`docs/plans/2026-03-22-perspective-simplification-v2-follow-up.md` 已移至 `docs/archive/backend-plans/2026-03-22-perspective-simplification-v2-follow-up.md`，并在文首补充“已完成/已归档”状态说明；`docs/plans/README.md` 同步移除该条目及已失效的 `2026-03-21-ci-baseline-restoration-plan.md` 活跃索引，只保留仍在进行中的方案。

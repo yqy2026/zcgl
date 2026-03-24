@@ -41,6 +41,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
       open={open}
       onCancel={onCancel}
       footer={null}
+      forceRender
       width={600}
     >
       <Form form={form} layout="vertical" onFinish={onSubmit}>

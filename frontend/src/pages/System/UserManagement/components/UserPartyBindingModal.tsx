@@ -134,8 +134,7 @@ const UserPartyBindingModal: React.FC<UserPartyBindingModalProps> = ({
 
     setEditingBinding(null);
     setClosingBindingId(null);
-    form.resetFields();
-  }, [form, open, resetFormToCreate, user?.id]);
+  }, [open, resetFormToCreate, user?.id]);
 
   const handleEditBinding = useCallback(
     (binding: UserPartyBinding) => {
@@ -299,6 +298,7 @@ const UserPartyBindingModal: React.FC<UserPartyBindingModalProps> = ({
       open={open}
       onCancel={onClose}
       footer={null}
+      forceRender
       width={980}
       destroyOnHidden
     >

@@ -163,4 +163,36 @@ describe('UserManagementPage', () => {
       expect(partyService.getParties).toHaveBeenCalledWith({ limit: 500 });
     });
   }, 20_000);
+
+  it('does not emit an unconnected useForm warning during page interactions', async () => {
+    const refetchUsers = vi.fn().mockResolvedValue(undefined);
+    const refetchStatistics = vi.fn().mockResolvedValue(undefined);
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    vi.mocked(useUserManagementData).mockReturnValue(
+      buildHookResult({
+        refetchUsers,
+        refetchStatistics,
+      })
+    );
+
+    renderWithProviders(<UserManagementPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: '刷新用户列表' }));
+
+    await waitFor(() => {
+      expect(refetchUsers).toHaveBeenCalled();
+      expect(refetchStatistics).toHaveBeenCalled();
+    });
+
+    expect(
+      consoleErrorSpy.mock.calls.some(call =>
+        call.some(arg =>
+          String(arg).includes('Instance created by `useForm` is not connected to any Form element')
+        )
+      )
+    ).toBe(false);
+
+    consoleErrorSpy.mockRestore();
+  }, 20_000);
 });
