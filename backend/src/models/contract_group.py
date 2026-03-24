@@ -218,6 +218,11 @@ class ContractGroup(Base):
         back_populates="contract_group",
         cascade="all, delete-orphan",
     )
+    service_fee_ledgers: Mapped[list["ServiceFeeLedger"]] = relationship(
+        "ServiceFeeLedger",
+        back_populates="contract_group",
+        cascade="all, delete-orphan",
+    )
     assets: Mapped[list["Asset"]] = relationship(
         "Asset",
         secondary=contract_group_assets,
@@ -440,6 +445,10 @@ class Contract(Base):
         "ContractLedgerEntry",
         back_populates="contract",
         cascade="all, delete-orphan",
+    )
+    service_fee_ledgers: Mapped[list["ServiceFeeLedger"]] = relationship(
+        "ServiceFeeLedger",
+        back_populates="agency_contract",
     )
 
     def __repr__(self) -> str:  # pragma: no cover
@@ -833,4 +842,82 @@ class ContractLedgerEntry(Base):
     contract: Mapped["Contract"] = relationship(
         "Contract",
         back_populates="ledger_entries",
+    )
+
+
+class ServiceFeeLedger(Base):
+    """代理模式服务费台账。"""
+
+    __tablename__ = "service_fee_ledgers"
+    __table_args__ = (
+        UniqueConstraint(
+            "source_ledger_id",
+            name="uq_service_fee_ledger_source",
+        ),
+    )
+
+    service_fee_entry_id: Mapped[str] = mapped_column(
+        String,
+        primary_key=True,
+        default=lambda: str(uuid.uuid4()),
+    )
+    contract_group_id: Mapped[str] = mapped_column(
+        String,
+        ForeignKey("contract_groups.contract_group_id"),
+        nullable=False,
+        index=True,
+    )
+    agency_contract_id: Mapped[str] = mapped_column(
+        String,
+        ForeignKey("contracts.contract_id"),
+        nullable=False,
+        index=True,
+    )
+    source_ledger_id: Mapped[str] = mapped_column(
+        String,
+        ForeignKey("contract_ledger_entries.entry_id"),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+    year_month: Mapped[str] = mapped_column(String(7), nullable=False)
+    amount_due: Mapped[Decimal] = mapped_column(DECIMAL(15, 2), nullable=False)
+    paid_amount: Mapped[Decimal] = mapped_column(
+        DECIMAL(15, 2),
+        nullable=False,
+        default=Decimal("0"),
+    )
+    payment_status: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default="unpaid",
+    )
+    currency_code: Mapped[str] = mapped_column(
+        String(10),
+        nullable=False,
+        default="CNY",
+    )
+    service_fee_ratio: Mapped[Decimal] = mapped_column(
+        DECIMAL(5, 4),
+        nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        onupdate=lambda: datetime.now(UTC).replace(tzinfo=None),
+    )
+
+    contract_group: Mapped["ContractGroup"] = relationship(
+        "ContractGroup",
+        back_populates="service_fee_ledgers",
+    )
+    agency_contract: Mapped["Contract"] = relationship(
+        "Contract",
+        back_populates="service_fee_ledgers",
     )

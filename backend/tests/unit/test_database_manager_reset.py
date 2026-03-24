@@ -46,6 +46,19 @@ async def test_reset_database_manager_is_noop_when_not_initialized(monkeypatch):
     assert database_module._database_manager is None
 
 
+@pytest.mark.asyncio
+async def test_init_db_should_not_call_create_tables(monkeypatch):
+    mock_create_tables = AsyncMock()
+    mock_status = {"healthy": True}
+
+    monkeypatch.setattr(database_module, "create_tables", mock_create_tables)
+    monkeypatch.setattr(database_module, "get_database_status", AsyncMock(return_value=mock_status))
+
+    await database_module.init_db()
+
+    mock_create_tables.assert_not_awaited()
+
+
 class _SessionContext:
     def __init__(self, session):
         self._session = session

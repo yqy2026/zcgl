@@ -201,6 +201,26 @@ class CRUDContract:
         )
         return list((await db.execute(stmt)).scalars().unique().all())
 
+    async def list_active_lease_contracts_for_ledger(
+        self,
+        db: AsyncSession,
+    ) -> list[Contract]:
+        """列出需要参与台账补偿扫描的生效租赁合同。"""
+        stmt = (
+            select(Contract)
+            .join(
+                LeaseContractDetail,
+                LeaseContractDetail.contract_id == Contract.contract_id,
+            )
+            .where(
+                Contract.status == ContractLifecycleStatus.ACTIVE,
+                Contract.data_status == "正常",
+            )
+            .options(selectinload(Contract.lease_detail))
+            .order_by(Contract.contract_id.asc())
+        )
+        return list((await db.execute(stmt)).scalars().unique().all())
+
     async def _replace_assets(
         self,
         db: AsyncSession,

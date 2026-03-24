@@ -194,7 +194,7 @@ class AnalyticsService:
         stats["occupancy_rate"] = occupancy_stats
 
         active_contracts = await self._list_active_contracts(filters)
-        stats.update(self._calculate_operational_metrics(active_contracts))
+        stats.update(self._calculate_operational_metrics(active_contracts, filters))
 
         return stats
 
@@ -214,8 +214,10 @@ class AnalyticsService:
                 ),
                 selectinload(Contract.lease_detail),
                 selectinload(Contract.agency_detail),
+                selectinload(Contract.ledger_entries),
                 selectinload(Contract.lessor_party),
                 selectinload(Contract.lessee_party),
+                selectinload(Contract.service_fee_ledgers),
             )
         )
 
@@ -237,36 +239,43 @@ class AnalyticsService:
 
         return list((await self.db.execute(stmt)).scalars().unique().all())
 
+    @staticmethod
+    def _resolve_ledger_year_month_bounds(
+        filters: dict[str, Any] | None,
+    ) -> tuple[str | None, str | None]:
+        if filters is None:
+            return None, None
+
+        date_from = AnalyticsService._safe_parse_date(filters.get("date_from"))
+        date_to = AnalyticsService._safe_parse_date(filters.get("date_to"))
+        lower = date_from.strftime("%Y-%m") if date_from is not None else None
+        upper = date_to.strftime("%Y-%m") if date_to is not None else None
+        return lower, upper
+
+    @classmethod
+    def _is_ledger_entry_in_scope(
+        cls,
+        year_month: str | None,
+        *,
+        lower: str | None,
+        upper: str | None,
+    ) -> bool:
+        if year_month is None or year_month == "":
+            return False
+        if lower is not None and year_month < lower:
+            return False
+        if upper is not None and year_month > upper:
+            return False
+        return True
+
     def _calculate_operational_metrics(
-        self, contracts: list[Contract]
+        self, contracts: list[Contract], filters: dict[str, Any] | None = None
     ) -> dict[str, Any]:
         self_operated_rent_income = Decimal("0")
         agency_service_income = Decimal("0")
         customer_party_ids: set[str] = set()
         customer_contract_ids: set[str] = set()
-
-        agency_group_ratios: dict[str, Decimal] = {}
-        for contract in contracts:
-            group = getattr(contract, "contract_group", None)
-            if (
-                group is None
-                or getattr(group, "revenue_mode", None) != RevenueMode.AGENCY
-            ):
-                continue
-            if (
-                getattr(contract, "group_relation_type", None)
-                != GroupRelationType.ENTRUSTED
-            ):
-                continue
-            agency_detail = getattr(contract, "agency_detail", None)
-            if agency_detail is None:
-                continue
-            group_id = self._resolve_contract_group_id(contract, group)
-            if group_id == "":
-                continue
-            agency_group_ratios[group_id] = self._to_decimal(
-                getattr(agency_detail, "service_fee_ratio", None)
-            )
+        lower_year_month, upper_year_month = self._resolve_ledger_year_month_bounds(filters)
 
         for contract in contracts:
             if not self._is_contract_statistically_eligible(contract):
@@ -283,10 +292,17 @@ class AnalyticsService:
                 group_mode == RevenueMode.LEASE
                 and relation_type == GroupRelationType.DOWNSTREAM
             ):
-                lease_detail = getattr(contract, "lease_detail", None)
-                if lease_detail is not None:
+                for ledger_entry in getattr(contract, "ledger_entries", []) or []:
+                    if getattr(ledger_entry, "payment_status", None) == "voided":
+                        continue
+                    if not self._is_ledger_entry_in_scope(
+                        getattr(ledger_entry, "year_month", None),
+                        lower=lower_year_month,
+                        upper=upper_year_month,
+                    ):
+                        continue
                     self_operated_rent_income += self._to_decimal(
-                        getattr(lease_detail, "rent_amount", None)
+                        getattr(ledger_entry, "amount_due", None)
                     )
                 lessee_party_id = str(getattr(contract, "lessee_party_id", "")).strip()
                 if lessee_party_id != "":
@@ -299,13 +315,17 @@ class AnalyticsService:
                 group_mode == RevenueMode.AGENCY
                 and relation_type == GroupRelationType.DIRECT_LEASE
             ):
-                lease_detail = getattr(contract, "lease_detail", None)
-                if lease_detail is not None:
-                    group_id = self._resolve_contract_group_id(contract, group)
-                    ratio = agency_group_ratios.get(group_id, Decimal("0"))
+                for service_fee_entry in getattr(contract, "service_fee_ledgers", []) or []:
+                    if getattr(service_fee_entry, "payment_status", None) == "voided":
+                        continue
+                    if not self._is_ledger_entry_in_scope(
+                        getattr(service_fee_entry, "year_month", None),
+                        lower=lower_year_month,
+                        upper=upper_year_month,
+                    ):
+                        continue
                     agency_service_income += self._quantize_money(
-                        self._to_decimal(getattr(lease_detail, "rent_amount", None))
-                        * ratio
+                        self._to_decimal(getattr(service_fee_entry, "amount_due", None))
                     )
                 lessee_party_id = str(getattr(contract, "lessee_party_id", "")).strip()
                 if lessee_party_id != "":

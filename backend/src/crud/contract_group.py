@@ -20,6 +20,7 @@ from ..models.contract_group import (
     ContractLedgerEntry,
     ContractLifecycleStatus,
     ContractRentTerm,
+    ServiceFeeLedger,
 )
 
 
@@ -572,6 +573,34 @@ class CRUDContractGroup:
         )
         count = (await db.execute(stmt)).scalar_one()
         return count > 0
+
+    async def list_service_fee_entries_by_group(
+        self,
+        db: AsyncSession,
+        *,
+        group_id: str,
+    ) -> list[ServiceFeeLedger]:
+        stmt = (
+            select(ServiceFeeLedger)
+            .where(ServiceFeeLedger.contract_group_id == group_id)
+            .order_by(ServiceFeeLedger.year_month.asc())
+        )
+        return list((await db.execute(stmt)).scalars().all())
+
+    async def create_service_fee_entry(
+        self,
+        db: AsyncSession,
+        *,
+        data: dict[str, Any],
+        commit: bool = True,
+    ) -> ServiceFeeLedger:
+        entry = ServiceFeeLedger(**data)
+        db.add(entry)
+        await db.flush()
+        if commit:
+            await db.commit()
+            await db.refresh(entry)
+        return entry
 
     async def _replace_assets(
         self,

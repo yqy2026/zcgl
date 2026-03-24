@@ -302,7 +302,32 @@
 - `voided` 为系统保留状态，仅允许由台账重算流程写入；人工批量更新不得直接设置为 `voided`。
 - 幂等：`year_month` 已存在则跳过，不重新生成。
 
-## 3.11 ContractAuditLog（合同操作审计日志）
+## 3.11 ServiceFeeLedger（代理服务费台账）
+
+> 定位：仅用于 `RevenueMode = AGENCY` 的代理模式，按 `AgencyAgreementDetail.service_fee_ratio` 从直租合同租金台账派生的只读服务费台账。物理表：`service_fee_ledgers`。
+
+| 字段 | 类型 | 必填 | 规则/说明 | 状态 |
+|---|---|---|---|---|
+| `service_fee_entry_id` | string | 是 | 主键（UUID） | 已确认 |
+| `contract_group_id` | string | 是 | FK → `contract_groups.contract_group_id` | 已确认 |
+| `agency_contract_id` | string | 是 | 直租合同 ID（FK → `contracts.contract_id`） | 已确认 |
+| `source_ledger_id` | string | 是 | 来源租金台账 ID（FK → `contract_ledger_entries.entry_id`）；唯一约束一对一派生 | 已确认 |
+| `year_month` | string | 是 | 账期，格式 `YYYY-MM` | 已确认 |
+| `amount_due` | decimal(18,2) | 是 | 派生服务费应收金额，=`ContractLedgerEntry.amount_due * service_fee_ratio` | 已确认（派生） |
+| `paid_amount` | decimal(18,2) | 否 | 派生服务费实收金额，=`ContractLedgerEntry.paid_amount * service_fee_ratio` | 已确认（派生） |
+| `payment_status` | enum | 是 | 同步来源台账状态；支持 `unpaid/paid/overdue/partial/voided` | 已确认 |
+| `currency_code` | string | 是 | 币种，继承来源台账 | 已确认 |
+| `service_fee_ratio` | decimal(5,4) | 是 | 代理服务费比例，来自同组唯一委托协议 | 已确认 |
+| `created_at` | datetime | 是 | 系统字段 | 已确认 |
+| `updated_at` | datetime | 是 | 系统字段 | 已确认 |
+
+**约束**：
+- 仅 `DIRECT_LEASE` 合同的租金台账可派生服务费台账。
+- 同一 `contract_group_id` 必须且只能存在一份 `ENTRUSTED` 合同，且其 `AgencyAgreementDetail.service_fee_ratio` 为派生唯一口径。
+- `source_ledger_id` 唯一，重复同步时只允许更新，不允许重复插入。
+- `payment_status = voided` 时表示来源租金台账已失效或不再参与派生。
+
+## 3.12 ContractAuditLog（合同操作审计日志）
 
 > 定位：合同每次状态流转或关键操作的审计留痕，不可修改。物理表：`contract_audit_logs`。
 

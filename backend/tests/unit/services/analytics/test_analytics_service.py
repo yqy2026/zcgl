@@ -360,8 +360,13 @@ class TestAnalyticsService:
             data_status="正常",
             group_relation_type=GroupRelationType.DOWNSTREAM,
             contract_group=lease_group,
-            lease_detail=MagicMock(rent_amount=Decimal("1000.00")),
+            lease_detail=MagicMock(rent_amount=Decimal("9999.00")),
             agency_detail=None,
+            ledger_entries=[
+                MagicMock(year_month="2026-05", amount_due=Decimal("600.00")),
+                MagicMock(year_month="2026-06", amount_due=Decimal("400.00")),
+            ],
+            service_fee_ledgers=[],
             lessee_party_id="customer-1",
             lessor_party=MagicMock(review_status=PartyReviewStatus.APPROVED.value),
             lessee_party=MagicMock(review_status=PartyReviewStatus.APPROVED.value),
@@ -388,8 +393,21 @@ class TestAnalyticsService:
             data_status="正常",
             group_relation_type=GroupRelationType.DIRECT_LEASE,
             contract_group=agency_group,
-            lease_detail=MagicMock(rent_amount=Decimal("2000.00")),
+            lease_detail=MagicMock(rent_amount=Decimal("9999.00")),
             agency_detail=None,
+            ledger_entries=[],
+            service_fee_ledgers=[
+                MagicMock(
+                    year_month="2026-05",
+                    amount_due=Decimal("150.00"),
+                    payment_status="paid",
+                ),
+                MagicMock(
+                    year_month="2026-06",
+                    amount_due=Decimal("50.00"),
+                    payment_status="unpaid",
+                ),
+            ],
             lessee_party_id="customer-2",
             lessor_party=MagicMock(review_status=PartyReviewStatus.APPROVED.value),
             lessee_party=MagicMock(review_status=PartyReviewStatus.APPROVED.value),
@@ -397,7 +415,8 @@ class TestAnalyticsService:
         direct_contract.status = ContractLifecycleStatus.ACTIVE
 
         metrics = analytics_service._calculate_operational_metrics(
-            [lease_contract, entrusted_contract, direct_contract]
+            [lease_contract, entrusted_contract, direct_contract],
+            {},
         )
 
         assert metrics["self_operated_rent_income"] == 1000.0
@@ -406,6 +425,100 @@ class TestAnalyticsService:
         assert metrics["customer_entity_count"] == 2
         assert metrics["customer_contract_count"] == 2
         assert metrics["metrics_version"]
+
+    @pytest.mark.asyncio
+    async def test_get_comprehensive_analytics_should_apply_date_window_to_ledger_backed_income_fields(
+        self, analytics_service
+    ):
+        lease_group = MagicMock(revenue_mode=RevenueMode.LEASE, data_status="正常")
+        lease_group.operator_party = MagicMock(review_status=PartyReviewStatus.APPROVED.value)
+        lease_group.owner_party = MagicMock(review_status=PartyReviewStatus.APPROVED.value)
+
+        agency_group = MagicMock(revenue_mode=RevenueMode.AGENCY, data_status="正常")
+        agency_group.contract_group_id = "group-agency"
+        agency_group.operator_party = MagicMock(review_status=PartyReviewStatus.APPROVED.value)
+        agency_group.owner_party = MagicMock(review_status=PartyReviewStatus.APPROVED.value)
+
+        lease_contract = MagicMock(
+            contract_id="contract-lease-window",
+            status=ContractLifecycleStatus.ACTIVE,
+            data_status="正常",
+            group_relation_type=GroupRelationType.DOWNSTREAM,
+            contract_group=lease_group,
+            lease_detail=MagicMock(rent_amount=Decimal("9999.00")),
+            ledger_entries=[
+                MagicMock(year_month="2026-05", amount_due=Decimal("600.00")),
+                MagicMock(year_month="2026-06", amount_due=Decimal("400.00")),
+            ],
+            service_fee_ledgers=[],
+            agency_detail=None,
+            lessee_party_id="customer-1",
+            lessor_party=MagicMock(review_status=PartyReviewStatus.APPROVED.value),
+            lessee_party=MagicMock(review_status=PartyReviewStatus.APPROVED.value),
+        )
+
+        direct_contract = MagicMock(
+            contract_id="contract-agency-window",
+            status=ContractLifecycleStatus.ACTIVE,
+            data_status="正常",
+            group_relation_type=GroupRelationType.DIRECT_LEASE,
+            contract_group=agency_group,
+            lease_detail=MagicMock(rent_amount=Decimal("9999.00")),
+            ledger_entries=[],
+            service_fee_ledgers=[
+                MagicMock(
+                    year_month="2026-05",
+                    amount_due=Decimal("150.00"),
+                    payment_status="paid",
+                ),
+                MagicMock(
+                    year_month="2026-06",
+                    amount_due=Decimal("50.00"),
+                    payment_status="unpaid",
+                ),
+            ],
+            agency_detail=None,
+            lessee_party_id="customer-2",
+            lessor_party=MagicMock(review_status=PartyReviewStatus.APPROVED.value),
+            lessee_party=MagicMock(review_status=PartyReviewStatus.APPROVED.value),
+        )
+
+        with (
+            patch(
+                "src.crud.asset.asset_crud.get_multi_with_search_async",
+                new_callable=AsyncMock,
+                return_value=([], 0),
+            ),
+            patch("src.services.analytics.area_service.AreaService") as mock_area_cls,
+            patch(
+                "src.services.analytics.occupancy_service.OccupancyService"
+            ) as mock_occupancy_cls,
+            patch.object(
+                analytics_service,
+                "_list_active_contracts",
+                AsyncMock(return_value=[lease_contract, direct_contract]),
+            ),
+        ):
+            mock_area_service = MagicMock()
+            mock_area_service.calculate_summary_with_aggregation = AsyncMock(
+                return_value={"total_assets": 0}
+            )
+            mock_area_cls.return_value = mock_area_service
+
+            mock_occupancy_service = MagicMock()
+            mock_occupancy_service.calculate_with_aggregation = AsyncMock(
+                return_value={"rate": 0}
+            )
+            mock_occupancy_cls.return_value = mock_occupancy_service
+
+            result = await analytics_service.get_comprehensive_analytics(
+                filters={"date_from": "2026-05-01", "date_to": "2026-05-31"},
+                should_use_cache=False,
+            )
+
+        assert result["self_operated_rent_income"] == 600.0
+        assert result["agency_service_income"] == 150.0
+        assert result["total_income"] == 750.0
 
     @pytest.mark.asyncio
     async def test_calculate_analytics_should_include_operational_metrics(

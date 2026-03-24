@@ -551,7 +551,7 @@ async def get_database_status() -> dict[str, object]:
 
 async def init_db() -> None:
     """初始化数据库"""
-    await create_tables()
+    await get_database_status()
     logger.info("数据库初始化完成")
 
 

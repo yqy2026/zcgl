@@ -2,7 +2,7 @@
 
 from typing import Annotated, Literal, cast
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response
 from fastapi.exceptions import RequestValidationError
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,8 +18,14 @@ from ....models.auth import User
 from ....schemas.contract_group import (
     ContractLedgerListResponse,
     LedgerAggregateQueryParams,
+    LedgerCompensationResponse,
+    LedgerExportQueryParams,
     LedgerRecalculateResponse,
 )
+from ....services.contract.ledger_compensation_service import (
+    ledger_compensation_service,
+)
+from ....services.contract.ledger_export_service import ledger_export_service
 from ....services.contract.ledger_service_v2 import ledger_service_v2
 
 router = APIRouter()
@@ -79,6 +85,27 @@ def resolve_ledger_query_params(
         raise RequestValidationError(exc.errors()) from exc
 
 
+def resolve_ledger_export_query_params(
+    export_format: Literal["csv", "excel"] = Query(
+        "excel",
+        description="导出格式",
+    ),
+    params: LedgerAggregateQueryParams = Depends(resolve_ledger_query_params),
+) -> LedgerExportQueryParams:
+    return LedgerExportQueryParams(
+        export_format=export_format,
+        asset_id=params.asset_id,
+        party_id=params.party_id,
+        contract_id=params.contract_id,
+        year_month_start=params.year_month_start,
+        year_month_end=params.year_month_end,
+        payment_status=params.payment_status,
+        include_voided=params.include_voided,
+        offset=params.offset,
+        limit=params.limit,
+    )
+
+
 @router.get(
     "/ledger/entries",
     response_model=ContractLedgerListResponse,
@@ -118,6 +145,70 @@ async def get_ledger_entries(
         raise
     except Exception as exc:
         raise internal_error("查询台账条目失败", original_error=exc) from exc
+
+
+@router.get(
+    "/ledger/entries/export",
+    summary="导出台账条目",
+)
+async def export_ledger_entries(
+    params: LedgerExportQueryParams = Depends(resolve_ledger_export_query_params),
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz: Annotated[
+        AuthzContext | None,
+        Depends(
+            require_authz(
+                action="read",
+                resource_type="contract",
+            )
+        ),
+    ] = None,
+) -> Response:
+    _ = current_user
+    _ = _authz
+    try:
+        result = await ledger_export_service.export_ledger_entries(db, params=params)
+        return Response(
+            content=result.content,
+            media_type=result.media_type,
+            headers={
+                "Content-Disposition": f"attachment; filename={result.filename}"
+            },
+        )
+    except BaseBusinessError:
+        raise
+    except Exception as exc:
+        raise internal_error("导出台账条目失败", original_error=exc) from exc
+
+
+@router.post(
+    "/ledger/compensation/run",
+    response_model=LedgerCompensationResponse,
+    summary="运行台账补偿任务",
+)
+async def run_ledger_compensation(
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz: Annotated[
+        AuthzContext | None,
+        Depends(
+            require_authz(
+                action="update",
+                resource_type="contract",
+            )
+        ),
+    ] = None,
+) -> LedgerCompensationResponse:
+    _ = current_user
+    _ = _authz
+    try:
+        result = await ledger_compensation_service.run(db)
+        return LedgerCompensationResponse.model_validate(result)
+    except BaseBusinessError:
+        raise
+    except Exception as exc:
+        raise internal_error("运行台账补偿任务失败", original_error=exc) from exc
 
 
 @router.post(

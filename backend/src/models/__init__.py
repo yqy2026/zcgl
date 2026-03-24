@@ -35,13 +35,16 @@ from .contract_group import (  # noqa: F401
     Contract,
     ContractDirection,
     ContractGroup,
+    ContractLedgerEntry,
     ContractLifecycleStatus,
     ContractRelation,
     ContractRelationType,
+    ContractRentTerm,
     ContractReviewStatus,
     GroupRelationType,
     LeaseContractDetail,
     RevenueMode,
+    ServiceFeeLedger,
 )
 from .enum_field import (  # noqa: F401
     EnumFieldHistory,
@@ -131,6 +134,9 @@ __all__ = [
     # 合同组体系（REQ-RNT-001）
     "ContractGroup",
     "Contract",
+    "ContractRentTerm",
+    "ContractLedgerEntry",
+    "ServiceFeeLedger",
     "LeaseContractDetail",
     "AgencyAgreementDetail",
     "ContractRelation",

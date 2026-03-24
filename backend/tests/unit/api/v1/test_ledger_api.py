@@ -98,6 +98,53 @@ def test_recalculate_ledger_delegates_to_service(client) -> None:
     mock_recalculate.assert_awaited_once_with(ANY, contract_id="contract-001")
 
 
+def test_export_ledger_entries_delegates_to_service(client) -> None:
+    payload = AsyncMock()
+    payload.filename = "ledger_entries_20260324.csv"
+    payload.media_type = "text/csv; charset=utf-8"
+    payload.content = b"entry_id,contract_id\r\nentry-001,contract-001\r\n"
+
+    with patch(
+        "src.api.v1.contracts.ledger.ledger_export_service.export_ledger_entries",
+        new=AsyncMock(return_value=payload),
+        create=True,
+    ) as mock_export:
+        response = client.get(
+            "/api/v1/ledger/entries/export",
+            params={"contract_id": "contract-001", "year_month_start": "2026-05"},
+        )
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/csv")
+    assert "attachment; filename=ledger_entries_20260324.csv" in response.headers[
+        "content-disposition"
+    ]
+    assert response.text == "entry_id,contract_id\r\nentry-001,contract-001\r\n"
+    mock_export.assert_awaited_once()
+
+
+def test_run_ledger_compensation_delegates_to_service(client) -> None:
+    payload = {
+        "contracts_scanned": 2,
+        "contracts_repaired": 1,
+        "rent_entries_created": 1,
+        "rent_entries_voided": 0,
+        "failures": [],
+        "timestamp": "2026-03-24T11:30:00",
+    }
+
+    with patch(
+        "src.api.v1.contracts.ledger.ledger_compensation_service.run",
+        new=AsyncMock(return_value=payload),
+        create=True,
+    ) as mock_run:
+        response = client.post("/api/v1/ledger/compensation/run")
+
+    assert response.status_code == 200
+    assert response.json() == payload
+    mock_run.assert_awaited_once_with(ANY)
+
+
 def test_batch_update_ledger_rejects_voided_status(client) -> None:
     response = client.patch(
         "/api/v1/contracts/contract-001/ledger/batch-update-status",
@@ -108,4 +155,3 @@ def test_batch_update_ledger_rejects_voided_status(client) -> None:
     )
 
     assert response.status_code == 422
-

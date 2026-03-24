@@ -753,6 +753,45 @@ if __name__ == "__main__":
 0 3 * * 0 find /opt/asset-management/backend/backups -type d -mtime +30 -exec rm -rf {} \;
 ```
 
+#### 台账补偿任务（REQ-RNT-006 M3）
+```bash
+# 每日凌晨 01:30 执行台账补偿
+30 1 * * * cd /opt/asset-management && \
+  TEST_DATABASE_URL='' DATABASE_URL='postgresql+psycopg://app:***@127.0.0.1:5432/zcgl_db' \
+  /opt/asset-management/backend/.venv/bin/python backend/scripts/maintenance/run_ledger_compensation.py \
+  >> /var/log/zcgl/ledger-compensation.log 2>&1
+```
+
+```ini
+# systemd timer 方案（可替代 crontab）
+# /etc/systemd/system/zcgl-ledger-compensation.service
+[Unit]
+Description=Run zcgl ledger compensation
+After=network.target postgresql.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/asset-management
+Environment=DATABASE_URL=postgresql+psycopg://app:***@127.0.0.1:5432/zcgl_db
+ExecStart=/opt/asset-management/backend/.venv/bin/python backend/scripts/maintenance/run_ledger_compensation.py
+
+# /etc/systemd/system/zcgl-ledger-compensation.timer
+[Unit]
+Description=Daily zcgl ledger compensation
+
+[Timer]
+OnCalendar=*-*-* 01:30:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+```
+
+- 必填环境：`DATABASE_URL`。不要给生产补偿任务注入 `TEST_DATABASE_URL`。
+- 工作目录必须指向仓库根或能正确解析 `backend/scripts/maintenance/run_ledger_compensation.py` 的目录。
+- 首次启用前先手工执行一次脚本，确认输出 JSON 中 `failures` 为空。
+- 回滚方式：先停用 cron/timer，再通过 `POST /api/v1/ledger/compensation/run` 做一次人工验证；如需回退代码，恢复到上一个已验证版本后重新启用定时任务。
+
 ### 3. 更新部署
 
 #### 零停机部署脚本

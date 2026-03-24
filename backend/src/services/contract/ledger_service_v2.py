@@ -56,6 +56,11 @@ def _expand_year_months(rent_terms: list[ContractRentTerm]) -> list[str]:
     return year_months
 
 
+def compute_expected_year_months(rent_terms: list[ContractRentTerm]) -> list[str]:
+    """公开给补偿任务复用的账期展开逻辑。"""
+    return _expand_year_months(rent_terms)
+
+
 def _get_rent_term_for_month(
     rent_terms: list[ContractRentTerm],
     month_date: date,

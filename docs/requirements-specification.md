@@ -323,7 +323,7 @@
   - 必须先作废/冲销后再重建，禁止物理删除关键业务记录。
   - 全流程强制留痕（原因、操作人、审批人、前后值、关联单号）。
 
-#### REQ-RNT-006 台账自动化 🚧
+#### REQ-RNT-006 台账自动化 ✅
 - 描述：合同生效后自动生成台账并支持批量维护。
 - 验收（分期交付）：
   - **M2 范围（台账核心正确性）**：
@@ -340,8 +340,12 @@
   - 台账金额来源：`ContractRentTerm.total_monthly_amount`（派生字段，= `monthly_rent + management_fee + other_fees`）。
 - 代码证据：
   - `backend/src/api/v1/contracts/contract_groups.py`（`GET /contracts/{id}/ledger` + `PATCH /contracts/{id}/ledger/batch-update-status`）
-  - `backend/src/api/v1/contracts/ledger.py`（`GET /ledger/entries` + `POST /contracts/{id}/ledger/recalculate`）
+  - `backend/src/api/v1/contracts/ledger.py`（`GET /ledger/entries` + `GET /ledger/entries/export` + `POST /contracts/{id}/ledger/recalculate` + `POST /ledger/compensation/run`）
   - `backend/src/services/contract/ledger_service_v2.py`（`generate_ledger_on_activation` + `query_ledger` + `query_ledger_entries` + `recalculate_ledger` + `batch_update_status`）
+  - `backend/src/services/contract/ledger_export_service.py`
+  - `backend/src/services/contract/ledger_compensation_service.py`
+  - `backend/src/services/contract/service_fee_ledger_service.py`
+  - `backend/scripts/maintenance/run_ledger_compensation.py`
 
 ### 6.4 客户域
 
@@ -561,7 +565,7 @@
 | REQ-RNT-003 | ✅ | `/api/v1/contracts/{contract_id}/*` 生命周期 6 端点 + 派生状态 + 审计日志 | `test_contract_lifecycle_api.py`, `test_contract_group_service.py` |
 | REQ-RNT-004 | 📋 | — | — |
 | REQ-RNT-005 | 📋 | — | — |
-| REQ-RNT-006 | 🚧 | `/api/v1/ledger/entries`, `/api/v1/contracts/{contract_id}/ledger/*` | `test_ledger_service_v2.py`, `test_ledger_aggregate_query.py`, `test_ledger_recalculate.py`, `test_ledger_api.py`, `test_contract_ledger_entries_migration.py` |
+| REQ-RNT-006 | ✅ | `/api/v1/ledger/entries`, `/api/v1/ledger/entries/export`, `/api/v1/ledger/compensation/run`, `/api/v1/contracts/{contract_id}/ledger/*` | `test_ledger_service_v2.py`, `test_ledger_aggregate_query.py`, `test_ledger_recalculate.py`, `test_ledger_api.py`, `test_contract_ledger_entries_migration.py`, `test_ledger_export_service.py`, `test_ledger_compensation_service.py`, `test_service_fee_ledger_service.py`, `test_service_fee_ledger_migration.py` |
 | REQ-CUS-001 | 📋 | — | — |
 | REQ-CUS-002 | 📋 | — | — |
 | REQ-SCH-001 | 📋 | — | — |

@@ -468,6 +468,15 @@ class ContractLedgerListResponse(BaseModel):
     limit: int
 
 
+class LedgerExportQueryParams(LedgerAggregateQueryParams):
+    """台账导出查询参数。"""
+
+    export_format: Literal["csv", "excel"] = Field(
+        "excel",
+        description="导出格式",
+    )
+
+
 class ContractLedgerBatchUpdateRequest(BaseModel):
     """批量更新合同台账状态。"""
 
@@ -495,6 +504,24 @@ class LedgerRecalculateResponse(BaseModel):
     updated: int = Field(..., ge=0)
     voided: int = Field(..., ge=0)
     skipped_entries: list[LedgerRecalculateSkippedEntry] = Field(default_factory=list)
+
+
+class LedgerCompensationFailure(BaseModel):
+    """台账补偿失败项。"""
+
+    contract_id: str
+    error: str
+
+
+class LedgerCompensationResponse(BaseModel):
+    """台账补偿结果摘要。"""
+
+    contracts_scanned: int = Field(..., ge=0)
+    contracts_repaired: int = Field(..., ge=0)
+    rent_entries_created: int = Field(..., ge=0)
+    rent_entries_voided: int = Field(..., ge=0)
+    failures: list[LedgerCompensationFailure] = Field(default_factory=list)
+    timestamp: str
 
 
 class ContractRelationCreate(BaseModel):

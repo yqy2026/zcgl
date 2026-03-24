@@ -15,10 +15,8 @@ Run from repository root:
 from __future__ import annotations
 
 import re
-import sys
 from pathlib import Path
 from typing import NamedTuple
-
 
 ROOT = Path(__file__).resolve().parent.parent
 FIELD_SPEC = ROOT / "docs" / "features" / "requirements-appendix-fields.md"
@@ -35,6 +33,10 @@ ENTITY_MODEL_MAP: dict[str, tuple[str, str]] = {
     "Project": ("project.py", "Project"),
     "ContractGroup": ("contract_group.py", "ContractGroup"),
     "Contract": ("contract_group.py", "Contract"),
+    "ContractRentTerm": ("contract_group.py", "ContractRentTerm"),
+    "ContractLedgerEntry": ("contract_group.py", "ContractLedgerEntry"),
+    "ServiceFeeLedger": ("contract_group.py", "ServiceFeeLedger"),
+    "ContractAuditLog": ("contract_group.py", "ContractAuditLog"),
     "LeaseContractDetail": ("contract_group.py", "LeaseContractDetail"),
     "AgencyAgreementDetail": ("contract_group.py", "AgencyAgreementDetail"),
     "ContractRelation": ("contract_group.py", "ContractRelation"),
