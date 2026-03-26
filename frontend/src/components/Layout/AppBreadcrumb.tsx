@@ -10,6 +10,8 @@ interface AppBreadcrumbProps {
   customItems?: { title: string; link?: string }[];
 }
 
+type BreadcrumbItems = NonNullable<React.ComponentProps<typeof Breadcrumb>['items']>;
+
 const getBreadcrumbName = (path: string): string | null => {
   // 1. Static match
   if (staticBreadcrumbMap[path]) {
@@ -56,8 +58,9 @@ const AppBreadcrumb: React.FC<AppBreadcrumbProps> = ({ customItems }) => {
 
   const breadcrumbItems = useMemo(() => {
     // Always include Home as the first item
-    const items: Array<{ title: React.ReactNode }> = [
+    const items: BreadcrumbItems = [
       {
+        key: 'home',
         title: (
           <Link to="/" aria-label="返回首页" className={styles.homeLink}>
             <HomeOutlined />
@@ -69,8 +72,9 @@ const AppBreadcrumb: React.FC<AppBreadcrumbProps> = ({ customItems }) => {
 
     // If custom items are provided, use them
     if (customItems && customItems.length > 0) {
-      customItems.forEach(item => {
+      customItems.forEach((item, index) => {
         items.push({
+          key: item.link ?? `custom-${index}`,
           title: item.link ? renderCrumbLink(item.link, item.title) : renderCrumbLabel(item.title),
         });
       });
@@ -87,6 +91,7 @@ const AppBreadcrumb: React.FC<AppBreadcrumbProps> = ({ customItems }) => {
       if (name) {
         const isLast = index === pathSnippets.length - 1;
         items.push({
+          key: url,
           title: isLast
             ? renderCrumbLabel(name)
             : renderCrumbLink(resolveBreadcrumbLink(pathname, url), name),

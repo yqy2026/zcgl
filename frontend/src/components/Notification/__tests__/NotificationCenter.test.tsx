@@ -9,6 +9,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import NotificationCenter from '../NotificationCenter';
 
+const formatConsoleMessages = (calls: unknown[][]) =>
+  calls
+    .flat()
+    .map(value => String(value))
+    .join(' ');
+
 // Mock notificationService
 vi.mock('@/services/notificationService', () => ({
   notificationService: {
@@ -39,7 +45,12 @@ const renderWithProviders = (props = {}) => {
 
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter>
+      <MemoryRouter
+        future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true,
+        }}
+      >
         <NotificationCenter {...props} />
       </MemoryRouter>
     </QueryClientProvider>
@@ -142,6 +153,47 @@ describe('NotificationCenter', () => {
       await waitFor(() => {
         expect(screen.getByText('合同到期提醒')).toBeInTheDocument();
       });
+    });
+
+    it('does not emit framework or antd deprecation warnings when opening the list', async () => {
+      vi.mocked(notificationService.getNotifications).mockResolvedValue({
+        items: [
+          {
+            id: 'notif_1',
+            title: '合同到期提醒',
+            content: '合同将在7天后到期',
+            type: 'contract_expiring',
+            is_read: false,
+            priority: 'normal',
+            created_at: '2026-01-30T08:00:00Z',
+          },
+        ],
+        total: 1,
+        page: 1,
+        page_size: 10,
+      });
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      try {
+        renderWithProviders();
+
+        fireEvent.click(document.querySelector('.anticon-bell')!);
+
+        await waitFor(() => {
+          expect(screen.getByText('合同到期提醒')).toBeInTheDocument();
+        });
+
+        const messages = `${formatConsoleMessages(consoleErrorSpy.mock.calls)} ${formatConsoleMessages(
+          consoleWarnSpy.mock.calls
+        )}`;
+
+        expect(messages).not.toContain('[antd: List]');
+        expect(messages).not.toContain('React Router Future Flag Warning');
+      } finally {
+        consoleErrorSpy.mockRestore();
+        consoleWarnSpy.mockRestore();
+      }
     });
   });
 

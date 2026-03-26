@@ -17,6 +17,7 @@ interface LinkMockProps {
 }
 
 interface BreadcrumbItem {
+  key?: string;
   title?: ReactNode;
 }
 
@@ -38,7 +39,11 @@ vi.mock('antd', () => ({
   Breadcrumb: ({ items, style }: BreadcrumbMockProps) => (
     <div data-testid="breadcrumb" style={style}>
       {items?.map(item => (
-        <div key={String(item.title ?? 'breadcrumb-item')} data-testid="breadcrumb-item">
+        <div
+          key={String(item.key ?? item.title ?? 'breadcrumb-item')}
+          data-testid="breadcrumb-item"
+          data-breadcrumb-key={item.key ?? ''}
+        >
           {item.title}
         </div>
       ))}
@@ -141,5 +146,13 @@ describe('AppBreadcrumb', () => {
     renderBreadcrumb('/assets/list');
 
     expect(screen.getByTestId('breadcrumb')).toBeInTheDocument();
+  });
+
+  it('provides stable keys for breadcrumb items', () => {
+    renderBreadcrumb('/assets/123/edit');
+
+    expect(screen.getAllByTestId('breadcrumb-item').map(item => item.dataset.breadcrumbKey)).toEqual(
+      ['home', '/assets', '/assets/123', '/assets/123/edit']
+    );
   });
 });

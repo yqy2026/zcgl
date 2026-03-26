@@ -10,6 +10,12 @@ import DataPolicyManagementPage from '../DataPolicyManagementPage';
 import { dataPolicyService } from '@/services/dataPolicyService';
 import type { RoleDataPoliciesResponse } from '@/types/dataPolicy';
 
+const formatConsoleMessages = (calls: unknown[][]) =>
+  calls
+    .flat()
+    .map(value => String(value))
+    .join(' ');
+
 vi.mock('@/services/dataPolicyService', () => ({
   dataPolicyService: {
     getDataPolicyTemplates: vi.fn(),
@@ -104,6 +110,28 @@ describe('DataPolicyManagementPage', () => {
 
     await screen.findByText('加载失败');
     expect(saveButton).toBeDisabled();
+  });
+
+  it('does not emit antd deprecation warnings while rendering load failures', async () => {
+    vi.mocked(dataPolicyService.getRoleDataPolicies).mockRejectedValueOnce(new Error('加载失败'));
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      renderWithProviders(<DataPolicyManagementPage />);
+
+      const roleInput = await screen.findByPlaceholderText('请输入角色 ID（role_id）');
+      fireEvent.change(roleInput, { target: { value: 'role-1' } });
+
+      fireEvent.click(screen.getByRole('button', { name: '加载当前策略' }));
+
+      await screen.findByText('加载失败');
+
+      const messages = formatConsoleMessages(consoleErrorSpy.mock.calls);
+      expect(messages).not.toContain('[antd: Space]');
+      expect(messages).not.toContain('[antd: Alert]');
+    } finally {
+      consoleErrorSpy.mockRestore();
+    }
   });
 
   it('writes mutation cache using the response role id after role switch', async () => {

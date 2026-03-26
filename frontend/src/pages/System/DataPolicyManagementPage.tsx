@@ -87,7 +87,7 @@ const DataPolicyManagementPage: React.FC = () => {
   const templateOptions = useMemo(() => {
     return (templatesQuery.data ?? []).map(template => ({
       label: (
-        <Space direction="vertical" size={0}>
+        <Space orientation="vertical" size={0}>
           <Typography.Text>{template.name}</Typography.Text>
           <Typography.Text type="secondary">{template.description}</Typography.Text>
         </Space>
@@ -117,9 +117,9 @@ const DataPolicyManagementPage: React.FC = () => {
 
   return (
     <PageContainer title="数据策略包管理" subTitle="按角色配置 ABAC 数据策略包（policy_packages）">
-      <Space direction="vertical" size="large" style={{ width: '100%' }}>
+      <Space orientation="vertical" size="large" style={{ width: '100%' }}>
         <Card>
-          <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+          <Space orientation="vertical" size="middle" style={{ width: '100%' }}>
             <Typography.Text strong>角色选择</Typography.Text>
             <Row gutter={12}>
               <Col flex="auto">
@@ -177,7 +177,7 @@ const DataPolicyManagementPage: React.FC = () => {
             <Alert
               type="error"
               showIcon
-              message={
+              title={
                 templatesQuery.error instanceof Error ? templatesQuery.error.message : '加载失败'
               }
             />
@@ -192,7 +192,7 @@ const DataPolicyManagementPage: React.FC = () => {
                 setSelectedPackages(values as DataPolicyPackageCode[]);
               }}
             >
-              <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+              <Space orientation="vertical" size="middle" style={{ width: '100%' }}>
                 {templateOptions.map(option => (
                   <Checkbox key={option.value} value={option.value}>
                     {option.label}
@@ -214,7 +214,7 @@ const DataPolicyManagementPage: React.FC = () => {
             <Alert
               type="error"
               showIcon
-              message={
+              title={
                 rolePoliciesQuery.error instanceof Error
                   ? rolePoliciesQuery.error.message
                   : '加载失败'

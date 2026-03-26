@@ -2,6 +2,11 @@
 
 ## [Unreleased] - 2026-03-06
 
+### 2026-03-26
+- fix(test-noise): 收敛首批高频前端测试噪音。`frontend/src/components/Layout/AppBreadcrumb.tsx` 现为 breadcrumb items 显式生成稳定 `key`，并在 `frontend/src/components/Layout/__tests__/AppBreadcrumb.test.tsx` 锁定 `home` / path-based key，不再出现重复 key 警告；`frontend/src/pages/System/DataPolicyManagementPage.tsx` 已将 `Space direction` 全部替换为 `orientation`，并把 `Alert message` 替换为 `title`，对应测试新增“不产生 antd 废弃警告”断言。
+- fix(test-noise): `frontend/src/components/Notification/NotificationCenter.tsx` 已移除已废弃的 AntD `List` 组件，改为显式通知列表结构；`frontend/src/components/Notification/__tests__/NotificationCenter.test.tsx` 同时补齐 `MemoryRouter future` 配置与日志断言，收口 `List` 废弃告警和 React Router future flag 噪音。`frontend/src/components/Monitoring/__tests__/ApiMonitor.test.tsx` 则将 fake timers 推进与卸载过程包进 `act(...)` 边界，消除高频 `not wrapped in act(...)` 告警。
+- verify(test-noise): `cd frontend && pnpm exec vitest run src/components/Layout/__tests__/AppBreadcrumb.test.tsx src/pages/System/__tests__/DataPolicyManagementPage.test.tsx src/components/Notification/__tests__/NotificationCenter.test.tsx src/components/Monitoring/__tests__/ApiMonitor.test.tsx --reporter=verbose`（PASS）。
+
 ### 2026-03-25
 - docs(plan): 新增 `REQ-AUTH-002` 设计文档 `docs/plans/2026-03-25-req-auth-002-perspective-context-design.md`，收口方案为“canonical owner/manager route 继续作为前端真值，所有业务请求强制携带 `X-Perspective`，后端统一构建 `PerspectiveContext` 并按单一视角口径执行查询/统计/搜索；资源级 perspective 规则回到 `/auth/me/capabilities`，默认视角失效时进入统一 `PerspectiveResolution` 恢复流程”；`docs/plans/README.md` 已同步登记为活跃待评审方案。
 - docs(plan): 新增 `REQ-AUTH-002` 实施计划文档 `docs/plans/2026-03-25-req-auth-002-perspective-context-plan.md`，把工作拆成 5 个执行块：后端资源视角注册表与 capabilities 契约、前端 `X-Perspective` 自动注入、后端 `PerspectiveContext` 与单视角 `PartyFilter`、前端 `PerspectiveResolution` 恢复流与 legacy redirect 统一，以及 SSOT / `make check` 最终收口；`docs/plans/README.md` 已同步登记为活跃待评审实施计划。

@@ -68,11 +68,8 @@
 
 .notificationList {
   background: transparent;
-}
-
-.notificationList :global(.ant-list-items) {
-  margin: 0;
-  padding: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .notificationItem {

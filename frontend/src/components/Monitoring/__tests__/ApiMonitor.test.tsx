@@ -3,9 +3,15 @@
  */
 
 import React from 'react';
-import { screen, fireEvent, waitFor } from '@/test/utils/test-helpers';
+import { act, screen, fireEvent, waitFor } from '@/test/utils/test-helpers';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ApiMonitor from '../ApiMonitor';
+
+const formatConsoleMessages = (calls: unknown[][]) =>
+  calls
+    .flat()
+    .map(value => String(value))
+    .join(' ');
 
 // Mock apiHealthCheck
 vi.mock('../../../services/apiHealthCheck', () => ({
@@ -273,23 +279,40 @@ describe('ApiMonitor', () => {
 
     it('自动每 30 秒刷新一次', async () => {
       vi.useFakeTimers();
-      renderWithProviders(<ApiMonitor />);
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      await vi.runAllTicks();
-      expect(apiHealthCheck.checkCriticalEndpoints).toHaveBeenCalledTimes(1);
+      try {
+        await act(async () => {
+          renderWithProviders(<ApiMonitor />);
+        });
 
-      // 前进 30 秒
-      await vi.advanceTimersByTimeAsync(30000);
-      await vi.runAllTicks();
+        await act(async () => {
+          await vi.runAllTicks();
+        });
+        expect(apiHealthCheck.checkCriticalEndpoints).toHaveBeenCalledTimes(1);
 
-      expect(apiHealthCheck.checkCriticalEndpoints).toHaveBeenCalledTimes(2);
+        // 前进 30 秒
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(30000);
+          await vi.runAllTicks();
+        });
 
-      // 再前进 30 秒
-      await vi.advanceTimersByTimeAsync(30000);
-      await vi.runAllTicks();
+        expect(apiHealthCheck.checkCriticalEndpoints).toHaveBeenCalledTimes(2);
 
-      expect(apiHealthCheck.checkCriticalEndpoints).toHaveBeenCalledTimes(3);
-      vi.useRealTimers();
+        // 再前进 30 秒
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(30000);
+          await vi.runAllTicks();
+        });
+
+        expect(apiHealthCheck.checkCriticalEndpoints).toHaveBeenCalledTimes(3);
+        expect(formatConsoleMessages(consoleErrorSpy.mock.calls)).not.toContain(
+          'not wrapped in act'
+        );
+      } finally {
+        consoleErrorSpy.mockRestore();
+        vi.useRealTimers();
+      }
     });
   });
 
@@ -357,20 +380,38 @@ describe('ApiMonitor', () => {
   describe('清理', () => {
     it('卸载时清理定时器', async () => {
       vi.useFakeTimers();
-      const { unmount } = renderWithProviders(<ApiMonitor />);
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      await vi.runAllTicks();
-      expect(apiHealthCheck.checkCriticalEndpoints).toHaveBeenCalledTimes(1);
+      try {
+        let unmount: (() => void) | undefined;
+        await act(async () => {
+          ({ unmount } = renderWithProviders(<ApiMonitor />));
+        });
 
-      unmount();
+        await act(async () => {
+          await vi.runAllTicks();
+        });
+        expect(apiHealthCheck.checkCriticalEndpoints).toHaveBeenCalledTimes(1);
 
-      // 前进时间后不应该再调用
-      await vi.advanceTimersByTimeAsync(60000);
-      await vi.runAllTicks();
+        await act(async () => {
+          unmount?.();
+        });
 
-      // 调用次数应该还是 1
-      expect(apiHealthCheck.checkCriticalEndpoints).toHaveBeenCalledTimes(1);
-      vi.useRealTimers();
+        // 前进时间后不应该再调用
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(60000);
+          await vi.runAllTicks();
+        });
+
+        // 调用次数应该还是 1
+        expect(apiHealthCheck.checkCriticalEndpoints).toHaveBeenCalledTimes(1);
+        expect(formatConsoleMessages(consoleErrorSpy.mock.calls)).not.toContain(
+          'not wrapped in act'
+        );
+      } finally {
+        consoleErrorSpy.mockRestore();
+        vi.useRealTimers();
+      }
     });
   });
 });
