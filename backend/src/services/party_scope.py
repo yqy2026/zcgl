@@ -41,6 +41,32 @@ def _normalize_identifier_sequence(values: Sequence[object] | None) -> list[str]
     return normalized
 
 
+def build_party_filter_from_perspective_context(
+    perspective_context: object,
+) -> PartyFilter | None:
+    perspective = getattr(perspective_context, "perspective", None)
+    effective_party_ids = _normalize_identifier_sequence(
+        getattr(perspective_context, "effective_party_ids", None)
+    )
+    if len(effective_party_ids) == 0:
+        return None
+
+    if perspective == "owner":
+        return PartyFilter(
+            party_ids=effective_party_ids,
+            filter_mode="owner",
+            owner_party_ids=effective_party_ids,
+            manager_party_ids=[],
+        )
+
+    return PartyFilter(
+        party_ids=effective_party_ids,
+        filter_mode="manager",
+        owner_party_ids=[],
+        manager_party_ids=effective_party_ids,
+    )
+
+
 async def _resolve_legacy_default_organization_id(
     db: AsyncSession, *, current_user_id: str, logger: logging.Logger
 ) -> str | None:

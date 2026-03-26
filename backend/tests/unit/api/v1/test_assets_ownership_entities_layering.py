@@ -1,7 +1,7 @@
 """分层约束测试：assets ownership-entities 端点应委托服务层。"""
 
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import ANY, AsyncMock, MagicMock
 
 import pytest
 
@@ -31,8 +31,14 @@ async def test_get_ownership_entities_should_delegate_asset_service() -> None:
         result = await get_ownership_entities(
             db=MagicMock(),
             current_user=MagicMock(),
+            _perspective_ctx=MagicMock(
+                perspective="owner",
+                effective_party_ids=["owner-1"],
+            ),
         )
 
     assert result == ["A公司", "B公司"]
-    mock_service.get_ownership_entity_names.assert_awaited_once_with()
-
+    mock_service.get_ownership_entity_names.assert_awaited_once_with(
+        current_user_id=ANY,
+        party_filter=ANY,
+    )

@@ -399,12 +399,17 @@ async def test_get_project_statistics_should_delegate_project_service() -> None:
         result = await get_project_statistics(
             db=MagicMock(),
             current_user=MagicMock(),
+            _perspective_ctx=MagicMock(
+                perspective="manager",
+                effective_party_ids=["manager-1"],
+            ),
         )
 
     assert result["total_projects"] == 8
     mock_service.get_project_statistics.assert_awaited_once_with(
         db=ANY,
         current_user_id=ANY,
+        party_filter=ANY,
     )
 
 
@@ -434,6 +439,10 @@ async def test_get_project_should_delegate_project_service_lookup() -> None:
             project_id="project-1",
             db=MagicMock(),
             current_user=MagicMock(),
+            _perspective_ctx=MagicMock(
+                perspective="manager",
+                effective_party_ids=["manager-1"],
+            ),
         )
 
     assert result.id == "project-1"
@@ -441,4 +450,5 @@ async def test_get_project_should_delegate_project_service_lookup() -> None:
         db=ANY,
         project_id="project-1",
         current_user_id=ANY,
+        party_filter=ANY,
     )

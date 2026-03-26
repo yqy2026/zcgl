@@ -404,11 +404,38 @@
   - `backend/src/services/permission/rbac_service.py`
   - `backend/tests/unit/api/v1/test_roles_permission_grants.py`
 
-#### REQ-AUTH-002 视角上下文强制注入 📋
+#### REQ-AUTH-002 视角上下文强制注入 🚧
 - 描述：所有业务请求需携带当前视角上下文。
 - 验收：
   - 业务查询、统计、搜索均使用当前视角口径。
   - 当默认视角权限失效时，系统要求重新选择视角。
+- 代码证据：
+  - `backend/src/services/authz/resource_perspective_registry.py`
+  - `backend/src/services/authz/service.py`
+  - `backend/src/middleware/auth.py`
+  - `backend/src/services/party_scope.py`
+  - `backend/src/api/v1/analytics/analytics.py`
+  - `backend/src/api/v1/assets/project.py`
+  - `backend/src/api/v1/assets/assets.py`
+  - `backend/src/api/v1/contracts/contract_groups.py`
+  - `frontend/src/api/client.ts`
+  - `frontend/src/routes/perspective.ts`
+  - `frontend/src/routes/perspectiveResolution.ts`
+  - `frontend/src/routes/PerspectiveResolutionPage.tsx`
+  - `frontend/src/components/System/CapabilityGuard.tsx`
+  - `frontend/src/routes/LegacyRouteRedirect.tsx`
+  - `backend/tests/unit/services/test_authz_service.py`
+  - `backend/tests/unit/middleware/test_perspective_context.py`
+  - `backend/tests/unit/services/test_party_scope.py`
+  - `backend/tests/unit/crud/test_query_builder.py`
+  - `backend/tests/unit/api/v1/test_analytics.py`
+  - `backend/tests/unit/api/v1/test_project.py`
+  - `backend/tests/unit/api/v1/test_assets_authz_layering.py`
+  - `backend/tests/unit/services/contract/test_contract_group_service.py`
+  - `frontend/src/api/__tests__/client.test.ts`
+  - `frontend/src/routes/__tests__/AppRoutes.perspective-redirect.test.tsx`
+  - `frontend/src/routes/__tests__/perspectiveResolution.test.tsx`
+  - `frontend/src/components/System/__tests__/CapabilityGuard.test.tsx`
 
 ### 6.7 文档与分析域
 
@@ -422,15 +449,20 @@
   - `backend/src/api/v1/documents/pdf_upload.py`
   - `backend/src/api/v1/documents/pdf_batch_routes.py`
 
-#### REQ-ANA-001 经营分析与导出 🚧
+#### REQ-ANA-001 经营分析与导出 ✅
 - 描述：提供可直接用于经营决策的分析能力。
 - 验收：
   - 提供总收入合计并强制拆分"自营租金收入/代理服务费收入"。
   - 提供客户双指标（主体数/合同数）。去重口径：`customer_entity_count`（客户主体数）按 `customer_party_id` 去重；`customer_contract_count`（客户合同数）按 `contract_id` 去重。
   - 支持结果导出并标记统计口径版本。
 - 代码证据：
-  - `backend/src/api/v1/analytics/analytics.py`（综合分析/趋势/分布已实现）
+  - `backend/src/api/v1/analytics/analytics.py`
   - `backend/src/services/analytics/analytics_service.py`
+  - `backend/src/services/analytics/analytics_export_service.py`
+  - `backend/src/services/excel/excel_export_service.py`
+  - `frontend/src/services/analyticsService.ts`
+  - `frontend/src/hooks/useAssetAnalytics.ts`
+  - `frontend/src/components/Analytics/AnalyticsDashboard.tsx`
 
 ### 6.8 主体（Party）域
 
@@ -570,9 +602,9 @@
 | REQ-CUS-002 | 📋 | — | — |
 | REQ-SCH-001 | 📋 | — | — |
 | REQ-AUTH-001 | ✅ | `/auth/login`, `/auth/refresh` | `test_optional_auth.py` |
-| REQ-AUTH-002 | 📋 | — | — |
+| REQ-AUTH-002 | 🚧 | `/api/v1/analytics/*`, `/api/v1/projects/*`, `/api/v1/assets`（列表/详情/筛选）, `/api/v1/contract-groups*`, `/auth/me/capabilities`, 前端 `X-Perspective` 自动注入与 `PerspectiveResolution` 恢复流 | `test_authz_service.py`, `test_perspective_context.py`, `test_party_scope.py`, `test_query_builder.py`, `test_analytics.py`, `test_project.py`, `test_assets_authz_layering.py`, `client.test.ts`, `AppRoutes.perspective-redirect.test.tsx`, `perspectiveResolution.test.tsx`, `CapabilityGuard.test.tsx` |
 | REQ-DOC-001 | ✅ | `/pdf-import/*` | `pdf_import.py` |
-| REQ-ANA-001 | 🚧 | `/analytics/*`（综合分析 + 导出带口径版本） | `test_analytics_service.py`, `test_analytics.py`, `analytics_service.py` |
+| REQ-ANA-001 | ✅ | `/analytics/comprehensive`, `/analytics/export`（综合分析 + 统一 CSV/XLSX 导出 + `metrics_version`；PDF 明确返回 501 未实现） | `test_analytics_service.py`, `test_analytics.py`, `test_analytics_export_service.py`, `analyticsService.test.ts`, `useAssetAnalytics.test.ts`, `AnalyticsDashboard.test.tsx` |
 | REQ-PTY-001 | 🚧 | `/api/v1/parties` (CRUD + review fields) + `/system/parties` | `test_party_api.py`, `test_party_service.py`, `partyService.test.ts`, `PartyPages.test.tsx` |
 | REQ-PTY-002 | 🚧 | `/api/v1/parties/{party_id}/submit-review|approve-review|reject-review` + 合同提审门禁 + `/system/parties/:id` | `test_party_api.py`, `test_party_service.py`, `test_contract_group_service.py`, `partyService.test.ts`, `PartyPages.test.tsx` |
 

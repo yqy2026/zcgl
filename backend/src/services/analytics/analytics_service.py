@@ -27,6 +27,7 @@ from sqlalchemy.orm import selectinload
 from ...constants.business_constants import DataStatusValues
 from ...core.cache_manager import analytics_cache
 from ...core.response_handler import ResponseHandler
+from ...crud.query_builder import PartyFilter
 from ...models.asset import Asset
 from ...models.contract_group import (
     Contract,
@@ -55,6 +56,7 @@ class AnalyticsService:
         filters: dict[str, Any] | None = None,
         should_use_cache: bool = True,
         current_user: "User | None" = None,
+        party_filter: PartyFilter | None = None,
     ) -> dict[str, Any]:
         """
         获取综合统计分析数据
@@ -85,7 +87,10 @@ class AnalyticsService:
                 return cast(dict[str, Any], cached_result)
 
         # 执行分析计算
-        result = await self._calculate_analytics(validated_filters)
+        result = await self._calculate_analytics(
+            validated_filters,
+            party_filter=party_filter,
+        )
 
         # 存入缓存
         if should_use_cache:
@@ -142,7 +147,12 @@ class AnalyticsService:
         filter_str = json.dumps(filters, sort_keys=True)
         return f"analytics:{hashlib.md5(filter_str.encode(), usedforsecurity=False).hexdigest()}"
 
-    async def _calculate_analytics(self, filters: dict[str, Any]) -> dict[str, Any]:
+    async def _calculate_analytics(
+        self,
+        filters: dict[str, Any],
+        *,
+        party_filter: PartyFilter | None = None,
+    ) -> dict[str, Any]:
         """
         执行核心分析计算
 
@@ -166,6 +176,7 @@ class AnalyticsService:
             limit=10000,
             filters=query_filters,
             include_contract_projection=False,
+            party_filter=party_filter,
         )
 
         # 计算各项统计
@@ -193,14 +204,26 @@ class AnalyticsService:
         )
         stats["occupancy_rate"] = occupancy_stats
 
-        active_contracts = await self._list_active_contracts(filters)
+        active_contracts = await self._list_active_contracts(
+            filters,
+            party_filter=party_filter,
+        )
         stats.update(self._calculate_operational_metrics(active_contracts, filters))
 
         return stats
 
-    async def _list_active_contracts(self, filters: dict[str, Any]) -> list[Contract]:
+    async def _list_active_contracts(
+        self,
+        filters: dict[str, Any],
+        *,
+        party_filter: PartyFilter | None = None,
+    ) -> list[Contract]:
         stmt = (
             select(Contract)
+            .join(
+                ContractGroup,
+                Contract.contract_group_id == ContractGroup.contract_group_id,
+            )
             .where(
                 Contract.status == ContractLifecycleStatus.ACTIVE,
                 Contract.data_status == "正常",
@@ -223,6 +246,23 @@ class AnalyticsService:
 
         date_from = self._safe_parse_date(filters.get("date_from"))
         date_to = self._safe_parse_date(filters.get("date_to"))
+        scoped_party_ids = self._normalize_party_ids(
+            party_filter.party_ids if party_filter is not None else None
+        )
+        if party_filter is not None and len(scoped_party_ids) == 0:
+            return []
+        if party_filter is not None:
+            if party_filter.filter_mode == "owner":
+                stmt = stmt.where(ContractGroup.owner_party_id.in_(scoped_party_ids))
+            elif party_filter.filter_mode == "manager":
+                stmt = stmt.where(ContractGroup.operator_party_id.in_(scoped_party_ids))
+            else:
+                stmt = stmt.where(
+                    or_(
+                        ContractGroup.owner_party_id.in_(scoped_party_ids),
+                        ContractGroup.operator_party_id.in_(scoped_party_ids),
+                    )
+                )
         if date_from is not None or date_to is not None:
             overlap_clauses: list[Any] = []
             if date_to is not None:
@@ -238,6 +278,21 @@ class AnalyticsService:
                 stmt = stmt.where(and_(*overlap_clauses))
 
         return list((await self.db.execute(stmt)).scalars().unique().all())
+
+    @staticmethod
+    def _normalize_party_ids(values: Any) -> list[str]:
+        if not isinstance(values, list | tuple | set):
+            return []
+
+        normalized_values: list[str] = []
+        seen: set[str] = set()
+        for value in values:
+            normalized_value = str(value).strip()
+            if normalized_value == "" or normalized_value in seen:
+                continue
+            seen.add(normalized_value)
+            normalized_values.append(normalized_value)
+        return normalized_values
 
     @staticmethod
     def _resolve_ledger_year_month_bounds(

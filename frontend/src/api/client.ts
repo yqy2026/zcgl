@@ -15,6 +15,7 @@ import { ApiClientConfig, RetryConfig, ExtractResult } from '@/types/apiResponse
 import { createLogger } from '@/utils/logger';
 import { isDevelopmentMode } from '@/utils/runtimeEnv';
 import { getCurrentRequestScopeKey } from '@/utils/queryScope';
+import { getCurrentRoutePerspective } from '@/routes/perspective';
 import { API_BASE_URL, CSRF_CONFIG } from './config';
 import { AuthStorage } from '@/utils/AuthStorage';
 
@@ -73,6 +74,75 @@ const setHeaderIfMissing = (
   if (record[name] == null) {
     record[name] = value;
   }
+};
+
+const setHeader = (
+  headers: InternalAxiosRequestConfig['headers'],
+  name: string,
+  value: string
+): void => {
+  if (headers == null) {
+    return;
+  }
+
+  const setFn = (headers as { set?: (headerName: string, val: string) => void }).set;
+  if (typeof setFn === 'function') {
+    setFn.call(headers, name, value);
+    return;
+  }
+
+  const record = headers as Record<string, string>;
+  record[name] = value;
+};
+
+const removeHeader = (
+  headers: InternalAxiosRequestConfig['headers'],
+  name: string
+): void => {
+  if (headers == null) {
+    return;
+  }
+
+  const deleteFn = (headers as { delete?: (headerName: string) => void }).delete;
+  if (typeof deleteFn === 'function') {
+    deleteFn.call(headers, name);
+    return;
+  }
+
+  const record = headers as Record<string, string>;
+  delete record[name];
+};
+
+const normalizeRequestPath = (url: string | undefined): string => {
+  if (url == null || url.trim() === '') {
+    return '';
+  }
+
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return new URL(url).pathname;
+  }
+
+  return url.startsWith('/') ? url : `/${url}`;
+};
+
+const isPerspectiveHeaderExemptRequest = (url: string | undefined): boolean => {
+  const pathname = normalizeRequestPath(url);
+  return pathname === '/auth' || pathname.startsWith('/auth/');
+};
+
+const applyPerspectiveHeader = (config: InternalAxiosRequestConfig): void => {
+  if (isPerspectiveHeaderExemptRequest(config.url)) {
+    removeHeader(config.headers, 'X-Perspective');
+    return;
+  }
+
+  const perspective = getCurrentRoutePerspective();
+  if (perspective == null) {
+    removeHeader(config.headers, 'X-Perspective');
+    return;
+  }
+
+  setHeader(config.headers, 'X-Perspective', perspective);
 };
 
 // ==================== URL验证 ====================
@@ -358,6 +428,8 @@ export class ApiClient {
             setHeaderIfMissing(config.headers, CSRF_CONFIG.HEADER_NAME, csrfToken);
           }
         }
+
+        applyPerspectiveHeader(config);
 
         // 执行自定义请求拦截器
         if (this.config.requestInterceptors) {

@@ -13,6 +13,7 @@ from src.database import get_async_db
 from src.main import app
 from src.middleware.auth import get_current_active_user
 from src.models.auth import User
+from src.services.authz.context_builder import SubjectContext
 
 # =============================================================================
 # Fixtures
@@ -48,11 +49,30 @@ def client(mock_db, mock_user):
 
     app.dependency_overrides[get_async_db] = override_get_db
     app.dependency_overrides[get_current_active_user] = override_get_user
-    with patch(
-        "src.middleware.auth.authz_service.check_access",
-        AsyncMock(return_value=SimpleNamespace(allowed=True, reason_code="ALLOW")),
+    with (
+        patch(
+            "src.middleware.auth.authz_service.check_access",
+            AsyncMock(return_value=SimpleNamespace(allowed=True, reason_code="ALLOW")),
+        ),
+        patch(
+            "src.middleware.auth.authz_service.context_builder.build_subject_context",
+            AsyncMock(
+                return_value=SubjectContext(
+                    user_id="test_user_001",
+                    owner_party_ids=["owner-party-1"],
+                    manager_party_ids=["manager-party-1"],
+                    headquarters_party_ids=[],
+                    role_ids=[],
+                )
+            ),
+        ),
+        patch(
+            "src.middleware.auth.RBACService.is_admin",
+            AsyncMock(return_value=False),
+        ),
     ):
         with TestClient(app) as test_client:
+            test_client.headers.update({"X-Perspective": "manager"})
             yield test_client
 
     app.dependency_overrides.clear()

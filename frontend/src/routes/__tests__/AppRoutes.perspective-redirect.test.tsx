@@ -146,6 +146,27 @@ describe('legacy perspective route redirects', () => {
     expect(screen.getByTestId('location-probe')).toHaveTextContent(MANAGER_ROUTES.PROJECTS);
   });
 
+  it('redirects legacy project route from backend perspectives even when data scope bindings are empty', () => {
+    mockUseAuth.mockReturnValue({
+      capabilitiesLoading: false,
+      capabilities: [
+        {
+          resource: 'project',
+          actions: ['read'],
+          perspectives: ['manager'],
+          data_scope: {
+            owner_party_ids: [],
+            manager_party_ids: [],
+          },
+        },
+      ],
+      error: null,
+    });
+
+    renderLegacyRoute(PROJECT_ROUTES.LIST);
+    expect(screen.getByTestId('location-probe')).toHaveTextContent(MANAGER_ROUTES.PROJECTS);
+  });
+
   it('redirects legacy property certificate route to owner route and falls back to dashboard', () => {
     mockUseAuth.mockReturnValue({
       capabilitiesLoading: false,
@@ -184,10 +205,21 @@ describe('legacy perspective route redirects', () => {
     mockUseAuth.mockReturnValue({
       capabilitiesLoading: false,
       capabilities: [],
-      error: 'failed to load capabilities',
+      error: null,
     });
 
     renderLegacyRoute(CONTRACT_GROUP_ROUTES.LIST);
-    expect(screen.getByTestId('location-probe')).toHaveTextContent(BASE_PATHS.DASHBOARD);
+    expect(screen.getByText('当前视角已失效')).toBeInTheDocument();
+  });
+
+  it('shows fail-closed resolution for legacy /project when no project perspective is available', () => {
+    mockUseAuth.mockReturnValue({
+      capabilitiesLoading: false,
+      capabilities: [],
+      error: null,
+    });
+
+    renderLegacyRoute(PROJECT_ROUTES.LIST);
+    expect(screen.getByText('当前视角已失效')).toBeInTheDocument();
   });
 });

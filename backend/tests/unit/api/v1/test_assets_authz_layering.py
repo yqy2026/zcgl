@@ -19,8 +19,10 @@ def test_assets_module_should_import_authz_dependency() -> None:
     """assets 路由应引入统一 ABAC 依赖。"""
     module_source = _read_module_source()
     assert "AuthzContext" in module_source
+    assert "PerspectiveContext" in module_source
     assert "get_current_active_user" in module_source
     assert "require_authz" in module_source
+    assert "require_perspective_context" in module_source
     assert "require_permission(" not in module_source
 
 
@@ -29,12 +31,14 @@ def test_assets_endpoints_should_use_authz_dependencies() -> None:
     module_source = _read_module_source()
     expected_patterns = [
         r"async def get_assets[\s\S]*?_authz_ctx:\s*AuthzContext\s*=\s*Depends\(_require_asset_collection_read_authz\)",
+        r"async def get_assets[\s\S]*?_perspective_ctx:\s*PerspectiveContext\s*=\s*Depends\(\s*require_perspective_context\(resource_type=\"asset\"\)\s*\)",
         r"async def create_asset[\s\S]*?_authz_ctx:\s*AuthzContext\s*=\s*Depends\(_require_asset_create_authz\)",
         r"async def get_ownership_entities[\s\S]*?_authz_ctx:\s*AuthzContext\s*=\s*Depends\(_require_asset_collection_read_authz\)",
         r"async def get_business_categories[\s\S]*?_authz_ctx:\s*AuthzContext\s*=\s*Depends\(_require_asset_collection_read_authz\)",
         r"async def get_usage_statuses[\s\S]*?_authz_ctx:\s*AuthzContext\s*=\s*Depends\(_require_asset_collection_read_authz\)",
         r"async def get_property_natures[\s\S]*?_authz_ctx:\s*AuthzContext\s*=\s*Depends\(_require_asset_collection_read_authz\)",
         r"async def get_ownership_statuses[\s\S]*?_authz_ctx:\s*AuthzContext\s*=\s*Depends\(_require_asset_collection_read_authz\)",
+        r"async def get_asset[\s\S]*?_perspective_ctx:\s*PerspectiveContext\s*=\s*Depends\(\s*require_perspective_context\(resource_type=\"asset\"\)\s*\)",
         r"async def restore_asset[\s\S]*?require_authz\([\s\S]*?action=\"update\"[\s\S]*?resource_type=\"asset\"[\s\S]*?resource_id=\"\{asset_id\}\"",
         r"async def hard_delete_asset[\s\S]*?require_authz\([\s\S]*?action=\"delete\"[\s\S]*?resource_type=\"asset\"[\s\S]*?resource_id=\"\{asset_id\}\"",
         r"async def get_asset_history[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"asset\"[\s\S]*?resource_id=\"\{asset_id\}\"[\s\S]*?deny_as_not_found=True",

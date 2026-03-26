@@ -18,7 +18,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from pydantic import ValidationError
 
-from src.core.exception_handler import DuplicateResourceError, OperationNotAllowedError
+from src.core.exception_handler import (
+    DuplicateResourceError,
+    OperationNotAllowedError,
+    ResourceNotFoundError,
+)
 from src.models.contract_group import (
     Contract,
     ContractGroup,
@@ -373,6 +377,51 @@ class TestCreateContractGroupDuplicateCheck:
                     group_code="GRP-NEW",
                 )
         assert result.contract_group_id == "grp_001"
+
+
+class TestPerspectiveScopedContractGroups:
+    async def test_list_groups_should_apply_manager_effective_party_ids(
+        self, mock_db: MagicMock
+    ) -> None:
+        service = ContractGroupService()
+
+        with patch(
+            "src.services.contract.contract_group_service.contract_group_crud.list_by_filters",
+            new_callable=AsyncMock,
+            return_value=([], 0),
+        ) as mock_list_by_filters:
+            result = await service.list_groups(
+                mock_db,
+                perspective="manager",
+                effective_party_ids=["manager-1"],
+            )
+
+        assert result == ([], 0)
+        assert mock_list_by_filters.await_args.kwargs["operator_party_ids"] == [
+            "manager-1"
+        ]
+
+    async def test_get_group_detail_should_fail_closed_when_owner_scope_mismatches(
+        self, mock_db: MagicMock
+    ) -> None:
+        service = ContractGroupService()
+        group = MagicMock(spec=ContractGroup)
+        group.contract_group_id = "group-1"
+        group.owner_party_id = "owner-2"
+        group.operator_party_id = "manager-1"
+
+        with patch(
+            "src.services.contract.contract_group_service.contract_group_crud.get",
+            new_callable=AsyncMock,
+            return_value=group,
+        ):
+            with pytest.raises(ResourceNotFoundError):
+                await service.get_group_detail(
+                    mock_db,
+                    group_id="group-1",
+                    perspective="owner",
+                    effective_party_ids=["owner-1"],
+                )
 
 
 # ─── add_contract_to_group（integration of business rules）───────────────────

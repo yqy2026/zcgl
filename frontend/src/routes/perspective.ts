@@ -19,6 +19,18 @@ export const isPerspectiveRoute = (pathname: string): boolean => {
   return getRoutePerspective(pathname) != null;
 };
 
+export const getCurrentRoutePathname = (): string => {
+  if (typeof window === 'undefined') {
+    return '';
+  }
+
+  return window.location.pathname;
+};
+
+export const getCurrentRoutePerspective = (): RoutePerspective => {
+  return getRoutePerspective(getCurrentRoutePathname());
+};
+
 export const useRoutePerspective = (): {
   perspective: RoutePerspective;
   isPerspectiveRoute: boolean;

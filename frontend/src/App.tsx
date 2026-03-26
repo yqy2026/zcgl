@@ -11,6 +11,12 @@ import { CapabilityGuard } from './components/System/CapabilityGuard';
 import { MessageManager } from './utils/messageManager';
 import { ThemeProvider } from './components/Common/ThemeProvider';
 import { useCapabilities } from './hooks/useCapabilities';
+import PerspectiveResolutionPage from './routes/PerspectiveResolutionPage';
+import {
+  resolveLegacyPerspectiveFailure,
+  resolveLegacyPerspectiveTarget,
+  resolvePerspectiveMismatch,
+} from './routes/perspectiveResolution';
 import styles from './App.module.css';
 // App.css removed - classes were unused default React template styles
 
@@ -47,7 +53,7 @@ const InlineForbidden: React.FC = () => {
 
 const ProtectedRoutes: React.FC = () => {
   const { isAuthenticated, isAdmin, loading: authLoading } = useAuth();
-  const { canPerform, loading: capabilitiesLoading } = useCapabilities();
+  const { canPerform, capabilities, loading: capabilitiesLoading } = useCapabilities();
   const location = useLocation();
   const capabilityGuardEnabled = import.meta.env.VITE_ENABLE_CAPABILITY_GUARD === 'true';
 
@@ -84,6 +90,28 @@ const ProtectedRoutes: React.FC = () => {
       return isAdmin ? renderRouteElement(route) : (route.fallback ?? <InlineForbidden />);
     }
 
+    const legacyRedirectTarget = resolveLegacyPerspectiveTarget(location.pathname, capabilities);
+    if (legacyRedirectTarget != null && legacyRedirectTarget !== location.pathname) {
+      return <Navigate to={legacyRedirectTarget} replace />;
+    }
+    const legacyResolution = resolveLegacyPerspectiveFailure(location.pathname, capabilities);
+    if (legacyResolution != null) {
+      return <PerspectiveResolutionPage resolution={legacyResolution} />;
+    }
+
+    const primaryPermission =
+      route.permissions?.length === 1 ? (route.permissions?.[0] ?? null) : null;
+    if (primaryPermission != null) {
+      const perspectiveResolution = resolvePerspectiveMismatch({
+        pathname: location.pathname,
+        resource: primaryPermission.resource,
+        capabilities,
+      });
+      if (perspectiveResolution != null) {
+        return <PerspectiveResolutionPage resolution={perspectiveResolution} />;
+      }
+    }
+
     if (!shouldEnforceCapabilityGuard) {
       return renderRouteElement(route);
     }
@@ -99,7 +127,7 @@ const ProtectedRoutes: React.FC = () => {
         <CapabilityGuard
           action={permission.action}
           resource={permission.resource}
-          fallback={route.fallback}
+          fallback={route.fallback ?? <InlineForbidden />}
         >
           {renderRouteElement(route)}
         </CapabilityGuard>

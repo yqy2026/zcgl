@@ -7,24 +7,30 @@
 - 保持了原有的API签名和响应格式，确保向后兼容
 """
 
-import io
-import json
 import logging
 from collections.abc import AsyncIterator
 from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Query, Request, status
 from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ....core.exception_handler import BaseBusinessError
 from ....core.response_handler import ResponseHandler, get_request_id
 from ....database import get_async_db
-from ....middleware.auth import AuthzContext, get_current_active_user, require_authz
+from ....middleware.auth import (
+    AuthzContext,
+    PerspectiveContext,
+    get_current_active_user,
+    require_authz,
+    require_perspective_context,
+)
 from ....models.auth import User
 from ....security.route_guards import debug_only, require_localhost
+from ....services.analytics.analytics_export_service import AnalyticsExportService
 from ....services.analytics.analytics_service import AnalyticsService
+from ....services.party_scope import build_party_filter_from_perspective_context
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +52,9 @@ async def get_comprehensive_analytics(
     should_use_cache: bool = True,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _perspective_ctx: PerspectiveContext = Depends(
+        require_perspective_context(resource_type="analytics")
+    ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="read",
@@ -81,6 +90,7 @@ async def get_comprehensive_analytics(
             filters=filters,
             should_use_cache=should_use_cache,
             current_user=current_user,
+            party_filter=build_party_filter_from_perspective_context(_perspective_ctx),
         )
 
         success_response: JSONResponse = ResponseHandler.success(
@@ -98,6 +108,7 @@ async def get_comprehensive_analytics(
                 filters=filters,
                 should_use_cache=False,
                 current_user=current_user,
+                party_filter=build_party_filter_from_perspective_context(_perspective_ctx),
             )
             return ResponseHandler.success(
                 data=fallback_result,
@@ -121,6 +132,9 @@ async def get_cache_stats(
     request: Request,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _perspective_ctx: PerspectiveContext = Depends(
+        require_perspective_context(resource_type="analytics")
+    ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="read",
@@ -159,6 +173,9 @@ async def clear_cache(
     request: Request,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _perspective_ctx: PerspectiveContext = Depends(
+        require_perspective_context(resource_type="analytics")
+    ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="update",
@@ -352,6 +369,9 @@ async def export_analytics(
     date_to: str | None = None,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _perspective_ctx: PerspectiveContext = Depends(
+        require_perspective_context(resource_type="analytics")
+    ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="read",
@@ -376,22 +396,39 @@ async def export_analytics(
         if date_to is not None:
             filters["date_to"] = date_to
 
+        if export_format == "pdf":
+            return ResponseHandler.error(
+                message="PDF 导出功能尚未实现，请使用 Excel 或 CSV 格式",
+                error_code="EXPORT_NOT_IMPLEMENTED",
+                status_code=status.HTTP_501_NOT_IMPLEMENTED,
+                request_id=get_request_id(request),
+            )
+
+        if export_format not in {"csv", "excel"}:
+            return ResponseHandler.error(
+                message=f"不支持的导出格式: {export_format}",
+                error_code="INVALID_EXPORT_FORMAT",
+                status_code=status.HTTP_400_BAD_REQUEST,
+                request_id=get_request_id(request),
+            )
+
         service = AnalyticsService(db)
         result = await service.get_comprehensive_analytics(
             filters=filters,
             should_use_cache=False,
             current_user=current_user,
+            party_filter=build_party_filter_from_perspective_context(_perspective_ctx),
         )
+        export_service = AnalyticsExportService()
+        export_rows = export_service.build_export_rows(result)
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
         if export_format == "csv":
-            output = io.StringIO()
-            json.dump(result, output, ensure_ascii=False, indent=2)
-            output.seek(0)
+            csv_content = export_service.render_csv(export_rows)
 
             async def csv_generator() -> AsyncIterator[bytes]:
-                yield output.getvalue().encode("utf-8")
+                yield csv_content.encode("utf-8")
 
             return StreamingResponse(
                 csv_generator(),
@@ -405,7 +442,7 @@ async def export_analytics(
             from ....services.excel import ExcelExportService
 
             excel_service = ExcelExportService(None)
-            buffer = excel_service.export_analytics_to_excel(result)
+            buffer = excel_service.export_analytics_to_excel(export_rows)
 
             async def excel_generator() -> AsyncIterator[bytes]:
                 data = buffer.getvalue()
@@ -419,11 +456,6 @@ async def export_analytics(
                     "Content-Disposition": f"attachment; filename=analytics_{timestamp}.xlsx"
                 },
             )
-
-        return ResponseHandler.error(
-            message="PDF 导出功能尚未实现，请使用 Excel 或 CSV 格式",
-            request_id=get_request_id(request),
-        )
 
     except Exception as e:
         logger.error(f"导出分析数据失败: {str(e)}")

@@ -8,6 +8,8 @@
 
 | 文件 | 主题 | 状态 | 备注 |
 |------|------|------|------|
+| [2026-03-25-req-auth-002-perspective-context-design.md](2026-03-25-req-auth-002-perspective-context-design.md) | REQ-AUTH-002 视角上下文强制注入 | 🔄 进行中 | `X-Perspective` 协议、后端 `PerspectiveContext`、前端 `PerspectiveResolution` 与主要业务读链路已开始落地 |
+| [2026-03-25-req-auth-002-perspective-context-plan.md](2026-03-25-req-auth-002-perspective-context-plan.md) | REQ-AUTH-002 视角上下文强制注入实施计划 | 🔄 进行中 | 已完成 capability/请求头/恢复流/核心 PartyFilter 收口，继续推进最终门禁与剩余业务面 |
 | [2026-02-11-approval-flowable-b-plan.md](2026-02-11-approval-flowable-b-plan.md) | Flowable 编排内核 B 方案 | ⏸ 搁置 | 审批流方向待定，暂不实施 |
 
 ## 已归档方案
@@ -28,6 +30,8 @@
 | 2026-03-02-party-scope-isolation-fix-plan.md | 组织数据权限隔离修复（全量排查） | ✅ 已完成 |
 | 2026-03-21-ci-baseline-restoration-plan.md | CI 基线恢复与格式治理 | ✅ 已完成 |
 | 2026-03-22-perspective-simplification-v2-follow-up.md | 前端视角简化 v2 后续收口 | ✅ 已完成 |
+| 2026-03-24-req-ana-001-export-closure-design.md | REQ-ANA-001 导出链路收口 | ✅ 已完成 |
+| 2026-03-24-req-ana-001-export-closure-plan.md | REQ-ANA-001 导出链路收口实施计划 | ✅ 已完成 |
 | 2026-03-24-req-rnt-006-ledger-m3-plan.md | REQ-RNT-006 M3：台账运营增强（导出/补偿任务/服务费台账） | ✅ 已完成 |
 | 2026-03-11-req-ast-003-asset-review.md | REQ-AST-003：资产主数据审核与反审核 | ✅ 已完成 |
 | 2026-03-12-req-pty-001-002-party-remediation.md | REQ-PTY-001/002：主体主档管理 Gap 修复 | ✅ 已完成 |

@@ -936,8 +936,15 @@ class AssetService:
         )
         return [str(value) for value in values]
 
-    async def get_ownership_entity_names(self) -> list[str]:
+    async def get_ownership_entity_names(
+        self,
+        *,
+        party_filter: PartyFilter | None = None,
+        current_user_id: str | None = None,
+    ) -> list[str]:
         """获取所有正常状态的权属方名称列表"""
+        _ = party_filter
+        _ = current_user_id
         return await ownership.get_names_by_status_async(
             self.db, data_status=DataStatusValues.ASSET_NORMAL
         )

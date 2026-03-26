@@ -437,12 +437,13 @@ class ProjectService:
         *,
         project_id: str,
         current_user_id: str | None = None,
+        party_filter: PartyFilter | None = None,
     ) -> tuple[list[Asset], ProjectAssetSummary]:
         """获取项目当前有效关联资产列表及面积汇总。"""
         resolved_party_filter = await self._resolve_party_filter(
             db,
             current_user_id=current_user_id,
-            party_filter=None,
+            party_filter=party_filter,
         )
         if self._is_fail_closed_party_filter(resolved_party_filter):
             raise ResourceNotFoundError("项目", project_id)

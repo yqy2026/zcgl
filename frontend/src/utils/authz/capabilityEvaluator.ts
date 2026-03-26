@@ -27,10 +27,6 @@ export interface HasPartyScopeAccessInput {
 const TEMP_ADMIN_ONLY_ACTION: TemporaryAdminAction = 'backup';
 const TEMP_ADMIN_ONLY_RESOURCE: ResourceType = 'system';
 
-const PERSPECTIVE_OVERRIDES: Partial<Record<ResourceType, Perspective[]>> = {
-  project: ['manager'],
-};
-
 const dedupe = <T extends string>(items: readonly T[] | undefined): T[] => {
   if (!Array.isArray(items)) {
     return [];
@@ -87,10 +83,7 @@ export const getAvailablePerspectives = (
   resourceType: ResourceType,
   capability: CapabilityItem | undefined
 ): Perspective[] => {
-  const override = PERSPECTIVE_OVERRIDES[resourceType];
-  if (override != null) {
-    return override;
-  }
+  void resourceType;
   return capability?.perspectives ?? [];
 };
 
@@ -162,11 +155,6 @@ export const hasPartyScopeAccess = ({
   }
 
   if (partyId.trim() === '') {
-    return false;
-  }
-
-  // Project 资源在 Phase 3 仅支持 manager 视角。
-  if (resourceType === 'project' && relationType === 'owner') {
     return false;
   }
 

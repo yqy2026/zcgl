@@ -125,14 +125,24 @@ class TestAPIExceptionHandling:
     """测试API层异常处理"""
 
     @patch("src.api.v1.assets.assets.AsyncAssetService.get_asset", new_callable=AsyncMock)
-    def test_api_propagates_business_exceptions(self, mock_get_asset, client):
+    @patch("src.middleware.auth.RBACService.is_admin", new_callable=AsyncMock)
+    def test_api_propagates_business_exceptions(
+        self,
+        mock_is_admin,
+        mock_get_asset,
+        client,
+    ):
         """测试API层业务异常保持契约语义"""
+        mock_is_admin.return_value = True
         mock_get_asset.side_effect = BusinessValidationError(
             "资产ID格式不正确",
             field_errors={"asset_id": ["invalid"]},
         )
 
-        response = client.get("/api/v1/assets/non_existent_id")
+        response = client.get(
+            "/api/v1/assets/non_existent_id",
+            headers={"X-Perspective": "owner"},
+        )
 
         assert response.status_code == 422
         data = response.json()
@@ -141,13 +151,18 @@ class TestAPIExceptionHandling:
         assert data["error"]["message"] == "资产ID格式不正确"
 
     @patch("src.api.v1.assets.assets.AsyncAssetService.get_asset", new_callable=AsyncMock)
+    @patch("src.middleware.auth.RBACService.is_admin", new_callable=AsyncMock)
     def test_api_general_exception_masked_as_internal_error(
-        self, mock_get_asset, client
+        self, mock_is_admin, mock_get_asset, client
     ):
         """测试API层通用异常会走错误恢复中间件契约"""
+        mock_is_admin.return_value = True
         mock_get_asset.side_effect = RuntimeError("database unavailable")
 
-        response = client.get("/api/v1/assets/non_existent_id")
+        response = client.get(
+            "/api/v1/assets/non_existent_id",
+            headers={"X-Perspective": "owner"},
+        )
 
         assert response.status_code == 503
         data = response.json()

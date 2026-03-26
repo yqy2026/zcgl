@@ -136,11 +136,15 @@ def admin_user_headers(client, admin_user, test_organization, test_org_party, mo
             )
         ),
     )
+    monkeypatch.setattr(
+        "src.middleware.auth.RBACService.is_admin",
+        AsyncMock(return_value=True),
+    )
 
     app.dependency_overrides[project_module.get_current_active_user] = (
         mock_get_current_user
     )
-    yield {}
+    yield {"X-Perspective": "manager"}
     app.dependency_overrides.pop(project_module.get_current_active_user, None)
 
 
@@ -252,6 +256,19 @@ class TestListProjects:
         """测试未授权访问"""
         response = unauthenticated_client.get("/api/v1/projects/")
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_list_projects_should_reject_missing_perspective_header(self, client):
+        response = client.get("/api/v1/projects/")
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_list_projects_should_reject_owner_perspective_header(self, client):
+        response = client.get(
+            "/api/v1/projects/",
+            headers={"X-Perspective": "owner"},
+        )
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
 
     def test_list_projects_passes_owner_party_id_filter(
         self,
@@ -1103,6 +1120,7 @@ class TestGetProjectActiveAssets:
             *,
             project_id: str,
             current_user_id: str | None = None,
+            party_filter=None,
         ):
             assert project_id == project_data.id
             assert current_user_id is not None
@@ -1166,6 +1184,7 @@ class TestGetProjectActiveAssets:
             *,
             project_id: str,
             current_user_id: str | None = None,
+            party_filter=None,
         ):
             raise ResourceNotFoundError("项目", project_id)
 
@@ -1199,6 +1218,7 @@ class TestProjectStatistics:
             db,
             *,
             current_user_id: str | None = None,
+            party_filter=None,
         ):
             assert current_user_id is not None
             return {
@@ -1240,6 +1260,7 @@ class TestProjectDropdownOptions:
             *,
             status: str | None = "active",
             current_user_id: str | None = None,
+            party_filter=None,
         ):
             assert current_user_id is not None
             assert status == "paused"

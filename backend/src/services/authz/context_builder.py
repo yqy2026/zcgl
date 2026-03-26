@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ...crud.party import CRUDParty, party_crud
 from ...models.auth import User
 from ...models.user_party_binding import RelationType, UserPartyBinding
+from ...schemas.authz import PerspectiveName
 
 logger = logging.getLogger(__name__)
 
@@ -106,6 +107,26 @@ class AuthzContextBuilder:
             headquarters_party_ids=sorted(headquarters_party_ids),
             role_ids=sorted(role_ids or []),
         )
+
+    @staticmethod
+    def resolve_allowed_perspectives(
+        subject_context: SubjectContext,
+    ) -> list[PerspectiveName]:
+        perspectives: list[PerspectiveName] = []
+        if len(subject_context.owner_party_ids) > 0:
+            perspectives.append("owner")
+        if len(subject_context.manager_party_ids) > 0:
+            perspectives.append("manager")
+        return perspectives
+
+    @staticmethod
+    def resolve_effective_party_ids(
+        subject_context: SubjectContext,
+        perspective: PerspectiveName,
+    ) -> list[str]:
+        if perspective == "owner":
+            return list(subject_context.owner_party_ids)
+        return list(subject_context.manager_party_ids)
 
     @staticmethod
     def _normalize_relation_type(binding: UserPartyBinding) -> str:

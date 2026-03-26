@@ -1,5 +1,7 @@
+import type { ReactNode } from 'react';
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import CapabilityGuard from '../CapabilityGuard';
 
 const mockUseCapabilities = vi.hoisted(() => vi.fn());
@@ -9,6 +11,10 @@ vi.mock('@/hooks/useCapabilities', () => ({
 }));
 
 describe('CapabilityGuard', () => {
+  const renderInRouter = (ui: ReactNode) => {
+    return render(<MemoryRouter>{ui}</MemoryRouter>);
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -19,7 +25,7 @@ describe('CapabilityGuard', () => {
       loading: false,
     });
 
-    render(
+    renderInRouter(
       <CapabilityGuard action="read" resource="asset">
         <div>allowed-content</div>
       </CapabilityGuard>
@@ -34,7 +40,7 @@ describe('CapabilityGuard', () => {
       loading: false,
     });
 
-    render(
+    renderInRouter(
       <CapabilityGuard action="read" resource="asset" fallback={<div>custom-forbidden</div>}>
         <div>allowed-content</div>
       </CapabilityGuard>
@@ -50,12 +56,38 @@ describe('CapabilityGuard', () => {
       loading: true,
     });
 
-    render(
+    renderInRouter(
       <CapabilityGuard action="read" resource="asset">
         <div>allowed-content</div>
       </CapabilityGuard>
     );
 
     expect(screen.getByText('权限检查中...')).toBeInTheDocument();
+  });
+
+  it('passes the current route perspective into capability checks by default', () => {
+    const canPerform = vi.fn(() => false);
+    mockUseCapabilities.mockReturnValue({
+      canPerform,
+      loading: false,
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/owner/assets']}>
+        <Routes>
+          <Route
+            path="/owner/assets"
+            element={
+              <CapabilityGuard action="read" resource="asset" fallback={<div>forbidden</div>}>
+                <div>allowed-content</div>
+              </CapabilityGuard>
+            }
+          />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(canPerform).toHaveBeenCalledWith('read', 'asset', 'owner');
+    expect(screen.getByText('forbidden')).toBeInTheDocument();
   });
 });

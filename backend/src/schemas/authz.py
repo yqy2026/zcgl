@@ -6,6 +6,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 AuthzAction = Literal["create", "read", "list", "update", "delete", "export"]
+PerspectiveName = Literal["owner", "manager"]
 
 
 class AuthzCheckRequest(BaseModel):
@@ -37,7 +38,7 @@ class CapabilityItem(BaseModel):
 
     resource: str
     actions: list[AuthzAction]
-    perspectives: list[str]
+    perspectives: list[PerspectiveName]
     data_scope: DataScope
 
 
@@ -53,6 +54,7 @@ class CapabilitiesResponse(BaseModel):
 
 __all__ = [
     "AuthzAction",
+    "PerspectiveName",
     "AuthzCheckRequest",
     "AuthzCheckResponse",
     "DataScope",

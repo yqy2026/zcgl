@@ -128,7 +128,9 @@ class CRUDContractGroup:
         db: AsyncSession,
         *,
         operator_party_id: str | None = None,
+        operator_party_ids: list[str] | None = None,
         owner_party_id: str | None = None,
+        owner_party_ids: list[str] | None = None,
         revenue_mode: str | None = None,
         data_status: str = "正常",
         offset: int = 0,
@@ -139,8 +141,12 @@ class CRUDContractGroup:
 
         if operator_party_id is not None:
             stmt = stmt.where(ContractGroup.operator_party_id == operator_party_id)
+        if operator_party_ids:
+            stmt = stmt.where(ContractGroup.operator_party_id.in_(operator_party_ids))
         if owner_party_id is not None:
             stmt = stmt.where(ContractGroup.owner_party_id == owner_party_id)
+        if owner_party_ids:
+            stmt = stmt.where(ContractGroup.owner_party_id.in_(owner_party_ids))
         if revenue_mode is not None:
             stmt = stmt.where(ContractGroup.revenue_mode == revenue_mode)
 

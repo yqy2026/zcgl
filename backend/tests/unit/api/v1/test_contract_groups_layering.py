@@ -211,12 +211,21 @@ async def test_get_contract_group_route_exists(
     """GET /contract-groups/{id} 路由存在，未找到时返回 404。"""
     from src.core.exception_handler import ResourceNotFoundError
 
-    with patch(
-        "src.api.v1.contracts.contract_groups.contract_group_service.get_group_detail",
-        new_callable=AsyncMock,
-        side_effect=ResourceNotFoundError("合同组", "grp-notexist"),
+    with (
+        patch(
+            "src.api.v1.contracts.contract_groups.contract_group_service.get_group_detail",
+            new_callable=AsyncMock,
+            side_effect=ResourceNotFoundError("合同组", "grp-notexist"),
+        ),
+        patch(
+            "src.middleware.auth.RBACService.is_admin",
+            new=AsyncMock(return_value=True),
+        ),
     ):
-        resp = client.get("/api/v1/contract-groups/grp-notexist")
+        resp = client.get(
+            "/api/v1/contract-groups/grp-notexist",
+            headers={"X-Perspective": "manager"},
+        )
         # service 抛出 ResourceNotFoundError 应被映射为 404
         assert resp.status_code == 404, resp.text
 

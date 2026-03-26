@@ -13,7 +13,7 @@ import re
 import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
-from typing import Any
+from typing import Any, Literal
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -185,6 +185,46 @@ def _compute_total_monthly_amount(
 
 class ContractGroupService:
     """合同组业务逻辑服务。"""
+
+    @staticmethod
+    def _normalize_effective_party_ids(
+        effective_party_ids: list[str] | None,
+    ) -> list[str]:
+        if effective_party_ids is None:
+            return []
+
+        normalized_ids: list[str] = []
+        seen: set[str] = set()
+        for party_id in effective_party_ids:
+            normalized_party_id = str(party_id).strip()
+            if normalized_party_id == "" or normalized_party_id in seen:
+                continue
+            seen.add(normalized_party_id)
+            normalized_ids.append(normalized_party_id)
+        return normalized_ids
+
+    @classmethod
+    def _assert_group_in_scope(
+        cls,
+        *,
+        group: ContractGroup,
+        group_id: str,
+        perspective: Literal["owner", "manager"] | None,
+        effective_party_ids: list[str] | None,
+    ) -> None:
+        normalized_effective_party_ids = cls._normalize_effective_party_ids(
+            effective_party_ids
+        )
+        if perspective is None or len(normalized_effective_party_ids) == 0:
+            return
+
+        scoped_party_id = (
+            str(getattr(group, "owner_party_id", "")).strip()
+            if perspective == "owner"
+            else str(getattr(group, "operator_party_id", "")).strip()
+        )
+        if scoped_party_id not in normalized_effective_party_ids:
+            raise ResourceNotFoundError("合同组", group_id)
 
     async def _get_contract_or_raise(
         self, db: AsyncSession, *, contract_id: str
@@ -403,7 +443,12 @@ class ContractGroupService:
         )
 
     async def get_group_detail(
-        self, db: AsyncSession, *, group_id: str
+        self,
+        db: AsyncSession,
+        *,
+        group_id: str,
+        perspective: Literal["owner", "manager"] | None = None,
+        effective_party_ids: list[str] | None = None,
     ) -> ContractGroupDetail:
         """
         获取合同组详情，包含：
@@ -414,6 +459,12 @@ class ContractGroupService:
         group = await contract_group_crud.get(db, group_id)
         if group is None:
             raise ResourceNotFoundError("合同组", group_id)
+        self._assert_group_in_scope(
+            group=group,
+            group_id=group_id,
+            perspective=perspective,
+            effective_party_ids=effective_party_ids,
+        )
 
         contracts = await contract_crud.list_by_group(db, group_id=group_id)
         derived = calculate_derived_status(contracts)
@@ -451,12 +502,45 @@ class ContractGroupService:
         revenue_mode: str | None = None,
         offset: int = 0,
         limit: int = 20,
+        perspective: Literal["owner", "manager"] | None = None,
+        effective_party_ids: list[str] | None = None,
     ) -> tuple[list[ContractGroupListItem], int]:
         """分页查询合同组列表，返回含 derived_status 的列表项。"""
+        normalized_effective_party_ids = self._normalize_effective_party_ids(
+            effective_party_ids
+        )
+        scoped_operator_party_ids: list[str] | None = None
+        scoped_owner_party_ids: list[str] | None = None
+        if perspective == "manager":
+            if len(normalized_effective_party_ids) == 0:
+                return [], 0
+            if (
+                operator_party_id is not None
+                and operator_party_id not in normalized_effective_party_ids
+            ):
+                return [], 0
+            scoped_operator_party_ids = (
+                [operator_party_id]
+                if operator_party_id is not None
+                else normalized_effective_party_ids
+            )
+        if perspective == "owner":
+            if len(normalized_effective_party_ids) == 0:
+                return [], 0
+            if owner_party_id is not None and owner_party_id not in normalized_effective_party_ids:
+                return [], 0
+            scoped_owner_party_ids = (
+                [owner_party_id]
+                if owner_party_id is not None
+                else normalized_effective_party_ids
+            )
+
         items, total = await contract_group_crud.list_by_filters(
             db,
             operator_party_id=operator_party_id,
+            operator_party_ids=scoped_operator_party_ids,
             owner_party_id=owner_party_id,
+            owner_party_ids=scoped_owner_party_ids,
             revenue_mode=revenue_mode,
             offset=offset,
             limit=limit,

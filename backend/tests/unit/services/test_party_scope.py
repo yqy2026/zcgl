@@ -5,12 +5,54 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from src.crud.query_builder import PartyFilter
-from src.services.party_scope import resolve_user_party_filter
+from src.middleware.auth import PerspectiveContext
+from src.services.party_scope import (
+    build_party_filter_from_perspective_context,
+    resolve_user_party_filter,
+)
 
 pytestmark = pytest.mark.asyncio
 
 
 class TestResolveUserPartyFilter:
+    async def test_build_perspective_party_filter_should_use_owner_ids_only(self) -> None:
+        perspective_context = PerspectiveContext(
+            perspective="owner",
+            allowed_perspectives=["owner", "manager"],
+            owner_party_ids=["owner-1"],
+            manager_party_ids=["manager-1"],
+            effective_party_ids=["owner-1"],
+            source="header",
+        )
+
+        result = build_party_filter_from_perspective_context(perspective_context)
+
+        assert result == PartyFilter(
+            party_ids=["owner-1"],
+            filter_mode="owner",
+            owner_party_ids=["owner-1"],
+            manager_party_ids=[],
+        )
+
+    async def test_build_perspective_party_filter_should_use_manager_ids_only(self) -> None:
+        perspective_context = PerspectiveContext(
+            perspective="manager",
+            allowed_perspectives=["owner", "manager"],
+            owner_party_ids=["owner-1"],
+            manager_party_ids=["manager-1"],
+            effective_party_ids=["manager-1"],
+            source="header",
+        )
+
+        result = build_party_filter_from_perspective_context(perspective_context)
+
+        assert result == PartyFilter(
+            party_ids=["manager-1"],
+            filter_mode="manager",
+            owner_party_ids=[],
+            manager_party_ids=["manager-1"],
+        )
+
     async def test_should_return_explicit_party_filter(self) -> None:
         db = MagicMock()
         explicit_filter = PartyFilter(party_ids=["party-1"])

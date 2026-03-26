@@ -604,6 +604,76 @@ describe('URL Validation', () => {
   });
 });
 
+describe('Perspective Header Injection', () => {
+  let client: ApiClient;
+
+  const buildRequestConfig = (
+    url: string,
+    headers: AxiosHeaders = new AxiosHeaders()
+  ): InternalAxiosRequestConfig => ({
+    url,
+    method: 'get',
+    headers,
+  });
+
+  beforeEach(() => {
+    client = new ApiClient({
+      baseURL: API_BASE_URL,
+      enableLogging: false,
+      enableAutoRetry: false,
+    });
+    window.history.pushState({}, 'Test', '/');
+  });
+
+  it('injects X-Perspective for owner business requests and skips auth routes', () => {
+    window.history.pushState({}, 'Owner Assets', '/owner/assets');
+
+    const axiosInstance = client.getAxiosInstance();
+    const requestInterceptor = axiosInstance.interceptors.request.handlers[0]?.fulfilled;
+    if (!requestInterceptor) {
+      throw new Error('Request interceptor is not registered');
+    }
+
+    const businessRequest = buildRequestConfig('/assets');
+    requestInterceptor(businessRequest);
+    expect(businessRequest.headers.get('X-Perspective')).toBe('owner');
+
+    const authRequest = buildRequestConfig('/auth/me/capabilities');
+    requestInterceptor(authRequest);
+    expect(authRequest.headers.get('X-Perspective')).toBeUndefined();
+  });
+
+  it('skips X-Perspective on neutral routes', () => {
+    window.history.pushState({}, 'Dashboard', '/dashboard');
+
+    const axiosInstance = client.getAxiosInstance();
+    const requestInterceptor = axiosInstance.interceptors.request.handlers[0]?.fulfilled;
+    if (!requestInterceptor) {
+      throw new Error('Request interceptor is not registered');
+    }
+
+    const businessRequest = buildRequestConfig('/analytics/comprehensive');
+    requestInterceptor(businessRequest);
+    expect(businessRequest.headers.get('X-Perspective')).toBeUndefined();
+  });
+
+  it('overrides handcrafted X-Perspective with the current route perspective', () => {
+    window.history.pushState({}, 'Manager Assets', '/manager/assets');
+
+    const axiosInstance = client.getAxiosInstance();
+    const requestInterceptor = axiosInstance.interceptors.request.handlers[0]?.fulfilled;
+    if (!requestInterceptor) {
+      throw new Error('Request interceptor is not registered');
+    }
+
+    const headers = new AxiosHeaders({ 'X-Perspective': 'owner' });
+    const businessRequest = buildRequestConfig('/assets', headers);
+    requestInterceptor(businessRequest);
+
+    expect(businessRequest.headers.get('X-Perspective')).toBe('manager');
+  });
+});
+
 // =============================================================================
 // Default Instance 测试
 // =============================================================================

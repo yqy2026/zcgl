@@ -554,7 +554,7 @@ class TestAnalyticsService:
 
             result = await analytics_service._calculate_analytics({})
 
-        mock_list_contracts.assert_awaited_once_with({})
+        mock_list_contracts.assert_awaited_once_with({}, party_filter=None)
         assert "total_income" in result
         assert "self_operated_rent_income" in result
         assert "agency_service_income" in result

@@ -49,7 +49,7 @@ describe('useCapabilities', () => {
     expect(result.current.hasPartyAccess('manager-1', 'manager', 'asset')).toBe(true);
   });
 
-  it('applies project perspective override and blocks owner perspective', () => {
+  it('uses backend-provided project perspectives without local overrides', () => {
     mockUseAuth.mockReturnValue({
       isAdmin: false,
       capabilitiesLoading: false,
@@ -57,10 +57,10 @@ describe('useCapabilities', () => {
         {
           resource: 'project',
           actions: ['read', 'update'],
-          perspectives: ['owner', 'manager'],
+          perspectives: ['owner'],
           data_scope: {
             owner_party_ids: ['owner-project'],
-            manager_party_ids: ['manager-project'],
+            manager_party_ids: [],
           },
         },
       ],
@@ -68,9 +68,9 @@ describe('useCapabilities', () => {
 
     const { result } = renderHook(() => useCapabilities());
 
-    expect(result.current.getAvailablePerspectives('project')).toEqual(['manager']);
-    expect(result.current.canPerform('update', 'project', 'owner')).toBe(false);
-    expect(result.current.canPerform('update', 'project', 'manager')).toBe(true);
+    expect(result.current.getAvailablePerspectives('project')).toEqual(['owner']);
+    expect(result.current.canPerform('update', 'project', 'owner')).toBe(true);
+    expect(result.current.hasPartyAccess('owner-project', 'owner', 'project')).toBe(true);
   });
 
   it('supports temporary admin-only backup action', () => {

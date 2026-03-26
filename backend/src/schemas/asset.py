@@ -518,6 +518,16 @@ class AssetResponseBase(BaseModel):
     # last_audit_date, audit_status, auditor 字段已移除
     audit_notes: str | None = Field(None, description="审核备注")
 
+    @field_validator("review_status", mode="before")
+    @classmethod
+    def normalize_review_status(cls, value: Any) -> str:
+        if value is None:
+            return "draft"
+        normalized = str(value).strip()
+        if normalized == "":
+            return "draft"
+        return normalized
+
 
 class AssetResponse(AssetResponseBase):
     """资产响应模型"""

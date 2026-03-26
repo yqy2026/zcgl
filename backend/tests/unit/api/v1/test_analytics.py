@@ -19,6 +19,7 @@ from fastapi.testclient import TestClient
 from src.database import get_async_db
 from src.main import app
 from src.middleware.auth import get_current_active_user
+from src.services.authz.context_builder import SubjectContext
 
 # ============================================================================
 # Fixtures
@@ -29,7 +30,7 @@ from src.middleware.auth import get_current_active_user
 def admin_user_headers():
     """管理员用户认证头"""
     # Since client fixture mocks authentication, we don't need real token
-    return {}
+    return {"X-Perspective": "manager"}
 
 
 @pytest.fixture
@@ -49,6 +50,7 @@ def client(monkeypatch):
         filters=None,
         should_use_cache=True,
         current_user=None,
+        party_filter=None,
     ):
         return {
             "total_assets": 1,
@@ -61,6 +63,7 @@ def client(monkeypatch):
             "filters_applied": filters or {},
             "should_use_cache": should_use_cache,
             "requested_by": getattr(current_user, "username", None),
+            "party_filter_applied": party_filter is not None,
         }
 
     monkeypatch.setattr(
@@ -73,6 +76,22 @@ def client(monkeypatch):
     monkeypatch.setattr(
         "src.middleware.auth.authz_service.check_access",
         AsyncMock(return_value=SimpleNamespace(allowed=True, reason_code="ALLOW")),
+    )
+    monkeypatch.setattr(
+        "src.middleware.auth.authz_service.context_builder.build_subject_context",
+        AsyncMock(
+            return_value=SubjectContext(
+                user_id="admin_001",
+                owner_party_ids=["owner-party-1"],
+                manager_party_ids=["manager-party-1"],
+                headquarters_party_ids=[],
+                role_ids=[],
+            )
+        ),
+    )
+    monkeypatch.setattr(
+        "src.middleware.auth.RBACService.is_admin",
+        AsyncMock(return_value=False),
     )
 
     with TestClient(app) as test_client:
@@ -156,6 +175,11 @@ class TestComprehensiveAnalytics:
         response = unauthenticated_client.get("/api/v1/analytics/comprehensive")
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_get_comprehensive_analytics_missing_perspective_header(self, client):
+        response = client.get("/api/v1/analytics/comprehensive")
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 
 # ============================================================================
@@ -346,7 +370,23 @@ class TestAnalyticsResponseStructure:
         )
 
         assert response.status_code == status.HTTP_200_OK
+        assert response.text.splitlines()[0] == "分组,指标,数值,单位"
+        assert "总览,总收入（经营口径）,1200.00,元" in response.text
         assert "req-ana-001-v1" in response.text
+        assert '"total_income"' not in response.text
+
+    def test_export_pdf_should_return_not_implemented_message(
+        self, client, admin_user_headers
+    ):
+        response = client.post(
+            "/api/v1/analytics/export?export_format=pdf",
+            headers=admin_user_headers,
+        )
+
+        assert response.status_code == status.HTTP_501_NOT_IMPLEMENTED
+        payload = response.json()
+        assert payload["success"] is False
+        assert "尚未实现" in payload["message"]
 
     def test_cache_stats_response_structure(self, client, admin_user_headers):
         """测试缓存统计响应结构"""

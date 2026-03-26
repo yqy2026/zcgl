@@ -7,7 +7,7 @@ import logging
 from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Literal
 
 import jwt
 from fastapi import Cookie, Depends, Request
@@ -28,10 +28,16 @@ from ..crud.auth import AuditLogCRUD
 from ..database import get_async_db
 from ..models.auth import User
 from ..schemas.auth import TokenData
+from ..schemas.authz import PerspectiveName
 from ..schemas.rbac import PermissionCheckRequest
 from ..security.cookie_manager import cookie_manager
 from ..services import RBACService
 from ..services.authz import authz_service
+from ..services.authz.resource_perspective_registry import (
+    get_registered_perspectives,
+    resolve_capability_perspectives,
+    resource_requires_perspective,
+)
 from ..services.permission.rbac_service import (
     ADMIN_PERMISSION_ACTION,
     ADMIN_PERMISSION_RESOURCE,
@@ -343,6 +349,115 @@ class AuthzContext:
     resource_context: dict[str, Any]
     allowed: bool
     reason_code: str | None
+
+
+@dataclass(frozen=True)
+class PerspectiveContext:
+    """Resolved request perspective context."""
+
+    perspective: PerspectiveName
+    allowed_perspectives: list[PerspectiveName]
+    owner_party_ids: list[str]
+    manager_party_ids: list[str]
+    effective_party_ids: list[str]
+    source: Literal["header"]
+
+
+class PerspectiveContextChecker:
+    """Resolve and validate request perspective context."""
+
+    EXEMPT_PATH_PREFIXES: tuple[str, ...] = (
+        "/api/v1/auth",
+    )
+
+    def __init__(self, *, resource_type: str | None = None) -> None:
+        self.resource_type = resource_type
+
+    async def __call__(
+        self,
+        request: Request,
+        current_user: User = Depends(get_current_active_user),
+        db: AsyncSession = Depends(get_async_db),
+    ) -> PerspectiveContext | None:
+        request_path = request.url.path
+        raw_perspective = self._normalize_perspective_header(
+            request.headers.get("X-Perspective")
+        )
+
+        if self._is_exempt_path(request_path):
+            if raw_perspective is None:
+                request.state.perspective_context = None
+                return None
+
+        if raw_perspective is None:
+            raise bad_request("缺少 X-Perspective 请求头")
+
+        if raw_perspective not in {"owner", "manager"}:
+            raise bad_request("X-Perspective 仅支持 owner 或 manager")
+
+        rbac_service = RBACService(db)
+        is_admin = bool(await rbac_service.is_admin(str(current_user.id)))
+        subject_context = await authz_service.context_builder.build_subject_context(
+            db,
+            user_id=str(current_user.id),
+        )
+        subject_perspectives = authz_service.context_builder.resolve_allowed_perspectives(
+            subject_context
+        )
+        if self.resource_type is not None:
+            if is_admin:
+                allowed_perspectives = list(
+                    get_registered_perspectives(self.resource_type)
+                )
+            else:
+                allowed_perspectives = resolve_capability_perspectives(
+                    self.resource_type,
+                    subject_perspectives,
+                )
+                if (
+                    resource_requires_perspective(self.resource_type)
+                    and len(allowed_perspectives) == 0
+                ):
+                    raise forbidden("当前资源无可用视角")
+        else:
+            allowed_perspectives = (
+                ["owner", "manager"] if is_admin else subject_perspectives
+            )
+        if raw_perspective not in allowed_perspectives:
+            raise forbidden("当前视角不可用")
+
+        effective_party_ids = (
+            []
+            if is_admin
+            else authz_service.context_builder.resolve_effective_party_ids(
+                subject_context,
+                raw_perspective,
+            )
+        )
+        perspective_context = PerspectiveContext(
+            perspective=raw_perspective,
+            allowed_perspectives=allowed_perspectives,
+            owner_party_ids=list(subject_context.owner_party_ids),
+            manager_party_ids=list(subject_context.manager_party_ids),
+            effective_party_ids=effective_party_ids,
+            source="header",
+        )
+        request.state.perspective_context = perspective_context
+        return perspective_context
+
+    @classmethod
+    def _is_exempt_path(cls, path: str) -> bool:
+        return any(path.startswith(prefix) for prefix in cls.EXEMPT_PATH_PREFIXES)
+
+    @staticmethod
+    def _normalize_perspective_header(value: str | None) -> PerspectiveName | str | None:
+        if value is None:
+            return None
+
+        normalized = value.strip().lower()
+        if normalized == "":
+            return None
+        return normalized
 
 
 class AuthzPermissionChecker:
@@ -1194,6 +1309,13 @@ def require_authz(
         resource_context=resource_context,
         deny_as_not_found=deny_as_not_found,
     )
+
+
+def require_perspective_context(
+    *, resource_type: str | None = None
+) -> PerspectiveContextChecker:
+    """Perspective request-contract dependency factory."""
+    return PerspectiveContextChecker(resource_type=resource_type)
 
 
 class OrganizationPermissionChecker:  # DEPRECATED
