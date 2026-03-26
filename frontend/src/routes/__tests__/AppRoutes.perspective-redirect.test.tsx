@@ -12,6 +12,11 @@ import {
 } from '@/constants/routes';
 import { protectedRoutes } from '@/routes/AppRoutes';
 
+const memoryRouterFuture = {
+  v7_startTransition: true,
+  v7_relativeSplatPath: true,
+} as const;
+
 const mockUseAuth = vi.hoisted(() => vi.fn());
 
 vi.mock('@/contexts/AuthContext', () => ({
@@ -34,7 +39,7 @@ const renderLegacyRoute = (path: string) => {
   expect(RouteElement).not.toBeNull();
 
   render(
-    <MemoryRouter initialEntries={[path]}>
+    <MemoryRouter future={memoryRouterFuture} initialEntries={[path]}>
       <Routes>
         <Route path={path} element={RouteElement != null ? <RouteElement /> : null} />
         <Route path="*" element={<LocationProbe />} />

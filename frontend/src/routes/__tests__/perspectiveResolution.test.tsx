@@ -5,6 +5,11 @@ import { MemoryRouter } from 'react-router-dom';
 import PerspectiveResolutionPage from '@/routes/PerspectiveResolutionPage';
 import { resolvePerspectiveMismatch } from '@/routes/perspectiveResolution';
 
+const memoryRouterFuture = {
+  v7_startTransition: true,
+  v7_relativeSplatPath: true,
+} as const;
+
 describe('perspective resolution', () => {
   it('routes invalid /owner/assets/:id sessions to deterministic manager/detail fallback', () => {
     const resolution = resolvePerspectiveMismatch({
@@ -50,7 +55,7 @@ describe('perspective resolution', () => {
     }
 
     render(
-      <MemoryRouter>
+      <MemoryRouter future={memoryRouterFuture}>
         <PerspectiveResolutionPage resolution={resolution} />
       </MemoryRouter>
     );

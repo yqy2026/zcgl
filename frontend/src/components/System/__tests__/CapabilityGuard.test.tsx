@@ -4,6 +4,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import CapabilityGuard from '../CapabilityGuard';
 
+const memoryRouterFuture = {
+  v7_startTransition: true,
+  v7_relativeSplatPath: true,
+} as const;
+
 const mockUseCapabilities = vi.hoisted(() => vi.fn());
 
 vi.mock('@/hooks/useCapabilities', () => ({
@@ -12,7 +17,7 @@ vi.mock('@/hooks/useCapabilities', () => ({
 
 describe('CapabilityGuard', () => {
   const renderInRouter = (ui: ReactNode) => {
-    return render(<MemoryRouter>{ui}</MemoryRouter>);
+    return render(<MemoryRouter future={memoryRouterFuture}>{ui}</MemoryRouter>);
   };
 
   beforeEach(() => {
@@ -73,7 +78,7 @@ describe('CapabilityGuard', () => {
     });
 
     render(
-      <MemoryRouter initialEntries={['/owner/assets']}>
+      <MemoryRouter future={memoryRouterFuture} initialEntries={['/owner/assets']}>
         <Routes>
           <Route
             path="/owner/assets"

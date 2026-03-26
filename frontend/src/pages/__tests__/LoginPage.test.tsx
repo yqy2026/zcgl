@@ -52,6 +52,11 @@ vi.mock('../LoginPage.module.css', () => ({
 
 import { useAuth } from '../../contexts/AuthContext';
 
+const memoryRouterFuture = {
+  v7_startTransition: true,
+  v7_relativeSplatPath: true,
+} as const;
+
 describe('LoginPage', () => {
   const mockLogin = vi.fn();
 
@@ -72,7 +77,7 @@ describe('LoginPage', () => {
   describe('渲染', () => {
     it('渲染登录页面标题', () => {
       render(
-        <MemoryRouter>
+        <MemoryRouter future={memoryRouterFuture}>
           <LoginPage />
         </MemoryRouter>
       );
@@ -87,7 +92,7 @@ describe('LoginPage', () => {
 
     it('渲染用户名输入框', () => {
       render(
-        <MemoryRouter>
+        <MemoryRouter future={memoryRouterFuture}>
           <LoginPage />
         </MemoryRouter>
       );
@@ -97,7 +102,7 @@ describe('LoginPage', () => {
 
     it('渲染密码输入框', () => {
       render(
-        <MemoryRouter>
+        <MemoryRouter future={memoryRouterFuture}>
           <LoginPage />
         </MemoryRouter>
       );
@@ -107,7 +112,7 @@ describe('LoginPage', () => {
 
     it('渲染记住我复选框', () => {
       render(
-        <MemoryRouter>
+        <MemoryRouter future={memoryRouterFuture}>
           <LoginPage />
         </MemoryRouter>
       );
@@ -117,7 +122,7 @@ describe('LoginPage', () => {
 
     it('渲染登录按钮', () => {
       render(
-        <MemoryRouter>
+        <MemoryRouter future={memoryRouterFuture}>
           <LoginPage />
         </MemoryRouter>
       );
@@ -127,7 +132,7 @@ describe('LoginPage', () => {
 
     it('渲染帮助信息', () => {
       render(
-        <MemoryRouter>
+        <MemoryRouter future={memoryRouterFuture}>
           <LoginPage />
         </MemoryRouter>
       );
@@ -139,7 +144,7 @@ describe('LoginPage', () => {
   describe('表单交互', () => {
     it('输入用户名', () => {
       render(
-        <MemoryRouter>
+        <MemoryRouter future={memoryRouterFuture}>
           <LoginPage />
         </MemoryRouter>
       );
@@ -152,7 +157,7 @@ describe('LoginPage', () => {
 
     it('输入密码', () => {
       render(
-        <MemoryRouter>
+        <MemoryRouter future={memoryRouterFuture}>
           <LoginPage />
         </MemoryRouter>
       );
@@ -165,7 +170,7 @@ describe('LoginPage', () => {
 
     it('切换记住我复选框', () => {
       render(
-        <MemoryRouter>
+        <MemoryRouter future={memoryRouterFuture}>
           <LoginPage />
         </MemoryRouter>
       );
@@ -182,7 +187,7 @@ describe('LoginPage', () => {
       mockLogin.mockResolvedValue(undefined);
 
       render(
-        <MemoryRouter>
+        <MemoryRouter future={memoryRouterFuture}>
           <LoginPage />
         </MemoryRouter>
       );
@@ -212,7 +217,7 @@ describe('LoginPage', () => {
       mockLogin.mockResolvedValue(undefined);
 
       render(
-        <MemoryRouter>
+        <MemoryRouter future={memoryRouterFuture}>
           <LoginPage />
         </MemoryRouter>
       );
@@ -250,7 +255,7 @@ describe('LoginPage', () => {
       } as unknown as ReturnType<typeof useAuth>);
 
       render(
-        <MemoryRouter>
+        <MemoryRouter future={memoryRouterFuture}>
           <LoginPage />
         </MemoryRouter>
       );
@@ -272,7 +277,7 @@ describe('LoginPage', () => {
       } as unknown as ReturnType<typeof useAuth>);
 
       render(
-        <MemoryRouter>
+        <MemoryRouter future={memoryRouterFuture}>
           <LoginPage />
         </MemoryRouter>
       );
@@ -285,7 +290,7 @@ describe('LoginPage', () => {
   describe('表单验证', () => {
     it('用户名必填验证', async () => {
       render(
-        <MemoryRouter>
+        <MemoryRouter future={memoryRouterFuture}>
           <LoginPage />
         </MemoryRouter>
       );
@@ -300,7 +305,7 @@ describe('LoginPage', () => {
 
     it('密码必填验证', async () => {
       render(
-        <MemoryRouter>
+        <MemoryRouter future={memoryRouterFuture}>
           <LoginPage />
         </MemoryRouter>
       );

@@ -7,6 +7,11 @@ import { CONTRACT_GROUP_ROUTES, LEGACY_RENTAL_ROUTES } from '@/constants/routes'
 import { protectedRoutes } from '@/routes/AppRoutes';
 import LegacyRentalRetiredPage from '@/pages/Rental/LegacyRentalRetiredPage';
 
+const memoryRouterFuture = {
+  v7_startTransition: true,
+  v7_relativeSplatPath: true,
+} as const;
+
 const LocationProbe = () => {
   const location = useLocation();
   return <div data-testid="location-probe">{location.pathname}</div>;
@@ -34,7 +39,10 @@ describe('legacy rental frontend retirement routing', () => {
     expect(RedirectElement).toBeDefined();
 
     render(
-      <MemoryRouter initialEntries={[LEGACY_RENTAL_ROUTES.CONTRACTS.PDF_IMPORT]}>
+      <MemoryRouter
+        future={memoryRouterFuture}
+        initialEntries={[LEGACY_RENTAL_ROUTES.CONTRACTS.PDF_IMPORT]}
+      >
         {RedirectElement != null && <RedirectElement />}
         <LocationProbe />
       </MemoryRouter>
@@ -45,7 +53,7 @@ describe('legacy rental frontend retirement routing', () => {
 
   it('renders an explicit retirement notice instead of calling deleted legacy APIs', () => {
     render(
-      <MemoryRouter initialEntries={['/rental/contracts']}>
+      <MemoryRouter future={memoryRouterFuture} initialEntries={['/rental/contracts']}>
         <LegacyRentalRetiredPage />
         <LocationProbe />
       </MemoryRouter>
