@@ -79,6 +79,19 @@ Object.defineProperty(window, 'matchMedia', {
   })),
 });
 
+// jsdom 对 pseudo-element 的 getComputedStyle 仅会向 stderr 打 not implemented 噪音。
+// 测试里统一回退到宿主元素样式读取，避免把环境缺口误报成组件问题。
+const originalGetComputedStyle = window.getComputedStyle.bind(window);
+Object.defineProperty(window, 'getComputedStyle', {
+  writable: true,
+  value: ((element: Element, pseudoElement?: string | null) => {
+    if (pseudoElement != null && pseudoElement !== '') {
+      return originalGetComputedStyle(element);
+    }
+    return originalGetComputedStyle(element, pseudoElement);
+  }) as typeof window.getComputedStyle,
+});
+
 // Mock ResizeObserver (用于图表和布局组件)
 class ResizeObserverMock {
   observe = vi.fn();

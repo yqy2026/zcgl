@@ -211,7 +211,7 @@ const PartyDetailPage: React.FC = () => {
 
   return (
     <PageContainer title="主体详情" subTitle="查看主体审核状态，并在草稿状态下维护业务字段">
-      <Space direction="vertical" size="large" style={{ width: '100%' }}>
+      <Space orientation="vertical" size="large" style={{ width: '100%' }}>
         <Space>
           <Button
             onClick={() => {
@@ -264,19 +264,19 @@ const PartyDetailPage: React.FC = () => {
           ) : null}
         </Space>
 
-        {!hasPartyId ? <Alert type="error" message="缺少主体 ID，无法加载详情" showIcon /> : null}
+        {!hasPartyId ? <Alert type="error" title="缺少主体 ID，无法加载详情" showIcon /> : null}
         {partyDetailQuery.isError ? (
-          <Alert type="error" message={partyDetailQuery.error.message} showIcon />
+          <Alert type="error" title={partyDetailQuery.error.message} showIcon />
         ) : null}
         {!isEditable && party != null ? (
           <Alert
             type={isPending ? 'warning' : 'info'}
-            message={isPending ? '待审核主体不可编辑业务字段' : '已审核主体不可编辑业务字段'}
+            title={isPending ? '待审核主体不可编辑业务字段' : '已审核主体不可编辑业务字段'}
             showIcon
           />
         ) : null}
         {party?.review_reason != null && party.review_reason.trim() !== '' ? (
-          <Alert type="info" message={`审核说明：${party.review_reason}`} showIcon />
+          <Alert type="info" title={`审核说明：${party.review_reason}`} showIcon />
         ) : null}
 
         <Card loading={partyDetailQuery.isLoading} title={party?.name ?? '主体详情'}>

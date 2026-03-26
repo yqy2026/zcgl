@@ -27,6 +27,12 @@ import PartyDetailPage from '../PartyDetailPage';
 import PartyListPage from '../PartyListPage';
 import { partyService } from '@/services/partyService';
 
+const formatConsoleMessages = (calls: unknown[][]) =>
+  calls
+    .flat()
+    .map(value => String(value))
+    .join(' ');
+
 const draftParty = {
   id: 'party-1',
   party_type: 'organization' as const,
@@ -101,6 +107,27 @@ describe('Party system pages', () => {
     });
   });
 
+  it('does not emit antd deprecation warnings while rendering the party list page', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      renderWithProviders(
+        <Routes>
+          <Route path="/system/parties" element={<PartyListPage />} />
+        </Routes>,
+        { route: '/system/parties' }
+      );
+
+      expect(await screen.findByText('主体主档管理')).toBeInTheDocument();
+      expect(await screen.findByText('测试主体')).toBeInTheDocument();
+
+      const messages = formatConsoleMessages(consoleErrorSpy.mock.calls);
+      expect(messages).not.toContain('[antd: Space]');
+    } finally {
+      consoleErrorSpy.mockRestore();
+    }
+  });
+
   it('updates and submits a draft party from detail page', async () => {
     renderWithProviders(
       <Routes>
@@ -173,5 +200,28 @@ describe('Party system pages', () => {
         reason: '资料不完整',
       });
     });
+  });
+
+  it('does not emit antd deprecation warnings while rendering the party detail page', async () => {
+    vi.mocked(partyService.getPartyById).mockResolvedValue(pendingParty);
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      renderWithProviders(
+        <Routes>
+          <Route path="/system/parties/:id" element={<PartyDetailPage />} />
+        </Routes>,
+        { route: '/system/parties/party-2' }
+      );
+
+      expect(await screen.findByText('待审核主体')).toBeInTheDocument();
+      expect(screen.getByText('待审核主体不可编辑业务字段')).toBeInTheDocument();
+
+      const messages = formatConsoleMessages(consoleErrorSpy.mock.calls);
+      expect(messages).not.toContain('[antd: Space]');
+      expect(messages).not.toContain('[antd: Alert]');
+    } finally {
+      consoleErrorSpy.mockRestore();
+    }
   });
 });

@@ -171,7 +171,7 @@ const PartyListPage: React.FC = () => {
 
   return (
     <PageContainer title="主体主档管理" subTitle="维护主体台账、审核状态与基础信息主档">
-      <Space direction="vertical" size="large" style={{ width: '100%' }}>
+      <Space orientation="vertical" size="large" style={{ width: '100%' }}>
         <Space wrap>
           <Input.Search
             allowClear
