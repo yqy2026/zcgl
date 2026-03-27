@@ -7,7 +7,6 @@ Excel导出服务
 import asyncio
 import inspect
 import io
-import json
 import logging
 import os
 from collections.abc import Awaitable
@@ -168,29 +167,22 @@ class ExcelExportService:
             )
         )
 
-    def export_analytics_to_excel(self, analytics_data: dict[str, Any]) -> io.BytesIO:
+    def export_analytics_to_excel(self, rows: list[dict[str, Any]]) -> io.BytesIO:
         try:
-            rows: list[dict[str, Any]] = []
-            for key, value in analytics_data.items():
-                if isinstance(value, (str, int, float, bool)) or value is None:
-                    rows.append({"metric": key, "value": value})
-                else:
-                    rows.append(
-                        {
-                            "metric": key,
-                            "value": json.dumps(value, ensure_ascii=False),
-                        }
-                    )
+            export_rows = [
+                {
+                    "分组": row.get("section", ""),
+                    "指标": row.get("metric", ""),
+                    "数值": row.get("value", ""),
+                    "单位": row.get("unit", ""),
+                }
+                for row in rows
+            ]
 
-            if not rows:
-                rows = [
-                    {
-                        "metric": "data",
-                        "value": json.dumps(analytics_data, ensure_ascii=False),
-                    }
-                ]
+            if not export_rows:
+                export_rows = [{"分组": "", "指标": "暂无数据", "数值": "", "单位": ""}]
 
-            df = pd.DataFrame(rows)
+            df = pd.DataFrame(export_rows, columns=["分组", "指标", "数值", "单位"])
             buffer = io.BytesIO()
             with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
                 df.to_excel(writer, sheet_name="analytics", index=False)

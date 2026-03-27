@@ -9,6 +9,7 @@ import { AnalyticsService, analyticsService } from '../analyticsService';
 vi.mock('@/api/client', () => ({
   apiClient: {
     get: vi.fn(),
+    post: vi.fn(),
   },
 }));
 
@@ -29,6 +30,7 @@ describe('AnalyticsService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useRealTimers();
     service = new AnalyticsService();
   });
 
@@ -255,6 +257,95 @@ describe('AnalyticsService', () => {
       });
 
       await expect(service.getFinancialSummary()).rejects.toThrow();
+    });
+  });
+
+  describe('exportAnalyticsReport', () => {
+    it('passes date filters to backend export using date_from/date_to', async () => {
+      const blob = new Blob(['csv']);
+      vi.mocked(apiClient.post).mockResolvedValue({
+        success: true,
+        data: blob,
+      });
+
+      const result = await service.exportAnalyticsReport('csv', {
+        start_date: '2026-03-01',
+        end_date: '2026-03-31',
+        include_deleted: true,
+      });
+
+      expect(apiClient.post).toHaveBeenCalledWith(
+        '/analytics/export',
+        undefined,
+        expect.objectContaining({
+          params: {
+            export_format: 'csv',
+            date_from: '2026-03-01',
+            date_to: '2026-03-31',
+            include_deleted: true,
+          },
+          responseType: 'blob',
+          retry: false,
+          smartExtract: false,
+        })
+      );
+      expect(result).toBe(blob);
+    });
+
+    it('downloadAnalyticsReport downloads the blob using the shared filename rule', async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-03-25T01:18:43.000Z'));
+
+      const blob = new Blob(['xlsx']);
+      vi.spyOn(service, 'exportAnalyticsReport').mockResolvedValue(blob);
+
+      const anchor = document.createElement('a');
+      const clickSpy = vi.fn();
+      const removeSpy = vi.fn();
+      anchor.click = clickSpy;
+      anchor.remove = removeSpy;
+
+      const originalCreateElement = document.createElement.bind(document);
+      vi.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
+        if (tagName === 'a') {
+          return anchor;
+        }
+        return originalCreateElement(tagName);
+      });
+
+      global.URL.createObjectURL = vi.fn(() => 'blob:analytics');
+      global.URL.revokeObjectURL = vi.fn();
+
+      await service.downloadAnalyticsReport('excel', {
+        start_date: '2026-03-01',
+        end_date: '2026-03-31',
+      });
+
+      expect(service.exportAnalyticsReport).toHaveBeenCalledWith('excel', {
+        start_date: '2026-03-01',
+        end_date: '2026-03-31',
+      });
+      expect(global.URL.createObjectURL).toHaveBeenCalledWith(blob);
+      expect(anchor.download).toBe('analytics_20260325T011843.xlsx');
+      expect(clickSpy).toHaveBeenCalled();
+      expect(removeSpy).toHaveBeenCalled();
+      expect(global.URL.revokeObjectURL).toHaveBeenCalledWith('blob:analytics');
+    });
+
+    it('does not create a blob URL when the backend export request fails', async () => {
+      vi.spyOn(service, 'exportAnalyticsReport').mockRejectedValue(new Error('501 Not Implemented'));
+      global.URL.createObjectURL = vi.fn(() => 'blob:analytics');
+      global.URL.revokeObjectURL = vi.fn();
+
+      await expect(
+        service.downloadAnalyticsReport('excel', {
+          start_date: '2026-03-01',
+          end_date: '2026-03-31',
+        })
+      ).rejects.toThrow('501 Not Implemented');
+
+      expect(global.URL.createObjectURL).not.toHaveBeenCalled();
+      expect(global.URL.revokeObjectURL).not.toHaveBeenCalled();
     });
   });
 

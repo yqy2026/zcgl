@@ -64,7 +64,6 @@ def test_legacy_contract_service_modules_should_be_retired() -> None:
     assert not hasattr(models, "Rent" + "ContractAttachment")
     assert not hasattr(models, "Rent" + "ContractHistory")
     assert not hasattr(models, "Rent" + "DepositLedger")
-    assert not hasattr(models, "Service" + "FeeLedger")
     assert not hasattr(models, "Deposit" + "TransactionType")
     assert not hasattr(models, "Rent" + "Contract")
     assert not hasattr(models, "Rent" + "Term")

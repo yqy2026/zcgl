@@ -81,30 +81,15 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
 
   const handleExport = async (format: 'excel' | 'pdf' | 'csv') => {
     try {
-      MessageManager.loading('正在导出...');
-      const blob = await analyticsService.exportAnalyticsReport(format, {
+      MessageManager.loading('正在导出数据...');
+      await analyticsService.downloadAnalyticsReport(format, {
         start_date: filters.start_date,
         end_date: filters.end_date,
         include_deleted: filters.include_deleted,
       });
-
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-
-      // 生成文件名
-      const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '');
-      const extension = format === 'excel' ? 'xlsx' : format;
-      a.download = `analytics_${timestamp}.${extension}`;
-
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-
-      MessageManager.success('导出成功');
+      MessageManager.success('数据导出成功！');
     } catch (error) {
-      MessageManager.error('导出失败');
+      MessageManager.error('导出失败，请重试');
       logger.error('Export failed', error as Error);
     }
   };

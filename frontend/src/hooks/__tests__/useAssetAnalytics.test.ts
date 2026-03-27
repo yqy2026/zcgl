@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@/test/utils/test-helpers';
 import { useAssetAnalytics } from '../useAssetAnalytics';
 import { analyticsService } from '@/services/analyticsService';
+import { exportAnalyticsData } from '@/services/analyticsExportService';
+import { MessageManager } from '@/utils/messageManager';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 
@@ -20,6 +22,7 @@ vi.mock('@/utils/queryScope', () => ({
 vi.mock('@/services/analyticsService', () => ({
   analyticsService: {
     getComprehensiveAnalytics: vi.fn(),
+    downloadAnalyticsReport: vi.fn(),
   },
 }));
 
@@ -54,6 +57,38 @@ const createWrapper = () => {
 describe('useAssetAnalytics', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(analyticsService.getComprehensiveAnalytics).mockResolvedValue({
+      success: true,
+      data: {
+        area_summary: {
+          total_assets: 0,
+          total_area: 0,
+          total_rentable_area: 0,
+          total_rented_area: 0,
+          total_unrented_area: 0,
+          assets_with_area_data: 0,
+          occupancy_rate: 0,
+          total_non_commercial_area: 0,
+        },
+        financial_summary: {
+          estimated_annual_income: 0,
+          total_annual_income: 0,
+          total_annual_expense: 0,
+          total_net_income: 0,
+          total_monthly_rent: 0,
+          total_deposit: 0,
+          assets_with_income_data: 0,
+          assets_with_rent_data: 0,
+          profit_margin: 0,
+        },
+        property_nature_distribution: [],
+        ownership_status_distribution: [],
+        usage_status_distribution: [],
+        business_category_distribution: [],
+        occupancy_trend: [],
+        occupancy_distribution: [],
+      },
+    });
   });
 
   it('should initialize with default state', () => {
@@ -185,5 +220,43 @@ describe('useAssetAnalytics', () => {
     expect(result.current.analyticsData?.customer_entity_count).toBe(8);
     expect(result.current.analyticsData?.customer_contract_count).toBe(12);
     expect(result.current.analyticsData?.metrics_version).toBe('req-ana-001-v1');
+  });
+
+  it('should delegate export to analyticsService backend flow', async () => {
+    const mockData = {
+      success: true,
+      data: {
+        area_summary: { total_assets: 5, total_area: 2000 },
+        financial_summary: { total_annual_income: 100000 },
+        total_income: 80000,
+        self_operated_rent_income: 50000,
+        agency_service_income: 30000,
+        customer_entity_count: 8,
+        customer_contract_count: 12,
+        metrics_version: 'req-ana-001-v1',
+        property_nature_distribution: [],
+        ownership_status_distribution: [],
+        usage_status_distribution: [],
+        business_category_distribution: [],
+        occupancy_trend: [],
+        occupancy_distribution: [],
+      },
+    };
+    vi.mocked(analyticsService.getComprehensiveAnalytics).mockResolvedValue(mockData);
+    vi.mocked(analyticsService.downloadAnalyticsReport).mockResolvedValue(undefined);
+
+    const { result } = renderHook(() => useAssetAnalytics(), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await act(async () => {
+      await result.current.handleExport();
+    });
+
+    expect(analyticsService.downloadAnalyticsReport).toHaveBeenCalledWith('excel', {});
+    expect(exportAnalyticsData).not.toHaveBeenCalled();
+    expect(MessageManager.success).toHaveBeenCalledWith('数据导出成功！');
   });
 });

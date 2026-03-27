@@ -91,6 +91,23 @@ const toNumber = (value: unknown): number => {
 export class AnalyticsService {
   private api = apiClient;
 
+  private buildExportFilename(format: 'excel' | 'pdf' | 'csv'): string {
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '');
+    const extension = format === 'excel' ? 'xlsx' : format;
+    return `analytics_${timestamp}.${extension}`;
+  }
+
+  private triggerBlobDownload(blob: Blob, filename: string): void {
+    const url = window.URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.URL.revokeObjectURL(url);
+  }
+
   async getComprehensiveAnalytics(filters?: AssetSearchParams): Promise<AnalyticsResponse> {
     try {
       const response = await this.api.get<AnalyticsResponse>('/analytics/comprehensive', {
@@ -309,6 +326,14 @@ export class AnalyticsService {
       serviceLogger.error('Analytics export API Error:', error as Error);
       throw error;
     }
+  }
+
+  async downloadAnalyticsReport(
+    format: 'excel' | 'pdf' | 'csv',
+    filters?: Pick<AssetSearchParams, 'start_date' | 'end_date' | 'include_deleted'>
+  ): Promise<void> {
+    const blob = await this.exportAnalyticsReport(format, filters);
+    this.triggerBlobDownload(blob, this.buildExportFilename(format));
   }
 }
 

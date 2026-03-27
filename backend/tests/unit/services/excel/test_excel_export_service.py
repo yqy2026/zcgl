@@ -10,7 +10,9 @@ from pathlib import Path
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
+from openpyxl import load_workbook
 
+from src.services.analytics.analytics_export_service import AnalyticsExportService
 from src.services.excel import excel_export_service as excel_export_service_module
 from src.services.excel.excel_export_service import (
     EXPORT_FIELD_MAPPING,
@@ -366,6 +368,39 @@ class TestExportAssetsToExcel:
 
         with pytest.raises(Exception, match="Database error"):
             excel_service.export_assets_to_excel()
+
+
+class TestExportAnalyticsToExcel:
+    """测试分析导出 Excel 内容"""
+
+    def test_export_analytics_to_excel_should_preserve_tabular_headers_and_ana001_rows(
+        self, excel_service
+    ):
+        analytics_data = {
+            "total_assets": 1,
+            "area_summary": {"total_area": 100.0, "total_rentable_area": 80.0},
+            "financial_summary": {"total_annual_income": 1000.0},
+            "total_income": 1200.0,
+            "self_operated_rent_income": 1000.0,
+            "agency_service_income": 200.0,
+            "customer_entity_count": 2,
+            "customer_contract_count": 3,
+            "metrics_version": "req-ana-001-v1",
+        }
+        rows = AnalyticsExportService().build_export_rows(analytics_data)
+
+        buffer = excel_service.export_analytics_to_excel(rows)
+
+        workbook = load_workbook(buffer)
+        sheet = workbook["analytics"]
+        values = list(sheet.iter_rows(values_only=True))
+
+        assert values[0] == ("分组", "指标", "数值", "单位")
+        assert ("总览", "总收入（经营口径）", "1200.00", "元") in values
+        assert any(
+            row[0] == "总览" and row[1] == "口径版本" and row[2] == "req-ana-001-v1"
+            for row in values[1:]
+        )
 
 
 # ============================================================================
