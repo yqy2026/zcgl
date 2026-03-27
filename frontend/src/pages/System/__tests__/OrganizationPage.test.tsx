@@ -5,6 +5,8 @@ import OrganizationPage from '../OrganizationPage';
 import { organizationService } from '@/services/organizationService';
 import { useDictionary } from '@/hooks/useDictionary';
 
+const formatStderrWrites = (calls: unknown[][]) => calls.map(call => String(call[0] ?? '')).join(' ');
+
 vi.mock('@/services/organizationService', () => ({
   organizationService: {
     getOrganizations: vi.fn(),
@@ -35,6 +37,37 @@ vi.mock('@/utils/messageManager', () => ({
 
 vi.mock('@/hooks/useDictionary', () => ({
   useDictionary: vi.fn(),
+}));
+
+vi.mock('../OrganizationPage.module.css', () => ({
+  default: new Proxy(
+    {},
+    {
+      get: (_target, property) => String(property),
+    }
+  ),
+}));
+
+vi.mock('../Organization/components/OrganizationStatisticsCards', () => ({
+  default: () => <div data-testid="org-stats-cards" />,
+}));
+
+vi.mock('../Organization/components/OrganizationTabsPanel', () => ({
+  default: () => (
+    <div data-testid="org-tabs-panel">
+      <div>列表视图</div>
+      <div>树形视图</div>
+      <button disabled>新建组织</button>
+    </div>
+  ),
+}));
+
+vi.mock('../Organization/components/OrganizationFormModal', () => ({
+  default: () => null,
+}));
+
+vi.mock('../Organization/components/OrganizationHistoryModal', () => ({
+  default: () => null,
 }));
 
 describe('OrganizationPage', () => {
@@ -100,24 +133,31 @@ describe('OrganizationPage', () => {
   it('renders tabs without TabPane deprecation warning', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const stderrWriteSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
 
-    renderWithProviders(<OrganizationPage />);
+    try {
+      renderWithProviders(<OrganizationPage />);
 
-    await waitFor(() => {
-      expect(organizationService.getOrganizations).toHaveBeenCalled();
-    });
+      await waitFor(() => {
+        expect(organizationService.getOrganizations).toHaveBeenCalled();
+      });
 
-    expect(screen.getByText('列表视图')).toBeInTheDocument();
-    expect(screen.getByText('树形视图')).toBeInTheDocument();
+      expect(screen.getByText('列表视图')).toBeInTheDocument();
+      expect(screen.getByText('树形视图')).toBeInTheDocument();
 
-    const warnOutput = warnSpy.mock.calls.flat().join(' ');
-    const errorOutput = errorSpy.mock.calls.flat().join(' ');
+      const warnOutput = warnSpy.mock.calls.flat().join(' ');
+      const errorOutput = errorSpy.mock.calls.flat().join(' ');
 
-    expect(warnOutput).not.toContain('Tabs.TabPane');
-    expect(errorOutput).not.toContain('Tabs.TabPane');
-
-    warnSpy.mockRestore();
-    errorSpy.mockRestore();
+      expect(warnOutput).not.toContain('Tabs.TabPane');
+      expect(errorOutput).not.toContain('Tabs.TabPane');
+      expect(formatStderrWrites(stderrWriteSpy.mock.calls)).not.toContain(
+        'Could not parse CSS stylesheet'
+      );
+    } finally {
+      stderrWriteSpy.mockRestore();
+      warnSpy.mockRestore();
+      errorSpy.mockRestore();
+    }
   });
 
   it('enforces read-only mode and disables write entry point', async () => {

@@ -28,6 +28,8 @@
 - verify(test-noise-11): `cd frontend && pnpm exec vitest run src/components/ErrorHandling/__tests__/ErrorBoundary.test.tsx --reporter=verbose`（PASS）。
 - fix(test-noise): 收敛第十二批资产导入测试噪音。`frontend/src/components/Asset/__tests__/AssetImport.test.tsx` 现统一使用带 `act` 的渲染 helper 等待初始副作用收敛，并对初始渲染、非法文件上传、失败导入三条路径直接锁定 stderr，不再输出 `OptimizedAssetImport` 的 `act(...)` 警告与错误 logger 噪音；生产组件行为未改。
 - verify(test-noise-12): `cd frontend && pnpm exec vitest run src/components/Asset/__tests__/AssetImport.test.tsx --reporter=verbose`（PASS）。
+- fix(test-noise): 收敛第十三批页面级 CSS 解析噪音。`frontend/src/pages/System/__tests__/OrganizationPage.test.tsx` 现将与断言无关的 `OrganizationStatisticsCards` / `OrganizationTabsPanel` / modal 子组件替换为轻量替身，并直接锁住 stderr 中的 `Could not parse CSS stylesheet`；`frontend/src/pages/Ownership/__tests__/OwnershipDetailPage.legacy-contract-retired.test.tsx` 同样通过最小化 antd 替身与 CSS module mock 隔离掉样式解析噪音，同时保留退休提示与迁移文案断言。
+- verify(test-noise-13): `cd frontend && pnpm exec vitest run src/pages/System/__tests__/OrganizationPage.test.tsx src/pages/Ownership/__tests__/OwnershipDetailPage.legacy-contract-retired.test.tsx --reporter=verbose`（PASS）。
 
 ### 2026-03-25
 - docs(plan): 新增 `REQ-AUTH-002` 设计文档 `docs/plans/2026-03-25-req-auth-002-perspective-context-design.md`，收口方案为“canonical owner/manager route 继续作为前端真值，所有业务请求强制携带 `X-Perspective`，后端统一构建 `PerspectiveContext` 并按单一视角口径执行查询/统计/搜索；资源级 perspective 规则回到 `/auth/me/capabilities`，默认视角失效时进入统一 `PerspectiveResolution` 恢复流程”；`docs/plans/README.md` 已同步登记为活跃待评审方案。
