@@ -1,8 +1,11 @@
+import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, renderWithProviders, screen, waitFor } from '@/test/utils/test-helpers';
 import ContractImportReview from '../ContractImportReview';
 
 const mockNavigate = vi.fn();
+
+const formatStderrWrites = (calls: unknown[][]) => calls.map(call => String(call[0] ?? '')).join(' ');
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
@@ -27,6 +30,144 @@ vi.mock('@/utils/logger', () => ({
     debug: vi.fn(),
   }),
 }));
+
+vi.mock('../ContractImportReview.module.css', () => ({
+  default: new Proxy(
+    {},
+    {
+      get: (_target, property) => String(property),
+    }
+  ),
+}));
+
+vi.mock('antd', async () => {
+  const actual = await vi.importActual<typeof import('antd')>('antd');
+  const ReactModule = await import('react');
+  const { useState } = ReactModule;
+
+  const MockDatePicker = ({
+    value,
+    className,
+  }: {
+    value?: { format?: (pattern?: string) => string } | null;
+    className?: string;
+  }) => (
+    <input
+      aria-label="mock-date-picker"
+      className={className}
+      readOnly
+      value={value?.format?.('YYYY-MM-DD') ?? ''}
+    />
+  );
+
+  const MockInputNumber = ({
+    value,
+    className,
+  }: {
+    value?: string | number | null;
+    className?: string;
+  }) => <input aria-label="mock-input-number" className={className} readOnly value={value ?? ''} />;
+
+  const MockStatistic = ({
+    title,
+    value,
+    className,
+  }: {
+    title?: ReactNode;
+    value?: ReactNode;
+    className?: string;
+  }) => (
+    <div className={className}>
+      <span>{title}</span>
+      <span>{value}</span>
+    </div>
+  );
+
+  const MockPopover = ({
+    children,
+  }: {
+    children?: ReactNode;
+  }) => <>{children}</>;
+
+  const MockSelect = ({
+    value,
+    onChange,
+    options,
+    disabled,
+    'aria-label': ariaLabel,
+  }: {
+    value?: string;
+    onChange?: (value: string) => void;
+    options?: Array<{ label: ReactNode; value: string }>;
+    disabled?: boolean;
+    'aria-label'?: string;
+  }) => (
+    <select
+      aria-label={ariaLabel}
+      disabled={disabled}
+      value={value ?? ''}
+      onChange={event => onChange?.(event.target.value)}
+    >
+      {(options ?? []).map(option => (
+        <option key={option.value} value={option.value}>
+          {typeof option.label === 'string' ? option.label : option.value}
+        </option>
+      ))}
+    </select>
+  );
+
+  const MockTabs = ({
+    activeKey,
+    defaultActiveKey,
+    onChange,
+    items,
+  }: {
+    activeKey?: string;
+    defaultActiveKey?: string;
+    onChange?: (key: string) => void;
+    items?: Array<{ key: string; label: ReactNode; children?: ReactNode }>;
+  }) => {
+    const [internalKey, setInternalKey] = useState(defaultActiveKey ?? items?.[0]?.key);
+    const currentKey = activeKey ?? internalKey ?? items?.[0]?.key ?? '';
+    const currentItem = items?.find(item => item.key === currentKey) ?? items?.[0];
+
+    return (
+      <div>
+        <div role="tablist">
+          {(items ?? []).map(item => (
+            <button
+              key={item.key}
+              type="button"
+              role="tab"
+              aria-selected={item.key === currentKey}
+              onClick={() => {
+                if (activeKey == null) {
+                  setInternalKey(item.key);
+                }
+                onChange?.(item.key);
+              }}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+        <div role="tabpanel">{currentItem?.children}</div>
+      </div>
+    );
+  };
+
+  return {
+    ...actual,
+    DatePicker: Object.assign(MockDatePicker, {
+      RangePicker: MockDatePicker,
+    }),
+    InputNumber: MockInputNumber,
+    Statistic: MockStatistic,
+    Popover: MockPopover,
+    Select: MockSelect,
+    Tabs: MockTabs,
+  };
+});
 
 const buildResult = () => ({
   success: true,
@@ -107,6 +248,28 @@ const buildResult = () => ({
 describe('ContractImportReview confirm context', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it('does not emit css parse warnings while rendering the review form', () => {
+    const stderrWriteSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+
+    try {
+      renderWithProviders(
+        <ContractImportReview
+          sessionId="session-123"
+          result={buildResult()}
+          onConfirm={vi.fn()}
+          onCancel={vi.fn()}
+          onBack={vi.fn()}
+        />
+      );
+
+      expect(formatStderrWrites(stderrWriteSpy.mock.calls)).not.toContain(
+        'Could not parse CSS stylesheet'
+      );
+    } finally {
+      stderrWriteSpy.mockRestore();
+    }
   });
 
   it('submits the explicit contract-group context and navigates to the new group detail page', async () => {
