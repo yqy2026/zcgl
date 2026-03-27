@@ -14,6 +14,8 @@ import {
   useErrorHandler,
 } from '../ErrorBoundary';
 
+const formatStdoutWrites = (calls: unknown[][]) => calls.map(call => String(call[0] ?? '')).join(' ');
+
 const runtimeEnvState = vi.hoisted(() => ({
   isDevelopment: true,
   isProduction: false,
@@ -22,6 +24,12 @@ const runtimeEnvState = vi.hoisted(() => ({
 vi.mock('@/utils/runtimeEnv', () => ({
   isDevelopmentMode: () => runtimeEnvState.isDevelopment,
   isProductionMode: () => runtimeEnvState.isProduction,
+}));
+
+vi.mock('@/services/errorReportService', () => ({
+  errorReportService: {
+    report: vi.fn(() => Promise.resolve()),
+  },
 }));
 
 // =============================================================================
@@ -60,6 +68,8 @@ vi.mock('react-router-dom', () => ({
 describe('ErrorBoundary - 基础功能', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(console, 'group').mockImplementation(() => {});
+    vi.spyOn(console, 'groupEnd').mockImplementation(() => {});
   });
 
   it('应该正常渲染子组件', () => {
@@ -127,6 +137,8 @@ describe('ErrorBoundary - 基础功能', () => {
 describe('ErrorBoundary - 错误类型检测', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(console, 'group').mockImplementation(() => {});
+    vi.spyOn(console, 'groupEnd').mockImplementation(() => {});
   });
 
   it('应该识别ChunkLoadError', () => {
@@ -168,6 +180,8 @@ describe('ErrorBoundary - 错误类型检测', () => {
 describe('ErrorBoundary - 重试功能', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(console, 'group').mockImplementation(() => {});
+    vi.spyOn(console, 'groupEnd').mockImplementation(() => {});
   });
 
   it('应该支持重试功能', async () => {
@@ -220,6 +234,8 @@ describe('ErrorBoundary - 重试功能', () => {
 describe('ErrorBoundary - 导航功能', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(console, 'group').mockImplementation(() => {});
+    vi.spyOn(console, 'groupEnd').mockImplementation(() => {});
   });
 
   it('应该显示返回上一页按钮', () => {
@@ -258,6 +274,8 @@ describe('ErrorBoundary - 导航功能', () => {
 describe('专用错误边界', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(console, 'group').mockImplementation(() => {});
+    vi.spyOn(console, 'groupEnd').mockImplementation(() => {});
   });
 
   it('AssetErrorBoundary应该正常渲染子组件', () => {
@@ -365,6 +383,8 @@ describe('useErrorHandler Hook', () => {
 describe('ErrorBoundary - 边界情况', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(console, 'group').mockImplementation(() => {});
+    vi.spyOn(console, 'groupEnd').mockImplementation(() => {});
   });
 
   it('应该处理空children', () => {
@@ -409,6 +429,12 @@ describe('ErrorBoundary - 边界情况', () => {
 // =============================================================================
 
 describe('ErrorBoundary - 开发模式功能', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.spyOn(console, 'group').mockImplementation(() => {});
+    vi.spyOn(console, 'groupEnd').mockImplementation(() => {});
+  });
+
   afterEach(() => {
     runtimeEnvState.isDevelopment = true;
     runtimeEnvState.isProduction = false;
@@ -432,6 +458,28 @@ describe('ErrorBoundary - 开发模式功能', () => {
     consoleErrorSpy.mockRestore();
   });
 
+  it('开发模式测试不应向 stdout 输出错误报告分组日志', () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const stdoutWriteSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+
+    runtimeEnvState.isDevelopment = true;
+    runtimeEnvState.isProduction = false;
+
+    try {
+      render(
+        <ErrorBoundary showErrorDetails={true}>
+          <ThrowError shouldThrow={true} />
+        </ErrorBoundary>
+      );
+
+      expect(screen.getByText(/错误详情 \(开发模式\)/)).toBeInTheDocument();
+      expect(formatStdoutWrites(stdoutWriteSpy.mock.calls)).not.toContain('错误报告');
+    } finally {
+      stdoutWriteSpy.mockRestore();
+      consoleErrorSpy.mockRestore();
+    }
+  });
+
   it('生产模式不应该显示错误详情', () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
@@ -448,5 +496,29 @@ describe('ErrorBoundary - 开发模式功能', () => {
     expect(screen.queryByText(/错误详情/)).not.toBeInTheDocument();
 
     consoleErrorSpy.mockRestore();
+  });
+
+  it('生产模式测试不应触发 API 调试日志输出', () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const stdoutWriteSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+
+    runtimeEnvState.isDevelopment = false;
+    runtimeEnvState.isProduction = true;
+
+    try {
+      render(
+        <ErrorBoundary showErrorDetails={false}>
+          <ThrowError shouldThrow={true} />
+        </ErrorBoundary>
+      );
+
+      expect(screen.queryByText(/错误详情/)).not.toBeInTheDocument();
+      const stdout = formatStdoutWrites(stdoutWriteSpy.mock.calls);
+      expect(stdout).not.toContain('[DEBUG] [API]');
+      expect(stdout).not.toContain('API Request');
+    } finally {
+      stdoutWriteSpy.mockRestore();
+      consoleErrorSpy.mockRestore();
+    }
   });
 });
