@@ -8,7 +8,7 @@
  * - 使用 className 和文本内容进行断言
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { screen } from '@/test/utils/test-helpers';
 
 import ProgressIndicator, {
@@ -19,7 +19,46 @@ import ProgressIndicator, {
   ProgressCard,
 } from '../ProgressIndicator';
 
+const formatConsoleMessages = (calls: unknown[][]) =>
+  calls
+    .flat()
+    .map(value => String(value))
+    .join(' ');
+
 describe('ProgressIndicator', () => {
+  it('does not emit antd deprecation warnings across progress variants', () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      renderWithProviders(
+        <>
+          <ProgressIndicator percent={40} strokeWidth={10} />
+          <ProgressIndicator type="circle" size="small" percent={50} />
+          <ProcessSteps
+            current={1}
+            steps={[
+              { title: '步骤1', status: 'finish' },
+              { title: '步骤2', status: 'process' },
+            ]}
+          />
+          <ProcessTimeline
+            steps={[
+              { title: '事件1', status: 'finish' },
+              { title: '事件2', status: 'error' },
+            ]}
+          />
+        </>
+      );
+
+      const messages = formatConsoleMessages(consoleErrorSpy.mock.calls);
+      expect(messages).not.toContain('[antd: Progress]');
+      expect(messages).not.toContain('[antd: Steps]');
+      expect(messages).not.toContain('[antd: Timeline]');
+    } finally {
+      consoleErrorSpy.mockRestore();
+    }
+  });
+
   it('renders line progress with defaults', () => {
     const { container } = renderWithProviders(<ProgressIndicator />);
 

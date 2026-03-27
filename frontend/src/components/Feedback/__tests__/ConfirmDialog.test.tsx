@@ -13,6 +13,12 @@ import React from 'react';
 import { screen, fireEvent } from '@/test/utils/test-helpers';
 import type { ConfirmType } from '../ConfirmDialog';
 
+const formatConsoleMessages = (calls: unknown[][]) =>
+  calls
+    .flat()
+    .map(value => String(value))
+    .join(' ');
+
 describe('ConfirmDialog - 组件导入测试', () => {
   it('应该能够导入ConfirmDialog组件', async () => {
     const module = await import('../ConfirmDialog');
@@ -161,16 +167,44 @@ describe('ConfirmDialog - 便捷方法测试', () => {
   });
 
   it('showDeleteConfirm应该返回Promise', async () => {
+    const antd = await import('antd');
+    const confirmSpy = vi.spyOn(antd.Modal, 'confirm').mockImplementation(() => ({
+      destroy: vi.fn(),
+      update: vi.fn(),
+    }));
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
     const { showDeleteConfirm } = await import('../ConfirmDialog');
     const result = showDeleteConfirm({ title: '删除标题' });
 
-    expect(result).toBeInstanceOf(Promise);
+    try {
+      expect(result).toBeInstanceOf(Promise);
+      expect(confirmSpy).toHaveBeenCalled();
+      expect(formatConsoleMessages(consoleErrorSpy.mock.calls)).not.toContain('[antd: Modal]');
+    } finally {
+      confirmSpy.mockRestore();
+      consoleErrorSpy.mockRestore();
+    }
   });
 
   it('showSaveConfirm应该返回Promise', async () => {
+    const antd = await import('antd');
+    const confirmSpy = vi.spyOn(antd.Modal, 'confirm').mockImplementation(() => ({
+      destroy: vi.fn(),
+      update: vi.fn(),
+    }));
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
     const { showSaveConfirm } = await import('../ConfirmDialog');
     const result = showSaveConfirm({ title: '保存标题' });
 
-    expect(result).toBeInstanceOf(Promise);
+    try {
+      expect(result).toBeInstanceOf(Promise);
+      expect(confirmSpy).toHaveBeenCalled();
+      expect(formatConsoleMessages(consoleErrorSpy.mock.calls)).not.toContain('[antd: Modal]');
+    } finally {
+      confirmSpy.mockRestore();
+      consoleErrorSpy.mockRestore();
+    }
   });
 });

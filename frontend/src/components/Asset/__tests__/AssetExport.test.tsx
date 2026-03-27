@@ -8,6 +8,8 @@ import React from 'react';
 import { renderWithProviders, screen, fireEvent, waitFor } from '@/test/utils/test-helpers';
 import { useMutation } from '@tanstack/react-query';
 
+const formatStderrWrites = (calls: unknown[][]) => calls.map(call => String(call[0] ?? '')).join(' ');
+
 // Mock services
 vi.mock('@/services/assetService', () => ({
   assetService: {
@@ -190,6 +192,7 @@ vi.mock('antd', async importOriginal => {
     type,
     loading,
     disabled,
+    htmlType,
   }: {
     children?: React.ReactNode;
     onClick?: () => void;
@@ -197,8 +200,10 @@ vi.mock('antd', async importOriginal => {
     type?: string;
     loading?: boolean;
     disabled?: boolean;
+    htmlType?: 'button' | 'submit' | 'reset';
   }) => (
     <button
+      type={htmlType ?? 'button'}
       data-testid={`btn-${type || 'default'}`}
       data-loading={loading}
       disabled={disabled}
@@ -482,14 +487,23 @@ describe('AssetExport', () => {
 
   describe('导出按钮点击', () => {
     it('点击导出按钮应该触发导出', async () => {
+      const stderrWriteSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
       renderWithProviders(<AssetExport />);
 
-      const exportButton = screen.getByText('开始导出');
-      fireEvent.click(exportButton);
+      try {
+        const exportButton = screen.getByText('开始导出');
+        fireEvent.click(exportButton);
 
-      await waitFor(() => {
-        expect(mockMutate).toHaveBeenCalled();
-      });
+        await waitFor(() => {
+          expect(mockMutate).toHaveBeenCalled();
+        });
+
+        expect(formatStderrWrites(stderrWriteSpy.mock.calls)).not.toContain(
+          "HTMLFormElement's requestSubmit() method"
+        );
+      } finally {
+        stderrWriteSpy.mockRestore();
+      }
     });
 
     it('导出成功应该显示成功消息', async () => {

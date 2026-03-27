@@ -8,6 +8,12 @@ import React from 'react';
 import { renderWithProviders, screen } from '@/test/utils/test-helpers';
 import { createMockAsset } from '@/test-utils/factories';
 
+const formatConsoleMessages = (calls: unknown[][]) =>
+  calls
+    .flat()
+    .map(value => String(value))
+    .join(' ');
+
 // Mock format utilities
 vi.mock('@/utils/format', () => ({
   formatDate: (date: string, format?: string) =>
@@ -315,6 +321,26 @@ describe('AssetDetailInfo', () => {
   });
 
   describe('面积信息显示', () => {
+    it('经营性资产缺少已出租面积时不应向进度条传递 NaN', () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const asset = createMockAsset({
+        property_nature: '经营性',
+        rentable_area: 600,
+        rented_area: undefined,
+        occupancy_rate: undefined,
+      });
+
+      try {
+        renderWithProviders(<AssetDetailInfo asset={asset} />);
+
+        expect(formatConsoleMessages(consoleErrorSpy.mock.calls)).not.toContain(
+          'Received NaN for the `data-percent` attribute'
+        );
+      } finally {
+        consoleErrorSpy.mockRestore();
+      }
+    });
+
     it('应该显示土地面积', () => {
       const asset = createMockAsset({ land_area: 1000 });
       renderWithProviders(<AssetDetailInfo asset={asset} />);

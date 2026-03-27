@@ -158,21 +158,19 @@ export const GlobalLoadingOverlay: React.FC = () => {
     return null;
   }
 
+  const overlayText =
+    globalLoading.tip !== undefined && globalLoading.tip !== null && globalLoading.tip !== ''
+      ? globalLoading.tip
+      : globalLoading.text !== undefined &&
+          globalLoading.text !== null &&
+          globalLoading.text !== ''
+        ? globalLoading.text
+        : '加载中...';
+
   return (
     <div className={styles.globalLoadingOverlay}>
-      <Spin
-        size="large"
-        tip={
-          globalLoading.tip !== undefined && globalLoading.tip !== null && globalLoading.tip !== ''
-            ? globalLoading.tip
-            : globalLoading.text !== undefined &&
-                globalLoading.text !== null &&
-                globalLoading.text !== ''
-              ? globalLoading.text
-              : '加载中...'
-        }
-        delay={globalLoading.delay}
-      />
+      <Spin size="large" delay={globalLoading.delay} />
+      <div>{overlayText}</div>
     </div>
   );
 };

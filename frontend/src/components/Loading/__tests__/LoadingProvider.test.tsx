@@ -12,6 +12,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import { screen, fireEvent, waitFor } from '@/test/utils/test-helpers';
 
+const formatConsoleMessages = (calls: unknown[][]) =>
+  calls
+    .flat()
+    .map(value => String(value))
+    .join(' ');
+
 describe('LoadingProvider - 组件导入测试', () => {
   it('应该能够导出LoadingProvider', async () => {
     const module = await import('../LoadingProvider');
@@ -72,6 +78,7 @@ describe('LoadingProvider - 基础功能测试', () => {
   it('useLoading应该可以控制全局Loading显示', async () => {
     const { LoadingProvider, GlobalLoadingOverlay, useLoading } =
       await import('../LoadingProvider');
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     const TestComponent = () => {
       const { showGlobalLoading, hideGlobalLoading } = useLoading();
@@ -90,18 +97,25 @@ describe('LoadingProvider - 基础功能测试', () => {
       </LoadingProvider>
     );
 
-    // 初始状态下不应该显示加载遮罩
-    expect(document.querySelector('.ant-spin-spinning')).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByText('Show'));
-    await waitFor(() => {
-      expect(document.querySelector('.ant-spin-spinning')).toBeInTheDocument();
-    });
-
-    fireEvent.click(screen.getByText('Hide'));
-    await waitFor(() => {
+    try {
+      // 初始状态下不应该显示加载遮罩
       expect(document.querySelector('.ant-spin-spinning')).not.toBeInTheDocument();
-    });
+
+      fireEvent.click(screen.getByText('Show'));
+      await waitFor(() => {
+        expect(document.querySelector('.ant-spin-spinning')).toBeInTheDocument();
+      });
+      expect(screen.getByText('Test Tip')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByText('Hide'));
+      await waitFor(() => {
+        expect(document.querySelector('.ant-spin-spinning')).not.toBeInTheDocument();
+      });
+
+      expect(formatConsoleMessages(consoleErrorSpy.mock.calls)).not.toContain('[antd: Spin]');
+    } finally {
+      consoleErrorSpy.mockRestore();
+    }
   });
 
   it('useLocalLoading应该可以切换局部Loading状态', async () => {

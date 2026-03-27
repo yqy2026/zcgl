@@ -8,6 +8,9 @@ import React from 'react';
 import { screen, fireEvent, waitFor } from '@/test/utils/test-helpers';
 import OwnershipForm from '../OwnershipForm';
 import { ownershipService } from '@/services/ownershipService';
+import { projectService } from '@/services/projectService';
+
+const formatStderrWrites = (calls: unknown[][]) => calls.map(call => String(call[0] ?? '')).join(' ');
 
 vi.mock('@/services/ownershipService', () => ({
   ownershipService: {
@@ -49,16 +52,47 @@ describe('OwnershipForm', () => {
     });
   });
 
-  it('应该渲染表单并支持取消', () => {
-    renderWithProviders(
-      <OwnershipForm initialValues={null} onSuccess={onSuccess} onCancel={onCancel} />
-    );
+  it('应该渲染表单并支持取消', async () => {
+    const stderrWriteSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
 
-    expect(screen.getByText('基本信息')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /取\s*消/ })).toBeInTheDocument();
+    try {
+      renderWithProviders(
+        <OwnershipForm initialValues={null} onSuccess={onSuccess} onCancel={onCancel} />
+      );
 
-    fireEvent.click(screen.getByRole('button', { name: /取\s*消/ }));
-    expect(onCancel).toHaveBeenCalledTimes(1);
+      expect(screen.getByText('基本信息')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /取\s*消/ })).toBeInTheDocument();
+
+      await waitFor(() => {
+        expect(projectService.getProjectOptions).toHaveBeenCalledWith('active');
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: /取\s*消/ }));
+      expect(onCancel).toHaveBeenCalledTimes(1);
+      expect(formatStderrWrites(stderrWriteSpy.mock.calls)).not.toContain('not wrapped in act');
+    } finally {
+      stderrWriteSpy.mockRestore();
+    }
+  });
+
+  it('等待项目选项加载后取消时不应输出 act 告警', async () => {
+    const stderrWriteSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+
+    try {
+      renderWithProviders(
+        <OwnershipForm initialValues={null} onSuccess={onSuccess} onCancel={onCancel} />
+      );
+
+      await waitFor(() => {
+        expect(projectService.getProjectOptions).toHaveBeenCalledWith('active');
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: /取\s*消/ }));
+      expect(onCancel).toHaveBeenCalledTimes(1);
+      expect(formatStderrWrites(stderrWriteSpy.mock.calls)).not.toContain('not wrapped in act');
+    } finally {
+      stderrWriteSpy.mockRestore();
+    }
   });
 
   it('填写必填项后应提交创建', async () => {

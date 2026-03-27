@@ -3,9 +3,11 @@
  */
 
 import React from 'react';
-import { renderWithProviders, screen, fireEvent, waitFor } from '@/test/utils/test-helpers';
+import { act, renderWithProviders, screen, fireEvent, waitFor } from '@/test/utils/test-helpers';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import PDFUploadArea from '../PDFUploadArea';
+
+const formatStderrWrites = (calls: unknown[][]) => calls.map(call => String(call[0] ?? '')).join(' ');
 
 // Mock MessageManager
 vi.mock('@/utils/messageManager', () => ({
@@ -136,37 +138,55 @@ describe('PDFUploadArea', () => {
       });
     });
 
-    it('接受有效的 PDF 文件 (通过 MIME 类型)', () => {
+    it('接受有效的 PDF 文件 (通过 MIME 类型)', async () => {
       renderWithProviders(<PDFUploadArea />);
+      const stderrWriteSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
 
       const file = new File(['%PDF-1.4'], 'valid.pdf', { type: 'application/pdf' });
       const input = document.querySelector('input[type="file"]') as HTMLInputElement;
 
-      // 文件验证通过时不会调用 error
-      Object.defineProperty(input, 'files', {
-        value: [file],
-      });
+      try {
+        // 文件验证通过时不会调用 error
+        Object.defineProperty(input, 'files', {
+          value: [file],
+        });
 
-      fireEvent.change(input);
+        await act(async () => {
+          fireEvent.change(input);
+          await Promise.resolve();
+        });
 
-      // 验证 error 没有被调用（验证通过）
-      expect(MessageManager.error).not.toHaveBeenCalled();
+        // 验证 error 没有被调用（验证通过）
+        expect(MessageManager.error).not.toHaveBeenCalled();
+        expect(formatStderrWrites(stderrWriteSpy.mock.calls)).not.toContain('not wrapped in act');
+      } finally {
+        stderrWriteSpy.mockRestore();
+      }
     });
 
-    it('接受 .pdf 扩展名的文件', () => {
+    it('接受 .pdf 扩展名的文件', async () => {
       renderWithProviders(<PDFUploadArea />);
+      const stderrWriteSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
 
       // 即使 MIME 类型不是 application/pdf，扩展名是 .pdf 也应该通过
       const file = new File(['content'], 'document.pdf', { type: '' });
       const input = document.querySelector('input[type="file"]') as HTMLInputElement;
 
-      Object.defineProperty(input, 'files', {
-        value: [file],
-      });
+      try {
+        Object.defineProperty(input, 'files', {
+          value: [file],
+        });
 
-      fireEvent.change(input);
+        await act(async () => {
+          fireEvent.change(input);
+          await Promise.resolve();
+        });
 
-      expect(MessageManager.error).not.toHaveBeenCalled();
+        expect(MessageManager.error).not.toHaveBeenCalled();
+        expect(formatStderrWrites(stderrWriteSpy.mock.calls)).not.toContain('not wrapped in act');
+      } finally {
+        stderrWriteSpy.mockRestore();
+      }
     });
   });
 

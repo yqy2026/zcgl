@@ -85,38 +85,27 @@ const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
       percent,
       status,
       showInfo,
-      strokeWidth,
       strokeColor: getStatusColor(),
     };
+    const lineSize = strokeWidth != null ? { height: strokeWidth } : undefined;
+    const circularSize = size === 'small' ? 80 : size === 'large' ? 120 : 100;
 
     switch (type) {
       case 'line':
-        return <Progress {...commonProps} />;
+        return <Progress {...commonProps} size={lineSize} />;
 
       case 'circle':
-        return (
-          <Progress
-            {...commonProps}
-            type="circle"
-            width={size === 'small' ? 80 : size === 'large' ? 120 : 100}
-          />
-        );
+        return <Progress {...commonProps} type="circle" size={circularSize} />;
 
       case 'dashboard':
-        return (
-          <Progress
-            {...commonProps}
-            type="dashboard"
-            width={size === 'small' ? 80 : size === 'large' ? 120 : 100}
-          />
-        );
+        return <Progress {...commonProps} type="dashboard" size={circularSize} />;
 
       case 'steps':
         return (
           <Steps
             current={current}
             status={status === 'exception' ? 'error' : undefined}
-            direction={direction}
+            orientation={direction}
             size={size === 'large' ? 'default' : size}
             items={steps.map(step => ({
               key: step.title,
@@ -130,21 +119,19 @@ const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
 
       case 'timeline':
         return (
-          <Timeline>
-            {steps.map(step => (
-              <Timeline.Item
-                key={step.title}
-                color={
-                  step.status === 'finish'
-                    ? 'green'
-                    : step.status === 'error'
-                      ? 'red'
-                      : step.status === 'process'
-                        ? 'blue'
-                        : 'gray'
-                }
-                dot={step.icon}
-              >
+          <Timeline
+            items={steps.map(step => ({
+              key: step.title,
+              color:
+                step.status === 'finish'
+                  ? 'green'
+                  : step.status === 'error'
+                    ? 'red'
+                    : step.status === 'process'
+                      ? 'blue'
+                      : 'gray',
+              icon: step.icon,
+              content: (
                 <div>
                   <Text strong>{step.title}</Text>
                   {step.description != null && (
@@ -153,9 +140,9 @@ const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
                     </div>
                   )}
                 </div>
-              </Timeline.Item>
-            ))}
-          </Timeline>
+              ),
+            }))}
+          />
         );
 
       default:
