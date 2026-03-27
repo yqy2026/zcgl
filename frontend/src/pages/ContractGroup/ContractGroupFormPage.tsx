@@ -266,7 +266,7 @@ const ContractGroupFormPage: React.FC = () => {
         <Alert
           type="error"
           showIcon
-          message={isEditMode ? '合同组详情加载失败' : '表单初始化失败'}
+          title={isEditMode ? '合同组详情加载失败' : '表单初始化失败'}
           description={error instanceof Error ? error.message : '未知错误'}
         />
       )}
@@ -280,12 +280,12 @@ const ContractGroupFormPage: React.FC = () => {
               <Alert
                 type="info"
                 showIcon
-                message="编辑页当前只开放后端允许修改的字段"
+                title="编辑页当前只开放后端允许修改的字段"
                 description="经营模式、主体关系、开始日期和资产关联暂不在该页修改，避免前端凭空拼装缺失字段。"
               />
             )}
 
-            {submitError != null && <Alert type="error" showIcon message={submitError} />}
+            {submitError != null && <Alert type="error" showIcon title={submitError} />}
 
             <Card title="基础信息">
               <Space orientation="vertical" size={12}>
