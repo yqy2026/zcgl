@@ -156,7 +156,7 @@ export const SkeletonLoading: React.FC<SkeletonLoadingProps> = ({
   style,
 }) => {
   const renderListSkeleton = () => (
-    <Space direction="vertical" className={styles.listSkeletonSpace} size="small">
+    <Space orientation="vertical" className={styles.listSkeletonSpace} size="small">
       {Array.from({ length: count }).map((_, index) => (
         <Skeleton.Input key={index} active size="large" className={styles.fullWidthInput} />
       ))}
@@ -172,7 +172,7 @@ export const SkeletonLoading: React.FC<SkeletonLoadingProps> = ({
   );
 
   const renderCardSkeleton = () => (
-    <Space direction="vertical" className={styles.cardSkeletonSpace} size="small">
+    <Space orientation="vertical" className={styles.cardSkeletonSpace} size="small">
       <Skeleton.Input active size="large" className={styles.cardSkeletonTitle} />
       <Skeleton.Input active size="small" className={styles.cardSkeletonLine} />
       <Skeleton.Input active size="small" className={styles.cardSkeletonLine} />

@@ -169,7 +169,7 @@ export const ErrorState: React.FC<ErrorStateConfig> = ({
           </div>
         }
         extra={
-          <Space direction="vertical" size="small" className={styles.actionSpace}>
+          <Space orientation="vertical" size="small" className={styles.actionSpace}>
             {/* Primary action */}
             {primaryAction && (
               <Button
@@ -198,7 +198,7 @@ export const ErrorState: React.FC<ErrorStateConfig> = ({
             {/* Technical details */}
             {(showTechnicalDetails || errorDetails) && (
               <Alert
-                message="技术详情"
+                title="技术详情"
                 description={
                   <Text code className={styles.technicalDetailText}>
                     {errorDetails || '暂无详细信息'}
