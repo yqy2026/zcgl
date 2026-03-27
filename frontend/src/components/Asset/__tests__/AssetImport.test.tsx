@@ -9,6 +9,8 @@ import { QueryClient } from '@tanstack/react-query';
 import { screen, fireEvent, waitFor, act, renderWithProviders } from '@/test/utils/test-helpers';
 import AssetImport from '../AssetImport';
 
+const formatStderrWrites = (calls: unknown[][]) => calls.map(call => String(call[0] ?? '')).join(' ');
+
 interface UploadDraggerMockProps {
   children?: React.ReactNode;
   beforeUpload?: (file: File) => boolean;
@@ -80,6 +82,15 @@ vi.mock('@/utils/messageManager', () => ({
     warning: vi.fn(),
     info: vi.fn(),
   },
+}));
+
+vi.mock('@/utils/logger', () => ({
+  createLogger: () => ({
+    error: vi.fn(),
+    warn: vi.fn(),
+    info: vi.fn(),
+    debug: vi.fn(),
+  }),
 }));
 
 // Mock Ant Design components
@@ -244,6 +255,13 @@ const createUploadFile = () => {
 };
 
 describe('AssetImport - 渲染与交互测试', () => {
+  const renderAssetImport = async (options?: { queryClient?: QueryClient }) => {
+    await act(async () => {
+      renderWithProviders(<AssetImport />, options);
+      await Promise.resolve();
+    });
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     uploadDraggerMock.mockClear();
@@ -258,29 +276,43 @@ describe('AssetImport - 渲染与交互测试', () => {
     }
   });
 
-  it('应该渲染初始步骤与上传区域', () => {
-    renderWithProviders(<AssetImport />);
+  it('应该渲染初始步骤与上传区域', async () => {
+    const stderrWriteSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
 
-    expect(screen.getByTestId('steps')).toHaveAttribute('data-current', '0');
-    expect(screen.getByText('下载Excel模板')).toBeInTheDocument();
-    expect(screen.getByTestId('upload-dragger')).toBeInTheDocument();
-    expect(screen.getByText('第一步：下载模板')).toBeInTheDocument();
+    try {
+      await renderAssetImport();
+
+      expect(screen.getByTestId('steps')).toHaveAttribute('data-current', '0');
+      expect(screen.getByText('下载Excel模板')).toBeInTheDocument();
+      expect(screen.getByTestId('upload-dragger')).toBeInTheDocument();
+      expect(screen.getByText('第一步：下载模板')).toBeInTheDocument();
+      expect(formatStderrWrites(stderrWriteSpy.mock.calls)).not.toContain('not wrapped in act');
+    } finally {
+      stderrWriteSpy.mockRestore();
+    }
   });
 
-  it('上传无效类型文件应提示错误且不前进', () => {
-    renderWithProviders(<AssetImport />);
-    const draggerProps = uploadDraggerMock.mock.calls[0][0] as UploadDraggerMockProps;
+  it('上传无效类型文件应提示错误且不前进', async () => {
+    const stderrWriteSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
 
-    const invalidFile = { type: 'text/plain', size: 1024 } as File;
-    act(() => {
-      expect(draggerProps.beforeUpload?.(invalidFile)).toBe(false);
-    });
-    expect(messageErrorMock).toHaveBeenCalledWith('只能上传Excel文件(.xlsx, .xls)');
-    expect(screen.getByTestId('steps')).toHaveAttribute('data-current', '0');
+    try {
+      await renderAssetImport();
+      const draggerProps = uploadDraggerMock.mock.calls[0][0] as UploadDraggerMockProps;
+
+      const invalidFile = { type: 'text/plain', size: 1024 } as File;
+      act(() => {
+        expect(draggerProps.beforeUpload?.(invalidFile)).toBe(false);
+      });
+      expect(messageErrorMock).toHaveBeenCalledWith('只能上传Excel文件(.xlsx, .xls)');
+      expect(screen.getByTestId('steps')).toHaveAttribute('data-current', '0');
+      expect(formatStderrWrites(stderrWriteSpy.mock.calls)).not.toContain('not wrapped in act');
+    } finally {
+      stderrWriteSpy.mockRestore();
+    }
   });
 
   it('上传有效文件应进入步骤1并显示文件名', async () => {
-    renderWithProviders(<AssetImport />);
+    await renderAssetImport();
     const draggerProps = uploadDraggerMock.mock.calls[0][0] as UploadDraggerMockProps;
 
     act(() => {
@@ -304,7 +336,7 @@ describe('AssetImport - 渲染与交互测试', () => {
       processing_time: 5,
     });
 
-    renderWithProviders(<AssetImport />);
+    await renderAssetImport();
     const draggerProps = uploadDraggerMock.mock.calls[0][0] as UploadDraggerMockProps;
     act(() => {
       draggerProps.beforeUpload?.(createUploadFile());
@@ -357,7 +389,7 @@ describe('AssetImport - 渲染与交互测试', () => {
       processing_time: 8,
     });
 
-    renderWithProviders(<AssetImport />, { queryClient });
+    await renderAssetImport({ queryClient });
     const draggerProps = uploadDraggerMock.mock.calls[0][0] as UploadDraggerMockProps;
 
     act(() => {
@@ -382,27 +414,33 @@ describe('AssetImport - 渲染与交互测试', () => {
   });
 
   it('导入失败应提示错误并显示失败摘要', async () => {
+    const stderrWriteSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     importAssetsMock.mockRejectedValue(new Error('Network error'));
 
-    renderWithProviders(<AssetImport />);
-    const draggerProps = uploadDraggerMock.mock.calls[0][0] as UploadDraggerMockProps;
-    act(() => {
-      draggerProps.beforeUpload?.(createUploadFile());
-    });
+    try {
+      await renderAssetImport();
+      const draggerProps = uploadDraggerMock.mock.calls[0][0] as UploadDraggerMockProps;
+      act(() => {
+        draggerProps.beforeUpload?.(createUploadFile());
+      });
 
-    await waitFor(() => {
-      expect(screen.getByTestId('steps')).toHaveAttribute('data-current', '1');
-    });
+      await waitFor(() => {
+        expect(screen.getByTestId('steps')).toHaveAttribute('data-current', '1');
+      });
 
-    await act(async () => {
-      fireEvent.click(screen.getByText('开始导入'));
-    });
+      await act(async () => {
+        fireEvent.click(screen.getByText('开始导入'));
+      });
 
-    await waitFor(() => {
-      expect(screen.getByTestId('steps')).toHaveAttribute('data-current', '2');
-    });
+      await waitFor(() => {
+        expect(screen.getByTestId('steps')).toHaveAttribute('data-current', '2');
+      });
 
-    expect(messageErrorMock).toHaveBeenCalledWith(expect.stringContaining('导入失败'));
-    expect(screen.getByText(/没有数据被导入/)).toBeInTheDocument();
+      expect(messageErrorMock).toHaveBeenCalledWith(expect.stringContaining('导入失败'));
+      expect(screen.getByText(/没有数据被导入/)).toBeInTheDocument();
+      expect(formatStderrWrites(stderrWriteSpy.mock.calls)).not.toContain('[ERROR] [AssetImport]');
+    } finally {
+      stderrWriteSpy.mockRestore();
+    }
   });
 });
