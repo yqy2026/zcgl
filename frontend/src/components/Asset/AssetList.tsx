@@ -666,7 +666,7 @@ const AssetList: React.FC<AssetListProps> = ({
         okButtonProps={{ disabled: !hardDeleteMatch }}
         aria-labelledby="hard-delete-title"
       >
-        <Space direction="vertical" className={styles.hardDeleteSpace}>
+        <Space orientation="vertical" className={styles.hardDeleteSpace}>
           <div id="hard-delete-title">
             此操作不可恢复。请输入物业名称或资产 ID 以确认删除：
             <strong>

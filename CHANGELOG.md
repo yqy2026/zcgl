@@ -20,6 +20,8 @@
 - verify(test-noise-7): `cd frontend && pnpm exec vitest run src/pages/System/__tests__/PromptDashboard.test.tsx --reporter=verbose`（PASS）。
 - fix(test-noise): 收敛第八批产权证详情页噪音。`frontend/src/pages/PropertyCertificate/PropertyCertificateDetailPage.tsx` 的详情区主容器 `Space` 已将废弃的 `direction="vertical"` 替换为 `orientation="vertical"`；新增 `frontend/src/pages/PropertyCertificate/__tests__/PropertyCertificateDetailPage.test.tsx`，用真实 `react-query` + mock service 覆盖详情页正常渲染路径，并锁定该页不再输出 `[antd: Space]` deprecation warning。
 - verify(test-noise-8): `cd frontend && pnpm exec vitest run src/pages/PropertyCertificate/__tests__/PropertyCertificateDetailPage.test.tsx --reporter=verbose`（PASS）。
+- fix(test-noise): 收敛第九批资产列表噪音。`frontend/src/components/Asset/AssetList.tsx` 的 hard-delete modal 内容容器已将 `Space direction` 替换为 `orientation`；新增 `frontend/src/components/Asset/__tests__/AssetList.hard-delete.test.tsx`，以管理员 + 已删除资产场景覆盖“彻底删除”弹窗的真实打开路径，并锁定打开 modal 时不再输出 `[antd: Space]` deprecation warning。
+- verify(test-noise-9): `cd frontend && pnpm exec vitest run src/components/Asset/__tests__/AssetList.test.tsx src/components/Asset/__tests__/AssetList.hard-delete.test.tsx --reporter=verbose`（PASS）；`cd frontend && pnpm lint`（PASS）；`cd frontend && pnpm type-check`（PASS）。当前前端静态扫描下只剩 `PDFImportHelp.tsx` 中的 `Steps direction="vertical"`，该处属于 AntD `Steps` 正常 API，不在本轮 deprecation 清理范围内。
 
 ### 2026-03-25
 - docs(plan): 新增 `REQ-AUTH-002` 设计文档 `docs/plans/2026-03-25-req-auth-002-perspective-context-design.md`，收口方案为“canonical owner/manager route 继续作为前端真值，所有业务请求强制携带 `X-Perspective`，后端统一构建 `PerspectiveContext` 并按单一视角口径执行查询/统计/搜索；资源级 perspective 规则回到 `/auth/me/capabilities`，默认视角失效时进入统一 `PerspectiveResolution` 恢复流程”；`docs/plans/README.md` 已同步登记为活跃待评审方案。

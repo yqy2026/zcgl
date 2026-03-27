@@ -15,6 +15,12 @@ import React from 'react';
 import { renderWithProviders, screen } from '@/test/utils/test-helpers';
 import AssetList from '../AssetList';
 
+const formatConsoleMessages = (calls: unknown[][]) =>
+  calls
+    .flat()
+    .map(value => String(value))
+    .join(' ');
+
 // Mock utility functions
 vi.mock('@/utils/format', () => ({
   formatArea: vi.fn((value: number | undefined) => (value ? `${value} m²` : '-')),
@@ -196,6 +202,27 @@ describe('AssetList - 基础渲染测试', () => {
 
     const table = screen.getByTestId('table');
     expect(table.getAttribute('data-row-count')).toBe('0');
+  });
+
+  it('不应在默认渲染时输出 antd Space 废弃告警', () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const mockHandlers = {
+      onEdit: vi.fn(),
+      onDelete: vi.fn(),
+      onRestore: vi.fn(),
+      onHardDelete: vi.fn(),
+      onView: vi.fn(),
+      onViewHistory: vi.fn(),
+      onTableChange: vi.fn(),
+    };
+
+    try {
+      renderWithProviders(<AssetList data={mockData} loading={false} {...mockHandlers} />);
+
+      expect(formatConsoleMessages(consoleErrorSpy.mock.calls)).not.toContain('[antd: Space]');
+    } finally {
+      consoleErrorSpy.mockRestore();
+    }
   });
 });
 
