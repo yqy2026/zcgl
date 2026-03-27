@@ -27,7 +27,7 @@ const PromptDashboardSuggestionsCard: React.FC<PromptDashboardSuggestionsCardPro
     }
 
     return (
-      <Space direction="vertical" size={12} className={styles.suggestionsList}>
+      <Space orientation="vertical" size={12} className={styles.suggestionsList}>
         {suggestions.map(suggestion => {
           const priorityConfig = getPriorityConfig(suggestion.priority);
           return (

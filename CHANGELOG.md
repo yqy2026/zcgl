@@ -16,6 +16,8 @@
 - verify(test-noise-5): `cd frontend && pnpm exec vitest run src/pages/ContractGroup/__tests__/ContractGroupFormPage.test.tsx --reporter=verbose`（PASS）。
 - fix(test-noise): 收敛第六批通用组件噪音。`frontend/src/components/Common/Loading.tsx` 的 `SkeletonLoading` 已将 `Space direction` 替换为 `orientation`；`frontend/src/components/Common/ErrorState.tsx` 则同时把操作区 `Space direction` 改为 `orientation`，并将技术详情 `Alert` 从 `message` 切换到 `title`。新增回归 `frontend/src/components/Common/__tests__/Loading.test.tsx` 与 `frontend/src/components/Common/__tests__/ErrorState.test.tsx`，锁定这两个组件在常用渲染场景下不再输出 AntD deprecation warning。
 - verify(test-noise-6): `cd frontend && pnpm exec vitest run src/components/Common/__tests__/Loading.test.tsx src/components/Common/__tests__/ErrorState.test.tsx --reporter=verbose`（PASS）。
+- fix(test-noise): 收敛第七批 Prompt Dashboard 噪音。`frontend/src/pages/System/PromptDashboard/components/PromptDashboardSuggestionsCard.tsx` 已将建议列表容器的 `Space direction` 替换为 `orientation`；`frontend/src/pages/System/__tests__/PromptDashboard.test.tsx` 新增“渲染建议区时不再输出 `[antd: Space]`”回归，锁定该页在正常数据和错误态渲染时不再打 AntD deprecation warning。
+- verify(test-noise-7): `cd frontend && pnpm exec vitest run src/pages/System/__tests__/PromptDashboard.test.tsx --reporter=verbose`（PASS）。
 
 ### 2026-03-25
 - docs(plan): 新增 `REQ-AUTH-002` 设计文档 `docs/plans/2026-03-25-req-auth-002-perspective-context-design.md`，收口方案为“canonical owner/manager route 继续作为前端真值，所有业务请求强制携带 `X-Perspective`，后端统一构建 `PerspectiveContext` 并按单一视角口径执行查询/统计/搜索；资源级 perspective 规则回到 `/auth/me/capabilities`，默认视角失效时进入统一 `PerspectiveResolution` 恢复流程”；`docs/plans/README.md` 已同步登记为活跃待评审方案。

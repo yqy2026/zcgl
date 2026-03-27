@@ -10,6 +10,12 @@ vi.mock('../PromptDashboard/hooks/usePromptDashboardData', () => ({
   usePromptDashboardData: vi.fn(),
 }));
 
+const formatConsoleMessages = (calls: unknown[][]) =>
+  calls
+    .flat()
+    .map(value => String(value))
+    .join(' ');
+
 const buildHookResult = (overrides: Record<string, unknown> = {}) => {
   return {
     prompts: [],
@@ -123,6 +129,19 @@ describe('PromptDashboard', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '刷新监控数据' }));
     expect(handleRefresh).toHaveBeenCalled();
+  });
+
+  it('does not emit antd space deprecation warnings while rendering suggestions', () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      renderWithProviders(<PromptDashboard />);
+
+      expect(screen.getByText('优化建议')).toBeInTheDocument();
+      expect(formatConsoleMessages(consoleErrorSpy.mock.calls)).not.toContain('[antd: Space]');
+    } finally {
+      consoleErrorSpy.mockRestore();
+    }
   });
 
   it('renders error alert when data load failed', () => {
