@@ -303,7 +303,7 @@ const PropertyCertificateDetailPage: React.FC = () => {
       }
     >
       {certificate && (
-        <Space direction="vertical" size="large" className={styles.fullWidthStack}>
+        <Space orientation="vertical" size="large" className={styles.fullWidthStack}>
           <Row gutter={[24, 24]}>
             <Col span={24}>
               <Card title="基础信息">
