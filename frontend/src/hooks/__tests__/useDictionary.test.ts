@@ -4,9 +4,11 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, waitFor } from '@/test/utils/test-helpers';
+import { act, renderHook, waitFor } from '@/test/utils/test-helpers';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
+
+const formatStderrWrites = (calls: unknown[][]) => calls.map(call => String(call[0] ?? '')).join(' ');
 
 // =============================================================================
 // Mock dictionaryService
@@ -300,24 +302,33 @@ describe('useDictionaryManager', () => {
   it('should create dictionary successfully', async () => {
     mockGetAvailableTypes.mockReturnValue([]);
     mockQuickCreate.mockResolvedValue({ success: true });
+    const stderrWriteSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
 
-    const { useDictionaryManager } = await import('../useDictionary');
-    const { result } = renderHook(() => useDictionaryManager(), {
-      wrapper: createWrapper(),
-    });
+    try {
+      const { useDictionaryManager } = await import('../useDictionary');
+      const { result } = renderHook(() => useDictionaryManager(), {
+        wrapper: createWrapper(),
+      });
 
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
 
-    const success = await result.current.createDictionary('new_type', [
-      { label: '新选项', value: 'new_option' },
-    ]);
+      let success = false;
+      await act(async () => {
+        success = await result.current.createDictionary('new_type', [
+          { label: '新选项', value: 'new_option' },
+        ]);
+      });
 
-    expect(success).toBe(true);
-    expect(mockQuickCreate).toHaveBeenCalledWith('new_type', {
-      options: [{ label: '新选项', value: 'new_option' }],
-    });
+      expect(success).toBe(true);
+      expect(mockQuickCreate).toHaveBeenCalledWith('new_type', {
+        options: [{ label: '新选项', value: 'new_option' }],
+      });
+      expect(formatStderrWrites(stderrWriteSpy.mock.calls)).not.toContain('not wrapped in act');
+    } finally {
+      stderrWriteSpy.mockRestore();
+    }
   });
 
   it('should handle create dictionary failure', async () => {
@@ -341,20 +352,29 @@ describe('useDictionaryManager', () => {
   it('should delete dictionary successfully', async () => {
     mockGetAvailableTypes.mockReturnValue([{ code: 'to_delete', name: '待删除' }]);
     mockDeleteType.mockResolvedValue({ success: true });
+    const stderrWriteSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
 
-    const { useDictionaryManager } = await import('../useDictionary');
-    const { result } = renderHook(() => useDictionaryManager(), {
-      wrapper: createWrapper(),
-    });
+    try {
+      const { useDictionaryManager } = await import('../useDictionary');
+      const { result } = renderHook(() => useDictionaryManager(), {
+        wrapper: createWrapper(),
+      });
 
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
 
-    const success = await result.current.deleteDictionary('to_delete');
+      let success = false;
+      await act(async () => {
+        success = await result.current.deleteDictionary('to_delete');
+      });
 
-    expect(success).toBe(true);
-    expect(mockDeleteType).toHaveBeenCalledWith('to_delete');
+      expect(success).toBe(true);
+      expect(mockDeleteType).toHaveBeenCalledWith('to_delete');
+      expect(formatStderrWrites(stderrWriteSpy.mock.calls)).not.toContain('not wrapped in act');
+    } finally {
+      stderrWriteSpy.mockRestore();
+    }
   });
 
   it('should handle delete dictionary failure', async () => {
@@ -382,23 +402,31 @@ describe('useDictionaryManager', () => {
         { code: 'initial', name: '初始' },
         { code: 'new', name: '新增' },
       ]);
+    const stderrWriteSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
 
-    const { useDictionaryManager } = await import('../useDictionary');
-    const { result } = renderHook(() => useDictionaryManager(), {
-      wrapper: createWrapper(),
-    });
+    try {
+      const { useDictionaryManager } = await import('../useDictionary');
+      const { result } = renderHook(() => useDictionaryManager(), {
+        wrapper: createWrapper(),
+      });
 
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
 
-    expect(result.current.types).toEqual(['initial']);
+      expect(result.current.types).toEqual(['initial']);
 
-    await result.current.refresh();
+      await act(async () => {
+        await result.current.refresh();
+      });
 
-    await waitFor(() => {
-      expect(result.current.types).toEqual(['initial', 'new']);
-    });
+      await waitFor(() => {
+        expect(result.current.types).toEqual(['initial', 'new']);
+      });
+      expect(formatStderrWrites(stderrWriteSpy.mock.calls)).not.toContain('not wrapped in act');
+    } finally {
+      stderrWriteSpy.mockRestore();
+    }
   });
 
   it('should handle getAvailableTypes exception', async () => {

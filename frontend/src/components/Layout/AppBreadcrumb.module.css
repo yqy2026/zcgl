@@ -59,7 +59,7 @@
   font-weight: var(--font-weight-medium);
 }
 
-@media (max-width: var(--breakpoint-sm)) {
+@media (max-width: 48rem) {
   .homeLink,
   .breadcrumbLink,
   .currentLabel {

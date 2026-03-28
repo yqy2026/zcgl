@@ -38,6 +38,11 @@
   margin-top: var(--spacing-xs);
 }
 
+.notificationEmptyState {
+  margin-top: var(--spacing-xs);
+  padding: var(--spacing-xl) 0;
+}
+
 .notificationItem {
   cursor: pointer;
   border-radius: var(--card-radius);
@@ -62,6 +67,26 @@
 .notificationItemUnread {
   background: var(--color-info-light);
   border-color: var(--color-primary);
+}
+
+.notificationItemContent {
+  display: flex;
+  gap: var(--spacing-lg);
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.notificationMain {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  gap: var(--spacing-md);
+  align-items: flex-start;
+}
+
+.notificationCopy {
+  min-width: 0;
+  flex: 1;
 }
 
 .notificationAvatar {
@@ -126,6 +151,17 @@
   min-height: var(--button-height-md);
 }
 
+.notificationActions {
+  flex-shrink: 0;
+  align-items: flex-start;
+}
+
+.notificationPagination {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--spacing-md);
+}
+
 .priorityTag,
 .typeTag,
 .statusTag {
@@ -187,9 +223,19 @@
   min-height: var(--button-height-md);
 }
 
-@media (max-width: var(--breakpoint-sm)) {
+@media (max-width: 48rem) {
   .notificationItem {
     padding: var(--spacing-md) var(--spacing-lg);
+  }
+
+  .notificationItemContent,
+  .notificationMain {
+    flex-direction: column;
+  }
+
+  .notificationActions {
+    width: 100%;
+    justify-content: flex-start;
   }
 
   .headerActionButton,

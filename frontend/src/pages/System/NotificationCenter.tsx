@@ -1,5 +1,17 @@
 import React, { useEffect, useCallback, useMemo, useState } from 'react';
-import { List, Card, Typography, Tag, Button, Space, Empty, Tabs, Badge, Spin, Modal } from 'antd';
+import {
+  Card,
+  Typography,
+  Tag,
+  Button,
+  Space,
+  Empty,
+  Tabs,
+  Badge,
+  Spin,
+  Modal,
+  Pagination,
+} from 'antd';
 import { MessageManager } from '@/utils/messageManager';
 import {
   BellOutlined,
@@ -287,97 +299,102 @@ const NotificationCenter: React.FC = () => {
           <div className={styles.loadingContainer}>
             <Spin size="large" />
           </div>
+        ) : notifications.length === 0 ? (
+          <div className={styles.notificationEmptyState}>
+            <Empty description="暂无通知" />
+          </div>
         ) : (
-          <List
-            className={styles.notificationList}
-            dataSource={notifications}
-            pagination={{
-              current: pagination.current,
-              pageSize: pagination.pageSize,
-              total: pagination.total,
-              onChange: (page, pageSize) => {
-                handlePageChange(page, pageSize);
-              },
-            }}
-            locale={{ emptyText: <Empty description="暂无通知" /> }}
-            renderItem={item => (
-              <List.Item
-                actions={[
-                  <Button
-                    key="read"
-                    type="text"
-                    className={styles.listActionButton}
-                    disabled={item.is_read}
-                    onClick={e => {
-                      e.stopPropagation();
-                      handleMarkAsRead(item.id);
-                    }}
-                    aria-label={`标记通知 ${item.title} 为已读`}
-                  >
-                    {item.is_read ? '已读' : '标为已读'}
-                  </Button>,
-                  <Button
-                    key="delete"
-                    type="text"
-                    danger
-                    className={styles.listActionButton}
-                    onClick={e => {
-                      e.stopPropagation();
-                      handleDelete(item.id);
-                    }}
-                    aria-label={`删除通知 ${item.title}`}
-                  >
-                    删除
-                  </Button>,
-                ]}
-                className={[
-                  styles.notificationItem,
-                  item.is_read ? '' : styles.notificationItemUnread,
-                ].join(' ')}
-                role="button"
-                tabIndex={0}
-                onClick={() => handleItemClick(item)}
-                onKeyDown={event => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    handleItemClick(item);
-                  }
-                }}
-              >
-                <List.Item.Meta
-                  avatar={<div className={styles.notificationAvatar}>{getIcon(item.type)}</div>}
-                  title={
-                    <Space size={8} className={styles.notificationTitle}>
-                      {item.is_read === false && (
-                        <Tag className={[styles.statusTag, styles.tonePrimary].join(' ')}>未读</Tag>
-                      )}
-                      <Text strong={!item.is_read} className={styles.notificationTitleText}>
-                        {item.title}
-                      </Text>
-                      {getTypeTag(item.type)}
-                      {getPriorityTag(item.priority)}
-                      <Text type="secondary" className={styles.notificationTime}>
-                        {dayjs(item.created_at).fromNow()}
-                      </Text>
+          <div className={styles.notificationList} role="list">
+            {notifications.map(item => (
+              <div key={item.id} role="listitem">
+                <div
+                  className={[
+                    styles.notificationItem,
+                    item.is_read ? '' : styles.notificationItemUnread,
+                  ].join(' ')}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => handleItemClick(item)}
+                  onKeyDown={event => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      handleItemClick(item);
+                    }
+                  }}
+                >
+                  <div className={styles.notificationItemContent}>
+                    <div className={styles.notificationMain}>
+                      <div className={styles.notificationAvatar}>{getIcon(item.type)}</div>
+                      <div className={styles.notificationCopy}>
+                        <Space size={8} className={styles.notificationTitle}>
+                          {item.is_read === false && (
+                            <Tag className={[styles.statusTag, styles.tonePrimary].join(' ')}>
+                              未读
+                            </Tag>
+                          )}
+                          <Text strong={!item.is_read} className={styles.notificationTitleText}>
+                            {item.title}
+                          </Text>
+                          {getTypeTag(item.type)}
+                          {getPriorityTag(item.priority)}
+                          <Text type="secondary" className={styles.notificationTime}>
+                            {dayjs(item.created_at).fromNow()}
+                          </Text>
+                        </Space>
+                        <Paragraph
+                          ellipsis={{ rows: 2 }}
+                          className={[
+                            styles.notificationDescription,
+                            item.is_read
+                              ? styles.notificationDescriptionRead
+                              : styles.notificationDescriptionUnread,
+                          ].join(' ')}
+                        >
+                          {item.content}
+                        </Paragraph>
+                      </div>
+                    </div>
+                    <Space size={8} className={styles.notificationActions}>
+                      <Button
+                        type="text"
+                        className={styles.listActionButton}
+                        disabled={item.is_read}
+                        onClick={e => {
+                          e.stopPropagation();
+                          handleMarkAsRead(item.id);
+                        }}
+                        aria-label={`标记通知 ${item.title} 为已读`}
+                      >
+                        {item.is_read ? '已读' : '标为已读'}
+                      </Button>
+                      <Button
+                        type="text"
+                        danger
+                        className={styles.listActionButton}
+                        onClick={e => {
+                          e.stopPropagation();
+                          handleDelete(item.id);
+                        }}
+                        aria-label={`删除通知 ${item.title}`}
+                      >
+                        删除
+                      </Button>
                     </Space>
-                  }
-                  description={
-                    <Paragraph
-                      ellipsis={{ rows: 2 }}
-                      className={[
-                        styles.notificationDescription,
-                        item.is_read
-                          ? styles.notificationDescriptionRead
-                          : styles.notificationDescriptionUnread,
-                      ].join(' ')}
-                    >
-                      {item.content}
-                    </Paragraph>
-                  }
+                  </div>
+                </div>
+              </div>
+            ))}
+            {pagination.total > pagination.pageSize && (
+              <div className={styles.notificationPagination}>
+                <Pagination
+                  current={pagination.current}
+                  pageSize={pagination.pageSize}
+                  total={pagination.total}
+                  onChange={handlePageChange}
                 />
-              </List.Item>
+              </div>
             )}
-          />
+          </div>
         )}
       </Card>
     </PageContainer>

@@ -4,6 +4,8 @@ import NotificationCenter from '../NotificationCenter';
 import { notificationService } from '@/services/notificationService';
 import { MessageManager } from '@/utils/messageManager';
 
+const formatStderrWrites = (calls: unknown[][]) => calls.map(call => String(call[0] ?? '')).join(' ');
+
 const mockNavigate = vi.fn();
 
 vi.mock('react-router-dom', async () => {
@@ -30,6 +32,102 @@ vi.mock('@/utils/messageManager', () => ({
     warning: vi.fn(),
     info: vi.fn(),
   },
+}));
+
+vi.mock('@/components/Common/PageContainer', () => ({
+  default: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="page-container">{children}</div>
+  ),
+}));
+
+vi.mock('antd', () => ({
+  Card: ({
+    title,
+    extra,
+    children,
+  }: {
+    title?: React.ReactNode;
+    extra?: React.ReactNode;
+    children?: React.ReactNode;
+  }) => (
+    <section>
+      <div>{title}</div>
+      <div>{extra}</div>
+      <div>{children}</div>
+    </section>
+  ),
+  Typography: {
+    Text: ({
+      children,
+      className,
+    }: {
+      children?: React.ReactNode;
+      className?: string;
+    }) => <span className={className}>{children}</span>,
+    Paragraph: ({
+      children,
+      className,
+    }: {
+      children?: React.ReactNode;
+      className?: string;
+    }) => <p className={className}>{children}</p>,
+  },
+  Tag: ({ children, className }: { children?: React.ReactNode; className?: string }) => (
+    <span className={className}>{children}</span>
+  ),
+  Button: ({
+    children,
+    onClick,
+    disabled,
+    className,
+    'aria-label': ariaLabel,
+  }: {
+    children?: React.ReactNode;
+    onClick?: React.MouseEventHandler<HTMLButtonElement>;
+    disabled?: boolean;
+    className?: string;
+    'aria-label'?: string;
+  }) => (
+    <button type="button" onClick={onClick} disabled={disabled} className={className} aria-label={ariaLabel}>
+      {children}
+    </button>
+  ),
+  Space: ({ children, className }: { children?: React.ReactNode; className?: string }) => (
+    <div className={className}>{children}</div>
+  ),
+  Empty: ({ description }: { description?: React.ReactNode }) => <div>{description}</div>,
+  Tabs: ({
+    items,
+    onChange,
+    className,
+  }: {
+    items?: Array<{ key: string; label: React.ReactNode }>;
+    onChange?: (key: string) => void;
+    className?: string;
+  }) => (
+    <div className={className}>
+      {items?.map(item => (
+        <button key={item.key} type="button" onClick={() => onChange?.(item.key)}>
+          {item.label}
+        </button>
+      ))}
+    </div>
+  ),
+  Badge: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
+  Spin: () => <div>loading</div>,
+  Modal: {
+    confirm: vi.fn(),
+  },
+  Pagination: () => <div>pagination</div>,
+}));
+
+vi.mock('../NotificationCenter.module.css', () => ({
+  default: new Proxy(
+    {},
+    {
+      get: (_target, key) => String(key),
+    }
+  ),
 }));
 
 describe('NotificationCenter legacy contract navigation retirement', () => {
@@ -60,17 +158,26 @@ describe('NotificationCenter legacy contract navigation retirement', () => {
   });
 
   it('shows a migration notice instead of navigating to the retired rental contract detail route', async () => {
-    renderWithProviders(<NotificationCenter />);
+    const stderrWriteSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
 
-    expect(await screen.findByText('合同到期提醒')).toBeInTheDocument();
-    fireEvent.click(screen.getByText('合同到期提醒'));
+    try {
+      renderWithProviders(<NotificationCenter />);
 
-    await waitFor(() => {
-      expect(notificationService.markAsRead).toHaveBeenCalledWith('notif-1');
-      expect(MessageManager.info).toHaveBeenCalledWith(
-        '合同通知详情入口迁移中，请改从新 contract/contract-group 页面处理'
-      );
-    });
-    expect(mockNavigate).not.toHaveBeenCalled();
+      expect(await screen.findByText('合同到期提醒')).toBeInTheDocument();
+      fireEvent.click(screen.getByText('合同到期提醒'));
+
+      await waitFor(() => {
+        expect(notificationService.markAsRead).toHaveBeenCalledWith('notif-1');
+        expect(MessageManager.info).toHaveBeenCalledWith(
+          '合同通知详情入口迁移中，请改从新 contract/contract-group 页面处理'
+        );
+      });
+      const stderr = formatStderrWrites(stderrWriteSpy.mock.calls);
+      expect(stderr).not.toContain('Could not parse CSS stylesheet');
+      expect(stderr).not.toContain('[antd: List]');
+      expect(mockNavigate).not.toHaveBeenCalled();
+    } finally {
+      stderrWriteSpy.mockRestore();
+    }
   });
 });
