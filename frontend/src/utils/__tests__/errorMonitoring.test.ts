@@ -8,9 +8,13 @@ vi.mock('@/utils/runtimeEnv', () => ({
   isProductionMode: () => runtimeEnvState.isProduction,
 }));
 
-vi.mock('@/api/config', () => ({
-  createApiUrl: (path: string) => `http://test.local${path}`,
-}));
+vi.mock('@/api/config', async () => {
+  const actual = await vi.importActual<typeof import('@/api/config')>('@/api/config');
+  return {
+    ...actual,
+    createApiUrl: (path: string) => `http://test.local${path}`,
+  };
+});
 
 const loadModule = async () => {
   vi.resetModules();
@@ -92,6 +96,7 @@ describe('errorMonitoring', () => {
 
   it('uses Sentry APIs when Sentry exists on window', async () => {
     const module = await loadModule();
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const sentry = {
       captureException: vi.fn(),
       captureMessage: vi.fn(),
@@ -124,6 +129,13 @@ describe('errorMonitoring', () => {
     });
     expect(sentry.setUser).toHaveBeenNthCalledWith(2, null);
     expect(module.getErrorQueueSize()).toBe(0);
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      '[ErrorMonitoring]',
+      expect.objectContaining({
+        message: 'sentry-error',
+        context: { page: 'dashboard' },
+      })
+    );
   });
 
   it('logs non-error message to console when Sentry is unavailable', async () => {
@@ -194,6 +206,7 @@ describe('errorMonitoring', () => {
   it('captures unhandledrejection and error events through global handlers', async () => {
     const addListenerSpy = vi.spyOn(window, 'addEventListener');
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const consoleInfoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
     const module = await loadModule();
     const fetchMock = vi.fn().mockResolvedValue({ ok: true });
     vi.stubGlobal('fetch', fetchMock);
@@ -223,6 +236,10 @@ describe('errorMonitoring', () => {
     expect(payload.errors[1]?.message).toBe('window crashed');
     expect(payload.errors[1]?.context.type).toBe('uncaughterror');
     expect(consoleErrorSpy).toHaveBeenCalled();
+    expect(consoleInfoSpy).toHaveBeenCalledWith(
+      '[ErrorMonitoring] Running in development mode - logging to console'
+    );
+    expect(consoleInfoSpy).toHaveBeenCalledWith('[ErrorMonitoring] Sent 2 errors to server');
   });
 
   it('supports empty queue flush and no-op user context updates without Sentry', async () => {

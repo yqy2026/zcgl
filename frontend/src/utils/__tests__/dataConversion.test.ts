@@ -12,15 +12,19 @@ import {
 } from '../dataConversion';
 
 // Mock DecimalUtils
-vi.mock('@/types/asset', () => ({
-  DecimalUtils: {
-    parseDecimal: (value: string) => parseFloat(value),
-    formatDecimal: (value: number) => value.toString(),
-    safeSubtract: (a: number, b: number) => a - b,
-    safeMultiply: (a: number, b: number) => a * b,
-    safeDivide: (a: number, b: number) => a / b,
-  },
-}));
+vi.mock('@/types/asset', async () => {
+  const actual = await vi.importActual<typeof import('@/types/asset')>('@/types/asset');
+  return {
+    ...actual,
+    DecimalUtils: {
+      parseDecimal: (value: string) => parseFloat(value),
+      formatDecimal: (value: number) => value.toString(),
+      safeSubtract: (a: number, b: number) => a - b,
+      safeMultiply: (a: number, b: number) => a * b,
+      safeDivide: (a: number, b: number) => a / b,
+    },
+  };
+});
 
 describe('convertBackendToFrontend', () => {
   describe('基本类型处理', () => {
