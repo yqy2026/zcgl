@@ -8,6 +8,8 @@ import routeCache, {
   useRouteCacheState,
 } from '../routeCache';
 
+const formatStderrWrites = (calls: unknown[][]) => calls.map(call => String(call[0] ?? '')).join(' ');
+
 describe('routeCache', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -96,9 +98,25 @@ describe('routeCache', () => {
     const loader = vi.fn(async () => {
       throw new Error('preload failed');
     });
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const stderrWriteSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
 
-    await expect(state.preloadRoute('broken', loader)).rejects.toThrow('preload failed');
-    expect(loader).toHaveBeenCalledTimes(1);
+    try {
+      await expect(state.preloadRoute('broken', loader)).rejects.toThrow('preload failed');
+      expect(loader).toHaveBeenCalledTimes(1);
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[ERROR] [RouteCache] Failed to preload route: broken'),
+        expect.objectContaining({
+          error: 'preload failed',
+        })
+      );
+      expect(formatStderrWrites(stderrWriteSpy.mock.calls)).not.toContain(
+        'Failed to preload route: broken'
+      );
+    } finally {
+      consoleErrorSpy.mockRestore();
+      stderrWriteSpy.mockRestore();
+    }
   });
 
   it('starts cleanup timer once and stops it explicitly', () => {

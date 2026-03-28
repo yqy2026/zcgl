@@ -3,6 +3,8 @@
 ## [Unreleased] - 2026-03-06
 
 ### 2026-03-28
+- fix(test-noise): 收敛 `responseExtractor` 与 `routeCache` 的失败路径日志噪音。`frontend/src/utils/__tests__/responseExtractor.test.ts` 现显式拦截 `extractData()` 在错误响应下的 `console.warn`，并用 stderr 断言锁定“返回默认值但不向终端输出警告”；`frontend/src/utils/__tests__/routeCache.test.ts` 则在 `preloadRoute()` 异常分支中接管 `console.error` 并断言格式化后的 logger payload，避免测试正常覆盖错误路径时继续向 stderr 打出 `[ERROR] [RouteCache] Failed to preload route`。
+- verify(test-noise-utils): `cd frontend && pnpm exec vitest run src/utils/__tests__/responseExtractor.test.ts src/utils/__tests__/routeCache.test.ts --reporter=verbose`（PASS）；`cd frontend && pnpm lint`（PASS）；`cd frontend && pnpm type-check`（PASS）。
 - fix(test-noise): 收敛导出下载链路的 jsdom 导航噪音。`frontend/src/utils/__tests__/exportAnalytics.test.ts` 与 `frontend/src/pages/Assets/__tests__/AssetListPage.test.tsx` 现统一在测试内拦截 `document.createElement('a')` 生成的下载锚点点击，改为可断言的 `click` 替身，并新增 stderr 断言，锁定导出 CSV / PDF fallback 与资产列表“导出全部”流程不再输出 `Not implemented: navigation to another Document` 噪音，同时保留对 `href`、`download`、`createObjectURL/revokeObjectURL` 与成功提示的既有行为覆盖。
 - verify(test-noise-export): `cd frontend && pnpm exec vitest run src/utils/__tests__/exportAnalytics.test.ts src/pages/Assets/__tests__/AssetListPage.test.tsx --reporter=verbose`（PASS）；`cd frontend && pnpm lint`（PASS）；`cd frontend && pnpm type-check`（PASS）。
 

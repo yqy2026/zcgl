@@ -8,6 +8,8 @@ import { ResponseExtractor, ApiErrorHandler } from '../responseExtractor';
 import { AxiosResponse, AxiosError } from 'axios';
 import type { ApiClientError, ApiErrorType } from '@/types/apiResponse';
 
+const formatStderrWrites = (calls: unknown[][]) => calls.map(call => String(call[0] ?? '')).join(' ');
+
 // =============================================================================
 // Mock数据
 // =============================================================================
@@ -240,9 +242,19 @@ describe('ResponseExtractor - 便捷方法', () => {
 
     it('应该返回默认值当提取失败时', () => {
       const defaultValue = { id: 0, name: '默认数据' };
-      const data = ResponseExtractor.extractData(errorResponse, defaultValue);
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const stderrWriteSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
 
-      expect(data).toEqual(defaultValue);
+      try {
+        const data = ResponseExtractor.extractData(errorResponse, defaultValue);
+
+        expect(data).toEqual(defaultValue);
+        expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('响应数据提取失败'));
+        expect(formatStderrWrites(stderrWriteSpy.mock.calls)).not.toContain('响应数据提取失败');
+      } finally {
+        consoleSpy.mockRestore();
+        stderrWriteSpy.mockRestore();
+      }
     });
 
     it('提取失败时应该显示警告', () => {
