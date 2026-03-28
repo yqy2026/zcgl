@@ -2,6 +2,10 @@
 
 ## [Unreleased] - 2026-03-06
 
+### 2026-03-28
+- fix(test-noise): 收敛导出下载链路的 jsdom 导航噪音。`frontend/src/utils/__tests__/exportAnalytics.test.ts` 与 `frontend/src/pages/Assets/__tests__/AssetListPage.test.tsx` 现统一在测试内拦截 `document.createElement('a')` 生成的下载锚点点击，改为可断言的 `click` 替身，并新增 stderr 断言，锁定导出 CSV / PDF fallback 与资产列表“导出全部”流程不再输出 `Not implemented: navigation to another Document` 噪音，同时保留对 `href`、`download`、`createObjectURL/revokeObjectURL` 与成功提示的既有行为覆盖。
+- verify(test-noise-export): `cd frontend && pnpm exec vitest run src/utils/__tests__/exportAnalytics.test.ts src/pages/Assets/__tests__/AssetListPage.test.tsx --reporter=verbose`（PASS）；`cd frontend && pnpm lint`（PASS）；`cd frontend && pnpm type-check`（PASS）。
+
 ### 2026-03-26
 - fix(test-noise): 收敛首批高频前端测试噪音。`frontend/src/components/Layout/AppBreadcrumb.tsx` 现为 breadcrumb items 显式生成稳定 `key`，并在 `frontend/src/components/Layout/__tests__/AppBreadcrumb.test.tsx` 锁定 `home` / path-based key，不再出现重复 key 警告；`frontend/src/pages/System/DataPolicyManagementPage.tsx` 已将 `Space direction` 全部替换为 `orientation`，并把 `Alert message` 替换为 `title`，对应测试新增“不产生 antd 废弃警告”断言。
 - fix(test-noise): `frontend/src/components/Notification/NotificationCenter.tsx` 已移除已废弃的 AntD `List` 组件，改为显式通知列表结构；`frontend/src/components/Notification/__tests__/NotificationCenter.test.tsx` 同时补齐 `MemoryRouter future` 配置与日志断言，收口 `List` 废弃告警和 React Router future flag 噪音。`frontend/src/components/Monitoring/__tests__/ApiMonitor.test.tsx` 则将 fake timers 推进与卸载过程包进 `act(...)` 边界，消除高频 `not wrapped in act(...)` 告警。

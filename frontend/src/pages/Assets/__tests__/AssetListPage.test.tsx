@@ -122,6 +122,27 @@ vi.mock('@/routes/perspective', () => ({
 import { assetService } from '@/services/assetService';
 import { MessageManager } from '@/utils/messageManager';
 
+const formatStderrWrites = (calls: unknown[][]) => calls.map(call => String(call[0] ?? '')).join(' ');
+const realCreateElement = document.createElement.bind(document);
+
+const stubDownloadLinkClick = () => {
+  const clickSpy = vi.fn();
+  const createElementSpy = vi.spyOn(document, 'createElement').mockImplementation(((tagName: string) => {
+    const element = realCreateElement(tagName);
+
+    if (tagName.toLowerCase() === 'a') {
+      (element as HTMLAnchorElement).click = clickSpy;
+    }
+
+    return element;
+  }) as typeof document.createElement);
+
+  return {
+    clickSpy,
+    restore: () => createElementSpy.mockRestore(),
+  };
+};
+
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
@@ -479,19 +500,30 @@ describe('AssetListPage', () => {
     it('点击导出全部触发导出', async () => {
       const mockBlob = new Blob(['test'], { type: 'application/xlsx' });
       vi.mocked(assetService.exportAssets).mockResolvedValue(mockBlob);
+      const stderrWriteSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+      const downloadLink = stubDownloadLinkClick();
 
       // Mock URL.createObjectURL
       global.URL.createObjectURL = vi.fn(() => 'blob:test');
       global.URL.revokeObjectURL = vi.fn();
 
-      renderPage();
+      try {
+        renderPage();
 
-      fireEvent.click(screen.getByText('导出全部'));
+        fireEvent.click(screen.getByText('导出全部'));
 
-      await waitFor(() => {
-        expect(assetService.exportAssets).toHaveBeenCalledWith({}, { format: 'xlsx' });
-        expect(MessageManager.success).toHaveBeenCalledWith('资产数据导出成功');
-      });
+        await waitFor(() => {
+          expect(assetService.exportAssets).toHaveBeenCalledWith({}, { format: 'xlsx' });
+          expect(MessageManager.success).toHaveBeenCalledWith('资产数据导出成功');
+        });
+        expect(downloadLink.clickSpy).toHaveBeenCalledTimes(1);
+        expect(formatStderrWrites(stderrWriteSpy.mock.calls)).not.toContain(
+          'navigation to another Document'
+        );
+      } finally {
+        downloadLink.restore();
+        stderrWriteSpy.mockRestore();
+      }
     });
   });
 });

@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { exportAnalytics } from '../exportAnalytics';
 
+const formatStderrWrites = (calls: unknown[][]) => calls.map(call => String(call[0] ?? '')).join(' ');
+
 const mockData = {
   area_summary: {
     total_assets: 12,
@@ -32,6 +34,7 @@ const mockData = {
 describe('exportAnalytics', () => {
   const realCreateObjectURL = URL.createObjectURL;
   const realRevokeObjectURL = URL.revokeObjectURL;
+  const realCreateElement = document.createElement.bind(document);
 
   const readBlobText = async (blob: Blob): Promise<string> => {
     if (typeof (blob as Blob & { text?: () => Promise<string> }).text === 'function') {
@@ -44,6 +47,21 @@ describe('exportAnalytics', () => {
       reader.onerror = () => reject(reader.error ?? new Error('Failed to read blob text'));
       reader.readAsText(blob);
     });
+  };
+
+  const stubDownloadLinkClick = () => {
+    const clickSpy = vi.fn();
+    vi.spyOn(document, 'createElement').mockImplementation(((tagName: string) => {
+      const element = realCreateElement(tagName);
+
+      if (tagName.toLowerCase() === 'a') {
+        (element as HTMLAnchorElement).click = clickSpy;
+      }
+
+      return element;
+    }) as typeof document.createElement);
+
+    return clickSpy;
   };
 
   beforeEach(() => {
@@ -60,57 +78,87 @@ describe('exportAnalytics', () => {
   it('exports CSV for excel format with BOM and expected sections', async () => {
     const appendSpy = vi.spyOn(document.body, 'appendChild');
     const removeSpy = vi.spyOn(document.body, 'removeChild');
+    const stderrWriteSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    const clickSpy = stubDownloadLinkClick();
 
-    await exportAnalytics(mockData, 'excel');
+    try {
+      await exportAnalytics(mockData, 'excel');
 
-    const createUrlMock = vi.mocked(URL.createObjectURL);
-    expect(createUrlMock).toHaveBeenCalledTimes(1);
-    const blob = createUrlMock.mock.calls[0]?.[0] as Blob;
-    const text = await readBlobText(blob);
+      const createUrlMock = vi.mocked(URL.createObjectURL);
+      expect(createUrlMock).toHaveBeenCalledTimes(1);
+      const blob = createUrlMock.mock.calls[0]?.[0] as Blob;
+      const text = await readBlobText(blob);
 
-    expect(text).toContain('资产分析报告');
-    expect(text).toContain('面积概览');
-    expect(text).toContain('财务概览');
-    expect(text).toContain('物业性质分布');
-    expect(text).toContain('出租率趋势');
+      expect(text).toContain('资产分析报告');
+      expect(text).toContain('面积概览');
+      expect(text).toContain('财务概览');
+      expect(text).toContain('物业性质分布');
+      expect(text).toContain('出租率趋势');
 
-    const link = appendSpy.mock.calls[0]?.[0] as HTMLAnchorElement;
-    expect(link.tagName).toBe('A');
-    expect(link.getAttribute('href')).toBe('blob:mock-url');
-    expect(link.getAttribute('download')).toMatch(/^analytics_\d+\.csv$/);
+      const link = appendSpy.mock.calls[0]?.[0] as HTMLAnchorElement;
+      expect(link.tagName).toBe('A');
+      expect(link.getAttribute('href')).toBe('blob:mock-url');
+      expect(link.getAttribute('download')).toMatch(/^analytics_\d+\.csv$/);
 
-    expect(removeSpy).toHaveBeenCalledWith(link);
-    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
+      expect(clickSpy).toHaveBeenCalledTimes(1);
+      expect(removeSpy).toHaveBeenCalledWith(link);
+      expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
+      expect(formatStderrWrites(stderrWriteSpy.mock.calls)).not.toContain(
+        'navigation to another Document'
+      );
+    } finally {
+      stderrWriteSpy.mockRestore();
+    }
   });
 
   it('exports CSV for csv format', async () => {
     const appendSpy = vi.spyOn(document.body, 'appendChild');
+    const stderrWriteSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    const clickSpy = stubDownloadLinkClick();
 
-    await exportAnalytics(mockData, 'csv');
+    try {
+      await exportAnalytics(mockData, 'csv');
 
-    const link = appendSpy.mock.calls[0]?.[0] as HTMLAnchorElement;
-    expect(link.getAttribute('download')).toMatch(/^analytics_\d+\.csv$/);
-    expect(URL.createObjectURL).toHaveBeenCalledTimes(1);
+      const link = appendSpy.mock.calls[0]?.[0] as HTMLAnchorElement;
+      expect(link.getAttribute('download')).toMatch(/^analytics_\d+\.csv$/);
+      expect(URL.createObjectURL).toHaveBeenCalledTimes(1);
+      expect(clickSpy).toHaveBeenCalledTimes(1);
+      expect(formatStderrWrites(stderrWriteSpy.mock.calls)).not.toContain(
+        'navigation to another Document'
+      );
+    } finally {
+      stderrWriteSpy.mockRestore();
+    }
   });
 
   it('exports text fallback and warns for pdf format', async () => {
     const appendSpy = vi.spyOn(document.body, 'appendChild');
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+    const stderrWriteSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    const clickSpy = stubDownloadLinkClick();
 
-    await exportAnalytics(mockData, 'pdf');
+    try {
+      await exportAnalytics(mockData, 'pdf');
 
-    const link = appendSpy.mock.calls[0]?.[0] as HTMLAnchorElement;
-    expect(link.getAttribute('download')).toMatch(/^analytics_\d+\.txt$/);
+      const link = appendSpy.mock.calls[0]?.[0] as HTMLAnchorElement;
+      expect(link.getAttribute('download')).toMatch(/^analytics_\d+\.txt$/);
 
-    const blob = vi.mocked(URL.createObjectURL).mock.calls[0]?.[0] as Blob;
-    const text = await readBlobText(blob);
-    expect(text).toContain('资产分析报告');
-    expect(text).toContain('财务概览');
+      const blob = vi.mocked(URL.createObjectURL).mock.calls[0]?.[0] as Blob;
+      const text = await readBlobText(blob);
+      expect(text).toContain('资产分析报告');
+      expect(text).toContain('财务概览');
 
-    expect(warnSpy).toHaveBeenCalledWith(
-      'PDF export requires external library (jsPDF). Exported as text file instead.'
-    );
-    expect(infoSpy).toHaveBeenCalledWith('To enable PDF export, install jsPDF: pnpm add jspdf');
+      expect(warnSpy).toHaveBeenCalledWith(
+        'PDF export requires external library (jsPDF). Exported as text file instead.'
+      );
+      expect(infoSpy).toHaveBeenCalledWith('To enable PDF export, install jsPDF: pnpm add jspdf');
+      expect(clickSpy).toHaveBeenCalledTimes(1);
+      expect(formatStderrWrites(stderrWriteSpy.mock.calls)).not.toContain(
+        'navigation to another Document'
+      );
+    } finally {
+      stderrWriteSpy.mockRestore();
+    }
   });
 });
