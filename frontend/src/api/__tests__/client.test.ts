@@ -10,6 +10,8 @@ import { Logger } from '@/utils/logger';
 import { ApiClient, apiClient } from '../client';
 import { API_BASE_URL } from '../config';
 
+const formatStderrWrites = (calls: unknown[][]) => calls.map(call => String(call[0] ?? '')).join(' ');
+
 const {
   mockClearAuthData,
   mockClearCapabilitiesSnapshot,
@@ -456,6 +458,9 @@ describe('ApiClient', () => {
     });
 
     it('普通请求401且刷新失败时应登出并跳转', async () => {
+      const stderrWriteSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+      const warnSpy = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
+      const errorSpy = vi.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
       const axiosInstance = client.getAxiosInstance();
       const responseInterceptor = axiosInstance.interceptors.response.handlers[0]?.rejected;
       if (responseInterceptor == null) {
@@ -488,12 +493,20 @@ describe('ApiClient', () => {
         toJSON: () => ({}),
       } as AxiosError;
 
-      await expect(responseInterceptor(error)).rejects.toBe(refreshError);
+      try {
+        await expect(responseInterceptor(error)).rejects.toBe(refreshError);
 
-      expect(postSpy).toHaveBeenCalledTimes(1);
-      expect(postSpy.mock.calls[0]?.[0]).toBe('/auth/refresh');
-      expect(mockClearAuthData).toHaveBeenCalledTimes(1);
-      expect(window.location.href).toBe(`/login?redirect=${encodeURIComponent('/assets')}`);
+        expect(postSpy).toHaveBeenCalledTimes(1);
+        expect(postSpy.mock.calls[0]?.[0]).toBe('/auth/refresh');
+        expect(mockClearAuthData).toHaveBeenCalledTimes(1);
+        expect(window.location.href).toBe(`/login?redirect=${encodeURIComponent('/assets')}`);
+        expect(formatStderrWrites(stderrWriteSpy.mock.calls)).not.toContain('[WARN] [API]');
+        expect(formatStderrWrites(stderrWriteSpy.mock.calls)).not.toContain('[ERROR] [API]');
+      } finally {
+        errorSpy.mockRestore();
+        warnSpy.mockRestore();
+        stderrWriteSpy.mockRestore();
+      }
     });
   });
 });

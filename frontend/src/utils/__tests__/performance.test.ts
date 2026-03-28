@@ -1,5 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('../logger', () => ({
+  createLogger: () => ({
+    warn: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+    debug: vi.fn(),
+  }),
+}));
+
+const formatStderrWrites = (calls: unknown[][]) => calls.map(call => String(call[0] ?? '')).join(' ');
+
 type PerformanceModule = typeof import('../performance');
 type EntryMap = Record<string, PerformanceEntry[]>;
 
@@ -70,6 +81,7 @@ describe('performance utils', () => {
   });
 
   it('preloadManager supports low-priority scheduling via requestIdleCallback and fallback retry after failure', async () => {
+    const stderrWriteSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     const idleSpy = vi.fn((callback: () => void) => {
       callback();
       return 1;
@@ -84,15 +96,20 @@ describe('performance utils', () => {
       .mockRejectedValueOnce(new Error('load failed'))
       .mockResolvedValueOnce('ok');
 
-    await expect(preloadManager.preload(importFn, 'module-b', 'low')).rejects.toThrow(
-      'load failed'
-    );
-    expect(preloadManager.isPreloaded('module-b')).toBe(false);
+    try {
+      await expect(preloadManager.preload(importFn, 'module-b', 'low')).rejects.toThrow(
+        'load failed'
+      );
+      expect(preloadManager.isPreloaded('module-b')).toBe(false);
 
-    await expect(preloadManager.preload(importFn, 'module-b', 'low')).resolves.toBe('ok');
-    expect(idleSpy).toHaveBeenCalled();
-    expect(importFn).toHaveBeenCalledTimes(2);
-    expect(preloadManager.isPreloaded('module-b')).toBe(true);
+      await expect(preloadManager.preload(importFn, 'module-b', 'low')).resolves.toBe('ok');
+      expect(idleSpy).toHaveBeenCalled();
+      expect(importFn).toHaveBeenCalledTimes(2);
+      expect(preloadManager.isPreloaded('module-b')).toBe(true);
+      expect(formatStderrWrites(stderrWriteSpy.mock.calls)).not.toContain('[WARN] [Performance]');
+    } finally {
+      stderrWriteSpy.mockRestore();
+    }
   });
 
   it('preloadManager falls back to setTimeout when requestIdleCallback is unavailable', async () => {
