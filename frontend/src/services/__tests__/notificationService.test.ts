@@ -5,6 +5,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { notificationService } from '../notificationService';
 
+const formatStderrWrites = (calls: unknown[][]) => calls.map(call => String(call[0] ?? '')).join(' ');
+
 // Mock apiClient
 vi.mock('@/api/client', () => ({
   apiClient: {
@@ -112,10 +114,22 @@ describe('NotificationService', () => {
 
     it('获取失败时返回0', async () => {
       vi.mocked(apiClient.get).mockRejectedValue(new Error('网络错误'));
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const stderrWriteSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
 
-      const result = await notificationService.getUnreadCount();
+      try {
+        const result = await notificationService.getUnreadCount();
 
-      expect(result).toBe(0);
+        expect(result).toBe(0);
+        expect(consoleWarnSpy).toHaveBeenCalledWith(
+          '获取未读通知数量失败',
+          expect.any(Error)
+        );
+        expect(formatStderrWrites(stderrWriteSpy.mock.calls)).not.toContain('获取未读通知数量失败');
+      } finally {
+        consoleWarnSpy.mockRestore();
+        stderrWriteSpy.mockRestore();
+      }
     });
 
     it('API返回失败时返回0', async () => {
@@ -123,11 +137,23 @@ describe('NotificationService', () => {
         success: false,
         error: '获取失败',
       });
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const stderrWriteSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
 
-      // 这个方法会捕获错误并返回0
-      const result = await notificationService.getUnreadCount();
+      try {
+        // 这个方法会捕获错误并返回0
+        const result = await notificationService.getUnreadCount();
 
-      expect(result).toBe(0);
+        expect(result).toBe(0);
+        expect(consoleWarnSpy).toHaveBeenCalledWith(
+          '获取未读通知数量失败',
+          expect.any(Error)
+        );
+        expect(formatStderrWrites(stderrWriteSpy.mock.calls)).not.toContain('获取未读通知数量失败');
+      } finally {
+        consoleWarnSpy.mockRestore();
+        stderrWriteSpy.mockRestore();
+      }
     });
   });
 

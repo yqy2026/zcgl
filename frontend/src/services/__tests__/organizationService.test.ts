@@ -6,6 +6,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { organizationService } from '../organizationService';
 
+const formatStderrWrites = (calls: unknown[][]) => calls.map(call => String(call[0] ?? '')).join(' ');
+
 // =============================================================================
 // Mock API client
 // =============================================================================
@@ -112,10 +114,22 @@ describe('OrganizationService', () => {
         success: false,
         error: '获取失败',
       });
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const stderrWriteSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
 
-      const result = await organizationService.getOrganizations();
+      try {
+        const result = await organizationService.getOrganizations();
 
-      expect(result).toEqual([]);
+        expect(result).toEqual([]);
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          '获取组织列表失败:',
+          '获取组织列表失败: 获取失败'
+        );
+        expect(formatStderrWrites(stderrWriteSpy.mock.calls)).not.toContain('获取组织列表失败');
+      } finally {
+        consoleErrorSpy.mockRestore();
+        stderrWriteSpy.mockRestore();
+      }
     });
 
     it('should support pagination', async () => {
@@ -312,10 +326,22 @@ describe('OrganizationService', () => {
         success: false,
         error: '获取失败',
       });
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const stderrWriteSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
 
-      const result = await organizationService.getOrganizationTree();
+      try {
+        const result = await organizationService.getOrganizationTree();
 
-      expect(result).toEqual([]);
+        expect(result).toEqual([]);
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          expect.stringContaining('获取组织树'),
+          expect.stringContaining('获取失败')
+        );
+        expect(formatStderrWrites(stderrWriteSpy.mock.calls)).not.toContain('获取组织树');
+      } finally {
+        consoleErrorSpy.mockRestore();
+        stderrWriteSpy.mockRestore();
+      }
     });
 
     it('should support parent_id filter', async () => {
