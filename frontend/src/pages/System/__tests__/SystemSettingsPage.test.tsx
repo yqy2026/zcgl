@@ -4,6 +4,8 @@ import { renderWithProviders, screen, waitFor } from '@/test/utils/test-helpers'
 import SystemSettingsPage from '../SystemSettingsPage';
 import { systemService } from '@/services/systemService';
 
+const formatStderrWrites = (calls: unknown[][]) => calls.map(call => String(call[0] ?? '')).join(' ');
+
 vi.mock('@/services/systemService', () => ({
   systemService: {
     getSettings: vi.fn(),
@@ -31,6 +33,116 @@ vi.mock('@/utils/logger', () => ({
     debug: vi.fn(),
   }),
 }));
+
+vi.mock('../SystemSettingsPage.module.css', () => ({
+  default: new Proxy(
+    {},
+    {
+      get: (_target, property) => String(property),
+    }
+  ),
+}));
+
+vi.mock('@/components/Common/PageContainer', () => ({
+  default: ({
+    title,
+    children,
+  }: {
+    title?: React.ReactNode;
+    children?: React.ReactNode;
+  }) => (
+    <div data-testid="page-container">
+      <h1>{title}</h1>
+      {children}
+    </div>
+  ),
+}));
+
+vi.mock('antd', async () => {
+  const actual = await vi.importActual<typeof import('antd')>('antd');
+
+  const Card = ({
+    title,
+    children,
+  }: {
+    title?: React.ReactNode;
+    children?: React.ReactNode;
+  }) => (
+    <div data-testid="card">
+      {title != null && <div data-testid="card-title">{title}</div>}
+      {children}
+    </div>
+  );
+
+  const Alert = ({
+    title,
+    description,
+  }: {
+    title?: React.ReactNode;
+    description?: React.ReactNode;
+  }) => (
+    <div data-testid="alert">
+      {title}
+      {description}
+    </div>
+  );
+
+  const Space = ({ children }: { children?: React.ReactNode }) => <div>{children}</div>;
+  const Tabs = ({ items }: { items?: Array<{ label?: React.ReactNode; children?: React.ReactNode }> }) => (
+    <div data-testid="tabs">
+      {(items ?? []).map((item, index) => (
+        <div key={index}>
+          <div>{item.label}</div>
+          <div>{item.children}</div>
+        </div>
+      ))}
+    </div>
+  );
+  const Form = ({ children }: { children?: React.ReactNode }) => <form>{children}</form>;
+  Form.Item = ({ children }: { children?: React.ReactNode }) => <div>{children}</div>;
+  Form.useForm = () => [{ setFieldsValue: vi.fn() }];
+  const Input = ({ placeholder }: { placeholder?: string }) => <input placeholder={placeholder} readOnly />;
+  Input.TextArea = ({ placeholder }: { placeholder?: string }) => (
+    <textarea placeholder={placeholder} readOnly />
+  );
+  const InputNumber = ({ placeholder }: { placeholder?: string }) => (
+    <input placeholder={placeholder} readOnly />
+  );
+  const Switch = () => <input type="checkbox" readOnly />;
+  const Button = ({
+    children,
+    disabled,
+  }: {
+    children?: React.ReactNode;
+    disabled?: boolean;
+  }) => <button disabled={disabled}>{children}</button>;
+  const Divider = () => <hr />;
+  const Tag = ({ children }: { children?: React.ReactNode }) => <span>{children}</span>;
+  const Typography = {
+    Title: ({ children }: { children?: React.ReactNode }) => <span>{children}</span>,
+    Text: ({ children }: { children?: React.ReactNode }) => <span>{children}</span>,
+  };
+  const ConfigProvider = ({ children }: { children?: React.ReactNode }) => <>{children}</>;
+  const theme = { defaultAlgorithm: {} };
+
+  return {
+    ...actual,
+    Card,
+    Alert,
+    Space,
+    Tabs,
+    Form,
+    Input,
+    InputNumber,
+    Switch,
+    Button,
+    Divider,
+    Tag,
+    Typography,
+    ConfigProvider,
+    theme,
+  };
+});
 
 const mockSettings = {
   site_name: '测试站点',
@@ -66,24 +178,31 @@ describe('SystemSettingsPage', () => {
   it('renders without Tabs/Form warnings', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const stderrWriteSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
 
-    renderWithProviders(<SystemSettingsPage />);
+    try {
+      renderWithProviders(<SystemSettingsPage />);
 
-    await waitFor(() => {
-      expect(systemService.getSettings).toHaveBeenCalled();
-    });
+      await waitFor(() => {
+        expect(systemService.getSettings).toHaveBeenCalled();
+      });
 
-    expect(screen.getByText('系统设置')).toBeInTheDocument();
+      expect(screen.getByText('系统设置')).toBeInTheDocument();
 
-    const warnOutput = warnSpy.mock.calls.flat().join(' ');
-    const errorOutput = errorSpy.mock.calls.flat().join(' ');
+      const warnOutput = warnSpy.mock.calls.flat().join(' ');
+      const errorOutput = errorSpy.mock.calls.flat().join(' ');
 
-    expect(warnOutput).not.toContain('Tabs.TabPane');
-    expect(errorOutput).not.toContain('Tabs.TabPane');
-    expect(warnOutput).not.toContain('Form.Item');
-    expect(errorOutput).not.toContain('Form.Item');
-
-    warnSpy.mockRestore();
-    errorSpy.mockRestore();
+      expect(warnOutput).not.toContain('Tabs.TabPane');
+      expect(errorOutput).not.toContain('Tabs.TabPane');
+      expect(warnOutput).not.toContain('Form.Item');
+      expect(errorOutput).not.toContain('Form.Item');
+      expect(formatStderrWrites(stderrWriteSpy.mock.calls)).not.toContain(
+        'Could not parse CSS stylesheet'
+      );
+    } finally {
+      stderrWriteSpy.mockRestore();
+      warnSpy.mockRestore();
+      errorSpy.mockRestore();
+    }
   });
 });

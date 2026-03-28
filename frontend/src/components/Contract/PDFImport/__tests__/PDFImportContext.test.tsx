@@ -42,6 +42,8 @@ vi.mock('../../../../utils/logger', () => ({
 import { pdfImportService } from '../../../../services/pdfImportService';
 import { MessageManager } from '@/utils/messageManager';
 
+const formatStderrWrites = (calls: unknown[][]) => calls.map(call => String(call[0] ?? '')).join(' ');
+
 describe('PDFImportContext', () => {
   const mockOnUploadSuccess = vi.fn();
   const mockOnUploadError = vi.fn();
@@ -55,6 +57,18 @@ describe('PDFImportContext', () => {
       {children}
     </PDFImportProvider>
   );
+
+  const renderContextHook = async <T,>(hook: () => T) => {
+    let hookResult!: ReturnType<typeof renderHook<T>>;
+
+    await act(async () => {
+      hookResult = renderHook(hook, { wrapper });
+      await Promise.resolve();
+      await vi.runAllTimersAsync();
+    });
+
+    return hookResult;
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -73,12 +87,16 @@ describe('PDFImportContext', () => {
     });
 
     it('在 Provider 内部返回 context 值', () => {
-      const { result } = renderHook(() => usePDFImportContext(), { wrapper });
+      const stderrWriteSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
 
-      expect(result.current).toBeDefined();
-      expect(result.current.uploading).toBe(false);
-      expect(result.current.currentSession).toBeNull();
-      expect(result.current.maxSize).toBe(50);
+      return renderContextHook(() => usePDFImportContext()).then(({ result }) => {
+        expect(result.current).toBeDefined();
+        expect(result.current.uploading).toBe(false);
+        expect(result.current.currentSession).toBeNull();
+        expect(result.current.maxSize).toBe(50);
+        expect(formatStderrWrites(stderrWriteSpy.mock.calls)).not.toContain('not wrapped in act');
+        stderrWriteSpy.mockRestore();
+      });
     });
   });
 
@@ -90,26 +108,22 @@ describe('PDFImportContext', () => {
     });
 
     it('返回上传函数', () => {
-      const { result } = renderHook(() => usePDFImportUpload(), { wrapper });
-
-      expect(result.current).toBeDefined();
-      expect(typeof result.current).toBe('function');
+      return renderContextHook(() => usePDFImportUpload()).then(({ result }) => {
+        expect(result.current).toBeDefined();
+        expect(typeof result.current).toBe('function');
+      });
     });
   });
 
   describe('初始状态', () => {
     it('初始化时加载系统信息', async () => {
-      renderHook(() => usePDFImportContext(), { wrapper });
-
-      await act(async () => {
-        await vi.runAllTimersAsync();
-      });
+      await renderContextHook(() => usePDFImportContext());
 
       expect(pdfImportService.getPdfImportSystemInfo).toHaveBeenCalled();
     });
 
-    it('默认处理步骤初始化正确', () => {
-      const { result } = renderHook(() => usePDFImportContext(), { wrapper });
+    it('默认处理步骤初始化正确', async () => {
+      const { result } = await renderContextHook(() => usePDFImportContext());
 
       expect(result.current.processingSteps).toHaveLength(6);
       expect(result.current.processingSteps[0].title).toBe('文件上传');
@@ -119,7 +133,7 @@ describe('PDFImportContext', () => {
 
   describe('handleCancel', () => {
     it('取消上传并重置状态', async () => {
-      const { result } = renderHook(() => usePDFImportContext(), { wrapper });
+      const { result } = await renderContextHook(() => usePDFImportContext());
 
       await act(async () => {
         result.current.handleCancel();
@@ -134,7 +148,7 @@ describe('PDFImportContext', () => {
 
   describe('handleReset', () => {
     it('重置所有状态', async () => {
-      const { result } = renderHook(() => usePDFImportContext(), { wrapper });
+      const { result } = await renderContextHook(() => usePDFImportContext());
 
       await act(async () => {
         result.current.handleReset();
@@ -149,8 +163,8 @@ describe('PDFImportContext', () => {
   });
 
   describe('getStepIcon', () => {
-    it('为 finish 状态返回成功图标', () => {
-      const { result } = renderHook(() => usePDFImportContext(), { wrapper });
+    it('为 finish 状态返回成功图标', async () => {
+      const { result } = await renderContextHook(() => usePDFImportContext());
 
       const icon = result.current.getStepIcon({
         title: 'Test',
@@ -161,8 +175,8 @@ describe('PDFImportContext', () => {
       expect(icon).toBeDefined();
     });
 
-    it('为 process 状态返回加载图标', () => {
-      const { result } = renderHook(() => usePDFImportContext(), { wrapper });
+    it('为 process 状态返回加载图标', async () => {
+      const { result } = await renderContextHook(() => usePDFImportContext());
 
       const icon = result.current.getStepIcon({
         title: 'Test',
@@ -173,8 +187,8 @@ describe('PDFImportContext', () => {
       expect(icon).toBeDefined();
     });
 
-    it('为 error 状态返回错误图标', () => {
-      const { result } = renderHook(() => usePDFImportContext(), { wrapper });
+    it('为 error 状态返回错误图标', async () => {
+      const { result } = await renderContextHook(() => usePDFImportContext());
 
       const icon = result.current.getStepIcon({
         title: 'Test',
@@ -185,8 +199,8 @@ describe('PDFImportContext', () => {
       expect(icon).toBeDefined();
     });
 
-    it('为 wait 状态返回默认图标', () => {
-      const { result } = renderHook(() => usePDFImportContext(), { wrapper });
+    it('为 wait 状态返回默认图标', async () => {
+      const { result } = await renderContextHook(() => usePDFImportContext());
 
       const icon = result.current.getStepIcon({
         title: 'Test',
@@ -200,7 +214,7 @@ describe('PDFImportContext', () => {
 
   describe('setters', () => {
     it('setShowAdvancedOptions 更新状态', async () => {
-      const { result } = renderHook(() => usePDFImportContext(), { wrapper });
+      const { result } = await renderContextHook(() => usePDFImportContext());
 
       expect(result.current.showAdvancedOptions).toBe(false);
 
@@ -212,7 +226,7 @@ describe('PDFImportContext', () => {
     });
 
     it('setShowPreviewModal 更新状态', async () => {
-      const { result } = renderHook(() => usePDFImportContext(), { wrapper });
+      const { result } = await renderContextHook(() => usePDFImportContext());
 
       expect(result.current.showPreviewModal).toBe(false);
 
@@ -224,7 +238,7 @@ describe('PDFImportContext', () => {
     });
 
     it('setProcessingOptions 更新状态', async () => {
-      const { result } = renderHook(() => usePDFImportContext(), { wrapper });
+      const { result } = await renderContextHook(() => usePDFImportContext());
 
       const newOptions = {
         processing_mode: 'fast' as const,
@@ -263,7 +277,7 @@ describe('PDFImportContext', () => {
         },
       });
 
-      const { result } = renderHook(() => usePDFImportUpload(), { wrapper });
+      const { result } = await renderContextHook(() => usePDFImportUpload());
 
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
       const onSuccess = vi.fn();
@@ -282,7 +296,7 @@ describe('PDFImportContext', () => {
     it('上传失败时调用错误回调', async () => {
       vi.mocked(pdfImportService.uploadPdfFileWithOptions).mockRejectedValue(new Error('上传失败'));
 
-      const { result } = renderHook(() => usePDFImportUpload(), { wrapper });
+      const { result } = await renderContextHook(() => usePDFImportUpload());
 
       const file = new File(['test'], 'test.pdf', { type: 'application/pdf' });
       const onError = vi.fn();
@@ -299,8 +313,8 @@ describe('PDFImportContext', () => {
   });
 
   describe('清理', () => {
-    it('卸载时清理定时器', () => {
-      const { unmount } = renderHook(() => usePDFImportContext(), { wrapper });
+    it('卸载时清理定时器', async () => {
+      const { unmount } = await renderContextHook(() => usePDFImportContext());
 
       unmount();
 
