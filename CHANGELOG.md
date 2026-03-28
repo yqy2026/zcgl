@@ -34,6 +34,8 @@
 - verify(test-noise-14): `cd frontend && pnpm exec vitest run src/components/Contract/PDFImport/__tests__/PDFImportContext.test.tsx src/pages/System/__tests__/SystemSettingsPage.test.tsx src/pages/System/__tests__/OrganizationPage.test.tsx src/pages/Ownership/__tests__/OwnershipDetailPage.legacy-contract-retired.test.tsx --reporter=verbose`（PASS）；`cd frontend && pnpm lint && pnpm type-check`（PASS）。
 - fix(test-noise): 收敛第十五批 logger 噪音。`frontend/src/api/__tests__/client.test.ts` 现对 token 刷新失败路径显式静音 `Logger.prototype.warn/error` 并锁定 stderr，不再输出 `[WARN]/[ERROR] [API]`；`frontend/src/utils/__tests__/performance.test.ts` 通过 mock `createLogger` 收口 `preloadManager`、`MemoryManager` 与 Web Vitals 阈值测试里的 `[WARN] [Performance]` 日志，保持性能行为断言不变。
 - verify(test-noise-15): `cd frontend && pnpm exec vitest run src/api/__tests__/client.test.ts src/utils/__tests__/performance.test.ts --reporter=verbose`（PASS）；`cd frontend && pnpm lint && pnpm type-check`（PASS）。
+- fix(test-noise): 收敛第十六批 analytics hook 日志噪音。`frontend/src/hooks/__tests__/useAssetAnalytics.test.ts` 现 mock `createLogger`，并在默认初始化用例中直接锁定 stdout，不再输出 `[DEBUG] [useAssetAnalytics]` 调试日志，同时保持 queryKey、字段透传与导出委托行为断言不变。
+- verify(test-noise-16): `cd frontend && pnpm exec vitest run src/hooks/__tests__/useAssetAnalytics.test.ts --reporter=verbose`（PASS）。
 
 ### 2026-03-25
 - docs(plan): 新增 `REQ-AUTH-002` 设计文档 `docs/plans/2026-03-25-req-auth-002-perspective-context-design.md`，收口方案为“canonical owner/manager route 继续作为前端真值，所有业务请求强制携带 `X-Perspective`，后端统一构建 `PerspectiveContext` 并按单一视角口径执行查询/统计/搜索；资源级 perspective 规则回到 `/auth/me/capabilities`，默认视角失效时进入统一 `PerspectiveResolution` 恢复流程”；`docs/plans/README.md` 已同步登记为活跃待评审方案。

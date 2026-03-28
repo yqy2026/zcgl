@@ -7,6 +7,8 @@ import { MessageManager } from '@/utils/messageManager';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 
+const formatStdoutWrites = (calls: unknown[][]) => calls.map(call => String(call[0] ?? '')).join(' ');
+
 vi.mock('@/routes/perspective', () => ({
   useRoutePerspective: () => ({
     perspective: 'owner',
@@ -37,6 +39,15 @@ vi.mock('@/utils/messageManager', () => ({
     error: vi.fn(),
     destroy: vi.fn(),
   },
+}));
+
+vi.mock('@/utils/logger', () => ({
+  createLogger: () => ({
+    debug: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    info: vi.fn(),
+  }),
 }));
 
 // Setup QueryClient for testing
@@ -92,13 +103,20 @@ describe('useAssetAnalytics', () => {
   });
 
   it('should initialize with default state', () => {
-    const { result } = renderHook(() => useAssetAnalytics(), {
-      wrapper: createWrapper(),
-    });
+    const stdoutWriteSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
 
-    expect(result.current.filters).toEqual({});
-    expect(result.current.dimension).toBe('area');
-    expect(result.current.loading).toBe(true); // Initially loading
+    try {
+      const { result } = renderHook(() => useAssetAnalytics(), {
+        wrapper: createWrapper(),
+      });
+
+      expect(result.current.filters).toEqual({});
+      expect(result.current.dimension).toBe('area');
+      expect(result.current.loading).toBe(true); // Initially loading
+      expect(formatStdoutWrites(stdoutWriteSpy.mock.calls)).not.toContain('[DEBUG] [useAssetAnalytics]');
+    } finally {
+      stdoutWriteSpy.mockRestore();
+    }
   });
 
   it('should fetch data on mount', async () => {
