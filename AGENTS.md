@@ -9,7 +9,35 @@
 4、如果一个任务需要改20个以上的文件，先停下来输出计划文档，按计划文档把它拆成更小的任务再逐一完成。
 5、采用TDD方式，遇到 bug 的时候，先写一个能复现这个 bug 的测试，然后修到测试通过为止。
 6、每次我纠正你的时候，想想自己哪里做错了，拿出一个方案确保以后不再犯同样的错。
-**Last Updated**: 2026-03-05（精简上下文体积约 35%）
+**Last Updated**: 2026-03-28（补充 Done when、Codex 配置与任务模板入口）
+
+---
+
+## 协作入口
+
+### 标准任务输入
+
+优先直接按 [`docs/guides/codex-task-template.md`](docs/guides/codex-task-template.md) 提需求，至少包含以下四段：
+- `Goal`：要实现/修复什么
+- `Context`：涉及模块、文件、报错、REQ 编号、上下游约束
+- `Constraints`：必须遵守的规则，例如先出方案、TDD、不要做兼容保留
+- `Done when`：完成标准，避免“做了一半就停”
+
+### 统一完成标准（Done when）
+
+除非任务明确说明只做调研，否则完成时默认同时满足：
+1. 代码、文档或配置改动已完成，并与需求一致。
+2. 涉及行为变更或 bug 修复时，已先补失败测试或复现用例，再完成修复；纯文档/配置任务至少完成相应校验。
+3. 已运行受影响范围内的校验命令；能跑 `make check` 时优先跑，至少保证相关 lint、type-check、test、docs-lint 或定向验证完成。
+4. 涉及需求、字段、接口、计划状态时，已同步 SSOT 文档与代码证据。
+5. `CHANGELOG.md` 已更新。
+6. 回复中已补充边界情况与建议测试用例。
+
+### Codex 项目默认配置
+
+- 仓库级默认配置放在 `.codex/config.toml`
+- 长期稳定的项目规则放在本文件
+- 操作型说明放在 `docs/guides/`
 
 ---
 
@@ -19,13 +47,7 @@
 
 核心功能：资产管理 | 租赁合同管理（PDF 智能提取）| 数据分析报表 | 组织架构管理 | 产权证管理
 
-| 层级 | 技术栈 |
-|------|--------|
-| 前端 | React 19 + TypeScript 5 + Vite 6 + Ant Design 6 + pnpm |
-| 后端 | FastAPI + Python 3.12 + SQLAlchemy 2.0 + Pydantic v2 + Alembic |
-| 数据库 | PostgreSQL 18（开发/测试/生产统一）|
-| 缓存 | Redis 8 |
-| 文档AI | Qwen-VL / GLM-4V / Hunyuan Vision / DeepSeek-VL |
+技术栈：前端 `React 19 + TypeScript 5 + Vite 6 + Ant Design 6 + pnpm`；后端 `FastAPI + Python 3.12 + SQLAlchemy 2.0 + Pydantic v2 + Alembic`；数据库 `PostgreSQL 18`；缓存 `Redis 8`；文档 AI `Qwen-VL / GLM-4V / Hunyuan Vision / DeepSeek-VL`。
 
 ---
 
@@ -85,36 +107,20 @@ docs/ scripts/ Makefile
 
 ### 前端状态管理
 
-| 状态类型 | 使用工具 | 说明 |
-|---------|---------|----|
-| 全局 UI / 偏好 | Zustand | `useAppStore` / `useAssetStore` |
-| 认证状态 | React Context | `AuthContext` |
-| 服务器数据 | React Query | API 缓存与同步 |
-| 表单 | React Hook Form | 验证 / 提交 |
-| 局部 UI | useState | 模态框 / loading |
+- 全局 UI / 偏好：Zustand（`useAppStore` / `useAssetStore`）
+- 认证状态：React Context（`AuthContext`）
+- 服务器数据：React Query
+- 表单：React Hook Form
+- 局部 UI：`useState`
 
 ---
 
 ## 后端开发要点
 
-### Pydantic v2
-- 使用 `model_validate()` / `model_dump()`
-- 配置：`model_config = ConfigDict(from_attributes=True)`
-
-### SQLAlchemy 2.0
-- ORM + QueryBuilder
-- 集合关系用 `selectinload` 避免 N+1
-- ❌ 不要在 schema validator 中触发懒加载
-
-### PII 数据加密
-- `SensitiveDataHandler` 对身份证号/手机号做 AES-256-CBC 确定性加密
-- ❌ 不要绕过 CRUD 直接写库
-- `DATA_ENCRYPTION_KEY` 缺失会降级为明文存储
-
-### 计算字段
-- `unrented_area`、`occupancy_rate` 等由 `AssetCalculator` 计算
-- ❌ 不要从 API 直接写入计算字段
-- `version` 字段由 ORM 自动维护（乐观锁）
+- Pydantic v2：使用 `model_validate()` / `model_dump()`；配置 `model_config = ConfigDict(from_attributes=True)`
+- SQLAlchemy 2.0：ORM + QueryBuilder；集合关系用 `selectinload` 避免 N+1；❌ 不要在 schema validator 中触发懒加载
+- PII 数据加密：`SensitiveDataHandler` 对身份证号/手机号做 AES-256-CBC 确定性加密；❌ 不要绕过 CRUD 直接写库；`DATA_ENCRYPTION_KEY` 缺失会降级为明文存储
+- 计算字段：`unrented_area`、`occupancy_rate` 等由 `AssetCalculator` 计算；❌ 不要从 API 直接写入计算字段；`version` 字段由 ORM 自动维护（乐观锁）
 
 ### 新增功能流程
 ```
@@ -161,16 +167,13 @@ cd frontend && pnpm test
 
 ---
 
-## 环境配置
+## 参考文档
 
-> 详见 [docs/guides/environment-setup.md](docs/guides/environment-setup.md)
-
-关键变量（`backend/.env` / `frontend/.env`）：
-- `DATABASE_URL` / `TEST_DATABASE_URL`：`postgresql+psycopg://...`
-- `SECRET_KEY`：≥32 字符强随机密钥（`make secrets` 生成）
-- `DATA_ENCRYPTION_KEY`：`uv run python -m src.core.encryption` 生成
-- `VITE_API_BASE_URL`：`http://127.0.0.1:8002/api/v1`
-- `LLM_PROVIDER`：`hunyuan`（或其他视觉模型）
+- 环境变量与启动：[`docs/guides/environment-setup.md`](docs/guides/environment-setup.md)
+- 数据库初始化与迁移：[`docs/guides/database.md`](docs/guides/database.md)
+- 开发工作流：[`docs/guides/development-workflow.md`](docs/guides/development-workflow.md)
+- 测试规范：[`docs/guides/testing-standards.md`](docs/guides/testing-standards.md)
+- 文档总入口：[`docs/index.md`](docs/index.md)
 
 ---
 
@@ -188,23 +191,6 @@ cd frontend && pnpm test
 - ⚠️ rebase `--continue` 会静默丢弃文件，push 前必须核查：文件数吻合 + 关键符号存在；丢失时用 `git cherry-pick <hash>` 恢复
 
 > 📖 详细流程见 [docs/incidents/2026-02-git-conflict-postmortem.md](docs/incidents/2026-02-git-conflict-postmortem.md)
-
----
-
-## 排障速查
-
-| 问题 | 解决方案 |
-|------|---------| 
-| 后端 Import 错误 | `cd backend && uv sync --frozen` |
-| 数据库连接失败 | 检查 PostgreSQL 服务和 `DATABASE_URL` |
-| Alembic 迁移失败 | `cd backend && uv run alembic stamp head && uv run alembic upgrade head` |
-| 前端端口被占用 | 修改 `vite.config.ts` 或 kill 进程 |
-| 加密未生效 | 检查 `DATA_ENCRYPTION_KEY` |
-| TypeScript 严格布尔错误 | 使用 `??` 和显式空值检查 |
-| CORS 错误 | 检查后端 `CORS_ORIGINS` |
-| 403 权限错误 | 执行 `init_rbac_data.py` 补齐 RBAC |
-
-> 📖 更多启动排查经验见 [Git 冲突处理复盘](docs/incidents/2026-02-git-conflict-postmortem.md#启动排查经验)
 
 ---
 

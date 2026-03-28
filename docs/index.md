@@ -19,6 +19,7 @@
 
 ### 开发指南
 - [快速开始](guides/getting-started.md)
+- [Codex 任务模板](guides/codex-task-template.md)
 - [环境配置](guides/environment-setup.md)
 - [后端开发](guides/backend.md)
 - [前端开发](guides/frontend.md)

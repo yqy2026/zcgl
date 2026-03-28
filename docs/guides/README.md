@@ -7,6 +7,7 @@
 | 文档 | 说明 |
 |------|------|
 | [getting-started.md](./getting-started.md) | 本地环境搭建，新成员必读 |
+| [codex-task-template.md](./codex-task-template.md) | 给 Codex 提需求的标准模板 |
 | [environment-setup.md](./environment-setup.md) | 环境变量与配置详解 |
 
 ## 后端 / 前端开发
