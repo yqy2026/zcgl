@@ -25,6 +25,8 @@ from .context_builder import AuthzContextBuilder
 from .engine import AuthzDecision, AuthzEngine
 from .events import AuthzEventBus
 from .resource_perspective_registry import (
+    action_is_authenticated_default,
+    iter_authenticated_default_actions,
     resolve_capability_perspectives,
     resource_requires_perspective,
 )
@@ -133,6 +135,11 @@ class AuthzService:
                 allowed=True,
                 reason_code="rbac_permission_fallback",
             )
+        elif action_is_authenticated_default(resource_type, action):
+            decision = AuthzDecision(
+                allowed=True,
+                reason_code="authenticated_default_permission",
+            )
         self.decision_cache.set(decision_key, self._serialize_decision(decision))
         return decision
 
@@ -156,6 +163,8 @@ class AuthzService:
         static_rbac_actions = await self._get_static_rbac_actions(db, user_id=user_id)
 
         actions_by_resource: dict[str, set[str]] = {}
+        for resource, actions in iter_authenticated_default_actions().items():
+            actions_by_resource.setdefault(resource, set()).update(actions)
         for resource, actions in static_rbac_actions.items():
             actions_by_resource.setdefault(resource, set()).update(actions)
         for policy in policies:

@@ -25,6 +25,10 @@ def _login(client: TestClient, username: str, password: str) -> None:
     assert response.status_code == 200
 
 
+def _perspective_headers(perspective: str) -> dict[str, str]:
+    return {"X-Perspective": perspective}
+
+
 def _owner_scope_condition_expr() -> dict[str, object]:
     return {
         "if": [
@@ -184,7 +188,15 @@ def test_non_admin_owner_scoped_asset_list_should_not_be_forbidden(
     db_session.commit()
 
     _login(client, scoped_user.username, password)
-    response = client.get(f"/api/v1/assets?page=1&page_size=20&search={suffix}")
+    missing_header_response = client.get(
+        f"/api/v1/assets?page=1&page_size=20&search={suffix}"
+    )
+    assert missing_header_response.status_code == 400
+
+    response = client.get(
+        f"/api/v1/assets?page=1&page_size=20&search={suffix}",
+        headers=_perspective_headers("owner"),
+    )
     assert response.status_code == 200
 
     payload = response.json()
@@ -199,4 +211,3 @@ def test_non_admin_owner_scoped_asset_list_should_not_be_forbidden(
     }
     assert scoped_asset.id in item_ids
     assert other_asset.id not in item_ids
-

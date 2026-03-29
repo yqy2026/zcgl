@@ -15,6 +15,7 @@ import pytest
 from fastapi import status
 from sqlalchemy.orm import Session
 
+from src.models.auth import User
 from src.models.notification import Notification
 
 # ============================================================================
@@ -106,6 +107,56 @@ def sample_notification(db_session: Session, admin_user_in_db):
     db_session.flush()
     db_session.refresh(notification)
 
+    yield notification
+
+
+@pytest.fixture
+def normal_user_in_db(db_session: Session, normal_user):
+    """Ensure mocked normal user exists in DB for authz and notification queries."""
+    existing = db_session.query(User).filter(User.id == normal_user.id).first()
+    if existing:
+        return existing
+
+    existing_by_name = (
+        db_session.query(User).filter(User.username == normal_user.username).first()
+    )
+    if existing_by_name:
+        return existing_by_name
+
+    user = User(
+        id=normal_user.id,
+        username=normal_user.username,
+        email=normal_user.email,
+        phone="13800008888",
+        full_name="Normal User",
+        password_hash="test-hash",
+        is_active=True,
+        created_by="test-fixture",
+        updated_by="test-fixture",
+    )
+    db_session.add(user)
+    db_session.flush()
+    db_session.refresh(user)
+    return user
+
+
+@pytest.fixture
+def normal_user_notification(db_session: Session, normal_user_in_db):
+    """Create one notification for a normal authenticated user."""
+    from datetime import UTC, datetime
+
+    notification = Notification(
+        recipient_id=normal_user_in_db.id,
+        type="system",
+        priority="normal",
+        title="普通用户通知",
+        content="普通用户可读取通知列表",
+        is_read=False,
+        created_at=datetime.now(UTC),
+    )
+    db_session.add(notification)
+    db_session.flush()
+    db_session.refresh(notification)
     yield notification
 
 
@@ -254,6 +305,19 @@ class TestGetNotifications:
         data = response.json()
         assert data.get("error", {}).get("code") == "AUTHENTICATION_ERROR"
 
+    def test_get_notifications_allows_authenticated_user_without_explicit_notification_permission(
+        self,
+        client_normal_user,
+        normal_user_notification,
+    ):
+        """普通已登录用户应能读取自己的通知列表。"""
+        response = client_normal_user.get("/api/v1/notifications/")
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        item_ids = {item["id"] for item in data["data"]["items"]}
+        assert normal_user_notification.id in item_ids
+
 
 # ============================================================================
 # Get Unread Count Tests
@@ -300,6 +364,18 @@ class TestGetUnreadCount:
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         data = response.json()
         assert data.get("error", {}).get("code") == "AUTHENTICATION_ERROR"
+
+    def test_get_unread_count_allows_authenticated_user_without_explicit_notification_permission(
+        self,
+        client_normal_user,
+        normal_user_notification,
+    ):
+        """普通已登录用户应能读取自己的未读通知数量。"""
+        response = client_normal_user.get("/api/v1/notifications/unread-count")
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["unread_count"] >= 1
 
 
 # ============================================================================

@@ -2,7 +2,7 @@
 
 ## 状态
 
-🔄 进行中
+✅ 已完成
 
 ## 2026-03-29 复核
 
@@ -13,10 +13,10 @@
 - 浏览器巡检确认：owner 访问 `/project`、manager 访问 `/manager/assets/{id}` 时均未跳回 `/login` 或 `/403`，页面主 UI 可达。
 - `/ownership/*` 仍保持 neutral 路由，未被误迁入 owner/manager canonical route。
 
-本轮复核同时暴露两项残余问题，因此暂不将 `REQ-AUTH-002` 置为 `✅`：
+上述两项残余问题已于 2026-03-29 当日收口：
 
-- 旧的真实集成用例 [`backend/tests/integration/api/test_project_visibility_real.py`](/home/y/projects/zcgl/backend/tests/integration/api/test_project_visibility_real.py) 与 [`backend/tests/integration/api/test_assets_visibility_real.py`](/home/y/projects/zcgl/backend/tests/integration/api/test_assets_visibility_real.py) 仍按 pre-AUTH-002 契约发请求，未显式携带 `X-Perspective`，在 2026-03-29 fresh 复跑时返回 `400`。
-- 最小 owner/manager probe 账号的浏览器巡检仍对 `/api/v1/notifications` 与 `/api/v1/notifications/unread-count` 记录 `403` warn；这说明页头通知能力与最小验证夹具的权限模型尚未对齐，虽然不影响 AUTH-002 核心路由恢复流与详情页访问。
+- [`backend/tests/integration/api/test_project_visibility_real.py`](/home/y/projects/zcgl/backend/tests/integration/api/test_project_visibility_real.py) 与 [`backend/tests/integration/api/test_assets_visibility_real.py`](/home/y/projects/zcgl/backend/tests/integration/api/test_assets_visibility_real.py) 已升级为显式带 `X-Perspective` 的请求契约，并新增“缺少 header 返回 `400`”断言。
+- 后端 `notification:read` 已收口为 authenticated-default capability，最小 owner/manager probe 在 fresh API 探针和浏览器巡检下均不再触发 `/api/v1/notifications*` 的 `403` warn。
 
 ## 背景
 

@@ -32,6 +32,10 @@ def _login(client: TestClient, username: str, password: str) -> None:
     assert response.status_code == 200
 
 
+def _perspective_headers(perspective: str) -> dict[str, str]:
+    return {"X-Perspective": perspective}
+
+
 def _bind_project_read_policy(
     db_session: Session,
     *,
@@ -184,7 +188,10 @@ def test_non_admin_project_visibility_isolation(client: TestClient, db_session: 
     db_session.commit()
 
     _login(client, user_a.username, password)
-    response_a = client.get("/api/v1/projects/")
+    missing_header_response_a = client.get("/api/v1/projects/")
+    assert missing_header_response_a.status_code == 400
+
+    response_a = client.get("/api/v1/projects/", headers=_perspective_headers("manager"))
     assert response_a.status_code == 200
     items_a = response_a.json()["data"]["items"]
     ids_a = {item["id"] for item in items_a}
@@ -193,7 +200,10 @@ def test_non_admin_project_visibility_isolation(client: TestClient, db_session: 
 
     client.cookies.clear()
     _login(client, user_b.username, password)
-    response_b = client.get("/api/v1/projects/")
+    missing_header_response_b = client.get("/api/v1/projects/")
+    assert missing_header_response_b.status_code == 400
+
+    response_b = client.get("/api/v1/projects/", headers=_perspective_headers("manager"))
     assert response_b.status_code == 200
     items_b = response_b.json()["data"]["items"]
     ids_b = {item["id"] for item in items_b}

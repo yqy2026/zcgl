@@ -21,10 +21,13 @@ Fresh verification performed on 2026-03-29:
 - Scoped browser inspection on `/project` and `/manager/assets/{id}` confirms login succeeds and both routes render main UI without redirecting to `/login` or `/403`
 - `/ownership/*` remains neutral and out of scope for this plan
 
-Residual blockers before moving this plan to `✅`:
+Closure update:
 
-- Integration tests [`backend/tests/integration/api/test_project_visibility_real.py`](/home/y/projects/zcgl/backend/tests/integration/api/test_project_visibility_real.py) and [`backend/tests/integration/api/test_assets_visibility_real.py`](/home/y/projects/zcgl/backend/tests/integration/api/test_assets_visibility_real.py) still exercise the old request contract and fail with `400` because they do not send `X-Perspective`.
-- Minimal owner/manager browser probes still record `warn` on `/api/v1/notifications*` (`403`), so the page-header notification capability is not yet aligned with the verification fixture used for non-admin route smoke checks.
+- Integration tests [`backend/tests/integration/api/test_project_visibility_real.py`](/home/y/projects/zcgl/backend/tests/integration/api/test_project_visibility_real.py) and [`backend/tests/integration/api/test_assets_visibility_real.py`](/home/y/projects/zcgl/backend/tests/integration/api/test_assets_visibility_real.py) now send explicit `X-Perspective` and lock the fail-closed `400` behavior for missing header.
+- `notification:read` is now exposed as an authenticated-default capability, so non-admin route smoke checks no longer emit `/api/v1/notifications*` `403` warnings.
+- Fresh browser inspection on `/project` and `/manager/assets/{id}` is now `ok`/`ok` with no warn/fail routes.
+
+This plan is complete and ready for archive.
 
 ## Chunk 1: File Structure
 

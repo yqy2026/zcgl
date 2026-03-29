@@ -404,7 +404,7 @@
   - `backend/src/services/permission/rbac_service.py`
   - `backend/tests/unit/api/v1/test_roles_permission_grants.py`
 
-#### REQ-AUTH-002 视角上下文强制注入 🚧
+#### REQ-AUTH-002 视角上下文强制注入 ✅
 - 描述：所有业务请求需携带当前视角上下文。
 - 验收：
   - 业务查询、统计、搜索均使用当前视角口径。
@@ -428,6 +428,9 @@
   - `backend/tests/unit/middleware/test_perspective_context.py`
   - `backend/tests/unit/services/test_party_scope.py`
   - `backend/tests/unit/crud/test_query_builder.py`
+  - `backend/tests/unit/api/v1/test_notifications.py`
+  - `backend/tests/integration/api/test_project_visibility_real.py`
+  - `backend/tests/integration/api/test_assets_visibility_real.py`
   - `backend/tests/unit/api/v1/test_analytics.py`
   - `backend/tests/unit/api/v1/test_project.py`
   - `backend/tests/unit/api/v1/test_assets_authz_layering.py`
@@ -602,7 +605,7 @@
 | REQ-CUS-002 | 📋 | — | — |
 | REQ-SCH-001 | 📋 | — | — |
 | REQ-AUTH-001 | ✅ | `/auth/login`, `/auth/refresh` | `test_optional_auth.py` |
-| REQ-AUTH-002 | 🚧 | `/api/v1/analytics/*`, `/api/v1/projects/*`, `/api/v1/assets`（列表/详情/筛选）, `/api/v1/contract-groups*`, `/auth/me/capabilities`, 前端 `X-Perspective` 自动注入与 `PerspectiveResolution` 恢复流 | `test_authz_service.py`, `test_perspective_context.py`, `test_party_scope.py`, `test_query_builder.py`, `test_analytics.py`, `test_project.py`, `test_assets_authz_layering.py`, `client.test.ts`, `AppRoutes.perspective-redirect.test.tsx`, `perspectiveResolution.test.tsx`, `CapabilityGuard.test.tsx` |
+| REQ-AUTH-002 | ✅ | `/api/v1/analytics/*`, `/api/v1/projects/*`, `/api/v1/assets`（列表/详情/筛选）, `/api/v1/contract-groups*`, `/auth/me/capabilities`, 前端 `X-Perspective` 自动注入与 `PerspectiveResolution` 恢复流 | `test_authz_service.py`, `test_perspective_context.py`, `test_party_scope.py`, `test_query_builder.py`, `test_notifications.py`, `test_project_visibility_real.py`, `test_assets_visibility_real.py`, `test_analytics.py`, `test_project.py`, `test_assets_authz_layering.py`, `client.test.ts`, `AppRoutes.perspective-redirect.test.tsx`, `perspectiveResolution.test.tsx`, `CapabilityGuard.test.tsx` |
 | REQ-DOC-001 | ✅ | `/pdf-import/*` | `pdf_import.py` |
 | REQ-ANA-001 | ✅ | `/analytics/comprehensive`, `/analytics/export`（综合分析 + 统一 CSV/XLSX 导出 + `metrics_version`；PDF 明确返回 501 未实现） | `test_analytics_service.py`, `test_analytics.py`, `test_analytics_export_service.py`, `analyticsService.test.ts`, `useAssetAnalytics.test.ts`, `AnalyticsDashboard.test.tsx` |
 | REQ-PTY-001 | 🚧 | `/api/v1/parties` (CRUD + review fields) + `/system/parties` | `test_party_api.py`, `test_party_service.py`, `partyService.test.ts`, `PartyPages.test.tsx` |
