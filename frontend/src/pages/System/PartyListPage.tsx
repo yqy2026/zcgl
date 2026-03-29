@@ -7,11 +7,13 @@ import PageContainer from '@/components/Common/PageContainer';
 import { SYSTEM_ROUTES } from '@/constants/routes';
 import {
   partyService,
+  type PartyImportPayload,
   type PartyCreatePayload,
   type PartyListResult,
 } from '@/services/partyService';
 import type { Party, PartyReviewStatus, PartyType } from '@/types/party';
 import { MessageManager } from '@/utils/messageManager';
+import { parsePartyImportWorkbook } from './partyImport';
 
 interface PartyFilters {
   search: string;
@@ -66,6 +68,10 @@ const PartyListPage: React.FC = () => {
     reviewStatus: 'all',
   });
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importPreviewCount, setImportPreviewCount] = useState(0);
+  const [importPayload, setImportPayload] = useState<PartyImportPayload | null>(null);
 
   const queryFilters = useMemo(
     () => ({
@@ -102,6 +108,23 @@ const PartyListPage: React.FC = () => {
     },
     onError: error => {
       MessageManager.error(error instanceof Error ? error.message : '创建主体失败');
+    },
+  });
+
+  const importPartyMutation = useMutation({
+    mutationFn: async (payload: PartyImportPayload) => {
+      return await partyService.importParties(payload);
+    },
+    onSuccess: async result => {
+      MessageManager.success(`主体导入完成：成功 ${result.created_count} 条`);
+      setImportModalOpen(false);
+      setImportFile(null);
+      setImportPreviewCount(0);
+      setImportPayload(null);
+      await queryClient.invalidateQueries({ queryKey: ['system-party-list'] });
+    },
+    onError: error => {
+      MessageManager.error(error instanceof Error ? error.message : '主体导入失败');
     },
   });
 
@@ -167,6 +190,13 @@ const PartyListPage: React.FC = () => {
   const handleCreateSubmit = async (): Promise<void> => {
     const values = await createForm.validateFields();
     createPartyMutation.mutate(values);
+  };
+
+  const handleImportFile = async (file: File): Promise<void> => {
+    const items = await parsePartyImportWorkbook(file);
+    setImportFile(file);
+    setImportPreviewCount(items.length);
+    setImportPayload({ items });
   };
 
   return (
@@ -242,6 +272,13 @@ const PartyListPage: React.FC = () => {
             }}
           >
             新建主体
+          </Button>
+          <Button
+            onClick={() => {
+              setImportModalOpen(true);
+            }}
+          >
+            批量导入
           </Button>
         </Space>
 
@@ -319,6 +356,43 @@ const PartyListPage: React.FC = () => {
             <Input aria-label="外部引用" />
           </Form.Item>
         </Form>
+      </Modal>
+
+      <Modal
+        title="主体批量导入"
+        open={importModalOpen}
+        onCancel={() => {
+          setImportModalOpen(false);
+          setImportFile(null);
+          setImportPreviewCount(0);
+          setImportPayload(null);
+        }}
+        onOk={() => {
+          if (importPayload != null) {
+            importPartyMutation.mutate(importPayload);
+          }
+        }}
+        okText="开始导入"
+        cancelText="取消"
+        okButtonProps={{ disabled: importPayload == null }}
+        confirmLoading={importPartyMutation.isPending}
+        destroyOnHidden
+      >
+        <input
+          aria-label="主体导入文件"
+          type="file"
+          accept=".xlsx,.xls"
+          onChange={event => {
+            const nextFile = event.target.files?.[0];
+            if (nextFile != null) {
+              void handleImportFile(nextFile);
+            }
+          }}
+        />
+        <Typography.Paragraph type="secondary" style={{ marginTop: 12 }}>
+          {importFile != null ? `已选择文件：${importFile.name}` : '支持 .xlsx / .xls，读取首个工作表'}
+          {importPreviewCount > 0 ? `，已识别 ${importPreviewCount} 条主体数据` : ''}
+        </Typography.Paragraph>
       </Modal>
     </PageContainer>
   );

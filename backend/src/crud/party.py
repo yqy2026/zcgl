@@ -63,6 +63,20 @@ class CRUDParty:
         )
         return (await db.execute(stmt)).scalars().first()
 
+    async def get_party_by_type_and_name(
+        self,
+        db: AsyncSession,
+        *,
+        party_type: str,
+        name: str,
+    ) -> Party | None:
+        stmt = select(Party).where(
+            Party.party_type == party_type,
+            Party.name == name,
+            Party.deleted_at.is_(None),
+        )
+        return (await db.execute(stmt)).scalars().first()
+
     async def resolve_organization_party_id(
         self,
         db: AsyncSession,

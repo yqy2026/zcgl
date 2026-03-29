@@ -38,6 +38,32 @@ export interface PartyReviewRejectPayload {
   reason: string;
 }
 
+export interface PartyImportPayload {
+  items: PartyCreatePayload[];
+}
+
+export interface PartyImportResult {
+  created_count: number;
+  error_count: number;
+  items: Array<{
+    index: number;
+    status: string;
+    party_id: string | null;
+    message: string | null;
+  }>;
+}
+
+export interface PartyReviewLog {
+  id: string;
+  party_id: string;
+  action: string;
+  from_status: string;
+  to_status: string;
+  operator?: string | null;
+  reason?: string | null;
+  created_at: string;
+}
+
 const normalizePartyList = (
   responseData: PartyListRawResponse,
   request: { skip: number; limit: number }
@@ -231,6 +257,43 @@ export class PartyService {
 
       if (!result.success || result.data == null) {
         throw new Error(`驳回主体审核失败: ${result.error}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw toServiceError(enhancedError);
+    }
+  }
+
+  async importParties(payload: PartyImportPayload): Promise<PartyImportResult> {
+    try {
+      const result = await apiClient.post<PartyImportResult>(`${PARTY_BASE_URL}/import`, payload, {
+        retry: { maxAttempts: 1, delay: 0, backoffMultiplier: 1 },
+        smartExtract: true,
+      });
+
+      if (!result.success || result.data == null) {
+        throw new Error(`批量导入主体失败: ${result.error}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw toServiceError(enhancedError);
+    }
+  }
+
+  async getReviewLogs(id: string): Promise<PartyReviewLog[]> {
+    try {
+      const result = await apiClient.get<PartyReviewLog[]>(`${PARTY_BASE_URL}/${id}/review-logs`, {
+        cache: false,
+        retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
+
+      if (!result.success || result.data == null) {
+        throw new Error(`获取主体日志失败: ${result.error}`);
       }
 
       return result.data;

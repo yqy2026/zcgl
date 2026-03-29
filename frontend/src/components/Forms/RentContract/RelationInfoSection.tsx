@@ -50,7 +50,12 @@ const RelationInfoSection: React.FC = () => {
             name="owner_party_id"
             rules={[{ required: true, message: '请选择产权方主体' }]}
           >
-            <PartySelector filterMode="owner" placeholder="请选择产权方主体" allowClear={false} />
+            <PartySelector
+              filterMode="owner"
+              placeholder="请选择产权方主体"
+              allowClear={false}
+              allowQuickCreate
+            />
           </Form.Item>
         </Col>
         <Col xs={24} md={8}>
@@ -63,12 +68,17 @@ const RelationInfoSection: React.FC = () => {
               filterMode="manager"
               placeholder="请选择经营管理方主体"
               allowClear={false}
+              allowQuickCreate
             />
           </Form.Item>
         </Col>
         <Col xs={24} md={8}>
           <Form.Item label="承租方主体" name="tenant_party_id">
-            <PartySelector filterMode="tenant" placeholder="请选择承租方主体（可选）" />
+            <PartySelector
+              filterMode="tenant"
+              placeholder="请选择承租方主体（可选）"
+              allowQuickCreate
+            />
           </Form.Item>
         </Col>
       </Row>

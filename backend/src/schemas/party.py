@@ -69,6 +69,44 @@ class PartyReviewRejectRequest(BaseModel):
     reason: str = Field(..., min_length=1, max_length=500, description="驳回原因")
 
 
+class PartyImportRequest(BaseModel):
+    """Batch import payload for initializing party master data."""
+
+    items: list[PartyCreate] = Field(..., min_length=1, description="待导入主体列表")
+
+
+class PartyImportResultItem(BaseModel):
+    """Single import row result."""
+
+    index: int = Field(..., ge=0)
+    status: str = Field(..., description="created/error")
+    party_id: str | None = None
+    message: str | None = None
+
+
+class PartyImportResponse(BaseModel):
+    """Batch import result summary."""
+
+    created_count: int = Field(..., ge=0)
+    error_count: int = Field(..., ge=0)
+    items: list[PartyImportResultItem]
+
+
+class PartyReviewLogResponse(BaseModel):
+    """Party review/change log response."""
+
+    id: str
+    party_id: str
+    action: str
+    from_status: str
+    to_status: str
+    operator: str | None = None
+    reason: str | None = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class PartyHierarchyCreate(BaseModel):
     """Create hierarchy relation payload."""
 
@@ -182,6 +220,10 @@ __all__ = [
     "PartyCreate",
     "PartyUpdate",
     "PartyResponse",
+    "PartyImportRequest",
+    "PartyImportResponse",
+    "PartyImportResultItem",
+    "PartyReviewLogResponse",
     "PartyReviewRejectRequest",
     "PartyHierarchyCreate",
     "PartyHierarchyResponse",

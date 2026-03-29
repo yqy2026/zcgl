@@ -176,6 +176,42 @@ describe('PartyService', () => {
     );
   });
 
+  it('imports parties in batch', async () => {
+    vi.mocked(apiClient.post).mockResolvedValue({
+      success: true,
+      data: {
+        created_count: 1,
+        error_count: 0,
+        items: [{ index: 0, status: 'created', party_id: 'party-1', message: null }],
+      },
+    });
+
+    const result = await service.importParties({
+      items: [
+        {
+          party_type: 'organization',
+          name: '导入主体',
+          code: 'IMP-001',
+        },
+      ],
+    });
+
+    expect(result.created_count).toBe(1);
+    expect(apiClient.post).toHaveBeenCalledWith(
+      '/parties/import',
+      {
+        items: [
+          {
+            party_type: 'organization',
+            name: '导入主体',
+            code: 'IMP-001',
+          },
+        ],
+      },
+      expect.objectContaining({ smartExtract: true })
+    );
+  });
+
   it('preserves structured error metadata for forbidden detection consumers', async () => {
     vi.mocked(apiClient.get).mockRejectedValue(new Error('request failed'));
     vi.mocked(ApiErrorHandler.handleError).mockReturnValue({

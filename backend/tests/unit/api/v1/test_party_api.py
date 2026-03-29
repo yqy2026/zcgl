@@ -249,6 +249,82 @@ def test_party_review_endpoints_should_transition_review_status(client, db_sessi
     assert reject_payload["review_reason"] == "资料不完整"
 
 
+def test_import_parties_should_return_created_and_error_summary(client) -> None:
+    with patch(
+        "src.api.v1.party.party_service.import_parties",
+        new=AsyncMock(
+            return_value={
+                "created_count": 1,
+                "error_count": 1,
+                "items": [
+                    {"index": 0, "status": "created", "party_id": "party-1", "message": None},
+                    {"index": 1, "status": "error", "party_id": None, "message": "主体重复"},
+                ],
+            }
+        ),
+    ) as mock_import:
+        response = client.post(
+            "/api/v1/parties/import",
+            json={
+                "items": [
+                    {
+                        "party_type": "organization",
+                        "name": "导入主体1",
+                        "code": "IMP-001",
+                    },
+                    {
+                        "party_type": "organization",
+                        "name": "导入主体2",
+                        "code": "IMP-002",
+                    },
+                ]
+            },
+        )
+
+    assert response.status_code == status.HTTP_200_OK
+    payload = response.json()
+    assert payload["created_count"] == 1
+    assert payload["error_count"] == 1
+    assert payload["items"][0]["status"] == "created"
+    assert payload["items"][1]["status"] == "error"
+    mock_import.assert_awaited_once()
+
+
+def test_get_party_review_logs_should_return_entries(client) -> None:
+    log_entry = type(
+        "LogEntry",
+        (),
+        {
+            "id": "log-1",
+            "party_id": "party-1",
+            "action": "update",
+            "from_status": "draft",
+            "to_status": "draft",
+            "operator": "tester",
+            "reason": "fields:name",
+            "created_at": "2026-03-29T08:00:00Z",
+        },
+    )()
+
+    with (
+        patch(
+            "src.api.v1.party.party_service.get_party",
+            new=AsyncMock(return_value=type("Party", (), {"id": "party-1"})()),
+        ),
+        patch(
+            "src.api.v1.party.party_service.get_review_logs",
+            new=AsyncMock(return_value=[log_entry]),
+        ),
+    ):
+        response = client.get("/api/v1/parties/party-1/review-logs")
+
+    assert response.status_code == status.HTTP_200_OK
+    payload = response.json()
+    assert isinstance(payload, list)
+    assert payload[0]["action"] == "update"
+    assert payload[0]["reason"] == "fields:name"
+
+
 def test_create_user_party_binding_should_return_400_for_invalid_time_range(
     client, db_session
 ) -> None:

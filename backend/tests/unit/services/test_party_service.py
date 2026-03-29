@@ -264,6 +264,38 @@ class TestPartyServiceReviewFlow:
         assert create_payload["reviewed_at"] is None
         assert create_payload["review_reason"] is None
 
+    async def test_create_party_should_write_create_log(self) -> None:
+        db = MagicMock()
+        db.add = MagicMock()
+        db.flush = AsyncMock()
+        db.commit = MagicMock()
+        created_party = SimpleNamespace(
+            id="party-1",
+            review_status=PartyReviewStatus.DRAFT.value,
+        )
+        party_crud = MagicMock()
+        party_crud.get_party_by_type_and_code = AsyncMock(return_value=None)
+        party_crud.create_party = AsyncMock(return_value=created_party)
+        service = PartyService(data_access=party_crud)
+
+        await service.create_party(
+            db,
+            obj_in=PartyCreate(
+                party_type=PartyType.ORGANIZATION,
+                name="测试主体",
+                code="PARTY-001",
+            ),
+        )
+
+        from src.models.party_review_log import PartyReviewLog
+
+        log_calls = [c for c in db.add.call_args_list if isinstance(c[0][0], PartyReviewLog)]
+        assert len(log_calls) == 1
+        log_obj = log_calls[0][0][0]
+        assert log_obj.action == "create"
+        assert log_obj.from_status == "none"
+        assert log_obj.to_status == PartyReviewStatus.DRAFT.value
+
     async def test_approve_party_review_should_update_review_fields(self) -> None:
         db = MagicMock()
         db.add = MagicMock()
@@ -382,6 +414,38 @@ class TestPartyServiceReviewFlow:
 
         assert result is updated_party
 
+    async def test_update_party_should_write_update_log(self) -> None:
+        db = MagicMock()
+        db.add = MagicMock()
+        db.flush = AsyncMock()
+        party = SimpleNamespace(
+            id="party-1",
+            party_type=PartyType.ORGANIZATION.value,
+            name="旧主体",
+            code="OLD-001",
+            review_status=PartyReviewStatus.DRAFT.value,
+            status="active",
+        )
+        updated_party = SimpleNamespace(id="party-1", name="新主体")
+        party_crud = MagicMock()
+        party_crud.get_party = AsyncMock(return_value=party)
+        party_crud.update_party = AsyncMock(return_value=updated_party)
+        service = PartyService(data_access=party_crud)
+
+        await service.update_party(
+            db,
+            party_id="party-1",
+            obj_in=PartyUpdate(name="新主体"),
+        )
+
+        from src.models.party_review_log import PartyReviewLog
+
+        log_calls = [c for c in db.add.call_args_list if isinstance(c[0][0], PartyReviewLog)]
+        assert len(log_calls) == 1
+        log_obj = log_calls[0][0][0]
+        assert log_obj.action == "update"
+        assert log_obj.reason == "fields:name"
+
     async def test_delete_party_should_block_when_pending(self) -> None:
         """待审状态的主体不允许删除。"""
         db = MagicMock()
@@ -437,12 +501,33 @@ class TestPartyServiceReviewFlow:
 
         party_crud.create_party.assert_not_called()
 
+    async def test_create_party_should_reject_duplicate_type_and_name(self) -> None:
+        """相同 party_type + name 应抛 DuplicateResourceError。"""
+        db = MagicMock()
+        existing = SimpleNamespace(id="existing-1")
+        party_crud = MagicMock()
+        party_crud.get_party_by_type_and_code = AsyncMock(return_value=None)
+        party_crud.get_party_by_type_and_name = AsyncMock(return_value=existing)
+        service = PartyService(data_access=party_crud)
+
+        payload = PartyCreate(
+            party_type=PartyType.ORGANIZATION,
+            name="重复主体",
+            code="UNIQUE-001",
+        )
+
+        with pytest.raises(DuplicateResourceError, match="主体"):
+            await service.create_party(db, obj_in=payload)
+
+        party_crud.create_party.assert_not_called()
+
     async def test_create_party_should_succeed_when_no_duplicate(self) -> None:
         """不重复时应正常创建。"""
         db = MagicMock()
         created = SimpleNamespace(id="party-new")
         party_crud = MagicMock()
         party_crud.get_party_by_type_and_code = AsyncMock(return_value=None)
+        party_crud.get_party_by_type_and_name = AsyncMock(return_value=None)
         party_crud.create_party = AsyncMock(return_value=created)
         service = PartyService(data_access=party_crud)
 
@@ -455,6 +540,72 @@ class TestPartyServiceReviewFlow:
         result = await service.create_party(db, obj_in=payload)
 
         assert result is created
+
+    async def test_update_party_should_reject_duplicate_name_when_changed(self) -> None:
+        db = MagicMock()
+        party = SimpleNamespace(
+            id="party-1",
+            party_type=PartyType.ORGANIZATION.value,
+            name="旧主体",
+            code="OLD-001",
+            review_status=PartyReviewStatus.DRAFT.value,
+        )
+        duplicated_party = SimpleNamespace(id="party-2")
+        party_crud = MagicMock()
+        party_crud.get_party = AsyncMock(return_value=party)
+        party_crud.get_party_by_type_and_name = AsyncMock(return_value=duplicated_party)
+        service = PartyService(data_access=party_crud)
+
+        with pytest.raises(DuplicateResourceError, match="主体"):
+            await service.update_party(
+                db,
+                party_id="party-1",
+                obj_in=PartyUpdate(name="新重复主体"),
+            )
+
+        party_crud.update_party.assert_not_called()
+
+    async def test_import_parties_should_create_approved_records_and_collect_duplicates(self) -> None:
+        db = MagicMock()
+        party_crud = MagicMock()
+        party_crud.get_party_by_type_and_code = AsyncMock(
+            side_effect=[None, SimpleNamespace(id="existing-2")]
+        )
+        party_crud.get_party_by_type_and_name = AsyncMock(
+            side_effect=[None, None]
+        )
+        party_crud.create_party = AsyncMock(
+            return_value=SimpleNamespace(id="party-1", name="导入主体1")
+        )
+        service = PartyService(data_access=party_crud)
+
+        result = await service.import_parties(
+            db,
+            items=[
+                PartyCreate(
+                    party_type=PartyType.ORGANIZATION,
+                    name="导入主体1",
+                    code="IMP-001",
+                    status="active",
+                ),
+                PartyCreate(
+                    party_type=PartyType.ORGANIZATION,
+                    name="导入主体2",
+                    code="IMP-002",
+                    status="active",
+                ),
+            ],
+            operator="import-user",
+        )
+
+        assert result["created_count"] == 1
+        assert result["error_count"] == 1
+        assert result["items"][0]["status"] == "created"
+        assert result["items"][1]["status"] == "error"
+        create_payload = party_crud.create_party.await_args.kwargs["obj_in"]
+        assert create_payload["review_status"] == PartyReviewStatus.APPROVED.value
+        assert create_payload["review_by"] == "import-user"
+        assert create_payload["review_reason"] == "初始化导入"
 
 
 class TestPartyServiceSoftDelete:

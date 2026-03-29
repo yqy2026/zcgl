@@ -20,6 +20,7 @@ import { SYSTEM_ROUTES } from '@/constants/routes';
 import {
   partyService,
   type PartyReviewRejectPayload,
+  type PartyReviewLog,
   type PartyUpdatePayload,
 } from '@/services/partyService';
 import type { Party, PartyReviewStatus, PartyType } from '@/types/party';
@@ -80,6 +81,14 @@ const PartyDetailPage: React.FC = () => {
   });
 
   const party = partyDetailQuery.data;
+  const reviewLogQuery = useQuery<PartyReviewLog[]>({
+    queryKey: ['system-party-review-logs', partyId],
+    queryFn: async () => {
+      return await partyService.getReviewLogs(partyId);
+    },
+    enabled: hasPartyId,
+    staleTime: 60 * 1000,
+  });
   const reviewStatus = party?.review_status ?? 'draft';
   const isDraft = reviewStatus === 'draft';
   const isPending = reviewStatus === 'pending';
@@ -324,6 +333,47 @@ const PartyDetailPage: React.FC = () => {
               </Typography.Paragraph>
             </Form.Item>
           </Form>
+        </Card>
+
+        <Card
+          title="审核与变更日志"
+          loading={reviewLogQuery.isLoading}
+          extra={
+            reviewLogQuery.data != null ? (
+              <Typography.Text type="secondary">
+                共 {reviewLogQuery.data.length} 条
+              </Typography.Text>
+            ) : null
+          }
+        >
+          <Space orientation="vertical" style={{ width: '100%' }}>
+            {(reviewLogQuery.data ?? []).map(log => (
+              <Card key={log.id} size="small">
+                <Descriptions
+                  column={1}
+                  size="small"
+                  items={[
+                    { key: 'action', label: '动作', children: log.action },
+                    {
+                      key: 'status',
+                      label: '状态流转',
+                      children: `${log.from_status} -> ${log.to_status}`,
+                    },
+                    { key: 'operator', label: '操作人', children: log.operator ?? '-' },
+                    { key: 'reason', label: '说明', children: log.reason ?? '-' },
+                    {
+                      key: 'created_at',
+                      label: '时间',
+                      children: formatDateTime(log.created_at),
+                    },
+                  ]}
+                />
+              </Card>
+            ))}
+            {!reviewLogQuery.isLoading && (reviewLogQuery.data ?? []).length === 0 ? (
+              <Typography.Text type="secondary">暂无主体日志</Typography.Text>
+            ) : null}
+          </Space>
         </Card>
       </Space>
 

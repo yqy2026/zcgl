@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Select, Typography } from 'antd';
+import { Button, Form, Input, Modal, Select, Typography } from 'antd';
 import type { SelectProps } from 'antd';
 import type { DefaultOptionType } from 'antd/es/select';
 import { useLocation } from 'react-router-dom';
 import { partyService } from '@/services/partyService';
 import type { Party, PartyType } from '@/types/party';
+import { MessageManager } from '@/utils/messageManager';
 import styles from './PartySelector.module.css';
 
 const { Text } = Typography;
@@ -55,7 +56,21 @@ export interface PartySelectorProps {
   style?: React.CSSProperties;
   filterMode?: PartySelectorFilterMode;
   fetcher?: PartyFetcher;
+  allowQuickCreate?: boolean;
 }
+
+interface QuickCreateFormValues {
+  party_type: PartyType;
+  name: string;
+  code: string;
+}
+
+const resolveDefaultCreatePartyType = (filterMode: PartySelectorFilterMode): PartyType => {
+  if (filterMode === 'tenant') {
+    return 'legal_entity';
+  }
+  return 'organization';
+};
 
 const mergeAndDedupeParties = (partyGroups: Party[][]): Party[] => {
   const deduped = new Map<string, Party>();
@@ -173,11 +188,15 @@ const PartySelector: React.FC<PartySelectorProps> = ({
   style,
   filterMode,
   fetcher = defaultFetcher,
+  allowQuickCreate = false,
 }) => {
   const location = useLocation();
+  const [quickCreateForm] = Form.useForm<QuickCreateFormValues>();
   const [options, setOptions] = useState<PartyOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [statusText, setStatusText] = useState<string | null>(null);
+  const [quickCreateOpen, setQuickCreateOpen] = useState(false);
+  const [quickCreateSubmitting, setQuickCreateSubmitting] = useState(false);
   const requestIdRef = useRef(0);
 
   const optionPartyMap = useMemo(() => {
@@ -189,6 +208,7 @@ const PartySelector: React.FC<PartySelectorProps> = ({
   }, [options]);
 
   const resolvedFilterMode = filterMode ?? resolveCurrentViewFilterMode(location.pathname);
+  const defaultCreatePartyType = resolveDefaultCreatePartyType(resolvedFilterMode);
 
   const loadOptions = useCallback(
     async (query: string) => {
@@ -265,6 +285,37 @@ const PartySelector: React.FC<PartySelectorProps> = ({
 
   const notFoundContent = loading ? '加载中...' : (statusText ?? EMPTY_STATUS_TEXT);
 
+  const handleQuickCreate = useCallback(async (): Promise<void> => {
+    const values = await quickCreateForm.validateFields();
+    setQuickCreateSubmitting(true);
+    try {
+      const createdParty = await partyService.createParty({
+        party_type: values.party_type,
+        name: values.name,
+        code: values.code,
+        status: 'active',
+      });
+      const createdOption = toPartyOption(createdParty);
+      setOptions(currentOptions => {
+        const nextOptions = currentOptions.filter(option => option.value !== createdOption.value);
+        return [createdOption, ...nextOptions];
+      });
+      setStatusText(null);
+      setQuickCreateOpen(false);
+      quickCreateForm.resetFields();
+      onChange?.(createdParty.id, {
+        party_id: createdParty.id,
+        party_name: createdParty.name,
+        party: createdParty,
+      });
+      MessageManager.success(`主体 ${createdParty.name} 已创建`);
+    } catch (error) {
+      MessageManager.error(error instanceof Error ? error.message : '创建主体失败');
+    } finally {
+      setQuickCreateSubmitting(false);
+    }
+  }, [onChange, quickCreateForm]);
+
   return (
     <div className={styles.wrapper} style={style}>
       <Select<string, PartyOption>
@@ -287,6 +338,69 @@ const PartySelector: React.FC<PartySelectorProps> = ({
           {statusText}
         </Text>
       )}
+
+      {!loading && allowQuickCreate && statusText === EMPTY_STATUS_TEXT ? (
+        <Button
+          type="link"
+          onClick={() => {
+            quickCreateForm.setFieldsValue({ party_type: defaultCreatePartyType });
+            setQuickCreateOpen(true);
+          }}
+        >
+          快速新建主体
+        </Button>
+      ) : null}
+
+      <Modal
+        title="快速新建主体"
+        open={quickCreateOpen}
+        onCancel={() => {
+          setQuickCreateOpen(false);
+          quickCreateForm.resetFields();
+        }}
+        onOk={() => {
+          void handleQuickCreate();
+        }}
+        okText="创建主体"
+        cancelText="取消"
+        confirmLoading={quickCreateSubmitting}
+        destroyOnHidden
+      >
+        <Form<QuickCreateFormValues>
+          form={quickCreateForm}
+          layout="vertical"
+          initialValues={{ party_type: defaultCreatePartyType }}
+        >
+          <Form.Item
+            label="主体类型"
+            name="party_type"
+            rules={[{ required: true, message: '请选择主体类型' }]}
+          >
+            <Select
+              aria-label="快速新建主体类型"
+              options={[
+                { label: '组织', value: 'organization' },
+                { label: '法人主体', value: 'legal_entity' },
+                { label: '自然人', value: 'individual' },
+              ]}
+            />
+          </Form.Item>
+          <Form.Item
+            label="主体名称"
+            name="name"
+            rules={[{ required: true, message: '请输入主体名称' }]}
+          >
+            <Input aria-label="快速新建主体名称" />
+          </Form.Item>
+          <Form.Item
+            label="主体编码"
+            name="code"
+            rules={[{ required: true, message: '请输入主体编码' }]}
+          >
+            <Input aria-label="快速新建主体编码" />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 };

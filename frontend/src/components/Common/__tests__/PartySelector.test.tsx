@@ -14,6 +14,7 @@ import PartySelector, { createDefaultPartyFetcher } from '../PartySelector';
 vi.mock('@/services/partyService', () => ({
   partyService: {
     searchParties: vi.fn(),
+    createParty: vi.fn(),
   },
 }));
 
@@ -50,6 +51,16 @@ describe('PartySelector', () => {
       skip: 0,
       limit: 20,
       isTruncated: false,
+    });
+    vi.mocked(partyService.createParty).mockResolvedValue({
+      id: 'party-created',
+      party_type: 'organization',
+      name: '新建主体',
+      code: 'NEW-001',
+      status: 'active',
+      review_status: 'draft',
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
     });
   });
 
@@ -282,6 +293,43 @@ describe('PartySelector', () => {
 
     expect(await screen.findByRole('status')).toHaveTextContent(
       '当前账号无 party.read 权限，请联系管理员'
+    );
+  });
+
+  it('supports quick-create and selects the created party', async () => {
+    vi.mocked(partyService.searchParties).mockResolvedValue({
+      items: [],
+      skip: 0,
+      limit: 20,
+      isTruncated: false,
+    });
+    const handleChange = vi.fn();
+    const user = userEvent.setup();
+
+    renderWithProviders(<PartySelector allowQuickCreate onChange={handleChange} />);
+
+    expect(await screen.findByRole('button', { name: '快速新建主体' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: '快速新建主体' }));
+    await user.type(screen.getByLabelText('快速新建主体名称'), '新建主体');
+    await user.type(screen.getByLabelText('快速新建主体编码'), 'NEW-001');
+    await user.click(screen.getByRole('button', { name: '创建主体' }));
+
+    await waitFor(() => {
+      expect(partyService.createParty).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: '新建主体',
+          code: 'NEW-001',
+        })
+      );
+    });
+
+    expect(handleChange).toHaveBeenCalledWith(
+      'party-created',
+      expect.objectContaining({
+        party_id: 'party-created',
+        party_name: '新建主体',
+      })
     );
   });
 });

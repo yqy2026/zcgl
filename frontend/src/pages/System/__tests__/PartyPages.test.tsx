@@ -6,12 +6,27 @@ vi.mock('@/services/partyService', () => ({
   partyService: {
     getParties: vi.fn(),
     getPartyById: vi.fn(),
+    getReviewLogs: vi.fn(),
+    importParties: vi.fn(),
     createParty: vi.fn(),
     updateParty: vi.fn(),
     submitReview: vi.fn(),
     approveReview: vi.fn(),
     rejectReview: vi.fn(),
   },
+}));
+
+vi.mock('../partyImport', () => ({
+  parsePartyImportWorkbook: vi.fn(() =>
+    Promise.resolve([
+      {
+        party_type: 'organization',
+        name: '导入主体',
+        code: 'IMP-001',
+        status: 'active',
+      },
+    ])
+  ),
 }));
 
 vi.mock('@/utils/messageManager', () => ({
@@ -68,6 +83,23 @@ describe('Party system pages', () => {
       isTruncated: false,
     });
     vi.mocked(partyService.getPartyById).mockResolvedValue(draftParty);
+    vi.mocked(partyService.importParties).mockResolvedValue({
+      created_count: 1,
+      error_count: 0,
+      items: [{ index: 0, status: 'created', party_id: 'party-import-1', message: null }],
+    });
+    vi.mocked(partyService.getReviewLogs).mockResolvedValue([
+      {
+        id: 'log-1',
+        party_id: 'party-1',
+        action: 'update',
+        from_status: 'draft',
+        to_status: 'draft',
+        operator: 'tester',
+        reason: 'fields:name',
+        created_at: '2026-03-29T08:00:00Z',
+      },
+    ]);
     vi.mocked(partyService.createParty).mockResolvedValue(draftParty);
     vi.mocked(partyService.updateParty).mockResolvedValue({
       ...draftParty,
@@ -126,6 +158,36 @@ describe('Party system pages', () => {
     } finally {
       consoleErrorSpy.mockRestore();
     }
+  });
+
+  it('imports parties from workbook data on list page', async () => {
+    renderWithProviders(
+      <Routes>
+        <Route path="/system/parties" element={<PartyListPage />} />
+      </Routes>,
+      { route: '/system/parties' }
+    );
+
+    expect(await screen.findByText('主体主档管理')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '批量导入' }));
+    fireEvent.change(screen.getByLabelText('主体导入文件'), {
+      target: {
+        files: [new File(['fake'], 'party-import.xlsx')],
+      },
+    });
+    await screen.findByText('已选择文件：party-import.xlsx，已识别 1 条主体数据');
+    fireEvent.click(screen.getByRole('button', { name: '开始导入' }));
+
+    await waitFor(() => {
+      expect(partyService.importParties).toHaveBeenCalledWith({
+        items: [
+          expect.objectContaining({
+            name: '导入主体',
+            code: 'IMP-001',
+          }),
+        ],
+      });
+    });
   });
 
   it('updates and submits a draft party from detail page', async () => {
@@ -223,5 +285,18 @@ describe('Party system pages', () => {
     } finally {
       consoleErrorSpy.mockRestore();
     }
+  });
+
+  it('renders review log entries on detail page', async () => {
+    renderWithProviders(
+      <Routes>
+        <Route path="/system/parties/:id" element={<PartyDetailPage />} />
+      </Routes>,
+      { route: '/system/parties/party-1' }
+    );
+
+    expect(await screen.findByText('测试主体')).toBeInTheDocument();
+    expect(await screen.findByText('fields:name')).toBeInTheDocument();
+    expect(screen.getByText('update')).toBeInTheDocument();
   });
 });

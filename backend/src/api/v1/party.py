@@ -21,7 +21,10 @@ from ...schemas.party import (
     PartyCreate,
     PartyHierarchyCreate,
     PartyHierarchyResponse,
+    PartyImportRequest,
+    PartyImportResponse,
     PartyResponse,
+    PartyReviewLogResponse,
     PartyReviewRejectRequest,
     PartyUpdate,
     UserPartyBindingCreate,
@@ -96,6 +99,40 @@ async def create_party(
         raise
     except Exception as exc:
         raise internal_error("创建主体失败", original_error=exc) from exc
+
+
+@router.post("/parties/import", response_model=PartyImportResponse, summary="批量导入主体")
+async def import_parties(
+    payload: PartyImportRequest,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: Annotated[
+        AuthzContext | None,
+        Depends(
+            require_authz(
+                action="create",
+                resource_type="party",
+                resource_context=_PARTY_CREATE_RESOURCE_CONTEXT,
+            )
+        ),
+    ] = None,
+) -> PartyImportResponse:
+    operator = (
+        str(getattr(current_user, "full_name", "")).strip()
+        or str(getattr(current_user, "username", "")).strip()
+        or str(current_user.id)
+    )
+    try:
+        result = await party_service.import_parties(
+            db,
+            items=payload.items,
+            operator=operator,
+        )
+        return PartyImportResponse.model_validate(result)
+    except BaseBusinessError:
+        raise
+    except Exception as exc:
+        raise internal_error("批量导入主体失败", original_error=exc) from exc
 
 
 @router.get("/parties/{party_id}", response_model=PartyResponse, summary="获取主体详情")
@@ -278,6 +315,36 @@ async def reject_party_review(
         raise
     except Exception as exc:
         raise internal_error("驳回主体审核失败", original_error=exc) from exc
+
+
+@router.get(
+    "/parties/{party_id}/review-logs",
+    response_model=list[PartyReviewLogResponse],
+    summary="获取主体审核/变更日志",
+)
+async def get_party_review_logs(
+    party_id: str,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: Annotated[
+        AuthzContext | None,
+        Depends(
+            require_authz(
+                action="read",
+                resource_type="party",
+                resource_id="{party_id}",
+                deny_as_not_found=True,
+            )
+        ),
+    ] = None,
+) -> list[PartyReviewLogResponse]:
+    _ = current_user
+    party = await party_service.get_party(db, party_id=party_id)
+    if party is None:
+        raise not_found("主体不存在", resource_type="party", resource_id=party_id)
+
+    logs = await party_service.get_review_logs(db, party_id=party_id)
+    return [PartyReviewLogResponse.model_validate(item) for item in logs]
 
 
 @router.get(

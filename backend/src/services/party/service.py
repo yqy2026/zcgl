@@ -1,5 +1,6 @@
 """Party domain service orchestration."""
 
+import inspect
 import logging
 from datetime import UTC, datetime
 from typing import Any
@@ -55,7 +56,29 @@ class PartyService:
                 value=f"{party_type}/{code}",
             )
 
-        return await self.party_crud.create_party(db, obj_in=payload)
+        existing_by_name = await self._maybe_call_optional_async(
+            getattr(self.party_crud, "get_party_by_type_and_name", None),
+            db,
+            party_type=party_type,
+            name=str(payload.get("name", "")),
+        )
+        if existing_by_name is not None:
+            raise DuplicateResourceError(
+                resource_type="主体",
+                field="party_type+name",
+                value=f"{party_type}/{payload.get('name', '')}",
+            )
+
+        party = await self.party_crud.create_party(db, obj_in=payload, commit=False)
+        await self._write_review_log(
+            db,
+            party_id=str(party.id),
+            action="create",
+            from_status="none",
+            to_status=PartyReviewStatus.DRAFT.value,
+        )
+        await self._maybe_await_db_call(getattr(db, "commit", None))
+        return party
 
     async def get_party(self, db: AsyncSession, *, party_id: str) -> Party | None:
         return await self.party_crud.get_party(db, party_id=party_id)
@@ -111,7 +134,147 @@ class PartyService:
             )
 
         payload = self._normalize_party_payload(obj_in.model_dump(exclude_unset=True))
-        return await self.party_crud.update_party(db, db_obj=party, obj_in=payload)
+        next_party_type = str(payload.get("party_type", getattr(party, "party_type", "")))
+        next_name = str(payload.get("name", getattr(party, "name", "")))
+        if next_name != str(getattr(party, "name", "")):
+            duplicate_by_name = await self._maybe_call_optional_async(
+                getattr(self.party_crud, "get_party_by_type_and_name", None),
+                db,
+                party_type=next_party_type,
+                name=next_name,
+            )
+            if duplicate_by_name is not None and str(duplicate_by_name.id) != str(party.id):
+                raise DuplicateResourceError(
+                    resource_type="主体",
+                    field="party_type+name",
+                    value=f"{next_party_type}/{next_name}",
+                )
+        next_code = str(payload.get("code", getattr(party, "code", "")))
+        if next_code != str(getattr(party, "code", "")):
+            duplicate_by_code = await self.party_crud.get_party_by_type_and_code(
+                db,
+                party_type=next_party_type,
+                code=next_code,
+            )
+            if duplicate_by_code is not None and str(duplicate_by_code.id) != str(party.id):
+                raise DuplicateResourceError(
+                    resource_type="主体",
+                    field="party_type+code",
+                    value=f"{next_party_type}/{next_code}",
+                )
+
+        updated_party = await self.party_crud.update_party(
+            db,
+            db_obj=party,
+            obj_in=payload,
+            commit=False,
+        )
+        await self._write_review_log(
+            db,
+            party_id=str(party.id),
+            action="update",
+            from_status=str(getattr(party, "review_status", PartyReviewStatus.DRAFT.value)),
+            to_status=str(getattr(party, "review_status", PartyReviewStatus.DRAFT.value)),
+            reason=self._build_update_reason(payload),
+        )
+        await self._maybe_await_db_call(getattr(db, "commit", None))
+        return updated_party
+
+    async def import_parties(
+        self,
+        db: AsyncSession,
+        *,
+        items: list[PartyCreate],
+        operator: str | None = None,
+    ) -> dict[str, Any]:
+        results: list[dict[str, Any]] = []
+        created_count = 0
+        error_count = 0
+
+        for index, item in enumerate(items):
+            payload = self._normalize_party_payload(item.model_dump())
+            payload["review_status"] = PartyReviewStatus.APPROVED.value
+            payload["review_by"] = operator
+            payload["reviewed_at"] = self._utcnow_naive()
+            payload["review_reason"] = "初始化导入"
+
+            party_type = str(payload.get("party_type", ""))
+            code = str(payload.get("code", ""))
+            name = str(payload.get("name", ""))
+
+            duplicate_by_code = await self.party_crud.get_party_by_type_and_code(
+                db,
+                party_type=party_type,
+                code=code,
+            )
+            if duplicate_by_code is not None:
+                error_count += 1
+                results.append(
+                    {
+                        "index": index,
+                        "status": "error",
+                        "party_id": None,
+                        "message": "主体编码重复",
+                    }
+                )
+                continue
+
+            duplicate_by_name = await self.party_crud.get_party_by_type_and_name(
+                db,
+                party_type=party_type,
+                name=name,
+            )
+            if duplicate_by_name is not None:
+                error_count += 1
+                results.append(
+                    {
+                        "index": index,
+                        "status": "error",
+                        "party_id": None,
+                        "message": "主体名称重复",
+                    }
+                )
+                continue
+
+            party = await self.party_crud.create_party(db, obj_in=payload, commit=False)
+            await self._write_review_log(
+                db,
+                party_id=str(party.id),
+                action="import",
+                from_status="none",
+                to_status=PartyReviewStatus.APPROVED.value,
+                operator=operator,
+                reason="初始化导入",
+            )
+            await self._maybe_await_db_call(getattr(db, "commit", None))
+            created_count += 1
+            results.append(
+                {
+                    "index": index,
+                    "status": "created",
+                    "party_id": str(party.id),
+                    "message": None,
+                }
+            )
+
+        return {
+            "created_count": created_count,
+            "error_count": error_count,
+            "items": results,
+        }
+
+    async def get_review_logs(
+        self,
+        db: AsyncSession,
+        *,
+        party_id: str,
+    ) -> list[PartyReviewLog]:
+        stmt = (
+            select(PartyReviewLog)
+            .where(PartyReviewLog.party_id == party_id)
+            .order_by(PartyReviewLog.created_at.desc())
+        )
+        return list((await db.execute(stmt)).scalars().all())
 
     async def delete_party(self, db: AsyncSession, *, party_id: str) -> bool:
         party = await self.party_crud.get_party(db, party_id=party_id)
@@ -329,7 +492,7 @@ class PartyService:
         log.operator = operator
         log.reason = reason
         db.add(log)
-        await db.flush()
+        await self._maybe_await_db_call(getattr(db, "flush", None))
 
     async def assert_parties_approved(
         self,
@@ -672,6 +835,31 @@ class PartyService:
         if "metadata" in payload:
             payload["metadata_json"] = payload.pop("metadata")
         return payload
+
+    @staticmethod
+    def _build_update_reason(payload: dict[str, Any]) -> str:
+        changed_fields = sorted(payload.keys())
+        if len(changed_fields) == 0:
+            return "fields:none"
+        return f"fields:{','.join(changed_fields)}"
+
+    @staticmethod
+    async def _maybe_await_db_call(callback: Any) -> Any:
+        if not callable(callback):
+            return None
+        result = callback()
+        if inspect.isawaitable(result):
+            return await result
+        return result
+
+    @staticmethod
+    async def _maybe_call_optional_async(callback: Any, *args: Any, **kwargs: Any) -> Any:
+        if not callable(callback):
+            return None
+        result = callback(*args, **kwargs)
+        if inspect.isawaitable(result):
+            return await result
+        return None
 
     @staticmethod
     def _utcnow_naive() -> datetime:

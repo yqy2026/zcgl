@@ -469,7 +469,7 @@
 
 ### 6.8 主体（Party）域
 
-#### REQ-PTY-001 Party 单一主档管理 🚧
+#### REQ-PTY-001 Party 单一主档管理 ✅
 - 描述：Party 作为跨资产、项目、合同、客户的统一主体主档，必须可维护且可追溯。
 - 验收：
   - 支持 Party 新增、编辑、启停用、查询。
@@ -481,12 +481,15 @@
  - `backend/src/crud/party.py`
  - `backend/src/services/party/service.py`
  - `backend/src/api/v1/party.py`
-  - `frontend/src/constants/routes.ts`
+ - `frontend/src/constants/routes.ts`
   - `frontend/src/routes/AppRoutes.tsx`
   - `frontend/src/pages/System/PartyListPage.tsx`
   - `frontend/src/pages/System/PartyDetailPage.tsx`
+  - `backend/tests/unit/services/test_party_service.py`
+  - `backend/tests/unit/api/v1/test_party_api.py`
+  - `frontend/src/pages/System/__tests__/PartyPages.test.tsx`
 
-#### REQ-PTY-002 Party 数据来源与创建路径 🚧
+#### REQ-PTY-002 Party 数据来源与创建路径 ✅
 - 描述：Party 支持"初始化导入 + 业务过程创建"双路径进入主档。
 - 验收：
   - 支持初始化批量导入主体主档。
@@ -496,8 +499,12 @@
  - 代码证据：
  - `backend/src/models/party.py`（`review_status/review_by/reviewed_at/review_reason`）
  - `backend/src/services/party/service.py`（主体提审/通过/驳回 + `assert_parties_approved`）
+ - `backend/src/api/v1/party.py`（`/parties/import`）
  - `backend/src/api/v1/party.py`（`/parties/{party_id}/submit-review|approve-review|reject-review`）
  - `backend/src/services/contract/contract_group_service.py`（合同提审前主体审核门禁）
+  - `frontend/src/components/Common/PartySelector.tsx`（合同流程主体 quick-create）
+  - `frontend/src/pages/System/partyImport.ts`（初始化导入表格解析）
+  - `frontend/src/pages/System/PartyListPage.tsx`（主体批量导入入口）
   - `frontend/src/services/partyService.ts`（主体提审/通过/驳回调用）
   - `frontend/src/pages/System/PartyDetailPage.tsx`（审核按钮与编辑守卫提示）
 
@@ -608,8 +615,8 @@
 | REQ-AUTH-002 | ✅ | `/api/v1/analytics/*`, `/api/v1/projects/*`, `/api/v1/assets`（列表/详情/筛选）, `/api/v1/contract-groups*`, `/auth/me/capabilities`, 前端 `X-Perspective` 自动注入与 `PerspectiveResolution` 恢复流 | `test_authz_service.py`, `test_perspective_context.py`, `test_party_scope.py`, `test_query_builder.py`, `test_notifications.py`, `test_project_visibility_real.py`, `test_assets_visibility_real.py`, `test_analytics.py`, `test_project.py`, `test_assets_authz_layering.py`, `client.test.ts`, `AppRoutes.perspective-redirect.test.tsx`, `perspectiveResolution.test.tsx`, `CapabilityGuard.test.tsx` |
 | REQ-DOC-001 | ✅ | `/pdf-import/*` | `pdf_import.py` |
 | REQ-ANA-001 | ✅ | `/analytics/comprehensive`, `/analytics/export`（综合分析 + 统一 CSV/XLSX 导出 + `metrics_version`；PDF 明确返回 501 未实现） | `test_analytics_service.py`, `test_analytics.py`, `test_analytics_export_service.py`, `analyticsService.test.ts`, `useAssetAnalytics.test.ts`, `AnalyticsDashboard.test.tsx` |
-| REQ-PTY-001 | 🚧 | `/api/v1/parties` (CRUD + review fields) + `/system/parties` | `test_party_api.py`, `test_party_service.py`, `partyService.test.ts`, `PartyPages.test.tsx` |
-| REQ-PTY-002 | 🚧 | `/api/v1/parties/{party_id}/submit-review|approve-review|reject-review` + 合同提审门禁 + `/system/parties/:id` | `test_party_api.py`, `test_party_service.py`, `test_contract_group_service.py`, `partyService.test.ts`, `PartyPages.test.tsx` |
+| REQ-PTY-001 | ✅ | `/api/v1/parties` (CRUD + review/change logs) + `/system/parties` | `test_party_api.py`, `test_party_service.py`, `partyService.test.ts`, `PartyPages.test.tsx` |
+| REQ-PTY-002 | ✅ | `/api/v1/parties/import` + `/api/v1/parties/{party_id}/submit-review|approve-review|reject-review` + 合同提审门禁 + `/system/parties/:id` | `test_party_api.py`, `test_party_service.py`, `test_contract_group_service.py`, `partyService.test.ts`, `PartyPages.test.tsx`, `partyImport.test.ts`, `PartySelector.test.tsx` |
 
 ---
 
