@@ -10,6 +10,22 @@
 
 ---
 
+## Execution Status (2026-03-29)
+
+Code-level implementation for this plan is in place: backend resource perspective registry, `PerspectiveContext`, frontend `X-Perspective` injection, `PerspectiveResolution`, and the main asset/project/contract-group/analytics read surfaces are already landed in the branch.
+
+Fresh verification performed on 2026-03-29:
+
+- `make check` PASS
+- Direct API probes on local dev runtime: owner `project(owner)` returns `403 当前资源无可用视角`; manager `project(manager)` and `asset detail(manager)` return `200`
+- Scoped browser inspection on `/project` and `/manager/assets/{id}` confirms login succeeds and both routes render main UI without redirecting to `/login` or `/403`
+- `/ownership/*` remains neutral and out of scope for this plan
+
+Residual blockers before moving this plan to `✅`:
+
+- Integration tests [`backend/tests/integration/api/test_project_visibility_real.py`](/home/y/projects/zcgl/backend/tests/integration/api/test_project_visibility_real.py) and [`backend/tests/integration/api/test_assets_visibility_real.py`](/home/y/projects/zcgl/backend/tests/integration/api/test_assets_visibility_real.py) still exercise the old request contract and fail with `400` because they do not send `X-Perspective`.
+- Minimal owner/manager browser probes still record `warn` on `/api/v1/notifications*` (`403`), so the page-header notification capability is not yet aligned with the verification fixture used for non-admin route smoke checks.
+
 ## Chunk 1: File Structure
 
 ### Backend ownership

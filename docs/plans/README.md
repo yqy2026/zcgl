@@ -8,8 +8,8 @@
 
 | 文件 | 主题 | 状态 | 备注 |
 |------|------|------|------|
-| [2026-03-25-req-auth-002-perspective-context-design.md](2026-03-25-req-auth-002-perspective-context-design.md) | REQ-AUTH-002 视角上下文强制注入 | 🔄 进行中 | `X-Perspective` 协议、后端 `PerspectiveContext`、前端 `PerspectiveResolution` 与主要业务读链路已开始落地 |
-| [2026-03-25-req-auth-002-perspective-context-plan.md](2026-03-25-req-auth-002-perspective-context-plan.md) | REQ-AUTH-002 视角上下文强制注入实施计划 | 🔄 进行中 | 已完成 capability/请求头/恢复流/核心 PartyFilter 收口，继续推进最终门禁与剩余业务面 |
+| [2026-03-25-req-auth-002-perspective-context-design.md](2026-03-25-req-auth-002-perspective-context-design.md) | REQ-AUTH-002 视角上下文强制注入 | 🔄 进行中 | 2026-03-29 fresh 复核确认核心协议链路已通；当前仍有集成用例未补 `X-Perspective` 与通知接口 `403` 巡检噪音待收口 |
+| [2026-03-25-req-auth-002-perspective-context-plan.md](2026-03-25-req-auth-002-perspective-context-plan.md) | REQ-AUTH-002 视角上下文强制注入实施计划 | 🔄 进行中 | 已完成 capability/请求头/恢复流/核心 PartyFilter 收口；剩余阻塞是旧真实集成用例契约更新和非管理员通知能力夹具对齐 |
 | [2026-02-11-approval-flowable-b-plan.md](2026-02-11-approval-flowable-b-plan.md) | Flowable 编排内核 B 方案 | ⏸ 搁置 | 审批流方向待定，暂不实施 |
 
 ## 已归档方案
