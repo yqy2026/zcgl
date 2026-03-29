@@ -295,6 +295,12 @@ class ContractLifecycleAction(BaseModel):
     related_entry_id: str | None = Field(None, description="关联单号")
 
 
+class ContractCorrectionStartRequest(BaseModel):
+    """发起纠错草稿入参。"""
+
+    reason: str = Field(..., min_length=1, description="纠错原因")
+
+
 class AuditLogResponse(BaseModel):
     """审计日志出参。"""
 
@@ -309,6 +315,7 @@ class AuditLogResponse(BaseModel):
     operator_id: str | None
     operator_name: str | None
     related_entry_id: str | None
+    context: dict[str, Any] | None = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

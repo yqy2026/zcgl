@@ -24,6 +24,8 @@ from ....middleware.auth import (
 )
 from ....models.auth import User
 from ....schemas.contract_group import (
+    AuditLogResponse,
+    ContractCorrectionStartRequest,
     ContractCreate,
     ContractDetail,
     ContractGroupCreate,
@@ -483,6 +485,46 @@ async def submit_contract_review(
 
 
 @router.post(
+    "/contracts/{contract_id}/start-correction",
+    response_model=ContractDetail,
+    summary="发起合同纠错草稿",
+)
+async def start_contract_correction(
+    contract_id: str,
+    payload: ContractCorrectionStartRequest,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz: Annotated[
+        AuthzContext | None,
+        Depends(
+            require_authz(
+                action="update",
+                resource_type="contract",
+                resource_id="{contract_id}",
+            )
+        ),
+    ] = None,
+) -> ContractDetail:
+    _ = _authz
+    try:
+        draft_contract = await contract_group_service.start_correction(
+            db,
+            contract_id=contract_id,
+            reason=payload.reason,
+            current_user=str(current_user.id),
+            operator_name=current_user.username,
+        )
+        return await contract_group_service.get_contract_detail(
+            db,
+            contract_id=draft_contract.contract_id,
+        )
+    except BaseBusinessError:
+        raise
+    except Exception as exc:
+        raise internal_error("发起合同纠错失败", original_error=exc) from exc
+
+
+@router.post(
     "/contracts/{contract_id}/approve",
     response_model=ContractDetail,
     summary="审核通过合同",
@@ -681,6 +723,39 @@ async def void_contract(
         raise
     except Exception as exc:
         raise internal_error("作废合同失败", original_error=exc) from exc
+
+
+@router.get(
+    "/contracts/{contract_id}/audit-logs",
+    response_model=list[AuditLogResponse],
+    summary="获取合同审计日志",
+)
+async def list_contract_audit_logs(
+    contract_id: str,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz: Annotated[
+        AuthzContext | None,
+        Depends(
+            require_authz(
+                action="read",
+                resource_type="contract",
+                resource_id="{contract_id}",
+            )
+        ),
+    ] = None,
+) -> list[AuditLogResponse]:
+    _ = current_user
+    _ = _authz
+    try:
+        return await contract_group_service.list_contract_audit_logs(
+            db,
+            contract_id=contract_id,
+        )
+    except BaseBusinessError:
+        raise
+    except Exception as exc:
+        raise internal_error("获取合同审计日志失败", original_error=exc) from exc
 
 
 @router.post(

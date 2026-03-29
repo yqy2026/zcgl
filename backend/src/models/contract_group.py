@@ -671,7 +671,10 @@ class ContractAuditLog(Base):
     action: Mapped[str] = mapped_column(
         String(50),
         nullable=False,
-        comment="动作：submit_review / approve / reject / expire / terminate / void",
+        comment=(
+            "动作：submit_review / approve / reject / expire / terminate / void / "
+            "start_correction / reverse_review"
+        ),
     )
     old_status: Mapped[str | None] = mapped_column(String(50), nullable=True)
     new_status: Mapped[str | None] = mapped_column(String(50), nullable=True)
@@ -684,6 +687,11 @@ class ContractAuditLog(Base):
         String(100),
         nullable=True,
         comment="关联单号（如冲销台账单号）",
+    )
+    context: Mapped[dict[str, Any] | None] = mapped_column(
+        JSONB,
+        nullable=True,
+        comment="结构化审计上下文（联审范围、差异分类、纠错链路等）",
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime,

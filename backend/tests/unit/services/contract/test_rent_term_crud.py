@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from src.models.contract_group import ContractLifecycleStatus
 from src.services.contract.contract_group_service import ContractGroupService
 
 pytestmark = pytest.mark.asyncio
@@ -41,9 +42,16 @@ class TestContractRentTermCrud:
         created = MagicMock(total_monthly_amount="1250.00")
 
         with (
-            patch(
-                "src.services.contract.contract_group_service.contract_crud.get",
-                new=AsyncMock(return_value=MagicMock(contract_id="contract-001")),
+            patch.object(
+                service,
+                "_get_contract_or_raise",
+                new=AsyncMock(
+                    return_value=MagicMock(
+                        contract_id="contract-001",
+                        status=ContractLifecycleStatus.DRAFT,
+                        data_status="正常",
+                    )
+                ),
             ),
             patch(
                 "src.services.contract.contract_group_service.contract_group_crud.create_rent_term",
@@ -86,6 +94,17 @@ class TestContractRentTermCrud:
         )
 
         with (
+            patch.object(
+                service,
+                "_get_contract_or_raise",
+                new=AsyncMock(
+                    return_value=MagicMock(
+                        contract_id="contract-001",
+                        status=ContractLifecycleStatus.DRAFT,
+                        data_status="正常",
+                    )
+                ),
+            ),
             patch(
                 "src.services.contract.contract_group_service.contract_group_crud.get_rent_term",
                 new=AsyncMock(return_value=term),

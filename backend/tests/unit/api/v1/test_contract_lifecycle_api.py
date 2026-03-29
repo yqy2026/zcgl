@@ -27,7 +27,9 @@ def test_route_paths_cover_lifecycle_and_rent_term_endpoints() -> None:
     required = {
         "/contract-groups/{group_id}/submit-review",
         "/contracts/{contract_id}/submit-review",
+        "/contracts/{contract_id}/start-correction",
         "/contracts/{contract_id}/approve",
+        "/contracts/{contract_id}/audit-logs",
         "/contracts/{contract_id}/reject",
         "/contracts/{contract_id}/expire",
         "/contracts/{contract_id}/terminate",
@@ -72,6 +74,66 @@ async def test_submit_contract_review_delegates_to_service() -> None:
     assert result is detail
     mock_submit_review.assert_awaited_once()
     mock_get_contract_detail.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_start_contract_correction_delegates_to_service() -> None:
+    mod = _module()
+    endpoint = getattr(mod, "start_contract_correction", None)
+    assert endpoint is not None, "start_contract_correction 路由尚未实现"
+
+    schema_module = import_module("src.schemas.contract_group")
+    request_schema = getattr(schema_module, "ContractCorrectionStartRequest", None)
+    assert request_schema is not None, "ContractCorrectionStartRequest 尚未实现"
+
+    payload = request_schema(reason="租金条款调整")
+    user = MagicMock(id="user-001", username="tester")
+    detail = MagicMock(contract_id="contract-002")
+
+    with (
+        patch(
+            "src.api.v1.contracts.contract_groups.contract_group_service.start_correction",
+            new=AsyncMock(return_value=detail),
+        ) as mock_start_correction,
+        patch(
+            "src.api.v1.contracts.contract_groups.contract_group_service.get_contract_detail",
+            new=AsyncMock(return_value=detail),
+        ) as mock_get_contract_detail,
+    ):
+        result = await endpoint(
+            contract_id="contract-001",
+            payload=payload,
+            db=AsyncMock(),
+            current_user=user,
+            _authz=None,
+        )
+
+    assert result is detail
+    mock_start_correction.assert_awaited_once()
+    mock_get_contract_detail.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_list_contract_audit_logs_delegates_to_service() -> None:
+    mod = _module()
+    endpoint = getattr(mod, "list_contract_audit_logs", None)
+    assert endpoint is not None, "list_contract_audit_logs 路由尚未实现"
+
+    logs = [MagicMock(log_id="log-001"), MagicMock(log_id="log-002")]
+
+    with patch(
+        "src.api.v1.contracts.contract_groups.contract_group_service.list_contract_audit_logs",
+        new=AsyncMock(return_value=logs),
+    ) as mock_list_logs:
+        result = await endpoint(
+            contract_id="contract-001",
+            db=AsyncMock(),
+            current_user=MagicMock(id="user-001"),
+            _authz=None,
+        )
+
+    assert result is logs
+    mock_list_logs.assert_awaited_once()
 
 
 @pytest.mark.asyncio

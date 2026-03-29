@@ -19,6 +19,8 @@ from ..models.contract_group import (
     ContractGroup,
     ContractLedgerEntry,
     ContractLifecycleStatus,
+    ContractRelation,
+    ContractRelationType,
     ContractRentTerm,
     ServiceFeeLedger,
 )
@@ -283,6 +285,58 @@ class CRUDContractGroup:
             await db.commit()
             await db.refresh(log)
         return log
+
+    async def create_contract_relation(
+        self,
+        db: AsyncSession,
+        *,
+        data: dict[str, Any],
+        commit: bool = False,
+    ) -> ContractRelation:
+        relation = ContractRelation(**data)
+        db.add(relation)
+        await db.flush()
+        if commit:
+            await db.commit()
+            await db.refresh(relation)
+        return relation
+
+    async def list_contract_audit_logs(
+        self,
+        db: AsyncSession,
+        *,
+        contract_id: str,
+    ) -> list[ContractAuditLog]:
+        stmt = (
+            select(ContractAuditLog)
+            .where(ContractAuditLog.contract_id == contract_id)
+            .order_by(ContractAuditLog.created_at.desc(), ContractAuditLog.log_id.desc())
+        )
+        return list((await db.execute(stmt)).scalars().all())
+
+    async def get_renewal_parent_contract(
+        self,
+        db: AsyncSession,
+        *,
+        contract_id: str,
+    ) -> Contract | None:
+        stmt = (
+            select(Contract)
+            .join(
+                ContractRelation,
+                ContractRelation.parent_contract_id == Contract.contract_id,
+            )
+            .where(
+                ContractRelation.child_contract_id == contract_id,
+                ContractRelation.relation_type == ContractRelationType.RENEWAL,
+            )
+            .options(
+                selectinload(Contract.assets),
+                selectinload(Contract.lease_detail),
+                selectinload(Contract.agency_detail),
+            )
+        )
+        return (await db.execute(stmt)).scalars().first()
 
     async def create_rent_term(
         self,

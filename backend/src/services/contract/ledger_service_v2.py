@@ -10,7 +10,11 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.exception_handler import BusinessValidationError, ResourceNotFoundError
+from src.core.exception_handler import (
+    BusinessValidationError,
+    OperationNotAllowedError,
+    ResourceNotFoundError,
+)
 from src.crud.contract import contract_crud
 from src.crud.contract_group import contract_group_crud
 from src.models.contract_group import (
@@ -411,6 +415,34 @@ class ContractLedgerServiceV2:
             paid_amount=paid_amount,
             notes=notes,
         )
+
+    async def reverse_correction_source_entries(
+        self,
+        db: AsyncSession,
+        *,
+        contract_id: str,
+        year_month_start: str,
+    ) -> list[str]:
+        entries = await contract_group_crud.list_ledger_entries_by_contract(
+            db,
+            contract_id=contract_id,
+        )
+        voided_entry_ids: list[str] = []
+        now = _utcnow()
+
+        for entry in entries:
+            if entry.year_month < year_month_start:
+                continue
+            if entry.payment_status in {"paid", "partial"}:
+                raise OperationNotAllowedError("存在已支付账期，需先人工处理")
+            if entry.payment_status == "voided":
+                continue
+            entry.payment_status = "voided"
+            entry.updated_at = now
+            voided_entry_ids.append(entry.entry_id)
+
+        await db.flush()
+        return voided_entry_ids
 
 
 ledger_service_v2 = ContractLedgerServiceV2()

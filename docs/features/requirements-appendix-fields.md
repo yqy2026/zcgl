@@ -335,7 +335,7 @@
 |---|---|---|---|---|
 | `log_id` | string | 是 | 主键（UUID） | 已确认 |
 | `contract_id` | string | 是 | FK → Contract 基表 | 已确认 |
-| `action` | string | 是 | 操作类型：`submit_review` / `approve` / `reject` / `expire` / `terminate` / `void` | 已确认 |
+| `action` | string | 是 | 操作类型：`submit_review` / `approve` / `reject` / `expire` / `terminate` / `void` / `start_correction` / `reverse_review` | 已确认 |
 | `old_status` | string | 否 | 操作前的 `status` 值 | 已确认 |
 | `new_status` | string | 否 | 操作后的 `status` 值 | 已确认 |
 | `review_status_old` | string | 否 | 操作前的 `review_status` 值 | 已确认 |
@@ -344,11 +344,14 @@
 | `operator_id` | string | 否 | 操作人 ID | 已确认 |
 | `operator_name` | string | 否 | 操作人姓名（冗余展示） | 已确认 |
 | `related_entry_id` | string | 否 | 关联单号（冲销台账时填写，对应 `ContractLedgerEntry.entry_id`） | 已确认 |
+| `context` | json | 否 | 审计上下文：`review_scope`、`affected_contract_ids`、`change_categories`、`correction_source_contract_id`、`voided_entry_ids` | 已确认 |
 | `created_at` | datetime | 是 | 系统字段；操作时刻，不可修改 | 已确认 |
 
 **约束**：
 - 仅允许 INSERT，禁止 UPDATE / DELETE（审计表不可篡改）。
 - 每次成功状态流转必须同事务内写入一条日志。
+- 关键变更联审时，`context.review_scope = joint`，并写入关联合同清单。
+- 纠错链路时，`start_correction` 与 `reverse_review` 都必须记录 `correction_source_contract_id`。
 
 ---
 

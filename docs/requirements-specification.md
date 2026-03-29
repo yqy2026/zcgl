@@ -310,18 +310,33 @@
   - `backend/tests/unit/api/v1/test_contract_lifecycle_api.py`
   - `backend/tests/unit/services/contract/test_contract_group_service.py`
 
-#### REQ-RNT-004 关键合同联审 📋
+#### REQ-RNT-004 关键合同联审 ✅
 - 描述：审核在合同级进行，关键合同提审时可触发同组关联合同联审。
 - 验收：
   - 支持混合联审策略：金额/周期/计费/分润/主体/资产变更走强联审，非关键文本类改动可单审。
   - 审核记录包含审核范围、审核结论与关联合同清单。
+- 代码证据：
+  - `backend/src/services/contract/contract_group_service.py`（`_classify_change_categories` / `_requires_joint_review` / `submit_review(... allow_joint_review=...)` / `submit_group_review`）
+  - `backend/src/models/contract_group.py`（`ContractAuditLog.context` 审计上下文字段）
+  - `backend/src/schemas/contract_group.py`（`AuditLogResponse.context`）
+  - `backend/src/api/v1/contracts/contract_groups.py`（`POST /api/v1/contract-groups/{group_id}/submit-review`、`GET /api/v1/contracts/{contract_id}/audit-logs`）
+  - `backend/tests/unit/services/contract/test_contract_joint_review.py`
+  - `backend/tests/unit/api/v1/test_contract_lifecycle_api.py`
 
-#### REQ-RNT-005 反审核与纠错闭环 📋
+#### REQ-RNT-005 反审核与纠错闭环 ✅
 - 描述：已出账数据不允许直接反审核，需走纠错链路。
 - 验收：
   - 已产生台账或结算时，不允许直接反审核。
   - 必须先作废/冲销后再重建，禁止物理删除关键业务记录。
   - 全流程强制留痕（原因、操作人、审批人、前后值、关联单号）。
+- 代码证据：
+  - `backend/src/services/contract/contract_group_service.py`（`start_correction` / `approve` 的纠错接力、前合同 `REVERSED` 收口、草稿编辑守卫）
+  - `backend/src/services/contract/ledger_service_v2.py`（`reverse_correction_source_entries`）
+  - `backend/src/crud/contract_group.py`（`create_contract_relation` / `get_renewal_parent_contract` / `list_contract_audit_logs`）
+  - `backend/src/api/v1/contracts/contract_groups.py`（`POST /api/v1/contracts/{contract_id}/start-correction`、`GET /api/v1/contracts/{contract_id}/audit-logs`）
+  - `backend/alembic/versions/20260329_req_rnt_004_005_audit_context.py`
+  - `backend/tests/unit/services/contract/test_contract_correction_flow.py`
+  - `backend/tests/unit/api/v1/test_contract_lifecycle_api.py`
 
 #### REQ-RNT-006 台账自动化 ✅
 - 描述：合同生效后自动生成台账并支持批量维护。
@@ -605,8 +620,8 @@
 | REQ-RNT-001 | ✅ | M1 ORM/DDL ✅ M2 Schema/CRUD/Service ✅ M3 API ✅ | — |
 | REQ-RNT-002 | 📋 | — | — |
 | REQ-RNT-003 | ✅ | `/api/v1/contracts/{contract_id}/*` 生命周期 6 端点 + 派生状态 + 审计日志 | `test_contract_lifecycle_api.py`, `test_contract_group_service.py` |
-| REQ-RNT-004 | 📋 | — | — |
-| REQ-RNT-005 | 📋 | — | — |
+| REQ-RNT-004 | ✅ | `/api/v1/contract-groups/{group_id}/submit-review` + `/api/v1/contracts/{contract_id}/audit-logs`（关键变更单审阻断 + 组联审放行 + 审计上下文） | `test_contract_joint_review.py`, `test_contract_lifecycle_api.py` |
+| REQ-RNT-005 | ✅ | `/api/v1/contracts/{contract_id}/start-correction` + `/api/v1/contracts/{contract_id}/approve`（纠错草稿、前合同反转、台账作废重建） | `test_contract_correction_flow.py`, `test_contract_lifecycle_api.py`, `test_lifecycle_v2.py` |
 | REQ-RNT-006 | ✅ | `/api/v1/ledger/entries`, `/api/v1/ledger/entries/export`, `/api/v1/ledger/compensation/run`, `/api/v1/contracts/{contract_id}/ledger/*` | `test_ledger_service_v2.py`, `test_ledger_aggregate_query.py`, `test_ledger_recalculate.py`, `test_ledger_api.py`, `test_contract_ledger_entries_migration.py`, `test_ledger_export_service.py`, `test_ledger_compensation_service.py`, `test_service_fee_ledger_service.py`, `test_service_fee_ledger_migration.py` |
 | REQ-CUS-001 | 📋 | — | — |
 | REQ-CUS-002 | 📋 | — | — |

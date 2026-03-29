@@ -74,6 +74,7 @@ class CRUDContract:
         stmt = select(Contract).where(Contract.contract_id == contract_id)
         if load_details:
             stmt = stmt.options(
+                selectinload(Contract.assets),
                 selectinload(Contract.lease_detail),
                 selectinload(Contract.agency_detail),
             )
