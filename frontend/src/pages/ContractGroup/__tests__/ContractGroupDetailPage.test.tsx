@@ -85,4 +85,52 @@ describe('ContractGroupDetailPage', () => {
 
     expect(mockNavigate).toHaveBeenCalledWith('/contract-groups/group-1/edit');
   });
+
+  it('renders agency mode warning when the group is agency operated', async () => {
+    vi.mocked(contractGroupService.getContractGroup).mockResolvedValue({
+      contract_group_id: 'group-2',
+      group_code: 'GRP-AGENCY-202603-0001',
+      revenue_mode: 'AGENCY',
+      operator_party_id: 'party-op',
+      owner_party_id: 'party-owner',
+      effective_from: '2026-03-01',
+      effective_to: '2026-12-31',
+      derived_status: '生效中',
+      data_status: '正常',
+      created_at: '2026-03-01T00:00:00Z',
+      updated_at: '2026-03-02T00:00:00Z',
+      version: 1,
+      settlement_rule: {
+        version: 'v1',
+        cycle: '月付',
+        settlement_mode: 'manual',
+        amount_rule: { basis: 'fixed' },
+        payment_rule: { due_day: 15 },
+      },
+      revenue_attribution_rule: null,
+      revenue_share_rule: null,
+      risk_tags: [],
+      predecessor_group_id: null,
+      upstream_contract_ids: [],
+      downstream_contract_ids: ['contract-2'],
+      contracts: [
+        {
+          contract_id: 'contract-2',
+          contract_number: 'C-AGENCY-001',
+          contract_direction: 'OUTBOUND',
+          group_relation_type: 'DIRECT_LEASE',
+          lessor_party_id: 'party-owner',
+          lessee_party_id: 'party-customer',
+          effective_from: '2026-03-01',
+          effective_to: '2026-12-31',
+          status: 'ACTIVE',
+          review_status: 'APPROVED',
+        },
+      ],
+    });
+
+    renderWithProviders(<ContractGroupDetailPage />, { route: '/contract-groups/group-1' });
+
+    expect(await screen.findByText('代理口径，非自营出租')).toBeInTheDocument();
+  });
 });

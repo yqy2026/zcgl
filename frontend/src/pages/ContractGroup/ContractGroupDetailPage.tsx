@@ -14,6 +14,17 @@ const jsonBlockStyle: React.CSSProperties = {
   wordBreak: 'break-word',
 };
 
+const REVENUE_MODE_META = {
+  LEASE: {
+    color: 'blue',
+    label: '承租模式',
+  },
+  AGENCY: {
+    color: 'cyan',
+    label: '代理模式',
+  },
+} as const;
+
 const contractColumns: ColumnsType<ContractGroupSummaryContract> = [
   {
     title: '合同编号',
@@ -95,11 +106,20 @@ const ContractGroupDetailPage: React.FC = () => {
     >
       {data != null && (
         <Space orientation="vertical" size={16}>
+          {data.revenue_mode === 'AGENCY' ? (
+            <Alert
+              type="info"
+              showIcon
+              title="代理口径，非自营出租"
+              description="该合同组按代理模式管理，终端租金不直接计入运营方自营租金收入。"
+            />
+          ) : null}
+
           <Descriptions bordered column={2}>
             <Descriptions.Item label="合同组编码">{data.group_code}</Descriptions.Item>
             <Descriptions.Item label="经营模式">
-              <Tag color={data.revenue_mode === 'LEASE' ? 'blue' : 'purple'}>
-                {data.revenue_mode}
+              <Tag color={REVENUE_MODE_META[data.revenue_mode].color}>
+                {REVENUE_MODE_META[data.revenue_mode].label}
               </Tag>
             </Descriptions.Item>
             <Descriptions.Item label="运营方主体 ID">{data.operator_party_id}</Descriptions.Item>

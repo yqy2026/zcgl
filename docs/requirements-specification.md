@@ -278,7 +278,7 @@
   - API 端点：`backend/src/api/v1/contracts/contract_groups.py`（`/api/v1/contract-groups/*`，`/api/v1/contracts/*`）
   - 单元测试：`backend/tests/unit/services/contract/test_contract_group_service.py`、`backend/tests/unit/api/v1/test_contract_groups_layering.py`
 
-#### REQ-RNT-002 承租模式与代理模式并行支持 📋
+#### REQ-RNT-002 承租模式与代理模式并行支持 ✅
 - 描述：系统需同时支持两种现实经营模式，通过 `ContractGroup.revenue_mode` + `Contract.group_relation_type` 覆盖完整业务结构。
 - 验收：
   - 承租模式（`revenue_mode = lease`）：
@@ -294,6 +294,18 @@
 - 字段映射（附录 v0.3 / §3.3 ContractGroup + §3.4 Contract）：
   - `ContractGroup.revenue_mode`：`lease`(承租模式) / `agency`(代理模式)。
   - `Contract.group_relation_type`：`上游` / `下游` / `委托` / `直租`。
+- 代码证据：
+  - `backend/src/models/contract_group.py`（`RevenueMode` / `GroupRelationType` / `AgencyAgreementDetail` 定义，锁定承租与代理双模式结构）
+  - `backend/src/services/contract/contract_group_service.py`（`validate_revenue_mode_compatibility()` 约束承租组仅可用 `上游/下游`，代理组仅可用 `委托/直租`）
+  - `backend/src/services/asset/asset_service.py`（`get_asset_lease_summary()` 仅将 `下游/直租` 终端租户投影到资产客户摘要）
+  - `backend/src/services/analytics/analytics_service.py`（`_calculate_operational_metrics()` 将承租下游租金计入 `self_operated_rent_income`，代理直租服务费计入 `agency_service_income`）
+  - `frontend/src/pages/ContractGroup/ContractGroupDetailPage.tsx`（代理合同组显式标注“代理口径，非自营出租”）
+  - `frontend/src/pages/Assets/AssetDetailPage.tsx`（资产租赁摘要出现 `委托/直租` 合同时显式提示代理口径）
+  - `backend/tests/unit/services/contract/test_contract_group_service.py`
+  - `backend/tests/unit/services/asset/test_asset_lease_summary.py`
+  - `backend/tests/unit/services/analytics/test_analytics_service.py`
+  - `frontend/src/pages/ContractGroup/__tests__/ContractGroupDetailPage.test.tsx`
+  - `frontend/src/pages/Assets/__tests__/AssetDetailPage.test.tsx`
 
 #### REQ-RNT-003 合同生命周期与状态流转 ✅
 - 描述：合同组为纯容器，不拥有独立生命周期状态；生命周期状态管理在合同级进行。
@@ -618,7 +630,7 @@
 | REQ-PRJ-001 | ✅ | `/api/v1/projects` (CRUD + search) | `test_project.py`, `test_project_service.py` |
 | REQ-PRJ-002 | ✅ | `/api/v1/projects/{project_id}/assets` | `test_project_service.py`, `test_project.py` |
 | REQ-RNT-001 | ✅ | M1 ORM/DDL ✅ M2 Schema/CRUD/Service ✅ M3 API ✅ | — |
-| REQ-RNT-002 | 📋 | — | — |
+| REQ-RNT-002 | ✅ | `/api/v1/contract-groups/*` 双模式校验 + `/api/v1/assets/{id}/lease-summary` 终端客户摘要 + `/api/v1/analytics/comprehensive` 自营/代理收入拆分 + 前端代理口径标识 | `test_contract_group_service.py`, `test_asset_lease_summary.py`, `test_analytics_service.py`, `ContractGroupDetailPage.test.tsx`, `AssetDetailPage.test.tsx` |
 | REQ-RNT-003 | ✅ | `/api/v1/contracts/{contract_id}/*` 生命周期 6 端点 + 派生状态 + 审计日志 | `test_contract_lifecycle_api.py`, `test_contract_group_service.py` |
 | REQ-RNT-004 | ✅ | `/api/v1/contract-groups/{group_id}/submit-review` + `/api/v1/contracts/{contract_id}/audit-logs`（关键变更单审阻断 + 组联审放行 + 审计上下文） | `test_contract_joint_review.py`, `test_contract_lifecycle_api.py` |
 | REQ-RNT-005 | ✅ | `/api/v1/contracts/{contract_id}/start-correction` + `/api/v1/contracts/{contract_id}/approve`（纠错草稿、前合同反转、台账作废重建） | `test_contract_correction_flow.py`, `test_contract_lifecycle_api.py`, `test_lifecycle_v2.py` |

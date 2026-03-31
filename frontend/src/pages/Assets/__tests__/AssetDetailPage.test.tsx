@@ -288,6 +288,59 @@ describe('AssetDetailPage', () => {
       ).toBeInTheDocument();
     });
 
+    it('出现代理模式合同时应提示代理口径而非自营出租', async () => {
+      vi.mocked(assetService.getAsset).mockResolvedValue({
+        id: 'asset_123',
+        asset_name: '测试资产A栋',
+      });
+      vi.mocked(assetService.getAssetLeaseSummary).mockResolvedValue(
+        buildLeaseSummary({
+          by_type: [
+            {
+              group_relation_type: '上游',
+              label: '上游承租',
+              contract_count: 0,
+              total_area: 0,
+              monthly_amount: 0,
+            },
+            {
+              group_relation_type: '下游',
+              label: '下游转租',
+              contract_count: 1,
+              total_area: 0,
+              monthly_amount: 18000,
+            },
+            {
+              group_relation_type: '委托',
+              label: '委托协议',
+              contract_count: 1,
+              total_area: 0,
+              monthly_amount: 0,
+            },
+            {
+              group_relation_type: '直租',
+              label: '直租合同',
+              contract_count: 2,
+              total_area: 0,
+              monthly_amount: 32000,
+            },
+          ],
+          customer_summary: [
+            {
+              party_id: 'party-1',
+              party_name: '终端租户甲',
+              group_relation_type: '直租',
+              contract_count: 2,
+            },
+          ],
+        })
+      );
+
+      renderAssetDetailPage('asset_123');
+
+      expect(await screen.findByText('代理口径，非自营出租')).toBeInTheDocument();
+    });
+
     it('切换月份时重新请求对应月份的租赁汇总', async () => {
       const mockAsset = {
         id: 'asset_123',

@@ -41,6 +41,8 @@ const RELATION_TYPE_COLORS: Record<AssetLeaseGroupRelationType, string> = {
   直租: 'green',
 };
 
+const AGENCY_RELATION_TYPES: AssetLeaseGroupRelationType[] = ['委托', '直租'];
+
 const buildPeriodParams = (month: Dayjs) => ({
   period_start: month.startOf('month').format('YYYY-MM-DD'),
   period_end: month.endOf('month').format('YYYY-MM-DD'),
@@ -188,8 +190,22 @@ const AssetDetailPage: React.FC = () => {
       return <Empty description="暂无租赁汇总数据" image={Empty.PRESENTED_IMAGE_SIMPLE} />;
     }
 
+    const hasAgencyModeContracts = leaseSummary.by_type.some(
+      item =>
+        AGENCY_RELATION_TYPES.includes(item.group_relation_type) && item.contract_count > 0
+    );
+
     return (
       <div className={styles.summaryContent}>
+        {hasAgencyModeContracts ? (
+          <Alert
+            type="info"
+            showIcon
+            title="代理口径，非自营出租"
+            description="本资产当前包含委托/直租合同，终端租金属于代理链路展示，不计入运营方自营出租收入。"
+          />
+        ) : null}
+
         <Row gutter={[16, 16]}>
           <Col xs={24} lg={10}>
             <div className={styles.heroPanel}>

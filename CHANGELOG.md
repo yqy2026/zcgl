@@ -2,6 +2,11 @@
 
 ## [Unreleased] - 2026-03-06
 
+### 2026-03-31
+- feat(rnt-002): 收口 `REQ-RNT-002` 的前端可见语义。`frontend/src/pages/ContractGroup/ContractGroupDetailPage.tsx` 现将 `LEASE/AGENCY` 显式映射为“承租模式/代理模式”，并在代理合同组详情展示“代理口径，非自营出租”提示；`frontend/src/pages/Assets/AssetDetailPage.tsx` 在资产租赁摘要出现 `委托/直租` 合同时同步提示代理链路口径，避免将代理终端租金误读为自营出租收入。
+- test(rnt-002): 新增前端回归 `frontend/src/pages/ContractGroup/__tests__/ContractGroupDetailPage.test.tsx` 与 `frontend/src/pages/Assets/__tests__/AssetDetailPage.test.tsx`，锁定代理合同组与资产租赁摘要都必须显式提示“代理口径，非自营出租”。
+- docs(rnt-002): `docs/requirements-specification.md` 已将 `REQ-RNT-002` 状态更新为 `✅`，补充合同模式兼容校验、资产客户摘要、经营分析和前端代理口径提示的代码证据，并同步更新需求追踪矩阵。
+
 ### 2026-03-29
 - feat(contract-review): 完成 `REQ-RNT-004/005` 收口。后端 `backend/src/services/contract/contract_group_service.py` 新增关键变更分类与联审策略，纠错草稿 `start_correction`、前合同 `reverse_review` 反转、草稿编辑守卫与合同审计日志查询；`backend/src/services/contract/ledger_service_v2.py` 新增 `reverse_correction_source_entries()`，对纠错生效月起的原合同未支付台账执行 `voided` 冲销并对 `paid/partial` 账期 fail-closed；`backend/src/api/v1/contracts/contract_groups.py` 新增 `/contracts/{contract_id}/start-correction` 与 `/contracts/{contract_id}/audit-logs`；`backend/src/models/contract_group.py` / `backend/src/schemas/contract_group.py` 为 `ContractAuditLog` 补充结构化 `context`，Alembic 新增 `20260329_req_rnt_004_005_audit_context.py`。
 - test(contract-review): 新增 `backend/tests/unit/services/contract/test_contract_joint_review.py`、`backend/tests/unit/services/contract/test_contract_correction_flow.py`，并扩充 `backend/tests/unit/api/v1/test_contract_lifecycle_api.py`，锁定“关键变更单审阻断、合同组联审放行、纠错草稿复制、前合同反转、已支付账期 fail-closed、审计接口路由注册”。
