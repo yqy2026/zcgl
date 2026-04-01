@@ -60,3 +60,42 @@ class TestAnalyticsExportService:
         assert "总览,总收入（经营口径）,1200.00,元" in lines
         assert "总览,口径版本,," in lines
         assert '"total_income"' not in content
+
+    def test_build_customer_breakdown_rows_should_include_contract_type_split(self):
+        service = AnalyticsExportService()
+
+        rows = service.build_customer_breakdown_rows(
+            {
+                "customer_entity_breakdown": {
+                    "upstream_lease": 1,
+                    "downstream_sublease": 2,
+                    "entrusted_operation": 3,
+                },
+                "customer_contract_breakdown": {
+                    "upstream_lease": 2,
+                    "downstream_sublease": 4,
+                    "entrusted_operation": 6,
+                },
+            }
+        )
+
+        assert rows == [
+            {
+                "section": "客户统计拆分",
+                "metric": "上游承租",
+                "value": "主体 1 / 合同 2",
+                "unit": "",
+            },
+            {
+                "section": "客户统计拆分",
+                "metric": "下游转租",
+                "value": "主体 2 / 合同 4",
+                "unit": "",
+            },
+            {
+                "section": "客户统计拆分",
+                "metric": "委托运营",
+                "value": "主体 3 / 合同 6",
+                "unit": "",
+            },
+        ]

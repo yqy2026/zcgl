@@ -117,6 +117,16 @@ const baseProtectedRoutes: ProtectedRouteItem[] = [
     element: assetDetailPage,
     permissions: [{ resource: 'asset', action: 'read' }],
   },
+  {
+    path: OWNER_ROUTES.CUSTOMER_DETAIL_PATH,
+    element: React.lazy(() => import('../pages/Customer/CustomerDetailPage')),
+    permissions: [{ resource: 'analytics', action: 'read' }],
+  },
+  {
+    path: MANAGER_ROUTES.CUSTOMER_DETAIL_PATH,
+    element: React.lazy(() => import('../pages/Customer/CustomerDetailPage')),
+    permissions: [{ resource: 'analytics', action: 'read' }],
+  },
 
   // 租赁管理模块 - 注意路由顺序，具体路径必须在动态路径之前
   {

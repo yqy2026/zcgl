@@ -42,7 +42,7 @@ import { useArrayListData } from '@/hooks/useArrayListData';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
 import { PageContainer } from '@/components/Common';
 import { buildQueryScopeKey } from '@/utils/queryScope';
-import { MANAGER_ROUTES } from '@/constants/routes';
+import { MANAGER_ROUTES, OWNER_ROUTES } from '@/constants/routes';
 import styles from './ProjectDetailPage.module.css';
 
 const { Text } = Typography;
@@ -73,6 +73,22 @@ const buildPeriodParams = (month: Dayjs) => ({
   period_end: month.endOf('month').format('YYYY-MM-DD'),
 });
 
+const buildCustomerDetailPath = (
+  perspective: string | null,
+  partyId: string | null | undefined
+): string | null => {
+  if (partyId == null || partyId.trim() === '') {
+    return null;
+  }
+  if (perspective === 'owner') {
+    return OWNER_ROUTES.CUSTOMER_DETAIL(partyId);
+  }
+  if (perspective === 'manager') {
+    return MANAGER_ROUTES.CUSTOMER_DETAIL(partyId);
+  }
+  return null;
+};
+
 // 子组件：逐资产获取租赁汇总，避免在 map 中调用 hook
 interface AssetLeaseSummaryRowData {
   queryScopeKey: string;
@@ -101,8 +117,22 @@ const useAssetLeaseSummary = (
   });
 
 const AssetLeaseSummaryRow: React.FC<
-  AssetLeaseSummaryRowData & { onNavigate: (id: string) => void; enabled: boolean }
-> = ({ queryScopeKey, assetId, assetName, periodParams, onNavigate, enabled }) => {
+  AssetLeaseSummaryRowData & {
+    onNavigate: (id: string) => void;
+    onNavigateCustomer: (id: string) => void;
+    perspective: string | null;
+    enabled: boolean;
+  }
+> = ({
+  queryScopeKey,
+  assetId,
+  assetName,
+  periodParams,
+  onNavigate,
+  onNavigateCustomer,
+  perspective,
+  enabled,
+}) => {
   const { data, isLoading } = useAssetLeaseSummary(queryScopeKey, assetId, periodParams, enabled);
 
   if (isLoading) {
@@ -144,9 +174,29 @@ const AssetLeaseSummaryRow: React.FC<
       </td>
       <td style={{ textAlign: 'center' }}>
         {customerCount > 0 ? (
-          <Tooltip title={data?.customer_summary.map(c => c.party_name).join('、')}>
-            <Tag>{customerCount} 家</Tag>
-          </Tooltip>
+          <Space size={8} wrap>
+            <Tooltip title={data?.customer_summary.map(c => c.party_name).join('、')}>
+              <Tag>{customerCount} 家</Tag>
+            </Tooltip>
+            {(data?.customer_summary ?? [])
+              .filter(customer => buildCustomerDetailPath(perspective, customer.party_id) != null)
+              .slice(0, 2)
+              .map(customer => (
+                <Button
+                  key={`${customer.party_id}-${customer.party_name}`}
+                  type="link"
+                  style={{ padding: 0 }}
+                  aria-label={`查看客户${customer.party_name}详情`}
+                  onClick={() => {
+                    if (customer.party_id != null) {
+                      onNavigateCustomer(customer.party_id);
+                    }
+                  }}
+                >
+                  {customer.party_name}
+                </Button>
+              ))}
+          </Space>
         ) : (
           <Text type="secondary">—</Text>
         )}
@@ -521,6 +571,13 @@ const ProjectDetailPage: React.FC = () => {
                         periodParams={periodParams}
                         enabled={canQuery}
                         onNavigate={assetId => navigate(`/assets/${assetId}`)}
+                        onNavigateCustomer={customerId => {
+                          const nextPath = buildCustomerDetailPath(perspective, customerId);
+                          if (nextPath != null) {
+                            navigate(nextPath);
+                          }
+                        }}
+                        perspective={perspective}
                       />
                     ))}
                   </tbody>

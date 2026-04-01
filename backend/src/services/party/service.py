@@ -7,6 +7,7 @@ from typing import Any
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from ...core.exception_handler import (
     DuplicateResourceError,
@@ -16,6 +17,7 @@ from ...core.exception_handler import (
 from ...crud.party import CRUDParty, party_crud
 from ...crud.query_builder import PartyFilter
 from ...models.auth import User
+from ...models.contract_group import Contract, ContractGroup, GroupRelationType
 from ...models.party import Party, PartyContact, PartyHierarchy, PartyReviewStatus
 from ...models.party_review_log import PartyReviewLog
 from ...models.user_party_binding import UserPartyBinding
@@ -29,6 +31,12 @@ from ...schemas.party import (
 from ...services.party_scope import resolve_user_party_filter
 
 logger = logging.getLogger(__name__)
+
+_CUSTOMER_BUCKET_LABELS: dict[str, str] = {
+    "upstream_lease": "upstream_lease",
+    "downstream_sublease": "downstream_sublease",
+    "entrusted_operation": "entrusted_operation",
+}
 
 
 class PartyService:
@@ -623,6 +631,122 @@ class PartyService:
         result = await db.execute(stmt)
         return list(result.scalars().all())
 
+    async def get_customer_profile(
+        self,
+        db: AsyncSession,
+        *,
+        party_id: str,
+        perspective: str,
+        effective_party_ids: list[str] | None,
+    ) -> dict[str, Any]:
+        party = await self.party_crud.get_party(db, party_id=party_id)
+        if party is None:
+            raise ResourceNotFoundError("客户", party_id)
+
+        contracts = await self._list_customer_contracts(
+            db,
+            party_id=party_id,
+            perspective=perspective,
+            effective_party_ids=effective_party_ids,
+        )
+        if len(contracts) == 0:
+            raise ResourceNotFoundError("客户", party_id)
+
+        contacts = await self.get_contacts(db, party_id=party_id)
+        primary_contact = next((contact for contact in contacts if contact.is_primary), None)
+        metadata = self._normalize_metadata(getattr(party, "metadata_json", None))
+
+        risk_tag_items = self._collect_customer_risk_tags(contracts, metadata)
+        normalized_effective_party_ids = {
+            str(item).strip()
+            for item in (effective_party_ids or [])
+            if str(item).strip() != ""
+        }
+        contract_summaries = [
+            self._serialize_customer_contract_summary(contract) for contract in contracts
+        ]
+        contract_role = self._resolve_primary_contract_role(contracts)
+
+        return {
+            "customer_party_id": str(party.id),
+            "customer_name": str(party.name),
+            "customer_type": str(
+                metadata.get("customer_type")
+                or ("internal" if str(party.id) in normalized_effective_party_ids else "external")
+            ),
+            "subject_nature": str(
+                metadata.get("subject_nature")
+                or self._derive_subject_nature(getattr(party, "party_type", None))
+            ),
+            "perspective_type": perspective,
+            "contract_role": contract_role,
+            "contact_name": self._normalize_optional_text(
+                metadata.get("contact_name")
+                or getattr(primary_contact, "contact_name", None)
+            ),
+            "contact_phone": self._normalize_optional_text(
+                metadata.get("contact_phone")
+                or getattr(primary_contact, "contact_phone", None)
+            ),
+            "identifier_type": self._normalize_optional_text(metadata.get("identifier_type")),
+            "unified_identifier": self._normalize_optional_text(
+                metadata.get("unified_identifier")
+            ),
+            "address": self._normalize_optional_text(metadata.get("address")),
+            "status": str(getattr(party, "status", "active")),
+            "historical_contract_count": len(contract_summaries),
+            "risk_tags": [item["tag"] for item in risk_tag_items],
+            "risk_tag_items": risk_tag_items,
+            "payment_term_preference": self._normalize_optional_text(
+                metadata.get("payment_term_preference")
+            ),
+            "contracts": contract_summaries,
+        }
+
+    async def _list_customer_contracts(
+        self,
+        db: AsyncSession,
+        *,
+        party_id: str,
+        perspective: str,
+        effective_party_ids: list[str] | None,
+    ) -> list[Contract]:
+        normalized_effective_party_ids = [
+            str(item).strip()
+            for item in (effective_party_ids or [])
+            if str(item).strip() != ""
+        ]
+        if len(normalized_effective_party_ids) == 0:
+            return []
+
+        stmt = (
+            select(Contract)
+            .join(
+                ContractGroup,
+                Contract.contract_group_id == ContractGroup.contract_group_id,
+            )
+            .where(
+                Contract.data_status == "正常",
+                Contract.status.in_(["ACTIVE", "EXPIRED", "TERMINATED"]),
+            )
+            .options(
+                selectinload(Contract.contract_group),
+            )
+        )
+        if perspective == "owner":
+            stmt = stmt.where(ContractGroup.owner_party_id.in_(normalized_effective_party_ids))
+        else:
+            stmt = stmt.where(
+                ContractGroup.operator_party_id.in_(normalized_effective_party_ids)
+            )
+
+        contracts = list((await db.execute(stmt)).scalars().unique().all())
+        return [
+            contract
+            for contract in contracts
+            if self._resolve_customer_party_id(contract, perspective) == party_id
+        ]
+
     async def create_user_party_binding(
         self,
         db: AsyncSession,
@@ -842,6 +966,140 @@ class PartyService:
         if len(changed_fields) == 0:
             return "fields:none"
         return f"fields:{','.join(changed_fields)}"
+
+    @staticmethod
+    def _normalize_metadata(value: Any) -> dict[str, Any]:
+        return value if isinstance(value, dict) else {}
+
+    @staticmethod
+    def _normalize_optional_text(value: Any) -> str | None:
+        if value is None:
+            return None
+        normalized = str(value).strip()
+        return normalized if normalized != "" else None
+
+    @staticmethod
+    def _derive_subject_nature(raw_party_type: Any) -> str:
+        normalized_party_type = str(raw_party_type).strip().lower()
+        if normalized_party_type == "individual":
+            return "individual"
+        return "enterprise"
+
+    @classmethod
+    def _resolve_customer_party_id(cls, contract: Contract, perspective: str) -> str | None:
+        relation_type = getattr(contract, "group_relation_type", None)
+        normalized_relation_type = (
+            relation_type.name if hasattr(relation_type, "name") else str(relation_type)
+        ).strip()
+        if normalized_relation_type == GroupRelationType.UPSTREAM.name:
+            party_value = (
+                getattr(contract, "lessee_party_id", None)
+                if perspective == "owner"
+                else getattr(contract, "lessor_party_id", None)
+            )
+            return cls._normalize_optional_text(party_value)
+        if normalized_relation_type == GroupRelationType.DOWNSTREAM.name:
+            return cls._normalize_optional_text(getattr(contract, "lessee_party_id", None))
+        if normalized_relation_type == GroupRelationType.ENTRUSTED.name:
+            party_value = (
+                getattr(contract, "lessee_party_id", None)
+                if perspective == "owner"
+                else getattr(contract, "lessor_party_id", None)
+            )
+            return cls._normalize_optional_text(party_value)
+        if normalized_relation_type == GroupRelationType.DIRECT_LEASE.name:
+            return cls._normalize_optional_text(getattr(contract, "lessee_party_id", None))
+        return None
+
+    @classmethod
+    def _resolve_customer_bucket(cls, contract: Contract) -> str:
+        relation_type = getattr(contract, "group_relation_type", None)
+        normalized_relation_type = (
+            relation_type.name if hasattr(relation_type, "name") else str(relation_type)
+        ).strip()
+        if normalized_relation_type == GroupRelationType.UPSTREAM.name:
+            return "upstream_lease"
+        if normalized_relation_type == GroupRelationType.DOWNSTREAM.name:
+            return "downstream_sublease"
+        return "entrusted_operation"
+
+    @classmethod
+    def _resolve_primary_contract_role(cls, contracts: list[Contract]) -> str:
+        if len(contracts) == 0:
+            return "downstream_sublease"
+        return cls._resolve_customer_bucket(contracts[0])
+
+    @classmethod
+    def _serialize_customer_contract_summary(cls, contract: Contract) -> dict[str, Any]:
+        group = getattr(contract, "contract_group", None)
+        revenue_mode = getattr(group, "revenue_mode", None)
+        relation_type = getattr(contract, "group_relation_type", None)
+        status = getattr(contract, "status", None)
+        return {
+            "contract_id": str(getattr(contract, "contract_id", "")),
+            "contract_number": str(
+                getattr(contract, "contract_number", None)
+                or getattr(contract, "contract_id", "")
+            ),
+            "group_code": str(getattr(group, "group_code", "")),
+            "revenue_mode": revenue_mode.name if hasattr(revenue_mode, "name") else str(revenue_mode),
+            "group_relation_type": relation_type.name
+            if hasattr(relation_type, "name")
+            else str(relation_type),
+            "status": status.name if hasattr(status, "name") else str(status),
+            "effective_from": getattr(contract, "effective_from", None),
+            "effective_to": getattr(contract, "effective_to", None),
+        }
+
+    @classmethod
+    def _collect_customer_risk_tags(
+        cls,
+        contracts: list[Contract],
+        metadata: dict[str, Any],
+    ) -> list[dict[str, Any]]:
+        risk_tag_items: list[dict[str, Any]] = []
+        seen_tags: set[tuple[str, str]] = set()
+
+        manual_tags = metadata.get("risk_tags")
+        if isinstance(manual_tags, list):
+            for tag in manual_tags:
+                normalized_tag = cls._normalize_optional_text(tag)
+                if normalized_tag is None:
+                    continue
+                identity = ("manual", normalized_tag)
+                if identity in seen_tags:
+                    continue
+                seen_tags.add(identity)
+                risk_tag_items.append(
+                    {
+                        "tag": normalized_tag,
+                        "source": "manual",
+                        "updated_at": None,
+                    }
+                )
+
+        for contract in contracts:
+            group = getattr(contract, "contract_group", None)
+            group_risk_tags = getattr(group, "risk_tags", None)
+            if not isinstance(group_risk_tags, list):
+                continue
+            for tag in group_risk_tags:
+                normalized_tag = cls._normalize_optional_text(tag)
+                if normalized_tag is None:
+                    continue
+                identity = ("rule", normalized_tag)
+                if identity in seen_tags:
+                    continue
+                seen_tags.add(identity)
+                risk_tag_items.append(
+                    {
+                        "tag": normalized_tag,
+                        "source": "rule",
+                        "updated_at": getattr(group, "updated_at", None),
+                    }
+                )
+
+        return risk_tag_items
 
     @staticmethod
     async def _maybe_await_db_call(callback: Any) -> Any:

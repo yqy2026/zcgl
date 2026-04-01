@@ -424,6 +424,16 @@ class TestAnalyticsService:
         assert metrics["total_income"] == 1200.0
         assert metrics["customer_entity_count"] == 2
         assert metrics["customer_contract_count"] == 2
+        assert metrics["customer_entity_breakdown"] == {
+            "upstream_lease": 0,
+            "downstream_sublease": 1,
+            "entrusted_operation": 1,
+        }
+        assert metrics["customer_contract_breakdown"] == {
+            "upstream_lease": 0,
+            "downstream_sublease": 1,
+            "entrusted_operation": 2,
+        }
         assert metrics["metrics_version"]
 
     @pytest.mark.asyncio

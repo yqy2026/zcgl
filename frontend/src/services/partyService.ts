@@ -1,6 +1,6 @@
 import { apiClient } from '@/api/client';
 import type { ApiClientError } from '@/types/apiResponse';
-import type { Party, PartyListParams, PartyType } from '@/types/party';
+import type { CustomerProfile, Party, PartyListParams, PartyType } from '@/types/party';
 import { ApiErrorHandler } from '@/utils/responseExtractor';
 
 const DEFAULT_SEARCH_LIMIT = 20;
@@ -159,6 +159,25 @@ export class PartyService {
 
       if (!result.success || result.data == null) {
         throw new Error(`获取主体详情失败: ${result.error}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw toServiceError(enhancedError);
+    }
+  }
+
+  async getCustomerProfile(id: string): Promise<CustomerProfile> {
+    try {
+      const result = await apiClient.get<CustomerProfile>(`/customers/${id}`, {
+        cache: true,
+        retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
+
+      if (!result.success || result.data == null) {
+        throw new Error(`获取客户档案失败: ${result.error}`);
       }
 
       return result.data;

@@ -2,6 +2,12 @@
 
 ## [Unreleased] - 2026-03-06
 
+### 2026-04-01
+- feat(customer-profile): 完成 `REQ-CUS-001/002` 收口。后端 `backend/src/services/party/service.py` 新增 `get_customer_profile()`，以 `Party` 作为唯一主档，按当前视角聚合客户基础信息、历史签约记录、手工/规则双来源风险标签与账期偏好；`backend/src/api/v1/party.py` 新增 `GET /api/v1/customers/{party_id}`，`backend/src/schemas/party.py` 增补客户档案响应模型。前端新增 `frontend/src/pages/Customer/CustomerDetailPage.tsx`，并将资产详情/项目详情中的客户摘要改为可跳转客户详情；`frontend/src/pages/System/PartyDetailPage.tsx` 现支持维护客户增强字段，继续保持 `Party` 为唯一主档。
+- feat(customer-metrics): 经营分析现补齐客户双指标拆分。`backend/src/services/analytics/analytics_service.py` 为 `customer_entity_count` / `customer_contract_count` 新增按“上游承租 / 下游转租 / 委托运营”拆分的统计字段，`backend/src/services/analytics/analytics_export_service.py` 同步导出该拆分；前端 `frontend/src/components/Analytics/AnalyticsStatsCard.tsx`、`frontend/src/pages/Assets/AssetAnalyticsPage.tsx`、`frontend/src/services/analyticsService.ts`、`frontend/src/types/analytics.ts` 已适配展示与消费。
+- test(customer-profile): 新增/更新 `backend/tests/unit/services/test_party_service.py`、`backend/tests/unit/api/v1/test_party_api.py`、`backend/tests/unit/services/analytics/test_analytics_service.py`、`backend/tests/unit/services/analytics/test_analytics_export_service.py`、`frontend/src/pages/Customer/__tests__/CustomerDetailPage.test.tsx`、`frontend/src/pages/System/__tests__/PartyPages.test.tsx`、`frontend/src/pages/Assets/__tests__/AssetDetailPage.test.tsx`、`frontend/src/pages/Project/__tests__/ProjectDetailPage.test.tsx`、`frontend/src/components/Analytics/__tests__/RevenueStatsGrid.test.tsx`、`frontend/src/services/__tests__/partyService.test.ts` 与 `frontend/src/services/__tests__/analyticsService.test.ts`，锁定客户档案聚合、视角跳转和客户双指标拆分不回归。
+- docs(customer-profile): `docs/requirements-specification.md` 已将 `REQ-CUS-001/002` 状态更新为 `✅`，补充接口、服务、页面和测试代码证据，并同步更新需求追踪矩阵。
+
 ### 2026-03-31
 - feat(rnt-002): 收口 `REQ-RNT-002` 的前端可见语义。`frontend/src/pages/ContractGroup/ContractGroupDetailPage.tsx` 现将 `LEASE/AGENCY` 显式映射为“承租模式/代理模式”，并在代理合同组详情展示“代理口径，非自营出租”提示；`frontend/src/pages/Assets/AssetDetailPage.tsx` 在资产租赁摘要出现 `委托/直租` 合同时同步提示代理链路口径，避免将代理终端租金误读为自营出租收入。
 - test(rnt-002): 新增前端回归 `frontend/src/pages/ContractGroup/__tests__/ContractGroupDetailPage.test.tsx` 与 `frontend/src/pages/Assets/__tests__/AssetDetailPage.test.tsx`，锁定代理合同组与资产租赁摘要都必须显式提示“代理口径，非自营出租”。

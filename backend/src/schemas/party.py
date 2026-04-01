@@ -1,7 +1,7 @@
 """Pydantic schemas for Party-Role domain APIs."""
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
@@ -169,6 +169,55 @@ class PartyContactResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class CustomerRiskTagResponse(BaseModel):
+    """Customer risk tag item with source metadata."""
+
+    tag: str = Field(..., min_length=1, description="风险标签")
+    source: Literal["manual", "rule"] = Field(..., description="标签来源")
+    updated_at: datetime | None = Field(None, description="标签最近更新时间")
+
+
+class CustomerContractSummaryResponse(BaseModel):
+    """Historical customer contract summary."""
+
+    contract_id: str = Field(..., description="合同ID")
+    contract_number: str = Field(..., description="合同编号")
+    group_code: str = Field(..., description="合同组编号")
+    revenue_mode: str = Field(..., description="经营模式")
+    group_relation_type: str = Field(..., description="组内合同角色")
+    status: str = Field(..., description="合同状态")
+    effective_from: datetime | None = Field(None, description="生效开始")
+    effective_to: datetime | None = Field(None, description="生效结束")
+
+
+class CustomerProfileResponse(BaseModel):
+    """Perspective-scoped customer profile view."""
+
+    customer_party_id: str = Field(..., description="客户主体ID")
+    customer_name: str = Field(..., description="客户名称")
+    customer_type: str = Field(..., description="客户类型 internal/external")
+    subject_nature: str = Field(..., description="主体性质 enterprise/individual")
+    perspective_type: str = Field(..., description="当前视角 owner/manager")
+    contract_role: str = Field(..., description="当前视角下的客户合同角色")
+    contact_name: str | None = Field(None, description="联系人")
+    contact_phone: str | None = Field(None, description="联系电话")
+    identifier_type: str | None = Field(None, description="统一标识类型")
+    unified_identifier: str | None = Field(None, description="统一标识")
+    address: str | None = Field(None, description="地址")
+    status: str = Field(..., description="客户状态")
+    historical_contract_count: int = Field(..., ge=0, description="历史签约数")
+    risk_tags: list[str] = Field(default_factory=list, description="风险标签汇总")
+    risk_tag_items: list[CustomerRiskTagResponse] = Field(
+        default_factory=list,
+        description="带来源信息的风险标签",
+    )
+    payment_term_preference: str | None = Field(None, description="账期偏好")
+    contracts: list[CustomerContractSummaryResponse] = Field(
+        default_factory=list,
+        description="历史合同列表",
+    )
+
+
 class UserPartyBindingCreate(BaseModel):
     """Create user-party binding payload."""
 
@@ -230,6 +279,9 @@ __all__ = [
     "PartyContactCreate",
     "PartyContactUpdate",
     "PartyContactResponse",
+    "CustomerRiskTagResponse",
+    "CustomerContractSummaryResponse",
+    "CustomerProfileResponse",
     "UserPartyBindingCreate",
     "UserPartyBindingUpsert",
     "UserPartyBindingUpdate",

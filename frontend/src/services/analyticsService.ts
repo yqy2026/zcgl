@@ -23,6 +23,8 @@ interface RawApiData {
   agency_service_income?: number;
   customer_entity_count?: number;
   customer_contract_count?: number;
+  customer_entity_breakdown?: Record<string, number>;
+  customer_contract_breakdown?: Record<string, number>;
   metrics_version?: string;
   property_nature_distribution?: unknown[];
   ownership_status_distribution?: unknown[];
@@ -229,6 +231,12 @@ export class AnalyticsService {
       agency_service_income: toNumber(apiData.agency_service_income),
       customer_entity_count: toNumber(apiData.customer_entity_count),
       customer_contract_count: toNumber(apiData.customer_contract_count),
+      customer_entity_breakdown:
+        apiData.customer_entity_breakdown != null ? apiData.customer_entity_breakdown : undefined,
+      customer_contract_breakdown:
+        apiData.customer_contract_breakdown != null
+          ? apiData.customer_contract_breakdown
+          : undefined,
       metrics_version:
         typeof apiData.metrics_version === 'string' ? apiData.metrics_version : undefined,
       property_nature_distribution,

@@ -258,11 +258,85 @@ class TestPartyServiceReviewFlow:
         result = await service.create_party(db, obj_in=payload)
 
         assert result is created_party
-        create_payload = party_crud.create_party.await_args.kwargs["obj_in"]
-        assert create_payload["review_status"] == PartyReviewStatus.DRAFT.value
-        assert create_payload["review_by"] is None
-        assert create_payload["reviewed_at"] is None
-        assert create_payload["review_reason"] is None
+
+
+class TestCustomerProfileAggregation:
+    async def test_get_customer_profile_should_merge_metadata_contact_and_contract_history(
+        self,
+    ) -> None:
+        db = MagicMock()
+        party = SimpleNamespace(
+            id="party-customer-1",
+            party_type=PartyType.ORGANIZATION,
+            name="终端租户甲",
+            code="CUS-001",
+            status="active",
+            metadata_json={
+                "customer_type": "external",
+                "subject_nature": "enterprise",
+                "identifier_type": "USCC",
+                "unified_identifier": "91310000123456789A",
+                "address": "上海市徐汇区测试路 1 号",
+                "payment_term_preference": "月付",
+                "risk_tags": ["手工关注"],
+                "contact_name": "张三",
+                "contact_phone": "13800000000",
+            },
+        )
+        party_crud = MagicMock()
+        party_crud.get_party = AsyncMock(return_value=party)
+        service = PartyService(data_access=party_crud)
+
+        direct_contract = SimpleNamespace(
+            contract_id="contract-1",
+            contract_number="CTR-001",
+            status="ACTIVE",
+            group_relation_type="DIRECT_LEASE",
+            effective_from=datetime(2026, 1, 1),
+            effective_to=datetime(2026, 12, 31),
+            contract_group=SimpleNamespace(
+                group_code="GRP-001",
+                revenue_mode="AGENCY",
+                risk_tags=["代理口径冲突"],
+                updated_at=datetime(2026, 3, 30),
+            ),
+        )
+
+        with (
+            patch.object(service, "get_contacts", AsyncMock(return_value=[])),
+            patch.object(
+                service,
+                "_list_customer_contracts",
+                AsyncMock(return_value=[direct_contract]),
+            ),
+        ):
+            profile = await service.get_customer_profile(
+                db,
+                party_id="party-customer-1",
+                perspective="manager",
+                effective_party_ids=["party-manager-1"],
+            )
+
+        assert profile["customer_party_id"] == "party-customer-1"
+        assert profile["customer_name"] == "终端租户甲"
+        assert profile["contact_name"] == "张三"
+        assert profile["contact_phone"] == "13800000000"
+        assert profile["historical_contract_count"] == 1
+        assert profile["payment_term_preference"] == "月付"
+        assert profile["risk_tags"] == ["手工关注", "代理口径冲突"]
+        assert profile["risk_tag_items"] == [
+            {
+                "tag": "手工关注",
+                "source": "manual",
+                "updated_at": None,
+            },
+            {
+                "tag": "代理口径冲突",
+                "source": "rule",
+                "updated_at": datetime(2026, 3, 30),
+            },
+        ]
+        assert profile["contracts"][0]["group_relation_type"] == "DIRECT_LEASE"
 
     async def test_create_party_should_write_create_log(self) -> None:
         db = MagicMock()

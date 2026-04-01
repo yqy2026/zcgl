@@ -93,6 +93,8 @@ export const dynamicBreadcrumbMap: Record<string, string> = {
   // 项目
   '/project/:id': '项目详情',
   '/project/:id/edit': '编辑项目',
+  '/owner/customers/:id': '客户详情',
+  '/manager/customers/:id': '客户详情',
 
   // 主体管理
   '/system/parties/:id': '主体详情',

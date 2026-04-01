@@ -41,6 +41,11 @@ from ...models.party import PartyReviewStatus
 logger = logging.getLogger(__name__)
 
 ANALYTICS_METRICS_VERSION = "req-ana-001-v1"
+CUSTOMER_BREAKDOWN_KEYS = (
+    "upstream_lease",
+    "downstream_sublease",
+    "entrusted_operation",
+)
 
 
 class AnalyticsService:
@@ -208,7 +213,13 @@ class AnalyticsService:
             filters,
             party_filter=party_filter,
         )
-        stats.update(self._calculate_operational_metrics(active_contracts, filters))
+        stats.update(
+            self._calculate_operational_metrics(
+                active_contracts,
+                filters,
+                party_filter=party_filter,
+            )
+        )
 
         return stats
 
@@ -324,12 +335,22 @@ class AnalyticsService:
         return True
 
     def _calculate_operational_metrics(
-        self, contracts: list[Contract], filters: dict[str, Any] | None = None
+        self,
+        contracts: list[Contract],
+        filters: dict[str, Any] | None = None,
+        *,
+        party_filter: PartyFilter | None = None,
     ) -> dict[str, Any]:
         self_operated_rent_income = Decimal("0")
         agency_service_income = Decimal("0")
         customer_party_ids: set[str] = set()
         customer_contract_ids: set[str] = set()
+        customer_party_ids_by_bucket: dict[str, set[str]] = {
+            key: set() for key in CUSTOMER_BREAKDOWN_KEYS
+        }
+        customer_contract_counts_by_bucket: dict[str, int] = {
+            key: 0 for key in CUSTOMER_BREAKDOWN_KEYS
+        }
         lower_year_month, upper_year_month = self._resolve_ledger_year_month_bounds(filters)
 
         for contract in contracts:
@@ -362,9 +383,13 @@ class AnalyticsService:
                 lessee_party_id = str(getattr(contract, "lessee_party_id", "")).strip()
                 if lessee_party_id != "":
                     customer_party_ids.add(lessee_party_id)
+                    customer_party_ids_by_bucket["downstream_sublease"].add(
+                        lessee_party_id
+                    )
                 customer_contract_ids.add(
                     str(getattr(contract, "contract_id", "")).strip()
                 )
+                customer_contract_counts_by_bucket["downstream_sublease"] += 1
 
             if (
                 group_mode == RevenueMode.AGENCY
@@ -385,9 +410,41 @@ class AnalyticsService:
                 lessee_party_id = str(getattr(contract, "lessee_party_id", "")).strip()
                 if lessee_party_id != "":
                     customer_party_ids.add(lessee_party_id)
+                    customer_party_ids_by_bucket["entrusted_operation"].add(
+                        lessee_party_id
+                    )
                 customer_contract_ids.add(
                     str(getattr(contract, "contract_id", "")).strip()
                 )
+                customer_contract_counts_by_bucket["entrusted_operation"] += 1
+
+            if (
+                group_mode == RevenueMode.LEASE
+                and relation_type == GroupRelationType.UPSTREAM
+            ):
+                upstream_party_id = self._resolve_counterparty_for_bucket(
+                    contract,
+                    party_filter=party_filter,
+                )
+                if upstream_party_id is not None:
+                    customer_party_ids_by_bucket["upstream_lease"].add(upstream_party_id)
+                    customer_party_ids.add(upstream_party_id)
+                customer_contract_counts_by_bucket["upstream_lease"] += 1
+
+            if (
+                group_mode == RevenueMode.AGENCY
+                and relation_type == GroupRelationType.ENTRUSTED
+            ):
+                entrusted_party_id = self._resolve_counterparty_for_bucket(
+                    contract,
+                    party_filter=party_filter,
+                )
+                if entrusted_party_id is not None:
+                    customer_party_ids_by_bucket["entrusted_operation"].add(
+                        entrusted_party_id
+                    )
+                    customer_party_ids.add(entrusted_party_id)
+                customer_contract_counts_by_bucket["entrusted_operation"] += 1
 
         total_income = self._quantize_money(
             self_operated_rent_income + agency_service_income
@@ -406,8 +463,27 @@ class AnalyticsService:
                     if contract_id != ""
                 ]
             ),
+            "customer_entity_breakdown": {
+                key: len(value) for key, value in customer_party_ids_by_bucket.items()
+            },
+            "customer_contract_breakdown": dict(customer_contract_counts_by_bucket),
             "metrics_version": ANALYTICS_METRICS_VERSION,
         }
+
+    @staticmethod
+    def _resolve_counterparty_for_bucket(
+        contract: Contract,
+        *,
+        party_filter: PartyFilter | None,
+    ) -> str | None:
+        lessor_party_id = str(getattr(contract, "lessor_party_id", "")).strip()
+        lessee_party_id = str(getattr(contract, "lessee_party_id", "")).strip()
+
+        if party_filter is not None and party_filter.filter_mode == "owner":
+            return lessee_party_id or None
+        if party_filter is not None and party_filter.filter_mode == "manager":
+            return lessor_party_id or None
+        return None
 
     @staticmethod
     def _is_party_approved(party: Any) -> bool:

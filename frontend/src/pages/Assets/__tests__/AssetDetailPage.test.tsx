@@ -143,6 +143,7 @@ const renderAssetDetailPage = (assetId: string) => {
         <Route path="/owner/assets/:id" element={<AssetDetailPage />} />
         <Route path="/assets" element={<div>Asset List</div>} />
         <Route path="/assets/:id/edit" element={<div>Edit Asset</div>} />
+        <Route path="/owner/customers/:id" element={<div>Customer Detail</div>} />
       </Routes>
     </QueryClientProvider>,
     { route: `/owner/assets/${assetId}` }
@@ -286,6 +287,23 @@ describe('AssetDetailPage', () => {
       expect(
         screen.getByText((_, node) => (node?.textContent?.trim() ?? '') === '75.00%')
       ).toBeInTheDocument();
+    });
+
+    it('在视角路由下点击客户摘要应跳转到客户详情', async () => {
+      vi.mocked(assetService.getAsset).mockResolvedValue({
+        id: 'asset_123',
+        asset_name: '测试资产A栋',
+      });
+      vi.mocked(assetService.getAssetLeaseSummary).mockResolvedValue(buildLeaseSummary());
+
+      renderAssetDetailPage('asset_123');
+
+      const customerButton = await screen.findByRole('button', { name: '查看客户租户甲详情' });
+      fireEvent.click(customerButton);
+
+      await waitFor(() => {
+        expect(window.location.pathname).toBe('/owner/customers/party-1');
+      });
     });
 
     it('出现代理模式合同时应提示代理口径而非自营出租', async () => {

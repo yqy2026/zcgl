@@ -180,6 +180,8 @@ const AssetAnalyticsPage: React.FC = () => {
                 agency_service_income: analyticsData.agency_service_income ?? 0,
                 customer_entity_count: analyticsData.customer_entity_count ?? 0,
                 customer_contract_count: analyticsData.customer_contract_count ?? 0,
+                customer_entity_breakdown: analyticsData.customer_entity_breakdown,
+                customer_contract_breakdown: analyticsData.customer_contract_breakdown,
                 metrics_version: analyticsData.metrics_version,
               }}
               loading={loading}

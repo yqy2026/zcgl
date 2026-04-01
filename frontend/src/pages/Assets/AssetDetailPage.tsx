@@ -30,6 +30,7 @@ import { buildQueryScopeKey } from '@/utils/queryScope';
 import { formatArea, formatCurrency } from '@/utils/format';
 import AssetDetailInfo from '@/components/Asset/AssetDetailInfo';
 import { PageContainer } from '@/components/Common';
+import { MANAGER_ROUTES, OWNER_ROUTES } from '@/constants/routes';
 import styles from './AssetDetailPage.module.css';
 
 const { Text } = Typography;
@@ -47,6 +48,22 @@ const buildPeriodParams = (month: Dayjs) => ({
   period_start: month.startOf('month').format('YYYY-MM-DD'),
   period_end: month.endOf('month').format('YYYY-MM-DD'),
 });
+
+const buildCustomerDetailPath = (
+  perspective: string | null,
+  partyId: string | null | undefined
+): string | null => {
+  if (partyId == null || partyId.trim() === '') {
+    return null;
+  }
+  if (perspective === 'owner') {
+    return OWNER_ROUTES.CUSTOMER_DETAIL(partyId);
+  }
+  if (perspective === 'manager') {
+    return MANAGER_ROUTES.CUSTOMER_DETAIL(partyId);
+  }
+  return null;
+};
 
 const summaryColumns: ColumnsType<ContractTypeSummary> = [
   {
@@ -165,7 +182,23 @@ const AssetDetailPage: React.FC = () => {
               <Tag color={RELATION_TYPE_COLORS[item.group_relation_type]}>
                 {item.group_relation_type}
               </Tag>
-              <Text strong>{item.party_name}</Text>
+              {buildCustomerDetailPath(perspective, item.party_id) != null ? (
+                <Button
+                  type="link"
+                  style={{ padding: 0 }}
+                  aria-label={`查看客户${item.party_name}详情`}
+                  onClick={() => {
+                    const nextPath = buildCustomerDetailPath(perspective, item.party_id);
+                    if (nextPath != null) {
+                      navigate(nextPath);
+                    }
+                  }}
+                >
+                  {item.party_name}
+                </Button>
+              ) : (
+                <Text strong>{item.party_name}</Text>
+              )}
             </Space>
             <Text type="secondary">关联 {item.contract_count} 份合同</Text>
           </div>

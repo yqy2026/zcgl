@@ -325,6 +325,86 @@ def test_get_party_review_logs_should_return_entries(client) -> None:
     assert payload[0]["reason"] == "fields:name"
 
 
+def test_get_customer_profile_should_require_perspective_and_return_profile(
+    client, db_session
+) -> None:
+    from src.models.party import Party, PartyType
+    from src.models.user_party_binding import RelationType, UserPartyBinding
+
+    _create_user(db_session, user_id="test_user_001")
+    scoped_party = Party(
+        party_type=PartyType.ORGANIZATION,
+        name="经营主体",
+        code="MGR-001",
+        status="active",
+    )
+    db_session.add(scoped_party)
+    db_session.flush()
+    db_session.add(
+        UserPartyBinding(
+            user_id="test_user_001",
+            party_id=scoped_party.id,
+            relation_type=RelationType.MANAGER,
+            is_primary=True,
+        )
+    )
+    db_session.flush()
+
+    with patch(
+        "src.api.v1.party.party_service.get_customer_profile",
+        new=AsyncMock(
+            return_value={
+                "customer_party_id": "party-customer-1",
+                "customer_name": "终端租户甲",
+                "customer_type": "external",
+                "subject_nature": "enterprise",
+                "perspective_type": "manager",
+                "contract_role": "entrusted_operation",
+                "contact_name": "张三",
+                "contact_phone": "13800000000",
+                "identifier_type": "USCC",
+                "unified_identifier": "91310000123456789A",
+                "address": "上海市徐汇区测试路 1 号",
+                "status": "active",
+                "historical_contract_count": 2,
+                "risk_tags": ["手工关注", "代理口径冲突"],
+                "risk_tag_items": [
+                    {"tag": "手工关注", "source": "manual", "updated_at": None},
+                    {
+                        "tag": "代理口径冲突",
+                        "source": "rule",
+                        "updated_at": "2026-03-30T00:00:00",
+                    },
+                ],
+                "payment_term_preference": "月付",
+                "contracts": [
+                    {
+                        "contract_id": "contract-1",
+                        "contract_number": "CTR-001",
+                        "group_code": "GRP-001",
+                        "revenue_mode": "AGENCY",
+                        "group_relation_type": "DIRECT_LEASE",
+                        "status": "ACTIVE",
+                        "effective_from": "2026-01-01T00:00:00",
+                        "effective_to": "2026-12-31T00:00:00",
+                    }
+                ],
+            }
+        ),
+    ) as mock_get_customer_profile:
+        response = client.get(
+            "/api/v1/customers/party-customer-1",
+            headers={"X-Perspective": "manager"},
+        )
+
+    assert response.status_code == status.HTTP_200_OK
+    payload = response.json()
+    assert payload["customer_party_id"] == "party-customer-1"
+    assert payload["historical_contract_count"] == 2
+    assert payload["risk_tag_items"][1]["source"] == "rule"
+    mock_get_customer_profile.assert_awaited_once()
+
+
 def test_create_user_party_binding_should_return_400_for_invalid_time_range(
     client, db_session
 ) -> None:

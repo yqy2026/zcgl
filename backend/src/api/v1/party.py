@@ -10,12 +10,15 @@ from ...core.router_registry import route_registry
 from ...database import get_async_db
 from ...middleware.auth import (
     AuthzContext,
+    PerspectiveContext,
     get_current_active_user,
     require_admin,
     require_authz,
+    require_perspective_context,
 )
 from ...models.auth import User
 from ...schemas.party import (
+    CustomerProfileResponse,
     PartyContactCreate,
     PartyContactResponse,
     PartyCreate,
@@ -157,6 +160,34 @@ async def get_party(
     if party is None:
         raise not_found("主体不存在", resource_type="party", resource_id=party_id)
     return PartyResponse.model_validate(party)
+
+
+@router.get(
+    "/customers/{party_id}",
+    response_model=CustomerProfileResponse,
+    summary="获取客户档案详情",
+)
+async def get_customer_profile(
+    party_id: str,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _perspective_ctx: PerspectiveContext = Depends(
+        require_perspective_context(resource_type="analytics")
+    ),
+) -> CustomerProfileResponse:
+    _ = current_user
+    try:
+        profile = await party_service.get_customer_profile(
+            db,
+            party_id=party_id,
+            perspective=_perspective_ctx.perspective,
+            effective_party_ids=_perspective_ctx.effective_party_ids,
+        )
+        return CustomerProfileResponse.model_validate(profile)
+    except BaseBusinessError:
+        raise
+    except Exception as exc:
+        raise internal_error("获取客户档案失败", original_error=exc) from exc
 
 
 @router.put("/parties/{party_id}", response_model=PartyResponse, summary="更新主体")

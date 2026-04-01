@@ -172,4 +172,67 @@ describe('ProjectDetailPage', () => {
 
     expect(mockNavigate).toHaveBeenCalledWith('/manager/projects');
   });
+
+  it('renders customer summary links that navigate to customer detail', () => {
+    vi.mocked(useQuery).mockImplementation(options => {
+      const [scope] = options.queryKey as [string, ...unknown[]];
+      if (scope === 'project') {
+        return {
+          data: {
+            id: 'project-1',
+            project_name: '项目A',
+            project_code: 'PRJ-TEST-000001',
+            status: 'active',
+            data_status: '正常',
+            created_at: '2026-03-01T00:00:00Z',
+            updated_at: '2026-03-02T00:00:00Z',
+          },
+          isLoading: false,
+          error: null,
+        };
+      }
+      if (scope === 'project-assets') {
+        return {
+          data: {
+            items: [{ id: 'asset-1', asset_name: '资产A' }],
+            total: 1,
+            summary: {
+              total_assets: 1,
+              total_rentable_area: 0,
+              total_rented_area: 0,
+              occupancy_rate: 0,
+            },
+          },
+          isLoading: false,
+          error: null,
+        };
+      }
+      if (scope === 'asset-lease-summary') {
+        return {
+          data: {
+            total_contracts: 1,
+            occupancy_rate: 0,
+            customer_summary: [
+              {
+                party_id: 'party-customer-1',
+                party_name: '终端租户甲',
+                group_relation_type: '直租',
+                contract_count: 1,
+              },
+            ],
+            by_type: [],
+          },
+          isLoading: false,
+          error: null,
+        };
+      }
+      return { data: undefined, isLoading: false, error: null };
+    });
+
+    renderWithProviders(<ProjectDetailPage />, { route: '/manager/projects/project-1' });
+
+    fireEvent.click(screen.getByRole('button', { name: '查看客户终端租户甲详情' }));
+
+    expect(mockNavigate).toHaveBeenCalledWith('/manager/customers/party-customer-1');
+  });
 });

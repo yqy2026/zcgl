@@ -32,6 +32,23 @@ const PARTY_TYPE_OPTIONS: Array<{ label: string; value: PartyType }> = [
   { label: '自然人', value: 'individual' },
 ];
 
+const CUSTOMER_TYPE_OPTIONS = [
+  { label: '外部', value: 'external' },
+  { label: '内部', value: 'internal' },
+] as const;
+
+const SUBJECT_NATURE_OPTIONS = [
+  { label: '企业', value: 'enterprise' },
+  { label: '个人', value: 'individual' },
+] as const;
+
+const IDENTIFIER_TYPE_OPTIONS = [
+  { label: '统一社会信用代码', value: 'USCC' },
+  { label: '身份证', value: 'CN_ID_CARD' },
+  { label: '护照', value: 'PASSPORT' },
+  { label: '其他证件', value: 'OTHER_GOV_ID' },
+] as const;
+
 const PARTY_TYPE_LABELS: Record<PartyType, string> = {
   organization: '组织',
   legal_entity: '法人主体',
@@ -61,10 +78,30 @@ const formatDateTime = (value: string | null | undefined): string => {
   return parsed.isValid() ? parsed.format('YYYY-MM-DD HH:mm:ss') : value;
 };
 
+const normalizeOptionalText = (value: unknown): string | undefined => {
+  if (value == null) {
+    return undefined;
+  }
+  const normalized = String(value).trim();
+  return normalized !== '' ? normalized : undefined;
+};
+
+const parseRiskTags = (value: unknown): string[] | undefined => {
+  const normalized = normalizeOptionalText(value);
+  if (normalized == null) {
+    return undefined;
+  }
+  const tags = normalized
+    .split(/[，,]/)
+    .map(tag => tag.trim())
+    .filter(tag => tag !== '');
+  return tags.length > 0 ? Array.from(new Set(tags)) : undefined;
+};
+
 const PartyDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [form] = Form.useForm<PartyUpdatePayload>();
+  const [form] = Form.useForm<Record<string, unknown>>();
   const [rejectForm] = Form.useForm<PartyReviewRejectPayload>();
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const params = useParams<{ id: string }>();
@@ -99,12 +136,24 @@ const PartyDetailPage: React.FC = () => {
       return;
     }
 
+    const metadata = party.metadata ?? {};
+
     form.setFieldsValue({
       party_type: party.party_type,
       name: party.name,
       code: party.code,
       external_ref: party.external_ref ?? undefined,
       status: party.status,
+      metadata: metadata,
+      customer_type: normalizeOptionalText(metadata.customer_type),
+      subject_nature: normalizeOptionalText(metadata.subject_nature),
+      identifier_type: normalizeOptionalText(metadata.identifier_type),
+      unified_identifier: normalizeOptionalText(metadata.unified_identifier),
+      address: normalizeOptionalText(metadata.address),
+      payment_term_preference: normalizeOptionalText(metadata.payment_term_preference),
+      contact_name: normalizeOptionalText(metadata.contact_name),
+      contact_phone: normalizeOptionalText(metadata.contact_phone),
+      risk_tags_text: Array.isArray(metadata.risk_tags) ? metadata.risk_tags.join(', ') : undefined,
     });
   }, [form, party]);
 
@@ -210,7 +259,47 @@ const PartyDetailPage: React.FC = () => {
 
   const handleSave = async (): Promise<void> => {
     const values = await form.validateFields();
-    updateMutation.mutate(values);
+    const normalizedPartyType =
+      typeof values.party_type === 'string' ? (values.party_type as PartyType) : undefined;
+    const nextMetadata = {
+      ...(party?.metadata ?? {}),
+      ...(normalizeOptionalText(values.customer_type) != null
+        ? { customer_type: normalizeOptionalText(values.customer_type) }
+        : { customer_type: undefined }),
+      ...(normalizeOptionalText(values.subject_nature) != null
+        ? { subject_nature: normalizeOptionalText(values.subject_nature) }
+        : { subject_nature: undefined }),
+      ...(normalizeOptionalText(values.identifier_type) != null
+        ? { identifier_type: normalizeOptionalText(values.identifier_type) }
+        : { identifier_type: undefined }),
+      ...(normalizeOptionalText(values.unified_identifier) != null
+        ? { unified_identifier: normalizeOptionalText(values.unified_identifier) }
+        : { unified_identifier: undefined }),
+      ...(normalizeOptionalText(values.address) != null
+        ? { address: normalizeOptionalText(values.address) }
+        : { address: undefined }),
+      ...(normalizeOptionalText(values.payment_term_preference) != null
+        ? { payment_term_preference: normalizeOptionalText(values.payment_term_preference) }
+        : { payment_term_preference: undefined }),
+      ...(normalizeOptionalText(values.contact_name) != null
+        ? { contact_name: normalizeOptionalText(values.contact_name) }
+        : { contact_name: undefined }),
+      ...(normalizeOptionalText(values.contact_phone) != null
+        ? { contact_phone: normalizeOptionalText(values.contact_phone) }
+        : { contact_phone: undefined }),
+      ...(parseRiskTags(values.risk_tags_text) != null
+        ? { risk_tags: parseRiskTags(values.risk_tags_text) }
+        : { risk_tags: undefined }),
+    };
+
+    updateMutation.mutate({
+      party_type: normalizedPartyType,
+      name: normalizeOptionalText(values.name),
+      code: normalizeOptionalText(values.code),
+      external_ref: normalizeOptionalText(values.external_ref) ?? null,
+      status: normalizeOptionalText(values.status),
+      metadata: nextMetadata,
+    });
   };
 
   const handleReject = async (): Promise<void> => {
@@ -293,7 +382,7 @@ const PartyDetailPage: React.FC = () => {
         </Card>
 
         <Card title="业务信息">
-          <Form<PartyUpdatePayload> form={form} layout="vertical" disabled={!isEditable}>
+          <Form<Record<string, unknown>> form={form} layout="vertical" disabled={!isEditable}>
             <Form.Item
               label="主体名称"
               name="name"
@@ -326,6 +415,33 @@ const PartyDetailPage: React.FC = () => {
             </Form.Item>
             <Form.Item label="外部引用" name="external_ref">
               <Input aria-label="外部引用" />
+            </Form.Item>
+            <Form.Item label="客户类型" name="customer_type">
+              <Select aria-label="客户类型" options={CUSTOMER_TYPE_OPTIONS as unknown as []} />
+            </Form.Item>
+            <Form.Item label="主体性质" name="subject_nature">
+              <Select aria-label="主体性质" options={SUBJECT_NATURE_OPTIONS as unknown as []} />
+            </Form.Item>
+            <Form.Item label="统一标识类型" name="identifier_type">
+              <Select aria-label="统一标识类型" options={IDENTIFIER_TYPE_OPTIONS as unknown as []} />
+            </Form.Item>
+            <Form.Item label="统一标识" name="unified_identifier">
+              <Input aria-label="统一标识" />
+            </Form.Item>
+            <Form.Item label="联系人" name="contact_name">
+              <Input aria-label="联系人" />
+            </Form.Item>
+            <Form.Item label="联系电话" name="contact_phone">
+              <Input aria-label="联系电话" />
+            </Form.Item>
+            <Form.Item label="地址" name="address">
+              <Input.TextArea aria-label="地址" rows={3} />
+            </Form.Item>
+            <Form.Item label="账期偏好" name="payment_term_preference">
+              <Input aria-label="账期偏好" />
+            </Form.Item>
+            <Form.Item label="风险标签" name="risk_tags_text">
+              <Input aria-label="风险标签" placeholder="多个标签请用逗号分隔" />
             </Form.Item>
             <Form.Item label="扩展元数据" shouldUpdate>
               <Typography.Paragraph type="secondary">

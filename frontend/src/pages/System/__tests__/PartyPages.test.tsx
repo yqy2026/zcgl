@@ -6,6 +6,7 @@ vi.mock('@/services/partyService', () => ({
   partyService: {
     getParties: vi.fn(),
     getPartyById: vi.fn(),
+    getCustomerProfile: vi.fn(),
     getReviewLogs: vi.fn(),
     importParties: vi.fn(),
     createParty: vi.fn(),
@@ -203,12 +204,23 @@ describe('Party system pages', () => {
     fireEvent.change(screen.getByLabelText('主体名称'), {
       target: { value: '测试主体-更新' },
     });
+    fireEvent.mouseDown(screen.getByLabelText('客户类型'));
+    fireEvent.click(await screen.findByText('外部'));
+    fireEvent.change(screen.getByLabelText('风险标签'), {
+      target: { value: '手工关注,高频签约' },
+    });
     fireEvent.click(screen.getByRole('button', { name: '保存变更' }));
 
     await waitFor(() => {
       expect(partyService.updateParty).toHaveBeenCalledWith(
         'party-1',
-        expect.objectContaining({ name: '测试主体-更新' })
+        expect.objectContaining({
+          name: '测试主体-更新',
+          metadata: expect.objectContaining({
+            customer_type: 'external',
+            risk_tags: ['手工关注', '高频签约'],
+          }),
+        })
       );
     });
 

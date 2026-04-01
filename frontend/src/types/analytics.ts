@@ -109,6 +109,8 @@ export interface AnalyticsData {
   agency_service_income?: number;
   customer_entity_count?: number;
   customer_contract_count?: number;
+  customer_entity_breakdown?: Record<string, number>;
+  customer_contract_breakdown?: Record<string, number>;
   metrics_version?: string;
   occupancy_distribution: OccupancyDistribution[];
   property_nature_distribution: PropertyNatureDistribution[];
@@ -136,6 +138,8 @@ export interface AnalyticsResponse {
   agency_service_income?: number;
   customer_entity_count?: number;
   customer_contract_count?: number;
+  customer_entity_breakdown?: Record<string, number>;
+  customer_contract_breakdown?: Record<string, number>;
   metrics_version?: string;
   occupancy_distribution?: OccupancyDistribution[];
   property_nature_distribution?: PropertyNatureDistribution[];

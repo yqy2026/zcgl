@@ -177,6 +177,41 @@ describe('AnalyticsService', () => {
         avg_annual_income: 120000.75,
       });
     });
+
+    it('保留客户统计拆分字段', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        success: true,
+        data: {
+          area_summary: {
+            total_assets: 10,
+          },
+          financial_summary: {},
+          customer_entity_breakdown: {
+            upstream_lease: 1,
+            downstream_sublease: 2,
+            entrusted_operation: 3,
+          },
+          customer_contract_breakdown: {
+            upstream_lease: 2,
+            downstream_sublease: 4,
+            entrusted_operation: 6,
+          },
+        },
+      });
+
+      const result = await service.getComprehensiveAnalytics();
+
+      expect(result.data?.customer_entity_breakdown).toEqual({
+        upstream_lease: 1,
+        downstream_sublease: 2,
+        entrusted_operation: 3,
+      });
+      expect(result.data?.customer_contract_breakdown).toEqual({
+        upstream_lease: 2,
+        downstream_sublease: 4,
+        entrusted_operation: 6,
+      });
+    });
   });
 
   describe('getBasicStatistics', () => {

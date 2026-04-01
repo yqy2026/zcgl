@@ -56,4 +56,29 @@ describe('RevenueStatsGrid (ANA-001)', () => {
     expect(screen.getByText('总收入（经营口径）')).toBeInTheDocument();
     expect(screen.getByText('客户主体数')).toBeInTheDocument();
   });
+
+  it('should render customer breakdown rows when provided', () => {
+    render(
+      <RevenueStatsGrid
+        data={{
+          ...baseData,
+          customer_entity_breakdown: {
+            upstream_lease: 1,
+            downstream_sublease: 2,
+            entrusted_operation: 3,
+          },
+          customer_contract_breakdown: {
+            upstream_lease: 2,
+            downstream_sublease: 4,
+            entrusted_operation: 6,
+          },
+        }}
+      />
+    );
+
+    expect(screen.getByText('客户统计拆分')).toBeInTheDocument();
+    expect(screen.getByText('主体 1 个 / 合同 2 份')).toBeInTheDocument();
+    expect(screen.getByText('主体 2 个 / 合同 4 份')).toBeInTheDocument();
+    expect(screen.getByText('主体 3 个 / 合同 6 份')).toBeInTheDocument();
+  });
 });

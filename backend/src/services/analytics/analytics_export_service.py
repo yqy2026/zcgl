@@ -91,6 +91,12 @@ class AnalyticsExportService:
             "平方米",
         ),
     )
+    _CUSTOMER_BREAKDOWN_SECTION = "客户统计拆分"
+    _CUSTOMER_BREAKDOWN_LABELS: tuple[tuple[str, str], ...] = (
+        ("upstream_lease", "上游承租"),
+        ("downstream_sublease", "下游转租"),
+        ("entrusted_operation", "委托运营"),
+    )
 
     def build_summary_rows(self, analytics_data: dict[str, Any]) -> list[dict[str, str]]:
         rows: list[dict[str, str]] = []
@@ -134,9 +140,31 @@ class AnalyticsExportService:
         return rows
 
     def build_export_rows(self, analytics_data: dict[str, Any]) -> list[dict[str, str]]:
-        return self.build_summary_rows(analytics_data) + self.build_distribution_rows(
-            analytics_data
+        return (
+            self.build_summary_rows(analytics_data)
+            + self.build_customer_breakdown_rows(analytics_data)
+            + self.build_distribution_rows(analytics_data)
         )
+
+    def build_customer_breakdown_rows(
+        self, analytics_data: dict[str, Any]
+    ) -> list[dict[str, str]]:
+        entity_breakdown = analytics_data.get("customer_entity_breakdown")
+        contract_breakdown = analytics_data.get("customer_contract_breakdown")
+        if not isinstance(entity_breakdown, dict) and not isinstance(contract_breakdown, dict):
+            return []
+
+        rows: list[dict[str, str]] = []
+        for key, label in self._CUSTOMER_BREAKDOWN_LABELS:
+            rows.append(
+                {
+                    "section": self._CUSTOMER_BREAKDOWN_SECTION,
+                    "metric": label,
+                    "value": f"主体 {int((entity_breakdown or {}).get(key, 0) or 0)} / 合同 {int((contract_breakdown or {}).get(key, 0) or 0)}",
+                    "unit": "",
+                }
+            )
+        return rows
 
     def render_csv(self, rows: list[dict[str, Any]]) -> str:
         output = io.StringIO()

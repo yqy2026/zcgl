@@ -19,6 +19,51 @@ export interface Party {
   updated_at: string;
 }
 
+export type CustomerType = 'internal' | 'external';
+export type CustomerSubjectNature = 'enterprise' | 'individual';
+export type CustomerContractRole =
+  | 'upstream_lease'
+  | 'downstream_sublease'
+  | 'entrusted_operation';
+export type CustomerRiskTagSource = 'manual' | 'rule';
+
+export interface CustomerRiskTag {
+  tag: string;
+  source: CustomerRiskTagSource;
+  updated_at?: string | null;
+}
+
+export interface CustomerContractSummary {
+  contract_id: string;
+  contract_number: string;
+  group_code: string;
+  revenue_mode: string;
+  group_relation_type: string;
+  status: string;
+  effective_from?: string | null;
+  effective_to?: string | null;
+}
+
+export interface CustomerProfile {
+  customer_party_id: string;
+  customer_name: string;
+  customer_type: CustomerType;
+  subject_nature: CustomerSubjectNature;
+  perspective_type: 'owner' | 'manager';
+  contract_role: CustomerContractRole;
+  contact_name?: string | null;
+  contact_phone?: string | null;
+  identifier_type?: string | null;
+  unified_identifier?: string | null;
+  address?: string | null;
+  status: string;
+  historical_contract_count: number;
+  risk_tags: string[];
+  risk_tag_items: CustomerRiskTag[];
+  payment_term_preference?: string | null;
+  contracts: CustomerContractSummary[];
+}
+
 export interface PartyListParams {
   party_type?: PartyType;
   status?: string;

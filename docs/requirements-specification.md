@@ -376,7 +376,7 @@
 
 ### 6.4 客户域
 
-#### REQ-CUS-001 客户增强信息管理 📋
+#### REQ-CUS-001 客户增强信息管理 ✅
 - 描述：客户信息需覆盖增强版字段与历史信息。
 - 验收：
   - 基础信息：名称、客户类型、联系人、联系电话、统一标识、地址、状态。
@@ -385,12 +385,34 @@
   - 资产/项目页展示摘要，客户详情页展示全量。
 - 字段映射（附录 v0.3 / 3.5 CustomerProfile）：
   - `subject_nature` / `identifier_type` / `unified_identifier`：企业与个人标识差异化校验与去重。
+- 代码证据：
+  - `backend/src/services/party/service.py`（`get_customer_profile()` 基于 `Party` 主档、合同历史、风险标签与当前视角聚合 `CustomerProfile`）
+  - `backend/src/schemas/party.py`（`CustomerProfileResponse` / `CustomerRiskTagResponse` / `CustomerContractSummaryResponse`）
+  - `backend/src/api/v1/party.py`（`GET /api/v1/customers/{party_id}`）
+  - `frontend/src/pages/Customer/CustomerDetailPage.tsx`（客户详情页展示基础信息、风险标签来源和历史签约记录）
+  - `frontend/src/pages/System/PartyDetailPage.tsx`（在 Party 主档中维护客户增强字段，保持 Party 为唯一主档）
+  - `frontend/src/pages/Assets/AssetDetailPage.tsx`、`frontend/src/pages/Project/ProjectDetailPage.tsx`（资产/项目客户摘要可跳转客户详情）
+  - `backend/tests/unit/services/test_party_service.py`
+  - `backend/tests/unit/api/v1/test_party_api.py`
+  - `frontend/src/pages/Customer/__tests__/CustomerDetailPage.test.tsx`
+  - `frontend/src/pages/System/__tests__/PartyPages.test.tsx`
 
-#### REQ-CUS-002 客户统计双指标 📋
+#### REQ-CUS-002 客户统计双指标 ✅
 - 描述：客户统计需同时反映主体规模与合同规模。
 - 验收：
   - 同时展示"客户主体数"和"客户合同数"。
   - 支持按合同类型（上游承租/下游转租/委托运营）维度拆分。
+- 代码证据：
+  - `backend/src/services/analytics/analytics_service.py`（`customer_entity_count` / `customer_contract_count` 与三类合同维度拆分）
+  - `backend/src/services/analytics/analytics_export_service.py`（客户统计拆分导出映射）
+  - `frontend/src/components/Analytics/AnalyticsStatsCard.tsx`（经营口径卡片展示客户双指标及类型拆分）
+  - `frontend/src/pages/Assets/AssetAnalyticsPage.tsx`
+  - `frontend/src/types/analytics.ts`
+  - `frontend/src/services/analyticsService.ts`
+  - `backend/tests/unit/services/analytics/test_analytics_service.py`
+  - `backend/tests/unit/services/analytics/test_analytics_export_service.py`
+  - `frontend/src/components/Analytics/__tests__/RevenueStatsGrid.test.tsx`
+  - `frontend/src/services/__tests__/analyticsService.test.ts`
 
 ### 6.5 搜索域
 
@@ -635,8 +657,8 @@
 | REQ-RNT-004 | ✅ | `/api/v1/contract-groups/{group_id}/submit-review` + `/api/v1/contracts/{contract_id}/audit-logs`（关键变更单审阻断 + 组联审放行 + 审计上下文） | `test_contract_joint_review.py`, `test_contract_lifecycle_api.py` |
 | REQ-RNT-005 | ✅ | `/api/v1/contracts/{contract_id}/start-correction` + `/api/v1/contracts/{contract_id}/approve`（纠错草稿、前合同反转、台账作废重建） | `test_contract_correction_flow.py`, `test_contract_lifecycle_api.py`, `test_lifecycle_v2.py` |
 | REQ-RNT-006 | ✅ | `/api/v1/ledger/entries`, `/api/v1/ledger/entries/export`, `/api/v1/ledger/compensation/run`, `/api/v1/contracts/{contract_id}/ledger/*` | `test_ledger_service_v2.py`, `test_ledger_aggregate_query.py`, `test_ledger_recalculate.py`, `test_ledger_api.py`, `test_contract_ledger_entries_migration.py`, `test_ledger_export_service.py`, `test_ledger_compensation_service.py`, `test_service_fee_ledger_service.py`, `test_service_fee_ledger_migration.py` |
-| REQ-CUS-001 | 📋 | — | — |
-| REQ-CUS-002 | 📋 | — | — |
+| REQ-CUS-001 | ✅ | `/api/v1/customers/{party_id}` + Party 主档增强字段维护 + 资产/项目客户摘要跳转 | `test_party_service.py`, `test_party_api.py`, `CustomerDetailPage.test.tsx`, `PartyPages.test.tsx` |
+| REQ-CUS-002 | ✅ | `/api/v1/analytics/comprehensive` 客户双指标 + 合同类型拆分 + 导出映射 | `test_analytics_service.py`, `test_analytics_export_service.py`, `RevenueStatsGrid.test.tsx`, `analyticsService.test.ts` |
 | REQ-SCH-001 | 📋 | — | — |
 | REQ-AUTH-001 | ✅ | `/auth/login`, `/auth/refresh` | `test_optional_auth.py` |
 | REQ-AUTH-002 | ✅ | `/api/v1/analytics/*`, `/api/v1/projects/*`, `/api/v1/assets`（列表/详情/筛选）, `/api/v1/contract-groups*`, `/auth/me/capabilities`, 前端 `X-Perspective` 自动注入与 `PerspectiveResolution` 恢复流 | `test_authz_service.py`, `test_perspective_context.py`, `test_party_scope.py`, `test_query_builder.py`, `test_notifications.py`, `test_project_visibility_real.py`, `test_assets_visibility_real.py`, `test_analytics.py`, `test_project.py`, `test_assets_authz_layering.py`, `client.test.ts`, `AppRoutes.perspective-redirect.test.tsx`, `perspectiveResolution.test.tsx`, `CapabilityGuard.test.tsx` |

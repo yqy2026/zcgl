@@ -96,6 +96,29 @@ describe('PartyService', () => {
     );
   });
 
+  it('fetches customer profile by id', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      success: true,
+      data: {
+        customer_party_id: 'party-1',
+        customer_name: '终端租户甲',
+        customer_type: 'external',
+        historical_contract_count: 2,
+        risk_tags: ['手工关注'],
+        risk_tag_items: [{ tag: '手工关注', source: 'manual', updated_at: null }],
+        contracts: [],
+      },
+    });
+
+    const result = await service.getCustomerProfile('party-1');
+
+    expect(result.customer_party_id).toBe('party-1');
+    expect(apiClient.get).toHaveBeenCalledWith(
+      '/customers/party-1',
+      expect.objectContaining({ cache: true })
+    );
+  });
+
   it('creates and updates party', async () => {
     vi.mocked(apiClient.post).mockResolvedValue({
       success: true,
