@@ -12,9 +12,29 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import DashboardPage from '../DashboardPage';
 
+const mockUseRoutePerspective = vi.hoisted(() =>
+  vi.fn(() => ({
+    perspective: 'owner',
+    isPerspectiveRoute: true,
+  }))
+);
+const mockUseCapabilities = vi.hoisted(() =>
+  vi.fn(() => ({
+    getAvailablePerspectives: vi.fn(() => ['owner', 'manager']),
+  }))
+);
+
 // Mock useAnalytics hook
 vi.mock('../../../hooks/useAnalytics', () => ({
   useAnalytics: vi.fn(),
+}));
+
+vi.mock('@/routes/perspective', () => ({
+  useRoutePerspective: () => mockUseRoutePerspective(),
+}));
+
+vi.mock('@/hooks/useCapabilities', () => ({
+  useCapabilities: () => mockUseCapabilities(),
 }));
 
 // Mock CSS modules
@@ -97,6 +117,13 @@ const renderDashboardPage = () => {
 describe('DashboardPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseRoutePerspective.mockReturnValue({
+      perspective: 'owner',
+      isPerspectiveRoute: true,
+    });
+    mockUseCapabilities.mockReturnValue({
+      getAvailablePerspectives: vi.fn(() => ['owner', 'manager']),
+    });
 
     // 默认 mock 返回值
     vi.mocked(useAnalytics).mockReturnValue({
@@ -158,6 +185,19 @@ describe('DashboardPage', () => {
 
       expect(screen.getByText('面积分布统计')).toBeInTheDocument();
       expect(screen.getByText('运营状况概览')).toBeInTheDocument();
+    });
+
+    it('共享工作台缺少视角时应显示视角入口而不是请求分析数据', () => {
+      mockUseRoutePerspective.mockReturnValue({
+        perspective: null,
+        isPerspectiveRoute: false,
+      });
+
+      renderDashboardPage();
+
+      expect(screen.getByText('请选择业务视角')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '进入业主视角' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '进入经营视角' })).toBeInTheDocument();
     });
   });
 

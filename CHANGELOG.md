@@ -3,6 +3,8 @@
 ## [Unreleased] - 2026-03-06
 
 ### 2026-04-02
+- fix(dashboard): 修复共享工作台在无视角路由下误请求 `GET /api/v1/analytics/comprehensive` 的问题。`frontend/src/hooks/useAnalytics.ts` 现在仅在视角路由下启用综合分析查询，`frontend/src/pages/Dashboard/DashboardPage.tsx` 在共享 `/dashboard` 上改为显示“进入业主视角 / 进入经营视角”入口，避免因缺少 `X-Perspective` 触发 `400` 与控制台报错。
+- test(dashboard): 新增回归覆盖 `frontend/src/hooks/__tests__/useAnalytics.test.ts` 与 `frontend/src/pages/Dashboard/__tests__/DashboardPage.test.tsx`，锁定共享工作台不再发起无视角分析请求，并必须显示视角入口提示。
 - feat(approval): 完成 `REQ-APR-001` 收口。后端新增 `backend/src/models/approval.py`、`backend/src/crud/approval.py`、`backend/src/schemas/approval.py`、`backend/src/services/approval/service.py` 与 `backend/src/api/v1/approval.py`，交付统一审批域第一阶段最小闭环：资产发起审批、待办查询、我发起的流程、流程时间线，以及按任务执行通过/驳回/撤回；`backend/src/services/asset/asset_service.py` 新增撤回联动，`backend/src/services/notification/notification_service.py` 补齐审批待办通知创建与已读收口，`backend/scripts/setup/init_rbac_data.py` / `backend/src/security/permissions.py` 已同步补充审批权限。
 - test(approval): 新增 `backend/tests/unit/services/approval/test_approval_service.py` 与 `backend/tests/unit/api/v1/test_approval_api.py`，并扩充 `backend/tests/unit/services/asset/test_asset_review.py`，锁定审批实例/任务/动作日志写入、资产审核状态联动、审批待办通知以及统一审批 API 委派契约。
 - docs(approval): `docs/requirements-specification.md` 已将 `REQ-APR-001` 更新为 `✅`，同步补充字段附录中的审批域结构；新增迁移 `backend/alembic/versions/20260402_req_apr_001_approval_domain.py`；实施方案 `docs/archive/backend-plans/2026-04-02-req-apr-001-asset-approval-workflow-plan.md` 已完成并归档。

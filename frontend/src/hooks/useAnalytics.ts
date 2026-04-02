@@ -6,7 +6,7 @@ import type { AnalyticsResponse } from '@/types/analytics';
 import { buildQueryScopeKey } from '@/utils/queryScope';
 
 export const useAnalytics = (filters?: AssetSearchParams) => {
-  const { perspective } = useRoutePerspective();
+  const { perspective, isPerspectiveRoute } = useRoutePerspective();
   const queryScopeKey = buildQueryScopeKey(perspective);
 
   return useQuery<AnalyticsResponse>({
@@ -21,6 +21,7 @@ export const useAnalytics = (filters?: AssetSearchParams) => {
     retryDelay: 1000,
     refetchOnWindowFocus: false, // 禁用自动刷新避免循环请求
     refetchOnMount: true,
+    enabled: isPerspectiveRoute,
     // 添加依赖项数组，确保filters变化时重新请求
   });
 };
