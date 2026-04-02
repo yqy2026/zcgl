@@ -416,24 +416,49 @@
 
 ### 6.5 搜索域
 
-#### REQ-SCH-001 全局搜索入口与对象范围 📋
+#### REQ-SCH-001 全局搜索入口与对象范围 ✅
 - 描述：系统需提供统一全局搜索入口，并保留模块内搜索。
 - 验收：
   - MVP 全局搜索覆盖：资产、项目、合同组、合同、客户、产权证。
   - 任务、通知搜索能力列入 V1.1 范围（非 MVP 验收阻塞项）。
   - 统一入口与模块内搜索并存。
+- 代码证据：
+  - `backend/src/api/v1/search.py`（`GET /api/v1/search`）
+  - `backend/src/services/search/service.py`（统一聚合资产、项目、合同组、合同、客户、产权证）
+  - `backend/src/schemas/search.py`
+  - `frontend/src/services/searchService.ts`
+  - `frontend/src/pages/Search/GlobalSearchPage.tsx`
+  - `frontend/src/components/Layout/AppHeader.tsx`（全局搜索入口）
+  - `frontend/src/routes/AppRoutes.tsx`
+  - `frontend/src/constants/routes.ts`
+  - `backend/tests/unit/services/search/test_search_service.py`
+  - `backend/tests/unit/api/v1/test_search_api.py`
+  - `frontend/src/services/__tests__/searchService.test.ts`
+  - `frontend/src/pages/Search/__tests__/GlobalSearchPage.test.tsx`
+  - `frontend/src/components/Layout/__tests__/AppHeader.test.tsx`
 
-#### REQ-SCH-002 搜索结果组织与排序 📋
+#### REQ-SCH-002 搜索结果组织与排序 ✅
 - 描述：搜索结果需支持多视图浏览与业务友好排序。
 - 验收：
   - 支持"全部视图"和"按对象分组视图"切换。
   - 默认排序为"相关度优先 + 业务置顶规则"。
+- 代码证据：
+  - `backend/src/services/search/service.py`（`score + business_rank` 默认排序、对象分组汇总）
+  - `frontend/src/pages/Search/GlobalSearchPage.tsx`（全部视图 / 按对象分组切换）
+  - `backend/tests/unit/services/search/test_search_service.py`
+  - `frontend/src/pages/Search/__tests__/GlobalSearchPage.test.tsx`
 
-#### REQ-SCH-003 搜索权限过滤 📋
+#### REQ-SCH-003 搜索权限过滤 ✅
 - 描述：搜索结果必须严格受权限约束。
 - 验收：
   - 未授权对象完全不返回。
   - 权限判定基于当前全局视角。
+- 代码证据：
+  - `backend/src/services/authz/resource_perspective_registry.py`（`search` 资源视角注册）
+  - `backend/src/api/v1/search.py`（强制 `X-Perspective` 请求契约）
+  - `backend/src/services/search/service.py`（按当前视角与作用域 fail-closed 聚合结果）
+  - `backend/tests/unit/api/v1/test_search_api.py`
+  - `backend/tests/unit/services/search/test_search_service.py`
 
 ### 6.6 认证与授权域
 
@@ -659,7 +684,9 @@
 | REQ-RNT-006 | ✅ | `/api/v1/ledger/entries`, `/api/v1/ledger/entries/export`, `/api/v1/ledger/compensation/run`, `/api/v1/contracts/{contract_id}/ledger/*` | `test_ledger_service_v2.py`, `test_ledger_aggregate_query.py`, `test_ledger_recalculate.py`, `test_ledger_api.py`, `test_contract_ledger_entries_migration.py`, `test_ledger_export_service.py`, `test_ledger_compensation_service.py`, `test_service_fee_ledger_service.py`, `test_service_fee_ledger_migration.py` |
 | REQ-CUS-001 | ✅ | `/api/v1/customers/{party_id}` + Party 主档增强字段维护 + 资产/项目客户摘要跳转 | `test_party_service.py`, `test_party_api.py`, `CustomerDetailPage.test.tsx`, `PartyPages.test.tsx` |
 | REQ-CUS-002 | ✅ | `/api/v1/analytics/comprehensive` 客户双指标 + 合同类型拆分 + 导出映射 | `test_analytics_service.py`, `test_analytics_export_service.py`, `RevenueStatsGrid.test.tsx`, `analyticsService.test.ts` |
-| REQ-SCH-001 | 📋 | — | — |
+| REQ-SCH-001 | ✅ | `/api/v1/search` + Header 全局搜索入口 + 搜索结果页 | `test_search_service.py`, `test_search_api.py`, `searchService.test.ts`, `GlobalSearchPage.test.tsx`, `AppHeader.test.tsx` |
+| REQ-SCH-002 | ✅ | 全部视图 / 按对象分组切换 + `score + business_rank` 排序 | `test_search_service.py`, `GlobalSearchPage.test.tsx` |
+| REQ-SCH-003 | ✅ | 当前视角 `X-Perspective` 强制校验 + fail-closed 权限过滤 | `test_search_service.py`, `test_search_api.py` |
 | REQ-AUTH-001 | ✅ | `/auth/login`, `/auth/refresh` | `test_optional_auth.py` |
 | REQ-AUTH-002 | ✅ | `/api/v1/analytics/*`, `/api/v1/projects/*`, `/api/v1/assets`（列表/详情/筛选）, `/api/v1/contract-groups*`, `/auth/me/capabilities`, 前端 `X-Perspective` 自动注入与 `PerspectiveResolution` 恢复流 | `test_authz_service.py`, `test_perspective_context.py`, `test_party_scope.py`, `test_query_builder.py`, `test_notifications.py`, `test_project_visibility_real.py`, `test_assets_visibility_real.py`, `test_analytics.py`, `test_project.py`, `test_assets_authz_layering.py`, `client.test.ts`, `AppRoutes.perspective-redirect.test.tsx`, `perspectiveResolution.test.tsx`, `CapabilityGuard.test.tsx` |
 | REQ-DOC-001 | ✅ | `/pdf-import/*` | `pdf_import.py` |

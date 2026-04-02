@@ -6,6 +6,7 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   LogoutOutlined,
+  SearchOutlined,
   UserOutlined,
   SettingOutlined,
   QuestionCircleOutlined,
@@ -16,6 +17,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { AuthService } from '@/services/authService';
 import { NotificationCenter } from '@/components/Notification';
+import { useRoutePerspective } from '@/routes/perspective';
 
 import styles from './Layout.module.css';
 
@@ -28,6 +30,7 @@ interface AppHeaderProps {
 
 const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) => {
   const navigate = useNavigate();
+  const { perspective } = useRoutePerspective();
   const { logout } = useAuth();
   const user = AuthService.getLocalUser();
 
@@ -111,6 +114,18 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) =
     MessageManager.info('帮助文档功能开发中');
   };
 
+  const handleOpenGlobalSearch = () => {
+    if (perspective === 'owner') {
+      navigate('/owner/search');
+      return;
+    }
+    if (perspective === 'manager') {
+      navigate('/manager/search');
+      return;
+    }
+    MessageManager.info('请先进入业主视角或经营视角后再使用全局搜索');
+  };
+
   return (
     <Header className={styles.header}>
       {/* 左侧 */}
@@ -132,6 +147,16 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) =
 
       {/* 右侧 */}
       <Space size={8} className={styles.headerRight} wrap>
+        <Tooltip title="全局搜索">
+          <Button
+            type="text"
+            className={styles.headerIconButton}
+            icon={<SearchOutlined className={styles.headerActionIcon} />}
+            onClick={handleOpenGlobalSearch}
+            aria-label="全局搜索"
+          />
+        </Tooltip>
+
         {/* 语言切换 */}
         <Tooltip title="语言切换">
           <Button

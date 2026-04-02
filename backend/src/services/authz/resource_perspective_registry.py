@@ -16,6 +16,7 @@ RESOURCE_PERSPECTIVE_REGISTRY: Final[ResourcePerspectiveMap] = {
     "contract_group": ("owner", "manager"),
     "project": ("manager",),
     "property_certificate": ("owner",),
+    "search": ("owner", "manager"),
     "backup": (),
     "collection": (),
     "contact": (),

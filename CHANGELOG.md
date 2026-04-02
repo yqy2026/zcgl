@@ -2,6 +2,12 @@
 
 ## [Unreleased] - 2026-03-06
 
+### 2026-04-02
+- feat(search): 完成 `REQ-SCH-001/002/003` 收口。后端新增 `backend/src/api/v1/search.py` 与 `backend/src/services/search/service.py`，交付 `GET /api/v1/search` 统一聚合入口，覆盖资产、项目、合同组、合同、客户与产权证，并按当前 `X-Perspective` 视角执行 fail-closed 搜索；`backend/src/schemas/search.py` 定义统一结果模型，`backend/src/services/authz/resource_perspective_registry.py` 新增 `search` 资源视角注册。
+- feat(search-ui): 前端新增 `frontend/src/pages/Search/GlobalSearchPage.tsx` 与 `frontend/src/services/searchService.ts`，支持“全部视图 / 按对象分组视图”切换与结果跳转；`frontend/src/components/Layout/AppHeader.tsx` 已接入全局搜索入口，按当前视角跳转 `/owner/search` 或 `/manager/search`；`frontend/src/routes/AppRoutes.tsx`、`frontend/src/constants/routes.ts`、`frontend/src/config/breadcrumb.ts` 同步补齐搜索路由与面包屑。
+- test(search): 新增 `backend/tests/unit/services/search/test_search_service.py`、`backend/tests/unit/api/v1/test_search_api.py`、`frontend/src/services/__tests__/searchService.test.ts`、`frontend/src/pages/Search/__tests__/GlobalSearchPage.test.tsx`，并扩充 `frontend/src/components/Layout/__tests__/AppHeader.test.tsx`，锁定统一搜索响应结构、分组切换、视角入口与强制 `X-Perspective` 契约。
+- docs(search): `docs/requirements-specification.md` 已将 `REQ-SCH-001/002/003` 状态更新为 `✅`，补充统一搜索 API、搜索页、排序与权限过滤代码证据；活跃实施计划 `docs/plans/2026-04-01-req-sch-001-003-global-search-plan.md` 已完成并归档。
+
 ### 2026-04-01
 - feat(customer-profile): 完成 `REQ-CUS-001/002` 收口。后端 `backend/src/services/party/service.py` 新增 `get_customer_profile()`，以 `Party` 作为唯一主档，按当前视角聚合客户基础信息、历史签约记录、手工/规则双来源风险标签与账期偏好；`backend/src/api/v1/party.py` 新增 `GET /api/v1/customers/{party_id}`，`backend/src/schemas/party.py` 增补客户档案响应模型。前端新增 `frontend/src/pages/Customer/CustomerDetailPage.tsx`，并将资产详情/项目详情中的客户摘要改为可跳转客户详情；`frontend/src/pages/System/PartyDetailPage.tsx` 现支持维护客户增强字段，继续保持 `Party` 为唯一主档。
 - feat(customer-metrics): 经营分析现补齐客户双指标拆分。`backend/src/services/analytics/analytics_service.py` 为 `customer_entity_count` / `customer_contract_count` 新增按“上游承租 / 下游转租 / 委托运营”拆分的统计字段，`backend/src/services/analytics/analytics_export_service.py` 同步导出该拆分；前端 `frontend/src/components/Analytics/AnalyticsStatsCard.tsx`、`frontend/src/pages/Assets/AssetAnalyticsPage.tsx`、`frontend/src/services/analyticsService.ts`、`frontend/src/types/analytics.ts` 已适配展示与消费。

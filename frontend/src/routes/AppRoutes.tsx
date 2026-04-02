@@ -123,8 +123,18 @@ const baseProtectedRoutes: ProtectedRouteItem[] = [
     permissions: [{ resource: 'analytics', action: 'read' }],
   },
   {
+    path: OWNER_ROUTES.SEARCH,
+    element: React.lazy(() => import('../pages/Search/GlobalSearchPage')),
+    permissions: [{ resource: 'analytics', action: 'read' }],
+  },
+  {
     path: MANAGER_ROUTES.CUSTOMER_DETAIL_PATH,
     element: React.lazy(() => import('../pages/Customer/CustomerDetailPage')),
+    permissions: [{ resource: 'analytics', action: 'read' }],
+  },
+  {
+    path: MANAGER_ROUTES.SEARCH,
+    element: React.lazy(() => import('../pages/Search/GlobalSearchPage')),
     permissions: [{ resource: 'analytics', action: 'read' }],
   },
 

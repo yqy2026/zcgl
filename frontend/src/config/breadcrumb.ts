@@ -64,6 +64,8 @@ export const staticBreadcrumbMap: Record<string, string> = {
   '/system/dictionaries': '字典管理',
   '/system/templates': '模板管理',
   '/system/settings': '系统设置',
+  '/owner/search': '全局搜索',
+  '/manager/search': '全局搜索',
 
   // 其他
   '/profile': '个人中心',

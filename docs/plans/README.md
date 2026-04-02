@@ -34,6 +34,7 @@
 | 2026-03-25-req-auth-002-perspective-context-design.md | REQ-AUTH-002 视角上下文强制注入 | ✅ 已完成 |
 | 2026-03-25-req-auth-002-perspective-context-plan.md | REQ-AUTH-002 视角上下文强制注入实施计划 | ✅ 已完成 |
 | 2026-03-29-req-rnt-004-005-joint-review-and-correction-plan.md | REQ-RNT-004/005：关键合同联审与纠错链路 | ✅ 已完成 |
+| 2026-04-01-req-sch-001-003-global-search-plan.md | REQ-SCH-001/002/003 全局搜索 | ✅ 已完成 |
 | 2026-03-11-req-ast-003-asset-review.md | REQ-AST-003：资产主数据审核与反审核 | ✅ 已完成 |
 | 2026-03-12-req-pty-001-002-party-remediation.md | REQ-PTY-001/002：主体主档管理 Gap 修复 | ✅ 已完成 |
 | 2026-02-20-phase3-implementation-plan.md | Phase 3：前端全量迁移 + 策略包 UI | ✅ 已完成 |

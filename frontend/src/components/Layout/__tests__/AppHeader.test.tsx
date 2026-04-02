@@ -81,6 +81,13 @@ vi.mock('react-router-dom', () => ({
   useNavigate: () => navigateMock,
 }));
 
+vi.mock('@/routes/perspective', () => ({
+  useRoutePerspective: () => ({
+    perspective: 'manager',
+    isPerspectiveRoute: true,
+  }),
+}));
+
 // Mock NotificationCenter
 vi.mock('../../Notification', () => ({
   NotificationCenter: () => <div data-testid="notification-center" />,
@@ -189,6 +196,7 @@ vi.mock('@ant-design/icons', () => ({
   MenuFoldOutlined: () => <div data-testid="icon-menu-fold" />,
   MenuUnfoldOutlined: () => <div data-testid="icon-menu-unfold" />,
   LogoutOutlined: () => <div data-testid="icon-logout" />,
+  SearchOutlined: () => <div data-testid="icon-search" />,
   UserOutlined: () => <div data-testid="icon-user" />,
   SettingOutlined: () => <div data-testid="icon-setting" />,
   QuestionCircleOutlined: () => <div data-testid="icon-question" />,
@@ -220,6 +228,7 @@ describe('AppHeader - 渲染与交互测试', () => {
     expect(screen.getByText('土地房产资产管理系统')).toBeInTheDocument();
     expect(screen.getByText('测试用户')).toBeInTheDocument();
     expect(screen.getByTestId('notification-center')).toBeInTheDocument();
+    expect(screen.getByTestId('icon-search')).toBeInTheDocument();
   });
 
   it('折叠按钮应显示正确图标并触发回调', async () => {
@@ -254,6 +263,21 @@ describe('AppHeader - 渲染与交互测试', () => {
 
     fireEvent.click(screen.getByTestId('menu-item-help'));
     expect(messageInfoSpy).toHaveBeenCalledWith('帮助中心功能开发中');
+  });
+
+  it('点击全局搜索按钮应跳转到当前视角搜索页', async () => {
+    const AppHeader = (await import('../AppHeader')).default;
+    renderWithProviders(<AppHeader collapsed={false} onToggleCollapsed={vi.fn()} />, {
+      route: '/manager/assets',
+    });
+
+    const searchButton = screen.getByTestId('icon-search').closest('button');
+    expect(searchButton).not.toBeNull();
+    if (searchButton != null) {
+      fireEvent.click(searchButton);
+    }
+
+    expect(navigateMock).toHaveBeenCalledWith('/manager/search');
   });
 
   it('退出登录应触发确认并执行登出流程', async () => {
