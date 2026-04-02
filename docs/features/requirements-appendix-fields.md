@@ -353,6 +353,52 @@
 - 关键变更联审时，`context.review_scope = joint`，并写入关联合同清单。
 - 纠错链路时，`start_correction` 与 `reverse_review` 都必须记录 `correction_source_contract_id`。
 
+## 3.13 Approval（审批域第一阶段）
+
+> 定位：统一审批域骨架。第一阶段仅承接资产审批流，后续再扩展合同、产权证等业务对象。
+
+### 3.13.1 ApprovalInstance
+
+| 字段 | 类型 | 必填 | 规则/说明 | 状态 |
+|---|---|---|---|---|
+| `approval_instance_id` | string | 是 | 审批实例主键 | 已确认 |
+| `approval_no` | string | 是 | 审批单号，全局唯一 | 已确认 |
+| `business_type` | enum | 是 | 第一阶段固定 `asset` | 已确认 |
+| `business_id` | string | 是 | 业务对象主键 | 已确认 |
+| `status` | enum | 是 | `pending/approved/rejected/withdrawn` | 已确认 |
+| `starter_id` | string | 是 | 发起人用户 ID | 已确认 |
+| `assignee_user_id` | string | 是 | 当前处理人用户 ID；第一阶段只支持单处理人 | 已确认 |
+| `current_task_id` | string | 否 | 当前待办快照 ID；结束后可空 | 已确认 |
+| `started_at` | datetime | 是 | 发起时间 | 已确认 |
+| `ended_at` | datetime | 否 | 流程结束时间 | 已确认 |
+
+### 3.13.2 ApprovalTaskSnapshot
+
+| 字段 | 类型 | 必填 | 规则/说明 | 状态 |
+|---|---|---|---|---|
+| `approval_task_id` | string | 是 | 待办快照主键 | 已确认 |
+| `approval_instance_id` | string | 是 | FK → ApprovalInstance | 已确认 |
+| `business_type` | enum | 是 | 第一阶段固定 `asset` | 已确认 |
+| `business_id` | string | 是 | 业务对象主键 | 已确认 |
+| `task_name` | string | 是 | 第一阶段默认“资产审批” | 已确认 |
+| `assignee_user_id` | string | 是 | 处理人用户 ID | 已确认 |
+| `status` | enum | 是 | `pending/completed/cancelled` | 已确认 |
+| `created_at` | datetime | 是 | 创建时间 | 已确认 |
+| `completed_at` | datetime | 否 | 处理完成时间 | 已确认 |
+
+### 3.13.3 ApprovalActionLog
+
+| 字段 | 类型 | 必填 | 规则/说明 | 状态 |
+|---|---|---|---|---|
+| `approval_action_log_id` | string | 是 | 动作日志主键 | 已确认 |
+| `approval_instance_id` | string | 是 | FK → ApprovalInstance | 已确认 |
+| `approval_task_id` | string | 否 | FK → ApprovalTaskSnapshot；发起动作可空 | 已确认 |
+| `action` | enum | 是 | `start/approve/reject/withdraw` | 已确认 |
+| `operator_id` | string | 是 | 操作人用户 ID | 已确认 |
+| `comment` | string | 否 | 审批意见/撤回原因 | 已确认 |
+| `context` | json | 否 | 附加上下文 | 已确认 |
+| `created_at` | datetime | 是 | 创建时间 | 已确认 |
+
 ---
 
 ## 3.10 Party（主体主档）

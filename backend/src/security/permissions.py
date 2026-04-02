@@ -254,6 +254,26 @@ def require_asset_delete() -> Callable[[User, AsyncSession], Any]:
     return get_current_user_with_permissions("asset", "delete")
 
 
+def require_approval_read() -> Callable[[User, AsyncSession], Any]:
+    return get_current_user_with_permissions("approval", "read")
+
+
+def require_approval_start() -> Callable[[User, AsyncSession], Any]:
+    return get_current_user_with_permissions("approval", "start")
+
+
+def require_approval_approve() -> Callable[[User, AsyncSession], Any]:
+    return get_current_user_with_permissions("approval", "approve")
+
+
+def require_approval_reject() -> Callable[[User, AsyncSession], Any]:
+    return get_current_user_with_permissions("approval", "reject")
+
+
+def require_approval_withdraw() -> Callable[[User, AsyncSession], Any]:
+    return get_current_user_with_permissions("approval", "withdraw")
+
+
 def require_user_management() -> Callable[[User, AsyncSession], Any]:
     return get_current_user_with_permissions("user", "view")
 

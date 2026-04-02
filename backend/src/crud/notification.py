@@ -189,5 +189,26 @@ class NotificationCRUD:
             if related_entity_id is not None
         }
 
+    async def mark_related_notifications_as_read_async(
+        self,
+        db: AsyncSession,
+        *,
+        related_entity_type: str,
+        related_entity_id: str,
+        notification_type: str,
+    ) -> int:
+        stmt = (
+            update(Notification)
+            .where(
+                Notification.related_entity_type == related_entity_type,
+                Notification.related_entity_id == related_entity_id,
+                Notification.type == notification_type,
+                Notification.is_read.is_(False),
+            )
+            .values(is_read=True, read_at=datetime.now(UTC).replace(tzinfo=None))
+        )
+        result = await db.execute(stmt)
+        return int(getattr(result, "rowcount", 0) or 0)
+
 
 notification_crud = NotificationCRUD()

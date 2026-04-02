@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...crud.notification import notification_crud
 from ...models.auth import User
-from ...models.notification import Notification
+from ...models.notification import Notification, NotificationPriority, NotificationType
 
 
 class NotificationService:
@@ -106,6 +106,55 @@ class NotificationService:
     ) -> bool:
         return await notification_crud.delete_async(
             db, notification_id=notification_id, recipient_id=user_id
+        )
+
+    async def create_approval_pending_notification(
+        self,
+        db: AsyncSession,
+        *,
+        recipient_id: str,
+        approval_instance_id: str,
+        business_type: str,
+        business_id: str,
+        starter_id: str,
+        priority: str = NotificationPriority.HIGH,
+    ) -> Notification:
+        existing = await notification_crud.find_existing_notification_async(
+            db,
+            recipient_id=recipient_id,
+            related_entity_type="approval",
+            related_entity_id=approval_instance_id,
+            notification_type=NotificationType.APPROVAL_PENDING,
+            require_unread=True,
+        )
+        if existing is not None:
+            return existing
+
+        notification = Notification(
+            recipient_id=recipient_id,
+            type=NotificationType.APPROVAL_PENDING,
+            priority=priority,
+            title="待处理审批",
+            content=f"您有一条待处理审批：{business_type} {business_id}（发起人：{starter_id}）",
+            related_entity_type="approval",
+            related_entity_id=approval_instance_id,
+            is_read=False,
+        )
+        db.add(notification)
+        await db.flush()
+        return notification
+
+    async def mark_approval_notifications_read(
+        self,
+        db: AsyncSession,
+        *,
+        approval_instance_id: str,
+    ) -> int:
+        return await notification_crud.mark_related_notifications_as_read_async(
+            db,
+            related_entity_type="approval",
+            related_entity_id=approval_instance_id,
+            notification_type=NotificationType.APPROVAL_PENDING,
         )
 
 

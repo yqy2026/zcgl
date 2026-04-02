@@ -914,6 +914,45 @@ class AssetService:
                 resource_type="Asset",
             ) from exc
 
+    async def withdraw_asset_review(
+        self,
+        asset_id: str,
+        operator: str,
+        reason: str | None = None,
+    ) -> Asset:
+        normalized_reason = _normalize_optional_str(reason)
+        try:
+            async with self._transaction():
+                asset = await self.get_asset(asset_id, use_cache=False)
+                self._ensure_allowed_review_status(
+                    asset,
+                    allowed_statuses={AssetReviewStatus.PENDING.value},
+                    action="撤回",
+                )
+                from_status = asset.review_status
+                asset.review_status = AssetReviewStatus.DRAFT.value
+                asset.review_by = operator
+                asset.reviewed_at = _utcnow_naive()
+                asset.review_reason = normalized_reason
+                asset.updated_by = operator
+                asset.updated_at = _utcnow_naive()
+                self.db.add(asset)
+                await self._append_asset_review_log(
+                    asset_id=asset.id,
+                    action="withdraw",
+                    from_status=from_status,
+                    to_status=asset.review_status,
+                    operator=operator,
+                    reason=normalized_reason,
+                )
+                await self.db.flush()
+                return asset
+        except StaleDataError as exc:
+            raise conflict(
+                "资产已被其他人更新，请刷新后重试",
+                resource_type="Asset",
+            ) from exc
+
     async def get_distinct_field_values(
         self,
         field_name: str,

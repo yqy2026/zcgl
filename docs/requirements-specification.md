@@ -582,6 +582,28 @@
   - `frontend/src/services/partyService.ts`（主体提审/通过/驳回调用）
   - `frontend/src/pages/System/PartyDetailPage.tsx`（审核按钮与编辑守卫提示）
 
+### 6.9 审批域
+
+#### REQ-APR-001 资产审批流第一阶段 ✅
+- 描述：补齐统一审批域，先以资产为首个业务对象交付审批流第一阶段后端最小闭环。
+- 验收：
+  - 支持资产发起审批，并生成审批实例、待办快照和动作日志。
+  - 支持待办查询、我发起的流程查询和流程时间线查询。
+  - 支持审批通过、驳回、撤回动作，并与资产审核状态联动。
+  - 为当前待办处理人创建站内 `approval_pending` 通知。
+  - 第一阶段不要求接入 Flowable 真服务，不要求交付前端审批中心。
+- 代码证据：
+  - `backend/src/models/approval.py`
+  - `backend/src/crud/approval.py`
+  - `backend/src/schemas/approval.py`
+  - `backend/src/services/approval/service.py`
+  - `backend/src/api/v1/approval.py`
+  - `backend/src/services/asset/asset_service.py`
+  - `backend/src/services/notification/notification_service.py`
+  - `backend/alembic/versions/20260402_req_apr_001_approval_domain.py`
+  - `backend/tests/unit/services/approval/test_approval_service.py`
+  - `backend/tests/unit/api/v1/test_approval_api.py`
+
 ---
 
 ## 7. 跨模块约束
@@ -693,6 +715,7 @@
 | REQ-ANA-001 | ✅ | `/analytics/comprehensive`, `/analytics/export`（综合分析 + 统一 CSV/XLSX 导出 + `metrics_version`；PDF 明确返回 501 未实现） | `test_analytics_service.py`, `test_analytics.py`, `test_analytics_export_service.py`, `analyticsService.test.ts`, `useAssetAnalytics.test.ts`, `AnalyticsDashboard.test.tsx` |
 | REQ-PTY-001 | ✅ | `/api/v1/parties` (CRUD + review/change logs) + `/system/parties` | `test_party_api.py`, `test_party_service.py`, `partyService.test.ts`, `PartyPages.test.tsx` |
 | REQ-PTY-002 | ✅ | `/api/v1/parties/import` + `/api/v1/parties/{party_id}/submit-review|approve-review|reject-review` + 合同提审门禁 + `/system/parties/:id` | `test_party_api.py`, `test_party_service.py`, `test_contract_group_service.py`, `partyService.test.ts`, `PartyPages.test.tsx`, `partyImport.test.ts`, `PartySelector.test.tsx` |
+| REQ-APR-001 | ✅ | `/api/v1/approval/processes/start`, `/api/v1/approval/tasks/pending`, `/api/v1/approval/processes/mine`, `/api/v1/approval/processes/{id}/timeline`, `/api/v1/approval/tasks/{task_id}/approve|reject|withdraw` | `test_approval_service.py`, `test_approval_api.py`, `test_asset_review.py` |
 
 ---
 
@@ -714,7 +737,11 @@
 - R2：合同生命周期冲突检测触发拒绝。
 - R3：台账批量更新成功并更新欠费状态字段。
 
-### 12.4 推荐验证命令
+### 12.4 审批
+- P4：资产发起审批后，处理人能在待办列表中看到对应任务。
+- P5：审批通过/驳回/撤回后，资产审核状态与审批实例终态一致。
+
+### 12.5 推荐验证命令
 ```bash
 cd backend
 pytest -m unit tests/unit/services/asset/test_asset_service.py -q

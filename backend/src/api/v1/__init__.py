@@ -14,6 +14,7 @@ from . import (
 # 导入各个模块的路由 - Analytics
 from .analytics.analytics import router as analytics_router
 from .analytics.statistics import router as statistics_router
+from .approval import router as approval_router
 
 # 导入各个模块的路由 - Assets
 from .assets.assets import router as assets_router
@@ -100,6 +101,7 @@ api_router.include_router(auth_router, prefix="/auth", tags=["用户认证"])
 api_router.include_router(data_policies_router, prefix="/auth", tags=["数据策略包"])
 api_router.include_router(roles_router, prefix="/roles", tags=["角色管理"])
 api_router.include_router(operation_logs_router, prefix="/logs", tags=["操作日志"])
+api_router.include_router(approval_router, prefix="/approval", tags=["审批流"])
 api_router.include_router(assets_router, prefix="/assets", tags=["资产管理"])
 api_router.include_router(
     excel_router, tags=["Excel导入导出"]

@@ -9,6 +9,11 @@ from .abac import (  # noqa: F401
     ABACPolicyRule,
     ABACRolePolicy,
 )
+from .approval import (  # noqa: F401
+    ApprovalActionLog,
+    ApprovalInstance,
+    ApprovalTaskSnapshot,
+)
 from .asset import Asset  # noqa: F401
 from .asset_history import AssetDocument, AssetHistory  # noqa: F401
 from .asset_management_history import AssetManagementHistory  # noqa: F401
@@ -182,6 +187,9 @@ __all__ = [
     "ABACPolicy",
     "ABACPolicyRule",
     "ABACRolePolicy",
+    "ApprovalInstance",
+    "ApprovalTaskSnapshot",
+    "ApprovalActionLog",
     # Property Certificate models
     "CertificateType",
     "OwnerType",

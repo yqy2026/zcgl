@@ -131,6 +131,35 @@ async def test_reverse_asset_review_should_record_context_and_reason(
     assert logs[0].context == {"active_contract_count": 2}
 
 
+async def test_withdraw_asset_review_should_restore_draft_and_write_log(
+    service: AssetService,
+    mock_db: MagicMock,
+) -> None:
+    asset = _build_asset(review_status=AssetReviewStatus.PENDING.value)
+
+    with patch.object(service, "get_asset", new=AsyncMock(return_value=asset)):
+        updated = await service.withdraw_asset_review(
+            asset.id,
+            operator="starter-001",
+            reason="资料需要补充",
+        )
+
+    assert updated is asset
+    assert asset.review_status == AssetReviewStatus.DRAFT.value
+    assert asset.review_by == "starter-001"
+    assert asset.reviewed_at is not None
+    assert asset.review_reason == "资料需要补充"
+    mock_db.flush.assert_awaited_once()
+
+    logs = _extract_review_logs(mock_db)
+    assert len(logs) == 1
+    assert logs[0].action == "withdraw"
+    assert logs[0].from_status == AssetReviewStatus.PENDING.value
+    assert logs[0].to_status == AssetReviewStatus.DRAFT.value
+    assert logs[0].operator == "starter-001"
+    assert logs[0].reason == "资料需要补充"
+
+
 async def test_update_asset_should_block_when_review_status_is_approved(
     service: AssetService,
     mock_user: User,

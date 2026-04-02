@@ -54,6 +54,12 @@ async def create_basic_permissions(db):
         # Excel配置权限
         ("excel_config", "read", "查看Excel配置", "查看Excel导入导出配置"),
         ("excel_config", "write", "管理Excel配置", "创建/更新/删除Excel配置"),
+        # 审批流权限
+        ("approval", "read", "查看审批", "查看审批任务与流程"),
+        ("approval", "start", "发起审批", "发起业务审批流程"),
+        ("approval", "approve", "审批通过", "处理审批通过动作"),
+        ("approval", "reject", "审批驳回", "处理审批驳回动作"),
+        ("approval", "withdraw", "审批撤回", "撤回本人发起的审批"),
         # 系统管理权限
         ("system", "admin", "系统管理员", "全局管理员权限"),
         ("system", "manage", "系统管理", "系统管理权限"),
