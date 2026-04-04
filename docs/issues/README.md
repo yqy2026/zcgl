@@ -8,4 +8,5 @@
 
 | 文档 | 内容 | 状态 |
 |------|------|------|
+| [2026-04-04-perspective-to-data-scope-refactor-review.md](./2026-04-04-perspective-to-data-scope-refactor-review.md) | `视角机制 → 数据范围自动注入` 活跃方案复核报告 | 🔄 待方案修订 |
 | [2026-03-03-project-issues-analysis.md](./2026-03-03-project-issues-analysis.md) | 前后端全面排查报告（MyPy / Lint / 构建）| 🔄 修复进行中（49 errors 待清零） |

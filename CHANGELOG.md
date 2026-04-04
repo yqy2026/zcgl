@@ -2,6 +2,17 @@
 
 ## [Unreleased] - 2026-03-06
 
+### 2026-04-04
+- docs(review): 新增 `docs/issues/2026-04-04-perspective-to-data-scope-refactor-review.md`，对活跃方案 `docs/plans/2026-04-03-perspective-to-data-scope-refactor.md` 进行二次复核，收口 5 个仍阻塞实现的关键问题：`/auth/me/capabilities` 契约未定、`all` 类型边界冲突、`project` owner/all 查询仍是 API 层分叉、query scope 与 API cache scope 不一致、`dataScopeStore` 生命周期与 canonical 路由入口替代设计不完整。
+- docs(plans): 修订 `docs/plans/2026-04-03-perspective-to-data-scope-refactor.md`，收口 review 提出的 6 条建议：①决策不改 `CapabilitiesResponse`，前端从现有 `capabilities[].data_scope` 聚合绑定信息；②拆分 `PerspectiveName`（`owner|manager`）与 `EffectivePerspective`（`owner|manager|all`），`all` 永不出现在 capabilities 响应中；③project owner/all 过滤下沉到 `CRUDProject._apply_project_party_filter()` 统一入口，覆盖 get/get_multi/search/get_statistics 全部 4 条读路径；④合并 `buildQueryScopeKey`/`getCurrentRequestScopeKey` 为统一的 `buildScopeKey()`，管理员使用 `scope:admin` token；⑤定义 dataScopeStore 在 AuthContext 的 7 个挂载点完整生命周期；⑥新增 `CanonicalEntryRedirect` 组件替代 `LegacyRouteRedirect`，含行为对比表。
+- docs(review): 对上述修订方案再次复核，更新 `docs/issues/2026-04-04-perspective-to-data-scope-refactor-review.md` 结论为“主体结构已收口，但仍剩 3 个实现级缺口”：`refreshCapabilitiesByUser()` 中 `isAdmin` 读取闭包状态可能失真、`CanonicalEntryRedirect` 仅按 resource 存在性判定权限过粗、目标态仍残留 `/projects` 与实施章节 `/project` 的路径不一致。
+- docs(index): 更新 `docs/issues/README.md`，将上述方案复核报告纳入问题跟踪索引。
+
+### 2026-04-03
+- docs(requirements): 基于业务访谈重写 `docs/requirements-specification.md` §5.2，将"全局视角切换"替换为"数据范围与身份机制"。核心变更：数据范围由 `UserPartyBinding` 自动决定（不需手动选择/切换）；多绑定用户展示数据并集；管理员/审计不受绑定约束；菜单可见性由 RBAC 灵活配置（不按绑定类型硬编码）；统计口径按绑定类型自动确定。§5.3 客户定义去掉"当前视角"标签；REQ-AUTH-002 标题从"视角上下文强制注入"改为"数据范围上下文自动注入"（✅→🚧）；REQ-SCH-003 权限判定描述从"全局视角"改为"主体绑定数据范围"；§13 vNext 新增"集团汇总视图"候选；§14 风险与 §15 访谈结论同步修正措辞。
+- docs(fields-appendix): 同步修正 `docs/features/requirements-appendix-fields.md` 中与新数据范围机制矛盾的"视角"残留：§3.8 CustomerProfile 口径描述去掉"当前视角"、`perspective_type` 字段更名为 `binding_type`、`contract_role` 描述去掉"当前视角下"；§3.9 AnalyticsMetrics `perspective_party_id` 更名为 `scope_party_id` 并修正描述。
+- docs(plans): 新增 `docs/plans/2026-04-03-perspective-to-data-scope-refactor.md`（🔄 活跃方案），视角机制→数据范围自动注入重构实施计划，拆分为 3 个独立子任务：①后端 X-Perspective 可选+并集查询 ②前端 DataScopeStore+ApiClient 改造 ③路由统一+废弃代码清理。
+
 ### 2026-04-02
 - fix(dashboard): 修复共享工作台在无视角路由下误请求 `GET /api/v1/analytics/comprehensive` 的问题。`frontend/src/hooks/useAnalytics.ts` 现在仅在视角路由下启用综合分析查询，`frontend/src/pages/Dashboard/DashboardPage.tsx` 在共享 `/dashboard` 上改为显示“进入业主视角 / 进入经营视角”入口，避免因缺少 `X-Perspective` 触发 `400` 与控制台报错。
 - test(dashboard): 新增回归覆盖 `frontend/src/hooks/__tests__/useAnalytics.test.ts` 与 `frontend/src/pages/Dashboard/__tests__/DashboardPage.test.tsx`，锁定共享工作台不再发起无视角分析请求，并必须显示视角入口提示。
