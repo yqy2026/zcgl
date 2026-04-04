@@ -72,7 +72,7 @@
 - 租赁管理：承租模式与代理模式、合同组、合同生命周期、台账生成与维护。
 - 客户管理：客户增强信息、历史签约、风险标签、账期偏好。
 - 搜索能力：全局搜索入口 + 模块内搜索并存。
-- 权限体系：登录、会话刷新、角色权限配置、关键操作鉴权、全局视角切换。
+- 权限体系：登录、会话刷新、角色权限配置、关键操作鉴权、基于主体绑定的数据范围自动注入。
 - 数据分析：概览、趋势、分布、收入拆分、客户双指标。
 - 文档处理：PDF 上传、解析、批处理、进度追踪。
 
@@ -85,7 +85,7 @@
 
 ---
 
-## 5. 角色、视角与客户定义
+## 5. 角色、数据范围与客户定义
 
 ### 5.1 角色
 - 运营管理员：资产、项目、合同组与台账维护。
@@ -94,19 +94,55 @@
 - 管理层：查看统计看板与导出报表。
 - 只读查看者（含外审/临时查看）：仅可查看授权范围数据，不允许新增/编辑/审核/作废。
 
-### 5.2 全局视角机制
-- 视角采用全局切换，不限定在单模块内。
-- 用户首次登录必须手动选择"当前主体/视角"。
-- 当用户仅有一个可用视角时，系统自动锁定该视角并跳过手动选择。
-- 后续默认使用最近一次选择的视角，并允许手动切换。
-- 所有查询与统计都基于当前视角执行权限与口径判定。
+### 5.2 数据范围与身份机制
+
+> 2026-04-03 业务访谈确认，替代原"全局视角切换"设计。
+
+#### 核心规则
+- 数据范围由用户的**主体绑定（UserPartyBinding）**自动决定，不需要用户手动选择或切换。
+- 每个用户通过绑定关系关联到一个或多个 Party，绑定类型为 `owner`（产权方）或 `manager`（运营方/经营方）。
+- 系统根据绑定类型自动确定数据过滤方式：
+  - `owner` 绑定：按 `owner_party_id` 过滤资产、合同、台账等。
+  - `manager` 绑定：按 `manager_party_id` 过滤资产、合同、台账等。
+
+#### 数据隔离
+- 产权方 A 的人**不能看到**产权方 B 的数据。
+- 运营方 1 的人**不能看到**运营方 2 管理的数据。
+- 运营方用户可跨产权方查看自己管理的所有资产（同一 manager_party_id 下的全部资产）。
+- 产权方用户只看到自己名下的资产及其被管理情况（合同、租户、台账、项目、出租率）。
+
+#### 多绑定用户
+- 当用户同时绑定了 `owner` 和 `manager` 类型的 Party 时，系统展示该用户所有有权限数据的**并集**，不需要手动切换。
+- 菜单项取所有绑定类型的并集。
+
+#### 管理员与审计角色
+- 系统管理员（集团资产部）和外部审计用户可查看全部数据，不受主体绑定约束。
+
+#### 菜单可见性
+- 菜单项的显示/隐藏由**角色权限（RBAC）**控制，管理员可灵活配置。
+- 系统不按绑定类型硬编码菜单可见性。
+
+#### 统计口径
+- 产权方用户：
+  - 承租模式收入 = 来自运营方的内部租金。
+  - 代理模式收入 = 来自终端租户的租金。
+- 运营方用户：
+  - 承租模式 = 终端租金收入 + 承租租金支出。
+  - 代理模式 = 服务费收入。
+- 统计口径由用户的绑定类型自动确定，不需要手动指定。
+- 集团汇总视图为 vNext 候选需求（见 §13），MVP 不纳入。
+
+#### 组织规模参考
+- 集团下 20+ 个产权方主体，4-5 个运营方主体。
+- 运营方与产权方的管理关系有交叉重叠（同一产权方的不同资产可分属不同运营方管理）。
+- 同一个资产不会同时被两个运营方管理。
 
 ### 5.3 客户定义（强制口径）
-- 客户不是固定身份，而是"当前视角下合同对方主体"。
+- 客户不是固定身份，而是"合同对方主体"。
 - 同一主体可在不同合同中扮演不同角色（如运营管理方、承租方、出租方）。
-- 所有客户展示必须包含：`客户名称 + 当前视角 + 合同角色`。
-- 同一主体在不同视角下可出现多条客户记录，列表唯一键为 `party_id + current_view + contract_role`。
-- UI 必须显式展示"当前视角标签"和"合同角色标签"，避免同名主体误判为重复数据。
+- 所有客户展示必须包含：`客户名称 + 合同角色`。
+- 同一主体可出现多条客户记录，列表唯一键为 `party_id + contract_role`。
+- UI 必须显式展示"合同角色标签"，避免同名主体误判为重复数据。
 
 ### 5.4 核心场景
 - 场景 S1：资产详情页一屏展示资产基本信息、租赁情况（按合同类型汇总：上游承租/下游转租/委托运营）、客户摘要。
@@ -452,7 +488,7 @@
 - 描述：搜索结果必须严格受权限约束。
 - 验收：
   - 未授权对象完全不返回。
-  - 权限判定基于当前全局视角。
+  - 权限判定基于用户主体绑定的数据范围。
 - 代码证据：
   - `backend/src/services/authz/resource_perspective_registry.py`（`search` 资源视角注册）
   - `backend/src/api/v1/search.py`（强制 `X-Perspective` 请求契约）
@@ -478,11 +514,12 @@
   - `backend/src/services/permission/rbac_service.py`
   - `backend/tests/unit/api/v1/test_roles_permission_grants.py`
 
-#### REQ-AUTH-002 视角上下文强制注入 ✅
-- 描述：所有业务请求需携带当前视角上下文。
+#### REQ-AUTH-002 数据范围上下文自动注入 🚧
+- 描述：所有业务请求自动携带数据范围上下文（基于用户主体绑定），无需手动选择。
 - 验收：
-  - 业务查询、统计、搜索均使用当前视角口径。
-  - 当默认视角权限失效时，系统要求重新选择视角。
+  - 业务查询、统计、搜索均按用户主体绑定的数据范围过滤。
+  - 多绑定用户展示所有有权限数据的并集。
+  - 管理员/审计用户不受主体绑定约束，可查看全部数据。
 - 代码证据：
   - `backend/src/services/authz/resource_perspective_registry.py`
   - `backend/src/services/authz/service.py`
@@ -710,7 +747,7 @@
 | REQ-SCH-002 | ✅ | 全部视图 / 按对象分组切换 + `score + business_rank` 排序 | `test_search_service.py`, `GlobalSearchPage.test.tsx` |
 | REQ-SCH-003 | ✅ | 当前视角 `X-Perspective` 强制校验 + fail-closed 权限过滤 | `test_search_service.py`, `test_search_api.py` |
 | REQ-AUTH-001 | ✅ | `/auth/login`, `/auth/refresh` | `test_optional_auth.py` |
-| REQ-AUTH-002 | ✅ | `/api/v1/analytics/*`, `/api/v1/projects/*`, `/api/v1/assets`（列表/详情/筛选）, `/api/v1/contract-groups*`, `/auth/me/capabilities`, 前端 `X-Perspective` 自动注入与 `PerspectiveResolution` 恢复流 | `test_authz_service.py`, `test_perspective_context.py`, `test_party_scope.py`, `test_query_builder.py`, `test_notifications.py`, `test_project_visibility_real.py`, `test_assets_visibility_real.py`, `test_analytics.py`, `test_project.py`, `test_assets_authz_layering.py`, `client.test.ts`, `AppRoutes.perspective-redirect.test.tsx`, `perspectiveResolution.test.tsx`, `CapabilityGuard.test.tsx` |
+| REQ-AUTH-002 | 🚧 | 数据范围上下文自动注入（基于主体绑定），多绑定用户展示并集，管理员不受约束。前端 `X-Perspective` 自动注入（待重构为自动数据范围） | `test_authz_service.py`, `test_perspective_context.py`, `test_party_scope.py`, `test_query_builder.py`, `test_notifications.py`, `test_project_visibility_real.py`, `test_assets_visibility_real.py`, `test_analytics.py`, `test_project.py`, `test_assets_authz_layering.py`, `client.test.ts`, `AppRoutes.perspective-redirect.test.tsx`, `perspectiveResolution.test.tsx`, `CapabilityGuard.test.tsx` |
 | REQ-DOC-001 | ✅ | `/pdf-import/*` | `pdf_import.py` |
 | REQ-ANA-001 | ✅ | `/analytics/comprehensive`, `/analytics/export`（综合分析 + 统一 CSV/XLSX 导出 + `metrics_version`；PDF 明确返回 501 未实现） | `test_analytics_service.py`, `test_analytics.py`, `test_analytics_export_service.py`, `analyticsService.test.ts`, `useAssetAnalytics.test.ts`, `AnalyticsDashboard.test.tsx` |
 | REQ-PTY-001 | ✅ | `/api/v1/parties` (CRUD + review/change logs) + `/system/parties` | `test_party_api.py`, `test_party_service.py`, `partyService.test.ts`, `PartyPages.test.tsx` |
@@ -759,12 +796,13 @@ pytest -m unit tests/unit/api/v1/test_roles_permission_grants.py -q
 1. **错误恢复模块正式化** — `error_recovery` 路由在聚合处被临时禁用。
 2. **系统设置模块能力稳定化** — `system_settings_router` 为条件导入/条件注册。
 3. **PDF 批量导入从"可选加载"提升为"必选能力"** — 批量路由当前通过可导入性判断注册。
+4. **集团汇总视图** — 支持集团总部查看所有产权方+运营方的汇总数据（2026-04-03 访谈确认需求存在但可延后）。
 
 ---
 
 ## 14. 风险与依赖
 
-- 承租/代理双模式并存，若视角口径不一致会引发统计争议。
+- 承租/代理双模式并存，若数据范围口径不一致会引发统计争议。
 - 历史数据质量差异可能影响合同组建模与统计一致性。
 - 存量 Excel/旧系统数据迁移存在主档去重、字段缺失、初始台账重建风险，可能影响 MVP 上线节奏。
 - 权限模型收敛需要跨模块改造协同，需阶段推进。
@@ -775,8 +813,8 @@ pytest -m unit tests/unit/api/v1/test_roles_permission_grants.py -q
 ## 15. 访谈冻结结论（2026-02-28）
 
 - 主定位：范围与目标冻结优先。
-- 客户口径：客户为"当前视角下合同对方主体"，非固定身份。
-- 视角机制：首次手动选择，后续默认最近选择，支持全局切换。
+- 客户口径：客户为"合同对方主体"，非固定身份。
+- 数据范围机制：由用户主体绑定自动确定，无需手动选择或切换（2026-04-03 访谈修正，替代原"全局视角切换"设计）。
 - 经营模式：承租模式与代理模式并存，合同组单模式不混用。
 - 审核策略：审核在合同级进行，关键合同提审时触发同组关联合同联审。
 - 反审核策略：已出账场景仅允许作废/冲销 + 重建，禁止物理删除。

@@ -44,3 +44,8 @@ pytest -m unit
 ### 维护文档
 
 每次修改后请更新 `CHANGELOG.md`。
+
+## gstack
+
+- **网页浏览**：统一使用 `/browse` skill（来自 gstack），永远不要使用 `mcp__claude-in-chrome__*` 工具。
+- **可用 skills**：`/office-hours` `/plan-ceo-review` `/plan-eng-review` `/plan-design-review` `/design-consultation` `/design-shotgun` `/design-html` `/review` `/ship` `/land-and-deploy` `/canary` `/benchmark` `/browse` `/connect-chrome` `/qa` `/qa-only` `/design-review` `/setup-browser-cookies` `/setup-deploy` `/retro` `/investigate` `/document-release` `/codex` `/cso` `/autoplan` `/careful` `/freeze` `/guard` `/unfreeze` `/gstack-upgrade` `/learn`

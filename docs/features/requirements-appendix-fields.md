@@ -240,7 +240,7 @@
 
 ## 3.8 CustomerProfile（客户视图档案）
 
-> 口径：客户为“当前视角下合同对方主体”，非固定身份。
+> 口径：客户为“合同对方主体”，非固定身份。同一主体可在不同合同中扮演不同角色。
 
 | 字段 | 类型 | 必填 | 规则/说明 | 状态 |
 |---|---|---|---|---|
@@ -248,8 +248,8 @@
 | `customer_name` | string | 是 | 客户名称 | 已确认 |
 | `customer_type` | enum | 是 | 内部/外部 | 已确认 |
 | `subject_nature` | enum | 是 | 主体性质：`enterprise/individual` | 已确认 |
-| `perspective_type` | enum | 是 | 当前视角（运营方/产权方等） | 已确认 |
-| `contract_role` | enum | 是 | 当前视角下合同角色（承租/出租） | 已确认 |
+| `binding_type` | enum | 是 | 查询方的主体绑定类型（`owner`/`manager`），决定“合同对方”的抽取口径 | 已确认 |
+| `contract_role` | enum | 是 | 合同角色（承租/出租） | 已确认 |
 | `contact_name` | string | 否 | 联系人 | 已确认 |
 | `contact_phone` | string | 否 | 联系电话 | 已确认 |
 | `identifier_type` | enum | 条件必填 | 有 `unified_identifier` 时必填；企业=`USCC`，个人=`CN_ID_CARD/PASSPORT/OTHER_GOV_ID` | 已确认 |
@@ -265,7 +265,7 @@
 | 字段 | 类型 | 必填 | 规则/说明 | 状态 |
 |---|---|---|---|---|
 | `stat_period` | string | 是 | 统计周期（默认本月，可切换） | 已确认 |
-| `perspective_party_id` | string | 是 | 当前视角主体 | 已确认 |
+| `scope_party_id` | string | 是 | 查询方主体 ID（由用户主体绑定自动注入） | 已确认 |
 | `total_income` | number | 是 | 总收入合计（派生） | 已确认（派生） |
 | `self_operated_rent_income` | number | 是 | 自营租金收入（派生） | 已确认（派生） |
 | `agency_service_income` | number | 是 | 代理服务费收入（派生） | 已确认（派生） |
