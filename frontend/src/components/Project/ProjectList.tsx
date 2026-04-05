@@ -38,8 +38,6 @@ import { projectService } from '@/services/projectService';
 import { partyService } from '@/services/partyService';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
 import { ListToolbar } from '@/components/Common/ListToolbar';
-import CurrentViewBanner from '@/components/System/CurrentViewBanner';
-import { useRoutePerspective } from '@/routes/perspective';
 import { useQuery } from '@tanstack/react-query';
 import { getIconButtonProps } from '@/utils/accessibility';
 import type { Project, ProjectListResponse, ProjectStatisticsResponse } from '@/types/project';
@@ -95,7 +93,6 @@ interface ProjectListProps {
 }
 
 const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list' }) => {
-  const { perspective } = useRoutePerspective();
   const [filters, setFilters] = useState<ProjectFilters>({
     keyword: '',
     status: '',
@@ -110,7 +107,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isDetailVisible, setIsDetailVisible] = useState(false);
-  const queryScopeKey = buildQueryScopeKey(perspective);
+  const queryScopeKey = buildQueryScopeKey();
 
   const fetchProjectList = useCallback(async () => {
     const params: ProjectQueryParams = {
@@ -486,7 +483,6 @@ const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, mode = 'list
 
   return (
     <div className="project-list">
-      <CurrentViewBanner />
 
       {/* 统计卡片 */}
       <Row gutter={[16, 16]} className={styles.statisticsRow}>

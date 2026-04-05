@@ -7,6 +7,7 @@
 export const BASE_PATHS = {
   DASHBOARD: '/dashboard',
   ASSETS: '/assets',
+  SEARCH: '/search',
   CONTRACT_GROUPS: '/contract-groups',
   OWNERSHIP: '/ownership',
   PROJECT: '/project',
@@ -97,37 +98,20 @@ export const PROFILE_ROUTES = {
   PROFILE: '/profile',
 } as const;
 
+export const SEARCH_ROUTES = {
+  LIST: '/search',
+} as const;
+
+export const CUSTOMER_ROUTES = {
+  DETAIL_PATH: '/customers/:id',
+  DETAIL: (id: string) => `/customers/${id}`,
+} as const;
+
 export const PROPERTY_CERTIFICATE_ROUTES = {
   LIST: '/property-certificates',
   IMPORT: '/property-certificates/import',
   DETAIL_PATH: '/property-certificates/:id',
   DETAIL: (id: string) => `/property-certificates/${id}`,
-} as const;
-
-export const OWNER_ROUTES = {
-  ASSETS: '/owner/assets',
-  ASSET_DETAIL_PATH: '/owner/assets/:id',
-  DETAIL: (id: string) => `/owner/assets/${id}`,
-  SEARCH: '/owner/search',
-  CUSTOMER_DETAIL_PATH: '/owner/customers/:id',
-  CUSTOMER_DETAIL: (id: string) => `/owner/customers/${id}`,
-  CONTRACT_GROUPS: '/owner/contract-groups',
-  CONTRACT_GROUP_DETAIL_PATH: '/owner/contract-groups/:id',
-  PROPERTY_CERTIFICATES: '/owner/property-certificates',
-  PROPERTY_CERTIFICATE_DETAIL_PATH: '/owner/property-certificates/:id',
-} as const;
-
-export const MANAGER_ROUTES = {
-  ASSETS: '/manager/assets',
-  ASSET_DETAIL_PATH: '/manager/assets/:id',
-  DETAIL: (id: string) => `/manager/assets/${id}`,
-  SEARCH: '/manager/search',
-  CUSTOMER_DETAIL_PATH: '/manager/customers/:id',
-  CUSTOMER_DETAIL: (id: string) => `/manager/customers/${id}`,
-  CONTRACT_GROUPS: '/manager/contract-groups',
-  CONTRACT_GROUP_DETAIL_PATH: '/manager/contract-groups/:id',
-  PROJECTS: '/manager/projects',
-  PROJECT_DETAIL_PATH: '/manager/projects/:id',
 } as const;
 
 const LEGACY_RENTAL_RETIRED_TITLE = '旧租赁前端已退休';
@@ -160,52 +144,6 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     title: '工作台',
     icon: 'dashboard',
     breadcrumb: ['工作台'],
-  },
-  {
-    path: '/owner',
-    title: '业主视角',
-    icon: 'home',
-    breadcrumb: ['业主视角'],
-    children: [
-      {
-        path: OWNER_ROUTES.ASSETS,
-        title: '资产列表',
-        permissions: [{ resource: 'asset', action: 'read' }],
-      },
-      {
-        path: OWNER_ROUTES.CONTRACT_GROUPS,
-        title: '合同组列表',
-        permissions: [{ resource: 'contract_group', action: 'read' }],
-      },
-      {
-        path: OWNER_ROUTES.PROPERTY_CERTIFICATES,
-        title: '产权证列表',
-        permissions: [{ resource: 'property_certificate', action: 'read' }],
-      },
-    ],
-  },
-  {
-    path: '/manager',
-    title: '经营视角',
-    icon: 'appstore',
-    breadcrumb: ['经营视角'],
-    children: [
-      {
-        path: MANAGER_ROUTES.ASSETS,
-        title: '资产列表',
-        permissions: [{ resource: 'asset', action: 'read' }],
-      },
-      {
-        path: MANAGER_ROUTES.CONTRACT_GROUPS,
-        title: '合同组列表',
-        permissions: [{ resource: 'contract_group', action: 'read' }],
-      },
-      {
-        path: MANAGER_ROUTES.PROJECTS,
-        title: '项目列表',
-        permissions: [{ resource: 'project', action: 'read' }],
-      },
-    ],
   },
   {
     path: '/assets',
@@ -473,8 +411,8 @@ export const ROUTES = {
   ASSET_ROUTES,
   LEGACY_RENTAL_ROUTES,
   CONTRACT_GROUP_ROUTES,
-  OWNER_ROUTES,
-  MANAGER_ROUTES,
+  SEARCH_ROUTES,
+  CUSTOMER_ROUTES,
   SYSTEM_ROUTES,
   OTHER_ROUTES,
   OWNERSHIP_ROUTES,

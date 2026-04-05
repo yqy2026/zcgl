@@ -1,16 +1,16 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useParams } from 'react-router-dom';
 import type { AuthzAction, ResourceType } from '@/types/capability';
-import LegacyRouteRedirect from './LegacyRouteRedirect';
+import CanonicalEntryRedirect from './CanonicalEntryRedirect';
 import {
   ASSET_ROUTES,
   CONTRACT_GROUP_ROUTES,
+  CUSTOMER_ROUTES,
   LEGACY_RENTAL_ROUTES,
-  MANAGER_ROUTES,
   OWNERSHIP_ROUTES,
-  OWNER_ROUTES,
   PROJECT_ROUTES,
   PROFILE_ROUTES,
+  SEARCH_ROUTES,
   SYSTEM_ROUTES,
   BASE_PATHS,
   PROPERTY_CERTIFICATE_ROUTES,
@@ -53,6 +53,16 @@ const legacyRentalPdfImportRedirect: React.FC = () => (
   <Navigate to={CONTRACT_GROUP_ROUTES.IMPORT} replace />
 );
 
+const legacyCustomerRedirect: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+
+  if (id == null || id.trim() === '') {
+    return <Navigate to={ASSET_ROUTES.LIST} replace />;
+  }
+
+  return <Navigate to={CUSTOMER_ROUTES.DETAIL(id)} replace />;
+};
+
 const baseProtectedRoutes: ProtectedRouteItem[] = [
   // 仪表板 - 首页
   {
@@ -62,7 +72,7 @@ const baseProtectedRoutes: ProtectedRouteItem[] = [
   },
   {
     path: BASE_PATHS.ASSETS,
-    element: () => <LegacyRouteRedirect legacyPath={BASE_PATHS.ASSETS} />,
+    element: () => <CanonicalEntryRedirect targetPath={ASSET_ROUTES.LIST} resource="asset" />,
     permissions: [{ resource: 'asset', action: 'read' }],
   },
 
@@ -89,7 +99,7 @@ const baseProtectedRoutes: ProtectedRouteItem[] = [
   },
   {
     path: ASSET_ROUTES.LIST,
-    element: () => <LegacyRouteRedirect legacyPath={ASSET_ROUTES.LIST} />,
+    element: assetListPage,
     permissions: [{ resource: 'asset', action: 'read' }],
   },
   {
@@ -98,44 +108,14 @@ const baseProtectedRoutes: ProtectedRouteItem[] = [
     permissions: [{ resource: 'asset', action: 'read' }],
   },
   {
-    path: OWNER_ROUTES.ASSETS,
-    element: assetListPage,
-    permissions: [{ resource: 'asset', action: 'read' }],
-  },
-  {
-    path: OWNER_ROUTES.ASSET_DETAIL_PATH,
-    element: assetDetailPage,
-    permissions: [{ resource: 'asset', action: 'read' }],
-  },
-  {
-    path: MANAGER_ROUTES.ASSETS,
-    element: assetListPage,
-    permissions: [{ resource: 'asset', action: 'read' }],
-  },
-  {
-    path: MANAGER_ROUTES.ASSET_DETAIL_PATH,
-    element: assetDetailPage,
-    permissions: [{ resource: 'asset', action: 'read' }],
-  },
-  {
-    path: OWNER_ROUTES.CUSTOMER_DETAIL_PATH,
+    path: CUSTOMER_ROUTES.DETAIL_PATH,
     element: React.lazy(() => import('../pages/Customer/CustomerDetailPage')),
     permissions: [{ resource: 'analytics', action: 'read' }],
   },
   {
-    path: OWNER_ROUTES.SEARCH,
+    path: SEARCH_ROUTES.LIST,
     element: React.lazy(() => import('../pages/Search/GlobalSearchPage')),
-    permissions: [{ resource: 'analytics', action: 'read' }],
-  },
-  {
-    path: MANAGER_ROUTES.CUSTOMER_DETAIL_PATH,
-    element: React.lazy(() => import('../pages/Customer/CustomerDetailPage')),
-    permissions: [{ resource: 'analytics', action: 'read' }],
-  },
-  {
-    path: MANAGER_ROUTES.SEARCH,
-    element: React.lazy(() => import('../pages/Search/GlobalSearchPage')),
-    permissions: [{ resource: 'analytics', action: 'read' }],
+    permissions: [{ resource: 'search', action: 'read' }],
   },
 
   // 租赁管理模块 - 注意路由顺序，具体路径必须在动态路径之前
@@ -187,7 +167,7 @@ const baseProtectedRoutes: ProtectedRouteItem[] = [
 
   {
     path: CONTRACT_GROUP_ROUTES.LIST,
-    element: () => <LegacyRouteRedirect legacyPath={CONTRACT_GROUP_ROUTES.LIST} />,
+    element: contractGroupListPage,
     permissions: [{ resource: 'contract_group', action: 'read' }],
   },
   {
@@ -206,33 +186,13 @@ const baseProtectedRoutes: ProtectedRouteItem[] = [
     permissions: [{ resource: 'contract_group', action: 'read' }],
   },
   {
-    path: OWNER_ROUTES.CONTRACT_GROUPS,
-    element: contractGroupListPage,
-    permissions: [{ resource: 'contract_group', action: 'read' }],
-  },
-  {
-    path: OWNER_ROUTES.CONTRACT_GROUP_DETAIL_PATH,
-    element: contractGroupDetailPage,
-    permissions: [{ resource: 'contract_group', action: 'read' }],
-  },
-  {
-    path: MANAGER_ROUTES.CONTRACT_GROUPS,
-    element: contractGroupListPage,
-    permissions: [{ resource: 'contract_group', action: 'read' }],
-  },
-  {
-    path: MANAGER_ROUTES.CONTRACT_GROUP_DETAIL_PATH,
-    element: contractGroupDetailPage,
-    permissions: [{ resource: 'contract_group', action: 'read' }],
-  },
-  {
     path: CONTRACT_GROUP_ROUTES.EDIT_PATH,
     element: React.lazy(() => import('../pages/ContractGroup/ContractGroupFormPage')),
     permissions: [{ resource: 'contract_group', action: 'update' }],
   },
   {
     path: PROPERTY_CERTIFICATE_ROUTES.LIST,
-    element: () => <LegacyRouteRedirect legacyPath={PROPERTY_CERTIFICATE_ROUTES.LIST} />,
+    element: propertyCertificateListPage,
     permissions: [{ resource: 'property_certificate', action: 'read' }],
   },
   {
@@ -245,17 +205,6 @@ const baseProtectedRoutes: ProtectedRouteItem[] = [
     element: propertyCertificateDetailPage,
     permissions: [{ resource: 'property_certificate', action: 'read' }],
   },
-  {
-    path: OWNER_ROUTES.PROPERTY_CERTIFICATES,
-    element: propertyCertificateListPage,
-    permissions: [{ resource: 'property_certificate', action: 'read' }],
-  },
-  {
-    path: OWNER_ROUTES.PROPERTY_CERTIFICATE_DETAIL_PATH,
-    element: propertyCertificateDetailPage,
-    permissions: [{ resource: 'property_certificate', action: 'read' }],
-  },
-
   // 权属方管理 - 注意路由顺序，详情页必须在列表页之前
   {
     path: OWNERSHIP_ROUTES.EDIT_PATH,
@@ -286,19 +235,26 @@ const baseProtectedRoutes: ProtectedRouteItem[] = [
   },
   {
     path: PROJECT_ROUTES.LIST,
-    element: () => <LegacyRouteRedirect legacyPath={PROJECT_ROUTES.LIST} />,
-    permissions: [{ resource: 'project', action: 'read' }],
-  },
-  {
-    path: MANAGER_ROUTES.PROJECTS,
     element: projectManagementPage,
     permissions: [{ resource: 'project', action: 'read' }],
   },
-  {
-    path: MANAGER_ROUTES.PROJECT_DETAIL_PATH,
-    element: projectDetailPage,
-    permissions: [{ resource: 'project', action: 'read' }],
-  },
+
+  { path: '/owner/assets', element: () => <Navigate to={ASSET_ROUTES.LIST} replace /> },
+  { path: '/owner/assets/:id', element: () => <Navigate to={ASSET_ROUTES.LIST} replace /> },
+  { path: '/manager/assets', element: () => <Navigate to={ASSET_ROUTES.LIST} replace /> },
+  { path: '/manager/assets/:id', element: () => <Navigate to={ASSET_ROUTES.LIST} replace /> },
+  { path: '/owner/contract-groups', element: () => <Navigate to={CONTRACT_GROUP_ROUTES.LIST} replace /> },
+  { path: '/owner/contract-groups/:id', element: () => <Navigate to={CONTRACT_GROUP_ROUTES.LIST} replace /> },
+  { path: '/manager/contract-groups', element: () => <Navigate to={CONTRACT_GROUP_ROUTES.LIST} replace /> },
+  { path: '/manager/contract-groups/:id', element: () => <Navigate to={CONTRACT_GROUP_ROUTES.LIST} replace /> },
+  { path: '/manager/projects', element: () => <Navigate to={PROJECT_ROUTES.LIST} replace /> },
+  { path: '/manager/projects/:id', element: () => <Navigate to={PROJECT_ROUTES.LIST} replace /> },
+  { path: '/owner/property-certificates', element: () => <Navigate to={PROPERTY_CERTIFICATE_ROUTES.LIST} replace /> },
+  { path: '/owner/property-certificates/:id', element: () => <Navigate to={PROPERTY_CERTIFICATE_ROUTES.LIST} replace /> },
+  { path: '/owner/search', element: () => <Navigate to={SEARCH_ROUTES.LIST} replace /> },
+  { path: '/manager/search', element: () => <Navigate to={SEARCH_ROUTES.LIST} replace /> },
+  { path: '/owner/customers/:id', element: legacyCustomerRedirect },
+  { path: '/manager/customers/:id', element: legacyCustomerRedirect },
 
   // 个人中心
   {

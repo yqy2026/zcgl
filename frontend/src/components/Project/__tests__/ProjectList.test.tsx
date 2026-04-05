@@ -10,7 +10,7 @@ import { render, screen, fireEvent, act } from '@testing-library/react';
 import { useQuery } from '@tanstack/react-query';
 import { partyService } from '@/services/partyService';
 
-const mockBuildQueryScopeKey = vi.fn(() => 'user:user-1|perspective:manager');
+const mockBuildQueryScopeKey = vi.fn(() => 'user:user-1|scope:owner,manager');
 const mockUseRoutePerspective = vi.fn(() => ({
   perspective: 'manager',
   isPerspectiveRoute: true,
@@ -465,21 +465,20 @@ describe('ProjectList', () => {
       expect(screen.getByText('项目1')).toBeInTheDocument();
     });
 
-    it('应该显示当前视角标签', async () => {
+    it('不再显示当前视角标签', async () => {
       await renderProjectList();
 
-      expect(screen.getByText('当前视角')).toBeInTheDocument();
-      expect(screen.getByText('经营视角')).toBeInTheDocument();
+      expect(screen.queryByText('当前视角')).not.toBeInTheDocument();
     });
 
-    it('项目列表与主体搜索查询应把当前视角纳入 queryKey', async () => {
+    it('项目列表与主体搜索查询应把当前数据范围纳入 queryKey', async () => {
       await renderProjectList();
 
       expect(useQuery).toHaveBeenCalledWith(
         expect.objectContaining({
           queryKey: [
             'project-list',
-            'user:user-1|perspective:manager',
+            'user:user-1|scope:owner,manager',
             1,
             10,
             { keyword: '', status: '', ownerPartyId: '' },
@@ -488,10 +487,10 @@ describe('ProjectList', () => {
       );
       expect(useQuery).toHaveBeenCalledWith(
         expect.objectContaining({
-          queryKey: ['project-owner-party-options', 'user:user-1|perspective:manager', ''],
+          queryKey: ['project-owner-party-options', 'user:user-1|scope:owner,manager', ''],
         })
       );
-      expect(mockBuildQueryScopeKey).toHaveBeenCalledWith('manager');
+      expect(mockBuildQueryScopeKey).toHaveBeenCalledWith(undefined);
     });
 
     it('legacy 路径不显示视角标签，但列表和主体选项查询仍继续执行', async () => {
@@ -506,18 +505,12 @@ describe('ProjectList', () => {
       expect(screen.queryByText('当前视角')).not.toBeInTheDocument();
       expect(useQuery).toHaveBeenCalledWith(
         expect.objectContaining({
-          queryKey: [
-            'project-list',
-            'user:user-1|perspective:manager',
-            1,
-            10,
-            { keyword: '', status: '', ownerPartyId: '' },
-          ],
+          queryKey: ['project-list', 'user:user-1|scope:owner,manager', 1, 10, { keyword: '', status: '', ownerPartyId: '' }],
         })
       );
       expect(useQuery).toHaveBeenCalledWith(
         expect.objectContaining({
-          queryKey: ['project-owner-party-options', 'user:user-1|perspective:manager', ''],
+          queryKey: ['project-owner-party-options', 'user:user-1|scope:owner,manager', ''],
         })
       );
     });

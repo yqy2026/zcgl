@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useDataScopeStore } from '@/stores/dataScopeStore';
 
 vi.mock('@/utils/AuthStorage', () => ({
   AuthStorage: {
@@ -12,30 +13,30 @@ import { buildQueryScopeKey, getCurrentRequestScopeKey } from '../queryScope';
 describe('queryScope', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useDataScopeStore.getState().reset();
   });
 
-  it('builds a scoped key from user id and route perspective', () => {
+  it('builds a scoped key from user id and binding types', () => {
     vi.mocked(AuthStorage.getCurrentUser).mockReturnValue({
       id: 'user-1',
     } as never);
+    useDataScopeStore.setState({ bindingTypes: ['owner'], isAdmin: false });
 
-    expect(buildQueryScopeKey('owner')).toBe('user:user-1|perspective:owner');
-    expect(buildQueryScopeKey('manager')).toBe('user:user-1|perspective:manager');
-    expect(buildQueryScopeKey(null)).toBe('user:user-1|perspective:none');
+    expect(buildQueryScopeKey()).toBe('user:user-1|scope:owner');
   });
 
   it('falls back to anonymous scope when no user is available', () => {
     vi.mocked(AuthStorage.getCurrentUser).mockReturnValue(null);
 
-    expect(buildQueryScopeKey('owner')).toBe('user:anonymous|perspective:owner');
+    expect(buildQueryScopeKey()).toBe('user:anonymous|scope:none');
   });
 
-  it('derives the current request scope without consulting stored view selection', () => {
+  it('derives admin request scope from store state', () => {
     vi.mocked(AuthStorage.getCurrentUser).mockReturnValue({
       id: 'user-2',
     } as never);
+    useDataScopeStore.setState({ bindingTypes: ['owner', 'manager'], isAdmin: true });
 
-    expect(getCurrentRequestScopeKey('manager')).toBe('user:user-2|perspective:manager');
-    expect(getCurrentRequestScopeKey()).toBe('user:user-2|perspective:none');
+    expect(getCurrentRequestScopeKey()).toBe('user:user-2|scope:admin');
   });
 });

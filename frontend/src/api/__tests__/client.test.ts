@@ -6,6 +6,7 @@
 import type { AxiosError, AxiosResponse } from 'axios';
 import { AxiosHeaders, InternalAxiosRequestConfig } from 'axios';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { useDataScopeStore } from '@/stores/dataScopeStore';
 import { Logger } from '@/utils/logger';
 import { ApiClient, apiClient } from '../client';
 import { API_BASE_URL } from '../config';
@@ -14,14 +15,10 @@ const formatStderrWrites = (calls: unknown[][]) => calls.map(call => String(call
 
 const {
   mockClearAuthData,
-  mockClearCapabilitiesSnapshot,
   mockGetCurrentUser,
-  mockGetViewSelection,
 } = vi.hoisted(() => ({
   mockClearAuthData: vi.fn(),
-  mockClearCapabilitiesSnapshot: vi.fn(),
   mockGetCurrentUser: vi.fn(),
-  mockGetViewSelection: vi.fn(),
 }));
 
 vi.mock('@/utils/AuthStorage', () => ({
@@ -31,18 +28,20 @@ vi.mock('@/utils/AuthStorage', () => ({
 }));
 
 vi.mock('@/utils/queryScope', () => ({
-  getCurrentRequestScopeKey: () => {
+  buildScopeKey: () => {
     const currentUser = mockGetCurrentUser();
-    const viewSelection = mockGetViewSelection();
     const userId = currentUser?.id ?? 'anonymous';
-    if (viewSelection == null) {
-      return `user:${userId}|view:none`;
+    const state = useDataScopeStore.getState();
+    if (state.isAdmin) {
+      return `user:${userId}|scope:admin`;
     }
-    return `user:${userId}|view:${viewSelection.perspective}:${viewSelection.partyId}`;
+    if (state.bindingTypes.length === 0) {
+      return `user:${userId}|scope:none`;
+    }
+    return `user:${userId}|scope:${[...state.bindingTypes].sort().join(',')}`;
   },
-  clearCapabilitiesSnapshot: mockClearCapabilitiesSnapshot,
-  getCurrentUser: mockGetCurrentUser,
-  getViewSelection: mockGetViewSelection,
+  buildQueryScopeKey: () => 'unused',
+  getCurrentRequestScopeKey: () => 'unused',
 }));
 
 // =============================================================================
@@ -174,6 +173,7 @@ describe('ApiClient', () => {
       enableCaching: false,
       enableLogging: false,
     });
+    useDataScopeStore.getState().reset();
   });
 
   describe('构造函数和初始化', () => {
@@ -293,7 +293,7 @@ describe('ApiClient', () => {
       expect(result.data?.pages).toBe(1);
     });
 
-    it('GET 缓存键应区分当前用户与视角', () => {
+    it('GET 缓存键应区分当前用户与数据范围', () => {
       const cacheClient = new ApiClient({
         baseURL: API_BASE_URL,
         enableAutoRetry: false,
@@ -307,18 +307,28 @@ describe('ApiClient', () => {
       });
 
       mockGetCurrentUser.mockReturnValue({ id: 'user-1' });
-      mockGetViewSelection.mockReturnValue({
-        key: 'owner:party-1',
-        perspective: 'owner',
-        partyId: 'party-1',
+      useDataScopeStore.setState({
+        bindingTypes: ['owner'],
+        isSingleOwner: true,
+        isSingleManager: false,
+        isDualBinding: false,
+        isOwner: true,
+        isManager: false,
+        isAdmin: false,
+        initialized: true,
       });
       const ownerScopeKey = cacheClient['generateCacheKey']('GET', '/api/test', { page: 1 });
 
       mockGetCurrentUser.mockReturnValue({ id: 'user-2' });
-      mockGetViewSelection.mockReturnValue({
-        key: 'manager:party-2',
-        perspective: 'manager',
-        partyId: 'party-2',
+      useDataScopeStore.setState({
+        bindingTypes: ['manager'],
+        isSingleOwner: false,
+        isSingleManager: true,
+        isDualBinding: false,
+        isOwner: false,
+        isManager: true,
+        isAdmin: false,
+        initialized: true,
       });
       const managerScopeKey = cacheClient['generateCacheKey']('GET', '/api/test', { page: 1 });
 
@@ -635,11 +645,20 @@ describe('Perspective Header Injection', () => {
       enableLogging: false,
       enableAutoRetry: false,
     });
-    window.history.pushState({}, 'Test', '/');
+    useDataScopeStore.getState().reset();
   });
 
-  it('injects X-Perspective for owner business requests and skips auth routes', () => {
-    window.history.pushState({}, 'Owner Assets', '/owner/assets');
+  it('injects X-Perspective for single owner business requests and skips auth routes', () => {
+    useDataScopeStore.setState({
+      bindingTypes: ['owner'],
+      isSingleOwner: true,
+      isSingleManager: false,
+      isDualBinding: false,
+      isOwner: true,
+      isManager: false,
+      isAdmin: false,
+      initialized: true,
+    });
 
     const axiosInstance = client.getAxiosInstance();
     const requestInterceptor = axiosInstance.interceptors.request.handlers[0]?.fulfilled;
@@ -657,7 +676,16 @@ describe('Perspective Header Injection', () => {
   });
 
   it('skips X-Perspective on neutral routes', () => {
-    window.history.pushState({}, 'Dashboard', '/dashboard');
+    useDataScopeStore.setState({
+      bindingTypes: [],
+      isSingleOwner: false,
+      isSingleManager: false,
+      isDualBinding: false,
+      isOwner: false,
+      isManager: false,
+      isAdmin: false,
+      initialized: true,
+    });
 
     const axiosInstance = client.getAxiosInstance();
     const requestInterceptor = axiosInstance.interceptors.request.handlers[0]?.fulfilled;
@@ -670,8 +698,17 @@ describe('Perspective Header Injection', () => {
     expect(businessRequest.headers.get('X-Perspective')).toBeUndefined();
   });
 
-  it('overrides handcrafted X-Perspective with the current route perspective', () => {
-    window.history.pushState({}, 'Manager Assets', '/manager/assets');
+  it('overrides handcrafted X-Perspective with single manager binding', () => {
+    useDataScopeStore.setState({
+      bindingTypes: ['manager'],
+      isSingleOwner: false,
+      isSingleManager: true,
+      isDualBinding: false,
+      isOwner: false,
+      isManager: true,
+      isAdmin: false,
+      initialized: true,
+    });
 
     const axiosInstance = client.getAxiosInstance();
     const requestInterceptor = axiosInstance.interceptors.request.handlers[0]?.fulfilled;
@@ -684,6 +721,52 @@ describe('Perspective Header Injection', () => {
     requestInterceptor(businessRequest);
 
     expect(businessRequest.headers.get('X-Perspective')).toBe('manager');
+  });
+
+  it('does not inject X-Perspective for dual binding users', () => {
+    useDataScopeStore.setState({
+      bindingTypes: ['owner', 'manager'],
+      isSingleOwner: false,
+      isSingleManager: false,
+      isDualBinding: true,
+      isOwner: true,
+      isManager: true,
+      isAdmin: false,
+      initialized: true,
+    });
+
+    const axiosInstance = client.getAxiosInstance();
+    const requestInterceptor = axiosInstance.interceptors.request.handlers[0]?.fulfilled;
+    if (!requestInterceptor) {
+      throw new Error('Request interceptor is not registered');
+    }
+
+    const businessRequest = buildRequestConfig('/assets');
+    requestInterceptor(businessRequest);
+    expect(businessRequest.headers.get('X-Perspective')).toBeUndefined();
+  });
+
+  it('does not inject X-Perspective for admin users', () => {
+    useDataScopeStore.setState({
+      bindingTypes: ['owner'],
+      isSingleOwner: true,
+      isSingleManager: false,
+      isDualBinding: false,
+      isOwner: true,
+      isManager: false,
+      isAdmin: true,
+      initialized: true,
+    });
+
+    const axiosInstance = client.getAxiosInstance();
+    const requestInterceptor = axiosInstance.interceptors.request.handlers[0]?.fulfilled;
+    if (!requestInterceptor) {
+      throw new Error('Request interceptor is not registered');
+    }
+
+    const businessRequest = buildRequestConfig('/assets');
+    requestInterceptor(businessRequest);
+    expect(businessRequest.headers.get('X-Perspective')).toBeUndefined();
   });
 });
 

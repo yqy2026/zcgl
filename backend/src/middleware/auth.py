@@ -7,7 +7,7 @@ import logging
 from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 import jwt
 from fastapi import Cookie, Depends, Request
@@ -28,7 +28,7 @@ from ..crud.auth import AuditLogCRUD
 from ..database import get_async_db
 from ..models.auth import User
 from ..schemas.auth import TokenData
-from ..schemas.authz import PerspectiveName
+from ..schemas.authz import EffectivePerspective, PerspectiveName
 from ..schemas.rbac import PermissionCheckRequest
 from ..security.cookie_manager import cookie_manager
 from ..services import RBACService
@@ -355,20 +355,18 @@ class AuthzContext:
 class PerspectiveContext:
     """Resolved request perspective context."""
 
-    perspective: PerspectiveName
+    perspective: EffectivePerspective
     allowed_perspectives: list[PerspectiveName]
     owner_party_ids: list[str]
     manager_party_ids: list[str]
     effective_party_ids: list[str]
-    source: Literal["header"]
+    source: Literal["header", "auto"]
 
 
 class PerspectiveContextChecker:
     """Resolve and validate request perspective context."""
 
-    EXEMPT_PATH_PREFIXES: tuple[str, ...] = (
-        "/api/v1/auth",
-    )
+    EXEMPT_PATH_PREFIXES: tuple[str, ...] = ("/api/v1/auth",)
 
     def __init__(self, *, resource_type: str | None = None) -> None:
         self.resource_type = resource_type
@@ -389,11 +387,14 @@ class PerspectiveContextChecker:
                 request.state.perspective_context = None
                 return None
 
+        source: Literal["header", "auto"] = "header"
         if raw_perspective is None:
-            raise bad_request("缺少 X-Perspective 请求头")
+            raw_perspective = "all"
+            source = "auto"
 
-        if raw_perspective not in {"owner", "manager"}:
-            raise bad_request("X-Perspective 仅支持 owner 或 manager")
+        if raw_perspective not in {"owner", "manager", "all"}:
+            raise bad_request("X-Perspective 仅支持 owner、manager 或 all")
+        normalized_perspective = cast(EffectivePerspective, raw_perspective)
 
         rbac_service = RBACService(db)
         is_admin = bool(await rbac_service.is_admin(str(current_user.id)))
@@ -401,12 +402,12 @@ class PerspectiveContextChecker:
             db,
             user_id=str(current_user.id),
         )
-        subject_perspectives = authz_service.context_builder.resolve_allowed_perspectives(
-            subject_context
+        subject_perspectives = (
+            authz_service.context_builder.resolve_allowed_perspectives(subject_context)
         )
         if self.resource_type is not None:
             if is_admin:
-                allowed_perspectives = list(
+                allowed_perspectives: list[PerspectiveName] = list(
                     get_registered_perspectives(self.resource_type)
                 )
             else:
@@ -421,26 +422,39 @@ class PerspectiveContextChecker:
                     raise forbidden("当前资源无可用视角")
         else:
             allowed_perspectives = (
-                ["owner", "manager"] if is_admin else subject_perspectives
+                cast(list[PerspectiveName], ["owner", "manager"])
+                if is_admin
+                else subject_perspectives
             )
-        if raw_perspective not in allowed_perspectives:
+        if (
+            normalized_perspective != "all"
+            and normalized_perspective not in allowed_perspectives
+        ):
             raise forbidden("当前视角不可用")
 
-        effective_party_ids = (
-            []
-            if is_admin
-            else authz_service.context_builder.resolve_effective_party_ids(
-                subject_context,
-                raw_perspective,
+        if is_admin:
+            effective_party_ids = []
+        elif normalized_perspective == "all":
+            effective_party_ids = sorted(
+                set(subject_context.owner_party_ids).union(
+                    subject_context.manager_party_ids
+                )
             )
-        )
+        else:
+            effective_party_ids = (
+                authz_service.context_builder.resolve_effective_party_ids(
+                    subject_context,
+                    normalized_perspective,
+                )
+            )
+
         perspective_context = PerspectiveContext(
-            perspective=raw_perspective,
+            perspective=normalized_perspective,
             allowed_perspectives=allowed_perspectives,
             owner_party_ids=list(subject_context.owner_party_ids),
             manager_party_ids=list(subject_context.manager_party_ids),
             effective_party_ids=effective_party_ids,
-            source="header",
+            source=source,
         )
         request.state.perspective_context = perspective_context
         return perspective_context
@@ -450,7 +464,7 @@ class PerspectiveContextChecker:
         return any(path.startswith(prefix) for prefix in cls.EXEMPT_PATH_PREFIXES)
 
     @staticmethod
-    def _normalize_perspective_header(value: str | None) -> PerspectiveName | str | None:
+    def _normalize_perspective_header(value: str | None) -> str | None:
         if value is None:
             return None
 

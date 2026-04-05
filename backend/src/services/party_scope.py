@@ -45,6 +45,24 @@ def build_party_filter_from_perspective_context(
     perspective_context: object,
 ) -> PartyFilter | None:
     perspective = getattr(perspective_context, "perspective", None)
+    if perspective == "all":
+        owner_ids = _normalize_identifier_sequence(
+            getattr(perspective_context, "owner_party_ids", None)
+        )
+        manager_ids = _normalize_identifier_sequence(
+            getattr(perspective_context, "manager_party_ids", None)
+        )
+        if len(owner_ids) == 0 and len(manager_ids) == 0:
+            return None
+
+        merged_ids = sorted(set(owner_ids + manager_ids))
+        return PartyFilter(
+            party_ids=merged_ids,
+            filter_mode="any",
+            owner_party_ids=owner_ids,
+            manager_party_ids=manager_ids,
+        )
+
     effective_party_ids = _normalize_identifier_sequence(
         getattr(perspective_context, "effective_party_ids", None)
     )

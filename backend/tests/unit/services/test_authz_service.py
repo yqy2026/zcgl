@@ -43,19 +43,27 @@ async def test_get_capabilities_should_use_resource_perspective_registry() -> No
         authz_crud=authz_crud,
     )
 
-    with patch.object(service, "_get_user_role_ids", new=AsyncMock(return_value=["role-1"])):
+    with patch.object(
+        service,
+        "_get_user_role_summary",
+        new=AsyncMock(return_value={"role_ids": ["role-1"], "is_admin": False}),
+    ):
         result = await service.get_capabilities(db, user_id="user-1")
 
     project_capability = next(
         item for item in result.capabilities if item.resource == "project"
     )
-    user_capability = next(item for item in result.capabilities if item.resource == "user")
+    user_capability = next(
+        item for item in result.capabilities if item.resource == "user"
+    )
 
-    assert project_capability.perspectives == ["manager"]
+    assert project_capability.perspectives == ["owner", "manager"]
     assert user_capability.perspectives == []
 
 
-async def test_get_capabilities_should_include_rbac_permission_when_abac_policy_missing() -> None:
+async def test_get_capabilities_should_include_rbac_permission_when_abac_policy_missing() -> (
+    None
+):
     db = MagicMock()
     context_builder = MagicMock()
     context_builder.build_subject_context = AsyncMock(
@@ -76,7 +84,11 @@ async def test_get_capabilities_should_include_rbac_permission_when_abac_policy_
     )
 
     with (
-        patch.object(service, "_get_user_role_ids", new=AsyncMock(return_value=["role-1"])),
+        patch.object(
+            service,
+            "_get_user_role_summary",
+            new=AsyncMock(return_value={"role_ids": ["role-1"], "is_admin": False}),
+        ),
         patch.object(
             service,
             "_get_static_rbac_actions",
@@ -135,7 +147,9 @@ async def test_check_access_should_fallback_to_rbac_when_abac_rule_missing() -> 
     assert result.reason_code == "rbac_permission_fallback"
 
 
-async def test_get_capabilities_should_include_authenticated_notification_read_without_roles() -> None:
+async def test_get_capabilities_should_include_authenticated_notification_read_without_roles() -> (
+    None
+):
     db = MagicMock()
     context_builder = MagicMock()
     context_builder.build_subject_context = AsyncMock(
@@ -156,7 +170,11 @@ async def test_get_capabilities_should_include_authenticated_notification_read_w
     )
 
     with (
-        patch.object(service, "_get_user_role_ids", new=AsyncMock(return_value=[])),
+        patch.object(
+            service,
+            "_get_user_role_summary",
+            new=AsyncMock(return_value={"role_ids": [], "is_admin": False}),
+        ),
         patch.object(
             service,
             "_get_static_rbac_actions",
@@ -172,7 +190,9 @@ async def test_get_capabilities_should_include_authenticated_notification_read_w
     assert notification_capability.perspectives == []
 
 
-async def test_check_access_should_allow_authenticated_notification_read_without_policy() -> None:
+async def test_check_access_should_allow_authenticated_notification_read_without_policy() -> (
+    None
+):
     db = MagicMock()
     context_builder = MagicMock()
     context_builder.build_subject_context = AsyncMock(

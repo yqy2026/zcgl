@@ -3,6 +3,7 @@ from typing import Any
 from sqlalchemy import Select, desc, false, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..models.asset import Asset
 from ..models.auth import User
 from ..models.party import Party, PartyType
 from ..models.project import Project
@@ -74,11 +75,56 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
         stmt: Select[Any],
         party_filter: PartyFilter,
     ) -> Select[Any]:
-        if self._supports_party_scope_columns():
-            return self.query_builder.apply_party_filter(stmt, party_filter)
+        owner_party_ids = [
+            str(owner_id).strip()
+            for owner_id in (party_filter.owner_party_ids or [])
+            if str(owner_id).strip() != ""
+        ]
+        manager_party_ids = [
+            str(manager_id).strip()
+            for manager_id in (party_filter.manager_party_ids or [])
+            if str(manager_id).strip() != ""
+        ]
 
-        principals = await self._resolve_creator_principals(db, party_filter)
-        return self._apply_creator_scope(stmt, principals)
+        if party_filter.filter_mode == "manager":
+            if self._supports_party_scope_columns():
+                return self.query_builder.apply_party_filter(stmt, party_filter)
+            principals = await self._resolve_creator_principals(db, party_filter)
+            return self._apply_creator_scope(stmt, principals)
+
+        if party_filter.filter_mode == "owner":
+            if not owner_party_ids:
+                return stmt.where(false())
+            asset_project_ids = (
+                select(ProjectAsset.project_id)
+                .join(Asset, Asset.id == ProjectAsset.asset_id)
+                .where(ProjectAsset.valid_to.is_(None))
+                .where(Asset.owner_party_id.in_(owner_party_ids))
+                .distinct()
+            )
+            return stmt.where(Project.id.in_(asset_project_ids))
+
+        if len(owner_party_ids) == 0 and len(manager_party_ids) == 0:
+            if self._supports_party_scope_columns():
+                return self.query_builder.apply_party_filter(stmt, party_filter)
+            principals = await self._resolve_creator_principals(db, party_filter)
+            return self._apply_creator_scope(stmt, principals)
+
+        conditions: list[Any] = []
+        if manager_party_ids:
+            conditions.append(Project.manager_party_id.in_(manager_party_ids))
+        if owner_party_ids:
+            asset_project_ids = (
+                select(ProjectAsset.project_id)
+                .join(Asset, Asset.id == ProjectAsset.asset_id)
+                .where(ProjectAsset.valid_to.is_(None))
+                .where(Asset.owner_party_id.in_(owner_party_ids))
+                .distinct()
+            )
+            conditions.append(Project.id.in_(asset_project_ids))
+        if not conditions:
+            return stmt.where(false())
+        return stmt.where(or_(*conditions))
 
     async def create(
         self,

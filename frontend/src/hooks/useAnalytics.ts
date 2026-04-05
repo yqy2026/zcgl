@@ -1,13 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
-import { useRoutePerspective } from '@/routes/perspective';
 import { analyticsService } from '@/services/analyticsService';
 import type { AssetSearchParams } from '@/types/asset';
 import type { AnalyticsResponse } from '@/types/analytics';
 import { buildQueryScopeKey } from '@/utils/queryScope';
+import { useDataScopeStore } from '@/stores/dataScopeStore';
 
 export const useAnalytics = (filters?: AssetSearchParams) => {
-  const { perspective, isPerspectiveRoute } = useRoutePerspective();
-  const queryScopeKey = buildQueryScopeKey(perspective);
+  const initialized = useDataScopeStore(state => state.initialized);
+  const queryScopeKey = buildQueryScopeKey();
 
   return useQuery<AnalyticsResponse>({
     queryKey: ['analytics', queryScopeKey, 'comprehensive', filters],
@@ -21,14 +21,13 @@ export const useAnalytics = (filters?: AssetSearchParams) => {
     retryDelay: 1000,
     refetchOnWindowFocus: false, // 禁用自动刷新避免循环请求
     refetchOnMount: true,
-    enabled: isPerspectiveRoute,
+    enabled: initialized,
     // 添加依赖项数组，确保filters变化时重新请求
   });
 };
 
 export const useBasicStatistics = (filters?: AssetSearchParams) => {
-  const { perspective } = useRoutePerspective();
-  const queryScopeKey = buildQueryScopeKey(perspective);
+  const queryScopeKey = buildQueryScopeKey();
 
   return useQuery<AnalyticsResponse>({
     queryKey: ['analytics', queryScopeKey, 'basic-statistics', filters],
@@ -39,8 +38,7 @@ export const useBasicStatistics = (filters?: AssetSearchParams) => {
 };
 
 export const useAreaSummary = () => {
-  const { perspective } = useRoutePerspective();
-  const queryScopeKey = buildQueryScopeKey(perspective);
+  const queryScopeKey = buildQueryScopeKey();
 
   return useQuery<AnalyticsResponse>({
     queryKey: ['analytics', queryScopeKey, 'area-summary'],
@@ -51,8 +49,7 @@ export const useAreaSummary = () => {
 };
 
 export const useFinancialSummary = () => {
-  const { perspective } = useRoutePerspective();
-  const queryScopeKey = buildQueryScopeKey(perspective);
+  const queryScopeKey = buildQueryScopeKey();
 
   return useQuery<AnalyticsResponse>({
     queryKey: ['analytics', queryScopeKey, 'financial-summary'],

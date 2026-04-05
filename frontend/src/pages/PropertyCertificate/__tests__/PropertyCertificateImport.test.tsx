@@ -14,7 +14,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React from 'react';
 import { act, screen, waitFor } from '@testing-library/react';
 import { message } from 'antd';
-import { OWNER_ROUTES } from '@/constants/routes';
+import { PROPERTY_CERTIFICATE_ROUTES } from '@/constants/routes';
 import { renderWithProviders } from '@/test/utils/test-helpers';
 
 import { PropertyCertificateImport } from '../PropertyCertificateImport';
@@ -231,7 +231,7 @@ describe('PropertyCertificateImport - 确认导入测试', () => {
     });
   });
 
-  it('确认导入成功后应该跳转到 owner 产权证列表', async () => {
+  it('确认导入成功后应该跳转到产权证列表', async () => {
     vi.mocked(propertyCertificateService.confirmImport).mockResolvedValue({
       certificate_id: 'cert-001',
     });
@@ -251,7 +251,7 @@ describe('PropertyCertificateImport - 确认导入测试', () => {
       await vi.runAllTimersAsync();
     });
 
-    expect(mockNavigate).toHaveBeenCalledWith(OWNER_ROUTES.PROPERTY_CERTIFICATES);
+    expect(mockNavigate).toHaveBeenCalledWith(PROPERTY_CERTIFICATE_ROUTES.LIST);
   });
 
   it('确认导入失败应该显示错误消息', async () => {

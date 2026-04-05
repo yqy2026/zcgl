@@ -4,7 +4,6 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useRoutePerspective } from '@/routes/perspective';
 import { projectService } from '@/services/projectService';
 import type {
   Project,
@@ -49,8 +48,7 @@ interface UseProjectOptionsResult {
  * 获取项目选项列表
  */
 export const useProjectOptions = (status: string = 'active'): UseProjectOptionsResult => {
-  const { perspective } = useRoutePerspective();
-  const queryScopeKey = buildQueryScopeKey(perspective);
+  const queryScopeKey = buildQueryScopeKey();
   const queryKey = ['project-options', queryScopeKey, status];
 
   const { data, isLoading, error, refetch } = useQuery({
@@ -91,8 +89,7 @@ interface UseProjectDetailResult {
  * 获取单个项目详情
  */
 export const useProjectDetail = (id?: string): UseProjectDetailResult => {
-  const { perspective } = useRoutePerspective();
-  const queryScopeKey = buildQueryScopeKey(perspective);
+  const queryScopeKey = buildQueryScopeKey();
   const queryKey = ['project', queryScopeKey, id];
 
   const { data, isLoading, error, refetch } = useQuery({

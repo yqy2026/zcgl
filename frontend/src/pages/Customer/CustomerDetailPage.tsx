@@ -3,10 +3,10 @@ import { Alert, Button, Card, Descriptions, Space, Table, Tag, Typography } from
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import PageContainer from '@/components/Common/PageContainer';
-import { OWNER_ROUTES, MANAGER_ROUTES } from '@/constants/routes';
+import { ASSET_ROUTES } from '@/constants/routes';
 import { partyService } from '@/services/partyService';
 import type { CustomerContractSummary, CustomerProfile } from '@/types/party';
-import { useRoutePerspective } from '@/routes/perspective';
+import { buildQueryScopeKey } from '@/utils/queryScope';
 
 const CUSTOMER_TYPE_LABELS: Record<string, string> = {
   internal: '内部',
@@ -59,13 +59,13 @@ const contractColumns = [
 
 const CustomerDetailPage: React.FC = () => {
   const navigate = useNavigate();
-  const { perspective } = useRoutePerspective();
   const params = useParams<{ id: string }>();
   const customerId = params.id?.trim() ?? '';
   const hasCustomerId = customerId !== '';
+  const queryScopeKey = buildQueryScopeKey();
 
   const customerProfileQuery = useQuery<CustomerProfile>({
-    queryKey: ['customer-profile', perspective, customerId],
+    queryKey: ['customer-profile', queryScopeKey, customerId],
     queryFn: async () => {
       return await partyService.getCustomerProfile(customerId);
     },
@@ -74,7 +74,6 @@ const CustomerDetailPage: React.FC = () => {
   });
 
   const customerProfile = customerProfileQuery.data;
-  const backRoute = perspective === 'owner' ? OWNER_ROUTES.ASSETS : MANAGER_ROUTES.ASSETS;
 
   return (
     <PageContainer
@@ -84,7 +83,7 @@ const CustomerDetailPage: React.FC = () => {
       <Space orientation="vertical" size="large" style={{ width: '100%' }}>
         <Button
           onClick={() => {
-            navigate(backRoute);
+            navigate(ASSET_ROUTES.LIST);
           }}
         >
           返回列表

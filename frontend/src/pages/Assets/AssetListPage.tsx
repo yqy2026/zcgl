@@ -15,8 +15,6 @@ import { analyticsService } from '@/services/analyticsService';
 import AssetList from '@/components/Asset/AssetList';
 import AssetSearch from '@/components/Asset/AssetSearch';
 import AssetAreaSummary from '@/components/Asset/AssetAreaSummary';
-import CurrentViewBanner from '@/components/System/CurrentViewBanner';
-import { useRoutePerspective } from '@/routes/perspective';
 import type { Asset, AssetSearchParams } from '@/types/asset';
 import { createLogger } from '@/utils/logger';
 import { buildQueryScopeKey } from '@/utils/queryScope';
@@ -29,14 +27,13 @@ type AssetListFilters = Omit<AssetSearchParams, 'page' | 'page_size'>;
 
 const AssetListPage: React.FC = () => {
   const navigate = useNavigate();
-  const { perspective } = useRoutePerspective();
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [filters, setFilters] = useState<AssetListFilters>({});
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 20,
   });
-  const queryScopeKey = buildQueryScopeKey(perspective);
+  const queryScopeKey = buildQueryScopeKey();
 
   const {
     data: assetsData,
@@ -338,7 +335,6 @@ const AssetListPage: React.FC = () => {
         </Space>
       }
     >
-      <CurrentViewBanner />
 
       {/* 搜索组件 */}
       <AssetSearch

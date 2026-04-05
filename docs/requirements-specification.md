@@ -514,7 +514,7 @@
   - `backend/src/services/permission/rbac_service.py`
   - `backend/tests/unit/api/v1/test_roles_permission_grants.py`
 
-#### REQ-AUTH-002 数据范围上下文自动注入 🚧
+#### REQ-AUTH-002 数据范围上下文自动注入 ✅
 - 描述：所有业务请求自动携带数据范围上下文（基于用户主体绑定），无需手动选择。
 - 验收：
   - 业务查询、统计、搜索均按用户主体绑定的数据范围过滤。
@@ -525,20 +525,25 @@
   - `backend/src/services/authz/service.py`
   - `backend/src/middleware/auth.py`
   - `backend/src/services/party_scope.py`
+  - `backend/src/crud/project.py`
   - `backend/src/api/v1/analytics/analytics.py`
   - `backend/src/api/v1/assets/project.py`
   - `backend/src/api/v1/assets/assets.py`
   - `backend/src/api/v1/contracts/contract_groups.py`
   - `frontend/src/api/client.ts`
-  - `frontend/src/routes/perspective.ts`
-  - `frontend/src/routes/perspectiveResolution.ts`
-  - `frontend/src/routes/PerspectiveResolutionPage.tsx`
+  - `frontend/src/stores/dataScopeStore.ts`
+  - `frontend/src/contexts/AuthContext.tsx`
+  - `frontend/src/utils/queryScope.ts`
   - `frontend/src/components/System/CapabilityGuard.tsx`
-  - `frontend/src/routes/LegacyRouteRedirect.tsx`
+  - `frontend/src/routes/CanonicalEntryRedirect.tsx`
+  - `frontend/src/routes/AppRoutes.tsx`
+  - `frontend/src/constants/routes.ts`
+  - `frontend/src/config/menuConfig.tsx`
   - `backend/tests/unit/services/test_authz_service.py`
   - `backend/tests/unit/middleware/test_perspective_context.py`
+  - `backend/tests/unit/middleware/test_perspective_context_optional.py`
   - `backend/tests/unit/services/test_party_scope.py`
-  - `backend/tests/unit/crud/test_query_builder.py`
+  - `backend/tests/unit/crud/test_project.py`
   - `backend/tests/unit/api/v1/test_notifications.py`
   - `backend/tests/integration/api/test_project_visibility_real.py`
   - `backend/tests/integration/api/test_assets_visibility_real.py`
@@ -547,8 +552,8 @@
   - `backend/tests/unit/api/v1/test_assets_authz_layering.py`
   - `backend/tests/unit/services/contract/test_contract_group_service.py`
   - `frontend/src/api/__tests__/client.test.ts`
-  - `frontend/src/routes/__tests__/AppRoutes.perspective-redirect.test.tsx`
-  - `frontend/src/routes/__tests__/perspectiveResolution.test.tsx`
+  - `frontend/src/stores/__tests__/dataScopeStore.test.ts`
+  - `frontend/src/utils/__tests__/queryScope.test.ts`
   - `frontend/src/components/System/__tests__/CapabilityGuard.test.tsx`
 
 ### 6.7 文档与分析域
@@ -747,7 +752,7 @@
 | REQ-SCH-002 | ✅ | 全部视图 / 按对象分组切换 + `score + business_rank` 排序 | `test_search_service.py`, `GlobalSearchPage.test.tsx` |
 | REQ-SCH-003 | ✅ | 当前视角 `X-Perspective` 强制校验 + fail-closed 权限过滤 | `test_search_service.py`, `test_search_api.py` |
 | REQ-AUTH-001 | ✅ | `/auth/login`, `/auth/refresh` | `test_optional_auth.py` |
-| REQ-AUTH-002 | 🚧 | 数据范围上下文自动注入（基于主体绑定），多绑定用户展示并集，管理员不受约束。前端 `X-Perspective` 自动注入（待重构为自动数据范围） | `test_authz_service.py`, `test_perspective_context.py`, `test_party_scope.py`, `test_query_builder.py`, `test_notifications.py`, `test_project_visibility_real.py`, `test_assets_visibility_real.py`, `test_analytics.py`, `test_project.py`, `test_assets_authz_layering.py`, `client.test.ts`, `AppRoutes.perspective-redirect.test.tsx`, `perspectiveResolution.test.tsx`, `CapabilityGuard.test.tsx` |
+| REQ-AUTH-002 | ✅ | 数据范围上下文自动注入（基于主体绑定），多绑定用户展示并集，管理员不受约束。前端仅在单绑定时自动注入 `X-Perspective`，双绑定与管理员走自动数据范围 | `test_authz_service.py`, `test_perspective_context.py`, `test_perspective_context_optional.py`, `test_party_scope.py`, `test_project.py`, `test_notifications.py`, `test_project_visibility_real.py`, `test_assets_visibility_real.py`, `client.test.ts`, `dataScopeStore.test.ts`, `queryScope.test.ts`, `ProjectDetailPage.test.tsx`, `AssetListPage.test.tsx`, `AssetDetailPage.test.tsx` |
 | REQ-DOC-001 | ✅ | `/pdf-import/*` | `pdf_import.py` |
 | REQ-ANA-001 | ✅ | `/analytics/comprehensive`, `/analytics/export`（综合分析 + 统一 CSV/XLSX 导出 + `metrics_version`；PDF 明确返回 501 未实现） | `test_analytics_service.py`, `test_analytics.py`, `test_analytics_export_service.py`, `analyticsService.test.ts`, `useAssetAnalytics.test.ts`, `AnalyticsDashboard.test.tsx` |
 | REQ-PTY-001 | ✅ | `/api/v1/parties` (CRUD + review/change logs) + `/system/parties` | `test_party_api.py`, `test_party_service.py`, `partyService.test.ts`, `PartyPages.test.tsx` |

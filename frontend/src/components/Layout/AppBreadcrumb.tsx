@@ -3,7 +3,6 @@ import { Breadcrumb } from 'antd';
 import { HomeOutlined } from '@ant-design/icons';
 import { useLocation, Link } from 'react-router-dom';
 import { staticBreadcrumbMap, dynamicBreadcrumbMap } from '@/config/breadcrumb';
-import { MANAGER_ROUTES, OWNER_ROUTES } from '@/constants/routes';
 import styles from './AppBreadcrumb.module.css';
 
 interface AppBreadcrumbProps {
@@ -39,18 +38,6 @@ const renderCrumbLink = (to: string, label: React.ReactNode) => (
 const renderCrumbLabel = (label: React.ReactNode) => (
   <span className={styles.currentLabel}>{label}</span>
 );
-
-const resolveBreadcrumbLink = (pathname: string, url: string): string => {
-  if (pathname.startsWith('/project/') && url === '/project') {
-    return MANAGER_ROUTES.PROJECTS;
-  }
-
-  if (pathname.startsWith('/property-certificates/') && url === '/property-certificates') {
-    return OWNER_ROUTES.PROPERTY_CERTIFICATES;
-  }
-
-  return url;
-};
 
 const AppBreadcrumb: React.FC<AppBreadcrumbProps> = ({ customItems }) => {
   const location = useLocation();
@@ -94,7 +81,7 @@ const AppBreadcrumb: React.FC<AppBreadcrumbProps> = ({ customItems }) => {
           key: url,
           title: isLast
             ? renderCrumbLabel(name)
-            : renderCrumbLink(resolveBreadcrumbLink(pathname, url), name),
+            : renderCrumbLink(url, name),
         });
       }
     });

@@ -34,15 +34,13 @@ import { useQuery } from '@tanstack/react-query';
 import dayjs, { type Dayjs } from 'dayjs';
 import { projectService } from '@/services/projectService';
 import { assetService } from '@/services/assetService';
-import CurrentViewBanner from '@/components/System/CurrentViewBanner';
-import { useRoutePerspective } from '@/routes/perspective';
 import type { ColumnsType } from 'antd/es/table';
 import type { Asset, AssetLeaseSummaryResponse } from '@/types/asset';
 import { useArrayListData } from '@/hooks/useArrayListData';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
 import { PageContainer } from '@/components/Common';
 import { buildQueryScopeKey } from '@/utils/queryScope';
-import { MANAGER_ROUTES, OWNER_ROUTES } from '@/constants/routes';
+import { CUSTOMER_ROUTES, PROJECT_ROUTES } from '@/constants/routes';
 import styles from './ProjectDetailPage.module.css';
 
 const { Text } = Typography;
@@ -73,20 +71,11 @@ const buildPeriodParams = (month: Dayjs) => ({
   period_end: month.endOf('month').format('YYYY-MM-DD'),
 });
 
-const buildCustomerDetailPath = (
-  perspective: string | null,
-  partyId: string | null | undefined
-): string | null => {
+const buildCustomerDetailPath = (partyId: string | null | undefined): string | null => {
   if (partyId == null || partyId.trim() === '') {
     return null;
   }
-  if (perspective === 'owner') {
-    return OWNER_ROUTES.CUSTOMER_DETAIL(partyId);
-  }
-  if (perspective === 'manager') {
-    return MANAGER_ROUTES.CUSTOMER_DETAIL(partyId);
-  }
-  return null;
+  return CUSTOMER_ROUTES.DETAIL(partyId);
 };
 
 // 子组件：逐资产获取租赁汇总，避免在 map 中调用 hook
@@ -120,7 +109,6 @@ const AssetLeaseSummaryRow: React.FC<
   AssetLeaseSummaryRowData & {
     onNavigate: (id: string) => void;
     onNavigateCustomer: (id: string) => void;
-    perspective: string | null;
     enabled: boolean;
   }
 > = ({
@@ -130,7 +118,6 @@ const AssetLeaseSummaryRow: React.FC<
   periodParams,
   onNavigate,
   onNavigateCustomer,
-  perspective,
   enabled,
 }) => {
   const { data, isLoading } = useAssetLeaseSummary(queryScopeKey, assetId, periodParams, enabled);
@@ -179,7 +166,7 @@ const AssetLeaseSummaryRow: React.FC<
               <Tag>{customerCount} 家</Tag>
             </Tooltip>
             {(data?.customer_summary ?? [])
-              .filter(customer => buildCustomerDetailPath(perspective, customer.party_id) != null)
+              .filter(customer => buildCustomerDetailPath(customer.party_id) != null)
               .slice(0, 2)
               .map(customer => (
                 <Button
@@ -223,10 +210,9 @@ const AssetLeaseSummaryRow: React.FC<
 const ProjectDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { perspective } = useRoutePerspective();
   const [selectedMonth, setSelectedMonth] = useState<Dayjs>(() => dayjs().startOf('month'));
   const periodParams = useMemo(() => buildPeriodParams(selectedMonth), [selectedMonth]);
-  const queryScopeKey = buildQueryScopeKey(perspective);
+  const queryScopeKey = buildQueryScopeKey();
   const hasProjectId = id != null && id.length > 0;
   const canQuery = hasProjectId;
 
@@ -337,7 +323,7 @@ const ProjectDetailPage: React.FC = () => {
 
   if (!canQuery) {
     return (
-      <PageContainer title="项目详情" loading onBack={() => navigate(MANAGER_ROUTES.PROJECTS)}>
+      <PageContainer title="项目详情" loading onBack={() => navigate(PROJECT_ROUTES.LIST)}>
         <div />
       </PageContainer>
     );
@@ -346,7 +332,7 @@ const ProjectDetailPage: React.FC = () => {
   // 错误状态
   if (projectError) {
     return (
-      <PageContainer title="项目详情" onBack={() => navigate(MANAGER_ROUTES.PROJECTS)}>
+      <PageContainer title="项目详情" onBack={() => navigate(PROJECT_ROUTES.LIST)}>
         <Alert
           title="数据加载失败"
           description={`错误详情: ${projectError instanceof Error ? projectError.message : '未知错误'}`}
@@ -360,7 +346,7 @@ const ProjectDetailPage: React.FC = () => {
   // 数据不存在状态
   if (!projectLoading && !project) {
     return (
-      <PageContainer title="项目详情" onBack={() => navigate(MANAGER_ROUTES.PROJECTS)}>
+      <PageContainer title="项目详情" onBack={() => navigate(PROJECT_ROUTES.LIST)}>
         <Alert title="项目不存在" description="未找到指定的项目信息" type="warning" showIcon />
       </PageContainer>
     );
@@ -381,7 +367,7 @@ const ProjectDetailPage: React.FC = () => {
         </span>
       }
       loading={projectLoading}
-      onBack={() => navigate(MANAGER_ROUTES.PROJECTS)}
+      onBack={() => navigate(PROJECT_ROUTES.LIST)}
       extra={
         <Button
           type="primary"
@@ -393,8 +379,6 @@ const ProjectDetailPage: React.FC = () => {
         </Button>
       }
     >
-      <CurrentViewBanner />
-
       <Row gutter={[16, 16]} className={styles.metricsRow}>
         <Col xs={24} sm={12} lg={6}>
           <Card className={styles.metricCard}>
@@ -572,12 +556,11 @@ const ProjectDetailPage: React.FC = () => {
                         enabled={canQuery}
                         onNavigate={assetId => navigate(`/assets/${assetId}`)}
                         onNavigateCustomer={customerId => {
-                          const nextPath = buildCustomerDetailPath(perspective, customerId);
+                          const nextPath = buildCustomerDetailPath(customerId);
                           if (nextPath != null) {
                             navigate(nextPath);
                           }
                         }}
-                        perspective={perspective}
                       />
                     ))}
                   </tbody>

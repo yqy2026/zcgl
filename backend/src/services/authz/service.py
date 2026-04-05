@@ -26,6 +26,7 @@ from .engine import AuthzDecision, AuthzEngine
 from .events import AuthzEventBus
 from .resource_perspective_registry import (
     action_is_authenticated_default,
+    get_registered_perspectives,
     iter_authenticated_default_actions,
     resolve_capability_perspectives,
     resource_requires_perspective,
@@ -149,7 +150,9 @@ class AuthzService:
         *,
         user_id: str,
     ) -> CapabilitiesResponse:
-        role_ids = await self._get_user_role_ids(db, user_id=user_id)
+        role_summary = await self._get_user_role_summary(db, user_id=user_id)
+        role_ids = cast(list[str], role_summary.get("role_ids", []))
+        is_admin = bool(role_summary.get("is_admin"))
         subject_context = await self.context_builder.build_subject_context(
             db,
             user_id=user_id,
@@ -187,12 +190,15 @@ class AuthzService:
             for action in sorted(actions):
                 if action in {"create", "read", "list", "update", "delete", "export"}:
                     normalized_actions.append(cast(AuthzAction, action))
-            perspectives = resolve_capability_perspectives(
-                resource,
-                subject_perspectives,
-            )
-            if resource_requires_perspective(resource) and len(perspectives) == 0:
-                continue
+            if is_admin:
+                perspectives = list(get_registered_perspectives(resource))
+            else:
+                perspectives = resolve_capability_perspectives(
+                    resource,
+                    subject_perspectives,
+                )
+                if resource_requires_perspective(resource) and len(perspectives) == 0:
+                    continue
             capabilities.append(
                 CapabilityItem(
                     resource=resource,

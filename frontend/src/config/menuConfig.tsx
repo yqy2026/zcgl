@@ -18,7 +18,6 @@ import {
   IdcardOutlined,
   AccountBookOutlined,
   FileTextOutlined,
-  AppstoreOutlined,
   FileAddOutlined,
 } from '@ant-design/icons';
 
@@ -41,19 +40,19 @@ export const MENU_ITEMS: MenuProps['items'] = [
     label: '数据看板',
   },
   {
-    key: '/owner',
+    key: '/assets',
     icon: <HomeOutlined />,
-    label: '业主视角',
+    label: '资产管理',
     children: [
       {
-        key: '/owner/assets',
+        key: '/assets/list',
         icon: <UnorderedListOutlined />,
-        label: '业主资产',
+        label: '资产列表',
       },
       {
-        key: '/owner/contract-groups',
+        key: '/contract-groups',
         icon: <FileTextOutlined />,
-        label: '业主合同组',
+        label: '合同组管理',
       },
       {
         key: '/ownership',
@@ -61,31 +60,14 @@ export const MENU_ITEMS: MenuProps['items'] = [
         label: '权属方管理',
       },
       {
-        key: '/owner/property-certificates',
+        key: '/property-certificates',
         icon: <FileTextOutlined />,
         label: '产权证管理',
       },
-    ],
-  },
-  {
-    key: '/manager',
-    icon: <AppstoreOutlined />,
-    label: '经营视角',
-    children: [
       {
-        key: '/manager/assets',
-        icon: <HomeOutlined />,
-        label: '经营资产',
-      },
-      {
-        key: '/manager/contract-groups',
-        icon: <FileTextOutlined />,
-        label: '经营合同组',
-      },
-      {
-        key: '/manager/projects',
-        icon: <AppstoreOutlined />,
-        label: '经营项目',
+        key: '/project',
+        icon: <ApartmentOutlined />,
+        label: '项目管理',
       },
     ],
   },
@@ -159,23 +141,14 @@ export function getSelectedKeys(pathname: string): string[] {
     return ['/dashboard'];
   }
 
-  if (pathname.startsWith('/owner/assets/')) {
-    return ['/owner/assets'];
+  if (pathname.startsWith('/assets/')) {
+    return ['/assets/list'];
   }
-  if (pathname.startsWith('/owner/contract-groups/')) {
-    return ['/owner/contract-groups'];
+  if (pathname.startsWith('/contract-groups/')) {
+    return ['/contract-groups'];
   }
-  if (pathname.startsWith('/owner/property-certificates/')) {
-    return ['/owner/property-certificates'];
-  }
-  if (pathname.startsWith('/manager/assets/')) {
-    return ['/manager/assets'];
-  }
-  if (pathname.startsWith('/manager/contract-groups/')) {
-    return ['/manager/contract-groups'];
-  }
-  if (pathname.startsWith('/manager/projects/')) {
-    return ['/manager/projects'];
+  if (pathname.startsWith('/project/')) {
+    return ['/project'];
   }
 
   // 权属方管理页面
@@ -183,10 +156,10 @@ export function getSelectedKeys(pathname: string): string[] {
     return ['/ownership'];
   }
   if (pathname.startsWith('/property-certificates')) {
-    return [];
+    return ['/property-certificates'];
   }
   if (pathname.startsWith('/contract-groups')) {
-    return [];
+    return ['/contract-groups'];
   }
   if (pathname === '/rental/contracts/pdf-import') {
     return [];
@@ -205,17 +178,14 @@ export function getSelectedKeys(pathname: string): string[] {
  * 获取展开的菜单项
  */
 export function getOpenKeys(pathname: string): string[] {
-  if (pathname.startsWith('/owner/')) {
-    return ['/owner'];
-  }
-  if (pathname === '/ownership') {
-    return ['/owner'];
-  }
-  if (pathname.startsWith('/owner/property-certificates')) {
-    return ['/owner'];
-  }
-  if (pathname.startsWith('/manager/')) {
-    return ['/manager'];
+  if (
+    pathname.startsWith('/assets') ||
+    pathname.startsWith('/contract-groups') ||
+    pathname.startsWith('/ownership') ||
+    pathname.startsWith('/property-certificates') ||
+    pathname.startsWith('/project')
+  ) {
+    return ['/assets'];
   }
   if (pathname.startsWith('/rental')) {
     return ['rental'];

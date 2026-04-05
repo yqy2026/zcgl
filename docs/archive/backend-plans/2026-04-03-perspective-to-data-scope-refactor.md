@@ -1,6 +1,6 @@
-# 视角机制 → 数据范围自动注入 重构实施计划 🔄
+# 视角机制 → 数据范围自动注入 重构实施计划 ✅
 
-> **状态**: 🔄 活跃方案
+> **状态**: ✅ 已完成（2026-04-04，已归档）
 > **需求依据**: `docs/requirements-specification.md` §5.2（2026-04-03 业务访谈修正版）
 > **REQ 编号**: REQ-AUTH-002（🚧）
 > **预估影响文件数**: 后端 ~8 文件 + 前端 ~45 文件（含测试）
@@ -38,7 +38,7 @@
       管理员 → 不注入（后端 admin bypass）
   → 后端 PerspectiveContextChecker 允许无 header（构建并集 context）
   → party_scope.py 支持 filter_mode=all 并集过滤
-  → 前端统一路由 /assets, /projects, /contract-groups
+  → 前端统一路由 /assets, /project, /contract-groups
   → 菜单可见性由 RBAC 控制
 ```
 
@@ -454,15 +454,39 @@ const applyPerspectiveHeader = (config: InternalAxiosRequestConfig): void => {
 | **Logout** | `logout()` L388-391 | `reset()` |
 | **Session restore failure** | `restoreAuth()` catch branch L306-327 | `reset()` |
 
-**Implementation**: Centralize in `refreshCapabilitiesByUser` try/catch:
+**Implementation**: Centralize in `refreshCapabilitiesByUser` try/catch.
+
+> **⚠️ 关键决策**：`refreshCapabilitiesByUser` 的 `useCallback` 依赖为 `[]`，函数体内无法访问当前 `user` React state（会读到初始闭包的 `null`）。因此 `isAdmin` 必须作为显式参数传入，不能在函数体内读取 `user?.is_admin`。
+
+**Step 1**: 扩展 `refreshCapabilitiesByUser` 签名，新增 `isAdmin` 参数：
+
+```typescript
+// 当前签名:
+const refreshCapabilitiesByUser = useCallback(
+  async (userId: string, options?: { forceRefresh?: boolean }) => { ... },
+  []
+);
+
+// 改为:
+const refreshCapabilitiesByUser = useCallback(
+  async (
+    userId: string,
+    options?: { forceRefresh?: boolean },
+    context?: { isAdmin?: boolean },
+  ) => { ... },
+  []
+);
+```
+
+**Step 2**: 在 success/failure 分支使用传入的 `isAdmin`：
 
 ```typescript
 // refreshCapabilitiesByUser success branch (after L144):
 AuthStorage.setCapabilitiesSnapshot(snapshot);
 setCapabilities(snapshot.capabilities);
-// New: sync dataScopeStore
-const isAdmin = user?.is_admin ?? false;
-useDataScopeStore.getState().initFromCapabilities(snapshot.capabilities, isAdmin);
+// New: sync dataScopeStore —— isAdmin 来自调用方显式传入
+const adminFlag = context?.isAdmin ?? false;
+useDataScopeStore.getState().initFromCapabilities(snapshot.capabilities, adminFlag);
 
 // refreshCapabilitiesByUser failure branch (after L157):
 AuthStorage.clearCapabilitiesSnapshot();
@@ -470,6 +494,27 @@ setCapabilities([]);
 // New: reset dataScopeStore
 useDataScopeStore.getState().reset();
 ```
+
+**Step 3**: 所有调用点传入 `isAdmin` 真值：
+
+```typescript
+// login() L364 — response.data.user 是刚获取的最新用户对象:
+triggerCapabilitiesRefresh(response.data.user.id, { forceRefresh: true }, {
+  isAdmin: response.data.user.is_admin ?? false,
+});
+
+// restoreAuth() L261 — currentUser 是刚从 /auth/me 获取的:
+triggerCapabilitiesRefresh(currentUser.id, { forceRefresh: true }, {
+  isAdmin: currentUser.is_admin ?? false,
+});
+
+// refreshUser() L427 — currentUser 是刚刷新的:
+await refreshCapabilitiesByUser(currentUser.id, { forceRefresh: true }, {
+  isAdmin: currentUser.is_admin ?? false,
+});
+```
+
+> `triggerCapabilitiesRefresh` 也需要同步扩展签名以透传 `context` 参数。
 
 In `logout()` (after L391):
 
@@ -605,14 +650,18 @@ import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { Spin } from 'antd';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCapabilities } from '@/hooks/useCapabilities';
 import { useDataScopeStore } from '@/stores/dataScopeStore';
 import { BASE_PATHS } from '@/constants/routes';
+import type { AuthzAction, ResourceType } from '@/types/capability';
 
 interface CanonicalEntryRedirectProps {
   /** Target flat page path, e.g. '/assets/list' */
   targetPath: string;
   /** RBAC resource required for this page */
-  resource: string;
+  resource: ResourceType;
+  /** RBAC action required — defaults to 'read'; entry pages typically need read/list */
+  action?: AuthzAction;
 }
 
 /**
@@ -621,19 +670,21 @@ interface CanonicalEntryRedirectProps {
  *
  * Behavior:
  * 1. Capabilities still loading -> show spinner
- * 2. User has capability for resource -> Navigate to targetPath
+ * 2. User has capability for resource + action -> Navigate to targetPath
  * 3. User lacks capability -> Navigate to dashboard
  *
  * Key difference from LegacyRouteRedirect:
  * - No perspective-based /owner/* or /manager/* URL selection
- * - In flat routes, just check "can user access this resource at all"
+ * - In flat routes, check "can user perform this action on this resource"
  */
 const CanonicalEntryRedirect: React.FC<CanonicalEntryRedirectProps> = ({
   targetPath,
   resource,
+  action = 'read',
 }) => {
-  const { capabilities, capabilitiesLoading, error } = useAuth();
+  const { capabilitiesLoading, error } = useAuth();
   const { initialized } = useDataScopeStore();
+  const { canPerform } = useCapabilities();
 
   if (capabilitiesLoading || !initialized) {
     return (
@@ -647,8 +698,7 @@ const CanonicalEntryRedirect: React.FC<CanonicalEntryRedirectProps> = ({
     return <Navigate to={BASE_PATHS.DASHBOARD} replace />;
   }
 
-  const hasCapability = capabilities.some(cap => cap.resource === resource);
-  if (!hasCapability) {
+  if (!canPerform(action, resource)) {
     return <Navigate to={BASE_PATHS.DASHBOARD} replace />;
   }
 

@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 AuthzAction = Literal["create", "read", "list", "update", "delete", "export"]
 PerspectiveName = Literal["owner", "manager"]
+EffectivePerspective = Literal["owner", "manager", "all"]
 
 
 class AuthzCheckRequest(BaseModel):
@@ -54,6 +55,7 @@ class CapabilitiesResponse(BaseModel):
 
 __all__ = [
     "AuthzAction",
+    "EffectivePerspective",
     "PerspectiveName",
     "AuthzCheckRequest",
     "AuthzCheckResponse",

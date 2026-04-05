@@ -19,7 +19,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import dayjs, { type Dayjs } from 'dayjs';
 import { assetService } from '@/services/assetService';
-import { useRoutePerspective } from '@/routes/perspective';
 import type {
   AssetLeaseGroupRelationType,
   AssetLeaseSummaryResponse,
@@ -30,7 +29,7 @@ import { buildQueryScopeKey } from '@/utils/queryScope';
 import { formatArea, formatCurrency } from '@/utils/format';
 import AssetDetailInfo from '@/components/Asset/AssetDetailInfo';
 import { PageContainer } from '@/components/Common';
-import { MANAGER_ROUTES, OWNER_ROUTES } from '@/constants/routes';
+import { CUSTOMER_ROUTES } from '@/constants/routes';
 import styles from './AssetDetailPage.module.css';
 
 const { Text } = Typography;
@@ -50,19 +49,12 @@ const buildPeriodParams = (month: Dayjs) => ({
 });
 
 const buildCustomerDetailPath = (
-  perspective: string | null,
   partyId: string | null | undefined
 ): string | null => {
   if (partyId == null || partyId.trim() === '') {
     return null;
   }
-  if (perspective === 'owner') {
-    return OWNER_ROUTES.CUSTOMER_DETAIL(partyId);
-  }
-  if (perspective === 'manager') {
-    return MANAGER_ROUTES.CUSTOMER_DETAIL(partyId);
-  }
-  return null;
+  return CUSTOMER_ROUTES.DETAIL(partyId);
 };
 
 const summaryColumns: ColumnsType<ContractTypeSummary> = [
@@ -104,12 +96,11 @@ const summaryColumns: ColumnsType<ContractTypeSummary> = [
 const AssetDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { perspective } = useRoutePerspective();
   const [selectedMonth, setSelectedMonth] = useState<Dayjs>(() => dayjs().startOf('month'));
   const hasAssetId = id != null && id !== '';
   const canQuery = hasAssetId;
   const periodParams = useMemo(() => buildPeriodParams(selectedMonth), [selectedMonth]);
-  const queryScopeKey = buildQueryScopeKey(perspective);
+  const queryScopeKey = buildQueryScopeKey();
 
   const {
     data: asset,
@@ -182,13 +173,13 @@ const AssetDetailPage: React.FC = () => {
               <Tag color={RELATION_TYPE_COLORS[item.group_relation_type]}>
                 {item.group_relation_type}
               </Tag>
-              {buildCustomerDetailPath(perspective, item.party_id) != null ? (
+              {buildCustomerDetailPath(item.party_id) != null ? (
                 <Button
                   type="link"
                   style={{ padding: 0 }}
                   aria-label={`查看客户${item.party_name}详情`}
                   onClick={() => {
-                    const nextPath = buildCustomerDetailPath(perspective, item.party_id);
+                    const nextPath = buildCustomerDetailPath(item.party_id);
                     if (nextPath != null) {
                       navigate(nextPath);
                     }

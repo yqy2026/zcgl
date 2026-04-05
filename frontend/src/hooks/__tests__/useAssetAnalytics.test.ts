@@ -9,15 +9,13 @@ import React from 'react';
 
 const formatStdoutWrites = (calls: unknown[][]) => calls.map(call => String(call[0] ?? '')).join(' ');
 
-vi.mock('@/routes/perspective', () => ({
-  useRoutePerspective: () => ({
-    perspective: 'owner',
-    isPerspectiveRoute: true,
-  }),
+vi.mock('@/utils/queryScope', () => ({
+  buildQueryScopeKey: () => 'user:user-1|scope:owner,manager',
 }));
 
-vi.mock('@/utils/queryScope', () => ({
-  buildQueryScopeKey: () => 'user:user-1|perspective:owner',
+vi.mock('@/stores/dataScopeStore', () => ({
+  useDataScopeStore: (selector: (state: { initialized: boolean }) => boolean) =>
+    selector({ initialized: true }),
 }));
 
 // Mock dependencies
@@ -112,7 +110,7 @@ describe('useAssetAnalytics', () => {
 
       expect(result.current.filters).toEqual({});
       expect(result.current.dimension).toBe('area');
-      expect(result.current.loading).toBe(true); // Initially loading
+      expect(result.current.loading).toBe(true);
       expect(formatStdoutWrites(stdoutWriteSpy.mock.calls)).not.toContain('[DEBUG] [useAssetAnalytics]');
     } finally {
       stdoutWriteSpy.mockRestore();
@@ -135,9 +133,9 @@ describe('useAssetAnalytics', () => {
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
-    expect(analyticsService.getComprehensiveAnalytics).toHaveBeenCalledWith({});
-    expect(result.current.analyticsData).toEqual(mockData.data);
-    expect(result.current.hasData).toBe(true);
+      expect(analyticsService.getComprehensiveAnalytics).toHaveBeenCalledWith({});
+      expect(result.current.analyticsData).toEqual(mockData.data);
+      expect(result.current.hasData).toBe(true);
   });
 
   it('should scope analytics cache keys to the current view', async () => {
@@ -168,12 +166,12 @@ describe('useAssetAnalytics', () => {
     expect(
       queryKeys.some(
         queryKey =>
-          Array.isArray(queryKey) &&
-          queryKey[0] === 'analytics' &&
-          queryKey[1] === 'user:user-1|perspective:owner' &&
-          queryKey[2] === 'comprehensive'
-      )
-    ).toBe(true);
+            Array.isArray(queryKey) &&
+            queryKey[0] === 'analytics' &&
+            queryKey[1] === 'user:user-1|scope:owner,manager' &&
+            queryKey[2] === 'comprehensive'
+        )
+      ).toBe(true);
   });
 
   it('should update filters and refetch', async () => {

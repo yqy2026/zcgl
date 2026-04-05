@@ -15,7 +15,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import AssetDetailPage from '../AssetDetailPage';
 
-const mockBuildQueryScopeKey = vi.fn(() => 'user:user-1|perspective:owner');
+const mockBuildQueryScopeKey = vi.fn(() => 'user:user-1|scope:owner,manager');
 
 vi.mock('@/utils/queryScope', () => ({
   buildQueryScopeKey: (value: unknown) => mockBuildQueryScopeKey(value),
@@ -191,7 +191,7 @@ describe('AssetDetailPage', () => {
   });
 
   describe('成功加载', () => {
-    it('资产详情与租赁汇总查询应把当前视角纳入 queryKey', async () => {
+    it('资产详情与租赁汇总查询应把当前数据范围纳入 queryKey', async () => {
       vi.mocked(assetService.getAsset).mockResolvedValue({
         id: 'asset_123',
         asset_name: '测试资产A栋',
@@ -203,7 +203,7 @@ describe('AssetDetailPage', () => {
       await waitFor(() => {
         expect(assetService.getAsset).toHaveBeenCalled();
         expect(assetService.getAssetLeaseSummary).toHaveBeenCalled();
-        expect(mockBuildQueryScopeKey).toHaveBeenCalledWith('owner');
+        expect(mockBuildQueryScopeKey).toHaveBeenCalledWith(undefined);
       });
 
       const queryKeys = queryClient
@@ -216,7 +216,7 @@ describe('AssetDetailPage', () => {
           queryKey =>
             Array.isArray(queryKey) &&
             queryKey[0] === 'asset' &&
-            queryKey[1] === 'user:user-1|perspective:owner' &&
+            queryKey[1] === 'user:user-1|scope:owner,manager' &&
             queryKey[2] === 'asset_123'
         )
       ).toBe(true);
@@ -225,7 +225,7 @@ describe('AssetDetailPage', () => {
           queryKey =>
             Array.isArray(queryKey) &&
             queryKey[0] === 'asset-lease-summary' &&
-            queryKey[1] === 'user:user-1|perspective:owner' &&
+            queryKey[1] === 'user:user-1|scope:owner,manager' &&
             queryKey[2] === 'asset_123' &&
             queryKey[3] === dayjs().startOf('month').format('YYYY-MM-DD') &&
             queryKey[4] === dayjs().endOf('month').format('YYYY-MM-DD')
@@ -289,7 +289,7 @@ describe('AssetDetailPage', () => {
       ).toBeInTheDocument();
     });
 
-    it('在视角路由下点击客户摘要应跳转到客户详情', async () => {
+    it('点击客户摘要应跳转到统一客户详情页', async () => {
       vi.mocked(assetService.getAsset).mockResolvedValue({
         id: 'asset_123',
         asset_name: '测试资产A栋',
@@ -302,7 +302,7 @@ describe('AssetDetailPage', () => {
       fireEvent.click(customerButton);
 
       await waitFor(() => {
-        expect(window.location.pathname).toBe('/owner/customers/party-1');
+        expect(window.location.pathname).toBe('/customers/party-1');
       });
     });
 

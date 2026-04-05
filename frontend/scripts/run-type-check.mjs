@@ -10,8 +10,10 @@ const tscBinary = join(binDir, isWindows ? 'tsc.cmd' : 'tsc');
 const args = process.argv.slice(2);
 
 let compiler = 'tsgo';
+let compilerBinary = tsgoBinary;
 if (!existsSync(tsgoBinary)) {
   compiler = 'tsc';
+  compilerBinary = tscBinary;
   console.warn(
     '[type-check] tsgo is unavailable in this environment, fallback to tsc.',
   );
@@ -24,14 +26,15 @@ if (compiler === 'tsc' && !existsSync(tscBinary)) {
   process.exit(1);
 }
 
-const result = spawnSync(
-  'pnpm',
-  ['exec', '--', compiler, ...args],
-  {
-    stdio: 'inherit',
-    shell: isWindows,
-  },
-);
+const result = isWindows
+  ? spawnSync('cmd.exe', ['/c', compilerBinary, ...args], {
+      stdio: 'inherit',
+      shell: false,
+    })
+  : spawnSync(compilerBinary, args, {
+      stdio: 'inherit',
+      shell: false,
+    });
 
 if (result.error) {
   console.error(

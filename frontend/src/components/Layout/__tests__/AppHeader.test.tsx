@@ -81,13 +81,6 @@ vi.mock('react-router-dom', () => ({
   useNavigate: () => navigateMock,
 }));
 
-vi.mock('@/routes/perspective', () => ({
-  useRoutePerspective: () => ({
-    perspective: 'manager',
-    isPerspectiveRoute: true,
-  }),
-}));
-
 // Mock NotificationCenter
 vi.mock('../../Notification', () => ({
   NotificationCenter: () => <div data-testid="notification-center" />,
@@ -265,7 +258,7 @@ describe('AppHeader - 渲染与交互测试', () => {
     expect(messageInfoSpy).toHaveBeenCalledWith('帮助中心功能开发中');
   });
 
-  it('点击全局搜索按钮应跳转到当前视角搜索页', async () => {
+  it('点击全局搜索按钮应跳转到统一搜索页', async () => {
     const AppHeader = (await import('../AppHeader')).default;
     renderWithProviders(<AppHeader collapsed={false} onToggleCollapsed={vi.fn()} />, {
       route: '/manager/assets',
@@ -277,7 +270,7 @@ describe('AppHeader - 渲染与交互测试', () => {
       fireEvent.click(searchButton);
     }
 
-    expect(navigateMock).toHaveBeenCalledWith('/manager/search');
+    expect(navigateMock).toHaveBeenCalledWith('/search');
   });
 
   it('退出登录应触发确认并执行登出流程', async () => {

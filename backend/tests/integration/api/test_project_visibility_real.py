@@ -9,10 +9,12 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from src.models.abac import ABACPolicy, ABACPolicyRule, ABACRolePolicy
+from src.models.asset import Asset
 from src.models.auth import User
 from src.models.organization import Organization
 from src.models.party import Party, PartyType
 from src.models.project import Project
+from src.models.project_asset import ProjectAsset
 from src.models.rbac import Role, UserRoleAssignment
 from src.models.user_party_binding import RelationType, UserPartyBinding
 from src.services.core.password_service import PasswordService
@@ -83,7 +85,9 @@ def _bind_project_read_policy(
 
 
 @pytest.mark.integration
-def test_non_admin_project_visibility_isolation(client: TestClient, db_session: Session):
+def test_non_admin_project_visibility_isolation(
+    client: TestClient, db_session: Session
+):
     """真实链路验证：非管理员仅能看到本组织项目。"""
     suffix = uuid.uuid4().hex[:8]
     password = "User123!@#"
@@ -189,9 +193,11 @@ def test_non_admin_project_visibility_isolation(client: TestClient, db_session: 
 
     _login(client, user_a.username, password)
     missing_header_response_a = client.get("/api/v1/projects/")
-    assert missing_header_response_a.status_code == 400
+    assert missing_header_response_a.status_code == 200
 
-    response_a = client.get("/api/v1/projects/", headers=_perspective_headers("manager"))
+    response_a = client.get(
+        "/api/v1/projects/", headers=_perspective_headers("manager")
+    )
     assert response_a.status_code == 200
     items_a = response_a.json()["data"]["items"]
     ids_a = {item["id"] for item in items_a}
@@ -201,11 +207,112 @@ def test_non_admin_project_visibility_isolation(client: TestClient, db_session: 
     client.cookies.clear()
     _login(client, user_b.username, password)
     missing_header_response_b = client.get("/api/v1/projects/")
-    assert missing_header_response_b.status_code == 400
+    assert missing_header_response_b.status_code == 200
 
-    response_b = client.get("/api/v1/projects/", headers=_perspective_headers("manager"))
+    response_b = client.get(
+        "/api/v1/projects/", headers=_perspective_headers("manager")
+    )
     assert response_b.status_code == 200
     items_b = response_b.json()["data"]["items"]
     ids_b = {item["id"] for item in items_b}
     assert project_b.id in ids_b
     assert project_a.id not in ids_b
+
+
+@pytest.mark.integration
+def test_owner_user_sees_projects_via_asset_relation(
+    client: TestClient, db_session: Session
+):
+    suffix = uuid.uuid4().hex[:8]
+    password = "User123!@#"
+    password_hash = PasswordService().get_password_hash(password)
+
+    org = Organization(
+        name=f"Owner Visibility Org-{suffix}",
+        code=f"OWNER-ORG-{suffix}",
+        level=1,
+        type="department",
+        status="active",
+    )
+    db_session.add(org)
+    db_session.flush()
+
+    owner_party = Party(
+        party_type=PartyType.ORGANIZATION.value,
+        name=f"Owner Visibility Party-{suffix}",
+        code=f"OWNER-PARTY-{suffix}",
+        external_ref=org.id,
+        status="active",
+    )
+    manager_party = Party(
+        party_type=PartyType.ORGANIZATION.value,
+        name=f"Manager Visibility Party-{suffix}",
+        code=f"MANAGER-PARTY-{suffix}",
+        external_ref=org.id,
+        status="active",
+    )
+    db_session.add_all([owner_party, manager_party])
+    db_session.flush()
+
+    user = User(
+        username=f"owner_vis_user_{suffix}",
+        email=f"owner_vis_user_{suffix}@example.com",
+        phone=f"136{uuid.uuid4().int % 10**8:08d}",
+        full_name="Owner Visibility User",
+        password_hash=password_hash,
+        is_active=True,
+        default_organization_id=org.id,
+        created_by="integration_test",
+        updated_by="integration_test",
+    )
+    db_session.add(user)
+    db_session.flush()
+
+    db_session.add(
+        UserPartyBinding(
+            user_id=user.id,
+            party_id=owner_party.id,
+            relation_type=RelationType.OWNER,
+            is_primary=True,
+        )
+    )
+
+    project = Project(
+        project_name=f"Owner Visible Project-{suffix}",
+        project_code=_build_project_code(),
+        status="active",
+        manager_party_id=manager_party.id,
+        created_by=user.id,
+    )
+    db_session.add(project)
+    db_session.flush()
+
+    asset = Asset(
+        asset_name=f"Owner Visible Asset-{suffix}",
+        asset_code=f"ASSET-{suffix}",
+        asset_type="land",
+        asset_category="industrial",
+        business_status="active",
+        owner_party_id=owner_party.id,
+        manager_party_id=manager_party.id,
+        created_by=user.id,
+        updated_by=user.id,
+    )
+    db_session.add(asset)
+    db_session.flush()
+
+    db_session.add(
+        ProjectAsset(
+            project_id=project.id,
+            asset_id=asset.id,
+        )
+    )
+    _bind_project_read_policy(db_session, suffix=suffix, user_ids=[user.id])
+    db_session.commit()
+
+    _login(client, user.username, password)
+    response = client.get("/api/v1/projects/")
+    assert response.status_code == 200
+    items = response.json()["data"]["items"]
+    ids = {item["id"] for item in items}
+    assert project.id in ids

@@ -14,8 +14,8 @@ import { ResponseExtractor, ApiErrorHandler } from '@/utils/responseExtractor';
 import { ApiClientConfig, RetryConfig, ExtractResult } from '@/types/apiResponse';
 import { createLogger } from '@/utils/logger';
 import { isDevelopmentMode } from '@/utils/runtimeEnv';
-import { getCurrentRequestScopeKey } from '@/utils/queryScope';
-import { getCurrentRoutePerspective } from '@/routes/perspective';
+import { buildScopeKey } from '@/utils/queryScope';
+import { useDataScopeStore } from '@/stores/dataScopeStore';
 import { API_BASE_URL, CSRF_CONFIG } from './config';
 import { AuthStorage } from '@/utils/AuthStorage';
 
@@ -136,7 +136,8 @@ const applyPerspectiveHeader = (config: InternalAxiosRequestConfig): void => {
     return;
   }
 
-  const perspective = getCurrentRoutePerspective();
+  const { getEffectivePerspective } = useDataScopeStore.getState();
+  const perspective = getEffectivePerspective();
   if (perspective == null) {
     removeHeader(config.headers, 'X-Perspective');
     return;
@@ -908,7 +909,7 @@ export class ApiClient {
    */
   private generateCacheKey(method: string, url: string, params?: Record<string, unknown>): string {
     const paramsStr = params ? JSON.stringify(this.normalizeParams(params)) : '';
-    return `${method}:${url}:${paramsStr}:scope:${getCurrentRequestScopeKey()}`;
+    return `${method}:${url}:${paramsStr}:scope:${buildScopeKey()}`;
   }
 
   private normalizeParams(value: unknown): unknown {

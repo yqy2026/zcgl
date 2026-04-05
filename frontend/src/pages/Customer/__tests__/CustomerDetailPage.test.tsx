@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithProviders, screen } from '@/test/utils/test-helpers';
 import { Route, Routes } from 'react-router-dom';
+import { buildQueryScopeKey } from '@/utils/queryScope';
 
 vi.mock('@/services/partyService', () => ({
   partyService: {
@@ -8,11 +9,8 @@ vi.mock('@/services/partyService', () => ({
   },
 }));
 
-vi.mock('@/routes/perspective', () => ({
-  useRoutePerspective: () => ({
-    perspective: 'manager',
-    isPerspectiveRoute: true,
-  }),
+vi.mock('@/utils/queryScope', () => ({
+  buildQueryScopeKey: vi.fn(() => 'user:user-1|scope:owner,manager'),
 }));
 
 import CustomerDetailPage from '../CustomerDetailPage';
@@ -59,9 +57,9 @@ describe('CustomerDetailPage', () => {
   it('renders customer profile overview and contract history', async () => {
     renderWithProviders(
       <Routes>
-        <Route path="/manager/customers/:id" element={<CustomerDetailPage />} />
+        <Route path="/customers/:id" element={<CustomerDetailPage />} />
       </Routes>,
-      { route: '/manager/customers/party-customer-1' }
+      { route: '/customers/party-customer-1' }
     );
 
     expect(await screen.findByText('终端租户甲')).toBeInTheDocument();
@@ -69,5 +67,6 @@ describe('CustomerDetailPage', () => {
     expect(screen.getByText('代理口径冲突')).toBeInTheDocument();
     expect(screen.getByText('CTR-001')).toBeInTheDocument();
     expect(screen.getByText('月付')).toBeInTheDocument();
+    expect(buildQueryScopeKey).toHaveBeenCalledWith();
   });
 });

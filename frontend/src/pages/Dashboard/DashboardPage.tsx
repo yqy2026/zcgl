@@ -1,6 +1,5 @@
 import React from 'react';
 import { Card, Row, Col, Typography, Button, Space, Tooltip } from 'antd';
-import { useNavigate } from 'react-router-dom';
 import {
   ReloadOutlined,
   DownloadOutlined,
@@ -10,10 +9,7 @@ import {
   BarChartOutlined,
   PieChartOutlined,
 } from '@ant-design/icons';
-import { MANAGER_ROUTES, OWNER_ROUTES } from '@/constants/routes';
-import { useCapabilities } from '@/hooks/useCapabilities';
 import { useAnalytics } from '@/hooks/useAnalytics';
-import { useRoutePerspective } from '@/routes/perspective';
 import DataTrendCard from '@/components/Dashboard/DataTrendCard';
 import QuickInsights from '@/components/Dashboard/QuickInsights';
 import styles from './DashboardPage.module.css';
@@ -22,10 +18,6 @@ const { Title, Text } = Typography;
 
 const DashboardPage: React.FC = () => {
   const [isFullscreen, setIsFullscreen] = React.useState(false);
-  const navigate = useNavigate();
-  const { isPerspectiveRoute } = useRoutePerspective();
-  const { getAvailablePerspectives } = useCapabilities();
-  const availablePerspectives = getAvailablePerspectives('analytics');
 
   // 使用统一的Analytics hook，避免重复请求
   const { data: analyticsData, isLoading, error, refetch } = useAnalytics();
@@ -71,37 +63,6 @@ const DashboardPage: React.FC = () => {
     // 实现导出功能
     // Exporting dashboard data
   };
-
-  if (!isPerspectiveRoute) {
-    const canOpenOwner = availablePerspectives.includes('owner');
-    const canOpenManager = availablePerspectives.includes('manager');
-
-    return (
-      <div className={styles.dashboardContainer}>
-        <div className={styles.errorContainer}>
-          <div className={styles.errorTitle}>请选择业务视角</div>
-          <div className={styles.errorDescription}>
-            共享工作台不再直接请求带视角的数据分析接口。请进入业主视角或经营视角后查看对应模块。
-          </div>
-          <Space>
-            <Button
-              type="primary"
-              onClick={() => navigate(OWNER_ROUTES.ASSETS)}
-              disabled={!canOpenOwner}
-            >
-              进入业主视角
-            </Button>
-            <Button
-              onClick={() => navigate(MANAGER_ROUTES.ASSETS)}
-              disabled={!canOpenManager}
-            >
-              进入经营视角
-            </Button>
-          </Space>
-        </div>
-      </div>
-    );
-  }
 
   if (error) {
     return (

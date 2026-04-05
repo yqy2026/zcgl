@@ -5,7 +5,6 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import PageContainer from '@/components/Common/PageContainer';
 import { searchService } from '@/services/searchService';
 import type { GlobalSearchResultItem } from '@/types/search';
-import { useRoutePerspective } from '@/routes/perspective';
 import { buildQueryScopeKey } from '@/utils/queryScope';
 import styles from './GlobalSearchPage.module.css';
 
@@ -16,12 +15,11 @@ type SearchViewMode = 'all' | 'grouped';
 const GlobalSearchPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { perspective } = useRoutePerspective();
   const [viewMode, setViewMode] = useState<SearchViewMode>('all');
 
   const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const query = searchParams.get('q')?.trim() ?? '';
-  const queryScopeKey = buildQueryScopeKey(perspective);
+  const queryScopeKey = buildQueryScopeKey();
 
   const globalSearchQuery = useQuery({
     queryKey: ['global-search', queryScopeKey, query],
@@ -90,7 +88,7 @@ const GlobalSearchPage: React.FC = () => {
   };
 
   return (
-    <PageContainer title="全局搜索" subTitle="按当前视角跨对象搜索资产、项目、合同、客户和产权证。">
+    <PageContainer title="全局搜索" subTitle="按当前数据范围跨对象搜索资产、项目、合同、客户和产权证。">
       <div className={styles.page}>
         <Card>
           <div className={styles.toolbar}>

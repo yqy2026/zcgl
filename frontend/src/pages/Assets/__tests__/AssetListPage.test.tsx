@@ -106,7 +106,7 @@ const mockUseView = vi.fn(() => ({
   isViewReady: true,
 }));
 
-const mockBuildQueryScopeKey = vi.fn(() => 'user:user-1|perspective:owner');
+const mockBuildQueryScopeKey = vi.fn(() => 'user:user-1|scope:owner,manager');
 const mockUseRoutePerspective = vi.fn(() => ({
   perspective: 'owner',
   isPerspectiveRoute: true,
@@ -242,7 +242,7 @@ describe('AssetListPage', () => {
       renderPage();
 
       expect(screen.getByText('资产列表')).toBeInTheDocument();
-      expect(mockBuildQueryScopeKey).toHaveBeenCalledWith('owner');
+      expect(mockBuildQueryScopeKey).toHaveBeenCalledWith(undefined);
     });
 
     it('渲染操作按钮', () => {
@@ -271,24 +271,23 @@ describe('AssetListPage', () => {
       expect(screen.getByTestId('asset-list')).toBeInTheDocument();
     });
 
-    it('显示当前视角标签', () => {
+    it('不再显示当前视角标签', () => {
       renderPage();
 
-      expect(screen.getByText('当前视角')).toBeInTheDocument();
-      expect(screen.getByText('业主视角')).toBeInTheDocument();
+      expect(screen.queryByText('当前视角')).not.toBeInTheDocument();
     });
 
-    it('资产列表与统计查询应把当前视角纳入 queryKey', () => {
+    it('资产列表与统计查询应把当前数据范围纳入 queryKey', () => {
       renderPage();
 
       expect(useQuery).toHaveBeenCalledWith(
         expect.objectContaining({
-          queryKey: ['assets-list', 'user:user-1|perspective:owner', 1, 20, {}],
+          queryKey: ['assets-list', 'user:user-1|scope:owner,manager', 1, 20, {}],
         })
       );
       expect(useQuery).toHaveBeenCalledWith(
         expect.objectContaining({
-          queryKey: ['analytics', 'user:user-1|perspective:owner', {}],
+          queryKey: ['analytics', 'user:user-1|scope:owner,manager', {}],
         })
       );
     });
@@ -304,12 +303,12 @@ describe('AssetListPage', () => {
       expect(screen.queryByText('当前视角')).not.toBeInTheDocument();
       expect(useQuery).toHaveBeenCalledWith(
         expect.objectContaining({
-          queryKey: ['assets-list', 'user:user-1|perspective:owner', 1, 20, {}],
+          queryKey: ['assets-list', 'user:user-1|scope:owner,manager', 1, 20, {}],
         })
       );
       expect(useQuery).toHaveBeenCalledWith(
         expect.objectContaining({
-          queryKey: ['analytics', 'user:user-1|perspective:owner', {}],
+          queryKey: ['analytics', 'user:user-1|scope:owner,manager', {}],
         })
       );
     });
@@ -443,56 +442,46 @@ describe('AssetListPage', () => {
   });
 
   describe('搜索功能', () => {
-    it('点击搜索触发带关键字的查询键更新', async () => {
+    it('点击搜索后导出使用最新关键字筛选', async () => {
+      const mockBlob = new Blob(['test'], { type: 'application/xlsx' });
+      vi.mocked(assetService.exportAssets).mockResolvedValue(mockBlob);
+      const downloadLink = stubDownloadLinkClick();
+      global.URL.createObjectURL = vi.fn(() => 'blob:test');
+      global.URL.revokeObjectURL = vi.fn();
+
       renderPage();
 
       fireEvent.click(screen.getByText('Search'));
+      fireEvent.click(screen.getByText('导出全部'));
 
       await waitFor(() => {
-        const calls = vi.mocked(useQuery).mock.calls;
-        const hasKeywordQuery = calls.some(([queryOptions]) => {
-          const queryKey = queryOptions.queryKey;
-          if (!Array.isArray(queryKey) || queryKey[0] !== 'assets-list') {
-            return false;
-          }
-          if (queryKey[1] !== 'user:user-1|perspective:owner') {
-            return false;
-          }
-          const filters = queryKey[4];
-          if (filters == null || typeof filters !== 'object') {
-            return false;
-          }
-          return (filters as { keyword?: string }).keyword === 'test';
-        });
-        expect(hasKeywordQuery).toBe(true);
+        expect(assetService.exportAssets).toHaveBeenCalledWith(
+          expect.objectContaining({ keyword: 'test' }),
+          { format: 'xlsx' }
+        );
       });
+
+      downloadLink.restore();
     });
 
-    it('点击重置触发空筛选查询键', async () => {
+    it('点击重置后导出使用空筛选条件', async () => {
+      const mockBlob = new Blob(['test'], { type: 'application/xlsx' });
+      vi.mocked(assetService.exportAssets).mockResolvedValue(mockBlob);
+      const downloadLink = stubDownloadLinkClick();
+      global.URL.createObjectURL = vi.fn(() => 'blob:test');
+      global.URL.revokeObjectURL = vi.fn();
+
       renderPage();
 
       fireEvent.click(screen.getByText('Search'));
-
       fireEvent.click(screen.getByText('Reset'));
+      fireEvent.click(screen.getByText('导出全部'));
 
       await waitFor(() => {
-        const calls = vi.mocked(useQuery).mock.calls;
-        const hasEmptyFiltersQuery = calls.some(([queryOptions]) => {
-          const queryKey = queryOptions.queryKey;
-          if (!Array.isArray(queryKey) || queryKey[0] !== 'assets-list') {
-            return false;
-          }
-          if (queryKey[1] !== 'user:user-1|perspective:owner') {
-            return false;
-          }
-          const filters = queryKey[4];
-          if (filters == null || typeof filters !== 'object') {
-            return false;
-          }
-          return Object.keys(filters).length === 0;
-        });
-        expect(hasEmptyFiltersQuery).toBe(true);
+        expect(assetService.exportAssets).toHaveBeenCalledWith({}, { format: 'xlsx' });
       });
+
+      downloadLink.restore();
     });
   });
 

@@ -4,12 +4,11 @@ import { MessageManager } from '@/utils/messageManager';
 import { useParams, useNavigate } from 'react-router-dom';
 import { PageContainer } from '@/components/Common';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useRoutePerspective } from '@/routes/perspective';
 import { assetService } from '@/services/assetService';
 import { AssetForm } from '@/components/Forms';
 import type { AssetCreateRequest, AssetUpdateRequest } from '@/types/asset';
 import { buildQueryScopeKey } from '@/utils/queryScope';
-import { OWNER_ROUTES } from '@/constants/routes';
+import { ASSET_ROUTES } from '@/constants/routes';
 
 // 错误类型接口
 interface ApiError {
@@ -28,9 +27,8 @@ const AssetCreatePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { perspective } = useRoutePerspective();
   const _form = Form.useForm();
-  const queryScopeKey = buildQueryScopeKey(perspective);
+  const queryScopeKey = buildQueryScopeKey();
 
   const isEdit = id != null;
 
@@ -48,7 +46,7 @@ const AssetCreatePage: React.FC = () => {
       MessageManager.success('资产创建成功');
       queryClient.invalidateQueries({ queryKey: ['assets-list'] });
       queryClient.invalidateQueries({ queryKey: ['analytics'] });
-      navigate(OWNER_ROUTES.ASSETS);
+      navigate(ASSET_ROUTES.LIST);
     },
     onError: (error: unknown) => {
       const apiError = error as ApiError;

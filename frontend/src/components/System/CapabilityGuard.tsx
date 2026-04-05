@@ -1,8 +1,6 @@
 import React from 'react';
 import { Button, Result, Spin } from 'antd';
-import { useLocation } from 'react-router-dom';
 import { useCapabilities } from '@/hooks/useCapabilities';
-import { getRoutePerspective } from '@/routes/perspective';
 import type { AuthzAction, Perspective, ResourceType } from '@/types/capability';
 
 interface CapabilityGuardProps {
@@ -21,7 +19,6 @@ const CapabilityGuard: React.FC<CapabilityGuardProps> = ({
   children,
 }) => {
   const { canPerform, loading } = useCapabilities();
-  const location = useLocation();
 
   if (loading) {
     return (
@@ -31,8 +28,7 @@ const CapabilityGuard: React.FC<CapabilityGuardProps> = ({
     );
   }
 
-  const resolvedPerspective = perspective ?? getRoutePerspective(location.pathname) ?? undefined;
-  const allowed = canPerform(action, resource, resolvedPerspective);
+  const allowed = canPerform(action, resource, perspective);
   if (!allowed) {
     return (
       fallback ?? (

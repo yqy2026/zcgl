@@ -68,7 +68,7 @@ dev-frontend:
 lint: lint-backend lint-frontend
 
 lint-backend:
-	cd backend && uv run --extra dev python -m ruff check . && uv run python scripts/migration/check_migration_naming.py
+	cd backend && uv run --frozen --extra dev python -m ruff check . && uv run --frozen python scripts/migration/check_migration_naming.py
 
 check-migration-naming:
 	cd backend && $(PYTHON) scripts/migration/check_migration_naming.py

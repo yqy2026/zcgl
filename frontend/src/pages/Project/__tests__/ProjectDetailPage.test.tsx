@@ -5,11 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import ProjectDetailPage from '../ProjectDetailPage';
 
-const mockBuildQueryScopeKey = vi.fn(() => 'user:user-1|perspective:manager');
-const mockUseRoutePerspective = vi.fn(() => ({
-  perspective: 'manager',
-  isPerspectiveRoute: true,
-}));
+const mockBuildQueryScopeKey = vi.fn(() => 'user:user-1|scope:owner,manager');
 const mockNavigate = vi.fn();
 
 vi.mock('@/utils/queryScope', () => ({
@@ -18,10 +14,6 @@ vi.mock('@/utils/queryScope', () => ({
 
 vi.mock('@tanstack/react-query', () => ({
   useQuery: vi.fn(),
-}));
-
-vi.mock('@/routes/perspective', () => ({
-  useRoutePerspective: () => mockUseRoutePerspective(),
 }));
 
 vi.mock('react-router-dom', async () => {
@@ -46,10 +38,6 @@ vi.mock('@/hooks/useArrayListData', () => ({
 describe('ProjectDetailPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseRoutePerspective.mockReturnValue({
-      perspective: 'manager',
-      isPerspectiveRoute: true,
-    });
     vi.mocked(useQuery).mockImplementation(options => {
       const [scope] = options.queryKey as [string, ...unknown[]];
       if (scope === 'project') {
@@ -108,69 +96,39 @@ describe('ProjectDetailPage', () => {
     });
   });
 
-  it('renders current view label', () => {
-    renderWithProviders(<ProjectDetailPage />, { route: '/manager/projects/project-1' });
-
-    expect(screen.getByText('当前视角')).toBeInTheDocument();
-    expect(screen.getByText('经营视角')).toBeInTheDocument();
-  });
-
-  it('project detail queries should include current view in queryKey', () => {
+  it('project detail queries should include scope key in queryKey', () => {
     renderWithProviders(<ProjectDetailPage />);
 
     expect(useQuery).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: ['project', 'user:user-1|perspective:manager', 'project-1'],
+        queryKey: ['project', 'user:user-1|scope:owner,manager', 'project-1'],
       })
     );
     expect(useQuery).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: ['project-assets', 'user:user-1|perspective:manager', 'project-1'],
+        queryKey: ['project-assets', 'user:user-1|scope:owner,manager', 'project-1'],
       })
     );
     expect(useQuery).toHaveBeenCalledWith(
       expect.objectContaining({
         queryKey: [
           'asset-lease-summary',
-          'user:user-1|perspective:manager',
+          'user:user-1|scope:owner,manager',
           'asset-1',
           expect.any(String),
           expect.any(String),
         ],
       })
     );
-    expect(mockBuildQueryScopeKey).toHaveBeenCalledWith('manager');
+    expect(mockBuildQueryScopeKey).toHaveBeenCalledWith(undefined);
   });
 
-  it('legacy 路径不显示视角标签，但仍继续执行详情查询', () => {
-    mockUseRoutePerspective.mockReturnValue({
-      perspective: null,
-      isPerspectiveRoute: false,
-    });
-
+  it('uses canonical project route for back navigation', () => {
     renderWithProviders(<ProjectDetailPage />, { route: '/project/project-1' });
-
-    expect(screen.queryByText('当前视角')).not.toBeInTheDocument();
-    expect(useQuery).toHaveBeenCalledWith(
-      expect.objectContaining({
-        queryKey: ['project', 'user:user-1|perspective:manager', 'project-1'],
-        enabled: true,
-      })
-    );
-    expect(useQuery).toHaveBeenCalledWith(
-      expect.objectContaining({
-        queryKey: ['project-assets', 'user:user-1|perspective:manager', 'project-1'],
-        enabled: true,
-      })
-    );
-  });
-
-  it('uses canonical manager projects route for back navigation', () => {
-    renderWithProviders(<ProjectDetailPage />, { route: '/manager/projects/project-1' });
 
     fireEvent.click(screen.getByLabelText('返回'));
 
-    expect(mockNavigate).toHaveBeenCalledWith('/manager/projects');
+    expect(mockNavigate).toHaveBeenCalledWith('/project');
   });
 
   it('renders customer summary links that navigate to customer detail', () => {
@@ -229,10 +187,10 @@ describe('ProjectDetailPage', () => {
       return { data: undefined, isLoading: false, error: null };
     });
 
-    renderWithProviders(<ProjectDetailPage />, { route: '/manager/projects/project-1' });
+    renderWithProviders(<ProjectDetailPage />, { route: '/project/project-1' });
 
     fireEvent.click(screen.getByRole('button', { name: '查看客户终端租户甲详情' }));
 
-    expect(mockNavigate).toHaveBeenCalledWith('/manager/customers/party-customer-1');
+    expect(mockNavigate).toHaveBeenCalledWith('/customers/party-customer-1');
   });
 });
