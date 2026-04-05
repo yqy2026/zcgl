@@ -87,12 +87,23 @@
 
 ## 5. 角色、数据范围与客户定义
 
-### 5.1 角色
-- 运营管理员：资产、项目、合同组与台账维护。
-- 权限管理员：角色授权、组织与字典配置。
-- 业务审核人：关键数据复核、审核与反审核。
-- 管理层：查看统计看板与导出报表。
-- 只读查看者（含外审/临时查看）：仅可查看授权范围数据，不允许新增/编辑/审核/作废。
+### 5.1 角色与权限模型（RBAC + ABAC）
+
+应用基于角色（RBAC）与属性（ABAC）深度结合的权限机制。
+
+#### 1. 角色定义与动态分配
+- **基础推荐与动态化**：系统提供 5 个典型角色模板（运营管理员、权限管理员、业务审核人、管理层、只读查看者）供初始化。但系统核心**鼓励自由新增和修改角色并灵活勾选权限**。
+- **权限粒度**：要求更为细致，严格管控到**按钮与接口级别（Action-level）**，前端依行为编码掩藏元素，后端以 action validation 防守接口。
+
+#### 2. 多角色叠加机制与控制防线
+- **多角色并集（Union）**：单个用户允许多角色叠加，基础可执行指令为各角色权限之并集。
+- **拒绝优先（Deny Overrides）**：当遇到权限设定有重叠或冲突时，显式的“拒绝（Deny）”策略优先级高于“允许（Allow）”。
+- **职责分离（SoD, Separation of Duties）**：系统在核心流程或配置操作上保证相斥界限，例如制单人员不能审核自身单据、提权审核与业务审核隔离。
+- **ABAC 引入**：同时依靠上下文环境属性（如目标资源状态、来源情况）展开动态过滤。
+
+#### 3. 角色与数据主体（Party）相互作用
+- **受作用域约束（严格交集）**：用户具备某功能的先决前提是角色赋予了该操作点，而**作用范围**受限于 5.2 节所定义的主体（Party）绑定。这两者是严格交集。由于隔离不能越界，具备该功能不代表可在非授权 Party 执行。
+- **全局或集团特例**：被允许为“集团管理员”的宏观访问账号可穿透隔离壁垒，不再受限于特定 Party 绑定。
 
 ### 5.2 数据范围与身份机制
 
@@ -422,7 +433,7 @@
 - 字段映射（附录 v0.3 / 3.5 CustomerProfile）：
   - `subject_nature` / `identifier_type` / `unified_identifier`：企业与个人标识差异化校验与去重。
 - 代码证据：
-  - `backend/src/services/party/service.py`（`get_customer_profile()` 基于 `Party` 主档、合同历史、风险标签与当前视角聚合 `CustomerProfile`）
+  - `backend/src/services/party/service.py`（`get_customer_profile()` 基于 `Party` 主档、合同历史、风险标签与当前数据范围聚合 `CustomerProfile`）
   - `backend/src/schemas/party.py`（`CustomerProfileResponse` / `CustomerRiskTagResponse` / `CustomerContractSummaryResponse`）
   - `backend/src/api/v1/party.py`（`GET /api/v1/customers/{party_id}`）
   - `frontend/src/pages/Customer/CustomerDetailPage.tsx`（客户详情页展示基础信息、风险标签来源和历史签约记录）
@@ -491,8 +502,8 @@
   - 权限判定基于用户主体绑定的数据范围。
 - 代码证据：
   - `backend/src/services/authz/resource_perspective_registry.py`（`search` 资源视角注册）
-  - `backend/src/api/v1/search.py`（强制 `X-Perspective` 请求契约）
-  - `backend/src/services/search/service.py`（按当前视角与作用域 fail-closed 聚合结果）
+  - `backend/src/api/v1/search.py`（可选 `X-Perspective` 请求契约；缺失时自动走并集数据范围）
+  - `backend/src/services/search/service.py`（按当前数据范围与作用域 fail-closed 聚合结果）
   - `backend/tests/unit/api/v1/test_search_api.py`
   - `backend/tests/unit/services/search/test_search_service.py`
 
@@ -750,7 +761,7 @@
 | REQ-CUS-002 | ✅ | `/api/v1/analytics/comprehensive` 客户双指标 + 合同类型拆分 + 导出映射 | `test_analytics_service.py`, `test_analytics_export_service.py`, `RevenueStatsGrid.test.tsx`, `analyticsService.test.ts` |
 | REQ-SCH-001 | ✅ | `/api/v1/search` + Header 全局搜索入口 + 搜索结果页 | `test_search_service.py`, `test_search_api.py`, `searchService.test.ts`, `GlobalSearchPage.test.tsx`, `AppHeader.test.tsx` |
 | REQ-SCH-002 | ✅ | 全部视图 / 按对象分组切换 + `score + business_rank` 排序 | `test_search_service.py`, `GlobalSearchPage.test.tsx` |
-| REQ-SCH-003 | ✅ | 当前视角 `X-Perspective` 强制校验 + fail-closed 权限过滤 | `test_search_service.py`, `test_search_api.py` |
+| REQ-SCH-003 | ✅ | 可选 `X-Perspective` 缩窄查询范围 + 缺失时按自动数据范围 fail-closed 过滤 | `test_search_service.py`, `test_search_api.py` |
 | REQ-AUTH-001 | ✅ | `/auth/login`, `/auth/refresh` | `test_optional_auth.py` |
 | REQ-AUTH-002 | ✅ | 数据范围上下文自动注入（基于主体绑定），多绑定用户展示并集，管理员不受约束。前端仅在单绑定时自动注入 `X-Perspective`，双绑定与管理员走自动数据范围 | `test_authz_service.py`, `test_perspective_context.py`, `test_perspective_context_optional.py`, `test_party_scope.py`, `test_project.py`, `test_notifications.py`, `test_project_visibility_real.py`, `test_assets_visibility_real.py`, `client.test.ts`, `dataScopeStore.test.ts`, `queryScope.test.ts`, `ProjectDetailPage.test.tsx`, `AssetListPage.test.tsx`, `AssetDetailPage.test.tsx` |
 | REQ-DOC-001 | ✅ | `/pdf-import/*` | `pdf_import.py` |

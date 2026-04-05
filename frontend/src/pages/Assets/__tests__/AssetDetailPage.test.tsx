@@ -21,13 +21,6 @@ vi.mock('@/utils/queryScope', () => ({
   buildQueryScopeKey: (value: unknown) => mockBuildQueryScopeKey(value),
 }));
 
-vi.mock('@/routes/perspective', () => ({
-  useRoutePerspective: () => ({
-    perspective: 'owner',
-    isPerspectiveRoute: true,
-  }),
-}));
-
 vi.mock('antd', async () => {
   const antd = await vi.importActual<typeof import('antd')>('antd');
   const dayjsModule = await vi.importActual<typeof import('dayjs')>('dayjs');

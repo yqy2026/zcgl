@@ -191,14 +191,14 @@ class CustomerContractSummaryResponse(BaseModel):
 
 
 class CustomerProfileResponse(BaseModel):
-    """Perspective-scoped customer profile view."""
+    """Data-scope customer profile view."""
 
     customer_party_id: str = Field(..., description="客户主体ID")
     customer_name: str = Field(..., description="客户名称")
     customer_type: str = Field(..., description="客户类型 internal/external")
     subject_nature: str = Field(..., description="主体性质 enterprise/individual")
-    perspective_type: str = Field(..., description="当前视角 owner/manager")
-    contract_role: str = Field(..., description="当前视角下的客户合同角色")
+    binding_type: str = Field(..., description="数据范围绑定类型 owner/manager")
+    contract_role: str = Field(..., description="客户合同角色")
     contact_name: str | None = Field(None, description="联系人")
     contact_phone: str | None = Field(None, description="联系电话")
     identifier_type: str | None = Field(None, description="统一标识类型")

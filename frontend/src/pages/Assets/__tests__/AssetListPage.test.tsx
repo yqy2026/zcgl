@@ -107,17 +107,9 @@ const mockUseView = vi.fn(() => ({
 }));
 
 const mockBuildQueryScopeKey = vi.fn(() => 'user:user-1|scope:owner,manager');
-const mockUseRoutePerspective = vi.fn(() => ({
-  perspective: 'owner',
-  isPerspectiveRoute: true,
-}));
 
 vi.mock('@/utils/queryScope', () => ({
   buildQueryScopeKey: (value: unknown) => mockBuildQueryScopeKey(value),
-}));
-
-vi.mock('@/routes/perspective', () => ({
-  useRoutePerspective: () => mockUseRoutePerspective(),
 }));
 import { assetService } from '@/services/assetService';
 import { MessageManager } from '@/utils/messageManager';
@@ -210,10 +202,6 @@ describe('AssetListPage', () => {
       selectionRequired: false,
       isViewReady: true,
     });
-    mockUseRoutePerspective.mockReturnValue({
-      perspective: 'owner',
-      isPerspectiveRoute: true,
-    });
     mockData = [
       { id: 'asset_1', asset_name: '资产A' },
       { id: 'asset_2', asset_name: '资产B' },
@@ -269,48 +257,6 @@ describe('AssetListPage', () => {
       renderPage();
 
       expect(screen.getByTestId('asset-list')).toBeInTheDocument();
-    });
-
-    it('不再显示当前视角标签', () => {
-      renderPage();
-
-      expect(screen.queryByText('当前视角')).not.toBeInTheDocument();
-    });
-
-    it('资产列表与统计查询应把当前数据范围纳入 queryKey', () => {
-      renderPage();
-
-      expect(useQuery).toHaveBeenCalledWith(
-        expect.objectContaining({
-          queryKey: ['assets-list', 'user:user-1|scope:owner,manager', 1, 20, {}],
-        })
-      );
-      expect(useQuery).toHaveBeenCalledWith(
-        expect.objectContaining({
-          queryKey: ['analytics', 'user:user-1|scope:owner,manager', {}],
-        })
-      );
-    });
-
-    it('legacy 路径不显示视角标签，但仍启用资产列表和统计查询', () => {
-      mockUseRoutePerspective.mockReturnValue({
-        perspective: null,
-        isPerspectiveRoute: false,
-      });
-
-      renderPage('/assets/list');
-
-      expect(screen.queryByText('当前视角')).not.toBeInTheDocument();
-      expect(useQuery).toHaveBeenCalledWith(
-        expect.objectContaining({
-          queryKey: ['assets-list', 'user:user-1|scope:owner,manager', 1, 20, {}],
-        })
-      );
-      expect(useQuery).toHaveBeenCalledWith(
-        expect.objectContaining({
-          queryKey: ['analytics', 'user:user-1|scope:owner,manager', {}],
-        })
-      );
     });
   });
 

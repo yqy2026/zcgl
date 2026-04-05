@@ -160,11 +160,17 @@ class SearchService:
                 subtitle=str(getattr(asset, "asset_code", "")).strip() or None,
                 summary=str(getattr(asset, "address", "")).strip() or None,
                 keywords=["asset_name"],
-                route_path=f"/{perspective}/assets/{asset.id}",
+                route_path=f"/assets/{asset.id}",
                 score=self._score_text(
-                    query, [getattr(asset, "asset_name", None), getattr(asset, "asset_code", None)]
+                    query,
+                    [
+                        getattr(asset, "asset_name", None),
+                        getattr(asset, "asset_code", None),
+                    ],
                 ),
-                business_rank=self._business_rank(query, [getattr(asset, "asset_code", None)]),
+                business_rank=self._business_rank(
+                    query, [getattr(asset, "asset_code", None)]
+                ),
                 group_label="资产",
             )
             for asset in assets
@@ -192,16 +198,17 @@ class SearchService:
                 subtitle=str(getattr(project, "project_code", "")).strip() or None,
                 summary=str(getattr(project, "status", "")).strip() or None,
                 keywords=["project_name"],
-                route_path=(
-                    f"/manager/projects/{project.id}"
-                    if perspective == "manager"
-                    else f"/project/{project.id}"
-                ),
+                route_path=f"/project/{project.id}",
                 score=self._score_text(
                     query,
-                    [getattr(project, "project_name", None), getattr(project, "project_code", None)],
+                    [
+                        getattr(project, "project_name", None),
+                        getattr(project, "project_code", None),
+                    ],
                 ),
-                business_rank=self._business_rank(query, [getattr(project, "project_code", None)]),
+                business_rank=self._business_rank(
+                    query, [getattr(project, "project_code", None)]
+                ),
                 group_label="项目",
             )
             for project in items
@@ -224,7 +231,9 @@ class SearchService:
         else:
             stmt = stmt.where(ContractGroup.operator_party_id.in_(effective_party_ids))
 
-        groups = list((await db.execute(stmt.limit(self.DEFAULT_LIMIT_PER_TYPE))).scalars().all())
+        groups = list(
+            (await db.execute(stmt.limit(self.DEFAULT_LIMIT_PER_TYPE))).scalars().all()
+        )
         return [
             self._build_result_item(
                 object_type="contract_group",
@@ -233,7 +242,7 @@ class SearchService:
                 subtitle=str(getattr(group.revenue_mode, "name", group.revenue_mode)),
                 summary=str(getattr(group, "effective_from", "")),
                 keywords=["group_code"],
-                route_path=f"/{perspective}/contract-groups/{group.contract_group_id}",
+                route_path=f"/contract-groups/{group.contract_group_id}",
                 score=self._score_text(query, [group.group_code]),
                 business_rank=self._business_rank(query, [group.group_code]),
                 group_label="合同组",
@@ -265,16 +274,24 @@ class SearchService:
         else:
             stmt = stmt.where(ContractGroup.operator_party_id.in_(effective_party_ids))
 
-        contracts = list((await db.execute(stmt.limit(self.DEFAULT_LIMIT_PER_TYPE))).scalars().all())
+        contracts = list(
+            (await db.execute(stmt.limit(self.DEFAULT_LIMIT_PER_TYPE))).scalars().all()
+        )
         return [
             self._build_result_item(
                 object_type="contract",
                 object_id=str(contract.contract_id),
                 title=str(contract.contract_number),
-                subtitle=str(getattr(contract.group_relation_type, "name", contract.group_relation_type)),
+                subtitle=str(
+                    getattr(
+                        contract.group_relation_type,
+                        "name",
+                        contract.group_relation_type,
+                    )
+                ),
                 summary=str(getattr(contract, "status", "")),
                 keywords=["contract_number"],
-                route_path=f"/{perspective}/contract-groups/{contract.contract_group_id}",
+                route_path=f"/contract-groups/{contract.contract_group_id}",
                 score=self._score_text(query, [contract.contract_number]),
                 business_rank=self._business_rank(query, [contract.contract_number]),
                 group_label="合同",
@@ -317,7 +334,9 @@ class SearchService:
                 customer_ids.setdefault(customer_party_id, None)
 
         items: list[dict[str, Any]] = []
-        for customer_party_id in list(customer_ids.keys())[: self.DEFAULT_LIMIT_PER_TYPE * 3]:
+        for customer_party_id in list(customer_ids.keys())[
+            : self.DEFAULT_LIMIT_PER_TYPE * 3
+        ]:
             party = await party_crud.get_party(db, party_id=customer_party_id)
             if party is None:
                 continue
@@ -338,10 +357,14 @@ class SearchService:
                     subtitle=str(metadata.get("customer_type", "customer")),
                     summary=str(metadata.get("unified_identifier", "")).strip() or None,
                     keywords=["customer_name"],
-                    route_path=f"/{perspective}/customers/{party.id}",
+                    route_path=f"/customers/{party.id}",
                     score=score,
                     business_rank=self._business_rank(
-                        query, [metadata.get("unified_identifier"), getattr(party, "code", None)]
+                        query,
+                        [
+                            metadata.get("unified_identifier"),
+                            getattr(party, "code", None),
+                        ],
                     ),
                     group_label="客户",
                 )
@@ -356,7 +379,11 @@ class SearchService:
         perspective: str,
         party_filter: PartyFilter,
     ) -> list[dict[str, Any]]:
-        party_ids = [str(item).strip() for item in party_filter.party_ids if str(item).strip() != ""]
+        party_ids = [
+            str(item).strip()
+            for item in party_filter.party_ids
+            if str(item).strip() != ""
+        ]
         if len(party_ids) == 0:
             return []
         stmt = (
@@ -382,11 +409,16 @@ class SearchService:
                 object_id=str(certificate.id),
                 title=str(certificate.certificate_number),
                 subtitle=str(
-                    getattr(certificate.certificate_type, "value", certificate.certificate_type)
+                    getattr(
+                        certificate.certificate_type,
+                        "value",
+                        certificate.certificate_type,
+                    )
                 ),
-                summary=str(getattr(certificate, "property_address", "")).strip() or None,
+                summary=str(getattr(certificate, "property_address", "")).strip()
+                or None,
                 keywords=["certificate_number"],
-                route_path=f"/owner/property-certificates/{certificate.id}",
+                route_path=f"/property-certificates/{certificate.id}",
                 score=self._score_text(
                     query,
                     [

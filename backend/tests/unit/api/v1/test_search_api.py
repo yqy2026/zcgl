@@ -32,7 +32,7 @@ def search_client(monkeypatch):
                         "subtitle": "AST-001",
                         "summary": "资产结果",
                         "keywords": ["asset_name"],
-                        "route_path": "/manager/assets/asset-1",
+                        "route_path": "/assets/asset-1",
                         "score": 90,
                         "business_rank": 50,
                         "group_label": "资产",
@@ -44,7 +44,7 @@ def search_client(monkeypatch):
                         "subtitle": "external",
                         "summary": "客户结果",
                         "keywords": ["customer_name"],
-                        "route_path": "/manager/customers/party-1",
+                        "route_path": "/customers/party-1",
                         "score": 80,
                         "business_rank": 40,
                         "group_label": "客户",
@@ -83,10 +83,13 @@ def search_client(monkeypatch):
     app.dependency_overrides.clear()
 
 
-def test_global_search_should_require_perspective_header(search_client):
+def test_global_search_should_allow_missing_perspective_header(search_client):
     response = search_client.get("/api/v1/search?q=测试")
 
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.status_code == status.HTTP_200_OK
+    payload = response.json()
+    assert payload["success"] is True
+    assert payload["data"]["items"][0]["route_path"] == "/assets/asset-1"
 
 
 def test_global_search_should_return_grouped_results(search_client):
@@ -100,4 +103,5 @@ def test_global_search_should_return_grouped_results(search_client):
     assert payload["success"] is True
     assert payload["data"]["total"] == 2
     assert payload["data"]["items"][0]["object_type"] == "asset"
+    assert payload["data"]["items"][1]["route_path"] == "/customers/party-1"
     assert payload["data"]["groups"][1]["object_type"] == "customer"

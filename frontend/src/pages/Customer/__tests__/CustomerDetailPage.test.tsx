@@ -24,7 +24,7 @@ describe('CustomerDetailPage', () => {
       customer_name: '终端租户甲',
       customer_type: 'external',
       subject_nature: 'enterprise',
-      perspective_type: 'manager',
+      binding_type: 'manager',
       contract_role: 'entrusted_operation',
       contact_name: '张三',
       contact_phone: '13800000000',

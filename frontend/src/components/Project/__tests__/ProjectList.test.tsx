@@ -11,17 +11,9 @@ import { useQuery } from '@tanstack/react-query';
 import { partyService } from '@/services/partyService';
 
 const mockBuildQueryScopeKey = vi.fn(() => 'user:user-1|scope:owner,manager');
-const mockUseRoutePerspective = vi.fn(() => ({
-  perspective: 'manager',
-  isPerspectiveRoute: true,
-}));
 
 vi.mock('@/utils/queryScope', () => ({
   buildQueryScopeKey: (value: unknown) => mockBuildQueryScopeKey(value),
-}));
-
-vi.mock('@/routes/perspective', () => ({
-  useRoutePerspective: () => mockUseRoutePerspective(),
 }));
 // Mock message manager
 vi.mock('@/utils/messageManager', () => ({
@@ -381,10 +373,6 @@ const mockRefetchProjects = vi.fn();
 describe('ProjectList', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseRoutePerspective.mockReturnValue({
-      perspective: 'manager',
-      isPerspectiveRoute: true,
-    });
     mockRefetchProjects.mockClear();
     vi.mocked(useQuery).mockImplementation(options => {
       const queryKey = (options as { queryKey?: unknown[] }).queryKey;
@@ -494,10 +482,6 @@ describe('ProjectList', () => {
     });
 
     it('legacy 路径不显示视角标签，但列表和主体选项查询仍继续执行', async () => {
-      mockUseRoutePerspective.mockReturnValue({
-        perspective: null,
-        isPerspectiveRoute: false,
-      });
       window.history.pushState({}, 'Legacy project page', '/project');
 
       await renderProjectList();

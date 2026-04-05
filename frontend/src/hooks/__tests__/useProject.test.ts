@@ -17,13 +17,6 @@ import {
   useUpdateProject,
 } from '../useProject';
 
-vi.mock('@/routes/perspective', () => ({
-  useRoutePerspective: () => ({
-    perspective: 'manager',
-    isPerspectiveRoute: true,
-  }),
-}));
-
 vi.mock('@/utils/queryScope', () => ({
   buildQueryScopeKey: () => 'user:user-1|perspective:manager',
 }));

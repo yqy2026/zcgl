@@ -5,13 +5,6 @@ import AssetAnalyticsPage from '../AssetAnalyticsPage';
 import { analyticsService } from '@/services/analyticsService';
 import { MessageManager } from '@/utils/messageManager';
 
-vi.mock('@/routes/perspective', () => ({
-  useRoutePerspective: () => ({
-    perspective: 'owner',
-    isPerspectiveRoute: true,
-  }),
-}));
-
 vi.mock('@/utils/queryScope', () => ({
   buildQueryScopeKey: () => 'user:user-1|perspective:owner',
 }));

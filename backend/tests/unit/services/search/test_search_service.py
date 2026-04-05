@@ -37,7 +37,7 @@ async def test_search_global_should_sort_and_group_results(search_service):
                 "subtitle": "PRJ-001",
                 "summary": "项目结果",
                 "keywords": ["project_name"],
-                "route_path": "/manager/projects/project-1",
+                "route_path": "/project/project-1",
                 "score": 70,
                 "business_rank": 40,
                 "group_label": "项目",
@@ -49,7 +49,7 @@ async def test_search_global_should_sort_and_group_results(search_service):
                 "subtitle": "AST-001",
                 "summary": "资产结果",
                 "keywords": ["asset_name"],
-                "route_path": "/manager/assets/asset-1",
+                "route_path": "/assets/asset-1",
                 "score": 90,
                 "business_rank": 50,
                 "group_label": "资产",
@@ -61,7 +61,7 @@ async def test_search_global_should_sort_and_group_results(search_service):
                 "subtitle": "external",
                 "summary": "客户结果",
                 "keywords": ["customer_name"],
-                "route_path": "/manager/customers/party-1",
+                "route_path": "/customers/party-1",
                 "score": 60,
                 "business_rank": 30,
                 "group_label": "客户",
@@ -89,7 +89,9 @@ async def test_search_global_should_sort_and_group_results(search_service):
     assert result["total"] == 3
 
 
-async def test_search_assets_should_build_search_result_items(search_service, monkeypatch):
+async def test_search_assets_should_build_search_result_items(
+    search_service, monkeypatch
+):
     monkeypatch.setattr(
         "src.services.search.service.asset_crud.get_multi_with_search_async",
         AsyncMock(
@@ -127,7 +129,7 @@ async def test_search_assets_should_build_search_result_items(search_service, mo
             "subtitle": "AST-001",
             "summary": "上海市测试路 1 号",
             "keywords": ["asset_name"],
-            "route_path": "/manager/assets/asset-1",
+            "route_path": "/assets/asset-1",
             "score": 85,
             "business_rank": 0,
             "group_label": "资产",
@@ -135,7 +137,9 @@ async def test_search_assets_should_build_search_result_items(search_service, mo
     ]
 
 
-async def test_search_projects_should_build_search_result_items(search_service, monkeypatch):
+async def test_search_projects_should_build_search_result_items(
+    search_service, monkeypatch
+):
     monkeypatch.setattr(
         "src.services.search.service.project_service.search_projects",
         AsyncMock(
@@ -172,7 +176,7 @@ async def test_search_projects_should_build_search_result_items(search_service, 
             "subtitle": "PRJ-001",
             "summary": "active",
             "keywords": ["project_name"],
-            "route_path": "/manager/projects/project-1",
+            "route_path": "/project/project-1",
             "score": 85,
             "business_rank": 0,
             "group_label": "项目",

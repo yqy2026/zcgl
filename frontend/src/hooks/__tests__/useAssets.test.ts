@@ -7,13 +7,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { act, createTestQueryClient, renderHookWithProviders, waitFor } from '@/test/test-utils';
 import * as useAssetsHooks from '../useAssets';
 
-vi.mock('@/routes/perspective', () => ({
-  useRoutePerspective: () => ({
-    perspective: 'owner',
-    isPerspectiveRoute: true,
-  }),
-}));
-
 vi.mock('@/utils/queryScope', () => ({
   buildQueryScopeKey: () => 'user:user-1|perspective:owner',
 }));

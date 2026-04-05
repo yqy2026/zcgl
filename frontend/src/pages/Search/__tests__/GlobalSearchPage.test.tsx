@@ -25,7 +25,7 @@ describe('GlobalSearchPage', () => {
           subtitle: 'AST-001',
           summary: '资产结果',
           keywords: ['asset_name'],
-          route_path: '/manager/assets/asset-1',
+          route_path: '/assets/asset-1',
           score: 90,
           business_rank: 50,
           group_label: '资产',
@@ -37,7 +37,7 @@ describe('GlobalSearchPage', () => {
           subtitle: 'external',
           summary: '客户结果',
           keywords: ['customer_name'],
-          route_path: '/manager/customers/party-1',
+          route_path: '/customers/party-1',
           score: 80,
           business_rank: 40,
           group_label: '客户',
@@ -52,10 +52,10 @@ describe('GlobalSearchPage', () => {
 
   it('renders all-view results and supports grouped view switch', async () => {
     renderWithProviders(
-      <Routes>
-        <Route path="/manager/search" element={<GlobalSearchPage />} />
-      </Routes>,
-      { route: '/manager/search?q=测试' }
+        <Routes>
+          <Route path="/search" element={<GlobalSearchPage />} />
+        </Routes>,
+        { route: '/search?q=测试' }
     );
 
     expect(await screen.findByText('测试资产')).toBeInTheDocument();
@@ -70,13 +70,13 @@ describe('GlobalSearchPage', () => {
   });
 
   it('navigates to result route when clicking a result item', async () => {
-    renderWithProviders(
-      <Routes>
-        <Route path="/manager/search" element={<GlobalSearchPage />} />
-        <Route path="/manager/assets/:id" element={<div>Asset Detail</div>} />
-      </Routes>,
-      { route: '/manager/search?q=测试' }
-    );
+      renderWithProviders(
+        <Routes>
+          <Route path="/search" element={<GlobalSearchPage />} />
+          <Route path="/assets/:id" element={<div>Asset Detail</div>} />
+        </Routes>,
+        { route: '/search?q=测试' }
+      );
 
     fireEvent.click(await screen.findByRole('button', { name: '查看资产测试资产详情' }));
 

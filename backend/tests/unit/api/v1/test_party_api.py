@@ -114,7 +114,9 @@ def test_list_parties_should_filter_by_search_code(client, db_session) -> None:
     assert payload[0]["code"] == "ACME-001"
 
 
-def test_list_parties_should_fail_closed_when_user_has_no_bindings(client, db_session) -> None:
+def test_list_parties_should_fail_closed_when_user_has_no_bindings(
+    client, db_session
+) -> None:
     """无绑定时列表接口应 fail-closed 返回空列表。"""
     from src.models.party import Party, PartyType
 
@@ -205,7 +207,9 @@ def test_user_party_bindings_crud_should_work(client, db_session) -> None:
     assert active_response.json() == []
 
 
-def test_party_review_endpoints_should_transition_review_status(client, db_session) -> None:
+def test_party_review_endpoints_should_transition_review_status(
+    client, db_session
+) -> None:
     """主体审核接口应支持提审、通过、驳回三段流转。"""
     from src.models.party import Party, PartyReviewStatus, PartyType
 
@@ -257,8 +261,18 @@ def test_import_parties_should_return_created_and_error_summary(client) -> None:
                 "created_count": 1,
                 "error_count": 1,
                 "items": [
-                    {"index": 0, "status": "created", "party_id": "party-1", "message": None},
-                    {"index": 1, "status": "error", "party_id": None, "message": "主体重复"},
+                    {
+                        "index": 0,
+                        "status": "created",
+                        "party_id": "party-1",
+                        "message": None,
+                    },
+                    {
+                        "index": 1,
+                        "status": "error",
+                        "party_id": None,
+                        "message": "主体重复",
+                    },
                 ],
             }
         ),
@@ -358,7 +372,7 @@ def test_get_customer_profile_should_require_perspective_and_return_profile(
                 "customer_name": "终端租户甲",
                 "customer_type": "external",
                 "subject_nature": "enterprise",
-                "perspective_type": "manager",
+                "binding_type": "manager",
                 "contract_role": "entrusted_operation",
                 "contact_name": "张三",
                 "contact_phone": "13800000000",
@@ -400,6 +414,7 @@ def test_get_customer_profile_should_require_perspective_and_return_profile(
     assert response.status_code == status.HTTP_200_OK
     payload = response.json()
     assert payload["customer_party_id"] == "party-customer-1"
+    assert payload["binding_type"] == "manager"
     assert payload["historical_contract_count"] == 2
     assert payload["risk_tag_items"][1]["source"] == "rule"
     mock_get_customer_profile.assert_awaited_once()
@@ -447,7 +462,9 @@ def test_create_user_party_binding_should_return_400_for_invalid_time_range(
     assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 
-def test_list_parties_should_ignore_legacy_default_org_fallback(client, db_session) -> None:
+def test_list_parties_should_ignore_legacy_default_org_fallback(
+    client, db_session
+) -> None:
     """无绑定时即使存在 legacy default_organization 映射也应 fail-closed。"""
     from src.models.organization import Organization
     from src.models.party import Party, PartyType

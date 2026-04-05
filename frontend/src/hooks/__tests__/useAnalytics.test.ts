@@ -5,17 +5,6 @@ import { createTestQueryClient, renderHookWithProviders, waitFor } from '@/test/
 
 import { useAnalytics } from '../useAnalytics';
 
-const mockUseRoutePerspective = vi.hoisted(() =>
-  vi.fn(() => ({
-    perspective: 'owner',
-    isPerspectiveRoute: true,
-  }))
-);
-
-vi.mock('@/routes/perspective', () => ({
-  useRoutePerspective: () => mockUseRoutePerspective(),
-}));
-
 vi.mock('@/utils/queryScope', () => ({
   buildQueryScopeKey: () => 'user:user-1|perspective:owner',
 }));
@@ -29,13 +18,9 @@ vi.mock('@/services/analyticsService', () => ({
 describe('useAnalytics', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseRoutePerspective.mockReturnValue({
-      perspective: 'owner',
-      isPerspectiveRoute: true,
-    });
   });
 
-  it('应把综合分析 queryKey 绑定到当前视角作用域', async () => {
+  it('应把综合分析 queryKey 绑定到当前数据范围作用域', async () => {
     const queryClient = createTestQueryClient();
 
     renderHookWithProviders(() => useAnalytics({ keyword: '园区' }), { queryClient });
@@ -65,21 +50,5 @@ describe('useAnalytics', () => {
     await waitFor(() => {
       expect(analyticsService.getComprehensiveAnalytics).toHaveBeenCalledWith({ keyword: '园区' });
     });
-  });
-
-  it('在共享路由缺少视角时不应请求综合分析接口', async () => {
-    mockUseRoutePerspective.mockReturnValue({
-      perspective: null,
-      isPerspectiveRoute: false,
-    });
-    const queryClient = createTestQueryClient();
-
-    renderHookWithProviders(() => useAnalytics({ keyword: '园区' }), { queryClient });
-
-    await waitFor(() => {
-      expect(queryClient.getQueryCache().getAll()).toHaveLength(1);
-    });
-
-    expect(analyticsService.getComprehensiveAnalytics).not.toHaveBeenCalled();
   });
 });

@@ -142,7 +142,9 @@ class PartyService:
             )
 
         payload = self._normalize_party_payload(obj_in.model_dump(exclude_unset=True))
-        next_party_type = str(payload.get("party_type", getattr(party, "party_type", "")))
+        next_party_type = str(
+            payload.get("party_type", getattr(party, "party_type", ""))
+        )
         next_name = str(payload.get("name", getattr(party, "name", "")))
         if next_name != str(getattr(party, "name", "")):
             duplicate_by_name = await self._maybe_call_optional_async(
@@ -151,7 +153,9 @@ class PartyService:
                 party_type=next_party_type,
                 name=next_name,
             )
-            if duplicate_by_name is not None and str(duplicate_by_name.id) != str(party.id):
+            if duplicate_by_name is not None and str(duplicate_by_name.id) != str(
+                party.id
+            ):
                 raise DuplicateResourceError(
                     resource_type="主体",
                     field="party_type+name",
@@ -164,7 +168,9 @@ class PartyService:
                 party_type=next_party_type,
                 code=next_code,
             )
-            if duplicate_by_code is not None and str(duplicate_by_code.id) != str(party.id):
+            if duplicate_by_code is not None and str(duplicate_by_code.id) != str(
+                party.id
+            ):
                 raise DuplicateResourceError(
                     resource_type="主体",
                     field="party_type+code",
@@ -181,8 +187,12 @@ class PartyService:
             db,
             party_id=str(party.id),
             action="update",
-            from_status=str(getattr(party, "review_status", PartyReviewStatus.DRAFT.value)),
-            to_status=str(getattr(party, "review_status", PartyReviewStatus.DRAFT.value)),
+            from_status=str(
+                getattr(party, "review_status", PartyReviewStatus.DRAFT.value)
+            ),
+            to_status=str(
+                getattr(party, "review_status", PartyReviewStatus.DRAFT.value)
+            ),
             reason=self._build_update_reason(payload),
         )
         await self._maybe_await_db_call(getattr(db, "commit", None))
@@ -653,7 +663,9 @@ class PartyService:
             raise ResourceNotFoundError("客户", party_id)
 
         contacts = await self.get_contacts(db, party_id=party_id)
-        primary_contact = next((contact for contact in contacts if contact.is_primary), None)
+        primary_contact = next(
+            (contact for contact in contacts if contact.is_primary), None
+        )
         metadata = self._normalize_metadata(getattr(party, "metadata_json", None))
 
         risk_tag_items = self._collect_customer_risk_tags(contracts, metadata)
@@ -663,7 +675,8 @@ class PartyService:
             if str(item).strip() != ""
         }
         contract_summaries = [
-            self._serialize_customer_contract_summary(contract) for contract in contracts
+            self._serialize_customer_contract_summary(contract)
+            for contract in contracts
         ]
         contract_role = self._resolve_primary_contract_role(contracts)
 
@@ -672,13 +685,17 @@ class PartyService:
             "customer_name": str(party.name),
             "customer_type": str(
                 metadata.get("customer_type")
-                or ("internal" if str(party.id) in normalized_effective_party_ids else "external")
+                or (
+                    "internal"
+                    if str(party.id) in normalized_effective_party_ids
+                    else "external"
+                )
             ),
             "subject_nature": str(
                 metadata.get("subject_nature")
                 or self._derive_subject_nature(getattr(party, "party_type", None))
             ),
-            "perspective_type": perspective,
+            "binding_type": perspective,
             "contract_role": contract_role,
             "contact_name": self._normalize_optional_text(
                 metadata.get("contact_name")
@@ -688,7 +705,9 @@ class PartyService:
                 metadata.get("contact_phone")
                 or getattr(primary_contact, "contact_phone", None)
             ),
-            "identifier_type": self._normalize_optional_text(metadata.get("identifier_type")),
+            "identifier_type": self._normalize_optional_text(
+                metadata.get("identifier_type")
+            ),
             "unified_identifier": self._normalize_optional_text(
                 metadata.get("unified_identifier")
             ),
@@ -734,7 +753,9 @@ class PartyService:
             )
         )
         if perspective == "owner":
-            stmt = stmt.where(ContractGroup.owner_party_id.in_(normalized_effective_party_ids))
+            stmt = stmt.where(
+                ContractGroup.owner_party_id.in_(normalized_effective_party_ids)
+            )
         else:
             stmt = stmt.where(
                 ContractGroup.operator_party_id.in_(normalized_effective_party_ids)
@@ -986,7 +1007,9 @@ class PartyService:
         return "enterprise"
 
     @classmethod
-    def _resolve_customer_party_id(cls, contract: Contract, perspective: str) -> str | None:
+    def _resolve_customer_party_id(
+        cls, contract: Contract, perspective: str
+    ) -> str | None:
         relation_type = getattr(contract, "group_relation_type", None)
         normalized_relation_type = (
             relation_type.name if hasattr(relation_type, "name") else str(relation_type)
@@ -999,7 +1022,9 @@ class PartyService:
             )
             return cls._normalize_optional_text(party_value)
         if normalized_relation_type == GroupRelationType.DOWNSTREAM.name:
-            return cls._normalize_optional_text(getattr(contract, "lessee_party_id", None))
+            return cls._normalize_optional_text(
+                getattr(contract, "lessee_party_id", None)
+            )
         if normalized_relation_type == GroupRelationType.ENTRUSTED.name:
             party_value = (
                 getattr(contract, "lessee_party_id", None)
@@ -1008,7 +1033,9 @@ class PartyService:
             )
             return cls._normalize_optional_text(party_value)
         if normalized_relation_type == GroupRelationType.DIRECT_LEASE.name:
-            return cls._normalize_optional_text(getattr(contract, "lessee_party_id", None))
+            return cls._normalize_optional_text(
+                getattr(contract, "lessee_party_id", None)
+            )
         return None
 
     @classmethod
@@ -1042,7 +1069,9 @@ class PartyService:
                 or getattr(contract, "contract_id", "")
             ),
             "group_code": str(getattr(group, "group_code", "")),
-            "revenue_mode": revenue_mode.name if hasattr(revenue_mode, "name") else str(revenue_mode),
+            "revenue_mode": revenue_mode.name
+            if hasattr(revenue_mode, "name")
+            else str(revenue_mode),
             "group_relation_type": relation_type.name
             if hasattr(relation_type, "name")
             else str(relation_type),
@@ -1111,7 +1140,9 @@ class PartyService:
         return result
 
     @staticmethod
-    async def _maybe_call_optional_async(callback: Any, *args: Any, **kwargs: Any) -> Any:
+    async def _maybe_call_optional_async(
+        callback: Any, *args: Any, **kwargs: Any
+    ) -> Any:
         if not callable(callback):
             return None
         result = callback(*args, **kwargs)

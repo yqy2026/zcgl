@@ -31,7 +31,7 @@ describe('SearchService', () => {
             subtitle: 'AST-001',
             summary: '资产结果',
             keywords: ['asset_name'],
-            route_path: '/manager/assets/asset-1',
+            route_path: '/assets/asset-1',
             score: 90,
             business_rank: 50,
             group_label: '资产',
@@ -51,5 +51,6 @@ describe('SearchService', () => {
     });
     expect(result.total).toBe(1);
     expect(result.items[0].object_type).toBe('asset');
+    expect(result.items[0].route_path).toBe('/assets/asset-1');
   });
 });

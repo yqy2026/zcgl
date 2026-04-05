@@ -78,7 +78,7 @@ const CustomerDetailPage: React.FC = () => {
   return (
     <PageContainer
       title={customerProfile?.customer_name ?? '客户详情'}
-      subTitle="客户档案基于当前视角聚合 Party 主档、联系人与合同历史。"
+      subTitle="客户档案基于当前数据范围聚合 Party 主档、联系人与合同历史。"
     >
       <Space orientation="vertical" size="large" style={{ width: '100%' }}>
         <Button
