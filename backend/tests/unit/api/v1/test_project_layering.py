@@ -72,7 +72,9 @@ async def test_project_create_authz_should_include_manager_scope_context() -> No
 
 
 @pytest.mark.asyncio
-async def test_project_create_authz_should_normalize_party_fields_on_input_model() -> None:
+async def test_project_create_authz_should_normalize_party_fields_on_input_model() -> (
+    None
+):
     """创建项目鉴权应将 manager/org 字段归一化回写到入参。"""
     from src.api.v1.assets import project as module
 
@@ -102,7 +104,9 @@ async def test_project_create_authz_should_normalize_party_fields_on_input_model
 
 
 @pytest.mark.asyncio
-async def test_project_create_authz_should_infer_subject_scope_when_request_is_unscoped() -> None:
+async def test_project_create_authz_should_infer_subject_scope_when_request_is_unscoped() -> (
+    None
+):
     """创建项目缺少主体字段时应回退到 subject manager scope。"""
     from src.api.v1.assets import project as module
 
@@ -146,7 +150,9 @@ async def test_project_create_authz_should_infer_subject_scope_when_request_is_u
 
 
 @pytest.mark.asyncio
-async def test_project_create_authz_should_keep_unscoped_sentinel_when_subject_scope_is_empty() -> None:
+async def test_project_create_authz_should_keep_unscoped_sentinel_when_subject_scope_is_empty() -> (
+    None
+):
     """创建项目在无任何主体上下文时应保持 fail-closed 哨兵。"""
     from src.api.v1.assets import project as module
 
@@ -178,11 +184,15 @@ async def test_project_create_authz_should_keep_unscoped_sentinel_when_subject_s
         )
 
     assert result.allowed is True
-    assert result.resource_context["party_id"] == module._PROJECT_CREATE_UNSCOPED_PARTY_ID  # type: ignore[attr-defined]
+    assert (
+        result.resource_context["party_id"] == module._PROJECT_CREATE_UNSCOPED_PARTY_ID
+    )  # type: ignore[attr-defined]
 
 
 @pytest.mark.asyncio
-async def test_project_create_authz_should_backfill_manager_party_id_from_mapped_organization_party() -> None:
+async def test_project_create_authz_should_backfill_manager_party_id_from_mapped_organization_party() -> (
+    None
+):
     """创建项目应通过 organization->party 映射回填 manager_party_id。"""
     from src.api.v1.assets import project as module
 
@@ -219,8 +229,9 @@ async def test_project_create_authz_should_backfill_manager_party_id_from_mapped
 
 
 @pytest.mark.asyncio
-async def test_project_create_authz_should_not_copy_raw_organization_id_into_manager_party_id(
-) -> None:
+async def test_project_create_authz_should_not_copy_raw_organization_id_into_manager_party_id() -> (
+    None
+):
     """organization 映射缺失时不应把原始 organization_id 写入 manager_party_id。"""
     from src.api.v1.assets import project as module
 
@@ -264,7 +275,9 @@ async def test_project_create_authz_should_not_copy_raw_organization_id_into_man
 
 
 @pytest.mark.asyncio
-async def test_project_create_authz_should_use_default_org_scope_when_request_is_unscoped() -> None:
+async def test_project_create_authz_should_use_default_org_scope_when_request_is_unscoped() -> (
+    None
+):
     """创建项目请求未携带 organization_id 时应使用用户默认组织鉴权。"""
     from src.api.v1.assets import project as module
 
@@ -309,7 +322,9 @@ async def test_project_create_authz_should_use_default_org_scope_when_request_is
 
 
 @pytest.mark.asyncio
-async def test_create_project_should_backfill_manager_party_from_authz_context() -> None:
+async def test_create_project_should_backfill_manager_party_from_authz_context() -> (
+    None
+):
     """创建项目端点应基于鉴权上下文兜底回填 manager_party_id。"""
     from src.api.v1.assets import project as module
 
@@ -345,11 +360,16 @@ async def test_create_project_should_backfill_manager_party_from_authz_context()
     assert project_in.manager_party_id == "manager-party-from-authz"
     assert result["id"] == "project-1"
     assert mock_service.create_project.await_args.kwargs["obj_in"] is project_in
-    assert mock_service.create_project.await_args.kwargs["organization_id"] == "org-from-authz"
+    assert (
+        mock_service.create_project.await_args.kwargs["organization_id"]
+        == "org-from-authz"
+    )
 
 
 @pytest.mark.asyncio
-async def test_create_project_should_use_request_organization_id_before_default_organization() -> None:
+async def test_create_project_should_use_request_organization_id_before_default_organization() -> (
+    None
+):
     """创建项目应优先使用请求 organization_id，再回退 default_organization_id。"""
     from src.api.v1.assets import project as module
 
@@ -383,13 +403,17 @@ async def test_create_project_should_use_request_organization_id_before_default_
         )
 
     assert result["id"] == "project-1"
-    assert mock_service.create_project.await_args.kwargs["organization_id"] == "org-request"
+    assert (
+        mock_service.create_project.await_args.kwargs["organization_id"]
+        == "org-request"
+    )
 
 
 @pytest.mark.asyncio
 async def test_get_project_statistics_should_delegate_project_service() -> None:
     """项目统计接口应委托 project_service.get_project_statistics。"""
     from src.api.v1.assets.project import get_project_statistics
+    from src.middleware.auth import DataScopeContext
 
     mock_service = MagicMock()
     mock_service.get_project_statistics = AsyncMock(return_value={"total_projects": 8})
@@ -399,9 +423,13 @@ async def test_get_project_statistics_should_delegate_project_service() -> None:
         result = await get_project_statistics(
             db=MagicMock(),
             current_user=MagicMock(),
-            _perspective_ctx=MagicMock(
-                perspective="manager",
+            _scope_ctx=DataScopeContext(
+                scope_mode="manager",
+                allowed_binding_types=["manager"],
+                owner_party_ids=[],
+                manager_party_ids=["manager-1"],
                 effective_party_ids=["manager-1"],
+                source="header",
             ),
         )
 
@@ -417,6 +445,7 @@ async def test_get_project_statistics_should_delegate_project_service() -> None:
 async def test_get_project_should_delegate_project_service_lookup() -> None:
     """项目详情接口应委托 project_service.get_project_by_id。"""
     from src.api.v1.assets.project import get_project
+    from src.middleware.auth import DataScopeContext
     from src.models.project import Project
 
     project = Project()
@@ -439,9 +468,13 @@ async def test_get_project_should_delegate_project_service_lookup() -> None:
             project_id="project-1",
             db=MagicMock(),
             current_user=MagicMock(),
-            _perspective_ctx=MagicMock(
-                perspective="manager",
+            _scope_ctx=DataScopeContext(
+                scope_mode="manager",
+                allowed_binding_types=["manager"],
+                owner_party_ids=[],
+                manager_party_ids=["manager-1"],
                 effective_party_ids=["manager-1"],
+                source="header",
             ),
         )
 

@@ -22,18 +22,25 @@ async def test_get_ownership_entities_should_delegate_asset_service() -> None:
     """ownership-entities 接口应委托 AsyncAssetService.get_ownership_entity_names。"""
     from src.api.v1.assets import assets as module
     from src.api.v1.assets.assets import get_ownership_entities
+    from src.middleware.auth import DataScopeContext
 
     mock_service = MagicMock()
     mock_service.get_ownership_entity_names = AsyncMock(return_value=["A公司", "B公司"])
 
     with pytest.MonkeyPatch.context() as monkeypatch:
-        monkeypatch.setattr(module, "AsyncAssetService", MagicMock(return_value=mock_service))
+        monkeypatch.setattr(
+            module, "AsyncAssetService", MagicMock(return_value=mock_service)
+        )
         result = await get_ownership_entities(
             db=MagicMock(),
             current_user=MagicMock(),
-            _perspective_ctx=MagicMock(
-                perspective="owner",
+            _scope_ctx=DataScopeContext(
+                scope_mode="owner",
+                allowed_binding_types=["owner"],
+                owner_party_ids=["owner-1"],
+                manager_party_ids=[],
                 effective_party_ids=["owner-1"],
+                source="header",
             ),
         )
 

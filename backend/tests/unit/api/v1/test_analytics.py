@@ -176,10 +176,14 @@ class TestComprehensiveAnalytics:
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-    def test_get_comprehensive_analytics_missing_perspective_header(self, client):
+    def test_get_comprehensive_analytics_should_allow_missing_perspective_header(
+        self, client
+    ):
         response = client.get("/api/v1/analytics/comprehensive")
 
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.status_code == status.HTTP_200_OK
+        payload = response.json()
+        assert payload["success"] is True
 
 
 # ============================================================================

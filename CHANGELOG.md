@@ -2,6 +2,9 @@
 
 ## [Unreleased] - 2026-03-06
 
+### 2026-04-06
+- test(scope): 对齐 perspective residue follow-up 的陈旧测试契约。`backend/tests/unit/api/v1/test_assets_ownership_entities_layering.py`、`backend/tests/unit/api/v1/test_project_layering.py` 已将直调端点夹具从 `_perspective_ctx` 更新为 `_scope_ctx` / `DataScopeContext`；`backend/tests/unit/api/v1/test_analytics.py` 已改为验证 analytics 端点缺省 `X-Perspective` 时自动走 data-scope 并返回 `200`；`frontend/src/components/Layout/__tests__/AppSidebar.test.tsx` 已同步当前菜单结构与折叠态 logo 文本行为，移除对旧“业主/经营视角”菜单残留的过期断言。
+
 ### 2026-04-05
 - refactor(scope): 完成 perspective residue eradication。后端 `backend/src/middleware/auth.py`、`backend/src/services/party_scope.py`、`backend/src/services/search/service.py`、`backend/src/services/party/service.py`、`backend/src/services/contract/contract_group_service.py` 现分别用 `DataScopeContext`、`scope_mode`、`binding_type` 表达请求缩窄和主体绑定语义；前端 `frontend/src/routes/AppRoutes.tsx`、`frontend/src/hooks/useSmartPreload.tsx`、`frontend/src/components/Common/PartySelector.tsx` 已移除 legacy `/owner/*`、`/manager/*` 业务入口与 URL 前缀推断。
 - test(scope): 同步收口前后端 residue 回归。前端多组测试已统一从 `perspective:*` query token 和 legacy 路由夹具切到 `scope:*` 与 flat routes；后端 layering/middleware/service/api 定向回归已更新为 `DataScopeContext` / `require_data_scope_context()` / `build_party_filter_from_scope_context()` 语义。

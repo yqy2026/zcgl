@@ -130,18 +130,22 @@ describe('AppSidebar - 渲染与交互测试', () => {
     renderWithProviders(<AppSidebar collapsed={false} />);
 
     expect(screen.getByText('数据看板')).toBeInTheDocument();
-    expect(screen.getByText('资产管理')).toBeInTheDocument();
-    expect(screen.getByText('业主视角')).toBeInTheDocument();
-    expect(screen.getByText('业主资产')).toBeInTheDocument();
-    expect(screen.getByText('业主合同组')).toBeInTheDocument();
-    expect(screen.getByText('经营视角')).toBeInTheDocument();
-    expect(screen.getByText('经营资产')).toBeInTheDocument();
-    expect(screen.getByText('经营合同组')).toBeInTheDocument();
-    expect(screen.getByText('经营项目')).toBeInTheDocument();
+    expect(screen.getAllByText('资产管理')).toHaveLength(2);
+    expect(screen.getByText('资产列表')).toBeInTheDocument();
+    expect(screen.getByText('合同组管理')).toBeInTheDocument();
+    expect(screen.getByText('权属方管理')).toBeInTheDocument();
+    expect(screen.getByText('产权证管理')).toBeInTheDocument();
+    expect(screen.getByText('项目管理')).toBeInTheDocument();
     expect(screen.getAllByText('旧租赁前端已退休').length).toBeGreaterThan(0);
     expect(screen.getByText('系统管理')).toBeInTheDocument();
-    expect(screen.getByText('用户管理')).toBeInTheDocument();
     expect(screen.getByText('主体管理')).toBeInTheDocument();
+    expect(screen.getByText('用户管理')).toBeInTheDocument();
+    expect(screen.getByText('角色管理')).toBeInTheDocument();
+    expect(screen.getByText('组织架构')).toBeInTheDocument();
+    expect(screen.getByText('字典管理')).toBeInTheDocument();
+    expect(screen.getByText('数据模板')).toBeInTheDocument();
+    expect(screen.getByText('操作日志')).toBeInTheDocument();
+    expect(screen.getByText('数据策略包')).toBeInTheDocument();
   });
 
   it('应该设置选中与展开的菜单Key', async () => {
@@ -157,10 +161,10 @@ describe('AppSidebar - 渲染与交互测试', () => {
     const AppSidebar = (await import('../AppSidebar')).default;
     const { rerender } = renderWithProviders(<AppSidebar collapsed={true} />);
 
-    expect(screen.queryByText('资产管理')).not.toBeInTheDocument();
+    expect(screen.getAllByText('资产管理')).toHaveLength(1);
 
     rerender(<AppSidebar collapsed={false} />);
-    expect(screen.getByText('资产管理')).toBeInTheDocument();
+    expect(screen.getAllByText('资产管理')).toHaveLength(2);
   });
 
   it('点击菜单项应触发导航', async () => {
