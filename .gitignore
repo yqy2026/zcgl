@@ -100,6 +100,8 @@ migration_backup/
 
 # Dependencies
 node_modules/
+node_modules_broken/
+node_modules_broken/
 
 # Build outputs
 dist/
@@ -432,14 +434,30 @@ helm/charts/templates/
 k8s/overlays/
 
 # ============================================================================
-# 14. Claude AI Assistant
+# 14. AI Assistants
 # ============================================================================
 
+# Claude
 .claude/agents/
 .claude/cache/
 .claude/temp/
 .claude/logs/
+.claude/skills/
 tmpclaude-*
+
+# OpenCode / Serena
+.agent/
+.prompts/
+.serena/cache
+
+# OpenCode / Serena
+.agent/
+.prompts/
+.serena/cache
+
+# OpenCode
+.agent/
+.prompts/
 
 # BMad-Method Framework
 .bmad-core/

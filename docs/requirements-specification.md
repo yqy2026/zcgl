@@ -1,7 +1,7 @@
 # 土地物业资产运营管理系统需求规格说明书
 
 ## ✅ Status
-**当前状态**: Active Baseline (2026-03-04)
+**当前状态**: Active Baseline (2026-04-06 评审修订)
 **文档类型**: 唯一需求规格（目标 + 实现状态合并）
 **字段附录**: `docs/features/requirements-appendix-fields.md`
 **模块附录**: `docs/features/requirements-appendix-modules.md`
@@ -42,7 +42,7 @@
 
 ### 3.1 MVP 一票否决目标（未达标不放量）
 - 清晰展示资产基本信息、租赁情况（按合同类型：上游承租/下游转租/委托运营汇总）与客户信息。
-- 建立"合同组"能力，支撑承租模式与代理模式，且二者不混用。
+- 建立"合同组"能力，支撑承租模式与代理模式，且二者不混用。一个资产不允许关联多个合同组。
 - 提供可审计的合同审核/反审核与纠错闭环（作废/冲销 + 重建）。
 - 提供经营统计口径：总收入合计 + 自营租金/代理服务费拆分。
 
@@ -54,13 +54,22 @@
 
 ### 3.3 指标口径定义（MVP）
 - 合同台账自动生成覆盖率（按"应生成条目"口径）：
-  - 统计范围：统计周期内处于生效状态且应生成台账的合同计费条目。
+  - 分母定义（2026-04-06 决策冻结）：仅计入 `lifecycle_status` 为 `ACTIVE`/`EXPIRED`/`TERMINATED` **且** `review_status` 为已审核通过的合同。草稿/待审合同不纳入分母。`ServiceFeeLedger`（代理服务费台账）独立统计，不并入租金台账覆盖率分母。
+  - 统计范围：统计周期内处于上述状态且应生成台账的合同计费条目。
   - 计算公式：`系统自动生成成功条目数 / 应生成条目总数 * 100%`。
-  - 说明：手工补录条目计入"应生成条目总数"，但不计入"自动生成成功条目数"。
+  - 说明：手工补录条目计入"应生成条目总数"，但不计入"自动生成成功条目数"。作废条目（`is_voided = true`）不计入分子和分母。
+- 租金收缴率（2026-04-06 新增冻结）：
+  - 计算公式：`当月实收金额 / 当月应收金额 * 100%`。
+  - 分母定义：当月所有 `ContractLedgerEntry`（仅租金台账）中 `period` 落在当月、且 `is_voided = false` 的 `amount_due` 之和。**不含** `ServiceFeeLedger`（代理服务费另行统计）。
+  - 分子定义：上述条目中 `paid_amount` 之和。
+  - 说明：部分付款条目按实际 `paid_amount` 计入分子，未付款条目 `paid_amount = 0`。
 - 关键报表口径一致性问题（按"已确认问题单"口径）：
   - 判定标准：同一统计周期、同一视角、同一指标在两个及以上系统入口结果不一致，且经产品+业务+数据三方确认。
   - 统计来源：自动化口径校验任务 + 用户上报工单（合并去重后计数）。
   - 统计对象：按自然月统计"新发现并确认"的问题单数量。
+- 多绑定用户数据汇总口径（2026-04-06 决策冻结）：
+  - 用户绑定多个管理主体时，常规列表/搜索展示各主体数据的**并集去重**（按业务实体主键去重，同一资产/合同/台账条目只出现一次）。
+  - 分析/大屏模块按 ViewMode 分口径展示（见 §5.3），不在单一指标卡中混合不同口径的数据。
 
 ---
 
@@ -82,35 +91,85 @@
 - 跨法人多租户隔离产品化（SaaS 多租户）。
 - 高级 BI 建模与自定义分析语言。
 - 不提供用户侧物理删除入口；关键业务记录仅支持逻辑删除/作废。
+- **产权证管理（PropertyCertificate）与权属方管理（Ownership）**：代码中已有 ORM 模型与路由骨架，但 MVP 阶段不纳入正式需求基线、不做功能验收。保留代码不删除，待 vNext 补齐需求后再激活（见 §13）。
 
 ---
 
 ## 5. 角色、数据范围与客户定义
 
-### 5.1 角色与权限模型（RBAC + ABAC）
+> **架构模型**：本系统采用**角色-绑定-视图三维正交模型**，三个维度各自独立、互不纠缠。
+> **最终行为 = 维度① ∩ 维度② → 维度③**
+>
+> | 维度 | 名称 | 职责 | 边界 |
+> |------|------|------|------|
+> | ① RoleContext | 角色 | 你能做什么操作？ | 纯 RBAC + ABAC 权限矩阵，与 Party 无关 |
+> | ② BindingContext | 绑定 | 你属于哪个组织，看哪批数据？ | 纯 Party 过滤（owner_party_ids / manager_party_ids） |
+> | ③ ViewMode | 视图 | 同一数据用什么业务口径解读？ | 仅分析/大屏端点使用，`auto` / `owner` / `manager` |
+>
+> 2026-04-06 架构重构决策确认，详见 `docs/interviews/2026-04-06-architecture-restructure-decisions.md`。
 
-应用基于角色（RBAC）与属性（ABAC）深度结合的权限机制。
+### 5.1 维度①：角色与权限模型（RoleContext）
+
+角色维度仅回答"你能做什么操作"，不涉及"你能看哪批数据"。
 
 #### 1. 角色定义与动态分配
 - **基础推荐与动态化**：系统提供 5 个典型角色模板（运营管理员、权限管理员、业务审核人、管理层、只读查看者）供初始化。但系统核心**鼓励自由新增和修改角色并灵活勾选权限**。
-- **权限粒度**：要求更为细致，严格管控到**按钮与接口级别（Action-level）**，前端依行为编码掩藏元素，后端以 action validation 防守接口。
+- **权限粒度**：严格管控到**按钮与接口级别（Action-level）**，前端依行为编码掩藏元素，后端以 action validation 防守接口。
+- **权限管理员（perm_admin）隔离**：权限管理员仅可管理用户、角色、权限配置，**不可查看任何业务数据**（资产、合同、台账、客户、统计等）。（2026-04-06 Q6 决策）
 
-#### 2. 多角色叠加机制与控制防线
+#### 2. 多角色叠加机制
 - **多角色并集（Union）**：单个用户允许多角色叠加，基础可执行指令为各角色权限之并集。
-- **拒绝优先（Deny Overrides）**：当遇到权限设定有重叠或冲突时，显式的“拒绝（Deny）”策略优先级高于“允许（Allow）”。
-- **职责分离（SoD, Separation of Duties）**：系统在核心流程或配置操作上保证相斥界限，例如制单人员不能审核自身单据、提权审核与业务审核隔离。
-- **ABAC 引入**：同时依靠上下文环境属性（如目标资源状态、来源情况）展开动态过滤。
+- **ABAC 引入（MVP 必须）**：依靠上下文环境属性（如目标资源状态、来源情况）展开动态过滤。ABAC 策略模板需在 MVP 阶段激活并绑定角色（`abac_role_policies` 种子化），不得仅 fallback 到 RBAC。（2026-04-06 Q4 决策）
+- **拒绝优先（Deny Overrides）**：vNext 候选（见 §13）。MVP 阶段暂不要求显式 Deny 策略。（2026-04-06 Q3 决策）
+- **职责分离（SoD）**：vNext 候选（见 §13）。MVP 阶段暂不要求制单人/审核人互斥等 SoD 约束。（2026-04-06 Q3 决策）
 
-#### 3. 角色与数据主体（Party）相互作用
-- **受作用域约束（严格交集）**：用户具备某功能的先决前提是角色赋予了该操作点，而**作用范围**受限于 5.2 节所定义的主体（Party）绑定。这两者是严格交集。由于隔离不能越界，具备该功能不代表可在非授权 Party 执行。
-- **全局或集团特例**：被允许为“集团管理员”的宏观访问账号可穿透隔离壁垒，不再受限于特定 Party 绑定。
+#### 3. 角色与数据主体（Party）的关系
+- **严格交集**：用户执行操作的先决条件是角色赋予了该操作点（维度①），**且**作用范围在其主体绑定（维度②）覆盖之内。两者取严格交集。
+- **全局或集团特例**：集团管理员可穿透绑定隔离壁垒，不受特定 Party 绑定约束。
 
-### 5.2 数据范围与身份机制
+#### 4. ABAC 最小授权策略矩阵（MVP 种子化基线）
+
+> 来源：从代码 `alembic/20260219_phase2_seed_data_policy_packages.py` 和 `services/authz/data_policy_service.py` 提取。
+
+| 策略名 | 展示名 | Effect | Priority | 条件模板 | 适用说明 |
+|--------|--------|--------|----------|----------|----------|
+| `platform_admin` | 平台管理员 | allow | 10 | `ALLOW_ALL`（恒真） | 全量数据访问，不受 Party 范围约束 |
+| `no_data_access` | 无数据访问 | **deny** | **5** | `ALLOW_ALL`（恒真） | 阻断一切数据访问；用于权限管理员（`perm_admin`）隔离业务数据 |
+| `asset_owner_operator` | 产权方运营 | allow | 20 | `OWNER_SCOPE` | 按 `owner_party_id` 过滤，读写权限 |
+| `asset_manager_operator` | 经营方运营 | allow | 30 | `MANAGER_SCOPE` | 按 `manager_party_id` 过滤，读写权限 |
+| `dual_party_viewer` | 双维度只读 | allow | 40 | `DUAL_SCOPE` | owner OR manager 范围的只读视图 |
+| `project_manager_operator` | 项目运营 | allow | 50 | `MANAGER_SCOPE` | 项目资源读写 + 其他资源只读 |
+| `audit_viewer` | 审计只读 | allow | 60 | `DUAL_SCOPE` | 审计视角只读 |
+
+**条件模板语义**：
+- `ALLOW_ALL`：`{"==": [1, 1]}`（恒真，匹配任何资源）。
+- `OWNER_SCOPE`：检查 `resource.owner_party_id ∈ subject.owner_party_ids`，资源无 owner 字段时 fail-closed 拒绝。
+- `MANAGER_SCOPE`：检查 `resource.manager_party_id ∈ subject.manager_party_ids`，资源无 manager 字段时 fail-closed 拒绝。
+- `DUAL_SCOPE`：`OWNER_SCOPE ∪ MANAGER_SCOPE`，任一匹配即通过。
+
+**覆盖资源类型**（27 种）：`asset`, `project`, `contract_group`, `contract`, `party`, `analytics`, `property_certificate`, `ownership`, `occupancy`, `custom_field`, `task`, `operation_log`, `backup`, `collection`, `contact`, `dictionary`, `enum_field`, `history`, `llm_prompt`, `notification`, `role`, `user`, `organization`, `excel_config`, `system_monitoring`, `error_recovery`, `system_settings`。
+
+**评估优先级**：Priority 数值越小越优先。同 Priority 下 deny 优先于 allow。无匹配规则时默认拒绝（deny-by-default）。
+
+**RBAC 回退**：若 ABAC 未匹配任何规则且静态 RBAC 权限存在，则按 RBAC 授权（`rbac_permission_fallback`）。
+
+**代码证据**：
+- 策略模型：`backend/src/models/abac.py`（`ABACPolicy` / `ABACPolicyRule` / `ABACRolePolicy`）
+- 评估引擎：`backend/src/services/authz/engine.py`（`AuthzEngine.evaluate_with_reason()`）
+- 编排服务：`backend/src/services/authz/service.py`（`AuthzService.check_access()` 含 L1/L2 缓存）
+- 中间件集成：`backend/src/middleware/auth.py`（`AuthzPermissionChecker` + `require_authz()` 工厂）
+- 种子数据：`backend/alembic/versions/20260219_phase2_seed_data_policy_packages.py`
+- 策略模板：`backend/src/services/authz/data_policy_service.py`（`DATA_POLICY_TEMPLATES`）
+
+### 5.2 维度②：数据范围与绑定机制（BindingContext）
 
 > 2026-04-03 业务访谈确认，替代原"全局视角切换"设计。
+> 2026-04-06 架构重构决策进一步明确行为矩阵。
+
+绑定维度仅回答"你属于哪个组织，看哪批数据"，不涉及操作权限判定。
 
 #### 核心规则
-- 数据范围由用户的**主体绑定（UserPartyBinding）**自动决定，不需要用户手动选择或切换。
+- 数据范围由用户的**主体绑定（UserPartyBinding）**自动决定，不需要用户手动选择或切换。统计口径视图由 ViewMode 控制（见 §5.3）。
 - 每个用户通过绑定关系关联到一个或多个 Party，绑定类型为 `owner`（产权方）或 `manager`（运营方/经营方）。
 - 系统根据绑定类型自动确定数据过滤方式：
   - `owner` 绑定：按 `owner_party_id` 过滤资产、合同、台账等。
@@ -122,41 +181,68 @@
 - 运营方用户可跨产权方查看自己管理的所有资产（同一 manager_party_id 下的全部资产）。
 - 产权方用户只看到自己名下的资产及其被管理情况（合同、租户、台账、项目、出租率）。
 
-#### 多绑定用户
-- 当用户同时绑定了 `owner` 和 `manager` 类型的 Party 时，系统展示该用户所有有权限数据的**并集**，不需要手动切换。
-- 菜单项取所有绑定类型的并集。
+#### 多绑定用户行为矩阵
+
+| 场景 | 行为 |
+|------|------|
+| 常规列表（资产/合同/客户） | 展示所有绑定类型的数据**并集**，按业务实体主键去重（§3.3 口径冻结） |
+| 统计/分析/大屏 | 按绑定类型**分区**展示（见 §5.3 ViewMode） |
+| 菜单可见性 | 取所有绑定类型的**并集** |
+
+- 禁止在单一指标卡内将产权方口径与运营方口径强行混合。
 
 #### 管理员与审计角色
 - 系统管理员（集团资产部）和外部审计用户可查看全部数据，不受主体绑定约束。
 
 #### 菜单可见性
-- 菜单项的显示/隐藏由**角色权限（RBAC）**控制，管理员可灵活配置。
+- 菜单项的显示/隐藏由**角色权限（RBAC，维度①）**控制，管理员可灵活配置。
 - 系统不按绑定类型硬编码菜单可见性。
-
-#### 统计口径
-- 产权方用户：
-  - 承租模式收入 = 来自运营方的内部租金。
-  - 代理模式收入 = 来自终端租户的租金。
-- 运营方用户：
-  - 承租模式 = 终端租金收入 + 承租租金支出。
-  - 代理模式 = 服务费收入。
-- 统计口径由用户的绑定类型自动确定，不需要手动指定。
-- 集团汇总视图为 vNext 候选需求（见 §13），MVP 不纳入。
 
 #### 组织规模参考
 - 集团下 20+ 个产权方主体，4-5 个运营方主体。
 - 运营方与产权方的管理关系有交叉重叠（同一产权方的不同资产可分属不同运营方管理）。
 - 同一个资产不会同时被两个运营方管理。
 
-### 5.3 客户定义（强制口径）
+### 5.3 维度③：统计口径视图（ViewMode）
+
+> 2026-04-06 架构重构决策新增。
+
+视图维度仅回答"同一数据用什么业务口径解读"，仅在分析/大屏端点使用。
+
+#### ViewMode 取值
+- `auto`（默认）：系统根据用户绑定类型自动选择口径。单绑定用户直接使用对应口径，双绑定用户默认使用其主要角色绑定的口径。无绑定用户（如集团管理员）使用全量数据口径，不做 Party 维度过滤。
+- `owner`：产权方口径。
+- `manager`：运营方口径。
+
+#### API 契约（计划变更）
+- **废弃**：`X-Perspective` HTTP header（当前实现）。
+- **替代**：`?view_mode=owner` 或 `?view_mode=manager` query parameter，仅分析/大屏端点接受。
+- 常规 CRUD 端点不使用 `view_mode`，数据过滤完全由维度②（BindingContext）自动完成。
+- 过渡期：后端同时兼容 header 和 query param，header 标记为 deprecated。
+
+#### 大屏 UX（双绑定用户）
+- **单绑定用户**：隐藏切换组件，直接展示对应口径。
+- **双绑定用户**：大屏顶部中间展示 `[ 产权方口径 | 运营方口径 ]` Segment 切换器，默认激活其主要角色的那一侧。
+
+#### 统计口径定义
+- 产权方口径（`view_mode=owner`）：
+  - 承租模式收入 = 来自运营方的内部租金。
+  - 代理模式收入 = 来自终端租户的租金。
+- 运营方口径（`view_mode=manager`）：
+  - 承租模式 = 终端租金收入 + 承租租金支出。
+  - 代理模式 = 服务费收入。
+- 集团汇总视图为 vNext 候选需求（见 §13），MVP 不纳入。
+
+### 5.4 客户定义（强制口径）
 - 客户不是固定身份，而是"合同对方主体"。
+- 快照原则（Snapshot）：历史已生效的老合同（台账与详情页等）必须固化保留归档签署时的原汁原味名称。Party 主档后续的工商名称变更不再追溯覆盖过往的单据快照。
 - 同一主体可在不同合同中扮演不同角色（如运营管理方、承租方、出租方）。
-- 所有客户展示必须包含：`客户名称 + 合同角色`。
-- 同一主体可出现多条客户记录，列表唯一键为 `party_id + contract_role`。
+- **客户列表唯一键（2026-04-06 决策冻结）**：改为仅用 `party_id`，同一主体合并为单行，通过多角色 Tag 标签展示其所有合同角色（如 `[承租方] [出租方]`）。理由：MDM 最佳实践，一家公司在系统中应有唯一经营总览视图。
+- 客户详情页使用 Tab 选项卡拆分不同业务角色的合同列表和统计信息。
 - UI 必须显式展示"合同角色标签"，避免同名主体误判为重复数据。
 
-### 5.4 核心场景
-- 场景 S1：资产详情页一屏展示资产基本信息、租赁情况（按合同类型汇总：上游承租/下游转租/委托运营）、客户摘要。
+### 5.5 核心场景
+- 场景 S1：资产详情页一屏展示资产基本信息、租赁情况（按合同类型汇总：上游承租/下游转租/委托运营/直租）、客户摘要。
 - 场景 S2：项目详情页汇总当前有效资产并展示同口径租赁与客户信息。
 - 场景 S3：承租模式与代理模式按合同组管理，支持关键合同联审。
 - 场景 S4：统计页展示总收入合计及自营租金/代理服务费拆分。
@@ -208,7 +294,7 @@
   - `backend/tests/unit/test_req_ast_002.py`（9 个单元测试）
   - `backend/alembic/versions/20260311_req_ast_002_active_project_unique.py`
 
-#### REQ-AST-003 关键主数据支持审核与反审核 ✅
+#### REQ-AST-003 关键主数据支持审核与反审核 🚧
 - 描述：资产等关键主数据需支持审核状态流转。
 - **技术方案**：`docs/archive/backend-plans/2026-03-11-req-ast-003-asset-review.md`
 - 验收：
@@ -217,7 +303,7 @@
   - 审核态（APPROVED/PENDING）关键字段变更受控：禁止编辑一切业务字段，需先反审核。
   - 审核状态机：DRAFT → PENDING → APPROVED，PENDING → DRAFT（驳回），APPROVED → REVERSED（反审核），REVERSED → PENDING（重提审）。
   - 每次状态转换写入 `AssetReviewLog` 审计日志。
-  - 合同提审时关联资产未审核仅软警告（不阻断）。
+  - 合同提审时关联的资产必须为已审核状态（强化阻断；因本物业系统在现阶段主要作为“审批后真实合同信息的归档补录”，必须保证前置主数据确权）。
 - 代码证据：
   - `backend/src/models/asset.py`（`AssetReviewStatus.REVERSED` + `review_logs` 关系）
   - `backend/src/models/asset_review_log.py`（`AssetReviewLog` 审计日志模型）
@@ -244,8 +330,9 @@
     - 代理模式（`revenue_mode = agency`）：
       - `group_relation_type = 委托`（委托协议）：运营方与产权方签署，运营方为受托管理方；内部入约合同。
       - `group_relation_type = 直租`（直租合同）：产权方与终端租户直接签署，运营方代为管理；对外出约合同。
-  - MVP 约束：一个资产只属于一种运营模式（承租或代理），禁止混用，不做系统强制校验，依赖录入规范。
+  - MVP 约束：一个资产对应一个合同组、一种运营模式结构（承租或代理）。系统强制拦截模式混合录入。（2026-04-06 Q1 决策确认）
   - 各类型分别展示：合同数量、租用/管理面积、月度金额合计。
+  - **多资产合同金额口径（2026-04-06 决策冻结）**：金额和台账以**合同级**为准，不做资产级金额分摊。资产详情页展示关联合同的完整合同级金额，UI 对跨资产合同标注"合同级口径"角标。汇总行对同一合同仅计一次（按 `contract_id` 去重），避免重复累加。台账按资产查询时返回关联合同的完整台账条目，不按面积比例拆分金额。
   - 汇总行展示：总合同数、总出租/管理面积、出租率（`已出租面积 / 可出租面积`）。
   - 客户摘要展示：**仅展示对外出约合同的对方承租方**（`下游`、`直租` 的 `lessee_party_id` 对应名称）；内部入约合同（`上游`、`委托`）不计入客户摘要。
   - 注：`ContractType` 旧枚举（`LEASE_UPSTREAM/LEASE_DOWNSTREAM/ENTRUSTED`）已废弃（见附录 §10.1），不以此为分类依据。
@@ -313,7 +400,9 @@
 - 验收：
   - 合同组至少包含：经营模式、运营方、产权方、状态、生效区间、关联资产、上下游合同、结算规则、收入归集口径、分润规则、风险标签。
   - `分润规则` 在 MVP 阶段仅要求结构化留存与版本化，不要求自动分润计算。
-  - 一个合同组只能属于一种经营模式（承租或代理），禁止混用。
+  - 一个合同组对应一种经营模式（承租或代理），**不允许混合**。`validate_revenue_mode_compatibility()` 校验保留。（2026-04-06 Q1 决策确认）
+  - **一个资产不允许关联多个合同组**。（2026-04-06 Q1 决策新增）
+  - 合同组业务定义：一个上游合同 + 对应的一个或多个下游合同。上游合同（产权方和运营方之间的）才有承租和代理的模式区别。（2026-04-06 Q1 决策新增）
 - 字段映射（附录 v0.3 / 3.3 ContractGroup）：
   - `group_code`：按经营主责方编码段生成（承租/代理均按运营方）。
 - 代码证据（M1–M3 已完成）：
@@ -325,7 +414,7 @@
   - API 端点：`backend/src/api/v1/contracts/contract_groups.py`（`/api/v1/contract-groups/*`，`/api/v1/contracts/*`）
   - 单元测试：`backend/tests/unit/services/contract/test_contract_group_service.py`、`backend/tests/unit/api/v1/test_contract_groups_layering.py`
 
-#### REQ-RNT-002 承租模式与代理模式并行支持 ✅
+#### REQ-RNT-002 承租模式与代理模式并行支持 🚧
 - 描述：系统需同时支持两种现实经营模式，通过 `ContractGroup.revenue_mode` + `Contract.group_relation_type` 覆盖完整业务结构。
 - 验收：
   - 承租模式（`revenue_mode = lease`）：
@@ -336,8 +425,8 @@
     - `group_relation_type = 委托`：运营方与产权方签署，运营方为受托管理方；为内部入约合同。对应 `AgencyAgreementDetail`。
     - `group_relation_type = 直租`：产权方与终端租户直接签署，运营方代为管理；为对外出约合同。对应 `LeaseContractDetail`。
     - 终端租户（`直租` 合同的 `lessee_party`）在资产详情客户摘要中可见。
-  - MVP 约束：一个合同组（ContractGroup）只能属于一种运营模式，禁止混用。
-  - 代理模式数据在运营视角下可见，且必须标注"代理口径，非自营出租"。
+  - MVP 约束：一个合同组（ContractGroup）对应一种运营模式（承租或代理），**不允许混合**。`validate_revenue_mode_compatibility()` 强制拦截不匹配的 `group_relation_type`。（2026-04-06 Q1 决策确认，方案 3 "解除经营模式校验锁"已撤回）
+  - 代理模式数据在运营方口径下可见，且必须标注"代理口径，非自营出租"。
 - 字段映射（附录 v0.3 / §3.3 ContractGroup + §3.4 Contract）：
   - `ContractGroup.revenue_mode`：`lease`(承租模式) / `agency`(代理模式)。
   - `Contract.group_relation_type`：`上游` / `下游` / `委托` / `直租`。
@@ -360,6 +449,31 @@
   - 合同组状态为派生只读字段 `derived_status`，由组内合同状态实时计算：`筹备中`（组内无生效合同）/ `生效中`（存在至少一份生效合同）/ `已结束`（全部合同已到期或已终止）。不允许手工写入。
   - 合同状态最小集为：`草稿 -> 待审 -> 生效 -> 已到期 / 已终止`。审核在合同级进行，不在组级进行。
   - `已到期` 表示按合同自然到期结束；`已终止` 表示提前解约或提前终止。二者互斥。
+
+##### 合同状态机总表
+
+| 当前状态 | 触发动作 | 目标状态 | 前置条件 | 副作用 |
+|----------|----------|----------|----------|--------|
+| `草稿` | `submit_review` | `待审` | sign_date 必填；关联 Party 须已审核 | 写 ContractAuditLog；可触发组联审 |
+| `待审` | `approve` | `生效` | 审核人操作 | 写 ContractAuditLog；触发台账生成（ContractLedgerEntry） |
+| `待审` | `reject` | `草稿` | 审核人操作；reason 必填 | 写 ContractAuditLog |
+| `生效` | 自然到期 | `已到期` | `effective_to <= 当前日期` | 停止未来台账生成；历史台账只读 |
+| `生效` | `terminate` | `已终止` | reason 必填 | 写 ContractAuditLog；停止台账执行；保留终止原因 |
+| `生效` | `start_correction` | 新合同`草稿` + 原合同`反审核` | 纠错链路 | 原合同台账作废；新草稿合同继承原合同信息 |
+| `生效` | `void` | `草稿`（作废标记） | 无台账或台账全作废 | 写 ContractAuditLog |
+
+> **续签说明**：续签不是状态转换，而是业务操作——在同一合同组下创建新合同（`草稿`），通过 `ContractRelation`（`relation_type = renewal`）链接前合同。前合同自然到期后变为 `已到期`，新合同独立走审批流程。代码证据：`get_renewal_parent_contract()` in `crud/contract_group.py`。
+
+##### 审批域联动：审批状态 → 合同审核/业务状态映射
+
+| 审批动作 | 审批实例状态 | 合同 review_status | 合同 lifecycle status |
+|----------|-------------|-------------------|----------------------|
+| start（发起审批） | `pending` | `待审` | 不变 |
+| approve（审批通过） | `approved` | `已审` | `生效` |
+| reject（审批驳回） | `rejected` | `草稿` | 不变 |
+| withdraw（撤回） | `withdrawn` | `草稿` | 不变 |
+
+> 注：项目审批联动见 REQ-PRJ-001（`draft/pending/approved/rejected`，不支持反审核）。资产审批联动见 REQ-AST-003 和 REQ-APR-001。
 - 字段映射（附录 v0.3 / 3.3 ContractGroup）：
   - `settlement_rule`：最小必填键固定为 `version/cycle/settlement_mode/amount_rule/payment_rule`。
 - 代码证据：
@@ -403,6 +517,7 @@
   - **M2 范围（台账核心正确性）**：
     - 初次生成：合同 `status` 变为 `生效`（ACTIVE）时，由 `approve()` 在同一事务内按 `ContractRentTerm` 展开自然月生成 `ContractLedgerEntry`（对齐附录 §11.2）。
     - 跨合同聚合查询：支持按资产、主体、时间区间跨合同查询台账条目。
+    - **多资产合同台账口径**：按资产查询台账时，返回该资产关联的所有合同的完整台账条目（合同级口径，不按面积拆分）。项目/主体汇总时按 `contract_id + period` 去重，同一合同条目不重复累加。
     - 批量状态更新：支持按合同批量更新支付状态（`payment_status` + `paid_amount`）。
     - 变更重算：金额/周期/计费规则变更并重新生效后，仅对受影响区间作废并重建。
   - **M3 范围（运营增强）**：
@@ -428,7 +543,7 @@
 - 验收：
   - 基础信息：名称、客户类型、联系人、联系电话、统一标识、地址、状态。
   - 增强信息：历史签约记录、风险标签、账期偏好。
-  - 风险标签支持"人工标注 + 规则自动标注"双来源，并保留来源与更新时间。
+  - 风险标签 MVP 仅支持**人工标注**，不做规则自动标注（2026-04-06 评审决策：MVP 降级，"规则自动标注"移入 vNext）。标签保留来源字段（`source`）与更新时间，为后续自动化预留接口。
   - 资产/项目页展示摘要，客户详情页展示全量。
 - 字段映射（附录 v0.3 / 3.5 CustomerProfile）：
   - `subject_nature` / `identifier_type` / `unified_identifier`：企业与个人标识差异化校验与去重。
@@ -448,7 +563,7 @@
 - 描述：客户统计需同时反映主体规模与合同规模。
 - 验收：
   - 同时展示"客户主体数"和"客户合同数"。
-  - 支持按合同类型（上游承租/下游转租/委托运营）维度拆分。
+  - 支持按合同类型（上游承租/下游转租/委托运营/直租）维度拆分。
 - 代码证据：
   - `backend/src/services/analytics/analytics_service.py`（`customer_entity_count` / `customer_contract_count` 与三类合同维度拆分）
   - `backend/src/services/analytics/analytics_export_service.py`（客户统计拆分导出映射）
@@ -466,7 +581,8 @@
 #### REQ-SCH-001 全局搜索入口与对象范围 ✅
 - 描述：系统需提供统一全局搜索入口，并保留模块内搜索。
 - 验收：
-  - MVP 全局搜索覆盖：资产、项目、合同组、合同、客户、产权证。
+  - MVP 全局搜索覆盖：资产、项目、合同组、合同、客户。
+  - 产权证搜索能力随产权证模块整体移入 vNext（见 §4.2）。
   - 任务、通知搜索能力列入 V1.1 范围（非 MVP 验收阻塞项）。
   - 统一入口与模块内搜索并存。
 - 代码证据：
@@ -488,7 +604,8 @@
 - 描述：搜索结果需支持多视图浏览与业务友好排序。
 - 验收：
   - 支持"全部视图"和"按对象分组视图"切换。
-  - 默认排序为"相关度优先 + 业务置顶规则"。
+  - 默认排序为"相关度优先 + 业务置顶规则"：先按文本匹配 `score` 降序，同分时按 `business_rank` 降序（业务置顶规则：ACTIVE 合同 > 正常资产 > 其他）。
+  - 分页参数：默认 `page_size = 20`，最大 `100`。
 - 代码证据：
   - `backend/src/services/search/service.py`（`score + business_rank` 默认排序、对象分组汇总）
   - `frontend/src/pages/Search/GlobalSearchPage.tsx`（全部视图 / 按对象分组切换）
@@ -499,10 +616,10 @@
 - 描述：搜索结果必须严格受权限约束。
 - 验收：
   - 未授权对象完全不返回。
-  - 权限判定基于用户主体绑定的数据范围。
+  - 权限判定基于用户主体绑定的数据范围（维度②）。
 - 代码证据：
   - `backend/src/services/authz/resource_perspective_registry.py`（`search` 资源视角注册）
-  - `backend/src/api/v1/search.py`（可选 `X-Perspective` 请求契约；缺失时自动走并集数据范围）
+  - `backend/src/api/v1/search.py`（当前实现：可选 `X-Perspective` 请求契约；缺失时自动走并集数据范围。**计划变更**：`X-Perspective` 将废弃，搜索端点不使用 `view_mode`，数据过滤完全由 BindingContext 自动完成，见 §5.3）
   - `backend/src/services/search/service.py`（按当前数据范围与作用域 fail-closed 聚合结果）
   - `backend/tests/unit/api/v1/test_search_api.py`
   - `backend/tests/unit/services/search/test_search_service.py`
@@ -526,11 +643,12 @@
   - `backend/tests/unit/api/v1/test_roles_permission_grants.py`
 
 #### REQ-AUTH-002 数据范围上下文自动注入 ✅
-- 描述：所有业务请求自动携带数据范围上下文（基于用户主体绑定），无需手动选择。
+- 描述：所有业务请求自动携带数据范围上下文（基于用户主体绑定，维度②），无需手动选择。分析/大屏端点通过 `view_mode` query param 指定统计口径（维度③）。
 - 验收：
   - 业务查询、统计、搜索均按用户主体绑定的数据范围过滤。
-  - 多绑定用户展示所有有权限数据的并集。
+  - 多绑定用户在常规列表中展示业务模块的并集，非数据的并集，特别在数据看板与分析模块按 ViewMode 隔离查看（见 §5.3）。
   - 管理员/审计用户不受主体绑定约束，可查看全部数据。
+  - **计划变更**：`X-Perspective` HTTP header 将废弃，分析/大屏端点改用 `?view_mode=owner|manager` query param（见 §5.3）。常规 CRUD 端点数据过滤完全由 BindingContext 自动完成。
 - 代码证据：
   - `backend/src/services/authz/resource_perspective_registry.py`
   - `backend/src/services/authz/service.py`
@@ -574,16 +692,23 @@
 - 验收：
   - 单文件与批量文件都可追踪处理状态。
   - 抽取失败可回退人工修正。
+  - **异常流程闭环（2026-04-06 评审补充）**：
+    - 失败重试：抽取失败的文件支持手动触发重试（同文件、同参数），重试次数上限由配置控制（默认 3 次）。
+    - 人工修正：AI 抽取结果可在确认落库前逐字段人工修正；修正后标记 `source = manual_correction`，与 AI 抽取结果并存以供审计。
+    - 超时处理：单文件抽取超时（默认 120s）自动标记为 `timeout`，进入失败队列等待重试或人工处理。
+    - 批量状态汇总：批量导入任务提供整体进度（成功/失败/处理中计数），失败文件可单独筛选和批量重试。
 - 代码证据：
   - `backend/src/api/v1/documents/pdf_import.py`
   - `backend/src/api/v1/documents/pdf_upload.py`
   - `backend/src/api/v1/documents/pdf_batch_routes.py`
 
-#### REQ-ANA-001 经营分析与导出 ✅
+#### REQ-ANA-001 经营分析与导出 🚧
 - 描述：提供可直接用于经营决策的分析能力。
 - 验收：
-  - 提供总收入合计并强制拆分"自营租金收入/代理服务费收入"。
+  - 提供总收入合计并强制拆分"自营租金收入/代理服务费收入"；不仅提供应收台账额，必须增加"当月实收"总计与「租金收缴率」统计双向指标（口径定义见 §3.3）。
   - 提供客户双指标（主体数/合同数）。去重口径：`customer_entity_count`（客户主体数）按 `customer_party_id` 去重；`customer_contract_count`（客户合同数）按 `contract_id` 去重。
+  - 多绑定用户汇总口径：常规列表按实体主键并集去重，分析/大屏按 ViewMode 分口径（见 §3.3 + §5.3）。
+  - 多资产合同金额口径：按合同级统计，不做资产级拆分；项目/主体维度汇总时按 `contract_id` 去重（见 REQ-AST-004 口径冻结）。
   - 支持结果导出并标记统计口径版本。
 - 代码证据：
   - `backend/src/api/v1/analytics/analytics.py`
@@ -657,6 +782,32 @@
   - `backend/tests/unit/services/approval/test_approval_service.py`
   - `backend/tests/unit/api/v1/test_approval_api.py`
 
+### 6.10 系统管理域
+
+#### REQ-SYS-001 用户与角色管理 📋
+- 描述：系统需提供用户账号的全生命周期管理（创建、编辑、启停用、密码重置）以及角色的灵活定义与分配能力。
+- 验收：
+  - 支持用户 CRUD、批量启停用。
+  - 支持自定义角色并灵活勾选权限（按钮与接口级 Action-level）。
+  - 单用户可分配多角色，权限取并集（见 §5.1）。
+  - 权限管理员（`perm_admin`）仅可管理用户/角色/权限配置，不可查看任何业务数据。
+- 代码证据：待补充（代码已存在：`backend/src/api/v1/auth/roles.py`、`backend/src/models/auth.py`、`backend/src/models/rbac.py`、`frontend/src/pages/System/`）
+
+#### REQ-SYS-002 组织架构管理 📋
+- 描述：系统需支持组织架构的维护，作为用户归属与数据范围绑定的基础设施。
+- 验收：
+  - 支持组织的 CRUD。
+  - 组织与 Party 主档可建立关联。
+  - 用户-主体绑定（UserPartyBinding）通过组织管理维护（见 §5.2）。
+- 代码证据：待补充（代码已存在：`backend/src/api/v1/auth/organization.py`、`frontend/src/pages/System/`）
+
+#### REQ-SYS-003 数据字典管理 📋
+- 描述：系统需提供统一的数据字典管理能力，支撑枚举字段、下拉选项等基础数据的集中维护。
+- 验收：
+  - 支持字典分类、字典项 CRUD。
+  - 业务表单的枚举选项从字典服务获取，前端不硬编码。
+- 代码证据：待补充（代码已存在：`backend/src/api/v1/system/dictionaries.py`）
+
 ---
 
 ## 7. 跨模块约束
@@ -683,6 +834,7 @@
 - PII 字段必须字段级加密存储（生产强制）。
 - 会话凭证必须使用 HttpOnly Cookie，并带 `SameSite` 策略。
 - CORS 必须允许 `Authorization`、`X-CSRF-Token` 等关键请求头。
+- **CSRF 防护（2026-04-06 评审补充）**：所有状态变更请求（POST/PUT/PATCH/DELETE）必须携带 CSRF token。实现机制：后端 `CSRFMiddleware` 签发双重 token（cookie + header），前端 `client.ts` 自动从 cookie 读取并注入 `X-CSRF-Token` 请求头。安全读取端点（GET/HEAD/OPTIONS）豁免校验。代码证据：`backend/src/middleware/security_middleware.py`（`CSRFMiddleware`）、`backend/src/security/cookie_manager.py`、`backend/src/core/config_security.py`、`frontend/src/api/client.ts`。
 - 关键操作必须记录审计日志（含操作者、时间、对象、动作）。
 - 关键业务记录默认禁止物理删除。
 - 生产环境禁止弱密钥与部分降级配置。
@@ -693,12 +845,19 @@
 - 全局搜索 P95 响应时间 <= 2s（默认分页）。
 - 批量导入任务应支持异步执行与进度查询。
 - 性能基线数据量（MVP 估算）：资产 <= 5,000，合同组 <= 10,000，合同 <= 20,000，台账 <= 500,000，客户 <= 10,000。
+- **性能基准前提条件（2026-04-06 评审补充）**：以上 P95 指标基于 PostgreSQL 单实例、无外部缓存命中、标准分页（`page_size <= 50`）、单租户场景。Redis 缓存命中时指标应更优。超出基线数据量时需重新评估或引入分区/分库方案。
 
-### 8.3 可用性与可维护性
-- 全局视角切换入口清晰可见，且支持手动切换。
+### 8.3 并发与幂等（2026-04-06 评审新增）
+- **乐观锁**：资产、合同等核心实体使用 `version` 字段做并发控制，更新时校验版本号一致，冲突返回 HTTP 409。
+- **幂等性**：批量台账更新（`batch-update-status`）、台账补偿任务（`run_ledger_compensation`）、审批回调等关键写操作必须幂等。重复调用不产生副作用，不重复创建记录。
+- **事务边界**：合同审批通过触发的台账生成必须在同一数据库事务内完成（已在 `approve()` 中实现）。跨服务调用（如审批系统回调）采用"本地事务 + 最终一致"模式。
+
+### 8.4 可用性与可维护性
+- 分析/大屏模块为双绑定用户提供 `[ 产权方口径 | 运营方口径 ]` Segment 切换器，单绑定用户自动展示对应口径（见 §5.3 ViewMode）。（2026-04-06 决策，替代原"全局视角切换入口"）
 - 核心模块可观测（健康检查、关键错误日志、任务状态）。
 - 接口统一版本化（`/api/v1/*`）。
 - 路由层与业务层分离，便于长期演进。
+- **浏览器兼容性（2026-04-06 评审补充）**：MVP 支持 Chrome 最新两个大版本 + Edge 最新版。不保证 IE、Safari 或移动端浏览器兼容。
 
 ---
 
@@ -709,10 +868,13 @@
 - Asset（资产）
 - Project（项目）
 - ContractGroup（合同组/交易包）
-- RentContract（租赁合同）
-- RentLedger（租金台账）
-- CustomerProfile（客户视图档案）
-- PropertyCertificate（产权证）
+- Contract（合同基表，物理表 `contracts`）
+- ContractLedgerEntry（合同台账条目，物理表 `contract_ledger_entries`）
+- ServiceFeeLedger（代理服务费台账，物理表 `service_fee_ledgers`）
+- CustomerProfile（客户视图档案，非物理表，由 Party + 合同历史聚合投影）
+- User / Role / Permission / ABACPolicy（认证与权限体系）
+
+> 注：PropertyCertificate（产权证）与 Ownership（权属方）在代码中已有骨架，但 MVP 不纳入需求基线（见 §4.2）。
 
 ### 9.2 外部/周边集成
 - 文件存储：合同附件与导出文件管理。
@@ -735,7 +897,7 @@
 4. M4：搜索、权限、审计与上线验收闭环。目标窗口：`2026-06-08 ~ 2026-06-30`。
 
 ### 10.2 MVP 放量硬门槛（访谈冻结）
-- G1：资产页/项目页可清晰展示资产信息 + 按合同类型分类的租赁情况（上游承租/下游转租/委托运营）+ 客户摘要。
+- G1：资产页/项目页可清晰展示资产信息 + 按合同类型分类的租赁情况（上游承租/下游转租/委托运营/直租）+ 客户摘要。
 - G2：合同组能力可用（承租/代理、关键合同联审、状态流转）。
 - G3：统计口径可用（总收入合计 + 自营租金/代理服务费拆分 + 客户主体数/客户合同数）。
 
@@ -747,12 +909,12 @@
 |---|---|---|---|
 | REQ-AST-001 | ✅ | `/api/v1/assets` (CRUD + batch + import) | `test_assets_projection_guard.py`, `test_asset_service.py` |
 | REQ-AST-002 | ✅ | 当前有效项目投影 + 项目/经营方历史关系 | `test_project_asset.py`, `test_assets_history_layering.py`, `test_asset_service.py` |
-| REQ-AST-003 | ✅ | `POST /api/v1/assets/{id}/submit-review` + `approve-review` + `reject-review` + `reverse-review` + `resubmit-review` + `GET review-logs` | `test_asset_review.py`, `test_asset_review_api.py`, `test_asset_review_status.py`, `test_req_ast_003_asset_review_migration.py` |
+| REQ-AST-003 | 🚧 | `POST /api/v1/assets/{id}/submit-review` + `approve-review` + `reject-review` + `reverse-review` + `resubmit-review` + `GET review-logs` | `test_asset_review.py`, `test_asset_review_api.py`, `test_asset_review_status.py`, `test_req_ast_003_asset_review_migration.py` |
 | REQ-AST-004 | ✅ | `GET /api/v1/assets/{id}/lease-summary` | `test_asset_lease_summary.py` (service + api) |
 | REQ-PRJ-001 | ✅ | `/api/v1/projects` (CRUD + search) | `test_project.py`, `test_project_service.py` |
 | REQ-PRJ-002 | ✅ | `/api/v1/projects/{project_id}/assets` | `test_project_service.py`, `test_project.py` |
 | REQ-RNT-001 | ✅ | M1 ORM/DDL ✅ M2 Schema/CRUD/Service ✅ M3 API ✅ | — |
-| REQ-RNT-002 | ✅ | `/api/v1/contract-groups/*` 双模式校验 + `/api/v1/assets/{id}/lease-summary` 终端客户摘要 + `/api/v1/analytics/comprehensive` 自营/代理收入拆分 + 前端代理口径标识 | `test_contract_group_service.py`, `test_asset_lease_summary.py`, `test_analytics_service.py`, `ContractGroupDetailPage.test.tsx`, `AssetDetailPage.test.tsx` |
+| REQ-RNT-002 | 🚧 | `/api/v1/contract-groups/*` 双模式校验 + `/api/v1/assets/{id}/lease-summary` 终端客户摘要 + `/api/v1/analytics/comprehensive` 自营/代理收入拆分 + 前端代理口径标识 | `test_contract_group_service.py`, `test_asset_lease_summary.py`, `test_analytics_service.py`, `ContractGroupDetailPage.test.tsx`, `AssetDetailPage.test.tsx` |
 | REQ-RNT-003 | ✅ | `/api/v1/contracts/{contract_id}/*` 生命周期 6 端点 + 派生状态 + 审计日志 | `test_contract_lifecycle_api.py`, `test_contract_group_service.py` |
 | REQ-RNT-004 | ✅ | `/api/v1/contract-groups/{group_id}/submit-review` + `/api/v1/contracts/{contract_id}/audit-logs`（关键变更单审阻断 + 组联审放行 + 审计上下文） | `test_contract_joint_review.py`, `test_contract_lifecycle_api.py` |
 | REQ-RNT-005 | ✅ | `/api/v1/contracts/{contract_id}/start-correction` + `/api/v1/contracts/{contract_id}/approve`（纠错草稿、前合同反转、台账作废重建） | `test_contract_correction_flow.py`, `test_contract_lifecycle_api.py`, `test_lifecycle_v2.py` |
@@ -761,46 +923,87 @@
 | REQ-CUS-002 | ✅ | `/api/v1/analytics/comprehensive` 客户双指标 + 合同类型拆分 + 导出映射 | `test_analytics_service.py`, `test_analytics_export_service.py`, `RevenueStatsGrid.test.tsx`, `analyticsService.test.ts` |
 | REQ-SCH-001 | ✅ | `/api/v1/search` + Header 全局搜索入口 + 搜索结果页 | `test_search_service.py`, `test_search_api.py`, `searchService.test.ts`, `GlobalSearchPage.test.tsx`, `AppHeader.test.tsx` |
 | REQ-SCH-002 | ✅ | 全部视图 / 按对象分组切换 + `score + business_rank` 排序 | `test_search_service.py`, `GlobalSearchPage.test.tsx` |
-| REQ-SCH-003 | ✅ | 可选 `X-Perspective` 缩窄查询范围 + 缺失时按自动数据范围 fail-closed 过滤 | `test_search_service.py`, `test_search_api.py` |
+| REQ-SCH-003 | ✅ | `X-Perspective` 缩窄查询范围 + 缺失时按自动数据范围 fail-closed 过滤。**过渡状态**：代码仍活跃使用（`middleware/auth.py`、`client.ts`），计划废弃改为 `?view_mode=` query param（见 §5.3） | `test_search_service.py`, `test_search_api.py` |
 | REQ-AUTH-001 | ✅ | `/auth/login`, `/auth/refresh` | `test_optional_auth.py` |
-| REQ-AUTH-002 | ✅ | 数据范围上下文自动注入（基于主体绑定），多绑定用户展示并集，管理员不受约束。前端仅在单绑定时自动注入 `X-Perspective`，双绑定与管理员走自动数据范围 | `test_authz_service.py`, `test_perspective_context.py`, `test_perspective_context_optional.py`, `test_party_scope.py`, `test_project.py`, `test_notifications.py`, `test_project_visibility_real.py`, `test_assets_visibility_real.py`, `client.test.ts`, `dataScopeStore.test.ts`, `queryScope.test.ts`, `ProjectDetailPage.test.tsx`, `AssetListPage.test.tsx`, `AssetDetailPage.test.tsx` |
+| REQ-AUTH-002 | ✅ | 数据范围上下文自动注入（基于主体绑定），多绑定用户展示并集去重（§3.3），管理员不受约束。**过渡状态**：前端单绑定时仍注入 `X-Perspective` header，计划废弃改为 `?view_mode=` query param（见 §5.3） | `test_authz_service.py`, `test_perspective_context.py`, `test_perspective_context_optional.py`, `test_party_scope.py`, `test_project.py`, `test_notifications.py`, `test_project_visibility_real.py`, `test_assets_visibility_real.py`, `client.test.ts`, `dataScopeStore.test.ts`, `queryScope.test.ts`, `ProjectDetailPage.test.tsx`, `AssetListPage.test.tsx`, `AssetDetailPage.test.tsx` |
 | REQ-DOC-001 | ✅ | `/pdf-import/*` | `pdf_import.py` |
-| REQ-ANA-001 | ✅ | `/analytics/comprehensive`, `/analytics/export`（综合分析 + 统一 CSV/XLSX 导出 + `metrics_version`；PDF 明确返回 501 未实现） | `test_analytics_service.py`, `test_analytics.py`, `test_analytics_export_service.py`, `analyticsService.test.ts`, `useAssetAnalytics.test.ts`, `AnalyticsDashboard.test.tsx` |
+| REQ-ANA-001 | 🚧 | `/analytics/comprehensive`, `/analytics/export`（综合分析 + `metrics_version`） + 前端大屏隔离展示 | `test_analytics_service.py`, `test_analytics.py`, `test_analytics_export_service.py`, `analyticsService.test.ts`, `useAssetAnalytics.test.ts`, `AnalyticsDashboard.test.tsx` |
 | REQ-PTY-001 | ✅ | `/api/v1/parties` (CRUD + review/change logs) + `/system/parties` | `test_party_api.py`, `test_party_service.py`, `partyService.test.ts`, `PartyPages.test.tsx` |
 | REQ-PTY-002 | ✅ | `/api/v1/parties/import` + `/api/v1/parties/{party_id}/submit-review|approve-review|reject-review` + 合同提审门禁 + `/system/parties/:id` | `test_party_api.py`, `test_party_service.py`, `test_contract_group_service.py`, `partyService.test.ts`, `PartyPages.test.tsx`, `partyImport.test.ts`, `PartySelector.test.tsx` |
 | REQ-APR-001 | ✅ | `/api/v1/approval/processes/start`, `/api/v1/approval/tasks/pending`, `/api/v1/approval/processes/mine`, `/api/v1/approval/processes/{id}/timeline`, `/api/v1/approval/tasks/{task_id}/approve|reject|withdraw` | `test_approval_service.py`, `test_approval_api.py`, `test_asset_review.py` |
+| REQ-SYS-001 | 📋 | `/api/v1/roles/*`, `/api/v1/auth/*`（用户与角色管理） | 待补充 |
+| REQ-SYS-002 | 📋 | `/api/v1/organizations/*`（组织架构管理） | 待补充 |
+| REQ-SYS-003 | 📋 | `/api/v1/system/dictionaries/*`（数据字典管理） | 待补充 |
 
 ---
 
-## 12. 验收场景（最小集）
+## 12. 验收场景（2026-04-06 评审扩展）
 
-### 12.1 资产
-- A1：创建资产重名拦截。
-- A2：面积不一致拦截（`rented_area > rentable_area`）。
-- A3：资产已关联合同时删除拦截。
-- A4：`include_relations` 开关影响投影字段返回。
+> 编号规则：`{域缩写}{序号}`。每条对应至少一个 REQ 编号。
 
-### 12.2 认证与权限
-- P1：登录后 Cookie 写入成功。
-- P2：刷新令牌走 Cookie 读取流程。
-- P3：普通用户访问他人权限摘要被拒绝。
+### 12.1 资产域（REQ-AST-*）
+- A1：创建资产重名拦截。（REQ-AST-001）
+- A2：面积不一致拦截（`rented_area > rentable_area`）。（REQ-AST-001）
+- A3：资产已关联合同时删除拦截。（REQ-AST-001）
+- A4：`include_relations` 开关影响投影字段返回。（REQ-AST-001）
+- A5：资产详情租赁情况按四类（上游/下游/委托/直租）分组展示，金额为合同级口径。（REQ-AST-004）
+- A6：多资产合同在资产汇总行按 `contract_id` 去重，不重复累加金额。（REQ-AST-004）
+- A7：资产审核：`draft → pending → approved` 流程正常；approved 后可 reversed 回退。（REQ-AST-003）
 
-### 12.3 租赁
-- R1：创建合同时关联资产不存在应失败。
-- R2：合同生命周期冲突检测触发拒绝。
-- R3：台账批量更新成功并更新欠费状态字段。
+### 12.2 项目域（REQ-PRJ-*）
+- J1：项目必须绑定运营管理方，缺失时创建失败。（REQ-PRJ-001）
+- J2：项目 `review_status` 流程：`draft → pending → approved / rejected`，不支持反审核。（REQ-PRJ-001）
+- J3：项目关联多个资产，各资产可属不同产权方。（REQ-PRJ-001）
 
-### 12.4 审批
-- P4：资产发起审批后，处理人能在待办列表中看到对应任务。
-- P5：审批通过/驳回/撤回后，资产审核状态与审批实例终态一致。
+### 12.3 认证与权限域（REQ-AUTH-*）
+- P1：登录后 Cookie 写入成功。（REQ-AUTH-001）
+- P2：刷新令牌走 Cookie 读取流程。（REQ-AUTH-001）
+- P3：普通用户访问他人权限摘要被拒绝。（REQ-AUTH-001）
+- P4：多绑定用户常规列表展示并集去重数据。（REQ-AUTH-002）
+- P5：管理员不受主体绑定约束，可查看全部数据。（REQ-AUTH-002）
+- P6：ABAC 策略优先级排序正确（deny 优先 + priority ASC）。（REQ-AUTH-003）
 
-### 12.5 推荐验证命令
+### 12.4 租赁合同域（REQ-RNT-*）
+- R1：创建合同时关联资产不存在应失败。（REQ-RNT-001）
+- R2：合同生命周期冲突检测触发拒绝。（REQ-RNT-003）
+- R3：台账批量更新成功并更新欠费状态字段。（REQ-RNT-006）
+- R4：合同组模式校验：承租模式不允许混入代理类型合同。（REQ-RNT-002）
+- R5：合同审批通过后自动生成台账（同一事务）。（REQ-RNT-006）
+- R6：合同纠错（作废 + 重建）后旧台账作废、新台账重建。（REQ-RNT-005）
+- R7：台账覆盖率分母仅含已生效合同（ACTIVE/EXPIRED/TERMINATED + 已审核）。（REQ-RNT-006 + §3.3）
+- R8：按资产查询台账返回完整合同级条目，不拆分金额。（REQ-RNT-006）
+
+### 12.5 客户域（REQ-CUS-*）
+- C1：客户双指标（主体数/合同数）在分析页正确去重展示。（REQ-CUS-002）
+- C2：风险标签仅支持人工标注，标签保留来源字段。（REQ-CUS-001）
+
+### 12.6 审批域（REQ-APR-*）
+- W1：资产发起审批后，处理人能在待办列表中看到对应任务。（REQ-APR-001）
+- W2：审批通过/驳回/撤回后，资产审核状态与审批实例终态一致。（REQ-APR-001）
+
+### 12.7 文档与分析域（REQ-DOC-* / REQ-ANA-*）
+- D1：PDF 上传抽取失败后可手动重试（≤ 3 次）。（REQ-DOC-001）
+- D2：AI 抽取结果可逐字段人工修正后落库。（REQ-DOC-001）
+- N1：经营分析总收入拆分"自营租金/代理服务费"两个独立指标卡。（REQ-ANA-001）
+- N2：租金收缴率 = 当月实收 / 当月应收（仅租金台账，不含服务费）。（REQ-ANA-001 + §3.3）
+
+### 12.8 搜索域（REQ-SCH-*）
+- S1：全局搜索至少覆盖资产名称、合同编号、Party 名称。（REQ-SCH-001）
+
+### 12.9 主体域（REQ-PTY-*）
+- T1：Party 统一标识去重：同类型 + 同 unified_identifier 不可重复创建。（REQ-PTY-001）
+- T2：草稿 Party 挂在合同组上，合同提审时校验 Party 必须为已审核。（REQ-PTY-002）
+
+### 12.10 推荐验证命令
 ```bash
 cd backend
-pytest -m unit tests/unit/services/asset/test_asset_service.py -q
-pytest -m unit tests/unit/api/v1/test_assets_projection_guard.py -q
-pytest -m unit tests/unit/api/v1/test_authentication_layering.py -q
-pytest -m unit tests/unit/api/v1/test_roles_permission_grants.py -q
+uv run pytest -m unit tests/unit/services/asset/test_asset_service.py -q
+uv run pytest -m unit tests/unit/api/v1/test_assets_projection_guard.py -q
+uv run pytest -m unit tests/unit/api/v1/test_authentication_layering.py -q
+uv run pytest -m unit tests/unit/api/v1/test_roles_permission_grants.py -q
+uv run pytest -m unit tests/unit/services/contract/test_contract_group_service.py -q
+uv run pytest -m unit tests/unit/services/contract/test_ledger_service_v2.py -q
+uv run pytest -m unit tests/unit/services/analytics/test_analytics_service.py -q
 ```
 
 ---
@@ -813,6 +1016,10 @@ pytest -m unit tests/unit/api/v1/test_roles_permission_grants.py -q
 2. **系统设置模块能力稳定化** — `system_settings_router` 为条件导入/条件注册。
 3. **PDF 批量导入从"可选加载"提升为"必选能力"** — 批量路由当前通过可导入性判断注册。
 4. **集团汇总视图** — 支持集团总部查看所有产权方+运营方的汇总数据（2026-04-03 访谈确认需求存在但可延后）。
+5. **Deny-Overrides 策略框架** — 多角色权限冲突时显式 Deny 优先于 Allow。MVP 阶段不要求。（2026-04-06 Q3 决策推迟）
+6. **职责分离（SoD）** — 制单人/审核人互斥、提权审核与业务审核隔离等核心流程相斥约束。MVP 阶段不要求。（2026-04-06 Q3 决策推迟）
+7. **产权证管理（PropertyCertificate）与权属方管理（Ownership）** — 代码骨架已存在（ORM + 路由 + 前端页面），MVP 不纳入验收。需补齐 REQ-PCT-* / REQ-OWN-* 需求后激活。
+8. **风险标签规则自动标注** — MVP 仅支持人工标注（REQ-CUS-001），规则引擎自动标注（如"逾期 N 次自动标红"）推迟到 vNext。（2026-04-06 评审决策）
 
 ---
 
@@ -826,12 +1033,17 @@ pytest -m unit tests/unit/api/v1/test_roles_permission_grants.py -q
 
 ---
 
-## 15. 访谈冻结结论（2026-02-28）
+## 15. 访谈冻结结论（2026-02-28，2026-04-06 补充）
 
 - 主定位：范围与目标冻结优先。
 - 客户口径：客户为"合同对方主体"，非固定身份。
-- 数据范围机制：由用户主体绑定自动确定，无需手动选择或切换（2026-04-03 访谈修正，替代原"全局视角切换"设计）。
-- 经营模式：承租模式与代理模式并存，合同组单模式不混用。
+- 数据范围机制：由用户主体绑定自动确定，无需手动选择或切换（2026-04-03 访谈修正，替代原"全局视角切换"设计）。统计口径视图由 ViewMode Segment 切换器控制（见 §5.3）。
+- 经营模式：承租模式与代理模式并存，合同组单模式不混用。`validate_revenue_mode_compatibility()` 校验保留，不得解除。（2026-04-06 Q1 决策确认）
+- **合同组业务定义**（2026-04-06 Q1 决策新增）：
+  - 合同组 = 一个上游合同 + 对应的一个或多个下游合同。
+  - 上游合同（产权方和运营方之间的）才有承租和代理的模式区别。
+  - **不允许一个资产关联多个合同组**。
+  - 不存在拼铺出租的情况。
 - 审核策略：审核在合同级进行，关键合同提审时触发同组关联合同联审。
 - 反审核策略：已出账场景仅允许作废/冲销 + 重建，禁止物理删除。
 - 搜索策略：统一入口 + 模块内搜索并存，未授权对象不返回。
@@ -839,6 +1051,9 @@ pytest -m unit tests/unit/api/v1/test_roles_permission_grants.py -q
 - 字段冻结补充：资产地址采用半结构化口径（行政区三级 + `address_detail`），`address_detail` 必填且 `trim` 后长度 `5-200`，`address` 仅作系统拼接展示字段。
 - 字段冻结补充：项目域 DEPRECATED 字段直接收口（不做兼容），状态语义收敛为 `status + data_status`，`is_active` 下线。
 - 放量门槛：G1/G2/G3 三项必须同时满足。
+- **权限安全分期**（2026-04-06 Q3/Q4 决策新增）：
+  - MVP 必须：ABAC 激活（`abac_role_policies` 种子化）、权限管理员业务数据完全隔离。
+  - vNext 推迟：Deny-Overrides 策略框架、职责分离（SoD）约束。
 
 ---
 

@@ -1,7 +1,7 @@
 # 需求规格附录：模块与接口清单（代码证据版）
 
 ## ✅ Status
-**当前状态**: Active (2026-02-09)  
+**当前状态**: Active (2026-04-06 评审修订)
 **对应主文档**: `docs/requirements-specification.md`
 
 ---
@@ -58,13 +58,18 @@
 | 实体 | 主要职责 | 关键字段/行为证据 |
 |---|---|---|
 | `Asset` | 资产核心主实体 | `backend/src/models/asset.py` |
-| `Ownership` | 权属方主数据 | `backend/src/models/ownership.py` |
 | `Project` | 项目主数据 | `backend/src/models/project.py` |
-| `RentContract` | 合同主数据 | `backend/src/models/rent_contract.py` |
-| `RentLedger` | 租金台账 | `backend/src/models/rent_contract.py` |
-| `PropertyCertificate` | 产权证主数据 | `backend/src/models/property_certificate.py` |
-| `PropertyOwner` | 权利人（含 PII） | `backend/src/models/property_certificate.py` |
+| `Party` | 统一主体主档（跨资产/项目/合同/客户） | `backend/src/models/party.py` |
+| `ContractGroup` | 合同组（承租/代理模式容器） | `backend/src/models/contract_group.py` |
+| `Contract` | 合同主数据（物理表 `contracts`） | `backend/src/models/contract_group.py` |
+| `ContractLedgerEntry` | 租金台账（物理表 `contract_ledger_entries`） | `backend/src/models/contract_group.py` |
+| `ServiceFeeLedger` | 代理服务费台账 | `backend/src/models/contract_group.py` |
 | `User/Role/Permission` | 认证与 RBAC | `backend/src/models/auth.py`, `backend/src/models/rbac.py` |
+| `ABACPolicy/ABACPolicyRule` | 属性访问控制策略 | `backend/src/models/abac.py` |
+| ~~`Ownership`~~ | 权属方（MVP Out of Scope，见 §4.2） | `backend/src/models/ownership.py` |
+| ~~`PropertyCertificate`~~ | 产权证（MVP Out of Scope，见 §4.2） | `backend/src/models/property_certificate.py` |
+
+> **实体名映射（旧→新）**：`RentContract` → `Contract`，`RentLedger` → `ContractLedgerEntry`。详见主文档 §9.1 和字段附录 §10。
 
 ---
 

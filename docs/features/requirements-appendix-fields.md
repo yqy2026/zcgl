@@ -1,7 +1,7 @@
 # 需求规格附录：字段冻结清单（v0.3）
 
 ## ✅ Status
-**当前状态**: Draft Freeze Candidate (2026-03-06, v0.4 — M2 字段采纣更新：新增 §3.5.1 ContractRentTerm / §3.10 ContractLedgerEntry / §3.11 ContractAuditLog；更新 §11.2 台账生成口径)  
+**当前状态**: Draft Freeze Candidate (2026-04-06 评审修订, v0.4)
 **对应主文档**: `docs/requirements-specification.md`  
 **用途**: 将业务口径转为可评审字段口径（必填/枚举/校验/展示）
 
@@ -51,10 +51,10 @@
 | `owner_party_id` | string | 是 | 当前有效主产权主体（单值，同一时点只允许一个主产权主体，历史关联通过审计日志追溯） | 已确认 |
 | `manager_party_id` | string | 是 | 运营管理主体 | 已确认 |
 | `data_status` | enum | 是 | 正常/已删除 | 已确认 |
-| `review_status` | enum | 是 | 草稿/待审/已审/反审核 | 已确认 |
-| `review_by` | string | 否 | 审核人（通过/反审核时必填） | 已确认 |
-| `reviewed_at` | datetime | 否 | 审核时间（通过/反审核时必填） | 已确认 |
-| `review_reason` | string | 否 | 审核原因（反审核时必填） | 已确认 |
+| `review_status` | enum | 是 | 代码值：`draft/pending/approved/reversed`（展示值：草稿/待审/已审/反审核） | 已确认 |
+| `review_by` | string | 否 | 审核人（approved/reversed 时必填） | 已确认 |
+| `reviewed_at` | datetime | 否 | 审核时间（approved/reversed 时必填） | 已确认 |
+| `review_reason` | string | 否 | 审核原因（reversed 时必填） | 已确认 |
 
 ## 3.2 Project（项目）
 
@@ -68,10 +68,10 @@
 | `asset_count_current` | number | 否 | 当前有效资产数（派生） | 已确认（派生） |
 | `status` | enum | 是 | 业务状态（代码值）：`planning/active/paused/completed/terminated`；展示值：`规划中/进行中/暂停/已完成/已终止` | 已确认 |
 | `data_status` | enum | 是 | 数据状态：`正常/已删除`（仅逻辑删除） | 已确认 |
-| `review_status` | enum | 是 | 草稿/待审/已审/反审核 | 已确认 |
-| `review_by` | string | 否 | 审核人（通过/反审核时必填） | 已确认 |
-| `reviewed_at` | datetime | 否 | 审核时间（通过/反审核时必填） | 已确认 |
-| `review_reason` | string | 否 | 审核原因（反审核时必填） | 已确认 |
+| `review_status` | enum | 是 | 代码值：`draft/pending/approved/rejected`（展示值：草稿/待审/已审/已驳回）；项目**不支持反审核**，审批通过后不可撤回（项目为聚合容器，反审核会导致下挂资产和台账游离） | 已确认 |
+| `review_by` | string | 否 | 审核人（approved/rejected 时必填） | 已确认 |
+| `reviewed_at` | datetime | 否 | 审核时间（approved/rejected 时必填） | 已确认 |
+| `review_reason` | string | 否 | 审核原因（rejected 时必填） | 已确认 |
 
 ### 3.2.1 废弃字段（M1 迁移时 DROP）
 
@@ -132,14 +132,14 @@
 
 ## 3.4 Contract（合同基表）
 
-> 定位：所有合同类型的公共字段。类型差异字段下沉到明细表（§3.5 / §3.6）。台账（RentLedger / ServiceFeeLedger）FK 挂本表。
+> 定位：所有合同类型的公共字段。类型差异字段下沉到明细表（§3.5 / §3.6）。台账（ContractLedgerEntry / ServiceFeeLedger）FK 挂本表。
 
 | 字段 | 类型 | 必填 | 规则/说明 | 状态 |
 |---|---|---|---|---|
 | `contract_id` | string | 是 | 合同主键 | 已确认 |
 | `contract_group_id` | string | 是 | 所属合同组 FK → ContractGroup | 已确认 |
 | `contract_direction` | enum | 是 | `出租` / `承租`（从哪个视角看这份合同） | 已确认 |
-| `group_relation_type` | enum | 是 | `上游` / `下游` / `委托` / `直租` | 已确认 |
+| `group_relation_type` | enum | 是 | 代码值（中文）：`上游` / `下游` / `委托` / `直租`（四值完整集，对应 `GroupRelationType` 枚举） | 已确认 |
 | `lessor_party_id` | string | 是 | 出租方/委托方主体（代理模式下 lessor = 委托方） | 已确认 |
 | `lessee_party_id` | string | 是 | 承租方/受托方主体（代理模式下 lessee = 受托方） | 已确认 |
 | `asset_ids` | string[] | 否 | 关联资产 ID 列表（多对多），为所属 ContractGroup.asset_ids 的子集 | 已确认 |
@@ -149,10 +149,10 @@
 | `currency_code` | enum | 是 | 币种，MVP 固定 `CNY` | 已确认 |
 | `tax_rate` | decimal(5,4) | 否 | 税率，范围 `[0,1]` | 已确认 |
 | `is_tax_included` | boolean | 是 | 含税标记，默认 `true` | 已确认 |
-| `status` | enum | 是 | `草稿/待审/生效/已到期/已终止` | 已确认 |
-| `review_status` | enum | 是 | `草稿/待审/已审/反审核` | 已确认 |
-| `review_by` | string | 否 | 审核人（通过/反审核时必填） | 已确认 |
-| `reviewed_at` | datetime | 否 | 审核时间（通过/反审核时必填） | 已确认 |
+| `status` | enum | 是 | 生命周期状态，代码值（中文）：`草稿/待审/生效/已到期/已终止` | 已确认 |
+| `review_status` | enum | 是 | 审核状态，代码值（中文）：`草稿/待审/已审/反审核`（⚠️ 与资产/项目/Party 的英文代码值风格不统一，为已知技术债，后续统一收口） | 已确认 |
+| `review_by` | string | 否 | 审核人（已审/反审核时必填） | 已确认 |
+| `reviewed_at` | datetime | 否 | 审核时间（已审/反审核时必填） | 已确认 |
 | `review_reason` | string | 否 | 审核原因（反审核时必填） | 已确认 |
 | `data_status` | enum | 是 | `正常/已删除`（仅逻辑删除） | 已确认 |
 | `contract_notes` | text | 否 | 合同备注 | 已确认 |
@@ -240,16 +240,17 @@
 
 ## 3.8 CustomerProfile（客户视图档案）
 
-> 口径：客户为“合同对方主体”，非固定身份。同一主体可在不同合同中扮演不同角色。
+> 口径：客户为"合同对方主体"，非固定身份。同一主体可在不同合同中扮演不同角色。
+> **列表唯一键（2026-04-06 决策冻结）**：仅用 `customer_party_id`，同主体合并为单行 + 多角色 Tag 标签。详情页用 Tab 选项卡按角色拆分合同列表。
 
 | 字段 | 类型 | 必填 | 规则/说明 | 状态 |
 |---|---|---|---|---|
-| `customer_party_id` | string | 是 | 客户主体 ID | 已确认 |
+| `customer_party_id` | string | 是 | 客户主体 ID（列表唯一键） | 已确认 |
 | `customer_name` | string | 是 | 客户名称 | 已确认 |
 | `customer_type` | enum | 是 | 内部/外部 | 已确认 |
 | `subject_nature` | enum | 是 | 主体性质：`enterprise/individual` | 已确认 |
-| `binding_type` | enum | 是 | 查询方的数据范围绑定类型（`owner`/`manager`/`all`）；`all` 表示未显式缩窄时的 owner+manager 并集口径 | 已确认 |
-| `contract_role` | enum | 是 | 合同角色（承租/出租） | 已确认 |
+| `binding_type` | enum | 是 | 查询方的主体绑定类型（`owner`/`manager`），决定"合同对方"的抽取口径 | 已确认 |
+| `contract_roles` | enum[] | 是 | 合同角色集合（多值 Tag），如 `[承租, 出租]`。替代旧的单值 `contract_role`（2026-04-06 决策） | 已确认 |
 | `contact_name` | string | 否 | 联系人 | 已确认 |
 | `contact_phone` | string | 否 | 联系电话 | 已确认 |
 | `identifier_type` | enum | 条件必填 | 有 `unified_identifier` 时必填；企业=`USCC`，个人=`CN_ID_CARD/PASSPORT/OTHER_GOV_ID` | 已确认 |
@@ -257,7 +258,7 @@
 | `address` | string | 否 | 地址 | 已确认 |
 | `status` | enum | 是 | 正常/停用 | 已确认 |
 | `historical_contract_count` | number | 否 | 历史签约数（派生） | 已确认（派生） |
-| `risk_tags` | string[] | 否 | 风险标签 | 已确认 |
+| `risk_tags` | string[] | 否 | 风险标签（MVP 仅人工标注，规则自动标注移入 vNext） | 已确认 |
 | `payment_term_preference` | string | 否 | 账期偏好 | 已确认 |
 
 ## 3.9 AnalyticsMetrics（统计口径字段）
@@ -403,6 +404,8 @@
 
 ## 3.10 Party（主体主档）
 
+> 注：字段附录原编号为 §3.10，与 §3.10 ContractLedgerEntry 冲突。此处保留原编号待下次重编号时统一调整。
+
 | 字段 | 类型 | 必填 | 规则/说明 | 状态 |
 |---|---|---|---|---|
 | `id` | string | 是 | 主体主键 | 已确认 |
@@ -411,10 +414,10 @@
 | `code` | string | 是 | 主体编码；同类型内唯一 | 已确认 |
 | `external_ref` | string | 否 | 外部系统引用 | 已确认 |
 | `status` | enum | 是 | `active/inactive` | 已确认 |
-| `review_status` | enum | 是 | `draft/pending/approved/rejected` | 已确认 |
-| `review_by` | string | 否 | 审核人；通过/驳回时写入 | 已确认 |
-| `reviewed_at` | datetime | 否 | 审核时间；通过/驳回时写入 | 已确认 |
-| `review_reason` | string | 否 | 驳回原因；驳回时必填 | 已确认 |
+| `review_status` | enum | 是 | 代码值：`draft/pending/approved/reversed`（展示值：草稿/待审/已审/反审核） | 已确认 |
+| `review_by` | string | 否 | 审核人；approved/reversed 时写入 | 已确认 |
+| `reviewed_at` | datetime | 否 | 审核时间；approved/reversed 时写入 | 已确认 |
+| `review_reason` | string | 否 | 原因；reversed 时必填 | 已确认 |
 | `metadata` | json | 否 | 扩展信息 | 已确认 |
 
 ---
@@ -740,7 +743,7 @@
 
 ## 10. 合同旧字段 DEPRECATED 清单与映射（2026-03-03 确认）
 
-> 说明：当前 `RentContract` As-Built 字段到五层模型的映射。口径：不迁移，测试数据可删。
+> 说明：当前旧 `RentContract` As-Built 字段到五层模型（Contract 基表 + 明细表）的映射。口径：不迁移，测试数据可删。旧 `RentContract` 对应新 `Contract`（物理表 `contracts`），旧 `RentLedger` 对应新 `ContractLedgerEntry`（物理表 `contract_ledger_entries`）。
 
 ### 10.1 直接下线删除
 
