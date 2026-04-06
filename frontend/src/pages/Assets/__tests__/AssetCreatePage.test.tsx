@@ -9,7 +9,7 @@ const mockNavigate = vi.fn();
 const mockInvalidateQueries = vi.fn();
 const mockUseParams = vi.fn(() => ({ id: 'asset-1' }));
 
-const mockBuildQueryScopeKey = vi.fn(() => 'user:user-1|perspective:owner');
+const mockBuildQueryScopeKey = vi.fn(() => 'user:user-1|scope:owner,manager');
 
 vi.mock('@/utils/queryScope', () => ({
   buildQueryScopeKey: (value: unknown) => mockBuildQueryScopeKey(value),
@@ -93,7 +93,7 @@ describe('AssetCreatePage', () => {
     mockUseParams.mockReturnValue({ id: 'asset-1' });
   });
 
-  it('编辑态资产详情查询应把当前视角纳入 queryKey', async () => {
+  it('编辑态资产详情查询应把当前数据范围纳入 queryKey', async () => {
     const queryClient = new QueryClient({
       defaultOptions: {
         queries: {
@@ -119,11 +119,11 @@ describe('AssetCreatePage', () => {
         queryKey =>
           Array.isArray(queryKey) &&
           queryKey[0] === 'asset' &&
-          queryKey[1] === 'user:user-1|perspective:owner' &&
+          queryKey[1] === 'user:user-1|scope:owner,manager' &&
           queryKey[2] === 'asset-1'
       )
     ).toBe(true);
-    expect(mockBuildQueryScopeKey).toHaveBeenCalledWith('owner');
+    expect(mockBuildQueryScopeKey).toHaveBeenCalledWith(undefined);
   });
 
   it('编辑成功后应失效 scoped 资产列表与详情查询前缀', async () => {
@@ -158,7 +158,7 @@ describe('AssetCreatePage', () => {
     expect(screen.getByRole('button', { name: 'submit' })).toBeInTheDocument();
   });
 
-  it('创建成功后应返回 canonical owner 资产列表', async () => {
+  it('创建成功后应返回 canonical 资产列表', async () => {
     mockUseParams.mockReturnValue({});
 
     const { getByRole } = renderWithProviders(<AssetCreatePage />, {
@@ -173,6 +173,6 @@ describe('AssetCreatePage', () => {
       });
     });
 
-    expect(mockNavigate).toHaveBeenCalledWith('/owner/assets');
+    expect(mockNavigate).toHaveBeenCalledWith('/assets/list');
   });
 });

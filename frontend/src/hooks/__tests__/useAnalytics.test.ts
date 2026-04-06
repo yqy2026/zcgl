@@ -6,7 +6,12 @@ import { createTestQueryClient, renderHookWithProviders, waitFor } from '@/test/
 import { useAnalytics } from '../useAnalytics';
 
 vi.mock('@/utils/queryScope', () => ({
-  buildQueryScopeKey: () => 'user:user-1|perspective:owner',
+  buildQueryScopeKey: () => 'user:user-1|scope:owner,manager',
+}));
+
+vi.mock('@/stores/dataScopeStore', () => ({
+  useDataScopeStore: (selector: (state: { initialized: boolean }) => unknown) =>
+    selector({ initialized: true }),
 }));
 
 vi.mock('@/services/analyticsService', () => ({
@@ -36,7 +41,7 @@ describe('useAnalytics', () => {
 
     expect(queryKeys).toContainEqual([
       'analytics',
-      'user:user-1|perspective:owner',
+      'user:user-1|scope:owner,manager',
       'comprehensive',
       { keyword: '园区' },
     ]);

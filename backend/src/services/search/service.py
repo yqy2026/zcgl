@@ -25,7 +25,7 @@ class SearchService:
         *,
         db: AsyncSession,
         query: str,
-        perspective: str,
+        scope_mode: str,
         effective_party_ids: list[str] | None,
     ) -> dict[str, Any]:
         normalized_query = query.strip()
@@ -43,7 +43,7 @@ class SearchService:
         items = await self._collect_results(
             db=db,
             query=normalized_query,
-            perspective=perspective,
+            scope_mode=scope_mode,
             effective_party_ids=normalized_effective_party_ids,
         )
         ranked_items = sorted(
@@ -68,29 +68,29 @@ class SearchService:
         *,
         db: AsyncSession,
         query: str,
-        perspective: str,
+        scope_mode: str,
         effective_party_ids: list[str],
     ) -> list[dict[str, Any]]:
         party_filter = self._build_party_filter(
-            perspective=perspective,
+            scope_mode=scope_mode,
             effective_party_ids=effective_party_ids,
         )
         results: list[dict[str, Any]] = []
         results.extend(
             await self._search_assets(
-                db=db, query=query, perspective=perspective, party_filter=party_filter
+                db=db, query=query, scope_mode=scope_mode, party_filter=party_filter
             )
         )
         results.extend(
             await self._search_projects(
-                db=db, query=query, perspective=perspective, party_filter=party_filter
+                db=db, query=query, scope_mode=scope_mode, party_filter=party_filter
             )
         )
         results.extend(
             await self._search_contract_groups(
                 db=db,
                 query=query,
-                perspective=perspective,
+                scope_mode=scope_mode,
                 effective_party_ids=effective_party_ids,
             )
         )
@@ -98,7 +98,7 @@ class SearchService:
             await self._search_contracts(
                 db=db,
                 query=query,
-                perspective=perspective,
+                scope_mode=scope_mode,
                 effective_party_ids=effective_party_ids,
             )
         )
@@ -106,26 +106,33 @@ class SearchService:
             await self._search_customers(
                 db=db,
                 query=query,
-                perspective=perspective,
+                scope_mode=scope_mode,
                 effective_party_ids=effective_party_ids,
             )
         )
         results.extend(
             await self._search_property_certificates(
-                db=db, query=query, perspective=perspective, party_filter=party_filter
+                db=db, query=query, scope_mode=scope_mode, party_filter=party_filter
             )
         )
         return results
 
     @staticmethod
     def _build_party_filter(
-        *, perspective: str, effective_party_ids: list[str]
+        *, scope_mode: str, effective_party_ids: list[str]
     ) -> PartyFilter:
-        if perspective == "owner":
+        if scope_mode == "owner":
             return PartyFilter(
                 party_ids=effective_party_ids,
                 filter_mode="owner",
                 owner_party_ids=effective_party_ids,
+                manager_party_ids=[],
+            )
+        if scope_mode == "all":
+            return PartyFilter(
+                party_ids=effective_party_ids,
+                filter_mode="any",
+                owner_party_ids=[],
                 manager_party_ids=[],
             )
         return PartyFilter(
@@ -135,14 +142,30 @@ class SearchService:
             manager_party_ids=effective_party_ids,
         )
 
+    @staticmethod
+    def _apply_contract_group_scope(
+        stmt: Any, *, scope_mode: str, effective_party_ids: list[str]
+    ) -> Any:
+        if scope_mode == "owner":
+            return stmt.where(ContractGroup.owner_party_id.in_(effective_party_ids))
+        if scope_mode == "manager":
+            return stmt.where(ContractGroup.operator_party_id.in_(effective_party_ids))
+        return stmt.where(
+            or_(
+                ContractGroup.owner_party_id.in_(effective_party_ids),
+                ContractGroup.operator_party_id.in_(effective_party_ids),
+            )
+        )
+
     async def _search_assets(
         self,
         *,
         db: AsyncSession,
         query: str,
-        perspective: str,
+        scope_mode: str,
         party_filter: PartyFilter,
     ) -> list[dict[str, Any]]:
+        _ = scope_mode
         assets, _ = await asset_crud.get_multi_with_search_async(
             db,
             search=query,
@@ -181,9 +204,10 @@ class SearchService:
         *,
         db: AsyncSession,
         query: str,
-        perspective: str,
+        scope_mode: str,
         party_filter: PartyFilter,
     ) -> list[dict[str, Any]]:
+        _ = scope_mode
         result = await project_service.search_projects(
             db,
             search_params=ProjectSearchRequest(keyword=query, page=1, page_size=5),
@@ -219,17 +243,18 @@ class SearchService:
         *,
         db: AsyncSession,
         query: str,
-        perspective: str,
+        scope_mode: str,
         effective_party_ids: list[str],
     ) -> list[dict[str, Any]]:
         stmt = select(ContractGroup).where(
             ContractGroup.data_status == "正常",
             ContractGroup.group_code.ilike(f"%{query}%"),
         )
-        if perspective == "owner":
-            stmt = stmt.where(ContractGroup.owner_party_id.in_(effective_party_ids))
-        else:
-            stmt = stmt.where(ContractGroup.operator_party_id.in_(effective_party_ids))
+        stmt = self._apply_contract_group_scope(
+            stmt,
+            scope_mode=scope_mode,
+            effective_party_ids=effective_party_ids,
+        )
 
         groups = list(
             (await db.execute(stmt.limit(self.DEFAULT_LIMIT_PER_TYPE))).scalars().all()
@@ -255,7 +280,7 @@ class SearchService:
         *,
         db: AsyncSession,
         query: str,
-        perspective: str,
+        scope_mode: str,
         effective_party_ids: list[str],
     ) -> list[dict[str, Any]]:
         stmt = (
@@ -269,10 +294,11 @@ class SearchService:
                 Contract.contract_number.ilike(f"%{query}%"),
             )
         )
-        if perspective == "owner":
-            stmt = stmt.where(ContractGroup.owner_party_id.in_(effective_party_ids))
-        else:
-            stmt = stmt.where(ContractGroup.operator_party_id.in_(effective_party_ids))
+        stmt = self._apply_contract_group_scope(
+            stmt,
+            scope_mode=scope_mode,
+            effective_party_ids=effective_party_ids,
+        )
 
         contracts = list(
             (await db.execute(stmt.limit(self.DEFAULT_LIMIT_PER_TYPE))).scalars().all()
@@ -304,7 +330,7 @@ class SearchService:
         *,
         db: AsyncSession,
         query: str,
-        perspective: str,
+        scope_mode: str,
         effective_party_ids: list[str],
     ) -> list[dict[str, Any]]:
         stmt = (
@@ -318,20 +344,25 @@ class SearchService:
                 ContractGroup.data_status == "正常",
             )
         )
-        if perspective == "owner":
-            stmt = stmt.where(ContractGroup.owner_party_id.in_(effective_party_ids))
-        else:
-            stmt = stmt.where(ContractGroup.operator_party_id.in_(effective_party_ids))
+        stmt = self._apply_contract_group_scope(
+            stmt,
+            scope_mode=scope_mode,
+            effective_party_ids=effective_party_ids,
+        )
 
         contracts = list((await db.execute(stmt)).scalars().all())
         customer_ids: OrderedDict[str, None] = OrderedDict()
         for contract in contracts:
-            customer_party_id = party_service._resolve_customer_party_id(  # type: ignore[attr-defined]
-                contract,
-                perspective,
+            binding_types = (
+                ["owner", "manager"] if scope_mode == "all" else [scope_mode]
             )
-            if customer_party_id is not None:
-                customer_ids.setdefault(customer_party_id, None)
+            for binding_type in binding_types:
+                customer_party_id = party_service._resolve_customer_party_id(  # type: ignore[attr-defined]
+                    contract,
+                    binding_type,
+                )
+                if customer_party_id is not None:
+                    customer_ids.setdefault(customer_party_id, None)
 
         items: list[dict[str, Any]] = []
         for customer_party_id in list(customer_ids.keys())[
@@ -376,9 +407,10 @@ class SearchService:
         *,
         db: AsyncSession,
         query: str,
-        perspective: str,
+        scope_mode: str,
         party_filter: PartyFilter,
     ) -> list[dict[str, Any]]:
+        _ = scope_mode
         party_ids = [
             str(item).strip()
             for item in party_filter.party_ids

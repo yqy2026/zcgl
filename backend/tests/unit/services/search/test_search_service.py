@@ -18,7 +18,7 @@ async def test_search_global_should_fail_closed_when_scope_empty(search_service)
     result = await search_service.search_global(
         db=AsyncMock(),
         query="测试",
-        perspective="manager",
+        scope_mode="manager",
         effective_party_ids=[],
     )
 
@@ -72,7 +72,7 @@ async def test_search_global_should_sort_and_group_results(search_service):
     result = await search_service.search_global(
         db=AsyncMock(),
         query="测试",
-        perspective="manager",
+        scope_mode="manager",
         effective_party_ids=["party-manager-1"],
     )
 
@@ -112,7 +112,7 @@ async def test_search_assets_should_build_search_result_items(
     result = await search_service._search_assets(
         db=AsyncMock(),
         query="测试",
-        perspective="manager",
+        scope_mode="manager",
         party_filter=PartyFilter(
             party_ids=["party-manager-1"],
             filter_mode="manager",
@@ -159,7 +159,7 @@ async def test_search_projects_should_build_search_result_items(
     result = await search_service._search_projects(
         db=AsyncMock(),
         query="测试",
-        perspective="manager",
+        scope_mode="manager",
         party_filter=PartyFilter(
             party_ids=["party-manager-1"],
             filter_mode="manager",
@@ -182,3 +182,17 @@ async def test_search_projects_should_build_search_result_items(
             "group_label": "项目",
         }
     ]
+
+
+async def test_build_party_filter_should_use_any_mode_for_all_scope(search_service):
+    result = search_service._build_party_filter(
+        scope_mode="all",
+        effective_party_ids=["owner-1", "manager-1"],
+    )
+
+    assert result == PartyFilter(
+        party_ids=["owner-1", "manager-1"],
+        filter_mode="any",
+        owner_party_ids=[],
+        manager_party_ids=[],
+    )

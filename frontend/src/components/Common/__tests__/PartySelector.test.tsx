@@ -120,54 +120,24 @@ describe('PartySelector', () => {
     });
   });
 
-  it('defaults to owner-scoped search when route perspective is owner', async () => {
-    vi.mocked(partyService.searchParties)
-      .mockResolvedValueOnce({ items: [], skip: 0, limit: 20, isTruncated: false })
-      .mockResolvedValueOnce({ items: [], skip: 0, limit: 20, isTruncated: false });
-
-    renderWithProviders(<PartySelector />, { route: '/owner/assets' });
-
-    await waitFor(() => {
-      expect(partyService.searchParties).toHaveBeenCalledWith('', {
-        limit: 20,
-        party_type: 'organization',
-      });
-      expect(partyService.searchParties).toHaveBeenCalledWith('', {
-        limit: 20,
-        party_type: 'legal_entity',
-      });
-    });
-  });
-
-  it('defaults to manager-scoped search when route perspective is manager', async () => {
-    vi.mocked(partyService.searchParties)
-      .mockResolvedValueOnce({ items: [], skip: 0, limit: 20, isTruncated: false })
-      .mockResolvedValueOnce({ items: [], skip: 0, limit: 20, isTruncated: false });
-
-    renderWithProviders(<PartySelector />, { route: '/manager/assets' });
-
-    await waitFor(() => {
-      expect(partyService.searchParties).toHaveBeenCalledWith('', {
-        limit: 20,
-        party_type: 'organization',
-      });
-      expect(partyService.searchParties).toHaveBeenCalledWith('', {
-        limit: 20,
-        party_type: 'legal_entity',
-      });
-    });
-  });
-
-  it('defaults to unscoped search on non-perspective routes', async () => {
-    renderWithProviders(<PartySelector />, { route: '/dashboard' });
+  it('defaults to unscoped search on flat routes', async () => {
+    renderWithProviders(<PartySelector />, { route: '/assets/list' });
 
     await waitFor(() => {
       expect(partyService.searchParties).toHaveBeenCalledWith('', { limit: 20 });
     });
   });
 
-  it('keeps explicit filterMode over route-derived default', async () => {
-    renderWithProviders(<PartySelector filterMode="tenant" />, { route: '/owner/assets' });
+  it('no longer derives owner or manager defaults from legacy route prefixes', async () => {
+    renderWithProviders(<PartySelector />, { route: '/owner/assets' });
+
+    await waitFor(() => {
+      expect(partyService.searchParties).toHaveBeenCalledWith('', { limit: 20 });
+    });
+  });
+
+  it('keeps explicit filterMode over flat-route default', async () => {
+    renderWithProviders(<PartySelector filterMode="tenant" />, { route: '/assets/list' });
 
     await waitFor(() => {
       expect(partyService.searchParties).toHaveBeenCalledWith('', { limit: 20 });

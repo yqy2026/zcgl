@@ -5,7 +5,7 @@ import logging
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -646,7 +646,7 @@ class PartyService:
         db: AsyncSession,
         *,
         party_id: str,
-        perspective: str,
+        binding_type: str,
         effective_party_ids: list[str] | None,
     ) -> dict[str, Any]:
         party = await self.party_crud.get_party(db, party_id=party_id)
@@ -656,7 +656,7 @@ class PartyService:
         contracts = await self._list_customer_contracts(
             db,
             party_id=party_id,
-            perspective=perspective,
+            binding_type=binding_type,
             effective_party_ids=effective_party_ids,
         )
         if len(contracts) == 0:
@@ -695,7 +695,7 @@ class PartyService:
                 metadata.get("subject_nature")
                 or self._derive_subject_nature(getattr(party, "party_type", None))
             ),
-            "binding_type": perspective,
+            "binding_type": binding_type,
             "contract_role": contract_role,
             "contact_name": self._normalize_optional_text(
                 metadata.get("contact_name")
@@ -727,7 +727,7 @@ class PartyService:
         db: AsyncSession,
         *,
         party_id: str,
-        perspective: str,
+        binding_type: str,
         effective_party_ids: list[str] | None,
     ) -> list[Contract]:
         normalized_effective_party_ids = [
@@ -752,9 +752,16 @@ class PartyService:
                 selectinload(Contract.contract_group),
             )
         )
-        if perspective == "owner":
+        if binding_type == "owner":
             stmt = stmt.where(
                 ContractGroup.owner_party_id.in_(normalized_effective_party_ids)
+            )
+        elif binding_type == "all":
+            stmt = stmt.where(
+                or_(
+                    ContractGroup.owner_party_id.in_(normalized_effective_party_ids),
+                    ContractGroup.operator_party_id.in_(normalized_effective_party_ids),
+                )
             )
         else:
             stmt = stmt.where(
@@ -762,11 +769,27 @@ class PartyService:
             )
 
         contracts = list((await db.execute(stmt)).scalars().unique().all())
-        return [
-            contract
-            for contract in contracts
-            if self._resolve_customer_party_id(contract, perspective) == party_id
-        ]
+        binding_types = (
+            ["owner", "manager"] if binding_type == "all" else [binding_type]
+        )
+        matched_contract_ids: set[str] = set()
+        matched_contracts: list[Contract] = []
+
+        for contract in contracts:
+            for current_binding_type in binding_types:
+                if (
+                    self._resolve_customer_party_id(contract, current_binding_type)
+                    != party_id
+                ):
+                    continue
+
+                contract_id = str(getattr(contract, "contract_id", "")).strip()
+                if contract_id == "" or contract_id not in matched_contract_ids:
+                    matched_contract_ids.add(contract_id)
+                    matched_contracts.append(contract)
+                break
+
+        return matched_contracts
 
     async def create_user_party_binding(
         self,
@@ -1008,7 +1031,7 @@ class PartyService:
 
     @classmethod
     def _resolve_customer_party_id(
-        cls, contract: Contract, perspective: str
+        cls, contract: Contract, binding_type: str
     ) -> str | None:
         relation_type = getattr(contract, "group_relation_type", None)
         normalized_relation_type = (
@@ -1017,7 +1040,7 @@ class PartyService:
         if normalized_relation_type == GroupRelationType.UPSTREAM.name:
             party_value = (
                 getattr(contract, "lessee_party_id", None)
-                if perspective == "owner"
+                if binding_type == "owner"
                 else getattr(contract, "lessor_party_id", None)
             )
             return cls._normalize_optional_text(party_value)
@@ -1028,7 +1051,7 @@ class PartyService:
         if normalized_relation_type == GroupRelationType.ENTRUSTED.name:
             party_value = (
                 getattr(contract, "lessee_party_id", None)
-                if perspective == "owner"
+                if binding_type == "owner"
                 else getattr(contract, "lessor_party_id", None)
             )
             return cls._normalize_optional_text(party_value)

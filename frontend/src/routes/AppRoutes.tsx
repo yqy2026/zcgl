@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate, useParams } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import type { AuthzAction, ResourceType } from '@/types/capability';
 import CanonicalEntryRedirect from './CanonicalEntryRedirect';
 import {
@@ -52,16 +52,6 @@ const projectDetailPage = React.lazy(() => import('../pages/Project/ProjectDetai
 const legacyRentalPdfImportRedirect: React.FC = () => (
   <Navigate to={CONTRACT_GROUP_ROUTES.IMPORT} replace />
 );
-
-const legacyCustomerRedirect: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
-
-  if (id == null || id.trim() === '') {
-    return <Navigate to={ASSET_ROUTES.LIST} replace />;
-  }
-
-  return <Navigate to={CUSTOMER_ROUTES.DETAIL(id)} replace />;
-};
 
 const baseProtectedRoutes: ProtectedRouteItem[] = [
   // 仪表板 - 首页
@@ -238,23 +228,6 @@ const baseProtectedRoutes: ProtectedRouteItem[] = [
     element: projectManagementPage,
     permissions: [{ resource: 'project', action: 'read' }],
   },
-
-  { path: '/owner/assets', element: () => <Navigate to={ASSET_ROUTES.LIST} replace /> },
-  { path: '/owner/assets/:id', element: () => <Navigate to={ASSET_ROUTES.LIST} replace /> },
-  { path: '/manager/assets', element: () => <Navigate to={ASSET_ROUTES.LIST} replace /> },
-  { path: '/manager/assets/:id', element: () => <Navigate to={ASSET_ROUTES.LIST} replace /> },
-  { path: '/owner/contract-groups', element: () => <Navigate to={CONTRACT_GROUP_ROUTES.LIST} replace /> },
-  { path: '/owner/contract-groups/:id', element: () => <Navigate to={CONTRACT_GROUP_ROUTES.LIST} replace /> },
-  { path: '/manager/contract-groups', element: () => <Navigate to={CONTRACT_GROUP_ROUTES.LIST} replace /> },
-  { path: '/manager/contract-groups/:id', element: () => <Navigate to={CONTRACT_GROUP_ROUTES.LIST} replace /> },
-  { path: '/manager/projects', element: () => <Navigate to={PROJECT_ROUTES.LIST} replace /> },
-  { path: '/manager/projects/:id', element: () => <Navigate to={PROJECT_ROUTES.LIST} replace /> },
-  { path: '/owner/property-certificates', element: () => <Navigate to={PROPERTY_CERTIFICATE_ROUTES.LIST} replace /> },
-  { path: '/owner/property-certificates/:id', element: () => <Navigate to={PROPERTY_CERTIFICATE_ROUTES.LIST} replace /> },
-  { path: '/owner/search', element: () => <Navigate to={SEARCH_ROUTES.LIST} replace /> },
-  { path: '/manager/search', element: () => <Navigate to={SEARCH_ROUTES.LIST} replace /> },
-  { path: '/owner/customers/:id', element: legacyCustomerRedirect },
-  { path: '/manager/customers/:id', element: legacyCustomerRedirect },
 
   // 个人中心
   {

@@ -211,18 +211,18 @@ class ContractGroupService:
         *,
         group: ContractGroup,
         group_id: str,
-        perspective: Literal["owner", "manager"] | None,
+        binding_type: Literal["owner", "manager"] | None,
         effective_party_ids: list[str] | None,
     ) -> None:
         normalized_effective_party_ids = cls._normalize_effective_party_ids(
             effective_party_ids
         )
-        if perspective is None or len(normalized_effective_party_ids) == 0:
+        if binding_type is None or len(normalized_effective_party_ids) == 0:
             return
 
         scoped_party_id = (
             str(getattr(group, "owner_party_id", "")).strip()
-            if perspective == "owner"
+            if binding_type == "owner"
             else str(getattr(group, "operator_party_id", "")).strip()
         )
         if scoped_party_id not in normalized_effective_party_ids:
@@ -390,7 +390,9 @@ class ContractGroupService:
             categories.add("parties")
         if draft_contract.lessee_party_id != source_contract.lessee_party_id:
             categories.add("parties")
-        if (draft_contract.contract_notes or "") != (source_contract.contract_notes or ""):
+        if (draft_contract.contract_notes or "") != (
+            source_contract.contract_notes or ""
+        ):
             categories.add("notes")
 
         draft_lease = getattr(draft_contract, "lease_detail", None)
@@ -402,10 +404,12 @@ class ContractGroupService:
                 categories.add("billing")
 
         draft_assets = sorted(
-            str(getattr(asset, "id", asset)) for asset in (getattr(draft_contract, "assets", None) or [])
+            str(getattr(asset, "id", asset))
+            for asset in (getattr(draft_contract, "assets", None) or [])
         )
         source_assets = sorted(
-            str(getattr(asset, "id", asset)) for asset in (getattr(source_contract, "assets", None) or [])
+            str(getattr(asset, "id", asset))
+            for asset in (getattr(source_contract, "assets", None) or [])
         )
         if draft_assets != source_assets:
             categories.add("assets")
@@ -556,7 +560,9 @@ class ContractGroupService:
         if agency_detail is None:
             return None
         return {
-            "service_fee_ratio": getattr(agency_detail, "service_fee_ratio", Decimal("0")),
+            "service_fee_ratio": getattr(
+                agency_detail, "service_fee_ratio", Decimal("0")
+            ),
             "fee_calculation_base": getattr(
                 agency_detail, "fee_calculation_base", "actual_received"
             ),
@@ -774,7 +780,7 @@ class ContractGroupService:
         db: AsyncSession,
         *,
         group_id: str,
-        perspective: Literal["owner", "manager"] | None = None,
+        binding_type: Literal["owner", "manager"] | None = None,
         effective_party_ids: list[str] | None = None,
     ) -> ContractGroupDetail:
         """
@@ -789,7 +795,7 @@ class ContractGroupService:
         self._assert_group_in_scope(
             group=group,
             group_id=group_id,
-            perspective=perspective,
+            binding_type=binding_type,
             effective_party_ids=effective_party_ids,
         )
 
@@ -829,7 +835,7 @@ class ContractGroupService:
         revenue_mode: str | None = None,
         offset: int = 0,
         limit: int = 20,
-        perspective: Literal["owner", "manager"] | None = None,
+        binding_type: Literal["owner", "manager"] | None = None,
         effective_party_ids: list[str] | None = None,
     ) -> tuple[list[ContractGroupListItem], int]:
         """分页查询合同组列表，返回含 derived_status 的列表项。"""
@@ -838,7 +844,7 @@ class ContractGroupService:
         )
         scoped_operator_party_ids: list[str] | None = None
         scoped_owner_party_ids: list[str] | None = None
-        if perspective == "manager":
+        if binding_type == "manager":
             if len(normalized_effective_party_ids) == 0:
                 return [], 0
             if (
@@ -851,10 +857,13 @@ class ContractGroupService:
                 if operator_party_id is not None
                 else normalized_effective_party_ids
             )
-        if perspective == "owner":
+        if binding_type == "owner":
             if len(normalized_effective_party_ids) == 0:
                 return [], 0
-            if owner_party_id is not None and owner_party_id not in normalized_effective_party_ids:
+            if (
+                owner_party_id is not None
+                and owner_party_id not in normalized_effective_party_ids
+            ):
                 return [], 0
             scoped_owner_party_ids = (
                 [owner_party_id]
@@ -1355,7 +1364,9 @@ class ContractGroupService:
 
         updated_contract_ids: list[str] = []
         warnings: list[str] = []
-        joint_review_contract_ids = [contract.contract_id for contract in draft_contracts]
+        joint_review_contract_ids = [
+            contract.contract_id for contract in draft_contracts
+        ]
         for contract in draft_contracts:
             _, contract_warnings = await self.submit_review(
                 db,

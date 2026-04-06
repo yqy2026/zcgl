@@ -248,7 +248,7 @@
 | `customer_name` | string | 是 | 客户名称 | 已确认 |
 | `customer_type` | enum | 是 | 内部/外部 | 已确认 |
 | `subject_nature` | enum | 是 | 主体性质：`enterprise/individual` | 已确认 |
-| `binding_type` | enum | 是 | 查询方的主体绑定类型（`owner`/`manager`），决定“合同对方”的抽取口径 | 已确认 |
+| `binding_type` | enum | 是 | 查询方的数据范围绑定类型（`owner`/`manager`/`all`）；`all` 表示未显式缩窄时的 owner+manager 并集口径 | 已确认 |
 | `contract_role` | enum | 是 | 合同角色（承租/出租） | 已确认 |
 | `contact_name` | string | 否 | 联系人 | 已确认 |
 | `contact_phone` | string | 否 | 联系电话 | 已确认 |

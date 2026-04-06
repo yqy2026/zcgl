@@ -39,8 +39,8 @@ interface PreloadConfig {
 const DEFAULT_CONFIG: PreloadConfig = {
   threshold: 200,
   maxConcurrent: 3,
-  enabledRoutes: ['/owner/assets', '/system/users', '/dashboard'],
-  priorityRoutes: ['/dashboard', '/owner/assets'],
+  enabledRoutes: ['/assets/list', '/system/users', '/dashboard'],
+  priorityRoutes: ['/dashboard', '/assets/list'],
 };
 
 // 用户行为跟踪
@@ -189,7 +189,7 @@ class SmartPreloadManager {
     // 预加载函数映射
     const preloadFunctions: Record<string, PreloadFunction> = {
       '/dashboard': () => import('../pages/Dashboard/DashboardPage'),
-      '/owner/assets': () => import('../pages/Assets/AssetListPage'),
+      '/assets/list': () => import('../pages/Assets/AssetListPage'),
       '/assets/new': () => import('../pages/Assets/AssetCreatePage'),
       '/system/users': () => import('../pages/System/UserManagementPage'),
       '/system/roles': () => import('../pages/System/RoleManagementPage'),
@@ -222,8 +222,8 @@ class SmartPreloadManager {
 
     // 根据当前路由预测
     if (currentRoute === '/dashboard') {
-      predictions.push('/owner/assets');
-    } else if (currentRoute === '/owner/assets') {
+      predictions.push('/assets/list');
+    } else if (currentRoute === '/assets/list') {
       predictions.push('/assets/new', '/assets/analytics');
     }
 

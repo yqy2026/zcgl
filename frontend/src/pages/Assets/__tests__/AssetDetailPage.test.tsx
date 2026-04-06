@@ -133,13 +133,12 @@ const renderAssetDetailPage = (assetId: string) => {
     <QueryClientProvider client={queryClient}>
       <Routes>
         <Route path="/assets/:id" element={<AssetDetailPage />} />
-        <Route path="/owner/assets/:id" element={<AssetDetailPage />} />
         <Route path="/assets" element={<div>Asset List</div>} />
         <Route path="/assets/:id/edit" element={<div>Edit Asset</div>} />
-        <Route path="/owner/customers/:id" element={<div>Customer Detail</div>} />
+        <Route path="/customers/:id" element={<div>Customer Detail</div>} />
       </Routes>
     </QueryClientProvider>,
-    { route: `/owner/assets/${assetId}` }
+    { route: `/assets/${assetId}` }
   );
 
   return {

@@ -109,7 +109,7 @@ class AuthzContextBuilder:
         )
 
     @staticmethod
-    def resolve_allowed_perspectives(
+    def resolve_allowed_binding_types(
         subject_context: SubjectContext,
     ) -> list[PerspectiveName]:
         perspectives: list[PerspectiveName] = []

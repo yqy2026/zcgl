@@ -7,9 +7,9 @@ from ...core.exception_handler import BaseBusinessError, internal_error
 from ...core.response_handler import ResponseHandler
 from ...database import get_async_db
 from ...middleware.auth import (
-    PerspectiveContext,
+    DataScopeContext,
     get_current_active_user,
-    require_perspective_context,
+    require_data_scope_context,
 )
 from ...models.auth import User
 from ...schemas.search import GlobalSearchResponse
@@ -23,8 +23,8 @@ async def global_search(
     q: str = Query(..., min_length=1, description="搜索关键词"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
-    _perspective_ctx: PerspectiveContext = Depends(
-        require_perspective_context(resource_type="search")
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="search")
     ),
 ) -> object:
     _ = current_user
@@ -32,8 +32,8 @@ async def global_search(
         result = await search_service.search_global(
             db=db,
             query=q,
-            perspective=_perspective_ctx.perspective,
-            effective_party_ids=_perspective_ctx.effective_party_ids,
+            scope_mode=_scope_ctx.scope_mode,
+            effective_party_ids=_scope_ctx.effective_party_ids,
         )
         normalized_result = GlobalSearchResponse.model_validate(result)
         return ResponseHandler.success(

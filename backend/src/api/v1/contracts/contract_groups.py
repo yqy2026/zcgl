@@ -17,10 +17,10 @@ from ....core.exception_handler import BaseBusinessError, internal_error, not_fo
 from ....database import get_async_db
 from ....middleware.auth import (
     AuthzContext,
-    PerspectiveContext,
+    DataScopeContext,
     get_current_active_user,
     require_authz,
-    require_perspective_context,
+    require_data_scope_context,
 )
 from ....models.auth import User
 from ....schemas.contract_group import (
@@ -120,8 +120,8 @@ async def list_contract_groups(
     limit: int = Query(20, ge=1, le=200, description="每页条数"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
-    _perspective_ctx: PerspectiveContext = Depends(
-        require_perspective_context(resource_type="contract_group")
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="contract_group")
     ),
     _authz: Annotated[
         AuthzContext | None,
@@ -142,8 +142,8 @@ async def list_contract_groups(
         revenue_mode=revenue_mode,
         offset=offset,
         limit=limit,
-        perspective=_perspective_ctx.perspective,
-        effective_party_ids=_perspective_ctx.effective_party_ids,
+        binding_type=_scope_ctx.scope_mode,
+        effective_party_ids=_scope_ctx.effective_party_ids,
     )
     return {
         "items": [item.model_dump() for item in items],
@@ -162,8 +162,8 @@ async def get_contract_group(
     group_id: str,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
-    _perspective_ctx: PerspectiveContext = Depends(
-        require_perspective_context(resource_type="contract_group")
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="contract_group")
     ),
     _authz: Annotated[
         AuthzContext | None,
@@ -183,8 +183,8 @@ async def get_contract_group(
         return await contract_group_service.get_group_detail(
             db,
             group_id=group_id,
-            perspective=_perspective_ctx.perspective,
-            effective_party_ids=_perspective_ctx.effective_party_ids,
+            binding_type=_scope_ctx.scope_mode,
+            effective_party_ids=_scope_ctx.effective_party_ids,
         )
     except BaseBusinessError:
         raise

@@ -215,9 +215,7 @@ class TestValidateSignDate:
     def test_b8_pending_review_without_sign_date_raises(self):
         """B8: 待审且 sign_date=None → OperationNotAllowedError"""
         with pytest.raises(OperationNotAllowedError, match="sign_date"):
-            validate_sign_date_for_status(
-                ContractLifecycleStatus.PENDING_REVIEW, None
-            )
+            validate_sign_date_for_status(ContractLifecycleStatus.PENDING_REVIEW, None)
 
     def test_b8_active_without_sign_date_raises(self):
         """B8: 生效且 sign_date=None → OperationNotAllowedError"""
@@ -230,9 +228,7 @@ class TestValidateSignDate:
 
     def test_active_with_sign_date_ok(self):
         """生效状态且有 sign_date 不报错"""
-        validate_sign_date_for_status(
-            ContractLifecycleStatus.ACTIVE, date(2026, 1, 1)
-        )
+        validate_sign_date_for_status(ContractLifecycleStatus.ACTIVE, date(2026, 1, 1))
 
 
 # ─── SettlementRuleSchema ─────────────────────────────────────────────────────
@@ -392,7 +388,7 @@ class TestPerspectiveScopedContractGroups:
         ) as mock_list_by_filters:
             result = await service.list_groups(
                 mock_db,
-                perspective="manager",
+                binding_type="manager",
                 effective_party_ids=["manager-1"],
             )
 
@@ -419,7 +415,7 @@ class TestPerspectiveScopedContractGroups:
                 await service.get_group_detail(
                     mock_db,
                     group_id="group-1",
-                    perspective="owner",
+                    binding_type="owner",
                     effective_party_ids=["owner-1"],
                 )
 
@@ -434,9 +430,7 @@ class TestAddContractToGroup:
             _valid_contract_create(contract_number=None)
         assert "contract_number" in str(exc_info.value)
 
-    async def test_b1_lease_group_rejects_entrusted_contract(
-        self, mock_db: MagicMock
-    ):
+    async def test_b1_lease_group_rejects_entrusted_contract(self, mock_db: MagicMock):
         """B1: LEASE 合同组不允许添加 ENTRUSTED 角色合同"""
         service = ContractGroupService()
         mock_group = MagicMock(spec=ContractGroup)
@@ -451,9 +445,7 @@ class TestAddContractToGroup:
                 group_relation_type=GroupRelationType.ENTRUSTED
             )
             with pytest.raises(OperationNotAllowedError, match="承租模式"):
-                await service.add_contract_to_group(
-                    mock_db, obj_in=contract_in
-                )
+                await service.add_contract_to_group(mock_db, obj_in=contract_in)
 
     async def test_b8_active_contract_without_sign_date_raises(
         self, mock_db: MagicMock
@@ -473,13 +465,9 @@ class TestAddContractToGroup:
                 sign_date=None,
             )
             with pytest.raises(OperationNotAllowedError, match="sign_date"):
-                await service.add_contract_to_group(
-                    mock_db, obj_in=contract_in
-                )
+                await service.add_contract_to_group(mock_db, obj_in=contract_in)
 
-    async def test_duplicate_contract_number_raises(
-        self, mock_db: MagicMock
-    ):
+    async def test_duplicate_contract_number_raises(self, mock_db: MagicMock):
         """重复 contract_number 应在 Service 层直接拦截。"""
         service = ContractGroupService()
         mock_group = MagicMock(spec=ContractGroup)
@@ -537,7 +525,9 @@ class TestAddContractToGroup:
             )
 
         assert result.contract_id == "contract-001"
-        assert mock_create.await_args.kwargs["data"]["contract_number"] == "HT-2026-0099"
+        assert (
+            mock_create.await_args.kwargs["data"]["contract_number"] == "HT-2026-0099"
+        )
 
 
 class TestSubmitReviewRequiresApprovedParties:
@@ -560,7 +550,9 @@ class TestSubmitReviewRequiresApprovedParties:
         )
 
         with (
-            patch.object(service, "_get_contract_or_raise", AsyncMock(return_value=contract)),
+            patch.object(
+                service, "_get_contract_or_raise", AsyncMock(return_value=contract)
+            ),
             patch(
                 "src.services.contract.contract_group_service.contract_group_crud.get",
                 new_callable=AsyncMock,
@@ -576,7 +568,9 @@ class TestSubmitReviewRequiresApprovedParties:
                 new_callable=AsyncMock,
                 side_effect=OperationNotAllowedError("存在未审核主体"),
             ) as mock_assert,
-            patch.object(service, "_transition_contract", AsyncMock()) as mock_transition,
+            patch.object(
+                service, "_transition_contract", AsyncMock()
+            ) as mock_transition,
         ):
             with pytest.raises(OperationNotAllowedError, match="未审核主体"):
                 await service.submit_review(mock_db, contract_id="contract-001")
@@ -612,7 +606,9 @@ class TestSubmitReviewRequiresApprovedParties:
         )
 
         with (
-            patch.object(service, "_get_contract_or_raise", AsyncMock(return_value=contract)),
+            patch.object(
+                service, "_get_contract_or_raise", AsyncMock(return_value=contract)
+            ),
             patch(
                 "src.services.contract.contract_group_service.contract_group_crud.get",
                 new_callable=AsyncMock,
@@ -628,7 +624,9 @@ class TestSubmitReviewRequiresApprovedParties:
                 new_callable=AsyncMock,
                 return_value=None,
             ) as mock_assert,
-            patch.object(service, "_transition_contract", AsyncMock(return_value=contract)) as mock_transition,
+            patch.object(
+                service, "_transition_contract", AsyncMock(return_value=contract)
+            ) as mock_transition,
         ):
             result = await service.submit_review(mock_db, contract_id="contract-001")
 

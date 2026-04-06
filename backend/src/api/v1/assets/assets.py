@@ -35,12 +35,12 @@ from ....crud.query_builder import PartyFilter
 from ....database import get_async_db
 from ....middleware.auth import (
     AuthzContext,
-    PerspectiveContext,
+    DataScopeContext,
     audit_action,
     get_current_active_user,
     require_admin,
     require_authz,
-    require_perspective_context,
+    require_data_scope_context,
 )
 from ....middleware.security_middleware import get_client_ip
 from ....models.auth import User
@@ -58,7 +58,7 @@ from ....services.asset.asset_service import (
     AsyncAssetService,
 )
 from ....services.authz import authz_service
-from ....services.party_scope import build_party_filter_from_perspective_context
+from ....services.party_scope import build_party_filter_from_scope_context
 
 # 导入子路由模块
 from . import asset_attachments, asset_batch, asset_import
@@ -80,9 +80,9 @@ _ASSET_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:asset:create"
 
 
 def _build_asset_party_filter(
-    perspective_context: PerspectiveContext,
+    scope_context: DataScopeContext,
 ) -> PartyFilter:
-    return build_party_filter_from_perspective_context(perspective_context)
+    return build_party_filter_from_scope_context(scope_context)
 
 
 def _normalize_optional_str(value: Any) -> str | None:
@@ -332,8 +332,8 @@ async def get_assets(
     include_relations: bool = Query(False, description="是否加载关联数据"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
-    _perspective_ctx: PerspectiveContext = Depends(
-        require_perspective_context(resource_type="asset")
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="asset")
     ),
     _authz_ctx: AuthzContext = Depends(_require_asset_collection_read_authz),
     sort_field: str | None = Query(None, description="排序字段"),
@@ -388,7 +388,7 @@ async def get_assets(
         sort_order=sort_order,
         include_relations=include_relations,
         current_user_id=str(current_user.id),
-        party_filter=_build_asset_party_filter(_perspective_ctx),
+        party_filter=_build_asset_party_filter(_scope_ctx),
     )
 
     items: Sequence[AssetResponse | AssetListItemResponse]
@@ -414,15 +414,15 @@ async def get_assets(
 async def get_ownership_entities(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
-    _perspective_ctx: PerspectiveContext = Depends(
-        require_perspective_context(resource_type="asset")
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="asset")
     ),
     _authz_ctx: AuthzContext = Depends(_require_asset_collection_read_authz),
 ) -> list[str]:
     """获取所有权属方列表，用于搜索筛选"""
     return await AsyncAssetService(db).get_ownership_entity_names(
         current_user_id=str(current_user.id),
-        party_filter=_build_asset_party_filter(_perspective_ctx),
+        party_filter=_build_asset_party_filter(_scope_ctx),
     )
 
 
@@ -432,8 +432,8 @@ async def get_ownership_entities(
 async def get_business_categories(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
-    _perspective_ctx: PerspectiveContext = Depends(
-        require_perspective_context(resource_type="asset")
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="asset")
     ),
     _authz_ctx: AuthzContext = Depends(_require_asset_collection_read_authz),
 ) -> list[str]:
@@ -442,7 +442,7 @@ async def get_business_categories(
         db,
         "business_category",
         str(current_user.id),
-        party_filter=_build_asset_party_filter(_perspective_ctx),
+        party_filter=_build_asset_party_filter(_scope_ctx),
     )
 
 
@@ -450,8 +450,8 @@ async def get_business_categories(
 async def get_usage_statuses(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
-    _perspective_ctx: PerspectiveContext = Depends(
-        require_perspective_context(resource_type="asset")
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="asset")
     ),
     _authz_ctx: AuthzContext = Depends(_require_asset_collection_read_authz),
 ) -> list[str]:
@@ -460,7 +460,7 @@ async def get_usage_statuses(
         db,
         "usage_status",
         str(current_user.id),
-        party_filter=_build_asset_party_filter(_perspective_ctx),
+        party_filter=_build_asset_party_filter(_scope_ctx),
     )
 
 
@@ -468,8 +468,8 @@ async def get_usage_statuses(
 async def get_property_natures(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
-    _perspective_ctx: PerspectiveContext = Depends(
-        require_perspective_context(resource_type="asset")
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="asset")
     ),
     _authz_ctx: AuthzContext = Depends(_require_asset_collection_read_authz),
 ) -> list[str]:
@@ -478,7 +478,7 @@ async def get_property_natures(
         db,
         "property_nature",
         str(current_user.id),
-        party_filter=_build_asset_party_filter(_perspective_ctx),
+        party_filter=_build_asset_party_filter(_scope_ctx),
     )
 
 
@@ -486,8 +486,8 @@ async def get_property_natures(
 async def get_ownership_statuses(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
-    _perspective_ctx: PerspectiveContext = Depends(
-        require_perspective_context(resource_type="asset")
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="asset")
     ),
     _authz_ctx: AuthzContext = Depends(_require_asset_collection_read_authz),
 ) -> list[str]:
@@ -496,7 +496,7 @@ async def get_ownership_statuses(
         db,
         "ownership_status",
         str(current_user.id),
-        party_filter=_build_asset_party_filter(_perspective_ctx),
+        party_filter=_build_asset_party_filter(_scope_ctx),
     )
 
 
@@ -508,8 +508,8 @@ async def get_asset(
     asset_id: str = Path(..., description="资产ID"),
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_async_db),
-    _perspective_ctx: PerspectiveContext = Depends(
-        require_perspective_context(resource_type="asset")
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="asset")
     ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
@@ -529,7 +529,7 @@ async def get_asset(
     asset = await asset_service.get_asset(
         asset_id,
         current_user_id=str(current_user.id),
-        party_filter=_build_asset_party_filter(_perspective_ctx),
+        party_filter=_build_asset_party_filter(_scope_ctx),
     )
     return AssetResponse.model_validate(asset)
 

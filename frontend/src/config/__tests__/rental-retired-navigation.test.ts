@@ -32,26 +32,19 @@ describe('rental retired navigation config', () => {
     expect(dynamicBreadcrumbMap['/rental/contracts/:id/renew']).toBe('旧合同续签入口已退休');
   });
 
-  it('keeps retired rental routing while contract groups move under owner/manager navigation', () => {
-    const ownerSection = (MENU_ITEMS ?? []).find(item => item?.key === '/owner');
-    const managerSection = (MENU_ITEMS ?? []).find(item => item?.key === '/manager');
-    const ownerChildren = 'children' in (ownerSection ?? {}) ? (ownerSection?.children ?? []) : [];
-    const managerChildren =
-      'children' in (managerSection ?? {}) ? (managerSection?.children ?? []) : [];
+  it('keeps retired rental routing while contract groups stay under flat asset navigation', () => {
+    const assetsSection = (MENU_ITEMS ?? []).find(item => item?.key === '/assets');
+    const assetsChildren = 'children' in (assetsSection ?? {}) ? (assetsSection?.children ?? []) : [];
 
-    expect(ownerChildren).toEqual(
-      expect.arrayContaining([expect.objectContaining({ key: '/owner/contract-groups' })])
+    expect(assetsChildren).toEqual(
+      expect.arrayContaining([expect.objectContaining({ key: '/contract-groups' })])
     );
-    expect(managerChildren).toEqual(
-      expect.arrayContaining([expect.objectContaining({ key: '/manager/contract-groups' })])
-    );
-    expect((MENU_ITEMS ?? []).find(item => item?.key === '/contract-groups')).toBeUndefined();
 
-    expect(getSelectedKeys('/contract-groups')).toEqual([]);
-    expect(getSelectedKeys('/contract-groups/import')).toEqual([]);
-    expect(getSelectedKeys('/contract-groups/new')).toEqual([]);
-    expect(getSelectedKeys('/contract-groups/group-1')).toEqual([]);
-    expect(getSelectedKeys('/contract-groups/group-1/edit')).toEqual([]);
+    expect(getSelectedKeys('/contract-groups')).toEqual(['/contract-groups']);
+    expect(getSelectedKeys('/contract-groups/import')).toEqual(['/contract-groups']);
+    expect(getSelectedKeys('/contract-groups/new')).toEqual(['/contract-groups']);
+    expect(getSelectedKeys('/contract-groups/group-1')).toEqual(['/contract-groups']);
+    expect(getSelectedKeys('/contract-groups/group-1/edit')).toEqual(['/contract-groups']);
     expect(getSelectedKeys('/rental/contracts/pdf-import')).toEqual([]);
 
     expect(staticBreadcrumbMap['/contract-groups']).toBe('合同组管理');

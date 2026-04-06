@@ -8,7 +8,7 @@ import { act, createTestQueryClient, renderHookWithProviders, waitFor } from '@/
 import * as useAssetsHooks from '../useAssets';
 
 vi.mock('@/utils/queryScope', () => ({
-  buildQueryScopeKey: () => 'user:user-1|perspective:owner',
+  buildQueryScopeKey: () => 'user:user-1|scope:owner,manager',
 }));
 
 vi.mock('@/utils/messageManager', () => ({
@@ -131,7 +131,7 @@ describe('useAssets - Hook验证', () => {
     expect(typeof useAssetsHooks.useValidateAsset).toBe('function');
   });
 
-  it('useAsset 应把当前视角纳入详情 queryKey', async () => {
+  it('useAsset 应把当前数据范围纳入详情 queryKey', async () => {
     const queryClient = createTestQueryClient();
 
     renderHookWithProviders(() => useAssetsHooks.useAsset('asset-1'), { queryClient });
@@ -150,13 +150,13 @@ describe('useAssets - Hook验证', () => {
         queryKey =>
           Array.isArray(queryKey) &&
           queryKey[0] === 'asset' &&
-          queryKey[1] === 'user:user-1|perspective:owner' &&
+          queryKey[1] === 'user:user-1|scope:owner,manager' &&
           queryKey[2] === 'asset-1'
       )
     ).toBe(true);
   });
 
-  it('useAssets 应把当前视角纳入列表 queryKey 并使用 assets-list 前缀', async () => {
+  it('useAssets 应把当前数据范围纳入列表 queryKey 并使用 assets-list 前缀', async () => {
     const queryClient = createTestQueryClient();
 
     renderHookWithProviders(() => useAssetsHooks.useAssets({ keyword: '园区' } as never), {
@@ -177,7 +177,7 @@ describe('useAssets - Hook验证', () => {
         queryKey =>
           Array.isArray(queryKey) &&
           queryKey[0] === 'assets-list' &&
-          queryKey[1] === 'user:user-1|perspective:owner' &&
+          queryKey[1] === 'user:user-1|scope:owner,manager' &&
           typeof queryKey[2] === 'object' &&
           queryKey[2] !== null &&
           'keyword' in queryKey[2] &&

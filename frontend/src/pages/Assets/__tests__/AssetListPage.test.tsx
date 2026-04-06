@@ -144,7 +144,7 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-const renderPage = (route = '/owner/assets') => renderWithProviders(<AssetListPage />, { route });
+const renderPage = (route = '/assets/list') => renderWithProviders(<AssetListPage />, { route });
 
 let mockData: Array<{ id: string; asset_name: string }> = [];
 let mockIsAssetsInitialLoading = false;
@@ -229,7 +229,7 @@ describe('AssetListPage', () => {
     it('渲染页面标题', () => {
       renderPage();
 
-      expect(screen.getByText('资产列表')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: '资产列表' })).toBeInTheDocument();
       expect(mockBuildQueryScopeKey).toHaveBeenCalledWith(undefined);
     });
 

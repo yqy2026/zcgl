@@ -19,10 +19,10 @@ from ....crud.query_builder import PartyFilter
 from ....database import get_async_db
 from ....middleware.auth import (
     AuthzContext,
-    PerspectiveContext,
+    DataScopeContext,
     get_current_active_user,
     require_authz,
-    require_perspective_context,
+    require_data_scope_context,
 )
 from ....models.auth import User
 from ....schemas.asset import AssetListItemResponse
@@ -35,7 +35,7 @@ from ....schemas.project import (
     ProjectUpdate,
 )
 from ....services.authz import authz_service
-from ....services.party_scope import build_party_filter_from_perspective_context
+from ....services.party_scope import build_party_filter_from_scope_context
 from ....services.project import project_service
 
 router = APIRouter()
@@ -46,9 +46,9 @@ ProjectActiveAssetsResponse.model_rebuild(
 
 
 def _build_project_party_filter(
-    perspective_context: PerspectiveContext,
+    scope_context: DataScopeContext,
 ) -> PartyFilter:
-    return build_party_filter_from_perspective_context(perspective_context)
+    return build_party_filter_from_scope_context(scope_context)
 
 
 def _normalize_optional_str(value: Any) -> str | None:
@@ -229,8 +229,8 @@ async def create_project(
     project_in: ProjectCreate,
     db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
-    _perspective_ctx: PerspectiveContext = Depends(
-        require_perspective_context(resource_type="project")
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="project")
     ),
     _authz_ctx: AuthzContext = Depends(_require_project_create_authz),
 ) -> ProjectResponse:
@@ -286,8 +286,8 @@ async def create_project(
 async def list_projects(
     db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
-    _perspective_ctx: PerspectiveContext = Depends(
-        require_perspective_context(resource_type="project")
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="project")
     ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(action="read", resource_type="project")
@@ -315,7 +315,7 @@ async def list_projects(
             db=db,
             search_params=search_params,
             current_user_id=str(current_user.id),
-            party_filter=_build_project_party_filter(_perspective_ctx),
+            party_filter=_build_project_party_filter(_scope_ctx),
         )
         items = [
             project_service.project_to_response(item)
@@ -341,8 +341,8 @@ async def search_projects(
     search_params: ProjectSearchRequest,
     db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
-    _perspective_ctx: PerspectiveContext = Depends(
-        require_perspective_context(resource_type="project")
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="project")
     ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(action="read", resource_type="project")
@@ -356,7 +356,7 @@ async def search_projects(
             db=db,
             search_params=search_params,
             current_user_id=str(current_user.id),
-            party_filter=_build_project_party_filter(_perspective_ctx),
+            party_filter=_build_project_party_filter(_scope_ctx),
         )
         items = [
             project_service.project_to_response(item)
@@ -377,8 +377,8 @@ async def search_projects(
 async def get_project_options(
     db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
-    _perspective_ctx: PerspectiveContext = Depends(
-        require_perspective_context(resource_type="project")
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="project")
     ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(action="read", resource_type="project")
@@ -390,7 +390,7 @@ async def get_project_options(
         db,
         status=status,
         current_user_id=str(current_user.id),
-        party_filter=_build_project_party_filter(_perspective_ctx),
+        party_filter=_build_project_party_filter(_scope_ctx),
     )
 
 
@@ -402,8 +402,8 @@ async def get_project_options(
 async def get_project_statistics(
     db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
-    _perspective_ctx: PerspectiveContext = Depends(
-        require_perspective_context(resource_type="project")
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="project")
     ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(action="read", resource_type="project")
@@ -415,7 +415,7 @@ async def get_project_statistics(
     return await project_service.get_project_statistics(
         db=db,
         current_user_id=str(current_user.id),
-        party_filter=_build_project_party_filter(_perspective_ctx),
+        party_filter=_build_project_party_filter(_scope_ctx),
     )
 
 
@@ -428,8 +428,8 @@ async def get_project_active_assets(
     project_id: Annotated[str, Path(description="项目ID")],
     db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
-    _perspective_ctx: PerspectiveContext = Depends(
-        require_perspective_context(resource_type="project")
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="project")
     ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
@@ -446,7 +446,7 @@ async def get_project_active_assets(
             db=db,
             project_id=project_id,
             current_user_id=str(current_user.id),
-            party_filter=_build_project_party_filter(_perspective_ctx),
+            party_filter=_build_project_party_filter(_scope_ctx),
         )
         items = [AssetListItemResponse.model_validate(asset) for asset in assets]
         response_payload = ProjectActiveAssetsResponse(
@@ -469,8 +469,8 @@ async def get_project(
     project_id: Annotated[str, Path(description="项目ID")],
     db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
-    _perspective_ctx: PerspectiveContext = Depends(
-        require_perspective_context(resource_type="project")
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="project")
     ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
@@ -488,7 +488,7 @@ async def get_project(
         db=db,
         project_id=project_id,
         current_user_id=str(current_user.id),
-        party_filter=_build_project_party_filter(_perspective_ctx),
+        party_filter=_build_project_party_filter(_scope_ctx),
     )
     if not project:
         raise not_found("项目不存在", resource_type="project", resource_id=project_id)
@@ -501,8 +501,8 @@ async def update_project(
     project_in: ProjectUpdate,
     db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
-    _perspective_ctx: PerspectiveContext = Depends(
-        require_perspective_context(resource_type="project")
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="project")
     ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
@@ -522,7 +522,7 @@ async def update_project(
             obj_in=project_in,
             updated_by=current_user.id,
             current_user_id=str(current_user.id),
-            party_filter=_build_project_party_filter(_perspective_ctx),
+            party_filter=_build_project_party_filter(_scope_ctx),
         )
         return project_service.project_to_response(project)
     except Exception as e:
@@ -536,8 +536,8 @@ async def delete_project(
     project_id: Annotated[str, Path(description="项目ID")],
     db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
-    _perspective_ctx: PerspectiveContext = Depends(
-        require_perspective_context(resource_type="project")
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="project")
     ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
@@ -555,7 +555,7 @@ async def delete_project(
             db=db,
             project_id=project_id,
             current_user_id=str(current_user.id),
-            party_filter=_build_project_party_filter(_perspective_ctx),
+            party_filter=_build_project_party_filter(_scope_ctx),
         )
         return {"message": "项目删除成功"}
     except Exception as e:
@@ -569,8 +569,8 @@ async def toggle_project_status(
     project_id: Annotated[str, Path(description="项目ID")],
     db: Annotated[AsyncSession, Depends(get_async_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
-    _perspective_ctx: PerspectiveContext = Depends(
-        require_perspective_context(resource_type="project")
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="project")
     ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
@@ -589,7 +589,7 @@ async def toggle_project_status(
             project_id=project_id,
             updated_by=current_user.id,
             current_user_id=str(current_user.id),
-            party_filter=_build_project_party_filter(_perspective_ctx),
+            party_filter=_build_project_party_filter(_scope_ctx),
         )
         return project_service.project_to_response(project)
     except Exception as e:

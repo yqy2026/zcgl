@@ -36,7 +36,9 @@ class TestPartyServiceUserScopeInvalidation:
         with (
             patch.object(service, "_assert_user_exists", AsyncMock(return_value=None)),
             patch.object(service, "_assert_party_exists", AsyncMock(return_value=None)),
-            patch("src.services.authz.authz_event_bus.publish_invalidation") as mock_publish,
+            patch(
+                "src.services.authz.authz_event_bus.publish_invalidation"
+            ) as mock_publish,
         ):
             result = await service.create_user_party_binding(
                 db,
@@ -49,7 +51,9 @@ class TestPartyServiceUserScopeInvalidation:
             payload={"user_id": "user-1"},
         )
 
-    async def test_create_user_party_binding_does_not_fail_when_publish_errors(self) -> None:
+    async def test_create_user_party_binding_does_not_fail_when_publish_errors(
+        self,
+    ) -> None:
         db = MagicMock()
         binding = SimpleNamespace(user_id="user-1")
         party_crud = MagicMock()
@@ -110,7 +114,9 @@ class TestPartyServiceScopeAndBindingBehavior:
             scoped_party_ids=["party-1"],
         )
 
-    async def test_get_parties_should_not_scope_when_filter_resolver_returns_none(self) -> None:
+    async def test_get_parties_should_not_scope_when_filter_resolver_returns_none(
+        self,
+    ) -> None:
         db = MagicMock()
         party_crud = MagicMock()
         party_crud.get_parties = AsyncMock(return_value=[])
@@ -177,7 +183,9 @@ class TestPartyServiceScopeAndBindingBehavior:
         party_crud.update_user_party_binding.assert_awaited_once()
         mock_publish.assert_awaited_once_with("user-1")
 
-    async def test_close_user_party_binding_should_publish_scope_invalidation(self) -> None:
+    async def test_close_user_party_binding_should_publish_scope_invalidation(
+        self,
+    ) -> None:
         from datetime import UTC, datetime, timedelta
 
         db = MagicMock()
@@ -211,7 +219,9 @@ class TestPartyServiceScopeAndBindingBehavior:
         party_crud.update_user_party_binding.assert_awaited_once()
         mock_publish.assert_awaited_once_with("user-1")
 
-    async def test_create_user_party_binding_should_reject_invalid_time_range(self) -> None:
+    async def test_create_user_party_binding_should_reject_invalid_time_range(
+        self,
+    ) -> None:
         from datetime import UTC, datetime, timedelta
 
         db = MagicMock()
@@ -313,7 +323,7 @@ class TestCustomerProfileAggregation:
             profile = await service.get_customer_profile(
                 db,
                 party_id="party-customer-1",
-                perspective="manager",
+                binding_type="manager",
                 effective_party_ids=["party-manager-1"],
             )
 
@@ -337,6 +347,49 @@ class TestCustomerProfileAggregation:
             },
         ]
         assert profile["contracts"][0]["group_relation_type"] == "DIRECT_LEASE"
+
+    async def test_list_customer_contracts_should_union_owner_and_manager_matches_for_all_binding_type(
+        self,
+    ) -> None:
+        db = MagicMock()
+        execute_result = MagicMock()
+
+        owner_visible_contract = SimpleNamespace(
+            contract_id="contract-owner",
+            group_relation_type="UPSTREAM",
+            lessee_party_id="party-customer-1",
+            lessor_party_id="other-party",
+        )
+        manager_visible_contract = SimpleNamespace(
+            contract_id="contract-manager",
+            group_relation_type="UPSTREAM",
+            lessee_party_id="other-party",
+            lessor_party_id="party-customer-1",
+        )
+
+        scalar_result = MagicMock()
+        unique_result = MagicMock()
+        execute_result.scalars.return_value = scalar_result
+        scalar_result.unique.return_value = unique_result
+        unique_result.all.return_value = [
+            owner_visible_contract,
+            manager_visible_contract,
+        ]
+        db.execute = AsyncMock(return_value=execute_result)
+
+        service = PartyService(data_access=MagicMock())
+
+        contracts = await service._list_customer_contracts(
+            db,
+            party_id="party-customer-1",
+            binding_type="all",
+            effective_party_ids=["owner-1", "manager-1"],
+        )
+
+        assert [contract.contract_id for contract in contracts] == [
+            "contract-owner",
+            "contract-manager",
+        ]
 
     async def test_create_party_should_write_create_log(self) -> None:
         db = MagicMock()
@@ -363,7 +416,9 @@ class TestCustomerProfileAggregation:
 
         from src.models.party_review_log import PartyReviewLog
 
-        log_calls = [c for c in db.add.call_args_list if isinstance(c[0][0], PartyReviewLog)]
+        log_calls = [
+            c for c in db.add.call_args_list if isinstance(c[0][0], PartyReviewLog)
+        ]
         assert len(log_calls) == 1
         log_obj = log_calls[0][0][0]
         assert log_obj.action == "create"
@@ -375,7 +430,9 @@ class TestCustomerProfileAggregation:
         db.add = MagicMock()
         db.flush = AsyncMock()
         now = datetime.now(UTC).replace(tzinfo=None)
-        party = SimpleNamespace(id="party-1", review_status=PartyReviewStatus.PENDING.value)
+        party = SimpleNamespace(
+            id="party-1", review_status=PartyReviewStatus.PENDING.value
+        )
         updated_party = SimpleNamespace(
             id="party-1",
             review_status=PartyReviewStatus.APPROVED.value,
@@ -410,7 +467,9 @@ class TestCustomerProfileAggregation:
         db.add = MagicMock()
         db.flush = AsyncMock()
         now = datetime.now(UTC).replace(tzinfo=None)
-        party = SimpleNamespace(id="party-1", review_status=PartyReviewStatus.PENDING.value)
+        party = SimpleNamespace(
+            id="party-1", review_status=PartyReviewStatus.PENDING.value
+        )
         updated_party = SimpleNamespace(
             id="party-1",
             review_status=PartyReviewStatus.DRAFT.value,
@@ -443,7 +502,9 @@ class TestCustomerProfileAggregation:
     async def test_update_party_should_block_when_pending(self) -> None:
         """待审状态的主体不允许编辑。"""
         db = MagicMock()
-        party = SimpleNamespace(id="party-1", review_status=PartyReviewStatus.PENDING.value)
+        party = SimpleNamespace(
+            id="party-1", review_status=PartyReviewStatus.PENDING.value
+        )
         party_crud = MagicMock()
         party_crud.get_party = AsyncMock(return_value=party)
         service = PartyService(data_access=party_crud)
@@ -458,7 +519,9 @@ class TestCustomerProfileAggregation:
     async def test_update_party_should_block_when_approved(self) -> None:
         """已审核状态的主体不允许编辑。"""
         db = MagicMock()
-        party = SimpleNamespace(id="party-1", review_status=PartyReviewStatus.APPROVED.value)
+        party = SimpleNamespace(
+            id="party-1", review_status=PartyReviewStatus.APPROVED.value
+        )
         party_crud = MagicMock()
         party_crud.get_party = AsyncMock(return_value=party)
         service = PartyService(data_access=party_crud)
@@ -473,7 +536,9 @@ class TestCustomerProfileAggregation:
     async def test_update_party_should_allow_when_draft(self) -> None:
         """草稿状态的主体允许编辑。"""
         db = MagicMock()
-        party = SimpleNamespace(id="party-1", review_status=PartyReviewStatus.DRAFT.value)
+        party = SimpleNamespace(
+            id="party-1", review_status=PartyReviewStatus.DRAFT.value
+        )
         updated_party = SimpleNamespace(id="party-1", name="新名称")
         party_crud = MagicMock()
         party_crud.get_party = AsyncMock(return_value=party)
@@ -514,7 +579,9 @@ class TestCustomerProfileAggregation:
 
         from src.models.party_review_log import PartyReviewLog
 
-        log_calls = [c for c in db.add.call_args_list if isinstance(c[0][0], PartyReviewLog)]
+        log_calls = [
+            c for c in db.add.call_args_list if isinstance(c[0][0], PartyReviewLog)
+        ]
         assert len(log_calls) == 1
         log_obj = log_calls[0][0][0]
         assert log_obj.action == "update"
@@ -523,7 +590,9 @@ class TestCustomerProfileAggregation:
     async def test_delete_party_should_block_when_pending(self) -> None:
         """待审状态的主体不允许删除。"""
         db = MagicMock()
-        party = SimpleNamespace(id="party-1", review_status=PartyReviewStatus.PENDING.value)
+        party = SimpleNamespace(
+            id="party-1", review_status=PartyReviewStatus.PENDING.value
+        )
         party_crud = MagicMock()
         party_crud.get_party = AsyncMock(return_value=party)
         service = PartyService(data_access=party_crud)
@@ -534,7 +603,9 @@ class TestCustomerProfileAggregation:
     async def test_delete_party_should_block_when_approved(self) -> None:
         """已审核状态的主体不允许删除。"""
         db = MagicMock()
-        party = SimpleNamespace(id="party-1", review_status=PartyReviewStatus.APPROVED.value)
+        party = SimpleNamespace(
+            id="party-1", review_status=PartyReviewStatus.APPROVED.value
+        )
         party_crud = MagicMock()
         party_crud.get_party = AsyncMock(return_value=party)
         service = PartyService(data_access=party_crud)
@@ -545,13 +616,17 @@ class TestCustomerProfileAggregation:
     async def test_delete_party_should_allow_when_draft(self) -> None:
         """草稿状态的主体允许删除。"""
         db = MagicMock()
-        party = SimpleNamespace(id="party-1", review_status=PartyReviewStatus.DRAFT.value)
+        party = SimpleNamespace(
+            id="party-1", review_status=PartyReviewStatus.DRAFT.value
+        )
         party_crud = MagicMock()
         party_crud.get_party = AsyncMock(return_value=party)
         party_crud.delete_party = AsyncMock(return_value=None)
         service = PartyService(data_access=party_crud)
 
-        with patch.object(service, "_assert_no_references", AsyncMock(return_value=None)):
+        with patch.object(
+            service, "_assert_no_references", AsyncMock(return_value=None)
+        ):
             result = await service.delete_party(db, party_id="party-1")
 
         assert result is True
@@ -639,15 +714,15 @@ class TestCustomerProfileAggregation:
 
         party_crud.update_party.assert_not_called()
 
-    async def test_import_parties_should_create_approved_records_and_collect_duplicates(self) -> None:
+    async def test_import_parties_should_create_approved_records_and_collect_duplicates(
+        self,
+    ) -> None:
         db = MagicMock()
         party_crud = MagicMock()
         party_crud.get_party_by_type_and_code = AsyncMock(
             side_effect=[None, SimpleNamespace(id="existing-2")]
         )
-        party_crud.get_party_by_type_and_name = AsyncMock(
-            side_effect=[None, None]
-        )
+        party_crud.get_party_by_type_and_name = AsyncMock(side_effect=[None, None])
         party_crud.create_party = AsyncMock(
             return_value=SimpleNamespace(id="party-1", name="导入主体1")
         )
@@ -686,7 +761,9 @@ class TestPartyServiceSoftDelete:
     async def test_delete_party_should_check_asset_references(self) -> None:
         """被资产引用的主体不允许删除。"""
         db = MagicMock()
-        party = SimpleNamespace(id="party-1", review_status=PartyReviewStatus.DRAFT.value)
+        party = SimpleNamespace(
+            id="party-1", review_status=PartyReviewStatus.DRAFT.value
+        )
         party_crud = MagicMock()
         party_crud.get_party = AsyncMock(return_value=party)
         service = PartyService(data_access=party_crud)
@@ -707,7 +784,9 @@ class TestPartyServiceSoftDelete:
     async def test_delete_party_should_check_contract_references(self) -> None:
         """被合同组引用的主体不允许删除。"""
         db = MagicMock()
-        party = SimpleNamespace(id="party-1", review_status=PartyReviewStatus.DRAFT.value)
+        party = SimpleNamespace(
+            id="party-1", review_status=PartyReviewStatus.DRAFT.value
+        )
         party_crud = MagicMock()
         party_crud.get_party = AsyncMock(return_value=party)
         service = PartyService(data_access=party_crud)
@@ -728,13 +807,17 @@ class TestPartyServiceSoftDelete:
     async def test_delete_party_soft_deletes_via_crud(self) -> None:
         """删除应调用 CRUD 软删除。"""
         db = MagicMock()
-        party = SimpleNamespace(id="party-1", review_status=PartyReviewStatus.DRAFT.value)
+        party = SimpleNamespace(
+            id="party-1", review_status=PartyReviewStatus.DRAFT.value
+        )
         party_crud = MagicMock()
         party_crud.get_party = AsyncMock(return_value=party)
         party_crud.delete_party = AsyncMock(return_value=None)
         service = PartyService(data_access=party_crud)
 
-        with patch.object(service, "_assert_no_references", AsyncMock(return_value=None)):
+        with patch.object(
+            service, "_assert_no_references", AsyncMock(return_value=None)
+        ):
             result = await service.delete_party(db, party_id="party-1")
 
         assert result is True
@@ -748,7 +831,9 @@ class TestPartyServiceReviewLog:
         db.add = MagicMock()
         db.flush = AsyncMock()
         party = SimpleNamespace(id="party-1", review_status=PartyReviewStatus.DRAFT)
-        updated = SimpleNamespace(id="party-1", review_status=PartyReviewStatus.PENDING.value)
+        updated = SimpleNamespace(
+            id="party-1", review_status=PartyReviewStatus.PENDING.value
+        )
         party_crud = MagicMock()
         party_crud.get_party = AsyncMock(return_value=party)
         party_crud.update_party = AsyncMock(return_value=updated)
@@ -776,7 +861,9 @@ class TestPartyServiceReviewLog:
         db.flush = AsyncMock()
         now = datetime.now(UTC).replace(tzinfo=None)
         party = SimpleNamespace(id="party-1", review_status=PartyReviewStatus.PENDING)
-        updated = SimpleNamespace(id="party-1", review_status=PartyReviewStatus.APPROVED.value)
+        updated = SimpleNamespace(
+            id="party-1", review_status=PartyReviewStatus.APPROVED.value
+        )
         party_crud = MagicMock()
         party_crud.get_party = AsyncMock(return_value=party)
         party_crud.update_party = AsyncMock(return_value=updated)
@@ -806,7 +893,9 @@ class TestPartyServiceReviewLog:
         db.flush = AsyncMock()
         now = datetime.now(UTC).replace(tzinfo=None)
         party = SimpleNamespace(id="party-1", review_status=PartyReviewStatus.PENDING)
-        updated = SimpleNamespace(id="party-1", review_status=PartyReviewStatus.DRAFT.value)
+        updated = SimpleNamespace(
+            id="party-1", review_status=PartyReviewStatus.DRAFT.value
+        )
         party_crud = MagicMock()
         party_crud.get_party = AsyncMock(return_value=party)
         party_crud.update_party = AsyncMock(return_value=updated)

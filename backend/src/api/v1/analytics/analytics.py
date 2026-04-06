@@ -21,16 +21,16 @@ from ....core.response_handler import ResponseHandler, get_request_id
 from ....database import get_async_db
 from ....middleware.auth import (
     AuthzContext,
-    PerspectiveContext,
+    DataScopeContext,
     get_current_active_user,
     require_authz,
-    require_perspective_context,
+    require_data_scope_context,
 )
 from ....models.auth import User
 from ....security.route_guards import debug_only, require_localhost
 from ....services.analytics.analytics_export_service import AnalyticsExportService
 from ....services.analytics.analytics_service import AnalyticsService
-from ....services.party_scope import build_party_filter_from_perspective_context
+from ....services.party_scope import build_party_filter_from_scope_context
 
 logger = logging.getLogger(__name__)
 
@@ -52,8 +52,8 @@ async def get_comprehensive_analytics(
     should_use_cache: bool = True,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
-    _perspective_ctx: PerspectiveContext = Depends(
-        require_perspective_context(resource_type="analytics")
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="analytics")
     ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
@@ -90,7 +90,7 @@ async def get_comprehensive_analytics(
             filters=filters,
             should_use_cache=should_use_cache,
             current_user=current_user,
-            party_filter=build_party_filter_from_perspective_context(_perspective_ctx),
+            party_filter=build_party_filter_from_scope_context(_scope_ctx),
         )
 
         success_response: JSONResponse = ResponseHandler.success(
@@ -108,7 +108,7 @@ async def get_comprehensive_analytics(
                 filters=filters,
                 should_use_cache=False,
                 current_user=current_user,
-                party_filter=build_party_filter_from_perspective_context(_perspective_ctx),
+                party_filter=build_party_filter_from_scope_context(_scope_ctx),
             )
             return ResponseHandler.success(
                 data=fallback_result,
@@ -132,8 +132,8 @@ async def get_cache_stats(
     request: Request,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
-    _perspective_ctx: PerspectiveContext = Depends(
-        require_perspective_context(resource_type="analytics")
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="analytics")
     ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
@@ -173,8 +173,8 @@ async def clear_cache(
     request: Request,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
-    _perspective_ctx: PerspectiveContext = Depends(
-        require_perspective_context(resource_type="analytics")
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="analytics")
     ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
@@ -369,8 +369,8 @@ async def export_analytics(
     date_to: str | None = None,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
-    _perspective_ctx: PerspectiveContext = Depends(
-        require_perspective_context(resource_type="analytics")
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="analytics")
     ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
@@ -417,7 +417,7 @@ async def export_analytics(
             filters=filters,
             should_use_cache=False,
             current_user=current_user,
-            party_filter=build_party_filter_from_perspective_context(_perspective_ctx),
+            party_filter=build_party_filter_from_scope_context(_scope_ctx),
         )
         export_service = AnalyticsExportService()
         export_rows = export_service.build_export_rows(result)

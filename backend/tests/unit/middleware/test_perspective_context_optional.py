@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.middleware.auth import require_perspective_context
+from src.middleware.auth import require_data_scope_context
 from src.services.authz.context_builder import SubjectContext
 
 from .test_perspective_context import _build_request, _UserStub
@@ -13,7 +13,7 @@ pytestmark = pytest.mark.asyncio
 
 
 async def test_no_perspective_header_returns_all_binding_context() -> None:
-    checker = require_perspective_context()
+    checker = require_data_scope_context()
     request = _build_request(method="GET", path="/api/v1/assets/")
 
     with (
@@ -41,13 +41,13 @@ async def test_no_perspective_header_returns_all_binding_context() -> None:
         )
 
     assert result is not None
-    assert result.perspective == "all"
+    assert result.scope_mode == "all"
     assert result.effective_party_ids == ["manager-1", "owner-1"]
     assert result.source == "auto"
 
 
 async def test_no_perspective_header_admin_bypass() -> None:
-    checker = require_perspective_context(resource_type="project")
+    checker = require_data_scope_context(resource_type="project")
     request = _build_request(method="GET", path="/api/v1/projects/")
 
     with (
@@ -74,12 +74,12 @@ async def test_no_perspective_header_admin_bypass() -> None:
         )
 
     assert result is not None
-    assert result.perspective == "all"
+    assert result.scope_mode == "all"
     assert result.effective_party_ids == []
 
 
 async def test_perspective_all_header_returns_union_context() -> None:
-    checker = require_perspective_context()
+    checker = require_data_scope_context()
     request = _build_request(
         method="GET",
         path="/api/v1/assets/",
@@ -111,13 +111,13 @@ async def test_perspective_all_header_returns_union_context() -> None:
         )
 
     assert result is not None
-    assert result.perspective == "all"
+    assert result.scope_mode == "all"
     assert result.effective_party_ids == ["manager-1", "owner-1"]
     assert result.source == "header"
 
 
 async def test_single_binding_user_no_header_returns_single_scope() -> None:
-    checker = require_perspective_context()
+    checker = require_data_scope_context()
     request = _build_request(method="GET", path="/api/v1/assets/")
 
     with (
@@ -145,13 +145,13 @@ async def test_single_binding_user_no_header_returns_single_scope() -> None:
         )
 
     assert result is not None
-    assert result.perspective == "all"
-    assert result.allowed_perspectives == ["manager"]
+    assert result.scope_mode == "all"
+    assert result.allowed_binding_types == ["manager"]
     assert result.effective_party_ids == ["manager-1"]
 
 
 async def test_non_exempt_path_without_header_no_longer_400() -> None:
-    checker = require_perspective_context()
+    checker = require_data_scope_context()
     request = _build_request(method="GET", path="/api/v1/analytics/comprehensive")
 
     with (
@@ -179,4 +179,4 @@ async def test_non_exempt_path_without_header_no_longer_400() -> None:
         )
 
     assert result is not None
-    assert result.perspective == "all"
+    assert result.scope_mode == "all"

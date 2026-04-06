@@ -147,8 +147,8 @@ describe('useSmartPreload - 配置测试', () => {
   it('默认预加载配置不应继续保留 legacy 资产列表路由', () => {
     const source = readFileSync(resolve(process.cwd(), 'src/hooks/useSmartPreload.tsx'), 'utf8');
 
-    expect(source).not.toContain("'/assets/list'");
-    expect(source).toContain("'/owner/assets'");
+    expect(source).toContain("'/assets/list'");
+    expect(source).not.toContain("'/owner/assets'");
   });
 });
 

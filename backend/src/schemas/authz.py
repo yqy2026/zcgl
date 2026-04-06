@@ -6,8 +6,12 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 AuthzAction = Literal["create", "read", "list", "update", "delete", "export"]
-PerspectiveName = Literal["owner", "manager"]
-EffectivePerspective = Literal["owner", "manager", "all"]
+BindingType = Literal["owner", "manager"]
+ScopeMode = Literal["owner", "manager", "all"]
+
+# Temporary aliases kept during the phased residue cleanup.
+PerspectiveName = BindingType
+EffectivePerspective = ScopeMode
 
 
 class AuthzCheckRequest(BaseModel):
@@ -39,7 +43,7 @@ class CapabilityItem(BaseModel):
 
     resource: str
     actions: list[AuthzAction]
-    perspectives: list[PerspectiveName]
+    perspectives: list[BindingType]
     data_scope: DataScope
 
 
@@ -55,6 +59,8 @@ class CapabilitiesResponse(BaseModel):
 
 __all__ = [
     "AuthzAction",
+    "BindingType",
+    "ScopeMode",
     "EffectivePerspective",
     "PerspectiveName",
     "AuthzCheckRequest",

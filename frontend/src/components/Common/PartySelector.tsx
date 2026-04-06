@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button, Form, Input, Modal, Select, Typography } from 'antd';
 import type { SelectProps } from 'antd';
 import type { DefaultOptionType } from 'antd/es/select';
-import { useLocation } from 'react-router-dom';
 import { partyService } from '@/services/partyService';
 import type { Party, PartyType } from '@/types/party';
 import { MessageManager } from '@/utils/messageManager';
@@ -33,18 +32,6 @@ interface PartyOption extends DefaultOptionType {
   label: string;
   party: Party;
 }
-
-const resolveCurrentViewFilterMode = (pathname: string): PartySelectorFilterMode => {
-  if (pathname.startsWith('/owner/')) {
-    return 'owner';
-  }
-
-  if (pathname.startsWith('/manager/')) {
-    return 'manager';
-  }
-
-  return 'any';
-};
 
 export interface PartySelectorProps {
   value?: string;
@@ -190,7 +177,6 @@ const PartySelector: React.FC<PartySelectorProps> = ({
   fetcher = defaultFetcher,
   allowQuickCreate = false,
 }) => {
-  const location = useLocation();
   const [quickCreateForm] = Form.useForm<QuickCreateFormValues>();
   const [options, setOptions] = useState<PartyOption[]>([]);
   const [loading, setLoading] = useState(false);
@@ -207,7 +193,7 @@ const PartySelector: React.FC<PartySelectorProps> = ({
     return map;
   }, [options]);
 
-  const resolvedFilterMode = filterMode ?? resolveCurrentViewFilterMode(location.pathname);
+  const resolvedFilterMode = filterMode ?? 'any';
   const defaultCreatePartyType = resolveDefaultCreatePartyType(resolvedFilterMode);
 
   const loadOptions = useCallback(

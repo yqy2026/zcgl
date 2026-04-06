@@ -18,7 +18,7 @@ import {
 } from '../useProject';
 
 vi.mock('@/utils/queryScope', () => ({
-  buildQueryScopeKey: () => 'user:user-1|perspective:manager',
+  buildQueryScopeKey: () => 'user:user-1|scope:owner,manager',
 }));
 
 vi.mock('@/utils/messageManager', () => ({
@@ -275,7 +275,7 @@ describe('useProject - Hook验证', () => {
     expect(result.current.projects[0]?.project_name).toBe('项目二');
   });
 
-  it('useProjectOptions 应把当前视角纳入选项 queryKey', async () => {
+  it('useProjectOptions 应把当前数据范围纳入选项 queryKey', async () => {
     const { queryClient, wrapper } = createQueryHarness();
 
     renderHook(() => useProjectOptions('active'), { wrapper });
@@ -291,12 +291,12 @@ describe('useProject - Hook验证', () => {
 
     expect(queryKeys).toContainEqual([
       'project-options',
-      'user:user-1|perspective:manager',
+      'user:user-1|scope:owner,manager',
       'active',
     ]);
   });
 
-  it('useProjectDetail 应把当前视角纳入详情 queryKey', async () => {
+  it('useProjectDetail 应把当前数据范围纳入详情 queryKey', async () => {
     const { queryClient, wrapper } = createQueryHarness();
 
     renderHook(() => useProjectDetail('1'), { wrapper });
@@ -310,7 +310,7 @@ describe('useProject - Hook验证', () => {
       .getAll()
       .map(query => query.queryKey);
 
-    expect(queryKeys).toContainEqual(['project', 'user:user-1|perspective:manager', '1']);
+    expect(queryKeys).toContainEqual(['project', 'user:user-1|scope:owner,manager', '1']);
   });
 
   it('useUpdateProject 成功后应失效 scoped 项目详情查询前缀', async () => {

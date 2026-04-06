@@ -8,7 +8,9 @@ import pytest
 
 pytestmark = pytest.mark.api
 
-_ASSETS_API_MODULE_PATH = Path(__file__).resolve().parents[4] / "src/api/v1/assets/assets.py"
+_ASSETS_API_MODULE_PATH = (
+    Path(__file__).resolve().parents[4] / "src/api/v1/assets/assets.py"
+)
 
 
 def _read_module_source() -> str:
@@ -19,10 +21,10 @@ def test_assets_module_should_import_authz_dependency() -> None:
     """assets 路由应引入统一 ABAC 依赖。"""
     module_source = _read_module_source()
     assert "AuthzContext" in module_source
-    assert "PerspectiveContext" in module_source
+    assert "DataScopeContext" in module_source
     assert "get_current_active_user" in module_source
     assert "require_authz" in module_source
-    assert "require_perspective_context" in module_source
+    assert "require_data_scope_context" in module_source
     assert "require_permission(" not in module_source
 
 
@@ -31,14 +33,14 @@ def test_assets_endpoints_should_use_authz_dependencies() -> None:
     module_source = _read_module_source()
     expected_patterns = [
         r"async def get_assets[\s\S]*?_authz_ctx:\s*AuthzContext\s*=\s*Depends\(_require_asset_collection_read_authz\)",
-        r"async def get_assets[\s\S]*?_perspective_ctx:\s*PerspectiveContext\s*=\s*Depends\(\s*require_perspective_context\(resource_type=\"asset\"\)\s*\)",
+        r"async def get_assets[\s\S]*?_scope_ctx:\s*DataScopeContext\s*=\s*Depends\(\s*require_data_scope_context\(resource_type=\"asset\"\)\s*\)",
         r"async def create_asset[\s\S]*?_authz_ctx:\s*AuthzContext\s*=\s*Depends\(_require_asset_create_authz\)",
         r"async def get_ownership_entities[\s\S]*?_authz_ctx:\s*AuthzContext\s*=\s*Depends\(_require_asset_collection_read_authz\)",
         r"async def get_business_categories[\s\S]*?_authz_ctx:\s*AuthzContext\s*=\s*Depends\(_require_asset_collection_read_authz\)",
         r"async def get_usage_statuses[\s\S]*?_authz_ctx:\s*AuthzContext\s*=\s*Depends\(_require_asset_collection_read_authz\)",
         r"async def get_property_natures[\s\S]*?_authz_ctx:\s*AuthzContext\s*=\s*Depends\(_require_asset_collection_read_authz\)",
         r"async def get_ownership_statuses[\s\S]*?_authz_ctx:\s*AuthzContext\s*=\s*Depends\(_require_asset_collection_read_authz\)",
-        r"async def get_asset[\s\S]*?_perspective_ctx:\s*PerspectiveContext\s*=\s*Depends\(\s*require_perspective_context\(resource_type=\"asset\"\)\s*\)",
+        r"async def get_asset[\s\S]*?_scope_ctx:\s*DataScopeContext\s*=\s*Depends\(\s*require_data_scope_context\(resource_type=\"asset\"\)\s*\)",
         r"async def restore_asset[\s\S]*?require_authz\([\s\S]*?action=\"update\"[\s\S]*?resource_type=\"asset\"[\s\S]*?resource_id=\"\{asset_id\}\"",
         r"async def hard_delete_asset[\s\S]*?require_authz\([\s\S]*?action=\"delete\"[\s\S]*?resource_type=\"asset\"[\s\S]*?resource_id=\"\{asset_id\}\"",
         r"async def get_asset_history[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"asset\"[\s\S]*?resource_id=\"\{asset_id\}\"[\s\S]*?deny_as_not_found=True",
@@ -93,7 +95,9 @@ async def test_asset_create_authz_should_include_party_scope_context() -> None:
 
 
 @pytest.mark.asyncio
-async def test_asset_create_authz_should_normalize_party_fields_on_input_model() -> None:
+async def test_asset_create_authz_should_normalize_party_fields_on_input_model() -> (
+    None
+):
     """创建资产鉴权应将 owner/manager/ownership/org 字段归一化回写到入参。"""
     from src.api.v1.assets import assets as module
 
@@ -172,7 +176,9 @@ async def test_asset_create_authz_should_fallback_to_unscoped_party_context() ->
 
 
 @pytest.mark.asyncio
-async def test_asset_create_authz_should_resolve_party_scope_from_ownership_id() -> None:
+async def test_asset_create_authz_should_resolve_party_scope_from_ownership_id() -> (
+    None
+):
     """创建资产在 legacy ownership_id 场景应回填 owner/party scope。"""
     from src.api.v1.assets import assets as module
 
@@ -212,7 +218,9 @@ async def test_asset_create_authz_should_resolve_party_scope_from_ownership_id()
 
 
 @pytest.mark.asyncio
-async def test_asset_create_authz_should_backfill_owner_party_id_for_persistence() -> None:
+async def test_asset_create_authz_should_backfill_owner_party_id_for_persistence() -> (
+    None
+):
     """创建资产在 legacy ownership_id 场景应回填 owner_party_id 到入参对象。"""
     from src.api.v1.assets import assets as module
 
@@ -249,7 +257,9 @@ async def test_asset_create_authz_should_backfill_owner_party_id_for_persistence
 
 
 @pytest.mark.asyncio
-async def test_asset_create_authz_should_infer_manager_scope_before_ownership_scope() -> None:
+async def test_asset_create_authz_should_infer_manager_scope_before_ownership_scope() -> (
+    None
+):
     """创建资产在 legacy payload 下应先注入 manager scope，避免 manager-only 误拒绝。"""
     from src.api.v1.assets import assets as module
 
@@ -305,7 +315,9 @@ async def test_asset_create_authz_should_infer_manager_scope_before_ownership_sc
 
 
 @pytest.mark.asyncio
-async def test_asset_collection_read_authz_should_merge_ownership_scope_and_subject_scope() -> None:
+async def test_asset_collection_read_authz_should_merge_ownership_scope_and_subject_scope() -> (
+    None
+):
     """集合读取鉴权应合并 ownership scope 与 subject scope hint。"""
     from src.api.v1.assets import assets as module
 
@@ -351,7 +363,9 @@ async def test_asset_collection_read_authz_should_merge_ownership_scope_and_subj
 
 
 @pytest.mark.asyncio
-async def test_asset_collection_read_authz_should_inject_subject_scope_without_ownership_filter() -> None:
+async def test_asset_collection_read_authz_should_inject_subject_scope_without_ownership_filter() -> (
+    None
+):
     """集合读取在无 ownership 参数时仍应注入 subject scope，避免无上下文拒绝。"""
     from src.api.v1.assets import assets as module
 

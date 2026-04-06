@@ -1,13 +1,13 @@
 from sqlalchemy import select
 
 from src.crud.query_builder import PartyFilter, QueryBuilder
-from src.middleware.auth import PerspectiveContext
+from src.middleware.auth import DataScopeContext
 from src.models.asset import Asset  # Using Asset as a test model
 from src.models.ownership import Ownership
 from src.models.property_certificate import PropertyCertificate
 from src.models.rbac import Role
 from src.models.system_dictionary import AssetCustomField
-from src.services.party_scope import build_party_filter_from_perspective_context
+from src.services.party_scope import build_party_filter_from_scope_context
 
 
 class TestQueryBuilder:
@@ -295,12 +295,14 @@ class TestQueryBuilder:
         assert "false" not in compiled.lower()
         assert "0 = 1" not in compiled
 
-    def test_build_query_should_use_owner_perspective_filter_without_manager_union(self):
+    def test_build_query_should_use_owner_perspective_filter_without_manager_union(
+        self,
+    ):
         qb = QueryBuilder(Asset)
-        party_filter = build_party_filter_from_perspective_context(
-            PerspectiveContext(
-                perspective="owner",
-                allowed_perspectives=["owner", "manager"],
+        party_filter = build_party_filter_from_scope_context(
+            DataScopeContext(
+                scope_mode="owner",
+                allowed_binding_types=["owner", "manager"],
                 owner_party_ids=["owner-1"],
                 manager_party_ids=["manager-1"],
                 effective_party_ids=["owner-1"],
@@ -314,12 +316,14 @@ class TestQueryBuilder:
         assert "assets.owner_party_id IN ('owner-1')" in compiled
         assert "assets.manager_party_id IN ('manager-1')" not in compiled
 
-    def test_build_query_should_use_manager_perspective_filter_without_owner_union(self):
+    def test_build_query_should_use_manager_perspective_filter_without_owner_union(
+        self,
+    ):
         qb = QueryBuilder(Asset)
-        party_filter = build_party_filter_from_perspective_context(
-            PerspectiveContext(
-                perspective="manager",
-                allowed_perspectives=["owner", "manager"],
+        party_filter = build_party_filter_from_scope_context(
+            DataScopeContext(
+                scope_mode="manager",
+                allowed_binding_types=["owner", "manager"],
                 owner_party_ids=["owner-1"],
                 manager_party_ids=["manager-1"],
                 effective_party_ids=["manager-1"],

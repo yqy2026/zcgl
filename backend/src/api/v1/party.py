@@ -10,11 +10,11 @@ from ...core.router_registry import route_registry
 from ...database import get_async_db
 from ...middleware.auth import (
     AuthzContext,
-    PerspectiveContext,
+    DataScopeContext,
     get_current_active_user,
     require_admin,
     require_authz,
-    require_perspective_context,
+    require_data_scope_context,
 )
 from ...models.auth import User
 from ...schemas.party import (
@@ -104,7 +104,9 @@ async def create_party(
         raise internal_error("创建主体失败", original_error=exc) from exc
 
 
-@router.post("/parties/import", response_model=PartyImportResponse, summary="批量导入主体")
+@router.post(
+    "/parties/import", response_model=PartyImportResponse, summary="批量导入主体"
+)
 async def import_parties(
     payload: PartyImportRequest,
     db: AsyncSession = Depends(get_async_db),
@@ -171,8 +173,8 @@ async def get_customer_profile(
     party_id: str,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
-    _perspective_ctx: PerspectiveContext = Depends(
-        require_perspective_context(resource_type="analytics")
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="analytics")
     ),
 ) -> CustomerProfileResponse:
     _ = current_user
@@ -180,8 +182,8 @@ async def get_customer_profile(
         profile = await party_service.get_customer_profile(
             db,
             party_id=party_id,
-            perspective=_perspective_ctx.perspective,
-            effective_party_ids=_perspective_ctx.effective_party_ids,
+            binding_type=_scope_ctx.scope_mode,
+            effective_party_ids=_scope_ctx.effective_party_ids,
         )
         return CustomerProfileResponse.model_validate(profile)
     except BaseBusinessError:

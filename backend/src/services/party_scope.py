@@ -41,16 +41,16 @@ def _normalize_identifier_sequence(values: Sequence[object] | None) -> list[str]
     return normalized
 
 
-def build_party_filter_from_perspective_context(
-    perspective_context: object,
+def build_party_filter_from_scope_context(
+    scope_context: object,
 ) -> PartyFilter | None:
-    perspective = getattr(perspective_context, "perspective", None)
-    if perspective == "all":
+    scope_mode = getattr(scope_context, "scope_mode", None)
+    if scope_mode == "all":
         owner_ids = _normalize_identifier_sequence(
-            getattr(perspective_context, "owner_party_ids", None)
+            getattr(scope_context, "owner_party_ids", None)
         )
         manager_ids = _normalize_identifier_sequence(
-            getattr(perspective_context, "manager_party_ids", None)
+            getattr(scope_context, "manager_party_ids", None)
         )
         if len(owner_ids) == 0 and len(manager_ids) == 0:
             return None
@@ -64,12 +64,12 @@ def build_party_filter_from_perspective_context(
         )
 
     effective_party_ids = _normalize_identifier_sequence(
-        getattr(perspective_context, "effective_party_ids", None)
+        getattr(scope_context, "effective_party_ids", None)
     )
     if len(effective_party_ids) == 0:
         return None
 
-    if perspective == "owner":
+    if scope_mode == "owner":
         return PartyFilter(
             party_ids=effective_party_ids,
             filter_mode="owner",

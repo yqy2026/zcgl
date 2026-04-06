@@ -362,7 +362,7 @@ const flushPromises = () =>
 
 const renderProjectList = async (props?: React.ComponentProps<typeof ProjectList>) => {
   await act(async () => {
-    window.history.pushState({}, 'Test page', '/manager/projects');
+    window.history.pushState({}, 'Test page', '/project');
     render(<ProjectList {...props} />);
     await flushPromises();
   });
@@ -453,12 +453,6 @@ describe('ProjectList', () => {
       expect(screen.getByText('项目1')).toBeInTheDocument();
     });
 
-    it('不再显示当前视角标签', async () => {
-      await renderProjectList();
-
-      expect(screen.queryByText('当前视角')).not.toBeInTheDocument();
-    });
-
     it('项目列表与主体搜索查询应把当前数据范围纳入 queryKey', async () => {
       await renderProjectList();
 
@@ -481,12 +475,11 @@ describe('ProjectList', () => {
       expect(mockBuildQueryScopeKey).toHaveBeenCalledWith(undefined);
     });
 
-    it('legacy 路径不显示视角标签，但列表和主体选项查询仍继续执行', async () => {
+    it('legacy 路径下列表和主体选项查询仍继续执行', async () => {
       window.history.pushState({}, 'Legacy project page', '/project');
 
       await renderProjectList();
 
-      expect(screen.queryByText('当前视角')).not.toBeInTheDocument();
       expect(useQuery).toHaveBeenCalledWith(
         expect.objectContaining({
           queryKey: ['project-list', 'user:user-1|scope:owner,manager', 1, 10, { keyword: '', status: '', ownerPartyId: '' }],

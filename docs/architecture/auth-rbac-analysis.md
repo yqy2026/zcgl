@@ -65,8 +65,8 @@
 ┌─────────────────────────────────────────────────────────────────┐
 │                    数据层 (Data Scoping)                          │
 │  ┌──────────────────────────────────────────────────────────┐   │
-│  │ PerspectiveContextChecker + PartyFilter                   │   │
-│  │  - owner / manager / all 视角                             │   │
+│  │ DataScopeContextChecker + PartyFilter                     │   │
+│  │  - owner / manager / all scope_mode                       │   │
 │  │  - effective_party_ids 自动注入查询                        │   │
 │  │  - UserPartyBinding 绑定关系                               │   │
 │  └──────────────────────────────────────────────────────────┘   │
@@ -716,12 +716,12 @@ ABAC 层当前仅为空壳代码，**不是真正的 RBAC+ABAC 混合模型**。
 | `manager` | 管理者视角 | 仅查看用户作为管理者的主体关联数据 |
 | `all` | 全局视角 | 查看用户所有主体关联数据 (owner ∪ manager) |
 
-#### 5.3.2 PerspectiveContextChecker
+#### 5.3.2 DataScopeContextChecker
 
 **文件**: `backend/src/middleware/auth.py:366-475`
 
 ```
-PerspectiveContextChecker(request, current_user, db)
+DataScopeContextChecker(request, current_user, db)
   │
   ├─ 1. 读取 X-Perspective 请求头
   │     └─ 未设置 → 默认 "all"
@@ -842,7 +842,7 @@ _build_subject_scope_hint()
 | `require_admin` | 检查 system:admin 或 system:manage 权限 | 403 Forbidden |
 | `require_authz(action, resource_type, ...)` | ABAC 鉴权 + 资源上下文加载 | 403/404 |
 | `require_permissions([resource:action])` | 静态 RBAC 权限检查 | 403 Forbidden |
-| `require_perspective_context(resource_type)` | 视角上下文解析与验证 | 403 Forbidden |
+| `require_data_scope_context(resource_type)` | 数据范围上下文解析与验证 | 403 Forbidden |
 
 #### 6.2.3 AuthzPermissionChecker 详解
 
@@ -1014,7 +1014,7 @@ initFromCapabilities(capabilities, isAdmin)
 | `PermissionGrant` | Model | `models/rbac.py:313-399` | Capabilities 机制 |
 | `CRUDResourcePermission` | CRUD | `crud/rbac.py` | ABAC CRUD |
 | `CRUDPermissionGrant` | CRUD | `crud/rbac.py` | Capabilities CRUD |
-| `OrganizationPermissionChecker` | Middleware | `middleware/auth.py:1335-1372` | PerspectiveContextChecker |
+| `OrganizationPermissionChecker` | Middleware | `middleware/auth.py:1335-1372` | DataScopeContextChecker |
 | `require_organization_access()` | Factory | `middleware/auth.py:1368-1372` | `require_authz()` |
 | `organization_id` 参数 | 参数 | 多处 | `party_id` |
 | `grant_permission_to_user()` | Service | `rbac_service.py:909-988` | Capabilities API |

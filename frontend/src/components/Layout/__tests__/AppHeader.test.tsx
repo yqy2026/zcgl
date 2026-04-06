@@ -261,7 +261,7 @@ describe('AppHeader - 渲染与交互测试', () => {
   it('点击全局搜索按钮应跳转到统一搜索页', async () => {
     const AppHeader = (await import('../AppHeader')).default;
     renderWithProviders(<AppHeader collapsed={false} onToggleCollapsed={vi.fn()} />, {
-      route: '/manager/assets',
+      route: '/assets/list',
     });
 
     const searchButton = screen.getByTestId('icon-search').closest('button');

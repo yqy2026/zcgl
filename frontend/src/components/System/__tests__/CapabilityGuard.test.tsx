@@ -70,7 +70,7 @@ describe('CapabilityGuard', () => {
     expect(screen.getByText('权限检查中...')).toBeInTheDocument();
   });
 
-  it('passes the current route perspective into capability checks by default', () => {
+  it('passes the explicitly provided binding perspective into capability checks', () => {
     const canPerform = vi.fn(() => false);
     mockUseCapabilities.mockReturnValue({
       canPerform,
@@ -78,12 +78,17 @@ describe('CapabilityGuard', () => {
     });
 
     render(
-      <MemoryRouter future={memoryRouterFuture} initialEntries={['/owner/assets']}>
+      <MemoryRouter future={memoryRouterFuture} initialEntries={['/assets/list']}>
         <Routes>
           <Route
-            path="/owner/assets"
+            path="/assets/list"
             element={
-              <CapabilityGuard action="read" resource="asset" fallback={<div>forbidden</div>}>
+              <CapabilityGuard
+                action="read"
+                resource="asset"
+                perspective="owner"
+                fallback={<div>forbidden</div>}
+              >
                 <div>allowed-content</div>
               </CapabilityGuard>
             }

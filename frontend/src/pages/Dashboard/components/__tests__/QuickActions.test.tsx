@@ -18,11 +18,11 @@ describe('QuickActions', () => {
     vi.clearAllMocks();
   });
 
-  it('routes the export shortcut to the canonical owner assets list', () => {
+  it('routes the export shortcut to the canonical assets list', () => {
     render(<QuickActions />);
 
     fireEvent.click(screen.getByText('数据导出'));
 
-    expect(navigateMock).toHaveBeenCalledWith('/owner/assets');
+    expect(navigateMock).toHaveBeenCalledWith('/assets/list');
   });
 });

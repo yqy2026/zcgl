@@ -49,7 +49,7 @@ export interface CustomerProfile {
   customer_name: string;
   customer_type: CustomerType;
   subject_nature: CustomerSubjectNature;
-  binding_type: 'owner' | 'manager';
+  binding_type: 'owner' | 'manager' | 'all';
   contract_role: CustomerContractRole;
   contact_name?: string | null;
   contact_phone?: string | null;

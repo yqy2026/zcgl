@@ -68,7 +68,15 @@ describe('legacy rental frontend retirement routing', () => {
     expect(screen.getByRole('button', { name: 'PDF导入' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: '查看资产' }));
-    expect(screen.getByTestId('location-probe')).toHaveTextContent('/owner/assets');
+    expect(screen.getByTestId('location-probe')).toHaveTextContent('/assets/list');
+  });
+
+  it('does not keep legacy owner/manager prefixed business routes in protectedRoutes', () => {
+    const legacyScopedRoutes = protectedRoutes.filter(
+      route => route.path.startsWith('/owner/') || route.path.startsWith('/manager/')
+    );
+
+    expect(legacyScopedRoutes).toEqual([]);
   });
 
   it('does not keep raw legacy rental-contracts tokens in active retirement page source', () => {

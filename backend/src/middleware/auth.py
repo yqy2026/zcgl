@@ -28,7 +28,7 @@ from ..crud.auth import AuditLogCRUD
 from ..database import get_async_db
 from ..models.auth import User
 from ..schemas.auth import TokenData
-from ..schemas.authz import EffectivePerspective, PerspectiveName
+from ..schemas.authz import BindingType, ScopeMode
 from ..schemas.rbac import PermissionCheckRequest
 from ..security.cookie_manager import cookie_manager
 from ..services import RBACService
@@ -352,19 +352,19 @@ class AuthzContext:
 
 
 @dataclass(frozen=True)
-class PerspectiveContext:
-    """Resolved request perspective context."""
+class DataScopeContext:
+    """Resolved request data-scope context."""
 
-    perspective: EffectivePerspective
-    allowed_perspectives: list[PerspectiveName]
+    scope_mode: ScopeMode
+    allowed_binding_types: list[BindingType]
     owner_party_ids: list[str]
     manager_party_ids: list[str]
     effective_party_ids: list[str]
     source: Literal["header", "auto"]
 
 
-class PerspectiveContextChecker:
-    """Resolve and validate request perspective context."""
+class DataScopeContextChecker:
+    """Resolve and validate request data-scope context."""
 
     EXEMPT_PATH_PREFIXES: tuple[str, ...] = ("/api/v1/auth",)
 
@@ -376,7 +376,7 @@ class PerspectiveContextChecker:
         request: Request,
         current_user: User = Depends(get_current_active_user),
         db: AsyncSession = Depends(get_async_db),
-    ) -> PerspectiveContext | None:
+    ) -> DataScopeContext | None:
         request_path = request.url.path
         raw_perspective = self._normalize_perspective_header(
             request.headers.get("X-Perspective")
@@ -384,7 +384,7 @@ class PerspectiveContextChecker:
 
         if self._is_exempt_path(request_path):
             if raw_perspective is None:
-                request.state.perspective_context = None
+                request.state.data_scope_context = None
                 return None
 
         source: Literal["header", "auto"] = "header"
@@ -394,7 +394,7 @@ class PerspectiveContextChecker:
 
         if raw_perspective not in {"owner", "manager", "all"}:
             raise bad_request("X-Perspective 仅支持 owner、manager 或 all")
-        normalized_perspective = cast(EffectivePerspective, raw_perspective)
+        normalized_scope_mode = cast(ScopeMode, raw_perspective)
 
         rbac_service = RBACService(db)
         is_admin = bool(await rbac_service.is_admin(str(current_user.id)))
@@ -402,39 +402,39 @@ class PerspectiveContextChecker:
             db,
             user_id=str(current_user.id),
         )
-        subject_perspectives = (
-            authz_service.context_builder.resolve_allowed_perspectives(subject_context)
+        subject_binding_types = (
+            authz_service.context_builder.resolve_allowed_binding_types(subject_context)
         )
         if self.resource_type is not None:
             if is_admin:
-                allowed_perspectives: list[PerspectiveName] = list(
+                allowed_binding_types: list[BindingType] = list(
                     get_registered_perspectives(self.resource_type)
                 )
             else:
-                allowed_perspectives = resolve_capability_perspectives(
+                allowed_binding_types = resolve_capability_perspectives(
                     self.resource_type,
-                    subject_perspectives,
+                    subject_binding_types,
                 )
                 if (
                     resource_requires_perspective(self.resource_type)
-                    and len(allowed_perspectives) == 0
+                    and len(allowed_binding_types) == 0
                 ):
                     raise forbidden("当前资源无可用视角")
         else:
-            allowed_perspectives = (
-                cast(list[PerspectiveName], ["owner", "manager"])
+            allowed_binding_types = (
+                cast(list[BindingType], ["owner", "manager"])
                 if is_admin
-                else subject_perspectives
+                else subject_binding_types
             )
         if (
-            normalized_perspective != "all"
-            and normalized_perspective not in allowed_perspectives
+            normalized_scope_mode != "all"
+            and normalized_scope_mode not in allowed_binding_types
         ):
             raise forbidden("当前视角不可用")
 
         if is_admin:
             effective_party_ids = []
-        elif normalized_perspective == "all":
+        elif normalized_scope_mode == "all":
             effective_party_ids = sorted(
                 set(subject_context.owner_party_ids).union(
                     subject_context.manager_party_ids
@@ -444,20 +444,20 @@ class PerspectiveContextChecker:
             effective_party_ids = (
                 authz_service.context_builder.resolve_effective_party_ids(
                     subject_context,
-                    normalized_perspective,
+                    normalized_scope_mode,
                 )
             )
 
-        perspective_context = PerspectiveContext(
-            perspective=normalized_perspective,
-            allowed_perspectives=allowed_perspectives,
+        data_scope_context = DataScopeContext(
+            scope_mode=normalized_scope_mode,
+            allowed_binding_types=allowed_binding_types,
             owner_party_ids=list(subject_context.owner_party_ids),
             manager_party_ids=list(subject_context.manager_party_ids),
             effective_party_ids=effective_party_ids,
             source=source,
         )
-        request.state.perspective_context = perspective_context
-        return perspective_context
+        request.state.data_scope_context = data_scope_context
+        return data_scope_context
 
     @classmethod
     def _is_exempt_path(cls, path: str) -> bool:
@@ -1325,11 +1325,11 @@ def require_authz(
     )
 
 
-def require_perspective_context(
+def require_data_scope_context(
     *, resource_type: str | None = None
-) -> PerspectiveContextChecker:
-    """Perspective request-contract dependency factory."""
-    return PerspectiveContextChecker(resource_type=resource_type)
+) -> DataScopeContextChecker:
+    """Data-scope request-contract dependency factory."""
+    return DataScopeContextChecker(resource_type=resource_type)
 
 
 class OrganizationPermissionChecker:  # DEPRECATED

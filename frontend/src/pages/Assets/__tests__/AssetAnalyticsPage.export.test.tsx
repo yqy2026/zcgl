@@ -6,7 +6,12 @@ import { analyticsService } from '@/services/analyticsService';
 import { MessageManager } from '@/utils/messageManager';
 
 vi.mock('@/utils/queryScope', () => ({
-  buildQueryScopeKey: () => 'user:user-1|perspective:owner',
+  buildQueryScopeKey: () => 'user:user-1|scope:owner,manager',
+}));
+
+vi.mock('@/stores/dataScopeStore', () => ({
+  useDataScopeStore: (selector: (state: { initialized: boolean }) => unknown) =>
+    selector({ initialized: true }),
 }));
 
 vi.mock('@/hooks/useFullscreen', () => ({
@@ -132,7 +137,7 @@ describe('AssetAnalyticsPage export flow', () => {
 
   it('passes the same export filters from the asset analytics page to analyticsService', async () => {
     const blob = new Blob(['xlsx']);
-    vi.spyOn(analyticsService, 'exportAnalyticsReport').mockResolvedValue(blob);
+    vi.spyOn(analyticsService, 'downloadAnalyticsReport').mockResolvedValue(blob);
 
     const anchor = document.createElement('a');
     anchor.click = vi.fn();
@@ -149,7 +154,7 @@ describe('AssetAnalyticsPage export flow', () => {
     global.URL.createObjectURL = vi.fn(() => 'blob:asset-analytics');
     global.URL.revokeObjectURL = vi.fn();
 
-    renderWithProviders(<AssetAnalyticsPage />, { route: '/owner/assets/analytics' });
+    renderWithProviders(<AssetAnalyticsPage />, { route: '/assets/analytics' });
 
     await waitFor(() => {
       expect(screen.getByText('资产分析')).toBeInTheDocument();
@@ -162,7 +167,7 @@ describe('AssetAnalyticsPage export flow', () => {
     fireEvent.click(screen.getByRole('button', { name: /导出/ }));
 
     await waitFor(() => {
-      expect(analyticsService.exportAnalyticsReport).toHaveBeenCalledWith('excel', {
+      expect(analyticsService.downloadAnalyticsReport).toHaveBeenCalledWith('excel', {
         start_date: '2026-03-01',
         end_date: '2026-03-31',
         include_deleted: true,
@@ -172,13 +177,13 @@ describe('AssetAnalyticsPage export flow', () => {
   });
 
   it('shows an error toast and avoids blob download when export fails', async () => {
-    vi.spyOn(analyticsService, 'exportAnalyticsReport').mockRejectedValue(
+    vi.spyOn(analyticsService, 'downloadAnalyticsReport').mockRejectedValue(
       new Error('501 Not Implemented')
     );
     global.URL.createObjectURL = vi.fn(() => 'blob:asset-analytics');
     global.URL.revokeObjectURL = vi.fn();
 
-    renderWithProviders(<AssetAnalyticsPage />, { route: '/owner/assets/analytics' });
+    renderWithProviders(<AssetAnalyticsPage />, { route: '/assets/analytics' });
 
     await waitFor(() => {
       expect(screen.getByText('资产分析')).toBeInTheDocument();
