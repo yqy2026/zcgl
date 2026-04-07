@@ -10,6 +10,7 @@
 
 | 文件 | 主题 | 状态 | 备注 |
 |------|------|------|------|
+| [2026-04-07-orthogonal-restructure-blueprint.md](2026-04-07-orthogonal-restructure-blueprint.md) | 角色-绑定-视图三维正交重构蓝图 | 🔄 进行中 | 统一执行蓝图，Phase 1-7，吸收下列 3 个方案 |
 | [2026-04-05-perspective-residue-eradication-plan.md](2026-04-05-perspective-residue-eradication-plan.md) | Perspective 残留彻底清理 | ⏸ 吸收 | 吸收至蓝图 Phase 2（术语收口） |
 | [2026-04-05-requirements-update-plan.md](2026-04-05-requirements-update-plan.md) | 业务规格更新实施计划 | ⏸ 吸收 | P1 模式解绑已撤回（Q1 决策）；P2/P3 吸收至蓝图 Phase 4（分析增强） |
 | [2026-04-05-rbac-role-realignment.md](2026-04-05-rbac-role-realignment.md) | RBAC 角色权限重定义与授权加固 | ⏸ 吸收 | Phase 1 吸收至蓝图 Phase 3；Phase 2 吸收至蓝图 Phase 5 |
