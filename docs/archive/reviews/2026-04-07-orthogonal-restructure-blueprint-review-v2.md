@@ -328,6 +328,152 @@
 
 ---
 
+
+### P1-7：Phase 1 提议的 `asset_id` 全局唯一约束，与合同组当前“逻辑删除但不清关联”的实现存在冲突风险
+
+**问题**:
+
+v3 已经把“一资产一合同组”补进了任务清单，这是正确修正；但当前蓝图把实现直接写成：
+
+- `contract_group_assets` 表增加 `asset_id` 全局唯一约束
+
+这一点与现有合同组删除语义仍未完全对齐。
+
+**代码证据**:
+
+- `backend/src/crud/contract_group.py:113-126` 的 `soft_delete()` 只是把 `ContractGroup.data_status` 置为 `已删除`。
+- 它**不会清理** `contract_group_assets` 关联表记录。
+- `backend/src/models/associations.py:11-28` 的 `contract_group_assets` 只是纯关联表，本身没有 `active` 标记列。
+
+**影响**:
+
+如果直接给 `asset_id` 加全局唯一约束：
+
+- 一个资产即使其原合同组已逻辑删除，只要关联表记录还在，就仍无法重新绑定到新合同组。
+
+这会把“禁止一资产同时属于多个活跃合同组”，错误实现成“禁止一资产历史上曾属于任何其他合同组”。
+
+**建议**:
+
+把 Phase 1 的这条任务再 уточ准为三选一：
+
+1. 软删合同组时同步清理 `contract_group_assets` 关联；或
+2. 关联表改造成可表达 active/inactive 的模型后做条件唯一；或
+3. 先以 **service 校验 + integration test** 为主，DB 约束放到结构调整后再上。
+
+当前蓝图如果不补这一层说明，实施时很容易引入误伤。
+
+---
+
+### P1-8：Phase 2/4 目前只审计 `analytics.py`，但 `statistics_modules/*.py` 也属于分析域，仍未纳入 scope/view_mode 统一计划
+
+**问题**:
+
+v3 已把 `trend/distribution` 端点补进 Phase 2，这是进步；但当前蓝图的“分析端点全量审计”仍只写在 `backend/src/api/v1/analytics/analytics.py` 上。
+
+实际上统计域还有一整组：
+
+- `backend/src/api/v1/analytics/statistics_modules/*.py`
+
+这些模块当前大量只有 `require_authz(...)`，没有显式 `require_data_scope_context(...)` / `build_party_filter_from_scope_context(...)`。
+
+**代码证据**:
+
+- `backend/src/api/v1/analytics/statistics_modules/area_stats.py`
+- `backend/src/api/v1/analytics/statistics_modules/basic_stats.py`
+- `backend/src/api/v1/analytics/statistics_modules/distribution.py`
+- `backend/src/api/v1/analytics/statistics_modules/financial_stats.py`
+- `backend/src/api/v1/analytics/statistics_modules/occupancy_stats.py`
+- `backend/src/api/v1/analytics/statistics_modules/trend_stats.py`
+
+当前检索结果显示，这些模块都有 `require_authz(...)`，但没有与 `analytics.py` 对齐的 scope context 接入。
+
+**影响**:
+
+如果只修 `analytics.py` 主文件，不审计 `statistics_modules`，最终仍会留下：
+
+- `comprehensive/export/trend/distribution` 一套契约
+- `statistics_modules/*` 另一套契约
+
+这会让“analysis 域 view_mode / scope 一致化”只完成一半。
+
+**建议**:
+
+把 Phase 2 或 Phase 4 的后端任务明确扩成：
+
+- `backend/src/api/v1/analytics/analytics.py`
+- `backend/src/api/v1/analytics/statistics.py`
+- `backend/src/api/v1/analytics/statistics_modules/*.py`
+
+统一做一次分析域端点契约审计。
+
+---
+
+### P1-9：Phase 5 已修正文案，但内部仍残留两处旧说法，容易误导执行
+
+**问题**:
+
+v3 已把 Phase 5 主任务拆成“模板入库”+“角色绑定”两步，这是正确的；但文档内部仍残留两处旧表述：
+
+1. 建议测试用例里仍写：`通过 DataPolicyService 创建 → 幂等`
+2. 异常项 A8 仍写：`7 个 ABAC 数据策略模板未入库 | Phase 5（通过 DataPolicyService 创建）`
+
+这两处与 v3 已经修正后的主叙述不一致。
+
+**影响**:
+
+会让执行者再次误以为：
+
+- `DataPolicyService` 负责创建模板策略记录
+
+而实际上它只负责绑定。
+
+**建议**:
+
+把这两处同步改为：
+
+- “模板通过 seed migration / Alembic 入库”
+- “DataPolicyService 负责绑定与管理”
+
+避免 Phase 5 内部自相矛盾。
+
+---
+
+
+### P1-10：现有 `backfill_role_policies.py` 的策略包选择逻辑仍基于旧角色命名启发式，直接用于新 6 角色会映射错误
+
+**问题**:
+
+v3 已把 Phase 5 改为复用 `backfill_role_policies.py` 做角色-策略绑定，但当前脚本的 `_choose_policy_package()` 仍是基于旧角色名/类别里的关键词做启发式判断，并不是为新 6 角色显式设计的映射表。
+
+**代码证据**:
+
+- `backend/src/scripts/migration/party_migration/backfill_role_policies.py:38-59`
+- 其中规则包括：
+  - 只要 token 里包含 `admin` 就返回 `platform_admin`
+  - 包含 `manager` / `运营` 就返回 `asset_manager_operator`
+  - `viewer` / `只读` → `dual_party_viewer`
+  - 其余默认 `no_data_access`
+
+**影响**:
+
+如果直接把该脚本用于新 6 角色：
+
+- `perm_admin` 会因为名字里有 `admin` 被错误映射到 `platform_admin`，这与“零业务数据权限”直接冲突；
+- `ops_admin` 也大概率会被映射成 `platform_admin`；
+- `reviewer` / `executive` 这类新角色也缺少显式映射规则。
+
+这会让 Phase 5 的“复用现有 backfill 脚本”在新角色体系下产生错误授权。
+
+**建议**:
+
+在蓝图中补一句强约束：
+
+- **Phase 3 完成新角色冻结后，先重写 `backfill_role_policies.py` 的角色→策略映射为显式白名单表，再执行 Phase 5 绑定**；
+- 不应继续依赖旧的关键词启发式。
+
+---
+
 ## 低优先级建议
 
 ### L1：Phase 6 中“保留 `role_name` 做兼容派生”与 0→1 原则略有张力

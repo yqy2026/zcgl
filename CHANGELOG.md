@@ -2,6 +2,9 @@
 
 ## [Unreleased] - 2026-03-06
 
+### 2026-04-09
+- docs(review): 补归档 `2026-04-07-orthogonal-restructure-blueprint-review-v2.md` 中 P1-7 ~ P1-10 深审意见，保留对资产唯一约束、statistics_modules 分析域审计、ABAC 模板入库文案与 `backfill_role_policies.py` 显式映射的审查记录，便于后续追溯蓝图修订依据。
+
 ### 2026-04-08
 - refactor(authz): 收口遗留 `view/edit` 动作命名。`backend/src/services/permission/rbac_service.py` 新增统一 action 归一化（`view→read`, `edit→update`），`security/permissions.py`、`middleware/auth.py`、`middleware/request_logging.py` 全面切到 canonical `read/create/update/delete`；同步补齐 `test_permissions.py`、`test_authz_dependency.py`、`test_rbac_service.py`、`test_request_logging.py`、`test_rbac.py` 回归，锁定旧 helper 仍可映射到新动作且主链路统一输出 `read/update`。
 - feat(analytics): 完成 `REQ-ANA-001.b` 指标补充。`backend/src/services/analytics/analytics_service.py` 新增 `actual_receipts`（当期实收）与 `collection_rate`（租金收缴率）口径，严格按租金台账 `paid_amount / amount_due` 计算，分母为 0 返回 `null`；前端 `analyticsService.ts`、`types/analytics.ts`、`AnalyticsStatsCard.tsx`、`AssetAnalyticsPage.tsx` 已适配展示“当期实收 / 租金收缴率”。同步补齐 `test_analytics_service.py`、`RevenueStatsGrid.test.tsx`、`analyticsService.test.ts`。
