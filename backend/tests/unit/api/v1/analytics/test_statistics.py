@@ -50,9 +50,23 @@ def client(mock_db, mock_user):
     app.dependency_overrides[get_async_db] = override_get_db
     app.dependency_overrides[get_current_active_user] = override_get_user
 
-    with patch(
-        "src.middleware.auth.authz_service.check_access",
-        AsyncMock(return_value=SimpleNamespace(allowed=True, reason_code="ALLOW")),
+    with (
+        patch(
+            "src.middleware.auth.authz_service.check_access",
+            AsyncMock(return_value=SimpleNamespace(allowed=True, reason_code="ALLOW")),
+        ),
+        patch(
+            "src.middleware.auth.authz_service.context_builder.build_subject_context",
+            AsyncMock(
+                return_value=SimpleNamespace(
+                    owner_party_ids=["owner-party-1"],
+                    manager_party_ids=[],
+                    headquarters_party_ids=[],
+                    role_ids=[],
+                )
+            ),
+        ),
+        patch("src.middleware.auth.RBACService.is_admin", AsyncMock(return_value=False)),
     ):
         with TestClient(app) as test_client:
             yield test_client

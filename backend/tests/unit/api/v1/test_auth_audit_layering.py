@@ -24,6 +24,7 @@ def test_auth_audit_module_should_import_authz_dependency() -> None:
     module_source = inspect.getsource(audit)
     assert "AuthzContext" in module_source
     assert "require_authz" in module_source
+    assert "require_any_role" in module_source
 
 
 def test_auth_audit_endpoint_should_use_require_authz() -> None:

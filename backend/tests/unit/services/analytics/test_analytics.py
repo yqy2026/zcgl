@@ -716,7 +716,7 @@ class TestAreaServiceAggregationCalculation:
         ) as mock_memory:
             result = await area_service.calculate_summary_with_aggregation(filters=None)
 
-            mock_memory.assert_called_once_with(None)
+            mock_memory.assert_called_once_with(None, party_filter=None)
             assert result["overall_occupancy_rate"] == 75.0
             assert result["calculation_method"] == "memory_fallback"
 
@@ -928,6 +928,7 @@ class TestAreaServiceMemoryCalculation:
             limit=1000,
             filters=filters,
             include_contract_projection=False,
+            party_filter=None,
         )
         assert result["total_assets"] == 1
 

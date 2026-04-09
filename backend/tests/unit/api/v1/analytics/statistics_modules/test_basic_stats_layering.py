@@ -3,7 +3,7 @@
 import inspect
 import re
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import ANY, AsyncMock, MagicMock
 
 import pytest
 
@@ -82,6 +82,13 @@ async def test_get_basic_statistics_should_delegate_to_service(mock_db):
         db=mock_db,
         current_user=MagicMock(id="user-1"),
         service=mock_service,
+        _scope_ctx=MagicMock(
+            scope_mode="owner",
+            owner_party_ids=["owner-party-1"],
+            manager_party_ids=[],
+            effective_party_ids=["owner-party-1"],
+        ),
+        _authz_ctx=MagicMock(),
     )
 
     assert result == expected
@@ -91,6 +98,7 @@ async def test_get_basic_statistics_should_delegate_to_service(mock_db):
         property_nature=None,
         usage_status=None,
         ownership_id=None,
+        party_filter=ANY,
     )
 
 
@@ -114,10 +122,18 @@ async def test_get_comprehensive_statistics_should_delegate_to_service(mock_db):
         db=mock_db,
         current_user=MagicMock(id="user-1"),
         service=mock_service,
+        _scope_ctx=MagicMock(
+            scope_mode="owner",
+            owner_party_ids=["owner-party-1"],
+            manager_party_ids=[],
+            effective_party_ids=["owner-party-1"],
+        ),
+        _authz_ctx=MagicMock(),
     )
 
     assert result == expected
     mock_service.calculate_comprehensive_statistics.assert_awaited_once_with(
         db=mock_db,
         should_include_deleted=False,
+        party_filter=ANY,
     )

@@ -4,7 +4,8 @@ from fastapi import APIRouter, Depends
 
 from ....core.exception_handler import internal_error
 from ....database import create_tables, drop_tables
-from ....middleware.auth import get_current_active_user, require_admin
+from ....middleware.auth import get_current_active_user
+from ....security.permissions import require_any_role
 
 """
 管理员API路由
@@ -16,6 +17,8 @@ router = APIRouter(
     tags=["系统管理"],
     dependencies=[Depends(get_current_active_user)],
 )
+_SYSTEM_ADMIN_ROLE_CODES = ["admin", "system_admin"]
+require_system_admin = require_any_role(_SYSTEM_ADMIN_ROLE_CODES)
 
 
 @router.get("/health")
@@ -28,7 +31,7 @@ def health_check() -> dict[str, str]:
 
 @router.post("/database/reset")
 async def reset_database(
-    current_user: dict[str, Any] = Depends(require_admin),
+    current_user: dict[str, Any] = Depends(require_system_admin),
 ) -> dict[str, Any]:
     """
     重置数据库（仅管理员）

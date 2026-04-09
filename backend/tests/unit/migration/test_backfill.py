@@ -12,6 +12,7 @@ from src.scripts.migration.party_migration.backfill_business_tables import (
 )
 from src.scripts.migration.party_migration.backfill_role_policies import (
     _choose_policy_package,
+    _choose_policy_packages,
 )
 from src.scripts.migration.party_migration.generate_mapping import (
     build_mapping_artifact,
@@ -226,16 +227,20 @@ def test_reconciliation_role_scope_integrity_fails_for_invalid_scope() -> None:
 
 
 def test_choose_policy_package_uses_role_signals() -> None:
-    assert _choose_policy_package({"name": "platform_admin"}) == "platform_admin"
-    assert (
-        _choose_policy_package({"name": "viewer", "is_system_role": True})
-        == "dual_party_viewer"
-    )
-    assert _choose_policy_package({"name": "user"}) == "dual_party_viewer"
-    assert _choose_policy_package({"category": "business"}) == "dual_party_viewer"
-    assert _choose_policy_package({"display_name": "普通用户"}) == "dual_party_viewer"
-    assert _choose_policy_package({"display_name": "审计角色"}) == "audit_viewer"
-    assert _choose_policy_package({"category": "project"}) == "project_manager_operator"
-    assert _choose_policy_package({"name": "owner_view"}) == "asset_owner_operator"
-    assert _choose_policy_package({"name": "manager_ops"}) == "asset_manager_operator"
+    assert _choose_policy_package({"name": "system_admin"}) == "platform_admin"
+    assert _choose_policy_packages({"name": "ops_admin"}) == [
+        "asset_owner_operator",
+        "asset_manager_operator",
+        "project_manager_operator",
+    ]
+    assert _choose_policy_package({"name": "perm_admin"}) == "no_data_access"
+    assert _choose_policy_package({"name": "reviewer"}) == "audit_viewer"
+    assert _choose_policy_package({"name": "viewer"}) == "dual_party_viewer"
+    assert _choose_policy_packages({"name": "executive"}) == [
+        "asset_owner_operator",
+        "asset_manager_operator",
+        "project_manager_operator",
+    ]
+    assert _choose_policy_package({"name": "admin"}) == "platform_admin"
+    assert _choose_policy_package({"name": "asset_manager"}) == "asset_manager_operator"
     assert _choose_policy_package({"name": "custom_role_x"}) == "no_data_access"

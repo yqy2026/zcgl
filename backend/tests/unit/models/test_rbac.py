@@ -20,19 +20,19 @@ def test_role_permissions_association_table_structure() -> None:
 def test_role_and_permission_creation() -> None:
     role = Role(name="admin", display_name="管理员")
     permission = Permission(
-        name="asset:view",
-        display_name="查看资产",
+        name="asset:read",
+        display_name="读取资产",
         resource="asset",
-        action="view",
+        action="read",
     )
 
     assert role.name == "admin"
     assert role.display_name == "管理员"
     assert "admin" in repr(role)
 
-    assert permission.name == "asset:view"
+    assert permission.name == "asset:read"
     assert permission.resource == "asset"
-    assert permission.action == "view"
+    assert permission.action == "read"
     assert permission.is_active is True
     assert "asset" in repr(permission)
 

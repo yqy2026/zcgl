@@ -55,6 +55,10 @@ ADMIN_PERMISSION_RESOURCE = "system"
 ADMIN_PERMISSION_ACTION = "admin"
 LEGACY_ADMIN_PERMISSION_ACTION = "manage"
 VALID_GRANT_EFFECTS = {"allow", "deny"}
+LEGACY_ACTION_ALIASES = {
+    "view": "read",
+    "edit": "update",
+}
 logger = logging.getLogger(__name__)
 
 _user_crud = UserCRUD()
@@ -69,6 +73,11 @@ def invalidate_user_accessible_organizations_cache(user_id: str | None = None) -
     )
 
     _invalidate_cache(user_id)
+
+
+def normalize_permission_action(action: str) -> str:
+    normalized = str(action).strip().lower()
+    return LEGACY_ACTION_ALIASES.get(normalized, normalized)
 
 
 class RBACService:
@@ -329,6 +338,22 @@ class RBACService:
         self, permission_data: PermissionCreate, created_by: str
     ) -> Permission:
         """创建权限"""
+        normalized_action = normalize_permission_action(permission_data.action)
+        normalized_name = permission_data.name
+        for separator in (":", "."):
+            legacy_suffix = f"{separator}{permission_data.action}"
+            if normalized_name.endswith(legacy_suffix):
+                normalized_name = (
+                    f"{normalized_name[: -len(legacy_suffix)]}{separator}{normalized_action}"
+                )
+                break
+
+        permission_data = permission_data.model_copy(
+            update={
+                "action": normalized_action,
+                "name": normalized_name,
+            }
+        )
         existing_permission = await permission_crud.get_by_name(
             self.db, name=permission_data.name
         )
@@ -355,6 +380,9 @@ class RBACService:
         current_user_id: str | None = None,
     ) -> tuple[list[Permission], int]:
         """获取权限列表"""
+        normalized_action = (
+            normalize_permission_action(action) if action is not None else None
+        )
         resolved_party_filter = await self._resolve_party_filter(
             current_user_id=current_user_id,
             party_filter=party_filter,
@@ -365,7 +393,7 @@ class RBACService:
             limit=limit,
             search=search,
             resource=resource,
-            action=action,
+            action=normalized_action,
             is_system_permission=is_system_permission,
             party_filter=resolved_party_filter,
         )
@@ -489,6 +517,7 @@ class RBACService:
         self, user_id: str, permission_request: PermissionCheckRequest
     ) -> PermissionCheckResponse:
         """检查用户权限"""
+        permission_request = self._normalize_permission_request(permission_request)
         user = await self.user_crud.get_async(self.db, user_id)
         if not user or not user.is_active:
             return PermissionCheckResponse(
@@ -1180,10 +1209,11 @@ class RBACService:
         self, role: Role, permission_request: PermissionCheckRequest
     ) -> bool:
         """检查角色是否有权限"""
+        target_action = normalize_permission_action(permission_request.action)
         for permission in role.permissions:
             if (
                 permission.resource == permission_request.resource
-                and permission.action == permission_request.action
+                and normalize_permission_action(permission.action) == target_action
             ):
                 return True
         return False
@@ -1192,10 +1222,11 @@ class RBACService:
         self, role: Role, permission_request: PermissionCheckRequest
     ) -> dict[str, Any] | None:
         """获取角色权限条件"""
+        target_action = normalize_permission_action(permission_request.action)
         for permission in role.permissions:
             if (
                 permission.resource == permission_request.resource
-                and permission.action == permission_request.action
+                and normalize_permission_action(permission.action) == target_action
             ):
                 return permission.conditions if permission.conditions else None
         return None  # pragma: no cover  # Defensive: only reached if role_has_permission check is bypassed
@@ -1213,7 +1244,7 @@ class RBACService:
         for role in roles:
             for permission in role.permissions:
                 resource = permission.resource
-                action = permission.action
+                action = normalize_permission_action(permission.action)
 
                 if resource not in effective_permissions:
                     effective_permissions[resource] = []
@@ -1242,7 +1273,7 @@ class RBACService:
         # 统一授权记录（permission_grants）映射出的权限
         for permission in granted_permissions or []:
             resource = permission.resource
-            action = permission.action
+            action = normalize_permission_action(permission.action)
             if resource not in effective_permissions:
                 effective_permissions[resource] = []
             if action not in effective_permissions[resource]:
@@ -1310,7 +1341,7 @@ class RBACService:
 
         permission_request = PermissionCheckRequest(
             resource=resource,
-            action=action,
+            action=normalize_permission_action(action),
             resource_id=None,
             context=None,
         )
@@ -1337,7 +1368,7 @@ class RBACService:
 
         permission_request = PermissionCheckRequest(
             resource=resource,
-            action=action,
+            action=normalize_permission_action(action),
             resource_id=resource_id,
             context=None,
         )
@@ -1364,10 +1395,22 @@ class RBACService:
 
         permission_request = PermissionCheckRequest(
             resource="organization",
-            action="view",
+            action="read",
             resource_id=organization_id,  # DEPRECATED alias
             context=None,
         )
 
         response = await self.check_permission(user_id, permission_request)
         return response.has_permission
+
+    @staticmethod
+    def _normalize_permission_request(
+        permission_request: PermissionCheckRequest,
+    ) -> PermissionCheckRequest:
+        normalized_action = normalize_permission_action(permission_request.action)
+        if normalized_action == permission_request.action:
+            return permission_request
+
+        return permission_request.model_copy(
+            update={"action": normalized_action},
+        )

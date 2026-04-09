@@ -53,6 +53,13 @@ vi.mock('@/services/assetService', () => ({
   assetService: {
     getAsset: vi.fn(),
     getAssetLeaseSummary: vi.fn(),
+    submitAssetReview: vi.fn(),
+    approveAssetReview: vi.fn(),
+    rejectAssetReview: vi.fn(),
+    reverseAssetReview: vi.fn(),
+    resubmitAssetReview: vi.fn(),
+    withdrawAssetReview: vi.fn(),
+    getAssetReviewLogs: vi.fn(),
   },
 }));
 
@@ -151,6 +158,7 @@ describe('AssetDetailPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(assetService.getAssetLeaseSummary).mockResolvedValue(buildLeaseSummary());
+    vi.mocked(assetService.getAssetReviewLogs).mockResolvedValue([]);
   });
 
   describe('加载状态', () => {
@@ -233,6 +241,7 @@ describe('AssetDetailPage', () => {
         floor: 5,
         area: 120.5,
         status: 'available',
+        review_status: 'draft',
       };
 
       vi.mocked(assetService.getAsset).mockResolvedValue(mockAsset);
@@ -516,6 +525,86 @@ describe('AssetDetailPage', () => {
       await waitFor(() => {
         expect(assetService.getAsset).toHaveBeenCalledWith('specific_asset_id');
       });
+    });
+  });
+
+  describe('资产审核', () => {
+    it('草稿资产显示提交审核按钮并可触发提交', async () => {
+      vi.mocked(assetService.getAsset).mockResolvedValue({
+        id: 'asset_review_1',
+        asset_name: '待提审资产',
+        review_status: 'draft',
+      });
+      vi.mocked(assetService.submitAssetReview).mockResolvedValue({
+        id: 'asset_review_1',
+        asset_name: '待提审资产',
+        review_status: 'pending',
+      });
+
+      renderAssetDetailPage('asset_review_1');
+
+      const submitButton = await screen.findByRole('button', { name: '提交审核' });
+      fireEvent.click(submitButton);
+
+      await waitFor(() => {
+        expect(assetService.submitAssetReview).toHaveBeenCalledWith('asset_review_1');
+      });
+    });
+
+    it('待审核资产显示通过/驳回/撤回按钮与审核日志', async () => {
+      vi.mocked(assetService.getAsset).mockResolvedValue({
+        id: 'asset_review_2',
+        asset_name: '待审核资产',
+        review_status: 'pending',
+        review_reason: '待复核',
+      });
+      vi.mocked(assetService.getAssetReviewLogs).mockResolvedValue([
+        {
+          id: 'log-1',
+          asset_id: 'asset_review_2',
+          action: 'submit',
+          from_status: 'draft',
+          to_status: 'pending',
+          operator: 'alice',
+          created_at: '2026-04-07T00:00:00Z',
+        },
+      ]);
+
+      renderAssetDetailPage('asset_review_2');
+
+      expect(await screen.findByRole('button', { name: '审核通过' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '驳回审核' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '撤回审核' })).toBeInTheDocument();
+      expect(screen.getByText('submit')).toBeInTheDocument();
+      expect(screen.getByText('alice')).toBeInTheDocument();
+    });
+
+    it('驳回和反审核操作会收集原因后调用服务', async () => {
+      vi.mocked(assetService.getAsset).mockResolvedValue({
+        id: 'asset_review_3',
+        asset_name: '已审核资产',
+        review_status: 'approved',
+      });
+      vi.mocked(assetService.reverseAssetReview).mockResolvedValue({
+        id: 'asset_review_3',
+        asset_name: '已审核资产',
+        review_status: 'reversed',
+      });
+      const promptSpy = vi.spyOn(window, 'prompt').mockReturnValue('原因说明');
+
+      renderAssetDetailPage('asset_review_3');
+
+      const reverseButton = await screen.findByRole('button', { name: '反审核' });
+      fireEvent.click(reverseButton);
+
+      await waitFor(() => {
+        expect(assetService.reverseAssetReview).toHaveBeenCalledWith(
+          'asset_review_3',
+          '原因说明'
+        );
+      });
+
+      promptSpy.mockRestore();
     });
   });
 });

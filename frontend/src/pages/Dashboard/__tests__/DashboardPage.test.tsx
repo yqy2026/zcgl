@@ -11,6 +11,7 @@ import {
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import DashboardPage from '../DashboardPage';
+import { useDataScopeStore } from '@/stores/dataScopeStore';
 
 // Mock useAnalytics hook
 vi.mock('../../../hooks/useAnalytics', () => ({
@@ -97,6 +98,7 @@ const renderDashboardPage = () => {
 describe('DashboardPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useDataScopeStore.getState().reset();
 
     // 默认 mock 返回值
     vi.mocked(useAnalytics).mockReturnValue({
@@ -165,6 +167,27 @@ describe('DashboardPage', () => {
 
       expect(screen.getByText('资产管理看板')).toBeInTheDocument();
       expect(screen.queryByText('请选择业务视角')).not.toBeInTheDocument();
+    });
+
+    it('双绑定用户显示口径切换器', () => {
+      useDataScopeStore.setState({
+        bindingTypes: ['owner', 'manager'],
+        ownerPartyIds: ['owner-1'],
+        managerPartyIds: ['manager-1'],
+        isAdmin: false,
+        initialized: true,
+        isOwner: true,
+        isManager: true,
+        isDualBinding: true,
+        isSingleOwner: false,
+        isSingleManager: false,
+        currentViewMode: 'owner',
+      });
+
+      renderDashboardPage();
+
+      expect(screen.getByText('产权方口径')).toBeInTheDocument();
+      expect(screen.getByText('运营方口径')).toBeInTheDocument();
     });
   });
 

@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { analyticsService } from '@/services/analyticsService';
+import { useDataScopeStore } from '@/stores/dataScopeStore';
 
-const fetchDashboardData = async () => {
-  const response = await analyticsService.getComprehensiveAnalytics();
+const fetchDashboardData = async (viewMode: 'owner' | 'manager' | null) => {
+  const response = await analyticsService.getComprehensiveAnalytics(undefined, viewMode);
   const areaSummary = response.data?.area_summary;
   const financialSummary = response.data?.financial_summary;
 
@@ -34,9 +35,10 @@ const fetchDashboardData = async () => {
 };
 
 export const useDashboardData = () => {
+  const currentViewMode = useDataScopeStore(state => state.getEffectiveViewMode());
   const { data, isLoading, error } = useQuery({
-    queryKey: ['dashboard'],
-    queryFn: fetchDashboardData,
+    queryKey: ['dashboard', currentViewMode],
+    queryFn: () => fetchDashboardData(currentViewMode),
   });
 
   return {

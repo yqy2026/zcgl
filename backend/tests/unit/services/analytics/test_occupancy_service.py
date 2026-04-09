@@ -96,7 +96,7 @@ class TestOccupancyService:
         ) as mock_memory:
             result = await occupancy_service.calculate_with_aggregation(filters=None)
 
-        mock_memory.assert_awaited_once_with(None)
+        mock_memory.assert_awaited_once_with(None, party_filter=None)
         assert result["overall_rate"] == 75.0
         assert result["calculation_method"] == "memory_fallback"
 

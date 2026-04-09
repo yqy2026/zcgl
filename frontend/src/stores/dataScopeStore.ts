@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { CapabilitiesResponse } from '@/types/capability';
 
 export type BindingType = 'owner' | 'manager';
+const VIEW_MODE_STORAGE_KEY = 'data-scope:view-mode';
 
 interface DataScopeState {
   bindingTypes: BindingType[];
@@ -14,8 +15,11 @@ interface DataScopeState {
   isDualBinding: boolean;
   isSingleOwner: boolean;
   isSingleManager: boolean;
+  currentViewMode: BindingType | null;
   initFromCapabilities: (response: CapabilitiesResponse | CapabilitiesResponse['capabilities'], isAdmin: boolean) => void;
+  setCurrentViewMode: (viewMode: BindingType | null) => void;
   reset: () => void;
+  getEffectiveViewMode: () => BindingType | null;
   getEffectivePerspective: () => BindingType | null;
 }
 
@@ -56,8 +60,48 @@ const createState = (
 
 const initialState = createState([], [], [], false, false);
 
+const resolveDefaultViewMode = (
+  bindingTypes: BindingType[],
+  isAdmin: boolean,
+  persistedViewMode: string | null
+): BindingType | null => {
+  if (isAdmin) {
+    return null;
+  }
+
+  const flags = computeFlags(bindingTypes);
+  const allowedModes: BindingType[] = [];
+  if (flags.isOwner) {
+    allowedModes.push('owner');
+  }
+  if (flags.isManager) {
+    allowedModes.push('manager');
+  }
+
+  if (allowedModes.length === 0) {
+    return null;
+  }
+
+  if (
+    (persistedViewMode === 'owner' || persistedViewMode === 'manager') &&
+    allowedModes.includes(persistedViewMode)
+  ) {
+    return persistedViewMode;
+  }
+
+  if (flags.isSingleOwner) {
+    return 'owner';
+  }
+  if (flags.isSingleManager) {
+    return 'manager';
+  }
+
+  return 'owner';
+};
+
 export const useDataScopeStore = create<DataScopeState>((set, get) => ({
   ...initialState,
+  currentViewMode: null,
 
   initFromCapabilities: (response, isAdmin) => {
     const capabilities = Array.isArray(response) ? response : response.capabilities;
@@ -87,32 +131,69 @@ export const useDataScopeStore = create<DataScopeState>((set, get) => ({
       bindingTypes.push('manager');
     }
 
+    const currentViewMode = resolveDefaultViewMode(
+      bindingTypes,
+      isAdmin,
+      typeof window === 'undefined' ? null : window.localStorage.getItem(VIEW_MODE_STORAGE_KEY)
+    );
+
+    if (typeof window !== 'undefined') {
+      if (currentViewMode == null) {
+        window.localStorage.removeItem(VIEW_MODE_STORAGE_KEY);
+      } else {
+        window.localStorage.setItem(VIEW_MODE_STORAGE_KEY, currentViewMode);
+      }
+    }
+
     set(
-      createState(
-        bindingTypes,
-        [...ownerPartyIds].sort(),
-        [...managerPartyIds].sort(),
-        isAdmin,
-        true
-      )
+      {
+        ...createState(
+          bindingTypes,
+          [...ownerPartyIds].sort(),
+          [...managerPartyIds].sort(),
+          isAdmin,
+          true
+        ),
+        currentViewMode,
+      }
     );
   },
 
+  setCurrentViewMode: viewMode => {
+    const state = get();
+    const nextViewMode =
+      viewMode != null &&
+      ((viewMode === 'owner' && state.isOwner) || (viewMode === 'manager' && state.isManager))
+        ? viewMode
+        : resolveDefaultViewMode(state.bindingTypes, state.isAdmin, null);
+
+    if (typeof window !== 'undefined') {
+      if (nextViewMode == null) {
+        window.localStorage.removeItem(VIEW_MODE_STORAGE_KEY);
+      } else {
+        window.localStorage.setItem(VIEW_MODE_STORAGE_KEY, nextViewMode);
+      }
+    }
+
+    set({ currentViewMode: nextViewMode });
+  },
+
   reset: () => {
-    set(initialState);
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem(VIEW_MODE_STORAGE_KEY);
+    }
+    set({ ...initialState, currentViewMode: null });
+  },
+
+  getEffectiveViewMode: () => {
+    const state = get();
+    if (state.isAdmin) {
+      return null;
+    }
+    return state.currentViewMode;
   },
 
   getEffectivePerspective: () => {
-    const state = get();
-    if (state.isAdmin || state.isDualBinding) {
-      return null;
-    }
-    if (state.isSingleOwner) {
-      return 'owner';
-    }
-    if (state.isSingleManager) {
-      return 'manager';
-    }
-    return null;
+    return get().getEffectiveViewMode();
   },
 }));

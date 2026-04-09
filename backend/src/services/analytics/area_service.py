@@ -10,6 +10,7 @@ from typing import Any, cast
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...crud.asset import asset_crud
+from ...crud.query_builder import PartyFilter
 from ...utils.numeric import to_float
 
 logger = logging.getLogger(__name__)
@@ -39,7 +40,10 @@ class AreaService:
         self.db = db
 
     async def calculate_summary_with_aggregation(
-        self, filters: dict[str, Any] | None = None
+        self,
+        filters: dict[str, Any] | None = None,
+        *,
+        party_filter: PartyFilter | None = None,
     ) -> dict[str, Any]:
         """
         使用数据库聚合查询计算面积汇总 (原 _calculate_area_summary_with_aggregation)
@@ -60,7 +64,9 @@ class AreaService:
         """
         try:
             result = await asset_crud.get_area_summary_aggregation_async(
-                self.db, filters=filters
+                self.db,
+                filters=filters,
+                party_filter=party_filter,
             )
 
             # 提取并转换结果
@@ -114,12 +120,18 @@ class AreaService:
         except Exception as e:
             logger.error(f"面积汇总数据库聚合查询失败: {str(e)}，降级到内存计算")
             # 降级到内存计算
-            memory_result = await self._calculate_summary_in_memory(filters)
+            memory_result = await self._calculate_summary_in_memory(
+                filters,
+                party_filter=party_filter,
+            )
             memory_result["calculation_method"] = "memory_fallback"
             return memory_result
 
     async def _calculate_summary_in_memory(
-        self, filters: dict[str, Any] | None = None
+        self,
+        filters: dict[str, Any] | None = None,
+        *,
+        party_filter: PartyFilter | None = None,
     ) -> dict[str, Any]:
         """
         内存计算面积汇总 (原 _calculate_area_summary_in_memory)
@@ -143,6 +155,7 @@ class AreaService:
                     limit=batch_size,
                     filters=filters,
                     include_contract_projection=False,
+                    party_filter=party_filter,
                 )
 
                 if not assets_batch:

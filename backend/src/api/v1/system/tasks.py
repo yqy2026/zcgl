@@ -16,7 +16,6 @@ from ....database import get_async_db
 from ....middleware.auth import (
     AuthzContext,
     get_current_active_user,
-    require_admin,
     require_authz,
 )
 from ....models.auth import User
@@ -30,6 +29,7 @@ from ....schemas.task import (
     TaskStatistics,
     TaskUpdate,
 )
+from ....security.permissions import require_any_role
 from ....services.task import task_service
 from ....services.task.access import ensure_task_access, resolve_task_user_filter
 from ....services.task.service import TaskService
@@ -64,6 +64,7 @@ _EXCEL_CONFIG_CREATE_RESOURCE_CONTEXT: dict[str, str] = {
     "owner_party_id": _EXCEL_CONFIG_CREATE_UNSCOPED_PARTY_ID,
     "manager_party_id": _EXCEL_CONFIG_CREATE_UNSCOPED_PARTY_ID,
 }
+_SYSTEM_ADMIN_ROLE_CODES = ["admin", "system_admin"]
 
 
 @router.post("/", response_model=TaskResponse, summary="创建新任务")
@@ -633,7 +634,7 @@ async def cleanup_old_tasks(
     days: int = Query(30, ge=1, le=365, description="清理多少天前的任务"),
     is_dry_run: bool = Query(False, description="是否为试运行"),
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_any_role(_SYSTEM_ADMIN_ROLE_CODES)),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="delete",

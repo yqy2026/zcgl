@@ -18,7 +18,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.constants.cache_constants import CACHE_TTL_SHORT_SECONDS
 from src.core.exception_handler import bad_request
 from src.database import get_async_db
-from src.middleware.auth import AuthzContext, get_current_active_user, require_authz
+from src.middleware.auth import (
+    AuthzContext,
+    DataScopeContext,
+    get_current_active_user,
+    require_authz,
+    require_data_scope_context,
+)
 from src.models.auth import User
 from src.schemas.statistics import (
     CategoryOccupancyRateListResponse,
@@ -26,6 +32,7 @@ from src.schemas.statistics import (
     OccupancyRateStatsResponse,
 )
 from src.services.analytics import OccupancyService
+from src.services.party_scope import build_party_filter_from_scope_context
 from src.utils.cache_manager import cache_statistics
 
 logger = logging.getLogger(__name__)
@@ -40,6 +47,9 @@ async def get_overall_occupancy_rate(
     should_use_aggregation: bool = True,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="analytics")
+    ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="read",
@@ -71,10 +81,17 @@ async def get_overall_occupancy_rate(
         filters["data_status"] = "正常"
 
     service = OccupancyService(db)
+    party_filter = build_party_filter_from_scope_context(_scope_ctx)
     if should_use_aggregation:
-        stats = await service.calculate_with_aggregation(filters)
+        stats = await service.calculate_with_aggregation(
+            filters,
+            party_filter=party_filter,
+        )
     else:
-        stats = await service._calculate_in_memory(filters)
+        stats = await service._calculate_in_memory(
+            filters,
+            party_filter=party_filter,
+        )
 
     logger.info(f"出租率计算完成: {stats}")
 
@@ -96,6 +113,9 @@ async def get_occupancy_rate_by_category(
     should_use_aggregation: bool = True,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="analytics")
+    ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="read",
@@ -137,13 +157,18 @@ async def get_occupancy_rate_by_category(
         filters["data_status"] = "正常"
 
     service = OccupancyService(db)
+    party_filter = build_party_filter_from_scope_context(_scope_ctx)
     if should_use_aggregation:
         category_results = await service.calculate_category_with_aggregation(
-            category_field, filters
+            category_field,
+            filters,
+            party_filter=party_filter,
         )
     else:
         category_results = await service._calculate_category_in_memory(
-            category_field, filters
+            category_field,
+            filters,
+            party_filter=party_filter,
         )
 
     category_occupancy = []
@@ -173,6 +198,9 @@ async def get_occupancy_rate_statistics(
     business_category: str | None = Query(None, description="业务分类筛选"),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="analytics")
+    ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="read",
@@ -210,7 +238,10 @@ async def get_occupancy_rate_statistics(
         filters["business_category"] = business_category
 
     occupancy_service = OccupancyService(db)
-    stats = await occupancy_service.calculate_with_aggregation(filters)
+    stats = await occupancy_service.calculate_with_aggregation(
+        filters,
+        party_filter=build_party_filter_from_scope_context(_scope_ctx),
+    )
 
     return {
         "success": True,

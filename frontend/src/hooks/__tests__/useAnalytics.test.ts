@@ -10,8 +10,13 @@ vi.mock('@/utils/queryScope', () => ({
 }));
 
 vi.mock('@/stores/dataScopeStore', () => ({
-  useDataScopeStore: (selector: (state: { initialized: boolean }) => unknown) =>
-    selector({ initialized: true }),
+  useDataScopeStore: (
+    selector: (state: { initialized: boolean; getEffectiveViewMode: () => 'owner' }) => unknown
+  ) =>
+    selector({
+      initialized: true,
+      getEffectiveViewMode: () => 'owner',
+    }),
 }));
 
 vi.mock('@/services/analyticsService', () => ({
@@ -31,7 +36,10 @@ describe('useAnalytics', () => {
     renderHookWithProviders(() => useAnalytics({ keyword: '园区' }), { queryClient });
 
     await waitFor(() => {
-      expect(analyticsService.getComprehensiveAnalytics).toHaveBeenCalledWith({ keyword: '园区' });
+      expect(analyticsService.getComprehensiveAnalytics).toHaveBeenCalledWith(
+        { keyword: '园区' },
+        'owner'
+      );
     });
 
     const queryKeys = queryClient
@@ -42,6 +50,7 @@ describe('useAnalytics', () => {
     expect(queryKeys).toContainEqual([
       'analytics',
       'user:user-1|scope:owner,manager',
+      'owner',
       'comprehensive',
       { keyword: '园区' },
     ]);
@@ -53,7 +62,10 @@ describe('useAnalytics', () => {
     renderHookWithProviders(() => useAnalytics({ keyword: '园区' }), { queryClient });
 
     await waitFor(() => {
-      expect(analyticsService.getComprehensiveAnalytics).toHaveBeenCalledWith({ keyword: '园区' });
+      expect(analyticsService.getComprehensiveAnalytics).toHaveBeenCalledWith(
+        { keyword: '园区' },
+        'owner'
+      );
     });
   });
 });

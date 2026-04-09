@@ -53,11 +53,11 @@ vi.mock('../Organization/components/OrganizationStatisticsCards', () => ({
 }));
 
 vi.mock('../Organization/components/OrganizationTabsPanel', () => ({
-  default: () => (
+  default: ({ listTabProps }: { listTabProps: { isReadOnlyMode: boolean } }) => (
     <div data-testid="org-tabs-panel">
       <div>列表视图</div>
       <div>树形视图</div>
-      <button disabled>新建组织</button>
+      <button disabled={listTabProps.isReadOnlyMode}>新建组织</button>
     </div>
   ),
 }));
@@ -160,7 +160,7 @@ describe('OrganizationPage', () => {
     }
   });
 
-  it('enforces read-only mode and disables write entry point', async () => {
+  it('默认启用写操作入口，不再显示只读提示', async () => {
     renderWithProviders(<OrganizationPage />);
 
     await waitFor(() => {
@@ -169,7 +169,7 @@ describe('OrganizationPage', () => {
       expect(useDictionary).toHaveBeenCalledWith('organization_status');
     });
 
-    expect(screen.getByText(/组织架构当前为只读模式/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /新建组织/ })).toBeDisabled();
+    expect(screen.queryByText(/组织架构当前为只读模式/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /新建组织/ })).toBeEnabled();
   });
 });

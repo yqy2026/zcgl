@@ -1,5 +1,6 @@
 import { apiClient } from '@/api/client';
 import { STATISTICS_API } from '@/constants/api';
+import { useDataScopeStore, type BindingType } from '@/stores/dataScopeStore';
 import type { AssetSearchParams } from '@/types/asset';
 import type { AnalyticsData, AnalyticsResponse } from '@/types/analytics';
 import { convertBackendToFrontend } from '@/utils/dataConversion';
@@ -21,6 +22,8 @@ interface RawApiData {
   total_income?: number;
   self_operated_rent_income?: number;
   agency_service_income?: number;
+  actual_receipts?: number | null;
+  collection_rate?: number | null;
   customer_entity_count?: number;
   customer_contract_count?: number;
   customer_entity_breakdown?: Record<string, number>;
@@ -90,8 +93,40 @@ const toNumber = (value: unknown): number => {
   return 0;
 };
 
+const toNullableNumber = (value: unknown): number | null => {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+  return null;
+};
+
 export class AnalyticsService {
   private api = apiClient;
+
+  private appendViewMode<T extends Record<string, unknown> | undefined>(
+    params: T,
+    viewMode?: BindingType | null
+  ): (T & { view_mode?: BindingType }) | { view_mode?: BindingType } | undefined {
+    const resolvedViewMode =
+      viewMode === undefined ? useDataScopeStore.getState().getEffectiveViewMode() : viewMode;
+    if (resolvedViewMode == null) {
+      return params;
+    }
+
+    return {
+      ...(params ?? {}),
+      view_mode: resolvedViewMode,
+    };
+  }
 
   private buildExportFilename(format: 'excel' | 'pdf' | 'csv'): string {
     const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '');
@@ -110,10 +145,13 @@ export class AnalyticsService {
     window.URL.revokeObjectURL(url);
   }
 
-  async getComprehensiveAnalytics(filters?: AssetSearchParams): Promise<AnalyticsResponse> {
+  async getComprehensiveAnalytics(
+    filters?: AssetSearchParams,
+    viewMode?: BindingType | null
+  ): Promise<AnalyticsResponse> {
     try {
       const response = await this.api.get<AnalyticsResponse>('/analytics/comprehensive', {
-        params: filters,
+        params: this.appendViewMode(filters, viewMode),
       });
 
       if (!response.success) {
@@ -229,6 +267,8 @@ export class AnalyticsService {
       total_income: toNumber(apiData.total_income),
       self_operated_rent_income: toNumber(apiData.self_operated_rent_income),
       agency_service_income: toNumber(apiData.agency_service_income),
+      actual_receipts: toNumber(apiData.actual_receipts),
+      collection_rate: toNullableNumber(apiData.collection_rate),
       customer_entity_count: toNumber(apiData.customer_entity_count),
       customer_contract_count: toNumber(apiData.customer_contract_count),
       customer_entity_breakdown:
@@ -255,10 +295,13 @@ export class AnalyticsService {
     return adaptedData;
   }
 
-  async getBasicStatistics(filters?: AssetSearchParams): Promise<AnalyticsResponse> {
+  async getBasicStatistics(
+    filters?: AssetSearchParams,
+    viewMode?: BindingType | null
+  ): Promise<AnalyticsResponse> {
     try {
       const response = await this.api.get<AnalyticsResponse>(STATISTICS_API.OVERVIEW, {
-        params: filters,
+        params: this.appendViewMode(filters, viewMode),
       });
 
       if (response.success && response.data) {
@@ -271,9 +314,11 @@ export class AnalyticsService {
     }
   }
 
-  async getAreaSummary(): Promise<AnalyticsResponse> {
+  async getAreaSummary(viewMode?: BindingType | null): Promise<AnalyticsResponse> {
     try {
-      const response = await this.api.get<AnalyticsResponse>(STATISTICS_API.ASSET_SUMMARY);
+      const response = await this.api.get<AnalyticsResponse>(STATISTICS_API.ASSET_SUMMARY, {
+        params: this.appendViewMode(undefined, viewMode),
+      });
 
       if (response.success && response.data) {
         return response.data;
@@ -285,9 +330,11 @@ export class AnalyticsService {
     }
   }
 
-  async getFinancialSummary(): Promise<AnalyticsResponse> {
+  async getFinancialSummary(viewMode?: BindingType | null): Promise<AnalyticsResponse> {
     try {
-      const response = await this.api.get<AnalyticsResponse>(STATISTICS_API.FINANCIAL_SUMMARY);
+      const response = await this.api.get<AnalyticsResponse>(STATISTICS_API.FINANCIAL_SUMMARY, {
+        params: this.appendViewMode(undefined, viewMode),
+      });
 
       if (response.success && response.data) {
         return response.data;
@@ -301,7 +348,8 @@ export class AnalyticsService {
 
   async exportAnalyticsReport(
     format: 'excel' | 'pdf' | 'csv',
-    filters?: Pick<AssetSearchParams, 'start_date' | 'end_date' | 'include_deleted'>
+    filters?: Pick<AssetSearchParams, 'start_date' | 'end_date' | 'include_deleted'>,
+    viewMode?: BindingType | null
   ): Promise<Blob> {
     try {
       const params: Record<string, string | boolean> = {
@@ -319,7 +367,7 @@ export class AnalyticsService {
       }
 
       const response = await this.api.post<Blob>('/analytics/export', undefined, {
-        params,
+        params: this.appendViewMode(params, viewMode),
         responseType: 'blob',
         retry: false,
         smartExtract: false,
@@ -338,9 +386,10 @@ export class AnalyticsService {
 
   async downloadAnalyticsReport(
     format: 'excel' | 'pdf' | 'csv',
-    filters?: Pick<AssetSearchParams, 'start_date' | 'end_date' | 'include_deleted'>
+    filters?: Pick<AssetSearchParams, 'start_date' | 'end_date' | 'include_deleted'>,
+    viewMode?: BindingType | null
   ): Promise<void> {
-    const blob = await this.exportAnalyticsReport(format, filters);
+    const blob = await this.exportAnalyticsReport(format, filters, viewMode);
     this.triggerBlobDownload(blob, this.buildExportFilename(format));
   }
 }

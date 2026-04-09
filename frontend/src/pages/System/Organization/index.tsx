@@ -34,6 +34,7 @@ import OrganizationStatisticsCards from './components/OrganizationStatisticsCard
 import OrganizationTabsPanel from './components/OrganizationTabsPanel';
 import OrganizationFormModal from './components/OrganizationFormModal';
 import OrganizationHistoryModal from './components/OrganizationHistoryModal';
+import OrganizationBindingDrawer from './components/OrganizationBindingDrawer';
 import styles from '../OrganizationPage.module.css';
 
 const toneClassMap: Record<Tone, string> = {
@@ -52,6 +53,7 @@ const OrganizationPage: React.FC = () => {
   });
   const [modalVisible, setModalVisible] = useState(false);
   const [historyModalVisible, setHistoryModalVisible] = useState(false);
+  const [bindingDrawerVisible, setBindingDrawerVisible] = useState(false);
   const [editingOrganization, setEditingOrganization] = useState<Organization | null>(null);
   const [selectedOrganization, setSelectedOrganization] = useState<Organization | null>(null);
   const [organizationHistory, setOrganizationHistory] = useState<OrganizationHistory[]>([]);
@@ -261,6 +263,11 @@ const OrganizationPage: React.FC = () => {
     }
   }, []);
 
+  const handleManageBindings = useCallback((organization: Organization) => {
+    setSelectedOrganization(organization);
+    setBindingDrawerVisible(true);
+  }, []);
+
   const {
     data: historyPageItems,
     pagination: historyPagination,
@@ -337,6 +344,7 @@ const OrganizationPage: React.FC = () => {
             onPageChange: handlePageChange,
             onEdit: handleEdit,
             onDelete: handleDelete,
+            onManageBindings: handleManageBindings,
             onViewHistory: handleViewHistory,
             isReadOnlyMode: readOnlyMode,
           }}
@@ -370,6 +378,12 @@ const OrganizationPage: React.FC = () => {
         getToneClassName={getToneClassName}
         onClose={() => setHistoryModalVisible(false)}
         onPageChange={updateHistoryPagination}
+      />
+
+      <OrganizationBindingDrawer
+        open={bindingDrawerVisible}
+        organization={selectedOrganization}
+        onClose={() => setBindingDrawerVisible(false)}
       />
     </PageContainer>
   );

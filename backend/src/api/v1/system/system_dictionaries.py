@@ -10,19 +10,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ....core.exception_handler import BaseBusinessError, internal_error, not_found
 from ....database import get_async_db
-from ....middleware.auth import require_admin
 from ....models.auth import User
 from ....schemas.asset import (
     SystemDictionaryCreate,
     SystemDictionaryResponse,
     SystemDictionaryUpdate,
 )
+from ....security.permissions import require_any_role
 from ....services.system_dictionary import (
     SystemDictionaryService,
     get_system_dictionary_service,
 )
 
 router = APIRouter()
+_SYSTEM_MANAGEMENT_ROLE_CODES = ["admin", "system_admin", "perm_admin"]
 
 
 def _resolve_service(
@@ -92,7 +93,7 @@ async def get_system_dictionary(
 async def create_system_dictionary(
     dictionary_in: SystemDictionaryCreate,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_any_role(_SYSTEM_MANAGEMENT_ROLE_CODES)),
     service: SystemDictionaryService = Depends(get_system_dictionary_service),
 ) -> SystemDictionaryResponse:
     try:
@@ -115,7 +116,7 @@ async def update_system_dictionary(
     dictionary_in: SystemDictionaryUpdate,
     dictionary_id: str = Path(..., description="字典ID"),
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_any_role(_SYSTEM_MANAGEMENT_ROLE_CODES)),
     service: SystemDictionaryService = Depends(get_system_dictionary_service),
 ) -> SystemDictionaryResponse:
     try:
@@ -135,7 +136,7 @@ async def update_system_dictionary(
 async def delete_system_dictionary(
     dictionary_id: str = Path(..., description="字典ID"),
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_any_role(_SYSTEM_MANAGEMENT_ROLE_CODES)),
     service: SystemDictionaryService = Depends(get_system_dictionary_service),
 ) -> dict[str, str]:
     try:
@@ -157,7 +158,7 @@ async def delete_system_dictionary(
 async def batch_update_system_dictionaries(
     updates: list[dict[str, Any]],
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_any_role(_SYSTEM_MANAGEMENT_ROLE_CODES)),
     service: SystemDictionaryService = Depends(get_system_dictionary_service),
 ) -> list[SystemDictionaryResponse]:
     try:

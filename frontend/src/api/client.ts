@@ -15,7 +15,6 @@ import { ApiClientConfig, RetryConfig, ExtractResult } from '@/types/apiResponse
 import { createLogger } from '@/utils/logger';
 import { isDevelopmentMode } from '@/utils/runtimeEnv';
 import { buildScopeKey } from '@/utils/queryScope';
-import { useDataScopeStore } from '@/stores/dataScopeStore';
 import { API_BASE_URL, CSRF_CONFIG } from './config';
 import { AuthStorage } from '@/utils/AuthStorage';
 
@@ -76,25 +75,6 @@ const setHeaderIfMissing = (
   }
 };
 
-const setHeader = (
-  headers: InternalAxiosRequestConfig['headers'],
-  name: string,
-  value: string
-): void => {
-  if (headers == null) {
-    return;
-  }
-
-  const setFn = (headers as { set?: (headerName: string, val: string) => void }).set;
-  if (typeof setFn === 'function') {
-    setFn.call(headers, name, value);
-    return;
-  }
-
-  const record = headers as Record<string, string>;
-  record[name] = value;
-};
-
 const removeHeader = (
   headers: InternalAxiosRequestConfig['headers'],
   name: string
@@ -130,20 +110,13 @@ const isPerspectiveHeaderExemptRequest = (url: string | undefined): boolean => {
   return pathname === '/auth' || pathname.startsWith('/auth/');
 };
 
-const applyPerspectiveHeader = (config: InternalAxiosRequestConfig): void => {
+const stripPerspectiveHeader = (config: InternalAxiosRequestConfig): void => {
   if (isPerspectiveHeaderExemptRequest(config.url)) {
     removeHeader(config.headers, 'X-Perspective');
     return;
   }
 
-  const { getEffectivePerspective } = useDataScopeStore.getState();
-  const perspective = getEffectivePerspective();
-  if (perspective == null) {
-    removeHeader(config.headers, 'X-Perspective');
-    return;
-  }
-
-  setHeader(config.headers, 'X-Perspective', perspective);
+  removeHeader(config.headers, 'X-Perspective');
 };
 
 // ==================== URL验证 ====================
@@ -430,7 +403,7 @@ export class ApiClient {
           }
         }
 
-        applyPerspectiveHeader(config);
+        stripPerspectiveHeader(config);
 
         // 执行自定义请求拦截器
         if (this.config.requestInterceptors) {

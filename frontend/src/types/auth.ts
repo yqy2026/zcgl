@@ -19,7 +19,6 @@ export interface User {
   full_name: string;
   phone: string;
   role_id?: string;
-  role_name?: string;
   roles?: string[];
   role_ids?: string[];
   is_admin?: boolean;

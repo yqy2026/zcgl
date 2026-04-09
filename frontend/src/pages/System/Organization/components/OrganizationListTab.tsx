@@ -33,6 +33,7 @@ export interface OrganizationListTabProps {
   onPageChange: (next: { current?: number; pageSize?: number }) => void;
   onEdit: (organization: Organization) => void;
   onDelete: (id: string) => Promise<void>;
+  onManageBindings: (organization: Organization) => void;
   onViewHistory: (organization: Organization) => void;
 }
 
@@ -53,6 +54,7 @@ const OrganizationListTab: React.FC<OrganizationListTabProps> = ({
   onPageChange,
   onEdit,
   onDelete,
+  onManageBindings,
   onViewHistory,
 }) => {
   const columns = useMemo<ColumnsType<Organization>>(
@@ -119,6 +121,16 @@ const OrganizationListTab: React.FC<OrganizationListTabProps> = ({
               历史
             </Button>
             {!isReadOnlyMode && (
+              <Button
+                type="text"
+                onClick={() => onManageBindings(record)}
+                className={styles.tableActionButton}
+                aria-label={`管理组织 ${record.name} 主体绑定`}
+              >
+                主体绑定
+              </Button>
+            )}
+            {!isReadOnlyMode && (
               <Popconfirm
                 title="确定要删除这个组织吗？"
                 onConfirm={() => onDelete(record.id)}
@@ -140,7 +152,16 @@ const OrganizationListTab: React.FC<OrganizationListTabProps> = ({
         ),
       },
     ],
-    [getStatusTag, getTypeIcon, getTypeLabel, isReadOnlyMode, onDelete, onEdit, onViewHistory]
+    [
+      getStatusTag,
+      getTypeIcon,
+      getTypeLabel,
+      isReadOnlyMode,
+      onDelete,
+      onEdit,
+      onManageBindings,
+      onViewHistory,
+    ]
   );
 
   return (

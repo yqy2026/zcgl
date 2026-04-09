@@ -129,7 +129,7 @@ class TestAreaService:
             result = await area_service.calculate_summary_with_aggregation(filters=None)
 
             # 验证降级到内存计算
-            mock_memory.assert_called_once_with(None)
+            mock_memory.assert_called_once_with(None, party_filter=None)
             assert result["overall_occupancy_rate"] == 75.0
 
     @patch("src.services.analytics.area_service.asset_crud")

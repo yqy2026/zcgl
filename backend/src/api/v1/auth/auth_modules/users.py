@@ -28,7 +28,6 @@ from .....exceptions import BusinessLogicError
 from .....middleware.auth import (
     AuthzContext,
     get_current_active_user,
-    require_admin,
     require_authz,
 )
 from .....middleware.security_middleware import get_client_ip
@@ -42,6 +41,7 @@ from .....schemas.auth import (
 from .....schemas.auth import (
     UserQueryParams as UserQueryParamsSchema,
 )
+from .....security.permissions import require_any_role
 from .....services.core.audit_service import AuditService
 from .....services.core.password_service import PasswordService
 from .....services.core.session_service import AsyncSessionService
@@ -54,6 +54,7 @@ router = APIRouter(prefix="/users", tags=["用户管理"])
 _get_factory = get_service_factory()
 UserCRUD = getattr(import_module("src.crud.auth"), "UserCRUD")
 _USER_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:user:create"
+_SYSTEM_MANAGEMENT_ROLE_CODES = ["admin", "system_admin", "perm_admin"]
 
 
 def _normalize_optional_str(value: Any) -> str | None:
@@ -154,7 +155,6 @@ async def _build_user_response(
     return base.model_copy(
         update={
             "role_id": role_summary["primary_role_id"],
-            "role_name": role_summary["primary_role_name"],
             "roles": role_summary["roles"],
             "role_ids": role_summary["role_ids"],
             "is_admin": role_summary["is_admin"],
@@ -230,7 +230,9 @@ async def get_users(
     params: UserQueryParamsSchema = Depends(),
     db: AsyncSession = Depends(get_async_db),
     factory: ServiceFactory = Depends(_get_factory),
-    current_user: UserResponse = Depends(require_admin),
+    current_user: UserResponse = Depends(
+        require_any_role(_SYSTEM_MANAGEMENT_ROLE_CODES)
+    ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(action="read", resource_type="user")
     ),
@@ -290,7 +292,9 @@ async def create_user(
     user_data: UserCreate,
     db: AsyncSession = Depends(get_async_db),
     factory: ServiceFactory = Depends(_get_factory),
-    current_user: UserResponse = Depends(require_admin),
+    current_user: UserResponse = Depends(
+        require_any_role(_SYSTEM_MANAGEMENT_ROLE_CODES)
+    ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="create",
@@ -487,7 +491,9 @@ async def deactivate_user(
     user_id: str,
     db: AsyncSession = Depends(get_async_db),
     factory: ServiceFactory = Depends(_get_factory),
-    current_user: UserResponse = Depends(require_admin),
+    current_user: UserResponse = Depends(
+        require_any_role(_SYSTEM_MANAGEMENT_ROLE_CODES)
+    ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(action="update", resource_type="user", resource_id="{user_id}")
     ),
@@ -507,7 +513,9 @@ async def delete_user(
     user_id: str,
     db: AsyncSession = Depends(get_async_db),
     factory: ServiceFactory = Depends(_get_factory),
-    current_user: UserResponse = Depends(require_admin),
+    current_user: UserResponse = Depends(
+        require_any_role(_SYSTEM_MANAGEMENT_ROLE_CODES)
+    ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(action="delete", resource_type="user", resource_id="{user_id}")
     ),
@@ -527,7 +535,9 @@ async def activate_user(
     user_id: str,
     db: AsyncSession = Depends(get_async_db),
     factory: ServiceFactory = Depends(_get_factory),
-    current_user: UserResponse = Depends(require_admin),
+    current_user: UserResponse = Depends(
+        require_any_role(_SYSTEM_MANAGEMENT_ROLE_CODES)
+    ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(action="update", resource_type="user", resource_id="{user_id}")
     ),
@@ -557,7 +567,9 @@ async def lock_user(
     request: Request,
     db: AsyncSession = Depends(get_async_db),
     factory: ServiceFactory = Depends(_get_factory),
-    current_user: UserResponse = Depends(require_admin),
+    current_user: UserResponse = Depends(
+        require_any_role(_SYSTEM_MANAGEMENT_ROLE_CODES)
+    ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(action="update", resource_type="user", resource_id="{user_id}")
     ),
@@ -604,7 +616,9 @@ async def unlock_user_account(
     request: Request,
     db: AsyncSession = Depends(get_async_db),
     factory: ServiceFactory = Depends(_get_factory),
-    current_user: UserResponse = Depends(require_admin),
+    current_user: UserResponse = Depends(
+        require_any_role(_SYSTEM_MANAGEMENT_ROLE_CODES)
+    ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(action="update", resource_type="user", resource_id="{user_id}")
     ),
@@ -655,7 +669,9 @@ async def reset_user_password(
     request: Request,
     db: AsyncSession = Depends(get_async_db),
     factory: ServiceFactory = Depends(_get_factory),
-    current_user: UserResponse = Depends(require_admin),
+    current_user: UserResponse = Depends(
+        require_any_role(_SYSTEM_MANAGEMENT_ROLE_CODES)
+    ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(action="update", resource_type="user", resource_id="{user_id}")
     ),
@@ -711,7 +727,9 @@ async def reset_user_password(
 async def get_user_statistics(
     db: AsyncSession = Depends(get_async_db),
     factory: ServiceFactory = Depends(_get_factory),
-    current_user: UserResponse = Depends(require_admin),
+    current_user: UserResponse = Depends(
+        require_any_role(_SYSTEM_MANAGEMENT_ROLE_CODES)
+    ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(action="read", resource_type="user")
     ),

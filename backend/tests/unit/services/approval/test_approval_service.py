@@ -38,6 +38,7 @@ def mock_asset_service() -> MagicMock:
     service.submit_asset_review = AsyncMock()
     service.approve_asset_review = AsyncMock()
     service.reject_asset_review = AsyncMock()
+    service.withdraw_asset_review = AsyncMock()
     return service
 
 
@@ -267,3 +268,64 @@ async def test_withdraw_task_should_only_allow_starter(
                 operator_id="other-user",
                 comment="撤回重提",
             )
+
+
+async def test_withdraw_task_should_restore_asset_and_complete_instance(
+    mock_db: MagicMock,
+    mock_asset_service: MagicMock,
+    mock_notification_service: MagicMock,
+) -> None:
+    service = _build_service(
+        mock_db,
+        mock_asset_service,
+        mock_notification_service,
+    )
+
+    task = MagicMock(
+        id="task-001",
+        approval_instance_id="approval-001",
+        business_type="asset",
+        business_id="asset-001",
+        assignee_user_id="reviewer-001",
+        status="pending",
+        completed_at=None,
+    )
+    instance = MagicMock(
+        id="approval-001",
+        business_type="asset",
+        business_id="asset-001",
+        starter_id="starter-001",
+        status="pending",
+        ended_at=None,
+        current_task_id="task-001",
+    )
+
+    with (
+        patch.object(service, "_get_task_or_raise", new=AsyncMock(return_value=task)),
+        patch.object(
+            service,
+            "_get_instance_or_raise",
+            new=AsyncMock(return_value=instance),
+        ),
+    ):
+        result = await service.withdraw_task(
+            task_id="task-001",
+            operator_id="starter-001",
+            comment="撤回重提",
+        )
+
+    assert result.status == "withdrawn"
+    assert task.status == "cancelled"
+    assert task.completed_at is not None
+    assert instance.status == "withdrawn"
+    assert instance.ended_at is not None
+    assert instance.current_task_id is None
+    mock_asset_service.withdraw_asset_review.assert_awaited_once_with(
+        "asset-001",
+        operator="starter-001",
+        reason="撤回重提",
+    )
+    mock_notification_service.mark_approval_notifications_read.assert_awaited_once_with(
+        mock_db,
+        approval_instance_id="approval-001",
+    )

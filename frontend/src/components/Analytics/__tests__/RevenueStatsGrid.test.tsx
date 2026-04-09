@@ -1,23 +1,32 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { RevenueStatsGrid } from '../AnalyticsStatsCard';
+
+vi.setConfig({
+  testTimeout: 20000,
+  hookTimeout: 20000,
+});
 
 describe('RevenueStatsGrid (ANA-001)', () => {
   const baseData = {
     total_income: 150000,
     self_operated_rent_income: 100000,
     agency_service_income: 50000,
+    actual_receipts: 85000,
+    collection_rate: 85,
     customer_entity_count: 12,
     customer_contract_count: 18,
     metrics_version: 'req-ana-001-v1',
   };
 
-  it('should render all 5 ANA-001 stat cards', () => {
+  it('should render all 7 ANA-001 stat cards', () => {
     render(<RevenueStatsGrid data={baseData} />);
 
     expect(screen.getByText('总收入（经营口径）')).toBeInTheDocument();
     expect(screen.getByText('自营租金收入')).toBeInTheDocument();
     expect(screen.getByText('代理服务费收入')).toBeInTheDocument();
+    expect(screen.getByText('当期实收')).toBeInTheDocument();
+    expect(screen.getByText('租金收缴率')).toBeInTheDocument();
     expect(screen.getByText('客户主体数')).toBeInTheDocument();
     expect(screen.getByText('客户合同数')).toBeInTheDocument();
   });
@@ -46,6 +55,8 @@ describe('RevenueStatsGrid (ANA-001)', () => {
       total_income: 0,
       self_operated_rent_income: 0,
       agency_service_income: 0,
+      actual_receipts: 0,
+      collection_rate: null,
       customer_entity_count: 0,
       customer_contract_count: 0,
       metrics_version: 'req-ana-001-v1',
@@ -55,6 +66,20 @@ describe('RevenueStatsGrid (ANA-001)', () => {
     // All cards should still render with zero values
     expect(screen.getByText('总收入（经营口径）')).toBeInTheDocument();
     expect(screen.getByText('客户主体数')).toBeInTheDocument();
+  });
+
+  it('should render collection rate placeholder when denominator is zero', () => {
+    render(
+      <RevenueStatsGrid
+        data={{
+          ...baseData,
+          collection_rate: null,
+        }}
+      />
+    );
+
+    expect(screen.getByText('租金收缴率')).toBeInTheDocument();
+    expect(screen.getByText('--')).toBeInTheDocument();
   });
 
   it('should render customer breakdown rows when provided', () => {

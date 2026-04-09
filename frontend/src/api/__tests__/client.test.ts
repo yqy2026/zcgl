@@ -627,16 +627,18 @@ describe('URL Validation', () => {
   });
 });
 
-describe('Perspective Header Injection', () => {
+describe('Perspective Header Cleanup', () => {
   let client: ApiClient;
 
   const buildRequestConfig = (
     url: string,
-    headers: AxiosHeaders = new AxiosHeaders()
+    headers: AxiosHeaders = new AxiosHeaders(),
+    params?: Record<string, unknown>
   ): InternalAxiosRequestConfig => ({
     url,
     method: 'get',
     headers,
+    params,
   });
 
   beforeEach(() => {
@@ -648,7 +650,7 @@ describe('Perspective Header Injection', () => {
     useDataScopeStore.getState().reset();
   });
 
-  it('injects X-Perspective for single owner business requests and skips auth routes', () => {
+  it('never injects X-Perspective for business requests', () => {
     useDataScopeStore.setState({
       bindingTypes: ['owner'],
       isSingleOwner: true,
@@ -668,37 +670,10 @@ describe('Perspective Header Injection', () => {
 
     const businessRequest = buildRequestConfig('/assets');
     requestInterceptor(businessRequest);
-    expect(businessRequest.headers.get('X-Perspective')).toBe('owner');
-
-    const authRequest = buildRequestConfig('/auth/me/capabilities');
-    requestInterceptor(authRequest);
-    expect(authRequest.headers.get('X-Perspective')).toBeUndefined();
-  });
-
-  it('skips X-Perspective on neutral routes', () => {
-    useDataScopeStore.setState({
-      bindingTypes: [],
-      isSingleOwner: false,
-      isSingleManager: false,
-      isDualBinding: false,
-      isOwner: false,
-      isManager: false,
-      isAdmin: false,
-      initialized: true,
-    });
-
-    const axiosInstance = client.getAxiosInstance();
-    const requestInterceptor = axiosInstance.interceptors.request.handlers[0]?.fulfilled;
-    if (!requestInterceptor) {
-      throw new Error('Request interceptor is not registered');
-    }
-
-    const businessRequest = buildRequestConfig('/analytics/comprehensive');
-    requestInterceptor(businessRequest);
     expect(businessRequest.headers.get('X-Perspective')).toBeUndefined();
   });
 
-  it('overrides handcrafted X-Perspective with single manager binding', () => {
+  it('strips handcrafted X-Perspective headers from outgoing requests', () => {
     useDataScopeStore.setState({
       bindingTypes: ['manager'],
       isSingleOwner: false,
@@ -716,14 +691,15 @@ describe('Perspective Header Injection', () => {
       throw new Error('Request interceptor is not registered');
     }
 
-    const headers = new AxiosHeaders({ 'X-Perspective': 'owner' });
-    const businessRequest = buildRequestConfig('/assets', headers);
+    const businessRequest = buildRequestConfig(
+      '/analytics/comprehensive',
+      new AxiosHeaders({ 'X-Perspective': 'owner' })
+    );
     requestInterceptor(businessRequest);
-
-    expect(businessRequest.headers.get('X-Perspective')).toBe('manager');
+    expect(businessRequest.headers.get('X-Perspective')).toBeUndefined();
   });
 
-  it('does not inject X-Perspective for dual binding users', () => {
+  it('keeps X-Perspective absent for dual binding users', () => {
     useDataScopeStore.setState({
       bindingTypes: ['owner', 'manager'],
       isSingleOwner: false,
@@ -743,10 +719,11 @@ describe('Perspective Header Injection', () => {
 
     const businessRequest = buildRequestConfig('/assets');
     requestInterceptor(businessRequest);
+
     expect(businessRequest.headers.get('X-Perspective')).toBeUndefined();
   });
 
-  it('does not inject X-Perspective for admin users', () => {
+  it('keeps X-Perspective absent for admin users', () => {
     useDataScopeStore.setState({
       bindingTypes: ['owner'],
       isSingleOwner: true,
@@ -767,6 +744,30 @@ describe('Perspective Header Injection', () => {
     const businessRequest = buildRequestConfig('/assets');
     requestInterceptor(businessRequest);
     expect(businessRequest.headers.get('X-Perspective')).toBeUndefined();
+  });
+
+  it('does not inject view_mode params in request interceptor', () => {
+    useDataScopeStore.setState({
+      bindingTypes: ['owner', 'manager'],
+      isSingleOwner: false,
+      isSingleManager: false,
+      isDualBinding: true,
+      isOwner: true,
+      isManager: true,
+      isAdmin: false,
+      initialized: true,
+      currentViewMode: 'owner',
+    });
+
+    const axiosInstance = client.getAxiosInstance();
+    const requestInterceptor = axiosInstance.interceptors.request.handlers[0]?.fulfilled;
+    if (!requestInterceptor) {
+      throw new Error('Request interceptor is not registered');
+    }
+
+    const analyticsRequest = buildRequestConfig('/analytics/comprehensive');
+    requestInterceptor(analyticsRequest);
+    expect(analyticsRequest.params).toBeUndefined();
   });
 });
 

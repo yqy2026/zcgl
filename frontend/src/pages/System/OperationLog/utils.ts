@@ -19,6 +19,13 @@ interface OperationLogRequestParams {
   response_status?: string;
 }
 
+const normalizeActionFilter = (action: string): string => {
+  if (action === 'view') {
+    return 'read';
+  }
+  return action;
+};
+
 interface StatusMeta {
   label: string;
   tone: Tone;
@@ -82,7 +89,7 @@ export const buildOperationLogRequestParams = (
     page: pagination.current,
     page_size: pagination.pageSize,
     module: filters.module === '' ? undefined : filters.module,
-    action: filters.action === '' ? undefined : filters.action,
+    action: filters.action === '' ? undefined : normalizeActionFilter(filters.action),
     start_date:
       filters.dateRange != null && filters.dateRange[0] != null
         ? filters.dateRange[0].format('YYYY-MM-DD')

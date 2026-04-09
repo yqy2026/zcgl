@@ -9,6 +9,7 @@ import styles from '../../UserManagementPage.module.css';
 interface UserDetailDrawerProps {
   open: boolean;
   user: User | null;
+  roleOptions: Array<{ id: string; name: string }>;
   onClose: () => void;
   onEdit: (user: User) => void;
   onToggleLock: (user: User) => void;
@@ -18,11 +19,13 @@ interface UserDetailDrawerProps {
 const UserDetailDrawer: React.FC<UserDetailDrawerProps> = ({
   open,
   user,
+  roleOptions,
   onClose,
   onEdit,
   onToggleLock,
   getStatusTag,
 }) => {
+  const roleNameById = new Map(roleOptions.map(role => [role.id, role.name]));
   return (
     <Drawer title="用户详情" placement="right" onClose={onClose} open={open} size={600}>
       {user != null && (
@@ -38,9 +41,34 @@ const UserDetailDrawer: React.FC<UserDetailDrawerProps> = ({
             <Descriptions.Item label="邮箱">{user.email}</Descriptions.Item>
             <Descriptions.Item label="手机号">{user.phone ?? '未设置'}</Descriptions.Item>
             <Descriptions.Item label="角色">
-              <Tag className={`${styles.semanticTag} ${styles.roleTag} ${styles.tonePrimary}`}>
-                {user.role_name ?? '未分配'}
-              </Tag>
+              <Space size={[6, 6]} wrap>
+                {(user.role_ids?.length ?? 0) > 0
+                  ? user.role_ids?.map(roleId => (
+                      <Tag
+                        key={roleId}
+                        className={`${styles.semanticTag} ${styles.roleTag} ${styles.tonePrimary}`}
+                      >
+                        {roleNameById.get(roleId) ?? roleId}
+                      </Tag>
+                    ))
+                  : (user.roles ?? []).length > 0
+                    ? user.roles?.map(roleCode => (
+                        <Tag
+                          key={roleCode}
+                          className={`${styles.semanticTag} ${styles.roleTag} ${styles.tonePrimary}`}
+                        >
+                          {roleCode}
+                        </Tag>
+                      ))
+                    : [
+                        <Tag
+                          key="unassigned"
+                          className={`${styles.semanticTag} ${styles.roleTag} ${styles.tonePrimary}`}
+                        >
+                          未分配
+                        </Tag>,
+                      ]}
+              </Space>
             </Descriptions.Item>
             <Descriptions.Item label="所属组织">{user.organization_name}</Descriptions.Item>
             <Descriptions.Item label="状态">

@@ -107,6 +107,8 @@ export interface AnalyticsData {
   total_income?: number;
   self_operated_rent_income?: number;
   agency_service_income?: number;
+  actual_receipts?: number;
+  collection_rate?: number | null;
   customer_entity_count?: number;
   customer_contract_count?: number;
   customer_entity_breakdown?: Record<string, number>;
@@ -136,6 +138,8 @@ export interface AnalyticsResponse {
   total_income?: number;
   self_operated_rent_income?: number;
   agency_service_income?: number;
+  actual_receipts?: number;
+  collection_rate?: number | null;
   customer_entity_count?: number;
   customer_contract_count?: number;
   customer_entity_breakdown?: Record<string, number>;

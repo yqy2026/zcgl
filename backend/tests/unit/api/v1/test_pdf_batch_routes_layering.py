@@ -26,6 +26,7 @@ def test_pdf_batch_routes_module_should_not_import_session_crud_directly() -> No
 def test_pdf_batch_routes_key_endpoints_should_use_require_authz() -> None:
     """pdf 批处理关键端点应接入统一 ABAC 依赖。"""
     module_source = _read_module_source()
+    assert "require_any_role" in module_source
     expected_patterns = [
         r"async def batch_upload_pdfs[\s\S]*?require_authz\([\s\S]*?action=\"create\"[\s\S]*?resource_type=\"contract\"[\s\S]*?resource_context=_CONTRACT_CREATE_RESOURCE_CONTEXT",
         r"async def get_batch_status[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"contract\"",

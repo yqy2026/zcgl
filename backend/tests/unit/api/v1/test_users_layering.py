@@ -36,6 +36,7 @@ def test_users_module_should_import_authz_dependency() -> None:
     module_source = Path(users_module.__file__).read_text(encoding="utf-8")
     assert "AuthzContext" in module_source
     assert "require_authz" in module_source
+    assert "require_any_role" in module_source
 
 
 def test_users_endpoints_should_use_require_authz() -> None:

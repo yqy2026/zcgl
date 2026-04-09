@@ -38,7 +38,6 @@ from ....middleware.auth import (
     DataScopeContext,
     audit_action,
     get_current_active_user,
-    require_admin,
     require_authz,
     require_data_scope_context,
 )
@@ -53,6 +52,7 @@ from ....schemas.asset import (
     AssetReviewRejectRequest,
     AssetUpdate,
 )
+from ....security.permissions import require_any_role
 from ....services.asset.asset_service import (
     AssetService,
     AsyncAssetService,
@@ -68,6 +68,7 @@ DEV_MODE = os.getenv("DEV_MODE", "false").lower() == "true"
 
 # 创建资产路由器
 router = APIRouter()
+_SYSTEM_ADMIN_ROLE_CODES = ["admin", "system_admin"]
 
 # 包含子路由器
 router.include_router(asset_batch.router, tags=["资产批量操作"])
@@ -663,6 +664,33 @@ async def resubmit_asset_review(
     return AssetResponse.model_validate(asset)
 
 
+@router.post(
+    "/{asset_id}/withdraw-review",
+    response_model=AssetResponse,
+    summary="撤回资产审核",
+)
+async def withdraw_asset_review(
+    payload: AssetReviewRejectRequest | None = None,
+    asset_id: str = Path(..., description="资产ID"),
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="asset",
+            resource_id="{asset_id}",
+        )
+    ),
+) -> AssetResponse:
+    _ = _authz
+    asset = await AsyncAssetService(db).withdraw_asset_review(
+        asset_id,
+        operator=_resolve_operator_name(current_user),
+        reason=payload.reason if payload is not None else None,
+    )
+    return AssetResponse.model_validate(asset)
+
+
 @router.get(
     "/{asset_id}/review-logs",
     response_model=list[AssetReviewLogResponse],
@@ -828,7 +856,7 @@ async def delete_asset(
 async def restore_asset(
     asset_id: str = Path(..., description="资产ID"),
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_any_role(_SYSTEM_ADMIN_ROLE_CODES)),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="update",
@@ -852,7 +880,7 @@ async def restore_asset(
 async def hard_delete_asset(
     asset_id: str = Path(..., description="资产ID"),
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_any_role(_SYSTEM_ADMIN_ROLE_CODES)),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="delete",

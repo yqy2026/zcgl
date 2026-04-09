@@ -11,17 +11,20 @@ from fastapi import APIRouter, Depends
 from .....middleware.auth import (
     AuthzContext,
     SecurityConfig,
-    require_admin,
     require_authz,
 )
 from .....schemas.auth import UserResponse
+from .....security.permissions import require_any_role
 
 router = APIRouter(prefix="/security", tags=["安全配置"])
+_SYSTEM_MANAGEMENT_ROLE_CODES = ["admin", "system_admin", "perm_admin"]
 
 
 @router.get("/config", response_model=dict[str, Any], summary="获取安全配置")
 def get_security_config(
-    current_user: UserResponse = Depends(require_admin),
+    current_user: UserResponse = Depends(
+        require_any_role(_SYSTEM_MANAGEMENT_ROLE_CODES)
+    ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(action="read", resource_type="system_settings")
     ),

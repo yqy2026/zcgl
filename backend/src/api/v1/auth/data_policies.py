@@ -8,8 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ....core.exception_handler import BaseBusinessError, internal_error
 from ....database import get_async_db
-from ....middleware.auth import require_admin
 from ....models.auth import User
+from ....security.permissions import require_any_role
 from ....services.authz import DataPolicyService, authz_event_bus
 
 router = APIRouter(tags=["Data Policies"])
@@ -26,7 +26,7 @@ class RolePolicyUpdateRequest(BaseModel):
 async def get_role_data_policies(
     role_id: str,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_any_role(["admin", "system_admin", "perm_admin"])),
 ) -> dict[str, object]:
     del current_user
     try:
@@ -49,7 +49,7 @@ async def put_role_data_policies(
     role_id: str,
     payload: RolePolicyUpdateRequest,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_any_role(["admin", "system_admin", "perm_admin"])),
 ) -> dict[str, object]:
     del current_user
     try:
@@ -74,7 +74,7 @@ async def put_role_data_policies(
 @router.get("/data-policies/templates")
 async def get_data_policy_templates(
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_any_role(["admin", "system_admin", "perm_admin"])),
 ) -> dict[str, dict[str, str]]:
     del current_user
     service = DataPolicyService(db, event_bus=authz_event_bus)

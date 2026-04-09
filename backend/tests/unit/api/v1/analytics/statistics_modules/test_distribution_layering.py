@@ -3,7 +3,7 @@
 import inspect
 import re
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import ANY, AsyncMock, MagicMock
 
 import pytest
 
@@ -66,10 +66,20 @@ async def test_get_ownership_distribution_should_delegate_to_service(mock_db):
         db=mock_db,
         current_user=MagicMock(id="user-1"),
         service=mock_service,
+        _scope_ctx=MagicMock(
+            scope_mode="owner",
+            owner_party_ids=["owner-party-1"],
+            manager_party_ids=[],
+            effective_party_ids=["owner-party-1"],
+        ),
+        _authz_ctx=MagicMock(),
     )
 
     assert result == expected
-    mock_service.get_ownership_distribution.assert_awaited_once_with(db=mock_db)
+    mock_service.get_ownership_distribution.assert_awaited_once_with(
+        db=mock_db,
+        party_filter=ANY,
+    )
 
 
 @pytest.mark.asyncio
@@ -93,6 +103,13 @@ async def test_get_asset_distribution_should_delegate_to_service(mock_db):
         db=mock_db,
         current_user=MagicMock(id="user-1"),
         service=mock_service,
+        _scope_ctx=MagicMock(
+            scope_mode="owner",
+            owner_party_ids=["owner-party-1"],
+            manager_party_ids=[],
+            effective_party_ids=["owner-party-1"],
+        ),
+        _authz_ctx=MagicMock(),
     )
 
     assert result == expected
@@ -100,4 +117,5 @@ async def test_get_asset_distribution_should_delegate_to_service(mock_db):
         db=mock_db,
         group_by="ownership_status",
         should_include_deleted=False,
+        party_filter=ANY,
     )

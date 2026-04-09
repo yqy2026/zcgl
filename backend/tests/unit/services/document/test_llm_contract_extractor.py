@@ -194,9 +194,13 @@ class TestBackwardCompatibility:
         """测试 extract_smart 是异步方法"""
         sample_path = "/fake/path.pdf"
 
-        with patch.object(
-            extractor.adapter, "extract", new_callable=AsyncMock
-        ) as mock_extract:
+        with (
+            patch(
+                "src.services.document.llm_contract_extractor.get_extraction_recommendation_async",
+                new=AsyncMock(return_value="adapter"),
+            ),
+            patch.object(extractor.adapter, "extract", new_callable=AsyncMock) as mock_extract,
+        ):
             mock_extract.return_value = {"success": True}
 
             # 验证可以 await

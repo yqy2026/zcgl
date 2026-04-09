@@ -145,8 +145,8 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
             </Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item name="role_id" label="角色">
-              <Select placeholder="请选择角色（选填）">
+            <Form.Item name="role_ids" label="角色">
+              <Select mode="multiple" placeholder="请选择角色（可多选）">
                 {roles.map(role => (
                   <Option key={role.id} value={role.id}>
                     {role.name}

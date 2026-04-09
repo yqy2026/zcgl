@@ -17,13 +17,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.constants.cache_constants import CACHE_TTL_SHORT_SECONDS
 from src.database import get_async_db
-from src.middleware.auth import AuthzContext, get_current_active_user, require_authz
+from src.middleware.auth import (
+    AuthzContext,
+    DataScopeContext,
+    get_current_active_user,
+    require_authz,
+    require_data_scope_context,
+)
 from src.models.auth import User
 from src.schemas.statistics import AreaSummaryResponse
 from src.services.analytics.area_stats_service import (
     AreaStatsService,
     get_area_stats_service,
 )
+from src.services.party_scope import build_party_filter_from_scope_context
 from src.utils.cache_manager import cache_statistics
 
 logger = logging.getLogger(__name__)
@@ -46,6 +53,9 @@ async def get_area_summary(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     service: AreaStatsService = Depends(get_area_stats_service),
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="analytics")
+    ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="read",
@@ -72,6 +82,7 @@ async def get_area_summary(
         db=db,
         should_include_deleted=should_include_deleted,
         should_use_aggregation=should_use_aggregation,
+        party_filter=build_party_filter_from_scope_context(_scope_ctx),
     )
     logger.info("面积汇总计算完成")
     return result
@@ -86,6 +97,9 @@ async def get_area_statistics(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     service: AreaStatsService = Depends(get_area_stats_service),
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="analytics")
+    ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="read",
@@ -118,4 +132,5 @@ async def get_area_statistics(
         property_nature=property_nature,
         usage_status=usage_status,
         should_include_deleted=should_include_deleted,
+        party_filter=build_party_filter_from_scope_context(_scope_ctx),
     )

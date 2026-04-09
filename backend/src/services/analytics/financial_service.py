@@ -12,6 +12,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...crud.asset import asset_crud
+from ...crud.query_builder import PartyFilter
 from ...utils.numeric import to_float
 
 logger = logging.getLogger(__name__)
@@ -24,7 +25,10 @@ class FinancialService:
         self.db = db
 
     async def calculate_summary(
-        self, filters: dict[str, Any] | None = None
+        self,
+        filters: dict[str, Any] | None = None,
+        *,
+        party_filter: PartyFilter | None = None,
     ) -> dict[str, Any]:
         """
         计算财务汇总数据
@@ -41,6 +45,7 @@ class FinancialService:
             limit=10000,
             filters=filters,
             include_contract_projection=False,
+            party_filter=party_filter,
         )
 
         total_assets = len(assets)

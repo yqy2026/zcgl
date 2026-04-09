@@ -360,13 +360,14 @@ class DataScopeContext:
     owner_party_ids: list[str]
     manager_party_ids: list[str]
     effective_party_ids: list[str]
-    source: Literal["header", "auto"]
+    source: Literal["query", "auto"]
 
 
 class DataScopeContextChecker:
     """Resolve and validate request data-scope context."""
 
     EXEMPT_PATH_PREFIXES: tuple[str, ...] = ("/api/v1/auth",)
+    ANALYTICS_PATH_PREFIXES: tuple[str, ...] = ("/api/v1/analytics", "/api/v1/statistics")
 
     def __init__(self, *, resource_type: str | None = None) -> None:
         self.resource_type = resource_type
@@ -378,23 +379,16 @@ class DataScopeContextChecker:
         db: AsyncSession = Depends(get_async_db),
     ) -> DataScopeContext | None:
         request_path = request.url.path
-        raw_perspective = self._normalize_perspective_header(
-            request.headers.get("X-Perspective")
+        raw_view_mode = (
+            self._normalize_view_mode(request)
+            if any(request_path.startswith(prefix) for prefix in self.ANALYTICS_PATH_PREFIXES)
+            else None
         )
 
         if self._is_exempt_path(request_path):
-            if raw_perspective is None:
+            if raw_view_mode is None:
                 request.state.data_scope_context = None
                 return None
-
-        source: Literal["header", "auto"] = "header"
-        if raw_perspective is None:
-            raw_perspective = "all"
-            source = "auto"
-
-        if raw_perspective not in {"owner", "manager", "all"}:
-            raise bad_request("X-Perspective 仅支持 owner、manager 或 all")
-        normalized_scope_mode = cast(ScopeMode, raw_perspective)
 
         rbac_service = RBACService(db)
         is_admin = bool(await rbac_service.is_admin(str(current_user.id)))
@@ -405,6 +399,20 @@ class DataScopeContextChecker:
         subject_binding_types = (
             authz_service.context_builder.resolve_allowed_binding_types(subject_context)
         )
+
+        source: Literal["query", "auto"] = "query"
+        if raw_view_mode is None:
+            raw_view_mode = self._resolve_auto_scope_mode(
+                request_path=request_path,
+                is_admin=is_admin,
+                subject_binding_types=subject_binding_types,
+            )
+            source = "auto"
+
+        if raw_view_mode not in {"owner", "manager", "all"}:
+            raise bad_request("view_mode 仅支持 owner 或 manager")
+        normalized_scope_mode = cast(ScopeMode, raw_view_mode)
+
         if self.resource_type is not None:
             if is_admin:
                 allowed_binding_types: list[BindingType] = list(
@@ -463,8 +471,25 @@ class DataScopeContextChecker:
     def _is_exempt_path(cls, path: str) -> bool:
         return any(path.startswith(prefix) for prefix in cls.EXEMPT_PATH_PREFIXES)
 
+    @classmethod
+    def _resolve_auto_scope_mode(
+        cls,
+        *,
+        request_path: str,
+        is_admin: bool,
+        subject_binding_types: list[BindingType],
+    ) -> ScopeMode:
+        if is_admin:
+            return "all"
+        if any(request_path.startswith(prefix) for prefix in cls.ANALYTICS_PATH_PREFIXES):
+            if "owner" in subject_binding_types:
+                return "owner"
+            if "manager" in subject_binding_types:
+                return "manager"
+        return "all"
+
     @staticmethod
-    def _normalize_perspective_header(value: str | None) -> str | None:
+    def _normalize_optional_mode(value: str | None) -> str | None:
         if value is None:
             return None
 
@@ -472,6 +497,10 @@ class DataScopeContextChecker:
         if normalized == "":
             return None
         return normalized
+
+    @classmethod
+    def _normalize_view_mode(cls, request: Request) -> str | None:
+        return cls._normalize_optional_mode(request.query_params.get("view_mode"))
 
 
 class AuthzPermissionChecker:
@@ -1651,7 +1680,7 @@ async def can_edit_contract(user: User, db: AsyncSession, contract_id: str) -> b
     try:
         permission_request = PermissionCheckRequest(
             resource="contract",
-            action="edit",
+            action="update",
             resource_id=contract_id,
             context=None,
         )

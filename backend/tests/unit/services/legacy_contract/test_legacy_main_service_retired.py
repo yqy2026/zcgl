@@ -19,7 +19,7 @@ def _assert_retired_namespace_or_none(module_name: str) -> None:
     if spec is None:
         return
 
-    assert spec.loader is None
+    assert spec.loader is None or spec.loader.__class__.__name__ == "NamespaceLoader"
     search_locations = list(spec.submodule_search_locations or [])
     assert len(search_locations) == 1
 

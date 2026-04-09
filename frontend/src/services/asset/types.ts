@@ -9,6 +9,7 @@ import type { AreaStatistics } from '@/types/asset';
 export type {
   Asset,
   AssetLeaseSummaryResponse,
+  AssetReviewLog,
   AssetSearchParams,
   AssetListResponse,
   AssetCreateRequest,

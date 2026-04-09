@@ -57,7 +57,6 @@ class FakeUser:
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     role_id: str | None = None
-    role_name: str | None = None
     roles: list[str] = field(default_factory=list)
     role_ids: list[str] = field(default_factory=list)
     is_admin: bool = False
@@ -86,7 +85,6 @@ def _build_current_user(*, user_id: str, username: str, is_admin: bool) -> UserR
         phone="13800000001" if is_admin else "13800000002",
         full_name=f"{username} User",
         role_id="role-admin-id" if is_admin else "role-user-id",
-        role_name="admin" if is_admin else "asset_viewer",
         roles=["admin"] if is_admin else ["asset_viewer"],
         role_ids=["role-admin-id"] if is_admin else ["role-user-id"],
         is_admin=is_admin,
@@ -215,8 +213,44 @@ class TestCreateUser:
         result = asyncio.run(create_user(user_data=user_data, db=mock_db, current_user=admin_user))
 
         assert result.username == "new-user"
-        assert result.role_name == "asset_viewer"
+        assert result.roles == ["asset_viewer"]
         mock_service.create_user.assert_awaited_once()
+
+    @patch("src.api.v1.auth.auth_modules.users.RBACService")
+    @patch("src.api.v1.auth.auth_modules.users.AsyncUserManagementService")
+    def test_create_user_should_accept_role_ids(
+        self, mock_service_class, mock_rbac_class, mock_db, admin_user
+    ):
+        from src.api.v1.auth.auth_modules.users import create_user
+
+        user_data = UserCreate(
+            username="multi-role-user",
+            email="multi-role-user@example.com",
+            phone="13800000125",
+            full_name="Multi Role User",
+            password="StrongPass123!",
+            role_ids=["role-user-id", "role-reviewer-id"],
+        )
+        created_user = _build_fake_user("multi-role-user-id", "multi-role-user")
+
+        mock_service = MagicMock()
+        mock_service.create_user = AsyncMock(return_value=created_user)
+        mock_service_class.return_value = mock_service
+
+        mock_rbac = MagicMock()
+        mock_rbac.get_user_role_summary = AsyncMock(
+            return_value={
+                **USER_ROLE_SUMMARY,
+                "roles": ["asset_viewer", "reviewer"],
+                "role_ids": ["role-user-id", "role-reviewer-id"],
+            }
+        )
+        mock_rbac_class.return_value = mock_rbac
+
+        asyncio.run(create_user(user_data=user_data, db=mock_db, current_user=admin_user))
+
+        created_payload = mock_service.create_user.await_args.args[0]
+        assert created_payload.role_ids == ["role-user-id", "role-reviewer-id"]
 
     @patch("src.api.v1.auth.auth_modules.users.AsyncUserManagementService")
     def test_create_user_duplicate(self, mock_service_class, mock_db, admin_user):
@@ -268,7 +302,7 @@ class TestGetUser:
         result = asyncio.run(get_user(user_id="target-id", db=mock_db, current_user=admin_user))
 
         assert result.id == "target-id"
-        assert result.role_name == "asset_viewer"
+        assert result.roles == ["asset_viewer"]
 
 
 class TestUpdateUser:
@@ -335,6 +369,53 @@ class TestUpdateUser:
         )
 
         assert result.full_name == "Updated User"
+
+    @patch("src.api.v1.auth.auth_modules.users.RBACService")
+    @patch("src.api.v1.auth.auth_modules.users.AsyncUserManagementService")
+    @patch("src.api.v1.auth.auth_modules.users.UserCRUD")
+    def test_update_user_should_accept_role_ids(
+        self,
+        mock_user_crud_class,
+        mock_service_class,
+        mock_rbac_class,
+        mock_db,
+        admin_user,
+    ):
+        from src.api.v1.auth.auth_modules.users import update_user
+
+        existing_user = _build_fake_user("target-id", "target")
+        updated_user = _build_fake_user("target-id", "target")
+
+        mock_user_crud = MagicMock()
+        mock_user_crud.get_async = AsyncMock(return_value=existing_user)
+        mock_user_crud_class.return_value = mock_user_crud
+
+        mock_service = MagicMock()
+        mock_service.update_user = AsyncMock(return_value=updated_user)
+        mock_service_class.return_value = mock_service
+
+        mock_rbac = MagicMock()
+        mock_rbac.is_admin = AsyncMock(return_value=True)
+        mock_rbac.get_user_role_summary = AsyncMock(
+            return_value={
+                **USER_ROLE_SUMMARY,
+                "roles": ["asset_viewer", "reviewer"],
+                "role_ids": ["role-user-id", "role-reviewer-id"],
+            }
+        )
+        mock_rbac_class.return_value = mock_rbac
+
+        asyncio.run(
+            update_user(
+                user_id="target-id",
+                user_data=UserUpdate(role_ids=["role-user-id", "role-reviewer-id"]),
+                db=mock_db,
+                current_user=admin_user,
+            )
+        )
+
+        updated_payload = mock_service.update_user.await_args.args[1]
+        assert updated_payload.role_ids == ["role-user-id", "role-reviewer-id"]
 
 
 class TestChangePassword:

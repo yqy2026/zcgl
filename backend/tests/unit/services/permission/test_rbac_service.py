@@ -19,6 +19,7 @@ from src.crud.query_builder import PartyFilter
 from src.models.rbac import Permission, Role, UserRoleAssignment
 from src.schemas.rbac import (
     PermissionCheckRequest,
+    PermissionCheckResponse,
     PermissionCreate,
     RoleCreate,
     RoleUpdate,
@@ -1390,7 +1391,7 @@ class TestCalculateEffectivePermissions:
         result = rbac_service._calculate_effective_permissions([sample_role], [])
 
         assert "asset" in result
-        assert "view" in result["asset"]
+        assert "read" in result["asset"]
 
     async def test_calculate_with_resource_permissions(self, rbac_service):
         """测试从资源权限计算权限"""
@@ -1422,7 +1423,7 @@ class TestCalculateEffectivePermissions:
         )
 
         assert "asset" in result
-        assert "view" in result["asset"]
+        assert "read" in result["asset"]
         assert "contract" in result
         assert "read" in result["contract"]
         assert "write" in result["contract"]
@@ -1487,17 +1488,24 @@ class TestAsyncAdapterMethods:
     async def test_check_user_permission(self, rbac_service, mock_db, sample_user):
         """测试检查用户权限（异步适配器）"""
         with patch.object(
-            rbac_service.user_crud,
-            "get_async",
-            new=AsyncMock(return_value=sample_user),
-        ):
-            with patch.object(
-                rbac_service, "get_user_roles", new=AsyncMock(return_value=[])
-            ):
-                result = await rbac_service.check_user_permission(
-                    "user-1", "asset", "view"
+            rbac_service,
+            "check_permission",
+            new=AsyncMock(
+                return_value=PermissionCheckResponse(
+                    has_permission=False,
+                    granted_by=[],
+                    conditions=None,
+                    reason="权限不足",
                 )
-                assert result is False
+            ),
+        ) as mock_check_permission:
+            result = await rbac_service.check_user_permission("user-1", "asset", "view")
+
+        assert result is False
+        args, _kwargs = mock_check_permission.await_args
+        assert args[0] == "user-1"
+        assert args[1].resource == "asset"
+        assert args[1].action == "read"
 
     @pytest.mark.asyncio
     async def test_check_user_permission_admin_uses_is_admin(self, rbac_service):
@@ -1524,28 +1532,48 @@ class TestAsyncAdapterMethods:
     async def test_check_resource_access(self, rbac_service, mock_db, sample_user):
         """测试检查资源访问权限（异步适配器）"""
         with patch.object(
-            rbac_service.user_crud,
-            "get_async",
-            new=AsyncMock(return_value=sample_user),
-        ):
-            with patch.object(
-                rbac_service, "get_user_roles", new=AsyncMock(return_value=[])
-            ):
-                result = await rbac_service.check_resource_access(
-                    "user-1", "asset", "asset-1", "view"
+            rbac_service,
+            "check_permission",
+            new=AsyncMock(
+                return_value=PermissionCheckResponse(
+                    has_permission=False,
+                    granted_by=[],
+                    conditions=None,
+                    reason="权限不足",
                 )
-                assert result is False
+            ),
+        ) as mock_check_permission:
+            result = await rbac_service.check_resource_access(
+                "user-1", "asset", "asset-1", "edit"
+            )
+
+        assert result is False
+        args, _kwargs = mock_check_permission.await_args
+        assert args[0] == "user-1"
+        assert args[1].resource == "asset"
+        assert args[1].action == "update"
+        assert args[1].resource_id == "asset-1"
 
     @pytest.mark.asyncio
     async def test_check_organization_access(self, rbac_service, mock_db, sample_user):
         """测试检查组织访问权限（异步适配器）"""
         with patch.object(
-            rbac_service.user_crud,
-            "get_async",
-            new=AsyncMock(return_value=sample_user),
-        ):
-            with patch.object(
-                rbac_service, "get_user_roles", new=AsyncMock(return_value=[])
-            ):
-                result = await rbac_service.check_organization_access("user-1", "org-1")
-                assert result is False
+            rbac_service,
+            "check_permission",
+            new=AsyncMock(
+                return_value=PermissionCheckResponse(
+                    has_permission=False,
+                    granted_by=[],
+                    conditions=None,
+                    reason="权限不足",
+                )
+            ),
+        ) as mock_check_permission:
+            result = await rbac_service.check_organization_access("user-1", "org-1")
+
+        assert result is False
+        args, _kwargs = mock_check_permission.await_args
+        assert args[0] == "user-1"
+        assert args[1].resource == "organization"
+        assert args[1].action == "read"
+        assert args[1].resource_id == "org-1"

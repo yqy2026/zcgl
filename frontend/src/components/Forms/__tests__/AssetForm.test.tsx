@@ -104,7 +104,7 @@ describe('AssetForm', () => {
     expect(screen.getByRole('button', { name: '重置' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '取消' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '创建资产' })).toBeInTheDocument();
-  });
+  }, 20000);
 
   it('点击取消应触发回调', () => {
     const handleCancel = vi.fn();

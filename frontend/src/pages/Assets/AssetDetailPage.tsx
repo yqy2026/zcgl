@@ -16,10 +16,11 @@ import {
 import { EditOutlined, TeamOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs, { type Dayjs } from 'dayjs';
 import { assetService } from '@/services/assetService';
 import type {
+  AssetReviewLog,
   AssetLeaseGroupRelationType,
   AssetLeaseSummaryResponse,
   ContractPartyItem,
@@ -30,6 +31,7 @@ import { formatArea, formatCurrency } from '@/utils/format';
 import AssetDetailInfo from '@/components/Asset/AssetDetailInfo';
 import { PageContainer } from '@/components/Common';
 import { CUSTOMER_ROUTES } from '@/constants/routes';
+import { MessageManager } from '@/utils/messageManager';
 import styles from './AssetDetailPage.module.css';
 
 const { Text } = Typography;
@@ -42,6 +44,13 @@ const RELATION_TYPE_COLORS: Record<AssetLeaseGroupRelationType, string> = {
 };
 
 const AGENCY_RELATION_TYPES: AssetLeaseGroupRelationType[] = ['委托', '直租'];
+
+const REVIEW_STATUS_META: Record<string, { color: string; label: string }> = {
+  draft: { color: 'default', label: '草稿' },
+  pending: { color: 'processing', label: '待审核' },
+  approved: { color: 'success', label: '已审核' },
+  reversed: { color: 'warning', label: '已反审核' },
+};
 
 const buildPeriodParams = (month: Dayjs) => ({
   period_start: month.startOf('month').format('YYYY-MM-DD'),
@@ -96,6 +105,7 @@ const summaryColumns: ColumnsType<ContractTypeSummary> = [
 const AssetDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [selectedMonth, setSelectedMonth] = useState<Dayjs>(() => dayjs().startOf('month'));
   const hasAssetId = id != null && id !== '';
   const canQuery = hasAssetId;
@@ -110,6 +120,86 @@ const AssetDetailPage: React.FC = () => {
     queryKey: ['asset', queryScopeKey, id],
     queryFn: () => assetService.getAsset(id as string),
     enabled: canQuery,
+  });
+
+  const {
+    data: reviewLogs,
+    isLoading: isReviewLogsLoading,
+  } = useQuery<AssetReviewLog[]>({
+    queryKey: ['asset-review-logs', queryScopeKey, id],
+    queryFn: () => assetService.getAssetReviewLogs(id as string),
+    enabled: canQuery,
+  });
+
+  const syncAssetDetail = (nextAsset: unknown) => {
+    queryClient.setQueryData(['asset', queryScopeKey, id], nextAsset);
+    void queryClient.invalidateQueries({ queryKey: ['asset-review-logs', queryScopeKey, id] });
+  };
+
+  const submitReviewMutation = useMutation({
+    mutationFn: async () => assetService.submitAssetReview(id as string),
+    onSuccess: updatedAsset => {
+      syncAssetDetail(updatedAsset);
+      MessageManager.success('资产已提交审核');
+    },
+    onError: error => {
+      MessageManager.error(error instanceof Error ? error.message : '提交审核失败');
+    },
+  });
+
+  const approveReviewMutation = useMutation({
+    mutationFn: async () => assetService.approveAssetReview(id as string),
+    onSuccess: updatedAsset => {
+      syncAssetDetail(updatedAsset);
+      MessageManager.success('资产审核已通过');
+    },
+    onError: error => {
+      MessageManager.error(error instanceof Error ? error.message : '审核通过失败');
+    },
+  });
+
+  const rejectReviewMutation = useMutation({
+    mutationFn: async (reason: string) => assetService.rejectAssetReview(id as string, reason),
+    onSuccess: updatedAsset => {
+      syncAssetDetail(updatedAsset);
+      MessageManager.success('资产已驳回回草稿');
+    },
+    onError: error => {
+      MessageManager.error(error instanceof Error ? error.message : '驳回审核失败');
+    },
+  });
+
+  const reverseReviewMutation = useMutation({
+    mutationFn: async (reason: string) => assetService.reverseAssetReview(id as string, reason),
+    onSuccess: updatedAsset => {
+      syncAssetDetail(updatedAsset);
+      MessageManager.success('资产已反审核');
+    },
+    onError: error => {
+      MessageManager.error(error instanceof Error ? error.message : '反审核失败');
+    },
+  });
+
+  const resubmitReviewMutation = useMutation({
+    mutationFn: async () => assetService.resubmitAssetReview(id as string),
+    onSuccess: updatedAsset => {
+      syncAssetDetail(updatedAsset);
+      MessageManager.success('资产已重新提交审核');
+    },
+    onError: error => {
+      MessageManager.error(error instanceof Error ? error.message : '重提审核失败');
+    },
+  });
+
+  const withdrawReviewMutation = useMutation({
+    mutationFn: async (reason?: string) => assetService.withdrawAssetReview(id as string, reason),
+    onSuccess: updatedAsset => {
+      syncAssetDetail(updatedAsset);
+      MessageManager.success('资产审核已撤回');
+    },
+    onError: error => {
+      MessageManager.error(error instanceof Error ? error.message : '撤回审核失败');
+    },
   });
 
   const {
@@ -294,6 +384,28 @@ const AssetDetailPage: React.FC = () => {
     );
   };
 
+  const handleReasonedAction = (action: 'reject' | 'reverse' | 'withdraw') => {
+    const reason = window.prompt('请输入原因');
+    if (reason == null || reason.trim() === '') {
+      return;
+    }
+    if (action === 'reject') {
+      rejectReviewMutation.mutate(reason);
+      return;
+    }
+    if (action === 'reverse') {
+      reverseReviewMutation.mutate(reason);
+      return;
+    }
+    withdrawReviewMutation.mutate(reason);
+  };
+
+  const reviewStatus = String(asset?.review_status ?? 'draft').trim().toLowerCase();
+  const reviewMeta = REVIEW_STATUS_META[reviewStatus] ?? {
+    color: 'default',
+    label: reviewStatus || '未知',
+  };
+
   return (
     <PageContainer
       title={asset?.asset_name ?? '资产详情'}
@@ -313,6 +425,69 @@ const AssetDetailPage: React.FC = () => {
       {asset && (
         <div className={styles.pageContent}>
           <AssetDetailInfo asset={asset} />
+
+          <Card title="审核信息" className={styles.leaseCard}>
+            <Space size={16} style={{ width: '100%', flexDirection: 'column', alignItems: 'flex-start' }}>
+              <Space size={12} wrap>
+                <Tag color={reviewMeta.color}>{reviewMeta.label}</Tag>
+                {asset.review_reason != null && asset.review_reason.trim() !== '' ? (
+                  <Text type="secondary">审核说明：{asset.review_reason}</Text>
+                ) : null}
+              </Space>
+              <Space wrap>
+                {reviewStatus === 'draft' ? (
+                  <Button onClick={() => submitReviewMutation.mutate()} loading={submitReviewMutation.isPending}>
+                    提交审核
+                  </Button>
+                ) : null}
+                {reviewStatus === 'pending' ? (
+                  <>
+                    <Button onClick={() => approveReviewMutation.mutate()} loading={approveReviewMutation.isPending}>
+                      审核通过
+                    </Button>
+                    <Button onClick={() => handleReasonedAction('reject')} loading={rejectReviewMutation.isPending}>
+                      驳回审核
+                    </Button>
+                    <Button onClick={() => handleReasonedAction('withdraw')} loading={withdrawReviewMutation.isPending}>
+                      撤回审核
+                    </Button>
+                  </>
+                ) : null}
+                {reviewStatus === 'approved' ? (
+                  <Button onClick={() => handleReasonedAction('reverse')} loading={reverseReviewMutation.isPending}>
+                    反审核
+                  </Button>
+                ) : null}
+                {reviewStatus === 'reversed' ? (
+                  <Button onClick={() => resubmitReviewMutation.mutate()} loading={resubmitReviewMutation.isPending}>
+                    重提审核
+                  </Button>
+                ) : null}
+              </Space>
+              <div>
+                <Text strong>审核日志</Text>
+                {isReviewLogsLoading ? (
+                  <Text type="secondary" style={{ display: 'block', marginTop: 8 }}>
+                    加载中...
+                  </Text>
+                ) : reviewLogs == null || reviewLogs.length === 0 ? (
+                  <Empty description="暂无审核日志" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                ) : (
+                  <Table
+                    size="small"
+                    pagination={false}
+                    rowKey={record => record.id}
+                    dataSource={reviewLogs}
+                    columns={[
+                      { title: '动作', dataIndex: 'action', key: 'action' },
+                      { title: '操作人', dataIndex: 'operator', key: 'operator', render: value => value ?? '-' },
+                      { title: '原因', dataIndex: 'reason', key: 'reason', render: value => value ?? '-' },
+                    ]}
+                  />
+                )}
+              </div>
+            </Space>
+          </Card>
 
           <Card
             title="租赁情况"

@@ -17,10 +17,10 @@ from ....database import get_async_db
 from ....middleware.auth import (
     AuthzContext,
     get_current_active_user,
-    require_admin,
     require_authz,
 )
 from ....models.auth import User
+from ....security.permissions import require_any_role
 from ....services.operation_log.service import (
     OperationLogService,
     get_operation_log_service,
@@ -28,6 +28,7 @@ from ....services.operation_log.service import (
 from ..utils import handle_api_errors
 
 router = APIRouter(tags=["操作日志"])
+_SYSTEM_MANAGEMENT_ROLE_CODES = ["admin", "system_admin", "perm_admin"]
 _OPERATION_LOG_DELETE_UNSCOPED_PARTY_ID = "__unscoped__:operation_log:delete"
 _OPERATION_LOG_DELETE_RESOURCE_CONTEXT: dict[str, str] = {
     "party_id": _OPERATION_LOG_DELETE_UNSCOPED_PARTY_ID,
@@ -291,7 +292,7 @@ async def get_daily_operation_statistics(
 async def get_error_operation_statistics(
     days: int = Query(30, ge=1, le=365, description="统计天数"),
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_any_role(_SYSTEM_MANAGEMENT_ROLE_CODES)),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="read",
@@ -347,7 +348,7 @@ async def export_operation_logs(
     filters: dict[str, Any] | None = None,
     format: str = Query("excel", description="导出格式: excel 或 csv"),
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_any_role(_SYSTEM_MANAGEMENT_ROLE_CODES)),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="read",
@@ -387,7 +388,7 @@ async def export_operation_logs(
 async def cleanup_old_logs(
     days: int = Query(90, ge=1, le=365, description="保留天数"),
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_any_role(_SYSTEM_MANAGEMENT_ROLE_CODES)),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="delete",

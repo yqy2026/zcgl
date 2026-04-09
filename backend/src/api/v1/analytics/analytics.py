@@ -263,6 +263,9 @@ async def get_trend_data(
     should_include_deleted: bool = False,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="analytics")
+    ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="read",
@@ -287,6 +290,7 @@ async def get_trend_data(
             trend_type=trend_type,
             time_dimension=time_dimension,
             filters=filters,
+            party_filter=build_party_filter_from_scope_context(_scope_ctx),
         )
 
         success_response: JSONResponse = ResponseHandler.success(
@@ -318,6 +322,9 @@ async def get_distribution_data(
     should_include_deleted: bool = False,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="analytics")
+    ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="read",
@@ -340,6 +347,7 @@ async def get_distribution_data(
         distribution = await service.calculate_distribution(
             distribution_type=distribution_type,
             filters=filters,
+            party_filter=build_party_filter_from_scope_context(_scope_ctx),
         )
 
         success_response: JSONResponse = ResponseHandler.success(

@@ -14,9 +14,17 @@ from fastapi import APIRouter, Depends, Path, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_async_db
-from src.middleware.auth import AuthzContext, get_current_active_user, require_authz
+from src.middleware.auth import (
+    AuthzContext,
+    DataScopeContext,
+    get_current_active_user,
+    require_authz,
+    require_data_scope_context,
+)
 from src.models.auth import User
 from src.schemas.statistics import TimeSeriesDataPoint, TrendDataResponse
+from src.services.analytics.analytics_service import AnalyticsService
+from src.services.party_scope import build_party_filter_from_scope_context
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +40,9 @@ async def get_trend_data(
     ),
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="analytics")
+    ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="read",
@@ -56,38 +67,29 @@ async def get_trend_data(
         当前实现返回模拟数据，实际项目中应从历史数据表中查询真实趋势
     """
 
-    time_series: list[TimeSeriesDataPoint] = []
-
-    if metric == "occupancy_rate":
-        for i in range(6):
-            month_value = 75 + (i * 2) + (hash(f"{metric}_{i}") % 10)
-            time_series.append(
-                TimeSeriesDataPoint(
-                    date=datetime.strptime(f"2024-{i + 1:02d}-01", "%Y-%m-%d"),
-                    value=float(round(min(month_value, 95), 1)),
-                    label=f"2024-{i + 1:02d}",
-                )
-            )
-    elif metric == "income":
-        base_income = 1000000
-        for i in range(6):
-            month_income = base_income + (i * 50000) + (hash(f"{metric}_{i}") % 100000)
-            time_series.append(
-                TimeSeriesDataPoint(
-                    date=datetime.strptime(f"2024-{i + 1:02d}-01", "%Y-%m-%d"),
-                    value=float(round(month_income, 2)),
-                    label=f"2024-{i + 1:02d}",
-                )
-            )
-    else:
-        for i in range(6):
-            time_series.append(
-                TimeSeriesDataPoint(
-                    date=datetime.strptime(f"2024-{i + 1:02d}-01", "%Y-%m-%d"),
-                    value=float(100 + i * 10),
-                    label=f"2024-{i + 1:02d}",
-                )
-            )
+    trend_alias = {
+        "occupancy_rate": "occupancy",
+        "income": "financial",
+    }.get(metric, metric)
+    trend_rows = await AnalyticsService(db).calculate_trend(
+        trend_type=trend_alias,
+        time_dimension=period,
+        filters={},
+        party_filter=build_party_filter_from_scope_context(_scope_ctx),
+    )
+    time_series = [
+        TimeSeriesDataPoint(
+            date=datetime.strptime(str(item.get("period")), "%Y-%m"),
+            value=float(
+                item.get("occupancy_rate")
+                or item.get("total_land_area")
+                or item.get("value")
+                or 0
+            ),
+            label=str(item.get("period")),
+        )
+        for item in trend_rows
+    ]
 
     return TrendDataResponse(
         metric_name=metric,

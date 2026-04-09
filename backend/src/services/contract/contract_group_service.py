@@ -189,6 +189,40 @@ class ContractGroupService:
     """合同组业务逻辑服务。"""
 
     @staticmethod
+    async def _ensure_assets_not_bound_to_other_groups(
+        db: AsyncSession,
+        *,
+        current_group_id: str | None,
+        asset_ids: list[str] | None,
+    ) -> None:
+        normalized_asset_ids = sorted(
+            {
+                str(asset_id).strip()
+                for asset_id in (asset_ids or [])
+                if str(asset_id).strip() != ""
+            }
+        )
+        if not normalized_asset_ids:
+            return
+
+        conflicts = await contract_group_crud.list_active_group_bindings_for_assets(
+            db,
+            group_id=current_group_id,
+            asset_ids=normalized_asset_ids,
+        )
+        if not conflicts:
+            return
+
+        details = "；".join(
+            f"{item['asset_id']} -> {item['group_code']}"
+            for item in conflicts
+        )
+        raise OperationNotAllowedError(
+            f"以下资产已绑定其他有效合同组：{details}",
+            reason="asset_already_bound_to_active_contract_group",
+        )
+
+    @staticmethod
     def _normalize_effective_party_ids(
         effective_party_ids: list[str] | None,
     ) -> list[str]:
@@ -713,6 +747,12 @@ class ContractGroupService:
         if existing is not None:
             raise DuplicateResourceError("合同组", "group_code", group_code)
 
+        await self._ensure_assets_not_bound_to_other_groups(
+            db,
+            current_group_id=None,
+            asset_ids=obj_in.asset_ids,
+        )
+
         now = _utcnow()
         data: dict[str, Any] = {
             "contract_group_id": str(uuid.uuid4()),
@@ -767,6 +807,12 @@ class ContractGroupService:
             update_data["risk_tags"] = obj_in.risk_tags
         if current_user is not None:
             update_data["updated_by"] = current_user
+
+        await self._ensure_assets_not_bound_to_other_groups(
+            db,
+            current_group_id=group_id,
+            asset_ids=obj_in.asset_ids,
+        )
 
         return await contract_group_crud.update(
             db,

@@ -687,5 +687,44 @@ class CRUDContractGroup:
         if rows:
             await db.execute(contract_group_assets.insert(), rows)
 
+    async def list_active_group_bindings_for_assets(
+        self,
+        db: AsyncSession,
+        *,
+        group_id: str | None,
+        asset_ids: list[str],
+    ) -> list[dict[str, str]]:
+        if not asset_ids:
+            return []
+
+        stmt = (
+            select(
+                contract_group_assets.c.asset_id,
+                ContractGroup.contract_group_id,
+                ContractGroup.group_code,
+            )
+            .join(
+                ContractGroup,
+                ContractGroup.contract_group_id
+                == contract_group_assets.c.contract_group_id,
+            )
+            .where(
+                contract_group_assets.c.asset_id.in_(asset_ids),
+                ContractGroup.data_status == "正常",
+            )
+        )
+        if group_id is not None:
+            stmt = stmt.where(ContractGroup.contract_group_id != group_id)
+
+        rows = (await db.execute(stmt)).all()
+        return [
+            {
+                "asset_id": str(asset_id),
+                "contract_group_id": str(conflict_group_id),
+                "group_code": str(group_code),
+            }
+            for asset_id, conflict_group_id, group_code in rows
+        ]
+
 
 contract_group_crud = CRUDContractGroup()

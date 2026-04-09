@@ -42,6 +42,7 @@ import { assetFieldService } from './asset/assetFieldService';
 
 import type {
   Asset,
+  AssetReviewLog,
   AssetLeaseSummaryResponse,
   AssetSearchParams,
   AssetListResponse,
@@ -100,6 +101,34 @@ export class AssetService {
     params?: { period_start?: string; period_end?: string }
   ): Promise<AssetLeaseSummaryResponse> {
     return assetCoreService.getAssetLeaseSummary(id, params);
+  }
+
+  async submitAssetReview(id: string): Promise<Asset> {
+    return assetCoreService.submitAssetReview(id);
+  }
+
+  async approveAssetReview(id: string): Promise<Asset> {
+    return assetCoreService.approveAssetReview(id);
+  }
+
+  async rejectAssetReview(id: string, reason: string): Promise<Asset> {
+    return assetCoreService.rejectAssetReview(id, reason);
+  }
+
+  async reverseAssetReview(id: string, reason: string): Promise<Asset> {
+    return assetCoreService.reverseAssetReview(id, reason);
+  }
+
+  async resubmitAssetReview(id: string): Promise<Asset> {
+    return assetCoreService.resubmitAssetReview(id);
+  }
+
+  async withdrawAssetReview(id: string, reason?: string): Promise<Asset> {
+    return assetCoreService.withdrawAssetReview(id, reason);
+  }
+
+  async getAssetReviewLogs(id: string): Promise<AssetReviewLog[]> {
+    return assetCoreService.getAssetReviewLogs(id);
   }
 
   async createAsset(data: AssetCreateRequest): Promise<Asset> {

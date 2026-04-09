@@ -19,7 +19,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.constants.cache_constants import CACHE_TTL_SHORT_SECONDS
 from src.database import get_async_db
-from src.middleware.auth import AuthzContext, get_current_active_user, require_authz
+from src.middleware.auth import (
+    AuthzContext,
+    DataScopeContext,
+    get_current_active_user,
+    require_authz,
+    require_data_scope_context,
+)
 from src.models.auth import User
 from src.schemas.statistics import (
     AreaSummaryResponse,
@@ -34,6 +40,7 @@ from src.services.analytics.basic_stats_service import (
     BasicStatsService,
     get_basic_stats_service,
 )
+from src.services.party_scope import build_party_filter_from_scope_context
 from src.utils.cache_manager import cache_statistics, get_cache_manager
 
 logger = logging.getLogger(__name__)
@@ -66,6 +73,9 @@ async def get_basic_statistics(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     service: BasicStatsService = Depends(get_basic_stats_service),
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="analytics")
+    ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="read",
@@ -81,6 +91,7 @@ async def get_basic_statistics(
         property_nature=property_nature,
         usage_status=usage_status,
         ownership_id=ownership_id,
+        party_filter=build_party_filter_from_scope_context(_scope_ctx),
     )
 
 
@@ -89,6 +100,9 @@ async def get_statistics_summary(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     service: BasicStatsService = Depends(get_basic_stats_service),
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="analytics")
+    ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="read",
@@ -104,6 +118,7 @@ async def get_statistics_summary(
         property_nature=None,
         usage_status=None,
         ownership_id=None,
+        party_filter=build_party_filter_from_scope_context(_scope_ctx),
     )
 
 
@@ -113,6 +128,9 @@ async def get_dashboard_data(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     service: BasicStatsService = Depends(get_basic_stats_service),
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="analytics")
+    ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="read",
@@ -128,20 +146,33 @@ async def get_dashboard_data(
         property_nature=None,
         usage_status=None,
         ownership_id=None,
+        party_filter=build_party_filter_from_scope_context(_scope_ctx),
     )
     filters = basic_stats.filters_applied or {}
+    party_filter = build_party_filter_from_scope_context(_scope_ctx)
 
     area_service = AreaService(db)
-    area_summary_stats = await area_service.calculate_summary_with_aggregation(filters)
+    area_summary_stats = await area_service.calculate_summary_with_aggregation(
+        filters,
+        party_filter=party_filter,
+    )
 
     financial_service = FinancialService(db)
-    financial_summary_stats = await financial_service.calculate_summary(filters)
+    financial_summary_stats = await financial_service.calculate_summary(
+        filters,
+        party_filter=party_filter,
+    )
 
     occupancy_service = OccupancyService(db)
-    occupancy_stats_data = await occupancy_service.calculate_with_aggregation(filters)
+    occupancy_stats_data = await occupancy_service.calculate_with_aggregation(
+        filters,
+        party_filter=party_filter,
+    )
     category_occupancy_stats = (
         await occupancy_service.calculate_category_with_aggregation(
-            "business_category", filters
+            "business_category",
+            filters,
+            party_filter=party_filter,
         )
     )
 
@@ -197,6 +228,9 @@ async def get_comprehensive_statistics(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     service: BasicStatsService = Depends(get_basic_stats_service),
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="analytics")
+    ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="read",
@@ -209,6 +243,7 @@ async def get_comprehensive_statistics(
     return await resolved_service.calculate_comprehensive_statistics(
         db=db,
         should_include_deleted=should_include_deleted,
+        party_filter=build_party_filter_from_scope_context(_scope_ctx),
     )
 
 

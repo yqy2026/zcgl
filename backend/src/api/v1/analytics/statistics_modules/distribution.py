@@ -17,13 +17,20 @@ from fastapi.params import Depends as DependsParam
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_async_db
-from src.middleware.auth import AuthzContext, get_current_active_user, require_authz
+from src.middleware.auth import (
+    AuthzContext,
+    DataScopeContext,
+    get_current_active_user,
+    require_authz,
+    require_data_scope_context,
+)
 from src.models.auth import User
 from src.schemas.statistics import DistributionResponse
 from src.services.analytics.distribution_service import (
     DistributionService,
     get_distribution_service,
 )
+from src.services.party_scope import build_party_filter_from_scope_context
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +55,9 @@ async def get_ownership_distribution(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     service: DistributionService = Depends(get_distribution_service),
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="analytics")
+    ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="read",
@@ -62,7 +72,10 @@ async def get_ownership_distribution(
     """
     _ = current_user
     resolved_service = _resolve_service(service)
-    return await resolved_service.get_ownership_distribution(db=db)
+    return await resolved_service.get_ownership_distribution(
+        db=db,
+        party_filter=build_party_filter_from_scope_context(_scope_ctx),
+    )
 
 
 @router.get(
@@ -74,6 +87,9 @@ async def get_property_nature_distribution(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     service: DistributionService = Depends(get_distribution_service),
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="analytics")
+    ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="read",
@@ -87,7 +103,10 @@ async def get_property_nature_distribution(
     """
     _ = current_user
     resolved_service = _resolve_service(service)
-    return await resolved_service.get_property_nature_distribution(db=db)
+    return await resolved_service.get_property_nature_distribution(
+        db=db,
+        party_filter=build_party_filter_from_scope_context(_scope_ctx),
+    )
 
 
 @router.get(
@@ -99,6 +118,9 @@ async def get_usage_status_distribution(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     service: DistributionService = Depends(get_distribution_service),
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="analytics")
+    ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="read",
@@ -113,7 +135,10 @@ async def get_usage_status_distribution(
     """
     _ = current_user
     resolved_service = _resolve_service(service)
-    return await resolved_service.get_usage_status_distribution(db=db)
+    return await resolved_service.get_usage_status_distribution(
+        db=db,
+        party_filter=build_party_filter_from_scope_context(_scope_ctx),
+    )
 
 
 @router.get("/asset-distribution", summary="获取资产分布统计")
@@ -123,6 +148,9 @@ async def get_asset_distribution(
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
     service: DistributionService = Depends(get_distribution_service),
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="analytics")
+    ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="read",
@@ -150,4 +178,5 @@ async def get_asset_distribution(
         db=db,
         group_by=group_by,
         should_include_deleted=should_include_deleted,
+        party_filter=build_party_filter_from_scope_context(_scope_ctx),
     )

@@ -97,7 +97,6 @@ def mock_admin_user():
         phone="13800000001",
         full_name="Admin User",
         role_id="role-admin-id",
-        role_name="admin",
         roles=["admin"],
         role_ids=["role-admin-id"],
         is_admin=True,
@@ -122,7 +121,6 @@ def mock_regular_user():
         phone="13800000002",
         full_name="Test User",
         role_id="role-user-id",
-        role_name="asset_viewer",
         roles=["asset_viewer"],
         role_ids=["role-user-id"],
         is_admin=False,
@@ -1534,7 +1532,6 @@ class TestGetCurrentUserInfo:
         assert result["full_name"] == "Admin User"
         assert result["id"] == "admin-id"
         assert result["role_id"] == "role-admin-id"
-        assert result["role_name"] == "admin"
         assert result["is_active"] is True
         assert result["is_admin"] is True
         assert result["session_status"] == "active"

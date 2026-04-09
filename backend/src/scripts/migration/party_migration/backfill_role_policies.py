@@ -22,6 +22,31 @@ POLICY_PACKAGE_TO_NAME: dict[str, str] = {
     "no_data_access": "no_data_access",
 }
 
+ROLE_TO_POLICY_PACKAGES: dict[str, list[str]] = {
+    # Target 6-role model
+    "system_admin": ["platform_admin"],
+    "ops_admin": [
+        "asset_owner_operator",
+        "asset_manager_operator",
+        "project_manager_operator",
+    ],
+    "perm_admin": ["no_data_access"],
+    "reviewer": ["audit_viewer"],
+    "executive": [
+        "asset_owner_operator",
+        "asset_manager_operator",
+        "project_manager_operator",
+    ],
+    "viewer": ["dual_party_viewer"],
+    # Legacy compatibility during migration
+    "admin": ["platform_admin"],
+    "manager": ["asset_manager_operator"],
+    "user": ["dual_party_viewer"],
+    "asset_manager": ["asset_manager_operator"],
+    "project_manager": ["project_manager_operator"],
+    "auditor": ["audit_viewer"],
+}
+
 
 def _utcnow_naive() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
@@ -35,28 +60,13 @@ def _table_exists(connection: sa.engine.Connection, table_name: str) -> bool:
     return sa.inspect(connection).has_table(table_name)
 
 
-def _choose_policy_package(role: Mapping[str, Any]) -> str:
+def _choose_policy_packages(role: Mapping[str, Any]) -> list[str]:
     name = _normalize_text(role.get("name"))
-    category = _normalize_text(role.get("category"))
-    display_name = _normalize_text(role.get("display_name"))
-    token = " ".join([name, category, display_name])
+    return ROLE_TO_POLICY_PACKAGES.get(name, ["no_data_access"])
 
-    if "admin" in token:
-        return "platform_admin"
-    if "audit" in token or "审计" in token:
-        return "audit_viewer"
-    if "project" in token or "项目" in token:
-        return "project_manager_operator"
-    if "owner" in token or "产权" in token:
-        return "asset_owner_operator"
-    if "manager" in token or "运营" in token:
-        return "asset_manager_operator"
-    # Baseline business user should be dual-path read-only, not deny-all.
-    if name == "user" or category == "business" or "普通用户" in display_name:
-        return "dual_party_viewer"
-    if "viewer" in token or "read" in token or "只读" in token:
-        return "dual_party_viewer"
-    return "no_data_access"
+
+def _choose_policy_package(role: Mapping[str, Any]) -> str:
+    return _choose_policy_packages(role)[0]
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -141,13 +151,6 @@ def main() -> int:
                 now = _utcnow_naive()
                 for role in role_rows:
                     role_id = str(role["id"])
-                    package_code = _choose_policy_package(dict(role))
-                    policy_name = policy_name_to_id.get(package_code)
-                    if policy_name is None or policy_name not in policy_by_name:
-                        skipped += 1
-                        continue
-                    policy_id = policy_by_name[policy_name]
-
                     if template_policy_ids:
                         conn.execute(
                             delete_template_stmt,
@@ -157,29 +160,42 @@ def main() -> int:
                             },
                         )
 
+                    package_codes = _choose_policy_packages(dict(role))
+                    resolved_policy_ids = [
+                        policy_by_name[policy_name_to_id[package_code]]
+                        for package_code in package_codes
+                        if package_code in policy_name_to_id
+                        and policy_name_to_id[package_code] in policy_by_name
+                    ]
+
+                    if len(resolved_policy_ids) == 0:
+                        skipped += 1
+                        continue
+
                     updated += 1
                     if args.dry_run:
                         continue
 
-                    conn.execute(
-                        sa.text(
-                            """
-                            INSERT INTO abac_role_policies (
-                                id, role_id, policy_id, enabled, created_at, updated_at
-                            ) VALUES (
-                                :id, :role_id, :policy_id, :enabled, :created_at, :updated_at
-                            )
-                            """
-                        ),
-                        {
-                            "id": str(uuid.uuid4()),
-                            "role_id": role_id,
-                            "policy_id": policy_id,
-                            "enabled": True,
-                            "created_at": now,
-                            "updated_at": now,
-                        },
-                    )
+                    for policy_id in resolved_policy_ids:
+                        conn.execute(
+                            sa.text(
+                                """
+                                INSERT INTO abac_role_policies (
+                                    id, role_id, policy_id, enabled, created_at, updated_at
+                                ) VALUES (
+                                    :id, :role_id, :policy_id, :enabled, :created_at, :updated_at
+                                )
+                                """
+                            ),
+                            {
+                                "id": str(uuid.uuid4()),
+                                "role_id": role_id,
+                                "policy_id": policy_id,
+                                "enabled": True,
+                                "created_at": now,
+                                "updated_at": now,
+                            },
+                        )
 
                 if args.dry_run:
                     transaction.rollback()

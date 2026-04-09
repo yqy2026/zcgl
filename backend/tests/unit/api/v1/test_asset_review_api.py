@@ -30,6 +30,7 @@ def test_asset_review_routes_should_exist() -> None:
         "/{asset_id}/reject-review",
         "/{asset_id}/reverse-review",
         "/{asset_id}/resubmit-review",
+        "/{asset_id}/withdraw-review",
         "/{asset_id}/review-logs",
     }
     assert required.issubset(paths), f"缺少路径: {required - paths}"

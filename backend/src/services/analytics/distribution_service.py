@@ -6,6 +6,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...crud.asset import asset_crud
+from ...crud.query_builder import PartyFilter
 from ...schemas.statistics import ChartDataItem, DistributionResponse
 from ...security.security import FieldValidator
 
@@ -14,13 +15,17 @@ class DistributionService:
     """Service for distribution statistics routes."""
 
     async def get_ownership_distribution(
-        self, db: AsyncSession
+        self,
+        db: AsyncSession,
+        *,
+        party_filter: PartyFilter | None = None,
     ) -> DistributionResponse:
         assets, _ = await asset_crud.get_multi_with_search_async(
             db=db,
             skip=0,
             limit=10000,
             include_contract_projection=False,
+            party_filter=party_filter,
         )
         total_assets = len(assets)
 
@@ -30,6 +35,7 @@ class DistributionService:
             limit=10000,
             filters={"ownership_status": "已确权"},
             include_contract_projection=False,
+            party_filter=party_filter,
         )
         unconfirmed_assets, _ = await asset_crud.get_multi_with_search_async(
             db=db,
@@ -37,6 +43,7 @@ class DistributionService:
             limit=10000,
             filters={"ownership_status": "未确权"},
             include_contract_projection=False,
+            party_filter=party_filter,
         )
         partial_assets, _ = await asset_crud.get_multi_with_search_async(
             db=db,
@@ -44,6 +51,7 @@ class DistributionService:
             limit=10000,
             filters={"ownership_status": "部分确权"},
             include_contract_projection=False,
+            party_filter=party_filter,
         )
 
         def _pct(count: int) -> float:
@@ -71,13 +79,17 @@ class DistributionService:
         )
 
     async def get_property_nature_distribution(
-        self, db: AsyncSession
+        self,
+        db: AsyncSession,
+        *,
+        party_filter: PartyFilter | None = None,
     ) -> DistributionResponse:
         assets, _ = await asset_crud.get_multi_with_search_async(
             db=db,
             skip=0,
             limit=10000,
             include_contract_projection=False,
+            party_filter=party_filter,
         )
         total_assets = len(assets)
 
@@ -87,6 +99,7 @@ class DistributionService:
             limit=10000,
             filters={"property_nature": "经营性"},
             include_contract_projection=False,
+            party_filter=party_filter,
         )
         non_commercial_assets, _ = await asset_crud.get_multi_with_search_async(
             db=db,
@@ -94,6 +107,7 @@ class DistributionService:
             limit=10000,
             filters={"property_nature": "非经营性"},
             include_contract_projection=False,
+            party_filter=party_filter,
         )
 
         def _pct(count: int) -> float:
@@ -116,13 +130,17 @@ class DistributionService:
         )
 
     async def get_usage_status_distribution(
-        self, db: AsyncSession
+        self,
+        db: AsyncSession,
+        *,
+        party_filter: PartyFilter | None = None,
     ) -> DistributionResponse:
         assets, _ = await asset_crud.get_multi_with_search_async(
             db=db,
             skip=0,
             limit=10000,
             include_contract_projection=False,
+            party_filter=party_filter,
         )
         total_assets = len(assets)
 
@@ -132,6 +150,7 @@ class DistributionService:
             limit=10000,
             filters={"usage_status": "出租"},
             include_contract_projection=False,
+            party_filter=party_filter,
         )
         vacant_assets, _ = await asset_crud.get_multi_with_search_async(
             db=db,
@@ -139,6 +158,7 @@ class DistributionService:
             limit=10000,
             filters={"usage_status": "空置"},
             include_contract_projection=False,
+            party_filter=party_filter,
         )
         self_used_assets, _ = await asset_crud.get_multi_with_search_async(
             db=db,
@@ -146,6 +166,7 @@ class DistributionService:
             limit=10000,
             filters={"usage_status": "自用"},
             include_contract_projection=False,
+            party_filter=party_filter,
         )
 
         def _pct(count: int) -> float:
@@ -178,6 +199,7 @@ class DistributionService:
         *,
         group_by: str,
         should_include_deleted: bool,
+        party_filter: PartyFilter | None = None,
     ) -> dict[str, Any]:
         FieldValidator.validate_group_by_field("Asset", group_by, raise_on_invalid=True)
 
@@ -191,6 +213,7 @@ class DistributionService:
             limit=10000,
             filters=filters,
             include_contract_projection=False,
+            party_filter=party_filter,
         )
 
         distribution: dict[str, int] = {}

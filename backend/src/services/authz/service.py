@@ -1,5 +1,6 @@
 """Authz service orchestration for ABAC checks and capability snapshots."""
 
+import os
 from datetime import UTC, datetime
 from typing import Any, cast
 
@@ -37,6 +38,11 @@ class AuthzService:
     """Facade for ABAC decision and capability APIs."""
 
     CAPABILITIES_VERSION = "2026-03-25.v1"
+
+    @staticmethod
+    def _is_log_only_mode_enabled() -> bool:
+        value = os.getenv("AUTHZ_LOG_ONLY_MODE", "").strip().lower()
+        return value in {"1", "true", "yes", "on"}
 
     def __init__(
         self,
@@ -136,10 +142,20 @@ class AuthzService:
                 allowed=True,
                 reason_code="rbac_permission_fallback",
             )
-        elif action_is_authenticated_default(resource_type, action):
+        elif not has_matching_policy_rule and action_is_authenticated_default(
+            resource_type, action
+        ):
             decision = AuthzDecision(
                 allowed=True,
                 reason_code="authenticated_default_permission",
+            )
+        elif not decision.allowed and self._is_log_only_mode_enabled():
+            decision = AuthzDecision(
+                allowed=True,
+                reason_code="authz_log_only_allow",
+                matched_policy_id=decision.matched_policy_id,
+                matched_rule_id=decision.matched_rule_id,
+                field_mask=decision.field_mask,
             )
         self.decision_cache.set(decision_key, self._serialize_decision(decision))
         return decision

@@ -66,9 +66,47 @@ def client(monkeypatch):
             "party_filter_applied": party_filter is not None,
         }
 
+    async def mock_calculate_trend(
+        _self,
+        *,
+        trend_type,
+        time_dimension="monthly",
+        filters=None,
+        party_filter=None,
+    ):
+        return [
+            {
+                "period": "2024-01",
+                "trend_type": trend_type,
+                "time_dimension": time_dimension,
+                "scope_mode": getattr(party_filter, "filter_mode", None),
+            }
+        ]
+
+    async def mock_calculate_distribution(
+        _self,
+        *,
+        distribution_type,
+        filters=None,
+        party_filter=None,
+    ):
+        return {
+            "distribution_type": distribution_type,
+            "scope_mode": getattr(party_filter, "filter_mode", None),
+            "filters": filters or {},
+        }
+
     monkeypatch.setattr(
         "src.services.analytics.analytics_service.AnalyticsService.get_comprehensive_analytics",
         mock_get_comprehensive_analytics,
+    )
+    monkeypatch.setattr(
+        "src.services.analytics.analytics_service.AnalyticsService.calculate_trend",
+        mock_calculate_trend,
+    )
+    monkeypatch.setattr(
+        "src.services.analytics.analytics_service.AnalyticsService.calculate_distribution",
+        mock_calculate_distribution,
     )
 
     app.dependency_overrides[get_async_db] = override_get_db
@@ -180,6 +218,13 @@ class TestComprehensiveAnalytics:
         self, client
     ):
         response = client.get("/api/v1/analytics/comprehensive")
+
+        assert response.status_code == status.HTTP_200_OK
+        payload = response.json()
+        assert payload["success"] is True
+
+    def test_get_comprehensive_analytics_should_honor_view_mode_query(self, client):
+        response = client.get("/api/v1/analytics/comprehensive?view_mode=manager")
 
         assert response.status_code == status.HTTP_200_OK
         payload = response.json()
@@ -404,3 +449,24 @@ class TestAnalyticsResponseStructure:
         assert "success" in data
         assert "data" in data
         assert data["success"] is True
+
+    def test_trend_endpoint_should_use_query_view_mode_scope(self, client):
+        response = client.get("/api/v1/analytics/trend?trend_type=occupancy&view_mode=manager")
+
+        assert response.status_code == status.HTTP_200_OK
+        payload = response.json()
+        assert payload["success"] is True
+        assert payload["data"]["data"][0]["scope_mode"] == "manager"
+
+    def test_distribution_endpoint_should_ignore_legacy_header_and_use_view_mode_query(
+        self, client, admin_user_headers
+    ):
+        response = client.get(
+            "/api/v1/analytics/distribution?distribution_type=property_nature&view_mode=owner",
+            headers=admin_user_headers,
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        payload = response.json()
+        assert payload["success"] is True
+        assert payload["data"]["scope_mode"] == "owner"

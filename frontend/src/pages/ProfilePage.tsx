@@ -95,7 +95,7 @@ const ProfilePage: React.FC = () => {
   };
 
   // 获取角色显示名称
-  const getRoleDisplay = (roleName?: string, roleCodes?: string[]) => {
+  const getRoleDisplay = (roleCodes?: string[]) => {
     const roleMap: Record<string, { text: string; color: string }> = {
       super_admin: { text: '超级管理员', color: 'red' },
       admin: { text: '系统管理员', color: 'red' },
@@ -106,7 +106,7 @@ const ProfilePage: React.FC = () => {
     };
     const primaryCode = roleCodes?.[0]?.toLowerCase();
     const mapped = primaryCode != null ? roleMap[primaryCode] : undefined;
-    const displayText = roleName ?? mapped?.text ?? roleCodes?.[0] ?? '-';
+    const displayText = mapped?.text ?? roleCodes?.[0] ?? '-';
     const color = mapped?.color ?? 'default';
     return <Tag color={color}>{displayText}</Tag>;
   };
@@ -191,7 +191,7 @@ const ProfilePage: React.FC = () => {
                       : '-'}
                   </Descriptions.Item>
                   <Descriptions.Item label="角色">
-                    {getRoleDisplay(user.role_name, user.roles)}
+                    {getRoleDisplay(user.roles)}
                   </Descriptions.Item>
                   <Descriptions.Item label="状态">
                     {getStatusDisplay(user.is_active)}

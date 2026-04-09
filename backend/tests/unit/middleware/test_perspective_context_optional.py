@@ -78,7 +78,7 @@ async def test_no_perspective_header_admin_bypass() -> None:
     assert result.effective_party_ids == []
 
 
-async def test_perspective_all_header_returns_union_context() -> None:
+async def test_legacy_header_is_ignored_for_non_analytics_endpoint() -> None:
     checker = require_data_scope_context()
     request = _build_request(
         method="GET",
@@ -113,7 +113,7 @@ async def test_perspective_all_header_returns_union_context() -> None:
     assert result is not None
     assert result.scope_mode == "all"
     assert result.effective_party_ids == ["manager-1", "owner-1"]
-    assert result.source == "header"
+    assert result.source == "auto"
 
 
 async def test_single_binding_user_no_header_returns_single_scope() -> None:
@@ -179,4 +179,4 @@ async def test_non_exempt_path_without_header_no_longer_400() -> None:
         )
 
     assert result is not None
-    assert result.scope_mode == "all"
+    assert result.scope_mode == "owner"

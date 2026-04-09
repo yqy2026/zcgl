@@ -20,6 +20,7 @@ const createResponse = (
 
 describe('dataScopeStore', () => {
   beforeEach(() => {
+    localStorage.clear();
     useDataScopeStore.getState().reset();
   });
 
@@ -55,7 +56,8 @@ describe('dataScopeStore', () => {
     const state = useDataScopeStore.getState();
 
     expect(state.isSingleOwner).toBe(true);
-    expect(state.getEffectivePerspective()).toBe('owner');
+    expect(state.currentViewMode).toBe('owner');
+    expect(state.getEffectiveViewMode()).toBe('owner');
   });
 
   it('handles single manager binding', () => {
@@ -70,10 +72,11 @@ describe('dataScopeStore', () => {
     const state = useDataScopeStore.getState();
 
     expect(state.isSingleManager).toBe(true);
-    expect(state.getEffectivePerspective()).toBe('manager');
+    expect(state.currentViewMode).toBe('manager');
+    expect(state.getEffectiveViewMode()).toBe('manager');
   });
 
-  it('handles dual binding', () => {
+  it('defaults dual binding users to owner view mode', () => {
     const response = createResponse([
       {
         perspectives: ['owner', 'manager'],
@@ -85,7 +88,8 @@ describe('dataScopeStore', () => {
     const state = useDataScopeStore.getState();
 
     expect(state.isDualBinding).toBe(true);
-    expect(state.getEffectivePerspective()).toBeNull();
+    expect(state.currentViewMode).toBe('owner');
+    expect(state.getEffectiveViewMode()).toBe('owner');
   });
 
   it('stores admin flag', () => {
@@ -94,7 +98,37 @@ describe('dataScopeStore', () => {
     useDataScopeStore.getState().initFromCapabilities(response, true);
 
     expect(useDataScopeStore.getState().isAdmin).toBe(true);
-    expect(useDataScopeStore.getState().getEffectivePerspective()).toBeNull();
+    expect(useDataScopeStore.getState().currentViewMode).toBeNull();
+    expect(useDataScopeStore.getState().getEffectiveViewMode()).toBeNull();
+  });
+
+  it('persists user-selected view mode when still allowed', () => {
+    localStorage.setItem('data-scope:view-mode', 'manager');
+    const response = createResponse([
+      {
+        perspectives: ['owner', 'manager'],
+        data_scope: { owner_party_ids: ['owner-1'], manager_party_ids: ['manager-1'] },
+      },
+    ]);
+
+    useDataScopeStore.getState().initFromCapabilities(response, false);
+
+    expect(useDataScopeStore.getState().currentViewMode).toBe('manager');
+  });
+
+  it('allows switching currentViewMode and updates persistence', () => {
+    const response = createResponse([
+      {
+        perspectives: ['owner', 'manager'],
+        data_scope: { owner_party_ids: ['owner-1'], manager_party_ids: ['manager-1'] },
+      },
+    ]);
+
+    useDataScopeStore.getState().initFromCapabilities(response, false);
+    useDataScopeStore.getState().setCurrentViewMode('manager');
+
+    expect(useDataScopeStore.getState().currentViewMode).toBe('manager');
+    expect(localStorage.getItem('data-scope:view-mode')).toBe('manager');
   });
 
   it('resets on logout', () => {
@@ -113,5 +147,6 @@ describe('dataScopeStore', () => {
     expect(state.managerPartyIds).toEqual([]);
     expect(state.isAdmin).toBe(false);
     expect(state.initialized).toBe(false);
+    expect(state.currentViewMode).toBeNull();
   });
 });

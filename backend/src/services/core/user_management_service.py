@@ -32,31 +32,51 @@ class AsyncUserManagementService:
         self.session_service = session_service or AsyncSessionService(db)
         self.rbac_service = rbac_service or RBACService(db)
 
-    async def _assign_primary_role(
+    @staticmethod
+    def _normalize_role_ids(
+        role_ids: list[str] | None,
+        role_id: str | None = None,
+    ) -> list[str]:
+        normalized_role_ids: list[str] = []
+        seen: set[str] = set()
+        for raw_value in [*(role_ids or []), role_id]:
+            if raw_value is None:
+                continue
+            normalized = str(raw_value).strip()
+            if normalized == "" or normalized in seen:
+                continue
+            seen.add(normalized)
+            normalized_role_ids.append(normalized)
+        return normalized_role_ids
+
+    async def _assign_roles(
         self,
         user_id: str,
-        role_id: str | None,
+        role_ids: list[str] | None = None,
+        role_id: str | None = None,
         assigned_by: str | None = None,
     ) -> None:
-        if role_id is None:
+        normalized_role_ids = self._normalize_role_ids(role_ids, role_id)
+        if len(normalized_role_ids) == 0:
             # Default to asset_viewer as the least-privilege baseline role
             role_obj = await role_crud.get_by_name(self.db, name="asset_viewer")
-            role_id = str(role_obj.id) if role_obj else None
+            normalized_role_ids = [str(role_obj.id)] if role_obj else []
 
-        if not role_id:
+        if len(normalized_role_ids) == 0:
             return
 
-        assignment = UserRoleAssignmentCreate(
-            user_id=user_id,
-            role_id=role_id,
-            expires_at=None,
-            reason=None,
-            notes=None,
-            context=None,
-        )
-        await self.rbac_service.assign_role_to_user(
-            assignment_data=assignment, assigned_by=assigned_by or "system"
-        )
+        for resolved_role_id in normalized_role_ids:
+            assignment = UserRoleAssignmentCreate(
+                user_id=user_id,
+                role_id=resolved_role_id,
+                expires_at=None,
+                reason=None,
+                notes=None,
+                context=None,
+            )
+            await self.rbac_service.assign_role_to_user(
+                assignment_data=assignment, assigned_by=assigned_by or "system"
+            )
 
     async def get_user_by_id(self, user_id: str) -> User | None:
         return await _user_crud.get_async(self.db, user_id)
@@ -117,8 +137,9 @@ class AsyncUserManagementService:
         await self.db.commit()
         await self.db.refresh(db_user)
 
-        await self._assign_primary_role(
+        await self._assign_roles(
             user_id=str(db_user.id),
+            role_ids=user_data.role_ids,
             role_id=user_data.role_id,
             assigned_by=assigned_by,
         )
@@ -145,6 +166,7 @@ class AsyncUserManagementService:
 
         update_data: dict[str, Any] = user_data.model_dump(exclude_unset=True)
         role_id = update_data.pop("role_id", None)
+        role_ids = update_data.pop("role_ids", None)
         for field, value in update_data.items():
             setattr(user, field, value)
 
@@ -152,15 +174,18 @@ class AsyncUserManagementService:
         await self.db.commit()
         await self.db.refresh(user)
 
-        if role_id is not None:
+        if role_id is not None or role_ids is not None:
             # Replace active roles with the provided primary role
             assignments = await self.rbac_service.get_user_roles(user_id)
             for role in assignments:
                 await self.rbac_service.revoke_role_from_user(
                     user_id, str(role.id), revoked_by=assigned_by or user_id
                 )
-            await self._assign_primary_role(
-                user_id=user_id, role_id=role_id, assigned_by=assigned_by
+            await self._assign_roles(
+                user_id=user_id,
+                role_ids=role_ids,
+                role_id=role_id,
+                assigned_by=assigned_by,
             )
 
         return user

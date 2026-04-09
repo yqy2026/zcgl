@@ -5,9 +5,11 @@ import pytest
 from src.api.v1.analytics.statistics import router as statistics_router
 from src.api.v1.analytics.statistics_modules.basic_stats import (
     clear_statistics_cache,
+    get_basic_statistics,
     get_cache_info,
     get_comprehensive_statistics,
 )
+from src.middleware.auth import DataScopeContext
 
 pytestmark = pytest.mark.api
 
@@ -84,16 +86,55 @@ async def test_get_comprehensive_statistics_delegates_to_service(mock_db):
     expected = {"summary": "ok"}
     mock_service = MagicMock()
     mock_service.calculate_comprehensive_statistics = AsyncMock(return_value=expected)
+    scope_ctx = DataScopeContext(
+        scope_mode="manager",
+        allowed_binding_types=["owner", "manager"],
+        owner_party_ids=["owner-1"],
+        manager_party_ids=["manager-1"],
+        effective_party_ids=["manager-1"],
+        source="query",
+    )
 
     result = await get_comprehensive_statistics(
         should_include_deleted=True,
         db=mock_db,
         current_user=MagicMock(),
         service=mock_service,
+        _scope_ctx=scope_ctx,
     )
 
     assert result == expected
-    mock_service.calculate_comprehensive_statistics.assert_awaited_once_with(
-        db=mock_db,
-        should_include_deleted=True,
+    kwargs = mock_service.calculate_comprehensive_statistics.await_args.kwargs
+    assert kwargs["db"] is mock_db
+    assert kwargs["should_include_deleted"] is True
+    assert kwargs["party_filter"].filter_mode == "manager"
+
+
+@pytest.mark.asyncio
+async def test_get_basic_statistics_delegates_scope_filter(mock_db):
+    expected = MagicMock()
+    mock_service = MagicMock()
+    mock_service.calculate_basic_statistics = AsyncMock(return_value=expected)
+    scope_ctx = DataScopeContext(
+        scope_mode="owner",
+        allowed_binding_types=["owner", "manager"],
+        owner_party_ids=["owner-1"],
+        manager_party_ids=["manager-1"],
+        effective_party_ids=["owner-1"],
+        source="query",
     )
+
+    result = await get_basic_statistics(
+        ownership_status=None,
+        property_nature=None,
+        usage_status=None,
+        ownership_id=None,
+        db=mock_db,
+        current_user=MagicMock(),
+        service=mock_service,
+        _scope_ctx=scope_ctx,
+    )
+
+    assert result is expected
+    kwargs = mock_service.calculate_basic_statistics.await_args.kwargs
+    assert kwargs["party_filter"].filter_mode == "owner"

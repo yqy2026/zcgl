@@ -115,4 +115,10 @@ describe('OperationLogPage', () => {
       expect(MessageManager.error).toHaveBeenCalledWith('加载操作日志失败');
     });
   });
+
+  it('renders canonical read action with 查看 label', async () => {
+    renderWithProviders(<OperationLogPage />);
+
+    expect(await screen.findByText('查看')).toBeInTheDocument();
+  });
 });

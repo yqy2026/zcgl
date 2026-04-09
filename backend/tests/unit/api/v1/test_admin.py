@@ -14,8 +14,9 @@ import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 
+from src.api.v1.auth.admin import require_system_admin
 from src.main import app
-from src.middleware.auth import get_current_active_user, require_admin
+from src.middleware.auth import get_current_active_user
 
 # ============================================================================
 # Fixtures
@@ -32,7 +33,7 @@ def client():
     mock_user.is_active = True
 
     app.dependency_overrides[get_current_active_user] = lambda: mock_user
-    app.dependency_overrides[require_admin] = lambda: mock_user
+    app.dependency_overrides[require_system_admin] = lambda: mock_user
 
     with TestClient(app) as test_client:
         yield test_client
@@ -52,10 +53,10 @@ def normal_user_headers(client, normal_user):
     """普通用户认证头"""
     # Force admin dependency to reject normal users
     from src.core.exception_handler import forbidden
-    from src.middleware.auth import get_current_active_user, require_admin
+    from src.middleware.auth import get_current_active_user
 
     client.app.dependency_overrides[get_current_active_user] = lambda: normal_user
-    client.app.dependency_overrides[require_admin] = lambda: (_ for _ in ()).throw(
+    client.app.dependency_overrides[require_system_admin] = lambda: (_ for _ in ()).throw(
         forbidden("需要管理员权限")
     )
     return {}

@@ -214,11 +214,10 @@
 - `owner`：产权方口径。
 - `manager`：运营方口径。
 
-#### API 契约（计划变更）
-- **废弃**：`X-Perspective` HTTP header（当前实现）。
-- **替代**：`?view_mode=owner` 或 `?view_mode=manager` query parameter，仅分析/大屏端点接受。
+#### API 契约（已落地）
+- **已废弃**：`X-Perspective` HTTP header。
+- **现行契约**：分析/大屏端点使用 `?view_mode=owner` 或 `?view_mode=manager`；未显式传参时按绑定类型自动回落。
 - 常规 CRUD 端点不使用 `view_mode`，数据过滤完全由维度②（BindingContext）自动完成。
-- 过渡期：后端同时兼容 header 和 query param，header 标记为 deprecated。
 
 #### 大屏 UX（双绑定用户）
 - **单绑定用户**：隐藏切换组件，直接展示对应口径。
@@ -294,7 +293,7 @@
   - `backend/tests/unit/test_req_ast_002.py`（9 个单元测试）
   - `backend/alembic/versions/20260311_req_ast_002_active_project_unique.py`
 
-#### REQ-AST-003 关键主数据支持审核与反审核 🚧
+#### REQ-AST-003 关键主数据支持审核与反审核 ✅
 - 描述：资产等关键主数据需支持审核状态流转。
 - **技术方案**：`docs/archive/backend-plans/2026-03-11-req-ast-003-asset-review.md`
 - 验收：
@@ -414,7 +413,7 @@
   - API 端点：`backend/src/api/v1/contracts/contract_groups.py`（`/api/v1/contract-groups/*`，`/api/v1/contracts/*`）
   - 单元测试：`backend/tests/unit/services/contract/test_contract_group_service.py`、`backend/tests/unit/api/v1/test_contract_groups_layering.py`
 
-#### REQ-RNT-002 承租模式与代理模式并行支持 🚧
+#### REQ-RNT-002 承租模式与代理模式并行支持 ✅
 - 描述：系统需同时支持两种现实经营模式，通过 `ContractGroup.revenue_mode` + `Contract.group_relation_type` 覆盖完整业务结构。
 - 验收：
   - 承租模式（`revenue_mode = lease`）：
@@ -685,6 +684,26 @@
   - `frontend/src/utils/__tests__/queryScope.test.ts`
   - `frontend/src/components/System/__tests__/CapabilityGuard.test.tsx`
 
+#### REQ-AUTH-003 ABAC 数据策略引擎 ✅
+- 描述：系统需基于 ABAC 策略模板、角色策略绑定与 JSONLogic 规则执行数据级授权，并支持 deny 优先、缓存失效与日志模式。
+- 验收：
+  - deny 优先于 allow，且不会被 `authenticated_default` 覆盖。
+  - 角色可绑定一个或多个策略包，策略包来源唯一（`abac_policies` / `abac_role_policies`）。
+  - 用户角色、主体绑定或策略配置变化后，授权缓存可失效并重新计算。
+  - 支持 `AUTHZ_LOG_ONLY_MODE` 日志模式：命中 deny 时记录但允许通过，便于灰度启用。
+- 代码证据：
+  - `backend/src/services/authz/service.py`
+  - `backend/src/services/authz/engine.py`
+  - `backend/src/services/authz/cache.py`
+  - `backend/src/services/authz/data_policy_service.py`
+  - `backend/src/services/authz/events.py`
+  - `backend/src/api/v1/auth/data_policies.py`
+  - `backend/src/scripts/migration/party_migration/backfill_role_policies.py`
+  - `backend/alembic/versions/20260219_phase2_seed_data_policy_packages.py`
+  - `backend/tests/unit/services/test_authz_service.py`
+  - `backend/tests/unit/services/test_data_policy_service.py`
+  - `backend/tests/unit/migration/test_backfill.py`
+
 ### 6.7 文档与分析域
 
 #### REQ-DOC-001 PDF 智能导入流程 ✅
@@ -702,7 +721,7 @@
   - `backend/src/api/v1/documents/pdf_upload.py`
   - `backend/src/api/v1/documents/pdf_batch_routes.py`
 
-#### REQ-ANA-001 经营分析与导出 🚧
+#### REQ-ANA-001 经营分析与导出 ✅
 - 描述：提供可直接用于经营决策的分析能力。
 - 验收：
   - 提供总收入合计并强制拆分"自营租金收入/代理服务费收入"；不仅提供应收台账额，必须增加"当月实收"总计与「租金收缴率」统计双向指标（口径定义见 §3.3）。
@@ -784,29 +803,29 @@
 
 ### 6.10 系统管理域
 
-#### REQ-SYS-001 用户与角色管理 📋
+#### REQ-SYS-001 用户与角色管理 ✅
 - 描述：系统需提供用户账号的全生命周期管理（创建、编辑、启停用、密码重置）以及角色的灵活定义与分配能力。
 - 验收：
   - 支持用户 CRUD、批量启停用。
   - 支持自定义角色并灵活勾选权限（按钮与接口级 Action-level）。
   - 单用户可分配多角色，权限取并集（见 §5.1）。
   - 权限管理员（`perm_admin`）仅可管理用户/角色/权限配置，不可查看任何业务数据。
-- 代码证据：待补充（代码已存在：`backend/src/api/v1/auth/roles.py`、`backend/src/models/auth.py`、`backend/src/models/rbac.py`、`frontend/src/pages/System/`）
+- 代码证据：`backend/src/api/v1/auth/auth_modules/users.py`、`backend/src/services/core/user_management_service.py`、`backend/src/models/rbac.py`、`frontend/src/pages/System/UserManagement/`、`frontend/src/services/systemService.ts`
 
-#### REQ-SYS-002 组织架构管理 📋
+#### REQ-SYS-002 组织架构管理 ✅
 - 描述：系统需支持组织架构的维护，作为用户归属与数据范围绑定的基础设施。
 - 验收：
   - 支持组织的 CRUD。
   - 组织与 Party 主档可建立关联。
   - 用户-主体绑定（UserPartyBinding）通过组织管理维护（见 §5.2）。
-- 代码证据：待补充（代码已存在：`backend/src/api/v1/auth/organization.py`、`frontend/src/pages/System/`）
+- 代码证据：`backend/src/api/v1/auth/organization.py`、`backend/src/api/v1/party.py`、`frontend/src/pages/System/Organization/`、`frontend/src/pages/System/Organization/components/OrganizationBindingDrawer.tsx`、`frontend/src/pages/System/__tests__/OrganizationPage.test.tsx`、`frontend/src/pages/System/Organization/components/__tests__/OrganizationBindingDrawer.test.tsx`、`backend/tests/unit/api/v1/test_organization.py`
 
-#### REQ-SYS-003 数据字典管理 📋
+#### REQ-SYS-003 数据字典管理 ✅
 - 描述：系统需提供统一的数据字典管理能力，支撑枚举字段、下拉选项等基础数据的集中维护。
 - 验收：
   - 支持字典分类、字典项 CRUD。
   - 业务表单的枚举选项从字典服务获取，前端不硬编码。
-- 代码证据：待补充（代码已存在：`backend/src/api/v1/system/dictionaries.py`）
+- 代码证据：`backend/src/api/v1/system/dictionaries.py`、`backend/src/api/v1/system/system_dictionaries.py`、`frontend/src/pages/System/DictionaryPage.tsx`、`frontend/src/pages/System/__tests__/DictionaryPage.test.tsx`、`backend/tests/unit/api/v1/test_dictionaries_layering.py`
 
 ---
 
@@ -909,12 +928,12 @@
 |---|---|---|---|
 | REQ-AST-001 | ✅ | `/api/v1/assets` (CRUD + batch + import) | `test_assets_projection_guard.py`, `test_asset_service.py` |
 | REQ-AST-002 | ✅ | 当前有效项目投影 + 项目/经营方历史关系 | `test_project_asset.py`, `test_assets_history_layering.py`, `test_asset_service.py` |
-| REQ-AST-003 | 🚧 | `POST /api/v1/assets/{id}/submit-review` + `approve-review` + `reject-review` + `reverse-review` + `resubmit-review` + `GET review-logs` | `test_asset_review.py`, `test_asset_review_api.py`, `test_asset_review_status.py`, `test_req_ast_003_asset_review_migration.py` |
+| REQ-AST-003 | ✅ | `POST /api/v1/assets/{id}/submit-review` + `approve-review` + `reject-review` + `reverse-review` + `resubmit-review` + `withdraw-review` + `GET review-logs`，前端资产详情页展示审核状态/日志并可执行审核动作，审批域动作与资产审核状态联动 | `test_asset_review.py`, `test_asset_review_api.py`, `test_asset_review_status.py`, `test_req_ast_003_asset_review_migration.py`, `test_approval_service.py`, `AssetDetailPage.test.tsx` |
 | REQ-AST-004 | ✅ | `GET /api/v1/assets/{id}/lease-summary` | `test_asset_lease_summary.py` (service + api) |
 | REQ-PRJ-001 | ✅ | `/api/v1/projects` (CRUD + search) | `test_project.py`, `test_project_service.py` |
 | REQ-PRJ-002 | ✅ | `/api/v1/projects/{project_id}/assets` | `test_project_service.py`, `test_project.py` |
 | REQ-RNT-001 | ✅ | M1 ORM/DDL ✅ M2 Schema/CRUD/Service ✅ M3 API ✅ | — |
-| REQ-RNT-002 | 🚧 | `/api/v1/contract-groups/*` 双模式校验 + `/api/v1/assets/{id}/lease-summary` 终端客户摘要 + `/api/v1/analytics/comprehensive` 自营/代理收入拆分 + 前端代理口径标识 | `test_contract_group_service.py`, `test_asset_lease_summary.py`, `test_analytics_service.py`, `ContractGroupDetailPage.test.tsx`, `AssetDetailPage.test.tsx` |
+| REQ-RNT-002 | ✅ | `/api/v1/contract-groups/*` 双模式校验 + 一资产一有效合同组后端守卫 + `/api/v1/assets/{id}/lease-summary` 终端客户摘要 + `/api/v1/analytics/comprehensive` 自营/代理收入拆分 + 前端表单经营模式选择/错误反馈 + 列表/详情代理口径标识 | `test_contract_group_service.py`, `test_asset_lease_summary.py`, `test_analytics_service.py`, `ContractGroupFormPage.test.tsx`, `ContractGroupDetailPage.test.tsx`, `AssetDetailPage.test.tsx` |
 | REQ-RNT-003 | ✅ | `/api/v1/contracts/{contract_id}/*` 生命周期 6 端点 + 派生状态 + 审计日志 | `test_contract_lifecycle_api.py`, `test_contract_group_service.py` |
 | REQ-RNT-004 | ✅ | `/api/v1/contract-groups/{group_id}/submit-review` + `/api/v1/contracts/{contract_id}/audit-logs`（关键变更单审阻断 + 组联审放行 + 审计上下文） | `test_contract_joint_review.py`, `test_contract_lifecycle_api.py` |
 | REQ-RNT-005 | ✅ | `/api/v1/contracts/{contract_id}/start-correction` + `/api/v1/contracts/{contract_id}/approve`（纠错草稿、前合同反转、台账作废重建） | `test_contract_correction_flow.py`, `test_contract_lifecycle_api.py`, `test_lifecycle_v2.py` |
@@ -923,17 +942,18 @@
 | REQ-CUS-002 | ✅ | `/api/v1/analytics/comprehensive` 客户双指标 + 合同类型拆分 + 导出映射 | `test_analytics_service.py`, `test_analytics_export_service.py`, `RevenueStatsGrid.test.tsx`, `analyticsService.test.ts` |
 | REQ-SCH-001 | ✅ | `/api/v1/search` + Header 全局搜索入口 + 搜索结果页 | `test_search_service.py`, `test_search_api.py`, `searchService.test.ts`, `GlobalSearchPage.test.tsx`, `AppHeader.test.tsx` |
 | REQ-SCH-002 | ✅ | 全部视图 / 按对象分组切换 + `score + business_rank` 排序 | `test_search_service.py`, `GlobalSearchPage.test.tsx` |
-| REQ-SCH-003 | ✅ | `X-Perspective` 缩窄查询范围 + 缺失时按自动数据范围 fail-closed 过滤。**过渡状态**：代码仍活跃使用（`middleware/auth.py`、`client.ts`），计划废弃改为 `?view_mode=` query param（见 §5.3） | `test_search_service.py`, `test_search_api.py` |
+| REQ-SCH-003 | ✅ | 搜索/常规查询不再依赖 `X-Perspective`；数据范围由 BindingContext 自动收口，分析/大屏端点改用 `?view_mode=` query param（见 §5.3） | `test_search_service.py`, `test_search_api.py` |
 | REQ-AUTH-001 | ✅ | `/auth/login`, `/auth/refresh` | `test_optional_auth.py` |
-| REQ-AUTH-002 | ✅ | 数据范围上下文自动注入（基于主体绑定），多绑定用户展示并集去重（§3.3），管理员不受约束。**过渡状态**：前端单绑定时仍注入 `X-Perspective` header，计划废弃改为 `?view_mode=` query param（见 §5.3） | `test_authz_service.py`, `test_perspective_context.py`, `test_perspective_context_optional.py`, `test_party_scope.py`, `test_project.py`, `test_notifications.py`, `test_project_visibility_real.py`, `test_assets_visibility_real.py`, `client.test.ts`, `dataScopeStore.test.ts`, `queryScope.test.ts`, `ProjectDetailPage.test.tsx`, `AssetListPage.test.tsx`, `AssetDetailPage.test.tsx` |
+| REQ-AUTH-002 | ✅ | 数据范围上下文自动注入（基于主体绑定），多绑定用户展示并集去重（§3.3），管理员不受约束。前端已停止注入 `X-Perspective`，分析/大屏端点通过 `?view_mode=` 驱动 owner/manager 口径选择，常规 CRUD 端点仅按 BindingContext 自动过滤（见 §5.3） | `test_authz_service.py`, `test_perspective_context.py`, `test_perspective_context_optional.py`, `test_party_scope.py`, `test_project.py`, `test_notifications.py`, `test_project_visibility_real.py`, `test_assets_visibility_real.py`, `client.test.ts`, `dataScopeStore.test.ts`, `queryScope.test.ts`, `ProjectDetailPage.test.tsx`, `AssetListPage.test.tsx`, `AssetDetailPage.test.tsx` |
+| REQ-AUTH-003 | ✅ | `abac_policies` / `abac_role_policies` / `AUTHZ_LOG_ONLY_MODE`（ABAC deny 优先、角色策略绑定、缓存失效与日志模式） | `test_authz_service.py`, `test_data_policy_service.py`, `test_authz_cache.py`, `test_authz_events.py`, `test_backfill.py`, `test_policy_package_seed_actions.py` |
 | REQ-DOC-001 | ✅ | `/pdf-import/*` | `pdf_import.py` |
-| REQ-ANA-001 | 🚧 | `/analytics/comprehensive`, `/analytics/export`（综合分析 + `metrics_version`） + 前端大屏隔离展示 | `test_analytics_service.py`, `test_analytics.py`, `test_analytics_export_service.py`, `analyticsService.test.ts`, `useAssetAnalytics.test.ts`, `AnalyticsDashboard.test.tsx` |
+| REQ-ANA-001 | ✅ | `/analytics/comprehensive`, `/analytics/export`（综合分析 + `metrics_version` + `actual_receipts` + `collection_rate`） + 前端大屏/分析页隔离展示与 ViewMode 切换 | `test_analytics_service.py`, `test_analytics.py`, `test_statistics.py`, `test_analytics_export_service.py`, `analyticsService.test.ts`, `useAssetAnalytics.test.ts`, `DashboardPage.test.tsx`, `ViewModeSegment.test.tsx`, `RevenueStatsGrid.test.tsx` |
 | REQ-PTY-001 | ✅ | `/api/v1/parties` (CRUD + review/change logs) + `/system/parties` | `test_party_api.py`, `test_party_service.py`, `partyService.test.ts`, `PartyPages.test.tsx` |
 | REQ-PTY-002 | ✅ | `/api/v1/parties/import` + `/api/v1/parties/{party_id}/submit-review|approve-review|reject-review` + 合同提审门禁 + `/system/parties/:id` | `test_party_api.py`, `test_party_service.py`, `test_contract_group_service.py`, `partyService.test.ts`, `PartyPages.test.tsx`, `partyImport.test.ts`, `PartySelector.test.tsx` |
 | REQ-APR-001 | ✅ | `/api/v1/approval/processes/start`, `/api/v1/approval/tasks/pending`, `/api/v1/approval/processes/mine`, `/api/v1/approval/processes/{id}/timeline`, `/api/v1/approval/tasks/{task_id}/approve|reject|withdraw` | `test_approval_service.py`, `test_approval_api.py`, `test_asset_review.py` |
-| REQ-SYS-001 | 📋 | `/api/v1/roles/*`, `/api/v1/auth/*`（用户与角色管理） | 待补充 |
-| REQ-SYS-002 | 📋 | `/api/v1/organizations/*`（组织架构管理） | 待补充 |
-| REQ-SYS-003 | 📋 | `/api/v1/system/dictionaries/*`（数据字典管理） | 待补充 |
+| REQ-SYS-001 | ✅ | `/api/v1/roles/*`, `/api/v1/auth/*`（用户与角色管理，主契约统一使用 `roles[]/role_ids[]` 多角色语义，前端列表/详情/资料页不再依赖 `role_name`） | `test_users.py`, `test_authentication.py`, `systemService.test.ts`, `UserManagementPage.test.tsx`, `ProfilePage.test.tsx`, `useAuth.test.ts`, `authService.test.ts` |
+| REQ-SYS-002 | ✅ | `/api/v1/organizations/*`（组织架构管理，默认开放写入口，并可从组织上下文进入用户主体绑定维护；绑定写入落在 `/api/v1/parties/users/{user_id}/party-bindings*`） | `test_organization.py`, `test_organization_layering.py`, `OrganizationPage.test.tsx`, `OrganizationBindingDrawer.test.tsx`, `party.py` |
+| REQ-SYS-003 | ✅ | `/api/v1/system/dictionaries/*`（数据字典管理，含分类/字典项维护与详情查看） | `test_dictionaries_layering.py`, `test_system_dictionaries_layering.py`, `DictionaryPage.test.tsx` |
 
 ---
 

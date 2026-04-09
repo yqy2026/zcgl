@@ -5,6 +5,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...crud.asset import asset_crud
+from ...crud.query_builder import PartyFilter
 from ...schemas.statistics import AreaSummaryResponse
 from ...utils.numeric import to_float
 from .area_service import AreaService
@@ -19,6 +20,7 @@ class AreaStatsService:
         *,
         should_include_deleted: bool,
         should_use_aggregation: bool,
+        party_filter: PartyFilter | None = None,
     ) -> AreaSummaryResponse:
         filters: dict[str, Any] = {}
         if not should_include_deleted:
@@ -26,9 +28,15 @@ class AreaStatsService:
 
         area_service = AreaService(db)
         if should_use_aggregation:
-            summary = await area_service.calculate_summary_with_aggregation(filters)
+            summary = await area_service.calculate_summary_with_aggregation(
+                filters,
+                party_filter=party_filter,
+            )
         else:
-            summary = await area_service._calculate_summary_in_memory(filters)
+            summary = await area_service._calculate_summary_in_memory(
+                filters,
+                party_filter=party_filter,
+            )
 
         return AreaSummaryResponse(
             total_area=summary["total_land_area"],
@@ -46,6 +54,7 @@ class AreaStatsService:
         property_nature: str | None,
         usage_status: str | None,
         should_include_deleted: bool,
+        party_filter: PartyFilter | None = None,
     ) -> dict[str, Any]:
         filters: dict[str, Any] = {}
         if ownership_status:
@@ -63,6 +72,7 @@ class AreaStatsService:
             limit=10000,
             filters=filters,
             include_contract_projection=False,
+            party_filter=party_filter,
         )
 
         total_land_area = 0.0

@@ -23,6 +23,14 @@ vi.mock('../../utils/logger', () => ({
   }),
 }));
 
+vi.mock('@/stores/dataScopeStore', () => ({
+  useDataScopeStore: {
+    getState: () => ({
+      getEffectiveViewMode: () => 'owner',
+    }),
+  },
+}));
+
 import { apiClient } from '@/api/client';
 
 describe('AnalyticsService', () => {
@@ -73,7 +81,9 @@ describe('AnalyticsService', () => {
       const result = await service.getComprehensiveAnalytics();
 
       expect(apiClient.get).toHaveBeenCalledWith('/analytics/comprehensive', {
-        params: undefined,
+        params: {
+          view_mode: 'owner',
+        },
       });
       expect(result).toBeDefined();
     });
@@ -92,7 +102,28 @@ describe('AnalyticsService', () => {
       await service.getComprehensiveAnalytics(filters);
 
       expect(apiClient.get).toHaveBeenCalledWith('/analytics/comprehensive', {
-        params: filters,
+        params: {
+          ...filters,
+          view_mode: 'owner',
+        },
+      });
+    });
+
+    it('显式传入 view_mode 时附加到综合分析请求参数', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        success: true,
+        data: {
+          area_summary: { total_assets: 50 },
+        },
+      });
+
+      await service.getComprehensiveAnalytics({ project_id: 'proj_123' }, 'manager');
+
+      expect(apiClient.get).toHaveBeenCalledWith('/analytics/comprehensive', {
+        params: {
+          project_id: 'proj_123',
+          view_mode: 'manager',
+        },
       });
     });
 
@@ -186,6 +217,8 @@ describe('AnalyticsService', () => {
             total_assets: 10,
           },
           financial_summary: {},
+          actual_receipts: '12345.67',
+          collection_rate: null,
           customer_entity_breakdown: {
             upstream_lease: 1,
             downstream_sublease: 2,
@@ -206,6 +239,8 @@ describe('AnalyticsService', () => {
         downstream_sublease: 2,
         entrusted_operation: 3,
       });
+      expect(result.data?.actual_receipts).toBe(12345.67);
+      expect(result.data?.collection_rate).toBeNull();
       expect(result.data?.customer_contract_breakdown).toEqual({
         upstream_lease: 2,
         downstream_sublease: 4,
@@ -238,6 +273,25 @@ describe('AnalyticsService', () => {
       });
 
       await expect(service.getBasicStatistics()).rejects.toThrow();
+    });
+
+    it('默认使用当前 view_mode 请求基础统计', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        success: true,
+        data: {
+          total_assets: 100,
+          total_area: 50000,
+        },
+      });
+
+      await service.getBasicStatistics({ project_id: 'proj_1' });
+
+      expect(apiClient.get).toHaveBeenCalledWith(expect.any(String), {
+        params: {
+          project_id: 'proj_1',
+          view_mode: 'owner',
+        },
+      });
     });
   });
 
@@ -303,11 +357,15 @@ describe('AnalyticsService', () => {
         data: blob,
       });
 
-      const result = await service.exportAnalyticsReport('csv', {
-        start_date: '2026-03-01',
-        end_date: '2026-03-31',
-        include_deleted: true,
-      });
+      const result = await service.exportAnalyticsReport(
+        'csv',
+        {
+          start_date: '2026-03-01',
+          end_date: '2026-03-31',
+          include_deleted: true,
+        },
+        'manager'
+      );
 
       expect(apiClient.post).toHaveBeenCalledWith(
         '/analytics/export',
@@ -318,6 +376,7 @@ describe('AnalyticsService', () => {
             date_from: '2026-03-01',
             date_to: '2026-03-31',
             include_deleted: true,
+            view_mode: 'manager',
           },
           responseType: 'blob',
           retry: false,
@@ -351,15 +410,23 @@ describe('AnalyticsService', () => {
       global.URL.createObjectURL = vi.fn(() => 'blob:analytics');
       global.URL.revokeObjectURL = vi.fn();
 
-      await service.downloadAnalyticsReport('excel', {
-        start_date: '2026-03-01',
-        end_date: '2026-03-31',
-      });
+      await service.downloadAnalyticsReport(
+        'excel',
+        {
+          start_date: '2026-03-01',
+          end_date: '2026-03-31',
+        },
+        'manager'
+      );
 
-      expect(service.exportAnalyticsReport).toHaveBeenCalledWith('excel', {
-        start_date: '2026-03-01',
-        end_date: '2026-03-31',
-      });
+      expect(service.exportAnalyticsReport).toHaveBeenCalledWith(
+        'excel',
+        {
+          start_date: '2026-03-01',
+          end_date: '2026-03-31',
+        },
+        'manager'
+      );
       expect(global.URL.createObjectURL).toHaveBeenCalledWith(blob);
       expect(anchor.download).toBe('analytics_20260325T011843.xlsx');
       expect(clickSpy).toHaveBeenCalled();

@@ -282,6 +282,8 @@ interface RevenueStatsGridProps {
     total_income: number;
     self_operated_rent_income: number;
     agency_service_income: number;
+    actual_receipts: number;
+    collection_rate: number | null;
     customer_entity_count: number;
     customer_contract_count: number;
     customer_entity_breakdown?: Record<string, number>;
@@ -298,6 +300,9 @@ const CUSTOMER_BREAKDOWN_LABELS: Array<{ key: string; label: string }> = [
 ];
 
 export const RevenueStatsGrid: React.FC<RevenueStatsGridProps> = ({ data, loading = false }) => {
+  const collectionRateValue = data.collection_rate == null ? '--' : data.collection_rate;
+  const collectionRateSuffix = data.collection_rate == null ? undefined : '%';
+
   return (
     <>
       <Row gutter={[16, 16]} className={styles.statsGrid}>
@@ -330,6 +335,28 @@ export const RevenueStatsGrid: React.FC<RevenueStatsGridProps> = ({ data, loadin
             precision={2}
             suffix="元"
             icon={<TransactionOutlined />}
+            color={COLORS.warning}
+            loading={loading}
+          />
+        </Col>
+        <Col xs={24} sm={12} lg={8}>
+          <StatCard
+            title="当期实收"
+            value={data.actual_receipts}
+            precision={2}
+            suffix="元"
+            icon={<MoneyCollectOutlined />}
+            color={COLORS.success}
+            loading={loading}
+          />
+        </Col>
+        <Col xs={24} sm={12} lg={8}>
+          <StatCard
+            title="租金收缴率"
+            value={collectionRateValue}
+            precision={2}
+            suffix={collectionRateSuffix}
+            icon={<AreaChartOutlined />}
             color={COLORS.warning}
             loading={loading}
           />

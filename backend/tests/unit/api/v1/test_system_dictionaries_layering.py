@@ -14,6 +14,7 @@ def test_system_dictionaries_api_module_should_not_use_crud_adapter_calls():
 
     module_source = inspect.getsource(system_dictionaries)
     assert "system_dictionary_crud." not in module_source
+    assert "require_any_role" in module_source
 
 
 @pytest.mark.asyncio

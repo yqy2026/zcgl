@@ -28,10 +28,10 @@ from ....database import get_async_db
 from ....middleware.auth import (
     AuthzContext,
     get_current_active_user,
-    require_admin,
     require_authz,
 )
 from ....models.auth import User
+from ....security.permissions import require_any_role
 from ....services.document.pdf_import_service import PDFImportService
 from ....services.document.processing_tracker import BatchStatusTracker
 from ....utils.file_security import generate_safe_filename
@@ -78,6 +78,7 @@ _CONTRACT_UPDATE_RESOURCE_CONTEXT: dict[str, str] = {
     "owner_party_id": _CONTRACT_UPDATE_UNSCOPED_PARTY_ID,
     "manager_party_id": _CONTRACT_UPDATE_UNSCOPED_PARTY_ID,
 }
+_SYSTEM_ADMIN_ROLE_CODES = ["admin", "system_admin"]
 _CONTRACT_DELETE_UNSCOPED_PARTY_ID = "__unscoped__:contract:delete"
 _CONTRACT_DELETE_RESOURCE_CONTEXT: dict[str, str] = {
     "party_id": _CONTRACT_DELETE_UNSCOPED_PARTY_ID,
@@ -682,7 +683,7 @@ async def cancel_batch(
 @router.delete("/cleanup")
 def cleanup_completed_batches(
     older_than_hours: int = 24,
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_any_role(_SYSTEM_ADMIN_ROLE_CODES)),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="delete",

@@ -19,6 +19,7 @@ from ..services import RBACService
 from ..services.permission.rbac_service import (
     ADMIN_PERMISSION_ACTION,
     ADMIN_PERMISSION_RESOURCE,
+    normalize_permission_action,
 )
 
 """
@@ -41,9 +42,10 @@ def permission_required[**P, R](
 
     Args:
         resource: 资源名称 (如: 'asset', 'user', 'role')
-        action: 操作类型 (如: 'view', 'create', 'edit', 'delete')
+        action: 操作类型 (如: 'read', 'create', 'update', 'delete')
         resource_id_param: 资源ID参数名 (用于特定资源权限检查)
     """
+    normalized_action = normalize_permission_action(action)
 
     def decorator(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
         @wraps(func)
@@ -66,11 +68,13 @@ def permission_required[**P, R](
 
                 # 检查基础权限
                 user_id_value: str = str(getattr(current_user, "id", ""))
-                if _is_admin_permission(resource, action):
+                if _is_admin_permission(resource, normalized_action):
                     has_permission = await rbac_service.is_admin(user_id=user_id_value)
                 else:
                     has_permission = await rbac_service.check_user_permission(
-                        user_id=user_id_value, resource=resource, action=action
+                        user_id=user_id_value,
+                        resource=resource,
+                        action=normalized_action,
                     )
 
                 # 如果有资源ID参数，检查特定资源权限
@@ -82,17 +86,21 @@ def permission_required[**P, R](
                             user_id=user_id_value,
                             resource=resource,
                             resource_id=resource_id_value,
-                            action=action,
+                            action=normalized_action,
                         )
 
                 if not has_permission:
                     logger.warning(
                         f"用户 {current_user.username} 尝试访问未授权资源: {resource}:{action}"
+                        f" -> {resource}:{normalized_action}"
                     )
-                    raise forbidden(f"权限不足，需要 {resource}:{action} 权限")
+                    raise forbidden(
+                        f"权限不足，需要 {resource}:{normalized_action} 权限"
+                    )
 
                 logger.info(
-                    f"用户 {current_user.username} 权限验证通过: {resource}:{action}"
+                    f"用户 {current_user.username} 权限验证通过: "
+                    f"{resource}:{normalized_action}"
                 )
 
                 # 执行原函数
@@ -160,6 +168,36 @@ def role_required[**P, R](
     return decorator
 
 
+def require_any_role(role_codes: list[str]) -> Callable[[User, AsyncSession], Any]:
+    """依赖工厂：用户命中任一角色即可放行。"""
+
+    normalized_role_codes = {
+        str(role_code).strip()
+        for role_code in role_codes
+        if str(role_code).strip() != ""
+    }
+
+    async def dependency(
+        current_user: User = Depends(get_current_user),
+        db: AsyncSession = Depends(get_async_db),
+    ) -> User:
+        if not current_user:
+            raise unauthorized("未认证用户")
+
+        rbac_service = RBACService(db)
+        user_id_value = str(getattr(current_user, "id", ""))
+        roles = await rbac_service.get_user_roles(user_id_value)
+        role_names = {str(role.name).strip() for role in roles if getattr(role, "name", None)}
+
+        if normalized_role_codes.isdisjoint(role_names):
+            required_roles = ", ".join(sorted(normalized_role_codes))
+            raise forbidden(f"权限不足，需要以下任一角色：{required_roles}")
+
+        return current_user
+
+    return dependency
+
+
 def organization_required[**P, R](
     organization_id_param: str = "organization_id",
 ) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, Awaitable[R]]]:
@@ -212,6 +250,7 @@ def get_current_user_with_permissions(
     """
     获取具有特定权限的当前用户
     """
+    normalized_action = normalize_permission_action(action)
 
     async def dependency(
         current_user: User = Depends(get_current_user),
@@ -222,15 +261,17 @@ def get_current_user_with_permissions(
 
         rbac_service = RBACService(db)
         user_id_value: str = str(getattr(current_user, "id", ""))
-        if _is_admin_permission(resource, action):
+        if _is_admin_permission(resource, normalized_action):
             has_permission = await rbac_service.is_admin(user_id=user_id_value)
         else:
             has_permission = await rbac_service.check_user_permission(
-                user_id=user_id_value, resource=resource, action=action
+                user_id=user_id_value,
+                resource=resource,
+                action=normalized_action,
             )
 
         if not has_permission:
-            raise forbidden(f"权限不足，需要 {resource}:{action} 权限")
+            raise forbidden(f"权限不足，需要 {resource}:{normalized_action} 权限")
 
         return current_user
 
@@ -238,16 +279,24 @@ def get_current_user_with_permissions(
 
 
 # 预定义权限依赖
+def require_asset_read() -> Callable[[User, AsyncSession], Any]:
+    return get_current_user_with_permissions("asset", "read")
+
+
 def require_asset_view() -> Callable[[User, AsyncSession], Any]:
-    return get_current_user_with_permissions("asset", "view")
+    return require_asset_read()
 
 
 def require_asset_create() -> Callable[[User, AsyncSession], Any]:
     return get_current_user_with_permissions("asset", "create")
 
 
+def require_asset_update() -> Callable[[User, AsyncSession], Any]:
+    return get_current_user_with_permissions("asset", "update")
+
+
 def require_asset_edit() -> Callable[[User, AsyncSession], Any]:
-    return get_current_user_with_permissions("asset", "edit")
+    return require_asset_update()
 
 
 def require_asset_delete() -> Callable[[User, AsyncSession], Any]:
@@ -275,11 +324,11 @@ def require_approval_withdraw() -> Callable[[User, AsyncSession], Any]:
 
 
 def require_user_management() -> Callable[[User, AsyncSession], Any]:
-    return get_current_user_with_permissions("user", "view")
+    return get_current_user_with_permissions("user", "read")
 
 
 def require_role_management() -> Callable[[User, AsyncSession], Any]:
-    return get_current_user_with_permissions("role", "view")
+    return get_current_user_with_permissions("role", "read")
 
 
 def require_system_logs() -> Callable[[User, AsyncSession], Any]:
@@ -287,7 +336,7 @@ def require_system_logs() -> Callable[[User, AsyncSession], Any]:
 
 
 def require_organization_management() -> Callable[[User, AsyncSession], Any]:
-    return get_current_user_with_permissions("organization", "view")
+    return get_current_user_with_permissions("organization", "read")
 
 
 # 权限检查工具类
@@ -302,11 +351,14 @@ class PermissionChecker:
     async def has_permission(self, resource: str, action: str) -> bool:
         """检查用户是否具有指定权限"""
         user_id_value: str = getattr(self.user, "id", "")
-        if _is_admin_permission(resource, action):
+        normalized_action = normalize_permission_action(action)
+        if _is_admin_permission(resource, normalized_action):
             return bool(await self.rbac_service.is_admin(user_id=user_id_value))
         return bool(
             await self.rbac_service.check_user_permission(
-                user_id=user_id_value, resource=resource, action=action
+                user_id=user_id_value,
+                resource=resource,
+                action=normalized_action,
             )
         )
 
@@ -315,12 +367,13 @@ class PermissionChecker:
     ) -> bool:
         """检查用户是否可以访问特定资源"""
         user_id_value: str = getattr(self.user, "id", "")
+        normalized_action = normalize_permission_action(action)
         return bool(
             await self.rbac_service.check_resource_access(
                 user_id=user_id_value,
                 resource=resource,
                 resource_id=resource_id,
-                action=action,
+                action=normalized_action,
             )
         )
 

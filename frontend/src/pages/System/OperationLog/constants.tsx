@@ -15,7 +15,7 @@ export const ACTION_OPTIONS: ActionMeta[] = [
   { value: 'create', label: '创建', tone: 'success', icon: <PlusOutlined /> },
   { value: 'update', label: '更新', tone: 'primary', icon: <EditOutlined /> },
   { value: 'delete', label: '删除', tone: 'error', icon: <DeleteOutlined /> },
-  { value: 'view', label: '查看', tone: 'primary', icon: <EyeOutlined /> },
+  { value: 'read', label: '查看', tone: 'primary', icon: <EyeOutlined /> },
   { value: 'login', label: '登录', tone: 'success', icon: <LoginOutlined /> },
   { value: 'logout', label: '登出', tone: 'warning', icon: <LogoutOutlined /> },
   { value: 'export', label: '导出', tone: 'warning', icon: <FileTextOutlined /> },
@@ -30,6 +30,8 @@ export const ACTION_META_MAP = ACTION_OPTIONS.reduce<Record<string, ActionMeta>>
   },
   {}
 );
+
+ACTION_META_MAP.view = ACTION_META_MAP.read;
 
 export const MODULE_OPTIONS: ModuleMeta[] = [
   { value: 'dashboard', label: '数据看板', tone: 'primary' },

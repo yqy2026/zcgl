@@ -12,6 +12,7 @@ import {
 import { useAnalytics } from '@/hooks/useAnalytics';
 import DataTrendCard from '@/components/Dashboard/DataTrendCard';
 import QuickInsights from '@/components/Dashboard/QuickInsights';
+import ViewModeSegment from '@/components/Analytics/ViewModeSegment';
 import styles from './DashboardPage.module.css';
 
 const { Title, Text } = Typography;
@@ -101,6 +102,7 @@ const DashboardPage: React.FC = () => {
           <Text className={styles.dashboardSubtitle}>
             实时监控资产运营状况，提供数据驱动的决策支持
           </Text>
+          <ViewModeSegment />
         </div>
         <div className={styles.dashboardActions}>
           <Space>

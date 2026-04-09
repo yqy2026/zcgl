@@ -13,6 +13,7 @@ import { MessageManager } from '@/utils/messageManager';
 import { createLogger } from '@/utils/logger';
 import { isDevelopmentMode } from '@/utils/runtimeEnv';
 import { analyticsService } from '@/services/analyticsService';
+import { useDataScopeStore } from '@/stores/dataScopeStore';
 
 const logger = createLogger('AnalyticsDashboard');
 
@@ -54,6 +55,7 @@ import { AnalyticsFilters } from './AnalyticsFilters';
 import { StatisticCard, FinancialStatisticCard } from './StatisticCard';
 import { ChartCard } from './AnalyticsCard';
 import { AnalyticsPieChart, AnalyticsBarChart, AnalyticsLineChart } from './Charts';
+import ViewModeSegment from './ViewModeSegment';
 import styles from './AnalyticsDashboard.module.css';
 // import AdvancedAnalyticsCard from './AdvancedAnalyticsCard'  // 暂时注释，等待后端API支持
 import PerformanceMonitor from '@/components/PerformanceMonitor';
@@ -73,6 +75,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(false);
+  const currentViewMode = useDataScopeStore(state => state.getEffectiveViewMode());
 
   const { data: analyticsResponse, isLoading, error, refetch } = useAnalytics(filters);
   const analytics = analyticsResponse?.data;
@@ -86,7 +89,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
         start_date: filters.start_date,
         end_date: filters.end_date,
         include_deleted: filters.include_deleted,
-      });
+      }, currentViewMode);
       MessageManager.success('数据导出成功！');
     } catch (error) {
       MessageManager.error('导出失败，请重试');
@@ -233,9 +236,12 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
       {/* 头部操作栏 */}
       <Row gutter={[16, 16]} className={styles.headerRow}>
         <Col xs={24} md={12} className={styles.titleCol}>
-          <Title level={2} className={styles.pageTitle}>
-            资产分析
-          </Title>
+          <Space size={12} style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
+            <Title level={2} className={styles.pageTitle}>
+              资产分析
+            </Title>
+            <ViewModeSegment />
+          </Space>
         </Col>
         <Col xs={24} md={12} className={styles.actionsCol}>
           <Space size={12} wrap className={styles.actionsSpace}>

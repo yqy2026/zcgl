@@ -23,7 +23,6 @@ from ....database import get_async_db
 from ....middleware.auth import (
     AuthzContext,
     get_current_active_user,
-    require_admin,
     require_authz,
 )
 from ....models.auth import User
@@ -41,9 +40,11 @@ from ....schemas.rbac import (
     UserRoleAssignmentCreate,
     UserRoleAssignmentResponse,
 )
+from ....security.permissions import require_any_role
 from ....services import RBACService
 
 router = APIRouter(tags=["角色管理"])
+_SYSTEM_MANAGEMENT_ROLE_CODES = ["admin", "system_admin", "perm_admin"]
 _ROLE_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:role:create"
 
 
@@ -252,7 +253,7 @@ async def get_roles(
 async def create_role(
     role_data: RoleCreate,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_any_role(_SYSTEM_MANAGEMENT_ROLE_CODES)),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="create",
@@ -292,7 +293,7 @@ async def create_role(
 async def check_user_permission(
     check_data: UserPermissionCheckRequest,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_any_role(_SYSTEM_MANAGEMENT_ROLE_CODES)),
     _authz_ctx: AuthzContext = Depends(
         require_authz(action="read", resource_type="role")
     ),
@@ -322,7 +323,7 @@ async def check_user_permission(
 async def assign_role_to_user(
     assignment_data: UserRoleAssignmentCreate,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_any_role(_SYSTEM_MANAGEMENT_ROLE_CODES)),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="update",
@@ -381,7 +382,7 @@ async def revoke_user_role(
     user_id: str,
     role_id: str,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_any_role(_SYSTEM_MANAGEMENT_ROLE_CODES)),
     _authz_ctx: AuthzContext = Depends(
         require_authz(action="delete", resource_type="user", resource_id="{user_id}")
     ),
@@ -441,7 +442,7 @@ async def get_user_permissions_summary(
 async def create_permission_grant(
     grant_data: PermissionGrantCreate,  # DEPRECATED
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_any_role(_SYSTEM_MANAGEMENT_ROLE_CODES)),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="create",
@@ -491,7 +492,7 @@ async def get_permission_grants(
     scope: str | None = Query(None, description="作用域"),
     is_active: bool | None = Query(None, description="是否激活"),
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_any_role(_SYSTEM_MANAGEMENT_ROLE_CODES)),
     _authz_ctx: AuthzContext = Depends(
         require_authz(action="read", resource_type="role")
     ),
@@ -534,7 +535,7 @@ async def get_permission_grants(
 async def get_permission_grant(
     grant_id: str,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_any_role(_SYSTEM_MANAGEMENT_ROLE_CODES)),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="read",
@@ -570,7 +571,7 @@ async def update_permission_grant(
     grant_id: str,
     grant_data: PermissionGrantUpdate,  # DEPRECATED
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_any_role(_SYSTEM_MANAGEMENT_ROLE_CODES)),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="update",
@@ -602,7 +603,7 @@ async def update_permission_grant(
 async def revoke_permission_grant(
     grant_id: str,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_any_role(_SYSTEM_MANAGEMENT_ROLE_CODES)),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="delete",
@@ -668,7 +669,7 @@ async def update_role(
     role_id: str,
     role_data: RoleUpdate,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_any_role(_SYSTEM_MANAGEMENT_ROLE_CODES)),
     _authz_ctx: AuthzContext = Depends(
         require_authz(action="update", resource_type="role", resource_id="{role_id}")
     ),
@@ -700,7 +701,7 @@ async def update_role(
 async def delete_role(
     role_id: str,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_any_role(_SYSTEM_MANAGEMENT_ROLE_CODES)),
     _authz_ctx: AuthzContext = Depends(
         require_authz(action="delete", resource_type="role", resource_id="{role_id}")
     ),
@@ -770,7 +771,7 @@ async def set_role_permissions(
     role_id: str,
     request: RolePermissionUpdateRequest,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_any_role(_SYSTEM_MANAGEMENT_ROLE_CODES)),
     _authz_ctx: AuthzContext = Depends(
         require_authz(action="update", resource_type="role", resource_id="{role_id}")
     ),

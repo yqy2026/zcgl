@@ -150,6 +150,31 @@ describe('UserManagementPage', () => {
     });
   }, 20_000);
 
+  it('renders multiple role tags for a multi-role user', async () => {
+    vi.mocked(useUserManagementData).mockReturnValue(
+      buildHookResult({
+        users: [
+          {
+            ...mockUser,
+            role_id: 'role-1',
+            role_name: '资产管理员',
+            role_ids: ['role-1', 'role-2'],
+            roles: ['asset_manager', 'reviewer'],
+          },
+        ],
+        roles: [
+          { id: 'role-1', name: '资产管理员' },
+          { id: 'role-2', name: '审核员' },
+        ],
+      })
+    );
+
+    renderWithProviders(<UserManagementPage />);
+
+    expect(screen.getByText('资产管理员')).toBeInTheDocument();
+    expect(screen.getByText('审核员')).toBeInTheDocument();
+  }, 20_000);
+
   it('opens party binding modal from table action', async () => {
     renderWithProviders(<UserManagementPage />);
 

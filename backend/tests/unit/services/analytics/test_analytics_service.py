@@ -363,8 +363,16 @@ class TestAnalyticsService:
             lease_detail=MagicMock(rent_amount=Decimal("9999.00")),
             agency_detail=None,
             ledger_entries=[
-                MagicMock(year_month="2026-05", amount_due=Decimal("600.00")),
-                MagicMock(year_month="2026-06", amount_due=Decimal("400.00")),
+                MagicMock(
+                    year_month="2026-05",
+                    amount_due=Decimal("600.00"),
+                    paid_amount=Decimal("450.00"),
+                ),
+                MagicMock(
+                    year_month="2026-06",
+                    amount_due=Decimal("400.00"),
+                    paid_amount=Decimal("100.00"),
+                ),
             ],
             service_fee_ledgers=[],
             lessee_party_id="customer-1",
@@ -422,6 +430,8 @@ class TestAnalyticsService:
         assert metrics["self_operated_rent_income"] == 1000.0
         assert metrics["agency_service_income"] == 200.0
         assert metrics["total_income"] == 1200.0
+        assert metrics["actual_receipts"] == 550.0
+        assert metrics["collection_rate"] == 55.0
         assert metrics["customer_entity_count"] == 2
         assert metrics["customer_contract_count"] == 2
         assert metrics["customer_entity_breakdown"] == {
@@ -457,8 +467,16 @@ class TestAnalyticsService:
             contract_group=lease_group,
             lease_detail=MagicMock(rent_amount=Decimal("9999.00")),
             ledger_entries=[
-                MagicMock(year_month="2026-05", amount_due=Decimal("600.00")),
-                MagicMock(year_month="2026-06", amount_due=Decimal("400.00")),
+                MagicMock(
+                    year_month="2026-05",
+                    amount_due=Decimal("600.00"),
+                    paid_amount=Decimal("480.00"),
+                ),
+                MagicMock(
+                    year_month="2026-06",
+                    amount_due=Decimal("400.00"),
+                    paid_amount=Decimal("120.00"),
+                ),
             ],
             service_fee_ledgers=[],
             agency_detail=None,
@@ -529,6 +547,42 @@ class TestAnalyticsService:
         assert result["self_operated_rent_income"] == 600.0
         assert result["agency_service_income"] == 150.0
         assert result["total_income"] == 750.0
+        assert result["actual_receipts"] == 480.0
+        assert result["collection_rate"] == 80.0
+
+    def test_calculate_operational_metrics_should_return_null_collection_rate_when_no_rent_ledger_due(
+        self, analytics_service
+    ):
+        agency_group = MagicMock(revenue_mode=RevenueMode.AGENCY, data_status="正常")
+        agency_group.contract_group_id = "group-agency"
+        agency_group.operator_party = MagicMock(review_status=PartyReviewStatus.APPROVED.value)
+        agency_group.owner_party = MagicMock(review_status=PartyReviewStatus.APPROVED.value)
+
+        direct_contract = MagicMock(
+            contract_id="contract-agency-direct-only",
+            status=ContractLifecycleStatus.ACTIVE,
+            data_status="正常",
+            group_relation_type=GroupRelationType.DIRECT_LEASE,
+            contract_group=agency_group,
+            lease_detail=MagicMock(rent_amount=Decimal("9999.00")),
+            ledger_entries=[],
+            service_fee_ledgers=[
+                MagicMock(
+                    year_month="2026-05",
+                    amount_due=Decimal("150.00"),
+                    payment_status="paid",
+                )
+            ],
+            agency_detail=None,
+            lessee_party_id="customer-2",
+            lessor_party=MagicMock(review_status=PartyReviewStatus.APPROVED.value),
+            lessee_party=MagicMock(review_status=PartyReviewStatus.APPROVED.value),
+        )
+
+        metrics = analytics_service._calculate_operational_metrics([direct_contract], {})
+
+        assert metrics["actual_receipts"] == 0.0
+        assert metrics["collection_rate"] is None
 
     @pytest.mark.asyncio
     async def test_calculate_analytics_should_include_operational_metrics(
@@ -568,6 +622,8 @@ class TestAnalyticsService:
         assert "total_income" in result
         assert "self_operated_rent_income" in result
         assert "agency_service_income" in result
+        assert "actual_receipts" in result
+        assert "collection_rate" in result
         assert "customer_entity_count" in result
         assert "customer_contract_count" in result
         assert "metrics_version" in result

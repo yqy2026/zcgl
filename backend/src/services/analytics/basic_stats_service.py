@@ -6,6 +6,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...crud.asset import asset_crud
+from ...crud.query_builder import PartyFilter
 from ...schemas.statistics import BasicStatisticsResponse
 from ...utils.numeric import to_float
 
@@ -39,6 +40,7 @@ class BasicStatsService:
         property_nature: str | None,
         usage_status: str | None,
         ownership_id: str | None,
+        party_filter: PartyFilter | None = None,
     ) -> BasicStatisticsResponse:
         filters = self._build_basic_filters(
             ownership_status,
@@ -53,6 +55,7 @@ class BasicStatsService:
             limit=10000,
             filters=filters,
             include_contract_projection=False,
+            party_filter=party_filter,
         )
         total_assets = len(assets)
 
@@ -104,6 +107,7 @@ class BasicStatsService:
         db: AsyncSession,
         *,
         should_include_deleted: bool,
+        party_filter: PartyFilter | None = None,
     ) -> dict[str, Any]:
         filters: dict[str, Any] = {}
         if not should_include_deleted:
@@ -115,6 +119,7 @@ class BasicStatsService:
             limit=10000,
             filters=filters,
             include_contract_projection=False,
+            party_filter=party_filter,
         )
 
         total_assets = len(assets)

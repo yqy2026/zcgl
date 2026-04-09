@@ -16,13 +16,14 @@ def _build_request(
     *,
     method: str,
     path: str,
+    query_string: bytes | None = None,
     headers: list[tuple[bytes, bytes]] | None = None,
 ) -> Request:
     scope = {
         "type": "http",
         "method": method,
         "path": path,
-        "query_string": b"",
+        "query_string": query_string or b"",
         "headers": headers or [],
         "path_params": {},
     }
@@ -39,7 +40,7 @@ class _UserStub:
         self.is_active = True
 
 
-async def test_require_data_scope_context_should_build_union_context_when_header_missing() -> (
+async def test_require_data_scope_context_should_auto_fallback_dual_binding_analytics_to_owner() -> (
     None
 ):
     assert DataScopeContext is not None
@@ -74,9 +75,9 @@ async def test_require_data_scope_context_should_build_union_context_when_header
         )
 
     assert result is not None
-    assert result.scope_mode == "all"
+    assert result.scope_mode == "owner"
     assert result.allowed_binding_types == ["owner", "manager"]
-    assert result.effective_party_ids == ["manager-1", "owner-1"]
+    assert result.effective_party_ids == ["owner-1"]
     assert result.source == "auto"
 
 
@@ -98,15 +99,33 @@ async def test_require_data_scope_context_should_allow_neutral_auth_endpoint_wit
     assert result is None
 
 
-async def test_require_data_scope_context_should_reject_invalid_header_value() -> None:
+async def test_require_data_scope_context_should_reject_invalid_view_mode() -> None:
     checker = require_data_scope_context()
     request = _build_request(
         method="GET",
         path="/api/v1/analytics/comprehensive",
-        headers=[(b"x-perspective", b"tenant")],
+        query_string=b"view_mode=tenant",
     )
 
-    with pytest.raises(Exception) as exc_info:
+    with (
+        patch(
+            "src.middleware.auth.authz_service.context_builder.build_subject_context",
+            new=AsyncMock(
+                return_value=SubjectContext(
+                    user_id="user-1",
+                    owner_party_ids=["owner-1"],
+                    manager_party_ids=["manager-1"],
+                    headquarters_party_ids=[],
+                    role_ids=[],
+                )
+            ),
+        ),
+        patch(
+            "src.middleware.auth.RBACService.is_admin",
+            new=AsyncMock(return_value=False),
+        ),
+        pytest.raises(Exception) as exc_info,
+    ):
         await checker(
             request=request,
             current_user=_UserStub("user-1"),
@@ -124,7 +143,7 @@ async def test_require_data_scope_context_should_build_owner_effective_party_ids
     request = _build_request(
         method="GET",
         path="/api/v1/analytics/comprehensive",
-        headers=[(b"x-perspective", b"owner")],
+        query_string=b"view_mode=owner",
     )
 
     with (
@@ -155,6 +174,7 @@ async def test_require_data_scope_context_should_build_owner_effective_party_ids
     assert result.scope_mode == "owner"
     assert result.allowed_binding_types == ["owner", "manager"]
     assert result.effective_party_ids == ["owner-1"]
+    assert result.source == "query"
 
 
 async def test_require_data_scope_context_should_allow_admin_without_header() -> None:
@@ -195,7 +215,7 @@ async def test_require_data_scope_context_should_allow_admin_without_header() ->
     assert result.source == "auto"
 
 
-async def test_require_data_scope_context_should_allow_all_header_union() -> None:
+async def test_require_data_scope_context_should_ignore_legacy_header_and_keep_auto_scope() -> None:
     checker = require_data_scope_context()
     request = _build_request(
         method="GET",
@@ -230,7 +250,7 @@ async def test_require_data_scope_context_should_allow_all_header_union() -> Non
     assert result is not None
     assert result.scope_mode == "all"
     assert result.effective_party_ids == ["manager-1", "owner-1"]
-    assert result.source == "header"
+    assert result.source == "auto"
 
 
 async def test_require_data_scope_context_should_build_single_scope_when_single_binding_header_missing() -> (

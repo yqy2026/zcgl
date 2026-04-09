@@ -181,7 +181,7 @@ describe('userService', () => {
         full_name: '新用户',
         password: 'password123',
         status: 'active' as const,
-        role_id: 'role-user-id',
+        role_ids: ['role-user-id', 'role-reviewer-id'],
         default_organization_id: 'org_1',
       };
 
@@ -192,7 +192,10 @@ describe('userService', () => {
 
       const result = await userService.createUser(newUser);
 
-      expect(apiClient.post).toHaveBeenCalled();
+      expect(apiClient.post).toHaveBeenCalledWith('/auth/users', {
+        ...newUser,
+        role_id: 'role-user-id',
+      });
       expect(result.id).toBe('user_new');
     });
   });
@@ -204,8 +207,16 @@ describe('userService', () => {
         data: { id: 'user_1', full_name: '更新后的名称' },
       });
 
-      const result = await userService.updateUser('user_1', { full_name: '更新后的名称' });
+      const result = await userService.updateUser('user_1', {
+        full_name: '更新后的名称',
+        role_ids: ['role-user-id', 'role-reviewer-id'],
+      });
 
+      expect(apiClient.put).toHaveBeenCalledWith('/auth/users/user_1', {
+        full_name: '更新后的名称',
+        role_ids: ['role-user-id', 'role-reviewer-id'],
+        role_id: 'role-user-id',
+      });
       expect(result.full_name).toBe('更新后的名称');
     });
   });

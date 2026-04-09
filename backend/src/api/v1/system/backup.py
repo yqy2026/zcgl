@@ -13,7 +13,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ....core.config import settings
 from ....core.exception_handler import bad_request, not_found
 from ....database import get_async_db
-from ....middleware.auth import AuthzContext, require_admin, require_authz
+from ....middleware.auth import AuthzContext, require_authz
+from ....security.permissions import require_any_role
 from ....services.backup import BackupService
 from ..utils import handle_api_errors
 
@@ -21,7 +22,8 @@ from ..utils import handle_api_errors
 logger = logging.getLogger(__name__)
 
 # 创建备份路由器
-router = APIRouter(dependencies=[Depends(require_admin)])
+require_system_admin = require_any_role(["admin", "system_admin"])
+router = APIRouter(dependencies=[Depends(require_system_admin)])
 _BACKUP_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:backup:create"
 _BACKUP_CREATE_RESOURCE_CONTEXT: dict[str, str] = {
     "party_id": _BACKUP_CREATE_UNSCOPED_PARTY_ID,

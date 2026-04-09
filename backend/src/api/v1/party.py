@@ -12,7 +12,6 @@ from ...middleware.auth import (
     AuthzContext,
     DataScopeContext,
     get_current_active_user,
-    require_admin,
     require_authz,
     require_data_scope_context,
 )
@@ -35,9 +34,11 @@ from ...schemas.party import (
     UserPartyBindingUpdate,
     UserPartyBindingUpsert,
 )
+from ...security.permissions import require_any_role
 from ...services.party import party_service
 
 router = APIRouter(tags=["主体管理"])
+_SYSTEM_MANAGEMENT_ROLE_CODES = ["admin", "system_admin", "perm_admin"]
 _PARTY_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:party:create"
 _PARTY_CREATE_RESOURCE_CONTEXT: dict[str, str] = {
     "party_id": _PARTY_CREATE_UNSCOPED_PARTY_ID,
@@ -548,7 +549,7 @@ async def get_user_party_bindings(
     user_id: str,
     active_only: bool = Query(True, description="仅返回当前有效绑定"),
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_any_role(_SYSTEM_MANAGEMENT_ROLE_CODES)),
     _authz_ctx: Annotated[
         AuthzContext | None,
         Depends(
@@ -579,7 +580,7 @@ async def create_user_party_binding(
     user_id: str,
     payload: UserPartyBindingUpsert,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_any_role(_SYSTEM_MANAGEMENT_ROLE_CODES)),
     _authz_ctx: Annotated[
         AuthzContext | None,
         Depends(
@@ -618,7 +619,7 @@ async def update_user_party_binding(
     binding_id: str,
     payload: UserPartyBindingUpdate,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_any_role(_SYSTEM_MANAGEMENT_ROLE_CODES)),
     _authz_ctx: Annotated[
         AuthzContext | None,
         Depends(
@@ -653,7 +654,7 @@ async def close_user_party_binding(
     user_id: str,
     binding_id: str,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_any_role(_SYSTEM_MANAGEMENT_ROLE_CODES)),
     _authz_ctx: Annotated[
         AuthzContext | None,
         Depends(

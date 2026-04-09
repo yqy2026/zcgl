@@ -43,6 +43,7 @@ def test_task_endpoints_should_use_require_authz() -> None:
     from src.api.v1.system import tasks
 
     module_source = inspect.getsource(tasks)
+    assert "require_any_role" in module_source
 
     patterns = [
         r"async def create_task[\s\S]*?require_authz\([\s\S]*?action=\"create\"[\s\S]*?resource_type=\"task\"[\s\S]*?resource_context=_TASK_CREATE_RESOURCE_CONTEXT",

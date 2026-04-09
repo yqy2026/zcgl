@@ -19,15 +19,16 @@ from ....database import get_async_db
 from ....middleware.auth import (
     AuthzContext,
     get_current_active_user,
-    require_admin,
     require_authz,
 )
 from ....models.auth import User
 from ....schemas.asset import AssetHistoryResponse
+from ....security.permissions import require_any_role
 from ....services.history.history_service import HistoryService, get_history_service
 
 # 创建历史路由器
 router = APIRouter(dependencies=[Depends(get_current_active_user)])
+_SYSTEM_MANAGEMENT_ROLE_CODES = ["admin", "system_admin", "perm_admin"]
 
 
 def _resolve_service(service: HistoryService | Any) -> HistoryService | Any:
@@ -129,7 +130,7 @@ async def get_history_detail(
 async def delete_history(
     history_id: str = Path(..., description="历史记录ID"),
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(require_any_role(_SYSTEM_MANAGEMENT_ROLE_CODES)),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="delete",

@@ -167,7 +167,7 @@ const UserManagementPage: React.FC = () => {
         full_name: user.full_name,
         phone: user.phone,
         status: user.status,
-        role_id: user.role_id,
+        role_ids: user.role_ids ?? (user.role_id != null ? [user.role_id] : []),
         default_organization_id: user.default_organization_id,
       });
       setModalVisible(true);
@@ -321,6 +321,7 @@ const UserManagementPage: React.FC = () => {
 
         <UserTable
           users={users}
+          roleOptions={roles}
           loading={loading}
           paginationState={tablePagination}
           onPageChange={handlePageChange}
@@ -349,6 +350,7 @@ const UserManagementPage: React.FC = () => {
       <UserDetailDrawer
         open={detailDrawerVisible}
         user={selectedUser}
+        roleOptions={roles}
         onClose={() => setDetailDrawerVisible(false)}
         onEdit={handleEditFromDrawer}
         onToggleLock={handleToggleLockFromDrawer}

@@ -199,13 +199,15 @@ class AnalyticsService:
 
         # 面积汇总
         area_stats = await area_service.calculate_summary_with_aggregation(
-            filters=filters
+            filters=filters,
+            party_filter=party_filter,
         )
         stats["area_summary"] = area_stats
 
         # 出租率统计
         occupancy_stats = await occupancy_service.calculate_with_aggregation(
-            filters=filters
+            filters=filters,
+            party_filter=party_filter,
         )
         stats["occupancy_rate"] = occupancy_stats
 
@@ -343,6 +345,8 @@ class AnalyticsService:
     ) -> dict[str, Any]:
         self_operated_rent_income = Decimal("0")
         agency_service_income = Decimal("0")
+        actual_receipts = Decimal("0")
+        rent_due_total = Decimal("0")
         customer_party_ids: set[str] = set()
         customer_contract_ids: set[str] = set()
         customer_party_ids_by_bucket: dict[str, set[str]] = {
@@ -377,9 +381,15 @@ class AnalyticsService:
                         upper=upper_year_month,
                     ):
                         continue
-                    self_operated_rent_income += self._to_decimal(
-                        getattr(ledger_entry, "amount_due", None)
+                    due_amount = self._quantize_money(
+                        self._to_decimal(getattr(ledger_entry, "amount_due", None))
                     )
+                    paid_amount = self._quantize_money(
+                        self._to_decimal(getattr(ledger_entry, "paid_amount", None))
+                    )
+                    self_operated_rent_income += due_amount
+                    rent_due_total += due_amount
+                    actual_receipts += paid_amount
                 lessee_party_id = str(getattr(contract, "lessee_party_id", "")).strip()
                 if lessee_party_id != "":
                     customer_party_ids.add(lessee_party_id)
@@ -449,12 +459,26 @@ class AnalyticsService:
         total_income = self._quantize_money(
             self_operated_rent_income + agency_service_income
         )
+        quantized_actual_receipts = self._quantize_money(actual_receipts)
+        collection_rate = (
+            None
+            if rent_due_total == Decimal("0")
+            else float(
+                (
+                    quantized_actual_receipts
+                    / self._quantize_money(rent_due_total)
+                    * Decimal("100")
+                ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+            )
+        )
         return {
             "total_income": float(total_income),
             "self_operated_rent_income": float(
                 self._quantize_money(self_operated_rent_income)
             ),
             "agency_service_income": float(self._quantize_money(agency_service_income)),
+            "actual_receipts": float(quantized_actual_receipts),
+            "collection_rate": collection_rate,
             "customer_entity_count": len(customer_party_ids),
             "customer_contract_count": len(
                 [
@@ -593,6 +617,8 @@ class AnalyticsService:
         trend_type: str,
         time_dimension: str = "monthly",
         filters: dict[str, Any] | None = None,
+        *,
+        party_filter: PartyFilter | None = None,
     ) -> list[dict[str, Any]]:
         """
         计算趋势数据
@@ -621,6 +647,7 @@ class AnalyticsService:
             limit=10000,
             filters=query_filters,
             include_contract_projection=False,
+            party_filter=party_filter,
         )
 
         # 根据趋势类型和维度生成数据
@@ -674,6 +701,8 @@ class AnalyticsService:
         self,
         distribution_type: str,
         filters: dict[str, Any] | None = None,
+        *,
+        party_filter: PartyFilter | None = None,
     ) -> dict[str, Any]:
         """
         计算分布数据
@@ -720,6 +749,7 @@ class AnalyticsService:
             limit=10000,
             filters=query_filters,
             include_contract_projection=False,
+            party_filter=party_filter,
         )
 
         # 统计分布

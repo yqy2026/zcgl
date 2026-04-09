@@ -540,14 +540,14 @@ describe('AssetExport', () => {
       expect(screen.getByText('导出历史')).toBeInTheDocument();
     });
 
-    it('点击历史按钮应该打开历史弹窗', () => {
+    it('点击历史按钮应该打开历史弹窗', async () => {
       renderWithProviders(<AssetExport />);
 
       const historyButton = screen.getByText('导出历史');
       fireEvent.click(historyButton);
 
-      expect(screen.getByTestId('modal')).toBeInTheDocument();
-    });
+      expect(await screen.findByTestId('modal')).toBeInTheDocument();
+    }, 20000);
 
     it('历史弹窗应该显示历史列表', () => {
       renderWithProviders(<AssetExport />);

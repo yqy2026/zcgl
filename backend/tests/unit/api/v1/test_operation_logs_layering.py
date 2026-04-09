@@ -46,6 +46,7 @@ def test_operation_logs_endpoints_should_use_require_authz() -> None:
     module_source = inspect.getsource(operation_logs)
     assert "AuthzContext" in module_source
     assert "require_authz" in module_source
+    assert "require_any_role" in module_source
 
     patterns = [
         r"async def get_operation_logs[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"operation_log\"",

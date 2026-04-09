@@ -26,6 +26,7 @@ def test_history_endpoints_should_use_require_authz() -> None:
     module_source = inspect.getsource(history)
     assert "AuthzContext" in module_source
     assert "require_authz" in module_source
+    assert "require_any_role" in module_source
 
     patterns = [
         r"async def get_history_list[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"history\"",

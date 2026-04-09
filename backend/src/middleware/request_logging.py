@@ -295,14 +295,14 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             return "update"
         if method == "DELETE":
             return "delete"
-        return "view"
+        return "read"
 
     def _map_action_name(self, action: str) -> str:
         mapping = {
             "create": "创建",
             "update": "更新",
             "delete": "删除",
-            "view": "查看",
+            "read": "查看",
             "login": "登录",
             "logout": "登出",
             "export": "导出",

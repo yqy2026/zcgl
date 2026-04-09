@@ -24,6 +24,7 @@ def test_backup_endpoints_should_use_require_authz() -> None:
     module_source = inspect.getsource(backup)
     assert "AuthzContext" in module_source
     assert "require_authz" in module_source
+    assert "require_any_role" in module_source
 
     patterns = [
         r"async def create_backup[\s\S]*?require_authz\([\s\S]*?action=\"create\"[\s\S]*?resource_type=\"backup\"[\s\S]*?resource_context=_BACKUP_CREATE_RESOURCE_CONTEXT",

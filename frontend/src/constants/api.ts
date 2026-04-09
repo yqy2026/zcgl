@@ -75,6 +75,13 @@ export const ASSET_API = {
   STATISTICS: '/assets/statistics',
   SUMMARY: '/assets/summary',
   LEASE_SUMMARY: (id: string) => `/assets/${id}/lease-summary`,
+  SUBMIT_REVIEW: (id: string) => `/assets/${id}/submit-review`,
+  APPROVE_REVIEW: (id: string) => `/assets/${id}/approve-review`,
+  REJECT_REVIEW: (id: string) => `/assets/${id}/reject-review`,
+  REVERSE_REVIEW: (id: string) => `/assets/${id}/reverse-review`,
+  RESUBMIT_REVIEW: (id: string) => `/assets/${id}/resubmit-review`,
+  WITHDRAW_REVIEW: (id: string) => `/assets/${id}/withdraw-review`,
+  REVIEW_LOGS: (id: string) => `/assets/${id}/review-logs`,
 
   // 文件操作
   UPLOAD_IMAGE: '/assets/upload/image',

@@ -14,7 +14,6 @@ export interface User {
   phone: string;
   status: 'active' | 'inactive' | 'locked';
   role_id?: string;
-  role_name?: string;
   roles?: string[];
   role_ids?: string[];
   default_organization_id?: string;
@@ -52,6 +51,7 @@ export interface CreateUserData {
   password: string;
   status?: 'active' | 'inactive';
   role_id?: string;
+  role_ids?: string[];
   default_organization_id: string;
 }
 
@@ -61,6 +61,7 @@ export interface UpdateUserData {
   phone?: string;
   status?: 'active' | 'inactive';
   role_id?: string;
+  role_ids?: string[];
   default_organization_id?: string;
 }
 
@@ -95,6 +96,17 @@ export interface UserPartyBindingUpdateData {
 }
 
 export const userService = {
+  normalizeUserPayload(data: CreateUserData | UpdateUserData) {
+    const roleIds = Array.isArray(data.role_ids)
+      ? data.role_ids.map(item => item.trim()).filter(item => item !== '')
+      : undefined;
+    return {
+      ...data,
+      role_ids: roleIds,
+      role_id: roleIds != null ? (roleIds[0] ?? data.role_id) : data.role_id,
+    };
+  },
+
   // 获取用户列表
   async getUsers(params?: {
     page?: number;
@@ -162,13 +174,16 @@ export const userService = {
 
   // 创建用户
   async createUser(data: CreateUserData) {
-    const response = await api.post(SYSTEM_API.USERS, data);
+    const response = await api.post(SYSTEM_API.USERS, userService.normalizeUserPayload(data));
     return response.data;
   },
 
   // 更新用户
   async updateUser(id: string, data: UpdateUserData) {
-    const response = await api.put(SYSTEM_API.USER_DETAIL(id), data);
+    const response = await api.put(
+      SYSTEM_API.USER_DETAIL(id),
+      userService.normalizeUserPayload(data)
+    );
     return response.data;
   },
 

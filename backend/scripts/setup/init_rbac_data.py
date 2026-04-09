@@ -19,81 +19,242 @@ from src.database import async_session_scope
 from src.models.auth import User
 from src.models.rbac import Permission, PermissionGrant, Role, UserRoleAssignment
 
+TARGET_SYSTEM_ROLE_DEFINITIONS = [
+    ("system_admin", "系统管理员", "系统超级管理员，拥有全局权限", 1, "system"),
+    ("ops_admin", "运营管理员", "运营管理员，负责业务域全量管理", 2, "operations"),
+    ("perm_admin", "权限管理员", "权限管理员，仅管理用户/角色/权限/策略", 2, "security"),
+    ("reviewer", "审核员", "负责审批与审核处理", 3, "review"),
+    ("executive", "业务经办", "负责日常业务录入与维护", 4, "business"),
+    ("viewer", "只读用户", "只读查看业务数据", 5, "read_only"),
+]
+
+LEGACY_SYSTEM_ROLE_NAMES = {
+    "admin",
+    "manager",
+    "user",
+    "asset_manager",
+    "project_manager",
+    "auditor",
+}
+
+SYSTEM_MANAGEMENT_RESOURCES = {
+    "system",
+    "user",
+    "role",
+    "permission_grant",
+    "organization",
+    "backup",
+    "dictionary",
+    "enum_field",
+    "error_recovery",
+    "history",
+    "llm_prompt",
+    "operation_log",
+    "system_monitoring",
+    "system_settings",
+    "task",
+}
+BUSINESS_RESOURCES = {
+    "asset",
+    "property_certificate",
+    "project",
+    "ownership",
+    "contract",
+    "contract_group",
+    "approval",
+    "analytics",
+    "excel_config",
+    "audit",
+    "collection",
+    "contact",
+    "custom_field",
+    "notification",
+    "occupancy",
+    "party",
+}
+
+ROLE_PERMISSION_MATRIX: dict[str, callable] = {
+    "system_admin": lambda permissions: [p for p in permissions],
+    "ops_admin": lambda permissions: [
+        p for p in permissions if p.resource not in SYSTEM_MANAGEMENT_RESOURCES
+    ],
+    "perm_admin": lambda permissions: [
+        p
+        for p in permissions
+        if p.resource in SYSTEM_MANAGEMENT_RESOURCES
+        or (p.resource == "system" and p.action in {"admin", "manage"})
+    ],
+    "reviewer": lambda permissions: [
+        p
+        for p in permissions
+        if (p.resource in BUSINESS_RESOURCES and p.action == "read")
+        or (p.resource == "approval" and p.action in {"read", "approve", "reject", "withdraw"})
+    ],
+    "executive": lambda permissions: [
+        p
+        for p in permissions
+        if (
+            p.resource
+            in {
+                "asset",
+                "property_certificate",
+                "project",
+                "ownership",
+                "contract",
+                "contract_group",
+            }
+            and p.action in {"create", "read", "update", "delete"}
+        )
+        or (p.resource == "analytics" and p.action in {"read", "export"})
+        or (p.resource == "approval" and p.action in {"read", "start"})
+        or (p.resource == "excel_config" and p.action in {"read", "create", "update", "delete"})
+    ],
+    "viewer": lambda permissions: [
+        p
+        for p in permissions
+        if (p.resource in BUSINESS_RESOURCES and p.action == "read")
+        or (p.resource == "analytics" and p.action == "export")
+    ],
+}
+
+TEST_USER_ROLE_ASSIGNMENTS = [
+    ("manager1", "ops_admin"),
+    ("user1", "executive"),
+    ("user2", "executive"),
+    ("viewer1", "viewer"),
+]
+
+BASIC_PERMISSIONS_DATA = [
+    # 资产管理权限
+    ("asset", "read", "查看资产", "查看资产基本信息"),
+    ("asset", "create", "创建资产", "创建新资产"),
+    ("asset", "update", "更新资产", "更新资产信息"),
+    ("asset", "delete", "删除资产", "删除资产"),
+    # 产权证管理权限
+    ("property_certificate", "read", "查看产权证", "查看产权证信息"),
+    ("property_certificate", "create", "创建产权证", "创建新产权证"),
+    ("property_certificate", "update", "更新产权证", "更新产权证信息"),
+    ("property_certificate", "delete", "删除产权证", "删除产权证"),
+    # 项目管理权限
+    ("project", "read", "查看项目", "查看项目信息"),
+    ("project", "create", "创建项目", "创建新项目"),
+    ("project", "update", "更新项目", "更新项目信息"),
+    ("project", "delete", "删除项目", "删除项目"),
+    # 权属管理权限
+    ("ownership", "read", "查看权属", "查看权属信息"),
+    ("ownership", "create", "创建权属", "创建新权属"),
+    ("ownership", "update", "更新权属", "更新权属信息"),
+    ("ownership", "delete", "删除权属", "删除权属"),
+    # 合同/合同组权限
+    ("contract", "read", "查看合同", "查看合同信息"),
+    ("contract", "create", "创建合同", "创建新合同"),
+    ("contract", "update", "更新合同", "更新合同信息"),
+    ("contract", "delete", "删除合同", "删除合同"),
+    ("contract_group", "read", "查看合同组", "查看合同组信息"),
+    ("contract_group", "create", "创建合同组", "创建新合同组"),
+    ("contract_group", "update", "更新合同组", "更新合同组信息"),
+    ("contract_group", "delete", "删除合同组", "删除合同组"),
+    # 分析权限
+    ("analytics", "read", "查看分析", "查看分析信息"),
+    ("analytics", "export", "导出分析", "导出分析数据"),
+    ("analytics", "update", "更新分析配置", "更新分析缓存与口径相关配置"),
+    # Excel配置权限
+    ("excel_config", "read", "查看Excel配置", "查看Excel导入导出配置"),
+    ("excel_config", "create", "创建Excel配置", "创建Excel导入导出配置"),
+    ("excel_config", "update", "更新Excel配置", "更新Excel导入导出配置"),
+    ("excel_config", "delete", "删除Excel配置", "删除Excel导入导出配置"),
+    # 审批流权限
+    ("approval", "read", "查看审批", "查看审批任务与流程"),
+    ("approval", "start", "发起审批", "发起业务审批流程"),
+    ("approval", "approve", "审批通过", "处理审批通过动作"),
+    ("approval", "reject", "审批驳回", "处理审批驳回动作"),
+    ("approval", "withdraw", "审批撤回", "撤回本人发起的审批"),
+    # 系统管理权限
+    ("system", "admin", "系统管理员", "全局管理员权限"),
+    ("system", "manage", "系统管理", "系统管理权限"),
+    ("system", "audit", "审计查看", "查看审计日志"),
+    ("system", "backup", "数据备份", "数据备份权限"),
+    # 用户管理权限
+    ("user", "read", "查看用户", "查看用户信息"),
+    ("user", "create", "创建用户", "创建新用户"),
+    ("user", "update", "更新用户", "更新用户信息"),
+    ("user", "delete", "删除用户", "删除用户"),
+    # 角色权限管理
+    ("role", "read", "查看角色", "查看角色信息"),
+    ("role", "create", "创建角色", "创建新角色"),
+    ("role", "update", "更新角色", "更新角色信息"),
+    ("role", "delete", "删除角色", "删除角色"),
+    ("role", "assign", "分配角色", "分配用户角色"),
+    # 组织管理权限
+    ("organization", "read", "查看组织", "查看组织信息"),
+    ("organization", "update", "更新组织", "更新组织信息"),
+    ("organization", "delete", "删除组织", "删除组织"),
+    # 统一授权管理
+    ("permission_grant", "read", "查看统一授权", "查看统一授权记录"),
+    ("permission_grant", "assign", "分配统一授权", "分配统一授权记录"),
+    ("permission_grant", "revoke", "撤销统一授权", "撤销统一授权记录"),
+    ("permission_grant", "check", "检查权限", "检查用户权限"),
+    # 审计权限
+    ("audit", "read", "查看审计", "查看审计日志"),
+    ("audit", "export", "导出审计", "导出审计数据"),
+    # 其余系统/业务资源权限（与当前 API 契约保持一致）
+    ("backup", "create", "创建备份", "创建数据备份"),
+    ("backup", "read", "查看备份", "查看备份列表与详情"),
+    ("backup", "update", "恢复备份", "执行备份恢复"),
+    ("backup", "delete", "删除备份", "删除备份文件"),
+    ("collection", "create", "创建收藏", "创建收藏记录"),
+    ("collection", "read", "查看收藏", "查看收藏记录"),
+    ("collection", "update", "更新收藏", "更新收藏记录"),
+    ("collection", "delete", "删除收藏", "删除收藏记录"),
+    ("contact", "create", "创建联系人", "创建联系人记录"),
+    ("contact", "read", "查看联系人", "查看联系人记录"),
+    ("contact", "update", "更新联系人", "更新联系人记录"),
+    ("contact", "delete", "删除联系人", "删除联系人记录"),
+    ("party", "create", "创建主体", "创建主体主档"),
+    ("party", "read", "查看主体", "查看主体主档与绑定信息"),
+    ("party", "update", "更新主体", "更新主体主档与绑定信息"),
+    ("party", "delete", "删除主体", "删除主体主档"),
+    ("custom_field", "read", "查看自定义字段", "查看自定义字段定义"),
+    ("dictionary", "create", "创建字典", "创建字典类型和值"),
+    ("dictionary", "read", "查看字典", "查看字典类型和值"),
+    ("dictionary", "delete", "删除字典", "删除字典类型和值"),
+    ("enum_field", "create", "创建枚举字段", "创建枚举字段"),
+    ("enum_field", "read", "查看枚举字段", "查看枚举字段"),
+    ("enum_field", "update", "更新枚举字段", "更新枚举字段"),
+    ("enum_field", "delete", "删除枚举字段", "删除枚举字段"),
+    ("error_recovery", "read", "查看错误恢复", "查看错误恢复任务"),
+    ("error_recovery", "update", "更新错误恢复", "执行错误恢复操作"),
+    ("error_recovery", "delete", "删除错误恢复", "删除错误恢复记录"),
+    ("history", "read", "查看历史", "查看历史记录"),
+    ("history", "delete", "删除历史", "删除历史记录"),
+    ("llm_prompt", "create", "创建提示词", "创建提示词模板"),
+    ("llm_prompt", "read", "查看提示词", "查看提示词模板"),
+    ("llm_prompt", "update", "更新提示词", "更新提示词模板"),
+    ("notification", "read", "查看通知", "查看通知"),
+    ("notification", "update", "更新通知", "更新通知状态"),
+    ("notification", "delete", "删除通知", "删除通知"),
+    ("occupancy", "read", "查看出租率", "查看出租率与占用率信息"),
+    ("operation_log", "read", "查看操作日志", "查看操作日志"),
+    ("operation_log", "delete", "删除操作日志", "清理操作日志"),
+    ("system_monitoring", "create", "创建系统监控配置", "创建系统监控配置"),
+    ("system_monitoring", "read", "查看系统监控", "查看系统监控数据"),
+    ("system_monitoring", "update", "更新系统监控", "更新系统监控配置"),
+    ("system_monitoring", "delete", "删除系统监控", "删除系统监控配置"),
+    ("system_settings", "create", "创建系统设置", "创建系统设置"),
+    ("system_settings", "read", "查看系统设置", "查看系统设置"),
+    ("system_settings", "update", "更新系统设置", "更新系统设置"),
+    ("task", "create", "创建任务", "创建异步任务"),
+    ("task", "read", "查看任务", "查看异步任务"),
+    ("task", "update", "更新任务", "更新异步任务"),
+    ("task", "delete", "删除任务", "删除异步任务"),
+]
+
 
 async def create_basic_permissions(db):
     """创建基础权限"""
-    permissions_data = [
-        # 资产管理权限
-        ("asset", "read", "查看资产", "查看资产基本信息"),
-        ("asset", "create", "创建资产", "创建新资产"),
-        ("asset", "update", "更新资产", "更新资产信息"),
-        ("asset", "delete", "删除资产", "删除资产"),
-        # 产权证管理权限
-        ("property_certificate", "read", "查看产权证", "查看产权证信息"),
-        ("property_certificate", "create", "创建产权证", "创建新产权证"),
-        ("property_certificate", "update", "更新产权证", "更新产权证信息"),
-        ("property_certificate", "delete", "删除产权证", "删除产权证"),
-        # 项目管理权限
-        ("project", "read", "查看项目", "查看项目信息"),
-        ("project", "create", "创建项目", "创建新项目"),
-        ("project", "update", "更新项目", "更新项目信息"),
-        ("project", "delete", "删除项目", "删除项目"),
-        # 权属管理权限
-        ("ownership", "read", "查看权属", "查看权属信息"),
-        ("ownership", "create", "创建权属", "创建新权属"),
-        ("ownership", "update", "更新权属", "更新权属信息"),
-        ("ownership", "delete", "删除权属", "删除权属"),
-        # 租金合同权限
-        ("rent_contract", "read", "查看租金合同", "查看租金合同信息"),
-        ("rent_contract", "create", "创建租金合同", "创建新租金合同"),
-        ("rent_contract", "update", "更新租金合同", "更新租金合同信息"),
-        ("rent_contract", "delete", "删除租金合同", "删除租金合同"),
-        # 统计分析权限
-        ("statistics", "read", "查看统计", "查看统计信息"),
-        ("statistics", "export", "导出统计", "导出统计数据"),
-        # Excel配置权限
-        ("excel_config", "read", "查看Excel配置", "查看Excel导入导出配置"),
-        ("excel_config", "write", "管理Excel配置", "创建/更新/删除Excel配置"),
-        # 审批流权限
-        ("approval", "read", "查看审批", "查看审批任务与流程"),
-        ("approval", "start", "发起审批", "发起业务审批流程"),
-        ("approval", "approve", "审批通过", "处理审批通过动作"),
-        ("approval", "reject", "审批驳回", "处理审批驳回动作"),
-        ("approval", "withdraw", "审批撤回", "撤回本人发起的审批"),
-        # 系统管理权限
-        ("system", "admin", "系统管理员", "全局管理员权限"),
-        ("system", "manage", "系统管理", "系统管理权限"),
-        ("system", "audit", "审计查看", "查看审计日志"),
-        ("system", "backup", "数据备份", "数据备份权限"),
-        # 用户管理权限
-        ("user", "read", "查看用户", "查看用户信息"),
-        ("user", "create", "创建用户", "创建新用户"),
-        ("user", "update", "更新用户", "更新用户信息"),
-        ("user", "delete", "删除用户", "删除用户"),
-        # 角色权限管理
-        ("role", "read", "查看角色", "查看角色信息"),
-        ("role", "create", "创建角色", "创建新角色"),
-        ("role", "update", "更新角色", "更新角色信息"),
-        ("role", "delete", "删除角色", "删除角色"),
-        ("role", "assign", "分配角色", "分配用户角色"),
-        # 组织管理权限
-        ("organization", "read", "查看组织", "查看组织信息"),
-        ("organization", "create", "创建组织", "创建新组织"),
-        ("organization", "update", "更新组织", "更新组织信息"),
-        ("organization", "delete", "删除组织", "删除组织"),
-        # 统一授权管理
-        ("permission_grant", "read", "查看统一授权", "查看统一授权记录"),
-        ("permission_grant", "assign", "分配统一授权", "分配统一授权记录"),
-        ("permission_grant", "revoke", "撤销统一授权", "撤销统一授权记录"),
-        ("permission_grant", "check", "检查权限", "检查用户权限"),
-        # 审计权限
-        ("audit", "read", "查看审计", "查看审计日志"),
-        ("audit", "export", "导出审计", "导出审计数据"),
-    ]
-
     created_permissions: list[Permission] = []
     all_permissions: list[Permission] = []
-    for resource, action, display_name, description in permissions_data:
+    for resource, action, display_name, description in BASIC_PERMISSIONS_DATA:
         # 检查权限是否已存在
         existing_result = await db.execute(
             select(Permission).where(
@@ -126,19 +287,9 @@ async def create_basic_permissions(db):
 
 async def create_basic_roles(db):
     """创建基础角色"""
-    roles_data = [
-        ("admin", "系统管理员", "系统超级管理员，拥有所有权限", 1, "system"),
-        ("manager", "管理员", "部门管理员，拥有大部分管理权限", 2, "management"),
-        ("user", "普通用户", "普通用户，基础操作权限", 3, "business"),
-        ("viewer", "只读用户", "只能查看数据，不能修改", 4, "read_only"),
-        ("asset_manager", "资产管理员", "负责资产管理的专业人员", 2, "asset"),
-        ("project_manager", "项目经理", "负责项目管理的专业人员", 2, "project"),
-        ("auditor", "审计员", "负责审计工作的专业人员", 2, "audit"),
-    ]
-
     created_roles: list[Role] = []
     all_roles: list[Role] = []
-    for name, display_name, description, level, category in roles_data:
+    for name, display_name, description, level, category in TARGET_SYSTEM_ROLE_DEFINITIONS:
         # 检查角色是否已存在
         existing_result = await db.execute(select(Role).where(Role.name == name))
         existing = existing_result.scalars().first()
@@ -159,6 +310,16 @@ async def create_basic_roles(db):
         db.add(role)
         created_roles.append(role)
         all_roles.append(role)
+
+    legacy_roles_result = await db.execute(
+        select(Role).where(Role.name.in_(sorted(LEGACY_SYSTEM_ROLE_NAMES)))
+    )
+    legacy_roles = list(legacy_roles_result.scalars().all())
+    for legacy_role in legacy_roles:
+        legacy_role.is_active = False
+        legacy_role.updated_by = "system"
+        legacy_role.updated_at = datetime.now(UTC).replace(tzinfo=None)
+        db.add(legacy_role)
 
     await db.commit()
     print(f"[OK] 创建了 {len(created_roles)} 个基础角色")
@@ -192,7 +353,7 @@ async def create_admin_user(db):
 
         # Assign admin role via RBAC
         role_result = await db.execute(
-            select(Role).where(Role.name.in_(["super_admin", "admin"]))
+            select(Role).where(Role.name.in_(["system_admin", "super_admin", "admin"]))
         )
         role = role_result.scalars().first()
         if role:
@@ -211,7 +372,7 @@ async def create_admin_user(db):
     else:
         # Ensure admin role assignment exists
         role_result = await db.execute(
-            select(Role).where(Role.name.in_(["super_admin", "admin"]))
+            select(Role).where(Role.name.in_(["system_admin", "super_admin", "admin"]))
         )
         role = role_result.scalars().first()
         if role:
@@ -240,33 +401,12 @@ async def create_admin_user(db):
 
 async def assign_permissions_to_roles(db, roles, permissions):
     """为角色分配权限"""
-    role_permission_map = {
-        "admin": [p for p in permissions],  # 管理员拥有所有权限
-        "manager": [
-            p for p in permissions if not p.resource.startswith("system")
-        ],  # 管理员拥有除系统管理外的所有权限
-        "user": [
-            p for p in permissions if p.action in ["read"]
-        ],  # 普通用户只有读取权限
-        "viewer": [
-            p for p in permissions if p.action in ["read"]
-        ],  # 只读用户只有读取权限
-        "asset_manager": [
-            p for p in permissions if p.resource in ["asset", "statistics"]
-        ],  # 资产管理员可以管理资产和查看统计
-        "project_manager": [
-            p for p in permissions if p.resource in ["project", "statistics"]
-        ],  # 项目经理可以管理项目和查看统计
-        "auditor": [
-            p for p in permissions if p.resource in ["audit", "statistics"]
-        ],  # 审计员可以查看审计和统计
-    }
-
     from src.models.rbac import role_permissions
 
     for role in roles:
-        if role.name in role_permission_map:
-            role_perms = role_permission_map[role.name]
+        resolver = ROLE_PERMISSION_MATRIX.get(role.name)
+        if resolver is not None:
+            role_perms = resolver(permissions)
             for permission in role_perms:
                 # 检查是否已存在关联
                 existing_result = await db.execute(
@@ -347,14 +487,7 @@ async def assign_roles_to_users(db, roles, users):
     role_map = {role.name: role for role in roles}
 
     # 为测试用户分配角色
-    user_role_assignments = [
-        ("manager1", "manager"),
-        ("user1", "user"),
-        ("user2", "user"),
-        ("viewer1", "viewer"),
-    ]
-
-    for username, role_name in user_role_assignments:
+    for username, role_name in TEST_USER_ROLE_ASSIGNMENTS:
         user_result = await db.execute(
             select(User).where(User.username == username)
         )
@@ -538,7 +671,7 @@ async def main():
         print("\n默认登录信息:")
         print("   管理员用户名: admin")
         if (test_users_created + test_users_existing) > 0:
-            print("   测试用户名: manager1, user1, user2, viewer1")
+            print("   测试用户名: manager1(ops_admin), user1/user2(executive), viewer1(viewer)")
         else:
             print("   测试用户名: 未创建")
         print("   (默认密码需要在实际部署时设置)")

@@ -440,7 +440,7 @@ async def test_can_edit_contract_checks_contract_resource() -> None:
     args, _kwargs = rbac_service.check_permission.await_args
     assert args[0] == "user-1"
     assert args[1].resource == "contract"
-    assert args[1].action == "edit"
+    assert args[1].action == "update"
     assert args[1].resource_id == "contract-1"
 
 

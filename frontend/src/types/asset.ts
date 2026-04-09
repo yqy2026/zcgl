@@ -74,6 +74,10 @@ export interface Asset {
   version?: number;
   tags?: string;
   audit_notes?: string;
+  review_status?: AssetReviewStatus | string;
+  review_by?: string | null;
+  reviewed_at?: string | null;
+  review_reason?: string | null;
 
   // 其他字段
   is_litigated: boolean; // 优化为boolean类型
@@ -162,6 +166,13 @@ export enum AuditStatus {
   PENDING = '待审核',
   APPROVED = '已审核',
   REJECTED = '审核不通过',
+}
+
+export enum AssetReviewStatus {
+  DRAFT = 'draft',
+  PENDING = 'pending',
+  APPROVED = 'approved',
+  REVERSED = 'reversed',
 }
 
 export enum ContractStatus {
@@ -257,6 +268,18 @@ export interface ContractTypeSummary {
   contract_count: number;
   total_area: number;
   monthly_amount: number;
+}
+
+export interface AssetReviewLog {
+  id: string;
+  asset_id: string;
+  action: string;
+  from_status: string;
+  to_status: string;
+  operator?: string | null;
+  reason?: string | null;
+  context?: Record<string, unknown> | null;
+  created_at: string;
 }
 
 export interface ContractPartyItem {

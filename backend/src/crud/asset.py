@@ -822,9 +822,15 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         return stmt
 
     async def get_occupancy_aggregation_async(
-        self, db: AsyncSession, *, filters: AssetFilterData | None = None
+        self,
+        db: AsyncSession,
+        *,
+        filters: AssetFilterData | None = None,
+        party_filter: PartyFilter | None = None,
     ) -> OccupancyAggregationRow | None:
         stmt = self._apply_simple_asset_filters(select(Asset), filters)
+        if party_filter is not None:
+            stmt = await self._apply_asset_party_filter(db, stmt, party_filter)
         agg_stmt = stmt.with_only_columns(
             func.count(Asset.id).label("total_assets"),
             sql_cast(func.sum(func.coalesce(Asset.rentable_area, 0)), Float).label(
@@ -847,11 +853,14 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         *,
         category_field: str,
         filters: AssetFilterData | None = None,
+        party_filter: PartyFilter | None = None,
     ) -> list[OccupancyCategoryAggregationRow]:
         if not hasattr(Asset, category_field):
             return []
 
         stmt = self._apply_simple_asset_filters(select(Asset), filters)
+        if party_filter is not None:
+            stmt = await self._apply_asset_party_filter(db, stmt, party_filter)
         category_column = getattr(Asset, category_field)
         agg_stmt = stmt.with_only_columns(
             category_column.label("category"),
@@ -871,9 +880,15 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         return rows
 
     async def get_area_summary_aggregation_async(
-        self, db: AsyncSession, *, filters: AssetFilterData | None = None
+        self,
+        db: AsyncSession,
+        *,
+        filters: AssetFilterData | None = None,
+        party_filter: PartyFilter | None = None,
     ) -> AreaSummaryAggregationRow | None:
         stmt = self._apply_simple_asset_filters(select(Asset), filters)
+        if party_filter is not None:
+            stmt = await self._apply_asset_party_filter(db, stmt, party_filter)
         agg_stmt = stmt.with_only_columns(
             func.count(Asset.id).label("total_assets"),
             sql_cast(func.sum(func.coalesce(Asset.land_area, 0)), Float).label(

@@ -10,6 +10,7 @@ import { ASSET_API } from '@/constants/api';
 import { convertBackendToFrontend } from '@/utils/dataConversion';
 import type {
   Asset,
+  AssetReviewLog,
   AssetLeaseSummaryResponse,
   AssetSearchParams,
   AssetListResponse,
@@ -207,6 +208,102 @@ export class AssetCoreService {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
+  }
+
+  async submitAssetReview(id: string): Promise<Asset> {
+    const result = await apiClient.post<Asset>(ASSET_API.SUBMIT_REVIEW(id), undefined, {
+      retry: false,
+      smartExtract: true,
+    });
+    if (!result.success || result.data == null) {
+      throw new Error(`提交资产审核失败: ${result.error}`);
+    }
+    this.invalidateAssetCaches();
+    return convertBackendToFrontend<Asset>(result.data);
+  }
+
+  async approveAssetReview(id: string): Promise<Asset> {
+    const result = await apiClient.post<Asset>(ASSET_API.APPROVE_REVIEW(id), undefined, {
+      retry: false,
+      smartExtract: true,
+    });
+    if (!result.success || result.data == null) {
+      throw new Error(`审核通过资产失败: ${result.error}`);
+    }
+    this.invalidateAssetCaches();
+    return convertBackendToFrontend<Asset>(result.data);
+  }
+
+  async rejectAssetReview(id: string, reason: string): Promise<Asset> {
+    const result = await apiClient.post<Asset>(
+      ASSET_API.REJECT_REVIEW(id),
+      { reason },
+      {
+        retry: false,
+        smartExtract: true,
+      }
+    );
+    if (!result.success || result.data == null) {
+      throw new Error(`驳回资产审核失败: ${result.error}`);
+    }
+    this.invalidateAssetCaches();
+    return convertBackendToFrontend<Asset>(result.data);
+  }
+
+  async reverseAssetReview(id: string, reason: string): Promise<Asset> {
+    const result = await apiClient.post<Asset>(
+      ASSET_API.REVERSE_REVIEW(id),
+      { reason },
+      {
+        retry: false,
+        smartExtract: true,
+      }
+    );
+    if (!result.success || result.data == null) {
+      throw new Error(`反审核资产失败: ${result.error}`);
+    }
+    this.invalidateAssetCaches();
+    return convertBackendToFrontend<Asset>(result.data);
+  }
+
+  async resubmitAssetReview(id: string): Promise<Asset> {
+    const result = await apiClient.post<Asset>(ASSET_API.RESUBMIT_REVIEW(id), undefined, {
+      retry: false,
+      smartExtract: true,
+    });
+    if (!result.success || result.data == null) {
+      throw new Error(`重提资产审核失败: ${result.error}`);
+    }
+    this.invalidateAssetCaches();
+    return convertBackendToFrontend<Asset>(result.data);
+  }
+
+  async withdrawAssetReview(id: string, reason?: string): Promise<Asset> {
+    const result = await apiClient.post<Asset>(
+      ASSET_API.WITHDRAW_REVIEW(id),
+      reason != null && reason.trim() !== '' ? { reason } : undefined,
+      {
+        retry: false,
+        smartExtract: true,
+      }
+    );
+    if (!result.success || result.data == null) {
+      throw new Error(`撤回资产审核失败: ${result.error}`);
+    }
+    this.invalidateAssetCaches();
+    return convertBackendToFrontend<Asset>(result.data);
+  }
+
+  async getAssetReviewLogs(id: string): Promise<AssetReviewLog[]> {
+    const result = await apiClient.get<AssetReviewLog[]>(ASSET_API.REVIEW_LOGS(id), {
+      cache: false,
+      retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+      smartExtract: true,
+    });
+    if (!result.success || result.data == null) {
+      throw new Error(`获取资产审核历史失败: ${result.error}`);
+    }
+    return convertBackendToFrontend<AssetReviewLog[]>(result.data);
   }
 
   /**

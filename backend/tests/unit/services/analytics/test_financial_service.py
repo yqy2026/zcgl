@@ -35,6 +35,7 @@ async def test_calculate_summary_empty(mock_to_float, mock_asset_crud, service):
         limit=10000,
         filters=None,
         include_contract_projection=False,
+        party_filter=None,
     )
 
 

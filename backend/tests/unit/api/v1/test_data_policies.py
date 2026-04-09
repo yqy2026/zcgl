@@ -1,6 +1,7 @@
 """Unit tests for data policy package API handlers."""
 
 import asyncio
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -8,6 +9,14 @@ import pytest
 from src.core.exception_handler import BaseBusinessError, ResourceNotFoundError
 
 pytestmark = pytest.mark.api
+
+
+def test_data_policies_module_should_use_require_any_role() -> None:
+    from src.api.v1.auth import data_policies as data_policies_module
+
+    module_source = Path(data_policies_module.__file__).read_text(encoding="utf-8")
+    assert "require_any_role" in module_source
+    assert "require_admin" not in module_source
 
 
 @patch("src.api.v1.auth.data_policies.DataPolicyService")

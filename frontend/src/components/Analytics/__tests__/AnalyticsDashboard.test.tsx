@@ -495,11 +495,15 @@ describe('AnalyticsDashboard - 导出功能测试', () => {
     fireEvent.click(csvOption);
 
     await waitFor(() => {
-      expect(analyticsService.downloadAnalyticsReport).toHaveBeenCalledWith('csv', {
-        start_date: '2026-03-01',
-        end_date: '2026-03-31',
-        include_deleted: true,
-      });
+      expect(analyticsService.downloadAnalyticsReport).toHaveBeenCalledWith(
+        'csv',
+        {
+          start_date: '2026-03-01',
+          end_date: '2026-03-31',
+          include_deleted: true,
+        },
+        null
+      );
       expect(MessageManager.success).toHaveBeenCalledWith('数据导出成功！');
     });
   });

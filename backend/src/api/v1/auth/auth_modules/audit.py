@@ -10,11 +10,13 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .....database import get_async_db
-from .....middleware.auth import AuthzContext, require_admin, require_authz
+from .....middleware.auth import AuthzContext, require_authz
 from .....schemas.auth import UserResponse
+from .....security.permissions import require_any_role
 from .....services.core.audit_service import AuditService
 
 router = APIRouter(prefix="/audit", tags=["审计日志"])
+_SYSTEM_MANAGEMENT_ROLE_CODES = ["admin", "system_admin", "perm_admin"]
 
 
 def get_audit_service(
@@ -28,7 +30,9 @@ def get_audit_service(
 async def get_audit_statistics(
     days: int = 30,
     db: AsyncSession = Depends(get_async_db),
-    current_user: UserResponse = Depends(require_admin),
+    current_user: UserResponse = Depends(
+        require_any_role(_SYSTEM_MANAGEMENT_ROLE_CODES)
+    ),
     audit_service: AuditService = Depends(get_audit_service),
     _authz_ctx: AuthzContext = Depends(
         require_authz(action="read", resource_type="operation_log")

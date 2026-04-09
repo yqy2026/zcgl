@@ -178,6 +178,8 @@ const AssetAnalyticsPage: React.FC = () => {
                 total_income: analyticsData.total_income ?? 0,
                 self_operated_rent_income: analyticsData.self_operated_rent_income ?? 0,
                 agency_service_income: analyticsData.agency_service_income ?? 0,
+                actual_receipts: analyticsData.actual_receipts ?? 0,
+                collection_rate: analyticsData.collection_rate ?? null,
                 customer_entity_count: analyticsData.customer_entity_count ?? 0,
                 customer_contract_count: analyticsData.customer_contract_count ?? 0,
                 customer_entity_breakdown: analyticsData.customer_entity_breakdown,

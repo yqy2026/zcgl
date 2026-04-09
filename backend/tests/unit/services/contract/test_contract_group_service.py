@@ -374,6 +374,76 @@ class TestCreateContractGroupDuplicateCheck:
                 )
         assert result.contract_group_id == "grp_001"
 
+    async def test_create_group_should_reject_assets_already_bound_elsewhere(
+        self, mock_db: MagicMock
+    ) -> None:
+        service = ContractGroupService()
+
+        with (
+            patch(
+                "src.services.contract.contract_group_service.contract_group_crud.get_by_code",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_group_crud.list_active_group_bindings_for_assets",
+                new_callable=AsyncMock,
+                return_value=[
+                    {
+                        "asset_id": "asset-1",
+                        "contract_group_id": "group-existing",
+                        "group_code": "GRP-EXISTING",
+                    }
+                ],
+            ),
+        ):
+            with pytest.raises(OperationNotAllowedError, match="asset-1"):
+                await service.create_contract_group(
+                    mock_db,
+                    obj_in=_valid_group_create(asset_ids=["asset-1"]),
+                    group_code="GRP-NEW",
+                )
+
+    async def test_update_group_should_reject_assets_already_bound_elsewhere(
+        self, mock_db: MagicMock
+    ) -> None:
+        service = ContractGroupService()
+        existing_group = MagicMock()
+        existing_group.contract_group_id = "group-current"
+
+        with (
+            patch(
+                "src.services.contract.contract_group_service.contract_group_crud.get",
+                new_callable=AsyncMock,
+                return_value=existing_group,
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_group_crud.list_active_group_bindings_for_assets",
+                new_callable=AsyncMock,
+                return_value=[
+                    {
+                        "asset_id": "asset-2",
+                        "contract_group_id": "group-other",
+                        "group_code": "GRP-OTHER",
+                    }
+                ],
+            ),
+        ):
+            with pytest.raises(OperationNotAllowedError, match="asset-2"):
+                await service.update_contract_group(
+                    mock_db,
+                    group_id="group-current",
+                    obj_in=SimpleNamespace(
+                        asset_ids=["asset-2"],
+                        model_fields_set={"asset_ids"},
+                        settlement_rule=None,
+                        effective_to=None,
+                        revenue_attribution_rule=None,
+                        revenue_share_rule=None,
+                        risk_tags=None,
+                    ),
+                )
+
 
 class TestPerspectiveScopedContractGroups:
     async def test_list_groups_should_apply_manager_effective_party_ids(

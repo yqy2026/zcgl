@@ -62,6 +62,7 @@ class UserCreate(UserBase):
 
     password: str = Field(..., min_length=8, max_length=128, description="密码")
     role_id: str | None = Field(None, description="主角色ID")
+    role_ids: list[str] = Field(default_factory=list, description="角色ID列表")
     default_organization_id: str | None = Field(
         None,
         description="默认组织ID",
@@ -105,6 +106,7 @@ class UserUpdate(BaseModel):
         None, min_length=2, max_length=100, description="全名"
     )
     role_id: str | None = Field(None, description="主角色ID")
+    role_ids: list[str] | None = Field(None, description="角色ID列表")
     is_active: bool | None = Field(None, description="是否激活")
     default_organization_id: str | None = Field(
         None,
@@ -140,7 +142,6 @@ class UserResponse(BaseModel):
     phone: str
     full_name: str
     role_id: str | None = Field(None, description="主角色ID")
-    role_name: str | None = Field(None, description="主角色名称")
     roles: list[str] = Field(default_factory=list, description="角色编码列表")
     role_ids: list[str] = Field(default_factory=list, description="角色ID列表")
     is_admin: bool = Field(False, description="是否管理员")

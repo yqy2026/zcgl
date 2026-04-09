@@ -20,6 +20,7 @@ import styles from '../../UserManagementPage.module.css';
 
 interface UserTableProps {
   users: User[];
+  roleOptions: Array<{ id: string; name: string }>;
   loading: boolean;
   paginationState: PaginationState;
   onPageChange: (next: { current?: number; pageSize?: number }) => void;
@@ -34,6 +35,7 @@ interface UserTableProps {
 
 const UserTable: React.FC<UserTableProps> = ({
   users,
+  roleOptions,
   loading,
   paginationState,
   onPageChange,
@@ -45,6 +47,10 @@ const UserTable: React.FC<UserTableProps> = ({
   onDelete,
   getStatusTag,
 }) => {
+  const roleNameById = useMemo(
+    () => new Map(roleOptions.map(role => [role.id, role.name])),
+    [roleOptions]
+  );
   const columns: ColumnsType<User> = useMemo(
     () => [
       {
@@ -72,14 +78,26 @@ const UserTable: React.FC<UserTableProps> = ({
       },
       {
         title: '角色',
-        dataIndex: 'role_name',
         key: 'role',
-        render: (role?: string) => {
-          const roleLabel = role ?? '未分配';
+        render: (_, record) => {
+          const roleLabels =
+            record.role_ids?.map(roleId => roleNameById.get(roleId) ?? roleId) ??
+            record.roles ??
+            [];
+          if (roleLabels.length === 0) {
+            return <Tag className={`${styles.semanticTag} ${styles.roleTag} ${styles.tonePrimary}`}>未分配</Tag>;
+          }
           return (
-            <Tag className={`${styles.semanticTag} ${styles.roleTag} ${styles.tonePrimary}`}>
-              {roleLabel}
-            </Tag>
+            <Space size={[6, 6]} wrap>
+              {roleLabels.map(roleLabel => (
+                <Tag
+                  key={roleLabel}
+                  className={`${styles.semanticTag} ${styles.roleTag} ${styles.tonePrimary}`}
+                >
+                  {roleLabel}
+                </Tag>
+              ))}
+            </Space>
           );
         },
       },
@@ -205,6 +223,7 @@ const UserTable: React.FC<UserTableProps> = ({
       onToggleLock,
       onToggleStatus,
       onViewDetail,
+      roleNameById,
     ]
   );
 

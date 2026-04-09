@@ -15,10 +15,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.constants.cache_constants import CACHE_TTL_MEDIUM_SECONDS
 from src.database import get_async_db
-from src.middleware.auth import AuthzContext, get_current_active_user, require_authz
+from src.middleware.auth import (
+    AuthzContext,
+    DataScopeContext,
+    get_current_active_user,
+    require_authz,
+    require_data_scope_context,
+)
 from src.models.auth import User
 from src.schemas.statistics import FinancialSummaryResponse
 from src.services.analytics import FinancialService
+from src.services.party_scope import build_party_filter_from_scope_context
 from src.utils.cache_manager import cache_statistics
 
 logger = logging.getLogger(__name__)
@@ -33,6 +40,9 @@ async def get_financial_summary(
     should_include_deleted: bool = False,
     db: AsyncSession = Depends(get_async_db),
     current_user: User = Depends(get_current_active_user),
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="analytics")
+    ),
     _authz_ctx: AuthzContext = Depends(
         require_authz(
             action="read",
@@ -60,7 +70,10 @@ async def get_financial_summary(
         filters["data_status"] = "正常"
 
     service = FinancialService(db)
-    summary = await service.calculate_summary(filters)
+    summary = await service.calculate_summary(
+        filters,
+        party_filter=build_party_filter_from_scope_context(_scope_ctx),
+    )
 
     return FinancialSummaryResponse(
         total_assets=int(summary["total_assets"]),
