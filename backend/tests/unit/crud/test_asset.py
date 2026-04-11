@@ -35,7 +35,31 @@ def mock_db() -> MagicMock:
 
 
 class TestCRUDAssetGet:
-    async def test_get_existing_asset(self, crud: AssetCRUD, mock_db: MagicMock) -> None:
+    async def test_decrypt_asset_object_should_fallback_blank_address_when_decrypt_returns_none(
+        self, crud: AssetCRUD
+    ) -> None:
+        asset = Asset(
+            asset_name="测试物业",
+            address="enc:v1:AAAAAAAAAAAAAAAAAAAAAA==",
+            ownership_status="已确权",
+            property_nature="经营类",
+            usage_status="出租",
+        )
+
+        with patch.object(
+            crud.sensitive_data_handler,
+            "decrypt_field",
+            side_effect=lambda field_name, value: None
+            if field_name == "address"
+            else value,
+        ):
+            crud._decrypt_asset_object(asset)
+
+        assert asset.address == ""
+
+    async def test_get_existing_asset(
+        self, crud: AssetCRUD, mock_db: MagicMock
+    ) -> None:
         mock_asset = MagicMock(spec=Asset)
         mock_asset.id = "1"
         mock_asset.asset_name = "测试物业"
@@ -45,7 +69,9 @@ class TestCRUDAssetGet:
 
         assert result is not None
 
-    async def test_get_nonexistent_asset(self, crud: AssetCRUD, mock_db: MagicMock) -> None:
+    async def test_get_nonexistent_asset(
+        self, crud: AssetCRUD, mock_db: MagicMock
+    ) -> None:
         with patch.object(crud, "get", new_callable=AsyncMock, return_value=None):
             result = await crud.get(mock_db, id="999")
 
@@ -120,7 +146,9 @@ class TestCRUDAssetSoftDeleteGuard:
 
 
 class TestCRUDAssetGetByName:
-    async def test_get_by_name_exists(self, crud: AssetCRUD, mock_db: MagicMock) -> None:
+    async def test_get_by_name_exists(
+        self, crud: AssetCRUD, mock_db: MagicMock
+    ) -> None:
         mock_asset = MagicMock(spec=Asset)
         mock_asset.asset_name = "测试物业A"
 
@@ -135,7 +163,9 @@ class TestCRUDAssetGetByName:
         assert result is not None
         assert result.asset_name == "测试物业A"
 
-    async def test_get_by_name_not_exists(self, crud: AssetCRUD, mock_db: MagicMock) -> None:
+    async def test_get_by_name_not_exists(
+        self, crud: AssetCRUD, mock_db: MagicMock
+    ) -> None:
         with patch.object(
             crud,
             "get_by_name_async",
@@ -148,7 +178,9 @@ class TestCRUDAssetGetByName:
 
 
 class TestCRUDAssetGetMulti:
-    async def test_get_multi_default_params(self, crud: AssetCRUD, mock_db: MagicMock) -> None:
+    async def test_get_multi_default_params(
+        self, crud: AssetCRUD, mock_db: MagicMock
+    ) -> None:
         mock_assets = [MagicMock(spec=Asset), MagicMock(spec=Asset)]
         with patch.object(
             crud,
@@ -162,7 +194,9 @@ class TestCRUDAssetGetMulti:
         assert len(result[0]) == 2
         assert result[1] == 2
 
-    async def test_get_multi_with_pagination(self, crud: AssetCRUD, mock_db: MagicMock) -> None:
+    async def test_get_multi_with_pagination(
+        self, crud: AssetCRUD, mock_db: MagicMock
+    ) -> None:
         mock_assets = [MagicMock(spec=Asset)]
         with patch.object(
             crud,
@@ -324,7 +358,9 @@ class TestCRUDAssetLedgerGuards:
         monkeypatch.setattr(
             asset_crud_module,
             "with_loader_criteria",
-            lambda model, predicate, include_aliases: recorded_with_loader_models.append(model)
+            lambda model,
+            predicate,
+            include_aliases: recorded_with_loader_models.append(model)
             or (model, include_aliases),
         )
 
@@ -369,7 +405,9 @@ class TestCRUDAssetLedgerGuards:
         execute_result.first.return_value = ("entry-1",)
         mock_db.execute.return_value = execute_result
 
-        result = await crud.has_contract_ledger_entries_async(mock_db, asset_id="asset-1")
+        result = await crud.has_contract_ledger_entries_async(
+            mock_db, asset_id="asset-1"
+        )
 
         stmt = mock_db.execute.await_args.args[0]
         compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
@@ -488,7 +526,9 @@ class TestCRUDAssetUpdate:
             new_callable=AsyncMock,
             return_value=mock_asset,
         ):
-            result = await crud.update_async(mock_db, db_obj=mock_asset, obj_in=update_data)
+            result = await crud.update_async(
+                mock_db, db_obj=mock_asset, obj_in=update_data
+            )
 
         assert result is not None
 
@@ -510,7 +550,9 @@ class TestCRUDAssetDelete:
 
 
 class TestCRUDAssetSearch:
-    async def test_search_with_filters(self, crud: AssetCRUD, mock_db: MagicMock) -> None:
+    async def test_search_with_filters(
+        self, crud: AssetCRUD, mock_db: MagicMock
+    ) -> None:
         mock_assets = [MagicMock(spec=Asset)]
         with patch.object(
             crud,

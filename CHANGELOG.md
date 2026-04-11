@@ -2,6 +2,9 @@
 
 ## [Unreleased] - 2026-03-06
 
+### 2026-04-11
+- fix(asset): 修复资产列表在本地脏地址数据下的登录后点检阻断。排查发现 `GET /api/v1/assets` 会在读取历史资产时对 `address` 做解密，遇到旧密钥/损坏密文后返回 `None`，再触发 `AssetListItemResponse.address` 的必填字符串校验，导致前端 `/assets/list` 路由请求直接 `400`。现于 `backend/src/crud/asset.py` 的资产读取解密链路中为 `address` 增加最小回退：解密失败时返回空字符串而不是 `None`，保证列表与详情序列化不中断；同步补齐 `backend/tests/unit/crud/test_asset.py` 与 `backend/tests/integration/test_asset_lifecycle.py` 回归，覆盖解密失败回退与真实 API 列表访问场景。验证：`cd backend && uv run pytest tests/unit/crud/test_asset.py -q --no-cov`、`cd backend && uv run pytest tests/integration/test_asset_lifecycle.py -q --no-cov`、登录后前端全量巡检 `node .agents/skills/frontend-inspection/scripts/inspect_frontend.js --chromium-path /home/y/.cache/ms-playwright/chromium-1208/chrome-linux64/chrome`（23/23 路由通过）。
+
 ### 2026-04-09
 - docs(review): 补归档 `2026-04-07-orthogonal-restructure-blueprint-review-v2.md` 中 P1-7 ~ P1-10 深审意见，保留对资产唯一约束、statistics_modules 分析域审计、ABAC 模板入库文案与 `backfill_role_policies.py` 显式映射的审查记录，便于后续追溯蓝图修订依据。
 
