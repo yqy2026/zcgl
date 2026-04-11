@@ -10,6 +10,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from src.crud.asset_support import SensitiveDataHandler
+from src.models.asset import Asset
 from src.models.enum_field import EnumFieldType, EnumFieldValue
 from src.models.ownership import Ownership
 from src.services.organization_permission_service import (
@@ -282,7 +283,9 @@ class TestAssetLifecycle:
         detail_payload = detail_response.json()
         detail_address = detail_payload.get("address")
         assert isinstance(detail_address, str)
-        decrypted_detail_address = address_handler.decrypt_field("address", detail_address)
+        decrypted_detail_address = address_handler.decrypt_field(
+            "address", detail_address
+        )
         assert isinstance(decrypted_detail_address, str)
         assert decrypted_detail_address == detail
 
@@ -392,8 +395,7 @@ class TestAssetLifecycle:
         assert set(created_asset_ids).issubset(search_item_ids)
 
         filter_response = authenticated_client.get(
-            "/api/v1/assets?page=1&page_size=20"
-            f"&search={suffix}&usage_status=闲置"
+            f"/api/v1/assets?page=1&page_size=20&search={suffix}&usage_status=闲置"
         )
         assert filter_response.status_code == 200
         filter_payload = filter_response.json()
@@ -412,3 +414,51 @@ class TestAssetLifecycle:
                 headers=csrf_headers,
             )
             assert response.status_code == 204
+
+    def test_asset_list_should_tolerate_legacy_address_decrypt_failure(
+        self,
+        authenticated_client: TestClient,
+        csrf_headers: dict[str, str],
+        db_session,
+        test_data,
+    ) -> None:
+        suffix = uuid4().hex[:8]
+        self._ensure_asset_enum_data(db_session)
+        ownership = self._create_ownership(db_session, suffix)
+        organization_id = str(test_data["organization"].id)
+        payload = self._create_asset_payload(
+            suffix=suffix,
+            ownership_id=ownership.id,
+            organization_id=organization_id,
+        )
+
+        create_response = authenticated_client.post(
+            "/api/v1/assets",
+            json=payload,
+            headers=csrf_headers,
+        )
+        assert create_response.status_code == 201
+        asset_id = create_response.json().get("id")
+        assert isinstance(asset_id, str)
+
+        asset = db_session.query(Asset).filter(Asset.id == asset_id).first()
+        assert asset is not None
+        asset.address = "enc:v1:AAAAAAAAAAAAAAAAAAAAAA=="
+        db_session.commit()
+
+        response = authenticated_client.get(
+            f"/api/v1/assets?page=1&page_size=20&search={suffix}"
+        )
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload.get("success") is True
+        items = payload.get("data", {}).get("items", [])
+        assert isinstance(items, list)
+        matched = [
+            item
+            for item in items
+            if isinstance(item, dict) and item.get("id") == asset_id
+        ]
+        assert len(matched) == 1
+        assert matched[0].get("address") == ""

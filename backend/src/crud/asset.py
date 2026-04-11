@@ -396,6 +396,9 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
                     decrypted_value = self.sensitive_data_handler.decrypt_field(
                         field_name, value
                     )
+                    if decrypted_value is None and field_name == "address":
+                        # 历史地址数据可能混有旧密钥/损坏密文；列表接口至少应保持可序列化。
+                        decrypted_value = ""
                     setattr(asset, field_name, decrypted_value)
 
     def _encrypt_update_data(self, update_data: AssetMutationData) -> AssetMutationData:
