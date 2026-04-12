@@ -95,7 +95,9 @@ class ApprovalService:
             )
         return normalized
 
-    async def _get_instance_or_raise(self, approval_instance_id: str) -> ApprovalInstance:
+    async def _get_instance_or_raise(
+        self, approval_instance_id: str
+    ) -> ApprovalInstance:
         instance = await approval_crud.get_instance(
             self.db,
             approval_instance_id=approval_instance_id,
@@ -153,7 +155,9 @@ class ApprovalService:
                 business_id=business_id,
             )
             if active_instance is not None:
-                raise conflict("该业务对象已有进行中的审批", resource_type="ApprovalInstance")
+                raise conflict(
+                    "该业务对象已有进行中的审批", resource_type="ApprovalInstance"
+                )
 
             await self.asset_service.get_asset(
                 business_id,
@@ -214,14 +218,20 @@ class ApprovalService:
             )
             return instance
 
-    async def list_pending_tasks(self, *, assignee_user_id: str) -> list[ApprovalTaskSnapshot]:
+    async def list_pending_tasks(
+        self, *, assignee_user_id: str
+    ) -> list[ApprovalTaskSnapshot]:
         return await approval_crud.list_pending_tasks(
             self.db,
             assignee_user_id=assignee_user_id,
         )
 
-    async def list_started_processes(self, *, starter_id: str) -> list[ApprovalInstance]:
-        return await approval_crud.list_started_processes(self.db, starter_id=starter_id)
+    async def list_started_processes(
+        self, *, starter_id: str
+    ) -> list[ApprovalInstance]:
+        return await approval_crud.list_started_processes(
+            self.db, starter_id=starter_id
+        )
 
     async def get_process_timeline(
         self,

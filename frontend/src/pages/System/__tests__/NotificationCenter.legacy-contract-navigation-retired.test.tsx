@@ -4,7 +4,8 @@ import NotificationCenter from '../NotificationCenter';
 import { notificationService } from '@/services/notificationService';
 import { MessageManager } from '@/utils/messageManager';
 
-const formatStderrWrites = (calls: unknown[][]) => calls.map(call => String(call[0] ?? '')).join(' ');
+const formatStderrWrites = (calls: unknown[][]) =>
+  calls.map(call => String(call[0] ?? '')).join(' ');
 
 const mockNavigate = vi.fn();
 
@@ -57,20 +58,12 @@ vi.mock('antd', () => ({
     </section>
   ),
   Typography: {
-    Text: ({
-      children,
-      className,
-    }: {
-      children?: React.ReactNode;
-      className?: string;
-    }) => <span className={className}>{children}</span>,
-    Paragraph: ({
-      children,
-      className,
-    }: {
-      children?: React.ReactNode;
-      className?: string;
-    }) => <p className={className}>{children}</p>,
+    Text: ({ children, className }: { children?: React.ReactNode; className?: string }) => (
+      <span className={className}>{children}</span>
+    ),
+    Paragraph: ({ children, className }: { children?: React.ReactNode; className?: string }) => (
+      <p className={className}>{children}</p>
+    ),
   },
   Tag: ({ children, className }: { children?: React.ReactNode; className?: string }) => (
     <span className={className}>{children}</span>
@@ -88,7 +81,13 @@ vi.mock('antd', () => ({
     className?: string;
     'aria-label'?: string;
   }) => (
-    <button type="button" onClick={onClick} disabled={disabled} className={className} aria-label={ariaLabel}>
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={className}
+      aria-label={ariaLabel}
+    >
       {children}
     </button>
   ),

@@ -214,8 +214,7 @@ class ContractGroupService:
             return
 
         details = "；".join(
-            f"{item['asset_id']} -> {item['group_code']}"
-            for item in conflicts
+            f"{item['asset_id']} -> {item['group_code']}" for item in conflicts
         )
         raise OperationNotAllowedError(
             f"以下资产已绑定其他有效合同组：{details}",

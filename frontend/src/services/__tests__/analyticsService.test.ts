@@ -435,7 +435,9 @@ describe('AnalyticsService', () => {
     });
 
     it('does not create a blob URL when the backend export request fails', async () => {
-      vi.spyOn(service, 'exportAnalyticsReport').mockRejectedValue(new Error('501 Not Implemented'));
+      vi.spyOn(service, 'exportAnalyticsReport').mockRejectedValue(
+        new Error('501 Not Implemented')
+      );
       global.URL.createObjectURL = vi.fn(() => 'blob:analytics');
       global.URL.revokeObjectURL = vi.fn();
 

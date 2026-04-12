@@ -5,6 +5,7 @@ Unit test configuration and fixtures
 import os
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -169,7 +170,9 @@ def db_tables(engine):
         except Exception as exc:
             # Some branches contain in-progress migrations; for unit tests,
             # prefer a clean model-based schema over leaving half-migrated DB.
-            print(f"[!] Alembic upgrade failed in unit fixture, fallback create_all: {exc}")
+            print(
+                f"[!] Alembic upgrade failed in unit fixture, fallback create_all: {exc}"
+            )
             if is_postgres and unit_only_invocation:
                 _reset_postgres_public_schema(engine)
             importlib.import_module("src.models")
@@ -287,13 +290,16 @@ def client(monkeypatch, db_session):
     from src.main import app
     from src.middleware import auth as auth_module
     from src.middleware.auth import (
+        DataScopeContext,
         get_current_active_user,
         get_current_user,
         get_current_user_from_cookie,
         require_admin,
         require_authz,
+        require_data_scope_context,
         require_permission,
     )
+    from src.security.permissions import require_any_role
 
     # Mock authenticated user
     mock_user = MagicMock()
@@ -318,13 +324,48 @@ def client(monkeypatch, db_session):
 
         return dependency
 
+    def mock_require_any_role(role_codes):  # noqa: ANN001 - test stub
+        _ = role_codes
+
+        def dependency():
+            return mock_user
+
+        return dependency
+
+    def mock_require_data_scope_context(resource_type=None):  # noqa: ANN001 - test stub
+        _ = resource_type
+
+        def dependency():
+            return DataScopeContext(
+                scope_mode="all",
+                allowed_binding_types=["owner", "manager"],
+                owner_party_ids=[],
+                manager_party_ids=[],
+                effective_party_ids=[],
+                source="auto",
+            )
+
+        return dependency
+
     monkeypatch.setattr(auth_module, "get_current_active_user", mock_get_current_user)
     monkeypatch.setattr(auth_module, "get_current_user", mock_get_current_user)
     monkeypatch.setattr(
         auth_module, "get_current_user_from_cookie", mock_get_current_user
     )
     monkeypatch.setattr(auth_module, "require_permission", mock_require_permission)
-    monkeypatch.setattr(auth_module, "require_authz", lambda *args, **kwargs: lambda: {})
+    monkeypatch.setattr(
+        auth_module, "require_authz", lambda *args, **kwargs: lambda: {}
+    )
+    monkeypatch.setattr(
+        auth_module, "require_data_scope_context", mock_require_data_scope_context
+    )
+    monkeypatch.setattr(
+        "src.security.permissions.require_any_role", mock_require_any_role
+    )
+    monkeypatch.setattr(
+        "src.security.permissions.RBACService.get_user_roles",
+        AsyncMock(return_value=[SimpleNamespace(name="admin")]),
+    )
 
     # Override dependencies in FastAPI app
     app.dependency_overrides[get_current_active_user] = mock_get_current_user
@@ -332,6 +373,10 @@ def client(monkeypatch, db_session):
     app.dependency_overrides[get_current_user_from_cookie] = mock_get_current_user
     app.dependency_overrides[require_permission] = mock_require_permission
     app.dependency_overrides[require_authz] = lambda *args, **kwargs: lambda: {}
+    app.dependency_overrides[require_any_role] = mock_require_any_role
+    app.dependency_overrides[require_data_scope_context] = (
+        mock_require_data_scope_context
+    )
     app.dependency_overrides[require_admin] = mock_get_current_user
 
     # Override RBAC permission checkers created at route import time
@@ -341,6 +386,16 @@ def client(monkeypatch, db_session):
     def mock_authz_checker():  # noqa: ANN001 - test stub
         return {}
 
+    def mock_data_scope_checker():  # noqa: ANN001 - test stub
+        return DataScopeContext(
+            scope_mode="all",
+            allowed_binding_types=["owner", "manager"],
+            owner_party_ids=[],
+            manager_party_ids=[],
+            effective_party_ids=[],
+            source="auto",
+        )
+
     def apply_rbac_overrides(dependant):
         for sub in getattr(dependant, "dependencies", []):
             dependency_type_name = type(sub.call).__name__
@@ -348,6 +403,8 @@ def client(monkeypatch, db_session):
                 app.dependency_overrides[sub.call] = mock_rbac_checker
             if dependency_type_name == "AuthzPermissionChecker":
                 app.dependency_overrides[sub.call] = mock_authz_checker
+            if dependency_type_name == "DataScopeContextChecker":
+                app.dependency_overrides[sub.call] = mock_data_scope_checker
             apply_rbac_overrides(sub)
 
     for route in app.router.routes:

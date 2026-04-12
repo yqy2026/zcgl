@@ -14,7 +14,7 @@ describe('browser api mocks', () => {
 
       expect(style).toBeDefined();
       expect(formatStderrWrites(stderrWriteSpy.mock.calls)).not.toContain(
-        "getComputedStyle() method: with pseudo-elements"
+        'getComputedStyle() method: with pseudo-elements'
       );
     } finally {
       element.remove();

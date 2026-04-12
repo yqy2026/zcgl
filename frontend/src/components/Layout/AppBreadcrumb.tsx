@@ -79,9 +79,7 @@ const AppBreadcrumb: React.FC<AppBreadcrumbProps> = ({ customItems }) => {
         const isLast = index === pathSnippets.length - 1;
         items.push({
           key: url,
-          title: isLast
-            ? renderCrumbLabel(name)
-            : renderCrumbLink(url, name),
+          title: isLast ? renderCrumbLabel(name) : renderCrumbLink(url, name),
         });
       }
     });

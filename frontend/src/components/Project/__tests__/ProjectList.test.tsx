@@ -482,7 +482,13 @@ describe('ProjectList', () => {
 
       expect(useQuery).toHaveBeenCalledWith(
         expect.objectContaining({
-          queryKey: ['project-list', 'user:user-1|scope:owner,manager', 1, 10, { keyword: '', status: '', ownerPartyId: '' }],
+          queryKey: [
+            'project-list',
+            'user:user-1|scope:owner,manager',
+            1,
+            10,
+            { keyword: '', status: '', ownerPartyId: '' },
+          ],
         })
       );
       expect(useQuery).toHaveBeenCalledWith(

@@ -268,9 +268,13 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             setError(null);
           }
           currentUserIdRef.current = currentUser.id;
-          triggerCapabilitiesRefresh(currentUser.id, { forceRefresh: true }, {
-            isAdmin: currentUser.is_admin ?? false,
-          });
+          triggerCapabilitiesRefresh(
+            currentUser.id,
+            { forceRefresh: true },
+            {
+              isAdmin: currentUser.is_admin ?? false,
+            }
+          );
 
           if (currentUser.id !== storedUser.id) {
             logger.info('检测到跨标签账号切换，已同步当前会话用户', {
@@ -313,9 +317,13 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setError(null);
         }
         currentUserIdRef.current = currentUser.id;
-        triggerCapabilitiesRefresh(currentUser.id, { forceRefresh: true }, {
-          isAdmin: currentUser.is_admin ?? false,
-        });
+        triggerCapabilitiesRefresh(
+          currentUser.id,
+          { forceRefresh: true },
+          {
+            isAdmin: currentUser.is_admin ?? false,
+          }
+        );
         logger.debug('通过Cookie恢复登录会话成功', { userId: currentUser.id });
       } catch {
         currentUserIdRef.current = null;
@@ -377,9 +385,13 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(response.data.user);
         setPermissions(response.data.permissions as Permission[]);
         logger.debug('用户状态已更新', { user: response.data.user } as Record<string, unknown>);
-        triggerCapabilitiesRefresh(response.data.user.id, { forceRefresh: true }, {
-          isAdmin: response.data.user.is_admin ?? false,
-        });
+        triggerCapabilitiesRefresh(
+          response.data.user.id,
+          { forceRefresh: true },
+          {
+            isAdmin: response.data.user.is_admin ?? false,
+          }
+        );
         const successLog =
           typeof response.message === 'string' && response.message !== ''
             ? response.message
@@ -444,9 +456,13 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(currentUser);
         setPermissions(refreshedPermissions as Permission[]);
         setError(null);
-        await refreshCapabilitiesByUser(currentUser.id, { forceRefresh: true }, {
-          isAdmin: currentUser.is_admin ?? false,
-        });
+        await refreshCapabilitiesByUser(
+          currentUser.id,
+          { forceRefresh: true },
+          {
+            isAdmin: currentUser.is_admin ?? false,
+          }
+        );
       }
     } catch (refreshError) {
       logger.error(
@@ -463,9 +479,13 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(currentUser);
         setPermissions(refreshedPermissions as Permission[]);
         setError(null);
-        await refreshCapabilitiesByUser(currentUser.id, { forceRefresh: true }, {
-          isAdmin: currentUser.is_admin ?? false,
-        });
+        await refreshCapabilitiesByUser(
+          currentUser.id,
+          { forceRefresh: true },
+          {
+            isAdmin: currentUser.is_admin ?? false,
+          }
+        );
       } catch (tokenRefreshError) {
         logger.error(
           '刷新令牌失败，清理本地认证信息',

@@ -2,6 +2,9 @@
 
 ## [Unreleased] - 2026-03-06
 
+### 2026-04-12
+- chore(ci): 收口 `chore/ci-format-cleanup` 分支的格式化漂移与陈旧回归契约。后端多处 auth/contract/analytics/approval/permission 服务文件与前端 api/analytics/asset/project/search/system 等模块已统一格式；同时修正 `backend/tests/unit/conftest.py`、`backend/tests/unit/api/v1/test_roles.py`、`backend/tests/unit/api/v1/test_project.py`，使其对齐当前 `ScopeMode` literal 契约、roles 路由实现，以及 `/api/v1/projects/` 忽略 legacy `X-Perspective` 请求头的现行行为，避免 CI unit gate 因旧夹具和过期断言失败。验证：`cd backend && uv run ruff format --check src/`、`cd frontend && pnpm format:check`、`cd frontend && pnpm lint`、`cd frontend && pnpm type-check`、`cd frontend && pnpm type-check:e2e`、`cd backend && uv run pytest -m unit`（`4584 passed, 3 skipped, 434 deselected`）、`cd frontend && CI=true pnpm exec vitest run --reporter=dot --silent=passed-only <29 changed test files>`（`365 passed`）、`make docs-lint`。
+
 ### 2026-04-11
 - fix(asset): 修复资产列表在本地脏地址数据下的登录后点检阻断。排查发现 `GET /api/v1/assets` 会在读取历史资产时对 `address` 做解密，遇到旧密钥/损坏密文后返回 `None`，再触发 `AssetListItemResponse.address` 的必填字符串校验，导致前端 `/assets/list` 路由请求直接 `400`。现于 `backend/src/crud/asset.py` 的资产读取解密链路中为 `address` 增加最小回退：解密失败时返回空字符串而不是 `None`，保证列表与详情序列化不中断；同步补齐 `backend/tests/unit/crud/test_asset.py` 与 `backend/tests/integration/test_asset_lifecycle.py` 回归，覆盖解密失败回退与真实 API 列表访问场景。验证：`cd backend && uv run pytest tests/unit/crud/test_asset.py -q --no-cov`、`cd backend && uv run pytest tests/integration/test_asset_lifecycle.py -q --no-cov`、登录后前端全量巡检 `node .agents/skills/frontend-inspection/scripts/inspect_frontend.js --chromium-path /home/y/.cache/ms-playwright/chromium-1208/chrome-linux64/chrome`（23/23 路由通过）。
 

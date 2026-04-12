@@ -34,7 +34,10 @@ const DESCRIPTIONS_CONTENT_STYLE = {
 
 const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
   // 计算出租率
-  const calculatedOccupancyRate = calculateOccupancyRate(asset.rented_area ?? 0, asset.rentable_area ?? 0);
+  const calculatedOccupancyRate = calculateOccupancyRate(
+    asset.rented_area ?? 0,
+    asset.rentable_area ?? 0
+  );
   const occupancyRate =
     asset.occupancy_rate !== undefined && asset.occupancy_rate !== null
       ? asset.occupancy_rate

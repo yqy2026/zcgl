@@ -60,7 +60,9 @@ const GlobalSearchPage: React.FC = () => {
             查看详情
           </Button>
         </Space>
-        {item.summary != null && item.summary !== '' ? <Text type="secondary">{item.summary}</Text> : null}
+        {item.summary != null && item.summary !== '' ? (
+          <Text type="secondary">{item.summary}</Text>
+        ) : null}
         {item.keywords.length > 0 ? (
           <div className={styles.keywords}>
             {item.keywords.map(keyword => (
@@ -77,7 +79,11 @@ const GlobalSearchPage: React.FC = () => {
     const items = globalSearchQuery.data?.items ?? [];
 
     return groups.map(group => (
-      <Card key={group.object_type} title={`${group.label} (${group.count})`} className={styles.groupCard}>
+      <Card
+        key={group.object_type}
+        title={`${group.label} (${group.count})`}
+        className={styles.groupCard}
+      >
         <Space orientation="vertical" size="small" style={{ width: '100%' }}>
           {items
             .filter(item => item.object_type === group.object_type)
@@ -88,7 +94,10 @@ const GlobalSearchPage: React.FC = () => {
   };
 
   return (
-    <PageContainer title="全局搜索" subTitle="按当前数据范围跨对象搜索资产、项目、合同、客户和产权证。">
+    <PageContainer
+      title="全局搜索"
+      subTitle="按当前数据范围跨对象搜索资产、项目、合同、客户和产权证。"
+    >
       <div className={styles.page}>
         <Card>
           <div className={styles.toolbar}>
@@ -116,7 +125,11 @@ const GlobalSearchPage: React.FC = () => {
           <Alert
             type="error"
             showIcon
-            title={globalSearchQuery.error instanceof Error ? globalSearchQuery.error.message : '搜索失败'}
+            title={
+              globalSearchQuery.error instanceof Error
+                ? globalSearchQuery.error.message
+                : '搜索失败'
+            }
           />
         ) : null}
 

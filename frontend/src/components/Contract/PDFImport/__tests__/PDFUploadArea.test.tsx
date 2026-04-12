@@ -7,7 +7,8 @@ import { act, renderWithProviders, screen, fireEvent, waitFor } from '@/test/uti
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import PDFUploadArea from '../PDFUploadArea';
 
-const formatStderrWrites = (calls: unknown[][]) => calls.map(call => String(call[0] ?? '')).join(' ');
+const formatStderrWrites = (calls: unknown[][]) =>
+  calls.map(call => String(call[0] ?? '')).join(' ');
 
 // Mock MessageManager
 vi.mock('@/utils/messageManager', () => ({

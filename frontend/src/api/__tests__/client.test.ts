@@ -11,12 +11,10 @@ import { Logger } from '@/utils/logger';
 import { ApiClient, apiClient } from '../client';
 import { API_BASE_URL } from '../config';
 
-const formatStderrWrites = (calls: unknown[][]) => calls.map(call => String(call[0] ?? '')).join(' ');
+const formatStderrWrites = (calls: unknown[][]) =>
+  calls.map(call => String(call[0] ?? '')).join(' ');
 
-const {
-  mockClearAuthData,
-  mockGetCurrentUser,
-} = vi.hoisted(() => ({
+const { mockClearAuthData, mockGetCurrentUser } = vi.hoisted(() => ({
   mockClearAuthData: vi.fn(),
   mockGetCurrentUser: vi.fn(),
 }));

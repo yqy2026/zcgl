@@ -8,7 +8,8 @@ import { ResponseExtractor, ApiErrorHandler } from '../responseExtractor';
 import { AxiosResponse, AxiosError } from 'axios';
 import type { ApiClientError, ApiErrorType } from '@/types/apiResponse';
 
-const formatStderrWrites = (calls: unknown[][]) => calls.map(call => String(call[0] ?? '')).join(' ');
+const formatStderrWrites = (calls: unknown[][]) =>
+  calls.map(call => String(call[0] ?? '')).join(' ');
 
 // =============================================================================
 // Mock数据

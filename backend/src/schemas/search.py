@@ -25,5 +25,9 @@ class GlobalSearchGroup(BaseModel):
 class GlobalSearchResponse(BaseModel):
     query: str = Field(..., description="搜索词")
     total: int = Field(..., ge=0, description="结果总数")
-    items: list[GlobalSearchResultItem] = Field(default_factory=list, description="全部视图结果")
-    groups: list[GlobalSearchGroup] = Field(default_factory=list, description="按对象分组结果")
+    items: list[GlobalSearchResultItem] = Field(
+        default_factory=list, description="全部视图结果"
+    )
+    groups: list[GlobalSearchGroup] = Field(
+        default_factory=list, description="按对象分组结果"
+    )

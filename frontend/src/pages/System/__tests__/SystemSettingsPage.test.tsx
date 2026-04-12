@@ -4,7 +4,8 @@ import { renderWithProviders, screen, waitFor } from '@/test/utils/test-helpers'
 import SystemSettingsPage from '../SystemSettingsPage';
 import { systemService } from '@/services/systemService';
 
-const formatStderrWrites = (calls: unknown[][]) => calls.map(call => String(call[0] ?? '')).join(' ');
+const formatStderrWrites = (calls: unknown[][]) =>
+  calls.map(call => String(call[0] ?? '')).join(' ');
 
 vi.mock('@/services/systemService', () => ({
   systemService: {
@@ -44,13 +45,7 @@ vi.mock('../SystemSettingsPage.module.css', () => ({
 }));
 
 vi.mock('@/components/Common/PageContainer', () => ({
-  default: ({
-    title,
-    children,
-  }: {
-    title?: React.ReactNode;
-    children?: React.ReactNode;
-  }) => (
+  default: ({ title, children }: { title?: React.ReactNode; children?: React.ReactNode }) => (
     <div data-testid="page-container">
       <h1>{title}</h1>
       {children}
@@ -61,13 +56,7 @@ vi.mock('@/components/Common/PageContainer', () => ({
 vi.mock('antd', async () => {
   const actual = await vi.importActual<typeof import('antd')>('antd');
 
-  const Card = ({
-    title,
-    children,
-  }: {
-    title?: React.ReactNode;
-    children?: React.ReactNode;
-  }) => (
+  const Card = ({ title, children }: { title?: React.ReactNode; children?: React.ReactNode }) => (
     <div data-testid="card">
       {title != null && <div data-testid="card-title">{title}</div>}
       {children}
@@ -88,7 +77,11 @@ vi.mock('antd', async () => {
   );
 
   const Space = ({ children }: { children?: React.ReactNode }) => <div>{children}</div>;
-  const Tabs = ({ items }: { items?: Array<{ label?: React.ReactNode; children?: React.ReactNode }> }) => (
+  const Tabs = ({
+    items,
+  }: {
+    items?: Array<{ label?: React.ReactNode; children?: React.ReactNode }>;
+  }) => (
     <div data-testid="tabs">
       {(items ?? []).map((item, index) => (
         <div key={index}>
@@ -101,7 +94,9 @@ vi.mock('antd', async () => {
   const Form = ({ children }: { children?: React.ReactNode }) => <form>{children}</form>;
   Form.Item = ({ children }: { children?: React.ReactNode }) => <div>{children}</div>;
   Form.useForm = () => [{ setFieldsValue: vi.fn() }];
-  const Input = ({ placeholder }: { placeholder?: string }) => <input placeholder={placeholder} readOnly />;
+  const Input = ({ placeholder }: { placeholder?: string }) => (
+    <input placeholder={placeholder} readOnly />
+  );
   Input.TextArea = ({ placeholder }: { placeholder?: string }) => (
     <textarea placeholder={placeholder} readOnly />
   );
@@ -109,13 +104,9 @@ vi.mock('antd', async () => {
     <input placeholder={placeholder} readOnly />
   );
   const Switch = () => <input type="checkbox" readOnly />;
-  const Button = ({
-    children,
-    disabled,
-  }: {
-    children?: React.ReactNode;
-    disabled?: boolean;
-  }) => <button disabled={disabled}>{children}</button>;
+  const Button = ({ children, disabled }: { children?: React.ReactNode; disabled?: boolean }) => (
+    <button disabled={disabled}>{children}</button>
+  );
   const Divider = () => <hr />;
   const Tag = ({ children }: { children?: React.ReactNode }) => <span>{children}</span>;
   const Typography = {

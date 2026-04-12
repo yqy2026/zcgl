@@ -7,7 +7,8 @@ import { MessageManager } from '@/utils/messageManager';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 
-const formatStdoutWrites = (calls: unknown[][]) => calls.map(call => String(call[0] ?? '')).join(' ');
+const formatStdoutWrites = (calls: unknown[][]) =>
+  calls.map(call => String(call[0] ?? '')).join(' ');
 
 vi.mock('@/utils/queryScope', () => ({
   buildQueryScopeKey: () => 'user:user-1|scope:owner,manager',
@@ -111,7 +112,9 @@ describe('useAssetAnalytics', () => {
       expect(result.current.filters).toEqual({});
       expect(result.current.dimension).toBe('area');
       expect(result.current.loading).toBe(true);
-      expect(formatStdoutWrites(stdoutWriteSpy.mock.calls)).not.toContain('[DEBUG] [useAssetAnalytics]');
+      expect(formatStdoutWrites(stdoutWriteSpy.mock.calls)).not.toContain(
+        '[DEBUG] [useAssetAnalytics]'
+      );
     } finally {
       stdoutWriteSpy.mockRestore();
     }
@@ -133,9 +136,9 @@ describe('useAssetAnalytics', () => {
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
-      expect(analyticsService.getComprehensiveAnalytics).toHaveBeenCalledWith({});
-      expect(result.current.analyticsData).toEqual(mockData.data);
-      expect(result.current.hasData).toBe(true);
+    expect(analyticsService.getComprehensiveAnalytics).toHaveBeenCalledWith({});
+    expect(result.current.analyticsData).toEqual(mockData.data);
+    expect(result.current.hasData).toBe(true);
   });
 
   it('should scope analytics cache keys to the current view', async () => {
@@ -166,12 +169,12 @@ describe('useAssetAnalytics', () => {
     expect(
       queryKeys.some(
         queryKey =>
-            Array.isArray(queryKey) &&
-            queryKey[0] === 'analytics' &&
-            queryKey[1] === 'user:user-1|scope:owner,manager' &&
-            queryKey[2] === 'comprehensive'
-        )
-      ).toBe(true);
+          Array.isArray(queryKey) &&
+          queryKey[0] === 'analytics' &&
+          queryKey[1] === 'user:user-1|scope:owner,manager' &&
+          queryKey[2] === 'comprehensive'
+      )
+    ).toBe(true);
   });
 
   it('should update filters and refetch', async () => {

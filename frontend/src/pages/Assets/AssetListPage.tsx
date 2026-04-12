@@ -335,7 +335,6 @@ const AssetListPage: React.FC = () => {
         </Space>
       }
     >
-
       {/* 搜索组件 */}
       <AssetSearch
         onSearch={handleSearch}

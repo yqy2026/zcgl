@@ -8,7 +8,8 @@ import routeCache, {
   useRouteCacheState,
 } from '../routeCache';
 
-const formatStderrWrites = (calls: unknown[][]) => calls.map(call => String(call[0] ?? '')).join(' ');
+const formatStderrWrites = (calls: unknown[][]) =>
+  calls.map(call => String(call[0] ?? '')).join(' ');
 
 describe('routeCache', () => {
   beforeEach(() => {

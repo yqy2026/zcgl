@@ -5,7 +5,8 @@ import ContractImportReview from '../ContractImportReview';
 
 const mockNavigate = vi.fn();
 
-const formatStderrWrites = (calls: unknown[][]) => calls.map(call => String(call[0] ?? '')).join(' ');
+const formatStderrWrites = (calls: unknown[][]) =>
+  calls.map(call => String(call[0] ?? '')).join(' ');
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
@@ -83,11 +84,7 @@ vi.mock('antd', async () => {
     </div>
   );
 
-  const MockPopover = ({
-    children,
-  }: {
-    children?: ReactNode;
-  }) => <>{children}</>;
+  const MockPopover = ({ children }: { children?: ReactNode }) => <>{children}</>;
 
   const MockSelect = ({
     value,

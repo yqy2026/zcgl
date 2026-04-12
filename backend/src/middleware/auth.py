@@ -367,7 +367,10 @@ class DataScopeContextChecker:
     """Resolve and validate request data-scope context."""
 
     EXEMPT_PATH_PREFIXES: tuple[str, ...] = ("/api/v1/auth",)
-    ANALYTICS_PATH_PREFIXES: tuple[str, ...] = ("/api/v1/analytics", "/api/v1/statistics")
+    ANALYTICS_PATH_PREFIXES: tuple[str, ...] = (
+        "/api/v1/analytics",
+        "/api/v1/statistics",
+    )
 
     def __init__(self, *, resource_type: str | None = None) -> None:
         self.resource_type = resource_type
@@ -381,7 +384,10 @@ class DataScopeContextChecker:
         request_path = request.url.path
         raw_view_mode = (
             self._normalize_view_mode(request)
-            if any(request_path.startswith(prefix) for prefix in self.ANALYTICS_PATH_PREFIXES)
+            if any(
+                request_path.startswith(prefix)
+                for prefix in self.ANALYTICS_PATH_PREFIXES
+            )
             else None
         )
 
@@ -481,7 +487,9 @@ class DataScopeContextChecker:
     ) -> ScopeMode:
         if is_admin:
             return "all"
-        if any(request_path.startswith(prefix) for prefix in cls.ANALYTICS_PATH_PREFIXES):
+        if any(
+            request_path.startswith(prefix) for prefix in cls.ANALYTICS_PATH_PREFIXES
+        ):
             if "owner" in subject_binding_types:
                 return "owner"
             if "manager" in subject_binding_types:

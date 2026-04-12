@@ -187,7 +187,9 @@ def require_any_role(role_codes: list[str]) -> Callable[[User, AsyncSession], An
         rbac_service = RBACService(db)
         user_id_value = str(getattr(current_user, "id", ""))
         roles = await rbac_service.get_user_roles(user_id_value)
-        role_names = {str(role.name).strip() for role in roles if getattr(role, "name", None)}
+        role_names = {
+            str(role.name).strip() for role in roles if getattr(role, "name", None)
+        }
 
         if normalized_role_codes.isdisjoint(role_names):
             required_roles = ", ".join(sorted(normalized_role_codes))

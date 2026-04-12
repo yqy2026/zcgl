@@ -598,10 +598,7 @@ describe('AssetDetailPage', () => {
       fireEvent.click(reverseButton);
 
       await waitFor(() => {
-        expect(assetService.reverseAssetReview).toHaveBeenCalledWith(
-          'asset_review_3',
-          '原因说明'
-        );
+        expect(assetService.reverseAssetReview).toHaveBeenCalledWith('asset_review_3', '原因说明');
       });
 
       promptSpy.mockRestore();

@@ -85,7 +85,11 @@ const UserTable: React.FC<UserTableProps> = ({
             record.roles ??
             [];
           if (roleLabels.length === 0) {
-            return <Tag className={`${styles.semanticTag} ${styles.roleTag} ${styles.tonePrimary}`}>未分配</Tag>;
+            return (
+              <Tag className={`${styles.semanticTag} ${styles.roleTag} ${styles.tonePrimary}`}>
+                未分配
+              </Tag>
+            );
           }
           return (
             <Space size={[6, 6]} wrap>

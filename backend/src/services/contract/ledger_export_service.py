@@ -87,8 +87,7 @@ class LedgerExportService:
             raw = item
         else:
             raw = {
-                column: getattr(item, column, None)
-                for column in self.EXPORT_COLUMNS
+                column: getattr(item, column, None) for column in self.EXPORT_COLUMNS
             }
 
         normalized: dict[str, str] = {}
@@ -117,4 +116,3 @@ class LedgerExportService:
 
 
 ledger_export_service = LedgerExportService()
-

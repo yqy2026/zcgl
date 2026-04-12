@@ -9,7 +9,8 @@ import { QueryClient } from '@tanstack/react-query';
 import { screen, fireEvent, waitFor, act, renderWithProviders } from '@/test/utils/test-helpers';
 import AssetImport from '../AssetImport';
 
-const formatStderrWrites = (calls: unknown[][]) => calls.map(call => String(call[0] ?? '')).join(' ');
+const formatStderrWrites = (calls: unknown[][]) =>
+  calls.map(call => String(call[0] ?? '')).join(' ');
 
 interface UploadDraggerMockProps {
   children?: React.ReactNode;

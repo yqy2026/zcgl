@@ -26,7 +26,9 @@ class RolePolicyUpdateRequest(BaseModel):
 async def get_role_data_policies(
     role_id: str,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_any_role(["admin", "system_admin", "perm_admin"])),
+    current_user: User = Depends(
+        require_any_role(["admin", "system_admin", "perm_admin"])
+    ),
 ) -> dict[str, object]:
     del current_user
     try:
@@ -49,7 +51,9 @@ async def put_role_data_policies(
     role_id: str,
     payload: RolePolicyUpdateRequest,
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_any_role(["admin", "system_admin", "perm_admin"])),
+    current_user: User = Depends(
+        require_any_role(["admin", "system_admin", "perm_admin"])
+    ),
 ) -> dict[str, object]:
     del current_user
     try:
@@ -74,7 +78,9 @@ async def put_role_data_policies(
 @router.get("/data-policies/templates")
 async def get_data_policy_templates(
     db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(require_any_role(["admin", "system_admin", "perm_admin"])),
+    current_user: User = Depends(
+        require_any_role(["admin", "system_admin", "perm_admin"])
+    ),
 ) -> dict[str, dict[str, str]]:
     del current_user
     service = DataPolicyService(db, event_bus=authz_event_bus)
