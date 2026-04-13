@@ -769,11 +769,19 @@ async def create_asset(
         resolved_owner_party_id = _normalize_optional_str(
             _authz_ctx.resource_context.get("owner_party_id")
         )
+        resolved_manager_party_id = _normalize_optional_str(
+            _authz_ctx.resource_context.get("manager_party_id")
+        )
         if (
             _normalize_optional_str(asset_in.owner_party_id) is None
             and resolved_owner_party_id is not None
         ):
             asset_in.owner_party_id = resolved_owner_party_id
+        if (
+            _normalize_optional_str(asset_in.manager_party_id) is None
+            and resolved_manager_party_id is not None
+        ):
+            asset_in.manager_party_id = resolved_manager_party_id
     ip_address = get_client_ip(request)
     user_agent = request.headers.get("user-agent", "")
     session_id = request.headers.get("X-Session-ID") or request.headers.get(

@@ -456,3 +456,47 @@ async def test_create_asset_should_backfill_owner_party_from_authz_context() -> 
     assert asset_in.owner_party_id == "owner-party-from-authz"
     assert result["id"] == "asset-1"
     assert mock_service.create_asset.await_args.args[0] is asset_in
+
+
+@pytest.mark.asyncio
+async def test_create_asset_should_backfill_manager_party_from_authz_context() -> None:
+    """创建资产端点应基于鉴权上下文兜底回填 manager_party_id。"""
+    from src.api.v1.assets import assets as module
+
+    mock_service = MagicMock()
+    mock_service.create_asset = AsyncMock(return_value=MagicMock(id="asset-1"))
+
+    request = MagicMock()
+    request.client = MagicMock(host="127.0.0.1")
+    request.headers = {}
+    asset_in = MagicMock(owner_party_id="owner-party-1", manager_party_id=None)
+    current_user = MagicMock(id="user-1")
+    authz_ctx = module.AuthzContext(
+        current_user=current_user,
+        action="create",
+        resource_type="asset",
+        resource_id=None,
+        resource_context={"manager_party_id": "manager-party-from-authz"},
+        allowed=True,
+        reason_code="allow",
+    )
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(module, "AsyncAssetService", lambda _db: mock_service)
+        monkeypatch.setattr(
+            module.AssetResponse,
+            "model_validate",
+            staticmethod(lambda _: {"id": "asset-1"}),
+        )
+        result = await module.create_asset(
+            asset_in=asset_in,
+            request=request,
+            db=MagicMock(),
+            current_user=current_user,
+            _authz_ctx=authz_ctx,
+            audit_logger=MagicMock(),
+        )
+
+    assert asset_in.manager_party_id == "manager-party-from-authz"
+    assert result["id"] == "asset-1"
+    assert mock_service.create_asset.await_args.args[0] is asset_in
