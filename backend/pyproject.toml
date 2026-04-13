@@ -21,10 +21,10 @@ dependencies = [
     "aiofiles>=23.0.0",
     "psutil>=7.1.3",
     "python-dotenv>=1.2.1",
-    "pillow>=12.0.0",
+    "pillow>=12.2.0",
     "sentry-sdk[fastapi]>=1.45.0",
     "httpx>=0.28.1",
-    "cryptography>=42.0.0",
+    "cryptography>=46.0.7",
     "python-jsonlogic>=0.1.0",
     # PDF基础处理（移动到可选依赖）
     "bcrypt>=5.0.0",
