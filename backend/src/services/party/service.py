@@ -1034,8 +1034,9 @@ class PartyService:
         cls, contract: Contract, binding_type: str
     ) -> str | None:
         relation_type = getattr(contract, "group_relation_type", None)
+        relation_name = getattr(relation_type, "name", None)
         normalized_relation_type = (
-            relation_type.name if hasattr(relation_type, "name") else str(relation_type)
+            str(relation_name) if relation_name is not None else str(relation_type)
         ).strip()
         if normalized_relation_type == GroupRelationType.UPSTREAM.name:
             party_value = (
@@ -1064,8 +1065,9 @@ class PartyService:
     @classmethod
     def _resolve_customer_bucket(cls, contract: Contract) -> str:
         relation_type = getattr(contract, "group_relation_type", None)
+        relation_name = getattr(relation_type, "name", None)
         normalized_relation_type = (
-            relation_type.name if hasattr(relation_type, "name") else str(relation_type)
+            str(relation_name) if relation_name is not None else str(relation_type)
         ).strip()
         if normalized_relation_type == GroupRelationType.UPSTREAM.name:
             return "upstream_lease"
@@ -1085,6 +1087,9 @@ class PartyService:
         revenue_mode = getattr(group, "revenue_mode", None)
         relation_type = getattr(contract, "group_relation_type", None)
         status = getattr(contract, "status", None)
+        revenue_mode_name = getattr(revenue_mode, "name", None)
+        relation_type_name = getattr(relation_type, "name", None)
+        status_name = getattr(status, "name", None)
         return {
             "contract_id": str(getattr(contract, "contract_id", "")),
             "contract_number": str(
@@ -1092,13 +1097,13 @@ class PartyService:
                 or getattr(contract, "contract_id", "")
             ),
             "group_code": str(getattr(group, "group_code", "")),
-            "revenue_mode": revenue_mode.name
-            if hasattr(revenue_mode, "name")
+            "revenue_mode": str(revenue_mode_name)
+            if revenue_mode_name is not None
             else str(revenue_mode),
-            "group_relation_type": relation_type.name
-            if hasattr(relation_type, "name")
+            "group_relation_type": str(relation_type_name)
+            if relation_type_name is not None
             else str(relation_type),
-            "status": status.name if hasattr(status, "name") else str(status),
+            "status": str(status_name) if status_name is not None else str(status),
             "effective_from": getattr(contract, "effective_from", None),
             "effective_to": getattr(contract, "effective_to", None),
         }

@@ -82,7 +82,7 @@ _ASSET_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:asset:create"
 
 def _build_asset_party_filter(
     scope_context: DataScopeContext,
-) -> PartyFilter:
+) -> PartyFilter | None:
     return build_party_filter_from_scope_context(scope_context)
 
 

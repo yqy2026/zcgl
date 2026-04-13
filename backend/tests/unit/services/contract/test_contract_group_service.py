@@ -446,6 +446,32 @@ class TestCreateContractGroupDuplicateCheck:
 
 
 class TestPerspectiveScopedContractGroups:
+    async def test_list_groups_should_apply_any_scope_effective_party_ids(
+        self, mock_db: MagicMock
+    ) -> None:
+        service = ContractGroupService()
+
+        with patch(
+            "src.services.contract.contract_group_service.contract_group_crud.list_by_filters",
+            new_callable=AsyncMock,
+            return_value=([], 0),
+        ) as mock_list_by_filters:
+            result = await service.list_groups(
+                mock_db,
+                binding_type="all",
+                effective_party_ids=["owner-1", "manager-1"],
+            )
+
+        assert result == ([], 0)
+        assert mock_list_by_filters.await_args.kwargs["operator_party_ids"] == [
+            "owner-1",
+            "manager-1",
+        ]
+        assert mock_list_by_filters.await_args.kwargs["owner_party_ids"] == [
+            "owner-1",
+            "manager-1",
+        ]
+
     async def test_list_groups_should_apply_manager_effective_party_ids(
         self, mock_db: MagicMock
     ) -> None:
@@ -488,6 +514,50 @@ class TestPerspectiveScopedContractGroups:
                     binding_type="owner",
                     effective_party_ids=["owner-1"],
                 )
+
+    async def test_get_group_detail_should_allow_any_scope_when_owner_matches(
+        self, mock_db: MagicMock
+    ) -> None:
+        service = ContractGroupService()
+        group = MagicMock(spec=ContractGroup)
+        group.contract_group_id = "group-1"
+        group.owner_party_id = "owner-1"
+        group.operator_party_id = "manager-2"
+        group.__table__.columns.keys.return_value = [
+            "contract_group_id",
+            "owner_party_id",
+            "operator_party_id",
+        ]
+        contracts: list[Contract] = []
+
+        with (
+            patch(
+                "src.services.contract.contract_group_service.contract_group_crud.get",
+                new_callable=AsyncMock,
+                return_value=group,
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.list_by_group",
+                new_callable=AsyncMock,
+                return_value=contracts,
+            ),
+            patch(
+                "src.services.contract.contract_group_service.ContractSummary.model_validate",
+                side_effect=lambda contract: contract,
+            ),
+            patch(
+                "src.services.contract.contract_group_service.ContractGroupDetail",
+                side_effect=lambda **kwargs: SimpleNamespace(**kwargs),
+            ),
+        ):
+            result = await service.get_group_detail(
+                mock_db,
+                group_id="group-1",
+                binding_type="all",
+                effective_party_ids=["owner-1", "manager-1"],
+            )
+
+        assert result.contract_group_id == "group-1"
 
 
 # ─── add_contract_to_group（integration of business rules）───────────────────
