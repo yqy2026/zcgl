@@ -5,8 +5,8 @@
 使枚举字段管理功能与代码定义保持一致。
 """
 
-from contextlib import asynccontextmanager
 import logging
+from contextlib import asynccontextmanager
 from typing import Any, TypedDict
 
 from sqlalchemy import text
