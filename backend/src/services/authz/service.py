@@ -2,7 +2,7 @@
 
 import os
 from datetime import UTC, datetime
-from typing import Any, cast
+from typing import Any, TypeGuard, cast
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -32,6 +32,10 @@ from .resource_perspective_registry import (
     resolve_capability_perspectives,
     resource_requires_perspective,
 )
+
+
+def _is_authz_action(value: str) -> TypeGuard[AuthzAction]:
+    return value in {"create", "read", "list", "update", "delete", "export"}
 
 
 class AuthzService:
@@ -182,8 +186,8 @@ class AuthzService:
         static_rbac_actions = await self._get_static_rbac_actions(db, user_id=user_id)
 
         actions_by_resource: dict[str, set[str]] = {}
-        for resource, actions in iter_authenticated_default_actions().items():
-            actions_by_resource.setdefault(resource, set()).update(actions)
+        for resource, default_actions in iter_authenticated_default_actions().items():
+            actions_by_resource.setdefault(resource, set()).update(default_actions)
         for resource, actions in static_rbac_actions.items():
             actions_by_resource.setdefault(resource, set()).update(actions)
         for policy in policies:
@@ -204,8 +208,8 @@ class AuthzService:
         for resource, actions in sorted(actions_by_resource.items()):
             normalized_actions: list[AuthzAction] = []
             for action in sorted(actions):
-                if action in {"create", "read", "list", "update", "delete", "export"}:
-                    normalized_actions.append(cast(AuthzAction, action))
+                if _is_authz_action(action):
+                    normalized_actions.append(action)
             if is_admin:
                 perspectives = list(get_registered_perspectives(resource))
             else:

@@ -142,7 +142,9 @@ async def list_contract_groups(
         revenue_mode=revenue_mode,
         offset=offset,
         limit=limit,
-        binding_type=_scope_ctx.scope_mode,
+        binding_type=(
+            None if _scope_ctx.scope_mode == "all" else _scope_ctx.scope_mode
+        ),
         effective_party_ids=_scope_ctx.effective_party_ids,
     )
     return {
@@ -183,7 +185,9 @@ async def get_contract_group(
         return await contract_group_service.get_group_detail(
             db,
             group_id=group_id,
-            binding_type=_scope_ctx.scope_mode,
+            binding_type=(
+                None if _scope_ctx.scope_mode == "all" else _scope_ctx.scope_mode
+            ),
             effective_party_ids=_scope_ctx.effective_party_ids,
         )
     except BaseBusinessError:
@@ -748,10 +752,11 @@ async def list_contract_audit_logs(
     _ = current_user
     _ = _authz
     try:
-        return await contract_group_service.list_contract_audit_logs(
+        logs = await contract_group_service.list_contract_audit_logs(
             db,
             contract_id=contract_id,
         )
+        return [AuditLogResponse.model_validate(log) for log in logs]
     except BaseBusinessError:
         raise
     except Exception as exc:

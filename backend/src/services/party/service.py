@@ -1034,6 +1034,8 @@ class PartyService:
         cls, contract: Contract, binding_type: str
     ) -> str | None:
         relation_type = getattr(contract, "group_relation_type", None)
+        if relation_type is None:
+            return None
         normalized_relation_type = (
             relation_type.name if hasattr(relation_type, "name") else str(relation_type)
         ).strip()
@@ -1064,6 +1066,8 @@ class PartyService:
     @classmethod
     def _resolve_customer_bucket(cls, contract: Contract) -> str:
         relation_type = getattr(contract, "group_relation_type", None)
+        if relation_type is None:
+            return "entrusted_operation"
         normalized_relation_type = (
             relation_type.name if hasattr(relation_type, "name") else str(relation_type)
         ).strip()
@@ -1092,13 +1096,17 @@ class PartyService:
                 or getattr(contract, "contract_id", "")
             ),
             "group_code": str(getattr(group, "group_code", "")),
-            "revenue_mode": revenue_mode.name
+            "revenue_mode": (revenue_mode.name if revenue_mode is not None else None)
             if hasattr(revenue_mode, "name")
             else str(revenue_mode),
-            "group_relation_type": relation_type.name
+            "group_relation_type": (
+                relation_type.name if relation_type is not None else None
+            )
             if hasattr(relation_type, "name")
             else str(relation_type),
-            "status": status.name if hasattr(status, "name") else str(status),
+            "status": (status.name if status is not None else None)
+            if hasattr(status, "name")
+            else str(status),
             "effective_from": getattr(contract, "effective_from", None),
             "effective_to": getattr(contract, "effective_to", None),
         }

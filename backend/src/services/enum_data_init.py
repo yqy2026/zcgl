@@ -6,6 +6,7 @@
 """
 
 import logging
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any, TypedDict
 
@@ -190,7 +191,7 @@ async def init_enum_data(
 
 
 @asynccontextmanager
-async def _enum_init_advisory_lock(db: AsyncSession):
+async def _enum_init_advisory_lock(db: AsyncSession) -> AsyncIterator[None]:
     """
     使用 PostgreSQL advisory lock 串行化枚举初始化。
 
