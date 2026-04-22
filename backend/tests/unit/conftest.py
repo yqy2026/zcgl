@@ -348,6 +348,15 @@ def client(monkeypatch, db_session):
                 app.dependency_overrides[sub.call] = mock_rbac_checker
             if dependency_type_name == "AuthzPermissionChecker":
                 app.dependency_overrides[sub.call] = mock_authz_checker
+            # `require_any_role(...)` and `get_current_user_with_permissions(...)`
+            # produce plain closure dependencies at route import time, so they
+            # need explicit override here to keep unit tests auth-bypassed.
+            if (
+                callable(sub.call)
+                and getattr(sub.call, "__module__", "") == "src.security.permissions"
+                and getattr(sub.call, "__name__", "") == "dependency"
+            ):
+                app.dependency_overrides[sub.call] = mock_rbac_checker
             apply_rbac_overrides(sub)
 
     for route in app.router.routes:

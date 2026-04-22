@@ -92,7 +92,7 @@ def project_data(db_session: Session, test_organization, test_org_party):
 
 @pytest.fixture
 def admin_user_headers(client, admin_user, test_organization, test_org_party, monkeypatch):
-    """管理员用户认证头"""
+    """管理员用户上下文。"""
     from src.api.v1.assets import project as project_module
     from src.main import app
     from src.services.organization_permission_service import (
@@ -144,7 +144,7 @@ def admin_user_headers(client, admin_user, test_organization, test_org_party, mo
     app.dependency_overrides[project_module.get_current_active_user] = (
         mock_get_current_user
     )
-    yield {"X-Perspective": "manager"}
+    yield {}
     app.dependency_overrides.pop(project_module.get_current_active_user, None)
 
 
@@ -257,18 +257,25 @@ class TestListProjects:
         response = unauthenticated_client.get("/api/v1/projects/")
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-    def test_list_projects_should_reject_missing_perspective_header(self, client):
-        response = client.get("/api/v1/projects/")
-
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
-
-    def test_list_projects_should_reject_owner_perspective_header(self, client):
+    def test_list_projects_should_allow_admin_without_view_mode_query(
+        self, client, admin_user_headers
+    ):
         response = client.get(
             "/api/v1/projects/",
-            headers={"X-Perspective": "owner"},
+            headers=admin_user_headers,
         )
 
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_200_OK
+
+    def test_list_projects_should_ignore_view_mode_query_and_keep_auto_scope(
+        self, client, admin_user_headers
+    ):
+        response = client.get(
+            "/api/v1/projects/?view_mode=tenant",
+            headers=admin_user_headers,
+        )
+
+        assert response.status_code == status.HTTP_200_OK
 
     def test_list_projects_passes_owner_party_id_filter(
         self,
