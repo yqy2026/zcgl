@@ -462,6 +462,32 @@ def test_create_user_party_binding_should_return_400_for_invalid_time_range(
     assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 
+def test_unit_client_should_bypass_closure_based_require_any_role_dependencies(
+    client, monkeypatch
+) -> None:
+    """unit client 应覆盖路由导入时生成的 require_any_role 闭包依赖。"""
+    from src.api.v1 import party as party_module
+
+    monkeypatch.setattr(
+        "src.security.permissions.RBACService.get_user_roles",
+        AsyncMock(
+            side_effect=AssertionError(
+                "closure-based role dependency was not bypassed by unit client"
+            )
+        ),
+    )
+    monkeypatch.setattr(
+        party_module.party_service,
+        "get_user_party_bindings",
+        AsyncMock(return_value=[]),
+    )
+
+    response = client.get("/api/v1/users/test-user-1/party-bindings")
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == []
+
+
 def test_list_parties_should_ignore_legacy_default_org_fallback(
     client, db_session
 ) -> None:

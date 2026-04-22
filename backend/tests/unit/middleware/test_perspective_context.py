@@ -253,6 +253,46 @@ async def test_require_data_scope_context_should_ignore_legacy_header_and_keep_a
     assert result.source == "auto"
 
 
+async def test_require_data_scope_context_should_ignore_view_mode_query_for_projects_and_keep_auto_scope() -> (
+    None
+):
+    checker = require_data_scope_context()
+    request = _build_request(
+        method="GET",
+        path="/api/v1/projects/",
+        query_string=b"view_mode=owner",
+    )
+
+    with (
+        patch(
+            "src.middleware.auth.authz_service.context_builder.build_subject_context",
+            new=AsyncMock(
+                return_value=SubjectContext(
+                    user_id="user-1",
+                    owner_party_ids=["owner-1"],
+                    manager_party_ids=["manager-1"],
+                    headquarters_party_ids=[],
+                    role_ids=[],
+                )
+            ),
+        ),
+        patch(
+            "src.middleware.auth.RBACService.is_admin",
+            new=AsyncMock(return_value=False),
+        ),
+    ):
+        result = await checker(
+            request=request,
+            current_user=_UserStub("user-1"),
+            db=MagicMock(),
+        )
+
+    assert result is not None
+    assert result.scope_mode == "all"
+    assert result.effective_party_ids == ["manager-1", "owner-1"]
+    assert result.source == "auto"
+
+
 async def test_require_data_scope_context_should_build_single_scope_when_single_binding_header_missing() -> (
     None
 ):
