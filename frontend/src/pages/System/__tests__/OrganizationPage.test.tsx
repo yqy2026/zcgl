@@ -5,7 +5,8 @@ import OrganizationPage from '../OrganizationPage';
 import { organizationService } from '@/services/organizationService';
 import { useDictionary } from '@/hooks/useDictionary';
 
-const formatStderrWrites = (calls: unknown[][]) => calls.map(call => String(call[0] ?? '')).join(' ');
+const formatStderrWrites = (calls: unknown[][]) =>
+  calls.map(call => String(call[0] ?? '')).join(' ');
 
 vi.mock('@/services/organizationService', () => ({
   organizationService: {

@@ -355,7 +355,9 @@ class AnalyticsService:
         customer_contract_counts_by_bucket: dict[str, int] = {
             key: 0 for key in CUSTOMER_BREAKDOWN_KEYS
         }
-        lower_year_month, upper_year_month = self._resolve_ledger_year_month_bounds(filters)
+        lower_year_month, upper_year_month = self._resolve_ledger_year_month_bounds(
+            filters
+        )
 
         for contract in contracts:
             if not self._is_contract_statistically_eligible(contract):
@@ -405,7 +407,9 @@ class AnalyticsService:
                 group_mode == RevenueMode.AGENCY
                 and relation_type == GroupRelationType.DIRECT_LEASE
             ):
-                for service_fee_entry in getattr(contract, "service_fee_ledgers", []) or []:
+                for service_fee_entry in (
+                    getattr(contract, "service_fee_ledgers", []) or []
+                ):
                     if getattr(service_fee_entry, "payment_status", None) == "voided":
                         continue
                     if not self._is_ledger_entry_in_scope(
@@ -437,7 +441,9 @@ class AnalyticsService:
                     party_filter=party_filter,
                 )
                 if upstream_party_id is not None:
-                    customer_party_ids_by_bucket["upstream_lease"].add(upstream_party_id)
+                    customer_party_ids_by_bucket["upstream_lease"].add(
+                        upstream_party_id
+                    )
                     customer_party_ids.add(upstream_party_id)
                 customer_contract_counts_by_bucket["upstream_lease"] += 1
 

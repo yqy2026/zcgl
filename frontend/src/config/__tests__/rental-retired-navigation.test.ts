@@ -34,7 +34,8 @@ describe('rental retired navigation config', () => {
 
   it('keeps retired rental routing while contract groups stay under flat asset navigation', () => {
     const assetsSection = (MENU_ITEMS ?? []).find(item => item?.key === '/assets');
-    const assetsChildren = 'children' in (assetsSection ?? {}) ? (assetsSection?.children ?? []) : [];
+    const assetsChildren =
+      'children' in (assetsSection ?? {}) ? (assetsSection?.children ?? []) : [];
 
     expect(assetsChildren).toEqual(
       expect.arrayContaining([expect.objectContaining({ key: '/contract-groups' })])

@@ -5,7 +5,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { notificationService } from '../notificationService';
 
-const formatStderrWrites = (calls: unknown[][]) => calls.map(call => String(call[0] ?? '')).join(' ');
+const formatStderrWrites = (calls: unknown[][]) =>
+  calls.map(call => String(call[0] ?? '')).join(' ');
 
 // Mock apiClient
 vi.mock('@/api/client', () => ({
@@ -121,10 +122,7 @@ describe('NotificationService', () => {
         const result = await notificationService.getUnreadCount();
 
         expect(result).toBe(0);
-        expect(consoleWarnSpy).toHaveBeenCalledWith(
-          '获取未读通知数量失败',
-          expect.any(Error)
-        );
+        expect(consoleWarnSpy).toHaveBeenCalledWith('获取未读通知数量失败', expect.any(Error));
         expect(formatStderrWrites(stderrWriteSpy.mock.calls)).not.toContain('获取未读通知数量失败');
       } finally {
         consoleWarnSpy.mockRestore();
@@ -145,10 +143,7 @@ describe('NotificationService', () => {
         const result = await notificationService.getUnreadCount();
 
         expect(result).toBe(0);
-        expect(consoleWarnSpy).toHaveBeenCalledWith(
-          '获取未读通知数量失败',
-          expect.any(Error)
-        );
+        expect(consoleWarnSpy).toHaveBeenCalledWith('获取未读通知数量失败', expect.any(Error));
         expect(formatStderrWrites(stderrWriteSpy.mock.calls)).not.toContain('获取未读通知数量失败');
       } finally {
         consoleWarnSpy.mockRestore();

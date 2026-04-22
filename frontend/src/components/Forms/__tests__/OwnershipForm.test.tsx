@@ -10,7 +10,8 @@ import OwnershipForm from '../OwnershipForm';
 import { ownershipService } from '@/services/ownershipService';
 import { projectService } from '@/services/projectService';
 
-const formatStderrWrites = (calls: unknown[][]) => calls.map(call => String(call[0] ?? '')).join(' ');
+const formatStderrWrites = (calls: unknown[][]) =>
+  calls.map(call => String(call[0] ?? '')).join(' ');
 
 vi.mock('@/services/ownershipService', () => ({
   ownershipService: {

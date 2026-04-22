@@ -14,7 +14,8 @@ import {
   useErrorHandler,
 } from '../ErrorBoundary';
 
-const formatStdoutWrites = (calls: unknown[][]) => calls.map(call => String(call[0] ?? '')).join(' ');
+const formatStdoutWrites = (calls: unknown[][]) =>
+  calls.map(call => String(call[0] ?? '')).join(' ');
 
 const runtimeEnvState = vi.hoisted(() => ({
   isDevelopment: true,

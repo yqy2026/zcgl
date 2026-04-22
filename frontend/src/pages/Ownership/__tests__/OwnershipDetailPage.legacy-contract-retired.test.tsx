@@ -31,7 +31,8 @@ vi.mock('@/services/assetService', () => ({
 import { ownershipService } from '@/services/ownershipService';
 import { assetService } from '@/services/assetService';
 
-const formatStderrWrites = (calls: unknown[][]) => calls.map(call => String(call[0] ?? '')).join(' ');
+const formatStderrWrites = (calls: unknown[][]) =>
+  calls.map(call => String(call[0] ?? '')).join(' ');
 
 vi.mock('../OwnershipDetailPage.module.css', () => ({
   default: new Proxy(
@@ -45,13 +46,7 @@ vi.mock('../OwnershipDetailPage.module.css', () => ({
 vi.mock('antd', async () => {
   const actual = await vi.importActual<typeof import('antd')>('antd');
 
-  const Card = ({
-    children,
-    title,
-  }: {
-    children?: React.ReactNode;
-    title?: React.ReactNode;
-  }) => (
+  const Card = ({ children, title }: { children?: React.ReactNode; title?: React.ReactNode }) => (
     <div data-testid="card">
       {title != null && <div data-testid="card-title">{title}</div>}
       {children}
@@ -71,7 +66,11 @@ vi.mock('antd', async () => {
     </div>
   );
 
-  const Tabs = ({ items }: { items?: Array<{ label?: React.ReactNode; children?: React.ReactNode }> }) => (
+  const Tabs = ({
+    items,
+  }: {
+    items?: Array<{ label?: React.ReactNode; children?: React.ReactNode }>;
+  }) => (
     <div data-testid="tabs">
       {(items ?? []).map((item, index) => (
         <div key={index}>
@@ -120,26 +119,18 @@ vi.mock('antd', async () => {
   const Table = () => <div data-testid="table" />;
   const Badge = ({ text }: { text?: React.ReactNode }) => <span>{text}</span>;
   const Tag = ({ children }: { children?: React.ReactNode }) => <span>{children}</span>;
-  const Button = ({
-    children,
-    onClick,
-  }: {
-    children?: React.ReactNode;
-    onClick?: () => void;
-  }) => <button onClick={onClick}>{children}</button>;
+  const Button = ({ children, onClick }: { children?: React.ReactNode; onClick?: () => void }) => (
+    <button onClick={onClick}>{children}</button>
+  );
   const Space = ({ children }: { children?: React.ReactNode }) => <div>{children}</div>;
   const Row = ({ children }: { children?: React.ReactNode }) => <div>{children}</div>;
   const Col = ({ children }: { children?: React.ReactNode }) => <div>{children}</div>;
   const Popconfirm = ({ children }: { children?: React.ReactNode }) => <>{children}</>;
   const Modal = ({ children }: { children?: React.ReactNode }) => <>{children}</>;
   const Select = ({ children }: { children?: React.ReactNode }) => <select>{children}</select>;
-  Select.Option = ({
-    children,
-    value,
-  }: {
-    children?: React.ReactNode;
-    value?: string;
-  }) => <option value={value}>{children}</option>;
+  Select.Option = ({ children, value }: { children?: React.ReactNode; value?: string }) => (
+    <option value={value}>{children}</option>
+  );
   const Input = ({ value }: { value?: string }) => <input value={value} readOnly />;
   Input.TextArea = ({ value }: { value?: string }) => <textarea value={value} readOnly />;
   const DatePicker = () => <input readOnly />;
@@ -219,9 +210,7 @@ describe('OwnershipDetailPage legacy contract retirement', () => {
     try {
       renderWithProviders(<OwnershipDetailPage />, { route: '/ownership/owner-1' });
 
-      expect(
-        await screen.findAllByText(/旧租赁合同与财务汇总入口已退休/)
-      ).toHaveLength(2);
+      expect(await screen.findAllByText(/旧租赁合同与财务汇总入口已退休/)).toHaveLength(2);
       expect(screen.getByText('关联合同（迁移中）')).toBeInTheDocument();
       expect(screen.getByText(/财务汇总迁移中/)).toBeInTheDocument();
       expect(screen.getByText(/关联资产 \(1\)/)).toBeInTheDocument();

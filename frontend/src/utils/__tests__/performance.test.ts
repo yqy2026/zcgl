@@ -9,7 +9,8 @@ vi.mock('../logger', () => ({
   }),
 }));
 
-const formatStderrWrites = (calls: unknown[][]) => calls.map(call => String(call[0] ?? '')).join(' ');
+const formatStderrWrites = (calls: unknown[][]) =>
+  calls.map(call => String(call[0] ?? '')).join(' ');
 
 type PerformanceModule = typeof import('../performance');
 type EntryMap = Record<string, PerformanceEntry[]>;

@@ -75,10 +75,7 @@ const setHeaderIfMissing = (
   }
 };
 
-const removeHeader = (
-  headers: InternalAxiosRequestConfig['headers'],
-  name: string
-): void => {
+const removeHeader = (headers: InternalAxiosRequestConfig['headers'], name: string): void => {
   if (headers == null) {
     return;
   }

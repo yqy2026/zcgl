@@ -45,19 +45,25 @@ class ServiceFeeLedgerService:
         entrusted_contracts = [
             contract
             for contract in contracts
-            if getattr(contract, "group_relation_type", None) == GroupRelationType.ENTRUSTED
+            if getattr(contract, "group_relation_type", None)
+            == GroupRelationType.ENTRUSTED
             and getattr(contract, "agency_detail", None) is not None
         ]
         if len(entrusted_contracts) != 1:
-            raise BusinessValidationError("代理合同组必须且只能有一份委托协议用于服务费比例")
+            raise BusinessValidationError(
+                "代理合同组必须且只能有一份委托协议用于服务费比例"
+            )
 
         ratio = Decimal(
-            getattr(entrusted_contracts[0].agency_detail, "service_fee_ratio", Decimal("0"))
+            getattr(
+                entrusted_contracts[0].agency_detail, "service_fee_ratio", Decimal("0")
+            )
         )
         direct_lease_contracts = [
             contract
             for contract in contracts
-            if getattr(contract, "group_relation_type", None) == GroupRelationType.DIRECT_LEASE
+            if getattr(contract, "group_relation_type", None)
+            == GroupRelationType.DIRECT_LEASE
         ]
         existing_entries = await contract_group_crud.list_service_fee_entries_by_group(
             db,

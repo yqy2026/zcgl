@@ -172,9 +172,7 @@ async def export_ledger_entries(
         return Response(
             content=result.content,
             media_type=result.media_type,
-            headers={
-                "Content-Disposition": f"attachment; filename={result.filename}"
-            },
+            headers={"Content-Disposition": f"attachment; filename={result.filename}"},
         )
     except BaseBusinessError:
         raise

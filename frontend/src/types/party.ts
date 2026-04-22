@@ -21,10 +21,7 @@ export interface Party {
 
 export type CustomerType = 'internal' | 'external';
 export type CustomerSubjectNature = 'enterprise' | 'individual';
-export type CustomerContractRole =
-  | 'upstream_lease'
-  | 'downstream_sublease'
-  | 'entrusted_operation';
+export type CustomerContractRole = 'upstream_lease' | 'downstream_sublease' | 'entrusted_operation';
 export type CustomerRiskTagSource = 'manual' | 'rule';
 
 export interface CustomerRiskTag {

@@ -26,7 +26,9 @@ class AnalyticsExportService:
         ("客户合同数", ("customer_contract_count",), "份"),
         ("口径版本", ("metrics_version",), ""),
     )
-    _DISTRIBUTION_SECTIONS: tuple[tuple[str, str, tuple[str, ...], tuple[str, ...], str], ...] = (
+    _DISTRIBUTION_SECTIONS: tuple[
+        tuple[str, str, tuple[str, ...], tuple[str, ...], str], ...
+    ] = (
         (
             "property_nature_distribution",
             "物业性质分布",
@@ -98,7 +100,9 @@ class AnalyticsExportService:
         ("entrusted_operation", "委托运营"),
     )
 
-    def build_summary_rows(self, analytics_data: dict[str, Any]) -> list[dict[str, str]]:
+    def build_summary_rows(
+        self, analytics_data: dict[str, Any]
+    ) -> list[dict[str, str]]:
         rows: list[dict[str, str]] = []
         for metric, paths, unit in self._SUMMARY_METRICS:
             value = self._get_first_value(analytics_data, paths)
@@ -112,7 +116,9 @@ class AnalyticsExportService:
             )
         return rows
 
-    def build_distribution_rows(self, analytics_data: dict[str, Any]) -> list[dict[str, str]]:
+    def build_distribution_rows(
+        self, analytics_data: dict[str, Any]
+    ) -> list[dict[str, str]]:
         rows: list[dict[str, str]] = []
         for field, section, label_keys, value_keys, unit in self._DISTRIBUTION_SECTIONS:
             items = analytics_data.get(field)
@@ -151,7 +157,9 @@ class AnalyticsExportService:
     ) -> list[dict[str, str]]:
         entity_breakdown = analytics_data.get("customer_entity_breakdown")
         contract_breakdown = analytics_data.get("customer_contract_breakdown")
-        if not isinstance(entity_breakdown, dict) and not isinstance(contract_breakdown, dict):
+        if not isinstance(entity_breakdown, dict) and not isinstance(
+            contract_breakdown, dict
+        ):
             return []
 
         rows: list[dict[str, str]] = []

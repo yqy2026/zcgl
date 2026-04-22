@@ -52,10 +52,10 @@ describe('GlobalSearchPage', () => {
 
   it('renders all-view results and supports grouped view switch', async () => {
     renderWithProviders(
-        <Routes>
-          <Route path="/search" element={<GlobalSearchPage />} />
-        </Routes>,
-        { route: '/search?q=测试' }
+      <Routes>
+        <Route path="/search" element={<GlobalSearchPage />} />
+      </Routes>,
+      { route: '/search?q=测试' }
     );
 
     expect(await screen.findByText('测试资产')).toBeInTheDocument();
@@ -70,13 +70,13 @@ describe('GlobalSearchPage', () => {
   });
 
   it('navigates to result route when clicking a result item', async () => {
-      renderWithProviders(
-        <Routes>
-          <Route path="/search" element={<GlobalSearchPage />} />
-          <Route path="/assets/:id" element={<div>Asset Detail</div>} />
-        </Routes>,
-        { route: '/search?q=测试' }
-      );
+    renderWithProviders(
+      <Routes>
+        <Route path="/search" element={<GlobalSearchPage />} />
+        <Route path="/assets/:id" element={<div>Asset Detail</div>} />
+      </Routes>,
+      { route: '/search?q=测试' }
+    );
 
     fireEvent.click(await screen.findByRole('button', { name: '查看资产测试资产详情' }));
 

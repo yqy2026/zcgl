@@ -8,7 +8,8 @@ import React from 'react';
 import { renderWithProviders, screen, fireEvent, waitFor } from '@/test/utils/test-helpers';
 import { useMutation } from '@tanstack/react-query';
 
-const formatStderrWrites = (calls: unknown[][]) => calls.map(call => String(call[0] ?? '')).join(' ');
+const formatStderrWrites = (calls: unknown[][]) =>
+  calls.map(call => String(call[0] ?? '')).join(' ');
 
 // Mock services
 vi.mock('@/services/assetService', () => ({

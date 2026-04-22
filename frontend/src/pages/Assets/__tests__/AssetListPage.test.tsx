@@ -114,12 +114,15 @@ vi.mock('@/utils/queryScope', () => ({
 import { assetService } from '@/services/assetService';
 import { MessageManager } from '@/utils/messageManager';
 
-const formatStderrWrites = (calls: unknown[][]) => calls.map(call => String(call[0] ?? '')).join(' ');
+const formatStderrWrites = (calls: unknown[][]) =>
+  calls.map(call => String(call[0] ?? '')).join(' ');
 const realCreateElement = document.createElement.bind(document);
 
 const stubDownloadLinkClick = () => {
   const clickSpy = vi.fn();
-  const createElementSpy = vi.spyOn(document, 'createElement').mockImplementation(((tagName: string) => {
+  const createElementSpy = vi.spyOn(document, 'createElement').mockImplementation(((
+    tagName: string
+  ) => {
     const element = realCreateElement(tagName);
 
     if (tagName.toLowerCase() === 'a') {

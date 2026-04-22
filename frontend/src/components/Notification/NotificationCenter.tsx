@@ -212,7 +212,9 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClick }) => {
                   </div>
                   <div className={styles.notificationTitle}>
                     <Text
-                      strong={notification.priority === 'high' || notification.priority === 'urgent'}
+                      strong={
+                        notification.priority === 'high' || notification.priority === 'urgent'
+                      }
                     >
                       {notification.title}
                     </Text>

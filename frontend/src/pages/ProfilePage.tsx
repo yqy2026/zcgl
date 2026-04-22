@@ -190,9 +190,7 @@ const ProfilePage: React.FC = () => {
                       ? user.phone
                       : '-'}
                   </Descriptions.Item>
-                  <Descriptions.Item label="角色">
-                    {getRoleDisplay(user.roles)}
-                  </Descriptions.Item>
+                  <Descriptions.Item label="角色">{getRoleDisplay(user.roles)}</Descriptions.Item>
                   <Descriptions.Item label="状态">
                     {getStatusDisplay(user.is_active)}
                   </Descriptions.Item>
