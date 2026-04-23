@@ -1,9 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { clearAuthState, ensureAuthenticated } from '../helpers/auth';
-import {
-  LEGACY_CONTRACT_ROUTES,
-  legacyContractRoutePattern,
-} from '../helpers/legacyContract';
+import { LEGACY_CONTRACT_ROUTES, legacyContractRoutePattern } from '../helpers/legacyContract';
 
 interface UsabilityRouteCase {
   path: string;
@@ -23,8 +20,8 @@ const CORE_ROUTE_CASES: UsabilityRouteCase[] = [
     readySelectors: ['.dashboardContainer', '.ant-card', '.errorContainer'],
   },
   {
-    path: '/owner/assets',
-    urlPattern: /\/owner\/assets$/,
+    path: '/assets/list',
+    urlPattern: /\/assets\/list$/,
     titlePattern: /资产列表|资产管理/i,
     readySelectors: ['.ant-table', '.ant-empty'],
   },
@@ -35,14 +32,14 @@ const CORE_ROUTE_CASES: UsabilityRouteCase[] = [
     readySelectors: LEGACY_CONTRACT_RETIRED_READY_SELECTORS,
   },
   {
-    path: '/manager/projects',
-    urlPattern: /\/manager\/projects$/,
+    path: '/project',
+    urlPattern: /\/project$/,
     titlePattern: /项目管理/i,
     readySelectors: ['.ant-table', '.ant-empty'],
   },
   {
-    path: '/owner/property-certificates',
-    urlPattern: /\/owner\/property-certificates$/,
+    path: '/property-certificates',
+    urlPattern: /\/property-certificates$/,
     titlePattern: /产权证管理/i,
     readySelectors: ['.ant-table', '.ant-empty'],
   },
@@ -114,8 +111,8 @@ test.describe('@user-usable 用户可用性冒烟', () => {
   test('authenticated user can reach key creation entries and see retired contract entry state', async ({
     page,
   }) => {
-    await page.goto('/owner/assets');
-    await expect(page).toHaveURL(/\/owner\/assets$/);
+    await page.goto('/assets/list');
+    await expect(page).toHaveURL(/\/assets\/list$/);
     const createAssetButton = page.getByRole('button', { name: /新增资产/ }).first();
     if (await isLocatorVisible(createAssetButton)) {
       await createAssetButton.click();
@@ -130,15 +127,15 @@ test.describe('@user-usable 用户可用性冒烟', () => {
     await expect(page.getByText(/租赁前端模块已退休/i).first()).toBeVisible();
     await expect(page.getByText(/旧合同前端页面已下线/i).first()).toBeVisible();
 
-    await page.goto('/manager/projects');
-    await expect(page).toHaveURL(/\/manager\/projects$/);
+    await page.goto('/project');
+    await expect(page).toHaveURL(/\/project$/);
     const createProjectButton = page.getByRole('button', { name: /新建项目/ }).first();
     await expect(createProjectButton).toBeVisible();
     await createProjectButton.click();
     await expect(page.getByRole('dialog', { name: /新建项目|编辑项目/i })).toBeVisible();
 
-    await page.goto('/owner/property-certificates');
-    await expect(page).toHaveURL(/\/owner\/property-certificates$/);
+    await page.goto('/property-certificates');
+    await expect(page).toHaveURL(/\/property-certificates$/);
     const createCertificateButton = page.getByRole('button', { name: /新建产权证/ }).first();
     if (await isLocatorVisible(createCertificateButton)) {
       await createCertificateButton.click();
