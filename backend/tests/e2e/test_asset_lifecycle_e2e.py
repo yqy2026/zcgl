@@ -7,6 +7,8 @@ from uuid import uuid4
 import pytest
 from fastapi.testclient import TestClient
 
+from src.models.party import Party, PartyType
+from src.models.user_party_binding import RelationType, UserPartyBinding
 from tests.e2e.factories import (
     create_asset_ownership as _create_ownership,
 )
@@ -17,16 +19,100 @@ from tests.e2e.factories import (
 pytestmark = pytest.mark.e2e
 
 
+def _ensure_asset_party_scope(
+    db_session,
+    authenticated_client: TestClient,
+    *,
+    suffix: str,
+) -> Party:
+    ownership = _create_ownership(db_session, suffix)
+    party = (
+        db_session.query(Party)
+        .filter(
+            Party.party_type == PartyType.LEGAL_ENTITY,
+            Party.external_ref == ownership.id,
+        )
+        .one_or_none()
+    )
+    if party is None:
+        party = Party(
+            party_type=PartyType.LEGAL_ENTITY,
+            name=ownership.name,
+            code=ownership.code,
+            external_ref=ownership.id,
+            status="active",
+        )
+        db_session.add(party)
+        db_session.flush()
+
+    user_id = getattr(authenticated_client, "_user_id", None)
+    assert isinstance(user_id, str) and user_id != ""
+
+    binding = (
+        db_session.query(UserPartyBinding)
+        .filter(
+            UserPartyBinding.user_id == user_id,
+            UserPartyBinding.party_id == party.id,
+            UserPartyBinding.relation_type == RelationType.OWNER,
+        )
+        .one_or_none()
+    )
+    if binding is None:
+        existing_primary_owner_binding = (
+            db_session.query(UserPartyBinding)
+            .filter(
+                UserPartyBinding.user_id == user_id,
+                UserPartyBinding.relation_type == RelationType.OWNER,
+                UserPartyBinding.is_primary.is_(True),
+            )
+            .one_or_none()
+        )
+        binding = UserPartyBinding(
+            user_id=user_id,
+            party_id=party.id,
+            relation_type=RelationType.OWNER,
+            is_primary=existing_primary_owner_binding is None,
+        )
+        db_session.add(binding)
+        db_session.flush()
+
+    db_session.commit()
+    db_session.refresh(party)
+    return party
+
+
+def _create_scoped_asset_payload(
+    db_session,
+    authenticated_client: TestClient,
+    *,
+    suffix: str,
+    usage_status: str = "出租",
+) -> dict[str, object]:
+    party = _ensure_asset_party_scope(
+        db_session,
+        authenticated_client,
+        suffix=suffix,
+    )
+    payload = _create_asset_payload(
+        suffix=suffix,
+        ownership_id=party.external_ref or party.id,
+        usage_status=usage_status,
+    )
+    payload["owner_party_id"] = party.id
+    payload["manager_party_id"] = party.id
+    return payload
+
+
 def test_asset_complete_lifecycle_e2e(
     authenticated_client: TestClient,
     csrf_headers: dict[str, str],
     db_session,
 ) -> None:
     suffix = uuid4().hex[:8]
-    ownership = _create_ownership(db_session, suffix)
-    payload = _create_asset_payload(
+    payload = _create_scoped_asset_payload(
+        db_session,
+        authenticated_client,
         suffix=suffix,
-        ownership_id=ownership.id,
     )
 
     create_response = authenticated_client.post(
@@ -70,16 +156,16 @@ def test_asset_search_and_filter_e2e(
     db_session,
 ) -> None:
     suffix = uuid4().hex[:8]
-    ownership = _create_ownership(db_session, suffix)
-
-    payload_a = _create_asset_payload(
+    payload_a = _create_scoped_asset_payload(
+        db_session,
+        authenticated_client,
         suffix=f"{suffix}a",
-        ownership_id=ownership.id,
         usage_status="出租",
     )
-    payload_b = _create_asset_payload(
+    payload_b = _create_scoped_asset_payload(
+        db_session,
+        authenticated_client,
         suffix=f"{suffix}b",
-        ownership_id=ownership.id,
         usage_status="闲置",
     )
 
@@ -138,10 +224,10 @@ def test_asset_create_requires_csrf_header_e2e(
     db_session,
 ) -> None:
     suffix = uuid4().hex[:8]
-    ownership = _create_ownership(db_session, suffix)
-    payload = _create_asset_payload(
+    payload = _create_scoped_asset_payload(
+        db_session,
+        authenticated_client,
         suffix=f"{suffix}no-csrf",
-        ownership_id=ownership.id,
     )
 
     response = authenticated_client.post("/api/v1/assets", json=payload)
@@ -154,10 +240,10 @@ def test_deleted_asset_not_returned_in_search_e2e(
     db_session,
 ) -> None:
     suffix = uuid4().hex[:8]
-    ownership = _create_ownership(db_session, suffix)
-    payload = _create_asset_payload(
+    payload = _create_scoped_asset_payload(
+        db_session,
+        authenticated_client,
         suffix=f"{suffix}hidden",
-        ownership_id=ownership.id,
     )
 
     create_response = authenticated_client.post(
@@ -198,10 +284,10 @@ def test_asset_restore_after_soft_delete_e2e(
     db_session,
 ) -> None:
     suffix = uuid4().hex[:8]
-    ownership = _create_ownership(db_session, suffix)
-    payload = _create_asset_payload(
+    payload = _create_scoped_asset_payload(
+        db_session,
+        authenticated_client,
         suffix=f"{suffix}restore",
-        ownership_id=ownership.id,
     )
 
     create_response = authenticated_client.post(
@@ -240,10 +326,10 @@ def test_asset_update_and_delete_require_csrf_header_e2e(
     db_session,
 ) -> None:
     suffix = uuid4().hex[:8]
-    ownership = _create_ownership(db_session, suffix)
-    payload = _create_asset_payload(
+    payload = _create_scoped_asset_payload(
+        db_session,
+        authenticated_client,
         suffix=f"{suffix}csrf-update-delete",
-        ownership_id=ownership.id,
     )
 
     create_response = authenticated_client.post(
@@ -277,10 +363,10 @@ def test_asset_hard_delete_requires_deleted_state_e2e(
     db_session,
 ) -> None:
     suffix = uuid4().hex[:8]
-    ownership = _create_ownership(db_session, suffix)
-    payload = _create_asset_payload(
+    payload = _create_scoped_asset_payload(
+        db_session,
+        authenticated_client,
         suffix=f"{suffix}hard-delete-precheck",
-        ownership_id=ownership.id,
     )
 
     create_response = authenticated_client.post(
@@ -310,10 +396,10 @@ def test_asset_hard_delete_blocks_restore_e2e(
     db_session,
 ) -> None:
     suffix = uuid4().hex[:8]
-    ownership = _create_ownership(db_session, suffix)
-    payload = _create_asset_payload(
+    payload = _create_scoped_asset_payload(
+        db_session,
+        authenticated_client,
         suffix=f"{suffix}hard-delete",
-        ownership_id=ownership.id,
     )
 
     create_response = authenticated_client.post(

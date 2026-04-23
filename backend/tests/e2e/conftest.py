@@ -295,6 +295,7 @@ def authenticated_client(client, create_test_user_factory, db_session):
         client.cookies.set("csrf_token", csrf_token)
 
     setattr(client, "_csrf_token", csrf_token)
+    setattr(client, "_user_id", user.id)
     return client
 
 
