@@ -26,7 +26,7 @@ services:
     ports:
       - "8002:8002"
     environment:
-      - ENVIRONMENT=production
+      - ENVIRONMENT=development
       - DATABASE_URL=${DATABASE_URL}
       - REDIS_URL=redis://redis:6379/0
       - REDIS_HOST=redis
@@ -35,7 +35,7 @@ services:
       - SECRET_KEY=${SECRET_KEY}
       - DATA_ENCRYPTION_KEY=${DATA_ENCRYPTION_KEY}
       - REQUIRE_ENCRYPTION=${REQUIRE_ENCRYPTION}
-      - CORS_ORIGINS=http://localhost:3000,http://frontend:80
+      - CORS_ORIGINS=["http://localhost:3000","http://frontend:80"]
       - API_PORT=8002
     depends_on:
       postgres:
@@ -46,7 +46,7 @@ services:
       - ./logs:/app/logs
       - ./config:/app/config
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8002/api/v1/monitoring/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8002/docs"]
       interval: 30s
       timeout: 10s
       retries: 3

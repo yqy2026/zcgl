@@ -65,15 +65,12 @@ RUN chown -R appuser:appgroup /usr/share/nginx/html \
     /var/log/nginx \
     /var/run
 
-# 切换到非root用户
-USER appuser
-
 # 暴露端口
 EXPOSE 80
 
 # 健康检查
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:80/health || exit 1
+  CMD curl -f http://localhost:80/ || exit 1
 
 # 启动nginx
 CMD ["nginx", "-g", "daemon off;"]

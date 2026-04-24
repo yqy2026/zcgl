@@ -6,14 +6,20 @@
 """
 
 import logging
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from typing import Any, TypedDict
 
+from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..crud.enum_field import enum_field_type_crud, enum_field_value_crud
 from ..models.enum_field import EnumFieldType, EnumFieldValue
 
 logger = logging.getLogger(__name__)
+
+_ENUM_INIT_ADVISORY_LOCK_KEY = 2026041001
 
 
 def _set_attr(obj: Any, attr: str, value: Any) -> None:
@@ -161,138 +167,167 @@ async def init_enum_data(
         "errors": [],
     }
 
-    enum_codes = list(STANDARD_ENUMS.keys())
-    try:
-        existing_types = await enum_field_type_crud.get_by_codes_async(
-            db, codes=enum_codes
-        )
-    except Exception as e:
-        for enum_code in STANDARD_ENUMS:
-            error_msg = f"处理枚举类型 {enum_code} 失败: {e}"
-            logger.error(error_msg)
-            stats["errors"].append(error_msg)
-        await db.commit()
-        logger.info(f"枚举数据初始化完成: {stats}")
-        return stats
-
-    existing_types_by_code = {
-        str(enum_type.code): enum_type
-        for enum_type in existing_types
-        if getattr(enum_type, "code", None) is not None
-    }
-    existing_values_by_type_and_value: dict[tuple[str, str], EnumFieldValue] = {}
-
-    existing_type_ids = [
-        str(enum_type.id)
-        for enum_type in existing_types
-        if getattr(enum_type, "id", None) is not None
-    ]
-    if existing_type_ids:
-        try:
-            existing_values = await enum_field_value_crud.get_by_type_ids_async(
-                db, enum_type_ids=existing_type_ids
-            )
-            existing_values_by_type_and_value = {
-                (str(value.enum_type_id), str(value.value)): value
-                for value in existing_values
-                if value.enum_type_id is not None and value.value is not None
-            }
-        except Exception as e:
-            for enum_code in STANDARD_ENUMS:
+    async with _enum_init_advisory_lock(db):
+        for enum_code, enum_config in STANDARD_ENUMS.items():
+            try:
+                type_stats = await _sync_single_enum_type(
+                    db=db,
+                    enum_code=enum_code,
+                    enum_config=enum_config,
+                    created_by=created_by,
+                )
+                stats["types_created"] += type_stats["types_created"]
+                stats["types_updated"] += type_stats["types_updated"]
+                stats["values_created"] += type_stats["values_created"]
+                stats["values_updated"] += type_stats["values_updated"]
+            except Exception as e:
                 error_msg = f"处理枚举类型 {enum_code} 失败: {e}"
                 logger.error(error_msg)
                 stats["errors"].append(error_msg)
-            await db.commit()
-            logger.info(f"枚举数据初始化完成: {stats}")
-            return stats
 
-    for enum_code, enum_config in STANDARD_ENUMS.items():
-        try:
-            enum_type = existing_types_by_code.get(enum_code)
-
-            if not enum_type:
-                # 创建新枚举类型
-                enum_type = EnumFieldType()
-                _set_attr(enum_type, "code", enum_code)
-                _set_attr(enum_type, "name", enum_config["name"])
-                _set_attr(enum_type, "category", enum_config.get("category", "其他"))
-                _set_attr(
-                    enum_type,
-                    "description",
-                    enum_config.get("description", ""),
-                )
-                _set_attr(enum_type, "is_system", True)
-                _set_attr(enum_type, "status", "active")
-                _set_attr(enum_type, "created_by", created_by)
-                db.add(enum_type)
-                await db.flush()  # 获取ID
-                existing_types_by_code[enum_code] = enum_type
-                stats["types_created"] += 1
-                logger.info(f"创建枚举类型: {enum_code}")
-            else:
-                # 更新现有枚举类型
-                _set_attr(enum_type, "name", enum_config["name"])
-                _set_attr(
-                    enum_type,
-                    "category",
-                    enum_config.get("category", enum_type.category),
-                )
-                _set_attr(
-                    enum_type,
-                    "description",
-                    enum_config.get("description", enum_type.description),
-                )
-                _set_attr(enum_type, "is_system", True)
-                _set_attr(enum_type, "status", "active")
-                _set_attr(enum_type, "is_deleted", False)
-                _set_attr(enum_type, "updated_by", created_by)
-                stats["types_updated"] += 1
-                logger.info(f"更新枚举类型: {enum_code}")
-
-            # 处理枚举值
-            enum_type_id = getattr(enum_type, "id", None)
-            if enum_type_id is None:
-                raise ValueError(f"枚举类型 {enum_code} 缺少 id")
-            enum_type_id_str = str(enum_type_id)
-
-            for value_config in enum_config["values"]:
-                value_dict: EnumValueConfig = value_config
-                existing_value = existing_values_by_type_and_value.get(
-                    (enum_type_id_str, value_dict["value"])
-                )
-
-                if not existing_value:
-                    new_value = EnumFieldValue()
-                    _set_attr(new_value, "enum_type_id", enum_type_id_str)
-                    _set_attr(new_value, "value", value_dict["value"])
-                    _set_attr(new_value, "label", value_dict["label"])
-                    _set_attr(new_value, "sort_order", value_dict.get("sort_order", 0))
-                    _set_attr(new_value, "is_active", True)
-                    _set_attr(new_value, "is_deleted", False)
-                    _set_attr(new_value, "created_by", created_by)
-                    db.add(new_value)
-                    existing_values_by_type_and_value[
-                        (enum_type_id_str, value_dict["value"])
-                    ] = new_value
-                    stats["values_created"] += 1
-                else:
-                    # 更新现有枚举值
-                    _set_attr(existing_value, "label", value_dict["label"])
-                    _set_attr(
-                        existing_value,
-                        "sort_order",
-                        value_dict.get("sort_order", existing_value.sort_order),
-                    )
-                    _set_attr(existing_value, "is_active", True)
-                    _set_attr(existing_value, "is_deleted", False)
-                    _set_attr(existing_value, "updated_by", created_by)
-                    stats["values_updated"] += 1
-
-        except Exception as e:
-            error_msg = f"处理枚举类型 {enum_code} 失败: {e}"
-            logger.error(error_msg)
-            stats["errors"].append(error_msg)
-
-    await db.commit()
+        await db.commit()
     logger.info(f"枚举数据初始化完成: {stats}")
     return stats
+
+
+@asynccontextmanager
+async def _enum_init_advisory_lock(db: AsyncSession) -> AsyncIterator[None]:
+    """
+    使用 PostgreSQL advisory lock 串行化枚举初始化。
+
+    这样多 worker 并发启动时，只有一个 worker 执行初始化写入，
+    其他 worker 会在锁释放后读取已提交结果，避免无意义的唯一键冲突日志。
+    """
+    await db.execute(
+        text("SELECT pg_advisory_lock(:lock_key)"),
+        {"lock_key": _ENUM_INIT_ADVISORY_LOCK_KEY},
+    )
+    try:
+        yield
+    finally:
+        await db.execute(
+            text("SELECT pg_advisory_unlock(:lock_key)"),
+            {"lock_key": _ENUM_INIT_ADVISORY_LOCK_KEY},
+        )
+
+
+async def _sync_single_enum_type(
+    *,
+    db: AsyncSession,
+    enum_code: str,
+    enum_config: EnumTypeConfig,
+    created_by: str,
+) -> dict[str, int]:
+    """
+    同步单个枚举类型及其值。
+
+    使用 savepoint + 一次重试来吸收并发启动时的唯一键冲突，
+    避免整个 session 因单条重复写入进入 pending rollback。
+    """
+    for attempt in range(2):
+        local_stats = {
+            "types_created": 0,
+            "types_updated": 0,
+            "values_created": 0,
+            "values_updated": 0,
+        }
+        try:
+            async with db.begin_nested():
+                enum_type = await enum_field_type_crud.get_by_code_async(db, enum_code)
+
+                if not enum_type:
+                    enum_type = EnumFieldType()
+                    _set_attr(enum_type, "code", enum_code)
+                    _set_attr(enum_type, "name", enum_config["name"])
+                    _set_attr(
+                        enum_type,
+                        "category",
+                        enum_config.get("category", "其他"),
+                    )
+                    _set_attr(
+                        enum_type,
+                        "description",
+                        enum_config.get("description", ""),
+                    )
+                    _set_attr(enum_type, "is_system", True)
+                    _set_attr(enum_type, "status", "active")
+                    _set_attr(enum_type, "created_by", created_by)
+                    db.add(enum_type)
+                    await db.flush()
+                    local_stats["types_created"] += 1
+                    logger.info(f"创建枚举类型: {enum_code}")
+                else:
+                    _set_attr(enum_type, "name", enum_config["name"])
+                    _set_attr(
+                        enum_type,
+                        "category",
+                        enum_config.get("category", enum_type.category),
+                    )
+                    _set_attr(
+                        enum_type,
+                        "description",
+                        enum_config.get("description", enum_type.description),
+                    )
+                    _set_attr(enum_type, "is_system", True)
+                    _set_attr(enum_type, "status", "active")
+                    _set_attr(enum_type, "is_deleted", False)
+                    _set_attr(enum_type, "updated_by", created_by)
+                    local_stats["types_updated"] += 1
+                    logger.info(f"更新枚举类型: {enum_code}")
+
+                enum_type_id = getattr(enum_type, "id", None)
+                if enum_type_id is None:
+                    raise ValueError(f"枚举类型 {enum_code} 缺少 id")
+
+                existing_values = await enum_field_value_crud.get_by_type_ids_async(
+                    db, enum_type_ids=[str(enum_type_id)]
+                )
+                existing_values_by_value = {
+                    str(value.value): value
+                    for value in existing_values
+                    if value.value is not None
+                }
+
+                for value_config in enum_config["values"]:
+                    value_dict: EnumValueConfig = value_config
+                    existing_value = existing_values_by_value.get(value_dict["value"])
+
+                    if not existing_value:
+                        new_value = EnumFieldValue()
+                        _set_attr(new_value, "enum_type_id", str(enum_type_id))
+                        _set_attr(new_value, "value", value_dict["value"])
+                        _set_attr(new_value, "label", value_dict["label"])
+                        _set_attr(
+                            new_value, "sort_order", value_dict.get("sort_order", 0)
+                        )
+                        _set_attr(new_value, "is_active", True)
+                        _set_attr(new_value, "is_deleted", False)
+                        _set_attr(new_value, "created_by", created_by)
+                        db.add(new_value)
+                        await db.flush()
+                        existing_values_by_value[value_dict["value"]] = new_value
+                        local_stats["values_created"] += 1
+                    else:
+                        _set_attr(existing_value, "label", value_dict["label"])
+                        _set_attr(
+                            existing_value,
+                            "sort_order",
+                            value_dict.get("sort_order", existing_value.sort_order),
+                        )
+                        _set_attr(existing_value, "is_active", True)
+                        _set_attr(existing_value, "is_deleted", False)
+                        _set_attr(existing_value, "updated_by", created_by)
+                        local_stats["values_updated"] += 1
+
+            return local_stats
+        except IntegrityError as exc:
+            if attempt == 0:
+                logger.warning(
+                    "枚举类型 %s 初始化遇到并发唯一键冲突，准备重试一次: %s",
+                    enum_code,
+                    exc,
+                )
+                continue
+            raise
+
+    raise RuntimeError(f"枚举类型 {enum_code} 初始化在重试后仍失败")

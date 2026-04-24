@@ -39,6 +39,10 @@ def _utcnow_naive() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
 
+def _set_model_attr(obj: object, attr: str, value: object) -> None:
+    object.__setattr__(obj, attr, value)
+
+
 class ApprovalService:
     """审批服务。"""
 
@@ -123,14 +127,14 @@ class ApprovalService:
         context: dict[str, Any] | None = None,
     ) -> ApprovalActionLog:
         log = ApprovalActionLog()
-        log.id = str(uuid.uuid4())
-        log.approval_instance_id = approval_instance_id
-        log.approval_task_snapshot_id = approval_task_snapshot_id
-        log.action = action
-        log.operator_id = operator_id
-        log.comment = comment
-        log.context = context
-        log.created_at = _utcnow_naive()
+        _set_model_attr(log, "id", str(uuid.uuid4()))
+        _set_model_attr(log, "approval_instance_id", approval_instance_id)
+        _set_model_attr(log, "approval_task_snapshot_id", approval_task_snapshot_id)
+        _set_model_attr(log, "action", action)
+        _set_model_attr(log, "operator_id", operator_id)
+        _set_model_attr(log, "comment", comment)
+        _set_model_attr(log, "context", context)
+        _set_model_attr(log, "created_at", _utcnow_naive())
         self.db.add(log)
         await self.db.flush()
         return log
@@ -169,29 +173,29 @@ class ApprovalService:
 
             now = _utcnow_naive()
             instance = ApprovalInstance()
-            instance.id = str(uuid.uuid4())
-            instance.approval_no = self._generate_approval_no()
-            instance.business_type = business_type
-            instance.business_id = business_id
-            instance.status = _APPROVAL_STATUS_PENDING
-            instance.starter_id = starter_id
-            instance.assignee_user_id = assignee_user_id
-            instance.current_task_id = None
-            instance.started_at = now
-            instance.ended_at = None
+            _set_model_attr(instance, "id", str(uuid.uuid4()))
+            _set_model_attr(instance, "approval_no", self._generate_approval_no())
+            _set_model_attr(instance, "business_type", business_type)
+            _set_model_attr(instance, "business_id", business_id)
+            _set_model_attr(instance, "status", _APPROVAL_STATUS_PENDING)
+            _set_model_attr(instance, "starter_id", starter_id)
+            _set_model_attr(instance, "assignee_user_id", assignee_user_id)
+            _set_model_attr(instance, "current_task_id", None)
+            _set_model_attr(instance, "started_at", now)
+            _set_model_attr(instance, "ended_at", None)
             self.db.add(instance)
             await self.db.flush()
 
             task = ApprovalTaskSnapshot()
-            task.id = str(uuid.uuid4())
-            task.approval_instance_id = instance.id
-            task.business_type = business_type
-            task.business_id = business_id
-            task.task_name = "资产审批"
-            task.assignee_user_id = assignee_user_id
-            task.status = _TASK_STATUS_PENDING
-            task.created_at = now
-            task.completed_at = None
+            _set_model_attr(task, "id", str(uuid.uuid4()))
+            _set_model_attr(task, "approval_instance_id", instance.id)
+            _set_model_attr(task, "business_type", business_type)
+            _set_model_attr(task, "business_id", business_id)
+            _set_model_attr(task, "task_name", "资产审批")
+            _set_model_attr(task, "assignee_user_id", assignee_user_id)
+            _set_model_attr(task, "status", _TASK_STATUS_PENDING)
+            _set_model_attr(task, "created_at", now)
+            _set_model_attr(task, "completed_at", None)
             self.db.add(task)
             await self.db.flush()
 

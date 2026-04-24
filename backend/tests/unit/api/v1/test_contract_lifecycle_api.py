@@ -2,6 +2,7 @@
 分层约束测试：合同生命周期 / RentTerm API（M2-T1）。
 """
 
+from datetime import UTC, datetime
 from importlib import import_module
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -119,7 +120,38 @@ async def test_list_contract_audit_logs_delegates_to_service() -> None:
     endpoint = getattr(mod, "list_contract_audit_logs", None)
     assert endpoint is not None, "list_contract_audit_logs 路由尚未实现"
 
-    logs = [MagicMock(log_id="log-001"), MagicMock(log_id="log-002")]
+    logs = [
+        MagicMock(
+            log_id="log-001",
+            contract_id="contract-001",
+            action="status_change",
+            old_status="draft",
+            new_status="active",
+            review_status_old=None,
+            review_status_new=None,
+            reason=None,
+            operator_id="user-001",
+            operator_name="测试用户",
+            related_entry_id=None,
+            context=None,
+            created_at=datetime.now(UTC),
+        ),
+        MagicMock(
+            log_id="log-002",
+            contract_id="contract-001",
+            action="review",
+            old_status=None,
+            new_status=None,
+            review_status_old="pending",
+            review_status_new="approved",
+            reason="通过",
+            operator_id="user-002",
+            operator_name="审核员",
+            related_entry_id=None,
+            context={"source": "unit-test"},
+            created_at=datetime.now(UTC),
+        ),
+    ]
 
     with patch(
         "src.api.v1.contracts.contract_groups.contract_group_service.list_contract_audit_logs",
@@ -132,7 +164,8 @@ async def test_list_contract_audit_logs_delegates_to_service() -> None:
             _authz=None,
         )
 
-    assert result is logs
+    assert [item.log_id for item in result] == ["log-001", "log-002"]
+    assert result[1].context == {"source": "unit-test"}
     mock_list_logs.assert_awaited_once()
 
 

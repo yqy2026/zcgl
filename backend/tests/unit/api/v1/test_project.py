@@ -148,7 +148,7 @@ def admin_user_headers(
     app.dependency_overrides[project_module.get_current_active_user] = (
         mock_get_current_user
     )
-    yield {"X-Perspective": "manager"}
+    yield {}
     app.dependency_overrides.pop(project_module.get_current_active_user, None)
 
 
@@ -262,22 +262,25 @@ class TestListProjects:
         response = unauthenticated_client.get("/api/v1/projects/")
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-    def test_list_projects_should_allow_missing_perspective_header(self, client):
-        response = client.get("/api/v1/projects/")
-
-        assert response.status_code == status.HTTP_200_OK
-        data = response.json()
-        assert "items" in data["data"]
-
-    def test_list_projects_should_ignore_legacy_owner_perspective_header(self, client):
+    def test_list_projects_should_allow_admin_without_view_mode_query(
+        self, client, admin_user_headers
+    ):
         response = client.get(
             "/api/v1/projects/",
-            headers={"X-Perspective": "owner"},
+            headers=admin_user_headers,
         )
 
         assert response.status_code == status.HTTP_200_OK
-        data = response.json()
-        assert "items" in data["data"]
+
+    def test_list_projects_should_ignore_view_mode_query_and_keep_auto_scope(
+        self, client, admin_user_headers
+    ):
+        response = client.get(
+            "/api/v1/projects/?view_mode=tenant",
+            headers=admin_user_headers,
+        )
+
+        assert response.status_code == status.HTTP_200_OK
 
     def test_list_projects_passes_owner_party_id_filter(
         self,

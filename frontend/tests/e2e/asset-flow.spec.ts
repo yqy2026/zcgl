@@ -7,11 +7,13 @@ test.describe('Asset Management Flow', () => {
   });
 
   test('should load list and support keyword search', async ({ page }) => {
-    await page.goto('/owner/assets');
-    await expect(page).toHaveURL(/\/owner\/assets$/);
+    await page.goto('/assets/list');
+    await expect(page).toHaveURL(/\/assets\/list$/);
 
     const searchInput = page
-      .locator('input[id="search"], input[placeholder*="搜索"], input[placeholder*="关键字"]')
+      .locator(
+        'input[id="search"], input[placeholder*="搜索"], input[placeholder*="关键词"], input[placeholder*="关键字"]'
+      )
       .first();
     await expect(searchInput).toBeVisible();
     await searchInput.fill('测试');

@@ -683,7 +683,9 @@ jobs:
         from src.database import async_session_scope
         from src.models.auth import User
         from src.models.organization import Organization
+        from src.models.party import Party, PartyType
         from src.models.rbac import Permission, Role, UserRoleAssignment, role_permissions
+        from src.models.user_party_binding import RelationType, UserPartyBinding
         from src.services.core.password_service import PasswordService
 
         ADMIN_USERNAME = os.getenv("E2E_ADMIN_USERNAME", "admin")
@@ -691,6 +693,7 @@ jobs:
         LOGOUT_USERNAME = os.getenv("E2E_LOGOUT_USERNAME", "e2e_logout_admin")
         LOGOUT_PASSWORD = os.getenv("E2E_LOGOUT_PASSWORD", "Logout123!@#")
         ORG_CODE = "E2E-ORG-ROOT"
+        PARTY_CODE = "E2E-LEGAL-ADMIN"
 
         async def ensure_organization(db):
             result = await db.execute(
@@ -751,21 +754,21 @@ jobs:
                 await db.refresh(role)
             return role
 
-        async def ensure_admin_permission(db):
+        async def ensure_permission(db, *, resource, action, display_name, description):
             permission_result = await db.execute(
                 select(Permission).where(
-                    Permission.resource == "system",
-                    Permission.action == "admin",
+                    Permission.resource == resource,
+                    Permission.action == action,
                 )
             )
             permission = permission_result.scalars().first()
             if permission is None:
                 permission = Permission(
-                    name="system:admin",
-                    display_name="系统管理员",
-                    description="系统管理员权限",
-                    resource="system",
-                    action="admin",
+                    name=f"{resource}:{action}",
+                    display_name=display_name,
+                    description=description,
+                    resource=resource,
+                    action=action,
                     is_system_permission=True,
                     requires_approval=False,
                     created_by="ci-e2e",
@@ -853,13 +856,122 @@ jobs:
                 assignment.assigned_by = "ci-e2e"
             await db.commit()
 
+        async def ensure_e2e_party(db):
+            result = await db.execute(
+                select(Party).where(
+                    Party.party_type == PartyType.LEGAL_ENTITY,
+                    Party.code == PARTY_CODE,
+                )
+            )
+            party = result.scalars().first()
+            if party is None:
+                party = Party(
+                    party_type=PartyType.LEGAL_ENTITY,
+                    name="E2E Legal Entity",
+                    code=PARTY_CODE,
+                    status="active",
+                    created_by="ci-e2e",
+                    updated_by="ci-e2e",
+                )
+                db.add(party)
+                await db.commit()
+                await db.refresh(party)
+            return party
+
+        async def ensure_owner_binding(db, user_id, party_id, *, is_primary):
+            binding_result = await db.execute(
+                select(UserPartyBinding).where(
+                    UserPartyBinding.user_id == user_id,
+                    UserPartyBinding.party_id == party_id,
+                    UserPartyBinding.relation_type == RelationType.OWNER,
+                )
+            )
+            binding = binding_result.scalars().first()
+            if binding is None:
+                binding = UserPartyBinding(
+                    user_id=user_id,
+                    party_id=party_id,
+                    relation_type=RelationType.OWNER,
+                    is_primary=is_primary,
+                )
+                db.add(binding)
+            else:
+                binding.is_primary = is_primary
+            await db.commit()
+
         async def main():
             async with async_session_scope() as db:
                 organization = await ensure_organization(db)
                 admin_role = await ensure_admin_role(db)
                 await ensure_regular_role(db)
-                admin_permission = await ensure_admin_permission(db)
-                await ensure_role_permission(db, admin_role.id, admin_permission.id)
+                required_permissions = [
+                    await ensure_permission(
+                        db,
+                        resource="system",
+                        action="admin",
+                        display_name="系统管理员",
+                        description="系统管理员权限",
+                    ),
+                    await ensure_permission(
+                        db,
+                        resource="asset",
+                        action="read",
+                        display_name="读取资产",
+                        description="Frontend E2E 资产列表读取",
+                    ),
+                    await ensure_permission(
+                        db,
+                        resource="asset",
+                        action="create",
+                        display_name="创建资产",
+                        description="Frontend E2E 资产创建入口",
+                    ),
+                    await ensure_permission(
+                        db,
+                        resource="project",
+                        action="read",
+                        display_name="读取项目",
+                        description="Frontend E2E 项目列表读取",
+                    ),
+                    await ensure_permission(
+                        db,
+                        resource="project",
+                        action="create",
+                        display_name="创建项目",
+                        description="Frontend E2E 项目创建入口",
+                    ),
+                    await ensure_permission(
+                        db,
+                        resource="property_certificate",
+                        action="read",
+                        display_name="读取产权证",
+                        description="Frontend E2E 产权证列表读取",
+                    ),
+                    await ensure_permission(
+                        db,
+                        resource="property_certificate",
+                        action="create",
+                        display_name="创建产权证",
+                        description="Frontend E2E 产权证创建入口",
+                    ),
+                    await ensure_permission(
+                        db,
+                        resource="analytics",
+                        action="read",
+                        display_name="读取分析",
+                        description="Frontend E2E 资产分析读取",
+                    ),
+                    await ensure_permission(
+                        db,
+                        resource="contract_group",
+                        action="create",
+                        display_name="创建合同组",
+                        description="Frontend E2E 退休租赁入口跳转",
+                    ),
+                ]
+                for permission in required_permissions:
+                    await ensure_role_permission(db, admin_role.id, permission.id)
+                e2e_party = await ensure_e2e_party(db)
 
                 admin_user = await upsert_admin_user(
                     db,
@@ -882,6 +994,18 @@ jobs:
 
                 await ensure_user_role_assignment(db, admin_user.id, admin_role.id)
                 await ensure_user_role_assignment(db, logout_user.id, admin_role.id)
+                await ensure_owner_binding(
+                    db,
+                    admin_user.id,
+                    e2e_party.id,
+                    is_primary=True,
+                )
+                await ensure_owner_binding(
+                    db,
+                    logout_user.id,
+                    e2e_party.id,
+                    is_primary=True,
+                )
 
         asyncio.run(main())
         PY

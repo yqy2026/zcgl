@@ -1,20 +1,21 @@
 # 多阶段构建 - 构建阶段
-FROM python:3.12-slim AS builder
+FROM python:3.12-bookworm AS builder
 
 # 设置环境变量
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    UV_LINK_MODE=copy
-
-# 使用官方 uv 二进制，避免在镜像内额外安装构建工具链
-COPY --from=ghcr.io/astral-sh/uv:0.10.2 /uv /bin/uv
+    UV_LINK_MODE=copy \
+    UV_NATIVE_TLS=1
 
 # 安装构建依赖
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
+
+# 直接从 PyPI 安装 uv，避免依赖额外镜像仓库
+RUN pip install --no-cache-dir --retries 10 uv==0.10.2
 
 # 设置工作目录
 WORKDIR /app
@@ -23,10 +24,15 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 
 # 安装依赖（跳过本地项目安装，避免依赖层受源码变动影响）
-RUN uv sync --frozen --no-dev --no-install-project
+RUN for attempt in 1 2 3; do \
+        uv sync --frozen --no-dev --no-install-project --native-tls && break; \
+        if [ "$attempt" -eq 3 ]; then exit 1; fi; \
+        echo "uv sync failed (attempt $attempt), retrying..." >&2; \
+        sleep 5; \
+    done
 
 # 生产阶段
-FROM python:3.12-slim AS production
+FROM python:3.12-bookworm AS production
 
 # 设置环境变量
 ENV PYTHONUNBUFFERED=1 \
@@ -46,17 +52,17 @@ RUN groupadd -r appuser && useradd -r -g appuser appuser
 WORKDIR /app
 
 # 从构建阶段复制虚拟环境
-COPY --from=builder /app/.venv /app/.venv
+COPY --from=builder --chown=appuser:appuser /app/.venv /app/.venv
 
 # 仅复制运行时需要的文件，避免将测试/文档打入镜像
-COPY src ./src
-COPY alembic ./alembic
-COPY alembic.ini ./
-COPY scripts ./scripts
+COPY --chown=appuser:appuser src ./src
+COPY --chown=appuser:appuser alembic ./alembic
+COPY --chown=appuser:appuser alembic.ini ./
+COPY --chown=appuser:appuser scripts ./scripts
 
 # 创建必要的目录
-RUN mkdir -p uploads logs && \
-    chown -R appuser:appuser /app
+RUN mkdir -p uploads logs backups && \
+    chown -R appuser:appuser /app/uploads /app/logs /app/backups
 
 # 切换到非root用户
 USER appuser
@@ -66,7 +72,7 @@ EXPOSE 8002
 
 # 健康检查
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8002/api/v1/monitoring/health || exit 1
+    CMD curl -f http://localhost:8002/docs || exit 1
 
 # 启动命令
 CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8002", "--workers", "4"]

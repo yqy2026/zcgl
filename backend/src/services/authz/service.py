@@ -2,7 +2,7 @@
 
 import os
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, TypeGuard
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -32,6 +32,10 @@ from .resource_perspective_registry import (
     resolve_capability_perspectives,
     resource_requires_perspective,
 )
+
+
+def _is_authz_action(value: str) -> TypeGuard[AuthzAction]:
+    return value in {"create", "read", "list", "update", "delete", "export"}
 
 
 class AuthzService:
@@ -192,8 +196,8 @@ class AuthzService:
         actions_by_resource: dict[str, set[str]] = {}
         for resource, default_actions in iter_authenticated_default_actions().items():
             actions_by_resource.setdefault(resource, set()).update(default_actions)
-        for resource, resource_actions in static_rbac_actions.items():
-            actions_by_resource.setdefault(resource, set()).update(resource_actions)
+        for resource, actions in static_rbac_actions.items():
+            actions_by_resource.setdefault(resource, set()).update(actions)
         for policy in policies:
             if not bool(getattr(policy, "enabled", True)):
                 continue
@@ -209,21 +213,11 @@ class AuthzService:
 
         subject_perspectives = self._resolve_perspectives(subject_context)
         capabilities: list[CapabilityItem] = []
-        for resource, resource_actions in sorted(actions_by_resource.items()):
+        for resource, actions in sorted(actions_by_resource.items()):
             normalized_actions: list[AuthzAction] = []
-            for action in sorted(resource_actions):
-                if action == "create":
-                    normalized_actions.append("create")
-                elif action == "read":
-                    normalized_actions.append("read")
-                elif action == "list":
-                    normalized_actions.append("list")
-                elif action == "update":
-                    normalized_actions.append("update")
-                elif action == "delete":
-                    normalized_actions.append("delete")
-                elif action == "export":
-                    normalized_actions.append("export")
+            for action in sorted(actions):
+                if _is_authz_action(action):
+                    normalized_actions.append(action)
             if is_admin:
                 perspectives = list(get_registered_perspectives(resource))
             else:
