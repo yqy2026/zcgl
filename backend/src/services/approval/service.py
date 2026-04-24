@@ -95,7 +95,9 @@ class ApprovalService:
             )
         return normalized
 
-    async def _get_instance_or_raise(self, approval_instance_id: str) -> ApprovalInstance:
+    async def _get_instance_or_raise(
+        self, approval_instance_id: str
+    ) -> ApprovalInstance:
         instance = await approval_crud.get_instance(
             self.db,
             approval_instance_id=approval_instance_id,
@@ -120,16 +122,15 @@ class ApprovalService:
         comment: str | None = None,
         context: dict[str, Any] | None = None,
     ) -> ApprovalActionLog:
-        log = ApprovalActionLog(
-            id=str(uuid.uuid4()),
-            approval_instance_id=approval_instance_id,
-            approval_task_snapshot_id=approval_task_snapshot_id,
-            action=action,
-            operator_id=operator_id,
-            comment=comment,
-            context=context,
-            created_at=_utcnow_naive(),
-        )
+        log = ApprovalActionLog()
+        log.id = str(uuid.uuid4())
+        log.approval_instance_id = approval_instance_id
+        log.approval_task_snapshot_id = approval_task_snapshot_id
+        log.action = action
+        log.operator_id = operator_id
+        log.comment = comment
+        log.context = context
+        log.created_at = _utcnow_naive()
         self.db.add(log)
         await self.db.flush()
         return log
@@ -153,7 +154,9 @@ class ApprovalService:
                 business_id=business_id,
             )
             if active_instance is not None:
-                raise conflict("该业务对象已有进行中的审批", resource_type="ApprovalInstance")
+                raise conflict(
+                    "该业务对象已有进行中的审批", resource_type="ApprovalInstance"
+                )
 
             await self.asset_service.get_asset(
                 business_id,
@@ -165,32 +168,30 @@ class ApprovalService:
             )
 
             now = _utcnow_naive()
-            instance = ApprovalInstance(
-                id=str(uuid.uuid4()),
-                approval_no=self._generate_approval_no(),
-                business_type=business_type,
-                business_id=business_id,
-                status=_APPROVAL_STATUS_PENDING,
-                starter_id=starter_id,
-                assignee_user_id=assignee_user_id,
-                current_task_id=None,
-                started_at=now,
-                ended_at=None,
-            )
+            instance = ApprovalInstance()
+            instance.id = str(uuid.uuid4())
+            instance.approval_no = self._generate_approval_no()
+            instance.business_type = business_type
+            instance.business_id = business_id
+            instance.status = _APPROVAL_STATUS_PENDING
+            instance.starter_id = starter_id
+            instance.assignee_user_id = assignee_user_id
+            instance.current_task_id = None
+            instance.started_at = now
+            instance.ended_at = None
             self.db.add(instance)
             await self.db.flush()
 
-            task = ApprovalTaskSnapshot(
-                id=str(uuid.uuid4()),
-                approval_instance_id=instance.id,
-                business_type=business_type,
-                business_id=business_id,
-                task_name="资产审批",
-                assignee_user_id=assignee_user_id,
-                status=_TASK_STATUS_PENDING,
-                created_at=now,
-                completed_at=None,
-            )
+            task = ApprovalTaskSnapshot()
+            task.id = str(uuid.uuid4())
+            task.approval_instance_id = instance.id
+            task.business_type = business_type
+            task.business_id = business_id
+            task.task_name = "资产审批"
+            task.assignee_user_id = assignee_user_id
+            task.status = _TASK_STATUS_PENDING
+            task.created_at = now
+            task.completed_at = None
             self.db.add(task)
             await self.db.flush()
 
@@ -214,14 +215,20 @@ class ApprovalService:
             )
             return instance
 
-    async def list_pending_tasks(self, *, assignee_user_id: str) -> list[ApprovalTaskSnapshot]:
+    async def list_pending_tasks(
+        self, *, assignee_user_id: str
+    ) -> list[ApprovalTaskSnapshot]:
         return await approval_crud.list_pending_tasks(
             self.db,
             assignee_user_id=assignee_user_id,
         )
 
-    async def list_started_processes(self, *, starter_id: str) -> list[ApprovalInstance]:
-        return await approval_crud.list_started_processes(self.db, starter_id=starter_id)
+    async def list_started_processes(
+        self, *, starter_id: str
+    ) -> list[ApprovalInstance]:
+        return await approval_crud.list_started_processes(
+            self.db, starter_id=starter_id
+        )
 
     async def get_process_timeline(
         self,

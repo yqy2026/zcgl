@@ -8,7 +8,8 @@ import { act, renderHook, waitFor } from '@/test/utils/test-helpers';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 
-const formatStderrWrites = (calls: unknown[][]) => calls.map(call => String(call[0] ?? '')).join(' ');
+const formatStderrWrites = (calls: unknown[][]) =>
+  calls.map(call => String(call[0] ?? '')).join(' ');
 
 // =============================================================================
 // Mock dictionaryService

@@ -41,6 +41,7 @@ from src.models.contract_group import (
     RevenueMode,
 )
 from src.schemas.contract_group import (
+    AuditLogResponse,
     ContractCreate,
     ContractDetail,
     ContractGroupCreate,
@@ -214,13 +215,22 @@ class ContractGroupService:
             return
 
         details = "；".join(
-            f"{item['asset_id']} -> {item['group_code']}"
-            for item in conflicts
+            f"{item['asset_id']} -> {item['group_code']}" for item in conflicts
         )
         raise OperationNotAllowedError(
             f"以下资产已绑定其他有效合同组：{details}",
             reason="asset_already_bound_to_active_contract_group",
         )
+
+    @staticmethod
+    def _normalize_binding_type(
+        binding_type: Literal["owner", "manager", "all"] | None,
+    ) -> Literal["owner", "manager"] | None:
+        if binding_type == "owner":
+            return "owner"
+        if binding_type == "manager":
+            return "manager"
+        return None
 
     @staticmethod
     def _normalize_effective_party_ids(
@@ -245,7 +255,7 @@ class ContractGroupService:
         *,
         group: ContractGroup,
         group_id: str,
-        binding_type: Literal["owner", "manager"] | None,
+        binding_type: Literal["owner", "manager", "all"] | None,
         effective_party_ids: list[str] | None,
     ) -> None:
         normalized_effective_party_ids = cls._normalize_effective_party_ids(
@@ -253,6 +263,16 @@ class ContractGroupService:
         )
         if binding_type is None or len(normalized_effective_party_ids) == 0:
             return
+
+        if binding_type == "all":
+            owner_party_id = str(getattr(group, "owner_party_id", "")).strip()
+            operator_party_id = str(getattr(group, "operator_party_id", "")).strip()
+            if (
+                owner_party_id in normalized_effective_party_ids
+                or operator_party_id in normalized_effective_party_ids
+            ):
+                return
+            raise ResourceNotFoundError("合同组", group_id)
 
         scoped_party_id = (
             str(getattr(group, "owner_party_id", "")).strip()
@@ -826,7 +846,7 @@ class ContractGroupService:
         db: AsyncSession,
         *,
         group_id: str,
-        binding_type: Literal["owner", "manager"] | None = None,
+        binding_type: Literal["owner", "manager", "all"] | None = None,
         effective_party_ids: list[str] | None = None,
     ) -> ContractGroupDetail:
         """
@@ -881,16 +901,22 @@ class ContractGroupService:
         revenue_mode: str | None = None,
         offset: int = 0,
         limit: int = 20,
-        binding_type: Literal["owner", "manager"] | None = None,
+        binding_type: Literal["owner", "manager", "all"] | None = None,
         effective_party_ids: list[str] | None = None,
     ) -> tuple[list[ContractGroupListItem], int]:
         """分页查询合同组列表，返回含 derived_status 的列表项。"""
         normalized_effective_party_ids = self._normalize_effective_party_ids(
             effective_party_ids
         )
+        normalized_binding_type = self._normalize_binding_type(binding_type)
         scoped_operator_party_ids: list[str] | None = None
         scoped_owner_party_ids: list[str] | None = None
-        if binding_type == "manager":
+        if binding_type == "all":
+            if len(normalized_effective_party_ids) == 0:
+                return [], 0
+            scoped_operator_party_ids = normalized_effective_party_ids
+            scoped_owner_party_ids = normalized_effective_party_ids
+        elif normalized_binding_type == "manager":
             if len(normalized_effective_party_ids) == 0:
                 return [], 0
             if (
@@ -903,7 +929,7 @@ class ContractGroupService:
                 if operator_party_id is not None
                 else normalized_effective_party_ids
             )
-        if binding_type == "owner":
+        if normalized_binding_type == "owner":
             if len(normalized_effective_party_ids) == 0:
                 return [], 0
             if (
@@ -1054,12 +1080,13 @@ class ContractGroupService:
         db: AsyncSession,
         *,
         contract_id: str,
-    ) -> list[ContractAuditLog]:
+    ) -> list[AuditLogResponse]:
         await self._get_contract_or_raise(db, contract_id=contract_id)
-        return await contract_group_crud.list_contract_audit_logs(
+        logs = await contract_group_crud.list_contract_audit_logs(
             db,
             contract_id=contract_id,
         )
+        return [AuditLogResponse.model_validate(log) for log in logs]
 
     async def list_contracts_in_group(
         self, db: AsyncSession, *, group_id: str

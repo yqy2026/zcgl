@@ -85,11 +85,15 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   const handleExport = async (format: 'excel' | 'pdf' | 'csv') => {
     try {
       MessageManager.loading('正在导出数据...');
-      await analyticsService.downloadAnalyticsReport(format, {
-        start_date: filters.start_date,
-        end_date: filters.end_date,
-        include_deleted: filters.include_deleted,
-      }, currentViewMode);
+      await analyticsService.downloadAnalyticsReport(
+        format,
+        {
+          start_date: filters.start_date,
+          end_date: filters.end_date,
+          include_deleted: filters.include_deleted,
+        },
+        currentViewMode
+      );
       MessageManager.success('数据导出成功！');
     } catch (error) {
       MessageManager.error('导出失败，请重试');

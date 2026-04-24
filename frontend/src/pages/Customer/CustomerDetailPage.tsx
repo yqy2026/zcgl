@@ -93,7 +93,11 @@ const CustomerDetailPage: React.FC = () => {
         {customerProfileQuery.isError ? (
           <Alert
             type="error"
-            title={customerProfileQuery.error instanceof Error ? customerProfileQuery.error.message : '客户档案加载失败'}
+            title={
+              customerProfileQuery.error instanceof Error
+                ? customerProfileQuery.error.message
+                : '客户档案加载失败'
+            }
             showIcon
           />
         ) : null}
@@ -107,7 +111,9 @@ const CustomerDetailPage: React.FC = () => {
                 {
                   key: 'customer_type',
                   label: '客户类型',
-                  children: CUSTOMER_TYPE_LABELS[customerProfile.customer_type] ?? customerProfile.customer_type,
+                  children:
+                    CUSTOMER_TYPE_LABELS[customerProfile.customer_type] ??
+                    customerProfile.customer_type,
                 },
                 {
                   key: 'subject_nature',

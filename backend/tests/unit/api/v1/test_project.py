@@ -84,14 +84,18 @@ def project_data(db_session: Session, test_organization, test_org_party):
     db_session.refresh(project)
     yield project
     # Cleanup
-    existing_project = db_session.query(Project).filter(Project.id == project.id).one_or_none()
+    existing_project = (
+        db_session.query(Project).filter(Project.id == project.id).one_or_none()
+    )
     if existing_project is not None:
         db_session.delete(existing_project)
         db_session.flush()
 
 
 @pytest.fixture
-def admin_user_headers(client, admin_user, test_organization, test_org_party, monkeypatch):
+def admin_user_headers(
+    client, admin_user, test_organization, test_org_party, monkeypatch
+):
     """管理员用户认证头"""
     from src.api.v1.assets import project as project_module
     from src.main import app
@@ -243,7 +247,8 @@ class TestListProjects:
     ):
         """测试关键词搜索"""
         response = client.get(
-            f"/api/v1/projects/?keyword={project_data.project_name}", headers=admin_user_headers
+            f"/api/v1/projects/?keyword={project_data.project_name}",
+            headers=admin_user_headers,
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -257,18 +262,22 @@ class TestListProjects:
         response = unauthenticated_client.get("/api/v1/projects/")
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-    def test_list_projects_should_reject_missing_perspective_header(self, client):
+    def test_list_projects_should_allow_missing_perspective_header(self, client):
         response = client.get("/api/v1/projects/")
 
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert "items" in data["data"]
 
-    def test_list_projects_should_reject_owner_perspective_header(self, client):
+    def test_list_projects_should_ignore_legacy_owner_perspective_header(self, client):
         response = client.get(
             "/api/v1/projects/",
             headers={"X-Perspective": "owner"},
         )
 
-        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert "items" in data["data"]
 
     def test_list_projects_passes_owner_party_id_filter(
         self,
@@ -711,7 +720,11 @@ class TestSearchProjects:
 
     def test_search_projects_by_keyword(self, client, admin_user_headers, project_data):
         """测试关键词搜索"""
-        search_params = {"keyword": project_data.project_name, "page": 1, "page_size": 10}
+        search_params = {
+            "keyword": project_data.project_name,
+            "page": 1,
+            "page_size": 10,
+        }
 
         response = client.post(
             "/api/v1/projects/search", json=search_params, headers=admin_user_headers
@@ -969,9 +982,7 @@ class TestSearchProjects:
         self, client, admin_user_headers, project_data
     ):
         """测试按关键词筛选（原类型筛选测试 - project_type 字段已删除）"""
-        response = client.get(
-            "/api/v1/projects/", headers=admin_user_headers
-        )
+        response = client.get("/api/v1/projects/", headers=admin_user_headers)
 
         assert response.status_code == status.HTTP_200_OK
         items = response.json()["data"]["items"]

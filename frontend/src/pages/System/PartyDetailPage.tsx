@@ -423,7 +423,10 @@ const PartyDetailPage: React.FC = () => {
               <Select aria-label="主体性质" options={SUBJECT_NATURE_OPTIONS as unknown as []} />
             </Form.Item>
             <Form.Item label="统一标识类型" name="identifier_type">
-              <Select aria-label="统一标识类型" options={IDENTIFIER_TYPE_OPTIONS as unknown as []} />
+              <Select
+                aria-label="统一标识类型"
+                options={IDENTIFIER_TYPE_OPTIONS as unknown as []}
+              />
             </Form.Item>
             <Form.Item label="统一标识" name="unified_identifier">
               <Input aria-label="统一标识" />
@@ -456,9 +459,7 @@ const PartyDetailPage: React.FC = () => {
           loading={reviewLogQuery.isLoading}
           extra={
             reviewLogQuery.data != null ? (
-              <Typography.Text type="secondary">
-                共 {reviewLogQuery.data.length} 条
-              </Typography.Text>
+              <Typography.Text type="secondary">共 {reviewLogQuery.data.length} 条</Typography.Text>
             ) : null
           }
         >

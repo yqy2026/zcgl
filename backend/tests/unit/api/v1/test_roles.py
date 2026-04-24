@@ -8,34 +8,51 @@ Test coverage for Roles API endpoints:
 - RBAC functionality
 """
 
+from datetime import UTC, datetime
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
+
 import pytest
 from fastapi import status
 
 
 @pytest.fixture
 def admin_user_headers(client):
-    """管理员用户认证头（本地 mock，避免依赖 admin_user fixture 导致跳过）"""
-    from unittest.mock import Mock
-
-    from src.middleware.auth import get_current_active_user, require_admin
-
-    mock_admin = Mock()
-    mock_admin.id = "test-admin-id"
-    mock_admin.username = "test-admin"
-    mock_admin.is_admin = True
-    mock_admin.is_active = True
-
-    client.app.dependency_overrides[get_current_active_user] = lambda: mock_admin
-    client.app.dependency_overrides[require_admin] = lambda: mock_admin
+    """共享 client fixture 已注入管理员身份，角色接口无需额外请求头。"""
+    _ = client
     yield {}
-    client.app.dependency_overrides.pop(get_current_active_user, None)
-    client.app.dependency_overrides.pop(require_admin, None)
 
 
 class TestRolesCRUD:
     """测试角色CRUD操作"""
 
-    def test_create_role_success(self, client, admin_user_headers):
+    @staticmethod
+    def _build_role_detail(
+        *,
+        role_id: str = "role-test-id",
+        description: str | None = "Test role description",
+    ):
+        return SimpleNamespace(
+            id=role_id,
+            name="test_role",
+            display_name="Test Role",
+            description=description,
+            level=1,
+            category=None,
+            is_system_role=False,
+            is_active=True,
+            party_id=None,
+            organization_id=None,
+            scope="global",
+            permissions=[],
+            user_count=0,
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+            created_by="test-admin-id",
+            updated_by="test-admin-id",
+        )
+
+    def test_create_role_success(self, client, admin_user_headers, monkeypatch):
         """测试成功创建角色"""
         role_data = {
             "name": "test_role",
@@ -43,10 +60,17 @@ class TestRolesCRUD:
             "description": "Test role description",
             "permission_ids": ["asset.read", "asset.write"],
         }
+        monkeypatch.setattr(
+            "src.api.v1.auth.roles.RBACService.create_role",
+            AsyncMock(return_value=self._build_role_detail()),
+        )
         response = client.post(
             "/api/v1/roles", json=role_data, headers=admin_user_headers
         )
-        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.status_code == status.HTTP_201_CREATED
+        payload = response.json()
+        assert payload["name"] == "test_role"
+        assert payload["display_name"] == "Test Role"
 
     def test_get_roles_list(self, client, admin_user_headers):
         """测试获取角色列表"""
@@ -58,20 +82,32 @@ class TestRolesCRUD:
         response = client.get("/api/v1/roles/test-role-id", headers=admin_user_headers)
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_update_role(self, client, admin_user_headers):
+    def test_update_role(self, client, admin_user_headers, monkeypatch):
         """测试更新角色"""
         update_data = {"description": "Updated description"}
+        monkeypatch.setattr(
+            "src.api.v1.auth.roles.RBACService.update_role",
+            AsyncMock(
+                return_value=self._build_role_detail(description="Updated description")
+            ),
+        )
         response = client.put(
             "/api/v1/roles/test-role-id", json=update_data, headers=admin_user_headers
         )
-        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.status_code == status.HTTP_200_OK
+        payload = response.json()
+        assert payload["description"] == "Updated description"
 
-    def test_delete_role(self, client, admin_user_headers):
+    def test_delete_role(self, client, admin_user_headers, monkeypatch):
         """测试删除角色"""
+        monkeypatch.setattr(
+            "src.api.v1.auth.roles.RBACService.delete_role",
+            AsyncMock(return_value=True),
+        )
         response = client.delete(
             "/api/v1/roles/test-role-id", headers=admin_user_headers
         )
-        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.status_code == status.HTTP_204_NO_CONTENT
 
 
 class TestRolePermissions:

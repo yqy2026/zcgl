@@ -310,7 +310,9 @@ class CRUDContractGroup:
         stmt = (
             select(ContractAuditLog)
             .where(ContractAuditLog.contract_id == contract_id)
-            .order_by(ContractAuditLog.created_at.desc(), ContractAuditLog.log_id.desc())
+            .order_by(
+                ContractAuditLog.created_at.desc(), ContractAuditLog.log_id.desc()
+            )
         )
         return list((await db.execute(stmt)).scalars().all())
 

@@ -161,9 +161,7 @@ export const GlobalLoadingOverlay: React.FC = () => {
   const overlayText =
     globalLoading.tip !== undefined && globalLoading.tip !== null && globalLoading.tip !== ''
       ? globalLoading.tip
-      : globalLoading.text !== undefined &&
-          globalLoading.text !== null &&
-          globalLoading.text !== ''
+      : globalLoading.text !== undefined && globalLoading.text !== null && globalLoading.text !== ''
         ? globalLoading.text
         : '加载中...';
 

@@ -128,7 +128,9 @@ describe('AppBreadcrumb', () => {
     renderBreadcrumb('/project/project-1');
 
     const links = screen.getAllByTestId('link');
-    expect(links.map(link => link.getAttribute('data-link-to'))).toEqual(expect.arrayContaining(['/project']));
+    expect(links.map(link => link.getAttribute('data-link-to'))).toEqual(
+      expect.arrayContaining(['/project'])
+    );
   });
 
   it('uses canonical certificate list link for property certificate detail breadcrumbs', () => {
@@ -149,8 +151,8 @@ describe('AppBreadcrumb', () => {
   it('provides stable keys for breadcrumb items', () => {
     renderBreadcrumb('/assets/123/edit');
 
-    expect(screen.getAllByTestId('breadcrumb-item').map(item => item.dataset.breadcrumbKey)).toEqual(
-      ['home', '/assets', '/assets/123', '/assets/123/edit']
-    );
+    expect(
+      screen.getAllByTestId('breadcrumb-item').map(item => item.dataset.breadcrumbKey)
+    ).toEqual(['home', '/assets', '/assets/123', '/assets/123/edit']);
   });
 });

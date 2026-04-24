@@ -16,7 +16,10 @@ interface DataScopeState {
   isSingleOwner: boolean;
   isSingleManager: boolean;
   currentViewMode: BindingType | null;
-  initFromCapabilities: (response: CapabilitiesResponse | CapabilitiesResponse['capabilities'], isAdmin: boolean) => void;
+  initFromCapabilities: (
+    response: CapabilitiesResponse | CapabilitiesResponse['capabilities'],
+    isAdmin: boolean
+  ) => void;
   setCurrentViewMode: (viewMode: BindingType | null) => void;
   reset: () => void;
   getEffectiveViewMode: () => BindingType | null;
@@ -145,18 +148,16 @@ export const useDataScopeStore = create<DataScopeState>((set, get) => ({
       }
     }
 
-    set(
-      {
-        ...createState(
-          bindingTypes,
-          [...ownerPartyIds].sort(),
-          [...managerPartyIds].sort(),
-          isAdmin,
-          true
-        ),
-        currentViewMode,
-      }
-    );
+    set({
+      ...createState(
+        bindingTypes,
+        [...ownerPartyIds].sort(),
+        [...managerPartyIds].sort(),
+        isAdmin,
+        true
+      ),
+      currentViewMode,
+    });
   },
 
   setCurrentViewMode: viewMode => {

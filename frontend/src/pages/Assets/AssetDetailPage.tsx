@@ -57,9 +57,7 @@ const buildPeriodParams = (month: Dayjs) => ({
   period_end: month.endOf('month').format('YYYY-MM-DD'),
 });
 
-const buildCustomerDetailPath = (
-  partyId: string | null | undefined
-): string | null => {
+const buildCustomerDetailPath = (partyId: string | null | undefined): string | null => {
   if (partyId == null || partyId.trim() === '') {
     return null;
   }
@@ -122,10 +120,7 @@ const AssetDetailPage: React.FC = () => {
     enabled: canQuery,
   });
 
-  const {
-    data: reviewLogs,
-    isLoading: isReviewLogsLoading,
-  } = useQuery<AssetReviewLog[]>({
+  const { data: reviewLogs, isLoading: isReviewLogsLoading } = useQuery<AssetReviewLog[]>({
     queryKey: ['asset-review-logs', queryScopeKey, id],
     queryFn: () => assetService.getAssetReviewLogs(id as string),
     enabled: canQuery,
@@ -305,8 +300,7 @@ const AssetDetailPage: React.FC = () => {
     }
 
     const hasAgencyModeContracts = leaseSummary.by_type.some(
-      item =>
-        AGENCY_RELATION_TYPES.includes(item.group_relation_type) && item.contract_count > 0
+      item => AGENCY_RELATION_TYPES.includes(item.group_relation_type) && item.contract_count > 0
     );
 
     return (
@@ -400,7 +394,9 @@ const AssetDetailPage: React.FC = () => {
     withdrawReviewMutation.mutate(reason);
   };
 
-  const reviewStatus = String(asset?.review_status ?? 'draft').trim().toLowerCase();
+  const reviewStatus = String(asset?.review_status ?? 'draft')
+    .trim()
+    .toLowerCase();
   const reviewMeta = REVIEW_STATUS_META[reviewStatus] ?? {
     color: 'default',
     label: reviewStatus || '未知',
@@ -427,7 +423,10 @@ const AssetDetailPage: React.FC = () => {
           <AssetDetailInfo asset={asset} />
 
           <Card title="审核信息" className={styles.leaseCard}>
-            <Space size={16} style={{ width: '100%', flexDirection: 'column', alignItems: 'flex-start' }}>
+            <Space
+              size={16}
+              style={{ width: '100%', flexDirection: 'column', alignItems: 'flex-start' }}
+            >
               <Space size={12} wrap>
                 <Tag color={reviewMeta.color}>{reviewMeta.label}</Tag>
                 {asset.review_reason != null && asset.review_reason.trim() !== '' ? (
@@ -436,30 +435,48 @@ const AssetDetailPage: React.FC = () => {
               </Space>
               <Space wrap>
                 {reviewStatus === 'draft' ? (
-                  <Button onClick={() => submitReviewMutation.mutate()} loading={submitReviewMutation.isPending}>
+                  <Button
+                    onClick={() => submitReviewMutation.mutate()}
+                    loading={submitReviewMutation.isPending}
+                  >
                     提交审核
                   </Button>
                 ) : null}
                 {reviewStatus === 'pending' ? (
                   <>
-                    <Button onClick={() => approveReviewMutation.mutate()} loading={approveReviewMutation.isPending}>
+                    <Button
+                      onClick={() => approveReviewMutation.mutate()}
+                      loading={approveReviewMutation.isPending}
+                    >
                       审核通过
                     </Button>
-                    <Button onClick={() => handleReasonedAction('reject')} loading={rejectReviewMutation.isPending}>
+                    <Button
+                      onClick={() => handleReasonedAction('reject')}
+                      loading={rejectReviewMutation.isPending}
+                    >
                       驳回审核
                     </Button>
-                    <Button onClick={() => handleReasonedAction('withdraw')} loading={withdrawReviewMutation.isPending}>
+                    <Button
+                      onClick={() => handleReasonedAction('withdraw')}
+                      loading={withdrawReviewMutation.isPending}
+                    >
                       撤回审核
                     </Button>
                   </>
                 ) : null}
                 {reviewStatus === 'approved' ? (
-                  <Button onClick={() => handleReasonedAction('reverse')} loading={reverseReviewMutation.isPending}>
+                  <Button
+                    onClick={() => handleReasonedAction('reverse')}
+                    loading={reverseReviewMutation.isPending}
+                  >
                     反审核
                   </Button>
                 ) : null}
                 {reviewStatus === 'reversed' ? (
-                  <Button onClick={() => resubmitReviewMutation.mutate()} loading={resubmitReviewMutation.isPending}>
+                  <Button
+                    onClick={() => resubmitReviewMutation.mutate()}
+                    loading={resubmitReviewMutation.isPending}
+                  >
                     重提审核
                   </Button>
                 ) : null}
@@ -480,8 +497,18 @@ const AssetDetailPage: React.FC = () => {
                     dataSource={reviewLogs}
                     columns={[
                       { title: '动作', dataIndex: 'action', key: 'action' },
-                      { title: '操作人', dataIndex: 'operator', key: 'operator', render: value => value ?? '-' },
-                      { title: '原因', dataIndex: 'reason', key: 'reason', render: value => value ?? '-' },
+                      {
+                        title: '操作人',
+                        dataIndex: 'operator',
+                        key: 'operator',
+                        render: value => value ?? '-',
+                      },
+                      {
+                        title: '原因',
+                        dataIndex: 'reason',
+                        key: 'reason',
+                        render: value => value ?? '-',
+                      },
                     ]}
                   />
                 )}

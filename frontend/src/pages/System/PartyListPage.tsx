@@ -390,7 +390,9 @@ const PartyListPage: React.FC = () => {
           }}
         />
         <Typography.Paragraph type="secondary" style={{ marginTop: 12 }}>
-          {importFile != null ? `已选择文件：${importFile.name}` : '支持 .xlsx / .xls，读取首个工作表'}
+          {importFile != null
+            ? `已选择文件：${importFile.name}`
+            : '支持 .xlsx / .xls，读取首个工作表'}
           {importPreviewCount > 0 ? `，已识别 ${importPreviewCount} 条主体数据` : ''}
         </Typography.Paragraph>
       </Modal>

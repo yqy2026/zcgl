@@ -210,7 +210,13 @@ class SearchService:
         _ = scope_mode
         result = await project_service.search_projects(
             db,
-            search_params=ProjectSearchRequest(keyword=query, page=1, page_size=5),
+            search_params=ProjectSearchRequest(
+                keyword=query,
+                status=None,
+                owner_party_id=None,
+                page=1,
+                page_size=5,
+            ),
             party_filter=party_filter,
         )
         items = result.get("items", [])
@@ -357,7 +363,7 @@ class SearchService:
                 ["owner", "manager"] if scope_mode == "all" else [scope_mode]
             )
             for binding_type in binding_types:
-                customer_party_id = party_service._resolve_customer_party_id(  # type: ignore[attr-defined]
+                customer_party_id = party_service._resolve_customer_party_id(
                     contract,
                     binding_type,
                 )

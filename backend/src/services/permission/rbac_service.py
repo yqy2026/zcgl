@@ -343,9 +343,7 @@ class RBACService:
         for separator in (":", "."):
             legacy_suffix = f"{separator}{permission_data.action}"
             if normalized_name.endswith(legacy_suffix):
-                normalized_name = (
-                    f"{normalized_name[: -len(legacy_suffix)]}{separator}{normalized_action}"
-                )
+                normalized_name = f"{normalized_name[: -len(legacy_suffix)]}{separator}{normalized_action}"
                 break
 
         permission_data = permission_data.model_copy(

@@ -4,7 +4,8 @@ import { renderWithProviders, screen } from '@/test/utils/test-helpers';
 import { Form } from 'antd';
 import RelationInfoSection from '../RelationInfoSection';
 
-const formatStderrWrites = (calls: unknown[][]) => calls.map(call => String(call[0] ?? '')).join(' ');
+const formatStderrWrites = (calls: unknown[][]) =>
+  calls.map(call => String(call[0] ?? '')).join(' ');
 
 vi.mock('../RentContractFormContext', () => ({
   useRentContractFormContext: vi.fn(() => ({

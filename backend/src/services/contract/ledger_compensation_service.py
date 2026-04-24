@@ -51,9 +51,11 @@ class LedgerCompensationService:
                 if not rent_terms:
                     continue
 
-                existing_entries = await contract_group_crud.list_ledger_entries_by_contract(
-                    db,
-                    contract_id=contract_id,
+                existing_entries = (
+                    await contract_group_crud.list_ledger_entries_by_contract(
+                        db,
+                        contract_id=contract_id,
+                    )
                 )
                 expected_months = set(compute_expected_year_months(rent_terms))
                 actual_months = {
@@ -91,7 +93,10 @@ class LedgerCompensationService:
                     group_id=group_id,
                     commit=False,
                 )
-                if any(int(fee_result.get(key, 0)) > 0 for key in ("created", "updated", "voided")):
+                if any(
+                    int(fee_result.get(key, 0)) > 0
+                    for key in ("created", "updated", "voided")
+                ):
                     await db.commit()
             except Exception as exc:  # noqa: BLE001
                 await db.rollback()

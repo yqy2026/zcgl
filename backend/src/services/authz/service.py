@@ -2,7 +2,7 @@
 
 import os
 from datetime import UTC, datetime
-from typing import Any, cast
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -38,6 +38,9 @@ class AuthzService:
     """Facade for ABAC decision and capability APIs."""
 
     CAPABILITIES_VERSION = "2026-03-25.v1"
+    _KNOWN_AUTHZ_ACTIONS = frozenset(
+        {"create", "read", "list", "update", "delete", "export"}
+    )
 
     @staticmethod
     def _is_log_only_mode_enabled() -> bool:
@@ -167,7 +170,12 @@ class AuthzService:
         user_id: str,
     ) -> CapabilitiesResponse:
         role_summary = await self._get_user_role_summary(db, user_id=user_id)
-        role_ids = cast(list[str], role_summary.get("role_ids", []))
+        raw_role_ids = role_summary.get("role_ids", [])
+        role_ids = (
+            [str(role_id) for role_id in raw_role_ids]
+            if isinstance(raw_role_ids, list)
+            else []
+        )
         is_admin = bool(role_summary.get("is_admin"))
         subject_context = await self.context_builder.build_subject_context(
             db,
@@ -182,10 +190,10 @@ class AuthzService:
         static_rbac_actions = await self._get_static_rbac_actions(db, user_id=user_id)
 
         actions_by_resource: dict[str, set[str]] = {}
-        for resource, actions in iter_authenticated_default_actions().items():
-            actions_by_resource.setdefault(resource, set()).update(actions)
-        for resource, actions in static_rbac_actions.items():
-            actions_by_resource.setdefault(resource, set()).update(actions)
+        for resource, default_actions in iter_authenticated_default_actions().items():
+            actions_by_resource.setdefault(resource, set()).update(default_actions)
+        for resource, resource_actions in static_rbac_actions.items():
+            actions_by_resource.setdefault(resource, set()).update(resource_actions)
         for policy in policies:
             if not bool(getattr(policy, "enabled", True)):
                 continue
@@ -201,11 +209,21 @@ class AuthzService:
 
         subject_perspectives = self._resolve_perspectives(subject_context)
         capabilities: list[CapabilityItem] = []
-        for resource, actions in sorted(actions_by_resource.items()):
+        for resource, resource_actions in sorted(actions_by_resource.items()):
             normalized_actions: list[AuthzAction] = []
-            for action in sorted(actions):
-                if action in {"create", "read", "list", "update", "delete", "export"}:
-                    normalized_actions.append(cast(AuthzAction, action))
+            for action in sorted(resource_actions):
+                if action == "create":
+                    normalized_actions.append("create")
+                elif action == "read":
+                    normalized_actions.append("read")
+                elif action == "list":
+                    normalized_actions.append("list")
+                elif action == "update":
+                    normalized_actions.append("update")
+                elif action == "delete":
+                    normalized_actions.append("delete")
+                elif action == "export":
+                    normalized_actions.append("export")
             if is_admin:
                 perspectives = list(get_registered_perspectives(resource))
             else:
@@ -332,7 +350,10 @@ class AuthzService:
                 continue
             for action_name in actions:
                 normalized_action = str(action_name).strip()
-                if normalized_action == "":
+                if (
+                    normalized_action == ""
+                    or normalized_action not in self._KNOWN_AUTHZ_ACTIONS
+                ):
                     continue
                 normalized.setdefault(resource_name, set()).add(normalized_action)
         return normalized

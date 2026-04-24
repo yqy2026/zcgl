@@ -31,7 +31,9 @@ class ApprovalCRUD:
         *,
         approval_instance_id: str,
     ) -> ApprovalInstance | None:
-        stmt = select(ApprovalInstance).where(ApprovalInstance.id == approval_instance_id)
+        stmt = select(ApprovalInstance).where(
+            ApprovalInstance.id == approval_instance_id
+        )
         return (await db.execute(stmt)).scalars().first()
 
     async def get_task(
