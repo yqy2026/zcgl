@@ -518,6 +518,27 @@ backup_*.*
 *.tar
 *.zip
 
+# ----------
+# Local Agent / Tool State
+# ----------
+.omx/
+.localappdata/
+.npm-cache/
+.playwright-cli/
+
+# ----------
+# Local Generated Artifacts
+# ----------
+/output/
+/frontend/output/
+/backend/temp_uploads/
+/backend/key_*
+
+# ----------
+# Playwright Local Auth State
+# ----------
+/frontend/tests/e2e/storage/
+
 # ============================================================================
 # 17. Preserve Rules (Exceptions)
 # ============================================================================
