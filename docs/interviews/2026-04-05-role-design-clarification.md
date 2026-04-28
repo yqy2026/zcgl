@@ -2,6 +2,7 @@
 
 - **日期**：2026-04-05
 - **主题**：系统角色交互机制、多角色与数据范围的关系明确。
+- **当前状态**：历史采访记录，结论已被 `docs/prd.md`、`docs/specs/api-contract.md` 与 `docs/traceability/requirements-trace.md` 吸收。
 
 ## 背景
 在审视《需求规格说明书》 5.1 节时，发现仅有 5 个角色的粗略列表，缺乏系统级的 RBAC 运行规则、角色增删、精细度、以及角色与数据范围重叠时的控制边界。因此引发此采访以澄清，确保 SSOT 设计合理、完备。
@@ -30,4 +31,4 @@
 
 ## 结论与落地方案
 根据以上回答，确定本系统采用 **动态粒度 RBAC + 动态 ABAC + SoD** 配合的体系。权限和角色的绑定灵活不受限。
-相关定稿要求已同步更新并替代至 `docs/requirements-specification.md` 第 5.1 节，作为全组后续权限实现和验收的 SSOT。
+相关定稿要求当时已同步至 `docs/requirements-specification.md` 第 5.1 节；当前需求入口已迁移为 `docs/prd.md`，API 与权限契约以 `docs/specs/api-contract.md` 为准。

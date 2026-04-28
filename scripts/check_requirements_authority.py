@@ -5,6 +5,9 @@ Checks performed:
 1. Legacy dual-spec references must not reappear in active docs.
 2. Code evidence paths declared in requirements-specification.md must exist.
 3. docs/plans/ must not contain files with ✅-completed status (should be archived).
+4. PRD/spec documents must not contain implementation evidence or code/test paths.
+5. Traceability evidence paths must exist.
+6. Legacy requirements entries must remain jump pages without code/test paths.
 
 Run from repository root:
     python scripts/check_requirements_authority.py
@@ -21,6 +24,14 @@ ROOT = Path(__file__).resolve().parent.parent
 DOCS = ROOT / "docs"
 PLANS = DOCS / "plans"
 REQUIREMENTS_SPEC = DOCS / "requirements-specification.md"
+PRD = DOCS / "prd.md"
+SPECS = DOCS / "specs"
+TRACEABILITY = DOCS / "traceability" / "requirements-trace.md"
+LEGACY_JUMP_PAGES = [
+    REQUIREMENTS_SPEC,
+    DOCS / "features" / "requirements-appendix-fields.md",
+    DOCS / "features" / "requirements-appendix-modules.md",
+]
 
 # Legacy patterns that must not reappear (old dual-spec references).
 LEGACY_PATTERNS = [
@@ -41,6 +52,29 @@ _CODE_EVIDENCE_SECTION_RE = re.compile(r"^[\s\-*]*代码证据[：:]", re.MULTIL
 
 # Plans ✅ status markers — a plan file containing these should be archived.
 _PLANS_COMPLETED_RE = re.compile(r"✅\s*(已完成|已实现|已采纳|Completed|Done)", re.IGNORECASE)
+
+_TARGET_DOC_FORBIDDEN_PATTERNS = [
+    ("代码证据", re.compile(r"代码证据")),
+    ("测试证据", re.compile(r"测试证据")),
+    ("As-Built", re.compile(r"As-Built", re.IGNORECASE)),
+    ("backend/src path", re.compile(r"backend/src/")),
+    ("frontend/src path", re.compile(r"frontend/src/")),
+    ("backend/tests path", re.compile(r"backend/tests/")),
+    ("frontend/tests path", re.compile(r"frontend/tests/")),
+    ("frontend __tests__ path", re.compile(r"frontend/src/[^\s`]*__tests__")),
+    ("当前实现", re.compile(r"当前实现")),
+    ("技术方案", re.compile(r"技术方案")),
+]
+
+_LEGACY_ENTRY_FORBIDDEN_PATHS = [
+    ("backend/src path", re.compile(r"backend/src/")),
+    ("frontend/src path", re.compile(r"frontend/src/")),
+    ("backend/tests path", re.compile(r"backend/tests/")),
+    ("frontend/tests path", re.compile(r"frontend/tests/")),
+    ("frontend __tests__ path", re.compile(r"frontend/src/[^\s`]*__tests__")),
+]
+
+_BACKTICK_PATH_RE = re.compile(r"`((?:backend|frontend|docs|scripts)/[^`]+)`")
 
 
 def to_rel(path: Path) -> str:
@@ -125,6 +159,76 @@ def check_plans_residual() -> list[str]:
 
 
 # ---------------------------------------------------------------------------
+# Check 4: target docs must not carry implementation evidence
+# ---------------------------------------------------------------------------
+
+def _line_number(text: str, pos: int) -> int:
+    return text.count("\n", 0, pos) + 1
+
+
+def _check_forbidden_patterns(path: Path, patterns: list[tuple[str, re.Pattern[str]]]) -> list[str]:
+    if not path.exists():
+        return [f"{to_rel(path)}: required document missing"]
+
+    text = path.read_text(encoding="utf-8", errors="replace")
+    issues: list[str] = []
+    for label, pattern in patterns:
+        for match in pattern.finditer(text):
+            line = _line_number(text, match.start())
+            issues.append(f"{to_rel(path)}:{line}: forbidden {label}")
+    return issues
+
+
+def check_target_doc_purity() -> list[str]:
+    issues: list[str] = []
+    issues.extend(_check_forbidden_patterns(PRD, _TARGET_DOC_FORBIDDEN_PATTERNS))
+
+    if not SPECS.exists():
+        issues.append(f"{to_rel(SPECS)}: required directory missing")
+        return issues
+
+    for md in sorted(SPECS.glob("*.md")):
+        issues.extend(_check_forbidden_patterns(md, _TARGET_DOC_FORBIDDEN_PATTERNS))
+    return issues
+
+
+# ---------------------------------------------------------------------------
+# Check 5: traceability evidence paths must exist
+# ---------------------------------------------------------------------------
+
+def check_traceability_paths() -> list[str]:
+    if not TRACEABILITY.exists():
+        return [f"{to_rel(TRACEABILITY)}: required document missing"]
+
+    text = TRACEABILITY.read_text(encoding="utf-8", errors="replace")
+    issues: list[str] = []
+    for match in _BACKTICK_PATH_RE.finditer(text):
+        rel_path = match.group(1)
+        full_path = ROOT / rel_path
+        if not full_path.exists():
+            line = _line_number(text, match.start())
+            issues.append(f"{to_rel(TRACEABILITY)}:{line}: dead traceability path -> {rel_path}")
+    return issues
+
+
+# ---------------------------------------------------------------------------
+# Check 6: legacy requirements entries must stay jump pages
+# ---------------------------------------------------------------------------
+
+def check_legacy_requirements_entries() -> list[str]:
+    issues: list[str] = []
+    for path in LEGACY_JUMP_PAGES:
+        issues.extend(_check_forbidden_patterns(path, _LEGACY_ENTRY_FORBIDDEN_PATHS))
+        if not path.exists():
+            continue
+
+        text = path.read_text(encoding="utf-8", errors="replace")
+        if "兼容跳转页" not in text:
+            issues.append(f"{to_rel(path)}: must remain a compatibility jump page")
+    return issues
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -155,6 +259,33 @@ def main() -> int:
         all_issues.extend(issues)
         for i in issues:
             print(f"  WARN  {i}")
+    else:
+        print("  PASS")
+
+    print("=== Check 4: PRD/spec implementation evidence guard ===")
+    issues = check_target_doc_purity()
+    if issues:
+        all_issues.extend(issues)
+        for i in issues:
+            print(f"  FAIL  {i}")
+    else:
+        print("  PASS")
+
+    print("=== Check 5: traceability path existence ===")
+    issues = check_traceability_paths()
+    if issues:
+        all_issues.extend(issues)
+        for i in issues:
+            print(f"  FAIL  {i}")
+    else:
+        print("  PASS")
+
+    print("=== Check 6: legacy requirements jump-page guard ===")
+    issues = check_legacy_requirements_entries()
+    if issues:
+        all_issues.extend(issues)
+        for i in issues:
+            print(f"  FAIL  {i}")
     else:
         print("  PASS")
 

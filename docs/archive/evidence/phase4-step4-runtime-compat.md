@@ -1,4 +1,6 @@
-# Phase4 Step4 Runtime Compatibility
+# Phase4 Step4 Runtime Compatibility（历史证据）
+
+> Historical evidence. 本文件是 2026-03-01 Phase4 Step4 本地运行时兼容性证据快照，不作为当前安全基线。当前安全入口见 `docs/security/README.md`，当前需求、字段与 API 基线分别见 `docs/prd.md`、`docs/specs/domain-model.md`、`docs/specs/api-contract.md`。
 
 ## 扫描口径
 - symbol_pattern: `Asset.organization_id|...|contract.ownership_id`

@@ -16,5 +16,8 @@
 ## 当前架构基线
 
 - 架构概览：[`docs/architecture/system-overview.md`](./system-overview.md)
-- 数据库设计：[`docs/architecture/database-design.md`](./database-design.md)
-- 需求权威入口：[`docs/requirements-specification.md`](../requirements-specification.md)
+- 数据库设计基线：[`docs/architecture/database-design.md`](./database-design.md)
+- 产品需求入口：[`docs/prd.md`](../prd.md)
+- 领域模型契约：[`docs/specs/domain-model.md`](../specs/domain-model.md)
+- API 契约：[`docs/specs/api-contract.md`](../specs/api-contract.md)
+- 实现追踪：[`docs/traceability/requirements-trace.md`](../traceability/requirements-trace.md)

@@ -4,8 +4,8 @@
 **当前状态**: Supplemental (2026-02-09)
 
 > 说明：本页为 PDF 流程补充说明，不作为需求权威基线。  
-> 需求权威入口：`docs/requirements-specification.md`  
-> 模块证据请参考：`docs/features/requirements-appendix-modules.md`
+> 产品需求入口：`docs/prd.md`<br>
+> API 契约请参考：`docs/specs/api-contract.md`；实现证据请参考：`docs/traceability/requirements-trace.md`
 
 ## 接口入口
 - Base: `/api/v1/pdf-import`

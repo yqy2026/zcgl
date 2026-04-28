@@ -5,4 +5,4 @@
 ## 记录规范
 - **命名规则**：`YYYY-MM-DD-<topic>.md`，例如 `2026-04-05-role-design-clarification.md`。
 - **内容结构**：应包含采访背景、核心问题与回答（Q&A 形式为主），以及最终达成的结论与制定的规则。
-- **作用**：作为追溯 `docs/requirements-specification.md`（唯一真相）背后为什么这么设计的过程依据。
+- **作用**：作为追溯 `docs/prd.md`、`docs/specs/` 背后为什么这么设计的过程依据。

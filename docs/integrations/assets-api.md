@@ -1,62 +1,54 @@
 # 资产管理 API
 
-## ✅ Status
-**当前状态**: Supplemental (2026-02-09)
+## Status
 
-> 说明：本页为资产 API 的补充说明，不作为需求权威基线。  
-> 需求权威入口：`docs/requirements-specification.md`  
-> 模块证据请参考：`docs/features/requirements-appendix-modules.md`
+**当前状态**: Supplemental (2026-04-28)
 
-## 核心资源
-| 资源 | 路径前缀 | 说明 |
-|------|----------|------|
-| 资产 | `/api/v1/assets` | 资产 CRUD 与查询 |
-| 项目 | `/api/v1/projects` | 项目管理 |
-| 权属方 | `/api/v1/ownerships` | 权属方管理 |
-| 自定义字段 | `/api/v1/asset-custom-fields` | 字段配置 |
-| 产权证 | `/api/v1/property-certificates` | 产权证管理 |
+本页只补充资产 API 的使用边界，不作为权威契约。权威入口如下：
 
-## 常见操作
-- 列表查询、条件筛选、分页
-- 新增/更新/删除
-- 批量操作（以接口实现为准）
-- 导入/导出（以接口实现为准）
+- 产品需求：[`docs/prd.md`](../prd.md)
+- API 契约：[`docs/specs/api-contract.md`](../specs/api-contract.md)
+- 字段契约：[`docs/specs/domain-model.md`](../specs/domain-model.md)
+- 实现追踪：[`docs/traceability/requirements-trace.md`](../traceability/requirements-trace.md)
 
-## 回收站与删除
-- 软删除：`DELETE /api/v1/assets/{id}`（默认仅标记 data_status=已删除）
-- 恢复资产：`POST /api/v1/assets/{id}/restore`（管理员）
-- 彻底删除：`DELETE /api/v1/assets/{id}/hard-delete`（管理员）
+## 当前资产端点
 
-## 查询参数补充
-- 列表接口支持 `data_status` 筛选；传 `已删除` 可查看回收站资产
+| 能力 | 方法与路径 | 说明 |
+|---|---|---|
+| 列表 | `GET /api/v1/assets` | 分页、筛选、排序、搜索，按主体绑定自动过滤 |
+| 详情 | `GET /api/v1/assets/{asset_id}` | 返回资产主数据和必要投影 |
+| 创建 | `POST /api/v1/assets` | 创建草稿资产，需满足权限和主体范围约束 |
+| 更新 | `PATCH /api/v1/assets/{asset_id}` | 审核态关键字段受控，版本冲突返回 409 |
+| 删除 | `DELETE /api/v1/assets/{asset_id}` | 逻辑删除，存在关联约束时拒绝 |
+| 恢复 | `POST /api/v1/assets/{asset_id}/restore` | 恢复逻辑删除资产 |
+| 导出列表 | `GET /api/v1/assets/all` | 导出场景使用的不分页读取，受 `max_export` 限制 |
+| 按 ID 批量读取 | `POST /api/v1/assets/by-ids` | 根据资产 ID 列表批量返回资产 |
+| 附件 | `/api/v1/assets/{asset_id}/attachments/*` | 管理资产附件 |
+| 审核动作 | `/api/v1/assets/{asset_id}/submit-review|approve-review|reject-review|reverse-review|resubmit-review|withdraw-review` | 资产审核状态流转 |
+| 审核日志 | `GET /api/v1/assets/{asset_id}/review-logs` | 返回资产审核日志 |
+| 租赁摘要 | `GET /api/v1/assets/{asset_id}/lease-summary` | 按上游、下游、委托、直租展示租赁情况 |
 
-## 业务规则与校验
-- **`property_name` 全局唯一**（创建/更新必须避免重名）
-- 导入去重认可 `property_name + address` 逻辑
-- `ownership_id` 为唯一来源；`ownership_entity` 动态读取（不落库）。导入/写入如携带 `ownership_entity` 仅用于匹配 `ownership_id`
-- 面积一致性：`rented_area ≤ rentable_area`
-- 计算字段 `unrented_area` / `occupancy_rate` 不落库，实时计算
+## 字段与业务规则
 
-## 关联与删除约束
-- 资产可选关联项目/权属方
-- 合同/产权证创建时必须关联资产
-- 资产删除时若已关联合同或产权证，必须阻止删除
+- 写入主线使用 `asset_name`、`owner_party_id`、`manager_party_id`、`project_id` 等当前字段。
+- `address` 是系统拼接的只读展示字段，外部写入应提交行政区字段和 `address_detail`。
+- `rented_area` 不得大于 `rentable_area`。
+- `unrented_area`、`occupancy_rate_total` 等统计展示值属于派生口径，字段定义见领域模型契约。
+- 资产删除为逻辑删除；若存在有效合同组、合同、台账或其他业务约束，删除应被拒绝。
+- 资产进入合同签订等关键流转前必须满足审核状态约束。
 
-## 枚举值
-- 确权状态：已确权 / 部分确权 / 未确权 / 其它
-- 使用状态：出租 / 闲置 / 自用 / 公房（出租） / 公房（闲置） / 其它
-- 物业性质：经营类 / 公房 / 自用 / 其它
-- 承租方类型（`tenant_type`）：企业 / 个人 / 其它
+## 数据范围
 
-## 附件与自定义字段
-- 资产支持附件（PDF）上传/下载/删除（大小限制以实现为准）
-- 资产支持自定义字段配置（见 `/api/v1/asset-custom-fields`）
+- 常规资产查询不使用 `view_mode`，系统按用户主体绑定自动收口。
+- 产权方绑定用户只看绑定产权方范围内资产。
+- 运营方绑定用户只看绑定运营方范围内资产。
+- 多绑定用户返回各绑定范围并集，并按资产主键去重。
+- `X-Perspective` 已废弃，不作为当前请求契约。
 
-## 权限与可见范围
-- 当前按角色权限控制
-- 未来将引入“角色数据范围”机制（权属方/经营方关注点不同）
+## Out of Scope
 
-## 相关代码
-- 资产路由: `backend/src/api/v1/assets/`
-- 资产模型: `backend/src/models/asset.py`
-- 资产服务: `backend/src/services/asset/`
+以下历史入口或代码骨架不纳入当前 MVP 验收，不应作为新开发依赖：
+
+- 产权证管理 API
+- 权属方管理 API
+- 资产自定义字段配置 API

@@ -1,5 +1,11 @@
 # 系统监控API使用指南
 
+## Status
+
+**当前状态**: Supplemental / Historical Component Note (2026-04-28)
+
+本文保留早期监控 API 与指标采集设计说明，不作为当前需求或 API 权威契约。当前系统基础健康检查入口以 [`docs/specs/api-contract.md`](../specs/api-contract.md) 的系统管理契约为准；若本文中的高级告警、趋势预测、时序库存储等能力未在代码证据中出现，应按候选能力处理。
+
 ## 概述
 
 系统监控API提供全面的应用程序和基础设施监控功能，包括性能指标收集、健康状态检查、实时监控和告警功能。该API基于现代化的监控架构设计，支持多维度指标收集和分析。
@@ -834,7 +840,7 @@ for rule in rules:
 
 ## 相关文档
 
-- [增强数据库管理器指南](./enhanced_database_guide.md)
-- [API文档分析报告](./API_DOCUMENTATION_ANALYSIS.md)
-- [代码质量指南](./code_quality_guidelines.md)
-- [安全指南](./security.md)
+- [增强数据库管理器](./enhanced-database-manager.md)
+- [API 总览](./api-overview.md)
+- [代码质量规范](../guides/code-quality.md)
+- [后端安全指南](../security/backend-security.md)

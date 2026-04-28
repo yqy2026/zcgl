@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Field drift detector: compare field spec (docs) vs ORM model columns.
+"""Field drift detector: compare domain model spec vs ORM model columns.
 
-For each entity section in requirements-appendix-fields.md, collect
-non-derived confirmed fields and compare with the corresponding ORM model.
+For each entity section in docs/specs/domain-model.md, collect non-derived
+fields and compare with the corresponding ORM model.
 
 Outputs an informational drift report. Does NOT fail the build (exit 0)
 since spec may intentionally be ahead of implementation during 0→1 phase.
@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import NamedTuple
 
 ROOT = Path(__file__).resolve().parent.parent
-FIELD_SPEC = ROOT / "docs" / "features" / "requirements-appendix-fields.md"
+FIELD_SPEC = ROOT / "docs" / "specs" / "domain-model.md"
 MODELS_DIR = ROOT / "backend" / "src" / "models"
 
 # ---------------------------------------------------------------------------
@@ -46,15 +46,11 @@ ENTITY_MODEL_MAP: dict[str, tuple[str, str]] = {
     # CustomerProfile, AnalyticsMetrics not yet implemented as separate ORM models.
 }
 
-# Regex: section heading pattern, e.g. "## 3.1 Asset（资产）"
-_SECTION_RE = re.compile(r"^#+\s+\d+[\.\d]*\s+(\w+)[（(]", re.MULTILINE)
+# Regex: field contract section heading, e.g. "### 4.1 Asset".
+_SECTION_RE = re.compile(r"^###\s+4\.\d+\s+([A-Z]\w*)\s*$", re.MULTILINE)
 
 # Regex: table row with a backtick-quoted field name as first column.
-# Matches: | `field_name` | ... | state |
-_FIELD_ROW_RE = re.compile(
-    r"^\|\s*`([a-z][a-z0-9_]*)`\s*\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)\|",
-    re.MULTILINE,
-)
+_FIELD_ROW_RE = re.compile(r"^\|\s*`([a-z][a-z0-9_]*)`\s*\|(.+)\|$", re.MULTILINE)
 
 # Regex: detect derived status in last column or description column.
 _DERIVED_RE = re.compile(r"派生")
@@ -93,10 +89,8 @@ def parse_spec_fields(text: str) -> dict[str, list[str]]:
         fields: list[str] = []
         for row_match in _FIELD_ROW_RE.finditer(section_text):
             field_name = row_match.group(1)
-            description = row_match.group(4)  # 规则/说明 column
-            status_col = row_match.group(5)   # 状态 column
             # Skip derived fields.
-            if _DERIVED_RE.search(description) or _DERIVED_RE.search(status_col):
+            if _DERIVED_RE.search(row_match.group(2)):
                 continue
             fields.append(field_name)
 

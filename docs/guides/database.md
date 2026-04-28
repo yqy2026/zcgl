@@ -36,10 +36,16 @@
 ├── roles              # 角色表
 ├── permissions        # 权限表
 ├── organizations      # 组织架构表
+├── parties            # 统一主体主档
+├── user_party_bindings # 用户主体绑定与数据范围
 ├── assets             # 资产表 (58字段)
-├── ownerships         # 权属关系表
-├── rent_contracts     # 租赁合同表
-├── rent_schedule      # 租金计划表
+├── projects           # 项目表
+├── project_assets     # 项目资产关系表
+├── contract_groups    # 合同组表
+├── contracts          # 合同基表
+├── contract_assets    # 合同资产关系表
+├── contract_ledger_entries # 租金台账表
+├── service_fee_ledgers # 代理服务费台账表
 ├── dictionaries       # 数据字典表
 ├── audit_logs         # 审计日志表
 └── tasks              # 任务表
@@ -58,13 +64,13 @@ export DATABASE_URL="postgresql+psycopg://postgres:your_password@localhost:5432/
 export TEST_DATABASE_URL="postgresql+psycopg://postgres:your_password@localhost:5432/zcgl_test"
 
 # 2. 创建数据库（如未创建）
-python scripts/setup_postgresql.py
+uv run python scripts/setup_postgresql.py
 
 # 3. 运行迁移
-alembic upgrade head
+uv run alembic upgrade head
 
 # 4. 验证当前版本
-alembic current
+uv run alembic current
 ```
 
 ### 生产环境 (PostgreSQL)
@@ -84,10 +90,10 @@ GRANT ALL PRIVILEGES ON DATABASE zcgl_prod TO zcgl_user;
 export DATABASE_URL="postgresql+psycopg://zcgl_user:secure_password@localhost:5432/zcgl_prod"
 
 # 4. 运行迁移
-alembic upgrade head
+uv run alembic upgrade head
 
 # 5. 验证连接
-python -c "import asyncio; from src.database import get_database_status; print(asyncio.run(get_database_status()))"
+uv run python -c "import asyncio; from src.database import get_database_status; print(asyncio.run(get_database_status()))"
 ```
 
 ---
@@ -118,7 +124,7 @@ DATABASE_POOL_PRE_PING=true
 ### 驱动与异步连接
 - 同步访问使用 `psycopg`
 - 异步访问 (AsyncSession) 使用 `asyncpg`（已纳入核心依赖）
-- 若运行期提示缺少 `asyncpg`，请确认在虚拟环境内执行 `pip install -e .`
+- 若运行期提示缺少 `asyncpg`，请确认在 `backend/` 内执行过 `uv sync --frozen`
 
 **连接池说明**:
 - `pool_size`: 连接池大小（默认 20）
@@ -157,31 +163,31 @@ backend/
 
 ```bash
 # 1. 初始化 Alembic（首次使用）
-alembic init alembic
+uv run alembic init alembic
 
 # 2. 创建新迁移（自动生成）
-alembic revision --autogenerate -m "描述性消息"
+uv run alembic revision --autogenerate -m "描述性消息"
 
 # 3. 创建新迁移（手动创建）
-alembic revision -m "添加用户表"
+uv run alembic revision -m "添加用户表"
 
 # 4. 应用所有迁移
-alembic upgrade head
+uv run alembic upgrade head
 
 # 5. 回滚一个版本
-alembic downgrade -1
+uv run alembic downgrade -1
 
 # 6. 回滚到特定版本
-alembic downgrade <revision_id>
+uv run alembic downgrade <revision_id>
 
 # 7. 查看当前版本
-alembic current
+uv run alembic current
 
 # 8. 查看迁移历史
-alembic history
+uv run alembic history
 
 # 9. 生成迁移 SQL（不执行）
-alembic upgrade head --sql
+uv run alembic upgrade head --sql
 ```
 
 ### 迁移工作流程
@@ -192,20 +198,20 @@ alembic upgrade head --sql
 # 编辑 backend/src/models/xxx.py
 
 # 2. 生成迁移脚本
-alembic revision --autogenerate -m "添加新字段"
+uv run alembic revision --autogenerate -m "添加新字段"
 
 # 3. 审查生成的迁移脚本
 # 编辑 backend/alembic/versions/xxxxx_add_new_field.py
 
 # 4. 测试迁移（开发环境）
-alembic upgrade head
+uv run alembic upgrade head
 
 # 5. 验证更改
-python -c "from src.models import YourModel; print(YourModel.__table__.columns.keys())"
+uv run python -c "from src.models import YourModel; print(YourModel.__table__.columns.keys())"
 
 # 6. 回滚测试
-alembic downgrade -1
-alembic upgrade head
+uv run alembic downgrade -1
+uv run alembic upgrade head
 ```
 
 #### 生产环境部署流程
@@ -214,23 +220,23 @@ alembic upgrade head
 pg_dump zcgl_prod > backup_$(date +%Y%m%d_%H%M%S).sql
 
 # 2. 查看待执行迁移
-alembic history
+uv run alembic history
 
 # 3. 在测试环境验证
-alembic upgrade head
+uv run alembic upgrade head
 
 # 4. 生产环境执行
-alembic upgrade head
+uv run alembic upgrade head
 
 # 5. 验证数据完整性
-python scripts/verify_migration.py
+uv run python scripts/verify_migration.py
 ```
 
 ### 当前迁移版本
 ```bash
 # 查看当前版本与头版本
-alembic current
-alembic heads
+uv run alembic current
+uv run alembic heads
 ```
 
 ---
@@ -242,10 +248,10 @@ alembic heads
 ```bash
 # 启动应用时自动初始化
 cd backend
-python run_dev.py
+uv run python run_dev.py
 
 # 应用启动前建议执行:
-# - alembic upgrade head
+# - uv run alembic upgrade head
 # - 初始化基础数据脚本（如有）
 ```
 
@@ -268,13 +274,13 @@ source venv/bin/activate  # Linux/Mac
 venv\Scripts\activate     # Windows
 
 # 3. 初始化数据库
-python -c "import asyncio; from src.database import init_db; asyncio.run(init_db())"
+uv run python -c "import asyncio; from src.database import init_db; asyncio.run(init_db())"
 
 # 4. 运行迁移
-alembic upgrade head
+uv run alembic upgrade head
 
 # 5. 验证初始化
-python -c "import asyncio; from src.database import get_database_status; print(asyncio.run(get_database_status()))"
+uv run python -c "import asyncio; from src.database import get_database_status; print(asyncio.run(get_database_status()))"
 ```
 
 ### 方式三：使用 SQL 初始化脚本
@@ -356,12 +362,13 @@ DATABASE_POOL_PRE_PING=true    # 连接前检查可用性
 ```sql
 -- 创建常用查询索引
 CREATE INDEX idx_assets_ownership_status ON assets(ownership_status);
-CREATE INDEX idx_assets_property_type ON assets(property_type);
-CREATE INDEX idx_contracts_start_date ON rent_contracts(contract_start_date);
-CREATE INDEX idx_contracts_end_date ON rent_contracts(contract_end_date);
+CREATE INDEX idx_assets_owner_party ON assets(owner_party_id);
+CREATE INDEX idx_assets_manager_party ON assets(manager_party_id);
+CREATE INDEX idx_contracts_effective_from ON contracts(effective_from);
+CREATE INDEX idx_contracts_effective_to ON contracts(effective_to);
 
 -- 复合索引
-CREATE INDEX idx_assets_status_type ON assets(ownership_status, property_type);
+CREATE INDEX idx_assets_status_usage ON assets(ownership_status, usage_status);
 ```
 
 #### 3. 查询优化
@@ -446,19 +453,19 @@ ALTER USER zcgl_user WITH PASSWORD 'new_password';
 **解决方案**:
 ```bash
 # 1. 查看当前版本
-alembic current
+uv run alembic current
 
 # 2. 查看迁移历史
-alembic history
+uv run alembic history
 
 # 3. 检查数据库中的版本
 psql -c "SELECT * FROM alembic_version;"
 
 # 4. 手动同步版本（如果确定可以）
-alembic stamp head
+uv run alembic stamp head
 
 # 5. 然后重新运行迁移
-alembic upgrade head
+uv run alembic upgrade head
 ```
 
 ### Q4: 表已存在错误
@@ -467,13 +474,13 @@ alembic upgrade head
 **解决方案**:
 ```bash
 # 方案一：删除现有表（谨慎使用）
-python -c "import asyncio; from src.database import drop_tables; asyncio.run(drop_tables())"
+uv run python -c "import asyncio; from src.database import drop_tables; asyncio.run(drop_tables())"
 
 # 方案二：使用迁移
-alembic upgrade head
+uv run alembic upgrade head
 
 # 方案三：标记为已应用
-alembic stamp head
+uv run alembic stamp head
 ```
 
 ### Q5: 外键约束错误
@@ -482,22 +489,29 @@ alembic stamp head
 **解决方案**:
 ```bash
 # 1. 检查外键定义
-psql -d zcgl_db -c "\d+ ownerships"
+psql -d zcgl_db -c "\d+ parties"
+psql -d zcgl_db -c "\d+ assets"
 
 # 2. 检查数据完整性
-python -c "
+uv run python -c "
 import asyncio
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from src.database import async_session_scope
-from src.models import Asset, Ownership
+from src.models import Asset, Party
 
 async def check_orphans():
     async with async_session_scope() as db:
+        party_ids = select(Party.id)
         result = await db.execute(
-            select(Ownership).where(~Ownership.asset_id.in_(select(Asset.id)))
+            select(Asset).where(
+                or_(
+                    Asset.owner_party_id.is_not(None) & ~Asset.owner_party_id.in_(party_ids),
+                    Asset.manager_party_id.is_not(None) & ~Asset.manager_party_id.in_(party_ids),
+                )
+            )
         )
         orphans = list(result.scalars().all())
-        print(f'Found {len(orphans)} orphaned ownerships')
+        print(f'Found {len(orphans)} assets with orphaned party references')
 
 asyncio.run(check_orphans())
 "

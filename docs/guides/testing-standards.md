@@ -69,7 +69,7 @@ backend/tests/
 ├── unit/                            # Unit Tests - Fast, isolated
 │   ├── models/                      # Model layer tests
 │   │   ├── test_asset_model.py      # Asset model validation
-│   │   ├── test_rent_contract_model.py
+│   │   ├── test_contract_group_model.py
 │   │   └── test_user_model.py
 │   │
 │   ├── services/                    # Service layer tests
@@ -82,7 +82,7 @@ backend/tests/
 │   │
 │   ├── crud/                        # CRUD layer tests
 │   │   ├── test_asset_crud.py
-│   │   └── test_rent_contract_crud.py
+│   │   └── test_contract_group_crud.py
 │   │
 │   └── utils/                       # Utility tests
 │       ├── test_validation.py
@@ -134,8 +134,8 @@ frontend/src/
 │   ├── Forms/                      # Unified form tests
 │   │   └── __tests__/
 │   │       ├── AssetForm.test.tsx
-│   │       ├── OwnershipForm.test.tsx
-│   │       └── RentContractForm.test.tsx
+│   │       ├── PartyBindingForm.test.tsx
+│   │       └── ContractGroupForm.test.tsx
 │   │
 │   └── Router/
 │       └── __tests__/
@@ -190,9 +190,10 @@ class TestAssetCRUD:
         """Test successful asset creation with valid data"""
         # Arrange
         asset_data = AssetCreate(
-            ownership_id="ownership-001",
-            property_name="测试物业",
-            address="测试地址123号",
+            owner_party_id="party-owner-001",
+            manager_party_id="party-manager-001",
+            asset_name="测试资产",
+            address_detail="测试地址123号",
             actual_property_area=1000.0,
             ownership_status="已确权",
         )
@@ -202,8 +203,8 @@ class TestAssetCRUD:
 
         # Assert
         assert result is not None
-        assert result.ownership_id == "ownership-001"
-        assert result.property_name == "测试物业"
+        assert result.owner_party_id == "party-owner-001"
+        assert result.asset_name == "测试资产"
         assert result.id is not None
 
     @pytest.mark.unit
@@ -212,9 +213,10 @@ class TestAssetCRUD:
         """Test that duplicate assets are rejected"""
         # Arrange
         asset_data = AssetCreate(
-            ownership_id="ownership-001",
-            property_name="唯一物业",
-            address="测试地址",
+            owner_party_id="party-owner-001",
+            manager_party_id="party-manager-001",
+            asset_name="唯一资产",
+            address_detail="测试地址123号",
         )
 
         # Act - Create first asset
@@ -230,9 +232,10 @@ class TestAssetCRUD:
         """Test retrieving asset from database by ID"""
         # Arrange
         asset_data = AssetCreate(
-            ownership_id="ownership-001",
-            property_name="测试物业",
-            address="测试地址",
+            owner_party_id="party-owner-001",
+            manager_party_id="party-manager-001",
+            asset_name="测试资产",
+            address_detail="测试地址123号",
         )
         created = await asset_crud.create_async(db_session, obj_in=asset_data)
 
@@ -242,7 +245,7 @@ class TestAssetCRUD:
         # Assert
         assert retrieved is not None
         assert retrieved.id == created.id
-        assert retrieved.property_name == "测试物业"
+        assert retrieved.asset_name == "测试资产"
 ```
 
 ### Fixture Usage
@@ -286,10 +289,10 @@ async def authenticated_client(db_session: AsyncSession):
 def sample_asset_data():
     """Sample asset data for testing"""
     return {
-        "ownership_id": "ownership-001",
-        "management_entity": "测试管理人",
-        "property_name": "测试物业",
-        "address": "测试地址123号",
+        "owner_party_id": "party-owner-001",
+        "manager_party_id": "party-manager-001",
+        "asset_name": "测试资产",
+        "address_detail": "测试地址123号",
         "actual_property_area": 1000.0,
         "rentable_area": 800.0,
         "ownership_status": "已确权",
@@ -300,14 +303,14 @@ def sample_asset_data():
 
 ```python
 # Run specific test types
-pytest -m unit                    # Only unit tests
-pytest -m integration             # Only integration tests
-pytest -m slow                    # Only slow tests
-pytest -m "not slow"              # Exclude slow tests
+uv run pytest -m unit                    # Only unit tests
+uv run pytest -m integration             # Only integration tests
+uv run pytest -m slow                    # Only slow tests
+uv run pytest -m "not slow"              # Exclude slow tests
 
 # Combined markers
-pytest -m "integration and database"  # Integration tests that use database
-pytest -m "unit and not slow"         # Fast unit tests only
+uv run pytest -m "integration and database"  # Integration tests that use database
+uv run pytest -m "unit and not slow"         # Fast unit tests only
 ```
 
 ### Async Tests
@@ -379,9 +382,9 @@ describe('AssetForm', () => {
       <AssetForm mode="create" onSubmit={mockOnSubmit} />
     )
 
-    expect(screen.getByLabelText(/权属单位/)).toBeInTheDocument()
-    expect(screen.getByLabelText(/物业名称/)).toBeInTheDocument()
-    expect(screen.getByLabelText(/地址/)).toBeInTheDocument()
+    expect(screen.getByLabelText(/产权方主体/)).toBeInTheDocument()
+    expect(screen.getByLabelText(/资产名称/)).toBeInTheDocument()
+    expect(screen.getByLabelText(/详细地址/)).toBeInTheDocument()
   })
 
   it('submits form with valid data', async () => {
@@ -392,9 +395,10 @@ describe('AssetForm', () => {
     )
 
     // Fill in form fields
-    await user.type(screen.getByLabelText(/权属单位/), 'ownership-001')
-    await user.type(screen.getByLabelText(/物业名称/), '测试物业')
-    await user.type(screen.getByLabelText(/地址/), '测试地址123号')
+    await user.type(screen.getByLabelText(/产权方主体/), 'party-owner-001')
+    await user.type(screen.getByLabelText(/经营管理方主体/), 'party-manager-001')
+    await user.type(screen.getByLabelText(/资产名称/), '测试资产')
+    await user.type(screen.getByLabelText(/详细地址/), '测试地址123号')
     await user.type(screen.getByLabelText(/建筑面积/), '1000')
 
     // Submit form
@@ -404,9 +408,10 @@ describe('AssetForm', () => {
     await waitFor(() => {
       expect(mockOnSubmit).toHaveBeenCalledWith(
         expect.objectContaining({
-          ownership_id: 'ownership-001',
-          property_name: '测试物业',
-          address: '测试地址123号',
+          owner_party_id: 'party-owner-001',
+          manager_party_id: 'party-manager-001',
+          asset_name: '测试资产',
+          address_detail: '测试地址123号',
           actual_property_area: 1000,
         })
       )
@@ -425,8 +430,8 @@ describe('AssetForm', () => {
 
     // Verify error messages
     await waitFor(() => {
-      expect(screen.getByText(/权属单位是必填项/)).toBeInTheDocument()
-      expect(screen.getByText(/物业名称是必填项/)).toBeInTheDocument()
+      expect(screen.getByText(/产权方主体是必填项/)).toBeInTheDocument()
+      expect(screen.getByText(/资产名称是必填项/)).toBeInTheDocument()
     })
 
     // Verify form was not submitted
@@ -442,7 +447,7 @@ describe('AssetForm', () => {
     )
 
     // Fill and submit
-    await user.type(screen.getByLabelText(/权属单位/), 'ownership-001')
+    await user.type(screen.getByLabelText(/产权方主体/), 'party-owner-001')
     await user.click(screen.getByRole('button', { name: /提交/ }))
 
     // Verify loading state
@@ -532,15 +537,15 @@ describe('assetService', () => {
   describe('getAssets', () => {
     it('fetches assets with default parameters', async () => {
       const mockAssets = [
-        { id: '1', property_name: '测试物业1' },
-        { id: '2', property_name: '测试物业2' },
+        { id: '1', asset_name: '测试资产1' },
+        { id: '2', asset_name: '测试资产2' },
       ]
       vi.mocked(apiClient.get).mockResolvedValue({ data: mockAssets })
 
       const result = await assetService.getAssets()
 
       expect(apiClient.get).toHaveBeenCalledWith('/api/v1/assets', {
-        params: { page: 1, pageSize: 20 },
+        params: { page: 1, page_size: 20 },
       })
       expect(result).toEqual(mockAssets)
     })
@@ -555,9 +560,10 @@ describe('assetService', () => {
   describe('createAsset', () => {
     it('creates a new asset successfully', async () => {
       const newAsset = {
-        ownership_id: 'ownership-001',
-        property_name: '新物业',
-        address: '测试地址',
+        owner_party_id: 'party-owner-001',
+        manager_party_id: 'party-manager-001',
+        asset_name: '新资产',
+        address_detail: '测试地址123号',
       }
       const createdAsset = { id: '123', ...newAsset }
       vi.mocked(apiClient.post).mockResolvedValue({ data: createdAsset })
@@ -625,29 +631,29 @@ describe('assetService', () => {
 ```bash
 # Run all tests
 cd backend
-pytest
+uv run pytest
 
 # Run with coverage(auto-generated xml/html)
-pytest --cov=src
+uv run pytest --cov=src
 
 # Run specific test types
-pytest -m unit                    # Fast unit tests only
-pytest -m integration             # Integration tests
-pytest -m e2e                     # End-to-end workflow tests
-pytest -m "not slow"              # Exclude slow tests
+uv run pytest -m unit             # Fast unit tests only
+uv run pytest -m integration      # Integration tests
+uv run pytest -m e2e              # End-to-end workflow tests
+uv run pytest -m "not slow"       # Exclude slow tests
 
 # Run specific file
-pytest tests/unit/models/test_asset_model.py
-pytest tests/e2e/test_auth_flow_e2e.py -m e2e
+uv run pytest tests/unit/models/test_asset_model.py
+uv run pytest tests/e2e/test_auth_flow_e2e.py -m e2e
 
 # Run with verbose output
-pytest -v --tb=short
+uv run pytest -v --tb=short
 
 # Run failed tests only
-pytest --lf
+uv run pytest --lf
 
 # Recommended E2E command (disable coverage gate for workflow tests)
-pytest tests/e2e -m e2e --no-cov
+uv run pytest tests/e2e -m e2e --no-cov
 ```
 
 ### Frontend Test Execution
@@ -720,15 +726,19 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-          cache: 'pip'
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
 
       - name: Install dependencies
         run: |
-          pip install -e ".[dev]"
+          cd backend
+          uv sync --frozen --extra dev
 
       - name: Run ${{ matrix.test-type }} tests
         run: |
-          pytest -m ${{ matrix.test-type }} --cov=src --cov-report=xml
+          cd backend
+          uv run pytest -m ${{ matrix.test-type }} --cov=src --cov-report=xml
 
       - name: Upload coverage
         uses: codecov/codecov-action@v4
@@ -780,7 +790,7 @@ jobs:
   backend-e2e:
     runs-on: ubuntu-latest
     steps:
-      - run: cd backend && pytest tests/e2e -m e2e --no-cov
+      - run: cd backend && uv run pytest tests/e2e -m e2e --no-cov
 
   frontend-e2e:
     runs-on: ubuntu-latest

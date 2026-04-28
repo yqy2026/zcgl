@@ -1,5 +1,11 @@
 # 增强数据库管理器使用指南
 
+## Status
+
+**当前状态**: Supplemental / Historical Component Note (2026-04-28)
+
+本文保留早期数据库管理器设计说明，不作为当前数据库字段、迁移或运行配置的权威来源。当前数据库配置与迁移操作以 [`docs/guides/database.md`](../guides/database.md) 为准；字段和表结构基线以 [`docs/specs/domain-model.md`](../specs/domain-model.md) 为准。
+
 ## 概述
 
 增强数据库管理器（Enhanced Database Manager）是地产资产管理系统的核心组件，提供企业级数据库连接管理、性能监控、健康检查和自动优化功能。
@@ -543,7 +549,7 @@ db_manager.reset_connection_pool()
 
 ## 相关文档
 
-- [API文档](./API_DOCUMENTATION_ANALYSIS.md)
-- [代码质量指南](./code_quality_guidelines.md)
-- [安全指南](./security.md)
-- [测试覆盖率报告](./COVERAGE_IMPROVEMENT_REPORT.md)
+- [API 总览](./api-overview.md)
+- [数据库指南](../guides/database.md)
+- [代码质量规范](../guides/code-quality.md)
+- [后端安全指南](../security/backend-security.md)

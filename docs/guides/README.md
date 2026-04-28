@@ -39,6 +39,4 @@
 
 ## 特性文档
 
-| 文档 | 说明 |
-|------|------|
-| [property-certificate.md](./property-certificate.md) | 产权证管理功能使用指南 |
+当前 `guides/` 只保留已进入当前开发基线的操作性指南。产权证管理历史指南已移入 [`docs/archive/guides/property-certificate.md`](../archive/guides/property-certificate.md)，不作为 MVP 功能入口。

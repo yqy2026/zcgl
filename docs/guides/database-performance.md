@@ -134,34 +134,33 @@ def get_contracts_with_assets_bad() -> List[dict]:
 #### 合理使用事务
 ```python
 # ✅ 好的事务管理
-def transfer_ownership(
+def reassign_asset_manager(
     asset_id: int,
-    from_owner_id: int,
-    to_owner_id: int
+    from_manager_party_id: int,
+    to_manager_party_id: int
 ) -> bool:
-    """转移资产所有权"""
+    """调整资产经营管理方"""
     try:
         # 开始事务
         with session.begin():
             # 检查资产状态
             asset = session.query(Asset).filter(
                 Asset.id == asset_id,
-                Asset.owner_id == from_owner_id
+                Asset.manager_party_id == from_manager_party_id
             ).with_for_update().first()  # 行锁防止并发问题
 
             if not asset:
                 raise AssetNotFoundError(f"Asset {asset_id} not found")
 
-            # 更新所有权
-            asset.owner_id = to_owner_id
+            # 更新经营管理方
+            asset.manager_party_id = to_manager_party_id
             asset.updated_at = datetime.now(UTC).replace(tzinfo=None)
 
             # 记录变更历史
-            history = OwnershipHistory(
+            history = AssetManagementHistory(
                 asset_id=asset_id,
-                from_owner_id=from_owner_id,
-                to_owner_id=to_owner_id,
-                transferred_at=datetime.now(UTC).replace(tzinfo=None)
+                manager_party_id=to_manager_party_id,
+                valid_from=datetime.now(UTC).replace(tzinfo=None)
             )
             session.add(history)
 
@@ -169,15 +168,15 @@ def transfer_ownership(
         return True
 
     except Exception as e:
-        logger.error(f"所有权转移失败: {e}")
+        logger.error(f"经营管理方调整失败: {e}")
         # 事务自动回滚
         return False
 
 # ❌ 不好的事务管理
-def transfer_ownership_bad(asset_id: int, from_owner_id: int, to_owner_id: int):
-    """转移资产所有权 - 缺乏事务保护"""
+def reassign_asset_manager_bad(asset_id: int, to_manager_party_id: int):
+    """调整资产经营管理方 - 缺乏事务保护"""
     asset = session.query(Asset).filter(Asset.id == asset_id).first()
-    asset.owner_id = to_owner_id
+    asset.manager_party_id = to_manager_party_id
     session.commit()  # 没有错误处理，可能导致数据不一致
 ```
 

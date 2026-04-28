@@ -12,6 +12,14 @@
 
 | 子目录 | 内容 |
 |--------|------|
-| `frontend-reports/` | 前端 AI 任务执行报告（2026-02，已归档） |
+| `evidence/` | 阶段性门禁证据、发布证据和本地验证快照 |
+| `guides/` | 已从当前入口移除的历史指南和长版设计快照 |
 | `backend-plans/` | 后端已完结技术方案（从 `plans/` 归档） |
-| `terminology/` | 词汇表审计记录（已冻结） |
+| `requirements-decisions/` | 需求访谈、评审、As-Built、迁移过程归档 |
+| `reviews/` | 方案或代码审阅记录归档 |
+
+## 单文件归档
+
+| 文件 | 内容 |
+|------|------|
+| `2026-03-07-m2-contract-lifecycle-ledger-handoff.md` | M2 合同生命周期与台账交接快照 |

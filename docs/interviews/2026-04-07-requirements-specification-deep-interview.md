@@ -1,14 +1,14 @@
-# requirements-specification deep interview（进行中）
+# requirements-specification deep interview（历史快照）
 
 - 日期：2026-04-07
 - 目标文档：`docs/requirements-specification.md`
 - 模式：deep-interview / standard
-- 状态：进行中
-- 记录说明：本文件用于沉淀本轮采访问答与结论；未完成前不视为冻结纪要。
+- 状态：历史快照，已被 PRD/spec/traceability 文档体系重构吸收
+- 记录说明：本文件用于沉淀本轮采访问答与结论；其中旧 SSOT 表述保留为当时上下文，当前需求入口以 `docs/prd.md`、`docs/specs/` 和 `docs/traceability/` 为准。
 
 ## 预检结论
-- `docs/requirements-specification.md` 是当前 SSOT。
-- 文档当前状态为 `Active Baseline (2026-04-06 评审修订)`。
+- 当时上下文：`docs/requirements-specification.md` 曾承担 SSOT；当前已降级为兼容跳转页。
+- 当时文档状态为 `Active Baseline (2026-04-06 评审修订)`。
 - 文档已有 2026-02-28、2026-04-06 两轮冻结结论。
 - 仓库已有 `docs/interviews/` 目录，故本轮采访记录沿用该目录。
 

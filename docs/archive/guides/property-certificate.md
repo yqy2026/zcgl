@@ -1,4 +1,8 @@
-# Property Certificate Management - User Guide
+# Property Certificate Management - Historical Guide
+
+## Status
+
+Historical snapshot. Property certificate management is currently Out of Scope for MVP and is not exposed as an active user guide. Current product scope is defined in `docs/prd.md`, and Out of Scope objects are listed in `docs/specs/domain-model.md` and `docs/specs/api-contract.md`.
 
 ## Overview
 

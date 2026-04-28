@@ -27,7 +27,7 @@
 ```python
 # ✅ 正确 - PascalCase
 class AssetService:
-class RentContractCRUD:
+class ContractGroupCRUD:
 class UserResponse:
 
 # ❌ 错误
@@ -40,13 +40,13 @@ class rentContractCrud:
 # ✅ 正确 - snake_case
 def get_assets():
 def calculate_occupancy_rate():
-async def create_rent_contract():
+async def create_contract_group():
 ```
 
 ### 2.3 变量与属性
 ```python
 # ✅ 正确 - snake_case
-property_name = "示例物业"
+asset_name = "示例资产"
 page_size = 20
 current_user = get_current_user()
 ```
@@ -168,8 +168,8 @@ const displayPageSize = page_size;  // 可赋值给 camelCase 变量用于 UI
 
 ## 5. 数据库命名规范
 
-- **表名**: `snake_case` 复数 (`assets`, `rent_contracts`)
-- **字段名**: `snake_case` (`property_name`, `created_at`)
+- **表名**: `snake_case` 复数 (`assets`, `contract_groups`, `contracts`)
+- **字段名**: `snake_case` (`asset_name`, `created_at`)
 - **外键**: `target_table_id` (`user_id`, `asset_id`)
 
 ---
@@ -178,14 +178,15 @@ const displayPageSize = page_size;  // 可赋值给 camelCase 变量用于 UI
 
 ```
 # ✅ 正确 - kebab-case
-GET  /api/v1/rental-contracts/contracts
+GET  /api/v1/contract-groups
+GET  /api/v1/contracts/{id}
 GET  /api/v1/assets/{id}/attachments
 POST /api/v1/user-permissions
 
 # ❌ 错误
 /api/v1/rentContracts      # camelCase
-/api/v1/rent_contracts     # snake_case
-/api/v1/RentContracts      # PascalCase
+/api/v1/contract_groups    # snake_case
+/api/v1/ContractGroups     # PascalCase
 ```
 
 ---
@@ -249,10 +250,10 @@ enum AssetType {
 
 | 类型 | 风格 | 示例 |
 |------|------|------|
-| **Python 模块** | `snake_case.py` | `rent_contract.py`, `asset_service.py` |
+| **Python 模块** | `snake_case.py` | `contract_group.py`, `asset_service.py` |
 | **React 组件** | `PascalCase.tsx` | `AssetForm.tsx`, `ContractList.tsx` |
 | **TypeScript 工具** | `camelCase.ts` | `apiClient.ts`, `formatDate.ts` |
-| **类型定义** | `camelCase.ts` | `assetType.ts`, `contractDetail.ts`, `rentContract.ts` |
+| **类型定义** | `camelCase.ts` | `assetType.ts`, `contractDetail.ts`, `contractGroup.ts` |
 | **常量文件** | `camelCase.ts` | `constants.ts`, `config.ts` |
 | **样式文件** | `PascalCase.module.css` | `AssetForm.module.css` |
 

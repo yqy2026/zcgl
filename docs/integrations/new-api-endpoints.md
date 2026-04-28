@@ -1,5 +1,11 @@
 # 新增API端点文档
 
+## Status
+
+**当前状态**: Supplemental (2026-04-28)
+
+本文记录资产批量读取/导出补充端点，不作为 API 权威契约。当前 API 主契约见 [`docs/specs/api-contract.md`](../specs/api-contract.md)。
+
 ## 概述
 
 本文档描述了为解决前后端不一致问题而新增的API端点，包括详细的请求/响应格式和使用示例。
@@ -22,7 +28,8 @@
 | business_category | string | 否 | - | 业态类别过滤 |
 | sort_by | string | 否 | created_at | 排序字段 |
 | sort_order | string | 否 | desc | 排序顺序（asc/desc） |
-| limit | integer | 否 | 10000 | 最大返回数量（1-50000） |
+| max_export | integer | 否 | 10000 | 最大返回数量（1-50000） |
+| include_relations | boolean | 否 | false | 是否加载关联数据 |
 
 **响应格式**:
 ```json
@@ -31,9 +38,9 @@
   "data": [
     {
       "id": "asset-id-1",
-      "ownership_id": "ownership-id-1",
-      "ownership_entity": "权属方名称",
-      "property_name": "物业名称",
+      "owner_party_id": "party-owner-1",
+      "manager_party_id": "party-manager-1",
+      "asset_name": "资产名称",
       "address": "物业地址",
       "rentable_area": 100.0,
       "rented_area": 80.0,
@@ -56,10 +63,10 @@ GET /api/v1/assets/all
 GET /api/v1/assets/all?search=商业广场&ownership_status=已确权
 
 # 带排序
-GET /api/v1/assets/all?sort_by=property_name&sort_order=asc
+GET /api/v1/assets/all?sort_by=asset_name&sort_order=asc
 
 # 限制返回数量
-GET /api/v1/assets/all?limit=1000
+GET /api/v1/assets/all?max_export=1000
 ```
 
 ### 2. 根据ID列表获取资产
@@ -82,9 +89,9 @@ GET /api/v1/assets/all?limit=1000
   "data": [
     {
       "id": "asset-id-1",
-      "ownership_id": "ownership-id-1",
-      "ownership_entity": "权属方名称",
-      "property_name": "物业名称",
+      "owner_party_id": "party-owner-1",
+      "manager_party_id": "party-manager-1",
+      "asset_name": "资产名称",
       "unrented_area": 20.0,  // 计算字段
       "occupancy_rate": 80.00   // 计算字段
     }
@@ -142,7 +149,7 @@ Content-Type: application/json
 
 ## 参数验证规则
 
-### limit参数
+### max_export 参数
 - 类型: integer
 - 范围: 1-50000
 - 默认值: 10000
@@ -155,21 +162,21 @@ Content-Type: application/json
 ### search参数
 - 类型: string
 - 最大长度: 500
-- 搜索字段: property_name, address, ownership_entity(通过权属表名称), business_category
+- 搜索字段: asset_name, address, business_category，以及当前实现支持的主体展示投影
 
 ## 性能考虑
 
 1. **分页建议**: 对于大量数据，建议使用分页端点 `/api/v1/assets` 而不是此端点
 2. **索引优化**: 搜索字段已建立索引以提高查询性能
 3. **缓存策略**: 建议对频繁查询的结果实施缓存
-4. **内存使用**: 大量数据查询可能消耗较多内存，建议合理设置limit参数
+4. **内存使用**: 大量数据查询可能消耗较多内存，建议合理设置 `max_export` 参数
 
 ## 版本信息
 
 - **API版本**: v1
 - **添加版本**: 2025-10-23
-- **兼容性**: 向后兼容
-- **变更类型**: 新增功能
+- **兼容性**: 以当前 `/api/v1/assets/*` 契约为准，不为历史字段保留额外兼容说明
+- **变更类型**: 资产导出与批量读取补充端点
 
 ## 测试覆盖
 

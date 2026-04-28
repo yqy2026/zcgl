@@ -44,7 +44,7 @@ import { AssetForm } from '@/components/Forms';
 | 认证组件 | `frontend/src/components/Auth` | `index.ts` | 登录守卫与鉴权 |
 | 表单组件 | `frontend/src/components/Forms` | `index.ts` | 资产/租赁/项目表单入口 |
 | 资产表单 | `frontend/src/components/Forms/Asset` | `index.ts` | 资产表单分段 |
-| 租赁表单 | `frontend/src/components/Forms/RentContract` | `index.ts` | 合同表单分段 |
+| 合同表单 | `frontend/src/components/Forms/RentContract` | `index.ts` | 历史目录名，当前业务语义为 Contract/ContractGroup 表单分段 |
 | 仪表盘 | `frontend/src/components/Dashboard` | `index.ts` | 趋势卡片与洞察 |
 | 布局组件 | `frontend/src/components/Layout` | `index.ts` | 页面布局与导航 |
 | 加载组件 | `frontend/src/components/Loading` | `index.ts` | Loading/Skeleton |
@@ -54,11 +54,9 @@ import { AssetForm } from '@/components/Forms';
 | 通知中心 | `frontend/src/components/Notification` | `index.ts` | 站内通知 |
 | 系统管理 | `frontend/src/components/System` | `index.ts` | 权限守卫、面包屑、提示编辑 |
 | 系统监控 | `frontend/src/components/Monitoring` | `index.ts` | 监控看板与健康状态 |
-| 权属方 | `frontend/src/components/Ownership` | `index.ts` | 权属方列表与详情 |
 | 项目管理 | `frontend/src/components/Project` | `index.ts` | 项目列表与选择 |
 | 租赁管理 | `frontend/src/components/Rental` | `index.ts` | 合同、台账与导入 |
 | 数据字典 | `frontend/src/components/Dictionary` | `index.ts` | 字典选择与预览 |
-| 产权证 | `frontend/src/components/PropertyCertificate` | `index.ts` | 上传/审核组件 |
 | PDF 导入 | `frontend/src/components/Contract/PDFImport` | `index.ts` | 合同 PDF 导入流程 |
 
 ---
@@ -66,4 +64,5 @@ import { AssetForm } from '@/components/Forms';
 ## 🧩 目录补充说明
 
 - `Contract/` 目录暂未提供统一导出（仅 `PDFImport` 有入口），可继续按文件路径引用。
+- `Ownership/` 与 `PropertyCertificate/` 目录为历史或候选实现目录；当前 MVP 中权属方管理和产权证管理均为 Out of Scope，不作为新页面入口。
 - 若某目录新增组件较多，建议补齐 `index.ts` 并在本表中登记入口。

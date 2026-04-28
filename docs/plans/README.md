@@ -42,6 +42,8 @@
 | 2026-04-05-requirements-update-plan.md | 业务规格更新实施计划 | ✅ 已完成（已吸收） |
 | 2026-04-05-rbac-role-realignment.md | RBAC 角色权限重定义与授权加固 | ✅ 已完成（已吸收） |
 | 2026-04-07-orthogonal-restructure-blueprint.md | 角色-绑定-视图三维正交重构蓝图 | ✅ 已完成 |
+| 2026-04-22-ci-format-remediation.md | CI 格式化门禁修复分批计划 | ✅ 已完成 |
+| 2026-04-27-prd-document-restructure-plan.md | PRD 文档体系重构 | ✅ 已完成 |
 | 2026-03-11-req-ast-003-asset-review.md | REQ-AST-003：资产主数据审核与反审核 | ✅ 已完成 |
 | 2026-03-12-req-pty-001-002-party-remediation.md | REQ-PTY-001/002：主体主档管理 Gap 修复 | ✅ 已完成 |
 | 2026-02-20-phase3-implementation-plan.md | Phase 3：前端全量迁移 + 策略包 UI | ✅ 已完成 |

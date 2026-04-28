@@ -53,7 +53,8 @@ backend/
 │   │       ├── assets/     # 资产管理接口
 │   │       ├── auth/       # 认证授权接口
 │   │       ├── documents/  # 文档/PDF 处理接口
-│   │       ├── rent_contracts/ # 租赁合同接口
+│   │       ├── contracts/  # 合同组与合同接口（当前主线）
+│   │       ├── rent_contracts/ # 历史兼容路由装配，新能力以 contracts 契约为准
 │   │       ├── system/     # 系统管理接口
 │   │       ├── llm_prompts.py # LLM Prompt 管理
 │   │       └── dependencies.py # 共享依赖注入
@@ -71,7 +72,7 @@ backend/
 │   │   ├── asset.py      # 资产模型
 │   │   ├── auth.py       # 用户/角色模型
 │   │   ├── rbac.py       # RBAC 权限模型
-│   │   ├── rent_contract.py # 租赁合同模型
+│   │   ├── contract_group.py # 合同组、合同、台账模型
 │   │   └── ...           # 共 22 个模型文件
 │   ├── schemas/           # Pydantic 模型
 │   │   ├── auth.py       # 认证 Schema
@@ -79,7 +80,7 @@ backend/
 │   │   └── ...
 │   ├── services/          # 业务逻辑（按模块子目录划分）
 │   │   ├── asset/         # 资产服务
-│   │   ├── rent_contract/ # 合同服务
+│   │   ├── contract/      # 合同与合同组服务（当前主线）
 │   │   ├── document/      # PDF 处理
 │   │   ├── core/          # 核心服务（认证/密码）
 │   │   ├── permission/    # 权限服务（RBAC）
@@ -117,30 +118,18 @@ backend/
 # 1. 进入后端目录
 cd backend
 
-# 2. 创建虚拟环境
-python -m venv venv
-
-# 3. 激活虚拟环境
-# Windows:
-venv\Scripts\activate
-# macOS/Linux:
-source venv/bin/activate
-
-# 4. 安装依赖
-pip install -e .
-
-# 5. 安装开发依赖
-pip install -e ".[dev]"
+# 2. 安装锁定依赖
+uv sync --frozen --extra dev
 
 # 可选：PDF 处理基础依赖（如需 PDF 解析/分析）
-pip install -e ".[pdf-basic]"
+uv sync --frozen --extra dev --extra pdf-basic
 
-# 6. 配置数据库并启动开发服务器
-alembic upgrade head
-python run_dev.py
+# 3. 配置数据库并启动开发服务器
+uv run alembic upgrade head
+uv run python run_dev.py
 ```
 
-> 提示：确保 `python` 来自虚拟环境（如 `.venv` / `venv`），可用 `python -c "import sys; print(sys.executable)"` 检查，避免系统 Python 缺失依赖。
+> 提示：后端命令统一使用 `uv run <cmd>`，虚拟环境为 `backend/.venv`，避免误用系统 Python、Anaconda 或全局 pip。
 
 ### PDF 渲染后端策略
 
@@ -153,27 +142,27 @@ python run_dev.py
 
 ```bash
 # 启动开发服务器
-python run_dev.py              # 端口 8002，热重载
+uv run python run_dev.py       # 端口 8002，热重载
 
 # 完整功能服务器
-python start_complete_backend.py
+uv run python start_complete_backend.py
 
 # 代码质量
-ruff check .                    # 代码检查
-ruff format .                   # 代码格式化
-mypy src                        # 类型检查
-bandit -r src                   # 安全扫描
+uv run ruff check .             # 代码检查
+uv run ruff format .            # 代码格式化
+uv run mypy src                 # 类型检查
+uv run bandit -r src            # 安全扫描
 
 # 测试
-pytest                          # 运行所有测试
-pytest --cov=src               # 带覆盖率
-pytest -m unit                 # 单元测试
-pytest -m integration          # 集成测试
-pytest -m slow                 # 慢速测试
+uv run pytest                   # 运行所有测试
+uv run pytest --cov=src         # 带覆盖率
+uv run pytest -m unit           # 单元测试
+uv run pytest -m integration    # 集成测试
+uv run pytest -m slow           # 慢速测试
 
 # 数据库迁移
-alembic revision --autogenerate -m "描述"
-alembic upgrade head
+uv run alembic revision --autogenerate -m "描述"
+uv run alembic upgrade head
 ```
 
 ---
@@ -257,14 +246,15 @@ async def get_asset(
 
 ```python
 # src/schemas/asset.py
-from pydantic import BaseModel, Field, field_validator
-from typing import Optional
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from datetime import datetime
 
 class AssetBase(BaseModel):
     """资产基础 Schema"""
-    property_name: str = Field(..., min_length=1, max_length=200, description="资产名称")
-    address: str = Field(..., min_length=1, description="资产地址")
+    asset_name: str = Field(..., min_length=1, max_length=200, description="资产名称")
+    owner_party_id: str = Field(..., description="产权方主体ID")
+    manager_party_id: str = Field(..., description="经营管理方主体ID")
+    address_detail: str = Field(..., min_length=5, max_length=200, description="详细地址")
     ownership_status: str = Field(..., description="权属状态")
     property_nature: str = Field(..., description="资产性质")
     usage_status: str = Field(..., description="使用状态")
@@ -279,26 +269,26 @@ class AssetBase(BaseModel):
 
 class AssetCreate(AssetBase):
     """创建资产 Schema"""
-    land_area: Optional[float] = Field(None, ge=0, description="土地面积")
-    building_area: Optional[float] = Field(None, ge=0, description="建筑面积")
+    land_area: float | None = Field(None, ge=0, description="土地面积")
+    rentable_area: float | None = Field(None, ge=0, description="可出租面积")
 
 class AssetUpdate(BaseModel):
     """更新资产 Schema（所有字段可选）"""
-    property_name: Optional[str] = Field(None, min_length=1, max_length=200)
-    address: Optional[str] = None
-    ownership_status: Optional[str] = None
-    version: Optional[int] = Field(None, description="版本号(乐观锁)")
+    asset_name: str | None = Field(None, min_length=1, max_length=200)
+    address_detail: str | None = None
+    ownership_status: str | None = None
+    version: int | None = Field(None, description="版本号(乐观锁)")
     # ... 其他字段
 
 class AssetResponse(AssetBase):
     """资产响应 Schema"""
     id: str
+    address: str
     created_at: datetime
     updated_at: datetime
-    created_by: Optional[str] = None
+    created_by: str | None = None
 
-    class Config:
-        from_attributes = True  # Pydantic v2
+    model_config = ConfigDict(from_attributes=True)
 ```
 
 ### 统一响应格式
@@ -349,8 +339,8 @@ def error_response(
 
 ```python
 # src/models/asset.py
-from sqlalchemy import Column, String, Float, DateTime, Text, Enum as SQLEnum
-from sqlalchemy.orm import relationship
+from sqlalchemy import DateTime, ForeignKey, Integer, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime
 
 from ...database import Base
@@ -359,39 +349,26 @@ class Asset(Base):
     """资产模型"""
     __tablename__ = "assets"
 
-    # 主键
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    asset_code: Mapped[str | None] = mapped_column(String(50), unique=True, index=True)
+    asset_name: Mapped[str] = mapped_column(String(200), nullable=False, unique=True)
+    address_detail: Mapped[str | None] = mapped_column(String(200))
+    address: Mapped[str] = mapped_column(String(500), nullable=False)
+    ownership_status: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    property_nature: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    usage_status: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    owner_party_id: Mapped[str | None] = mapped_column(ForeignKey("parties.id"), index=True)
+    manager_party_id: Mapped[str | None] = mapped_column(ForeignKey("parties.id"), index=True)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # 基本信息（58字段中的核心字段）
-    property_name = Column(String(200), nullable=False, index=True, comment="资产名称")
-    address = Column(String(500), nullable=False, comment="资产地址")
-    ownership_status = Column(SQLEnum('自持', '租赁', '合作', '其他'), nullable=False, comment="权属状态")
-    property_nature = Column(String(50), comment="资产性质")
-    usage_status = Column(String(50), comment="使用状态")
-
-    # 面积信息
-    land_area = Column(Float, comment="土地面积(㎡)")
-    building_area = Column(Float, comment="建筑面积(㎡)")
-    rentable_area = Column(Float, comment="可租面积(㎡)")
-    rented_area = Column(Float, comment="已租面积(㎡)")
-    occupancy_rate = Column(Float, comment="出租率(%)")
-
-    # 财务信息
-    annual_income = Column(Float, comment="年收入")
-    annual_expense = Column(Float, comment="年支出")
-    net_income = Column(Float, comment="净收入")
-
-    # 元数据
-    created_at = Column(DateTime, default=datetime.utcnow, comment="创建时间")
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    created_by = Column(String, comment="创建人ID")
-
-    # 关系
-    ownerships = relationship("Ownership", back_populates="asset")
-    contracts = relationship("RentContract", back_populates="asset")
+    owner_party = relationship("Party", foreign_keys=[owner_party_id])
+    manager_party = relationship("Party", foreign_keys=[manager_party_id])
+    contracts = relationship("Contract", secondary="contract_assets", lazy="selectin")
 
     def __repr__(self):
-        return f"<Asset(id={self.id}, name={self.property_name})>"
+        return f"<Asset(id={self.id}, name={self.asset_name})>"
 ```
 
 ### CRUD 基类
@@ -485,7 +462,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         """搜索资产"""
         stmt = (
             select(Asset)
-            .where(Asset.property_name.contains(keyword))
+            .where(Asset.asset_name.contains(keyword))
             .offset(skip)
             .limit(limit)
         )
@@ -847,8 +824,10 @@ class TestAssetsAPI:
         response = await client.post(
             "/api/v1/assets",
             json={
-                "property_name": "测试资产",
-                "address": "测试地址",
+                "asset_name": "测试资产",
+                "owner_party_id": "party-owner-001",
+                "manager_party_id": "party-manager-001",
+                "address_detail": "测试地址123号",
                 "ownership_status": "自持",
                 "property_nature": "办公楼",
                 "usage_status": "在用"
@@ -856,7 +835,7 @@ class TestAssetsAPI:
         )
         assert response.status_code == 201
         data = response.json()
-        assert data["data"]["property_name"] == "测试资产"
+        assert data["data"]["asset_name"] == "测试资产"
 
     @pytest.mark.asyncio
     async def test_get_assets(self, client: AsyncClient):

@@ -2,6 +2,22 @@
 
 ## [Unreleased] - 2026-03-06
 
+### 2026-04-28
+- docs(audit): 收口活跃文档中的过期模型、API 与入口边界。`docs/integrations/assets-api.md` 与 `docs/integrations/new-api-endpoints.md` 已对齐当前资产字段、数据范围和 `max_export` 端点口径；产权证指南和 2026-01 长版数据库设计已移入 `docs/archive/guides/`，当前 `docs/architecture/database-design.md` 改为数据库设计基线入口；一次性 Auth-RBAC 分析/审阅报告已移入 `docs/archive/reviews/` 并在原路径保留跳转页；Phase4 Step4 运行时兼容性证据已移入 `docs/archive/evidence/`；同步修正后端、数据库、命名、组件、测试指南中的旧 `RentContract` / `Ownership` / `property_name` 示例，并补全归档索引。
+
+### 2026-04-27
+- docs(requirements): 收口需求文档 SSOT 一致性问题。`docs/requirements-specification.md` 明确 ✅ 状态为代码证据快照而非放量完成，删除“续签”需求并改为到期后新签口径，清理 `X-Perspective` 过渡表述、产权证搜索验收泄漏和 PDF 批量导入 vNext 冲突，并将 `REQ-XCUT-001` 至 `REQ-XCUT-004` 补入追踪矩阵。`docs/features/requirements-appendix-fields.md` 升级为 v0.4 字段基线，移除 `renewal` / `predecessor_group_id` 续签口径，修复 Party 编号与 `metadata_json` / `source_ledger_id` 字段漂移描述。`docs/features/requirements-appendix-modules.md` 对齐当前合同组/台账主线并标注产权证、权属方为 Out of Scope；已将完成的 CI 格式整改方案归档到 `docs/archive/backend-plans/`。
+- docs(plan): 新增 `docs/plans/2026-04-27-prd-document-restructure-plan.md`，规划将当前混合型需求文档拆分为最终态 `prd.md`、领域模型契约、API 契约、需求追踪矩阵和历史决策归档，明确 PRD 不再承载代码证据、As-Built 和过程信息。
+- docs(prd): 启动 PRD 文档体系重构 Phase 1。新增 `docs/prd.md` 作为产品目标态入口，新增 `docs/specs/{README.md,domain-model.md,api-contract.md}`、`docs/traceability/{README.md,requirements-trace.md}` 和 `docs/archive/requirements-decisions/README.md`，并更新 `docs/index.md` 将旧 `requirements-specification.md` 标为过渡期综合文档。
+- docs(specs): 推进 PRD 文档体系重构 Phase 3。`docs/specs/domain-model.md` 已从骨架扩展为当前目标态领域契约，覆盖 Asset、Project、ContractGroup、Contract、台账、审批、Party 等对象字段、状态机和统计口径；`docs/specs/api-contract.md` 已扩展为当前 API 契约，覆盖全局规则、数据范围、ViewMode、主要端点、错误边界和 Out of Scope API。
+- docs(traceability): 推进 PRD 文档体系重构 Phase 4。`docs/traceability/requirements-trace.md` 已从骨架扩展为完整 REQ 追踪矩阵，集中承载产品状态、实现状态、代码证据和测试证据，并通过路径存在性校验，避免 PRD 和规格契约继续承载实现台账。
+- docs(requirements): 推进 PRD 文档体系重构 Phase 5。`docs/requirements-specification.md` 已降级为兼容跳转页，当前需求入口改为 `docs/prd.md`、`docs/specs/` 和 `docs/traceability/`；旧综合文档中的访谈、评审、As-Built、迁移过程信息已归档摘要到 `docs/archive/requirements-decisions/2026-04-27-requirements-specification-process-archive.md`，并同步更新文档中心导航。
+- docs(lint): 推进 PRD 文档体系重构 Phase 6。`scripts/check_requirements_authority.py` 新增 PRD/spec 实现证据守卫、traceability 路径存在性守卫和旧需求入口跳转页守卫，防止目标态文档重新混入代码证据、测试路径或死链证据。
+- docs(appendices): 推进 PRD 文档体系重构 Phase 7。`docs/features/requirements-appendix-fields.md` 与 `docs/features/requirements-appendix-modules.md` 已降级为兼容跳转页，旧附录过程信息归档摘要新增到 `docs/archive/requirements-decisions/2026-04-27-requirements-appendices-process-archive.md`；`scripts/check_field_drift.py` 改为读取 `docs/specs/domain-model.md`，`scripts/check_requirements_authority.py` 同步守卫旧附录跳转页；`AGENTS.md` 和相关集成文档已切换到新 PRD/spec/traceability 入口。
+- docs(plan): 完成并归档 `docs/archive/backend-plans/2026-04-27-prd-document-restructure-plan.md`，`docs/plans/README.md` 已从活跃方案移除 PRD 文档体系重构并登记到已归档方案。
+- docs(references): 同步 PRD 文档体系重构后的活跃文档引用。`docs/issues/2026-04-party-architecture-analysis.md` 改为引用 `docs/prd.md` 与 `docs/specs/domain-model.md`，`docs/issues/2026-04-06-requirements-specification-review.md` 和 `docs/issues/README.md` 标记为历史审阅已吸收，`docs/interviews/` 中相关采访记录补充历史快照说明，避免继续把旧 `requirements-specification.md` 解读为当前 SSOT。
+- docs(audit): 修复全面文档复核发现的活跃文档治理问题。`docs/integrations/{enhanced-database-manager.md,monitoring.md}` 的失效相关文档链接已替换为现有入口；新增 `docs/plans/execution/README.md` 说明执行快照目录；`docs/architecture/ADR-0001-party-role-architecture.md`、`docs/interviews/2026-04-07-requirements-specification-deep-interview.md` 和 `docs/plans/2026-02-11-approval-flowable-b-plan.md` 状态已对齐索引；`docs/index.md` 已补充 `docs/interviews/` 入口。
+
 ### 2026-04-22
 - chore(lint): 在重基 `feature/asset-list-address-fallback` 到最新 `origin/develop` 后，补齐 `backend/src/services/enum_data_init.py` 的 import 排序，消除 `make check` 在 backend lint 阶段的 `I001` 阻断，避免分支因单文件格式问题无法继续验证与推送。
 - test(authz): 修正 unit test 基础夹具与项目列表断言，使其跟上当前鉴权契约。`backend/tests/unit/conftest.py` 现会覆盖路由导入时由 `require_any_role(...)` / `get_current_user_with_permissions(...)` 生成的闭包依赖，避免 unit test 默认绕过鉴权时被新依赖面误伤；`backend/tests/unit/api/v1/test_project.py` 同步改为校验 `/api/v1/projects/` 当前的自动 scope 行为，而不再沿用已废弃的 `X-Perspective` 必填假设。验证：定向执行 `party/project/roles` 相关 7 个回归用例，均已通过。

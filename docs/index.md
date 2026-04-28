@@ -8,14 +8,21 @@
 ## 🚀 快速入口
 
 ### 需求
-- [**需求规格说明书（唯一 SSOT）**](requirements-specification.md)
-- [需求附录：模块与接口清单](features/requirements-appendix-modules.md)
-- [需求附录：字段冻结清单](features/requirements-appendix-fields.md)
+- [**产品需求文档 PRD**](prd.md)
+- [领域模型契约](specs/domain-model.md)
+- [API 契约](specs/api-contract.md)
+- [需求追踪矩阵](traceability/requirements-trace.md)
+- [需求访谈与澄清记录](interviews/README.md)
+- [旧需求规格兼容入口](requirements-specification.md)
 
 ### 架构与数据库
 - [系统架构概览](architecture/system-overview.md)
-- [数据库设计](architecture/database-design.md)
+- [数据库设计基线](architecture/database-design.md)
 - [ADR-0001: Party-Role 组织架构](architecture/ADR-0001-party-role-architecture.md)
+
+### 规格与追踪
+- [规格文档索引](specs/README.md)
+- [需求追踪索引](traceability/README.md)
 
 ### 开发指南
 - [快速开始](guides/getting-started.md)
@@ -33,7 +40,6 @@
 - [TypeScript 规范](guides/typescript-conventions.md)
 - [测试标准](guides/testing-standards.md)
 - [组件导航](guides/components.md)
-- [产权证使用指南](guides/property-certificate.md)
 
 ### API 与集成
 - [API 总览](integrations/api-overview.md)
@@ -57,27 +63,37 @@
 
 ## 🗂️ 历史归档
 - [归档目录说明](archive/readme.md)
-- `archive/frontend-reports/` — 前端 AI 任务执行报告（2026-02）
+- `archive/evidence/` — 阶段性门禁证据、发布证据和本地验证快照
+- `archive/guides/` — 历史指南和长版设计快照
 - `archive/backend-plans/` — 后端已完结技术方案
-- `archive/terminology/` — 词汇表审计记录（已冻结）
+- `archive/requirements-decisions/` — 需求访谈、评审、As-Built、迁移过程归档
+- `archive/reviews/` — 方案或代码审阅记录归档
 
 ## 📚 文档结构
 
 > 每个子目录均有 README，进入目录后可直接看到内容导航。
 
-- `requirements-specification.md` — 唯一需求规格（目标 + 实现状态）
-- `features/` — 需求附录（字段清单、模块清单）
+- `prd.md` — 产品需求文档（最终产品目标态）
+- `specs/` — 领域模型与 API 契约
+- `traceability/` — 需求到实现和测试证据的追踪
+- `requirements-specification.md` — 旧需求规格兼容跳转页
+- `features/` — 旧需求附录兼容跳转页
 - `architecture/` — 架构设计（含 ADR）
 - `guides/` — 开发指南（环境、后端、前端、代码质量、部署运维、测试）
 - `integrations/` — API 接口规范与系统组件文档
 - `security/` — 安全相关（加密、后端安全、能力守卫）
 - `plans/` — 活跃方案（进行中 + 搁置）
+- `interviews/` — 需求访谈、澄清与历史决策记录
 - `incidents/` — 事故复盘（Post-Mortem）
 - `issues/` — 项目技术债务排查记录
-- `archive/` — 历史归档（不再维护，含 backend-plans / frontend-reports / terminology）
+- `archive/` — 历史归档（不再维护，含 evidence / guides / backend-plans / requirements-decisions / reviews）
 
 ## 🧹 文档治理规则
-- 需求变更直接修改 `requirements-specification.md`
+- 产品目标态变更修改 `prd.md`
+- 字段、状态、统计口径变更修改 `specs/domain-model.md`
+- API 与权限契约变更修改 `specs/api-contract.md`
+- 实现证据变更修改 `traceability/requirements-trace.md`
+- 历史访谈、评审、As-Built、迁移过程追加到 `archive/requirements-decisions/`
 - 同步更新 `CHANGELOG.md`
 - 新通用文档统一放 `docs/`，不在 `backend/docs/` 中新建
 - `frontend/docs/` 保留前端内部技术参考（设计系统、动画规范等与实现强绑定的内容）

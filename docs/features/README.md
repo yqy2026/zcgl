@@ -1,13 +1,17 @@
 # 功能需求附录索引
 
-本目录存放需求规格说明书（`requirements-specification.md`）的附录文件，作为补充参考。
+本目录保留旧需求附录的兼容跳转页，不再承载活跃需求事实。
 
-> ⚠️ **需求权威来源**：`docs/requirements-specification.md`（唯一 SSOT）  
-> 本目录内容为冻结清单，不作为变更入口，需求变更请直接修改 SSOT。
+当前权威入口：
+
+- 产品需求：`docs/prd.md`
+- 领域模型与字段：`docs/specs/domain-model.md`
+- API 契约：`docs/specs/api-contract.md`
+- 实现追踪：`docs/traceability/requirements-trace.md`
 
 ## 附录文件
 
 | 文档 | 说明 |
 |------|------|
-| [requirements-appendix-modules.md](./requirements-appendix-modules.md) | 模块与接口清单 |
-| [requirements-appendix-fields.md](./requirements-appendix-fields.md) | 字段冻结清单（各实体字段定义） |
+| [requirements-appendix-modules.md](./requirements-appendix-modules.md) | 旧模块与接口附录兼容跳转页 |
+| [requirements-appendix-fields.md](./requirements-appendix-fields.md) | 旧字段附录兼容跳转页 |

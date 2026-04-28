@@ -4,7 +4,10 @@
 - 日期：2026-04-06
 - 审阅对象：`docs/requirements-specification.md`
 - 关联附录：`docs/features/requirements-appendix-fields.md`、`docs/features/requirements-appendix-modules.md`
-- 结论：当前文档已具备 SSOT 骨架，但还不适合作为“冻结后可直接开发/测试”的最终版本；建议先修正文档，再继续扩展实现与验收。
+- 当前状态：历史审阅，已被 `docs/prd.md`、`docs/specs/`、`docs/traceability/` 文档体系重构吸收。
+- 原始结论：旧综合文档已具备 SSOT 骨架，但还不适合作为“冻结后可直接开发/测试”的最终版本；建议先修正文档，再继续扩展实现与验收。
+
+> 注：本文保留 2026-04-06 当时的审阅上下文，旧文档路径为历史引用；当前需求入口以 `docs/prd.md`、`docs/specs/domain-model.md`、`docs/specs/api-contract.md` 和 `docs/traceability/requirements-trace.md` 为准。
 
 ## 总体判断
 

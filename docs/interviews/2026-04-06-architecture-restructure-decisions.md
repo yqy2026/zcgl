@@ -3,6 +3,7 @@
 - **日期**：2026-04-06
 - **主题**：根因分析后的架构决策 —— 角色/绑定/视图三维正交模型确立、合同组规则确认、安全策略分期、API 契约变更
 - **背景**：在审读需求规格说明书与三个活跃补丁方案（视角残留根除、RBAC 角色重组、业务规格更新）后，发现 `perspective` 一词同时承载角色(Role)、绑定(Binding)、视图(View) 三个正交概念，导致方案之间概念纠缠、越陷越深。经根因分析后，就 6 个关键业务决策点向业务方确认。
+- **当前状态**：历史决策记录，结论已被 `docs/prd.md`、`docs/specs/`、`docs/traceability/` 吸收；旧文档路径保留为当时上下文。
 
 ---
 
@@ -105,6 +106,6 @@
 ## 落地动作
 
 1. 本采访记录归档至 `docs/interviews/`。
-2. 根据以上 6 个决策，更新 `docs/requirements-specification.md` 消除所有矛盾（§5 三维模型重写、§8.3 修正、§15 补充、vNext 标注等）。
+2. 根据以上 6 个决策，更新当时的 `docs/requirements-specification.md` 消除所有矛盾；当前结论已迁入 `docs/prd.md`、`docs/specs/` 与 `docs/traceability/`。
 3. 三个活跃方案在 `docs/plans/README.md` 中标注"被综合重构蓝图吸收"。
 4. 更新 `CHANGELOG.md`。
