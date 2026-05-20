@@ -28,10 +28,15 @@ from ....models.auth import User
 from ....schemas.asset import AssetListItemResponse
 from ....schemas.project import (
     ProjectActiveAssetsResponse,
+    ProjectAnalyticsResponse,
+    ProjectContractRelationsResponse,
     ProjectCreate,
+    ProjectLedgerSummaryResponse,
     ProjectResponse,
+    ProjectRisksResponse,
     ProjectSearchRequest,
     ProjectStatisticsResponse,
+    ProjectTenantSummaryResponse,
     ProjectUpdate,
 )
 from ....services.authz import authz_service
@@ -462,6 +467,201 @@ async def get_project_active_assets(
         if isinstance(e, BaseBusinessError):
             raise
         raise internal_error(f"获取项目有效关联资产失败: {str(e)}")
+
+
+@router.get(
+    "/{project_id}/contract-relations",
+    response_model=APIResponse[ProjectContractRelationsResponse],
+    summary="获取项目合同关系",
+)
+async def get_project_contract_relations(
+    project_id: Annotated[str, Path(description="项目ID")],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="project")
+    ),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="project",
+            resource_id="{project_id}",
+            deny_as_not_found=True,
+        )
+    ),
+) -> Any:
+    """获取项目下的合同关系列表。"""
+    try:
+        response_payload = await project_service.get_project_contract_relations(
+            db=db,
+            project_id=project_id,
+            current_user_id=str(current_user.id),
+            party_filter=_build_project_party_filter(_scope_ctx),
+        )
+        return ResponseHandler.success(
+            data=response_payload.model_dump(mode="json"),
+            message="获取项目合同关系成功",
+        )
+    except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
+        raise internal_error(f"获取项目合同关系失败: {str(e)}")
+
+
+@router.get(
+    "/{project_id}/ledger-summary",
+    response_model=APIResponse[ProjectLedgerSummaryResponse],
+    summary="获取项目收付款摘要",
+)
+async def get_project_ledger_summary(
+    project_id: Annotated[str, Path(description="项目ID")],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="project")
+    ),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="project",
+            resource_id="{project_id}",
+            deny_as_not_found=True,
+        )
+    ),
+) -> Any:
+    """获取项目维度收付款摘要。"""
+    try:
+        response_payload = await project_service.get_project_ledger_summary(
+            db=db,
+            project_id=project_id,
+            current_user_id=str(current_user.id),
+            party_filter=_build_project_party_filter(_scope_ctx),
+        )
+        return ResponseHandler.success(
+            data=response_payload.model_dump(mode="json"),
+            message="获取项目收付款摘要成功",
+        )
+    except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
+        raise internal_error(f"获取项目收付款摘要失败: {str(e)}")
+
+
+@router.get(
+    "/{project_id}/risks",
+    response_model=APIResponse[ProjectRisksResponse],
+    summary="获取项目风险提示",
+)
+async def get_project_risks(
+    project_id: Annotated[str, Path(description="项目ID")],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="project")
+    ),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="project",
+            resource_id="{project_id}",
+            deny_as_not_found=True,
+        )
+    ),
+) -> Any:
+    """获取项目风险提示。"""
+    try:
+        response_payload = await project_service.get_project_risks(
+            db=db,
+            project_id=project_id,
+            current_user_id=str(current_user.id),
+            party_filter=_build_project_party_filter(_scope_ctx),
+        )
+        return ResponseHandler.success(
+            data=response_payload.model_dump(mode="json"),
+            message="获取项目风险提示成功",
+        )
+    except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
+        raise internal_error(f"获取项目风险提示失败: {str(e)}")
+
+
+@router.get(
+    "/{project_id}/tenants",
+    response_model=APIResponse[ProjectTenantSummaryResponse],
+    summary="获取项目租户客户摘要",
+)
+async def get_project_tenants(
+    project_id: Annotated[str, Path(description="项目ID")],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="project")
+    ),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="project",
+            resource_id="{project_id}",
+            deny_as_not_found=True,
+        )
+    ),
+) -> Any:
+    """获取项目下终端租户、客户主体和合同数摘要。"""
+    try:
+        response_payload = await project_service.get_project_tenants(
+            db=db,
+            project_id=project_id,
+            current_user_id=str(current_user.id),
+            party_filter=_build_project_party_filter(_scope_ctx),
+        )
+        return ResponseHandler.success(
+            data=response_payload.model_dump(mode="json"),
+            message="获取项目租户客户摘要成功",
+        )
+    except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
+        raise internal_error(f"获取项目租户客户摘要失败: {str(e)}")
+
+
+@router.get(
+    "/{project_id}/analytics",
+    response_model=APIResponse[ProjectAnalyticsResponse],
+    summary="获取项目分析摘要",
+)
+async def get_project_analytics(
+    project_id: Annotated[str, Path(description="项目ID")],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    _scope_ctx: DataScopeContext = Depends(
+        require_data_scope_context(resource_type="project")
+    ),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="read",
+            resource_type="project",
+            resource_id="{project_id}",
+            deny_as_not_found=True,
+        )
+    ),
+) -> Any:
+    """获取项目维度指标，并按承租转租和代理运营分区。"""
+    try:
+        response_payload = await project_service.get_project_analytics(
+            db=db,
+            project_id=project_id,
+            current_user_id=str(current_user.id),
+            party_filter=_build_project_party_filter(_scope_ctx),
+        )
+        return ResponseHandler.success(
+            data=response_payload.model_dump(mode="json"),
+            message="获取项目分析摘要成功",
+        )
+    except Exception as e:
+        if isinstance(e, BaseBusinessError):
+            raise
+        raise internal_error(f"获取项目分析摘要失败: {str(e)}")
 
 
 @router.get("/{project_id}", response_model=ProjectResponse, summary="获取项目详情")

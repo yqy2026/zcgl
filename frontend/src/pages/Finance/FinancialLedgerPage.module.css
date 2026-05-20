@@ -1,0 +1,39 @@
+.toolbar {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr)) auto;
+  gap: var(--spacing-md);
+  align-items: end;
+}
+
+.toolbarItem {
+  min-width: 0;
+}
+
+.toolbarLabel {
+  display: block;
+  margin-bottom: var(--spacing-xs);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.summaryRow {
+  margin-bottom: var(--spacing-lg);
+}
+
+.filterCard,
+.tableCard {
+  margin-bottom: var(--spacing-xl);
+  border-radius: var(--radius-lg);
+}
+
+@media (max-width: var(--breakpoint-lg)) {
+  .toolbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: var(--breakpoint-sm)) {
+  .toolbar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

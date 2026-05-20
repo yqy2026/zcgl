@@ -2,15 +2,8 @@
 
 本文件为 AI Coding Agents 提供项目上下文与执行约束（Single Source of Truth）。
 每次修改后请先复核没问题后更新 `CHANGELOG.md`。
-项目目前在从0到1阶段的开发中，不要做兼容保留操作，充分的暴露问题，要打牢系统基础。
-1、写代码之前，先说清楚你打算怎么做，等我确认了再动手。
-2、如果我给的需求不够明确，先问清楚再写代码，别自己猜。
-3、每次写完代码之后，把你能想到的边界情况列出来，再建议几个测试用例覆盖它们。
-4、如果一个任务需要改20个以上的文件，先停下来输出计划文档，按计划文档把它拆成更小的任务再逐一完成。
-5、采用TDD方式，遇到 bug 的时候，先写一个能复现这个 bug 的测试，然后修到测试通过为止。
-6、每次我纠正你的时候，想想自己哪里做错了，拿出一个方案确保以后不再犯同样的错。
+项目目前在从0到1阶段的开发中，不要做兼容操作，充分暴露问题，打牢系统基础。
 **Last Updated**: 2026-03-28（补充 Done when、Codex 配置与任务模板入口）
-
 ---
 
 ## 协作入口
@@ -34,11 +27,8 @@
 6. 回复中已补充边界情况与建议测试用例。
 
 ### Codex 项目默认配置
-
-- 仓库级默认配置放在 `.codex/config.toml`
 - 长期稳定的项目规则放在本文件
 - 操作型说明放在 `docs/guides/`
-
 ---
 
 ## 项目概述
@@ -190,8 +180,6 @@ cd frontend && pnpm test
 - ✅ 涉及 `models/` / `crud/` 的冲突需重点复核，防止重复定义
 - ⚠️ rebase `--continue` 会静默丢弃文件，push 前必须核查：文件数吻合 + 关键符号存在；丢失时用 `git cherry-pick <hash>` 恢复
 
-> 📖 详细流程见 [docs/incidents/2026-02-git-conflict-postmortem.md](docs/incidents/2026-02-git-conflict-postmortem.md)
-
 ---
 
 ## ⚠️ 安全警告
@@ -267,3 +255,66 @@ docs-lint 覆盖：①旧文档引用守卫 ②代码证据死链检测 ③`plan
 3. 文件命名：全小写 + 连字符；方案 `YYYY-MM-DD-<slug>.md`；复盘 `YYYY-MM-<slug>.md`；ADR `ADR-NNNN-<slug>.md`
 4. 单文档 >800 行须拆分；新建子目录必须同时创建 `README.md`
 5. 内容修改后同步更新 `CHANGELOG.md`
+
+# 12-rule
+
+These rules apply to every task in this project unless explicitly overridden.
+Bias: caution over speed on non-trivial work. Use judgment on trivial tasks.
+
+## Rule 1 — Think Before Coding
+State assumptions explicitly. If uncertain, ask rather than guess.
+Present multiple interpretations when ambiguity exists.
+Push back when a simpler approach exists.
+Stop when confused. Name what's unclear.
+
+## Rule 2 — Simplicity First
+Minimum code that solves the problem. Nothing speculative.
+No features beyond what was asked. No abstractions for single-use code.
+Test: would a senior engineer say this is overcomplicated? If yes, simplify.
+
+## Rule 3 — Surgical Changes
+Touch only what you must. Clean up only your own mess.
+Don't "improve" adjacent code, comments, or formatting.
+Don't refactor what isn't broken. Match existing style.
+
+## Rule 4 — Goal-Driven Execution
+Define success criteria. Loop until verified.
+Don't follow steps. Define success and iterate.
+Strong success criteria let you loop independently.
+
+## Rule 5 — Use the model only for judgment calls
+Use me for: classification, drafting, summarization, extraction.
+Do NOT use me for: routing, retries, deterministic transforms.
+If code can answer, code answers.
+
+## Rule 6 — Token budgets are not advisory
+Per-task: 4,000 tokens. Per-session: 30,000 tokens.
+If approaching budget, summarize and start fresh.
+Surface the breach. Do not silently overrun.
+
+## Rule 7 — Surface conflicts, don't average them
+If two patterns contradict, pick one (more recent / more tested).
+Explain why. Flag the other for cleanup.
+Don't blend conflicting patterns.
+
+## Rule 8 — Read before you write
+Before adding code, read exports, immediate callers, shared utilities.
+"Looks orthogonal" is dangerous. If unsure why code is structured a way, ask.
+
+## Rule 9 — Tests verify intent, not just behavior
+Tests must encode WHY behavior matters, not just WHAT it does.
+A test that can't fail when business logic changes is wrong.
+
+## Rule 10 — Checkpoint after every significant step
+Summarize what was done, what's verified, what's left.
+Don't continue from a state you can't describe back.
+If you lose track, stop and restate.
+
+## Rule 11 — Match the codebase's conventions, even if you disagree
+Conformance > taste inside the codebase.
+If you genuinely think a convention is harmful, surface it. Don't fork silently.
+
+## Rule 12 — Fail loud
+"Completed" is wrong if anything was skipped silently.
+"Tests pass" is wrong if any were skipped.
+Default to surfacing uncertainty, not hiding it.

@@ -42,15 +42,13 @@ describe('frontend legacy contract e2e hygiene', () => {
   it('keeps the import success e2e spec free from raw legacy rental route literals', () => {
     const source = readSource('tests/e2e/legacy-contract/import-success.spec.ts');
 
-    expect(source).not.toContain("'/rental/contracts'");
-    expect(source).not.toContain("'/rental/contracts/pdf-import'");
+    expect(source).not.toContain('/rental/contracts');
   });
 
   it('keeps the import guardrails e2e spec free from raw legacy rental route literals', () => {
     const source = readSource('tests/e2e/user/import-guardrails.spec.ts');
 
-    expect(source).not.toContain("'/rental/contracts'");
-    expect(source).not.toContain("'/rental/contracts/pdf-import'");
+    expect(source).not.toContain('/rental/contracts');
   });
 
   it('keeps the import success e2e spec free from low-value rental describe tags', () => {
@@ -62,8 +60,7 @@ describe('frontend legacy contract e2e hygiene', () => {
   it('keeps the user usability e2e spec free from raw legacy rental route literals', () => {
     const source = readSource('tests/e2e/user/user-usability.spec.ts');
 
-    expect(source).not.toContain("'/rental/contracts'");
-    expect(source).not.toContain("'/rental/contracts/create'");
+    expect(source).not.toContain('/rental/contracts');
   });
 
   it('keeps the user usability e2e spec free from stale legacy contract creation assumptions', () => {

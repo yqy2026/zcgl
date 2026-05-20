@@ -67,23 +67,34 @@ describe('ContractGroupDetailPage', () => {
     });
   });
 
-  it('renders contract group details and nested contracts', async () => {
-    renderWithProviders(<ContractGroupDetailPage />, { route: '/contract-groups/group-1' });
+  it('renders contract relation details and nested contracts with business wording', async () => {
+    renderWithProviders(<ContractGroupDetailPage />, { route: '/contract-center/group-1' });
 
     expect(
       await screen.findByRole('heading', { name: 'GRP-TEST-202603-0001' })
     ).toBeInTheDocument();
+    expect(screen.getByText('合同关系编码')).toBeInTheDocument();
+    expect(screen.getByText('承租转租')).toBeInTheDocument();
+    expect(screen.getByText('固定金额')).toBeInTheDocument();
+    expect(screen.getByText('每月 15 日')).toBeInTheDocument();
     expect(screen.getByText('高价值')).toBeInTheDocument();
     expect(screen.getByText('C-001')).toBeInTheDocument();
-    expect(screen.getByText('UPSTREAM')).toBeInTheDocument();
+    expect(screen.getByText('上游承租合同')).toBeInTheDocument();
+    expect(screen.queryByText('合同组详情')).not.toBeInTheDocument();
+    expect(screen.queryByText('合同组编码')).not.toBeInTheDocument();
+    expect(screen.queryByText('运营方主体 ID')).not.toBeInTheDocument();
+    expect(screen.queryByText('产权方主体 ID')).not.toBeInTheDocument();
+    expect(screen.queryByText('UPSTREAM')).not.toBeInTheDocument();
+    expect(screen.queryByText('收益归属规则')).not.toBeInTheDocument();
+    expect(screen.queryByText('收益分成规则')).not.toBeInTheDocument();
   });
 
   it('navigates to the edit page', async () => {
-    renderWithProviders(<ContractGroupDetailPage />, { route: '/contract-groups/group-1' });
+    renderWithProviders(<ContractGroupDetailPage />, { route: '/contract-center/group-1' });
 
-    fireEvent.click(await screen.findByText('编辑合同组'));
+    fireEvent.click(await screen.findByText('编辑合同关系'));
 
-    expect(mockNavigate).toHaveBeenCalledWith('/contract-groups/group-1/edit');
+    expect(mockNavigate).toHaveBeenCalledWith('/contract-center/group-1/edit');
   });
 
   it('renders agency mode warning when the group is agency operated', async () => {
@@ -129,7 +140,7 @@ describe('ContractGroupDetailPage', () => {
       ],
     });
 
-    renderWithProviders(<ContractGroupDetailPage />, { route: '/contract-groups/group-1' });
+    renderWithProviders(<ContractGroupDetailPage />, { route: '/contract-center/group-1' });
 
     expect(await screen.findByText('代理口径，非自营出租')).toBeInTheDocument();
   });

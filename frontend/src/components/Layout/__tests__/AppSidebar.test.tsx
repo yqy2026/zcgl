@@ -129,14 +129,20 @@ describe('AppSidebar - 渲染与交互测试', () => {
     const AppSidebar = (await import('../AppSidebar')).default;
     renderWithProviders(<AppSidebar collapsed={false} />);
 
-    expect(screen.getByText('数据看板')).toBeInTheDocument();
-    expect(screen.getAllByText('资产管理')).toHaveLength(2);
-    expect(screen.getByText('资产列表')).toBeInTheDocument();
-    expect(screen.getByText('合同组管理')).toBeInTheDocument();
+    expect(screen.getByText('工作台')).toBeInTheDocument();
+    expect(screen.getAllByText('资产管理')).toHaveLength(1);
+    expect(screen.getByText('项目运营')).toBeInTheDocument();
+    expect(screen.getByText('项目列表')).toBeInTheDocument();
+    expect(screen.getByText('资产台账')).toBeInTheDocument();
+    expect(screen.getByText('合同中心')).toBeInTheDocument();
+    expect(screen.getByText('主体中心')).toBeInTheDocument();
+    expect(screen.getByText('资产资源')).toBeInTheDocument();
+    expect(screen.getByText('财务台账')).toBeInTheDocument();
+    expect(screen.getByText('经营分析')).toBeInTheDocument();
+    expect(screen.queryByText('合同关系管理')).not.toBeInTheDocument();
     expect(screen.getByText('权属方管理')).toBeInTheDocument();
     expect(screen.getByText('产权证管理')).toBeInTheDocument();
-    expect(screen.getByText('项目管理')).toBeInTheDocument();
-    expect(screen.getAllByText('旧租赁前端已退休').length).toBeGreaterThan(0);
+    expect(screen.queryByText('旧租赁前端已退休')).not.toBeInTheDocument();
     expect(screen.getByText('系统管理')).toBeInTheDocument();
     expect(screen.getByText('主体管理')).toBeInTheDocument();
     expect(screen.getByText('用户管理')).toBeInTheDocument();
@@ -161,17 +167,17 @@ describe('AppSidebar - 渲染与交互测试', () => {
     const AppSidebar = (await import('../AppSidebar')).default;
     const { rerender } = renderWithProviders(<AppSidebar collapsed={true} />);
 
-    expect(screen.getAllByText('资产管理')).toHaveLength(1);
+    expect(screen.queryByText('资产管理')).not.toBeInTheDocument();
 
     rerender(<AppSidebar collapsed={false} />);
-    expect(screen.getAllByText('资产管理')).toHaveLength(2);
+    expect(screen.getByText('资产管理')).toBeInTheDocument();
   });
 
   it('点击菜单项应触发导航', async () => {
     const AppSidebar = (await import('../AppSidebar')).default;
     renderWithProviders(<AppSidebar collapsed={false} />);
 
-    fireEvent.click(screen.getByText('数据看板'));
+    fireEvent.click(screen.getByText('工作台'));
     expect(navigateMock).toHaveBeenCalledWith('/dashboard');
   });
 });

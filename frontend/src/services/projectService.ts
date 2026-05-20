@@ -14,7 +14,12 @@ const projectLogger = createLogger('Project');
 import type {
   Project,
   ProjectActiveAssetsResponse,
+  ProjectAnalyticsResponse,
+  ProjectContractRelationsResponse,
   ProjectCreate,
+  ProjectLedgerSummaryResponse,
+  ProjectRisksResponse,
+  ProjectTenantSummaryResponse,
   ProjectUpdate,
   ProjectListResponse,
   ProjectSearchRequest,
@@ -92,6 +97,131 @@ export class ProjectService {
 
       if (!result.success) {
         throw new Error(`获取项目关联资产失败: ${result.error}`);
+      }
+
+      return result.data!;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
+  /**
+   * 获取项目下的合同关系展示投影
+   */
+  async getProjectContractRelations(projectId: string): Promise<ProjectContractRelationsResponse> {
+    try {
+      const result = await apiClient.get<ProjectContractRelationsResponse>(
+        API_ENDPOINTS.PROJECT.CONTRACT_RELATIONS(projectId),
+        {
+          cache: true,
+          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+          smartExtract: true,
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`获取项目合同关系失败: ${result.error}`);
+      }
+
+      return result.data!;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
+  /**
+   * 获取项目维度收付款摘要
+   */
+  async getProjectLedgerSummary(projectId: string): Promise<ProjectLedgerSummaryResponse> {
+    try {
+      const result = await apiClient.get<ProjectLedgerSummaryResponse>(
+        API_ENDPOINTS.PROJECT.LEDGER_SUMMARY(projectId),
+        {
+          cache: true,
+          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+          smartExtract: true,
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`获取项目收付款摘要失败: ${result.error}`);
+      }
+
+      return result.data!;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
+  /**
+   * 获取项目风险提示
+   */
+  async getProjectRisks(projectId: string): Promise<ProjectRisksResponse> {
+    try {
+      const result = await apiClient.get<ProjectRisksResponse>(
+        API_ENDPOINTS.PROJECT.RISKS(projectId),
+        {
+          cache: true,
+          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+          smartExtract: true,
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`获取项目风险提示失败: ${result.error}`);
+      }
+
+      return result.data!;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
+  /**
+   * 获取项目租户客户摘要
+   */
+  async getProjectTenants(projectId: string): Promise<ProjectTenantSummaryResponse> {
+    try {
+      const result = await apiClient.get<ProjectTenantSummaryResponse>(
+        API_ENDPOINTS.PROJECT.TENANTS(projectId),
+        {
+          cache: true,
+          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+          smartExtract: true,
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`获取项目租户客户摘要失败: ${result.error}`);
+      }
+
+      return result.data!;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
+  /**
+   * 获取项目分析摘要
+   */
+  async getProjectAnalytics(projectId: string): Promise<ProjectAnalyticsResponse> {
+    try {
+      const result = await apiClient.get<ProjectAnalyticsResponse>(
+        API_ENDPOINTS.PROJECT.ANALYTICS(projectId),
+        {
+          cache: true,
+          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+          smartExtract: true,
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`获取项目分析摘要失败: ${result.error}`);
       }
 
       return result.data!;

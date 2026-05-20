@@ -584,6 +584,124 @@ class TestAnalyticsService:
         assert metrics["actual_receipts"] == 0.0
         assert metrics["collection_rate"] is None
 
+    def test_calculate_analytics_breakdowns_should_group_by_project_and_mode(
+        self, analytics_service
+    ):
+        project = MagicMock(id="project-1", project_name="湖滨产业园")
+
+        lease_group = MagicMock(
+            contract_group_id="group-lease",
+            project_id="project-1",
+            project=project,
+            revenue_mode=RevenueMode.LEASE,
+            data_status="正常",
+        )
+        lease_group.operator_party = MagicMock(review_status=PartyReviewStatus.APPROVED.value)
+        lease_group.owner_party = MagicMock(review_status=PartyReviewStatus.APPROVED.value)
+
+        agency_group = MagicMock(
+            contract_group_id="group-agency",
+            project_id="project-1",
+            project=project,
+            revenue_mode=RevenueMode.AGENCY,
+            data_status="正常",
+        )
+        agency_group.operator_party = MagicMock(review_status=PartyReviewStatus.APPROVED.value)
+        agency_group.owner_party = MagicMock(review_status=PartyReviewStatus.APPROVED.value)
+
+        lease_contract = MagicMock(
+            contract_id="contract-lease-1",
+            status=ContractLifecycleStatus.ACTIVE,
+            data_status="正常",
+            group_relation_type=GroupRelationType.DOWNSTREAM,
+            contract_group=lease_group,
+            contract_group_id="group-lease",
+            lease_detail=MagicMock(rent_amount=Decimal("9999.00")),
+            agency_detail=None,
+            ledger_entries=[
+                MagicMock(
+                    year_month="2026-05",
+                    amount_due=Decimal("600.00"),
+                    paid_amount=Decimal("450.00"),
+                    payment_status="unpaid",
+                )
+            ],
+            service_fee_ledgers=[],
+            lessee_party_id="customer-1",
+            lessor_party=MagicMock(review_status=PartyReviewStatus.APPROVED.value),
+            lessee_party=MagicMock(review_status=PartyReviewStatus.APPROVED.value),
+        )
+
+        direct_contract = MagicMock(
+            contract_id="contract-agency-direct-1",
+            status=ContractLifecycleStatus.ACTIVE,
+            data_status="正常",
+            group_relation_type=GroupRelationType.DIRECT_LEASE,
+            contract_group=agency_group,
+            contract_group_id="group-agency",
+            lease_detail=MagicMock(rent_amount=Decimal("9999.00")),
+            agency_detail=None,
+            ledger_entries=[],
+            service_fee_ledgers=[
+                MagicMock(
+                    year_month="2026-05",
+                    amount_due=Decimal("120.00"),
+                    payment_status="paid",
+                )
+            ],
+            lessee_party_id="customer-2",
+            lessor_party=MagicMock(review_status=PartyReviewStatus.APPROVED.value),
+            lessee_party=MagicMock(review_status=PartyReviewStatus.APPROVED.value),
+        )
+
+        breakdowns = analytics_service._calculate_analytics_breakdowns(
+            [lease_contract, direct_contract],
+            {"date_from": "2026-05-01", "date_to": "2026-05-31"},
+        )
+
+        assert breakdowns["mode_breakdown"] == [
+            {
+                "relation_kind": "lease_sublease",
+                "label": "承租转租",
+                "contract_relation_count": 1,
+                "contract_count": 1,
+                "total_income": 600.0,
+                "self_operated_rent_income": 600.0,
+                "agency_service_income": 0.0,
+                "actual_receipts": 450.0,
+                "customer_entity_count": 1,
+                "customer_contract_count": 1,
+            },
+            {
+                "relation_kind": "agency_operation",
+                "label": "代理运营",
+                "contract_relation_count": 1,
+                "contract_count": 1,
+                "total_income": 120.0,
+                "self_operated_rent_income": 0.0,
+                "agency_service_income": 120.0,
+                "actual_receipts": 0.0,
+                "customer_entity_count": 1,
+                "customer_contract_count": 1,
+            },
+        ]
+        assert breakdowns["project_breakdown"] == [
+            {
+                "project_id": "project-1",
+                "project_name": "湖滨产业园",
+                "contract_relation_count": 2,
+                "contract_count": 2,
+                "lease_relation_count": 1,
+                "agency_relation_count": 1,
+                "total_income": 720.0,
+                "self_operated_rent_income": 600.0,
+                "agency_service_income": 120.0,
+                "actual_receipts": 450.0,
+                "customer_entity_count": 2,
+                "customer_contract_count": 2,
+            }
+        ]
+
     @pytest.mark.asyncio
     async def test_calculate_analytics_should_include_operational_metrics(
         self, analytics_service
@@ -626,4 +744,6 @@ class TestAnalyticsService:
         assert "collection_rate" in result
         assert "customer_entity_count" in result
         assert "customer_contract_count" in result
+        assert "project_breakdown" in result
+        assert "mode_breakdown" in result
         assert "metrics_version" in result

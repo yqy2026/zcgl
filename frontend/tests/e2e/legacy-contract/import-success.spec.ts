@@ -4,10 +4,8 @@ import {
   loginWithCredentialRetry,
   resolveAdminCredentialCandidates,
 } from '../helpers/auth';
-import {
-  LEGACY_CONTRACT_ROUTES,
-} from '../helpers/legacyContract';
 
+const ACTIVE_CONTRACT_PDF_IMPORT_PATH = '/contract-groups/import';
 const PDF_MIME = 'application/pdf';
 const MINIMAL_PDF_BUFFER = Buffer.from(
   [
@@ -46,7 +44,7 @@ test.describe('@legacy-contract-import-success 导入成功路径', () => {
   });
 
   test('pdf import should accept minimal valid pdf file', async ({ page }) => {
-    await page.goto(LEGACY_CONTRACT_ROUTES.PDF_IMPORT);
+    await page.goto(ACTIVE_CONTRACT_PDF_IMPORT_PATH);
     await expect(page).toHaveURL(/\/contract-groups\/import$/);
     await expect(page.getByRole('heading', { name: /PDF合同智能导入/i })).toBeVisible();
 

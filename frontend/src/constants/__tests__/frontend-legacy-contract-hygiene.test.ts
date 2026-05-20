@@ -6,7 +6,6 @@ const ACTIVE_FRONTEND_RUNTIME_FILES = [
   'src/constants/api.ts',
   'src/constants/routes.ts',
   'src/routes/AppRoutes.tsx',
-  'src/pages/Rental/LegacyRentalRetiredPage.tsx',
   'src/pages/Ownership/OwnershipDetailPage.tsx',
   'src/services/apiHealthCheck.ts',
   'src/config/menuConfig.tsx',

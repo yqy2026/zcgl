@@ -135,7 +135,7 @@ api_router.include_router(dictionaries_router)  # Unified dictionary API
 api_router.include_router(ownership_router, prefix="/ownerships", tags=["权属方管理"])
 api_router.include_router(project_router, prefix="/projects", tags=["项目管理"])
 api_router.include_router(search_router, prefix="/search", tags=["全局搜索"])
-# 合同组体系（REQ-RNT-001）：/contract-groups/* 和 /contracts/*
+# 合同关系技术聚合（REQ-RNT-001）：/contract-groups/* 和 /contracts/*
 api_router.include_router(contract_groups_router, tags=["合同组管理"])
 api_router.include_router(ledger_router, tags=["台账管理"])
 # Analytics路由 - Service层重构版 (2026-01-04)

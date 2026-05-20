@@ -15,6 +15,7 @@
 | 鉴权 | 写操作和受保护读操作必须鉴权 |
 | 授权 | 使用 RBAC + ABAC，按钮和接口级动作均需授权 |
 | 数据范围 | 业务查询按用户主体绑定自动过滤 |
+| 项目主轴 | 项目端点承载资产、合同关系、台账摘要、风险和项目分析等运营视图 |
 | 分析视图 | 分析和大屏端点使用 `view_mode` 指定 owner 或 manager 口径 |
 | 搜索 | 搜索结果必须经过权限和数据范围过滤 |
 | CSRF | 状态变更请求必须携带 CSRF token |
@@ -97,15 +98,21 @@
 | 更新项目 | `PATCH /api/v1/projects/{project_id}` | 更新项目主数据 |
 | 删除项目 | `DELETE /api/v1/projects/{project_id}` | 逻辑删除 |
 | 当前有效资产 | `GET /api/v1/projects/{project_id}/assets` | 返回项目当前有效资产汇总 |
+| 合同关系 | `GET /api/v1/projects/{project_id}/contract-relations` | 返回项目下承租转租和代理运营合同关系投影 |
+| 台账摘要 | `GET /api/v1/projects/{project_id}/ledger-summary` | 返回项目维度应收、应付、实收、实付、逾期摘要；承租模式上游合同计入应付，承租模式下游合同计入应收，代理模式服务费台账计入应收，直租租金不计入运营方自营应收 |
+| 风险摘要 | `GET /api/v1/projects/{project_id}/risks` | 返回项目风险项；MVP 已覆盖人工风险标签、30 天内合同到期提醒、付款逾期、资产/期间覆盖冲突、下游/直租缺少有效上游或委托覆盖，后续补齐空置风险 |
+| 租户客户 | `GET /api/v1/projects/{project_id}/tenants` | 返回项目下终端租户、客户主体和合同数摘要 |
+| 项目分析 | `GET /api/v1/projects/{project_id}/analytics` | 返回项目维度分析摘要，包含有效资产汇总、合同关系数、客户数、风险数、应收/应付/实收/实付/逾期和服务费摘要，并按承租转租、代理运营分区返回关系数、覆盖资产数、主合同/终端合同数、客户数、收付款和风险数；代理直租租金不计入运营方自营应收 |
 
-### 4.5 合同组与合同
+### 4.5 合同关系与合同
 
 | 能力 | 方法与路径 | 契约 |
 |---|---|---|
-| 合同组列表 | `GET /api/v1/contract-groups` | 支持主体范围过滤和业务筛选 |
-| 合同组详情 | `GET /api/v1/contract-groups/{group_id}` | 返回合同组、主体、资产和合同信息 |
-| 创建合同组 | `POST /api/v1/contract-groups` | 同组只能选择一种经营模式，一个资产不关联多个有效合同组 |
-| 更新合同组 | `PATCH /api/v1/contract-groups/{group_id}` | 更新合同组主数据和关联信息 |
+| 合同关系列表 | `GET /api/v1/contract-groups` | 辅助或内部入口，支持主体范围过滤、项目筛选和业务筛选；列表项返回所属项目名称和按合同角色聚合的数量 |
+| 合同关系详情 | `GET /api/v1/contract-groups/{group_id}` | 返回合同关系投影、主体、资产和合同信息 |
+| 创建合同关系 | `POST /api/v1/contract-groups` | 必须归属项目；同条合同关系只能选择一种经营模式 |
+| 更新合同关系 | `PATCH /api/v1/contract-groups/{group_id}` | 更新合同关系主数据和关联信息 |
+| 新增关系内合同 | `POST /api/v1/contract-groups/{group_id}/contracts` | 在既有合同关系内新增上游、下游、委托或直租合同；路径 `group_id` 必须与请求体一致 |
 | 合同详情 | `GET /api/v1/contracts/{contract_id}` | 返回合同基表和类型明细 |
 | 合同提审 | `POST /api/v1/contracts/{contract_id}/submit-review` | 草稿合同进入待审 |
 | 合同通过 | `POST /api/v1/contracts/{contract_id}/approve` | 合同生效并生成台账 |
@@ -115,9 +122,9 @@
 | 合同作废 | `POST /api/v1/contracts/{contract_id}/void` | 无台账或台账已处理后作废 |
 | 纠错 | `POST /api/v1/contracts/{contract_id}/start-correction` | 发起作废、冲销和重建流程 |
 | 审计日志 | `GET /api/v1/contracts/{contract_id}/audit-logs` | 返回合同审计日志 |
-| 组联审 | `POST /api/v1/contract-groups/{group_id}/submit-review` | 关键变更触发同组联审 |
+| 关系联审 | `POST /api/v1/contract-groups/{group_id}/submit-review` | 关键变更触发同关系联审 |
 
-MVP 不提供续签端点。到期后继续合作按新签流程创建合同组和合同。
+MVP 不提供续签端点。到期后继续合作按新签流程创建合同关系和合同。
 
 ### 4.6 台账
 
@@ -125,8 +132,8 @@ MVP 不提供续签端点。到期后继续合作按新签流程创建合同组�
 |---|---|---|
 | 合同台账 | `GET /api/v1/contracts/{contract_id}/ledger` | 查询单合同台账 |
 | 批量更新 | `PATCH /api/v1/contracts/{contract_id}/ledger/batch-update-status` | 批量更新支付状态和实收金额，必须幂等 |
-| 台账查询 | `GET /api/v1/ledger/entries` | 支持跨合同按资产、主体、时间区间查询 |
-| 台账导出 | `GET /api/v1/ledger/entries/export` | 导出台账查询结果 |
+| 台账查询 | `GET /api/v1/ledger/entries` | 支持跨合同、跨项目按资产、主体、合同、账期和支付状态查询，作为全局“财务台账”入口的数据源 |
+| 台账导出 | `GET /api/v1/ledger/entries/export` | 按当前台账筛选条件导出查询结果 |
 | 台账重算 | `POST /api/v1/contracts/{contract_id}/ledger/recalculate` | 对受影响区间作废并重建 |
 | 补偿任务 | `POST /api/v1/ledger/compensation/run` | 扫描并补齐缺失台账，必须幂等 |
 
@@ -150,7 +157,7 @@ MVP 不提供续签端点。到期后继续合作按新签流程创建合同组�
 
 | 能力 | 方法与路径 | 契约 |
 |---|---|---|
-| 全局搜索 | `GET /api/v1/search` | MVP 覆盖资产、项目、合同组、合同、客户 |
+| 全局搜索 | `GET /api/v1/search` | MVP 覆盖资产、项目、合同关系、合同、客户 |
 
 搜索结果支持全部视图和按对象分组视图。默认排序为相关度优先，同分时按业务置顶规则排序。未授权对象不返回。
 
@@ -158,7 +165,7 @@ MVP 不提供续签端点。到期后继续合作按新签流程创建合同组�
 
 | 能力 | 方法与路径 | 契约 |
 |---|---|---|
-| 综合分析 | `GET /api/v1/analytics/comprehensive` | 返回收入拆分、客户双指标、实收和收缴率 |
+| 综合分析 | `GET /api/v1/analytics/comprehensive` | 返回收入拆分、客户双指标、实收、收缴率、按项目分区的 `project_breakdown` 和按经营模式分区的 `mode_breakdown`；承租转租统计下游租金，代理运营统计服务费，代理直租租金不计入运营方自营收入 |
 | 分析导出 | `GET /api/v1/analytics/export` | 导出带统计口径版本的结果 |
 | 统计报表 | `/api/v1/statistics/*` | 提供基础、面积、财务、出租率、分布、趋势等统计能力 |
 

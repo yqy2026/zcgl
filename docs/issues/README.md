@@ -8,5 +8,6 @@
 
 | 文档 | 内容 | 状态 |
 |------|------|------|
+| [2026-05-13-project-centered-phase0-audit.md](./2026-05-13-project-centered-phase0-audit.md) | 项目主轴资产运营 Phase 0 审计，覆盖合同组可见点、项目/合同关系模型、SSOT 差距和 Phase 1a/1b 实施切片 | 📋 待 SSOT 同步 |
 | [2026-03-03-project-issues-analysis.md](./2026-03-03-project-issues-analysis.md) | 前后端全面排查报告（MyPy / Lint / 构建）| 🔄 修复进行中（49 errors 待清零） |
 | [2026-04-06-requirements-specification-review.md](./2026-04-06-requirements-specification-review.md) | 旧 `requirements-specification.md` 业务分析审阅意见，已被 PRD/spec/traceability 重构吸收 | ✅ 已吸收 |

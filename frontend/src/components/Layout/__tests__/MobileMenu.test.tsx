@@ -62,7 +62,7 @@ vi.mock('react-router-dom', () => ({
 vi.mock('@/config/menuConfig', () => ({
   MENU_ITEMS: [
     { key: '/dashboard', label: '工作台' },
-    { key: '/assets/list', label: '资产列表' },
+    { key: '/assets/list', label: '资产台账' },
   ],
   getSelectedKeys: vi.fn(() => ['/dashboard']),
   getOpenKeys: vi.fn(() => ['/assets']),

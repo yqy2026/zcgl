@@ -12,6 +12,7 @@ from ..database import Base
 
 if TYPE_CHECKING:
     from .asset import Asset
+    from .contract_group import ContractGroup
     from .party import Party
 
 
@@ -110,6 +111,10 @@ class Project(Base):
     manager_party: Mapped["Party | None"] = relationship(
         "Party",
         foreign_keys=[manager_party_id],
+    )
+    contract_groups: Mapped[list["ContractGroup"]] = relationship(
+        "ContractGroup",
+        back_populates="project",
     )
 
     def __init__(self, **kwargs: object) -> None:

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Row, Col, Spin, Alert, Empty, Typography, Space, Button, Radio } from 'antd';
+import { Card, Row, Col, Spin, Alert, Empty, Typography, Space, Button, Radio, Table } from 'antd';
 import styles from './AssetAnalyticsPage.module.css';
 import {
   ReloadOutlined,
@@ -19,11 +19,69 @@ import { useAssetAnalytics, AnalysisDimension } from '@/hooks/useAssetAnalytics'
 import { useFullscreen } from '@/hooks/useFullscreen';
 import AssetDistributionGrid from '@/components/Analytics/AssetDistributionGrid';
 import AssetDistributionDetails from '@/components/Analytics/AssetDistributionDetails';
+import type { ColumnsType } from 'antd/es/table';
+import type { AnalyticsModeBreakdown, AnalyticsProjectBreakdown } from '@/types/analytics';
+import { formatCurrency } from '@/utils/format';
 
 const pageLogger = createLogger('AssetAnalytics');
 const CHART_PRIMARY_COLOR = 'var(--color-primary)';
 
 const { Text } = Typography;
+
+const projectBreakdownColumns: ColumnsType<AnalyticsProjectBreakdown> = [
+  {
+    title: '项目',
+    dataIndex: 'project_name',
+    key: 'project_name',
+  },
+  {
+    title: '合同关系',
+    dataIndex: 'contract_relation_count',
+    key: 'contract_relation_count',
+    align: 'right',
+  },
+  {
+    title: '承租转租',
+    dataIndex: 'lease_relation_count',
+    key: 'lease_relation_count',
+    align: 'right',
+  },
+  {
+    title: '代理运营',
+    dataIndex: 'agency_relation_count',
+    key: 'agency_relation_count',
+    align: 'right',
+  },
+  {
+    title: '经营收入',
+    dataIndex: 'total_income',
+    key: 'total_income',
+    align: 'right',
+    render: (value: number) => formatCurrency(value),
+  },
+  {
+    title: '当期实收',
+    dataIndex: 'actual_receipts',
+    key: 'actual_receipts',
+    align: 'right',
+    render: (value: number) => formatCurrency(value),
+  },
+  {
+    title: '客户主体',
+    dataIndex: 'customer_entity_count',
+    key: 'customer_entity_count',
+    align: 'right',
+  },
+  {
+    title: '客户合同',
+    dataIndex: 'customer_contract_count',
+    key: 'customer_contract_count',
+    align: 'right',
+  },
+];
+
+const getModeCardClassName = (relationKind: AnalyticsModeBreakdown['relation_kind']): string =>
+  relationKind === 'agency_operation' ? styles.modeCardAgency : styles.modeCardLease;
 
 const AssetAnalyticsPage: React.FC = () => {
   const {
@@ -73,7 +131,7 @@ const AssetAnalyticsPage: React.FC = () => {
         <Row justify="space-between" align="middle" gutter={[16, 16]}>
           <Col xs={24} sm={12}>
             <Typography.Title level={3} className={styles.pageTitle}>
-              资产分析
+              经营分析
             </Typography.Title>
           </Col>
           <Col xs={24} sm={12}>
@@ -187,6 +245,55 @@ const AssetAnalyticsPage: React.FC = () => {
                 metrics_version: analyticsData.metrics_version,
               }}
               loading={loading}
+            />
+          </Card>
+
+          {/* 项目与模式分区 */}
+          <Card title="项目与模式分区" className={styles.sectionCard}>
+            <div className={styles.modeBreakdownGrid}>
+              {(analyticsData.mode_breakdown ?? []).map(mode => (
+                <div
+                  className={`${styles.modeBreakdownCard} ${getModeCardClassName(
+                    mode.relation_kind
+                  )}`}
+                  key={mode.relation_kind}
+                >
+                  <div>
+                    <Text strong>{mode.label}</Text>
+                    <div className={styles.modeSubtitle}>
+                      {mode.contract_relation_count} 个关系 / {mode.contract_count} 份合同
+                    </div>
+                  </div>
+                  <div className={styles.modeMetricGrid}>
+                    <div>
+                      <span>经营收入</span>
+                      <strong>{formatCurrency(mode.total_income)}</strong>
+                    </div>
+                    <div>
+                      <span>当期实收</span>
+                      <strong>{formatCurrency(mode.actual_receipts)}</strong>
+                    </div>
+                    <div>
+                      <span>客户主体</span>
+                      <strong>{mode.customer_entity_count} 个</strong>
+                    </div>
+                    <div>
+                      <span>客户合同</span>
+                      <strong>{mode.customer_contract_count} 份</strong>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <Table<AnalyticsProjectBreakdown>
+              className={styles.projectBreakdownTable}
+              rowKey="project_id"
+              size="small"
+              columns={projectBreakdownColumns}
+              dataSource={analyticsData.project_breakdown ?? []}
+              pagination={false}
+              scroll={{ x: 920 }}
+              locale={{ emptyText: '暂无项目分区数据' }}
             />
           </Card>
 

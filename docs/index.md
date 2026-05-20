@@ -58,6 +58,10 @@
 ### 前端参考文档
 - [前端文档索引](../frontend/docs/README.md)（设计系统、可访问性、动画、性能优化）
 
+### 设计资产
+- [设计资产索引](design/README.md)
+- [项目主轴资产运营 UI 图](design/ui-mockups/2026-05-16-project-main-axis/README.md)
+
 ### 方案设计
 - [**方案状态索引**](plans/README.md)
 
@@ -82,6 +86,7 @@
 - `guides/` — 开发指南（环境、后端、前端、代码质量、部署运维、测试）
 - `integrations/` — API 接口规范与系统组件文档
 - `security/` — 安全相关（加密、后端安全、能力守卫）
+- `design/` — 产品 UI 图、可复现画板和设计评审资产
 - `plans/` — 活跃方案（进行中 + 搁置）
 - `interviews/` — 需求访谈、澄清与历史决策记录
 - `incidents/` — 事故复盘（Post-Mortem）

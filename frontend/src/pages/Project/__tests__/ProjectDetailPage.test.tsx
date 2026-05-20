@@ -76,6 +76,162 @@ describe('ProjectDetailPage', () => {
           error: null,
         };
       }
+      if (scope === 'project-contract-relations') {
+        return {
+          data: {
+            items: [
+              {
+                contract_relation_id: 'group-lease',
+                project_id: 'project-1',
+                display_name: 'GRP-LEASE',
+                revenue_mode: 'lease',
+                relation_kind: 'lease_sublease',
+                owner_party_id: 'owner-1',
+                operator_party_id: 'manager-1',
+                asset_ids: ['asset-1'],
+                primary_contract_ids: ['contract-upstream'],
+                terminal_contract_ids: ['contract-downstream'],
+                derived_status: '生效中',
+                risk_tags: ['到期风险'],
+              },
+              {
+                contract_relation_id: 'group-agency',
+                project_id: 'project-1',
+                display_name: 'GRP-AGENCY',
+                revenue_mode: 'agency',
+                relation_kind: 'agency_operation',
+                owner_party_id: 'owner-2',
+                operator_party_id: 'manager-1',
+                asset_ids: ['asset-2', 'asset-3'],
+                primary_contract_ids: ['contract-entrusted'],
+                terminal_contract_ids: ['contract-direct'],
+                derived_status: '筹备中',
+                risk_tags: null,
+              },
+            ],
+            total: 2,
+          },
+          isLoading: false,
+          error: null,
+        };
+      }
+      if (scope === 'project-ledger-summary') {
+        return {
+          data: {
+            receivable_amount: '2650.00',
+            payable_amount: '1000.00',
+            received_amount: '1400.00',
+            paid_amount: '700.00',
+            overdue_amount: '600.00',
+            service_fee_receivable: '250.00',
+            service_fee_received: '200.00',
+          },
+          isLoading: false,
+          error: null,
+        };
+      }
+      if (scope === 'project-risks') {
+        return {
+          data: {
+            items: [
+              {
+                risk_id: 'group-lease:manual_tag:到期风险',
+                risk_type: 'manual_tag',
+                severity: 'warning',
+                message: '到期风险',
+                contract_relation_id: 'group-lease',
+                display_name: 'GRP-LEASE',
+              },
+            ],
+            total: 1,
+          },
+          isLoading: false,
+          error: null,
+        };
+      }
+      if (scope === 'project-tenants') {
+        return {
+          data: {
+            items: [
+              {
+                party_id: 'tenant-1',
+                party_name: '终端租户甲',
+                group_relation_type: '下游',
+                contract_count: 2,
+              },
+              {
+                party_id: 'tenant-2',
+                party_name: '直租租户乙',
+                group_relation_type: '直租',
+                contract_count: 1,
+              },
+            ],
+            total: 2,
+          },
+          isLoading: false,
+          error: null,
+        };
+      }
+      if (scope === 'project-analytics') {
+        return {
+          data: {
+            asset_summary: {
+              total_assets: 3,
+              total_rentable_area: 300,
+              total_rented_area: 210,
+              occupancy_rate: 70,
+            },
+            contract_relation_count: 2,
+            tenant_count: 2,
+            customer_contract_count: 3,
+            risk_count: 2,
+            high_risk_count: 1,
+            receivable_amount: '2650.00',
+            payable_amount: '1000.00',
+            received_amount: '1400.00',
+            paid_amount: '700.00',
+            overdue_amount: '600.00',
+            service_fee_receivable: '250.00',
+            service_fee_received: '200.00',
+            mode_summaries: [
+              {
+                relation_kind: 'lease_sublease',
+                label: '承租转租',
+                contract_relation_count: 1,
+                asset_count: 2,
+                primary_contract_count: 1,
+                terminal_contract_count: 1,
+                customer_count: 1,
+                customer_contract_count: 2,
+                receivable_amount: '2400.00',
+                payable_amount: '1000.00',
+                received_amount: '1200.00',
+                paid_amount: '700.00',
+                overdue_amount: '600.00',
+                risk_count: 1,
+              },
+              {
+                relation_kind: 'agency_operation',
+                label: '代理运营',
+                contract_relation_count: 1,
+                asset_count: 2,
+                primary_contract_count: 1,
+                terminal_contract_count: 1,
+                customer_count: 1,
+                customer_contract_count: 1,
+                receivable_amount: '250.00',
+                payable_amount: '0.00',
+                received_amount: '200.00',
+                paid_amount: '0.00',
+                overdue_amount: '0.00',
+                risk_count: 1,
+              },
+            ],
+          },
+          isLoading: false,
+          error: null,
+        };
+      }
       if (scope === 'asset-lease-summary') {
         return {
           data: {
@@ -107,6 +263,31 @@ describe('ProjectDetailPage', () => {
     expect(useQuery).toHaveBeenCalledWith(
       expect.objectContaining({
         queryKey: ['project-assets', 'user:user-1|scope:owner,manager', 'project-1'],
+      })
+    );
+    expect(useQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: ['project-contract-relations', 'user:user-1|scope:owner,manager', 'project-1'],
+      })
+    );
+    expect(useQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: ['project-ledger-summary', 'user:user-1|scope:owner,manager', 'project-1'],
+      })
+    );
+    expect(useQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: ['project-risks', 'user:user-1|scope:owner,manager', 'project-1'],
+      })
+    );
+    expect(useQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: ['project-tenants', 'user:user-1|scope:owner,manager', 'project-1'],
+      })
+    );
+    expect(useQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: ['project-analytics', 'user:user-1|scope:owner,manager', 'project-1'],
       })
     );
     expect(useQuery).toHaveBeenCalledWith(
@@ -192,5 +373,174 @@ describe('ProjectDetailPage', () => {
     fireEvent.click(screen.getByRole('button', { name: '查看客户终端租户甲详情' }));
 
     expect(mockNavigate).toHaveBeenCalledWith('/customers/party-customer-1');
+  });
+
+  it('renders project contract relations as business-facing project content', () => {
+    renderWithProviders(<ProjectDetailPage />, { route: '/project/project-1' });
+
+    expect(screen.getAllByText('合同关系').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('承租转租').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('代理运营').length).toBeGreaterThan(0);
+    expect(screen.getByText('收付款摘要')).toBeInTheDocument();
+    expect(screen.getAllByText('应收').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('应付').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('实收').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('实付').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('逾期').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('¥2,650.00').length).toBeGreaterThan(0);
+    expect(screen.getByText('¥1,000.00')).toBeInTheDocument();
+    expect(screen.getByText('¥1,400.00')).toBeInTheDocument();
+    expect(screen.getByText('¥700.00')).toBeInTheDocument();
+    expect(screen.getByText('¥600.00')).toBeInTheDocument();
+    expect(screen.getByText('服务费应收 ¥250.00 / 实收 ¥200.00')).toBeInTheDocument();
+    expect(screen.queryByText('待台账接入')).not.toBeInTheDocument();
+    expect(screen.getByText('风险提示')).toBeInTheDocument();
+    expect(screen.getByText('生效中')).toBeInTheDocument();
+    expect(screen.getAllByText('到期风险').length).toBeGreaterThan(0);
+    expect(screen.getByText('租户/客户')).toBeInTheDocument();
+    expect(screen.getAllByText('客户主体').length).toBeGreaterThan(0);
+    expect(screen.getByText('客户合同')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '查看客户终端租户甲详情' })).toBeInTheDocument();
+    expect(screen.getByText('3 份合同')).toBeInTheDocument();
+    expect(screen.getByText('项目分析')).toBeInTheDocument();
+    expect(screen.getByText('经营风险')).toBeInTheDocument();
+    expect(screen.getAllByText('¥250.00').length).toBeGreaterThan(0);
+    expect(screen.queryByText('合同组编码')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getAllByRole('button', { name: '查看明细' })[0]);
+
+    expect(mockNavigate).toHaveBeenCalledWith('/contract-center/group-lease');
+  });
+
+  it('renders project risk panel from project risks endpoint', () => {
+    vi.mocked(useQuery).mockImplementation(options => {
+      const [scope] = options.queryKey as [string, ...unknown[]];
+      if (scope === 'project') {
+        return {
+          data: {
+            id: 'project-1',
+            project_name: '项目A',
+            project_code: 'PRJ-TEST-000001',
+            status: 'active',
+            data_status: '正常',
+            created_at: '2026-03-01T00:00:00Z',
+            updated_at: '2026-03-02T00:00:00Z',
+          },
+          isLoading: false,
+          error: null,
+        };
+      }
+      if (scope === 'project-assets') {
+        return {
+          data: {
+            items: [],
+            total: 0,
+            summary: {
+              total_assets: 0,
+              total_rentable_area: 0,
+              total_rented_area: 0,
+              occupancy_rate: 0,
+            },
+          },
+          isLoading: false,
+          error: null,
+        };
+      }
+      if (scope === 'project-contract-relations') {
+        return {
+          data: {
+            items: [
+              {
+                contract_relation_id: 'group-lease',
+                project_id: 'project-1',
+                display_name: 'GRP-LEASE',
+                revenue_mode: 'lease',
+                relation_kind: 'lease_sublease',
+                owner_party_id: 'owner-1',
+                operator_party_id: 'manager-1',
+                asset_ids: ['asset-1'],
+                primary_contract_ids: [],
+                terminal_contract_ids: ['contract-downstream'],
+                derived_status: '生效中',
+                risk_tags: null,
+              },
+            ],
+            total: 1,
+          },
+          isLoading: false,
+          error: null,
+        };
+      }
+      if (scope === 'project-ledger-summary') {
+        return {
+          data: {
+            receivable_amount: '0.00',
+            payable_amount: '0.00',
+            received_amount: '0.00',
+            paid_amount: '0.00',
+            overdue_amount: '0.00',
+            service_fee_receivable: '0.00',
+            service_fee_received: '0.00',
+          },
+          isLoading: false,
+          error: null,
+        };
+      }
+      if (scope === 'project-risks') {
+        return {
+          data: {
+            items: [
+              {
+                risk_id: 'group-lease:missing_primary_contract',
+                risk_type: 'missing_primary_contract',
+                severity: 'warning',
+                message: '下游合同缺少有效上游或委托覆盖',
+                contract_relation_id: 'group-lease',
+                display_name: 'GRP-LEASE',
+              },
+            ],
+            total: 1,
+          },
+          isLoading: false,
+          error: null,
+        };
+      }
+      return { data: undefined, isLoading: false, error: null };
+    });
+
+    renderWithProviders(<ProjectDetailPage />, { route: '/project/project-1' });
+
+    expect(screen.getByText('风险提示')).toBeInTheDocument();
+    expect(screen.getByText('下游合同缺少有效上游或委托覆盖')).toBeInTheDocument();
+    expect(screen.getAllByText('GRP-LEASE').length).toBeGreaterThan(0);
+    expect(screen.queryByText('暂无风险提示')).not.toBeInTheDocument();
+  });
+
+  it('starts creating a contract relation from the current project', () => {
+    renderWithProviders(<ProjectDetailPage />, { route: '/project/project-1' });
+
+    fireEvent.click(screen.getByRole('button', { name: '新建合同关系' }));
+
+    expect(mockNavigate).toHaveBeenCalledWith('/contract-center/new?project_id=project-1');
+  });
+
+  it('starts creating an upstream lease contract from a project relation card', () => {
+    renderWithProviders(<ProjectDetailPage />, { route: '/project/project-1' });
+
+    fireEvent.click(screen.getByRole('button', { name: '新增上游承租合同' }));
+
+    expect(mockNavigate).toHaveBeenCalledWith(
+      '/contract-center/group-lease/contracts/new?project_id=project-1&role=UPSTREAM'
+    );
+  });
+
+  it('starts creating an entrusted agency agreement from an agency relation card', () => {
+    renderWithProviders(<ProjectDetailPage />, { route: '/project/project-1' });
+
+    fireEvent.click(screen.getByRole('button', { name: '新增委托协议' }));
+
+    expect(mockNavigate).toHaveBeenCalledWith(
+      '/contract-center/group-agency/contracts/new?project_id=project-1&role=ENTRUSTED'
+    );
   });
 });

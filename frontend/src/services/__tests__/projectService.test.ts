@@ -253,6 +253,96 @@ describe('ProjectService', () => {
     });
   });
 
+  describe('getProjectContractRelations', () => {
+    it('should return project contract relations from project endpoint', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        success: true,
+        data: {
+          items: [
+            {
+              contract_relation_id: 'group-1',
+              project_id: 'project-1',
+              display_name: 'GRP-LEASE',
+              revenue_mode: 'lease',
+              relation_kind: 'lease_sublease',
+              owner_party_id: 'owner-1',
+              operator_party_id: 'manager-1',
+              asset_ids: ['asset-1'],
+              primary_contract_ids: ['contract-upstream'],
+              terminal_contract_ids: ['contract-downstream'],
+              derived_status: '生效中',
+              risk_tags: ['到期风险'],
+            },
+          ],
+          total: 1,
+        },
+      });
+
+      const result = await service.getProjectContractRelations('project-1');
+
+      expect(result.total).toBe(1);
+      expect(result.items[0]?.relation_kind).toBe('lease_sublease');
+      expect(apiClient.get).toHaveBeenCalledWith(
+        '/projects/project-1/contract-relations',
+        expect.objectContaining({
+          cache: true,
+          smartExtract: true,
+        })
+      );
+    });
+
+    it('should throw when project contract relations API returns failure', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        success: false,
+        error: '获取失败',
+      });
+
+      await expect(service.getProjectContractRelations('project-1')).rejects.toThrow(
+        '获取项目合同关系失败'
+      );
+    });
+  });
+
+  describe('getProjectLedgerSummary', () => {
+    it('should return project ledger summary from project endpoint', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        success: true,
+        data: {
+          receivable_amount: '2650.00',
+          payable_amount: '1000.00',
+          received_amount: '1400.00',
+          paid_amount: '700.00',
+          overdue_amount: '600.00',
+          service_fee_receivable: '250.00',
+          service_fee_received: '200.00',
+        },
+      });
+
+      const result = await service.getProjectLedgerSummary('project-1');
+
+      expect(result.receivable_amount).toBe('2650.00');
+      expect(result.service_fee_receivable).toBe('250.00');
+      expect(apiClient.get).toHaveBeenCalledWith(
+        '/projects/project-1/ledger-summary',
+        expect.objectContaining({
+          cache: true,
+          smartExtract: true,
+        })
+      );
+    });
+
+    it('should throw when project ledger summary API returns failure', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        success: false,
+        error: '获取失败',
+      });
+
+      await expect(service.getProjectLedgerSummary('project-1')).rejects.toThrow(
+        '获取项目收付款摘要失败'
+      );
+    });
+  });
+
   describe('createProject', () => {
     it('should create project successfully', async () => {
       const newProject = {
@@ -957,6 +1047,142 @@ describe('ProjectService', () => {
 
       expect(result.assetCount).toBe(5);
       expect(result.totalArea).toBe(0);
+    });
+  });
+
+  describe('getProjectRisks', () => {
+    it('should return project risks from project endpoint', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        success: true,
+        data: {
+          items: [
+            {
+              risk_id: 'group-lease:manual_tag:到期风险',
+              risk_type: 'manual_tag',
+              severity: 'warning',
+              message: '到期风险',
+              contract_relation_id: 'group-lease',
+              display_name: 'GRP-LEASE',
+            },
+          ],
+          total: 1,
+        },
+      });
+
+      const result = await service.getProjectRisks('project-1');
+
+      expect(result.total).toBe(1);
+      expect(result.items[0].message).toBe('到期风险');
+      expect(apiClient.get).toHaveBeenCalledWith(
+        expect.stringContaining('/projects/project-1/risks'),
+        expect.any(Object)
+      );
+    });
+
+    it('should throw error when project risks API returns failure', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        success: false,
+        error: '获取失败',
+      });
+
+      await expect(service.getProjectRisks('project-1')).rejects.toThrow('获取项目风险提示失败');
+    });
+  });
+
+  describe('getProjectTenants', () => {
+    it('should return project tenants from project endpoint', async () => {
+      const mockResponse = {
+        success: true,
+        data: {
+          items: [
+            {
+              party_id: 'tenant-1',
+              party_name: '终端租户甲',
+              group_relation_type: '下游',
+              contract_count: 2,
+            },
+          ],
+          total: 1,
+        },
+      };
+
+      vi.mocked(apiClient.get).mockResolvedValueOnce(mockResponse);
+
+      const result = await service.getProjectTenants('project-1');
+
+      expect(apiClient.get).toHaveBeenCalledWith(
+        expect.stringContaining('/projects/project-1/tenants'),
+        expect.objectContaining({ cache: true })
+      );
+      expect(result.items[0]?.party_name).toBe('终端租户甲');
+    });
+
+    it('should throw error when project tenants API returns failure', async () => {
+      vi.mocked(apiClient.get).mockResolvedValueOnce({ success: false, error: 'Not found' });
+
+      await expect(service.getProjectTenants('project-1')).rejects.toThrow('获取项目租户客户摘要失败');
+    });
+  });
+
+  describe('getProjectAnalytics', () => {
+    it('should return project analytics from project endpoint', async () => {
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        success: true,
+        data: {
+          asset_summary: {
+            total_assets: 3,
+            total_rentable_area: 300,
+            total_rented_area: 210,
+            occupancy_rate: 70,
+          },
+          contract_relation_count: 2,
+          tenant_count: 2,
+          customer_contract_count: 3,
+          risk_count: 2,
+          high_risk_count: 1,
+          receivable_amount: '2650.00',
+          payable_amount: '1000.00',
+          received_amount: '1400.00',
+          paid_amount: '700.00',
+          overdue_amount: '600.00',
+          service_fee_receivable: '250.00',
+          service_fee_received: '200.00',
+          mode_summaries: [
+            {
+              relation_kind: 'lease_sublease',
+              label: '承租转租',
+              contract_relation_count: 1,
+              asset_count: 2,
+              primary_contract_count: 1,
+              terminal_contract_count: 1,
+              customer_count: 1,
+              customer_contract_count: 2,
+              receivable_amount: '2400.00',
+              payable_amount: '1000.00',
+              received_amount: '1200.00',
+              paid_amount: '700.00',
+              overdue_amount: '600.00',
+              risk_count: 1,
+            },
+          ],
+        },
+      });
+
+      const result = await service.getProjectAnalytics('project-1');
+
+      expect(apiClient.get).toHaveBeenCalledWith(
+        expect.stringContaining('/projects/project-1/analytics'),
+        expect.objectContaining({ cache: true })
+      );
+      expect(result.mode_summaries[0]?.label).toBe('承租转租');
+    });
+
+    it('should throw error when project analytics API returns failure', async () => {
+      vi.mocked(apiClient.get).mockResolvedValueOnce({ success: false, error: 'Not found' });
+
+      await expect(service.getProjectAnalytics('project-1')).rejects.toThrow(
+        '获取项目分析摘要失败'
+      );
     });
   });
 });

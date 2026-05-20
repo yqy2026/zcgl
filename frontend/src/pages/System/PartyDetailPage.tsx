@@ -362,7 +362,7 @@ const PartyDetailPage: React.FC = () => {
           ) : null}
         </Space>
 
-        {!hasPartyId ? <Alert type="error" title="缺少主体 ID，无法加载详情" showIcon /> : null}
+        {!hasPartyId ? <Alert type="error" title="缺少主体标识，无法加载详情" showIcon /> : null}
         {partyDetailQuery.isError ? (
           <Alert type="error" title={partyDetailQuery.error.message} showIcon />
         ) : null}

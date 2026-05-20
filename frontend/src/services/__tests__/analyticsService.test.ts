@@ -247,6 +247,79 @@ describe('AnalyticsService', () => {
         entrusted_operation: 6,
       });
     });
+
+    it('保留项目和经营模式分析拆分字段', async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        success: true,
+        data: {
+          area_summary: {
+            total_assets: 10,
+          },
+          financial_summary: {},
+          project_breakdown: [
+            {
+              project_id: 'project-1',
+              project_name: '湖滨产业园',
+              contract_relation_count: '2',
+              contract_count: '3',
+              lease_relation_count: '1',
+              agency_relation_count: '1',
+              total_income: '720.50',
+              self_operated_rent_income: '600.50',
+              agency_service_income: '120',
+              actual_receipts: '450',
+              customer_entity_count: '2',
+              customer_contract_count: '2',
+            },
+          ],
+          mode_breakdown: [
+            {
+              relation_kind: 'agency_operation',
+              label: '代理运营',
+              contract_relation_count: '1',
+              contract_count: '1',
+              total_income: '120',
+              self_operated_rent_income: '0',
+              agency_service_income: '120',
+              actual_receipts: '0',
+              customer_entity_count: '1',
+              customer_contract_count: '1',
+            },
+          ],
+        },
+      });
+
+      const result = await service.getComprehensiveAnalytics();
+
+      expect(result.data?.project_breakdown).toEqual([
+        {
+          project_id: 'project-1',
+          project_name: '湖滨产业园',
+          contract_relation_count: 2,
+          contract_count: 3,
+          lease_relation_count: 1,
+          agency_relation_count: 1,
+          total_income: 720.5,
+          self_operated_rent_income: 600.5,
+          agency_service_income: 120,
+          actual_receipts: 450,
+          customer_entity_count: 2,
+          customer_contract_count: 2,
+        },
+      ]);
+      expect(result.data?.mode_breakdown?.[0]).toEqual({
+        relation_kind: 'agency_operation',
+        label: '代理运营',
+        contract_relation_count: 1,
+        contract_count: 1,
+        total_income: 120,
+        self_operated_rent_income: 0,
+        agency_service_income: 120,
+        actual_receipts: 0,
+        customer_entity_count: 1,
+        customer_contract_count: 1,
+      });
+    });
   });
 
   describe('getBasicStatistics', () => {

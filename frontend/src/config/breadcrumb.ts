@@ -5,36 +5,29 @@
 
 // 静态路由映射 (精确匹配)
 export const staticBreadcrumbMap: Record<string, string> = {
-  '/dashboard': '仪表盘',
+  '/dashboard': '工作台',
 
-  // 资产管理
-  '/assets': '资产管理',
-  '/assets/list': '资产列表',
+  // 资产资源
+  '/assets': '资产资源',
+  '/assets/list': '资产台账',
   '/assets/map': '资产地图',
   '/assets/new': '新增资产',
   '/assets/import': '数据导入',
-  '/assets/analytics': '资产分析',
+  '/assets/analytics': '经营分析',
   '/assets/analytics-simple': '简易分析',
 
-  // 租赁管理
-  '/rental': '旧租赁前端已退休',
-  '/rental/contracts': '旧租赁前端已退休',
-  '/rental/contracts/new': '旧租赁前端已退休',
-  '/rental/contracts/create': '旧租赁前端已退休',
-  '/rental/contracts/pdf-import': '跳转至PDF导入',
-  '/rental/ledger': '旧租赁台账已退休',
-  '/rental/statistics': '旧租赁统计已退休',
-
-  // 财务管理
-  '/finance': '财务中心',
+  // 财务台账
+  '/finance': '财务台账',
+  '/finance/ledger': '财务台账',
   '/finance/billing': '账单管理',
   '/finance/payment': '收付款记录',
   // 兼容旧路径
-  '/financial': '财务中心',
+  '/financial': '财务台账',
   '/financial/billing': '账单管理',
   '/financial/payment': '收付款记录',
 
   // 统计分析
+  '/analytics': '经营分析',
   '/analysis': '分析统计',
   '/analysis/overview': '概览统计',
   '/analysis/report': '报表生成',
@@ -46,13 +39,16 @@ export const staticBreadcrumbMap: Record<string, string> = {
   // 权属方管理
   '/ownership': '权属方管理',
 
-  // 项目管理
-  '/project': '项目管理',
+  // 项目运营
+  '/project': '项目运营',
 
-  // 合同组管理
-  '/contract-groups': '合同组管理',
+  // 合同中心
+  '/contract-center': '合同中心',
+  '/contract-center/import': 'PDF导入',
+  '/contract-center/new': '新建合同关系',
+  '/contract-groups': '合同关系管理',
   '/contract-groups/import': 'PDF导入',
-  '/contract-groups/new': '新建合同组',
+  '/contract-groups/new': '新建合同关系',
 
   // 系统管理
   '/system': '系统管理',
@@ -78,11 +74,10 @@ export const dynamicBreadcrumbMap: Record<string, string> = {
   '/assets/:id/edit': '编辑资产',
 
   // 合同
-  '/contract-groups/:id': '合同组详情',
-  '/contract-groups/:id/edit': '编辑合同组',
-  '/rental/contracts/:id': '旧合同详情入口已退休',
-  '/rental/contracts/:id/renew': '旧合同续签入口已退休',
-  '/rental/contracts/:id/edit': '旧合同编辑入口已退休',
+  '/contract-center/:id': '合同关系明细',
+  '/contract-center/:id/edit': '编辑合同关系',
+  '/contract-groups/:id': '合同关系明细',
+  '/contract-groups/:id/edit': '编辑合同关系',
 
   // 产权证
   '/property-certificates/:id': '产权证详情',

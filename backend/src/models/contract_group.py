@@ -1,14 +1,14 @@
 """
-合同组及合同体系数据模型（五层合同架构 v1.0）
+合同关系与合同体系数据模型（五层合同架构 v1.0）
 
 层级：
-  ContractGroup（交易包）
+  ContractGroup（技术聚合根，用户侧展示为“合同关系”）
     └── Contract 基表（N 条）
           ├── LeaseContractDetail（租赁明细，1:1）
           └── AgencyAgreementDetail（代理明细，1:1）
   ContractRelation（合同间关系）
 
-对应需求：REQ-RNT-001（合同组作为主业务对象）
+对应需求：REQ-RNT-001（合同关系作为用户可见层，ContractGroup 为技术聚合根）
 字段附录：docs/features/requirements-appendix-fields.md §3.3–§3.7
 """
 
@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from .asset import Asset
     from .party import Party
+    from .project import Project
 
 from sqlalchemy import (
     DECIMAL,
@@ -101,7 +102,7 @@ class ContractRelationType(str, enum.Enum):
 
 
 class ContractGroup(Base):
-    """合同组（交易包）—— 以一笔经营关系为单位的业务容器。
+    """合同关系技术聚合根，承载一笔经营关系下的多份合同。
 
     定位：纯容器，不拥有独立生命周期状态。
     状态（derived_status）由 Service 层从组内合同状态实时计算，不写库。
@@ -113,6 +114,13 @@ class ContractGroup(Base):
         String,
         primary_key=True,
         default=lambda: str(uuid.uuid4()),
+    )
+    project_id: Mapped[str | None] = mapped_column(
+        String,
+        ForeignKey("projects.id"),
+        nullable=True,
+        index=True,
+        comment="所属项目 ID；Phase 1a 存量回填前允许为空",
     )
     group_code: Mapped[str] = mapped_column(
         String(50),
@@ -212,6 +220,10 @@ class ContractGroup(Base):
     owner_party: Mapped["Party"] = relationship(
         "Party",
         foreign_keys=[owner_party_id],
+    )
+    project: Mapped["Project | None"] = relationship(
+        "Project",
+        back_populates="contract_groups",
     )
     contracts: Mapped[list["Contract"]] = relationship(
         "Contract",

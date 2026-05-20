@@ -92,6 +92,99 @@ export interface ProjectActiveAssetsResponse {
   summary: ProjectAssetSummary;
 }
 
+export type ProjectRevenueMode = 'lease' | 'agency';
+export type ProjectContractRelationKind = 'lease_sublease' | 'agency_operation';
+
+export interface ProjectContractRelation {
+  contract_relation_id: string;
+  project_id: string;
+  display_name: string;
+  revenue_mode: ProjectRevenueMode;
+  relation_kind: ProjectContractRelationKind;
+  owner_party_id: string;
+  operator_party_id: string;
+  asset_ids: string[];
+  primary_contract_ids: string[];
+  terminal_contract_ids: string[];
+  derived_status: string;
+  risk_tags?: string[] | null;
+}
+
+export interface ProjectContractRelationsResponse {
+  items: ProjectContractRelation[];
+  total: number;
+}
+
+export interface ProjectLedgerSummaryResponse {
+  receivable_amount: string;
+  payable_amount: string;
+  received_amount: string;
+  paid_amount: string;
+  overdue_amount: string;
+  service_fee_receivable: string;
+  service_fee_received: string;
+}
+
+export interface ProjectRiskItem {
+  risk_id: string;
+  risk_type: string;
+  severity: string;
+  message: string;
+  contract_relation_id?: string | null;
+  display_name?: string | null;
+}
+
+export interface ProjectRisksResponse {
+  items: ProjectRiskItem[];
+  total: number;
+}
+
+export interface ProjectTenantSummaryItem {
+  party_id: string;
+  party_name: string;
+  group_relation_type: string;
+  contract_count: number;
+}
+
+export interface ProjectTenantSummaryResponse {
+  items: ProjectTenantSummaryItem[];
+  total: number;
+}
+
+export interface ProjectAnalysisModeSummary {
+  relation_kind: ProjectContractRelationKind;
+  label: string;
+  contract_relation_count: number;
+  asset_count: number;
+  primary_contract_count: number;
+  terminal_contract_count: number;
+  customer_count: number;
+  customer_contract_count: number;
+  receivable_amount: string;
+  payable_amount: string;
+  received_amount: string;
+  paid_amount: string;
+  overdue_amount: string;
+  risk_count: number;
+}
+
+export interface ProjectAnalyticsResponse {
+  asset_summary: ProjectAssetSummary;
+  contract_relation_count: number;
+  tenant_count: number;
+  customer_contract_count: number;
+  risk_count: number;
+  high_risk_count: number;
+  receivable_amount: string;
+  payable_amount: string;
+  received_amount: string;
+  paid_amount: string;
+  overdue_amount: string;
+  service_fee_receivable: string;
+  service_fee_received: string;
+  mode_summaries: ProjectAnalysisModeSummary[];
+}
+
 // 项目搜索参数类型
 export interface ProjectSearchParams {
   keyword?: string;

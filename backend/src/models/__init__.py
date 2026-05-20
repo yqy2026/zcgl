@@ -136,7 +136,7 @@ __all__ = [
     "EnumFieldUsage",
     "EnumFieldHistory",
     "property_cert_assets",
-    # 合同组体系（REQ-RNT-001）
+    # 合同关系技术聚合（REQ-RNT-001）
     "ContractGroup",
     "Contract",
     "ContractRentTerm",

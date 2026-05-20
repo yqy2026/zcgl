@@ -19,6 +19,7 @@ import {
   Statistic,
   Badge,
   DatePicker,
+  Empty,
   Skeleton,
   Tooltip,
 } from 'antd';
@@ -28,6 +29,7 @@ import {
   AreaChartOutlined,
   TeamOutlined,
   InfoCircleOutlined,
+  PlusOutlined,
 } from '@ant-design/icons';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -36,11 +38,17 @@ import { projectService } from '@/services/projectService';
 import { assetService } from '@/services/assetService';
 import type { ColumnsType } from 'antd/es/table';
 import type { Asset, AssetLeaseSummaryResponse } from '@/types/asset';
+import type {
+  ProjectAnalysisModeSummary,
+  ProjectContractRelation,
+  ProjectRiskItem,
+} from '@/types/project';
+import type { GroupRelationType } from '@/types/contractGroup';
 import { useArrayListData } from '@/hooks/useArrayListData';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
 import { PageContainer } from '@/components/Common';
 import { buildQueryScopeKey } from '@/utils/queryScope';
-import { CUSTOMER_ROUTES, PROJECT_ROUTES } from '@/constants/routes';
+import { CONTRACT_CENTER_ROUTES, CUSTOMER_ROUTES, PROJECT_ROUTES } from '@/constants/routes';
 import styles from './ProjectDetailPage.module.css';
 
 const { Text } = Typography;
@@ -66,10 +74,65 @@ const RELATION_TYPE_COLORS: Record<string, string> = {
   直租: 'green',
 };
 
+const PROJECT_RELATION_KIND_META: Record<
+  ProjectContractRelation['relation_kind'],
+  {
+    label: string;
+    color: string;
+    primaryLabel: string;
+    terminalLabel: string;
+  }
+> = {
+  lease_sublease: {
+    label: '承租转租',
+    color: 'gold',
+    primaryLabel: '上游合同',
+    terminalLabel: '下游合同',
+  },
+  agency_operation: {
+    label: '代理运营',
+    color: 'cyan',
+    primaryLabel: '委托协议',
+    terminalLabel: '直租合同',
+  },
+};
+
+const PROJECT_RELATION_CONTRACT_ACTIONS: Record<
+  ProjectContractRelation['relation_kind'],
+  Array<{ label: string; role: GroupRelationType }>
+> = {
+  lease_sublease: [
+    { label: '新增上游承租合同', role: 'UPSTREAM' },
+    { label: '新增下游出租合同', role: 'DOWNSTREAM' },
+  ],
+  agency_operation: [
+    { label: '新增委托协议', role: 'ENTRUSTED' },
+    { label: '新增直租合同', role: 'DIRECT_LEASE' },
+  ],
+};
+
+const PROJECT_RISK_SEVERITY_COLORS: Record<string, string> = {
+  critical: 'red',
+  error: 'red',
+  warning: 'orange',
+  info: 'blue',
+};
+
 const buildPeriodParams = (month: Dayjs) => ({
   period_start: month.startOf('month').format('YYYY-MM-DD'),
   period_end: month.endOf('month').format('YYYY-MM-DD'),
 });
+
+const formatCurrency = (value: string | number | null | undefined): string => {
+  const amount = Number(value ?? 0);
+  if (!Number.isFinite(amount)) {
+    return '¥0.00';
+  }
+  return `¥${amount.toLocaleString('zh-CN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+};
 
 const buildCustomerDetailPath = (partyId: string | null | undefined): string | null => {
   if (partyId == null || partyId.trim() === '') {
@@ -77,6 +140,25 @@ const buildCustomerDetailPath = (partyId: string | null | undefined): string | n
   }
   return CUSTOMER_ROUTES.DETAIL(partyId);
 };
+
+const buildNewContractPath = ({
+  relationId,
+  projectId,
+  role,
+}: {
+  relationId: string;
+  projectId: string;
+  role: GroupRelationType;
+}) =>
+  `${CONTRACT_CENTER_ROUTES.NEW_CONTRACT(relationId)}?project_id=${encodeURIComponent(
+    projectId
+  )}&role=${role}`;
+
+const getProjectRiskTagColor = (risk: ProjectRiskItem): string =>
+  PROJECT_RISK_SEVERITY_COLORS[risk.severity] ?? 'orange';
+
+const getAnalysisModeColor = (mode: ProjectAnalysisModeSummary): string =>
+  PROJECT_RELATION_KIND_META[mode.relation_kind]?.color ?? 'blue';
 
 // 子组件：逐资产获取租赁汇总，避免在 map 中调用 hook
 interface AssetLeaseSummaryRowData {
@@ -234,6 +316,41 @@ const ProjectDetailPage: React.FC = () => {
     enabled: canQuery,
   });
 
+  const { data: contractRelationsData, isLoading: contractRelationsLoading } = useQuery({
+    queryKey: ['project-contract-relations', queryScopeKey, id],
+    queryFn: () => projectService.getProjectContractRelations(id as string),
+    enabled: canQuery,
+    staleTime: 60_000,
+  });
+
+  const { data: ledgerSummaryData, isLoading: ledgerSummaryLoading } = useQuery({
+    queryKey: ['project-ledger-summary', queryScopeKey, id],
+    queryFn: () => projectService.getProjectLedgerSummary(id as string),
+    enabled: canQuery,
+    staleTime: 60_000,
+  });
+
+  const { data: projectRisksData, isLoading: projectRisksLoading } = useQuery({
+    queryKey: ['project-risks', queryScopeKey, id],
+    queryFn: () => projectService.getProjectRisks(id as string),
+    enabled: canQuery,
+    staleTime: 60_000,
+  });
+
+  const { data: projectTenantsData, isLoading: projectTenantsLoading } = useQuery({
+    queryKey: ['project-tenants', queryScopeKey, id],
+    queryFn: () => projectService.getProjectTenants(id as string),
+    enabled: canQuery,
+    staleTime: 60_000,
+  });
+
+  const { data: projectAnalyticsData, isLoading: projectAnalyticsLoading } = useQuery({
+    queryKey: ['project-analytics', queryScopeKey, id],
+    queryFn: () => projectService.getProjectAnalytics(id as string),
+    enabled: canQuery,
+    staleTime: 60_000,
+  });
+
   // 资产表格列定义
   const assetColumns: ColumnsType<Asset> = [
     {
@@ -288,6 +405,35 @@ const ProjectDetailPage: React.FC = () => {
 
   // 计算统计数据
   const assets = useMemo(() => assetsData?.items ?? [], [assetsData?.items]);
+  const contractRelations = contractRelationsData?.items ?? [];
+  const leaseSubleaseCount = contractRelations.filter(
+    relation => relation.relation_kind === 'lease_sublease'
+  ).length;
+  const agencyOperationCount = contractRelations.filter(
+    relation => relation.relation_kind === 'agency_operation'
+  ).length;
+  const projectRisks = projectRisksData?.items ?? [];
+  const projectTenants = projectTenantsData?.items ?? [];
+  const projectTenantContractCount = projectTenants.reduce(
+    (total, item) => total + item.contract_count,
+    0
+  );
+  const ledgerSummary = ledgerSummaryData ?? {
+    receivable_amount: '0.00',
+    payable_amount: '0.00',
+    received_amount: '0.00',
+    paid_amount: '0.00',
+    overdue_amount: '0.00',
+    service_fee_receivable: '0.00',
+    service_fee_received: '0.00',
+  };
+  const ledgerSummaryItems = [
+    { label: '应收', value: ledgerSummary.receivable_amount },
+    { label: '应付', value: ledgerSummary.payable_amount },
+    { label: '实收', value: ledgerSummary.received_amount },
+    { label: '实付', value: ledgerSummary.paid_amount },
+    { label: '逾期', value: ledgerSummary.overdue_amount },
+  ];
   const summary = assetsData?.summary ?? {
     total_assets: 0,
     total_rentable_area: 0,
@@ -456,6 +602,283 @@ const ProjectDetailPage: React.FC = () => {
                 {project.updated_at ? new Date(project.updated_at).toLocaleString('zh-CN') : '-'}
               </Descriptions.Item>
             </Descriptions>
+          </Card>
+
+          <Card
+            className={styles.contractRelationCard}
+            title={
+              <div className={styles.contractRelationHeader}>
+                <Space className={styles.assetTableTitle}>
+                  <span>合同关系</span>
+                  <Badge
+                    count={contractRelationsData?.total ?? 0}
+                    className={styles.assetCountBadge}
+                  />
+                </Space>
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  aria-label="新建合同关系"
+                  onClick={() =>
+                    navigate(
+                      `${CONTRACT_CENTER_ROUTES.NEW}?project_id=${encodeURIComponent(id as string)}`
+                    )
+                  }
+                >
+                  新建合同关系
+                </Button>
+              </div>
+            }
+          >
+            <div className={styles.relationSummaryStrip}>
+              <div className={styles.relationSummaryItem}>
+                <Text type="secondary">承租转租</Text>
+                <Text strong>{leaseSubleaseCount}</Text>
+              </div>
+              <div className={styles.relationSummaryItem}>
+                <Text type="secondary">代理运营</Text>
+                <Text strong>{agencyOperationCount}</Text>
+              </div>
+              <div className={styles.relationSummaryItem}>
+                <Text type="secondary">覆盖资产</Text>
+                <Text strong>
+                  {new Set(contractRelations.flatMap(relation => relation.asset_ids ?? [])).size}
+                </Text>
+              </div>
+            </div>
+
+            {contractRelationsLoading ? (
+              <Skeleton active paragraph={{ rows: 3 }} />
+            ) : contractRelations.length === 0 ? (
+              <Empty description="暂无合同关系" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+            ) : (
+              <div className={styles.relationGrid}>
+                {contractRelations.map(relation => {
+                  const meta = PROJECT_RELATION_KIND_META[relation.relation_kind];
+                  const riskTags = relation.risk_tags ?? [];
+                  return (
+                    <div key={relation.contract_relation_id} className={styles.relationItem}>
+                      <div className={styles.relationItemHeader}>
+                        <Space size={8} wrap>
+                          <Tag color={meta.color}>{meta.label}</Tag>
+                          <Text strong>{relation.display_name}</Text>
+                        </Space>
+                        <Button
+                          type="link"
+                          className={styles.relationDetailButton}
+                          onClick={() =>
+                            navigate(CONTRACT_CENTER_ROUTES.DETAIL(relation.contract_relation_id))
+                          }
+                        >
+                          查看明细
+                        </Button>
+                      </div>
+                      <div className={styles.relationFacts}>
+                        <div>
+                          <Text type="secondary">{meta.primaryLabel}</Text>
+                          <Text strong>{relation.primary_contract_ids.length}</Text>
+                        </div>
+                        <div>
+                          <Text type="secondary">{meta.terminalLabel}</Text>
+                          <Text strong>{relation.terminal_contract_ids.length}</Text>
+                        </div>
+                        <div>
+                          <Text type="secondary">关联资产</Text>
+                          <Text strong>{relation.asset_ids.length}</Text>
+                        </div>
+                        <div>
+                          <Text type="secondary">状态</Text>
+                          <Tag className={styles.relationStatusTag}>{relation.derived_status}</Tag>
+                        </div>
+                      </div>
+                      {riskTags.length > 0 && (
+                        <div className={styles.relationRiskTags}>
+                          {riskTags.map(tag => (
+                            <Tag key={`${relation.contract_relation_id}-${tag}`} color="orange">
+                              {tag}
+                            </Tag>
+                          ))}
+                        </div>
+                      )}
+                      <div className={styles.relationActions}>
+                        {PROJECT_RELATION_CONTRACT_ACTIONS[relation.relation_kind].map(action => (
+                          <Button
+                            key={`${relation.contract_relation_id}-${action.role}`}
+                            size="small"
+                            onClick={() =>
+                              navigate(
+                                buildNewContractPath({
+                                  relationId: relation.contract_relation_id,
+                                  projectId: id as string,
+                                  role: action.role,
+                                })
+                              )
+                            }
+                          >
+                            {action.label}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </Card>
+
+          <Card className={styles.assetTableCard} title="收付款摘要">
+            {ledgerSummaryLoading ? (
+              <Skeleton active paragraph={{ rows: 2 }} />
+            ) : (
+              <>
+                <div className={styles.relationSummaryStrip}>
+                  {ledgerSummaryItems.map(item => (
+                    <div key={item.label} className={styles.relationSummaryItem}>
+                      <Text type="secondary">{item.label}</Text>
+                      <Text strong>{formatCurrency(item.value)}</Text>
+                    </div>
+                  ))}
+                </div>
+                <Text type="secondary" className={styles.ledgerServiceFeeText}>
+                  服务费应收 {formatCurrency(ledgerSummary.service_fee_receivable)} / 实收{' '}
+                  {formatCurrency(ledgerSummary.service_fee_received)}
+                </Text>
+              </>
+            )}
+          </Card>
+
+          <Card className={styles.assetTableCard} title="风险提示">
+            {projectRisksLoading ? (
+              <Skeleton active paragraph={{ rows: 2 }} />
+            ) : projectRisks.length > 0 ? (
+              <div className={styles.projectRiskList}>
+                {projectRisks.map(risk => (
+                  <div key={risk.risk_id} className={styles.projectRiskItem}>
+                    <Tag color={getProjectRiskTagColor(risk)}>{risk.message}</Tag>
+                    {risk.display_name != null && risk.display_name.trim() !== '' && (
+                      <Text type="secondary">{risk.display_name}</Text>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <Empty description="暂无风险提示" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+            )}
+          </Card>
+
+          <Card className={styles.assetTableCard} title="租户/客户">
+            {projectTenantsLoading ? (
+              <Skeleton active paragraph={{ rows: 2 }} />
+            ) : projectTenants.length > 0 ? (
+              <>
+                <div className={styles.relationSummaryStrip}>
+                  <div className={styles.relationSummaryItem}>
+                    <Text type="secondary">客户主体</Text>
+                    <Text strong>{projectTenants.length}</Text>
+                  </div>
+                  <div className={styles.relationSummaryItem}>
+                    <Text type="secondary">客户合同</Text>
+                    <Text strong>{projectTenantContractCount} 份合同</Text>
+                  </div>
+                  <div className={styles.relationSummaryItem}>
+                    <Text type="secondary">直租客户</Text>
+                    <Text strong>
+                      {
+                        projectTenants.filter(item => item.group_relation_type === '直租')
+                          .length
+                      }
+                    </Text>
+                  </div>
+                </div>
+                <div className={styles.projectTenantList}>
+                  {projectTenants.slice(0, 6).map(item => {
+                    const detailPath = buildCustomerDetailPath(item.party_id);
+                    return (
+                      <div
+                        key={`${item.party_id}-${item.group_relation_type}`}
+                        className={styles.projectTenantItem}
+                      >
+                        <Space size={8} wrap>
+                          <Tag>{item.group_relation_type}</Tag>
+                          {detailPath != null ? (
+                            <Button
+                              type="link"
+                              className={styles.tenantLinkButton}
+                              aria-label={`查看客户${item.party_name}详情`}
+                              onClick={() => navigate(detailPath)}
+                            >
+                              {item.party_name}
+                            </Button>
+                          ) : (
+                            <Text strong>{item.party_name}</Text>
+                          )}
+                        </Space>
+                        <Text type="secondary">{item.contract_count} 份合同</Text>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <Empty description="暂无租户/客户" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+            )}
+          </Card>
+
+          <Card className={styles.assetTableCard} title="项目分析">
+            {projectAnalyticsLoading ? (
+              <Skeleton active paragraph={{ rows: 2 }} />
+            ) : projectAnalyticsData != null ? (
+              <>
+                <div className={styles.analysisSummaryStrip}>
+                  <div className={styles.relationSummaryItem}>
+                    <Text type="secondary">合同关系</Text>
+                    <Text strong>{projectAnalyticsData.contract_relation_count}</Text>
+                  </div>
+                  <div className={styles.relationSummaryItem}>
+                    <Text type="secondary">客户主体</Text>
+                    <Text strong>{projectAnalyticsData.tenant_count}</Text>
+                  </div>
+                  <div className={styles.relationSummaryItem}>
+                    <Text type="secondary">经营风险</Text>
+                    <Text strong>{projectAnalyticsData.risk_count}</Text>
+                  </div>
+                  <div className={styles.relationSummaryItem}>
+                    <Text type="secondary">应收</Text>
+                    <Text strong>{formatCurrency(projectAnalyticsData.receivable_amount)}</Text>
+                  </div>
+                </div>
+                <div className={styles.analysisModeGrid}>
+                  {projectAnalyticsData.mode_summaries.map(mode => (
+                    <div key={mode.relation_kind} className={styles.analysisModeItem}>
+                      <div className={styles.analysisModeHeader}>
+                        <Tag color={getAnalysisModeColor(mode)}>{mode.label}</Tag>
+                        <Text type="secondary">{mode.risk_count} 个风险</Text>
+                      </div>
+                      <div className={styles.analysisModeFacts}>
+                        <span>
+                          <Text type="secondary">关系</Text>
+                          <Text strong>{mode.contract_relation_count}</Text>
+                        </span>
+                        <span>
+                          <Text type="secondary">资产</Text>
+                          <Text strong>{mode.asset_count}</Text>
+                        </span>
+                        <span>
+                          <Text type="secondary">客户</Text>
+                          <Text strong>{mode.customer_count}</Text>
+                        </span>
+                        <span>
+                          <Text type="secondary">应收</Text>
+                          <Text strong>{formatCurrency(mode.receivable_amount)}</Text>
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <Empty description="暂无项目分析" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+            )}
           </Card>
 
           {/* 关联资产列表 */}

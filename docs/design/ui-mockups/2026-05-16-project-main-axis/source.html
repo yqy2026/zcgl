@@ -1,0 +1,1404 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>项目主轴资产运营 UI 图</title>
+    <style>
+
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+      :root {
+        --ink: #0f172a;
+        --muted: #64748b;
+        --soft: #f1f5f9;
+        --line: #e2e8f0;
+        --panel: #ffffff;
+        --page: #f8fafc;
+        --blue: #2563eb;
+        --blue-soft: #eff6ff;
+        --green: #10b981;
+        --green-soft: #ecfdf5;
+        --amber: #f59e0b;
+        --amber-soft: #fffbeb;
+        --red: #ef4444;
+        --red-soft: #fef2f2;
+        --cyan: #06b6d4;
+        --cyan-soft: #ecfeff;
+        --violet: #8b5cf6;
+        --violet-soft: #f5f3ff;
+        --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+        --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+        --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+        --radius: 12px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: #e2e8f0;
+        color: var(--ink);
+        font-family: "Inter", "PingFang SC", sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .frame {
+        width: 1440px;
+        height: 960px;
+        position: relative;
+        overflow: hidden;
+        margin: 32px auto;
+        background: var(--page);
+        border: 1px solid #cbd5e1;
+        border-radius: 16px;
+        box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+      }
+
+      .app {
+        display: grid;
+        grid-template-columns: 260px 1fr;
+        height: 100%;
+      }
+
+      .sidebar {
+        background: #0f172a;
+        color: #94a3b8;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        border-right: 1px solid rgba(255,255,255,0.1);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 40px;
+      }
+
+      .brand-mark {
+        width: 44px;
+        height: 44px;
+        display: grid;
+        place-items: center;
+        border-radius: 12px;
+        color: white;
+        font-size: 18px;
+        font-weight: 800;
+        background: linear-gradient(135deg, #3b82f6, #10b981);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+      }
+
+      .brand-title {
+        color: #f8fafc;
+        font-size: 18px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+
+      .brand-subtitle {
+        margin-top: 4px;
+        color: #64748b;
+        font-size: 13px;
+        font-weight: 500;
+      }
+
+      .nav-section {
+        margin: 24px 0 12px;
+        padding-left: 12px;
+        color: #64748b;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .nav-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        height: 42px;
+        padding: 0 12px;
+        margin: 4px 0;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .nav-item:hover {
+        background: rgba(255,255,255,0.05);
+        color: #f8fafc;
+      }
+
+      .nav-item.active {
+        background: linear-gradient(90deg, rgba(59, 130, 246, 0.15), transparent);
+        color: #3b82f6;
+        border-left: 3px solid #3b82f6;
+      }
+
+      .nav-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+        opacity: 0.8;
+      }
+
+      .main {
+        min-width: 0;
+        display: grid;
+        grid-template-rows: 72px 1fr;
+        background: #f8fafc;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 32px;
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid var(--line);
+        z-index: 10;
+      }
+
+      .search {
+        width: 480px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 0 16px;
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        background: #f1f5f9;
+        color: var(--muted);
+        font-size: 14px;
+        transition: all 0.2s;
+      }
+
+      .search:hover {
+        background: #ffffff;
+        border-color: #cbd5e1;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      }
+
+      .top-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        min-height: 28px;
+        padding: 0 12px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: #ffffff;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 500;
+        white-space: nowrap;
+        box-shadow: var(--shadow-sm);
+      }
+
+      .pill.blue { background: var(--blue-soft); color: var(--blue); border-color: #bfdbfe; }
+      .pill.green { background: var(--green-soft); color: var(--green); border-color: #a7f3d0; }
+      .pill.amber { background: var(--amber-soft); color: #d97706; border-color: #fde68a; }
+      .pill.red { background: var(--red-soft); color: var(--red); border-color: #fecaca; }
+      .pill.cyan { background: var(--cyan-soft); color: #0891b2; border-color: #a5f3fc; }
+      .pill.violet { background: var(--violet-soft); color: var(--violet); border-color: #ddd6fe; }
+
+      .content {
+        padding: 32px;
+        overflow: hidden;
+      }
+
+      .page-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 24px;
+        margin-bottom: 24px;
+      }
+
+      .eyebrow {
+        margin-bottom: 8px;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 500;
+        letter-spacing: 0.02em;
+      }
+
+      h1, h2, h3, p { margin: 0; }
+
+      h1 {
+        font-size: 28px;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        line-height: 1.2;
+        color: #0f172a;
+      }
+
+      h2 {
+        font-size: 18px;
+        font-weight: 600;
+        color: #1e293b;
+        letter-spacing: -0.01em;
+      }
+
+      h3 {
+        font-size: 15px;
+        font-weight: 600;
+      }
+
+      .muted { color: var(--muted); }
+      .small { font-size: 13px; }
+
+      .button {
+        height: 40px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 0 16px;
+        border-radius: 8px;
+        border: 1px solid var(--line);
+        background: #ffffff;
+        color: #334155;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: var(--shadow-sm);
+        transition: all 0.2s;
+      }
+
+      .button:hover {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+      }
+
+      .button.primary {
+        color: #ffffff;
+        background: var(--blue);
+        border-color: var(--blue);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+      }
+
+      .button.primary:hover {
+        background: #1d4ed8;
+      }
+
+      .grid { display: grid; gap: 16px; }
+      .grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
+      .grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+      .grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
+
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow-sm);
+        transition: box-shadow 0.2s;
+      }
+      
+      .card:hover {
+        box-shadow: var(--shadow);
+      }
+
+      .card.pad {
+        padding: 24px;
+      }
+
+      .metric {
+        display: flex;
+        flex-direction: column;
+        min-height: 120px;
+      }
+
+      .metric-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+        font-weight: 500;
+      }
+
+      .metric-value {
+        font-size: 36px;
+        font-weight: 800;
+        line-height: 1;
+        letter-spacing: -0.04em;
+        color: #0f172a;
+      }
+
+      .metric-foot {
+        margin-top: auto;
+        color: var(--muted);
+        font-size: 13px;
+        padding-top: 12px;
+      }
+
+      .section-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 20px;
+      }
+
+      .table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+
+      .table th {
+        height: 44px;
+        color: #64748b;
+        background: #f8fafc;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        font-weight: 600;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .table td {
+        height: 56px;
+        border-bottom: 1px solid #f1f5f9;
+        color: #334155;
+      }
+
+      .table th, .table td {
+        padding: 0 16px;
+      }
+
+      .split {
+        display: grid;
+        grid-template-columns: 1.5fr 1fr;
+        gap: 16px;
+      }
+
+      .split.equal {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .bar {
+        height: 6px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: #f1f5f9;
+      }
+
+      .bar > span {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: var(--blue);
+      }
+
+      .bar.green > span { background: var(--green); }
+      .bar.amber > span { background: var(--amber); }
+
+      .stacked {
+        display: flex;
+        height: 12px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: #f1f5f9;
+      }
+
+      .stacked span:nth-child(1) { background: var(--blue); }
+      .stacked span:nth-child(2) { background: var(--green); }
+      .stacked span:nth-child(3) { background: var(--amber); }
+
+      .list { display: grid; gap: 12px; }
+
+      .list-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 16px;
+        border: 1px solid #f1f5f9;
+        border-radius: 10px;
+        background: #ffffff;
+        box-shadow: var(--shadow-sm);
+      }
+
+      .relation-card {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 16px;
+        padding: 20px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #ffffff;
+      }
+
+      .relation-card.featured {
+        border-color: #bfdbfe;
+        background: linear-gradient(180deg, #f8fafc, #ffffff);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.05);
+      }
+
+      .relation-title {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+        font-weight: 700;
+        font-size: 15px;
+      }
+
+      .contract-lane {
+        display: grid;
+        grid-template-columns: 1fr 40px 1fr;
+        gap: 16px;
+        align-items: center;
+        margin-top: 16px;
+      }
+
+      .contract-node {
+        padding: 16px;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        background: #f8fafc;
+      }
+
+      .arrow {
+        display: grid;
+        place-items: center;
+        height: 32px;
+        color: #94a3b8;
+        font-size: 24px;
+      }
+
+      .timeline {
+        position: relative;
+        display: grid;
+        gap: 20px;
+        padding-left: 24px;
+      }
+
+      .timeline::before {
+        content: "";
+        position: absolute;
+        left: 7px;
+        top: 10px;
+        bottom: 10px;
+        width: 2px;
+        background: #e2e8f0;
+      }
+
+      .timeline-item { position: relative; }
+
+      .timeline-item::before {
+        content: "";
+        position: absolute;
+        left: -23px;
+        top: 4px;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        border: 2px solid white;
+        background: var(--blue);
+        box-shadow: 0 0 0 2px #bfdbfe;
+      }
+
+      .chart {
+        position: relative;
+        height: 240px;
+        padding: 24px 24px 20px;
+      }
+
+      .chart-grid {
+        position: absolute;
+        inset: 24px;
+        display: grid;
+        grid-template-rows: repeat(4, 1fr);
+      }
+
+      .chart-grid span {
+        border-top: 1px dashed #e2e8f0;
+      }
+
+      .bars {
+        position: absolute;
+        left: 50px;
+        right: 32px;
+        bottom: 40px;
+        height: 180px;
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        align-items: end;
+        gap: 24px;
+      }
+
+      .bar-col {
+        display: grid;
+        grid-template-rows: 1fr auto;
+        gap: 10px;
+      }
+
+      .bar-fill {
+        align-self: end;
+        min-height: 24px;
+        border-radius: 8px 8px 0 0;
+        background: linear-gradient(180deg, #3b82f6, #93c5fd);
+      }
+
+      .bar-fill.green {
+        background: linear-gradient(180deg, #10b981, #6ee7b7);
+      }
+
+      .bar-label {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 500;
+        text-align: center;
+      }
+
+      .donut {
+        width: 140px;
+        height: 140px;
+        border-radius: 50%;
+        background: conic-gradient(var(--blue) 0 46%, var(--green) 46% 73%, var(--amber) 73% 91%, #e2e8f0 91% 100%);
+        position: relative;
+        box-shadow: var(--shadow);
+      }
+
+      .donut::after {
+        content: "";
+        position: absolute;
+        inset: 28px;
+        border-radius: 50%;
+        background: white;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+      }
+
+      .kpi-strip {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 12px;
+      }
+
+      .kpi {
+        padding: 16px;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        background: #ffffff;
+        box-shadow: var(--shadow-sm);
+      }
+
+      .kpi strong {
+        display: block;
+        margin-top: 8px;
+        font-size: 24px;
+        font-weight: 800;
+        color: #0f172a;
+        letter-spacing: -0.02em;
+      }
+
+      .board {
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 16px;
+      }
+
+      .workflow {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+      }
+
+      .step {
+        position: relative;
+        min-height: 160px;
+        padding: 20px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #ffffff;
+        box-shadow: var(--shadow-sm);
+      }
+
+      .step-number {
+        width: 32px;
+        height: 32px;
+        display: grid;
+        place-items: center;
+        margin-bottom: 12px;
+        border-radius: 8px;
+        color: white;
+        background: var(--blue);
+        font-weight: 700;
+        font-size: 14px;
+      }
+
+      .form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+      }
+
+      .field { min-height: 64px; }
+
+      .field label {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 500;
+      }
+
+      .input {
+        height: 40px;
+        display: flex;
+        align-items: center;
+        padding: 0 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #f8fafc;
+        font-size: 14px;
+        color: #334155;
+      }
+
+      .asset-mini-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+      }
+
+      .asset-mini {
+        padding: 12px 16px;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        background: #f8fafc;
+      }
+
+      .legend { display: grid; gap: 10px; }
+
+      .legend-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 13px;
+        color: #475569;
+        font-weight: 500;
+      }
+
+      .legend-swatch {
+        width: 12px;
+        height: 12px;
+        border-radius: 4px;
+        background: var(--blue);
+      }
+
+      .legend-swatch.green { background: var(--green); }
+      .legend-swatch.amber { background: var(--amber); }
+
+      .danger-line { border-left: 4px solid var(--red); }
+
+      .screen-note {
+        position: absolute;
+        right: 24px;
+        bottom: 20px;
+        color: #94a3b8;
+        font-size: 12px;
+        font-weight: 600;
+        background: rgba(255,255,255,0.8);
+        padding: 4px 12px;
+        border-radius: 999px;
+        backdrop-filter: blur(4px);
+      }
+
+      .dense { line-height: 1.5; }
+
+    </style>
+  </head>
+  <body>
+    <section class="frame" id="dashboard">
+      <div class="app">
+        <aside class="sidebar">
+          <div class="brand">
+            <div class="brand-mark">资</div>
+            <div>
+              <div class="brand-title">资产运营平台</div>
+              <div class="brand-subtitle">LandOps Console</div>
+            </div>
+          </div>
+          <div class="nav-section">主工作区</div>
+          <div class="nav-item active"><span class="nav-dot"></span>工作台</div>
+          <div class="nav-item"><span class="nav-dot"></span>项目运营</div>
+          <div class="nav-item"><span class="nav-dot"></span>资产资源</div>
+          <div class="nav-item"><span class="nav-dot"></span>合同中心</div>
+          <div class="nav-item"><span class="nav-dot"></span>财务台账</div>
+          <div class="nav-item"><span class="nav-dot"></span>主体中心</div>
+          <div class="nav-section">管理与分析</div>
+          <div class="nav-item"><span class="nav-dot"></span>经营分析</div>
+          <div class="nav-item"><span class="nav-dot"></span>系统管理</div>
+        </aside>
+        <main class="main">
+          <header class="topbar">
+            <div class="search">搜索资产、项目、合同关系、客户</div>
+            <div class="top-actions">
+              <span class="pill blue">运营方视角</span>
+              <span class="pill">2026-05</span>
+              <span class="pill">管理员</span>
+            </div>
+          </header>
+          <div class="content">
+            <div class="page-head">
+              <div>
+                <div class="eyebrow">工作台 / 今日运营摘要</div>
+                <h1>项目主轴资产运营总览</h1>
+                <p class="muted small" style="margin-top: 6px">从项目进入资产、合同关系、台账、客户和风险，避免普通用户在零散对象间跳转。</p>
+              </div>
+              <div class="top-actions">
+                <button class="button">导出摘要</button>
+                <button class="button primary">新建项目</button>
+              </div>
+            </div>
+
+            <div class="grid cols-4">
+              <div class="card pad metric">
+                <div class="metric-top"><span class="muted">在营项目</span><span class="pill green">+3</span></div>
+                <div class="metric-value">42</div>
+                <div class="metric-foot">覆盖当前有效资产 1,286 项</div>
+              </div>
+              <div class="card pad metric">
+                <div class="metric-top"><span class="muted">本月总收入</span><span class="pill blue">口径 v1.4</span></div>
+                <div class="metric-value">3,482万</div>
+                <div class="metric-foot">自营租金 2,914万 / 代理服务费 568万</div>
+              </div>
+              <div class="card pad metric">
+                <div class="metric-top"><span class="muted">客户主体数</span><span class="pill cyan">去重</span></div>
+                <div class="metric-value">618</div>
+                <div class="metric-foot">客户合同数 914，支持双指标核对</div>
+              </div>
+              <div class="card pad metric">
+                <div class="metric-top"><span class="muted">待处理风险</span><span class="pill red">P0 7</span></div>
+                <div class="metric-value">26</div>
+                <div class="metric-foot">到期、逾期、覆盖冲突按项目聚合</div>
+              </div>
+            </div>
+
+            <div class="split" style="margin-top: 14px">
+              <div class="card pad">
+                <div class="section-title">
+                  <h2>重点项目经营雷达</h2>
+                  <span class="pill">按风险优先排序</span>
+                </div>
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>项目</th>
+                      <th>经营模式</th>
+                      <th>出租率</th>
+                      <th>本月应收</th>
+                      <th>风险</th>
+                      <th>负责人</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><strong>东城科创园</strong><br /><span class="muted small">园区 / 78 项资产</span></td>
+                      <td><span class="pill blue">承租转租</span><span class="pill green">代理运营</span></td>
+                      <td><div class="bar"><span style="width: 86%"></span></div></td>
+                      <td>628万</td>
+                      <td><span class="pill red">3 项</span></td>
+                      <td>陈岚</td>
+                    </tr>
+                    <tr>
+                      <td><strong>南站商业街</strong><br /><span class="muted small">商业 / 126 项资产</span></td>
+                      <td><span class="pill blue">承租转租</span></td>
+                      <td><div class="bar green"><span style="width: 93%"></span></div></td>
+                      <td>512万</td>
+                      <td><span class="pill amber">1 项</span></td>
+                      <td>黄杰</td>
+                    </tr>
+                    <tr>
+                      <td><strong>滨江仓储组合</strong><br /><span class="muted small">仓储 / 39 项资产</span></td>
+                      <td><span class="pill green">代理运营</span></td>
+                      <td><div class="bar amber"><span style="width: 72%"></span></div></td>
+                      <td>184万</td>
+                      <td><span class="pill red">5 项</span></td>
+                      <td>李蓓</td>
+                    </tr>
+                    <tr>
+                      <td><strong>北湖办公楼群</strong><br /><span class="muted small">办公 / 64 项资产</span></td>
+                      <td><span class="pill blue">承租转租</span></td>
+                      <td><div class="bar"><span style="width: 81%"></span></div></td>
+                      <td>346万</td>
+                      <td><span class="pill green">正常</span></td>
+                      <td>王凯</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="grid" style="gap: 14px">
+                <div class="card pad">
+                  <div class="section-title">
+                    <h2>收入结构</h2>
+                    <span class="pill blue">按项目归集</span>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 20px">
+                    <div class="donut"></div>
+                    <div class="legend">
+                      <div class="legend-row"><span class="legend-swatch"></span>承租转租租金 68%</div>
+                      <div class="legend-row"><span class="legend-swatch green"></span>代理服务费 22%</div>
+                      <div class="legend-row"><span class="legend-swatch amber"></span>其他运营收入 9%</div>
+                      <div class="legend-row"><span class="legend-swatch" style="background: #d9e1ea"></span>未归集 1%</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="card pad">
+                  <div class="section-title">
+                    <h2>今日待办</h2>
+                    <span class="pill red">12</span>
+                  </div>
+                  <div class="timeline">
+                    <div class="timeline-item"><strong>7 条台账逾期待核对</strong><br /><span class="muted small">优先处理东城科创园下游应收</span></div>
+                    <div class="timeline-item"><strong>3 份合同待联审</strong><br /><span class="muted small">金额与资产范围变更触发</span></div>
+                    <div class="timeline-item"><strong>2 个主体绑定待确认</strong><br /><span class="muted small">影响常规列表数据范围</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+      <div class="screen-note">UI-01 工作台总览</div>
+    </section>
+
+    <section class="frame" id="project-detail">
+      <div class="app">
+        <aside class="sidebar">
+          <div class="brand">
+            <div class="brand-mark">资</div>
+            <div>
+              <div class="brand-title">资产运营平台</div>
+              <div class="brand-subtitle">Project Workspace</div>
+            </div>
+          </div>
+          <div class="nav-section">主工作区</div>
+          <div class="nav-item"><span class="nav-dot"></span>工作台</div>
+          <div class="nav-item active"><span class="nav-dot"></span>项目运营</div>
+          <div class="nav-item"><span class="nav-dot"></span>资产资源</div>
+          <div class="nav-item"><span class="nav-dot"></span>合同中心</div>
+          <div class="nav-item"><span class="nav-dot"></span>财务台账</div>
+          <div class="nav-item"><span class="nav-dot"></span>主体中心</div>
+          <div class="nav-section">管理与分析</div>
+          <div class="nav-item"><span class="nav-dot"></span>经营分析</div>
+          <div class="nav-item"><span class="nav-dot"></span>系统管理</div>
+        </aside>
+        <main class="main">
+          <header class="topbar">
+            <div class="search">在东城科创园内搜索资产、合同关系、租户</div>
+            <div class="top-actions">
+              <span class="pill green">当前有效资产</span>
+              <span class="pill">陈岚</span>
+            </div>
+          </header>
+          <div class="content">
+            <div class="page-head">
+              <div>
+                <div class="eyebrow">项目运营 / 东城科创园</div>
+                <h1>东城科创园运营台账</h1>
+                <p class="muted small" style="margin-top: 6px">项目详情承载资产、合同关系、收付款、客户、风险和项目分析入口。</p>
+              </div>
+              <div class="top-actions">
+                <button class="button">查看资产清单</button>
+                <button class="button primary">新建合同关系</button>
+              </div>
+            </div>
+
+            <div class="kpi-strip">
+              <div class="kpi"><span class="muted small">当前有效资产</span><strong>78</strong></div>
+              <div class="kpi"><span class="muted small">可出租面积</span><strong>124,800㎡</strong></div>
+              <div class="kpi"><span class="muted small">合同关系</span><strong>36</strong></div>
+              <div class="kpi"><span class="muted small">客户主体</span><strong>112</strong></div>
+              <div class="kpi"><span class="muted small">高风险项</span><strong style="color: var(--red)">3</strong></div>
+            </div>
+
+            <div class="board" style="margin-top: 14px">
+              <div class="grid" style="gap: 14px">
+                <div class="card pad">
+                  <div class="section-title">
+                    <h2>合同关系分区</h2>
+                    <span class="pill blue">一条关系只对应一种经营模式</span>
+                  </div>
+                  <div class="list">
+                    <div class="relation-card featured">
+                      <div>
+                        <div class="relation-title"><span class="pill blue">承租转租</span> A 区标准厂房经营关系</div>
+                        <div class="contract-lane">
+                          <div class="contract-node">
+                            <strong>上游承租合同 1 份</strong><br />
+                            <span class="muted small">产权方：城投资产公司</span>
+                          </div>
+                          <div class="arrow">→</div>
+                          <div class="contract-node">
+                            <strong>下游出租合同 8 份</strong><br />
+                            <span class="muted small">终端客户：制造、仓储、研发</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div><span class="pill red">逾期 2</span></div>
+                    </div>
+                    <div class="relation-card">
+                      <div>
+                        <div class="relation-title"><span class="pill green">代理运营</span> B 区商铺代理关系</div>
+                        <div class="contract-lane">
+                          <div class="contract-node">
+                            <strong>委托协议 1 份</strong><br />
+                            <span class="muted small">代理范围：招商与收缴</span>
+                          </div>
+                          <div class="arrow">→</div>
+                          <div class="contract-node">
+                            <strong>直租合同 14 份</strong><br />
+                            <span class="muted small">服务费按实收 5%</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div><span class="pill amber">到期 1</span></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="split equal">
+                  <div class="card pad">
+                    <div class="section-title">
+                      <h2>收付款摘要</h2>
+                      <span class="pill">本月</span>
+                    </div>
+                    <div class="grid cols-2">
+                      <div class="kpi"><span class="muted small">应收</span><strong>628万</strong></div>
+                      <div class="kpi"><span class="muted small">实收</span><strong>571万</strong></div>
+                      <div class="kpi"><span class="muted small">应付</span><strong>312万</strong></div>
+                      <div class="kpi"><span class="muted small">逾期未收</span><strong style="color: var(--red)">42万</strong></div>
+                    </div>
+                  </div>
+                  <div class="card pad">
+                    <div class="section-title">
+                      <h2>风险提示</h2>
+                      <span class="pill red">需处理</span>
+                    </div>
+                    <div class="list">
+                      <div class="list-row danger-line"><span>下游合同超出上游覆盖期</span><span class="pill red">高</span></div>
+                      <div class="list-row"><span>30 天内合同到期</span><span class="pill amber">中</span></div>
+                      <div class="list-row"><span>台账逾期未收</span><span class="pill red">高</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="grid" style="gap: 14px">
+                <div class="card pad">
+                  <div class="section-title">
+                    <h2>当前有效资产摘要</h2>
+                    <span class="pill green">出租率 86%</span>
+                  </div>
+                  <div class="asset-mini-grid">
+                    <div class="asset-mini"><strong>A-01 厂房</strong><br /><span class="muted small">18,400㎡ / 已租 92%</span></div>
+                    <div class="asset-mini"><strong>A-02 厂房</strong><br /><span class="muted small">21,600㎡ / 已租 88%</span></div>
+                    <div class="asset-mini"><strong>B-01 商铺</strong><br /><span class="muted small">4,800㎡ / 已租 74%</span></div>
+                    <div class="asset-mini"><strong>C-仓库</strong><br /><span class="muted small">12,200㎡ / 已租 81%</span></div>
+                    <div class="asset-mini"><strong>办公楼</strong><br /><span class="muted small">9,900㎡ / 已租 95%</span></div>
+                    <div class="asset-mini"><strong>停车区</strong><br /><span class="muted small">450 位 / 已租 68%</span></div>
+                  </div>
+                </div>
+                <div class="card pad">
+                  <div class="section-title">
+                    <h2>项目分析入口</h2>
+                    <span class="pill blue">按模式分区</span>
+                  </div>
+                  <div class="list">
+                    <div class="list-row">
+                      <div><strong>承租转租</strong><br /><span class="muted small">24 条关系，主合同 24，终端合同 68</span></div>
+                      <span class="pill blue">收入 2,914万</span>
+                    </div>
+                    <div class="list-row">
+                      <div><strong>代理运营</strong><br /><span class="muted small">12 条关系，委托 12，直租 31</span></div>
+                      <span class="pill green">服务费 568万</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="card pad">
+                  <div class="section-title">
+                    <h2>租户客户</h2>
+                    <span class="pill cyan">客户双指标</span>
+                  </div>
+                  <table class="table">
+                    <tbody>
+                      <tr><td>客户主体数</td><td><strong>112</strong></td><td>按 Party 去重</td></tr>
+                      <tr><td>客户合同数</td><td><strong>161</strong></td><td>含下游与直租</td></tr>
+                      <tr><td>风险标签客户</td><td><strong>9</strong></td><td>逾期、到期、覆盖冲突</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+      <div class="screen-note">UI-02 项目详情运营台账</div>
+    </section>
+
+    <section class="frame" id="contract-relation">
+      <div class="app">
+        <aside class="sidebar">
+          <div class="brand">
+            <div class="brand-mark">资</div>
+            <div>
+              <div class="brand-title">资产运营平台</div>
+              <div class="brand-subtitle">Relation Builder</div>
+            </div>
+          </div>
+          <div class="nav-section">主工作区</div>
+          <div class="nav-item"><span class="nav-dot"></span>工作台</div>
+          <div class="nav-item active"><span class="nav-dot"></span>项目运营</div>
+          <div class="nav-item"><span class="nav-dot"></span>资产资源</div>
+          <div class="nav-item"><span class="nav-dot"></span>合同中心</div>
+          <div class="nav-item"><span class="nav-dot"></span>财务台账</div>
+          <div class="nav-item"><span class="nav-dot"></span>主体中心</div>
+          <div class="nav-section">管理与分析</div>
+          <div class="nav-item"><span class="nav-dot"></span>经营分析</div>
+          <div class="nav-item"><span class="nav-dot"></span>系统管理</div>
+        </aside>
+        <main class="main">
+          <header class="topbar">
+            <div class="search">选择项目后，系统只展示项目当前有效资产和已审核主体</div>
+            <div class="top-actions">
+              <span class="pill blue">联审规则启用</span>
+              <span class="pill">草稿自动保存</span>
+            </div>
+          </header>
+          <div class="content">
+            <div class="page-head">
+              <div>
+                <div class="eyebrow">东城科创园 / 新建合同关系</div>
+                <h1>建立一笔用户能理解的经营对应关系</h1>
+                <p class="muted small" style="margin-top: 6px">从项目上下文选择模式、主体和资产，再在关系内新增主合同与终端合同。</p>
+              </div>
+              <div class="top-actions">
+                <button class="button">保存草稿</button>
+                <button class="button primary">提交联审</button>
+              </div>
+            </div>
+
+            <div class="workflow">
+              <div class="step">
+                <div class="step-number">1</div>
+                <h3>选择经营模式</h3>
+                <p class="muted small dense" style="margin-top: 8px">承租转租或代理运营二选一。同一条关系内不允许混用。</p>
+                <div style="margin-top: 12px"><span class="pill blue">承租转租</span></div>
+              </div>
+              <div class="step">
+                <div class="step-number">2</div>
+                <h3>确认业务主体</h3>
+                <p class="muted small dense" style="margin-top: 8px">只能选择已审核主体，避免合同提审时再暴露主档问题。</p>
+                <div style="margin-top: 12px"><span class="pill green">主体已审核</span></div>
+              </div>
+              <div class="step">
+                <div class="step-number">3</div>
+                <h3>圈定资产范围</h3>
+                <p class="muted small dense" style="margin-top: 8px">只从项目当前有效资产中选择，历史失效资产不参与。</p>
+                <div style="margin-top: 12px"><span class="pill cyan">6 项资产</span></div>
+              </div>
+              <div class="step">
+                <div class="step-number">4</div>
+                <h3>补齐结算规则</h3>
+                <p class="muted small dense" style="margin-top: 8px">用业务字段生成规则对象，普通用户不编辑原始 JSON。</p>
+                <div style="margin-top: 12px"><span class="pill amber">月结 / 10 日</span></div>
+              </div>
+            </div>
+
+            <div class="split" style="margin-top: 14px">
+              <div class="card pad">
+                <div class="section-title">
+                  <h2>关系基本信息</h2>
+                  <span class="pill blue">项目上下文已锁定</span>
+                </div>
+                <div class="form-grid">
+                  <div class="field">
+                    <label>所属项目</label>
+                    <div class="input">东城科创园</div>
+                  </div>
+                  <div class="field">
+                    <label>关系名称</label>
+                    <div class="input">A 区标准厂房经营关系</div>
+                  </div>
+                  <div class="field">
+                    <label>运营方主体</label>
+                    <div class="input">城运资产运营有限公司</div>
+                  </div>
+                  <div class="field">
+                    <label>产权方主体</label>
+                    <div class="input">城投资产发展有限公司</div>
+                  </div>
+                  <div class="field">
+                    <label>生效开始</label>
+                    <div class="input">2026-06-01</div>
+                  </div>
+                  <div class="field">
+                    <label>生效结束</label>
+                    <div class="input">2031-05-31</div>
+                  </div>
+                  <div class="field">
+                    <label>计费依据</label>
+                    <div class="input">按月租金与管理费合计</div>
+                  </div>
+                  <div class="field">
+                    <label>付款日</label>
+                    <div class="input">每月 10 日前</div>
+                  </div>
+                </div>
+                <div class="section-title" style="margin-top: 16px">
+                  <h2>资产范围</h2>
+                  <span class="pill cyan">6 / 78 已选</span>
+                </div>
+                <div class="asset-mini-grid">
+                  <div class="asset-mini"><strong>A-01 厂房</strong><br /><span class="muted small">18,400㎡</span></div>
+                  <div class="asset-mini"><strong>A-02 厂房</strong><br /><span class="muted small">21,600㎡</span></div>
+                  <div class="asset-mini"><strong>A-03 厂房</strong><br /><span class="muted small">13,200㎡</span></div>
+                  <div class="asset-mini"><strong>C-01 仓库</strong><br /><span class="muted small">6,800㎡</span></div>
+                  <div class="asset-mini"><strong>C-02 仓库</strong><br /><span class="muted small">5,400㎡</span></div>
+                  <div class="asset-mini"><strong>装卸区</strong><br /><span class="muted small">3,000㎡</span></div>
+                </div>
+              </div>
+
+              <div class="grid" style="gap: 14px">
+                <div class="card pad">
+                  <div class="section-title">
+                    <h2>关系内合同结构</h2>
+                    <span class="pill">生效后生成台账</span>
+                  </div>
+                  <div class="relation-card featured">
+                    <div>
+                      <div class="relation-title"><span class="pill blue">主合同</span> 上游承租合同</div>
+                      <p class="muted small">产权方与运营方之间的入约合同，计入项目应付。</p>
+                    </div>
+                    <button class="button">新增</button>
+                  </div>
+                  <div class="arrow" style="height: 32px">↓</div>
+                  <div class="relation-card">
+                    <div>
+                      <div class="relation-title"><span class="pill green">终端合同</span> 下游出租合同</div>
+                      <p class="muted small">运营方与终端客户之间的对外合同，计入项目应收。</p>
+                    </div>
+                    <button class="button primary">继续新增</button>
+                  </div>
+                </div>
+                <div class="card pad">
+                  <div class="section-title">
+                    <h2>提交前规则检查</h2>
+                    <span class="pill green">4/5 通过</span>
+                  </div>
+                  <div class="list">
+                    <div class="list-row"><span>项目归属已确认</span><span class="pill green">通过</span></div>
+                    <div class="list-row"><span>经营模式未混用</span><span class="pill green">通过</span></div>
+                    <div class="list-row"><span>主体审核状态</span><span class="pill green">通过</span></div>
+                    <div class="list-row"><span>资产范围在当前项目内</span><span class="pill green">通过</span></div>
+                    <div class="list-row danger-line"><span>下游合同尚未添加</span><span class="pill amber">待补齐</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+      <div class="screen-note">UI-03 合同关系建模</div>
+    </section>
+
+    <section class="frame" id="analytics-ledger">
+      <div class="app">
+        <aside class="sidebar">
+          <div class="brand">
+            <div class="brand-mark">资</div>
+            <div>
+              <div class="brand-title">资产运营平台</div>
+              <div class="brand-subtitle">Analytics & Ledger</div>
+            </div>
+          </div>
+          <div class="nav-section">主工作区</div>
+          <div class="nav-item"><span class="nav-dot"></span>工作台</div>
+          <div class="nav-item"><span class="nav-dot"></span>项目运营</div>
+          <div class="nav-item"><span class="nav-dot"></span>资产资源</div>
+          <div class="nav-item"><span class="nav-dot"></span>合同中心</div>
+          <div class="nav-item active"><span class="nav-dot"></span>财务台账</div>
+          <div class="nav-item"><span class="nav-dot"></span>主体中心</div>
+          <div class="nav-section">管理与分析</div>
+          <div class="nav-item active"><span class="nav-dot"></span>经营分析</div>
+          <div class="nav-item"><span class="nav-dot"></span>系统管理</div>
+        </aside>
+        <main class="main">
+          <header class="topbar">
+            <div class="search">筛选项目、模式、账期、客户或支付状态</div>
+            <div class="top-actions">
+              <span class="pill blue">manager 口径</span>
+              <span class="pill">指标版本 2026.05</span>
+            </div>
+          </header>
+          <div class="content">
+            <div class="page-head">
+              <div>
+                <div class="eyebrow">经营分析 / 财务台账</div>
+                <h1>收入拆分、客户双指标与台账穿透</h1>
+                <p class="muted small" style="margin-top: 6px">承租转租看下游租金，代理运营看服务费；代理直租租金不计入运营方自营应收。</p>
+              </div>
+              <div class="top-actions">
+                <button class="button">下载台账</button>
+                <button class="button primary">导出分析</button>
+              </div>
+            </div>
+
+            <div class="grid cols-4">
+              <div class="card pad metric">
+                <div class="metric-top"><span class="muted">总收入</span><span class="pill blue">拆分</span></div>
+                <div class="metric-value">3,482万</div>
+                <div class="metric-foot">自营租金 + 代理服务费</div>
+              </div>
+              <div class="card pad metric">
+                <div class="metric-top"><span class="muted">当期实收</span><span class="pill green">91.2%</span></div>
+                <div class="metric-value">3,174万</div>
+                <div class="metric-foot">按租金与服务费实收计算</div>
+              </div>
+              <div class="card pad metric">
+                <div class="metric-top"><span class="muted">客户主体数</span><span class="pill cyan">去重</span></div>
+                <div class="metric-value">618</div>
+                <div class="metric-foot">客户合同数 914</div>
+              </div>
+              <div class="card pad metric">
+                <div class="metric-top"><span class="muted">逾期未收</span><span class="pill red">关注</span></div>
+                <div class="metric-value">286万</div>
+                <div class="metric-foot">可穿透到项目和合同关系</div>
+              </div>
+            </div>
+
+            <div class="split" style="margin-top: 14px">
+              <div class="card pad">
+                <div class="section-title">
+                  <h2>按项目收入分区</h2>
+                  <span class="pill">前 6 项目</span>
+                </div>
+                <div class="chart">
+                  <div class="chart-grid"><span></span><span></span><span></span><span></span></div>
+                  <div class="bars">
+                    <div class="bar-col"><div class="bar-fill" style="height: 142px"></div><div class="bar-label">东城</div></div>
+                    <div class="bar-col"><div class="bar-fill green" style="height: 118px"></div><div class="bar-label">南站</div></div>
+                    <div class="bar-col"><div class="bar-fill" style="height: 96px"></div><div class="bar-label">北湖</div></div>
+                    <div class="bar-col"><div class="bar-fill green" style="height: 84px"></div><div class="bar-label">滨江</div></div>
+                    <div class="bar-col"><div class="bar-fill" style="height: 72px"></div><div class="bar-label">西港</div></div>
+                    <div class="bar-col"><div class="bar-fill green" style="height: 56px"></div><div class="bar-label">新桥</div></div>
+                  </div>
+                </div>
+              </div>
+              <div class="card pad">
+                <div class="section-title">
+                  <h2>经营模式拆分</h2>
+                  <span class="pill blue">口径隔离</span>
+                </div>
+                <div style="margin: 8px 0 18px">
+                  <div class="stacked"><span style="width: 68%"></span><span style="width: 22%"></span><span style="width: 10%"></span></div>
+                </div>
+                <div class="list">
+                  <div class="list-row">
+                    <div><strong>承租转租</strong><br /><span class="muted small">合同关系 96，终端合同 542</span></div>
+                    <span class="pill blue">2,914万</span>
+                  </div>
+                  <div class="list-row">
+                    <div><strong>代理运营</strong><br /><span class="muted small">合同关系 48，直租合同 219</span></div>
+                    <span class="pill green">568万</span>
+                  </div>
+                  <div class="list-row">
+                    <div><strong>代理直租租金</strong><br /><span class="muted small">仅用于产权方侧核对</span></div>
+                    <span class="pill amber">不计入自营应收</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card pad" style="margin-top: 14px">
+              <div class="section-title">
+                <h2>财务台账查询结果</h2>
+                <div class="top-actions">
+                  <span class="pill">账期 2026-05</span>
+                  <span class="pill red">逾期优先</span>
+                </div>
+              </div>
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>项目</th>
+                    <th>合同关系</th>
+                    <th>款项类型</th>
+                    <th>对方主体</th>
+                    <th>应收/应付</th>
+                    <th>实收/实付</th>
+                    <th>状态</th>
+                    <th>处理动作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>东城科创园</td>
+                    <td>A 区标准厂房经营关系</td>
+                    <td>下游租金</td>
+                    <td>星河智能制造</td>
+                    <td>48万</td>
+                    <td>0</td>
+                    <td><span class="pill red">逾期</span></td>
+                    <td><button class="button">核销登记</button></td>
+                  </tr>
+                  <tr>
+                    <td>东城科创园</td>
+                    <td>B 区商铺代理关系</td>
+                    <td>代理服务费</td>
+                    <td>城投资产发展</td>
+                    <td>16万</td>
+                    <td>16万</td>
+                    <td><span class="pill green">已收</span></td>
+                    <td><button class="button">查看凭证</button></td>
+                  </tr>
+                  <tr>
+                    <td>南站商业街</td>
+                    <td>沿街铺位经营关系</td>
+                    <td>上游租金</td>
+                    <td>南站置业</td>
+                    <td>96万</td>
+                    <td>96万</td>
+                    <td><span class="pill green">已付</span></td>
+                    <td><button class="button">查看台账</button></td>
+                  </tr>
+                  <tr>
+                    <td>滨江仓储组合</td>
+                    <td>仓储代理运营关系</td>
+                    <td>代理服务费</td>
+                    <td>滨江资产公司</td>
+                    <td>22万</td>
+                    <td>9万</td>
+                    <td><span class="pill amber">部分收款</span></td>
+                    <td><button class="button">跟进记录</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </main>
+      </div>
+      <div class="screen-note">UI-04 经营分析与财务台账</div>
+    </section>
+  </body>
+</html>

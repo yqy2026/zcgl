@@ -9,16 +9,16 @@ import {
   DashboardOutlined,
   HomeOutlined,
   SettingOutlined,
-  UnorderedListOutlined,
   UserOutlined,
   TeamOutlined,
   AuditOutlined,
   BookOutlined,
   ApartmentOutlined,
   IdcardOutlined,
-  AccountBookOutlined,
   FileTextOutlined,
   FileAddOutlined,
+  BarChartOutlined,
+  AccountBookOutlined,
 } from '@ant-design/icons';
 
 export type MenuItemKey = string;
@@ -37,62 +37,81 @@ export const MENU_ITEMS: MenuProps['items'] = [
   {
     key: '/dashboard',
     icon: <DashboardOutlined />,
-    label: '数据看板',
+    label: '工作台',
   },
   {
-    key: '/assets',
+    key: '/project',
+    icon: <ApartmentOutlined />,
+    label: '项目运营',
+    children: [
+      {
+        key: '/project',
+        icon: <ApartmentOutlined />,
+        label: '项目列表',
+      },
+    ],
+  },
+  {
+    key: '/asset-files',
     icon: <HomeOutlined />,
-    label: '资产管理',
+    label: '资产资源',
     children: [
       {
         key: '/assets/list',
-        icon: <UnorderedListOutlined />,
-        label: '资产列表',
-      },
-      {
-        key: '/contract-groups',
-        icon: <FileTextOutlined />,
-        label: '合同组管理',
-      },
-      {
-        key: '/ownership',
-        icon: <IdcardOutlined />,
-        label: '权属方管理',
+        icon: <HomeOutlined />,
+        label: '资产台账',
       },
       {
         key: '/property-certificates',
         icon: <FileTextOutlined />,
         label: '产权证管理',
       },
+    ],
+  },
+  {
+    key: '/contract-center',
+    icon: <FileTextOutlined />,
+    label: '合同中心',
+    children: [
       {
-        key: '/project',
-        icon: <ApartmentOutlined />,
-        label: '项目管理',
+        key: '/contract-center/import',
+        icon: <FileAddOutlined />,
+        label: 'PDF导入',
       },
     ],
   },
   {
-    key: 'rental',
+    key: '/finance/ledger',
     icon: <AccountBookOutlined />,
-    label: '旧租赁前端已退休',
+    label: '财务台账',
+  },
+  {
+    key: '/customer-center',
+    icon: <TeamOutlined />,
+    label: '主体中心',
     children: [
       {
-        key: '/rental/contracts',
-        icon: <FileTextOutlined />,
-        label: '旧租赁前端已退休',
+        key: '/ownership',
+        icon: <IdcardOutlined />,
+        label: '权属方管理',
+      },
+      {
+        key: '/system/parties',
+        icon: <TeamOutlined />,
+        label: '主体管理',
       },
     ],
+  },
+  {
+    key: '/analytics',
+    icon: <BarChartOutlined />,
+    label: '经营分析',
   },
   {
     key: 'system',
     icon: <SettingOutlined />,
     label: '系统管理',
     children: [
-      {
-        key: '/system/parties',
-        icon: <IdcardOutlined />,
-        label: '主体管理',
-      },
       {
         key: '/system/users',
         icon: <UserOutlined />,
@@ -141,11 +160,23 @@ export function getSelectedKeys(pathname: string): string[] {
     return ['/dashboard'];
   }
 
+  if (pathname === '/analytics' || pathname.startsWith('/analytics/')) {
+    return ['/analytics'];
+  }
+  if (pathname === '/contract-center' || pathname.startsWith('/contract-center/')) {
+    if (pathname === '/contract-center/import') {
+      return ['/contract-center/import'];
+    }
+    return ['/contract-center'];
+  }
   if (pathname.startsWith('/assets/')) {
     return ['/assets/list'];
   }
   if (pathname.startsWith('/contract-groups/')) {
-    return ['/contract-groups'];
+    return ['/contract-center'];
+  }
+  if (pathname === '/finance/ledger' || pathname.startsWith('/finance/ledger/')) {
+    return ['/finance/ledger'];
   }
   if (pathname.startsWith('/project/')) {
     return ['/project'];
@@ -159,13 +190,7 @@ export function getSelectedKeys(pathname: string): string[] {
     return ['/property-certificates'];
   }
   if (pathname.startsWith('/contract-groups')) {
-    return ['/contract-groups'];
-  }
-  if (pathname === '/rental/contracts/pdf-import') {
-    return [];
-  }
-  if (pathname.startsWith('/rental')) {
-    return ['/rental/contracts'];
+    return ['/contract-center'];
   }
   if (pathname.startsWith('/system/parties')) {
     return ['/system/parties'];
@@ -178,17 +203,29 @@ export function getSelectedKeys(pathname: string): string[] {
  * 获取展开的菜单项
  */
 export function getOpenKeys(pathname: string): string[] {
-  if (
-    pathname.startsWith('/assets') ||
-    pathname.startsWith('/contract-groups') ||
-    pathname.startsWith('/ownership') ||
-    pathname.startsWith('/property-certificates') ||
-    pathname.startsWith('/project')
-  ) {
-    return ['/assets'];
+  if (pathname.startsWith('/project')) {
+    return ['/project'];
   }
-  if (pathname.startsWith('/rental')) {
-    return ['rental'];
+  if (pathname.startsWith('/assets')) {
+    return ['/asset-files'];
+  }
+  if (pathname.startsWith('/contract-groups')) {
+    return ['/contract-center'];
+  }
+  if (pathname.startsWith('/contract-center')) {
+    return ['/contract-center'];
+  }
+  if (pathname.startsWith('/ownership') || pathname.startsWith('/system/parties')) {
+    return ['/customer-center'];
+  }
+  if (pathname.startsWith('/property-certificates')) {
+    return ['/asset-files'];
+  }
+  if (pathname.startsWith('/analytics')) {
+    return [];
+  }
+  if (pathname.startsWith('/finance')) {
+    return [];
   }
   if (pathname.startsWith('/system')) {
     return ['system'];

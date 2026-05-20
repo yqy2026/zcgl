@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Button, Card, Input, Space, Spin, Tag, Typography } from 'antd';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { PageContainer } from '@/components/Common';
-import { CONTRACT_GROUP_ROUTES } from '@/constants/routes';
+import { CONTRACT_CENTER_ROUTES, PROJECT_ROUTES } from '@/constants/routes';
 import { contractGroupService } from '@/services/contractGroupService';
+import { partyService } from '@/services/partyService';
+import { projectService } from '@/services/projectService';
 import type {
   ContractGroupCreate,
   ContractGroupDetail,
@@ -12,6 +14,8 @@ import type {
   RevenueMode,
   SettlementRule,
 } from '@/types/contractGroup';
+import type { Asset } from '@/types/asset';
+import type { Party } from '@/types/party';
 
 type EditableFormState = {
   revenue_mode: RevenueMode;
@@ -22,13 +26,17 @@ type EditableFormState = {
   settlement_version: string;
   settlement_cycle: string;
   settlement_mode: string;
+  amount_basis: string;
+  payment_due_day: string;
+  revenue_attribution_scope: string;
+  revenue_share_operator_ratio: string;
   amount_rule_json: string;
   payment_rule_json: string;
   revenue_attribution_rule_json: string;
   revenue_share_rule_json: string;
   risk_tags: string;
   predecessor_group_id: string;
-  asset_ids: string;
+  asset_ids: string[];
 };
 
 const EMPTY_FORM: EditableFormState = {
@@ -40,14 +48,23 @@ const EMPTY_FORM: EditableFormState = {
   settlement_version: '',
   settlement_cycle: '月付',
   settlement_mode: '',
+  amount_basis: '',
+  payment_due_day: '',
+  revenue_attribution_scope: '',
+  revenue_share_operator_ratio: '',
   amount_rule_json: '',
   payment_rule_json: '',
   revenue_attribution_rule_json: '',
   revenue_share_rule_json: '',
   risk_tags: '',
   predecessor_group_id: '',
-  asset_ids: '',
+  asset_ids: [],
 };
+
+const REVENUE_MODE_OPTIONS = [
+  { label: '承租转租', value: 'LEASE' },
+  { label: '代理运营', value: 'AGENCY' },
+] satisfies Array<{ label: string; value: RevenueMode }>;
 
 const parseJsonField = (value: string, label: string): Record<string, unknown> | undefined => {
   const normalized = value.trim();
@@ -79,18 +96,87 @@ const parseRiskTags = (value: string): string[] | undefined => {
   return tags.length > 0 ? tags : undefined;
 };
 
-const parseAssetIds = (value: string): string[] =>
-  value
-    .split(',')
-    .map(item => item.trim())
-    .filter(item => item !== '');
+const readRuleValue = (rule: Record<string, unknown>, key: string): string => {
+  const value = rule[key];
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return String(value);
+  }
+  return '';
+};
+
+const parseDueDay = (value: string): number | undefined => {
+  const normalized = value.trim();
+  if (normalized === '') {
+    return undefined;
+  }
+
+  const parsed = Number(normalized);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 31) {
+    throw new Error('付款日必须是 1 到 31 之间的整数');
+  }
+  return parsed;
+};
+
+const parsePercent = (value: string, label: string): number | undefined => {
+  const normalized = value.trim();
+  if (normalized === '') {
+    return undefined;
+  }
+
+  const parsed = Number(normalized);
+  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100) {
+    throw new Error(`${label}必须是 0 到 100 之间的数字`);
+  }
+  return parsed;
+};
+
+const buildAmountRule = (state: EditableFormState): Record<string, unknown> => {
+  const amountRule = parseJsonField(state.amount_rule_json, '金额规则') ?? {};
+  const basis = state.amount_basis.trim();
+  if (basis !== '') {
+    amountRule.basis = basis;
+  }
+  return amountRule;
+};
+
+const buildPaymentRule = (state: EditableFormState): Record<string, unknown> => {
+  const paymentRule = parseJsonField(state.payment_rule_json, '支付规则') ?? {};
+  const dueDay = parseDueDay(state.payment_due_day);
+  if (dueDay != null) {
+    paymentRule.due_day = dueDay;
+  }
+  return paymentRule;
+};
+
+const buildRevenueAttributionRule = (
+  state: EditableFormState
+): Record<string, unknown> | undefined => {
+  const rule = parseJsonField(state.revenue_attribution_rule_json, '收益归属规则') ?? {};
+  const scope = state.revenue_attribution_scope.trim();
+  if (scope !== '') {
+    rule.scope = scope;
+  }
+  return Object.keys(rule).length > 0 ? rule : undefined;
+};
+
+const buildRevenueShareRule = (state: EditableFormState): Record<string, unknown> | undefined => {
+  const rule = parseJsonField(state.revenue_share_rule_json, '收益分成规则') ?? {};
+  const operatorRatio = parsePercent(state.revenue_share_operator_ratio, '运营方分成比例');
+  if (operatorRatio != null) {
+    rule.operator_ratio_percent = operatorRatio;
+  }
+  return Object.keys(rule).length > 0 ? rule : undefined;
+};
 
 const buildSettlementRule = (state: EditableFormState): SettlementRule => ({
   version: state.settlement_version.trim(),
   cycle: state.settlement_cycle,
   settlement_mode: state.settlement_mode.trim(),
-  amount_rule: parseJsonField(state.amount_rule_json, '金额规则 JSON') ?? {},
-  payment_rule: parseJsonField(state.payment_rule_json, '支付规则 JSON') ?? {},
+  amount_rule: buildAmountRule(state),
+  payment_rule: buildPaymentRule(state),
 });
 
 const mapDetailToFormState = (detail: ContractGroupDetail): EditableFormState => ({
@@ -102,6 +188,16 @@ const mapDetailToFormState = (detail: ContractGroupDetail): EditableFormState =>
   settlement_version: detail.settlement_rule.version,
   settlement_cycle: detail.settlement_rule.cycle,
   settlement_mode: detail.settlement_rule.settlement_mode,
+  amount_basis: readRuleValue(detail.settlement_rule.amount_rule, 'basis'),
+  payment_due_day: readRuleValue(detail.settlement_rule.payment_rule, 'due_day'),
+  revenue_attribution_scope:
+    detail.revenue_attribution_rule != null
+      ? readRuleValue(detail.revenue_attribution_rule, 'scope')
+      : '',
+  revenue_share_operator_ratio:
+    detail.revenue_share_rule != null
+      ? readRuleValue(detail.revenue_share_rule, 'operator_ratio_percent')
+      : '',
   amount_rule_json: JSON.stringify(detail.settlement_rule.amount_rule, null, 2),
   payment_rule_json: JSON.stringify(detail.settlement_rule.payment_rule, null, 2),
   revenue_attribution_rule_json:
@@ -112,18 +208,16 @@ const mapDetailToFormState = (detail: ContractGroupDetail): EditableFormState =>
     detail.revenue_share_rule != null ? JSON.stringify(detail.revenue_share_rule, null, 2) : '',
   risk_tags: detail.risk_tags?.join(', ') ?? '',
   predecessor_group_id: detail.predecessor_group_id ?? '',
-  asset_ids: '',
+  asset_ids: [],
 });
 
-const buildCreatePayload = (state: EditableFormState): ContractGroupCreate => {
-  const revenueAttributionRule = parseJsonField(
-    state.revenue_attribution_rule_json,
-    '收益归属规则 JSON'
-  );
-  const revenueShareRule = parseJsonField(state.revenue_share_rule_json, '收益分成规则 JSON');
+const buildCreatePayload = (state: EditableFormState, projectId: string): ContractGroupCreate => {
+  const revenueAttributionRule = buildRevenueAttributionRule(state);
+  const revenueShareRule = buildRevenueShareRule(state);
   const riskTags = parseRiskTags(state.risk_tags);
 
   return {
+    project_id: projectId,
     revenue_mode: state.revenue_mode,
     operator_party_id: state.operator_party_id.trim(),
     owner_party_id: state.owner_party_id.trim(),
@@ -136,16 +230,15 @@ const buildCreatePayload = (state: EditableFormState): ContractGroupCreate => {
     ...(state.predecessor_group_id.trim() !== ''
       ? { predecessor_group_id: state.predecessor_group_id.trim() }
       : {}),
-    asset_ids: parseAssetIds(state.asset_ids),
+    asset_ids: state.asset_ids,
   };
 };
 
 const buildUpdatePayload = (state: EditableFormState): ContractGroupUpdate => ({
   effective_to: state.effective_to.trim() !== '' ? state.effective_to.trim() : null,
   settlement_rule: buildSettlementRule(state),
-  revenue_attribution_rule:
-    parseJsonField(state.revenue_attribution_rule_json, '收益归属规则 JSON') ?? null,
-  revenue_share_rule: parseJsonField(state.revenue_share_rule_json, '收益分成规则 JSON') ?? null,
+  revenue_attribution_rule: buildRevenueAttributionRule(state) ?? null,
+  revenue_share_rule: buildRevenueShareRule(state) ?? null,
   risk_tags: parseRiskTags(state.risk_tags) ?? null,
 });
 
@@ -201,10 +294,87 @@ const LabeledSelect: React.FC<{
   </label>
 );
 
+const LabeledAssetChecklist: React.FC<{
+  assets: Asset[];
+  value: string[];
+  disabled?: boolean;
+  onChange: (value: string[]) => void;
+}> = ({ assets, value, disabled = false, onChange }) => {
+  const selectedIds = new Set(value);
+
+  if (assets.length === 0) {
+    return (
+      <div>
+        <Typography.Text strong>关联资产</Typography.Text>
+        <Alert type="info" showIcon title="该项目暂无可选资产" />
+      </div>
+    );
+  }
+
+  return (
+    <fieldset aria-label="关联资产" disabled={disabled}>
+      <legend>
+        <Typography.Text strong>关联资产</Typography.Text>
+      </legend>
+      <Space orientation="vertical" size={8}>
+        {assets.map(asset => {
+          const isChecked = selectedIds.has(asset.id);
+          const address = asset.address_detail?.trim() || asset.address?.trim();
+          return (
+            <label key={asset.id}>
+              <input
+                type="checkbox"
+                value={asset.id}
+                checked={isChecked}
+                onChange={event => {
+                  const nextIds = event.target.checked
+                    ? [...value, asset.id]
+                    : value.filter(assetId => assetId !== asset.id);
+                  onChange(nextIds);
+                }}
+              />
+              <span>{asset.asset_name}</span>
+              {address != null && address !== '' && (
+                <Typography.Text type="secondary"> {address}</Typography.Text>
+              )}
+            </label>
+          );
+        })}
+      </Space>
+    </fieldset>
+  );
+};
+
+const buildPartyLabel = (party: Party): string => {
+  const code = party.code.trim();
+  return code !== '' ? `${party.name}（${code}）` : party.name;
+};
+
+const LabeledPartySelect: React.FC<{
+  label: string;
+  value: string;
+  parties: Party[];
+  onChange: (value: string) => void;
+}> = ({ label, value, parties, onChange }) => (
+  <label>
+    <Typography.Text strong>{label}</Typography.Text>
+    <select aria-label={label} value={value} onChange={event => onChange(event.target.value)}>
+      <option value="">请选择主体</option>
+      {parties.map(party => (
+        <option key={party.id} value={party.id}>
+          {buildPartyLabel(party)}
+        </option>
+      ))}
+    </select>
+  </label>
+);
+
 const ContractGroupFormPage: React.FC = () => {
   const { id } = useParams<{ id?: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const isEditMode = id != null && id.length > 0;
+  const projectId = searchParams.get('project_id')?.trim() ?? '';
   const [formState, setFormState] = useState<EditableFormState>(EMPTY_FORM);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -215,13 +385,38 @@ const ContractGroupFormPage: React.FC = () => {
     enabled: isEditMode,
   });
 
+  const {
+    data: projectAssetsData,
+    isLoading: projectAssetsLoading,
+    error: projectAssetsError,
+  } = useQuery({
+    queryKey: ['contract-group-form-project-assets', projectId],
+    queryFn: () => projectService.getProjectAssets(projectId),
+    enabled: !isEditMode && projectId !== '',
+    staleTime: 60_000,
+  });
+
+  const {
+    data: partiesData,
+    isLoading: partiesLoading,
+    error: partiesError,
+  } = useQuery({
+    queryKey: ['contract-group-form-parties'],
+    queryFn: () => partyService.getParties({ limit: 500 }),
+    enabled: !isEditMode && projectId !== '',
+    staleTime: 5 * 60_000,
+  });
+
+  const projectAssets = projectAssetsData?.items ?? [];
+  const parties = partiesData?.items ?? [];
+
   useEffect(() => {
     if (data != null) {
       setFormState(mapDetailToFormState(data));
     }
   }, [data]);
 
-  const submitLabel = useMemo(() => (isEditMode ? '保存修改' : '创建合同组'), [isEditMode]);
+  const submitLabel = useMemo(() => (isEditMode ? '保存修改' : '创建合同关系'), [isEditMode]);
 
   const updateField = <T extends keyof EditableFormState>(key: T, value: EditableFormState[T]) => {
     setFormState(current => ({
@@ -238,12 +433,12 @@ const ContractGroupFormPage: React.FC = () => {
     try {
       if (isEditMode) {
         await contractGroupService.updateContractGroup(id as string, buildUpdatePayload(formState));
-        navigate(CONTRACT_GROUP_ROUTES.DETAIL(id as string));
+        navigate(CONTRACT_CENTER_ROUTES.DETAIL(id as string));
       } else {
         const created = await contractGroupService.createContractGroup(
-          buildCreatePayload(formState)
+          buildCreatePayload(formState, projectId)
         );
-        navigate(CONTRACT_GROUP_ROUTES.DETAIL(created.contract_group_id));
+        navigate(CONTRACT_CENTER_ROUTES.DETAIL(created.contract_group_id));
       }
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : '提交失败');
@@ -252,13 +447,35 @@ const ContractGroupFormPage: React.FC = () => {
     }
   };
 
+  if (!isEditMode && projectId === '') {
+    return (
+      <PageContainer
+        title="新建合同关系"
+        subTitle="合同关系必须归属到具体项目。"
+        onBack={() => navigate(CONTRACT_CENTER_ROUTES.LIST)}
+      >
+        <Alert
+          type="warning"
+          showIcon
+          title="请先从项目详情发起新建合同关系"
+          description="当前页面缺少项目上下文，无法提交到后端。请进入项目详情后再新建合同关系。"
+          action={
+            <Button size="small" type="primary" onClick={() => navigate(PROJECT_ROUTES.LIST)}>
+              选择项目
+            </Button>
+          }
+        />
+      </PageContainer>
+    );
+  }
+
   return (
     <PageContainer
-      title={isEditMode ? '编辑合同组' : '新建合同组'}
-      subTitle="当前表单直接贴合后端 schema；主体、日期和规则 JSON 都按原始字段提交。"
+      title={isEditMode ? '编辑合同关系' : '新建合同关系'}
+      subTitle="创建或维护承租转租、代理运营的合同关系，填写主体、日期、结算规则和关联资产。"
       onBack={() =>
         navigate(
-          isEditMode ? CONTRACT_GROUP_ROUTES.DETAIL(id as string) : CONTRACT_GROUP_ROUTES.LIST
+          isEditMode ? CONTRACT_CENTER_ROUTES.DETAIL(id as string) : CONTRACT_CENTER_ROUTES.LIST
         )
       }
     >
@@ -266,7 +483,7 @@ const ContractGroupFormPage: React.FC = () => {
         <Alert
           type="error"
           showIcon
-          title={isEditMode ? '合同组详情加载失败' : '表单初始化失败'}
+          title={isEditMode ? '合同关系明细加载失败' : '表单初始化失败'}
           description={error instanceof Error ? error.message : '未知错误'}
         />
       )}
@@ -293,24 +510,45 @@ const ContractGroupFormPage: React.FC = () => {
                   label="经营模式"
                   value={formState.revenue_mode}
                   disabled={isEditMode}
-                  options={[
-                    { label: 'LEASE', value: 'LEASE' },
-                    { label: 'AGENCY', value: 'AGENCY' },
-                  ]}
+                  options={REVENUE_MODE_OPTIONS}
                   onChange={value => updateField('revenue_mode', value as RevenueMode)}
                 />
-                <LabeledInput
-                  label="运营方主体 ID"
-                  value={formState.operator_party_id}
-                  disabled={isEditMode}
-                  onChange={value => updateField('operator_party_id', value)}
-                />
-                <LabeledInput
-                  label="产权方主体 ID"
-                  value={formState.owner_party_id}
-                  disabled={isEditMode}
-                  onChange={value => updateField('owner_party_id', value)}
-                />
+                {!isEditMode && (
+                  <LabeledInput
+                    label="所属项目 ID"
+                    value={projectId}
+                    disabled
+                    onChange={() => undefined}
+                  />
+                )}
+                {!isEditMode && partiesError != null ? (
+                  <Alert
+                    type="error"
+                    showIcon
+                    title="主体列表加载失败"
+                    description={partiesError instanceof Error ? partiesError.message : '未知错误'}
+                  />
+                ) : null}
+                {!isEditMode && partiesLoading ? <Spin /> : null}
+                {!isEditMode && !partiesLoading && parties.length === 0 ? (
+                  <Alert type="info" showIcon title="暂无可选主体" />
+                ) : null}
+                {!isEditMode && !partiesLoading && parties.length > 0 ? (
+                  <>
+                    <LabeledPartySelect
+                      label="运营方主体"
+                      value={formState.operator_party_id}
+                      parties={parties}
+                      onChange={value => updateField('operator_party_id', value)}
+                    />
+                    <LabeledPartySelect
+                      label="产权方主体"
+                      value={formState.owner_party_id}
+                      parties={parties}
+                      onChange={value => updateField('owner_party_id', value)}
+                    />
+                  </>
+                ) : null}
                 <LabeledInput
                   label="开始日期"
                   value={formState.effective_from}
@@ -325,15 +563,31 @@ const ContractGroupFormPage: React.FC = () => {
                 {!isEditMode && (
                   <>
                     <LabeledInput
-                      label="前驱合同组 ID"
+                      label="前序合同关系 ID"
                       value={formState.predecessor_group_id}
                       onChange={value => updateField('predecessor_group_id', value)}
                     />
-                    <LabeledInput
-                      label="关联资产 ID"
-                      value={formState.asset_ids}
-                      onChange={value => updateField('asset_ids', value)}
-                    />
+                    {projectAssetsError != null && (
+                      <Alert
+                        type="error"
+                        showIcon
+                        title="项目资产加载失败"
+                        description={
+                          projectAssetsError instanceof Error
+                            ? projectAssetsError.message
+                            : '未知错误'
+                        }
+                      />
+                    )}
+                    {projectAssetsLoading ? (
+                      <Spin />
+                    ) : (
+                      <LabeledAssetChecklist
+                        assets={projectAssets}
+                        value={formState.asset_ids}
+                        onChange={value => updateField('asset_ids', value)}
+                      />
+                    )}
                   </>
                 )}
               </Space>
@@ -362,34 +616,43 @@ const ContractGroupFormPage: React.FC = () => {
                   value={formState.settlement_mode}
                   onChange={value => updateField('settlement_mode', value)}
                 />
-                <LabeledInput
-                  label="金额规则 JSON"
-                  value={formState.amount_rule_json}
-                  multiline
-                  onChange={value => updateField('amount_rule_json', value)}
+                <LabeledSelect
+                  label="计费依据"
+                  value={formState.amount_basis}
+                  options={[
+                    { label: '请选择计费依据', value: '' },
+                    { label: '固定金额', value: 'fixed' },
+                    { label: '按面积', value: 'area' },
+                    { label: '按收入分成', value: 'revenue' },
+                    { label: '其他约定', value: 'other' },
+                  ]}
+                  onChange={value => updateField('amount_basis', value)}
                 />
                 <LabeledInput
-                  label="支付规则 JSON"
-                  value={formState.payment_rule_json}
-                  multiline
-                  onChange={value => updateField('payment_rule_json', value)}
+                  label="付款日"
+                  value={formState.payment_due_day}
+                  onChange={value => updateField('payment_due_day', value)}
                 />
               </Space>
             </Card>
 
-            <Card title="扩展配置">
+            <Card title="收益配置">
               <Space orientation="vertical" size={12}>
-                <LabeledInput
-                  label="收益归属规则 JSON"
-                  value={formState.revenue_attribution_rule_json}
-                  multiline
-                  onChange={value => updateField('revenue_attribution_rule_json', value)}
+                <LabeledSelect
+                  label="收益归属口径"
+                  value={formState.revenue_attribution_scope}
+                  options={[
+                    { label: '不单独配置', value: '' },
+                    { label: '运营方归集', value: 'operator' },
+                    { label: '产权方归集', value: 'owner' },
+                    { label: '按合同约定', value: 'contract' },
+                  ]}
+                  onChange={value => updateField('revenue_attribution_scope', value)}
                 />
                 <LabeledInput
-                  label="收益分成规则 JSON"
-                  value={formState.revenue_share_rule_json}
-                  multiline
-                  onChange={value => updateField('revenue_share_rule_json', value)}
+                  label="运营方分成比例（%）"
+                  value={formState.revenue_share_operator_ratio}
+                  onChange={value => updateField('revenue_share_operator_ratio', value)}
                 />
                 <LabeledInput
                   label="风险标签"
@@ -400,7 +663,7 @@ const ContractGroupFormPage: React.FC = () => {
                   data != null &&
                   data.predecessor_group_id != null &&
                   data.predecessor_group_id !== '' && (
-                    <Tag>前驱合同组：{data.predecessor_group_id}</Tag>
+                    <Tag>前序合同关系：{data.predecessor_group_id}</Tag>
                   )}
               </Space>
             </Card>
@@ -409,7 +672,7 @@ const ContractGroupFormPage: React.FC = () => {
               <Button htmlType="submit" type="primary" loading={isSubmitting}>
                 {submitLabel}
               </Button>
-              <Button onClick={() => navigate(CONTRACT_GROUP_ROUTES.LIST)}>返回列表</Button>
+              <Button onClick={() => navigate(CONTRACT_CENTER_ROUTES.LIST)}>返回列表</Button>
             </Space>
           </Space>
         </form>

@@ -1,8 +1,8 @@
 """contract group M1: create five-layer contract model tables
 
-新增表（REQ-RNT-001 合同组作为主业务对象）：
-  - contract_groups        合同组主表
-  - contract_group_assets  合同组-资产 M2M
+新增表（REQ-RNT-001 合同关系技术聚合）：
+  - contract_groups        合同关系技术聚合根
+  - contract_group_assets  合同关系聚合-资产 M2M
   - contracts              合同基表（替代旧 rent_contracts 的合同概念）
   - contract_assets        合同-资产 M2M
   - lease_contract_details 租赁合同明细（1:1 → contracts）
@@ -148,7 +148,7 @@ def upgrade() -> None:
             name="fk_cga_contract_group",
         ),
         sa.PrimaryKeyConstraint("contract_group_id", "asset_id"),
-        comment="合同组-资产多对多关联",
+        comment="合同关系聚合与资产多对多关联",
     )
 
     # ── 3. contracts（合同基表）──────────────────────────────────────────────
