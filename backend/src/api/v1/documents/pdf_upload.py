@@ -92,17 +92,22 @@ async def upload_pdf_file(
 
     total_size = 0
     chunk_size = 64 * 1024
+    too_large = False
 
     try:
         with open(temp_file_path, "wb") as temp_file:
             while chunk := await file.read(chunk_size):
                 total_size += len(chunk)
                 if total_size > max_size:
-                    temp_file_path.unlink(missing_ok=True)
-                    raise bad_request(
-                        f"文件大小超过限制({max_size // (1024 * 1024)}MB)"
-                    )
+                    too_large = True
+                    break
                 temp_file.write(chunk)
+
+        if too_large:
+            temp_file_path.unlink(missing_ok=True)
+            raise bad_request(
+                f"文件大小超过限制({max_size // (1024 * 1024)}MB)"
+            )
 
         logger.info("PDF文件已保存: %s, size=%s", temp_file_path, total_size)
 
