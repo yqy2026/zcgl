@@ -2,6 +2,10 @@
 
 ## [Unreleased] - 2026-03-06
 
+### 2026-05-29
+- docs(issues): 收口并归档项目主轴 Phase 0 审计。`docs/issues/2026-05-13-project-centered-phase0-audit.md` 已移动到 `docs/archive/issues/2026-05-13-project-centered-phase0-audit.md`，该审计的 SSOT 同步、`ContractGroup.project_id`、项目合同关系 API 和项目详情运营能力已在 2026-05-13 项目主轴 Phase 1-4 中吸收；本次补充归档目录索引、审计吸收状态、归档规划链接和代码/文档证据，并同步更新问题索引。
+- docs(cleanup): 清理 `docs/` 活跃目录边界。将已被 PRD/spec/traceability 吸收的 `docs/issues/2026-04-06-requirements-specification-review.md` 归档到 `docs/archive/issues/`；补齐 `docs/archive/readme.md`、`docs/archive/issues/README.md` 和 `docs/archive/backend-plans/README.md` 入口，并更新文档中心的归档目录说明。
+
 ### 2026-05-16
 - docs(design): 新增 `docs/design/ui-mockups/2026-05-16-project-main-axis/` 项目主轴资产运营 UI 图设计包。图稿覆盖工作台总览、项目详情运营台账、合同关系建模、经营分析与财务台账 4 个核心画面，并提供可复现 `source.html` 与 Playwright 导出脚本；同步新增设计资产目录索引和文档中心入口。
 - fix(frontend): 修复全局财务台账空筛选与导出失败处理。财务台账页在账期、合同、资产和主体筛选全部为空时不再触发后端必填筛选查询或导出，并给出业务提示；导出接口失败时改为页面内错误提示，避免未处理的 Promise rejection。同步补齐财务台账页回归测试。

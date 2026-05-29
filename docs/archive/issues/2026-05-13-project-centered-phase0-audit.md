@@ -3,9 +3,13 @@
 ## 状态
 
 - 日期：2026-05-13
-- 关联规划：`docs/plans/2026-05-12-project-centered-asset-operations-plan.md`
+- 状态：✅ 已吸收（SSOT 和 Phase 1-4 实施已于 2026-05-13 收口）
+- 关联规划：`docs/archive/backend-plans/2026-05-12-project-centered-asset-operations-plan.md`
 - 审计范围：前端菜单/路由/页面、后端 Project/ContractGroup/Contract/Asset/台账关系、SSOT 差距、Phase 1a/1b 前置设计
-- 结论：可以进入 SSOT 同步和 Phase 1a 设计，但必须先处理 `ContractGroup.project_id`、项目合同关系 API 和“一资产一有效合同组”约束。
+- 原始结论：可以进入 SSOT 同步和 Phase 1a 设计，但必须先处理 `ContractGroup.project_id`、项目合同关系 API 和“一资产一有效合同组”约束。
+- 吸收证据：`docs/prd.md`、`docs/specs/domain-model.md`、`docs/specs/api-contract.md`、`docs/traceability/requirements-trace.md` 已同步项目主轴口径；`backend/alembic/versions/20260513_project_contract_relation_phase1a.py`、`backend/src/models/contract_group.py`、`backend/src/api/v1/assets/project.py`、`backend/src/services/project/service.py`、`frontend/src/pages/Project/ProjectDetailPage.tsx` 已承接项目合同关系、收付款摘要、风险、租户客户和项目分析能力。
+
+> 以下内容保留 2026-05-13 审计时点的原始发现，用于追溯问题来源；状态以本节为准。
 
 ## 1. 总体结论
 
@@ -225,4 +229,3 @@ Phase 1a 可以先不做完整项目分析和租户 API，避免一次改造过�
 - 项目详情合同关系 API 只返回该项目下合同关系。
 - 普通菜单不展示“合同组管理”，但内部回退路由仍受权限保护。
 - 搜索结果不再以“合同组”作为普通用户分组名。
-
