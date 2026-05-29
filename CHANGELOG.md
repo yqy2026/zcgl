@@ -3,6 +3,7 @@
 ## [Unreleased] - 2026-03-06
 
 ### 2026-05-29
+- docs(plan): 新增 `docs/plans/2026-05-29-codebase-lean-refocus-plan.md` 代码库瘦身与业务聚焦方案（📋 待评审），提出冻结 Out of Scope 模块、AI 适配器收敛、Excel 服务合并、自建监控移除、middleware 拆分和核心业务收敛六个阶段；同步更新 `docs/plans/README.md` 活跃方案索引。
 - docs(issues): 收口并归档项目主轴 Phase 0 审计。`docs/issues/2026-05-13-project-centered-phase0-audit.md` 已移动到 `docs/archive/issues/2026-05-13-project-centered-phase0-audit.md`，该审计的 SSOT 同步、`ContractGroup.project_id`、项目合同关系 API 和项目详情运营能力已在 2026-05-13 项目主轴 Phase 1-4 中吸收；本次补充归档目录索引、审计吸收状态、归档规划链接和代码/文档证据，并同步更新问题索引。
 - docs(cleanup): 清理 `docs/` 活跃目录边界。将已被 PRD/spec/traceability 吸收的 `docs/issues/2026-04-06-requirements-specification-review.md` 归档到 `docs/archive/issues/`；补齐 `docs/archive/readme.md`、`docs/archive/issues/README.md` 和 `docs/archive/backend-plans/README.md` 入口，并更新文档中心的归档目录说明。
 

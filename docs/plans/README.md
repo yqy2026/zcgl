@@ -8,6 +8,7 @@
 
 | 文件 | 主题 | 状态 | 备注 |
 |------|------|------|------|
+| [2026-05-29-codebase-lean-refocus-plan.md](2026-05-29-codebase-lean-refocus-plan.md) | 代码库瘦身与业务聚焦方案 | 📋 待评审 | 冻结 Out of Scope、AI 适配器收敛、Excel 合并、移除自建监控、middleware 拆分、核心业务收敛 |
 | [2026-02-11-approval-flowable-b-plan.md](2026-02-11-approval-flowable-b-plan.md) | Flowable 编排内核 B 方案 | ⏸ 搁置 | 审批流方向待定，暂不实施 |
 
 ## 已归档方案
