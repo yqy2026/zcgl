@@ -719,6 +719,7 @@ class TestConfirmImport:
         created_contract.contract_id = "contract-456"
 
         confirmed_data = {
+            "project_id": "project-123",
             "revenue_mode": "LEASE",
             "operator_party_id": "party-op",
             "owner_party_id": "party-owner",
@@ -795,6 +796,7 @@ class TestConfirmImport:
         assert result["created_terms_count"] == 2
 
         created_group_payload = mock_create_group.await_args.kwargs["obj_in"]
+        assert created_group_payload.project_id == "project-123"
         assert created_group_payload.revenue_mode.name == "LEASE"
         assert created_group_payload.operator_party_id == "party-op"
         assert created_group_payload.owner_party_id == "party-owner"
@@ -906,6 +908,7 @@ class TestConfirmImport:
         created_contract.contract_id = "contract-agency-456"
 
         confirmed_data = {
+            "project_id": "project-123",
             "revenue_mode": "AGENCY",
             "operator_party_id": "party-op",
             "owner_party_id": "party-owner",
