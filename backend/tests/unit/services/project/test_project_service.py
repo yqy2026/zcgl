@@ -1244,6 +1244,11 @@ class TestGetProjectRisks:
                 "get_project_contract_relations",
                 new=AsyncMock(return_value=relations),
             ),
+            patch.object(
+                project_service,
+                "_load_project_active_assets",
+                new=AsyncMock(return_value=([], None)),
+            ),
             patch(
                 "src.services.project.service.contract_crud.list_by_group",
                 new=AsyncMock(return_value=[]),
@@ -1313,6 +1318,11 @@ class TestGetProjectRisks:
                 project_service,
                 "get_project_contract_relations",
                 new=AsyncMock(return_value=relations),
+            ),
+            patch.object(
+                project_service,
+                "_load_project_active_assets",
+                new=AsyncMock(return_value=([], None)),
             ),
             patch(
                 "src.services.project.service.contract_crud.list_by_group",
@@ -1404,6 +1414,11 @@ class TestGetProjectRisks:
                 "get_project_contract_relations",
                 new=AsyncMock(return_value=relations),
             ),
+            patch.object(
+                project_service,
+                "_load_project_active_assets",
+                new=AsyncMock(return_value=([], None)),
+            ),
             patch(
                 "src.services.project.service.contract_crud.list_by_group",
                 new=AsyncMock(return_value=[downstream_contract, upstream_contract]),
@@ -1484,6 +1499,11 @@ class TestGetProjectRisks:
                 "get_project_contract_relations",
                 new=AsyncMock(return_value=relations),
             ),
+            patch.object(
+                project_service,
+                "_load_project_active_assets",
+                new=AsyncMock(return_value=([], None)),
+            ),
             patch(
                 "src.services.project.service.contract_crud.list_by_group",
                 new=AsyncMock(return_value=[upstream_contract, downstream_contract]),
@@ -1513,6 +1533,78 @@ class TestGetProjectRisks:
         assert response.items[0].message == (
             "下游出租合同 CN-DOWNSTREAM-001 超出有效上游承租覆盖"
         )
+
+    async def test_get_project_risks_returns_vacancy_risk_for_uncovered_rentable_area(
+        self, project_service: ProjectService, mock_db: MagicMock
+    ) -> None:
+        from src.schemas.project import (
+            ProjectAssetSummary,
+            ProjectContractRelationItem,
+            ProjectContractRelationsResponse,
+        )
+
+        relations = ProjectContractRelationsResponse(
+            items=[
+                ProjectContractRelationItem(
+                    contract_relation_id="group-lease",
+                    project_id="project-1",
+                    display_name="GRP-LEASE",
+                    revenue_mode="lease",
+                    relation_kind="lease_sublease",
+                    owner_party_id="owner-1",
+                    operator_party_id="manager-1",
+                    asset_ids=["asset-1"],
+                    primary_contract_ids=["contract-upstream"],
+                    terminal_contract_ids=[],
+                    derived_status="生效中",
+                    risk_tags=[],
+                )
+            ],
+            total=1,
+        )
+        vacant_asset = SimpleNamespace(
+            id="asset-1",
+            asset_name="空置资产A",
+            rentable_area=Decimal("100.00"),
+            rented_area=Decimal("40.00"),
+        )
+
+        with (
+            patch.object(
+                project_service,
+                "get_project_contract_relations",
+                new=AsyncMock(return_value=relations),
+            ),
+            patch.object(
+                project_service,
+                "_load_project_active_assets",
+                new=AsyncMock(
+                    return_value=(
+                        [vacant_asset],
+                        ProjectAssetSummary(
+                            total_assets=1,
+                            total_rentable_area=100.0,
+                            total_rented_area=40.0,
+                            occupancy_rate=40.0,
+                        ),
+                    )
+                ),
+            ),
+            patch(
+                "src.services.project.service.contract_crud.list_by_group",
+                new=AsyncMock(return_value=[]),
+            ),
+        ):
+            response = await project_service.get_project_risks(
+                mock_db,
+                project_id="project-1",
+                current_user_id="user-1",
+            )
+
+        assert response.total == 1
+        assert response.items[0].risk_type == "vacancy"
+        assert response.items[0].severity == "warning"
+        assert response.items[0].message == "空置资产 空置资产A 空置面积 60.00㎡"
 
 
 class TestGetProjectLedgerSummary:
@@ -1966,3 +2058,207 @@ class TestGetProjectAnalytics:
         assert by_kind["agency_operation"].payable_amount == Decimal("0.00")
         assert by_kind["agency_operation"].customer_count == 1
         assert by_kind["agency_operation"].risk_count == 1
+
+    async def test_get_project_analytics_returns_monthly_amount_trends(
+        self, project_service: ProjectService, mock_db: MagicMock
+    ) -> None:
+        from src.schemas.project import (
+            ProjectAssetSummary,
+            ProjectContractRelationItem,
+            ProjectContractRelationsResponse,
+            ProjectLedgerSummaryResponse,
+            ProjectRisksResponse,
+            ProjectTenantSummaryResponse,
+        )
+
+        asset_summary = ProjectAssetSummary(
+            total_assets=1,
+            total_rentable_area=100.0,
+            total_rented_area=70.0,
+            occupancy_rate=70.0,
+        )
+        relations = ProjectContractRelationsResponse(
+            items=[
+                ProjectContractRelationItem(
+                    contract_relation_id="group-lease",
+                    project_id="project-1",
+                    display_name="GRP-LEASE",
+                    revenue_mode="lease",
+                    relation_kind="lease_sublease",
+                    owner_party_id="owner-1",
+                    operator_party_id="manager-1",
+                    asset_ids=["asset-1"],
+                    primary_contract_ids=["contract-upstream"],
+                    terminal_contract_ids=["contract-downstream"],
+                    derived_status="生效中",
+                    risk_tags=[],
+                ),
+                ProjectContractRelationItem(
+                    contract_relation_id="group-agency",
+                    project_id="project-1",
+                    display_name="GRP-AGENCY",
+                    revenue_mode="agency",
+                    relation_kind="agency_operation",
+                    owner_party_id="owner-2",
+                    operator_party_id="manager-1",
+                    asset_ids=["asset-2"],
+                    primary_contract_ids=["contract-entrusted"],
+                    terminal_contract_ids=["contract-direct"],
+                    derived_status="生效中",
+                    risk_tags=[],
+                ),
+            ],
+            total=2,
+        )
+        ledger_summary = ProjectLedgerSummaryResponse(
+            receivable_amount=Decimal("4000.00"),
+            payable_amount=Decimal("1000.00"),
+            received_amount=Decimal("2100.00"),
+            paid_amount=Decimal("1000.00"),
+            overdue_amount=Decimal("500.00"),
+            service_fee_receivable=Decimal("600.00"),
+            service_fee_received=Decimal("600.00"),
+        )
+        lease_group = SimpleNamespace(
+            contract_group_id="group-lease",
+            revenue_mode=RevenueMode.LEASE,
+        )
+        agency_group = SimpleNamespace(
+            contract_group_id="group-agency",
+            revenue_mode=RevenueMode.AGENCY,
+        )
+        upstream_contract = SimpleNamespace(
+            contract_id="contract-upstream",
+            group_relation_type=GroupRelationType.UPSTREAM,
+        )
+        downstream_contract = SimpleNamespace(
+            contract_id="contract-downstream",
+            group_relation_type=GroupRelationType.DOWNSTREAM,
+        )
+        direct_contract = SimpleNamespace(
+            contract_id="contract-direct",
+            group_relation_type=GroupRelationType.DIRECT_LEASE,
+        )
+
+        async def mock_list_by_group(
+            _db: MagicMock, *, group_id: str
+        ) -> list[SimpleNamespace]:
+            if group_id == "group-lease":
+                return [upstream_contract, downstream_contract]
+            return [direct_contract]
+
+        async def mock_list_ledger_entries_by_contract(
+            _db: MagicMock, *, contract_id: str
+        ) -> list[SimpleNamespace]:
+            if contract_id == "contract-upstream":
+                return [
+                    SimpleNamespace(
+                        year_month="2026-01",
+                        amount_due=Decimal("1000.00"),
+                        paid_amount=Decimal("1000.00"),
+                        payment_status="paid",
+                    )
+                ]
+            if contract_id == "contract-downstream":
+                return [
+                    SimpleNamespace(
+                        year_month="2026-01",
+                        amount_due=Decimal("2000.00"),
+                        paid_amount=Decimal("1600.00"),
+                        payment_status="partial",
+                    ),
+                    SimpleNamespace(
+                        year_month="2026-02",
+                        amount_due=Decimal("1400.00"),
+                        paid_amount=Decimal("500.00"),
+                        payment_status="overdue",
+                    ),
+                ]
+            return []
+
+        with (
+            patch.object(
+                project_service,
+                "get_project_active_assets",
+                new=AsyncMock(return_value=([], asset_summary)),
+            ),
+            patch.object(
+                project_service,
+                "get_project_contract_relations",
+                new=AsyncMock(return_value=relations),
+            ),
+            patch.object(
+                project_service,
+                "get_project_ledger_summary",
+                new=AsyncMock(return_value=ledger_summary),
+            ),
+            patch.object(
+                project_service,
+                "get_project_tenants",
+                new=AsyncMock(return_value=ProjectTenantSummaryResponse(items=[], total=0)),
+            ),
+            patch.object(
+                project_service,
+                "get_project_risks",
+                new=AsyncMock(return_value=ProjectRisksResponse(items=[], total=0)),
+            ),
+            patch(
+                "src.services.project.service.contract_group_crud.list_by_project",
+                new=AsyncMock(return_value=[lease_group, agency_group]),
+            ),
+            patch(
+                "src.services.project.service.contract_crud.list_by_group",
+                new=AsyncMock(side_effect=mock_list_by_group),
+            ),
+            patch(
+                "src.services.project.service.contract_group_crud.list_ledger_entries_by_contract",
+                new=AsyncMock(side_effect=mock_list_ledger_entries_by_contract),
+            ),
+            patch(
+                "src.services.project.service.contract_group_crud.list_service_fee_entries_by_group",
+                new=AsyncMock(
+                    return_value=[
+                        SimpleNamespace(
+                            year_month="2026-02",
+                            amount_due=Decimal("600.00"),
+                            paid_amount=Decimal("600.00"),
+                            payment_status="paid",
+                        )
+                    ]
+                ),
+            ),
+        ):
+            response = await project_service.get_project_analytics(
+                mock_db,
+                project_id="project-1",
+                current_user_id="user-1",
+            )
+
+        assert [
+            (
+                item.period,
+                item.receivable_amount,
+                item.payable_amount,
+                item.received_amount,
+                item.paid_amount,
+                item.overdue_amount,
+            )
+            for item in response.monthly_trends
+        ] == [
+            (
+                "2026-01",
+                Decimal("2000.00"),
+                Decimal("1000.00"),
+                Decimal("1600.00"),
+                Decimal("1000.00"),
+                Decimal("0.00"),
+            ),
+            (
+                "2026-02",
+                Decimal("2000.00"),
+                Decimal("0.00"),
+                Decimal("1100.00"),
+                Decimal("0.00"),
+                Decimal("900.00"),
+            ),
+        ]

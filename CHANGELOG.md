@@ -2,6 +2,10 @@
 
 ## [Unreleased] - 2026-03-06
 
+### 2026-05-30
+- docs(ssot): 收口剩余 `REQ-RNT-001`、`REQ-RNT-002`、`REQ-SCH-001` 需求状态。复核合同关系、承租/代理双模式和全局搜索的现有代码与测试证据后，`docs/traceability/requirements-trace.md` 已将三项从“开发中”更新为“已有证据”，并同步更新瘦身聚焦方案中的需求状态表和验收说明。
+- feat(project): 收口 `REQ-PRJ-003` 项目运营台账证据。项目风险摘要新增当前有效资产空置面积风险，项目分析摘要新增按账期聚合的月度收付款趋势；项目详情页展示“项目分析趋势”和应收环比，SSOT 将 `REQ-PRJ-003` 从“开发中”更新为“已有证据”。
+
 ### 2026-05-29
 - fix(document): 修复 PDF 上传超限校验在 Windows 下的临时文件删除顺序。`/api/v1/pdf-import/upload` 现在会先关闭写入句柄，再删除超限临时文件并返回业务 400，避免文件句柄占用把“文件过大”误报为 500。
 - docs(plan): 新增 `docs/plans/2026-05-29-codebase-lean-refocus-plan.md` 代码库瘦身与业务聚焦方案（📋 待评审），提出冻结 Out of Scope 模块、AI 适配器收敛、Excel 服务合并、自建监控移除、middleware 拆分和核心业务收敛六个阶段；同步更新 `docs/plans/README.md` 活跃方案索引。

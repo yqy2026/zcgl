@@ -405,6 +405,17 @@ class ProjectAnalysisModeSummary(BaseModel):
     risk_count: int
 
 
+class ProjectMonthlyTrendItem(BaseModel):
+    """项目月度分析趋势项。"""
+
+    period: str
+    receivable_amount: Decimal
+    payable_amount: Decimal
+    received_amount: Decimal
+    paid_amount: Decimal
+    overdue_amount: Decimal
+
+
 class ProjectAnalyticsResponse(BaseModel):
     """项目分析摘要响应。"""
 
@@ -422,6 +433,7 @@ class ProjectAnalyticsResponse(BaseModel):
     service_fee_receivable: Decimal
     service_fee_received: Decimal
     mode_summaries: list[ProjectAnalysisModeSummary]
+    monthly_trends: list[ProjectMonthlyTrendItem] = Field(default_factory=list)
 
 
 class ProjectDeleteResponse(BaseModel):

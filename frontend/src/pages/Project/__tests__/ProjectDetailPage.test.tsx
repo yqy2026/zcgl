@@ -227,6 +227,24 @@ describe('ProjectDetailPage', () => {
                 risk_count: 1,
               },
             ],
+            monthly_trends: [
+              {
+                period: '2026-01',
+                receivable_amount: '2000.00',
+                payable_amount: '1000.00',
+                received_amount: '1600.00',
+                paid_amount: '1000.00',
+                overdue_amount: '0.00',
+              },
+              {
+                period: '2026-02',
+                receivable_amount: '2650.00',
+                payable_amount: '0.00',
+                received_amount: '1400.00',
+                paid_amount: '0.00',
+                overdue_amount: '600.00',
+              },
+            ],
           },
           isLoading: false,
           error: null,
@@ -404,6 +422,9 @@ describe('ProjectDetailPage', () => {
     expect(screen.getByText('3 份合同')).toBeInTheDocument();
     expect(screen.getByText('项目分析')).toBeInTheDocument();
     expect(screen.getByText('经营风险')).toBeInTheDocument();
+    expect(screen.getByText('项目分析趋势')).toBeInTheDocument();
+    expect(screen.getByText('应收环比 +32.5%')).toBeInTheDocument();
+    expect(screen.getByText('2026-02')).toBeInTheDocument();
     expect(screen.getAllByText('¥250.00').length).toBeGreaterThan(0);
     expect(screen.queryByText('合同组编码')).not.toBeInTheDocument();
 

@@ -157,6 +157,22 @@
 | `service_fee_receivable` | decimal | 是 | 代理模式服务费应收 |
 | `service_fee_received` | decimal | 是 | 代理模式服务费实收 |
 | `mode_summaries` | array | 是 | 按 `lease_sublease` / `agency_operation` 分区的指标；每个分区包含合同关系数、资产数、主合同数、终端合同数、客户数、客户合同数、收付款金额和风险数 |
+| `monthly_trends` | array | 是 | 按 `year_month` 聚合的项目收付款趋势；承租模式下游租金和代理服务费计入应收/实收，承租模式上游租金计入应付/实付，逾期金额仅统计项目应收侧未收金额 |
+
+### 4.5.1 ProjectRisk
+
+该对象是项目风险摘要 API 的派生项，不单独持久化。风险项必须能够回溯到合同关系或资产，避免只给出无来源的总体提示。
+
+| 字段 | 类型 | 必填 | 规则 |
+|---|---|---|---|
+| `risk_id` | string | 是 | 稳定风险标识，按来源对象、风险类型和消息派生 |
+| `risk_type` | enum | 是 | `manual_tag`、`missing_primary_contract`、`coverage_conflict`、`contract_expiring`、`payment_overdue`、`vacancy` |
+| `severity` | enum | 是 | `info`、`warning`、`high`、`critical`、`error` |
+| `message` | string | 是 | 面向业务用户的风险说明 |
+| `contract_relation_id` | string/null | 否 | 合同关系风险必须填写；资产空置风险为空 |
+| `display_name` | string/null | 否 | 合同关系名称或资产名称 |
+
+空置风险口径：项目当前有效资产的 `rentable_area - rented_area > 0` 时生成 `vacancy` 风险，消息展示资产名称和空置面积；删除、异常或已失效项目资产关系不参与计算。
 
 ### 4.6 GlobalAnalytics
 

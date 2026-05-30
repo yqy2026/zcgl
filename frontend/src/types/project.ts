@@ -168,6 +168,15 @@ export interface ProjectAnalysisModeSummary {
   risk_count: number;
 }
 
+export interface ProjectMonthlyTrendItem {
+  period: string;
+  receivable_amount: string;
+  payable_amount: string;
+  received_amount: string;
+  paid_amount: string;
+  overdue_amount: string;
+}
+
 export interface ProjectAnalyticsResponse {
   asset_summary: ProjectAssetSummary;
   contract_relation_count: number;
@@ -183,6 +192,7 @@ export interface ProjectAnalyticsResponse {
   service_fee_receivable: string;
   service_fee_received: string;
   mode_summaries: ProjectAnalysisModeSummary[];
+  monthly_trends: ProjectMonthlyTrendItem[];
 }
 
 // 项目搜索参数类型

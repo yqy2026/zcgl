@@ -41,6 +41,7 @@ from ...schemas.project import (
     ProjectContractRelationsResponse,
     ProjectCreate,
     ProjectLedgerSummaryResponse,
+    ProjectMonthlyTrendItem,
     ProjectResponse,
     ProjectRiskItem,
     ProjectRisksResponse,
@@ -235,6 +236,26 @@ class ProjectService:
             "paid_amount": Decimal(0),
             "overdue_amount": Decimal(0),
         }
+
+    @staticmethod
+    def _empty_trend_amounts() -> dict[str, Decimal]:
+        return {
+            "receivable_amount": Decimal(0),
+            "payable_amount": Decimal(0),
+            "received_amount": Decimal(0),
+            "paid_amount": Decimal(0),
+            "overdue_amount": Decimal(0),
+        }
+
+    @staticmethod
+    def _year_month_from_entry(entry: Any) -> str:
+        year_month = str(getattr(entry, "year_month", "") or "").strip()
+        if year_month != "":
+            return year_month
+        due_date = getattr(entry, "due_date", None)
+        if isinstance(due_date, date):
+            return due_date.strftime("%Y-%m")
+        return "unknown"
 
     @staticmethod
     def _party_name_from_contract(contract: Any) -> str:
@@ -614,6 +635,15 @@ class ProjectService:
         if project is None:
             raise ResourceNotFoundError("项目", project_id)
 
+        return await self._load_project_active_assets(db, project_id=project_id)
+
+    async def _load_project_active_assets(
+        self,
+        db: AsyncSession,
+        *,
+        project_id: str,
+    ) -> tuple[list[Asset], ProjectAssetSummary]:
+        """加载项目当前有效资产；调用方负责完成项目可见性校验。"""
         project_assets = await project_asset_crud.get_project_assets(
             db,
             project_id=project_id,
@@ -772,6 +802,29 @@ class ProjectService:
                     message=message,
                     contract_relation_id=relation.contract_relation_id,
                     display_name=relation.display_name,
+                )
+            )
+
+        def add_asset_risk(
+            *,
+            asset_id: str,
+            asset_name: str,
+            risk_type: str,
+            message: str,
+            severity: str = "warning",
+        ) -> None:
+            risk_id = f"asset:{asset_id}:{risk_type}:{message}"
+            if risk_id in seen:
+                return
+            seen.add(risk_id)
+            items.append(
+                ProjectRiskItem(
+                    risk_id=risk_id,
+                    risk_type=risk_type,
+                    severity=severity,
+                    message=message,
+                    contract_relation_id=None,
+                    display_name=asset_name,
                 )
             )
 
@@ -991,6 +1044,32 @@ class ProjectService:
                     message=f"代理服务费逾期未收 {format_money(service_fee_overdue_amount)}",
                     severity="high",
                 )
+
+        active_assets, _summary = await self._load_project_active_assets(
+            db,
+            project_id=project_id,
+        )
+        for asset in active_assets:
+            asset_id = str(getattr(asset, "id", "") or "").strip()
+            if asset_id == "":
+                continue
+            rentable_area = self._as_decimal(getattr(asset, "rentable_area", None))
+            rented_area = self._as_decimal(getattr(asset, "rented_area", None))
+            vacant_area = max(rentable_area - rented_area, Decimal(0))
+            if vacant_area <= Decimal(0):
+                continue
+            asset_name = str(
+                getattr(asset, "asset_name", None)
+                or getattr(asset, "name", None)
+                or asset_id
+            ).strip()
+            add_asset_risk(
+                asset_id=asset_id,
+                asset_name=asset_name,
+                risk_type="vacancy",
+                message=f"空置资产 {asset_name} 空置面积 {vacant_area:.2f}㎡",
+                severity="warning",
+            )
 
         return ProjectRisksResponse(items=items, total=len(items))
 
@@ -1254,6 +1333,7 @@ class ProjectService:
             "lease_sublease": self._empty_mode_amounts(),
             "agency_operation": self._empty_mode_amounts(),
         }
+        trend_amounts: dict[str, dict[str, Decimal]] = {}
         customer_ids_by_mode: dict[str, set[str]] = {
             "lease_sublease": set(),
             "agency_operation": set(),
@@ -1324,21 +1404,33 @@ class ProjectService:
                     entry_paid_amount = self._as_decimal(
                         getattr(entry, "paid_amount", None)
                     )
+                    period = self._year_month_from_entry(entry)
+                    period_amounts = trend_amounts.setdefault(
+                        period, self._empty_trend_amounts()
+                    )
                     if is_payable_contract:
                         mode_amounts[relation_kind]["payable_amount"] += amount_due
                         mode_amounts[relation_kind]["paid_amount"] += (
                             entry_paid_amount
                         )
+                        period_amounts["payable_amount"] += amount_due
+                        period_amounts["paid_amount"] += entry_paid_amount
                     else:
                         mode_amounts[relation_kind]["receivable_amount"] += amount_due
                         mode_amounts[relation_kind]["received_amount"] += (
                             entry_paid_amount
                         )
+                        period_amounts["receivable_amount"] += amount_due
+                        period_amounts["received_amount"] += entry_paid_amount
                         if payment_status == "overdue":
-                            mode_amounts[relation_kind]["overdue_amount"] += max(
+                            overdue_amount = max(
                                 amount_due - entry_paid_amount,
                                 Decimal(0),
                             )
+                            mode_amounts[relation_kind]["overdue_amount"] += (
+                                overdue_amount
+                            )
+                            period_amounts["overdue_amount"] += overdue_amount
 
             if revenue_mode != RevenueMode.AGENCY:
                 continue
@@ -1361,13 +1453,21 @@ class ProjectService:
                 entry_paid_amount = self._as_decimal(
                     getattr(service_fee_entry, "paid_amount", None)
                 )
+                period = self._year_month_from_entry(service_fee_entry)
+                period_amounts = trend_amounts.setdefault(
+                    period, self._empty_trend_amounts()
+                )
                 mode_amounts[relation_kind]["receivable_amount"] += amount_due
                 mode_amounts[relation_kind]["received_amount"] += entry_paid_amount
+                period_amounts["receivable_amount"] += amount_due
+                period_amounts["received_amount"] += entry_paid_amount
                 if payment_status == "overdue":
-                    mode_amounts[relation_kind]["overdue_amount"] += max(
+                    overdue_amount = max(
                         amount_due - entry_paid_amount,
                         Decimal(0),
                     )
+                    mode_amounts[relation_kind]["overdue_amount"] += overdue_amount
+                    period_amounts["overdue_amount"] += overdue_amount
 
         risk_counts: dict[str, int] = {"lease_sublease": 0, "agency_operation": 0}
         relation_kind_by_id = {
@@ -1447,6 +1547,20 @@ class ProjectService:
             service_fee_receivable=ledger_summary.service_fee_receivable,
             service_fee_received=ledger_summary.service_fee_received,
             mode_summaries=mode_summaries,
+            monthly_trends=[
+                ProjectMonthlyTrendItem(
+                    period=period,
+                    receivable_amount=self._quantize_money(
+                        amounts["receivable_amount"]
+                    ),
+                    payable_amount=self._quantize_money(amounts["payable_amount"]),
+                    received_amount=self._quantize_money(amounts["received_amount"]),
+                    paid_amount=self._quantize_money(amounts["paid_amount"]),
+                    overdue_amount=self._quantize_money(amounts["overdue_amount"]),
+                )
+                for period, amounts in sorted(trend_amounts.items())
+                if period != "unknown"
+            ],
         )
 
     async def get_project_by_id(

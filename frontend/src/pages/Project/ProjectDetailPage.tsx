@@ -160,6 +160,20 @@ const getProjectRiskTagColor = (risk: ProjectRiskItem): string =>
 const getAnalysisModeColor = (mode: ProjectAnalysisModeSummary): string =>
   PROJECT_RELATION_KIND_META[mode.relation_kind]?.color ?? 'blue';
 
+const formatTrendDelta = (current: string | number, previous: string | number): string => {
+  const currentValue = Number(current);
+  const previousValue = Number(previous);
+  if (!Number.isFinite(currentValue) || !Number.isFinite(previousValue)) {
+    return '0.0%';
+  }
+  if (previousValue === 0) {
+    return currentValue === 0 ? '0.0%' : '+100.0%';
+  }
+  const delta = ((currentValue - previousValue) / Math.abs(previousValue)) * 100;
+  const prefix = delta > 0 ? '+' : '';
+  return `${prefix}${delta.toFixed(1)}%`;
+};
+
 // 子组件：逐资产获取租赁汇总，避免在 map 中调用 hook
 interface AssetLeaseSummaryRowData {
   queryScopeKey: string;
@@ -450,6 +464,13 @@ const ProjectDetailPage: React.FC = () => {
       : occupancyRate >= 50
         ? styles.occupancyWarning
         : styles.occupancyError;
+  const monthlyTrends = projectAnalyticsData?.monthly_trends ?? [];
+  const latestTrend = monthlyTrends.at(-1);
+  const previousTrend = monthlyTrends.at(-2);
+  const receivableTrendText =
+    latestTrend != null && previousTrend != null
+      ? formatTrendDelta(latestTrend.receivable_amount, previousTrend.receivable_amount)
+      : null;
 
   const {
     data: assetRows,
@@ -875,6 +896,28 @@ const ProjectDetailPage: React.FC = () => {
                     </div>
                   ))}
                 </div>
+                {monthlyTrends.length > 0 && (
+                  <div className={styles.analysisTrendPanel}>
+                    <div className={styles.analysisModeHeader}>
+                      <Text strong>项目分析趋势</Text>
+                      {receivableTrendText != null && (
+                        <Tag color={receivableTrendText.startsWith('-') ? 'orange' : 'green'}>
+                          应收环比 {receivableTrendText}
+                        </Tag>
+                      )}
+                    </div>
+                    <div className={styles.analysisTrendList}>
+                      {monthlyTrends.slice(-6).map(item => (
+                        <div key={item.period} className={styles.analysisTrendItem}>
+                          <Text type="secondary">{item.period}</Text>
+                          <Text strong>应收 {formatCurrency(item.receivable_amount)}</Text>
+                          <Text type="secondary">实收 {formatCurrency(item.received_amount)}</Text>
+                          <Text type="secondary">逾期 {formatCurrency(item.overdue_amount)}</Text>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </>
             ) : (
               <Empty description="暂无项目分析" image={Empty.PRESENTED_IMAGE_SIMPLE} />
