@@ -269,7 +269,7 @@ describe('ContractImportReview confirm context', () => {
     }
   });
 
-  it('submits the explicit contract-group context and navigates to the new group detail page', async () => {
+  it('submits the explicit contract relation context and navigates to the detail page', async () => {
     const onConfirm = vi.fn().mockResolvedValue({
       success: true,
       message: '导入成功',
@@ -298,16 +298,16 @@ describe('ContractImportReview confirm context', () => {
     fireEvent.change(screen.getByLabelText('合同角色'), {
       target: { value: 'UPSTREAM' },
     });
-    fireEvent.change(screen.getByLabelText('运营方主体 ID'), {
+    fireEvent.change(screen.getByLabelText('运营方主体'), {
       target: { value: 'party-operator' },
     });
-    fireEvent.change(screen.getByLabelText('出租方/委托方主体 ID'), {
+    fireEvent.change(screen.getByLabelText('出租方/委托方主体'), {
       target: { value: 'party-lessor' },
     });
-    fireEvent.change(screen.getByLabelText('承租方/受托方主体 ID'), {
+    fireEvent.change(screen.getByLabelText('承租方/受托方主体'), {
       target: { value: 'party-lessee' },
     });
-    fireEvent.change(screen.getByLabelText('结算规则 JSON'), {
+    fireEvent.change(screen.getByLabelText('结算规则'), {
       target: {
         value:
           '{"version":"v1","cycle":"月付","settlement_mode":"manual","amount_rule":{"basis":"fixed"},"payment_rule":{"due_day":15}}',
@@ -339,7 +339,7 @@ describe('ContractImportReview confirm context', () => {
     });
 
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/contract-groups/group-123');
+      expect(mockNavigate).toHaveBeenCalledWith('/contract-center/group-123');
     });
   });
 
@@ -372,16 +372,16 @@ describe('ContractImportReview confirm context', () => {
     fireEvent.change(screen.getByLabelText('合同角色'), {
       target: { value: 'ENTRUSTED' },
     });
-    fireEvent.change(screen.getByLabelText('运营方主体 ID'), {
+    fireEvent.change(screen.getByLabelText('运营方主体'), {
       target: { value: 'party-operator' },
     });
-    fireEvent.change(screen.getByLabelText('出租方/委托方主体 ID'), {
+    fireEvent.change(screen.getByLabelText('出租方/委托方主体'), {
       target: { value: 'party-owner' },
     });
-    fireEvent.change(screen.getByLabelText('承租方/受托方主体 ID'), {
+    fireEvent.change(screen.getByLabelText('承租方/受托方主体'), {
       target: { value: 'party-operator' },
     });
-    fireEvent.change(screen.getByLabelText('结算规则 JSON'), {
+    fireEvent.change(screen.getByLabelText('结算规则'), {
       target: {
         value:
           '{"version":"v1","cycle":"月付","settlement_mode":"manual","amount_rule":{"basis":"actual_received"},"payment_rule":{"due_day":15}}',
@@ -448,16 +448,16 @@ describe('ContractImportReview confirm context', () => {
     fireEvent.change(screen.getByLabelText('合同角色'), {
       target: { value: 'ENTRUSTED' },
     });
-    fireEvent.change(screen.getByLabelText('运营方主体 ID'), {
+    fireEvent.change(screen.getByLabelText('运营方主体'), {
       target: { value: 'party-operator' },
     });
-    fireEvent.change(screen.getByLabelText('出租方/委托方主体 ID'), {
+    fireEvent.change(screen.getByLabelText('出租方/委托方主体'), {
       target: { value: 'party-owner' },
     });
-    fireEvent.change(screen.getByLabelText('承租方/受托方主体 ID'), {
+    fireEvent.change(screen.getByLabelText('承租方/受托方主体'), {
       target: { value: 'party-operator' },
     });
-    fireEvent.change(screen.getByLabelText('结算规则 JSON'), {
+    fireEvent.change(screen.getByLabelText('结算规则'), {
       target: {
         value:
           '{"version":"v1","cycle":"月付","settlement_mode":"manual","amount_rule":{"basis":"actual_received"},"payment_rule":{"due_day":15}}',
@@ -474,7 +474,7 @@ describe('ContractImportReview confirm context', () => {
 
     await waitFor(() => {
       expect(onConfirm).not.toHaveBeenCalled();
-      expect(screen.getByText('计费基数必须是 actual_received 或 due_amount')).toBeInTheDocument();
+      expect(screen.getAllByText('请选择计费基数').length).toBeGreaterThan(0);
     });
   });
 });

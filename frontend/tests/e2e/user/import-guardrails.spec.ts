@@ -1,6 +1,5 @@
 import { expect, test, type Page, type Request } from '@playwright/test';
 import { clearAuthState, ensureAuthenticated } from '../helpers/auth';
-import { LEGACY_CONTRACT_ROUTES, legacyContractRoutePattern } from '../helpers/legacyContract';
 
 type FileInputScope = Page | { locator: Page['locator'] };
 const ACTIVE_CONTRACT_PDF_IMPORT_PATH = '/contract-groups/import';
@@ -34,25 +33,6 @@ const expectMessageVisible = async (page: Page, messagePattern: RegExp): Promise
 test.describe('@user-usable 导入入口校验', () => {
   test.beforeEach(async ({ page }) => {
     await ensureAuthenticated(page);
-  });
-
-  test('legacy contract list should expose retired state instead of excel import entry', async ({
-    page,
-  }) => {
-    await page.goto(LEGACY_CONTRACT_ROUTES.LIST);
-    await expect(page).toHaveURL(legacyContractRoutePattern(LEGACY_CONTRACT_ROUTES.LIST));
-    await expect(page.getByRole('heading', { name: /租赁前端模块已退休/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: '导入Excel' })).toHaveCount(0);
-    await expect(page.locator('input[type="file"]')).toHaveCount(0);
-  });
-
-  test('legacy contract list should direct users to active contract-group flows', async ({
-    page,
-  }) => {
-    await page.goto(LEGACY_CONTRACT_ROUTES.LIST);
-    await expect(page).toHaveURL(legacyContractRoutePattern(LEGACY_CONTRACT_ROUTES.LIST));
-    await expect(page.getByRole('button', { name: '查看合同组' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'PDF导入' })).toBeVisible();
   });
 
   test('pdf import should reject non-pdf file before request', async ({ page }) => {

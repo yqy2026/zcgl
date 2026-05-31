@@ -1,13 +1,14 @@
 # 方案设计索引
 
-本目录仅存放**活跃方案**（进行中 / 搁置待定）。已完结方案统一归档至 `docs/archive/backend-plans/`。
+本目录仅存放**活跃方案**（待评审 / 进行中 / 搁置待定）。已完结方案统一归档至 `docs/archive/backend-plans/`。
 
-> **规则**：方案进入 ✅ 状态后移入 `archive/backend-plans/`，本索引只保留 🔄 和 ⏸ 条目。
+> **规则**：方案进入 ✅ 状态后移入 `archive/backend-plans/`，本索引只保留 📋、🔄 和 ⏸ 条目。
 
 ## 活跃方案
 
 | 文件 | 主题 | 状态 | 备注 |
 |------|------|------|------|
+| [2026-05-29-codebase-lean-refocus-plan.md](2026-05-29-codebase-lean-refocus-plan.md) | 代码库瘦身与业务聚焦方案 | 📋 待评审 | 冻结 Out of Scope、AI 适配器收敛、Excel 合并、移除自建监控、middleware 拆分、核心业务收敛 |
 | [2026-02-11-approval-flowable-b-plan.md](2026-02-11-approval-flowable-b-plan.md) | Flowable 编排内核 B 方案 | ⏸ 搁置 | 审批流方向待定，暂不实施 |
 
 ## 已归档方案
@@ -16,6 +17,7 @@
 
 | 文件 | 主题 | 最终状态 |
 |------|------|----------|
+| 2026-05-12-project-centered-asset-operations-plan.md | 项目主轴资产运营全局规划 | ✅ 已完成 |
 | 2026-02-11-langextract-rollout-plan.md | langextract 灰度接入 PDF 链路 | ✅ 已采纳 |
 | 2026-02-15-phone-first-login-and-username-retention.md | 手机号优先登录与用户名保留 | ✅ 已实现 |
 | 2026-02-16-party-role-architecture-design.md | Party-Role 组织架构设计 | ✅ 已实现 |

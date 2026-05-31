@@ -1,12 +1,12 @@
 """
-合同组业务逻辑 Service（REQ-RNT-001 M2）。
+合同关系技术聚合 Service（REQ-RNT-001 M2）。
 
 核心职责：
   - group_code 生成
   - revenue_mode / group_relation_type 一致性校验
   - sign_date 约束校验
   - derived_status 计算（纯函数）
-  - ContractGroup + Contract CRUD 编排
+  - ContractGroup 技术聚合根 + Contract CRUD 编排
 """
 
 import re
@@ -187,13 +187,14 @@ def _compute_total_monthly_amount(
 
 
 class ContractGroupService:
-    """合同组业务逻辑服务。"""
+    """合同关系技术聚合服务。"""
 
     @staticmethod
     async def _ensure_assets_not_bound_to_other_groups(
         db: AsyncSession,
         *,
         current_group_id: str | None,
+        project_id: str | None,
         asset_ids: list[str] | None,
     ) -> None:
         normalized_asset_ids = sorted(
@@ -214,12 +215,24 @@ class ContractGroupService:
         if not conflicts:
             return
 
+        normalized_project_id = (
+            str(project_id).strip() if project_id is not None else ""
+        )
+        blocking_conflicts = [
+            item
+            for item in conflicts
+            if normalized_project_id == ""
+            or str(item.get("project_id") or "").strip() != normalized_project_id
+        ]
+        if not blocking_conflicts:
+            return
+
         details = "；".join(
-            f"{item['asset_id']} -> {item['group_code']}" for item in conflicts
+            f"{item['asset_id']} -> {item['group_code']}" for item in blocking_conflicts
         )
         raise OperationNotAllowedError(
-            f"以下资产已绑定其他有效合同组：{details}",
-            reason="asset_already_bound_to_active_contract_group",
+            f"以下资产已绑定其他项目的有效合同关系：{details}",
+            reason="asset_already_bound_to_active_contract_relation",
         )
 
     @staticmethod
@@ -770,12 +783,14 @@ class ContractGroupService:
         await self._ensure_assets_not_bound_to_other_groups(
             db,
             current_group_id=None,
+            project_id=obj_in.project_id,
             asset_ids=obj_in.asset_ids,
         )
 
         now = _utcnow()
         data: dict[str, Any] = {
             "contract_group_id": str(uuid.uuid4()),
+            "project_id": obj_in.project_id,
             "group_code": group_code,
             "revenue_mode": obj_in.revenue_mode.name,
             "operator_party_id": obj_in.operator_party_id,
@@ -831,6 +846,7 @@ class ContractGroupService:
         await self._ensure_assets_not_bound_to_other_groups(
             db,
             current_group_id=group_id,
+            project_id=getattr(group, "project_id", None),
             asset_ids=obj_in.asset_ids,
         )
 
@@ -960,9 +976,25 @@ class ContractGroupService:
                 db, group_id=group.contract_group_id
             )
             derived = calculate_derived_status(contracts)
+            role_counts: dict[str, int] = {}
+            for contract in contracts:
+                try:
+                    role = _normalize_enum_member(
+                        GroupRelationType,
+                        getattr(contract, "group_relation_type", None),
+                    )
+                except OperationNotAllowedError:
+                    continue
+                role_counts[role.name] = role_counts.get(role.name, 0) + 1
             group_dict = {
                 col: getattr(group, col) for col in group.__table__.columns.keys()
             }
+            group_dict["project_name"] = getattr(
+                getattr(group, "project", None),
+                "project_name",
+                None,
+            )
+            group_dict["contract_role_counts"] = role_counts
             group_dict["derived_status"] = derived
             result.append(ContractGroupListItem(**group_dict))
 

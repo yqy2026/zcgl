@@ -82,6 +82,34 @@ export interface OccupancyTrend {
   total_rentable_area: number;
 }
 
+export interface AnalyticsProjectBreakdown {
+  project_id: string;
+  project_name: string;
+  contract_relation_count: number;
+  contract_count: number;
+  lease_relation_count: number;
+  agency_relation_count: number;
+  total_income: number;
+  self_operated_rent_income: number;
+  agency_service_income: number;
+  actual_receipts: number;
+  customer_entity_count: number;
+  customer_contract_count: number;
+}
+
+export interface AnalyticsModeBreakdown {
+  relation_kind: 'lease_sublease' | 'agency_operation';
+  label: string;
+  contract_relation_count: number;
+  contract_count: number;
+  total_income: number;
+  self_operated_rent_income: number;
+  agency_service_income: number;
+  actual_receipts: number;
+  customer_entity_count: number;
+  customer_contract_count: number;
+}
+
 export interface PerformanceMetrics {
   asset_utilization: number;
   income_efficiency: number;
@@ -113,6 +141,8 @@ export interface AnalyticsData {
   customer_contract_count?: number;
   customer_entity_breakdown?: Record<string, number>;
   customer_contract_breakdown?: Record<string, number>;
+  project_breakdown?: AnalyticsProjectBreakdown[];
+  mode_breakdown?: AnalyticsModeBreakdown[];
   metrics_version?: string;
   occupancy_distribution: OccupancyDistribution[];
   property_nature_distribution: PropertyNatureDistribution[];
@@ -144,6 +174,8 @@ export interface AnalyticsResponse {
   customer_contract_count?: number;
   customer_entity_breakdown?: Record<string, number>;
   customer_contract_breakdown?: Record<string, number>;
+  project_breakdown?: AnalyticsProjectBreakdown[];
+  mode_breakdown?: AnalyticsModeBreakdown[];
   metrics_version?: string;
   occupancy_distribution?: OccupancyDistribution[];
   property_nature_distribution?: PropertyNatureDistribution[];

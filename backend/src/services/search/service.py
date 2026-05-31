@@ -273,10 +273,10 @@ class SearchService:
                 subtitle=str(getattr(group.revenue_mode, "name", group.revenue_mode)),
                 summary=str(getattr(group, "effective_from", "")),
                 keywords=["group_code"],
-                route_path=f"/contract-groups/{group.contract_group_id}",
+                route_path=f"/contract-center/{group.contract_group_id}",
                 score=self._score_text(query, [group.group_code]),
                 business_rank=self._business_rank(query, [group.group_code]),
-                group_label="合同组",
+                group_label="合同关系",
             )
             for group in groups
         ]

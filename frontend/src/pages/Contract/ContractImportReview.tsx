@@ -35,7 +35,7 @@ import {
   type AssetMatch,
   type OwnershipMatch,
 } from '@/services/pdfImportService';
-import { CONTRACT_GROUP_ROUTES } from '@/constants/routes';
+import { CONTRACT_CENTER_ROUTES } from '@/constants/routes';
 import { ContractStatus, ContractStatusLabels } from '@/types/rentContract';
 import styles from './ContractImportReview.module.css';
 
@@ -100,14 +100,36 @@ interface EvidenceSnippet {
 
 type OwnerReferenceFields = Pick<FormValues, 'owner_party_id'>;
 
+const REVENUE_MODE_OPTIONS = [
+  { label: '承租转租', value: 'LEASE' },
+  { label: '代理运营', value: 'AGENCY' },
+] as const;
+
+const CONTRACT_DIRECTION_OPTIONS = [
+  { label: '出租方/委托方', value: 'LESSOR' },
+  { label: '承租方/受托方', value: 'LESSEE' },
+] as const;
+
+const GROUP_RELATION_TYPE_OPTIONS = [
+  { label: '上游承租合同', value: 'UPSTREAM' },
+  { label: '下游出租合同', value: 'DOWNSTREAM' },
+  { label: '委托协议', value: 'ENTRUSTED' },
+  { label: '直租合同', value: 'DIRECT_LEASE' },
+] as const;
+
+const AGENCY_FEE_BASE_OPTIONS = [
+  { label: '按实收金额', value: 'actual_received' },
+  { label: '按应收金额', value: 'due_amount' },
+] as const;
+
 export const parseJsonObjectField = (value: string): ConfirmedContractData['settlement_rule'] => {
   const normalized = value.trim();
   if (normalized === '') {
-    throw new Error('结算规则 JSON 不能为空');
+    throw new Error('结算规则不能为空');
   }
   const parsed: unknown = JSON.parse(normalized);
   if (parsed == null || typeof parsed !== 'object' || Array.isArray(parsed)) {
-    throw new Error('结算规则必须是合法 JSON 对象');
+    throw new Error('结算规则必须是合法规则对象');
   }
   return parsed as ConfirmedContractData['settlement_rule'];
 };
@@ -364,7 +386,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
         form.setFields([
           {
             name: 'fee_calculation_base',
-            errors: ['计费基数必须是 actual_received 或 due_amount'],
+            errors: ['请选择计费基数'],
           },
         ]);
         MessageManager.error('请检查表单填写是否正确');
@@ -417,7 +439,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
       if (response.success) {
         MessageManager.success('合同导入成功！');
         if (response.contract_group_id != null && response.contract_group_id.trim() !== '') {
-          navigate(CONTRACT_GROUP_ROUTES.DETAIL(response.contract_group_id));
+          navigate(CONTRACT_CENTER_ROUTES.DETAIL(response.contract_group_id));
         }
       } else {
         MessageManager.error(response.error ?? '导入失败');
@@ -686,16 +708,16 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
           <>
             <Alert
               title="未找到匹配的产权方主体"
-              description="新合同导入仍要求显式 owner_party_id，请手动填写。"
+              description="新合同导入仍要求显式提供产权方主体，请手动填写。"
               type="warning"
               showIcon
             />
             <Form.Item
-              label="产权方主体 ID"
+              label="产权方主体"
               name="owner_party_id"
-              rules={[{ required: true, message: '请输入产权方主体 ID' }]}
+              rules={[{ required: true, message: '请输入产权方主体' }]}
             >
-              <Input placeholder="请输入产权方主体 ID" />
+              <Input placeholder="请输入产权方主体" />
             </Form.Item>
           </>
         )}
@@ -722,7 +744,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
         type="info"
         showIcon
         className={styles.messageAlert}
-        title="新合同导入采用 fail-closed 模式，必须显式提供合同组与主体上下文。"
+        title="新合同导入采用 fail-closed 模式，必须显式提供合同关系与签约主体上下文。"
       />
 
       <Row gutter={16}>
@@ -731,9 +753,13 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
             label="经营模式"
             name="revenue_mode"
             rules={[{ required: true, message: '请选择经营模式' }]}
-            extra="请输入 LEASE 或 AGENCY"
+            extra="用于区分承租转租和代理运营"
           >
-            <Input placeholder="LEASE / AGENCY" />
+            <Select
+              aria-label="经营模式"
+              placeholder="请选择经营模式"
+              options={[...REVENUE_MODE_OPTIONS]}
+            />
           </Form.Item>
         </Col>
         <Col span={8}>
@@ -741,9 +767,12 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
             label="合同方向"
             name="contract_direction"
             rules={[{ required: true, message: '请选择合同方向' }]}
-            extra="请输入 LESSOR 或 LESSEE"
           >
-            <Input placeholder="LESSOR / LESSEE" />
+            <Select
+              aria-label="合同方向"
+              placeholder="请选择合同方向"
+              options={[...CONTRACT_DIRECTION_OPTIONS]}
+            />
           </Form.Item>
         </Col>
         <Col span={8}>
@@ -751,9 +780,12 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
             label="合同角色"
             name="group_relation_type"
             rules={[{ required: true, message: '请选择合同角色' }]}
-            extra="请输入 UPSTREAM / DOWNSTREAM / ENTRUSTED / DIRECT_LEASE"
           >
-            <Input placeholder="UPSTREAM / DOWNSTREAM / ENTRUSTED / DIRECT_LEASE" />
+            <Select
+              aria-label="合同角色"
+              placeholder="请选择合同角色"
+              options={[...GROUP_RELATION_TYPE_OPTIONS]}
+            />
           </Form.Item>
         </Col>
       </Row>
@@ -761,44 +793,44 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
       <Row gutter={16}>
         <Col span={8}>
           <Form.Item
-            label="运营方主体 ID"
+            label="运营方主体"
             name="operator_party_id"
-            rules={[{ required: true, message: '请输入运营方主体 ID' }]}
+            rules={[{ required: true, message: '请输入运营方主体' }]}
           >
-            <Input placeholder="请输入运营方主体 ID" />
+            <Input placeholder="请输入运营方主体" />
           </Form.Item>
         </Col>
         <Col span={8}>
           <Form.Item
-            label="出租方/委托方主体 ID"
+            label="出租方/委托方主体"
             name="lessor_party_id"
-            rules={[{ required: true, message: '请输入出租方/委托方主体 ID' }]}
+            rules={[{ required: true, message: '请输入出租方/委托方主体' }]}
           >
-            <Input placeholder="请输入出租方/委托方主体 ID" />
+            <Input placeholder="请输入出租方/委托方主体" />
           </Form.Item>
         </Col>
         <Col span={8}>
           <Form.Item
-            label="承租方/受托方主体 ID"
+            label="承租方/受托方主体"
             name="lessee_party_id"
-            rules={[{ required: true, message: '请输入承租方/受托方主体 ID' }]}
+            rules={[{ required: true, message: '请输入承租方/受托方主体' }]}
           >
-            <Input placeholder="请输入承租方/受托方主体 ID" />
+            <Input placeholder="请输入承租方/受托方主体" />
           </Form.Item>
         </Col>
       </Row>
 
       <Form.Item
-        label="结算规则 JSON"
+        label="结算规则"
         name="settlement_rule_json"
         rules={[
-          { required: true, message: '请输入结算规则 JSON' },
+          { required: true, message: '请输入结算规则' },
           {
             validator: async (_, value: string | undefined) => {
               try {
                 parseJsonObjectField(value ?? '');
               } catch (error) {
-                throw new Error(error instanceof Error ? error.message : '结算规则必须是合法 JSON');
+                throw new Error(error instanceof Error ? error.message : '结算规则必须是合法规则对象');
               }
             },
           },
@@ -806,7 +838,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
       >
         <TextArea
           rows={6}
-          placeholder='{"version":"v1","cycle":"月付","settlement_mode":"manual","amount_rule":{},"payment_rule":{}}'
+          placeholder="请输入系统识别的结算规则对象，包含周期、计费依据和付款日等信息"
         />
       </Form.Item>
 
@@ -842,18 +874,21 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
               label="计费基数"
               name="fee_calculation_base"
               rules={[
-                { required: true, message: '请输入计费基数' },
+                { required: true, message: '请选择计费基数' },
                 {
                   validator: async (_, value: string | undefined) => {
                     if (normalizeAgencyFeeCalculationBase(value) == null) {
-                      throw new Error('计费基数必须是 actual_received 或 due_amount');
+                      throw new Error('请选择计费基数');
                     }
                   },
                 },
               ]}
-              extra="请输入 actual_received 或 due_amount"
             >
-              <Input placeholder="actual_received / due_amount" />
+              <Select
+                aria-label="计费基数"
+                placeholder="请选择计费基数"
+                options={[...AGENCY_FEE_BASE_OPTIONS]}
+              />
             </Form.Item>
           </Col>
           <Col span={8}>

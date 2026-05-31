@@ -21,6 +21,8 @@ const mockUseAssetAnalytics = vi.fn(() => ({
     ownership_status_distribution: [],
     usage_status_distribution: [],
     business_category_distribution: [],
+    project_breakdown: [],
+    mode_breakdown: [],
     occupancy_trend: [],
   },
   loading: false,
@@ -94,6 +96,48 @@ describe('AssetAnalyticsPage', () => {
         ownership_status_distribution: [],
         usage_status_distribution: [],
         business_category_distribution: [],
+        project_breakdown: [
+          {
+            project_id: 'project-1',
+            project_name: '湖滨产业园',
+            contract_relation_count: 2,
+            contract_count: 3,
+            lease_relation_count: 1,
+            agency_relation_count: 1,
+            total_income: 720,
+            self_operated_rent_income: 600,
+            agency_service_income: 120,
+            actual_receipts: 450,
+            customer_entity_count: 2,
+            customer_contract_count: 2,
+          },
+        ],
+        mode_breakdown: [
+          {
+            relation_kind: 'lease_sublease',
+            label: '承租转租',
+            contract_relation_count: 1,
+            contract_count: 2,
+            total_income: 600,
+            self_operated_rent_income: 600,
+            agency_service_income: 0,
+            actual_receipts: 450,
+            customer_entity_count: 1,
+            customer_contract_count: 1,
+          },
+          {
+            relation_kind: 'agency_operation',
+            label: '代理运营',
+            contract_relation_count: 1,
+            contract_count: 1,
+            total_income: 120,
+            self_operated_rent_income: 0,
+            agency_service_income: 120,
+            actual_receipts: 0,
+            customer_entity_count: 1,
+            customer_contract_count: 1,
+          },
+        ],
         occupancy_trend: [],
       },
       loading: false,
@@ -128,5 +172,15 @@ describe('AssetAnalyticsPage', () => {
 
     expect(screen.getByText('加载分析数据中...')).toBeInTheDocument();
     expect(screen.queryByText('暂无数据')).not.toBeInTheDocument();
+  });
+
+  it('展示全局经营分析的项目和经营模式分区', () => {
+    renderWithProviders(<AssetAnalyticsPage />, { route: '/analytics' });
+
+    expect(screen.getByText('经营分析')).toBeInTheDocument();
+    expect(screen.getByText('项目与模式分区')).toBeInTheDocument();
+    expect(screen.getAllByText('承租转租').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('代理运营').length).toBeGreaterThan(0);
+    expect(screen.getByText('湖滨产业园')).toBeInTheDocument();
   });
 });

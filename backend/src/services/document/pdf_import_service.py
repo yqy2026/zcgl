@@ -903,6 +903,7 @@ class PDFImportService:
 
         merged_data = _merge_confirmed_payload(confirmed_data)
         required_fields = [
+            "project_id",
             "contract_number",
             "tenant_name",
             "start_date",
@@ -1040,6 +1041,7 @@ class PDFImportService:
 
         try:
             group_payload = ContractGroupCreate(
+                project_id=_normalize_text(merged_data.get("project_id")),
                 revenue_mode=revenue_mode,
                 operator_party_id=operator_party_id,
                 owner_party_id=owner_party_id,

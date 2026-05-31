@@ -6,7 +6,7 @@ from sqlalchemy import Column, DateTime, ForeignKey, String, Table
 
 from ..database import Base
 
-# ---- 合同组-资产（REQ-RNT-001 五层合同体系）----
+# ---- 合同关系聚合-资产（REQ-RNT-001）----
 
 contract_group_assets = Table(
     "contract_group_assets",
@@ -24,7 +24,7 @@ contract_group_assets = Table(
         default=lambda: datetime.now(UTC).replace(tzinfo=None),
         comment="关联创建时间",
     ),
-    comment="合同组-资产多对多关联",
+    comment="合同关系聚合与资产多对多关联",
 )
 
 contract_assets = Table(

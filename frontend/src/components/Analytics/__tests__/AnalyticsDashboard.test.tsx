@@ -251,7 +251,7 @@ describe('AnalyticsDashboard - 渲染测试', () => {
     const { AnalyticsDashboard } = await import('../AnalyticsDashboard');
     renderWithProviders(<AnalyticsDashboard />);
 
-    expect(screen.getByText('资产分析')).toBeInTheDocument();
+    expect(screen.getByText('经营分析')).toBeInTheDocument();
   });
 
   it('应该渲染AnalyticsFilters组件', async () => {

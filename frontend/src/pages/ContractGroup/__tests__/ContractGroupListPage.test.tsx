@@ -27,8 +27,14 @@ describe('ContractGroupListPage', () => {
       items: [
         {
           contract_group_id: 'group-1',
+          project_id: 'project-1',
+          project_name: '项目A',
           group_code: 'GRP-TEST-202603-0001',
           revenue_mode: 'LEASE',
+          contract_role_counts: {
+            UPSTREAM: 1,
+            DOWNSTREAM: 2,
+          },
           operator_party_id: 'party-op',
           owner_party_id: 'party-owner',
           effective_from: '2026-03-01',
@@ -48,17 +54,27 @@ describe('ContractGroupListPage', () => {
   it('renders the list title, row data, and create action', async () => {
     renderWithProviders(<ContractGroupListPage />);
 
-    expect(await screen.findByText('合同组管理')).toBeInTheDocument();
+    expect(await screen.findByText('合同中心')).toBeInTheDocument();
     expect(await screen.findByText('GRP-TEST-202603-0001')).toBeInTheDocument();
-    expect(screen.getByText('新建合同组')).toBeInTheDocument();
+    expect(screen.getByText('项目A')).toBeInTheDocument();
+    expect(screen.getByText('承租转租')).toBeInTheDocument();
+    expect(screen.getByText('上游承租合同 1')).toBeInTheDocument();
+    expect(screen.getByText('下游出租合同 2')).toBeInTheDocument();
+    expect(screen.getByText('新建合同关系')).toBeInTheDocument();
+    expect(screen.queryByText('合同组管理')).not.toBeInTheDocument();
+    expect(screen.queryByText('新建合同组')).not.toBeInTheDocument();
+    expect(screen.queryByText('LEASE')).not.toBeInTheDocument();
+    expect(screen.queryByText('UPSTREAM')).not.toBeInTheDocument();
+    expect(screen.queryByText('运营方主体 ID')).not.toBeInTheDocument();
+    expect(screen.queryByText('产权方主体 ID')).not.toBeInTheDocument();
   });
 
   it('navigates to the create page', async () => {
     renderWithProviders(<ContractGroupListPage />);
 
-    fireEvent.click(await screen.findByText('新建合同组'));
+    fireEvent.click(await screen.findByText('新建合同关系'));
 
-    expect(mockNavigate).toHaveBeenCalledWith('/contract-groups/new');
+    expect(mockNavigate).toHaveBeenCalledWith('/contract-center/new');
   });
 
   it('navigates to the pdf import page', async () => {
@@ -66,6 +82,6 @@ describe('ContractGroupListPage', () => {
 
     fireEvent.click(await screen.findByText('PDF导入'));
 
-    expect(mockNavigate).toHaveBeenCalledWith('/contract-groups/import');
+    expect(mockNavigate).toHaveBeenCalledWith('/contract-center/import');
   });
 });

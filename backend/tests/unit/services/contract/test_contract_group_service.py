@@ -10,7 +10,7 @@
   - ContractCreate 基本 schema 校验
 """
 
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -30,6 +30,7 @@ from src.models.contract_group import (
     GroupRelationType,
     RevenueMode,
 )
+from src.models.project import Project
 from src.schemas.contract_group import (
     ContractCreate,
     ContractGroupCreate,
@@ -74,6 +75,7 @@ def _valid_settlement_rule() -> dict:
 
 def _valid_group_create(**kwargs) -> ContractGroupCreate:
     defaults = dict(
+        project_id="project-1",
         revenue_mode=RevenueMode.LEASE,
         operator_party_id="party_op",
         owner_party_id="party_ow",
@@ -366,13 +368,14 @@ class TestCreateContractGroupDuplicateCheck:
                 "src.services.contract.contract_group_service.contract_group_crud.create",
                 new_callable=AsyncMock,
                 return_value=created_group,
-            ):
+            ) as mock_create:
                 result = await service.create_contract_group(
                     mock_db,
                     obj_in=_valid_group_create(),
                     group_code="GRP-NEW",
                 )
         assert result.contract_group_id == "grp_001"
+        assert mock_create.await_args.kwargs["data"]["project_id"] == "project-1"
 
     async def test_create_group_should_reject_assets_already_bound_elsewhere(
         self, mock_db: MagicMock
@@ -391,6 +394,7 @@ class TestCreateContractGroupDuplicateCheck:
                 return_value=[
                     {
                         "asset_id": "asset-1",
+                        "project_id": "other-project",
                         "contract_group_id": "group-existing",
                         "group_code": "GRP-EXISTING",
                     }
@@ -404,12 +408,53 @@ class TestCreateContractGroupDuplicateCheck:
                     group_code="GRP-NEW",
                 )
 
+    async def test_create_group_should_allow_assets_bound_in_same_project(
+        self, mock_db: MagicMock
+    ) -> None:
+        service = ContractGroupService()
+        created_group = MagicMock()
+        created_group.contract_group_id = "group-new"
+
+        with (
+            patch(
+                "src.services.contract.contract_group_service.contract_group_crud.get_by_code",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_group_crud.list_active_group_bindings_for_assets",
+                new_callable=AsyncMock,
+                return_value=[
+                    {
+                        "asset_id": "asset-1",
+                        "project_id": "project-1",
+                        "contract_group_id": "group-existing",
+                        "group_code": "GRP-EXISTING",
+                    }
+                ],
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_group_crud.create",
+                new_callable=AsyncMock,
+                return_value=created_group,
+            ) as mock_create,
+        ):
+            result = await service.create_contract_group(
+                mock_db,
+                obj_in=_valid_group_create(asset_ids=["asset-1"]),
+                group_code="GRP-NEW",
+            )
+
+        assert result.contract_group_id == "group-new"
+        mock_create.assert_awaited_once()
+
     async def test_update_group_should_reject_assets_already_bound_elsewhere(
         self, mock_db: MagicMock
     ) -> None:
         service = ContractGroupService()
         existing_group = MagicMock()
         existing_group.contract_group_id = "group-current"
+        existing_group.project_id = "project-1"
 
         with (
             patch(
@@ -423,6 +468,7 @@ class TestCreateContractGroupDuplicateCheck:
                 return_value=[
                     {
                         "asset_id": "asset-2",
+                        "project_id": "other-project",
                         "contract_group_id": "group-other",
                         "group_code": "GRP-OTHER",
                     }
@@ -444,8 +490,120 @@ class TestCreateContractGroupDuplicateCheck:
                     ),
                 )
 
+    async def test_update_group_should_allow_assets_bound_in_same_project(
+        self, mock_db: MagicMock
+    ) -> None:
+        service = ContractGroupService()
+        existing_group = MagicMock()
+        existing_group.contract_group_id = "group-current"
+        existing_group.project_id = "project-1"
+        updated_group = MagicMock()
+        updated_group.contract_group_id = "group-current"
+
+        with (
+            patch(
+                "src.services.contract.contract_group_service.contract_group_crud.get",
+                new_callable=AsyncMock,
+                return_value=existing_group,
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_group_crud.list_active_group_bindings_for_assets",
+                new_callable=AsyncMock,
+                return_value=[
+                    {
+                        "asset_id": "asset-2",
+                        "project_id": "project-1",
+                        "contract_group_id": "group-other",
+                        "group_code": "GRP-OTHER",
+                    }
+                ],
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_group_crud.update",
+                new_callable=AsyncMock,
+                return_value=updated_group,
+            ) as mock_update,
+        ):
+            result = await service.update_contract_group(
+                mock_db,
+                group_id="group-current",
+                obj_in=SimpleNamespace(
+                    asset_ids=["asset-2"],
+                    model_fields_set={"asset_ids"},
+                    settlement_rule=None,
+                    effective_to=None,
+                    revenue_attribution_rule=None,
+                    revenue_share_rule=None,
+                    risk_tags=None,
+                ),
+            )
+
+        assert result.contract_group_id == "group-current"
+        mock_update.assert_awaited_once()
+
 
 class TestPerspectiveScopedContractGroups:
+    async def test_list_groups_enriches_project_name_and_contract_role_counts(
+        self, mock_db: MagicMock
+    ) -> None:
+        service = ContractGroupService()
+        group = ContractGroup(
+            contract_group_id="group-1",
+            project_id="project-1",
+            group_code="GRP-TEST-202605-0001",
+            revenue_mode=RevenueMode.LEASE,
+            operator_party_id="manager-1",
+            owner_party_id="owner-1",
+            effective_from=date(2026, 5, 1),
+            effective_to=None,
+            settlement_rule=_valid_settlement_rule(),
+            data_status="正常",
+            created_at=datetime(2026, 5, 1),
+            updated_at=datetime(2026, 5, 2),
+        )
+        group.project = Project(
+            id="project-1",
+            project_name="项目A",
+            project_code="PRJ-A",
+            status="active",
+            data_status="正常",
+        )
+        contracts = [
+            _make_contract(
+                ContractLifecycleStatus.ACTIVE,
+                group_relation_type=GroupRelationType.UPSTREAM,
+            ),
+            _make_contract(
+                ContractLifecycleStatus.DRAFT,
+                group_relation_type=GroupRelationType.DOWNSTREAM,
+            ),
+            _make_contract(
+                ContractLifecycleStatus.DRAFT,
+                group_relation_type=GroupRelationType.DOWNSTREAM,
+            ),
+        ]
+
+        with (
+            patch(
+                "src.services.contract.contract_group_service.contract_group_crud.list_by_filters",
+                new_callable=AsyncMock,
+                return_value=([group], 1),
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.list_by_group",
+                new_callable=AsyncMock,
+                return_value=contracts,
+            ),
+        ):
+            result, total = await service.list_groups(mock_db)
+
+        assert total == 1
+        assert result[0].project_name == "项目A"
+        assert result[0].contract_role_counts == {
+            "UPSTREAM": 1,
+            "DOWNSTREAM": 2,
+        }
+
     async def test_list_groups_should_apply_any_scope_effective_party_ids(
         self, mock_db: MagicMock
     ) -> None:

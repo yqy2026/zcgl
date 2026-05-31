@@ -1216,6 +1216,72 @@ class TestGetProjectActiveAssets:
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
+class TestGetProjectContractRelations:
+    """测试项目合同关系端点。"""
+
+    def test_get_project_contract_relations_endpoint_returns_200(
+        self,
+        client,
+        admin_user_headers,
+        project_data,
+        monkeypatch,
+    ):
+        from src.api.v1.assets import project as project_module
+        from src.schemas.project import (
+            ProjectContractRelationItem,
+            ProjectContractRelationsResponse,
+        )
+
+        async def mock_get_project_contract_relations(
+            db,
+            *,
+            project_id: str,
+            current_user_id: str | None = None,
+            party_filter=None,
+        ):
+            assert project_id == project_data.id
+            assert current_user_id is not None
+            return ProjectContractRelationsResponse(
+                items=[
+                    ProjectContractRelationItem(
+                        contract_relation_id="group-1",
+                        project_id=project_data.id,
+                        display_name="GRP-LEASE",
+                        revenue_mode="lease",
+                        relation_kind="lease_sublease",
+                        owner_party_id="owner-1",
+                        operator_party_id="manager-1",
+                        asset_ids=["asset-1"],
+                        primary_contract_ids=["contract-upstream"],
+                        terminal_contract_ids=["contract-downstream"],
+                        derived_status="生效中",
+                        risk_tags=["到期风险"],
+                    )
+                ],
+                total=1,
+            )
+
+        monkeypatch.setattr(
+            project_module.project_service,
+            "get_project_contract_relations",
+            mock_get_project_contract_relations,
+        )
+
+        response = client.get(
+            f"/api/v1/projects/{project_data.id}/contract-relations",
+            headers=admin_user_headers,
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        payload = response.json()
+        assert payload["success"] is True
+        assert payload["data"]["total"] == 1
+        assert payload["data"]["items"][0]["relation_kind"] == "lease_sublease"
+        assert payload["data"]["items"][0]["primary_contract_ids"] == [
+            "contract-upstream"
+        ]
+
+
 class TestProjectStatistics:
     """测试项目统计端点。"""
 

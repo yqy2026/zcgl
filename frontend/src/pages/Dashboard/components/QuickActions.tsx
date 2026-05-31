@@ -10,7 +10,7 @@ import {
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import type { AntdIconProps } from '@ant-design/icons/lib/components/AntdIcon';
-import { ASSET_ROUTES } from '@/constants/routes';
+import { ANALYTICS_ROUTES, ASSET_ROUTES } from '@/constants/routes';
 import styles from './QuickActions.module.css';
 
 type ActionTone = 'primary' | 'success' | 'warning' | 'info' | 'secondary' | 'neutral';
@@ -57,11 +57,11 @@ const QuickActions: React.FC = () => {
       onClick: () => navigate(ASSET_ROUTES.LIST),
     },
     {
-      title: '资产分析',
-      description: '查看详细分析报告',
+      title: '经营分析',
+      description: '按项目和模式查看经营口径',
       icon: BarChartOutlined,
       tone: 'info',
-      onClick: () => navigate('/assets/analytics'),
+      onClick: () => navigate(ANALYTICS_ROUTES.OVERVIEW),
     },
     {
       title: '生成报表',

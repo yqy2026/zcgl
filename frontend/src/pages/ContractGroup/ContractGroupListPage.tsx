@@ -4,11 +4,41 @@ import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { PageContainer } from '@/components/Common';
-import { CONTRACT_GROUP_ROUTES } from '@/constants/routes';
+import { CONTRACT_CENTER_ROUTES } from '@/constants/routes';
 import { contractGroupService } from '@/services/contractGroupService';
-import type { ContractGroupListItem, RevenueMode } from '@/types/contractGroup';
+import type { ContractGroupListItem, GroupRelationType, RevenueMode } from '@/types/contractGroup';
 
 const PAGE_SIZE = 20;
+
+const REVENUE_MODE_META = {
+  LEASE: {
+    color: 'blue',
+    label: '承租转租',
+  },
+  AGENCY: {
+    color: 'cyan',
+    label: '代理运营',
+  },
+} as const;
+
+const CONTRACT_ROLE_META: Record<GroupRelationType, { color: string; label: string }> = {
+  UPSTREAM: {
+    color: 'gold',
+    label: '上游承租合同',
+  },
+  DOWNSTREAM: {
+    color: 'blue',
+    label: '下游出租合同',
+  },
+  ENTRUSTED: {
+    color: 'cyan',
+    label: '委托协议',
+  },
+  DIRECT_LEASE: {
+    color: 'green',
+    label: '直租合同',
+  },
+};
 
 const ContractGroupListPage: React.FC = () => {
   const navigate = useNavigate();
@@ -29,13 +59,13 @@ const ContractGroupListPage: React.FC = () => {
   const columns = useMemo<ColumnsType<ContractGroupListItem>>(
     () => [
       {
-        title: '合同组编码',
+        title: '合同关系编码',
         dataIndex: 'group_code',
         key: 'group_code',
         render: (value: string, record) => (
           <Button
             type="link"
-            onClick={() => navigate(CONTRACT_GROUP_ROUTES.DETAIL(record.contract_group_id))}
+            onClick={() => navigate(CONTRACT_CENTER_ROUTES.DETAIL(record.contract_group_id))}
           >
             {value}
           </Button>
@@ -46,18 +76,41 @@ const ContractGroupListPage: React.FC = () => {
         dataIndex: 'revenue_mode',
         key: 'revenue_mode',
         render: (value: RevenueMode) => (
-          <Tag color={value === 'LEASE' ? 'blue' : 'purple'}>{value}</Tag>
+          <Tag color={REVENUE_MODE_META[value].color}>{REVENUE_MODE_META[value].label}</Tag>
         ),
       },
       {
-        title: '运营方主体 ID',
-        dataIndex: 'operator_party_id',
-        key: 'operator_party_id',
+        title: '所属项目',
+        dataIndex: 'project_name',
+        key: 'project_name',
+        render: (value?: string | null) => {
+          const projectName = value?.trim() ?? '';
+          return projectName !== '' ? projectName : '未归属项目';
+        },
       },
       {
-        title: '产权方主体 ID',
-        dataIndex: 'owner_party_id',
-        key: 'owner_party_id',
+        title: '合同角色',
+        key: 'contract_role_counts',
+        render: (_, record) => {
+          const roleCounts = record.contract_role_counts ?? {};
+          const activeRoles = (Object.keys(CONTRACT_ROLE_META) as GroupRelationType[]).filter(
+            role => (roleCounts[role] ?? 0) > 0
+          );
+
+          if (activeRoles.length === 0) {
+            return <Tag>暂无合同</Tag>;
+          }
+
+          return (
+            <Space size={4} wrap>
+              {activeRoles.map(role => (
+                <Tag key={role} color={CONTRACT_ROLE_META[role].color}>
+                  {CONTRACT_ROLE_META[role].label} {roleCounts[role]}
+                </Tag>
+              ))}
+            </Space>
+          );
+        },
       },
       {
         title: '生效区间',
@@ -73,7 +126,7 @@ const ContractGroupListPage: React.FC = () => {
         title: '操作',
         key: 'actions',
         render: (_, record) => (
-          <Button onClick={() => navigate(CONTRACT_GROUP_ROUTES.EDIT(record.contract_group_id))}>
+          <Button onClick={() => navigate(CONTRACT_CENTER_ROUTES.EDIT(record.contract_group_id))}>
             编辑
           </Button>
         ),
@@ -91,8 +144,8 @@ const ContractGroupListPage: React.FC = () => {
 
   return (
     <PageContainer
-      title="合同组管理"
-      subTitle="新合同体系主入口，直接对接 contract_groups / contracts 后端能力。"
+      title="合同中心"
+      subTitle="查看承租转租、代理运营等合同关系，进入明细维护关联合同、结算规则和风险状态。"
       extra={
         <Space>
           <Select
@@ -105,13 +158,13 @@ const ContractGroupListPage: React.FC = () => {
               setOffset(0);
             }}
             options={[
-              { label: 'LEASE', value: 'LEASE' },
-              { label: 'AGENCY', value: 'AGENCY' },
+              { label: REVENUE_MODE_META.LEASE.label, value: 'LEASE' },
+              { label: REVENUE_MODE_META.AGENCY.label, value: 'AGENCY' },
             ]}
           />
-          <Button onClick={() => navigate(CONTRACT_GROUP_ROUTES.IMPORT)}>PDF导入</Button>
-          <Button type="primary" onClick={() => navigate(CONTRACT_GROUP_ROUTES.NEW)}>
-            新建合同组
+          <Button onClick={() => navigate(CONTRACT_CENTER_ROUTES.IMPORT)}>PDF导入</Button>
+          <Button type="primary" onClick={() => navigate(CONTRACT_CENTER_ROUTES.NEW)}>
+            新建合同关系
           </Button>
         </Space>
       }
@@ -120,7 +173,7 @@ const ContractGroupListPage: React.FC = () => {
         <Alert
           type="error"
           showIcon
-          message="合同组列表加载失败"
+          message="合同关系列表加载失败"
           description={error instanceof Error ? error.message : '未知错误'}
           action={
             <Button size="small" onClick={() => void refetch()}>

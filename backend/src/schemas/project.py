@@ -4,6 +4,7 @@
 
 import re
 from datetime import datetime
+from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -313,6 +314,126 @@ class ProjectActiveAssetsResponse(BaseModel):
     items: list["AssetListItemResponse"]
     total: int
     summary: ProjectAssetSummary
+
+
+class ProjectContractRelationItem(BaseModel):
+    """项目合同关系展示投影。"""
+
+    contract_relation_id: str
+    project_id: str
+    display_name: str
+    revenue_mode: str
+    relation_kind: str
+    owner_party_id: str
+    operator_party_id: str
+    asset_ids: list[str] = Field(default_factory=list)
+    primary_contract_ids: list[str] = Field(default_factory=list)
+    terminal_contract_ids: list[str] = Field(default_factory=list)
+    derived_status: str
+    risk_tags: list[str] | None = None
+
+
+class ProjectContractRelationsResponse(BaseModel):
+    """项目合同关系列表响应。"""
+
+    items: list[ProjectContractRelationItem]
+    total: int
+
+
+class ProjectRiskItem(BaseModel):
+    """项目风险提示项。"""
+
+    risk_id: str
+    risk_type: str
+    severity: str = "warning"
+    message: str
+    contract_relation_id: str | None = None
+    display_name: str | None = None
+
+
+class ProjectRisksResponse(BaseModel):
+    """项目风险提示列表响应。"""
+
+    items: list[ProjectRiskItem]
+    total: int
+
+
+class ProjectLedgerSummaryResponse(BaseModel):
+    """项目收付款摘要响应。"""
+
+    receivable_amount: Decimal
+    payable_amount: Decimal
+    received_amount: Decimal
+    paid_amount: Decimal
+    overdue_amount: Decimal
+    service_fee_receivable: Decimal
+    service_fee_received: Decimal
+
+
+class ProjectTenantSummaryItem(BaseModel):
+    """项目租户客户摘要项。"""
+
+    party_id: str
+    party_name: str
+    group_relation_type: str
+    contract_count: int
+
+
+class ProjectTenantSummaryResponse(BaseModel):
+    """项目租户客户摘要响应。"""
+
+    items: list[ProjectTenantSummaryItem]
+    total: int
+
+
+class ProjectAnalysisModeSummary(BaseModel):
+    """项目经营模式分区分析摘要。"""
+
+    relation_kind: str
+    label: str
+    contract_relation_count: int
+    asset_count: int
+    primary_contract_count: int
+    terminal_contract_count: int
+    customer_count: int
+    customer_contract_count: int
+    receivable_amount: Decimal
+    payable_amount: Decimal
+    received_amount: Decimal
+    paid_amount: Decimal
+    overdue_amount: Decimal
+    risk_count: int
+
+
+class ProjectMonthlyTrendItem(BaseModel):
+    """项目月度分析趋势项。"""
+
+    period: str
+    receivable_amount: Decimal
+    payable_amount: Decimal
+    received_amount: Decimal
+    paid_amount: Decimal
+    overdue_amount: Decimal
+
+
+class ProjectAnalyticsResponse(BaseModel):
+    """项目分析摘要响应。"""
+
+    asset_summary: ProjectAssetSummary
+    contract_relation_count: int
+    tenant_count: int
+    customer_contract_count: int
+    risk_count: int
+    high_risk_count: int
+    receivable_amount: Decimal
+    payable_amount: Decimal
+    received_amount: Decimal
+    paid_amount: Decimal
+    overdue_amount: Decimal
+    service_fee_receivable: Decimal
+    service_fee_received: Decimal
+    mode_summaries: list[ProjectAnalysisModeSummary]
+    monthly_trends: list[ProjectMonthlyTrendItem] = Field(default_factory=list)
 
 
 class ProjectDeleteResponse(BaseModel):

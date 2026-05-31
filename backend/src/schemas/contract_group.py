@@ -1,5 +1,5 @@
 """
-合同组体系 Pydantic Schemas（REQ-RNT-001 M2）
+合同关系技术聚合 Pydantic Schemas（REQ-RNT-001 M2）
 
 对应数据模型：docs/features/requirements-appendix-fields.md §3.3–§3.7
 """
@@ -51,6 +51,7 @@ class SettlementRuleSchema(BaseModel):
 class ContractGroupCreate(BaseModel):
     """创建合同组入参"""
 
+    project_id: str = Field(..., min_length=1, description="所属项目 ID")
     revenue_mode: RevenueMode = Field(..., description="经营模式：lease / agency")
     operator_party_id: str = Field(..., min_length=1, description="运营方主体 ID")
     owner_party_id: str = Field(..., min_length=1, description="产权方主体 ID")
@@ -97,8 +98,11 @@ class ContractGroupListItem(BaseModel):
     """合同组列表出参（精简）"""
 
     contract_group_id: str
+    project_id: str | None = None
+    project_name: str | None = None
     group_code: str
     revenue_mode: RevenueMode
+    contract_role_counts: dict[str, int] = Field(default_factory=dict)
     operator_party_id: str
     owner_party_id: str
     effective_from: date

@@ -1,5 +1,5 @@
 """
-分层约束测试：contract_groups 路由（REQ-RNT-001 M3）
+分层约束测试：contract_groups 技术聚合路由（REQ-RNT-001 M3）
 
 验证：
   1. 路由模块不直接调用 CRUD（不绕过 Service 层）

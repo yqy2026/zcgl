@@ -1,6 +1,8 @@
 import { apiClient } from '@/api/client';
 import { API_ENDPOINTS } from '@/constants/api';
 import type {
+  ContractCreate,
+  ContractDetail,
   ContractGroupCreate,
   ContractGroupDetail,
   ContractGroupListParams,
@@ -39,12 +41,12 @@ export class ContractGroupService {
       });
 
       if (!result.success || result.data == null) {
-        throw new Error(`获取合同组列表失败: ${result.error}`);
+        throw new Error(`获取合同关系列表失败: ${result.error}`);
       }
 
       return result.data;
     } catch (error) {
-      contractGroupLogger.error('获取合同组列表失败', error as Error);
+      contractGroupLogger.error('获取合同关系列表失败', error as Error);
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -62,12 +64,12 @@ export class ContractGroupService {
       );
 
       if (!result.success || result.data == null) {
-        throw new Error(`获取合同组详情失败: ${result.error}`);
+        throw new Error(`获取合同关系明细失败: ${result.error}`);
       }
 
       return result.data;
     } catch (error) {
-      contractGroupLogger.error('获取合同组详情失败', error as Error);
+      contractGroupLogger.error('获取合同关系明细失败', error as Error);
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -85,12 +87,12 @@ export class ContractGroupService {
       );
 
       if (!result.success || result.data == null) {
-        throw new Error(`创建合同组失败: ${result.error}`);
+        throw new Error(`创建合同关系失败: ${result.error}`);
       }
 
       return result.data;
     } catch (error) {
-      contractGroupLogger.error('创建合同组失败', error as Error);
+      contractGroupLogger.error('创建合同关系失败', error as Error);
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -111,12 +113,35 @@ export class ContractGroupService {
       );
 
       if (!result.success || result.data == null) {
-        throw new Error(`更新合同组失败: ${result.error}`);
+        throw new Error(`更新合同关系失败: ${result.error}`);
       }
 
       return result.data;
     } catch (error) {
-      contractGroupLogger.error('更新合同组失败', error as Error);
+      contractGroupLogger.error('更新合同关系失败', error as Error);
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
+  async addContractToGroup(groupId: string, payload: ContractCreate): Promise<ContractDetail> {
+    try {
+      const result = await apiClient.post<ContractDetail>(
+        API_ENDPOINTS.CONTRACT_GROUP.CONTRACTS(groupId),
+        payload,
+        {
+          retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+          smartExtract: true,
+        }
+      );
+
+      if (!result.success || result.data == null) {
+        throw new Error(`添加合同失败: ${result.error}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      contractGroupLogger.error('添加合同失败', error as Error);
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }

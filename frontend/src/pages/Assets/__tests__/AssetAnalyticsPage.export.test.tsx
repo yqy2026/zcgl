@@ -116,6 +116,8 @@ const analyticsResponse = {
     customer_entity_count: 8,
     customer_contract_count: 12,
     metrics_version: 'req-ana-001-v1',
+    project_breakdown: [],
+    mode_breakdown: [],
     property_nature_distribution: [],
     ownership_status_distribution: [],
     usage_status_distribution: [],
@@ -154,10 +156,10 @@ describe('AssetAnalyticsPage export flow', () => {
     global.URL.createObjectURL = vi.fn(() => 'blob:asset-analytics');
     global.URL.revokeObjectURL = vi.fn();
 
-    renderWithProviders(<AssetAnalyticsPage />, { route: '/assets/analytics' });
+    renderWithProviders(<AssetAnalyticsPage />, { route: '/analytics' });
 
     await waitFor(() => {
-      expect(screen.getByText('资产分析')).toBeInTheDocument();
+      expect(screen.getByText('经营分析')).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByTestId('set-export-filters'));
@@ -183,10 +185,10 @@ describe('AssetAnalyticsPage export flow', () => {
     global.URL.createObjectURL = vi.fn(() => 'blob:asset-analytics');
     global.URL.revokeObjectURL = vi.fn();
 
-    renderWithProviders(<AssetAnalyticsPage />, { route: '/assets/analytics' });
+    renderWithProviders(<AssetAnalyticsPage />, { route: '/analytics' });
 
     await waitFor(() => {
-      expect(screen.getByText('资产分析')).toBeInTheDocument();
+      expect(screen.getByText('经营分析')).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByRole('button', { name: /导出/ }));

@@ -104,7 +104,7 @@ const GlobalSearchPage: React.FC = () => {
             <Input.Search
               allowClear
               defaultValue={query}
-              placeholder="搜索资产、项目、合同组、合同、客户、产权证"
+              placeholder="搜索资产、项目、合同关系、合同、客户、产权证"
               enterButton="搜索"
               onSearch={handleSearch}
               style={{ maxWidth: 480 }}

@@ -222,6 +222,7 @@ class AnalyticsService:
                 party_filter=party_filter,
             )
         )
+        stats.update(self._calculate_analytics_breakdowns(active_contracts, filters))
 
         return stats
 
@@ -498,6 +499,285 @@ class AnalyticsService:
             },
             "customer_contract_breakdown": dict(customer_contract_counts_by_bucket),
             "metrics_version": ANALYTICS_METRICS_VERSION,
+        }
+
+    def _calculate_analytics_breakdowns(
+        self,
+        contracts: list[Contract],
+        filters: dict[str, Any] | None = None,
+    ) -> dict[str, list[dict[str, Any]]]:
+        project_accumulators: dict[str, dict[str, Any]] = {}
+        mode_accumulators: dict[str, dict[str, Any]] = {
+            "lease_sublease": self._new_analytics_breakdown_accumulator(
+                relation_kind="lease_sublease",
+                label="承租转租",
+            ),
+            "agency_operation": self._new_analytics_breakdown_accumulator(
+                relation_kind="agency_operation",
+                label="代理运营",
+            ),
+        }
+        lower_year_month, upper_year_month = self._resolve_ledger_year_month_bounds(
+            filters
+        )
+
+        for contract in contracts:
+            if not self._is_contract_statistically_eligible(contract):
+                continue
+
+            group = getattr(contract, "contract_group", None)
+            relation_kind = self._resolve_contract_relation_kind(contract, group)
+            if relation_kind is None:
+                continue
+
+            group_id = self._resolve_contract_group_id(contract, group)
+            contract_id = str(getattr(contract, "contract_id", "")).strip()
+            customer_party_id = self._resolve_terminal_customer_party_id(contract)
+            income = self._calculate_contract_income_for_analytics_breakdown(
+                contract,
+                relation_kind=relation_kind,
+                lower_year_month=lower_year_month,
+                upper_year_month=upper_year_month,
+            )
+
+            mode_accumulator = mode_accumulators[relation_kind]
+            self._add_contract_to_analytics_breakdown(
+                mode_accumulator,
+                group_id=group_id,
+                contract_id=contract_id,
+                customer_party_id=customer_party_id,
+                income=income,
+            )
+
+            project_id = self._resolve_contract_project_id(group)
+            if project_id is None:
+                continue
+            project_accumulator = project_accumulators.setdefault(
+                project_id,
+                self._new_analytics_breakdown_accumulator(
+                    project_id=project_id,
+                    project_name=self._resolve_contract_project_name(group),
+                ),
+            )
+            self._add_contract_to_analytics_breakdown(
+                project_accumulator,
+                group_id=group_id,
+                contract_id=contract_id,
+                customer_party_id=customer_party_id,
+                income=income,
+            )
+            if relation_kind == "lease_sublease":
+                project_accumulator["lease_relation_ids"].add(group_id)
+            else:
+                project_accumulator["agency_relation_ids"].add(group_id)
+
+        return {
+            "project_breakdown": [
+                self._serialize_project_analytics_breakdown(item)
+                for item in sorted(
+                    project_accumulators.values(),
+                    key=lambda value: (
+                        -float(value["total_income"]),
+                        str(value["project_name"]),
+                    ),
+                )
+            ],
+            "mode_breakdown": [
+                self._serialize_mode_analytics_breakdown(mode_accumulators[key])
+                for key in ("lease_sublease", "agency_operation")
+            ],
+        }
+
+    @staticmethod
+    def _new_analytics_breakdown_accumulator(
+        *,
+        project_id: str | None = None,
+        project_name: str | None = None,
+        relation_kind: str | None = None,
+        label: str | None = None,
+    ) -> dict[str, Any]:
+        return {
+            "project_id": project_id,
+            "project_name": project_name,
+            "relation_kind": relation_kind,
+            "label": label,
+            "relation_ids": set(),
+            "lease_relation_ids": set(),
+            "agency_relation_ids": set(),
+            "contract_ids": set(),
+            "customer_party_ids": set(),
+            "customer_contract_ids": set(),
+            "total_income": Decimal("0"),
+            "self_operated_rent_income": Decimal("0"),
+            "agency_service_income": Decimal("0"),
+            "actual_receipts": Decimal("0"),
+        }
+
+    @staticmethod
+    def _resolve_contract_relation_kind(
+        contract: Contract,
+        group: ContractGroup | None,
+    ) -> str | None:
+        if group is None:
+            return None
+        group_mode = getattr(group, "revenue_mode", None)
+        relation_type = getattr(contract, "group_relation_type", None)
+        if group_mode == RevenueMode.LEASE and relation_type == GroupRelationType.DOWNSTREAM:
+            return "lease_sublease"
+        if (
+            group_mode == RevenueMode.AGENCY
+            and relation_type == GroupRelationType.DIRECT_LEASE
+        ):
+            return "agency_operation"
+        return None
+
+    @classmethod
+    def _calculate_contract_income_for_analytics_breakdown(
+        cls,
+        contract: Contract,
+        *,
+        relation_kind: str,
+        lower_year_month: str | None,
+        upper_year_month: str | None,
+    ) -> dict[str, Decimal]:
+        self_operated_rent_income = Decimal("0")
+        agency_service_income = Decimal("0")
+        actual_receipts = Decimal("0")
+
+        if relation_kind == "lease_sublease":
+            for ledger_entry in getattr(contract, "ledger_entries", []) or []:
+                if getattr(ledger_entry, "payment_status", None) == "voided":
+                    continue
+                if not cls._is_ledger_entry_in_scope(
+                    getattr(ledger_entry, "year_month", None),
+                    lower=lower_year_month,
+                    upper=upper_year_month,
+                ):
+                    continue
+                self_operated_rent_income += cls._quantize_money(
+                    cls._to_decimal(getattr(ledger_entry, "amount_due", None))
+                )
+                actual_receipts += cls._quantize_money(
+                    cls._to_decimal(getattr(ledger_entry, "paid_amount", None))
+                )
+
+        if relation_kind == "agency_operation":
+            for service_fee_entry in getattr(contract, "service_fee_ledgers", []) or []:
+                if getattr(service_fee_entry, "payment_status", None) == "voided":
+                    continue
+                if not cls._is_ledger_entry_in_scope(
+                    getattr(service_fee_entry, "year_month", None),
+                    lower=lower_year_month,
+                    upper=upper_year_month,
+                ):
+                    continue
+                agency_service_income += cls._quantize_money(
+                    cls._to_decimal(getattr(service_fee_entry, "amount_due", None))
+                )
+
+        return {
+            "total_income": cls._quantize_money(
+                self_operated_rent_income + agency_service_income
+            ),
+            "self_operated_rent_income": cls._quantize_money(
+                self_operated_rent_income
+            ),
+            "agency_service_income": cls._quantize_money(agency_service_income),
+            "actual_receipts": cls._quantize_money(actual_receipts),
+        }
+
+    @staticmethod
+    def _resolve_terminal_customer_party_id(contract: Contract) -> str | None:
+        lessee_party_id = str(getattr(contract, "lessee_party_id", "")).strip()
+        return lessee_party_id or None
+
+    @staticmethod
+    def _resolve_contract_project_id(group: ContractGroup | None) -> str | None:
+        if group is None:
+            return None
+        project_id = str(getattr(group, "project_id", "")).strip()
+        return project_id or None
+
+    @staticmethod
+    def _resolve_contract_project_name(group: ContractGroup | None) -> str:
+        if group is None:
+            return "未归属项目"
+        project = getattr(group, "project", None)
+        project_name = str(getattr(project, "project_name", "")).strip()
+        if project_name != "":
+            return project_name
+        project_id = str(getattr(group, "project_id", "")).strip()
+        return project_id or "未归属项目"
+
+    @staticmethod
+    def _add_contract_to_analytics_breakdown(
+        accumulator: dict[str, Any],
+        *,
+        group_id: str,
+        contract_id: str,
+        customer_party_id: str | None,
+        income: dict[str, Decimal],
+    ) -> None:
+        if group_id != "":
+            accumulator["relation_ids"].add(group_id)
+        if contract_id != "":
+            accumulator["contract_ids"].add(contract_id)
+            accumulator["customer_contract_ids"].add(contract_id)
+        if customer_party_id is not None:
+            accumulator["customer_party_ids"].add(customer_party_id)
+        accumulator["total_income"] += income["total_income"]
+        accumulator["self_operated_rent_income"] += income[
+            "self_operated_rent_income"
+        ]
+        accumulator["agency_service_income"] += income["agency_service_income"]
+        accumulator["actual_receipts"] += income["actual_receipts"]
+
+    @classmethod
+    def _serialize_project_analytics_breakdown(
+        cls,
+        accumulator: dict[str, Any],
+    ) -> dict[str, Any]:
+        return {
+            "project_id": accumulator["project_id"],
+            "project_name": accumulator["project_name"],
+            "contract_relation_count": len(accumulator["relation_ids"]),
+            "contract_count": len(accumulator["contract_ids"]),
+            "lease_relation_count": len(accumulator["lease_relation_ids"]),
+            "agency_relation_count": len(accumulator["agency_relation_ids"]),
+            **cls._serialize_common_analytics_breakdown(accumulator),
+        }
+
+    @classmethod
+    def _serialize_mode_analytics_breakdown(
+        cls,
+        accumulator: dict[str, Any],
+    ) -> dict[str, Any]:
+        return {
+            "relation_kind": accumulator["relation_kind"],
+            "label": accumulator["label"],
+            "contract_relation_count": len(accumulator["relation_ids"]),
+            "contract_count": len(accumulator["contract_ids"]),
+            **cls._serialize_common_analytics_breakdown(accumulator),
+        }
+
+    @classmethod
+    def _serialize_common_analytics_breakdown(
+        cls,
+        accumulator: dict[str, Any],
+    ) -> dict[str, Any]:
+        return {
+            "total_income": float(cls._quantize_money(accumulator["total_income"])),
+            "self_operated_rent_income": float(
+                cls._quantize_money(accumulator["self_operated_rent_income"])
+            ),
+            "agency_service_income": float(
+                cls._quantize_money(accumulator["agency_service_income"])
+            ),
+            "actual_receipts": float(
+                cls._quantize_money(accumulator["actual_receipts"])
+            ),
+            "customer_entity_count": len(accumulator["customer_party_ids"]),
+            "customer_contract_count": len(accumulator["customer_contract_ids"]),
         }
 
     @staticmethod

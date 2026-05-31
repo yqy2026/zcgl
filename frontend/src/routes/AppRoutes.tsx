@@ -1,12 +1,11 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
 import type { AuthzAction, ResourceType } from '@/types/capability';
 import CanonicalEntryRedirect from './CanonicalEntryRedirect';
 import {
   ASSET_ROUTES,
+  CONTRACT_CENTER_ROUTES,
   CONTRACT_GROUP_ROUTES,
   CUSTOMER_ROUTES,
-  LEGACY_RENTAL_ROUTES,
   OWNERSHIP_ROUTES,
   PROJECT_ROUTES,
   PROFILE_ROUTES,
@@ -14,6 +13,8 @@ import {
   SYSTEM_ROUTES,
   BASE_PATHS,
   PROPERTY_CERTIFICATE_ROUTES,
+  ANALYTICS_ROUTES,
+  FINANCE_ROUTES,
 } from '@/constants/routes';
 
 export interface ProtectedRouteItem {
@@ -31,7 +32,6 @@ export interface ProtectedRouteItem {
  * 这些路由需要用户认证后才能访问,并会被 AppLayout 包装
  * 注意: 登录页面路由不应该在此定义,应该在 App.tsx 中作为公共路由处理
  */
-const legacyRentalRetiredPage = React.lazy(() => import('../pages/Rental/LegacyRentalRetiredPage'));
 const assetListPage = React.lazy(() => import('../pages/Assets/AssetListPage'));
 const assetDetailPage = React.lazy(() => import('../pages/Assets/AssetDetailPage'));
 const contractGroupListPage = React.lazy(
@@ -49,10 +49,6 @@ const propertyCertificateDetailPage = React.lazy(
 const projectManagementPage = React.lazy(() => import('../pages/Project/ProjectManagementPage'));
 const projectDetailPage = React.lazy(() => import('../pages/Project/ProjectDetailPage'));
 
-const legacyRentalPdfImportRedirect: React.FC = () => (
-  <Navigate to={CONTRACT_GROUP_ROUTES.IMPORT} replace />
-);
-
 const baseProtectedRoutes: ProtectedRouteItem[] = [
   // 仪表板 - 首页
   {
@@ -66,7 +62,7 @@ const baseProtectedRoutes: ProtectedRouteItem[] = [
     permissions: [{ resource: 'asset', action: 'read' }],
   },
 
-  // 资产管理模块 - 注意路由顺序，更具体的路径要在前面
+  // 资产资源模块 - 注意路由顺序，更具体的路径要在前面
   {
     path: ASSET_ROUTES.NEW,
     element: React.lazy(() => import('../pages/Assets/AssetCreatePage')),
@@ -76,6 +72,16 @@ const baseProtectedRoutes: ProtectedRouteItem[] = [
     path: ASSET_ROUTES.IMPORT,
     element: React.lazy(() => import('../pages/Assets/AssetImportPage')),
     permissions: [{ resource: 'asset', action: 'create' }],
+  },
+  {
+    path: ANALYTICS_ROUTES.OVERVIEW,
+    element: React.lazy(() => import('../pages/Assets/AssetAnalyticsPage')),
+    permissions: [{ resource: 'analytics', action: 'read' }],
+  },
+  {
+    path: FINANCE_ROUTES.LEDGER,
+    element: React.lazy(() => import('../pages/Finance/FinancialLedgerPage')),
+    permissions: [{ resource: 'contract', action: 'read' }],
   },
   {
     path: ASSET_ROUTES.ANALYTICS,
@@ -108,53 +114,36 @@ const baseProtectedRoutes: ProtectedRouteItem[] = [
     permissions: [{ resource: 'search', action: 'read' }],
   },
 
-  // 租赁管理模块 - 注意路由顺序，具体路径必须在动态路径之前
   {
-    path: LEGACY_RENTAL_ROUTES.CONTRACTS.LIST,
-    element: legacyRentalRetiredPage,
-    permissions: [{ resource: 'contract', action: 'read' }],
+    path: CONTRACT_CENTER_ROUTES.LIST,
+    element: contractGroupListPage,
+    permissions: [{ resource: 'contract_group', action: 'read' }],
   },
   {
-    path: LEGACY_RENTAL_ROUTES.CONTRACTS.NEW, // 具体路由 - 创建合同
-    element: legacyRentalRetiredPage,
-    permissions: [{ resource: 'contract', action: 'read' }],
-  },
-  {
-    path: LEGACY_RENTAL_ROUTES.CONTRACTS.CREATE, // 具体路由 - 创建合同（备用）
-    element: legacyRentalRetiredPage,
-    permissions: [{ resource: 'contract', action: 'read' }],
-  },
-  {
-    path: LEGACY_RENTAL_ROUTES.CONTRACTS.PDF_IMPORT, // 具体路由 - PDF导入
-    element: legacyRentalPdfImportRedirect,
+    path: CONTRACT_CENTER_ROUTES.NEW,
+    element: React.lazy(() => import('../pages/ContractGroup/ContractGroupFormPage')),
     permissions: [{ resource: 'contract_group', action: 'create' }],
   },
   {
-    path: LEGACY_RENTAL_ROUTES.CONTRACTS.RENEW_PATH, // 具体路由 - 续签合同（必须在 :id/edit 之前）
-    element: legacyRentalRetiredPage,
-    permissions: [{ resource: 'contract', action: 'read' }],
+    path: CONTRACT_CENTER_ROUTES.IMPORT,
+    element: React.lazy(() => import('../pages/Contract/PDFImportPage')),
+    permissions: [{ resource: 'contract_group', action: 'create' }],
   },
   {
-    path: LEGACY_RENTAL_ROUTES.CONTRACTS.DETAIL_PATH, // 动态路由 - 合同详情页
-    element: legacyRentalRetiredPage,
-    permissions: [{ resource: 'contract', action: 'read' }],
+    path: CONTRACT_CENTER_ROUTES.DETAIL_PATH,
+    element: contractGroupDetailPage,
+    permissions: [{ resource: 'contract_group', action: 'read' }],
   },
   {
-    path: LEGACY_RENTAL_ROUTES.CONTRACTS.EDIT_PATH, // 动态路由 - 编辑合同
-    element: legacyRentalRetiredPage,
-    permissions: [{ resource: 'contract', action: 'read' }],
+    path: CONTRACT_CENTER_ROUTES.EDIT_PATH,
+    element: React.lazy(() => import('../pages/ContractGroup/ContractGroupFormPage')),
+    permissions: [{ resource: 'contract_group', action: 'update' }],
   },
   {
-    path: LEGACY_RENTAL_ROUTES.LEDGER,
-    element: legacyRentalRetiredPage,
-    permissions: [{ resource: 'contract', action: 'read' }],
+    path: CONTRACT_CENTER_ROUTES.NEW_CONTRACT_PATH,
+    element: React.lazy(() => import('../pages/ContractGroup/ContractInGroupFormPage')),
+    permissions: [{ resource: 'contract_group', action: 'create' }],
   },
-  {
-    path: LEGACY_RENTAL_ROUTES.STATISTICS,
-    element: legacyRentalRetiredPage,
-    permissions: [{ resource: 'contract', action: 'read' }],
-  },
-
   {
     path: CONTRACT_GROUP_ROUTES.LIST,
     element: contractGroupListPage,
@@ -179,6 +168,11 @@ const baseProtectedRoutes: ProtectedRouteItem[] = [
     path: CONTRACT_GROUP_ROUTES.EDIT_PATH,
     element: React.lazy(() => import('../pages/ContractGroup/ContractGroupFormPage')),
     permissions: [{ resource: 'contract_group', action: 'update' }],
+  },
+  {
+    path: CONTRACT_GROUP_ROUTES.NEW_CONTRACT_PATH,
+    element: React.lazy(() => import('../pages/ContractGroup/ContractInGroupFormPage')),
+    permissions: [{ resource: 'contract_group', action: 'create' }],
   },
   {
     path: PROPERTY_CERTIFICATE_ROUTES.LIST,
@@ -212,7 +206,7 @@ const baseProtectedRoutes: ProtectedRouteItem[] = [
     permissions: [{ resource: 'party', action: 'read' }],
   },
 
-  // 项目管理 - 注意路由顺序，详情页必须在列表页之前
+  // 项目运营 - 注意路由顺序，详情页必须在列表页之前
   {
     path: PROJECT_ROUTES.EDIT_PATH,
     element: projectManagementPage,

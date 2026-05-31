@@ -1,5 +1,5 @@
 """
-合同组与合同 API 端点（REQ-RNT-001 M3）
+合同关系技术聚合与合同 API 端点（REQ-RNT-001 M3）
 
 路径：
   /contract-groups          (合同组 CRUD)

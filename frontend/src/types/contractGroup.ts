@@ -1,4 +1,37 @@
 export type RevenueMode = 'LEASE' | 'AGENCY';
+export type ContractDirection = 'LESSOR' | 'LESSEE';
+export type GroupRelationType = 'UPSTREAM' | 'DOWNSTREAM' | 'ENTRUSTED' | 'DIRECT_LEASE';
+export type ContractLifecycleStatus =
+  | 'DRAFT'
+  | 'PENDING_REVIEW'
+  | 'ACTIVE'
+  | 'REJECTED'
+  | 'EXPIRED'
+  | 'TERMINATED'
+  | 'VOIDED';
+export type ContractReviewStatus = 'DRAFT' | 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export interface LeaseDetailCreate {
+  total_deposit?: string | number;
+  rent_amount: string | number;
+  monthly_rent_base?: string | number | null;
+  payment_cycle?: string;
+  payment_terms?: string | null;
+  tenant_name?: string | null;
+  tenant_contact?: string | null;
+  tenant_phone?: string | null;
+  tenant_address?: string | null;
+  tenant_usage?: string | null;
+  owner_name?: string | null;
+  owner_contact?: string | null;
+  owner_phone?: string | null;
+}
+
+export interface AgencyDetailCreate {
+  service_fee_ratio: string | number;
+  fee_calculation_base?: string;
+  agency_scope?: string | null;
+}
 
 export interface SettlementRule {
   version: string;
@@ -11,20 +44,63 @@ export interface SettlementRule {
 export interface ContractGroupSummaryContract {
   contract_id: string;
   contract_number: string;
-  contract_direction: string;
-  group_relation_type: string;
+  contract_direction: ContractDirection | string;
+  group_relation_type: GroupRelationType | string;
   lessor_party_id: string;
   lessee_party_id: string;
   effective_from: string;
   effective_to?: string | null;
-  status: string;
-  review_status: string;
+  status: ContractLifecycleStatus | string;
+  review_status: ContractReviewStatus | string;
+}
+
+export interface ContractCreate {
+  contract_group_id: string;
+  contract_number: string;
+  contract_direction: ContractDirection;
+  group_relation_type: GroupRelationType;
+  lessor_party_id: string;
+  lessee_party_id: string;
+  sign_date?: string | null;
+  effective_from: string;
+  effective_to?: string | null;
+  currency_code?: string;
+  tax_rate?: string | number | null;
+  is_tax_included?: boolean;
+  status?: ContractLifecycleStatus;
+  review_status?: ContractReviewStatus;
+  contract_notes?: string | null;
+  source_session_id?: string | null;
+  asset_ids: string[];
+  lease_detail?: LeaseDetailCreate | null;
+  agency_detail?: AgencyDetailCreate | null;
+}
+
+export interface ContractDetail extends ContractGroupSummaryContract {
+  contract_group_id: string;
+  sign_date?: string | null;
+  currency_code: string;
+  tax_rate?: string | number | null;
+  is_tax_included: boolean;
+  review_by?: string | null;
+  reviewed_at?: string | null;
+  review_reason?: string | null;
+  contract_notes?: string | null;
+  data_status: string;
+  version: number;
+  created_at: string;
+  updated_at: string;
+  lease_detail?: LeaseDetailCreate | null;
+  agency_detail?: AgencyDetailCreate | null;
 }
 
 export interface ContractGroupListItem {
   contract_group_id: string;
+  project_id?: string | null;
+  project_name?: string | null;
   group_code: string;
   revenue_mode: RevenueMode;
+  contract_role_counts?: Partial<Record<GroupRelationType, number>>;
   operator_party_id: string;
   owner_party_id: string;
   effective_from: string;
@@ -63,6 +139,7 @@ export interface ContractGroupListResponse {
 }
 
 export interface ContractGroupCreate {
+  project_id: string;
   revenue_mode: RevenueMode;
   operator_party_id: string;
   owner_party_id: string;

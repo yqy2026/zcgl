@@ -184,6 +184,46 @@ async def test_search_projects_should_build_search_result_items(
     ]
 
 
+async def test_search_contract_groups_should_use_relation_label_and_contract_center_route(
+    search_service,
+):
+    execute_result = SimpleNamespace(
+        scalars=lambda: SimpleNamespace(
+            all=lambda: [
+                SimpleNamespace(
+                    contract_group_id="group-1",
+                    group_code="GRP-001",
+                    revenue_mode=SimpleNamespace(name="LEASE"),
+                    effective_from="2026-01-01",
+                )
+            ]
+        )
+    )
+    db = SimpleNamespace(execute=AsyncMock(return_value=execute_result))
+
+    result = await search_service._search_contract_groups(
+        db=db,
+        query="GRP",
+        scope_mode="manager",
+        effective_party_ids=["party-manager-1"],
+    )
+
+    assert result == [
+        {
+            "object_type": "contract_group",
+            "object_id": "group-1",
+            "title": "GRP-001",
+            "subtitle": "LEASE",
+            "summary": "2026-01-01",
+            "keywords": ["group_code"],
+            "route_path": "/contract-center/group-1",
+            "score": 85,
+            "business_rank": 40,
+            "group_label": "合同关系",
+        }
+    ]
+
+
 async def test_build_party_filter_should_use_any_mode_for_all_scope(search_service):
     result = search_service._build_party_filter(
         scope_mode="all",

@@ -28,6 +28,8 @@ interface RawApiData {
   customer_contract_count?: number;
   customer_entity_breakdown?: Record<string, number>;
   customer_contract_breakdown?: Record<string, number>;
+  project_breakdown?: unknown[];
+  mode_breakdown?: unknown[];
   metrics_version?: string;
   property_nature_distribution?: unknown[];
   ownership_status_distribution?: unknown[];
@@ -78,6 +80,34 @@ interface RawFinancialSummary {
 interface RawBusinessCategoryItem {
   percentage?: number;
   [key: string]: unknown;
+}
+
+interface RawAnalyticsProjectBreakdownItem {
+  project_id?: unknown;
+  project_name?: unknown;
+  contract_relation_count?: unknown;
+  contract_count?: unknown;
+  lease_relation_count?: unknown;
+  agency_relation_count?: unknown;
+  total_income?: unknown;
+  self_operated_rent_income?: unknown;
+  agency_service_income?: unknown;
+  actual_receipts?: unknown;
+  customer_entity_count?: unknown;
+  customer_contract_count?: unknown;
+}
+
+interface RawAnalyticsModeBreakdownItem {
+  relation_kind?: unknown;
+  label?: unknown;
+  contract_relation_count?: unknown;
+  contract_count?: unknown;
+  total_income?: unknown;
+  self_operated_rent_income?: unknown;
+  agency_service_income?: unknown;
+  actual_receipts?: unknown;
+  customer_entity_count?: unknown;
+  customer_contract_count?: unknown;
 }
 
 const toNumber = (value: unknown): number => {
@@ -261,6 +291,44 @@ export class AnalyticsService {
     const occupancy_distribution = (apiData.occupancy_distribution ??
       []) as AnalyticsData['occupancy_distribution'];
 
+    const rawProjectBreakdown = (apiData.project_breakdown ??
+      []) as RawAnalyticsProjectBreakdownItem[];
+    const project_breakdown: AnalyticsData['project_breakdown'] = rawProjectBreakdown.map(item => ({
+      project_id: typeof item.project_id === 'string' ? item.project_id : '',
+      project_name: typeof item.project_name === 'string' ? item.project_name : '未归属项目',
+      contract_relation_count: toNumber(item.contract_relation_count),
+      contract_count: toNumber(item.contract_count),
+      lease_relation_count: toNumber(item.lease_relation_count),
+      agency_relation_count: toNumber(item.agency_relation_count),
+      total_income: toNumber(item.total_income),
+      self_operated_rent_income: toNumber(item.self_operated_rent_income),
+      agency_service_income: toNumber(item.agency_service_income),
+      actual_receipts: toNumber(item.actual_receipts),
+      customer_entity_count: toNumber(item.customer_entity_count),
+      customer_contract_count: toNumber(item.customer_contract_count),
+    }));
+
+    const rawModeBreakdown = (apiData.mode_breakdown ?? []) as RawAnalyticsModeBreakdownItem[];
+    const mode_breakdown: AnalyticsData['mode_breakdown'] = rawModeBreakdown.map(item => {
+      const relationKind =
+        item.relation_kind === 'lease_sublease' || item.relation_kind === 'agency_operation'
+          ? item.relation_kind
+          : 'lease_sublease';
+
+      return {
+        relation_kind: relationKind,
+        label: typeof item.label === 'string' ? item.label : '承租转租',
+        contract_relation_count: toNumber(item.contract_relation_count),
+        contract_count: toNumber(item.contract_count),
+        total_income: toNumber(item.total_income),
+        self_operated_rent_income: toNumber(item.self_operated_rent_income),
+        agency_service_income: toNumber(item.agency_service_income),
+        actual_receipts: toNumber(item.actual_receipts),
+        customer_entity_count: toNumber(item.customer_entity_count),
+        customer_contract_count: toNumber(item.customer_contract_count),
+      };
+    });
+
     const adaptedData: AnalyticsData = {
       area_summary,
       financial_summary,
@@ -277,6 +345,8 @@ export class AnalyticsService {
         apiData.customer_contract_breakdown != null
           ? apiData.customer_contract_breakdown
           : undefined,
+      project_breakdown,
+      mode_breakdown,
       metrics_version:
         typeof apiData.metrics_version === 'string' ? apiData.metrics_version : undefined,
       property_nature_distribution,

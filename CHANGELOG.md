@@ -2,6 +2,56 @@
 
 ## [Unreleased] - 2026-03-06
 
+### 2026-05-30
+- docs(ssot): 收口剩余 `REQ-RNT-001`、`REQ-RNT-002`、`REQ-SCH-001` 需求状态。复核合同关系、承租/代理双模式和全局搜索的现有代码与测试证据后，`docs/traceability/requirements-trace.md` 已将三项从“开发中”更新为“已有证据”，并同步更新瘦身聚焦方案中的需求状态表和验收说明。
+- feat(project): 收口 `REQ-PRJ-003` 项目运营台账证据。项目风险摘要新增当前有效资产空置面积风险，项目分析摘要新增按账期聚合的月度收付款趋势；项目详情页展示“项目分析趋势”和应收环比，SSOT 将 `REQ-PRJ-003` 从“开发中”更新为“已有证据”。
+
+### 2026-05-29
+- fix(document): 修复 PDF 上传超限校验在 Windows 下的临时文件删除顺序。`/api/v1/pdf-import/upload` 现在会先关闭写入句柄，再删除超限临时文件并返回业务 400，避免文件句柄占用把“文件过大”误报为 500。
+- docs(plan): 新增 `docs/plans/2026-05-29-codebase-lean-refocus-plan.md` 代码库瘦身与业务聚焦方案（📋 待评审），提出冻结 Out of Scope 模块、AI 适配器收敛、Excel 服务合并、自建监控移除、middleware 拆分和核心业务收敛六个阶段；同步更新 `docs/plans/README.md` 活跃方案索引。
+- docs(issues): 收口并归档项目主轴 Phase 0 审计。`docs/issues/2026-05-13-project-centered-phase0-audit.md` 已移动到 `docs/archive/issues/2026-05-13-project-centered-phase0-audit.md`，该审计的 SSOT 同步、`ContractGroup.project_id`、项目合同关系 API 和项目详情运营能力已在 2026-05-13 项目主轴 Phase 1-4 中吸收；本次补充归档目录索引、审计吸收状态、归档规划链接和代码/文档证据，并同步更新问题索引。
+- docs(cleanup): 清理 `docs/` 活跃目录边界。将已被 PRD/spec/traceability 吸收的 `docs/issues/2026-04-06-requirements-specification-review.md` 归档到 `docs/archive/issues/`；补齐 `docs/archive/readme.md`、`docs/archive/issues/README.md` 和 `docs/archive/backend-plans/README.md` 入口，并更新文档中心的归档目录说明。
+
+### 2026-05-16
+- docs(design): 新增 `docs/design/ui-mockups/2026-05-16-project-main-axis/` 项目主轴资产运营 UI 图设计包。图稿覆盖工作台总览、项目详情运营台账、合同关系建模、经营分析与财务台账 4 个核心画面，并提供可复现 `source.html` 与 Playwright 导出脚本；同步新增设计资产目录索引和文档中心入口。
+- fix(frontend): 修复全局财务台账空筛选与导出失败处理。财务台账页在账期、合同、资产和主体筛选全部为空时不再触发后端必填筛选查询或导出，并给出业务提示；导出接口失败时改为页面内错误提示，避免未处理的 Promise rejection。同步补齐财务台账页回归测试。
+
+### 2026-05-13
+- docs(plan): 完成并归档 `docs/archive/backend-plans/2026-05-12-project-centered-asset-operations-plan.md`。项目主轴资产运营 Phase 0-4 已完成代码、测试和 SSOT 收口，`docs/plans/README.md` 已从活跃方案移除该计划并登记到已归档方案。
+- feat(frontend): 收口项目主轴资产运营 Phase 4 导航与财务台账。主导航最终调整为工作台、项目运营、资产资源、合同中心、财务台账、主体中心、经营分析、系统管理；新增全局 `/finance/ledger` 财务台账页面和 `ledgerService`，接入 `/api/v1/ledger/entries` 与导出接口，支持按账期、状态、合同、资产、主体筛选。同步清理普通页面中的“合同组”、主体 ID、规则 JSON 和原始枚举文案，并补齐搜索、PDF 导入、客户详情和财务台账回归测试。
+- feat(analytics): 推进项目主轴资产运营 Phase 4 全局经营分析收口。`GET /api/v1/analytics/comprehensive` 新增 `project_breakdown` 与 `mode_breakdown`，按项目和“承租转租 / 代理运营”分区返回合同关系、合同、收入拆分、实收和客户指标；前端新增全局 `/analytics` 经营分析入口，页面展示项目与模式分区，并接入项目主轴导航。同步更新 PRD、API/领域契约、追踪矩阵和前后端单测。
+- feat(project): 补齐项目主轴资产运营项目分析入口。新增 `GET /api/v1/projects/{project_id}/analytics` 项目分析摘要，复用项目有效资产、合同关系、收付款、租户客户和风险摘要，按“承租转租 / 代理运营”分区返回关系、资产、客户、收付款和风险指标；项目详情接入 `project-analytics` 查询并展示“项目分析”区，继续避免把代理直租租金计入运营方自营应收。同步更新 API/领域契约、追踪矩阵和前后端单测。
+- feat(project): 补齐项目风险摘要资产与期间覆盖冲突提示。`GET /api/v1/projects/{project_id}/risks` 现在按同一合同关系内“上游覆盖下游 / 委托覆盖直租”的业务链路校验资产集合和合同生效期间，终端合同超出有效主合同覆盖时生成 `coverage_conflict` 风险；无主合同场景继续由 `missing_primary_contract` 表达根因。同步补齐项目服务单测和 SSOT 口径。
+- feat(project): 补齐项目风险摘要付款逾期提示。`GET /api/v1/projects/{project_id}/risks` 现在按项目合同关系聚合承租模式下游合同租金台账和代理模式服务费台账中的 overdue 未收金额，生成 `payment_overdue` 风险；上游承租应付不计入项目未收风险。同步补齐项目服务单测和 SSOT 口径。
+- feat(project): 推进项目主轴资产运营 Phase 3 风险闭环。`GET /api/v1/projects/{project_id}/risks` 新增合同到期提醒，按项目合同关系读取组内合同，针对 30 天内到期且未终止/未到期的上游、下游、委托和直租合同生成 `contract_expiring` 风险；继续保留人工风险标签和缺少有效上游/委托覆盖风险。同步补齐项目服务单测和 SSOT 说明。
+- feat(frontend): 收口项目主轴资产运营 Phase 1b 普通导航入口。资产管理菜单不再暴露 `/contract-groups` “合同关系管理”入口，合同关系转为项目详情内业务区和内部回退路由；`/contract-groups` 选中态、面包屑和路由保留，便于合同中心查询、PDF 导入和排障场景继续受权限控制。同步更新菜单、侧边栏和 legacy 导航单测。
+- feat(frontend): 补齐项目主轴资产运营项目风险提示真实接入。项目详情页新增 `project-risks` React Query 查询，风险提示区改为消费 `GET /api/v1/projects/{project_id}/risks` 返回的风险项，能够展示后端推导的“下游合同缺少有效上游或委托覆盖”等项目级风险，不再只依赖合同关系投影里的人工 `risk_tags` 汇总。同步补齐项目详情页单测和追踪矩阵证据。
+- feat(project): 补齐项目主轴资产运营项目收付款摘要竖切。新增 `GET /api/v1/projects/{project_id}/ledger-summary`，按项目合同关系聚合承租模式上游应付/实付、下游应收/实收、代理服务费应收/实收和逾期金额，并明确代理直租租金不计入运营方自营应收；前端项目详情接入真实摘要，替换“待台账接入”占位。同步更新 API/领域契约、追踪矩阵和前后端单测。
+- feat(frontend): 推进项目主轴资产运营 Phase 2b/2c。项目详情合同关系卡片新增“新增上游承租合同 / 新增下游出租合同 / 新增委托协议 / 新增直租合同”入口，跳转到关系内新增合同表单；新增 `ContractInGroupFormPage`，从项目上下文加载资产和主体，按合同角色生成 `ContractCreate` payload 并调用 `addContractToGroup`。委托协议表单使用“委托方主体 / 受托方主体”业务标签，服务费比例按百分比输入并转换为后端 0-1 小数口径；缺少项目上下文或未选择合同资产范围时阻断提交。同步注册受保护路由、路由常量、追踪矩阵和项目/表单/路由单测。
+- feat(contract): 补齐项目主轴资产运营 Phase 2 合同中心列表验收。`GET /api/v1/contract-groups` 列表项新增 `project_name` 与 `contract_role_counts` 展示投影，后端按组内合同 `group_relation_type` 聚合上游、下游、委托、直租数量；前端合同关系列表新增“所属项目”和“合同角色”列，以业务文案展示项目名称和角色数量，不暴露项目 ID 或角色枚举。同步更新领域/API 契约、追踪矩阵和前后端单测。
+- feat(frontend): 启动项目主轴资产运营 Phase 2a。前端 `contractGroupService` 新增 `addContractToGroup(groupId, payload)`，补齐 `ContractCreate` / `ContractDetail` / 租赁与代理明细类型，并在 API 常量中登记 `/contract-groups/{group_id}/contracts`，为后续项目页四类合同录入表单复用现有后端新增合同端点。同步更新 API 契约、追踪矩阵和 service 单测。
+- feat(frontend): 推进项目主轴资产运营 Phase 1b-9。项目详情页在合同关系区后补齐“收付款摘要”和“风险提示”页面骨架：收付款摘要先展示应收、应付、实收、实付、逾期五项待台账接入口径，风险提示聚合当前项目合同关系的风险标签。同步补齐项目详情页单测，覆盖 Phase 1 验收所需的台账和风险区域。
+- feat(frontend): 推进项目主轴资产运营 Phase 1b-8。合同关系编辑表单的经营模式选项改为“承租转租 / 代理运营”业务文案，并在编辑模式移除运营方/产权方主体 ID 只读字段，避免普通编辑页继续暴露技术标识。同步补齐编辑模式表单单测。
+- feat(frontend): 推进项目主轴资产运营 Phase 1b-7。合同关系列表和明细页将 `LEASE` / `AGENCY`、`UPSTREAM` 等枚举展示替换为“承租转租 / 代理运营 / 上游承租合同”等业务文案，移除普通页面中的运营方/产权方主体 ID 展示，并把明细页结算/收益规则从 JSON 块改为规则版本、计费依据、付款日、收益归属口径、分成比例等可读摘要。同步补齐列表和明细页单测。
+- feat(frontend): 推进项目主轴资产运营 Phase 1b-6。合同关系创建表单将“金额规则 JSON / 支付规则 JSON / 收益归属规则 JSON / 收益分成规则 JSON”替换为“计费依据、付款日、收益归属口径、运营方分成比例”等业务字段，提交时继续生成后端 `settlement_rule`、`revenue_attribution_rule` 和 `revenue_share_rule` 对象。同步补齐表单单测，锁定普通创建路径不再暴露规则 JSON。
+- feat(frontend): 推进项目主轴资产运营 Phase 1b-5。合同关系创建表单在项目上下文中加载主体主档，将运营方/产权方从原始“主体 ID”手填改为选择主体名称和编码，提交仍写入 `operator_party_id` / `owner_party_id`；无可选主体时显示“暂无可选主体”。同步补齐表单单测覆盖主体加载、选择提交和空主体状态。
+- feat(frontend): 推进项目主轴资产运营 Phase 1b-4。合同关系创建表单在项目上下文中加载当前项目有效资产，替代原始“关联资产 ID”输入；用户可直接勾选项目内资产并随创建 payload 提交 `asset_ids`，空项目显示“该项目暂无可选资产”。同步补齐表单单测覆盖资产加载、选择提交和空资产状态。
+- feat(frontend): 推进项目主轴资产运营 Phase 1b-3。项目详情“合同关系”区新增“新建合同关系”入口，跳转到 `/contract-groups/new?project_id=<项目ID>`；创建表单读取项目上下文并随 `ContractGroupCreate` payload 提交 `project_id`，无项目上下文时阻断创建并引导回项目列表。同步补齐项目详情、合同关系表单和服务层单测。
+- feat(frontend): 推进项目主轴资产运营 Phase 1b-2。`/contract-groups` 仍复用既有技术路由和服务，但侧边栏、面包屑、路由标题、合同入口列表、创建/编辑表单、明细页和服务层错误消息统一改为“合同关系”业务文案；补齐列表、表单、明细、路由、面包屑和侧边栏单测，锁定普通用户界面不再出现“合同组管理 / 合同组详情”等旧入口词。
+- feat(frontend): 启动项目主轴资产运营 Phase 1b-1。前端 `projectService` 新增项目合同关系查询，项目详情页新增“合同关系”业务区块，按“承租转租 / 代理运营”展示关系数量、覆盖资产、主合同/终端合同、状态和风险标签；“查看明细”继续复用现有合同聚合详情路由，但项目页普通用户文案不再以“合同组编码”为主入口。同步补齐 service 与项目详情页单测，并把前端证据写入 `REQ-PRJ-003` 追踪矩阵。
+- feat(project): 落地项目主轴资产运营 Phase 1a 后端首个竖切。`ContractGroup` 新增 `project_id` ORM 字段与 Alembic migration，创建合同关系时必须绑定项目；新增 `GET /api/v1/projects/{project_id}/contract-relations`，按项目返回“合同关系”展示投影并由 `revenue_mode` 派生 `relation_kind`；项目内允许多个合同关系绑定同一资产，跨项目或无项目归属的有效绑定仍阻断。同步补齐 migration、service、route layering 和资产覆盖边界单测，并清理后端代码注释中“合同组作为主业务对象”的旧口径。
+- chore(backend): 将后端 PostgreSQL 驱动依赖调整为 `psycopg[binary]` 并刷新 `uv.lock`，保证重建 `.venv` 后本地测试环境不因缺少 libpq/psycopg binary wrapper 中断。
+- docs(review): 处理项目主轴 SSOT 复核意见。`ContractGroup.project_id` 在领域模型中改为条件必填，明确 Phase 1a migration 初始允许为空、存量回填后再评估 NOT NULL；`ContractRelationProjection.relation_kind` 明确由 `revenue_mode` 派生；Phase 1a 计划补充清理代码文件头和注释中旧 REQ 口径的待办。
+- docs(ssot): 同步项目主轴资产运营的第一批 SSOT 口径。`docs/prd.md` 已将普通用户主对象从“合同组”调整为“项目下合同关系”，新增 `REQ-PRJ-003` 项目详情运营台账；`docs/specs/domain-model.md` 增补 `ContractGroup.project_id`、`ContractRelationProjection` 展示投影、项目类型/周期和派生经营模式分布；`docs/specs/api-contract.md` 增补项目合同关系、台账摘要、风险、租户客户和项目分析端点；`docs/traceability/requirements-trace.md` 同步标记项目主轴相关需求的待实现状态。
+- docs(audit): 新增 `docs/issues/2026-05-13-project-centered-phase0-audit.md`，完成项目主轴资产运营 Phase 0 只读审计。审计覆盖前端“合同组”可见点、项目详情现状、`Project` / `ProjectAsset` / `ContractGroup` / `ContractRelation` 数据关系、项目 API 缺口、`ContractGroup.project_id` 迁移与存量回填设计，并输出第一批 SSOT 同步和 Phase 1a/1b 实施切片；同步更新 `docs/issues/README.md` 索引。
+- docs(plan): 吸收 `项目主轴资产运营全局规划` 评审意见并标记为进行中，明确两项 P0 领域决策：`ContractGroup` 新增 `project_id` 作为项目内合同关系技术聚合，普通用户看到的“合同关系”是 `ContractGroup` 的展示投影而非新增 ORM 对象；规划同步补充 Phase 0 输出物、工作量估算、依赖关系、存量数据回填、回滚策略、Phase 1a/1b 拆分、Phase 2-4 验收标准和 SSOT 同步清单。
+
+### 2026-05-12
+- docs(plan): 新增 `docs/plans/2026-05-12-project-centered-asset-operations-plan.md`（📋 待评审），明确系统全局规划改为项目主轴：项目是普通用户第一工作对象，承租转租与代理运营并列，`ContractGroup` 仅作为技术实现隐藏在普通用户界面之后；同步更新 `docs/plans/README.md`，登记该活跃规划并补齐待评审状态说明。
+
+### 2026-05-07
+- refactor(frontend): 彻底移除旧租赁前端入口。前端菜单、受保护路由、路由常量、面包屑、系统模块标签与 E2E helper 不再保留 `/rental/*` 或“旧租赁前端已退休”入口；合同相关入口统一走现行 `/contract-groups` 与 `/contract-groups/import`。同步删除 `LegacyRentalRetiredPage` 并更新路由/菜单/常量/E2E 回归，避免退休页继续作为可见模块暴露。
+
 ### 2026-04-28
 - docs(audit): 收口活跃文档中的过期模型、API 与入口边界。`docs/integrations/assets-api.md` 与 `docs/integrations/new-api-endpoints.md` 已对齐当前资产字段、数据范围和 `max_export` 端点口径；产权证指南和 2026-01 长版数据库设计已移入 `docs/archive/guides/`，当前 `docs/architecture/database-design.md` 改为数据库设计基线入口；一次性 Auth-RBAC 分析/审阅报告已移入 `docs/archive/reviews/` 并在原路径保留跳转页；Phase4 Step4 运行时兼容性证据已移入 `docs/archive/evidence/`；同步修正后端、数据库、命名、组件、测试指南中的旧 `RentContract` / `Ownership` / `property_name` 示例，并补全归档索引。
 

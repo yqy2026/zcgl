@@ -24,6 +24,18 @@ const CONTRACT_ROLE_LABELS: Record<string, string> = {
   entrusted_operation: '委托运营',
 };
 
+const REVENUE_MODE_LABELS: Record<string, string> = {
+  LEASE: '承租转租',
+  AGENCY: '代理运营',
+};
+
+const GROUP_RELATION_TYPE_LABELS: Record<string, string> = {
+  UPSTREAM: '上游承租合同',
+  DOWNSTREAM: '下游出租合同',
+  ENTRUSTED: '委托协议',
+  DIRECT_LEASE: '直租合同',
+};
+
 const RISK_TAG_SOURCE_COLORS: Record<string, string> = {
   manual: 'blue',
   rule: 'orange',
@@ -36,7 +48,7 @@ const contractColumns = [
     key: 'contract_number',
   },
   {
-    title: '合同组',
+    title: '合同关系',
     dataIndex: 'group_code',
     key: 'group_code',
   },
@@ -44,11 +56,13 @@ const contractColumns = [
     title: '经营模式',
     dataIndex: 'revenue_mode',
     key: 'revenue_mode',
+    render: (value: string) => REVENUE_MODE_LABELS[value] ?? value,
   },
   {
     title: '合同角色',
     dataIndex: 'group_relation_type',
     key: 'group_relation_type',
+    render: (value: string) => GROUP_RELATION_TYPE_LABELS[value] ?? value,
   },
   {
     title: '生命周期',

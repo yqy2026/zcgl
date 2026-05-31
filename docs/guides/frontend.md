@@ -445,7 +445,7 @@ export const AppRoutes = {
   // 主要模块
   DASHBOARD: '/dashboard',
   ASSETS: '/assets',
-  RENTAL: '/rental',
+  CONTRACT_GROUPS: '/contract-groups',
   SYSTEM: '/system',
 
   // 资产管理

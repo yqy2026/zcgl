@@ -7,8 +7,10 @@
 export const BASE_PATHS = {
   DASHBOARD: '/dashboard',
   ASSETS: '/assets',
+  ANALYTICS: '/analytics',
   SEARCH: '/search',
   CONTRACT_GROUPS: '/contract-groups',
+  CONTRACT_CENTER: '/contract-center',
   OWNERSHIP: '/ownership',
   PROJECT: '/project',
   SYSTEM: '/system',
@@ -16,7 +18,15 @@ export const BASE_PATHS = {
   DOCUMENTS: '/documents',
 } as const;
 
-// 资产管理路由
+export const ANALYTICS_ROUTES = {
+  OVERVIEW: '/analytics',
+} as const;
+
+export const FINANCE_ROUTES = {
+  LEDGER: '/finance/ledger',
+} as const;
+
+// 资产资源路由
 export const ASSET_ROUTES = {
   LIST: '/assets/list',
   NEW: '/assets/new',
@@ -29,32 +39,28 @@ export const ASSET_ROUTES = {
   EDIT: (id: string) => `/assets/${id}/edit`,
 } as const;
 
-// 已退休旧租赁路由
-export const LEGACY_RENTAL_ROUTES = {
-  CONTRACTS: {
-    LIST: '/rental/contracts',
-    NEW: '/rental/contracts/new',
-    CREATE: '/rental/contracts/create',
-    PDF_IMPORT: '/rental/contracts/pdf-import',
-    DETAIL_PATH: '/rental/contracts/:id',
-    EDIT_PATH: '/rental/contracts/:id/edit',
-    RENEW_PATH: '/rental/contracts/:id/renew',
-    DETAIL: (id: string) => `/rental/contracts/${id}`,
-    EDIT: (id: string) => `/rental/contracts/${id}/edit`,
-    RENEW: (id: string) => `/rental/contracts/${id}/renew`,
-  },
-  LEDGER: '/rental/ledger',
-  STATISTICS: '/rental/statistics',
-} as const;
-
 export const CONTRACT_GROUP_ROUTES = {
   LIST: '/contract-groups',
   NEW: '/contract-groups/new',
   IMPORT: '/contract-groups/import',
   DETAIL_PATH: '/contract-groups/:id',
   EDIT_PATH: '/contract-groups/:id/edit',
+  NEW_CONTRACT_PATH: '/contract-groups/:id/contracts/new',
   DETAIL: (id: string) => `/contract-groups/${id}`,
   EDIT: (id: string) => `/contract-groups/${id}/edit`,
+  NEW_CONTRACT: (id: string) => `/contract-groups/${id}/contracts/new`,
+} as const;
+
+export const CONTRACT_CENTER_ROUTES = {
+  LIST: '/contract-center',
+  NEW: '/contract-center/new',
+  IMPORT: '/contract-center/import',
+  DETAIL_PATH: '/contract-center/:id',
+  EDIT_PATH: '/contract-center/:id/edit',
+  NEW_CONTRACT_PATH: '/contract-center/:id/contracts/new',
+  DETAIL: (id: string) => `/contract-center/${id}`,
+  EDIT: (id: string) => `/contract-center/${id}/edit`,
+  NEW_CONTRACT: (id: string) => `/contract-center/${id}/contracts/new`,
 } as const;
 
 // 系统管理路由
@@ -114,8 +120,6 @@ export const PROPERTY_CERTIFICATE_ROUTES = {
   DETAIL: (id: string) => `/property-certificates/${id}`,
 } as const;
 
-const LEGACY_RENTAL_RETIRED_TITLE = '旧租赁前端已退休';
-
 // 页面重定向配置
 export const REDIRECTS = {
   ROOT: '/dashboard',
@@ -135,8 +139,6 @@ export interface RouteConfig {
   children?: RouteConfig[];
 }
 
-const LEGACY_RENTAL_PDF_IMPORT_REDIRECT_TITLE = '跳转至PDF导入';
-
 // 完整路由配置树
 export const ROUTE_CONFIG: RouteConfig[] = [
   {
@@ -147,13 +149,13 @@ export const ROUTE_CONFIG: RouteConfig[] = [
   },
   {
     path: '/assets',
-    title: '资产管理',
+    title: '资产资源',
     icon: 'home',
-    breadcrumb: ['资产管理'],
+    breadcrumb: ['资产资源'],
     children: [
       {
         path: ASSET_ROUTES.LIST,
-        title: '资产列表',
+        title: '资产台账',
         permissions: [{ resource: 'asset', action: 'read' }],
       },
       {
@@ -165,11 +167,6 @@ export const ROUTE_CONFIG: RouteConfig[] = [
         path: ASSET_ROUTES.IMPORT,
         title: '资产导入',
         permissions: [{ resource: 'asset', action: 'create' }],
-      },
-      {
-        path: ASSET_ROUTES.ANALYTICS,
-        title: '资产分析',
-        permissions: [{ resource: 'analytics', action: 'read' }],
       },
       {
         path: ASSET_ROUTES.ANALYTICS_SIMPLE,
@@ -184,88 +181,40 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     ],
   },
   {
-    path: '/rental',
-    title: LEGACY_RENTAL_RETIRED_TITLE,
-    icon: 'bank',
-    breadcrumb: [LEGACY_RENTAL_RETIRED_TITLE],
-    children: [
-      {
-        path: LEGACY_RENTAL_ROUTES.CONTRACTS.LIST,
-        title: LEGACY_RENTAL_RETIRED_TITLE,
-        permissions: [{ resource: 'contract', action: 'read' }],
-      },
-      {
-        path: LEGACY_RENTAL_ROUTES.CONTRACTS.NEW,
-        title: LEGACY_RENTAL_RETIRED_TITLE,
-        permissions: [{ resource: 'contract', action: 'read' }],
-      },
-      {
-        path: LEGACY_RENTAL_ROUTES.CONTRACTS.CREATE,
-        title: LEGACY_RENTAL_RETIRED_TITLE,
-        permissions: [{ resource: 'contract', action: 'read' }],
-      },
-      {
-        path: LEGACY_RENTAL_ROUTES.CONTRACTS.PDF_IMPORT,
-        title: LEGACY_RENTAL_PDF_IMPORT_REDIRECT_TITLE,
-        permissions: [{ resource: 'contract_group', action: 'create' }],
-      },
-      {
-        path: LEGACY_RENTAL_ROUTES.CONTRACTS.RENEW_PATH,
-        title: LEGACY_RENTAL_RETIRED_TITLE,
-        permissions: [{ resource: 'contract', action: 'read' }],
-      },
-      {
-        path: LEGACY_RENTAL_ROUTES.CONTRACTS.DETAIL_PATH,
-        title: LEGACY_RENTAL_RETIRED_TITLE,
-        permissions: [{ resource: 'contract', action: 'read' }],
-      },
-      {
-        path: LEGACY_RENTAL_ROUTES.CONTRACTS.EDIT_PATH,
-        title: LEGACY_RENTAL_RETIRED_TITLE,
-        permissions: [{ resource: 'contract', action: 'read' }],
-      },
-      {
-        path: LEGACY_RENTAL_ROUTES.LEDGER,
-        title: LEGACY_RENTAL_RETIRED_TITLE,
-        permissions: [{ resource: 'contract', action: 'read' }],
-      },
-      {
-        path: LEGACY_RENTAL_ROUTES.STATISTICS,
-        title: LEGACY_RENTAL_RETIRED_TITLE,
-        permissions: [{ resource: 'contract', action: 'read' }],
-      },
-    ],
-  },
-  {
-    path: CONTRACT_GROUP_ROUTES.LIST,
-    title: '合同组管理',
+    path: CONTRACT_CENTER_ROUTES.LIST,
+    title: '合同中心',
     icon: 'file-text',
-    breadcrumb: ['合同组管理'],
+    breadcrumb: ['合同中心'],
     children: [
       {
-        path: CONTRACT_GROUP_ROUTES.LIST,
-        title: '合同组列表',
+        path: CONTRACT_CENTER_ROUTES.LIST,
+        title: '合同关系列表',
         permissions: [{ resource: 'contract_group', action: 'read' }],
       },
       {
-        path: CONTRACT_GROUP_ROUTES.NEW,
-        title: '新建合同组',
+        path: CONTRACT_CENTER_ROUTES.NEW,
+        title: '新建合同关系',
         permissions: [{ resource: 'contract_group', action: 'create' }],
       },
       {
-        path: CONTRACT_GROUP_ROUTES.IMPORT,
+        path: CONTRACT_CENTER_ROUTES.IMPORT,
         title: 'PDF导入',
         permissions: [{ resource: 'contract_group', action: 'create' }],
       },
       {
-        path: CONTRACT_GROUP_ROUTES.DETAIL_PATH,
-        title: '合同组详情',
+        path: CONTRACT_CENTER_ROUTES.DETAIL_PATH,
+        title: '合同关系明细',
         permissions: [{ resource: 'contract_group', action: 'read' }],
       },
       {
-        path: CONTRACT_GROUP_ROUTES.EDIT_PATH,
-        title: '编辑合同组',
+        path: CONTRACT_CENTER_ROUTES.EDIT_PATH,
+        title: '编辑合同关系',
         permissions: [{ resource: 'contract_group', action: 'update' }],
+      },
+      {
+        path: CONTRACT_CENTER_ROUTES.NEW_CONTRACT_PATH,
+        title: '新增关系内合同',
+        permissions: [{ resource: 'contract_group', action: 'create' }],
       },
     ],
   },
@@ -294,9 +243,9 @@ export const ROUTE_CONFIG: RouteConfig[] = [
   },
   {
     path: '/project',
-    title: '项目管理',
+    title: '项目运营',
     icon: 'project',
-    breadcrumb: ['项目管理'],
+    breadcrumb: ['项目运营'],
     children: [
       {
         path: PROJECT_ROUTES.LIST,
@@ -317,9 +266,9 @@ export const ROUTE_CONFIG: RouteConfig[] = [
   },
   {
     path: PROPERTY_CERTIFICATE_ROUTES.LIST,
-    title: '产权证管理',
+    title: '资产资源',
     icon: 'file-text',
-    breadcrumb: ['产权证管理'],
+    breadcrumb: ['资产资源'],
     children: [
       {
         path: PROPERTY_CERTIFICATE_ROUTES.LIST,
@@ -337,6 +286,20 @@ export const ROUTE_CONFIG: RouteConfig[] = [
         permissions: [{ resource: 'property_certificate', action: 'read' }],
       },
     ],
+  },
+  {
+    path: FINANCE_ROUTES.LEDGER,
+    title: '财务台账',
+    icon: 'account-book',
+    breadcrumb: ['财务台账'],
+    permissions: [{ resource: 'contract', action: 'read' }],
+  },
+  {
+    path: ANALYTICS_ROUTES.OVERVIEW,
+    title: '经营分析',
+    icon: 'bar-chart',
+    breadcrumb: ['经营分析'],
+    permissions: [{ resource: 'analytics', action: 'read' }],
   },
   {
     path: PROFILE_ROUTES.PROFILE,
@@ -409,9 +372,11 @@ export const ROUTE_CONFIG: RouteConfig[] = [
 export const ROUTES = {
   BASE_PATHS,
   ASSET_ROUTES,
-  LEGACY_RENTAL_ROUTES,
   CONTRACT_GROUP_ROUTES,
+  CONTRACT_CENTER_ROUTES,
   SEARCH_ROUTES,
+  ANALYTICS_ROUTES,
+  FINANCE_ROUTES,
   CUSTOMER_ROUTES,
   SYSTEM_ROUTES,
   OTHER_ROUTES,

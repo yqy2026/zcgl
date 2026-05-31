@@ -139,7 +139,11 @@ class CRUDContractGroup:
         limit: int = 20,
     ) -> tuple[list[ContractGroup], int]:
         """分页查询合同组，返回 (items, total)。"""
-        stmt = select(ContractGroup).where(ContractGroup.data_status == data_status)
+        stmt = (
+            select(ContractGroup)
+            .options(selectinload(ContractGroup.project))
+            .where(ContractGroup.data_status == data_status)
+        )
 
         if operator_party_id is not None:
             stmt = stmt.where(ContractGroup.operator_party_id == operator_party_id)
@@ -160,6 +164,25 @@ class CRUDContractGroup:
         )
         items = list((await db.execute(items_stmt)).scalars().all())
         return items, total
+
+    async def list_by_project(
+        self,
+        db: AsyncSession,
+        *,
+        project_id: str,
+        data_status: str = "正常",
+    ) -> list[ContractGroup]:
+        """查询项目下的合同关系聚合。"""
+        stmt = (
+            select(ContractGroup)
+            .options(selectinload(ContractGroup.assets))
+            .where(
+                ContractGroup.project_id == project_id,
+                ContractGroup.data_status == data_status,
+            )
+            .order_by(ContractGroup.created_at.desc())
+        )
+        return list((await db.execute(stmt)).scalars().all())
 
     async def count_by_operator_month(
         self,
@@ -695,13 +718,14 @@ class CRUDContractGroup:
         *,
         group_id: str | None,
         asset_ids: list[str],
-    ) -> list[dict[str, str]]:
+    ) -> list[dict[str, str | None]]:
         if not asset_ids:
             return []
 
         stmt = (
             select(
                 contract_group_assets.c.asset_id,
+                ContractGroup.project_id,
                 ContractGroup.contract_group_id,
                 ContractGroup.group_code,
             )
@@ -722,10 +746,11 @@ class CRUDContractGroup:
         return [
             {
                 "asset_id": str(asset_id),
+                "project_id": str(project_id) if project_id is not None else None,
                 "contract_group_id": str(conflict_group_id),
                 "group_code": str(group_code),
             }
-            for asset_id, conflict_group_id, group_code in rows
+            for asset_id, project_id, conflict_group_id, group_code in rows
         ]
 
 

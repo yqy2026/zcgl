@@ -58,6 +58,10 @@
 ### 前端参考文档
 - [前端文档索引](../frontend/docs/README.md)（设计系统、可访问性、动画、性能优化）
 
+### 设计资产
+- [设计资产索引](design/README.md)
+- [项目主轴资产运营 UI 图](design/ui-mockups/2026-05-16-project-main-axis/README.md)
+
 ### 方案设计
 - [**方案状态索引**](plans/README.md)
 
@@ -66,6 +70,7 @@
 - `archive/evidence/` — 阶段性门禁证据、发布证据和本地验证快照
 - `archive/guides/` — 历史指南和长版设计快照
 - `archive/backend-plans/` — 后端已完结技术方案
+- `archive/issues/` — 已被吸收的问题排查记录
 - `archive/requirements-decisions/` — 需求访谈、评审、As-Built、迁移过程归档
 - `archive/reviews/` — 方案或代码审阅记录归档
 
@@ -82,11 +87,12 @@
 - `guides/` — 开发指南（环境、后端、前端、代码质量、部署运维、测试）
 - `integrations/` — API 接口规范与系统组件文档
 - `security/` — 安全相关（加密、后端安全、能力守卫）
+- `design/` — 产品 UI 图、可复现画板和设计评审资产
 - `plans/` — 活跃方案（进行中 + 搁置）
 - `interviews/` — 需求访谈、澄清与历史决策记录
 - `incidents/` — 事故复盘（Post-Mortem）
 - `issues/` — 项目技术债务排查记录
-- `archive/` — 历史归档（不再维护，含 evidence / guides / backend-plans / requirements-decisions / reviews）
+- `archive/` — 历史归档（不再维护，含 backend-plans / evidence / guides / issues / requirements-decisions / reviews）
 
 ## 🧹 文档治理规则
 - 产品目标态变更修改 `prd.md`

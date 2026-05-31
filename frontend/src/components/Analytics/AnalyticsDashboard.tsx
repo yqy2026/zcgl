@@ -242,7 +242,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
         <Col xs={24} md={12} className={styles.titleCol}>
           <Space size={12} style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
             <Title level={2} className={styles.pageTitle}>
-              资产分析
+              经营分析
             </Title>
             <ViewModeSegment />
           </Space>

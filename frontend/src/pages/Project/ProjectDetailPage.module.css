@@ -67,7 +67,8 @@
 }
 
 .infoCard,
-.assetTableCard {
+.assetTableCard,
+.contractRelationCard {
   margin-bottom: var(--spacing-xl);
   border-radius: var(--radius-lg);
 }
@@ -84,6 +85,14 @@
 .assetTableTitle {
   align-items: center;
   gap: var(--spacing-sm);
+}
+
+.contractRelationHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  width: 100%;
 }
 
 .assetCountBadge :global(.ant-badge-count) {
@@ -103,6 +112,193 @@
   outline-offset: var(--focus-ring-offset);
 }
 
+.relationSummaryStrip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.analysisSummaryStrip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.relationSummaryItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 3rem;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: var(--border-width-thin) solid var(--color-border-secondary);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-layout);
+}
+
+.ledgerServiceFeeText {
+  display: block;
+  margin-top: var(--spacing-sm);
+}
+
+.relationGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--spacing-md);
+}
+
+.relationItem {
+  padding: var(--spacing-md);
+  border: var(--border-width-thin) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-container);
+}
+
+.relationItemHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.relationDetailButton {
+  padding-inline: var(--spacing-xs) !important;
+  min-height: var(--button-height-md);
+}
+
+.relationFacts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--spacing-md);
+}
+
+.relationFacts > div {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing-xs) / 2);
+  min-width: 0;
+}
+
+.relationStatusTag {
+  width: fit-content;
+  margin-inline-end: 0;
+}
+
+.relationRiskTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-md);
+}
+
+.projectRiskList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.projectRiskItem {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+  min-height: 2rem;
+}
+
+.projectTenantList {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--spacing-sm);
+}
+
+.projectTenantItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 2.75rem;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: var(--border-width-thin) solid var(--color-border-secondary);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-container);
+}
+
+.tenantLinkButton {
+  height: auto;
+  min-height: 2rem;
+  padding: 0 !important;
+  white-space: normal;
+  text-align: left;
+}
+
+.analysisModeGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--spacing-md);
+}
+
+.analysisModeItem {
+  min-width: 0;
+  padding: var(--spacing-md);
+  border: var(--border-width-thin) solid var(--color-border-secondary);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-container);
+}
+
+.analysisModeHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+}
+
+.analysisModeFacts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--spacing-sm);
+}
+
+.analysisModeFacts span {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing-xs) / 2);
+  min-width: 0;
+}
+
+.analysisTrendPanel {
+  margin-top: var(--spacing-md);
+  padding: var(--spacing-md);
+  border: var(--border-width-thin) solid var(--color-border-secondary);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-container);
+}
+
+.analysisTrendList {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--spacing-sm);
+}
+
+.analysisTrendItem {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--spacing-xs) / 2);
+  min-width: 0;
+  padding: var(--spacing-sm);
+  border: var(--border-width-thin) solid var(--color-border-secondary);
+  border-radius: var(--radius-sm);
+}
+
+.relationActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-md);
+}
+
 @media (max-width: var(--breakpoint-sm)) {
   .metricsRow {
     margin-bottom: var(--spacing-lg);
@@ -110,5 +306,25 @@
 
   .assetLinkButton {
     min-height: calc(var(--button-height-lg) + var(--spacing-xs));
+  }
+
+  .relationSummaryStrip,
+  .analysisSummaryStrip,
+  .analysisTrendList,
+  .relationFacts,
+  .projectTenantList,
+  .analysisModeGrid,
+  .analysisModeFacts {
+    grid-template-columns: 1fr;
+  }
+
+  .contractRelationHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .relationItemHeader {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }

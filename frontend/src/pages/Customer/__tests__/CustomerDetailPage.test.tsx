@@ -66,6 +66,12 @@ describe('CustomerDetailPage', () => {
     expect(screen.getByText('手工关注')).toBeInTheDocument();
     expect(screen.getByText('代理口径冲突')).toBeInTheDocument();
     expect(screen.getByText('CTR-001')).toBeInTheDocument();
+    expect(screen.getByText('合同关系')).toBeInTheDocument();
+    expect(screen.getAllByText('代理运营').length).toBeGreaterThan(0);
+    expect(screen.getByText('直租合同')).toBeInTheDocument();
+    expect(screen.queryByText('合同组')).not.toBeInTheDocument();
+    expect(screen.queryByText('AGENCY')).not.toBeInTheDocument();
+    expect(screen.queryByText('DIRECT_LEASE')).not.toBeInTheDocument();
     expect(screen.getByText('月付')).toBeInTheDocument();
     expect(buildQueryScopeKey).toHaveBeenCalledWith();
   });

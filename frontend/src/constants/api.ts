@@ -129,6 +129,11 @@ export const PROJECT_API = {
   LIST: '/projects',
   DETAIL: (id: string) => `/projects/${id}`,
   ASSETS: (id: string) => `/projects/${id}/assets`,
+  CONTRACT_RELATIONS: (id: string) => `/projects/${id}/contract-relations`,
+  LEDGER_SUMMARY: (id: string) => `/projects/${id}/ledger-summary`,
+  RISKS: (id: string) => `/projects/${id}/risks`,
+  TENANTS: (id: string) => `/projects/${id}/tenants`,
+  ANALYTICS: (id: string) => `/projects/${id}/analytics`,
   CREATE: '/projects',
   UPDATE: (id: string) => `/projects/${id}`,
   DELETE: (id: string) => `/projects/${id}`,
@@ -141,6 +146,12 @@ export const CONTRACT_GROUP_API = {
   DETAIL: (id: string) => `/contract-groups/${id}`,
   CREATE: '/contract-groups',
   UPDATE: (id: string) => `/contract-groups/${id}`,
+  CONTRACTS: (id: string) => `/contract-groups/${id}/contracts`,
+} as const;
+
+export const LEDGER_API = {
+  ENTRIES: '/ledger/entries',
+  EXPORT: '/ledger/entries/export',
 } as const;
 
 // 数据统计API
@@ -384,6 +395,7 @@ export const API_ENDPOINTS = {
   OWNERSHIP: OWNERSHIP_API,
   PROJECT: PROJECT_API,
   CONTRACT_GROUP: CONTRACT_GROUP_API,
+  LEDGER: LEDGER_API,
   STATISTICS: STATISTICS_API,
   EXCEL: EXCEL_API,
   PDF: PDF_API,
