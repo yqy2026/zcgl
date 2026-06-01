@@ -16,7 +16,7 @@ from ...core.exception_handler import ConfigurationError
 from ...schemas.property_certificate import PROPERTY_CERT_EXTRACTION_PROMPT
 from ..core.glm_ocr_service import get_glm_ocr_service
 from ..core.llm_service import create_llm_service
-from .config import LLMProvider
+from ..core.vision_provider import resolve_vision_provider
 from .contract_extractor import ContractExtractor
 from .utils import build_field_evidence, extract_json_from_response
 
@@ -132,19 +132,7 @@ class OCRExtractionService:
         return {key: source for key in fields.keys()}
 
     async def _extract_with_llm(self, prompt: str, ocr_text: str) -> dict[str, Any]:
-        try:
-            from src.core.config import settings
-
-            provider_name: str = (
-                settings.EXTRACTION_LLM_PROVIDER or settings.LLM_PROVIDER or "hunyuan"
-            )
-        except Exception:
-            provider_name = (
-                os.getenv("EXTRACTION_LLM_PROVIDER")
-                or os.getenv("LLM_PROVIDER")
-                or "hunyuan"
-            )
-        provider = LLMProvider.normalize(provider_name)
+        provider = resolve_vision_provider()
         service = create_llm_service(provider)
 
         messages = [

@@ -44,6 +44,11 @@ class LlmSettings(BaseModel):
         description="可选：仅文档提取使用的 LLM 提供商（覆盖 LLM_PROVIDER）",
         json_schema_extra={"env": "EXTRACTION_LLM_PROVIDER"},
     )
+    VISION_MODEL: str | None = Field(
+        default=None,
+        description="文档视觉模型统一入口；支持 qwen、deepseek、glm、hunyuan 及其别名",
+        json_schema_extra={"env": "VISION_MODEL"},
+    )
 
     # Qwen/DashScope Configuration
     DASHSCOPE_API_KEY: str | None = Field(
@@ -150,7 +155,7 @@ class LlmSettings(BaseModel):
         json_schema_extra={"env": "HUNYUAN_VISION_MODEL"},
     )
 
-    @field_validator("LLM_PROVIDER", "EXTRACTION_LLM_PROVIDER")
+    @field_validator("LLM_PROVIDER", "EXTRACTION_LLM_PROVIDER", "VISION_MODEL")
     @classmethod
     def validate_llm_provider(cls, v: str | None) -> str | None:
         """验证 LLM 提供商"""
@@ -236,7 +241,9 @@ class LlmSettings(BaseModel):
     @model_validator(mode="after")
     def validate_llm_configuration(self) -> LlmSettings:
         """验证 LLM 配置一致性"""
-        provider = (self.EXTRACTION_LLM_PROVIDER or self.LLM_PROVIDER).lower()
+        provider = (
+            self.VISION_MODEL or self.EXTRACTION_LLM_PROVIDER or self.LLM_PROVIDER
+        ).lower()
         alias_map = {
             # GLM aliases
             "glm-4v": "glm",

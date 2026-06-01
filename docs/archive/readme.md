@@ -23,4 +23,5 @@
 
 | 文件 | 内容 |
 |------|------|
+| `2026-05-31-excel-module-audit.md` | Excel 模块调用关系和合并门槛审计 |
 | `2026-03-07-m2-contract-lifecycle-ledger-handoff.md` | M2 合同生命周期与台账交接快照 |

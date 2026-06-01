@@ -3,7 +3,8 @@ Unit Tests for Contract Extractor Adapters
 合同提取适配器单元测试
 """
 
-from unittest.mock import MagicMock
+from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -20,6 +21,10 @@ from src.services.document.extractors.glm_adapter import GLMAdapter
 from src.services.document.extractors.qwen_adapter import QwenAdapter
 
 
+def _available_vision_service():
+    return SimpleNamespace(is_available=True)
+
+
 class TestContractExtractorInterface:
     """Tests for the abstract interface"""
 
@@ -34,27 +39,47 @@ class TestExtractorFactory:
 
     def test_get_glm_adapter_by_name(self):
         """Should return GLMAdapter for glm-4v"""
-        adapter = ExtractorFactory.get_extractor("glm-4v")
+        with patch(
+            "src.services.document.extractors.factory.get_vision_provider",
+            return_value=_available_vision_service(),
+        ):
+            adapter = ExtractorFactory.get_extractor("glm-4v")
         assert isinstance(adapter, GLMAdapter)
 
     def test_get_glm_adapter_by_alias(self):
         """Should return GLMAdapter for 'zhipu' alias"""
-        adapter = ExtractorFactory.get_extractor("zhipu")
+        with patch(
+            "src.services.document.extractors.factory.get_vision_provider",
+            return_value=_available_vision_service(),
+        ):
+            adapter = ExtractorFactory.get_extractor("zhipu")
         assert isinstance(adapter, GLMAdapter)
 
     def test_get_qwen_adapter_by_name(self):
         """Should return QwenAdapter for qwen-vl-max"""
-        adapter = ExtractorFactory.get_extractor("qwen-vl-max")
+        with patch(
+            "src.services.document.extractors.factory.get_vision_provider",
+            return_value=_available_vision_service(),
+        ):
+            adapter = ExtractorFactory.get_extractor("qwen-vl-max")
         assert isinstance(adapter, QwenAdapter)
 
     def test_get_qwen_adapter_by_alias(self):
         """Should return QwenAdapter for 'qwen' alias"""
-        adapter = ExtractorFactory.get_extractor("qwen")
+        with patch(
+            "src.services.document.extractors.factory.get_vision_provider",
+            return_value=_available_vision_service(),
+        ):
+            adapter = ExtractorFactory.get_extractor("qwen")
         assert isinstance(adapter, QwenAdapter)
 
     def test_get_deepseek_adapter_by_name(self):
         """Should return DeepSeekAdapter for deepseek-vl"""
-        adapter = ExtractorFactory.get_extractor("deepseek-vl")
+        with patch(
+            "src.services.document.extractors.factory.get_vision_provider",
+            return_value=_available_vision_service(),
+        ):
+            adapter = ExtractorFactory.get_extractor("deepseek-vl")
         assert isinstance(adapter, DeepSeekAdapter)
 
     def test_default_fallback_is_glm(self):
@@ -64,11 +89,15 @@ class TestExtractorFactory:
 
     def test_case_insensitive(self):
         """Provider names should be case-insensitive"""
-        adapter = ExtractorFactory.get_extractor("GLM-4V")
-        assert isinstance(adapter, GLMAdapter)
+        with patch(
+            "src.services.document.extractors.factory.get_vision_provider",
+            return_value=_available_vision_service(),
+        ):
+            adapter = ExtractorFactory.get_extractor("GLM-4V")
+            assert isinstance(adapter, GLMAdapter)
 
-        adapter = ExtractorFactory.get_extractor("QWEN")
-        assert isinstance(adapter, QwenAdapter)
+            adapter = ExtractorFactory.get_extractor("QWEN")
+            assert isinstance(adapter, QwenAdapter)
 
 
 class TestGLMAdapter:
@@ -146,7 +175,11 @@ class TestGetLLMExtractor:
 
     def test_returns_adapter_instance(self):
         """get_llm_extractor() should return a valid adapter"""
-        adapter = get_llm_extractor()
+        with patch(
+            "src.services.document.extractors.factory.get_vision_provider",
+            return_value=_available_vision_service(),
+        ):
+            adapter = get_llm_extractor()
         assert isinstance(adapter, ContractExtractorInterface)
 
     def test_returns_same_instance(self):
@@ -154,7 +187,11 @@ class TestGetLLMExtractor:
         # Reset singleton
         reset_extractor()
 
-        adapter1 = get_llm_extractor()
-        adapter2 = get_llm_extractor()
+        with patch(
+            "src.services.document.extractors.factory.get_vision_provider",
+            return_value=_available_vision_service(),
+        ):
+            adapter1 = get_llm_extractor()
+            adapter2 = get_llm_extractor()
 
         assert adapter1 is adapter2

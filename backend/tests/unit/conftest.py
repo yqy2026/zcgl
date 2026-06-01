@@ -297,7 +297,6 @@ def client(monkeypatch, db_session):
         require_admin,
         require_authz,
         require_data_scope_context,
-        require_permission,
     )
     from src.security.permissions import require_any_role
 
@@ -317,12 +316,6 @@ def client(monkeypatch, db_session):
     # Use monkeypatch to replace functions at module level
     def mock_get_current_user():
         return mock_user
-
-    def mock_require_permission(resource, action):
-        def dependency():
-            return mock_user
-
-        return dependency
 
     def mock_require_any_role(role_codes):  # noqa: ANN001 - test stub
         _ = role_codes
@@ -352,7 +345,6 @@ def client(monkeypatch, db_session):
     monkeypatch.setattr(
         auth_module, "get_current_user_from_cookie", mock_get_current_user
     )
-    monkeypatch.setattr(auth_module, "require_permission", mock_require_permission)
     monkeypatch.setattr(
         auth_module, "require_authz", lambda *args, **kwargs: lambda: {}
     )
@@ -371,7 +363,6 @@ def client(monkeypatch, db_session):
     app.dependency_overrides[get_current_active_user] = mock_get_current_user
     app.dependency_overrides[get_current_user] = mock_get_current_user
     app.dependency_overrides[get_current_user_from_cookie] = mock_get_current_user
-    app.dependency_overrides[require_permission] = mock_require_permission
     app.dependency_overrides[require_authz] = lambda *args, **kwargs: lambda: {}
     app.dependency_overrides[require_any_role] = mock_require_any_role
     app.dependency_overrides[require_data_scope_context] = (
@@ -399,8 +390,6 @@ def client(monkeypatch, db_session):
     def apply_rbac_overrides(dependant):
         for sub in getattr(dependant, "dependencies", []):
             dependency_type_name = type(sub.call).__name__
-            if dependency_type_name == "RBACPermissionChecker":
-                app.dependency_overrides[sub.call] = mock_rbac_checker
             if dependency_type_name == "AuthzPermissionChecker":
                 app.dependency_overrides[sub.call] = mock_authz_checker
             if dependency_type_name == "DataScopeContextChecker":

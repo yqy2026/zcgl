@@ -7,8 +7,11 @@ Contract Extractor Factory
 
 import logging
 
-from src.core.config import settings
 from src.core.exception_handler import ConfigurationError
+from src.services.core.vision_provider import (
+    get_vision_provider,
+    resolve_vision_provider,
+)
 
 from ..config import LLMProvider
 from .base import ContractExtractorInterface
@@ -58,12 +61,7 @@ class ExtractorFactory:
         Raises:
             ValueError: 如果提供商不支持
         """
-        # 解析提供商
-        if provider is None:
-            provider_str = settings.EXTRACTION_LLM_PROVIDER or settings.LLM_PROVIDER
-            provider = LLMProvider.normalize(provider_str)
-        elif isinstance(provider, str):
-            provider = LLMProvider.normalize(provider)
+        provider = resolve_vision_provider(provider)
 
         # 获取提取器类
         extractor_class = EXTRACTOR_MAP.get(provider)
@@ -76,7 +74,7 @@ class ExtractorFactory:
             )
 
         logger.info(f"Creating extractor for provider: {provider.value}")
-        return extractor_class()
+        return extractor_class(vision_service=get_vision_provider(provider))
 
     @classmethod
     def list_providers(cls) -> dict[str, list[str]]:

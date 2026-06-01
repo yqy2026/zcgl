@@ -25,7 +25,11 @@ class TestSystemAPI:
     def test_health_check(self, client, admin_user_headers):
         """测试健康检查"""
         response = client.get("/api/v1/system/health", headers=admin_user_headers)
-        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.status_code == status.HTTP_200_OK
+        payload = response.json()
+        assert payload.get("success") is True
+        assert payload["data"]["service"] == "土地物业资产管理系统"
+        assert set(payload["data"]["database"].keys()) == {"healthy", "engine_type"}
 
     def test_get_system_info(self, client, admin_user_headers):
         """测试获取系统信息"""
@@ -60,4 +64,9 @@ class TestSystemAPI:
     def test_unauthorized_access(self, unauthenticated_client):
         """测试未授权访问"""
         response = unauthenticated_client.get("/api/v1/system/health")
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_legacy_monitoring_health_is_not_exposed(self, client, admin_user_headers):
+        """复杂 monitoring 暴露面冻结后不再提供旧健康路径。"""
+        response = client.get("/api/v1/monitoring/health", headers=admin_user_headers)
         assert response.status_code == status.HTTP_404_NOT_FOUND

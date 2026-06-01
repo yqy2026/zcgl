@@ -239,7 +239,9 @@ class ExtractionConfig(BaseModel):
     def from_env(cls) -> "ExtractionConfig":
         """从环境变量加载配置"""
         # 解析 LLM 提供商（使用标准化方法）
-        llm_provider_str = os.getenv("EXTRACTION_LLM_PROVIDER", "glm")
+        llm_provider_str = (
+            os.getenv("VISION_MODEL") or os.getenv("EXTRACTION_LLM_PROVIDER") or "glm"
+        )
         try:
             llm_provider = LLMProvider.normalize(llm_provider_str)
         except ConfigurationError:

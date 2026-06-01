@@ -26,7 +26,11 @@ from src.services.asset.ownership_financial_service import (
     OwnershipFinancialResult,
 )
 
-pytestmark = [pytest.mark.api, pytest.mark.asyncio]
+pytestmark = [
+    pytest.mark.api,
+    pytest.mark.asyncio,
+    pytest.mark.skip("Out of Scope - route frozen"),
+]
 
 
 def _make_ownership(

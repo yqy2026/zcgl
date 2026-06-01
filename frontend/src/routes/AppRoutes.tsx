@@ -6,13 +6,11 @@ import {
   CONTRACT_CENTER_ROUTES,
   CONTRACT_GROUP_ROUTES,
   CUSTOMER_ROUTES,
-  OWNERSHIP_ROUTES,
   PROJECT_ROUTES,
   PROFILE_ROUTES,
   SEARCH_ROUTES,
   SYSTEM_ROUTES,
   BASE_PATHS,
-  PROPERTY_CERTIFICATE_ROUTES,
   ANALYTICS_ROUTES,
   FINANCE_ROUTES,
 } from '@/constants/routes';
@@ -39,12 +37,6 @@ const contractGroupListPage = React.lazy(
 );
 const contractGroupDetailPage = React.lazy(
   () => import('../pages/ContractGroup/ContractGroupDetailPage')
-);
-const propertyCertificateListPage = React.lazy(
-  () => import('../pages/PropertyCertificate/PropertyCertificateList')
-);
-const propertyCertificateDetailPage = React.lazy(
-  () => import('../pages/PropertyCertificate/PropertyCertificateDetailPage')
 );
 const projectManagementPage = React.lazy(() => import('../pages/Project/ProjectManagementPage'));
 const projectDetailPage = React.lazy(() => import('../pages/Project/ProjectDetailPage'));
@@ -174,38 +166,6 @@ const baseProtectedRoutes: ProtectedRouteItem[] = [
     element: React.lazy(() => import('../pages/ContractGroup/ContractInGroupFormPage')),
     permissions: [{ resource: 'contract_group', action: 'create' }],
   },
-  {
-    path: PROPERTY_CERTIFICATE_ROUTES.LIST,
-    element: propertyCertificateListPage,
-    permissions: [{ resource: 'property_certificate', action: 'read' }],
-  },
-  {
-    path: PROPERTY_CERTIFICATE_ROUTES.IMPORT,
-    element: React.lazy(() => import('../pages/PropertyCertificate/PropertyCertificateImport')),
-    permissions: [{ resource: 'property_certificate', action: 'create' }],
-  },
-  {
-    path: PROPERTY_CERTIFICATE_ROUTES.DETAIL_PATH,
-    element: propertyCertificateDetailPage,
-    permissions: [{ resource: 'property_certificate', action: 'read' }],
-  },
-  // 权属方管理 - 注意路由顺序，详情页必须在列表页之前
-  {
-    path: OWNERSHIP_ROUTES.EDIT_PATH,
-    element: React.lazy(() => import('../pages/Ownership/OwnershipManagementPage')),
-    permissions: [{ resource: 'party', action: 'read' }],
-  },
-  {
-    path: OWNERSHIP_ROUTES.DETAIL_PATH,
-    element: React.lazy(() => import('../pages/Ownership/OwnershipDetailPage')),
-    permissions: [{ resource: 'party', action: 'read' }],
-  },
-  {
-    path: OWNERSHIP_ROUTES.LIST,
-    element: React.lazy(() => import('../pages/Ownership/OwnershipManagementPage')),
-    permissions: [{ resource: 'party', action: 'read' }],
-  },
-
   // 项目运营 - 注意路由顺序，详情页必须在列表页之前
   {
     path: PROJECT_ROUTES.EDIT_PATH,

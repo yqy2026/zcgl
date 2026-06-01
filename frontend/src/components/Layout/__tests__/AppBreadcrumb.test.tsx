@@ -133,13 +133,11 @@ describe('AppBreadcrumb', () => {
     );
   });
 
-  it('uses canonical certificate list link for property certificate detail breadcrumbs', () => {
+  it('does not expose frozen property certificate breadcrumbs', () => {
     renderBreadcrumb('/property-certificates/cert-1');
 
-    const links = screen.getAllByTestId('link');
-    expect(links.map(link => link.getAttribute('data-link-to'))).toEqual(
-      expect.arrayContaining(['/property-certificates'])
-    );
+    expect(screen.queryByText('产权证管理')).not.toBeInTheDocument();
+    expect(screen.queryByText('产权证详情')).not.toBeInTheDocument();
   });
 
   it('renders breadcrumb container', () => {

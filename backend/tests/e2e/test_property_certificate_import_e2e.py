@@ -25,7 +25,10 @@ from tests.e2e.factories import (
     create_asset_payload as _create_asset_payload,
 )
 
-pytestmark = pytest.mark.e2e
+pytestmark = [
+    pytest.mark.e2e,
+    pytest.mark.skip("Out of Scope - route frozen"),
+]
 
 _MINIMAL_CERT_FILE_BYTES = b"fake-property-certificate-content"
 

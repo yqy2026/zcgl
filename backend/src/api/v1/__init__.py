@@ -20,9 +20,7 @@ from .approval import router as approval_router
 from .assets.assets import router as assets_router
 from .assets.custom_fields import router as custom_fields_router
 from .assets.occupancy import router as occupancy_router
-from .assets.ownership import router as ownership_router
 from .assets.project import router as project_router
-from .assets.property_certificate import router as property_certificate_router
 
 # 导入各个模块的路由 - Auth
 from .auth.admin import router as admin_router
@@ -50,7 +48,6 @@ from .system.dictionaries import router as dictionaries_router
 from .system.enum_field import router as enum_field_router
 from .system.error_recovery import router as error_recovery_router
 from .system.history import router as history_router
-from .system.monitoring import router as monitoring_router
 from .system.notifications import router as notifications_router
 from .system.operation_logs import router as operation_logs_router
 from .system.system import router as system_router
@@ -132,7 +129,6 @@ api_router.include_router(enum_field_router, tags=["枚举字段管理"])
 # dictionaries_router 自带 prefix="/system/dictionaries"，此处直接 include
 api_router.include_router(dictionaries_router)  # Unified dictionary API
 
-api_router.include_router(ownership_router, prefix="/ownerships", tags=["权属方管理"])
 api_router.include_router(project_router, prefix="/projects", tags=["项目管理"])
 api_router.include_router(search_router, prefix="/search", tags=["全局搜索"])
 # 合同关系技术聚合（REQ-RNT-001）：/contract-groups/* 和 /contracts/*
@@ -151,7 +147,6 @@ if system_settings_router is not None:
     )
 else:
     logger.warning("system_settings_router is None, NOT registering")
-api_router.include_router(monitoring_router, prefix="/monitoring", tags=["系统监控"])
 
 # 注册新创建的统一路由模块
 api_router.include_router(system_router, tags=["系统管理"])
@@ -167,9 +162,6 @@ api_router.include_router(collection_router, prefix="/collections", tags=["催�
 api_router.include_router(error_recovery_router, tags=["错误恢复"])
 api_router.include_router(
     llm_prompts_router, prefix="/llm-prompts", tags=["LLM提示词管理"]
-)
-api_router.include_router(
-    property_certificate_router, prefix="/property-certificates", tags=["产权证管理"]
 )
 
 __all__ = ["api_router"]

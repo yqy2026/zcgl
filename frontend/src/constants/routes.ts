@@ -11,7 +11,6 @@ export const BASE_PATHS = {
   SEARCH: '/search',
   CONTRACT_GROUPS: '/contract-groups',
   CONTRACT_CENTER: '/contract-center',
-  OWNERSHIP: '/ownership',
   PROJECT: '/project',
   SYSTEM: '/system',
   FINANCE: '/finance',
@@ -80,7 +79,6 @@ export const SYSTEM_ROUTES = {
 
 // 其他模块路由
 export const OTHER_ROUTES = {
-  OWNERSHIP: '/ownership',
   PROJECT: '/project',
 } as const;
 
@@ -219,29 +217,6 @@ export const ROUTE_CONFIG: RouteConfig[] = [
     ],
   },
   {
-    path: '/ownership',
-    title: '权属方管理',
-    icon: 'team',
-    breadcrumb: ['权属方管理'],
-    children: [
-      {
-        path: OWNERSHIP_ROUTES.LIST,
-        title: '权属方列表',
-        permissions: [{ resource: 'ownership', action: 'read' }],
-      },
-      {
-        path: OWNERSHIP_ROUTES.DETAIL_PATH,
-        title: '权属方详情',
-        permissions: [{ resource: 'ownership', action: 'read' }],
-      },
-      {
-        path: OWNERSHIP_ROUTES.EDIT_PATH,
-        title: '编辑权属方',
-        permissions: [{ resource: 'ownership', action: 'update' }],
-      },
-    ],
-  },
-  {
     path: '/project',
     title: '项目运营',
     icon: 'project',
@@ -261,29 +236,6 @@ export const ROUTE_CONFIG: RouteConfig[] = [
         path: PROJECT_ROUTES.EDIT_PATH,
         title: '编辑项目',
         permissions: [{ resource: 'project', action: 'update' }],
-      },
-    ],
-  },
-  {
-    path: PROPERTY_CERTIFICATE_ROUTES.LIST,
-    title: '资产资源',
-    icon: 'file-text',
-    breadcrumb: ['资产资源'],
-    children: [
-      {
-        path: PROPERTY_CERTIFICATE_ROUTES.LIST,
-        title: '产权证列表',
-        permissions: [{ resource: 'property_certificate', action: 'read' }],
-      },
-      {
-        path: PROPERTY_CERTIFICATE_ROUTES.IMPORT,
-        title: '产权证导入',
-        permissions: [{ resource: 'property_certificate', action: 'create' }],
-      },
-      {
-        path: PROPERTY_CERTIFICATE_ROUTES.DETAIL_PATH,
-        title: '产权证详情',
-        permissions: [{ resource: 'property_certificate', action: 'read' }],
       },
     ],
   },

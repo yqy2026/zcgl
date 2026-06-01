@@ -26,10 +26,11 @@ class TestRouteTrailingSlashFix:
         ("route_path", "expected_status"),
         [
             ("/api/v1/notifications", 401),
-            ("/api/v1/ownerships", 401),
             ("/api/v1/organizations", 401),
             ("/api/v1/projects", 401),
             ("/api/v1/tasks", 401),
+            ("/api/v1/ownerships", 404),
+            ("/api/v1/property-certificates", 404),
             ("/api/v1/defects", 404),
         ],
     )

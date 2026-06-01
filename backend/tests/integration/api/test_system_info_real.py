@@ -75,4 +75,4 @@ def test_system_root_real_flow(client: TestClient, test_data):
     endpoints = data.get("endpoints", {})
     assert isinstance(endpoints, dict)
     assert endpoints.get("auth") == "/api/v1/auth"
-    assert endpoints.get("health") == "/api/v1/monitoring/health"
+    assert endpoints.get("health") == "/api/v1/system/health"

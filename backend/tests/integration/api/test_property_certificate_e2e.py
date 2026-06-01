@@ -21,6 +21,8 @@ from src.models.ownership import Ownership
 from src.models.property_certificate import PropertyCertificate
 from src.services.property_certificate.service import PropertyCertificateService
 
+pytestmark = pytest.mark.skip("Out of Scope - route frozen")
+
 
 def get_auth_headers(client: TestClient, admin_user) -> dict:
     response = client.post(

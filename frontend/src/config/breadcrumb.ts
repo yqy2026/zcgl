@@ -32,13 +32,6 @@ export const staticBreadcrumbMap: Record<string, string> = {
   '/analysis/overview': '概览统计',
   '/analysis/report': '报表生成',
 
-  // 产权证管理
-  '/property-certificates': '产权证管理',
-  '/property-certificates/import': '导入产权证',
-
-  // 权属方管理
-  '/ownership': '权属方管理',
-
   // 项目运营
   '/project': '项目运营',
 
@@ -78,13 +71,6 @@ export const dynamicBreadcrumbMap: Record<string, string> = {
   '/contract-center/:id/edit': '编辑合同关系',
   '/contract-groups/:id': '合同关系明细',
   '/contract-groups/:id/edit': '编辑合同关系',
-
-  // 产权证
-  '/property-certificates/:id': '产权证详情',
-
-  // 权属方
-  '/ownership/:id': '权属方详情',
-  '/ownership/:id/edit': '编辑权属方',
 
   // 项目
   '/project/:id': '项目详情',

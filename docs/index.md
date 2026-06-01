@@ -47,7 +47,6 @@
 - [认证 API](integrations/auth-api.md)
 - [PDF 处理](integrations/pdf-processing.md)
 - [新增 API 端点](integrations/new-api-endpoints.md)
-- [监控 API](integrations/monitoring.md)
 - [增强数据库管理器](integrations/enhanced-database-manager.md)
 
 ### 安全

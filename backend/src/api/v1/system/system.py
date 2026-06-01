@@ -24,7 +24,7 @@ def _as_dict(value: object) -> dict[str, Any]:
     return {}
 
 
-@router.get("/monitoring/health")
+@router.get("/system/health")
 async def health_check(
     _authz_ctx: AuthzContext = Depends(
         require_authz(
@@ -34,20 +34,14 @@ async def health_check(
     ),
 ) -> JSONResponse:
     """
-    健康检查端点 - 包含数据库状态
-    迁移自 main.py 的健康检查功能
+    最小健康检查端点，仅表达应用和数据库连通性。
     """
     try:
         db_status = await get_database_status()
 
         health_check = _as_dict(db_status.get("health_check", {}))
-        metrics = _as_dict(db_status.get("metrics", {}))
-        pool_status = _as_dict(
-            _as_dict(health_check.get("checks", {})).get("connection_pool", {})
-        )
-
         health_data: dict[str, Any] = {
-            "status": "healthy",
+            "status": "healthy" if health_check.get("healthy") else "unhealthy",
             "version": "2.0.0",
             "service": "土地物业资产管理系统",
             "database": {
@@ -55,35 +49,6 @@ async def health_check(
                 "engine_type": db_status.get("engine_type", "Unknown"),
             },
         }
-
-        database_data = health_data.get("database")
-        if isinstance(database_data, dict):
-            try:
-                database_data.update(
-                    {
-                        "connection_pool_utilization": pool_status.get(
-                            "utilization", 0
-                        ),
-                        "active_connections": metrics.get("active_connections", 0),
-                        "total_queries": metrics.get("total_queries", 0),
-                        "slow_queries": metrics.get("slow_queries", 0),
-                        "avg_response_time_ms": round(
-                            metrics.get("avg_response_time", 0), 2
-                        ),
-                        "pool_hit_rate": pool_status.get("pool_hit_rate", 0),
-                    }
-                )
-            except Exception as db_e:
-                import logging
-
-                logger = logging.getLogger(__name__)
-                logger.warning(f"Failed to get detailed database metrics: {db_e}")
-                database_data["metrics_error"] = str(db_e)
-        else:
-            import logging
-
-            logger = logging.getLogger(__name__)
-            logger.warning("Database status payload is missing or invalid")
 
         return success_response(data=health_data, message="系统运行正常")
 
@@ -150,7 +115,7 @@ def api_root(
         data={
             "version": "2.0.0",
             "endpoints": {
-                "health": "/api/v1/monitoring/health",
+                "health": "/api/v1/system/health",
                 "assets": "/api/v1/assets",
                 "auth": "/api/v1/auth",
                 "docs": "/docs",

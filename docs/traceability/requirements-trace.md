@@ -59,7 +59,7 @@
 
 | REQ | 产品状态 | 实现状态 | 代码证据 | 测试证据 | 备注 |
 |---|---|---|---|---|---|
-| REQ-SCH-001 | MVP | 已有证据 | `backend/src/api/v1/search.py`, `backend/src/services/search/service.py`, `backend/src/schemas/search.py`, `frontend/src/services/searchService.ts`, `frontend/src/pages/Search/GlobalSearchPage.tsx`, `frontend/src/components/Layout/AppHeader.tsx` | `backend/tests/unit/services/search/test_search_service.py`, `backend/tests/unit/api/v1/test_search_api.py`, `frontend/src/services/__tests__/searchService.test.ts`, `frontend/src/pages/Search/__tests__/GlobalSearchPage.test.tsx`, `frontend/src/components/Layout/__tests__/AppHeader.test.tsx` | 全局搜索入口、对象范围和前端搜索页已有证据；搜索覆盖资产、项目、合同关系、合同、客户和产权证，合同聚合结果使用“合同关系”对象文案，并跳转到合同中心详情路径。 |
+| REQ-SCH-001 | MVP | 已有证据 | `backend/src/api/v1/search.py`, `backend/src/services/search/service.py`, `backend/src/schemas/search.py`, `frontend/src/services/searchService.ts`, `frontend/src/pages/Search/GlobalSearchPage.tsx`, `frontend/src/components/Layout/AppHeader.tsx` | `backend/tests/unit/services/search/test_search_service.py`, `backend/tests/unit/api/v1/test_search_api.py`, `frontend/src/services/__tests__/searchService.test.ts`, `frontend/src/pages/Search/__tests__/GlobalSearchPage.test.tsx`, `frontend/src/components/Layout/__tests__/AppHeader.test.tsx` | 全局搜索入口、对象范围和前端搜索页已有证据；MVP 搜索覆盖资产、项目、合同关系、合同和客户。产权证为 Out of Scope，不再作为 MVP 搜索对象；合同聚合结果使用“合同关系”对象文案，并跳转到合同中心详情路径。 |
 | REQ-SCH-002 | MVP | 已有证据 | `backend/src/services/search/service.py`, `frontend/src/pages/Search/GlobalSearchPage.tsx` | `backend/tests/unit/services/search/test_search_service.py`, `frontend/src/pages/Search/__tests__/GlobalSearchPage.test.tsx` | 搜索结果分组和排序 |
 | REQ-SCH-003 | MVP | 已有证据 | `backend/src/api/v1/search.py`, `backend/src/services/search/service.py`, `backend/src/services/authz/resource_perspective_registry.py` | `backend/tests/unit/api/v1/test_search_api.py`, `backend/tests/unit/services/search/test_search_service.py` | 搜索权限过滤和数据范围收口 |
 
@@ -107,8 +107,8 @@
 
 | 能力 | 产品状态 | 实现状态 | 说明 |
 |---|---|---|---|
-| PropertyCertificate | Out of Scope | 代码骨架存在 | 产权证管理不纳入 MVP 功能验收 |
-| Ownership | Out of Scope | 代码骨架存在 | 权属方管理不纳入 MVP 功能验收 |
+| PropertyCertificate | Out of Scope | 代码骨架存在，路由和可见入口已冻结 | 产权证管理不纳入 MVP 功能验收；普通用户路径、注册路由和全局搜索不暴露该对象 |
+| Ownership | Out of Scope | 代码骨架存在，路由和可见入口已冻结 | 权属方管理不纳入 MVP 功能验收；普通用户路径和注册路由不暴露该对象 |
 | 通用 BPM 审批流引擎 | Out of Scope | 不纳入当前验收 | MVP 只交付资产审批第一阶段最小闭环 |
 | 财务总账、税票、支付结算 | Out of Scope | 不纳入当前验收 | 当前只做运营台账和经营统计 |
 

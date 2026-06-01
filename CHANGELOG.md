@@ -2,6 +2,19 @@
 
 ## [Unreleased] - 2026-03-06
 
+### 2026-06-01
+- refactor(auth): 完成 Auth middleware 拆分 Phase 4/5 并归档方案。新增 `backend/src/middleware/resource_context.py` 承载 ABAC 可信资源上下文加载，新增 `audit.py` 与 `security_config.py` 拆出审计依赖和安全配置展示逻辑；`auth.py` 收敛为公共 facade，继续注入当前 `authz_service` / `RBACService` 并保留 FastAPI dependency override 入口。同步删除 `auth.py` 中无运行时调用方的旧 RBAC/角色/资源 checker、`can_edit_contract()` 和 `get_user_rbac_permissions()`，补充护栏测试阻止旧入口回流，并将 `docs/plans/2026-05-31-auth-middleware-split.md` 完成后移入 `docs/archive/backend-plans/`。
+- refactor(scope): 推进 Auth middleware 拆分 Phase 3。新增 `backend/src/middleware/data_scope.py` 承载 `DataScopeContext`、`DataScopeContextChecker` 和 data-scope 解析逻辑；`auth.py` 保留 `require_data_scope_context()` 公共工厂并注入当前 `authz_service` / `RBACService`，维持既有路由依赖入口、FastAPI dependency override 和测试 patch 点。
+
+### 2026-05-31
+- refactor(authz): 推进 Auth middleware 拆分 Phase 2。新增 `backend/src/middleware/authorization.py` 承载 `AuthzContext`、`AuthzPermissionChecker` 和 ABAC 可信资源上下文加载；`auth.py` 保留 `require_authz()` 公共工厂并注入当前 `authz_service` / logger，维持既有路由依赖入口、拒绝映射和测试 patch 点。
+- refactor(auth): 推进 Auth middleware 拆分 Phase 1。新增 `backend/src/middleware/identity.py` 承载 Cookie/JWT 解析、当前用户、active user 和 optional auth 实现；`backend/src/middleware/auth.py` 保持原公共依赖入口为薄包装，维持路由依赖签名和既有黑名单 fail-closed 语义。
+- test(auth): 启动 Auth middleware 拆分 Phase 0 护栏。新增 `backend/tests/unit/middleware/test_auth_middleware_guardrails.py`，固定 `src.middleware.auth` 公共入口导出、cookie-only 当前用户认证、缺失 token、黑名单 token、禁用用户和锁定用户的 fail-closed 行为；同步将 `docs/plans/2026-05-31-auth-middleware-split.md` 状态推进为进行中。
+- refactor(scope): 落地代码库瘦身第一轮。后端停止注册 `/api/v1/ownerships`、`/api/v1/property-certificates` 和复杂 `/api/v1/monitoring/*` 暴露面，系统健康检查收敛为 `/api/v1/system/health`；前端菜单、路由、面包屑和全局搜索不再暴露权属方/产权证入口；搜索服务移除产权证对象；冻结模块路由测试改为 skip，并新增运行时冻结断言。
+- refactor(document): 文档视觉模型 provider 统一到 `VISION_MODEL`。新增 `services/core/vision_provider.py`，PDF 提取工厂和 OCR 文本回退统一解析 `VISION_MODEL -> EXTRACTION_LLM_PROVIDER -> LLM_PROVIDER`，缺少 provider/API key 时显式抛错；Qwen/DeepSeek/GLM/Hunyuan adapter 支持注入统一 vision service，相关 provider/config/OCR 单测已补齐。
+- docs(ssot): 同步瘦身第一轮 SSOT 和归档。API 契约改为最小 `/api/v1/system/health`，追踪矩阵将 `REQ-SCH-001` 搜索范围收回到资产、项目、合同关系、合同和客户，并标注 PropertyCertificate/Ownership 路由与可见入口冻结；环境说明和 `.env.example` 新增 `VISION_MODEL`；旧复杂监控指南移入 `docs/archive/guides/`；瘦身方案归档到 `docs/archive/backend-plans/`；新增 Excel 模块审计报告和 `docs/plans/2026-05-31-auth-middleware-split.md`。
+- docs(plan): 修正并归档 `docs/archive/backend-plans/2026-05-29-codebase-lean-refocus-plan.md` 代码库瘦身方案。第一轮范围调整为冻结 Out of Scope 可见面、系统监控最小化和 AI Provider 统一入口；Excel 改为先做调用关系审计，不再直接按文件数合并；auth middleware 拆分移出瘦身第一轮，后续单独立项治理。
+
 ### 2026-05-30
 - docs(ssot): 收口剩余 `REQ-RNT-001`、`REQ-RNT-002`、`REQ-SCH-001` 需求状态。复核合同关系、承租/代理双模式和全局搜索的现有代码与测试证据后，`docs/traceability/requirements-trace.md` 已将三项从“开发中”更新为“已有证据”，并同步更新瘦身聚焦方案中的需求状态表和验收说明。
 - feat(project): 收口 `REQ-PRJ-003` 项目运营台账证据。项目风险摘要新增当前有效资产空置面积风险，项目分析摘要新增按账期聚合的月度收付款趋势；项目详情页展示“项目分析趋势”和应收环比，SSOT 将 `REQ-PRJ-003` 从“开发中”更新为“已有证据”。

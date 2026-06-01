@@ -89,6 +89,31 @@ async def test_search_global_should_sort_and_group_results(search_service):
     assert result["total"] == 3
 
 
+async def test_collect_results_should_not_search_out_of_scope_property_certificates(
+    search_service, monkeypatch
+):
+    """产权证为 Out of Scope，MVP 全局搜索不应访问产权证查询面。"""
+    db = AsyncMock()
+    monkeypatch.setattr(search_service, "_search_assets", AsyncMock(return_value=[]))
+    monkeypatch.setattr(search_service, "_search_projects", AsyncMock(return_value=[]))
+    monkeypatch.setattr(
+        search_service, "_search_contract_groups", AsyncMock(return_value=[])
+    )
+    monkeypatch.setattr(search_service, "_search_contracts", AsyncMock(return_value=[]))
+    monkeypatch.setattr(search_service, "_search_customers", AsyncMock(return_value=[]))
+
+    result = await search_service._collect_results(
+        db=db,
+        query="产权证",
+        scope_mode="manager",
+        effective_party_ids=["party-manager-1"],
+    )
+
+    assert result == []
+    assert not hasattr(search_service, "_search_property_certificates")
+    db.execute.assert_not_awaited()
+
+
 async def test_search_assets_should_build_search_result_items(
     search_service, monkeypatch
 ):

@@ -33,9 +33,11 @@ describe('menuConfig perspective grouping', () => {
       label: '资产资源',
       children: expect.arrayContaining([
         expect.objectContaining({ key: '/assets/list', label: '资产台账' }),
-        expect.objectContaining({ key: '/property-certificates', label: '产权证管理' }),
       ]),
     });
+    expect(assetGroup?.children).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ key: '/property-certificates' })])
+    );
 
     expect(menuEntries).toEqual(
       expect.arrayContaining([
@@ -74,7 +76,7 @@ describe('menuConfig perspective grouping', () => {
     expect(getOpenKeys('/assets/list')).toEqual(['/asset-files']);
     expect(getOpenKeys('/contract-center/import')).toEqual(['/contract-center']);
     expect(getOpenKeys('/contract-groups')).toEqual(['/contract-center']);
-    expect(getOpenKeys('/property-certificates')).toEqual(['/asset-files']);
+    expect(getOpenKeys('/property-certificates')).toEqual([]);
     expect(getOpenKeys('/finance/ledger')).toEqual([]);
     expect(getOpenKeys('/project')).toEqual(['/project']);
     expect(getOpenKeys('/analytics')).toEqual([]);
@@ -85,14 +87,16 @@ describe('menuConfig perspective grouping', () => {
     expect(getSelectedKeys('/assets/asset-1/edit')).toEqual(['/assets/list']);
     expect(getSelectedKeys('/contract-center/group-1')).toEqual(['/contract-center']);
     expect(getSelectedKeys('/contract-groups/group-1')).toEqual(['/contract-center']);
-    expect(getSelectedKeys('/property-certificates/cert-1')).toEqual(['/property-certificates']);
+    expect(getSelectedKeys('/property-certificates/cert-1')).toEqual([
+      '/property-certificates/cert-1',
+    ]);
     expect(getSelectedKeys('/project/project-1')).toEqual(['/project']);
     expect(getSelectedKeys('/project/project-1/edit')).toEqual(['/project']);
 
     expect(getOpenKeys('/assets/asset-1')).toEqual(['/asset-files']);
     expect(getOpenKeys('/contract-center/group-1')).toEqual(['/contract-center']);
     expect(getOpenKeys('/contract-groups/group-1')).toEqual(['/contract-center']);
-    expect(getOpenKeys('/property-certificates/cert-1')).toEqual(['/asset-files']);
+    expect(getOpenKeys('/property-certificates/cert-1')).toEqual([]);
     expect(getOpenKeys('/project/project-1')).toEqual(['/project']);
   });
 

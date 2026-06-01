@@ -136,6 +136,18 @@ class TestExtractionConfig:
             config = ExtractionConfig.from_env()
             assert config.llm_provider == LLMProvider.GLM
 
+    def test_from_env_prefers_vision_model(self):
+        """测试 VISION_MODEL 是文档视觉模型选择入口"""
+        with patch.dict(
+            os.environ,
+            {
+                "VISION_MODEL": "hunyuan",
+                "EXTRACTION_LLM_PROVIDER": "qwen",
+            },
+        ):
+            config = ExtractionConfig.from_env()
+            assert config.llm_provider == LLMProvider.HUNYUAN
+
     def test_from_env_invalid_provider_uses_default(self):
         """测试无效提供商时使用默认值"""
         with patch.dict(

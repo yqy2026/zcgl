@@ -10,7 +10,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 
-from src.middleware.auth import can_edit_contract, require_authz
+from src.middleware.auth import require_authz
 from src.services.authz.context_builder import SubjectContext
 from src.services.authz.engine import AuthzDecision
 
@@ -421,27 +421,6 @@ async def test_resolve_trusted_resource_context_loads_contract_scope_from_new_ta
     assert "contract_groups" in sql
     assert "contracts" in sql
     assert legacy_contract_table not in sql
-
-
-@pytest.mark.asyncio
-async def test_can_edit_contract_checks_contract_resource() -> None:
-    user = _UserStub("user-1")
-    db = AsyncMock(spec=AsyncSession)
-    rbac_service = MagicMock()
-    rbac_service.is_admin = AsyncMock(return_value=False)
-    rbac_service.check_permission = AsyncMock(
-        return_value=MagicMock(has_permission=True)
-    )
-
-    with patch("src.middleware.auth.RBACService", return_value=rbac_service):
-        result = await can_edit_contract(user, db, "contract-1")
-
-    assert result is True
-    args, _kwargs = rbac_service.check_permission.await_args
-    assert args[0] == "user-1"
-    assert args[1].resource == "contract"
-    assert args[1].action == "update"
-    assert args[1].resource_id == "contract-1"
 
 
 @pytest.mark.asyncio

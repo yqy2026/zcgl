@@ -14,7 +14,6 @@ import {
   AuditOutlined,
   BookOutlined,
   ApartmentOutlined,
-  IdcardOutlined,
   FileTextOutlined,
   FileAddOutlined,
   BarChartOutlined,
@@ -61,11 +60,6 @@ export const MENU_ITEMS: MenuProps['items'] = [
         icon: <HomeOutlined />,
         label: '资产台账',
       },
-      {
-        key: '/property-certificates',
-        icon: <FileTextOutlined />,
-        label: '产权证管理',
-      },
     ],
   },
   {
@@ -90,11 +84,6 @@ export const MENU_ITEMS: MenuProps['items'] = [
     icon: <TeamOutlined />,
     label: '主体中心',
     children: [
-      {
-        key: '/ownership',
-        icon: <IdcardOutlined />,
-        label: '权属方管理',
-      },
       {
         key: '/system/parties',
         icon: <TeamOutlined />,
@@ -182,13 +171,6 @@ export function getSelectedKeys(pathname: string): string[] {
     return ['/project'];
   }
 
-  // 权属方管理页面
-  if (pathname === '/ownership') {
-    return ['/ownership'];
-  }
-  if (pathname.startsWith('/property-certificates')) {
-    return ['/property-certificates'];
-  }
   if (pathname.startsWith('/contract-groups')) {
     return ['/contract-center'];
   }
@@ -215,11 +197,8 @@ export function getOpenKeys(pathname: string): string[] {
   if (pathname.startsWith('/contract-center')) {
     return ['/contract-center'];
   }
-  if (pathname.startsWith('/ownership') || pathname.startsWith('/system/parties')) {
+  if (pathname.startsWith('/system/parties')) {
     return ['/customer-center'];
-  }
-  if (pathname.startsWith('/property-certificates')) {
-    return ['/asset-files'];
   }
   if (pathname.startsWith('/analytics')) {
     return [];

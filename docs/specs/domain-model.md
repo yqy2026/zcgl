@@ -494,5 +494,5 @@
 
 | 对象 | 说明 |
 |---|---|
-| PropertyCertificate | 产权证管理不纳入 MVP 需求基线 |
-| Ownership | 权属方管理不纳入 MVP 需求基线 |
+| PropertyCertificate | 产权证管理不纳入 MVP 需求基线；当前保留代码骨架，路由、菜单和搜索可见面冻结 |
+| Ownership | 权属方管理不纳入 MVP 需求基线；当前保留代码骨架，路由和菜单可见面冻结 |

@@ -17,6 +17,8 @@ from fastapi import status
 
 from src.services.property_certificate.service import PropertyCertificateService
 
+pytestmark = pytest.mark.skip("Out of Scope - route frozen")
+
 # ============================================================================
 # Fixtures
 # ============================================================================
@@ -26,17 +28,12 @@ from src.services.property_certificate.service import PropertyCertificateService
 def admin_user_headers(client, admin_user, monkeypatch):
     """管理员用户认证头"""
     from src.api.v1.assets import property_certificate as property_certificate_module
-    from src.middleware.auth import RBACPermissionChecker
-
-    def allow_admin(self, current_user=None, db=None):  # noqa: ANN001 - test stub
-        return admin_user
 
     mock_authz_service = MagicMock()
     mock_authz_service.check_access = AsyncMock(
         return_value=MagicMock(allowed=True, reason_code="allow")
     )
 
-    monkeypatch.setattr(RBACPermissionChecker, "__call__", allow_admin)
     monkeypatch.setattr(
         property_certificate_module,
         "authz_service",

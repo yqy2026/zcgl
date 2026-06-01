@@ -16,5 +16,4 @@
 
 | 文档 | 说明 |
 |------|------|
-| [monitoring.md](./monitoring.md) | 早期监控 API 与指标采集补充说明，部分高级能力按候选处理 |
 | [enhanced-database-manager.md](./enhanced-database-manager.md) | 早期 EnhancedDatabaseManager 设计说明，当前配置以数据库指南为准 |

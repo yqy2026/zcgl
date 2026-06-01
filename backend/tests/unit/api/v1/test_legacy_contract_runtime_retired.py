@@ -42,6 +42,23 @@ def test_api_router_should_not_expose_legacy_rental_contract_paths() -> None:
     assert "/contracts/{contract_id}/ledger" in paths
 
 
+def test_api_router_should_not_expose_out_of_scope_runtime_paths() -> None:
+    """MVP 外产权证和权属方运行时路由应冻结。"""
+    paths = {
+        route.path
+        for route in api_router.routes  # type: ignore[attr-defined]
+    }
+
+    frozen_prefixes = ("/ownerships", "/property-certificates")
+    exposed_paths = {
+        path
+        for path in paths
+        if any(path.startswith(prefix) for prefix in frozen_prefixes)
+    }
+
+    assert exposed_paths == set(), f"Out of Scope 路径仍被注册: {sorted(exposed_paths)}"
+
+
 def test_legacy_contract_api_package_should_be_retired() -> None:
     _assert_retired_namespace_or_none(_legacy_contracts_api_module())
 

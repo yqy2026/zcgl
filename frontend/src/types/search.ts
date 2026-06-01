@@ -4,8 +4,7 @@ export interface GlobalSearchResultItem {
     | 'project'
     | 'contract_group'
     | 'contract'
-    | 'customer'
-    | 'property_certificate';
+    | 'customer';
   object_id: string;
   title: string;
   subtitle?: string | null;

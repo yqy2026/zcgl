@@ -19,8 +19,8 @@ class DeepSeekAdapter(BaseVisionAdapter):
     Inherits common extraction logic from BaseVisionAdapter.
     """
 
-    def __init__(self) -> None:
-        self._vision_service = get_deepseek_vision_service()
+    def __init__(self, vision_service: Any | None = None) -> None:
+        self._vision_service = vision_service or get_deepseek_vision_service()
 
     @property
     def vision_service(self) -> Any:

@@ -9,9 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ...crud.asset import asset_crud
 from ...crud.party import party_crud
 from ...crud.query_builder import PartyFilter
-from ...models.certificate_party_relation import CertificatePartyRelation
 from ...models.contract_group import Contract, ContractGroup
-from ...models.property_certificate import PropertyCertificate
 from ...schemas.project import ProjectSearchRequest
 from ..party import party_service
 from ..project import project_service
@@ -108,11 +106,6 @@ class SearchService:
                 query=query,
                 scope_mode=scope_mode,
                 effective_party_ids=effective_party_ids,
-            )
-        )
-        results.extend(
-            await self._search_property_certificates(
-                db=db, query=query, scope_mode=scope_mode, party_filter=party_filter
             )
         )
         return results
@@ -407,70 +400,6 @@ class SearchService:
                 )
             )
         return items[: self.DEFAULT_LIMIT_PER_TYPE]
-
-    async def _search_property_certificates(
-        self,
-        *,
-        db: AsyncSession,
-        query: str,
-        scope_mode: str,
-        party_filter: PartyFilter,
-    ) -> list[dict[str, Any]]:
-        _ = scope_mode
-        party_ids = [
-            str(item).strip()
-            for item in party_filter.party_ids
-            if str(item).strip() != ""
-        ]
-        if len(party_ids) == 0:
-            return []
-        stmt = (
-            select(PropertyCertificate)
-            .join(
-                CertificatePartyRelation,
-                CertificatePartyRelation.certificate_id == PropertyCertificate.id,
-            )
-            .where(
-                CertificatePartyRelation.party_id.in_(party_ids),
-                or_(
-                    PropertyCertificate.certificate_number.ilike(f"%{query}%"),
-                    PropertyCertificate.property_address.ilike(f"%{query}%"),
-                ),
-            )
-            .distinct()
-            .limit(self.DEFAULT_LIMIT_PER_TYPE)
-        )
-        certificates = list((await db.execute(stmt)).scalars().all())
-        return [
-            self._build_result_item(
-                object_type="property_certificate",
-                object_id=str(certificate.id),
-                title=str(certificate.certificate_number),
-                subtitle=str(
-                    getattr(
-                        certificate.certificate_type,
-                        "value",
-                        certificate.certificate_type,
-                    )
-                ),
-                summary=str(getattr(certificate, "property_address", "")).strip()
-                or None,
-                keywords=["certificate_number"],
-                route_path=f"/property-certificates/{certificate.id}",
-                score=self._score_text(
-                    query,
-                    [
-                        getattr(certificate, "certificate_number", None),
-                        getattr(certificate, "property_address", None),
-                    ],
-                ),
-                business_rank=self._business_rank(
-                    query, [getattr(certificate, "certificate_number", None)]
-                ),
-                group_label="产权证",
-            )
-            for certificate in certificates
-        ]
 
     @staticmethod
     def _build_result_item(

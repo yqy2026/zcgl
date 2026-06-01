@@ -4,6 +4,7 @@ Unit tests for ExtractorFactory
 提取器工厂单元测试
 """
 
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
@@ -17,6 +18,10 @@ from src.services.document.extractors.factory import (
     get_llm_extractor,
     reset_extractor,
 )
+
+
+def _available_vision_service():
+    return SimpleNamespace(is_available=True)
 
 
 class TestExtractorMap:
@@ -44,33 +49,47 @@ class TestExtractorFactory:
 
     def test_get_extractor_default(self):
         """测试获取默认提取器"""
-        with patch(
-            "src.services.document.extractors.factory.settings"
-        ) as mock_settings:
+        with patch("src.services.core.vision_provider.settings") as mock_settings:
+            mock_settings.VISION_MODEL = None
             mock_settings.EXTRACTION_LLM_PROVIDER = None
             mock_settings.LLM_PROVIDER = "glm"
-
-            extractor = ExtractorFactory.get_extractor()
+            with patch(
+                "src.services.document.extractors.factory.get_vision_provider",
+                return_value=_available_vision_service(),
+            ):
+                extractor = ExtractorFactory.get_extractor()
 
             assert isinstance(extractor, ContractExtractorInterface)
             assert extractor is not None
 
     def test_get_extractor_with_provider_enum(self):
         """测试使用枚举指定提供商"""
-        extractor = ExtractorFactory.get_extractor(LLMProvider.QWEN)
+        with patch(
+            "src.services.document.extractors.factory.get_vision_provider",
+            return_value=_available_vision_service(),
+        ):
+            extractor = ExtractorFactory.get_extractor(LLMProvider.QWEN)
 
         assert isinstance(extractor, ContractExtractorInterface)
 
     def test_get_extractor_with_provider_string(self):
         """测试使用字符串指定提供商"""
-        extractor = ExtractorFactory.get_extractor("deepseek")
+        with patch(
+            "src.services.document.extractors.factory.get_vision_provider",
+            return_value=_available_vision_service(),
+        ):
+            extractor = ExtractorFactory.get_extractor("deepseek")
 
         assert isinstance(extractor, ContractExtractorInterface)
 
     def test_get_extractor_with_alias(self):
         """测试使用别名指定提供商"""
         # glm-4v 应该被标准化为 glm
-        extractor = ExtractorFactory.get_extractor("glm-4v")
+        with patch(
+            "src.services.document.extractors.factory.get_vision_provider",
+            return_value=_available_vision_service(),
+        ):
+            extractor = ExtractorFactory.get_extractor("glm-4v")
 
         assert isinstance(extractor, ContractExtractorInterface)
 
@@ -81,13 +100,15 @@ class TestExtractorFactory:
 
     def test_get_extractor_none_uses_config(self):
         """测试不指定提供商时使用配置"""
-        with patch(
-            "src.services.document.extractors.factory.settings"
-        ) as mock_settings:
+        with patch("src.services.core.vision_provider.settings") as mock_settings:
+            mock_settings.VISION_MODEL = None
             mock_settings.EXTRACTION_LLM_PROVIDER = None
             mock_settings.LLM_PROVIDER = "qwen"
-
-            extractor = ExtractorFactory.get_extractor()
+            with patch(
+                "src.services.document.extractors.factory.get_vision_provider",
+                return_value=_available_vision_service(),
+            ):
+                extractor = ExtractorFactory.get_extractor()
 
             # 应该创建 QwenAdapter
             from src.services.document.extractors.qwen_adapter import QwenAdapter
@@ -113,25 +134,35 @@ class TestConvenienceFunctions:
 
     def test_get_llm_extractor(self):
         """测试 get_llm_extractor 函数"""
-        with patch(
-            "src.services.document.extractors.factory.settings"
-        ) as mock_settings:
+        with patch("src.services.core.vision_provider.settings") as mock_settings:
+            mock_settings.VISION_MODEL = None
             mock_settings.EXTRACTION_LLM_PROVIDER = None
             mock_settings.LLM_PROVIDER = "glm"
-
-            extractor = get_llm_extractor()
+            with patch(
+                "src.services.document.extractors.factory.get_vision_provider",
+                return_value=_available_vision_service(),
+            ):
+                extractor = get_llm_extractor()
 
             assert isinstance(extractor, ContractExtractorInterface)
 
     def test_get_llm_extractor_with_force_provider(self):
         """测试强制指定提供商"""
-        extractor = get_llm_extractor(force_provider="qwen")
+        with patch(
+            "src.services.document.extractors.factory.get_vision_provider",
+            return_value=_available_vision_service(),
+        ):
+            extractor = get_llm_extractor(force_provider="qwen")
 
         assert isinstance(extractor, ContractExtractorInterface)
 
     def test_get_llm_extractor_with_enum(self):
         """测试使用枚举强制指定提供商"""
-        extractor = get_llm_extractor(force_provider=LLMProvider.DEEPSEEK)
+        with patch(
+            "src.services.document.extractors.factory.get_vision_provider",
+            return_value=_available_vision_service(),
+        ):
+            extractor = get_llm_extractor(force_provider=LLMProvider.DEEPSEEK)
 
         assert isinstance(extractor, ContractExtractorInterface)
 
@@ -165,20 +196,26 @@ class TestProviderNormalization:
     )
     def test_get_extractor_with_various_aliases(self, alias, expected):
         """测试使用各种别名获取提取器"""
-        extractor = ExtractorFactory.get_extractor(alias)
+        with patch(
+            "src.services.document.extractors.factory.get_vision_provider",
+            return_value=_available_vision_service(),
+        ):
+            extractor = ExtractorFactory.get_extractor(alias)
 
         # 验证返回了提取器实例
         assert isinstance(extractor, ContractExtractorInterface)
 
     def test_case_insensitive_provider(self):
         """测试提供商名称大小写不敏感"""
-        with patch(
-            "src.services.document.extractors.factory.settings"
-        ) as mock_settings:
+        with patch("src.services.core.vision_provider.settings") as mock_settings:
+            mock_settings.VISION_MODEL = None
             mock_settings.EXTRACTION_LLM_PROVIDER = None
             mock_settings.LLM_PROVIDER = "GLM"
-
-            extractor = ExtractorFactory.get_extractor()
+            with patch(
+                "src.services.document.extractors.factory.get_vision_provider",
+                return_value=_available_vision_service(),
+            ):
+                extractor = ExtractorFactory.get_extractor()
 
             assert isinstance(extractor, ContractExtractorInterface)
 
@@ -193,21 +230,29 @@ class TestExtractorCreation:
         from src.services.document.extractors.qwen_adapter import QwenAdapter
 
         # GLM
-        glm_extractor = ExtractorFactory.get_extractor(LLMProvider.GLM)
-        assert isinstance(glm_extractor, GLMAdapter)
+        with patch(
+            "src.services.document.extractors.factory.get_vision_provider",
+            return_value=_available_vision_service(),
+        ):
+            glm_extractor = ExtractorFactory.get_extractor(LLMProvider.GLM)
+            assert isinstance(glm_extractor, GLMAdapter)
 
-        # Qwen
-        qwen_extractor = ExtractorFactory.get_extractor(LLMProvider.QWEN)
-        assert isinstance(qwen_extractor, QwenAdapter)
+            # Qwen
+            qwen_extractor = ExtractorFactory.get_extractor(LLMProvider.QWEN)
+            assert isinstance(qwen_extractor, QwenAdapter)
 
-        # DeepSeek
-        deepseek_extractor = ExtractorFactory.get_extractor(LLMProvider.DEEPSEEK)
-        assert isinstance(deepseek_extractor, DeepSeekAdapter)
+            # DeepSeek
+            deepseek_extractor = ExtractorFactory.get_extractor(LLMProvider.DEEPSEEK)
+            assert isinstance(deepseek_extractor, DeepSeekAdapter)
 
     def test_factory_creates_new_instances(self):
         """测试工厂每次创建新实例（非单例）"""
-        extractor1 = ExtractorFactory.get_extractor(LLMProvider.GLM)
-        extractor2 = ExtractorFactory.get_extractor(LLMProvider.GLM)
+        with patch(
+            "src.services.document.extractors.factory.get_vision_provider",
+            return_value=_available_vision_service(),
+        ):
+            extractor1 = ExtractorFactory.get_extractor(LLMProvider.GLM)
+            extractor2 = ExtractorFactory.get_extractor(LLMProvider.GLM)
 
         # 应该是不同的实例
         assert extractor1 is not extractor2
@@ -215,8 +260,12 @@ class TestExtractorCreation:
     def test_factory_supports_all_llm_providers(self):
         """测试工厂支持所有 LLM 提供商"""
         for provider in LLMProvider:
-            extractor = ExtractorFactory.get_extractor(provider)
-            assert isinstance(extractor, ContractExtractorInterface)
+            with patch(
+                "src.services.document.extractors.factory.get_vision_provider",
+                return_value=_available_vision_service(),
+            ):
+                extractor = ExtractorFactory.get_extractor(provider)
+                assert isinstance(extractor, ContractExtractorInterface)
 
 
 class TestErrorHandling:

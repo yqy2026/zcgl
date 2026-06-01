@@ -4,6 +4,8 @@
 
 | 文档 | 主题 |
 |------|------|
+| [2026-05-31-auth-middleware-split.md](./2026-05-31-auth-middleware-split.md) | Auth middleware 拆分方案 |
+| [2026-05-29-codebase-lean-refocus-plan.md](./2026-05-29-codebase-lean-refocus-plan.md) | 代码库瘦身与业务聚焦方案 |
 | [2026-05-12-project-centered-asset-operations-plan.md](./2026-05-12-project-centered-asset-operations-plan.md) | 项目主轴资产运营全局规划 |
 | [2026-04-27-prd-document-restructure-plan.md](./2026-04-27-prd-document-restructure-plan.md) | PRD 文档体系重构 |
 | [2026-04-22-ci-format-remediation.md](./2026-04-22-ci-format-remediation.md) | CI 格式化门禁修复分批计划 |

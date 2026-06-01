@@ -5,9 +5,7 @@ import {
   CONTRACT_GROUP_ROUTES,
   ANALYTICS_ROUTES,
   FINANCE_ROUTES,
-  OWNERSHIP_ROUTES,
   PROJECT_ROUTES,
-  PROPERTY_CERTIFICATE_ROUTES,
   SYSTEM_ROUTES,
 } from '@/constants/routes';
 
@@ -19,9 +17,6 @@ const normalizePermissions = (permissions: RoutePermission[]): string[] =>
 describe('AppRoutes authz metadata', () => {
   it('keeps Phase 3d critical route resource mappings aligned', () => {
     const expectedByPath = new Map<string, string>([
-      [OWNERSHIP_ROUTES.LIST, 'party:read'],
-      [OWNERSHIP_ROUTES.DETAIL_PATH, 'party:read'],
-      [OWNERSHIP_ROUTES.EDIT_PATH, 'party:read'],
       [PROJECT_ROUTES.LIST, 'project:read'],
       [PROJECT_ROUTES.DETAIL_PATH, 'project:read'],
       [PROJECT_ROUTES.EDIT_PATH, 'project:read'],
@@ -37,9 +32,6 @@ describe('AppRoutes authz metadata', () => {
       [CONTRACT_GROUP_ROUTES.DETAIL_PATH, 'contract_group:read'],
       [CONTRACT_GROUP_ROUTES.EDIT_PATH, 'contract_group:update'],
       [CONTRACT_GROUP_ROUTES.NEW_CONTRACT_PATH, 'contract_group:create'],
-      [PROPERTY_CERTIFICATE_ROUTES.LIST, 'property_certificate:read'],
-      [PROPERTY_CERTIFICATE_ROUTES.DETAIL_PATH, 'property_certificate:read'],
-      [PROPERTY_CERTIFICATE_ROUTES.IMPORT, 'property_certificate:create'],
       [ANALYTICS_ROUTES.OVERVIEW, 'analytics:read'],
       [FINANCE_ROUTES.LEDGER, 'contract:read'],
     ]);
@@ -52,6 +44,21 @@ describe('AppRoutes authz metadata', () => {
       const actualPermissions = route?.permissions ?? [];
       expect(normalizePermissions(actualPermissions)).toEqual([expectedPermission]);
     }
+  });
+
+  it('does not expose out-of-scope ownership or property certificate page routes', () => {
+    const protectedRoutePaths = protectedRoutes.map(route => route.path);
+
+    expect(protectedRoutePaths).not.toEqual(
+      expect.arrayContaining([
+        '/ownership',
+        '/ownership/:id',
+        '/ownership/:id/edit',
+        '/property-certificates',
+        '/property-certificates/:id',
+        '/property-certificates/import',
+      ])
+    );
   });
 
   it('requires explicit capability metadata for each protected route', () => {
