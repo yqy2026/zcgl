@@ -4,10 +4,15 @@ from unittest.mock import ANY, AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.core.exception_handler import DuplicateResourceError, OperationNotAllowedError
+from src.core.exception_handler import (
+    DuplicateResourceError,
+    OperationNotAllowedError,
+    ResourceNotFoundError,
+)
 from src.crud.query_builder import PartyFilter
 from src.models.party import PartyReviewStatus, PartyType
 from src.schemas.party import (
+    PartyContactCreate,
     PartyCreate,
     PartyUpdate,
     UserPartyBindingCreate,
@@ -347,6 +352,7 @@ class TestCustomerProfileAggregation:
             },
         ]
         assert profile["contracts"][0]["group_relation_type"] == "DIRECT_LEASE"
+
 
     async def test_list_customer_contracts_should_union_owner_and_manager_matches_for_all_binding_type(
         self,
@@ -755,6 +761,61 @@ class TestCustomerProfileAggregation:
         assert create_payload["review_status"] == PartyReviewStatus.APPROVED.value
         assert create_payload["review_by"] == "import-user"
         assert create_payload["review_reason"] == "初始化导入"
+
+
+class TestPartyContactService:
+    async def test_create_contact_should_require_existing_party(self) -> None:
+        db = MagicMock()
+        party_crud = MagicMock()
+        party_crud.get_party = AsyncMock(return_value=None)
+        party_crud.create_contact = AsyncMock()
+        service = PartyService(data_access=party_crud)
+
+        with pytest.raises(ResourceNotFoundError, match="主体"):
+            await service.create_contact(
+                db,
+                obj_in=PartyContactCreate(
+                    party_id="missing-party",
+                    contact_name="张三",
+                    is_primary=True,
+                ),
+            )
+
+        party_crud.create_contact.assert_not_called()
+
+    async def test_create_contact_delegates_to_party_crud_with_party_id(self) -> None:
+        db = MagicMock()
+        created_contact = SimpleNamespace(
+            id="contact-1",
+            party_id="party-1",
+            contact_name="张三",
+            is_primary=True,
+        )
+        party_crud = MagicMock()
+        party_crud.get_party = AsyncMock(return_value=SimpleNamespace(id="party-1"))
+        party_crud.create_contact = AsyncMock(return_value=created_contact)
+        service = PartyService(data_access=party_crud)
+
+        result = await service.create_contact(
+            db,
+            obj_in=PartyContactCreate(
+                party_id="party-1",
+                contact_name="张三",
+                contact_phone="13800000000",
+                is_primary=True,
+            ),
+        )
+
+        assert result is created_contact
+        party_crud.create_contact.assert_awaited_once_with(
+            db,
+            obj_in={
+                "party_id": "party-1",
+                "contact_name": "张三",
+                "contact_phone": "13800000000",
+                "is_primary": True,
+            },
+        )
 
 
 class TestPartyServiceSoftDelete:

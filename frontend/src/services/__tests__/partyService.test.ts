@@ -199,6 +199,35 @@ describe('PartyService', () => {
     );
   });
 
+  it('manages contacts through party-scoped endpoints', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      success: true,
+      data: [{ id: 'contact-1', party_id: 'party-1', contact_name: '张三', is_primary: true }],
+    });
+    vi.mocked(apiClient.post).mockResolvedValue({
+      success: true,
+      data: { id: 'contact-2', party_id: 'party-1', contact_name: '李四', is_primary: false },
+    });
+
+    const contacts = await service.getPartyContacts('party-1');
+    const created = await service.createPartyContact('party-1', {
+      contact_name: '李四',
+      contact_phone: '13800000000',
+    });
+
+    expect(contacts[0].contact_name).toBe('张三');
+    expect(created.party_id).toBe('party-1');
+    expect(apiClient.get).toHaveBeenCalledWith(
+      '/parties/party-1/contacts',
+      expect.objectContaining({ smartExtract: true })
+    );
+    expect(apiClient.post).toHaveBeenCalledWith(
+      '/parties/party-1/contacts',
+      { contact_name: '李四', contact_phone: '13800000000' },
+      expect.objectContaining({ smartExtract: true })
+    );
+  });
+
   it('imports parties in batch', async () => {
     vi.mocked(apiClient.post).mockResolvedValue({
       success: true,

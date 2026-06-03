@@ -2,6 +2,11 @@
 
 ## [Unreleased] - 2026-03-06
 
+### 2026-06-03
+- docs(agents): 完整检查并修正 `AGENTS.md`。增加 Codex sub-agent / code-reviewer 用户长期授权，允许非平凡代码修改、架构收口、测试失败诊断和完成前复核时按需派发，并要求说明派发目的、边界、复核结论及采纳情况；同步更新 Last Updated、修正 Markdown 分隔线空行，并补齐 `make check` 的 UI guard / backend-import 门禁口径。
+- refactor(party): 收口 Contact/PartyContact 双通路，删除通用 `/contacts` API、`Contact` ORM/CRUD/service/schema、前端 `contactService` 与旧测试；新增 `20260603_drop_generic_contacts` 迁移删除已落库的 `contacts` 表、`contact` 权限和 ABAC 规则，联系人统一通过 `party_contacts` 与 `/parties/{party_id}/contacts` 维护。同步补充 Party 联系人前后端测试、`partyService` 主体联系人方法、领域模型/API 契约/追踪矩阵和架构复核报告状态，并清理 ABAC seed 与 datetime 静态约束中的旧 `contact` 期望。
+- docs(issues): 新增并复核 `docs/issues/2026-06-02-architecture-review.md` 架构技术债报告，将外部 HTML 审阅材料校准为当前仓库状态；修正原报告中过时的 authz 后端 0 覆盖率、System 页面大规模死文件和 API 直连 CRUD 建议，重新整理 Contact/PartyContact、Capability/RBAC、system_settings fail-loud、路由注册标准与浅服务治理的后续切片，并同步更新问题索引。复核后补充源报告 8 个候选合并为 7 个复核方向的说明、限定后续 `rg` 验收命令范围，并标注 System 页面 CSS module 旧命名依赖不能随迁移壳一并误删。
+
 ### 2026-06-01
 - refactor(auth): 完成 Auth middleware 拆分 Phase 4/5 并归档方案。新增 `backend/src/middleware/resource_context.py` 承载 ABAC 可信资源上下文加载，新增 `audit.py` 与 `security_config.py` 拆出审计依赖和安全配置展示逻辑；`auth.py` 收敛为公共 facade，继续注入当前 `authz_service` / `RBACService` 并保留 FastAPI dependency override 入口。同步删除 `auth.py` 中无运行时调用方的旧 RBAC/角色/资源 checker、`can_edit_contract()` 和 `get_user_rbac_permissions()`，补充护栏测试阻止旧入口回流，并将 `docs/plans/2026-05-31-auth-middleware-split.md` 完成后移入 `docs/archive/backend-plans/`。
 - refactor(scope): 推进 Auth middleware 拆分 Phase 3。新增 `backend/src/middleware/data_scope.py` 承载 `DataScopeContext`、`DataScopeContextChecker` 和 data-scope 解析逻辑；`auth.py` 保留 `require_data_scope_context()` 公共工厂并注入当前 `authz_service` / `RBACService`，维持既有路由依赖入口、FastAPI dependency override 和测试 patch 点。

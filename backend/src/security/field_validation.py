@@ -12,7 +12,6 @@ from ..core.exception_handler import InvalidRequestError
 from ..crud import field_whitelist as crud_field_whitelist
 from ..crud.field_whitelist import ModelFieldWhitelist
 from ..models.asset import Asset
-from ..models.contact import Contact
 from ..models.contract_group import Contract
 from ..models.organization import Organization
 
@@ -22,7 +21,6 @@ MODEL_REGISTRY: dict[str, type] = {
     "Asset": Asset,
     "Contract": Contract,
     "Organization": Organization,
-    "Contact": Contact,
 }
 
 

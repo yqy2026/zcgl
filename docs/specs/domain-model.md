@@ -432,6 +432,19 @@
 | `review_reason` | string | 否 | 审核原因 |
 | `metadata_json` | json | 否 | 扩展信息 |
 
+### 4.19 PartyContact
+
+| 字段 | 类型 | 必填 | 规则 |
+|---|---|---|---|
+| `id` | string | 是 | 主体联系人主键 |
+| `party_id` | string | 是 | 所属主体 ID |
+| `contact_name` | string | 是 | 联系人姓名 |
+| `contact_phone` | string | 否 | 联系电话 |
+| `contact_email` | string | 否 | 联系邮箱 |
+| `position` | string | 否 | 职位 |
+| `is_primary` | boolean | 是 | 是否主联系人；同一主体最多一个主联系人 |
+| `notes` | text | 否 | 备注 |
+
 ## 5. 状态机
 
 ### 5.1 ContractGroup 派生状态

@@ -43,7 +43,6 @@ from .search import router as search_router
 # 导入各个模块的路由 - System
 from .system.backup import router as backup_router
 from .system.collection import router as collection_router
-from .system.contact import router as contact_router
 from .system.dictionaries import router as dictionaries_router
 from .system.enum_field import router as enum_field_router
 from .system.error_recovery import router as error_recovery_router
@@ -157,7 +156,6 @@ if pdf_batch_router is not None:
 api_router.include_router(
     notifications_router, prefix="/notifications", tags=["通知管理"]
 )
-api_router.include_router(contact_router, prefix="/contacts", tags=["联系人管理"])
 api_router.include_router(collection_router, prefix="/collections", tags=["催缴管理"])
 api_router.include_router(error_recovery_router, tags=["错误恢复"])
 api_router.include_router(

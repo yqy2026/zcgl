@@ -1,5 +1,6 @@
 """Party API behavior tests."""
 
+from datetime import datetime
 from unittest.mock import AsyncMock, patch
 
 from fastapi import status
@@ -337,6 +338,45 @@ def test_get_party_review_logs_should_return_entries(client) -> None:
     assert isinstance(payload, list)
     assert payload[0]["action"] == "update"
     assert payload[0]["reason"] == "fields:name"
+
+
+def test_party_contact_endpoints_should_use_party_scoped_path(client) -> None:
+    with (
+        patch(
+            "src.api.v1.party.party_service.get_party",
+            new=AsyncMock(return_value=type("Party", (), {"id": "party-1"})()),
+        ),
+        patch(
+            "src.api.v1.party.party_service.get_contacts",
+            new=AsyncMock(
+                return_value=[
+                    type(
+                        "PartyContact",
+                        (),
+                        {
+                            "id": "contact-1",
+                            "party_id": "party-1",
+                            "contact_name": "张三",
+                            "contact_phone": "13800000000",
+                            "contact_email": None,
+                            "position": None,
+                            "is_primary": True,
+                            "notes": None,
+                            "created_at": datetime(2026, 6, 3, 10, 0, 0),
+                            "updated_at": datetime(2026, 6, 3, 10, 0, 0),
+                        },
+                    )()
+                ]
+            ),
+        ) as mock_get_contacts,
+    ):
+        response = client.get("/api/v1/parties/party-1/contacts")
+
+    assert response.status_code == status.HTTP_200_OK
+    payload = response.json()
+    assert payload[0]["party_id"] == "party-1"
+    assert payload[0]["contact_name"] == "张三"
+    mock_get_contacts.assert_awaited_once()
 
 
 def test_get_customer_profile_should_require_perspective_and_return_profile(

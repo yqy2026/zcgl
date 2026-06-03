@@ -34,7 +34,6 @@ from .collection import (  # noqa: F401
     CollectionRecord,
     CollectionStatus,
 )
-from .contact import Contact, ContactType  # noqa: F401
 from .contract_group import (  # noqa: F401
     AgencyAgreementDetail,
     Contract,
@@ -153,9 +152,6 @@ __all__ = [
     "ContractRelationType",
     "contract_group_assets",
     "contract_assets",
-    # Contact models
-    "Contact",
-    "ContactType",
     # Collection models
     "CollectionRecord",
     "CollectionMethod",

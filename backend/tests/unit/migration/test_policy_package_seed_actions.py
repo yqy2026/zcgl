@@ -240,7 +240,6 @@ def test_backfill_expanded_resource_types_should_include_system_domain_resources
         "backup",
         "analytics",
         "collection",
-        "contact",
         "dictionary",
         "enum_field",
         "history",
@@ -248,6 +247,7 @@ def test_backfill_expanded_resource_types_should_include_system_domain_resources
     }
 
     assert expected_resources.issubset(set(module._EXPANDED_RESOURCE_TYPES))
+    assert "contact" not in set(module._EXPANDED_RESOURCE_TYPES)
 
 
 def test_backfill_expanded_resource_types_should_match_non_base_api_authz_resources() -> None:

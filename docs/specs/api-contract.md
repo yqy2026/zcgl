@@ -149,6 +149,7 @@ MVP 不提供续签端点。到期后继续合作按新签流程创建合同关�
 | 主体更新 | `PATCH /api/v1/parties/{party_id}` | 更新主体主档 |
 | 主体导入 | `POST /api/v1/parties/import` | 初始化批量导入主体 |
 | 主体审核 | `/api/v1/parties/{party_id}/submit-review|approve-review|reject-review` | 主体审核状态流转 |
+| 主体联系人 | `GET/POST /api/v1/parties/{party_id}/contacts` | 维护主体主档下的联系人；联系人不提供通用实体联系人写入口 |
 | 主体绑定 | `/api/v1/parties/users/{user_id}/party-bindings*` | 维护用户和主体绑定关系 |
 
 合同进入待审前，关联主体必须已审核通过。

@@ -251,7 +251,6 @@ def get_encryption_status(
 
         protected_fields = {
             "Contract": ["owner_phone", "tenant_phone"],
-            "Contact": ["phone", "office_phone"],
             "Asset": ["project_phone"],
         }
 

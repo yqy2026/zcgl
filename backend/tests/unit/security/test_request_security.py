@@ -224,7 +224,6 @@ class TestFieldValidator:
         assert "Asset" in MODEL_REGISTRY
         assert "Contract" in MODEL_REGISTRY
         assert "Organization" in MODEL_REGISTRY
-        assert "Contact" in MODEL_REGISTRY
 
     def test_get_model_class_valid(self, validator):
         """Test getting valid model class"""

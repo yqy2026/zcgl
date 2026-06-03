@@ -3,7 +3,8 @@
 本文件为 AI Coding Agents 提供项目上下文与执行约束（Single Source of Truth）。
 每次修改后请先复核没问题后更新 `CHANGELOG.md`。
 项目目前在从0到1阶段的开发中，不要做兼容操作，充分暴露问题，打牢系统基础。
-**Last Updated**: 2026-03-28（补充 Done when、Codex 配置与任务模板入口）
+**Last Updated**: 2026-06-03（补充 sub-agent 长期授权与 make check 门禁口径）
+
 ---
 
 ## 协作入口
@@ -29,6 +30,13 @@
 ### Codex 项目默认配置
 - 长期稳定的项目规则放在本文件
 - 操作型说明放在 `docs/guides/`
+
+### Sub-agent 使用授权
+
+用户长期授权 Codex 在非平凡代码修改、架构收口、测试失败诊断、完成前复核时，按需派发 sub-agent / code-reviewer 进行并行检查或代码复核。无需每次单独询问；使用时必须说明派发目的、边界、复核结论，以及是否采纳其建议。
+
+派发 sub-agent 时必须保持任务边界清晰，避免覆盖用户或其他 agent 的未关联改动；代码修改类子任务应明确文件或模块责任范围。
+
 ---
 
 ## 项目概述
@@ -50,7 +58,7 @@ make type-check     # TypeScript 类型检查
 make test           # 前后端测试
 make migrate        # alembic upgrade head
 make secrets        # 生成 SECRET_KEY / DATA_ENCRYPTION_KEY
-make check          # lint + type-check + test + build + docs-lint 全量门禁
+make check          # lint + UI guard + type-check + test + build + backend-import + docs-lint 全量门禁
 make docs-lint      # 仅跑 SSOT 完整性检查
 ```
 
@@ -215,7 +223,7 @@ docs/traceability/requirements-trace.md  ← 实现状态、代码证据、测�
 
 ### make check 门禁
 
-lint + type-check + test + build + backend-import + **docs-lint**（`check_requirements_authority.py` + `check_field_drift.py`）
+lint + UI guard + type-check + test + build + backend-import + **docs-lint**（`check_requirements_authority.py` + `check_field_drift.py`）
 
 docs-lint 覆盖：①旧文档引用守卫 ②代码证据死链检测 ③`plans/` 完成态残留检测 ④PRD/spec 实现证据守卫 ⑤traceability 路径存在性守卫 ⑥旧需求入口跳转页守卫。
 

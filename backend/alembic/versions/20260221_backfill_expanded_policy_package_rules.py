@@ -159,7 +159,6 @@ _EXPANDED_RESOURCE_TYPES = (
     "backup",
     "analytics",
     "collection",
-    "contact",
     "dictionary",
     "enum_field",
     "history",

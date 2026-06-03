@@ -1,6 +1,6 @@
 import { apiClient } from '@/api/client';
 import type { ApiClientError } from '@/types/apiResponse';
-import type { CustomerProfile, Party, PartyListParams, PartyType } from '@/types/party';
+import type { CustomerProfile, Party, PartyContact, PartyListParams, PartyType } from '@/types/party';
 import { ApiErrorHandler } from '@/utils/responseExtractor';
 
 const DEFAULT_SEARCH_LIMIT = 20;
@@ -62,6 +62,15 @@ export interface PartyReviewLog {
   operator?: string | null;
   reason?: string | null;
   created_at: string;
+}
+
+export interface PartyContactCreatePayload {
+  contact_name: string;
+  contact_phone?: string | null;
+  contact_email?: string | null;
+  position?: string | null;
+  is_primary?: boolean;
+  notes?: string | null;
 }
 
 const normalizePartyList = (
@@ -333,6 +342,50 @@ export class PartyService {
 
       if (!result.success || result.data == null) {
         throw new Error(`获取主体层级失败: ${result.error}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw toServiceError(enhancedError);
+    }
+  }
+
+  async getPartyContacts(partyId: string): Promise<PartyContact[]> {
+    try {
+      const result = await apiClient.get<PartyContact[]>(`${PARTY_BASE_URL}/${partyId}/contacts`, {
+        cache: false,
+        retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
+
+      if (!result.success || result.data == null) {
+        throw new Error(`获取主体联系人失败: ${result.error}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw toServiceError(enhancedError);
+    }
+  }
+
+  async createPartyContact(
+    partyId: string,
+    payload: PartyContactCreatePayload
+  ): Promise<PartyContact> {
+    try {
+      const result = await apiClient.post<PartyContact>(
+        `${PARTY_BASE_URL}/${partyId}/contacts`,
+        payload,
+        {
+          retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+          smartExtract: true,
+        }
+      );
+
+      if (!result.success || result.data == null) {
+        throw new Error(`创建主体联系人失败: ${result.error}`);
       }
 
       return result.data;
