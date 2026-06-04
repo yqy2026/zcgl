@@ -29,8 +29,6 @@ vi.mock('@/services/authService', () => ({
     getCurrentUserPermissions: vi.fn(),
     getCurrentUserCapabilities: vi.fn(),
     refreshToken: vi.fn(),
-    hasPermission: vi.fn(),
-    hasAnyPermission: vi.fn(),
     isAuthenticated: vi.fn(),
     verifyAuth: vi.fn(),
   },
@@ -142,8 +140,6 @@ describe('useAuth Hook', () => {
       capabilities: [],
     });
     vi.mocked(AuthService.getLocalPermissions).mockReturnValue([]);
-    vi.mocked(AuthService.hasPermission).mockReturnValue(false);
-    vi.mocked(AuthService.hasAnyPermission).mockReturnValue(false);
     vi.mocked(AuthService.isAuthenticated).mockReturnValue(false);
     vi.mocked(AuthService.logout).mockResolvedValue(undefined);
   });
@@ -224,7 +220,6 @@ describe('useAuth Hook', () => {
       });
 
       expect(result.current.capabilities).toEqual([]);
-      expect(result.current.hasPermission('legacy', 'delete')).toBe(false);
       expect(result.current.capabilitiesLoading).toBe(true);
     });
 

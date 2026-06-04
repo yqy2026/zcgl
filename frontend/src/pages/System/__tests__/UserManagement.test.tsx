@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import React from 'react';
 import { fireEvent, renderWithProviders, screen, waitFor } from '@/test/utils/test-helpers';
-import UserManagementPage from '../UserManagementPage';
+import UserManagementPage from '../UserManagement';
 import { userService } from '@/services/systemService';
 import { partyService } from '@/services/partyService';
 import { MessageManager } from '@/utils/messageManager';

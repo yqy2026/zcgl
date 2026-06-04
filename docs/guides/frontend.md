@@ -271,7 +271,8 @@ interface ComponentProps {
 │  │ - user       │     │ - assets     │    │
 │  │ - theme      │     │ - contracts  │    │
 │  │ - sidebar    │     │ - users      │    │
-│  │ - permissions│     │ - cache      │    │
+│  │ - preferences│     │ - capabilities│   │
+│  │              │     │ - cache      │    │
 │  └──────────────┘     └──────────────┘    │
 │           │                   │            │
 │           └─────────┬─────────┘            │
@@ -302,10 +303,6 @@ interface AppState {
   sidebarCollapsed: boolean;
   setSidebarCollapsed: (collapsed: boolean) => void;
 
-  // 权限
-  permissions: Permission[];
-  hasPermission: (resource: string, action: string) => boolean;
-
   // UI 状态
   loading: boolean;
   setLoading: (loading: boolean) => void;
@@ -313,28 +310,18 @@ interface AppState {
 
 export const useAppStore = create<AppState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       // 初始状态
       user: null,
       theme: 'light',
       sidebarCollapsed: false,
-      permissions: [],
       loading: false,
 
       // Actions
       setUser: (user) => set({ user }),
       setTheme: (theme) => set({ theme }),
       setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
-      setPermissions: (permissions) => set({ permissions }),
-      setLoading: (loading) => set({ loading }),
-
-      // 权限检查
-      hasPermission: (resource, action) => {
-        const { permissions } = get();
-        return permissions.some(
-          p => p.resource === resource && p.actions.includes(action)
-        );
-      }
+      setLoading: (loading) => set({ loading })
     }),
     {
       name: 'app-storage', // localStorage key
@@ -347,6 +334,10 @@ export const useAppStore = create<AppState>()(
   )
 );
 ```
+
+权限判断不放入 Zustand。生产代码统一通过 `useCapabilities().canPerform()` 和
+`frontend/src/utils/authz/capabilityEvaluator.ts` 处理，避免出现第二套本地
+RBAC 入口。
 
 ### React Query 服务端状态
 

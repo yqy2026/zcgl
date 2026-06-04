@@ -8,7 +8,7 @@
 
 | 文档 | 内容 | 状态 |
 |------|------|------|
-| [2026-06-02-architecture-review.md](./2026-06-02-architecture-review.md) | 架构技术债复核报告，校准 Contact/PartyContact、Capability/RBAC、System 页面迁移、路由注册和浅服务候选项；Contact/PartyContact 第一轮已收口 | 🔄 分批实施中 |
+| [2026-06-02-architecture-review.md](./2026-06-02-architecture-review.md) | 架构技术债复核报告，校准 Contact/PartyContact、Capability/RBAC、System 页面迁移、路由注册、浅服务和活跃页面 React Query 边界；源报告候选项第一轮已完成收口，后续新增候选另行立案 | ✅ 第一轮收口完成 |
 | [2026-03-03-project-issues-analysis.md](./2026-03-03-project-issues-analysis.md) | 前后端全面排查报告（MyPy / Lint / 构建）| 🔄 修复进行中（49 errors 待清零） |
 | [2026-04-party-architecture-analysis.md](./2026-04-party-architecture-analysis.md) | 主体 Party 架构深度分析与重构方案 | 📋 待排期 |
 

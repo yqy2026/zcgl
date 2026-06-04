@@ -23,8 +23,6 @@ vi.mock('@/hooks/useAuth', () => ({
     permissions: [],
     login: vi.fn(),
     logout: vi.fn(),
-    hasPermission: vi.fn(),
-    hasAnyPermission: vi.fn(),
     clearError: vi.fn(),
   }),
 }));

@@ -3,7 +3,7 @@
 本文件为 AI Coding Agents 提供项目上下文与执行约束（Single Source of Truth）。
 每次修改后请先复核没问题后更新 `CHANGELOG.md`。
 项目目前在从0到1阶段的开发中，不要做兼容操作，充分暴露问题，打牢系统基础。
-**Last Updated**: 2026-06-03（补充 sub-agent 长期授权与 make check 门禁口径）
+**Last Updated**: 2026-06-03（明确 API 路由注册边界与 registry 自注册护栏）
 
 ---
 
@@ -100,7 +100,8 @@ docs/ scripts/ Makefile
 - ❌ **不要** 在 API 端点中放业务逻辑
 - ✅ 数据访问通过 `crud/` 层
 - ❌ **不要** 绕过 CRUD 直接操作数据库
-- ✅ 新 API 使用 `route_registry.register_router()` 注册
+- ✅ 新 API 使用 `route_registry.register_router()` 注册；历史 `api_router.include_router()` 仅作为既有 v1 聚合内部布线
+- ❌ 已在模块内调用 `route_registry.register_router()` 的路由，不得再被 `api_router.include_router()` 二次聚合，避免产生双公共入口
 - ✅ API 路径统一 `/api/v1/*`
 
 ### 前端状态管理

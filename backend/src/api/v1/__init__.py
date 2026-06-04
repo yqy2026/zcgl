@@ -5,7 +5,7 @@ from importlib import import_module
 
 from fastapi import APIRouter
 
-# --- Party-Role Phase 1 新模块加载（触发 route_registry.register_router） ---
+# --- route_registry 自注册模块加载（触发 route_registry.register_router） ---
 from . import (
     authz,  # noqa: F401
     party,  # noqa: F401
@@ -39,10 +39,10 @@ from .documents.pdf_import import router as pdf_import_router
 # 导入各个模块的路由 - LLM Prompts
 from .llm_prompts import router as llm_prompts_router
 from .search import router as search_router
+from .system import collection  # noqa: F401
 
 # 导入各个模块的路由 - System
 from .system.backup import router as backup_router
-from .system.collection import router as collection_router
 from .system.dictionaries import router as dictionaries_router
 from .system.enum_field import router as enum_field_router
 from .system.error_recovery import router as error_recovery_router
@@ -50,6 +50,7 @@ from .system.history import router as history_router
 from .system.notifications import router as notifications_router
 from .system.operation_logs import router as operation_logs_router
 from .system.system import router as system_router
+from .system.system_settings import router as system_settings_router
 from .system.tasks import router as tasks_router
 
 logger = logging.getLogger(__name__)
@@ -82,11 +83,6 @@ def _load_optional_router(
 pdf_batch_router = _load_optional_router(
     ".documents.pdf_batch_routes",
     missing_message="PDF batch routes not available: %s",
-)
-system_settings_router = _load_optional_router(
-    ".system.system_settings",
-    missing_message="系统设置路由模块不存在，跳过: %s",
-    log_level="debug",
 )
 
 # 创建统一API路由器 - 版本化架构
@@ -138,14 +134,8 @@ api_router.include_router(ledger_router, tags=["台账管理"])
 # 业务逻辑迁移至 src/services/analytics/analytics_service.py
 api_router.include_router(analytics_router, prefix="/analytics", tags=["综合分析"])
 
-# 条件注册系统设置路由
-if system_settings_router is not None:
-    logger.info("Registering system_settings_router")
-    api_router.include_router(
-        system_settings_router, prefix="/system", tags=["系统设置"]
-    )
-else:
-    logger.warning("system_settings_router is None, NOT registering")
+# 核心系统设置路由必须 fail loud；导入失败应阻断应用启动。
+api_router.include_router(system_settings_router, prefix="/system", tags=["系统设置"])
 
 # 注册新创建的统一路由模块
 api_router.include_router(system_router, tags=["系统管理"])
@@ -156,7 +146,6 @@ if pdf_batch_router is not None:
 api_router.include_router(
     notifications_router, prefix="/notifications", tags=["通知管理"]
 )
-api_router.include_router(collection_router, prefix="/collections", tags=["催缴管理"])
 api_router.include_router(error_recovery_router, tags=["错误恢复"])
 api_router.include_router(
     llm_prompts_router, prefix="/llm-prompts", tags=["LLM提示词管理"]

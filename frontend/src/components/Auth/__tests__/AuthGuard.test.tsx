@@ -49,8 +49,6 @@ const renderAuthGuard = (
     logout: vi.fn(async () => {}),
     refreshUser: vi.fn(async () => {}),
     refreshCapabilities: vi.fn(async () => {}),
-    hasPermission: vi.fn(() => true),
-    hasAnyPermission: vi.fn(() => true),
     clearError: vi.fn(),
     loading: false,
     error: null,

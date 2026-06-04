@@ -284,28 +284,6 @@ export class AuthService {
     return AuthStorage.getPermissions() as Permission[];
   }
 
-  // 检查用户是否有特定权限
-  static hasPermission(resource: string, action: string): boolean {
-    const permissions = this.getLocalPermissions();
-
-    return permissions.some(
-      permission => permission.resource === resource && permission.action === action
-    );
-  }
-
-  // 检查用户是否有任一权限（用于权限检查）
-  static hasAnyPermission(permissions: Array<{ resource: string; action: string }>): boolean {
-    const userPermissions = this.getLocalPermissions();
-
-    return permissions.some(requiredPermission =>
-      userPermissions.some(
-        permission =>
-          permission.resource === requiredPermission.resource &&
-          permission.action === requiredPermission.action
-      )
-    );
-  }
-
   // 清除认证数据
   private static clearAuthData(): void {
     // Tokens are in httpOnly cookies, cleared by backend logout endpoint

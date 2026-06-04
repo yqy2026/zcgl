@@ -203,17 +203,17 @@ const baseProtectedRoutes: ProtectedRouteItem[] = [
   },
   {
     path: SYSTEM_ROUTES.USERS,
-    element: React.lazy(() => import('../pages/System/UserManagementPage')),
+    element: React.lazy(() => import('../pages/System/UserManagement')),
     adminOnly: true,
   },
   {
     path: SYSTEM_ROUTES.ROLES,
-    element: React.lazy(() => import('../pages/System/RoleManagementPage')),
+    element: React.lazy(() => import('../pages/System/RoleManagement')),
     adminOnly: true,
   },
   {
     path: SYSTEM_ROUTES.ORGANIZATIONS,
-    element: React.lazy(() => import('../pages/System/OrganizationPage')),
+    element: React.lazy(() => import('../pages/System/Organization')),
     adminOnly: true,
   },
   {
@@ -223,7 +223,7 @@ const baseProtectedRoutes: ProtectedRouteItem[] = [
   },
   {
     path: SYSTEM_ROUTES.LOGS,
-    element: React.lazy(() => import('../pages/System/OperationLogPage')),
+    element: React.lazy(() => import('../pages/System/OperationLog')),
     adminOnly: true,
   },
   {

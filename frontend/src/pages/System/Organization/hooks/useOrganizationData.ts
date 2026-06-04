@@ -2,7 +2,11 @@ import { useCallback, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { PaginationState } from '@/components/Common/TableWithPagination';
 import { organizationService } from '@/services/organizationService';
-import type { OrganizationStatistics, OrganizationTree } from '@/types/organization';
+import type {
+  OrganizationHistory,
+  OrganizationStatistics,
+  OrganizationTree,
+} from '@/types/organization';
 import type {
   OrganizationFilters,
   OrganizationListQueryResult,
@@ -12,9 +16,16 @@ import type {
 interface UseOrganizationDataParams {
   filters: OrganizationFilters;
   pagination: OrganizationPaginationState;
+  historyOrganizationId?: string;
+  historyEnabled?: boolean;
 }
 
-export const useOrganizationData = ({ filters, pagination }: UseOrganizationDataParams) => {
+export const useOrganizationData = ({
+  filters,
+  pagination,
+  historyOrganizationId,
+  historyEnabled = false,
+}: UseOrganizationDataParams) => {
   const currentPage = pagination.current;
   const pageSize = pagination.pageSize;
   const keyword = filters.keyword;
@@ -58,6 +69,18 @@ export const useOrganizationData = ({ filters, pagination }: UseOrganizationData
     retry: 1,
   });
 
+  const organizationHistoryQuery = useQuery<OrganizationHistory[]>({
+    queryKey: ['organization-history', historyOrganizationId],
+    queryFn: async () => {
+      if (historyOrganizationId == null) {
+        return [];
+      }
+      return await organizationService.getOrganizationHistory(historyOrganizationId);
+    },
+    enabled: historyEnabled && historyOrganizationId != null,
+    retry: 1,
+  });
+
   const tablePagination = useMemo<PaginationState>(
     () => ({
       current: currentPage,
@@ -76,6 +99,9 @@ export const useOrganizationData = ({ filters, pagination }: UseOrganizationData
     organizationsError: organizationsQuery.error,
     organizationTreeError: organizationTreeQuery.error,
     statisticsError: statisticsQuery.error,
+    organizationHistory: organizationHistoryQuery.data ?? [],
+    organizationHistoryError: organizationHistoryQuery.error,
+    isOrganizationHistoryFetching: organizationHistoryQuery.isFetching,
     tablePagination,
     refetchOrganizations: organizationsQuery.refetch,
     refetchOrganizationTree: organizationTreeQuery.refetch,

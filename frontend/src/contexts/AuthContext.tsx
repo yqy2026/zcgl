@@ -32,10 +32,6 @@ interface AuthContextType {
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   refreshCapabilities: (options?: { forceRefresh?: boolean }) => Promise<void>;
-  /** @deprecated Phase 3 迁移期兼容导出，后续统一改为 canPerform/useCapabilities。 */
-  hasPermission: (resource: string, action: string) => boolean;
-  /** @deprecated Phase 3 迁移期兼容导出，后续统一改为 canPerform/useCapabilities。 */
-  hasAnyPermission: (permissions: Array<{ resource: string; action: string }>) => boolean;
   clearError: () => void;
   loading: boolean;
   error: string | null;
@@ -507,40 +503,6 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const hasPermission = useCallback(
-    (resource: string, action: string): boolean => {
-      if (user?.is_admin === true) {
-        return true;
-      }
-
-      const hasCapability = capabilities.some(capability => {
-        return (
-          capability.resource === resource &&
-          capability.actions.some(capabilityAction => capabilityAction === action)
-        );
-      });
-
-      if (hasCapability) {
-        return true;
-      }
-
-      // Phase 3 兼容路径：在守卫主链完全切换前，保留旧权限摘要兜底。
-      return permissions.some(
-        permission => permission.resource === resource && permission.action === action
-      );
-    },
-    [capabilities, permissions, user?.is_admin]
-  );
-
-  const hasAnyPermission = useCallback(
-    (nextPermissions: Array<{ resource: string; action: string }>): boolean => {
-      return nextPermissions.some(permission =>
-        hasPermission(permission.resource, permission.action)
-      );
-    },
-    [hasPermission]
-  );
-
   const clearError = useCallback(() => {
     setError(null);
   }, []);
@@ -564,8 +526,6 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       logout,
       refreshUser,
       refreshCapabilities,
-      hasPermission,
-      hasAnyPermission,
       clearError,
       loading,
       error,
@@ -580,8 +540,6 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       loading,
       error,
       refreshCapabilities,
-      hasPermission,
-      hasAnyPermission,
       clearError,
     ]
   );

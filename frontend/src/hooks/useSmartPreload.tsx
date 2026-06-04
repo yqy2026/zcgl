@@ -191,8 +191,8 @@ class SmartPreloadManager {
       '/dashboard': () => import('../pages/Dashboard/DashboardPage'),
       '/assets/list': () => import('../pages/Assets/AssetListPage'),
       '/assets/new': () => import('../pages/Assets/AssetCreatePage'),
-      '/system/users': () => import('../pages/System/UserManagementPage'),
-      '/system/roles': () => import('../pages/System/RoleManagementPage'),
+      '/system/users': () => import('../pages/System/UserManagement'),
+      '/system/roles': () => import('../pages/System/RoleManagement'),
     };
 
     return preloadFunctions[route] ?? null;

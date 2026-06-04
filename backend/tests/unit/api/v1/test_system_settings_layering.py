@@ -6,6 +6,7 @@ from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from fastapi.routing import APIRoute
 
 pytestmark = pytest.mark.api
 
@@ -26,6 +27,21 @@ def test_system_settings_module_should_import_authz_dependency():
     module_source = inspect.getsource(system_settings)
     assert "AuthzContext" in module_source
     assert "require_authz" in module_source
+
+
+def test_api_v1_should_register_system_settings_router_fail_loud():
+    """system_settings 是核心路由，导入失败不得被静默跳过。"""
+    import src.api.v1 as api_v1
+
+    module_source = inspect.getsource(api_v1)
+    assert "from .system.system_settings import router as system_settings_router" in module_source
+    assert '_load_optional_router(\n    ".system.system_settings"' not in module_source
+    assert "if system_settings_router is not None" not in module_source
+
+    registered_paths = {
+        route.path for route in api_v1.api_router.routes if isinstance(route, APIRoute)
+    }
+    assert "/system/settings" in registered_paths
 
 
 def test_system_settings_endpoints_should_use_require_authz():

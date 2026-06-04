@@ -56,7 +56,6 @@ const OrganizationPage: React.FC = () => {
   const [bindingDrawerVisible, setBindingDrawerVisible] = useState(false);
   const [editingOrganization, setEditingOrganization] = useState<Organization | null>(null);
   const [selectedOrganization, setSelectedOrganization] = useState<Organization | null>(null);
-  const [organizationHistory, setOrganizationHistory] = useState<OrganizationHistory[]>([]);
   const [activeTab, setActiveTab] = useState('list');
   const readOnlyMode = isOrganizationReadOnlyMode();
 
@@ -85,6 +84,8 @@ const OrganizationPage: React.FC = () => {
     organizationsError,
     organizationTreeError,
     statisticsError,
+    organizationHistory,
+    organizationHistoryError,
     tablePagination,
     refetchOrganizations,
     refetchOrganizationTree,
@@ -92,6 +93,8 @@ const OrganizationPage: React.FC = () => {
   } = useOrganizationData({
     filters,
     pagination: paginationState,
+    historyOrganizationId: selectedOrganization?.id,
+    historyEnabled: historyModalVisible,
   });
 
   useEffect(() => {
@@ -111,6 +114,12 @@ const OrganizationPage: React.FC = () => {
       MessageManager.error('加载统计信息失败');
     }
   }, [statisticsError]);
+
+  useEffect(() => {
+    if (organizationHistoryError != null) {
+      MessageManager.error('加载历史记录失败');
+    }
+  }, [organizationHistoryError]);
 
   const typeLabelMap = useMemo(
     () => buildOptionLabelMap(organizationTypeOptions),
@@ -252,15 +261,9 @@ const OrganizationPage: React.FC = () => {
     [readOnlyMode, refreshOrganizations]
   );
 
-  const handleViewHistory = useCallback(async (organization: Organization) => {
+  const handleViewHistory = useCallback((organization: Organization) => {
     setSelectedOrganization(organization);
-    try {
-      const history = await organizationService.getOrganizationHistory(organization.id);
-      setOrganizationHistory(history);
-      setHistoryModalVisible(true);
-    } catch {
-      MessageManager.error('加载历史记录失败');
-    }
+    setHistoryModalVisible(true);
   }, []);
 
   const handleManageBindings = useCallback((organization: Organization) => {

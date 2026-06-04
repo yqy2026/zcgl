@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import { renderWithProviders, screen, waitFor } from '@/test/utils/test-helpers';
-import OrganizationPage from '../OrganizationPage';
+import OrganizationPage from '../Organization';
 import { organizationService } from '@/services/organizationService';
 import { useDictionary } from '@/hooks/useDictionary';
 

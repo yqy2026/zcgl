@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import React from 'react';
 import { fireEvent, renderWithProviders, screen, waitFor } from '@/test/utils/test-helpers';
-import OperationLogPage from '../OperationLogPage';
+import OperationLogPage from '../OperationLog';
 import { MessageManager } from '@/utils/messageManager';
 import { useOperationLogData } from '../OperationLog/hooks/useOperationLogData';
 

@@ -15,7 +15,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import userEvent from '@testing-library/user-event';
 import { act, fireEvent, renderWithProviders, screen, waitFor } from '@/test/utils/test-helpers';
-import RoleManagementPage from '../RoleManagementPage';
+import RoleManagementPage from '../RoleManagement';
 import { roleService } from '@/services/systemService';
 import { MessageManager } from '@/utils/messageManager';
 
@@ -137,13 +137,13 @@ beforeEach(() => {
 
 describe('RoleManagementPage - 组件导入测试', () => {
   it('应该能够导入组件', async () => {
-    const module = await import('../RoleManagementPage');
+    const module = await import('../RoleManagement');
     expect(module).toBeDefined();
     expect(module.default).toBeDefined();
   });
 
   it('组件应该是React函数组件', async () => {
-    const RoleManagementPage = (await import('../RoleManagementPage')).default;
+    const RoleManagementPage = (await import('../RoleManagement')).default;
     expect(typeof RoleManagementPage).toBe('function');
   });
 });
