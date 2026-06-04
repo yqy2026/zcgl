@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>工作台原型 — 资产运营管理系统</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f0f2f5;
+  --surface: #ffffff;
+  --border: #e8e8e8;
+  --text: #1a1a2e;
+  --text-secondary: #6b7280;
+  --text-tertiary: #9ca3af;
+  --primary: #1e3a5f;
+  --primary-light: #2d5a8e;
+  --accent-gold: #d4a853;
+  --danger: #dc2626;
+  --danger-bg: #fef2f2;
+  --warning: #d97706;
+  --warning-bg: #fffbeb;
+  --success: #059669;
+  --success-bg: #f0fdf4;
+  --info: #2563eb;
+  --info-bg: #eff6ff;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.06);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.08);
+  --radius: 12px;
+  --radius-sm: 8px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+.page {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 32px 40px 80px;
+}
+
+/* Header */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 32px;
+}
+.header h1 {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+.avatar {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Nav bar */
+.nav {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 28px;
+  padding: 4px;
+  background: #fff;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+.nav-item {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+}
+.nav-item:hover{background:#f3f4f6;color:var(--text)}
+.nav-item.active{background:var(--primary);color:#fff}
+.nav-item.active:hover{background:var(--primary-light)}
+
+/* Stats row */
+.stats {display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px}
+.stat-card {
+  background:var(--surface);
+  border-radius:var(--radius);
+  padding:20px 24px;
+  box-shadow:var(--shadow-sm);
+  border:1px solid var(--border);
+  transition:box-shadow 0.2s;
+  cursor:default;
+  position:relative;
+  overflow:hidden;
+}
+.stat-card::before {
+  content:'';
+  position:absolute;top:0;left:0;right:0;height:3px;
+}
+.stat-card:nth-child(1)::before{background:var(--primary)}
+.stat-card:nth-child(2)::before{background:var(--accent-gold)}
+.stat-card:nth-child(3)::before{background:var(--success)}
+.stat-card:hover{box-shadow:var(--shadow-md)}
+.stat-label{font-size:13px;color:var(--text-secondary);margin-bottom:4px}
+.stat-value{font-size:28px;font-weight:700;letter-spacing:-0.02em}
+.stat-value .unit{font-size:16px;font-weight:500;color:var(--text-secondary);margin-left:4px}
+.stat-sub{font-size:13px;margin-top:4px}
+.stat-sub.up{color:var(--success)}
+.stat-sub.down{color:var(--danger)}
+
+/* Two-column */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
+.two-col-wide-right{display:grid;grid-template-columns:2fr 3fr;gap:16px;margin-bottom:24px}
+
+/* Section */
+.section {
+  background:var(--surface);
+  border-radius:var(--radius);
+  padding:20px 24px;
+  box-shadow:var(--shadow-sm);
+  border:1px solid var(--border);
+}
+.section-header {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:16px;
+}
+.section-title {
+  font-size:15px;
+  font-weight:600;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.section-more {
+  font-size:13px;
+  color:var(--primary-light);
+  cursor:pointer;
+  transition:color 0.15s;
+}
+.section-more:hover{color:var(--primary)}
+
+/* Todo items */
+.todo-list{display:flex;flex-direction:column;gap:8px}
+.todo-item {
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:12px 14px;
+  border-radius:var(--radius-sm);
+  background:#fafafa;
+  cursor:pointer;
+  transition:background 0.15s, transform 0.1s;
+  border-left:3px solid transparent;
+}
+.todo-item:hover{background:#f3f4f6;transform:translateX(2px)}
+.todo-item.danger{border-left-color:var(--danger);background:var(--danger-bg)}
+.todo-item.warning{border-left-color:var(--warning);background:var(--warning-bg)}
+.todo-item.info{border-left-color:var(--info);background:var(--info-bg)}
+.todo-icon{width:20px;height:20px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+.todo-item.danger .todo-icon{background:var(--danger);color:#fff}
+.todo-item.warning .todo-icon{background:var(--warning);color:#fff}
+.todo-item.info .todo-icon{background:var(--info);color:#fff}
+.todo-text{flex:1;font-size:14px}
+.todo-text .todo-desc{color:var(--text);font-weight:500}
+.todo-text .todo-detail{color:var(--text-secondary);font-size:13px;margin-top:1px}
+.todo-link{font-size:13px;color:var(--primary-light);white-space:nowrap}
+
+/* Quick actions */
+.quick-actions{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.quick-action {
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:8px;padding:16px 12px;border-radius:var(--radius-sm);
+  background:#fafafa;border:1px dashed #d1d5db;
+  cursor:pointer;transition:all 0.2s;
+  user-select:none;
+}
+.quick-action:hover {
+  background:var(--info-bg);border-color:var(--info);
+  transform:translateY(-2px);box-shadow:var(--shadow-md);
+}
+.qa-icon {
+  width:40px;height:40px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;transition:transform 0.2s;
+}
+.quick-action:hover .qa-icon{transform:scale(1.1)}
+.qa-label{font-size:13px;font-weight:500;color:var(--text)}
+
+.qa-icon.blue{background:#dbeafe;color:var(--info)}
+.qa-icon.green{background:#d1fae5;color:var(--success)}
+.qa-icon.amber{background:#fef3c7;color:var(--warning)}
+.qa-icon.purple{background:#ede9fe;color:#7c3aed}
+
+/* Project cards */
+.project-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.project-card {
+  padding:16px 18px;
+  border-radius:var(--radius-sm);
+  border:1px solid var(--border);
+  cursor:pointer;
+  transition:all 0.2s;
+  position:relative;
+  overflow:hidden;
+}
+.project-card:hover{border-color:var(--primary-light);box-shadow:var(--shadow-md);transform:translateY(-1px)}
+.project-card .p-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.project-card .p-name{font-size:14px;font-weight:600}
+.project-card .p-badge{
+  font-size:11px;padding:2px 8px;border-radius:4px;font-weight:500;
+  background:#f3f4f6;color:var(--text-secondary)
+}
+.project-card .p-badge.lease{background:#dbeafe;color:var(--info)}
+.project-card .p-badge.agency{background:#fef3c7;color:var(--warning)}
+.project-card .p-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.project-card .p-metric{text-align:center}
+.project-card .p-metric .pm-val{font-size:16px;font-weight:700}
+.project-card .p-metric .pm-label{font-size:11px;color:var(--text-tertiary);margin-top:1px}
+.project-card .p-risk{
+  display:inline-flex;align-items:center;gap:4px;
+  margin-top:10px;font-size:12px;padding:4px 10px 4px 6px;
+  border-radius:4px;font-weight:500
+}
+.project-card .p-risk.warning{background:var(--warning-bg);color:var(--warning)}
+.project-card .p-risk.danger{background:var(--danger-bg);color:var(--danger)}
+.project-card .p-risk.success{background:var(--success-bg);color:var(--success)}
+.project-card .p-risk .p-risk-icon{display:inline-block}
+.project-card .p-footer{display:flex;align-items:center;justify-content:space-between;margin-top:10px}
+.project-card .p-updated{font-size:12px;color:var(--text-tertiary)}
+.project-card .p-enter{font-size:13px;color:var(--primary-light);font-weight:500;opacity:0;transition:opacity 0.2s}
+.project-card:hover .p-enter{opacity:1}
+
+/* empty card hint */
+.empty-hint{
+  display:flex;align-items:center;justify-content:center;
+  height:100%;min-height:80px;
+  font-size:14px;color:var(--text-tertiary);
+  border:2px dashed #d1d5db;border-radius:var(--radius-sm);
+}
+
+/* fade-in animation */
+.fade-in{animation:fadeIn 0.4s ease-out both}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.fade-in:nth-child(1){animation-delay:0s}
+.fade-in:nth-child(2){animation-delay:0.06s}
+.fade-in:nth-child(3){animation-delay:0.12s}
+.fade-in:nth-child(4){animation-delay:0.18s}
+.fade-in:nth-child(5){animation-delay:0.24s}
+.fade-in:nth-child(6){animation-delay:0.30s}
+
+/* Responsive */
+@media(max-width:900px){
+  .page{padding:24px 20px}
+  .stats{grid-template-columns:1fr}
+  .two-col,.two-col-wide-right{grid-template-columns:1fr}
+  .quick-actions{grid-template-columns:repeat(2,1fr)}
+  .project-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="page">
+  <!-- Header -->
+  <div class="header fade-in">
+    <h1>工作台</h1>
+    <div class="header-right">
+      <span>运营方 · 新海资产管理</span>
+      <span style="color:#d1d5db">|</span>
+      <span>2026年6月3日 周四</span>
+      <div class="avatar">张</div>
+    </div>
+  </div>
+
+  <!-- Nav -->
+  <div class="nav fade-in">
+    <div class="nav-item active">工作台</div>
+    <div class="nav-item">项目运营</div>
+    <div class="nav-item">资产资源</div>
+    <div class="nav-item">合同中心</div>
+    <div class="nav-item">财务台账</div>
+    <div class="nav-item">主体中心</div>
+    <div class="nav-item">经营分析</div>
+    <div class="nav-item">系统管理</div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats fade-in">
+    <div class="stat-card">
+      <div class="stat-label">本月应收租金</div>
+      <div class="stat-value">358.2<span class="unit">万元</span></div>
+      <div class="stat-sub up">↑ 12.3% vs 上月</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">综合收缴率</div>
+      <div class="stat-value">92.5<span class="unit">%</span></div>
+      <div class="stat-sub" style="color:var(--text-secondary)">出租率 87.3%</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">在管项目</div>
+      <div class="stat-value">12<span class="unit">个</span></div>
+      <div class="stat-sub" style="color:var(--text-secondary)">在租租户 48 户</div>
+    </div>
+  </div>
+
+  <!-- Left: Todo + Quick Actions, Right: Project Summary -->
+  <div class="two-col-wide-right fade-in">
+
+    <!-- Left column -->
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <!-- Todo -->
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">📋 待办提醒</span>
+          <span class="section-more">查看全部 →</span>
+        </div>
+        <div class="todo-list">
+          <div class="todo-item info">
+            <div class="todo-icon">✓</div>
+            <div class="todo-text">
+              <div class="todo-desc">3 份合同待审核</div>
+              <div class="todo-detail">XX产业园-L-2024-001 等 3 份合同进入待审</div>
+            </div>
+            <span class="todo-link">去审核 →</span>
+          </div>
+          <div class="todo-item danger">
+            <div class="todo-icon">!</div>
+            <div class="todo-text">
+              <div class="todo-desc">5 笔欠费逾期</div>
+              <div class="todo-detail">星光广场商位 203 · 逾期 32 天 · ¥28,500.00</div>
+            </div>
+            <span class="todo-link">去催缴 →</span>
+          </div>
+          <div class="todo-item warning">
+            <div class="todo-icon">!</div>
+            <div class="todo-text">
+              <div class="todo-desc">2 份合同 30 天内到期</div>
+              <div class="todo-detail">YY商业广场-A-001 · 到期 2026-06-28</div>
+            </div>
+            <span class="todo-link">查看续约 →</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">🚀 快捷操作</span>
+        </div>
+        <div class="quick-actions">
+          <div class="quick-action">
+            <div class="qa-icon blue">📄</div>
+            <span class="qa-label">新建合同</span>
+          </div>
+          <div class="quick-action">
+            <div class="qa-icon green">💰</div>
+            <span class="qa-label">录入收款</span>
+          </div>
+          <div class="quick-action">
+            <div class="qa-icon amber">🏠</div>
+            <span class="qa-label">新增资产</span>
+          </div>
+          <div class="quick-action">
+            <div class="qa-icon purple">📊</div>
+            <span class="qa-label">经营报表</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Project Summary -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">🏢 项目运营摘要</span>
+        <span class="section-more">全部项目 →</span>
+      </div>
+      <div class="project-grid">
+        <div class="project-card">
+          <div class="p-top">
+            <span class="p-name">新海科技产业园</span>
+            <span class="p-badge lease">承租转租</span>
+          </div>
+          <div class="p-metrics">
+            <div class="p-metric"><div class="pm-val">3</div><div class="pm-label">合同关系</div></div>
+            <div class="p-metric"><div class="pm-val">92%</div><div class="pm-label">出租率</div></div>
+            <div class="p-metric"><div class="pm-val">¥30.2</div><div class="pm-label">应收/万</div></div>
+            <div class="p-metric"><div class="pm-val">¥27.8</div><div class="pm-label">实收/万</div></div>
+          </div>
+          <div class="p-footer">
+            <span class="p-risk warning">⚠️ 1 项风险</span>
+            <span class="p-updated">更新于 1 小时前</span>
+          </div>
+          <div class="p-enter">进入项目 →</div>
+        </div>
+
+        <div class="project-card">
+          <div class="p-top">
+            <span class="p-name">星辉商业广场</span>
+            <span class="p-badge agency">代理运营</span>
+          </div>
+          <div class="p-metrics">
+            <div class="p-metric"><div class="pm-val">2</div><div class="pm-label">合同关系</div></div>
+            <div class="p-metric"><div class="pm-val">75%</div><div class="pm-label">出租率</div></div>
+            <div class="p-metric"><div class="pm-val">¥15.8</div><div class="pm-label">应收/万</div></div>
+            <div class="p-metric"><div class="pm-val">¥12.0</div><div class="pm-label">实收/万</div></div>
+          </div>
+          <div class="p-footer">
+            <span class="p-risk danger">🔴 2 项风险</span>
+            <span class="p-updated">更新于 3 小时前</span>
+          </div>
+          <div class="p-enter">进入项目 →</div>
+        </div>
+
+        <div class="project-card">
+          <div class="p-top">
+            <span class="p-name">滨江商务中心</span>
+            <span class="p-badge">自持运营</span>
+          </div>
+          <div class="p-metrics">
+            <div class="p-metric"><div class="pm-val">1</div><div class="pm-label">合同关系</div></div>
+            <div class="p-metric"><div class="pm-val">100%</div><div class="pm-label">出租率</div></div>
+            <div class="p-metric"><div class="pm-val">¥22.5</div><div class="pm-label">应收/万</div></div>
+            <div class="p-metric"><div class="pm-val">¥22.5</div><div class="pm-label">实收/万</div></div>
+          </div>
+          <div class="p-footer">
+            <span class="p-risk success">✓ 无风险</span>
+            <span class="p-updated">更新于 1 天前</span>
+          </div>
+          <div class="p-enter">进入项目 →</div>
+        </div>
+
+        <div class="project-card">
+          <div class="p-top">
+            <span class="p-name">智慧谷科技园</span>
+            <span class="p-badge lease">承租转租</span>
+          </div>
+          <div class="p-metrics">
+            <div class="p-metric"><div class="pm-val">4</div><div class="pm-label">合同关系</div></div>
+            <div class="p-metric"><div class="pm-val">68%</div><div class="pm-label">出租率</div></div>
+            <div class="p-metric"><div class="pm-val">¥18.6</div><div class="pm-label">应收/万</div></div>
+            <div class="p-metric"><div class="pm-val">¥14.3</div><div class="pm-label">实收/万</div></div>
+          </div>
+          <div class="p-footer">
+            <span class="p-risk danger">🔴 3 项风险</span>
+            <span class="p-updated">更新于 2 小时前</span>
+          </div>
+          <div class="p-enter">进入项目 →</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom: recent activity placeholder, just to balance -->
+  <div class="two-col fade-in" style="margin-bottom:0">
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">📅 最近操作</span>
+        <span class="section-more">全部 →</span>
+      </div>
+      <div class="todo-list">
+        <div class="todo-item" style="border-left-color:transparent;background:transparent;padding:8px 0">
+          <span style="font-size:13px;color:var(--text-secondary);width:80px;flex-shrink:0">09:32</span>
+          <span style="font-size:14px">审核通过《XX产业园-L-2024-001》租赁合同</span>
+        </div>
+        <div class="todo-item" style="border-left-color:transparent;background:transparent;padding:8px 0">
+          <span style="font-size:13px;color:var(--text-secondary);width:80px;flex-shrink:0">昨天</span>
+          <span style="font-size:14px">录入星光广场 6 月收款 ¥85,200.00</span>
+        </div>
+        <div class="todo-item" style="border-left-color:transparent;background:transparent;padding:8px 0">
+          <span style="font-size:13px;color:var(--text-secondary);width:80px;flex-shrink:0">昨天</span>
+          <span style="font-size:14px">新建合同关系「星辉广场-A-001」</span>
+        </div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">📈 本月趋势（速览）</span>
+      </div>
+      <div class="empty-hint" style="min-height:100px">
+        走势图区域（待接入真实数据）
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

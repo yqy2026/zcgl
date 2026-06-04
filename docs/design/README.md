@@ -5,6 +5,7 @@
 ## 目录
 
 - [UI 图](ui-mockups/README.md)
+- [角色化工作台设计方案](role-based-dashboard-redesign.md)
 
 ## 治理规则
 

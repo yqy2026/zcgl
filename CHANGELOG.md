@@ -3,6 +3,7 @@
 ## [Unreleased] - 2026-03-06
 
 ### 2026-06-03
+- docs(design): 新增 `docs/design/role-based-dashboard-redesign.md` 角色化工作台设计方案和 `docs/design/ui-mockups/2026-06-03-role-dashboard/` HTML 原型。覆盖领导/资产管理/招商/物业运维 4 类岗位的独立工作台布局、组件规划、数据依赖分析和分阶段实施计划；同步更新设计资产目录索引。
 - docs(issues): 收口 `2026-06-02-architecture-review.md` 源报告候选项第一轮状态。候选项 06 补齐源报告点名浅服务示例排查证据，候选项 07 明确活跃 System 页面 React Query 护栏与冻结 `PropertyCertificate` 可见面护栏均已完成；问题索引同步改为“第一轮收口完成”，后续新增浅服务或冻结模块治理需另行立案。
 - test(system-pages): 补齐活跃 System 管理页服务器取数边界护栏。新增 `system-active-pages-data-fetching.test.ts` 静态检查，锁定用户、角色、组织和操作日志页面的列表、统计、组织树、权限列表和组织历史等服务器数据必须经各自 React Query hook 获取，页面入口不得回退到直接调用 list/stat/history 服务；架构复核报告候选项 07 同步标注活跃页已完成复核，`PropertyCertificate` 冻结残留只随可见面清理或归档处理。
 - test(services): 补齐浅服务第一轮业务边界证据。`CollectionService` 新增催缴汇总成功率、台账缺失 fail loud、操作人上下文补全单测；`HistoryService` 新增按资产筛选前置存在性校验、详情缺失业务 404、删除前存在性检查单测；架构复核报告候选项 06 明确源报告点名示例已逐个处理，`ContactService` 合并进 Party，`CollectionService`、`ExcelTaskService`、`SystemSettingsService` 和 `HistoryService` 均保留服务层边界，`document/cache.py` 归类为缓存聚合导出，不采用 API 直连 CRUD 的瘦身方案。

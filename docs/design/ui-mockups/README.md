@@ -5,6 +5,7 @@
 ## 当前图稿
 
 - [2026-05-16 项目主轴资产运营 UI 图](2026-05-16-project-main-axis/README.md)
+- [2026-06-03 角色化工作台 HTML 原型](2026-06-03-role-dashboard/README.md)
 
 ## 命名规则
 

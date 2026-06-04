@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>工作台原型 v2 — 角色视角</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f0f2f5;--surface:#fff;--border:#e8e8e8;
+  --text:#1a1a2e;--text2:#6b7280;--text3:#9ca3af;
+  --primary:#1e3a5f;--primary-l:#2d5a8e;
+  --gold:#d4a853;--red:#dc2626;--red-bg:#fef2f2;
+  --amber:#d97706;--amber-bg:#fffbeb;
+  --green:#059669;--green-bg:#f0fdf4;
+  --blue:#2563eb;--blue-bg:#eff6ff;
+  --shadow:0 1px 3px rgba(0,0,0,0.06);--shadow-md:0 4px 14px rgba(0,0,0,0.08);
+  --r:12px;--rs:8px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:'Noto Sans SC',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:var(--bg);color:var(--text);line-height:1.6;
+}
+.page{max-width:1320px;margin:0 auto;padding:28px 36px 64px}
+
+/* Role tabs */
+.role-bar{
+  display:flex;align-items:center;gap:8px;
+  margin-bottom:24px;padding:4px;background:#fff;
+  border-radius:var(--r);box-shadow:var(--shadow);
+}
+.role-label{font-size:13px;color:var(--text2);padding:0 12px 0 8px;font-weight:500;white-space:nowrap}
+.role-btn{
+  padding:8px 18px;border-radius:8px;font-size:13px;font-weight:500;
+  color:var(--text2);cursor:pointer;transition:all 0.18s;user-select:none;
+  border:none;background:transparent;
+}
+.role-btn:hover{background:#f3f4f6;color:var(--text)}
+.role-btn.active{background:var(--primary);color:#fff}
+.role-btn.active:hover{background:var(--primary-l)}
+
+/* dashboard panels */
+.dash{display:none}
+.dash.active{display:block}
+
+/* Header */
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px}
+.header h1{font-size:22px;font-weight:700;color:var(--text)}
+.header-right{display:flex;align-items:center;gap:14px;font-size:13px;color:var(--text2)}
+.avatar{width:34px;height:34px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600}
+
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.stat-card{background:var(--surface);border-radius:var(--r);padding:18px 22px;box-shadow:var(--shadow);border:1px solid var(--border);position:relative;overflow:hidden}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.stat-card:nth-child(1)::before{background:var(--primary)}
+.stat-card:nth-child(2)::before{background:var(--gold)}
+.stat-card:nth-child(3)::before{background:var(--green)}
+.stat-card:nth-child(4)::before{background:var(--blue)}
+.stat-label{font-size:12px;color:var(--text2);margin-bottom:2px}
+.stat-value{font-size:26px;font-weight:700;letter-spacing:-0.02em}
+.stat-value .u{font-size:14px;font-weight:500;color:var(--text2);margin-left:3px}
+.stat-sub{font-size:12px;margin-top:3px}
+.stat-sub.up{color:var(--green)}
+.stat-sub.down{color:var(--red)}
+
+/* Layout grids */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:20px}
+.grid-2wr{display:grid;grid-template-columns:2fr 3fr;gap:14px;margin-bottom:20px}
+.grid-2wl{display:grid;grid-template-columns:3fr 2fr;gap:14px;margin-bottom:20px}
+
+.section{background:var(--surface);border-radius:var(--r);padding:18px 22px;box-shadow:var(--shadow);border:1px solid var(--border)}
+.sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.stitle{font-size:14px;font-weight:600;display:flex;align-items:center;gap:6px}
+.smore{font-size:12px;color:var(--primary-l);cursor:pointer}
+.smore:hover{color:var(--primary)}
+
+/* Todo */
+.tl{display:flex;flex-direction:column;gap:6px}
+.ti{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--rs);background:#fafafa;cursor:pointer;transition:all 0.15s;border-left:3px solid transparent}
+.ti:hover{background:#f3f4f6;transform:translateX(2px)}
+.ti.danger{border-color:var(--red);background:var(--red-bg)}
+.ti.warn{border-color:var(--amber);background:var(--amber-bg)}
+.ti.info{border-color:var(--blue);background:var(--blue-bg)}
+.ti-icon{width:18px;height:18px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;color:#fff}
+.ti.danger .ti-icon{background:var(--red)}
+.ti.warn .ti-icon{background:var(--amber)}
+.ti.info .ti-icon{background:var(--blue)}
+.ti-txt{flex:1;font-size:13px}
+.ti-txt .d{font-weight:500;color:var(--text)}
+.ti-txt .dd{color:var(--text2);font-size:12px;margin-top:1px}
+.ti-link{font-size:12px;color:var(--primary-l);white-space:nowrap}
+
+/* Quick actions */
+.qa-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.qa{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:6px;padding:14px 10px;border-radius:var(--rs);
+  background:#fafafa;border:1px dashed #d1d5db;cursor:pointer;transition:all 0.18s;
+}
+.qa:hover{background:var(--blue-bg);border-color:var(--blue);transform:translateY(-2px)}
+.qa-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;transition:transform 0.2s}
+.qa:hover .qa-icon{transform:scale(1.1)}
+.qa-icon.b{background:#dbeafe;color:var(--blue)}
+.qa-icon.g{background:#d1fae5;color:var(--green)}
+.qa-icon.a{background:#fef3c7;color:var(--amber)}
+.qa-icon.p{background:#ede9fe;color:#7c3aed}
+.qa-lb{font-size:12px;font-weight:500}
+
+/* Project cards */
+.pg{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pc{padding:14px 16px;border-radius:var(--rs);border:1px solid var(--border);cursor:pointer;transition:all 0.18s}
+.pc:hover{border-color:var(--primary-l);box-shadow:var(--shadow-md);transform:translateY(-1px)}
+.pc .pt{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.pc .pn{font-size:13px;font-weight:600}
+.pc .pb{font-size:10px;padding:2px 7px;border-radius:4px;font-weight:500;background:#f3f4f6;color:var(--text2)}
+.pc .pb.l{background:#dbeafe;color:var(--blue)}
+.pc .pb.a{background:#fef3c7;color:var(--amber)}
+.pc .pm{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.pc .pm .mv{font-size:15px;font-weight:700}
+.pc .pm .ml{font-size:10px;color:var(--text3);margin-top:0}
+.pc .pf{display:flex;align-items:center;justify-content:space-between;margin-top:8px}
+.pc .pr{font-size:11px;padding:2px 8px 2px 4px;border-radius:4px;font-weight:500;display:inline-flex;align-items:center;gap:3px}
+.pc .pr.w{background:var(--amber-bg);color:var(--amber)}
+.pc .pr.d{background:var(--red-bg);color:var(--red)}
+.pc .pr.s{background:var(--green-bg);color:var(--green)}
+.pc .pu{font-size:11px;color:var(--text3)}
+.pc .pe{font-size:12px;color:var(--primary-l);font-weight:500;opacity:0;transition:opacity 0.2s}
+.pc:hover .pe{opacity:1}
+
+/* Tables */
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{text-align:left;padding:8px 10px;font-weight:500;color:var(--text2);border-bottom:1px solid var(--border);font-size:12px}
+.tbl td{padding:10px;border-bottom:1px solid #f3f4f6}
+.tbl tr:last-child td{border:none}
+.tbl tr:hover td{background:#f9fafb}
+.badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:4px;font-weight:500}
+.badge.g{background:var(--green-bg);color:var(--green)}
+.badge.r{background:var(--red-bg);color:var(--red)}
+.badge.blue{background:var(--blue-bg);color:var(--blue)}
+.badge.y{background:var(--amber-bg);color:var(--amber)}
+.badge.gray{background:#f3f4f6;color:var(--text2)}
+
+/* Animations */
+.dash.active .fa{animation:fi 0.35s ease-out both}
+@keyframes fi{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.dash.active .fa:nth-child(1){animation-delay:0s}
+.dash.active .fa:nth-child(2){animation-delay:0.05s}
+.dash.active .fa:nth-child(3){animation-delay:0.1s}
+.dash.active .fa:nth-child(4){animation-delay:0.15s}
+.dash.active .fa:nth-child(5){animation-delay:0.2s}
+.dash.active .fa:nth-child(6){animation-delay:0.25s}
+
+@media(max-width:1024px){
+  .page{padding:20px 16px}
+  .stats{grid-template-columns:1fr 1fr}
+  .grid-2,.grid-3,.grid-2wr,.grid-2wl{grid-template-columns:1fr}
+  .pg{grid-template-columns:1fr}
+  .qa-grid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="header fa">
+    <h1 id="pageTitle">工作台</h1>
+    <div class="header-right">
+      <span id="roleDisplay">运营管理 · 新海资产</span>
+      <span style="color:#d1d5db">|</span>
+      <span>2026年6月3日 周四</span>
+      <div class="avatar">张</div>
+    </div>
+  </div>
+
+  <!-- Role Switcher -->
+  <div class="role-bar fa">
+    <span class="role-label">👤 当前视角：</span>
+    <button class="role-btn active" data-role="lead">领导/管理层</button>
+    <button class="role-btn" data-role="asset">资产管理</button>
+    <button class="role-btn" data-role="lease">招商</button>
+    <button class="role-btn" data-role="property">物业运维</button>
+  </div>
+
+  <!-- ============ LEAD ============ -->
+  <div class="dash active" id="dash-lead">
+    <div class="stats fa">
+      <div class="stat-card"><div class="stat-label">本月总收入</div><div class="stat-value">¥358.2<span class="u">万元</span></div><div class="stat-sub up">↑ 12.3% vs 上月</div></div>
+      <div class="stat-card"><div class="stat-label">综合收缴率</div><div class="stat-value">92.5<span class="u">%</span></div><div class="stat-sub" style="color:var(--text2)">出租率 87.3%</div></div>
+      <div class="stat-card"><div class="stat-label">在管资产</div><div class="stat-value">42<span class="u">处</span></div><div class="stat-sub" style="color:var(--text2)">总可租面积 186,000㎡</div></div>
+      <div class="stat-card"><div class="stat-label">在租租户</div><div class="stat-value">48<span class="u">户</span></div><div class="stat-sub" style="color:var(--text2)">本月新增 3 户</div></div>
+    </div>
+
+    <div class="grid-2wr fa">
+      <div class="section">
+        <div class="sh"><span class="stitle">⚠️ 高风险事项</span><span class="smore">全部 →</span></div>
+        <div class="tl">
+          <div class="ti danger"><div class="ti-icon">!</div><div class="ti-txt"><div class="d">星光广场 · 欠费 32 天未缴</div><div class="dd">¥28,500.00 · 租户：星辉餐饮</div></div><span class="ti-link">处理 →</span></div>
+          <div class="ti warn"><div class="ti-icon">!</div><div class="ti-txt"><div class="d">智慧谷科技园 · 出租率跌破 70%</div><div class="dd">当前出租率 68% · 空置面积 3,200㎡</div></div><span class="ti-link">查看 →</span></div>
+          <div class="ti info"><div class="ti-icon">✓</div><div class="ti-txt"><div class="d">2 份合同 30 天内到期</div><div class="dd">YY商业广场-A-001 · 到期 2026-06-28</div></div><span class="ti-link">续约安排 →</span></div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="sh"><span class="stitle">📊 本月收入趋势</span></div>
+        <div style="height:160px;display:flex;align-items:flex-end;gap:6px;padding:12px 4px">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:100%;height:58%;background:var(--primary);border-radius:4px 4px 0 0;transition:height 0.4s"></div><span style="font-size:10px;color:var(--text3)">1月</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:100%;height:55%;background:var(--primary);border-radius:4px 4px 0 0"></div><span style="font-size:10px;color:var(--text3)">2月</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:100%;height:62%;background:var(--primary);border-radius:4px 4px 0 0"></div><span style="font-size:10px;color:var(--text3)">3月</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:100%;height:70%;background:var(--primary);border-radius:4px 4px 0 0"></div><span style="font-size:10px;color:var(--text3)">4月</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:100%;height:78%;background:var(--primary);border-radius:4px 4px 0 0"></div><span style="font-size:10px;color:var(--text3)">5月</span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><div style="width:100%;height:85%;background:var(--primary-l);border-radius:4px 4px 0 0"></div><span style="font-size:10px;color:var(--text3)">6月</span></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-top:4px">
+          <span>自营租金 ¥285.6万</span>
+          <span>代理服务费 ¥72.6万</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section fa">
+      <div class="sh"><span class="stitle">🏢 项目运营总览</span><span class="smore">全部项目 →</span></div>
+      <div class="pg">
+        <div class="pc"><div class="pt"><span class="pn">新海科技产业园</span><span class="pb l">承租</span></div><div class="pm"><div><div class="mv">3</div><div class="ml">合同关系</div></div><div><div class="mv">92%</div><div class="ml">出租率</div></div><div><div class="mv">¥30.2</div><div class="ml">应收/万</div></div><div><div class="mv">¥27.8</div><div class="ml">实收/万</div></div></div><div class="pf"><span class="pr w">⚠️ 1 项</span><span class="pu">1小时前</span></div></div>
+        <div class="pc"><div class="pt"><span class="pn">星辉商业广场</span><span class="pb a">代理</span></div><div class="pm"><div><div class="mv">2</div><div class="ml">合同关系</div></div><div><div class="mv">75%</div><div class="ml">出租率</div></div><div><div class="mv">¥15.8</div><div class="ml">应收/万</div></div><div><div class="mv">¥12.0</div><div class="ml">实收/万</div></div></div><div class="pf"><span class="pr d">🔴 2 项</span><span class="pu">3小时前</span></div></div>
+        <div class="pc"><div class="pt"><span class="pn">滨江商务中心</span><span class="pb">自营</span></div><div class="pm"><div><div class="mv">1</div><div class="ml">合同关系</div></div><div><div class="mv">100%</div><div class="ml">出租率</div></div><div><div class="mv">¥22.5</div><div class="ml">应收/万</div></div><div><div class="mv">¥22.5</div><div class="ml">实收/万</div></div></div><div class="pf"><span class="pr s">✓ 无</span><span class="pu">1天前</span></div></div>
+        <div class="pc"><div class="pt"><span class="pn">智慧谷科技园</span><span class="pb l">承租</span></div><div class="pm"><div><div class="mv">4</div><div class="ml">合同关系</div></div><div><div class="mv">68%</div><div class="ml">出租率</div></div><div><div class="mv">¥18.6</div><div class="ml">应收/万</div></div><div><div class="mv">¥14.3</div><div class="ml">实收/万</div></div></div><div class="pf"><span class="pr d">🔴 3 项</span><span class="pu">2小时前</span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ ASSET ============ -->
+  <div class="dash" id="dash-asset">
+    <div class="stats fa">
+      <div class="stat-card"><div class="stat-label">管理资产总数</div><div class="stat-value">42<span class="u">处</span></div><div class="stat-sub" style="color:var(--text2)">总可租面积 186,000㎡</div></div>
+      <div class="stat-card"><div class="stat-label">已出租面积</div><div class="stat-value">162,400<span class="u">㎡</span></div><div class="stat-sub up">综合出租率 87.3%</div></div>
+      <div class="stat-card"><div class="stat-label">空置面积</div><div class="stat-value">23,600<span class="u">㎡</span></div><div class="stat-sub down">空置率 12.7%</div></div>
+      <div class="stat-card"><div class="stat-label">本月到期合同</div><div class="stat-value">2<span class="u">份</span></div><div class="stat-sub" style="color:var(--text2)">涉及 2 个项目</div></div>
+    </div>
+
+    <div class="grid-2wr fa">
+      <div class="section">
+        <div class="sh"><span class="stitle">📋 待处理事项</span></div>
+        <div class="tl">
+          <div class="ti warn"><div class="ti-icon">!</div><div class="ti-txt"><div class="d">3 份合同待审核</div><div class="dd">XX产业园-L-001 · 智慧谷-A-002 · 星辉-D-001</div></div><span class="ti-link">审核 →</span></div>
+          <div class="ti info"><div class="ti-icon">!</div><div class="ti-txt"><div class="d">2 份合同即将到期</div><div class="dd">YY商业广场-A-001 · 2026-06-28 到期</div></div><span class="ti-link">续约评估 →</span></div>
+          <div class="ti"><div class="ti-icon" style="background:#6366f1">📋</div><div class="ti-txt"><div class="d">1 条资产信息待完善</div><div class="dd">滨江商务中心 · 产权证信息缺失</div></div><span class="ti-link">补充 →</span></div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="sh"><span class="stitle">📊 出租率分布</span></div>
+        <div style="display:flex;flex-direction:column;gap:10px;padding:6px 0">
+          <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>新海科技产业园</span><span>92%</span></div><div style="height:8px;background:#f3f4f6;border-radius:4px;overflow:hidden"><div style="width:92%;height:100%;background:var(--green);border-radius:4px"></div></div></div>
+          <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>星辉商业广场</span><span>75%</span></div><div style="height:8px;background:#f3f4f6;border-radius:4px;overflow:hidden"><div style="width:75%;height:100%;background:var(--amber);border-radius:4px"></div></div></div>
+          <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>滨江商务中心</span><span>100%</span></div><div style="height:8px;background:#f3f4f6;border-radius:4px;overflow:hidden"><div style="width:100%;height:100%;background:var(--green);border-radius:4px"></div></div></div>
+          <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>智慧谷科技园</span><span>68%</span></div><div style="height:8px;background:#f3f4f6;border-radius:4px;overflow:hidden"><div style="width:68%;height:100%;background:var(--red);border-radius:4px"></div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section fa">
+      <div class="sh"><span class="stitle">🧾 在租资产明细</span><span class="smore">资产台账 →</span></div>
+      <table class="tbl">
+        <tr><th>资产名称</th><th>所属项目</th><th>租户</th><th>租期</th><th>月租金</th><th>状态</th></tr>
+        <tr><td>A栋-101</td><td>新海科技产业园</td><td>中科创达</td><td>2025.06-2027.06</td><td>¥45,000</td><td><span class="badge g">在租</span></td></tr>
+        <tr><td>A栋-204</td><td>新海科技产业园</td><td>微光科技</td><td>2026.01-2027.01</td><td>¥32,000</td><td><span class="badge g">在租</span></td></tr>
+        <tr><td>广场-1F-03</td><td>星辉商业广场</td><td>星辉餐饮</td><td>2024.03-2026.06</td><td>¥28,500</td><td><span class="badge r">欠费</span></td></tr>
+        <tr><td>B座-301</td><td>智慧谷科技园</td><td>—</td><td>—</td><td>—</td><td><span class="badge y">空置</span></td></tr>
+        <tr><td>B座-302</td><td>智慧谷科技园</td><td>—</td><td>—</td><td>—</td><td><span class="badge y">空置</span></td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- ============ LEASE ============ -->
+  <div class="dash" id="dash-lease">
+    <div class="stats fa">
+      <div class="stat-card"><div class="stat-label">空置总面积</div><div class="stat-value">23,600<span class="u">㎡</span></div><div class="stat-sub" style="color:var(--text2)">涉及 4 个项目</div></div>
+      <div class="stat-card"><div class="stat-label">待租资产</div><div class="stat-value">18<span class="u">处</span></div><div class="stat-sub" style="color:var(--text2)">可分割为 6-24 个单元</div></div>
+      <div class="stat-card"><div class="stat-label">本月新增意向</div><div class="stat-value">5<span class="u">组</span></div><div class="stat-sub up">↗ 较上月 +2 组</div></div>
+      <div class="stat-card"><div class="stat-label">本月签约</div><div class="stat-value">3<span class="u">单</span></div><div class="stat-sub" style="color:var(--text2)">完成率 60%</div></div>
+    </div>
+
+    <div class="grid-2wr fa">
+      <div class="section">
+        <div class="sh"><span class="stitle">📍 重点项目空置</span><span class="smore">空置资产 →</span></div>
+        <div class="tl">
+          <div class="ti danger"><div class="ti-icon">!</div><div class="ti-txt"><div class="d">智慧谷科技园 · 空置 3,200㎡</div><div class="dd">B座 3-4层 · 适合办公/研发 · 月租金面议</div></div><span class="ti-link">推盘 →</span></div>
+          <div class="ti warn"><div class="ti-icon">!</div><div class="ti-txt"><div class="d">星辉商业广场 · 空置 1,800㎡</div><div class="dd">2F 东区 · 适合餐饮/零售</div></div><span class="ti-link">推盘 →</span></div>
+          <div class="ti"><div class="ti-icon" style="background:#6366f1">📋</div><div class="ti-txt"><div class="d">新海科技产业园 · 空置 890㎡</div><div class="dd">C栋 5层 · 精装修，可立即入驻</div></div><span class="ti-link">推盘 →</span></div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="sh"><span class="stitle">👥 意向客户跟进</span><span class="smore">全部 →</span></div>
+        <table class="tbl">
+          <tr><th>客户名称</th><th>意向面积</th><th>意向项目</th><th>跟进人</th><th>阶段</th></tr>
+          <tr><td>云帆科技</td><td>500㎡</td><td>智慧谷科技园</td><td>王经理</td><td><span class="badge blue">洽谈中</span></td></tr>
+          <tr><td>悦己餐饮</td><td>300㎡</td><td>星辉广场</td><td>李主管</td><td><span class="badge y">报价中</span></td></tr>
+          <tr><td>锐思咨询</td><td>200㎡</td><td>产业园</td><td>王经理</td><td><span class="badge g">意向确认</span></td></tr>
+          <tr><td>禾丰农业</td><td>800㎡</td><td>智慧谷</td><td>—</td><td><span class="badge gray">初步接触</span></td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="grid-2 fa">
+      <div class="section">
+        <div class="sh"><span class="stitle">🚀 快速操作</span></div>
+        <div class="qa-grid">
+          <div class="qa"><div class="qa-icon b">📄</div><span class="qa-lb">新建合同</span></div>
+          <div class="qa"><div class="qa-icon g">➕</div><span class="qa-lb">录入意向</span></div>
+          <div class="qa"><div class="qa-icon a">📋</div><span class="qa-lb">报价单</span></div>
+          <div class="qa"><div class="qa-icon p">📊</div><span class="qa-lb">空置报告</span></div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="sh"><span class="stitle">📈 本月招商进度</span></div>
+        <div style="display:flex;flex-direction:column;gap:12px;padding:10px 0">
+          <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>意向 → 报价</span><span>40%</span></div><div style="height:8px;background:#f3f4f6;border-radius:4px;overflow:hidden"><div style="width:40%;height:100%;background:var(--blue);border-radius:4px"></div></div></div>
+          <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>报价 → 签约</span><span>60%</span></div><div style="height:8px;background:#f3f4f6;border-radius:4px;overflow:hidden"><div style="width:60%;height:100%;background:var(--amber);border-radius:4px"></div></div></div>
+          <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>月度目标完成</span><span>3/5</span></div><div style="height:8px;background:#f3f4f6;border-radius:4px;overflow:hidden"><div style="width:60%;height:100%;background:var(--green);border-radius:4px"></div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ PROPERTY ============ -->
+  <div class="dash" id="dash-property">
+    <div class="stats fa">
+      <div class="stat-card"><div class="stat-label">今日处理工单</div><div class="stat-value">12<span class="u">单</span></div><div class="stat-sub" style="color:var(--text2)">已完成 8 单</div></div>
+      <div class="stat-card"><div class="stat-label">待维修</div><div class="stat-value">4<span class="u">单</span></div><div class="stat-sub" style="color:var(--text2)">平均响应 2.5h</div></div>
+      <div class="stat-card"><div class="stat-label">巡检计划</div><div class="stat-value">3<span class="u">项</span></div><div class="stat-sub" style="color:var(--text2)">今日已完成 1 项</div></div>
+      <div class="stat-card"><div class="stat-label">入驻/退租</div><div class="stat-value">2<span class="u">户</span></div><div class="stat-sub" style="color:var(--text2)">待交接 1 户</div></div>
+    </div>
+
+    <div class="grid-2wr fa">
+      <div class="section">
+        <div class="sh"><span class="stitle">🔧 待处理工单</span><span class="smore">全部工单 →</span></div>
+        <div class="tl">
+          <div class="ti danger"><div class="ti-icon">!</div><div class="ti-txt"><div class="d">A栋-301 空调故障</div><div class="dd">报修人：中科创达 · 已等待 4h</div></div><span class="ti-link">派单 →</span></div>
+          <div class="ti warn"><div class="ti-icon">!</div><div class="ti-txt"><div class="d">广场-B1 卫生间漏水</div><div class="dd">已报修 2h · 需联系施工队</div></div><span class="ti-link">派单 →</span></div>
+          <div class="ti"><div class="ti-icon" style="background:#6366f1">🔨</div><div class="ti-txt"><div class="d">C栋 电梯月度维保</div><div class="dd">计划今日 · 维保单位：日立</div></div><span class="ti-link">确认 →</span></div>
+          <div class="ti"><div class="ti-icon" style="background:#6366f1">🔨</div><div class="ti-txt"><div class="d">消防系统季度巡检</div><div class="dd">本周四 · 覆盖全部项目</div></div><span class="ti-link">安排 →</span></div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="sh"><span class="stitle">📅 入驻/退租计划</span></div>
+        <table class="tbl">
+          <tr><th>资产</th><th>类型</th><th>租户</th><th>日期</th><th>状态</th></tr>
+          <tr><td>B座-302</td><td>退租</td><td>星源文化</td><td>2026-06-05</td><td><span class="badge y">待验收</span></td></tr>
+          <tr><td>C栋-501</td><td>入驻</td><td>云帆科技</td><td>2026-06-10</td><td><span class="badge blue">水电待开通</span></td></tr>
+          <tr><td>广场-2F-05</td><td>退租</td><td>味美餐饮</td><td>2026-06-15</td><td><span class="badge gray">计划中</span></td></tr>
+          <tr><td>A栋-102</td><td>入驻</td><td>锐思咨询</td><td>2026-06-20</td><td><span class="badge gray">计划中</span></td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="grid-2 fa">
+      <div class="section">
+        <div class="sh"><span class="stitle">⚡ 设备运行异常</span><span class="smore">全部 →</span></div>
+        <div class="tl">
+          <div class="ti warn"><div class="ti-icon">!</div><div class="ti-txt"><div class="d">星辉广场 · 2#配电柜负载 95%</div><div class="dd">建议近期检修，避免过载跳闸</div></div><span class="ti-link">查看 →</span></div>
+          <div class="ti"><div class="ti-icon" style="background:#6366f1">⚡</div><div class="ti-txt"><div class="d">产业园 · 电梯运行异常抖动</div><div class="dd">已记录，等待维保单位排查</div></div><span class="ti-link">追踪 →</span></div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="sh"><span class="stitle">🚀 快捷操作</span></div>
+        <div class="qa-grid">
+          <div class="qa"><div class="qa-icon b">➕</div><span class="qa-lb">新建工单</span></div>
+          <div class="qa"><div class="qa-icon g">📋</div><span class="qa-lb">巡检录入</span></div>
+          <div class="qa"><div class="qa-icon a">🗝️</div><span class="qa-lb">退租验收</span></div>
+          <div class="qa"><div class="qa-icon p">📊</div><span class="qa-lb">设备台账</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:24px;font-size:12px;color:var(--text3);text-align:center">
+    工作台原型 v2 · 点击顶部按钮切换角色视角
+  </div>
+</div>
+
+<script>
+// Role switching
+document.querySelectorAll('.role-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const role = btn.dataset.role;
+    const titles = {lead:'领导工作台',asset:'资产管理工作台',lease:'招商工作台',property:'物业运维工作台'};
+    document.getElementById('pageTitle').textContent = titles[role];
+    document.querySelectorAll('.dash').forEach(d => d.classList.remove('active'));
+    document.getElementById('dash-'+role).classList.add('active');
+  });
+});
+</script>
+
+</body>
+</html>
