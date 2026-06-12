@@ -9,11 +9,6 @@ from .abac import (  # noqa: F401
     ABACPolicyRule,
     ABACRolePolicy,
 )
-from .approval import (  # noqa: F401
-    ApprovalActionLog,
-    ApprovalInstance,
-    ApprovalTaskSnapshot,
-)
 from .asset import Asset  # noqa: F401
 from .asset_history import AssetDocument, AssetHistory  # noqa: F401
 from .asset_management_history import AssetManagementHistory  # noqa: F401
@@ -41,8 +36,6 @@ from .contract_group import (  # noqa: F401
     ContractGroup,
     ContractLedgerEntry,
     ContractLifecycleStatus,
-    ContractRelation,
-    ContractRelationType,
     ContractRentTerm,
     ContractReviewStatus,
     GroupRelationType,
@@ -143,13 +136,11 @@ __all__ = [
     "ServiceFeeLedger",
     "LeaseContractDetail",
     "AgencyAgreementDetail",
-    "ContractRelation",
     "RevenueMode",
     "ContractDirection",
     "GroupRelationType",
     "ContractLifecycleStatus",
     "ContractReviewStatus",
-    "ContractRelationType",
     "contract_group_assets",
     "contract_assets",
     # Collection models
@@ -183,9 +174,6 @@ __all__ = [
     "ABACPolicy",
     "ABACPolicyRule",
     "ABACRolePolicy",
-    "ApprovalInstance",
-    "ApprovalTaskSnapshot",
-    "ApprovalActionLog",
     # Property Certificate models
     "CertificateType",
     "OwnerType",

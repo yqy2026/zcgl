@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from src.crud.query_builder import PartyFilter
 from src.models.contract_group import (
     ContractLifecycleStatus,
     GroupRelationType,
@@ -435,16 +436,135 @@ class TestAnalyticsService:
         assert metrics["customer_entity_count"] == 2
         assert metrics["customer_contract_count"] == 2
         assert metrics["customer_entity_breakdown"] == {
-            "upstream_lease": 0,
             "downstream_sublease": 1,
-            "entrusted_operation": 1,
+            "direct_lease": 1,
         }
         assert metrics["customer_contract_breakdown"] == {
-            "upstream_lease": 0,
             "downstream_sublease": 1,
-            "entrusted_operation": 2,
+            "direct_lease": 1,
+        }
+        assert metrics["counterparty_entity_breakdown"] == {
+            "upstream_lease": 0,
+            "entrusted_operation": 0,
+        }
+        assert metrics["counterparty_contract_breakdown"] == {
+            "upstream_lease": 0,
+            "entrusted_operation": 1,
         }
         assert metrics["metrics_version"]
+
+    def test_calculate_operational_metrics_counts_only_terminal_customer_entities(
+        self, analytics_service
+    ):
+        lease_group = MagicMock(revenue_mode=RevenueMode.LEASE, data_status="正常")
+        lease_group.operator_party = MagicMock(
+            review_status=PartyReviewStatus.APPROVED.value
+        )
+        lease_group.owner_party = MagicMock(
+            review_status=PartyReviewStatus.APPROVED.value
+        )
+
+        agency_group = MagicMock(revenue_mode=RevenueMode.AGENCY, data_status="正常")
+        agency_group.operator_party = MagicMock(
+            review_status=PartyReviewStatus.APPROVED.value
+        )
+        agency_group.owner_party = MagicMock(
+            review_status=PartyReviewStatus.APPROVED.value
+        )
+
+        upstream_contract = MagicMock(
+            contract_id="contract-upstream",
+            status=ContractLifecycleStatus.ACTIVE,
+            data_status="正常",
+            group_relation_type=GroupRelationType.UPSTREAM,
+            contract_group=lease_group,
+            lease_detail=None,
+            agency_detail=None,
+            ledger_entries=[],
+            service_fee_ledgers=[],
+            lessor_party_id="owner-party",
+            lessee_party_id="operator-party",
+            lessor_party=MagicMock(review_status=PartyReviewStatus.APPROVED.value),
+            lessee_party=MagicMock(review_status=PartyReviewStatus.APPROVED.value),
+        )
+        downstream_contract = MagicMock(
+            contract_id="contract-downstream",
+            status=ContractLifecycleStatus.ACTIVE,
+            data_status="正常",
+            group_relation_type=GroupRelationType.DOWNSTREAM,
+            contract_group=lease_group,
+            lease_detail=MagicMock(),
+            agency_detail=None,
+            ledger_entries=[],
+            service_fee_ledgers=[],
+            lessor_party_id="operator-party",
+            lessee_party_id="terminal-customer",
+            lessor_party=MagicMock(review_status=PartyReviewStatus.APPROVED.value),
+            lessee_party=MagicMock(review_status=PartyReviewStatus.APPROVED.value),
+        )
+        entrusted_contract = MagicMock(
+            contract_id="contract-entrusted",
+            status=ContractLifecycleStatus.ACTIVE,
+            data_status="正常",
+            group_relation_type=GroupRelationType.ENTRUSTED,
+            contract_group=agency_group,
+            lease_detail=None,
+            agency_detail=MagicMock(),
+            ledger_entries=[],
+            service_fee_ledgers=[],
+            lessor_party_id="principal-party",
+            lessee_party_id="operator-party",
+            lessor_party=MagicMock(review_status=PartyReviewStatus.APPROVED.value),
+            lessee_party=MagicMock(review_status=PartyReviewStatus.APPROVED.value),
+        )
+        direct_contract = MagicMock(
+            contract_id="contract-direct",
+            status=ContractLifecycleStatus.ACTIVE,
+            data_status="正常",
+            group_relation_type=GroupRelationType.DIRECT_LEASE,
+            contract_group=agency_group,
+            lease_detail=MagicMock(),
+            agency_detail=None,
+            ledger_entries=[],
+            service_fee_ledgers=[],
+            lessor_party_id="operator-party",
+            lessee_party_id="internal-terminal-customer",
+            lessor_party=MagicMock(review_status=PartyReviewStatus.APPROVED.value),
+            lessee_party=MagicMock(review_status=PartyReviewStatus.APPROVED.value),
+        )
+
+        metrics = analytics_service._calculate_operational_metrics(
+            [
+                upstream_contract,
+                downstream_contract,
+                entrusted_contract,
+                direct_contract,
+            ],
+            {},
+            party_filter=PartyFilter(
+                party_ids=["operator-party"],
+                filter_mode="manager",
+            ),
+        )
+
+        assert metrics["customer_entity_count"] == 2
+        assert metrics["customer_contract_count"] == 2
+        assert metrics["customer_entity_breakdown"] == {
+            "downstream_sublease": 1,
+            "direct_lease": 1,
+        }
+        assert metrics["customer_contract_breakdown"] == {
+            "downstream_sublease": 1,
+            "direct_lease": 1,
+        }
+        assert metrics["counterparty_entity_breakdown"] == {
+            "upstream_lease": 1,
+            "entrusted_operation": 1,
+        }
+        assert metrics["counterparty_contract_breakdown"] == {
+            "upstream_lease": 1,
+            "entrusted_operation": 1,
+        }
 
     @pytest.mark.asyncio
     async def test_get_comprehensive_analytics_should_apply_date_window_to_ledger_backed_income_fields(

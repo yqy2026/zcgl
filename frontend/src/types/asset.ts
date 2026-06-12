@@ -605,3 +605,17 @@ export interface BatchOperationResult {
     message: string;
   }>;
 }
+
+export interface AssetBatchReviewResult {
+  success_count: number;
+  failed_count: number;
+  total_count: number;
+  reviewed_assets: string[];
+  errors: Array<{
+    id?: string | null;
+    row_index?: number | null;
+    field?: string | null;
+    message: string;
+    code?: string | null;
+  }>;
+}

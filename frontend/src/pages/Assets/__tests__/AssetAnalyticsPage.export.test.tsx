@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { fireEvent, renderWithProviders, screen, waitFor } from '@/test/utils/test-helpers';
 import AssetAnalyticsPage from '../AssetAnalyticsPage';
@@ -115,7 +115,7 @@ const analyticsResponse = {
     agency_service_income: 30000,
     customer_entity_count: 8,
     customer_contract_count: 12,
-    metrics_version: 'req-ana-001-v1',
+    metrics_version: 'req-ana-001-v2',
     project_breakdown: [],
     mode_breakdown: [],
     property_nature_distribution: [],

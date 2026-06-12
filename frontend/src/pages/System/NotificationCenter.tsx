@@ -71,7 +71,6 @@ const TYPE_META_MAP: Record<
   [NotificationType.CONTRACT_EXPIRED]: { label: '合同到期', tone: 'error' },
   [NotificationType.PAYMENT_OVERDUE]: { label: '逾期提醒', tone: 'error' },
   [NotificationType.PAYMENT_DUE]: { label: '支付提醒', tone: 'primary' },
-  [NotificationType.APPROVAL_PENDING]: { label: '待办审批', tone: 'warning' },
   [NotificationType.SYSTEM_NOTICE]: { label: '系统通知', tone: 'success' },
 };
 
@@ -236,8 +235,6 @@ const NotificationCenter: React.FC = () => {
         return (
           <InfoCircleOutlined className={`${styles.notificationTypeIcon} ${styles.infoIcon}`} />
         );
-      case NotificationType.APPROVAL_PENDING:
-        return <CheckOutlined className={`${styles.notificationTypeIcon} ${styles.successIcon}`} />;
       default:
         return <BellOutlined className={`${styles.notificationTypeIcon} ${styles.infoIcon}`} />;
     }
@@ -290,7 +287,6 @@ const NotificationCenter: React.FC = () => {
             { label: '全部消息', key: 'all' },
             { label: '合同提醒', key: NotificationType.CONTRACT_EXPIRING },
             { label: '支付提醒', key: NotificationType.PAYMENT_DUE },
-            { label: '待办审批', key: NotificationType.APPROVAL_PENDING },
             { label: '系统通知', key: NotificationType.SYSTEM_NOTICE },
           ]}
         />

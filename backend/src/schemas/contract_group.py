@@ -14,7 +14,6 @@ from pydantic_core import PydanticCustomError
 from ..models.contract_group import (
     ContractDirection,
     ContractLifecycleStatus,
-    ContractRelationType,
     ContractReviewStatus,
     GroupRelationType,
     RevenueMode,
@@ -57,17 +56,12 @@ class ContractGroupCreate(BaseModel):
     owner_party_id: str = Field(..., min_length=1, description="产权方主体 ID")
     effective_from: date = Field(..., description="合同组有效开始日期")
     effective_to: date | None = Field(None, description="合同组有效结束日期（可空）")
-    settlement_rule: SettlementRuleSchema = Field(
-        ..., description="结算规则（五键必填）"
-    )
+    settlement_rule: SettlementRuleSchema | None = Field(None, description="结算规则")
     revenue_attribution_rule: dict[str, Any] | None = Field(
         None, description="收益归属规则"
     )
     revenue_share_rule: dict[str, Any] | None = Field(None, description="收益分成规则")
     risk_tags: list[str] | None = Field(None, description="风险标签列表")
-    predecessor_group_id: str | None = Field(
-        None, description="前驱合同组 ID（续签用）"
-    )
     asset_ids: list[str] = Field(default_factory=list, description="关联资产 ID 列表")
 
     @model_validator(mode="after")
@@ -118,12 +112,10 @@ class ContractGroupListItem(BaseModel):
 class ContractGroupDetail(ContractGroupListItem):
     """合同组详情出参（含派生字段及合同摘要列表）"""
 
-    settlement_rule: dict[str, Any]
+    settlement_rule: dict[str, Any] | None
     revenue_attribution_rule: dict[str, Any] | None
     revenue_share_rule: dict[str, Any] | None
     risk_tags: list[str] | None
-    predecessor_group_id: str | None
-    version: int
     upstream_contract_ids: list[str] = Field(default_factory=list)
     downstream_contract_ids: list[str] = Field(default_factory=list)
     contracts: list["ContractSummary"] = Field(default_factory=list)
@@ -283,7 +275,6 @@ class ContractDetail(BaseModel):
     review_reason: str | None
     contract_notes: str | None
     data_status: str
-    version: int
     created_at: datetime
     updated_at: datetime
     lease_detail: LeaseDetailResponse | None = None
@@ -533,24 +524,6 @@ class LedgerCompensationResponse(BaseModel):
     rent_entries_voided: int = Field(..., ge=0)
     failures: list[LedgerCompensationFailure] = Field(default_factory=list)
     timestamp: str
-
-
-class ContractRelationCreate(BaseModel):
-    """创建合同关系入参"""
-
-    parent_contract_id: str = Field(..., min_length=1)
-    child_contract_id: str = Field(..., min_length=1)
-    relation_type: ContractRelationType = Field(...)
-
-    @model_validator(mode="after")
-    def validate_no_self_relation(self) -> "ContractRelationCreate":
-        if self.parent_contract_id == self.child_contract_id:
-            raise PydanticCustomError(
-                "self_relation",
-                "parent_contract_id 和 child_contract_id 不能相同",
-                {},
-            )
-        return self
 
 
 # 解决 ContractGroupDetail 中 ContractSummary 的前向引用

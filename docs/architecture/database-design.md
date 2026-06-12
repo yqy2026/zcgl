@@ -15,9 +15,9 @@
 | 主体 | `Party`、`UserPartyBinding` | 统一承载产权方、运营方、客户等主体身份和用户数据范围绑定 |
 | 资产 | `Asset`、`AssetHistory`、`AssetDocument` | 资产主数据、历史、附件和审核信息 |
 | 项目 | `Project`、`ProjectAsset` | 项目作为资产运营管理归集单元 |
-| 合同 | `ContractGroup`、`Contract`、`ContractRelation` | 合同组承载一笔经营关系，合同基表承载上下游、委托、直租合同 |
+| 合同 | `ContractGroup`、`Contract` | 合同组承载一笔经营关系，合同基表承载上下游、委托、直租合同（`ContractRelation` 逐对配对表 MVP 已删，上下游只用 `group_relation_type` 方向标记，见 ADR-0003） |
 | 台账 | `ContractLedgerEntry`、`ServiceFeeLedger` | 租金台账和代理服务费台账 |
-| 审批 | `ApprovalInstance`、`ApprovalTaskSnapshot`、`ApprovalActionLog` | MVP 阶段承接资产审批和必要业务审批动作 |
+| ~~审批~~（MVP 已删） | — | 资产路由审批 `ApprovalInstance`/`ApprovalTaskSnapshot`/`ApprovalActionLog` 已删除，资产改由 `Asset.review_status` 两步生命周期管控（确认按权限门控，不限审核人≠提交人），见 ADR-0002 |
 | 权限 | `User`、`Role`、`Permission`、`ABACPolicy` | RBAC + ABAC 授权和数据策略 |
 
 ## 设计约束

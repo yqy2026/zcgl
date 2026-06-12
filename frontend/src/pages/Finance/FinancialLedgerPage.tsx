@@ -1,11 +1,26 @@
 import React, { useMemo, useState } from 'react';
-import { Alert, Button, Card, DatePicker, Input, Select, Space, Statistic, Table, Tag } from 'antd';
+import {
+  Alert,
+  App,
+  Button,
+  Card,
+  DatePicker,
+  Form,
+  Input,
+  InputNumber,
+  Modal,
+  Select,
+  Space,
+  Statistic,
+  Table,
+  Tag,
+} from 'antd';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import dayjs, { type Dayjs } from 'dayjs';
 import { PageContainer } from '@/components/Common';
 import { ledgerService } from '@/services/ledgerService';
-import type { LedgerEntry, LedgerPaymentStatus } from '@/types/ledger';
+import type { LedgerEntry, LedgerPaymentStatus, ManualLedgerPaymentStatus } from '@/types/ledger';
 import { buildQueryScopeKey } from '@/utils/queryScope';
 import styles from './FinancialLedgerPage.module.css';
 
@@ -28,6 +43,19 @@ const PAYMENT_STATUS_OPTIONS = [
   { label: '已作废', value: 'voided' },
 ];
 
+const MANUAL_PAYMENT_STATUS_OPTIONS: Array<{ label: string; value: ManualLedgerPaymentStatus }> = [
+  { label: '未收/未付', value: 'unpaid' },
+  { label: '已收/已付', value: 'paid' },
+  { label: '部分收付', value: 'partial' },
+  { label: '逾期', value: 'overdue' },
+];
+
+interface ReceiptRegistrationValues {
+  payment_status: ManualLedgerPaymentStatus;
+  paid_amount?: number | null;
+  notes?: string;
+}
+
 const formatAmount = (value: string | number): string => {
   const numericValue = Number(value);
   if (Number.isNaN(numericValue)) {
@@ -42,7 +70,9 @@ const formatAmount = (value: string | number): string => {
 const resolveCurrentYearMonth = () => dayjs().format('YYYY-MM');
 
 const FinancialLedgerPage: React.FC = () => {
+  const { message } = App.useApp();
   const queryScopeKey = buildQueryScopeKey();
+  const [receiptForm] = Form.useForm<ReceiptRegistrationValues>();
   const [offset, setOffset] = useState(0);
   const [limit, setLimit] = useState(PAGE_SIZE);
   const [yearMonthRange, setYearMonthRange] = useState<[Dayjs | null, Dayjs | null]>([
@@ -55,6 +85,8 @@ const FinancialLedgerPage: React.FC = () => {
   const [partyId, setPartyId] = useState('');
   const [exportError, setExportError] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [selectedEntryIds, setSelectedEntryIds] = useState<React.Key[]>([]);
+  const [receiptModalOpen, setReceiptModalOpen] = useState(false);
 
   const yearMonthStart = yearMonthRange[0]?.format('YYYY-MM') ?? undefined;
   const yearMonthEnd = yearMonthRange[1]?.format('YYYY-MM') ?? undefined;
@@ -116,6 +148,52 @@ const FinancialLedgerPage: React.FC = () => {
     () => ledgerItems.reduce((sum, item) => sum + Number(item.paid_amount || 0), 0),
     [ledgerItems]
   );
+  const selectedEntries = useMemo(() => {
+    const selectedIdSet = new Set(selectedEntryIds.map(String));
+    return ledgerItems.filter(item => selectedIdSet.has(item.entry_id));
+  }, [ledgerItems, selectedEntryIds]);
+
+  const receiptMutation = useMutation({
+    mutationFn: async (values: ReceiptRegistrationValues) => {
+      if (selectedEntries.length !== 1) {
+        throw new Error('请选择一条台账记录登记实收');
+      }
+
+      const entriesByContract = selectedEntries.reduce<Record<string, string[]>>((acc, entry) => {
+        if (acc[entry.contract_id] == null) {
+          acc[entry.contract_id] = [];
+        }
+        acc[entry.contract_id].push(entry.entry_id);
+        return acc;
+      }, {});
+
+      const paidAmount =
+        values.paid_amount == null || Number.isNaN(values.paid_amount)
+          ? undefined
+          : values.paid_amount;
+      const notes = values.notes?.trim() === '' ? undefined : values.notes?.trim();
+
+      const results = await Promise.all(
+        Object.entries(entriesByContract).map(([groupedContractId, entryIds]) =>
+          ledgerService.updateContractLedgerStatus(groupedContractId, {
+            entry_ids: entryIds,
+            payment_status: values.payment_status,
+            paid_amount: paidAmount,
+            notes,
+          })
+        )
+      );
+
+      return results.flat();
+    },
+    onSuccess: async updatedEntries => {
+      setReceiptModalOpen(false);
+      setSelectedEntryIds([]);
+      receiptForm.resetFields();
+      await ledgerQuery.refetch();
+      message.success(`已登记 ${updatedEntries.length} 条台账实收`);
+    },
+  });
 
   const columns = useMemo<ColumnsType<LedgerEntry>>(
     () => [
@@ -142,14 +220,16 @@ const FinancialLedgerPage: React.FC = () => {
         dataIndex: 'amount_due',
         key: 'amount_due',
         align: 'right',
-        render: (value: string | number, record) => `${formatAmount(value)} ${record.currency_code}`,
+        render: (value: string | number, record) =>
+          `${formatAmount(value)} ${record.currency_code}`,
       },
       {
         title: '实收/实付',
         dataIndex: 'paid_amount',
         key: 'paid_amount',
         align: 'right',
-        render: (value: string | number, record) => `${formatAmount(value)} ${record.currency_code}`,
+        render: (value: string | number, record) =>
+          `${formatAmount(value)} ${record.currency_code}`,
       },
       {
         title: '状态',
@@ -200,27 +280,47 @@ const FinancialLedgerPage: React.FC = () => {
     }
   };
 
+  const openReceiptModal = () => {
+    const selectedEntry = selectedEntries[0];
+    receiptForm.setFieldsValue({
+      payment_status: 'paid',
+      paid_amount: selectedEntry == null ? undefined : Number(selectedEntry.amount_due || 0),
+    });
+    setReceiptModalOpen(true);
+  };
+
+  const handleReceiptSubmit = async () => {
+    const values = await receiptForm.validateFields();
+    receiptMutation.mutate(values);
+  };
+
   return (
-    <PageContainer
-      title="财务台账"
-      subTitle="跨项目查询合同应收、应付、实收、实付和逾期记录。"
-    >
+    <PageContainer title="财务台账" subTitle="跨项目查询合同应收、应付、实收、实付和逾期记录。">
       <Space orientation="vertical" size="large" style={{ width: '100%' }}>
         {ledgerQuery.isError ? (
           <Alert
             type="error"
             showIcon
-            title={ledgerQuery.error instanceof Error ? ledgerQuery.error.message : '财务台账加载失败'}
+            title={
+              ledgerQuery.error instanceof Error ? ledgerQuery.error.message : '财务台账加载失败'
+            }
           />
         ) : null}
         {!hasRequiredLedgerFilter ? (
-          <Alert
-            type="warning"
-            showIcon
-            title="请至少选择账期、合同、资产或主体后查询财务台账。"
-          />
+          <Alert type="warning" showIcon title="请至少选择账期、合同、资产或主体后查询财务台账。" />
         ) : null}
         {exportError != null ? <Alert type="error" showIcon title={exportError} /> : null}
+        {receiptMutation.isError ? (
+          <Alert
+            type="error"
+            showIcon
+            title={
+              receiptMutation.error instanceof Error
+                ? receiptMutation.error.message
+                : '台账实收登记失败'
+            }
+          />
+        ) : null}
 
         <Card className={styles.filterCard}>
           <div className={styles.toolbar}>
@@ -283,6 +383,13 @@ const FinancialLedgerPage: React.FC = () => {
             </label>
             <Space>
               <Button
+                type="primary"
+                disabled={selectedEntries.length !== 1}
+                onClick={openReceiptModal}
+              >
+                实收登记
+              </Button>
+              <Button
                 disabled={!hasRequiredLedgerFilter}
                 onClick={() => void ledgerQuery.refetch()}
               >
@@ -316,6 +423,16 @@ const FinancialLedgerPage: React.FC = () => {
             loading={hasRequiredLedgerFilter && (ledgerQuery.isLoading || ledgerQuery.isFetching)}
             columns={columns}
             dataSource={ledgerItems}
+            rowSelection={{
+              type: 'radio',
+              selectedRowKeys: selectedEntryIds,
+              onChange: nextSelectedEntryIds => {
+                setSelectedEntryIds(nextSelectedEntryIds);
+              },
+              getCheckboxProps: record => ({
+                disabled: record.payment_status === 'voided',
+              }),
+            }}
             pagination={{
               current: Math.floor(offset / limit) + 1,
               pageSize: limit,
@@ -326,6 +443,34 @@ const FinancialLedgerPage: React.FC = () => {
           />
         </Card>
       </Space>
+      <Modal
+        title="台账实收登记"
+        open={receiptModalOpen}
+        okText="登记"
+        cancelText="取消"
+        confirmLoading={receiptMutation.isPending}
+        onOk={() => void handleReceiptSubmit()}
+        onCancel={() => {
+          setReceiptModalOpen(false);
+          receiptForm.resetFields();
+        }}
+      >
+        <Form form={receiptForm} layout="vertical">
+          <Form.Item
+            label="支付状态"
+            name="payment_status"
+            rules={[{ required: true, message: '请选择支付状态' }]}
+          >
+            <Select options={MANUAL_PAYMENT_STATUS_OPTIONS} />
+          </Form.Item>
+          <Form.Item label="实收/实付金额" name="paid_amount">
+            <InputNumber min={0} precision={2} style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item label="备注" name="notes">
+            <Input.TextArea rows={3} maxLength={200} />
+          </Form.Item>
+        </Form>
+      </Modal>
     </PageContainer>
   );
 };

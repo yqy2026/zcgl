@@ -45,7 +45,6 @@ def _make_contract(
     contract.reviewed_at = None
     contract.updated_by = None
     contract.updated_at = datetime(2026, 3, 1, 10, 0, 0)
-    contract.version = 1
     return contract
 
 

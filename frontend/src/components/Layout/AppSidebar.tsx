@@ -3,7 +3,12 @@ import { Layout, Menu } from 'antd';
 import { HomeOutlined } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
 import styles from './Layout.module.css';
-import { MENU_ITEMS, getSelectedKeys, getOpenKeys } from '@/config/menuConfig';
+import {
+  MENU_ITEMS,
+  getSelectedKeys,
+  getOpenKeys,
+  getMenuNavigationPath,
+} from '@/config/menuConfig';
 
 const { Sider } = Layout;
 
@@ -17,7 +22,10 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed }) => {
 
   // 处理菜单点击
   const handleMenuClick = ({ key }: { key: string }) => {
-    navigate(key);
+    const targetPath = getMenuNavigationPath(key);
+    if (targetPath != null) {
+      navigate(targetPath);
+    }
   };
 
   return (

@@ -804,10 +804,7 @@ const ProjectDetailPage: React.FC = () => {
                   <div className={styles.relationSummaryItem}>
                     <Text type="secondary">直租客户</Text>
                     <Text strong>
-                      {
-                        projectTenants.filter(item => item.group_relation_type === '直租')
-                          .length
-                      }
+                      {projectTenants.filter(item => item.group_relation_type === '直租').length}
                     </Text>
                   </div>
                 </div>
@@ -1036,8 +1033,7 @@ const ProjectDetailPage: React.FC = () => {
                 type="secondary"
                 style={{ display: 'block', marginTop: '0.5rem', fontSize: '0.75rem' }}
               >
-                注：MVP 阶段面积字段以合同台账落地后口径为准；出租率目前为占位值
-                0%，待台账覆盖后升级。
+                注：MVP 阶段出租率目前为占位值 0%，后续将按有效合同面积口径升级。
               </Text>
             </Card>
           )}

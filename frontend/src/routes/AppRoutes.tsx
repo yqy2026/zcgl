@@ -112,6 +112,13 @@ const baseProtectedRoutes: ProtectedRouteItem[] = [
     permissions: [{ resource: 'contract_group', action: 'read' }],
   },
   {
+    path: '/contract-center/list',
+    element: () => (
+      <CanonicalEntryRedirect targetPath={CONTRACT_CENTER_ROUTES.LIST} resource="contract_group" />
+    ),
+    permissions: [{ resource: 'contract_group', action: 'read' }],
+  },
+  {
     path: CONTRACT_CENTER_ROUTES.NEW,
     element: React.lazy(() => import('../pages/ContractGroup/ContractGroupFormPage')),
     permissions: [{ resource: 'contract_group', action: 'create' }],
@@ -170,6 +177,11 @@ const baseProtectedRoutes: ProtectedRouteItem[] = [
   {
     path: PROJECT_ROUTES.EDIT_PATH,
     element: projectManagementPage,
+    permissions: [{ resource: 'project', action: 'read' }],
+  },
+  {
+    path: '/project/list',
+    element: () => <CanonicalEntryRedirect targetPath={PROJECT_ROUTES.LIST} resource="project" />,
     permissions: [{ resource: 'project', action: 'read' }],
   },
   {

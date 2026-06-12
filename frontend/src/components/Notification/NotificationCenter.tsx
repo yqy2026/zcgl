@@ -27,7 +27,6 @@ const NOTIFICATION_TYPE_META_MAP: Record<NotificationType, NotificationTypeMeta>
   [NotificationType.CONTRACT_EXPIRED]: { label: '合同已到期', tone: 'error' },
   [NotificationType.PAYMENT_OVERDUE]: { label: '付款逾期', tone: 'error' },
   [NotificationType.PAYMENT_DUE]: { label: '付款到期提醒', tone: 'warning' },
-  [NotificationType.APPROVAL_PENDING]: { label: '审批待办', tone: 'primary' },
   [NotificationType.SYSTEM_NOTICE]: { label: '系统通知', tone: 'neutral' },
 };
 

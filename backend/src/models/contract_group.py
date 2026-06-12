@@ -1,15 +1,9 @@
 """
-合同关系与合同体系数据模型（五层合同架构 v1.0）
+Contract relationship and contract hierarchy models.
 
-层级：
-  ContractGroup（技术聚合根，用户侧展示为“合同关系”）
-    └── Contract 基表（N 条）
-          ├── LeaseContractDetail（租赁明细，1:1）
-          └── AgencyAgreementDetail（代理明细，1:1）
-  ContractRelation（合同间关系）
-
-对应需求：REQ-RNT-001（合同关系作为用户可见层，ContractGroup 为技术聚合根）
-字段附录：docs/features/requirements-appendix-fields.md §3.3–§3.7
+ContractGroup is the technical aggregate root for a user-visible contract
+relationship. Contract stores shared fields, with specialized details in
+LeaseContractDetail and AgencyAgreementDetail.
 """
 
 import enum
@@ -41,29 +35,23 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from ..database import Base
 from .associations import contract_assets, contract_group_assets
 
-# ===================== Enums =====================
-
 
 class RevenueMode(str, enum.Enum):
-    """经营模式"""
+    """Revenue mode for a contract group."""
 
-    LEASE = "lease"  # 承租模式
-    AGENCY = "agency"  # 代理模式
+    LEASE = "lease"
+    AGENCY = "agency"
 
 
 class ContractDirection(str, enum.Enum):
-    """合同方向（从哪个视角看这份合同）"""
+    """Contract direction from the operator perspective."""
 
     LESSOR = "出租"
     LESSEE = "承租"
 
 
 class GroupRelationType(str, enum.Enum):
-    """合同在合同组内的角色
-
-    承租模式: 上游（内部入约）/ 下游（对外出约）
-    代理模式: 委托（内部入约）/ 直租（对外出约，产权方-终端租户直签）
-    """
+    """Role of a contract inside a contract group."""
 
     UPSTREAM = "上游"
     DOWNSTREAM = "下游"
@@ -72,7 +60,7 @@ class GroupRelationType(str, enum.Enum):
 
 
 class ContractLifecycleStatus(str, enum.Enum):
-    """合同生命周期状态"""
+    """Contract lifecycle status."""
 
     DRAFT = "草稿"
     PENDING_REVIEW = "待审"
@@ -82,7 +70,7 @@ class ContractLifecycleStatus(str, enum.Enum):
 
 
 class ContractReviewStatus(str, enum.Enum):
-    """合同审核状态"""
+    """Contract review status."""
 
     DRAFT = "草稿"
     PENDING = "待审"
@@ -90,23 +78,8 @@ class ContractReviewStatus(str, enum.Enum):
     REVERSED = "反审核"
 
 
-class ContractRelationType(str, enum.Enum):
-    """合同间关系类型"""
-
-    UPSTREAM_DOWNSTREAM = "upstream_downstream"  # 上下游（承租模式）
-    AGENCY_DIRECT = "agency_direct"  # 代理-直租（代理模式）
-    RENEWAL = "renewal"  # 续签
-
-
-# ===================== Models =====================
-
-
 class ContractGroup(Base):
-    """合同关系技术聚合根，承载一笔经营关系下的多份合同。
-
-    定位：纯容器，不拥有独立生命周期状态。
-    状态（derived_status）由 Service 层从组内合同状态实时计算，不写库。
-    """
+    """Technical aggregate for one contract relationship."""
 
     __tablename__ = "contract_groups"
 
@@ -120,83 +93,69 @@ class ContractGroup(Base):
         ForeignKey("projects.id"),
         nullable=True,
         index=True,
-        comment="所属项目 ID；Phase 1a 存量回填前允许为空",
+        comment="Project ID, nullable before phase 1a backfill.",
     )
     group_code: Mapped[str] = mapped_column(
         String(50),
         unique=True,
         nullable=False,
         index=True,
-        comment="合同组编码（唯一），格式：GRP-{运营方编码}-{YYYYMM}-{SEQ4}",
+        comment="Unique contract group code.",
     )
     revenue_mode: Mapped[RevenueMode] = mapped_column(
         Enum(RevenueMode, values_callable=lambda e: [m.name for m in e]),
         nullable=False,
-        comment="经营模式：lease(承租) / agency(代理)；DB 存储成员 name（LEASE/AGENCY）",
+        comment="Revenue mode. DB stores enum names.",
     )
     operator_party_id: Mapped[str] = mapped_column(
         String,
         ForeignKey("parties.id"),
         nullable=False,
         index=True,
-        comment="运营方主体 ID",
+        comment="Operator party ID.",
     )
     owner_party_id: Mapped[str] = mapped_column(
         String,
         ForeignKey("parties.id"),
         nullable=False,
         index=True,
-        comment="产权方主体 ID",
+        comment="Owner party ID.",
     )
     effective_from: Mapped[date] = mapped_column(
         Date,
         nullable=False,
-        comment="合同组生效开始日",
+        comment="Effective start date.",
     )
     effective_to: Mapped[date | None] = mapped_column(
         Date,
         nullable=True,
-        comment="合同组生效结束日（手动设定初始值 or 由组内合同 MAX 派生）",
+        comment="Effective end date.",
     )
-    settlement_rule: Mapped[dict[str, Any]] = mapped_column(
+    settlement_rule: Mapped[dict[str, Any] | None] = mapped_column(
         JSONB,
-        nullable=False,
-        comment=(
-            "结算规则（必填键：version/cycle/settlement_mode/amount_rule/payment_rule）"
-        ),
+        nullable=True,
+        comment="Optional settlement rule snapshot.",
     )
     revenue_attribution_rule: Mapped[dict[str, Any] | None] = mapped_column(
         JSONB,
         nullable=True,
-        comment="收入归集口径配置",
+        comment="Revenue attribution rule.",
     )
     revenue_share_rule: Mapped[dict[str, Any] | None] = mapped_column(
         JSONB,
         nullable=True,
-        comment="分润规则配置（MVP 仅留存，不做自动分润计算）",
+        comment="Revenue share rule reserved for MVP.",
     )
     risk_tags: Mapped[list[str] | None] = mapped_column(
         JSONB,
         nullable=True,
-        comment="风险标签列表",
-    )
-    predecessor_group_id: Mapped[str | None] = mapped_column(
-        String,
-        ForeignKey("contract_groups.contract_group_id"),
-        nullable=True,
-        comment="续签时指向前一周期的合同组",
+        comment="Risk tag list.",
     )
     data_status: Mapped[str] = mapped_column(
         String(20),
         nullable=False,
         default="正常",
-        comment="数据状态：正常 / 已删除（仅逻辑删除）",
-    )
-    version: Mapped[int] = mapped_column(
-        Integer,
-        nullable=False,
-        default=1,
-        comment="乐观锁版本号（由 ORM 自动维护）",
+        comment="Data status.",
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
@@ -212,7 +171,6 @@ class ContractGroup(Base):
     created_by: Mapped[str | None] = mapped_column(String(100), nullable=True)
     updated_by: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
-    # --- Relationships ---
     operator_party: Mapped["Party"] = relationship(
         "Party",
         foreign_keys=[operator_party_id],
@@ -239,10 +197,6 @@ class ContractGroup(Base):
         "Asset",
         secondary=contract_group_assets,
     )
-    predecessor_group: Mapped["ContractGroup | None"] = relationship(
-        "ContractGroup",
-        remote_side=[contract_group_id],
-    )
 
     def __repr__(self) -> str:  # pragma: no cover
         return (
@@ -251,15 +205,7 @@ class ContractGroup(Base):
 
 
 class Contract(Base):
-    """合同基表 —— 所有合同类型的公共字段。
-
-    类型差异字段下沉到明细表：
-    - LeaseContractDetail（租赁类：上游承租 / 下游出租 / 直租）
-    - AgencyAgreementDetail（代理类：委托协议）
-
-    历史台账模型已收口到 `ContractLedgerEntry`；当前台账 FK 指向
-    `contracts.contract_id`。
-    """
+    """Shared base table for all contract types."""
 
     __tablename__ = "contracts"
 
@@ -273,114 +219,115 @@ class Contract(Base):
         ForeignKey("contract_groups.contract_group_id"),
         nullable=False,
         index=True,
-        comment="所属合同组",
+        comment="Owning contract group.",
     )
     contract_number: Mapped[str] = mapped_column(
         String(100),
         unique=True,
         nullable=False,
         index=True,
-        comment="合同编号",
+        comment="Contract number.",
     )
     contract_direction: Mapped[ContractDirection] = mapped_column(
         Enum(ContractDirection, values_callable=lambda e: [m.name for m in e]),
         nullable=False,
-        comment="合同方向；DB 存储成员 name（LESSOR/LESSEE）",
+        comment="Contract direction. DB stores enum names.",
     )
     group_relation_type: Mapped[GroupRelationType] = mapped_column(
         Enum(GroupRelationType, values_callable=lambda e: [m.name for m in e]),
         nullable=False,
-        comment="合同角色；DB 存储成员 name（UPSTREAM/DOWNSTREAM/ENTRUSTED/DIRECT_LEASE）",
+        comment="Contract role in group. DB stores enum names.",
     )
     lessor_party_id: Mapped[str] = mapped_column(
         String,
         ForeignKey("parties.id"),
         nullable=False,
         index=True,
-        comment="出租方/委托方主体（代理模式下 lessor = 委托方）",
+        comment="Lessor or entrusted party ID.",
     )
     lessee_party_id: Mapped[str] = mapped_column(
         String,
         ForeignKey("parties.id"),
         nullable=False,
         index=True,
-        comment="承租方/受托方主体（代理模式下 lessee = 受托方）",
+        comment="Lessee or operator party ID.",
+    )
+    correction_source_contract_id: Mapped[str | None] = mapped_column(
+        String(50),
+        ForeignKey("contracts.contract_id"),
+        nullable=True,
+        index=True,
+        comment="Source contract for correction drafts.",
     )
     sign_date: Mapped[date | None] = mapped_column(
         Date,
         nullable=True,
-        comment="签订日期（草稿可空，进入待审/生效前必填）",
+        comment="Sign date.",
     )
     effective_from: Mapped[date] = mapped_column(
         Date,
         nullable=False,
-        comment="合同生效开始日",
+        comment="Effective start date.",
     )
     effective_to: Mapped[date | None] = mapped_column(
         Date,
         nullable=True,
-        comment="合同生效结束日",
+        comment="Effective end date.",
     )
     currency_code: Mapped[str] = mapped_column(
         String(10),
         nullable=False,
         default="CNY",
-        comment="币种，MVP 固定 CNY",
+        comment="Currency code.",
     )
     tax_rate: Mapped[Decimal | None] = mapped_column(
         DECIMAL(5, 4),
         nullable=True,
-        comment="税率，范围 [0, 1]",
+        comment="Tax rate in [0, 1].",
     )
     is_tax_included: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,
         default=True,
-        comment="是否含税，默认 true",
+        comment="Whether amount includes tax.",
     )
     status: Mapped[ContractLifecycleStatus] = mapped_column(
         Enum(ContractLifecycleStatus, values_callable=lambda e: [m.name for m in e]),
         nullable=False,
         default=ContractLifecycleStatus.DRAFT,
-        comment="合同生命周期状态；DB 存储成员 name（DRAFT/PENDING_REVIEW/ACTIVE/EXPIRED/TERMINATED）",
+        comment="Contract lifecycle status. DB stores enum names.",
     )
     review_status: Mapped[ContractReviewStatus] = mapped_column(
         Enum(ContractReviewStatus, values_callable=lambda e: [m.name for m in e]),
         nullable=False,
         default=ContractReviewStatus.DRAFT,
-        comment="审核状态；DB 存储成员 name（DRAFT/PENDING/APPROVED/REVERSED）",
+        comment="Contract review status. DB stores enum names.",
     )
     review_by: Mapped[str | None] = mapped_column(
         String(100),
         nullable=True,
-        comment="审核人（通过/反审核时必填）",
+        comment="Reviewer ID.",
     )
     reviewed_at: Mapped[datetime | None] = mapped_column(
         DateTime,
         nullable=True,
-        comment="审核时间（通过/反审核时必填）",
+        comment="Review timestamp.",
     )
     review_reason: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
-        comment="审核原因（反审核时必填）",
+        comment="Review reason.",
     )
     data_status: Mapped[str] = mapped_column(
         String(20),
         nullable=False,
         default="正常",
-        comment="数据状态：正常 / 已删除（仅逻辑删除）",
+        comment="Data status.",
     )
     contract_notes: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
-        comment="合同备注",
-    )
-    version: Mapped[int] = mapped_column(
-        Integer,
-        nullable=False,
-        default=1,
-        comment="乐观锁版本号",
+        comment="Contract notes.",
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
@@ -398,10 +345,9 @@ class Contract(Base):
     source_session_id: Mapped[str | None] = mapped_column(
         String(100),
         nullable=True,
-        comment="PDF 导入会话 ID",
+        comment="PDF import session ID.",
     )
 
-    # --- Relationships ---
     contract_group: Mapped["ContractGroup"] = relationship(
         "ContractGroup",
         back_populates="contracts",
@@ -413,6 +359,11 @@ class Contract(Base):
     lessee_party: Mapped["Party"] = relationship(
         "Party",
         foreign_keys=[lessee_party_id],
+    )
+    correction_source_contract: Mapped["Contract | None"] = relationship(
+        "Contract",
+        remote_side=[contract_id],
+        foreign_keys=[correction_source_contract_id],
     )
     assets: Mapped[list["Asset"]] = relationship(
         "Asset",
@@ -429,19 +380,6 @@ class Contract(Base):
         back_populates="contract",
         uselist=False,
         cascade="all, delete-orphan",
-    )
-    # 本合同作为 child 时的父合同关系
-    parent_relations: Mapped[list["ContractRelation"]] = relationship(
-        "ContractRelation",
-        foreign_keys="[ContractRelation.child_contract_id]",
-        back_populates="child_contract",
-        cascade="all, delete-orphan",
-    )
-    # 本合同作为 parent 时的子合同关系
-    child_relations: Mapped[list["ContractRelation"]] = relationship(
-        "ContractRelation",
-        foreign_keys="[ContractRelation.parent_contract_id]",
-        back_populates="parent_contract",
     )
     audit_logs: Mapped[list["ContractAuditLog"]] = relationship(
         "ContractAuditLog",
@@ -471,11 +409,7 @@ class Contract(Base):
 
 
 class LeaseContractDetail(Base):
-    """租赁合同明细 —— 租赁类合同（上游承租/下游出租/直租）的专有字段。
-
-    一份 Contract 最多关联一条 LeaseContractDetail（UNIQUE contract_id）。
-    派生字段 rent_amount_excl_tax 由 Service 层按 is_tax_included/tax_rate 计算，不写库。
-    """
+    """Lease-specific detail table."""
 
     __tablename__ = "lease_contract_details"
 
@@ -490,35 +424,35 @@ class LeaseContractDetail(Base):
         nullable=False,
         unique=True,
         index=True,
-        comment="FK → Contract 基表（1:1）",
+        comment="One-to-one contract FK.",
     )
     total_deposit: Mapped[Decimal | None] = mapped_column(
         DECIMAL(18, 2),
         nullable=True,
         default=Decimal("0"),
-        comment="总押金金额 ≥ 0",
+        comment="Total deposit amount.",
     )
     rent_amount: Mapped[Decimal] = mapped_column(
         DECIMAL(18, 2),
         nullable=False,
-        comment="合同级租金汇总金额（不替代 ContractRentTerm 分阶段明细）",
+        comment="Contract-level total rent amount.",
     )
     monthly_rent_base: Mapped[Decimal | None] = mapped_column(
         DECIMAL(15, 2),
         nullable=True,
-        comment="基础月租金",
+        comment="Base monthly rent.",
     )
     payment_cycle: Mapped[str] = mapped_column(
         String(20),
         nullable=False,
         default="月付",
-        comment="付款周期：月付 / 季付 / 半年付 / 年付",
+        comment="Payment cycle.",
     )
     payment_terms: Mapped[str | None] = mapped_column(Text, nullable=True)
     tenant_name: Mapped[str | None] = mapped_column(
         String(200),
         nullable=True,
-        comment="承租方名称（冗余展示，主数据以 lessee_party_id 为准）",
+        comment="Denormalized tenant display name.",
     )
     tenant_contact: Mapped[str | None] = mapped_column(String(100), nullable=True)
     tenant_phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
@@ -527,12 +461,11 @@ class LeaseContractDetail(Base):
     owner_name: Mapped[str | None] = mapped_column(
         String(200),
         nullable=True,
-        comment="甲方/出租方名称（冗余展示，主数据以 lessor_party_id 为准）",
+        comment="Denormalized owner display name.",
     )
     owner_contact: Mapped[str | None] = mapped_column(String(100), nullable=True)
     owner_phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
-    # --- Relationships ---
     contract: Mapped["Contract"] = relationship(
         "Contract",
         back_populates="lease_detail",
@@ -546,11 +479,7 @@ class LeaseContractDetail(Base):
 
 
 class AgencyAgreementDetail(Base):
-    """代理协议明细 —— 代理模式委托协议的专有字段。
-
-    一份 Contract 最多关联一条 AgencyAgreementDetail（UNIQUE contract_id）。
-    代理协议中：lessor_party_id = 委托方（产权方），lessee_party_id = 受托方（运营方）。
-    """
+    """Agency-agreement-specific detail table."""
 
     __tablename__ = "agency_agreement_details"
 
@@ -565,26 +494,25 @@ class AgencyAgreementDetail(Base):
         nullable=False,
         unique=True,
         index=True,
-        comment="FK → Contract 基表（1:1）",
+        comment="One-to-one contract FK.",
     )
     service_fee_ratio: Mapped[Decimal] = mapped_column(
         DECIMAL(5, 4),
         nullable=False,
-        comment="服务费比例，如 0.0500 = 5%",
+        comment="Service fee ratio, e.g. 0.0500 = 5%.",
     )
     fee_calculation_base: Mapped[str] = mapped_column(
         String(30),
         nullable=False,
         default="actual_received",
-        comment="计费基数：actual_received(实收租金) / due_amount(应收租金)",
+        comment="Fee base: actual_received or due_amount.",
     )
     agency_scope: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
-        comment="代理范围描述（自由文本）",
+        comment="Agency scope free text.",
     )
 
-    # --- Relationships ---
     contract: Mapped["Contract"] = relationship(
         "Contract",
         back_populates="agency_detail",
@@ -597,74 +525,8 @@ class AgencyAgreementDetail(Base):
         )
 
 
-class ContractRelation(Base):
-    """合同间关系 —— 记录合同的上下游、代理-直租、续签关系。
-
-    采用 parent/child 模型，不做反向冗余存储。
-    ContractGroup 的 upstream_contract_ids / downstream_contract_ids 由本表派生。
-    约束：(parent_contract_id, child_contract_id) 联合唯一。
-    """
-
-    __tablename__ = "contract_relations"
-    __table_args__ = (
-        UniqueConstraint(
-            "parent_contract_id",
-            "child_contract_id",
-            name="uq_contract_relation_pair",
-        ),
-    )
-
-    relation_id: Mapped[str] = mapped_column(
-        String,
-        primary_key=True,
-        default=lambda: str(uuid.uuid4()),
-    )
-    parent_contract_id: Mapped[str] = mapped_column(
-        String,
-        ForeignKey("contracts.contract_id"),
-        nullable=False,
-        index=True,
-        comment="上级合同（上游 / 委托协议 / 旧合同）",
-    )
-    child_contract_id: Mapped[str] = mapped_column(
-        String,
-        ForeignKey("contracts.contract_id"),
-        nullable=False,
-        index=True,
-        comment="下级合同（下游 / 终端合同 / 新合同）",
-    )
-    relation_type: Mapped[ContractRelationType] = mapped_column(
-        Enum(ContractRelationType, values_callable=lambda e: [m.name for m in e]),
-        nullable=False,
-        comment="关系类型；DB 存储成员 name（UPSTREAM_DOWNSTREAM/AGENCY_DIRECT/RENEWAL）",
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        nullable=False,
-        default=lambda: datetime.now(UTC).replace(tzinfo=None),
-    )
-
-    # --- Relationships ---
-    parent_contract: Mapped["Contract"] = relationship(
-        "Contract",
-        foreign_keys=[parent_contract_id],
-        back_populates="child_relations",
-    )
-    child_contract: Mapped["Contract"] = relationship(
-        "Contract",
-        foreign_keys=[child_contract_id],
-        back_populates="parent_relations",
-    )
-
-    def __repr__(self) -> str:  # pragma: no cover
-        return (
-            f"<ContractRelation(type={self.relation_type}, "
-            f"parent={self.parent_contract_id}, child={self.child_contract_id})>"
-        )
-
-
 class ContractAuditLog(Base):
-    """合同生命周期审计日志。"""
+    """Contract lifecycle audit log."""
 
     __tablename__ = "contract_audit_logs"
 
@@ -678,14 +540,14 @@ class ContractAuditLog(Base):
         ForeignKey("contracts.contract_id"),
         nullable=False,
         index=True,
-        comment="关联合同 ID",
+        comment="Contract ID.",
     )
     action: Mapped[str] = mapped_column(
         String(50),
         nullable=False,
         comment=(
-            "动作：submit_review / approve / reject / expire / terminate / void / "
-            "start_correction / reverse_review"
+            "Action: submit_review, approve, reject, expire, terminate, void, "
+            "start_correction, reverse_review"
         ),
     )
     old_status: Mapped[str | None] = mapped_column(String(50), nullable=True)
@@ -698,12 +560,12 @@ class ContractAuditLog(Base):
     related_entry_id: Mapped[str | None] = mapped_column(
         String(100),
         nullable=True,
-        comment="关联单号（如冲销台账单号）",
+        comment="Related document or ledger entry ID.",
     )
     context: Mapped[dict[str, Any] | None] = mapped_column(
         JSONB,
         nullable=True,
-        comment="结构化审计上下文（联审范围、差异分类、纠错链路等）",
+        comment="Structured audit context.",
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
@@ -718,7 +580,7 @@ class ContractAuditLog(Base):
 
 
 class ContractRentTerm(Base):
-    """分阶段租金条款。"""
+    """Segmented rent terms."""
 
     __tablename__ = "contract_rent_terms"
     __table_args__ = (
@@ -739,12 +601,12 @@ class ContractRentTerm(Base):
         ForeignKey("contracts.contract_id"),
         nullable=False,
         index=True,
-        comment="关联合同 ID",
+        comment="Contract ID.",
     )
     sort_order: Mapped[int] = mapped_column(
         Integer,
         nullable=False,
-        comment="阶段排序，从 1 开始",
+        comment="Term order, starting from 1.",
     )
     start_date: Mapped[date] = mapped_column(Date, nullable=False)
     end_date: Mapped[date] = mapped_column(Date, nullable=False)
@@ -762,7 +624,7 @@ class ContractRentTerm(Base):
     total_monthly_amount: Mapped[Decimal | None] = mapped_column(
         DECIMAL(15, 2),
         nullable=True,
-        comment="派生金额：monthly_rent + management_fee + other_fees",
+        comment="Derived monthly_rent + management_fee + other_fees.",
     )
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
@@ -784,7 +646,7 @@ class ContractRentTerm(Base):
 
 
 class ContractLedgerEntry(Base):
-    """合同月度台账条目。"""
+    """Monthly contract ledger entry."""
 
     __tablename__ = "contract_ledger_entries"
     __table_args__ = (
@@ -805,22 +667,22 @@ class ContractLedgerEntry(Base):
         ForeignKey("contracts.contract_id"),
         nullable=False,
         index=True,
-        comment="关联合同 ID",
+        comment="Contract ID.",
     )
     year_month: Mapped[str] = mapped_column(
         String(7),
         nullable=False,
-        comment="台账所属年月，格式 YYYY-MM",
+        comment="Ledger period in YYYY-MM format.",
     )
     due_date: Mapped[date] = mapped_column(
         Date,
         nullable=False,
-        comment="本账期应收日",
+        comment="Due date.",
     )
     amount_due: Mapped[Decimal] = mapped_column(
         DECIMAL(15, 2),
         nullable=False,
-        comment="本账期应收金额",
+        comment="Amount due.",
     )
     currency_code: Mapped[str] = mapped_column(
         String(10),
@@ -866,7 +728,7 @@ class ContractLedgerEntry(Base):
 
 
 class ServiceFeeLedger(Base):
-    """代理模式服务费台账。"""
+    """Agency-mode service fee ledger."""
 
     __tablename__ = "service_fee_ledgers"
     __table_args__ = (

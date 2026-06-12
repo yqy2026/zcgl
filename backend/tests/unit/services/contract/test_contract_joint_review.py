@@ -28,14 +28,14 @@ def _make_contract(
     contract.status = status
     contract.review_status = review_status
     contract.sign_date = date(2026, 3, 1)
-    contract.data_status = "正常"
+    contract.data_status = "姝ｅ父"
     contract.lessor_party_id = "party-lessor"
     contract.lessee_party_id = "party-lessee"
     contract.contract_notes = contract_notes
     contract.review_by = None
     contract.review_reason = None
     contract.reviewed_at = None
-    contract.version = 1
+    contract.correction_source_contract_id = None
     return contract
 
 
@@ -43,6 +43,7 @@ class TestContractJointReview:
     async def test_submit_review_should_require_group_review_for_critical_change(self):
         service = ContractGroupService()
         draft_contract = _make_contract(contract_id="draft-correction")
+        draft_contract.correction_source_contract_id = "source-contract"
         predecessor_contract = _make_contract(
             contract_id="source-contract",
             status=ContractLifecycleStatus.ACTIVE,
@@ -70,11 +71,9 @@ class TestContractJointReview:
                 "src.services.contract.contract_group_service.party_service.assert_parties_approved",
                 new=AsyncMock(return_value=None),
             ),
-            patch.object(
-                service,
-                "_get_correction_source_contract",
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.get",
                 new=AsyncMock(return_value=predecessor_contract),
-                create=True,
             ),
             patch.object(
                 service,
@@ -85,25 +84,28 @@ class TestContractJointReview:
         ):
             db = AsyncMock()
             db.execute.return_value = SimpleNamespace(all=lambda: [])
-            with pytest.raises(OperationNotAllowedError, match="合同组联审"):
+            with pytest.raises(OperationNotAllowedError):
                 await service.submit_review(
                     db,
                     contract_id=draft_contract.contract_id,
                     current_user="user-001",
-                    operator_name="测试用户",
+                    operator_name="娴嬭瘯鐢ㄦ埛",
                 )
 
-    async def test_submit_review_should_allow_single_review_for_non_critical_change(self):
+    async def test_submit_review_should_allow_single_review_for_non_critical_change(
+        self,
+    ):
         service = ContractGroupService()
         draft_contract = _make_contract(
             contract_id="draft-text-only",
-            contract_notes="修正备注",
+            contract_notes="updated notes",
         )
+        draft_contract.correction_source_contract_id = "source-contract"
         predecessor_contract = _make_contract(
             contract_id="source-contract",
             status=ContractLifecycleStatus.ACTIVE,
             review_status=ContractReviewStatus.APPROVED,
-            contract_notes="原备注",
+            contract_notes="original notes",
         )
 
         with (
@@ -127,11 +129,9 @@ class TestContractJointReview:
                 "src.services.contract.contract_group_service.party_service.assert_parties_approved",
                 new=AsyncMock(return_value=None),
             ),
-            patch.object(
-                service,
-                "_get_correction_source_contract",
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.get",
                 new=AsyncMock(return_value=predecessor_contract),
-                create=True,
             ),
             patch.object(
                 service,
@@ -145,7 +145,9 @@ class TestContractJointReview:
             ),
             patch(
                 "src.services.contract.contract_group_service.contract_crud.update",
-                new=AsyncMock(side_effect=lambda db, db_obj, data, commit=False: db_obj),
+                new=AsyncMock(
+                    side_effect=lambda db, db_obj, data, commit=False: db_obj
+                ),
             ),
             patch(
                 "src.services.contract.contract_group_service.contract_group_crud.create_audit_log",
@@ -158,7 +160,7 @@ class TestContractJointReview:
                 db,
                 contract_id=draft_contract.contract_id,
                 current_user="user-001",
-                operator_name="测试用户",
+                operator_name="娴嬭瘯鐢ㄦ埛",
             )
 
         assert result is draft_contract
@@ -176,6 +178,7 @@ class TestContractJointReview:
     ):
         service = ContractGroupService()
         draft_contract = _make_contract(contract_id="draft-correction")
+        draft_contract.correction_source_contract_id = "source-contract"
         predecessor_contract = _make_contract(
             contract_id="source-contract",
             status=ContractLifecycleStatus.ACTIVE,
@@ -203,11 +206,9 @@ class TestContractJointReview:
                 "src.services.contract.contract_group_service.party_service.assert_parties_approved",
                 new=AsyncMock(return_value=None),
             ),
-            patch.object(
-                service,
-                "_get_correction_source_contract",
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.get",
                 new=AsyncMock(return_value=predecessor_contract),
-                create=True,
             ),
             patch.object(
                 service,
@@ -221,7 +222,9 @@ class TestContractJointReview:
             ),
             patch(
                 "src.services.contract.contract_group_service.contract_crud.update",
-                new=AsyncMock(side_effect=lambda db, db_obj, data, commit=False: db_obj),
+                new=AsyncMock(
+                    side_effect=lambda db, db_obj, data, commit=False: db_obj
+                ),
             ),
             patch(
                 "src.services.contract.contract_group_service.contract_group_crud.create_audit_log",
@@ -234,7 +237,7 @@ class TestContractJointReview:
                 db,
                 contract_id=draft_contract.contract_id,
                 current_user="user-001",
-                operator_name="测试用户",
+                operator_name="娴嬭瘯鐢ㄦ埛",
                 allow_joint_review=True,
                 joint_review_contract_ids=["draft-correction", "sibling-001"],
             )

@@ -141,6 +141,8 @@ export interface AnalyticsData {
   customer_contract_count?: number;
   customer_entity_breakdown?: Record<string, number>;
   customer_contract_breakdown?: Record<string, number>;
+  counterparty_entity_breakdown?: Record<string, number>;
+  counterparty_contract_breakdown?: Record<string, number>;
   project_breakdown?: AnalyticsProjectBreakdown[];
   mode_breakdown?: AnalyticsModeBreakdown[];
   metrics_version?: string;
@@ -174,6 +176,8 @@ export interface AnalyticsResponse {
   customer_contract_count?: number;
   customer_entity_breakdown?: Record<string, number>;
   customer_contract_breakdown?: Record<string, number>;
+  counterparty_entity_breakdown?: Record<string, number>;
+  counterparty_contract_breakdown?: Record<string, number>;
   project_breakdown?: AnalyticsProjectBreakdown[];
   mode_breakdown?: AnalyticsModeBreakdown[];
   metrics_version?: string;

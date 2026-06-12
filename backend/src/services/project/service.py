@@ -135,7 +135,6 @@ class ProjectService:
             if normalized_asset_id != "":
                 asset_ids.add(normalized_asset_id)
         return asset_ids
-
     @classmethod
     def _contract_relation_item_from_group(
         cls,
@@ -851,32 +850,6 @@ class ProjectService:
         def format_money(value: Decimal) -> str:
             return f"¥{self._quantize_money(value):,.2f}"
 
-        def is_contract_period_covered(terminal: Any, primary: Any) -> bool:
-            terminal_from = getattr(terminal, "effective_from", None)
-            terminal_to = getattr(terminal, "effective_to", None)
-            primary_from = getattr(primary, "effective_from", None)
-            primary_to = getattr(primary, "effective_to", None)
-            if not isinstance(terminal_from, date) or not isinstance(primary_from, date):
-                return False
-            if terminal_from < primary_from:
-                return False
-            if isinstance(terminal_to, date):
-                if not isinstance(primary_to, date):
-                    return False
-                if terminal_to > primary_to:
-                    return False
-            return True
-
-        def is_terminal_covered(terminal: Any, primary_contracts: list[Any]) -> bool:
-            terminal_asset_ids = self._asset_ids_from_contract(terminal)
-            for primary in primary_contracts:
-                primary_asset_ids = self._asset_ids_from_contract(primary)
-                if terminal_asset_ids and not terminal_asset_ids.issubset(primary_asset_ids):
-                    continue
-                if is_contract_period_covered(terminal, primary):
-                    return True
-            return False
-
         for relation in relations.items:
             for tag in relation.risk_tags or []:
                 normalized_tag = str(tag).strip()
@@ -887,74 +860,10 @@ class ProjectService:
                         message=normalized_tag,
                     )
 
-            has_terminal_contract = len(relation.terminal_contract_ids) > 0
-            lacks_primary_contract = len(relation.primary_contract_ids) == 0
-            if has_terminal_contract and lacks_primary_contract:
-                message = (
-                    "下游出租合同缺少有效上游承租覆盖"
-                    if relation.relation_kind == "lease_sublease"
-                    else "直租合同缺少有效委托协议覆盖"
-                )
-                add_risk(
-                    relation,
-                    risk_type="missing_primary_contract",
-                    message=message,
-                    severity="high",
-                )
-
             contracts = await contract_crud.list_by_group(
                 db,
                 group_id=relation.contract_relation_id,
             )
-            primary_relation_types = (
-                {GroupRelationType.UPSTREAM}
-                if relation.revenue_mode == RevenueMode.LEASE.value
-                else {GroupRelationType.ENTRUSTED}
-            )
-            terminal_relation_types = (
-                {GroupRelationType.DOWNSTREAM}
-                if relation.revenue_mode == RevenueMode.LEASE.value
-                else {GroupRelationType.DIRECT_LEASE}
-            )
-            primary_contracts = [
-                contract
-                for contract in contracts
-                if self._normalize_group_relation_type(
-                    getattr(contract, "group_relation_type", None)
-                )
-                in primary_relation_types
-            ]
-            terminal_contracts = [
-                contract
-                for contract in contracts
-                if self._normalize_group_relation_type(
-                    getattr(contract, "group_relation_type", None)
-                )
-                in terminal_relation_types
-            ]
-            if primary_contracts:
-                for terminal_contract in terminal_contracts:
-                    if not is_terminal_covered(terminal_contract, primary_contracts):
-                        message = (
-                            "下游出租合同"
-                            if relation.revenue_mode == RevenueMode.LEASE.value
-                            else "直租合同"
-                        )
-                        coverage = (
-                            "有效上游承租覆盖"
-                            if relation.revenue_mode == RevenueMode.LEASE.value
-                            else "有效委托协议覆盖"
-                        )
-                        add_risk(
-                            relation,
-                            risk_type="coverage_conflict",
-                            message=(
-                                f"{message} {contract_display_name(terminal_contract)} "
-                                f"超出{coverage}"
-                            ),
-                            severity="high",
-                        )
-
             for contract in contracts:
                 relation_type = self._normalize_group_relation_type(
                     getattr(contract, "group_relation_type", None)
@@ -1247,7 +1156,7 @@ class ProjectService:
             GroupRelationType.DOWNSTREAM: "下游",
             GroupRelationType.DIRECT_LEASE: "直租",
         }
-        tenants_by_key: dict[tuple[str, GroupRelationType], ProjectTenantSummaryItem] = {}
+        tenants_by_party_id: dict[str, ProjectTenantSummaryItem] = {}
 
         for group in groups:
             revenue_mode = self._normalize_revenue_mode(
@@ -1270,8 +1179,7 @@ class ProjectService:
                 if party_id == "":
                     continue
 
-                key = (party_id, relation_type)
-                item = tenants_by_key.get(key)
+                item = tenants_by_party_id.get(party_id)
                 if item is None:
                     item = ProjectTenantSummaryItem(
                         party_id=party_id,
@@ -1279,10 +1187,10 @@ class ProjectService:
                         group_relation_type=relation_labels[relation_type],
                         contract_count=0,
                     )
-                    tenants_by_key[key] = item
+                    tenants_by_party_id[party_id] = item
                 item.contract_count += 1
 
-        items = list(tenants_by_key.values())
+        items = list(tenants_by_party_id.values())
         return ProjectTenantSummaryResponse(items=items, total=len(items))
 
     async def get_project_analytics(

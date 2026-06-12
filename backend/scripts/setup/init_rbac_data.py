@@ -22,8 +22,14 @@ from src.models.rbac import Permission, PermissionGrant, Role, UserRoleAssignmen
 TARGET_SYSTEM_ROLE_DEFINITIONS = [
     ("system_admin", "系统管理员", "系统超级管理员，拥有全局权限", 1, "system"),
     ("ops_admin", "运营管理员", "运营管理员，负责业务域全量管理", 2, "operations"),
-    ("perm_admin", "权限管理员", "权限管理员，仅管理用户/角色/权限/策略", 2, "security"),
-    ("reviewer", "审核员", "负责审批与审核处理", 3, "review"),
+    (
+        "perm_admin",
+        "权限管理员",
+        "权限管理员，仅管理用户/角色/权限/策略",
+        2,
+        "security",
+    ),
+    ("reviewer", "审核员", "负责业务复核处理", 3, "review"),
     ("executive", "业务经办", "负责日常业务录入与维护", 4, "business"),
     ("viewer", "只读用户", "只读查看业务数据", 5, "read_only"),
 ]
@@ -61,7 +67,6 @@ BUSINESS_RESOURCES = {
     "ownership",
     "contract",
     "contract_group",
-    "approval",
     "analytics",
     "excel_config",
     "audit",
@@ -87,7 +92,6 @@ ROLE_PERMISSION_MATRIX: dict[str, callable] = {
         p
         for p in permissions
         if (p.resource in BUSINESS_RESOURCES and p.action == "read")
-        or (p.resource == "approval" and p.action in {"read", "approve", "reject", "withdraw"})
     ],
     "executive": lambda permissions: [
         p
@@ -105,8 +109,10 @@ ROLE_PERMISSION_MATRIX: dict[str, callable] = {
             and p.action in {"create", "read", "update", "delete"}
         )
         or (p.resource == "analytics" and p.action in {"read", "export"})
-        or (p.resource == "approval" and p.action in {"read", "start"})
-        or (p.resource == "excel_config" and p.action in {"read", "create", "update", "delete"})
+        or (
+            p.resource == "excel_config"
+            and p.action in {"read", "create", "update", "delete"}
+        )
     ],
     "viewer": lambda permissions: [
         p
@@ -162,12 +168,6 @@ BASIC_PERMISSIONS_DATA = [
     ("excel_config", "create", "创建Excel配置", "创建Excel导入导出配置"),
     ("excel_config", "update", "更新Excel配置", "更新Excel导入导出配置"),
     ("excel_config", "delete", "删除Excel配置", "删除Excel导入导出配置"),
-    # 审批流权限
-    ("approval", "read", "查看审批", "查看审批任务与流程"),
-    ("approval", "start", "发起审批", "发起业务审批流程"),
-    ("approval", "approve", "审批通过", "处理审批通过动作"),
-    ("approval", "reject", "审批驳回", "处理审批驳回动作"),
-    ("approval", "withdraw", "审批撤回", "撤回本人发起的审批"),
     # 系统管理权限
     ("system", "admin", "系统管理员", "全局管理员权限"),
     ("system", "manage", "系统管理", "系统管理权限"),
@@ -284,7 +284,13 @@ async def create_basic_roles(db):
     """创建基础角色"""
     created_roles: list[Role] = []
     all_roles: list[Role] = []
-    for name, display_name, description, level, category in TARGET_SYSTEM_ROLE_DEFINITIONS:
+    for (
+        name,
+        display_name,
+        description,
+        level,
+        category,
+    ) in TARGET_SYSTEM_ROLE_DEFINITIONS:
         # 检查角色是否已存在
         existing_result = await db.execute(select(Role).where(Role.name == name))
         existing = existing_result.scalars().first()
@@ -324,9 +330,7 @@ async def create_basic_roles(db):
 async def create_admin_user(db):
     """创建管理员用户"""
     # 检查管理员用户是否已存在
-    existing_result = await db.execute(
-        select(User).where(User.username == "admin")
-    )
+    existing_result = await db.execute(select(User).where(User.username == "admin"))
     existing_admin = existing_result.scalars().first()
 
     if not existing_admin:
@@ -483,9 +487,7 @@ async def assign_roles_to_users(db, roles, users):
 
     # 为测试用户分配角色
     for username, role_name in TEST_USER_ROLE_ASSIGNMENTS:
-        user_result = await db.execute(
-            select(User).where(User.username == username)
-        )
+        user_result = await db.execute(select(User).where(User.username == username))
         user = user_result.scalars().first()
         if user and role_name in role_map:
             role = role_map[role_name]
@@ -521,17 +523,13 @@ async def create_permission_grant_samples(db) -> bool:
     """创建统一权限授权示例"""
 
     # 获取测试用户和权限
-    test_user_result = await db.execute(
-        select(User).where(User.username == "user1")
-    )
+    test_user_result = await db.execute(select(User).where(User.username == "user1"))
     test_user = test_user_result.scalars().first()
     if not test_user:
         print("[WARN] 测试用户不存在，跳过统一授权创建")
         return False
 
-    assigned_by_result = await db.execute(
-        select(User).where(User.username == "admin")
-    )
+    assigned_by_result = await db.execute(select(User).where(User.username == "admin"))
     assigned_by_user = assigned_by_result.scalars().first()
     assigned_by = assigned_by_user.id if assigned_by_user else test_user.id
 
@@ -547,15 +545,19 @@ async def create_permission_grant_samples(db) -> bool:
         created_any = False
 
         existing_temp = (
-            await db.execute(
-                select(PermissionGrant).where(
-                    PermissionGrant.user_id == test_user.id,
-                    PermissionGrant.permission_id == asset_create_perm.id,
-                    PermissionGrant.grant_type == "temporary",
-                    PermissionGrant.is_active.is_(True),
+            (
+                await db.execute(
+                    select(PermissionGrant).where(
+                        PermissionGrant.user_id == test_user.id,
+                        PermissionGrant.permission_id == asset_create_perm.id,
+                        PermissionGrant.grant_type == "temporary",
+                        PermissionGrant.is_active.is_(True),
+                    )
                 )
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
         if not existing_temp:
             # 创建一个临时授权（有效期7天）
             temp_permission = PermissionGrant(
@@ -577,15 +579,19 @@ async def create_permission_grant_samples(db) -> bool:
             created_any = True
 
         existing_dynamic = (
-            await db.execute(
-                select(PermissionGrant).where(
-                    PermissionGrant.user_id == test_user.id,
-                    PermissionGrant.permission_id == asset_create_perm.id,
-                    PermissionGrant.grant_type == "dynamic",
-                    PermissionGrant.is_active.is_(True),
+            (
+                await db.execute(
+                    select(PermissionGrant).where(
+                        PermissionGrant.user_id == test_user.id,
+                        PermissionGrant.permission_id == asset_create_perm.id,
+                        PermissionGrant.grant_type == "dynamic",
+                        PermissionGrant.is_active.is_(True),
+                    )
                 )
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
         if not existing_dynamic:
             # 创建一个动态授权
             permission_grant_sample = PermissionGrant(
@@ -666,7 +672,9 @@ async def main():
         print("\n默认登录信息:")
         print("   管理员用户名: admin")
         if (test_users_created + test_users_existing) > 0:
-            print("   测试用户名: manager1(ops_admin), user1/user2(executive), viewer1(viewer)")
+            print(
+                "   测试用户名: manager1(ops_admin), user1/user2(executive), viewer1(viewer)"
+            )
         else:
             print("   测试用户名: 未创建")
         print("   (默认密码需要在实际部署时设置)")
@@ -676,5 +684,7 @@ async def main():
         import traceback
 
         traceback.print_exc()
+
+
 if __name__ == "__main__":
     asyncio.run(main())

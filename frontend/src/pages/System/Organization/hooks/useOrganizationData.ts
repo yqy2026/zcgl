@@ -1,17 +1,20 @@
-import { useCallback, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import type { PaginationState } from '@/components/Common/TableWithPagination';
-import { organizationService } from '@/services/organizationService';
+import { useCallback, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import type { PaginationState } from "@/components/Common/TableWithPagination";
+import { organizationService } from "@/services/organizationService";
 import type {
   OrganizationHistory,
   OrganizationStatistics,
   OrganizationTree,
-} from '@/types/organization';
+} from "@/types/organization";
 import type {
   OrganizationFilters,
   OrganizationListQueryResult,
   OrganizationPaginationState,
-} from '../types';
+} from "../types";
+
+// Stable empty array ref to prevent infinite re-render from `?? []`
+const EMPTY_ARRAY: never[] = [];
 
 interface UseOrganizationDataParams {
   filters: OrganizationFilters;
@@ -33,7 +36,7 @@ export const useOrganizationData = ({
   const fetchOrganizationList = useCallback(async (): Promise<OrganizationListQueryResult> => {
     const trimmedKeyword = keyword.trim();
     const data =
-      trimmedKeyword !== ''
+      trimmedKeyword !== ""
         ? await organizationService.searchOrganizations(trimmedKeyword, {
             page: currentPage,
             page_size: pageSize,
@@ -46,13 +49,13 @@ export const useOrganizationData = ({
   }, [currentPage, keyword, pageSize]);
 
   const organizationsQuery = useQuery<OrganizationListQueryResult>({
-    queryKey: ['organization-list', currentPage, pageSize, keyword],
+    queryKey: ["organization-list", currentPage, pageSize, keyword],
     queryFn: fetchOrganizationList,
     retry: 1,
   });
 
   const organizationTreeQuery = useQuery<OrganizationTree[]>({
-    queryKey: ['organization-tree'],
+    queryKey: ["organization-tree"],
     queryFn: async () => {
       return await organizationService.getOrganizationTree();
     },
@@ -61,7 +64,7 @@ export const useOrganizationData = ({
   });
 
   const statisticsQuery = useQuery<OrganizationStatistics>({
-    queryKey: ['organization-statistics'],
+    queryKey: ["organization-statistics"],
     queryFn: async () => {
       return await organizationService.getStatistics();
     },
@@ -70,7 +73,7 @@ export const useOrganizationData = ({
   });
 
   const organizationHistoryQuery = useQuery<OrganizationHistory[]>({
-    queryKey: ['organization-history', historyOrganizationId],
+    queryKey: ["organization-history", historyOrganizationId],
     queryFn: async () => {
       if (historyOrganizationId == null) {
         return [];
@@ -87,19 +90,19 @@ export const useOrganizationData = ({
       pageSize,
       total: organizationsQuery.data?.total ?? 0,
     }),
-    [currentPage, organizationsQuery.data?.total, pageSize]
+    [currentPage, organizationsQuery.data?.total, pageSize],
   );
 
   return {
-    organizations: organizationsQuery.data?.items ?? [],
-    organizationTree: organizationTreeQuery.data ?? [],
+    organizations: organizationsQuery.data?.items ?? EMPTY_ARRAY,
+    organizationTree: organizationTreeQuery.data ?? EMPTY_ARRAY,
     statistics: statisticsQuery.data ?? null,
     loading: organizationsQuery.isLoading || organizationsQuery.isFetching,
     isOrganizationTreeFetching: organizationTreeQuery.isFetching,
     organizationsError: organizationsQuery.error,
     organizationTreeError: organizationTreeQuery.error,
     statisticsError: statisticsQuery.error,
-    organizationHistory: organizationHistoryQuery.data ?? [],
+    organizationHistory: organizationHistoryQuery.data ?? EMPTY_ARRAY,
     organizationHistoryError: organizationHistoryQuery.error,
     isOrganizationHistoryFetching: organizationHistoryQuery.isFetching,
     tablePagination,

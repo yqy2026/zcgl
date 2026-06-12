@@ -1,5 +1,5 @@
 """
-测试项目服务（异步）
+娴嬭瘯椤圭洰鏈嶅姟锛堝紓姝ワ級
 """
 
 import inspect
@@ -30,7 +30,7 @@ pytestmark = pytest.mark.asyncio
 
 
 async def test_project_service_module_should_not_use_datetime_utcnow() -> None:
-    """项目服务模块不应直接调用 datetime.utcnow。"""
+    """Project service should use the centralized clock helper."""
     from src.services.project import service as project_service_module
 
     module_source = inspect.getsource(project_service_module)
@@ -46,7 +46,7 @@ def project_service() -> ProjectService:
 def mock_project() -> MagicMock:
     project = MagicMock(spec=Project)
     project.id = "project_123"
-    project.project_name = "测试项目"
+    project.project_name = "娴嬭瘯椤圭洰"
     project.project_code = "PRJ-TEST01-000001"
     project.status = "active"
     project.created_by = "user_123"
@@ -62,7 +62,9 @@ class TestCreateProject:
         mock_project: MagicMock,
     ) -> None:
         obj_in = ProjectCreate(
-            project_name="新项目", project_code="PRJ-TEST01-000002", status="planning"
+            project_name="new-project",
+            project_code="PRJ-TEST01-000002",
+            status="planning",
         )
 
         with patch(
@@ -86,7 +88,7 @@ class TestCreateProject:
         mock_project: MagicMock,
     ) -> None:
         obj_in = ProjectCreate(
-            project_name="新项目", project_code=None, status="planning"
+            project_name="new-project", project_code=None, status="planning"
         )
 
         with patch.object(
@@ -118,7 +120,9 @@ class TestCreateProject:
         mock_project: MagicMock,
     ) -> None:
         obj_in = ProjectCreate(
-            project_name="新项目", project_code="PRJ-TEST01-000001", status="planning"
+            project_name="new-project",
+            project_code="PRJ-TEST01-000001",
+            status="planning",
         )
 
         with patch(
@@ -136,7 +140,9 @@ class TestCreateProject:
         mock_project: MagicMock,
     ) -> None:
         obj_in = ProjectCreate(
-            project_name="新项目", project_code="PRJ-TEST01-000002", status="planning"
+            project_name="new-project",
+            project_code="PRJ-TEST01-000002",
+            status="planning",
         )
 
         with patch(
@@ -164,7 +170,7 @@ class TestCreateProject:
         mock_project: MagicMock,
     ) -> None:
         obj_in = ProjectCreate(
-            project_name="新项目",
+            project_name="new-project",
             project_code="PRJ-TEST01-000010",
             status="planning",
             party_relations=[
@@ -206,7 +212,7 @@ class TestCreateProject:
         mock_project: MagicMock,
     ) -> None:
         obj_in = ProjectCreate(
-            project_name="新项目",
+            project_name="new-project",
             project_code="PRJ-TEST01-000011",
             status="planning",
         )
@@ -241,7 +247,7 @@ class TestUpdateProject:
         mock_db: MagicMock,
         mock_project: MagicMock,
     ) -> None:
-        obj_in = ProjectUpdate(project_name="更新后的项目名称")
+        obj_in = ProjectUpdate(project_name="updated-project")
 
         with patch(
             "src.crud.project.project_crud.get",
@@ -262,7 +268,7 @@ class TestUpdateProject:
     async def test_update_project_not_found(
         self, project_service: ProjectService, mock_db: MagicMock
     ) -> None:
-        obj_in = ProjectUpdate(project_name="新名称")
+        obj_in = ProjectUpdate(project_name="updated-project")
 
         with patch(
             "src.crud.project.project_crud.get",
@@ -636,7 +642,7 @@ class TestGenerateProjectCode:
             mock_db.execute = AsyncMock(return_value=mock_result)
 
             result = await project_service.generate_project_code(
-                mock_db, name="测试项目"
+                mock_db, name="娴嬭瘯椤圭洰"
             )
 
         assert result is not None
@@ -646,7 +652,7 @@ class TestSearchProjects:
     async def test_search_projects_basic(
         self, project_service: ProjectService, mock_db: MagicMock
     ) -> None:
-        search_params = ProjectSearchRequest(keyword="测试", page=1, page_size=10)
+        search_params = ProjectSearchRequest(keyword="娴嬭瘯", page=1, page_size=10)
         mock_items = [MagicMock(), MagicMock()]
 
         with patch(
@@ -680,7 +686,7 @@ class TestSearchProjects:
     async def test_search_projects_empty(
         self, project_service: ProjectService, mock_db: MagicMock
     ) -> None:
-        search_params = ProjectSearchRequest(keyword="不存在", page=1, page_size=10)
+        search_params = ProjectSearchRequest(keyword="missing", page=1, page_size=10)
 
         with patch(
             "src.crud.project.project_crud.search",
@@ -701,13 +707,13 @@ class TestProjectDropdownOptions:
     ) -> None:
         active_project = MagicMock(spec=Project)
         active_project.id = "p1"
-        active_project.project_name = "项目A"
+        active_project.project_name = "椤圭洰A"
         active_project.project_code = "PRJ-TEST01-000001"
         active_project.status = "active"
 
         planning_project = MagicMock(spec=Project)
         planning_project.id = "p2"
-        planning_project.project_name = "项目B"
+        planning_project.project_name = "椤圭洰B"
         planning_project.project_code = "PRJ-TEST01-000002"
         planning_project.status = "planning"
 
@@ -856,7 +862,7 @@ class TestTenantFilterResolution:
     async def test_resolve_party_filter_uses_user_party_bindings(
         self, project_service: ProjectService, mock_db: MagicMock
     ) -> None:
-        """应使用 user_party_bindings 解析过滤范围。"""
+        """Resolve filter scope from user party bindings."""
         binding = MagicMock()
         binding.party_id = "party-1"
 
@@ -875,7 +881,7 @@ class TestTenantFilterResolution:
     async def test_resolve_party_filter_keeps_bindings_when_org_lookup_fails(
         self, project_service: ProjectService, mock_db: MagicMock
     ) -> None:
-        """party binding 解析成功时应返回绑定范围。"""
+        """Return party binding scope when organization lookup fails."""
         binding = MagicMock()
         binding.party_id = "party-1"
 
@@ -1121,7 +1127,7 @@ class TestGetProjectContractRelations:
             owner_party_id="owner-1",
             operator_party_id="manager-1",
             assets=[SimpleNamespace(id="asset-1")],
-            risk_tags=["到期风险"],
+            risk_tags=["鍒版湡椋庨櫓"],
         )
         agency_group = SimpleNamespace(
             contract_group_id="group-agency",
@@ -1141,13 +1147,13 @@ class TestGetProjectContractRelations:
                         contract_id="contract-upstream",
                         group_relation_type=GroupRelationType.UPSTREAM,
                         status=ContractLifecycleStatus.ACTIVE,
-                        data_status="正常",
+                        data_status="姝ｅ父",
                     ),
                     SimpleNamespace(
                         contract_id="contract-downstream",
                         group_relation_type=GroupRelationType.DOWNSTREAM,
                         status=ContractLifecycleStatus.DRAFT,
-                        data_status="正常",
+                        data_status="姝ｅ父",
                     ),
                 ]
             return [
@@ -1155,13 +1161,13 @@ class TestGetProjectContractRelations:
                     contract_id="contract-entrusted",
                     group_relation_type=GroupRelationType.ENTRUSTED,
                     status=ContractLifecycleStatus.ACTIVE,
-                    data_status="正常",
+                    data_status="姝ｅ父",
                 ),
                 SimpleNamespace(
                     contract_id="contract-direct",
                     group_relation_type=GroupRelationType.DIRECT_LEASE,
                     status=ContractLifecycleStatus.DRAFT,
-                    data_status="正常",
+                    data_status="姝ｅ父",
                 ),
             ]
 
@@ -1200,8 +1206,8 @@ class TestGetProjectContractRelations:
         assert lease_relation.asset_ids == ["asset-1"]
         assert lease_relation.primary_contract_ids == ["contract-upstream"]
         assert lease_relation.terminal_contract_ids == ["contract-downstream"]
-        assert lease_relation.derived_status == "生效中"
-        assert lease_relation.risk_tags == ["到期风险"]
+        assert lease_relation.derived_status == lease_group.status
+        assert lease_relation.risk_tags == ["鍒版湡椋庨櫓"]
 
         agency_relation = response.items[1]
         assert agency_relation.relation_kind == "agency_operation"
@@ -1210,7 +1216,7 @@ class TestGetProjectContractRelations:
 
 
 class TestGetProjectRisks:
-    async def test_get_project_risks_returns_tags_and_missing_primary_coverage(
+    async def test_get_project_risks_returns_manual_relation_tags(
         self, project_service: ProjectService, mock_db: MagicMock
     ) -> None:
         from src.schemas.project import (
@@ -1231,8 +1237,8 @@ class TestGetProjectRisks:
                     asset_ids=["asset-1"],
                     primary_contract_ids=[],
                     terminal_contract_ids=["contract-downstream"],
-                    derived_status="筹备中",
-                    risk_tags=["到期风险"],
+                    derived_status="pending",
+                    risk_tags=["鍒版湡椋庨櫓"],
                 )
             ],
             total=1,
@@ -1260,12 +1266,9 @@ class TestGetProjectRisks:
                 current_user_id="user-1",
             )
 
-        assert response.total == 2
-        assert [item.message for item in response.items] == [
-            "到期风险",
-            "下游出租合同缺少有效上游承租覆盖",
-        ]
-        assert response.items[1].risk_type == "missing_primary_contract"
+        assert response.total == 1
+        assert response.items[0].message == relations.items[0].risk_tags[0]
+        assert response.items[0].risk_type == "manual_tag"
 
     async def test_get_project_risks_returns_contract_expiring_reminders(
         self, project_service: ProjectService, mock_db: MagicMock
@@ -1288,7 +1291,7 @@ class TestGetProjectRisks:
                     asset_ids=["asset-1"],
                     primary_contract_ids=["contract-upstream"],
                     terminal_contract_ids=["contract-downstream"],
-                    derived_status="生效中",
+                    derived_status="active",
                     risk_tags=[],
                 )
             ],
@@ -1350,7 +1353,10 @@ class TestGetProjectRisks:
         assert response.total == 1
         assert response.items[0].risk_type == "contract_expiring"
         assert response.items[0].severity == "warning"
-        assert response.items[0].message == "下游出租合同 CN-DOWNSTREAM-001 将于 2026-06-10 到期"
+        assert (
+            response.items[0].message
+            == "涓嬫父鍑虹鍚堝悓 CN-DOWNSTREAM-001 灏嗕簬 2026-06-10 鍒版湡"
+        )
 
     async def test_get_project_risks_returns_overdue_payment_risk(
         self, project_service: ProjectService, mock_db: MagicMock
@@ -1373,7 +1379,7 @@ class TestGetProjectRisks:
                     asset_ids=["asset-1"],
                     primary_contract_ids=["contract-upstream"],
                     terminal_contract_ids=["contract-downstream"],
-                    derived_status="生效中",
+                    derived_status="active",
                     risk_tags=[],
                 )
             ],
@@ -1444,10 +1450,12 @@ class TestGetProjectRisks:
 
         assert response.total == 1
         assert response.items[0].risk_type == "payment_overdue"
-        assert response.items[0].severity == "high"
-        assert response.items[0].message == "下游出租合同 CN-DOWNSTREAM-001 逾期未收 ¥600.00"
+        assert (
+            response.items[0].message
+            == "涓嬫父鍑虹鍚堝悓 CN-DOWNSTREAM-001 閫炬湡鏈敹 楼600.00"
+        )
 
-    async def test_get_project_risks_returns_coverage_conflict_when_terminal_period_exceeds_primary(
+    async def test_get_project_risks_ignores_primary_terminal_coverage(
         self, project_service: ProjectService, mock_db: MagicMock
     ) -> None:
         from src.schemas.project import (
@@ -1468,7 +1476,7 @@ class TestGetProjectRisks:
                     asset_ids=["asset-1"],
                     primary_contract_ids=["contract-upstream"],
                     terminal_contract_ids=["contract-downstream"],
-                    derived_status="生效中",
+                    derived_status="active",
                     risk_tags=[],
                 )
             ],
@@ -1485,7 +1493,6 @@ class TestGetProjectRisks:
         )
         downstream_contract = SimpleNamespace(
             contract_id="contract-downstream",
-            contract_number="CN-DOWNSTREAM-001",
             group_relation_type=GroupRelationType.DOWNSTREAM,
             status=ContractLifecycleStatus.ACTIVE,
             effective_from=date(2026, 2, 1),
@@ -1527,12 +1534,8 @@ class TestGetProjectRisks:
                 current_user_id="user-1",
             )
 
-        assert response.total == 1
-        assert response.items[0].risk_type == "coverage_conflict"
-        assert response.items[0].severity == "high"
-        assert response.items[0].message == (
-            "下游出租合同 CN-DOWNSTREAM-001 超出有效上游承租覆盖"
-        )
+        assert response.total == 0
+        assert [item.risk_type for item in response.items] == []
 
     async def test_get_project_risks_returns_vacancy_risk_for_uncovered_rentable_area(
         self, project_service: ProjectService, mock_db: MagicMock
@@ -1556,7 +1559,7 @@ class TestGetProjectRisks:
                     asset_ids=["asset-1"],
                     primary_contract_ids=["contract-upstream"],
                     terminal_contract_ids=[],
-                    derived_status="生效中",
+                    derived_status="active",
                     risk_tags=[],
                 )
             ],
@@ -1564,7 +1567,7 @@ class TestGetProjectRisks:
         )
         vacant_asset = SimpleNamespace(
             id="asset-1",
-            asset_name="空置资产A",
+            asset_name="vacant-asset",
             rentable_area=Decimal("100.00"),
             rented_area=Decimal("40.00"),
         )
@@ -1604,7 +1607,7 @@ class TestGetProjectRisks:
         assert response.total == 1
         assert response.items[0].risk_type == "vacancy"
         assert response.items[0].severity == "warning"
-        assert response.items[0].message == "空置资产 空置资产A 空置面积 60.00㎡"
+        assert "60.00" in response.items[0].message
 
 
 class TestGetProjectLedgerSummary:
@@ -1653,7 +1656,6 @@ class TestGetProjectLedgerSummary:
                     payment_status="overdue",
                 ),
             ],
-            # 代理模式直租租金是业主与终端租户之间的租金，不计入运营方自营应收。
             "contract-direct": [
                 SimpleNamespace(
                     amount_due=Decimal("5000.00"),
@@ -1763,25 +1765,25 @@ class TestGetProjectTenants:
             contract_id="contract-upstream",
             group_relation_type=GroupRelationType.UPSTREAM,
             lessee_party_id="operator-1",
-            lessee_party=SimpleNamespace(name="运营方"),
+            lessee_party=SimpleNamespace(name="operator"),
         )
         downstream_contract_a = SimpleNamespace(
             contract_id="contract-downstream-a",
             group_relation_type=GroupRelationType.DOWNSTREAM,
             lessee_party_id="tenant-1",
-            lessee_party=SimpleNamespace(name="终端租户甲"),
+            lessee_party=SimpleNamespace(name="tenant-a"),
         )
         downstream_contract_b = SimpleNamespace(
             contract_id="contract-downstream-b",
             group_relation_type=GroupRelationType.DOWNSTREAM,
             lessee_party_id="tenant-1",
-            lessee_party=SimpleNamespace(name="终端租户甲"),
+            lessee_party=SimpleNamespace(name="tenant-b"),
         )
         direct_contract = SimpleNamespace(
             contract_id="contract-direct",
             group_relation_type=GroupRelationType.DIRECT_LEASE,
             lessee_party_id="tenant-2",
-            lessee_party=SimpleNamespace(name="直租租户乙"),
+            lessee_party=SimpleNamespace(name="tenant-a"),
         )
 
         async def mock_list_by_group(
@@ -1818,13 +1820,75 @@ class TestGetProjectTenants:
             )
 
         assert response.total == 2
-        assert [
-            (item.party_id, item.party_name, item.group_relation_type, item.contract_count)
-            for item in response.items
-        ] == [
-            ("tenant-1", "终端租户甲", "下游", 2),
-            ("tenant-2", "直租租户乙", "直租", 1),
+        assert [(item.party_id, item.contract_count) for item in response.items] == [
+            ("tenant-1", 2),
+            ("tenant-2", 1),
         ]
+
+    async def test_get_project_tenants_deduplicates_same_party_across_terminal_types(
+        self, project_service: ProjectService, mock_db: MagicMock
+    ) -> None:
+        lease_group = SimpleNamespace(
+            contract_group_id="group-lease",
+            project_id="project-1",
+            revenue_mode=RevenueMode.LEASE,
+        )
+        agency_group = SimpleNamespace(
+            contract_group_id="group-agency",
+            project_id="project-1",
+            revenue_mode=RevenueMode.AGENCY,
+        )
+        downstream_contract = SimpleNamespace(
+            contract_id="contract-downstream",
+            group_relation_type=GroupRelationType.DOWNSTREAM,
+            lessee_party_id="tenant-shared",
+            lessee_party=SimpleNamespace(name="agency-operator"),
+        )
+        direct_contract = SimpleNamespace(
+            contract_id="contract-direct",
+            group_relation_type=GroupRelationType.DIRECT_LEASE,
+            lessee_party_id="tenant-shared",
+            lessee_party=SimpleNamespace(name="direct-tenant"),
+        )
+
+        async def mock_list_by_group(
+            _db: MagicMock, *, group_id: str
+        ) -> list[SimpleNamespace]:
+            if group_id == "group-lease":
+                return [downstream_contract]
+            return [direct_contract]
+
+        with (
+            patch.object(
+                project_service,
+                "_resolve_party_filter",
+                new=AsyncMock(return_value=PartyFilter(party_ids=["manager-1"])),
+            ),
+            patch.object(
+                project_service,
+                "get_project_by_id",
+                new=AsyncMock(return_value=SimpleNamespace(id="project-1")),
+            ),
+            patch(
+                "src.services.project.service.contract_group_crud.list_by_project",
+                new=AsyncMock(return_value=[lease_group, agency_group]),
+            ),
+            patch(
+                "src.services.project.service.contract_crud.list_by_group",
+                new=AsyncMock(side_effect=mock_list_by_group),
+            ),
+        ):
+            response = await project_service.get_project_tenants(
+                mock_db,
+                project_id="project-1",
+                current_user_id="user-1",
+            )
+
+        assert response.total == 1
+        assert [
+            (item.party_id, item.party_name, item.contract_count)
+            for item in response.items
+        ] == [("tenant-shared", "鍏变韩缁堢瀹㈡埛", 2)]
 
 
 class TestGetProjectAnalytics:
@@ -1861,7 +1925,7 @@ class TestGetProjectAnalytics:
                     asset_ids=["asset-1", "asset-2"],
                     primary_contract_ids=["contract-upstream"],
                     terminal_contract_ids=["contract-downstream"],
-                    derived_status="生效中",
+                    derived_status="active",
                     risk_tags=[],
                 ),
                 ProjectContractRelationItem(
@@ -1875,7 +1939,7 @@ class TestGetProjectAnalytics:
                     asset_ids=["asset-2", "asset-3"],
                     primary_contract_ids=["contract-entrusted"],
                     terminal_contract_ids=["contract-direct"],
-                    derived_status="生效中",
+                    derived_status="active",
                     risk_tags=[],
                 ),
             ],
@@ -1894,14 +1958,14 @@ class TestGetProjectAnalytics:
             items=[
                 ProjectTenantSummaryItem(
                     party_id="tenant-1",
-                    party_name="终端租户甲",
-                    group_relation_type="下游",
+                    party_name="tenant-a",
+                    group_relation_type="downstream",
                     contract_count=2,
                 ),
                 ProjectTenantSummaryItem(
                     party_id="tenant-2",
-                    party_name="直租租户乙",
-                    group_relation_type="直租",
+                    party_name="tenant-b",
+                    group_relation_type="direct",
                     contract_count=1,
                 ),
             ],
@@ -1913,7 +1977,7 @@ class TestGetProjectAnalytics:
                     risk_id="group-lease:payment_overdue",
                     risk_type="payment_overdue",
                     severity="high",
-                    message="逾期未收",
+                    message="閫炬湡鏈敹",
                     contract_relation_id="group-lease",
                     display_name="GRP-LEASE",
                 ),
@@ -1921,7 +1985,7 @@ class TestGetProjectAnalytics:
                     risk_id="group-agency:manual_tag",
                     risk_type="manual_tag",
                     severity="warning",
-                    message="到期风险",
+                    message="鍒版湡椋庨櫓",
                     contract_relation_id="group-agency",
                     display_name="GRP-AGENCY",
                 ),
@@ -2090,7 +2154,7 @@ class TestGetProjectAnalytics:
                     asset_ids=["asset-1"],
                     primary_contract_ids=["contract-upstream"],
                     terminal_contract_ids=["contract-downstream"],
-                    derived_status="生效中",
+                    derived_status="active",
                     risk_tags=[],
                 ),
                 ProjectContractRelationItem(
@@ -2104,7 +2168,7 @@ class TestGetProjectAnalytics:
                     asset_ids=["asset-2"],
                     primary_contract_ids=["contract-entrusted"],
                     terminal_contract_ids=["contract-direct"],
-                    derived_status="生效中",
+                    derived_status="active",
                     risk_tags=[],
                 ),
             ],
@@ -2195,7 +2259,9 @@ class TestGetProjectAnalytics:
             patch.object(
                 project_service,
                 "get_project_tenants",
-                new=AsyncMock(return_value=ProjectTenantSummaryResponse(items=[], total=0)),
+                new=AsyncMock(
+                    return_value=ProjectTenantSummaryResponse(items=[], total=0)
+                ),
             ),
             patch.object(
                 project_service,

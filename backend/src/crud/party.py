@@ -6,6 +6,7 @@ from typing import Any
 from sqlalchemy import delete, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from .asset_support import SensitiveDataHandler
 from ..models.party import Party, PartyContact, PartyHierarchy, PartyType
 from ..models.user_party_binding import UserPartyBinding
 
@@ -16,6 +17,11 @@ def _utcnow_naive() -> datetime:
 
 class CRUDParty:
     """Party and related hierarchy/contact/user-binding CRUD methods."""
+
+    def __init__(self) -> None:
+        self.sensitive_data_handler = SensitiveDataHandler(
+            searchable_fields={"contact_phone"},
+        )
 
     @staticmethod
     def _normalize_identifier(value: Any) -> str | None:
@@ -511,13 +517,15 @@ class CRUDParty:
         obj_in: dict[str, Any],
         commit: bool = True,
     ) -> PartyContact:
-        contact = PartyContact(**obj_in)
+        encrypted_data = self.sensitive_data_handler.encrypt_data(obj_in.copy())
+        contact = PartyContact(**encrypted_data)
         db.add(contact)
         if commit:
             await db.commit()
         else:
             await db.flush()
         await db.refresh(contact)
+        self._decrypt_contact_object(contact)
         return contact
 
     async def update_contact(
@@ -528,7 +536,8 @@ class CRUDParty:
         obj_in: dict[str, Any],
         commit: bool = True,
     ) -> PartyContact:
-        for key, value in obj_in.items():
+        encrypted_data = self._encrypt_contact_update_data(obj_in)
+        for key, value in encrypted_data.items():
             setattr(db_obj, key, value)
 
         if commit:
@@ -536,7 +545,38 @@ class CRUDParty:
         else:
             await db.flush()
         await db.refresh(db_obj)
+        self._decrypt_contact_object(db_obj)
         return db_obj
+
+    async def get_contacts(
+        self, db: AsyncSession, *, party_id: str
+    ) -> list[PartyContact]:
+        stmt = select(PartyContact).where(PartyContact.party_id == party_id)
+        result = await db.execute(stmt)
+        contacts = list(result.scalars().all())
+        for contact in contacts:
+            self._decrypt_contact_object(contact)
+        return contacts
+
+    def _encrypt_contact_update_data(self, update_data: dict[str, Any]) -> dict[str, Any]:
+        encrypted_data: dict[str, Any] = {}
+        for field_name, value in update_data.items():
+            if field_name in self.sensitive_data_handler.ALL_PII_FIELDS:
+                encrypted_data[field_name] = self.sensitive_data_handler.encrypt_field(
+                    field_name, value
+                )
+            else:
+                encrypted_data[field_name] = value
+        return encrypted_data
+
+    def _decrypt_contact_object(self, contact: PartyContact) -> None:
+        value = getattr(contact, "contact_phone", None)
+        if value is None:
+            return
+        decrypted_value = self.sensitive_data_handler.decrypt_field(
+            "contact_phone", value
+        )
+        setattr(contact, "contact_phone", decrypted_value)
 
     async def delete_contact(
         self,

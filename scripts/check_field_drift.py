@@ -39,7 +39,6 @@ ENTITY_MODEL_MAP: dict[str, tuple[str, str]] = {
     "ContractAuditLog": ("contract_group.py", "ContractAuditLog"),
     "LeaseContractDetail": ("contract_group.py", "LeaseContractDetail"),
     "AgencyAgreementDetail": ("contract_group.py", "AgencyAgreementDetail"),
-    "ContractRelation": ("contract_group.py", "ContractRelation"),
     "PropertyCertificate": ("property_certificate.py", "PropertyCertificate"),
     "Ownership": ("ownership.py", "Ownership"),
     "Party": ("party.py", "Party"),
@@ -66,14 +65,15 @@ _SYNONYM_RE = re.compile(r"^\s{4}(\w+)\s*=\s*synonym\(", re.MULTILINE)
 class EntityDrift(NamedTuple):
     entity: str
     model_file: str
-    spec_only: list[str]    # in spec, not in ORM
-    orm_only: list[str]     # in ORM, not in spec
-    matched: list[str]      # in both
+    spec_only: list[str]  # in spec, not in ORM
+    orm_only: list[str]  # in ORM, not in spec
+    matched: list[str]  # in both
 
 
 # ---------------------------------------------------------------------------
 # Parsing helpers
 # ---------------------------------------------------------------------------
+
 
 def parse_spec_fields(text: str) -> dict[str, list[str]]:
     """Return {EntityName: [non-derived confirmed field names]} from spec."""
@@ -117,11 +117,11 @@ def parse_orm_columns(model_file: Path, class_name: str | None = None) -> set[st
         if not class_start:
             return set()
         # Find next top-level class definition after this one.
-        next_class = re.search(r"^class ", text[class_start.end():], re.MULTILINE)
+        next_class = re.search(r"^class ", text[class_start.end() :], re.MULTILINE)
         if next_class:
-            text = text[class_start.start(): class_start.end() + next_class.start()]
+            text = text[class_start.start() : class_start.end() + next_class.start()]
         else:
-            text = text[class_start.start():]
+            text = text[class_start.start() :]
 
     columns = set(_MAPPED_COL_RE.findall(text))
     columns |= set(_SYNONYM_RE.findall(text))
@@ -133,6 +133,7 @@ def parse_orm_columns(model_file: Path, class_name: str | None = None) -> set[st
 # ---------------------------------------------------------------------------
 # Main diff logic
 # ---------------------------------------------------------------------------
+
 
 def compute_drifts() -> list[EntityDrift]:
     if not FIELD_SPEC.exists():
@@ -158,7 +159,9 @@ def compute_drifts() -> list[EntityDrift]:
         orm_cols = parse_orm_columns(model_path, class_name)
 
         if not orm_cols:
-            print(f"[SKIP] {entity}: model file or class not found -> {model_filename}::{class_name}")
+            print(
+                f"[SKIP] {entity}: model file or class not found -> {model_filename}::{class_name}"
+            )
             continue
 
         spec_set = set(spec_fields)
@@ -166,13 +169,15 @@ def compute_drifts() -> list[EntityDrift]:
         orm_only = sorted(orm_cols - spec_set)
         matched = sorted(spec_set & orm_cols)
 
-        drifts.append(EntityDrift(
-            entity=entity,
-            model_file=f"{model_filename}::{class_name}",
-            spec_only=spec_only,
-            orm_only=orm_only,
-            matched=matched,
-        ))
+        drifts.append(
+            EntityDrift(
+                entity=entity,
+                model_file=f"{model_filename}::{class_name}",
+                spec_only=spec_only,
+                orm_only=orm_only,
+                matched=matched,
+            )
+        )
 
     return drifts
 
@@ -189,20 +194,32 @@ def main() -> int:
         status = "DRIFT" if has_diff else "OK   "
         print(f"[{status}] {drift.entity} ({drift.model_file})")
         if drift.matched:
-            print(f"         matched ({len(drift.matched)}): {', '.join(drift.matched)}")
+            print(
+                f"         matched ({len(drift.matched)}): {', '.join(drift.matched)}"
+            )
         if drift.spec_only:
-            print(f"         spec-only / not in ORM ({len(drift.spec_only)}): {', '.join(drift.spec_only)}")
+            print(
+                f"         spec-only / not in ORM ({len(drift.spec_only)}): {', '.join(drift.spec_only)}"
+            )
             total_spec_only += len(drift.spec_only)
         if drift.orm_only:
-            print(f"         orm-only / not in spec ({len(drift.orm_only)}): {', '.join(drift.orm_only)}")
+            print(
+                f"         orm-only / not in spec ({len(drift.orm_only)}): {', '.join(drift.orm_only)}"
+            )
             total_orm_only += len(drift.orm_only)
         print()
 
-    print(f"Summary: {total_spec_only} spec-only fields (unimplemented or renamed), "
-          f"{total_orm_only} orm-only columns (undocumented).")
+    print(
+        f"Summary: {total_spec_only} spec-only fields (unimplemented or renamed), "
+        f"{total_orm_only} orm-only columns (undocumented)."
+    )
     print()
-    print("NOTE: spec-only fields may be planned-but-not-yet-implemented (normal during 0→1).")
-    print("      orm-only columns may use different names than the spec (check for renames).")
+    print(
+        "NOTE: spec-only fields may be planned-but-not-yet-implemented (normal during 0→1)."
+    )
+    print(
+        "      orm-only columns may use different names than the spec (check for renames)."
+    )
 
     # Informational only — do not fail CI during 0→1 phase.
     return 0

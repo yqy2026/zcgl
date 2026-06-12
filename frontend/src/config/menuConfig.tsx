@@ -29,6 +29,21 @@ export interface MenuItemConfig {
   children?: MenuItemConfig[];
 }
 
+export const MENU_GROUP_KEYS = {
+  PROJECT: 'project-group',
+  CONTRACT_CENTER: 'contract-center-group',
+} as const;
+
+export const MENU_ACTION_KEYS = {
+  PROJECT_LIST: 'project:list',
+  CONTRACT_CENTER_LIST: 'contract-center:list',
+} as const;
+
+const MENU_NAVIGATION_TARGETS: Record<string, string> = {
+  [MENU_ACTION_KEYS.PROJECT_LIST]: '/project',
+  [MENU_ACTION_KEYS.CONTRACT_CENTER_LIST]: '/contract-center',
+};
+
 /**
  * 菜单项配置
  */
@@ -39,12 +54,12 @@ export const MENU_ITEMS: MenuProps['items'] = [
     label: '工作台',
   },
   {
-    key: '/project',
+    key: MENU_GROUP_KEYS.PROJECT,
     icon: <ApartmentOutlined />,
     label: '项目运营',
     children: [
       {
-        key: '/project',
+        key: MENU_ACTION_KEYS.PROJECT_LIST,
         icon: <ApartmentOutlined />,
         label: '项目列表',
       },
@@ -63,10 +78,15 @@ export const MENU_ITEMS: MenuProps['items'] = [
     ],
   },
   {
-    key: '/contract-center',
+    key: MENU_GROUP_KEYS.CONTRACT_CENTER,
     icon: <FileTextOutlined />,
     label: '合同中心',
     children: [
+      {
+        key: MENU_ACTION_KEYS.CONTRACT_CENTER_LIST,
+        icon: <FileTextOutlined />,
+        label: '合同关系列表',
+      },
       {
         key: '/contract-center/import',
         icon: <FileAddOutlined />,
@@ -156,23 +176,23 @@ export function getSelectedKeys(pathname: string): string[] {
     if (pathname === '/contract-center/import') {
       return ['/contract-center/import'];
     }
-    return ['/contract-center'];
+    return [MENU_ACTION_KEYS.CONTRACT_CENTER_LIST];
   }
   if (pathname.startsWith('/assets/')) {
     return ['/assets/list'];
   }
   if (pathname.startsWith('/contract-groups/')) {
-    return ['/contract-center'];
+    return [MENU_ACTION_KEYS.CONTRACT_CENTER_LIST];
   }
   if (pathname === '/finance/ledger' || pathname.startsWith('/finance/ledger/')) {
     return ['/finance/ledger'];
   }
-  if (pathname.startsWith('/project/')) {
-    return ['/project'];
+  if (pathname === '/project' || pathname.startsWith('/project/')) {
+    return [MENU_ACTION_KEYS.PROJECT_LIST];
   }
 
   if (pathname.startsWith('/contract-groups')) {
-    return ['/contract-center'];
+    return [MENU_ACTION_KEYS.CONTRACT_CENTER_LIST];
   }
   if (pathname.startsWith('/system/parties')) {
     return ['/system/parties'];
@@ -186,16 +206,16 @@ export function getSelectedKeys(pathname: string): string[] {
  */
 export function getOpenKeys(pathname: string): string[] {
   if (pathname.startsWith('/project')) {
-    return ['/project'];
+    return [MENU_GROUP_KEYS.PROJECT];
   }
   if (pathname.startsWith('/assets')) {
     return ['/asset-files'];
   }
   if (pathname.startsWith('/contract-groups')) {
-    return ['/contract-center'];
+    return [MENU_GROUP_KEYS.CONTRACT_CENTER];
   }
   if (pathname.startsWith('/contract-center')) {
-    return ['/contract-center'];
+    return [MENU_GROUP_KEYS.CONTRACT_CENTER];
   }
   if (pathname.startsWith('/system/parties')) {
     return ['/customer-center'];
@@ -211,4 +231,11 @@ export function getOpenKeys(pathname: string): string[] {
   }
 
   return [];
+}
+
+export function getMenuNavigationPath(key: string): string | undefined {
+  if (MENU_NAVIGATION_TARGETS[key] != null) {
+    return MENU_NAVIGATION_TARGETS[key];
+  }
+  return key.startsWith('/') ? key : undefined;
 }

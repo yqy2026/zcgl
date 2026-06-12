@@ -6,7 +6,7 @@
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ....core.exception_handler import bad_request, internal_error
@@ -18,6 +18,8 @@ from ....middleware.auth import (
 )
 from ....models.auth import User
 from ....schemas.asset import (
+    AssetBatchReviewRequest,
+    AssetBatchReviewResponse,
     AssetBatchUpdateRequest,
     AssetBatchUpdateResponse,
     AssetListItemResponse,
@@ -47,6 +49,14 @@ _ASSET_BATCH_DELETE_RESOURCE_CONTEXT: dict[str, str] = {
     "owner_party_id": _ASSET_BATCH_DELETE_UNSCOPED_PARTY_ID,
     "manager_party_id": _ASSET_BATCH_DELETE_UNSCOPED_PARTY_ID,
 }
+
+
+def _resolve_operator_name(current_user: User) -> str:
+    return (
+        str(getattr(current_user, "full_name", "")).strip()
+        or str(getattr(current_user, "username", "")).strip()
+        or str(current_user.id)
+    )
 
 
 @router.post(
@@ -114,6 +124,62 @@ async def batch_update_assets(
 
     except Exception as e:
         raise internal_error(f"批量更新失败: {str(e)}")
+
+
+@router.post(
+    "/batch-submit-review",
+    response_model=AssetBatchReviewResponse,
+    summary="批量提交资产审核",
+)
+async def batch_submit_asset_reviews(
+    request: AssetBatchReviewRequest,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="asset",
+            resource_context=_ASSET_BATCH_UPDATE_RESOURCE_CONTEXT,
+        )
+    ),
+) -> AssetBatchReviewResponse:
+    try:
+        return await AsyncAssetService(db).batch_submit_asset_reviews(
+            asset_ids=request.asset_ids,
+            operator=_resolve_operator_name(current_user),
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise internal_error(f"批量提交资产审核失败: {str(e)}")
+
+
+@router.post(
+    "/batch-approve-review",
+    response_model=AssetBatchReviewResponse,
+    summary="批量审核通过资产",
+)
+async def batch_approve_asset_reviews(
+    request: AssetBatchReviewRequest,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="update",
+            resource_type="asset",
+            resource_context=_ASSET_BATCH_UPDATE_RESOURCE_CONTEXT,
+        )
+    ),
+) -> AssetBatchReviewResponse:
+    try:
+        return await AsyncAssetService(db).batch_approve_asset_reviews(
+            asset_ids=request.asset_ids,
+            reviewer=_resolve_operator_name(current_user),
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise internal_error(f"批量审核通过资产失败: {str(e)}")
 
 
 @router.post(

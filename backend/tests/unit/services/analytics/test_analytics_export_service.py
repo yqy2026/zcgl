@@ -1,4 +1,4 @@
-"""
+﻿"""
 测试 AnalyticsExportService (分析导出映射服务)
 """
 
@@ -22,7 +22,7 @@ class TestAnalyticsExportService:
                 "agency_service_income": 200.0,
                 "customer_entity_count": 2,
                 "customer_contract_count": 3,
-                "metrics_version": "req-ana-001-v1",
+                "metrics_version": "req-ana-001-v2",
             }
         )
 
@@ -35,7 +35,7 @@ class TestAnalyticsExportService:
             "客户合同数",
             "口径版本",
         ]
-        assert rows[-1]["value"] == "req-ana-001-v1"
+        assert rows[-1]["value"] == "req-ana-001-v2"
         assert rows[-1]["unit"] == ""
 
     def test_render_csv_should_return_tabular_text_with_header_and_blank_version(self):
@@ -61,31 +61,31 @@ class TestAnalyticsExportService:
         assert "总览,口径版本,," in lines
         assert '"total_income"' not in content
 
-    def test_build_customer_breakdown_rows_should_include_contract_type_split(self):
+    def test_build_customer_breakdown_rows_should_split_customers_and_counterparties(self):
         service = AnalyticsExportService()
 
         rows = service.build_customer_breakdown_rows(
             {
                 "customer_entity_breakdown": {
-                    "upstream_lease": 1,
                     "downstream_sublease": 2,
-                    "entrusted_operation": 3,
+                    "direct_lease": 3,
                 },
                 "customer_contract_breakdown": {
-                    "upstream_lease": 2,
                     "downstream_sublease": 4,
-                    "entrusted_operation": 6,
+                    "direct_lease": 6,
+                },
+                "counterparty_entity_breakdown": {
+                    "upstream_lease": 1,
+                    "entrusted_operation": 5,
+                },
+                "counterparty_contract_breakdown": {
+                    "upstream_lease": 2,
+                    "entrusted_operation": 7,
                 },
             }
         )
 
         assert rows == [
-            {
-                "section": "客户统计拆分",
-                "metric": "上游承租",
-                "value": "主体 1 / 合同 2",
-                "unit": "",
-            },
             {
                 "section": "客户统计拆分",
                 "metric": "下游转租",
@@ -94,8 +94,20 @@ class TestAnalyticsExportService:
             },
             {
                 "section": "客户统计拆分",
-                "metric": "委托运营",
+                "metric": "代理直租",
                 "value": "主体 3 / 合同 6",
+                "unit": "",
+            },
+            {
+                "section": "对手方统计拆分",
+                "metric": "上游承租",
+                "value": "主体 1 / 合同 2",
+                "unit": "",
+            },
+            {
+                "section": "对手方统计拆分",
+                "metric": "委托运营",
+                "value": "主体 5 / 合同 7",
                 "unit": "",
             },
         ]

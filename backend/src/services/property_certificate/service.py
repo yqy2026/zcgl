@@ -337,7 +337,6 @@ class PropertyCertificateService:
                 ),
                 "extraction_confidence": extraction_confidence,
                 "extraction_source": "llm",
-                "is_verified": False,
                 "registration_date": parsed_date_fields.get("registration_date"),
                 "property_address": extracted_data.get("property_address"),
                 "property_type": extracted_data.get("property_type"),

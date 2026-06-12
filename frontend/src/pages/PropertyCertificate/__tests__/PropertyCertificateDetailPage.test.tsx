@@ -43,12 +43,12 @@ describe('PropertyCertificateDetailPage', () => {
       id: 'cert-1',
       certificate_number: 'CERT-001',
       certificate_type: 'real_estate',
-      property_address: '测试地址 1 号',
-      property_type: '商业',
-      building_area: 1200,
-      land_area: 800,
+      property_address: 'Test address 1',
+      property_type: 'Commercial',
+      building_area: '1200',
+      land_area: '800',
       floor_info: '1-3F',
-      land_use_type: '商业',
+      land_use_type: 'Commercial',
       land_use_term_start: '2020-01-01',
       land_use_term_end: '2050-01-01',
       registration_date: '2020-02-01',
@@ -57,17 +57,16 @@ describe('PropertyCertificateDetailPage', () => {
       remarks: null,
       extraction_source: null,
       extraction_confidence: 0.92,
-      is_verified: false,
       asset_ids: [],
       owners: [
         {
           id: 'owner-1',
-          name: '测试主体',
+          name: 'Test owner',
           owner_type: 'organization',
-          id_type: '统一社会信用代码',
+          id_type: 'Unified social credit code',
           id_number: '1234567890',
           phone: '13800000000',
-          address: '测试地址',
+          address: 'Test address',
         },
       ],
       created_at: '2026-03-01',
@@ -90,7 +89,7 @@ describe('PropertyCertificateDetailPage', () => {
         route: '/property-certificates/cert-1',
       });
 
-      expect(await screen.findAllByText('产权证详情')).not.toHaveLength(0);
+      expect(await screen.findAllByText('Property Certificate Detail')).not.toHaveLength(0);
       expect(await screen.findByText('CERT-001')).toBeInTheDocument();
 
       expect(formatConsoleMessages(consoleErrorSpy.mock.calls)).not.toContain('[antd: Space]');

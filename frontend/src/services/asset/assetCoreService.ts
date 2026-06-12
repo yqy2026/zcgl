@@ -10,6 +10,7 @@ import { ASSET_API } from '@/constants/api';
 import { convertBackendToFrontend } from '@/utils/dataConversion';
 import type {
   Asset,
+  AssetBatchReviewResult,
   AssetReviewLog,
   AssetLeaseSummaryResponse,
   AssetSearchParams,
@@ -232,6 +233,38 @@ export class AssetCoreService {
     }
     this.invalidateAssetCaches();
     return convertBackendToFrontend<Asset>(result.data);
+  }
+
+  async batchSubmitAssetReviews(ids: string[]): Promise<AssetBatchReviewResult> {
+    const result = await apiClient.post<AssetBatchReviewResult>(
+      ASSET_API.BATCH_SUBMIT_REVIEW,
+      { asset_ids: ids },
+      {
+        retry: false,
+        smartExtract: true,
+      }
+    );
+    if (!result.success || result.data == null) {
+      throw new Error(`批量提交资产审核失败: ${result.error}`);
+    }
+    this.invalidateAssetCaches();
+    return result.data;
+  }
+
+  async batchApproveAssetReviews(ids: string[]): Promise<AssetBatchReviewResult> {
+    const result = await apiClient.post<AssetBatchReviewResult>(
+      ASSET_API.BATCH_APPROVE_REVIEW,
+      { asset_ids: ids },
+      {
+        retry: false,
+        smartExtract: true,
+      }
+    );
+    if (!result.success || result.data == null) {
+      throw new Error(`批量审核通过资产失败: ${result.error}`);
+    }
+    this.invalidateAssetCaches();
+    return result.data;
   }
 
   async rejectAssetReview(id: string, reason: string): Promise<Asset> {

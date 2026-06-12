@@ -1,4 +1,4 @@
-"""
+﻿"""
 分析API测试
 
 Test coverage for Analytics API endpoints:
@@ -59,7 +59,7 @@ def client(monkeypatch):
             "agency_service_income": 200.0,
             "customer_entity_count": 2,
             "customer_contract_count": 2,
-            "metrics_version": "req-ana-001-v1",
+            "metrics_version": "req-ana-001-v2",
             "filters_applied": filters or {},
             "should_use_cache": should_use_cache,
             "requested_by": getattr(current_user, "username", None),
@@ -229,6 +229,16 @@ class TestComprehensiveAnalytics:
         assert response.status_code == status.HTTP_200_OK
         payload = response.json()
         assert payload["success"] is True
+
+    def test_get_comprehensive_analytics_should_reject_all_view_for_customer_metrics(
+        self, client
+    ):
+        response = client.get("/api/v1/analytics/comprehensive?view_mode=all")
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        payload = response.json()
+        assert payload["success"] is False
+        assert "客户双指标" in payload["message"]
 
 
 # ============================================================================
@@ -408,7 +418,7 @@ class TestAnalyticsResponseStructure:
         assert data["data"]["agency_service_income"] == 200.0
         assert data["data"]["customer_entity_count"] == 2
         assert data["data"]["customer_contract_count"] == 2
-        assert data["data"]["metrics_version"] == "req-ana-001-v1"
+        assert data["data"]["metrics_version"] == "req-ana-001-v2"
 
     def test_export_should_include_metrics_version_in_payload(
         self, client, admin_user_headers
@@ -421,8 +431,20 @@ class TestAnalyticsResponseStructure:
         assert response.status_code == status.HTTP_200_OK
         assert response.text.splitlines()[0] == "分组,指标,数值,单位"
         assert "总览,总收入（经营口径）,1200.00,元" in response.text
-        assert "req-ana-001-v1" in response.text
+        assert "req-ana-001-v2" in response.text
         assert '"total_income"' not in response.text
+
+    def test_export_should_reject_all_view_for_customer_metrics(
+        self, client
+    ):
+        response = client.post(
+            "/api/v1/analytics/export?export_format=csv&view_mode=all",
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        payload = response.json()
+        assert payload["success"] is False
+        assert "客户双指标" in payload["message"]
 
     def test_export_pdf_should_return_not_implemented_message(
         self, client, admin_user_headers

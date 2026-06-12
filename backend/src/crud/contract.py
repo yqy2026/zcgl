@@ -100,7 +100,6 @@ class CRUDContract:
         for key, value in data.items():
             setattr(db_obj, key, value)
         db_obj.updated_at = _utcnow()
-        db_obj.version = (db_obj.version or 0) + 1
 
         if commit:
             await db.commit()

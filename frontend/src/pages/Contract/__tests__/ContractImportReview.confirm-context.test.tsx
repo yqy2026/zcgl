@@ -343,6 +343,60 @@ describe('ContractImportReview confirm context', () => {
     });
   });
 
+  it('allows confirming a lease import without settlement_rule', async () => {
+    const onConfirm = vi.fn().mockResolvedValue({
+      success: true,
+      message: '导入成功',
+      contract_group_id: 'group-optional-rule',
+      contract_id: 'contract-optional-rule',
+    });
+
+    renderWithProviders(
+      <ContractImportReview
+        sessionId="session-123"
+        result={buildResult()}
+        onConfirm={onConfirm}
+        onCancel={vi.fn()}
+        onBack={vi.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('tab', { name: '新体系上下文' }));
+
+    fireEvent.change(screen.getByLabelText('经营模式'), {
+      target: { value: 'LEASE' },
+    });
+    fireEvent.change(screen.getByLabelText('合同方向'), {
+      target: { value: 'LESSOR' },
+    });
+    fireEvent.change(screen.getByLabelText('合同角色'), {
+      target: { value: 'DOWNSTREAM' },
+    });
+    fireEvent.change(screen.getByLabelText('运营方主体'), {
+      target: { value: 'party-operator' },
+    });
+    fireEvent.change(screen.getByLabelText('出租方/委托方主体'), {
+      target: { value: 'party-lessor' },
+    });
+    fireEvent.change(screen.getByLabelText('承租方/受托方主体'), {
+      target: { value: 'party-lessee' },
+    });
+    fireEvent.change(screen.getByLabelText('结算规则'), {
+      target: { value: '' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: '确认导入' }));
+
+    await waitFor(() => {
+      expect(onConfirm).toHaveBeenCalledWith(
+        expect.objectContaining({
+          revenue_mode: 'LEASE',
+          settlement_rule: null,
+        })
+      );
+    });
+  });
+
   it('collects agency_detail fields when revenue_mode is AGENCY', async () => {
     const onConfirm = vi.fn().mockResolvedValue({
       success: true,

@@ -16,7 +16,7 @@ from fastapi import APIRouter, Depends, Query, Request, status
 from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ....core.exception_handler import BaseBusinessError
+from ....core.exception_handler import BaseBusinessError, bad_request
 from ....core.response_handler import ResponseHandler, get_request_id
 from ....database import get_async_db
 from ....middleware.auth import (
@@ -41,6 +41,18 @@ _ANALYTICS_UPDATE_RESOURCE_CONTEXT: dict[str, str] = {
     "owner_party_id": _ANALYTICS_UPDATE_UNSCOPED_PARTY_ID,
     "manager_party_id": _ANALYTICS_UPDATE_UNSCOPED_PARTY_ID,
 }
+
+
+def _assert_analytics_customer_metrics_perspective(
+    scope_ctx: DataScopeContext,
+) -> None:
+    if scope_ctx.scope_mode != "all":
+        return
+    raise bad_request(
+        "客户双指标分析口径不支持 view_mode=all，请选择 owner 或 manager 视图",
+        field="view_mode",
+        details={"reason": "analytics_customer_metrics_requires_single_perspective"},
+    )
 
 
 @router.get("/comprehensive", summary="获取综合统计分析数据")
@@ -74,6 +86,7 @@ async def get_comprehensive_analytics(
 
     权限要求: 需要登录
     """
+    _assert_analytics_customer_metrics_perspective(_scope_ctx)
 
     filters: dict[str, Any] = {
         "include_deleted": should_include_deleted,
@@ -393,6 +406,7 @@ async def export_analytics(
     支持导出为 Excel、CSV 或 PDF 格式
     权限要求: 需要登录
     """
+    _assert_analytics_customer_metrics_perspective(_scope_ctx)
 
     try:
         filters: dict[str, Any] = {

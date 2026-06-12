@@ -66,6 +66,8 @@ export const ASSET_API = {
   // 批量操作
   BATCH_UPDATE: '/assets/batch-update',
   BATCH_DELETE: '/assets/batch-delete',
+  BATCH_SUBMIT_REVIEW: '/assets/batch-submit-review',
+  BATCH_APPROVE_REVIEW: '/assets/batch-approve-review',
 
   // 搜索和过滤
   SEARCH: '/assets/search',
@@ -152,6 +154,8 @@ export const CONTRACT_GROUP_API = {
 export const LEDGER_API = {
   ENTRIES: '/ledger/entries',
   EXPORT: '/ledger/entries/export',
+  CONTRACT_BATCH_UPDATE_STATUS: (contractId: string) =>
+    `/contracts/${contractId}/ledger/batch-update-status`,
 } as const;
 
 // 数据统计API

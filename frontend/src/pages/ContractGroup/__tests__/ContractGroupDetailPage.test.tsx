@@ -36,7 +36,6 @@ describe('ContractGroupDetailPage', () => {
       data_status: '正常',
       created_at: '2026-03-01T00:00:00Z',
       updated_at: '2026-03-02T00:00:00Z',
-      version: 1,
       settlement_rule: {
         version: 'v1',
         cycle: '月付',
@@ -47,7 +46,6 @@ describe('ContractGroupDetailPage', () => {
       revenue_attribution_rule: null,
       revenue_share_rule: null,
       risk_tags: ['高价值'],
-      predecessor_group_id: null,
       upstream_contract_ids: ['contract-1'],
       downstream_contract_ids: [],
       contracts: [
@@ -97,6 +95,34 @@ describe('ContractGroupDetailPage', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/contract-center/group-1/edit');
   });
 
+  it('renders an empty settlement rule state when the group has no rule yet', async () => {
+    vi.mocked(contractGroupService.getContractGroup).mockResolvedValue({
+      contract_group_id: 'group-3',
+      group_code: 'GRP-NO-RULE-202603-0001',
+      revenue_mode: 'LEASE',
+      operator_party_id: 'party-op',
+      owner_party_id: 'party-owner',
+      effective_from: '2026-03-01',
+      effective_to: null,
+      derived_status: '筹备中',
+      data_status: '正常',
+      created_at: '2026-03-01T00:00:00Z',
+      updated_at: '2026-03-02T00:00:00Z',
+      settlement_rule: null,
+      revenue_attribution_rule: null,
+      revenue_share_rule: null,
+      risk_tags: [],
+      upstream_contract_ids: [],
+      downstream_contract_ids: [],
+      contracts: [],
+    });
+
+    renderWithProviders(<ContractGroupDetailPage />, { route: '/contract-center/group-1' });
+
+    expect(await screen.findByText('GRP-NO-RULE-202603-0001')).toBeInTheDocument();
+    expect(screen.getAllByText('未配置').length).toBeGreaterThan(0);
+  });
+
   it('renders agency mode warning when the group is agency operated', async () => {
     vi.mocked(contractGroupService.getContractGroup).mockResolvedValue({
       contract_group_id: 'group-2',
@@ -110,7 +136,6 @@ describe('ContractGroupDetailPage', () => {
       data_status: '正常',
       created_at: '2026-03-01T00:00:00Z',
       updated_at: '2026-03-02T00:00:00Z',
-      version: 1,
       settlement_rule: {
         version: 'v1',
         cycle: '月付',
@@ -121,7 +146,6 @@ describe('ContractGroupDetailPage', () => {
       revenue_attribution_rule: null,
       revenue_share_rule: null,
       risk_tags: [],
-      predecessor_group_id: null,
       upstream_contract_ids: [],
       downstream_contract_ids: ['contract-2'],
       contracts: [

@@ -86,6 +86,18 @@ def _valid_group_create(**kwargs) -> ContractGroupCreate:
     return ContractGroupCreate(**defaults)
 
 
+def _valid_group_create_payload(**kwargs) -> dict:
+    defaults = dict(
+        project_id="project-1",
+        revenue_mode=RevenueMode.LEASE,
+        operator_party_id="party_op",
+        owner_party_id="party_ow",
+        effective_from=date(2026, 1, 1),
+    )
+    defaults.update(kwargs)
+    return defaults
+
+
 def _valid_contract_create(**kwargs) -> ContractCreate:
     from src.models.contract_group import ContractDirection
 
@@ -337,6 +349,18 @@ class TestGenerateGroupCode:
 
 
 class TestCreateContractGroupDuplicateCheck:
+    def test_contract_group_create_allows_missing_settlement_rule(self):
+        group = ContractGroupCreate(**_valid_group_create_payload())
+
+        assert group.settlement_rule is None
+
+    def test_contract_group_create_allows_null_settlement_rule(self):
+        group = ContractGroupCreate(
+            **_valid_group_create_payload(settlement_rule=None)
+        )
+
+        assert group.settlement_rule is None
+
     async def test_b12_duplicate_code_raises(self, mock_db: MagicMock):
         """B12: group_code 重复 → DuplicateResourceError"""
         service = ContractGroupService()
@@ -376,6 +400,37 @@ class TestCreateContractGroupDuplicateCheck:
                 )
         assert result.contract_group_id == "grp_001"
         assert mock_create.await_args.kwargs["data"]["project_id"] == "project-1"
+
+    async def test_create_group_persists_null_settlement_rule(
+        self, mock_db: MagicMock
+    ):
+        service = ContractGroupService()
+        created_group = MagicMock()
+        created_group.contract_group_id = "grp_001"
+
+        with (
+            patch(
+                "src.services.contract.contract_group_service.contract_group_crud.get_by_code",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_group_crud.create",
+                new_callable=AsyncMock,
+                return_value=created_group,
+            ) as mock_create,
+        ):
+            result = await service.create_contract_group(
+                mock_db,
+                obj_in=ContractGroupCreate(**_valid_group_create_payload()),
+                group_code="GRP-NEW",
+            )
+
+        assert result.contract_group_id == "grp_001"
+        data = mock_create.await_args.kwargs["data"]
+        assert data["settlement_rule"] is None
+        assert "predecessor_group_id" not in data
+        assert "version" not in data
 
     async def test_create_group_should_reject_assets_already_bound_elsewhere(
         self, mock_db: MagicMock
@@ -489,6 +544,45 @@ class TestCreateContractGroupDuplicateCheck:
                         risk_tags=None,
                     ),
                 )
+
+    async def test_update_group_should_clear_settlement_rule_when_explicit_null(
+        self, mock_db: MagicMock
+    ) -> None:
+        service = ContractGroupService()
+        existing_group = MagicMock()
+        existing_group.contract_group_id = "group-current"
+        existing_group.project_id = "project-1"
+        updated_group = MagicMock()
+        updated_group.contract_group_id = "group-current"
+
+        with (
+            patch(
+                "src.services.contract.contract_group_service.contract_group_crud.get",
+                new_callable=AsyncMock,
+                return_value=existing_group,
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_group_crud.update",
+                new_callable=AsyncMock,
+                return_value=updated_group,
+            ) as mock_update,
+        ):
+            result = await service.update_contract_group(
+                mock_db,
+                group_id="group-current",
+                obj_in=SimpleNamespace(
+                    asset_ids=None,
+                    model_fields_set={"settlement_rule"},
+                    settlement_rule=None,
+                    effective_to=None,
+                    revenue_attribution_rule=None,
+                    revenue_share_rule=None,
+                    risk_tags=None,
+                ),
+            )
+
+        assert result.contract_group_id == "group-current"
+        assert mock_update.await_args.kwargs["data"] == {"settlement_rule": None}
 
     async def test_update_group_should_allow_assets_bound_in_same_project(
         self, mock_db: MagicMock

@@ -220,7 +220,7 @@ export interface ConfirmedContractData {
   contract_status?: string;
   payment_terms?: string;
   contract_notes?: string;
-  settlement_rule: PdfImportSettlementRule;
+  settlement_rule?: PdfImportSettlementRule | null;
   agency_detail?: PdfImportAgencyDetail;
   rent_terms: RentTermData[];
 }

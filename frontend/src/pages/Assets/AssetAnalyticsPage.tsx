@@ -242,6 +242,8 @@ const AssetAnalyticsPage: React.FC = () => {
                 customer_contract_count: analyticsData.customer_contract_count ?? 0,
                 customer_entity_breakdown: analyticsData.customer_entity_breakdown,
                 customer_contract_breakdown: analyticsData.customer_contract_breakdown,
+                counterparty_entity_breakdown: analyticsData.counterparty_entity_breakdown,
+                counterparty_contract_breakdown: analyticsData.counterparty_contract_breakdown,
                 metrics_version: analyticsData.metrics_version,
               }}
               loading={loading}

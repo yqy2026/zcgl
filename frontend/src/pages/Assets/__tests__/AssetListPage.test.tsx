@@ -16,6 +16,8 @@ vi.mock('@/services/assetService', () => ({
     hardDeleteAsset: vi.fn(),
     exportAssets: vi.fn(),
     exportSelectedAssets: vi.fn(),
+    batchSubmitAssetReviews: vi.fn(),
+    batchApproveAssetReviews: vi.fn(),
   },
 }));
 
@@ -32,6 +34,7 @@ vi.mock('@/components/Asset/AssetList', () => ({
     onRestore,
     onHardDelete,
     onView,
+    onSelectChange,
   }: {
     data: unknown;
     onEdit: (asset: { id: string }) => void;
@@ -39,9 +42,11 @@ vi.mock('@/components/Asset/AssetList', () => ({
     onRestore: (id: string) => void;
     onHardDelete: (id: string) => void;
     onView: (asset: { id: string }) => void;
+    onSelectChange?: (selectedRowKeys: React.Key[]) => void;
   }) => (
     <div data-testid="asset-list">
       Asset List Component
+      <button onClick={() => onSelectChange?.(['asset_1', 'asset_2'])}>SelectRows</button>
       <button onClick={() => onEdit({ id: 'asset_1' })}>Edit</button>
       <button onClick={() => onDelete('asset_1')}>Delete</button>
       <button onClick={() => onRestore('asset_1')}>Restore</button>
@@ -462,6 +467,61 @@ describe('AssetListPage', () => {
         downloadLink.restore();
         stderrWriteSpy.mockRestore();
       }
+    });
+  });
+
+  describe('批量审核操作', () => {
+    it('选中资产后可批量提交并刷新列表', async () => {
+      vi.mocked(assetService.batchSubmitAssetReviews).mockResolvedValue({
+        success_count: 2,
+        failed_count: 0,
+        total_count: 2,
+        reviewed_assets: ['asset_1', 'asset_2'],
+        errors: [],
+      });
+
+      renderPage();
+
+      fireEvent.click(screen.getByText('SelectRows'));
+      fireEvent.click(screen.getByText('批量提交 (2)'));
+
+      await waitFor(() => {
+        expect(assetService.batchSubmitAssetReviews).toHaveBeenCalledWith(['asset_1', 'asset_2']);
+        expect(MessageManager.success).toHaveBeenCalledWith('批量提交完成：成功 2 条，失败 0 条');
+        expect(mockRefetchAssets).toHaveBeenCalledTimes(1);
+        expect(mockRefetchAnalytics).toHaveBeenCalledTimes(1);
+      });
+      expect(screen.queryByText('批量提交 (2)')).not.toBeInTheDocument();
+    });
+
+    it('选中资产后可批量确认并刷新列表', async () => {
+      vi.mocked(assetService.batchApproveAssetReviews).mockResolvedValue({
+        success_count: 1,
+        failed_count: 1,
+        total_count: 2,
+        reviewed_assets: ['asset_1'],
+        errors: [
+          {
+            id: 'asset_2',
+            row_index: 1,
+            field: 'review_status',
+            message: '状态不匹配',
+            code: 'INVALID_REVIEW_STATUS',
+          },
+        ],
+      });
+
+      renderPage();
+
+      fireEvent.click(screen.getByText('SelectRows'));
+      fireEvent.click(screen.getByText('批量确认 (2)'));
+
+      await waitFor(() => {
+        expect(assetService.batchApproveAssetReviews).toHaveBeenCalledWith(['asset_1', 'asset_2']);
+        expect(MessageManager.success).toHaveBeenCalledWith('批量确认完成：成功 1 条，失败 1 条');
+        expect(mockRefetchAssets).toHaveBeenCalledTimes(1);
+        expect(mockRefetchAnalytics).toHaveBeenCalledTimes(1);
+      });
     });
   });
 });

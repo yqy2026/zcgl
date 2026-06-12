@@ -8,6 +8,7 @@
 
 | 文档 | 内容 | 状态 |
 |------|------|------|
+| [2026-06-10-mvp-subtraction-engineering-followup.md](./2026-06-10-mvp-subtraction-engineering-followup.md) | MVP 减法工程清理：删除审批流、合同上下游逐对配对和覆盖风险、资产确认权限门控与批量提交/审核、settlement_rule 可选、客户口径收敛、删除覆盖率指标、台账实收登记正名、删除产权证 is_verified、乐观锁范围收口、PartyContact 电话加密、全局客户主体数与项目 tenant 去重。A/B/C/D/E/F/G/H/I/J/K 已落地。 | 已全部闭环，保留为历史记录 |
 | [2026-06-02-architecture-review.md](./2026-06-02-architecture-review.md) | 架构技术债复核报告，校准 Contact/PartyContact、Capability/RBAC、System 页面迁移、路由注册、浅服务和活跃页面 React Query 边界；源报告候选项第一轮已完成收口，后续新增候选另行立案 | ✅ 第一轮收口完成 |
 | [2026-03-03-project-issues-analysis.md](./2026-03-03-project-issues-analysis.md) | 前后端全面排查报告（MyPy / Lint / 构建）| 🔄 修复进行中（49 errors 待清零） |
 | [2026-04-party-architecture-analysis.md](./2026-04-party-architecture-analysis.md) | 主体 Party 架构深度分析与重构方案 | 📋 待排期 |

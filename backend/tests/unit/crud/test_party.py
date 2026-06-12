@@ -1,7 +1,7 @@
 """Unit tests for party CRUD helpers."""
 
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -303,3 +303,106 @@ async def test_resolve_legacy_organization_scope_ids_by_party_ids_should_skip_bl
 
     assert result == {}
     mock_db.execute.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_create_contact_encrypts_phone_before_write_and_returns_plaintext(
+    mock_db,
+) -> None:
+    crud = CRUDParty()
+    mock_handler = MagicMock()
+    mock_handler.encrypt_data.side_effect = lambda data: {
+        **data,
+        "contact_phone": "enc:v1:ciphertext",
+    }
+    mock_handler.decrypt_field.return_value = "13800000000"
+    crud.sensitive_data_handler = mock_handler
+    added_phone_values: list[str | None] = []
+    mock_db.add.side_effect = lambda contact: added_phone_values.append(
+        contact.contact_phone
+    )
+
+    contact = await crud.create_contact(
+        mock_db,
+        obj_in={
+            "party_id": "party-1",
+            "contact_name": "联系人",
+            "contact_phone": "13800000000",
+        },
+        commit=False,
+    )
+
+    assert added_phone_values == ["enc:v1:ciphertext"]
+    mock_handler.encrypt_data.assert_called_once_with(
+        {
+            "party_id": "party-1",
+            "contact_name": "联系人",
+            "contact_phone": "13800000000",
+        }
+    )
+    mock_handler.decrypt_field.assert_called_once_with(
+        "contact_phone", "enc:v1:ciphertext"
+    )
+    assert contact.contact_phone == "13800000000"
+
+
+@pytest.mark.asyncio
+async def test_update_contact_encrypts_phone_before_write_and_returns_plaintext(
+    mock_db,
+) -> None:
+    crud = CRUDParty()
+    mock_handler = MagicMock()
+    mock_handler.ALL_PII_FIELDS = {"contact_phone"}
+    mock_handler.encrypt_field.return_value = "enc:v1:new-ciphertext"
+    mock_handler.decrypt_field.return_value = "13900000000"
+    crud.sensitive_data_handler = mock_handler
+    db_obj = SimpleNamespace(contact_phone="13800000000")
+    flushed_phone_values: list[str | None] = []
+
+    async def capture_flush() -> None:
+        flushed_phone_values.append(db_obj.contact_phone)
+
+    mock_db.flush.side_effect = capture_flush
+
+    updated = await crud.update_contact(
+        mock_db,
+        db_obj=db_obj,
+        obj_in={"contact_phone": "13900000000"},
+        commit=False,
+    )
+
+    mock_handler.encrypt_field.assert_called_once_with(
+        "contact_phone", "13900000000"
+    )
+    mock_handler.decrypt_field.assert_called_once_with(
+        "contact_phone", "enc:v1:new-ciphertext"
+    )
+    assert flushed_phone_values == ["enc:v1:new-ciphertext"]
+    assert updated.contact_phone == "13900000000"
+
+
+@pytest.mark.asyncio
+async def test_get_contacts_decrypts_phone_results(mock_db) -> None:
+    crud = CRUDParty()
+    mock_handler = MagicMock()
+    mock_handler.decrypt_field.return_value = "13800000000"
+    crud.sensitive_data_handler = mock_handler
+    contact = SimpleNamespace(contact_phone="enc:v1:ciphertext")
+    execute_result = MagicMock()
+    execute_result.scalars.return_value.all.return_value = [contact]
+    mock_db.execute = AsyncMock(return_value=execute_result)
+
+    contacts = await crud.get_contacts(mock_db, party_id="party-1")
+
+    assert contacts == [contact]
+    mock_handler.decrypt_field.assert_called_once_with(
+        "contact_phone", "enc:v1:ciphertext"
+    )
+    assert contact.contact_phone == "13800000000"
+
+
+def test_party_contact_phone_is_declared_searchable_pii() -> None:
+    with patch("src.crud.party.SensitiveDataHandler") as handler_cls:
+        CRUDParty()
+
+    handler_cls.assert_called_once_with(searchable_fields={"contact_phone"})

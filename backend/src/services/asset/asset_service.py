@@ -37,9 +37,11 @@ from ...models.contract_group import (
 )
 from ...models.project_asset import ProjectAsset
 from ...schemas.asset import (
+    AssetBatchReviewResponse,
     AssetCreate,
     AssetLeaseSummaryResponse,
     AssetUpdate,
+    BatchProcessingError,
     ContractPartyItem,
     ContractTypeSummary,
 )
@@ -799,6 +801,135 @@ class AssetService:
                 "资产已被其他人更新，请刷新后重试",
                 resource_type="Asset",
             ) from exc
+
+    async def batch_submit_asset_reviews(
+        self,
+        asset_ids: list[str],
+        *,
+        operator: str,
+    ) -> AssetBatchReviewResponse:
+        return await self._batch_transition_asset_reviews(
+            asset_ids=asset_ids,
+            operator=operator,
+            action="submit",
+            from_status=AssetReviewStatus.DRAFT.value,
+            to_status=AssetReviewStatus.PENDING.value,
+            idempotent_status=AssetReviewStatus.PENDING.value,
+        )
+
+    async def batch_approve_asset_reviews(
+        self,
+        asset_ids: list[str],
+        *,
+        reviewer: str,
+    ) -> AssetBatchReviewResponse:
+        return await self._batch_transition_asset_reviews(
+            asset_ids=asset_ids,
+            operator=reviewer,
+            action="approve",
+            from_status=AssetReviewStatus.PENDING.value,
+            to_status=AssetReviewStatus.APPROVED.value,
+            idempotent_status=AssetReviewStatus.APPROVED.value,
+        )
+
+    async def _batch_transition_asset_reviews(
+        self,
+        *,
+        asset_ids: list[str],
+        operator: str,
+        action: str,
+        from_status: str,
+        to_status: str,
+        idempotent_status: str,
+    ) -> AssetBatchReviewResponse:
+        normalized_ids = [
+            normalized_id
+            for asset_id in asset_ids
+            if (normalized_id := _normalize_optional_str(asset_id)) is not None
+        ]
+        total_count = len(normalized_ids)
+        errors: list[BatchProcessingError] = []
+        reviewed_assets: list[str] = []
+
+        try:
+            async with self._transaction():
+                assets = await self.get_assets_by_ids(
+                    ids=normalized_ids,
+                    include_relations=False,
+                )
+                assets_by_id = {
+                    str(asset.id): asset for asset in assets if asset.id is not None
+                }
+
+                now = _utcnow_naive()
+                for index, asset_id in enumerate(normalized_ids):
+                    asset = assets_by_id.get(asset_id)
+                    if asset is None:
+                        errors.append(
+                            BatchProcessingError(
+                                id=asset_id,
+                                row_index=index,
+                                field="asset_ids",
+                                message="资产不存在",
+                                code="NOT_FOUND",
+                            )
+                        )
+                        continue
+
+                    if asset.review_status == idempotent_status:
+                        reviewed_assets.append(asset_id)
+                        continue
+
+                    if asset.review_status != from_status:
+                        errors.append(
+                            BatchProcessingError(
+                                id=asset_id,
+                                row_index=index,
+                                field="review_status",
+                                message=(
+                                    f"资产当前审核状态为 {asset.review_status}，"
+                                    f"仅允许从 {from_status} 转为 {to_status}"
+                                ),
+                                code="INVALID_REVIEW_STATUS",
+                            )
+                        )
+                        continue
+
+                    previous_status = asset.review_status
+                    asset.review_status = to_status
+                    if action == "submit":
+                        asset.review_by = None
+                        asset.reviewed_at = None
+                    else:
+                        asset.review_by = operator
+                        asset.reviewed_at = now
+                    asset.review_reason = None
+                    asset.updated_by = operator
+                    asset.updated_at = now
+                    self.db.add(asset)
+                    await self._append_asset_review_log(
+                        asset_id=asset.id,
+                        action=action,
+                        from_status=previous_status,
+                        to_status=to_status,
+                        operator=operator,
+                    )
+                    reviewed_assets.append(asset_id)
+
+                await self.db.flush()
+        except StaleDataError as exc:
+            raise conflict(
+                "资产已被其他人更新，请刷新后重试",
+                resource_type="Asset",
+            ) from exc
+
+        return AssetBatchReviewResponse(
+            success_count=len(reviewed_assets),
+            failed_count=len(errors),
+            total_count=total_count,
+            errors=errors,
+            reviewed_assets=reviewed_assets,
+        )
 
     async def reject_asset_review(
         self,

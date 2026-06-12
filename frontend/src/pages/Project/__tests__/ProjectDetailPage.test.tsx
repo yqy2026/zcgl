@@ -512,10 +512,10 @@ describe('ProjectDetailPage', () => {
           data: {
             items: [
               {
-                risk_id: 'group-lease:missing_primary_contract',
-                risk_type: 'missing_primary_contract',
+                risk_id: 'group-lease:manual_tag:资料待复核',
+                risk_type: 'manual_tag',
                 severity: 'warning',
-                message: '下游合同缺少有效上游或委托覆盖',
+                message: '资料待复核',
                 contract_relation_id: 'group-lease',
                 display_name: 'GRP-LEASE',
               },
@@ -532,7 +532,7 @@ describe('ProjectDetailPage', () => {
     renderWithProviders(<ProjectDetailPage />, { route: '/project/project-1' });
 
     expect(screen.getByText('风险提示')).toBeInTheDocument();
-    expect(screen.getByText('下游合同缺少有效上游或委托覆盖')).toBeInTheDocument();
+    expect(screen.getByText('资料待复核')).toBeInTheDocument();
     expect(screen.getAllByText('GRP-LEASE').length).toBeGreaterThan(0);
     expect(screen.queryByText('暂无风险提示')).not.toBeInTheDocument();
   });

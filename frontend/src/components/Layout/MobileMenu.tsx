@@ -2,7 +2,12 @@ import React, { useState } from 'react';
 import { Drawer, Menu, Button, Space, Typography } from 'antd';
 import { MenuOutlined, CloseOutlined, HomeOutlined } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { MENU_ITEMS, getSelectedKeys, getOpenKeys } from '@/config/menuConfig';
+import {
+  MENU_ITEMS,
+  getSelectedKeys,
+  getOpenKeys,
+  getMenuNavigationPath,
+} from '@/config/menuConfig';
 import styles from './MobileMenu.module.css';
 
 const { Text } = Typography;
@@ -14,7 +19,10 @@ const MobileMenu: React.FC = () => {
 
   // 处理菜单点击
   const handleMenuClick = ({ key }: { key: string }) => {
-    navigate(key);
+    const targetPath = getMenuNavigationPath(key);
+    if (targetPath != null) {
+      navigate(targetPath);
+    }
     setVisible(false); // 点击后关闭菜单
   };
 

@@ -288,14 +288,20 @@ interface RevenueStatsGridProps {
     customer_contract_count: number;
     customer_entity_breakdown?: Record<string, number>;
     customer_contract_breakdown?: Record<string, number>;
+    counterparty_entity_breakdown?: Record<string, number>;
+    counterparty_contract_breakdown?: Record<string, number>;
     metrics_version?: string;
   };
   loading?: boolean;
 }
 
 const CUSTOMER_BREAKDOWN_LABELS: Array<{ key: string; label: string }> = [
-  { key: 'upstream_lease', label: '上游承租' },
   { key: 'downstream_sublease', label: '下游转租' },
+  { key: 'direct_lease', label: '代理直租' },
+];
+
+const COUNTERPARTY_BREAKDOWN_LABELS: Array<{ key: string; label: string }> = [
+  { key: 'upstream_lease', label: '上游承租' },
   { key: 'entrusted_operation', label: '委托运营' },
 ];
 
@@ -396,6 +402,23 @@ export const RevenueStatsGrid: React.FC<RevenueStatsGridProps> = ({ data, loadin
               children: `主体 ${
                 data.customer_entity_breakdown?.[item.key] ?? 0
               } 个 / 合同 ${data.customer_contract_breakdown?.[item.key] ?? 0} 份`,
+            }))}
+          />
+        </Card>
+      )}
+      {(data.counterparty_entity_breakdown != null ||
+        data.counterparty_contract_breakdown != null) && (
+        <Card loading={loading} size="small" style={{ marginTop: 16 }}>
+          <Descriptions
+            column={1}
+            size="small"
+            title="对手方统计拆分"
+            items={COUNTERPARTY_BREAKDOWN_LABELS.map(item => ({
+              key: item.key,
+              label: item.label,
+              children: `主体 ${
+                data.counterparty_entity_breakdown?.[item.key] ?? 0
+              } 个 / 合同 ${data.counterparty_contract_breakdown?.[item.key] ?? 0} 份`,
             }))}
           />
         </Card>

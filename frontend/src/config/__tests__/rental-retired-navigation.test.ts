@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { MENU_ITEMS, getSelectedKeys } from '@/config/menuConfig';
+import {
+  MENU_ACTION_KEYS,
+  MENU_GROUP_KEYS,
+  MENU_ITEMS,
+  getSelectedKeys,
+} from '@/config/menuConfig';
 import { dynamicBreadcrumbMap, staticBreadcrumbMap } from '@/config/breadcrumb';
 
 describe('legacy rental navigation removal', () => {
@@ -37,15 +42,27 @@ describe('legacy rental navigation removal', () => {
       expect.arrayContaining([expect.objectContaining({ key: '/contract-groups' })])
     );
 
-    expect(getSelectedKeys('/contract-center')).toEqual(['/contract-center']);
+    expect(getSelectedKeys('/contract-center')).toEqual([MENU_ACTION_KEYS.CONTRACT_CENTER_LIST]);
     expect(getSelectedKeys('/contract-center/import')).toEqual(['/contract-center/import']);
-    expect(getSelectedKeys('/contract-center/new')).toEqual(['/contract-center']);
-    expect(getSelectedKeys('/contract-center/group-1')).toEqual(['/contract-center']);
-    expect(getSelectedKeys('/contract-groups')).toEqual(['/contract-center']);
-    expect(getSelectedKeys('/contract-groups/import')).toEqual(['/contract-center']);
-    expect(getSelectedKeys('/contract-groups/new')).toEqual(['/contract-center']);
-    expect(getSelectedKeys('/contract-groups/group-1')).toEqual(['/contract-center']);
-    expect(getSelectedKeys('/contract-groups/group-1/edit')).toEqual(['/contract-center']);
+    expect(getSelectedKeys('/contract-center/new')).toEqual([
+      MENU_ACTION_KEYS.CONTRACT_CENTER_LIST,
+    ]);
+    expect(getSelectedKeys('/contract-center/group-1')).toEqual([
+      MENU_ACTION_KEYS.CONTRACT_CENTER_LIST,
+    ]);
+    expect(getSelectedKeys('/contract-groups')).toEqual([MENU_ACTION_KEYS.CONTRACT_CENTER_LIST]);
+    expect(getSelectedKeys('/contract-groups/import')).toEqual([
+      MENU_ACTION_KEYS.CONTRACT_CENTER_LIST,
+    ]);
+    expect(getSelectedKeys('/contract-groups/new')).toEqual([
+      MENU_ACTION_KEYS.CONTRACT_CENTER_LIST,
+    ]);
+    expect(getSelectedKeys('/contract-groups/group-1')).toEqual([
+      MENU_ACTION_KEYS.CONTRACT_CENTER_LIST,
+    ]);
+    expect(getSelectedKeys('/contract-groups/group-1/edit')).toEqual([
+      MENU_ACTION_KEYS.CONTRACT_CENTER_LIST,
+    ]);
 
     expect(staticBreadcrumbMap['/contract-center']).toBe('合同中心');
     expect(staticBreadcrumbMap['/contract-center/import']).toBe('PDF导入');
@@ -53,7 +70,7 @@ describe('legacy rental navigation removal', () => {
     expect(dynamicBreadcrumbMap['/contract-center/:id']).toBe('合同关系明细');
     expect(dynamicBreadcrumbMap['/contract-center/:id/edit']).toBe('编辑合同关系');
     expect(MENU_ITEMS).toEqual(
-      expect.arrayContaining([expect.objectContaining({ key: '/contract-center' })])
+      expect.arrayContaining([expect.objectContaining({ key: MENU_GROUP_KEYS.CONTRACT_CENTER })])
     );
   });
 
@@ -71,8 +88,7 @@ describe('legacy rental navigation removal', () => {
 
   it('does not expose out-of-scope ownership or property certificate navigation', () => {
     const assetSection = (MENU_ITEMS ?? []).find(item => item?.key === '/asset-files');
-    const assetChildren =
-      'children' in (assetSection ?? {}) ? (assetSection?.children ?? []) : [];
+    const assetChildren = 'children' in (assetSection ?? {}) ? (assetSection?.children ?? []) : [];
     const customerSection = (MENU_ITEMS ?? []).find(item => item?.key === '/customer-center');
     const customerChildren =
       'children' in (customerSection ?? {}) ? (customerSection?.children ?? []) : [];

@@ -8,6 +8,7 @@ import type { AreaStatistics } from '@/types/asset';
 // Re-export types from asset.ts for convenience
 export type {
   Asset,
+  AssetBatchReviewResult,
   AssetLeaseSummaryResponse,
   AssetReviewLog,
   AssetSearchParams,

@@ -5,12 +5,12 @@
  * @author Claude Code
  */
 
-import { apiClient } from '@/api/client';
-import { ApiErrorHandler } from '@/utils/responseExtractor';
-import { API_ENDPOINTS } from '@/constants/api';
-import { createLogger } from '@/utils/logger';
+import { apiClient } from "@/api/client";
+import { ApiErrorHandler } from "@/utils/responseExtractor";
+import { API_ENDPOINTS } from "@/constants/api";
+import { createLogger } from "@/utils/logger";
 
-const ownershipLogger = createLogger('Ownership');
+const ownershipLogger = createLogger("Ownership");
 import type {
   Ownership,
   OwnershipCreate,
@@ -21,7 +21,7 @@ import type {
   OwnershipDeleteResponse,
   OwnershipSearchParams,
   OwnershipDropdownOption,
-} from '@/types/ownership';
+} from "@/types/ownership";
 
 export class OwnershipService {
   private baseUrl = API_ENDPOINTS.OWNERSHIP.LIST;
@@ -39,7 +39,7 @@ export class OwnershipService {
         {
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
           smartExtract: true,
-        }
+        },
       );
 
       if (!result.success) {
@@ -179,7 +179,7 @@ export class OwnershipService {
         {
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
           smartExtract: true,
-        }
+        },
       );
 
       if (!result.success) {
@@ -206,7 +206,7 @@ export class OwnershipService {
         {
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
           smartExtract: true,
-        }
+        },
       );
 
       if (!result.success) {
@@ -231,7 +231,7 @@ export class OwnershipService {
           cache: true,
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
           smartExtract: true,
-        }
+        },
       );
 
       if (!result.success) {
@@ -256,11 +256,12 @@ export class OwnershipService {
           cache: true,
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
           smartExtract: true,
-        }
+        },
       );
 
       if (!result.success) {
-        throw new Error(`获取权属方选项失败: ${result.error}`);
+        ownershipLogger.warn("权属方选项接口暂不可用（模块未实现），返回空列表");
+        return [];
       }
 
       // 确保返回数组格式
@@ -269,8 +270,13 @@ export class OwnershipService {
       const possibleData = (data as Record<string, unknown>).data;
       return Array.isArray(possibleData) ? (possibleData as OwnershipDropdownOption[]) : [];
     } catch (error) {
-      const enhancedError = ApiErrorHandler.handleError(error);
-      throw new Error(enhancedError.message);
+      const axiosError = error as { response?: { status?: number }; message?: string };
+      if (axiosError.response?.status === 404) {
+        ownershipLogger.warn("权属方模块尚未实现，返回空列表");
+        return [];
+      }
+      ownershipLogger.warn("获取权属方选项失败: " + (axiosError.message ?? error));
+      return [];
     }
   }
 
@@ -282,10 +288,10 @@ export class OwnershipService {
   async validateOwnershipCode(code: string, excludeId?: string): Promise<boolean> {
     try {
       const result = await this.getOwnerships({ keyword: code });
-      return !result.items.some(item => item.code === code && item.id !== excludeId);
+      return !result.items.some((item) => item.code === code && item.id !== excludeId);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      ownershipLogger.error('验证权属方编码失败:', undefined, { error: enhancedError.message });
+      ownershipLogger.error("验证权属方编码失败:", undefined, { error: enhancedError.message });
       return false;
     }
   }
@@ -296,10 +302,10 @@ export class OwnershipService {
   async validateOwnershipName(name: string, excludeId?: string): Promise<boolean> {
     try {
       const result = await this.getOwnerships({ keyword: name });
-      return !result.items.some(item => item.name === name && item.id !== excludeId);
+      return !result.items.some((item) => item.name === name && item.id !== excludeId);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      ownershipLogger.error('验证权属方名称失败:', undefined, { error: enhancedError.message });
+      ownershipLogger.error("验证权属方名称失败:", undefined, { error: enhancedError.message });
       return false;
     }
   }
@@ -315,7 +321,7 @@ export class OwnershipService {
       return result.total;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      ownershipLogger.error('获取权属方数量失败:', undefined, { error: enhancedError.message });
+      ownershipLogger.error("获取权属方数量失败:", undefined, { error: enhancedError.message });
       return 0;
     }
   }
@@ -327,7 +333,7 @@ export class OwnershipService {
     try {
       const ownership = await this.getOwnership(id);
       if (ownership == null) {
-        return { canDelete: false, reason: '权属方不存在' };
+        return { canDelete: false, reason: "权属方不存在" };
       }
 
       // 检查是否有关联的资产或项目
@@ -341,8 +347,8 @@ export class OwnershipService {
       return { canDelete: true };
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      ownershipLogger.error('检查权属方删除条件失败:', undefined, { error: enhancedError.message });
-      return { canDelete: false, reason: '检查失败，请稍后重试' };
+      ownershipLogger.error("检查权属方删除条件失败:", undefined, { error: enhancedError.message });
+      return { canDelete: false, reason: "检查失败，请稍后重试" };
     }
   }
 
@@ -352,13 +358,11 @@ export class OwnershipService {
   async getOwnershipSelectOptions(): Promise<Array<{ value: string; label: string }>> {
     try {
       const options = await this.getOwnershipOptions();
-      return options.map(option => ({
+      return options.map((option) => ({
         value: option.id,
         label: `${option.name} (${option.code})`,
       }));
-    } catch (error) {
-      const enhancedError = ApiErrorHandler.handleError(error);
-      ownershipLogger.error('获取权属方选择选项失败:', undefined, { error: enhancedError.message });
+    } catch {
       return [];
     }
   }
@@ -372,7 +376,7 @@ export class OwnershipService {
       return result.items;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      ownershipLogger.error('关键词搜索权属方失败:', undefined, { error: enhancedError.message });
+      ownershipLogger.error("关键词搜索权属方失败:", undefined, { error: enhancedError.message });
       return [];
     }
   }
@@ -386,7 +390,7 @@ export class OwnershipService {
       return result.items;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      ownershipLogger.error('获取活跃权属方失败:', undefined, { error: enhancedError.message });
+      ownershipLogger.error("获取活跃权属方失败:", undefined, { error: enhancedError.message });
       return [];
     }
   }
@@ -400,7 +404,7 @@ export class OwnershipService {
       return result.items;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      ownershipLogger.error('获取非活跃权属方失败:', undefined, { error: enhancedError.message });
+      ownershipLogger.error("获取非活跃权属方失败:", undefined, { error: enhancedError.message });
       return [];
     }
   }
@@ -411,13 +415,13 @@ export class OwnershipService {
    * 权属方数据导出
    */
   async exportOwnerships(
-    format: 'excel' | 'csv' = 'excel',
-    filters?: OwnershipSearchParams
+    format: "excel" | "csv" = "excel",
+    filters?: OwnershipSearchParams,
   ): Promise<Blob> {
     try {
       const result = await apiClient.get<Blob>(`${this.baseUrl}/export`, {
         params: { format, ...filters },
-        responseType: 'blob',
+        responseType: "blob",
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
       });
 
@@ -443,7 +447,7 @@ export class OwnershipService {
   }> {
     try {
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append("file", file);
 
       const result = await apiClient.post<{
         success: boolean;
@@ -452,7 +456,7 @@ export class OwnershipService {
         errors?: string[];
       }>(`${this.baseUrl}/import`, formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          "Content-Type": "multipart/form-data",
         },
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
         smartExtract: true,

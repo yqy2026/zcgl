@@ -10,10 +10,7 @@ from types import ModuleType, SimpleNamespace
 
 def _load_module() -> ModuleType:
     module_path = (
-        Path(__file__).resolve().parents[3]
-        / "scripts"
-        / "setup"
-        / "init_rbac_data.py"
+        Path(__file__).resolve().parents[3] / "scripts" / "setup" / "init_rbac_data.py"
     )
     spec = spec_from_file_location("init_rbac_data", module_path)
     assert spec is not None
@@ -67,7 +64,9 @@ def test_legacy_roles_should_not_appear_in_target_definitions() -> None:
 
 def test_test_user_assignments_should_use_new_role_names() -> None:
     module = _load_module()
-    assigned_role_names = {role_name for _, role_name in module.TEST_USER_ROLE_ASSIGNMENTS}
+    assigned_role_names = {
+        role_name for _, role_name in module.TEST_USER_ROLE_ASSIGNMENTS
+    }
 
     assert assigned_role_names == {"ops_admin", "executive", "viewer"}
 
@@ -111,9 +110,19 @@ def test_permission_seed_should_use_contract_resources_and_crud_actions() -> Non
     assert "('excel_config', 'write'" not in flattened
 
 
+def test_permission_seed_should_not_recreate_retired_approval_resource() -> None:
+    module = _load_module()
+    seed_resources = {resource for resource, *_ in module.BASIC_PERMISSIONS_DATA}
+
+    assert "approval" not in seed_resources
+    assert "approval" not in module.BUSINESS_RESOURCES
+
+
 def test_permission_seed_should_cover_current_api_authz_pairs() -> None:
     module = _load_module()
-    seed_pairs = {(resource, action) for resource, action, *_ in module.BASIC_PERMISSIONS_DATA}
+    seed_pairs = {
+        (resource, action) for resource, action, *_ in module.BASIC_PERMISSIONS_DATA
+    }
     api_pairs = _discover_api_authz_pairs()
 
     missing_pairs = sorted(api_pairs - seed_pairs)

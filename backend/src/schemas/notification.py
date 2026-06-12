@@ -16,7 +16,6 @@ class NotificationType(str, Enum):
     CONTRACT_EXPIRED = "contract_expired"  # 合同已到期
     PAYMENT_OVERDUE = "payment_overdue"  # 付款逾期
     PAYMENT_DUE = "payment_due"  # 付款到期提醒
-    APPROVAL_PENDING = "approval_pending"  # 审批待办
     SYSTEM_NOTICE = "system_notice"  # 系统通知
 
 

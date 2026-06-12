@@ -59,6 +59,25 @@ def test_api_router_should_not_expose_out_of_scope_runtime_paths() -> None:
     assert exposed_paths == set(), f"Out of Scope 路径仍被注册: {sorted(exposed_paths)}"
 
 
+def test_api_router_should_not_expose_retired_approval_paths() -> None:
+    paths = {
+        route.path
+        for route in api_router.routes  # type: ignore[attr-defined]
+    }
+
+    exposed_paths = {path for path in paths if path.startswith("/approval")}
+
+    assert exposed_paths == set(), f"审批流路径仍被注册: {sorted(exposed_paths)}"
+
+
+def test_approval_api_module_should_be_retired() -> None:
+    assert _find_spec_or_none("src.api.v1.approval") is None
+
+
+def test_approval_service_package_should_be_retired() -> None:
+    assert _find_spec_or_none("src.services.approval") is None
+
+
 def test_legacy_contract_api_package_should_be_retired() -> None:
     _assert_retired_namespace_or_none(_legacy_contracts_api_module())
 

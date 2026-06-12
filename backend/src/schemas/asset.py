@@ -789,6 +789,26 @@ class AssetBatchUpdateResponse(BaseModel):
     model_config = ConfigDict(json_schema_extra={"example": {"description": "示例"}})
 
 
+class AssetBatchReviewRequest(BaseModel):
+    """资产批量审核动作请求模型"""
+
+    asset_ids: list[str] = Field(..., min_length=1, description="资产ID列表")
+
+
+class AssetBatchReviewResponse(BaseModel):
+    """资产批量审核动作响应模型"""
+
+    success_count: int = Field(..., description="成功处理数量")
+    failed_count: int = Field(..., description="失败数量")
+    total_count: int = Field(..., description="总数量")
+    errors: list[BatchProcessingError] = Field(
+        default_factory=list, description="错误信息列表"
+    )
+    reviewed_assets: list[str] = Field(
+        default_factory=list, description="成功处理的资产ID"
+    )
+
+
 class AssetValidationRequest(BaseModel):
     """资产数据验证请求模型"""
 

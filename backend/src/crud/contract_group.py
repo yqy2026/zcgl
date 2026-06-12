@@ -19,8 +19,6 @@ from ..models.contract_group import (
     ContractGroup,
     ContractLedgerEntry,
     ContractLifecycleStatus,
-    ContractRelation,
-    ContractRelationType,
     ContractRentTerm,
     ServiceFeeLedger,
 )
@@ -100,7 +98,6 @@ class CRUDContractGroup:
         for key, value in data.items():
             setattr(db_obj, key, value)
         db_obj.updated_at = _utcnow()
-        db_obj.version = (db_obj.version or 0) + 1
 
         if asset_ids is not None:
             await self._replace_assets(db, db_obj.contract_group_id, asset_ids)
@@ -309,21 +306,6 @@ class CRUDContractGroup:
             await db.refresh(log)
         return log
 
-    async def create_contract_relation(
-        self,
-        db: AsyncSession,
-        *,
-        data: dict[str, Any],
-        commit: bool = False,
-    ) -> ContractRelation:
-        relation = ContractRelation(**data)
-        db.add(relation)
-        await db.flush()
-        if commit:
-            await db.commit()
-            await db.refresh(relation)
-        return relation
-
     async def list_contract_audit_logs(
         self,
         db: AsyncSession,
@@ -338,30 +320,6 @@ class CRUDContractGroup:
             )
         )
         return list((await db.execute(stmt)).scalars().all())
-
-    async def get_renewal_parent_contract(
-        self,
-        db: AsyncSession,
-        *,
-        contract_id: str,
-    ) -> Contract | None:
-        stmt = (
-            select(Contract)
-            .join(
-                ContractRelation,
-                ContractRelation.parent_contract_id == Contract.contract_id,
-            )
-            .where(
-                ContractRelation.child_contract_id == contract_id,
-                ContractRelation.relation_type == ContractRelationType.RENEWAL,
-            )
-            .options(
-                selectinload(Contract.assets),
-                selectinload(Contract.lease_detail),
-                selectinload(Contract.agency_detail),
-            )
-        )
-        return (await db.execute(stmt)).scalars().first()
 
     async def create_rent_term(
         self,

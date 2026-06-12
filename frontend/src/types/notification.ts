@@ -24,7 +24,6 @@ export enum NotificationType {
   CONTRACT_EXPIRED = 'contract_expired',
   PAYMENT_OVERDUE = 'payment_overdue',
   PAYMENT_DUE = 'payment_due',
-  APPROVAL_PENDING = 'approval_pending',
   SYSTEM_NOTICE = 'system_notice',
 }
 

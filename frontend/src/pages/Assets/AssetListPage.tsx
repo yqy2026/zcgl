@@ -1,6 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button, Space, Alert } from 'antd';
-import { PlusOutlined, ExportOutlined, ImportOutlined } from '@ant-design/icons';
+import {
+  CheckCircleOutlined,
+  ExportOutlined,
+  ImportOutlined,
+  PlusOutlined,
+  SendOutlined,
+} from '@ant-design/icons';
 import { MessageManager } from '@/utils/messageManager';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -28,6 +34,7 @@ type AssetListFilters = Omit<AssetSearchParams, 'page' | 'page_size'>;
 const AssetListPage: React.FC = () => {
   const navigate = useNavigate();
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [batchReviewLoading, setBatchReviewLoading] = useState<'submit' | 'approve' | null>(null);
   const [filters, setFilters] = useState<AssetListFilters>({});
   const [pagination, setPagination] = useState({
     current: 1,
@@ -287,6 +294,58 @@ const AssetListPage: React.FC = () => {
     }
   };
 
+  const refreshAfterBatchReview = useCallback(() => {
+    setSelectedRowKeys([]);
+    void refetchAssets();
+    void refetchAnalytics();
+  }, [refetchAnalytics, refetchAssets]);
+
+  const handleBatchSubmitReview = useCallback(async () => {
+    if (selectedRowKeys.length === 0) {
+      MessageManager.warning('请先选择要提交的资产');
+      return;
+    }
+
+    try {
+      setBatchReviewLoading('submit');
+      const result = await assetService.batchSubmitAssetReviews(
+        selectedRowKeys.map(key => String(key))
+      );
+      MessageManager.success(
+        `批量提交完成：成功 ${result.success_count} 条，失败 ${result.failed_count} 条`
+      );
+      refreshAfterBatchReview();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '批量提交失败';
+      MessageManager.error(errorMessage);
+    } finally {
+      setBatchReviewLoading(null);
+    }
+  }, [refreshAfterBatchReview, selectedRowKeys]);
+
+  const handleBatchApproveReview = useCallback(async () => {
+    if (selectedRowKeys.length === 0) {
+      MessageManager.warning('请先选择要确认的资产');
+      return;
+    }
+
+    try {
+      setBatchReviewLoading('approve');
+      const result = await assetService.batchApproveAssetReviews(
+        selectedRowKeys.map(key => String(key))
+      );
+      MessageManager.success(
+        `批量确认完成：成功 ${result.success_count} 条，失败 ${result.failed_count} 条`
+      );
+      refreshAfterBatchReview();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '批量确认失败';
+      MessageManager.error(errorMessage);
+    } finally {
+      setBatchReviewLoading(null);
+    }
+  }, [refreshAfterBatchReview, selectedRowKeys]);
+
   if (showInitialLoading) {
     return <LoadingContainer text="加载资产数据中..." />;
   }
@@ -328,9 +387,25 @@ const AssetListPage: React.FC = () => {
             导出全部
           </Button>
           {selectedRowKeys.length > 0 && (
-            <Button type="dashed" icon={<ExportOutlined />} onClick={handleExportSelected}>
-              导出选中 ({selectedRowKeys.length})
-            </Button>
+            <>
+              <Button
+                icon={<SendOutlined />}
+                loading={batchReviewLoading === 'submit'}
+                onClick={() => void handleBatchSubmitReview()}
+              >
+                批量提交 ({selectedRowKeys.length})
+              </Button>
+              <Button
+                icon={<CheckCircleOutlined />}
+                loading={batchReviewLoading === 'approve'}
+                onClick={() => void handleBatchApproveReview()}
+              >
+                批量确认 ({selectedRowKeys.length})
+              </Button>
+              <Button type="dashed" icon={<ExportOutlined />} onClick={handleExportSelected}>
+                导出选中 ({selectedRowKeys.length})
+              </Button>
+            </>
           )}
         </Space>
       }

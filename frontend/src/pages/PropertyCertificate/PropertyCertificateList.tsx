@@ -1,6 +1,5 @@
 /**
  * Property Certificate List Page
- * 产权证列表页面
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -28,10 +27,10 @@ interface TypeMeta {
 }
 
 const CERTIFICATE_TYPE_META: Record<CertificateType, TypeMeta> = {
-  real_estate: { label: '不动产权证', tone: 'primary' },
-  house_ownership: { label: '房屋所有权证', tone: 'success' },
-  land_use: { label: '土地使用证', tone: 'warning' },
-  other: { label: '其他', tone: 'error' },
+  real_estate: { label: 'Real estate', tone: 'primary' },
+  house_ownership: { label: 'House ownership', tone: 'success' },
+  land_use: { label: 'Land use', tone: 'warning' },
+  other: { label: 'Other', tone: 'error' },
 };
 
 const CONFIDENCE_THRESHOLD = {
@@ -41,12 +40,12 @@ const CONFIDENCE_THRESHOLD = {
 
 const getConfidenceMeta = (confidence: number): { tone: Tone; label: string } => {
   if (confidence > CONFIDENCE_THRESHOLD.high) {
-    return { tone: 'success', label: '高' };
+    return { tone: 'success', label: 'High' };
   }
   if (confidence > CONFIDENCE_THRESHOLD.medium) {
-    return { tone: 'warning', label: '中' };
+    return { tone: 'warning', label: 'Medium' };
   }
-  return { tone: 'error', label: '低' };
+  return { tone: 'error', label: 'Low' };
 };
 
 export const PropertyCertificateList: React.FC = () => {
@@ -84,7 +83,7 @@ export const PropertyCertificateList: React.FC = () => {
         const data = await propertyCertificateService.listCertificates();
         setCertificateSource(data);
       } catch (error) {
-        const message = error instanceof Error ? error.message : '加载产权证列表失败';
+        const message = error instanceof Error ? error.message : 'Failed to load certificates';
         MessageManager.error(message);
       } finally {
         setIsFetching(false);
@@ -108,12 +107,12 @@ export const PropertyCertificateList: React.FC = () => {
 
   const columns = [
     {
-      title: '证书编号',
+      title: 'Certificate number',
       dataIndex: 'certificate_number',
       key: 'certificate_number',
     },
     {
-      title: '类型',
+      title: 'Type',
       dataIndex: 'certificate_type',
       key: 'certificate_type',
       render: (type: CertificateType) => {
@@ -129,19 +128,19 @@ export const PropertyCertificateList: React.FC = () => {
       },
     },
     {
-      title: '坐落地址',
+      title: 'Address',
       dataIndex: 'property_address',
       key: 'property_address',
       ellipsis: true,
     },
     {
-      title: '建筑面积',
+      title: 'Building area',
       dataIndex: 'building_area',
       key: 'building_area',
-      render: (area: string | null) => (area != null ? `${area}㎡` : '-'),
+      render: (area: string | null) => (area != null ? `${area} sqm` : '-'),
     },
     {
-      title: '置信度',
+      title: 'Confidence',
       dataIndex: 'extraction_confidence',
       key: 'extraction_confidence',
       render: (confidence: number | null) => {
@@ -162,31 +161,13 @@ export const PropertyCertificateList: React.FC = () => {
       },
     },
     {
-      title: '审核状态',
-      dataIndex: 'is_verified',
-      key: 'is_verified',
-      render: (isVerified: boolean) => {
-        const tone: Tone = isVerified ? 'success' : 'warning';
-        return (
-          <Space size={6} className={styles.inlineStatus} wrap>
-            <Tag className={[styles.statusTag, toneClassMap[tone]].join(' ')}>
-              {isVerified ? '已审核' : '待审核'}
-            </Tag>
-            <Text type="secondary" className={styles.statusAssistText}>
-              {isVerified ? '状态正常' : '待处理'}
-            </Text>
-          </Space>
-        );
-      },
-    },
-    {
-      title: '创建时间',
+      title: 'Created at',
       dataIndex: 'created_at',
       key: 'created_at',
       render: (date: string) => dayjs(date).format('YYYY-MM-DD'),
     },
     {
-      title: '操作',
+      title: 'Actions',
       key: 'actions',
       render: (_: unknown, record: PropertyCertificate) => (
         <Space className={styles.actionGroup}>
@@ -195,9 +176,9 @@ export const PropertyCertificateList: React.FC = () => {
             icon={<EyeOutlined />}
             onClick={() => navigate(`/property-certificates/${record.id}`)}
             className={styles.actionButton}
-            aria-label={`查看证书 ${record.certificate_number ?? record.id}`}
+            aria-label={`View certificate ${record.certificate_number ?? record.id}`}
           >
-            查看
+            View
           </Button>
         </Space>
       ),
@@ -207,14 +188,14 @@ export const PropertyCertificateList: React.FC = () => {
   return (
     <PageContainer
       className={styles.pageShell}
-      title="产权证管理"
-      subTitle="管理产权证列表、审核状态与资产关联"
+      title="Property Certificates"
+      subTitle="Manage property certificate records and asset links"
     >
       <div className={styles.pageContent}>
         <Card className={styles.filterCard}>
           <Space size={12} wrap className={styles.filterActions}>
             <Input
-              placeholder="搜索证书编号"
+              placeholder="Search certificate number"
               prefix={<SearchOutlined />}
               className={styles.searchInput}
               value={filters.keyword}
@@ -227,7 +208,7 @@ export const PropertyCertificateList: React.FC = () => {
               onClick={() => navigate('/property-certificates/import')}
               className={styles.createButton}
             >
-              新建产权证
+              New Certificate
             </Button>
           </Space>
         </Card>
@@ -240,7 +221,7 @@ export const PropertyCertificateList: React.FC = () => {
           paginationState={pagination}
           onPageChange={updatePagination}
           paginationProps={{
-            showTotal: (total: number) => `共 ${total} 条`,
+            showTotal: (total: number) => `Total ${total}`,
           }}
         />
       </div>

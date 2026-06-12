@@ -17,7 +17,11 @@ from src.services.asset.asset_service import AssetService
 pytestmark = pytest.mark.asyncio
 
 
-def _build_asset(*, review_status: str) -> Asset:
+def _build_asset(
+    *,
+    review_status: str,
+    asset_id: str = "asset-001",
+) -> Asset:
     asset = Asset(
         owner_party_id="owner-001",
         manager_party_id="manager-001",
@@ -27,7 +31,7 @@ def _build_asset(*, review_status: str) -> Asset:
         property_nature="商业",
         usage_status="空置",
     )
-    asset.id = "asset-001"
+    asset.id = asset_id
     asset.review_status = review_status
     asset.review_by = None
     asset.reviewed_at = None
@@ -92,6 +96,118 @@ async def test_submit_asset_review_should_transition_to_pending_and_write_log(
     assert logs[0].to_status == AssetReviewStatus.PENDING.value
     assert logs[0].operator == "alice"
     assert logs[0].reason is None
+
+
+async def test_same_operator_should_submit_and_approve_asset_review(
+    service: AssetService,
+    mock_db: MagicMock,
+) -> None:
+    asset = _build_asset(review_status=AssetReviewStatus.DRAFT.value)
+
+    with patch.object(service, "get_asset", new=AsyncMock(return_value=asset)):
+        await service.submit_asset_review(asset.id, operator="alice")
+        updated = await service.approve_asset_review(asset.id, reviewer="alice")
+
+    assert updated is asset
+    assert asset.review_status == AssetReviewStatus.APPROVED.value
+    assert asset.review_by == "alice"
+    assert asset.reviewed_at is not None
+    assert asset.review_reason is None
+    assert mock_db.flush.await_count == 2
+
+    logs = _extract_review_logs(mock_db)
+    assert [log.action for log in logs] == ["submit", "approve"]
+    assert logs[1].from_status == AssetReviewStatus.PENDING.value
+    assert logs[1].to_status == AssetReviewStatus.APPROVED.value
+    assert logs[1].operator == "alice"
+
+
+async def test_batch_submit_asset_reviews_should_be_idempotent_for_pending(
+    service: AssetService,
+    mock_db: MagicMock,
+) -> None:
+    draft_asset = _build_asset(
+        review_status=AssetReviewStatus.DRAFT.value,
+        asset_id="asset-draft",
+    )
+    pending_asset = _build_asset(
+        review_status=AssetReviewStatus.PENDING.value,
+        asset_id="asset-pending",
+    )
+    approved_asset = _build_asset(
+        review_status=AssetReviewStatus.APPROVED.value,
+        asset_id="asset-approved",
+    )
+
+    with patch.object(
+        service,
+        "get_assets_by_ids",
+        new=AsyncMock(return_value=[draft_asset, pending_asset, approved_asset]),
+    ):
+        result = await service.batch_submit_asset_reviews(
+            ["asset-draft", "asset-pending", "asset-missing", "asset-approved"],
+            operator="alice",
+        )
+
+    assert result.total_count == 4
+    assert result.success_count == 2
+    assert result.failed_count == 2
+    assert result.reviewed_assets == ["asset-draft", "asset-pending"]
+    assert draft_asset.review_status == AssetReviewStatus.PENDING.value
+    assert pending_asset.review_status == AssetReviewStatus.PENDING.value
+    assert [error.code for error in result.errors] == [
+        "NOT_FOUND",
+        "INVALID_REVIEW_STATUS",
+    ]
+    assert mock_db.flush.await_count == 1
+
+    logs = _extract_review_logs(mock_db)
+    assert len(logs) == 1
+    assert logs[0].asset_id == "asset-draft"
+    assert logs[0].action == "submit"
+
+
+async def test_batch_approve_asset_reviews_should_be_idempotent_for_approved(
+    service: AssetService,
+    mock_db: MagicMock,
+) -> None:
+    pending_asset = _build_asset(
+        review_status=AssetReviewStatus.PENDING.value,
+        asset_id="asset-pending",
+    )
+    approved_asset = _build_asset(
+        review_status=AssetReviewStatus.APPROVED.value,
+        asset_id="asset-approved",
+    )
+    draft_asset = _build_asset(
+        review_status=AssetReviewStatus.DRAFT.value,
+        asset_id="asset-draft",
+    )
+
+    with patch.object(
+        service,
+        "get_assets_by_ids",
+        new=AsyncMock(return_value=[pending_asset, approved_asset, draft_asset]),
+    ):
+        result = await service.batch_approve_asset_reviews(
+            ["asset-pending", "asset-approved", "asset-draft"],
+            reviewer="alice",
+        )
+
+    assert result.total_count == 3
+    assert result.success_count == 2
+    assert result.failed_count == 1
+    assert result.reviewed_assets == ["asset-pending", "asset-approved"]
+    assert pending_asset.review_status == AssetReviewStatus.APPROVED.value
+    assert pending_asset.review_by == "alice"
+    assert pending_asset.reviewed_at is not None
+    assert approved_asset.review_status == AssetReviewStatus.APPROVED.value
+    assert result.errors[0].code == "INVALID_REVIEW_STATUS"
+
+    logs = _extract_review_logs(mock_db)
+    assert len(logs) == 1
+    assert logs[0].asset_id == "asset-pending"
+    assert logs[0].action == "approve"
 
 
 async def test_reverse_asset_review_should_record_context_and_reason(

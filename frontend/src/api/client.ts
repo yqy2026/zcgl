@@ -753,6 +753,53 @@ export class ApiClient {
   }
 
   /**
+   * PATCH请求
+   */
+  async patch<T = unknown>(
+    url: string,
+    data?: unknown,
+    config?: AxiosRequestConfig & {
+      retry?: boolean | RetryConfig;
+      smartExtract?: boolean;
+    }
+  ): Promise<ExtractResult<T>> {
+    const {
+      retry = this.config.enableAutoRetry,
+      smartExtract = true,
+      ...axiosConfig
+    } = config || {};
+
+    const executeRequest = async (): Promise<AxiosResponse> => {
+      return await this.instance.patch(url, data, axiosConfig);
+    };
+
+    let response: AxiosResponse;
+    if (retry === true) {
+      response = await RetryManager.executeWithRetry(
+        executeRequest,
+        this.config.defaultRetryConfig!
+      );
+    } else if (retry !== undefined && retry !== null && typeof retry === 'object') {
+      response = await RetryManager.executeWithRetry(executeRequest, retry);
+    } else {
+      response = await executeRequest();
+    }
+
+    if (smartExtract) {
+      return ResponseExtractor.smartExtract<T>(response, {
+        detection: this.config.responseDetection,
+        enableTypeValidation: this.config.enableTypeValidation,
+      });
+    }
+
+    return {
+      success: true,
+      data: response.data as T,
+      rawResponse: response,
+    };
+  }
+
+  /**
    * DELETE请求
    */
   async delete<T = unknown>(

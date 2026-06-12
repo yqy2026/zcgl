@@ -4,6 +4,7 @@ import { LedgerService } from '../ledgerService';
 vi.mock('@/api/client', () => ({
   apiClient: {
     get: vi.fn(),
+    patch: vi.fn(),
   },
 }));
 
@@ -114,5 +115,45 @@ describe('LedgerService', () => {
       smartExtract: false,
     });
     expect(result).toBe(blob);
+  });
+
+  it('registers received ledger amounts through the contract ledger endpoint', async () => {
+    vi.mocked(apiClient.patch).mockResolvedValue({
+      success: true,
+      data: [
+        {
+          entry_id: 'ledger-1',
+          contract_id: 'contract-1',
+          year_month: '2026-05',
+          due_date: '2026-05-15',
+          amount_due: '12000.00',
+          currency_code: 'CNY',
+          is_tax_included: true,
+          payment_status: 'paid',
+          paid_amount: '12000.00',
+        },
+      ],
+    });
+
+    const result = await service.updateContractLedgerStatus('contract-1', {
+      entry_ids: ['ledger-1'],
+      payment_status: 'paid',
+      paid_amount: '12000.00',
+      notes: '实收登记',
+    });
+
+    expect(apiClient.patch).toHaveBeenCalledWith(
+      '/contracts/contract-1/ledger/batch-update-status',
+      {
+        entry_ids: ['ledger-1'],
+        payment_status: 'paid',
+        paid_amount: '12000.00',
+        notes: '实收登记',
+      },
+      {
+        retry: false,
+      }
+    );
+    expect(result[0].payment_status).toBe('paid');
   });
 });

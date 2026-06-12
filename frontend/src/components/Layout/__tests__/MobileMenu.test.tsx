@@ -63,9 +63,13 @@ vi.mock('@/config/menuConfig', () => ({
   MENU_ITEMS: [
     { key: '/dashboard', label: '工作台' },
     { key: '/assets/list', label: '资产台账' },
+    { key: 'contract-center:list', label: '合同关系列表' },
   ],
   getSelectedKeys: vi.fn(() => ['/dashboard']),
   getOpenKeys: vi.fn(() => ['/assets']),
+  getMenuNavigationPath: vi.fn((key: string) =>
+    key === 'contract-center:list' ? '/contract-center' : key
+  ),
 }));
 
 vi.mock('antd', () => ({
@@ -171,6 +175,20 @@ describe('MobileMenu', () => {
     fireEvent.click(menuItems[1]);
 
     expect(navigateMock).toHaveBeenCalledWith('/assets/list');
+    expect(screen.getByTestId('drawer')).toHaveAttribute('data-open', 'false');
+  });
+
+  it('maps menu action keys to canonical route paths', () => {
+    renderWithProviders(<MobileMenu />);
+
+    const triggerButton = screen.getByTestId('icon-menu').closest('button');
+    if (triggerButton) {
+      fireEvent.click(triggerButton);
+    }
+
+    fireEvent.click(screen.getByText('合同关系列表'));
+
+    expect(navigateMock).toHaveBeenCalledWith('/contract-center');
     expect(screen.getByTestId('drawer')).toHaveAttribute('data-open', 'false');
   });
 

@@ -151,8 +151,6 @@ const PartyDetailPage: React.FC = () => {
       unified_identifier: normalizeOptionalText(metadata.unified_identifier),
       address: normalizeOptionalText(metadata.address),
       payment_term_preference: normalizeOptionalText(metadata.payment_term_preference),
-      contact_name: normalizeOptionalText(metadata.contact_name),
-      contact_phone: normalizeOptionalText(metadata.contact_phone),
       risk_tags_text: Array.isArray(metadata.risk_tags) ? metadata.risk_tags.join(', ') : undefined,
     });
   }, [form, party]);
@@ -281,12 +279,6 @@ const PartyDetailPage: React.FC = () => {
       ...(normalizeOptionalText(values.payment_term_preference) != null
         ? { payment_term_preference: normalizeOptionalText(values.payment_term_preference) }
         : { payment_term_preference: undefined }),
-      ...(normalizeOptionalText(values.contact_name) != null
-        ? { contact_name: normalizeOptionalText(values.contact_name) }
-        : { contact_name: undefined }),
-      ...(normalizeOptionalText(values.contact_phone) != null
-        ? { contact_phone: normalizeOptionalText(values.contact_phone) }
-        : { contact_phone: undefined }),
       ...(parseRiskTags(values.risk_tags_text) != null
         ? { risk_tags: parseRiskTags(values.risk_tags_text) }
         : { risk_tags: undefined }),
@@ -430,12 +422,6 @@ const PartyDetailPage: React.FC = () => {
             </Form.Item>
             <Form.Item label="统一标识" name="unified_identifier">
               <Input aria-label="统一标识" />
-            </Form.Item>
-            <Form.Item label="联系人" name="contact_name">
-              <Input aria-label="联系人" />
-            </Form.Item>
-            <Form.Item label="联系电话" name="contact_phone">
-              <Input aria-label="联系电话" />
             </Form.Item>
             <Form.Item label="地址" name="address">
               <Input.TextArea aria-label="地址" rows={3} />

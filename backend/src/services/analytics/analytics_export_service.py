@@ -94,9 +94,13 @@ class AnalyticsExportService:
         ),
     )
     _CUSTOMER_BREAKDOWN_SECTION = "客户统计拆分"
+    _COUNTERPARTY_BREAKDOWN_SECTION = "对手方统计拆分"
     _CUSTOMER_BREAKDOWN_LABELS: tuple[tuple[str, str], ...] = (
-        ("upstream_lease", "上游承租"),
         ("downstream_sublease", "下游转租"),
+        ("direct_lease", "代理直租"),
+    )
+    _COUNTERPARTY_BREAKDOWN_LABELS: tuple[tuple[str, str], ...] = (
+        ("upstream_lease", "上游承租"),
         ("entrusted_operation", "委托运营"),
     )
 
@@ -157,18 +161,61 @@ class AnalyticsExportService:
     ) -> list[dict[str, str]]:
         entity_breakdown = analytics_data.get("customer_entity_breakdown")
         contract_breakdown = analytics_data.get("customer_contract_breakdown")
+        counterparty_entity_breakdown = analytics_data.get(
+            "counterparty_entity_breakdown"
+        )
+        counterparty_contract_breakdown = analytics_data.get(
+            "counterparty_contract_breakdown"
+        )
         if not isinstance(entity_breakdown, dict) and not isinstance(
             contract_breakdown, dict
+        ) and not isinstance(counterparty_entity_breakdown, dict) and not isinstance(
+            counterparty_contract_breakdown, dict
         ):
             return []
 
         rows: list[dict[str, str]] = []
-        for key, label in self._CUSTOMER_BREAKDOWN_LABELS:
+        if isinstance(entity_breakdown, dict) or isinstance(contract_breakdown, dict):
+            rows.extend(
+                self._build_breakdown_rows(
+                    section=self._CUSTOMER_BREAKDOWN_SECTION,
+                    labels=self._CUSTOMER_BREAKDOWN_LABELS,
+                    entity_breakdown=entity_breakdown,
+                    contract_breakdown=contract_breakdown,
+                )
+            )
+        if isinstance(counterparty_entity_breakdown, dict) or isinstance(
+            counterparty_contract_breakdown, dict
+        ):
+            rows.extend(
+                self._build_breakdown_rows(
+                    section=self._COUNTERPARTY_BREAKDOWN_SECTION,
+                    labels=self._COUNTERPARTY_BREAKDOWN_LABELS,
+                    entity_breakdown=counterparty_entity_breakdown,
+                    contract_breakdown=counterparty_contract_breakdown,
+                )
+            )
+        return rows
+
+    def _build_breakdown_rows(
+        self,
+        *,
+        section: str,
+        labels: tuple[tuple[str, str], ...],
+        entity_breakdown: Any,
+        contract_breakdown: Any,
+    ) -> list[dict[str, str]]:
+        rows: list[dict[str, str]] = []
+        entity_values = entity_breakdown if isinstance(entity_breakdown, dict) else {}
+        contract_values = (
+            contract_breakdown if isinstance(contract_breakdown, dict) else {}
+        )
+        for key, label in labels:
             rows.append(
                 {
-                    "section": self._CUSTOMER_BREAKDOWN_SECTION,
+                    "section": section,
                     "metric": label,
-                    "value": f"主体 {int((entity_breakdown or {}).get(key, 0) or 0)} / 合同 {int((contract_breakdown or {}).get(key, 0) or 0)}",
+                    "value": f"主体 {int(entity_values.get(key, 0) or 0)} / 合同 {int(contract_values.get(key, 0) or 0)}",
                     "unit": "",
                 }
             )

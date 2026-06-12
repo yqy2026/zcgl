@@ -246,9 +246,10 @@ class TestGetAllAssets:
             MagicMock(id="id1", asset_name="Property 1"),
             MagicMock(id="id2", asset_name="Property 2"),
         ]
-        mock_model_validate.side_effect = (
-            lambda asset: {"id": asset.id, "asset_name": asset.asset_name}
-        )
+        mock_model_validate.side_effect = lambda asset: {
+            "id": asset.id,
+            "asset_name": asset.asset_name,
+        }
         mock_service_instance = MagicMock()
         mock_service_instance.get_assets = AsyncMock(return_value=(mock_assets, 2))
         mock_asset_service.return_value = mock_service_instance
@@ -290,9 +291,10 @@ class TestGetAssetsByIds:
             MagicMock(id="id2", asset_name="Property 2"),
             MagicMock(id="id3", asset_name="Property 3"),
         ]
-        mock_model_validate.side_effect = (
-            lambda asset: {"id": asset.id, "asset_name": asset.asset_name}
-        )
+        mock_model_validate.side_effect = lambda asset: {
+            "id": asset.id,
+            "asset_name": asset.asset_name,
+        }
 
         mock_service_instance = MagicMock()
         mock_service_instance.get_assets_by_ids = AsyncMock(return_value=mock_assets)
@@ -317,9 +319,10 @@ class TestGetAssetsByIds:
         mock_assets = [
             MagicMock(id="id1", asset_name="Property 1"),
         ]
-        mock_model_validate.side_effect = (
-            lambda asset: {"id": asset.id, "asset_name": asset.asset_name}
-        )
+        mock_model_validate.side_effect = lambda asset: {
+            "id": asset.id,
+            "asset_name": asset.asset_name,
+        }
 
         mock_service_instance = MagicMock()
         mock_service_instance.get_assets_by_ids = AsyncMock(return_value=mock_assets)
@@ -405,6 +408,22 @@ class TestBatchOperationsUnauthorized:
         delete_request = {"asset_ids": ["id1"]}
         response = unauthenticated_client.post(
             "/api/v1/assets/batch-delete", json=delete_request
+        )
+        assert response.status_code == 401
+
+    def test_batch_submit_review_unauthorized(self, unauthenticated_client):
+        """Test that unauthorized users cannot batch submit review"""
+        response = unauthenticated_client.post(
+            "/api/v1/assets/batch-submit-review",
+            json={"asset_ids": ["id1"]},
+        )
+        assert response.status_code == 401
+
+    def test_batch_approve_review_unauthorized(self, unauthenticated_client):
+        """Test that unauthorized users cannot batch approve review"""
+        response = unauthenticated_client.post(
+            "/api/v1/assets/batch-approve-review",
+            json={"asset_ids": ["id1"]},
         )
         assert response.status_code == 401
 

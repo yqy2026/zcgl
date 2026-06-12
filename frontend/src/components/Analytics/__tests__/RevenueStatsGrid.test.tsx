@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+﻿import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { RevenueStatsGrid } from '../AnalyticsStatsCard';
 
@@ -16,7 +16,7 @@ describe('RevenueStatsGrid (ANA-001)', () => {
     collection_rate: 85,
     customer_entity_count: 12,
     customer_contract_count: 18,
-    metrics_version: 'req-ana-001-v1',
+    metrics_version: 'req-ana-001-v2',
   };
 
   it('should render all 7 ANA-001 stat cards', () => {
@@ -34,7 +34,7 @@ describe('RevenueStatsGrid (ANA-001)', () => {
   it('should display metrics_version tag', () => {
     render(<RevenueStatsGrid data={baseData} />);
 
-    expect(screen.getByText('口径版本: req-ana-001-v1')).toBeInTheDocument();
+    expect(screen.getByText('口径版本: req-ana-001-v2')).toBeInTheDocument();
   });
 
   it('should hide metrics_version tag when empty', () => {
@@ -59,7 +59,7 @@ describe('RevenueStatsGrid (ANA-001)', () => {
       collection_rate: null,
       customer_entity_count: 0,
       customer_contract_count: 0,
-      metrics_version: 'req-ana-001-v1',
+      metrics_version: 'req-ana-001-v2',
     };
     render(<RevenueStatsGrid data={zeroData} />);
 
@@ -82,28 +82,36 @@ describe('RevenueStatsGrid (ANA-001)', () => {
     expect(screen.getByText('--')).toBeInTheDocument();
   });
 
-  it('should render customer breakdown rows when provided', () => {
+  it('should render customer and counterparty breakdown rows when provided', () => {
     render(
       <RevenueStatsGrid
         data={{
           ...baseData,
           customer_entity_breakdown: {
-            upstream_lease: 1,
             downstream_sublease: 2,
-            entrusted_operation: 3,
+            direct_lease: 3,
           },
           customer_contract_breakdown: {
-            upstream_lease: 2,
             downstream_sublease: 4,
-            entrusted_operation: 6,
+            direct_lease: 6,
+          },
+          counterparty_entity_breakdown: {
+            upstream_lease: 1,
+            entrusted_operation: 5,
+          },
+          counterparty_contract_breakdown: {
+            upstream_lease: 2,
+            entrusted_operation: 7,
           },
         }}
       />
     );
 
     expect(screen.getByText('客户统计拆分')).toBeInTheDocument();
-    expect(screen.getByText('主体 1 个 / 合同 2 份')).toBeInTheDocument();
+    expect(screen.getByText('对手方统计拆分')).toBeInTheDocument();
     expect(screen.getByText('主体 2 个 / 合同 4 份')).toBeInTheDocument();
     expect(screen.getByText('主体 3 个 / 合同 6 份')).toBeInTheDocument();
+    expect(screen.getByText('主体 1 个 / 合同 2 份')).toBeInTheDocument();
+    expect(screen.getByText('主体 5 个 / 合同 7 份')).toBeInTheDocument();
   });
 });

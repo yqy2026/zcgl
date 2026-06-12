@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+﻿import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { analyticsExportService } from '../analyticsExportService';
 import type { AnalyticsExportData } from '../analyticsExportService';
 
@@ -32,7 +32,7 @@ const makeExportData = (
     agency_service_income: 60000,
     customer_entity_count: 15,
     customer_contract_count: 22,
-    metrics_version: 'req-ana-001-v1',
+    metrics_version: 'req-ana-001-v2',
     ...overrides,
   },
   property_nature_distribution: [],
@@ -77,7 +77,7 @@ describe('analyticsExportService ANA-001 fields', () => {
       const summaryRows = aoaCalls[0][0] as unknown[][];
 
       const versionRow = summaryRows.find(r => r[0] === '口径版本');
-      expect(versionRow?.[1]).toBe('req-ana-001-v1');
+      expect(versionRow?.[1]).toBe('req-ana-001-v2');
     });
   });
 
@@ -113,7 +113,7 @@ describe('analyticsExportService ANA-001 fields', () => {
       expect(blobContent).toContain('客户主体数');
       expect(blobContent).toContain('客户合同数');
       expect(blobContent).toContain('口径版本');
-      expect(blobContent).toContain('req-ana-001-v1');
+      expect(blobContent).toContain('req-ana-001-v2');
 
       globalThis.Blob = OrigBlob;
       createElementSpy.mockRestore();

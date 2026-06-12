@@ -527,7 +527,6 @@ class PropertyCertificateWhitelist(ModelFieldWhitelist):
         "certificate_number",
         "certificate_type",
         "extraction_source",
-        "is_verified",
         "registration_date",
         "property_type",
         "land_use_type",

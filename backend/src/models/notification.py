@@ -1,7 +1,7 @@
 """
 通知模型
 
-支持站内消息通知，用于合同到期提醒、付款逾期提醒、审批待办等场景
+支持站内消息通知，用于合同到期提醒、付款逾期提醒、系统通知等场景
 """
 
 import uuid
@@ -24,7 +24,6 @@ class NotificationType:
     CONTRACT_EXPIRED = "contract_expired"  # 合同已到期
     PAYMENT_OVERDUE = "payment_overdue"  # 付款逾期
     PAYMENT_DUE = "payment_due"  # 付款到期提醒
-    APPROVAL_PENDING = "approval_pending"  # 审批待办
     SYSTEM_NOTICE = "system_notice"  # 系统通知
 
 

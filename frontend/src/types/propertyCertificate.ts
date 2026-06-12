@@ -36,7 +36,6 @@ export interface PropertyCertificate {
   remarks: string | null;
   extraction_confidence: number | null;
   extraction_source: string;
-  is_verified: boolean;
   created_at: string;
   updated_at: string;
   owners: PropertyOwner[];
@@ -121,6 +120,5 @@ export interface PropertyCertificateUpdate {
   co_ownership?: string | null;
   restrictions?: string | null;
   remarks?: string | null;
-  is_verified?: boolean;
   asset_ids?: string[];
 }

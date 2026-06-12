@@ -180,4 +180,15 @@ describe('AppSidebar - 渲染与交互测试', () => {
     fireEvent.click(screen.getByText('工作台'));
     expect(navigateMock).toHaveBeenCalledWith('/dashboard');
   });
+
+  it('点击分组下列表项应导航到真实列表路由', async () => {
+    const AppSidebar = (await import('../AppSidebar')).default;
+    renderWithProviders(<AppSidebar collapsed={false} />);
+
+    fireEvent.click(screen.getByText('项目列表'));
+    expect(navigateMock).toHaveBeenCalledWith('/project');
+
+    fireEvent.click(screen.getByText('合同关系列表'));
+    expect(navigateMock).toHaveBeenCalledWith('/contract-center');
+  });
 });

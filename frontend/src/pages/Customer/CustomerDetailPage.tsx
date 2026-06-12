@@ -19,9 +19,8 @@ const SUBJECT_NATURE_LABELS: Record<string, string> = {
 };
 
 const CONTRACT_ROLE_LABELS: Record<string, string> = {
-  upstream_lease: '上游承租',
   downstream_sublease: '下游转租',
-  entrusted_operation: '委托运营',
+  direct_lease: '代理直租',
 };
 
 const REVENUE_MODE_LABELS: Record<string, string> = {

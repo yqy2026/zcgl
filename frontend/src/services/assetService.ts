@@ -42,6 +42,7 @@ import { assetFieldService } from './asset/assetFieldService';
 
 import type {
   Asset,
+  AssetBatchReviewResult,
   AssetReviewLog,
   AssetLeaseSummaryResponse,
   AssetSearchParams,
@@ -109,6 +110,14 @@ export class AssetService {
 
   async approveAssetReview(id: string): Promise<Asset> {
     return assetCoreService.approveAssetReview(id);
+  }
+
+  async batchSubmitAssetReviews(ids: string[]): Promise<AssetBatchReviewResult> {
+    return assetCoreService.batchSubmitAssetReviews(ids);
+  }
+
+  async batchApproveAssetReviews(ids: string[]): Promise<AssetBatchReviewResult> {
+    return assetCoreService.batchApproveAssetReviews(ids);
   }
 
   async rejectAssetReview(id: string, reason: string): Promise<Asset> {

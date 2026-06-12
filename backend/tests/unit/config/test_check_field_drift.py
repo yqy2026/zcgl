@@ -38,7 +38,10 @@ def test_compute_drifts_should_include_new_contract_related_entities() -> None:
 
     drifts_by_entity = {drift.entity: drift for drift in module.compute_drifts()}
 
-    assert drifts_by_entity["ContractGroup"].model_file == "contract_group.py::ContractGroup"
+    assert (
+        drifts_by_entity["ContractGroup"].model_file
+        == "contract_group.py::ContractGroup"
+    )
     assert (
         drifts_by_entity["LeaseContractDetail"].model_file
         == "contract_group.py::LeaseContractDetail"
@@ -47,7 +50,4 @@ def test_compute_drifts_should_include_new_contract_related_entities() -> None:
         drifts_by_entity["AgencyAgreementDetail"].model_file
         == "contract_group.py::AgencyAgreementDetail"
     )
-    assert (
-        drifts_by_entity["ContractRelation"].model_file
-        == "contract_group.py::ContractRelation"
-    )
+    assert "ContractRelation" not in drifts_by_entity

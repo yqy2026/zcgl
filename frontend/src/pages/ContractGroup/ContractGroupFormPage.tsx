@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Card, Input, Space, Spin, Tag, Typography } from 'antd';
+import { Alert, Button, Card, Input, Space, Spin, Typography } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { PageContainer } from '@/components/Common';
@@ -35,7 +35,6 @@ type EditableFormState = {
   revenue_attribution_rule_json: string;
   revenue_share_rule_json: string;
   risk_tags: string;
-  predecessor_group_id: string;
   asset_ids: string[];
 };
 
@@ -57,7 +56,6 @@ const EMPTY_FORM: EditableFormState = {
   revenue_attribution_rule_json: '',
   revenue_share_rule_json: '',
   risk_tags: '',
-  predecessor_group_id: '',
   asset_ids: [],
 };
 
@@ -171,13 +169,29 @@ const buildRevenueShareRule = (state: EditableFormState): Record<string, unknown
   return Object.keys(rule).length > 0 ? rule : undefined;
 };
 
-const buildSettlementRule = (state: EditableFormState): SettlementRule => ({
-  version: state.settlement_version.trim(),
-  cycle: state.settlement_cycle,
-  settlement_mode: state.settlement_mode.trim(),
-  amount_rule: buildAmountRule(state),
-  payment_rule: buildPaymentRule(state),
-});
+const hasSettlementInput = (state: EditableFormState): boolean =>
+  [
+    state.settlement_version,
+    state.settlement_mode,
+    state.amount_basis,
+    state.payment_due_day,
+    state.amount_rule_json,
+    state.payment_rule_json,
+  ].some(value => value.trim() !== '');
+
+const buildSettlementRule = (state: EditableFormState): SettlementRule | undefined => {
+  if (!hasSettlementInput(state)) {
+    return undefined;
+  }
+
+  return {
+    version: state.settlement_version.trim(),
+    cycle: state.settlement_cycle,
+    settlement_mode: state.settlement_mode.trim(),
+    amount_rule: buildAmountRule(state),
+    payment_rule: buildPaymentRule(state),
+  };
+};
 
 const mapDetailToFormState = (detail: ContractGroupDetail): EditableFormState => ({
   revenue_mode: detail.revenue_mode,
@@ -185,11 +199,11 @@ const mapDetailToFormState = (detail: ContractGroupDetail): EditableFormState =>
   owner_party_id: detail.owner_party_id,
   effective_from: detail.effective_from,
   effective_to: detail.effective_to ?? '',
-  settlement_version: detail.settlement_rule.version,
-  settlement_cycle: detail.settlement_rule.cycle,
-  settlement_mode: detail.settlement_rule.settlement_mode,
-  amount_basis: readRuleValue(detail.settlement_rule.amount_rule, 'basis'),
-  payment_due_day: readRuleValue(detail.settlement_rule.payment_rule, 'due_day'),
+  settlement_version: detail.settlement_rule?.version ?? '',
+  settlement_cycle: detail.settlement_rule?.cycle ?? EMPTY_FORM.settlement_cycle,
+  settlement_mode: detail.settlement_rule?.settlement_mode ?? '',
+  amount_basis: readRuleValue(detail.settlement_rule?.amount_rule ?? {}, 'basis'),
+  payment_due_day: readRuleValue(detail.settlement_rule?.payment_rule ?? {}, 'due_day'),
   revenue_attribution_scope:
     detail.revenue_attribution_rule != null
       ? readRuleValue(detail.revenue_attribution_rule, 'scope')
@@ -198,8 +212,12 @@ const mapDetailToFormState = (detail: ContractGroupDetail): EditableFormState =>
     detail.revenue_share_rule != null
       ? readRuleValue(detail.revenue_share_rule, 'operator_ratio_percent')
       : '',
-  amount_rule_json: JSON.stringify(detail.settlement_rule.amount_rule, null, 2),
-  payment_rule_json: JSON.stringify(detail.settlement_rule.payment_rule, null, 2),
+  amount_rule_json:
+    detail.settlement_rule != null ? JSON.stringify(detail.settlement_rule.amount_rule, null, 2) : '',
+  payment_rule_json:
+    detail.settlement_rule != null
+      ? JSON.stringify(detail.settlement_rule.payment_rule, null, 2)
+      : '',
   revenue_attribution_rule_json:
     detail.revenue_attribution_rule != null
       ? JSON.stringify(detail.revenue_attribution_rule, null, 2)
@@ -207,7 +225,6 @@ const mapDetailToFormState = (detail: ContractGroupDetail): EditableFormState =>
   revenue_share_rule_json:
     detail.revenue_share_rule != null ? JSON.stringify(detail.revenue_share_rule, null, 2) : '',
   risk_tags: detail.risk_tags?.join(', ') ?? '',
-  predecessor_group_id: detail.predecessor_group_id ?? '',
   asset_ids: [],
 });
 
@@ -215,6 +232,7 @@ const buildCreatePayload = (state: EditableFormState, projectId: string): Contra
   const revenueAttributionRule = buildRevenueAttributionRule(state);
   const revenueShareRule = buildRevenueShareRule(state);
   const riskTags = parseRiskTags(state.risk_tags);
+  const settlementRule = buildSettlementRule(state);
 
   return {
     project_id: projectId,
@@ -223,24 +241,25 @@ const buildCreatePayload = (state: EditableFormState, projectId: string): Contra
     owner_party_id: state.owner_party_id.trim(),
     effective_from: state.effective_from.trim(),
     ...(state.effective_to.trim() !== '' ? { effective_to: state.effective_to.trim() } : {}),
-    settlement_rule: buildSettlementRule(state),
+    ...(settlementRule != null ? { settlement_rule: settlementRule } : {}),
     ...(revenueAttributionRule != null ? { revenue_attribution_rule: revenueAttributionRule } : {}),
     ...(revenueShareRule != null ? { revenue_share_rule: revenueShareRule } : {}),
     ...(riskTags != null ? { risk_tags: riskTags } : {}),
-    ...(state.predecessor_group_id.trim() !== ''
-      ? { predecessor_group_id: state.predecessor_group_id.trim() }
-      : {}),
     asset_ids: state.asset_ids,
   };
 };
 
-const buildUpdatePayload = (state: EditableFormState): ContractGroupUpdate => ({
-  effective_to: state.effective_to.trim() !== '' ? state.effective_to.trim() : null,
-  settlement_rule: buildSettlementRule(state),
-  revenue_attribution_rule: buildRevenueAttributionRule(state) ?? null,
-  revenue_share_rule: buildRevenueShareRule(state) ?? null,
-  risk_tags: parseRiskTags(state.risk_tags) ?? null,
-});
+const buildUpdatePayload = (state: EditableFormState): ContractGroupUpdate => {
+  const settlementRule = buildSettlementRule(state);
+
+  return {
+    effective_to: state.effective_to.trim() !== '' ? state.effective_to.trim() : null,
+    settlement_rule: settlementRule ?? null,
+    revenue_attribution_rule: buildRevenueAttributionRule(state) ?? null,
+    revenue_share_rule: buildRevenueShareRule(state) ?? null,
+    risk_tags: parseRiskTags(state.risk_tags) ?? null,
+  };
+};
 
 const LabeledInput: React.FC<{
   label: string;
@@ -562,11 +581,6 @@ const ContractGroupFormPage: React.FC = () => {
                 />
                 {!isEditMode && (
                   <>
-                    <LabeledInput
-                      label="前序合同关系 ID"
-                      value={formState.predecessor_group_id}
-                      onChange={value => updateField('predecessor_group_id', value)}
-                    />
                     {projectAssetsError != null && (
                       <Alert
                         type="error"
@@ -659,12 +673,6 @@ const ContractGroupFormPage: React.FC = () => {
                   value={formState.risk_tags}
                   onChange={value => updateField('risk_tags', value)}
                 />
-                {isEditMode &&
-                  data != null &&
-                  data.predecessor_group_id != null &&
-                  data.predecessor_group_id !== '' && (
-                    <Tag>前序合同关系：{data.predecessor_group_id}</Tag>
-                  )}
               </Space>
             </Card>
 

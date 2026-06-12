@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, renderWithProviders, screen, waitFor } from '@/test/utils/test-helpers';
+import { fireEvent, renderWithProviders, screen, waitFor, within } from '@/test/utils/test-helpers';
 import FinancialLedgerPage from '../FinancialLedgerPage';
 
 vi.mock('@/services/ledgerService', () => ({
   ledgerService: {
     getLedgerEntries: vi.fn(),
     exportLedgerEntries: vi.fn(),
+    updateContractLedgerStatus: vi.fn(),
     triggerLedgerDownload: vi.fn(),
   },
 }));
@@ -67,13 +68,28 @@ describe('FinancialLedgerPage', () => {
       limit: 20,
     });
     vi.mocked(ledgerService.exportLedgerEntries).mockResolvedValue(new Blob(['ledger']));
+    vi.mocked(ledgerService.updateContractLedgerStatus).mockResolvedValue([
+      {
+        entry_id: 'ledger-1',
+        contract_id: 'contract-1',
+        year_month: '2026-05',
+        due_date: '2026-05-15',
+        amount_due: '12000.00',
+        currency_code: 'CNY',
+        is_tax_included: true,
+        payment_status: 'paid',
+        paid_amount: '12000.00',
+      },
+    ]);
   });
 
   it('renders global financial ledger entries with business labels', async () => {
     renderWithProviders(<FinancialLedgerPage />);
 
     expect(await screen.findByText('财务台账')).toBeInTheDocument();
-    expect(screen.getByText('跨项目查询合同应收、应付、实收、实付和逾期记录。')).toBeInTheDocument();
+    expect(
+      screen.getByText('跨项目查询合同应收、应付、实收、实付和逾期记录。')
+    ).toBeInTheDocument();
 
     await waitFor(() => {
       expect(ledgerService.getLedgerEntries).toHaveBeenCalledWith(
@@ -102,7 +118,9 @@ describe('FinancialLedgerPage', () => {
     expect(clearPeriodButton).not.toBeNull();
     fireEvent.click(clearPeriodButton!);
 
-    expect(await screen.findByText('请至少选择账期、合同、资产或主体后查询财务台账。')).toBeInTheDocument();
+    expect(
+      await screen.findByText('请至少选择账期、合同、资产或主体后查询财务台账。')
+    ).toBeInTheDocument();
     expect(ledgerService.getLedgerEntries).toHaveBeenCalledTimes(1);
     expect(screen.getByRole('button', { name: /刷\s*新/ })).toBeDisabled();
     expect(screen.getByRole('button', { name: /导\s*出/ })).toBeDisabled();
@@ -121,5 +139,24 @@ describe('FinancialLedgerPage', () => {
 
     expect(await screen.findByText('导出接口失败')).toBeInTheDocument();
     expect(ledgerService.triggerLedgerDownload).not.toHaveBeenCalled();
+  });
+
+  it('registers received amounts for selected ledger entries', async () => {
+    renderWithProviders(<FinancialLedgerPage />);
+
+    expect(await screen.findByText('contract-1')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('radio'));
+    fireEvent.click(screen.getByRole('button', { name: /实收登记/ }));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: /登\s*记/ }));
+
+    await waitFor(() => {
+      expect(ledgerService.updateContractLedgerStatus).toHaveBeenCalledWith('contract-1', {
+        entry_ids: ['ledger-1'],
+        payment_status: 'paid',
+        paid_amount: 12000,
+        notes: undefined,
+      });
+    });
   });
 });

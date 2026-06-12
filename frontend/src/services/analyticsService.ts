@@ -28,6 +28,8 @@ interface RawApiData {
   customer_contract_count?: number;
   customer_entity_breakdown?: Record<string, number>;
   customer_contract_breakdown?: Record<string, number>;
+  counterparty_entity_breakdown?: Record<string, number>;
+  counterparty_contract_breakdown?: Record<string, number>;
   project_breakdown?: unknown[];
   mode_breakdown?: unknown[];
   metrics_version?: string;
@@ -344,6 +346,14 @@ export class AnalyticsService {
       customer_contract_breakdown:
         apiData.customer_contract_breakdown != null
           ? apiData.customer_contract_breakdown
+          : undefined,
+      counterparty_entity_breakdown:
+        apiData.counterparty_entity_breakdown != null
+          ? apiData.counterparty_entity_breakdown
+          : undefined,
+      counterparty_contract_breakdown:
+        apiData.counterparty_contract_breakdown != null
+          ? apiData.counterparty_contract_breakdown
           : undefined,
       project_breakdown,
       mode_breakdown,

@@ -13,13 +13,14 @@
 | 主键 | 业务对象主键统一使用字符串 ID |
 | 时间字段 | `created_at`、`updated_at` 由系统写入 |
 | 审核字段 | 需要审核的对象统一包含 `review_status`、`review_by`、`reviewed_at`、`review_reason` |
-| 关键记录删除 | 合同组、合同、台账等关键记录禁止物理删除，只允许逻辑删除、作废、冲销或重建 |
+| 关键记录删除 | 合同组、合同、台账等关键记录禁止物理删除，只允许逻辑删除、作废或重建；MVP 不提供红字冲销机制 |
 | 派生字段 | 出租率、汇总金额、计数等派生字段不允许人工直接写入 |
 | 编码规则 | `asset_code` 按产权方编码段生成，`project_code` 按运营方编码段生成，`group_code` 按经营主责方编码段生成 |
 | 编码格式 | `<TYPE>-<SEGMENT>-<SERIAL>`，`SERIAL` 为 6 位数字并按 `TYPE + SEGMENT` 单调递增 |
 | 项目主轴 | 项目是普通用户理解资产、合同、台账、客户和风险关系的主业务单元 |
 | 合同关系展示层 | “合同关系”是面向用户的展示投影，由 `ContractGroup` 派生，不新增持久化对象 |
 | 资产项目归属 | 资产通过有效期关系归属项目，同一资产同一时点只能有一个当前有效项目 |
+| 并发控制 | MVP 乐观锁只在 `Asset` 启用；台账等批量写路径依靠幂等约束，`ContractGroup` / `Contract` 不保留未接入 ORM `version_id_col` 的误导性 `version` 列 |
 
 ## 3. 核心对象
 
@@ -34,14 +35,13 @@
 | LeaseContractDetail | 租赁类合同明细 |
 | AgencyAgreementDetail | 代理协议明细 |
 | ContractRentTerm | 分阶段租金条款 |
-| ContractRelation | 上下游或代理合同关系 |
 | ContractLedgerEntry | 租金台账条目 |
 | ServiceFeeLedger | 代理服务费台账 |
 | ContractAuditLog | 合同操作审计日志 |
 | CustomerProfile | 客户视图档案，由 Party 和合同历史投影形成 |
-| ApprovalInstance | 审批实例 |
-| ApprovalTaskSnapshot | 审批待办快照 |
-| ApprovalActionLog | 审批动作日志 |
+| PropertyCertificate | 资产产权证照记录，作为资产详情内能力维护 |
+| CertificatePartyRelation | 产权证与 Party 权利人的关系 |
+| ScanExtractionSession | 合同或产权证扫描件解析辅助补录的临时会话 |
 
 ## 4. 字段契约
 
@@ -67,8 +67,8 @@
 | `owner_party_id` | string | 是 | 当前有效主产权主体，同一时点只允许一个 |
 | `manager_party_id` | string | 是 | 运营管理主体 |
 | `data_status` | enum | 是 | 正常、已删除 |
-| `review_status` | enum | 是 | `draft`、`pending`、`approved`、`reversed` |
-| `review_by` | string | 否 | 审核人 |
+| `review_status` | enum | 是 | `draft`、`pending`、`approved`、`reversed`；两步生命周期为制单人提交 `draft → pending`、确认 `pending → approved`；确认仅按复核权限门控，不限制审核人 ≠ 提交人，并支持批量提交与批量确认 |
+| `review_by` | string | 否 | 确认人；不要求与提交人不同 |
 | `reviewed_at` | datetime | 否 | 审核时间 |
 | `review_reason` | string | 否 | 审核原因，反审核时必填 |
 
@@ -110,10 +110,10 @@
 | `effective_to` | date | 否 | 生效结束日期，可由组内合同派生 |
 | `upstream_contract_ids` | string[] | 否 | 上游合同引用，派生 |
 | `downstream_contract_ids` | string[] | 否 | 下游合同引用，派生 |
-| `settlement_rule` | json | 是 | 最小键为 `version`、`cycle`、`settlement_mode`、`amount_rule`、`payment_rule` |
+| `settlement_rule` | json | 否 | 创建时选填、可缓填；缺失不阻断合同关系保存，也不参与台账生成。结构键为 `version`、`cycle`、`settlement_mode`、`amount_rule`、`payment_rule`，用于留存运营约定；台账仍以组内合同条款明细为数据源。详见 `docs/architecture/ADR-0004-settlement-rule-optional-at-creation.md` |
 | `revenue_attribution_rule` | json | 否 | 收入归集口径配置 |
 | `revenue_share_rule` | json | 否 | 分润规则配置，MVP 只结构化留存 |
-| `risk_tags` | string[] | 否 | 风险标签；项目风险摘要会叠加人工标签、30 天内合同到期提醒、付款逾期、资产/期间覆盖冲突和缺少有效上游/委托覆盖风险 |
+| `risk_tags` | string[] | 否 | 风险标签；项目风险摘要会叠加人工标签、30 天内合同到期提醒、付款逾期、产权证数据质量和空置风险；MVP 不再生成主合同覆盖类风险 |
 
 ### 4.4 ContractRelationProjection
 
@@ -130,8 +130,8 @@
 | `owner_party_id` | string | 是 | 产权方主体 |
 | `operator_party_id` | string | 是 | 运营方主体 |
 | `asset_ids` | string[] | 是 | 覆盖资产范围 |
-| `primary_contract_ids` | string[] | 否 | 上游承租合同或委托协议 |
-| `terminal_contract_ids` | string[] | 否 | 下游出租合同或直租合同 |
+| `primary_contract_ids` | string[] | 否 | 组内 `group_relation_type` 为上游/委托的合同，按方向派生；不再表达合同对合同配对 |
+| `terminal_contract_ids` | string[] | 否 | 组内 `group_relation_type` 为下游/直租的合同，按方向派生；不再做主合同覆盖判定 |
 | `contract_role_counts` | map | 否 | 按 `group_relation_type` 聚合的合同数量，用于合同中心展示业务角色 |
 | `derived_status` | enum | 否 | 筹备中、生效中、已结束，派生只读 |
 | `ledger_summary` | json | 否 | 收付款摘要，派生；承租模式下游租金和代理模式服务费计入项目应收，上游承租租金计入项目应付，代理直租租金不计入运营方自营应收 |
@@ -166,13 +166,15 @@
 | 字段 | 类型 | 必填 | 规则 |
 |---|---|---|---|
 | `risk_id` | string | 是 | 稳定风险标识，按来源对象、风险类型和消息派生 |
-| `risk_type` | enum | 是 | `manual_tag`、`missing_primary_contract`、`coverage_conflict`、`contract_expiring`、`payment_overdue`、`vacancy` |
+| `risk_type` | enum | 是 | `manual_tag`、`property_certificate_data_quality`、`contract_expiring`、`payment_overdue`、`vacancy`；MVP 已移除 `missing_primary_contract` / `coverage_conflict` 主合同覆盖类风险 |
 | `severity` | enum | 是 | `info`、`warning`、`high`、`critical`、`error` |
 | `message` | string | 是 | 面向业务用户的风险说明 |
-| `contract_relation_id` | string/null | 否 | 合同关系风险必须填写；资产空置风险为空 |
+| `contract_relation_id` | string/null | 否 | 合同关系风险必须填写；产权证数据质量风险和资产空置风险为空 |
 | `display_name` | string/null | 否 | 合同关系名称或资产名称 |
 
 空置风险口径：项目当前有效资产的 `rentable_area - rented_area > 0` 时生成 `vacancy` 风险，消息展示资产名称和空置面积；删除、异常或已失效项目资产关系不参与计算。
+
+产权证数据质量风险口径：项目当前有效资产关联的产权证存在证照信息不完整，或产权证权利人与关联资产当前主产权主体不一致时，可生成 `property_certificate_data_quality` 风险，严重级别固定为 `warning`。MVP 已删除 `is_verified` 核验状态与“未核验”风险；风险只能通过补齐证照信息或修正权利人/资产关联自然消除，不生成待办、任务或审批。
 
 ### 4.6 GlobalAnalytics
 
@@ -185,8 +187,12 @@
 | `agency_service_income` | decimal | 是 | 代理模式服务费收入；代理直租租金不计入运营方自营收入 |
 | `actual_receipts` | decimal | 是 | 承租模式下游租金实收 |
 | `collection_rate` | number/null | 是 | 租金收缴率，分母为 0 时返回 null |
-| `customer_entity_count` | number | 是 | 客户主体数，按 Party 去重 |
-| `customer_contract_count` | number | 是 | 客户合同数，按合同 ID 去重 |
+| `customer_entity_count` | number | 是 | 终端客户主体数，仅统计下游转租 / 代理直租 lessee，按 Party 去重；不包含上游产权方或委托对手方 |
+| `customer_contract_count` | number | 是 | 终端客户合同数，仅统计下游转租 / 代理直租合同，按合同 ID 去重 |
+| `customer_entity_breakdown` | map | 是 | 终端客户主体拆分，仅包含 `downstream_sublease`、`direct_lease` |
+| `customer_contract_breakdown` | map | 是 | 终端客户合同拆分，仅包含 `downstream_sublease`、`direct_lease` |
+| `counterparty_entity_breakdown` | map | 是 | 非客户对手方主体拆分，包含 `upstream_lease`、`entrusted_operation`，不得并入客户口径 |
+| `counterparty_contract_breakdown` | map | 是 | 非客户对手方合同拆分，包含 `upstream_lease`、`entrusted_operation`，不得并入客户口径 |
 | `project_breakdown` | array | 是 | 按项目分区；每项包含项目 ID、项目名称、合同关系数、合同数、承租关系数、代理关系数、收入拆分、实收、客户主体数和客户合同数 |
 | `mode_breakdown` | array | 是 | 按 `lease_sublease` / `agency_operation` 分区；每项包含合同关系数、合同数、收入拆分、实收、客户主体数和客户合同数 |
 | `metrics_version` | string | 是 | 经营分析口径版本 |
@@ -201,6 +207,7 @@
 | `group_relation_type` | enum | 是 | 上游、下游、委托、直租 |
 | `lessor_party_id` | string | 是 | 出租方或委托方主体 |
 | `lessee_party_id` | string | 是 | 承租方或受托方主体 |
+| `correction_source_contract_id` | string | 否 | 纠错草稿显式来源合同；仅用于纠错溯源，不表达上下游、续签或主从配对 |
 | `asset_ids` | string[] | 否 | 关联资产，为所属合同关系覆盖资产子集 |
 | `sign_date` | date | 否 | 签订日期，进入待审或生效前必填 |
 | `effective_from` | date | 是 | 生效开始日期 |
@@ -268,17 +275,9 @@
 | `fee_calculation_base` | enum | 是 | `actual_received` 或 `due_amount`，MVP 默认 `actual_received` |
 | `agency_scope` | text | 否 | 代理范围描述 |
 
-### 4.11 ContractRelation
+### 4.11 ContractRelation（MVP 已删除）
 
-| 字段 | 类型 | 必填 | 规则 |
-|---|---|---|---|
-| `relation_id` | string | 是 | 关系主键 |
-| `parent_contract_id` | string | 是 | 上级合同，即上游合同或委托协议 |
-| `child_contract_id` | string | 是 | 下级合同，即下游合同或直租合同 |
-| `relation_type` | enum | 是 | `upstream_downstream` 或 `agency_direct` |
-| `created_at` | datetime | 是 | 创建时间 |
-
-约束：MVP 不提供续签关系；同一 child 在同一关系类型下只能有一个 parent。
+合同上下游逐对配对表已删除。上下游、委托、直租只由每份合同的 `group_relation_type` 表达方向；收入、成本、服务费全部按方向计算，盈亏沿“合同 -> 资产 -> 项目”归属链汇总，不依赖合同对合同配对。`ContractRelationType.RENEWAL` 随表一并删除，对齐“MVP 不提供续签”。纠错草稿来源改用 `Contract.correction_source_contract_id` 显式字段，仅用于纠错溯源，不表达上下游、续签或主从配对。
 
 ### 4.12 CustomerProfile
 
@@ -309,8 +308,8 @@
 | `total_income` | number | 是 | 总收入合计，派生 |
 | `self_operated_rent_income` | number | 是 | 自营租金收入，派生 |
 | `agency_service_income` | number | 是 | 代理服务费收入，派生 |
-| `customer_entity_count` | number | 是 | 客户主体数，按客户主体去重 |
-| `customer_contract_count` | number | 是 | 客户合同数，按合同去重 |
+| `customer_entity_count` | number | 是 | 终端客户主体数，仅统计下游转租 / 代理直租 lessee，按 Party 去重 |
+| `customer_contract_count` | number | 是 | 终端客户合同数，仅统计下游转租 / 代理直租合同，按合同去重 |
 | `metrics_version` | string | 是 | 统计口径版本标识 |
 | `internal_rent_income` | number | 否 | 内部租赁收入，派生 |
 | `terminal_rent_income` | number | 否 | 终端租赁收入，派生 |
@@ -327,13 +326,13 @@
 | `currency_code` | string | 是 | MVP 固定 `CNY` |
 | `is_tax_included` | boolean | 是 | 是否含税，继承合同 |
 | `tax_rate` | decimal | 否 | 税率，继承合同 |
-| `payment_status` | enum | 是 | `unpaid`、`paid`、`overdue`、`partial`、`voided` |
+| `payment_status` | enum | 是 | `unpaid`、`paid`、`partial`、`voided`；“逾期”为派生口径，不是登记状态 |
 | `paid_amount` | decimal | 否 | 实收金额，>= 0，默认 0 |
 | `notes` | text | 否 | 备注 |
 | `created_at` | datetime | 是 | 创建时间 |
 | `updated_at` | datetime | 是 | 更新时间 |
 
-约束：`voided` 仅允许由系统流程写入；合同到期或终止后停止生成未来台账，历史台账只读。
+约束：`voided` 仅允许由系统流程写入；合同到期或终止后停止生成未来台账，历史台账只读。台账重算只调整未收条目；`paid` / `partial` 条目系统不自动改写或作废，自动跳过并标记需人工处理。逾期口径为 `due_date` 已过且 `paid_amount < amount_due` 且状态非 `voided`，统计、风险、筛选与通知统一按此派生，不依赖人工翻状态。
 
 ### 4.15 ServiceFeeLedger
 
@@ -372,49 +371,9 @@
 
 约束：审计日志只允许新增，不允许修改或删除。
 
-### 4.17 Approval
+### 4.17 Approval（MVP 已删除）
 
-#### ApprovalInstance
-
-| 字段 | 类型 | 必填 | 规则 |
-|---|---|---|---|
-| `approval_instance_id` | string | 是 | 审批实例主键 |
-| `approval_no` | string | 是 | 审批单号，全局唯一 |
-| `business_type` | enum | 是 | 第一阶段固定为 `asset` |
-| `business_id` | string | 是 | 业务对象主键 |
-| `status` | enum | 是 | `pending`、`approved`、`rejected`、`withdrawn` |
-| `starter_id` | string | 是 | 发起人用户 ID |
-| `assignee_user_id` | string | 是 | 当前处理人用户 ID |
-| `current_task_id` | string | 否 | 当前待办快照 ID |
-| `started_at` | datetime | 是 | 发起时间 |
-| `ended_at` | datetime | 否 | 结束时间 |
-
-#### ApprovalTaskSnapshot
-
-| 字段 | 类型 | 必填 | 规则 |
-|---|---|---|---|
-| `approval_task_id` | string | 是 | 待办快照主键 |
-| `approval_instance_id` | string | 是 | 审批实例主键 |
-| `business_type` | enum | 是 | 第一阶段固定为 `asset` |
-| `business_id` | string | 是 | 业务对象主键 |
-| `task_name` | string | 是 | 第一阶段默认“资产审批” |
-| `assignee_user_id` | string | 是 | 处理人用户 ID |
-| `status` | enum | 是 | `pending`、`completed`、`cancelled` |
-| `created_at` | datetime | 是 | 创建时间 |
-| `completed_at` | datetime | 否 | 完成时间 |
-
-#### ApprovalActionLog
-
-| 字段 | 类型 | 必填 | 规则 |
-|---|---|---|---|
-| `approval_action_log_id` | string | 是 | 动作日志主键 |
-| `approval_instance_id` | string | 是 | 审批实例主键 |
-| `approval_task_id` | string | 否 | 待办快照主键 |
-| `action` | enum | 是 | `start`、`approve`、`reject`、`withdraw` |
-| `operator_id` | string | 是 | 操作人用户 ID |
-| `comment` | string | 否 | 审批意见或撤回原因 |
-| `context` | json | 否 | 附加上下文 |
-| `created_at` | datetime | 是 | 创建时间 |
+`ApprovalInstance`、`ApprovalTaskSnapshot`、`ApprovalActionLog` 已从 MVP 目标态删除。资产不走路由审批流，仅保留 `Asset.review_status` 两步确认；通用 BPM 审批流引擎属于 Out of Scope。
 
 ### 4.18 Party
 
@@ -439,7 +398,7 @@
 | `id` | string | 是 | 主体联系人主键 |
 | `party_id` | string | 是 | 所属主体 ID |
 | `contact_name` | string | 是 | 联系人姓名 |
-| `contact_phone` | string | 否 | 联系电话 |
+| `contact_phone` | string | 否 | 联系电话，PII 字段，写入时确定性加密，读取时解密；生产环境必须配置 `REQUIRE_ENCRYPTION=true` |
 | `contact_email` | string | 否 | 联系邮箱 |
 | `position` | string | 否 | 职位 |
 | `is_primary` | boolean | 是 | 是否主联系人；同一主体最多一个主联系人 |
@@ -476,20 +435,14 @@
 | Party | `draft`、`pending`、`approved`、`reversed` |
 | Contract | 草稿、待审、已审、反审核 |
 
-### 5.4 Approval 状态
+### 5.4 Approval 状态（MVP 已删除）
 
-| 对象 | 状态 |
-|---|---|
-| ApprovalInstance | `pending`、`approved`、`rejected`、`withdrawn` |
-| ApprovalTaskSnapshot | `pending`、`completed`、`cancelled` |
-| ApprovalActionLog.action | `start`、`approve`、`reject`、`withdraw` |
+审批实例、审批待办和审批动作日志不属于当前目标态。
 
 ## 6. 统计口径
 
 | 指标 | 公式或规则 |
 |---|---|
-| 台账自动生成覆盖率 | 系统自动生成成功条目数 / 应生成条目总数 * 100% |
-| 台账覆盖率分母 | 生命周期为生效、已到期、已终止且审核通过的合同 |
 | 租金收缴率 | 当月实收金额 / 当月应收金额 * 100% |
 | 租金收缴率分母 | 当月非作废租金台账 `amount_due` 之和，不含服务费台账 |
 | 租金收缴率分子 | 当月非作废租金台账 `paid_amount` 之和 |
@@ -499,13 +452,15 @@
 | 项目经营模式分布 | 项目下合同关系按 `revenue_mode` 分组计数和汇总 |
 | 全局项目分区 | 全局经营分析按 `ContractGroup.project_id` 聚合合同关系、合同、收入拆分、实收和客户指标 |
 | 全局模式分区 | 全局经营分析按 `lease_sublease` / `agency_operation` 聚合合同关系、合同、收入拆分、实收和客户指标 |
-| 客户主体数 | 按客户主体 ID 去重 |
-| 客户合同数 | 按合同 ID 去重 |
+| 客户主体数 | 仅统计下游转租 / 代理直租终端 lessee，按 Party 去重；`customer_type` 只是展示标签，不参与经营指标过滤 |
+| 客户合同数 | 仅统计下游转租 / 代理直租合同，按合同 ID 去重 |
+| 逾期金额 | `due_date` 已过且 `paid_amount < amount_due` 且状态非 `voided` 的应收侧条目金额 |
 | 多资产合同金额 | 合同级口径，不按资产分摊；汇总时按合同去重 |
 
 ## 7. Out of Scope 对象
 
 | 对象 | 说明 |
 |---|---|
-| PropertyCertificate | 产权证管理不纳入 MVP 需求基线；当前保留代码骨架，路由、菜单和搜索可见面冻结 |
 | Ownership | 权属方管理不纳入 MVP 需求基线；当前保留代码骨架，路由和菜单可见面冻结 |
+| 通用 BPM 审批流引擎 | MVP 不建设通用流程引擎；资产审批路由流已删除 |
+| 催缴管理 | MVP 不建催缴工单、催缴状态机或催缴成功率统计；逾期处理依靠台账逾期查询和台账实收登记闭环 |

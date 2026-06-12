@@ -209,7 +209,7 @@ describe('AnalyticsService', () => {
       });
     });
 
-    it('保留客户统计拆分字段', async () => {
+    it('保留客户与对手方统计拆分字段', async () => {
       vi.mocked(apiClient.get).mockResolvedValue({
         success: true,
         data: {
@@ -220,14 +220,20 @@ describe('AnalyticsService', () => {
           actual_receipts: '12345.67',
           collection_rate: null,
           customer_entity_breakdown: {
-            upstream_lease: 1,
             downstream_sublease: 2,
-            entrusted_operation: 3,
+            direct_lease: 3,
           },
           customer_contract_breakdown: {
-            upstream_lease: 2,
             downstream_sublease: 4,
-            entrusted_operation: 6,
+            direct_lease: 6,
+          },
+          counterparty_entity_breakdown: {
+            upstream_lease: 1,
+            entrusted_operation: 5,
+          },
+          counterparty_contract_breakdown: {
+            upstream_lease: 2,
+            entrusted_operation: 7,
           },
         },
       });
@@ -235,16 +241,22 @@ describe('AnalyticsService', () => {
       const result = await service.getComprehensiveAnalytics();
 
       expect(result.data?.customer_entity_breakdown).toEqual({
-        upstream_lease: 1,
         downstream_sublease: 2,
-        entrusted_operation: 3,
+        direct_lease: 3,
       });
       expect(result.data?.actual_receipts).toBe(12345.67);
       expect(result.data?.collection_rate).toBeNull();
       expect(result.data?.customer_contract_breakdown).toEqual({
-        upstream_lease: 2,
         downstream_sublease: 4,
-        entrusted_operation: 6,
+        direct_lease: 6,
+      });
+      expect(result.data?.counterparty_entity_breakdown).toEqual({
+        upstream_lease: 1,
+        entrusted_operation: 5,
+      });
+      expect(result.data?.counterparty_contract_breakdown).toEqual({
+        upstream_lease: 2,
+        entrusted_operation: 7,
       });
     });
 

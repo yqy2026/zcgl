@@ -74,7 +74,6 @@ describe('ContractGroupFormPage', () => {
         payment_rule: { due_day: 15 },
       },
       current_contract_id: null,
-      predecessor_group_id: null,
       sequence_no: 1,
       is_supplemental: false,
       lifecycle_status: 'DRAFT',
@@ -200,7 +199,7 @@ describe('ContractGroupFormPage', () => {
     expect(await screen.findByText('资产A')).toBeInTheDocument();
     expect(screen.getByText('资产B')).toBeInTheDocument();
     expect(projectService.getProjectAssets).toHaveBeenCalledWith('project-1');
-    expect(screen.getByText('前序合同关系 ID')).toBeInTheDocument();
+    expect(screen.queryByText('前序合同关系 ID')).not.toBeInTheDocument();
     expect(screen.queryByText('新建合同组')).not.toBeInTheDocument();
     expect(screen.queryByText('前驱合同组 ID')).not.toBeInTheDocument();
     expect(screen.queryByText('运营方主体 ID')).not.toBeInTheDocument();

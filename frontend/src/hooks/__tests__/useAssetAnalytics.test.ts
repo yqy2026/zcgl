@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+﻿import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@/test/utils/test-helpers';
 import { useAssetAnalytics } from '../useAssetAnalytics';
 import { analyticsService } from '@/services/analyticsService';
@@ -216,7 +216,7 @@ describe('useAssetAnalytics', () => {
         agency_service_income: 30000,
         customer_entity_count: 8,
         customer_contract_count: 12,
-        metrics_version: 'req-ana-001-v1',
+        metrics_version: 'req-ana-001-v2',
         property_nature_distribution: [],
         ownership_status_distribution: [],
         usage_status_distribution: [],
@@ -238,7 +238,7 @@ describe('useAssetAnalytics', () => {
     expect(result.current.analyticsData?.agency_service_income).toBe(30000);
     expect(result.current.analyticsData?.customer_entity_count).toBe(8);
     expect(result.current.analyticsData?.customer_contract_count).toBe(12);
-    expect(result.current.analyticsData?.metrics_version).toBe('req-ana-001-v1');
+    expect(result.current.analyticsData?.metrics_version).toBe('req-ana-001-v2');
   });
 
   it('should delegate export to analyticsService backend flow', async () => {
@@ -252,7 +252,7 @@ describe('useAssetAnalytics', () => {
         agency_service_income: 30000,
         customer_entity_count: 8,
         customer_contract_count: 12,
-        metrics_version: 'req-ana-001-v1',
+        metrics_version: 'req-ana-001-v2',
         property_nature_distribution: [],
         ownership_status_distribution: [],
         usage_status_distribution: [],

@@ -87,7 +87,6 @@ export interface ContractDetail extends ContractGroupSummaryContract {
   review_reason?: string | null;
   contract_notes?: string | null;
   data_status: string;
-  version: number;
   created_at: string;
   updated_at: string;
   lease_detail?: LeaseDetailCreate | null;
@@ -112,12 +111,10 @@ export interface ContractGroupListItem {
 }
 
 export interface ContractGroupDetail extends ContractGroupListItem {
-  settlement_rule: SettlementRule;
+  settlement_rule?: SettlementRule | null;
   revenue_attribution_rule?: Record<string, unknown> | null;
   revenue_share_rule?: Record<string, unknown> | null;
   risk_tags?: string[] | null;
-  predecessor_group_id?: string | null;
-  version: number;
   upstream_contract_ids: string[];
   downstream_contract_ids: string[];
   contracts: ContractGroupSummaryContract[];
@@ -145,17 +142,16 @@ export interface ContractGroupCreate {
   owner_party_id: string;
   effective_from: string;
   effective_to?: string;
-  settlement_rule: SettlementRule;
+  settlement_rule?: SettlementRule | null;
   revenue_attribution_rule?: Record<string, unknown>;
   revenue_share_rule?: Record<string, unknown>;
   risk_tags?: string[];
-  predecessor_group_id?: string;
   asset_ids: string[];
 }
 
 export interface ContractGroupUpdate {
   effective_to?: string | null;
-  settlement_rule?: SettlementRule;
+  settlement_rule?: SettlementRule | null;
   revenue_attribution_rule?: Record<string, unknown> | null;
   revenue_share_rule?: Record<string, unknown> | null;
   risk_tags?: string[] | null;

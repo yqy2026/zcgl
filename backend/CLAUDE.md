@@ -126,12 +126,11 @@ route_registry.register_router(router, prefix="/api/v1", tags=["My Feature"], ve
 | `owner_phone` | 🟡 敏感 PII | AES-256-CBC (确定性) | 业主电话 |
 | `tenant_phone` | 🟡 敏感 PII | AES-256-CBC (确定性) | 租户电话 |
 
-#### Contact 模型
+#### PartyContact 模型
 
 | 字段 | 类型 | 加密方式 | 说明 |
 |------|------|----------|------|
-| `phone` | 🟡 敏感 PII | AES-256-CBC (确定性) | 手机号码 |
-| `office_phone` | 🟡 敏感 PII | AES-256-CBC (确定性) | 办公电话 |
+| `contact_phone` | 🟡 敏感 PII | AES-256-CBC (确定性) | 当前主路径联系人电话 |
 
 #### Asset 模型
 
@@ -139,9 +138,9 @@ route_registry.register_router(router, prefix="/api/v1", tags=["My Feature"], ve
 |------|------|----------|------|
 | `project_phone` | 🟡 敏感 PII | AES-256-CBC (确定性) | 项目电话 |
 
-**总计**: 11个敏感字段已启用加密
+**总计**: 10个敏感字段已启用加密
 - 🔴 高度敏感: 1个（身份证号）
-- 🟡 敏感: 10个（手机号）
+- 🟡 敏感: 9个（手机号、联系电话）
 
 ### 加密方式
 
@@ -152,7 +151,7 @@ route_registry.register_router(router, prefix="/api/v1", tags=["My Feature"], ve
 
 - **写入时加密**: 新创建和更新的记录自动加密 PII 字段
 - **读取时解密**: 从数据库读取时自动解密，对应用层透明
-- **现有数据**: 保持明文直到下次更新（encrypt-on-write 策略）
+- **现有数据**: `PartyContact.contact_phone` 由 Alembic 迁移 `20260611_encrypt_party_contact_phone.py` 一次性加密；其他历史字段按对应迁移或 encrypt-on-write 策略处理
 - **优雅降级**: 密钥缺失时禁用加密，数据以明文存储
 
 ### 配置

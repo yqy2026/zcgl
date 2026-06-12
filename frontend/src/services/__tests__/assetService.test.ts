@@ -724,4 +724,50 @@ describe('AssetCoreService', () => {
       );
     });
   });
+
+  describe('batch review actions', () => {
+    it('should submit selected assets for review in one request', async () => {
+      vi.mocked(apiClient.post).mockResolvedValue({
+        success: true,
+        data: {
+          success_count: 2,
+          failed_count: 0,
+          total_count: 2,
+          reviewed_assets: ['asset-1', 'asset-2'],
+          errors: [],
+        },
+      });
+
+      const result = await service.batchSubmitAssetReviews(['asset-1', 'asset-2']);
+
+      expect(apiClient.post).toHaveBeenCalledWith(
+        expect.stringContaining('/batch-submit-review'),
+        { asset_ids: ['asset-1', 'asset-2'] },
+        expect.objectContaining({ retry: false, smartExtract: true })
+      );
+      expect(result.success_count).toBe(2);
+    });
+
+    it('should approve selected assets for review in one request', async () => {
+      vi.mocked(apiClient.post).mockResolvedValue({
+        success: true,
+        data: {
+          success_count: 1,
+          failed_count: 1,
+          total_count: 2,
+          reviewed_assets: ['asset-1'],
+          errors: [{ id: 'asset-2', message: '状态不匹配' }],
+        },
+      });
+
+      const result = await service.batchApproveAssetReviews(['asset-1', 'asset-2']);
+
+      expect(apiClient.post).toHaveBeenCalledWith(
+        expect.stringContaining('/batch-approve-review'),
+        { asset_ids: ['asset-1', 'asset-2'] },
+        expect.objectContaining({ retry: false, smartExtract: true })
+      );
+      expect(result.failed_count).toBe(1);
+    });
+  });
 });

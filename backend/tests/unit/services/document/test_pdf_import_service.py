@@ -866,7 +866,6 @@ class TestConfirmImport:
         assert "Missing required fields" in result["error"]
         assert "revenue_mode" in result["error"]
         assert "operator_party_id" in result["error"]
-        assert "settlement_rule" in result["error"]
         mock_db.commit.assert_not_awaited()
 
     @pytest.mark.asyncio

@@ -32,11 +32,7 @@ from ...services.party_scope import resolve_user_party_filter
 
 logger = logging.getLogger(__name__)
 
-_CUSTOMER_BUCKET_LABELS: dict[str, str] = {
-    "upstream_lease": "upstream_lease",
-    "downstream_sublease": "downstream_sublease",
-    "entrusted_operation": "entrusted_operation",
-}
+_CONTACT_METADATA_FIELDS = {"contact_name", "contact_phone"}
 
 
 class PartyService:
@@ -637,9 +633,7 @@ class PartyService:
     async def get_contacts(
         self, db: AsyncSession, *, party_id: str
     ) -> list[PartyContact]:
-        stmt = select(PartyContact).where(PartyContact.party_id == party_id)
-        result = await db.execute(stmt)
-        return list(result.scalars().all())
+        return await self.party_crud.get_contacts(db, party_id=party_id)
 
     async def get_customer_profile(
         self,
@@ -698,12 +692,10 @@ class PartyService:
             "binding_type": binding_type,
             "contract_role": contract_role,
             "contact_name": self._normalize_optional_text(
-                metadata.get("contact_name")
-                or getattr(primary_contact, "contact_name", None)
+                getattr(primary_contact, "contact_name", None)
             ),
             "contact_phone": self._normalize_optional_text(
-                metadata.get("contact_phone")
-                or getattr(primary_contact, "contact_phone", None)
+                getattr(primary_contact, "contact_phone", None)
             ),
             "identifier_type": self._normalize_optional_text(
                 metadata.get("identifier_type")
@@ -1002,6 +994,13 @@ class PartyService:
     def _normalize_party_payload(payload: dict[str, Any]) -> dict[str, Any]:
         if "metadata" in payload:
             payload["metadata_json"] = payload.pop("metadata")
+        metadata = payload.get("metadata_json")
+        if isinstance(metadata, dict):
+            payload["metadata_json"] = {
+                key: value
+                for key, value in metadata.items()
+                if key not in _CONTACT_METADATA_FIELDS
+            }
         return payload
 
     @staticmethod
@@ -1033,6 +1032,7 @@ class PartyService:
     def _resolve_customer_party_id(
         cls, contract: Contract, binding_type: str
     ) -> str | None:
+        _ = binding_type
         relation_type = getattr(contract, "group_relation_type", None)
         relation_name = getattr(relation_type, "name", None)
         if relation_type is None:
@@ -1040,25 +1040,10 @@ class PartyService:
         normalized_relation_type = (
             str(relation_name) if relation_name is not None else str(relation_type)
         ).strip()
-        if normalized_relation_type == GroupRelationType.UPSTREAM.name:
-            party_value = (
-                getattr(contract, "lessee_party_id", None)
-                if binding_type == "owner"
-                else getattr(contract, "lessor_party_id", None)
-            )
-            return cls._normalize_optional_text(party_value)
-        if normalized_relation_type == GroupRelationType.DOWNSTREAM.name:
-            return cls._normalize_optional_text(
-                getattr(contract, "lessee_party_id", None)
-            )
-        if normalized_relation_type == GroupRelationType.ENTRUSTED.name:
-            party_value = (
-                getattr(contract, "lessee_party_id", None)
-                if binding_type == "owner"
-                else getattr(contract, "lessor_party_id", None)
-            )
-            return cls._normalize_optional_text(party_value)
-        if normalized_relation_type == GroupRelationType.DIRECT_LEASE.name:
+        if normalized_relation_type in {
+            GroupRelationType.DOWNSTREAM.name,
+            GroupRelationType.DIRECT_LEASE.name,
+        }:
             return cls._normalize_optional_text(
                 getattr(contract, "lessee_party_id", None)
             )
@@ -1077,6 +1062,8 @@ class PartyService:
             return "upstream_lease"
         if normalized_relation_type == GroupRelationType.DOWNSTREAM.name:
             return "downstream_sublease"
+        if normalized_relation_type == GroupRelationType.DIRECT_LEASE.name:
+            return "direct_lease"
         return "entrusted_operation"
 
     @classmethod

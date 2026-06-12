@@ -2,6 +2,16 @@
 
 ## [Unreleased] - 2026-03-06
 
+### 2026-06-12
+- refactor(mvp): 落地 MVP 减法工程 followup，删除通用 approval 路由审批域，资产仅保留 `review_status` 两步确认，并支持批量提交/确认且不限制确认人与提交人互斥。
+- refactor(contract): 删除 `ContractRelation` 逐对配对和续签残留，改用合同方向字段与 `correction_source_contract_id` 表达运行时关系和纠错来源，移除主合同覆盖类风险。
+- refactor(contract-group): 将 `settlement_rule` 放宽为创建时选填、可缓填，删除 `predecessor_group_id` 与未接入 ORM 乐观锁的合同/合同组 `version` 列。
+- refactor(analytics): 修正客户主体数、客户合同数和项目 tenant 去重口径，仅统计终端 lessee，并把上游/委托对手方拆为 counterparty 口径。
+- refactor(ledger): 删除台账覆盖率指标残留，明确实收登记以 `paid_amount` 为事实来源，逾期改为按到期日和实收金额派生。
+- refactor(property-certificate): 删除产权证 `is_verified` 核验状态、前端核验展示和未核验风险，仅保留客观数据质量风险口径。
+- security(party): `PartyContact.contact_phone` 接入确定性加密和存量迁移，清理 `Party.metadata_json` 中的联系人 PII 残留。
+- docs: 同步 PRD、领域模型、API 契约、追踪矩阵、ADR、架构索引、加密说明和 MVP 减法完成报告。
+
 ### 2026-06-03
 - docs(design): 新增 `docs/design/role-based-dashboard-redesign.md` 角色化工作台设计方案和 `docs/design/ui-mockups/2026-06-03-role-dashboard/` HTML 原型。覆盖领导/资产管理/招商/物业运维 4 类岗位的独立工作台布局、组件规划、数据依赖分析和分阶段实施计划；同步更新设计资产目录索引。
 - docs(issues): 收口 `2026-06-02-architecture-review.md` 源报告候选项第一轮状态。候选项 06 补齐源报告点名浅服务示例排查证据，候选项 07 明确活跃 System 页面 React Query 护栏与冻结 `PropertyCertificate` 可见面护栏均已完成；问题索引同步改为“第一轮收口完成”，后续新增浅服务或冻结模块治理需另行立案。

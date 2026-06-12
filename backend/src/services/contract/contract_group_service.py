@@ -34,7 +34,6 @@ from src.models.contract_group import (
     ContractDirection,
     ContractGroup,
     ContractLifecycleStatus,
-    ContractRelationType,
     ContractRentTerm,
     ContractReviewStatus,
     GroupRelationType,
@@ -432,13 +431,10 @@ class ContractGroupService:
         *,
         contract: Contract,
     ) -> Contract | None:
-        try:
-            source_contract = await contract_group_crud.get_renewal_parent_contract(
-                db,
-                contract_id=contract.contract_id,
-            )
-        except (AttributeError, TypeError):
+        source_contract_id = getattr(contract, "correction_source_contract_id", None)
+        if not isinstance(source_contract_id, str) or source_contract_id.strip() == "":
             return None
+        source_contract = await contract_crud.get(db, source_contract_id)
         source_contract_id = getattr(source_contract, "contract_id", None)
         if not isinstance(source_contract_id, str) or source_contract_id.strip() == "":
             return None
@@ -592,8 +588,8 @@ class ContractGroupService:
             "review_status": ContractReviewStatus.DRAFT.name,
             "contract_notes": source_contract.contract_notes,
             "source_session_id": source_contract.source_session_id,
+            "correction_source_contract_id": source_contract.contract_id,
             "data_status": "正常",
-            "version": 1,
             "created_at": now,
             "updated_at": now,
             "created_by": current_user,
@@ -698,17 +694,6 @@ class ContractGroupService:
                 commit=False,
             )
 
-        await contract_group_crud.create_contract_relation(
-            db,
-            data={
-                "relation_id": str(uuid.uuid4()),
-                "parent_contract_id": source_contract.contract_id,
-                "child_contract_id": cloned_contract.contract_id,
-                "relation_type": ContractRelationType.RENEWAL.name,
-                "created_at": _utcnow(),
-            },
-            commit=False,
-        )
         await self._append_audit_log(
             db,
             contract=source_contract,
@@ -797,13 +782,15 @@ class ContractGroupService:
             "owner_party_id": obj_in.owner_party_id,
             "effective_from": obj_in.effective_from,
             "effective_to": obj_in.effective_to,
-            "settlement_rule": obj_in.settlement_rule.model_dump(),
+            "settlement_rule": (
+                obj_in.settlement_rule.model_dump()
+                if obj_in.settlement_rule is not None
+                else None
+            ),
             "revenue_attribution_rule": obj_in.revenue_attribution_rule,
             "revenue_share_rule": obj_in.revenue_share_rule,
             "risk_tags": obj_in.risk_tags,
-            "predecessor_group_id": obj_in.predecessor_group_id,
             "data_status": "正常",
-            "version": 1,
             "created_at": now,
             "updated_at": now,
             "created_by": current_user,
@@ -829,9 +816,12 @@ class ContractGroupService:
         update_data: dict[str, Any] = {}
         set_fields = obj_in.model_fields_set
 
-        # settlement_rule 不允许清空（DB NOT NULL），其余可空字段跟随 model_fields_set
-        if "settlement_rule" in set_fields and obj_in.settlement_rule is not None:
-            update_data["settlement_rule"] = obj_in.settlement_rule.model_dump()
+        if "settlement_rule" in set_fields:
+            update_data["settlement_rule"] = (
+                obj_in.settlement_rule.model_dump()
+                if obj_in.settlement_rule is not None
+                else None
+            )
         if "effective_to" in set_fields:
             update_data["effective_to"] = obj_in.effective_to
         if "revenue_attribution_rule" in set_fields:
@@ -869,7 +859,7 @@ class ContractGroupService:
         获取合同组详情，包含：
           - 组内所有合同摘要
           - 派生状态（derived_status）
-          - upstream / downstream contract_ids（来自 ContractRelation）
+          - upstream / downstream contract_ids（按 group_relation_type 派生）
         """
         group = await contract_group_crud.get(db, group_id)
         if group is None:
@@ -1075,7 +1065,6 @@ class ContractGroupService:
             "contract_notes": obj_in.contract_notes,
             "source_session_id": obj_in.source_session_id,
             "data_status": "正常",
-            "version": 1,
             "created_at": now,
             "updated_at": now,
             "created_by": current_user,

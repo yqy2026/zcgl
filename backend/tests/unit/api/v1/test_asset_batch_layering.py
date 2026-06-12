@@ -35,6 +35,8 @@ def test_asset_batch_write_endpoints_should_use_require_authz() -> None:
     module_source = Path(asset_batch.__file__).read_text(encoding="utf-8")
     expected_patterns = [
         r"async def batch_update_assets[\s\S]*?require_authz\([\s\S]*?action=\"update\"[\s\S]*?resource_type=\"asset\"[\s\S]*?resource_context=_ASSET_BATCH_UPDATE_RESOURCE_CONTEXT",
+        r"async def batch_submit_asset_reviews[\s\S]*?require_authz\([\s\S]*?action=\"update\"[\s\S]*?resource_type=\"asset\"[\s\S]*?resource_context=_ASSET_BATCH_UPDATE_RESOURCE_CONTEXT",
+        r"async def batch_approve_asset_reviews[\s\S]*?require_authz\([\s\S]*?action=\"update\"[\s\S]*?resource_type=\"asset\"[\s\S]*?resource_context=_ASSET_BATCH_UPDATE_RESOURCE_CONTEXT",
         r"async def batch_update_custom_fields[\s\S]*?require_authz\([\s\S]*?action=\"update\"[\s\S]*?resource_type=\"asset\"[\s\S]*?resource_context=_ASSET_BATCH_UPDATE_RESOURCE_CONTEXT",
         r"async def batch_delete_assets[\s\S]*?require_authz\([\s\S]*?action=\"delete\"[\s\S]*?resource_type=\"asset\"[\s\S]*?resource_context=_ASSET_BATCH_DELETE_RESOURCE_CONTEXT",
     ]

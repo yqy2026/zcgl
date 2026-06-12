@@ -1,4 +1,4 @@
-"""
+﻿"""
 Excel导出服务单元测试
 
 测试 ExcelExportService 的资产数据导出功能
@@ -385,7 +385,7 @@ class TestExportAnalyticsToExcel:
             "agency_service_income": 200.0,
             "customer_entity_count": 2,
             "customer_contract_count": 3,
-            "metrics_version": "req-ana-001-v1",
+            "metrics_version": "req-ana-001-v2",
         }
         rows = AnalyticsExportService().build_export_rows(analytics_data)
 
@@ -398,7 +398,7 @@ class TestExportAnalyticsToExcel:
         assert values[0] == ("分组", "指标", "数值", "单位")
         assert ("总览", "总收入（经营口径）", "1200.00", "元") in values
         assert any(
-            row[0] == "总览" and row[1] == "口径版本" and row[2] == "req-ana-001-v1"
+            row[0] == "总览" and row[1] == "口径版本" and row[2] == "req-ana-001-v2"
             for row in values[1:]
         )
 

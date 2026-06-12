@@ -140,7 +140,7 @@
 | 端点 | 提供数据 | 适用于 |
 |------|---------|--------|
 | `GET /api/v1/analytics/comprehensive` | 综合经营数据：收入/收缴率/出租率/项目维度和模式维度拆分 | 领导、资产 |
-| `GET /api/v1/projects/{id}/risks` | 项目级风险：人工标签/合同到期/欠费逾期/空置/覆盖冲突 | 领导、资产 |
+| `GET /api/v1/projects/{id}/risks` | 项目级风险：人工标签/合同到期/欠费逾期/空置/产权证数据质量（MVP 已删覆盖类风险，见 ADR-0003） | 领导、资产 |
 | `GET /api/v1/projects/{id}/ledger-summary` | 项目应收/应付/实收/实付/逾期 | 领导、资产 |
 | `GET /api/v1/projects/{id}/tenants` | 项目租户/客户摘要 | 领导、资产 |
 | `GET /api/v1/contract-groups` | 合同关系列表（可做待办审核的来源） | 资产 |

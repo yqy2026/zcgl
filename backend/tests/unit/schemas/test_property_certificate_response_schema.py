@@ -47,7 +47,6 @@ def test_property_certificate_response_serializes_owner_list_from_attributes() -
         asset_ids=[],
         extraction_confidence=None,
         extraction_source="manual",
-        is_verified=False,
         created_at=datetime.now(UTC),
         updated_at=datetime.now(UTC),
         created_by="user-001",

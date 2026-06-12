@@ -915,7 +915,6 @@ class PDFImportService:
             "group_relation_type",
             "lessor_party_id",
             "lessee_party_id",
-            "settlement_rule",
         ]
         missing_fields = [
             field for field in required_fields if merged_data.get(field) in (None, "")
@@ -1002,7 +1001,7 @@ class PDFImportService:
             }
 
         settlement_rule_data = merged_data.get("settlement_rule")
-        if not isinstance(settlement_rule_data, dict):
+        if settlement_rule_data is not None and not isinstance(settlement_rule_data, dict):
             return {
                 "success": False,
                 "message": "settlement_rule must be a JSON object",
@@ -1047,13 +1046,14 @@ class PDFImportService:
                 owner_party_id=owner_party_id,
                 effective_from=effective_from,
                 effective_to=effective_to,
-                settlement_rule=SettlementRuleSchema(**settlement_rule_data),
+                settlement_rule=(
+                    SettlementRuleSchema(**settlement_rule_data)
+                    if settlement_rule_data is not None
+                    else None
+                ),
                 revenue_attribution_rule=merged_data.get("revenue_attribution_rule"),
                 revenue_share_rule=merged_data.get("revenue_share_rule"),
                 risk_tags=merged_data.get("risk_tags"),
-                predecessor_group_id=_normalize_text(
-                    merged_data.get("predecessor_group_id")
-                ),
                 asset_ids=asset_ids,
             )
 
@@ -1061,11 +1061,16 @@ class PDFImportService:
             agency_detail: AgencyDetailCreate | None = None
             if revenue_mode == RevenueMode.LEASE:
                 payment_cycle = _normalize_text(merged_data.get("payment_cycle"))
+                settlement_cycle = (
+                    group_payload.settlement_rule.cycle
+                    if group_payload.settlement_rule is not None
+                    else "月付"
+                )
                 lease_detail = LeaseDetailCreate(
                     total_deposit=total_deposit,
                     rent_amount=monthly_rent_base,
                     monthly_rent_base=monthly_rent_base,
-                    payment_cycle=payment_cycle or group_payload.settlement_rule.cycle,
+                    payment_cycle=payment_cycle or settlement_cycle,
                     payment_terms=_normalize_text(merged_data.get("payment_terms")),
                     tenant_name=_normalize_text(merged_data.get("tenant_name")),
                     tenant_contact=_normalize_text(merged_data.get("tenant_contact")),

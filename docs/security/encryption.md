@@ -41,6 +41,21 @@ DATA_ENCRYPTION_KEY="<base64_key>:1"
 - **AES-256-GCM**：标准加密，每次产生不同密文（推荐用于非搜索字段）
 - **AES-256-CBC**：确定性加密，相同明文产生相同密文（用于需要数据库搜索的字段）
 
+## 加密字段覆盖（实现现状）
+
+加密在 **CRUD 层** 由 `SensitiveDataHandler`（`backend/src/crud/asset_support.py`）按字段 encrypt-on-write / decrypt-on-read 实现，**每个 CRUD 自行实例化并声明敏感字段**——没有全局自动覆盖。因此「某模型有没有加密」取决于其 CRUD 是否接了 handler。
+
+| 模型/字段 | 加密现状 |
+|---|---|
+| `Asset` 相关 PII（手机号等） | ✅ 已加密（`crud/asset.py` 接 `SensitiveDataHandler`） |
+| `PartyContact.contact_phone`（当前主路径联系电话） | ✅ 已加密（`crud/party.py` 接 `SensitiveDataHandler(searchable_fields={"contact_phone"})`，确定性加密） |
+| `Party.metadata_json` 的 `contact_name` / `contact_phone` | ✅ 写入时剥离，存量迁移 `20260611_encrypt_party_contact_phone.py` 会迁出到 `party_contacts` 并删除 JSON 键 |
+| 旧 `Contact` | 已随 Party 迁移退役，不再作为当前主路径加密对象 |
+
+> **存量数据迁移**：`20260611_encrypt_party_contact_phone.py` 会在有密钥时加密既有 `party_contacts.contact_phone`；若缺少可用 `DATA_ENCRYPTION_KEY` 会失败退出，避免把“已加密”状态建立在明文数据上。
+>
+> **静默明文风险**：缺密钥时默认「警告日志 + 明文存储」。生产必须 `REQUIRE_ENCRYPTION=true`（缺密钥即启动失败），否则「已加密」是虚假安全感——加了 handler 也可能静默存明文。
+
 ## 健康检查
 
 加密状态可通过健康检查 API 查看：

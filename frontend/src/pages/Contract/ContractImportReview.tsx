@@ -125,7 +125,7 @@ const AGENCY_FEE_BASE_OPTIONS = [
 export const parseJsonObjectField = (value: string): ConfirmedContractData['settlement_rule'] => {
   const normalized = value.trim();
   if (normalized === '') {
-    throw new Error('结算规则不能为空');
+    return null;
   }
   const parsed: unknown = JSON.parse(normalized);
   if (parsed == null || typeof parsed !== 'object' || Array.isArray(parsed)) {
@@ -824,7 +824,6 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
         label="结算规则"
         name="settlement_rule_json"
         rules={[
-          { required: true, message: '请输入结算规则' },
           {
             validator: async (_, value: string | undefined) => {
               try {
@@ -838,7 +837,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
       >
         <TextArea
           rows={6}
-          placeholder="请输入系统识别的结算规则对象，包含周期、计费依据和付款日等信息"
+          placeholder="可留空，或输入系统识别的结算规则对象"
         />
       </Form.Item>
 

@@ -18,6 +18,19 @@ describe('legacy rental frontend removal', () => {
     expect(legacyScopedRoutes).toEqual([]);
   });
 
+  it('registers legacy list aliases before dynamic detail routes as canonical redirects', () => {
+    const protectedRoutePaths = protectedRoutes.map(route => route.path);
+    const contractListAliasIndex = protectedRoutePaths.indexOf('/contract-center/list');
+    const contractDetailIndex = protectedRoutePaths.indexOf('/contract-center/:id');
+    const projectListAliasIndex = protectedRoutePaths.indexOf('/project/list');
+    const projectDetailIndex = protectedRoutePaths.indexOf('/project/:id');
+
+    expect(contractListAliasIndex).toBeGreaterThanOrEqual(0);
+    expect(projectListAliasIndex).toBeGreaterThanOrEqual(0);
+    expect(contractListAliasIndex).toBeLessThan(contractDetailIndex);
+    expect(projectListAliasIndex).toBeLessThan(projectDetailIndex);
+  });
+
   it('removes the legacy rental retired page from disk', () => {
     const source = resolve(process.cwd(), 'src/pages/Rental/LegacyRentalRetiredPage.tsx');
 
