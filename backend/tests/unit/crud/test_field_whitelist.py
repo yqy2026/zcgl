@@ -14,6 +14,7 @@ from src.crud.field_whitelist import (
     ContractWhitelist,
     EmptyWhitelist,
     OwnershipWhitelist,
+    ProjectWhitelist,
     get_whitelist_for_model,
     register_whitelist,
 )
@@ -155,6 +156,19 @@ class TestContractWhitelist:
         assert not whitelist.can_filter("created_by")
         assert not whitelist.can_search("review_reason")
         assert not whitelist.can_sort("updated_by")
+
+
+class TestProjectWhitelist:
+    """Test Project whitelist configuration."""
+
+    def test_review_fields_are_not_filterable(self):
+        """Project review fields were retired by ADR-0014."""
+        whitelist = ProjectWhitelist()
+
+        assert not whitelist.can_filter("review_status")
+        assert not whitelist.can_filter("review_by")
+        assert not whitelist.can_filter("reviewed_at")
+        assert not whitelist.can_filter("review_reason")
 
 
 class TestEmptyWhitelist:

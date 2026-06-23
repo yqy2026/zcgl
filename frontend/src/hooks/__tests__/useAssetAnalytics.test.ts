@@ -1,4 +1,4 @@
-﻿import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@/test/utils/test-helpers';
 import { useAssetAnalytics } from '../useAssetAnalytics';
 import { analyticsService } from '@/services/analyticsService';

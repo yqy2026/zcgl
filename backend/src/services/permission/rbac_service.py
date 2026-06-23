@@ -55,6 +55,30 @@ ADMIN_PERMISSION_RESOURCE = "system"
 ADMIN_PERMISSION_ACTION = "admin"
 LEGACY_ADMIN_PERMISSION_ACTION = "manage"
 VALID_GRANT_EFFECTS = {"allow", "deny"}
+BUSINESS_ROLE_GRANTER_NAMES = {"admin", "system_admin"}
+INTERNAL_ROLE_GRANTER_IDS = {"system"}
+MANAGEMENT_ROLE_NAMES = {"perm_admin"}
+MANAGEMENT_ROLE_CATEGORIES = {"security"}
+BUSINESS_DATA_ROLE_NAMES = {
+    "admin",
+    "system_admin",
+    "ops_admin",
+    "asset_manager",
+    "project_manager",
+    "manager",
+    "executive",
+    "reviewer",
+    "auditor",
+    "viewer",
+    "user",
+}
+BUSINESS_DATA_ROLE_CATEGORIES = {
+    "system",
+    "operations",
+    "business",
+    "review",
+    "read_only",
+}
 LEGACY_ACTION_ALIASES = {
     "view": "read",
     "edit": "update",
@@ -425,6 +449,12 @@ class RBACService:
         if not role:
             raise ResourceNotFoundError("角色", assignment_data.role_id)
 
+        await self._validate_role_assignment_boundary(
+            role=role,
+            assignment_data=assignment_data,
+            assigned_by=assigned_by,
+        )
+
         # 检查是否已分配
         existing_assignment = await user_role_assignment_crud.get_by_user_and_role(
             self.db,
@@ -471,6 +501,78 @@ class RBACService:
         )
 
         return assignment
+
+    async def _validate_role_assignment_boundary(
+        self,
+        *,
+        role: Role,
+        assignment_data: UserRoleAssignmentCreate,
+        assigned_by: str,
+    ) -> None:
+        """校验静态角色授予边界，防止权限管理员授予业务数据角色。"""
+        if not self._is_business_data_role(role):
+            return
+
+        if assigned_by in INTERNAL_ROLE_GRANTER_IDS:
+            return
+
+        assigner_roles = await role_crud.get_roles_by_user_async(
+            self.db,
+            assigned_by,
+            active_only=True,
+            include_permissions=False,
+        )
+        if any(
+            self._can_grant_business_roles(assigner_role)
+            for assigner_role in assigner_roles
+        ):
+            return
+
+        role_name = self._normalize_role_value(getattr(role, "name", None))
+        role_category = self._normalize_role_value(getattr(role, "category", None))
+        await self._create_permission_audit_log(
+            action="role_assign_denied",
+            resource_type="user_role",
+            resource_id=assignment_data.user_id,
+            operator_id=assigned_by,
+            new_permissions={
+                "role_id": assignment_data.role_id,
+                "role_name": role_name,
+                "role_category": role_category,
+                "denial_reason": "perm_admin_cannot_assign_business_role",
+            },
+            reason=assignment_data.reason,
+        )
+        raise OperationNotAllowedError(
+            "权限管理员不能授予业务角色",
+            reason="perm_admin_cannot_assign_business_role",
+        )
+
+    @classmethod
+    def _can_grant_business_roles(cls, role: Role) -> bool:
+        role_name = cls._normalize_role_value(getattr(role, "name", None))
+        return role_name in BUSINESS_ROLE_GRANTER_NAMES
+
+    @classmethod
+    def _is_business_data_role(cls, role: Role) -> bool:
+        role_name = cls._normalize_role_value(getattr(role, "name", None))
+        role_category = cls._normalize_role_value(getattr(role, "category", None))
+        if (
+            role_name in MANAGEMENT_ROLE_NAMES
+            or role_category in MANAGEMENT_ROLE_CATEGORIES
+        ):
+            return False
+        if role_name in BUSINESS_DATA_ROLE_NAMES:
+            return True
+        if role_category in BUSINESS_DATA_ROLE_CATEGORIES:
+            return True
+        return False
+
+    @staticmethod
+    def _normalize_role_value(value: Any) -> str:
+        if value is None:
+            return ""
+        return str(value).strip().lower()
 
     async def revoke_role_from_user(
         self, user_id: str, role_id: str, revoked_by: str

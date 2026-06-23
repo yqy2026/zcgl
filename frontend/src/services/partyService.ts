@@ -1,6 +1,12 @@
 import { apiClient } from '@/api/client';
 import type { ApiClientError } from '@/types/apiResponse';
-import type { CustomerProfile, Party, PartyContact, PartyListParams, PartyType } from '@/types/party';
+import type {
+  CustomerProfile,
+  Party,
+  PartyContact,
+  PartyListParams,
+  PartyType,
+} from '@/types/party';
 import { ApiErrorHandler } from '@/utils/responseExtractor';
 
 const DEFAULT_SEARCH_LIMIT = 20;

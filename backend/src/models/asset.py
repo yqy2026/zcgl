@@ -108,8 +108,9 @@ class Asset(Base):
         comment="项目名称（DEPRECATED，仅搜索兼容）",
         info={"deprecated": True},
     )
-    asset_code: Mapped[str | None] = mapped_column(
+    asset_code: Mapped[str] = mapped_column(
         String(50),
+        nullable=False,
         unique=True,
         index=True,
         comment="资产编码（全局唯一，按产权方编码段生成）",
@@ -536,7 +537,7 @@ class Asset(Base):
 
     def __init__(self, **kwargs: Any) -> None:
         # Phase4 Step4 兼容：旧列已删除，避免构造时将旧键传入 ORM。
-        legacy_management_entity = kwargs.pop("management_entity", None)
+        kwargs.pop("management_entity", None)
         kwargs.pop("project_id", None)
         legacy_organization_id = kwargs.pop("organization_id", None)
         owner_party_id = kwargs.get("owner_party_id")
@@ -549,31 +550,12 @@ class Asset(Base):
             kwargs["owner_party_id"] = str(legacy_ownership_id).strip()
             owner_party_id = kwargs["owner_party_id"]
         if (
-            kwargs.get("manager_party_id") in (None, "")
-            and legacy_management_entity is not None
-            and str(legacy_management_entity).strip() != ""
-        ):
-            kwargs["manager_party_id"] = str(legacy_management_entity).strip()
-        if (
-            kwargs.get("manager_party_id") in (None, "")
-            and legacy_organization_id is not None
-            and str(legacy_organization_id).strip() != ""
-        ):
-            kwargs["manager_party_id"] = str(legacy_organization_id).strip()
-        if (
             (owner_party_id is None or str(owner_party_id).strip() == "")
             and legacy_organization_id is not None
             and str(legacy_organization_id).strip() != ""
         ):
             kwargs["owner_party_id"] = str(legacy_organization_id).strip()
-        resolved_owner_party_id = kwargs.get("owner_party_id")
-        if (
-            kwargs.get("manager_party_id") in (None, "")
-            and resolved_owner_party_id is not None
-            and str(resolved_owner_party_id).strip() != ""
-        ):
-            # Step4 兼容：历史写入路径仅提供 ownership_id 时，默认同主体作为管理方。
-            kwargs["manager_party_id"] = str(resolved_owner_party_id).strip()
+        kwargs.pop("manager_party_id", None)
 
         kwargs.setdefault("id", str(uuid.uuid4()))
         kwargs.setdefault("data_status", "正常")

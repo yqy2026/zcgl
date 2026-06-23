@@ -1120,7 +1120,9 @@ describe('ProjectService', () => {
     it('should throw error when project tenants API returns failure', async () => {
       vi.mocked(apiClient.get).mockResolvedValueOnce({ success: false, error: 'Not found' });
 
-      await expect(service.getProjectTenants('project-1')).rejects.toThrow('获取项目租户客户摘要失败');
+      await expect(service.getProjectTenants('project-1')).rejects.toThrow(
+        '获取项目租户客户摘要失败'
+      );
     });
   });
 

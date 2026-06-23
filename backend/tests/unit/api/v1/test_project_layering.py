@@ -615,6 +615,77 @@ async def test_get_project_analytics_should_delegate_project_service() -> None:
         project_id="project-1",
         current_user_id="user-1",
         party_filter=ANY,
+        suppress_customer_metrics=False,
+    )
+
+
+@pytest.mark.asyncio
+async def test_get_project_analytics_should_suppress_customer_metrics_for_all_scope() -> None:
+    """scope_mode=all 下项目分析只抑制客户双指标，其余摘要照常返回。"""
+    from decimal import Decimal
+
+    from src.api.v1.assets.project import get_project_analytics
+    from src.middleware.auth import DataScopeContext
+    from src.schemas.project import (
+        ProjectAnalyticsResponse,
+        ProjectAssetSummary,
+    )
+
+    response_payload = ProjectAnalyticsResponse(
+        asset_summary=ProjectAssetSummary(
+            total_assets=1,
+            total_rentable_area=100.0,
+            total_rented_area=70.0,
+            occupancy_rate=70.0,
+        ),
+        contract_relation_count=1,
+        tenant_count=None,
+        customer_contract_count=None,
+        customer_metrics_suppression_reason="customer_metrics_requires_single_perspective",
+        risk_count=0,
+        high_risk_count=0,
+        receivable_amount=Decimal("100.00"),
+        payable_amount=Decimal("0.00"),
+        received_amount=Decimal("20.00"),
+        paid_amount=Decimal("0.00"),
+        overdue_amount=Decimal("0.00"),
+        service_fee_receivable=Decimal("0.00"),
+        service_fee_received=Decimal("0.00"),
+        mode_summaries=[],
+    )
+    mock_service = MagicMock()
+    mock_service.get_project_analytics = AsyncMock(return_value=response_payload)
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr("src.api.v1.assets.project.project_service", mock_service)
+        response = await get_project_analytics(
+            project_id="project-1",
+            db=MagicMock(),
+            current_user=MagicMock(id="user-1"),
+            _scope_ctx=DataScopeContext(
+                scope_mode="all",
+                allowed_binding_types=["owner", "manager"],
+                owner_party_ids=["owner-1"],
+                manager_party_ids=["manager-1"],
+                effective_party_ids=["owner-1", "manager-1"],
+                source="header",
+            ),
+        )
+
+    payload = json.loads(response.body)
+    assert payload["data"]["tenant_count"] is None
+    assert payload["data"]["customer_contract_count"] is None
+    assert (
+        payload["data"]["customer_metrics_suppression_reason"]
+        == "customer_metrics_requires_single_perspective"
+    )
+    assert payload["data"]["receivable_amount"] == "100.00"
+    mock_service.get_project_analytics.assert_awaited_once_with(
+        db=ANY,
+        project_id="project-1",
+        current_user_id="user-1",
+        party_filter=ANY,
+        suppress_customer_metrics=True,
     )
 
 

@@ -7,9 +7,7 @@ import {
 } from '@/utils/authz/capabilityEvaluator';
 import type { CapabilityItem } from '@/types/capability';
 
-const assetCapability = (
-  overrides: Partial<CapabilityItem> = {}
-): CapabilityItem => ({
+const assetCapability = (overrides: Partial<CapabilityItem> = {}): CapabilityItem => ({
   resource: 'asset',
   actions: ['read', 'update'],
   perspectives: ['owner'],

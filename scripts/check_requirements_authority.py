@@ -8,6 +8,8 @@ Checks performed:
 4. PRD/spec documents must not contain implementation evidence or code/test paths.
 5. Traceability evidence paths must exist.
 6. Legacy requirements entries must remain jump pages without code/test paths.
+7. PRD mechanics tokens must stay in the domain model.
+8. Every active docs/issues report must be indexed exactly once by README.
 
 Run from repository root:
     python scripts/check_requirements_authority.py
@@ -15,14 +17,14 @@ Run from repository root:
 
 from __future__ import annotations
 
-from pathlib import Path
 import re
-import sys
-
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 DOCS = ROOT / "docs"
 PLANS = DOCS / "plans"
+ISSUES = DOCS / "issues"
+ISSUES_INDEX = ISSUES / "README.md"
 REQUIREMENTS_SPEC = DOCS / "requirements-specification.md"
 PRD = DOCS / "prd.md"
 SPECS = DOCS / "specs"
@@ -76,9 +78,29 @@ _LEGACY_ENTRY_FORBIDDEN_PATHS = [
 
 _BACKTICK_PATH_RE = re.compile(r"`((?:backend|frontend|docs|scripts)/[^`]+)`")
 
+# PRD must stay product-altitude. These field-level mechanics tokens belong in
+# docs/specs/domain-model.md (the single mechanics home), not in prd.md. Chosen
+# to be unambiguous mechanics (near-zero false-positive risk in product prose).
+_PRD_MECHANICS_TOKENS = [
+    ("file-size limit", re.compile(r"\d+\s*MB")),
+    ("file-type whitelist (JPG/JPEG)", re.compile(r"\bJPE?G\b")),
+    ("ocr_prefill enum value", re.compile(r"ocr_prefill_(?:confirmed|corrected)")),
+    ("manual_after_ocr_miss enum value", re.compile(r"manual_after_ocr_miss")),
+    ("field_sources column name", re.compile(r"field_sources")),
+]
+
+_ACTIVE_ISSUE_LINK_RE = re.compile(r"\]\(\./([^/)]+\.md)\)")
+
 
 def to_rel(path: Path) -> str:
     return path.relative_to(ROOT).as_posix()
+
+
+def display_path(path: Path) -> str:
+    try:
+        return to_rel(path)
+    except ValueError:
+        return path.as_posix()
 
 
 # ---------------------------------------------------------------------------
@@ -229,6 +251,73 @@ def check_legacy_requirements_entries() -> list[str]:
 
 
 # ---------------------------------------------------------------------------
+# Check 7: PRD must not carry domain-model mechanics tokens
+# ---------------------------------------------------------------------------
+
+def check_prd_no_mechanics_tokens() -> list[str]:
+    """PRD stays product-altitude; field-level mechanics belong in domain-model."""
+    if not PRD.exists():
+        return [f"{to_rel(PRD)}: required document missing"]
+
+    text = PRD.read_text(encoding="utf-8", errors="replace")
+    issues: list[str] = []
+    for label, pattern in _PRD_MECHANICS_TOKENS:
+        for match in pattern.finditer(text):
+            line = _line_number(text, match.start())
+            issues.append(
+                f"{to_rel(PRD)}:{line}: PRD carries mechanics token "
+                f"({label}: '{match.group()}') — move it to "
+                f"docs/specs/domain-model.md and reference it"
+            )
+    return issues
+
+
+# ---------------------------------------------------------------------------
+# Check 8: active issue reports and their index must stay in sync
+# ---------------------------------------------------------------------------
+
+def check_issue_index_coverage(
+    issues_dir: Path = ISSUES,
+    index_path: Path = ISSUES_INDEX,
+) -> list[str]:
+    if not issues_dir.exists():
+        return [f"{to_rel(issues_dir)}: required directory missing"]
+    if not index_path.exists():
+        return [f"{to_rel(index_path)}: required issue index missing"]
+
+    index_text = index_path.read_text(encoding="utf-8", errors="replace")
+    indexed_name_list = _ACTIVE_ISSUE_LINK_RE.findall(index_text)
+    indexed_names = set(indexed_name_list)
+    report_names = {
+        path.name
+        for path in issues_dir.glob("*.md")
+        if path.name.lower() != "readme.md"
+    }
+
+    issues = [
+        f"{display_path(issues_dir / name)}: active issue report is not indexed"
+        for name in sorted(report_names - indexed_names)
+    ]
+    issues.extend(
+        f"{display_path(index_path)}: active issue index points to missing file -> {name}"
+        for name in sorted(indexed_names - report_names)
+    )
+    seen_names: set[str] = set()
+    duplicate_names = sorted(
+        {
+            name
+            for name in indexed_name_list
+            if name in seen_names or seen_names.add(name)
+        }
+    )
+    issues.extend(
+        f"{display_path(index_path)}: active issue index duplicates file -> {name}"
+        for name in duplicate_names
+    )
+    return issues
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -282,6 +371,24 @@ def main() -> int:
 
     print("=== Check 6: legacy requirements jump-page guard ===")
     issues = check_legacy_requirements_entries()
+    if issues:
+        all_issues.extend(issues)
+        for i in issues:
+            print(f"  FAIL  {i}")
+    else:
+        print("  PASS")
+
+    print("=== Check 7: PRD mechanics-token guard ===")
+    issues = check_prd_no_mechanics_tokens()
+    if issues:
+        all_issues.extend(issues)
+        for i in issues:
+            print(f"  FAIL  {i}")
+    else:
+        print("  PASS")
+
+    print("=== Check 8: active issue index coverage ===")
+    issues = check_issue_index_coverage()
     if issues:
         all_issues.extend(issues)
         for i in issues:

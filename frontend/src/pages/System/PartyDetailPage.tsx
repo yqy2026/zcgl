@@ -59,7 +59,7 @@ const REVIEW_STATUS_META: Record<PartyReviewStatus, { color: string; label: stri
   draft: { color: 'default', label: '草稿' },
   pending: { color: 'processing', label: '待审核' },
   approved: { color: 'success', label: '已审核' },
-  reversed: { color: 'warning', label: '已反审核' },
+  rejected: { color: 'warning', label: '已驳回' },
 };
 
 const renderReviewStatus = (
@@ -129,7 +129,7 @@ const PartyDetailPage: React.FC = () => {
   const reviewStatus = party?.review_status ?? 'draft';
   const isDraft = reviewStatus === 'draft';
   const isPending = reviewStatus === 'pending';
-  const isEditable = isDraft;
+  const isEditable = isDraft || reviewStatus === 'rejected';
 
   useEffect(() => {
     if (party == null) {
@@ -207,7 +207,7 @@ const PartyDetailPage: React.FC = () => {
       await syncPartyCaches(updatedParty);
       setRejectModalOpen(false);
       rejectForm.resetFields();
-      MessageManager.success('主体已驳回回草稿');
+      MessageManager.success('主体已驳回');
     },
     onError: error => {
       MessageManager.error(error instanceof Error ? error.message : '驳回审核失败');
@@ -310,7 +310,7 @@ const PartyDetailPage: React.FC = () => {
           >
             返回列表
           </Button>
-          {isDraft ? (
+          {isEditable ? (
             <>
               <Button
                 type="primary"

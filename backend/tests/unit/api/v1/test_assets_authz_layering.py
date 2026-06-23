@@ -56,7 +56,7 @@ def test_assets_endpoints_should_use_authz_dependencies() -> None:
 
 
 @pytest.mark.asyncio
-async def test_asset_create_authz_should_include_party_scope_context() -> None:
+async def test_asset_create_authz_should_include_owner_scope_context() -> None:
     """创建资产鉴权应携带 owner/manager 主体上下文。"""
     from src.api.v1.assets import assets as module
 
@@ -91,13 +91,14 @@ async def test_asset_create_authz_should_include_party_scope_context() -> None:
 
     assert result.allowed is True
     assert result.resource_context["owner_party_id"] == "owner-party-1"
-    assert result.resource_context["manager_party_id"] == "manager-party-1"
+    assert "manager_party_id" not in result.resource_context
     _args, kwargs = mock_authz_service.check_access.await_args
     assert kwargs["resource_type"] == "asset"
     assert kwargs["action"] == "create"
     assert kwargs["resource_id"] is None
     assert kwargs["resource"]["owner_party_id"] == "owner-party-1"
-    assert kwargs["resource"]["manager_party_id"] == "manager-party-1"
+    assert "manager_party_id" not in kwargs["resource"]
+    assert asset_in.manager_party_id is None
 
 
 @pytest.mark.asyncio
@@ -137,7 +138,7 @@ async def test_asset_create_authz_should_normalize_party_fields_on_input_model()
         )
 
     assert asset_in.owner_party_id == "owner-party-1"
-    assert asset_in.manager_party_id == "manager-party-1"
+    assert asset_in.manager_party_id is None
     assert asset_in.ownership_id == "ownership-1"
     assert asset_in.organization_id == "org-1"
 
@@ -263,10 +264,8 @@ async def test_asset_create_authz_should_backfill_owner_party_id_for_persistence
 
 
 @pytest.mark.asyncio
-async def test_asset_create_authz_should_infer_manager_scope_before_ownership_scope() -> (
-    None
-):
-    """创建资产在 legacy payload 下应先注入 manager scope，避免 manager-only 误拒绝。"""
+async def test_asset_create_authz_should_not_infer_asset_manager_scope() -> None:
+    """创建资产不再注入独立 manager scope，运营方由项目派生。"""
     from src.api.v1.assets import assets as module
 
     asset_in = MagicMock(
@@ -307,17 +306,16 @@ async def test_asset_create_authz_should_infer_manager_scope_before_ownership_sc
         )
 
     assert result.allowed is True
-    assert result.resource_context["manager_party_id"] == "subject-manager"
     assert result.resource_context["owner_party_id"] == "owner-party-from-ownership"
-    assert result.resource_context["party_id"] == "subject-manager"
+    assert result.resource_context["party_id"] == "owner-party-from-ownership"
+    assert asset_in.manager_party_id is None
     resolve_owner_scope.assert_awaited_once_with(
         db=ANY,
         ownership_id="ownership-1",
     )
     _args, kwargs = mock_authz_service.check_access.await_args
-    assert kwargs["resource"]["manager_party_id"] == "subject-manager"
     assert kwargs["resource"]["owner_party_id"] == "owner-party-from-ownership"
-    assert kwargs["resource"]["party_id"] == "subject-manager"
+    assert kwargs["resource"]["party_id"] == "owner-party-from-ownership"
 
 
 @pytest.mark.asyncio
@@ -465,8 +463,8 @@ async def test_create_asset_should_backfill_owner_party_from_authz_context() -> 
 
 
 @pytest.mark.asyncio
-async def test_create_asset_should_backfill_manager_party_from_authz_context() -> None:
-    """创建资产端点应基于鉴权上下文兜底回填 manager_party_id。"""
+async def test_create_asset_should_clear_independent_manager_party() -> None:
+    """创建资产端点应忽略独立 manager_party_id，运营方由项目派生。"""
     from src.api.v1.assets import assets as module
 
     mock_service = MagicMock()
@@ -475,7 +473,9 @@ async def test_create_asset_should_backfill_manager_party_from_authz_context() -
     request = MagicMock()
     request.client = MagicMock(host="127.0.0.1")
     request.headers = {}
-    asset_in = MagicMock(owner_party_id="owner-party-1", manager_party_id=None)
+    asset_in = MagicMock(
+        owner_party_id="owner-party-1", manager_party_id="forged-manager"
+    )
     current_user = MagicMock(id="user-1")
     authz_ctx = module.AuthzContext(
         current_user=current_user,
@@ -503,6 +503,6 @@ async def test_create_asset_should_backfill_manager_party_from_authz_context() -
             audit_logger=MagicMock(),
         )
 
-    assert asset_in.manager_party_id == "manager-party-from-authz"
+    assert asset_in.manager_party_id is None
     assert result["id"] == "asset-1"
     assert mock_service.create_asset.await_args.args[0] is asset_in

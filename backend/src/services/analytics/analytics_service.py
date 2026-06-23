@@ -561,27 +561,36 @@ class AnalyticsService:
                 income=income,
             )
 
-            project_id = self._resolve_contract_project_id(group)
-            if project_id is None:
-                continue
-            project_accumulator = project_accumulators.setdefault(
-                project_id,
-                self._new_analytics_breakdown_accumulator(
-                    project_id=project_id,
-                    project_name=self._resolve_contract_project_name(group),
-                ),
+            project_incomes = (
+                self._calculate_contract_income_by_attributed_project_for_breakdown(
+                    contract,
+                    relation_kind=relation_kind,
+                    lower_year_month=lower_year_month,
+                    upper_year_month=upper_year_month,
+                )
             )
-            self._add_contract_to_analytics_breakdown(
-                project_accumulator,
-                group_id=group_id,
-                contract_id=contract_id,
-                customer_party_id=customer_party_id,
-                income=income,
-            )
-            if relation_kind == "lease_sublease":
-                project_accumulator["lease_relation_ids"].add(group_id)
-            else:
-                project_accumulator["agency_relation_ids"].add(group_id)
+            for project_id, project_income in project_incomes.items():
+                project_accumulator = project_accumulators.setdefault(
+                    project_id,
+                    self._new_analytics_breakdown_accumulator(
+                        project_id=project_id,
+                        project_name=self._resolve_attributed_project_name(
+                            project_id,
+                            group,
+                        ),
+                    ),
+                )
+                self._add_contract_to_analytics_breakdown(
+                    project_accumulator,
+                    group_id=group_id,
+                    contract_id=contract_id,
+                    customer_party_id=customer_party_id,
+                    income=project_income,
+                )
+                if relation_kind == "lease_sublease":
+                    project_accumulator["lease_relation_ids"].add(group_id)
+                else:
+                    project_accumulator["agency_relation_ids"].add(group_id)
 
         return {
             "project_breakdown": [
@@ -634,13 +643,24 @@ class AnalyticsService:
             return None
         group_mode = getattr(group, "revenue_mode", None)
         relation_type = getattr(contract, "group_relation_type", None)
-        if group_mode == RevenueMode.LEASE and relation_type == GroupRelationType.DOWNSTREAM:
+        if (
+            group_mode == RevenueMode.LEASE
+            and relation_type == GroupRelationType.DOWNSTREAM
+        ):
             return "lease_sublease"
         if (
             group_mode == RevenueMode.AGENCY
             and relation_type == GroupRelationType.DIRECT_LEASE
         ):
             return "agency_operation"
+        return None
+
+    @staticmethod
+    def _resolve_attributed_project_id(entry: Any) -> str | None:
+        project_id = getattr(entry, "attributed_project_id", None)
+        if isinstance(project_id, str):
+            normalized = project_id.strip()
+            return normalized or None
         return None
 
     @classmethod
@@ -691,11 +711,89 @@ class AnalyticsService:
             "total_income": cls._quantize_money(
                 self_operated_rent_income + agency_service_income
             ),
-            "self_operated_rent_income": cls._quantize_money(
-                self_operated_rent_income
-            ),
+            "self_operated_rent_income": cls._quantize_money(self_operated_rent_income),
             "agency_service_income": cls._quantize_money(agency_service_income),
             "actual_receipts": cls._quantize_money(actual_receipts),
+        }
+
+    @classmethod
+    def _calculate_contract_income_by_attributed_project_for_breakdown(
+        cls,
+        contract: Contract,
+        *,
+        relation_kind: str,
+        lower_year_month: str | None,
+        upper_year_month: str | None,
+    ) -> dict[str, dict[str, Decimal]]:
+        project_incomes: dict[str, dict[str, Decimal]] = {}
+
+        def ensure_project_income(project_id: str) -> dict[str, Decimal]:
+            return project_incomes.setdefault(
+                project_id,
+                {
+                    "total_income": Decimal("0"),
+                    "self_operated_rent_income": Decimal("0"),
+                    "agency_service_income": Decimal("0"),
+                    "actual_receipts": Decimal("0"),
+                },
+            )
+
+        if relation_kind == "lease_sublease":
+            for ledger_entry in getattr(contract, "ledger_entries", []) or []:
+                if getattr(ledger_entry, "payment_status", None) == "voided":
+                    continue
+                if not cls._is_ledger_entry_in_scope(
+                    getattr(ledger_entry, "year_month", None),
+                    lower=lower_year_month,
+                    upper=upper_year_month,
+                ):
+                    continue
+                project_id = cls._resolve_attributed_project_id(ledger_entry)
+                if project_id is None:
+                    continue
+                project_income = ensure_project_income(project_id)
+                amount_due = cls._quantize_money(
+                    cls._to_decimal(getattr(ledger_entry, "amount_due", None))
+                )
+                paid_amount = cls._quantize_money(
+                    cls._to_decimal(getattr(ledger_entry, "paid_amount", None))
+                )
+                project_income["total_income"] += amount_due
+                project_income["self_operated_rent_income"] += amount_due
+                project_income["actual_receipts"] += paid_amount
+
+        if relation_kind == "agency_operation":
+            for service_fee_entry in getattr(contract, "service_fee_ledgers", []) or []:
+                if getattr(service_fee_entry, "payment_status", None) == "voided":
+                    continue
+                if not cls._is_ledger_entry_in_scope(
+                    getattr(service_fee_entry, "year_month", None),
+                    lower=lower_year_month,
+                    upper=upper_year_month,
+                ):
+                    continue
+                project_id = cls._resolve_attributed_project_id(service_fee_entry)
+                if project_id is None:
+                    continue
+                project_income = ensure_project_income(project_id)
+                amount_due = cls._quantize_money(
+                    cls._to_decimal(getattr(service_fee_entry, "amount_due", None))
+                )
+                project_income["total_income"] += amount_due
+                project_income["agency_service_income"] += amount_due
+
+        return {
+            project_id: {
+                "total_income": cls._quantize_money(income["total_income"]),
+                "self_operated_rent_income": cls._quantize_money(
+                    income["self_operated_rent_income"]
+                ),
+                "agency_service_income": cls._quantize_money(
+                    income["agency_service_income"]
+                ),
+                "actual_receipts": cls._quantize_money(income["actual_receipts"]),
+            }
+            for project_id, income in project_incomes.items()
         }
 
     @staticmethod
@@ -704,22 +802,20 @@ class AnalyticsService:
         return lessee_party_id or None
 
     @staticmethod
-    def _resolve_contract_project_id(group: ContractGroup | None) -> str | None:
+    def _resolve_attributed_project_name(
+        project_id: str,
+        group: ContractGroup | None,
+    ) -> str:
         if group is None:
-            return None
-        project_id = str(getattr(group, "project_id", "")).strip()
-        return project_id or None
-
-    @staticmethod
-    def _resolve_contract_project_name(group: ContractGroup | None) -> str:
-        if group is None:
-            return "未归属项目"
+            return project_id
+        group_project_id = str(getattr(group, "project_id", "")).strip()
+        if group_project_id != project_id:
+            return project_id
         project = getattr(group, "project", None)
         project_name = str(getattr(project, "project_name", "")).strip()
         if project_name != "":
             return project_name
-        project_id = str(getattr(group, "project_id", "")).strip()
-        return project_id or "未归属项目"
+        return project_id
 
     @staticmethod
     def _add_contract_to_analytics_breakdown(
@@ -738,9 +834,7 @@ class AnalyticsService:
         if customer_party_id is not None:
             accumulator["customer_party_ids"].add(customer_party_id)
         accumulator["total_income"] += income["total_income"]
-        accumulator["self_operated_rent_income"] += income[
-            "self_operated_rent_income"
-        ]
+        accumulator["self_operated_rent_income"] += income["self_operated_rent_income"]
         accumulator["agency_service_income"] += income["agency_service_income"]
         accumulator["actual_receipts"] += income["actual_receipts"]
 

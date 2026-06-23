@@ -523,8 +523,7 @@ class TestOwnershipResolution:
         assert result["owner_party_id"] == "party-1"
         assert "ownership_id" not in result
         mock_resolve.assert_awaited_once_with(ownership_id="ownership-id")
-        assert mock_get_party.await_count == 2
-        mock_get_party.assert_any_await(service.db, party_id="party-1")
+        mock_get_party.assert_awaited_once_with(service.db, party_id="party-1")
 
 
 # ============================================================================
@@ -680,6 +679,55 @@ class TestCreateAsset:
         assert excinfo.value.status_code == 422
         assert "地址" in str(excinfo.value.message)
         mock_create.assert_not_awaited()
+
+    async def test_create_asset_generates_asset_code_from_owner_segment(
+        self, service, asset_create_dict, mock_asset
+    ) -> None:
+        incoming_data = asset_create_dict.copy()
+        incoming_data["owner_party_id"] = "owner-party-1"
+        incoming_data.pop("ownership_id", None)
+        incoming_data["asset_code"] = "CLIENT-SHOULD-NOT-WIN"
+        asset_in = AssetCreate(**incoming_data)
+
+        owner_party = MagicMock()
+        owner_party.id = "owner-party-1"
+        owner_party.code = "own-001"
+
+        with (
+            patch(
+                "src.services.asset.asset_service.get_enum_validation_service_async"
+            ) as mock_validation,
+            patch(
+                "src.services.asset.asset_service.party_crud.get_party",
+                new_callable=AsyncMock,
+                return_value=owner_party,
+            ),
+            patch(
+                "src.crud.asset.asset_crud.get_by_name_async",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
+            patch(
+                "src.crud.asset.asset_crud.get_latest_by_code_prefix_async",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
+            patch(
+                "src.crud.asset.asset_crud.create_with_history_async",
+                new_callable=AsyncMock,
+                return_value=mock_asset,
+            ) as mock_create,
+        ):
+            mock_validation_service = MagicMock()
+            mock_validation_service.validate_asset_data = AsyncMock(
+                return_value=(True, [])
+            )
+            mock_validation.return_value = mock_validation_service
+
+            await service.create_asset(asset_in)
+
+        created_payload = mock_create.await_args.kwargs["obj_in"]
+        assert created_payload.asset_code == "AST-OWN001XX-000001"
 
     async def test_create_asset_rejects_legacy_address_without_address_detail(
         self, service, asset_create_dict, mock_asset

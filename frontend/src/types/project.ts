@@ -158,8 +158,8 @@ export interface ProjectAnalysisModeSummary {
   asset_count: number;
   primary_contract_count: number;
   terminal_contract_count: number;
-  customer_count: number;
-  customer_contract_count: number;
+  customer_count: number | null;
+  customer_contract_count: number | null;
   receivable_amount: string;
   payable_amount: string;
   received_amount: string;
@@ -180,8 +180,9 @@ export interface ProjectMonthlyTrendItem {
 export interface ProjectAnalyticsResponse {
   asset_summary: ProjectAssetSummary;
   contract_relation_count: number;
-  tenant_count: number;
-  customer_contract_count: number;
+  tenant_count: number | null;
+  customer_contract_count: number | null;
+  customer_metrics_suppression_reason?: string | null;
   risk_count: number;
   high_risk_count: number;
   receivable_amount: string;

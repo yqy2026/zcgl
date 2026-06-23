@@ -8,8 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.models.contract_group import ContractLifecycleStatus, ContractReviewStatus
-from src.services.contract.contract_group_service import ContractGroupService
+from src.models.contract_group import ContractLifecycleStatus
 
 pytestmark = pytest.mark.asyncio
 
@@ -17,22 +16,21 @@ pytestmark = pytest.mark.asyncio
 def _make_contract(
     *,
     contract_id: str = "contract-001",
+    assets: list[str] | None = None,
     payment_cycle: str = "月付",
 ) -> MagicMock:
     contract = MagicMock()
     contract.contract_id = contract_id
-    contract.status = ContractLifecycleStatus.PENDING_REVIEW
-    contract.review_status = ContractReviewStatus.PENDING
+    contract.contract_group_id = "group-001"
+    contract.status = ContractLifecycleStatus.ACTIVE
     contract.sign_date = date(2026, 1, 1)
     contract.currency_code = "CNY"
     contract.is_tax_included = True
     contract.tax_rate = Decimal("0.09")
     contract.data_status = "正常"
-    contract.review_by = None
-    contract.reviewed_at = None
-    contract.review_reason = None
     contract.lease_detail = MagicMock(payment_cycle=payment_cycle)
     contract.agency_detail = None
+    contract.assets = [MagicMock(id=asset_id) for asset_id in (assets or [])]
     return contract
 
 
@@ -63,7 +61,13 @@ class TestLedgerServiceV2:
         service = getattr(ledger_module, "ledger_service_v2", None)
         assert service is not None, "ledger_service_v2 尚未实现"
 
-        contract = _make_contract(payment_cycle="季付")
+        contract = _make_contract(payment_cycle="quarterly", assets=["asset-contract"])
+        contract_group = MagicMock(
+            project_id="project-001",
+            owner_party_id="owner-001",
+            operator_party_id="operator-001",
+            assets=[MagicMock(id="asset-group")],
+        )
         rent_terms = [
             _make_rent_term(
                 start_date=date(2026, 1, 1),
@@ -105,6 +109,10 @@ class TestLedgerServiceV2:
                 new=AsyncMock(return_value={"2026-02"}),
             ),
             patch(
+                "src.services.contract.ledger_service_v2.contract_group_crud.get_with_assets",
+                new=AsyncMock(return_value=contract_group),
+            ),
+            patch(
                 "src.services.contract.ledger_service_v2.contract_group_crud.create_ledger_entry",
                 new=_create_ledger_entry,
             ),
@@ -121,7 +129,11 @@ class TestLedgerServiceV2:
         ]
         assert str(created_entries[0]["amount_due"]) == "1200.00"
         assert str(created_entries[1]["amount_due"]) == "1800.00"
-        assert created_entries[1]["due_date"] == date(2026, 1, 1)
+        assert created_entries[1]["due_date"] == date(2026, 3, 1)
+        assert created_entries[0]["attributed_project_id"] == "project-001"
+        assert created_entries[0]["attributed_owner_party_id"] == "owner-001"
+        assert created_entries[0]["attributed_operator_party_id"] == "operator-001"
+        assert created_entries[0]["attributed_asset_ids"] == ["asset-contract"]
 
     async def test_generate_ledger_on_activation_without_rent_terms_returns_empty(self):
         from src.services.contract import ledger_service_v2 as ledger_module
@@ -159,6 +171,12 @@ class TestLedgerServiceV2:
         assert service is not None, "ledger_service_v2 尚未实现"
 
         contract = _make_contract(payment_cycle="月付")
+        contract_group = MagicMock(
+            project_id="project-001",
+            owner_party_id="owner-001",
+            operator_party_id="operator-001",
+            assets=[],
+        )
         rent_terms = [
             _make_rent_term(
                 start_date=date(2026, 1, 15),
@@ -191,6 +209,10 @@ class TestLedgerServiceV2:
                 new=AsyncMock(return_value=set()),
             ),
             patch(
+                "src.services.contract.ledger_service_v2.contract_group_crud.get_with_assets",
+                new=AsyncMock(return_value=contract_group),
+            ),
+            patch(
                 "src.services.contract.ledger_service_v2.contract_group_crud.create_ledger_entry",
                 new=_create_ledger_entry,
             ),
@@ -206,46 +228,16 @@ class TestLedgerServiceV2:
             "2026-02",
         ]
 
-    async def test_approve_calls_generate_ledger_on_activation(self):
-        service = ContractGroupService()
-        contract = _make_contract()
-
-        with (
-            patch(
-                "src.services.contract.contract_group_service.contract_crud.get",
-                new=AsyncMock(return_value=contract),
-            ),
-            patch(
-                "src.services.contract.contract_group_service.contract_crud.update",
-                new=AsyncMock(
-                    side_effect=lambda db, db_obj, data, commit=False: db_obj
-                ),
-            ),
-            patch(
-                "src.services.contract.contract_group_service.contract_group_crud.create_audit_log",
-                new=AsyncMock(),
-            ),
-            patch(
-                "src.services.contract.contract_group_service.ledger_service_v2.generate_ledger_on_activation",
-                new=AsyncMock(return_value=[]),
-            ) as mock_generate_ledger,
-        ):
-            await service.approve(
-                AsyncMock(),
-                contract_id="contract-001",
-                current_user="reviewer-001",
-                operator_name="审核员",
-            )
-
-        mock_generate_ledger.assert_awaited_once()
-
     async def test_batch_update_status_delegates_and_returns_updated_entries(self):
         from src.services.contract import ledger_service_v2 as ledger_module
 
         service = getattr(ledger_module, "ledger_service_v2", None)
         assert service is not None, "ledger_service_v2 尚未实现"
 
-        updated_entries = [MagicMock(entry_id="entry-001"), MagicMock(entry_id="entry-002")]
+        updated_entries = [
+            MagicMock(entry_id="entry-001"),
+            MagicMock(entry_id="entry-002"),
+        ]
 
         with patch(
             "src.services.contract.ledger_service_v2.contract_group_crud.batch_update_ledger_status",
@@ -255,9 +247,14 @@ class TestLedgerServiceV2:
                 AsyncMock(),
                 contract_id="contract-001",
                 entry_ids=["entry-001", "entry-002"],
-                payment_status="paid",
                 paid_amount=Decimal("3000.00"),
             )
 
         assert result is updated_entries
-        mock_batch_update.assert_awaited_once()
+        mock_batch_update.assert_awaited_once_with(
+            mock_batch_update.await_args.args[0],
+            contract_id="contract-001",
+            entry_ids=["entry-001", "entry-002"],
+            paid_amount=Decimal("3000.00"),
+            notes=None,
+        )

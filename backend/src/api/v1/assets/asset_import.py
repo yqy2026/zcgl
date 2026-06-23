@@ -80,7 +80,6 @@ async def _build_asset_import_resource_context(
     organization_scope_cache: dict[str, str | None],
 ) -> dict[str, Any]:
     owner_party_id = _normalize_optional_str(record.get("owner_party_id"))
-    manager_party_id = _normalize_optional_str(record.get("manager_party_id"))
     ownership_id = _normalize_optional_str(record.get("ownership_id"))
     organization_id = _normalize_optional_str(record.get("organization_id"))
 
@@ -88,10 +87,6 @@ async def _build_asset_import_resource_context(
     if owner_party_id is not None:
         resource_context["owner_party_id"] = owner_party_id
         resource_context["party_id"] = owner_party_id
-    if manager_party_id is not None:
-        resource_context["manager_party_id"] = manager_party_id
-        if "party_id" not in resource_context:
-            resource_context["party_id"] = manager_party_id
     if ownership_id is not None:
         resource_context["ownership_id"] = ownership_id
     if organization_id is not None:

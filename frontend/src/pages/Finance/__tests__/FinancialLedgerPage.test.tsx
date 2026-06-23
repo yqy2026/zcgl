@@ -53,12 +53,12 @@ describe('FinancialLedgerPage', () => {
           entry_id: 'ledger-1',
           contract_id: 'contract-1',
           year_month: '2026-05',
-          due_date: '2026-05-15',
+          due_date: '2020-05-15',
           amount_due: '12000.00',
           currency_code: 'CNY',
           is_tax_included: true,
           tax_rate: '0.06',
-          payment_status: 'overdue',
+          payment_status: 'partial',
           paid_amount: '2000.00',
           notes: '逾期未收',
         },
@@ -153,7 +153,6 @@ describe('FinancialLedgerPage', () => {
     await waitFor(() => {
       expect(ledgerService.updateContractLedgerStatus).toHaveBeenCalledWith('contract-1', {
         entry_ids: ['ledger-1'],
-        payment_status: 'paid',
         paid_amount: 12000,
         notes: undefined,
       });

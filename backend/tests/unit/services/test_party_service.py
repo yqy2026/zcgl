@@ -388,7 +388,6 @@ class TestCustomerProfileAggregation:
         ]
         assert profile["contracts"][0]["group_relation_type"] == "DIRECT_LEASE"
 
-
     async def test_list_customer_contracts_should_union_terminal_lessee_matches_for_all_binding_type(
         self,
     ) -> None:
@@ -499,6 +498,60 @@ class TestCustomerProfileAggregation:
         assert profile["contract_role"] == "direct_lease"
         assert profile["historical_contract_count"] == 1
 
+    async def test_get_customer_profile_all_binding_deduplicates_same_contract(
+        self,
+    ) -> None:
+        db = MagicMock()
+        party = SimpleNamespace(
+            id="party-customer-1",
+            party_type=PartyType.ORGANIZATION,
+            name="多绑定终端客户",
+            code="CUS-ALL",
+            status="active",
+            metadata_json={},
+        )
+        party_crud = MagicMock()
+        party_crud.get_party = AsyncMock(return_value=party)
+        service = PartyService(data_access=party_crud)
+        contract = SimpleNamespace(
+            contract_id="contract-shared",
+            contract_number="CTR-SHARED",
+            status="ACTIVE",
+            group_relation_type="DOWNSTREAM",
+            lessor_party_id="owner-party",
+            lessee_party_id="party-customer-1",
+            effective_from=datetime(2026, 1, 1),
+            effective_to=datetime(2026, 12, 31),
+            contract_group=SimpleNamespace(
+                group_code="GRP-SHARED",
+                revenue_mode="LEASE",
+                owner_party_id="owner-1",
+                operator_party_id="manager-1",
+                risk_tags=[],
+                updated_at=datetime(2026, 6, 20),
+            ),
+        )
+        execute_result = MagicMock()
+        scalar_result = MagicMock()
+        unique_result = MagicMock()
+        execute_result.scalars.return_value = scalar_result
+        scalar_result.unique.return_value = unique_result
+        unique_result.all.return_value = [contract, contract]
+        db.execute = AsyncMock(return_value=execute_result)
+
+        with patch.object(service, "get_contacts", AsyncMock(return_value=[])):
+            profile = await service.get_customer_profile(
+                db,
+                party_id="party-customer-1",
+                binding_type="all",
+                effective_party_ids=["owner-1", "manager-1"],
+            )
+
+        assert profile["historical_contract_count"] == 1
+        assert [item["contract_id"] for item in profile["contracts"]] == [
+            "contract-shared"
+        ]
+
     async def test_create_party_should_write_create_log(self) -> None:
         db = MagicMock()
         db.add = MagicMock()
@@ -569,8 +622,8 @@ class TestCustomerProfileAggregation:
             },
         )
 
-    async def test_reject_party_review_should_reset_to_draft(self) -> None:
-        """驳回后状态应回到 DRAFT，而不是 REJECTED。"""
+    async def test_reject_party_review_should_set_rejected_status(self) -> None:
+        """驳回后保留 rejected 状态，避免与 Asset 的 reversed 语义串线。"""
         db = MagicMock()
         db.add = MagicMock()
         db.flush = AsyncMock()
@@ -580,7 +633,7 @@ class TestCustomerProfileAggregation:
         )
         updated_party = SimpleNamespace(
             id="party-1",
-            review_status=PartyReviewStatus.DRAFT.value,
+            review_status=PartyReviewStatus.REJECTED.value,
         )
         party_crud = MagicMock()
         party_crud.get_party = AsyncMock(return_value=party)
@@ -600,7 +653,7 @@ class TestCustomerProfileAggregation:
             db,
             db_obj=party,
             obj_in={
-                "review_status": PartyReviewStatus.DRAFT.value,
+                "review_status": PartyReviewStatus.REJECTED.value,
                 "review_by": "reviewer-1",
                 "reviewed_at": now,
                 "review_reason": "资料不完整",
@@ -1078,6 +1131,6 @@ class TestPartyServiceReviewLog:
         log_obj = log_calls[0][0][0]
         assert log_obj.action == "reject"
         assert log_obj.from_status == "pending"
-        assert log_obj.to_status == "draft"
+        assert log_obj.to_status == "rejected"
         assert log_obj.operator == "审核人B"
         assert log_obj.reason == "信息不全"

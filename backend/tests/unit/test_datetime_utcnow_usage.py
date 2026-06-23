@@ -10,7 +10,6 @@ MODULE_PATHS = [
     "src/models/asset_history.py",
     "src/models/associations.py",
     "src/models/auth.py",
-    "src/models/collection.py",
     "src/models/enum_field.py",
     "src/models/llm_prompt.py",
     "src/models/notification.py",

@@ -1,6 +1,6 @@
 from typing import Any
 
-from sqlalchemy import Select, desc, false, func, or_, select
+from sqlalchemy import Select, desc, false, func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models.asset import Asset
@@ -168,6 +168,15 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
             .limit(1)
         )
         return (await db.execute(stmt)).scalars().first()
+
+    async def acquire_code_generation_lock(
+        self, db: AsyncSession, *, prefix: str
+    ) -> None:
+        """Serialize project code generation per operator-month prefix."""
+        await db.execute(
+            text("SELECT pg_advisory_xact_lock(hashtext(:lock_key))"),
+            {"lock_key": f"project_code:{prefix}"},
+        )
 
     async def update(
         self,

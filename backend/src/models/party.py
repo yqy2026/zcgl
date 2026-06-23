@@ -41,7 +41,7 @@ class PartyReviewStatus(StrEnum):
     DRAFT = "draft"
     PENDING = "pending"
     APPROVED = "approved"
-    REVERSED = "reversed"
+    REJECTED = "rejected"
 
 
 class Party(Base):

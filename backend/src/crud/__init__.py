@@ -3,7 +3,6 @@ CRUD操作模块
 """
 
 from ..models.asset import Asset
-from ..models.collection import CollectionRecord
 from ..models.llm_prompt import PromptTemplate
 from ..models.ownership import Ownership
 from ..models.project import Project
@@ -20,14 +19,12 @@ from ..models.task import AsyncTask, ExcelTaskConfig
 from .asset import asset_crud
 from .asset_management_history import asset_management_history_crud
 from .authz import crud_authz
-from .collection import collection_crud
 
 # Security: Register field whitelists for models
 from .field_whitelist import (
     AssetCustomFieldWhitelist,
     AssetWhitelist,
     AsyncTaskWhitelist,
-    CollectionRecordWhitelist,
     ExcelTaskConfigWhitelist,
     OwnershipWhitelist,
     PermissionAuditLogWhitelist,
@@ -52,7 +49,6 @@ register_whitelist(Asset, AssetWhitelist())
 register_whitelist(SystemDictionary, SystemDictionaryWhitelist())
 register_whitelist(AssetCustomField, AssetCustomFieldWhitelist())
 register_whitelist(Permission, PermissionWhitelist())
-register_whitelist(CollectionRecord, CollectionRecordWhitelist())
 register_whitelist(PromptTemplate, PromptTemplateWhitelist())
 register_whitelist(Project, ProjectWhitelist())
 register_whitelist(Ownership, OwnershipWhitelist())
@@ -74,7 +70,6 @@ register_whitelist(ExcelTaskConfig, ExcelTaskConfigWhitelist())
 __all__ = [
     "asset_crud",
     "asset_management_history_crud",
-    "collection_crud",
     "project_crud",
     "party_crud",
     "crud_authz",

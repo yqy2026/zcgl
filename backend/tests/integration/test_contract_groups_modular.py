@@ -8,6 +8,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
+from src.models.contract_group import ContractLifecycleStatus
 from src.models.organization import Organization
 from src.models.ownership import Ownership
 from src.models.party import Party, PartyReviewStatus, PartyType
@@ -61,12 +62,7 @@ class TestContractGroupRoutes:
             "/api/v1/contract-groups",
             "/api/v1/contract-groups/{group_id}",
             "/api/v1/contract-groups/{group_id}/contracts",
-            "/api/v1/contract-groups/{group_id}/submit-review",
             "/api/v1/contracts/{contract_id}",
-            "/api/v1/contracts/{contract_id}/submit-review",
-            "/api/v1/contracts/{contract_id}/approve",
-            "/api/v1/contracts/{contract_id}/reject",
-            "/api/v1/contracts/{contract_id}/expire",
             "/api/v1/contracts/{contract_id}/terminate",
             "/api/v1/contracts/{contract_id}/void",
             "/api/v1/contracts/{contract_id}/rent-terms",
@@ -77,6 +73,7 @@ class TestContractGroupRoutes:
 
         for route in required_paths:
             assert route in paths
+        assert "/api/v1/contracts/{contract_id}/expire" not in paths
 
     def test_retired_contract_paths_are_not_registered(
         self, authenticated_client: TestClient
@@ -90,7 +87,7 @@ class TestContractGroupRoutes:
         response = authenticated_client.get("/api/v1/contract-groups/grp-notexist")
         assert response.status_code == 404
 
-    def test_pdf_confirm_submit_review_approve_and_query_ledger_flow(
+    def test_pdf_confirm_creates_active_contract_and_query_ledger_flow(
         self,
         authenticated_client: TestClient,
         db_session,
@@ -235,28 +232,8 @@ class TestContractGroupRoutes:
         detail_response = authenticated_client.get(f"/api/v1/contracts/{contract_id}")
         assert detail_response.status_code == 200
         detail_payload = detail_response.json()
-        assert detail_payload["status"] == "草稿"
-        assert detail_payload["review_status"] == "草稿"
-
-        submit_response = authenticated_client.post(
-            f"/api/v1/contracts/{contract_id}/submit-review",
-            json={},
-            headers=csrf_headers,
-        )
-        assert submit_response.status_code == 200
-        submit_payload = submit_response.json()
-        assert submit_payload["status"] == "待审"
-        assert submit_payload["review_status"] == "待审"
-
-        approve_response = authenticated_client.post(
-            f"/api/v1/contracts/{contract_id}/approve",
-            json={},
-            headers=csrf_headers,
-        )
-        assert approve_response.status_code == 200
-        approve_payload = approve_response.json()
-        assert approve_payload["status"] == "生效"
-        assert approve_payload["review_status"] == "已审"
+        assert detail_payload["status"] == ContractLifecycleStatus.ACTIVE.value
+        assert "review_status" not in detail_payload
 
         group_response = authenticated_client.get(
             f"/api/v1/contract-groups/{contract_group_id}"
@@ -283,4 +260,6 @@ class TestContractGroupRoutes:
             "2026-02-01",
             "2026-03-01",
         ]
-        assert all(item["payment_status"] == "unpaid" for item in ledger_payload["items"])
+        assert all(
+            item["payment_status"] == "unpaid" for item in ledger_payload["items"]
+        )

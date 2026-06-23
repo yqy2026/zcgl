@@ -6,6 +6,7 @@ import type {
   LedgerEntry,
   LedgerListParams,
   LedgerListResponse,
+  LedgerRecalculateResult,
 } from '@/types/ledger';
 
 type LedgerExportParams = LedgerListParams & {
@@ -90,6 +91,28 @@ export class LedgerService {
       }
 
       return result.data!;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
+  async recalculateContractLedger(contractId: string): Promise<LedgerRecalculateResult> {
+    try {
+      const result = await apiClient.post<LedgerRecalculateResult>(
+        API_ENDPOINTS.LEDGER.CONTRACT_RECALCULATE(contractId),
+        {},
+        {
+          retry: false,
+          smartExtract: true,
+        }
+      );
+
+      if (!result.success || result.data == null) {
+        throw new Error(`重算合同台账失败: ${result.error}`);
+      }
+
+      return result.data;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);

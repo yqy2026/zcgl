@@ -235,14 +235,18 @@ SENTRY_SEND_DEFAULT_PII=false
 
 #### 11. 企业微信通知配置 (V2.0)
 ```bash
-# 是否启用企业微信通知
+# 是否启用企业微信应用消息通知
 WECOM_ENABLED=false
 
-# 企业微信机器人 Webhook URL
-WECOM_WEBHOOK_URL=https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=YOUR_KEY
+# 企业微信企业 ID / 自建应用 AgentId / Secret
+WECOM_CORP_ID=wwxxxxxxxxxxxxxxxx
+WECOM_AGENT_ID=1000011
+WECOM_SECRET=your-wecom-app-secret
 
-# 是否 @所有人
-WECOM_MENTION_ALL=false
+# 本地联调接收人企业微信 userid；多人用 user1|user2
+WECOM_TEST_TOUSER=user1
+
+# 群机器人通道已下线：不要再使用 WECOM_WEBHOOK_URL 承载业务通知正文
 ```
 
 ---

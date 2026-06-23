@@ -16,6 +16,11 @@
 
 | 文件 | 主题 | 最终状态 |
 |------|------|----------|
+| 2026-06-18-prd-grill-code-followup.md | PRD Grill 代码收口清单（ADR-0015~0018 + ADR-0011/0012 修订） | ✅ 代码项已收口；企业微信残余项拆至 `docs/issues/2026-06-23-wecom-userid-mapping-and-send-verification.md` |
+| 2026-06-16-prd-grill-code-followup.md | PRD Grill 代码收口清单（ADR-0010~0014） | ✅ 已完成 |
+| 2026-06-15-prd-grill-code-followup.md | PRD Grill 代码收口清单 | ✅ 已完成 |
+| 2026-06-19-prd-grill-code-followup.md | PRD Grill 代码收口清单（ADR-0019~0020 + ADR-0012/0013 修订） | ✅ 已完成 |
+| 2026-06-19-prd-detail-rebalance-plan.md | PRD 详略再平衡（解析/附件机制三文档单一化 + Check 7 守卫；批 1~5） | ✅ 已完成 |
 | 2026-05-31-auth-middleware-split.md | Auth middleware 拆分方案 | ✅ 已完成 |
 | 2026-05-29-codebase-lean-refocus-plan.md | 代码库瘦身与业务聚焦方案 | ✅ 已完成 |
 | 2026-05-12-project-centered-asset-operations-plan.md | 项目主轴资产运营全局规划 | ✅ 已完成 |

@@ -38,7 +38,6 @@ from .documents.pdf_import import router as pdf_import_router
 # 导入各个模块的路由 - LLM Prompts
 from .llm_prompts import router as llm_prompts_router
 from .search import router as search_router
-from .system import collection  # noqa: F401
 
 # 导入各个模块的路由 - System
 from .system.backup import router as backup_router

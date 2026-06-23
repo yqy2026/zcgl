@@ -11,6 +11,8 @@ Test coverage for Notifications API endpoints:
 - Error handling
 """
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 from fastapi import status
 from sqlalchemy.orm import Session
@@ -420,6 +422,68 @@ class TestMarkAsRead:
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         data = response.json()
         assert data.get("error", {}).get("code") == "AUTHENTICATION_ERROR"
+
+
+class TestCreateSystemNotice:
+    @pytest.mark.asyncio
+    @patch("src.api.v1.system.notifications.RBACService")
+    async def test_create_system_notice_requires_admin(self, mock_rbac_cls, mock_db):
+        from src.api.v1.system.notifications import (
+            SystemNoticeCreateRequest,
+            create_system_notice,
+        )
+        from src.core.exception_handler import PermissionDeniedError
+
+        mock_rbac = MagicMock()
+        mock_rbac.is_admin = AsyncMock(return_value=False)
+        mock_rbac_cls.return_value = mock_rbac
+
+        with pytest.raises(PermissionDeniedError):
+            await create_system_notice(
+                payload=SystemNoticeCreateRequest(
+                    title="Maintenance window",
+                    content="System maintenance starts at 22:00.",
+                ),
+                current_user=MagicMock(id="user-1"),
+                db=mock_db,
+            )
+
+    @pytest.mark.asyncio
+    @patch("src.api.v1.system.notifications.RBACService")
+    async def test_create_system_notice_delegates_to_service(
+        self, mock_rbac_cls, mock_db
+    ):
+        from src.api.v1.system.notifications import (
+            SystemNoticeCreateRequest,
+            create_system_notice,
+        )
+
+        mock_rbac = MagicMock()
+        mock_rbac.is_admin = AsyncMock(return_value=True)
+        mock_rbac_cls.return_value = mock_rbac
+        mock_service = MagicMock()
+        mock_service.create_system_notice_async = AsyncMock(
+            return_value=[MagicMock(), MagicMock()]
+        )
+
+        result = await create_system_notice(
+            payload=SystemNoticeCreateRequest(
+                title="Maintenance window",
+                content="System maintenance starts at 22:00.",
+                priority="high",
+            ),
+            current_user=MagicMock(id="admin-1"),
+            db=mock_db,
+            service=mock_service,
+        )
+
+        assert result["created_count"] == 2
+        mock_service.create_system_notice_async.assert_awaited_once_with(
+            mock_db,
+            title="Maintenance window",
+            content="System maintenance starts at 22:00.",
+            priority="high",
+        )
 
 
 # ============================================================================

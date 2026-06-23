@@ -11,9 +11,16 @@
 """
 
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import ANY, AsyncMock, MagicMock, patch
 
 import pytest
+
+from src.core.exception_handler import PermissionDeniedError
+from src.schemas.contract_group import (
+    ContractScanDocumentCreate,
+    ContractScanDocumentReplaceRequest,
+)
 
 pytestmark = pytest.mark.api
 
@@ -126,6 +133,7 @@ async def test_create_contract_group_delegates_to_service(
     ):
         payload = {
             "revenue_mode": "lease",
+            "project_id": "project-001",
             "operator_party_id": "party-operator-001",
             "owner_party_id": "party-owner-001",
             "effective_from": "2026-01-01",
@@ -154,6 +162,7 @@ async def test_create_contract_group_404_when_party_missing(
     ):
         payload = {
             "revenue_mode": "lease",
+            "project_id": "project-001",
             "operator_party_id": "nonexistent-party",
             "owner_party_id": "party-owner-001",
             "effective_from": "2026-01-01",
@@ -189,6 +198,7 @@ async def test_create_contract_group_404_when_owner_party_missing(
     ):
         payload = {
             "revenue_mode": "lease",
+            "project_id": "project-001",
             "operator_party_id": "party-operator-001",
             "owner_party_id": "nonexistent-owner-party",
             "effective_from": "2026-01-01",
@@ -242,8 +252,8 @@ async def test_add_contract_group_id_mismatch_returns_422(
     payload = {
         "contract_group_id": "different-group-id",  # 故意与路径 id 不同
         "contract_number": "HT-2026-0001",
-        "contract_direction": "出租",    # ContractDirection.LESSOR.value
-        "group_relation_type": "上游",   # GroupRelationType.UPSTREAM.value
+        "contract_direction": "出租",  # ContractDirection.LESSOR.value
+        "group_relation_type": "上游",  # GroupRelationType.UPSTREAM.value
         "lessor_party_id": "party-a",
         "lessee_party_id": "party-b",
         "effective_from": "2026-01-01",
@@ -264,5 +274,179 @@ def test_route_paths_cover_all_spec_endpoints() -> None:
         "/contract-groups/{group_id}",
         "/contract-groups/{group_id}/contracts",
         "/contracts/{contract_id}",
+        "/contracts/{contract_id}/attachments",
+        "/contracts/{contract_id}/attachments/{document_id}",
     }
     assert required.issubset(paths), f"缺少路径: {required - paths}"
+
+
+@pytest.mark.asyncio
+async def test_replace_contract_scan_documents_checks_every_affected_contract() -> None:
+    """共享扫描件替换会在 mutation 前逐个校验 affected contracts 的 update 权限。"""
+    from src.api.v1.contracts import contract_groups as mod
+
+    payload = ContractScanDocumentReplaceRequest(
+        documents=[
+            ContractScanDocumentCreate(
+                storage_key="scans/HT-SHARED-001.pdf",
+                original_filename="HT-SHARED-001.pdf",
+                content_type="application/pdf",
+                file_size=128,
+                checksum_sha256="a" * 64,
+            )
+        ]
+    )
+    user = MagicMock(id="user-001")
+    db = AsyncMock()
+
+    with (
+        patch(
+            "src.api.v1.contracts.contract_groups.contract_group_service.list_shared_scan_affected_contract_ids",
+            new=AsyncMock(return_value=["contract-a", "contract-b"]),
+        ) as mock_list_affected,
+        patch(
+            "src.api.v1.contracts.contract_groups.load_contract_scope_context",
+            new=AsyncMock(
+                side_effect=[
+                    {"contract_id": "contract-a", "party_id": "party-a"},
+                    {"contract_id": "contract-b", "party_id": "party-b"},
+                ]
+            ),
+        ) as mock_load_context,
+        patch(
+            "src.api.v1.contracts.contract_groups.authz_service.check_access",
+            new=AsyncMock(return_value=SimpleNamespace(allowed=True)),
+        ) as mock_check_access,
+        patch(
+            "src.api.v1.contracts.contract_groups.contract_group_service.replace_contract_scan_documents",
+            new=AsyncMock(return_value=[]),
+        ) as mock_replace,
+    ):
+        result = await mod.replace_contract_scan_documents(
+            contract_id="contract-a",
+            payload=payload,
+            db=db,
+            current_user=user,
+            _authz=None,
+        )
+
+    assert result == []
+    mock_list_affected.assert_awaited_once_with(db, contract_id="contract-a")
+    assert [
+        call.kwargs["contract_id"] for call in mock_load_context.await_args_list
+    ] == [
+        "contract-a",
+        "contract-b",
+    ]
+    assert [
+        call.kwargs["resource_id"] for call in mock_check_access.await_args_list
+    ] == [
+        "contract-a",
+        "contract-b",
+    ]
+    mock_replace.assert_awaited_once_with(
+        db,
+        contract_id="contract-a",
+        obj_in=payload,
+        affected_contract_ids=["contract-a", "contract-b"],
+        current_user="user-001",
+    )
+
+
+@pytest.mark.asyncio
+async def test_replace_contract_scan_documents_denies_before_mutation_when_sibling_denied() -> (
+    None
+):
+    """任一受影响合同无 update 权限时，替换共享扫描件不得进入 mutation。"""
+    from src.api.v1.contracts import contract_groups as mod
+
+    payload = ContractScanDocumentReplaceRequest(
+        documents=[
+            ContractScanDocumentCreate(
+                storage_key="scans/HT-SHARED-001.pdf",
+                original_filename="HT-SHARED-001.pdf",
+            )
+        ]
+    )
+
+    with (
+        patch(
+            "src.api.v1.contracts.contract_groups.contract_group_service.list_shared_scan_affected_contract_ids",
+            new=AsyncMock(return_value=["contract-a", "contract-b"]),
+        ),
+        patch(
+            "src.api.v1.contracts.contract_groups.load_contract_scope_context",
+            new=AsyncMock(return_value={"party_id": "party-a"}),
+        ),
+        patch(
+            "src.api.v1.contracts.contract_groups.authz_service.check_access",
+            new=AsyncMock(
+                side_effect=[
+                    SimpleNamespace(allowed=True),
+                    SimpleNamespace(allowed=False),
+                ]
+            ),
+        ),
+        patch(
+            "src.api.v1.contracts.contract_groups.contract_group_service.replace_contract_scan_documents",
+            new=AsyncMock(return_value=[]),
+        ) as mock_replace,
+    ):
+        with pytest.raises(PermissionDeniedError):
+            await mod.replace_contract_scan_documents(
+                contract_id="contract-a",
+                payload=payload,
+                db=AsyncMock(),
+                current_user=MagicMock(id="user-001"),
+                _authz=None,
+            )
+
+    mock_replace.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_delete_contract_scan_document_checks_every_affected_contract() -> None:
+    """共享扫描件删除会在 mutation 前逐个校验 affected contracts 的 update 权限。"""
+    from src.api.v1.contracts import contract_groups as mod
+
+    user = MagicMock(id="user-001")
+    db = AsyncMock()
+
+    with (
+        patch(
+            "src.api.v1.contracts.contract_groups.contract_group_service.list_shared_scan_affected_contract_ids",
+            new=AsyncMock(return_value=["contract-a", "contract-b"]),
+        ),
+        patch(
+            "src.api.v1.contracts.contract_groups.load_contract_scope_context",
+            new=AsyncMock(return_value={"party_id": "party-a"}),
+        ),
+        patch(
+            "src.api.v1.contracts.contract_groups.authz_service.check_access",
+            new=AsyncMock(return_value=SimpleNamespace(allowed=True)),
+        ) as mock_check_access,
+        patch(
+            "src.api.v1.contracts.contract_groups.contract_group_service.delete_contract_scan_document",
+            new=AsyncMock(return_value=None),
+        ) as mock_delete,
+    ):
+        await mod.delete_contract_scan_document(
+            contract_id="contract-a",
+            document_id="doc-1",
+            db=db,
+            current_user=user,
+            _authz=None,
+        )
+
+    assert [
+        call.kwargs["resource_id"] for call in mock_check_access.await_args_list
+    ] == [
+        "contract-a",
+        "contract-b",
+    ]
+    mock_delete.assert_awaited_once_with(
+        db,
+        contract_id="contract-a",
+        document_id="doc-1",
+        affected_contract_ids=["contract-a", "contract-b"],
+    )

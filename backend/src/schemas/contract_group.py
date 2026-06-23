@@ -14,7 +14,6 @@ from pydantic_core import PydanticCustomError
 from ..models.contract_group import (
     ContractDirection,
     ContractLifecycleStatus,
-    ContractReviewStatus,
     GroupRelationType,
     RevenueMode,
 )
@@ -216,8 +215,6 @@ class ContractCreate(BaseModel):
     currency_code: str = Field("CNY", max_length=10)
     tax_rate: Decimal | None = Field(None, ge=0, le=1)
     is_tax_included: bool = Field(True)
-    status: ContractLifecycleStatus = Field(ContractLifecycleStatus.DRAFT)
-    review_status: ContractReviewStatus = Field(ContractReviewStatus.DRAFT)
     contract_notes: str | None = Field(None)
     source_session_id: str | None = Field(None, max_length=100)
     asset_ids: list[str] = Field(default_factory=list, description="关联资产 ID 列表")
@@ -244,10 +241,11 @@ class ContractSummary(BaseModel):
     group_relation_type: GroupRelationType
     lessor_party_id: str
     lessee_party_id: str
+    lessor_name_snapshot: str | None = None
+    lessee_name_snapshot: str | None = None
     effective_from: date
     effective_to: date | None
     status: ContractLifecycleStatus
-    review_status: ContractReviewStatus
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -257,11 +255,14 @@ class ContractDetail(BaseModel):
 
     contract_id: str
     contract_group_id: str
+    project_id: str | None = None
     contract_number: str
     contract_direction: ContractDirection
     group_relation_type: GroupRelationType
     lessor_party_id: str
     lessee_party_id: str
+    lessor_name_snapshot: str | None = None
+    lessee_name_snapshot: str | None = None
     sign_date: date | None
     effective_from: date
     effective_to: date | None
@@ -269,10 +270,6 @@ class ContractDetail(BaseModel):
     tax_rate: Decimal | None
     is_tax_included: bool
     status: ContractLifecycleStatus
-    review_status: ContractReviewStatus
-    review_by: str | None
-    reviewed_at: datetime | None
-    review_reason: str | None
     contract_notes: str | None
     data_status: str
     created_at: datetime
@@ -281,6 +278,33 @@ class ContractDetail(BaseModel):
     agency_detail: AgencyDetailResponse | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ContractScanDocumentCreate(BaseModel):
+    """合同盖章扫描件元数据入参。"""
+
+    storage_key: str = Field(..., min_length=1, max_length=300)
+    original_filename: str = Field(..., min_length=1, max_length=255)
+    content_type: str | None = Field(None, max_length=100)
+    file_size: int | None = Field(None, ge=0)
+    checksum_sha256: str | None = Field(None, min_length=64, max_length=64)
+
+
+class ContractScanDocumentResponse(ContractScanDocumentCreate):
+    """合同盖章扫描件出参。"""
+
+    document_id: str
+    data_status: str
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ContractScanDocumentReplaceRequest(BaseModel):
+    """整体替换同合同号所有记录的扫描件关联。"""
+
+    documents: list[ContractScanDocumentCreate] = Field(..., min_length=1)
 
 
 class ContractLifecycleAction(BaseModel):
@@ -304,8 +328,6 @@ class AuditLogResponse(BaseModel):
     action: str
     old_status: str | None
     new_status: str | None
-    review_status_old: str | None
-    review_status_new: str | None
     reason: str | None
     operator_id: str | None
     operator_name: str | None
@@ -396,6 +418,10 @@ class ContractLedgerEntryResponse(BaseModel):
     tax_rate: Decimal | None
     payment_status: str
     paid_amount: Decimal
+    attributed_project_id: str | None = None
+    attributed_owner_party_id: str | None = None
+    attributed_operator_party_id: str | None = None
+    attributed_asset_ids: list[str] | None = None
     notes: str | None
     created_at: datetime | None = None
     updated_at: datetime | None = None
@@ -423,7 +449,6 @@ class LedgerAggregateQueryParams(BaseModel):
         Literal[
             "unpaid",
             "paid",
-            "overdue",
             "partial",
             "voided",
         ]
@@ -480,13 +505,12 @@ class LedgerExportQueryParams(LedgerAggregateQueryParams):
 
 
 class ContractLedgerBatchUpdateRequest(BaseModel):
-    """批量更新合同台账状态。"""
+    """批量登记合同台账实收金额。"""
+
+    model_config = ConfigDict(extra="forbid")
 
     entry_ids: list[str] = Field(..., min_length=1)
-    payment_status: Literal["unpaid", "paid", "overdue", "partial"] = Field(
-        ..., description="支付状态（voided 为系统保留状态）"
-    )
-    paid_amount: Decimal | None = Field(None, ge=0)
+    paid_amount: Decimal = Field(..., ge=0, description="实收金额")
     notes: str | None = None
 
 

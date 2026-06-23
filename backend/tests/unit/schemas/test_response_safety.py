@@ -17,12 +17,9 @@ class DummyProject:
     def __init__(self) -> None:
         self.id = "proj-001"
         self.project_name = "测试项目"
-        self.project_code = "PRJ-TEST01-000001"
+        self.project_code = "PRJ-TEST01-202606-0001"
         self.status = "planning"
-        self.review_status = "draft"
-        self.review_by = None
-        self.reviewed_at = None
-        self.review_reason = None
+
         self.data_status = "正常"
         self.manager_party_id = None
         now = datetime.now(UTC).replace(tzinfo=None)
@@ -137,15 +134,22 @@ def _fake_state(keys: list[str], rel_name: str, loaded_value=NO_VALUE):
 def test_project_response_skips_unloaded_relation_objects() -> None:
     dummy = DummyProject()
     fake_state = _fake_state(
-        ["id", "project_name", "project_code", "status", "review_status",
-         "review_by", "reviewed_at", "review_reason", "manager_party_id",
-         "data_status", "created_at", "updated_at", "created_by", "updated_by"],
+        [
+            "id",
+            "project_name",
+            "project_code",
+            "status",
+            "manager_party_id",
+            "data_status",
+            "created_at",
+            "updated_at",
+            "created_by",
+            "updated_by",
+        ],
         "ownership_relations",
     )
 
-    with patch(
-        "src.schemas.project.sa_inspect", return_value=fake_state, create=True
-    ):
+    with patch("src.schemas.project.sa_inspect", return_value=fake_state, create=True):
         result = ProjectResponse.model_validate(dummy)
 
     assert result.party_relations == []
@@ -158,19 +162,28 @@ def test_project_response_builds_party_relations_from_ownership_relations() -> N
         project_id="proj-001",
         ownership_id="own-001",
         is_active=True,
-        ownership=SimpleNamespace(name="测试权属方", code="OWN001", short_name="权属方"),
+        ownership=SimpleNamespace(
+            name="测试权属方", code="OWN001", short_name="权属方"
+        ),
     )
     fake_state = _fake_state(
-        ["id", "project_name", "project_code", "status", "review_status",
-         "review_by", "reviewed_at", "review_reason", "manager_party_id",
-         "data_status", "created_at", "updated_at", "created_by", "updated_by"],
+        [
+            "id",
+            "project_name",
+            "project_code",
+            "status",
+            "manager_party_id",
+            "data_status",
+            "created_at",
+            "updated_at",
+            "created_by",
+            "updated_by",
+        ],
         "ownership_relations",
         loaded_value=[relation],
     )
 
-    with patch(
-        "src.schemas.project.sa_inspect", return_value=fake_state, create=True
-    ):
+    with patch("src.schemas.project.sa_inspect", return_value=fake_state, create=True):
         result = ProjectResponse.model_validate(dummy)
 
     assert result.party_relations == [

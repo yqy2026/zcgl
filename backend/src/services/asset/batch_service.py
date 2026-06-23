@@ -181,6 +181,8 @@ class AsyncAssetBatchService:
         result = BatchOperationResult(total_count=len(asset_ids))
         assets_by_id = await self._load_assets_map(asset_ids)
         base_updates: dict[str, Any] = updates.copy() if updates else {}
+        base_updates.pop("manager_party_id", None)
+        base_updates.pop("management_entity", None)
         (
             has_ownership_update,
             batch_ownership_id,

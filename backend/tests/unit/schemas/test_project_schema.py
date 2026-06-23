@@ -2,16 +2,15 @@
 
 from datetime import UTC, datetime
 
-from src.schemas.project import ProjectResponse
+from src.schemas.project import ProjectCreate, ProjectResponse, ProjectUpdate
 
 
 def _build_project_payload() -> dict[str, object]:
     return {
         "id": "project-1",
         "project_name": "测试项目",
-        "project_code": "PRJ-TEST01-000001",
+        "project_code": "PRJ-TEST01-202606-0001",
         "status": "planning",
-        "review_status": "draft",
         "data_status": "正常",
         "created_at": datetime.now(UTC),
         "updated_at": datetime.now(UTC),
@@ -43,7 +42,10 @@ def test_project_response_party_relations_keep_is_active() -> None:
 
     project = ProjectResponse.model_validate(payload)
 
-    assert [relation["is_active"] for relation in project.party_relations] == [False, True]
+    assert [relation["is_active"] for relation in project.party_relations] == [
+        False,
+        True,
+    ]
 
 
 def test_project_response_allows_legacy_project_code_for_read_path() -> None:
@@ -53,3 +55,37 @@ def test_project_response_allows_legacy_project_code_for_read_path() -> None:
     project = ProjectResponse.model_validate(payload)
 
     assert project.project_code == "legacy-001"
+
+
+def test_project_create_accepts_operator_month_seq4_code() -> None:
+    project = ProjectCreate(
+        project_name="new-project",
+        project_code="PRJ-OPER0001-202606-0001",
+    )
+
+    assert project.project_code == "PRJ-OPER0001-202606-0001"
+
+
+def test_project_update_accepts_operator_month_seq4_code() -> None:
+    project = ProjectUpdate(project_code="PRJ-OPER0001-202606-0002")
+
+    assert project.project_code == "PRJ-OPER0001-202606-0002"
+
+
+def test_project_response_should_not_expose_review_fields() -> None:
+    payload = _build_project_payload()
+    payload.update(
+        {
+            "review_status": "draft",
+            "review_by": "reviewer",
+            "reviewed_at": datetime.now(UTC),
+            "review_reason": "legacy",
+        }
+    )
+
+    project = ProjectResponse.model_validate(payload)
+
+    assert "review_status" not in project.model_fields_set
+    assert "review_by" not in project.model_fields_set
+    assert "reviewed_at" not in project.model_fields_set
+    assert "review_reason" not in project.model_fields_set

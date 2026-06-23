@@ -1,10 +1,5 @@
 export interface GlobalSearchResultItem {
-  object_type:
-    | 'asset'
-    | 'project'
-    | 'contract_group'
-    | 'contract'
-    | 'customer';
+  object_type: 'asset' | 'project' | 'contract_group' | 'contract' | 'customer';
   object_id: string;
   title: string;
   subtitle?: string | null;

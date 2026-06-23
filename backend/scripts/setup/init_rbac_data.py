@@ -226,6 +226,7 @@ BASIC_PERMISSIONS_DATA = [
     ("llm_prompt", "read", "查看提示词", "查看提示词模板"),
     ("llm_prompt", "update", "更新提示词", "更新提示词模板"),
     ("notification", "read", "查看通知", "查看通知"),
+    ("notification", "create", "创建系统通知", "创建内容中立的系统通知"),
     ("notification", "update", "更新通知", "更新通知状态"),
     ("notification", "delete", "删除通知", "删除通知"),
     ("occupancy", "read", "查看出租率", "查看出租率与占用率信息"),

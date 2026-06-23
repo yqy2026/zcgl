@@ -1,5 +1,4 @@
-export type LedgerPaymentStatus = 'unpaid' | 'paid' | 'overdue' | 'partial' | 'voided';
-export type ManualLedgerPaymentStatus = Exclude<LedgerPaymentStatus, 'voided'>;
+export type LedgerPaymentStatus = 'unpaid' | 'paid' | 'partial' | 'voided';
 
 export interface LedgerEntry {
   entry_id: string;
@@ -38,7 +37,20 @@ export interface LedgerListResponse {
 
 export interface LedgerBatchUpdatePayload {
   entry_ids: string[];
-  payment_status: ManualLedgerPaymentStatus;
   paid_amount?: string | number | null;
   notes?: string | null;
+}
+
+export interface LedgerRecalculateSkippedEntry {
+  entry_id: string;
+  year_month: string;
+  payment_status: string;
+  reason: string;
+}
+
+export interface LedgerRecalculateResult {
+  created: number;
+  updated: number;
+  voided: number;
+  skipped_entries: LedgerRecalculateSkippedEntry[];
 }

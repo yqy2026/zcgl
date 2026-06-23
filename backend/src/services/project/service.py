@@ -24,6 +24,7 @@ from ...core.exception_handler import (
 from ...crud.asset import asset_crud
 from ...crud.contract import contract_crud
 from ...crud.contract_group import contract_group_crud
+from ...crud.party import party_crud
 from ...crud.project import project_crud
 from ...crud.project_asset import project_asset_crud
 from ...crud.query_builder import PartyFilter
@@ -50,7 +51,11 @@ from ...schemas.project import (
     ProjectTenantSummaryResponse,
     ProjectUpdate,
 )
+from ...services.code_segments import build_party_code_segment
 from ...services.contract.contract_group_service import calculate_derived_status
+from ...services.contract.ledger_service_v2 import (
+    find_stale_paid_or_partial_ledger_entries,
+)
 from ...services.party_scope import resolve_user_party_filter
 
 logger = logging.getLogger(__name__)
@@ -113,6 +118,37 @@ class ProjectService:
         return "agency_operation"
 
     @staticmethod
+    def _contract_from_ledger_entry(entry: Any) -> Any | None:
+        return getattr(entry, "contract", None) or getattr(
+            entry,
+            "agency_contract",
+            None,
+        )
+
+    @staticmethod
+    def _group_from_ledger_entry(entry: Any) -> Any | None:
+        contract = ProjectService._contract_from_ledger_entry(entry)
+        return (
+            getattr(contract, "contract_group", None) if contract is not None else None
+        )
+
+    @classmethod
+    def _ledger_entry_context(cls, entry: Any) -> tuple[RevenueMode, GroupRelationType]:
+        contract = cls._contract_from_ledger_entry(entry)
+        group = (
+            getattr(contract, "contract_group", None) if contract is not None else None
+        )
+        revenue_mode = cls._normalize_revenue_mode(getattr(group, "revenue_mode", None))
+        relation_type = cls._normalize_group_relation_type(
+            getattr(contract, "group_relation_type", None)
+        )
+        if relation_type is None:
+            raise OperationNotAllowedError(
+                "台账条目缺少合同关系类型，无法聚合项目历史口径"
+            )
+        return revenue_mode, relation_type
+
+    @staticmethod
     def _asset_ids_from_group(group: Any) -> list[str]:
         asset_ids: list[str] = []
         for asset in getattr(group, "assets", None) or []:
@@ -135,6 +171,7 @@ class ProjectService:
             if normalized_asset_id != "":
                 asset_ids.add(normalized_asset_id)
         return asset_ids
+
     @classmethod
     def _contract_relation_item_from_group(
         cls,
@@ -221,6 +258,26 @@ class ProjectService:
             return Decimal(str(value))
         except Exception:
             return Decimal(0)
+
+    @classmethod
+    def _unpaid_amount_from_entry(cls, entry: Any) -> Decimal:
+        amount_due = cls._as_decimal(getattr(entry, "amount_due", None))
+        paid_amount = cls._as_decimal(getattr(entry, "paid_amount", None))
+        return max(amount_due - paid_amount, Decimal(0))
+
+    @classmethod
+    def _overdue_amount_from_entry(cls, entry: Any, today: date) -> Decimal:
+        payment_status = str(getattr(entry, "payment_status", "") or "").strip()
+        due_date = getattr(entry, "due_date", None)
+        if not isinstance(due_date, date):
+            due_date = getattr(getattr(entry, "source_ledger", None), "due_date", None)
+        if (
+            payment_status == "voided"
+            or not isinstance(due_date, date)
+            or due_date >= today
+        ):
+            return Decimal(0)
+        return cls._unpaid_amount_from_entry(entry)
 
     @staticmethod
     def _quantize_money(value: Decimal) -> Decimal:
@@ -311,6 +368,13 @@ class ProjectService:
         party_relations: list[Any] | None,
         operator_id: str | None = None,
     ) -> None:
+        _ = db, project_id, operator_id
+        if party_relations is not None:
+            raise OperationNotAllowedError(
+                "项目 party_relations 写入口已下线；项目主体关系由产权/运营方字段派生，禁止通过该字段写入",
+                reason="project_party_relations_write_removed",
+            )
+
         normalized_relations = self._normalize_owner_party_relations(party_relations)
         if len(normalized_relations) == 0:
             return
@@ -323,6 +387,27 @@ class ProjectService:
             len(normalized_relations),
             operator_id,
         )
+
+    async def _resolve_operator_party_for_code(
+        self, db: AsyncSession, obj_in: ProjectCreate
+    ) -> tuple[str | None, str | None]:
+        operator_party_id = (obj_in.manager_party_id or obj_in.organization_id or "").strip()
+        if operator_party_id == "":
+            raise OperationNotAllowedError(
+                "自动生成 project_code 必须提供运营方 manager_party_id",
+                reason="project_operator_required_for_code",
+            )
+
+        party = await party_crud.get_party(db, party_id=operator_party_id)
+        if party is None:
+            raise ResourceNotFoundError("运营方主体", operator_party_id)
+        party_code = str(getattr(party, "code", "") or "").strip()
+        if party_code == "":
+            raise OperationNotAllowedError(
+                "自动生成 project_code 的运营方必须配置 party.code",
+                reason="project_operator_code_required",
+            )
+        return operator_party_id, party_code
 
     async def _resolve_party_filter(
         self,
@@ -350,9 +435,20 @@ class ProjectService:
         """创建项目"""
         try:
             # 1. 生成项目编码 (如果未提供)
+            if "party_relations" in obj_in.model_fields_set:
+                raise OperationNotAllowedError(
+                    "项目 party_relations 写入口已下线；项目主体关系由产权/运营方字段派生，禁止通过该字段写入",
+                    reason="project_party_relations_write_removed",
+                )
             if not obj_in.project_code:
+                operator_party_id, operator_party_code = (
+                    await self._resolve_operator_party_for_code(db, obj_in)
+                )
                 obj_in.project_code = await self.generate_project_code(
-                    db, obj_in.project_name
+                    db,
+                    obj_in.project_name,
+                    operator_party_id=operator_party_id,
+                    operator_party_code=operator_party_code,
                 )
 
             # 2. 检查编码唯一性
@@ -414,20 +510,17 @@ class ProjectService:
         if not project:
             raise ResourceNotFoundError("项目", project_id)
 
-        party_relations_provided = "party_relations" in obj_in.model_fields_set
+        if "party_relations" in obj_in.model_fields_set:
+            raise OperationNotAllowedError(
+                "项目 party_relations 写入口已下线；项目主体关系由产权/运营方字段派生，禁止通过该字段写入",
+                reason="project_party_relations_write_removed",
+            )
         result: Project = await project_crud.update(
             db,
             db_obj=project,
             obj_in=obj_in,
             commit=False,
         )
-        if party_relations_provided:
-            await self._replace_project_owner_relations(
-                db,
-                project_id=str(result.id),
-                party_relations=obj_in.party_relations,
-                operator_id=updated_by,
-            )
         await db.commit()
         await db.refresh(result)
         return result
@@ -507,23 +600,36 @@ class ProjectService:
             await project_crud.remove(db, id=project_id)
 
     async def generate_project_code(
-        self, db: AsyncSession, name: str | None = None
+        self,
+        db: AsyncSession,
+        name: str | None = None,
+        *,
+        operator_party_id: str | None = None,
+        operator_party_code: str | None = None,
     ) -> str:
-        """生成项目编码，格式：PRJ-YYYYMM-NNNNNN"""
-        segment = datetime.now().strftime("%Y%m")
-        prefix = f"PRJ-{segment}-"
+        """生成项目编码，格式：PRJ-<运营方段>-<YYYYMM>-<4位序号>。"""
+        _ = name
+        _ = operator_party_id
+        if not operator_party_code or str(operator_party_code).strip() == "":
+            raise OperationNotAllowedError(
+                "自动生成 project_code 必须提供运营方 party.code",
+                reason="project_operator_code_required",
+            )
+        year_month = datetime.now(UTC).strftime("%Y%m")
+        segment = build_party_code_segment(operator_party_code)
+        prefix = f"PRJ-{segment}-{year_month}-"
+        await project_crud.acquire_code_generation_lock(db, prefix=prefix)
         last_project = await project_crud.get_latest_by_code_prefix(db, prefix=prefix)
 
         if last_project:
             try:
-                seq = int(last_project.project_code[-6:])
-                next_seq = seq + 1
+                next_seq = int(str(last_project.project_code)[-4:]) + 1
             except (ValueError, IndexError, TypeError):
                 next_seq = 1
         else:
             next_seq = 1
 
-        return f"{prefix}{next_seq:06d}"
+        return f"{prefix}{next_seq:04d}"
 
     async def search_projects(
         self,
@@ -828,7 +934,9 @@ class ProjectService:
             )
 
         def contract_display_name(contract: Any) -> str:
-            contract_number = str(getattr(contract, "contract_number", "") or "").strip()
+            contract_number = str(
+                getattr(contract, "contract_number", "") or ""
+            ).strip()
             if contract_number != "":
                 return contract_number
             return str(getattr(contract, "contract_id", "") or "").strip()
@@ -863,6 +971,7 @@ class ProjectService:
             contracts = await contract_crud.list_by_group(
                 db,
                 group_id=relation.contract_relation_id,
+                load_details=True,
             )
             for contract in contracts:
                 relation_type = self._normalize_group_relation_type(
@@ -870,10 +979,7 @@ class ProjectService:
                 )
                 effective_to = getattr(contract, "effective_to", None)
                 status = getattr(contract, "status", None)
-                is_inactive = status in {
-                    ContractLifecycleStatus.EXPIRED,
-                    ContractLifecycleStatus.TERMINATED,
-                }
+                is_inactive = status == ContractLifecycleStatus.TERMINATED
                 if (
                     isinstance(effective_to, date)
                     and today <= effective_to <= expiring_until
@@ -889,6 +995,48 @@ class ProjectService:
                         severity="warning",
                     )
 
+                ledger_entries = (
+                    await contract_group_crud.list_ledger_entries_by_contract(
+                        db,
+                        contract_id=str(getattr(contract, "contract_id")),
+                    )
+                )
+                paid_or_partial_entries = [
+                    entry
+                    for entry in ledger_entries
+                    if str(getattr(entry, "payment_status", "") or "").strip()
+                    in {"paid", "partial"}
+                ]
+                if paid_or_partial_entries:
+                    rent_terms = await contract_group_crud.list_rent_terms_by_contract(
+                        db,
+                        contract_id=str(getattr(contract, "contract_id")),
+                    )
+                    payment_cycle = (
+                        getattr(
+                            getattr(contract, "lease_detail", None),
+                            "payment_cycle",
+                            None,
+                        )
+                        or "月付"
+                    )
+                    stale_entries = find_stale_paid_or_partial_ledger_entries(
+                        rent_terms=rent_terms,
+                        ledger_entries=paid_or_partial_entries,
+                        payment_cycle=payment_cycle,
+                    )
+                    if stale_entries:
+                        add_risk(
+                            relation,
+                            risk_type="ledger_stale_after_correction",
+                            message=(
+                                f"{contract_role_label(contract)} "
+                                f"{contract_display_name(contract)} "
+                                f"存在 {len(stale_entries)} 条已收台账与当前合同条款不一致"
+                            ),
+                            severity="warning",
+                        )
+
                 is_project_receivable_contract = (
                     relation.revenue_mode == RevenueMode.LEASE.value
                     and relation_type == GroupRelationType.DOWNSTREAM
@@ -896,22 +1044,9 @@ class ProjectService:
                 if not is_project_receivable_contract:
                     continue
 
-                ledger_entries = (
-                    await contract_group_crud.list_ledger_entries_by_contract(
-                        db,
-                        contract_id=str(getattr(contract, "contract_id")),
-                    )
-                )
                 overdue_amount = Decimal(0)
                 for entry in ledger_entries:
-                    payment_status = str(
-                        getattr(entry, "payment_status", "") or ""
-                    ).strip()
-                    if payment_status != "overdue":
-                        continue
-                    amount_due = self._as_decimal(getattr(entry, "amount_due", None))
-                    paid_amount = self._as_decimal(getattr(entry, "paid_amount", None))
-                    overdue_amount += max(amount_due - paid_amount, Decimal(0))
+                    overdue_amount += self._overdue_amount_from_entry(entry, today)
                 if overdue_amount > Decimal(0):
                     add_risk(
                         relation,
@@ -934,18 +1069,10 @@ class ProjectService:
             )
             service_fee_overdue_amount = Decimal(0)
             for service_fee_entry in service_fee_entries:
-                payment_status = str(
-                    getattr(service_fee_entry, "payment_status", "") or ""
-                ).strip()
-                if payment_status != "overdue":
-                    continue
-                amount_due = self._as_decimal(
-                    getattr(service_fee_entry, "amount_due", None)
+                service_fee_overdue_amount += self._overdue_amount_from_entry(
+                    service_fee_entry,
+                    today,
                 )
-                paid_amount = self._as_decimal(
-                    getattr(service_fee_entry, "paid_amount", None)
-                )
-                service_fee_overdue_amount += max(amount_due - paid_amount, Decimal(0))
             if service_fee_overdue_amount > Decimal(0):
                 add_risk(
                     relation,
@@ -1007,9 +1134,11 @@ class ProjectService:
         if project is None:
             raise ResourceNotFoundError("项目", project_id)
 
-        groups = await contract_group_crud.list_by_project(
-            db,
-            project_id=project_id,
+        ledger_entries = (
+            await contract_group_crud.list_ledger_entries_by_attributed_project(
+                db,
+                project_id=project_id,
+            )
         )
 
         receivable_amount = Decimal(0)
@@ -1019,94 +1148,62 @@ class ProjectService:
         overdue_amount = Decimal(0)
         service_fee_receivable = Decimal(0)
         service_fee_received = Decimal(0)
+        today = self._today()
 
-        for group in groups:
-            revenue_mode = self._normalize_revenue_mode(
-                getattr(group, "revenue_mode", None)
-            )
-            contracts = await contract_crud.list_by_group(
-                db,
-                group_id=str(getattr(group, "contract_group_id")),
-            )
-
-            for contract in contracts:
-                relation_type = self._normalize_group_relation_type(
-                    getattr(contract, "group_relation_type", None)
-                )
-                if relation_type is None:
-                    continue
-
-                is_payable_contract = (
-                    revenue_mode == RevenueMode.LEASE
-                    and relation_type == GroupRelationType.UPSTREAM
-                )
-                is_receivable_contract = (
-                    revenue_mode == RevenueMode.LEASE
-                    and relation_type == GroupRelationType.DOWNSTREAM
-                )
-                if not (is_payable_contract or is_receivable_contract):
-                    continue
-
-                ledger_entries = (
-                    await contract_group_crud.list_ledger_entries_by_contract(
-                        db,
-                        contract_id=str(getattr(contract, "contract_id")),
-                    )
-                )
-                for entry in ledger_entries:
-                    payment_status = str(
-                        getattr(entry, "payment_status", "") or ""
-                    ).strip()
-                    if payment_status == "voided":
-                        continue
-
-                    amount_due = self._as_decimal(getattr(entry, "amount_due", None))
-                    entry_paid_amount = self._as_decimal(
-                        getattr(entry, "paid_amount", None)
-                    )
-                    if is_payable_contract:
-                        payable_amount += amount_due
-                        paid_amount += entry_paid_amount
-                    else:
-                        receivable_amount += amount_due
-                        received_amount += entry_paid_amount
-                        if payment_status == "overdue":
-                            overdue_amount += max(
-                                amount_due - entry_paid_amount,
-                                Decimal(0),
-                            )
-
-            if revenue_mode != RevenueMode.AGENCY:
+        for entry in ledger_entries:
+            payment_status = str(getattr(entry, "payment_status", "") or "").strip()
+            if payment_status == "voided":
                 continue
 
-            service_fee_entries = (
-                await contract_group_crud.list_service_fee_entries_by_group(
-                    db,
-                    group_id=str(getattr(group, "contract_group_id")),
-                )
+            revenue_mode, relation_type = self._ledger_entry_context(entry)
+            is_payable_contract = (
+                revenue_mode == RevenueMode.LEASE
+                and relation_type == GroupRelationType.UPSTREAM
             )
-            for service_fee_entry in service_fee_entries:
-                payment_status = str(
-                    getattr(service_fee_entry, "payment_status", "") or ""
-                ).strip()
-                if payment_status == "voided":
-                    continue
+            is_receivable_contract = (
+                revenue_mode == RevenueMode.LEASE
+                and relation_type == GroupRelationType.DOWNSTREAM
+            )
+            if not (is_payable_contract or is_receivable_contract):
+                continue
 
-                amount_due = self._as_decimal(
-                    getattr(service_fee_entry, "amount_due", None)
-                )
-                entry_paid_amount = self._as_decimal(
-                    getattr(service_fee_entry, "paid_amount", None)
-                )
-                service_fee_receivable += amount_due
-                service_fee_received += entry_paid_amount
+            amount_due = self._as_decimal(getattr(entry, "amount_due", None))
+            entry_paid_amount = self._as_decimal(getattr(entry, "paid_amount", None))
+            if is_payable_contract:
+                payable_amount += amount_due
+                paid_amount += entry_paid_amount
+            else:
                 receivable_amount += amount_due
                 received_amount += entry_paid_amount
-                if payment_status == "overdue":
-                    overdue_amount += max(
-                        amount_due - entry_paid_amount,
-                        Decimal(0),
-                    )
+                overdue_amount += self._overdue_amount_from_entry(entry, today)
+
+        service_fee_entries = (
+            await contract_group_crud.list_service_fee_entries_by_attributed_project(
+                db,
+                project_id=project_id,
+            )
+        )
+        for service_fee_entry in service_fee_entries:
+            payment_status = str(
+                getattr(service_fee_entry, "payment_status", "") or ""
+            ).strip()
+            if payment_status == "voided":
+                continue
+
+            amount_due = self._as_decimal(
+                getattr(service_fee_entry, "amount_due", None)
+            )
+            entry_paid_amount = self._as_decimal(
+                getattr(service_fee_entry, "paid_amount", None)
+            )
+            service_fee_receivable += amount_due
+            service_fee_received += entry_paid_amount
+            receivable_amount += amount_due
+            received_amount += entry_paid_amount
+            overdue_amount += self._overdue_amount_from_entry(
+                service_fee_entry,
+                today,
+            )
 
         return ProjectLedgerSummaryResponse(
             receivable_amount=self._quantize_money(receivable_amount),
@@ -1200,8 +1297,13 @@ class ProjectService:
         project_id: str,
         current_user_id: str | None = None,
         party_filter: PartyFilter | None = None,
+        suppress_customer_metrics: bool = False,
     ) -> ProjectAnalyticsResponse:
         """获取项目维度分析摘要，按经营模式分区。"""
+        should_suppress_customer_metrics = (
+            suppress_customer_metrics
+            or getattr(party_filter, "filter_mode", None) == "any"
+        )
         _, asset_summary = await self.get_project_active_assets(
             db=db,
             project_id=project_id,
@@ -1250,6 +1352,7 @@ class ProjectService:
             "lease_sublease": 0,
             "agency_operation": 0,
         }
+        today = self._today()
 
         for tenant in tenants.items:
             relation_type = self._normalize_group_relation_type(
@@ -1264,118 +1367,82 @@ class ProjectService:
             customer_ids_by_mode[relation_kind].add(tenant.party_id)
             customer_contract_counts[relation_kind] += tenant.contract_count
 
-        groups = await contract_group_crud.list_by_project(
-            db,
-            project_id=project_id,
-        )
-        for group in groups:
-            revenue_mode = self._normalize_revenue_mode(
-                getattr(group, "revenue_mode", None)
-            )
-            relation_kind = self._relation_kind_from_revenue_mode(revenue_mode)
-            contracts = await contract_crud.list_by_group(
+        ledger_entries = (
+            await contract_group_crud.list_ledger_entries_by_attributed_project(
                 db,
-                group_id=str(getattr(group, "contract_group_id")),
+                project_id=project_id,
             )
-
-            for contract in contracts:
-                relation_type = self._normalize_group_relation_type(
-                    getattr(contract, "group_relation_type", None)
-                )
-                if relation_type is None:
-                    continue
-
-                is_payable_contract = (
-                    revenue_mode == RevenueMode.LEASE
-                    and relation_type == GroupRelationType.UPSTREAM
-                )
-                is_receivable_contract = (
-                    revenue_mode == RevenueMode.LEASE
-                    and relation_type == GroupRelationType.DOWNSTREAM
-                )
-                if not (is_payable_contract or is_receivable_contract):
-                    continue
-
-                ledger_entries = (
-                    await contract_group_crud.list_ledger_entries_by_contract(
-                        db,
-                        contract_id=str(getattr(contract, "contract_id")),
-                    )
-                )
-                for entry in ledger_entries:
-                    payment_status = str(
-                        getattr(entry, "payment_status", "") or ""
-                    ).strip()
-                    if payment_status == "voided":
-                        continue
-                    amount_due = self._as_decimal(getattr(entry, "amount_due", None))
-                    entry_paid_amount = self._as_decimal(
-                        getattr(entry, "paid_amount", None)
-                    )
-                    period = self._year_month_from_entry(entry)
-                    period_amounts = trend_amounts.setdefault(
-                        period, self._empty_trend_amounts()
-                    )
-                    if is_payable_contract:
-                        mode_amounts[relation_kind]["payable_amount"] += amount_due
-                        mode_amounts[relation_kind]["paid_amount"] += (
-                            entry_paid_amount
-                        )
-                        period_amounts["payable_amount"] += amount_due
-                        period_amounts["paid_amount"] += entry_paid_amount
-                    else:
-                        mode_amounts[relation_kind]["receivable_amount"] += amount_due
-                        mode_amounts[relation_kind]["received_amount"] += (
-                            entry_paid_amount
-                        )
-                        period_amounts["receivable_amount"] += amount_due
-                        period_amounts["received_amount"] += entry_paid_amount
-                        if payment_status == "overdue":
-                            overdue_amount = max(
-                                amount_due - entry_paid_amount,
-                                Decimal(0),
-                            )
-                            mode_amounts[relation_kind]["overdue_amount"] += (
-                                overdue_amount
-                            )
-                            period_amounts["overdue_amount"] += overdue_amount
-
-            if revenue_mode != RevenueMode.AGENCY:
+        )
+        for entry in ledger_entries:
+            payment_status = str(getattr(entry, "payment_status", "") or "").strip()
+            if payment_status == "voided":
+                continue
+            revenue_mode, relation_type = self._ledger_entry_context(entry)
+            relation_kind = self._relation_kind_from_revenue_mode(revenue_mode)
+            is_payable_contract = (
+                revenue_mode == RevenueMode.LEASE
+                and relation_type == GroupRelationType.UPSTREAM
+            )
+            is_receivable_contract = (
+                revenue_mode == RevenueMode.LEASE
+                and relation_type == GroupRelationType.DOWNSTREAM
+            )
+            if not (is_payable_contract or is_receivable_contract):
                 continue
 
-            service_fee_entries = (
-                await contract_group_crud.list_service_fee_entries_by_group(
-                    db,
-                    group_id=str(getattr(group, "contract_group_id")),
-                )
+            amount_due = self._as_decimal(getattr(entry, "amount_due", None))
+            entry_paid_amount = self._as_decimal(getattr(entry, "paid_amount", None))
+            period = self._year_month_from_entry(entry)
+            period_amounts = trend_amounts.setdefault(
+                period, self._empty_trend_amounts()
             )
-            for service_fee_entry in service_fee_entries:
-                payment_status = str(
-                    getattr(service_fee_entry, "payment_status", "") or ""
-                ).strip()
-                if payment_status == "voided":
-                    continue
-                amount_due = self._as_decimal(
-                    getattr(service_fee_entry, "amount_due", None)
-                )
-                entry_paid_amount = self._as_decimal(
-                    getattr(service_fee_entry, "paid_amount", None)
-                )
-                period = self._year_month_from_entry(service_fee_entry)
-                period_amounts = trend_amounts.setdefault(
-                    period, self._empty_trend_amounts()
-                )
+            if is_payable_contract:
+                mode_amounts[relation_kind]["payable_amount"] += amount_due
+                mode_amounts[relation_kind]["paid_amount"] += entry_paid_amount
+                period_amounts["payable_amount"] += amount_due
+                period_amounts["paid_amount"] += entry_paid_amount
+            else:
                 mode_amounts[relation_kind]["receivable_amount"] += amount_due
                 mode_amounts[relation_kind]["received_amount"] += entry_paid_amount
                 period_amounts["receivable_amount"] += amount_due
                 period_amounts["received_amount"] += entry_paid_amount
-                if payment_status == "overdue":
-                    overdue_amount = max(
-                        amount_due - entry_paid_amount,
-                        Decimal(0),
-                    )
-                    mode_amounts[relation_kind]["overdue_amount"] += overdue_amount
-                    period_amounts["overdue_amount"] += overdue_amount
+                overdue_amount = self._overdue_amount_from_entry(entry, today)
+                mode_amounts[relation_kind]["overdue_amount"] += overdue_amount
+                period_amounts["overdue_amount"] += overdue_amount
+
+        service_fee_entries = (
+            await contract_group_crud.list_service_fee_entries_by_attributed_project(
+                db,
+                project_id=project_id,
+            )
+        )
+        for service_fee_entry in service_fee_entries:
+            payment_status = str(
+                getattr(service_fee_entry, "payment_status", "") or ""
+            ).strip()
+            if payment_status == "voided":
+                continue
+            amount_due = self._as_decimal(
+                getattr(service_fee_entry, "amount_due", None)
+            )
+            entry_paid_amount = self._as_decimal(
+                getattr(service_fee_entry, "paid_amount", None)
+            )
+            period = self._year_month_from_entry(service_fee_entry)
+            period_amounts = trend_amounts.setdefault(
+                period, self._empty_trend_amounts()
+            )
+            relation_kind = "agency_operation"
+            mode_amounts[relation_kind]["receivable_amount"] += amount_due
+            mode_amounts[relation_kind]["received_amount"] += entry_paid_amount
+            period_amounts["receivable_amount"] += amount_due
+            period_amounts["received_amount"] += entry_paid_amount
+            overdue_amount = self._overdue_amount_from_entry(
+                service_fee_entry,
+                today,
+            )
+            mode_amounts[relation_kind]["overdue_amount"] += overdue_amount
+            period_amounts["overdue_amount"] += overdue_amount
 
         risk_counts: dict[str, int] = {"lease_sublease": 0, "agency_operation": 0}
         relation_kind_by_id = {
@@ -1417,8 +1484,12 @@ class ProjectService:
                         len(relation.terminal_contract_ids)
                         for relation in mode_relations
                     ),
-                    customer_count=len(customer_ids_by_mode[relation_kind]),
-                    customer_contract_count=customer_contract_counts[relation_kind],
+                    customer_count=None
+                    if should_suppress_customer_metrics
+                    else len(customer_ids_by_mode[relation_kind]),
+                    customer_contract_count=None
+                    if should_suppress_customer_metrics
+                    else customer_contract_counts[relation_kind],
                     receivable_amount=self._quantize_money(
                         amounts["receivable_amount"]
                     ),
@@ -1441,10 +1512,13 @@ class ProjectService:
         return ProjectAnalyticsResponse(
             asset_summary=asset_summary,
             contract_relation_count=relations.total,
-            tenant_count=tenants.total,
-            customer_contract_count=sum(
-                tenant.contract_count for tenant in tenants.items
-            ),
+            tenant_count=None if should_suppress_customer_metrics else tenants.total,
+            customer_contract_count=None
+            if should_suppress_customer_metrics
+            else sum(tenant.contract_count for tenant in tenants.items),
+            customer_metrics_suppression_reason="customer_metrics_requires_single_perspective"
+            if should_suppress_customer_metrics
+            else None,
             risk_count=risks.total,
             high_risk_count=high_risk_count,
             receivable_amount=ledger_summary.receivable_amount,

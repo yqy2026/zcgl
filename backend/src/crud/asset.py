@@ -5,12 +5,13 @@
 资产计算逻辑（AssetCalculator）应在 API 或 Service 层调用。
 """
 
-from typing import Any, NamedTuple, TypeVar, cast
+from typing import Any, Literal, NamedTuple, TypeVar, cast
 
 from sqlalchemy import Float, Select, case, delete, false, func, insert, or_, select
 from sqlalchemy import cast as sql_cast
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, load_only, selectinload, with_loader_criteria
+from sqlalchemy.orm.attributes import set_committed_value
 from sqlalchemy.sql.base import ExecutableOption
 
 from ..constants.business_constants import DataStatusValues, DateTimeFields
@@ -26,6 +27,8 @@ from ..models.asset_search_index import AssetSearchIndex
 from ..models.auth import User
 from ..models.contract_group import Contract, LeaseContractDetail
 from ..models.party import Party
+from ..models.project import Project
+from ..models.project_asset import ProjectAsset
 from ..schemas.asset import AssetCreate, AssetUpdate
 from .asset_support import (
     AssetFilterData,
@@ -71,6 +74,7 @@ class AreaSummaryAggregationRow(NamedTuple):
 class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
     """资产CRUD操作类 - 优化版本"""
 
+    PROJECT_MANAGER_FILTER_KEY = "project_manager_party_id"
     SORT_FIELD_ALIASES = {
         "occupancy_rate": "cached_occupancy_rate",
     }
@@ -78,8 +82,11 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         "min_occupancy_rate": "min_cached_occupancy_rate",
         "max_occupancy_rate": "max_cached_occupancy_rate",
         "occupancy_rate": "cached_occupancy_rate",
+        "manager_party_id": PROJECT_MANAGER_FILTER_KEY,
+        "management_entity": PROJECT_MANAGER_FILTER_KEY,
     }
     IMMUTABLE_MUTATION_FIELDS = (
+        "asset_code",
         "version",
         "tenant_name",
         "lease_contract_number",
@@ -91,6 +98,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         "description",
     )
     COMPUTED_MUTATION_FIELDS = ("unrented_area", "occupancy_rate")
+    DERIVED_MUTATION_FIELDS = ("manager_party_id", "management_entity")
     RELATION_MUTATION_FIELDS = ("ownership_entity",)
 
     @staticmethod
@@ -169,6 +177,8 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         if remove_computed_fields:
             for field in cls.COMPUTED_MUTATION_FIELDS:
                 data.pop(field, None)
+        for field in cls.DERIVED_MUTATION_FIELDS:
+            data.pop(field, None)
         if remove_relation_fields:
             for field in cls.RELATION_MUTATION_FIELDS:
                 data.pop(field, None)
@@ -261,6 +271,46 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
 
         return qb_filters
 
+    @classmethod
+    def _pop_project_manager_filter(cls, filters: AssetFilterData) -> Any | None:
+        return filters.pop(cls.PROJECT_MANAGER_FILTER_KEY, None)
+
+    @staticmethod
+    def _normalize_project_manager_filter_values(value: Any) -> list[str]:
+        if value is None:
+            return []
+        if isinstance(value, str):
+            values = [value]
+        elif isinstance(value, (list, tuple, set)):
+            values = list(value)
+        else:
+            values = [value]
+        return [
+            str(candidate).strip()
+            for candidate in values
+            if str(candidate).strip() != ""
+        ]
+
+    def _apply_project_manager_filter(
+        self,
+        stmt: Select[TSelectRow],
+        manager_filter_value: Any | None,
+    ) -> Select[TSelectRow]:
+        manager_party_ids = self._normalize_project_manager_filter_values(
+            manager_filter_value
+        )
+        if not manager_party_ids:
+            return stmt
+
+        active_project_asset_ids = (
+            select(ProjectAsset.asset_id)
+            .join(Project, Project.id == ProjectAsset.project_id)
+            .where(ProjectAsset.valid_to.is_(None))
+            .where(Project.manager_party_id.in_(manager_party_ids))
+            .distinct()
+        )
+        return stmt.where(Asset.id.in_(active_project_asset_ids))
+
     @staticmethod
     def _normalized_org_ids(party_filter: PartyFilter) -> list[str]:
         return [
@@ -321,7 +371,52 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         party_filter: PartyFilter,
     ) -> Select[Any]:
         if self._supports_party_scope_columns():
-            return self.query_builder.apply_party_filter(stmt, party_filter)
+            owner_party_ids = [
+                str(owner_id).strip()
+                for owner_id in (party_filter.owner_party_ids or [])
+                if str(owner_id).strip() != ""
+            ]
+            manager_party_ids = [
+                str(manager_id).strip()
+                for manager_id in (party_filter.manager_party_ids or [])
+                if str(manager_id).strip() != ""
+            ]
+
+            if (
+                party_filter.owner_party_ids is None
+                and party_filter.manager_party_ids is None
+            ):
+                party_ids = [
+                    str(party_id).strip()
+                    for party_id in party_filter.party_ids
+                    if str(party_id).strip() != ""
+                ]
+                if party_filter.filter_mode == "owner":
+                    owner_party_ids = party_ids
+                elif party_filter.filter_mode == "manager":
+                    manager_party_ids = party_ids
+                else:
+                    owner_party_ids = party_ids
+                    manager_party_ids = party_ids
+
+            conditions: list[Any] = []
+            if party_filter.filter_mode in {"owner", "any"} and owner_party_ids:
+                conditions.append(Asset.owner_party_id.in_(owner_party_ids))
+            if party_filter.filter_mode in {"manager", "any"} and manager_party_ids:
+                active_project_asset_ids = (
+                    select(ProjectAsset.asset_id)
+                    .join(Project, Project.id == ProjectAsset.project_id)
+                    .where(ProjectAsset.valid_to.is_(None))
+                    .where(Project.manager_party_id.in_(manager_party_ids))
+                    .distinct()
+                )
+                conditions.append(Asset.id.in_(active_project_asset_ids))
+
+            if not conditions:
+                return stmt.where(false())
+            if len(conditions) == 1:
+                return stmt.where(conditions[0])
+            return stmt.where(or_(*conditions))
 
         principals = await self._resolve_creator_principals(db, party_filter)
         return self._apply_creator_scope(stmt, principals)
@@ -356,6 +451,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         else:
             await db.flush()
         await db.refresh(db_obj)
+        await self._refresh_derived_manager_party(db, db_obj)
         return db_obj
 
     async def get_async(
@@ -379,8 +475,39 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         result = await db.execute(stmt)
         asset: Asset | None = await _scalars_first(result)
         if asset is not None:
+            self._apply_derived_manager_party(asset)
             self._decrypt_asset_object(asset)
         return asset
+
+    @staticmethod
+    def _apply_derived_manager_party(asset: Asset) -> None:
+        project = getattr(asset, "__dict__", {}).get("project")
+        derived_manager_party_id = (
+            getattr(project, "manager_party_id", None) if project is not None else None
+        )
+        try:
+            set_committed_value(asset, "manager_party_id", derived_manager_party_id)
+        except AttributeError:
+            setattr(asset, "manager_party_id", derived_manager_party_id)
+
+    async def _refresh_derived_manager_party(
+        self,
+        db: AsyncSession,
+        asset: Asset,
+    ) -> None:
+        stmt = (
+            select(Project.manager_party_id)
+            .join(ProjectAsset, ProjectAsset.project_id == Project.id)
+            .where(ProjectAsset.asset_id == asset.id)
+            .where(ProjectAsset.valid_to.is_(None))
+            .limit(1)
+        )
+        result = await db.execute(stmt)
+        derived_manager_party_id: str | None = await _result_scalar(result)
+        try:
+            set_committed_value(asset, "manager_party_id", derived_manager_party_id)
+        except AttributeError:
+            setattr(asset, "manager_party_id", derived_manager_party_id)
 
     def _decrypt_asset_object(self, asset: Asset) -> None:
         """
@@ -438,6 +565,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         result = await db.execute(stmt)
         asset: Asset | None = await _scalars_first(result)
         if asset is not None:
+            self._apply_derived_manager_party(asset)
             self._decrypt_asset_object(asset)
         return asset
 
@@ -455,6 +583,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         party_filter: PartyFilter | None = None,
     ) -> tuple[list[Asset], int]:
         qb_filters = self._normalize_filters(filters)
+        project_manager_filter = self._pop_project_manager_filter(qb_filters)
         normalized_sort_field = self._normalize_sort_field(sort_field)
 
         non_pii_search_fields = ["asset_name", "business_category"]
@@ -513,6 +642,10 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             base_query = base_query.join(
                 Party, Asset.owner_party_id == Party.id, isouter=True
             )
+        base_query = self._apply_project_manager_filter(
+            base_query,
+            project_manager_filter,
+        )
         if party_filter is not None:
             base_query = await self._apply_asset_party_filter(
                 db,
@@ -536,6 +669,10 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             count_base_query = count_base_query.join(
                 Party, Asset.owner_party_id == Party.id, isouter=True
             )
+        count_base_query = self._apply_project_manager_filter(
+            count_base_query,
+            project_manager_filter,
+        )
         if party_filter is not None:
             count_base_query = await self._apply_asset_party_filter(
                 db,
@@ -554,6 +691,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         total = int(total_raw) if total_raw is not None else 0
 
         for asset in assets:
+            self._apply_derived_manager_party(asset)
             self._decrypt_asset_object(asset)
 
         return assets, total
@@ -570,14 +708,11 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         session_id: str | None = None,
     ) -> Asset:
         obj_in_data = obj_in.model_dump()
-        self._clean_asset_data(obj_in_data, remove_relation_fields=False)
-        if (
-            organization_id is not None
-            and organization_id.strip() != ""
-            and obj_in_data.get("manager_party_id") in (None, "")
-        ):
-            # 仅保留最小兼容：旧 organization_id 输入不再写库列，按 manager_party_id 别名处理。
-            obj_in_data["manager_party_id"] = organization_id
+        self._clean_asset_data(
+            obj_in_data,
+            remove_immutable_fields=False,
+            remove_relation_fields=False,
+        )
         encrypted_data = self.sensitive_data_handler.encrypt_data(obj_in_data.copy())
 
         db_obj = Asset(**encrypted_data)
@@ -603,9 +738,100 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         else:
             await db.flush()
         await db.refresh(db_obj)
+        await self._refresh_derived_manager_party(db, db_obj)
         return db_obj
 
-    async def update_async(
+    async def get_distinct_field_values(
+        self,
+        db: AsyncSession,
+        field_name: str,
+        *,
+        filters: AssetFilterData | None = None,
+        sort_order: Literal["asc", "desc"] = "asc",
+        exclude_empty: bool = True,
+        use_cache: bool = True,
+        party_filter: PartyFilter | None = None,
+    ) -> list[Any]:
+        if sort_order not in {"asc", "desc"}:
+            return await super().get_distinct_field_values(
+                db,
+                field_name,
+                filters=filters,
+                sort_order=sort_order,
+                exclude_empty=exclude_empty,
+                use_cache=use_cache,
+                party_filter=party_filter,
+            )
+        if field_name not in self.DERIVED_MUTATION_FIELDS and not hasattr(
+            self.model, field_name
+        ):
+            return await super().get_distinct_field_values(
+                db,
+                field_name,
+                filters=filters,
+                sort_order=sort_order,
+                exclude_empty=exclude_empty,
+                use_cache=use_cache,
+                party_filter=party_filter,
+            )
+
+        qb_filters = self._normalize_filters(filters)
+        project_manager_filter = self._pop_project_manager_filter(qb_filters)
+
+        cache_key = None
+        if use_cache:
+            cache_key = self._get_cache_key(
+                "distinct_values",
+                field=field_name,
+                filters=qb_filters,
+                sort=sort_order,
+                exclude_empty=exclude_empty,
+                project_manager_filter=project_manager_filter,
+                party_filter=self._serialize_party_filter(party_filter),
+            )
+            cached_result = self._get_from_cache(cache_key)
+            if cached_result is not None:
+                return cast(list[Any], cached_result)
+
+        if field_name in self.DERIVED_MUTATION_FIELDS:
+            field_attr = Project.manager_party_id
+            stmt: Select[Any] = (
+                select(field_attr)
+                .select_from(Asset)
+                .join(ProjectAsset, ProjectAsset.asset_id == Asset.id)
+                .join(Project, Project.id == ProjectAsset.project_id)
+                .where(ProjectAsset.valid_to.is_(None))
+            )
+        else:
+            field_attr = getattr(self.model, field_name)
+            stmt = select(field_attr)
+
+        if exclude_empty:
+            stmt = stmt.where(field_attr.isnot(None), field_attr != "")
+
+        for filter_key, filter_value in qb_filters.items():
+            if hasattr(self.model, filter_key):
+                stmt = stmt.where(getattr(self.model, filter_key) == filter_value)
+
+        stmt = self._apply_project_manager_filter(stmt, project_manager_filter)
+        if party_filter is not None:
+            stmt = await self._apply_asset_party_filter(db, stmt, party_filter)
+
+        stmt = stmt.distinct()
+        if sort_order == "asc":
+            stmt = stmt.order_by(field_attr.asc())
+        else:
+            stmt = stmt.order_by(field_attr.desc())
+
+        result = (await db.execute(stmt)).all()
+        values = [row[0] for row in result if row[0]]
+
+        if use_cache and cache_key:
+            self._set_cache(cache_key, values)
+
+        return values
+
+    async def update(
         self,
         db: AsyncSession,
         *,
@@ -614,7 +840,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         commit: bool = True,
     ) -> Asset:
         if isinstance(obj_in, dict):
-            update_data = obj_in
+            update_data = dict(obj_in)
         else:
             update_data = obj_in.model_dump(exclude_unset=True)
 
@@ -634,7 +860,23 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         else:
             await db.flush()
         await db.refresh(result)
+        await self._refresh_derived_manager_party(db, result)
         return result
+
+    async def update_async(
+        self,
+        db: AsyncSession,
+        *,
+        db_obj: Asset,
+        obj_in: AssetUpdate | AssetMutationData,
+        commit: bool = True,
+    ) -> Asset:
+        return await self.update(
+            db=db,
+            db_obj=db_obj,
+            obj_in=obj_in,
+            commit=commit,
+        )
 
     async def update_with_history_async(
         self,
@@ -696,6 +938,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         else:
             await db.flush()
         await db.refresh(db_obj)
+        await self._refresh_derived_manager_party(db, db_obj)
         return db_obj
 
     async def remove_async(
@@ -733,6 +976,8 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
 
         result = await db.execute(query)
         assets: list[Asset] = await _scalars_all(result)
+        for asset in assets:
+            self._apply_derived_manager_party(asset)
         if decrypt:
             for asset in assets:
                 self._decrypt_asset_object(asset)
@@ -749,6 +994,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
     ) -> list[Asset]:
         stmt = (
             select(Asset)
+            .options(*self._asset_projection_load_options())
             .join(Party, Asset.owner_party_id == Party.id, isouter=True)
             .where(Party.name.ilike(f"%{ownership_name}%"))
         )
@@ -757,6 +1003,8 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
 
         result = await db.execute(stmt.limit(limit))
         assets: list[Asset] = await _scalars_all(result)
+        for asset in assets:
+            self._apply_derived_manager_party(asset)
         if decrypt:
             for asset in assets:
                 self._decrypt_asset_object(asset)
@@ -796,16 +1044,26 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
                         conditions.append(model_field == encrypted)
             if not conditions:
                 return [], used_blind_index
-            stmt = select(Asset).where(or_(*conditions))
+            stmt = (
+                select(Asset)
+                .options(*self._asset_projection_load_options())
+                .where(or_(*conditions))
+            )
         else:
             query_value = candidates[0]
-            stmt = select(Asset).where(model_field.ilike(f"%{query_value}%"))
+            stmt = (
+                select(Asset)
+                .options(*self._asset_projection_load_options())
+                .where(model_field.ilike(f"%{query_value}%"))
+            )
 
         if not include_deleted:
             stmt = stmt.where(self._not_deleted_clause(Asset.data_status))
 
         result = await db.execute(stmt.limit(limit))
         assets: list[Asset] = await _scalars_all(result)
+        for asset in assets:
+            self._apply_derived_manager_party(asset)
         if decrypt:
             for asset in assets:
                 self._decrypt_asset_object(asset)
@@ -1031,6 +1289,18 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
             for asset in assets:
                 self._decrypt_asset_object(asset)
         return assets
+
+    async def get_latest_by_code_prefix_async(
+        self, db: AsyncSession, *, prefix: str
+    ) -> Asset | None:
+        stmt = (
+            select(Asset)
+            .where(Asset.asset_code.like(f"{prefix}%"))
+            .order_by(Asset.asset_code.desc())
+            .limit(1)
+        )
+        result = await db.execute(stmt)
+        return await _scalars_first(result)
 
     async def count_by_ownership_async(
         self, db: AsyncSession, ownership_id: str

@@ -1,8 +1,8 @@
 # ADR-0007: 「逾期」改为派生口径，删除 `overdue` 手工登记状态
 
-**状态**: 🟡 已决策，待实施（2026-06-12）
+**状态**: ✅ 已实施（2026-06-16）
 **决策日期**: 2026-06-12
-**实施日期**: 待定
+**实施日期**: 2026-06-16
 **相关需求**: REQ-RNT-005（重算范围口径）、REQ-RNT-006（台账实收登记）、REQ-ANA-001（收缴率与逾期统计）
 
 ---
@@ -48,10 +48,10 @@
 
 ## 影响
 
-待实施的工程项：
+已实施的工程项：
 
-- **后端**：`ledger_service_v2.py` 删 `_MANUAL_LEDGER_PAYMENT_STATUSES` 中 `overdue` 及批量更新校验；`schemas/contract_group.py` 两处 `Literal` 去 `overdue`；`project/service.py` 风险与分析改派生规则（`due_date < today and paid_amount < amount_due and status != voided`）；`crud/contract_group.py` `sum_overdue_amount_by_ownership_async` 补 `due_date` 过滤；存量 `overdue` 行迁移（→ `unpaid` / `partial`）；通知调度 `get_overdue_with_contract_async` 口径已正确，迁移后自动覆盖原手工标记条目。
-- **前端**：`types/ledger.ts`、`FinancialLedgerPage.tsx` 及测试去掉 `overdue` 状态选项，逾期改为派生标签展示。
+- **后端**：`ledger_service_v2.py` 已删 `_MANUAL_LEDGER_PAYMENT_STATUSES` 中 `overdue`；`schemas/contract_group.py` 与 `api/v1/contracts/ledger.py` 已拒绝 `overdue` 查询/批量登记；`project/service.py` 风险、汇总与分析统一用 `due_date < today and paid_amount < amount_due and status != voided` 派生；服务费台账通过来源台账 `source_ledger.due_date` 派生逾期；`crud/contract_group.py` `sum_overdue_amount_by_ownership_async` 已补 `due_date` 与未收清过滤；`20260616_drop_manual_overdue_status.py` 将存量 `overdue` 行迁回 `unpaid` / `partial`。
+- **前端**：`types/ledger.ts`、`FinancialLedgerPage.tsx` 及测试已去掉 `overdue` 状态选项，逾期改为派生标签展示。
 - **PRD**：REQ-RNT-005、REQ-RNT-006 已改（本次决策随手落）。
 - **domain-model.md**：§4.14 `payment_status` 枚举与重算约束已改（本次决策随手落）。
 - **CONTEXT.md**：已增「逾期（派生口径）」词条、修订「台账重算」词条（本次决策随手落）。

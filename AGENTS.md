@@ -70,9 +70,10 @@ make docs-lint      # 仅跑 SSOT 完整性检查
 
 ```
 backend/src/
-  api/v1/       # analytics / assets / auth / documents / rent_contracts / system
-  services/     # 业务逻辑层
-  crud/         # 数据访问层
+  api/v1/       # analytics / assets / auth / contracts / debug / documents / system（目录模块）
+                 # + 顶层路由文件 authz.py / party.py / search.py（route_registry 自注册）/ llm_prompts.py / dependencies.py / utils.py
+  services/     # 业务逻辑层（按域分子目录：contract / asset / party / analytics / authz / rbac / ownership / document / excel / notification / ...）
+  crud/         # 数据访问层（扁平：asset.py / contract.py / contract_group.py / party.py / ownership.py / ...）
   models/       # SQLAlchemy ORM
   schemas/      # Pydantic
   core/ security/ middleware/ config/ constants/ enums/ utils/
@@ -82,6 +83,8 @@ frontend/src/
 
 docs/ scripts/ Makefile
 ```
+
+> 注：旧合同域 `rent_contract/` / `rent_contracts/` 已于 M2（REQ-RNT-001 / REQ-RNT-006）按 AD-4 全量下线，新实现落在 `api/v1/contracts/` + `services/contract/` + `models/contract_group.py`，不迁移旧数据。详见 `docs/issues/2026-06-20-rent-contract-dead-dir-cleanup.md`。
 
 ---
 

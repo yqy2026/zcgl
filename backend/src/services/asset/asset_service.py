@@ -46,6 +46,7 @@ from ...schemas.asset import (
     ContractTypeSummary,
 )
 from ...services.asset.asset_calculator import AssetCalculator
+from ...services.code_segments import build_party_code_segment
 from ...services.enum_validation_service import get_enum_validation_service_async
 from ...services.party_scope import resolve_user_party_filter
 
@@ -317,66 +318,33 @@ class AssetService:
                     "权属主体不存在", field_errors={"owner_party_id": "权属主体不存在"}
                 )
 
-        manager_party_id = _normalize_optional_str(data.get("manager_party_id"))
-        legacy_management_entity = _normalize_optional_str(
-            data.get("management_entity")
-        )
-        legacy_organization_id = _normalize_optional_str(data.get("organization_id"))
-
-        if manager_party_id is None and legacy_management_entity is not None:
-            manager_party_id = legacy_management_entity
-
-        if manager_party_id is None and legacy_organization_id is not None:
-            resolved_org_party_id = await party_crud.resolve_organization_party_id(
-                self.db,
-                organization_id=legacy_organization_id,
-            )
-            manager_party_id = (
-                resolved_org_party_id
-                if resolved_org_party_id is not None
-                else legacy_organization_id
-            )
-
-        if manager_party_id is None and current_asset is not None:
-            manager_party_id = _normalize_optional_str(
-                getattr(current_asset, "manager_party_id", None)
-            )
-
-        # Step4 兼容：历史调用方通常只提供 ownership_id，默认回填管理主体为产权主体。
-        if manager_party_id is None and owner_party_id is not None:
-            manager_party_id = owner_party_id
-
-        if manager_party_id:
-            manager_party_obj = await party_crud.get_party(
-                self.db,
-                party_id=manager_party_id,
-            )
-            if manager_party_obj is None:
-                fallback_manager_party_id = (
-                    await self.resolve_owner_party_scope_by_ownership_id_async(
-                        ownership_id=manager_party_id,
-                    )
-                )
-                if (
-                    fallback_manager_party_id is not None
-                    and fallback_manager_party_id != manager_party_id
-                ):
-                    manager_party_id = fallback_manager_party_id
-                    manager_party_obj = await party_crud.get_party(
-                        self.db,
-                        party_id=manager_party_id,
-                    )
-            if manager_party_obj is None:
-                raise validation_error(
-                    "经营管理主体不存在",
-                    field_errors={"manager_party_id": "经营管理主体不存在"},
-                )
-
         data["owner_party_id"] = owner_party_id
-        data["manager_party_id"] = manager_party_id
+        data.pop("manager_party_id", None)
         data.pop("ownership_id", None)  # DEPRECATED alias
         data.pop("management_entity", None)  # DEPRECATED alias
+        data.pop("organization_id", None)  # DEPRECATED alias
         return data
+
+    async def _generate_asset_code(self, *, owner_party_id: str) -> str:
+        owner_party = await party_crud.get_party(self.db, party_id=owner_party_id)
+        if owner_party is None:
+            raise validation_error(
+                "权属主体不存在", field_errors={"owner_party_id": "权属主体不存在"}
+            )
+
+        segment = build_party_code_segment(getattr(owner_party, "code", ""))
+        prefix = f"AST-{segment}-"
+        latest_asset = await self.asset_crud.get_latest_by_code_prefix_async(
+            self.db, prefix=prefix
+        )
+        if latest_asset is None:
+            next_seq = 1
+        else:
+            try:
+                next_seq = int(str(latest_asset.asset_code)[-6:]) + 1
+            except (TypeError, ValueError):
+                next_seq = 1
+        return f"{prefix}{next_seq:06d}"
 
     async def _ensure_asset_not_linked(self, asset_id: str) -> None:
         asset_crud = self.asset_crud
@@ -1193,6 +1161,15 @@ class AssetService:
             # 3. 自动计算与一致性验证
             asset_data = asset_in.model_dump()
             asset_data = await self._resolve_ownership(asset_data)
+            owner_party_id = _normalize_optional_str(asset_data.get("owner_party_id"))
+            if owner_party_id is None:
+                raise validation_error(
+                    "权属主体不能为空",
+                    field_errors={"owner_party_id": "权属主体不能为空"},
+                )
+            asset_data["asset_code"] = await self._generate_asset_code(
+                owner_party_id=owner_party_id
+            )
             calculated_fields = AssetCalculator.auto_calculate_fields(asset_data)
             final_data = {**asset_data, **calculated_fields}
 
@@ -1344,31 +1321,6 @@ class AssetService:
                         final_update["address"] = composed_address
 
                 calculated_asset_in = AssetUpdate(**final_update)
-
-                # REQ-AST-002: 经营方变更自动记录历史
-                new_manager = _normalize_optional_str(
-                    final_update.get("manager_party_id")
-                )
-                old_manager = _normalize_optional_str(
-                    getattr(asset, "manager_party_id", None)
-                )
-                if new_manager and old_manager and new_manager != old_manager:
-                    # 结束旧经营方记录
-                    await asset_management_history_crud.close_active(
-                        self.db,
-                        asset_id=asset_id,
-                        manager_party_id=old_manager,
-                        commit=False,
-                    )
-                    # 创建新经营方记录
-                    await asset_management_history_crud.create(
-                        self.db,
-                        asset_id=asset_id,
-                        manager_party_id=new_manager,
-                        change_reason=f"经营方变更: {old_manager} → {new_manager}",
-                        changed_by=str(operator) if operator is not None else None,
-                        commit=False,
-                    )
 
                 updated = cast(
                     Asset,

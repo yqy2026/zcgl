@@ -1,15 +1,7 @@
 export type RevenueMode = 'LEASE' | 'AGENCY';
 export type ContractDirection = 'LESSOR' | 'LESSEE';
 export type GroupRelationType = 'UPSTREAM' | 'DOWNSTREAM' | 'ENTRUSTED' | 'DIRECT_LEASE';
-export type ContractLifecycleStatus =
-  | 'DRAFT'
-  | 'PENDING_REVIEW'
-  | 'ACTIVE'
-  | 'REJECTED'
-  | 'EXPIRED'
-  | 'TERMINATED'
-  | 'VOIDED';
-export type ContractReviewStatus = 'DRAFT' | 'PENDING' | 'APPROVED' | 'REJECTED';
+export type ContractLifecycleStatus = 'DRAFT' | 'ACTIVE' | 'TERMINATED';
 
 export interface LeaseDetailCreate {
   total_deposit?: string | number;
@@ -48,10 +40,11 @@ export interface ContractGroupSummaryContract {
   group_relation_type: GroupRelationType | string;
   lessor_party_id: string;
   lessee_party_id: string;
+  lessor_name_snapshot?: string | null;
+  lessee_name_snapshot?: string | null;
   effective_from: string;
   effective_to?: string | null;
   status: ContractLifecycleStatus | string;
-  review_status: ContractReviewStatus | string;
 }
 
 export interface ContractCreate {
@@ -68,7 +61,6 @@ export interface ContractCreate {
   tax_rate?: string | number | null;
   is_tax_included?: boolean;
   status?: ContractLifecycleStatus;
-  review_status?: ContractReviewStatus;
   contract_notes?: string | null;
   source_session_id?: string | null;
   asset_ids: string[];
@@ -82,9 +74,6 @@ export interface ContractDetail extends ContractGroupSummaryContract {
   currency_code: string;
   tax_rate?: string | number | null;
   is_tax_included: boolean;
-  review_by?: string | null;
-  reviewed_at?: string | null;
-  review_reason?: string | null;
   contract_notes?: string | null;
   data_status: string;
   created_at: string;

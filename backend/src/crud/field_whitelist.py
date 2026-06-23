@@ -182,7 +182,6 @@ class ContractWhitelist(ModelFieldWhitelist):
         "effective_from",
         "effective_to",
         "status",
-        "review_status",
         "data_status",
         "created_at",
         "updated_at",
@@ -203,8 +202,6 @@ class ContractWhitelist(ModelFieldWhitelist):
     }
 
     blocked_fields: ClassVar[set[str]] = {
-        "review_by",
-        "review_reason",
         "created_by",
         "updated_by",
     }
@@ -357,50 +354,6 @@ class PermissionWhitelist(ModelFieldWhitelist):
     blocked_fields: ClassVar[set[str]] = set()
 
 
-# ============================================================================
-# CollectionRecord Whitelist
-# ============================================================================
-
-
-class CollectionRecordWhitelist(ModelFieldWhitelist):
-    """Whitelist for CollectionRecord model."""
-
-    filter_fields: ClassVar[set[str]] = {
-        "id",
-        "ledger_id",
-        "contract_id",
-        "collection_method",
-        "collection_status",
-        "collection_date",
-        "promised_date",
-        "next_follow_up_date",
-        "operator_id",
-        DateTimeFields.CREATED_AT,
-        DateTimeFields.UPDATED_AT,
-    }
-
-    search_fields: ClassVar[set[str]] = {
-        "operator",
-    }
-
-    sort_fields: ClassVar[set[str]] = {
-        "collection_date",
-        "promised_date",
-        "next_follow_up_date",
-        "promised_amount",
-        "actual_payment_amount",
-        DateTimeFields.CREATED_AT,
-        DateTimeFields.UPDATED_AT,
-    }
-
-    blocked_fields: ClassVar[set[str]] = {
-        "contact_phone",
-        "contacted_person",
-        "collection_notes",
-    }
-
-
-# ============================================================================
 # PromptTemplate Whitelist
 # ============================================================================
 
@@ -459,7 +412,6 @@ class ProjectWhitelist(ModelFieldWhitelist):
         "project_code",
         "status",
         "manager_party_id",
-        "review_status",
         "data_status",
         DateTimeFields.CREATED_AT,
         DateTimeFields.UPDATED_AT,
@@ -822,7 +774,6 @@ def register_whitelist(model_class: type, whitelist: ModelFieldWhitelist) -> Non
 def _ensure_whitelists_registered() -> None:
     try:
         from ..models.asset import Asset
-        from ..models.collection import CollectionRecord
         from ..models.contract_group import Contract
         from ..models.llm_prompt import PromptTemplate
         from ..models.ownership import Ownership
@@ -846,7 +797,6 @@ def _ensure_whitelists_registered() -> None:
             (SystemDictionary, SystemDictionaryWhitelist),
             (AssetCustomField, AssetCustomFieldWhitelist),
             (Permission, PermissionWhitelist),
-            (CollectionRecord, CollectionRecordWhitelist),
             (PromptTemplate, PromptTemplateWhitelist),
             (Project, ProjectWhitelist),
             (Ownership, OwnershipWhitelist),

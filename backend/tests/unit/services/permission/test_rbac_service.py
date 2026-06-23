@@ -112,6 +112,13 @@ def sample_user():
     return user
 
 
+def _system_admin_role() -> Mock:
+    role = Mock(spec=Role)
+    role.name = "system_admin"
+    role.category = "system"
+    return role
+
+
 # ============================================================================
 # create_role 测试
 # ============================================================================
@@ -782,16 +789,20 @@ class TestAssignRoleToUser:
                         "src.crud.rbac.user_role_assignment_crud.create",
                         new=AsyncMock(return_value=assignment),
                     ):
-                        with patch.object(
-                            rbac_service,
-                            "_create_permission_audit_log",
-                            new=AsyncMock(),
+                        with patch(
+                            "src.crud.rbac.role_crud.get_roles_by_user_async",
+                            new=AsyncMock(return_value=[_system_admin_role()]),
                         ):
-                            assignment = await rbac_service.assign_role_to_user(
-                                assignment_data, assigned_by="admin"
-                            )
-                            assert assignment.user_id == "user-1"
-                            assert assignment.role_id == "role-1"
+                            with patch.object(
+                                rbac_service,
+                                "_create_permission_audit_log",
+                                new=AsyncMock(),
+                            ):
+                                assignment = await rbac_service.assign_role_to_user(
+                                    assignment_data, assigned_by="admin"
+                                )
+                                assert assignment.user_id == "user-1"
+                                assert assignment.role_id == "role-1"
 
     async def test_assign_role_user_not_found(self, rbac_service, mock_db):
         """测试为不存在的用户分配角色"""
@@ -850,13 +861,17 @@ class TestAssignRoleToUser:
                 new=AsyncMock(return_value=sample_role),
             ):
                 with patch(
-                    "src.crud.rbac.user_role_assignment_crud.get_by_user_and_role",
-                    new=AsyncMock(return_value=existing_assignment),
+                    "src.crud.rbac.role_crud.get_roles_by_user_async",
+                    new=AsyncMock(return_value=[_system_admin_role()]),
                 ):
-                    with pytest.raises(ResourceConflictError, match="用户已分配此角色"):
-                        await rbac_service.assign_role_to_user(
-                            assignment_data, assigned_by="admin"
-                        )
+                    with patch(
+                        "src.crud.rbac.user_role_assignment_crud.get_by_user_and_role",
+                        new=AsyncMock(return_value=existing_assignment),
+                    ):
+                        with pytest.raises(ResourceConflictError, match="用户已分配此角色"):
+                            await rbac_service.assign_role_to_user(
+                                assignment_data, assigned_by="admin"
+                            )
 
     async def test_assign_role_invalidates_user_permission_cache(
         self, rbac_service, sample_user, sample_role
@@ -878,6 +893,9 @@ class TestAssignRoleToUser:
         ), patch(
             "src.crud.rbac.role_crud.get", new=AsyncMock(return_value=sample_role)
         ), patch(
+            "src.crud.rbac.role_crud.get_roles_by_user_async",
+            new=AsyncMock(return_value=[_system_admin_role()]),
+        ), patch(
             "src.crud.rbac.user_role_assignment_crud.get_by_user_and_role",
             new=AsyncMock(return_value=None),
         ), patch(
@@ -895,6 +913,96 @@ class TestAssignRoleToUser:
 
         mock_cache_service.invalidate_user_cache.assert_awaited_once_with("user-1")
         mock_invalidate_org_cache.assert_called_once_with("user-1")
+
+    async def test_perm_admin_should_not_assign_business_role(
+        self, rbac_service, sample_user, sample_role
+    ):
+        """perm_admin 只能管理权限配置，不能授予带业务数据能力的角色。"""
+        assignment_data = UserRoleAssignmentCreate(
+            user_id="user-1",
+            role_id="role-1",
+            reason="self elevation",
+        )
+        perm_admin_role = Mock(spec=Role)
+        perm_admin_role.name = "perm_admin"
+        perm_admin_role.category = "security"
+        mock_audit = AsyncMock()
+
+        with patch.object(
+            rbac_service.user_crud,
+            "get_async",
+            new=AsyncMock(return_value=sample_user),
+        ), patch(
+            "src.crud.rbac.role_crud.get",
+            new=AsyncMock(return_value=sample_role),
+        ), patch(
+            "src.crud.rbac.role_crud.get_roles_by_user_async",
+            new=AsyncMock(return_value=[perm_admin_role]),
+        ), patch.object(
+            rbac_service,
+            "_create_permission_audit_log",
+            new=mock_audit,
+        ):
+            with pytest.raises(
+                OperationNotAllowedError,
+                match="权限管理员不能授予业务角色",
+            ):
+                await rbac_service.assign_role_to_user(
+                    assignment_data, assigned_by="perm-admin-user"
+                )
+
+        mock_audit.assert_awaited_once()
+        assert mock_audit.await_args.kwargs["action"] == "role_assign_denied"
+        assert (
+            mock_audit.await_args.kwargs["new_permissions"]["denial_reason"]
+            == "perm_admin_cannot_assign_business_role"
+        )
+
+    async def test_perm_admin_can_assign_management_role(
+        self, rbac_service, sample_user
+    ):
+        """perm_admin 仍可授予管理类角色，保留其权限管理职责。"""
+        assignment_data = UserRoleAssignmentCreate(
+            user_id="user-1",
+            role_id="role-perm-admin",
+        )
+        target_role = Mock(spec=Role)
+        target_role.id = "role-perm-admin"
+        target_role.name = "perm_admin"
+        target_role.category = "security"
+        perm_admin_role = Mock(spec=Role)
+        perm_admin_role.name = "perm_admin"
+        perm_admin_role.category = "security"
+        assignment = Mock(spec=UserRoleAssignment)
+        assignment.user_id = "user-1"
+        assignment.role_id = "role-perm-admin"
+
+        with patch.object(
+            rbac_service.user_crud,
+            "get_async",
+            new=AsyncMock(return_value=sample_user),
+        ), patch(
+            "src.crud.rbac.role_crud.get",
+            new=AsyncMock(return_value=target_role),
+        ), patch(
+            "src.crud.rbac.role_crud.get_roles_by_user_async",
+            new=AsyncMock(return_value=[perm_admin_role]),
+        ), patch(
+            "src.crud.rbac.user_role_assignment_crud.get_by_user_and_role",
+            new=AsyncMock(return_value=None),
+        ), patch(
+            "src.crud.rbac.user_role_assignment_crud.create",
+            new=AsyncMock(return_value=assignment),
+        ), patch.object(
+            rbac_service,
+            "_create_permission_audit_log",
+            new=AsyncMock(),
+        ):
+            result = await rbac_service.assign_role_to_user(
+                assignment_data, assigned_by="perm-admin-user"
+            )
+
+        assert result.role_id == "role-perm-admin"
 
 
 # ============================================================================

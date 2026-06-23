@@ -4,12 +4,12 @@ CRUD helpers for ContractGroup（合同组）。
 单表操作，业务逻辑由 Service 层保证。
 """
 
-from datetime import UTC, datetime
-from typing import Any
+from datetime import UTC, date, datetime
+from typing import Any, TypedDict
 
-from sqlalchemy import Select, exists, func, select
+from sqlalchemy import Select, and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import joinedload, selectinload
 
 from ..models.asset import Asset
 from ..models.associations import contract_assets, contract_group_assets
@@ -21,11 +21,22 @@ from ..models.contract_group import (
     ContractLifecycleStatus,
     ContractRentTerm,
     ServiceFeeLedger,
+    derive_ledger_payment_status,
 )
+from ..models.project_asset import ProjectAsset
 
 
 def _utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
+
+
+def _today() -> date:
+    return datetime.now(UTC).date()
+
+
+class ContractAssetIdsByGroupRow(TypedDict):
+    contract_id: str
+    asset_ids: list[str]
 
 
 class CRUDContractGroup:
@@ -77,6 +88,18 @@ class CRUDContractGroup:
         stmt = select(ContractGroup).where(ContractGroup.contract_group_id == group_id)
         if load_contracts:
             stmt = stmt.options(selectinload(ContractGroup.contracts))
+        return (await db.execute(stmt)).scalars().first()
+
+    async def get_with_assets(
+        self,
+        db: AsyncSession,
+        group_id: str,
+    ) -> ContractGroup | None:
+        stmt = (
+            select(ContractGroup)
+            .where(ContractGroup.contract_group_id == group_id)
+            .options(selectinload(ContractGroup.assets))
+        )
         return (await db.execute(stmt)).scalars().first()
 
     async def get_by_code(
@@ -225,13 +248,8 @@ class CRUDContractGroup:
         stmt = (
             select(func.coalesce(func.sum(ContractLedgerEntry.amount_due), 0))
             .join(Contract, ContractLedgerEntry.contract_id == Contract.contract_id)
-            .join(
-                ContractGroup,
-                Contract.contract_group_id == ContractGroup.contract_group_id,
-            )
             .where(
-                ContractGroup.owner_party_id == ownership_id,
-                ContractGroup.data_status == "正常",
+                ContractLedgerEntry.attributed_owner_party_id == ownership_id,
                 Contract.data_status == "正常",
             )
         )
@@ -245,13 +263,8 @@ class CRUDContractGroup:
         stmt = (
             select(func.coalesce(func.sum(ContractLedgerEntry.paid_amount), 0))
             .join(Contract, ContractLedgerEntry.contract_id == Contract.contract_id)
-            .join(
-                ContractGroup,
-                Contract.contract_group_id == ContractGroup.contract_group_id,
-            )
             .where(
-                ContractGroup.owner_party_id == ownership_id,
-                ContractGroup.data_status == "正常",
+                ContractLedgerEntry.attributed_owner_party_id == ownership_id,
                 Contract.data_status == "正常",
             )
         )
@@ -276,17 +289,12 @@ class CRUDContractGroup:
                 )
             )
             .join(Contract, ContractLedgerEntry.contract_id == Contract.contract_id)
-            .join(
-                ContractGroup,
-                Contract.contract_group_id == ContractGroup.contract_group_id,
-            )
             .where(
-                ContractGroup.owner_party_id == ownership_id,
-                ContractGroup.data_status == "正常",
+                ContractLedgerEntry.attributed_owner_party_id == ownership_id,
                 Contract.data_status == "正常",
-                ContractLedgerEntry.payment_status.in_(
-                    ["unpaid", "partial", "overdue"]
-                ),
+                ContractLedgerEntry._payment_status != "voided",
+                ContractLedgerEntry.due_date < _today(),
+                ContractLedgerEntry.paid_amount < ContractLedgerEntry.amount_due,
             )
         )
         return float((await db.execute(stmt)).scalar() or 0)
@@ -429,6 +437,32 @@ class CRUDContractGroup:
         )
         return list((await db.execute(stmt)).scalars().all())
 
+    async def list_ledger_entries_by_attributed_project(
+        self,
+        db: AsyncSession,
+        *,
+        project_id: str,
+    ) -> list[ContractLedgerEntry]:
+        stmt = (
+            select(ContractLedgerEntry)
+            .join(Contract, ContractLedgerEntry.contract_id == Contract.contract_id)
+            .options(
+                joinedload(ContractLedgerEntry.contract).joinedload(
+                    Contract.contract_group
+                )
+            )
+            .where(
+                ContractLedgerEntry.attributed_project_id == project_id,
+                Contract.data_status == "正常",
+            )
+            .order_by(
+                ContractLedgerEntry.year_month.asc(),
+                ContractLedgerEntry.contract_id.asc(),
+                ContractLedgerEntry.entry_id.asc(),
+            )
+        )
+        return list((await db.execute(stmt)).scalars().all())
+
     async def get_ledger_by_contract(
         self,
         db: AsyncSession,
@@ -478,14 +512,7 @@ class CRUDContractGroup:
 
         if asset_id is not None:
             stmt = stmt.where(
-                exists(
-                    select(1)
-                    .select_from(contract_assets)
-                    .where(
-                        contract_assets.c.contract_id == Contract.contract_id,
-                        contract_assets.c.asset_id == asset_id,
-                    )
-                )
+                ContractLedgerEntry.attributed_asset_ids.contains([asset_id])
             )
         if party_id is not None:
             stmt = stmt.where(
@@ -501,7 +528,7 @@ class CRUDContractGroup:
         if payment_status is not None:
             stmt = stmt.where(ContractLedgerEntry.payment_status == payment_status)
         if not include_voided:
-            stmt = stmt.where(ContractLedgerEntry.payment_status != "voided")
+            stmt = stmt.where(ContractLedgerEntry._payment_status != "voided")
 
         stmt = stmt.where(Contract.data_status == "正常")
 
@@ -530,12 +557,14 @@ class CRUDContractGroup:
             select(ContractLedgerEntry)
             .join(Contract, ContractLedgerEntry.contract_id == Contract.contract_id)
             .where(
-                ContractLedgerEntry.payment_status.in_(["unpaid", "partial"]),
+                ContractLedgerEntry._payment_status != "voided",
                 ContractLedgerEntry.due_date < today,
+                ContractLedgerEntry.paid_amount < ContractLedgerEntry.amount_due,
                 Contract.data_status == "正常",
             )
             .options(
                 selectinload(ContractLedgerEntry.contract).options(
+                    selectinload(Contract.contract_group),
                     selectinload(Contract.lease_detail),
                     selectinload(Contract.lessee_party),
                 )
@@ -555,13 +584,15 @@ class CRUDContractGroup:
             select(ContractLedgerEntry)
             .join(Contract, ContractLedgerEntry.contract_id == Contract.contract_id)
             .where(
-                ContractLedgerEntry.payment_status == "unpaid",
+                ContractLedgerEntry._payment_status != "voided",
                 ContractLedgerEntry.due_date <= warning_date,
                 ContractLedgerEntry.due_date >= today,
+                ContractLedgerEntry.paid_amount <= 0,
                 Contract.data_status == "正常",
             )
             .options(
                 selectinload(ContractLedgerEntry.contract).options(
+                    selectinload(Contract.contract_group),
                     selectinload(Contract.lease_detail),
                     selectinload(Contract.lessee_party),
                 )
@@ -576,7 +607,6 @@ class CRUDContractGroup:
         *,
         contract_id: str,
         entry_ids: list[str],
-        payment_status: str,
         paid_amount: Any | None = None,
         notes: str | None = None,
         commit: bool = True,
@@ -594,9 +624,13 @@ class CRUDContractGroup:
         )
         entries = list((await db.execute(stmt)).scalars().all())
         for entry in entries:
-            entry.payment_status = payment_status
             if paid_amount is not None:
                 entry.paid_amount = paid_amount
+            entry.payment_status = derive_ledger_payment_status(
+                amount_due=entry.amount_due,
+                paid_amount=entry.paid_amount,
+                stored_status=entry.payment_status,
+            )
             if notes is not None:
                 entry.notes = notes
             entry.updated_at = _utcnow()
@@ -625,8 +659,36 @@ class CRUDContractGroup:
     ) -> list[ServiceFeeLedger]:
         stmt = (
             select(ServiceFeeLedger)
+            .options(selectinload(ServiceFeeLedger.source_ledger))
             .where(ServiceFeeLedger.contract_group_id == group_id)
             .order_by(ServiceFeeLedger.year_month.asc())
+        )
+        return list((await db.execute(stmt)).scalars().all())
+
+    async def list_service_fee_entries_by_attributed_project(
+        self,
+        db: AsyncSession,
+        *,
+        project_id: str,
+    ) -> list[ServiceFeeLedger]:
+        stmt = (
+            select(ServiceFeeLedger)
+            .join(Contract, ServiceFeeLedger.agency_contract_id == Contract.contract_id)
+            .options(
+                joinedload(ServiceFeeLedger.agency_contract).joinedload(
+                    Contract.contract_group
+                ),
+                selectinload(ServiceFeeLedger.source_ledger),
+            )
+            .where(
+                ServiceFeeLedger.attributed_project_id == project_id,
+                Contract.data_status == "正常",
+            )
+            .order_by(
+                ServiceFeeLedger.year_month.asc(),
+                ServiceFeeLedger.agency_contract_id.asc(),
+                ServiceFeeLedger.service_fee_entry_id.asc(),
+            )
         )
         return list((await db.execute(stmt)).scalars().all())
 
@@ -709,6 +771,73 @@ class CRUDContractGroup:
                 "group_code": str(group_code),
             }
             for asset_id, project_id, conflict_group_id, group_code in rows
+        ]
+
+    async def list_current_project_bindings_for_assets(
+        self,
+        db: AsyncSession,
+        *,
+        asset_ids: list[str],
+    ) -> list[dict[str, str | None]]:
+        if not asset_ids:
+            return []
+
+        stmt = (
+            select(Asset.id, ProjectAsset.project_id)
+            .outerjoin(
+                ProjectAsset,
+                and_(
+                    ProjectAsset.asset_id == Asset.id,
+                    ProjectAsset.valid_to.is_(None),
+                ),
+            )
+            .where(Asset.id.in_(asset_ids))
+        )
+        rows = (await db.execute(stmt)).all()
+        return [
+            {
+                "asset_id": str(asset_id),
+                "project_id": str(project_id) if project_id is not None else None,
+            }
+            for asset_id, project_id in rows
+        ]
+
+    async def list_asset_ids_for_group(
+        self,
+        db: AsyncSession,
+        *,
+        group_id: str,
+    ) -> list[str]:
+        stmt = select(contract_group_assets.c.asset_id).where(
+            contract_group_assets.c.contract_group_id == group_id
+        )
+        return [str(asset_id) for asset_id in (await db.execute(stmt)).scalars().all()]
+
+    async def list_contract_asset_ids_by_group(
+        self,
+        db: AsyncSession,
+        *,
+        group_id: str,
+    ) -> list[ContractAssetIdsByGroupRow]:
+        stmt = (
+            select(Contract.contract_id, contract_assets.c.asset_id)
+            .join(
+                contract_assets,
+                contract_assets.c.contract_id == Contract.contract_id,
+            )
+            .where(
+                Contract.contract_group_id == group_id,
+                Contract.data_status == "正常",
+            )
+            .order_by(Contract.contract_id.asc(), contract_assets.c.asset_id.asc())
+        )
+        rows = (await db.execute(stmt)).all()
+        grouped: dict[str, list[str]] = {}
+        for contract_id, asset_id in rows:
+            grouped.setdefault(str(contract_id), []).append(str(asset_id))
+        return [
+            {"contract_id": contract_id, "asset_ids": asset_ids}
+            for contract_id, asset_ids in grouped.items()
         ]
 
 

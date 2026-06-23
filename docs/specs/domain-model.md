@@ -15,12 +15,14 @@
 | 审核字段 | 需要审核的对象统一包含 `review_status`、`review_by`、`reviewed_at`、`review_reason` |
 | 关键记录删除 | 合同组、合同、台账等关键记录禁止物理删除，只允许逻辑删除、作废或重建；MVP 不提供红字冲销机制 |
 | 派生字段 | 出租率、汇总金额、计数等派生字段不允许人工直接写入 |
-| 编码规则 | `asset_code` 按产权方编码段生成，`project_code` 按运营方编码段生成，`group_code` 按经营主责方编码段生成 |
-| 编码格式 | `<TYPE>-<SEGMENT>-<SERIAL>`，`SERIAL` 为 6 位数字并按 `TYPE + SEGMENT` 单调递增 |
+| 编码规则 | 三类业务编码的「段」**统一由相关主体的 `party_code` 经共享 `_build_*_code_segment` 派生**（ADR-0018）：`asset_code` 用 owner、`project_code` 与 `group_code` 用 operator 的 `party_code` 段，生成后冻结只读、主体变更不重编号。**实施状态**：`group_code` 已实现；`asset_code` 已由创建/导入路径自动生成并经迁移回填收紧为必填；`project_code` 已改为按运营方 `party_code` 段 + 年月 + 4 位序号生成。|
+| 编码格式 | 段来源统一、字面格式按键角色分两族（不强求字面统一）：运营方键编码带月——`project_code`=`PRJ-{operator_seg}-{YYYYMM}-{SEQ4}`、`group_code`=`GRP-{operator_seg}-{YYYYMM}-{SEQ4}`（序号按运营方+月计）；owner 键编码不带月——`asset_code`=`AST-{owner_seg}-{NNNNNN}`（6 位序、按段单调，对齐 §3 line 53）|
 | 项目主轴 | 项目是普通用户理解资产、合同、台账、客户和风险关系的主业务单元 |
 | 合同关系展示层 | “合同关系”是面向用户的展示投影，由 `ContractGroup` 派生，不新增持久化对象 |
 | 资产项目归属 | 资产通过有效期关系归属项目，同一资产同一时点只能有一个当前有效项目 |
 | 并发控制 | MVP 乐观锁只在 `Asset` 启用；台账等批量写路径依靠幂等约束，`ContractGroup` / `Contract` 不保留未接入 ORM `version_id_col` 的误导性 `version` 列 |
+| 字段来源 | 解析或编辑写入目标对象字段时记 `field_sources` 快照，取值 `manual` / `ocr_prefill_confirmed` / `ocr_prefill_corrected`（纯手工录入与「解析未识别后手工补齐」统一为 `manual`，不拆 `manual_after_ocr_miss` 等子类型）；解析确认提交时每个写入字段必须带来源、缺失即阻断保存，普通非解析编辑缺失可由服务端默认补 `manual`；字段来源仅供编辑或补录来源上下文按需查看，业务详情主视图不默认展示 |
+| 扫描件解析确认 | 解析会话（`ScanExtractionSession`）仅当前补录过程的临时工作区，确认 / 取消 / 失败 / 放弃后不留档、不存草稿、不可稍后继续；OCR/AI 候选必须人工逐项确认或修正后才写入，低置信字段必须逐项处理（确认候选值 / 修正为手工值 / 非必填字段显式留空），未处理不得提交确认；候选不因高置信自动绑定 Party·Asset、不自动覆盖已保存字段（冲突默认保留旧值、仅作差异提示）；解析失败 / 超时 / 低置信不阻断完全手工补录；目标对象不保存解析工具、模型、供应商、置信度、确认时间、页码、文本片段或截图区域等解析元信息 |
 
 ## 3. 核心对象
 
@@ -42,6 +44,8 @@
 | PropertyCertificate | 资产产权证照记录，作为资产详情内能力维护 |
 | CertificatePartyRelation | 产权证与 Party 权利人的关系 |
 | ScanExtractionSession | 合同或产权证扫描件解析辅助补录的临时会话 |
+| Attachment | 资产、合同、产权证的附件 / 扫描件统一承载对象 |
+| Notification | 站内业务提醒与系统通知（提醒非工单，只有已读 / 未读） |
 
 ## 4. 字段契约
 
@@ -65,7 +69,7 @@
 | `occupancy_rate_total` | number | 否 | 总出租率，派生 |
 | `project_id` | string | 否 | 当前有效关联项目，同一时点只允许一个 |
 | `owner_party_id` | string | 是 | 当前有效主产权主体，同一时点只允许一个 |
-| `manager_party_id` | string | 是 | 运营管理主体 |
+| `manager_party_id` | string | 否 | 运营管理主体，**派生**：= 当前有效 `project_id` 所属项目的运营方；资产未归入项目时为空，对运营方绑定用户不可见。不作为独立可填字段，运营方权威轴唯一在 Project（见 ADR-0010） |
 | `data_status` | enum | 是 | 正常、已删除 |
 | `review_status` | enum | 是 | `draft`、`pending`、`approved`、`reversed`；两步生命周期为制单人提交 `draft → pending`、确认 `pending → approved`；确认仅按复核权限门控，不限制审核人 ≠ 提交人，并支持批量提交与批量确认 |
 | `review_by` | string | 否 | 确认人；不要求与提交人不同 |
@@ -89,17 +93,15 @@
 | `revenue_mode_summary` | json | 否 | 承租模式和代理模式分布，派生 |
 | `status` | enum | 是 | `planning`、`active`、`paused`、`completed`、`terminated` |
 | `data_status` | enum | 是 | 正常、已删除 |
-| `review_status` | enum | 是 | `draft`、`pending`、`approved`、`rejected`，项目不支持反审核 |
-| `review_by` | string | 否 | 审核人 |
-| `reviewed_at` | datetime | 否 | 审核时间 |
-| `review_reason` | string | 否 | 驳回原因 |
+
+> 项目**无 review 生命周期**：原 `review_status`/`review_by`/`reviewed_at`/`review_reason` 是零消费孤儿列（无流转、无门禁、无筛选、API 不暴露），MVP 删除——项目只是资产的业务管理归集桶，无下游要求「项目已审」（见 ADR-0014）。Asset 两步确认、Party 两步审核各自保留（均承重）。
 
 ### 4.3 ContractGroup
 
 | 字段 | 类型 | 必填 | 规则 |
 |---|---|---|---|
 | `contract_group_id` | string | 是 | 合同组主键 |
-| `project_id` | string | 条件必填 | 所属项目；目标态一条合同关系必须归属一个项目。Phase 1a migration 初始允许为空，存量回填完成后再评估是否改为数据库 NOT NULL |
+| `project_id` | string | 条件必填 | 所属项目；目标态一条合同关系必须归属一个项目，**单项目硬不变量**：覆盖 `asset_ids` 须同属该项目，承租/代理一律如此（代理合同跨项目靠共享盖章扫描件、各项目各建一条合同关系，不让合同组跨项目，见 ADR-0012）。Phase 1a migration 初始允许为空，存量回填完成后再评估是否改为数据库 NOT NULL |
 | `group_code` | string | 是 | 唯一，格式 `GRP-[A-Z0-9]{4,12}-[0-9]{6}` |
 | `revenue_mode` | enum | 是 | `lease` 承租模式，`agency` 代理模式，同条合同关系不混用 |
 | `operator_party_id` | string | 是 | 运营方主体 |
@@ -113,7 +115,7 @@
 | `settlement_rule` | json | 否 | 创建时选填、可缓填；缺失不阻断合同关系保存，也不参与台账生成。结构键为 `version`、`cycle`、`settlement_mode`、`amount_rule`、`payment_rule`，用于留存运营约定；台账仍以组内合同条款明细为数据源。详见 `docs/architecture/ADR-0004-settlement-rule-optional-at-creation.md` |
 | `revenue_attribution_rule` | json | 否 | 收入归集口径配置 |
 | `revenue_share_rule` | json | 否 | 分润规则配置，MVP 只结构化留存 |
-| `risk_tags` | string[] | 否 | 风险标签；项目风险摘要会叠加人工标签、30 天内合同到期提醒、付款逾期、产权证数据质量和空置风险；MVP 不再生成主合同覆盖类风险 |
+| `risk_tags` | string[] | 否 | 风险标签；项目风险摘要会叠加人工标签、30 天内合同到期提醒、付款逾期、产权证数据质量、空置风险和合同更正后陈旧已收台账风险（`ledger_stale_after_correction`，见 ADR-0008）；MVP 不再生成主合同覆盖类风险 |
 
 ### 4.4 ContractRelationProjection
 
@@ -166,7 +168,7 @@
 | 字段 | 类型 | 必填 | 规则 |
 |---|---|---|---|
 | `risk_id` | string | 是 | 稳定风险标识，按来源对象、风险类型和消息派生 |
-| `risk_type` | enum | 是 | `manual_tag`、`property_certificate_data_quality`、`contract_expiring`、`payment_overdue`、`vacancy`；MVP 已移除 `missing_primary_contract` / `coverage_conflict` 主合同覆盖类风险 |
+| `risk_type` | enum | 是 | `manual_tag`、`property_certificate_data_quality`、`contract_expiring`、`payment_overdue`、`vacancy`、`ledger_stale_after_correction`（已收/部分已收台账与当前合同条款不一致，合同更正重算时派生，人工对账后消除，见 ADR-0008）；MVP 已移除 `missing_primary_contract` / `coverage_conflict` 主合同覆盖类风险 |
 | `severity` | enum | 是 | `info`、`warning`、`high`、`critical`、`error` |
 | `message` | string | 是 | 面向业务用户的风险说明 |
 | `contract_relation_id` | string/null | 否 | 合同关系风险必须填写；产权证数据质量风险和资产空置风险为空 |
@@ -203,27 +205,40 @@
 |---|---|---|---|
 | `contract_id` | string | 是 | 合同主键 |
 | `contract_group_id` | string | 是 | 所属合同组 |
+| `project_id` | string | 是 | 合同所属项目快照，创建时取所属 `ContractGroup.project_id`；用于 `UNIQUE(contract_number, project_id)` 复合唯一，允许同一份委托协议在不同项目下保留同号合同记录；DB 以 `data_status <> '正常' OR project_id IS NOT NULL` 持续约束正常合同不得缺项目 |
 | `contract_direction` | enum | 是 | 出租、承租 |
 | `group_relation_type` | enum | 是 | 上游、下游、委托、直租 |
 | `lessor_party_id` | string | 是 | 出租方或委托方主体 |
 | `lessee_party_id` | string | 是 | 承租方或受托方主体 |
+| `lessor_name_snapshot` | string | 否 | 出租/委托方**签署时名称快照**，定稿（补录即生效 / `finalize_correction`）时从当时主档名写入，之后不随主档改名回写（§6.1，见 ADR-0020） |
+| `lessee_name_snapshot` | string | 否 | 承租/受托方**签署时名称快照**，定稿时写入、不随主档改名回写（§6.1，见 ADR-0020）；`LeaseContractDetail.tenant_name` 退为展示冗余、从此快照同步 |
 | `correction_source_contract_id` | string | 否 | 纠错草稿显式来源合同；仅用于纠错溯源，不表达上下游、续签或主从配对 |
-| `asset_ids` | string[] | 否 | 关联资产，为所属合同关系覆盖资产子集 |
-| `sign_date` | date | 否 | 签订日期，进入待审或生效前必填 |
+| `asset_ids` | string[] | 否 | 关联资产，须为所属合同关系覆盖资产**子集**（`⊆ ContractGroup.asset_ids`，service 层校验）；**留空表示「覆盖本合同关系全部资产（整租）」**，台账固化时回退到组 `asset_ids`（见 ADR-0011/0012） |
+| `sign_date` | date | 否 | 签订日期，进入生效前必填（补录即生效，无待审态，见 ADR-0013） |
 | `effective_from` | date | 是 | 生效开始日期 |
 | `effective_to` | date | 否 | 生效结束日期 |
 | `currency_code` | enum | 是 | MVP 固定 `CNY` |
 | `tax_rate` | decimal | 否 | 范围 `[0, 1]` |
 | `is_tax_included` | boolean | 是 | 是否含税，默认 true |
-| `status` | enum | 是 | 草稿、待审、生效、已到期、已终止 |
-| `review_status` | enum | 是 | 草稿、待审、已审、反审核 |
-| `review_by` | string | 否 | 审核人 |
-| `reviewed_at` | datetime | 否 | 审核时间 |
-| `review_reason` | string | 否 | 反审核原因 |
+| `status` | enum | 是 | 最小生命周期；**存储轴只有 `{草稿（纠错草稿/录入中）, 生效, 已终止}`**，`已到期` 是 `生效` + `effective_to < today` 的**派生展示状态、非落库写入值**（同逾期口径，无到期 job 写标记，台账生成器直接比对 `effective_to`，见 ADR-0007/0013）；补录即落 `生效`，无「待审」步骤，不做路由审批。MVP 已删 `待审` 态、`review_status`/`review_by`/`reviewed_at`/`review_reason` 审批列 |
 | `data_status` | enum | 是 | 正常、已删除 |
 | `contract_notes` | text | 否 | 合同备注 |
 
-约束：合同不单独持有项目外键，合同通过所属 `ContractGroup.project_id` 归属项目。
+约束：合同通过 `project_id` 固化所属 `ContractGroup.project_id`，用于按项目合同号复合唯一；正常合同缺 `project_id` 在迁移时 fail-loud，迁移后由 DB check constraint 持续拦截；`contract_group_id` 仍为单值，不挂多组。合同**不做 BPM 路由审批流**（提审/审核/联审/反审核/制审分离整体降级 vNext，同 ADR-0002 资产口径）；MVP 保留最小生命周期：补录即生效、按 `effective_to` 派生 `已到期` + 显式 `已终止`（台账据此停生成未来条目、生效中合同删除保护），`草稿 → 定稿` 承载 REQ-RNT-005 更正，纠错草稿发起门禁绑生命周期状态（只能从生效合同发起），不再依赖已删的 `review_status`（见 ADR-0013）。一份委托协议覆盖多个项目时，其盖章扫描件可被多个项目下的代运营受托合同记录共享引用（扫描件只传一份、多条 `Contract` 引用），跨项目落在扫描件层，不上升到合同关系或台账（见 ADR-0012）。
+
+### 4.7.1 ContractScanDocument
+
+| 字段 | 类型 | 必填 | 规则 |
+|---|---|---|---|
+| `document_id` | string | 是 | 扫描件文档主键 |
+| `storage_key` | string | 是 | 文件存储键，唯一；同一物理盖章扫描件只保存一份文档行 |
+| `original_filename` | string | 是 | 原始文件名 |
+| `content_type` | string | 否 | MIME 类型 |
+| `file_size` | int | 否 | 文件大小，>= 0 |
+| `checksum_sha256` | string | 否 | 文件内容校验和 |
+| `contract_ids` | string[] | 否 | 通过 `contract_scan_document_links` 关联的合同记录 |
+
+约束：扫描件文档可被多条同委托协议 `Contract` 共享引用；`PUT /contracts/{contract_id}/attachments` 只同步替换同 `contract_number`、同委托方、同受托方、正常合同组、且位于代运营合同关系中的受托合同扫描件引用；API 层必须对全部受影响合同逐条校验 `contract:update` 权限。复用既有 `storage_key` 时，该文档已链接的全部合同必须落在本次受影响合同集合内；若存在范围外链接，拒绝替换，避免未授权合同的可见扫描件元数据被改写。删除时每个受影响合同必须至少保留 1 份盖章扫描件。
 
 ### 4.8 LeaseContractDetail
 
@@ -287,7 +302,7 @@
 | `customer_name` | string | 是 | 客户名称 |
 | `customer_type` | enum | 是 | 内部、外部 |
 | `subject_nature` | enum | 是 | `enterprise` 或 `individual` |
-| `binding_type` | enum | 是 | `owner` 或 `manager` |
+| `binding_type` | enum | 是 | `owner`、`manager` 或 `all`；`all` = 该客户经 owner 与 manager 两绑定均可见（多绑定用户 `all` 模式下按主体去重的并集行）。列表唯一键 `customer_party_id`、一客户一行 |
 | `contract_roles` | enum[] | 是 | 合同角色集合 |
 | `contact_name` | string | 否 | 联系人 |
 | `contact_phone` | string | 否 | 联系电话 |
@@ -295,7 +310,7 @@
 | `unified_identifier` | string | 否 | 企业 18 位统一社会信用代码，个人按证件类型校验 |
 | `address` | string | 否 | 地址 |
 | `status` | enum | 是 | 正常、停用 |
-| `historical_contract_count` | number | 否 | 历史签约数，派生 |
+| `historical_contract_count` | number | 否 | 历史签约数，派生：按**用户数据范围并集、合同 ID 去重**计（同一合同在 owner+manager 两绑定均可见也只算一次）；属**列表/档案字段**，`all` 模式合法、**不受**「分析必选视图」约束——单视图铁律只约束分析端点客户双指标（`customer_entity_count`/`customer_contract_count`），见 CONTEXT「客户双指标」 |
 | `risk_tags` | string[] | 否 | 风险标签，MVP 仅人工标注 |
 | `payment_term_preference` | string | 否 | 账期偏好 |
 
@@ -320,19 +335,23 @@
 |---|---|---|---|
 | `entry_id` | string | 是 | 台账主键 |
 | `contract_id` | string | 是 | 合同主键 |
+| `attributed_project_id` | string | 否 | **生成时固化**的所属项目；台账是账本，历史/分析口径读此固化值聚合，不 join 合同组/资产的当前归属，re-org 不回写（见 ADR-0011） |
+| `attributed_owner_party_id` | string | 否 | 生成时固化的产权方，同上不随 re-org 改写 |
+| `attributed_operator_party_id` | string | 否 | 生成时固化的运营方，同上 |
+| `attributed_asset_ids` | string[] | 否 | 生成时固化的对应资产集合，取生成该条目的 `Contract.asset_ids`（留空整租时回退到组 `asset_ids`）；仅表达「这条账当时对应哪些资产」，金额仍合同级、不按资产分摊（§6，见 ADR-0011/0012） |
 | `year_month` | string | 是 | 账期，格式 `YYYY-MM`，同一合同内唯一 |
 | `due_date` | date | 是 | 应收或应付日 |
 | `amount_due` | decimal | 是 | 应收或应付金额，>= 0 |
 | `currency_code` | string | 是 | MVP 固定 `CNY` |
 | `is_tax_included` | boolean | 是 | 是否含税，继承合同 |
 | `tax_rate` | decimal | 否 | 税率，继承合同 |
-| `payment_status` | enum | 是 | `unpaid`、`paid`、`partial`、`voided`；“逾期”为派生口径，不是登记状态 |
+| `payment_status` | enum | 是 | `unpaid`/`paid`/`partial` 由 `paid_amount` 对 `amount_due` 纯派生（实收登记只填 `paid_amount`，不手登记状态，见 ADR-0019）；`voided` 仅系统重算/作废写入；“逾期”另为派生口径、不是登记状态（见 ADR-0007） |
 | `paid_amount` | decimal | 否 | 实收金额，>= 0，默认 0 |
 | `notes` | text | 否 | 备注 |
 | `created_at` | datetime | 是 | 创建时间 |
 | `updated_at` | datetime | 是 | 更新时间 |
 
-约束：`voided` 仅允许由系统流程写入；合同到期或终止后停止生成未来台账，历史台账只读。台账重算只调整未收条目；`paid` / `partial` 条目系统不自动改写或作废，自动跳过并标记需人工处理。逾期口径为 `due_date` 已过且 `paid_amount < amount_due` 且状态非 `voided`，统计、风险、筛选与通知统一按此派生，不依赖人工翻状态。
+约束：台账是**账本（历史记录）** 而非实时情况列表——每条是绑定账期的不可变财务事实，实时情况（当前欠款、出租率、当前归属）是另算的派生投影。`voided` 仅允许由系统流程写入；合同到期或终止后停止生成未来台账，历史台账只读。条目在生成时固化归属（`attributed_project_id` / `attributed_owner_party_id` / `attributed_operator_party_id` / `attributed_asset_ids`），项目/产权方维度的历史与分析口径只读固化值聚合，禁止 join 合同组/资产当前归属回算历史（见 ADR-0011）。台账重算只调整未收条目；`paid` / `partial` 条目系统不自动改写或作废，自动跳过；被跳过的已收条目以「重算结果当场列出」+「持久派生风险 `ledger_stale_after_correction`（条目与当前合同条款重算目标不一致时派生，人工对账后消除）」两条机制提醒，不设手工标记位（见 ADR-0008）。逾期口径为 `due_date` 已过且 `paid_amount < amount_due` 且状态非 `voided`，统计、风险、筛选与通知统一按此派生，不依赖人工翻状态。
 
 ### 4.15 ServiceFeeLedger
 
@@ -341,15 +360,17 @@
 | `service_fee_entry_id` | string | 是 | 服务费台账主键 |
 | `contract_group_id` | string | 是 | 合同组主键 |
 | `agency_contract_id` | string | 是 | 直租合同主键 |
-| `source_ledger_id` | string | 是 | 来源租金台账主键，唯一 |
+| `source_ledger_id` | string | 是 | 来源租金台账主键，唯一；归属固化继承来源租金台账（见 ADR-0011） |
 | `year_month` | string | 是 | 账期，格式 `YYYY-MM` |
 | `amount_due` | decimal | 是 | 服务费应收金额，派生 |
 | `paid_amount` | decimal | 否 | 服务费实收金额，派生 |
-| `payment_status` | enum | 是 | 同步来源台账状态 |
+| `payment_status` | enum | 是 | 由服务费 `paid_amount` 对 `amount_due` 派生；来源租金台账 `voided` 时同步为 `voided` |
 | `currency_code` | string | 是 | 继承来源台账 |
 | `service_fee_ratio` | decimal | 是 | 代理服务费比例 |
 | `created_at` | datetime | 是 | 创建时间 |
 | `updated_at` | datetime | 是 | 更新时间 |
+
+约束：服务费**应收/实收不独立登记**，全部从来源直租租金台账派生——`amount_due = 来源租金 amount_due × service_fee_ratio`，`paid_amount` 按来源条目实收派生，`payment_status` 按服务费金额派生（来源租金台账 `voided` 时同步为 `voided`）。业务依据：运营方与产权方对账，产权方实际收到租金才结算代理费，故服务费实收挂钩直租租金实收、不旱涝保收；运营方登记的直租租金实收反映对账确认的产权方到账结果（见 CONTEXT「代理服务费实收（挂钩直租租金实收派生）」）。不为服务费另开独立实收登记轴（单一真相轴，见 ADR-0019）。
 
 ### 4.16 ContractAuditLog
 
@@ -357,19 +378,17 @@
 |---|---|---|---|
 | `log_id` | string | 是 | 审计日志主键 |
 | `contract_id` | string | 是 | 合同主键 |
-| `action` | enum | 是 | `submit_review`、`approve`、`reject`、`expire`、`terminate`、`void`、`start_correction`、`reverse_review` |
-| `old_status` | string | 否 | 操作前状态 |
-| `new_status` | string | 否 | 操作后状态 |
-| `review_status_old` | string | 否 | 操作前审核状态 |
-| `review_status_new` | string | 否 | 操作后审核状态 |
-| `reason` | string | 条件必填 | 驳回、作废、终止等动作必填 |
+| `action` | enum | 是 | `terminate`、`void`、`start_correction`、`finalize_correction`（对应最小合同生命周期的**显式操作**；`expire`/已到期是派生状态、非操作，不入审计，同逾期口径；审批流动作 `submit_review`/`approve`/`reject`/`reverse_review` 已随 ADR-0013 删除） |
+| `old_status` | string | 否 | 操作前生命周期落库状态（草稿/生效/已终止；已到期为派生展示态，不入审计状态字段） |
+| `new_status` | string | 否 | 操作后生命周期状态 |
+| `reason` | string | 条件必填 | 作废、终止等动作必填 |
 | `operator_id` | string | 否 | 操作人 ID |
 | `operator_name` | string | 否 | 操作人名称 |
 | `related_entry_id` | string | 否 | 关联台账条目 |
 | `context` | json | 否 | 审计上下文 |
 | `created_at` | datetime | 是 | 操作时间 |
 
-约束：审计日志只允许新增，不允许修改或删除。
+约束：审计日志只允许新增，不允许修改或删除。`finalize_correction`（纠错草稿定稿）是触发台账重算/作废（ADR-0008）的有财务后果的关键操作，必须留痕（§8）；不记录任何审核状态转移（`ContractReviewStatus` 已随 ADR-0013 整删，合同无审批流）。
 
 ### 4.17 Approval（MVP 已删除）
 
@@ -385,7 +404,7 @@
 | `code` | string | 是 | 主体编码，同类型内唯一 |
 | `external_ref` | string | 否 | 外部系统引用 |
 | `status` | enum | 是 | `active`、`inactive` |
-| `review_status` | enum | 是 | `draft`、`pending`、`approved`、`reversed` |
+| `review_status` | enum | 是 | `draft`、`pending`、`approved`、`rejected`（两步审核；驳回后保留 `rejected` 态，可编辑后重新提审；**不可反审**——可反审的是 Asset 的 `reversed`，见 CONTEXT「轻量提交标记」/ADR-0014） |
 | `review_by` | string | 否 | 审核人 |
 | `reviewed_at` | datetime | 否 | 审核时间 |
 | `review_reason` | string | 否 | 审核原因 |
@@ -404,6 +423,105 @@
 | `is_primary` | boolean | 是 | 是否主联系人；同一主体最多一个主联系人 |
 | `notes` | text | 否 | 备注 |
 
+### 4.20 PropertyCertificate
+
+| 字段 | 类型 | 必填 | 规则 |
+|---|---|---|---|
+| `id` | string | 是 | 产权证主键 |
+| `certificate_number` | string | 是 | 证号，全局唯一且非空（正式保存硬门槛）；重复证号不得新建第二条，应维护既有产权证的资产关联 |
+| `certificate_type` | enum | 是 | 证照类型，如不动产权 / 房屋 / 土地 / 其他 |
+| `property_address` | string | 条件 | 坐落 / 地址；不动产权 / 房屋 / 土地证类型必填，其他证照类型按证号；非空为正式保存硬门槛（2026-06-18 grill 扩 ADR-0005 原四项为五项，已实施）|
+| `asset_ids` | string[] | 是 | 关联既有资产（ORM 经 `assets` 关系），至少一个；产权证↔资产为多对多平等关联，不分主 / 附属资产；可追加或移除，但更新后不得为空、删除最后一个关联应拒绝，不允许保存为孤立证照 |
+| `attachment_ids` | string[] | 是 | 附件 ID 列表，至少一份（见 §4.22 Attachment）；附件是证照事实底座，不区分「证照扫描件」与「其他附件」，删除最后一份应拒绝 |
+| `holder_party_ids` | string[] | 是 | 权利人（ORM 经 `party_relations` / `CertificatePartyRelation` 关联，见 §4.21），必须引用已审核 Party |
+| `building_area` | number | 否 | 证载建筑面积；缺失只作 `warning` 级补录完整性提示，不阻断保存 |
+| `land_area` | number | 否 | 证载土地面积；缺失同上只 `warning` |
+| `land_use_term_start` | date | 否 | 期限（土地使用起）；缺失同上只 `warning` |
+| `land_use_term_end` | date | 否 | 期限（土地使用止）；缺失同上只 `warning` |
+| `restrictions` | string | 否 | 限制信息；缺失同上只 `warning` |
+
+约束：
+
+- **正式保存 5 项硬门槛**：证号全局唯一且非空、≥1 既有资产关联、≥1 附件、权利人引用已审核 Party、坐落 / 地址非空（按 `certificate_type`）。保存闸门须按此 5 项校验，不得用解析字段校验器代替、不得漏卡资产 / 附件 / 权利人。
+- 其余证照信息（证载面积 / 期限 / 限制）为空只 `warning` 级补录完整性提示，不阻断资产维护、合同补录、台账生成或经营统计。
+- MVP 不含核验状态（`is_verified` 已删，见 ADR-0005）。数据质量风险只两类客观项——证照信息不完整、权利人与关联资产当前主产权主体不一致，均 `warning` 级、由当前数据实时派生、人工修正源数据自然消除，不可手工关闭 / 忽略 / 标记已处理，不进全局搜索、不建独立处置流程（风险落点见 §4.5.1 ProjectRisk）。
+- 解析辅助补录与附件遵循 §2「字段来源」「扫描件解析确认」跨对象规则；产品级规则见 PRD §6.5。
+
+### 4.21 CertificatePartyRelation
+
+| 字段 | 类型 | 必填 | 规则 |
+|---|---|---|---|
+| `id` | string | 是 | 关系主键 |
+| `certificate_id` | string | 是 | 所属产权证 ID |
+| `party_id` | string | 是 | 权利人主体 ID，必须引用已审核 Party（背 REQ-PTY-002）|
+| `relation_type` | enum | 是 | 权利人 |
+
+### 4.22 Attachment
+
+| 字段 | 类型 | 必填 | 规则 |
+|---|---|---|---|
+| `id` | string | 是 | 附件主键 |
+| `owner_type` | enum | 是 | `asset`、`contract`、`property_certificate` |
+| `owner_id` | string | 是 | 所属业务对象 ID |
+| `file_name` | string | 是 | 文件名；仅作展示与日志字段，不作为 MVP 筛选条件 |
+| `file_type` | enum | 是 | 仅接受 PDF、JPG/JPEG、PNG；其他类型拒绝 |
+| `file_size` | number | 是 | 单文件大小上限 20MB，超限拒绝并提示压缩或拆分 |
+| `file_hash` | string | 否 | 用于同名或相同哈希的疑似重复提示 |
+
+约束：
+
+- **预览**跟随所属对象查看权限，PDF 内嵌预览、JPG/PNG 图片预览，不单独记操作日志；预览失败只提示「预览失败，可下载查看」，不阻断保存、附件保留或扫描件解析；MVP 不做批注、旋转、裁剪、全文搜索或 OCR 原文高亮。
+- **下载**是独立资料外流动作，必须校验独立下载权限（≠ 查看权限）；记轻量下载日志（下载人、下载时间、附件），不记下载原因、来源页 / 入口、客户端 IP 或设备信息，不触发审批或告警；下载日志仅在系统操作日志 / 审计查询、详情不默认展示；MVP 只支持单附件下载，不做打包下载。
+- **追加 / 替换 / 删除**：替换不保留旧档，删除不记原因；删到最后一份被阻止（产权证、合同补录附件均须 ≥1）。变更日志记附件 ID、文件名、动作类型、操作人、操作时间，不记原因、不留旧文件内容、不做差异追踪。
+- **疑似重复**只提示「疑似重复附件」、不展示命中依据、默认不追加，用户显式追加即确认、不二次弹窗、不阻断保存。
+- 附件上传后不自动触发解析（上传与解析是两个独立动作）。MVP 不做附件版本管理、替换审批、差异追踪、备注字段、维护来源字段、容量配额、打包下载、批量解析 / 确认或复杂上传队列。
+
+### 4.23 ScanExtractionSession
+
+合同或产权证扫描件解析辅助补录的临时会话，仅当前补录过程的临时工作区，不持久化为长期记录。
+
+| 字段 | 类型 | 必填 | 规则 |
+|---|---|---|---|
+| `session_id` | string | 是 | 临时会话 ID；确认 / 取消 / 失败 / 放弃后不留档，不提供草稿保存、历史档案或稍后继续确认（见 §2「扫描件解析确认」）|
+| `target_type` | enum | 是 | `contract`、`property_certificate` |
+| `target_attachment_id` | string | 条件 | 产权证解析只能引用当前产权证已有附件 ID，不接收新文件上传作为解析输入 |
+| `status` | enum | 是 | 解析中、待确认、失败、超时（临时态，不作为长期记录）|
+| `candidate_fields` | json | 否 | 候选字段值、置信度、低置信标记、轻量来源证据（页码 / 文本片段 / 截图区域）、候选匹配、差异提示、建议补全字段；均临时，确认后不长期保存 |
+
+约束：
+
+- 确认写入目标对象的字段来源只取 `manual` / `ocr_prefill_confirmed` / `ocr_prefill_corrected`（见 §2「字段来源」）；候选不自动绑定 Party·Asset、不自动覆盖已保存字段（冲突仅作差异提示）。
+- 不持久化解析工具、模型、供应商、置信度、确认时间、页码、文本片段或截图区域等元信息。
+- 同一附件重新解析废弃旧未确认候选、不留版本对比；已确认写入主数据的字段不受影响。建议补全字段不填写不阻断确认保存。
+
+### 4.24 Notification
+
+站内业务提醒与系统通知。**通知是提醒不是工单**——只有已读 / 未读，无处理闭环、不指派、不承载待办或任务语义。
+
+| 字段 | 类型 | 必填 | 规则 |
+|---|---|---|---|
+| `id` | string | 是 | 通知主键 |
+| `recipient_id` | string | 是 | 接收用户 ID；业务提醒按主体绑定数据范围过滤——仅向可见该对象（owner / operator 范围）的用户创建（正文含合同号 / 租户名等业务数据，受 §8 约束） |
+| `type` | enum | 是 | `contract_expiring`、`contract_expired`、`payment_overdue`、`payment_due`、`system_notice` 五类 |
+| `priority` | enum | 是 | `low` / `normal` / `high` / `urgent`；为 `days_overdue` / `days_remaining` 实时派生的优先级档位、不存标记位（口径同 ADR-0007） |
+| `title` | string | 是 | 通知标题 |
+| `content` | text | 是 | 通知正文 |
+| `related_entity_type` | string | 否 | 关联实体类型（contract / asset 等）；系统通知强制为空 |
+| `related_entity_id` | string | 否 | 关联实体 ID；系统通知强制无该值（内容中立硬约束，见下） |
+| `is_read` | boolean | 是 | 已读 / 未读（唯一状态轴，无处理闭环） |
+| `read_at` | datetime | 否 | 已读时间 |
+| `is_sent_wecom` | boolean | 是 | 是否已推送企业微信 |
+| `wecom_sent_at` | datetime | 否 | 企业微信推送时间 |
+| `wecom_send_error` | text | 否 | 推送错误信息；推送失败不影响站内通知创建、不做送达重试保障 |
+| `extra_data` | text | 否 | 额外数据（JSON） |
+
+约束：
+
+- **档位幂等去重**（ADR-0015）：幂等键 =（`recipient_id`, 对象, `type`, 优先级档位），同档位不重复生成、跨档位升级各生成一次。逾期按 `days_overdue` 派生 `NORMAL→HIGH(≥7天)→URGENT(≥30天)`；合同 / 付款到期按剩余天数派生 30→15→7 天档位。档位实时派生、不存标记位，既不按天重发刷屏、也不因首条未读漏发后续升级。到期与逾期提醒由定时扫描生成，逾期判定按派生口径（`due_date` 已过且 `paid_amount < amount_due` 且非 `voided`，见 §4.14、ADR-0007）。
+- **系统通知广播豁免 + 内容中立硬约束**：`system_notice` 是唯一可豁免数据范围、广播全体活跃用户的类型，前提是内容中立——仅 `admin` / `system_admin` 可发，服务端强制无 `related_entity_id`、不挂业务实体、不含 PII，违反即拒绝创建；管理员手动一次性创建，不进定时扫描、不做档位幂等（那套只管派生类业务提醒）。
+- **企业微信推送**（ADR-0016）：可选通道、配置开关控制；按 `recipient_id` 定向推送应用消息（`touser` + `agentid`），不走群机器人广播——推给本人天然落在其数据范围内、自洽 §8，正文可含合同号 / 租户名 / 金额。是个人消息提醒不是企业微信待办（无完成态 / 处理闭环，同 ADR-0006）。当前代码已接入企业微信应用消息与 `gettoken` / `message/send`，真实发送验证受企业微信可信 IP / 域名前置配置阻塞（本地报 `errcode=60020`）；正式上线前仍需补系统用户 ↔ 企业微信 `userid` 映射，避免长期依赖 `recipient_id == touser` 的本地假设。
+- **提醒非工单**：只有 `is_read` / `read_at`，无处理闭环、不指派、不承载待办语义。MVP 不做通知模板配置、用户自定义订阅规则、短信或邮件通道。
+
 ## 5. 状态机
 
 ### 5.1 ContractGroup 派生状态
@@ -412,28 +530,28 @@
 |---|---|
 | 筹备中 | 组内无生效合同 |
 | 生效中 | 组内存在至少一份生效合同 |
-| 已结束 | 组内全部合同已到期或已终止，且至少有一份合同 |
+| 已结束 | 组内全部正常合同均已终止，或仍为生效但 `effective_to < today` 自然到期，且至少有一份合同 |
 
 ### 5.2 Contract 生命周期
 
+最小生命周期，不做 BPM 路由审批流（无提审/审核/联审/反审核，补录即生效，见 ADR-0013）。
+
 | 当前状态 | 动作 | 目标状态 | 约束 |
 |---|---|---|---|
-| 草稿 | 提审 | 待审 | 签订日期必填，关联主体必须已审核 |
-| 待审 | 审核通过 | 生效 | 写入审计日志并生成台账 |
-| 待审 | 驳回 | 草稿 | 驳回原因必填 |
-| 生效 | 自然到期 | 已到期 | 停止生成未来台账 |
+| 草稿（纠错/录入中） | 补录定稿 | 生效 | 签订日期必填，关联主体必须已审核；补录即生效，无提审/审核步骤，写入审计日志并生成台账 |
+| 生效 | 自然到期 | 生效（展示派生为已到期） | 停止生成未来台账；不写 `status`、不生成 `expire` 审计 |
 | 生效 | 提前终止 | 已终止 | 终止原因必填 |
-| 生效 | 纠错 | 新草稿 + 原合同反审核 | 原合同相关台账作废或冲销 |
-| 生效 | 作废 | 草稿作废标记 | 无台账或台账已全部作废 |
+| 生效 | 纠错 | 新纠错草稿（原合同不反审核） | 门禁：纠错草稿只能从生效合同发起；原合同相关台账按重算或作废处理（**无冲销**，见 ADR-0008、台账重算口径） |
+| 生效 | 作废 | 已作废（`data_status`） | 无台账或台账已全部作废 |
 
 ### 5.3 审核状态
 
+仅承重对象保留审核生命周期；Contract 无 `review_status`（补录即生效，见 ADR-0013）、Project 无 review 生命周期（孤儿列已删，见 ADR-0014）。
+
 | 对象 | 状态 |
 |---|---|
-| Asset | `draft`、`pending`、`approved`、`reversed` |
-| Project | `draft`、`pending`、`approved`、`rejected` |
-| Party | `draft`、`pending`、`approved`、`reversed` |
-| Contract | 草稿、待审、已审、反审核 |
+| Asset | `draft`、`pending`、`approved`、`reversed`（两步确认，可反审，见 ADR-0002） |
+| Party | `draft`、`pending`、`approved`、`rejected`（两步审核，背 REQ-PTY-002 已审主体引用） |
 
 ### 5.4 Approval 状态（MVP 已删除）
 

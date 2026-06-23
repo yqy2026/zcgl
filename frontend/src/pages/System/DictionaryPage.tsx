@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   Button,
   Card,
@@ -13,17 +13,17 @@ import {
   Row,
   Col,
   Badge,
-} from "antd";
-import { MessageManager } from "@/utils/messageManager";
-import type { ColumnsType } from "antd/es/table";
-import dayjs from "dayjs";
-import { SearchOutlined } from "@ant-design/icons";
-import type { EnumFieldType, EnumFieldValue } from "@/services/dictionary";
-import type { SystemDictionary } from "@/types/dictionary";
-import EnumValuePreview from "@/components/Dictionary/EnumValuePreview";
-import { TableWithPagination } from "@/components/Common/TableWithPagination";
-import PageContainer from "@/components/Common/PageContainer";
-import { useArrayListData } from "@/hooks/useArrayListData";
+} from 'antd';
+import { MessageManager } from '@/utils/messageManager';
+import type { ColumnsType } from 'antd/es/table';
+import dayjs from 'dayjs';
+import { SearchOutlined } from '@ant-design/icons';
+import type { EnumFieldType, EnumFieldValue } from '@/services/dictionary';
+import type { SystemDictionary } from '@/types/dictionary';
+import EnumValuePreview from '@/components/Dictionary/EnumValuePreview';
+import { TableWithPagination } from '@/components/Common/TableWithPagination';
+import PageContainer from '@/components/Common/PageContainer';
+import { useArrayListData } from '@/hooks/useArrayListData';
 import {
   useCreateEnumValueMutation,
   useDeleteEnumValueMutation,
@@ -32,8 +32,8 @@ import {
   useEnumFieldValuesByTypeCodeQuery,
   useToggleEnumValueActiveMutation,
   useUpdateEnumValueMutation,
-} from "@/hooks/useDictionaryManagement";
-import styles from "./DictionaryPage.module.css";
+} from '@/hooks/useDictionaryManagement';
+import styles from './DictionaryPage.module.css';
 
 const { Option } = Select;
 const { Search } = Input;
@@ -52,14 +52,14 @@ interface OverviewFilters {
   category: string;
 }
 
-type Tone = "primary" | "success" | "warning" | "error";
+type Tone = 'primary' | 'success' | 'warning' | 'error';
 
 const resolveText = (value: string | null | undefined, fallback: string): string => {
   if (value == null) {
     return fallback;
   }
   const normalizedValue = value.trim();
-  return normalizedValue !== "" ? normalizedValue : fallback;
+  return normalizedValue !== '' ? normalizedValue : fallback;
 };
 
 // Stable empty array ref to prevent infinite re-render loops
@@ -108,28 +108,28 @@ const DictionaryPage: React.FC = () => {
   } = useArrayListData<EnumFieldWithType, OverviewFilters>({
     items: resolvedEnumData,
     initialFilters: {
-      keyword: "",
-      category: "all",
+      keyword: '',
+      category: 'all',
     },
     initialPageSize: 10,
     filterFn: useCallback((items: EnumFieldWithType[], filters: OverviewFilters) => {
       const trimmedKeyword = filters.keyword.trim().toLowerCase();
-      return items.filter((item) => {
-        if (filters.category !== "all" && item.type.category !== filters.category) {
+      return items.filter(item => {
+        if (filters.category !== 'all' && item.type.category !== filters.category) {
           return false;
         }
 
-        if (trimmedKeyword === "") {
+        if (trimmedKeyword === '') {
           return true;
         }
 
-        const typeName = item.type.name?.toLowerCase() ?? "";
-        const typeCode = item.type.code?.toLowerCase() ?? "";
+        const typeName = item.type.name?.toLowerCase() ?? '';
+        const typeCode = item.type.code?.toLowerCase() ?? '';
         const typeMatch = typeName.includes(trimmedKeyword) || typeCode.includes(trimmedKeyword);
-        const valueMatch = item.values.some((value) => {
-          const label = value.label?.toLowerCase() ?? "";
-          const code = value.code?.toLowerCase() ?? "";
-          const val = value.value?.toLowerCase() ?? "";
+        const valueMatch = item.values.some(value => {
+          const label = value.label?.toLowerCase() ?? '';
+          const code = value.code?.toLowerCase() ?? '';
+          const val = value.value?.toLowerCase() ?? '';
           return (
             label.includes(trimmedKeyword) ||
             val.includes(trimmedKeyword) ||
@@ -156,11 +156,11 @@ const DictionaryPage: React.FC = () => {
 
   const overviewLoading = useMemo(
     () => isEnumDataLoading || isEnumTypesLoading || overviewTableLoading,
-    [isEnumDataLoading, isEnumTypesLoading, overviewTableLoading],
+    [isEnumDataLoading, isEnumTypesLoading, overviewTableLoading]
   );
   const detailLoading = useMemo(
     () => isDetailSourceLoading || detailTableLoading,
-    [isDetailSourceLoading, detailTableLoading],
+    [isDetailSourceLoading, detailTableLoading]
   );
 
   useEffect(() => {
@@ -173,39 +173,39 @@ const DictionaryPage: React.FC = () => {
 
   useEffect(() => {
     if (enumTypesError != null) {
-      MessageManager.error("获取字典类型失败");
+      MessageManager.error('获取字典类型失败');
     }
   }, [enumTypesError]);
 
   useEffect(() => {
     if (enumDataError != null) {
-      MessageManager.error("获取枚举数据失败");
+      MessageManager.error('获取枚举数据失败');
     }
   }, [enumDataError]);
 
   useEffect(() => {
     if (detailSourceError != null) {
-      MessageManager.error("获取枚举值失败");
+      MessageManager.error('获取枚举值失败');
     }
   }, [detailSourceError]);
 
   const handleCreate = async () => {
     if (activeType == null) {
-      MessageManager.warning("请先选择字典类型");
+      MessageManager.warning('请先选择字典类型');
       return;
     }
 
     // 获取对应的枚举类型
-    const targetType = enumTypes.find((type) => type.code === activeType);
+    const targetType = enumTypes.find(type => type.code === activeType);
     if (!targetType) {
-      MessageManager.error("未找到对应的枚举类型");
+      MessageManager.error('未找到对应的枚举类型');
       return;
     }
 
     setEditingRecord(null);
     setEdit({ visible: true });
     form.resetFields();
-    const sortOrders = detailRows.map((item) => item.sort_order ?? 0);
+    const sortOrders = detailRows.map(item => item.sort_order ?? 0);
     const maxSortOrder = sortOrders.length > 0 ? Math.max(...sortOrders) : 0;
     const initialValues: Partial<SystemDictionary> = {
       dict_type: activeType,
@@ -230,7 +230,7 @@ const DictionaryPage: React.FC = () => {
       dict_label: record.dict_label,
       dict_value: record.dict_value,
       dict_code: record.dict_code,
-      description: record.description ?? "",
+      description: record.description ?? '',
       sort_order: record.sort_order ?? 0,
       is_active: record.is_active,
     };
@@ -245,12 +245,12 @@ const DictionaryPage: React.FC = () => {
     try {
       const result = await deleteEnumValueMutation.mutateAsync(record.id);
       if (result.success === true) {
-        MessageManager.success("删除成功");
+        MessageManager.success('删除成功');
       } else {
-        MessageManager.error(result.message ?? "删除失败");
+        MessageManager.error(result.message ?? '删除失败');
       }
     } catch (e: unknown) {
-      const errorMessage = e instanceof Error ? e.message : "删除失败";
+      const errorMessage = e instanceof Error ? e.message : '删除失败';
       MessageManager.error(errorMessage);
     }
   };
@@ -260,13 +260,13 @@ const DictionaryPage: React.FC = () => {
       const values = await form.validateFields();
 
       if (activeType == null) {
-        MessageManager.error("未找到对应的枚举类型");
+        MessageManager.error('未找到对应的枚举类型');
         return;
       }
 
-      const targetType = enumTypes.find((type) => type.code === activeType);
+      const targetType = enumTypes.find(type => type.code === activeType);
       if (!targetType) {
-        MessageManager.error("未找到对应的枚举类型");
+        MessageManager.error('未找到对应的枚举类型');
         return;
       }
 
@@ -284,9 +284,9 @@ const DictionaryPage: React.FC = () => {
         });
 
         if (result.success === true) {
-          MessageManager.success("更新成功");
+          MessageManager.success('更新成功');
         } else {
-          MessageManager.error(result.message ?? "更新失败");
+          MessageManager.error(result.message ?? '更新失败');
           return;
         }
       } else {
@@ -302,9 +302,9 @@ const DictionaryPage: React.FC = () => {
         });
 
         if (createResult.success === true) {
-          MessageManager.success("创建成功");
+          MessageManager.success('创建成功');
         } else {
-          MessageManager.error(createResult.message ?? "创建失败");
+          MessageManager.error(createResult.message ?? '创建失败');
           return;
         }
       }
@@ -312,9 +312,9 @@ const DictionaryPage: React.FC = () => {
       setEdit({ visible: false });
       setEditingRecord(null);
     } catch (e: unknown) {
-      if (typeof e === "object" && e !== null && "errorFields" in e) return;
+      if (typeof e === 'object' && e !== null && 'errorFields' in e) return;
 
-      const errorMessage = e instanceof Error ? e.message : "保存失败";
+      const errorMessage = e instanceof Error ? e.message : '保存失败';
       MessageManager.error(errorMessage);
     }
   };
@@ -326,12 +326,12 @@ const DictionaryPage: React.FC = () => {
         isActive: checked,
       });
       if (result.success === true) {
-        MessageManager.success("状态已更新");
+        MessageManager.success('状态已更新');
       } else {
-        MessageManager.error(result.message ?? "更新失败");
+        MessageManager.error(result.message ?? '更新失败');
       }
     } catch (e: unknown) {
-      const errorMessage = e instanceof Error ? e.message : "更新失败";
+      const errorMessage = e instanceof Error ? e.message : '更新失败';
       MessageManager.error(errorMessage);
     }
   };
@@ -339,15 +339,15 @@ const DictionaryPage: React.FC = () => {
   // 获取所有分类
   const categories = useMemo(() => {
     if (enumTypes.length === 0) {
-      return ["all"];
+      return ['all'];
     }
-    const cats = enumTypes.map((type) => type.category ?? "未分类");
-    return ["all", ...Array.from(new Set(cats))];
+    const cats = enumTypes.map(type => type.category ?? '未分类');
+    return ['all', ...Array.from(new Set(cats))];
   }, [enumTypes]);
 
   const activeEnumType = useMemo(
-    () => enumTypes.find((type) => type.code === activeType),
-    [activeType, enumTypes],
+    () => enumTypes.find(type => type.code === activeType),
+    [activeType, enumTypes]
   );
   const toneClassMap: Record<Tone, string> = {
     primary: styles.tonePrimary,
@@ -358,8 +358,8 @@ const DictionaryPage: React.FC = () => {
 
   // 获取类型统计信息
   const _getTypeStats = (type: EnumFieldType) => {
-    const values = resolvedEnumData.find((item) => item.type.id === type.id)?.values || [];
-    const activeCount = values.filter((v) => v.is_active).length;
+    const values = resolvedEnumData.find(item => item.type.id === type.id)?.values || [];
+    const activeCount = values.filter(v => v.is_active).length;
     return {
       total: values.length,
       active: activeCount,
@@ -380,14 +380,14 @@ const DictionaryPage: React.FC = () => {
   const overviewColumns: ColumnsType<EnumFieldWithType> = useMemo(
     () => [
       {
-        title: "类型名称",
-        dataIndex: ["type", "name"],
+        title: '类型名称',
+        dataIndex: ['type', 'name'],
         width: 200,
         render: (name: string, record) => (
           <div className={styles.typeNameCell}>
             <div className={styles.typeName}>{name}</div>
             <div className={styles.typeCode}>
-              <Tag className={[styles.codeTag, styles.tonePrimary].join(" ")}>
+              <Tag className={[styles.codeTag, styles.tonePrimary].join(' ')}>
                 {record.type.code}
               </Tag>
             </div>
@@ -395,20 +395,20 @@ const DictionaryPage: React.FC = () => {
         ),
       },
       {
-        title: "分类",
-        dataIndex: ["type", "category"],
+        title: '分类',
+        dataIndex: ['type', 'category'],
         width: 120,
-        render: (category: string) => resolveText(category, "未分类"),
+        render: (category: string) => resolveText(category, '未分类'),
       },
       {
-        title: "描述",
-        dataIndex: ["type", "description"],
+        title: '描述',
+        dataIndex: ['type', 'description'],
         width: 200,
         ellipsis: true,
-        render: (desc: string) => resolveText(desc, "-"),
+        render: (desc: string) => resolveText(desc, '-'),
       },
       {
-        title: "枚举值预览",
+        title: '枚举值预览',
         width: 300,
         render: (_, record) => (
           <EnumValuePreview
@@ -420,8 +420,8 @@ const DictionaryPage: React.FC = () => {
         ),
       },
       {
-        title: "操作",
-        key: "action",
+        title: '操作',
+        key: 'action',
         width: 100,
         render: (_, record) => (
           <Button
@@ -436,69 +436,69 @@ const DictionaryPage: React.FC = () => {
         ),
       },
     ],
-    [handleViewDetail],
+    [handleViewDetail]
   );
 
   const columns: ColumnsType<SystemDictionary> = useMemo(
     () => [
       {
-        title: "类型",
-        dataIndex: "dict_type",
+        title: '类型',
+        dataIndex: 'dict_type',
         width: 160,
         render: (t: string) => {
-          const typeInfo = enumTypes.find((et) => et.code === t);
+          const typeInfo = enumTypes.find(et => et.code === t);
           return (
             <div className={styles.typeCell}>
-              <Tag className={[styles.codeTag, styles.tonePrimary].join(" ")}>{t}</Tag>
+              <Tag className={[styles.codeTag, styles.tonePrimary].join(' ')}>{t}</Tag>
               {typeInfo && <div className={styles.typeHint}>{typeInfo.name}</div>}
             </div>
           );
         },
       },
       {
-        title: "编码",
-        dataIndex: "dict_code",
+        title: '编码',
+        dataIndex: 'dict_code',
         width: 160,
-        render: (code: string) => resolveText(code, "-"),
+        render: (code: string) => resolveText(code, '-'),
       },
-      { title: "标签", dataIndex: "dict_label", width: 200 },
-      { title: "值", dataIndex: "dict_value", width: 200 },
+      { title: '标签', dataIndex: 'dict_label', width: 200 },
+      { title: '值', dataIndex: 'dict_value', width: 200 },
       {
-        title: "排序",
-        dataIndex: "sort_order",
+        title: '排序',
+        dataIndex: 'sort_order',
         width: 80,
         render: (v: number) => v ?? 0,
       },
       {
-        title: "启用",
-        dataIndex: "is_active",
+        title: '启用',
+        dataIndex: 'is_active',
         width: 100,
         render: (v: boolean, record) => {
-          const tone: Tone = v === true ? "success" : "warning";
+          const tone: Tone = v === true ? 'success' : 'warning';
           return (
             <Space size={6} className={styles.statusToggle}>
               <Switch
                 checked={v}
-                onChange={(checked) => handleToggleActive(record, checked)}
-                aria-label={`${v ? "停用" : "启用"}字典项 ${record.dict_label}`}
+                onChange={checked => handleToggleActive(record, checked)}
+                aria-label={`${v ? '停用' : '启用'}字典项 ${record.dict_label}`}
               />
-              <span className={[styles.statusText, toneClassMap[tone]].join(" ")}>
-                {v === true ? "启用" : "停用"}
+              <span className={[styles.statusText, toneClassMap[tone]].join(' ')}>
+                {v === true ? '启用' : '停用'}
               </span>
             </Space>
           );
         },
       },
       {
-        title: "更新时间",
-        dataIndex: "updated_at",
+        title: '更新时间',
+        dataIndex: 'updated_at',
         width: 180,
-        render: (v: string) => (v ? dayjs(v).format("YYYY-MM-DD HH:mm") : "-"),
+        render: (v: string) => (v ? dayjs(v).format('YYYY-MM-DD HH:mm') : '-'),
       },
       {
-        title: "操作",
-        key: "action",
-        fixed: "right",
+        title: '操作',
+        key: 'action',
+        fixed: 'right',
         width: 180,
         render: (_, record) => (
           <Space size={6} className={styles.rowActions}>
@@ -523,7 +523,7 @@ const DictionaryPage: React.FC = () => {
                 size="small"
                 type="text"
                 danger
-                className={[styles.rowActionButton, styles.dangerActionButton].join(" ")}
+                className={[styles.rowActionButton, styles.dangerActionButton].join(' ')}
                 aria-label={`删除 ${record.dict_label}`}
               >
                 删除
@@ -533,7 +533,7 @@ const DictionaryPage: React.FC = () => {
         ),
       },
     ],
-    [activeType, enumTypes],
+    [activeType, enumTypes]
   );
 
   return (
@@ -552,7 +552,7 @@ const DictionaryPage: React.FC = () => {
               onClick={() => {
                 void refetchEnumTypes();
                 void refetchEnumData();
-                if (activeType != null && activeType !== "") {
+                if (activeType != null && activeType !== '') {
                   void refetchDetailSource();
                 }
               }}
@@ -568,9 +568,7 @@ const DictionaryPage: React.FC = () => {
             <Search
               placeholder="搜索枚举类型或值"
               value={overviewFilters.keyword}
-              onChange={(e) =>
-                applyOverviewFilters({ ...overviewFilters, keyword: e.target.value })
-              }
+              onChange={e => applyOverviewFilters({ ...overviewFilters, keyword: e.target.value })}
               prefix={<SearchOutlined />}
               allowClear
             />
@@ -579,12 +577,12 @@ const DictionaryPage: React.FC = () => {
             <Select
               placeholder="选择分类"
               value={overviewFilters.category}
-              onChange={(value) => applyOverviewFilters({ ...overviewFilters, category: value })}
+              onChange={value => applyOverviewFilters({ ...overviewFilters, category: value })}
               className={styles.fullWidthControl}
             >
-              {categories.map((cat) => (
+              {categories.map(cat => (
                 <Option key={cat} value={cat}>
-                  {cat === "all" ? "全部分类" : cat}
+                  {cat === 'all' ? '全部分类' : cat}
                 </Option>
               ))}
             </Select>
@@ -597,7 +595,7 @@ const DictionaryPage: React.FC = () => {
               className={styles.fullWidthControl}
               allowClear
             >
-              {enumTypes.map((t) => (
+              {enumTypes.map(t => (
                 <Option key={t.code} value={t.code}>
                   {t.name} ({t.code})
                 </Option>
@@ -613,7 +611,7 @@ const DictionaryPage: React.FC = () => {
 
         {/* 列表视图 */}
         <TableWithPagination
-          rowKey={(record) => record.type.id}
+          rowKey={record => record.type.id}
           loading={overviewLoading}
           columns={overviewColumns}
           dataSource={overviewData}
@@ -632,7 +630,7 @@ const DictionaryPage: React.FC = () => {
 
       <Modal
         open={edit.visible}
-        title={editingRecord ? "编辑枚举值" : "新增枚举值"}
+        title={editingRecord ? '编辑枚举值' : '新增枚举值'}
         onOk={submit}
         onCancel={() => {
           form.resetFields();
@@ -651,7 +649,7 @@ const DictionaryPage: React.FC = () => {
           <Form.Item
             name="dict_label"
             label="显示标签"
-            rules={[{ required: true, message: "请输入显示标签" }]}
+            rules={[{ required: true, message: '请输入显示标签' }]}
           >
             <Input placeholder="如：已确权、经营性等" />
           </Form.Item>
@@ -659,7 +657,7 @@ const DictionaryPage: React.FC = () => {
           <Form.Item
             name="dict_value"
             label="枚举值"
-            rules={[{ required: true, message: "请输入枚举值" }]}
+            rules={[{ required: true, message: '请输入枚举值' }]}
           >
             <Input placeholder="如：CONFIRMED、COMMERCIAL等" />
           </Form.Item>
@@ -688,7 +686,7 @@ const DictionaryPage: React.FC = () => {
               </div>
               <div>
                 <strong>分类：</strong>
-                {activeEnumType.category ?? "未分类"}
+                {activeEnumType.category ?? '未分类'}
               </div>
               {activeEnumType.description != null && (
                 <div>
@@ -706,8 +704,8 @@ const DictionaryPage: React.FC = () => {
         open={detailModalVisible}
         title={
           activeType != null
-            ? `${enumTypes.find((t) => t.code === activeType)?.name} (${activeType})`
-            : "枚举值详情"
+            ? `${enumTypes.find(t => t.code === activeType)?.name} (${activeType})`
+            : '枚举值详情'
         }
         onCancel={() => setDetailModalVisible(false)}
         footer={[

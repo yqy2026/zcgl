@@ -33,7 +33,7 @@ const REVIEW_STATUS_OPTIONS: Array<{ label: string; value: PartyReviewStatus | '
   { label: '草稿', value: 'draft' },
   { label: '待审核', value: 'pending' },
   { label: '已审核', value: 'approved' },
-  { label: '已反审核', value: 'reversed' },
+  { label: '已驳回', value: 'rejected' },
 ];
 
 const PARTY_TYPE_LABELS: Record<PartyType, string> = {
@@ -46,7 +46,7 @@ const REVIEW_STATUS_META: Record<PartyReviewStatus, { color: string; label: stri
   draft: { color: 'default', label: '草稿' },
   pending: { color: 'processing', label: '待审核' },
   approved: { color: 'success', label: '已审核' },
-  reversed: { color: 'warning', label: '已反审核' },
+  rejected: { color: 'warning', label: '已驳回' },
 };
 
 const renderReviewStatus = (

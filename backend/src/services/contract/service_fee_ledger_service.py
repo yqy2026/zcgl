@@ -10,7 +10,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.exception_handler import BusinessValidationError, ResourceNotFoundError
 from src.crud.contract import contract_crud
 from src.crud.contract_group import contract_group_crud
-from src.models.contract_group import GroupRelationType, RevenueMode
+from src.models.contract_group import (
+    GroupRelationType,
+    RevenueMode,
+    derive_ledger_payment_status,
+)
 
 
 def _utcnow() -> datetime:
@@ -90,7 +94,34 @@ class ServiceFeeLedgerService:
 
                 amount_due = _quantize_money(Decimal(source_entry.amount_due) * ratio)
                 paid_amount = _quantize_money(Decimal(source_entry.paid_amount) * ratio)
+                payment_status = derive_ledger_payment_status(
+                    amount_due=amount_due,
+                    paid_amount=paid_amount,
+                    stored_status=getattr(source_entry, "payment_status", None),
+                )
                 existing_entry = existing_by_source.get(source_id)
+                attribution_data = {
+                    "attributed_project_id": getattr(
+                        source_entry,
+                        "attributed_project_id",
+                        None,
+                    ),
+                    "attributed_owner_party_id": getattr(
+                        source_entry,
+                        "attributed_owner_party_id",
+                        None,
+                    ),
+                    "attributed_operator_party_id": getattr(
+                        source_entry,
+                        "attributed_operator_party_id",
+                        None,
+                    ),
+                    "attributed_asset_ids": getattr(
+                        source_entry,
+                        "attributed_asset_ids",
+                        None,
+                    ),
+                }
 
                 if existing_entry is None:
                     await contract_group_crud.create_service_fee_entry(
@@ -102,9 +133,10 @@ class ServiceFeeLedgerService:
                             "year_month": str(source_entry.year_month),
                             "amount_due": amount_due,
                             "paid_amount": paid_amount,
-                            "payment_status": str(source_entry.payment_status),
+                            "payment_status": payment_status,
                             "currency_code": str(source_entry.currency_code),
                             "service_fee_ratio": ratio,
+                            **attribution_data,
                             "created_at": now,
                             "updated_at": now,
                         },
@@ -117,11 +149,19 @@ class ServiceFeeLedgerService:
                     [
                         existing_entry.amount_due != amount_due,
                         existing_entry.paid_amount != paid_amount,
-                        existing_entry.payment_status != source_entry.payment_status,
+                        existing_entry.payment_status != payment_status,
                         existing_entry.currency_code != source_entry.currency_code,
                         existing_entry.service_fee_ratio != ratio,
                         existing_entry.year_month != source_entry.year_month,
                         existing_entry.agency_contract_id != contract.contract_id,
+                        getattr(existing_entry, "attributed_project_id", None)
+                        != attribution_data["attributed_project_id"],
+                        getattr(existing_entry, "attributed_owner_party_id", None)
+                        != attribution_data["attributed_owner_party_id"],
+                        getattr(existing_entry, "attributed_operator_party_id", None)
+                        != attribution_data["attributed_operator_party_id"],
+                        getattr(existing_entry, "attributed_asset_ids", None)
+                        != attribution_data["attributed_asset_ids"],
                     ]
                 )
                 if not requires_update:
@@ -131,9 +171,21 @@ class ServiceFeeLedgerService:
                 existing_entry.year_month = str(source_entry.year_month)
                 existing_entry.amount_due = amount_due
                 existing_entry.paid_amount = paid_amount
-                existing_entry.payment_status = str(source_entry.payment_status)
+                existing_entry.payment_status = payment_status
                 existing_entry.currency_code = str(source_entry.currency_code)
                 existing_entry.service_fee_ratio = ratio
+                existing_entry.attributed_project_id = attribution_data[
+                    "attributed_project_id"
+                ]
+                existing_entry.attributed_owner_party_id = attribution_data[
+                    "attributed_owner_party_id"
+                ]
+                existing_entry.attributed_operator_party_id = attribution_data[
+                    "attributed_operator_party_id"
+                ]
+                existing_entry.attributed_asset_ids = attribution_data[
+                    "attributed_asset_ids"
+                ]
                 existing_entry.updated_at = now
                 updated += 1
 

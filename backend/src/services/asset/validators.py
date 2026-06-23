@@ -26,6 +26,7 @@ class AssetBatchValidator:
         "property_nature",
         "usage_status",
     ]
+    OWNER_REFERENCE_FIELDS = ("owner_party_id", "ownership_id")
 
     # 数值字段定义
     NUMERIC_FIELDS = [
@@ -65,6 +66,18 @@ class AssetBatchValidator:
         for field in AssetBatchValidator.REQUIRED_FIELDS:
             if field not in data or not data[field]:
                 errors.append({"field": field, "error": f"{field}为必填字段"})
+
+        has_owner_reference = any(
+            data.get(field) is not None and str(data.get(field)).strip() != ""
+            for field in AssetBatchValidator.OWNER_REFERENCE_FIELDS
+        )
+        if not has_owner_reference:
+            errors.append(
+                {
+                    "field": "owner_party_id",
+                    "error": "owner_party_id or ownership_id is required",
+                }
+            )
 
         return errors
 

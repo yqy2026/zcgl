@@ -44,6 +44,10 @@ async def test_sync_should_create_service_fee_entries_from_direct_lease_ledgers(
         paid_amount=Decimal("500.00"),
         payment_status="partial",
         currency_code="CNY",
+        attributed_project_id="project-001",
+        attributed_owner_party_id="owner-001",
+        attributed_operator_party_id="operator-001",
+        attributed_asset_ids=["asset-001"],
     )
     created_payloads: list[dict] = []
 
@@ -85,3 +89,85 @@ async def test_sync_should_create_service_fee_entries_from_direct_lease_ledgers(
     assert created_payloads[0]["paid_amount"] == Decimal("50.00")
     assert created_payloads[0]["payment_status"] == "partial"
     assert created_payloads[0]["service_fee_ratio"] == Decimal("0.1000")
+    assert created_payloads[0]["attributed_project_id"] == "project-001"
+    assert created_payloads[0]["attributed_owner_party_id"] == "owner-001"
+    assert created_payloads[0]["attributed_operator_party_id"] == "operator-001"
+    assert created_payloads[0]["attributed_asset_ids"] == ["asset-001"]
+
+
+async def test_sync_should_update_service_fee_attribution_from_source_ledger(
+    mock_db,
+) -> None:
+    service_fee_module = importlib.import_module(
+        "src.services.contract.service_fee_ledger_service"
+    )
+    service = service_fee_module.service_fee_ledger_service
+
+    agency_group = SimpleNamespace(
+        contract_group_id="group-1",
+        revenue_mode=RevenueMode.AGENCY,
+    )
+    entrusted_contract = SimpleNamespace(
+        contract_id="contract-entrust",
+        group_relation_type=GroupRelationType.ENTRUSTED,
+        agency_detail=SimpleNamespace(service_fee_ratio=Decimal("0.1000")),
+    )
+    direct_contract = SimpleNamespace(
+        contract_id="contract-direct",
+        group_relation_type=GroupRelationType.DIRECT_LEASE,
+        agency_detail=None,
+    )
+    source_entry = SimpleNamespace(
+        entry_id="entry-001",
+        year_month="2026-05",
+        amount_due=Decimal("2000.00"),
+        paid_amount=Decimal("500.00"),
+        payment_status="partial",
+        currency_code="CNY",
+        attributed_project_id="project-new",
+        attributed_owner_party_id="owner-new",
+        attributed_operator_party_id="operator-new",
+        attributed_asset_ids=["asset-new"],
+    )
+    existing_entry = SimpleNamespace(
+        source_ledger_id="entry-001",
+        amount_due=Decimal("200.00"),
+        paid_amount=Decimal("50.00"),
+        payment_status="partial",
+        currency_code="CNY",
+        service_fee_ratio=Decimal("0.1000"),
+        year_month="2026-05",
+        agency_contract_id="contract-direct",
+        attributed_project_id="project-old",
+        attributed_owner_party_id="owner-old",
+        attributed_operator_party_id="operator-old",
+        attributed_asset_ids=["asset-old"],
+        updated_at=None,
+    )
+
+    with (
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.get",
+            new=AsyncMock(return_value=agency_group),
+        ),
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_crud.list_by_group",
+            new=AsyncMock(return_value=[entrusted_contract, direct_contract]),
+        ),
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.list_ledger_entries_by_contract",
+            new=AsyncMock(return_value=[source_entry]),
+        ),
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.list_service_fee_entries_by_group",
+            new=AsyncMock(return_value=[existing_entry]),
+            create=True,
+        ),
+    ):
+        result = await service.sync_contract_group(mock_db, group_id="group-1")
+
+    assert result == {"created": 0, "updated": 1, "voided": 0}
+    assert existing_entry.attributed_project_id == "project-new"
+    assert existing_entry.attributed_owner_party_id == "owner-new"
+    assert existing_entry.attributed_operator_party_id == "operator-new"
+    assert existing_entry.attributed_asset_ids == ["asset-new"]

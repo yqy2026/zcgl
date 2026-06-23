@@ -9,6 +9,7 @@ from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 from types import ModuleType
 
+import pytest
 import sqlalchemy as sa
 
 
@@ -81,9 +82,37 @@ def _load_cleanup_legacy_contract_rules_module() -> ModuleType:
         / "versions"
         / "20260307_m2_cleanup_legacy_contract_policy_rules.py"
     )
-    spec = spec_from_file_location(
-        "cleanup_legacy_contract_policy_rules", module_path
+    spec = spec_from_file_location("cleanup_legacy_contract_policy_rules", module_path)
+    assert spec is not None
+    assert spec.loader is not None
+    module = module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _load_drop_collection_module() -> ModuleType:
+    module_path = (
+        Path(__file__).resolve().parents[3]
+        / "alembic"
+        / "versions"
+        / "20260615_drop_collection_module.py"
     )
+    spec = spec_from_file_location("drop_collection_module", module_path)
+    assert spec is not None
+    assert spec.loader is not None
+    module = module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _load_drop_manual_overdue_status_module() -> ModuleType:
+    module_path = (
+        Path(__file__).resolve().parents[3]
+        / "alembic"
+        / "versions"
+        / "20260616_drop_manual_overdue_status.py"
+    )
+    spec = spec_from_file_location("drop_manual_overdue_status", module_path)
     assert spec is not None
     assert spec.loader is not None
     module = module_from_spec(spec)
@@ -118,9 +147,7 @@ def _actions_for_policy(
     policy_name: str,
 ) -> set[str]:
     return {
-        str(seed["action"])
-        for seed in policy_seeds
-        if str(seed["name"]) == policy_name
+        str(seed["action"]) for seed in policy_seeds if str(seed["name"]) == policy_name
     }
 
 
@@ -233,13 +260,14 @@ def test_seed_packages_cover_new_guarded_resource_types() -> None:
             assert rw_actions.issubset(coverage.get(resource, set()))
 
 
-def test_backfill_expanded_resource_types_should_include_system_domain_resources() -> None:
+def test_backfill_expanded_resource_types_should_include_system_domain_resources() -> (
+    None
+):
     module = _load_backfill_module()
 
     expected_resources = {
         "backup",
         "analytics",
-        "collection",
         "dictionary",
         "enum_field",
         "history",
@@ -250,16 +278,25 @@ def test_backfill_expanded_resource_types_should_include_system_domain_resources
     assert "contact" not in set(module._EXPANDED_RESOURCE_TYPES)
 
 
-def test_backfill_expanded_resource_types_should_match_non_base_api_authz_resources() -> None:
+def test_backfill_expanded_resource_types_should_match_non_base_api_authz_resources() -> (
+    None
+):
     module = _load_backfill_module()
 
     api_resources = _discover_api_authz_resource_types()
     non_base_api_resources = api_resources - {"asset", "project"}
 
-    assert set(module._EXPANDED_RESOURCE_TYPES) == non_base_api_resources
+    retired_resources = {"collection"}
+
+    assert (
+        set(module._EXPANDED_RESOURCE_TYPES) - retired_resources
+    ) == non_base_api_resources
+    assert retired_resources.isdisjoint(api_resources)
 
 
-def test_backfill_expanded_resource_types_should_not_keep_legacy_contract_resource() -> None:
+def test_backfill_expanded_resource_types_should_not_keep_legacy_contract_resource() -> (
+    None
+):
     module = _load_backfill_module()
 
     assert "rent_contract" not in set(module._EXPANDED_RESOURCE_TYPES)
@@ -290,7 +327,238 @@ def test_cleanup_legacy_contract_rule_migration_should_follow_current_head() -> 
     assert module.down_revision == "20260307_m2_contract_number_on_contracts"
 
 
-def test_seed_migration_should_keep_original_predecessor_for_upgrade_continuity() -> None:
+def test_drop_collection_module_migration_should_follow_current_head() -> None:
+    module = _load_drop_collection_module()
+
+    assert module.down_revision == "20260612_drop_contract_relations"
+
+
+def test_drop_collection_module_upgrade_should_delete_runtime_rules_and_table(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = _load_drop_collection_module()
+    engine = sa.create_engine("sqlite+pysqlite:///:memory:", future=True)
+    dropped_tables: list[str] = []
+
+    metadata = sa.MetaData()
+    rule_table = sa.Table(
+        "abac_policy_rules",
+        metadata,
+        sa.Column("id", sa.String, primary_key=True),
+        sa.Column("resource_type", sa.String, nullable=False),
+    )
+    resource_permission_table = sa.Table(
+        "resource_permissions",
+        metadata,
+        sa.Column("id", sa.String, primary_key=True),
+        sa.Column("resource_type", sa.String, nullable=False),
+        sa.Column("permission_id", sa.String, nullable=True),
+    )
+    permission_table = sa.Table(
+        "permissions",
+        metadata,
+        sa.Column("id", sa.String, primary_key=True),
+        sa.Column("resource", sa.String, nullable=False),
+    )
+    role_permission_table = sa.Table(
+        "role_permissions",
+        metadata,
+        sa.Column("role_id", sa.String, nullable=False),
+        sa.Column("permission_id", sa.String, nullable=False),
+    )
+    permission_grant_table = sa.Table(
+        "permission_grants",
+        metadata,
+        sa.Column("id", sa.String, primary_key=True),
+        sa.Column("permission_id", sa.String, nullable=False),
+    )
+    sa.Table(
+        "collection_records",
+        metadata,
+        sa.Column("id", sa.String, primary_key=True),
+    )
+    metadata.create_all(engine)
+
+    with engine.begin() as connection:
+        connection.execute(
+            rule_table.insert(),
+            [
+                {"id": "collection_rule", "resource_type": "collection"},
+                {"id": "asset_rule", "resource_type": "asset"},
+            ],
+        )
+        connection.execute(
+            resource_permission_table.insert(),
+            [
+                {
+                    "id": "collection_resource_permission",
+                    "resource_type": "collection",
+                    "permission_id": None,
+                },
+                {
+                    "id": "legacy_mismatched_collection_permission",
+                    "resource_type": "asset",
+                    "permission_id": "collection_permission",
+                },
+                {
+                    "id": "asset_resource_permission",
+                    "resource_type": "asset",
+                    "permission_id": "asset_permission",
+                },
+            ],
+        )
+        connection.execute(
+            permission_table.insert(),
+            [
+                {"id": "collection_permission", "resource": "collection"},
+                {"id": "asset_permission", "resource": "asset"},
+            ],
+        )
+        connection.execute(
+            role_permission_table.insert(),
+            [
+                {"role_id": "role_1", "permission_id": "collection_permission"},
+                {"role_id": "role_1", "permission_id": "asset_permission"},
+            ],
+        )
+        connection.execute(
+            permission_grant_table.insert(),
+            [
+                {"id": "collection_grant", "permission_id": "collection_permission"},
+                {"id": "asset_grant", "permission_id": "asset_permission"},
+            ],
+        )
+
+        monkeypatch.setattr(module.op, "get_bind", lambda: connection)
+        monkeypatch.setattr(module.op, "drop_table", dropped_tables.append)
+
+        module.upgrade()
+
+        remaining_rules = set(connection.execute(sa.select(rule_table.c.id)).scalars())
+        remaining_permissions = set(
+            connection.execute(sa.select(permission_table.c.id)).scalars()
+        )
+        remaining_role_permissions = set(
+            connection.execute(
+                sa.select(role_permission_table.c.permission_id)
+            ).scalars()
+        )
+        remaining_resource_permissions = set(
+            connection.execute(sa.select(resource_permission_table.c.id)).scalars()
+        )
+        remaining_grants = set(
+            connection.execute(sa.select(permission_grant_table.c.id)).scalars()
+        )
+
+    assert dropped_tables == ["collection_records"]
+    assert remaining_rules == {"asset_rule"}
+    assert remaining_permissions == {"asset_permission"}
+    assert remaining_role_permissions == {"asset_permission"}
+    assert remaining_resource_permissions == {"asset_resource_permission"}
+    assert remaining_grants == {"asset_grant"}
+
+
+def test_drop_manual_overdue_status_migration_should_follow_current_head() -> None:
+    module = _load_drop_manual_overdue_status_module()
+
+    assert module.down_revision == "20260615_drop_collection_module"
+
+
+def test_drop_manual_overdue_status_upgrade_should_normalize_ledger_statuses(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = _load_drop_manual_overdue_status_module()
+    engine = sa.create_engine("sqlite+pysqlite:///:memory:", future=True)
+    metadata = sa.MetaData()
+
+    contract_ledger_table = sa.Table(
+        "contract_ledger_entries",
+        metadata,
+        sa.Column("entry_id", sa.String, primary_key=True),
+        sa.Column("payment_status", sa.String, nullable=False),
+        sa.Column("paid_amount", sa.Numeric(15, 2), nullable=False),
+    )
+    service_fee_ledger_table = sa.Table(
+        "service_fee_ledgers",
+        metadata,
+        sa.Column("service_fee_entry_id", sa.String, primary_key=True),
+        sa.Column("payment_status", sa.String, nullable=False),
+        sa.Column("paid_amount", sa.Numeric(15, 2), nullable=False),
+    )
+    metadata.create_all(engine)
+
+    with engine.begin() as connection:
+        connection.execute(
+            contract_ledger_table.insert(),
+            [
+                {
+                    "entry_id": "contract_unpaid_overdue",
+                    "payment_status": "overdue",
+                    "paid_amount": 0,
+                },
+                {
+                    "entry_id": "contract_partial_overdue",
+                    "payment_status": "overdue",
+                    "paid_amount": 10,
+                },
+                {
+                    "entry_id": "contract_paid",
+                    "payment_status": "paid",
+                    "paid_amount": 100,
+                },
+            ],
+        )
+        connection.execute(
+            service_fee_ledger_table.insert(),
+            [
+                {
+                    "service_fee_entry_id": "fee_unpaid_overdue",
+                    "payment_status": "overdue",
+                    "paid_amount": 0,
+                },
+                {
+                    "service_fee_entry_id": "fee_partial_overdue",
+                    "payment_status": "overdue",
+                    "paid_amount": 5,
+                },
+            ],
+        )
+
+        monkeypatch.setattr(module.op, "get_bind", lambda: connection)
+
+        module.upgrade()
+
+        contract_statuses = dict(
+            connection.execute(
+                sa.select(
+                    contract_ledger_table.c.entry_id,
+                    contract_ledger_table.c.payment_status,
+                )
+            ).all()
+        )
+        service_fee_statuses = dict(
+            connection.execute(
+                sa.select(
+                    service_fee_ledger_table.c.service_fee_entry_id,
+                    service_fee_ledger_table.c.payment_status,
+                )
+            ).all()
+        )
+
+    assert contract_statuses == {
+        "contract_unpaid_overdue": "unpaid",
+        "contract_partial_overdue": "partial",
+        "contract_paid": "paid",
+    }
+    assert service_fee_statuses == {
+        "fee_unpaid_overdue": "unpaid",
+        "fee_partial_overdue": "partial",
+    }
+
+
+def test_seed_migration_should_keep_original_predecessor_for_upgrade_continuity() -> (
+    None
+):
     module = _load_seed_module()
 
     assert module.down_revision == "20260219_create_abac_and_relation_tables"
@@ -421,7 +689,9 @@ def test_backfill_upgrade_should_update_existing_legacy_rule_condition_expr() ->
             module.op.get_bind = original_get_bind
 
         stored_expr = connection.execute(
-            sa.select(rule_table.c.condition_expr).where(rule_table.c.id == legacy_rule_id)
+            sa.select(rule_table.c.condition_expr).where(
+                rule_table.c.id == legacy_rule_id
+            )
         ).scalar_one()
 
     if isinstance(stored_expr, str):
@@ -483,7 +753,9 @@ def test_missing_resource_backfill_upgrade_should_insert_expected_rules() -> Non
         assert stored_rule_ids == expected_rule_ids
 
         stored_expr = connection.execute(
-            sa.select(rule_table.c.condition_expr).where(rule_table.c.id == sample_rule_id)
+            sa.select(rule_table.c.condition_expr).where(
+                rule_table.c.id == sample_rule_id
+            )
         ).scalar_one()
 
         total_inserted = connection.execute(
@@ -591,7 +863,9 @@ def test_scoped_policy_packages_should_reference_party_scope_variables() -> None
         assert expected_vars.issubset(actual_vars)
 
 
-def test_scoped_policy_conditions_should_fail_closed_when_resource_scope_missing() -> None:
+def test_scoped_policy_conditions_should_fail_closed_when_resource_scope_missing() -> (
+    None
+):
     deny_all_expr = {"==": [1, 0]}
     scoped_policy_names = {
         "asset_owner_operator",

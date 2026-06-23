@@ -270,10 +270,6 @@ const AssetBatchActions: React.FC<AssetBatchActionsProps> = ({
             </Select>
           </Form.Item>
 
-          <Form.Item name="manager_party_id" label="经营管理方ID">
-            <Input placeholder="请输入（不修改请留空）" />
-          </Form.Item>
-
           <Form.Item name="business_category" label="业态类别">
             <Input placeholder="请输入（不修改请留空）" />
           </Form.Item>

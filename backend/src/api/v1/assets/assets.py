@@ -218,31 +218,17 @@ async def _require_asset_create_authz(
     db: AsyncSession = Depends(get_async_db),
 ) -> AuthzContext:
     owner_party_id = _normalize_optional_str(asset_in.owner_party_id)
-    manager_party_id = _normalize_optional_str(asset_in.manager_party_id)
     ownership_id = _normalize_optional_str(asset_in.ownership_id)
     organization_id = _normalize_optional_str(asset_in.organization_id)
     asset_in.owner_party_id = owner_party_id
-    asset_in.manager_party_id = manager_party_id
+    asset_in.manager_party_id = None
     asset_in.ownership_id = ownership_id
     asset_in.organization_id = organization_id
     resource_context: dict[str, Any] = {}
     if owner_party_id is not None:
         resource_context["owner_party_id"] = owner_party_id
-    if manager_party_id is not None:
-        resource_context["manager_party_id"] = manager_party_id
     if ownership_id is not None:
         resource_context["ownership_id"] = ownership_id
-    if manager_party_id is None:
-        subject_scope_hint = await _build_subject_scope_hint(
-            db=db,
-            user_id=str(current_user.id),
-        )
-        inferred_manager_party_id = _normalize_optional_str(
-            subject_scope_hint.get("manager_party_id")
-        )
-        if inferred_manager_party_id is not None:
-            manager_party_id = inferred_manager_party_id
-            resource_context["manager_party_id"] = inferred_manager_party_id
     resolved_owner_party_id: str | None = None
     if owner_party_id is None and ownership_id is not None:
         resolved_owner_party_id = await _resolve_owner_party_scope_by_ownership_id(
@@ -255,8 +241,7 @@ async def _require_asset_create_authz(
     if organization_id is not None:
         resource_context["organization_id"] = organization_id
     resolved_party_id = (
-        manager_party_id
-        or owner_party_id
+        owner_party_id
         or resolved_owner_party_id
         or organization_id
         or _ASSET_CREATE_UNSCOPED_PARTY_ID
@@ -769,19 +754,12 @@ async def create_asset(
         resolved_owner_party_id = _normalize_optional_str(
             _authz_ctx.resource_context.get("owner_party_id")
         )
-        resolved_manager_party_id = _normalize_optional_str(
-            _authz_ctx.resource_context.get("manager_party_id")
-        )
         if (
             _normalize_optional_str(asset_in.owner_party_id) is None
             and resolved_owner_party_id is not None
         ):
             asset_in.owner_party_id = resolved_owner_party_id
-        if (
-            _normalize_optional_str(asset_in.manager_party_id) is None
-            and resolved_manager_party_id is not None
-        ):
-            asset_in.manager_party_id = resolved_manager_party_id
+        asset_in.manager_party_id = None
     ip_address = get_client_ip(request)
     user_agent = request.headers.get("user-agent", "")
     session_id = request.headers.get("X-Session-ID") or request.headers.get(

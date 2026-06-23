@@ -8,7 +8,6 @@ export type ResourceType =
   | 'analytics'
   | 'asset'
   | 'backup'
-  | 'collection'
   | 'contract'
   | 'contract_group'
   | 'contact'

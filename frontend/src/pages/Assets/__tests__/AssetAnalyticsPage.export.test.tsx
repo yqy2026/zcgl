@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { fireEvent, renderWithProviders, screen, waitFor } from '@/test/utils/test-helpers';
 import AssetAnalyticsPage from '../AssetAnalyticsPage';

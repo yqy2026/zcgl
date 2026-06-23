@@ -1,7 +1,7 @@
 /** Party domain types (Phase 3). */
 
 export type PartyType = 'organization' | 'legal_entity' | 'individual';
-export type PartyReviewStatus = 'draft' | 'pending' | 'approved' | 'reversed';
+export type PartyReviewStatus = 'draft' | 'pending' | 'approved' | 'rejected';
 
 export interface Party {
   id: string;

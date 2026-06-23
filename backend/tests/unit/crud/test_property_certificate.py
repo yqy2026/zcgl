@@ -54,6 +54,40 @@ class TestPropertyCertificateCRUD:
         assert cert.certificate_number == "PC-002"
         assert mock_db.add.call_count == 3
 
+    async def test_create_with_owners_async_persists_attachments(self, mock_db):
+        crud = CRUDPropertyCertificate(PropertyCertificate)
+        obj_in = PropertyCertificateCreate(
+            certificate_number="PC-ATT",
+            certificate_type="other",
+            asset_ids=["asset-1"],
+            holder_party_ids=["party-1"],
+            attachments=[
+                {
+                    "file_name": "cert.pdf",
+                    "storage_key": "property-certs/cert.pdf",
+                    "content_type": "application/pdf",
+                    "file_size": 1024,
+                }
+            ],
+        )
+
+        cert = await crud.create_with_owners_async(
+            mock_db,
+            obj_in=obj_in,
+            owner_ids=["party-1"],
+            attachments=obj_in.attachments,
+        )
+
+        assert cert.certificate_number == "PC-ATT"
+        added_objects = [call.args[0] for call in mock_db.add.call_args_list]
+        attachment = next(
+            item
+            for item in added_objects
+            if item.__class__.__name__ == "PropertyCertificateAttachment"
+        )
+        assert attachment.file_name == "cert.pdf"
+        assert attachment.storage_key == "property-certs/cert.pdf"
+
     async def test_get_with_party_filter(self, mock_db):
         crud = CRUDPropertyCertificate(PropertyCertificate)
         cert = PropertyCertificate(certificate_number="PC-001", certificate_type="other")

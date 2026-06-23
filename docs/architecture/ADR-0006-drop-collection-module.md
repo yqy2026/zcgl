@@ -1,8 +1,8 @@
 # ADR-0006: 删除催缴管理模块（催缴工单 / 状态机 / 成功率）
 
-**状态**: 🟡 已决策，待实施（2026-06-12）
+**状态**: ✅ 已实施（2026-06-15）
 **决策日期**: 2026-06-12
-**实施日期**: 待定
+**实施日期**: 2026-06-15
 **相关需求**: REQ-RNT-006（台账实收登记为逾期处理唯一闭环）、PRD §4.2 新增 Out of Scope 条目
 
 ---
@@ -52,10 +52,10 @@
 
 ## 影响
 
-待实施的工程项：
-
-- **后端**：删 `models/collection.py`、`crud/collection.py`、`services/collection/`、`schemas/collection.py` 及 API 注册；写删表迁移；清理相关测试。
-- **前端**：删 `frontend/src/types/collection.ts`。
+- **后端**：已删 `models/collection.py`、`crud/collection.py`、`services/collection/`、`schemas/collection.py` 及 `api/v1/system/collection.py`；`api/v1/__init__.py` 不再导入催缴自注册路由；`models/__init__.py`、`crud/__init__.py`、CRUD 字段白名单与 authz runtime registry 已移除 `collection` 资源。
+- **迁移**：新增 `backend/alembic/versions/20260615_drop_collection_module.py`，删除 `collection_records` 表、PostgreSQL enum 类型残留和 `collection` 的 ABAC/RBAC runtime 权限残留。
+- **前端**：已删孤儿文件 `frontend/src/types/collection.ts`，并从能力类型 `frontend/src/types/capability.ts` 移除 `collection` 资源。
+- **测试**：已删除催缴 API/CRUD/service 功能单测，新增路由删除护栏与删表/权限清理迁移测试；历史 `20260307_m2_collection_records_contract_fk.py` 迁移与测试保留用于旧库升级链。
 - **PRD**：§4.2 已增列（本次决策随手落）。
 - **CONTEXT.md**：已增词条（本次决策随手落）。
 - **CHANGELOG.md**：记录本次变更。

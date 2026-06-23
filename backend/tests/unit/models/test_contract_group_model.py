@@ -6,14 +6,19 @@ column metadata directly.
 
 import pytest
 
+from src.models.associations import contract_scan_document_links
 from src.models.contract_group import (
     Contract,
+    ContractAuditLog,
     ContractDirection,
     ContractGroup,
+    ContractLedgerEntry,
     ContractLifecycleStatus,
-    ContractReviewStatus,
+    ContractScanDocument,
     GroupRelationType,
     RevenueMode,
+    ServiceFeeLedger,
+    derive_ledger_payment_status,
 )
 
 pytestmark = pytest.mark.unit
@@ -47,9 +52,20 @@ class TestEnumColumnStorageStrategy:
 
     def test_contract_lifecycle_status_uses_names(self) -> None:
         self._assert_enum_uses_names(Contract, "status", ContractLifecycleStatus)
+        assert [status.name for status in ContractLifecycleStatus] == [
+            "DRAFT",
+            "ACTIVE",
+            "TERMINATED",
+        ]
 
-    def test_contract_review_status_uses_names(self) -> None:
-        self._assert_enum_uses_names(Contract, "review_status", ContractReviewStatus)
+    def test_contract_review_workflow_columns_are_removed(self) -> None:
+        retired_columns = {
+            "review_status",
+            "review_by",
+            "reviewed_at",
+            "review_reason",
+        }
+        assert retired_columns.isdisjoint(set(Contract.__table__.c.keys()))
 
     def test_contract_relation_model_is_removed(self) -> None:
         import src.models.contract_group as contract_group_models
@@ -60,13 +76,48 @@ class TestEnumColumnStorageStrategy:
     def test_contract_keeps_explicit_correction_source_column(self) -> None:
         assert "correction_source_contract_id" in Contract.__table__.c
 
-    def test_all_five_enum_columns_in_one_pass(self) -> None:
+    def test_contract_audit_log_action_comment_excludes_expire(self) -> None:
+        comment = ContractAuditLog.__table__.c["action"].comment or ""
+        assert "expire" not in comment
+        assert "finalize_correction" in comment
+
+    def test_contract_number_is_unique_per_project_not_global(self) -> None:
+        contract_number = Contract.__table__.c["contract_number"]
+        assert contract_number.unique is not True
+
+        constraints = {
+            constraint.name: {column.name for column in constraint.columns}
+            for constraint in Contract.__table__.constraints
+            if constraint.name is not None
+        }
+        assert constraints["uq_contract_number_project"] == {
+            "contract_number",
+            "project_id",
+        }
+
+    def test_contract_has_frozen_project_id(self) -> None:
+        assert "project_id" in Contract.__table__.c
+
+    def test_contract_has_party_name_snapshot_columns(self) -> None:
+        assert Contract.__table__.c["lessor_name_snapshot"].nullable is True
+        assert Contract.__table__.c["lessee_name_snapshot"].nullable is True
+
+    def test_contract_scan_document_model_and_link_table_exist(self) -> None:
+        assert ContractScanDocument.__tablename__ == "contract_scan_documents"
+        assert ContractScanDocument.__table__.c["storage_key"].unique is True
+        assert contract_scan_document_links.name == "contract_scan_document_links"
+        assert {column.name for column in contract_scan_document_links.c} == {
+            "contract_id",
+            "document_id",
+            "created_at",
+        }
+
+    def test_all_enum_columns_in_one_pass(self) -> None:
         cases: list[tuple[type, str, type]] = [
             (ContractGroup, "revenue_mode", RevenueMode),
             (Contract, "contract_direction", ContractDirection),
             (Contract, "group_relation_type", GroupRelationType),
             (Contract, "status", ContractLifecycleStatus),
-            (Contract, "review_status", ContractReviewStatus),
         ]
 
         failures: list[str] = []
@@ -82,8 +133,47 @@ class TestEnumColumnStorageStrategy:
         assert not failures, "\n".join(failures)
 
 
+class TestLedgerPaymentStatusDerivation:
+    def test_derive_ledger_payment_status_preserves_voided(self) -> None:
+        assert (
+            derive_ledger_payment_status(
+                amount_due="1000.00",
+                paid_amount="1000.00",
+                stored_status="voided",
+            )
+            == "voided"
+        )
+
+    @pytest.mark.parametrize(
+        ("paid_amount", "expected_status"),
+        [
+            ("0.00", "unpaid"),
+            ("100.00", "partial"),
+            ("1000.00", "paid"),
+            ("1200.00", "paid"),
+        ],
+    )
+    def test_contract_ledger_payment_status_is_derived_from_amounts(
+        self,
+        paid_amount: str,
+        expected_status: str,
+    ) -> None:
+        entry = ContractLedgerEntry(amount_due="1000.00", paid_amount=paid_amount)
+
+        assert entry.payment_status == expected_status
+
+    def test_service_fee_payment_status_is_derived_from_amounts(self) -> None:
+        entry = ServiceFeeLedger(
+            amount_due="100.00",
+            paid_amount="50.00",
+            payment_status="paid",
+        )
+
+        assert entry.payment_status == "partial"
+
+
 class TestEnumLabelsMatchMigrationDDL:
-    """Cross-check ORM labels against the original contract-group DDL."""
+    """Cross-check ORM labels against the current contract-group DDL."""
 
     def test_revenue_mode_ddl_labels(self) -> None:
         ddl_labels = ["LEASE", "AGENCY"]
@@ -91,13 +181,8 @@ class TestEnumLabelsMatchMigrationDDL:
         assert orm_labels == ddl_labels
 
     def test_lifecycle_status_ddl_labels(self) -> None:
-        ddl_labels = ["DRAFT", "PENDING_REVIEW", "ACTIVE", "EXPIRED", "TERMINATED"]
+        ddl_labels = ["DRAFT", "ACTIVE", "TERMINATED"]
         orm_labels = list(Contract.__table__.c["status"].type.enums)
-        assert orm_labels == ddl_labels
-
-    def test_review_status_ddl_labels(self) -> None:
-        ddl_labels = ["DRAFT", "PENDING", "APPROVED", "REVERSED"]
-        orm_labels = list(Contract.__table__.c["review_status"].type.enums)
         assert orm_labels == ddl_labels
 
     def test_group_relation_type_ddl_labels(self) -> None:

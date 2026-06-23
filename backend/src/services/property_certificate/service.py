@@ -19,14 +19,16 @@ from ...crud.asset import asset_crud
 from ...crud.property_certificate import property_certificate_crud
 from ...crud.query_builder import PartyFilter
 from ...models.asset import Asset
-from ...models.property_certificate import PropertyCertificate
+from ...models.property_certificate import CertificateType, PropertyCertificate
 from ...schemas.property_certificate import (
+    PropertyCertificateAttachmentInput,
     PropertyCertificateCreate,
     PropertyCertificateUpdate,
 )
 from ...services.document.extractors.property_cert_adapter import PropertyCertAdapter
 from ...services.document.ocr_extraction_service import OCRExtractionService
 from ...services.llm_prompt.prompt_manager import PromptManager
+from ...services.party.service import party_service
 from ...services.party_scope import resolve_user_party_filter
 
 logger = logging.getLogger(__name__)
@@ -131,19 +133,40 @@ class PropertyCertificateService:
         organization_id: str | None = None,
     ) -> PropertyCertificate:
         """创建产权证"""
-        payload = certificate.model_dump()
-        payload.pop("organization_id", None)  # DEPRECATED alias
-        if created_by is not None and created_by.strip() != "":
-            payload["created_by"] = created_by
+        asset_ids = self._normalize_id_list(certificate.asset_ids)
+        holder_party_ids = self._normalize_id_list(certificate.holder_party_ids)
+        attachments = self._normalize_attachments(certificate.attachments)
+        certificate = certificate.model_copy(
+            update={
+                "certificate_number": self._normalize_match_value(
+                    certificate.certificate_number
+                ),
+                "asset_ids": asset_ids,
+                "holder_party_ids": holder_party_ids,
+                "attachments": attachments,
+            }
+        )
+        await self._assert_write_gate(
+            certificate=certificate,
+            asset_ids=asset_ids,
+            holder_party_ids=holder_party_ids,
+            attachments=attachments,
+            operation="property_certificate:create",
+        )
         if organization_id is not None and organization_id.strip() != "":
             logger.debug(
                 "Ignoring deprecated organization_id during certificate creation: %s",
                 organization_id,
             )
 
-        return await property_certificate_crud.create(
+        return await property_certificate_crud.create_with_owners_async(
             self.db,
-            obj_in=payload,
+            obj_in=certificate,
+            owner_ids=holder_party_ids,
+            asset_ids=asset_ids,
+            attachments=attachments,
+            created_by=created_by,
+            organization_id=organization_id,
         )
 
     async def update_certificate(
@@ -152,13 +175,189 @@ class PropertyCertificateService:
         update: PropertyCertificateUpdate,
     ) -> PropertyCertificate:
         """更新产权证"""
-        return await property_certificate_crud.update(
-            self.db, db_obj=certificate, obj_in=update
+        asset_ids = (
+            self._normalize_id_list(update.asset_ids)
+            if "asset_ids" in update.model_fields_set
+            else None
+        )
+        holder_party_ids = (
+            self._normalize_id_list(update.holder_party_ids)
+            if "holder_party_ids" in update.model_fields_set
+            else None
+        )
+        attachments = (
+            self._normalize_attachments(update.attachments)
+            if "attachments" in update.model_fields_set
+            else None
+        )
+        await self._assert_update_replacements(
+            update=update,
+            asset_ids=asset_ids,
+            holder_party_ids=holder_party_ids,
+            attachments=attachments,
+        )
+        if holder_party_ids is not None:
+            await party_service.assert_parties_approved(
+                self.db,
+                party_ids=holder_party_ids,
+                operation="property_certificate:update",
+            )
+        if asset_ids is not None:
+            await self._assert_assets_exist(asset_ids)
+        return await property_certificate_crud.update_with_relations_async(
+            self.db,
+            db_obj=certificate,
+            obj_in=update,
+            owner_ids=holder_party_ids,
+            asset_ids=asset_ids,
+            attachments=attachments,
         )
 
     async def delete_certificate(self, certificate_id: str) -> None:
         """删除产权证"""
         await property_certificate_crud.remove(self.db, id=certificate_id)
+
+    async def _assert_write_gate(
+        self,
+        *,
+        certificate: PropertyCertificateCreate,
+        asset_ids: list[str],
+        holder_party_ids: list[str],
+        attachments: list[PropertyCertificateAttachmentInput],
+        operation: str,
+    ) -> None:
+        field_errors: dict[str, list[str]] = {}
+        certificate_number = self._normalize_match_value(certificate.certificate_number)
+        if certificate_number == "":
+            field_errors["certificate_number"] = ["certificate_number is required"]
+        else:
+            existing = await property_certificate_crud.get_by_certificate_number_async(
+                self.db,
+                certificate_number,
+            )
+            if existing is not None:
+                field_errors["certificate_number"] = [
+                    "certificate_number must be globally unique"
+                ]
+
+        if self._requires_property_address(certificate.certificate_type):
+            if self._normalize_match_value(certificate.property_address) == "":
+                field_errors["property_address"] = [
+                    "property_address is required for property certificate types"
+                ]
+
+        if len(asset_ids) == 0:
+            field_errors["asset_ids"] = ["at least one linked asset is required"]
+        if len(holder_party_ids) == 0:
+            field_errors["holder_party_ids"] = [
+                "at least one approved holder party is required"
+            ]
+        if len(attachments) == 0:
+            field_errors["attachments"] = ["at least one attachment is required"]
+
+        if field_errors:
+            raise BusinessValidationError(
+                "property certificate save gate failed",
+                field_errors=field_errors,
+            )
+
+        await self._assert_assets_exist(asset_ids)
+        await party_service.assert_parties_approved(
+            self.db,
+            party_ids=holder_party_ids,
+            operation=operation,
+        )
+
+    async def _assert_update_replacements(
+        self,
+        *,
+        update: PropertyCertificateUpdate,
+        asset_ids: list[str] | None,
+        holder_party_ids: list[str] | None,
+        attachments: list[PropertyCertificateAttachmentInput] | None,
+    ) -> None:
+        field_errors: dict[str, list[str]] = {}
+        if asset_ids is not None and len(asset_ids) == 0:
+            field_errors["asset_ids"] = ["at least one linked asset is required"]
+        if holder_party_ids is not None and len(holder_party_ids) == 0:
+            field_errors["holder_party_ids"] = [
+                "at least one approved holder party is required"
+            ]
+        if attachments is not None and len(attachments) == 0:
+            field_errors["attachments"] = ["at least one attachment is required"]
+        if (
+            "certificate_type" in update.model_fields_set
+            or "property_address" in update.model_fields_set
+        ) and update.certificate_type is not None:
+            if self._requires_property_address(update.certificate_type):
+                if self._normalize_match_value(update.property_address) == "":
+                    field_errors["property_address"] = [
+                        "property_address is required for property certificate types"
+                    ]
+        if field_errors:
+            raise BusinessValidationError(
+                "property certificate replacement floor failed",
+                field_errors=field_errors,
+            )
+
+    async def _assert_assets_exist(self, asset_ids: list[str]) -> None:
+        assets = await asset_crud.get_multi_by_ids_async(
+            self.db,
+            ids=asset_ids,
+            include_deleted=False,
+        )
+        found_asset_ids = {str(asset.id) for asset in assets}
+        missing_asset_ids = [
+            asset_id for asset_id in asset_ids if asset_id not in found_asset_ids
+        ]
+        if missing_asset_ids:
+            raise BusinessValidationError(
+                "linked assets must exist",
+                field_errors={"asset_ids": [", ".join(missing_asset_ids)]},
+            )
+
+    @staticmethod
+    def _normalize_id_list(values: list[str] | None) -> list[str]:
+        normalized_values: list[str] = []
+        seen_values: set[str] = set()
+        for raw_value in values or []:
+            normalized_value = str(raw_value).strip()
+            if normalized_value == "" or normalized_value in seen_values:
+                continue
+            seen_values.add(normalized_value)
+            normalized_values.append(normalized_value)
+        return normalized_values
+
+    @staticmethod
+    def _normalize_attachments(
+        attachments: list[PropertyCertificateAttachmentInput] | None,
+    ) -> list[PropertyCertificateAttachmentInput]:
+        normalized: list[PropertyCertificateAttachmentInput] = []
+        seen_storage_keys: set[str] = set()
+        for attachment in attachments or []:
+            file_name = str(attachment.file_name).strip()
+            storage_key = str(attachment.storage_key).strip()
+            if file_name == "" or storage_key == "" or storage_key in seen_storage_keys:
+                continue
+            seen_storage_keys.add(storage_key)
+            normalized.append(
+                attachment.model_copy(
+                    update={"file_name": file_name, "storage_key": storage_key}
+                )
+            )
+        return normalized
+
+    @staticmethod
+    def _requires_property_address(certificate_type: str) -> bool:
+        try:
+            parsed_type = CertificateType(certificate_type)
+        except ValueError:
+            return True
+        return parsed_type in {
+            CertificateType.REAL_ESTATE,
+            CertificateType.HOUSE_OWNERSHIP,
+            CertificateType.LAND_USE,
+        }
 
     async def extract_from_file(self, file_path: str, filename: str) -> dict[str, Any]:
         """
@@ -320,7 +519,14 @@ class PropertyCertificateService:
             )
             if existing:
                 logger.warning(f"产权证已存在: {certificate_number}")
-                return existing
+                raise BusinessValidationError(
+                    "property certificate number already exists",
+                    field_errors={
+                        "certificate_number": [
+                            "certificate_number must be globally unique"
+                        ]
+                    },
+                )
 
             confidence_raw = extracted_data.get("confidence")
             try:
@@ -329,6 +535,23 @@ class PropertyCertificateService:
                 )
             except (TypeError, ValueError):
                 extraction_confidence = None
+
+            direct_holder_party_ids = self._normalize_id_list(
+                data.get("holder_party_ids") or []
+            )
+            owner_ids = self._normalize_id_list(
+                [
+                    str(owner_data.get("party_id")).strip()
+                    for owner_data in owners_data
+                    if isinstance(owner_data, dict)
+                    and str(owner_data.get("party_id") or "").strip() != ""
+                ]
+            )
+            holder_party_ids = direct_holder_party_ids or owner_ids
+            attachments = [
+                PropertyCertificateAttachmentInput.model_validate(attachment)
+                for attachment in data.get("attachments") or []
+            ]
 
             certificate_create_data = {
                 "certificate_number": certificate_number,
@@ -349,23 +572,17 @@ class PropertyCertificateService:
                 "co_ownership": extracted_data.get("co_ownership"),
                 "restrictions": extracted_data.get("restrictions"),
                 "remarks": extracted_data.get("remarks"),
-                "created_by": created_by,
+                "asset_ids": asset_ids,
+                "holder_party_ids": holder_party_ids,
+                "attachments": attachments,
             }
-
-            owner_ids = [
-                str(owner_data.get("party_id")).strip()
-                for owner_data in owners_data
-                if str(owner_data.get("party_id") or "").strip() != ""
-            ]
 
             certificate_create = PropertyCertificateCreate.model_validate(
                 certificate_create_data
             )
-            certificate = await property_certificate_crud.create_with_owners_async(
-                self.db,
-                obj_in=certificate_create,
-                owner_ids=owner_ids if owner_ids else None,
-                asset_ids=asset_ids if asset_ids else None,
+            certificate = await self.create_certificate(
+                certificate_create,
+                created_by=created_by,
                 organization_id=organization_id,
             )
 

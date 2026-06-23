@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from src.crud.query_builder import PartyFilter
 from src.models.auth import User
 from src.models.contract_group import Contract, ContractLedgerEntry
 from src.models.notification import Notification, NotificationPriority, NotificationType
@@ -25,6 +26,43 @@ def _result_with_scalars(values: list[object] | None = None) -> MagicMock:
     scalars.all.return_value = values or []
     result.scalars.return_value = scalars
     return result
+
+
+def _mock_user(user_id: str) -> MagicMock:
+    user = MagicMock(spec=User)
+    user.id = user_id
+    return user
+
+
+def _scope_filters() -> dict[str, PartyFilter | None]:
+    return {
+        "owner_user": PartyFilter(
+            party_ids=["owner_party"],
+            filter_mode="owner",
+            owner_party_ids=["owner_party"],
+            manager_party_ids=[],
+        ),
+        "operator_user": PartyFilter(
+            party_ids=["operator_party"],
+            filter_mode="manager",
+            owner_party_ids=[],
+            manager_party_ids=["operator_party"],
+        ),
+        "outside_user": PartyFilter(
+            party_ids=["other_party"],
+            filter_mode="owner",
+            owner_party_ids=["other_party"],
+            manager_party_ids=[],
+        ),
+        "admin_user": None,
+    }
+
+
+def _attach_contract_group(contract: MagicMock) -> None:
+    contract.contract_group = MagicMock(
+        owner_party_id="owner_party",
+        operator_party_id="operator_party",
+    )
 
 
 # ============================================================================
@@ -54,6 +92,7 @@ def mock_contract():
     contract.contract_number = "HT2024001"
     contract.lease_detail = MagicMock(tenant_name="测试租户")
     contract.lessee_party = MagicMock(name="测试租户")
+    _attach_contract_group(contract)
     contract.status = "ACTIVE"
     contract.effective_to = date.today() + timedelta(days=15)
     return contract
@@ -71,6 +110,7 @@ def mock_ledger():
     ledger.contract.contract_number = "HT2024001"
     ledger.contract.lease_detail = MagicMock(tenant_name="测试租户")
     ledger.contract.lessee_party = MagicMock(name="测试租户")
+    _attach_contract_group(ledger.contract)
     return ledger
 
 
@@ -92,22 +132,28 @@ class TestNotificationSchedulerServiceInit:
 
 
 class TestSendWecomNotification:
-    async def test_send_wecom_success(self, scheduler_service, mock_db):
+    async def test_send_wecom_uses_recipient_id_as_touser(
+        self, scheduler_service, mock_db
+    ):
         notification = MagicMock(spec=Notification)
         notification.id = "notif_123"
-        notification.title = "测试通知"
-        notification.content = "测试内容"
+        notification.recipient_id = "user_123"
+        notification.title = "Test notice"
+        notification.content = "Test body"
 
         with patch("src.services.notification.scheduler.wecom_service") as mock_wecom:
-            mock_wecom.enabled = True
             scheduler_service.wecom_enabled = True
             mock_wecom.send_notification = AsyncMock(return_value=True)
 
             result = await scheduler_service._send_wecom_notification(notification)
 
             assert result is True
+            mock_wecom.send_notification.assert_awaited_once_with(
+                message="[Test notice]\nTest body",
+                touser="user_123",
+            )
             assert notification.is_sent_wecom is True
-            assert notification.wecom_sent_at is not None
+            assert notification.wecom_send_error is None
             mock_db.commit.assert_awaited_once()
 
     async def test_send_wecom_disabled(self, scheduler_service):
@@ -117,32 +163,38 @@ class TestSendWecomNotification:
         result = await scheduler_service._send_wecom_notification(notification)
         assert result is False
 
-    async def test_send_wecom_api_failure(self, scheduler_service, mock_db):
+    async def test_send_wecom_records_api_failure(
+        self, scheduler_service, mock_db
+    ):
         notification = MagicMock(spec=Notification)
         notification.id = "notif_123"
-        notification.title = "测试通知"
-        notification.content = "测试内容"
+        notification.recipient_id = "user_123"
+        notification.title = "Test notice"
+        notification.content = "Test body"
 
         with patch("src.services.notification.scheduler.wecom_service") as mock_wecom:
-            mock_wecom.enabled = True
             scheduler_service.wecom_enabled = True
             mock_wecom.send_notification = AsyncMock(return_value=False)
 
             result = await scheduler_service._send_wecom_notification(notification)
 
             assert result is False
+            mock_wecom.send_notification.assert_awaited_once()
             assert notification.is_sent_wecom is False
-            assert notification.wecom_send_error == "企业微信返回失败"
+            assert notification.wecom_sent_at is None
+            assert "failed" in notification.wecom_send_error
             mock_db.commit.assert_awaited_once()
 
-    async def test_send_wecom_exception(self, scheduler_service, mock_db):
+    async def test_send_wecom_records_exception(
+        self, scheduler_service, mock_db
+    ):
         notification = MagicMock(spec=Notification)
         notification.id = "notif_123"
-        notification.title = "测试通知"
-        notification.content = "测试内容"
+        notification.recipient_id = "user_123"
+        notification.title = "Test notice"
+        notification.content = "Test body"
 
         with patch("src.services.notification.scheduler.wecom_service") as mock_wecom:
-            mock_wecom.enabled = True
             scheduler_service.wecom_enabled = True
             mock_wecom.send_notification = AsyncMock(
                 side_effect=Exception("Network error")
@@ -151,10 +203,10 @@ class TestSendWecomNotification:
             result = await scheduler_service._send_wecom_notification(notification)
 
             assert result is False
-            assert "企业微信发送异常" in notification.wecom_send_error
+            assert notification.is_sent_wecom is False
+            assert notification.wecom_sent_at is None
+            assert "exception" in notification.wecom_send_error
             mock_db.commit.assert_awaited_once()
-
-
 # ============================================================================
 # _create_and_send_notification
 # ============================================================================
@@ -210,7 +262,9 @@ class TestCreateAndSendNotification:
 
 
 class TestCheckContractExpiry:
-    async def test_expiry_uses_new_contract_crud(self, scheduler_service, mock_contract):
+    async def test_expiry_uses_new_contract_crud(
+        self, scheduler_service, mock_contract
+    ):
         with (
             patch(
                 "src.services.notification.scheduler.contract_crud.get_expiring_contracts_async",
@@ -221,7 +275,9 @@ class TestCheckContractExpiry:
                 "src.services.notification.scheduler.notification_service"
             ) as mock_service,
             patch.object(
-                scheduler_service, "_create_and_send_notification", new_callable=AsyncMock
+                scheduler_service,
+                "_create_and_send_notification",
+                new_callable=AsyncMock,
             ),
         ):
             mock_service.list_active_users_async = AsyncMock(return_value=[])
@@ -248,6 +304,7 @@ class TestCheckContractExpiry:
         contract.contract_number = "HT001"
         contract.lease_detail = MagicMock(tenant_name="租户A")
         contract.lessee_party = MagicMock(name="租户A")
+        _attach_contract_group(contract)
         contract.effective_to = date.today()
 
         mock_db.execute = AsyncMock(return_value=_result_with_scalars([contract]))
@@ -260,12 +317,64 @@ class TestCheckContractExpiry:
                 return_value=set()
             )
             with patch.object(
-                scheduler_service, "_create_and_send_notification", new_callable=AsyncMock
+                scheduler_service,
+                "_create_and_send_notification",
+                new_callable=AsyncMock,
             ) as mock_create:
                 result = await scheduler_service.check_contract_expiry(days_ahead=30)
 
                 assert result == 1
                 mock_create.assert_not_awaited()
+
+    async def test_contract_expiry_filters_recipients_by_party_scope(
+        self, scheduler_service, mock_contract
+    ):
+        active_users = [
+            _mock_user("owner_user"),
+            _mock_user("operator_user"),
+            _mock_user("outside_user"),
+            _mock_user("admin_user"),
+        ]
+
+        with (
+            patch(
+                "src.services.notification.scheduler.contract_crud.get_expiring_contracts_async",
+                new_callable=AsyncMock,
+                return_value=[mock_contract],
+            ),
+            patch(
+                "src.services.notification.scheduler.notification_service"
+            ) as mock_service,
+            patch.object(
+                scheduler_service,
+                "_resolve_business_recipient_filters",
+                new_callable=AsyncMock,
+                return_value=_scope_filters(),
+            ),
+            patch.object(
+                scheduler_service,
+                "_create_and_send_notification",
+                new_callable=AsyncMock,
+            ) as mock_create,
+        ):
+            mock_service.list_active_users_async = AsyncMock(return_value=active_users)
+            mock_service.find_existing_notification_pairs_async = AsyncMock(
+                return_value=set()
+            )
+
+            result = await scheduler_service.check_contract_expiry(days_ahead=30)
+
+        assert result == 1
+        assert [
+            call.kwargs["recipient_id"] for call in mock_create.await_args_list
+        ] == [
+            "owner_user",
+            "operator_user",
+            "admin_user",
+        ]
+        assert mock_service.find_existing_notification_pairs_async.await_args.kwargs[
+            "recipient_ids"
+        ] == ["admin_user", "operator_user", "owner_user"]
 
     async def test_duplicate_contract_notification_skipped(
         self, scheduler_service, mock_db, mock_contract
@@ -283,13 +392,64 @@ class TestCheckContractExpiry:
                 return_value={(str(user.id), str(mock_contract.contract_id))}
             )
 
-            with patch.object(
-                scheduler_service, "_create_and_send_notification", new_callable=AsyncMock
-            ) as mock_create:
+            with (
+                patch.object(
+                    scheduler_service,
+                    "_resolve_business_recipient_filters",
+                    new_callable=AsyncMock,
+                    return_value={str(user.id): None},
+                ),
+                patch.object(
+                    scheduler_service,
+                    "_create_and_send_notification",
+                    new_callable=AsyncMock,
+                ) as mock_create,
+            ):
                 result = await scheduler_service.check_contract_expiry(days_ahead=30)
 
                 assert result == 1
                 mock_create.assert_not_awaited()
+
+    async def test_contract_expiry_idempotency_uses_priority_band(
+        self, scheduler_service, mock_contract
+    ):
+        """I1: 到期提醒幂等键必须包含优先级档位，且不因已读状态塌缩。"""
+        mock_contract.effective_to = date.today() + timedelta(days=15)
+
+        with (
+            patch(
+                "src.services.notification.scheduler.contract_crud.get_expiring_contracts_async",
+                new_callable=AsyncMock,
+                return_value=[mock_contract],
+            ),
+            patch(
+                "src.services.notification.scheduler.notification_service"
+            ) as mock_service,
+            patch.object(
+                scheduler_service,
+                "_resolve_business_recipient_filters",
+                new_callable=AsyncMock,
+                return_value={"user_123": None},
+            ),
+            patch.object(
+                scheduler_service,
+                "_create_and_send_notification",
+                new_callable=AsyncMock,
+            ),
+        ):
+            mock_service.list_active_users_async = AsyncMock(
+                return_value=[_mock_user("user_123")]
+            )
+            mock_service.find_existing_notification_pairs_async = AsyncMock(
+                return_value=set()
+            )
+
+            await scheduler_service.check_contract_expiry(days_ahead=30)
+
+        kwargs = mock_service.find_existing_notification_pairs_async.await_args.kwargs
+        assert kwargs["notification_type"] == NotificationType.CONTRACT_EXPIRING
+        assert kwargs["priority"] == NotificationPriority.HIGH
+        assert kwargs["require_unread"] is False
 
 
 # ============================================================================
@@ -311,7 +471,9 @@ class TestCheckPaymentOverdue:
                 "src.services.notification.scheduler.notification_service"
             ) as mock_service,
             patch.object(
-                scheduler_service, "_create_and_send_notification", new_callable=AsyncMock
+                scheduler_service,
+                "_create_and_send_notification",
+                new_callable=AsyncMock,
             ),
         ):
             mock_service.list_active_users_async = AsyncMock(return_value=[])
@@ -349,7 +511,9 @@ class TestCheckPaymentOverdue:
                 return_value=set()
             )
             with patch.object(
-                scheduler_service, "_create_and_send_notification", new_callable=AsyncMock
+                scheduler_service,
+                "_create_and_send_notification",
+                new_callable=AsyncMock,
             ):
                 result = await scheduler_service.check_payment_overdue()
 
@@ -371,13 +535,113 @@ class TestCheckPaymentOverdue:
                 return_value={(str(user.id), str(mock_ledger.entry_id))}
             )
 
-            with patch.object(
-                scheduler_service, "_create_and_send_notification", new_callable=AsyncMock
-            ) as mock_create:
+            with (
+                patch.object(
+                    scheduler_service,
+                    "_resolve_business_recipient_filters",
+                    new_callable=AsyncMock,
+                    return_value={str(user.id): None},
+                ),
+                patch.object(
+                    scheduler_service,
+                    "_create_and_send_notification",
+                    new_callable=AsyncMock,
+                ) as mock_create,
+            ):
                 result = await scheduler_service.check_payment_overdue()
 
                 assert result == 0
                 mock_create.assert_not_awaited()
+
+    async def test_overdue_idempotency_uses_priority_band_not_created_since(
+        self, scheduler_service, mock_ledger
+    ):
+        """I1: 逾期提醒同档位只发一次，不再按天重复刷屏。"""
+        mock_ledger.due_date = date.today() - timedelta(days=30)
+
+        with (
+            patch(
+                "src.services.notification.scheduler.contract_group_crud.get_overdue_with_contract_async",
+                new_callable=AsyncMock,
+                return_value=[mock_ledger],
+            ),
+            patch(
+                "src.services.notification.scheduler.notification_service"
+            ) as mock_service,
+            patch.object(
+                scheduler_service,
+                "_resolve_business_recipient_filters",
+                new_callable=AsyncMock,
+                return_value={"user_123": None},
+            ),
+            patch.object(
+                scheduler_service,
+                "_create_and_send_notification",
+                new_callable=AsyncMock,
+            ),
+        ):
+            mock_service.list_active_users_async = AsyncMock(
+                return_value=[_mock_user("user_123")]
+            )
+            mock_service.find_existing_notification_pairs_async = AsyncMock(
+                return_value=set()
+            )
+
+            await scheduler_service.check_payment_overdue()
+
+        kwargs = mock_service.find_existing_notification_pairs_async.await_args.kwargs
+        assert kwargs["priority"] == NotificationPriority.URGENT
+        assert kwargs["created_since"] is None
+
+    async def test_payment_overdue_filters_recipients_by_party_scope(
+        self, scheduler_service, mock_ledger
+    ):
+        active_users = [
+            _mock_user("owner_user"),
+            _mock_user("operator_user"),
+            _mock_user("outside_user"),
+            _mock_user("admin_user"),
+        ]
+
+        with (
+            patch(
+                "src.services.notification.scheduler.contract_group_crud.get_overdue_with_contract_async",
+                new_callable=AsyncMock,
+                return_value=[mock_ledger],
+            ),
+            patch(
+                "src.services.notification.scheduler.notification_service"
+            ) as mock_service,
+            patch.object(
+                scheduler_service,
+                "_resolve_business_recipient_filters",
+                new_callable=AsyncMock,
+                return_value=_scope_filters(),
+            ),
+            patch.object(
+                scheduler_service,
+                "_create_and_send_notification",
+                new_callable=AsyncMock,
+            ) as mock_create,
+        ):
+            mock_service.list_active_users_async = AsyncMock(return_value=active_users)
+            mock_service.find_existing_notification_pairs_async = AsyncMock(
+                return_value=set()
+            )
+
+            result = await scheduler_service.check_payment_overdue()
+
+        assert result == 3
+        assert [
+            call.kwargs["recipient_id"] for call in mock_create.await_args_list
+        ] == [
+            "owner_user",
+            "operator_user",
+            "admin_user",
+        ]
+        assert mock_service.find_existing_notification_pairs_async.await_args.kwargs[
+            "recipient_ids"
+        ] == ["admin_user", "operator_user", "owner_user"]
 
 
 # ============================================================================
@@ -399,7 +663,9 @@ class TestCheckPaymentDueSoon:
                 "src.services.notification.scheduler.notification_service"
             ) as mock_service,
             patch.object(
-                scheduler_service, "_create_and_send_notification", new_callable=AsyncMock
+                scheduler_service,
+                "_create_and_send_notification",
+                new_callable=AsyncMock,
             ),
         ):
             mock_service.list_active_users_async = AsyncMock(return_value=[])
@@ -436,11 +702,104 @@ class TestCheckPaymentDueSoon:
                 return_value=set()
             )
             with patch.object(
-                scheduler_service, "_create_and_send_notification", new_callable=AsyncMock
+                scheduler_service,
+                "_create_and_send_notification",
+                new_callable=AsyncMock,
             ):
                 result = await scheduler_service.check_payment_due_soon(days_ahead=7)
 
                 assert isinstance(result, int)
+
+    async def test_due_soon_idempotency_uses_priority_band_not_created_since(
+        self, scheduler_service, mock_ledger
+    ):
+        """I1: 即将到期提醒按优先级档位幂等，允许 NORMAL→HIGH 升级。"""
+        mock_ledger.due_date = date.today() + timedelta(days=3)
+
+        with (
+            patch(
+                "src.services.notification.scheduler.contract_group_crud.get_due_soon_with_contract_async",
+                new_callable=AsyncMock,
+                return_value=[mock_ledger],
+            ),
+            patch(
+                "src.services.notification.scheduler.notification_service"
+            ) as mock_service,
+            patch.object(
+                scheduler_service,
+                "_resolve_business_recipient_filters",
+                new_callable=AsyncMock,
+                return_value={"user_123": None},
+            ),
+            patch.object(
+                scheduler_service,
+                "_create_and_send_notification",
+                new_callable=AsyncMock,
+            ),
+        ):
+            mock_service.list_active_users_async = AsyncMock(
+                return_value=[_mock_user("user_123")]
+            )
+            mock_service.find_existing_notification_pairs_async = AsyncMock(
+                return_value=set()
+            )
+
+            await scheduler_service.check_payment_due_soon(days_ahead=7)
+
+        kwargs = mock_service.find_existing_notification_pairs_async.await_args.kwargs
+        assert kwargs["priority"] == NotificationPriority.HIGH
+        assert kwargs["created_since"] is None
+
+    async def test_payment_due_soon_filters_recipients_by_party_scope(
+        self, scheduler_service, mock_ledger
+    ):
+        mock_ledger.due_date = date.today() + timedelta(days=3)
+        active_users = [
+            _mock_user("owner_user"),
+            _mock_user("operator_user"),
+            _mock_user("outside_user"),
+            _mock_user("admin_user"),
+        ]
+
+        with (
+            patch(
+                "src.services.notification.scheduler.contract_group_crud.get_due_soon_with_contract_async",
+                new_callable=AsyncMock,
+                return_value=[mock_ledger],
+            ),
+            patch(
+                "src.services.notification.scheduler.notification_service"
+            ) as mock_service,
+            patch.object(
+                scheduler_service,
+                "_resolve_business_recipient_filters",
+                new_callable=AsyncMock,
+                return_value=_scope_filters(),
+            ),
+            patch.object(
+                scheduler_service,
+                "_create_and_send_notification",
+                new_callable=AsyncMock,
+            ) as mock_create,
+        ):
+            mock_service.list_active_users_async = AsyncMock(return_value=active_users)
+            mock_service.find_existing_notification_pairs_async = AsyncMock(
+                return_value=set()
+            )
+
+            result = await scheduler_service.check_payment_due_soon(days_ahead=7)
+
+        assert result == 3
+        assert [
+            call.kwargs["recipient_id"] for call in mock_create.await_args_list
+        ] == [
+            "owner_user",
+            "operator_user",
+            "admin_user",
+        ]
+        assert mock_service.find_existing_notification_pairs_async.await_args.kwargs[
+            "recipient_ids"
+        ] == ["admin_user", "operator_user", "owner_user"]
 
 
 # ============================================================================
@@ -525,7 +884,9 @@ class TestSchedulerEdgeCases:
                 return_value=set()
             )
             with patch.object(
-                scheduler_service, "_create_and_send_notification", new_callable=AsyncMock
+                scheduler_service,
+                "_create_and_send_notification",
+                new_callable=AsyncMock,
             ):
                 result = await scheduler_service.check_contract_expiry(days_ahead=30)
 
@@ -555,7 +916,9 @@ class TestSchedulerEdgeCases:
                 return_value=set()
             )
             with patch.object(
-                scheduler_service, "_create_and_send_notification", new_callable=AsyncMock
+                scheduler_service,
+                "_create_and_send_notification",
+                new_callable=AsyncMock,
             ):
                 result = await scheduler_service.check_payment_overdue()
 

@@ -18,7 +18,6 @@ def test_registry_owned_routes_should_not_be_included_by_api_router() -> None:
     registry_owned_modules = {
         "party": API_V1_DIR / "party.py",
         "authz": API_V1_DIR / "authz.py",
-        "collection": API_V1_DIR / "system" / "collection.py",
     }
 
     for module_name, module_path in registry_owned_modules.items():
@@ -26,4 +25,13 @@ def test_registry_owned_routes_should_not_be_included_by_api_router() -> None:
         assert "route_registry.register_router(" in module_source
         assert f"include_router({module_name}_router" not in api_v1_source
 
-    assert "from .system.collection import router as collection_router" not in api_v1_source
+    assert (
+        "from .system.collection import router as collection_router"
+        not in api_v1_source
+    )
+    assert "from .system import collection" not in api_v1_source
+
+
+def test_collection_route_module_should_remain_deleted() -> None:
+    """ADR-0006 keeps the retired collection workflow out of the public API."""
+    assert not (API_V1_DIR / "system" / "collection.py").exists()

@@ -11,11 +11,10 @@
 
 import re
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Any, Literal
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.exception_handler import (
@@ -26,8 +25,6 @@ from src.core.exception_handler import (
 )
 from src.crud.contract import contract_crud
 from src.crud.contract_group import contract_group_crud
-from src.models.asset import Asset, AssetReviewStatus
-from src.models.associations import contract_assets
 from src.models.contract_group import (
     Contract,
     ContractAuditLog,
@@ -35,7 +32,6 @@ from src.models.contract_group import (
     ContractGroup,
     ContractLifecycleStatus,
     ContractRentTerm,
-    ContractReviewStatus,
     GroupRelationType,
     RevenueMode,
 )
@@ -49,6 +45,9 @@ from src.schemas.contract_group import (
     ContractGroupUpdate,
     ContractRentTermCreate,
     ContractRentTermUpdate,
+    ContractScanDocumentCreate,
+    ContractScanDocumentReplaceRequest,
+    ContractScanDocumentResponse,
     ContractSummary,
 )
 from src.services.contract.ledger_service_v2 import ledger_service_v2
@@ -69,7 +68,6 @@ _VALID_RELATION_TYPES: dict[RevenueMode, frozenset[GroupRelationType]] = {
 # 进入非草稿状态前必须有 sign_date 的状态集
 _STATUS_REQUIRES_SIGN_DATE = frozenset(
     {
-        ContractLifecycleStatus.PENDING_REVIEW,
         ContractLifecycleStatus.ACTIVE,
     }
 )
@@ -91,21 +89,30 @@ def calculate_derived_status(contracts: list[Contract]) -> str:
 
     规则（docs/features/requirements-appendix-fields.md §8.1）：
       - 组内无任何合同 → 筹备中
-      - 有效合同中无 ACTIVE / PENDING_REVIEW → 筹备中
+      - 有效合同中无 ACTIVE → 筹备中
       - 至少一条处于 ACTIVE → 生效中
-      - 全部为 EXPIRED / TERMINATED → 已结束
+      - 全部已终止或自然到期 → 已结束
     """
     active_contracts = [c for c in contracts if c.data_status == "正常"]
     if not active_contracts:
         return "筹备中"
 
-    statuses = {c.status for c in active_contracts}
+    today = date.today()
 
-    terminal = {ContractLifecycleStatus.EXPIRED, ContractLifecycleStatus.TERMINATED}
-    if statuses.issubset(terminal):
+    def is_ended(contract: Contract) -> bool:
+        if contract.status == ContractLifecycleStatus.TERMINATED:
+            return True
+        effective_to = getattr(contract, "effective_to", None)
+        return (
+            contract.status == ContractLifecycleStatus.ACTIVE
+            and isinstance(effective_to, date)
+            and effective_to < today
+        )
+
+    if all(is_ended(contract) for contract in active_contracts):
         return "已结束"
 
-    if ContractLifecycleStatus.ACTIVE in statuses:
+    if any(c.status == ContractLifecycleStatus.ACTIVE for c in active_contracts):
         return "生效中"
 
     return "筹备中"
@@ -182,6 +189,23 @@ def _compute_total_monthly_amount(
     return monthly_rent + management_fee + other_fees
 
 
+def _normalize_required_project_id(group: ContractGroup) -> str:
+    project_id = str(getattr(group, "project_id", "") or "").strip()
+    if project_id == "":
+        raise OperationNotAllowedError(
+            "合同关系缺少所属项目，无法按项目校验合同号唯一性",
+            reason="contract_group_project_required",
+        )
+    return project_id
+
+
+def _normalize_snapshot_name(value: Any) -> str | None:
+    if value is None:
+        return None
+    normalized = str(value).strip()
+    return normalized or None
+
+
 # ── Service 类 ───────────────────────────────────────────────────────────────
 
 
@@ -232,6 +256,125 @@ class ContractGroupService:
         raise OperationNotAllowedError(
             f"以下资产已绑定其他项目的有效合同关系：{details}",
             reason="asset_already_bound_to_active_contract_relation",
+        )
+
+    @staticmethod
+    async def _ensure_assets_belong_to_project(
+        db: AsyncSession,
+        *,
+        project_id: str | None,
+        asset_ids: list[str] | None,
+    ) -> None:
+        normalized_project_id = (
+            str(project_id).strip() if project_id is not None else ""
+        )
+        normalized_asset_ids = sorted(
+            {
+                str(asset_id).strip()
+                for asset_id in (asset_ids or [])
+                if str(asset_id).strip() != ""
+            }
+        )
+        if not normalized_asset_ids:
+            return
+
+        bindings = await contract_group_crud.list_current_project_bindings_for_assets(
+            db,
+            asset_ids=normalized_asset_ids,
+        )
+        binding_by_asset_id = {
+            item["asset_id"]: item.get("project_id") for item in bindings
+        }
+        mismatches = [
+            asset_id
+            for asset_id in normalized_asset_ids
+            if normalized_project_id == ""
+            or str(binding_by_asset_id.get(asset_id) or "").strip()
+            != normalized_project_id
+        ]
+        if not mismatches:
+            return
+
+        details = "；".join(
+            f"{asset_id} -> {binding_by_asset_id.get(asset_id) or '未绑定项目'}"
+            for asset_id in mismatches
+        )
+        raise OperationNotAllowedError(
+            f"以下资产不属于合同关系所属项目：{details}",
+            reason="asset_project_mismatch",
+        )
+
+    @staticmethod
+    async def _ensure_contract_assets_within_group(
+        db: AsyncSession,
+        *,
+        group_id: str,
+        asset_ids: list[str] | None,
+    ) -> None:
+        normalized_asset_ids = sorted(
+            {
+                str(asset_id).strip()
+                for asset_id in (asset_ids or [])
+                if str(asset_id).strip() != ""
+            }
+        )
+        if not normalized_asset_ids:
+            return
+
+        group_asset_ids = set(
+            await contract_group_crud.list_asset_ids_for_group(db, group_id=group_id)
+        )
+        out_of_scope = [
+            asset_id
+            for asset_id in normalized_asset_ids
+            if asset_id not in group_asset_ids
+        ]
+        if not out_of_scope:
+            return
+
+        raise OperationNotAllowedError(
+            "合同覆盖资产不得超出所属合同关系覆盖资产范围：" + "；".join(out_of_scope),
+            reason="contract_assets_outside_group_scope",
+        )
+
+    @staticmethod
+    async def _ensure_existing_contract_assets_within_group_assets(
+        db: AsyncSession,
+        *,
+        group_id: str,
+        asset_ids: list[str] | None,
+    ) -> None:
+        normalized_group_asset_ids = {
+            str(asset_id).strip()
+            for asset_id in (asset_ids or [])
+            if str(asset_id).strip() != ""
+        }
+        contract_assets_by_group = (
+            await contract_group_crud.list_contract_asset_ids_by_group(
+                db,
+                group_id=group_id,
+            )
+        )
+        violations: list[str] = []
+        for item in contract_assets_by_group:
+            contract_id = item["contract_id"]
+            out_of_scope = sorted(
+                {
+                    str(asset_id).strip()
+                    for asset_id in item.get("asset_ids", [])
+                    if str(asset_id).strip() != ""
+                    and str(asset_id).strip() not in normalized_group_asset_ids
+                }
+            )
+            if out_of_scope:
+                violations.append(f"{contract_id}: {'、'.join(out_of_scope)}")
+
+        if not violations:
+            return
+
+        raise OperationNotAllowedError(
+            "合同关系覆盖资产不得小于已有合同显式覆盖资产：" + "；".join(violations),
+            reason="contract_assets_outside_group_scope",
         )
 
     @staticmethod
@@ -302,6 +445,39 @@ class ContractGroupService:
             raise ResourceNotFoundError("合同", contract_id)
         return contract
 
+    async def _build_party_name_snapshots(
+        self,
+        db: AsyncSession,
+        *,
+        lessor_party_id: str,
+        lessee_party_id: str,
+    ) -> dict[str, str | None]:
+        snapshots: dict[str, str | None] = {
+            "lessor_name_snapshot": None,
+            "lessee_name_snapshot": None,
+        }
+        for key, party_id in (
+            ("lessor_name_snapshot", lessor_party_id),
+            ("lessee_name_snapshot", lessee_party_id),
+        ):
+            party = await party_service.get_party(db, party_id=party_id)
+            if party is None:
+                raise ResourceNotFoundError("主体", party_id)
+            snapshots[key] = _normalize_snapshot_name(getattr(party, "name", None))
+        return snapshots
+
+    @staticmethod
+    def _sync_lease_detail_with_lessee_snapshot(
+        lease_detail_data: dict[str, Any] | None,
+        *,
+        lessee_name_snapshot: str | None,
+    ) -> dict[str, Any] | None:
+        if lease_detail_data is None:
+            return None
+        synced = dict(lease_detail_data)
+        synced["tenant_name"] = lessee_name_snapshot
+        return synced
+
     async def _append_audit_log(
         self,
         db: AsyncSession,
@@ -310,8 +486,6 @@ class ContractGroupService:
         action: str,
         old_status: ContractLifecycleStatus | None,
         new_status: ContractLifecycleStatus | None,
-        old_review_status: ContractReviewStatus | None,
-        new_review_status: ContractReviewStatus | None,
         reason: str | None,
         current_user: str | None,
         operator_name: str | None,
@@ -324,12 +498,6 @@ class ContractGroupService:
             "action": action,
             "old_status": old_status.name if old_status is not None else None,
             "new_status": new_status.name if new_status is not None else None,
-            "review_status_old": (
-                old_review_status.name if old_review_status is not None else None
-            ),
-            "review_status_new": (
-                new_review_status.name if new_review_status is not None else None
-            ),
             "reason": reason,
             "operator_id": current_user,
             "operator_name": operator_name,
@@ -347,13 +515,10 @@ class ContractGroupService:
         allowed_statuses: set[ContractLifecycleStatus],
         action: str,
         new_status: ContractLifecycleStatus,
-        new_review_status: ContractReviewStatus | None,
         current_user: str | None,
         operator_name: str | None,
         reason: str | None = None,
         related_entry_id: str | None = None,
-        review_by: str | None = None,
-        reviewed_at: datetime | None = None,
         extra_updates: dict[str, Any] | None = None,
         context: dict[str, Any] | None = None,
         commit: bool = True,
@@ -365,19 +530,10 @@ class ContractGroupService:
             )
 
         old_status = contract.status
-        old_review_status = contract.review_status
         update_data: dict[str, Any] = {
             "status": new_status,
             "updated_by": current_user,
         }
-        if new_review_status is not None:
-            update_data["review_status"] = new_review_status
-        if review_by is not None:
-            update_data["review_by"] = review_by
-        if reviewed_at is not None:
-            update_data["reviewed_at"] = reviewed_at
-        if reason is not None:
-            update_data["review_reason"] = reason
         if extra_updates:
             update_data.update(extra_updates)
 
@@ -393,8 +549,6 @@ class ContractGroupService:
             action=action,
             old_status=old_status,
             new_status=new_status,
-            old_review_status=old_review_status,
-            new_review_status=updated_contract.review_status,
             reason=reason,
             current_user=current_user,
             operator_name=operator_name,
@@ -512,31 +666,6 @@ class ContractGroupService:
 
         return categories
 
-    @staticmethod
-    def _requires_joint_review(change_categories: set[str]) -> bool:
-        critical_categories = {"parties", "assets", "rent_terms", "billing"}
-        return len(change_categories.intersection(critical_categories)) > 0
-
-    @staticmethod
-    def _build_review_audit_context(
-        *,
-        contract_id: str,
-        change_categories: set[str],
-        correction_source_contract: Contract | None,
-        review_scope: str,
-        affected_contract_ids: list[str] | None = None,
-    ) -> dict[str, Any]:
-        return {
-            "review_scope": review_scope,
-            "affected_contract_ids": affected_contract_ids or [contract_id],
-            "change_categories": sorted(change_categories),
-            "correction_source_contract_id": (
-                correction_source_contract.contract_id
-                if correction_source_contract is not None
-                else None
-            ),
-        }
-
     async def _get_correction_effective_month(
         self,
         db: AsyncSession,
@@ -573,11 +702,22 @@ class ContractGroupService:
         return {
             "contract_id": new_contract_id,
             "contract_group_id": source_contract.contract_group_id,
+            "project_id": source_contract.project_id,
             "contract_number": new_contract_number,
             "contract_direction": contract_direction.name,
             "group_relation_type": group_relation_type.name,
             "lessor_party_id": source_contract.lessor_party_id,
             "lessee_party_id": source_contract.lessee_party_id,
+            "lessor_name_snapshot": getattr(
+                source_contract,
+                "lessor_name_snapshot",
+                None,
+            ),
+            "lessee_name_snapshot": getattr(
+                source_contract,
+                "lessee_name_snapshot",
+                None,
+            ),
             "sign_date": source_contract.sign_date,
             "effective_from": source_contract.effective_from,
             "effective_to": source_contract.effective_to,
@@ -585,7 +725,6 @@ class ContractGroupService:
             "tax_rate": source_contract.tax_rate,
             "is_tax_included": source_contract.is_tax_included,
             "status": ContractLifecycleStatus.DRAFT.name,
-            "review_status": ContractReviewStatus.DRAFT.name,
             "contract_notes": source_contract.contract_notes,
             "source_session_id": source_contract.source_session_id,
             "correction_source_contract_id": source_contract.contract_id,
@@ -607,7 +746,13 @@ class ContractGroupService:
             "monthly_rent_base": getattr(lease_detail, "monthly_rent_base", None),
             "payment_cycle": getattr(lease_detail, "payment_cycle", "月付"),
             "payment_terms": getattr(lease_detail, "payment_terms", None),
-            "tenant_name": getattr(lease_detail, "tenant_name", None),
+            "tenant_name": _normalize_snapshot_name(
+                getattr(
+                    source_contract,
+                    "lessee_name_snapshot",
+                    getattr(lease_detail, "tenant_name", None),
+                )
+            ),
             "tenant_contact": getattr(lease_detail, "tenant_contact", None),
             "tenant_phone": getattr(lease_detail, "tenant_phone", None),
             "tenant_address": getattr(lease_detail, "tenant_address", None),
@@ -643,8 +788,8 @@ class ContractGroupService:
     ) -> Contract:
         source_contract = await self._get_contract_or_raise(db, contract_id=contract_id)
         normalized_reason = _require_reason("发起纠错", reason)
-        if source_contract.review_status != ContractReviewStatus.APPROVED:
-            raise OperationNotAllowedError("仅已审核通过的合同允许发起纠错草稿")
+        if source_contract.status != ContractLifecycleStatus.ACTIVE:
+            raise OperationNotAllowedError("仅生效中的合同允许发起纠错草稿")
 
         new_contract_id = str(uuid.uuid4())
         new_contract_number = f"{source_contract.contract_number}-C01"
@@ -665,6 +810,16 @@ class ContractGroupService:
             asset_ids=asset_ids or None,
             commit=False,
         )
+        source_scan_documents = await contract_crud.list_scan_documents_by_contract(
+            db,
+            contract_id=contract_id,
+        )
+        if source_scan_documents:
+            await contract_crud.replace_scan_document_links_for_contracts(
+                db,
+                contract_ids=[cloned_contract.contract_id],
+                document_ids=[doc.document_id for doc in source_scan_documents],
+            )
 
         source_rent_terms = await contract_group_crud.list_rent_terms_by_contract(
             db,
@@ -700,8 +855,6 @@ class ContractGroupService:
             action="start_correction",
             old_status=source_contract.status,
             new_status=source_contract.status,
-            old_review_status=source_contract.review_status,
-            new_review_status=source_contract.review_status,
             reason=normalized_reason,
             current_user=current_user,
             operator_name=operator_name,
@@ -765,6 +918,11 @@ class ContractGroupService:
         if existing is not None:
             raise DuplicateResourceError("合同组", "group_code", group_code)
 
+        await self._ensure_assets_belong_to_project(
+            db,
+            project_id=obj_in.project_id,
+            asset_ids=obj_in.asset_ids,
+        )
         await self._ensure_assets_not_bound_to_other_groups(
             db,
             current_group_id=None,
@@ -833,12 +991,23 @@ class ContractGroupService:
         if current_user is not None:
             update_data["updated_by"] = current_user
 
+        await self._ensure_assets_belong_to_project(
+            db,
+            project_id=getattr(group, "project_id", None),
+            asset_ids=obj_in.asset_ids,
+        )
         await self._ensure_assets_not_bound_to_other_groups(
             db,
             current_group_id=group_id,
             project_id=getattr(group, "project_id", None),
             asset_ids=obj_in.asset_ids,
         )
+        if "asset_ids" in set_fields:
+            await self._ensure_existing_contract_assets_within_group_assets(
+                db,
+                group_id=group_id,
+                asset_ids=obj_in.asset_ids,
+            )
 
         return await contract_group_crud.update(
             db,
@@ -1033,12 +1202,34 @@ class ContractGroupService:
         if group is None:
             raise ResourceNotFoundError("合同组", obj_in.contract_group_id)
 
+        project_id = _normalize_required_project_id(group)
         revenue_mode = group.revenue_mode
         validate_revenue_mode_compatibility(revenue_mode, obj_in.group_relation_type)
-        validate_sign_date_for_status(obj_in.status, obj_in.sign_date)
+        validate_sign_date_for_status(ContractLifecycleStatus.ACTIVE, obj_in.sign_date)
+        await party_service.assert_parties_approved(
+            db,
+            party_ids=[
+                obj_in.lessor_party_id,
+                obj_in.lessee_party_id,
+                group.operator_party_id,
+                group.owner_party_id,
+            ],
+            operation="合同补录",
+        )
+        party_name_snapshots = await self._build_party_name_snapshots(
+            db,
+            lessor_party_id=obj_in.lessor_party_id,
+            lessee_party_id=obj_in.lessee_party_id,
+        )
+        await self._ensure_contract_assets_within_group(
+            db,
+            group_id=obj_in.contract_group_id,
+            asset_ids=obj_in.asset_ids,
+        )
         existing_contract = await contract_crud.get_by_contract_number(
             db,
             contract_number=obj_in.contract_number,
+            project_id=project_id,
         )
         if existing_contract is not None:
             raise DuplicateResourceError(
@@ -1049,19 +1240,20 @@ class ContractGroupService:
         data: dict[str, Any] = {
             "contract_id": str(uuid.uuid4()),
             "contract_group_id": obj_in.contract_group_id,
+            "project_id": project_id,
             "contract_number": obj_in.contract_number,
             "contract_direction": obj_in.contract_direction.name,
             "group_relation_type": obj_in.group_relation_type.name,
             "lessor_party_id": obj_in.lessor_party_id,
             "lessee_party_id": obj_in.lessee_party_id,
+            **party_name_snapshots,
             "sign_date": obj_in.sign_date,
             "effective_from": obj_in.effective_from,
             "effective_to": obj_in.effective_to,
             "currency_code": obj_in.currency_code,
             "tax_rate": obj_in.tax_rate,
             "is_tax_included": obj_in.is_tax_included,
-            "status": obj_in.status.name,
-            "review_status": obj_in.review_status.name,
+            "status": ContractLifecycleStatus.ACTIVE.name,
             "contract_notes": obj_in.contract_notes,
             "source_session_id": obj_in.source_session_id,
             "data_status": "正常",
@@ -1074,18 +1266,29 @@ class ContractGroupService:
         lease_detail_data = (
             obj_in.lease_detail.model_dump() if obj_in.lease_detail else None
         )
+        lease_detail_data = self._sync_lease_detail_with_lessee_snapshot(
+            lease_detail_data,
+            lessee_name_snapshot=party_name_snapshots["lessee_name_snapshot"],
+        )
         agency_detail_data = (
             obj_in.agency_detail.model_dump() if obj_in.agency_detail else None
         )
 
-        return await contract_crud.create(
+        created_contract = await contract_crud.create(
             db,
             data=data,
             lease_detail_data=lease_detail_data,
             agency_detail_data=agency_detail_data,
             asset_ids=obj_in.asset_ids or None,
-            commit=commit,
+            commit=False,
         )
+        await ledger_service_v2.generate_ledger_on_activation(
+            db,
+            contract_id=created_contract.contract_id,
+        )
+        if commit:
+            await db.commit()
+        return created_contract
 
     async def get_contract_detail(
         self, db: AsyncSession, *, contract_id: str
@@ -1095,6 +1298,219 @@ class ContractGroupService:
         if contract is None:
             raise ResourceNotFoundError("合同", contract_id)
         return ContractDetail.model_validate(contract)
+
+    async def list_contract_scan_documents(
+        self,
+        db: AsyncSession,
+        *,
+        contract_id: str,
+    ) -> list[ContractScanDocumentResponse]:
+        await self._get_contract_or_raise(db, contract_id=contract_id)
+        documents = await contract_crud.list_scan_documents_by_contract(
+            db,
+            contract_id=contract_id,
+        )
+        return [ContractScanDocumentResponse.model_validate(doc) for doc in documents]
+
+    @staticmethod
+    def _contract_uses_shared_scan_scope(contract: Contract) -> bool:
+        contract_group = getattr(contract, "contract_group", None)
+        return (
+            contract.group_relation_type == GroupRelationType.ENTRUSTED
+            and getattr(contract_group, "revenue_mode", None) == RevenueMode.AGENCY
+        )
+
+    async def list_shared_scan_affected_contract_ids(
+        self,
+        db: AsyncSession,
+        *,
+        contract_id: str,
+    ) -> list[str]:
+        contract = await self._get_contract_or_raise(db, contract_id=contract_id)
+        if not self._contract_uses_shared_scan_scope(contract):
+            return [contract.contract_id]
+
+        sibling_contracts = await contract_crud.list_by_contract_number(
+            db,
+            contract_number=contract.contract_number,
+            lessor_party_id=contract.lessor_party_id,
+            lessee_party_id=contract.lessee_party_id,
+            shared_scan_scope_only=True,
+        )
+        sibling_ids = [item.contract_id for item in sibling_contracts]
+        if contract.contract_id not in sibling_ids:
+            sibling_ids.append(contract.contract_id)
+        return sorted(set(sibling_ids))
+
+    async def _get_or_create_scan_documents(
+        self,
+        db: AsyncSession,
+        *,
+        documents: list[ContractScanDocumentCreate],
+        affected_contract_ids: list[str],
+        current_user: str | None,
+    ) -> list[str]:
+        document_ids: list[str] = []
+        seen_storage_keys: set[str] = set()
+        affected_contract_id_set = set(affected_contract_ids)
+        now = _utcnow()
+        for document in documents:
+            storage_key = document.storage_key.strip()
+            if storage_key in seen_storage_keys:
+                continue
+            seen_storage_keys.add(storage_key)
+            existing = await contract_crud.get_scan_document_by_storage_key(
+                db,
+                storage_key=storage_key,
+            )
+            if existing is None:
+                created = await contract_crud.create_scan_document(
+                    db,
+                    data={
+                        "document_id": str(uuid.uuid4()),
+                        "storage_key": storage_key,
+                        "original_filename": document.original_filename,
+                        "content_type": document.content_type,
+                        "file_size": document.file_size,
+                        "checksum_sha256": document.checksum_sha256,
+                        "data_status": "正常",
+                        "created_at": now,
+                        "updated_at": now,
+                        "created_by": current_user,
+                        "updated_by": current_user,
+                    },
+                    commit=False,
+                )
+                document_ids.append(created.document_id)
+                continue
+
+            linked_contract_ids = (
+                await contract_crud.list_contract_ids_linked_to_scan_document(
+                    db,
+                    document_id=existing.document_id,
+                )
+            )
+            outside_scope_contract_ids = sorted(
+                set(linked_contract_ids) - affected_contract_id_set
+            )
+            if outside_scope_contract_ids:
+                raise OperationNotAllowedError(
+                    "scan document is already linked outside affected contracts: "
+                    + ", ".join(outside_scope_contract_ids),
+                    reason="contract_scan_document_scope_conflict",
+                    details={
+                        "document_id": existing.document_id,
+                        "storage_key": storage_key,
+                        "outside_contract_ids": outside_scope_contract_ids,
+                    },
+                )
+
+            await contract_crud.update_scan_document(
+                db,
+                db_obj=existing,
+                data={
+                    "original_filename": document.original_filename,
+                    "content_type": document.content_type,
+                    "file_size": document.file_size,
+                    "checksum_sha256": document.checksum_sha256,
+                    "updated_by": current_user,
+                },
+                commit=False,
+            )
+            document_ids.append(existing.document_id)
+        return document_ids
+
+    async def replace_contract_scan_documents(
+        self,
+        db: AsyncSession,
+        *,
+        contract_id: str,
+        obj_in: ContractScanDocumentReplaceRequest,
+        affected_contract_ids: list[str] | None = None,
+        current_user: str | None = None,
+        commit: bool = True,
+    ) -> list[ContractScanDocumentResponse]:
+        contract = await self._get_contract_or_raise(db, contract_id=contract_id)
+        sibling_ids = affected_contract_ids
+        if sibling_ids is None:
+            sibling_ids = await self.list_shared_scan_affected_contract_ids(
+                db,
+                contract_id=contract.contract_id,
+            )
+        document_ids = await self._get_or_create_scan_documents(
+            db,
+            documents=obj_in.documents,
+            affected_contract_ids=sibling_ids,
+            current_user=current_user,
+        )
+        if not document_ids:
+            raise OperationNotAllowedError(
+                "contract scan document is required",
+                reason="contract_scan_document_required",
+            )
+
+        await contract_crud.replace_scan_document_links_for_contracts(
+            db,
+            contract_ids=sibling_ids,
+            document_ids=document_ids,
+        )
+        if commit:
+            await db.commit()
+
+        documents = await contract_crud.list_scan_documents_by_contract(
+            db,
+            contract_id=contract_id,
+        )
+        return [ContractScanDocumentResponse.model_validate(doc) for doc in documents]
+
+    async def delete_contract_scan_document(
+        self,
+        db: AsyncSession,
+        *,
+        contract_id: str,
+        document_id: str,
+        affected_contract_ids: list[str] | None = None,
+        commit: bool = True,
+    ) -> None:
+        contract = await self._get_contract_or_raise(db, contract_id=contract_id)
+        sibling_ids = affected_contract_ids
+        if sibling_ids is None:
+            sibling_ids = await self.list_shared_scan_affected_contract_ids(
+                db,
+                contract_id=contract.contract_id,
+            )
+        linked_contract_ids = (
+            await contract_crud.list_contract_ids_linked_to_scan_document(
+                db,
+                document_id=document_id,
+                contract_ids=sibling_ids,
+            )
+        )
+        if not linked_contract_ids:
+            raise ResourceNotFoundError("contract scan document", document_id)
+
+        counts = await contract_crud.count_scan_documents_by_contracts(
+            db,
+            contract_ids=linked_contract_ids,
+        )
+        would_be_empty = [
+            linked_contract_id
+            for linked_contract_id in linked_contract_ids
+            if counts.get(linked_contract_id, 0) <= 1
+        ]
+        if would_be_empty:
+            raise OperationNotAllowedError(
+                "delete would leave contracts without scan documents: "
+                + ", ".join(sorted(would_be_empty)),
+                reason="contract_scan_document_required",
+            )
+        await contract_crud.unlink_scan_document_from_contracts(
+            db,
+            contract_ids=linked_contract_ids,
+            document_id=document_id,
+        )
+        if commit:
+            await db.commit()
 
     async def list_contract_audit_logs(
         self,
@@ -1144,91 +1560,12 @@ class ContractGroupService:
 
     # ─── Lifecycle ──────────────────────────────────────────────────────
 
-    async def submit_review(
+    async def finalize_correction(
         self,
         db: AsyncSession,
         *,
         contract_id: str,
-        current_user: str | None = None,
-        operator_name: str | None = None,
-        allow_joint_review: bool = False,
-        joint_review_contract_ids: list[str] | None = None,
-        commit: bool = True,
-    ) -> tuple[Contract, list[str]]:
-        contract = await self._get_contract_or_raise(db, contract_id=contract_id)
-        group = await contract_group_crud.get(db, contract.contract_group_id)
-        if group is None:
-            raise ResourceNotFoundError("合同组", contract.contract_group_id)
-        await party_service.assert_parties_approved(
-            db,
-            party_ids=[
-                contract.lessor_party_id,
-                contract.lessee_party_id,
-                group.operator_party_id,
-                group.owner_party_id,
-            ],
-            operation="合同提审",
-        )
-        validate_sign_date_for_status(
-            ContractLifecycleStatus.PENDING_REVIEW, contract.sign_date
-        )
-        correction_source_contract = await self._get_correction_source_contract(
-            db,
-            contract=contract,
-        )
-        change_categories: set[str] = set()
-        review_scope = "single"
-        if correction_source_contract is not None:
-            change_categories = await self._classify_change_categories(
-                db,
-                draft_contract=contract,
-                source_contract=correction_source_contract,
-            )
-            if self._requires_joint_review(change_categories):
-                if not allow_joint_review:
-                    raise OperationNotAllowedError(
-                        "检测到关键变更，请通过合同组联审提交审核"
-                    )
-                review_scope = "joint"
-        stmt = (
-            select(Asset.asset_name, Asset.review_status)
-            .join(contract_assets, contract_assets.c.asset_id == Asset.id)
-            .where(
-                contract_assets.c.contract_id == contract_id,
-                Asset.review_status != AssetReviewStatus.APPROVED.value,
-            )
-        )
-        non_approved_assets = (await db.execute(stmt)).all()
-        asset_warnings = [
-            f"关联资产 {row.asset_name} 尚未审核通过（当前状态：{row.review_status}），请注意核实"
-            for row in non_approved_assets
-        ]
-
-        updated_contract = await self._transition_contract(
-            db,
-            contract=contract,
-            allowed_statuses={ContractLifecycleStatus.DRAFT},
-            action="submit_review",
-            new_status=ContractLifecycleStatus.PENDING_REVIEW,
-            new_review_status=ContractReviewStatus.PENDING,
-            current_user=current_user,
-            operator_name=operator_name,
-            context=self._build_review_audit_context(
-                contract_id=contract.contract_id,
-                change_categories=change_categories,
-                correction_source_contract=correction_source_contract,
-                review_scope=review_scope,
-                affected_contract_ids=joint_review_contract_ids,
-            ),
-            commit=commit,
-        )
-        return updated_contract, asset_warnings
-
-    async def approve(
-        self,
-        db: AsyncSession,
-        *,
-        contract_id: str,
+        reason: str | None = None,
         current_user: str | None = None,
         operator_name: str | None = None,
         commit: bool = True,
@@ -1238,58 +1575,59 @@ class ContractGroupService:
             db,
             contract=contract,
         )
-        if correction_source_contract is not None:
-            correction_reason = (contract.review_reason or "").strip() or "纠错重建"
-            correction_effective_month = await self._get_correction_effective_month(
-                db,
-                contract=contract,
-            )
-            voided_entry_ids = (
-                await ledger_service_v2.reverse_correction_source_entries(
-                    db,
-                    contract_id=correction_source_contract.contract_id,
-                    year_month_start=correction_effective_month,
-                )
-            )
-            await self._transition_contract(
-                db,
-                contract=correction_source_contract,
-                allowed_statuses={
-                    ContractLifecycleStatus.ACTIVE,
-                    ContractLifecycleStatus.EXPIRED,
-                    ContractLifecycleStatus.TERMINATED,
-                },
-                action="reverse_review",
-                new_status=ContractLifecycleStatus.TERMINATED,
-                new_review_status=ContractReviewStatus.REVERSED,
-                current_user=current_user,
-                operator_name=operator_name,
-                reason=correction_reason,
-                context={
-                    "review_scope": "correction",
-                    "affected_contract_ids": [
-                        correction_source_contract.contract_id,
-                        contract.contract_id,
-                    ],
-                    "change_categories": [],
-                    "correction_source_contract_id": correction_source_contract.contract_id,
-                    "voided_entry_ids": voided_entry_ids,
-                },
-                commit=False,
-            )
-        reviewer = operator_name or current_user
+        if correction_source_contract is None:
+            raise OperationNotAllowedError("仅纠错草稿允许定稿")
+
+        correction_reason = (reason or "").strip() or "纠错定稿"
+        party_name_snapshots = await self._build_party_name_snapshots(
+            db,
+            lessor_party_id=contract.lessor_party_id,
+            lessee_party_id=contract.lessee_party_id,
+        )
+        lease_detail = getattr(contract, "lease_detail", None)
+        if lease_detail is not None:
+            lease_detail.tenant_name = party_name_snapshots["lessee_name_snapshot"]
+        correction_effective_month = await self._get_correction_effective_month(
+            db,
+            contract=contract,
+        )
+        voided_entry_ids = await ledger_service_v2.reverse_correction_source_entries(
+            db,
+            contract_id=correction_source_contract.contract_id,
+            year_month_start=correction_effective_month,
+        )
+        await self._transition_contract(
+            db,
+            contract=correction_source_contract,
+            allowed_statuses={
+                ContractLifecycleStatus.ACTIVE,
+                ContractLifecycleStatus.TERMINATED,
+            },
+            action="finalize_correction",
+            new_status=ContractLifecycleStatus.TERMINATED,
+            current_user=current_user,
+            operator_name=operator_name,
+            reason=correction_reason,
+            context={
+                "affected_contract_ids": [
+                    correction_source_contract.contract_id,
+                    contract.contract_id,
+                ],
+                "correction_source_contract_id": correction_source_contract.contract_id,
+                "voided_entry_ids": voided_entry_ids,
+            },
+            commit=False,
+        )
         updated_contract = await self._transition_contract(
             db,
             contract=contract,
-            allowed_statuses={ContractLifecycleStatus.PENDING_REVIEW},
-            action="approve",
+            allowed_statuses={ContractLifecycleStatus.DRAFT},
+            action="finalize_correction",
             new_status=ContractLifecycleStatus.ACTIVE,
-            new_review_status=ContractReviewStatus.APPROVED,
             current_user=current_user,
             operator_name=operator_name,
-            review_by=reviewer,
-            reviewed_at=_utcnow(),
-            extra_updates={"review_reason": None},
+            reason=correction_reason,
+            extra_updates=party_name_snapshots,
             commit=False,
         )
         await ledger_service_v2.generate_ledger_on_activation(
@@ -1299,53 +1637,6 @@ class ContractGroupService:
         if commit:
             await db.commit()
         return updated_contract
-
-    async def reject(
-        self,
-        db: AsyncSession,
-        *,
-        contract_id: str,
-        reason: str | None,
-        current_user: str | None = None,
-        operator_name: str | None = None,
-        commit: bool = True,
-    ) -> Contract:
-        contract = await self._get_contract_or_raise(db, contract_id=contract_id)
-        normalized_reason = _require_reason("驳回", reason)
-        return await self._transition_contract(
-            db,
-            contract=contract,
-            allowed_statuses={ContractLifecycleStatus.PENDING_REVIEW},
-            action="reject",
-            new_status=ContractLifecycleStatus.DRAFT,
-            new_review_status=ContractReviewStatus.DRAFT,
-            current_user=current_user,
-            operator_name=operator_name,
-            reason=normalized_reason,
-            commit=commit,
-        )
-
-    async def expire(
-        self,
-        db: AsyncSession,
-        *,
-        contract_id: str,
-        current_user: str | None = None,
-        operator_name: str | None = None,
-        commit: bool = True,
-    ) -> Contract:
-        contract = await self._get_contract_or_raise(db, contract_id=contract_id)
-        return await self._transition_contract(
-            db,
-            contract=contract,
-            allowed_statuses={ContractLifecycleStatus.ACTIVE},
-            action="expire",
-            new_status=ContractLifecycleStatus.EXPIRED,
-            new_review_status=None,
-            current_user=current_user,
-            operator_name=operator_name,
-            commit=commit,
-        )
 
     async def terminate_contract_v2(
         self,
@@ -1364,11 +1655,9 @@ class ContractGroupService:
             contract=contract,
             allowed_statuses={
                 ContractLifecycleStatus.ACTIVE,
-                ContractLifecycleStatus.EXPIRED,
             },
             action="terminate",
             new_status=ContractLifecycleStatus.TERMINATED,
-            new_review_status=None,
             current_user=current_user,
             operator_name=operator_name,
             reason=normalized_reason,
@@ -1397,14 +1686,12 @@ class ContractGroupService:
             raise OperationNotAllowedError("合同已存在台账，请先冲销台账后再作废")
 
         old_status = contract.status
-        old_review_status = contract.review_status
         updated_contract = await contract_crud.update(
             db,
             db_obj=contract,
             data={
                 "data_status": "已作废",
                 "updated_by": current_user,
-                "review_reason": normalized_reason,
             },
             commit=False,
         )
@@ -1414,8 +1701,6 @@ class ContractGroupService:
             action="void",
             old_status=old_status,
             new_status=old_status,
-            old_review_status=old_review_status,
-            new_review_status=old_review_status,
             reason=normalized_reason,
             current_user=current_user,
             operator_name=operator_name,
@@ -1423,66 +1708,6 @@ class ContractGroupService:
         )
         await db.commit()
         return updated_contract
-
-    async def submit_group_review(
-        self,
-        db: AsyncSession,
-        *,
-        group_id: str,
-        current_user: str | None = None,
-        operator_name: str | None = None,
-    ) -> dict[str, Any]:
-        group = await contract_group_crud.get(db, group_id)
-        if group is None:
-            raise ResourceNotFoundError("合同组", group_id)
-
-        contracts = await contract_crud.list_by_group(db, group_id=group_id)
-        draft_contracts = [
-            contract
-            for contract in contracts
-            if contract.data_status == "正常"
-            and contract.status == ContractLifecycleStatus.DRAFT
-        ]
-
-        validation_errors: list[str] = []
-        for contract in draft_contracts:
-            if contract.sign_date is None:
-                validation_errors.append(f"{contract.contract_id}: sign_date 不能为空")
-
-        if validation_errors:
-            raise InvalidRequestError(
-                "批量提审失败，请先补齐草稿合同签订日期: "
-                + "; ".join(validation_errors),
-                details={"contracts": validation_errors},
-            )
-
-        updated_contract_ids: list[str] = []
-        warnings: list[str] = []
-        joint_review_contract_ids = [
-            contract.contract_id for contract in draft_contracts
-        ]
-        for contract in draft_contracts:
-            _, contract_warnings = await self.submit_review(
-                db,
-                contract_id=contract.contract_id,
-                current_user=current_user,
-                operator_name=operator_name,
-                allow_joint_review=True,
-                joint_review_contract_ids=joint_review_contract_ids,
-                commit=False,
-            )
-            updated_contract_ids.append(contract.contract_id)
-            warnings.extend(contract_warnings)
-
-        if updated_contract_ids:
-            await db.commit()
-
-        return {
-            "updated_count": len(updated_contract_ids),
-            "skipped_count": len(contracts) - len(updated_contract_ids),
-            "contract_ids": updated_contract_ids,
-            "warnings": warnings,
-        }
 
     # ─── Rent Terms ─────────────────────────────────────────────────────
 

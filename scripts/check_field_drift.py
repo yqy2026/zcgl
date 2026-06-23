@@ -33,6 +33,7 @@ ENTITY_MODEL_MAP: dict[str, tuple[str, str]] = {
     "Project": ("project.py", "Project"),
     "ContractGroup": ("contract_group.py", "ContractGroup"),
     "Contract": ("contract_group.py", "Contract"),
+    "ContractScanDocument": ("contract_group.py", "ContractScanDocument"),
     "ContractRentTerm": ("contract_group.py", "ContractRentTerm"),
     "ContractLedgerEntry": ("contract_group.py", "ContractLedgerEntry"),
     "ServiceFeeLedger": ("contract_group.py", "ServiceFeeLedger"),
@@ -45,8 +46,9 @@ ENTITY_MODEL_MAP: dict[str, tuple[str, str]] = {
     # CustomerProfile, AnalyticsMetrics not yet implemented as separate ORM models.
 }
 
-# Regex: field contract section heading, e.g. "### 4.1 Asset".
-_SECTION_RE = re.compile(r"^###\s+4\.\d+\s+([A-Z]\w*)\s*$", re.MULTILINE)
+# Regex: field contract section heading, e.g. "### 4.1 Asset" or
+# "### 4.7.1 ContractScanDocument".
+_SECTION_RE = re.compile(r"^###\s+4\.\d+(?:\.\d+)?\s+([A-Z]\w*)\s*$", re.MULTILINE)
 
 # Regex: table row with a backtick-quoted field name as first column.
 _FIELD_ROW_RE = re.compile(r"^\|\s*`([a-z][a-z0-9_]*)`\s*\|(.+)\|$", re.MULTILINE)

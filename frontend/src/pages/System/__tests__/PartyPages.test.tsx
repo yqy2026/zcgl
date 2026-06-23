@@ -116,7 +116,7 @@ describe('Party system pages', () => {
     });
     vi.mocked(partyService.rejectReview).mockResolvedValue({
       ...pendingParty,
-      review_status: 'draft',
+      review_status: 'rejected',
       review_reason: '资料不完整',
     });
   });

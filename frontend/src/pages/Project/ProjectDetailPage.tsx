@@ -160,6 +160,9 @@ const getProjectRiskTagColor = (risk: ProjectRiskItem): string =>
 const getAnalysisModeColor = (mode: ProjectAnalysisModeSummary): string =>
   PROJECT_RELATION_KIND_META[mode.relation_kind]?.color ?? 'blue';
 
+const formatSuppressedMetric = (value: number | null | undefined): string =>
+  value == null ? '需选视图' : String(value);
+
 const formatTrendDelta = (current: string | number, previous: string | number): string => {
   const currentValue = Number(current);
   const previousValue = Number(previous);
@@ -854,7 +857,7 @@ const ProjectDetailPage: React.FC = () => {
                   </div>
                   <div className={styles.relationSummaryItem}>
                     <Text type="secondary">客户主体</Text>
-                    <Text strong>{projectAnalyticsData.tenant_count}</Text>
+                    <Text strong>{formatSuppressedMetric(projectAnalyticsData.tenant_count)}</Text>
                   </div>
                   <div className={styles.relationSummaryItem}>
                     <Text type="secondary">经营风险</Text>
@@ -865,6 +868,9 @@ const ProjectDetailPage: React.FC = () => {
                     <Text strong>{formatCurrency(projectAnalyticsData.receivable_amount)}</Text>
                   </div>
                 </div>
+                {projectAnalyticsData.customer_metrics_suppression_reason != null && (
+                  <Tag color="gold">客户指标需选产权方或运营方视图</Tag>
+                )}
                 <div className={styles.analysisModeGrid}>
                   {projectAnalyticsData.mode_summaries.map(mode => (
                     <div key={mode.relation_kind} className={styles.analysisModeItem}>
@@ -883,7 +889,7 @@ const ProjectDetailPage: React.FC = () => {
                         </span>
                         <span>
                           <Text type="secondary">客户</Text>
-                          <Text strong>{mode.customer_count}</Text>
+                          <Text strong>{formatSuppressedMetric(mode.customer_count)}</Text>
                         </span>
                         <span>
                           <Text type="secondary">应收</Text>

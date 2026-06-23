@@ -27,6 +27,8 @@
 
 2026-06-03 已完成候选项 06 第一轮排查：对源报告点名的浅服务候选逐个核对后，未采用“删除 service、API 直连 CRUD”的方案。`ContactService` 已随候选项 01 合并进 `PartyService`；`CollectionService`、`ExcelTaskService`、`SystemSettingsService` 和 `HistoryService` 均保留服务层边界；`document/cache.py` 当前只是缓存子模块聚合导出，不按业务 service 删除。本轮新增 `test_collection_service.py` 与 `test_history_service.py` 服务层业务护栏，补齐催缴服务和历史服务不是浅转发层的代码证据。
 
+2026-06-16 后续决策：ADR-0006 已将催缴管理模块从 MVP 中删除。本文中关于 `CollectionService` 保留、`collection` 自注册触发和相关测试护栏的结论均为 2026-06-03 历史状态，不再代表当前架构。
+
 2026-06-03 已完成候选项 07 活跃页面复核：System 用户、角色、组织和操作日志四个活跃管理页的服务器数据已经通过各自 `use*Data` React Query hook 获取，页面级 `useEffect` 仅承担错误提示或本地 UI 状态同步。本轮新增 `system-active-pages-data-fetching.test.ts` 静态护栏，锁定活跃页不得回退到页面内直接调用列表、统计或组织历史等服务器服务。`PropertyCertificateList.tsx` 仍是冻结模块残留，不在本轮做功能性 React Query 重构，后续只随冻结可见面清理或归档处理。
 
 源报告候选项第一轮已完成收口；后续若继续扩展浅服务或冻结模块治理，应作为新增候选逐项立案，不再按源报告做批量删除。
@@ -294,8 +296,8 @@ AGENTS 要求新 API 使用 `route_registry.register_router()`，但当前 `back
 | 自注册模块 | 禁止再进入聚合 `include_router()` | 避免同一路由产生双公共入口 |
 
 - `AGENTS.md` 明确上述边界：历史 `include_router()` 仅作为既有 v1 聚合内部布线；已自注册的路由不得再被聚合二次 include。
-- `backend/src/api/v1/__init__.py` 保留导入 `party`、`authz`、`collection` 以触发自注册，但移除 `collection_router` 的聚合 include。
-- 新增 `backend/tests/unit/api/v1/test_route_registration_standard.py`，锁定 `party`、`authz`、`collection` 这类自注册模块不得再被 `api_router` 二次 include。
+- `backend/src/api/v1/__init__.py` 保留导入 `party`、`authz`、`collection` 以触发自注册，但移除 `collection_router` 的聚合 include。（2026-06-16 注：`collection` 已随 ADR-0006 删除，此条仅记录当时的双入口收口。）
+- 新增 `backend/tests/unit/api/v1/test_route_registration_standard.py`，锁定 `party`、`authz`、`collection` 这类自注册模块不得再被 `api_router` 二次 include。（2026-06-16 注：当前测试改为断言 `collection` 路由模块保持删除。）
 
 ### 后续边界
 
@@ -333,7 +335,7 @@ AGENTS 要求新 API 使用 `route_registry.register_router()`，但当前 `back
 | 候选 | 当前判断 | 证据 |
 |---|---|---|
 | `ContactService` | 合并进 Party | 通用联系人通路已随候选项 01 删除，联系人统一由 `PartyService` 和 `party_contacts` 承载 |
-| `CollectionService` | 保留并补测试 | `get_summary_async()` 汇总逾期台账、待催缴、本月催缴与成功率；`create_async()` 做台账存在性校验并补操作人上下文 |
+| `CollectionService` | 历史结论：保留并补测试；当前已由 ADR-0006 删除 | `get_summary_async()` 汇总逾期台账、待催缴、本月催缴与成功率；`create_async()` 做台账存在性校验并补操作人上下文 |
 | `ExcelTaskService` | 保留 | `mark_task_failed()` 统一回滚事务、查询任务并写入失败态、进度、完成时间和结果清空 |
 | `SystemSettingsService` | 保留 | 审计日志创建和数据库连通性检查从 API 层下沉，DB 检查失败返回 `False` 并记录日志 |
 | `HistoryService` | 保留并补测试 | 列表按 `asset_id` 筛选前先校验资产存在性；详情和删除缺失时统一抛出业务 404；删除前先确认记录存在 |

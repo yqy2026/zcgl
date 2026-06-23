@@ -5,7 +5,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, String, Text
+from sqlalchemy import DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..database import Base
@@ -24,15 +24,6 @@ class ProjectStatus(str, enum.Enum):
     PAUSED = "paused"
     COMPLETED = "completed"
     TERMINATED = "terminated"
-
-
-class ProjectReviewStatus(str, enum.Enum):
-    """项目审核状态（英文代码值）。"""
-
-    DRAFT = "draft"
-    PENDING = "pending"
-    APPROVED = "approved"
-    REJECTED = "rejected"
 
 
 class Project(Base):
@@ -65,19 +56,6 @@ class Project(Base):
         ForeignKey("parties.id"),
         index=True,
         comment="项目运营管理主体ID",
-    )
-
-    # 审核字段
-    review_status: Mapped[str] = mapped_column(
-        String(20),
-        nullable=False,
-        default=ProjectReviewStatus.DRAFT.value,
-        comment="审核状态：draft/pending/approved/rejected",
-    )
-    review_by: Mapped[str | None] = mapped_column(String(100), comment="审核人")
-    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime, comment="审核时间")
-    review_reason: Mapped[str | None] = mapped_column(
-        Text, comment="审核原因（反审核时必填）"
     )
 
     data_status: Mapped[str] = mapped_column(
@@ -159,4 +137,4 @@ class Project(Base):
         return f"<Project(id={self.id}, project_name={self.project_name}, project_code={self.project_code})>"
 
 
-__all__ = ["Project", "ProjectStatus", "ProjectReviewStatus"]
+__all__ = ["Project", "ProjectStatus"]

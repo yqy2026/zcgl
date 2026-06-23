@@ -28,8 +28,6 @@ from ...crud.pdf_import_session import pdf_import_session_crud
 from ...crud.query_builder import PartyFilter
 from ...models.contract_group import (
     ContractDirection,
-    ContractLifecycleStatus,
-    ContractReviewStatus,
     GroupRelationType,
     RevenueMode,
 )
@@ -982,13 +980,15 @@ class PDFImportService:
         if single_asset_id is not None and single_asset_id not in asset_ids:
             asset_ids.append(single_asset_id)
 
+        project_id = _normalize_text(merged_data.get("project_id"))
         operator_party_id = _normalize_text(merged_data.get("operator_party_id"))
         owner_party_id = _normalize_text(merged_data.get("owner_party_id"))
         lessor_party_id = _normalize_text(merged_data.get("lessor_party_id"))
         lessee_party_id = _normalize_text(merged_data.get("lessee_party_id"))
         contract_number = _normalize_text(merged_data.get("contract_number"))
         if (
-            operator_party_id is None
+            project_id is None
+            or operator_party_id is None
             or owner_party_id is None
             or lessor_party_id is None
             or lessee_party_id is None
@@ -996,12 +996,14 @@ class PDFImportService:
         ):
             return {
                 "success": False,
-                "message": "Missing required party ids or contract number",
-                "error": "Missing required party ids or contract number",
+                "message": "Missing required project, party ids or contract number",
+                "error": "Missing required project, party ids or contract number",
             }
 
         settlement_rule_data = merged_data.get("settlement_rule")
-        if settlement_rule_data is not None and not isinstance(settlement_rule_data, dict):
+        if settlement_rule_data is not None and not isinstance(
+            settlement_rule_data, dict
+        ):
             return {
                 "success": False,
                 "message": "settlement_rule must be a JSON object",
@@ -1040,7 +1042,7 @@ class PDFImportService:
 
         try:
             group_payload = ContractGroupCreate(
-                project_id=_normalize_text(merged_data.get("project_id")),
+                project_id=project_id,
                 revenue_mode=revenue_mode,
                 operator_party_id=operator_party_id,
                 owner_party_id=owner_party_id,
@@ -1121,8 +1123,6 @@ class PDFImportService:
                 currency_code="CNY",
                 tax_rate=None,
                 is_tax_included=True,
-                status=ContractLifecycleStatus.DRAFT,
-                review_status=ContractReviewStatus.DRAFT,
                 contract_notes=_normalize_text(merged_data.get("contract_notes")),
                 source_session_id=session_id,
                 asset_ids=asset_ids,

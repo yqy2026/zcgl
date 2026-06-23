@@ -30,7 +30,7 @@ from ....services.contract.ledger_service_v2 import ledger_service_v2
 
 router = APIRouter()
 
-LedgerPaymentStatus = Literal["unpaid", "paid", "overdue", "partial", "voided"]
+LedgerPaymentStatus = Literal["unpaid", "paid", "partial", "voided"]
 
 
 def resolve_ledger_query_params(
@@ -50,7 +50,6 @@ def resolve_ledger_query_params(
             allowed_payment_statuses: set[LedgerPaymentStatus] = {
                 "unpaid",
                 "paid",
-                "overdue",
                 "partial",
                 "voided",
             }

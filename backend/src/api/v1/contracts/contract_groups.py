@@ -7,13 +7,17 @@
   /contracts/{id}           (合同 CRUD)
 """
 
-import json
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ....core.exception_handler import BaseBusinessError, internal_error, not_found
+from ....core.exception_handler import (
+    BaseBusinessError,
+    forbidden,
+    internal_error,
+    not_found,
+)
 from ....database import get_async_db
 from ....middleware.auth import (
     AuthzContext,
@@ -22,6 +26,7 @@ from ....middleware.auth import (
     require_authz,
     require_data_scope_context,
 )
+from ....middleware.resource_context import load_contract_scope_context
 from ....models.auth import User
 from ....schemas.contract_group import (
     AuditLogResponse,
@@ -38,13 +43,43 @@ from ....schemas.contract_group import (
     ContractRentTermCreate,
     ContractRentTermResponse,
     ContractRentTermUpdate,
+    ContractScanDocumentReplaceRequest,
+    ContractScanDocumentResponse,
     ContractSummary,
 )
+from ....services.authz import authz_service
 from ....services.contract.contract_group_service import contract_group_service
 from ....services.contract.ledger_service_v2 import ledger_service_v2
 from ....services.party import party_service
 
 router = APIRouter()
+
+
+async def _require_contract_update_for_all_affected_scan_contracts(
+    *,
+    db: AsyncSession,
+    current_user: User,
+    affected_contract_ids: list[str],
+) -> None:
+    for affected_contract_id in affected_contract_ids:
+        resource_context = await load_contract_scope_context(
+            db=db,
+            contract_id=affected_contract_id,
+        )
+        try:
+            decision = await authz_service.check_access(
+                db,
+                user_id=str(current_user.id),
+                resource_type="contract",
+                action="update",
+                resource_id=affected_contract_id,
+                resource=resource_context,
+            )
+        except Exception as exc:
+            raise forbidden("权限校验失败") from exc
+        if not decision.allowed:
+            raise forbidden("权限不足")
+
 
 # ─────────────────────── ContractGroup endpoints ────────────────────────────
 
@@ -379,6 +414,139 @@ async def get_contract(
         raise internal_error("获取合同详情失败", original_error=exc) from exc
 
 
+@router.get(
+    "/contracts/{contract_id}/attachments",
+    response_model=list[ContractScanDocumentResponse],
+    summary="List contract scan documents",
+)
+async def list_contract_scan_documents(
+    contract_id: str,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz: Annotated[
+        AuthzContext | None,
+        Depends(
+            require_authz(
+                action="read",
+                resource_type="contract",
+                resource_id="{contract_id}",
+                deny_as_not_found=True,
+            )
+        ),
+    ] = None,
+) -> list[ContractScanDocumentResponse]:
+    _ = current_user
+    _ = _authz
+    try:
+        return await contract_group_service.list_contract_scan_documents(
+            db,
+            contract_id=contract_id,
+        )
+    except BaseBusinessError:
+        raise
+    except Exception as exc:
+        raise internal_error(
+            "list contract scan documents failed", original_error=exc
+        ) from exc
+
+
+@router.put(
+    "/contracts/{contract_id}/attachments",
+    response_model=list[ContractScanDocumentResponse],
+    summary="Replace shared contract scan documents",
+)
+async def replace_contract_scan_documents(
+    contract_id: str,
+    payload: ContractScanDocumentReplaceRequest,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz: Annotated[
+        AuthzContext | None,
+        Depends(
+            require_authz(
+                action="update",
+                resource_type="contract",
+                resource_id="{contract_id}",
+            )
+        ),
+    ] = None,
+) -> list[ContractScanDocumentResponse]:
+    _ = _authz
+    try:
+        affected_contract_ids = (
+            await contract_group_service.list_shared_scan_affected_contract_ids(
+                db,
+                contract_id=contract_id,
+            )
+        )
+        await _require_contract_update_for_all_affected_scan_contracts(
+            db=db,
+            current_user=current_user,
+            affected_contract_ids=affected_contract_ids,
+        )
+        return await contract_group_service.replace_contract_scan_documents(
+            db,
+            contract_id=contract_id,
+            obj_in=payload,
+            affected_contract_ids=affected_contract_ids,
+            current_user=str(current_user.id),
+        )
+    except BaseBusinessError:
+        raise
+    except Exception as exc:
+        raise internal_error(
+            "replace contract scan documents failed", original_error=exc
+        ) from exc
+
+
+@router.delete(
+    "/contracts/{contract_id}/attachments/{document_id}",
+    status_code=204,
+    summary="Delete shared contract scan document link",
+)
+async def delete_contract_scan_document(
+    contract_id: str,
+    document_id: str,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz: Annotated[
+        AuthzContext | None,
+        Depends(
+            require_authz(
+                action="update",
+                resource_type="contract",
+                resource_id="{contract_id}",
+            )
+        ),
+    ] = None,
+) -> None:
+    _ = _authz
+    try:
+        affected_contract_ids = (
+            await contract_group_service.list_shared_scan_affected_contract_ids(
+                db,
+                contract_id=contract_id,
+            )
+        )
+        await _require_contract_update_for_all_affected_scan_contracts(
+            db=db,
+            current_user=current_user,
+            affected_contract_ids=affected_contract_ids,
+        )
+        await contract_group_service.delete_contract_scan_document(
+            db,
+            contract_id=contract_id,
+            document_id=document_id,
+            affected_contract_ids=affected_contract_ids,
+        )
+    except BaseBusinessError:
+        raise
+    except Exception as exc:
+        raise internal_error(
+            "delete contract scan document failed", original_error=exc
+        ) from exc
+
+
 @router.delete(
     "/contracts/{contract_id}",
     status_code=204,
@@ -407,85 +575,6 @@ async def delete_contract(
         raise
     except Exception as exc:
         raise internal_error("删除合同失败", original_error=exc) from exc
-
-
-@router.post(
-    "/contract-groups/{group_id}/submit-review",
-    response_model=dict,
-    summary="批量提交合同组内草稿合同审核",
-)
-async def submit_contract_group_review(
-    group_id: str,
-    db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(get_current_active_user),
-    _authz: Annotated[
-        AuthzContext | None,
-        Depends(
-            require_authz(
-                action="update",
-                resource_type="contract_group",
-                resource_id="{group_id}",
-            )
-        ),
-    ] = None,
-) -> dict[str, Any]:
-    _ = _authz
-    try:
-        return await contract_group_service.submit_group_review(
-            db,
-            group_id=group_id,
-            current_user=str(current_user.id),
-            operator_name=current_user.username,
-        )
-    except BaseBusinessError:
-        raise
-    except Exception as exc:
-        raise internal_error("批量提审失败", original_error=exc) from exc
-
-
-@router.post(
-    "/contracts/{contract_id}/submit-review",
-    response_model=ContractDetail,
-    summary="提交合同审核",
-)
-async def submit_contract_review(
-    contract_id: str,
-    response: Response,
-    payload: ContractLifecycleAction | None = None,
-    db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(get_current_active_user),
-    _authz: Annotated[
-        AuthzContext | None,
-        Depends(
-            require_authz(
-                action="update",
-                resource_type="contract",
-                resource_id="{contract_id}",
-            )
-        ),
-    ] = None,
-) -> ContractDetail:
-    _ = payload
-    _ = _authz
-    try:
-        _, warnings = await contract_group_service.submit_review(
-            db,
-            contract_id=contract_id,
-            current_user=str(current_user.id),
-            operator_name=current_user.username,
-        )
-        if warnings:
-            response.headers["X-Asset-Review-Warnings"] = json.dumps(
-                warnings,
-            )
-        return await contract_group_service.get_contract_detail(
-            db,
-            contract_id=contract_id,
-        )
-    except BaseBusinessError:
-        raise
-    except Exception as exc:
-        raise internal_error("提交审核失败", original_error=exc) from exc
 
 
 @router.post(
@@ -529,11 +618,11 @@ async def start_contract_correction(
 
 
 @router.post(
-    "/contracts/{contract_id}/approve",
+    "/contracts/{contract_id}/finalize-correction",
     response_model=ContractDetail,
-    summary="审核通过合同",
+    summary="定稿合同纠错草稿",
 )
-async def approve_contract_review(
+async def finalize_contract_correction(
     contract_id: str,
     payload: ContractLifecycleAction | None = None,
     db: AsyncSession = Depends(get_async_db),
@@ -549,103 +638,23 @@ async def approve_contract_review(
         ),
     ] = None,
 ) -> ContractDetail:
-    _ = payload
     _ = _authz
     try:
-        await contract_group_service.approve(
+        contract = await contract_group_service.finalize_correction(
             db,
             contract_id=contract_id,
+            reason=None if payload is None else payload.reason,
             current_user=str(current_user.id),
             operator_name=current_user.username,
         )
         return await contract_group_service.get_contract_detail(
             db,
-            contract_id=contract_id,
+            contract_id=contract.contract_id,
         )
     except BaseBusinessError:
         raise
     except Exception as exc:
-        raise internal_error("审核通过失败", original_error=exc) from exc
-
-
-@router.post(
-    "/contracts/{contract_id}/reject",
-    response_model=ContractDetail,
-    summary="驳回合同审核",
-)
-async def reject_contract_review(
-    contract_id: str,
-    payload: ContractLifecycleAction,
-    db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(get_current_active_user),
-    _authz: Annotated[
-        AuthzContext | None,
-        Depends(
-            require_authz(
-                action="update",
-                resource_type="contract",
-                resource_id="{contract_id}",
-            )
-        ),
-    ] = None,
-) -> ContractDetail:
-    _ = _authz
-    try:
-        await contract_group_service.reject(
-            db,
-            contract_id=contract_id,
-            reason=payload.reason,
-            current_user=str(current_user.id),
-            operator_name=current_user.username,
-        )
-        return await contract_group_service.get_contract_detail(
-            db,
-            contract_id=contract_id,
-        )
-    except BaseBusinessError:
-        raise
-    except Exception as exc:
-        raise internal_error("驳回失败", original_error=exc) from exc
-
-
-@router.post(
-    "/contracts/{contract_id}/expire",
-    response_model=ContractDetail,
-    summary="标记合同到期",
-)
-async def expire_contract(
-    contract_id: str,
-    payload: ContractLifecycleAction | None = None,
-    db: AsyncSession = Depends(get_async_db),
-    current_user: User = Depends(get_current_active_user),
-    _authz: Annotated[
-        AuthzContext | None,
-        Depends(
-            require_authz(
-                action="update",
-                resource_type="contract",
-                resource_id="{contract_id}",
-            )
-        ),
-    ] = None,
-) -> ContractDetail:
-    _ = payload
-    _ = _authz
-    try:
-        await contract_group_service.expire(
-            db,
-            contract_id=contract_id,
-            current_user=str(current_user.id),
-            operator_name=current_user.username,
-        )
-        return await contract_group_service.get_contract_detail(
-            db,
-            contract_id=contract_id,
-        )
-    except BaseBusinessError:
-        raise
-    except Exception as exc:
-        raise internal_error("标记到期失败", original_error=exc) from exc
+        raise internal_error("定稿合同纠错失败", original_error=exc) from exc
 
 
 @router.post(
@@ -950,7 +959,7 @@ async def get_contract_ledger(
 @router.patch(
     "/contracts/{contract_id}/ledger/batch-update-status",
     response_model=list[ContractLedgerEntryResponse],
-    summary="批量更新合同台账状态",
+    summary="批量登记合同台账实收金额",
 )
 async def batch_update_contract_ledger_status(
     contract_id: str,
@@ -975,7 +984,6 @@ async def batch_update_contract_ledger_status(
             db,
             contract_id=contract_id,
             entry_ids=payload.entry_ids,
-            payment_status=payload.payment_status,
             paid_amount=payload.paid_amount,
             notes=payload.notes,
         )

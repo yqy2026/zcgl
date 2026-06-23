@@ -34,7 +34,11 @@ def test_pdf_import_service_module_avoids_datetime_utcnow() -> None:
 @pytest.fixture
 def pdf_service():
     """创建 PDFImportService 实例"""
-    return PDFImportService()
+    with patch(
+        "src.services.document.pdf_import_service.get_llm_contract_extractor",
+        return_value=MagicMock(),
+    ):
+        return PDFImportService()
 
 
 @pytest.fixture

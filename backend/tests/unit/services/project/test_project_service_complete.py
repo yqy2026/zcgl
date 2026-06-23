@@ -48,7 +48,7 @@ def sample_project():
     project = MagicMock(spec=Project)
     project.id = "project-123"
     project.project_name = "Test Project"
-    project.project_code = "PRJ-TEST01-000001"
+    project.project_code = "PRJ-TEST01-202606-0001"
     project.status = "planning"
     project.data_status = "正常"
     project.manager_party_id = None
@@ -67,12 +67,12 @@ class TestCreateProject:
         """Test successful project creation"""
         project_data = ProjectCreate(
             project_name="New Project",
-            project_code="PRJ-TEST01-000002",
+            project_code="PRJ-TEST01-202606-0002",
         )
         created_project = MagicMock(spec=Project)
         created_project.id = "project-999"
         created_project.project_name = "New Project"
-        created_project.project_code = "PRJ-TEST01-000002"
+        created_project.project_code = "PRJ-TEST01-202606-0002"
 
         with patch("src.crud.project.project_crud.get_by_code", return_value=None):
             with patch(
@@ -86,7 +86,7 @@ class TestCreateProject:
         """Test that project dates are accepted"""
         project_data = ProjectCreate(
             project_name="Date Project",
-            project_code="PRJ-TEST01-000003",
+            project_code="PRJ-TEST01-202606-0003",
         )
         created_project = MagicMock(spec=Project)
         created_project.id = "project-998"
@@ -103,7 +103,7 @@ class TestCreateProject:
         """Test that project budget is accepted"""
         project_data = ProjectCreate(
             project_name="Budget Project",
-            project_code="PRJ-TEST01-000004",
+            project_code="PRJ-TEST01-202606-0004",
         )
         created_project = MagicMock(spec=Project)
         created_project.id = "project-997"
@@ -120,7 +120,7 @@ class TestCreateProject:
         """Test that new projects get default status"""
         project_data = ProjectCreate(
             project_name="Default Status Project",
-            project_code="PRJ-TEST01-000005",
+            project_code="PRJ-TEST01-202606-0005",
         )
         created_project = MagicMock(spec=Project)
         created_project.id = "project-996"
@@ -138,7 +138,7 @@ class TestCreateProject:
         """Test that duplicate project codes are rejected"""
         project_data = ProjectCreate(
             project_name="Duplicate Code Project",
-            project_code="PRJ-TEST01-000001",
+            project_code="PRJ-TEST01-202606-0001",
         )
 
         with patch(
@@ -432,6 +432,7 @@ class TestProjectErrorHandling:
                 with pytest.raises(InternalServerError, match="创建项目失败"):
                     project_data = ProjectCreate(
                         project_name="Test Project",
+                        project_code="PRJ-TEST01-202606-0001",
                     )
                     await project_service.create_project(db=mock_db, obj_in=project_data)
 

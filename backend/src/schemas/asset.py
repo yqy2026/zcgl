@@ -55,7 +55,9 @@ class AssetBase(BaseModel):
     # 基本信息 - 按照权属方、权属类别、资产编码、资产名称、分类、地址顺序
     organization_id: str | None = Field(None, description="所属组织ID（DEPRECATED）")
     ownership_id: str | None = Field(None, description="权属方ID（DEPRECATED）")
-    manager_party_id: str | None = Field(None, description="经营管理方主体ID")
+    manager_party_id: str | None = Field(
+        None, description="派生字段：当前项目运营方主体ID；创建/更新输入忽略"
+    )
     owner_party_id: str | None = Field(None, description="产权方主体ID")
     ownership_category: str | None = Field(
         None, max_length=FieldLengthLimits.CODE_MAX, description="权属类别"
@@ -98,7 +100,7 @@ class AssetBase(BaseModel):
     property_nature: str = Field(..., description="物业性质")
     usage_status: str = Field(..., description="使用状态")
     management_entity: str | None = Field(
-        None, max_length=200, description="经营管理单位"
+        None, max_length=200, description="DEPRECATED：资产独立经营管理单位输入忽略"
     )
     business_category: str | None = Field(None, max_length=100, description="业态类别")
     is_litigated: bool = Field(False, description="是否涉诉")
@@ -250,7 +252,9 @@ class AssetUpdate(BaseModel):
     # 基本信息 - 按照权属方、权属类别、资产编码、资产名称、分类、地址顺序
     organization_id: str | None = Field(None, description="所属组织ID（DEPRECATED）")
     ownership_id: str | None = Field(None, description="权属方ID（DEPRECATED）")
-    manager_party_id: str | None = Field(None, description="经营管理方主体ID")
+    manager_party_id: str | None = Field(
+        None, description="派生字段：当前项目运营方主体ID；创建/更新输入忽略"
+    )
     owner_party_id: str | None = Field(None, description="产权方主体ID")
     ownership_category: str | None = Field(None, max_length=100, description="权属类别")
     project_name: str | None = Field(
@@ -277,7 +281,7 @@ class AssetUpdate(BaseModel):
     property_nature: str | None = Field(None, description="物业性质")
     usage_status: str | None = Field(None, description="使用状态")
     management_entity: str | None = Field(
-        None, max_length=200, description="经营管理单位"
+        None, max_length=200, description="DEPRECATED：资产独立经营管理单位输入忽略"
     )
     business_category: str | None = Field(None, max_length=100, description="业态类别")
     is_litigated: bool | None = Field(None, description="是否涉诉")
@@ -443,7 +447,7 @@ class AssetResponseBase(BaseModel):
     property_nature: str = Field(..., description="物业性质")
     usage_status: str = Field(..., description="使用状态")
     management_entity: str | None = Field(
-        None, max_length=200, description="经营管理单位"
+        None, max_length=200, description="DEPRECATED：当前项目运营方派生展示"
     )
 
     business_category: str | None = Field(None, description="业态类别")
@@ -538,7 +542,9 @@ class AssetResponse(AssetResponseBase):
     ownership_id: str | None = Field(
         None, description="权属ID（DEPRECATED）"
     )  # 对齐Model
-    manager_party_id: str | None = Field(None, description="经营管理方主体ID")
+    manager_party_id: str | None = Field(
+        None, description="派生字段：当前项目运营方主体ID；无项目时为空"
+    )
     owner_party_id: str | None = Field(None, description="产权方主体ID")
     project: ProjectResponse | None = Field(None, description="关联项目")
     ownership: OwnershipResponse | None = Field(None, description="关联权属方")
@@ -555,7 +561,9 @@ class AssetListItemResponse(AssetResponseBase):
     organization_id: str | None = Field(None, description="所属组织ID（DEPRECATED）")
     project_id: str | None = Field(None, description="项目ID")
     ownership_id: str | None = Field(None, description="权属ID（DEPRECATED）")
-    manager_party_id: str | None = Field(None, description="经营管理方主体ID")
+    manager_party_id: str | None = Field(
+        None, description="派生字段：当前项目运营方主体ID；无项目时为空"
+    )
     owner_party_id: str | None = Field(None, description="产权方主体ID")
     created_at: datetime = Field(..., description="创建时间")
     updated_at: datetime = Field(..., description="更新时间")

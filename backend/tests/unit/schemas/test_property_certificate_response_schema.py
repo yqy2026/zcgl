@@ -5,12 +5,16 @@ Unit tests for property certificate response schema contract.
 from datetime import UTC, datetime
 from types import SimpleNamespace
 
-from src.schemas.property_certificate import PropertyCertificateResponse
+from src.schemas.property_certificate import (
+    PropertyCertificateAttachmentResponse,
+    PropertyCertificateResponse,
+)
 
 
 def test_property_certificate_response_schema_includes_owners_field() -> None:
     properties = PropertyCertificateResponse.model_json_schema().get("properties", {})
     assert "owners" in properties
+    assert "attachments" in properties
 
 
 def test_property_certificate_response_serializes_owner_list_from_attributes() -> None:
@@ -51,6 +55,16 @@ def test_property_certificate_response_serializes_owner_list_from_attributes() -
         updated_at=datetime.now(UTC),
         created_by="user-001",
         owners=[owner],
+        attachments=[
+            SimpleNamespace(
+                id="att-001",
+                file_name="cert.pdf",
+                storage_key="property-certs/cert.pdf",
+                content_type="application/pdf",
+                file_size=1024,
+                created_at=datetime.now(UTC),
+            )
+        ],
     )
 
     response = PropertyCertificateResponse.model_validate(certificate)
@@ -59,3 +73,20 @@ def test_property_certificate_response_serializes_owner_list_from_attributes() -
     assert "owners" in dumped
     assert isinstance(dumped["owners"], list)
     assert dumped["owners"][0]["id"] == "owner-001"
+    assert dumped["attachments"][0]["storage_key"] == "property-certs/cert.pdf"
+
+
+def test_property_certificate_attachment_response_schema() -> None:
+    attachment = PropertyCertificateAttachmentResponse.model_validate(
+        SimpleNamespace(
+            id="att-001",
+            file_name="cert.pdf",
+            storage_key="property-certs/cert.pdf",
+            content_type="application/pdf",
+            file_size=1024,
+            created_at=datetime.now(UTC),
+        )
+    )
+
+    assert attachment.id == "att-001"
+    assert attachment.file_name == "cert.pdf"

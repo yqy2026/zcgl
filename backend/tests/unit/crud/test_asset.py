@@ -5,6 +5,7 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from sqlalchemy import select
 
 import src.crud.asset as asset_crud_module
 from src.crud.asset import AssetCRUD
@@ -12,6 +13,7 @@ from src.crud.query_builder import PartyFilter
 from src.models.asset import Asset
 from src.models.asset_search_index import AssetSearchIndex
 from src.models.contract_group import Contract
+from src.schemas.asset import AssetUpdate
 
 pytestmark = pytest.mark.asyncio
 
@@ -32,6 +34,95 @@ def mock_db() -> MagicMock:
     db.delete = AsyncMock()
     db.add = MagicMock()
     return db
+
+
+class TestAssetManagerDerivedGuards:
+    async def test_distinct_values_with_manager_scope_filters_current_project_manager(
+        self, crud: AssetCRUD, mock_db: MagicMock
+    ) -> None:
+        result = MagicMock()
+        result.all.return_value = [("出租",)]
+        mock_db.execute.return_value = result
+
+        values = await crud.get_distinct_field_values(
+            mock_db,
+            "usage_status",
+            party_filter=PartyFilter(
+                party_ids=[],
+                manager_party_ids=["manager-1"],
+                filter_mode="manager",
+            ),
+            use_cache=False,
+        )
+
+        assert values == ["出租"]
+        stmt = mock_db.execute.await_args.args[0]
+        compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+        assert "projects.manager_party_id IN ('manager-1')" in compiled
+        assert "assets.manager_party_id IN ('manager-1')" not in compiled
+
+    async def test_distinct_manager_values_derive_from_current_project_manager(
+        self, crud: AssetCRUD, mock_db: MagicMock
+    ) -> None:
+        result = MagicMock()
+        result.all.return_value = [("manager-1",)]
+        mock_db.execute.return_value = result
+
+        values = await crud.get_distinct_field_values(
+            mock_db,
+            "manager_party_id",
+            use_cache=False,
+        )
+
+        assert values == ["manager-1"]
+        stmt = mock_db.execute.await_args.args[0]
+        compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+        assert "projects.manager_party_id" in compiled
+        assert "project_assets.valid_to IS NULL" in compiled
+        assert "SELECT DISTINCT assets.manager_party_id" not in compiled
+
+    async def test_distinct_management_entity_values_use_project_manager_alias(
+        self, crud: AssetCRUD, mock_db: MagicMock
+    ) -> None:
+        result = MagicMock()
+        result.all.return_value = [("manager-1",)]
+        mock_db.execute.return_value = result
+
+        values = await crud.get_distinct_field_values(
+            mock_db,
+            "management_entity",
+            use_cache=False,
+        )
+
+        assert values == ["manager-1"]
+        stmt = mock_db.execute.await_args.args[0]
+        compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+        assert "projects.manager_party_id" in compiled
+        assert "SELECT DISTINCT assets.management_entity" not in compiled
+
+    async def test_generic_update_ignores_independent_manager_party(
+        self, crud: AssetCRUD, mock_db: MagicMock
+    ) -> None:
+        asset = Asset(asset_name="A")
+        asset.id = "asset-1"
+        asset.manager_party_id = "manager-old"
+        refresh_result = MagicMock()
+        refresh_result.scalar.return_value = None
+        mock_db.execute.return_value = refresh_result
+
+        result = await crud.update(
+            mock_db,
+            db_obj=asset,
+            obj_in={
+                "manager_party_id": "manager-new",
+                "management_entity": "manager-alias",
+                "asset_name": "B",
+            },
+            commit=False,
+        )
+
+        assert result.asset_name == "B"
+        assert result.manager_party_id is None
 
 
 class TestCRUDAssetGet:
@@ -127,7 +218,7 @@ class TestCRUDAssetSoftDeleteGuard:
         assert "assets.data_status IS NULL" not in compiled
         assert "已删除" not in compiled
 
-    async def test_get_async_with_tenant_filter_applies_tenant_filter(
+    async def test_get_async_with_tenant_filter_applies_asset_party_filter(
         self, crud: AssetCRUD, mock_db: MagicMock
     ) -> None:
         execute_result = MagicMock()
@@ -136,13 +227,13 @@ class TestCRUDAssetSoftDeleteGuard:
         party_filter = PartyFilter(party_ids=["org-1"])
 
         with patch.object(
-            crud.query_builder,
-            "apply_party_filter",
-            side_effect=lambda stmt, _tf: stmt,
+            crud,
+            "_apply_asset_party_filter",
+            new=AsyncMock(side_effect=lambda _db, stmt, _party_filter: stmt),
         ) as mock_apply_party_filter:
             await crud.get_async(mock_db, id="asset-1", party_filter=party_filter)
 
-        assert mock_apply_party_filter.call_args.args[1] == party_filter
+        assert mock_apply_party_filter.await_args.args[2] == party_filter
 
 
 class TestCRUDAssetGetByName:
@@ -228,9 +319,9 @@ class TestCRUDAssetGetMulti:
                 crud.query_builder, "build_count_query", return_value=MagicMock()
             ) as mock_build_count_query,
             patch.object(
-                crud.query_builder,
-                "apply_party_filter",
-                side_effect=lambda stmt, _party_filter: stmt,
+                crud,
+                "_apply_asset_party_filter",
+                new=AsyncMock(side_effect=lambda _db, stmt, _party_filter: stmt),
             ) as mock_apply_party_filter,
         ):
             await crud.get_multi_with_search_async(
@@ -240,7 +331,51 @@ class TestCRUDAssetGetMulti:
 
         assert mock_build_query.call_args.kwargs.get("party_filter") is None
         assert mock_build_count_query.call_args.kwargs.get("party_filter") is None
-        assert mock_apply_party_filter.call_count == 2
+        assert mock_apply_party_filter.await_count == 2
+
+    async def test_apply_asset_party_filter_manager_uses_current_project_manager(
+        self, crud: AssetCRUD, mock_db: MagicMock
+    ) -> None:
+        party_filter = PartyFilter(
+            party_ids=["manager-1"],
+            filter_mode="manager",
+            owner_party_ids=[],
+            manager_party_ids=["manager-1"],
+        )
+
+        stmt = await crud._apply_asset_party_filter(
+            mock_db,
+            select(Asset),
+            party_filter,
+        )
+
+        compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+        assert "assets.id IN" in compiled
+        assert "project_assets.asset_id" in compiled
+        assert "project_assets.valid_to IS NULL" in compiled
+        assert "projects.manager_party_id IN ('manager-1')" in compiled
+        assert "assets.manager_party_id IN ('manager-1')" not in compiled
+
+    async def test_apply_asset_party_filter_any_combines_owner_and_project_manager(
+        self, crud: AssetCRUD, mock_db: MagicMock
+    ) -> None:
+        party_filter = PartyFilter(
+            party_ids=["owner-1", "manager-1"],
+            filter_mode="any",
+            owner_party_ids=["owner-1"],
+            manager_party_ids=["manager-1"],
+        )
+
+        stmt = await crud._apply_asset_party_filter(
+            mock_db,
+            select(Asset),
+            party_filter,
+        )
+
+        compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+        assert "assets.owner_party_id IN ('owner-1')" in compiled
+        assert "projects.manager_party_id IN ('manager-1')" in compiled
+        assert "assets.manager_party_id IN ('manager-1')" not in compiled
 
     async def test_get_multi_by_ids_decrypts_assets(
         self, crud: AssetCRUD, mock_db: MagicMock
@@ -476,7 +611,7 @@ class TestCRUDAssetQueryNormalization:
                 "max_occupancy_rate": 90,
                 "ids": ["asset-1", "asset-2"],
                 "usage_status": "出租",
-                "management_entity": "管理方A",
+                "management_entity": "manager-party-1",
                 "is_litigated": True,
             }
         )
@@ -487,8 +622,44 @@ class TestCRUDAssetQueryNormalization:
         assert normalized["max_cached_occupancy_rate"] == 90
         assert normalized["id__in"] == ["asset-1", "asset-2"]
         assert normalized["usage_status"] == "出租"
-        assert normalized["management_entity"] == "管理方A"
+        assert normalized["project_manager_party_id"] == "manager-party-1"
         assert normalized["is_litigated"] is True
+
+    async def test_get_multi_with_management_entity_filters_current_project_manager(
+        self, crud: AssetCRUD, mock_db: MagicMock
+    ) -> None:
+        execute_result_assets = MagicMock()
+        execute_result_assets.scalars.return_value.all.return_value = []
+        execute_result_count = MagicMock()
+        execute_result_count.scalar.return_value = 0
+        mock_db.execute = AsyncMock(
+            side_effect=[execute_result_assets, execute_result_count]
+        )
+
+        with (
+            patch.object(
+                crud.query_builder,
+                "build_query",
+                side_effect=lambda **kwargs: kwargs["base_query"],
+            ) as mock_build_query,
+            patch.object(
+                crud.query_builder,
+                "build_count_query",
+                side_effect=lambda **kwargs: kwargs["base_query"],
+            ) as mock_build_count_query,
+        ):
+            await crud.get_multi_with_search_async(
+                mock_db,
+                filters={"management_entity": "manager-party-1"},
+            )
+
+        query_stmt = mock_build_query.call_args.kwargs["base_query"]
+        count_stmt = mock_build_count_query.call_args.kwargs["base_query"]
+        query_compiled = str(query_stmt.compile(compile_kwargs={"literal_binds": True}))
+        count_compiled = str(count_stmt.compile(compile_kwargs={"literal_binds": True}))
+        assert "projects.manager_party_id IN ('manager-party-1')" in query_compiled
+        assert "assets.manager_party_id IN ('manager-party-1')" not in query_compiled
+        assert "projects.manager_party_id IN ('manager-party-1')" in count_compiled
 
     async def test_normalize_filters_maps_is_litigated_chinese_string(
         self, crud: AssetCRUD
@@ -531,6 +702,107 @@ class TestCRUDAssetUpdate:
             )
 
         assert result is not None
+
+    async def test_update_with_history_ignores_independent_manager_party(
+        self, crud: AssetCRUD, mock_db: MagicMock
+    ) -> None:
+        asset = Asset(
+            asset_name="测试物业",
+            address="测试地址",
+            ownership_status="已确权",
+            property_nature="商业",
+            usage_status="在用",
+            owner_party_id="owner-party-1",
+        )
+        asset.id = "asset-1"
+        asset.manager_party_id = "manager-old"
+        update_data = {
+            "manager_party_id": "manager-new",
+            "management_entity": "manager-alias",
+        }
+        execute_result = MagicMock()
+        execute_result.scalar.return_value = None
+        mock_db.execute = AsyncMock(return_value=execute_result)
+
+        result = await crud.update_with_history_async(
+            mock_db,
+            db_obj=asset,
+            obj_in=AssetUpdate(**update_data),
+            commit=False,
+        )
+
+        assert result.manager_party_id is None
+        added_history = [
+            call.args[0]
+            for call in mock_db.add.call_args_list
+            if getattr(call.args[0], "operation_type", None) == "UPDATE"
+        ]
+        assert added_history == []
+
+    async def test_update_with_history_ignores_asset_code_changes(
+        self, crud: AssetCRUD, mock_db: MagicMock
+    ) -> None:
+        asset = Asset(
+            asset_name="测试物业",
+            asset_code="AST-OWNER001-000001",
+            address="测试地址",
+            ownership_status="已确权",
+            property_nature="商业",
+            usage_status="在用",
+            owner_party_id="owner-party-1",
+        )
+        asset.id = "asset-1"
+        execute_result = MagicMock()
+        execute_result.scalar.return_value = None
+        mock_db.execute = AsyncMock(return_value=execute_result)
+
+        result = await crud.update_with_history_async(
+            mock_db,
+            db_obj=asset,
+            obj_in=AssetUpdate(asset_code="AST-OWNER001-999999"),
+            commit=False,
+        )
+
+        assert result.asset_code == "AST-OWNER001-000001"
+        added_history = [
+            call.args[0]
+            for call in mock_db.add.call_args_list
+            if getattr(call.args[0], "operation_type", None) == "UPDATE"
+        ]
+        assert added_history == []
+
+    async def test_update_with_history_projects_returned_manager_from_active_project(
+        self, crud: AssetCRUD, mock_db: MagicMock
+    ) -> None:
+        asset = Asset(
+            asset_name="测试物业",
+            address="测试地址",
+            ownership_status="已确权",
+            property_nature="商业",
+            usage_status="在用",
+            owner_party_id="owner-party-1",
+        )
+        asset.id = "asset-1"
+        asset.manager_party_id = "stale-manager"
+        execute_result = MagicMock()
+        execute_result.scalar.return_value = "project-manager"
+        mock_db.execute = AsyncMock(return_value=execute_result)
+
+        result = await crud.update_with_history_async(
+            mock_db,
+            db_obj=asset,
+            obj_in=AssetUpdate(asset_name="新名称"),
+            commit=False,
+        )
+
+        assert result.manager_party_id == "project-manager"
+        compiled = str(
+            mock_db.execute.await_args.args[0].compile(
+                compile_kwargs={"literal_binds": True}
+            )
+        )
+        assert "projects.manager_party_id" in compiled
+        assert "project_assets.valid_to IS NULL" in compiled
 
 
 class TestCRUDAssetDelete:

@@ -20,6 +20,7 @@ if TYPE_CHECKING:
 from sqlalchemy import (
     DECIMAL,
     Boolean,
+    CheckConstraint,
     Date,
     DateTime,
     Enum,
@@ -28,12 +29,53 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    case,
 )
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..database import Base
-from .associations import contract_assets, contract_group_assets
+from .associations import (
+    contract_assets,
+    contract_group_assets,
+    contract_scan_document_links,
+)
+
+
+def _decimal_or_zero(value: Any) -> Decimal:
+    if value is None:
+        return Decimal("0")
+    if isinstance(value, Decimal):
+        return value
+    return Decimal(str(value))
+
+
+def derive_ledger_payment_status(
+    *,
+    amount_due: Any,
+    paid_amount: Any,
+    stored_status: Any = None,
+) -> str:
+    """Derive unpaid/partial/paid from money facts; preserve system voided."""
+    if stored_status == "voided":
+        return "voided"
+    paid = _decimal_or_zero(paid_amount)
+    due = _decimal_or_zero(amount_due)
+    if paid <= 0:
+        return "unpaid"
+    if paid < due:
+        return "partial"
+    return "paid"
+
+
+def _ledger_payment_status_expression(cls: type[Any]) -> Any:
+    return case(
+        (cls._payment_status == "voided", "voided"),
+        (cls.paid_amount <= 0, "unpaid"),
+        (cls.paid_amount < cls.amount_due, "partial"),
+        else_="paid",
+    )
 
 
 class RevenueMode(str, enum.Enum):
@@ -63,19 +105,8 @@ class ContractLifecycleStatus(str, enum.Enum):
     """Contract lifecycle status."""
 
     DRAFT = "草稿"
-    PENDING_REVIEW = "待审"
     ACTIVE = "生效"
-    EXPIRED = "已到期"
     TERMINATED = "已终止"
-
-
-class ContractReviewStatus(str, enum.Enum):
-    """Contract review status."""
-
-    DRAFT = "草稿"
-    PENDING = "待审"
-    APPROVED = "已审"
-    REVERSED = "反审核"
 
 
 class ContractGroup(Base):
@@ -97,7 +128,6 @@ class ContractGroup(Base):
     )
     group_code: Mapped[str] = mapped_column(
         String(50),
-        unique=True,
         nullable=False,
         index=True,
         comment="Unique contract group code.",
@@ -208,7 +238,17 @@ class Contract(Base):
     """Shared base table for all contract types."""
 
     __tablename__ = "contracts"
-
+    __table_args__ = (
+        CheckConstraint(
+            "data_status <> '正常' OR project_id IS NOT NULL",
+            name="ck_contracts_active_project_id_required",
+        ),
+        UniqueConstraint(
+            "contract_number",
+            "project_id",
+            name="uq_contract_number_project",
+        ),
+    )
     contract_id: Mapped[str] = mapped_column(
         String,
         primary_key=True,
@@ -221,9 +261,15 @@ class Contract(Base):
         index=True,
         comment="Owning contract group.",
     )
+    project_id: Mapped[str | None] = mapped_column(
+        String,
+        ForeignKey("projects.id"),
+        nullable=True,
+        index=True,
+        comment="Frozen project ID for per-project contract number uniqueness.",
+    )
     contract_number: Mapped[str] = mapped_column(
         String(100),
-        unique=True,
         nullable=False,
         index=True,
         comment="Contract number.",
@@ -251,6 +297,16 @@ class Contract(Base):
         nullable=False,
         index=True,
         comment="Lessee or operator party ID.",
+    )
+    lessor_name_snapshot: Mapped[str | None] = mapped_column(
+        String(200),
+        nullable=True,
+        comment="Lessor/entrusting party name snapshot captured at finalization.",
+    )
+    lessee_name_snapshot: Mapped[str | None] = mapped_column(
+        String(200),
+        nullable=True,
+        comment="Lessee/entrusted party name snapshot captured at finalization.",
     )
     correction_source_contract_id: Mapped[str | None] = mapped_column(
         String(50),
@@ -297,27 +353,7 @@ class Contract(Base):
         default=ContractLifecycleStatus.DRAFT,
         comment="Contract lifecycle status. DB stores enum names.",
     )
-    review_status: Mapped[ContractReviewStatus] = mapped_column(
-        Enum(ContractReviewStatus, values_callable=lambda e: [m.name for m in e]),
-        nullable=False,
-        default=ContractReviewStatus.DRAFT,
-        comment="Contract review status. DB stores enum names.",
-    )
-    review_by: Mapped[str | None] = mapped_column(
-        String(100),
-        nullable=True,
-        comment="Reviewer ID.",
-    )
-    reviewed_at: Mapped[datetime | None] = mapped_column(
-        DateTime,
-        nullable=True,
-        comment="Review timestamp.",
-    )
-    review_reason: Mapped[str | None] = mapped_column(
-        Text,
-        nullable=True,
-        comment="Review reason.",
-    )
+
     data_status: Mapped[str] = mapped_column(
         String(20),
         nullable=False,
@@ -380,6 +416,11 @@ class Contract(Base):
         back_populates="contract",
         uselist=False,
         cascade="all, delete-orphan",
+    )
+    scan_documents: Mapped[list["ContractScanDocument"]] = relationship(
+        "ContractScanDocument",
+        secondary=contract_scan_document_links,
+        back_populates="contracts",
     )
     audit_logs: Mapped[list["ContractAuditLog"]] = relationship(
         "ContractAuditLog",
@@ -525,6 +566,59 @@ class AgencyAgreementDetail(Base):
         )
 
 
+class ContractScanDocument(Base):
+    """Shared stamped scan document referenced by one or more contracts."""
+
+    __tablename__ = "contract_scan_documents"
+
+    document_id: Mapped[str] = mapped_column(
+        String,
+        primary_key=True,
+        default=lambda: str(uuid.uuid4()),
+    )
+    storage_key: Mapped[str] = mapped_column(
+        String(300),
+        nullable=False,
+        unique=True,
+        index=True,
+        comment="Stable storage key or file path for the stamped scan.",
+    )
+    original_filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    content_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    file_size: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    checksum_sha256: Mapped[str | None] = mapped_column(
+        String(64),
+        nullable=True,
+        index=True,
+        comment="Optional content checksum for duplicate hints.",
+    )
+    data_status: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default="正常",
+        comment="Data status.",
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        default=lambda: datetime.now(UTC).replace(tzinfo=None),
+        onupdate=lambda: datetime.now(UTC).replace(tzinfo=None),
+    )
+    created_by: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    updated_by: Mapped[str | None] = mapped_column(String(100), nullable=True)
+
+    contracts: Mapped[list["Contract"]] = relationship(
+        "Contract",
+        secondary=contract_scan_document_links,
+        back_populates="scan_documents",
+    )
+
+
 class ContractAuditLog(Base):
     """Contract lifecycle audit log."""
 
@@ -545,15 +639,10 @@ class ContractAuditLog(Base):
     action: Mapped[str] = mapped_column(
         String(50),
         nullable=False,
-        comment=(
-            "Action: submit_review, approve, reject, expire, terminate, void, "
-            "start_correction, reverse_review"
-        ),
+        comment="Action: terminate, void, start_correction, finalize_correction",
     )
     old_status: Mapped[str | None] = mapped_column(String(50), nullable=True)
     new_status: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    review_status_old: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    review_status_new: Mapped[str | None] = mapped_column(String(50), nullable=True)
     reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     operator_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
     operator_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
@@ -698,7 +787,8 @@ class ContractLedgerEntry(Base):
         DECIMAL(5, 4),
         nullable=True,
     )
-    payment_status: Mapped[str] = mapped_column(
+    _payment_status: Mapped[str] = mapped_column(
+        "payment_status",
         String(20),
         nullable=False,
         default="unpaid",
@@ -707,6 +797,32 @@ class ContractLedgerEntry(Base):
         DECIMAL(15, 2),
         nullable=False,
         default=Decimal("0"),
+    )
+    attributed_project_id: Mapped[str | None] = mapped_column(
+        String,
+        ForeignKey("projects.id"),
+        nullable=True,
+        index=True,
+        comment="Frozen project attribution captured when the ledger entry is generated.",
+    )
+    attributed_owner_party_id: Mapped[str | None] = mapped_column(
+        String,
+        ForeignKey("parties.id"),
+        nullable=True,
+        index=True,
+        comment="Frozen owner party attribution captured when the ledger entry is generated.",
+    )
+    attributed_operator_party_id: Mapped[str | None] = mapped_column(
+        String,
+        ForeignKey("parties.id"),
+        nullable=True,
+        index=True,
+        comment="Frozen operator party attribution captured when the ledger entry is generated.",
+    )
+    attributed_asset_ids: Mapped[list[str] | None] = mapped_column(
+        JSONB,
+        nullable=True,
+        comment="Frozen asset IDs captured when the ledger entry is generated.",
     )
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
@@ -725,6 +841,23 @@ class ContractLedgerEntry(Base):
         "Contract",
         back_populates="ledger_entries",
     )
+
+    @hybrid_property
+    def payment_status(self) -> str:
+        return derive_ledger_payment_status(
+            amount_due=self.amount_due,
+            paid_amount=self.paid_amount,
+            stored_status=self._payment_status,
+        )
+
+    @payment_status.inplace.setter
+    def _set_payment_status(self, value: str) -> None:
+        self._payment_status = value
+
+    @payment_status.inplace.expression
+    @classmethod
+    def _payment_status_expr(cls) -> Any:
+        return _ledger_payment_status_expression(cls)
 
 
 class ServiceFeeLedger(Base):
@@ -769,7 +902,8 @@ class ServiceFeeLedger(Base):
         nullable=False,
         default=Decimal("0"),
     )
-    payment_status: Mapped[str] = mapped_column(
+    _payment_status: Mapped[str] = mapped_column(
+        "payment_status",
         String(20),
         nullable=False,
         default="unpaid",
@@ -782,6 +916,32 @@ class ServiceFeeLedger(Base):
     service_fee_ratio: Mapped[Decimal] = mapped_column(
         DECIMAL(5, 4),
         nullable=False,
+    )
+    attributed_project_id: Mapped[str | None] = mapped_column(
+        String,
+        ForeignKey("projects.id"),
+        nullable=True,
+        index=True,
+        comment="Frozen project attribution inherited from the source rent ledger.",
+    )
+    attributed_owner_party_id: Mapped[str | None] = mapped_column(
+        String,
+        ForeignKey("parties.id"),
+        nullable=True,
+        index=True,
+        comment="Frozen owner party attribution inherited from the source rent ledger.",
+    )
+    attributed_operator_party_id: Mapped[str | None] = mapped_column(
+        String,
+        ForeignKey("parties.id"),
+        nullable=True,
+        index=True,
+        comment="Frozen operator party attribution inherited from the source rent ledger.",
+    )
+    attributed_asset_ids: Mapped[list[str] | None] = mapped_column(
+        JSONB,
+        nullable=True,
+        comment="Frozen asset IDs inherited from the source rent ledger.",
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
@@ -803,3 +963,23 @@ class ServiceFeeLedger(Base):
         "Contract",
         back_populates="service_fee_ledgers",
     )
+    source_ledger: Mapped["ContractLedgerEntry"] = relationship(
+        "ContractLedgerEntry",
+    )
+
+    @hybrid_property
+    def payment_status(self) -> str:
+        return derive_ledger_payment_status(
+            amount_due=self.amount_due,
+            paid_amount=self.paid_amount,
+            stored_status=self._payment_status,
+        )
+
+    @payment_status.inplace.setter
+    def _set_payment_status(self, value: str) -> None:
+        self._payment_status = value
+
+    @payment_status.inplace.expression
+    @classmethod
+    def _payment_status_expr(cls) -> Any:
+        return _ledger_payment_status_expression(cls)

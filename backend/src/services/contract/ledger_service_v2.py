@@ -4,6 +4,7 @@
 
 import logging
 import uuid
+from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import Any
@@ -18,13 +19,42 @@ from src.core.exception_handler import (
 from src.crud.contract import contract_crud
 from src.crud.contract_group import contract_group_crud
 from src.models.contract_group import (
+    Contract,
+    ContractGroup,
     ContractLedgerEntry,
     ContractLifecycleStatus,
     ContractRentTerm,
 )
 
 logger = logging.getLogger(__name__)
-_MANUAL_LEDGER_PAYMENT_STATUSES = frozenset({"unpaid", "paid", "overdue", "partial"})
+
+
+@dataclass(frozen=True)
+class StalePaidLedgerEntry:
+    """Paid or partially paid ledger entry that no longer matches rent terms."""
+
+    entry_id: str
+    year_month: str
+    payment_status: str
+    reason: str
+
+
+@dataclass(frozen=True)
+class LedgerAttributionSnapshot:
+    """Frozen attribution stamped on newly generated ledger entries."""
+
+    project_id: str | None
+    owner_party_id: str | None
+    operator_party_id: str | None
+    asset_ids: list[str]
+
+    def as_entry_data(self) -> dict[str, Any]:
+        return {
+            "attributed_project_id": self.project_id,
+            "attributed_owner_party_id": self.owner_party_id,
+            "attributed_operator_party_id": self.operator_party_id,
+            "attributed_asset_ids": self.asset_ids,
+        }
 
 
 def _utcnow() -> datetime:
@@ -94,8 +124,131 @@ def _resolve_amount_due(rent_term: ContractRentTerm) -> Decimal:
     return rent_term.monthly_rent
 
 
+def _as_decimal(value: Any) -> Decimal:
+    if value is None:
+        return Decimal("0")
+    if isinstance(value, Decimal):
+        return value
+    return Decimal(str(value))
+
+
+def _has_registered_receipt(entry: Any) -> bool:
+    return _as_decimal(getattr(entry, "paid_amount", Decimal("0"))) > 0
+
+
+def _parse_year_month(year_month: str) -> date | None:
+    try:
+        return datetime.strptime(f"{year_month}-01", "%Y-%m-%d").date()
+    except ValueError:
+        return None
+
+
+def find_stale_paid_or_partial_ledger_entries(
+    *,
+    rent_terms: list[ContractRentTerm],
+    ledger_entries: list[ContractLedgerEntry],
+    payment_cycle: str,
+) -> list[StalePaidLedgerEntry]:
+    """Derive paid/partial entries that need manual correction after term changes."""
+    stale_entries: list[StalePaidLedgerEntry] = []
+    target_year_month_set = set(_expand_year_months(rent_terms))
+
+    for entry in ledger_entries:
+        if not _has_registered_receipt(entry):
+            continue
+        payment_status = str(getattr(entry, "payment_status", "") or "").strip()
+
+        year_month = str(getattr(entry, "year_month", "") or "").strip()
+        if year_month not in target_year_month_set:
+            stale_entries.append(
+                StalePaidLedgerEntry(
+                    entry_id=str(getattr(entry, "entry_id", "")),
+                    year_month=year_month,
+                    payment_status=payment_status,
+                    reason="paid_or_partial_entry_outside_current_terms",
+                )
+            )
+            continue
+
+        month_date = _parse_year_month(year_month)
+        if month_date is None:
+            stale_entries.append(
+                StalePaidLedgerEntry(
+                    entry_id=str(getattr(entry, "entry_id", "")),
+                    year_month=year_month,
+                    payment_status=payment_status,
+                    reason="paid_or_partial_entry_requires_manual_resolution",
+                )
+            )
+            continue
+
+        rent_term = _get_rent_term_for_month(rent_terms, month_date)
+        if rent_term is None:
+            continue
+
+        amount_due = _resolve_amount_due(rent_term)
+        due_date = _calculate_due_date(month_date, payment_cycle)
+        if (
+            _as_decimal(getattr(entry, "amount_due", Decimal("0"))) != amount_due
+            or getattr(entry, "due_date", None) != due_date
+        ):
+            stale_entries.append(
+                StalePaidLedgerEntry(
+                    entry_id=str(getattr(entry, "entry_id", "")),
+                    year_month=year_month,
+                    payment_status=payment_status,
+                    reason="paid_or_partial_entry_requires_manual_resolution",
+                )
+            )
+
+    return stale_entries
+
+
+def _asset_ids_from(items: list[Any] | None) -> list[str]:
+    if items is None:
+        return []
+    asset_ids: list[str] = []
+    for item in items:
+        asset_id = getattr(item, "id", None)
+        if asset_id is not None:
+            asset_ids.append(str(asset_id))
+    return asset_ids
+
+
 class ContractLedgerServiceV2:
     """合同月度台账服务。"""
+
+    async def _resolve_attribution_snapshot(
+        self,
+        db: AsyncSession,
+        *,
+        contract: Contract,
+    ) -> LedgerAttributionSnapshot:
+        group = await contract_group_crud.get_with_assets(
+            db,
+            str(contract.contract_group_id),
+        )
+        if group is None:
+            raise ResourceNotFoundError(
+                "ContractGroup", str(contract.contract_group_id)
+            )
+        return self._build_attribution_snapshot(contract=contract, group=group)
+
+    @staticmethod
+    def _build_attribution_snapshot(
+        *,
+        contract: Contract,
+        group: ContractGroup,
+    ) -> LedgerAttributionSnapshot:
+        asset_ids = _asset_ids_from(getattr(contract, "assets", None))
+        if not asset_ids:
+            asset_ids = _asset_ids_from(getattr(group, "assets", None))
+        return LedgerAttributionSnapshot(
+            project_id=getattr(group, "project_id", None),
+            owner_party_id=getattr(group, "owner_party_id", None),
+            operator_party_id=getattr(group, "operator_party_id", None),
+            asset_ids=asset_ids,
+        )
 
     @staticmethod
     def _build_ledger_entry_data(
@@ -107,6 +260,7 @@ class ContractLedgerServiceV2:
         currency_code: str,
         is_tax_included: bool,
         tax_rate: Decimal | None,
+        attribution: LedgerAttributionSnapshot,
         now: datetime,
     ) -> dict[str, Any]:
         return {
@@ -120,6 +274,7 @@ class ContractLedgerServiceV2:
             "tax_rate": tax_rate,
             "payment_status": "unpaid",
             "paid_amount": Decimal("0"),
+            **attribution.as_entry_data(),
             "notes": None,
             "created_at": now,
             "updated_at": now,
@@ -160,6 +315,7 @@ class ContractLedgerServiceV2:
         created_entries: list[ContractLedgerEntry] = []
         now = _utcnow()
         payment_cycle = lease_detail.payment_cycle or "月付"
+        attribution: LedgerAttributionSnapshot | None = None
 
         for year_month in all_year_months:
             if year_month in existing_year_months:
@@ -171,6 +327,11 @@ class ContractLedgerServiceV2:
                 continue
 
             amount_due = _resolve_amount_due(rent_term)
+            if attribution is None:
+                attribution = await self._resolve_attribution_snapshot(
+                    db,
+                    contract=contract,
+                )
             entry = await contract_group_crud.create_ledger_entry(
                 db,
                 data=self._build_ledger_entry_data(
@@ -181,6 +342,7 @@ class ContractLedgerServiceV2:
                     currency_code=contract.currency_code,
                     is_tax_included=contract.is_tax_included,
                     tax_rate=contract.tax_rate,
+                    attribution=attribution,
                     now=now,
                 ),
                 commit=False,
@@ -290,6 +452,7 @@ class ContractLedgerServiceV2:
         lease_detail = getattr(contract, "lease_detail", None)
         payment_cycle = getattr(lease_detail, "payment_cycle", None) or "月付"
         now = _utcnow()
+        attribution: LedgerAttributionSnapshot | None = None
         existing_by_month = {entry.year_month: entry for entry in existing_entries}
         target_year_months = _expand_year_months(rent_terms)
         target_year_month_set = set(target_year_months)
@@ -310,6 +473,11 @@ class ContractLedgerServiceV2:
             existing_entry = existing_by_month.get(year_month)
 
             if existing_entry is None:
+                if attribution is None:
+                    attribution = await self._resolve_attribution_snapshot(
+                        db,
+                        contract=contract,
+                    )
                 await contract_group_crud.create_ledger_entry(
                     db,
                     data=self._build_ledger_entry_data(
@@ -320,6 +488,7 @@ class ContractLedgerServiceV2:
                         currency_code=contract.currency_code,
                         is_tax_included=contract.is_tax_included,
                         tax_rate=contract.tax_rate,
+                        attribution=attribution,
                         now=now,
                     ),
                     commit=False,
@@ -343,7 +512,7 @@ class ContractLedgerServiceV2:
             if not requires_update:
                 continue
 
-            if existing_entry.payment_status in {"paid", "partial"}:
+            if _has_registered_receipt(existing_entry):
                 skipped_entries.append(
                     {
                         "entry_id": existing_entry.entry_id,
@@ -364,7 +533,7 @@ class ContractLedgerServiceV2:
                 continue
             if existing_entry.payment_status == "voided":
                 continue
-            if existing_entry.payment_status in {"paid", "partial"}:
+            if _has_registered_receipt(existing_entry):
                 skipped_entries.append(
                     {
                         "entry_id": existing_entry.entry_id,
@@ -396,22 +565,13 @@ class ContractLedgerServiceV2:
         *,
         contract_id: str,
         entry_ids: list[str],
-        payment_status: str,
-        paid_amount: Decimal | None = None,
+        paid_amount: Decimal,
         notes: str | None = None,
     ) -> list[ContractLedgerEntry]:
-        if payment_status == "voided":
-            raise BusinessValidationError("voided 为系统保留状态，不允许人工批量更新")
-        if payment_status not in _MANUAL_LEDGER_PAYMENT_STATUSES:
-            raise BusinessValidationError(
-                f"payment_status 必须为 {sorted(_MANUAL_LEDGER_PAYMENT_STATUSES)} 之一"
-            )
-
         return await contract_group_crud.batch_update_ledger_status(
             db,
             contract_id=contract_id,
             entry_ids=entry_ids,
-            payment_status=payment_status,
             paid_amount=paid_amount,
             notes=notes,
         )
@@ -433,10 +593,10 @@ class ContractLedgerServiceV2:
         for entry in entries:
             if entry.year_month < year_month_start:
                 continue
-            if entry.payment_status in {"paid", "partial"}:
-                raise OperationNotAllowedError("存在已支付账期，需先人工处理")
             if entry.payment_status == "voided":
                 continue
+            if _has_registered_receipt(entry):
+                raise OperationNotAllowedError("存在已支付账期，需先人工处理")
             entry.payment_status = "voided"
             entry.updated_at = now
             voided_entry_ids.append(entry.entry_id)

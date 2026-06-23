@@ -21,6 +21,7 @@ class TestValidateRequiredFields:
             "ownership_status": "已确权",
             "property_nature": "商业",
             "usage_status": "在用",
+            "ownership_id": "legacy-owner-1",
         }
         errors = AssetBatchValidator.validate_required_fields(data)
         assert len(errors) == 0
@@ -32,6 +33,7 @@ class TestValidateRequiredFields:
             "address": "北京市朝阳区",
             "ownership_status": "已确权",
             "property_nature": "商业",
+            "ownership_id": "legacy-owner-1",
             # 缺少 usage_status
         }
         errors = AssetBatchValidator.validate_required_fields(data)
@@ -43,7 +45,7 @@ class TestValidateRequiredFields:
         """测试缺少所有必填字段"""
         data = {}
         errors = AssetBatchValidator.validate_required_fields(data)
-        assert len(errors) == 5
+        assert len(errors) == 6
 
     def test_empty_string_treated_as_missing(self):
         """测试空字符串视为缺失"""
@@ -53,6 +55,7 @@ class TestValidateRequiredFields:
             "ownership_status": "已确权",
             "property_nature": "商业",
             "usage_status": "在用",
+            "ownership_id": "legacy-owner-1",
         }
         errors = AssetBatchValidator.validate_required_fields(data)
         assert len(errors) == 1
@@ -66,6 +69,7 @@ class TestValidateRequiredFields:
             "ownership_status": "已确权",
             "property_nature": "商业",
             "usage_status": "在用",
+            "ownership_id": "legacy-owner-1",
         }
         errors = AssetBatchValidator.validate_required_fields(data)
         assert len(errors) == 1
@@ -80,6 +84,7 @@ class TestValidateRequiredFields:
             "property_nature": "商业",
             "usage_status": "在用",
             "rentable_area": 0,  # 0 是有效值
+            "ownership_id": "legacy-owner-1",
         }
         errors = AssetBatchValidator.validate_required_fields(data)
         assert len(errors) == 0
@@ -346,6 +351,7 @@ class TestValidateAll:
             "ownership_status": "已确权",
             "property_nature": "商业",
             "usage_status": "在用",
+            "ownership_id": "legacy-owner-1",
             "land_area": 100.0,
             # Add all suggestion fields to avoid warnings
             "rentable_area": 100.0,
@@ -372,7 +378,7 @@ class TestValidateAll:
         )
 
         assert is_valid is False
-        assert len(errors) == 4
+        assert len(errors) == 5
         assert len(validated_fields) == 1
 
     def test_invalid_numeric_format_returns_error(self):
@@ -383,6 +389,7 @@ class TestValidateAll:
             "ownership_status": "已确权",
             "property_nature": "商业",
             "usage_status": "在用",
+            "ownership_id": "legacy-owner-1",
             "land_area": "invalid",  # 无效数值
         }
         is_valid, errors, warnings, validated_fields = AssetBatchValidator.validate_all(
@@ -400,6 +407,7 @@ class TestValidateAll:
             "ownership_status": "已确权",
             "property_nature": "商业",
             "usage_status": "在用",
+            "ownership_id": "legacy-owner-1",
             "rentable_area": 100.0,
             "rented_area": 150.0,  # 不一致
         }
@@ -419,6 +427,7 @@ class TestValidateAll:
             "ownership_status": "已确权",
             "property_nature": "商业",
             "usage_status": "在用",
+            "ownership_id": "legacy-owner-1",
             "land_area": 100.0,
             "operation_agreement_start_date": "2024-01-01",
             "rentable_area": 100.0,
@@ -445,7 +454,7 @@ class TestValidateAll:
 
         # Empty list triggers default validation rules
         assert is_valid is False  # Missing required fields
-        assert len(errors) == 5  # All 5 required fields missing
+        assert len(errors) == 6  # All required fields plus owner reference missing
         assert len(validated_fields) == 0
         # 建议性警告仍然存在
         assert len(warnings) == 3

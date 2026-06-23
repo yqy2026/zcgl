@@ -16,7 +16,7 @@ import pytest
 from fastapi import status
 from sqlalchemy.orm import Session
 
-from src.core.exception_handler import ResourceNotFoundError
+from src.core.exception_handler import DuplicateResourceError, ResourceNotFoundError
 
 # ============================================================================
 # Fixtures
@@ -184,13 +184,22 @@ class TestCreateProject:
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-    def test_create_project_duplicate_code(
-        self, client, admin_user_headers, project_data
-    ):
+    def test_create_project_duplicate_code(self, client, admin_user_headers, monkeypatch):
         """测试创建重复代码的项目"""
+        from src.api.v1.assets import project as project_module
+
+        async def mock_create_project(*args, **kwargs):
+            raise DuplicateResourceError(
+                "椤圭洰", "project_code", "PRJ-TEST09-202606-0001"
+            )
+
+        monkeypatch.setattr(
+            project_module.project_service,
+            "create_project",
+            mock_create_project,
+        )
         duplicate_data = {
             "project_name": "Duplicate Project",
-            "project_code": project_data.project_code,
         }
 
         response = client.post(

@@ -19,6 +19,7 @@ from ...schemas.asset import (
     BatchProcessingError,
 )
 from ..enum_validation_service import get_enum_validation_service_async
+from .asset_service import AssetService
 from .batch_service import AsyncAssetBatchService
 
 
@@ -49,14 +50,6 @@ class AsyncAssetImportService:
             or "system"
         )
         operator_value = str(operator) if operator is not None else None
-        default_org_id = getattr(
-            current_user, "default_organization_id", None
-        )  # DEPRECATED legacy org scope fallback
-        organization_id = (  # DEPRECATED alias
-            str(default_org_id)
-            if default_org_id is not None and str(default_org_id).strip() != ""
-            else None
-        )
         enum_service = get_enum_validation_service_async(self.db)
 
         ownership_by_id, ownership_by_name = await self._load_ownership_maps(
@@ -176,12 +169,9 @@ class AsyncAssetImportService:
                     continue
 
                 if request.import_mode == "create":
-                    asset_create = AssetCreate(**asset_data)
-                    new_asset = await asset_crud.create_with_history_async(
-                        db=self.db,
-                        obj_in=asset_create,
-                        operator=operator_value,
-                        organization_id=organization_id,  # DEPRECATED alias
+                    new_asset = await self._create_asset_via_service(
+                        asset_data=asset_data,
+                        current_user=current_user,
                     )
                     if getattr(new_asset, "asset_name", None) is not None:
                         existing_assets_by_name[str(new_asset.asset_name)] = new_asset
@@ -227,12 +217,9 @@ class AsyncAssetImportService:
                     success_count += 1
                     continue
 
-                asset_create = AssetCreate(**asset_data)
-                new_asset = await asset_crud.create_with_history_async(
-                    db=self.db,
-                    obj_in=asset_create,
-                    operator=operator_value,
-                    organization_id=organization_id,  # DEPRECATED alias
+                new_asset = await self._create_asset_via_service(
+                    asset_data=asset_data,
+                    current_user=current_user,
                 )
                 if getattr(new_asset, "asset_name", None) is not None:
                     existing_assets_by_name[str(new_asset.asset_name)] = new_asset
@@ -257,6 +244,21 @@ class AsyncAssetImportService:
             errors=errors,
             imported_assets=imported_assets,
             import_id=import_id if not request.is_dry_run else None,
+        )
+
+    async def _create_asset_via_service(
+        self,
+        *,
+        asset_data: dict[str, Any],
+        current_user: User | None,
+    ) -> Asset:
+        create_data = {
+            key: value for key, value in asset_data.items() if key != "asset_code"
+        }
+        asset_create = AssetCreate(**create_data)
+        return await AssetService(self.db).create_asset(
+            asset_create,
+            current_user=current_user,
         )
 
     async def _load_ownership_maps(

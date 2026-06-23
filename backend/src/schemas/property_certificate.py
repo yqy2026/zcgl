@@ -69,6 +69,26 @@ class CertificateImportConfirm(BaseModel):
     asset_link_id: str | None = Field(default=None, description="Linked asset ID")
     should_create_new_asset: bool = Field(default=False)
     owners: list[dict[str, Any]] = Field(default_factory=list)
+    holder_party_ids: list[str] = Field(default_factory=list)
+    attachments: list["PropertyCertificateAttachmentInput"] = Field(default_factory=list)
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PropertyCertificateAttachmentInput(BaseModel):
+    """Attachment input for property certificate writes."""
+
+    file_name: str = Field(min_length=1, max_length=255)
+    storage_key: str = Field(min_length=1, max_length=500)
+    content_type: str | None = Field(default=None, max_length=100)
+    file_size: int | None = Field(default=None, ge=0)
+
+
+class PropertyCertificateAttachmentResponse(PropertyCertificateAttachmentInput):
+    """Attachment response for property certificates."""
+
+    id: str = Field(description="Attachment ID")
+    created_at: datetime = Field(description="Created at")
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -98,6 +118,9 @@ class PropertyCertificateCreate(PropertyCertificateBase):
 
     extraction_confidence: float | None = Field(default=None)
     extraction_source: str = Field(default="manual")
+    asset_ids: list[str] = Field(default_factory=list)
+    holder_party_ids: list[str] = Field(default_factory=list)
+    attachments: list[PropertyCertificateAttachmentInput] = Field(default_factory=list)
 
 
 class PropertyCertificateUpdate(BaseModel):
@@ -120,6 +143,9 @@ class PropertyCertificateUpdate(BaseModel):
     organization_id: str | None = Field(default=None, description="Deprecated organization ID")
     extraction_confidence: float | None = Field(default=None)
     extraction_source: str | None = Field(default=None)
+    asset_ids: list[str] | None = Field(default=None)
+    holder_party_ids: list[str] | None = Field(default=None)
+    attachments: list[PropertyCertificateAttachmentInput] | None = Field(default=None)
 
 
 class PropertyCertificateResponse(PropertyCertificateBase):
@@ -128,6 +154,9 @@ class PropertyCertificateResponse(PropertyCertificateBase):
     id: str = Field(description="Certificate ID")
     asset_ids: list[str] = []
     owners: list["PropertyOwnerResponse"] = Field(default_factory=list)
+    attachments: list[PropertyCertificateAttachmentResponse] = Field(
+        default_factory=list
+    )
     extraction_confidence: float | None = Field(default=None)
     extraction_source: str = Field(description="Data source")
     created_at: datetime = Field(description="Created at")

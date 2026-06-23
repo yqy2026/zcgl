@@ -16,11 +16,20 @@ from ....core.response_handler import APIResponse, PaginatedData, ResponseHandle
 from ....database import get_async_db
 from ....middleware.auth import AuthzContext, get_current_active_user, require_authz
 from ....models.auth import User
-from ....services.notification.notification_service import notification_service
+from ....services.notification.notification_service import (
+    NotificationService,
+    notification_service,
+)
 from ....services.notification.scheduler import run_notification_tasks
 from ....services.permission.rbac_service import RBACService
 
 router = APIRouter(tags=["Notifications"])
+_NOTIFICATION_CREATE_UNSCOPED_PARTY_ID = "__unscoped__:notification:create"
+_NOTIFICATION_CREATE_RESOURCE_CONTEXT: dict[str, str] = {
+    "party_id": _NOTIFICATION_CREATE_UNSCOPED_PARTY_ID,
+    "owner_party_id": _NOTIFICATION_CREATE_UNSCOPED_PARTY_ID,
+    "manager_party_id": _NOTIFICATION_CREATE_UNSCOPED_PARTY_ID,
+}
 _NOTIFICATION_UPDATE_UNSCOPED_PARTY_ID = "__unscoped__:notification:update"
 _NOTIFICATION_UPDATE_RESOURCE_CONTEXT: dict[str, str] = {
     "party_id": _NOTIFICATION_UPDATE_UNSCOPED_PARTY_ID,
@@ -70,6 +79,16 @@ class UnreadCountResponse(BaseModel):
 
 
 # ==================== API 端点 ====================
+
+
+class SystemNoticeCreateRequest(BaseModel):
+    title: str
+    content: str
+    priority: str = "normal"
+
+
+def get_notification_service() -> NotificationService:
+    return notification_service
 
 
 @router.get("", response_model=APIResponse[PaginatedData[NotificationResponse]])
@@ -141,6 +160,36 @@ async def get_unread_count(
     return UnreadCountResponse(
         unread_count=unread_count,
     )
+
+
+@router.post("/system-notices", response_model=dict)
+async def create_system_notice(
+    payload: SystemNoticeCreateRequest,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_async_db),
+    _authz_ctx: AuthzContext = Depends(
+        require_authz(
+            action="create",
+            resource_type="notification",
+            resource_context=_NOTIFICATION_CREATE_RESOURCE_CONTEXT,
+        )
+    ),
+    service: NotificationService = Depends(get_notification_service),
+) -> dict[str, int | str]:
+    rbac_service = RBACService(db)
+    if not await rbac_service.is_admin(current_user.id):
+        raise forbidden("Only administrators can create system notices")
+
+    created = await service.create_system_notice_async(
+        db,
+        title=payload.title,
+        content=payload.content,
+        priority=payload.priority,
+    )
+    return {
+        "message": "system_notice_created",
+        "created_count": len(created),
+    }
 
 
 @router.post("/{notification_id}/read", response_model=NotificationResponse)

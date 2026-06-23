@@ -62,6 +62,9 @@ def _build_contract(
 class TestAssetModelCreation:
     """Test Asset model creation and basic attributes"""
 
+    def test_asset_code_column_is_required(self):
+        assert Asset.__table__.c.asset_code.nullable is False
+
     @pytest.fixture
     def engine(self):
         """Create database engine for testing"""
@@ -131,7 +134,7 @@ class TestAssetModelCreation:
         """Test that optional fields can be None"""
         assert sample_asset.ownership_category is None
         assert sample_asset.project_name is None
-        assert sample_asset.management_entity == "Test Corporation"
+        assert sample_asset.management_entity is None
 
     def test_asset_id_generation(self, sample_asset):
         """Test that Asset ID is auto-generated"""
@@ -234,14 +237,10 @@ class TestAssetRelationshipProjectionSafety:
             for record in caplog.records
             if "selectinload(Asset.contracts)" in record.message
         ]
-        assert (
-            asset.__dict__.get("_warned_unloaded_relationship_contracts") is True
-        )
+        assert asset.__dict__.get("_warned_unloaded_relationship_contracts") is True
         assert len(warnings) <= 1
 
-    def test_ownership_entity_unloaded_relationship_warns(
-        self, monkeypatch, caplog
-    ):
+    def test_ownership_entity_unloaded_relationship_warns(self, monkeypatch, caplog):
         """Unloaded ownership relation should emit actionable warning."""
         asset = self._build_asset()
         fake_state = SimpleNamespace(
@@ -496,7 +495,7 @@ class TestAssetManagementFields:
 
     def test_management_fields(self, managed_asset):
         """Test management-related fields"""
-        assert managed_asset.management_entity == "Management Corp"
+        assert managed_asset.management_entity is None
         assert managed_asset.business_category == "零售"
         assert managed_asset.operation_status == "正常经营"
         assert managed_asset.manager_name == "John Doe"

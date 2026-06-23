@@ -165,7 +165,6 @@ class ErrorMessages:
     SESSION_NOT_FOUND: Final[str] = "会话不存在"
     ROLE_NOT_FOUND: Final[str] = "角色不存在"
     LEDGER_NOT_FOUND: Final[str] = "台账记录不存在"
-    COLLECTION_RECORD_NOT_FOUND: Final[str] = "催缴记录不存在"
     PROJECT_NOT_FOUND: Final[str] = "项目不存在"
     NOTIFICATION_NOT_FOUND: Final[str] = "通知不存在"
     TASK_NOT_FOUND: Final[str] = "任务不存在"

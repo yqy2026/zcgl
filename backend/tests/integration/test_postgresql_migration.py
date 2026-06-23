@@ -28,7 +28,9 @@ pytestmark = pytest.mark.asyncio
 async def ensure_postgresql_available():
     database_url = os.getenv("DATABASE_URL", "")
     if not database_url.startswith("postgresql+psycopg://"):
-        pytest.skip("PostgreSQL tests require DATABASE_URL to use postgresql+psycopg://")
+        pytest.skip(
+            "PostgreSQL tests require DATABASE_URL to use postgresql+psycopg://"
+        )
 
     try:
         mgr = get_database_manager()
@@ -130,7 +132,6 @@ class TestPostgreSQLConnection:
                 "organizations",
                 "users",
                 LEGACY_CONTRACTS_TABLE,
-                "collection_records",  # Updated table name
             ]
 
             for table in key_tables:
@@ -143,6 +144,16 @@ class TestPostgreSQLConnection:
                 )
                 count = result.scalar()
                 assert count == 1, f"Key table '{table}' not found"
+
+            result = await session.execute(
+                text(
+                    "SELECT COUNT(*) FROM information_schema.tables "
+                    "WHERE table_schema = 'public' AND table_name = 'collection_records'"
+                )
+            )
+            assert result.scalar() == 0, (
+                "Retired collection_records table should not exist"
+            )
 
 
 @pytest.mark.integration
@@ -329,9 +340,7 @@ class TestPostgreSQLErrorHandling:
         error_type = type(exc_info.value).__name__.lower()
         cause_msg = str(exc_info.value.__cause__ or "").lower()
         context_msg = str(exc_info.value.__context__ or "").lower()
-        diagnostic_text = " ".join(
-            [error_msg, error_type, cause_msg, context_msg]
-        )
+        diagnostic_text = " ".join([error_msg, error_type, cause_msg, context_msg])
         assert (
             "connection" in diagnostic_text
             or "refused" in diagnostic_text
@@ -442,7 +451,6 @@ class TestPostgreSQLMigrationCompleteness:
                 "organizations",
                 "users",
                 LEGACY_CONTRACTS_TABLE,
-                "collection_records",  # Updated table name
                 "contacts",
                 "notifications",  # tasks table doesn't exist
                 "operation_logs",
@@ -456,6 +464,8 @@ class TestPostgreSQLMigrationCompleteness:
                 assert table in tables, (
                     f"Required table '{table}' not found in database"
                 )
+
+            assert "collection_records" not in tables
 
     async def test_alembic_version_table(self):
         """测试Alembic版本表存在"""

@@ -347,13 +347,21 @@ class TestAnalyticsService:
         self, analytics_service
     ):
         lease_group = MagicMock(revenue_mode=RevenueMode.LEASE, data_status="正常")
-        lease_group.operator_party = MagicMock(review_status=PartyReviewStatus.APPROVED.value)
-        lease_group.owner_party = MagicMock(review_status=PartyReviewStatus.APPROVED.value)
+        lease_group.operator_party = MagicMock(
+            review_status=PartyReviewStatus.APPROVED.value
+        )
+        lease_group.owner_party = MagicMock(
+            review_status=PartyReviewStatus.APPROVED.value
+        )
 
         agency_group = MagicMock(revenue_mode=RevenueMode.AGENCY, data_status="正常")
         agency_group.contract_group_id = "group-agency"
-        agency_group.operator_party = MagicMock(review_status=PartyReviewStatus.APPROVED.value)
-        agency_group.owner_party = MagicMock(review_status=PartyReviewStatus.APPROVED.value)
+        agency_group.operator_party = MagicMock(
+            review_status=PartyReviewStatus.APPROVED.value
+        )
+        agency_group.owner_party = MagicMock(
+            review_status=PartyReviewStatus.APPROVED.value
+        )
 
         lease_contract = MagicMock(
             contract_id="contract-lease-1",
@@ -571,13 +579,21 @@ class TestAnalyticsService:
         self, analytics_service
     ):
         lease_group = MagicMock(revenue_mode=RevenueMode.LEASE, data_status="正常")
-        lease_group.operator_party = MagicMock(review_status=PartyReviewStatus.APPROVED.value)
-        lease_group.owner_party = MagicMock(review_status=PartyReviewStatus.APPROVED.value)
+        lease_group.operator_party = MagicMock(
+            review_status=PartyReviewStatus.APPROVED.value
+        )
+        lease_group.owner_party = MagicMock(
+            review_status=PartyReviewStatus.APPROVED.value
+        )
 
         agency_group = MagicMock(revenue_mode=RevenueMode.AGENCY, data_status="正常")
         agency_group.contract_group_id = "group-agency"
-        agency_group.operator_party = MagicMock(review_status=PartyReviewStatus.APPROVED.value)
-        agency_group.owner_party = MagicMock(review_status=PartyReviewStatus.APPROVED.value)
+        agency_group.operator_party = MagicMock(
+            review_status=PartyReviewStatus.APPROVED.value
+        )
+        agency_group.owner_party = MagicMock(
+            review_status=PartyReviewStatus.APPROVED.value
+        )
 
         lease_contract = MagicMock(
             contract_id="contract-lease-window",
@@ -675,8 +691,12 @@ class TestAnalyticsService:
     ):
         agency_group = MagicMock(revenue_mode=RevenueMode.AGENCY, data_status="正常")
         agency_group.contract_group_id = "group-agency"
-        agency_group.operator_party = MagicMock(review_status=PartyReviewStatus.APPROVED.value)
-        agency_group.owner_party = MagicMock(review_status=PartyReviewStatus.APPROVED.value)
+        agency_group.operator_party = MagicMock(
+            review_status=PartyReviewStatus.APPROVED.value
+        )
+        agency_group.owner_party = MagicMock(
+            review_status=PartyReviewStatus.APPROVED.value
+        )
 
         direct_contract = MagicMock(
             contract_id="contract-agency-direct-only",
@@ -699,7 +719,9 @@ class TestAnalyticsService:
             lessee_party=MagicMock(review_status=PartyReviewStatus.APPROVED.value),
         )
 
-        metrics = analytics_service._calculate_operational_metrics([direct_contract], {})
+        metrics = analytics_service._calculate_operational_metrics(
+            [direct_contract], {}
+        )
 
         assert metrics["actual_receipts"] == 0.0
         assert metrics["collection_rate"] is None
@@ -707,27 +729,35 @@ class TestAnalyticsService:
     def test_calculate_analytics_breakdowns_should_group_by_project_and_mode(
         self, analytics_service
     ):
-        project = MagicMock(id="project-1", project_name="湖滨产业园")
+        project = MagicMock(id="project-current", project_name="迁移后项目")
 
         lease_group = MagicMock(
             contract_group_id="group-lease",
-            project_id="project-1",
+            project_id="project-current",
             project=project,
             revenue_mode=RevenueMode.LEASE,
             data_status="正常",
         )
-        lease_group.operator_party = MagicMock(review_status=PartyReviewStatus.APPROVED.value)
-        lease_group.owner_party = MagicMock(review_status=PartyReviewStatus.APPROVED.value)
+        lease_group.operator_party = MagicMock(
+            review_status=PartyReviewStatus.APPROVED.value
+        )
+        lease_group.owner_party = MagicMock(
+            review_status=PartyReviewStatus.APPROVED.value
+        )
 
         agency_group = MagicMock(
             contract_group_id="group-agency",
-            project_id="project-1",
+            project_id="project-current",
             project=project,
             revenue_mode=RevenueMode.AGENCY,
             data_status="正常",
         )
-        agency_group.operator_party = MagicMock(review_status=PartyReviewStatus.APPROVED.value)
-        agency_group.owner_party = MagicMock(review_status=PartyReviewStatus.APPROVED.value)
+        agency_group.operator_party = MagicMock(
+            review_status=PartyReviewStatus.APPROVED.value
+        )
+        agency_group.owner_party = MagicMock(
+            review_status=PartyReviewStatus.APPROVED.value
+        )
 
         lease_contract = MagicMock(
             contract_id="contract-lease-1",
@@ -744,6 +774,7 @@ class TestAnalyticsService:
                     amount_due=Decimal("600.00"),
                     paid_amount=Decimal("450.00"),
                     payment_status="unpaid",
+                    attributed_project_id="project-1",
                 )
             ],
             service_fee_ledgers=[],
@@ -767,6 +798,7 @@ class TestAnalyticsService:
                     year_month="2026-05",
                     amount_due=Decimal("120.00"),
                     payment_status="paid",
+                    attributed_project_id="project-1",
                 )
             ],
             lessee_party_id="customer-2",
@@ -808,7 +840,7 @@ class TestAnalyticsService:
         assert breakdowns["project_breakdown"] == [
             {
                 "project_id": "project-1",
-                "project_name": "湖滨产业园",
+                "project_name": "project-1",
                 "contract_relation_count": 2,
                 "contract_count": 2,
                 "lease_relation_count": 1,

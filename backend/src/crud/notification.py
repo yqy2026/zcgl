@@ -137,6 +137,7 @@ class NotificationCRUD:
         related_entity_type: str,
         related_entity_id: str,
         notification_type: str,
+        priority: str | None = None,
         require_unread: bool = False,
         created_since: date | datetime | None = None,
     ) -> Notification | None:
@@ -146,6 +147,9 @@ class NotificationCRUD:
             Notification.related_entity_id == related_entity_id,
             Notification.type == notification_type,
         )
+
+        if priority is not None:
+            stmt = stmt.where(Notification.priority == priority)
 
         if require_unread:
             stmt = stmt.where(Notification.is_read.is_(False))
@@ -163,6 +167,7 @@ class NotificationCRUD:
         related_entity_type: str,
         related_entity_ids: list[str],
         notification_type: str,
+        priority: str | None = None,
         require_unread: bool = False,
         created_since: date | datetime | None = None,
     ) -> set[tuple[str, str]]:
@@ -175,6 +180,9 @@ class NotificationCRUD:
             Notification.related_entity_id.in_(related_entity_ids),
             Notification.type == notification_type,
         )
+
+        if priority is not None:
+            stmt = stmt.where(Notification.priority == priority)
 
         if require_unread:
             stmt = stmt.where(Notification.is_read.is_(False))

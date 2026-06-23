@@ -829,16 +829,15 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
               try {
                 parseJsonObjectField(value ?? '');
               } catch (error) {
-                throw new Error(error instanceof Error ? error.message : '结算规则必须是合法规则对象');
+                throw new Error(
+                  error instanceof Error ? error.message : '结算规则必须是合法规则对象'
+                );
               }
             },
           },
         ]}
       >
-        <TextArea
-          rows={6}
-          placeholder="可留空，或输入系统识别的结算规则对象"
-        />
+        <TextArea rows={6} placeholder="可留空，或输入系统识别的结算规则对象" />
       </Form.Item>
 
       {currentRevenueMode === 'AGENCY' && (

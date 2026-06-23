@@ -108,16 +108,11 @@ class ContractPaths:
         "DETAIL": "/contract-groups/{group_id}",
         "UPDATE": "/contract-groups/{group_id}",
         "DELETE": "/contract-groups/{group_id}",
-        "SUBMIT_REVIEW": "/contract-groups/{group_id}/submit-review",
         "CONTRACTS": "/contract-groups/{group_id}/contracts",
     }
     CONTRACTS = {
         "DETAIL": "/contracts/{contract_id}",
         "DELETE": "/contracts/{contract_id}",
-        "SUBMIT_REVIEW": "/contracts/{contract_id}/submit-review",
-        "APPROVE": "/contracts/{contract_id}/approve",
-        "REJECT": "/contracts/{contract_id}/reject",
-        "EXPIRE": "/contracts/{contract_id}/expire",
         "TERMINATE": "/contracts/{contract_id}/terminate",
         "VOID": "/contracts/{contract_id}/void",
         "RENT_TERMS": "/contracts/{contract_id}/rent-terms",

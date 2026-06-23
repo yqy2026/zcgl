@@ -313,9 +313,12 @@ class PartyService:
         party = await self.party_crud.get_party(db, party_id=party_id)
         if party is None:
             raise ResourceNotFoundError("主体", party_id)
-        if party.review_status != PartyReviewStatus.DRAFT:
+        if party.review_status not in (
+            PartyReviewStatus.DRAFT,
+            PartyReviewStatus.REJECTED,
+        ):
             raise OperationNotAllowedError(
-                "仅草稿状态的主体允许提审",
+                "仅草稿或已驳回状态的主体允许提审",
                 reason="party_review_submit_invalid_status",
             )
 
@@ -417,7 +420,7 @@ class PartyService:
             db,
             db_obj=party,
             obj_in={
-                "review_status": PartyReviewStatus.DRAFT.value,
+                "review_status": PartyReviewStatus.REJECTED.value,
                 "review_by": reviewer,
                 "reviewed_at": self._utcnow_naive(),
                 "review_reason": normalized_reason,
@@ -428,7 +431,7 @@ class PartyService:
             party_id=party_id,
             action="reject",
             from_status=from_status,
-            to_status=PartyReviewStatus.DRAFT.value,
+            to_status=PartyReviewStatus.REJECTED.value,
             operator=reviewer,
             reason=normalized_reason,
         )
@@ -738,7 +741,7 @@ class PartyService:
             )
             .where(
                 Contract.data_status == "正常",
-                Contract.status.in_(["ACTIVE", "EXPIRED", "TERMINATED"]),
+                Contract.status.in_(["ACTIVE", "TERMINATED"]),
             )
             .options(
                 selectinload(Contract.contract_group),

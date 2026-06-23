@@ -1,10 +1,5 @@
 import React from 'react';
-import {
-  ApartmentOutlined,
-  KeyOutlined,
-  SettingOutlined,
-  TeamOutlined,
-} from '@ant-design/icons';
+import { ApartmentOutlined, KeyOutlined, SettingOutlined, TeamOutlined } from '@ant-design/icons';
 import type { StatusTone } from './types';
 
 export const roleStatusOptions: Array<{

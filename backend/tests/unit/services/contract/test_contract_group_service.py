@@ -34,6 +34,8 @@ from src.models.project import Project
 from src.schemas.contract_group import (
     ContractCreate,
     ContractGroupCreate,
+    ContractScanDocumentCreate,
+    ContractScanDocumentReplaceRequest,
     LeaseDetailCreate,
     SettlementRuleSchema,
 )
@@ -55,11 +57,13 @@ def _make_contract(
     status: ContractLifecycleStatus,
     data_status: str = "正常",
     group_relation_type: GroupRelationType = GroupRelationType.UPSTREAM,
+    effective_to: date | None = None,
 ) -> MagicMock:
     c = MagicMock(spec=Contract)
     c.status = status
     c.data_status = data_status
     c.group_relation_type = group_relation_type  # 枚举成员，非字符串
+    c.effective_to = effective_to
     return c
 
 
@@ -108,11 +112,26 @@ def _valid_contract_create(**kwargs) -> ContractCreate:
         group_relation_type=GroupRelationType.UPSTREAM,
         lessor_party_id="party_lessor",
         lessee_party_id="party_lessee",
+        sign_date=date(2026, 1, 1),
         effective_from=date(2026, 1, 1),
         lease_detail=LeaseDetailCreate(rent_amount=Decimal("10000")),
     )
     defaults.update(kwargs)
     return ContractCreate(**defaults)
+
+
+def _party_name_lookup() -> AsyncMock:
+    names = {
+        "party_lessor": "出租方签署名",
+        "party_lessee": "承租方签署名",
+        "party-operator": "运营方签署名",
+        "party-owner": "产权方签署名",
+    }
+
+    async def _get_party(_db: MagicMock, *, party_id: str) -> SimpleNamespace:
+        return SimpleNamespace(id=party_id, name=names.get(party_id, party_id))
+
+    return AsyncMock(side_effect=_get_party)
 
 
 # ─── calculate_derived_status ─────────────────────────────────────────────────
@@ -129,26 +148,27 @@ class TestCalculateDerivedStatus:
         assert calculate_derived_status(contracts) == "筹备中"
 
     def test_b5_one_active_returns_active(self):
-        """B5: 有一条合同处于生效，其他已到期 → 生效中"""
+        """B5: 有一条合同处于生效，其他自然到期 → 生效中"""
         contracts = [
             _make_contract(ContractLifecycleStatus.ACTIVE),
-            _make_contract(ContractLifecycleStatus.EXPIRED),
-            _make_contract(ContractLifecycleStatus.EXPIRED),
+            _make_contract(
+                ContractLifecycleStatus.ACTIVE, effective_to=date(2026, 1, 1)
+            ),
+            _make_contract(
+                ContractLifecycleStatus.ACTIVE, effective_to=date(2026, 1, 2)
+            ),
         ]
         assert calculate_derived_status(contracts) == "生效中"
 
-    def test_b6_all_expired_or_terminated_returns_ended(self):
-        """B6: 所有合同均已终止或已到期 → 已结束"""
+    def test_b6_all_naturally_expired_or_terminated_returns_ended(self):
+        """B6: 所有合同均已终止或自然到期 → 已结束"""
         contracts = [
-            _make_contract(ContractLifecycleStatus.EXPIRED),
+            _make_contract(
+                ContractLifecycleStatus.ACTIVE, effective_to=date(2026, 1, 1)
+            ),
             _make_contract(ContractLifecycleStatus.TERMINATED),
         ]
         assert calculate_derived_status(contracts) == "已结束"
-
-    def test_pending_review_still_preparing(self):
-        """待审状态不触发生效中（只有 ACTIVE 才算）"""
-        contracts = [_make_contract(ContractLifecycleStatus.PENDING_REVIEW)]
-        assert calculate_derived_status(contracts) == "筹备中"
 
     def test_deleted_contracts_excluded(self):
         """已删除合同不参与计算"""
@@ -226,11 +246,6 @@ class TestRevenueModeCompatibility:
 
 
 class TestValidateSignDate:
-    def test_b8_pending_review_without_sign_date_raises(self):
-        """B8: 待审且 sign_date=None → OperationNotAllowedError"""
-        with pytest.raises(OperationNotAllowedError, match="sign_date"):
-            validate_sign_date_for_status(ContractLifecycleStatus.PENDING_REVIEW, None)
-
     def test_b8_active_without_sign_date_raises(self):
         """B8: 生效且 sign_date=None → OperationNotAllowedError"""
         with pytest.raises(OperationNotAllowedError, match="sign_date"):
@@ -355,9 +370,7 @@ class TestCreateContractGroupDuplicateCheck:
         assert group.settlement_rule is None
 
     def test_contract_group_create_allows_null_settlement_rule(self):
-        group = ContractGroupCreate(
-            **_valid_group_create_payload(settlement_rule=None)
-        )
+        group = ContractGroupCreate(**_valid_group_create_payload(settlement_rule=None))
 
         assert group.settlement_rule is None
 
@@ -401,9 +414,7 @@ class TestCreateContractGroupDuplicateCheck:
         assert result.contract_group_id == "grp_001"
         assert mock_create.await_args.kwargs["data"]["project_id"] == "project-1"
 
-    async def test_create_group_persists_null_settlement_rule(
-        self, mock_db: MagicMock
-    ):
+    async def test_create_group_persists_null_settlement_rule(self, mock_db: MagicMock):
         service = ContractGroupService()
         created_group = MagicMock()
         created_group.contract_group_id = "grp_001"
@@ -444,6 +455,11 @@ class TestCreateContractGroupDuplicateCheck:
                 return_value=None,
             ),
             patch(
+                "src.services.contract.contract_group_service.contract_group_crud.list_current_project_bindings_for_assets",
+                new_callable=AsyncMock,
+                return_value=[{"asset_id": "asset-1", "project_id": "project-1"}],
+            ),
+            patch(
                 "src.services.contract.contract_group_service.contract_group_crud.list_active_group_bindings_for_assets",
                 new_callable=AsyncMock,
                 return_value=[
@@ -463,6 +479,67 @@ class TestCreateContractGroupDuplicateCheck:
                     group_code="GRP-NEW",
                 )
 
+    async def test_create_group_should_reject_asset_outside_group_project(
+        self, mock_db: MagicMock
+    ) -> None:
+        """C5: 合同关系覆盖资产必须属于该关系所属项目。"""
+        service = ContractGroupService()
+
+        with (
+            patch(
+                "src.services.contract.contract_group_service.contract_group_crud.get_by_code",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_group_crud.list_current_project_bindings_for_assets",
+                new_callable=AsyncMock,
+                return_value=[{"asset_id": "asset-1", "project_id": "other-project"}],
+            ),
+        ):
+            with pytest.raises(OperationNotAllowedError, match="asset-1"):
+                await service.create_contract_group(
+                    mock_db,
+                    obj_in=_valid_group_create(asset_ids=["asset-1"]),
+                    group_code="GRP-NEW",
+                )
+
+    async def test_update_group_should_reject_asset_outside_group_project(
+        self, mock_db: MagicMock
+    ) -> None:
+        """C5: 编辑合同关系资产时仍按当前项目归属校验。"""
+        service = ContractGroupService()
+        existing_group = MagicMock()
+        existing_group.contract_group_id = "group-current"
+        existing_group.project_id = "project-1"
+
+        with (
+            patch(
+                "src.services.contract.contract_group_service.contract_group_crud.get",
+                new_callable=AsyncMock,
+                return_value=existing_group,
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_group_crud.list_current_project_bindings_for_assets",
+                new_callable=AsyncMock,
+                return_value=[{"asset_id": "asset-2", "project_id": "other-project"}],
+            ),
+        ):
+            with pytest.raises(OperationNotAllowedError, match="asset-2"):
+                await service.update_contract_group(
+                    mock_db,
+                    group_id="group-current",
+                    obj_in=SimpleNamespace(
+                        asset_ids=["asset-2"],
+                        model_fields_set={"asset_ids"},
+                        settlement_rule=None,
+                        effective_to=None,
+                        revenue_attribution_rule=None,
+                        revenue_share_rule=None,
+                        risk_tags=None,
+                    ),
+                )
+
     async def test_create_group_should_allow_assets_bound_in_same_project(
         self, mock_db: MagicMock
     ) -> None:
@@ -475,6 +552,11 @@ class TestCreateContractGroupDuplicateCheck:
                 "src.services.contract.contract_group_service.contract_group_crud.get_by_code",
                 new_callable=AsyncMock,
                 return_value=None,
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_group_crud.list_current_project_bindings_for_assets",
+                new_callable=AsyncMock,
+                return_value=[{"asset_id": "asset-1", "project_id": "project-1"}],
             ),
             patch(
                 "src.services.contract.contract_group_service.contract_group_crud.list_active_group_bindings_for_assets",
@@ -518,6 +600,11 @@ class TestCreateContractGroupDuplicateCheck:
                 return_value=existing_group,
             ),
             patch(
+                "src.services.contract.contract_group_service.contract_group_crud.list_current_project_bindings_for_assets",
+                new_callable=AsyncMock,
+                return_value=[{"asset_id": "asset-2", "project_id": "project-1"}],
+            ),
+            patch(
                 "src.services.contract.contract_group_service.contract_group_crud.list_active_group_bindings_for_assets",
                 new_callable=AsyncMock,
                 return_value=[
@@ -544,6 +631,58 @@ class TestCreateContractGroupDuplicateCheck:
                         risk_tags=None,
                     ),
                 )
+
+    async def test_update_group_should_reject_when_existing_contract_assets_exceed_new_scope(
+        self, mock_db: MagicMock
+    ) -> None:
+        """C6: 缩小合同关系资产范围不得挤出已有合同显式覆盖资产。"""
+        service = ContractGroupService()
+        existing_group = MagicMock()
+        existing_group.contract_group_id = "group-current"
+        existing_group.project_id = "project-1"
+
+        with (
+            patch(
+                "src.services.contract.contract_group_service.contract_group_crud.get",
+                new_callable=AsyncMock,
+                return_value=existing_group,
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_group_crud.list_current_project_bindings_for_assets",
+                new_callable=AsyncMock,
+                return_value=[{"asset_id": "asset-1", "project_id": "project-1"}],
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_group_crud.list_active_group_bindings_for_assets",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_group_crud.list_contract_asset_ids_by_group",
+                new_callable=AsyncMock,
+                return_value=[{"contract_id": "contract-1", "asset_ids": ["asset-2"]}],
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_group_crud.update",
+                new_callable=AsyncMock,
+            ) as mock_update,
+        ):
+            with pytest.raises(OperationNotAllowedError, match="contract-1"):
+                await service.update_contract_group(
+                    mock_db,
+                    group_id="group-current",
+                    obj_in=SimpleNamespace(
+                        asset_ids=["asset-1"],
+                        model_fields_set={"asset_ids"},
+                        settlement_rule=None,
+                        effective_to=None,
+                        revenue_attribution_rule=None,
+                        revenue_share_rule=None,
+                        risk_tags=None,
+                    ),
+                )
+
+        mock_update.assert_not_awaited()
 
     async def test_update_group_should_clear_settlement_rule_when_explicit_null(
         self, mock_db: MagicMock
@@ -601,6 +740,11 @@ class TestCreateContractGroupDuplicateCheck:
                 return_value=existing_group,
             ),
             patch(
+                "src.services.contract.contract_group_service.contract_group_crud.list_current_project_bindings_for_assets",
+                new_callable=AsyncMock,
+                return_value=[{"asset_id": "asset-2", "project_id": "project-1"}],
+            ),
+            patch(
                 "src.services.contract.contract_group_service.contract_group_crud.list_active_group_bindings_for_assets",
                 new_callable=AsyncMock,
                 return_value=[
@@ -611,6 +755,11 @@ class TestCreateContractGroupDuplicateCheck:
                         "group_code": "GRP-OTHER",
                     }
                 ],
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_group_crud.list_contract_asset_ids_by_group",
+                new_callable=AsyncMock,
+                return_value=[],
             ),
             patch(
                 "src.services.contract.contract_group_service.contract_group_crud.update",
@@ -864,6 +1013,7 @@ class TestAddContractToGroup:
         service = ContractGroupService()
         mock_group = MagicMock(spec=ContractGroup)
         mock_group.revenue_mode = RevenueMode.LEASE
+        mock_group.project_id = "project-1"
         existing_contract = MagicMock(spec=Contract)
 
         with (
@@ -873,24 +1023,131 @@ class TestAddContractToGroup:
                 return_value=mock_group,
             ),
             patch(
+                "src.services.contract.contract_group_service.party_service.assert_parties_approved",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
+            patch(
+                "src.services.contract.contract_group_service.party_service.get_party",
+                new=_party_name_lookup(),
+            ),
+            patch(
                 "src.services.contract.contract_group_service.contract_crud.get_by_contract_number",
                 new_callable=AsyncMock,
                 return_value=existing_contract,
-            ),
+            ) as mock_get_by_number,
         ):
             with pytest.raises(DuplicateResourceError):
                 await service.add_contract_to_group(
                     mock_db,
                     obj_in=_valid_contract_create(contract_number="HT-DUP-001"),
                 )
+        mock_get_by_number.assert_awaited_once_with(
+            mock_db,
+            contract_number="HT-DUP-001",
+            project_id="project-1",
+        )
 
-    async def test_add_contract_passes_contract_number_to_crud(
+    async def test_duplicate_contract_number_in_other_project_is_allowed(
         self, mock_db: MagicMock
-    ):
-        """创建合同时必须把 contract_number 写入新 contracts 基表。"""
+    ) -> None:
         service = ContractGroupService()
         mock_group = MagicMock(spec=ContractGroup)
         mock_group.revenue_mode = RevenueMode.LEASE
+        mock_group.project_id = "project-2"
+        mock_group.operator_party_id = "party-operator"
+        mock_group.owner_party_id = "party-owner"
+        created_contract = MagicMock(spec=Contract)
+        created_contract.contract_id = "contract-002"
+
+        with (
+            patch(
+                "src.services.contract.contract_group_service.contract_group_crud.get",
+                new_callable=AsyncMock,
+                return_value=mock_group,
+            ),
+            patch(
+                "src.services.contract.contract_group_service.party_service.assert_parties_approved",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
+            patch(
+                "src.services.contract.contract_group_service.party_service.get_party",
+                new=_party_name_lookup(),
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.get_by_contract_number",
+                new_callable=AsyncMock,
+                return_value=None,
+            ) as mock_get_by_number,
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.create",
+                new_callable=AsyncMock,
+                return_value=created_contract,
+            ) as mock_create,
+            patch(
+                "src.services.contract.contract_group_service.ledger_service_v2.generate_ledger_on_activation",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+        ):
+            result = await service.add_contract_to_group(
+                mock_db,
+                obj_in=_valid_contract_create(contract_number="HT-SHARED-001"),
+            )
+
+        assert result is created_contract
+        mock_get_by_number.assert_awaited_once_with(
+            mock_db,
+            contract_number="HT-SHARED-001",
+            project_id="project-2",
+        )
+        assert mock_create.await_args.kwargs["data"]["project_id"] == "project-2"
+
+    async def test_add_contract_should_reject_assets_outside_group_scope(
+        self, mock_db: MagicMock
+    ) -> None:
+        """C6: 单合同覆盖资产不得超出所属合同关系覆盖资产。"""
+        service = ContractGroupService()
+        mock_group = MagicMock(spec=ContractGroup)
+        mock_group.revenue_mode = RevenueMode.LEASE
+        mock_group.project_id = "project-1"
+
+        with (
+            patch(
+                "src.services.contract.contract_group_service.contract_group_crud.get",
+                new_callable=AsyncMock,
+                return_value=mock_group,
+            ),
+            patch(
+                "src.services.contract.contract_group_service.party_service.assert_parties_approved",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
+            patch(
+                "src.services.contract.contract_group_service.party_service.get_party",
+                new=_party_name_lookup(),
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_group_crud.list_asset_ids_for_group",
+                new_callable=AsyncMock,
+                return_value=["asset-1"],
+            ),
+        ):
+            with pytest.raises(OperationNotAllowedError, match="asset-2"):
+                await service.add_contract_to_group(
+                    mock_db,
+                    obj_in=_valid_contract_create(asset_ids=["asset-2"]),
+                )
+
+    async def test_add_contract_should_allow_empty_asset_ids_as_whole_group_rent(
+        self, mock_db: MagicMock
+    ) -> None:
+        """C6: asset_ids 留空表示覆盖合同关系全部资产，跳过子集校验。"""
+        service = ContractGroupService()
+        mock_group = MagicMock(spec=ContractGroup)
+        mock_group.revenue_mode = RevenueMode.LEASE
+        mock_group.project_id = "project-1"
         created_contract = MagicMock(spec=Contract)
         created_contract.contract_id = "contract-001"
 
@@ -899,6 +1156,71 @@ class TestAddContractToGroup:
                 "src.services.contract.contract_group_service.contract_group_crud.get",
                 new_callable=AsyncMock,
                 return_value=mock_group,
+            ),
+            patch(
+                "src.services.contract.contract_group_service.party_service.assert_parties_approved",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
+            patch(
+                "src.services.contract.contract_group_service.party_service.get_party",
+                new=_party_name_lookup(),
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_group_crud.list_asset_ids_for_group",
+                new_callable=AsyncMock,
+                return_value=["asset-1"],
+            ) as mock_list_assets,
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.get_by_contract_number",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.create",
+                new_callable=AsyncMock,
+                return_value=created_contract,
+            ) as mock_create,
+            patch(
+                "src.services.contract.contract_group_service.ledger_service_v2.generate_ledger_on_activation",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+        ):
+            result = await service.add_contract_to_group(
+                mock_db,
+                obj_in=_valid_contract_create(asset_ids=[]),
+            )
+
+        assert result.contract_id == "contract-001"
+        mock_list_assets.assert_not_awaited()
+        assert mock_create.await_args.kwargs["asset_ids"] is None
+
+    async def test_add_contract_passes_contract_number_to_crud(
+        self, mock_db: MagicMock
+    ):
+        """创建合同时必须把 contract_number 写入新 contracts 基表。"""
+        service = ContractGroupService()
+        mock_group = MagicMock(spec=ContractGroup)
+        mock_group.revenue_mode = RevenueMode.LEASE
+        mock_group.project_id = "project-1"
+        created_contract = MagicMock(spec=Contract)
+        created_contract.contract_id = "contract-001"
+
+        with (
+            patch(
+                "src.services.contract.contract_group_service.contract_group_crud.get",
+                new_callable=AsyncMock,
+                return_value=mock_group,
+            ),
+            patch(
+                "src.services.contract.contract_group_service.party_service.assert_parties_approved",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
+            patch(
+                "src.services.contract.contract_group_service.party_service.get_party",
+                new=_party_name_lookup(),
             ),
             patch(
                 "src.services.contract.contract_group_service.contract_crud.get_by_contract_number",
@@ -910,6 +1232,11 @@ class TestAddContractToGroup:
                 new_callable=AsyncMock,
                 return_value=created_contract,
             ) as mock_create,
+            patch(
+                "src.services.contract.contract_group_service.ledger_service_v2.generate_ledger_on_activation",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
         ):
             result = await service.add_contract_to_group(
                 mock_db,
@@ -922,106 +1249,485 @@ class TestAddContractToGroup:
         )
 
 
-class TestSubmitReviewRequiresApprovedParties:
-    async def test_submit_review_should_block_when_related_party_not_approved(
+class TestAddContractRequiresApprovedParties:
+    async def test_add_contract_should_block_when_related_party_not_approved(
         self, mock_db: MagicMock
     ) -> None:
         service = ContractGroupService()
-        contract = MagicMock(spec=Contract)
-        contract.contract_id = "contract-001"
-        contract.contract_group_id = "group-001"
-        contract.sign_date = date(2026, 1, 1)
-        contract.status = ContractLifecycleStatus.DRAFT
-        contract.lessor_party_id = "party-lessor"
-        contract.lessee_party_id = "party-lessee"
-
-        group = SimpleNamespace(
-            contract_group_id="group-001",
-            operator_party_id="party-operator",
-            owner_party_id="party-owner",
-        )
+        mock_group = MagicMock(spec=ContractGroup)
+        mock_group.revenue_mode = RevenueMode.LEASE
+        mock_group.project_id = "project-1"
+        mock_group.operator_party_id = "party-operator"
+        mock_group.owner_party_id = "party-owner"
 
         with (
-            patch.object(
-                service, "_get_contract_or_raise", AsyncMock(return_value=contract)
-            ),
             patch(
                 "src.services.contract.contract_group_service.contract_group_crud.get",
                 new_callable=AsyncMock,
-                return_value=group,
-            ),
-            patch.object(
-                mock_db,
-                "execute",
-                new=AsyncMock(return_value=MagicMock(all=MagicMock(return_value=[]))),
+                return_value=mock_group,
             ),
             patch(
                 "src.services.contract.contract_group_service.party_service.assert_parties_approved",
                 new_callable=AsyncMock,
                 side_effect=OperationNotAllowedError("存在未审核主体"),
             ) as mock_assert,
-            patch.object(
-                service, "_transition_contract", AsyncMock()
-            ) as mock_transition,
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.create",
+                new_callable=AsyncMock,
+            ) as mock_create,
         ):
             with pytest.raises(OperationNotAllowedError, match="未审核主体"):
-                await service.submit_review(mock_db, contract_id="contract-001")
+                await service.add_contract_to_group(
+                    mock_db,
+                    obj_in=_valid_contract_create(),
+                )
 
         mock_assert.assert_awaited_once_with(
             mock_db,
             party_ids=[
-                "party-lessor",
-                "party-lessee",
+                "party_lessor",
+                "party_lessee",
                 "party-operator",
                 "party-owner",
             ],
-            operation="合同提审",
+            operation="合同补录",
         )
-        mock_transition.assert_not_awaited()
+        mock_create.assert_not_awaited()
 
-    async def test_submit_review_should_transition_when_all_related_parties_approved(
+    async def test_add_contract_should_create_active_contract_and_generate_ledger(
         self, mock_db: MagicMock
     ) -> None:
         service = ContractGroupService()
-        contract = MagicMock(spec=Contract)
-        contract.contract_id = "contract-001"
-        contract.contract_group_id = "group-001"
-        contract.sign_date = date(2026, 1, 1)
-        contract.status = ContractLifecycleStatus.DRAFT
-        contract.lessor_party_id = "party-lessor"
-        contract.lessee_party_id = "party-lessee"
-
-        group = SimpleNamespace(
-            contract_group_id="group-001",
-            operator_party_id="party-operator",
-            owner_party_id="party-owner",
-        )
+        mock_group = MagicMock(spec=ContractGroup)
+        mock_group.revenue_mode = RevenueMode.LEASE
+        mock_group.project_id = "project-1"
+        mock_group.operator_party_id = "party-operator"
+        mock_group.owner_party_id = "party-owner"
+        created_contract = MagicMock(spec=Contract)
+        created_contract.contract_id = "contract-001"
 
         with (
-            patch.object(
-                service, "_get_contract_or_raise", AsyncMock(return_value=contract)
-            ),
             patch(
                 "src.services.contract.contract_group_service.contract_group_crud.get",
                 new_callable=AsyncMock,
-                return_value=group,
-            ),
-            patch.object(
-                mock_db,
-                "execute",
-                new=AsyncMock(return_value=MagicMock(all=MagicMock(return_value=[]))),
+                return_value=mock_group,
             ),
             patch(
                 "src.services.contract.contract_group_service.party_service.assert_parties_approved",
                 new_callable=AsyncMock,
                 return_value=None,
             ) as mock_assert,
-            patch.object(
-                service, "_transition_contract", AsyncMock(return_value=contract)
-            ) as mock_transition,
+            patch(
+                "src.services.contract.contract_group_service.party_service.get_party",
+                new=_party_name_lookup(),
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.get_by_contract_number",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.create",
+                new_callable=AsyncMock,
+                return_value=created_contract,
+            ) as mock_create,
+            patch(
+                "src.services.contract.contract_group_service.ledger_service_v2.generate_ledger_on_activation",
+                new_callable=AsyncMock,
+                return_value=[],
+            ) as mock_generate_ledger,
         ):
-            result = await service.submit_review(mock_db, contract_id="contract-001")
+            result = await service.add_contract_to_group(
+                mock_db,
+                obj_in=_valid_contract_create(),
+            )
 
-        assert result == (contract, [])
+        assert result is created_contract
+        assert mock_create.await_args.kwargs["data"]["status"] == "ACTIVE"
+        assert mock_create.await_args.kwargs["data"]["project_id"] == "project-1"
+        assert (
+            mock_create.await_args.kwargs["data"]["lessor_name_snapshot"]
+            == "出租方签署名"
+        )
+        assert (
+            mock_create.await_args.kwargs["data"]["lessee_name_snapshot"]
+            == "承租方签署名"
+        )
+        assert (
+            mock_create.await_args.kwargs["lease_detail_data"]["tenant_name"]
+            == "承租方签署名"
+        )
+        assert "review_status" not in mock_create.await_args.kwargs["data"]
         mock_assert.assert_awaited_once()
-        mock_transition.assert_awaited_once()
+        mock_generate_ledger.assert_awaited_once_with(
+            mock_db,
+            contract_id="contract-001",
+        )
+        mock_db.commit.assert_awaited_once()
+
+
+class TestContractScanDocuments:
+    @staticmethod
+    def _scan_contract(
+        *,
+        contract_id: str,
+        contract_number: str = "HT-SHARED-001",
+        group_relation_type: GroupRelationType = GroupRelationType.ENTRUSTED,
+        revenue_mode: RevenueMode = RevenueMode.AGENCY,
+    ) -> SimpleNamespace:
+        return SimpleNamespace(
+            contract_id=contract_id,
+            contract_number=contract_number,
+            lessor_party_id="party-owner",
+            lessee_party_id="party-operator",
+            group_relation_type=group_relation_type,
+            contract_group=SimpleNamespace(revenue_mode=revenue_mode),
+        )
+
+    async def test_replace_scan_documents_updates_same_number_sibling_contracts(
+        self, mock_db: MagicMock
+    ) -> None:
+        service = ContractGroupService()
+        source_contract = self._scan_contract(contract_id="contract-a")
+        sibling_contract = self._scan_contract(contract_id="contract-b")
+        created_document = SimpleNamespace(
+            document_id="doc-1",
+            storage_key="scans/HT-SHARED-001.pdf",
+            original_filename="HT-SHARED-001.pdf",
+            content_type="application/pdf",
+            file_size=128,
+            checksum_sha256="a" * 64,
+            data_status="正常",
+            created_at=datetime(2026, 1, 1),
+            updated_at=datetime(2026, 1, 1),
+        )
+        payload = ContractScanDocumentReplaceRequest(
+            documents=[
+                ContractScanDocumentCreate(
+                    storage_key="scans/HT-SHARED-001.pdf",
+                    original_filename="HT-SHARED-001.pdf",
+                    content_type="application/pdf",
+                    file_size=128,
+                    checksum_sha256="a" * 64,
+                )
+            ]
+        )
+
+        with (
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.get",
+                new_callable=AsyncMock,
+                return_value=source_contract,
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.get_scan_document_by_storage_key",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.create_scan_document",
+                new_callable=AsyncMock,
+                return_value=created_document,
+            ) as mock_create_doc,
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.list_by_contract_number",
+                new_callable=AsyncMock,
+                return_value=[source_contract, sibling_contract],
+            ) as mock_list_by_number,
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.replace_scan_document_links_for_contracts",
+                new_callable=AsyncMock,
+            ) as mock_replace_links,
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.list_scan_documents_by_contract",
+                new_callable=AsyncMock,
+                return_value=[created_document],
+            ),
+        ):
+            result = await service.replace_contract_scan_documents(
+                mock_db,
+                contract_id="contract-a",
+                obj_in=payload,
+                current_user="user-1",
+            )
+
+        assert [item.document_id for item in result] == ["doc-1"]
+        mock_create_doc.assert_awaited_once()
+        assert mock_create_doc.await_args.kwargs["data"]["data_status"] == "正常"
+        mock_list_by_number.assert_awaited_once_with(
+            mock_db,
+            contract_number="HT-SHARED-001",
+            lessor_party_id="party-owner",
+            lessee_party_id="party-operator",
+            shared_scan_scope_only=True,
+        )
+        mock_replace_links.assert_awaited_once_with(
+            mock_db,
+            contract_ids=["contract-a", "contract-b"],
+            document_ids=["doc-1"],
+        )
+        mock_db.commit.assert_awaited_once()
+
+    async def test_non_agency_or_non_entrusted_same_number_contract_updates_only_self(
+        self, mock_db: MagicMock
+    ) -> None:
+        service = ContractGroupService()
+        source_contract = self._scan_contract(
+            contract_id="contract-a",
+            group_relation_type=GroupRelationType.UPSTREAM,
+            revenue_mode=RevenueMode.LEASE,
+        )
+        existing_document = SimpleNamespace(
+            document_id="doc-1",
+            storage_key="scans/HT-SHARED-001.pdf",
+            original_filename="HT-SHARED-001.pdf",
+            content_type="application/pdf",
+            file_size=128,
+            checksum_sha256="a" * 64,
+            data_status="正常",
+            created_at=datetime(2026, 1, 1),
+            updated_at=datetime(2026, 1, 1),
+        )
+        payload = ContractScanDocumentReplaceRequest(
+            documents=[
+                ContractScanDocumentCreate(
+                    storage_key="scans/HT-SHARED-001.pdf",
+                    original_filename="HT-SHARED-001.pdf",
+                    content_type="application/pdf",
+                    file_size=128,
+                    checksum_sha256="a" * 64,
+                )
+            ]
+        )
+
+        with (
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.get",
+                new_callable=AsyncMock,
+                return_value=source_contract,
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.get_scan_document_by_storage_key",
+                new_callable=AsyncMock,
+                return_value=existing_document,
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.list_contract_ids_linked_to_scan_document",
+                new_callable=AsyncMock,
+                return_value=["contract-a"],
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.update_scan_document",
+                new_callable=AsyncMock,
+                return_value=existing_document,
+            ) as mock_update_doc,
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.list_by_contract_number",
+                new_callable=AsyncMock,
+            ) as mock_list_by_number,
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.replace_scan_document_links_for_contracts",
+                new_callable=AsyncMock,
+            ) as mock_replace_links,
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.list_scan_documents_by_contract",
+                new_callable=AsyncMock,
+                return_value=[existing_document],
+            ),
+        ):
+            await service.replace_contract_scan_documents(
+                mock_db,
+                contract_id="contract-a",
+                obj_in=payload,
+                current_user="user-1",
+            )
+
+        mock_update_doc.assert_awaited_once()
+        mock_list_by_number.assert_not_awaited()
+        mock_replace_links.assert_awaited_once_with(
+            mock_db,
+            contract_ids=["contract-a"],
+            document_ids=["doc-1"],
+        )
+
+    async def test_reusing_scan_document_linked_outside_scope_fails_before_mutation(
+        self, mock_db: MagicMock
+    ) -> None:
+        service = ContractGroupService()
+        source_contract = self._scan_contract(contract_id="contract-a")
+        sibling_contract = self._scan_contract(contract_id="contract-b")
+        existing_document = SimpleNamespace(
+            document_id="doc-1",
+            storage_key="scans/HT-SHARED-001.pdf",
+            original_filename="old.pdf",
+            content_type="application/pdf",
+            file_size=64,
+            checksum_sha256="b" * 64,
+            data_status="正常",
+            created_at=datetime(2026, 1, 1),
+            updated_at=datetime(2026, 1, 1),
+        )
+        payload = ContractScanDocumentReplaceRequest(
+            documents=[
+                ContractScanDocumentCreate(
+                    storage_key="scans/HT-SHARED-001.pdf",
+                    original_filename="HT-SHARED-001.pdf",
+                    content_type="application/pdf",
+                    file_size=128,
+                    checksum_sha256="a" * 64,
+                )
+            ]
+        )
+
+        with (
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.get",
+                new_callable=AsyncMock,
+                return_value=source_contract,
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.list_by_contract_number",
+                new_callable=AsyncMock,
+                return_value=[source_contract, sibling_contract],
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.get_scan_document_by_storage_key",
+                new_callable=AsyncMock,
+                return_value=existing_document,
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.list_contract_ids_linked_to_scan_document",
+                new_callable=AsyncMock,
+                return_value=["contract-a", "contract-b", "contract-outside"],
+            ) as mock_list_linked,
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.update_scan_document",
+                new_callable=AsyncMock,
+            ) as mock_update_doc,
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.replace_scan_document_links_for_contracts",
+                new_callable=AsyncMock,
+            ) as mock_replace_links,
+        ):
+            with pytest.raises(
+                OperationNotAllowedError,
+                match="outside affected contracts",
+            ) as exc_info:
+                await service.replace_contract_scan_documents(
+                    mock_db,
+                    contract_id="contract-a",
+                    obj_in=payload,
+                    current_user="user-1",
+                )
+
+        assert (
+            exc_info.value.details["reason"] == "contract_scan_document_scope_conflict"
+        )
+        assert exc_info.value.details["outside_contract_ids"] == ["contract-outside"]
+        mock_list_linked.assert_awaited_once_with(
+            mock_db,
+            document_id="doc-1",
+        )
+        mock_update_doc.assert_not_awaited()
+        mock_replace_links.assert_not_awaited()
+        mock_db.commit.assert_not_awaited()
+
+    async def test_delete_scan_document_rejects_leaving_any_contract_empty(
+        self, mock_db: MagicMock
+    ) -> None:
+        service = ContractGroupService()
+        source_contract = self._scan_contract(contract_id="contract-a")
+        sibling_contract = self._scan_contract(contract_id="contract-b")
+
+        with (
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.get",
+                new_callable=AsyncMock,
+                return_value=source_contract,
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.list_by_contract_number",
+                new_callable=AsyncMock,
+                return_value=[source_contract, sibling_contract],
+            ) as mock_list_by_number,
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.list_contract_ids_linked_to_scan_document",
+                new_callable=AsyncMock,
+                return_value=["contract-a", "contract-b"],
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.count_scan_documents_by_contracts",
+                new_callable=AsyncMock,
+                return_value={"contract-a": 1, "contract-b": 2},
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.unlink_scan_document_from_contracts",
+                new_callable=AsyncMock,
+            ) as mock_unlink,
+        ):
+            with pytest.raises(
+                OperationNotAllowedError,
+                match="delete would leave contracts without scan documents",
+            ) as exc_info:
+                await service.delete_contract_scan_document(
+                    mock_db,
+                    contract_id="contract-a",
+                    document_id="doc-1",
+                )
+
+        assert exc_info.value.details["reason"] == "contract_scan_document_required"
+        mock_unlink.assert_not_awaited()
+        mock_list_by_number.assert_awaited_once_with(
+            mock_db,
+            contract_number="HT-SHARED-001",
+            lessor_party_id="party-owner",
+            lessee_party_id="party-operator",
+            shared_scan_scope_only=True,
+        )
+        mock_db.commit.assert_not_awaited()
+
+    async def test_delete_scan_document_unlinks_when_all_contracts_keep_documents(
+        self, mock_db: MagicMock
+    ) -> None:
+        service = ContractGroupService()
+        source_contract = self._scan_contract(contract_id="contract-a")
+        sibling_contract = self._scan_contract(contract_id="contract-b")
+
+        with (
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.get",
+                new_callable=AsyncMock,
+                return_value=source_contract,
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.list_by_contract_number",
+                new_callable=AsyncMock,
+                return_value=[source_contract, sibling_contract],
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.list_contract_ids_linked_to_scan_document",
+                new_callable=AsyncMock,
+                return_value=["contract-a", "contract-b"],
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.count_scan_documents_by_contracts",
+                new_callable=AsyncMock,
+                return_value={"contract-a": 2, "contract-b": 2},
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.unlink_scan_document_from_contracts",
+                new_callable=AsyncMock,
+            ) as mock_unlink,
+        ):
+            await service.delete_contract_scan_document(
+                mock_db,
+                contract_id="contract-a",
+                document_id="doc-1",
+            )
+
+        mock_unlink.assert_awaited_once_with(
+            mock_db,
+            contract_ids=["contract-a", "contract-b"],
+            document_id="doc-1",
+        )
+        mock_db.commit.assert_awaited_once()

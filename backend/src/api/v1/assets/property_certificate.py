@@ -432,24 +432,14 @@ async def create_certificate(
         HTTPException: 创建失败
     """
     from ....models.property_certificate import CertificateType
-    from ....services.property_certificate.validator import PropertyCertificateValidator
 
     try:
         try:
-            cert_type = CertificateType(certificate.certificate_type)
+            CertificateType(certificate.certificate_type)
         except ValueError as e:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=f"证书类型不正确: {str(e)}",
-            )
-
-        validation = PropertyCertificateValidator.validate_extracted_fields(
-            certificate.model_dump(), cert_type
-        )
-        if not validation.is_valid():
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-                detail={"errors": validation.errors},
             )
 
         service = PropertyCertificateService(db)

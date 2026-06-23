@@ -55,12 +55,22 @@ async def load_asset_scope_context(
     asset_id: str,
 ) -> dict[str, Any]:
     from ..models.asset import Asset
+    from ..models.project import Project
+    from ..models.project_asset import ProjectAsset
 
-    stmt = select(
-        Asset.id.label("asset_id"),
-        Asset.owner_party_id,
-        Asset.manager_party_id,
-    ).where(Asset.id == asset_id)
+    stmt = (
+        select(
+            Asset.id.label("asset_id"),
+            Asset.owner_party_id,
+            Project.manager_party_id.label("manager_party_id"),
+        )
+        .outerjoin(
+            ProjectAsset,
+            (ProjectAsset.asset_id == Asset.id) & ProjectAsset.valid_to.is_(None),
+        )
+        .outerjoin(Project, Project.id == ProjectAsset.project_id)
+        .where(Asset.id == asset_id)
+    )
     row = (await db.execute(stmt)).mappings().one_or_none()
     if row is None:
         return {}
@@ -260,8 +270,7 @@ async def load_user_scope_context(
         .where(UserPartyBinding.user_id == normalized_user_id)
         .where(UserPartyBinding.valid_from <= now)
         .where(
-            (UserPartyBinding.valid_to.is_(None))
-            | (UserPartyBinding.valid_to >= now)
+            (UserPartyBinding.valid_to.is_(None)) | (UserPartyBinding.valid_to >= now)
         )
         .order_by(
             UserPartyBinding.is_primary.desc(),

@@ -73,7 +73,10 @@ const PropertyCertificateDetailPage: React.FC = () => {
 
   if (error) {
     return (
-      <PageContainer title="Property Certificate Detail" onBack={() => navigate(PROPERTY_CERTIFICATE_ROUTES.LIST)}>
+      <PageContainer
+        title="Property Certificate Detail"
+        onBack={() => navigate(PROPERTY_CERTIFICATE_ROUTES.LIST)}
+      >
         <Alert type="error" title="Failed to load" />
       </PageContainer>
     );
@@ -81,7 +84,10 @@ const PropertyCertificateDetailPage: React.FC = () => {
 
   if (!isLoading && !certificate) {
     return (
-      <PageContainer title="Property Certificate Detail" onBack={() => navigate(PROPERTY_CERTIFICATE_ROUTES.LIST)}>
+      <PageContainer
+        title="Property Certificate Detail"
+        onBack={() => navigate(PROPERTY_CERTIFICATE_ROUTES.LIST)}
+      >
         <Alert type="warning" title="Property certificate not found" />
       </PageContainer>
     );
@@ -307,7 +313,9 @@ const PropertyCertificateDetailPage: React.FC = () => {
                   <Descriptions.Item label="Restrictions">
                     {certificate.restrictions ?? '-'}
                   </Descriptions.Item>
-                  <Descriptions.Item label="Remarks">{certificate.remarks ?? '-'}</Descriptions.Item>
+                  <Descriptions.Item label="Remarks">
+                    {certificate.remarks ?? '-'}
+                  </Descriptions.Item>
                   <Descriptions.Item label="Source">
                     {certificate.extraction_source ?? '-'}
                   </Descriptions.Item>

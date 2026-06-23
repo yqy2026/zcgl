@@ -152,7 +152,7 @@ describe('PartyService', () => {
       })
       .mockResolvedValueOnce({
         success: true,
-        data: { id: 'party-1', review_status: 'draft', review_reason: '资料不完整' },
+        data: { id: 'party-1', review_status: 'rejected', review_reason: '资料不完整' },
       });
 
     const submitted = await service.submitReview('party-1');
@@ -161,7 +161,7 @@ describe('PartyService', () => {
 
     expect(submitted.review_status).toBe('pending');
     expect(approved.review_status).toBe('approved');
-    expect(rejected.review_status).toBe('draft');
+    expect(rejected.review_status).toBe('rejected');
     expect(apiClient.post).toHaveBeenNthCalledWith(
       1,
       '/parties/party-1/submit-review',

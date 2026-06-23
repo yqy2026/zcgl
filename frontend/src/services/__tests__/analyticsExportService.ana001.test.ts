@@ -1,4 +1,4 @@
-﻿import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { analyticsExportService } from '../analyticsExportService';
 import type { AnalyticsExportData } from '../analyticsExportService';
 

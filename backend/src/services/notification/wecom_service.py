@@ -1,10 +1,15 @@
-"""
-企业微信 Webhook 服务
+"""WeCom application-message notification delivery.
 
-用于发送企业微信通知
+Group webhook delivery is retired because it cannot isolate business message
+content per recipient. This adapter only sends self-built application messages
+to an explicit WeCom ``touser``.
 """
+
+from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import httpx
@@ -14,108 +19,121 @@ from ...core.config import settings
 
 logger = logging.getLogger(__name__)
 
+WECOM_API_BASE_URL = "https://qyapi.weixin.qq.com/cgi-bin"
+TOKEN_REFRESH_SKEW_SECONDS = 120
+
+
+@dataclass
+class WecomAccessToken:
+    value: str
+    expires_at: datetime
+
 
 class WecomService:
-    """企业微信服务"""
+    """Send WeCom self-built application messages to explicit recipients."""
 
     def __init__(self) -> None:
-        self.webhook_url = getattr(settings, "WECOM_WEBHOOK_URL", None)
-        self.enabled = (
-            getattr(settings, "WECOM_ENABLED", False) and self.webhook_url is not None
-        )
+        self.enabled = bool(settings.WECOM_ENABLED)
+        self.corp_id = settings.WECOM_CORP_ID
+        self.agent_id = settings.WECOM_AGENT_ID
+        self.secret = settings.WECOM_SECRET
+        self._access_token: WecomAccessToken | None = None
+
+    @property
+    def configured(self) -> bool:
+        return bool(self.enabled and self.corp_id and self.agent_id and self.secret)
 
     async def send_notification(
-        self, message: str, mentioned_list: list[str] | None = None
+        self,
+        message: str,
+        *,
+        touser: str,
     ) -> bool:
-        """
-        发送企业微信通知
-
-        Args:
-            message: 消息内容
-            mentioned_list: @的用户列表，如 ["user1", "user2"]
-
-        Returns:
-            bool: 是否发送成功
-        """
-        if not self.enabled:
-            logger.debug("企业微信通知未启用")
+        """Send a text application message to one or more WeCom userids."""
+        normalized_touser = touser.strip()
+        if normalized_touser == "":
+            logger.warning("WeCom application message skipped: blank touser")
+            return False
+        if not self.configured:
+            logger.warning(
+                "WeCom application message skipped: service disabled or incomplete"
+            )
             return False
 
-        try:
-            # 构建消息体
-            data: dict[str, Any] = {"msgtype": "text", "text": {"content": message}}
+        access_token = await self._get_access_token()
+        payload = {
+            "touser": normalized_touser,
+            "msgtype": "text",
+            "agentid": self.agent_id,
+            "text": {"content": message},
+            "safe": 0,
+            "enable_id_trans": 0,
+            "enable_duplicate_check": 1,
+        }
 
-            # 添加@用户
-            if mentioned_list:
-                data["text"]["mentioned_list"] = mentioned_list
+        async with httpx.AsyncClient(timeout=WECOM_REQUEST_TIMEOUT_SECONDS) as client:
+            response = await client.post(
+                f"{WECOM_API_BASE_URL}/message/send",
+                params={"access_token": access_token},
+                json=payload,
+            )
+            response.raise_for_status()
+            body = response.json()
 
-            # 发送请求
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    str(self.webhook_url),
-                    json=data,
-                    timeout=WECOM_REQUEST_TIMEOUT_SECONDS,
-                )
-                response.raise_for_status()
+        if body.get("errcode") == 0:
+            return True
 
-            result = response.json()
-            if result.get("errcode") == 0:
-                logger.info(f"企业微信通知发送成功: {message[:50]}...")
-                return True
-            else:
-                logger.error(f"企业微信通知发送失败: {result}")
-                return False
+        logger.warning(
+            "WeCom application message failed: errcode=%s errmsg=%s",
+            body.get("errcode"),
+            body.get("errmsg"),
+        )
+        return False
 
-        except httpx.HTTPError as e:
-            logger.error(f"企业微信通知发送HTTP错误: {e}")
-            return False
-        except Exception as e:
-            logger.error(f"企业微信通知发送异常: {e}")
-            return False
+    async def send_markdown_notification(
+        self,
+        title: str,
+        content: str,
+        *,
+        touser: str,
+    ) -> bool:
+        """Compatibility wrapper; WeCom app messages use text for MVP."""
+        return await self.send_notification(f"【{title}】\n{content}", touser=touser)
 
-    async def send_markdown_notification(self, title: str, content: str) -> bool:
-        """
-        发送 Markdown 格式的企业微信通知
+    async def _get_access_token(self) -> str:
+        if self._access_token is not None and datetime.now(UTC) < self._access_token.expires_at:
+            return self._access_token.value
 
-        Args:
-            title: 标题
-            content: Markdown 格式的内容
+        body = await self._fetch_access_token()
+        errcode = body.get("errcode")
+        if errcode != 0:
+            raise RuntimeError(
+                f"WeCom gettoken failed: errcode={errcode}, errmsg={body.get('errmsg')}"
+            )
 
-        Returns:
-            bool: 是否发送成功
-        """
-        if not self.enabled:
-            logger.debug("企业微信通知未启用")
-            return False
+        token = str(body.get("access_token") or "").strip()
+        if token == "":
+            raise RuntimeError("WeCom gettoken returned blank access_token")
 
-        try:
-            # 构建消息体
-            data: dict[str, Any] = {
-                "msgtype": "markdown",
-                "markdown": {"content": f"# {title}\n\n{content}"},
-            }
+        expires_in = int(body.get("expires_in") or 7200)
+        self._access_token = WecomAccessToken(
+            value=token,
+            expires_at=datetime.now(UTC)
+            + timedelta(seconds=max(expires_in - TOKEN_REFRESH_SKEW_SECONDS, 0)),
+        )
+        return token
 
-            # 发送请求
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    str(self.webhook_url),
-                    json=data,
-                    timeout=WECOM_REQUEST_TIMEOUT_SECONDS,
-                )
-                response.raise_for_status()
-
-            result = response.json()
-            if result.get("errcode") == 0:
-                logger.info(f"企业微信 Markdown 通知发送成功: {title}")
-                return True
-            else:
-                logger.error(f"企业微信 Markdown 通知发送失败: {result}")
-                return False
-
-        except Exception as e:
-            logger.error(f"企业微信 Markdown 通知发送异常: {e}")
-            return False
+    async def _fetch_access_token(self) -> dict[str, Any]:
+        async with httpx.AsyncClient(timeout=WECOM_REQUEST_TIMEOUT_SECONDS) as client:
+            response = await client.get(
+                f"{WECOM_API_BASE_URL}/gettoken",
+                params={"corpid": self.corp_id, "corpsecret": self.secret},
+            )
+            response.raise_for_status()
+            data = response.json()
+        if not isinstance(data, dict):
+            raise RuntimeError("WeCom gettoken returned non-object response")
+        return data
 
 
-# 创建单例实例
 wecom_service = WecomService()

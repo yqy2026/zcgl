@@ -653,6 +653,7 @@ async def get_project_analytics(
             project_id=project_id,
             current_user_id=str(current_user.id),
             party_filter=_build_project_party_filter(_scope_ctx),
+            suppress_customer_metrics=_scope_ctx.scope_mode == "all",
         )
         return ResponseHandler.success(
             data=response_payload.model_dump(mode="json"),

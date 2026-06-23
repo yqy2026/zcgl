@@ -27,6 +27,7 @@ def test_notifications_endpoints_should_use_require_authz() -> None:
     patterns = [
         r"async def get_notifications[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"notification\"",
         r"async def get_unread_count[\s\S]*?require_authz\([\s\S]*?action=\"read\"[\s\S]*?resource_type=\"notification\"",
+        r"async def create_system_notice[\s\S]*?require_authz\([\s\S]*?action=\"create\"[\s\S]*?resource_type=\"notification\"[\s\S]*?resource_context=_NOTIFICATION_CREATE_RESOURCE_CONTEXT",
         r"async def mark_notification_as_read[\s\S]*?require_authz\([\s\S]*?action=\"update\"[\s\S]*?resource_type=\"notification\"[\s\S]*?resource_id=\"\{notification_id\}\"",
         r"async def mark_all_as_read[\s\S]*?require_authz\([\s\S]*?action=\"update\"[\s\S]*?resource_type=\"notification\"[\s\S]*?resource_context=_NOTIFICATION_UPDATE_RESOURCE_CONTEXT",
         r"async def delete_notification[\s\S]*?require_authz\([\s\S]*?action=\"delete\"[\s\S]*?resource_type=\"notification\"[\s\S]*?resource_id=\"\{notification_id\}\"",
@@ -39,6 +40,16 @@ def test_notifications_endpoints_should_use_require_authz() -> None:
 
 def test_notifications_unscoped_update_context_should_be_defined() -> None:
     from src.api.v1.system import notifications
+
+    expected_create_sentinel = "__unscoped__:notification:create"
+    assert notifications._NOTIFICATION_CREATE_UNSCOPED_PARTY_ID == (
+        expected_create_sentinel
+    )
+    assert notifications._NOTIFICATION_CREATE_RESOURCE_CONTEXT == {
+        "party_id": expected_create_sentinel,
+        "owner_party_id": expected_create_sentinel,
+        "manager_party_id": expected_create_sentinel,
+    }
 
     expected_sentinel = "__unscoped__:notification:update"
     assert notifications._NOTIFICATION_UPDATE_UNSCOPED_PARTY_ID == expected_sentinel

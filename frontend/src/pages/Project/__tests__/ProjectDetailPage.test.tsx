@@ -182,8 +182,9 @@ describe('ProjectDetailPage', () => {
               occupancy_rate: 70,
             },
             contract_relation_count: 2,
-            tenant_count: 2,
-            customer_contract_count: 3,
+            tenant_count: null,
+            customer_contract_count: null,
+            customer_metrics_suppression_reason: 'customer_metrics_requires_single_perspective',
             risk_count: 2,
             high_risk_count: 1,
             receivable_amount: '2650.00',
@@ -201,8 +202,8 @@ describe('ProjectDetailPage', () => {
                 asset_count: 2,
                 primary_contract_count: 1,
                 terminal_contract_count: 1,
-                customer_count: 1,
-                customer_contract_count: 2,
+                customer_count: null,
+                customer_contract_count: null,
                 receivable_amount: '2400.00',
                 payable_amount: '1000.00',
                 received_amount: '1200.00',
@@ -217,8 +218,8 @@ describe('ProjectDetailPage', () => {
                 asset_count: 2,
                 primary_contract_count: 1,
                 terminal_contract_count: 1,
-                customer_count: 1,
-                customer_contract_count: 1,
+                customer_count: null,
+                customer_contract_count: null,
                 receivable_amount: '250.00',
                 payable_amount: '0.00',
                 received_amount: '200.00',
@@ -422,6 +423,8 @@ describe('ProjectDetailPage', () => {
     expect(screen.getByText('3 份合同')).toBeInTheDocument();
     expect(screen.getByText('项目分析')).toBeInTheDocument();
     expect(screen.getByText('经营风险')).toBeInTheDocument();
+    expect(screen.getByText('客户指标需选产权方或运营方视图')).toBeInTheDocument();
+    expect(screen.getAllByText('需选视图').length).toBeGreaterThan(0);
     expect(screen.getByText('项目分析趋势')).toBeInTheDocument();
     expect(screen.getByText('应收环比 +32.5%')).toBeInTheDocument();
     expect(screen.getByText('2026-02')).toBeInTheDocument();

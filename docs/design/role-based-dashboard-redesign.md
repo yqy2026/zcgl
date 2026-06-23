@@ -1,5 +1,7 @@
 # 角色化工作台设计方案
 
+> ⚠️ **部分过时（2026-06-20 标注）**：本方案 2026-06-03 早于后续多轮 MVP 减法。其「招商」「物业运维」两个工作台及 `work-orders`/`move-in-out`/`lease-pipeline`/`vacant-assets` 等新 API **超出当前 MVP 范围**，§5.1 引用的 `approval/pending` 审批流**已删**（ADR-0002）。当前以 [`2026-06-20-uiux-analysis-and-alignment.md`](2026-06-20-uiux-analysis-and-alignment.md) 为准——保留「领导/资产」工作台骨架与 §3.3 布局规范、KpiCard/TodoItem 组件；招商/物业降 vNext；画像按系统真实用户轴（运营方/产权方 × RBAC）重定义、新增「产权方对接人」。其「工作台面向所有人又不像为任何人」「模块导航 vs 任务视角」的问题诊断仍有效。
+
 ## 1. 问题背景
 
 通过深度访谈确认，当前工作台（`frontend/src/pages/Dashboard/DashboardPage.tsx`）存在以下问题：

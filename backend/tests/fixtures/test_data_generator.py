@@ -118,7 +118,9 @@ class TestDataGenerator:
             "email": kwargs.get("email", fake.email()),
             "full_name": kwargs.get("full_name", fake.name()),
             "phone": kwargs.get("phone", fake.phone_number()),
-            "role_id": kwargs.get("role_id", role_id_map.get(role_name, "role-user-id")),
+            "role_id": kwargs.get(
+                "role_id", role_id_map.get(role_name, "role-user-id")
+            ),
             "role_name": role_name,
             "department": kwargs.get("department", fake.company_suffix()),
             "is_active": kwargs.get("is_active", True),
@@ -254,7 +256,7 @@ class TestDataGenerator:
             ),
             "payment_status": kwargs.get(
                 "payment_status",
-                random.choice(["unpaid", "partial", "paid", "overdue"]),
+                random.choice(["unpaid", "partial", "paid"]),
             ),
             "paid_amount": kwargs.get("paid_amount", Decimal("0")),
             "payment_date": kwargs.get("payment_date", None),

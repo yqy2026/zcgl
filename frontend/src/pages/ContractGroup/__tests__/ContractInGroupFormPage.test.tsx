@@ -54,7 +54,6 @@ describe('ContractInGroupFormPage', () => {
       currency_code: 'CNY',
       is_tax_included: true,
       status: 'DRAFT',
-      review_status: 'DRAFT',
       data_status: '正常',
       created_at: '2026-03-01T00:00:00Z',
       updated_at: '2026-03-01T00:00:00Z',

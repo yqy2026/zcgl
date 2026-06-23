@@ -7,6 +7,7 @@
 
 import asyncio
 import logging
+from collections.abc import Iterable
 from datetime import date, datetime, timedelta
 from typing import Any
 
@@ -14,7 +15,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...crud.contract import contract_crud
 from ...crud.contract_group import contract_group_crud
+from ...crud.query_builder import PartyFilter
 from ...database import async_session_scope
+from ..party_scope import resolve_user_party_filter
 
 logger = logging.getLogger(__name__)
 from ...models.notification import Notification, NotificationPriority, NotificationType
@@ -33,6 +36,33 @@ def _resolve_tenant_name(contract: Any) -> str:
     return str(party_name or "")
 
 
+def _normalize_identifier(raw_value: object | None) -> str | None:
+    if raw_value is None:
+        return None
+    value = str(raw_value).strip()
+    return value if value != "" else None
+
+
+def _normalize_identifier_set(values: Iterable[object] | None) -> set[str]:
+    if values is None:
+        return set()
+    return {
+        normalized
+        for value in values
+        if (normalized := _normalize_identifier(value)) is not None
+    }
+
+
+def _resolve_contract_group_scope_parties(
+    contract: Any,
+) -> tuple[str | None, str | None]:
+    group = getattr(contract, "contract_group", None)
+    return (
+        _normalize_identifier(getattr(group, "owner_party_id", None)),
+        _normalize_identifier(getattr(group, "operator_party_id", None)),
+    )
+
+
 class NotificationSchedulerService:
     """通知定时任务服务"""
 
@@ -41,41 +71,33 @@ class NotificationSchedulerService:
         self.wecom_enabled = wecom_service.enabled
 
     async def _send_wecom_notification(self, notification: Notification) -> bool:
-        """
-        发送企业微信通知（异步）
-
-        Args:
-            notification: 通知对象
-
-        Returns:
-            bool: 是否发送成功
-        """
+        """Send a WeCom application message for a created notification."""
         if not self.wecom_enabled:
             return False
 
         try:
-            # 构建企业微信消息
-            message = f"【{notification.title}】\n{notification.content}"
-
-            # 发送企业微信通知
-            success = await wecom_service.send_notification(message=message)
-
-            # 更新通知状态
+            message = f"[{notification.title}]\n{notification.content}"
+            success = await wecom_service.send_notification(
+                message=message,
+                touser=str(notification.recipient_id),
+            )
             notification.is_sent_wecom = success
             if success:
                 notification.wecom_sent_at = datetime.now()
+                notification.wecom_send_error = None
             else:
-                notification.wecom_send_error = "企业微信返回失败"
+                notification.wecom_sent_at = None
+                notification.wecom_send_error = "WeCom application message failed"
 
             await self.db.commit()
             return success
 
         except Exception as e:
-            # 记录错误但不影响主流程
-            notification.wecom_send_error = f"企业微信发送异常: {str(e)}"
+            notification.is_sent_wecom = False
+            notification.wecom_sent_at = None
+            notification.wecom_send_error = f"WeCom application message exception: {str(e)}"
             await self.db.commit()
             return False
-
     async def _create_and_send_notification(
         self,
         recipient_id: str,
@@ -124,6 +146,113 @@ class NotificationSchedulerService:
 
         return notification
 
+    async def _resolve_business_recipient_filters(
+        self, active_users: list[Any]
+    ) -> dict[str, PartyFilter | None]:
+        recipient_filters: dict[str, PartyFilter | None] = {}
+        for user in active_users:
+            user_id = _normalize_identifier(getattr(user, "id", None))
+            if user_id is None:
+                continue
+            recipient_filters[user_id] = await resolve_user_party_filter(
+                self.db,
+                current_user_id=user_id,
+                party_filter=None,
+                logger=logger,
+            )
+        return recipient_filters
+
+    @staticmethod
+    def _can_party_filter_see_contract(
+        party_filter: PartyFilter | None,
+        contract: Any,
+    ) -> bool:
+        if party_filter is None:
+            return True
+
+        owner_party_id, operator_party_id = _resolve_contract_group_scope_parties(
+            contract
+        )
+        if owner_party_id is None and operator_party_id is None:
+            return False
+
+        owner_scope = _normalize_identifier_set(party_filter.owner_party_ids)
+        manager_scope = _normalize_identifier_set(party_filter.manager_party_ids)
+        if len(owner_scope) > 0 or len(manager_scope) > 0:
+            return (
+                owner_party_id in owner_scope if owner_party_id is not None else False
+            ) or (
+                operator_party_id in manager_scope
+                if operator_party_id is not None
+                else False
+            )
+
+        party_ids = _normalize_identifier_set(party_filter.party_ids)
+        if len(party_ids) == 0:
+            return False
+
+        if party_filter.filter_mode == "owner":
+            return owner_party_id in party_ids if owner_party_id is not None else False
+        if party_filter.filter_mode == "manager":
+            return (
+                operator_party_id in party_ids
+                if operator_party_id is not None
+                else False
+            )
+        return (
+            owner_party_id in party_ids if owner_party_id is not None else False
+        ) or (
+            operator_party_id in party_ids if operator_party_id is not None else False
+        )
+
+    def _visible_business_recipient_ids(
+        self,
+        *,
+        contract: Any,
+        active_users: list[Any],
+        recipient_filters: dict[str, PartyFilter | None],
+    ) -> list[str]:
+        recipient_ids: list[str] = []
+        for user in active_users:
+            user_id = _normalize_identifier(getattr(user, "id", None))
+            if user_id is None or user_id not in recipient_filters:
+                continue
+            if self._can_party_filter_see_contract(
+                recipient_filters[user_id], contract
+            ):
+                recipient_ids.append(user_id)
+        return recipient_ids
+
+    async def _find_existing_ledger_pairs_by_priority(
+        self,
+        *,
+        ledger_alerts: list[dict[str, Any]],
+        notification_type: str,
+    ) -> dict[str, set[tuple[str, str]]]:
+        recipient_ids_by_priority: dict[str, set[str]] = {}
+        ledger_ids_by_priority: dict[str, list[str]] = {}
+        for alert in ledger_alerts:
+            priority = str(alert["priority"])
+            ledger_ids_by_priority.setdefault(priority, []).append(str(alert["ledger_id"]))
+            recipient_ids_by_priority.setdefault(priority, set()).update(
+                alert["recipient_ids"]
+            )
+
+        existing_pairs_by_priority: dict[str, set[tuple[str, str]]] = {}
+        for priority, ledger_ids in ledger_ids_by_priority.items():
+            existing_pairs_by_priority[priority] = (
+                await notification_service.find_existing_notification_pairs_async(
+                    self.db,
+                    recipient_ids=sorted(recipient_ids_by_priority.get(priority, set())),
+                    related_entity_type="contract_ledger_entry",
+                    related_entity_ids=ledger_ids,
+                    notification_type=notification_type,
+                    priority=priority,
+                    created_since=None,
+                )
+            )
+        return existing_pairs_by_priority
+
     async def check_contract_expiry(self, days_ahead: int = 30) -> int:
         """
         检查合同到期
@@ -144,9 +273,10 @@ class NotificationSchedulerService:
         )
 
         active_users = await notification_service.list_active_users_async(self.db)
-        active_user_ids = [str(user.id) for user in active_users]
-        contract_alerts: list[dict[str, str]] = []
-        contract_ids_by_type: dict[str, list[str]] = {}
+        recipient_filters = await self._resolve_business_recipient_filters(active_users)
+        recipient_ids_by_tier_key: dict[tuple[str, str], set[str]] = {}
+        contract_alerts: list[dict[str, Any]] = []
+        contract_ids_by_tier_key: dict[tuple[str, str], list[str]] = {}
 
         for contract in expiring_contracts:
             # 计算剩余天数
@@ -193,30 +323,44 @@ class NotificationSchedulerService:
                     "priority": priority,
                     "title": title,
                     "content": content,
+                    "recipient_ids": self._visible_business_recipient_ids(
+                        contract=contract,
+                        active_users=active_users,
+                        recipient_filters=recipient_filters,
+                    ),
                 }
             )
-            contract_ids_by_type.setdefault(notification_type, []).append(contract_id)
+            tier_key = (notification_type, priority)
+            contract_ids_by_tier_key.setdefault(tier_key, []).append(contract_id)
+            recipient_ids_by_tier_key.setdefault(tier_key, set()).update(
+                contract_alerts[-1]["recipient_ids"]
+            )
 
-        existing_pairs_by_type: dict[str, set[tuple[str, str]]] = {}
-        for notification_type, contract_ids in contract_ids_by_type.items():
-            existing_pairs_by_type[
-                notification_type
+        existing_pairs_by_tier_key: dict[tuple[str, str], set[tuple[str, str]]] = {}
+        for (notification_type, priority), contract_ids in contract_ids_by_tier_key.items():
+            existing_pairs_by_tier_key[
+                (notification_type, priority)
             ] = await notification_service.find_existing_notification_pairs_async(
                 self.db,
-                recipient_ids=active_user_ids,
+                recipient_ids=sorted(
+                    recipient_ids_by_tier_key.get((notification_type, priority), set())
+                ),
                 related_entity_type="contract",
                 related_entity_ids=contract_ids,
                 notification_type=notification_type,
-                require_unread=True,
+                priority=priority,
+                require_unread=False,
             )
 
         # 为每个用户创建通知
         for contract_alert in contract_alerts:
             notification_type = contract_alert["notification_type"]
+            priority = contract_alert["priority"]
             contract_id = contract_alert["contract_id"]
-            existing_pairs = existing_pairs_by_type.get(notification_type, set())
-            for user in active_users:
-                user_id = str(user.id)
+            existing_pairs = existing_pairs_by_tier_key.get(
+                (notification_type, priority), set()
+            )
+            for user_id in contract_alert["recipient_ids"]:
                 if (user_id, contract_id) not in existing_pairs:
                     # 使用统一方法创建通知并推送企业微信
                     await self._create_and_send_notification(
@@ -251,8 +395,8 @@ class NotificationSchedulerService:
 
         notifications_created = 0
         active_users = await notification_service.list_active_users_async(self.db)
-        active_user_ids = [str(user.id) for user in active_users]
-        ledger_alerts: list[dict[str, str]] = []
+        recipient_filters = await self._resolve_business_recipient_filters(active_users)
+        ledger_alerts: list[dict[str, Any]] = []
 
         for ledger in overdue_ledgers:
             # 计算逾期天数
@@ -288,24 +432,25 @@ class NotificationSchedulerService:
                     "priority": priority,
                     "title": title,
                     "content": content,
+                    "recipient_ids": self._visible_business_recipient_ids(
+                        contract=ledger.contract,
+                        active_users=active_users,
+                        recipient_filters=recipient_filters,
+                    ),
                 }
             )
-
-        existing_pairs = (
-            await notification_service.find_existing_notification_pairs_async(
-                self.db,
-                recipient_ids=active_user_ids,
-                related_entity_type="contract_ledger_entry",
-                related_entity_ids=[alert["ledger_id"] for alert in ledger_alerts],
+        existing_pairs_by_priority = (
+            await self._find_existing_ledger_pairs_by_priority(
+                ledger_alerts=ledger_alerts,
                 notification_type=NotificationType.PAYMENT_OVERDUE,
-                created_since=today,
             )
         )
 
         for ledger_alert in ledger_alerts:
             ledger_id = ledger_alert["ledger_id"]
-            for user in active_users:
-                user_id = str(user.id)
+            priority = ledger_alert["priority"]
+            existing_pairs = existing_pairs_by_priority.get(priority, set())
+            for user_id in ledger_alert["recipient_ids"]:
                 if (user_id, ledger_id) not in existing_pairs:
                     # 使用统一方法创建通知并推送企业微信
                     await self._create_and_send_notification(
@@ -344,8 +489,8 @@ class NotificationSchedulerService:
 
         notifications_created = 0
         active_users = await notification_service.list_active_users_async(self.db)
-        active_user_ids = [str(user.id) for user in active_users]
-        ledger_alerts: list[dict[str, str]] = []
+        recipient_filters = await self._resolve_business_recipient_filters(active_users)
+        ledger_alerts: list[dict[str, Any]] = []
 
         for ledger in due_soon_ledgers:
             # 计算剩余天数
@@ -381,24 +526,25 @@ class NotificationSchedulerService:
                     "priority": priority,
                     "title": title,
                     "content": content,
+                    "recipient_ids": self._visible_business_recipient_ids(
+                        contract=ledger.contract,
+                        active_users=active_users,
+                        recipient_filters=recipient_filters,
+                    ),
                 }
             )
-
-        existing_pairs = (
-            await notification_service.find_existing_notification_pairs_async(
-                self.db,
-                recipient_ids=active_user_ids,
-                related_entity_type="contract_ledger_entry",
-                related_entity_ids=[alert["ledger_id"] for alert in ledger_alerts],
+        existing_pairs_by_priority = (
+            await self._find_existing_ledger_pairs_by_priority(
+                ledger_alerts=ledger_alerts,
                 notification_type=NotificationType.PAYMENT_DUE,
-                created_since=today,
             )
         )
 
         for ledger_alert in ledger_alerts:
             ledger_id = ledger_alert["ledger_id"]
-            for user in active_users:
-                user_id = str(user.id)
+            priority = ledger_alert["priority"]
+            existing_pairs = existing_pairs_by_priority.get(priority, set())
+            for user_id in ledger_alert["recipient_ids"]:
                 if (user_id, ledger_id) not in existing_pairs:
                     # 使用统一方法创建通知并推送企业微信
                     await self._create_and_send_notification(

@@ -15,8 +15,8 @@ from sqlalchemy.orm import attributes as orm_attributes
 if TYPE_CHECKING:
     from .asset import AssetListItemResponse
 
-# project_code 格式：PRJ-<SEGMENT>-<SERIAL>
-_PROJECT_CODE_PATTERN = re.compile(r"^PRJ-[A-Z0-9]{4,12}-\d{6}$")
+# project_code 格式：PRJ-<OPERATOR_SEGMENT>-<YYYYMM>-<SEQ4>
+_PROJECT_CODE_PATTERN = re.compile(r"^PRJ-[A-Z0-9]{4,12}-\d{6}-\d{4}$")
 
 _VALID_STATUSES = {"planning", "active", "paused", "completed", "terminated"}
 
@@ -96,7 +96,7 @@ class ProjectCreate(ProjectBase):
         if not _PROJECT_CODE_PATTERN.match(v):
             raise PydanticCustomError(
                 "invalid_project_code",
-                "项目编码格式必须为 PRJ-<4-12位大写字母数字>-<6位序号>，例如: PRJ-ABCD01-000001",
+                "项目编码格式必须为 PRJ-<4-12位运营方段>-<YYYYMM>-<4位序号>，例如: PRJ-ABCD01-202606-0001",
                 {},
             )
         return v
@@ -127,7 +127,7 @@ class ProjectUpdate(BaseModel):
         if not _PROJECT_CODE_PATTERN.match(v):
             raise PydanticCustomError(
                 "invalid_project_code",
-                "项目编码格式必须为 PRJ-<4-12位大写字母数字>-<6位序号>，例如: PRJ-ABCD01-000001",
+                "项目编码格式必须为 PRJ-<4-12位运营方段>-<YYYYMM>-<4位序号>，例如: PRJ-ABCD01-202606-0001",
                 {},
             )
         return v
@@ -151,10 +151,7 @@ class ProjectResponse(ProjectBase):
 
     id: str
     data_status: str
-    review_status: str
-    review_by: str | None = None
-    reviewed_at: datetime | None = None
-    review_reason: str | None = None
+
     created_at: datetime
     updated_at: datetime
     created_by: str | None = None
@@ -395,8 +392,8 @@ class ProjectAnalysisModeSummary(BaseModel):
     asset_count: int
     primary_contract_count: int
     terminal_contract_count: int
-    customer_count: int
-    customer_contract_count: int
+    customer_count: int | None
+    customer_contract_count: int | None
     receivable_amount: Decimal
     payable_amount: Decimal
     received_amount: Decimal
@@ -421,8 +418,9 @@ class ProjectAnalyticsResponse(BaseModel):
 
     asset_summary: ProjectAssetSummary
     contract_relation_count: int
-    tenant_count: int
-    customer_contract_count: int
+    tenant_count: int | None
+    customer_contract_count: int | None
+    customer_metrics_suppression_reason: str | None = None
     risk_count: int
     high_risk_count: int
     receivable_amount: Decimal

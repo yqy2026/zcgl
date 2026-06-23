@@ -134,6 +134,7 @@ def valid_asset_data():
         "ownership_status": "已确权",
         "property_nature": "商业",
         "usage_status": "在用",
+        "owner_party_id": "owner-party-1",
         "land_area": 1000.0,
         "actual_property_area": 800.0,
         "rentable_area": 700.0,
@@ -866,6 +867,7 @@ class TestValidateAssetData:
             "ownership_status": "已确权",
             "property_nature": "商业",
             "usage_status": "在用",
+            "owner_party_id": "owner-party-1",
             # 缺少建议字段
         }
 
@@ -909,6 +911,7 @@ class TestValidateAssetData:
             "ownership_status": "已确权",
             "property_nature": "商业",
             "usage_status": "在用",
+            "owner_party_id": "owner-party-1",
         }
 
         is_valid, errors, warnings, validated_fields = (
@@ -1276,6 +1279,7 @@ class TestIntegrationScenarios:
             "ownership_status": "已确权",
             "property_nature": "商业",
             "usage_status": "在用",
+            "owner_party_id": "owner-party-1",
         }
 
         is_valid, errors, warnings, validated_fields = (

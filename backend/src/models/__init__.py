@@ -17,17 +17,13 @@ from .asset_search_index import AssetSearchIndex  # noqa: F401
 from .associations import (  # noqa: F401  # noqa: F401
     contract_assets,
     contract_group_assets,
+    contract_scan_document_links,
     property_cert_assets,
 )
 from .auth import AuditLog, User, UserSession  # noqa: F401
 from .certificate_party_relation import (  # noqa: F401
     CertificatePartyRelation,
     CertificateRelationRole,
-)
-from .collection import (  # noqa: F401
-    CollectionMethod,
-    CollectionRecord,
-    CollectionStatus,
 )
 from .contract_group import (  # noqa: F401
     AgencyAgreementDetail,
@@ -37,7 +33,7 @@ from .contract_group import (  # noqa: F401
     ContractLedgerEntry,
     ContractLifecycleStatus,
     ContractRentTerm,
-    ContractReviewStatus,
+    ContractScanDocument,
     GroupRelationType,
     LeaseContractDetail,
     RevenueMode,
@@ -82,6 +78,7 @@ from .property_certificate import (  # noqa: F401
     CertificateType,
     OwnerType,
     PropertyCertificate,
+    PropertyCertificateAttachment,
 )
 from .rbac import (  # noqa: F401
     Permission,
@@ -132,6 +129,7 @@ __all__ = [
     "ContractGroup",
     "Contract",
     "ContractRentTerm",
+    "ContractScanDocument",
     "ContractLedgerEntry",
     "ServiceFeeLedger",
     "LeaseContractDetail",
@@ -140,13 +138,9 @@ __all__ = [
     "ContractDirection",
     "GroupRelationType",
     "ContractLifecycleStatus",
-    "ContractReviewStatus",
     "contract_group_assets",
     "contract_assets",
-    # Collection models
-    "CollectionRecord",
-    "CollectionMethod",
-    "CollectionStatus",
+    "contract_scan_document_links",
     # Notification models
     "Notification",
     "NotificationType",
@@ -178,6 +172,7 @@ __all__ = [
     "CertificateType",
     "OwnerType",
     "PropertyCertificate",
+    "PropertyCertificateAttachment",
     # Task models
     "AsyncTask",
     "ExcelTaskConfig",

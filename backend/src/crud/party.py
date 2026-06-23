@@ -6,9 +6,9 @@ from typing import Any
 from sqlalchemy import delete, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .asset_support import SensitiveDataHandler
 from ..models.party import Party, PartyContact, PartyHierarchy, PartyType
 from ..models.user_party_binding import UserPartyBinding
+from .asset_support import SensitiveDataHandler
 
 
 def _utcnow_naive() -> datetime:

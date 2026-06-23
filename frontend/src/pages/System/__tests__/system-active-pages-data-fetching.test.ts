@@ -59,7 +59,7 @@ describe('System active page data fetching boundaries', () => {
       const pageSource = readSystemPageFile(page);
       const hookSource = readSystemPageFile(hook);
 
-      expect(hookSource).toContain("from '@tanstack/react-query'");
+      expect(hookSource).toMatch(/from\s+["']@tanstack\/react-query["']/);
       expect(hookSource).toContain('useQuery');
 
       for (const forbiddenCall of forbiddenPageCalls) {

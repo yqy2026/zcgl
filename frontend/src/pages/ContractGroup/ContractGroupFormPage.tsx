@@ -213,7 +213,9 @@ const mapDetailToFormState = (detail: ContractGroupDetail): EditableFormState =>
       ? readRuleValue(detail.revenue_share_rule, 'operator_ratio_percent')
       : '',
   amount_rule_json:
-    detail.settlement_rule != null ? JSON.stringify(detail.settlement_rule.amount_rule, null, 2) : '',
+    detail.settlement_rule != null
+      ? JSON.stringify(detail.settlement_rule.amount_rule, null, 2)
+      : '',
   payment_rule_json:
     detail.settlement_rule != null
       ? JSON.stringify(detail.settlement_rule.payment_rule, null, 2)

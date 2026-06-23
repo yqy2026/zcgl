@@ -6,11 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from src.core.exception_handler import OperationNotAllowedError
-from src.models.contract_group import (
-    Contract,
-    ContractLifecycleStatus,
-    ContractReviewStatus,
-)
+from src.models.contract_group import Contract, ContractLifecycleStatus
 from src.schemas.contract_group import ContractRentTermUpdate
 from src.services.contract.contract_group_service import ContractGroupService
 
@@ -22,14 +18,12 @@ def _make_contract(
     contract_id: str = "contract-001",
     contract_number: str = "HT-2026-0001",
     status: ContractLifecycleStatus = ContractLifecycleStatus.ACTIVE,
-    review_status: ContractReviewStatus = ContractReviewStatus.APPROVED,
 ) -> MagicMock:
     contract = MagicMock(spec=Contract)
     contract.contract_id = contract_id
     contract.contract_group_id = "group-001"
     contract.contract_number = contract_number
     contract.status = status
-    contract.review_status = review_status
     contract.sign_date = date(2026, 3, 1)
     contract.effective_from = date(2026, 3, 1)
     contract.effective_to = date(2026, 12, 31)
@@ -41,10 +35,11 @@ def _make_contract(
     contract.group_relation_type = "UPSTREAM"
     contract.lessor_party_id = "party-lessor"
     contract.lessee_party_id = "party-lessee"
+    contract.lessor_name_snapshot = "签署甲方"
+    contract.lessee_name_snapshot = "签署乙方"
     contract.contract_notes = "原始备注"
     contract.source_session_id = None
     contract.correction_source_contract_id = None
-    contract.review_reason = None
     contract.lease_detail = SimpleNamespace(
         rent_amount=Decimal("10000"),
         total_deposit=Decimal("5000"),
@@ -61,18 +56,20 @@ def _make_contract(
         owner_phone=None,
     )
     contract.agency_detail = None
+    contract.assets = []
     return contract
 
 
 class TestContractCorrectionFlow:
-    async def test_start_correction_should_clone_contract_with_audit_context(self):
+    async def test_start_correction_should_clone_active_contract_with_audit_context(
+        self,
+    ):
         service = ContractGroupService()
-        source_contract = _make_contract()
+        source_contract = _make_contract(status=ContractLifecycleStatus.ACTIVE)
         cloned_contract = _make_contract(
             contract_id="contract-002",
             contract_number="HT-2026-0001-C01",
             status=ContractLifecycleStatus.DRAFT,
-            review_status=ContractReviewStatus.DRAFT,
         )
 
         with (
@@ -102,6 +99,10 @@ class TestContractCorrectionFlow:
                 new=AsyncMock(return_value=cloned_contract),
             ) as mock_create_contract,
             patch(
+                "src.services.contract.contract_group_service.contract_crud.list_scan_documents_by_contract",
+                new=AsyncMock(return_value=[]),
+            ),
+            patch(
                 "src.services.contract.contract_group_service.contract_group_crud.create_audit_log",
                 new=AsyncMock(),
             ) as mock_create_audit_log,
@@ -117,18 +118,44 @@ class TestContractCorrectionFlow:
         assert result is cloned_contract
         assert mock_create_contract.await_args.kwargs["data"]["status"] == "DRAFT"
         assert (
-            mock_create_contract.await_args.kwargs["data"]["review_status"] == "DRAFT"
+            mock_create_contract.await_args.kwargs["data"]["lessor_name_snapshot"]
+            == "签署甲方"
         )
-        audit_context = mock_create_audit_log.await_args.kwargs["data"].get("context")
-        assert audit_context == {
-            "review_scope": "correction",
-            "affected_contract_ids": [
-                source_contract.contract_id,
-                cloned_contract.contract_id,
-            ],
-            "change_categories": [],
-            "correction_source_contract_id": source_contract.contract_id,
-        }
+        assert (
+            mock_create_contract.await_args.kwargs["data"]["lessee_name_snapshot"]
+            == "签署乙方"
+        )
+        assert (
+            mock_create_contract.await_args.kwargs["lease_detail_data"]["tenant_name"]
+            == "签署乙方"
+        )
+        assert "review_status" not in mock_create_contract.await_args.kwargs["data"]
+        audit_payload = mock_create_audit_log.await_args.kwargs["data"]
+        assert "review_status_old" not in audit_payload
+        assert audit_payload["context"]["affected_contract_ids"] == [
+            source_contract.contract_id,
+            cloned_contract.contract_id,
+        ]
+        assert (
+            audit_payload["context"]["correction_source_contract_id"]
+            == source_contract.contract_id
+        )
+
+    async def test_start_correction_should_reject_non_active_contract(self):
+        service = ContractGroupService()
+        source_contract = _make_contract(status=ContractLifecycleStatus.TERMINATED)
+
+        with patch.object(
+            service,
+            "_get_contract_or_raise",
+            new=AsyncMock(return_value=source_contract),
+        ):
+            with pytest.raises(OperationNotAllowedError, match="生效中"):
+                await service.start_correction(
+                    AsyncMock(),
+                    contract_id=source_contract.contract_id,
+                    reason="租金条款调整",
+                )
 
     async def test_update_rent_term_should_reject_non_draft_contract(self):
         service = ContractGroupService()
@@ -162,29 +189,21 @@ class TestContractCorrectionFlow:
                     obj_in=ContractRentTermUpdate(monthly_rent=Decimal("12000")),
                 )
 
-    async def test_approve_correction_should_reverse_source_and_activate_successor(
+    async def test_finalize_correction_should_fail_closed_when_impacted_paid_entries_exist(
         self,
     ):
         service = ContractGroupService()
         draft_contract = _make_contract(
             contract_id="draft-001",
             contract_number="HT-2026-0001-C01",
-            status=ContractLifecycleStatus.PENDING_REVIEW,
-            review_status=ContractReviewStatus.PENDING,
+            status=ContractLifecycleStatus.DRAFT,
         )
-        draft_contract.review_reason = "租金条款调整"
         draft_contract.correction_source_contract_id = "source-001"
         source_contract = _make_contract(
             contract_id="source-001",
             contract_number="HT-2026-0001",
             status=ContractLifecycleStatus.ACTIVE,
-            review_status=ContractReviewStatus.APPROVED,
         )
-
-        def apply_update(db_obj: MagicMock, data: dict) -> MagicMock:
-            for key, value in data.items():
-                setattr(db_obj, key, value)
-            return db_obj
 
         with (
             patch.object(
@@ -197,125 +216,100 @@ class TestContractCorrectionFlow:
                 new=AsyncMock(return_value=source_contract),
             ),
             patch(
-                "src.services.contract.contract_group_service.contract_crud.update",
+                "src.services.contract.contract_group_service.party_service.get_party",
                 new=AsyncMock(
-                    side_effect=lambda db, db_obj, data, commit=False: apply_update(
-                        db_obj, data
-                    )
+                    side_effect=[
+                        SimpleNamespace(id="party-lessor", name="签署甲方"),
+                        SimpleNamespace(id="party-lessee", name="签署乙方"),
+                    ]
                 ),
             ),
             patch(
-                "src.services.contract.contract_group_service.contract_group_crud.create_audit_log",
-                new=AsyncMock(),
-            ) as mock_create_audit_log,
-            patch(
-                "src.services.contract.contract_group_service.ledger_service_v2.reverse_correction_source_entries",
-                new=AsyncMock(return_value=["entry-2026-04", "entry-2026-05"]),
-                create=True,
-            ) as mock_reverse_entries,
-            patch(
-                "src.services.contract.contract_group_service.ledger_service_v2.generate_ledger_on_activation",
+                "src.services.contract.contract_group_service.contract_group_crud.list_rent_terms_by_contract",
                 new=AsyncMock(return_value=[]),
-            ) as mock_generate_ledger,
-            patch(
-                "src.services.contract.contract_group_service.contract_group_crud.list_rent_terms_by_contract",
-                new=AsyncMock(
-                    return_value=[
-                        SimpleNamespace(
-                            sort_order=1,
-                            start_date=date(2026, 4, 1),
-                            end_date=date(2026, 12, 31),
-                            monthly_rent=Decimal("12000"),
-                            management_fee=Decimal("0"),
-                            other_fees=Decimal("0"),
-                            notes=None,
-                        )
-                    ]
-                ),
-            ),
-        ):
-            result = await service.approve(
-                AsyncMock(),
-                contract_id=draft_contract.contract_id,
-                current_user="reviewer-001",
-                operator_name="审核员",
-            )
-
-        assert result.status == ContractLifecycleStatus.ACTIVE
-        assert result.review_status == ContractReviewStatus.APPROVED
-        assert source_contract.status == ContractLifecycleStatus.TERMINATED
-        assert source_contract.review_status == ContractReviewStatus.REVERSED
-        assert source_contract.review_reason == "租金条款调整"
-        mock_reverse_entries.assert_awaited_once()
-        mock_generate_ledger.assert_awaited_once()
-        latest_context = mock_create_audit_log.await_args_list[-2].kwargs["data"][
-            "context"
-        ]
-        assert latest_context == {
-            "review_scope": "correction",
-            "affected_contract_ids": ["source-001", "draft-001"],
-            "change_categories": [],
-            "correction_source_contract_id": "source-001",
-            "voided_entry_ids": ["entry-2026-04", "entry-2026-05"],
-        }
-
-    async def test_approve_correction_should_fail_closed_when_impacted_paid_entries_exist(
-        self,
-    ):
-        service = ContractGroupService()
-        draft_contract = _make_contract(
-            contract_id="draft-001",
-            contract_number="HT-2026-0001-C01",
-            status=ContractLifecycleStatus.PENDING_REVIEW,
-            review_status=ContractReviewStatus.PENDING,
-        )
-        draft_contract.review_reason = "租金条款调整"
-        draft_contract.correction_source_contract_id = "source-001"
-        source_contract = _make_contract(
-            contract_id="source-001",
-            contract_number="HT-2026-0001",
-            status=ContractLifecycleStatus.ACTIVE,
-            review_status=ContractReviewStatus.APPROVED,
-        )
-
-        with (
-            patch.object(
-                service,
-                "_get_contract_or_raise",
-                new=AsyncMock(return_value=draft_contract),
-            ),
-            patch(
-                "src.services.contract.contract_group_service.contract_crud.get",
-                new=AsyncMock(return_value=source_contract),
-            ),
-            patch(
-                "src.services.contract.contract_group_service.contract_group_crud.list_rent_terms_by_contract",
-                new=AsyncMock(
-                    return_value=[
-                        SimpleNamespace(
-                            sort_order=1,
-                            start_date=date(2026, 4, 1),
-                            end_date=date(2026, 12, 31),
-                            monthly_rent=Decimal("12000"),
-                            management_fee=Decimal("0"),
-                            other_fees=Decimal("0"),
-                            notes=None,
-                        )
-                    ]
-                ),
             ),
             patch(
                 "src.services.contract.contract_group_service.ledger_service_v2.reverse_correction_source_entries",
                 new=AsyncMock(
                     side_effect=OperationNotAllowedError("存在已支付账期，需先人工处理")
                 ),
-                create=True,
             ),
         ):
             with pytest.raises(OperationNotAllowedError, match="已支付账期"):
-                await service.approve(
+                await service.finalize_correction(
                     AsyncMock(),
                     contract_id=draft_contract.contract_id,
-                    current_user="reviewer-001",
-                    operator_name="审核员",
+                    current_user="operator-001",
+                    operator_name="操作员",
                 )
+
+    async def test_finalize_correction_should_refresh_party_name_snapshots(
+        self,
+    ) -> None:
+        service = ContractGroupService()
+        draft_contract = _make_contract(
+            contract_id="draft-001",
+            contract_number="HT-2026-0001-C01",
+            status=ContractLifecycleStatus.DRAFT,
+        )
+        draft_contract.correction_source_contract_id = "source-001"
+        draft_contract.lessor_name_snapshot = "旧甲方"
+        draft_contract.lessee_name_snapshot = "旧乙方"
+        source_contract = _make_contract(
+            contract_id="source-001",
+            contract_number="HT-2026-0001",
+            status=ContractLifecycleStatus.ACTIVE,
+        )
+
+        async def _get_party(_db: MagicMock, *, party_id: str) -> SimpleNamespace:
+            names = {
+                "party-lessor": "定稿时甲方",
+                "party-lessee": "定稿时乙方",
+            }
+            return SimpleNamespace(id=party_id, name=names[party_id])
+
+        with (
+            patch.object(
+                service,
+                "_get_contract_or_raise",
+                new=AsyncMock(return_value=draft_contract),
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.get",
+                new=AsyncMock(return_value=source_contract),
+            ),
+            patch(
+                "src.services.contract.contract_group_service.party_service.get_party",
+                new=AsyncMock(side_effect=_get_party),
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_group_crud.list_rent_terms_by_contract",
+                new=AsyncMock(return_value=[]),
+            ),
+            patch(
+                "src.services.contract.contract_group_service.ledger_service_v2.reverse_correction_source_entries",
+                new=AsyncMock(return_value=[]),
+            ),
+            patch.object(
+                service,
+                "_transition_contract",
+                new=AsyncMock(side_effect=[source_contract, draft_contract]),
+            ) as mock_transition,
+            patch(
+                "src.services.contract.contract_group_service.ledger_service_v2.generate_ledger_on_activation",
+                new=AsyncMock(return_value=[]),
+            ),
+        ):
+            result = await service.finalize_correction(
+                AsyncMock(),
+                contract_id=draft_contract.contract_id,
+                current_user="operator-001",
+                operator_name="操作员",
+            )
+
+        assert result is draft_contract
+        assert draft_contract.lease_detail.tenant_name == "定稿时乙方"
+        assert mock_transition.await_args_list[1].kwargs["extra_updates"] == {
+            "lessor_name_snapshot": "定稿时甲方",
+            "lessee_name_snapshot": "定稿时乙方",
+        }

@@ -20,13 +20,33 @@ class LlmSettings(BaseModel):
         default=0.65, json_schema_extra={"env": "LLM_TRIGGER_THRESHOLD"}
     )
 
-    # V2.0 企业微信通知配置
+    # V2.0 WeCom application-message notification settings
     WECOM_ENABLED: bool = Field(
         default=False, json_schema_extra={"env": "WECOM_ENABLED"}
     )
+    WECOM_CORP_ID: str | None = Field(
+        default=None,
+        description="WeCom CorpID used to fetch application access tokens",
+        json_schema_extra={"env": "WECOM_CORP_ID"},
+    )
+    WECOM_AGENT_ID: str | None = Field(
+        default=None,
+        description="WeCom self-built application AgentId",
+        json_schema_extra={"env": "WECOM_AGENT_ID"},
+    )
+    WECOM_SECRET: str | None = Field(
+        default=None,
+        description="WeCom self-built application Secret",
+        json_schema_extra={"env": "WECOM_SECRET"},
+    )
+    WECOM_TEST_TOUSER: str | None = Field(
+        default=None,
+        description="Local test WeCom userid, supports user1|user2",
+        json_schema_extra={"env": "WECOM_TEST_TOUSER"},
+    )
     WECOM_WEBHOOK_URL: str | None = Field(
         default=None,
-        description="企业微信机器人 Webhook URL",
+        description="Retired: group webhook must not carry business notifications",
         json_schema_extra={"env": "WECOM_WEBHOOK_URL"},
     )
     WECOM_MENTION_ALL: bool = Field(
@@ -291,7 +311,18 @@ class LlmSettings(BaseModel):
 
     @model_validator(mode="after")
     def validate_wecom_configuration(self) -> LlmSettings:
-        """验证企业微信配置一致性"""
-        if self.WECOM_ENABLED and not self.WECOM_WEBHOOK_URL:
-            logger.warning("企业微信通知已启用但未配置 Webhook URL，通知功能将无法工作")
+        """Validate WeCom application-message configuration."""
+        if self.WECOM_ENABLED and (
+            not self.WECOM_CORP_ID
+            or not self.WECOM_AGENT_ID
+            or not self.WECOM_SECRET
+        ):
+            logger.warning(
+                "WeCom is enabled but WECOM_CORP_ID / WECOM_AGENT_ID / "
+                "WECOM_SECRET is incomplete; app-message delivery is unavailable"
+            )
+        if self.WECOM_WEBHOOK_URL:
+            logger.warning(
+                "WECOM_WEBHOOK_URL group robot delivery is retired and ignored"
+            )
         return self

@@ -154,6 +154,7 @@ export const CONTRACT_GROUP_API = {
 export const LEDGER_API = {
   ENTRIES: '/ledger/entries',
   EXPORT: '/ledger/entries/export',
+  CONTRACT_RECALCULATE: (contractId: string) => `/contracts/${contractId}/ledger/recalculate`,
   CONTRACT_BATCH_UPDATE_STATUS: (contractId: string) =>
     `/contracts/${contractId}/ledger/batch-update-status`,
 } as const;

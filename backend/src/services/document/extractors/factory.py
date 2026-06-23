@@ -6,6 +6,7 @@ Contract Extractor Factory
 """
 
 import logging
+from collections.abc import Callable
 
 from src.core.exception_handler import ConfigurationError
 from src.services.core.vision_provider import (
@@ -28,7 +29,7 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 
 # 提取器类型映射（字典替代 if-elif 链）
-EXTRACTOR_MAP: dict[LLMProvider, type[ContractExtractorInterface]] = {
+EXTRACTOR_MAP: dict[LLMProvider, Callable[..., ContractExtractorInterface]] = {
     LLMProvider.QWEN: QwenAdapter,
     LLMProvider.DEEPSEEK: DeepSeekAdapter,
     LLMProvider.GLM: GLMAdapter,

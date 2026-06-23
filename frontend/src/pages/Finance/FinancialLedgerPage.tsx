@@ -20,7 +20,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import dayjs, { type Dayjs } from 'dayjs';
 import { PageContainer } from '@/components/Common';
 import { ledgerService } from '@/services/ledgerService';
-import type { LedgerEntry, LedgerPaymentStatus, ManualLedgerPaymentStatus } from '@/types/ledger';
+import type { LedgerEntry, LedgerPaymentStatus } from '@/types/ledger';
 import { buildQueryScopeKey } from '@/utils/queryScope';
 import styles from './FinancialLedgerPage.module.css';
 
@@ -29,7 +29,6 @@ const PAGE_SIZE = 20;
 const PAYMENT_STATUS_META: Record<string, { label: string; color: string }> = {
   unpaid: { label: '未收/未付', color: 'default' },
   paid: { label: '已收/已付', color: 'green' },
-  overdue: { label: '逾期', color: 'red' },
   partial: { label: '部分收付', color: 'orange' },
   voided: { label: '已作废', color: 'gray' },
 };
@@ -38,20 +37,11 @@ const PAYMENT_STATUS_OPTIONS = [
   { label: '全部状态', value: '' },
   { label: '未收/未付', value: 'unpaid' },
   { label: '已收/已付', value: 'paid' },
-  { label: '逾期', value: 'overdue' },
   { label: '部分收付', value: 'partial' },
   { label: '已作废', value: 'voided' },
 ];
 
-const MANUAL_PAYMENT_STATUS_OPTIONS: Array<{ label: string; value: ManualLedgerPaymentStatus }> = [
-  { label: '未收/未付', value: 'unpaid' },
-  { label: '已收/已付', value: 'paid' },
-  { label: '部分收付', value: 'partial' },
-  { label: '逾期', value: 'overdue' },
-];
-
 interface ReceiptRegistrationValues {
-  payment_status: ManualLedgerPaymentStatus;
   paid_amount?: number | null;
   notes?: string;
 }
@@ -68,6 +58,17 @@ const formatAmount = (value: string | number): string => {
 };
 
 const resolveCurrentYearMonth = () => dayjs().format('YYYY-MM');
+
+const isDerivedOverdue = (entry: LedgerEntry): boolean => {
+  if (entry.payment_status === 'voided') {
+    return false;
+  }
+  const dueDate = dayjs(entry.due_date);
+  if (!dueDate.isValid() || !dueDate.isBefore(dayjs(), 'day')) {
+    return false;
+  }
+  return Number(entry.paid_amount) < Number(entry.amount_due);
+};
 
 const FinancialLedgerPage: React.FC = () => {
   const { message } = App.useApp();
@@ -177,7 +178,6 @@ const FinancialLedgerPage: React.FC = () => {
         Object.entries(entriesByContract).map(([groupedContractId, entryIds]) =>
           ledgerService.updateContractLedgerStatus(groupedContractId, {
             entry_ids: entryIds,
-            payment_status: values.payment_status,
             paid_amount: paidAmount,
             notes,
           })
@@ -236,8 +236,10 @@ const FinancialLedgerPage: React.FC = () => {
         dataIndex: 'payment_status',
         key: 'payment_status',
         width: 120,
-        render: (value: string) => {
-          const meta = PAYMENT_STATUS_META[value] ?? { label: value, color: 'default' };
+        render: (value: string, record) => {
+          const meta = isDerivedOverdue(record)
+            ? { label: '逾期', color: 'red' }
+            : (PAYMENT_STATUS_META[value] ?? { label: value, color: 'default' });
           return <Tag color={meta.color}>{meta.label}</Tag>;
         },
       },
@@ -283,7 +285,6 @@ const FinancialLedgerPage: React.FC = () => {
   const openReceiptModal = () => {
     const selectedEntry = selectedEntries[0];
     receiptForm.setFieldsValue({
-      payment_status: 'paid',
       paid_amount: selectedEntry == null ? undefined : Number(selectedEntry.amount_due || 0),
     });
     setReceiptModalOpen(true);
@@ -456,13 +457,6 @@ const FinancialLedgerPage: React.FC = () => {
         }}
       >
         <Form form={receiptForm} layout="vertical">
-          <Form.Item
-            label="支付状态"
-            name="payment_status"
-            rules={[{ required: true, message: '请选择支付状态' }]}
-          >
-            <Select options={MANUAL_PAYMENT_STATUS_OPTIONS} />
-          </Form.Item>
           <Form.Item label="实收/实付金额" name="paid_amount">
             <InputNumber min={0} precision={2} style={{ width: '100%' }} />
           </Form.Item>

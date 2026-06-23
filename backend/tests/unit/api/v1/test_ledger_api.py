@@ -79,6 +79,19 @@ def test_get_ledger_entries_requires_at_least_one_core_filter(client) -> None:
     assert response.status_code == 422
 
 
+def test_get_ledger_entries_rejects_manual_overdue_status(client) -> None:
+    response = client.get(
+        "/api/v1/ledger/entries",
+        params={
+            "contract_id": "contract-001",
+            "year_month_start": "2026-01",
+            "payment_status": "overdue",
+        },
+    )
+
+    assert response.status_code == 422
+
+
 def test_recalculate_ledger_delegates_to_service(client) -> None:
     payload = {
         "created": 1,
@@ -116,9 +129,10 @@ def test_export_ledger_entries_delegates_to_service(client) -> None:
 
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/csv")
-    assert "attachment; filename=ledger_entries_20260324.csv" in response.headers[
-        "content-disposition"
-    ]
+    assert (
+        "attachment; filename=ledger_entries_20260324.csv"
+        in response.headers["content-disposition"]
+    )
     assert response.text == "entry_id,contract_id\r\nentry-001,contract-001\r\n"
     mock_export.assert_awaited_once()
 
@@ -145,12 +159,17 @@ def test_run_ledger_compensation_delegates_to_service(client) -> None:
     mock_run.assert_awaited_once_with(ANY)
 
 
-def test_batch_update_ledger_rejects_voided_status(client) -> None:
+@pytest.mark.parametrize("payment_status", ["unpaid", "partial", "paid", "voided"])
+def test_batch_update_ledger_rejects_payment_status_input(
+    client,
+    payment_status: str,
+) -> None:
     response = client.patch(
         "/api/v1/contracts/contract-001/ledger/batch-update-status",
         json={
             "entry_ids": ["entry-001"],
-            "payment_status": "voided",
+            "payment_status": payment_status,
+            "paid_amount": "100.00",
         },
     )
 

@@ -13,12 +13,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from ..models.asset import Asset
-from ..models.associations import contract_assets
+from ..models.associations import contract_assets, contract_scan_document_links
 from ..models.contract_group import (
     AgencyAgreementDetail,
     Contract,
     ContractLifecycleStatus,
+    ContractScanDocument,
+    GroupRelationType,
     LeaseContractDetail,
+    RevenueMode,
 )
 
 
@@ -74,9 +77,11 @@ class CRUDContract:
         stmt = select(Contract).where(Contract.contract_id == contract_id)
         if load_details:
             stmt = stmt.options(
+                selectinload(Contract.contract_group),
                 selectinload(Contract.assets),
                 selectinload(Contract.lease_detail),
                 selectinload(Contract.agency_detail),
+                selectinload(Contract.scan_documents),
             )
         return (await db.execute(stmt)).scalars().first()
 
@@ -85,9 +90,54 @@ class CRUDContract:
         db: AsyncSession,
         *,
         contract_number: str,
+        project_id: str | None = None,
+        data_status: str = "正常",
     ) -> Contract | None:
-        stmt = select(Contract).where(Contract.contract_number == contract_number)
+        stmt = select(Contract).where(
+            Contract.contract_number == contract_number,
+            Contract.data_status == data_status,
+        )
+        if project_id is None:
+            stmt = stmt.where(Contract.project_id.is_(None))
+        else:
+            stmt = stmt.where(Contract.project_id == project_id)
         return (await db.execute(stmt)).scalars().first()
+
+    async def list_by_contract_number(
+        self,
+        db: AsyncSession,
+        *,
+        contract_number: str,
+        data_status: str = "正常",
+        shared_scan_scope_only: bool = False,
+        lessor_party_id: str | None = None,
+        lessee_party_id: str | None = None,
+    ) -> list[Contract]:
+        stmt = select(Contract).where(
+            Contract.contract_number == contract_number,
+            Contract.data_status == data_status,
+        )
+        if lessor_party_id is not None:
+            stmt = stmt.where(Contract.lessor_party_id == lessor_party_id)
+        if lessee_party_id is not None:
+            stmt = stmt.where(Contract.lessee_party_id == lessee_party_id)
+        if shared_scan_scope_only:
+            from ..models.contract_group import ContractGroup
+
+            stmt = (
+                stmt.join(
+                    ContractGroup,
+                    Contract.contract_group_id == ContractGroup.contract_group_id,
+                )
+                .where(
+                    Contract.group_relation_type == GroupRelationType.ENTRUSTED,
+                    ContractGroup.revenue_mode == RevenueMode.AGENCY,
+                    ContractGroup.data_status == data_status,
+                )
+                .options(selectinload(Contract.contract_group))
+            )
+        stmt = stmt.order_by(Contract.contract_id.asc())
+        return list((await db.execute(stmt)).scalars().all())
 
     async def update(
         self,
@@ -136,6 +186,7 @@ class CRUDContract:
             stmt = stmt.options(
                 selectinload(Contract.lease_detail),
                 selectinload(Contract.agency_detail),
+                selectinload(Contract.scan_documents),
             )
         return list((await db.execute(stmt)).scalars().all())
 
@@ -164,6 +215,7 @@ class CRUDContract:
                 Contract.data_status == "正常",
             )
             .options(
+                selectinload(Contract.contract_group),
                 selectinload(Contract.lease_detail),
                 selectinload(Contract.lessee_party),
             )
@@ -220,6 +272,167 @@ class CRUDContract:
             .order_by(Contract.contract_id.asc())
         )
         return list((await db.execute(stmt)).scalars().unique().all())
+
+    async def create_scan_document(
+        self,
+        db: AsyncSession,
+        *,
+        data: dict[str, Any],
+        commit: bool = True,
+    ) -> ContractScanDocument:
+        document = ContractScanDocument(**data)
+        db.add(document)
+        await db.flush()
+        if commit:
+            await db.commit()
+            await db.refresh(document)
+        return document
+
+    async def update_scan_document(
+        self,
+        db: AsyncSession,
+        *,
+        db_obj: ContractScanDocument,
+        data: dict[str, Any],
+        commit: bool = True,
+    ) -> ContractScanDocument:
+        for key, value in data.items():
+            setattr(db_obj, key, value)
+        db_obj.updated_at = _utcnow()
+        if commit:
+            await db.commit()
+            await db.refresh(db_obj)
+        return db_obj
+
+    async def get_scan_document(
+        self,
+        db: AsyncSession,
+        *,
+        document_id: str,
+        data_status: str = "正常",
+    ) -> ContractScanDocument | None:
+        stmt = select(ContractScanDocument).where(
+            ContractScanDocument.document_id == document_id,
+            ContractScanDocument.data_status == data_status,
+        )
+        return (await db.execute(stmt)).scalars().first()
+
+    async def get_scan_document_by_storage_key(
+        self,
+        db: AsyncSession,
+        *,
+        storage_key: str,
+        data_status: str = "正常",
+    ) -> ContractScanDocument | None:
+        stmt = select(ContractScanDocument).where(
+            ContractScanDocument.storage_key == storage_key,
+            ContractScanDocument.data_status == data_status,
+        )
+        return (await db.execute(stmt)).scalars().first()
+
+    async def list_scan_documents_by_contract(
+        self,
+        db: AsyncSession,
+        *,
+        contract_id: str,
+        data_status: str = "正常",
+    ) -> list[ContractScanDocument]:
+        stmt = (
+            select(ContractScanDocument)
+            .join(
+                contract_scan_document_links,
+                contract_scan_document_links.c.document_id
+                == ContractScanDocument.document_id,
+            )
+            .where(
+                contract_scan_document_links.c.contract_id == contract_id,
+                ContractScanDocument.data_status == data_status,
+            )
+            .order_by(ContractScanDocument.created_at.asc())
+        )
+        return list((await db.execute(stmt)).scalars().all())
+
+    async def replace_scan_document_links_for_contracts(
+        self,
+        db: AsyncSession,
+        *,
+        contract_ids: list[str],
+        document_ids: list[str],
+    ) -> None:
+        if not contract_ids:
+            return
+
+        await db.execute(
+            contract_scan_document_links.delete().where(
+                contract_scan_document_links.c.contract_id.in_(contract_ids)
+            )
+        )
+        rows = [
+            {
+                "contract_id": contract_id,
+                "document_id": document_id,
+                "created_at": _utcnow(),
+            }
+            for contract_id in contract_ids
+            for document_id in document_ids
+        ]
+        if rows:
+            await db.execute(contract_scan_document_links.insert(), rows)
+
+    async def count_scan_documents_by_contracts(
+        self,
+        db: AsyncSession,
+        *,
+        contract_ids: list[str],
+    ) -> dict[str, int]:
+        if not contract_ids:
+            return {}
+        stmt = (
+            select(
+                contract_scan_document_links.c.contract_id,
+                func.count(contract_scan_document_links.c.document_id),
+            )
+            .where(contract_scan_document_links.c.contract_id.in_(contract_ids))
+            .group_by(contract_scan_document_links.c.contract_id)
+        )
+        counts = {str(contract_id): 0 for contract_id in contract_ids}
+        for contract_id, count in (await db.execute(stmt)).all():
+            counts[str(contract_id)] = int(count)
+        return counts
+
+    async def list_contract_ids_linked_to_scan_document(
+        self,
+        db: AsyncSession,
+        *,
+        document_id: str,
+        contract_ids: list[str] | None = None,
+    ) -> list[str]:
+        stmt = select(contract_scan_document_links.c.contract_id).where(
+            contract_scan_document_links.c.document_id == document_id,
+        )
+        if contract_ids is not None:
+            if not contract_ids:
+                return []
+            stmt = stmt.where(
+                contract_scan_document_links.c.contract_id.in_(contract_ids)
+            )
+        return [str(item) for item in (await db.execute(stmt)).scalars().all()]
+
+    async def unlink_scan_document_from_contracts(
+        self,
+        db: AsyncSession,
+        *,
+        contract_ids: list[str],
+        document_id: str,
+    ) -> None:
+        if not contract_ids:
+            return
+        await db.execute(
+            contract_scan_document_links.delete().where(
+                contract_scan_document_links.c.contract_id.in_(contract_ids),
+                contract_scan_document_links.c.document_id == document_id,
+            )
+        )
 
     async def _replace_assets(
         self,

@@ -120,10 +120,49 @@ async def test_asset_import_create_authz_should_check_each_distinct_scope() -> N
     assert result.allowed is True
     assert result.resource_context["checked_scope_count"] == 2
     assert mock_authz_service.check_access.await_count == 2
+    checked_resources = [
+        call.kwargs["resource"]
+        for call in mock_authz_service.check_access.await_args_list
+    ]
+    assert {"party_id": "__unscoped__:asset:import"} in checked_resources
+    assert all("manager_party_id" not in resource for resource in checked_resources)
 
 
 @pytest.mark.asyncio
-async def test_asset_import_create_authz_should_resolve_owner_party_from_legacy_ownership() -> None:
+async def test_asset_import_create_authz_should_ignore_independent_manager_scope() -> (
+    None
+):
+    """Import create authz must not trust deprecated asset manager input."""
+    from src.api.v1.assets import asset_import as module
+
+    request = AssetImportRequest(
+        data=[{"manager_party_id": "manager-legacy-1"}],
+        import_mode="create",
+        should_skip_errors=False,
+        is_dry_run=True,
+    )
+
+    mock_authz_service = MagicMock()
+    mock_authz_service.check_access = AsyncMock(
+        return_value=MagicMock(allowed=True, reason_code="allow")
+    )
+
+    with pytest.MonkeyPatch.context() as monkeypatch:
+        monkeypatch.setattr(module, "authz_service", mock_authz_service, raising=False)
+        await module._require_asset_import_create_authz(  # type: ignore[attr-defined]
+            request=request,
+            current_user=MagicMock(id="user-1"),
+            db=MagicMock(),
+        )
+
+    _args, kwargs = mock_authz_service.check_access.await_args
+    assert kwargs["resource"] == {"party_id": "__unscoped__:asset:import"}
+
+
+@pytest.mark.asyncio
+async def test_asset_import_create_authz_should_resolve_owner_party_from_legacy_ownership() -> (
+    None
+):
     """导入鉴权应把 legacy ownership 作用域桥接为 owner_party/party。"""
     from src.api.v1.assets import asset_import as module
 
@@ -164,7 +203,9 @@ async def test_asset_import_create_authz_should_resolve_owner_party_from_legacy_
 
 
 @pytest.mark.asyncio
-async def test_asset_import_create_authz_should_resolve_party_from_legacy_organization() -> None:
+async def test_asset_import_create_authz_should_resolve_party_from_legacy_organization() -> (
+    None
+):
     """导入鉴权应把 legacy organization 作用域桥接为 party_id。"""
     from src.api.v1.assets import asset_import as module
 
@@ -200,7 +241,9 @@ async def test_asset_import_create_authz_should_resolve_party_from_legacy_organi
 
 
 @pytest.mark.asyncio
-async def test_asset_import_create_authz_should_fail_closed_when_legacy_scope_not_resolved() -> None:
+async def test_asset_import_create_authz_should_fail_closed_when_legacy_scope_not_resolved() -> (
+    None
+):
     """ownership/organization 无法桥接时应回退 unscoped sentinel。"""
     from src.api.v1.assets import asset_import as module
 
