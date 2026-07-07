@@ -37,6 +37,8 @@ ENTITY_MODEL_MAP: dict[str, tuple[str, str]] = {
     "ContractRentTerm": ("contract_group.py", "ContractRentTerm"),
     "ContractLedgerEntry": ("contract_group.py", "ContractLedgerEntry"),
     "ServiceFeeLedger": ("contract_group.py", "ServiceFeeLedger"),
+    "OperationalPaymentFlow": ("contract_group.py", "OperationalPaymentFlow"),
+    "PaymentAllocation": ("contract_group.py", "PaymentAllocation"),
     "ContractAuditLog": ("contract_group.py", "ContractAuditLog"),
     "LeaseContractDetail": ("contract_group.py", "LeaseContractDetail"),
     "AgencyAgreementDetail": ("contract_group.py", "AgencyAgreementDetail"),

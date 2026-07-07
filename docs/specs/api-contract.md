@@ -15,7 +15,7 @@
 | 鉴权 | 写操作和受保护读操作必须鉴权 |
 | 授权 | 使用 RBAC + ABAC，按钮和接口级动作均需授权 |
 | 数据范围 | 业务查询按用户主体绑定自动过滤 |
-| 项目主轴 | 项目端点承载资产、合同关系、台账摘要、风险和项目分析等运营视图 |
+| 项目主轴 | 项目端点承载资产、合同与协议、经营台账摘要、风险和项目分析等运营视图；经营台账、合同中心、资产资源、主体客户仍保留全局直接入口 |
 | 分析视图 | 分析和大屏端点使用 `view_mode` 指定 owner 或 manager 口径 |
 | 搜索 | 搜索结果必须经过权限和数据范围过滤 |
 | CSRF | 状态变更请求必须携带 CSRF token |
@@ -100,46 +100,48 @@
 | 更新项目 | `PATCH /api/v1/projects/{project_id}` | 更新项目主数据 |
 | 删除项目 | `DELETE /api/v1/projects/{project_id}` | 逻辑删除 |
 | 当前有效资产 | `GET /api/v1/projects/{project_id}/assets` | 返回项目当前有效资产汇总 |
-| 合同关系 | `GET /api/v1/projects/{project_id}/contract-relations` | 返回项目下承租转租和代理运营合同关系投影 |
-| 台账摘要 | `GET /api/v1/projects/{project_id}/ledger-summary` | 返回项目维度应收、应付、实收、实付、逾期摘要；承租模式上游合同计入应付，承租模式下游合同计入应收，代理模式服务费台账计入应收，直租租金不计入运营方自营应收 |
-| 风险摘要 | `GET /api/v1/projects/{project_id}/risks` | 返回项目风险项；MVP 已覆盖人工风险标签、30 天内合同到期提醒、付款逾期、当前有效资产可出租面积大于已出租面积时的空置风险（MVP 不含主合同覆盖类风险）、合同更正后已收/部分已收台账与当前条款不一致的 `ledger_stale_after_correction` 风险（见 ADR-0008），以及产权证证照信息不完整或权利人与关联资产当前主产权主体不一致的 `warning` 级数据质量风险（MVP 已删「未核验」触发，见 ADR-0005）；该风险只作为项目风险摘要或详情页数据质量提示；产权证缺少必填附件、没有关联任何既有资产或未绑定已审核权利人属于产权证保存校验错误，不作为项目风险项返回；产权证证载面积、期限或限制信息缺失可作为补录完整性提示展示，但接口不返回任务、待办、审批或处置工单对象；产权证数据质量风险由当前数据实时派生，接口不接受关闭、忽略或标记已处理请求 |
+| 合同与协议 | `GET /api/v1/projects/{project_id}/contract-relations` | 返回项目下承租合同、转租合同、委托协议、直租合同摘要投影；路径可沿用内部 `contract-relations`，用户侧文案不得展示“合同关系” |
+| 经营台账摘要 | `GET /api/v1/projects/{project_id}/ledger-summary` | 返回项目维度四类视图摘要：终端租户收缴、运营方收入、运营方成本、服务费结算；终端租户收缴包含承租转租下游租金和代理直租租金，是唯一逾期来源；运营方收入包含承租转租租金收入和代理服务费收入，不含代理直租租金；运营方成本记录承租上游租金应付/实付/未付，不产生逾期 |
+| 风险摘要 | `GET /api/v1/projects/{project_id}/risks` | 返回项目风险项；MVP 已覆盖人工风险标签、30 天内合同/协议到期提醒、终端租户租金逾期、当前有效资产可出租面积大于已出租面积时的空置风险（MVP 不含主合同覆盖类风险）、合同更正后已收付台账与当前条款不一致的 `ledger_stale_after_correction` 风险（见 ADR-0008），以及产权证证照信息不完整或权利人与关联资产当前主产权主体不一致的 `warning` 级数据质量风险（MVP 已删「未核验」触发，见 ADR-0005）；运营方成本未付、服务费未收不作为逾期风险；该风险只作为项目风险摘要或详情页数据质量提示；接口不返回任务、待办、审批或处置工单对象；产权证数据质量风险由当前数据实时派生，接口不接受关闭、忽略或标记已处理请求 |
 | 租户客户 | `GET /api/v1/projects/{project_id}/tenants` | 返回项目下终端租户、客户主体和合同数摘要 |
-| 项目分析 | `GET /api/v1/projects/{project_id}/analytics` | 返回项目维度分析摘要，包含有效资产汇总、合同关系数、客户数、风险数、应收/应付/实收/实付/逾期、服务费摘要和月度收付款趋势，并按承租转租、代理运营分区返回关系数、覆盖资产数、主合同/终端合同数、客户数、收付款和风险数；代理直租租金不计入运营方自营应收；`scope_mode=all` 混合视图下客户双指标置空并返回 `customer_metrics_suppression_reason=customer_metrics_requires_single_perspective`，其余项目分析字段照常返回 |
+| 项目分析 | `GET /api/v1/projects/{project_id}/analytics` | 返回项目维度分析摘要，包含有效资产汇总、合同/协议数、客户数、风险数、终端租户收缴、运营方收入、运营方成本、服务费结算、经营结果和按租金账期聚合的月度趋势，并按承租转租、代理运营分区返回；代理直租租金计入终端租户收缴但不计入运营方收入；`scope_mode=all` 混合视图下客户双指标置空并返回 `customer_metrics_suppression_reason=customer_metrics_requires_single_perspective`，其余项目分析字段照常返回 |
 
-### 4.5 合同关系与合同
+### 4.5 合同与协议
 
 | 能力 | 方法与路径 | 契约 |
 |---|---|---|
-| 合同关系列表 | `GET /api/v1/contract-groups` | 辅助或内部入口，支持主体范围过滤、项目筛选和业务筛选；列表项返回所属项目名称和按合同角色聚合的数量 |
-| 合同关系详情 | `GET /api/v1/contract-groups/{group_id}` | 返回合同关系投影、主体、资产和合同信息 |
-| 创建合同关系 | `POST /api/v1/contract-groups` | 必须归属项目；同条合同关系只能选择一种经营模式 |
-| 更新合同关系 | `PATCH /api/v1/contract-groups/{group_id}` | 更新合同关系主数据和关联信息 |
-| 新增关系内合同 | `POST /api/v1/contract-groups/{group_id}/contracts` | 在既有合同关系内补录上游、下游、委托或直租合同；路径 `group_id` 必须与请求体一致 |
+| 合同与协议列表 | `GET /api/v1/contract-groups` | 支持主体范围过滤、项目筛选和业务筛选；路径可沿用内部 `contract-groups`，用户侧展示承租合同、转租合同、委托协议、直租合同，不展示“合同关系”对象名 |
+| 合同与协议详情 | `GET /api/v1/contract-groups/{group_id}` | 返回内部聚合投影、主体、资产和合同/协议信息；前端文案为“合同与协议” |
+| 创建合同/协议经营事项 | `POST /api/v1/contract-groups` | 必须归属项目；同一经营事项只能选择一种经营模式 |
+| 更新合同/协议经营事项 | `PATCH /api/v1/contract-groups/{group_id}` | 更新内部聚合主数据和关联信息 |
+| 新增合同/协议 | `POST /api/v1/contract-groups/{group_id}/contracts` | 在既有经营事项内补录承租合同、转租合同、委托协议或直租合同；路径 `group_id` 必须与请求体一致 |
 | 合同详情 | `GET /api/v1/contracts/{contract_id}` | 返回合同基表和类型明细；暴露只读 `lessor_name_snapshot` / `lessee_name_snapshot` 作为签署时主体名称快照，历史合同显示快照名而非跟随 Party 主档改名；可返回 `field_sources` 供编辑或补录来源上下文按需查看，业务详情主视图不要求默认展示；签订日期、付款周期或备注类关键经营字段缺失时，可返回轻量补录完整性提示，不返回任务、待办或审批对象，也不阻断保存 |
-| 更新合同补录信息 | `PATCH /api/v1/contracts/{contract_id}` | 更正合同补录字段；需记录操作痕迹，已生成台账按规则重算或作废（重算只动未收条目，已收/部分已收条目不自动改写、留待人工处理；MVP 无红字冲销） |
-| 合同扫描件附件 | `GET/PUT/DELETE /api/v1/contracts/{contract_id}/attachments*` | 查询、整体替换和删除盖章扫描件引用；扫描件文档按 `storage_key` 单存，多条同委托协议合同可共享引用；替换/删除只联动同合同号 + 同委托方 + 同受托方 + 正常代运营合同关系中的受托合同，且需对全部受影响合同逐条通过 `contract:update` 授权；复用既有 `storage_key` 时若该文档已链接到本次受影响集合外的合同，替换必须失败暴露；删除受「每合同 ≥1 盖章扫描件」保护 |
+| 更新合同补录信息 | `PATCH /api/v1/contracts/{contract_id}` | 更正合同补录字段；需记录操作痕迹，已生成经营台账按规则重算或作废（重算只动未收/未付且无收付流水的条目，已有收付流水条目不静默改写、留待人工处理；MVP 无红字冲销） |
+| 合同扫描件附件 | `GET/PUT/DELETE /api/v1/contracts/{contract_id}/attachments*` | 查询、整体替换和删除盖章扫描件引用；扫描件文档按 `storage_key` 单存，多条同委托协议合同可共享引用；替换/删除只联动同合同号 + 同委托方 + 同受托方 + 正常代运营受托合同，且需对全部受影响合同逐条通过 `contract:update` 授权；复用既有 `storage_key` 时若该文档已链接到本次受影响集合外的合同，替换必须失败暴露；删除受「每合同 ≥1 盖章扫描件」保护 |
 | 合同扫描件解析 | `/api/v1/contract-groups/{group_id}/contracts/extraction-sessions/*` | 上传合同扫描件后解析合同编号、主体、资产、期间、金额、租金或服务费条款，返回字段候选值、置信度、轻量来源证据、候选匹配、匹配提示和字段来源候选；必须人工确认后创建或更新合同补录；主体候选仅限已审核 Party，资产候选仅限既有资产，候选不得自动绑定；主体未匹配已审核 Party 时只返回提示，不直接创建 Party 或写入合同主体引用；资产未匹配既有资产时只返回提示，不直接创建或绑定新资产 |
 | 合同作废 | `POST /api/v1/contracts/{contract_id}/void` | 补录错误或业务作废时保留历史记录；相关台账按规则作废（已收/部分已收条目需先人工处理；MVP 无红字冲销） |
 | 审计日志 | `GET /api/v1/contracts/{contract_id}/audit-logs` | 返回合同补录、更正、作废和台账重算操作日志 |
 
 MVP 不提供合同提审、审核通过、驳回、反审核或关系联审主契约。合同补录**即生效**，仅保留最小生命周期（草稿/生效/已到期/已终止 + 纠错草稿，纠错门禁绑生命周期状态）。原合同审批流端点（`submit-review`/`approve`/`reject`/`reverse`/合同组 `submit-review` 批量提审、`_requires_joint_review` 联审）是已移出基线需求 REQ-RNT-004 联审半边的残留实现，已按 ADR-0013 删除而非保留；显式 `expire` 端点同样下线，`已到期` 仅由 `effective_to` 派生展示。
 
-MVP 不提供续签端点。到期后继续合作按新合同补录流程创建合同关系和合同。上下游/委托/直租仅为收入/成本方向标记，MVP 不做主合同覆盖判定或覆盖风险。
+MVP 不提供续签端点。到期后继续合作按新合同/协议补录流程创建记录。承租合同、转租合同、委托协议、直租合同仅为经营影响方向标记，MVP 不做主合同覆盖判定或覆盖风险。
 
-代理合同跨项目按 ADR-0012：同一份委托协议覆盖 N 个项目时，在每个项目下各建一条合同关系/合同记录、共享引用同一份盖章扫描件（扫描件只存一份、多记录引用，替换只联动同合同号 + 同委托方 + 同受托方 + 正常代运营合同关系中的受托角色兄弟记录，并对全部受影响合同逐条鉴权；复用既有 `storage_key` 时若发现范围外链接则拒绝；删除受「每合同 ≥1 扫描件」保护）；`contract_number` 已由全局唯一改为 `UNIQUE(contract_number, project_id)` 按项目复合唯一（N 条同号靠项目区分），正常合同缺 `project_id` 由 DB check constraint 持续拦截；更正按记录独立、只重算本项目台账，不联动兄弟记录（2026-06-20 已落地）。
+代理委托协议跨项目按 ADR-0012：同一份委托协议覆盖 N 个项目时，在每个项目下各建一条合同/协议记录、共享引用同一份盖章扫描件（扫描件只存一份、多记录引用，替换只联动同合同号 + 同委托方 + 同受托方 + 正常代运营受托角色兄弟记录，并对全部受影响合同逐条鉴权；复用既有 `storage_key` 时若发现范围外链接则拒绝；删除受「每合同 ≥1 扫描件」保护）；`contract_number` 已由全局唯一改为 `UNIQUE(contract_number, project_id)` 按项目复合唯一（N 条同号靠项目区分），正常合同缺 `project_id` 由 DB check constraint 持续拦截；更正按记录独立、只重算本项目台账，不联动兄弟记录（2026-06-20 已落地）。
 
-### 4.6 台账
+### 4.6 经营台账与收付流水
 
 | 能力 | 方法与路径 | 契约 |
 |---|---|---|
-| 合同台账 | `GET /api/v1/contracts/{contract_id}/ledger` | 查询单合同台账 |
-| 实收登记 | `PATCH /api/v1/contracts/{contract_id}/ledger/batch-update-status` | 批量登记实收金额（入参仅 `entry_ids`、`paid_amount`、`notes`），`unpaid`/`partial`/`paid` 由 `paid_amount` 对 `amount_due` 派生，`voided` 仅系统流程写入，必须幂等 |
-| 台账查询 | `GET /api/v1/ledger/entries` | 支持跨合同、跨项目按资产、主体、合同、账期和派生支付状态查询，作为全局“财务台账”入口的数据源 |
-| 台账导出 | `GET /api/v1/ledger/entries/export` | 按当前台账筛选条件导出查询结果 |
+| 合同/协议台账 | `GET /api/v1/contracts/{contract_id}/ledger` | 查询单合同/协议台账，返回账期、四类视图归属、应收/应付、实收/实付、未收/未付和派生状态 |
+| 收付流水登记 | `POST /api/v1/ledger/payment-flows` | 创建轻量收付流水，支持 `terminal_rent_receipt`、`service_fee_receipt`、`upstream_cost_payment`；字段包含发生日期、金额、登记人、备注和可选凭证附件 |
+| 收付流水分摊 | `POST /api/v1/ledger/payment-flows/{flow_id}/allocations` | 一笔流水可人工分摊到多个账期，系统校验分摊金额合计等于流水金额；账期归属按租金账期，流水发生日期仅用于查询、导出和审计 |
+| 经营台账查询 | `GET /api/v1/ledger/entries` | 支持项目上下文和全局上下文；按四类视图（终端租户收缴、运营方收入、运营方成本、服务费结算）、资产、主体、合同/协议、账期、发生日期和派生支付状态查询，作为全局“经营台账”入口的数据源 |
+| 经营台账导出 | `GET /api/v1/ledger/entries/export` | 按当前经营台账筛选条件导出查询结果 |
+| 服务费月度生成 | `POST /api/v1/ledger/service-fees/generate` | 按租金账期月份、项目、委托协议和产权方汇总代理直租实收，固化服务费比例、计算基数和来源账期生成服务费应收；不逐笔生成 |
 | 台账重算 | `POST /api/v1/contracts/{contract_id}/ledger/recalculate` | 对受影响区间作废并重建；响应返回 `created`/`updated`/`voided` 与 `skipped_entries`，已收/部分已收条目被跳过时需在前端当场展示 |
 | 补偿任务 | `POST /api/v1/ledger/compensation/run` | 扫描并补齐缺失台账，必须幂等 |
 
-多资产合同按合同级金额返回，不做资产级金额拆分；项目或主体汇总时按合同和账期去重。
+多资产合同按合同级金额返回，不做资产级金额拆分；项目或主体汇总时按合同和账期去重。逾期只由终端租户租金收缴派生；运营方成本未付、服务费未收不产生逾期。
 
 ### 4.7 客户与主体
 
@@ -160,16 +162,16 @@ MVP 不提供续签端点。到期后继续合作按新合同补录流程创建�
 
 | 能力 | 方法与路径 | 契约 |
 |---|---|---|
-| 全局搜索 | `GET /api/v1/search` | MVP 覆盖资产、项目、合同关系、合同、客户 |
+| 全局搜索 | `GET /api/v1/search` | MVP 覆盖资产、项目、合同/协议、客户 |
 
-搜索结果支持全部视图和按对象分组视图。**默认排序按业务置顶优先 → 文本相关度 → 标题**：业务置顶 = 查询命中业务编码（资产/项目/合同关系编码、合同号）精确或前缀匹配的结果，优先于纯文本相关度（修正原契约「相关度优先、同分按业务置顶」与代码 `_business_rank` 先于 `_score_text` 排序的方向矛盾）。未授权对象不返回。产权证不作为 MVP 全局搜索对象，用户通过资产结果进入资产详情后查看产权证信息；产权证数据质量风险也不进入全局搜索结果。
+搜索结果支持全部视图和按对象分组视图。**默认排序按业务置顶优先 → 文本相关度 → 标题**：业务置顶 = 查询命中业务编码（资产/项目编码、合同号/协议号）精确或前缀匹配的结果，优先于纯文本相关度（修正原契约「相关度优先、同分按业务置顶」与代码 `_business_rank` 先于 `_score_text` 排序的方向矛盾）。未授权对象不返回。产权证不作为 MVP 全局搜索对象，用户通过资产结果进入资产详情后查看产权证信息；产权证数据质量风险也不进入全局搜索结果。
 
 ### 4.9 分析与统计
 
 | 能力 | 方法与路径 | 契约 |
 |---|---|---|
-| 综合分析 | `GET /api/v1/analytics/comprehensive` | 返回收入拆分、客户双指标、实收、收缴率、按项目分区的 `project_breakdown` 和按经营模式分区的 `mode_breakdown`；承租转租统计下游租金，代理运营统计服务费，代理直租租金不计入运营方自营收入；`customer_entity_breakdown` / `customer_contract_breakdown` 仅含终端客户桶 `downstream_sublease`、`direct_lease`，上游/委托等非客户对手方只通过 `counterparty_entity_breakdown` / `counterparty_contract_breakdown` 的 `upstream_lease`、`entrusted_operation` 返回；客户双指标分析拒绝 `view_mode=all` |
-| 分析导出 | `GET /api/v1/analytics/export` | 导出带统计口径版本的结果；客户双指标分析拒绝 `view_mode=all` |
+| 综合分析 | `GET /api/v1/analytics/comprehensive` | 返回终端租户收缴、运营方收入、运营方成本、经营结果、客户双指标、按项目分区的 `project_breakdown` 和按经营模式分区的 `mode_breakdown`；承租转租统计下游租金收入和上游成本，代理运营统计代理直租收缴和服务费，代理直租租金不计入运营方收入；默认按租金账期归属，流水发生日期仅用于经营台账查询/导出；`customer_entity_breakdown` / `customer_contract_breakdown` 仅含终端客户桶 `downstream_sublease`、`direct_lease`，上游/委托等非客户对手方只通过 `counterparty_entity_breakdown` / `counterparty_contract_breakdown` 的 `upstream_lease`、`entrusted_operation` 返回；客户双指标分析拒绝 `view_mode=all` |
+| 分析导出 | `GET /api/v1/analytics/export` | 导出带统计口径版本的结果；客户双指标分析拒绝 `view_mode=all`；导出应标记账期归属口径和流水发生日期字段 |
 | 统计报表 | `/api/v1/statistics/*` | 提供基础、面积、财务、出租率、分布、趋势等统计能力 |
 
 分析端点可接收 `view_mode=owner|manager`，不传时按用户绑定自动回落。常规客户列表可使用 `all` 并集视图；综合分析和分析导出产出客户双指标，必须选定 owner 或 manager 单一视角。
@@ -196,7 +198,7 @@ MVP 不提供续签端点。到期后继续合作按新合同补录流程创建�
 | 组织管理 | `/api/v1/organizations/*` | 组织 CRUD 和组织上下文绑定维护 |
 | 数据字典 | `/api/v1/system/dictionaries/*` | 字典分类和字典项维护 |
 | 系统基础 | `/api/v1/system/health`、`/api/v1/system/info`、`/api/v1/system/root` | MVP 仅保留最小健康检查和系统信息；复杂 monitoring API 不作为产品能力暴露 |
-| 通知 | `/api/v1/notifications/*` | 站内通知查询与处理（仅已读/未读，无处理闭环）；业务提醒生成时按主体绑定数据范围过滤接收人（仅可见该对象 owner/operator 范围者），系统通知豁免范围过滤但须内容中立（`admin`/`system_admin` 发，见 domain-model §4.24）。档位幂等去重、优先级档位派生、系统通知生产者、企业微信按 `recipient_id` 定向应用消息（删群广播）等机制见 domain-model §4.24 Notification；ADR-0015 与系统通知生产者已实施。ADR-0016 代码已接企业微信应用消息并通过 `gettoken` 凭据验证，真实发送待企业微信可信 IP / 域名配置；正式用户 ↔ 企业微信 `userid` 映射仍待实施。 |
+| 通知 | `/api/v1/notifications/*` | 站内通知查询与处理（仅已读/未读，无处理闭环）；业务提醒生成时按主体绑定数据范围过滤接收人（仅可见该对象 owner/operator 范围者），系统通知豁免范围过滤但须内容中立（`admin`/`system_admin` 发，见 domain-model §4.24）。业务通知仅覆盖合同/协议即将到期、合同/协议已到期、终端租户租金到期、终端租户租金逾期；运营方成本未付和服务费未收不生成逾期通知。档位幂等去重、优先级档位派生、系统通知生产者、企业微信按 `recipient_id` 定向应用消息（删群广播）等机制见 domain-model §4.24 Notification；ADR-0015 与系统通知生产者已实施。ADR-0016 代码已接企业微信应用消息并通过 `gettoken` 凭据验证，真实发送待企业微信可信 IP / 域名配置；正式用户 ↔ 企业微信 `userid` 映射仍待实施。 |
 
 ## 5. 错误与边界约定
 

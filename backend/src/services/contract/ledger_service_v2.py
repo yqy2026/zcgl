@@ -24,6 +24,8 @@ from src.models.contract_group import (
     ContractLedgerEntry,
     ContractLifecycleStatus,
     ContractRentTerm,
+    GroupRelationType,
+    LedgerView,
 )
 
 logger = logging.getLogger(__name__)
@@ -215,6 +217,21 @@ def _asset_ids_from(items: list[Any] | None) -> list[str]:
     return asset_ids
 
 
+def derive_ledger_views_for_contract(contract: Contract) -> list[str]:
+    """Map contract business role to operations-ledger view memberships."""
+    relation_type = getattr(contract, "group_relation_type", None)
+    if relation_type in {GroupRelationType.DOWNSTREAM, "DOWNSTREAM", "??"}:
+        return [
+            LedgerView.TERMINAL_COLLECTION.value,
+            LedgerView.OPERATOR_INCOME.value,
+        ]
+    if relation_type in {GroupRelationType.DIRECT_LEASE, "DIRECT_LEASE", "??"}:
+        return [LedgerView.TERMINAL_COLLECTION.value]
+    if relation_type in {GroupRelationType.UPSTREAM, "UPSTREAM", "??"}:
+        return [LedgerView.OPERATOR_COST.value]
+    return []
+
+
 class ContractLedgerServiceV2:
     """合同月度台账服务。"""
 
@@ -261,6 +278,7 @@ class ContractLedgerServiceV2:
         is_tax_included: bool,
         tax_rate: Decimal | None,
         attribution: LedgerAttributionSnapshot,
+        ledger_views: list[str],
         now: datetime,
     ) -> dict[str, Any]:
         return {
@@ -269,6 +287,7 @@ class ContractLedgerServiceV2:
             "year_month": year_month,
             "due_date": due_date,
             "amount_due": amount_due,
+            "ledger_views": ledger_views,
             "currency_code": currency_code,
             "is_tax_included": is_tax_included,
             "tax_rate": tax_rate,
@@ -316,6 +335,9 @@ class ContractLedgerServiceV2:
         now = _utcnow()
         payment_cycle = lease_detail.payment_cycle or "月付"
         attribution: LedgerAttributionSnapshot | None = None
+        ledger_views = derive_ledger_views_for_contract(contract)
+        if not ledger_views:
+            raise BusinessValidationError("??????????????")
 
         for year_month in all_year_months:
             if year_month in existing_year_months:
@@ -343,6 +365,7 @@ class ContractLedgerServiceV2:
                     is_tax_included=contract.is_tax_included,
                     tax_rate=contract.tax_rate,
                     attribution=attribution,
+                    ledger_views=ledger_views,
                     now=now,
                 ),
                 commit=False,
@@ -453,6 +476,9 @@ class ContractLedgerServiceV2:
         payment_cycle = getattr(lease_detail, "payment_cycle", None) or "月付"
         now = _utcnow()
         attribution: LedgerAttributionSnapshot | None = None
+        ledger_views = derive_ledger_views_for_contract(contract)
+        if not ledger_views:
+            raise BusinessValidationError("??????????????")
         existing_by_month = {entry.year_month: entry for entry in existing_entries}
         target_year_months = _expand_year_months(rent_terms)
         target_year_month_set = set(target_year_months)
@@ -489,6 +515,7 @@ class ContractLedgerServiceV2:
                         is_tax_included=contract.is_tax_included,
                         tax_rate=contract.tax_rate,
                         attribution=attribution,
+                        ledger_views=ledger_views,
                         now=now,
                     ),
                     commit=False,

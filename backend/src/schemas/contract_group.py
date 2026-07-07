@@ -15,6 +15,11 @@ from ..models.contract_group import (
     ContractDirection,
     ContractLifecycleStatus,
     GroupRelationType,
+    LedgerFollowUpStatus,
+    LedgerView,
+    OperationalPaymentFlowStatus,
+    OperationalPaymentFlowType,
+    PaymentAllocationTargetType,
     RevenueMode,
 )
 
@@ -413,11 +418,15 @@ class ContractLedgerEntryResponse(BaseModel):
     year_month: str
     due_date: date
     amount_due: Decimal
+    ledger_views: list[LedgerView]
     currency_code: str
     is_tax_included: bool
     tax_rate: Decimal | None
     payment_status: str
     paid_amount: Decimal
+    follow_up_status: LedgerFollowUpStatus | None = None
+    next_follow_up_date: date | None = None
+    follow_up_note: str | None = None
     attributed_project_id: str | None = None
     attributed_owner_party_id: str | None = None
     attributed_operator_party_id: str | None = None
@@ -530,6 +539,91 @@ class LedgerRecalculateResponse(BaseModel):
     updated: int = Field(..., ge=0)
     voided: int = Field(..., ge=0)
     skipped_entries: list[LedgerRecalculateSkippedEntry] = Field(default_factory=list)
+
+
+class OperationalPaymentFlowCreate(BaseModel):
+    """Request body for creating an operational payment flow."""
+
+    flow_type: OperationalPaymentFlowType
+    occurred_on: date
+    amount: Decimal = Field(..., gt=0)
+    registered_by: str = Field(..., min_length=1, max_length=100)
+    counterparty_id: str | None = None
+    voucher_attachment_ids: list[str] | None = None
+    notes: str | None = None
+
+
+class OperationalPaymentFlowResponse(BaseModel):
+    """Response payload for an operational payment flow."""
+
+    flow_id: str
+    flow_type: OperationalPaymentFlowType
+    occurred_on: date
+    amount: Decimal
+    registered_by: str
+    counterparty_id: str | None = None
+    voucher_attachment_ids: list[str] | None = None
+    notes: str | None = None
+    status: OperationalPaymentFlowStatus
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PaymentAllocationCreate(BaseModel):
+    """Request row for allocating one payment flow to a ledger period."""
+
+    target_type: PaymentAllocationTargetType
+    target_id: str = Field(..., min_length=1)
+    year_month: str = Field(..., pattern=r"^\d{4}-\d{2}$")
+    amount: Decimal = Field(..., gt=0)
+
+
+class PaymentAllocationSaveRequest(BaseModel):
+    """Request body for replacing allocations for one flow."""
+
+    allocations: list[PaymentAllocationCreate] = Field(..., min_length=1)
+
+
+class PaymentAllocationResponse(BaseModel):
+    """Response payload for a payment allocation."""
+
+    allocation_id: str
+    flow_id: str
+    target_type: PaymentAllocationTargetType
+    target_id: str
+    year_month: str
+    amount: Decimal
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ServiceFeeLedgerResponse(BaseModel):
+    """Response payload for a monthly service-fee ledger entry."""
+
+    service_fee_entry_id: str
+    contract_group_id: str
+    agency_contract_id: str
+    agency_agreement_contract_id: str
+    source_ledger_ids: list[str]
+    year_month: str
+    amount_due: Decimal
+    paid_amount: Decimal
+    payment_status: str
+    currency_code: str
+    service_fee_ratio: Decimal
+    calculation_base_amount: Decimal
+    attributed_project_id: str | None = None
+    attributed_owner_party_id: str | None = None
+    attributed_operator_party_id: str | None = None
+    attributed_asset_ids: list[str] | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class LedgerCompensationFailure(BaseModel):

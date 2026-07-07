@@ -2,7 +2,17 @@
 
 ## [Unreleased] - 2026-03-06
 
+### 2026-07-07
+- feat(operations-ledger): implement the backend foundation slice from `docs/plans/2026-07-06-operations-ledger-implementation.md`. Added `ledger_views` and terminal follow-up columns to `ContractLedgerEntry`, new `OperationalPaymentFlow` / `PaymentAllocation` models and schemas, monthly aggregate `ServiceFeeLedger` fields, the `20260706_operations_ledger_foundation.py` migration with deterministic `paid_amount` backfill flows/allocations, legacy service-fee monthly aggregation, fail-loud allocation checks, minimal `payment_flow_service` allocation validation, preserve-not-overwrite service-fee sync behavior, and ledger generation view stamping by contract role. Updated field-drift mapping and REQ-RNT-006 traceability; added focused model, migration, ledger service, payment flow service, and service fee service tests.
+
+### 2026-07-06
+- docs(plan): 新增 `docs/plans/2026-07-06-operations-ledger-implementation.md`，将经营台账与收付流水目标口径拆为后端模型迁移、流水分摊服务、经营台账 API、前端入口联动、经营分析通知收口和最终门禁六个阶段；复核后补齐服务费与重算跳过联动、`ServiceFeeLedger.agency_agreement_contract_id` 命名、字段漂移映射、多视图去重验收、存量 `paid_amount` 回填前置条件和前端经营台账命名收口；同步更新活动方案索引和运营台账修订 issue 状态为实施计划待评审。
+- docs(specs): 同步运营台账目标口径到 `domain-model`、`api-contract` 与 `requirements-trace`，补充轻量收付流水、账期分摊、服务费按租金账期月度汇总、终端租户唯一逾期、经营分析四组指标和通知触发源收窄；在追踪矩阵记录目标态缺口。
+- docs(prd): 同步运营台账与经营口径到 `docs/prd.md`，明确项目默认入口但不取代全局直接入口、用户侧使用“合同与协议”而非“合同关系”、经营台账四类视图、终端租户收缴唯一逾期口径、代理服务费按租金账期月度生成、轻量收付流水与账期归属、通知边界和新增验收场景；更新运营台账修订 issue 状态与索引。
+- docs(issues): 新增运营台账与经营口径 PRD 修订建议，记录项目默认入口但不取代全局入口、用户侧不展示“合同关系”、经营台账四类视图、终端租户收缴唯一逾期口径、代理服务费按租金账期和委托协议比例月度结算、收付流水与账期归属等已确认需求；同步登记 `docs/issues/README.md`。
+
 ### 2026-06-23
+- docs(agents): 优化 `AGENTS.md` 执行护栏。明确优先使用 `make` 目标、手工后端命令再走 `uv run --frozen --extra dev`；收口 `CHANGELOG.md` 与 SSOT 的触发边界（只读调研例外、文件改动必更）；补充 `.env`、上传/日志/产物/依赖目录保护规则；为 route_registry 自注册补现有示例，并将 `12-rule` 调整为文档内二级章节。
 - test(api,migration): align final failing backend unit tests with the current contract-group/project contracts. Contract-group API layering tests now include required `project_id`, project duplicate-code routing coverage mocks the service-level `DuplicateResourceError` instead of sending retired manual code payloads, and the contract review workflow migration fake now covers top-level `op.alter_column`.
 - docs(issues,plans): archive the completed 2026-06-18 PRD grill follow-up. Moved the large issue to `docs/archive/issues/2026-06-18-prd-grill-code-followup.md` and the plan to `docs/archive/backend-plans/2026-06-18-prd-grill-code-followup.md`; created `docs/issues/2026-06-23-wecom-userid-mapping-and-send-verification.md` to track only the remaining WeCom trusted-IP/domain send verification and formal system-user to WeCom `userid` mapping. Updated active/archive indexes.
 - docs(ssot): close stale implementation-status drift after WeCom app-message integration. Updated domain-model, api-contract, traceability, active issue and plan indexes to mark asset/project code generation, asset import owner validation, property-certificate save gates, notification idempotency, system notice producer, and WeCom group-webhook retirement as implemented. I2② is now recorded as partially complete: app-message code and `gettoken` credentials are verified; real send remains blocked by WeCom trusted-IP/domain setup (`errcode=60020`), and the formal system-user to WeCom `userid` mapping remains to be implemented.

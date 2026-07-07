@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.models.contract_group import ContractLifecycleStatus
+from src.models.contract_group import ContractLifecycleStatus, GroupRelationType
 
 pytestmark = pytest.mark.asyncio
 
@@ -18,11 +18,13 @@ def _make_contract(
     contract_id: str = "contract-001",
     assets: list[str] | None = None,
     payment_cycle: str = "月付",
+    relation_type: GroupRelationType = GroupRelationType.DOWNSTREAM,
 ) -> MagicMock:
     contract = MagicMock()
     contract.contract_id = contract_id
     contract.contract_group_id = "group-001"
     contract.status = ContractLifecycleStatus.ACTIVE
+    contract.group_relation_type = relation_type
     contract.sign_date = date(2026, 1, 1)
     contract.currency_code = "CNY"
     contract.is_tax_included = True
@@ -134,6 +136,10 @@ class TestLedgerServiceV2:
         assert created_entries[0]["attributed_owner_party_id"] == "owner-001"
         assert created_entries[0]["attributed_operator_party_id"] == "operator-001"
         assert created_entries[0]["attributed_asset_ids"] == ["asset-contract"]
+        assert created_entries[0]["ledger_views"] == [
+            "terminal_collection",
+            "operator_income",
+        ]
 
     async def test_generate_ledger_on_activation_without_rent_terms_returns_empty(self):
         from src.services.contract import ledger_service_v2 as ledger_module
@@ -227,6 +233,61 @@ class TestLedgerServiceV2:
             "2026-01",
             "2026-02",
         ]
+
+    async def test_generate_ledger_on_activation_sets_direct_lease_view(self):
+        from src.services.contract import ledger_service_v2 as ledger_module
+
+        service = getattr(ledger_module, "ledger_service_v2", None)
+        assert service is not None, "ledger_service_v2 ????"
+
+        contract = _make_contract(relation_type=GroupRelationType.DIRECT_LEASE)
+        contract_group = MagicMock(
+            project_id="project-001",
+            owner_party_id="owner-001",
+            operator_party_id="operator-001",
+            assets=[],
+        )
+        rent_terms = [
+            _make_rent_term(
+                start_date=date(2026, 1, 1),
+                end_date=date(2026, 1, 31),
+                monthly_rent="1000.00",
+            )
+        ]
+        created_entries: list[dict] = []
+
+        async def _create_ledger_entry(db, *, data, commit=False):  # noqa: ANN001
+            created_entries.append(data)
+            return MagicMock(year_month=data["year_month"])
+
+        with (
+            patch(
+                "src.services.contract.ledger_service_v2.contract_crud.get",
+                new=AsyncMock(return_value=contract),
+            ),
+            patch(
+                "src.services.contract.ledger_service_v2.contract_group_crud.list_rent_terms_by_contract",
+                new=AsyncMock(return_value=rent_terms),
+            ),
+            patch(
+                "src.services.contract.ledger_service_v2.contract_group_crud.get_existing_ledger_year_months",
+                new=AsyncMock(return_value=set()),
+            ),
+            patch(
+                "src.services.contract.ledger_service_v2.contract_group_crud.get_with_assets",
+                new=AsyncMock(return_value=contract_group),
+            ),
+            patch(
+                "src.services.contract.ledger_service_v2.contract_group_crud.create_ledger_entry",
+                new=_create_ledger_entry,
+            ),
+        ):
+            await service.generate_ledger_on_activation(
+                AsyncMock(),
+                contract_id="contract-001",
+            )
+
+        assert created_entries[0]["ledger_views"] == ["terminal_collection"]
 
     async def test_batch_update_status_delegates_and_returns_updated_entries(self):
         from src.services.contract import ledger_service_v2 as ledger_module

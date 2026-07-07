@@ -5,6 +5,7 @@ CRUD helpers for ContractGroup（合同组）。
 """
 
 from datetime import UTC, date, datetime
+from decimal import Decimal
 from typing import Any, TypedDict
 
 from sqlalchemy import Select, and_, func, select
@@ -20,6 +21,8 @@ from ..models.contract_group import (
     ContractLedgerEntry,
     ContractLifecycleStatus,
     ContractRentTerm,
+    OperationalPaymentFlow,
+    PaymentAllocation,
     ServiceFeeLedger,
     derive_ledger_payment_status,
 )
@@ -659,7 +662,6 @@ class CRUDContractGroup:
     ) -> list[ServiceFeeLedger]:
         stmt = (
             select(ServiceFeeLedger)
-            .options(selectinload(ServiceFeeLedger.source_ledger))
             .where(ServiceFeeLedger.contract_group_id == group_id)
             .order_by(ServiceFeeLedger.year_month.asc())
         )
@@ -678,7 +680,6 @@ class CRUDContractGroup:
                 joinedload(ServiceFeeLedger.agency_contract).joinedload(
                     Contract.contract_group
                 ),
-                selectinload(ServiceFeeLedger.source_ledger),
             )
             .where(
                 ServiceFeeLedger.attributed_project_id == project_id,
@@ -706,6 +707,118 @@ class CRUDContractGroup:
             await db.commit()
             await db.refresh(entry)
         return entry
+
+    async def create_payment_flow(
+        self,
+        db: AsyncSession,
+        *,
+        data: dict[str, Any],
+        commit: bool = True,
+    ) -> OperationalPaymentFlow:
+        flow = OperationalPaymentFlow(**data)
+        db.add(flow)
+        await db.flush()
+        if commit:
+            await db.commit()
+            await db.refresh(flow)
+        return flow
+
+    async def get_payment_flow(
+        self,
+        db: AsyncSession,
+        *,
+        flow_id: str,
+    ) -> OperationalPaymentFlow | None:
+        stmt = select(OperationalPaymentFlow).where(
+            OperationalPaymentFlow.flow_id == flow_id
+        )
+        return (await db.execute(stmt)).scalars().first()
+
+    async def list_payment_allocations_by_flow(
+        self,
+        db: AsyncSession,
+        *,
+        flow_id: str,
+    ) -> list[PaymentAllocation]:
+        stmt = select(PaymentAllocation).where(PaymentAllocation.flow_id == flow_id)
+        return list((await db.execute(stmt)).scalars().all())
+
+    async def replace_payment_allocations(
+        self,
+        db: AsyncSession,
+        *,
+        flow_id: str,
+        rows: list[dict[str, Any]],
+        commit: bool = False,
+    ) -> list[PaymentAllocation]:
+        await db.execute(
+            PaymentAllocation.__table__.delete().where(
+                PaymentAllocation.flow_id == flow_id
+            )
+        )
+        allocations: list[PaymentAllocation] = []
+        for row in rows:
+            allocation = PaymentAllocation()
+            allocation.flow_id = flow_id
+            allocation.target_type = str(row["target_type"])
+            allocation.target_id = str(row["target_id"])
+            allocation.year_month = str(row["year_month"])
+            allocation.amount = row["amount"]
+            allocations.append(allocation)
+            db.add(allocation)
+        await db.flush()
+        if commit:
+            await db.commit()
+            for allocation in allocations:
+                await db.refresh(allocation)
+        return allocations
+
+    async def get_ledger_entries_by_ids(
+        self,
+        db: AsyncSession,
+        *,
+        entry_ids: list[str],
+    ) -> list[ContractLedgerEntry]:
+        if not entry_ids:
+            return []
+        stmt = select(ContractLedgerEntry).where(
+            ContractLedgerEntry.entry_id.in_(entry_ids)
+        )
+        return list((await db.execute(stmt)).scalars().all())
+
+    async def get_service_fee_entries_by_ids(
+        self,
+        db: AsyncSession,
+        *,
+        entry_ids: list[str],
+    ) -> list[ServiceFeeLedger]:
+        if not entry_ids:
+            return []
+        stmt = select(ServiceFeeLedger).where(
+            ServiceFeeLedger.service_fee_entry_id.in_(entry_ids)
+        )
+        return list((await db.execute(stmt)).scalars().all())
+
+    async def sum_active_allocations_by_target(
+        self,
+        db: AsyncSession,
+        *,
+        target_type: str,
+        target_id: str,
+    ) -> Decimal:
+        stmt = (
+            select(func.coalesce(func.sum(PaymentAllocation.amount), 0))
+            .join(
+                OperationalPaymentFlow,
+                OperationalPaymentFlow.flow_id == PaymentAllocation.flow_id,
+            )
+            .where(
+                PaymentAllocation.target_type == target_type,
+                PaymentAllocation.target_id == target_id,
+                OperationalPaymentFlow.status == "active",
+            )
+        )
+        return Decimal(str((await db.execute(stmt)).scalar() or 0))
 
     async def _replace_assets(
         self,

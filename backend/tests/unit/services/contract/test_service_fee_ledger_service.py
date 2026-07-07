@@ -81,13 +81,15 @@ async def test_sync_should_create_service_fee_entries_from_direct_lease_ledgers(
     ):
         result = await service.sync_contract_group(mock_db, group_id="group-1")
 
-    assert result == {"created": 1, "updated": 0, "voided": 0}
+    assert result == {"created": 1, "updated": 0, "voided": 0, "source_mismatches": 0}
     assert created_payloads[0]["contract_group_id"] == "group-1"
     assert created_payloads[0]["agency_contract_id"] == "contract-direct"
-    assert created_payloads[0]["source_ledger_id"] == "entry-001"
-    assert created_payloads[0]["amount_due"] == Decimal("200.00")
-    assert created_payloads[0]["paid_amount"] == Decimal("50.00")
-    assert created_payloads[0]["payment_status"] == "partial"
+    assert created_payloads[0]["agency_agreement_contract_id"] == "contract-entrust"
+    assert created_payloads[0]["source_ledger_ids"] == ["entry-001"]
+    assert created_payloads[0]["calculation_base_amount"] == Decimal("500.00")
+    assert created_payloads[0]["amount_due"] == Decimal("50.00")
+    assert created_payloads[0]["paid_amount"] == Decimal("0")
+    assert created_payloads[0]["payment_status"] == "unpaid"
     assert created_payloads[0]["service_fee_ratio"] == Decimal("0.1000")
     assert created_payloads[0]["attributed_project_id"] == "project-001"
     assert created_payloads[0]["attributed_owner_party_id"] == "owner-001"
@@ -95,7 +97,7 @@ async def test_sync_should_create_service_fee_entries_from_direct_lease_ledgers(
     assert created_payloads[0]["attributed_asset_ids"] == ["asset-001"]
 
 
-async def test_sync_should_update_service_fee_attribution_from_source_ledger(
+async def test_sync_should_preserve_existing_service_fee_when_source_changes(
     mock_db,
 ) -> None:
     service_fee_module = importlib.import_module(
@@ -130,16 +132,18 @@ async def test_sync_should_update_service_fee_attribution_from_source_ledger(
         attributed_asset_ids=["asset-new"],
     )
     existing_entry = SimpleNamespace(
-        source_ledger_id="entry-001",
+        agency_agreement_contract_id="contract-entrust",
+        source_ledger_ids=["entry-old"],
+        calculation_base_amount=Decimal("2000.00"),
         amount_due=Decimal("200.00"),
-        paid_amount=Decimal("50.00"),
+        paid_amount=Decimal("0.00"),
         payment_status="partial",
         currency_code="CNY",
         service_fee_ratio=Decimal("0.1000"),
         year_month="2026-05",
         agency_contract_id="contract-direct",
         attributed_project_id="project-old",
-        attributed_owner_party_id="owner-old",
+        attributed_owner_party_id="owner-new",
         attributed_operator_party_id="operator-old",
         attributed_asset_ids=["asset-old"],
         updated_at=None,
@@ -166,8 +170,12 @@ async def test_sync_should_update_service_fee_attribution_from_source_ledger(
     ):
         result = await service.sync_contract_group(mock_db, group_id="group-1")
 
-    assert result == {"created": 0, "updated": 1, "voided": 0}
-    assert existing_entry.attributed_project_id == "project-new"
+    assert result == {"created": 0, "updated": 0, "voided": 0, "source_mismatches": 1}
+    assert existing_entry.source_ledger_ids == ["entry-old"]
+    assert existing_entry.calculation_base_amount == Decimal("2000.00")
+    assert existing_entry.amount_due == Decimal("200.00")
+    assert existing_entry.attributed_project_id == "project-old"
     assert existing_entry.attributed_owner_party_id == "owner-new"
-    assert existing_entry.attributed_operator_party_id == "operator-new"
-    assert existing_entry.attributed_asset_ids == ["asset-new"]
+    assert existing_entry.attributed_operator_party_id == "operator-old"
+    assert existing_entry.attributed_asset_ids == ["asset-old"]
+    assert existing_entry.updated_at is None

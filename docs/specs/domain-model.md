@@ -17,8 +17,8 @@
 | 派生字段 | 出租率、汇总金额、计数等派生字段不允许人工直接写入 |
 | 编码规则 | 三类业务编码的「段」**统一由相关主体的 `party_code` 经共享 `_build_*_code_segment` 派生**（ADR-0018）：`asset_code` 用 owner、`project_code` 与 `group_code` 用 operator 的 `party_code` 段，生成后冻结只读、主体变更不重编号。**实施状态**：`group_code` 已实现；`asset_code` 已由创建/导入路径自动生成并经迁移回填收紧为必填；`project_code` 已改为按运营方 `party_code` 段 + 年月 + 4 位序号生成。|
 | 编码格式 | 段来源统一、字面格式按键角色分两族（不强求字面统一）：运营方键编码带月——`project_code`=`PRJ-{operator_seg}-{YYYYMM}-{SEQ4}`、`group_code`=`GRP-{operator_seg}-{YYYYMM}-{SEQ4}`（序号按运营方+月计）；owner 键编码不带月——`asset_code`=`AST-{owner_seg}-{NNNNNN}`（6 位序、按段单调，对齐 §3 line 53）|
-| 项目主轴 | 项目是普通用户理解资产、合同、台账、客户和风险关系的主业务单元 |
-| 合同关系展示层 | “合同关系”是面向用户的展示投影，由 `ContractGroup` 派生，不新增持久化对象 |
+| 项目主轴 | 项目是普通运营用户的默认主工作对象，但资产、合同与协议、经营台账、主体客户、经营分析保留同级直接入口 |
+| 合同与协议展示层 | 用户侧展示“合同与协议”，不展示“合同关系”作为页面对象名；内部可由 `ContractGroup` / `ContractRelationProjection` 承载聚合与投影 |
 | 资产项目归属 | 资产通过有效期关系归属项目，同一资产同一时点只能有一个当前有效项目 |
 | 并发控制 | MVP 乐观锁只在 `Asset` 启用；台账等批量写路径依靠幂等约束，`ContractGroup` / `Contract` 不保留未接入 ORM `version_id_col` 的误导性 `version` 列 |
 | 字段来源 | 解析或编辑写入目标对象字段时记 `field_sources` 快照，取值 `manual` / `ocr_prefill_confirmed` / `ocr_prefill_corrected`（纯手工录入与「解析未识别后手工补齐」统一为 `manual`，不拆 `manual_after_ocr_miss` 等子类型）；解析确认提交时每个写入字段必须带来源、缺失即阻断保存，普通非解析编辑缺失可由服务端默认补 `manual`；字段来源仅供编辑或补录来源上下文按需查看，业务详情主视图不默认展示 |
@@ -31,14 +31,16 @@
 | Party | 统一主体主档，承载产权方、运营方、客户等主体身份 |
 | Asset | 资产核心主实体 |
 | Project | 资产运营管理主业务单元 |
-| ContractGroup | 合同关系的技术聚合根，普通用户看到其展示投影 |
-| ContractRelationProjection | 合同关系用户可见投影，由 `ContractGroup` 派生 |
+| ContractGroup | 合同与协议经营事项的内部技术聚合根 |
+| ContractRelationProjection | 合同与协议用户侧摘要投影，由 `ContractGroup` 派生 |
 | Contract | 合同基表，承载所有合同公共字段 |
 | LeaseContractDetail | 租赁类合同明细 |
 | AgencyAgreementDetail | 代理协议明细 |
 | ContractRentTerm | 分阶段租金条款 |
 | ContractLedgerEntry | 租金台账条目 |
 | ServiceFeeLedger | 代理服务费台账 |
+| OperationalPaymentFlow | 轻量收付流水，承载租金收款、服务费收款和上游成本付款事件 |
+| PaymentAllocation | 收付流水到账期条目的人工分摊 |
 | ContractAuditLog | 合同操作审计日志 |
 | CustomerProfile | 客户视图档案，由 Party 和合同历史投影形成 |
 | PropertyCertificate | 资产产权证照记录，作为资产详情内能力维护 |
@@ -89,8 +91,8 @@
 | `end_date` | date | 否 | 项目经营结束日期，须晚于开始日期 |
 | `asset_ids_current` | string[] | 否 | 当前有效资产，派生 |
 | `asset_count_current` | number | 否 | 当前有效资产数，派生 |
-| `contract_relation_count` | number | 否 | 当前合同关系数量，派生 |
-| `revenue_mode_summary` | json | 否 | 承租模式和代理模式分布，派生 |
+| `contract_relation_count` | number | 否 | 当前合同与协议经营事项数量，派生 |
+| `revenue_mode_summary` | json | 否 | 承租转租和代理运营分布，派生 |
 | `status` | enum | 是 | `planning`、`active`、`paused`、`completed`、`terminated` |
 | `data_status` | enum | 是 | 正常、已删除 |
 
@@ -101,33 +103,33 @@
 | 字段 | 类型 | 必填 | 规则 |
 |---|---|---|---|
 | `contract_group_id` | string | 是 | 合同组主键 |
-| `project_id` | string | 条件必填 | 所属项目；目标态一条合同关系必须归属一个项目，**单项目硬不变量**：覆盖 `asset_ids` 须同属该项目，承租/代理一律如此（代理合同跨项目靠共享盖章扫描件、各项目各建一条合同关系，不让合同组跨项目，见 ADR-0012）。Phase 1a migration 初始允许为空，存量回填完成后再评估是否改为数据库 NOT NULL |
+| `project_id` | string | 条件必填 | 所属项目；目标态一条合同/协议经营事项必须归属一个项目，**单项目硬不变量**：覆盖 `asset_ids` 须同属该项目，承租转租/代理运营一律如此（代理委托协议跨项目靠共享盖章扫描件、各项目各建一条合同/协议记录，不让合同组跨项目，见 ADR-0012）。Phase 1a migration 初始允许为空，存量回填完成后再评估是否改为数据库 NOT NULL |
 | `group_code` | string | 是 | 唯一，格式 `GRP-[A-Z0-9]{4,12}-[0-9]{6}` |
-| `revenue_mode` | enum | 是 | `lease` 承租模式，`agency` 代理模式，同条合同关系不混用 |
+| `revenue_mode` | enum | 是 | `lease` 承租转租，`agency` 代理运营，同一合同/协议经营事项不混用 |
 | `operator_party_id` | string | 是 | 运营方主体 |
 | `owner_party_id` | string | 是 | 产权方主体 |
-| `asset_ids` | string[] | 是 | 合同关系覆盖资产 |
+| `asset_ids` | string[] | 是 | 合同/协议经营事项覆盖资产 |
 | `derived_status` | enum | 否 | 筹备中、生效中、已结束，派生只读 |
 | `effective_from` | date | 是 | 生效开始日期 |
 | `effective_to` | date | 否 | 生效结束日期，可由组内合同派生 |
 | `upstream_contract_ids` | string[] | 否 | 上游合同引用，派生 |
 | `downstream_contract_ids` | string[] | 否 | 下游合同引用，派生 |
-| `settlement_rule` | json | 否 | 创建时选填、可缓填；缺失不阻断合同关系保存，也不参与台账生成。结构键为 `version`、`cycle`、`settlement_mode`、`amount_rule`、`payment_rule`，用于留存运营约定；台账仍以组内合同条款明细为数据源。详见 `docs/architecture/ADR-0004-settlement-rule-optional-at-creation.md` |
+| `settlement_rule` | json | 否 | 创建时选填、可缓填；缺失不阻断合同/协议保存，也不参与经营台账生成。结构键为 `version`、`cycle`、`settlement_mode`、`amount_rule`、`payment_rule`，用于留存运营约定；经营台账仍以组内合同条款明细为数据源。详见 `docs/architecture/ADR-0004-settlement-rule-optional-at-creation.md` |
 | `revenue_attribution_rule` | json | 否 | 收入归集口径配置 |
 | `revenue_share_rule` | json | 否 | 分润规则配置，MVP 只结构化留存 |
-| `risk_tags` | string[] | 否 | 风险标签；项目风险摘要会叠加人工标签、30 天内合同到期提醒、付款逾期、产权证数据质量、空置风险和合同更正后陈旧已收台账风险（`ledger_stale_after_correction`，见 ADR-0008）；MVP 不再生成主合同覆盖类风险 |
+| `risk_tags` | string[] | 否 | 风险标签；项目风险摘要会叠加人工标签、30 天内合同/协议到期提醒、终端租户租金逾期、产权证数据质量、空置风险和合同更正后陈旧已收付台账风险（`ledger_stale_after_correction`，见 ADR-0008）；MVP 不再生成主合同覆盖类风险 |
 
 ### 4.4 ContractRelationProjection
 
-该对象是项目详情和搜索结果中的用户可见投影，不单独持久化。
+该对象是项目详情和搜索结果中的合同与协议用户侧摘要投影，不单独持久化；对象名保留为内部技术名称，界面文案不得展示“合同关系”。
 
 | 字段 | 类型 | 必填 | 规则 |
 |---|---|---|---|
 | `contract_relation_id` | string | 是 | 对应 `contract_group_id` |
 | `project_id` | string | 是 | 所属项目 |
 | `project_name` | string | 否 | 所属项目名称，列表和跨项目查询展示使用 |
-| `display_name` | string | 是 | 面向用户展示的合同关系名称 |
-| `revenue_mode` | enum | 是 | `lease` 承租模式，`agency` 代理模式 |
+| `display_name` | string | 是 | 面向用户展示的合同与协议摘要名称 |
+| `revenue_mode` | enum | 是 | `lease` 承租转租，`agency` 代理运营 |
 | `relation_kind` | enum | 是 | 由 `revenue_mode` 派生：`lease` -> `lease_sublease`，`agency` -> `agency_operation` |
 | `owner_party_id` | string | 是 | 产权方主体 |
 | `operator_party_id` | string | 是 | 运营方主体 |
@@ -136,34 +138,40 @@
 | `terminal_contract_ids` | string[] | 否 | 组内 `group_relation_type` 为下游/直租的合同，按方向派生；不再做主合同覆盖判定 |
 | `contract_role_counts` | map | 否 | 按 `group_relation_type` 聚合的合同数量，用于合同中心展示业务角色 |
 | `derived_status` | enum | 否 | 筹备中、生效中、已结束，派生只读 |
-| `ledger_summary` | json | 否 | 收付款摘要，派生；承租模式下游租金和代理模式服务费计入项目应收，上游承租租金计入项目应付，代理直租租金不计入运营方自营应收 |
+| `ledger_summary` | json | 否 | 经营台账摘要，派生；终端租户收缴包含承租转租下游租金和代理直租租金；运营方收入包含承租转租租金收入和代理服务费收入；运营方成本包含承租上游租金成本；服务费结算单独展示应收、实收、未收 |
 | `risk_tags` | string[] | 否 | 风险标签 |
 
 ### 4.5 ProjectAnalytics
 
-该对象是项目详情“项目分析”区和项目分析 API 的派生摘要，不单独持久化。MVP 口径复用项目有效资产、合同关系、台账、租户客户和风险摘要，不引入新的分析事实表。
+该对象是项目详情“项目分析”区和项目分析 API 的派生摘要，不单独持久化。MVP 口径复用项目有效资产、合同与协议、经营台账、租户客户和风险摘要，不引入新的分析事实表。
 
 | 字段 | 类型 | 必填 | 规则 |
 |---|---|---|---|
 | `asset_summary` | json | 是 | 当前有效资产汇总，口径同 `GET /api/v1/projects/{project_id}/assets` |
-| `contract_relation_count` | number | 是 | 项目合同关系总数 |
+| `contract_relation_count` | number | 是 | 项目合同与协议经营事项总数 |
 | `tenant_count` | number | 是 | 项目终端客户主体数，按 Party 去重 |
 | `customer_contract_count` | number | 是 | 项目终端客户合同数 |
 | `risk_count` | number | 是 | 项目风险项总数 |
 | `high_risk_count` | number | 是 | `critical`、`error`、`high` 风险项数量 |
-| `receivable_amount` | decimal | 是 | 项目应收，承租模式下游租金 + 代理模式服务费 |
-| `payable_amount` | decimal | 是 | 项目应付，承租模式上游租金 |
-| `received_amount` | decimal | 是 | 项目实收，承租模式下游租金实收 + 代理模式服务费实收 |
-| `paid_amount` | decimal | 是 | 项目实付，承租模式上游租金实付 |
-| `overdue_amount` | decimal | 是 | 项目逾期未收，承租模式下游租金逾期 + 代理模式服务费逾期 |
-| `service_fee_receivable` | decimal | 是 | 代理模式服务费应收 |
-| `service_fee_received` | decimal | 是 | 代理模式服务费实收 |
-| `mode_summaries` | array | 是 | 按 `lease_sublease` / `agency_operation` 分区的指标；每个分区包含合同关系数、资产数、主合同数、终端合同数、客户数、客户合同数、收付款金额和风险数 |
-| `monthly_trends` | array | 是 | 按 `year_month` 聚合的项目收付款趋势；承租模式下游租金和代理服务费计入应收/实收，承租模式上游租金计入应付/实付，逾期金额仅统计项目应收侧未收金额 |
+| `terminal_rent_receivable` | decimal | 是 | 终端租户租金应收，承租转租下游租金 + 代理直租租金 |
+| `terminal_rent_received` | decimal | 是 | 终端租户租金实收，承租转租下游租金实收 + 代理直租租金实收 |
+| `terminal_rent_unreceived` | decimal | 是 | 终端租户租金未收 |
+| `terminal_rent_overdue` | decimal | 是 | 终端租户租金逾期，唯一逾期口径 |
+| `operator_income_receivable` | decimal | 是 | 运营方收入应收，承租转租下游租金收入 + 代理服务费收入，不含代理直租租金 |
+| `operator_income_received` | decimal | 是 | 运营方收入实收，承租转租下游租金实收 + 代理服务费实收 |
+| `operator_cost_payable` | decimal | 是 | 运营方成本应付，承租转租上游租金成本 |
+| `operator_cost_paid` | decimal | 是 | 运营方成本实付，承租转租上游租金实付 |
+| `operator_cost_unpaid` | decimal | 是 | 运营方成本未付，不产生逾期 |
+| `service_fee_receivable` | decimal | 是 | 代理服务费应收 |
+| `service_fee_received` | decimal | 是 | 代理服务费实收 |
+| `net_operating_inflow` | decimal | 是 | 经营净流入（已登记实收实付）= 运营方收入实收 - 运营方成本实付，金额看实收/实付、时间按账期归属 |
+| `book_operating_spread` | decimal | 是 | 账面经营差额（应收应付）= 运营方收入应收 - 运营方成本应付 |
+| `mode_summaries` | array | 是 | 按 `lease_sublease` / `agency_operation` 分区的指标；每个分区包含合同/协议数、资产数、终端租户收缴、运营方收入、运营方成本、服务费和风险数 |
+| `monthly_trends` | array | 是 | 按租金账期 `year_month` 聚合的项目经营趋势；流水发生日期仅用于流水查询、导出和审计，不作为默认经营分析归属月 |
 
 ### 4.5.1 ProjectRisk
 
-该对象是项目风险摘要 API 的派生项，不单独持久化。风险项必须能够回溯到合同关系或资产，避免只给出无来源的总体提示。
+该对象是项目风险摘要 API 的派生项，不单独持久化。风险项必须能够回溯到合同/协议经营事项或资产，避免只给出无来源的总体提示。
 
 | 字段 | 类型 | 必填 | 规则 |
 |---|---|---|---|
@@ -171,8 +179,8 @@
 | `risk_type` | enum | 是 | `manual_tag`、`property_certificate_data_quality`、`contract_expiring`、`payment_overdue`、`vacancy`、`ledger_stale_after_correction`（已收/部分已收台账与当前合同条款不一致，合同更正重算时派生，人工对账后消除，见 ADR-0008）；MVP 已移除 `missing_primary_contract` / `coverage_conflict` 主合同覆盖类风险 |
 | `severity` | enum | 是 | `info`、`warning`、`high`、`critical`、`error` |
 | `message` | string | 是 | 面向业务用户的风险说明 |
-| `contract_relation_id` | string/null | 否 | 合同关系风险必须填写；产权证数据质量风险和资产空置风险为空 |
-| `display_name` | string/null | 否 | 合同关系名称或资产名称 |
+| `contract_relation_id` | string/null | 否 | 合同/协议经营事项风险必须填写；产权证数据质量风险和资产空置风险为空 |
+| `display_name` | string/null | 否 | 合同/协议经营事项名称或资产名称 |
 
 空置风险口径：项目当前有效资产的 `rentable_area - rented_area > 0` 时生成 `vacancy` 风险，消息展示资产名称和空置面积；删除、异常或已失效项目资产关系不参与计算。
 
@@ -184,19 +192,23 @@
 
 | 字段 | 类型 | 必填 | 规则 |
 |---|---|---|---|
-| `total_income` | decimal | 是 | 自营租金收入 + 代理服务费收入 |
-| `self_operated_rent_income` | decimal | 是 | 承租模式下游租金收入 |
-| `agency_service_income` | decimal | 是 | 代理模式服务费收入；代理直租租金不计入运营方自营收入 |
-| `actual_receipts` | decimal | 是 | 承租模式下游租金实收 |
-| `collection_rate` | number/null | 是 | 租金收缴率，分母为 0 时返回 null |
+| `total_income` | decimal | 是 | 运营方收入，承租转租下游租金收入 + 代理服务费收入；不含代理直租租金 |
+| `self_operated_rent_income` | decimal | 是 | 承租转租下游租金收入 |
+| `agency_service_income` | decimal | 是 | 代理运营服务费收入；代理直租租金不计入运营方收入 |
+| `terminal_rent_receivable` | decimal | 是 | 终端租户租金应收，承租转租下游租金 + 代理直租租金 |
+| `terminal_rent_received` | decimal | 是 | 终端租户租金实收 |
+| `terminal_rent_overdue` | decimal | 是 | 终端租户租金逾期 |
+| `operator_cost_paid` | decimal | 是 | 运营方成本实付，承租转租上游租金成本 |
+| `net_operating_inflow` | decimal | 是 | 经营净流入（已登记实收实付） |
+| `collection_rate` | number/null | 是 | 终端租户租金收缴率，分母为 0 时返回 null，按租金账期归属 |
 | `customer_entity_count` | number | 是 | 终端客户主体数，仅统计下游转租 / 代理直租 lessee，按 Party 去重；不包含上游产权方或委托对手方 |
 | `customer_contract_count` | number | 是 | 终端客户合同数，仅统计下游转租 / 代理直租合同，按合同 ID 去重 |
 | `customer_entity_breakdown` | map | 是 | 终端客户主体拆分，仅包含 `downstream_sublease`、`direct_lease` |
 | `customer_contract_breakdown` | map | 是 | 终端客户合同拆分，仅包含 `downstream_sublease`、`direct_lease` |
 | `counterparty_entity_breakdown` | map | 是 | 非客户对手方主体拆分，包含 `upstream_lease`、`entrusted_operation`，不得并入客户口径 |
 | `counterparty_contract_breakdown` | map | 是 | 非客户对手方合同拆分，包含 `upstream_lease`、`entrusted_operation`，不得并入客户口径 |
-| `project_breakdown` | array | 是 | 按项目分区；每项包含项目 ID、项目名称、合同关系数、合同数、承租关系数、代理关系数、收入拆分、实收、客户主体数和客户合同数 |
-| `mode_breakdown` | array | 是 | 按 `lease_sublease` / `agency_operation` 分区；每项包含合同关系数、合同数、收入拆分、实收、客户主体数和客户合同数 |
+| `project_breakdown` | array | 是 | 按项目分区；每项包含项目 ID、项目名称、合同/协议数、承租转租数、代理运营数、终端租户收缴、运营方收入、运营方成本、经营结果、客户主体数和客户合同数 |
+| `mode_breakdown` | array | 是 | 按 `lease_sublease` / `agency_operation` 分区；每项包含合同/协议数、运营方收入、终端租户收缴、服务费、客户主体数和客户合同数 |
 | `metrics_version` | string | 是 | 经营分析口径版本 |
 
 ### 4.7 Contract
@@ -213,7 +225,7 @@
 | `lessor_name_snapshot` | string | 否 | 出租/委托方**签署时名称快照**，定稿（补录即生效 / `finalize_correction`）时从当时主档名写入，之后不随主档改名回写（§6.1，见 ADR-0020） |
 | `lessee_name_snapshot` | string | 否 | 承租/受托方**签署时名称快照**，定稿时写入、不随主档改名回写（§6.1，见 ADR-0020）；`LeaseContractDetail.tenant_name` 退为展示冗余、从此快照同步 |
 | `correction_source_contract_id` | string | 否 | 纠错草稿显式来源合同；仅用于纠错溯源，不表达上下游、续签或主从配对 |
-| `asset_ids` | string[] | 否 | 关联资产，须为所属合同关系覆盖资产**子集**（`⊆ ContractGroup.asset_ids`，service 层校验）；**留空表示「覆盖本合同关系全部资产（整租）」**，台账固化时回退到组 `asset_ids`（见 ADR-0011/0012） |
+| `asset_ids` | string[] | 否 | 关联资产，须为所属合同/协议经营事项覆盖资产**子集**（`⊆ ContractGroup.asset_ids`，service 层校验）；**留空表示「覆盖本经营事项全部资产（整租）」**，台账固化时回退到组 `asset_ids`（见 ADR-0011/0012） |
 | `sign_date` | date | 否 | 签订日期，进入生效前必填（补录即生效，无待审态，见 ADR-0013） |
 | `effective_from` | date | 是 | 生效开始日期 |
 | `effective_to` | date | 否 | 生效结束日期 |
@@ -224,7 +236,7 @@
 | `data_status` | enum | 是 | 正常、已删除 |
 | `contract_notes` | text | 否 | 合同备注 |
 
-约束：合同通过 `project_id` 固化所属 `ContractGroup.project_id`，用于按项目合同号复合唯一；正常合同缺 `project_id` 在迁移时 fail-loud，迁移后由 DB check constraint 持续拦截；`contract_group_id` 仍为单值，不挂多组。合同**不做 BPM 路由审批流**（提审/审核/联审/反审核/制审分离整体降级 vNext，同 ADR-0002 资产口径）；MVP 保留最小生命周期：补录即生效、按 `effective_to` 派生 `已到期` + 显式 `已终止`（台账据此停生成未来条目、生效中合同删除保护），`草稿 → 定稿` 承载 REQ-RNT-005 更正，纠错草稿发起门禁绑生命周期状态（只能从生效合同发起），不再依赖已删的 `review_status`（见 ADR-0013）。一份委托协议覆盖多个项目时，其盖章扫描件可被多个项目下的代运营受托合同记录共享引用（扫描件只传一份、多条 `Contract` 引用），跨项目落在扫描件层，不上升到合同关系或台账（见 ADR-0012）。
+约束：合同通过 `project_id` 固化所属 `ContractGroup.project_id`，用于按项目合同号复合唯一；正常合同缺 `project_id` 在迁移时 fail-loud，迁移后由 DB check constraint 持续拦截；`contract_group_id` 仍为单值，不挂多组。合同**不做 BPM 路由审批流**（提审/审核/联审/反审核/制审分离整体降级 vNext，同 ADR-0002 资产口径）；MVP 保留最小生命周期：补录即生效、按 `effective_to` 派生 `已到期` + 显式 `已终止`（台账据此停生成未来条目、生效中合同删除保护），`草稿 → 定稿` 承载 REQ-RNT-005 更正，纠错草稿发起门禁绑生命周期状态（只能从生效合同发起），不再依赖已删的 `review_status`（见 ADR-0013）。一份委托协议覆盖多个项目时，其盖章扫描件可被多个项目下的代运营受托合同记录共享引用（扫描件只传一份、多条 `Contract` 引用），跨项目落在扫描件层，不提升为跨项目经营事项或台账（见 ADR-0012）。
 
 ### 4.7.1 ContractScanDocument
 
@@ -238,7 +250,7 @@
 | `checksum_sha256` | string | 否 | 文件内容校验和 |
 | `contract_ids` | string[] | 否 | 通过 `contract_scan_document_links` 关联的合同记录 |
 
-约束：扫描件文档可被多条同委托协议 `Contract` 共享引用；`PUT /contracts/{contract_id}/attachments` 只同步替换同 `contract_number`、同委托方、同受托方、正常合同组、且位于代运营合同关系中的受托合同扫描件引用；API 层必须对全部受影响合同逐条校验 `contract:update` 权限。复用既有 `storage_key` 时，该文档已链接的全部合同必须落在本次受影响合同集合内；若存在范围外链接，拒绝替换，避免未授权合同的可见扫描件元数据被改写。删除时每个受影响合同必须至少保留 1 份盖章扫描件。
+约束：扫描件文档可被多条同委托协议 `Contract` 共享引用；`PUT /contracts/{contract_id}/attachments` 只同步替换同 `contract_number`、同委托方、同受托方、正常合同组、且位于代运营合同/协议经营事项中的受托合同扫描件引用；API 层必须对全部受影响合同逐条校验 `contract:update` 权限。复用既有 `storage_key` 时，该文档已链接的全部合同必须落在本次受影响合同集合内；若存在范围外链接，拒绝替换，避免未授权合同的可见扫描件元数据被改写。删除时每个受影响合同必须至少保留 1 份盖章扫描件。
 
 ### 4.8 LeaseContractDetail
 
@@ -321,7 +333,7 @@
 | `stat_period` | string | 是 | 统计周期，默认本月 |
 | `scope_party_id` | string | 是 | 查询方主体 ID |
 | `total_income` | number | 是 | 总收入合计，派生 |
-| `self_operated_rent_income` | number | 是 | 自营租金收入，派生 |
+| `self_operated_rent_income` | number | 是 | 承租转租租金收入，派生 |
 | `agency_service_income` | number | 是 | 代理服务费收入，派生 |
 | `customer_entity_count` | number | 是 | 终端客户主体数，仅统计下游转租 / 代理直租 lessee，按 Party 去重 |
 | `customer_contract_count` | number | 是 | 终端客户合同数，仅统计下游转租 / 代理直租合同，按合同去重 |
@@ -342,16 +354,53 @@
 | `year_month` | string | 是 | 账期，格式 `YYYY-MM`，同一合同内唯一 |
 | `due_date` | date | 是 | 应收或应付日 |
 | `amount_due` | decimal | 是 | 应收或应付金额，>= 0 |
+| `ledger_views` | enum[] | 是 | 经营台账视图归属：`terminal_collection` 终端租户收缴、`operator_income` 运营方收入、`operator_cost` 运营方成本；承租转租下游租金同时进入终端租户收缴与运营方收入，代理直租只进入终端租户收缴，上游承租租金只进入运营方成本 |
 | `currency_code` | string | 是 | MVP 固定 `CNY` |
 | `is_tax_included` | boolean | 是 | 是否含税，继承合同 |
 | `tax_rate` | decimal | 否 | 税率，继承合同 |
-| `payment_status` | enum | 是 | `unpaid`/`paid`/`partial` 由 `paid_amount` 对 `amount_due` 纯派生（实收登记只填 `paid_amount`，不手登记状态，见 ADR-0019）；`voided` 仅系统重算/作废写入；“逾期”另为派生口径、不是登记状态（见 ADR-0007） |
-| `paid_amount` | decimal | 否 | 实收金额，>= 0，默认 0 |
+| `payment_status` | enum | 是 | `unpaid`/`paid`/`partial` 由收付流水汇总额对 `amount_due` 纯派生，不手登记状态；`voided` 仅系统重算/作废写入；“逾期”另为派生口径、不是登记状态（见 ADR-0007/0019） |
+| `paid_amount` | decimal | 否 | 已收/已付汇总金额，>= 0，默认 0；目标态由 `PaymentAllocation` 汇总生成，历史存量可由累计值回填 |
+| `follow_up_status` | enum | 否 | 仅终端租户收缴可维护：`pending_follow_up`、`contacted`、`promised_payment`、`disputed`、`offline_received_pending_entry`、`deferred`；不改变逾期金额、收缴率或实收金额 |
+| `next_follow_up_date` | date | 否 | 终端租户收缴跟进日期 |
+| `follow_up_note` | text | 否 | 终端租户收缴跟进备注 |
 | `notes` | text | 否 | 备注 |
 | `created_at` | datetime | 是 | 创建时间 |
 | `updated_at` | datetime | 是 | 更新时间 |
 
-约束：台账是**账本（历史记录）** 而非实时情况列表——每条是绑定账期的不可变财务事实，实时情况（当前欠款、出租率、当前归属）是另算的派生投影。`voided` 仅允许由系统流程写入；合同到期或终止后停止生成未来台账，历史台账只读。条目在生成时固化归属（`attributed_project_id` / `attributed_owner_party_id` / `attributed_operator_party_id` / `attributed_asset_ids`），项目/产权方维度的历史与分析口径只读固化值聚合，禁止 join 合同组/资产当前归属回算历史（见 ADR-0011）。台账重算只调整未收条目；`paid` / `partial` 条目系统不自动改写或作废，自动跳过；被跳过的已收条目以「重算结果当场列出」+「持久派生风险 `ledger_stale_after_correction`（条目与当前合同条款重算目标不一致时派生，人工对账后消除）」两条机制提醒，不设手工标记位（见 ADR-0008）。逾期口径为 `due_date` 已过且 `paid_amount < amount_due` 且状态非 `voided`，统计、风险、筛选与通知统一按此派生，不依赖人工翻状态。
+约束：台账是**账本（历史记录）** 而非实时情况列表——每条是绑定账期的经营事实，实时情况（当前欠款、出租率、当前归属）是另算的派生投影。`voided` 仅允许由系统流程写入；合同到期或终止后停止生成未来台账，历史台账只读。条目在生成时固化归属（`attributed_project_id` / `attributed_owner_party_id` / `attributed_operator_party_id` / `attributed_asset_ids`），项目/产权方维度的历史与分析口径只读固化值聚合，禁止 join 合同组/资产当前归属回算历史（见 ADR-0011）。台账重算只调整未收/未付且无收付流水的条目；已有收付流水条目系统不自动改写或作废，自动跳过；被跳过条目以「重算结果当场列出」+「持久派生风险 `ledger_stale_after_correction`（条目与当前合同/协议条款重算目标不一致时派生，人工对账后消除）」两条机制提醒，不设手工标记位（见 ADR-0008）。逾期只属于终端租户租金收缴，口径为 `due_date` 已过且终端租户租金 `paid_amount < amount_due` 且状态非 `voided`，统计、风险、筛选与通知统一按此派生；运营方成本未付、服务费未收不产生逾期。
+
+### 4.14.1 OperationalPaymentFlow
+
+| 字段 | 类型 | 必填 | 规则 |
+|---|---|---|---|
+| `flow_id` | string | 是 | 收付流水主键 |
+| `flow_type` | enum | 是 | `terminal_rent_receipt`、`service_fee_receipt`、`upstream_cost_payment` |
+| `occurred_on` | date | 是 | 实际收款/付款发生日期，用于流水查询、导出和审计，不作为默认经营分析归属月 |
+| `amount` | decimal | 是 | 流水金额，> 0 |
+| `registered_by` | string | 是 | 登记人 |
+| `counterparty_id` | string | 否 | 对方主体；终端租户、产权方或运营方 |
+| `voucher_attachment_ids` | string[] | 否 | 可选凭证附件；不上传不阻断登记 |
+| `notes` | text | 否 | 备注 |
+| `status` | enum | 是 | `active`、`voided`、`corrected`；作废、更正和反向冲正的最小状态机待实现阶段收口 |
+| `created_at` | datetime | 是 | 创建时间 |
+| `updated_at` | datetime | 是 | 更新时间 |
+
+约束：流水是实收/实付事实来源。经营分析默认按 `PaymentAllocation.year_month` / 台账账期归属，流水 `occurred_on` 只用于查看实际发生日期。MVP 不对接银行流水、支付通道或财务总账。
+
+### 4.14.2 PaymentAllocation
+
+| 字段 | 类型 | 必填 | 规则 |
+|---|---|---|---|
+| `allocation_id` | string | 是 | 分摊主键 |
+| `flow_id` | string | 是 | 所属收付流水 |
+| `target_type` | enum | 是 | `contract_ledger_entry` 或 `service_fee_ledger` |
+| `target_id` | string | 是 | 被分摊账期条目 ID |
+| `year_month` | string | 是 | 租金账期 / 服务费归属账期，格式 `YYYY-MM` |
+| `amount` | decimal | 是 | 分摊金额，> 0 |
+| `created_at` | datetime | 是 | 创建时间 |
+| `updated_at` | datetime | 是 | 更新时间 |
+
+约束：一笔流水可人工分摊到多个账期，系统校验同一流水的分摊金额合计等于流水金额；各账期实收/实付由分摊汇总派生。
 
 ### 4.15 ServiceFeeLedger
 
@@ -359,18 +408,24 @@
 |---|---|---|---|
 | `service_fee_entry_id` | string | 是 | 服务费台账主键 |
 | `contract_group_id` | string | 是 | 合同组主键 |
-| `agency_contract_id` | string | 是 | 直租合同主键 |
-| `source_ledger_id` | string | 是 | 来源租金台账主键，唯一；归属固化继承来源租金台账（见 ADR-0011） |
-| `year_month` | string | 是 | 账期，格式 `YYYY-MM` |
-| `amount_due` | decimal | 是 | 服务费应收金额，派生 |
-| `paid_amount` | decimal | 否 | 服务费实收金额，派生 |
-| `payment_status` | enum | 是 | 由服务费 `paid_amount` 对 `amount_due` 派生；来源租金台账 `voided` 时同步为 `voided` |
+| `agency_contract_id` | string | 是 | 直租合同主键；必须明确关联一份委托协议 |
+| `agency_agreement_contract_id` | string | 是 | 委托协议合同主键；服务费比例从该委托协议固化 |
+| `source_ledger_ids` | string[] | 是 | 来源代理直租租金台账集合；服务费按租金账期月份汇总生成，不逐笔生成 |
+| `year_month` | string | 是 | 租金账期月份，格式 `YYYY-MM`；服务费归属按租金账期，不按实际收款月份 |
+| `amount_due` | decimal | 是 | 服务费应收金额，= 代理直租租金实收 × 委托协议服务费比例 |
+| `paid_amount` | decimal | 否 | 服务费实收金额，目标态由服务费收款流水分摊汇总生成 |
+| `payment_status` | enum | 是 | 由服务费 `paid_amount` 对 `amount_due` 派生；不产生逾期 |
 | `currency_code` | string | 是 | 继承来源台账 |
 | `service_fee_ratio` | decimal | 是 | 代理服务费比例 |
+| `calculation_base_amount` | decimal | 是 | 服务费计算基数，即该租金账期内代理直租租金已登记实收金额 |
+| `attributed_project_id` | string | 否 | Inherits frozen project attribution from source rent ledgers for historical service-fee aggregation |
+| `attributed_owner_party_id` | string | 否 | Inherits frozen owner-party attribution from source rent ledgers |
+| `attributed_operator_party_id` | string | 否 | Inherits frozen operator-party attribution from source rent ledgers |
+| `attributed_asset_ids` | string[] | 否 | Inherits frozen asset IDs from source rent ledgers; amounts remain contract-level and are not split by asset |
 | `created_at` | datetime | 是 | 创建时间 |
 | `updated_at` | datetime | 是 | 更新时间 |
 
-约束：服务费**应收/实收不独立登记**，全部从来源直租租金台账派生——`amount_due = 来源租金 amount_due × service_fee_ratio`，`paid_amount` 按来源条目实收派生，`payment_status` 按服务费金额派生（来源租金台账 `voided` 时同步为 `voided`）。业务依据：运营方与产权方对账，产权方实际收到租金才结算代理费，故服务费实收挂钩直租租金实收、不旱涝保收；运营方登记的直租租金实收反映对账确认的产权方到账结果（见 CONTEXT「代理服务费实收（挂钩直租租金实收派生）」）。不为服务费另开独立实收登记轴（单一真相轴，见 ADR-0019）。
+约束：服务费应收只在代理直租租金实际收到后形成，按租金账期月份 / 项目 / 委托协议 / 产权方汇总生成。当前业务服务费比例存在历史差异：当前合同 30%，更早合同 20%；台账生成后固化比例、计算基数和来源账期。每条可计算服务费的租金账期必须命中单一委托协议比例；若账期跨比例区间，系统提示拆分账期，不自动按天拆分。已生成服务费应收后的租金实收更正，不得静默覆盖既有服务费应收；来源租金条目被合同更正重算跳过时，既有服务费台账不自动重算或覆盖，必须派生服务费来源不一致风险并交由人工处理；尚未生成服务费的账期按修正后的实收进入后续月度生成。服务费实收是产权方支付给运营方的收款事实，通过 `OperationalPaymentFlow(flow_type=service_fee_receipt)` 登记；服务费未收不产生逾期。
 
 ### 4.16 ContractAuditLog
 
@@ -502,7 +557,7 @@
 |---|---|---|---|
 | `id` | string | 是 | 通知主键 |
 | `recipient_id` | string | 是 | 接收用户 ID；业务提醒按主体绑定数据范围过滤——仅向可见该对象（owner / operator 范围）的用户创建（正文含合同号 / 租户名等业务数据，受 §8 约束） |
-| `type` | enum | 是 | `contract_expiring`、`contract_expired`、`payment_overdue`、`payment_due`、`system_notice` 五类 |
+| `type` | enum | 是 | `contract_expiring`、`contract_expired`、`payment_overdue`、`payment_due`、`system_notice` 五类；`payment_due` / `payment_overdue` 仅用于终端租户租金到期/逾期 |
 | `priority` | enum | 是 | `low` / `normal` / `high` / `urgent`；为 `days_overdue` / `days_remaining` 实时派生的优先级档位、不存标记位（口径同 ADR-0007） |
 | `title` | string | 是 | 通知标题 |
 | `content` | text | 是 | 通知正文 |
@@ -517,7 +572,7 @@
 
 约束：
 
-- **档位幂等去重**（ADR-0015）：幂等键 =（`recipient_id`, 对象, `type`, 优先级档位），同档位不重复生成、跨档位升级各生成一次。逾期按 `days_overdue` 派生 `NORMAL→HIGH(≥7天)→URGENT(≥30天)`；合同 / 付款到期按剩余天数派生 30→15→7 天档位。档位实时派生、不存标记位，既不按天重发刷屏、也不因首条未读漏发后续升级。到期与逾期提醒由定时扫描生成，逾期判定按派生口径（`due_date` 已过且 `paid_amount < amount_due` 且非 `voided`，见 §4.14、ADR-0007）。
+- **档位幂等去重**（ADR-0015）：幂等键 =（`recipient_id`, 对象, `type`, 优先级档位），同档位不重复生成、跨档位升级各生成一次。终端租户租金逾期按 `days_overdue` 派生 `NORMAL→HIGH(≥7天)→URGENT(≥30天)`；合同/协议到期与终端租户租金到期按剩余天数派生 30→15→7 天档位。档位实时派生、不存标记位，既不按天重发刷屏、也不因首条未读漏发后续升级。到期与逾期提醒由定时扫描生成，逾期判定按终端租户收缴派生口径（`due_date` 已过且终端租户租金 `paid_amount < amount_due` 且非 `voided`，见 §4.14、ADR-0007）。运营方成本未付、服务费未收不生成逾期通知。
 - **系统通知广播豁免 + 内容中立硬约束**：`system_notice` 是唯一可豁免数据范围、广播全体活跃用户的类型，前提是内容中立——仅 `admin` / `system_admin` 可发，服务端强制无 `related_entity_id`、不挂业务实体、不含 PII，违反即拒绝创建；管理员手动一次性创建，不进定时扫描、不做档位幂等（那套只管派生类业务提醒）。
 - **企业微信推送**（ADR-0016）：可选通道、配置开关控制；按 `recipient_id` 定向推送应用消息（`touser` + `agentid`），不走群机器人广播——推给本人天然落在其数据范围内、自洽 §8，正文可含合同号 / 租户名 / 金额。是个人消息提醒不是企业微信待办（无完成态 / 处理闭环，同 ADR-0006）。当前代码已接入企业微信应用消息与 `gettoken` / `message/send`，真实发送验证受企业微信可信 IP / 域名前置配置阻塞（本地报 `errcode=60020`）；正式上线前仍需补系统用户 ↔ 企业微信 `userid` 映射，避免长期依赖 `recipient_id == touser` 的本地假设。
 - **提醒非工单**：只有 `is_read` / `read_at`，无处理闭环、不指派、不承载待办语义。MVP 不做通知模板配置、用户自定义订阅规则、短信或邮件通道。
@@ -561,18 +616,21 @@
 
 | 指标 | 公式或规则 |
 |---|---|
-| 租金收缴率 | 当月实收金额 / 当月应收金额 * 100% |
-| 租金收缴率分母 | 当月非作废租金台账 `amount_due` 之和，不含服务费台账 |
-| 租金收缴率分子 | 当月非作废租金台账 `paid_amount` 之和 |
-| 总收入 | 自营租金收入 + 代理服务费收入 |
-| 自营租金收入 | 承租模式下游租金收入 |
-| 代理服务费收入 | 代理模式服务费收入 |
-| 项目经营模式分布 | 项目下合同关系按 `revenue_mode` 分组计数和汇总 |
-| 全局项目分区 | 全局经营分析按 `ContractGroup.project_id` 聚合合同关系、合同、收入拆分、实收和客户指标 |
-| 全局模式分区 | 全局经营分析按 `lease_sublease` / `agency_operation` 聚合合同关系、合同、收入拆分、实收和客户指标 |
+| 终端租户收缴率 | 租金账期实收金额 / 租金账期应收金额 * 100% |
+| 终端租户收缴率分母 | 指定租金账期内非作废终端租户租金台账 `amount_due` 之和，包含承租转租下游租金和代理直租租金，不含服务费台账和上游成本 |
+| 终端租户收缴率分子 | 指定租金账期内上述条目截至当前已登记实收金额之和，不按实际收款发生月份归属 |
+| 运营方收入 | 承租转租租金收入 + 代理服务费收入，不含代理直租租金 |
+| 承租转租租金收入 | 承租转租下游租金收入 |
+| 代理服务费收入 | 代理运营服务费收入 |
+| 运营方成本 | 承租转租上游租金成本 |
+| 经营净流入 | 运营方收入实收 - 运营方成本实付，金额看已登记实收/实付、时间按账期归属 |
+| 账面经营差额 | 运营方收入应收 - 运营方成本应付 |
+| 项目经营模式分布 | 项目下合同与协议经营事项按 `revenue_mode` 分组计数和汇总 |
+| 全局项目分区 | 全局经营分析按 `ContractGroup.project_id` 聚合合同/协议、终端租户收缴、运营方收入/成本、经营结果和客户指标 |
+| 全局模式分区 | 全局经营分析按 `lease_sublease` / `agency_operation` 聚合合同/协议、终端租户收缴、运营方收入/成本、服务费和客户指标 |
 | 客户主体数 | 仅统计下游转租 / 代理直租终端 lessee，按 Party 去重；`customer_type` 只是展示标签，不参与经营指标过滤 |
 | 客户合同数 | 仅统计下游转租 / 代理直租合同，按合同 ID 去重 |
-| 逾期金额 | `due_date` 已过且 `paid_amount < amount_due` 且状态非 `voided` 的应收侧条目金额 |
+| 逾期金额 | `due_date` 已过且 `paid_amount < amount_due` 且状态非 `voided` 的终端租户租金未收金额；运营方成本未付、服务费未收不计逾期 |
 | 多资产合同金额 | 合同级口径，不按资产分摊；汇总时按合同去重 |
 
 ## 7. Out of Scope 对象
@@ -581,4 +639,4 @@
 |---|---|
 | Ownership | 权属方管理不纳入 MVP 需求基线；当前保留代码骨架，路由和菜单可见面冻结 |
 | 通用 BPM 审批流引擎 | MVP 不建设通用流程引擎；资产审批路由流已删除 |
-| 催缴管理 | MVP 不建催缴工单、催缴状态机或催缴成功率统计；逾期处理依靠台账逾期查询和台账实收登记闭环 |
+| 催缴管理 | MVP 不建催缴工单、催缴状态机或催缴成功率统计；逾期处理依靠终端租户收缴逾期查询、轻量跟进状态和收款流水登记闭环 |
