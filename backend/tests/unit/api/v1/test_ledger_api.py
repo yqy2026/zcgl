@@ -33,6 +33,7 @@ def test_get_ledger_entries_delegates_to_service(client) -> None:
                 "year_month": "2026-01",
                 "due_date": "2026-01-01",
                 "amount_due": "1000.00",
+                "ledger_views": ["terminal_collection"],
                 "currency_code": "CNY",
                 "is_tax_included": True,
                 "tax_rate": "0.09",

@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from src.core.exception_handler import BusinessValidationError, OperationNotAllowedError
-from src.models.contract_group import ContractLifecycleStatus
+from src.models.contract_group import ContractLifecycleStatus, GroupRelationType
 from src.services.contract.ledger_service_v2 import (
     find_stale_paid_or_partial_ledger_entries,
     ledger_service_v2,
@@ -26,6 +26,7 @@ def _make_contract(
     contract.contract_group_id = "group-ledger"
     contract.contract_id = contract_id
     contract.status = status
+    contract.group_relation_type = GroupRelationType.DOWNSTREAM
     contract.currency_code = "CNY"
     contract.is_tax_included = True
     contract.tax_rate = Decimal("0.09")

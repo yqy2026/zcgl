@@ -3,6 +3,7 @@
 ## [Unreleased] - 2026-03-06
 
 ### 2026-07-07
+- feat(operations-ledger): derive rent-ledger read models from active PaymentAllocation totals. Contract ledger list/query/export inputs, project-attributed reads, ownership paid/overdue aggregates, and overdue/due-soon notification scans now compute paid_amount and payment_status from active operational_payment_flows allocations instead of trusting the stored paid_amount cache; added focused CRUD/API/recalculate fixture coverage.
 - feat(operations-ledger): implement the backend foundation slice from `docs/plans/2026-07-06-operations-ledger-implementation.md`. Added `ledger_views` and terminal follow-up columns to `ContractLedgerEntry`, new `OperationalPaymentFlow` / `PaymentAllocation` models and schemas, monthly aggregate `ServiceFeeLedger` fields, the `20260706_operations_ledger_foundation.py` migration with deterministic `paid_amount` backfill flows/allocations, legacy service-fee monthly aggregation, fail-loud allocation checks, minimal `payment_flow_service` allocation validation, preserve-not-overwrite service-fee sync behavior, and ledger generation view stamping by contract role. Updated field-drift mapping and REQ-RNT-006 traceability; added focused model, migration, ledger service, payment flow service, and service fee service tests.
 
 ### 2026-07-06
