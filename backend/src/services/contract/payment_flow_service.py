@@ -11,10 +11,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.exception_handler import BusinessValidationError, ResourceNotFoundError
 from src.crud.contract_group import contract_group_crud
 from src.models.contract_group import (
+    LedgerView,
     OperationalPaymentFlowStatus,
     OperationalPaymentFlowType,
     PaymentAllocationTargetType,
     derive_ledger_payment_status,
+)
+
+_SCOPE_FIELDS = (
+    "attributed_project_id",
+    "attributed_owner_party_id",
+    "attributed_operator_party_id",
+    "currency_code",
 )
 
 
@@ -28,6 +36,10 @@ def _as_decimal(value: Any) -> Decimal:
     if isinstance(value, Decimal):
         return value
     return Decimal(str(value))
+
+
+def _enum_value(value: Any) -> str:
+    return str(getattr(value, "value", value))
 
 
 def _entry_id(entry: Any, target_type: str) -> str:
@@ -46,6 +58,9 @@ class PaymentFlowService:
         data: dict[str, Any],
         commit: bool = True,
     ) -> Any:
+        flow_type = _enum_value(data.get("flow_type"))
+        self._expected_target_type(flow_type)
+
         amount = _as_decimal(data.get("amount"))
         if amount <= 0:
             raise BusinessValidationError("payment flow amount must be greater than 0")
@@ -53,8 +68,11 @@ class PaymentFlowService:
         now = _utcnow()
         payload = {
             **data,
+            "flow_type": flow_type,
             "amount": amount,
-            "status": data.get("status") or OperationalPaymentFlowStatus.ACTIVE.value,
+            "status": _enum_value(
+                data.get("status") or OperationalPaymentFlowStatus.ACTIVE.value
+            ),
             "created_at": data.get("created_at") or now,
             "updated_at": data.get("updated_at") or now,
         }
@@ -75,7 +93,9 @@ class PaymentFlowService:
         flow = await contract_group_crud.get_payment_flow(db, flow_id=flow_id)
         if flow is None:
             raise ResourceNotFoundError("PaymentFlow", flow_id)
-        if getattr(flow, "status", None) != OperationalPaymentFlowStatus.ACTIVE.value:
+        if _enum_value(getattr(flow, "status", None)) != (
+            OperationalPaymentFlowStatus.ACTIVE.value
+        ):
             raise BusinessValidationError("only active payment flows can be allocated")
 
         rows = self._normalize_allocations(allocations)
@@ -86,16 +106,37 @@ class PaymentFlowService:
                 "allocation amount total must equal payment flow amount"
             )
 
-        expected_target_type = self._expected_target_type(str(flow.flow_type))
+        flow_type = _enum_value(flow.flow_type)
+        expected_target_type = self._expected_target_type(flow_type)
         if any(row["target_type"] != expected_target_type for row in rows):
             raise BusinessValidationError(
                 "payment flow type does not match allocation target type"
             )
 
-        targets = await self._load_targets(
-            db, target_type=expected_target_type, rows=rows
+        existing_allocations = (
+            await contract_group_crud.list_payment_allocations_by_flow(
+                db,
+                flow_id=flow_id,
+            )
         )
-        self._validate_target_periods(rows=rows, targets=targets)
+        sync_rows = [
+            *rows,
+            *self._existing_allocation_rows(
+                existing_allocations,
+                expected_target_type=expected_target_type,
+            ),
+        ]
+        targets = await self._load_targets(
+            db,
+            target_type=expected_target_type,
+            rows=sync_rows,
+        )
+        allocation_targets = {
+            row["target_id"]: targets[row["target_id"]] for row in rows
+        }
+        self._validate_target_periods(rows=rows, targets=allocation_targets)
+        self._validate_target_views(flow_type=flow_type, targets=allocation_targets)
+        self._validate_target_scope(targets=allocation_targets)
 
         saved = await contract_group_crud.replace_payment_allocations(
             db,
@@ -127,13 +168,30 @@ class PaymentFlowService:
                 )
             rows.append(
                 {
-                    "target_type": str(allocation.get("target_type")),
+                    "target_type": _enum_value(allocation.get("target_type")),
                     "target_id": str(allocation.get("target_id")),
                     "year_month": str(allocation.get("year_month")),
                     "amount": amount,
                 }
             )
         return rows
+
+    @staticmethod
+    def _existing_allocation_rows(
+        allocations: list[Any],
+        *,
+        expected_target_type: str,
+    ) -> list[dict[str, Any]]:
+        return [
+            {
+                "target_type": _enum_value(allocation.target_type),
+                "target_id": str(allocation.target_id),
+                "year_month": str(allocation.year_month),
+                "amount": _as_decimal(allocation.amount),
+            }
+            for allocation in allocations
+            if _enum_value(allocation.target_type) == expected_target_type
+        ]
 
     @staticmethod
     def _expected_target_type(flow_type: str) -> str:
@@ -183,6 +241,50 @@ class PaymentFlowService:
                 raise BusinessValidationError(
                     "allocation period must match target ledger period"
                 )
+
+    @staticmethod
+    def _validate_target_views(
+        *,
+        flow_type: str,
+        targets: dict[str, Any],
+    ) -> None:
+        required_view: str | None = None
+        error_message: str | None = None
+        if flow_type == OperationalPaymentFlowType.TERMINAL_RENT_RECEIPT.value:
+            required_view = LedgerView.TERMINAL_COLLECTION.value
+            error_message = (
+                "terminal rent receipt can only allocate to terminal collection "
+                "ledger entries"
+            )
+        elif flow_type == OperationalPaymentFlowType.UPSTREAM_COST_PAYMENT.value:
+            required_view = LedgerView.OPERATOR_COST.value
+            error_message = "upstream cost payment can only allocate to operator cost ledger entries"
+
+        if required_view is None or error_message is None:
+            return
+
+        for target in targets.values():
+            if required_view not in PaymentFlowService._target_ledger_views(target):
+                raise BusinessValidationError(error_message)
+
+    @staticmethod
+    def _target_ledger_views(target: Any) -> set[str]:
+        raw_views = getattr(target, "ledger_views", []) or []
+        if isinstance(raw_views, str):
+            raw_views = [raw_views]
+        return {_enum_value(view) for view in raw_views}
+
+    @staticmethod
+    def _validate_target_scope(*, targets: dict[str, Any]) -> None:
+        scopes = {
+            tuple(getattr(target, field, None) for field in _SCOPE_FIELDS)
+            for target in targets.values()
+        }
+        if len(scopes) > 1:
+            raise BusinessValidationError(
+                "allocations must share the same project, owner, operator, and "
+                "currency scope"
+            )
 
     async def _sync_target_paid_amounts(
         self,
