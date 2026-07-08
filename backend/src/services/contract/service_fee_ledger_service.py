@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import logging
+from calendar import monthrange
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
@@ -38,10 +39,39 @@ def _as_decimal(value: Any) -> Decimal:
     return Decimal(str(value))
 
 
+def _as_date(value: Any, *, default: date) -> date:
+    if value is None:
+        return default
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    try:
+        return date.fromisoformat(str(value))
+    except ValueError as exc:
+        raise BusinessValidationError(
+            "entrusted contract effective date must be an ISO date"
+        ) from exc
+
+
+def _month_range(year_month: str) -> tuple[date, date]:
+    try:
+        year_text, month_text = year_month.split("-", maxsplit=1)
+        year = int(year_text)
+        month = int(month_text)
+        return date(year, month, 1), date(year, month, monthrange(year, month)[1])
+    except (TypeError, ValueError) as exc:
+        raise BusinessValidationError(
+            "service fee source ledger year_month must use YYYY-MM"
+        ) from exc
+
+
 @dataclass
 class _MonthlyFeeBucket:
     year_month: str
     agency_contract_id: str
+    agency_agreement_contract_id: str
+    service_fee_ratio: Decimal
     attributed_project_id: str | None
     attributed_owner_party_id: str | None
     attributed_operator_party_id: str | None
@@ -87,15 +117,11 @@ class ServiceFeeLedgerService:
             == GroupRelationType.ENTRUSTED
             and getattr(contract, "agency_detail", None) is not None
         ]
-        if len(entrusted_contracts) != 1:
+        if not entrusted_contracts:
             raise BusinessValidationError(
-                "Agency group requires exactly one entrusted contract with service fee ratio"
+                "Agency group requires at least one entrusted contract with service fee ratio"
             )
 
-        entrusted_contract = entrusted_contracts[0]
-        ratio = Decimal(
-            getattr(entrusted_contract.agency_detail, "service_fee_ratio", Decimal("0"))
-        )
         direct_lease_contracts = [
             contract
             for contract in contracts
@@ -106,23 +132,24 @@ class ServiceFeeLedgerService:
         buckets = await self._collect_monthly_buckets(
             db,
             direct_lease_contracts=direct_lease_contracts,
+            entrusted_contracts=entrusted_contracts,
         )
         existing_entries = await contract_group_crud.list_service_fee_entries_by_group(
             db,
             group_id=group_id,
         )
-        agreement_id = str(entrusted_contract.contract_id)
         existing_by_key = {self._entry_key(entry): entry for entry in existing_entries}
 
         created = 0
         updated = 0
         voided = 0
         source_mismatches = 0
-        seen_keys: set[tuple[str, str | None, str]] = set()
+        seen_keys: set[tuple[str, str, str | None, str]] = set()
         now = _utcnow()
 
         for key, bucket in buckets.items():
             seen_keys.add(key)
+            ratio = bucket.service_fee_ratio
             amount_due = _quantize_money(bucket.calculation_base_amount * ratio)
             existing_entry = existing_by_key.get(key)
             source_ledger_ids = sorted(bucket.source_ledger_ids)
@@ -137,7 +164,7 @@ class ServiceFeeLedgerService:
             data = {
                 "contract_group_id": group_id,
                 "agency_contract_id": bucket.agency_contract_id,
-                "agency_agreement_contract_id": agreement_id,
+                "agency_agreement_contract_id": bucket.agency_agreement_contract_id,
                 "source_ledger_ids": source_ledger_ids,
                 "year_month": bucket.year_month,
                 "amount_due": amount_due,
@@ -222,8 +249,9 @@ class ServiceFeeLedgerService:
         db: AsyncSession,
         *,
         direct_lease_contracts: list[Any],
-    ) -> dict[tuple[str, str | None, str], _MonthlyFeeBucket]:
-        buckets: dict[tuple[str, str | None, str], _MonthlyFeeBucket] = {}
+        entrusted_contracts: list[Any],
+    ) -> dict[tuple[str, str, str | None, str], _MonthlyFeeBucket]:
+        buckets: dict[tuple[str, str, str | None, str], _MonthlyFeeBucket] = {}
         for contract in direct_lease_contracts:
             source_entries = await contract_group_crud.list_ledger_entries_by_contract(
                 db,
@@ -234,8 +262,17 @@ class ServiceFeeLedgerService:
                     continue
                 if _as_decimal(getattr(source_entry, "paid_amount", None)) <= 0:
                     continue
+                agreement = self._resolve_agreement_for_source(
+                    source_entry,
+                    entrusted_contracts=entrusted_contracts,
+                )
+                agreement_id = str(agreement.contract_id)
+                ratio = _as_decimal(
+                    getattr(agreement.agency_detail, "service_fee_ratio", Decimal("0"))
+                )
                 key = (
                     str(source_entry.year_month),
+                    agreement_id,
                     getattr(source_entry, "attributed_owner_party_id", None),
                     str(getattr(source_entry, "currency_code", "CNY")),
                 )
@@ -244,6 +281,8 @@ class ServiceFeeLedgerService:
                     bucket = _MonthlyFeeBucket(
                         year_month=str(source_entry.year_month),
                         agency_contract_id=str(contract.contract_id),
+                        agency_agreement_contract_id=agreement_id,
+                        service_fee_ratio=ratio,
                         attributed_project_id=getattr(
                             source_entry,
                             "attributed_project_id",
@@ -272,10 +311,70 @@ class ServiceFeeLedgerService:
                 bucket.add_source(source_entry, str(contract.contract_id))
         return buckets
 
+    @classmethod
+    def _resolve_agreement_for_source(
+        cls,
+        source_entry: Any,
+        *,
+        entrusted_contracts: list[Any],
+    ) -> Any:
+        month_start, month_end = _month_range(str(source_entry.year_month))
+        full_matches = [
+            contract
+            for contract in entrusted_contracts
+            if cls._contract_covers_month(contract, month_start, month_end)
+        ]
+        if len(full_matches) == 1:
+            return full_matches[0]
+        if len(full_matches) > 1:
+            raise BusinessValidationError(
+                "rent ledger period must match exactly one entrusted service fee agreement"
+            )
+        if any(
+            cls._contract_overlaps_month(contract, month_start, month_end)
+            for contract in entrusted_contracts
+        ):
+            raise BusinessValidationError(
+                "split rent ledger period before generating service fee: rent ledger period "
+                "crosses service fee ratio interval"
+            )
+        raise BusinessValidationError(
+            "rent ledger period must match exactly one entrusted service fee agreement"
+        )
+
     @staticmethod
-    def _entry_key(entry: Any) -> tuple[str, str | None, str]:
+    def _contract_covers_month(
+        contract: Any,
+        month_start: date,
+        month_end: date,
+    ) -> bool:
+        effective_from = _as_date(
+            getattr(contract, "effective_from", None), default=date.min
+        )
+        effective_to = _as_date(
+            getattr(contract, "effective_to", None), default=date.max
+        )
+        return effective_from <= month_start and effective_to >= month_end
+
+    @staticmethod
+    def _contract_overlaps_month(
+        contract: Any,
+        month_start: date,
+        month_end: date,
+    ) -> bool:
+        effective_from = _as_date(
+            getattr(contract, "effective_from", None), default=date.min
+        )
+        effective_to = _as_date(
+            getattr(contract, "effective_to", None), default=date.max
+        )
+        return effective_from <= month_end and effective_to >= month_start
+
+    @staticmethod
+    def _entry_key(entry: Any) -> tuple[str, str, str | None, str]:
         return (
             str(getattr(entry, "year_month")),
+            str(getattr(entry, "agency_agreement_contract_id")),
             getattr(entry, "attributed_owner_party_id", None),
             str(getattr(entry, "currency_code", "CNY")),
         )

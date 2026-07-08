@@ -3,6 +3,7 @@
 ## [Unreleased] - 2026-03-06
 
 ### 2026-07-08
+- feat(operations-ledger): generate service-fee ledgers from direct-lease receipt periods using the entrusted-agreement ratio that fully covers each rent ledger month. The generator now supports historical entrusted agreements, freezes the agreement ID/ratio/calculation base/source period on creation, and fails loudly when a rent ledger month crosses a service-fee ratio interval instead of splitting by day.
 - feat(operations-ledger): tighten payment-flow registration and allocation validation. `PaymentFlowService` now rejects unsupported flow types, supports terminal rent receipts, service-fee receipts, and upstream cost payments through the same service seam, validates allocation target view, ledger period, frozen project/owner/operator/currency scope, and amount total, and recalculates stale targets removed from a flow's allocations. Added focused unit coverage for valid and invalid allocation paths.
 ### 2026-07-07
 - feat(operations-ledger): derive rent-ledger read models from active PaymentAllocation totals. Contract ledger list/query/export inputs, project-attributed reads, ownership paid/overdue aggregates, and overdue/due-soon notification scans now compute paid_amount and payment_status from active operational_payment_flows allocations instead of trusting the stored paid_amount cache; added focused CRUD/API/recalculate fixture coverage.
