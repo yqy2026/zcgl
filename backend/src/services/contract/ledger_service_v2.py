@@ -138,6 +138,31 @@ def _has_registered_receipt(entry: Any) -> bool:
     return _as_decimal(getattr(entry, "paid_amount", Decimal("0"))) > 0
 
 
+def _has_active_payment_allocation(entry: Any) -> bool:
+    try:
+        return int(getattr(entry, "active_allocation_count", 0) or 0) > 0
+    except (TypeError, ValueError):
+        return False
+
+
+def has_recalculation_protected_payment_fact(entry: Any) -> bool:
+    return _has_registered_receipt(entry) or _has_active_payment_allocation(entry)
+
+
+def _manual_resolution_reason(
+    entry: Any,
+    *,
+    outside_current_terms: bool = False,
+) -> str:
+    if _has_active_payment_allocation(entry) and not _has_registered_receipt(entry):
+        if outside_current_terms:
+            return "allocated_entry_outside_current_terms"
+        return "allocated_entry_requires_manual_resolution"
+    if outside_current_terms:
+        return "paid_or_partial_entry_outside_current_terms"
+    return "paid_or_partial_entry_requires_manual_resolution"
+
+
 def _parse_year_month(year_month: str) -> date | None:
     try:
         return datetime.strptime(f"{year_month}-01", "%Y-%m-%d").date()
@@ -151,12 +176,12 @@ def find_stale_paid_or_partial_ledger_entries(
     ledger_entries: list[ContractLedgerEntry],
     payment_cycle: str,
 ) -> list[StalePaidLedgerEntry]:
-    """Derive paid/partial entries that need manual correction after term changes."""
+    """Derive protected ledger entries that need manual correction after term changes."""
     stale_entries: list[StalePaidLedgerEntry] = []
     target_year_month_set = set(_expand_year_months(rent_terms))
 
     for entry in ledger_entries:
-        if not _has_registered_receipt(entry):
+        if not has_recalculation_protected_payment_fact(entry):
             continue
         payment_status = str(getattr(entry, "payment_status", "") or "").strip()
 
@@ -167,7 +192,7 @@ def find_stale_paid_or_partial_ledger_entries(
                     entry_id=str(getattr(entry, "entry_id", "")),
                     year_month=year_month,
                     payment_status=payment_status,
-                    reason="paid_or_partial_entry_outside_current_terms",
+                    reason=_manual_resolution_reason(entry, outside_current_terms=True),
                 )
             )
             continue
@@ -179,7 +204,7 @@ def find_stale_paid_or_partial_ledger_entries(
                     entry_id=str(getattr(entry, "entry_id", "")),
                     year_month=year_month,
                     payment_status=payment_status,
-                    reason="paid_or_partial_entry_requires_manual_resolution",
+                    reason=_manual_resolution_reason(entry),
                 )
             )
             continue
@@ -199,7 +224,7 @@ def find_stale_paid_or_partial_ledger_entries(
                     entry_id=str(getattr(entry, "entry_id", "")),
                     year_month=year_month,
                     payment_status=payment_status,
-                    reason="paid_or_partial_entry_requires_manual_resolution",
+                    reason=_manual_resolution_reason(entry),
                 )
             )
 
@@ -539,13 +564,13 @@ class ContractLedgerServiceV2:
             if not requires_update:
                 continue
 
-            if _has_registered_receipt(existing_entry):
+            if has_recalculation_protected_payment_fact(existing_entry):
                 skipped_entries.append(
                     {
                         "entry_id": existing_entry.entry_id,
                         "year_month": existing_entry.year_month,
                         "payment_status": existing_entry.payment_status,
-                        "reason": "paid_or_partial_entry_requires_manual_resolution",
+                        "reason": _manual_resolution_reason(existing_entry),
                     }
                 )
                 continue
@@ -560,13 +585,13 @@ class ContractLedgerServiceV2:
                 continue
             if existing_entry.payment_status == "voided":
                 continue
-            if _has_registered_receipt(existing_entry):
+            if has_recalculation_protected_payment_fact(existing_entry):
                 skipped_entries.append(
                     {
                         "entry_id": existing_entry.entry_id,
                         "year_month": existing_entry.year_month,
                         "payment_status": existing_entry.payment_status,
-                        "reason": "paid_or_partial_entry_requires_manual_resolution",
+                        "reason": _manual_resolution_reason(existing_entry),
                     }
                 )
                 continue
@@ -622,7 +647,7 @@ class ContractLedgerServiceV2:
                 continue
             if entry.payment_status == "voided":
                 continue
-            if _has_registered_receipt(entry):
+            if has_recalculation_protected_payment_fact(entry):
                 raise OperationNotAllowedError("存在已支付账期，需先人工处理")
             entry.payment_status = "voided"
             entry.updated_at = now

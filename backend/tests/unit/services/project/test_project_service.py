@@ -1,4 +1,4 @@
-﻿"""
+"""
 濞村鐦い鍦窗閺堝秴濮熼敍鍫濈磽濮濄儻绱?
 """
 
@@ -1672,6 +1672,102 @@ class TestGetProjectRisks:
             patch(
                 "src.services.project.service.ProjectService._today",
                 return_value=date(2026, 5, 14),
+            ),
+        ):
+            response = await project_service.get_project_risks(
+                mock_db,
+                project_id="project-1",
+                current_user_id="user-1",
+            )
+
+        assert response.total == 1
+        assert response.items[0].risk_type == "ledger_stale_after_correction"
+        assert response.items[0].contract_relation_id == "group-lease"
+        assert "CN-DOWNSTREAM-001" in response.items[0].message
+
+    async def test_get_project_risks_returns_stale_allocated_ledger_risk_after_correction(
+        self, project_service: ProjectService, mock_db: MagicMock
+    ) -> None:
+        from src.schemas.project import (
+            ProjectContractRelationItem,
+            ProjectContractRelationsResponse,
+        )
+
+        relations = ProjectContractRelationsResponse(
+            items=[
+                ProjectContractRelationItem(
+                    contract_relation_id="group-lease",
+                    project_id="project-1",
+                    display_name="GRP-LEASE",
+                    revenue_mode="lease",
+                    relation_kind="lease_sublease",
+                    owner_party_id="owner-1",
+                    operator_party_id="manager-1",
+                    asset_ids=["asset-1"],
+                    primary_contract_ids=[],
+                    terminal_contract_ids=["contract-downstream"],
+                    derived_status="active",
+                    risk_tags=[],
+                )
+            ],
+            total=1,
+        )
+        downstream_contract = SimpleNamespace(
+            contract_id="contract-downstream",
+            contract_number="CN-DOWNSTREAM-001",
+            group_relation_type=GroupRelationType.DOWNSTREAM,
+            status=ContractLifecycleStatus.ACTIVE,
+            effective_from=date(2026, 1, 1),
+            effective_to=date(2026, 12, 31),
+            lease_detail=SimpleNamespace(payment_cycle="monthly"),
+        )
+        allocated_entry = SimpleNamespace(
+            entry_id="entry-jan",
+            year_month="2026-01",
+            amount_due=Decimal("1000.00"),
+            due_date=date(2026, 1, 1),
+            payment_status="unpaid",
+            paid_amount=Decimal("0.00"),
+            active_allocation_count=1,
+        )
+        current_rent_term = SimpleNamespace(
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 1, 31),
+            monthly_rent=Decimal("1200.00"),
+            total_monthly_amount=Decimal("1200.00"),
+            sort_order=1,
+        )
+
+        with (
+            patch.object(
+                project_service,
+                "get_project_contract_relations",
+                new=AsyncMock(return_value=relations),
+            ),
+            patch.object(
+                project_service,
+                "_load_project_active_assets",
+                new=AsyncMock(return_value=([], None)),
+            ),
+            patch(
+                "src.services.project.service.contract_crud.list_by_group",
+                new=AsyncMock(return_value=[downstream_contract]),
+            ),
+            patch(
+                "src.services.project.service.contract_group_crud.list_ledger_entries_by_contract",
+                new=AsyncMock(return_value=[allocated_entry]),
+            ),
+            patch(
+                "src.services.project.service.contract_group_crud.list_rent_terms_by_contract",
+                new=AsyncMock(return_value=[current_rent_term]),
+            ),
+            patch(
+                "src.services.project.service.contract_group_crud.list_service_fee_entries_by_group",
+                new=AsyncMock(return_value=[]),
+            ),
+            patch(
+                "src.services.project.service.ProjectService._today",
+                return_value=date(2026, 1, 1),
             ),
         ):
             response = await project_service.get_project_risks(

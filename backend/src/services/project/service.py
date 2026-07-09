@@ -259,6 +259,13 @@ class ProjectService:
         except Exception:
             return Decimal(0)
 
+    @staticmethod
+    def _has_active_ledger_allocation(entry: Any) -> bool:
+        try:
+            return int(getattr(entry, "active_allocation_count", 0) or 0) > 0
+        except (TypeError, ValueError):
+            return False
+
     @classmethod
     def _unpaid_amount_from_entry(cls, entry: Any) -> Decimal:
         amount_due = cls._as_decimal(getattr(entry, "amount_due", None))
@@ -391,7 +398,9 @@ class ProjectService:
     async def _resolve_operator_party_for_code(
         self, db: AsyncSession, obj_in: ProjectCreate
     ) -> tuple[str | None, str | None]:
-        operator_party_id = (obj_in.manager_party_id or obj_in.organization_id or "").strip()
+        operator_party_id = (
+            obj_in.manager_party_id or obj_in.organization_id or ""
+        ).strip()
         if operator_party_id == "":
             raise OperationNotAllowedError(
                 "自动生成 project_code 必须提供运营方 manager_party_id",
@@ -441,9 +450,10 @@ class ProjectService:
                     reason="project_party_relations_write_removed",
                 )
             if not obj_in.project_code:
-                operator_party_id, operator_party_code = (
-                    await self._resolve_operator_party_for_code(db, obj_in)
-                )
+                (
+                    operator_party_id,
+                    operator_party_code,
+                ) = await self._resolve_operator_party_for_code(db, obj_in)
                 obj_in.project_code = await self.generate_project_code(
                     db,
                     obj_in.project_name,
@@ -1001,13 +1011,14 @@ class ProjectService:
                         contract_id=str(getattr(contract, "contract_id")),
                     )
                 )
-                paid_or_partial_entries = [
+                protected_payment_entries = [
                     entry
                     for entry in ledger_entries
                     if str(getattr(entry, "payment_status", "") or "").strip()
                     in {"paid", "partial"}
+                    or self._has_active_ledger_allocation(entry)
                 ]
-                if paid_or_partial_entries:
+                if protected_payment_entries:
                     rent_terms = await contract_group_crud.list_rent_terms_by_contract(
                         db,
                         contract_id=str(getattr(contract, "contract_id")),
@@ -1022,7 +1033,7 @@ class ProjectService:
                     )
                     stale_entries = find_stale_paid_or_partial_ledger_entries(
                         rent_terms=rent_terms,
-                        ledger_entries=paid_or_partial_entries,
+                        ledger_entries=protected_payment_entries,
                         payment_cycle=payment_cycle,
                     )
                     if stale_entries:

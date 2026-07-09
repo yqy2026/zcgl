@@ -57,6 +57,7 @@ def _assert_active_ledger_allocation_sql(sql: str) -> None:
     assert "operational_payment_flows" in sql
     assert "target_type = 'contract_ledger_entry'" in sql
     assert "operational_payment_flows.status = 'active'" in sql
+    assert "count(payment_allocations.allocation_id)" in sql
 
 
 class TestOwnershipAggregates:
@@ -198,7 +199,7 @@ class TestLedgerAggregateQueries:
     ) -> None:
         entry = _ledger_entry()
         result = MagicMock()
-        result.all.return_value = [(entry, Decimal("1000.00"), "paid")]
+        result.all.return_value = [(entry, Decimal("1000.00"), "paid", 2)]
         mock_db.execute.return_value = result
 
         items = await crud.list_ledger_entries_by_contract(

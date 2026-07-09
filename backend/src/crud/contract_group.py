@@ -54,6 +54,7 @@ class CRUDContractGroup:
                 func.coalesce(func.sum(PaymentAllocation.amount), 0).label(
                     "paid_amount"
                 ),
+                func.count(PaymentAllocation.allocation_id).label("allocation_count"),
             )
             .join(
                 OperationalPaymentFlow,
@@ -82,6 +83,7 @@ class CRUDContractGroup:
         *,
         paid_amount: Any,
         payment_status: Any,
+        allocation_count: Any = 0,
     ) -> ContractLedgerEntry:
         set_committed_value(
             entry,
@@ -89,7 +91,22 @@ class CRUDContractGroup:
             Decimal(str(paid_amount if paid_amount is not None else 0)),
         )
         set_committed_value(entry, "_payment_status", str(payment_status))
+        setattr(
+            entry,
+            "active_allocation_count",
+            int(allocation_count if allocation_count is not None else 0),
+        )
         return entry
+
+    @classmethod
+    def _apply_ledger_payment_facts_from_row(cls, row: Any) -> ContractLedgerEntry:
+        allocation_count = row[3] if len(row) > 3 else 0
+        return cls._apply_ledger_payment_facts(
+            row[0],
+            paid_amount=row[1],
+            payment_status=row[2],
+            allocation_count=allocation_count,
+        )
 
     @staticmethod
     def _ownership_contracts_stmt(ownership_id: str) -> Select[tuple[str]]:
@@ -496,6 +513,7 @@ class CRUDContractGroup:
                 ContractLedgerEntry,
                 allocated_paid_amount.label("allocation_paid_amount"),
                 allocation_payment_status,
+                allocation_totals.c.allocation_count,
             )
             .outerjoin(
                 allocation_totals,
@@ -505,14 +523,7 @@ class CRUDContractGroup:
             .order_by(ContractLedgerEntry.year_month.asc())
         )
         rows = (await db.execute(stmt)).all()
-        return [
-            self._apply_ledger_payment_facts(
-                row[0],
-                paid_amount=row[1],
-                payment_status=row[2],
-            )
-            for row in rows
-        ]
+        return [self._apply_ledger_payment_facts_from_row(row) for row in rows]
 
     async def list_ledger_entries_by_attributed_project(
         self,
@@ -530,6 +541,7 @@ class CRUDContractGroup:
                 ContractLedgerEntry,
                 allocated_paid_amount.label("allocation_paid_amount"),
                 allocation_payment_status,
+                allocation_totals.c.allocation_count,
             )
             .join(Contract, ContractLedgerEntry.contract_id == Contract.contract_id)
             .outerjoin(
@@ -552,14 +564,7 @@ class CRUDContractGroup:
             )
         )
         rows = (await db.execute(stmt)).all()
-        return [
-            self._apply_ledger_payment_facts(
-                row[0],
-                paid_amount=row[1],
-                payment_status=row[2],
-            )
-            for row in rows
-        ]
+        return [self._apply_ledger_payment_facts_from_row(row) for row in rows]
 
     async def get_ledger_by_contract(
         self,
@@ -582,6 +587,7 @@ class CRUDContractGroup:
                 ContractLedgerEntry,
                 allocated_paid_amount.label("allocation_paid_amount"),
                 allocation_payment_status,
+                allocation_totals.c.allocation_count,
             )
             .outerjoin(
                 allocation_totals,
@@ -603,14 +609,7 @@ class CRUDContractGroup:
             .limit(limit)
         )
         rows = (await db.execute(items_stmt)).all()
-        items = [
-            self._apply_ledger_payment_facts(
-                row[0],
-                paid_amount=row[1],
-                payment_status=row[2],
-            )
-            for row in rows
-        ]
+        items = [self._apply_ledger_payment_facts_from_row(row) for row in rows]
         return items, total
 
     async def query_ledger_entries(
@@ -638,6 +637,7 @@ class CRUDContractGroup:
                 ContractLedgerEntry,
                 allocated_paid_amount.label("allocation_paid_amount"),
                 allocation_payment_status,
+                allocation_totals.c.allocation_count,
             )
             .join(Contract, ContractLedgerEntry.contract_id == Contract.contract_id)
             .outerjoin(
@@ -681,14 +681,7 @@ class CRUDContractGroup:
             .limit(limit)
         )
         rows = (await db.execute(items_stmt)).all()
-        items = [
-            self._apply_ledger_payment_facts(
-                row[0],
-                paid_amount=row[1],
-                payment_status=row[2],
-            )
-            for row in rows
-        ]
+        items = [self._apply_ledger_payment_facts_from_row(row) for row in rows]
         return items, total
 
     async def get_overdue_with_contract_async(
@@ -707,6 +700,7 @@ class CRUDContractGroup:
                 ContractLedgerEntry,
                 allocated_paid_amount.label("allocation_paid_amount"),
                 allocation_payment_status,
+                allocation_totals.c.allocation_count,
             )
             .join(Contract, ContractLedgerEntry.contract_id == Contract.contract_id)
             .outerjoin(
@@ -729,14 +723,7 @@ class CRUDContractGroup:
             .order_by(ContractLedgerEntry.due_date.asc())
         )
         rows = (await db.execute(stmt)).all()
-        return [
-            self._apply_ledger_payment_facts(
-                row[0],
-                paid_amount=row[1],
-                payment_status=row[2],
-            )
-            for row in rows
-        ]
+        return [self._apply_ledger_payment_facts_from_row(row) for row in rows]
 
     async def get_due_soon_with_contract_async(
         self,
@@ -755,6 +742,7 @@ class CRUDContractGroup:
                 ContractLedgerEntry,
                 allocated_paid_amount.label("allocation_paid_amount"),
                 allocation_payment_status,
+                allocation_totals.c.allocation_count,
             )
             .join(Contract, ContractLedgerEntry.contract_id == Contract.contract_id)
             .outerjoin(
@@ -778,14 +766,7 @@ class CRUDContractGroup:
             .order_by(ContractLedgerEntry.due_date.asc())
         )
         rows = (await db.execute(stmt)).all()
-        return [
-            self._apply_ledger_payment_facts(
-                row[0],
-                paid_amount=row[1],
-                payment_status=row[2],
-            )
-            for row in rows
-        ]
+        return [self._apply_ledger_payment_facts_from_row(row) for row in rows]
 
     async def batch_update_ledger_status(
         self,
