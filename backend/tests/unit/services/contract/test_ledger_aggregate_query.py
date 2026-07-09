@@ -1,3 +1,4 @@
+from datetime import date
 from types import SimpleNamespace
 from unittest.mock import ANY, AsyncMock, patch
 
@@ -21,11 +22,15 @@ async def test_query_ledger_entries_delegates_filters_and_pagination() -> None:
     ) as mock_query:
         result = await ledger_service_v2.query_ledger_entries(
             AsyncMock(),
+            ledger_view="terminal_collection",
+            project_id="project-001",
             asset_id="asset-001",
             party_id="party-001",
             contract_id="contract-001",
             year_month_start="2026-01",
             year_month_end="2026-03",
+            flow_occurred_on_start=date(2026, 2, 1),
+            flow_occurred_on_end=date(2026, 2, 28),
             payment_status="partial",
             include_voided=True,
             offset=10,
@@ -40,11 +45,15 @@ async def test_query_ledger_entries_delegates_filters_and_pagination() -> None:
     }
     mock_query.assert_awaited_once_with(
         ANY,
+        ledger_view="terminal_collection",
+        project_id="project-001",
         asset_id="asset-001",
         party_id="party-001",
         contract_id="contract-001",
         year_month_start="2026-01",
         year_month_end="2026-03",
+        flow_occurred_on_start=date(2026, 2, 1),
+        flow_occurred_on_end=date(2026, 2, 28),
         payment_status="partial",
         include_voided=True,
         offset=10,
@@ -88,4 +97,17 @@ async def test_query_ledger_entries_rejects_inverted_year_month_range() -> None:
             contract_id="contract-001",
             year_month_start="2026-03",
             year_month_end="2026-01",
+        )
+
+
+async def test_query_ledger_entries_rejects_inverted_flow_date_range() -> None:
+    with pytest.raises(
+        BusinessValidationError,
+        match="flow occurred start date cannot be after end date",
+    ):
+        await ledger_service_v2.query_ledger_entries(
+            AsyncMock(),
+            contract_id="contract-001",
+            flow_occurred_on_start=date(2026, 3, 1),
+            flow_occurred_on_end=date(2026, 1, 1),
         )

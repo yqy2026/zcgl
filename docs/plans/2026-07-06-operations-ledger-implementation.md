@@ -157,12 +157,14 @@
 
 任务：
 
-- [ ] `GET /api/v1/ledger/entries` 支持 `ledger_view`、项目、主体、资产、合同/协议、账期、发生日期和派生支付状态筛选。
-- [ ] `GET /api/v1/projects/{project_id}/ledger-summary` 返回四类经营摘要。
-- [ ] `POST /api/v1/ledger/payment-flows` 创建流水。
-- [ ] `POST /api/v1/ledger/payment-flows/{flow_id}/allocations` 保存分摊。
-- [ ] `POST /api/v1/ledger/service-fees/generate` 生成月度服务费。
-- [ ] `GET /api/v1/ledger/entries/export` 导出经营台账视图、账期归属和流水发生日期字段。
+- [x] `GET /api/v1/ledger/entries` 支持合同租金台账 `ledger_view`、项目、主体、资产、合同/协议、账期、发生日期和派生支付状态筛选。
+- [x] `GET /api/v1/projects/{project_id}/ledger-summary` 返回四类经营摘要。
+- [x] `POST /api/v1/ledger/payment-flows` 创建流水。
+- [x] `POST /api/v1/ledger/payment-flows/{flow_id}/allocations` 保存分摊。
+- [x] `POST /api/v1/ledger/service-fees/generate` 生成月度服务费。
+- [x] `GET /api/v1/ledger/entries/export` 导出经营台账视图、账期归属和流水发生日期字段。
+
+说明：`GET /api/v1/ledger/entries` 的 `ledger_view` 当前覆盖 `ContractLedgerEntry` 三类合同租金台账视图（`terminal_collection` / `operator_income` / `operator_cost`）。服务费结算由 `ServiceFeeLedger`、服务费生成和服务费收款分摊路径承载；若后续前端需要单一列表同时混排租金台账与服务费台账，应新增统一响应载荷，不复用 `ContractLedgerEntryResponse` 暗中兼容。
 
 验收：
 

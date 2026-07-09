@@ -34,6 +34,7 @@ class LedgerExportService:
         "entry_id",
         "contract_id",
         "year_month",
+        "ledger_views",
         "due_date",
         "amount_due",
         "currency_code",
@@ -41,6 +42,7 @@ class LedgerExportService:
         "tax_rate",
         "payment_status",
         "paid_amount",
+        "flow_occurred_on_dates",
         "notes",
         "created_at",
         "updated_at",
@@ -54,11 +56,15 @@ class LedgerExportService:
     ) -> LedgerExportPayload:
         result = await ledger_service_v2.query_ledger_entries(
             db,
+            ledger_view=params.ledger_view,
+            project_id=params.project_id,
             asset_id=params.asset_id,
             party_id=params.party_id,
             contract_id=params.contract_id,
             year_month_start=params.year_month_start,
             year_month_end=params.year_month_end,
+            flow_occurred_on_start=params.flow_occurred_on_start,
+            flow_occurred_on_end=params.flow_occurred_on_end,
             payment_status=params.payment_status,
             include_voided=params.include_voided,
             offset=params.offset,
@@ -93,7 +99,12 @@ class LedgerExportService:
         normalized: dict[str, str] = {}
         for column in self.EXPORT_COLUMNS:
             value = raw.get(column)
-            normalized[column] = "" if value is None else str(value)
+            if value is None:
+                normalized[column] = ""
+            elif isinstance(value, list):
+                normalized[column] = ";".join(str(item) for item in value)
+            else:
+                normalized[column] = str(value)
         return normalized
 
     def _to_csv(self, rows: list[dict[str, str]]) -> bytes:

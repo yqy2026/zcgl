@@ -2,6 +2,10 @@
 
 ## [Unreleased] - 2026-03-06
 
+### 2026-07-09
+- feat(operations-ledger): expose Phase 3 backend ledger APIs for operational payment-flow creation, allocation save, and monthly service-fee generation. Extended `GET /api/v1/ledger/entries` and export to filter by contract rent-ledger view, project, active payment-flow occurrence date, and derived payment status, added `ledger_views` / `flow_occurred_on_dates` to query/export evidence, and registered the new ledger authz resource in RBAC seed/backfill coverage.
+- test(project): stabilize project-code generation unit coverage by routing month selection through the existing project-service clock helper and freezing the generated-code tests to June 2026.
+
 ### 2026-07-08
 - feat(operations-ledger): derive `service_fee_source_mismatch` risks for generated service-fee ledgers whose frozen source rent ledgers, calculation base, ratio, amount, or attribution no longer match current allocation-derived rent receipts, or whose frozen source rent ledger is stale after contract correction. Project risks no longer treat unpaid service fees as overdue.
 - feat(operations-ledger): preserve manually allocated ledger facts during contract-correction recalculation. CRUD now marks active allocation counts on ledger read models, recalculation and correction reversal skip entries with active allocations, and project risk derivation keeps `ledger_stale_after_correction` visible for allocated entries that no longer match current rent terms.

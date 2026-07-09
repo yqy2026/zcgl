@@ -744,16 +744,21 @@ class TestGenerateProjectCode:
         mock_last_project = MagicMock()
         mock_last_project.project_code = "PRJ-OPER0001-202606-0007"
 
-        with patch(
-            "src.services.project.service.project_crud.get_latest_by_code_prefix",
-            new_callable=AsyncMock,
-            return_value=mock_last_project,
-        ) as mock_get_latest:
-            result = await project_service.generate_project_code(
-                mock_db,
-                operator_party_id="operator-party-1",
-                operator_party_code="oper-0001",
-            )
+        with patch.object(
+            project_service,
+            "_utcnow_naive",
+            return_value=datetime(2026, 6, 15),
+        ):
+            with patch(
+                "src.services.project.service.project_crud.get_latest_by_code_prefix",
+                new_callable=AsyncMock,
+                return_value=mock_last_project,
+            ) as mock_get_latest:
+                result = await project_service.generate_project_code(
+                    mock_db,
+                    operator_party_id="operator-party-1",
+                    operator_party_code="oper-0001",
+                )
 
         assert result == "PRJ-OPER0001-202606-0008"
         prefix = mock_get_latest.await_args.kwargs["prefix"]
@@ -762,20 +767,25 @@ class TestGenerateProjectCode:
     async def test_generate_code_acquires_prefix_lock_before_latest_lookup(
         self, project_service: ProjectService, mock_db: MagicMock
     ) -> None:
-        with patch(
-            "src.services.project.service.project_crud.acquire_code_generation_lock",
-            new_callable=AsyncMock,
-        ) as mock_lock:
+        with patch.object(
+            project_service,
+            "_utcnow_naive",
+            return_value=datetime(2026, 6, 15),
+        ):
             with patch(
-                "src.services.project.service.project_crud.get_latest_by_code_prefix",
+                "src.services.project.service.project_crud.acquire_code_generation_lock",
                 new_callable=AsyncMock,
-                return_value=None,
-            ) as mock_get_latest:
-                result = await project_service.generate_project_code(
-                    mock_db,
-                    operator_party_id="operator-party-1",
-                    operator_party_code="oper-0001",
-                )
+            ) as mock_lock:
+                with patch(
+                    "src.services.project.service.project_crud.get_latest_by_code_prefix",
+                    new_callable=AsyncMock,
+                    return_value=None,
+                ) as mock_get_latest:
+                    result = await project_service.generate_project_code(
+                        mock_db,
+                        operator_party_id="operator-party-1",
+                        operator_party_code="oper-0001",
+                    )
 
         assert result == "PRJ-OPER0001-202606-0001"
         assert mock_lock.await_args.kwargs["prefix"] == "PRJ-OPER0001-202606-"

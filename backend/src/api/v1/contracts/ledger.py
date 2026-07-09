@@ -1,5 +1,6 @@
 """合同台账聚合查询与重算 API。"""
 
+from datetime import date
 from typing import Annotated, Literal, cast
 
 from fastapi import APIRouter, Depends, Query, Response
@@ -21,24 +22,43 @@ from ....schemas.contract_group import (
     LedgerCompensationResponse,
     LedgerExportQueryParams,
     LedgerRecalculateResponse,
+    OperationalPaymentFlowCreate,
+    OperationalPaymentFlowResponse,
+    PaymentAllocationResponse,
+    PaymentAllocationSaveRequest,
+    ServiceFeeGenerateRequest,
+    ServiceFeeGenerateResponse,
 )
 from ....services.contract.ledger_compensation_service import (
     ledger_compensation_service,
 )
 from ....services.contract.ledger_export_service import ledger_export_service
 from ....services.contract.ledger_service_v2 import ledger_service_v2
+from ....services.contract.payment_flow_service import payment_flow_service
+from ....services.contract.service_fee_ledger_service import service_fee_ledger_service
 
 router = APIRouter()
 
 LedgerPaymentStatus = Literal["unpaid", "paid", "partial", "voided"]
+LedgerViewFilter = Literal["terminal_collection", "operator_income", "operator_cost"]
 
 
 def resolve_ledger_query_params(
+    ledger_view: LedgerViewFilter | None = Query(None, description="经营台账视图"),
+    project_id: str | None = Query(None, description="项目 ID"),
     asset_id: str | None = Query(None, description="资产 ID"),
     party_id: str | None = Query(None, description="主体 ID"),
     contract_id: str | None = Query(None, description="合同 ID"),
     year_month_start: str | None = Query(None, description="开始账期，格式 YYYY-MM"),
     year_month_end: str | None = Query(None, description="结束账期，格式 YYYY-MM"),
+    flow_occurred_on_start: date | None = Query(
+        None,
+        description="收付流水发生日期开始",
+    ),
+    flow_occurred_on_end: date | None = Query(
+        None,
+        description="收付流水发生日期结束",
+    ),
     payment_status: str | None = Query(None, description="支付状态"),
     include_voided: bool = Query(False, description="是否包含作废条目"),
     offset: int = Query(0, ge=0, description="分页偏移"),
@@ -70,11 +90,15 @@ def resolve_ledger_query_params(
             normalized_payment_status = cast(LedgerPaymentStatus, payment_status)
 
         return LedgerAggregateQueryParams(
+            ledger_view=ledger_view,
+            project_id=project_id,
             asset_id=asset_id,
             party_id=party_id,
             contract_id=contract_id,
             year_month_start=year_month_start,
             year_month_end=year_month_end,
+            flow_occurred_on_start=flow_occurred_on_start,
+            flow_occurred_on_end=flow_occurred_on_end,
             payment_status=normalized_payment_status,
             include_voided=include_voided,
             offset=offset,
@@ -93,11 +117,15 @@ def resolve_ledger_export_query_params(
 ) -> LedgerExportQueryParams:
     return LedgerExportQueryParams(
         export_format=export_format,
+        ledger_view=params.ledger_view,
+        project_id=params.project_id,
         asset_id=params.asset_id,
         party_id=params.party_id,
         contract_id=params.contract_id,
         year_month_start=params.year_month_start,
         year_month_end=params.year_month_end,
+        flow_occurred_on_start=params.flow_occurred_on_start,
+        flow_occurred_on_end=params.flow_occurred_on_end,
         payment_status=params.payment_status,
         include_voided=params.include_voided,
         offset=params.offset,
@@ -129,11 +157,15 @@ async def get_ledger_entries(
     try:
         result = await ledger_service_v2.query_ledger_entries(
             db,
+            ledger_view=params.ledger_view,
+            project_id=params.project_id,
             asset_id=params.asset_id,
             party_id=params.party_id,
             contract_id=params.contract_id,
             year_month_start=params.year_month_start,
             year_month_end=params.year_month_end,
+            flow_occurred_on_start=params.flow_occurred_on_start,
+            flow_occurred_on_end=params.flow_occurred_on_end,
             payment_status=params.payment_status,
             include_voided=params.include_voided,
             offset=params.offset,
@@ -177,6 +209,110 @@ async def export_ledger_entries(
         raise
     except Exception as exc:
         raise internal_error("导出台账条目失败", original_error=exc) from exc
+
+
+@router.post(
+    "/ledger/payment-flows",
+    response_model=OperationalPaymentFlowResponse,
+    summary="创建经营收付流水",
+)
+async def create_payment_flow(
+    payload: OperationalPaymentFlowCreate,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz: Annotated[
+        AuthzContext | None,
+        Depends(
+            require_authz(
+                action="create",
+                resource_type="ledger",
+            )
+        ),
+    ] = None,
+) -> OperationalPaymentFlowResponse:
+    _ = current_user
+    _ = _authz
+    try:
+        result = await payment_flow_service.create_flow(
+            db,
+            data=payload.model_dump(mode="json"),
+        )
+        return OperationalPaymentFlowResponse.model_validate(result)
+    except BaseBusinessError:
+        raise
+    except Exception as exc:
+        raise internal_error("创建经营收付流水失败", original_error=exc) from exc
+
+
+@router.post(
+    "/ledger/payment-flows/{flow_id}/allocations",
+    response_model=list[PaymentAllocationResponse],
+    summary="保存经营收付流水分摊",
+)
+async def save_payment_flow_allocations(
+    flow_id: str,
+    payload: PaymentAllocationSaveRequest,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz: Annotated[
+        AuthzContext | None,
+        Depends(
+            require_authz(
+                action="update",
+                resource_type="ledger",
+                resource_id="{flow_id}",
+            )
+        ),
+    ] = None,
+) -> list[PaymentAllocationResponse]:
+    _ = current_user
+    _ = _authz
+    try:
+        result = await payment_flow_service.save_allocations(
+            db,
+            flow_id=flow_id,
+            allocations=[
+                allocation.model_dump(mode="json") for allocation in payload.allocations
+            ],
+        )
+        return [PaymentAllocationResponse.model_validate(item) for item in result]
+    except BaseBusinessError:
+        raise
+    except Exception as exc:
+        raise internal_error("保存经营收付流水分摊失败", original_error=exc) from exc
+
+
+@router.post(
+    "/ledger/service-fees/generate",
+    response_model=ServiceFeeGenerateResponse,
+    summary="生成月度服务费台账",
+)
+async def generate_service_fees(
+    payload: ServiceFeeGenerateRequest,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz: Annotated[
+        AuthzContext | None,
+        Depends(
+            require_authz(
+                action="update",
+                resource_type="ledger",
+            )
+        ),
+    ] = None,
+) -> ServiceFeeGenerateResponse:
+    _ = current_user
+    _ = _authz
+    try:
+        result = await service_fee_ledger_service.sync_contract_group(
+            db,
+            group_id=payload.contract_group_id,
+        )
+        return ServiceFeeGenerateResponse.model_validate(result)
+    except BaseBusinessError:
+        raise
+    except Exception as exc:
+        raise internal_error("生成月度服务费台账失败", original_error=exc) from exc
 
 
 @router.post(

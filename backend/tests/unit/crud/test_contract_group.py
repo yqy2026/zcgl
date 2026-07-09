@@ -194,6 +194,38 @@ class TestLedgerAggregateQueries:
         assert "operational_payment_flows.status = 'active'" in sql
         assert "partial" in sql
 
+    async def test_query_ledger_entries_filters_operations_view_project_and_flow_date(
+        self, crud: CRUDContractGroup, mock_db: MagicMock
+    ) -> None:
+        page_result = MagicMock()
+        page_result.scalar_one.return_value = 0
+        page_result.all.return_value = []
+        mock_db.execute.return_value = page_result
+
+        await crud.query_ledger_entries(
+            mock_db,
+            ledger_view="terminal_collection",
+            project_id="project-1",
+            flow_occurred_on_start=date(2026, 5, 1),
+            flow_occurred_on_end=date(2026, 5, 31),
+        )
+
+        count_stmt = mock_db.execute.await_args_list[0].args[0]
+        compiled = count_stmt.compile()
+        sql = str(compiled)
+        params = repr(compiled.params)
+        assert "attributed_project_id" in sql
+        assert "project-1" in params
+        assert "ledger_views" in sql
+        assert "terminal_collection" in params
+        assert "payment_allocations" in sql
+        assert "operational_payment_flows.occurred_on >=" in sql
+        assert "operational_payment_flows.occurred_on <=" in sql
+        assert "datetime.date(2026, 5, 1)" in params
+        assert "datetime.date(2026, 5, 31)" in params
+        assert "operational_payment_flows.status" in sql
+        assert "active" in params
+
     async def test_list_ledger_entries_by_contract_applies_active_allocation_facts(
         self, crud: CRUDContractGroup, mock_db: MagicMock
     ) -> None:

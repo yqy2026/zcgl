@@ -62,11 +62,56 @@ def test_get_ledger_entries_delegates_to_service(client) -> None:
     assert response.json()["total"] == 1
     mock_query.assert_awaited_once_with(
         ANY,
+        ledger_view=None,
+        project_id=None,
         asset_id=None,
         party_id=None,
         contract_id="contract-001",
         year_month_start="2026-01",
         year_month_end=None,
+        flow_occurred_on_start=None,
+        flow_occurred_on_end=None,
+        payment_status=None,
+        include_voided=False,
+        offset=0,
+        limit=20,
+    )
+
+
+def test_get_ledger_entries_delegates_operations_filters(client) -> None:
+    payload = {
+        "items": [],
+        "total": 0,
+        "offset": 0,
+        "limit": 20,
+    }
+
+    with patch(
+        "src.api.v1.contracts.ledger.ledger_service_v2.query_ledger_entries",
+        new=AsyncMock(return_value=payload),
+    ) as mock_query:
+        response = client.get(
+            "/api/v1/ledger/entries",
+            params={
+                "ledger_view": "terminal_collection",
+                "project_id": "project-001",
+                "flow_occurred_on_start": "2026-05-01",
+                "flow_occurred_on_end": "2026-05-31",
+            },
+        )
+
+    assert response.status_code == 200
+    mock_query.assert_awaited_once_with(
+        ANY,
+        ledger_view="terminal_collection",
+        project_id="project-001",
+        asset_id=None,
+        party_id=None,
+        contract_id=None,
+        year_month_start=None,
+        year_month_end=None,
+        flow_occurred_on_start=ANY,
+        flow_occurred_on_end=ANY,
         payment_status=None,
         include_voided=False,
         offset=0,
@@ -76,6 +121,19 @@ def test_get_ledger_entries_delegates_to_service(client) -> None:
 
 def test_get_ledger_entries_requires_at_least_one_core_filter(client) -> None:
     response = client.get("/api/v1/ledger/entries")
+
+    assert response.status_code == 422
+
+
+def test_get_ledger_entries_rejects_inverted_flow_date_range(client) -> None:
+    response = client.get(
+        "/api/v1/ledger/entries",
+        params={
+            "project_id": "project-001",
+            "flow_occurred_on_start": "2026-05-31",
+            "flow_occurred_on_end": "2026-05-01",
+        },
+    )
 
     assert response.status_code == 422
 
@@ -175,3 +233,119 @@ def test_batch_update_ledger_rejects_payment_status_input(
     )
 
     assert response.status_code == 422
+
+
+def test_create_payment_flow_delegates_to_service(client) -> None:
+    payload = {
+        "flow_id": "flow-001",
+        "flow_type": "terminal_rent_receipt",
+        "occurred_on": "2026-05-10",
+        "amount": "1200.00",
+        "registered_by": "user-001",
+        "counterparty_id": "tenant-001",
+        "voucher_attachment_ids": ["attachment-001"],
+        "notes": "offline receipt",
+        "status": "active",
+        "created_at": "2026-05-10T10:00:00",
+        "updated_at": "2026-05-10T10:00:00",
+    }
+
+    with patch(
+        "src.api.v1.contracts.ledger.payment_flow_service.create_flow",
+        new=AsyncMock(return_value=payload),
+        create=True,
+    ) as mock_create:
+        response = client.post(
+            "/api/v1/ledger/payment-flows",
+            json={
+                "flow_type": "terminal_rent_receipt",
+                "occurred_on": "2026-05-10",
+                "amount": "1200.00",
+                "registered_by": "user-001",
+                "counterparty_id": "tenant-001",
+                "voucher_attachment_ids": ["attachment-001"],
+                "notes": "offline receipt",
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json()["flow_id"] == "flow-001"
+    mock_create.assert_awaited_once_with(
+        ANY,
+        data={
+            "flow_type": "terminal_rent_receipt",
+            "occurred_on": ANY,
+            "amount": ANY,
+            "registered_by": "user-001",
+            "counterparty_id": "tenant-001",
+            "voucher_attachment_ids": ["attachment-001"],
+            "notes": "offline receipt",
+        },
+    )
+
+
+def test_save_payment_flow_allocations_delegates_to_service(client) -> None:
+    payload = [
+        {
+            "allocation_id": "allocation-001",
+            "flow_id": "flow-001",
+            "target_type": "contract_ledger_entry",
+            "target_id": "entry-001",
+            "year_month": "2026-05",
+            "amount": "1200.00",
+            "created_at": "2026-05-10T10:00:00",
+            "updated_at": "2026-05-10T10:00:00",
+        }
+    ]
+
+    with patch(
+        "src.api.v1.contracts.ledger.payment_flow_service.save_allocations",
+        new=AsyncMock(return_value=payload),
+        create=True,
+    ) as mock_save:
+        response = client.post(
+            "/api/v1/ledger/payment-flows/flow-001/allocations",
+            json={
+                "allocations": [
+                    {
+                        "target_type": "contract_ledger_entry",
+                        "target_id": "entry-001",
+                        "year_month": "2026-05",
+                        "amount": "1200.00",
+                    }
+                ]
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json()[0]["allocation_id"] == "allocation-001"
+    mock_save.assert_awaited_once_with(
+        ANY,
+        flow_id="flow-001",
+        allocations=[
+            {
+                "target_type": "contract_ledger_entry",
+                "target_id": "entry-001",
+                "year_month": "2026-05",
+                "amount": ANY,
+            }
+        ],
+    )
+
+
+def test_generate_service_fees_delegates_to_service(client) -> None:
+    payload = {"created": 2, "updated": 0, "voided": 0, "source_mismatches": 1}
+
+    with patch(
+        "src.api.v1.contracts.ledger.service_fee_ledger_service.sync_contract_group",
+        new=AsyncMock(return_value=payload),
+        create=True,
+    ) as mock_generate:
+        response = client.post(
+            "/api/v1/ledger/service-fees/generate",
+            json={"contract_group_id": "group-001"},
+        )
+
+    assert response.status_code == 200
+    assert response.json() == payload
+    mock_generate.assert_awaited_once_with(ANY, group_id="group-001")

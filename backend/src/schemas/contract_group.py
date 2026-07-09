@@ -419,6 +419,7 @@ class ContractLedgerEntryResponse(BaseModel):
     due_date: date
     amount_due: Decimal
     ledger_views: list[LedgerView]
+    flow_occurred_on_dates: list[date] = Field(default_factory=list)
     currency_code: str
     is_tax_included: bool
     tax_rate: Decimal | None
@@ -441,6 +442,15 @@ class ContractLedgerEntryResponse(BaseModel):
 class LedgerAggregateQueryParams(BaseModel):
     """跨合同台账聚合查询参数。"""
 
+    ledger_view: (
+        Literal[
+            "terminal_collection",
+            "operator_income",
+            "operator_cost",
+        ]
+        | None
+    ) = Field(None, description="经营台账视图")
+    project_id: str | None = Field(None, min_length=1, description="项目 ID")
     asset_id: str | None = Field(None, min_length=1, description="资产 ID")
     party_id: str | None = Field(None, min_length=1, description="主体 ID")
     contract_id: str | None = Field(None, min_length=1, description="合同 ID")
@@ -453,6 +463,14 @@ class LedgerAggregateQueryParams(BaseModel):
         None,
         pattern=r"^\d{4}-\d{2}$",
         description="结束账期，格式 YYYY-MM",
+    )
+    flow_occurred_on_start: date | None = Field(
+        None,
+        description="收付流水发生日期开始",
+    )
+    flow_occurred_on_end: date | None = Field(
+        None,
+        description="收付流水发生日期结束",
     )
     payment_status: (
         Literal[
@@ -471,15 +489,18 @@ class LedgerAggregateQueryParams(BaseModel):
     def validate_filters(self) -> "LedgerAggregateQueryParams":
         if not any(
             [
+                self.project_id is not None,
                 self.asset_id is not None,
                 self.party_id is not None,
                 self.contract_id is not None,
                 self.year_month_start is not None,
+                self.flow_occurred_on_start is not None,
+                self.flow_occurred_on_end is not None,
             ]
         ):
             raise PydanticCustomError(
                 "missing_ledger_filters",
-                "asset_id、party_id、contract_id、year_month_start 至少需要一个筛选条件",
+                "project_id、asset_id、party_id、contract_id、year_month_start、flow_occurred_on_start 至少需要一个筛选条件",
                 {},
             )
         if (
@@ -490,6 +511,16 @@ class LedgerAggregateQueryParams(BaseModel):
             raise PydanticCustomError(
                 "invalid_year_month_range",
                 "开始账期不能晚于结束账期",
+                {},
+            )
+        if (
+            self.flow_occurred_on_start is not None
+            and self.flow_occurred_on_end is not None
+            and self.flow_occurred_on_start > self.flow_occurred_on_end
+        ):
+            raise PydanticCustomError(
+                "invalid_flow_occurred_on_range",
+                "flow occurred start date cannot be after end date",
                 {},
             )
         return self
@@ -624,6 +655,21 @@ class ServiceFeeLedgerResponse(BaseModel):
     updated_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ServiceFeeGenerateRequest(BaseModel):
+    """Request body for generating monthly service-fee ledger entries."""
+
+    contract_group_id: str = Field(..., min_length=1)
+
+
+class ServiceFeeGenerateResponse(BaseModel):
+    """Result summary for monthly service-fee generation."""
+
+    created: int = Field(..., ge=0)
+    updated: int = Field(..., ge=0)
+    voided: int = Field(..., ge=0)
+    source_mismatches: int = Field(..., ge=0)
 
 
 class LedgerCompensationFailure(BaseModel):

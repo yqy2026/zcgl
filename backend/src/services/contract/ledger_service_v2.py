@@ -170,6 +170,19 @@ def _parse_year_month(year_month: str) -> date | None:
         return None
 
 
+def _parse_optional_date(value: date | datetime | str | None) -> date | None:
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    try:
+        return date.fromisoformat(str(value))
+    except ValueError as exc:
+        raise BusinessValidationError("date filters must use ISO date format") from exc
+
+
 def find_stale_paid_or_partial_ledger_entries(
     *,
     rent_terms: list[ContractRentTerm],
@@ -428,22 +441,31 @@ class ContractLedgerServiceV2:
         self,
         db: AsyncSession,
         *,
+        ledger_view: str | None = None,
+        project_id: str | None = None,
         asset_id: str | None = None,
         party_id: str | None = None,
         contract_id: str | None = None,
         year_month_start: str | None = None,
         year_month_end: str | None = None,
+        flow_occurred_on_start: date | datetime | str | None = None,
+        flow_occurred_on_end: date | datetime | str | None = None,
         payment_status: str | None = None,
         include_voided: bool = False,
         offset: int = 0,
         limit: int = 20,
     ) -> dict[str, Any]:
+        normalized_flow_occurred_on_start = _parse_optional_date(flow_occurred_on_start)
+        normalized_flow_occurred_on_end = _parse_optional_date(flow_occurred_on_end)
         if not any(
             [
+                project_id is not None,
                 asset_id is not None,
                 party_id is not None,
                 contract_id is not None,
                 year_month_start is not None,
+                normalized_flow_occurred_on_start is not None,
+                normalized_flow_occurred_on_end is not None,
             ]
         ):
             raise BusinessValidationError(
@@ -456,13 +478,26 @@ class ContractLedgerServiceV2:
         ):
             raise BusinessValidationError("开始账期不能晚于结束账期")
 
+        if (
+            normalized_flow_occurred_on_start is not None
+            and normalized_flow_occurred_on_end is not None
+            and normalized_flow_occurred_on_start > normalized_flow_occurred_on_end
+        ):
+            raise BusinessValidationError(
+                "flow occurred start date cannot be after end date"
+            )
+
         items, total = await contract_group_crud.query_ledger_entries(
             db,
+            ledger_view=ledger_view,
+            project_id=project_id,
             asset_id=asset_id,
             party_id=party_id,
             contract_id=contract_id,
             year_month_start=year_month_start,
             year_month_end=year_month_end,
+            flow_occurred_on_start=normalized_flow_occurred_on_start,
+            flow_occurred_on_end=normalized_flow_occurred_on_end,
             payment_status=payment_status,
             include_voided=include_voided,
             offset=offset,

@@ -626,7 +626,7 @@ class ProjectService:
                 "自动生成 project_code 必须提供运营方 party.code",
                 reason="project_operator_code_required",
             )
-        year_month = datetime.now(UTC).strftime("%Y%m")
+        year_month = self._utcnow_naive().strftime("%Y%m")
         segment = build_party_code_segment(operator_party_code)
         prefix = f"PRJ-{segment}-{year_month}-"
         await project_crud.acquire_code_generation_lock(db, prefix=prefix)

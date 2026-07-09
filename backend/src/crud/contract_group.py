@@ -55,6 +55,9 @@ class CRUDContractGroup:
                     "paid_amount"
                 ),
                 func.count(PaymentAllocation.allocation_id).label("allocation_count"),
+                func.array_agg(func.distinct(OperationalPaymentFlow.occurred_on)).label(
+                    "flow_occurred_on_dates"
+                ),
             )
             .join(
                 OperationalPaymentFlow,
@@ -84,6 +87,7 @@ class CRUDContractGroup:
         paid_amount: Any,
         payment_status: Any,
         allocation_count: Any = 0,
+        flow_occurred_on_dates: Any = None,
     ) -> ContractLedgerEntry:
         set_committed_value(
             entry,
@@ -96,17 +100,54 @@ class CRUDContractGroup:
             "active_allocation_count",
             int(allocation_count if allocation_count is not None else 0),
         )
+        if flow_occurred_on_dates is None:
+            normalized_flow_dates: list[Any] = []
+        elif isinstance(flow_occurred_on_dates, (list, tuple, set)):
+            normalized_flow_dates = list(flow_occurred_on_dates)
+        else:
+            normalized_flow_dates = [flow_occurred_on_dates]
+        setattr(entry, "flow_occurred_on_dates", normalized_flow_dates)
         return entry
 
     @classmethod
     def _apply_ledger_payment_facts_from_row(cls, row: Any) -> ContractLedgerEntry:
         allocation_count = row[3] if len(row) > 3 else 0
+        flow_occurred_on_dates = row[4] if len(row) > 4 else None
         return cls._apply_ledger_payment_facts(
             row[0],
             paid_amount=row[1],
             payment_status=row[2],
             allocation_count=allocation_count,
+            flow_occurred_on_dates=flow_occurred_on_dates,
         )
+
+    @staticmethod
+    def _ledger_flow_date_exists_clause(
+        *,
+        flow_occurred_on_start: date | None,
+        flow_occurred_on_end: date | None,
+    ) -> Any:
+        stmt = (
+            select(PaymentAllocation.allocation_id)
+            .join(
+                OperationalPaymentFlow,
+                OperationalPaymentFlow.flow_id == PaymentAllocation.flow_id,
+            )
+            .where(
+                PaymentAllocation.target_type == "contract_ledger_entry",
+                PaymentAllocation.target_id == ContractLedgerEntry.entry_id,
+                OperationalPaymentFlow.status == "active",
+            )
+        )
+        if flow_occurred_on_start is not None:
+            stmt = stmt.where(
+                OperationalPaymentFlow.occurred_on >= flow_occurred_on_start
+            )
+        if flow_occurred_on_end is not None:
+            stmt = stmt.where(
+                OperationalPaymentFlow.occurred_on <= flow_occurred_on_end
+            )
+        return stmt.exists()
 
     @staticmethod
     def _ownership_contracts_stmt(ownership_id: str) -> Select[tuple[str]]:
@@ -514,6 +555,7 @@ class CRUDContractGroup:
                 allocated_paid_amount.label("allocation_paid_amount"),
                 allocation_payment_status,
                 allocation_totals.c.allocation_count,
+                allocation_totals.c.flow_occurred_on_dates,
             )
             .outerjoin(
                 allocation_totals,
@@ -542,6 +584,7 @@ class CRUDContractGroup:
                 allocated_paid_amount.label("allocation_paid_amount"),
                 allocation_payment_status,
                 allocation_totals.c.allocation_count,
+                allocation_totals.c.flow_occurred_on_dates,
             )
             .join(Contract, ContractLedgerEntry.contract_id == Contract.contract_id)
             .outerjoin(
@@ -588,6 +631,7 @@ class CRUDContractGroup:
                 allocated_paid_amount.label("allocation_paid_amount"),
                 allocation_payment_status,
                 allocation_totals.c.allocation_count,
+                allocation_totals.c.flow_occurred_on_dates,
             )
             .outerjoin(
                 allocation_totals,
@@ -616,11 +660,15 @@ class CRUDContractGroup:
         self,
         db: AsyncSession,
         *,
+        ledger_view: str | None = None,
+        project_id: str | None = None,
         asset_id: str | None = None,
         party_id: str | None = None,
         contract_id: str | None = None,
         year_month_start: str | None = None,
         year_month_end: str | None = None,
+        flow_occurred_on_start: date | None = None,
+        flow_occurred_on_end: date | None = None,
         payment_status: str | None = None,
         include_voided: bool = False,
         offset: int = 0,
@@ -638,6 +686,7 @@ class CRUDContractGroup:
                 allocated_paid_amount.label("allocation_paid_amount"),
                 allocation_payment_status,
                 allocation_totals.c.allocation_count,
+                allocation_totals.c.flow_occurred_on_dates,
             )
             .join(Contract, ContractLedgerEntry.contract_id == Contract.contract_id)
             .outerjoin(
@@ -646,6 +695,10 @@ class CRUDContractGroup:
             )
         )
 
+        if ledger_view is not None:
+            stmt = stmt.where(ContractLedgerEntry.ledger_views.contains([ledger_view]))
+        if project_id is not None:
+            stmt = stmt.where(ContractLedgerEntry.attributed_project_id == project_id)
         if asset_id is not None:
             stmt = stmt.where(
                 ContractLedgerEntry.attributed_asset_ids.contains([asset_id])
@@ -661,6 +714,13 @@ class CRUDContractGroup:
             stmt = stmt.where(ContractLedgerEntry.year_month >= year_month_start)
         if year_month_end is not None:
             stmt = stmt.where(ContractLedgerEntry.year_month <= year_month_end)
+        if flow_occurred_on_start is not None or flow_occurred_on_end is not None:
+            stmt = stmt.where(
+                self._ledger_flow_date_exists_clause(
+                    flow_occurred_on_start=flow_occurred_on_start,
+                    flow_occurred_on_end=flow_occurred_on_end,
+                )
+            )
         if payment_status is not None:
             stmt = stmt.where(allocation_payment_status == payment_status)
         if not include_voided:
@@ -701,6 +761,7 @@ class CRUDContractGroup:
                 allocated_paid_amount.label("allocation_paid_amount"),
                 allocation_payment_status,
                 allocation_totals.c.allocation_count,
+                allocation_totals.c.flow_occurred_on_dates,
             )
             .join(Contract, ContractLedgerEntry.contract_id == Contract.contract_id)
             .outerjoin(
@@ -743,6 +804,7 @@ class CRUDContractGroup:
                 allocated_paid_amount.label("allocation_paid_amount"),
                 allocation_payment_status,
                 allocation_totals.c.allocation_count,
+                allocation_totals.c.flow_occurred_on_dates,
             )
             .join(Contract, ContractLedgerEntry.contract_id == Contract.contract_id)
             .outerjoin(
