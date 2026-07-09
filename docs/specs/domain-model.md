@@ -176,7 +176,7 @@
 | 字段 | 类型 | 必填 | 规则 |
 |---|---|---|---|
 | `risk_id` | string | 是 | 稳定风险标识，按来源对象、风险类型和消息派生 |
-| `risk_type` | enum | 是 | `manual_tag`、`property_certificate_data_quality`、`contract_expiring`、`payment_overdue`、`vacancy`、`ledger_stale_after_correction`（已收/部分已收台账与当前合同条款不一致，合同更正重算时派生，人工对账后消除，见 ADR-0008）；MVP 已移除 `missing_primary_contract` / `coverage_conflict` 主合同覆盖类风险 |
+| `risk_type` | enum | 是 | `manual_tag`、`property_certificate_data_quality`、`contract_expiring`、`payment_overdue`、`vacancy`、`ledger_stale_after_correction`（已收/部分已收台账与当前合同条款不一致，合同更正重算时派生，人工对账后消除，见 ADR-0008）、`service_fee_source_mismatch`（已生成服务费台账与当前来源租金集合、计算基数、比例、金额或归属不一致，或冻结来源租金条目已与当前合同条款不一致，人工处理后消除）；MVP 已移除 `missing_primary_contract` / `coverage_conflict` 主合同覆盖类风险 |
 | `severity` | enum | 是 | `info`、`warning`、`high`、`critical`、`error` |
 | `message` | string | 是 | 面向业务用户的风险说明 |
 | `contract_relation_id` | string/null | 否 | 合同/协议经营事项风险必须填写；产权证数据质量风险和资产空置风险为空 |

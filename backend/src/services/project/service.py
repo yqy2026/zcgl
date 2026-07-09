@@ -56,6 +56,7 @@ from ...services.contract.contract_group_service import calculate_derived_status
 from ...services.contract.ledger_service_v2 import (
     find_stale_paid_or_partial_ledger_entries,
 )
+from ...services.contract.service_fee_ledger_service import service_fee_ledger_service
 from ...services.party_scope import resolve_user_party_filter
 
 logger = logging.getLogger(__name__)
@@ -1072,24 +1073,19 @@ class ProjectService:
             if relation.revenue_mode != RevenueMode.AGENCY.value:
                 continue
 
-            service_fee_entries = (
-                await contract_group_crud.list_service_fee_entries_by_group(
-                    db,
-                    group_id=relation.contract_relation_id,
-                )
+            source_mismatches = await service_fee_ledger_service.find_source_mismatches(
+                db,
+                group_id=relation.contract_relation_id,
             )
-            service_fee_overdue_amount = Decimal(0)
-            for service_fee_entry in service_fee_entries:
-                service_fee_overdue_amount += self._overdue_amount_from_entry(
-                    service_fee_entry,
-                    today,
-                )
-            if service_fee_overdue_amount > Decimal(0):
+            if source_mismatches:
                 add_risk(
                     relation,
-                    risk_type="payment_overdue",
-                    message=f"代理服务费逾期未收 {format_money(service_fee_overdue_amount)}",
-                    severity="high",
+                    risk_type="service_fee_source_mismatch",
+                    message=(
+                        f"{relation.display_name} 存在 "
+                        f"{len(source_mismatches)} 条服务费台账来源租金不一致"
+                    ),
+                    severity="warning",
                 )
 
         active_assets, _summary = await self._load_project_active_assets(

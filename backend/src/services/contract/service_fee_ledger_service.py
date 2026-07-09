@@ -7,6 +7,7 @@ from calendar import monthrange
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 from decimal import ROUND_HALF_UP, Decimal
+from enum import Enum
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,6 +19,9 @@ from src.models.contract_group import (
     GroupRelationType,
     RevenueMode,
     derive_ledger_payment_status,
+)
+from src.services.contract.ledger_service_v2 import (
+    find_stale_paid_or_partial_ledger_entries,
 )
 
 logger = logging.getLogger(__name__)
@@ -89,6 +93,24 @@ class _MonthlyFeeBucket:
         self.source_ledger_ids.append(str(source_entry.entry_id))
 
 
+class ServiceFeeSourceMismatchReason(str, Enum):
+    MISSING_AGREEMENT = "service_fee_source_missing_agreement"
+    SOURCE_CHANGED = "service_fee_source_changed"
+    SOURCE_WITHOUT_CURRENT_SOURCE = "service_fee_source_without_current_source"
+    SOURCE_LEDGER_STALE_AFTER_CORRECTION = (
+        "service_fee_source_ledger_stale_after_correction"
+    )
+
+
+@dataclass(frozen=True)
+class ServiceFeeSourceMismatch:
+    """Existing service-fee ledger whose frozen source no longer matches current rent receipts."""
+
+    service_fee_entry_id: str
+    year_month: str
+    reason: str
+
+
 class ServiceFeeLedgerService:
     """Generate monthly service-fee receivables from direct-lease rent receipts."""
 
@@ -149,36 +171,15 @@ class ServiceFeeLedgerService:
 
         for key, bucket in buckets.items():
             seen_keys.add(key)
-            ratio = bucket.service_fee_ratio
-            amount_due = _quantize_money(bucket.calculation_base_amount * ratio)
             existing_entry = existing_by_key.get(key)
-            source_ledger_ids = sorted(bucket.source_ledger_ids)
-            payment_status = derive_ledger_payment_status(
-                amount_due=amount_due,
+            data = self._bucket_entry_data(
+                group_id=group_id,
+                bucket=bucket,
                 paid_amount=getattr(existing_entry, "paid_amount", Decimal("0"))
                 if existing_entry is not None
                 else Decimal("0"),
                 stored_status=getattr(existing_entry, "payment_status", None),
             )
-
-            data = {
-                "contract_group_id": group_id,
-                "agency_contract_id": bucket.agency_contract_id,
-                "agency_agreement_contract_id": bucket.agency_agreement_contract_id,
-                "source_ledger_ids": source_ledger_ids,
-                "year_month": bucket.year_month,
-                "amount_due": amount_due,
-                "payment_status": payment_status,
-                "currency_code": bucket.currency_code,
-                "service_fee_ratio": ratio,
-                "calculation_base_amount": _quantize_money(
-                    bucket.calculation_base_amount
-                ),
-                "attributed_project_id": bucket.attributed_project_id,
-                "attributed_owner_party_id": bucket.attributed_owner_party_id,
-                "attributed_operator_party_id": bucket.attributed_operator_party_id,
-                "attributed_asset_ids": bucket.attributed_asset_ids,
-            }
 
             if existing_entry is None:
                 await contract_group_crud.create_service_fee_entry(
@@ -194,7 +195,10 @@ class ServiceFeeLedgerService:
                 created += 1
                 continue
 
-            if self._requires_update(existing_entry, data):
+            if self._requires_update(
+                existing_entry,
+                self._bucket_source_data(group_id=group_id, bucket=bucket),
+            ):
                 source_mismatches += 1
                 logger.warning(
                     "service fee ledger source mismatch preserved",
@@ -243,6 +247,228 @@ class ServiceFeeLedgerService:
             "voided": voided,
             "source_mismatches": source_mismatches,
         }
+
+    async def find_source_mismatches(
+        self,
+        db: AsyncSession,
+        *,
+        group_id: str,
+    ) -> list[ServiceFeeSourceMismatch]:
+        group = await contract_group_crud.get(db, group_id)
+        if group is None:
+            raise ResourceNotFoundError("contract group", group_id)
+        if getattr(group, "revenue_mode", None) != RevenueMode.AGENCY:
+            return []
+
+        contracts = await contract_crud.list_by_group(
+            db,
+            group_id=group_id,
+            load_details=True,
+        )
+        existing_entries = await contract_group_crud.list_service_fee_entries_by_group(
+            db,
+            group_id=group_id,
+        )
+        entrusted_contracts = [
+            contract
+            for contract in contracts
+            if getattr(contract, "group_relation_type", None)
+            == GroupRelationType.ENTRUSTED
+            and getattr(contract, "agency_detail", None) is not None
+        ]
+        if not entrusted_contracts:
+            return [
+                self._source_mismatch_item(
+                    entry,
+                    reason=ServiceFeeSourceMismatchReason.MISSING_AGREEMENT.value,
+                )
+                for entry in existing_entries
+                if getattr(entry, "payment_status", None) != "voided"
+            ]
+
+        direct_lease_contracts = [
+            contract
+            for contract in contracts
+            if getattr(contract, "group_relation_type", None)
+            == GroupRelationType.DIRECT_LEASE
+        ]
+        stale_source_entry_ids = await self._collect_stale_source_entry_ids(
+            db,
+            direct_lease_contracts=direct_lease_contracts,
+        )
+        buckets = await self._collect_monthly_buckets(
+            db,
+            direct_lease_contracts=direct_lease_contracts,
+            entrusted_contracts=entrusted_contracts,
+        )
+        return self._find_source_mismatches(
+            existing_entries=existing_entries,
+            buckets=buckets,
+            group_id=group_id,
+            stale_source_entry_ids=stale_source_entry_ids,
+        )
+
+    def _find_source_mismatches(
+        self,
+        *,
+        existing_entries: list[Any],
+        buckets: dict[tuple[str, str, str | None, str], _MonthlyFeeBucket],
+        group_id: str,
+        stale_source_entry_ids: set[str],
+    ) -> list[ServiceFeeSourceMismatch]:
+        active_existing_entries = [
+            entry
+            for entry in existing_entries
+            if getattr(entry, "payment_status", None) != "voided"
+        ]
+        existing_by_key = {
+            self._entry_key(entry): entry for entry in active_existing_entries
+        }
+        seen_keys: set[tuple[str, str, str | None, str]] = set()
+        mismatches: list[ServiceFeeSourceMismatch] = []
+
+        for key, bucket in buckets.items():
+            seen_keys.add(key)
+            existing_entry = existing_by_key.get(key)
+            if existing_entry is None:
+                continue
+            if self._entry_has_stale_source(existing_entry, stale_source_entry_ids):
+                mismatches.append(
+                    self._source_mismatch_item(
+                        existing_entry,
+                        reason=ServiceFeeSourceMismatchReason.SOURCE_LEDGER_STALE_AFTER_CORRECTION.value,
+                    )
+                )
+                continue
+            if self._requires_update(
+                existing_entry,
+                self._bucket_source_data(
+                    group_id=group_id,
+                    bucket=bucket,
+                ),
+            ):
+                mismatches.append(
+                    self._source_mismatch_item(
+                        existing_entry,
+                        reason=ServiceFeeSourceMismatchReason.SOURCE_CHANGED.value,
+                    )
+                )
+
+        for existing_entry in active_existing_entries:
+            if self._entry_key(existing_entry) in seen_keys:
+                continue
+            mismatches.append(
+                self._source_mismatch_item(
+                    existing_entry,
+                    reason=ServiceFeeSourceMismatchReason.SOURCE_WITHOUT_CURRENT_SOURCE.value,
+                )
+            )
+
+        return mismatches
+
+    @staticmethod
+    def _required_text(entry: Any, field_name: str) -> str:
+        value = getattr(entry, field_name, None)
+        text = str(value).strip() if value is not None else ""
+        if text == "":
+            raise BusinessValidationError(
+                f"service fee ledger missing required {field_name}"
+            )
+        return text
+
+    @classmethod
+    def _source_mismatch_item(
+        cls,
+        entry: Any,
+        *,
+        reason: str,
+    ) -> ServiceFeeSourceMismatch:
+        return ServiceFeeSourceMismatch(
+            service_fee_entry_id=cls._required_text(entry, "service_fee_entry_id"),
+            year_month=cls._required_text(entry, "year_month"),
+            reason=reason,
+        )
+
+    @staticmethod
+    def _entry_has_stale_source(entry: Any, stale_source_entry_ids: set[str]) -> bool:
+        source_ledger_ids = getattr(entry, "source_ledger_ids", None)
+        if not isinstance(source_ledger_ids, list):
+            raise BusinessValidationError(
+                "service fee ledger source_ledger_ids must be a list"
+            )
+        return any(
+            str(source_id) in stale_source_entry_ids for source_id in source_ledger_ids
+        )
+
+    @staticmethod
+    def _bucket_source_data(
+        *,
+        group_id: str,
+        bucket: _MonthlyFeeBucket,
+    ) -> dict[str, Any]:
+        amount_due = _quantize_money(
+            bucket.calculation_base_amount * bucket.service_fee_ratio
+        )
+        return {
+            "contract_group_id": group_id,
+            "agency_contract_id": bucket.agency_contract_id,
+            "agency_agreement_contract_id": bucket.agency_agreement_contract_id,
+            "source_ledger_ids": sorted(bucket.source_ledger_ids),
+            "year_month": bucket.year_month,
+            "amount_due": amount_due,
+            "currency_code": bucket.currency_code,
+            "service_fee_ratio": bucket.service_fee_ratio,
+            "calculation_base_amount": _quantize_money(bucket.calculation_base_amount),
+            "attributed_project_id": bucket.attributed_project_id,
+            "attributed_owner_party_id": bucket.attributed_owner_party_id,
+            "attributed_operator_party_id": bucket.attributed_operator_party_id,
+            "attributed_asset_ids": bucket.attributed_asset_ids,
+        }
+
+    @classmethod
+    def _bucket_entry_data(
+        cls,
+        *,
+        group_id: str,
+        bucket: _MonthlyFeeBucket,
+        paid_amount: Decimal,
+        stored_status: str | None,
+    ) -> dict[str, Any]:
+        data = cls._bucket_source_data(group_id=group_id, bucket=bucket)
+        data["payment_status"] = derive_ledger_payment_status(
+            amount_due=data["amount_due"],
+            paid_amount=paid_amount,
+            stored_status=stored_status,
+        )
+        return data
+
+    async def _collect_stale_source_entry_ids(
+        self,
+        db: AsyncSession,
+        *,
+        direct_lease_contracts: list[Any],
+    ) -> set[str]:
+        stale_source_entry_ids: set[str] = set()
+        for contract in direct_lease_contracts:
+            source_entries = await contract_group_crud.list_ledger_entries_by_contract(
+                db,
+                contract_id=str(contract.contract_id),
+            )
+            rent_terms = await contract_group_crud.list_rent_terms_by_contract(
+                db,
+                contract_id=str(contract.contract_id),
+            )
+            payment_cycle = str(
+                getattr(getattr(contract, "lease_detail", None), "payment_cycle", "")
+                or ""
+            ).strip()
+            stale_entries = find_stale_paid_or_partial_ledger_entries(
+                rent_terms=rent_terms,
+                ledger_entries=source_entries,
+                payment_cycle=payment_cycle or "monthly",
+            )
+            stale_source_entry_ids.update(item.entry_id for item in stale_entries)
+        return stale_source_entry_ids
 
     async def _collect_monthly_buckets(
         self,

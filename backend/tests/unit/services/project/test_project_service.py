@@ -2835,3 +2835,112 @@ class TestGetProjectAnalytics:
                 Decimal("900.00"),
             ),
         ]
+
+
+async def _get_agency_project_risks(
+    project_service: ProjectService,
+    mock_db: MagicMock,
+    *,
+    source_mismatches: list[SimpleNamespace],
+    service_fee_entries: list[SimpleNamespace] | None = None,
+):
+    from src.schemas.project import (
+        ProjectContractRelationItem,
+        ProjectContractRelationsResponse,
+    )
+
+    relations = ProjectContractRelationsResponse(
+        items=[
+            ProjectContractRelationItem(
+                contract_relation_id="group-agency",
+                project_id="project-1",
+                display_name="GRP-AGENCY",
+                revenue_mode="agency",
+                relation_kind="agency_operation",
+                owner_party_id="owner-1",
+                operator_party_id="manager-1",
+                asset_ids=["asset-1"],
+                primary_contract_ids=["contract-entrusted"],
+                terminal_contract_ids=["contract-direct"],
+                derived_status="active",
+                risk_tags=[],
+            )
+        ],
+        total=1,
+    )
+
+    with (
+        patch.object(
+            project_service,
+            "get_project_contract_relations",
+            new=AsyncMock(return_value=relations),
+        ),
+        patch.object(
+            project_service,
+            "_load_project_active_assets",
+            new=AsyncMock(return_value=([], None)),
+        ),
+        patch(
+            "src.services.project.service.contract_crud.list_by_group",
+            new=AsyncMock(return_value=[]),
+        ),
+        patch(
+            "src.services.project.service.contract_group_crud.list_service_fee_entries_by_group",
+            new=AsyncMock(return_value=service_fee_entries or []),
+        ),
+        patch(
+            "src.services.project.service.service_fee_ledger_service.find_source_mismatches",
+            new=AsyncMock(return_value=source_mismatches),
+        ),
+        patch(
+            "src.services.project.service.ProjectService._today",
+            return_value=date(2026, 5, 14),
+        ),
+    ):
+        return await project_service.get_project_risks(
+            mock_db,
+            project_id="project-1",
+            current_user_id="user-1",
+        )
+
+
+async def test_get_project_risks_returns_service_fee_source_mismatch_risk(
+    project_service: ProjectService, mock_db: MagicMock
+) -> None:
+    mismatch = SimpleNamespace(
+        service_fee_entry_id="fee-001",
+        year_month="2026-05",
+        reason="service_fee_source_changed",
+    )
+
+    response = await _get_agency_project_risks(
+        project_service,
+        mock_db,
+        source_mismatches=[mismatch],
+    )
+
+    assert response.total == 1
+    assert response.items[0].risk_type == "service_fee_source_mismatch"
+    assert response.items[0].contract_relation_id == "group-agency"
+    assert "GRP-AGENCY" in response.items[0].message
+
+
+async def test_get_project_risks_does_not_treat_service_fee_unpaid_as_overdue(
+    project_service: ProjectService, mock_db: MagicMock
+) -> None:
+    unpaid_service_fee = SimpleNamespace(
+        service_fee_entry_id="fee-unpaid",
+        amount_due=Decimal("1000.00"),
+        paid_amount=Decimal("0.00"),
+        payment_status="unpaid",
+        due_date=date(2026, 1, 1),
+    )
+
+    response = await _get_agency_project_risks(
+        project_service,
+        mock_db,
+        source_mismatches=[],
+        service_fee_entries=[unpaid_service_fee],
+    )
+
+    assert response.items == []

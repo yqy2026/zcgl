@@ -324,3 +324,198 @@ async def test_sync_should_preserve_existing_service_fee_when_source_changes(
     assert existing_entry.attributed_operator_party_id == "operator-old"
     assert existing_entry.attributed_asset_ids == ["asset-old"]
     assert existing_entry.updated_at is None
+
+
+def _source_entry(**overrides) -> SimpleNamespace:  # noqa: ANN003
+    data = {
+        "entry_id": "entry-001",
+        "year_month": "2026-05",
+        "amount_due": Decimal("500.00"),
+        "due_date": date(2026, 5, 1),
+        "paid_amount": Decimal("500.00"),
+        "payment_status": "partial",
+        "currency_code": "CNY",
+        "attributed_project_id": "project-001",
+        "attributed_owner_party_id": "owner-001",
+        "attributed_operator_party_id": "operator-001",
+        "attributed_asset_ids": ["asset-001"],
+    }
+    data.update(overrides)
+    return SimpleNamespace(**data)
+
+
+def _rent_term(**overrides) -> SimpleNamespace:  # noqa: ANN003
+    data = {
+        "start_date": date(2026, 5, 1),
+        "end_date": date(2026, 5, 31),
+        "monthly_rent": Decimal("500.00"),
+        "total_monthly_amount": Decimal("500.00"),
+        "sort_order": 1,
+    }
+    data.update(overrides)
+    return SimpleNamespace(**data)
+
+
+def _existing_service_fee_entry(**overrides) -> SimpleNamespace:  # noqa: ANN003
+    data = {
+        "service_fee_entry_id": "fee-001",
+        "contract_group_id": "group-1",
+        "agency_contract_id": "contract-direct",
+        "agency_agreement_contract_id": "contract-entrust",
+        "source_ledger_ids": ["entry-001"],
+        "calculation_base_amount": Decimal("500.00"),
+        "amount_due": Decimal("50.00"),
+        "paid_amount": Decimal("0.00"),
+        "payment_status": "unpaid",
+        "currency_code": "CNY",
+        "service_fee_ratio": Decimal("0.1000"),
+        "year_month": "2026-05",
+        "attributed_project_id": "project-001",
+        "attributed_owner_party_id": "owner-001",
+        "attributed_operator_party_id": "operator-001",
+        "attributed_asset_ids": ["asset-001"],
+    }
+    data.update(overrides)
+    return SimpleNamespace(**data)
+
+
+async def _find_service_fee_source_mismatches(
+    mock_db,
+    *,
+    source_entry: SimpleNamespace,
+    existing_entries: list[SimpleNamespace],
+    rent_terms: list[SimpleNamespace] | None = None,
+):
+    service_fee_module = importlib.import_module(
+        "src.services.contract.service_fee_ledger_service"
+    )
+    service = service_fee_module.service_fee_ledger_service
+
+    agency_group = SimpleNamespace(
+        contract_group_id="group-1",
+        revenue_mode=RevenueMode.AGENCY,
+    )
+    entrusted_contract = SimpleNamespace(
+        contract_id="contract-entrust",
+        group_relation_type=GroupRelationType.ENTRUSTED,
+        agency_detail=SimpleNamespace(service_fee_ratio=Decimal("0.1000")),
+    )
+    direct_contract = SimpleNamespace(
+        contract_id="contract-direct",
+        group_relation_type=GroupRelationType.DIRECT_LEASE,
+        agency_detail=None,
+        lease_detail=SimpleNamespace(payment_cycle="monthly"),
+    )
+
+    with (
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.get",
+            new=AsyncMock(return_value=agency_group),
+        ),
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_crud.list_by_group",
+            new=AsyncMock(return_value=[entrusted_contract, direct_contract]),
+        ),
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.list_ledger_entries_by_contract",
+            new=AsyncMock(return_value=[source_entry]),
+        ),
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.list_rent_terms_by_contract",
+            new=AsyncMock(return_value=rent_terms or [_rent_term()]),
+        ),
+        patch(
+            "src.services.contract.service_fee_ledger_service.contract_group_crud.list_service_fee_entries_by_group",
+            new=AsyncMock(return_value=existing_entries),
+            create=True,
+        ),
+    ):
+        return await service.find_source_mismatches(mock_db, group_id="group-1")
+
+
+async def test_find_source_mismatches_should_report_preserved_service_fee_source_change(
+    mock_db,
+) -> None:
+    mismatches = await _find_service_fee_source_mismatches(
+        mock_db,
+        source_entry=_source_entry(
+            entry_id="entry-new",
+            attributed_project_id="project-new",
+            attributed_operator_party_id="operator-new",
+            attributed_asset_ids=["asset-new"],
+        ),
+        existing_entries=[
+            _existing_service_fee_entry(
+                source_ledger_ids=["entry-old"],
+                calculation_base_amount=Decimal("2000.00"),
+                amount_due=Decimal("200.00"),
+                attributed_project_id="project-old",
+                attributed_operator_party_id="operator-old",
+                attributed_asset_ids=["asset-old"],
+            )
+        ],
+    )
+
+    assert [
+        (item.service_fee_entry_id, item.year_month, item.reason) for item in mismatches
+    ] == [("fee-001", "2026-05", "service_fee_source_changed")]
+
+
+async def test_find_source_mismatches_should_report_stale_source_rent_entry(
+    mock_db,
+) -> None:
+    mismatches = await _find_service_fee_source_mismatches(
+        mock_db,
+        source_entry=_source_entry(amount_due=Decimal("1000.00")),
+        existing_entries=[_existing_service_fee_entry()],
+        rent_terms=[
+            _rent_term(
+                monthly_rent=Decimal("1200.00"),
+                total_monthly_amount=Decimal("1200.00"),
+            )
+        ],
+    )
+
+    assert [
+        (item.service_fee_entry_id, item.year_month, item.reason) for item in mismatches
+    ] == [("fee-001", "2026-05", "service_fee_source_ledger_stale_after_correction")]
+
+
+async def test_find_source_mismatches_should_ignore_service_fee_payment_status_change(
+    mock_db,
+) -> None:
+    mismatches = await _find_service_fee_source_mismatches(
+        mock_db,
+        source_entry=_source_entry(),
+        existing_entries=[_existing_service_fee_entry(payment_status="paid")],
+    )
+
+    assert mismatches == []
+
+
+async def test_find_source_mismatches_should_ignore_voided_service_fee_entries(
+    mock_db,
+) -> None:
+    mismatches = await _find_service_fee_source_mismatches(
+        mock_db,
+        source_entry=_source_entry(
+            entry_id="entry-new",
+            attributed_project_id="project-new",
+            attributed_operator_party_id="operator-new",
+            attributed_asset_ids=["asset-new"],
+        ),
+        existing_entries=[
+            _existing_service_fee_entry(
+                service_fee_entry_id="fee-voided",
+                source_ledger_ids=["entry-old"],
+                calculation_base_amount=Decimal("2000.00"),
+                amount_due=Decimal("200.00"),
+                payment_status="voided",
+                attributed_project_id="project-old",
+                attributed_operator_party_id="operator-old",
+                attributed_asset_ids=["asset-old"],
+            )
+        ],
+    )
+
+    assert mismatches == []
