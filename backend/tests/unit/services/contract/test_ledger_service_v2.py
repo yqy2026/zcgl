@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from src.core.exception_handler import OperationNotAllowedError, ResourceNotFoundError
 from src.models.contract_group import ContractLifecycleStatus, GroupRelationType
 
 pytestmark = pytest.mark.asyncio
@@ -319,3 +320,78 @@ class TestLedgerServiceV2:
             paid_amount=Decimal("3000.00"),
             notes=None,
         )
+
+    async def test_update_follow_up_updates_terminal_collection_entry(self):
+        from src.services.contract import ledger_service_v2 as ledger_module
+
+        service = getattr(ledger_module, "ledger_service_v2", None)
+        assert service is not None, "ledger_service_v2 尚未实现"
+
+        entry = MagicMock(entry_id="entry-001")
+        entry.ledger_views = ["terminal_collection"]
+        updated_entry = MagicMock(entry_id="entry-001")
+
+        with (
+            patch(
+                "src.services.contract.ledger_service_v2.contract_group_crud.get_ledger_entry_by_id",
+                new=AsyncMock(return_value=entry),
+            ) as mock_get_entry,
+            patch(
+                "src.services.contract.ledger_service_v2.contract_group_crud.update_ledger_follow_up",
+                new=AsyncMock(return_value=updated_entry),
+            ) as mock_update,
+        ):
+            result = await service.update_follow_up(
+                AsyncMock(),
+                entry_id="entry-001",
+                follow_up_status="contacted",
+                next_follow_up_date=date(2026, 5, 20),
+                follow_up_note="已联系租户",
+            )
+
+        assert result is updated_entry
+        mock_get_entry.assert_awaited_once()
+        mock_update.assert_awaited_once_with(
+            mock_update.await_args.args[0],
+            entry=entry,
+            follow_up_status="contacted",
+            next_follow_up_date=date(2026, 5, 20),
+            follow_up_note="已联系租户",
+        )
+
+    async def test_update_follow_up_rejects_non_terminal_collection_entry(self):
+        from src.services.contract import ledger_service_v2 as ledger_module
+
+        service = getattr(ledger_module, "ledger_service_v2", None)
+        assert service is not None, "ledger_service_v2 尚未实现"
+
+        entry = MagicMock(entry_id="entry-001")
+        entry.ledger_views = ["operator_cost"]
+
+        with patch(
+            "src.services.contract.ledger_service_v2.contract_group_crud.get_ledger_entry_by_id",
+            new=AsyncMock(return_value=entry),
+        ):
+            with pytest.raises(OperationNotAllowedError):
+                await service.update_follow_up(
+                    AsyncMock(),
+                    entry_id="entry-001",
+                    follow_up_status="contacted",
+                )
+
+    async def test_update_follow_up_rejects_missing_entry(self):
+        from src.services.contract import ledger_service_v2 as ledger_module
+
+        service = getattr(ledger_module, "ledger_service_v2", None)
+        assert service is not None, "ledger_service_v2 尚未实现"
+
+        with patch(
+            "src.services.contract.ledger_service_v2.contract_group_crud.get_ledger_entry_by_id",
+            new=AsyncMock(return_value=None),
+        ):
+            with pytest.raises(ResourceNotFoundError):
+                await service.update_follow_up(
+                    AsyncMock(),
+                    entry_id="missing-entry",
+                    follow_up_status="contacted",
+                )

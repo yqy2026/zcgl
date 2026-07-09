@@ -52,7 +52,7 @@ describe('menuConfig perspective grouping', () => {
         expect.objectContaining({ key: MENU_GROUP_KEYS.CONTRACT_CENTER, label: '合同中心' }),
         expect.objectContaining({ key: '/customer-center', label: '主体中心' }),
         expect.objectContaining({ key: '/asset-files', label: '资产资源' }),
-        expect.objectContaining({ key: '/finance/ledger', label: '财务台账' }),
+        expect.objectContaining({ key: '/operations/ledger', label: '经营台账' }),
         expect.objectContaining({ key: '/analytics', label: '经营分析' }),
       ])
     );
@@ -64,7 +64,7 @@ describe('menuConfig perspective grouping', () => {
       '项目运营',
       '资产资源',
       '合同中心',
-      '财务台账',
+      '经营台账',
       '主体中心',
       '经营分析',
       '系统管理',
@@ -77,7 +77,7 @@ describe('menuConfig perspective grouping', () => {
     expect(getSelectedKeys('/contract-center/import')).toEqual(['/contract-center/import']);
     expect(getSelectedKeys('/contract-groups')).toEqual([MENU_ACTION_KEYS.CONTRACT_CENTER_LIST]);
     expect(getSelectedKeys('/property-certificates')).toEqual(['/property-certificates']);
-    expect(getSelectedKeys('/finance/ledger')).toEqual(['/finance/ledger']);
+    expect(getSelectedKeys('/operations/ledger')).toEqual(['/operations/ledger']);
     expect(getSelectedKeys('/project')).toEqual([MENU_ACTION_KEYS.PROJECT_LIST]);
     expect(getSelectedKeys('/analytics')).toEqual(['/analytics']);
 
@@ -85,7 +85,7 @@ describe('menuConfig perspective grouping', () => {
     expect(getOpenKeys('/contract-center/import')).toEqual([MENU_GROUP_KEYS.CONTRACT_CENTER]);
     expect(getOpenKeys('/contract-groups')).toEqual([MENU_GROUP_KEYS.CONTRACT_CENTER]);
     expect(getOpenKeys('/property-certificates')).toEqual([]);
-    expect(getOpenKeys('/finance/ledger')).toEqual([]);
+    expect(getOpenKeys('/operations/ledger')).toEqual([]);
     expect(getOpenKeys('/project')).toEqual([MENU_GROUP_KEYS.PROJECT]);
     expect(getOpenKeys('/analytics')).toEqual([]);
   });

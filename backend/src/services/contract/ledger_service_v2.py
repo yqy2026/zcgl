@@ -663,6 +663,31 @@ class ContractLedgerServiceV2:
             notes=notes,
         )
 
+    async def update_follow_up(
+        self,
+        db: AsyncSession,
+        *,
+        entry_id: str,
+        follow_up_status: str | None,
+        next_follow_up_date: date | None = None,
+        follow_up_note: str | None = None,
+    ) -> ContractLedgerEntry:
+        entry = await contract_group_crud.get_ledger_entry_by_id(db, entry_id=entry_id)
+        if entry is None:
+            raise ResourceNotFoundError("台账条目不存在")
+
+        ledger_views = set(getattr(entry, "ledger_views", []) or [])
+        if LedgerView.TERMINAL_COLLECTION.value not in ledger_views:
+            raise OperationNotAllowedError("仅终端租户收缴台账可维护跟进状态")
+
+        return await contract_group_crud.update_ledger_follow_up(
+            db,
+            entry=entry,
+            follow_up_status=follow_up_status,
+            next_follow_up_date=next_follow_up_date,
+            follow_up_note=follow_up_note,
+        )
+
     async def reverse_correction_source_entries(
         self,
         db: AsyncSession,

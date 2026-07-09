@@ -311,7 +311,7 @@ const ContractGroupDetailPage: React.FC = () => {
                       type="warning"
                       showIcon
                       title="存在已收或部分已收条目未自动改写"
-                      description="这些条目可能与当前合同条款不一致，请在财务台账中人工对账处理。"
+                      description="这些条目可能与当前合同条款不一致，请在经营台账中人工对账处理。"
                     />
                     <Table<LedgerRecalculateSkippedEntry>
                       rowKey="entry_id"

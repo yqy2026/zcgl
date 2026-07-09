@@ -137,6 +137,7 @@ MVP 不提供续签端点。到期后继续合作按新合同/协议补录流程
 | 收付流水分摊 | `POST /api/v1/ledger/payment-flows/{flow_id}/allocations` | 一笔流水可人工分摊到多个账期，系统校验分摊金额合计等于流水金额；账期归属按租金账期，流水发生日期仅用于查询、导出和审计；返回分摊主键、流水 ID、目标类型、目标 ID、账期、金额和时间戳 |
 | 经营台账查询 | `GET /api/v1/ledger/entries` | 支持项目上下文和全局上下文；按合同租金台账视图 `ledger_view=terminal_collection/operator_income/operator_cost`、`project_id`、资产、主体、合同/协议、账期、有效收付流水发生日期 `flow_occurred_on_start/end` 和派生支付状态查询，作为全局“经营台账”入口的数据源；响应包含 `ledger_views` 与 `flow_occurred_on_dates`。服务费结算由 `ServiceFeeLedger` 与服务费生成/分摊路径承载，不复用合同租金台账响应暗中混排 |
 | 经营台账导出 | `GET /api/v1/ledger/entries/export` | 按当前经营台账筛选条件导出查询结果；导出列包含 `ledger_views`、账期 `year_month` 和有效流水发生日期集合 `flow_occurred_on_dates` |
+| 台账跟进状态 | `PATCH /api/v1/ledger/entries/{entry_id}/follow-up` | 仅维护终端租户收缴视图的轻量跟进字段：`follow_up_status`、`next_follow_up_date`、`follow_up_note`；不修改台账金额或派生支付状态 |
 | 服务费月度生成 | `POST /api/v1/ledger/service-fees/generate` | 按租金账期月份、项目、委托协议和产权方汇总代理直租实收，固化服务费比例、计算基数和来源账期生成服务费应收；不逐笔生成 |
 | 台账重算 | `POST /api/v1/contracts/{contract_id}/ledger/recalculate` | 对受影响区间作废并重建；响应返回 `created`/`updated`/`voided` 与 `skipped_entries`，已收/部分已收条目被跳过时需在前端当场展示 |
 | 补偿任务 | `POST /api/v1/ledger/compensation/run` | 扫描并补齐缺失台账，必须幂等 |

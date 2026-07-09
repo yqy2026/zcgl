@@ -1,3 +1,4 @@
+from datetime import date
 from pathlib import Path
 from unittest.mock import ANY, AsyncMock, patch
 
@@ -330,6 +331,52 @@ def test_save_payment_flow_allocations_delegates_to_service(client) -> None:
                 "amount": ANY,
             }
         ],
+    )
+
+
+def test_update_ledger_entry_follow_up_delegates_to_service(client) -> None:
+    payload = {
+        "entry_id": "entry-001",
+        "contract_id": "contract-001",
+        "year_month": "2026-05",
+        "due_date": "2026-05-31",
+        "amount_due": "1000.00",
+        "ledger_views": ["terminal_collection"],
+        "flow_occurred_on_dates": [],
+        "currency_code": "CNY",
+        "is_tax_included": True,
+        "tax_rate": "0.09",
+        "payment_status": "unpaid",
+        "paid_amount": "0",
+        "follow_up_status": "contacted",
+        "next_follow_up_date": "2026-05-20",
+        "follow_up_note": "已联系租户",
+        "notes": None,
+        "created_at": None,
+        "updated_at": None,
+    }
+
+    with patch(
+        "src.api.v1.contracts.ledger.ledger_service_v2.update_follow_up",
+        new=AsyncMock(return_value=payload),
+    ) as mock_update:
+        response = client.patch(
+            "/api/v1/ledger/entries/entry-001/follow-up",
+            json={
+                "follow_up_status": "contacted",
+                "next_follow_up_date": "2026-05-20",
+                "follow_up_note": "已联系租户",
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json()["follow_up_status"] == "contacted"
+    mock_update.assert_awaited_once_with(
+        ANY,
+        entry_id="entry-001",
+        follow_up_status="contacted",
+        next_follow_up_date=date(2026, 5, 20),
+        follow_up_note="已联系租户",
     )
 
 

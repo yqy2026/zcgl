@@ -48,7 +48,12 @@ import { useArrayListData } from '@/hooks/useArrayListData';
 import { TableWithPagination } from '@/components/Common/TableWithPagination';
 import { PageContainer } from '@/components/Common';
 import { buildQueryScopeKey } from '@/utils/queryScope';
-import { CONTRACT_CENTER_ROUTES, CUSTOMER_ROUTES, PROJECT_ROUTES } from '@/constants/routes';
+import {
+  CONTRACT_CENTER_ROUTES,
+  CUSTOMER_ROUTES,
+  OPERATIONS_ROUTES,
+  PROJECT_ROUTES,
+} from '@/constants/routes';
 import styles from './ProjectDetailPage.module.css';
 
 const { Text } = Typography;
@@ -445,12 +450,20 @@ const ProjectDetailPage: React.FC = () => {
     service_fee_received: '0.00',
   };
   const ledgerSummaryItems = [
-    { label: '应收', value: ledgerSummary.receivable_amount },
-    { label: '应付', value: ledgerSummary.payable_amount },
-    { label: '实收', value: ledgerSummary.received_amount },
-    { label: '实付', value: ledgerSummary.paid_amount },
-    { label: '逾期', value: ledgerSummary.overdue_amount },
+    {
+      label: '终端应收',
+      value: ledgerSummary.receivable_amount,
+      ledgerView: 'terminal_collection',
+    },
+    { label: '运营成本', value: ledgerSummary.payable_amount, ledgerView: 'operator_cost' },
+    { label: '终端实收', value: ledgerSummary.received_amount, ledgerView: 'terminal_collection' },
+    { label: '成本实付', value: ledgerSummary.paid_amount, ledgerView: 'operator_cost' },
+    { label: '逾期收缴', value: ledgerSummary.overdue_amount, ledgerView: 'terminal_collection' },
   ];
+  const buildProjectLedgerPath = (ledgerView: string): string =>
+    `${OPERATIONS_ROUTES.LEDGER}?project_id=${encodeURIComponent(
+      id as string
+    )}&ledger_view=${ledgerView}`;
   const summary = assetsData?.summary ?? {
     total_assets: 0,
     total_rentable_area: 0,
@@ -757,16 +770,27 @@ const ProjectDetailPage: React.FC = () => {
               <>
                 <div className={styles.relationSummaryStrip}>
                   {ledgerSummaryItems.map(item => (
-                    <div key={item.label} className={styles.relationSummaryItem}>
+                    <button
+                      key={item.label}
+                      type="button"
+                      className={styles.relationSummaryButton}
+                      onClick={() => navigate(buildProjectLedgerPath(item.ledgerView))}
+                    >
                       <Text type="secondary">{item.label}</Text>
                       <Text strong>{formatCurrency(item.value)}</Text>
-                    </div>
+                    </button>
                   ))}
                 </div>
-                <Text type="secondary" className={styles.ledgerServiceFeeText}>
-                  服务费应收 {formatCurrency(ledgerSummary.service_fee_receivable)} / 实收{' '}
-                  {formatCurrency(ledgerSummary.service_fee_received)}
-                </Text>
+                <button
+                  type="button"
+                  className={styles.ledgerServiceFeeButton}
+                  onClick={() => navigate(buildProjectLedgerPath('service_fee_settlement'))}
+                >
+                  <Text type="secondary">
+                    服务费应收 {formatCurrency(ledgerSummary.service_fee_receivable)} / 实收{' '}
+                    {formatCurrency(ledgerSummary.service_fee_received)}
+                  </Text>
+                </button>
               </>
             )}
           </Card>

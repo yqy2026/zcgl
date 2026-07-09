@@ -868,6 +868,36 @@ class CRUDContractGroup:
             await db.commit()
         return entries
 
+    async def get_ledger_entry_by_id(
+        self,
+        db: AsyncSession,
+        *,
+        entry_id: str,
+    ) -> ContractLedgerEntry | None:
+        stmt = select(ContractLedgerEntry).where(
+            ContractLedgerEntry.entry_id == entry_id
+        )
+        return (await db.execute(stmt)).scalars().first()
+
+    async def update_ledger_follow_up(
+        self,
+        db: AsyncSession,
+        *,
+        entry: ContractLedgerEntry,
+        follow_up_status: str | None,
+        next_follow_up_date: date | None,
+        follow_up_note: str | None,
+        commit: bool = True,
+    ) -> ContractLedgerEntry:
+        entry.follow_up_status = follow_up_status
+        entry.next_follow_up_date = next_follow_up_date
+        entry.follow_up_note = follow_up_note
+        entry.updated_at = _utcnow()
+        db.add(entry)
+        if commit:
+            await db.commit()
+        return entry
+
     async def has_contract_ledger_entries(
         self,
         db: AsyncSession,

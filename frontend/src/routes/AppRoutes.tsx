@@ -12,7 +12,7 @@ import {
   SYSTEM_ROUTES,
   BASE_PATHS,
   ANALYTICS_ROUTES,
-  FINANCE_ROUTES,
+  OPERATIONS_ROUTES,
 } from '@/constants/routes';
 
 export interface ProtectedRouteItem {
@@ -71,8 +71,8 @@ const baseProtectedRoutes: ProtectedRouteItem[] = [
     permissions: [{ resource: 'analytics', action: 'read' }],
   },
   {
-    path: FINANCE_ROUTES.LEDGER,
-    element: React.lazy(() => import('../pages/Finance/FinancialLedgerPage')),
+    path: OPERATIONS_ROUTES.LEDGER,
+    element: React.lazy(() => import('../pages/OperationsLedger/OperationsLedgerPage')),
     permissions: [{ resource: 'contract', action: 'read' }],
   },
   {

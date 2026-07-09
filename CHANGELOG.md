@@ -3,6 +3,7 @@
 ## [Unreleased] - 2026-03-06
 
 ### 2026-07-09
+- feat(operations-ledger): start Phase 4 frontend rollout by replacing the global finance-ledger entry with `/operations/ledger`, adding four operations-ledger views, payment-flow allocation actions, terminal follow-up maintenance, service-fee generation/receipt entry points, project-summary jumps, and contract/asset/party links. Added a terminal follow-up API guarded by the ledger update resource.
 - feat(operations-ledger): expose Phase 3 backend ledger APIs for operational payment-flow creation, allocation save, and monthly service-fee generation. Extended `GET /api/v1/ledger/entries` and export to filter by contract rent-ledger view, project, active payment-flow occurrence date, and derived payment status, added `ledger_views` / `flow_occurred_on_dates` to query/export evidence, and registered the new ledger authz resource in RBAC seed/backfill coverage.
 - test(project): stabilize project-code generation unit coverage by routing month selection through the existing project-service clock helper and freezing the generated-code tests to June 2026.
 

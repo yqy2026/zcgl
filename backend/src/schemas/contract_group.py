@@ -554,6 +554,16 @@ class ContractLedgerBatchUpdateRequest(BaseModel):
     notes: str | None = None
 
 
+class LedgerFollowUpUpdateRequest(BaseModel):
+    """Update lightweight terminal-collection follow-up fields."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    follow_up_status: LedgerFollowUpStatus | None = None
+    next_follow_up_date: date | None = None
+    follow_up_note: str | None = Field(None, max_length=500)
+
+
 class LedgerRecalculateSkippedEntry(BaseModel):
     """重算时跳过的台账条目。"""
 

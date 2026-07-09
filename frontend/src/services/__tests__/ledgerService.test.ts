@@ -86,7 +86,7 @@ describe('LedgerService', () => {
       service.getLedgerEntries({
         year_month_start: '2026-05',
       })
-    ).rejects.toThrow('获取财务台账失败: bad ledger');
+    ).rejects.toThrow('获取经营台账失败: bad ledger');
   });
 
   it('exports global ledger entries as a blob', async () => {
@@ -186,5 +186,135 @@ describe('LedgerService', () => {
     );
     expect(result.skipped_entries).toHaveLength(1);
     expect(result.skipped_entries[0].entry_id).toBe('ledger-paid');
+  });
+
+  it('creates a payment flow and saves allocations', async () => {
+    vi.mocked(apiClient.post)
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          flow_id: 'flow-1',
+          flow_type: 'terminal_rent_receipt',
+          occurred_on: '2026-05-10',
+          amount: '1000.00',
+          registered_by: 'operator',
+          status: 'active',
+        },
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        data: [
+          {
+            allocation_id: 'allocation-1',
+            flow_id: 'flow-1',
+            target_type: 'contract_ledger_entry',
+            target_id: 'entry-1',
+            year_month: '2026-05',
+            amount: '1000.00',
+          },
+        ],
+      });
+
+    const flow = await service.createPaymentFlow({
+      flow_type: 'terminal_rent_receipt',
+      occurred_on: '2026-05-10',
+      amount: '1000.00',
+      registered_by: 'operator',
+    });
+    const allocations = await service.savePaymentFlowAllocations(flow.flow_id, [
+      {
+        target_type: 'contract_ledger_entry',
+        target_id: 'entry-1',
+        year_month: '2026-05',
+        amount: '1000.00',
+      },
+    ]);
+
+    expect(apiClient.post).toHaveBeenNthCalledWith(
+      1,
+      '/ledger/payment-flows',
+      {
+        flow_type: 'terminal_rent_receipt',
+        occurred_on: '2026-05-10',
+        amount: '1000.00',
+        registered_by: 'operator',
+      },
+      {
+        retry: false,
+        smartExtract: true,
+      }
+    );
+    expect(apiClient.post).toHaveBeenNthCalledWith(
+      2,
+      '/ledger/payment-flows/flow-1/allocations',
+      {
+        allocations: [
+          {
+            target_type: 'contract_ledger_entry',
+            target_id: 'entry-1',
+            year_month: '2026-05',
+            amount: '1000.00',
+          },
+        ],
+      },
+      {
+        retry: false,
+        smartExtract: true,
+      }
+    );
+    expect(allocations[0].allocation_id).toBe('allocation-1');
+  });
+
+  it('generates service fees and updates follow-up state', async () => {
+    vi.mocked(apiClient.post).mockResolvedValue({
+      success: true,
+      data: { created: 1, updated: 0, voided: 0, source_mismatches: 0 },
+    });
+    vi.mocked(apiClient.patch).mockResolvedValue({
+      success: true,
+      data: {
+        entry_id: 'entry-1',
+        contract_id: 'contract-1',
+        year_month: '2026-05',
+        due_date: '2026-05-31',
+        amount_due: '1000.00',
+        ledger_views: ['terminal_collection'],
+        currency_code: 'CNY',
+        is_tax_included: true,
+        payment_status: 'unpaid',
+        paid_amount: '0',
+        follow_up_status: 'contacted',
+      },
+    });
+
+    const generateResult = await service.generateServiceFees({ contract_group_id: 'group-1' });
+    const entry = await service.updateLedgerEntryFollowUp('entry-1', {
+      follow_up_status: 'contacted',
+      next_follow_up_date: '2026-05-20',
+      follow_up_note: '已联系',
+    });
+
+    expect(apiClient.post).toHaveBeenCalledWith(
+      '/ledger/service-fees/generate',
+      { contract_group_id: 'group-1' },
+      {
+        retry: false,
+        smartExtract: true,
+      }
+    );
+    expect(apiClient.patch).toHaveBeenCalledWith(
+      '/ledger/entries/entry-1/follow-up',
+      {
+        follow_up_status: 'contacted',
+        next_follow_up_date: '2026-05-20',
+        follow_up_note: '已联系',
+      },
+      {
+        retry: false,
+        smartExtract: true,
+      }
+    );
+    expect(generateResult.created).toBe(1);
+    expect(entry.follow_up_status).toBe('contacted');
   });
 });

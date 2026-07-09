@@ -4,9 +4,16 @@ import { ApiErrorHandler } from '@/utils/responseExtractor';
 import type {
   LedgerBatchUpdatePayload,
   LedgerEntry,
+  LedgerFollowUpUpdatePayload,
   LedgerListParams,
   LedgerListResponse,
   LedgerRecalculateResult,
+  OperationalPaymentFlow,
+  OperationalPaymentFlowCreate,
+  PaymentAllocation,
+  PaymentAllocationCreate,
+  ServiceFeeGeneratePayload,
+  ServiceFeeGenerateResult,
 } from '@/types/ledger';
 
 type LedgerExportParams = LedgerListParams & {
@@ -39,7 +46,7 @@ export class LedgerService {
       });
 
       if (!result.success) {
-        throw new Error(`获取财务台账失败: ${result.error}`);
+        throw new Error(`获取经营台账失败: ${result.error}`);
       }
 
       return result.data!;
@@ -63,7 +70,7 @@ export class LedgerService {
       });
 
       if (!result.success || result.data == null) {
-        throw new Error(`导出财务台账失败: ${result.error}`);
+        throw new Error(`导出经营台账失败: ${result.error}`);
       }
 
       return result.data;
@@ -97,6 +104,100 @@ export class LedgerService {
     }
   }
 
+  async createPaymentFlow(payload: OperationalPaymentFlowCreate): Promise<OperationalPaymentFlow> {
+    try {
+      const result = await apiClient.post<OperationalPaymentFlow>(
+        API_ENDPOINTS.LEDGER.PAYMENT_FLOWS,
+        payload,
+        {
+          retry: false,
+          smartExtract: true,
+        }
+      );
+
+      if (!result.success || result.data == null) {
+        throw new Error(`创建经营收付流水失败: ${result.error}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
+  async savePaymentFlowAllocations(
+    flowId: string,
+    allocations: PaymentAllocationCreate[]
+  ): Promise<PaymentAllocation[]> {
+    try {
+      const result = await apiClient.post<PaymentAllocation[]>(
+        API_ENDPOINTS.LEDGER.PAYMENT_FLOW_ALLOCATIONS(flowId),
+        { allocations },
+        {
+          retry: false,
+          smartExtract: true,
+        }
+      );
+
+      if (!result.success || result.data == null) {
+        throw new Error(`保存经营收付流水分摊失败: ${result.error}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
+  async generateServiceFees(payload: ServiceFeeGeneratePayload): Promise<ServiceFeeGenerateResult> {
+    try {
+      const result = await apiClient.post<ServiceFeeGenerateResult>(
+        API_ENDPOINTS.LEDGER.SERVICE_FEES_GENERATE,
+        payload,
+        {
+          retry: false,
+          smartExtract: true,
+        }
+      );
+
+      if (!result.success || result.data == null) {
+        throw new Error(`生成服务费台账失败: ${result.error}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
+  async updateLedgerEntryFollowUp(
+    entryId: string,
+    payload: LedgerFollowUpUpdatePayload
+  ): Promise<LedgerEntry> {
+    try {
+      const result = await apiClient.patch<LedgerEntry>(
+        API_ENDPOINTS.LEDGER.ENTRY_FOLLOW_UP(entryId),
+        payload,
+        {
+          retry: false,
+          smartExtract: true,
+        }
+      );
+
+      if (!result.success || result.data == null) {
+        throw new Error(`维护台账跟进状态失败: ${result.error}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
   async recalculateContractLedger(contractId: string): Promise<LedgerRecalculateResult> {
     try {
       const result = await apiClient.post<LedgerRecalculateResult>(
@@ -124,7 +225,7 @@ export class LedgerService {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `financial-ledger.${extension}`;
+    link.download = `operations-ledger.${extension}`;
     link.style.display = 'none';
     document.body.appendChild(link);
     link.click();

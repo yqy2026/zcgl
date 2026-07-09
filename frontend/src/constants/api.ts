@@ -154,6 +154,10 @@ export const CONTRACT_GROUP_API = {
 export const LEDGER_API = {
   ENTRIES: '/ledger/entries',
   EXPORT: '/ledger/entries/export',
+  PAYMENT_FLOWS: '/ledger/payment-flows',
+  PAYMENT_FLOW_ALLOCATIONS: (flowId: string) => `/ledger/payment-flows/${flowId}/allocations`,
+  SERVICE_FEES_GENERATE: '/ledger/service-fees/generate',
+  ENTRY_FOLLOW_UP: (entryId: string) => `/ledger/entries/${entryId}/follow-up`,
   CONTRACT_RECALCULATE: (contractId: string) => `/contracts/${contractId}/ledger/recalculate`,
   CONTRACT_BATCH_UPDATE_STATUS: (contractId: string) =>
     `/contracts/${contractId}/ledger/batch-update-status`,

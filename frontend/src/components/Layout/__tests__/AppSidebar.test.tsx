@@ -137,7 +137,7 @@ describe('AppSidebar - 渲染与交互测试', () => {
     expect(screen.getByText('合同中心')).toBeInTheDocument();
     expect(screen.getByText('主体中心')).toBeInTheDocument();
     expect(screen.getByText('资产资源')).toBeInTheDocument();
-    expect(screen.getByText('财务台账')).toBeInTheDocument();
+    expect(screen.getByText('经营台账')).toBeInTheDocument();
     expect(screen.getByText('经营分析')).toBeInTheDocument();
     expect(screen.queryByText('合同关系管理')).not.toBeInTheDocument();
     expect(screen.queryByText('权属方管理')).not.toBeInTheDocument();

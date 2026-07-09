@@ -17,10 +17,12 @@ from ....middleware.auth import (
 )
 from ....models.auth import User
 from ....schemas.contract_group import (
+    ContractLedgerEntryResponse,
     ContractLedgerListResponse,
     LedgerAggregateQueryParams,
     LedgerCompensationResponse,
     LedgerExportQueryParams,
+    LedgerFollowUpUpdateRequest,
     LedgerRecalculateResponse,
     OperationalPaymentFlowCreate,
     OperationalPaymentFlowResponse,
@@ -280,6 +282,48 @@ async def save_payment_flow_allocations(
         raise
     except Exception as exc:
         raise internal_error("保存经营收付流水分摊失败", original_error=exc) from exc
+
+
+@router.patch(
+    "/ledger/entries/{entry_id}/follow-up",
+    response_model=ContractLedgerEntryResponse,
+    summary="维护终端收缴台账跟进状态",
+)
+async def update_ledger_entry_follow_up(
+    entry_id: str,
+    payload: LedgerFollowUpUpdateRequest,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: User = Depends(get_current_active_user),
+    _authz: Annotated[
+        AuthzContext | None,
+        Depends(
+            require_authz(
+                action="update",
+                resource_type="ledger",
+                resource_id="{entry_id}",
+            )
+        ),
+    ] = None,
+) -> ContractLedgerEntryResponse:
+    _ = current_user
+    _ = _authz
+    try:
+        result = await ledger_service_v2.update_follow_up(
+            db,
+            entry_id=entry_id,
+            follow_up_status=(
+                payload.follow_up_status.value
+                if payload.follow_up_status is not None
+                else None
+            ),
+            next_follow_up_date=payload.next_follow_up_date,
+            follow_up_note=payload.follow_up_note,
+        )
+        return ContractLedgerEntryResponse.model_validate(result)
+    except BaseBusinessError:
+        raise
+    except Exception as exc:
+        raise internal_error("维护台账跟进状态失败", original_error=exc) from exc
 
 
 @router.post(

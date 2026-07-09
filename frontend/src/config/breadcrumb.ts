@@ -16,15 +16,9 @@ export const staticBreadcrumbMap: Record<string, string> = {
   '/assets/analytics': '经营分析',
   '/assets/analytics-simple': '简易分析',
 
-  // 财务台账
-  '/finance': '财务台账',
-  '/finance/ledger': '财务台账',
-  '/finance/billing': '账单管理',
-  '/finance/payment': '收付款记录',
-  // 兼容旧路径
-  '/financial': '财务台账',
-  '/financial/billing': '账单管理',
-  '/financial/payment': '收付款记录',
+  // 经营台账
+  '/operations': '经营台账',
+  '/operations/ledger': '经营台账',
 
   // 统计分析
   '/analytics': '经营分析',
