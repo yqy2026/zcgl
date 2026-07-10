@@ -114,7 +114,7 @@
 | 合同与协议详情 | `GET /api/v1/contract-groups/{group_id}` | 返回内部聚合投影、主体、资产和合同/协议信息；前端文案为“合同与协议” |
 | 创建合同/协议经营事项 | `POST /api/v1/contract-groups` | 必须归属项目；同一经营事项只能选择一种经营模式 |
 | 更新合同/协议经营事项 | `PATCH /api/v1/contract-groups/{group_id}` | 更新内部聚合主数据和关联信息 |
-| 新增合同/协议 | `POST /api/v1/contract-groups/{group_id}/contracts` | 在既有经营事项内补录承租合同、转租合同、委托协议或直租合同；路径 `group_id` 必须与请求体一致 |
+| 新增合同/协议 | `POST /api/v1/contract-groups/{group_id}/contracts` | 在既有经营事项内补录承租合同、转租合同、委托协议或直租合同；路径 `group_id` 必须与请求体一致。创建载荷可携带初始 `rent_terms`，合同服务在同一事务内先落租金条款、再生成经营台账，不允许生效后绕过纠错流程补写条款 |
 | 合同详情 | `GET /api/v1/contracts/{contract_id}` | 返回合同基表和类型明细；暴露只读 `lessor_name_snapshot` / `lessee_name_snapshot` 作为签署时主体名称快照，历史合同显示快照名而非跟随 Party 主档改名；可返回 `field_sources` 供编辑或补录来源上下文按需查看，业务详情主视图不要求默认展示；签订日期、付款周期或备注类关键经营字段缺失时，可返回轻量补录完整性提示，不返回任务、待办或审批对象，也不阻断保存 |
 | 更新合同补录信息 | `PATCH /api/v1/contracts/{contract_id}` | 更正合同补录字段；需记录操作痕迹，已生成经营台账按规则重算或作废（重算只动未收/未付且无收付流水的条目，已有收付流水条目不静默改写、留待人工处理；MVP 无红字冲销） |
 | 合同扫描件附件 | `GET/PUT/DELETE /api/v1/contracts/{contract_id}/attachments*` | 查询、整体替换和删除盖章扫描件引用；扫描件文档按 `storage_key` 单存，多条同委托协议合同可共享引用；替换/删除只联动同合同号 + 同委托方 + 同受托方 + 正常代运营受托合同，且需对全部受影响合同逐条通过 `contract:update` 授权；复用既有 `storage_key` 时若该文档已链接到本次受影响集合外的合同，替换必须失败暴露；删除受「每合同 ≥1 盖章扫描件」保护 |
@@ -142,6 +142,8 @@ MVP 不提供续签端点。到期后继续合作按新合同/协议补录流程
 | 服务费台账查询 | `GET /api/v1/ledger/service-fees` | 按 `contract_group_id` 查询代理模式月度服务费台账；响应包含服务费台账 ID、服务费账期、应收/实收/派生状态、计算基数、服务费比例、固化归属字段和 `source_ledger_ids` 来源租金台账集合，用于服务费结算视图展示来源账期并登记服务费收款 |
 | 台账重算 | `POST /api/v1/contracts/{contract_id}/ledger/recalculate` | 对受影响区间作废并重建；响应返回 `created`/`updated`/`voided` 与 `skipped_entries`，已收/部分已收条目被跳过时需在前端当场展示 |
 | 补偿任务 | `POST /api/v1/ledger/compensation/run` | 扫描并补齐缺失台账，必须幂等 |
+
+实收/实付唯一写路径是「创建收付流水 → 保存账期分摊」。旧 `PATCH /api/v1/contracts/{contract_id}/ledger/batch-update-status` 已下线，不提供直接改写累计 `paid_amount` 的兼容入口。
 
 多资产合同按合同级金额返回，不做资产级金额拆分；项目或主体汇总时按合同和账期去重。逾期只由终端租户租金收缴派生；运营方成本未付、服务费未收不产生逾期。
 

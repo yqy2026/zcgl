@@ -290,37 +290,6 @@ class TestLedgerServiceV2:
 
         assert created_entries[0]["ledger_views"] == ["terminal_collection"]
 
-    async def test_batch_update_status_delegates_and_returns_updated_entries(self):
-        from src.services.contract import ledger_service_v2 as ledger_module
-
-        service = getattr(ledger_module, "ledger_service_v2", None)
-        assert service is not None, "ledger_service_v2 尚未实现"
-
-        updated_entries = [
-            MagicMock(entry_id="entry-001"),
-            MagicMock(entry_id="entry-002"),
-        ]
-
-        with patch(
-            "src.services.contract.ledger_service_v2.contract_group_crud.batch_update_ledger_status",
-            new=AsyncMock(return_value=updated_entries),
-        ) as mock_batch_update:
-            result = await service.batch_update_status(
-                AsyncMock(),
-                contract_id="contract-001",
-                entry_ids=["entry-001", "entry-002"],
-                paid_amount=Decimal("3000.00"),
-            )
-
-        assert result is updated_entries
-        mock_batch_update.assert_awaited_once_with(
-            mock_batch_update.await_args.args[0],
-            contract_id="contract-001",
-            entry_ids=["entry-001", "entry-002"],
-            paid_amount=Decimal("3000.00"),
-            notes=None,
-        )
-
     async def test_update_follow_up_updates_terminal_collection_entry(self):
         from src.services.contract import ledger_service_v2 as ledger_module
 

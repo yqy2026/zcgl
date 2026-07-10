@@ -2,7 +2,7 @@
 
 ## Status
 
-🔄 实施中
+✅ 已完成
 
 ## 1. 目标
 
@@ -21,7 +21,7 @@
 - `docs/specs/domain-model.md`
 - `docs/specs/api-contract.md`
 - `docs/traceability/requirements-trace.md`
-- `docs/issues/2026-07-06-operations-ledger-prd-revision.md`
+- `docs/archive/issues/2026-07-06-operations-ledger-prd-revision.md`
 
 涉及 REQ：
 
@@ -57,7 +57,7 @@
 ### 4.2 服务边界
 
 - `ledger_service_v2` 继续负责合同租金台账生成、重算、查询和派生支付状态。
-- 新增 `payment_flow_service` 负责流水登记、作废、分摊校验和汇总。
+- 新增 `payment_flow_service` 负责流水登记、分摊校验和汇总；流水作废/更正状态机拆至 `docs/issues/2026-07-10-payment-flow-lifecycle-and-voucher-audit.md`。
 - `service_fee_ledger_service` 从逐笔同步改为月度汇总生成。已生成服务费应收后，来源租金条目被合同更正重算跳过时，不自动重算或覆盖服务费台账，改为派生服务费来源不一致风险并交由人工处理；尚未生成服务费的账期按修正后实收进入后续月度生成。
 - `ledger_compensation_service` 补偿缺失租金台账、流水派生金额、服务费月度台账，保持幂等。
 - `analytics_service` 只读经营台账和流水汇总，不直接重新解释合同条款。
@@ -245,12 +245,19 @@
 
 任务：
 
-- [ ] 清理旧“财务台账”文案、测试快照和导出文件名。
-- [ ] 清理旧直接改 `paid_amount` 的前端入口。
-- [ ] 更新 `docs/prd.md`、`docs/specs/*`、`docs/traceability/*` 的实现证据。
-- [ ] 更新 `docs/issues/2026-07-06-operations-ledger-prd-revision.md` 状态。
-- [ ] 完成 `CHANGELOG.md`。
-- [ ] 跑受影响测试；能跑 `make check` 时跑全量门禁。
+- [x] 清理旧“财务台账”文案、测试快照和导出文件名。
+- [x] 清理旧直接改 `paid_amount` 的前端入口，并同步下线后端第二写路径。
+- [x] 更新 `docs/prd.md`、`docs/specs/*`、`docs/traceability/*` 的实现证据。
+- [x] 归档 `docs/archive/issues/2026-07-06-operations-ledger-prd-revision.md`，并将非阻断增强项拆至新 issue。
+- [x] 完成 `CHANGELOG.md`。
+- [x] 跑受影响测试；能跑 `make check` 时跑全量门禁。
+
+验证结果（2026-07-10）：
+
+- 后端 unit：`4370 passed, 301 skipped`。
+- 前端全量 Vitest 四分片：`2279 passed`。
+- 前端 `check`、生产构建、后端 Ruff、迁移命名检查和应用导入烟测通过。
+- Windows 环境无 `make`，按 `Makefile` 目标逐项执行等价命令；归档后再次运行文档门禁。
 
 ## 6. 建议首个代码切片
 
@@ -275,13 +282,10 @@
 | 已生成服务费来源租金被更正跳过 | 既有服务费台账不自动重算或覆盖，派生服务费来源不一致风险并交由人工处理；未生成服务费的账期按修正后实收进入后续月度生成 |
 | 前端路由仍叫 `/finance/ledger` | Phase 4 同步收口路由、页面目录、组件名、面包屑和导出文件名，目标路由为 `/operations/ledger` |
 
-## 8. 待实施前确认
+## 8. 已决策后续项
 
-以下问题不阻断首个后端底座切片，但会影响后续流水状态与审计设计：
-
-- 收付流水作废、更正、反向冲正的最小状态机。
-- 凭证附件是否需要下载审计。
-- 历史 `paid_amount` 回填流水的备注和来源字段是否需要专门枚举。
+- 历史 `paid_amount` 已通过系统回填流水/分摊迁移，无法完整回填时 fail-loud。
+- 不引入财务红字冲销；流水作废/更正最小状态机与凭证下载审计在 `docs/issues/2026-07-10-payment-flow-lifecycle-and-voucher-audit.md` 独立实施。
 
 ## 9. 验证命令
 

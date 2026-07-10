@@ -124,8 +124,14 @@ class PDFImportService:
 
     def __init__(self) -> None:
         self.regex_extractor = ContractExtractor()
-        self.llm_extractor = get_llm_contract_extractor()
+        self._llm_extractor: Any | None = None
         self.task_queue = get_task_queue()
+
+    @property
+    def llm_extractor(self) -> Any:
+        if self._llm_extractor is None:
+            self._llm_extractor = get_llm_contract_extractor()
+        return self._llm_extractor
 
     async def _resolve_party_filter(
         self,
@@ -1018,6 +1024,45 @@ class PDFImportService:
                 "error": "total_deposit must be a valid decimal",
             }
 
+        rent_term_payloads: list[ContractRentTermCreate] = []
+        rent_terms = merged_data.get("rent_terms")
+        if isinstance(rent_terms, list):
+            for index, rent_term in enumerate(rent_terms, start=1):
+                if not isinstance(rent_term, dict):
+                    continue
+                rent_term_start = self._parse_date(rent_term.get("start_date"))
+                rent_term_end = self._parse_date(rent_term.get("end_date"))
+                rent_term_amount = _parse_decimal(rent_term.get("monthly_rent"))
+                management_fee = _parse_decimal(
+                    rent_term.get("management_fee"), Decimal("0")
+                )
+                other_fees = _parse_decimal(rent_term.get("other_fees"), Decimal("0"))
+                if (
+                    rent_term_start is None
+                    or rent_term_end is None
+                    or rent_term_amount is None
+                    or management_fee is None
+                    or other_fees is None
+                ):
+                    return {
+                        "success": False,
+                        "message": "Invalid rent_terms payload",
+                        "error": "Invalid rent_terms payload",
+                    }
+                rent_term_payloads.append(
+                    ContractRentTermCreate(
+                        sort_order=index,
+                        start_date=rent_term_start,
+                        end_date=rent_term_end,
+                        monthly_rent=rent_term_amount,
+                        management_fee=management_fee,
+                        other_fees=other_fees,
+                        notes=_normalize_text(
+                            rent_term.get("rent_description") or rent_term.get("notes")
+                        ),
+                    )
+                )
+
         operator_party = await party_service.get_party(
             db,
             party_id=operator_party_id,
@@ -1128,6 +1173,7 @@ class PDFImportService:
                 asset_ids=asset_ids,
                 lease_detail=lease_detail,
                 agency_detail=agency_detail,
+                rent_terms=rent_term_payloads,
             )
             created_contract = await contract_group_service.add_contract_to_group(
                 db,
@@ -1136,51 +1182,7 @@ class PDFImportService:
                 commit=False,
             )
 
-            created_terms_count = 0
-            rent_terms = merged_data.get("rent_terms")
-            if isinstance(rent_terms, list):
-                for index, rent_term in enumerate(rent_terms, start=1):
-                    if not isinstance(rent_term, dict):
-                        continue
-                    rent_term_start = self._parse_date(rent_term.get("start_date"))
-                    rent_term_end = self._parse_date(rent_term.get("end_date"))
-                    rent_term_amount = _parse_decimal(rent_term.get("monthly_rent"))
-                    management_fee = _parse_decimal(
-                        rent_term.get("management_fee"), Decimal("0")
-                    )
-                    other_fees = _parse_decimal(
-                        rent_term.get("other_fees"), Decimal("0")
-                    )
-                    if (
-                        rent_term_start is None
-                        or rent_term_end is None
-                        or rent_term_amount is None
-                        or management_fee is None
-                        or other_fees is None
-                    ):
-                        return {
-                            "success": False,
-                            "message": "Invalid rent_terms payload",
-                            "error": "Invalid rent_terms payload",
-                        }
-                    await contract_group_service.create_rent_term(
-                        db,
-                        contract_id=created_contract.contract_id,
-                        obj_in=ContractRentTermCreate(
-                            sort_order=index,
-                            start_date=rent_term_start,
-                            end_date=rent_term_end,
-                            monthly_rent=rent_term_amount,
-                            management_fee=management_fee,
-                            other_fees=other_fees,
-                            notes=_normalize_text(
-                                rent_term.get("rent_description")
-                                or rent_term.get("notes")
-                            ),
-                        ),
-                        commit=False,
-                    )
-                    created_terms_count += 1
+            created_terms_count = len(rent_term_payloads)
 
             processing_result = dict(import_session.processing_result or {})
             processing_result["created_contract_group_id"] = (

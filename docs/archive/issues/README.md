@@ -4,6 +4,7 @@
 
 | 文档 | 内容 | 归档原因 |
 |------|------|------|
+| [2026-07-06-operations-ledger-prd-revision.md](./2026-07-06-operations-ledger-prd-revision.md) | 经营台账、收付流水、四类经营口径与服务费结算修订 | 核心口径已被 PRD/spec/traceability 和实现吸收；流水作废/更正与凭证审计拆至 `docs/issues/2026-07-10-payment-flow-lifecycle-and-voucher-audit.md` |
 | [2026-06-18-prd-grill-code-followup.md](./2026-06-18-prd-grill-code-followup.md) | 通知、资产/项目编码、产权证保存闸门与附件、合同号复合唯一等契约收口 | I1/I2①/I3~I9 代码项与门禁已收口；企业微信真实发送验证与正式 userid 映射拆至 `docs/issues/2026-06-23-wecom-userid-mapping-and-send-verification.md` |
 | [2026-03-03-project-issues-analysis.md](./2026-03-03-project-issues-analysis.md) | 前后端 MyPy/Lint/构建历史排查 | 2026-06-22 复核时 `uv run mypy src --no-incremental` 已清零；原 148/49 errors 为历史快照 |
 | [2026-04-06-requirements-specification-review.md](./2026-04-06-requirements-specification-review.md) | 旧 `requirements-specification.md` 业务分析审阅意见 | 已被 PRD/spec/traceability 文档体系重构吸收 |

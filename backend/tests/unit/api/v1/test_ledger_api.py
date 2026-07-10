@@ -221,21 +221,16 @@ def test_run_ledger_compensation_delegates_to_service(client) -> None:
     mock_run.assert_awaited_once_with(ANY)
 
 
-@pytest.mark.parametrize("payment_status", ["unpaid", "partial", "paid", "voided"])
-def test_batch_update_ledger_rejects_payment_status_input(
-    client,
-    payment_status: str,
-) -> None:
+def test_direct_paid_amount_update_endpoint_is_retired(client) -> None:
     response = client.patch(
         "/api/v1/contracts/contract-001/ledger/batch-update-status",
         json={
             "entry_ids": ["entry-001"],
-            "payment_status": payment_status,
             "paid_amount": "100.00",
         },
     )
 
-    assert response.status_code == 422
+    assert response.status_code == 404
 
 
 def test_create_payment_flow_delegates_to_service(client) -> None:

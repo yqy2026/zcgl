@@ -160,8 +160,6 @@ export const LEDGER_API = {
   SERVICE_FEES_GENERATE: '/ledger/service-fees/generate',
   ENTRY_FOLLOW_UP: (entryId: string) => `/ledger/entries/${entryId}/follow-up`,
   CONTRACT_RECALCULATE: (contractId: string) => `/contracts/${contractId}/ledger/recalculate`,
-  CONTRACT_BATCH_UPDATE_STATUS: (contractId: string) =>
-    `/contracts/${contractId}/ledger/batch-update-status`,
 } as const;
 
 // 数据统计API

@@ -203,6 +203,28 @@ class AgencyDetailResponse(AgencyDetailCreate):
 # ===================== Contract =====================
 
 
+class ContractRentTermCreate(BaseModel):
+    """创建租金条款入参。"""
+
+    sort_order: int = Field(..., ge=1)
+    start_date: date
+    end_date: date
+    monthly_rent: Decimal = Field(..., ge=0)
+    management_fee: Decimal = Field(Decimal("0"), ge=0)
+    other_fees: Decimal = Field(Decimal("0"), ge=0)
+    notes: str | None = None
+
+    @model_validator(mode="after")
+    def validate_date_range(self) -> "ContractRentTermCreate":
+        if self.end_date < self.start_date:
+            raise PydanticCustomError(
+                "invalid_rent_term_date_range",
+                "租金条款结束日期不得早于开始日期",
+                {},
+            )
+        return self
+
+
 class ContractCreate(BaseModel):
     """创建合同入参"""
 
@@ -225,6 +247,10 @@ class ContractCreate(BaseModel):
     asset_ids: list[str] = Field(default_factory=list, description="关联资产 ID 列表")
     lease_detail: LeaseDetailCreate | None = Field(None, description="租赁合同明细")
     agency_detail: AgencyDetailCreate | None = Field(None, description="代理协议明细")
+    rent_terms: list[ContractRentTermCreate] = Field(
+        default_factory=list,
+        description="初始租金条款，与合同在同一事务内落库",
+    )
 
     @model_validator(mode="after")
     def validate_date_range(self) -> "ContractCreate":
@@ -341,28 +367,6 @@ class AuditLogResponse(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
-
-
-class ContractRentTermCreate(BaseModel):
-    """创建租金条款入参。"""
-
-    sort_order: int = Field(..., ge=1)
-    start_date: date
-    end_date: date
-    monthly_rent: Decimal = Field(..., ge=0)
-    management_fee: Decimal = Field(Decimal("0"), ge=0)
-    other_fees: Decimal = Field(Decimal("0"), ge=0)
-    notes: str | None = None
-
-    @model_validator(mode="after")
-    def validate_date_range(self) -> "ContractRentTermCreate":
-        if self.end_date < self.start_date:
-            raise PydanticCustomError(
-                "invalid_rent_term_date_range",
-                "租金条款结束日期不得早于开始日期",
-                {},
-            )
-        return self
 
 
 class ContractRentTermUpdate(BaseModel):
@@ -542,16 +546,6 @@ class LedgerExportQueryParams(LedgerAggregateQueryParams):
         "excel",
         description="导出格式",
     )
-
-
-class ContractLedgerBatchUpdateRequest(BaseModel):
-    """批量登记合同台账实收金额。"""
-
-    model_config = ConfigDict(extra="forbid")
-
-    entry_ids: list[str] = Field(..., min_length=1)
-    paid_amount: Decimal = Field(..., ge=0, description="实收金额")
-    notes: str | None = None
 
 
 class LedgerFollowUpUpdateRequest(BaseModel):

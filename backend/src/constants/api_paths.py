@@ -118,7 +118,6 @@ class ContractPaths:
         "RENT_TERMS": "/contracts/{contract_id}/rent-terms",
         "RENT_TERM_DETAIL": "/contracts/rent-terms/{rent_term_id}",
         "LEDGER": "/contracts/{contract_id}/ledger",
-        "LEDGER_BATCH_UPDATE_STATUS": "/contracts/{contract_id}/ledger/batch-update-status",
     }
 
 

@@ -34,6 +34,7 @@ from src.models.project import Project
 from src.schemas.contract_group import (
     ContractCreate,
     ContractGroupCreate,
+    ContractRentTermCreate,
     ContractScanDocumentCreate,
     ContractScanDocumentReplaceRequest,
     LeaseDetailCreate,
@@ -1247,6 +1248,78 @@ class TestAddContractToGroup:
         assert (
             mock_create.await_args.kwargs["data"]["contract_number"] == "HT-2026-0099"
         )
+
+    async def test_add_contract_persists_initial_terms_before_generating_ledger(
+        self, mock_db: MagicMock
+    ) -> None:
+        service = ContractGroupService()
+        mock_group = MagicMock(spec=ContractGroup)
+        mock_group.revenue_mode = RevenueMode.LEASE
+        mock_group.project_id = "project-1"
+        mock_group.operator_party_id = "party-operator"
+        mock_group.owner_party_id = "party-owner"
+        created_contract = MagicMock(spec=Contract)
+        created_contract.contract_id = "contract-001"
+        events: list[str] = []
+
+        async def create_term(*args, **kwargs):  # noqa: ANN002, ANN003
+            events.append("rent_term")
+            return MagicMock()
+
+        async def generate_ledger(*args, **kwargs):  # noqa: ANN002, ANN003
+            events.append("ledger")
+            return []
+
+        rent_term = ContractRentTermCreate(
+            sort_order=1,
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 12, 31),
+            monthly_rent=Decimal("10000"),
+            management_fee=Decimal("500"),
+        )
+        with (
+            patch(
+                "src.services.contract.contract_group_service.contract_group_crud.get",
+                new_callable=AsyncMock,
+                return_value=mock_group,
+            ),
+            patch(
+                "src.services.contract.contract_group_service.party_service.assert_parties_approved",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
+            patch(
+                "src.services.contract.contract_group_service.party_service.get_party",
+                new=_party_name_lookup(),
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.get_by_contract_number",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_crud.create",
+                new_callable=AsyncMock,
+                return_value=created_contract,
+            ),
+            patch(
+                "src.services.contract.contract_group_service.contract_group_crud.create_rent_term",
+                new=AsyncMock(side_effect=create_term),
+            ) as mock_create_term,
+            patch(
+                "src.services.contract.contract_group_service.ledger_service_v2.generate_ledger_on_activation",
+                new=AsyncMock(side_effect=generate_ledger),
+            ),
+        ):
+            await service.add_contract_to_group(
+                mock_db,
+                obj_in=_valid_contract_create(rent_terms=[rent_term]),
+            )
+
+        assert events == ["rent_term", "ledger"]
+        term_data = mock_create_term.await_args.kwargs["data"]
+        assert term_data["contract_id"] == "contract-001"
+        assert term_data["total_monthly_amount"] == Decimal("10500")
 
 
 class TestAddContractRequiresApprovedParties:

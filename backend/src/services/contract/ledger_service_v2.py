@@ -646,23 +646,6 @@ class ContractLedgerServiceV2:
             "skipped_entries": skipped_entries,
         }
 
-    async def batch_update_status(
-        self,
-        db: AsyncSession,
-        *,
-        contract_id: str,
-        entry_ids: list[str],
-        paid_amount: Decimal,
-        notes: str | None = None,
-    ) -> list[ContractLedgerEntry]:
-        return await contract_group_crud.batch_update_ledger_status(
-            db,
-            contract_id=contract_id,
-            entry_ids=entry_ids,
-            paid_amount=paid_amount,
-            notes=notes,
-        )
-
     async def update_follow_up(
         self,
         db: AsyncSession,

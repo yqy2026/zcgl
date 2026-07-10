@@ -8,7 +8,6 @@
 
 | 文件 | 主题 | 状态 | 备注 |
 |------|------|------|------|
-| [2026-07-06-operations-ledger-implementation.md](2026-07-06-operations-ledger-implementation.md) | 经营台账与收付流水实施计划 | 🔄 实施中 | 后端/API、前端经营台账、分析和通知口径已落地；剩余 Phase 6 门禁与归档 |
 | [2026-02-11-approval-flowable-b-plan.md](2026-02-11-approval-flowable-b-plan.md) | Flowable 编排内核 B 方案 | ⏸ 搁置 | 审批流方向待定，暂不实施 |
 
 ## 已归档方案
@@ -17,6 +16,7 @@
 
 | 文件 | 主题 | 最终状态 |
 |------|------|----------|
+| 2026-07-06-operations-ledger-implementation.md | 经营台账与收付流水实施计划 | ✅ 已完成；流水分摊、四类经营视图、服务费结算、分析通知和旧写路径清理已收口 |
 | 2026-06-18-prd-grill-code-followup.md | PRD Grill 代码收口清单（ADR-0015~0018 + ADR-0011/0012 修订） | ✅ 代码项已收口；企业微信残余项拆至 `docs/issues/2026-06-23-wecom-userid-mapping-and-send-verification.md` |
 | 2026-06-16-prd-grill-code-followup.md | PRD Grill 代码收口清单（ADR-0010~0014） | ✅ 已完成 |
 | 2026-06-15-prd-grill-code-followup.md | PRD Grill 代码收口清单 | ✅ 已完成 |

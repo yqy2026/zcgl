@@ -62,12 +62,6 @@ export interface LedgerListResponse {
   limit: number;
 }
 
-export interface LedgerBatchUpdatePayload {
-  entry_ids: string[];
-  paid_amount?: string | number | null;
-  notes?: string | null;
-}
-
 export interface LedgerRecalculateSkippedEntry {
   entry_id: string;
   year_month: string;

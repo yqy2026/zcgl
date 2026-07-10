@@ -25,7 +25,6 @@ from ..models.contract_group import (
     OperationalPaymentFlow,
     PaymentAllocation,
     ServiceFeeLedger,
-    derive_ledger_payment_status,
 )
 from ..models.project_asset import ProjectAsset
 
@@ -831,44 +830,6 @@ class CRUDContractGroup:
         )
         rows = (await db.execute(stmt)).all()
         return [self._apply_ledger_payment_facts_from_row(row) for row in rows]
-
-    async def batch_update_ledger_status(
-        self,
-        db: AsyncSession,
-        *,
-        contract_id: str,
-        entry_ids: list[str],
-        paid_amount: Any | None = None,
-        notes: str | None = None,
-        commit: bool = True,
-    ) -> list[ContractLedgerEntry]:
-        if not entry_ids:
-            return []
-
-        stmt = (
-            select(ContractLedgerEntry)
-            .where(
-                ContractLedgerEntry.contract_id == contract_id,
-                ContractLedgerEntry.entry_id.in_(entry_ids),
-            )
-            .order_by(ContractLedgerEntry.year_month.asc())
-        )
-        entries = list((await db.execute(stmt)).scalars().all())
-        for entry in entries:
-            if paid_amount is not None:
-                entry.paid_amount = paid_amount
-            entry.payment_status = derive_ledger_payment_status(
-                amount_due=entry.amount_due,
-                paid_amount=entry.paid_amount,
-                stored_status=entry.payment_status,
-            )
-            if notes is not None:
-                entry.notes = notes
-            entry.updated_at = _utcnow()
-
-        if commit:
-            await db.commit()
-        return entries
 
     async def get_ledger_entry_by_id(
         self,

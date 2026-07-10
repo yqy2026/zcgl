@@ -401,11 +401,11 @@ describe('ProjectDetailPage', () => {
     expect(screen.getAllByText('承租转租').length).toBeGreaterThan(0);
     expect(screen.getAllByText('代理运营').length).toBeGreaterThan(0);
     expect(screen.getByText('收付款摘要')).toBeInTheDocument();
-    expect(screen.getAllByText('应收').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('应付').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('实收').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('实付').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('逾期').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('终端应收').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('运营成本').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('终端实收').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('成本实付').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('逾期收缴').length).toBeGreaterThan(0);
     expect(screen.getAllByText('¥2,650.00').length).toBeGreaterThan(0);
     expect(screen.getByText('¥1,000.00')).toBeInTheDocument();
     expect(screen.getByText('¥1,400.00')).toBeInTheDocument();

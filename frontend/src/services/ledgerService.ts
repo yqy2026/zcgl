@@ -2,7 +2,6 @@ import { apiClient } from '@/api/client';
 import { API_ENDPOINTS } from '@/constants/api';
 import { ApiErrorHandler } from '@/utils/responseExtractor';
 import type {
-  LedgerBatchUpdatePayload,
   LedgerEntry,
   LedgerFollowUpUpdatePayload,
   LedgerListParams,
@@ -75,30 +74,6 @@ export class LedgerService {
       }
 
       return result.data;
-    } catch (error) {
-      const enhancedError = ApiErrorHandler.handleError(error);
-      throw new Error(enhancedError.message);
-    }
-  }
-
-  async updateContractLedgerStatus(
-    contractId: string,
-    payload: LedgerBatchUpdatePayload
-  ): Promise<LedgerEntry[]> {
-    try {
-      const result = await apiClient.patch<LedgerEntry[]>(
-        API_ENDPOINTS.LEDGER.CONTRACT_BATCH_UPDATE_STATUS(contractId),
-        payload,
-        {
-          retry: false,
-        }
-      );
-
-      if (!result.success) {
-        throw new Error(`登记台账实收失败: ${result.error}`);
-      }
-
-      return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);

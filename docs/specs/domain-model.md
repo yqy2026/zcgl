@@ -359,7 +359,7 @@
 | `is_tax_included` | boolean | 是 | 是否含税，继承合同 |
 | `tax_rate` | decimal | 否 | 税率，继承合同 |
 | `payment_status` | enum | 是 | `unpaid`/`paid`/`partial` 由收付流水汇总额对 `amount_due` 纯派生，不手登记状态；`voided` 仅系统重算/作废写入；“逾期”另为派生口径、不是登记状态（见 ADR-0007/0019） |
-| `paid_amount` | decimal | 否 | 已收/已付汇总金额，>= 0，默认 0；目标态由 `PaymentAllocation` 汇总生成，历史存量可由累计值回填 |
+| `paid_amount` | decimal | 否 | 已收/已付汇总金额，>= 0，默认 0；查询时由有效 `PaymentAllocation` 汇总派生，历史存量累计值已通过迁移回填为系统流水和分摊 |
 | `follow_up_status` | enum | 否 | 仅终端租户收缴可维护：`pending_follow_up`、`contacted`、`promised_payment`、`disputed`、`offline_received_pending_entry`、`deferred`；不改变逾期金额、收缴率或实收金额 |
 | `next_follow_up_date` | date | 否 | 终端租户收缴跟进日期 |
 | `follow_up_note` | text | 否 | 终端租户收缴跟进备注 |
@@ -381,7 +381,7 @@
 | `counterparty_id` | string | 否 | 对方主体；终端租户、产权方或运营方 |
 | `voucher_attachment_ids` | string[] | 否 | 可选凭证附件；不上传不阻断登记 |
 | `notes` | text | 否 | 备注 |
-| `status` | enum | 是 | `active`、`voided`、`corrected`；作废、更正和反向冲正的最小状态机待实现阶段收口 |
+| `status` | enum | 是 | 当前登记链路写 `active`；`voided` / `corrected` 及原流水关联由后续状态机实现，见 `docs/issues/2026-07-10-payment-flow-lifecycle-and-voucher-audit.md` |
 | `created_at` | datetime | 是 | 创建时间 |
 | `updated_at` | datetime | 是 | 更新时间 |
 
